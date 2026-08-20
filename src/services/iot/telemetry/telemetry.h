@@ -57,6 +57,7 @@ typedef struct
     double sum;     ///< the running sum of the samples held
     double sum_sq;  ///< the running sum of their squares
 } TelemetryWindow;
+
 /** @brief The first difference between successive samples, in units per second. */
 typedef struct
 {
@@ -64,6 +65,7 @@ typedef struct
     uint32_t last_ms;  ///< the monotonic millisecond count it arrived at
     proto_bool primed; ///< a first sample has been seen
 } TelemetryRate;
+
 /** @brief The trapezoidal integral of a rate over time: SenML's Sum (RFC 8428 sec 4.2). */
 typedef struct
 {
@@ -72,6 +74,7 @@ typedef struct
     uint32_t last_ms;  ///< the monotonic millisecond count it arrived at
     proto_bool primed; ///< a first rate sample has been seen
 } TelemetryTotalizer;
+
 /** @brief The window a call acts on, the storage an init binds to it, and the sample a push adds. */
 typedef struct
 {
@@ -80,6 +83,7 @@ typedef struct
     uint16_t cap;       ///< how many samples that storage holds
     float sample;       ///< the sample a push adds
 } TelemetryWindowArgs;
+
 /** @brief The rate tracker a call acts on, and the timed sample an update differentiates. */
 typedef struct
 {
@@ -87,6 +91,7 @@ typedef struct
     float value;      ///< the sample an update differentiates
     uint32_t now_ms;  ///< the monotonic millisecond count it arrived at
 } TelemetryRateArgs;
+
 /** @brief The totalizer a call acts on, and the timed rate an add integrates. */
 typedef struct
 {
@@ -94,6 +99,7 @@ typedef struct
     float rate;            ///< the rate an add integrates, in units per second
     uint32_t now_ms;       ///< the monotonic millisecond count it arrived at
 } TelemetryTotalizerArgs;
+
 /**
  * @brief The sample aggregators: a moving window, a rate of change, and a totalizer.
  *
@@ -133,18 +139,12 @@ typedef struct
     TelemetryWindowArgs window;       ///< what a window call acts on and reads
     TelemetryRateArgs rate;           ///< what a rate call acts on and reads
     TelemetryTotalizerArgs totalizer; ///< what a totalizer call acts on and reads
+
     proto_bool ok;
     uint16_t u16;
     float f32;
     double f64;
-} TelemetryVars;
 
-/** @brief The operands and the outcome. */
-extern TelemetryVars TelemetryV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const window_init)(uint8_t *restrict work);
     void (*const window_push)(uint8_t *restrict work);
     void (*const window_count)(uint8_t *restrict work);
@@ -161,43 +161,8 @@ typedef struct
     void (*const totalizer_reset)(uint8_t *restrict work);
 } TelemetryNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in TelemetryV or a region of the borrow at a fixed offset.
-void protocore_telemetry_window_init(uint8_t *restrict work);
-void protocore_telemetry_window_push(uint8_t *restrict work);
-void protocore_telemetry_window_count(uint8_t *restrict work);
-void protocore_telemetry_window_mean(uint8_t *restrict work);
-void protocore_telemetry_window_variance(uint8_t *restrict work);
-void protocore_telemetry_window_stddev(uint8_t *restrict work);
-void protocore_telemetry_window_min(uint8_t *restrict work);
-void protocore_telemetry_window_max(uint8_t *restrict work);
-void protocore_telemetry_rate_init(uint8_t *restrict work);
-void protocore_telemetry_rate_update(uint8_t *restrict work);
-void protocore_telemetry_totalizer_init(uint8_t *restrict work);
-void protocore_telemetry_totalizer_add(uint8_t *restrict work);
-void protocore_telemetry_totalizer_total(uint8_t *restrict work);
-void protocore_telemetry_totalizer_reset(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Telemetry.window_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const TelemetryNs Telemetry __attribute__((unused)) = {
-    .window_init = protocore_telemetry_window_init,
-    .window_push = protocore_telemetry_window_push,
-    .window_count = protocore_telemetry_window_count,
-    .window_mean = protocore_telemetry_window_mean,
-    .window_variance = protocore_telemetry_window_variance,
-    .window_stddev = protocore_telemetry_window_stddev,
-    .window_min = protocore_telemetry_window_min,
-    .window_max = protocore_telemetry_window_max,
-    .rate_init = protocore_telemetry_rate_init,
-    .rate_update = protocore_telemetry_rate_update,
-    .totalizer_init = protocore_telemetry_totalizer_init,
-    .totalizer_add = protocore_telemetry_totalizer_add,
-    .totalizer_total = protocore_telemetry_totalizer_total,
-    .totalizer_reset = protocore_telemetry_totalizer_reset,
-};
+/** @brief The one symbol this module exports. */
+extern TelemetryNs Telemetry;
 
 PROTOCORE_END_DECLS
 

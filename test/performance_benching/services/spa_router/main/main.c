@@ -31,18 +31,18 @@ void dbench_run(void)
         static char out[128];
         DBENCH_OP("protocore_ui_stream (3 fragments)", 100000, {
             protocore_ui_stream s;
-            SpaRouterV.ui_stream_begin_args.s = &s;
-            SpaRouterV.ui_stream_begin_args.frags = frags;
-            SpaRouterV.ui_stream_begin_args.count = 3;
-            SpaRouterV.ui_stream_begin_args.ctx = NULL;
+            SpaRouter.ui_stream_begin_args.s = &s;
+            SpaRouter.ui_stream_begin_args.frags = frags;
+            SpaRouter.ui_stream_begin_args.count = 3;
+            SpaRouter.ui_stream_begin_args.ctx = NULL;
             SpaRouter.ui_stream_begin(spa_router_work);
             while (!protocore_ui_stream_done(&s))
             {
-                SpaRouterV.ui_stream_next_args.s = &s;
-                SpaRouterV.ui_stream_next_args.out = out;
-                SpaRouterV.ui_stream_next_args.cap = sizeof(out);
+                SpaRouter.ui_stream_next_args.s = &s;
+                SpaRouter.ui_stream_next_args.out = out;
+                SpaRouter.ui_stream_next_args.cap = sizeof(out);
                 SpaRouter.ui_stream_next(spa_router_work);
-                sink += SpaRouterV.n;
+                sink += SpaRouter.n;
             }
         });
         (void)sink;

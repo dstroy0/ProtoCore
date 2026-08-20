@@ -46,21 +46,21 @@ void dbench_run(void)
 
         // The arguments are set outside the timed expression and the entry is called inside it, so
         // what is timed is one call and not the staging that precedes it.
-        Ldc1614V.data_args.msb_reg = msb_reg;
-        Ldc1614V.data_args.lsb_reg = lsb_reg;
-        DBENCH_OP("Ldc1614.data (28b combine)", 200000, (Ldc1614.data(w), sink32 += Ldc1614V.value));
-        Ldc1614V.error_args.msb_reg = msb_reg;
-        DBENCH_OP("Ldc1614.error (flag nibble)", 200000, (Ldc1614.error(w), sink8 += Ldc1614V.flags));
-        Ldc1614V.sensor_freq_hz_args.data28 = data28;
-        Ldc1614V.sensor_freq_hz_args.fref_hz = fref_hz;
-        DBENCH_OP("Ldc1614.sensor_freq_hz", 200000, (Ldc1614.sensor_freq_hz(w), sink64 += Ldc1614V.hz));
+        Ldc1614.data_args.msb_reg = msb_reg;
+        Ldc1614.data_args.lsb_reg = lsb_reg;
+        DBENCH_OP("Ldc1614.data (28b combine)", 200000, (Ldc1614.data(w), sink32 += Ldc1614.value));
+        Ldc1614.error_args.msb_reg = msb_reg;
+        DBENCH_OP("Ldc1614.error (flag nibble)", 200000, (Ldc1614.error(w), sink8 += Ldc1614.flags));
+        Ldc1614.sensor_freq_hz_args.data28 = data28;
+        Ldc1614.sensor_freq_hz_args.fref_hz = fref_hz;
+        DBENCH_OP("Ldc1614.sensor_freq_hz", 200000, (Ldc1614.sensor_freq_hz(w), sink64 += Ldc1614.hz));
         // Config builder emits 21 bytes (7 register writes * 3 bytes) - benched as a bulk producer.
-        Ldc1614V.build_config_args.buf = cfg;
-        Ldc1614V.build_config_args.cap = sizeof(cfg);
-        Ldc1614V.build_config_args.rcount = 0xFFFF;
-        Ldc1614V.build_config_args.settlecount = 0x0400;
+        Ldc1614.build_config_args.buf = cfg;
+        Ldc1614.build_config_args.cap = sizeof(cfg);
+        Ldc1614.build_config_args.rcount = 0xFFFF;
+        Ldc1614.build_config_args.settlecount = 0x0400;
         DBENCH_BULK("Ldc1614.build_config", 100000, LDC1614_CONFIG_MAX,
-                    (Ldc1614.build_config(w), sinksz += Ldc1614V.n));
+                    (Ldc1614.build_config(w), sinksz += Ldc1614.n));
 
         (void)sink32;
         (void)sink8;

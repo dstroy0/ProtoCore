@@ -291,36 +291,35 @@ static proto_bool aesccm_open_record(uint8_t *restrict work, const uint8_t *key,
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_aesccm_seal(uint8_t *restrict work)
+static void aesccm_seal(uint8_t *restrict work)
 {
-    AesCcmV.ok = PROTO_FALSE;
-    if (!AesCcmV.seal_args.key || !AesCcmV.seal_args.nonce || !AesCcmV.seal_args.ct_out || !AesCcmV.seal_args.tag_out ||
-        (AesCcmV.seal_args.key_len != 16 && AesCcmV.seal_args.key_len != 32))
+    AesCcm.ok = PROTO_FALSE;
+    if (!AesCcm.seal_args.key || !AesCcm.seal_args.nonce || !AesCcm.seal_args.ct_out || !AesCcm.seal_args.tag_out ||
+        (AesCcm.seal_args.key_len != 16 && AesCcm.seal_args.key_len != 32))
     {
         return;
     }
-    AesCcmV.ok = aesccm_seal_record(work, AesCcmV.seal_args.key, AesCcmV.seal_args.key_len, AesCcmV.seal_args.nonce,
-                                    AesCcmV.seal_args.nonce_len, AesCcmV.seal_args.aad, AesCcmV.seal_args.aad_len,
-                                    AesCcmV.seal_args.pt, AesCcmV.seal_args.pt_len, AesCcmV.seal_args.ct_out,
-                                    AesCcmV.seal_args.tag_out);
+    AesCcm.ok = aesccm_seal_record(work, AesCcm.seal_args.key, AesCcm.seal_args.key_len, AesCcm.seal_args.nonce,
+                                   AesCcm.seal_args.nonce_len, AesCcm.seal_args.aad, AesCcm.seal_args.aad_len,
+                                   AesCcm.seal_args.pt, AesCcm.seal_args.pt_len, AesCcm.seal_args.ct_out,
+                                   AesCcm.seal_args.tag_out);
 }
 
-void protocore_aesccm_open(uint8_t *restrict work)
+static void aesccm_open(uint8_t *restrict work)
 {
-    AesCcmV.ok = PROTO_FALSE;
-    if (!AesCcmV.open_args.key || !AesCcmV.open_args.nonce || !AesCcmV.open_args.ct || !AesCcmV.open_args.out ||
-        !AesCcmV.open_args.tag || (AesCcmV.open_args.key_len != 16 && AesCcmV.open_args.key_len != 32))
+    AesCcm.ok = PROTO_FALSE;
+    if (!AesCcm.open_args.key || !AesCcm.open_args.nonce || !AesCcm.open_args.ct || !AesCcm.open_args.out ||
+        !AesCcm.open_args.tag || (AesCcm.open_args.key_len != 16 && AesCcm.open_args.key_len != 32))
     {
         return;
     }
-    AesCcmV.ok = aesccm_open_record(work, AesCcmV.open_args.key, AesCcmV.open_args.key_len, AesCcmV.open_args.nonce,
-                                    AesCcmV.open_args.nonce_len, AesCcmV.open_args.aad, AesCcmV.open_args.aad_len,
-                                    AesCcmV.open_args.ct, AesCcmV.open_args.ct_len, AesCcmV.open_args.tag,
-                                    AesCcmV.open_args.out);
+    AesCcm.ok =
+        aesccm_open_record(work, AesCcm.open_args.key, AesCcm.open_args.key_len, AesCcm.open_args.nonce,
+                           AesCcm.open_args.nonce_len, AesCcm.open_args.aad, AesCcm.open_args.aad_len,
+                           AesCcm.open_args.ct, AesCcm.open_args.ct_len, AesCcm.open_args.tag, AesCcm.open_args.out);
 }
 
-/** @brief The operands and the outcome. */
-AesCcmVars AesCcmV;
+AesCcmNs AesCcm = {.seal = aesccm_seal, .open = aesccm_open};
 
 PROTOCORE_END_DECLS
 

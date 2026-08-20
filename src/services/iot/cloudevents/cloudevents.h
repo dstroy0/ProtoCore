@@ -80,6 +80,7 @@ typedef struct
     const char *subject;         ///< OPTIONAL `subject`: non-empty when present; NULL or "" omits it
     const char *datacontenttype; ///< OPTIONAL `datacontenttype`: an RFC 2046 media type; NULL or "" omits it
 } CloudEventAttrArgs;
+
 /**
  * @brief The payload, in the two shapes a JSON serializer takes it in (JSON Event Format 1.0.2 sec 3.1.1).
  *
@@ -91,17 +92,20 @@ typedef struct
     const char *json; ///< `data` as a pre-formatted JSON value, emitted verbatim
     const char *str;  ///< `data` as a plain string, emitted as a JSON string with its escapes
 } CloudEventDataArgs;
+
 /** @brief Where a structured-mode message body lands (HTTP Protocol Binding 1.0.2 sec 3.2). */
 typedef struct
 {
     char *out;  ///< the buffer the JSON object is written into
     size_t cap; ///< octets that buffer holds, the NUL included
 } CloudEventEnvelopeArgs;
+
 /** @brief The inbound message a binary-mode read parses (HTTP Protocol Binding 1.0.2 sec 3.1). */
 typedef struct
 {
     const HttpReq *req; ///< the parsed request whose `ce-` prefixed headers carry the attributes
 } CloudEventMessageArgs;
+
 /**
  * @brief The CloudEvents envelope: structured-mode build, binary-mode read.
  *
@@ -141,33 +145,16 @@ typedef struct
     CloudEventDataArgs data;         ///< what it carries
     CloudEventEnvelopeArgs envelope; ///< where a structured build writes
     CloudEventMessageArgs msg;       ///< what a binary read parses
+
     proto_bool ok;
     size_t n;
-} CloudEventsVars;
 
-/** @brief The operands and the outcome. */
-extern CloudEventsVars CloudEventsV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const build_structured)(uint8_t *restrict work);
     void (*const read_binary)(uint8_t *restrict work);
 } CloudEventsNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in CloudEventsV or a region of the borrow at a fixed offset.
-void protocore_cloudevents_build_structured(uint8_t *restrict work);
-void protocore_cloudevents_read_binary(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `CloudEvents.build_structured(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const CloudEventsNs CloudEvents __attribute__((unused)) = {
-    .build_structured = protocore_cloudevents_build_structured,
-    .read_binary = protocore_cloudevents_read_binary,
-};
+/** @brief The one symbol this module exports. */
+extern CloudEventsNs CloudEvents;
 
 PROTOCORE_END_DECLS
 

@@ -76,6 +76,7 @@ typedef struct
     proto_bool has_time;       ///< a Time is present
     double time;               ///< Time (t)
 } SenmlRecord;
+
 /**
  * @brief One resolved SenML Record (RFC 8428 sec 4.6): no Base Fields left and no relative Time.
  */
@@ -90,18 +91,21 @@ typedef struct
     proto_bool has_time;                          ///< a Time is present
     double time;                                  ///< Time (t): the Base Time added to the Time
 } SenmlResolved;
+
 /** @brief RFC 8428 sec 3: the Pack a call reads, one array of Records. */
 typedef struct
 {
     const SenmlRecord *records; ///< the Records the array holds
     size_t count;               ///< how many of them
 } SenmlPackArgs;
+
 /** @brief RFC 8428 sec 5: where the JSON representation (application/senml+json) lands. */
 typedef struct
 {
     char *buf;  ///< the buffer the text Pack is written into
     size_t cap; ///< how much room it has, the NUL included
 } SenmlJsonArgs;
+
 /** @brief RFC 8428 sec 6: the binary encoding a Pack takes, and where it lands. */
 typedef struct
 {
@@ -109,12 +113,14 @@ typedef struct
     uint8_t *buf;                 ///< the buffer the encoded Pack is written into
     size_t cap;                   ///< how much room it has
 } SenmlBinaryArgs;
+
 /** @brief RFC 8428 sec 4.6: where the resolved Records land. */
 typedef struct
 {
     SenmlResolved *out; ///< the array a resolve fills
     size_t max;         ///< how many Records that array holds
 } SenmlResolvedArgs;
+
 /**
  * @brief The SenML Pack builders and the Record resolver.
  *
@@ -142,36 +148,17 @@ typedef struct
     SenmlJsonArgs json;         ///< where the text Pack lands
     SenmlBinaryArgs binary;     ///< which encoding, and where the encoded Pack lands
     SenmlResolvedArgs resolved; ///< where the resolved Records land
+
     proto_bool ok;
     size_t n;
-} SenmlVars;
 
-/** @brief The operands and the outcome. */
-extern SenmlVars SenmlV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const json_build)(uint8_t *restrict work);
     void (*const binary_build)(uint8_t *restrict work);
     void (*const resolve)(uint8_t *restrict work);
 } SenmlNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in SenmlV or a region of the borrow at a fixed offset.
-void protocore_senml_json_build(uint8_t *restrict work);
-void protocore_senml_binary_build(uint8_t *restrict work);
-void protocore_senml_resolve(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Senml.json_build(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const SenmlNs Senml __attribute__((unused)) = {
-    .json_build = protocore_senml_json_build,
-    .binary_build = protocore_senml_binary_build,
-    .resolve = protocore_senml_resolve,
-};
+/** @brief The one symbol this module exports. */
+extern SenmlNs Senml;
 
 PROTOCORE_END_DECLS
 

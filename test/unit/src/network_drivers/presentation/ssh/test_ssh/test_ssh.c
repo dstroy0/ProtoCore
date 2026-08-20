@@ -21,48 +21,48 @@ void tearDown(void)
 // ssh_conn_slot: the two branches
 // ---------------------------------------------------------------------------
 
-void test_every_slot_in_range_has_storage(void)
+ void test_every_slot_in_range_has_storage(void)
 {
     for (uint8_t i = 0; i < MAX_SSH_CONNS; i++)
     {
-        SshV.conn_slot_args.i = i;
+        Ssh.conn_slot_args.i = i;
         Ssh.conn_slot(protocore_ssh_span());
-        TEST_ASSERT_NOT_NULL(SshV.ptr);
+        TEST_ASSERT_NOT_NULL(Ssh.ptr);
     }
 }
 
 // Out of range is null rather than a wild pointer, so a bad slot index fails closed.
-void test_slot_past_the_pool_is_null(void)
+ void test_slot_past_the_pool_is_null(void)
 {
-    SshV.conn_slot_args.i = MAX_SSH_CONNS;
+    Ssh.conn_slot_args.i = MAX_SSH_CONNS;
     Ssh.conn_slot(protocore_ssh_span());
-    TEST_ASSERT_NULL(SshV.ptr);
-    SshV.conn_slot_args.i = (uint8_t)(MAX_SSH_CONNS + 1u);
+    TEST_ASSERT_NULL(Ssh.ptr);
+    Ssh.conn_slot_args.i = (uint8_t)(MAX_SSH_CONNS + 1u);
     Ssh.conn_slot(protocore_ssh_span());
-    TEST_ASSERT_NULL(SshV.ptr);
-    SshV.conn_slot_args.i = 0xFFu;
+    TEST_ASSERT_NULL(Ssh.ptr);
+    Ssh.conn_slot_args.i = 0xFFu;
     Ssh.conn_slot(protocore_ssh_span());
-    TEST_ASSERT_NULL(SshV.ptr);
+    TEST_ASSERT_NULL(Ssh.ptr);
 }
 
 // The same slot always answers with the same base: the storage is fixed at build time, not handed
 // out from a pool that could move it between calls.
-void test_the_same_slot_answers_the_same_base(void)
+ void test_the_same_slot_answers_the_same_base(void)
 {
     for (uint8_t i = 0; i < MAX_SSH_CONNS; i++)
     {
-        SshV.conn_slot_args.i = i;
+        Ssh.conn_slot_args.i = i;
         Ssh.conn_slot(protocore_ssh_span());
-        const uint8_t *first = SshV.ptr;
-        SshV.conn_slot_args.i = i;
+        const uint8_t *first = Ssh.ptr;
+        Ssh.conn_slot_args.i = i;
         Ssh.conn_slot(protocore_ssh_span());
-        TEST_ASSERT_EQUAL_PTR(first, SshV.ptr);
+        TEST_ASSERT_EQUAL_PTR(first, Ssh.ptr);
     }
 }
 
 // Distinct slots are distinct spans, a full borrow apart, so one connection cannot read or write
 // another's bytes by running off the end of its own.
-void test_slots_are_distinct_and_one_borrow_apart(void)
+ void test_slots_are_distinct_and_one_borrow_apart(void)
 {
     if (MAX_SSH_CONNS < 2u)
     {
@@ -70,30 +70,30 @@ void test_slots_are_distinct_and_one_borrow_apart(void)
     }
     for (uint8_t i = 1; i < MAX_SSH_CONNS; i++)
     {
-        SshV.conn_slot_args.i = (uint8_t)(i - 1u);
+        Ssh.conn_slot_args.i = (uint8_t)(i - 1u);
         Ssh.conn_slot(protocore_ssh_span());
-        const uint8_t *prev = SshV.ptr;
-        SshV.conn_slot_args.i = i;
+        const uint8_t *prev = Ssh.ptr;
+        Ssh.conn_slot_args.i = i;
         Ssh.conn_slot(protocore_ssh_span());
-        const uint8_t *cur = SshV.ptr;
+        const uint8_t *cur = Ssh.ptr;
         TEST_ASSERT_NOT_EQUAL(prev, cur);
         TEST_ASSERT_EQUAL_UINT32((uint32_t)SSH_SLOT_BORROW, (uint32_t)(size_t)(cur - prev));
     }
 }
 
 // Writing a slot end to end touches nothing outside it.
-void test_writing_a_whole_slot_leaves_its_neighbour_alone(void)
+ void test_writing_a_whole_slot_leaves_its_neighbour_alone(void)
 {
     if (MAX_SSH_CONNS < 2u)
     {
         TEST_IGNORE_MESSAGE("pool holds one slot; nothing to separate");
     }
-    SshV.conn_slot_args.i = 0;
+    Ssh.conn_slot_args.i = 0;
     Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *a = SshV.ptr;
-    SshV.conn_slot_args.i = 1;
+    uint8_t *a = Ssh.ptr;
+    Ssh.conn_slot_args.i = 1;
     Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *b = SshV.ptr;
+    uint8_t *b = Ssh.ptr;
 
     for (size_t k = 0; k < SSH_SLOT_BORROW; k++)
     {
@@ -113,7 +113,7 @@ void test_writing_a_whole_slot_leaves_its_neighbour_alone(void)
 // The slot map: every region inside the borrow
 // ---------------------------------------------------------------------------
 
-void test_every_region_ends_within_the_borrow(void)
+ void test_every_region_ends_within_the_borrow(void)
 {
     TEST_ASSERT_TRUE(SSH_OFF_WIRE + SSH_WIRE_CAP <= SSH_SLOT_BORROW);
     TEST_ASSERT_TRUE(SSH_OFF_V_C < SSH_SLOT_BORROW);
@@ -136,7 +136,7 @@ void test_every_region_ends_within_the_borrow(void)
 
 // The map is laid out in one direction, each offset starting where the one before it ended, so no
 // two can alias.
-void test_offsets_are_laid_out_in_ascending_order(void)
+ void test_offsets_are_laid_out_in_ascending_order(void)
 {
     // wire, then session: what outlives a single key exchange.
     TEST_ASSERT_TRUE(SSH_OFF_WIRE < SSH_OFF_V_C);
@@ -164,7 +164,7 @@ void test_offsets_are_laid_out_in_ascending_order(void)
 
 // The five regions partition the slot: each begins where the last ended, and together they are the
 // whole span. A region that grew without its neighbours moving would break one of these.
-void test_regions_partition_the_slot(void)
+ void test_regions_partition_the_slot(void)
 {
     TEST_ASSERT_EQUAL_UINT32((uint32_t)SSH_OFF_V_C, (uint32_t)(SSH_OFF_WIRE + SSH_WIRE_CAP));
     TEST_ASSERT_EQUAL_UINT32((uint32_t)SSH_OFF_IDENT, (uint32_t)SSH_SESSION_END);
@@ -177,7 +177,7 @@ void test_regions_partition_the_slot(void)
 
 // The regions that only live for one exchange or one message sit together, so what a per-worker
 // copy would cost is one span rather than a scatter.
-void test_the_transient_regions_are_contiguous(void)
+ void test_the_transient_regions_are_contiguous(void)
 {
     TEST_ASSERT_EQUAL_UINT32((uint32_t)(SSH_EXCHANGE_SIZE + SSH_PACKET_SIZE),
                              (uint32_t)(SSH_PACKET_END - SSH_OFF_IDENT));
@@ -185,7 +185,7 @@ void test_the_transient_regions_are_contiguous(void)
 
 // The wire is the first region. An overrun of the buffer bytes arrive in therefore runs forward
 // through the rest of the wire, not backwards into the key epochs.
-void test_the_wire_is_first_and_key_material_is_behind_it(void)
+ void test_the_wire_is_first_and_key_material_is_behind_it(void)
 {
     TEST_ASSERT_EQUAL_UINT32(0u, (uint32_t)SSH_OFF_WIRE);
     TEST_ASSERT_TRUE(SSH_OFF_WIRE + SSH_WIRE_CAP <= SSH_OFF_EPOCH_0);
@@ -194,7 +194,7 @@ void test_the_wire_is_first_and_key_material_is_behind_it(void)
 
 // The two key epochs are the same size and adjacent, so selecting one is an index times a stride
 // rather than a table.
-void test_the_two_key_epochs_are_one_stride_apart(void)
+ void test_the_two_key_epochs_are_one_stride_apart(void)
 {
     TEST_ASSERT_EQUAL_UINT32((uint32_t)SSH_EPOCH_STRIDE, (uint32_t)(SSH_OFF_EPOCH_1 - SSH_OFF_EPOCH_0));
     TEST_ASSERT_TRUE(SSH_OFF_EPOCH_1 + SSH_EPOCH_STRIDE <= SSH_SLOT_BORROW);
@@ -202,7 +202,7 @@ void test_the_two_key_epochs_are_one_stride_apart(void)
 
 // RFC 4253 sec 6.1: "All implementations MUST be able to process packets with an uncompressed
 // payload length of 32768 bytes or less". The reassembly region is sized to hold one.
-void test_sec6_1_reassembly_region_holds_a_full_payload(void)
+ void test_sec6_1_reassembly_region_holds_a_full_payload(void)
 {
     TEST_ASSERT_TRUE(SSH_RFC_MAX_PAYLOAD >= 32768u);
     TEST_ASSERT_TRUE(SSH_OFF_RX_ASM + SSH_RFC_MAX_PAYLOAD <= SSH_SLOT_BORROW);
@@ -210,8 +210,9 @@ void test_sec6_1_reassembly_region_holds_a_full_payload(void)
 
 // The wire holds two whole packets, so a reply framed while one is still draining has somewhere to
 // go, and it is a power of two so the index arithmetic is a mask.
-void test_the_wire_holds_two_packets_and_is_a_power_of_two(void)
+ void test_the_wire_holds_two_packets_and_is_a_power_of_two(void)
 {
     TEST_ASSERT_TRUE(SSH_WIRE_CAP >= 2u * SSH_RFC_MAX_PAYLOAD);
     TEST_ASSERT_EQUAL_UINT32(0u, (uint32_t)(SSH_WIRE_CAP & (SSH_WIRE_CAP - 1u)));
 }
+

@@ -15,213 +15,213 @@ static uint8_t snmp_ber_work[16]; // the borrow an entry takes; SnmpBer never re
 static size_t snmp_dispatch_pdu(const uint8_t *req, size_t req_len, proto_bool allow_write, proto_bool v2c,
                                 uint8_t *out, size_t out_cap)
 {
-    SnmpAgentV.pdu.req = req;
-    SnmpAgentV.pdu.req_len = req_len;
-    SnmpAgentV.pdu.allow_write = allow_write;
-    SnmpAgentV.pdu.v2c = v2c;
-    SnmpAgentV.pdu.out = out;
-    SnmpAgentV.pdu.out_cap = out_cap;
+    SnmpAgent.pdu.req = req;
+    SnmpAgent.pdu.req_len = req_len;
+    SnmpAgent.pdu.allow_write = allow_write;
+    SnmpAgent.pdu.v2c = v2c;
+    SnmpAgent.pdu.out = out;
+    SnmpAgent.pdu.out_cap = out_cap;
     SnmpAgent.dispatch_pdu(protocore_snmp_agent_span());
-    return SnmpAgentV.n;
+    return SnmpAgent.n;
 }
 
 // The BER codec, reached through its namespace. The cursor stays the caller's: several encodings
 // are open at once here, so each call names the one it acts on.
 static void ber_enc_init(BerEnc *e, uint8_t *buf, size_t cap)
 {
-    SnmpBerV.enc = e;
-    SnmpBerV.buf.out = buf;
-    SnmpBerV.buf.cap = cap;
+    SnmpBer.enc = e;
+    SnmpBer.buf.out = buf;
+    SnmpBer.buf.cap = cap;
     SnmpBer.enc_init(snmp_ber_work);
 }
 
 static void ber_dec_init(BerDec *d, const uint8_t *buf, size_t len)
 {
-    SnmpBerV.dec = d;
-    SnmpBerV.buf.in = buf;
-    SnmpBerV.buf.cap = len;
+    SnmpBer.dec = d;
+    SnmpBer.buf.in = buf;
+    SnmpBer.buf.cap = len;
     SnmpBer.dec_init(snmp_ber_work);
 }
 
 static size_t ber_seq_begin(BerEnc *e, uint8_t tag)
 {
-    SnmpBerV.enc = e;
-    SnmpBerV.tlv.tag = tag;
+    SnmpBer.enc = e;
+    SnmpBer.tlv.tag = tag;
     SnmpBer.seq_begin(snmp_ber_work);
-    return SnmpBerV.tlv.token;
+    return SnmpBer.tlv.token;
 }
 
 static void ber_seq_end(BerEnc *e, size_t token)
 {
-    SnmpBerV.enc = e;
-    SnmpBerV.tlv.token = token;
+    SnmpBer.enc = e;
+    SnmpBer.tlv.token = token;
     SnmpBer.seq_end(snmp_ber_work);
 }
 
 static void ber_put_octet_string(BerEnc *e, uint8_t tag, const uint8_t *bytes, size_t len)
 {
-    SnmpBerV.enc = e;
-    SnmpBerV.tlv.tag = tag;
-    SnmpBerV.tlv.bytes = bytes;
-    SnmpBerV.tlv.len = len;
+    SnmpBer.enc = e;
+    SnmpBer.tlv.tag = tag;
+    SnmpBer.tlv.bytes = bytes;
+    SnmpBer.tlv.len = len;
     SnmpBer.put_octet_string(snmp_ber_work);
 }
 
 static void ber_put_null(BerEnc *e)
 {
-    SnmpBerV.enc = e;
+    SnmpBer.enc = e;
     SnmpBer.put_null(snmp_ber_work);
 }
 
 static void ber_put_oid(BerEnc *e, const uint32_t *arcs, size_t arc_count)
 {
-    SnmpBerV.enc = e;
-    SnmpBerV.tlv.arcs = arcs;
-    SnmpBerV.tlv.arc_count = arc_count;
+    SnmpBer.enc = e;
+    SnmpBer.tlv.arcs = arcs;
+    SnmpBer.tlv.arc_count = arc_count;
     SnmpBer.put_oid(snmp_ber_work);
 }
 
 static void ber_put_raw(BerEnc *e, const uint8_t *bytes, size_t len)
 {
-    SnmpBerV.enc = e;
-    SnmpBerV.tlv.bytes = bytes;
-    SnmpBerV.tlv.len = len;
+    SnmpBer.enc = e;
+    SnmpBer.tlv.bytes = bytes;
+    SnmpBer.tlv.len = len;
     SnmpBer.put_raw(snmp_ber_work);
 }
 
 static void ber_put_uint(BerEnc *e, uint8_t tag, uint32_t uval)
 {
-    SnmpBerV.enc = e;
-    SnmpBerV.tlv.tag = tag;
-    SnmpBerV.tlv.uval = uval;
+    SnmpBer.enc = e;
+    SnmpBer.tlv.tag = tag;
+    SnmpBer.tlv.uval = uval;
     SnmpBer.put_uint(snmp_ber_work);
 }
 
 static void ber_put_integer(BerEnc *e, long ival)
 {
-    SnmpBerV.enc = e;
-    SnmpBerV.tlv.ival = ival;
+    SnmpBer.enc = e;
+    SnmpBer.tlv.ival = ival;
     SnmpBer.put_integer(snmp_ber_work);
 }
 
 static proto_bool ber_read_header(BerDec *d, uint8_t *tag, size_t *vlen)
 {
-    SnmpBerV.dec = d;
+    SnmpBer.dec = d;
     SnmpBer.read_header(snmp_ber_work);
     if (tag)
     {
-        *tag = SnmpBerV.tag;
+        *tag = SnmpBer.tag;
     }
     if (vlen)
     {
-        *vlen = SnmpBerV.vlen;
+        *vlen = SnmpBer.vlen;
     }
-    return SnmpBerV.ok;
+    return SnmpBer.ok;
 }
 
 static proto_bool ber_read_integer(BerDec *d, long *out)
 {
-    SnmpBerV.dec = d;
+    SnmpBer.dec = d;
     SnmpBer.read_integer(snmp_ber_work);
     if (out)
     {
-        *out = SnmpBerV.ival;
+        *out = SnmpBer.ival;
     }
-    return SnmpBerV.ok;
+    return SnmpBer.ok;
 }
 
 static proto_bool ber_read_oid(BerDec *d, uint32_t *arc_out, size_t arc_cap, size_t *count)
 {
-    SnmpBerV.dec = d;
-    SnmpBerV.read_args.arc_out = arc_out;
-    SnmpBerV.read_args.arc_cap = arc_cap;
+    SnmpBer.dec = d;
+    SnmpBer.read_args.arc_out = arc_out;
+    SnmpBer.read_args.arc_cap = arc_cap;
     SnmpBer.read_oid(snmp_ber_work);
     if (count)
     {
-        *count = SnmpBerV.n;
+        *count = SnmpBer.n;
     }
-    return SnmpBerV.ok;
+    return SnmpBer.ok;
 }
 
 static proto_bool ber_skip(BerDec *d, size_t len)
 {
-    SnmpBerV.dec = d;
-    SnmpBerV.read_args.skip = len;
-    SnmpBerV.skip(snmp_ber_work);
-    return SnmpBerV.ok;
+    SnmpBer.dec = d;
+    SnmpBer.read_args.skip = len;
+    SnmpBer.skip(snmp_ber_work);
+    return SnmpBer.ok;
 }
 
 // The SNMP agent, reached through its namespace: set the members a call takes, invoke it, read the
 // outcome off the same handle.
 static void snmp_init(const char *ro)
 {
-    SnmpAgentV.community.ro = ro;
+    SnmpAgent.community.ro = ro;
     SnmpAgent.init(protocore_snmp_agent_span());
 }
 
 static void snmp_set_rw_community(const char *rw)
 {
-    SnmpAgentV.community.rw = rw;
+    SnmpAgent.community.rw = rw;
     SnmpAgent.set_rw_community(protocore_snmp_agent_span());
 }
 
 static void snmp_set_system(const char *descr, const char *contact, const char *name, const char *location,
                             long services)
 {
-    SnmpAgentV.system.descr = descr;
-    SnmpAgentV.system.contact = contact;
-    SnmpAgentV.system.name = name;
-    SnmpAgentV.system.location = location;
-    SnmpAgentV.system.services = services;
+    SnmpAgent.system.descr = descr;
+    SnmpAgent.system.contact = contact;
+    SnmpAgent.system.name = name;
+    SnmpAgent.system.location = location;
+    SnmpAgent.system.services = services;
     SnmpAgent.set_system(protocore_snmp_agent_span());
 }
 
 static proto_bool snmp_add_integer(const uint32_t *oid, size_t oid_len, long ival, SnmpSetFn setter)
 {
-    SnmpAgentV.object.oid = oid;
-    SnmpAgentV.object.oid_len = oid_len;
-    SnmpAgentV.object.ival = ival;
-    SnmpAgentV.object.setter = setter;
+    SnmpAgent.object.oid = oid;
+    SnmpAgent.object.oid_len = oid_len;
+    SnmpAgent.object.ival = ival;
+    SnmpAgent.object.setter = setter;
     SnmpAgent.add_integer(protocore_snmp_agent_span());
-    return SnmpAgentV.ok;
+    return SnmpAgent.ok;
 }
 
 static proto_bool snmp_add_string(const uint32_t *oid, size_t oid_len, const char *text, SnmpSetFn setter)
 {
-    SnmpAgentV.object.oid = oid;
-    SnmpAgentV.object.oid_len = oid_len;
-    SnmpAgentV.object.text = text;
-    SnmpAgentV.object.setter = setter;
+    SnmpAgent.object.oid = oid;
+    SnmpAgent.object.oid_len = oid_len;
+    SnmpAgent.object.text = text;
+    SnmpAgent.object.setter = setter;
     SnmpAgent.add_string(protocore_snmp_agent_span());
-    return SnmpAgentV.ok;
+    return SnmpAgent.ok;
 }
 
 static proto_bool snmp_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_t type, SnmpGetFn getter)
 {
-    SnmpAgentV.object.oid = oid;
-    SnmpAgentV.object.oid_len = oid_len;
-    SnmpAgentV.object.type = type;
-    SnmpAgentV.object.getter = getter;
-    SnmpAgentV.object.setter = NULL;
+    SnmpAgent.object.oid = oid;
+    SnmpAgent.object.oid_len = oid_len;
+    SnmpAgent.object.type = type;
+    SnmpAgent.object.getter = getter;
+    SnmpAgent.object.setter = NULL;
     SnmpAgent.add_dynamic(protocore_snmp_agent_span());
-    return SnmpAgentV.ok;
+    return SnmpAgent.ok;
 }
 
 static proto_bool snmp_listen(uint16_t port)
 {
-    SnmpAgentV.port = port;
+    SnmpAgent.port = port;
     SnmpAgent.listen(protocore_snmp_agent_span());
-    return SnmpAgentV.ok;
+    return SnmpAgent.ok;
 }
 
 static size_t snmp_process(const uint8_t *req, size_t req_len, uint8_t *resp, size_t resp_cap)
 {
-    SnmpAgentV.msg.req = req;
-    SnmpAgentV.msg.req_len = req_len;
-    SnmpAgentV.msg.resp = resp;
-    SnmpAgentV.msg.resp_cap = resp_cap;
+    SnmpAgent.msg.req = req;
+    SnmpAgent.msg.req_len = req_len;
+    SnmpAgent.msg.resp = resp;
+    SnmpAgent.msg.resp_cap = resp_cap;
     SnmpAgent.process(protocore_snmp_agent_span());
-    return SnmpAgentV.n;
+    return SnmpAgent.n;
 }
 
 static const uint32_t OID_SYSDESCR[] = {1, 3, 6, 1, 2, 1, 1, 1, 0};
@@ -280,27 +280,27 @@ static size_t build_req(uint8_t *buf, size_t cap, long version, const char *comm
     BerEnc e;
     ber_enc_init(&e, buf, cap);
     size_t msg = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = version;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = version;
     SnmpBer.put_integer(snmp_ber_work);
     ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)comm, strlen(comm));
     size_t pdus = ber_seq_begin(&e, pdu);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = reqid;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = reqid;
     SnmpBer.put_integer(snmp_ber_work);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = f2;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = f2;
     SnmpBer.put_integer(snmp_ber_work);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = f3;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = f3;
     SnmpBer.put_integer(snmp_ber_work);
     size_t vbl = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     size_t vb = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     ber_put_oid(&e, oid, oidn);
     if (setval && setval->type == (uint8_t)SNMP_TAG_BER_INTEGER)
     {
-        SnmpBerV.enc = &e;
-        SnmpBerV.tlv.ival = setval->ival;
+        SnmpBer.enc = &e;
+        SnmpBer.tlv.ival = setval->ival;
         SnmpBer.put_integer(snmp_ber_work);
     }
     else if (setval && setval->type == (uint8_t)SNMP_TAG_BER_OCTET_STRING)
@@ -334,14 +334,14 @@ static size_t build_pdu(uint8_t *buf, size_t cap, int knob)
     BerEnc e;
     ber_enc_init(&e, buf, cap);
     size_t pdus = ber_seq_begin(&e, (uint8_t)SNMP_TAG_SNMP_PDU_GET);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = 42;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 42;
     SnmpBer.put_integer(snmp_ber_work);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = 0;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 0;
     SnmpBer.put_integer(snmp_ber_work);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = 0;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 0;
     SnmpBer.put_integer(snmp_ber_work);
     if (knob == VB_BAD_VBL_TAG)
     {
@@ -367,8 +367,8 @@ static size_t build_pdu(uint8_t *buf, size_t cap, int knob)
         else if (knob == VB_BAD_OID)
         {
             size_t vb = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-            SnmpBerV.enc = &e;
-            SnmpBerV.tlv.ival = 5;
+            SnmpBer.enc = &e;
+            SnmpBer.tlv.ival = 5;
             SnmpBer.put_integer(snmp_ber_work);
             ber_put_null(&e);
             ber_seq_end(&e, vb);
@@ -704,8 +704,8 @@ void test_v3_message_dropped()
     BerEnc e;
     ber_enc_init(&e, req, sizeof(req));
     size_t msg = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = (int)SNMP_V3;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = (int)SNMP_V3;
     SnmpBer.put_integer(snmp_ber_work);
     ber_seq_end(&e, msg);
     uint8_t resp[64];
@@ -812,14 +812,14 @@ static size_t build_pdu_with_value(uint8_t *buf, size_t cap, uint8_t pdu_tag, in
     BerEnc e;
     ber_enc_init(&e, buf, cap);
     size_t p = ber_seq_begin(&e, pdu_tag);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = 1;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 1;
     SnmpBer.put_integer(snmp_ber_work);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = 0;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 0;
     SnmpBer.put_integer(snmp_ber_work);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = 0;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 0;
     SnmpBer.put_integer(snmp_ber_work);
     size_t vbl = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     size_t vb = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
@@ -941,9 +941,9 @@ static void inject(uint16_t port, const char *src_ip, uint16_t src_port, const u
 
 static void reset_udp(void)
 {
-    UdpListenerV.port = 161;
+    UdpListener.port = 161;
     UdpListener.close(protocore_udp_listener_span());
-    (void)UdpListenerV.ok;
+    (void)UdpListener.ok;
     protocore_net_host_udp_reset();
 }
 
@@ -1170,19 +1170,19 @@ static size_t build_getbulk_multi(uint8_t *buf, size_t cap, long reqid, long non
     BerEnc e;
     ber_enc_init(&e, buf, cap);
     size_t msg = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = (int)SNMP_V2C;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = (int)SNMP_V2C;
     SnmpBer.put_integer(snmp_ber_work);
     ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"public", 6);
     size_t pdus = ber_seq_begin(&e, (uint8_t)SNMP_TAG_SNMP_PDU_GETBULK);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = reqid;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = reqid;
     SnmpBer.put_integer(snmp_ber_work);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = non_rep;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = non_rep;
     SnmpBer.put_integer(snmp_ber_work);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = max_rep;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = max_rep;
     SnmpBer.put_integer(snmp_ber_work);
     size_t vbl = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     for (size_t i = 0; i < nvb; i++)
@@ -1233,14 +1233,14 @@ void test_dispatch_empty_varbind_list_tiny_buffer()
     BerEnc e;
     ber_enc_init(&e, pdu, sizeof(pdu));
     size_t p = ber_seq_begin(&e, (uint8_t)SNMP_TAG_SNMP_PDU_GET);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = 1;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 1;
     SnmpBer.put_integer(snmp_ber_work);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = 0;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 0;
     SnmpBer.put_integer(snmp_ber_work);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = 0;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 0;
     SnmpBer.put_integer(snmp_ber_work);
     size_t vbl = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     ber_seq_end(&e, vbl);
@@ -1271,3 +1271,4 @@ void test_udp_handler_drops_unanswerable()
     TEST_ASSERT_EQUAL_size_t(0, protocore_net_host_udp_count());
     reset_udp();
 }
+

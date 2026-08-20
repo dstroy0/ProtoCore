@@ -66,6 +66,7 @@ typedef struct
     uint32_t frag_length;    ///< length of this fragment (uint24)
     const uint8_t *fragment; ///< fragment bytes, into the input buffer
 } DtlsHsHeader;
+
 /**
  * @brief Reassembles the fragments of a single handshake message into a contiguous body.
  *
@@ -86,6 +87,7 @@ typedef struct
     uint32_t range_hi[PROTOCORE_DTLS_HS_REASM_MAX_RANGES]; ///< received interval ends (exclusive)
     uint8_t range_count;                                   ///< number of active intervals
 } DtlsHsReasm;
+
 /** @brief A record identified for acknowledgement: (epoch, sequence_number), 8 bytes each on the
  *         wire (RFC 9147 §7). */
 typedef struct
@@ -93,6 +95,7 @@ typedef struct
     uint64_t epoch;
     uint64_t seq;
 } DtlsRecordNumber;
+
 /** @brief What header_parse takes: p, len, out. */
 typedef struct
 {
@@ -100,6 +103,7 @@ typedef struct
     size_t len;
     DtlsHsHeader *out;
 } DtlsHandshakeHeaderParseArgs;
+
 /** @brief What frag_build takes: msg_type, msg_seq, full_len, ... */
 typedef struct
 {
@@ -112,6 +116,7 @@ typedef struct
     uint8_t *out;
     size_t out_cap;
 } DtlsHandshakeFragBuildArgs;
+
 /** @brief What reasm_init takes: r, msg_seq, buf, buf_cap. */
 typedef struct
 {
@@ -120,12 +125,14 @@ typedef struct
     uint8_t *buf;
     size_t buf_cap;
 } DtlsHandshakeReasmInitArgs;
+
 /** @brief What reasm_add takes: r, frag. */
 typedef struct
 {
     DtlsHsReasm *r;
     const DtlsHsHeader *frag;
 } DtlsHandshakeReasmAddArgs;
+
 /** @brief What ack_build takes: nums, count, out, out_cap. */
 typedef struct
 {
@@ -134,6 +141,7 @@ typedef struct
     uint8_t *out;
     size_t out_cap;
 } DtlsHandshakeAckBuildArgs;
+
 /** @brief What ack_parse takes: body, len, out, out_cap, out_count. */
 typedef struct
 {
@@ -143,6 +151,7 @@ typedef struct
     size_t out_cap;
     size_t *out_count;
 } DtlsHandshakeAckParseArgs;
+
 /** @brief What cookie_make takes: mac_work, protocore_hmac_key, ... */
 typedef struct
 {
@@ -156,6 +165,7 @@ typedef struct
     uint8_t *out;
     size_t out_cap;
 } DtlsHandshakeCookieMakeArgs;
+
 /** @brief What cookie_verify takes: mac_work, protocore_hmac_key, ... */
 typedef struct
 {
@@ -171,6 +181,7 @@ typedef struct
     size_t payload_cap;
     size_t *payload_len_out;
 } DtlsHandshakeCookieVerifyArgs;
+
 /**
  * @brief DTLS 1.3 handshake framing and reliability (RFC 9147 §5, §7).
  *
@@ -216,16 +227,10 @@ typedef struct
     DtlsHandshakeAckParseArgs ack_parse_args;
     DtlsHandshakeCookieMakeArgs cookie_make_args;
     DtlsHandshakeCookieVerifyArgs cookie_verify_args;
+
     proto_bool ok;
     size_t n;
-} DtlsHandshakeVars;
 
-/** @brief The operands and the outcome. */
-extern DtlsHandshakeVars DtlsHandshakeV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const header_parse)(uint8_t *restrict work);
     void (*const frag_build)(uint8_t *restrict work);
     void (*const reasm_init)(uint8_t *restrict work);
@@ -236,31 +241,8 @@ typedef struct
     void (*const cookie_verify)(uint8_t *restrict work);
 } DtlsHandshakeNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in DtlsHandshakeV or a region of the borrow at a fixed offset.
-void protocore_dtls_handshake_header_parse(uint8_t *restrict work);
-void protocore_dtls_handshake_frag_build(uint8_t *restrict work);
-void protocore_dtls_handshake_reasm_init(uint8_t *restrict work);
-void protocore_dtls_handshake_reasm_add(uint8_t *restrict work);
-void protocore_dtls_handshake_ack_build(uint8_t *restrict work);
-void protocore_dtls_handshake_ack_parse(uint8_t *restrict work);
-void protocore_dtls_handshake_cookie_make(uint8_t *restrict work);
-void protocore_dtls_handshake_cookie_verify(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `DtlsHandshake.header_parse(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const DtlsHandshakeNs DtlsHandshake __attribute__((unused)) = {
-    .header_parse = protocore_dtls_handshake_header_parse,
-    .frag_build = protocore_dtls_handshake_frag_build,
-    .reasm_init = protocore_dtls_handshake_reasm_init,
-    .reasm_add = protocore_dtls_handshake_reasm_add,
-    .ack_build = protocore_dtls_handshake_ack_build,
-    .ack_parse = protocore_dtls_handshake_ack_parse,
-    .cookie_make = protocore_dtls_handshake_cookie_make,
-    .cookie_verify = protocore_dtls_handshake_cookie_verify,
-};
+/** @brief The one symbol this module exports. */
+extern DtlsHandshakeNs DtlsHandshake;
 
 PROTOCORE_END_DECLS
 

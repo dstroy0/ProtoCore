@@ -219,11 +219,11 @@ uint8_t *protocore_umati_span(void)
     return s_own.span;
 }
 
-void protocore_umati_bind(uint8_t *restrict work);
+static void umati_bind(uint8_t *restrict work);
 
-void protocore_umati_bind(uint8_t *restrict work)
+static void umati_bind(uint8_t *restrict work)
 {
-    const UmatiMachineTool *mt = UmatiV.bind_args.mt;
+    const UmatiMachineTool *mt = Umati.bind_args.mt;
 
     UMATI_CTX(work)->mt = mt;
     // The NamespaceArray is the server's (Part 3 sec 8.2.2), so these nodes are served at whatever
@@ -416,18 +416,17 @@ static int32_t umati_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint3
     }
 }
 
-void protocore_umati_install(uint8_t *restrict work)
+static void umati_install(uint8_t *restrict work)
 {
-    const UmatiMachineTool *mt = UmatiV.install_args.mt;
+    const UmatiMachineTool *mt = Umati.install_args.mt;
 
-    UmatiV.bind_args.mt = mt;
-    protocore_umati_bind(work);
+    Umati.bind_args.mt = mt;
+    umati_bind(work);
     protocore_opcua_set_read_handler(umati_read);
     protocore_opcua_set_browse_handler(umati_browse);
 }
 
-/** @brief The operands and the outcome. */
-UmatiVars UmatiV;
+UmatiNs Umati = {.bind = umati_bind, .install = umati_install};
 
 PROTOCORE_END_DECLS
 

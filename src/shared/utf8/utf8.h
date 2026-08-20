@@ -25,6 +25,7 @@ typedef struct
     const uint8_t *s; ///< the octets
     size_t n;         ///< how many
 } Utf8Args;
+
 /**
  * @brief UTF-8 well-formedness.
  *
@@ -40,28 +41,13 @@ typedef struct
 typedef struct
 {
     Utf8Args args;
+
     proto_bool ok;
-} Utf8Vars;
 
-/** @brief The operands and the outcome. */
-extern Utf8Vars Utf8V;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const valid)(uint8_t *restrict work);
 } Utf8Ns;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in Utf8V or a region of the borrow at a fixed offset.
-void protocore_utf8_valid(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Utf8.valid(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const Utf8Ns Utf8 __attribute__((unused)) = {
-    .valid = protocore_utf8_valid,
-};
+/** @brief The one symbol this module exports. */
+extern Utf8Ns Utf8;
 
 #endif // PROTOCORE_UTF8_H

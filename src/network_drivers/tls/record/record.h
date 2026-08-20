@@ -38,8 +38,9 @@
 #define PROTOCORE_TLS_RECORD_H
 
 #include "crypto/aead/aes128gcm/aes128gcm.h" // Aes128Gcm, the 0x1301 record AEAD
-#include "crypto/aead/aesgcm/aesgcm.h"       // AesGcm, the 0x1302 record AEAD
-#include "protocore_config.h"                // the entry point: the enable gate below, and the widths
+#include "crypto/aead/aesgcm/aesgcm.h"    // AesGcm, the 0x1302 record AEAD
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
 
 #if PROTOCORE_TLS_SOFTWARE
 
@@ -114,6 +115,7 @@ typedef struct
     uint64_t seq;                                  ///< records sealed/opened under this key, never sent
     proto_bool ready;                              ///< the AEAD context holds a key
 } TlsRecordKeys;
+
 /** @brief Parsed view of a TLSPlaintext record (fields point into the caller's buffer). */
 typedef struct
 {
@@ -121,12 +123,14 @@ typedef struct
     const uint8_t *fragment; ///< into the input buffer
     size_t frag_len;
 } TlsPlaintext;
+
 /** @brief Result of a successful @ref TlsRecordNs::unprotect. */
 typedef struct
 {
     uint8_t content_type; ///< recovered inner content type (last non-zero byte of the inner plaintext)
     size_t pt_len;        ///< plaintext bytes written to @p out
 } TlsCiphertext;
+
 /** @brief RFC 8446 sec 5.3: the direction a call acts on, and what a derive installs into it. */
 typedef struct
 {
@@ -134,6 +138,7 @@ typedef struct
     TlsCipher cipher;      ///< the negotiated AEAD a derive installs
     const uint8_t *secret; ///< the traffic secret it derives from, 32 or 48 octets by @c cipher
 } TlsKeyArgs;
+
 /** @brief RFC 8446 sec 5.1 TLSPlaintext: the fragment a build carries, and the view a parse fills. */
 typedef struct
 {
@@ -141,6 +146,7 @@ typedef struct
     size_t frag_len;         ///< how many
     TlsPlaintext *view;      ///< where a parse lands its view of the record
 } TlsPlaintextArgs;
+
 /** @brief RFC 8446 sec 5.2 TLSCiphertext: the fragment a seal takes, and the record an open takes. */
 typedef struct
 {
@@ -150,12 +156,14 @@ typedef struct
     size_t rec_len;      ///< how many bytes of it there are
     TlsCiphertext *info; ///< what an unprotect recovered
 } TlsCiphertextArgs;
+
 /** @brief Where a build, a protect or an unprotect writes. */
 typedef struct
 {
     uint8_t *out;   ///< where the record or the recovered plaintext lands
     size_t out_cap; ///< how much room it has
 } TlsRecordOut;
+
 /**
  * @brief The record layer (RFC 8446 sec 5): the two record shapes and their keys.
  *
@@ -189,49 +197,26 @@ typedef struct
 typedef struct
 {
     uint8_t content_type;
+
     TlsKeyArgs key;
     TlsPlaintextArgs plain;
     TlsCiphertextArgs sealed;
     TlsRecordOut out_args;
+
     proto_bool ok;
     size_t n;
-} TlsRecordVars;
 
-/** @brief The operands and the outcome. */
-extern TlsRecordVars TlsRecordV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const keys_derive)(uint8_t *restrict work);
     void (*const plaintext_build)(uint8_t *restrict work);
     void (*const plaintext_parse)(uint8_t *restrict work);
     void (*const protect)(uint8_t *restrict work);
     void (*const unprotect)(uint8_t *restrict work);
     void (*const keys_wipe)(uint8_t *restrict work);
+
 } TlsRecordNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in TlsRecordV or a region of the borrow at a fixed offset.
-void protocore_record_keys_derive(uint8_t *restrict work);
-void protocore_record_plaintext_build(uint8_t *restrict work);
-void protocore_record_plaintext_parse(uint8_t *restrict work);
-void protocore_record_protect(uint8_t *restrict work);
-void protocore_record_unprotect(uint8_t *restrict work);
-void protocore_record_keys_wipe(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `TlsRecord.keys_derive(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const TlsRecordNs TlsRecord __attribute__((unused)) = {
-    .keys_derive = protocore_record_keys_derive,
-    .plaintext_build = protocore_record_plaintext_build,
-    .plaintext_parse = protocore_record_plaintext_parse,
-    .protect = protocore_record_protect,
-    .unprotect = protocore_record_unprotect,
-    .keys_wipe = protocore_record_keys_wipe,
-};
+/** @brief The one symbol this module exports. */
+extern TlsRecordNs TlsRecord;
 
 #endif // PROTOCORE_TLS_SOFTWARE
 

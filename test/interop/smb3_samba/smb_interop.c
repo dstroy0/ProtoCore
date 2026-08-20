@@ -83,13 +83,13 @@ int main()
 
     SmbHandle h;
     memset(&h, 0, sizeof(h));
-    SmbClientV.smb_open_args.cfg = &cfg;
-    SmbClientV.smb_open_args.h = &h;
-    SmbClientV.smb_open_args.send = sock_send;
-    SmbClientV.smb_open_args.recv = sock_recv;
-    SmbClientV.smb_open_args.ctx = &fd;
+    SmbClient.smb_open_args.cfg = &cfg;
+    SmbClient.smb_open_args.h = &h;
+    SmbClient.smb_open_args.send = sock_send;
+    SmbClient.smb_open_args.recv = sock_recv;
+    SmbClient.smb_open_args.ctx = &fd;
     SmbClient.smb_open(protocore_smb_client_span());
-    SmbResult r = SmbClientV.value;
+    SmbResult r = SmbClient.value;
     printf("smb_open -> %d\n", (int)r);
     if (r != SMB_OK)
     {
@@ -101,39 +101,39 @@ int main()
     const char *payload = "ProtoCore SMB 3.1.1 CMAC interop payload - 0123456789";
     size_t plen = strlen(payload);
     size_t wrote = 0;
-    SmbClientV.smb_write_args.h = &h;
-    SmbClientV.smb_write_args.offset = 0;
-    SmbClientV.smb_write_args.data = (const uint8_t *)payload;
-    SmbClientV.smb_write_args.len = plen;
-    SmbClientV.smb_write_args.written = &wrote;
-    SmbClientV.smb_write_args.send = sock_send;
-    SmbClientV.smb_write_args.recv = sock_recv;
-    SmbClientV.smb_write_args.ctx = &fd;
+    SmbClient.smb_write_args.h = &h;
+    SmbClient.smb_write_args.offset = 0;
+    SmbClient.smb_write_args.data = (const uint8_t *)payload;
+    SmbClient.smb_write_args.len = plen;
+    SmbClient.smb_write_args.written = &wrote;
+    SmbClient.smb_write_args.send = sock_send;
+    SmbClient.smb_write_args.recv = sock_recv;
+    SmbClient.smb_write_args.ctx = &fd;
     SmbClient.smb_write(protocore_smb_client_span());
-    r = SmbClientV.value;
+    r = SmbClient.value;
     printf("smb_write -> %d (%zu bytes)\n", (int)r, wrote);
 
     // Read back on the same open handle (a second smb_open would re-NEGOTIATE, which SMB2 forbids on an
     // existing connection). The handle was opened GENERIC_READ|GENERIC_WRITE, so a read at 0 works.
     uint8_t buf[256];
     size_t got = 0;
-    SmbClientV.smb_read_args.h = &h;
-    SmbClientV.smb_read_args.offset = 0;
-    SmbClientV.smb_read_args.out = buf;
-    SmbClientV.smb_read_args.cap = sizeof(buf);
-    SmbClientV.smb_read_args.out_len = &got;
-    SmbClientV.smb_read_args.send = sock_send;
-    SmbClientV.smb_read_args.recv = sock_recv;
-    SmbClientV.smb_read_args.ctx = &fd;
+    SmbClient.smb_read_args.h = &h;
+    SmbClient.smb_read_args.offset = 0;
+    SmbClient.smb_read_args.out = buf;
+    SmbClient.smb_read_args.cap = sizeof(buf);
+    SmbClient.smb_read_args.out_len = &got;
+    SmbClient.smb_read_args.send = sock_send;
+    SmbClient.smb_read_args.recv = sock_recv;
+    SmbClient.smb_read_args.ctx = &fd;
     SmbClient.smb_read(protocore_smb_client_span());
-    r = SmbClientV.value;
+    r = SmbClient.value;
     proto_bool match = (got == plen) && (memcmp(buf, payload, plen) == 0);
     printf("smb_read -> %d (%zu bytes) match=%s\n", (int)r, got, match ? "YES" : "NO");
 
-    SmbClientV.smb_close_args.h = &h;
-    SmbClientV.smb_close_args.send = sock_send;
-    SmbClientV.smb_close_args.recv = sock_recv;
-    SmbClientV.smb_close_args.ctx = &fd;
+    SmbClient.smb_close_args.h = &h;
+    SmbClient.smb_close_args.send = sock_send;
+    SmbClient.smb_close_args.recv = sock_recv;
+    SmbClient.smb_close_args.ctx = &fd;
     SmbClient.smb_close(protocore_smb_client_span());
     close(fd);
     return match ? 0 : 4;

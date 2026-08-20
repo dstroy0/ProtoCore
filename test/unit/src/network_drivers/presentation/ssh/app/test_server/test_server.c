@@ -21,43 +21,43 @@ static proto_bool classify_file_transfer_request(uint8_t slot, uint32_t channel,
                                                  uint32_t rtype_len, const uint8_t *payload, size_t len, size_t *off,
                                                  proto_bool *accept)
 {
-    SshAppServerV.slot = slot;
-    SshAppServerV.channel = channel;
-    SshAppServerV.req.rtype = rtype;
-    SshAppServerV.req.rtype_len = rtype_len;
-    SshAppServerV.req.payload = payload;
-    SshAppServerV.req.len = len;
-    SshAppServerV.req.off = off ? *off : 0u;
-    SshAppServerV.accept = accept ? *accept : PROTO_FALSE;
+    SshAppServer.slot = slot;
+    SshAppServer.channel = channel;
+    SshAppServer.req.rtype = rtype;
+    SshAppServer.req.rtype_len = rtype_len;
+    SshAppServer.req.payload = payload;
+    SshAppServer.req.len = len;
+    SshAppServer.req.off = off ? *off : 0u;
+    SshAppServer.accept = accept ? *accept : PROTO_FALSE;
     SshAppServer.classify(ssh_app_server_work);
     if (off)
     {
-        *off = SshAppServerV.req.off;
+        *off = SshAppServer.req.off;
     }
     if (accept)
     {
-        *accept = SshAppServerV.accept;
+        *accept = SshAppServer.accept;
     }
-    return SshAppServerV.accept;
+    return SshAppServer.accept;
 }
 
 // The connection layer, reached through its namespace.
 static int chan_alloc(uint8_t slot)
 {
-    SshConnectionV.chan.slot = slot;
+    SshConnection.chan.slot = slot;
     SshConnection.chan_alloc(protocore_ssh_connection_span());
-    return SshConnectionV.i32;
+    return SshConnection.i32;
 }
 
 static void channel_set_sftp_open_cb(SshSftpOpenCb cb)
 {
-    SshConnectionV.sftp_open_cb = cb;
+    SshConnection.sftp_open_cb = cb;
     SshConnection.set_sftp_open_cb(protocore_ssh_connection_span());
 }
 
 static void channel_set_scp_open_cb(SshScpOpenCb cb)
 {
-    SshConnectionV.scp_open_cb = cb;
+    SshConnection.scp_open_cb = cb;
     SshConnection.set_scp_open_cb(protocore_ssh_connection_span());
 }
 
@@ -108,7 +108,7 @@ static uint32_t open_session_channel(void)
 
 void setUp(void)
 {
-    SshConnectionV.chan.slot = 0;
+    SshConnection.chan.slot = 0;
     SshConnection.channel_init(protocore_ssh_connection_span());
     s_sftp_opens = 0;
     s_scp_opens = 0;

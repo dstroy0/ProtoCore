@@ -25,12 +25,12 @@ const uint8_t RTPS_VERSION[2] = {2, 4};
 static void rtps_header(uint8_t *restrict work)
 {
     (void)work;
-    RtpsV.n = 0;
-    if (!RtpsV.hdr.guid_prefix || !RtpsV.hdr.vendor_id || !RtpsV.out.buf || RtpsV.out.cap < RTPS_HEADER_LEN)
+    Rtps.n = 0;
+    if (!Rtps.hdr.guid_prefix || !Rtps.hdr.vendor_id || !Rtps.out.buf || Rtps.out.cap < RTPS_HEADER_LEN)
     {
         return;
     }
-    uint8_t *out = RtpsV.out.buf;
+    uint8_t *out = Rtps.out.buf;
     // PROTOCOL_RTPS is the octets 'R' 'T' 'P' 'S' (sec 9.3.2.1), then version, vendorId, guidPrefix.
     out[0] = 'R';
     out[1] = 'T';
@@ -38,33 +38,33 @@ static void rtps_header(uint8_t *restrict work)
     out[3] = 'S';
     out[4] = RTPS_VERSION[0];
     out[5] = RTPS_VERSION[1];
-    out[6] = RtpsV.hdr.vendor_id[0];
-    out[7] = RtpsV.hdr.vendor_id[1];
-    mem.cpy(out + 8, RtpsV.hdr.guid_prefix, RTPS_GUIDPREFIX_LEN);
-    RtpsV.n = RTPS_HEADER_LEN;
+    out[6] = Rtps.hdr.vendor_id[0];
+    out[7] = Rtps.hdr.vendor_id[1];
+    mem.cpy(out + 8, Rtps.hdr.guid_prefix, RTPS_GUIDPREFIX_LEN);
+    Rtps.n = RTPS_HEADER_LEN;
 }
 
 // Build one Submessage, its SubmessageHeader then its contents (sec 9.4.5.1), into ns->out.
 static void rtps_submessage(uint8_t *restrict work)
 {
     (void)work;
-    RtpsV.n = 0;
-    const uint16_t contents_len = RtpsV.sub.contents_len;
-    if (!RtpsV.out.buf || (contents_len && !RtpsV.sub.contents))
+    Rtps.n = 0;
+    const uint16_t contents_len = Rtps.sub.contents_len;
+    if (!Rtps.out.buf || (contents_len && !Rtps.sub.contents))
     {
         return;
     }
     const size_t total = RTPS_SUBMESSAGE_HEADER_LEN + (size_t)contents_len;
-    if (total > RtpsV.out.cap)
+    if (total > Rtps.out.cap)
     {
         return;
     }
-    uint8_t *out = RtpsV.out.buf;
-    out[0] = RtpsV.sub.submessage_id;
-    out[1] = RtpsV.sub.flags;
+    uint8_t *out = Rtps.out.buf;
+    out[0] = Rtps.sub.submessage_id;
+    out[1] = Rtps.sub.flags;
     // octetsToNextHeader is a CDR ushort in the Submessage's own byte order, the EndiannessFlag in
     // bit 0 of flags deciding it: E=1 little-endian, E=0 big-endian (sec 9.4.5.1).
-    if (RtpsV.sub.flags & RTPS_FLAG_ENDIAN)
+    if (Rtps.sub.flags & RTPS_FLAG_ENDIAN)
     {
         out[2] = (uint8_t)contents_len;
         out[3] = (uint8_t)(contents_len >> 8);
@@ -76,19 +76,19 @@ static void rtps_submessage(uint8_t *restrict work)
     }
     if (contents_len)
     {
-        mem.cpy(out + RTPS_SUBMESSAGE_HEADER_LEN, RtpsV.sub.contents, contents_len);
+        mem.cpy(out + RTPS_SUBMESSAGE_HEADER_LEN, Rtps.sub.contents, contents_len);
     }
-    RtpsV.n = total;
+    Rtps.n = total;
 }
 
 // Validate the Header and walk the Submessages, reporting the verdict in ns->ok.
 static void rtps_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *msg = RtpsV.msg.msg;
-    const size_t len = RtpsV.msg.len;
+    const uint8_t *msg = Rtps.msg.msg;
+    const size_t len = Rtps.msg.len;
 
-    RtpsV.ok = PROTO_FALSE;
+    Rtps.ok = PROTO_FALSE;
     // sec 8.3.6.3: a Header is invalid with fewer octets than the PSM's 20, with a protocol that is
     // not PROTOCOL_RTPS, or with a major version above the one this implementation supports. The
     // minor version is not one of the three, so every minor parses.
@@ -130,10 +130,10 @@ static void rtps_parse(uint8_t *restrict work)
         {
             return;
         }
-        if (RtpsV.sink.on_submessage)
+        if (Rtps.sink.on_submessage)
         {
-            RtpsV.sink.on_submessage(submessage_id, flags, contents_len ? (msg + contents_off) : NULL, contents_len,
-                                     RtpsV.sink.arg);
+            Rtps.sink.on_submessage(submessage_id, flags, contents_len ? (msg + contents_off) : NULL, contents_len,
+                                    Rtps.sink.arg);
         }
         // A run to the end of the Message lands off at len, which fails the loop test.
         off = contents_off + contents_len;
@@ -144,11 +144,10 @@ static void rtps_parse(uint8_t *restrict work)
     {
         return;
     }
-    RtpsV.ok = PROTO_TRUE;
+    Rtps.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-RtpsVars RtpsV;
+RtpsNs Rtps = {.header = rtps_header, .submessage = rtps_submessage, .parse = rtps_parse};
 
 #endif // PROTOCORE_ENABLE_DDS

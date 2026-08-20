@@ -21,8 +21,8 @@
 void setUp(void)
 {
     Logbuf.reset(protocore_logbuf_span());
-    LogbufV.trap.threshold = 0xFF; // the trap outlives a reset, so each case starts with it off
-    LogbufV.trap.cb = NULL;
+    Logbuf.trap.threshold = 0xFF; // the trap outlives a reset, so each case starts with it off
+    Logbuf.trap.cb = NULL;
     Logbuf.set_trap(protocore_logbuf_span());
 }
 void tearDown(void)
@@ -31,32 +31,32 @@ void tearDown(void)
 
 static void put(uint8_t level, const char *msg)
 {
-    LogbufV.line.level = level;
-    LogbufV.line.msg = msg;
+    Logbuf.line.level = level;
+    Logbuf.line.msg = msg;
     Logbuf.put(protocore_logbuf_span());
 }
 
 static uint16_t held(void)
 {
-    LogbufV.held(protocore_logbuf_span());
-    return LogbufV.count;
+    Logbuf.held(protocore_logbuf_span());
+    return Logbuf.count;
 }
 
 static const char *at(uint16_t i)
 {
-    LogbufV.read.i = i;
+    Logbuf.read.i = i;
     Logbuf.at(protocore_logbuf_span());
-    return LogbufV.text;
+    return Logbuf.text;
 }
 
 static char g_out[4096];
 
 static int dump_into(char *out, size_t cap)
 {
-    LogbufV.read.out = out;
-    LogbufV.read.cap = cap;
+    Logbuf.read.out = out;
+    Logbuf.read.cap = cap;
     Logbuf.dump(protocore_logbuf_span());
-    return LogbufV.n;
+    return Logbuf.n;
 }
 
 static const char *dump(void)
@@ -91,8 +91,8 @@ static void arm_trap(uint8_t threshold)
     g_trap_fires = 0;
     g_trap_level = 0xFF;
     g_trap_line[0] = '\0';
-    LogbufV.trap.threshold = threshold;
-    LogbufV.trap.cb = on_trap;
+    Logbuf.trap.threshold = threshold;
+    Logbuf.trap.cb = on_trap;
     Logbuf.set_trap(protocore_logbuf_span());
 }
 
@@ -187,8 +187,8 @@ void test_dump_joins_the_held_lines_with_a_newline(void)
     put(PROTOCORE_LOG_ERROR, "b");
     put(PROTOCORE_LOG_ERROR, "c");
     TEST_ASSERT_EQUAL_STRING("E a\nE b\nE c", dump());
-    TEST_ASSERT_EQUAL_INT(11, LogbufV.n);
-    TEST_ASSERT_EQUAL_INT((int)strlen(g_out), LogbufV.n);
+    TEST_ASSERT_EQUAL_INT(11, Logbuf.n);
+    TEST_ASSERT_EQUAL_INT((int)strlen(g_out), Logbuf.n);
 }
 
 // The whole dump plus its terminator is what fits; one octet less writes nothing, because a partial
@@ -261,8 +261,8 @@ void test_the_trap_can_be_turned_off(void)
     TEST_ASSERT_EQUAL_INT(0, g_trap_fires);
 
     arm_trap(PROTOCORE_LOG_DEBUG);
-    LogbufV.trap.threshold = PROTOCORE_LOG_DEBUG;
-    LogbufV.trap.cb = NULL;
+    Logbuf.trap.threshold = PROTOCORE_LOG_DEBUG;
+    Logbuf.trap.cb = NULL;
     Logbuf.set_trap(protocore_logbuf_span());
     put(PROTOCORE_LOG_ERROR, "loud");
     TEST_ASSERT_EQUAL_INT(0, g_trap_fires);

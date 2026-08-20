@@ -54,6 +54,7 @@ typedef struct
     const uint8_t *value; ///< value payload (null if none).
     size_t value_len;
 } AttPdu;
+
 /** @brief One GATT characteristic for the northbound bridge. */
 typedef struct
 {
@@ -61,6 +62,7 @@ typedef struct
     uint16_t uuid; ///< 16-bit UUID (assigned-number form).
     uint8_t props; ///< GATT_PROP_* bits.
 } GattChar;
+
 /** @brief What att_read_req takes: handle, out, cap. */
 typedef struct
 {
@@ -68,6 +70,7 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } BleGattAttReadReqArgs;
+
 /** @brief What att_read_rsp takes: val, vlen, out, cap. */
 typedef struct
 {
@@ -76,6 +79,7 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } BleGattAttReadRspArgs;
+
 /** @brief What att_write_req takes: handle, val, vlen, out, cap. */
 typedef struct
 {
@@ -85,6 +89,7 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } BleGattAttWriteReqArgs;
+
 /** @brief What att_notify takes: handle, val, vlen, out, cap. */
 typedef struct
 {
@@ -94,6 +99,7 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } BleGattAttNotifyArgs;
+
 /** @brief What att_error_rsp takes: req_op, handle, error, out, cap. */
 typedef struct
 {
@@ -103,6 +109,7 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } BleGattAttErrorRspArgs;
+
 /** @brief What att_parse takes: pdu, len, out. */
 typedef struct
 {
@@ -110,6 +117,7 @@ typedef struct
     size_t len;
     AttPdu *out;
 } BleGattAttParseArgs;
+
 /** @brief What char_json takes: chars, n, out, cap. */
 typedef struct
 {
@@ -118,6 +126,7 @@ typedef struct
     char *out;
     size_t cap;
 } BleGattCharJsonArgs;
+
 /**
  * @brief Bluetooth ATT protocol codec + GATT characteristic bridge (PROTOCORE_ENABLE_BLE_GATT).
  *
@@ -160,16 +169,10 @@ typedef struct
     BleGattAttErrorRspArgs att_error_rsp_args;
     BleGattAttParseArgs att_parse_args;
     BleGattCharJsonArgs char_json_args;
+
     proto_bool ok;
     size_t n;
-} BleGattVars;
 
-/** @brief The operands and the outcome. */
-extern BleGattVars BleGattV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const att_read_req)(uint8_t *restrict work);
     void (*const att_read_rsp)(uint8_t *restrict work);
     void (*const att_write_req)(uint8_t *restrict work);
@@ -179,29 +182,8 @@ typedef struct
     void (*const char_json)(uint8_t *restrict work);
 } BleGattNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in BleGattV or a region of the borrow at a fixed offset.
-void protocore_ble_gatt_att_read_req(uint8_t *restrict work);
-void protocore_ble_gatt_att_read_rsp(uint8_t *restrict work);
-void protocore_ble_gatt_att_write_req(uint8_t *restrict work);
-void protocore_ble_gatt_att_notify(uint8_t *restrict work);
-void protocore_ble_gatt_att_error_rsp(uint8_t *restrict work);
-void protocore_ble_gatt_att_parse(uint8_t *restrict work);
-void protocore_ble_gatt_char_json(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `BleGatt.att_read_req(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const BleGattNs BleGatt __attribute__((unused)) = {
-    .att_read_req = protocore_ble_gatt_att_read_req,
-    .att_read_rsp = protocore_ble_gatt_att_read_rsp,
-    .att_write_req = protocore_ble_gatt_att_write_req,
-    .att_notify = protocore_ble_gatt_att_notify,
-    .att_error_rsp = protocore_ble_gatt_att_error_rsp,
-    .att_parse = protocore_ble_gatt_att_parse,
-    .char_json = protocore_ble_gatt_char_json,
-};
+/** @brief The one symbol this module exports. */
+extern BleGattNs BleGatt;
 
 PROTOCORE_END_DECLS
 

@@ -63,8 +63,8 @@ static void json_number(protocore_json_writer *w, double d)
     {
         tmp[0] = '\0';
     }
-    JsonV.put_raw_args.w = w;
-    JsonV.put_raw_args.literal = tmp;
+    Json.put_raw_args.w = w;
+    Json.put_raw_args.literal = tmp;
     Json.put_raw(json_work);
 }
 
@@ -114,55 +114,55 @@ static size_t record_fields(const SenmlRecord *r)
 
 // Build the JSON representation of ns->pack into ns->json (RFC 8428 sec 5): an array with one
 // object per Record, the labels as member names. Reports the length in ns->n.
-void protocore_senml_json_build(uint8_t *restrict work)
+static void senml_json_build(uint8_t *restrict work)
 {
     (void)work;
-    SenmlV.ok = PROTO_FALSE;
-    SenmlV.n = 0;
-    const SenmlRecord *records = SenmlV.pack.records;
-    const size_t count = SenmlV.pack.count;
-    if (!SenmlV.json.buf || (count && !records))
+    Senml.ok = PROTO_FALSE;
+    Senml.n = 0;
+    const SenmlRecord *records = Senml.pack.records;
+    const size_t count = Senml.pack.count;
+    if (!Senml.json.buf || (count && !records))
     {
         return;
     }
     protocore_json_writer w = {0};
-    JsonV.init_args.w = &w;
-    JsonV.init_args.buf = SenmlV.json.buf;
-    JsonV.init_args.cap = SenmlV.json.cap;
+    Json.init_args.w = &w;
+    Json.init_args.buf = Senml.json.buf;
+    Json.init_args.cap = Senml.json.cap;
     Json.init(json_work);
-    JsonV.begin_array_args.w = &w;
+    Json.begin_array_args.w = &w;
     Json.begin_array(json_work);
     for (size_t i = 0; i < count; i++)
     {
         const SenmlRecord *r = &records[i];
-        JsonV.begin_object_args.w = &w;
+        Json.begin_object_args.w = &w;
         Json.begin_object(json_work);
         if (r->base_name)
         {
-            JsonV.kv_str_args.w = &w;
-            JsonV.kv_str_args.k = "bn";
-            JsonV.kv_str_args.v = r->base_name;
+            Json.kv_str_args.w = &w;
+            Json.kv_str_args.k = "bn";
+            Json.kv_str_args.v = r->base_name;
             Json.kv_str(json_work);
         }
         if (r->has_base_time)
         {
-            JsonV.key_args.w = &w;
-            JsonV.key_args.k = "bt";
-            JsonV.key(json_work);
+            Json.key_args.w = &w;
+            Json.key_args.k = "bt";
+            Json.key(json_work);
             json_number(&w, r->base_time);
         }
         if (r->name)
         {
-            JsonV.kv_str_args.w = &w;
-            JsonV.kv_str_args.k = "n";
-            JsonV.kv_str_args.v = r->name;
+            Json.kv_str_args.w = &w;
+            Json.kv_str_args.k = "n";
+            Json.kv_str_args.v = r->name;
             Json.kv_str(json_work);
         }
         if (r->unit)
         {
-            JsonV.kv_str_args.w = &w;
-            JsonV.kv_str_args.k = "u";
-            JsonV.kv_str_args.v = r->unit;
+            Json.kv_str_args.w = &w;
+            Json.kv_str_args.k = "u";
+            Json.kv_str_args.v = r->unit;
             Json.kv_str(json_work);
         }
         // Every SenmlValueKind enumerator has a case below, so the default edge the compiler emits
@@ -170,24 +170,24 @@ void protocore_senml_json_build(uint8_t *restrict work)
         switch (r->value_kind)
         {
         case SENML_VALUE_NUMBER:
-            JsonV.key_args.w = &w;
-            JsonV.key_args.k = "v";
-            JsonV.key(json_work);
+            Json.key_args.w = &w;
+            Json.key_args.k = "v";
+            Json.key(json_work);
             json_number(&w, r->value);
             break;
         case SENML_VALUE_STRING:
             if (r->string_value)
             {
-                JsonV.kv_str_args.w = &w;
-                JsonV.kv_str_args.k = "vs";
-                JsonV.kv_str_args.v = r->string_value;
+                Json.kv_str_args.w = &w;
+                Json.kv_str_args.k = "vs";
+                Json.kv_str_args.v = r->string_value;
                 Json.kv_str(json_work);
             }
             break;
         case SENML_VALUE_BOOLEAN:
-            JsonV.kv_bool_args.w = &w;
-            JsonV.kv_bool_args.k = "vb";
-            JsonV.kv_bool_args.v = r->boolean_value;
+            Json.kv_bool_args.w = &w;
+            Json.kv_bool_args.k = "vb";
+            Json.kv_bool_args.v = r->boolean_value;
             Json.kv_bool(json_work);
             break;
         case SENML_VALUE_NONE:
@@ -195,39 +195,39 @@ void protocore_senml_json_build(uint8_t *restrict work)
         }
         if (r->has_time)
         {
-            JsonV.key_args.w = &w;
-            JsonV.key_args.k = "t";
-            JsonV.key(json_work);
+            Json.key_args.w = &w;
+            Json.key_args.k = "t";
+            Json.key(json_work);
             json_number(&w, r->time);
         }
-        JsonV.end_object_args.w = &w;
+        Json.end_object_args.w = &w;
         Json.end_object(json_work);
     }
-    JsonV.end_array_args.w = &w;
+    Json.end_array_args.w = &w;
     Json.end_array(json_work);
     if (!protocore_json_ok(&w))
     {
         return;
     }
-    SenmlV.n = protocore_json_length(&w);
-    SenmlV.ok = PROTO_TRUE;
+    Senml.n = protocore_json_length(&w);
+    Senml.ok = PROTO_TRUE;
 }
 
 // Build ns->pack into ns->binary through its codec: an array of Records, each a map whose keys the
 // codec writes as the RFC 8428 sec 6 Table 4 integers. Reports the length in ns->n.
-void protocore_senml_binary_build(uint8_t *restrict work)
+static void senml_binary_build(uint8_t *restrict work)
 {
     (void)work;
-    SenmlV.ok = PROTO_FALSE;
-    SenmlV.n = 0;
-    const protocore_codec *c = SenmlV.binary.codec;
-    const SenmlRecord *records = SenmlV.pack.records;
-    const size_t count = SenmlV.pack.count;
-    if (!c || !SenmlV.binary.buf || (count && !records))
+    Senml.ok = PROTO_FALSE;
+    Senml.n = 0;
+    const protocore_codec *c = Senml.binary.codec;
+    const SenmlRecord *records = Senml.pack.records;
+    const size_t count = Senml.pack.count;
+    if (!c || !Senml.binary.buf || (count && !records))
     {
         return;
     }
-    protocore_span w = span.from(SenmlV.binary.buf, SenmlV.binary.cap);
+    protocore_span w = span.from(Senml.binary.buf, Senml.binary.cap);
     c->put_array(&w, count);
     for (size_t i = 0; i < count; i++)
     {
@@ -285,21 +285,21 @@ void protocore_senml_binary_build(uint8_t *restrict work)
     {
         return;
     }
-    SenmlV.n = span.len(w);
-    SenmlV.ok = PROTO_TRUE;
+    Senml.n = span.len(w);
+    Senml.ok = PROTO_TRUE;
 }
 
 // Resolve ns->pack into ns->resolved (RFC 8428 sec 4.6). A Base Name or Base Time becomes active
 // for the Record carrying it and every Record after it, until a later one overrides it: each output
 // Name is the active Base Name concatenated with the Name, and each output Time is the active Base
 // Time added to the Time. Reports the Record count in ns->n.
-void protocore_senml_resolve(uint8_t *restrict work)
+static void senml_resolve(uint8_t *restrict work)
 {
     (void)work;
-    SenmlV.ok = PROTO_FALSE;
-    SenmlV.n = 0;
-    const SenmlRecord *in = SenmlV.pack.records;
-    SenmlResolved *out = SenmlV.resolved.out;
+    Senml.ok = PROTO_FALSE;
+    Senml.n = 0;
+    const SenmlRecord *in = Senml.pack.records;
+    SenmlResolved *out = Senml.resolved.out;
     if (!in || !out)
     {
         return;
@@ -308,7 +308,7 @@ void protocore_senml_resolve(uint8_t *restrict work)
     proto_bool base_time_set = PROTO_FALSE;
     double base_time = 0.0;
 
-    const size_t count = SenmlV.pack.count < SenmlV.resolved.max ? SenmlV.pack.count : SenmlV.resolved.max;
+    const size_t count = Senml.pack.count < Senml.resolved.max ? Senml.pack.count : Senml.resolved.max;
     for (size_t i = 0; i < count; i++)
     {
         const SenmlRecord *r = &in[i];
@@ -341,12 +341,11 @@ void protocore_senml_resolve(uint8_t *restrict work)
         o->string_value = r->string_value;
         o->boolean_value = r->boolean_value;
     }
-    SenmlV.n = count;
-    SenmlV.ok = PROTO_TRUE;
+    Senml.n = count;
+    Senml.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-SenmlVars SenmlV;
+SenmlNs Senml = {.json_build = senml_json_build, .binary_build = senml_binary_build, .resolve = senml_resolve};
 
 #endif // PROTOCORE_ENABLE_SENML

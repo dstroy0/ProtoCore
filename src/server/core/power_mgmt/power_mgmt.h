@@ -51,6 +51,7 @@ typedef struct
     int16_t temp_cool_c; ///< release the throttle at/below this one (must be < temp_hot_c).
     uint32_t recover_ms; ///< how long to stay at the floor after a brownout reset.
 } PowerCfg;
+
 /** @brief What the governor decided this tick. */
 typedef struct
 {
@@ -58,6 +59,7 @@ typedef struct
     proto_bool throttled;  ///< the thermal limit is holding the clock down.
     proto_bool recovering; ///< still inside the post-brownout settle window.
 } PowerPlan;
+
 /** @brief What the pure plan reads. */
 typedef struct
 {
@@ -68,6 +70,7 @@ typedef struct
     uint32_t since_boot_ms;   ///< how long it has been running
     proto_bool was_throttled; ///< the plan's own previous output, which is what gives it hysteresis
 } PowerPlanArgs;
+
 /** @brief The plan a call acts on, and where a report is written. */
 typedef struct
 {
@@ -76,6 +79,7 @@ typedef struct
     char *out;             ///< where the JSON lands
     size_t cap;            ///< how much room it has
 } PowerOutArgs;
+
 /**
  * @brief The CPU clock governor.
  *
@@ -108,58 +112,29 @@ typedef struct
     PowerPlanArgs plan_args;
     PowerOutArgs out_args;
     PowerCfg *cfg_out;
+
     PowerPlan plan;
     proto_bool ok;
     size_t n;
     int16_t temp_c;
     uint16_t mhz;
-#if PROTOCORE_HAS_VENDOR_PM
-#endif
-#if PROTOCORE_HAS_VENDOR_BT
-#endif
-} PowerVars;
 
-/** @brief The operands and the outcome. */
-extern PowerVars PowerV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const defaults)(uint8_t *restrict work);
     void (*const decide)(uint8_t *restrict work);
     void (*const json)(uint8_t *restrict work);
+#if PROTOCORE_HAS_VENDOR_PM
     void (*const brownout)(uint8_t *restrict work);
     void (*const die_temp)(uint8_t *restrict work);
     void (*const cpu_mhz)(uint8_t *restrict work);
     void (*const apply)(uint8_t *restrict work);
+#endif
+#if PROTOCORE_HAS_VENDOR_BT
     void (*const gate_bt)(uint8_t *restrict work);
+#endif
 } PowerMgmtNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in PowerV or a region of the borrow at a fixed offset.
-void protocore_power_mgmt_defaults(uint8_t *restrict work);
-void protocore_power_mgmt_decide(uint8_t *restrict work);
-void protocore_power_mgmt_json(uint8_t *restrict work);
-void protocore_power_mgmt_brownout(uint8_t *restrict work);
-void protocore_power_mgmt_die_temp(uint8_t *restrict work);
-void protocore_power_mgmt_cpu_mhz(uint8_t *restrict work);
-void protocore_power_mgmt_apply(uint8_t *restrict work);
-void protocore_power_mgmt_gate_bt(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Power.defaults(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const PowerMgmtNs Power __attribute__((unused)) = {
-    .defaults = protocore_power_mgmt_defaults,
-    .decide = protocore_power_mgmt_decide,
-    .json = protocore_power_mgmt_json,
-    .brownout = protocore_power_mgmt_brownout,
-    .die_temp = protocore_power_mgmt_die_temp,
-    .cpu_mhz = protocore_power_mgmt_cpu_mhz,
-    .apply = protocore_power_mgmt_apply,
-    .gate_bt = protocore_power_mgmt_gate_bt,
-};
+/** @brief The one symbol this module exports. */
+extern PowerMgmtNs Power;
 
 /**
  * @brief The PROTOCORE_POWER_MGMT_BORROW bytes this module's state lives in.

@@ -41,15 +41,20 @@ typedef struct
 {
     uint32_t d[PROTOCORE_BN_LIMBS]; ///< 256 bytes of magnitude, little-endian limbs.
 } protocore_bignum;
+
 // ---------------------------------------------------------------------------
 // Group-14 prime constant (exposed for key-derivation and validation)
 // ---------------------------------------------------------------------------
+
 /** @brief The RFC 3526 MODP group-14 prime (2048-bit). */
 extern const protocore_bignum group14_p;
+
 /** @brief Generator for group-14: g = 2. */
 extern const protocore_bignum group14_g;
+
 // PROTOCORE_BIGNUM_BORROW - the bytes a bignum call runs out of - is stated in protocore_config.h,
 // which sums it into the secure arena. A caller takes them once and passes the pointer to every call.
+
 // ---------------------------------------------------------------------------
 // Backend-facing
 // ---------------------------------------------------------------------------
@@ -58,9 +63,12 @@ extern const protocore_bignum group14_g;
 // chosen by the vendor's PROTOCORE_HAS_HW_BIGNUM. There is no weak default: link no backend and this is an
 // undefined reference; link two and it is a duplicate definition. Software crypto is a legitimate
 // choice - on some parts the only one - but it is always a stated one, never a fallback.
+
 /** @brief Compare two @p n-limb magnitudes: -1, 0 or 1. Shared with the backends. */
 int bn_cmp_raw(const uint32_t *a, const uint32_t *b, int n);
+
 void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, const protocore_bignum *exp);
+
 /** @brief The big-endian bytes read into a bignum. */
 typedef struct
 {
@@ -68,18 +76,21 @@ typedef struct
     const uint8_t *bytes;  ///< big-endian source bytes
     size_t len;            ///< how many; a shorter source zeroes the top limbs, a longer one keeps its low 256
 } BignumFromBytesArgs;
+
 /** @brief Where a bignum lands as big-endian bytes. */
 typedef struct
 {
     uint8_t *bytes;             ///< exactly 256 bytes
     const protocore_bignum *in; ///< the value written
 } BignumToBytesArgs;
+
 /** @brief The two values a compare orders. */
 typedef struct
 {
     const protocore_bignum *a; ///< left
     const protocore_bignum *b; ///< right
 } BignumCmpArgs;
+
 /** @brief The two magnitudes a raw compare orders. */
 typedef struct
 {
@@ -87,11 +98,13 @@ typedef struct
     const uint32_t *b; ///< right limbs, little-endian
     int n;             ///< limbs spanned
 } BignumCmpRawArgs;
+
 /** @brief The value tested for zero. */
 typedef struct
 {
     const protocore_bignum *a; ///< the value
 } BignumIsZeroArgs;
+
 /** @brief The operands of a group-14 modular exponentiation. */
 typedef struct
 {
@@ -99,11 +112,13 @@ typedef struct
     const protocore_bignum *base; ///< the base, 1 < base < p-1
     const protocore_bignum *exp;  ///< the exponent, e.g. the 2048-bit private DH scalar y
 } BignumExpmodArgs;
+
 /** @brief The received DH public value a validation checks. */
 typedef struct
 {
     const protocore_bignum *v; ///< the received e or f
 } BignumValidateArgs;
+
 /**
  * @brief 2048-bit big-integer arithmetic (RFC 3526 group-14).
  *
@@ -159,17 +174,11 @@ typedef struct
     BignumIsZeroArgs is_zero_args;
     BignumExpmodArgs expmod_args;
     BignumValidateArgs validate_args;
+
     proto_bool ok;
     int sign;
     proto_bool zero;
-} BignumVars;
 
-/** @brief The operands and the outcome. */
-extern BignumVars BignumV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const from_bytes)(uint8_t *restrict work);
     void (*const to_bytes)(uint8_t *restrict work);
     void (*const cmp)(uint8_t *restrict work);
@@ -179,29 +188,8 @@ typedef struct
     void (*const dh_validate)(uint8_t *restrict work);
 } BignumNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in BignumV or a region of the borrow at a fixed offset.
-void protocore_bignum_from_bytes(uint8_t *restrict work);
-void protocore_bignum_to_bytes(uint8_t *restrict work);
-void protocore_bignum_cmp(uint8_t *restrict work);
-void protocore_bignum_cmp_raw(uint8_t *restrict work);
-void protocore_bignum_is_zero(uint8_t *restrict work);
-void protocore_bignum_expmod_group14(uint8_t *restrict work);
-void protocore_bignum_dh_validate(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Bignum.from_bytes(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const BignumNs Bignum __attribute__((unused)) = {
-    .from_bytes = protocore_bignum_from_bytes,
-    .to_bytes = protocore_bignum_to_bytes,
-    .cmp = protocore_bignum_cmp,
-    .cmp_raw = protocore_bignum_cmp_raw,
-    .is_zero = protocore_bignum_is_zero,
-    .expmod_group14 = protocore_bignum_expmod_group14,
-    .dh_validate = protocore_bignum_dh_validate,
-};
+/** @brief The one symbol this module exports. */
+extern BignumNs Bignum;
 
 PROTOCORE_END_DECLS
 

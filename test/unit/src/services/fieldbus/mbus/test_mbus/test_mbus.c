@@ -42,12 +42,12 @@ void test_mbdoc_rsp_ud_example(void)
 {
     MbusFrame f;
     size_t used = 0;
-    MbusV.parse_args.buf = RSP_UD;
-    MbusV.parse_args.len = sizeof(RSP_UD);
-    MbusV.parse_args.out = &f;
-    MbusV.parse_args.consumed = &used;
+    Mbus.parse_args.buf = RSP_UD;
+    Mbus.parse_args.len = sizeof(RSP_UD);
+    Mbus.parse_args.out = &f;
+    Mbus.parse_args.consumed = &used;
     Mbus.parse(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_UINT(sizeof(RSP_UD), used);
     TEST_ASSERT_EQUAL_INT(MBUS_FRAME_LONG, f.type);
     TEST_ASSERT_EQUAL_HEX8(0x08, f.c);
@@ -56,11 +56,11 @@ void test_mbdoc_rsp_ud_example(void)
     TEST_ASSERT_EQUAL_UINT(0x1F - 3, f.data_len); // L counts C + A + CI + user data
 
     MbusVarHeader h;
-    MbusV.parse_var_header_args.body = f.data;
-    MbusV.parse_var_header_args.len = f.data_len;
-    MbusV.parse_var_header_args.out = &h;
+    Mbus.parse_var_header_args.body = f.data;
+    Mbus.parse_var_header_args.len = f.data_len;
+    Mbus.parse_var_header_args.out = &h;
     Mbus.parse_var_header(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_UINT32(12345678u, h.id);
     TEST_ASSERT_EQUAL_HEX16(0x4024, h.manufacturer_raw);
     TEST_ASSERT_EQUAL_STRING("PAD", h.manufacturer);
@@ -79,105 +79,105 @@ void test_mbdoc_rsp_ud_example(void)
     int8_t exp10 = 0;
 
     // Record 1: DIF 03 = 24-bit integer, VIF 13 = volume 10^(3-6) m3, i.e. litres.
-    MbusV.record_next_args.body = body;
-    MbusV.record_next_args.len = body_len;
-    MbusV.record_next_args.pos = &pos;
-    MbusV.record_next_args.out = &r;
+    Mbus.record_next_args.body = body;
+    Mbus.record_next_args.len = body_len;
+    Mbus.record_next_args.pos = &pos;
+    Mbus.record_next_args.out = &r;
     Mbus.record_next(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_HEX8(0x03, r.dif);
     TEST_ASSERT_EQUAL_HEX8(MBUS_DIF_INT24, r.coding);
     TEST_ASSERT_EQUAL_HEX8(0x13, r.vif);
     TEST_ASSERT_EQUAL_UINT8(3, r.data_len);
-    MbusV.record_value_int_args.r = &r;
-    MbusV.record_value_int_args.out = &v;
+    Mbus.record_value_int_args.r = &r;
+    Mbus.record_value_int_args.out = &v;
     Mbus.record_value_int(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_INT64(12565, v);
-    MbusV.vif_decode_args.vif = r.vif;
-    MbusV.vif_decode_args.unit = &unit;
-    MbusV.vif_decode_args.exp10 = &exp10;
+    Mbus.vif_decode_args.vif = r.vif;
+    Mbus.vif_decode_args.unit = &unit;
+    Mbus.vif_decode_args.exp10 = &exp10;
     Mbus.vif_decode(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_INT(MBUS_UNIT_M3, unit);
     TEST_ASSERT_EQUAL_INT8(-3, exp10);
 
     // Record 2: DIF DA carries a DIFE (02); coding A = 4-digit BCD. VIF 3B = volume flow 10^-3 m3/h.
-    MbusV.record_next_args.body = body;
-    MbusV.record_next_args.len = body_len;
-    MbusV.record_next_args.pos = &pos;
-    MbusV.record_next_args.out = &r;
+    Mbus.record_next_args.body = body;
+    Mbus.record_next_args.len = body_len;
+    Mbus.record_next_args.pos = &pos;
+    Mbus.record_next_args.out = &r;
     Mbus.record_next(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_HEX8(0xDA, r.dif);
     TEST_ASSERT_EQUAL_HEX8(MBUS_DIF_BCD4, r.coding);
     TEST_ASSERT_EQUAL_HEX8(0x3B, r.vif);
     TEST_ASSERT_EQUAL_UINT8(2, r.data_len);
-    MbusV.record_value_int_args.r = &r;
-    MbusV.record_value_int_args.out = &v;
+    Mbus.record_value_int_args.r = &r;
+    Mbus.record_value_int_args.out = &v;
     Mbus.record_value_int(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_INT64(113, v);
-    MbusV.vif_decode_args.vif = r.vif;
-    MbusV.vif_decode_args.unit = &unit;
-    MbusV.vif_decode_args.exp10 = &exp10;
+    Mbus.vif_decode_args.vif = r.vif;
+    Mbus.vif_decode_args.unit = &unit;
+    Mbus.vif_decode_args.exp10 = &exp10;
     Mbus.vif_decode(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_INT(MBUS_UNIT_M3_PER_H, unit);
     TEST_ASSERT_EQUAL_INT8(-3, exp10);
 
     // Record 3: DIF 8B carries a DIFE (60); coding B = 6-digit BCD. VIF 04 = energy 10^(4-3) Wh,
     // so the published 218.37 kWh is the raw 21837 scaled by 10^1 = 218370 Wh.
-    MbusV.record_next_args.body = body;
-    MbusV.record_next_args.len = body_len;
-    MbusV.record_next_args.pos = &pos;
-    MbusV.record_next_args.out = &r;
+    Mbus.record_next_args.body = body;
+    Mbus.record_next_args.len = body_len;
+    Mbus.record_next_args.pos = &pos;
+    Mbus.record_next_args.out = &r;
     Mbus.record_next(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_HEX8(0x8B, r.dif);
     TEST_ASSERT_EQUAL_HEX8(MBUS_DIF_BCD6, r.coding);
     TEST_ASSERT_EQUAL_HEX8(0x04, r.vif);
     TEST_ASSERT_EQUAL_UINT8(3, r.data_len);
-    MbusV.record_value_int_args.r = &r;
-    MbusV.record_value_int_args.out = &v;
+    Mbus.record_value_int_args.r = &r;
+    Mbus.record_value_int_args.out = &v;
     Mbus.record_value_int(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_INT64(21837, v);
-    MbusV.vif_decode_args.vif = r.vif;
-    MbusV.vif_decode_args.unit = &unit;
-    MbusV.vif_decode_args.exp10 = &exp10;
+    Mbus.vif_decode_args.vif = r.vif;
+    Mbus.vif_decode_args.unit = &unit;
+    Mbus.vif_decode_args.exp10 = &exp10;
     Mbus.vif_decode(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_INT(MBUS_UNIT_WH, unit);
     TEST_ASSERT_EQUAL_INT8(1, exp10);
 
     TEST_ASSERT_EQUAL_UINT(body_len, pos); // three records exactly fill the body
-    MbusV.record_next_args.body = body;
-    MbusV.record_next_args.len = body_len;
-    MbusV.record_next_args.pos = &pos;
-    MbusV.record_next_args.out = &r;
+    Mbus.record_next_args.body = body;
+    Mbus.record_next_args.len = body_len;
+    Mbus.record_next_args.pos = &pos;
+    Mbus.record_next_args.out = &r;
     Mbus.record_next(mbus_work);
-    TEST_ASSERT_FALSE(MbusV.ok);
+    TEST_ASSERT_FALSE(Mbus.ok);
 }
 
 // MBDOC48 fig. 13: the single character format is one octet, E5h (decimal 229).
 void test_single_character_ack(void)
 {
     uint8_t buf[4];
-    MbusV.build_ack_args.buf = buf;
-    MbusV.build_ack_args.cap = sizeof(buf);
+    Mbus.build_ack_args.buf = buf;
+    Mbus.build_ack_args.cap = sizeof(buf);
     Mbus.build_ack(mbus_work);
-    TEST_ASSERT_EQUAL_UINT(1u, MbusV.n);
+    TEST_ASSERT_EQUAL_UINT(1u, Mbus.n);
     TEST_ASSERT_EQUAL_HEX8(0xE5, buf[0]);
 
     MbusFrame f;
     size_t used = 0;
-    MbusV.parse_args.buf = buf;
-    MbusV.parse_args.len = 1;
-    MbusV.parse_args.out = &f;
-    MbusV.parse_args.consumed = &used;
+    Mbus.parse_args.buf = buf;
+    Mbus.parse_args.len = 1;
+    Mbus.parse_args.out = &f;
+    Mbus.parse_args.consumed = &used;
     Mbus.parse(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_INT(MBUS_FRAME_ACK, f.type);
     TEST_ASSERT_EQUAL_UINT(1u, used);
 }
@@ -187,21 +187,21 @@ void test_single_character_ack(void)
 void test_snd_nke_short_frame(void)
 {
     uint8_t buf[8];
-    MbusV.build_snd_nke_args.buf = buf;
-    MbusV.build_snd_nke_args.cap = sizeof(buf);
-    MbusV.build_snd_nke_args.a = 0x05;
+    Mbus.build_snd_nke_args.buf = buf;
+    Mbus.build_snd_nke_args.cap = sizeof(buf);
+    Mbus.build_snd_nke_args.a = 0x05;
     Mbus.build_snd_nke(mbus_work);
-    TEST_ASSERT_EQUAL_UINT(5u, MbusV.n);
+    TEST_ASSERT_EQUAL_UINT(5u, Mbus.n);
     static const uint8_t WANT[5] = {0x10, 0x40, 0x05, 0x45, 0x16};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 5);
 
     MbusFrame f;
-    MbusV.parse_args.buf = buf;
-    MbusV.parse_args.len = 5;
-    MbusV.parse_args.out = &f;
-    MbusV.parse_args.consumed = NULL;
+    Mbus.parse_args.buf = buf;
+    Mbus.parse_args.len = 5;
+    Mbus.parse_args.out = &f;
+    Mbus.parse_args.consumed = NULL;
     Mbus.parse(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_INT(MBUS_FRAME_SHORT, f.type);
     TEST_ASSERT_EQUAL_HEX8(MBUS_C_SND_NKE, f.c);
     TEST_ASSERT_EQUAL_HEX8(0x05, f.a);
@@ -212,34 +212,34 @@ void test_snd_nke_short_frame(void)
 void test_req_ud_fcb_toggles_bit5(void)
 {
     uint8_t a[8], b[8];
-    MbusV.build_req_ud2_args.buf = a;
-    MbusV.build_req_ud2_args.cap = sizeof(a);
-    MbusV.build_req_ud2_args.a = 0x01;
-    MbusV.build_req_ud2_args.fcb = PROTO_FALSE;
+    Mbus.build_req_ud2_args.buf = a;
+    Mbus.build_req_ud2_args.cap = sizeof(a);
+    Mbus.build_req_ud2_args.a = 0x01;
+    Mbus.build_req_ud2_args.fcb = PROTO_FALSE;
     Mbus.build_req_ud2(mbus_work);
-    TEST_ASSERT_EQUAL_UINT(5u, MbusV.n);
-    MbusV.build_req_ud2_args.buf = b;
-    MbusV.build_req_ud2_args.cap = sizeof(b);
-    MbusV.build_req_ud2_args.a = 0x01;
-    MbusV.build_req_ud2_args.fcb = PROTO_TRUE;
+    TEST_ASSERT_EQUAL_UINT(5u, Mbus.n);
+    Mbus.build_req_ud2_args.buf = b;
+    Mbus.build_req_ud2_args.cap = sizeof(b);
+    Mbus.build_req_ud2_args.a = 0x01;
+    Mbus.build_req_ud2_args.fcb = PROTO_TRUE;
     Mbus.build_req_ud2(mbus_work);
-    TEST_ASSERT_EQUAL_UINT(5u, MbusV.n);
+    TEST_ASSERT_EQUAL_UINT(5u, Mbus.n);
     TEST_ASSERT_EQUAL_HEX8(0x5B, a[1]);
     TEST_ASSERT_EQUAL_HEX8(0x7B, b[1]);
     TEST_ASSERT_EQUAL_HEX8(0x20, (uint8_t)(a[1] ^ b[1]));
 
-    MbusV.build_req_ud1_args.buf = a;
-    MbusV.build_req_ud1_args.cap = sizeof(a);
-    MbusV.build_req_ud1_args.a = 0x01;
-    MbusV.build_req_ud1_args.fcb = PROTO_FALSE;
+    Mbus.build_req_ud1_args.buf = a;
+    Mbus.build_req_ud1_args.cap = sizeof(a);
+    Mbus.build_req_ud1_args.a = 0x01;
+    Mbus.build_req_ud1_args.fcb = PROTO_FALSE;
     Mbus.build_req_ud1(mbus_work);
-    TEST_ASSERT_EQUAL_UINT(5u, MbusV.n);
-    MbusV.build_req_ud1_args.buf = b;
-    MbusV.build_req_ud1_args.cap = sizeof(b);
-    MbusV.build_req_ud1_args.a = 0x01;
-    MbusV.build_req_ud1_args.fcb = PROTO_TRUE;
+    TEST_ASSERT_EQUAL_UINT(5u, Mbus.n);
+    Mbus.build_req_ud1_args.buf = b;
+    Mbus.build_req_ud1_args.cap = sizeof(b);
+    Mbus.build_req_ud1_args.a = 0x01;
+    Mbus.build_req_ud1_args.fcb = PROTO_TRUE;
     Mbus.build_req_ud1(mbus_work);
-    TEST_ASSERT_EQUAL_UINT(5u, MbusV.n);
+    TEST_ASSERT_EQUAL_UINT(5u, Mbus.n);
     TEST_ASSERT_EQUAL_HEX8(0x5A, a[1]);
     TEST_ASSERT_EQUAL_HEX8(0x7A, b[1]);
 }
@@ -249,26 +249,26 @@ void test_req_ud_fcb_toggles_bit5(void)
 void test_control_frame_is_a_long_frame_with_l_three(void)
 {
     uint8_t buf[16];
-    MbusV.build_long_args.buf = buf;
-    MbusV.build_long_args.cap = sizeof(buf);
-    MbusV.build_long_args.c = MBUS_C_SND_UD;
-    MbusV.build_long_args.a = 0xFD;
-    MbusV.build_long_args.ci = MBUS_CI_SELECT;
-    MbusV.build_long_args.data = NULL;
-    MbusV.build_long_args.data_len = 0;
+    Mbus.build_long_args.buf = buf;
+    Mbus.build_long_args.cap = sizeof(buf);
+    Mbus.build_long_args.c = MBUS_C_SND_UD;
+    Mbus.build_long_args.a = 0xFD;
+    Mbus.build_long_args.ci = MBUS_CI_SELECT;
+    Mbus.build_long_args.data = NULL;
+    Mbus.build_long_args.data_len = 0;
     Mbus.build_long(mbus_work);
-    size_t n = MbusV.n;
+    size_t n = Mbus.n;
     TEST_ASSERT_EQUAL_UINT(9u, n); // 68 L L 68 C A CI CS 16
     static const uint8_t WANT[9] = {0x68, 0x03, 0x03, 0x68, 0x53, 0xFD, 0x52, 0xA2, 0x16};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 9);
 
     MbusFrame f;
-    MbusV.parse_args.buf = buf;
-    MbusV.parse_args.len = n;
-    MbusV.parse_args.out = &f;
-    MbusV.parse_args.consumed = NULL;
+    Mbus.parse_args.buf = buf;
+    Mbus.parse_args.len = n;
+    Mbus.parse_args.out = &f;
+    Mbus.parse_args.consumed = NULL;
     Mbus.parse(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_INT(MBUS_FRAME_LONG, f.type);
     TEST_ASSERT_EQUAL_UINT8(0, f.data_len);
     TEST_ASSERT_NULL(f.data);
@@ -282,15 +282,15 @@ void test_build_long_reproduces_the_published_telegram(void)
     uint8_t buf[64];
     const uint8_t *user = RSP_UD + 7;
     uint8_t user_len = 0x1F - 3;
-    MbusV.build_long_args.buf = buf;
-    MbusV.build_long_args.cap = sizeof(buf);
-    MbusV.build_long_args.c = 0x08;
-    MbusV.build_long_args.a = 0x02;
-    MbusV.build_long_args.ci = MBUS_CI_RSP_VARIABLE;
-    MbusV.build_long_args.data = user;
-    MbusV.build_long_args.data_len = user_len;
+    Mbus.build_long_args.buf = buf;
+    Mbus.build_long_args.cap = sizeof(buf);
+    Mbus.build_long_args.c = 0x08;
+    Mbus.build_long_args.a = 0x02;
+    Mbus.build_long_args.ci = MBUS_CI_RSP_VARIABLE;
+    Mbus.build_long_args.data = user;
+    Mbus.build_long_args.data_len = user_len;
     Mbus.build_long(mbus_work);
-    size_t n = MbusV.n;
+    size_t n = Mbus.n;
     TEST_ASSERT_EQUAL_UINT(sizeof(RSP_UD), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(RSP_UD, buf, sizeof(RSP_UD));
 }
@@ -304,46 +304,46 @@ void test_parse_refuses_a_damaged_frame(void)
 
     memcpy(f, RSP_UD, sizeof(RSP_UD));
     f[10] ^= 0x01; // an id octet, covered by the check sum
-    MbusV.parse_args.buf = f;
-    MbusV.parse_args.len = sizeof(RSP_UD);
-    MbusV.parse_args.out = &out;
-    MbusV.parse_args.consumed = NULL;
+    Mbus.parse_args.buf = f;
+    Mbus.parse_args.len = sizeof(RSP_UD);
+    Mbus.parse_args.out = &out;
+    Mbus.parse_args.consumed = NULL;
     Mbus.parse(mbus_work);
-    TEST_ASSERT_FALSE(MbusV.ok);
+    TEST_ASSERT_FALSE(Mbus.ok);
 
     memcpy(f, RSP_UD, sizeof(RSP_UD));
     f[2] = 0x1E; // the doubled L field disagrees
-    MbusV.parse_args.buf = f;
-    MbusV.parse_args.len = sizeof(RSP_UD);
-    MbusV.parse_args.out = &out;
-    MbusV.parse_args.consumed = NULL;
+    Mbus.parse_args.buf = f;
+    Mbus.parse_args.len = sizeof(RSP_UD);
+    Mbus.parse_args.out = &out;
+    Mbus.parse_args.consumed = NULL;
     Mbus.parse(mbus_work);
-    TEST_ASSERT_FALSE(MbusV.ok);
+    TEST_ASSERT_FALSE(Mbus.ok);
 
     memcpy(f, RSP_UD, sizeof(RSP_UD));
     f[sizeof(RSP_UD) - 1] = 0x17; // the stop octet is not 16h
-    MbusV.parse_args.buf = f;
-    MbusV.parse_args.len = sizeof(RSP_UD);
-    MbusV.parse_args.out = &out;
-    MbusV.parse_args.consumed = NULL;
+    Mbus.parse_args.buf = f;
+    Mbus.parse_args.len = sizeof(RSP_UD);
+    Mbus.parse_args.out = &out;
+    Mbus.parse_args.consumed = NULL;
     Mbus.parse(mbus_work);
-    TEST_ASSERT_FALSE(MbusV.ok);
+    TEST_ASSERT_FALSE(Mbus.ok);
 
     static const uint8_t SHORT_BAD[5] = {0x10, 0x40, 0x05, 0x46, 0x16}; // check sum is 45h, not 46h
-    MbusV.parse_args.buf = SHORT_BAD;
-    MbusV.parse_args.len = 5;
-    MbusV.parse_args.out = &out;
-    MbusV.parse_args.consumed = NULL;
+    Mbus.parse_args.buf = SHORT_BAD;
+    Mbus.parse_args.len = 5;
+    Mbus.parse_args.out = &out;
+    Mbus.parse_args.consumed = NULL;
     Mbus.parse(mbus_work);
-    TEST_ASSERT_FALSE(MbusV.ok);
+    TEST_ASSERT_FALSE(Mbus.ok);
 
     static const uint8_t UNKNOWN_START[5] = {0x11, 0x40, 0x05, 0x45, 0x16};
-    MbusV.parse_args.buf = UNKNOWN_START;
-    MbusV.parse_args.len = 5;
-    MbusV.parse_args.out = &out;
-    MbusV.parse_args.consumed = NULL;
+    Mbus.parse_args.buf = UNKNOWN_START;
+    Mbus.parse_args.len = 5;
+    Mbus.parse_args.out = &out;
+    Mbus.parse_args.consumed = NULL;
     Mbus.parse(mbus_work);
-    TEST_ASSERT_FALSE(MbusV.ok);
+    TEST_ASSERT_FALSE(Mbus.ok);
 }
 
 // A frame cut short of its own declared length is not a frame yet.
@@ -352,12 +352,12 @@ void test_parse_refuses_a_truncated_frame(void)
     MbusFrame out;
     for (size_t n = 1; n < sizeof(RSP_UD); n++)
     {
-        MbusV.parse_args.buf = RSP_UD;
-        MbusV.parse_args.len = n;
-        MbusV.parse_args.out = &out;
-        MbusV.parse_args.consumed = NULL;
+        Mbus.parse_args.buf = RSP_UD;
+        Mbus.parse_args.len = n;
+        Mbus.parse_args.out = &out;
+        Mbus.parse_args.consumed = NULL;
         Mbus.parse(mbus_work);
-        TEST_ASSERT_FALSE(MbusV.ok);
+        TEST_ASSERT_FALSE(Mbus.ok);
     }
 }
 
@@ -365,58 +365,58 @@ void test_parse_refuses_a_truncated_frame(void)
 // 32-bit real and 1101b is variable (an LVAR octet carries the length), so both report 0 here.
 void test_dif_data_field_lengths(void)
 {
-    MbusV.dif_data_len_args.coding = MBUS_DIF_NONE;
+    Mbus.dif_data_len_args.coding = MBUS_DIF_NONE;
     Mbus.dif_data_len(mbus_work);
-    TEST_ASSERT_EQUAL_UINT8(0, MbusV.value);
-    MbusV.dif_data_len_args.coding = MBUS_DIF_INT8;
+    TEST_ASSERT_EQUAL_UINT8(0, Mbus.value);
+    Mbus.dif_data_len_args.coding = MBUS_DIF_INT8;
     Mbus.dif_data_len(mbus_work);
-    TEST_ASSERT_EQUAL_UINT8(1, MbusV.value);
-    MbusV.dif_data_len_args.coding = MBUS_DIF_INT16;
+    TEST_ASSERT_EQUAL_UINT8(1, Mbus.value);
+    Mbus.dif_data_len_args.coding = MBUS_DIF_INT16;
     Mbus.dif_data_len(mbus_work);
-    TEST_ASSERT_EQUAL_UINT8(2, MbusV.value);
-    MbusV.dif_data_len_args.coding = MBUS_DIF_INT24;
+    TEST_ASSERT_EQUAL_UINT8(2, Mbus.value);
+    Mbus.dif_data_len_args.coding = MBUS_DIF_INT24;
     Mbus.dif_data_len(mbus_work);
-    TEST_ASSERT_EQUAL_UINT8(3, MbusV.value);
-    MbusV.dif_data_len_args.coding = MBUS_DIF_INT32;
+    TEST_ASSERT_EQUAL_UINT8(3, Mbus.value);
+    Mbus.dif_data_len_args.coding = MBUS_DIF_INT32;
     Mbus.dif_data_len(mbus_work);
-    TEST_ASSERT_EQUAL_UINT8(4, MbusV.value);
-    MbusV.dif_data_len_args.coding = MBUS_DIF_REAL32;
+    TEST_ASSERT_EQUAL_UINT8(4, Mbus.value);
+    Mbus.dif_data_len_args.coding = MBUS_DIF_REAL32;
     Mbus.dif_data_len(mbus_work);
-    TEST_ASSERT_EQUAL_UINT8(4, MbusV.value);
-    MbusV.dif_data_len_args.coding = MBUS_DIF_INT48;
+    TEST_ASSERT_EQUAL_UINT8(4, Mbus.value);
+    Mbus.dif_data_len_args.coding = MBUS_DIF_INT48;
     Mbus.dif_data_len(mbus_work);
-    TEST_ASSERT_EQUAL_UINT8(6, MbusV.value);
-    MbusV.dif_data_len_args.coding = MBUS_DIF_INT64;
+    TEST_ASSERT_EQUAL_UINT8(6, Mbus.value);
+    Mbus.dif_data_len_args.coding = MBUS_DIF_INT64;
     Mbus.dif_data_len(mbus_work);
-    TEST_ASSERT_EQUAL_UINT8(8, MbusV.value);
-    MbusV.dif_data_len_args.coding = MBUS_DIF_READOUT;
+    TEST_ASSERT_EQUAL_UINT8(8, Mbus.value);
+    Mbus.dif_data_len_args.coding = MBUS_DIF_READOUT;
     Mbus.dif_data_len(mbus_work);
-    TEST_ASSERT_EQUAL_UINT8(0, MbusV.value);
-    MbusV.dif_data_len_args.coding = MBUS_DIF_BCD2;
+    TEST_ASSERT_EQUAL_UINT8(0, Mbus.value);
+    Mbus.dif_data_len_args.coding = MBUS_DIF_BCD2;
     Mbus.dif_data_len(mbus_work);
-    TEST_ASSERT_EQUAL_UINT8(1, MbusV.value);
-    MbusV.dif_data_len_args.coding = MBUS_DIF_BCD4;
+    TEST_ASSERT_EQUAL_UINT8(1, Mbus.value);
+    Mbus.dif_data_len_args.coding = MBUS_DIF_BCD4;
     Mbus.dif_data_len(mbus_work);
-    TEST_ASSERT_EQUAL_UINT8(2, MbusV.value);
-    MbusV.dif_data_len_args.coding = MBUS_DIF_BCD6;
+    TEST_ASSERT_EQUAL_UINT8(2, Mbus.value);
+    Mbus.dif_data_len_args.coding = MBUS_DIF_BCD6;
     Mbus.dif_data_len(mbus_work);
-    TEST_ASSERT_EQUAL_UINT8(3, MbusV.value);
-    MbusV.dif_data_len_args.coding = MBUS_DIF_BCD8;
+    TEST_ASSERT_EQUAL_UINT8(3, Mbus.value);
+    Mbus.dif_data_len_args.coding = MBUS_DIF_BCD8;
     Mbus.dif_data_len(mbus_work);
-    TEST_ASSERT_EQUAL_UINT8(4, MbusV.value);
-    MbusV.dif_data_len_args.coding = MBUS_DIF_VARIABLE;
+    TEST_ASSERT_EQUAL_UINT8(4, Mbus.value);
+    Mbus.dif_data_len_args.coding = MBUS_DIF_VARIABLE;
     Mbus.dif_data_len(mbus_work);
-    TEST_ASSERT_EQUAL_UINT8(0, MbusV.value);
-    MbusV.dif_data_len_args.coding = MBUS_DIF_BCD12;
+    TEST_ASSERT_EQUAL_UINT8(0, Mbus.value);
+    Mbus.dif_data_len_args.coding = MBUS_DIF_BCD12;
     Mbus.dif_data_len(mbus_work);
-    TEST_ASSERT_EQUAL_UINT8(6, MbusV.value);
-    MbusV.dif_data_len_args.coding = MBUS_DIF_SPECIAL;
+    TEST_ASSERT_EQUAL_UINT8(6, Mbus.value);
+    Mbus.dif_data_len_args.coding = MBUS_DIF_SPECIAL;
     Mbus.dif_data_len(mbus_work);
-    TEST_ASSERT_EQUAL_UINT8(0, MbusV.value);
+    TEST_ASSERT_EQUAL_UINT8(0, Mbus.value);
     // only the low nibble selects the coding; the function / storage bits above it do not
-    MbusV.dif_data_len_args.coding = 0x42;
+    Mbus.dif_data_len_args.coding = 0x42;
     Mbus.dif_data_len(mbus_work);
-    TEST_ASSERT_EQUAL_UINT8(2, MbusV.value);
+    TEST_ASSERT_EQUAL_UINT8(2, Mbus.value);
 }
 
 // MBDOC48 8.4.3: each VIF range names a unit and an exponent formula. The boundary code of every
@@ -448,33 +448,33 @@ void test_vif_unit_table(void)
     {
         MbusUnit u = MBUS_UNIT_UNKNOWN;
         int8_t e = 127;
-        MbusV.vif_decode_args.vif = CASES[i].vif;
-        MbusV.vif_decode_args.unit = &u;
-        MbusV.vif_decode_args.exp10 = &e;
+        Mbus.vif_decode_args.vif = CASES[i].vif;
+        Mbus.vif_decode_args.unit = &u;
+        Mbus.vif_decode_args.exp10 = &e;
         Mbus.vif_decode(mbus_work);
-        TEST_ASSERT_TRUE(MbusV.ok);
+        TEST_ASSERT_TRUE(Mbus.ok);
         TEST_ASSERT_EQUAL_INT(CASES[i].unit, u);
         TEST_ASSERT_EQUAL_INT8(CASES[i].exp10, e);
 
         // the extension bit is bit 7 and carries no unit information, so setting it changes nothing
         MbusUnit u2 = MBUS_UNIT_UNKNOWN;
         int8_t e2 = 127;
-        MbusV.vif_decode_args.vif = (uint8_t)(CASES[i].vif | 0x80u);
-        MbusV.vif_decode_args.unit = &u2;
-        MbusV.vif_decode_args.exp10 = &e2;
+        Mbus.vif_decode_args.vif = (uint8_t)(CASES[i].vif | 0x80u);
+        Mbus.vif_decode_args.unit = &u2;
+        Mbus.vif_decode_args.exp10 = &e2;
         Mbus.vif_decode(mbus_work);
-        TEST_ASSERT_TRUE(MbusV.ok);
+        TEST_ASSERT_TRUE(Mbus.ok);
         TEST_ASSERT_EQUAL_INT(CASES[i].unit, u2);
         TEST_ASSERT_EQUAL_INT8(CASES[i].exp10, e2);
     }
 
     // 6Ch is a Time Point code, outside every measurement range this decoder covers
     MbusUnit u = MBUS_UNIT_WH;
-    MbusV.vif_decode_args.vif = 0x6C;
-    MbusV.vif_decode_args.unit = &u;
-    MbusV.vif_decode_args.exp10 = NULL;
+    Mbus.vif_decode_args.vif = 0x6C;
+    Mbus.vif_decode_args.unit = &u;
+    Mbus.vif_decode_args.exp10 = NULL;
     Mbus.vif_decode(mbus_work);
-    TEST_ASSERT_FALSE(MbusV.ok);
+    TEST_ASSERT_FALSE(Mbus.ok);
     TEST_ASSERT_EQUAL_INT(MBUS_UNIT_UNKNOWN, u);
 }
 
@@ -485,26 +485,26 @@ void test_bcd_decoding_and_sign(void)
     static const uint8_t POS[3] = {0x12, 0x34, 0x56};
     MbusRecord r = {0x0B, MBUS_DIF_BCD6, 0x00, POS, 3};
     int64_t v = 0;
-    MbusV.record_value_int_args.r = &r;
-    MbusV.record_value_int_args.out = &v;
+    Mbus.record_value_int_args.r = &r;
+    Mbus.record_value_int_args.out = &v;
     Mbus.record_value_int(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_INT64(563412, v);
 
     static const uint8_t NEG[3] = {0x12, 0x34, 0xF6}; // F in the top nibble, magnitude 63412
     r.data = NEG;
-    MbusV.record_value_int_args.r = &r;
-    MbusV.record_value_int_args.out = &v;
+    Mbus.record_value_int_args.r = &r;
+    Mbus.record_value_int_args.out = &v;
     Mbus.record_value_int(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_INT64(-63412, v);
 
     static const uint8_t BAD[3] = {0x12, 0x3A, 0x56}; // A is not a decimal digit
     r.data = BAD;
-    MbusV.record_value_int_args.r = &r;
-    MbusV.record_value_int_args.out = &v;
+    Mbus.record_value_int_args.r = &r;
+    Mbus.record_value_int_args.out = &v;
     Mbus.record_value_int(mbus_work);
-    TEST_ASSERT_FALSE(MbusV.ok);
+    TEST_ASSERT_FALSE(Mbus.ok);
 }
 
 // MBDOC48 8.4.2: integer codings are little-endian and signed. -1 in every width is all-ones, and
@@ -514,34 +514,34 @@ void test_integer_decoding_is_little_endian_and_signed(void)
     static const uint8_t LE16[2] = {0x34, 0x12};
     MbusRecord r = {0x02, MBUS_DIF_INT16, 0x00, LE16, 2};
     int64_t v = 0;
-    MbusV.record_value_int_args.r = &r;
-    MbusV.record_value_int_args.out = &v;
+    Mbus.record_value_int_args.r = &r;
+    Mbus.record_value_int_args.out = &v;
     Mbus.record_value_int(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_INT64(0x1234, v);
 
     static const uint8_t ONES[2] = {0xFF, 0xFF};
     r.data = ONES;
-    MbusV.record_value_int_args.r = &r;
-    MbusV.record_value_int_args.out = &v;
+    Mbus.record_value_int_args.r = &r;
+    Mbus.record_value_int_args.out = &v;
     Mbus.record_value_int(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_INT64(-1, v);
 
     static const uint8_t MIN16[2] = {0x00, 0x80};
     r.data = MIN16;
-    MbusV.record_value_int_args.r = &r;
-    MbusV.record_value_int_args.out = &v;
+    Mbus.record_value_int_args.r = &r;
+    Mbus.record_value_int_args.out = &v;
     Mbus.record_value_int(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_INT64(-32768, v);
 
     static const uint8_t LE32[4] = {0x78, 0x56, 0x34, 0x12};
     MbusRecord r32 = {0x04, MBUS_DIF_INT32, 0x00, LE32, 4};
-    MbusV.record_value_int_args.r = &r32;
-    MbusV.record_value_int_args.out = &v;
+    Mbus.record_value_int_args.r = &r32;
+    Mbus.record_value_int_args.out = &v;
     Mbus.record_value_int(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_INT64(0x12345678, v);
 }
 
@@ -553,23 +553,23 @@ void test_real32_record(void)
     static const uint8_t ONE[4] = {0x00, 0x00, 0x80, 0x3F};
     MbusRecord r = {0x05, MBUS_DIF_REAL32, 0x00, ONE, 4};
     float f = 0.0f;
-    MbusV.record_value_real_args.r = &r;
-    MbusV.record_value_real_args.out = &f;
+    Mbus.record_value_real_args.r = &r;
+    Mbus.record_value_real_args.out = &f;
     Mbus.record_value_real(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_FLOAT(1.0f, f);
 
     int64_t v = 0;
-    MbusV.record_value_int_args.r = &r;
-    MbusV.record_value_int_args.out = &v;
+    Mbus.record_value_int_args.r = &r;
+    Mbus.record_value_int_args.out = &v;
     Mbus.record_value_int(mbus_work);
-    TEST_ASSERT_FALSE(MbusV.ok); // a real is not an integer coding
+    TEST_ASSERT_FALSE(Mbus.ok); // a real is not an integer coding
 
     MbusRecord i = {0x02, MBUS_DIF_INT16, 0x00, ONE, 2};
-    MbusV.record_value_real_args.r = &i;
-    MbusV.record_value_real_args.out = &f;
+    Mbus.record_value_real_args.r = &i;
+    Mbus.record_value_real_args.out = &f;
     Mbus.record_value_real(mbus_work);
-    TEST_ASSERT_FALSE(MbusV.ok); // and an integer is not a real
+    TEST_ASSERT_FALSE(Mbus.ok); // and an integer is not a real
 }
 
 // MBDOC48 6.3.2: the LVAR octet before a variable-length record's data carries its length, and the
@@ -582,28 +582,28 @@ void test_variable_length_record(void)
     };
     size_t pos = 0;
     MbusRecord r;
-    MbusV.record_next_args.body = BODY;
-    MbusV.record_next_args.len = sizeof(BODY);
-    MbusV.record_next_args.pos = &pos;
-    MbusV.record_next_args.out = &r;
+    Mbus.record_next_args.body = BODY;
+    Mbus.record_next_args.len = sizeof(BODY);
+    Mbus.record_next_args.pos = &pos;
+    Mbus.record_next_args.out = &r;
     Mbus.record_next(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_HEX8(MBUS_DIF_VARIABLE, r.coding);
     TEST_ASSERT_EQUAL_UINT8(4, r.data_len);
     TEST_ASSERT_EQUAL_HEX8('A', r.data[0]);
 
-    MbusV.record_next_args.body = BODY;
-    MbusV.record_next_args.len = sizeof(BODY);
-    MbusV.record_next_args.pos = &pos;
-    MbusV.record_next_args.out = &r;
+    Mbus.record_next_args.body = BODY;
+    Mbus.record_next_args.len = sizeof(BODY);
+    Mbus.record_next_args.pos = &pos;
+    Mbus.record_next_args.out = &r;
     Mbus.record_next(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_HEX8(MBUS_DIF_INT8, r.coding);
     int64_t v = 0;
-    MbusV.record_value_int_args.r = &r;
-    MbusV.record_value_int_args.out = &v;
+    Mbus.record_value_int_args.r = &r;
+    Mbus.record_value_int_args.out = &v;
     Mbus.record_value_int(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_INT64(42, v);
     TEST_ASSERT_EQUAL_UINT(sizeof(BODY), pos);
 }
@@ -614,30 +614,30 @@ void test_record_walk_refuses_an_overrun(void)
     static const uint8_t SHORT_BODY[] = {0x04, 0x13, 0x01, 0x02}; // 32-bit coding, only 2 octets left
     size_t pos = 0;
     MbusRecord r;
-    MbusV.record_next_args.body = SHORT_BODY;
-    MbusV.record_next_args.len = sizeof(SHORT_BODY);
-    MbusV.record_next_args.pos = &pos;
-    MbusV.record_next_args.out = &r;
+    Mbus.record_next_args.body = SHORT_BODY;
+    Mbus.record_next_args.len = sizeof(SHORT_BODY);
+    Mbus.record_next_args.pos = &pos;
+    Mbus.record_next_args.out = &r;
     Mbus.record_next(mbus_work);
-    TEST_ASSERT_FALSE(MbusV.ok);
+    TEST_ASSERT_FALSE(Mbus.ok);
 
     static const uint8_t DANGLING_DIFE[] = {0x83, 0x84}; // an extension chain that never terminates
     pos = 0;
-    MbusV.record_next_args.body = DANGLING_DIFE;
-    MbusV.record_next_args.len = sizeof(DANGLING_DIFE);
-    MbusV.record_next_args.pos = &pos;
-    MbusV.record_next_args.out = &r;
+    Mbus.record_next_args.body = DANGLING_DIFE;
+    Mbus.record_next_args.len = sizeof(DANGLING_DIFE);
+    Mbus.record_next_args.pos = &pos;
+    Mbus.record_next_args.out = &r;
     Mbus.record_next(mbus_work);
-    TEST_ASSERT_FALSE(MbusV.ok);
+    TEST_ASSERT_FALSE(Mbus.ok);
 
     static const uint8_t NO_VIF[] = {0x03}; // a DIF with no VIF after it
     pos = 0;
-    MbusV.record_next_args.body = NO_VIF;
-    MbusV.record_next_args.len = sizeof(NO_VIF);
-    MbusV.record_next_args.pos = &pos;
-    MbusV.record_next_args.out = &r;
+    Mbus.record_next_args.body = NO_VIF;
+    Mbus.record_next_args.len = sizeof(NO_VIF);
+    Mbus.record_next_args.pos = &pos;
+    Mbus.record_next_args.out = &r;
     Mbus.record_next(mbus_work);
-    TEST_ASSERT_FALSE(MbusV.ok);
+    TEST_ASSERT_FALSE(Mbus.ok);
 }
 
 // MBDOC48 6.3.1: the manufacturer field packs three uppercase letters at five bits each,
@@ -648,11 +648,11 @@ void test_manufacturer_code_packing(void)
     body[4] = 0x43; // 0443h little-endian
     body[5] = 0x04;
     MbusVarHeader h;
-    MbusV.parse_var_header_args.body = body;
-    MbusV.parse_var_header_args.len = sizeof(body);
-    MbusV.parse_var_header_args.out = &h;
+    Mbus.parse_var_header_args.body = body;
+    Mbus.parse_var_header_args.len = sizeof(body);
+    Mbus.parse_var_header_args.out = &h;
     Mbus.parse_var_header(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
+    TEST_ASSERT_TRUE(Mbus.ok);
     TEST_ASSERT_EQUAL_HEX16(0x0443, h.manufacturer_raw);
     TEST_ASSERT_EQUAL_STRING("ABC", h.manufacturer);
     TEST_ASSERT_EQUAL_UINT32(0u, h.id);
@@ -664,77 +664,77 @@ void test_var_header_bounds_and_bcd_validation(void)
 {
     MbusVarHeader h;
     uint8_t body[MBUS_VAR_HEADER_LEN] = {0x78, 0x56, 0x34, 0x12, 0x24, 0x40, 0x01, 0x07, 0x55, 0, 0, 0};
-    MbusV.parse_var_header_args.body = body;
-    MbusV.parse_var_header_args.len = MBUS_VAR_HEADER_LEN;
-    MbusV.parse_var_header_args.out = &h;
+    Mbus.parse_var_header_args.body = body;
+    Mbus.parse_var_header_args.len = MBUS_VAR_HEADER_LEN;
+    Mbus.parse_var_header_args.out = &h;
     Mbus.parse_var_header(mbus_work);
-    TEST_ASSERT_TRUE(MbusV.ok);
-    MbusV.parse_var_header_args.body = body;
-    MbusV.parse_var_header_args.len = MBUS_VAR_HEADER_LEN - 1;
-    MbusV.parse_var_header_args.out = &h;
+    TEST_ASSERT_TRUE(Mbus.ok);
+    Mbus.parse_var_header_args.body = body;
+    Mbus.parse_var_header_args.len = MBUS_VAR_HEADER_LEN - 1;
+    Mbus.parse_var_header_args.out = &h;
     Mbus.parse_var_header(mbus_work);
-    TEST_ASSERT_FALSE(MbusV.ok);
+    TEST_ASSERT_FALSE(Mbus.ok);
 
     body[1] = 0x5A; // A is not a decimal digit
-    MbusV.parse_var_header_args.body = body;
-    MbusV.parse_var_header_args.len = MBUS_VAR_HEADER_LEN;
-    MbusV.parse_var_header_args.out = &h;
+    Mbus.parse_var_header_args.body = body;
+    Mbus.parse_var_header_args.len = MBUS_VAR_HEADER_LEN;
+    Mbus.parse_var_header_args.out = &h;
     Mbus.parse_var_header(mbus_work);
-    TEST_ASSERT_FALSE(MbusV.ok);
+    TEST_ASSERT_FALSE(Mbus.ok);
 }
 
 // A builder given less room than the frame needs writes nothing and reports 0.
 void test_builders_refuse_a_short_buffer(void)
 {
     uint8_t buf[300];
-    MbusV.build_ack_args.buf = buf;
-    MbusV.build_ack_args.cap = 0;
+    Mbus.build_ack_args.buf = buf;
+    Mbus.build_ack_args.cap = 0;
     Mbus.build_ack(mbus_work);
-    TEST_ASSERT_EQUAL_UINT(0u, MbusV.n);
-    MbusV.build_short_args.buf = buf;
-    MbusV.build_short_args.cap = 4;
-    MbusV.build_short_args.c = MBUS_C_SND_NKE;
-    MbusV.build_short_args.a = 0x01;
+    TEST_ASSERT_EQUAL_UINT(0u, Mbus.n);
+    Mbus.build_short_args.buf = buf;
+    Mbus.build_short_args.cap = 4;
+    Mbus.build_short_args.c = MBUS_C_SND_NKE;
+    Mbus.build_short_args.a = 0x01;
     Mbus.build_short(mbus_work);
-    TEST_ASSERT_EQUAL_UINT(0u, MbusV.n);
-    MbusV.build_long_args.buf = buf;
-    MbusV.build_long_args.cap = 8;
-    MbusV.build_long_args.c = 0x53;
-    MbusV.build_long_args.a = 0x01;
-    MbusV.build_long_args.ci = 0x51;
-    MbusV.build_long_args.data = NULL;
-    MbusV.build_long_args.data_len = 0;
+    TEST_ASSERT_EQUAL_UINT(0u, Mbus.n);
+    Mbus.build_long_args.buf = buf;
+    Mbus.build_long_args.cap = 8;
+    Mbus.build_long_args.c = 0x53;
+    Mbus.build_long_args.a = 0x01;
+    Mbus.build_long_args.ci = 0x51;
+    Mbus.build_long_args.data = NULL;
+    Mbus.build_long_args.data_len = 0;
     Mbus.build_long(mbus_work);
-    TEST_ASSERT_EQUAL_UINT(0u, MbusV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, Mbus.n);
 
     // MBDOC48 5.2: user data is 0..252 octets, since L is one octet and counts C + A + CI as well
     static uint8_t big[MBUS_MAX_DATA];
     // L = 3 + 252 = 255 and the frame is 6 + L octets, so the largest M-Bus frame is 261 octets
-    MbusV.build_long_args.buf = buf;
-    MbusV.build_long_args.cap = sizeof(buf);
-    MbusV.build_long_args.c = 0x53;
-    MbusV.build_long_args.a = 0x01;
-    MbusV.build_long_args.ci = 0x51;
-    MbusV.build_long_args.data = big;
-    MbusV.build_long_args.data_len = MBUS_MAX_DATA;
+    Mbus.build_long_args.buf = buf;
+    Mbus.build_long_args.cap = sizeof(buf);
+    Mbus.build_long_args.c = 0x53;
+    Mbus.build_long_args.a = 0x01;
+    Mbus.build_long_args.ci = 0x51;
+    Mbus.build_long_args.data = big;
+    Mbus.build_long_args.data_len = MBUS_MAX_DATA;
     Mbus.build_long(mbus_work);
-    TEST_ASSERT_EQUAL_UINT(261u, MbusV.n);
-    MbusV.build_long_args.buf = buf;
-    MbusV.build_long_args.cap = sizeof(buf);
-    MbusV.build_long_args.c = 0x53;
-    MbusV.build_long_args.a = 0x01;
-    MbusV.build_long_args.ci = 0x51;
-    MbusV.build_long_args.data = big;
-    MbusV.build_long_args.data_len = MBUS_MAX_DATA + 1;
+    TEST_ASSERT_EQUAL_UINT(261u, Mbus.n);
+    Mbus.build_long_args.buf = buf;
+    Mbus.build_long_args.cap = sizeof(buf);
+    Mbus.build_long_args.c = 0x53;
+    Mbus.build_long_args.a = 0x01;
+    Mbus.build_long_args.ci = 0x51;
+    Mbus.build_long_args.data = big;
+    Mbus.build_long_args.data_len = MBUS_MAX_DATA + 1;
     Mbus.build_long(mbus_work);
-    TEST_ASSERT_EQUAL_UINT(0u, MbusV.n);
-    MbusV.build_long_args.buf = buf;
-    MbusV.build_long_args.cap = sizeof(buf);
-    MbusV.build_long_args.c = 0x53;
-    MbusV.build_long_args.a = 0x01;
-    MbusV.build_long_args.ci = 0x51;
-    MbusV.build_long_args.data = NULL;
-    MbusV.build_long_args.data_len = 4;
+    TEST_ASSERT_EQUAL_UINT(0u, Mbus.n);
+    Mbus.build_long_args.buf = buf;
+    Mbus.build_long_args.cap = sizeof(buf);
+    Mbus.build_long_args.c = 0x53;
+    Mbus.build_long_args.a = 0x01;
+    Mbus.build_long_args.ci = 0x51;
+    Mbus.build_long_args.data = NULL;
+    Mbus.build_long_args.data_len = 4;
     Mbus.build_long(mbus_work);
-    TEST_ASSERT_EQUAL_UINT(0u, MbusV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, Mbus.n);
 }

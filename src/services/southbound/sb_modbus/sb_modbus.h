@@ -35,8 +35,8 @@
 
 #if PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER
 
-#include "services/fieldbus/modbus/modbus/modbus.h"    // ModbusFunction, MODBUS_ADU_MAX
-#include "services/southbound/southbound/southbound.h" // SouthboundDriver, Southbound
+#include "services/fieldbus/modbus/modbus/modbus.h" // ModbusFunction, MODBUS_ADU_MAX
+#include "services/southbound/southbound/southbound.h"  // SouthboundDriver, Southbound
 
 PROTOCORE_BEGIN_DECLS
 
@@ -67,6 +67,7 @@ typedef struct
     uint16_t txid;               ///< rolling transaction id, incremented per request.
     uint8_t last_exception;      ///< raw Modbus exception code from the last read (0 = none).
 } protocore_sb_modbus_ctx;
+
 /**
  * @brief The Modbus-master adapter: fill a driver instance, then build a SouthboundDriver over it.
  *
@@ -90,34 +91,18 @@ typedef struct
     void *io;                     ///< the opaque context handed to @c txn
     ModbusFunction fc;            ///< the read function code an init takes
     uint8_t unit;                 ///< the Modbus unit / slave id an init takes
-    SouthboundDriver *drv_out;    ///< the driver vtable a driver call fills
-    const char *name;             ///< the registry name a driver call binds
+
+    SouthboundDriver *drv_out; ///< the driver vtable a driver call fills
+    const char *name;          ///< the registry name a driver call binds
+
     int32_t i32;
-} SbModbusVars;
 
-/** @brief The operands and the outcome. */
-extern SbModbusVars SbModbusV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const init)(uint8_t *restrict work);
     void (*const driver)(uint8_t *restrict work);
 } SbModbusNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in SbModbusV or a region of the borrow at a fixed offset.
-void protocore_sb_modbus_init(uint8_t *restrict work);
-void protocore_sb_modbus_driver(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `SbModbus.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const SbModbusNs SbModbus __attribute__((unused)) = {
-    .init = protocore_sb_modbus_init,
-    .driver = protocore_sb_modbus_driver,
-};
+/** @brief The one symbol this module exports. */
+extern SbModbusNs SbModbus;
 
 #endif // PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER
 

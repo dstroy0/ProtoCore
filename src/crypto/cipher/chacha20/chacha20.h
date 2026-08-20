@@ -49,6 +49,7 @@ typedef struct
     uint8_t *out;       ///< len bytes; may alias in
     size_t len;         ///< how many
 } Chacha20XorArgs;
+
 /** @brief The key, nonce and counter one RFC 8439 keystream block is taken at. */
 typedef struct
 {
@@ -57,6 +58,7 @@ typedef struct
     const uint8_t *nonce; ///< 12-byte nonce, state words 13-15
     uint8_t *out;         ///< PROTOCORE_CHACHA20_BLOCK_LEN bytes
 } Chacha20BlockIetfArgs;
+
 /**
  * @brief ChaCha20 (RFC 8439).
  *
@@ -93,32 +95,15 @@ typedef struct
 {
     Chacha20XorArgs xor_args;
     Chacha20BlockIetfArgs block_ietf_args;
+
     proto_bool ok;
-} Chacha20Vars;
 
-/** @brief The operands and the outcome. */
-extern Chacha20Vars Chacha20V;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const xor_)(uint8_t *restrict work);
     void (*const block_ietf)(uint8_t *restrict work);
 } Chacha20Ns;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in Chacha20V or a region of the borrow at a fixed offset.
-void protocore_chacha20_xor_(uint8_t *restrict work);
-void protocore_chacha20_block_ietf(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Chacha20.xor_(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const Chacha20Ns Chacha20 __attribute__((unused)) = {
-    .xor_ = protocore_chacha20_xor_,
-    .block_ietf = protocore_chacha20_block_ietf,
-};
+/** @brief The one symbol this module exports. */
+extern Chacha20Ns Chacha20;
 
 PROTOCORE_END_DECLS
 

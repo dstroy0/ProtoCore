@@ -27,19 +27,19 @@ void dbench_run(void)
         volatile uint32_t sink = 0;
         uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN];
         DBENCH_BULK("Sha256.hash (1 KiB)", 2000, 1024, {
-            Sha256V.hash_args.data = buf;
-            Sha256V.hash_args.len = 1024;
-            Sha256V.hash_args.out = digest;
+            Sha256.hash_args.data = buf;
+            Sha256.hash_args.len = 1024;
+            Sha256.hash_args.out = digest;
             Sha256.hash(tw);
             sink += digest[0];
         });
         DBENCH_BULK("Chacha20.xor_ (1 KiB)", 1000, 1024, {
-            Chacha20V.xor_args.key = key;
-            Chacha20V.xor_args.iv = iv;
-            Chacha20V.xor_args.counter = 1;
-            Chacha20V.xor_args.in = buf;
-            Chacha20V.xor_args.out = buf;
-            Chacha20V.xor_args.len = 1024;
+            Chacha20.xor_args.key = key;
+            Chacha20.xor_args.iv = iv;
+            Chacha20.xor_args.counter = 1;
+            Chacha20.xor_args.in = buf;
+            Chacha20.xor_args.out = buf;
+            Chacha20.xor_args.len = 1024;
             Chacha20.xor_(tw);
             sink += buf[0];
         });

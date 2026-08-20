@@ -40,16 +40,16 @@ uint8_t *protocore_bus_capture_span(void)
     return s_own.span;
 }
 
-void protocore_bus_capture_can_to_socketcan(uint8_t *restrict work)
+static void bus_capture_can_to_socketcan(uint8_t *restrict work)
 {
     (void)work;
-    const CanFrame *f = BusCaptureV.can_to_socketcan_args.f;
-    uint8_t *out = BusCaptureV.can_to_socketcan_args.out;
-    size_t cap = BusCaptureV.can_to_socketcan_args.cap;
+    const CanFrame *f = BusCapture.can_to_socketcan_args.f;
+    uint8_t *out = BusCapture.can_to_socketcan_args.out;
+    size_t cap = BusCapture.can_to_socketcan_args.cap;
 
     if (!f || !out || cap < PROTOCORE_SOCKETCAN_FRAME_LEN)
     {
-        BusCaptureV.n = 0;
+        BusCapture.n = 0;
         return;
     }
 
@@ -77,7 +77,7 @@ void protocore_bus_capture_can_to_socketcan(uint8_t *restrict work)
     {
         out[8 + i] = (i < dlc && !f->rtr) ? f->data[i] : 0;
     }
-    BusCaptureV.n = PROTOCORE_SOCKETCAN_FRAME_LEN;
+    BusCapture.n = PROTOCORE_SOCKETCAN_FRAME_LEN;
 }
 
 // --- Controller binding ------------------------------------------------------------------
@@ -110,24 +110,24 @@ static_assert(
 // The region, at its offset in the caller's borrow.
 #define BUS_CAPTURE_CTX(w) ((BusCaptureCtx *)(void *)((w) + BUS_CAPTURE_OFF_CTX))
 
-void protocore_bus_capture_begin(uint8_t *restrict work)
+static void bus_capture_begin(uint8_t *restrict work)
 {
-    int tx_pin = BusCaptureV.begin_args.tx_pin;
-    int rx_pin = BusCaptureV.begin_args.rx_pin;
-    uint32_t bitrate = BusCaptureV.begin_args.bitrate;
-    bus_capture_sink_fn sink = BusCaptureV.begin_args.sink;
+    int tx_pin = BusCapture.begin_args.tx_pin;
+    int rx_pin = BusCapture.begin_args.rx_pin;
+    uint32_t bitrate = BusCapture.begin_args.bitrate;
+    bus_capture_sink_fn sink = BusCapture.begin_args.sink;
 
     if (!sink || !protocore_platform_can_open(tx_pin, rx_pin, bitrate))
     {
-        BusCaptureV.ok = PROTO_FALSE;
+        BusCapture.ok = PROTO_FALSE;
         return;
     }
     BUS_CAPTURE_CTX(work)->sink = sink;
     BUS_CAPTURE_CTX(work)->running = PROTO_TRUE;
-    BusCaptureV.ok = PROTO_TRUE;
+    BusCapture.ok = PROTO_TRUE;
 }
 
-void protocore_bus_capture_poll(uint8_t *restrict work)
+static void bus_capture_poll(uint8_t *restrict work)
 {
 
     if (!BUS_CAPTURE_CTX(work)->running || !BUS_CAPTURE_CTX(work)->sink)
@@ -150,7 +150,7 @@ void protocore_bus_capture_poll(uint8_t *restrict work)
     }
 }
 
-void protocore_bus_capture_end(uint8_t *restrict work)
+static void bus_capture_end(uint8_t *restrict work)
 {
 
     if (!BUS_CAPTURE_CTX(work)->running)
@@ -164,7 +164,7 @@ void protocore_bus_capture_end(uint8_t *restrict work)
 
 #else // no controller seam to open
 
-proto_bool protocore_bus_capture_begin(int tx_pin, int rx_pin, uint32_t bitrate, bus_capture_sink_fn sink)
+proto_bool bus_capture_begin(int tx_pin, int rx_pin, uint32_t bitrate, bus_capture_sink_fn sink)
 {
     (void)tx_pin;
     (void)rx_pin;
@@ -172,19 +172,21 @@ proto_bool protocore_bus_capture_begin(int tx_pin, int rx_pin, uint32_t bitrate,
     (void)sink;
     return PROTO_FALSE;
 }
-void protocore_bus_capture_poll(void)
+void bus_capture_poll(void)
 {
     // no controller, so nothing to drain
 }
-void protocore_bus_capture_end(void)
+void bus_capture_end(void)
 {
     // no controller, so nothing to stop
 }
 
 #endif // PROTOCORE_HAS_VENDOR_CAN
 
-/** @brief The operands and the outcome. */
-BusCaptureVars BusCaptureV;
+BusCaptureNs BusCapture = {.can_to_socketcan = bus_capture_can_to_socketcan,
+                           .begin = bus_capture_begin,
+                           .poll = bus_capture_poll,
+                           .end = bus_capture_end};
 
 PROTOCORE_END_DECLS
 

@@ -41,12 +41,12 @@ void tearDown(void)
 // gives PRE_SCALE (address FEh) the reset value 0001 1110 = 0x1E = 30.
 void test_datasheet_prescale_example(void)
 {
-    Pca9685V.prescale_args.freq_hz = 200;
+    Pca9685.prescale_args.freq_hz = 200;
     Pca9685.prescale(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_HEX8(0x1E, Pca9685V.value);
-    Pca9685V.prescale_args.freq_hz = 200;
+    TEST_ASSERT_EQUAL_HEX8(0x1E, Pca9685.value);
+    Pca9685.prescale_args.freq_hz = 200;
     Pca9685.prescale(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_UINT8(30, Pca9685V.value);
+    TEST_ASSERT_EQUAL_UINT8(30, Pca9685.value);
 }
 
 // Equation (1) at other rates, each derived the same way:
@@ -56,18 +56,18 @@ void test_datasheet_prescale_example(void)
 //   1526 Hz:25e6 / (4096 * 1526) =   4.000 ->   4 - 1 =   3, the hardware minimum
 void test_equation1_at_other_rates(void)
 {
-    Pca9685V.prescale_args.freq_hz = 50;
+    Pca9685.prescale_args.freq_hz = 50;
     Pca9685.prescale(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_UINT8(121, Pca9685V.value);
-    Pca9685V.prescale_args.freq_hz = 60;
+    TEST_ASSERT_EQUAL_UINT8(121, Pca9685.value);
+    Pca9685.prescale_args.freq_hz = 60;
     Pca9685.prescale(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_UINT8(101, Pca9685V.value);
-    Pca9685V.prescale_args.freq_hz = 1000;
+    TEST_ASSERT_EQUAL_UINT8(101, Pca9685.value);
+    Pca9685.prescale_args.freq_hz = 1000;
     Pca9685.prescale(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_UINT8(5, Pca9685V.value);
-    Pca9685V.prescale_args.freq_hz = 1526;
+    TEST_ASSERT_EQUAL_UINT8(5, Pca9685.value);
+    Pca9685.prescale_args.freq_hz = 1526;
     Pca9685.prescale(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_UINT8(3, Pca9685V.value);
+    TEST_ASSERT_EQUAL_UINT8(3, Pca9685.value);
 }
 
 // Section 7.3.5: "The hardware forces a minimum value that can be loaded into the PRE_SCALE
@@ -75,43 +75,43 @@ void test_equation1_at_other_rates(void)
 // and the register is a byte so the far end clamps at 255.
 void test_prescale_is_clamped_to_the_register_range(void)
 {
-    Pca9685V.prescale_args.freq_hz = 3000;
+    Pca9685.prescale_args.freq_hz = 3000;
     Pca9685.prescale(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_UINT8(3, Pca9685V.value);
-    Pca9685V.prescale_args.freq_hz = 1000000;
+    TEST_ASSERT_EQUAL_UINT8(3, Pca9685.value);
+    Pca9685.prescale_args.freq_hz = 1000000;
     Pca9685.prescale(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_UINT8(3, Pca9685V.value);
-    Pca9685V.prescale_args.freq_hz = 10;
+    TEST_ASSERT_EQUAL_UINT8(3, Pca9685.value);
+    Pca9685.prescale_args.freq_hz = 10;
     Pca9685.prescale(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_UINT8(255, Pca9685V.value);
-    Pca9685V.prescale_args.freq_hz = 1;
+    TEST_ASSERT_EQUAL_UINT8(255, Pca9685.value);
+    Pca9685.prescale_args.freq_hz = 1;
     Pca9685.prescale(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_UINT8(255, Pca9685V.value);
+    TEST_ASSERT_EQUAL_UINT8(255, Pca9685.value);
     // a zero rate has no prescale, so it takes the slowest the register can name.
-    Pca9685V.prescale_args.freq_hz = 0;
+    Pca9685.prescale_args.freq_hz = 0;
     Pca9685.prescale(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_UINT8(255, Pca9685V.value);
+    TEST_ASSERT_EQUAL_UINT8(255, Pca9685.value);
 }
 
 // Table 6: LED0_ON_L is 06h and each channel is four consecutive registers, so LED1_ON_L is 0Ah and
 // LED15_ON_L is 42h.
 void test_datasheet_channel_register_addresses(void)
 {
-    Pca9685V.channel_reg_args.channel = 0;
+    Pca9685.channel_reg_args.channel = 0;
     Pca9685.channel_reg(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_HEX8(0x06, Pca9685V.value);
-    Pca9685V.channel_reg_args.channel = 1;
+    TEST_ASSERT_EQUAL_HEX8(0x06, Pca9685.value);
+    Pca9685.channel_reg_args.channel = 1;
     Pca9685.channel_reg(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_HEX8(0x0A, Pca9685V.value);
-    Pca9685V.channel_reg_args.channel = 2;
+    TEST_ASSERT_EQUAL_HEX8(0x0A, Pca9685.value);
+    Pca9685.channel_reg_args.channel = 2;
     Pca9685.channel_reg(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_HEX8(0x0E, Pca9685V.value);
-    Pca9685V.channel_reg_args.channel = 15;
+    TEST_ASSERT_EQUAL_HEX8(0x0E, Pca9685.value);
+    Pca9685.channel_reg_args.channel = 15;
     Pca9685.channel_reg(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_HEX8(0x42, Pca9685V.value);
-    Pca9685V.channel_reg_args.channel = 0;
+    TEST_ASSERT_EQUAL_HEX8(0x42, Pca9685.value);
+    Pca9685.channel_reg_args.channel = 0;
     Pca9685.channel_reg(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_HEX8(PCA9685_REG_LED0_ON_L, Pca9685V.value);
+    TEST_ASSERT_EQUAL_HEX8(PCA9685_REG_LED0_ON_L, Pca9685.value);
 
     // MODE1 / MODE2 / PRE_SCALE sit where Table 5 and Table 7 put them.
     TEST_ASSERT_EQUAL_HEX8(0x00, PCA9685_REG_MODE1);
@@ -119,12 +119,12 @@ void test_datasheet_channel_register_addresses(void)
     TEST_ASSERT_EQUAL_HEX8(0xFE, PCA9685_REG_PRESCALE);
 
     // channel 16 is past the sixteen the part has, so there is no register to name.
-    Pca9685V.channel_reg_args.channel = PCA9685_CHANNELS;
+    Pca9685.channel_reg_args.channel = PCA9685_CHANNELS;
     Pca9685.channel_reg(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_HEX8(0x00, Pca9685V.value);
-    Pca9685V.channel_reg_args.channel = 255;
+    TEST_ASSERT_EQUAL_HEX8(0x00, Pca9685.value);
+    Pca9685.channel_reg_args.channel = 255;
     Pca9685.channel_reg(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_HEX8(0x00, Pca9685V.value);
+    TEST_ASSERT_EQUAL_HEX8(0x00, Pca9685.value);
     TEST_ASSERT_EQUAL_INT(16, PCA9685_CHANNELS);
 }
 
@@ -136,26 +136,26 @@ void test_datasheet_channel_register_addresses(void)
 // and at 200 Hz (u * 0.8192) 1500 us -> 1228.8 -> 1229.
 void test_pulse_width_to_count(void)
 {
-    Pca9685V.us_to_count_args.microseconds = 1000;
-    Pca9685V.us_to_count_args.freq_hz = 50;
+    Pca9685.us_to_count_args.microseconds = 1000;
+    Pca9685.us_to_count_args.freq_hz = 50;
     Pca9685.us_to_count(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_UINT16(205, Pca9685V.count);
-    Pca9685V.us_to_count_args.microseconds = 1500;
-    Pca9685V.us_to_count_args.freq_hz = 50;
+    TEST_ASSERT_EQUAL_UINT16(205, Pca9685.count);
+    Pca9685.us_to_count_args.microseconds = 1500;
+    Pca9685.us_to_count_args.freq_hz = 50;
     Pca9685.us_to_count(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_UINT16(307, Pca9685V.count);
-    Pca9685V.us_to_count_args.microseconds = 2000;
-    Pca9685V.us_to_count_args.freq_hz = 50;
+    TEST_ASSERT_EQUAL_UINT16(307, Pca9685.count);
+    Pca9685.us_to_count_args.microseconds = 2000;
+    Pca9685.us_to_count_args.freq_hz = 50;
     Pca9685.us_to_count(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_UINT16(410, Pca9685V.count);
-    Pca9685V.us_to_count_args.microseconds = 1500;
-    Pca9685V.us_to_count_args.freq_hz = 200;
+    TEST_ASSERT_EQUAL_UINT16(410, Pca9685.count);
+    Pca9685.us_to_count_args.microseconds = 1500;
+    Pca9685.us_to_count_args.freq_hz = 200;
     Pca9685.us_to_count(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_UINT16(1229, Pca9685V.count);
-    Pca9685V.us_to_count_args.microseconds = 0;
-    Pca9685V.us_to_count_args.freq_hz = 50;
+    TEST_ASSERT_EQUAL_UINT16(1229, Pca9685.count);
+    Pca9685.us_to_count_args.microseconds = 0;
+    Pca9685.us_to_count_args.freq_hz = 50;
     Pca9685.us_to_count(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_UINT16(0, Pca9685V.count);
+    TEST_ASSERT_EQUAL_UINT16(0, Pca9685.count);
 }
 
 // Section 7.3.4: "The LEDn_ON and LEDn_OFF counts can vary from 0 to 4095." A pulse as long as the
@@ -163,14 +163,14 @@ void test_pulse_width_to_count(void)
 // than wrapping to 0 and turning the output off.
 void test_pulse_width_saturates_at_the_twelve_bit_maximum(void)
 {
-    Pca9685V.us_to_count_args.microseconds = 20000;
-    Pca9685V.us_to_count_args.freq_hz = 50;
+    Pca9685.us_to_count_args.microseconds = 20000;
+    Pca9685.us_to_count_args.freq_hz = 50;
     Pca9685.us_to_count(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_UINT16(PCA9685_COUNT_MAX, Pca9685V.count);
-    Pca9685V.us_to_count_args.microseconds = 1000000;
-    Pca9685V.us_to_count_args.freq_hz = 50;
+    TEST_ASSERT_EQUAL_UINT16(PCA9685_COUNT_MAX, Pca9685.count);
+    Pca9685.us_to_count_args.microseconds = 1000000;
+    Pca9685.us_to_count_args.freq_hz = 50;
     Pca9685.us_to_count(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_UINT16(PCA9685_COUNT_MAX, Pca9685V.count);
+    TEST_ASSERT_EQUAL_UINT16(PCA9685_COUNT_MAX, Pca9685.count);
     TEST_ASSERT_EQUAL_UINT16(4095, PCA9685_COUNT_MAX);
 }
 
@@ -180,13 +180,13 @@ void test_set_pwm_bytes_layout(void)
 {
     uint8_t buf[8];
     // ON = 0, OFF = 0x0ABC: the 12-bit count splits into 0xBC low and 0x0A high.
-    Pca9685V.set_pwm_bytes_args.buf = buf;
-    Pca9685V.set_pwm_bytes_args.cap = sizeof(buf);
-    Pca9685V.set_pwm_bytes_args.channel = 0;
-    Pca9685V.set_pwm_bytes_args.on = 0;
-    Pca9685V.set_pwm_bytes_args.off = 0x0ABC;
+    Pca9685.set_pwm_bytes_args.buf = buf;
+    Pca9685.set_pwm_bytes_args.cap = sizeof(buf);
+    Pca9685.set_pwm_bytes_args.channel = 0;
+    Pca9685.set_pwm_bytes_args.on = 0;
+    Pca9685.set_pwm_bytes_args.off = 0x0ABC;
     Pca9685.set_pwm_bytes(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_size_t(5, Pca9685V.n);
+    TEST_ASSERT_EQUAL_size_t(5, Pca9685.n);
     TEST_ASSERT_EQUAL_HEX8(0x06, buf[0]);
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[1]);
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[2]);
@@ -194,13 +194,13 @@ void test_set_pwm_bytes_layout(void)
     TEST_ASSERT_EQUAL_HEX8(0x0A, buf[4]);
 
     // channel 15 addresses its own register block, and a full-scale count fills both halves.
-    Pca9685V.set_pwm_bytes_args.buf = buf;
-    Pca9685V.set_pwm_bytes_args.cap = sizeof(buf);
-    Pca9685V.set_pwm_bytes_args.channel = 15;
-    Pca9685V.set_pwm_bytes_args.on = 0x0FFF;
-    Pca9685V.set_pwm_bytes_args.off = 0x0FFF;
+    Pca9685.set_pwm_bytes_args.buf = buf;
+    Pca9685.set_pwm_bytes_args.cap = sizeof(buf);
+    Pca9685.set_pwm_bytes_args.channel = 15;
+    Pca9685.set_pwm_bytes_args.on = 0x0FFF;
+    Pca9685.set_pwm_bytes_args.off = 0x0FFF;
     Pca9685.set_pwm_bytes(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_size_t(5, Pca9685V.n);
+    TEST_ASSERT_EQUAL_size_t(5, Pca9685.n);
     TEST_ASSERT_EQUAL_HEX8(0x42, buf[0]);
     TEST_ASSERT_EQUAL_HEX8(0xFF, buf[1]);
     TEST_ASSERT_EQUAL_HEX8(0x0F, buf[2]);
@@ -216,34 +216,34 @@ void test_full_on_and_full_off_flags(void)
     TEST_ASSERT_EQUAL_HEX16(0x1000, PCA9685_FULL_ON);
     TEST_ASSERT_EQUAL_HEX16(0x1000, PCA9685_FULL_OFF);
 
-    Pca9685V.set_pwm_bytes_args.buf = buf;
-    Pca9685V.set_pwm_bytes_args.cap = sizeof(buf);
-    Pca9685V.set_pwm_bytes_args.channel = 0;
-    Pca9685V.set_pwm_bytes_args.on = PCA9685_FULL_ON;
-    Pca9685V.set_pwm_bytes_args.off = 0;
+    Pca9685.set_pwm_bytes_args.buf = buf;
+    Pca9685.set_pwm_bytes_args.cap = sizeof(buf);
+    Pca9685.set_pwm_bytes_args.channel = 0;
+    Pca9685.set_pwm_bytes_args.on = PCA9685_FULL_ON;
+    Pca9685.set_pwm_bytes_args.off = 0;
     Pca9685.set_pwm_bytes(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_size_t(5, Pca9685V.n);
+    TEST_ASSERT_EQUAL_size_t(5, Pca9685.n);
     TEST_ASSERT_EQUAL_HEX8(0x10, buf[2]); // ON_H bit 4
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[4]);
 
-    Pca9685V.set_pwm_bytes_args.buf = buf;
-    Pca9685V.set_pwm_bytes_args.cap = sizeof(buf);
-    Pca9685V.set_pwm_bytes_args.channel = 0;
-    Pca9685V.set_pwm_bytes_args.on = 0;
-    Pca9685V.set_pwm_bytes_args.off = PCA9685_FULL_OFF;
+    Pca9685.set_pwm_bytes_args.buf = buf;
+    Pca9685.set_pwm_bytes_args.cap = sizeof(buf);
+    Pca9685.set_pwm_bytes_args.channel = 0;
+    Pca9685.set_pwm_bytes_args.on = 0;
+    Pca9685.set_pwm_bytes_args.off = PCA9685_FULL_OFF;
     Pca9685.set_pwm_bytes(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_size_t(5, Pca9685V.n);
+    TEST_ASSERT_EQUAL_size_t(5, Pca9685.n);
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[2]);
     TEST_ASSERT_EQUAL_HEX8(0x10, buf[4]); // OFF_H bit 4
 
     // anything a caller sets above bit 12 belongs to no field and never reaches the reserved bits.
-    Pca9685V.set_pwm_bytes_args.buf = buf;
-    Pca9685V.set_pwm_bytes_args.cap = sizeof(buf);
-    Pca9685V.set_pwm_bytes_args.channel = 0;
-    Pca9685V.set_pwm_bytes_args.on = 0xFFFF;
-    Pca9685V.set_pwm_bytes_args.off = 0xFFFF;
+    Pca9685.set_pwm_bytes_args.buf = buf;
+    Pca9685.set_pwm_bytes_args.cap = sizeof(buf);
+    Pca9685.set_pwm_bytes_args.channel = 0;
+    Pca9685.set_pwm_bytes_args.on = 0xFFFF;
+    Pca9685.set_pwm_bytes_args.off = 0xFFFF;
     Pca9685.set_pwm_bytes(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_size_t(5, Pca9685V.n);
+    TEST_ASSERT_EQUAL_size_t(5, Pca9685.n);
     TEST_ASSERT_EQUAL_HEX8(0x1F, buf[2]);
     TEST_ASSERT_EQUAL_HEX8(0x1F, buf[4]);
 }
@@ -254,35 +254,35 @@ void test_set_pwm_bytes_refuses_bad_arguments(void)
 {
     uint8_t buf[8];
     buf[0] = 0xAA;
-    Pca9685V.set_pwm_bytes_args.buf = NULL;
-    Pca9685V.set_pwm_bytes_args.cap = 5;
-    Pca9685V.set_pwm_bytes_args.channel = 0;
-    Pca9685V.set_pwm_bytes_args.on = 0;
-    Pca9685V.set_pwm_bytes_args.off = 100;
+    Pca9685.set_pwm_bytes_args.buf = NULL;
+    Pca9685.set_pwm_bytes_args.cap = 5;
+    Pca9685.set_pwm_bytes_args.channel = 0;
+    Pca9685.set_pwm_bytes_args.on = 0;
+    Pca9685.set_pwm_bytes_args.off = 100;
     Pca9685.set_pwm_bytes(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_size_t(0, Pca9685V.n);
-    Pca9685V.set_pwm_bytes_args.buf = buf;
-    Pca9685V.set_pwm_bytes_args.cap = 4;
-    Pca9685V.set_pwm_bytes_args.channel = 0;
-    Pca9685V.set_pwm_bytes_args.on = 0;
-    Pca9685V.set_pwm_bytes_args.off = 100;
+    TEST_ASSERT_EQUAL_size_t(0, Pca9685.n);
+    Pca9685.set_pwm_bytes_args.buf = buf;
+    Pca9685.set_pwm_bytes_args.cap = 4;
+    Pca9685.set_pwm_bytes_args.channel = 0;
+    Pca9685.set_pwm_bytes_args.on = 0;
+    Pca9685.set_pwm_bytes_args.off = 100;
     Pca9685.set_pwm_bytes(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_size_t(0, Pca9685V.n);
+    TEST_ASSERT_EQUAL_size_t(0, Pca9685.n);
     TEST_ASSERT_EQUAL_HEX8(0xAA, buf[0]); // untouched
-    Pca9685V.set_pwm_bytes_args.buf = buf;
-    Pca9685V.set_pwm_bytes_args.cap = sizeof(buf);
-    Pca9685V.set_pwm_bytes_args.channel = PCA9685_CHANNELS;
-    Pca9685V.set_pwm_bytes_args.on = 0;
-    Pca9685V.set_pwm_bytes_args.off = 100;
+    Pca9685.set_pwm_bytes_args.buf = buf;
+    Pca9685.set_pwm_bytes_args.cap = sizeof(buf);
+    Pca9685.set_pwm_bytes_args.channel = PCA9685_CHANNELS;
+    Pca9685.set_pwm_bytes_args.on = 0;
+    Pca9685.set_pwm_bytes_args.off = 100;
     Pca9685.set_pwm_bytes(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_size_t(0, Pca9685V.n);
-    Pca9685V.set_pwm_bytes_args.buf = buf;
-    Pca9685V.set_pwm_bytes_args.cap = sizeof(buf);
-    Pca9685V.set_pwm_bytes_args.channel = 255;
-    Pca9685V.set_pwm_bytes_args.on = 0;
-    Pca9685V.set_pwm_bytes_args.off = 100;
+    TEST_ASSERT_EQUAL_size_t(0, Pca9685.n);
+    Pca9685.set_pwm_bytes_args.buf = buf;
+    Pca9685.set_pwm_bytes_args.cap = sizeof(buf);
+    Pca9685.set_pwm_bytes_args.channel = 255;
+    Pca9685.set_pwm_bytes_args.on = 0;
+    Pca9685.set_pwm_bytes_args.off = 100;
     Pca9685.set_pwm_bytes(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_size_t(0, Pca9685V.n);
+    TEST_ASSERT_EQUAL_size_t(0, Pca9685.n);
 }
 
 // ---------------------------------------------------------------------------
@@ -326,10 +326,10 @@ void test_rev4_a_prescale_write_while_awake_is_dropped(void)
 // takes, and 7.3.5 Eq 1 turns the programmed prescale back into the frequency that was asked for.
 void test_rev4_begin_leaves_the_part_at_the_frequency_it_was_given(void)
 {
-    Pca9685V.begin_args.addr = (uint8_t)PROTOCORE_PCA9685_I2C_ADDR;
-    Pca9685V.begin_args.freq_hz = 50u;
+    Pca9685.begin_args.addr = (uint8_t)PROTOCORE_PCA9685_I2C_ADDR;
+    Pca9685.begin_args.freq_hz = 50u;
     Pca9685.begin(protocore_pca9685_span());
-    TEST_ASSERT_TRUE(Pca9685V.ok);
+    TEST_ASSERT_TRUE(Pca9685.ok);
     // Eq 2's own worked form at 50 Hz: round(25e6 / (4096 * 50)) - 1 = 121 = 0x79
     TEST_ASSERT_EQUAL_HEX8(0x79u, s_part.reg[0xFEu]);
     TEST_ASSERT_EQUAL_UINT32(50u, protocore_pca9685_dev_freq_hz(&s_part));
@@ -346,10 +346,10 @@ void test_rev4_begin_leaves_the_part_at_the_frequency_it_was_given(void)
 // back to the number that was asked for.
 void test_rev4_the_200hz_example_programs_the_reset_prescale(void)
 {
-    Pca9685V.begin_args.addr = (uint8_t)PROTOCORE_PCA9685_I2C_ADDR;
-    Pca9685V.begin_args.freq_hz = 200u;
+    Pca9685.begin_args.addr = (uint8_t)PROTOCORE_PCA9685_I2C_ADDR;
+    Pca9685.begin_args.freq_hz = 200u;
     Pca9685.begin(protocore_pca9685_span());
-    TEST_ASSERT_TRUE(Pca9685V.ok);
+    TEST_ASSERT_TRUE(Pca9685.ok);
     TEST_ASSERT_EQUAL_HEX8(0x1Eu, s_part.reg[0xFEu]);
     TEST_ASSERT_EQUAL_UINT32(196u, protocore_pca9685_dev_freq_hz(&s_part));
 }
@@ -358,15 +358,15 @@ void test_rev4_the_200hz_example_programs_the_reset_prescale(void)
 // in one five-byte transfer, and the part holds what it was sent.
 void test_rev4_set_pwm_lands_in_the_channels_own_registers(void)
 {
-    Pca9685V.begin_args.addr = (uint8_t)PROTOCORE_PCA9685_I2C_ADDR;
-    Pca9685V.begin_args.freq_hz = 50u;
+    Pca9685.begin_args.addr = (uint8_t)PROTOCORE_PCA9685_I2C_ADDR;
+    Pca9685.begin_args.freq_hz = 50u;
     Pca9685.begin(protocore_pca9685_span());
 
-    Pca9685V.set_pwm_args.channel = 0u;
-    Pca9685V.set_pwm_args.on = 0u;
-    Pca9685V.set_pwm_args.off = 307u;
+    Pca9685.set_pwm_args.channel = 0u;
+    Pca9685.set_pwm_args.on = 0u;
+    Pca9685.set_pwm_args.off = 307u;
     Pca9685.set_pwm(protocore_pca9685_span());
-    TEST_ASSERT_TRUE(Pca9685V.ok);
+    TEST_ASSERT_TRUE(Pca9685.ok);
     TEST_ASSERT_EQUAL_UINT16(0u, protocore_pca9685_dev_on(&s_part, 0u));
     TEST_ASSERT_EQUAL_UINT16(307u, protocore_pca9685_dev_off(&s_part, 0u));
     // and nothing else moved
@@ -377,17 +377,17 @@ void test_rev4_set_pwm_lands_in_the_channels_own_registers(void)
 // in its own block and a channel written last does not disturb the ones before it.
 void test_rev4_each_channel_has_its_own_registers(void)
 {
-    Pca9685V.begin_args.addr = (uint8_t)PROTOCORE_PCA9685_I2C_ADDR;
-    Pca9685V.begin_args.freq_hz = 50u;
+    Pca9685.begin_args.addr = (uint8_t)PROTOCORE_PCA9685_I2C_ADDR;
+    Pca9685.begin_args.freq_hz = 50u;
     Pca9685.begin(protocore_pca9685_span());
 
     for (uint8_t ch = 0u; ch < PCA9685_CHANNELS; ch++)
     {
-        Pca9685V.set_pwm_args.channel = ch;
-        Pca9685V.set_pwm_args.on = 0u;
-        Pca9685V.set_pwm_args.off = (uint16_t)(100u + 11u * ch);
+        Pca9685.set_pwm_args.channel = ch;
+        Pca9685.set_pwm_args.on = 0u;
+        Pca9685.set_pwm_args.off = (uint16_t)(100u + 11u * ch);
         Pca9685.set_pwm(protocore_pca9685_span());
-        TEST_ASSERT_TRUE(Pca9685V.ok);
+        TEST_ASSERT_TRUE(Pca9685.ok);
     }
     for (uint8_t ch = 0u; ch < PCA9685_CHANNELS; ch++)
     {
@@ -399,23 +399,23 @@ void test_rev4_each_channel_has_its_own_registers(void)
 // period at 50 Hz is round(1500 * 4096 * 50 / 1e6) = 307 counts, and the part holds that.
 void test_rev4_a_servo_pulse_lands_as_its_fraction_of_the_period(void)
 {
-    Pca9685V.begin_args.addr = (uint8_t)PROTOCORE_PCA9685_I2C_ADDR;
-    Pca9685V.begin_args.freq_hz = 50u;
+    Pca9685.begin_args.addr = (uint8_t)PROTOCORE_PCA9685_I2C_ADDR;
+    Pca9685.begin_args.freq_hz = 50u;
     Pca9685.begin(protocore_pca9685_span());
 
-    Pca9685V.set_servo_us_args.channel = 3u;
-    Pca9685V.set_servo_us_args.microseconds = 1500u;
+    Pca9685.set_servo_us_args.channel = 3u;
+    Pca9685.set_servo_us_args.microseconds = 1500u;
     Pca9685.set_servo_us(protocore_pca9685_span());
-    TEST_ASSERT_TRUE(Pca9685V.ok);
+    TEST_ASSERT_TRUE(Pca9685.ok);
     TEST_ASSERT_EQUAL_UINT16(0u, protocore_pca9685_dev_on(&s_part, 3u));
     TEST_ASSERT_EQUAL_UINT16(307u, protocore_pca9685_dev_off(&s_part, 3u));
     // the ends of a common servo travel, at the same frequency
-    Pca9685V.set_servo_us_args.channel = 3u;
-    Pca9685V.set_servo_us_args.microseconds = 1000u;
+    Pca9685.set_servo_us_args.channel = 3u;
+    Pca9685.set_servo_us_args.microseconds = 1000u;
     Pca9685.set_servo_us(protocore_pca9685_span());
     TEST_ASSERT_EQUAL_UINT16(205u, protocore_pca9685_dev_off(&s_part, 3u));
-    Pca9685V.set_servo_us_args.channel = 3u;
-    Pca9685V.set_servo_us_args.microseconds = 2000u;
+    Pca9685.set_servo_us_args.channel = 3u;
+    Pca9685.set_servo_us_args.microseconds = 2000u;
     Pca9685.set_servo_us(protocore_pca9685_span());
     TEST_ASSERT_EQUAL_UINT16(410u, protocore_pca9685_dev_off(&s_part, 3u));
 }
@@ -424,13 +424,13 @@ void test_rev4_a_servo_pulse_lands_as_its_fraction_of_the_period(void)
 // the period: 1.5 ms of a 5 ms period at 200 Hz is four times the count it is at 50 Hz.
 void test_a_servo_pulse_follows_the_frequency_begin_programmed(void)
 {
-    Pca9685V.begin_args.addr = (uint8_t)PROTOCORE_PCA9685_I2C_ADDR;
-    Pca9685V.begin_args.freq_hz = 200u;
+    Pca9685.begin_args.addr = (uint8_t)PROTOCORE_PCA9685_I2C_ADDR;
+    Pca9685.begin_args.freq_hz = 200u;
     Pca9685.begin(protocore_pca9685_span());
-    Pca9685V.set_servo_us_args.channel = 0u;
-    Pca9685V.set_servo_us_args.microseconds = 1500u;
+    Pca9685.set_servo_us_args.channel = 0u;
+    Pca9685.set_servo_us_args.microseconds = 1500u;
     Pca9685.set_servo_us(protocore_pca9685_span());
-    TEST_ASSERT_TRUE(Pca9685V.ok);
+    TEST_ASSERT_TRUE(Pca9685.ok);
     TEST_ASSERT_EQUAL_UINT16(1229u, protocore_pca9685_dev_off(&s_part, 0u));
 }
 
@@ -440,26 +440,27 @@ void test_begin_sends_later_transfers_to_the_address_it_was_given(void)
 {
     protocore_bus_host_detach_all();
     protocore_pca9685_dev_place(&s_part, 0x41u);
-    Pca9685V.begin_args.addr = 0x41u;
-    Pca9685V.begin_args.freq_hz = 50u;
+    Pca9685.begin_args.addr = 0x41u;
+    Pca9685.begin_args.freq_hz = 50u;
     Pca9685.begin(protocore_pca9685_span());
-    TEST_ASSERT_TRUE(Pca9685V.ok);
+    TEST_ASSERT_TRUE(Pca9685.ok);
     TEST_ASSERT_EQUAL_HEX8(0x79u, s_part.reg[0xFEu]);
     TEST_ASSERT_EQUAL_HEX16(0x41u, protocore_bus_host_log[protocore_bus_host_log_len - 1u].target);
-    Pca9685V.begin_args.addr = 0u;
-    Pca9685V.begin_args.freq_hz = 50u;
+    Pca9685.begin_args.addr = 0u;
+    Pca9685.begin_args.freq_hz = 50u;
     Pca9685.begin(protocore_pca9685_span());
-    TEST_ASSERT_EQUAL_HEX16(PROTOCORE_PCA9685_I2C_ADDR, protocore_bus_host_log[protocore_bus_host_log_len - 1u].target);
+    TEST_ASSERT_EQUAL_HEX16(PROTOCORE_PCA9685_I2C_ADDR,
+                            protocore_bus_host_log[protocore_bus_host_log_len - 1u].target);
 }
 
 // An out-of-range channel is refused before anything reaches the bus.
 void test_set_pwm_refuses_an_out_of_range_channel(void)
 {
-    Pca9685V.set_pwm_args.channel = PCA9685_CHANNELS;
-    Pca9685V.set_pwm_args.on = 0u;
-    Pca9685V.set_pwm_args.off = 100u;
+    Pca9685.set_pwm_args.channel = PCA9685_CHANNELS;
+    Pca9685.set_pwm_args.on = 0u;
+    Pca9685.set_pwm_args.off = 100u;
     Pca9685.set_pwm(protocore_pca9685_span());
-    TEST_ASSERT_FALSE(Pca9685V.ok);
+    TEST_ASSERT_FALSE(Pca9685.ok);
     TEST_ASSERT_EQUAL_UINT32(0u, protocore_bus_host_log_len);
 }
 
@@ -467,8 +468,8 @@ void test_set_pwm_refuses_an_out_of_range_channel(void)
 void test_a_refused_transfer_fails_begin(void)
 {
     protocore_bus_host_fail = 1u;
-    Pca9685V.begin_args.addr = (uint8_t)PROTOCORE_PCA9685_I2C_ADDR;
-    Pca9685V.begin_args.freq_hz = 50u;
+    Pca9685.begin_args.addr = (uint8_t)PROTOCORE_PCA9685_I2C_ADDR;
+    Pca9685.begin_args.freq_hz = 50u;
     Pca9685.begin(protocore_pca9685_span());
-    TEST_ASSERT_FALSE(Pca9685V.ok);
+    TEST_ASSERT_FALSE(Pca9685.ok);
 }

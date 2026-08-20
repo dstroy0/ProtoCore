@@ -26,113 +26,113 @@ void tearDown(void)
 // exactly the reserve is still the floor and reserve+1 is the first heap with spare.
 void test_window_floor_at_and_below_the_reserve(void)
 {
-    NetadaptV.window_args.free_heap = 0u;
-    NetadaptV.window_args.reserve = 8000u;
-    NetadaptV.window_args.min_win = 1024u;
-    NetadaptV.window_args.max_win = 16384u;
+    Netadapt.window_args.free_heap = 0u;
+    Netadapt.window_args.reserve = 8000u;
+    Netadapt.window_args.min_win = 1024u;
+    Netadapt.window_args.max_win = 16384u;
     Netadapt.window(netadapt_work);
-    TEST_ASSERT_EQUAL_UINT32(1024u, NetadaptV.u32);
-    NetadaptV.window_args.free_heap = 7999u;
-    NetadaptV.window_args.reserve = 8000u;
-    NetadaptV.window_args.min_win = 1024u;
-    NetadaptV.window_args.max_win = 16384u;
+    TEST_ASSERT_EQUAL_UINT32(1024u, Netadapt.u32);
+    Netadapt.window_args.free_heap = 7999u;
+    Netadapt.window_args.reserve = 8000u;
+    Netadapt.window_args.min_win = 1024u;
+    Netadapt.window_args.max_win = 16384u;
     Netadapt.window(netadapt_work);
-    TEST_ASSERT_EQUAL_UINT32(1024u, NetadaptV.u32);
-    NetadaptV.window_args.free_heap = 8000u;
-    NetadaptV.window_args.reserve = 8000u;
-    NetadaptV.window_args.min_win = 1024u;
-    NetadaptV.window_args.max_win = 16384u;
+    TEST_ASSERT_EQUAL_UINT32(1024u, Netadapt.u32);
+    Netadapt.window_args.free_heap = 8000u;
+    Netadapt.window_args.reserve = 8000u;
+    Netadapt.window_args.min_win = 1024u;
+    Netadapt.window_args.max_win = 16384u;
     Netadapt.window(netadapt_work);
-    TEST_ASSERT_EQUAL_UINT32(1024u, NetadaptV.u32);
+    TEST_ASSERT_EQUAL_UINT32(1024u, Netadapt.u32);
     // one octet of spare: (8001-8000)/4 = 0, below the floor, so still the floor
-    NetadaptV.window_args.free_heap = 8001u;
-    NetadaptV.window_args.reserve = 8000u;
-    NetadaptV.window_args.min_win = 1024u;
-    NetadaptV.window_args.max_win = 16384u;
+    Netadapt.window_args.free_heap = 8001u;
+    Netadapt.window_args.reserve = 8000u;
+    Netadapt.window_args.min_win = 1024u;
+    Netadapt.window_args.max_win = 16384u;
     Netadapt.window(netadapt_work);
-    TEST_ASSERT_EQUAL_UINT32(1024u, NetadaptV.u32);
+    TEST_ASSERT_EQUAL_UINT32(1024u, Netadapt.u32);
 }
 
 // Header: "a quarter of the heap above the reserve". Each expectation is that division written out.
 void test_window_is_a_quarter_of_the_spare_heap(void)
 {
     // (40000 - 8000) / 4 = 32000 / 4 = 8000
-    NetadaptV.window_args.free_heap = 40000u;
-    NetadaptV.window_args.reserve = 8000u;
-    NetadaptV.window_args.min_win = 1024u;
-    NetadaptV.window_args.max_win = 16384u;
+    Netadapt.window_args.free_heap = 40000u;
+    Netadapt.window_args.reserve = 8000u;
+    Netadapt.window_args.min_win = 1024u;
+    Netadapt.window_args.max_win = 16384u;
     Netadapt.window(netadapt_work);
-    TEST_ASSERT_EQUAL_UINT32(8000u, NetadaptV.u32);
+    TEST_ASSERT_EQUAL_UINT32(8000u, Netadapt.u32);
     // (12096 - 8000) / 4 = 4096 / 4 = 1024, exactly the floor
-    NetadaptV.window_args.free_heap = 12096u;
-    NetadaptV.window_args.reserve = 8000u;
-    NetadaptV.window_args.min_win = 1024u;
-    NetadaptV.window_args.max_win = 16384u;
+    Netadapt.window_args.free_heap = 12096u;
+    Netadapt.window_args.reserve = 8000u;
+    Netadapt.window_args.min_win = 1024u;
+    Netadapt.window_args.max_win = 16384u;
     Netadapt.window(netadapt_work);
-    TEST_ASSERT_EQUAL_UINT32(1024u, NetadaptV.u32);
+    TEST_ASSERT_EQUAL_UINT32(1024u, Netadapt.u32);
     // (12092 - 8000) / 4 = 4092 / 4 = 1023, one below the floor, so the floor wins
-    NetadaptV.window_args.free_heap = 12092u;
-    NetadaptV.window_args.reserve = 8000u;
-    NetadaptV.window_args.min_win = 1024u;
-    NetadaptV.window_args.max_win = 16384u;
+    Netadapt.window_args.free_heap = 12092u;
+    Netadapt.window_args.reserve = 8000u;
+    Netadapt.window_args.min_win = 1024u;
+    Netadapt.window_args.max_win = 16384u;
     Netadapt.window(netadapt_work);
-    TEST_ASSERT_EQUAL_UINT32(1024u, NetadaptV.u32);
+    TEST_ASSERT_EQUAL_UINT32(1024u, Netadapt.u32);
     // (73536 - 8000) / 4 = 65536 / 4 = 16384, exactly the ceiling
-    NetadaptV.window_args.free_heap = 73536u;
-    NetadaptV.window_args.reserve = 8000u;
-    NetadaptV.window_args.min_win = 1024u;
-    NetadaptV.window_args.max_win = 16384u;
+    Netadapt.window_args.free_heap = 73536u;
+    Netadapt.window_args.reserve = 8000u;
+    Netadapt.window_args.min_win = 1024u;
+    Netadapt.window_args.max_win = 16384u;
     Netadapt.window(netadapt_work);
-    TEST_ASSERT_EQUAL_UINT32(16384u, NetadaptV.u32);
+    TEST_ASSERT_EQUAL_UINT32(16384u, Netadapt.u32);
     // a reserve of zero makes the whole heap spare: 4096 / 4 = 1024
-    NetadaptV.window_args.free_heap = 4096u;
-    NetadaptV.window_args.reserve = 0u;
-    NetadaptV.window_args.min_win = 256u;
-    NetadaptV.window_args.max_win = 16384u;
+    Netadapt.window_args.free_heap = 4096u;
+    Netadapt.window_args.reserve = 0u;
+    Netadapt.window_args.min_win = 256u;
+    Netadapt.window_args.max_win = 16384u;
     Netadapt.window(netadapt_work);
-    TEST_ASSERT_EQUAL_UINT32(1024u, NetadaptV.u32);
+    TEST_ASSERT_EQUAL_UINT32(1024u, Netadapt.u32);
 }
 
 // One past the ceiling boundary, and far past it, both clamp.
 void test_window_clamps_to_the_ceiling(void)
 {
     // (73540 - 8000) / 4 = 16385, one above the ceiling
-    NetadaptV.window_args.free_heap = 73540u;
-    NetadaptV.window_args.reserve = 8000u;
-    NetadaptV.window_args.min_win = 1024u;
-    NetadaptV.window_args.max_win = 16384u;
+    Netadapt.window_args.free_heap = 73540u;
+    Netadapt.window_args.reserve = 8000u;
+    Netadapt.window_args.min_win = 1024u;
+    Netadapt.window_args.max_win = 16384u;
     Netadapt.window(netadapt_work);
-    TEST_ASSERT_EQUAL_UINT32(16384u, NetadaptV.u32);
-    NetadaptV.window_args.free_heap = 4000000u;
-    NetadaptV.window_args.reserve = 8000u;
-    NetadaptV.window_args.min_win = 1024u;
-    NetadaptV.window_args.max_win = 16384u;
+    TEST_ASSERT_EQUAL_UINT32(16384u, Netadapt.u32);
+    Netadapt.window_args.free_heap = 4000000u;
+    Netadapt.window_args.reserve = 8000u;
+    Netadapt.window_args.min_win = 1024u;
+    Netadapt.window_args.max_win = 16384u;
     Netadapt.window(netadapt_work);
-    TEST_ASSERT_EQUAL_UINT32(16384u, NetadaptV.u32);
+    TEST_ASSERT_EQUAL_UINT32(16384u, Netadapt.u32);
     // the widest heap a uint32_t can name still lands on the ceiling, not on an overflowed value
-    NetadaptV.window_args.free_heap = 0xFFFFFFFFu;
-    NetadaptV.window_args.reserve = 8000u;
-    NetadaptV.window_args.min_win = 1024u;
-    NetadaptV.window_args.max_win = 16384u;
+    Netadapt.window_args.free_heap = 0xFFFFFFFFu;
+    Netadapt.window_args.reserve = 8000u;
+    Netadapt.window_args.min_win = 1024u;
+    Netadapt.window_args.max_win = 16384u;
     Netadapt.window(netadapt_work);
-    TEST_ASSERT_EQUAL_UINT32(16384u, NetadaptV.u32);
+    TEST_ASSERT_EQUAL_UINT32(16384u, Netadapt.u32);
 }
 
 // Header: "If max_win < min_win the result is min_win" - for a heap with spare and without.
 void test_window_inverted_bounds_yield_the_floor(void)
 {
-    NetadaptV.window_args.free_heap = 100000u;
-    NetadaptV.window_args.reserve = 8000u;
-    NetadaptV.window_args.min_win = 4096u;
-    NetadaptV.window_args.max_win = 1024u;
+    Netadapt.window_args.free_heap = 100000u;
+    Netadapt.window_args.reserve = 8000u;
+    Netadapt.window_args.min_win = 4096u;
+    Netadapt.window_args.max_win = 1024u;
     Netadapt.window(netadapt_work);
-    TEST_ASSERT_EQUAL_UINT32(4096u, NetadaptV.u32);
-    NetadaptV.window_args.free_heap = 100u;
-    NetadaptV.window_args.reserve = 8000u;
-    NetadaptV.window_args.min_win = 4096u;
-    NetadaptV.window_args.max_win = 1024u;
+    TEST_ASSERT_EQUAL_UINT32(4096u, Netadapt.u32);
+    Netadapt.window_args.free_heap = 100u;
+    Netadapt.window_args.reserve = 8000u;
+    Netadapt.window_args.min_win = 4096u;
+    Netadapt.window_args.max_win = 1024u;
     Netadapt.window(netadapt_work);
-    TEST_ASSERT_EQUAL_UINT32(4096u, NetadaptV.u32);
+    TEST_ASSERT_EQUAL_UINT32(4096u, Netadapt.u32);
 }
 
 // The result is never outside [min_win, max_win]: swept across the reserve boundary and the
@@ -143,12 +143,12 @@ void test_window_stays_inside_the_stated_bounds(void)
     static const uint32_t MAX = 16384u;
     for (uint32_t heap = 0u; heap <= 120000u; heap += 137u)
     {
-        NetadaptV.window_args.free_heap = heap;
-        NetadaptV.window_args.reserve = 8000u;
-        NetadaptV.window_args.min_win = MIN;
-        NetadaptV.window_args.max_win = MAX;
+        Netadapt.window_args.free_heap = heap;
+        Netadapt.window_args.reserve = 8000u;
+        Netadapt.window_args.min_win = MIN;
+        Netadapt.window_args.max_win = MAX;
         Netadapt.window(netadapt_work);
-        uint32_t w = NetadaptV.u32;
+        uint32_t w = Netadapt.u32;
         TEST_ASSERT_TRUE_MESSAGE(w >= MIN, "below the floor");
         TEST_ASSERT_TRUE_MESSAGE(w <= MAX, "above the ceiling");
     }
@@ -158,20 +158,20 @@ void test_window_stays_inside_the_stated_bounds(void)
 // see as flapping.
 void test_window_never_shrinks_as_the_heap_grows(void)
 {
-    NetadaptV.window_args.free_heap = 0u;
-    NetadaptV.window_args.reserve = 8000u;
-    NetadaptV.window_args.min_win = 1024u;
-    NetadaptV.window_args.max_win = 16384u;
+    Netadapt.window_args.free_heap = 0u;
+    Netadapt.window_args.reserve = 8000u;
+    Netadapt.window_args.min_win = 1024u;
+    Netadapt.window_args.max_win = 16384u;
     Netadapt.window(netadapt_work);
-    uint32_t prev = NetadaptV.u32;
+    uint32_t prev = Netadapt.u32;
     for (uint32_t heap = 0u; heap <= 120000u; heap += 61u)
     {
-        NetadaptV.window_args.free_heap = heap;
-        NetadaptV.window_args.reserve = 8000u;
-        NetadaptV.window_args.min_win = 1024u;
-        NetadaptV.window_args.max_win = 16384u;
+        Netadapt.window_args.free_heap = heap;
+        Netadapt.window_args.reserve = 8000u;
+        Netadapt.window_args.min_win = 1024u;
+        Netadapt.window_args.max_win = 16384u;
         Netadapt.window(netadapt_work);
-        uint32_t w = NetadaptV.u32;
+        uint32_t w = Netadapt.u32;
         TEST_ASSERT_TRUE_MESSAGE(w >= prev, "window shrank as the heap grew");
         prev = w;
     }
@@ -180,60 +180,60 @@ void test_window_never_shrinks_as_the_heap_grows(void)
 // Header: "once the elapsed wait exceeds timeout_ms". The trigger is at the timeout, not past it.
 void test_dhcp_fallback_timeout_boundary(void)
 {
-    NetadaptV.dhcp_fallback_args.elapsed_ms = 9999u;
-    NetadaptV.dhcp_fallback_args.attempts = 1u;
-    NetadaptV.dhcp_fallback_args.timeout_ms = 10000u;
-    NetadaptV.dhcp_fallback_args.max_attempts = 5u;
+    Netadapt.dhcp_fallback_args.elapsed_ms = 9999u;
+    Netadapt.dhcp_fallback_args.attempts = 1u;
+    Netadapt.dhcp_fallback_args.timeout_ms = 10000u;
+    Netadapt.dhcp_fallback_args.max_attempts = 5u;
     Netadapt.dhcp_fallback(netadapt_work);
-    TEST_ASSERT_FALSE(NetadaptV.ok);
-    NetadaptV.dhcp_fallback_args.elapsed_ms = 10000u;
-    NetadaptV.dhcp_fallback_args.attempts = 1u;
-    NetadaptV.dhcp_fallback_args.timeout_ms = 10000u;
-    NetadaptV.dhcp_fallback_args.max_attempts = 5u;
+    TEST_ASSERT_FALSE(Netadapt.ok);
+    Netadapt.dhcp_fallback_args.elapsed_ms = 10000u;
+    Netadapt.dhcp_fallback_args.attempts = 1u;
+    Netadapt.dhcp_fallback_args.timeout_ms = 10000u;
+    Netadapt.dhcp_fallback_args.max_attempts = 5u;
     Netadapt.dhcp_fallback(netadapt_work);
-    TEST_ASSERT_TRUE(NetadaptV.ok);
-    NetadaptV.dhcp_fallback_args.elapsed_ms = 10001u;
-    NetadaptV.dhcp_fallback_args.attempts = 1u;
-    NetadaptV.dhcp_fallback_args.timeout_ms = 10000u;
-    NetadaptV.dhcp_fallback_args.max_attempts = 5u;
+    TEST_ASSERT_TRUE(Netadapt.ok);
+    Netadapt.dhcp_fallback_args.elapsed_ms = 10001u;
+    Netadapt.dhcp_fallback_args.attempts = 1u;
+    Netadapt.dhcp_fallback_args.timeout_ms = 10000u;
+    Netadapt.dhcp_fallback_args.max_attempts = 5u;
     Netadapt.dhcp_fallback(netadapt_work);
-    TEST_ASSERT_TRUE(NetadaptV.ok);
+    TEST_ASSERT_TRUE(Netadapt.ok);
     // a zero timeout fires immediately
-    NetadaptV.dhcp_fallback_args.elapsed_ms = 0u;
-    NetadaptV.dhcp_fallback_args.attempts = 0u;
-    NetadaptV.dhcp_fallback_args.timeout_ms = 0u;
-    NetadaptV.dhcp_fallback_args.max_attempts = 0u;
+    Netadapt.dhcp_fallback_args.elapsed_ms = 0u;
+    Netadapt.dhcp_fallback_args.attempts = 0u;
+    Netadapt.dhcp_fallback_args.timeout_ms = 0u;
+    Netadapt.dhcp_fallback_args.max_attempts = 0u;
     Netadapt.dhcp_fallback(netadapt_work);
-    TEST_ASSERT_TRUE(NetadaptV.ok);
+    TEST_ASSERT_TRUE(Netadapt.ok);
 }
 
 // Header: "(when max_attempts > 0) the attempts reach max_attempts"; 0 ignores the attempt count.
 void test_dhcp_fallback_attempt_budget(void)
 {
-    NetadaptV.dhcp_fallback_args.elapsed_ms = 1000u;
-    NetadaptV.dhcp_fallback_args.attempts = 4u;
-    NetadaptV.dhcp_fallback_args.timeout_ms = 10000u;
-    NetadaptV.dhcp_fallback_args.max_attempts = 5u;
+    Netadapt.dhcp_fallback_args.elapsed_ms = 1000u;
+    Netadapt.dhcp_fallback_args.attempts = 4u;
+    Netadapt.dhcp_fallback_args.timeout_ms = 10000u;
+    Netadapt.dhcp_fallback_args.max_attempts = 5u;
     Netadapt.dhcp_fallback(netadapt_work);
-    TEST_ASSERT_FALSE(NetadaptV.ok);
-    NetadaptV.dhcp_fallback_args.elapsed_ms = 1000u;
-    NetadaptV.dhcp_fallback_args.attempts = 5u;
-    NetadaptV.dhcp_fallback_args.timeout_ms = 10000u;
-    NetadaptV.dhcp_fallback_args.max_attempts = 5u;
+    TEST_ASSERT_FALSE(Netadapt.ok);
+    Netadapt.dhcp_fallback_args.elapsed_ms = 1000u;
+    Netadapt.dhcp_fallback_args.attempts = 5u;
+    Netadapt.dhcp_fallback_args.timeout_ms = 10000u;
+    Netadapt.dhcp_fallback_args.max_attempts = 5u;
     Netadapt.dhcp_fallback(netadapt_work);
-    TEST_ASSERT_TRUE(NetadaptV.ok);
-    NetadaptV.dhcp_fallback_args.elapsed_ms = 1000u;
-    NetadaptV.dhcp_fallback_args.attempts = 6u;
-    NetadaptV.dhcp_fallback_args.timeout_ms = 10000u;
-    NetadaptV.dhcp_fallback_args.max_attempts = 5u;
+    TEST_ASSERT_TRUE(Netadapt.ok);
+    Netadapt.dhcp_fallback_args.elapsed_ms = 1000u;
+    Netadapt.dhcp_fallback_args.attempts = 6u;
+    Netadapt.dhcp_fallback_args.timeout_ms = 10000u;
+    Netadapt.dhcp_fallback_args.max_attempts = 5u;
     Netadapt.dhcp_fallback(netadapt_work);
-    TEST_ASSERT_TRUE(NetadaptV.ok);
-    NetadaptV.dhcp_fallback_args.elapsed_ms = 1000u;
-    NetadaptV.dhcp_fallback_args.attempts = 0xFFFFFFFFu;
-    NetadaptV.dhcp_fallback_args.timeout_ms = 10000u;
-    NetadaptV.dhcp_fallback_args.max_attempts = 0u;
+    TEST_ASSERT_TRUE(Netadapt.ok);
+    Netadapt.dhcp_fallback_args.elapsed_ms = 1000u;
+    Netadapt.dhcp_fallback_args.attempts = 0xFFFFFFFFu;
+    Netadapt.dhcp_fallback_args.timeout_ms = 10000u;
+    Netadapt.dhcp_fallback_args.max_attempts = 0u;
     Netadapt.dhcp_fallback(netadapt_work);
-    TEST_ASSERT_FALSE(NetadaptV.ok);
+    TEST_ASSERT_FALSE(Netadapt.ok);
 }
 
 // Neither counter runs backwards on a device, so once the fallback is due it stays due: no
@@ -243,12 +243,12 @@ void test_dhcp_fallback_latches_as_the_counters_advance(void)
     proto_bool seen = PROTO_FALSE;
     for (uint32_t ms = 0u; ms <= 20000u; ms += 250u)
     {
-        NetadaptV.dhcp_fallback_args.elapsed_ms = ms;
-        NetadaptV.dhcp_fallback_args.attempts = 1u;
-        NetadaptV.dhcp_fallback_args.timeout_ms = 10000u;
-        NetadaptV.dhcp_fallback_args.max_attempts = 5u;
+        Netadapt.dhcp_fallback_args.elapsed_ms = ms;
+        Netadapt.dhcp_fallback_args.attempts = 1u;
+        Netadapt.dhcp_fallback_args.timeout_ms = 10000u;
+        Netadapt.dhcp_fallback_args.max_attempts = 5u;
         Netadapt.dhcp_fallback(netadapt_work);
-        proto_bool now = NetadaptV.ok;
+        proto_bool now = Netadapt.ok;
         if (seen)
         {
             TEST_ASSERT_TRUE_MESSAGE(now, "fallback un-triggered as time advanced");
@@ -260,12 +260,12 @@ void test_dhcp_fallback_latches_as_the_counters_advance(void)
     seen = PROTO_FALSE;
     for (uint32_t n = 0u; n <= 12u; n++)
     {
-        NetadaptV.dhcp_fallback_args.elapsed_ms = 0u;
-        NetadaptV.dhcp_fallback_args.attempts = n;
-        NetadaptV.dhcp_fallback_args.timeout_ms = 10000u;
-        NetadaptV.dhcp_fallback_args.max_attempts = 5u;
+        Netadapt.dhcp_fallback_args.elapsed_ms = 0u;
+        Netadapt.dhcp_fallback_args.attempts = n;
+        Netadapt.dhcp_fallback_args.timeout_ms = 10000u;
+        Netadapt.dhcp_fallback_args.max_attempts = 5u;
         Netadapt.dhcp_fallback(netadapt_work);
-        proto_bool now = NetadaptV.ok;
+        proto_bool now = Netadapt.ok;
         if (seen)
         {
             TEST_ASSERT_TRUE_MESSAGE(now, "fallback un-triggered as attempts advanced");

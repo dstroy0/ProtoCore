@@ -48,12 +48,14 @@ typedef struct
     uint8_t *out;         ///< where the response message is written
     size_t out_cap;       ///< how many octets that holds
 } DnsMsgArgs;
+
 /** @brief RFC 1035 sec 4.1.3: what the answer resource record carries, and where its RDATA comes from. */
 typedef struct
 {
     uint32_t ttl;         ///< the TTL the answer RR advertises, in seconds (RFC 1035 sec 4.1.3)
     DnsResolveFn resolve; ///< what a QNAME is resolved through
 } DnsAnswerArgs;
+
 /** @brief One A record of the built-in table: an owner name and its ADDRESS (RFC 1035 sec 3.4.1). */
 typedef struct
 {
@@ -63,7 +65,9 @@ typedef struct
     uint8_t c;        ///< ADDRESS octet 3
     uint8_t d;        ///< ADDRESS octet 4
 } DnsRecordArgs;
+
 /** @brief The name table's own state and the calls that reach it, described only in dns_server.c. */
+
 /**
  * @brief The answering side of DNS.
  *
@@ -89,43 +93,21 @@ typedef struct
     DnsMsgArgs msg;    ///< the message pair a response is built from (RFC 1035 sec 4.1)
     DnsAnswerArgs ans; ///< what the answer RR carries (RFC 1035 sec 4.1.3)
     DnsRecordArgs rec; ///< the record a table call names (RFC 1035 sec 3.4.1)
+
     proto_bool ok;
     size_t n;
     uint32_t ip;
-} DnsServerVars;
 
-/** @brief The operands and the outcome. */
-extern DnsServerVars DnsServerV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const build_response)(uint8_t *restrict work);
     void (*const add)(uint8_t *restrict work);
     void (*const clear)(uint8_t *restrict work);
     void (*const begin)(uint8_t *restrict work);
     void (*const lookup)(uint8_t *restrict work);
+
 } DnsServerNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in DnsServerV or a region of the borrow at a fixed offset.
-void protocore_dns_server_build_response(uint8_t *restrict work);
-void protocore_dns_server_add(uint8_t *restrict work);
-void protocore_dns_server_clear(uint8_t *restrict work);
-void protocore_dns_server_begin(uint8_t *restrict work);
-void protocore_dns_server_lookup(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `DnsServer.build_response(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const DnsServerNs DnsServer __attribute__((unused)) = {
-    .build_response = protocore_dns_server_build_response,
-    .add = protocore_dns_server_add,
-    .clear = protocore_dns_server_clear,
-    .begin = protocore_dns_server_begin,
-    .lookup = protocore_dns_server_lookup,
-};
+/** @brief The one symbol this module exports. */
+extern DnsServerNs DnsServer;
 
 /**
  * @brief The PROTOCORE_DNS_SERVER_BORROW bytes this module's state lives in.

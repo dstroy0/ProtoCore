@@ -54,16 +54,16 @@ static proto_bool body_equals(const uint8_t *body, uint32_t len, const char *s)
 // "byte SSH_MSG_EXT_INFO (value 7) / uint32 nr-extensions / repeat ... string extension-name,
 // string extension-value (binary)"
 
-void test_sec2_3_message_starts_with_ext_info_and_a_count(void)
+ void test_sec2_3_message_starts_with_ext_info_and_a_count(void)
 {
     uint8_t out[512];
     size_t len = 0;
 
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &len;
-    ExtensionV.build_args.cap = sizeof(out);
+    Extension.build_args.out = out;
+    Extension.build_args.len = &len;
+    Extension.build_args.cap = sizeof(out);
     Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    TEST_ASSERT_EQUAL_INT(0, Extension.n);
     TEST_ASSERT_EQUAL_UINT8(SSH_MSG_EXT_INFO, out[0]);
     TEST_ASSERT_EQUAL_UINT8(7u, out[0]); // the section fixes the value at 7
     TEST_ASSERT_EQUAL_UINT32(1u, rd32(out + 1));
@@ -71,15 +71,15 @@ void test_sec2_3_message_starts_with_ext_info_and_a_count(void)
 
 // The name/value pairs sit immediately after the count, and the message ends exactly where the last
 // one does: nothing trailing, nothing short.
-void test_sec2_3_one_name_value_pair_spans_the_whole_message(void)
+ void test_sec2_3_one_name_value_pair_spans_the_whole_message(void)
 {
     uint8_t out[512];
     size_t len = 0;
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &len;
-    ExtensionV.build_args.cap = sizeof(out);
+    Extension.build_args.out = out;
+    Extension.build_args.len = &len;
+    Extension.build_args.cap = sizeof(out);
     Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    TEST_ASSERT_EQUAL_INT(0, Extension.n);
 
     size_t off = 5u; // past the type byte and nr-extensions
     uint32_t nlen = 0;
@@ -96,15 +96,15 @@ void test_sec2_3_one_name_value_pair_spans_the_whole_message(void)
 // ---------------------------------------------------------------------------
 // "string 'server-sig-algs' / name-list public-key-algorithms-accepted"
 
-void test_sec3_1_extension_name_is_server_sig_algs(void)
+ void test_sec3_1_extension_name_is_server_sig_algs(void)
 {
     uint8_t out[512];
     size_t len = 0;
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &len;
-    ExtensionV.build_args.cap = sizeof(out);
+    Extension.build_args.out = out;
+    Extension.build_args.len = &len;
+    Extension.build_args.cap = sizeof(out);
     Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    TEST_ASSERT_EQUAL_INT(0, Extension.n);
 
     size_t off = 5u;
     uint32_t nlen = 0;
@@ -116,15 +116,15 @@ void test_sec3_1_extension_name_is_server_sig_algs(void)
 
 // A name-list is comma-separated with no empty entries (RFC 4251 sec 5), so no leading, trailing or
 // doubled comma may appear in the value.
-void test_sec3_1_value_is_a_well_formed_name_list(void)
+ void test_sec3_1_value_is_a_well_formed_name_list(void)
 {
     uint8_t out[512];
     size_t len = 0;
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &len;
-    ExtensionV.build_args.cap = sizeof(out);
+    Extension.build_args.out = out;
+    Extension.build_args.len = &len;
+    Extension.build_args.cap = sizeof(out);
     Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    TEST_ASSERT_EQUAL_INT(0, Extension.n);
 
     size_t off = 5u;
     uint32_t nlen = 0;
@@ -146,15 +146,15 @@ void test_sec3_1_value_is_a_well_formed_name_list(void)
 
 // The list names the algorithms a "publickey" request may be signed with, so every one this end can
 // verify is present regardless of which host key it happens to hold.
-void test_sec3_1_value_names_every_verifiable_algorithm(void)
+ void test_sec3_1_value_names_every_verifiable_algorithm(void)
 {
     uint8_t out[512];
     size_t len = 0;
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &len;
-    ExtensionV.build_args.cap = sizeof(out);
+    Extension.build_args.out = out;
+    Extension.build_args.len = &len;
+    Extension.build_args.cap = sizeof(out);
     Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    TEST_ASSERT_EQUAL_INT(0, Extension.n);
 
     // The value body, NUL-terminated into a scratch buffer so a substring search is well defined.
     size_t off = 5u;
@@ -178,7 +178,7 @@ void test_sec3_1_value_names_every_verifiable_algorithm(void)
 
 // The one branch in the file: preference reorders the list without changing its membership. RFC
 // 8332 puts rsa-sha2-512 ahead of rsa-sha2-256 either way.
-void test_sec3_1_preference_reorders_but_keeps_the_same_members(void)
+ void test_sec3_1_preference_reorders_but_keeps_the_same_members(void)
 {
     uint8_t a[512];
     uint8_t b[512];
@@ -186,34 +186,34 @@ void test_sec3_1_preference_reorders_but_keeps_the_same_members(void)
     size_t blen = 0;
 
     ssh_kex_set_prefer_rsa(PROTO_FALSE);
-    ExtensionV.build_args.out = a;
-    ExtensionV.build_args.len = &alen;
-    ExtensionV.build_args.cap = sizeof(a);
+    Extension.build_args.out = a;
+    Extension.build_args.len = &alen;
+    Extension.build_args.cap = sizeof(a);
     Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    TEST_ASSERT_EQUAL_INT(0, Extension.n);
     ssh_kex_set_prefer_rsa(PROTO_TRUE);
-    ExtensionV.build_args.out = b;
-    ExtensionV.build_args.len = &blen;
-    ExtensionV.build_args.cap = sizeof(b);
+    Extension.build_args.out = b;
+    Extension.build_args.len = &blen;
+    Extension.build_args.cap = sizeof(b);
     Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    TEST_ASSERT_EQUAL_INT(0, Extension.n);
     ssh_kex_set_prefer_rsa(PROTO_FALSE); // leave the module as it was found
 
     TEST_ASSERT_EQUAL_UINT32((uint32_t)alen, (uint32_t)blen); // same names, same total length
     TEST_ASSERT_NOT_EQUAL(0, memcmp(a, b, alen));             // different order
 }
 
-void test_sec3_1_rsa_preference_puts_rsa_first(void)
+ void test_sec3_1_rsa_preference_puts_rsa_first(void)
 {
     uint8_t out[512];
     size_t len = 0;
 
     ssh_kex_set_prefer_rsa(PROTO_TRUE);
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &len;
-    ExtensionV.build_args.cap = sizeof(out);
+    Extension.build_args.out = out;
+    Extension.build_args.len = &len;
+    Extension.build_args.cap = sizeof(out);
     Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    TEST_ASSERT_EQUAL_INT(0, Extension.n);
     ssh_kex_set_prefer_rsa(PROTO_FALSE);
 
     size_t off = 5u;
@@ -225,17 +225,17 @@ void test_sec3_1_rsa_preference_puts_rsa_first(void)
     TEST_ASSERT_TRUE(body_equals(val, 12u, "rsa-sha2-512"));
 }
 
-void test_sec3_1_default_preference_puts_ed25519_first(void)
+ void test_sec3_1_default_preference_puts_ed25519_first(void)
 {
     uint8_t out[512];
     size_t len = 0;
 
     ssh_kex_set_prefer_rsa(PROTO_FALSE);
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &len;
-    ExtensionV.build_args.cap = sizeof(out);
+    Extension.build_args.out = out;
+    Extension.build_args.len = &len;
+    Extension.build_args.cap = sizeof(out);
     Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    TEST_ASSERT_EQUAL_INT(0, Extension.n);
 
     size_t off = 5u;
     uint32_t nlen = 0;
@@ -252,36 +252,37 @@ void test_sec3_1_default_preference_puts_ed25519_first(void)
 
 // A buffer too small for the whole message fails rather than emitting a truncated one, which the
 // peer would read as a malformed extension list.
-void test_undersized_buffer_is_refused(void)
+ void test_undersized_buffer_is_refused(void)
 {
     uint8_t out[512];
     size_t full = 0;
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &full;
-    ExtensionV.build_args.cap = sizeof(out);
+    Extension.build_args.out = out;
+    Extension.build_args.len = &full;
+    Extension.build_args.cap = sizeof(out);
     Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    TEST_ASSERT_EQUAL_INT(0, Extension.n);
 
     for (size_t cap = 0; cap < full; cap += 8u)
     {
         size_t len = 0xFFFFu;
-        ExtensionV.build_args.out = out;
-        ExtensionV.build_args.len = &len;
-        ExtensionV.build_args.cap = cap;
+        Extension.build_args.out = out;
+        Extension.build_args.len = &len;
+        Extension.build_args.cap = cap;
         Extension.build(extension_work);
-        TEST_ASSERT_EQUAL_INT(-1, ExtensionV.n);
+        TEST_ASSERT_EQUAL_INT(-1, Extension.n);
     }
     // One byte short still fails; exactly enough succeeds.
     size_t len = 0;
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &len;
-    ExtensionV.build_args.cap = full - 1u;
+    Extension.build_args.out = out;
+    Extension.build_args.len = &len;
+    Extension.build_args.cap = full - 1u;
     Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(-1, ExtensionV.n);
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &len;
-    ExtensionV.build_args.cap = full;
+    TEST_ASSERT_EQUAL_INT(-1, Extension.n);
+    Extension.build_args.out = out;
+    Extension.build_args.len = &len;
+    Extension.build_args.cap = full;
     Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    TEST_ASSERT_EQUAL_INT(0, Extension.n);
     TEST_ASSERT_EQUAL_UINT32((uint32_t)full, (uint32_t)len);
 }
+

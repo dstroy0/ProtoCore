@@ -20,38 +20,38 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_http_delivery_swr(uint8_t *restrict work)
+static void http_delivery_swr(uint8_t *restrict work)
 {
     (void)work;
-    uint32_t age_s = HttpDeliveryV.swr_args.age_s;
-    uint32_t max_age_s = HttpDeliveryV.swr_args.max_age_s;
-    uint32_t swr_s = HttpDeliveryV.swr_args.swr_s;
+    uint32_t age_s = HttpDelivery.swr_args.age_s;
+    uint32_t max_age_s = HttpDelivery.swr_args.max_age_s;
+    uint32_t swr_s = HttpDelivery.swr_args.swr_s;
 
     if (age_s <= max_age_s)
     {
-        HttpDeliveryV.value = DELIVERY_FRESH;
+        HttpDelivery.value = DELIVERY_FRESH;
         return;
     }
     uint64_t window = (uint64_t)max_age_s + swr_s;
     if ((uint64_t)age_s <= window)
     {
-        HttpDeliveryV.value = DELIVERY_STALE_REVALIDATE;
+        HttpDelivery.value = DELIVERY_STALE_REVALIDATE;
         return;
     }
-    HttpDeliveryV.value = DELIVERY_EXPIRED;
+    HttpDelivery.value = DELIVERY_EXPIRED;
 }
 
-void protocore_http_delivery_cache_control(uint8_t *restrict work)
+static void http_delivery_cache_control(uint8_t *restrict work)
 {
     (void)work;
-    uint32_t max_age_s = HttpDeliveryV.cache_control_args.max_age_s;
-    uint32_t swr_s = HttpDeliveryV.cache_control_args.swr_s;
-    char *out = HttpDeliveryV.cache_control_args.out;
-    size_t cap = HttpDeliveryV.cache_control_args.cap;
+    uint32_t max_age_s = HttpDelivery.cache_control_args.max_age_s;
+    uint32_t swr_s = HttpDelivery.cache_control_args.swr_s;
+    char *out = HttpDelivery.cache_control_args.out;
+    size_t cap = HttpDelivery.cache_control_args.cap;
 
     if (!out || cap == 0)
     {
-        HttpDeliveryV.n = 0;
+        HttpDelivery.n = 0;
         return;
     }
     protocore_sb b = {out, cap, 0, PROTO_TRUE};
@@ -64,25 +64,25 @@ void protocore_http_delivery_cache_control(uint8_t *restrict work)
     }
     if (!b.ok)
     {
-        HttpDeliveryV.n = 0;
+        HttpDelivery.n = 0;
         return;
     }
     out[b.len] = '\0';
-    HttpDeliveryV.n = b.len;
+    HttpDelivery.n = b.len;
 }
 
-void protocore_http_delivery_sw_manifest(uint8_t *restrict work)
+static void http_delivery_sw_manifest(uint8_t *restrict work)
 {
     (void)work;
-    const char *const *paths = HttpDeliveryV.sw_manifest_args.paths;
-    size_t n = HttpDeliveryV.sw_manifest_args.n;
-    const char *version = HttpDeliveryV.sw_manifest_args.version;
-    char *out = HttpDeliveryV.sw_manifest_args.out;
-    size_t cap = HttpDeliveryV.sw_manifest_args.cap;
+    const char *const *paths = HttpDelivery.sw_manifest_args.paths;
+    size_t n = HttpDelivery.sw_manifest_args.n;
+    const char *version = HttpDelivery.sw_manifest_args.version;
+    char *out = HttpDelivery.sw_manifest_args.out;
+    size_t cap = HttpDelivery.sw_manifest_args.cap;
 
     if (!out || cap == 0 || (n && !paths))
     {
-        HttpDeliveryV.n = 0;
+        HttpDelivery.n = 0;
         return;
     }
     protocore_sb b2 = {out, cap, 0, PROTO_TRUE};
@@ -100,11 +100,11 @@ void protocore_http_delivery_sw_manifest(uint8_t *restrict work)
     Sb.put(&b2, "]}");
     if (!b2.ok)
     {
-        HttpDeliveryV.n = 0;
+        HttpDelivery.n = 0;
         return;
     }
     out[b2.len] = '\0';
-    HttpDeliveryV.n = b2.len;
+    HttpDelivery.n = b2.len;
 }
 
 // The route installer lives in http_delivery_routes.c, the arm that has an HTTP surface to install
@@ -112,14 +112,18 @@ void protocore_http_delivery_sw_manifest(uint8_t *restrict work)
 // so the three pure cores link on their own - the freshness verdict, the Cache-Control builder and
 // the manifest serializer are host-tested without the server - and http_delivery_routes.c overrides
 // this the moment it is in the build. Nothing is registered without it, which is what ok reports.
-__attribute__((weak)) void protocore_http_delivery_serve_sw(uint8_t *restrict work)
+__attribute__((weak)) void http_delivery_serve_sw(uint8_t *restrict work)
 {
     (void)work;
-    HttpDeliveryV.ok = PROTO_FALSE;
+    HttpDelivery.ok = PROTO_FALSE;
 }
 
-/** @brief The operands and the outcome. */
-HttpDeliveryVars HttpDeliveryV;
+HttpDeliveryNs HttpDelivery = {
+    .swr = http_delivery_swr,
+    .cache_control = http_delivery_cache_control,
+    .sw_manifest = http_delivery_sw_manifest,
+    .serve_sw = http_delivery_serve_sw,
+};
 
 PROTOCORE_END_DECLS
 

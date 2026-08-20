@@ -65,13 +65,13 @@ void test_identity_vendor_id_request(void)
     static const uint8_t WANT[8] = {0x0E, 0x03, 0x20, 0x01, 0x24, 0x01, 0x30, 0x01};
     uint8_t buf[16];
     memset(buf, 0xEE, sizeof(buf));
-    CipV.build_get_attr_single_args.buf = buf;
-    CipV.build_get_attr_single_args.cap = sizeof(buf);
-    CipV.build_get_attr_single_args.class_id = 0x0001u;
-    CipV.build_get_attr_single_args.instance_id = 0x0001u;
-    CipV.build_get_attr_single_args.attribute_id = 0x0001u;
+    Cip.build_get_attr_single_args.buf = buf;
+    Cip.build_get_attr_single_args.cap = sizeof(buf);
+    Cip.build_get_attr_single_args.class_id = 0x0001u;
+    Cip.build_get_attr_single_args.instance_id = 0x0001u;
+    Cip.build_get_attr_single_args.attribute_id = 0x0001u;
     Cip.build_get_attr_single(cip_work);
-    size_t n = CipV.n;
+    size_t n = Cip.n;
     TEST_ASSERT_EQUAL_size_t(8u, n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 8);
     TEST_ASSERT_EQUAL_HEX8(0xEEu, buf[8]);
@@ -82,12 +82,12 @@ void test_get_attributes_all_has_no_attribute_segment(void)
 {
     static const uint8_t WANT[6] = {0x01, 0x02, 0x20, 0x01, 0x24, 0x01};
     uint8_t buf[16];
-    CipV.build_get_attr_all_args.buf = buf;
-    CipV.build_get_attr_all_args.cap = sizeof(buf);
-    CipV.build_get_attr_all_args.class_id = 0x0001u;
-    CipV.build_get_attr_all_args.instance_id = 0x0001u;
+    Cip.build_get_attr_all_args.buf = buf;
+    Cip.build_get_attr_all_args.cap = sizeof(buf);
+    Cip.build_get_attr_all_args.class_id = 0x0001u;
+    Cip.build_get_attr_all_args.instance_id = 0x0001u;
     Cip.build_get_attr_all(cip_work);
-    size_t n = CipV.n;
+    size_t n = Cip.n;
     TEST_ASSERT_EQUAL_size_t(6u, n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 6);
 }
@@ -98,40 +98,40 @@ void test_get_attributes_all_has_no_attribute_segment(void)
 void test_wide_ids_use_the_sixteen_bit_segment_form(void)
 {
     uint8_t epath[16];
-    CipV.build_epath_args.buf = epath;
-    CipV.build_epath_args.cap = sizeof(epath);
-    CipV.build_epath_args.class_id = 0x0100u;
-    CipV.build_epath_args.instance_id = 0x0001u;
-    CipV.build_epath_args.attribute_id = 0x0001u;
-    CipV.build_epath_args.with_attribute = PROTO_TRUE;
+    Cip.build_epath_args.buf = epath;
+    Cip.build_epath_args.cap = sizeof(epath);
+    Cip.build_epath_args.class_id = 0x0100u;
+    Cip.build_epath_args.instance_id = 0x0001u;
+    Cip.build_epath_args.attribute_id = 0x0001u;
+    Cip.build_epath_args.with_attribute = PROTO_TRUE;
     Cip.build_epath(cip_work);
-    size_t n = CipV.n;
+    size_t n = Cip.n;
     static const uint8_t WIDE_CLASS[8] = {0x21, 0x00, 0x00, 0x01, 0x24, 0x01, 0x30, 0x01};
     TEST_ASSERT_EQUAL_size_t(8u, n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WIDE_CLASS, epath, 8);
 
     // All three wide: 4 octets each.
-    CipV.build_epath_args.buf = epath;
-    CipV.build_epath_args.cap = sizeof(epath);
-    CipV.build_epath_args.class_id = 0x1234u;
-    CipV.build_epath_args.instance_id = 0xABCDu;
-    CipV.build_epath_args.attribute_id = 0x0102u;
-    CipV.build_epath_args.with_attribute = PROTO_TRUE;
+    Cip.build_epath_args.buf = epath;
+    Cip.build_epath_args.cap = sizeof(epath);
+    Cip.build_epath_args.class_id = 0x1234u;
+    Cip.build_epath_args.instance_id = 0xABCDu;
+    Cip.build_epath_args.attribute_id = 0x0102u;
+    Cip.build_epath_args.with_attribute = PROTO_TRUE;
     Cip.build_epath(cip_work);
-    n = CipV.n;
+    n = Cip.n;
     static const uint8_t ALL_WIDE[12] = {0x21, 0x00, 0x34, 0x12, 0x25, 0x00, 0xCD, 0xAB, 0x31, 0x00, 0x02, 0x01};
     TEST_ASSERT_EQUAL_size_t(12u, n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ALL_WIDE, epath, 12);
 
     // 0xFF is the widest 8-bit id; 0x0100 is the narrowest 16-bit one.
-    CipV.build_epath_args.buf = epath;
-    CipV.build_epath_args.cap = sizeof(epath);
-    CipV.build_epath_args.class_id = 0x00FFu;
-    CipV.build_epath_args.instance_id = 0x0100u;
-    CipV.build_epath_args.attribute_id = 0;
-    CipV.build_epath_args.with_attribute = PROTO_FALSE;
+    Cip.build_epath_args.buf = epath;
+    Cip.build_epath_args.cap = sizeof(epath);
+    Cip.build_epath_args.class_id = 0x00FFu;
+    Cip.build_epath_args.instance_id = 0x0100u;
+    Cip.build_epath_args.attribute_id = 0;
+    Cip.build_epath_args.with_attribute = PROTO_FALSE;
     Cip.build_epath(cip_work);
-    n = CipV.n;
+    n = Cip.n;
     static const uint8_t BOUNDARY[6] = {0x20, 0xFF, 0x25, 0x00, 0x00, 0x01};
     TEST_ASSERT_EQUAL_size_t(6u, n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(BOUNDARY, epath, 6);
@@ -145,27 +145,27 @@ void test_epath_is_always_word_aligned(void)
     {
         for (uint32_t instance = 0x00FEu; instance <= 0x0101u; instance++)
         {
-            CipV.build_epath_args.buf = epath;
-            CipV.build_epath_args.cap = sizeof(epath);
-            CipV.build_epath_args.class_id = (uint16_t)class_id;
-            CipV.build_epath_args.instance_id = (uint16_t)instance;
-            CipV.build_epath_args.attribute_id = 5;
-            CipV.build_epath_args.with_attribute = PROTO_TRUE;
+            Cip.build_epath_args.buf = epath;
+            Cip.build_epath_args.cap = sizeof(epath);
+            Cip.build_epath_args.class_id = (uint16_t)class_id;
+            Cip.build_epath_args.instance_id = (uint16_t)instance;
+            Cip.build_epath_args.attribute_id = 5;
+            Cip.build_epath_args.with_attribute = PROTO_TRUE;
             Cip.build_epath(cip_work);
-            size_t n = CipV.n;
+            size_t n = Cip.n;
             TEST_ASSERT_TRUE(n != 0u);
             TEST_ASSERT_EQUAL_size_t(0u, n % 2u);
 
             uint8_t req[24];
-            CipV.build_request_args.buf = req;
-            CipV.build_request_args.cap = sizeof(req);
-            CipV.build_request_args.service = CIP_SC_GET_ATTR_SINGLE;
-            CipV.build_request_args.epath = epath;
-            CipV.build_request_args.epath_len = n;
-            CipV.build_request_args.data = NULL;
-            CipV.build_request_args.data_len = 0;
+            Cip.build_request_args.buf = req;
+            Cip.build_request_args.cap = sizeof(req);
+            Cip.build_request_args.service = CIP_SC_GET_ATTR_SINGLE;
+            Cip.build_request_args.epath = epath;
+            Cip.build_request_args.epath_len = n;
+            Cip.build_request_args.data = NULL;
+            Cip.build_request_args.data_len = 0;
             Cip.build_request(cip_work);
-            size_t r = CipV.n;
+            size_t r = Cip.n;
             TEST_ASSERT_EQUAL_size_t(2u + n, r);
             TEST_ASSERT_EQUAL_UINT8((uint8_t)(n / 2u), req[1]); // path size is in words, not octets
         }
@@ -178,41 +178,41 @@ void test_set_attribute_single_appends_the_value(void)
 {
     static const uint8_t VALUE[5] = {0x04, 'A', 'C', 'M', 'E'}; // SHORT_STRING "ACME"
     uint8_t buf[24];
-    CipV.build_set_attr_single_args.buf = buf;
-    CipV.build_set_attr_single_args.cap = sizeof(buf);
-    CipV.build_set_attr_single_args.class_id = 0x0001u;
-    CipV.build_set_attr_single_args.instance_id = 0x0001u;
-    CipV.build_set_attr_single_args.attribute_id = 0x0007u;
-    CipV.build_set_attr_single_args.value = VALUE;
-    CipV.build_set_attr_single_args.value_len = sizeof(VALUE);
+    Cip.build_set_attr_single_args.buf = buf;
+    Cip.build_set_attr_single_args.cap = sizeof(buf);
+    Cip.build_set_attr_single_args.class_id = 0x0001u;
+    Cip.build_set_attr_single_args.instance_id = 0x0001u;
+    Cip.build_set_attr_single_args.attribute_id = 0x0007u;
+    Cip.build_set_attr_single_args.value = VALUE;
+    Cip.build_set_attr_single_args.value_len = sizeof(VALUE);
     Cip.build_set_attr_single(cip_work);
-    size_t n = CipV.n;
+    size_t n = Cip.n;
     static const uint8_t WANT[13] = {0x10, 0x03, 0x20, 0x01, 0x24, 0x01, 0x30, 0x07, 0x04, 'A', 'C', 'M', 'E'};
     TEST_ASSERT_EQUAL_size_t(13u, n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 13);
 
     // A zero-length value is legal and yields the bare request.
-    CipV.build_set_attr_single_args.buf = buf;
-    CipV.build_set_attr_single_args.cap = sizeof(buf);
-    CipV.build_set_attr_single_args.class_id = 0x0001u;
-    CipV.build_set_attr_single_args.instance_id = 0x0001u;
-    CipV.build_set_attr_single_args.attribute_id = 0x0007u;
-    CipV.build_set_attr_single_args.value = NULL;
-    CipV.build_set_attr_single_args.value_len = 0;
+    Cip.build_set_attr_single_args.buf = buf;
+    Cip.build_set_attr_single_args.cap = sizeof(buf);
+    Cip.build_set_attr_single_args.class_id = 0x0001u;
+    Cip.build_set_attr_single_args.instance_id = 0x0001u;
+    Cip.build_set_attr_single_args.attribute_id = 0x0007u;
+    Cip.build_set_attr_single_args.value = NULL;
+    Cip.build_set_attr_single_args.value_len = 0;
     Cip.build_set_attr_single(cip_work);
-    n = CipV.n;
+    n = Cip.n;
     TEST_ASSERT_EQUAL_size_t(8u, n);
 
     // A length without a value is refused.
-    CipV.build_set_attr_single_args.buf = buf;
-    CipV.build_set_attr_single_args.cap = sizeof(buf);
-    CipV.build_set_attr_single_args.class_id = 1;
-    CipV.build_set_attr_single_args.instance_id = 1;
-    CipV.build_set_attr_single_args.attribute_id = 7;
-    CipV.build_set_attr_single_args.value = NULL;
-    CipV.build_set_attr_single_args.value_len = 4;
+    Cip.build_set_attr_single_args.buf = buf;
+    Cip.build_set_attr_single_args.cap = sizeof(buf);
+    Cip.build_set_attr_single_args.class_id = 1;
+    Cip.build_set_attr_single_args.instance_id = 1;
+    Cip.build_set_attr_single_args.attribute_id = 7;
+    Cip.build_set_attr_single_args.value = NULL;
+    Cip.build_set_attr_single_args.value_len = 4;
     Cip.build_set_attr_single(cip_work);
-    TEST_ASSERT_EQUAL_size_t(0u, CipV.n);
+    TEST_ASSERT_EQUAL_size_t(0u, Cip.n);
 }
 
 // A response is `Service|0x80  reserved(0)  GeneralStatus  AdditionalStatusSize(words)` then the
@@ -222,11 +222,11 @@ void test_parse_successful_response(void)
     // Vendor ID 0x004D returned as a UINT, little-endian.
     static const uint8_t RESP[6] = {0x8E, 0x00, 0x00, 0x00, 0x4D, 0x00};
     CipResponse r;
-    CipV.parse_response_args.buf = RESP;
-    CipV.parse_response_args.len = sizeof(RESP);
-    CipV.parse_response_args.out = &r;
+    Cip.parse_response_args.buf = RESP;
+    Cip.parse_response_args.len = sizeof(RESP);
+    Cip.parse_response_args.out = &r;
     Cip.parse_response(cip_work);
-    TEST_ASSERT_TRUE(CipV.ok);
+    TEST_ASSERT_TRUE(Cip.ok);
     TEST_ASSERT_EQUAL_HEX8(0x8Eu, r.service);
     TEST_ASSERT_EQUAL_HEX8(CIP_SC_GET_ATTR_SINGLE | CIP_REPLY_FLAG, r.service);
     TEST_ASSERT_EQUAL_HEX8(CIP_STATUS_SUCCESS, r.general_status);
@@ -236,11 +236,11 @@ void test_parse_successful_response(void)
 
     // No service data at all: a Set reply.
     static const uint8_t ACK[4] = {0x90, 0x00, 0x00, 0x00};
-    CipV.parse_response_args.buf = ACK;
-    CipV.parse_response_args.len = sizeof(ACK);
-    CipV.parse_response_args.out = &r;
+    Cip.parse_response_args.buf = ACK;
+    Cip.parse_response_args.len = sizeof(ACK);
+    Cip.parse_response_args.out = &r;
     Cip.parse_response(cip_work);
-    TEST_ASSERT_TRUE(CipV.ok);
+    TEST_ASSERT_TRUE(Cip.ok);
     TEST_ASSERT_EQUAL_HEX8(CIP_SC_SET_ATTR_SINGLE | CIP_REPLY_FLAG, r.service);
     TEST_ASSERT_EQUAL_size_t(0u, r.data_len);
 }
@@ -252,11 +252,11 @@ void test_additional_status_is_counted_in_words(void)
     // General status 0x1F (vendor specific error) with two words of additional status.
     static const uint8_t RESP[10] = {0x8E, 0x00, 0x1F, 0x02, 0x11, 0x22, 0x33, 0x44, 0xAA, 0xBB};
     CipResponse r;
-    CipV.parse_response_args.buf = RESP;
-    CipV.parse_response_args.len = sizeof(RESP);
-    CipV.parse_response_args.out = &r;
+    Cip.parse_response_args.buf = RESP;
+    Cip.parse_response_args.len = sizeof(RESP);
+    Cip.parse_response_args.out = &r;
     Cip.parse_response(cip_work);
-    TEST_ASSERT_TRUE(CipV.ok);
+    TEST_ASSERT_TRUE(Cip.ok);
     TEST_ASSERT_EQUAL_HEX8(0x1Fu, r.general_status);
     TEST_ASSERT_EQUAL_size_t(2u, r.data_len); // 10 - (4 + 2*2)
     TEST_ASSERT_EQUAL_HEX8(0xAAu, r.data[0]);
@@ -264,21 +264,21 @@ void test_additional_status_is_counted_in_words(void)
 
     // One word of additional status, no data left over.
     static const uint8_t ONE[6] = {0x8E, 0x00, 0x05, 0x01, 0x00, 0x01}; // 0x05 = path destination unknown
-    CipV.parse_response_args.buf = ONE;
-    CipV.parse_response_args.len = sizeof(ONE);
-    CipV.parse_response_args.out = &r;
+    Cip.parse_response_args.buf = ONE;
+    Cip.parse_response_args.len = sizeof(ONE);
+    Cip.parse_response_args.out = &r;
     Cip.parse_response(cip_work);
-    TEST_ASSERT_TRUE(CipV.ok);
+    TEST_ASSERT_TRUE(Cip.ok);
     TEST_ASSERT_EQUAL_HEX8(0x05u, r.general_status);
     TEST_ASSERT_EQUAL_size_t(0u, r.data_len);
 
     // An additional-status size that runs past the buffer is refused.
     static const uint8_t LIES[6] = {0x8E, 0x00, 0x05, 0x08, 0x00, 0x01};
-    CipV.parse_response_args.buf = LIES;
-    CipV.parse_response_args.len = sizeof(LIES);
-    CipV.parse_response_args.out = &r;
+    Cip.parse_response_args.buf = LIES;
+    Cip.parse_response_args.len = sizeof(LIES);
+    Cip.parse_response_args.out = &r;
     Cip.parse_response(cip_work);
-    TEST_ASSERT_FALSE(CipV.ok);
+    TEST_ASSERT_FALSE(Cip.ok);
 }
 
 // A response shorter than its own fixed header is not a response.
@@ -286,31 +286,31 @@ void test_response_refusals(void)
 {
     static const uint8_t RESP[4] = {0x8E, 0x00, 0x00, 0x00};
     CipResponse r;
-    CipV.parse_response_args.buf = RESP;
-    CipV.parse_response_args.len = 4;
-    CipV.parse_response_args.out = &r;
+    Cip.parse_response_args.buf = RESP;
+    Cip.parse_response_args.len = 4;
+    Cip.parse_response_args.out = &r;
     Cip.parse_response(cip_work);
-    TEST_ASSERT_TRUE(CipV.ok);
-    CipV.parse_response_args.buf = RESP;
-    CipV.parse_response_args.len = 3;
-    CipV.parse_response_args.out = &r;
+    TEST_ASSERT_TRUE(Cip.ok);
+    Cip.parse_response_args.buf = RESP;
+    Cip.parse_response_args.len = 3;
+    Cip.parse_response_args.out = &r;
     Cip.parse_response(cip_work);
-    TEST_ASSERT_FALSE(CipV.ok);
-    CipV.parse_response_args.buf = RESP;
-    CipV.parse_response_args.len = 0;
-    CipV.parse_response_args.out = &r;
+    TEST_ASSERT_FALSE(Cip.ok);
+    Cip.parse_response_args.buf = RESP;
+    Cip.parse_response_args.len = 0;
+    Cip.parse_response_args.out = &r;
     Cip.parse_response(cip_work);
-    TEST_ASSERT_FALSE(CipV.ok);
-    CipV.parse_response_args.buf = NULL;
-    CipV.parse_response_args.len = 4;
-    CipV.parse_response_args.out = &r;
+    TEST_ASSERT_FALSE(Cip.ok);
+    Cip.parse_response_args.buf = NULL;
+    Cip.parse_response_args.len = 4;
+    Cip.parse_response_args.out = &r;
     Cip.parse_response(cip_work);
-    TEST_ASSERT_FALSE(CipV.ok);
-    CipV.parse_response_args.buf = RESP;
-    CipV.parse_response_args.len = 4;
-    CipV.parse_response_args.out = NULL;
+    TEST_ASSERT_FALSE(Cip.ok);
+    Cip.parse_response_args.buf = RESP;
+    Cip.parse_response_args.len = 4;
+    Cip.parse_response_args.out = NULL;
     Cip.parse_response(cip_work);
-    TEST_ASSERT_FALSE(CipV.ok);
+    TEST_ASSERT_FALSE(Cip.ok);
 }
 
 // A path that is not a whole number of 16-bit words, or one too long for the word count field, is
@@ -320,130 +320,130 @@ void test_request_refuses_a_misaligned_or_oversized_path(void)
     static const uint8_t EPATH[6] = {0x20, 0x01, 0x24, 0x01, 0x30, 0x01};
     uint8_t buf[32];
 
-    CipV.build_request_args.buf = buf;
-    CipV.build_request_args.cap = sizeof(buf);
-    CipV.build_request_args.service = CIP_SC_GET_ATTR_SINGLE;
-    CipV.build_request_args.epath = EPATH;
-    CipV.build_request_args.epath_len = 6;
-    CipV.build_request_args.data = NULL;
-    CipV.build_request_args.data_len = 0;
+    Cip.build_request_args.buf = buf;
+    Cip.build_request_args.cap = sizeof(buf);
+    Cip.build_request_args.service = CIP_SC_GET_ATTR_SINGLE;
+    Cip.build_request_args.epath = EPATH;
+    Cip.build_request_args.epath_len = 6;
+    Cip.build_request_args.data = NULL;
+    Cip.build_request_args.data_len = 0;
     Cip.build_request(cip_work);
-    TEST_ASSERT_EQUAL_size_t(8u, CipV.n);
-    CipV.build_request_args.buf = buf;
-    CipV.build_request_args.cap = sizeof(buf);
-    CipV.build_request_args.service = CIP_SC_GET_ATTR_SINGLE;
-    CipV.build_request_args.epath = EPATH;
-    CipV.build_request_args.epath_len = 5;
-    CipV.build_request_args.data = NULL;
-    CipV.build_request_args.data_len = 0;
+    TEST_ASSERT_EQUAL_size_t(8u, Cip.n);
+    Cip.build_request_args.buf = buf;
+    Cip.build_request_args.cap = sizeof(buf);
+    Cip.build_request_args.service = CIP_SC_GET_ATTR_SINGLE;
+    Cip.build_request_args.epath = EPATH;
+    Cip.build_request_args.epath_len = 5;
+    Cip.build_request_args.data = NULL;
+    Cip.build_request_args.data_len = 0;
     Cip.build_request(cip_work);
-    TEST_ASSERT_EQUAL_size_t(0u, CipV.n);
-    CipV.build_request_args.buf = buf;
-    CipV.build_request_args.cap = sizeof(buf);
-    CipV.build_request_args.service = CIP_SC_GET_ATTR_SINGLE;
-    CipV.build_request_args.epath = NULL;
-    CipV.build_request_args.epath_len = 6;
-    CipV.build_request_args.data = NULL;
-    CipV.build_request_args.data_len = 0;
+    TEST_ASSERT_EQUAL_size_t(0u, Cip.n);
+    Cip.build_request_args.buf = buf;
+    Cip.build_request_args.cap = sizeof(buf);
+    Cip.build_request_args.service = CIP_SC_GET_ATTR_SINGLE;
+    Cip.build_request_args.epath = NULL;
+    Cip.build_request_args.epath_len = 6;
+    Cip.build_request_args.data = NULL;
+    Cip.build_request_args.data_len = 0;
     Cip.build_request(cip_work);
-    TEST_ASSERT_EQUAL_size_t(0u, CipV.n);
-    CipV.build_request_args.buf = NULL;
-    CipV.build_request_args.cap = sizeof(buf);
-    CipV.build_request_args.service = CIP_SC_GET_ATTR_SINGLE;
-    CipV.build_request_args.epath = EPATH;
-    CipV.build_request_args.epath_len = 6;
-    CipV.build_request_args.data = NULL;
-    CipV.build_request_args.data_len = 0;
+    TEST_ASSERT_EQUAL_size_t(0u, Cip.n);
+    Cip.build_request_args.buf = NULL;
+    Cip.build_request_args.cap = sizeof(buf);
+    Cip.build_request_args.service = CIP_SC_GET_ATTR_SINGLE;
+    Cip.build_request_args.epath = EPATH;
+    Cip.build_request_args.epath_len = 6;
+    Cip.build_request_args.data = NULL;
+    Cip.build_request_args.data_len = 0;
     Cip.build_request(cip_work);
-    TEST_ASSERT_EQUAL_size_t(0u, CipV.n);
-    CipV.build_request_args.buf = buf;
-    CipV.build_request_args.cap = sizeof(buf);
-    CipV.build_request_args.service = CIP_SC_GET_ATTR_SINGLE;
-    CipV.build_request_args.epath = EPATH;
-    CipV.build_request_args.epath_len = 6;
-    CipV.build_request_args.data = NULL;
-    CipV.build_request_args.data_len = 4;
+    TEST_ASSERT_EQUAL_size_t(0u, Cip.n);
+    Cip.build_request_args.buf = buf;
+    Cip.build_request_args.cap = sizeof(buf);
+    Cip.build_request_args.service = CIP_SC_GET_ATTR_SINGLE;
+    Cip.build_request_args.epath = EPATH;
+    Cip.build_request_args.epath_len = 6;
+    Cip.build_request_args.data = NULL;
+    Cip.build_request_args.data_len = 4;
     Cip.build_request(cip_work);
-    TEST_ASSERT_EQUAL_size_t(0u, CipV.n);
+    TEST_ASSERT_EQUAL_size_t(0u, Cip.n);
     // 7 octets of capacity cannot hold the 8-octet request.
-    CipV.build_request_args.buf = buf;
-    CipV.build_request_args.cap = 7;
-    CipV.build_request_args.service = CIP_SC_GET_ATTR_SINGLE;
-    CipV.build_request_args.epath = EPATH;
-    CipV.build_request_args.epath_len = 6;
-    CipV.build_request_args.data = NULL;
-    CipV.build_request_args.data_len = 0;
+    Cip.build_request_args.buf = buf;
+    Cip.build_request_args.cap = 7;
+    Cip.build_request_args.service = CIP_SC_GET_ATTR_SINGLE;
+    Cip.build_request_args.epath = EPATH;
+    Cip.build_request_args.epath_len = 6;
+    Cip.build_request_args.data = NULL;
+    Cip.build_request_args.data_len = 0;
     Cip.build_request(cip_work);
-    TEST_ASSERT_EQUAL_size_t(0u, CipV.n);
+    TEST_ASSERT_EQUAL_size_t(0u, Cip.n);
 }
 
 // A buffer too small for the segments being written yields 0 rather than a half-formed path.
 void test_epath_refuses_a_short_buffer(void)
 {
     uint8_t epath[16];
-    CipV.build_epath_args.buf = epath;
-    CipV.build_epath_args.cap = 1;
-    CipV.build_epath_args.class_id = 1;
-    CipV.build_epath_args.instance_id = 1;
-    CipV.build_epath_args.attribute_id = 1;
-    CipV.build_epath_args.with_attribute = PROTO_FALSE;
+    Cip.build_epath_args.buf = epath;
+    Cip.build_epath_args.cap = 1;
+    Cip.build_epath_args.class_id = 1;
+    Cip.build_epath_args.instance_id = 1;
+    Cip.build_epath_args.attribute_id = 1;
+    Cip.build_epath_args.with_attribute = PROTO_FALSE;
     Cip.build_epath(cip_work);
-    TEST_ASSERT_EQUAL_size_t(0u, CipV.n); // class needs 2
-    CipV.build_epath_args.buf = epath;
-    CipV.build_epath_args.cap = 3;
-    CipV.build_epath_args.class_id = 1;
-    CipV.build_epath_args.instance_id = 1;
-    CipV.build_epath_args.attribute_id = 1;
-    CipV.build_epath_args.with_attribute = PROTO_TRUE;
+    TEST_ASSERT_EQUAL_size_t(0u, Cip.n); // class needs 2
+    Cip.build_epath_args.buf = epath;
+    Cip.build_epath_args.cap = 3;
+    Cip.build_epath_args.class_id = 1;
+    Cip.build_epath_args.instance_id = 1;
+    Cip.build_epath_args.attribute_id = 1;
+    Cip.build_epath_args.with_attribute = PROTO_TRUE;
     Cip.build_epath(cip_work);
-    TEST_ASSERT_EQUAL_size_t(0u, CipV.n); // instance needs 2 more
-    CipV.build_epath_args.buf = epath;
-    CipV.build_epath_args.cap = 5;
-    CipV.build_epath_args.class_id = 1;
-    CipV.build_epath_args.instance_id = 1;
-    CipV.build_epath_args.attribute_id = 1;
-    CipV.build_epath_args.with_attribute = PROTO_TRUE;
+    TEST_ASSERT_EQUAL_size_t(0u, Cip.n); // instance needs 2 more
+    Cip.build_epath_args.buf = epath;
+    Cip.build_epath_args.cap = 5;
+    Cip.build_epath_args.class_id = 1;
+    Cip.build_epath_args.instance_id = 1;
+    Cip.build_epath_args.attribute_id = 1;
+    Cip.build_epath_args.with_attribute = PROTO_TRUE;
     Cip.build_epath(cip_work);
-    TEST_ASSERT_EQUAL_size_t(0u, CipV.n); // attribute needs 2 more
-    CipV.build_epath_args.buf = epath;
-    CipV.build_epath_args.cap = 6;
-    CipV.build_epath_args.class_id = 1;
-    CipV.build_epath_args.instance_id = 1;
-    CipV.build_epath_args.attribute_id = 1;
-    CipV.build_epath_args.with_attribute = PROTO_TRUE;
+    TEST_ASSERT_EQUAL_size_t(0u, Cip.n); // attribute needs 2 more
+    Cip.build_epath_args.buf = epath;
+    Cip.build_epath_args.cap = 6;
+    Cip.build_epath_args.class_id = 1;
+    Cip.build_epath_args.instance_id = 1;
+    Cip.build_epath_args.attribute_id = 1;
+    Cip.build_epath_args.with_attribute = PROTO_TRUE;
     Cip.build_epath(cip_work);
-    TEST_ASSERT_EQUAL_size_t(6u, CipV.n);
-    CipV.build_epath_args.buf = epath;
-    CipV.build_epath_args.cap = 3;
-    CipV.build_epath_args.class_id = 0x0100u;
-    CipV.build_epath_args.instance_id = 1;
-    CipV.build_epath_args.attribute_id = 1;
-    CipV.build_epath_args.with_attribute = PROTO_FALSE;
+    TEST_ASSERT_EQUAL_size_t(6u, Cip.n);
+    Cip.build_epath_args.buf = epath;
+    Cip.build_epath_args.cap = 3;
+    Cip.build_epath_args.class_id = 0x0100u;
+    Cip.build_epath_args.instance_id = 1;
+    Cip.build_epath_args.attribute_id = 1;
+    Cip.build_epath_args.with_attribute = PROTO_FALSE;
     Cip.build_epath(cip_work);
-    TEST_ASSERT_EQUAL_size_t(0u, CipV.n); // wide needs 4
-    CipV.build_epath_args.buf = NULL;
-    CipV.build_epath_args.cap = sizeof(epath);
-    CipV.build_epath_args.class_id = 1;
-    CipV.build_epath_args.instance_id = 1;
-    CipV.build_epath_args.attribute_id = 1;
-    CipV.build_epath_args.with_attribute = PROTO_TRUE;
+    TEST_ASSERT_EQUAL_size_t(0u, Cip.n); // wide needs 4
+    Cip.build_epath_args.buf = NULL;
+    Cip.build_epath_args.cap = sizeof(epath);
+    Cip.build_epath_args.class_id = 1;
+    Cip.build_epath_args.instance_id = 1;
+    Cip.build_epath_args.attribute_id = 1;
+    Cip.build_epath_args.with_attribute = PROTO_TRUE;
     Cip.build_epath(cip_work);
-    TEST_ASSERT_EQUAL_size_t(0u, CipV.n);
+    TEST_ASSERT_EQUAL_size_t(0u, Cip.n);
 
     uint8_t out[8];
-    CipV.build_get_attr_single_args.buf = out;
-    CipV.build_get_attr_single_args.cap = 7;
-    CipV.build_get_attr_single_args.class_id = 1;
-    CipV.build_get_attr_single_args.instance_id = 1;
-    CipV.build_get_attr_single_args.attribute_id = 1;
+    Cip.build_get_attr_single_args.buf = out;
+    Cip.build_get_attr_single_args.cap = 7;
+    Cip.build_get_attr_single_args.class_id = 1;
+    Cip.build_get_attr_single_args.instance_id = 1;
+    Cip.build_get_attr_single_args.attribute_id = 1;
     Cip.build_get_attr_single(cip_work);
-    TEST_ASSERT_EQUAL_size_t(0u, CipV.n);
-    CipV.build_get_attr_all_args.buf = out;
-    CipV.build_get_attr_all_args.cap = 5;
-    CipV.build_get_attr_all_args.class_id = 1;
-    CipV.build_get_attr_all_args.instance_id = 1;
+    TEST_ASSERT_EQUAL_size_t(0u, Cip.n);
+    Cip.build_get_attr_all_args.buf = out;
+    Cip.build_get_attr_all_args.cap = 5;
+    Cip.build_get_attr_all_args.class_id = 1;
+    Cip.build_get_attr_all_args.instance_id = 1;
     Cip.build_get_attr_all(cip_work);
-    TEST_ASSERT_EQUAL_size_t(0u, CipV.n);
+    TEST_ASSERT_EQUAL_size_t(0u, Cip.n);
 }
 
 // A request built and its reply parsed carry the same service code, with the reply bit the only
@@ -451,13 +451,13 @@ void test_epath_refuses_a_short_buffer(void)
 void test_service_and_reply_service_differ_only_by_the_reply_bit(void)
 {
     uint8_t req[16];
-    CipV.build_get_attr_single_args.buf = req;
-    CipV.build_get_attr_single_args.cap = sizeof(req);
-    CipV.build_get_attr_single_args.class_id = 0x0001u;
-    CipV.build_get_attr_single_args.instance_id = 0x0001u;
-    CipV.build_get_attr_single_args.attribute_id = 0x0001u;
+    Cip.build_get_attr_single_args.buf = req;
+    Cip.build_get_attr_single_args.cap = sizeof(req);
+    Cip.build_get_attr_single_args.class_id = 0x0001u;
+    Cip.build_get_attr_single_args.instance_id = 0x0001u;
+    Cip.build_get_attr_single_args.attribute_id = 0x0001u;
     Cip.build_get_attr_single(cip_work);
-    size_t n = CipV.n;
+    size_t n = Cip.n;
     TEST_ASSERT_EQUAL_size_t(8u, n);
 
     uint8_t resp[8];
@@ -469,11 +469,11 @@ void test_service_and_reply_service_differ_only_by_the_reply_bit(void)
     resp[5] = 0x00;
 
     CipResponse r;
-    CipV.parse_response_args.buf = resp;
-    CipV.parse_response_args.len = 6;
-    CipV.parse_response_args.out = &r;
+    Cip.parse_response_args.buf = resp;
+    Cip.parse_response_args.len = 6;
+    Cip.parse_response_args.out = &r;
     Cip.parse_response(cip_work);
-    TEST_ASSERT_TRUE(CipV.ok);
+    TEST_ASSERT_TRUE(Cip.ok);
     TEST_ASSERT_EQUAL_HEX8(req[0], (uint8_t)(r.service & (uint8_t)~CIP_REPLY_FLAG));
     TEST_ASSERT_EQUAL_HEX8(CIP_REPLY_FLAG, (uint8_t)(r.service & CIP_REPLY_FLAG));
 }

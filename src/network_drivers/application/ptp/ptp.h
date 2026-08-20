@@ -58,6 +58,7 @@ typedef struct
     uint64_t seconds;     ///< seconds (only the low 48 bits are on the wire)
     uint32_t nanoseconds; ///< nanoseconds within the second (0 .. 999999999)
 } protocore_ptp_timestamp;
+
 /** @brief The 34-octet PTPv2 common header. */
 typedef struct
 {
@@ -74,6 +75,7 @@ typedef struct
     uint8_t control;            ///< controlField
     int8_t log_interval;        ///< logMessageInterval
 } protocore_ptp_header;
+
 /** @brief Parsed Delay_Resp body. */
 typedef struct
 {
@@ -81,6 +83,7 @@ typedef struct
     uint8_t req_clock_id[8];         ///< requestingPortIdentity clockIdentity (echoes our clock id)
     uint16_t req_port;               ///< requestingPortIdentity portNumber
 } protocore_ptp_delay_resp;
+
 /** @brief Parsed Pdelay_Resp / Pdelay_Resp_Follow_Up body (P2P peer-delay mechanism). */
 typedef struct
 {
@@ -89,6 +92,7 @@ typedef struct
     uint8_t req_clock_id[8]; ///< requestingPortIdentity clockIdentity (echoes the Pdelay_Req sender)
     uint16_t req_port;       ///< requestingPortIdentity portNumber
 } protocore_ptp_pdelay_resp;
+
 /** @brief Parsed Announce body (the master's quality, for best-master selection / display). */
 typedef struct
 {
@@ -103,35 +107,41 @@ typedef struct
     uint16_t steps_removed;         ///< stepsRemoved
     uint8_t time_source;            ///< timeSource
 } protocore_ptp_announce;
+
 /** @brief Slave sync result: offset from master and mean path delay, in nanoseconds. */
 typedef struct
 {
     int64_t offset_ns; ///< offsetFromMaster (local - master); subtract to correct the local clock
     int64_t delay_ns;  ///< meanPathDelay
 } protocore_ptp_sync;
+
 /** @brief What ts_write takes: p, ts. */
 typedef struct
 {
     uint8_t *p;
     const protocore_ptp_timestamp *ts;
 } PtpTsWriteArgs;
+
 /** @brief What ts_read takes: p, ts. */
 typedef struct
 {
     const uint8_t *p;
     protocore_ptp_timestamp *ts;
 } PtpTsReadArgs;
+
 /** @brief What ts_to_ns takes: ts. */
 typedef struct
 {
     const protocore_ptp_timestamp *ts;
 } PtpTsToNsArgs;
+
 /** @brief What ts_from_ns takes: ns, ts. */
 typedef struct
 {
     int64_t ns;
     protocore_ptp_timestamp *ts;
 } PtpTsFromNsArgs;
+
 /** @brief What build_header takes: buf, cap, h, body_len. */
 typedef struct
 {
@@ -140,6 +150,7 @@ typedef struct
     const protocore_ptp_header *h;
     uint16_t body_len;
 } PtpBuildHeaderArgs;
+
 /** @brief What parse_header takes: s, len, h. */
 typedef struct
 {
@@ -147,6 +158,7 @@ typedef struct
     size_t len;
     protocore_ptp_header *h;
 } PtpParseHeaderArgs;
+
 /** @brief What build_sync takes: buf, cap, h, origin. */
 typedef struct
 {
@@ -155,6 +167,7 @@ typedef struct
     const protocore_ptp_header *h;
     const protocore_ptp_timestamp *origin;
 } PtpBuildSyncArgs;
+
 /** @brief What build_delay_req takes: buf, cap, h, origin. */
 typedef struct
 {
@@ -163,6 +176,7 @@ typedef struct
     const protocore_ptp_header *h;
     const protocore_ptp_timestamp *origin;
 } PtpBuildDelayReqArgs;
+
 /** @brief What build_follow_up takes: buf, cap, h, precise. */
 typedef struct
 {
@@ -171,6 +185,7 @@ typedef struct
     const protocore_ptp_header *h;
     const protocore_ptp_timestamp *precise;
 } PtpBuildFollowUpArgs;
+
 /** @brief What build_delay_resp takes: buf, cap, h, recv, ... */
 typedef struct
 {
@@ -181,6 +196,7 @@ typedef struct
     const uint8_t *req_clock_id;
     uint16_t req_port;
 } PtpBuildDelayRespArgs;
+
 /** @brief What build_announce takes: buf, cap, h, a. */
 typedef struct
 {
@@ -189,6 +205,7 @@ typedef struct
     const protocore_ptp_header *h;
     const protocore_ptp_announce *a;
 } PtpBuildAnnounceArgs;
+
 /** @brief What build_pdelay_req takes: buf, cap, h, origin. */
 typedef struct
 {
@@ -197,6 +214,7 @@ typedef struct
     const protocore_ptp_header *h;
     const protocore_ptp_timestamp *origin;
 } PtpBuildPdelayReqArgs;
+
 /** @brief What build_pdelay_resp takes: buf, cap, h, recv, ... */
 typedef struct
 {
@@ -207,6 +225,7 @@ typedef struct
     const uint8_t *req_clock_id;
     uint16_t req_port;
 } PtpBuildPdelayRespArgs;
+
 /** @brief What build_pdelay_resp_follow_up takes: buf, cap, h, ... */
 typedef struct
 {
@@ -217,6 +236,7 @@ typedef struct
     const uint8_t *req_clock_id;
     uint16_t req_port;
 } PtpBuildPdelayRespFollowUpArgs;
+
 /** @brief What parse_timestamp_msg takes: s, len, h, ts. */
 typedef struct
 {
@@ -225,6 +245,7 @@ typedef struct
     protocore_ptp_header *h;
     protocore_ptp_timestamp *ts;
 } PtpParseTimestampMsgArgs;
+
 /** @brief What parse_delay_resp takes: s, len, h, out. */
 typedef struct
 {
@@ -233,6 +254,7 @@ typedef struct
     protocore_ptp_header *h;
     protocore_ptp_delay_resp *out;
 } PtpParseDelayRespArgs;
+
 /** @brief What parse_announce takes: s, len, h, out. */
 typedef struct
 {
@@ -241,6 +263,7 @@ typedef struct
     protocore_ptp_header *h;
     protocore_ptp_announce *out;
 } PtpParseAnnounceArgs;
+
 /** @brief What parse_pdelay_req takes: s, len, h, ts. */
 typedef struct
 {
@@ -249,6 +272,7 @@ typedef struct
     protocore_ptp_header *h;
     protocore_ptp_timestamp *ts;
 } PtpParsePdelayReqArgs;
+
 /** @brief What parse_pdelay_resp takes: s, len, h, out. */
 typedef struct
 {
@@ -257,6 +281,7 @@ typedef struct
     protocore_ptp_header *h;
     protocore_ptp_pdelay_resp *out;
 } PtpParsePdelayRespArgs;
+
 /** @brief What parse_pdelay_resp_follow_up takes: s, len, h, out. */
 typedef struct
 {
@@ -265,6 +290,7 @@ typedef struct
     protocore_ptp_header *h;
     protocore_ptp_pdelay_resp *out;
 } PtpParsePdelayRespFollowUpArgs;
+
 /** @brief What compute takes: t1, t2, t3, t4, out. */
 typedef struct
 {
@@ -274,6 +300,7 @@ typedef struct
     int64_t t4;
     protocore_ptp_sync *out;
 } PtpComputeArgs;
+
 /** @brief What compute_link_delay takes: t1, t2, t3, t4. */
 typedef struct
 {
@@ -282,6 +309,7 @@ typedef struct
     int64_t t3;
     int64_t t4;
 } PtpComputeLinkDelayArgs;
+
 /**
  * @brief PTP / IEEE 1588-2008 (PTPv2) message codec + slave clock math (PROTOCORE_ENABLE_PTP).
  *
@@ -368,17 +396,11 @@ typedef struct
     PtpParsePdelayRespFollowUpArgs parse_pdelay_resp_follow_up_args;
     PtpComputeArgs compute_args;
     PtpComputeLinkDelayArgs compute_link_delay_args;
+
     proto_bool ok;
     int64_t value;
     size_t n;
-} PtpVars;
 
-/** @brief The operands and the outcome. */
-extern PtpVars PtpV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const ts_write)(uint8_t *restrict work);
     void (*const ts_read)(uint8_t *restrict work);
     void (*const ts_to_ns)(uint8_t *restrict work);
@@ -403,59 +425,8 @@ typedef struct
     void (*const compute_link_delay)(uint8_t *restrict work);
 } PtpNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in PtpV or a region of the borrow at a fixed offset.
-void protocore_ptp_ts_write(uint8_t *restrict work);
-void protocore_ptp_ts_read(uint8_t *restrict work);
-void protocore_ptp_ts_to_ns(uint8_t *restrict work);
-void protocore_ptp_ts_from_ns(uint8_t *restrict work);
-void protocore_ptp_build_header(uint8_t *restrict work);
-void protocore_ptp_parse_header(uint8_t *restrict work);
-void protocore_ptp_build_sync(uint8_t *restrict work);
-void protocore_ptp_build_delay_req(uint8_t *restrict work);
-void protocore_ptp_build_follow_up(uint8_t *restrict work);
-void protocore_ptp_build_delay_resp(uint8_t *restrict work);
-void protocore_ptp_build_announce(uint8_t *restrict work);
-void protocore_ptp_build_pdelay_req(uint8_t *restrict work);
-void protocore_ptp_build_pdelay_resp(uint8_t *restrict work);
-void protocore_ptp_build_pdelay_resp_follow_up(uint8_t *restrict work);
-void protocore_ptp_parse_timestamp_msg(uint8_t *restrict work);
-void protocore_ptp_parse_delay_resp(uint8_t *restrict work);
-void protocore_ptp_parse_announce(uint8_t *restrict work);
-void protocore_ptp_parse_pdelay_req(uint8_t *restrict work);
-void protocore_ptp_parse_pdelay_resp(uint8_t *restrict work);
-void protocore_ptp_parse_pdelay_resp_follow_up(uint8_t *restrict work);
-void protocore_ptp_compute(uint8_t *restrict work);
-void protocore_ptp_compute_link_delay(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Ptp.ts_write(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const PtpNs Ptp __attribute__((unused)) = {
-    .ts_write = protocore_ptp_ts_write,
-    .ts_read = protocore_ptp_ts_read,
-    .ts_to_ns = protocore_ptp_ts_to_ns,
-    .ts_from_ns = protocore_ptp_ts_from_ns,
-    .build_header = protocore_ptp_build_header,
-    .parse_header = protocore_ptp_parse_header,
-    .build_sync = protocore_ptp_build_sync,
-    .build_delay_req = protocore_ptp_build_delay_req,
-    .build_follow_up = protocore_ptp_build_follow_up,
-    .build_delay_resp = protocore_ptp_build_delay_resp,
-    .build_announce = protocore_ptp_build_announce,
-    .build_pdelay_req = protocore_ptp_build_pdelay_req,
-    .build_pdelay_resp = protocore_ptp_build_pdelay_resp,
-    .build_pdelay_resp_follow_up = protocore_ptp_build_pdelay_resp_follow_up,
-    .parse_timestamp_msg = protocore_ptp_parse_timestamp_msg,
-    .parse_delay_resp = protocore_ptp_parse_delay_resp,
-    .parse_announce = protocore_ptp_parse_announce,
-    .parse_pdelay_req = protocore_ptp_parse_pdelay_req,
-    .parse_pdelay_resp = protocore_ptp_parse_pdelay_resp,
-    .parse_pdelay_resp_follow_up = protocore_ptp_parse_pdelay_resp_follow_up,
-    .compute = protocore_ptp_compute,
-    .compute_link_delay = protocore_ptp_compute_link_delay,
-};
+/** @brief The one symbol this module exports. */
+extern PtpNs Ptp;
 
 PROTOCORE_END_DECLS
 

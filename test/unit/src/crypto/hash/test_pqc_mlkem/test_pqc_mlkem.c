@@ -46,28 +46,28 @@ static uint8_t g_ws[PROTOCORE_MLKEM_BORROW] __attribute__((aligned(8)));
 // The namespace, called the way the vectors below read: operands in, one call, answer out.
 static void mlkem_keygen(const uint8_t *d, const uint8_t *z, uint8_t *ek, uint8_t *dk)
 {
-    MlKemV.keygen_args.d = d;
-    MlKemV.keygen_args.z = z;
-    MlKemV.keygen_args.ek = ek;
-    MlKemV.keygen_args.dk = dk;
+    MlKem.keygen_args.d = d;
+    MlKem.keygen_args.z = z;
+    MlKem.keygen_args.ek = ek;
+    MlKem.keygen_args.dk = dk;
     MlKem.keygen(g_ws);
 }
 
 static proto_bool mlkem_encaps(const uint8_t *ek, const uint8_t *m, uint8_t *ct, uint8_t *ss)
 {
-    MlKemV.encaps_args.ek = ek;
-    MlKemV.encaps_args.m = m;
-    MlKemV.encaps_args.ct = ct;
-    MlKemV.encaps_args.ss = ss;
+    MlKem.encaps_args.ek = ek;
+    MlKem.encaps_args.m = m;
+    MlKem.encaps_args.ct = ct;
+    MlKem.encaps_args.ss = ss;
     MlKem.encaps(g_ws);
-    return MlKemV.ok;
+    return MlKem.ok;
 }
 
 static void mlkem_decaps(const uint8_t *dk, const uint8_t *ct, uint8_t *ss)
 {
-    MlKemV.decaps_args.dk = dk;
-    MlKemV.decaps_args.ct = ct;
-    MlKemV.decaps_args.ss = ss;
+    MlKem.decaps_args.dk = dk;
+    MlKem.decaps_args.ct = ct;
+    MlKem.decaps_args.ss = ss;
     MlKem.decaps(g_ws);
 }
 

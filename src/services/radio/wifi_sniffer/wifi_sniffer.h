@@ -52,6 +52,7 @@ typedef struct
     uint8_t addr2[6];           ///< transmitter / source (present when naddr >= 2).
     uint8_t addr3[6];           ///< BSSID / source / dest (present when naddr >= 3).
 } WifiFrame;
+
 /** @brief Running per-type frame tally. */
 typedef struct
 {
@@ -61,6 +62,7 @@ typedef struct
     uint32_t other;
     uint32_t total;
 } WifiStats;
+
 /** @brief Channel-hop schedule across [chan_first, chan_last]. */
 typedef struct
 {
@@ -71,6 +73,7 @@ typedef struct
     uint32_t last_hop_ms; ///< when the current dwell started
     uint32_t sweeps;      ///< completed wraps back to chan_first
 } WifiScan;
+
 /** @brief What was heard on one channel during the survey. */
 typedef struct
 {
@@ -78,6 +81,7 @@ typedef struct
     int8_t best_rssi;      ///< strongest RSSI seen (dBm); PROTOCORE_WIFI_RSSI_NONE if nothing heard
     uint8_t best_bssid[6]; ///< transmitter of the strongest frame
 } WifiChannelSurvey;
+
 /** @brief Survey across the scanned channel range (index 0 == @c first). */
 typedef struct
 {
@@ -85,6 +89,7 @@ typedef struct
     uint8_t first; ///< channel represented by ch[0]
     uint8_t count; ///< channels tracked (<= PROTOCORE_WIFI_SNIFFER_MAX_CHANNELS)
 } WifiSurvey;
+
 /** @brief What parse takes: frame, len, out. */
 typedef struct
 {
@@ -92,17 +97,20 @@ typedef struct
     size_t len;
     WifiFrame *out;
 } WifiSnifferParseArgs;
+
 /** @brief What stats_reset takes: s. */
 typedef struct
 {
     WifiStats *s;
 } WifiSnifferStatsResetArgs;
+
 /** @brief What stats_add takes: s, f. */
 typedef struct
 {
     WifiStats *s;
     const WifiFrame *f;
 } WifiSnifferStatsAddArgs;
+
 /** @brief What should_roam takes: cur_rssi, cand_rssi, hysteresis_db. */
 typedef struct
 {
@@ -110,6 +118,7 @@ typedef struct
     int8_t cand_rssi;
     uint8_t hysteresis_db;
 } WifiSnifferShouldRoamArgs;
+
 /** @brief What scan_init takes: s, first, last, dwell_ms, now_ms. */
 typedef struct
 {
@@ -119,18 +128,21 @@ typedef struct
     uint16_t dwell_ms;
     uint32_t now_ms;
 } WifiSnifferScanInitArgs;
+
 /** @brief What scan_due takes: s, now_ms. */
 typedef struct
 {
     const WifiScan *s;
     uint32_t now_ms;
 } WifiSnifferScanDueArgs;
+
 /** @brief What scan_next takes: s, now_ms. */
 typedef struct
 {
     WifiScan *s;
     uint32_t now_ms;
 } WifiSnifferScanNextArgs;
+
 /** @brief What survey_reset takes: s, first, count. */
 typedef struct
 {
@@ -138,6 +150,7 @@ typedef struct
     uint8_t first;
     uint8_t count;
 } WifiSnifferSurveyResetArgs;
+
 /** @brief What survey_add takes: s, channel, rssi, f. */
 typedef struct
 {
@@ -146,12 +159,14 @@ typedef struct
     int8_t rssi;
     const WifiFrame *f;
 } WifiSnifferSurveyAddArgs;
+
 /** @brief What survey_get takes: s, channel. */
 typedef struct
 {
     const WifiSurvey *s;
     uint8_t channel;
 } WifiSnifferSurveyGetArgs;
+
 /** @brief What survey_best takes: s, exclude_channel, out_channel, ... */
 typedef struct
 {
@@ -160,6 +175,7 @@ typedef struct
     uint8_t *out_channel;
     int8_t *out_rssi;
 } WifiSnifferSurveyBestArgs;
+
 /** @brief What begin takes: first_chan, last_chan, dwell_ms. */
 typedef struct
 {
@@ -167,6 +183,7 @@ typedef struct
     uint8_t last_chan;
     uint16_t dwell_ms;
 } WifiSnifferBeginArgs;
+
 /**
  * @brief 802.11 frame decode + traffic tally + RSSI roaming decision (PROTOCORE_ENABLE_WIFI_SNIFFER).
  *
@@ -233,20 +250,14 @@ typedef struct
     WifiSnifferSurveyGetArgs survey_get_args;
     WifiSnifferSurveyBestArgs survey_best_args;
     WifiSnifferBeginArgs begin_args;
+
     proto_bool ok;
     uint8_t value;
     const WifiChannelSurvey *ptr;
     const WifiStats *stats_out;
     const WifiSurvey *survey_out;
     const WifiScan *scan_out;
-} WifiSnifferVars;
 
-/** @brief The operands and the outcome. */
-extern WifiSnifferVars WifiSnifferV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const parse)(uint8_t *restrict work);
     void (*const stats_reset)(uint8_t *restrict work);
     void (*const stats_add)(uint8_t *restrict work);
@@ -266,49 +277,8 @@ typedef struct
     void (*const scan)(uint8_t *restrict work);
 } WifiSnifferNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in WifiSnifferV or a region of the borrow at a fixed offset.
-void protocore_wifi_sniffer_parse(uint8_t *restrict work);
-void protocore_wifi_sniffer_stats_reset(uint8_t *restrict work);
-void protocore_wifi_sniffer_stats_add(uint8_t *restrict work);
-void protocore_wifi_sniffer_should_roam(uint8_t *restrict work);
-void protocore_wifi_sniffer_scan_init(uint8_t *restrict work);
-void protocore_wifi_sniffer_scan_due(uint8_t *restrict work);
-void protocore_wifi_sniffer_scan_next(uint8_t *restrict work);
-void protocore_wifi_sniffer_survey_reset(uint8_t *restrict work);
-void protocore_wifi_sniffer_survey_add(uint8_t *restrict work);
-void protocore_wifi_sniffer_survey_get(uint8_t *restrict work);
-void protocore_wifi_sniffer_survey_best(uint8_t *restrict work);
-void protocore_wifi_sniffer_begin(uint8_t *restrict work);
-void protocore_wifi_sniffer_tick(uint8_t *restrict work);
-void protocore_wifi_sniffer_end(uint8_t *restrict work);
-void protocore_wifi_sniffer_stats(uint8_t *restrict work);
-void protocore_wifi_sniffer_survey(uint8_t *restrict work);
-void protocore_wifi_sniffer_scan(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `WifiSniffer.parse(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const WifiSnifferNs WifiSniffer __attribute__((unused)) = {
-    .parse = protocore_wifi_sniffer_parse,
-    .stats_reset = protocore_wifi_sniffer_stats_reset,
-    .stats_add = protocore_wifi_sniffer_stats_add,
-    .should_roam = protocore_wifi_sniffer_should_roam,
-    .scan_init = protocore_wifi_sniffer_scan_init,
-    .scan_due = protocore_wifi_sniffer_scan_due,
-    .scan_next = protocore_wifi_sniffer_scan_next,
-    .survey_reset = protocore_wifi_sniffer_survey_reset,
-    .survey_add = protocore_wifi_sniffer_survey_add,
-    .survey_get = protocore_wifi_sniffer_survey_get,
-    .survey_best = protocore_wifi_sniffer_survey_best,
-    .begin = protocore_wifi_sniffer_begin,
-    .tick = protocore_wifi_sniffer_tick,
-    .end = protocore_wifi_sniffer_end,
-    .stats = protocore_wifi_sniffer_stats,
-    .survey = protocore_wifi_sniffer_survey,
-    .scan = protocore_wifi_sniffer_scan,
-};
+/** @brief The one symbol this module exports. */
+extern WifiSnifferNs WifiSniffer;
 
 /**
  * @brief The PROTOCORE_WIFI_SNIFFER_BORROW bytes this module's state lives in.

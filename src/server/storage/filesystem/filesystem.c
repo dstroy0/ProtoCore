@@ -94,7 +94,7 @@ uint8_t *protocore_filesystem_span(void)
 static const protocore_mnt_backend *store(uint8_t *restrict work)
 {
     Mnt.active(mnt_work);
-    const protocore_mnt_backend *b = MntV.backend;
+    const protocore_mnt_backend *b = Mnt.backend;
     if (b == NULL)
     {
         FILESYSTEM_CTX(work)->status |= PROTOCORE_FS_STORAGE_EXHAUSTED;
@@ -163,7 +163,7 @@ static const char *resolve_into(uint8_t *restrict work, int slot, int root, cons
 
 static void fs_status(uint8_t *restrict work)
 {
-    FsV.bits = FILESYSTEM_CTX(work)->status;
+    Fs.bits = FILESYSTEM_CTX(work)->status;
 }
 
 static void fs_clear(uint8_t *restrict work)
@@ -178,12 +178,12 @@ static void fs_present(uint8_t *restrict work)
     // Asked of the mount directly, not of the mask: the mask says what has failed, this says what is
     // true now. A hotswap can attach a store between the two.
     Mnt.active(mnt_work);
-    FsV.ok = MntV.backend != NULL;
+    Fs.ok = Mnt.backend != NULL;
 }
 
 static void fs_begin(uint8_t *restrict work)
 {
-    const char *name = FsV.mount;
+    const char *name = Fs.mount;
 
     const char *want = (name == NULL || name[0] == '\0') ? "/" : name;
 
@@ -194,13 +194,13 @@ static void fs_begin(uint8_t *restrict work)
     {
         if (str.eq(FILESYSTEM_CTX(work)->root[i].name, want, PROTOCORE_FS_ROOT_NAME_MAX, PROTO_FALSE))
         {
-            FsV.i32 = (int)i;
+            Fs.i32 = (int)i;
             return;
         }
     }
     if (FILESYSTEM_CTX(work)->count >= PROTOCORE_FS_MAX_ROOTS)
     {
-        FsV.i32 = -1;
+        Fs.i32 = -1;
         return; // refused, not silently aliased onto someone else's root
     }
 
@@ -211,7 +211,7 @@ static void fs_begin(uint8_t *restrict work)
                            (const protocore_fval[]){PROTOCORE_VSTR(want)}, 1);
     if (n == 0) // a root that does not fit - refused, not truncated into another directory
     {
-        FsV.i32 = -1;
+        Fs.i32 = -1;
         return;
     }
     if (r->path[n - 1] != '/') // the engine returned the length, so the last byte is an index
@@ -222,65 +222,65 @@ static void fs_begin(uint8_t *restrict work)
     if (frame.build(r->name, PROTOCORE_FS_ROOT_NAME_MAX, FILESYSTEM_ROOT,
                     (const protocore_fval[]){PROTOCORE_VSTR(want)}, 1) == 0)
     {
-        FsV.i32 = -1;
+        Fs.i32 = -1;
         return; // a name too long to record is a name that could not be matched again
     }
 
     int id = (int)FILESYSTEM_CTX(work)->count;
     FILESYSTEM_CTX(work)->count++;
-    FsV.i32 = id;
+    Fs.i32 = id;
 }
 
 static void fs_resolve(uint8_t *restrict work)
 {
-    const int root = FsV.path.root;
-    const char *dir = FsV.path.dir;
-    const char *name = FsV.path.name;
+    const int root = Fs.path.root;
+    const char *dir = Fs.path.dir;
+    const char *name = Fs.path.name;
 
-    FsV.text = resolve_into(work, 0, root, dir, name);
+    Fs.text = resolve_into(work, 0, root, dir, name);
 }
 
 static void fs_open(uint8_t *restrict work)
 {
-    const int root = FsV.path.root;
-    const char *dir = FsV.path.dir;
-    const char *name = FsV.path.name;
-    const protocore_mnt_mode mode = FsV.io.mode;
+    const int root = Fs.path.root;
+    const char *dir = Fs.path.dir;
+    const char *name = Fs.path.name;
+    const protocore_mnt_mode mode = Fs.io.mode;
 
     const protocore_mnt_backend *b = store(work);
     const char *p = resolve_into(work, 0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        FsV.i32 = -1;
+        Fs.i32 = -1;
         return;
     }
-    FsV.i32 = b->open(p, (int)(mode));
+    Fs.i32 = b->open(p, (int)(mode));
     return; // cross the int backend ABI
 }
 
 static void fs_read(uint8_t *restrict work)
 {
-    const int handle = FsV.io.handle;
-    void *buf = FsV.io.buf;
-    const size_t n = FsV.io.n;
+    const int handle = Fs.io.handle;
+    void *buf = Fs.io.buf;
+    const size_t n = Fs.io.n;
 
     const protocore_mnt_backend *b = store(work);
-    FsV.i32 = (b == NULL) ? -1 : b->read(handle, buf, n);
+    Fs.i32 = (b == NULL) ? -1 : b->read(handle, buf, n);
 }
 
 static void fs_write(uint8_t *restrict work)
 {
-    const int handle = FsV.io.handle;
-    const void *buf = FsV.io.wbuf;
-    const size_t n = FsV.io.n;
+    const int handle = Fs.io.handle;
+    const void *buf = Fs.io.wbuf;
+    const size_t n = Fs.io.n;
 
     const protocore_mnt_backend *b = store(work);
-    FsV.i32 = (b == NULL) ? -1 : b->write(handle, buf, n);
+    Fs.i32 = (b == NULL) ? -1 : b->write(handle, buf, n);
 }
 
 static void fs_close(uint8_t *restrict work)
 {
-    const int handle = FsV.io.handle;
+    const int handle = Fs.io.handle;
 
     const protocore_mnt_backend *b = store(work);
     if (b != NULL)
@@ -291,73 +291,73 @@ static void fs_close(uint8_t *restrict work)
 
 static void fs_seek(uint8_t *restrict work)
 {
-    const int handle = FsV.io.handle;
-    const uint64_t off = FsV.io.off;
+    const int handle = Fs.io.handle;
+    const uint64_t off = Fs.io.off;
 
     const protocore_mnt_backend *b = store(work);
-    FsV.ok = (b == NULL) ? PROTO_FALSE : b->seek(handle, off);
+    Fs.ok = (b == NULL) ? PROTO_FALSE : b->seek(handle, off);
 }
 
 static void fs_size(uint8_t *restrict work)
 {
-    const int root = FsV.path.root;
-    const char *dir = FsV.path.dir;
-    const char *name = FsV.path.name;
+    const int root = Fs.path.root;
+    const char *dir = Fs.path.dir;
+    const char *name = Fs.path.name;
 
     const protocore_mnt_backend *b = store(work);
     const char *p = resolve_into(work, 0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        FsV.len = -1;
+        Fs.len = -1;
         return;
     }
-    FsV.len = b->size(p);
+    Fs.len = b->size(p);
 }
 
 static void fs_exists(uint8_t *restrict work)
 {
-    const int root = FsV.path.root;
-    const char *dir = FsV.path.dir;
-    const char *name = FsV.path.name;
+    const int root = Fs.path.root;
+    const char *dir = Fs.path.dir;
+    const char *name = Fs.path.name;
 
     const protocore_mnt_backend *b = store(work);
     const char *p = resolve_into(work, 0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        FsV.ok = PROTO_FALSE;
+        Fs.ok = PROTO_FALSE;
         return;
     }
-    FsV.ok = b->exists(p);
+    Fs.ok = b->exists(p);
 }
 
 static void fs_stat(uint8_t *restrict work)
 {
-    const int root = FsV.path.root;
-    const char *dir = FsV.path.dir;
-    const char *name = FsV.path.name;
-    protocore_mnt_stat *out = FsV.io.stat;
+    const int root = Fs.path.root;
+    const char *dir = Fs.path.dir;
+    const char *name = Fs.path.name;
+    protocore_mnt_stat *out = Fs.io.stat;
 
     const protocore_mnt_backend *b = store(work);
     const char *p = resolve_into(work, 0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        FsV.ok = PROTO_FALSE;
+        Fs.ok = PROTO_FALSE;
         return;
     }
-    FsV.ok = b->stat(p, out);
+    Fs.ok = b->stat(p, out);
 }
 
 static void fs_remove(uint8_t *restrict work)
 {
-    const int root = FsV.path.root;
-    const char *dir = FsV.path.dir;
-    const char *name = FsV.path.name;
+    const int root = Fs.path.root;
+    const char *dir = Fs.path.dir;
+    const char *name = Fs.path.name;
 
     const protocore_mnt_backend *b = store(work);
     const char *p = resolve_into(work, 0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        FsV.ok = PROTO_FALSE;
+        Fs.ok = PROTO_FALSE;
         return;
     }
 
@@ -381,7 +381,7 @@ static void fs_remove(uint8_t *restrict work)
     if (plen == rlen && mem.cmp(p, rp, plen) == 0)
     {
         FILESYSTEM_CTX(work)->status |= PROTOCORE_FS_BAD_ROOT;
-        FsV.ok = PROTO_FALSE;
+        Fs.ok = PROTO_FALSE;
         return;
     }
 
@@ -391,12 +391,12 @@ static void fs_remove(uint8_t *restrict work)
     protocore_mnt_stat st;
     if (!b->stat(p, &st))
     {
-        FsV.ok = PROTO_FALSE;
+        Fs.ok = PROTO_FALSE;
         return;
     }
     if (!st.is_dir)
     {
-        FsV.ok = b->remove(p);
+        Fs.ok = b->remove(p);
         return;
     }
 
@@ -408,7 +408,7 @@ static void fs_remove(uint8_t *restrict work)
                              (const protocore_fval[]){PROTOCORE_VSTR(p)}, 1);
     if (len == 0)
     {
-        FsV.ok = PROTO_FALSE;
+        Fs.ok = PROTO_FALSE;
         return;
     }
 
@@ -418,7 +418,7 @@ static void fs_remove(uint8_t *restrict work)
         int d = b->opendir(FILESYSTEM_CTX(work)->walk);
         if (d < 0)
         {
-            FsV.ok = PROTO_FALSE;
+            Fs.ok = PROTO_FALSE;
             return;
         }
         // The entry's name is read straight onto the end of the path, one byte past the separator,
@@ -435,12 +435,12 @@ static void fs_remove(uint8_t *restrict work)
             FILESYSTEM_CTX(work)->walk[len] = '\0'; // undo the probe, whatever readdir left there
             if (!b->rmdir(FILESYSTEM_CTX(work)->walk))
             {
-                FsV.ok = PROTO_FALSE;
+                Fs.ok = PROTO_FALSE;
                 return;
             }
             if (lvl == 0)
             {
-                FsV.ok = PROTO_TRUE;
+                Fs.ok = PROTO_TRUE;
                 return;
             }
             len = walk_pop(FILESYSTEM_CTX(work)->walk, len);
@@ -458,14 +458,14 @@ static void fs_remove(uint8_t *restrict work)
             FILESYSTEM_CTX(work)->walk[len] = '\0'; // back to this level, whatever happened
             if (!ok)
             {
-                FsV.ok = PROTO_FALSE;
+                Fs.ok = PROTO_FALSE;
                 return;
             }
             continue; // same level, re-opened next pass
         }
         if (lvl + 1 > PROTOCORE_FS_MAX_DEPTH)
         {
-            FsV.ok = PROTO_FALSE;
+            Fs.ok = PROTO_FALSE;
             return; // refuse a pathologically deep tree rather than walk forever
         }
         len = str.len(FILESYSTEM_CTX(work)->walk, PROTOCORE_FILESYSTEM_PATH_MAX);
@@ -475,21 +475,21 @@ static void fs_remove(uint8_t *restrict work)
 
 static void fs_rename(uint8_t *restrict work)
 {
-    const int root = FsV.path.root;
-    const char *from_dir = FsV.path.dir;
-    const char *from_name = FsV.path.name;
-    const char *to_dir = FsV.dest.dir;
-    const char *to_name = FsV.dest.name;
+    const int root = Fs.path.root;
+    const char *from_dir = Fs.path.dir;
+    const char *from_name = Fs.path.name;
+    const char *to_dir = Fs.dest.dir;
+    const char *to_name = Fs.dest.name;
 
     const protocore_mnt_backend *b = store(work);
     const char *fp = resolve_into(work, 0, root, from_dir, from_name);
     const char *tp = resolve_into(work, 1, root, to_dir, to_name); // the one op needing both paths live at once
     if (b == NULL || fp == NULL || tp == NULL)
     {
-        FsV.ok = PROTO_FALSE;
+        Fs.ok = PROTO_FALSE;
         return;
     }
-    FsV.ok = b->rename(fp, tp);
+    Fs.ok = b->rename(fp, tp);
 }
 
 // Copy one file's bytes through the chunk buffer. The only place in this file that holds two handles
@@ -528,30 +528,30 @@ static proto_bool copy_one(uint8_t *restrict work, const protocore_mnt_backend *
 
 static void fs_copy(uint8_t *restrict work)
 {
-    const int root = FsV.path.root;
-    const char *from_dir = FsV.path.dir;
-    const char *from_name = FsV.path.name;
-    const char *to_dir = FsV.dest.dir;
-    const char *to_name = FsV.dest.name;
+    const int root = Fs.path.root;
+    const char *from_dir = Fs.path.dir;
+    const char *from_name = Fs.path.name;
+    const char *to_dir = Fs.dest.dir;
+    const char *to_name = Fs.dest.name;
 
     const protocore_mnt_backend *b = store(work);
     const char *sp = resolve_into(work, 0, root, from_dir, from_name);
     const char *dp = resolve_into(work, 1, root, to_dir, to_name); // both paths live at once, as in rename
     if (b == NULL || sp == NULL || dp == NULL)
     {
-        FsV.ok = PROTO_FALSE;
+        Fs.ok = PROTO_FALSE;
         return;
     }
 
     protocore_mnt_stat st;
     if (!b->stat(sp, &st))
     {
-        FsV.ok = PROTO_FALSE;
+        Fs.ok = PROTO_FALSE;
         return;
     }
     if (!st.is_dir)
     {
-        FsV.ok = copy_one(work, b, sp, dp);
+        Fs.ok = copy_one(work, b, sp, dp);
         return;
     }
 
@@ -561,12 +561,12 @@ static void fs_copy(uint8_t *restrict work)
                               (const protocore_fval[]){PROTOCORE_VSTR(dp)}, 1);
     if (slen == 0 || dlen == 0)
     {
-        FsV.ok = PROTO_FALSE;
+        Fs.ok = PROTO_FALSE;
         return;
     }
     if (!b->mkdir(FILESYSTEM_CTX(work)->dwalk))
     {
-        FsV.ok = PROTO_FALSE;
+        Fs.ok = PROTO_FALSE;
         return;
     }
     FILESYSTEM_CTX(work)->idx[0] = 0;
@@ -582,7 +582,7 @@ static void fs_copy(uint8_t *restrict work)
         int d = b->opendir(FILESYSTEM_CTX(work)->walk);
         if (d < 0)
         {
-            FsV.ok = PROTO_FALSE;
+            Fs.ok = PROTO_FALSE;
             return;
         }
         // The name is read onto the end of the source path; the destination takes the same name
@@ -609,7 +609,7 @@ static void fs_copy(uint8_t *restrict work)
             FILESYSTEM_CTX(work)->walk[slen] = '\0';
             if (lvl == 0)
             {
-                FsV.ok = PROTO_TRUE;
+                Fs.ok = PROTO_TRUE;
                 return;
             }
             slen = walk_pop(FILESYSTEM_CTX(work)->walk, slen);
@@ -626,7 +626,7 @@ static void fs_copy(uint8_t *restrict work)
         }
         if (ndlen == 0)
         {
-            FsV.ok = PROTO_FALSE;
+            Fs.ok = PROTO_FALSE;
             return;
         }
 
@@ -637,7 +637,7 @@ static void fs_copy(uint8_t *restrict work)
             FILESYSTEM_CTX(work)->dwalk[dlen] = '\0';
             if (!ok)
             {
-                FsV.ok = PROTO_FALSE;
+                Fs.ok = PROTO_FALSE;
                 return;
             }
             FILESYSTEM_CTX(work)->idx[lvl]++;
@@ -645,12 +645,12 @@ static void fs_copy(uint8_t *restrict work)
         }
         if (lvl + 1 > PROTOCORE_FS_MAX_DEPTH)
         {
-            FsV.ok = PROTO_FALSE;
+            Fs.ok = PROTO_FALSE;
             return;
         }
         if (!b->mkdir(FILESYSTEM_CTX(work)->dwalk))
         {
-            FsV.ok = PROTO_FALSE;
+            Fs.ok = PROTO_FALSE;
             return;
         }
         slen = str.len(FILESYSTEM_CTX(work)->walk, PROTOCORE_FILESYSTEM_PATH_MAX);
@@ -662,88 +662,88 @@ static void fs_copy(uint8_t *restrict work)
 
 static void fs_mkdir(uint8_t *restrict work)
 {
-    const int root = FsV.path.root;
-    const char *dir = FsV.path.dir;
-    const char *name = FsV.path.name;
+    const int root = Fs.path.root;
+    const char *dir = Fs.path.dir;
+    const char *name = Fs.path.name;
 
     const protocore_mnt_backend *b = store(work);
     const char *p = resolve_into(work, 0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        FsV.ok = PROTO_FALSE;
+        Fs.ok = PROTO_FALSE;
         return;
     }
-    FsV.ok = b->mkdir(p);
+    Fs.ok = b->mkdir(p);
 }
 
 static void fs_rmdir(uint8_t *restrict work)
 {
-    const int root = FsV.path.root;
-    const char *dir = FsV.path.dir;
-    const char *name = FsV.path.name;
+    const int root = Fs.path.root;
+    const char *dir = Fs.path.dir;
+    const char *name = Fs.path.name;
 
     const protocore_mnt_backend *b = store(work);
     const char *p = resolve_into(work, 0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        FsV.ok = PROTO_FALSE;
+        Fs.ok = PROTO_FALSE;
         return;
     }
-    FsV.ok = b->rmdir(p);
+    Fs.ok = b->rmdir(p);
 }
 
 static void fs_opendir(uint8_t *restrict work)
 {
-    const int root = FsV.path.root;
-    const char *dir = FsV.path.dir;
-    const char *name = FsV.path.name;
+    const int root = Fs.path.root;
+    const char *dir = Fs.path.dir;
+    const char *name = Fs.path.name;
 
     const protocore_mnt_backend *b = store(work);
     const char *p = resolve_into(work, 0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        FsV.i32 = -1;
+        Fs.i32 = -1;
         return;
     }
-    FsV.i32 = b->opendir(p);
+    Fs.i32 = b->opendir(p);
 }
 
 static void fs_readdir(uint8_t *restrict work)
 {
-    const int handle = FsV.io.handle;
-    protocore_mnt_stat *out = FsV.io.stat;
-    char *name = FsV.io.name_out;
-    const size_t name_cap = FsV.io.name_cap;
+    const int handle = Fs.io.handle;
+    protocore_mnt_stat *out = Fs.io.stat;
+    char *name = Fs.io.name_out;
+    const size_t name_cap = Fs.io.name_cap;
 
     const protocore_mnt_backend *b = store(work);
-    FsV.ok = (b == NULL) ? PROTO_FALSE : b->readdir(handle, out, name, name_cap);
+    Fs.ok = (b == NULL) ? PROTO_FALSE : b->readdir(handle, out, name, name_cap);
 }
 
 static void fs_read_file(uint8_t *restrict work)
 {
-    const int root = FsV.path.root;
-    const char *dir = FsV.path.dir;
-    const char *name = FsV.path.name;
-    void *buf = FsV.io.buf;
-    const size_t cap = FsV.io.n;
+    const int root = Fs.path.root;
+    const char *dir = Fs.path.dir;
+    const char *name = Fs.path.name;
+    void *buf = Fs.io.buf;
+    const size_t cap = Fs.io.n;
 
     const protocore_mnt_backend *b = store(work);
     const char *p = resolve_into(work, 0, root, dir, name); // resolved once; the loop below works on the handle
     if (b == NULL || p == NULL)
     {
-        FsV.len = -1;
+        Fs.len = -1;
         return;
     }
     long sz = b->size(p);
     if (sz < 0 || (size_t)(sz) > cap)
     {
-        FsV.len = -1;
+        Fs.len = -1;
         return;
     }
     int h = b->open(p, (int)(PROTOCORE_MNT_READ));
     if (h < 0)
     {
-        FsV.len = -1;
+        Fs.len = -1;
         return;
     }
     size_t total = 0;
@@ -758,28 +758,28 @@ static void fs_read_file(uint8_t *restrict work)
         total += (size_t)(r);
     }
     b->close(h);
-    FsV.len = (long)(total);
+    Fs.len = (long)(total);
 }
 
 static void fs_write_file(uint8_t *restrict work)
 {
-    const int root = FsV.path.root;
-    const char *dir = FsV.path.dir;
-    const char *name = FsV.path.name;
-    const void *buf = FsV.io.wbuf;
-    const size_t n = FsV.io.n;
+    const int root = Fs.path.root;
+    const char *dir = Fs.path.dir;
+    const char *name = Fs.path.name;
+    const void *buf = Fs.io.wbuf;
+    const size_t n = Fs.io.n;
 
     const protocore_mnt_backend *b = store(work);
     const char *p = resolve_into(work, 0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        FsV.ok = PROTO_FALSE;
+        Fs.ok = PROTO_FALSE;
         return;
     }
     int h = b->open(p, (int)(PROTOCORE_MNT_WRITE));
     if (h < 0)
     {
-        FsV.ok = PROTO_FALSE;
+        Fs.ok = PROTO_FALSE;
         return;
     }
     size_t total = 0;
@@ -800,12 +800,32 @@ static void fs_write_file(uint8_t *restrict work)
         // a caller tests for "there is nowhere to put this", whether the cause is no store at all or
         // a store with no room left.
         FILESYSTEM_CTX(work)->status |= PROTOCORE_FS_STORAGE_EXHAUSTED;
-        FsV.ok = PROTO_FALSE;
+        Fs.ok = PROTO_FALSE;
         return;
     }
-    FsV.ok = PROTO_TRUE;
+    Fs.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-FsVars FsV;
+FilesystemNs Fs = {.status = fs_status,
+                   .clear = fs_clear,
+                   .present = fs_present,
+                   .begin = fs_begin,
+                   .resolve = fs_resolve,
+                   .open = fs_open,
+                   .read = fs_read,
+                   .write = fs_write,
+                   .close = fs_close,
+                   .seek = fs_seek,
+                   .size = fs_size,
+                   .exists = fs_exists,
+                   .stat = fs_stat,
+                   .remove = fs_remove,
+                   .rename = fs_rename,
+                   .copy = fs_copy,
+                   .mkdir = fs_mkdir,
+                   .rmdir = fs_rmdir,
+                   .opendir = fs_opendir,
+                   .readdir = fs_readdir,
+                   .read_file = fs_read_file,
+                   .write_file = fs_write_file};

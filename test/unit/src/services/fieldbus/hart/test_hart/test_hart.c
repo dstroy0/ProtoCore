@@ -55,26 +55,26 @@ void test_command_zero_frame(void)
     static const uint8_t ADDR[1] = {0x80};
     static const uint8_t WANT[5] = {0x02, 0x80, 0x00, 0x00, 0x82};
     uint8_t out[16];
-    HartV.build_args.delimiter = HART_DELIM_STX;
-    HartV.build_args.addr = ADDR;
-    HartV.build_args.addr_len = sizeof(ADDR);
-    HartV.build_args.command = 0;
-    HartV.build_args.data = NULL;
-    HartV.build_args.data_len = 0;
-    HartV.build_args.out = out;
-    HartV.build_args.cap = sizeof(out);
+    Hart.build_args.delimiter = HART_DELIM_STX;
+    Hart.build_args.addr = ADDR;
+    Hart.build_args.addr_len = sizeof(ADDR);
+    Hart.build_args.command = 0;
+    Hart.build_args.data = NULL;
+    Hart.build_args.data_len = 0;
+    Hart.build_args.out = out;
+    Hart.build_args.cap = sizeof(out);
     Hart.build(hart_work);
-    size_t n = HartV.n;
+    size_t n = Hart.n;
     TEST_ASSERT_EQUAL_size_t(sizeof(WANT), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));
 
     HartFrame f;
     memset(&f, 0, sizeof(f));
-    HartV.parse_args.frame = WANT;
-    HartV.parse_args.len = sizeof(WANT);
-    HartV.parse_args.out = &f;
+    Hart.parse_args.frame = WANT;
+    Hart.parse_args.len = sizeof(WANT);
+    Hart.parse_args.out = &f;
     Hart.parse(hart_work);
-    TEST_ASSERT_TRUE(HartV.ok);
+    TEST_ASSERT_TRUE(Hart.ok);
     TEST_ASSERT_EQUAL_HEX8(0x02u, f.delimiter);
     TEST_ASSERT_EQUAL_size_t(1u, f.addr_len);
     TEST_ASSERT_EQUAL_HEX8(0x80u, f.addr[0]);
@@ -90,28 +90,28 @@ void test_checksum_folds_the_frame_to_zero(void)
     static const uint8_t DATA[6] = {0xFE, 0x00, 0x18, 0x9A, 0x02, 0x01};
     static const uint8_t ADDR[5] = {0x86, 0x1C, 0x11, 0x22, 0x33};
     uint8_t out[32];
-    HartV.build_args.delimiter = HART_DELIM_ACK | HART_DELIM_LONG_ADDR;
-    HartV.build_args.addr = ADDR;
-    HartV.build_args.addr_len = sizeof(ADDR);
-    HartV.build_args.command = 0;
-    HartV.build_args.data = DATA;
-    HartV.build_args.data_len = sizeof(DATA);
-    HartV.build_args.out = out;
-    HartV.build_args.cap = sizeof(out);
+    Hart.build_args.delimiter = HART_DELIM_ACK | HART_DELIM_LONG_ADDR;
+    Hart.build_args.addr = ADDR;
+    Hart.build_args.addr_len = sizeof(ADDR);
+    Hart.build_args.command = 0;
+    Hart.build_args.data = DATA;
+    Hart.build_args.data_len = sizeof(DATA);
+    Hart.build_args.out = out;
+    Hart.build_args.cap = sizeof(out);
     Hart.build(hart_work);
-    size_t n = HartV.n;
+    size_t n = Hart.n;
     // delimiter + 5 address + command + byte count + 6 data + check = 15.
     TEST_ASSERT_EQUAL_size_t(15u, n);
-    HartV.checksum_args.bytes = out;
-    HartV.checksum_args.len = n;
+    Hart.checksum_args.bytes = out;
+    Hart.checksum_args.len = n;
     Hart.checksum(hart_work);
-    TEST_ASSERT_EQUAL_HEX8(0x00u, HartV.value);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, Hart.value);
 
     // An empty span has nothing to fold.
-    HartV.checksum_args.bytes = DATA;
-    HartV.checksum_args.len = 0;
+    Hart.checksum_args.bytes = DATA;
+    Hart.checksum_args.len = 0;
     Hart.checksum(hart_work);
-    TEST_ASSERT_EQUAL_HEX8(0x00u, HartV.value);
+    TEST_ASSERT_EQUAL_HEX8(0x00u, Hart.value);
 }
 
 // The long-address bit in the delimiter, not the frame length, is what tells a parser the address
@@ -121,25 +121,25 @@ void test_long_address_is_driven_by_the_delimiter(void)
     static const uint8_t ADDR5[5] = {0x86, 0x1C, 0x11, 0x22, 0x33};
     static const uint8_t DATA[2] = {0xAA, 0xBB};
     uint8_t out[32];
-    HartV.build_args.delimiter = (uint8_t)(HART_DELIM_STX | HART_DELIM_LONG_ADDR);
-    HartV.build_args.addr = ADDR5;
-    HartV.build_args.addr_len = sizeof(ADDR5);
-    HartV.build_args.command = 3;
-    HartV.build_args.data = DATA;
-    HartV.build_args.data_len = sizeof(DATA);
-    HartV.build_args.out = out;
-    HartV.build_args.cap = sizeof(out);
+    Hart.build_args.delimiter = (uint8_t)(HART_DELIM_STX | HART_DELIM_LONG_ADDR);
+    Hart.build_args.addr = ADDR5;
+    Hart.build_args.addr_len = sizeof(ADDR5);
+    Hart.build_args.command = 3;
+    Hart.build_args.data = DATA;
+    Hart.build_args.data_len = sizeof(DATA);
+    Hart.build_args.out = out;
+    Hart.build_args.cap = sizeof(out);
     Hart.build(hart_work);
-    size_t n = HartV.n;
+    size_t n = Hart.n;
     TEST_ASSERT_EQUAL_size_t(11u, n); // 1 + 5 + 1 + 1 + 2 + 1
     TEST_ASSERT_EQUAL_HEX8(0x82u, out[0]);
 
     HartFrame f;
-    HartV.parse_args.frame = out;
-    HartV.parse_args.len = n;
-    HartV.parse_args.out = &f;
+    Hart.parse_args.frame = out;
+    Hart.parse_args.len = n;
+    Hart.parse_args.out = &f;
     Hart.parse(hart_work);
-    TEST_ASSERT_TRUE(HartV.ok);
+    TEST_ASSERT_TRUE(Hart.ok);
     TEST_ASSERT_EQUAL_size_t(5u, f.addr_len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ADDR5, f.addr, 5);
     TEST_ASSERT_EQUAL_HEX8(3u, f.command);
@@ -147,36 +147,36 @@ void test_long_address_is_driven_by_the_delimiter(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(DATA, f.data, 2);
 
     // Only one and five are legal address widths.
-    HartV.build_args.delimiter = HART_DELIM_STX;
-    HartV.build_args.addr = ADDR5;
-    HartV.build_args.addr_len = 2;
-    HartV.build_args.command = 0;
-    HartV.build_args.data = NULL;
-    HartV.build_args.data_len = 0;
-    HartV.build_args.out = out;
-    HartV.build_args.cap = sizeof(out);
+    Hart.build_args.delimiter = HART_DELIM_STX;
+    Hart.build_args.addr = ADDR5;
+    Hart.build_args.addr_len = 2;
+    Hart.build_args.command = 0;
+    Hart.build_args.data = NULL;
+    Hart.build_args.data_len = 0;
+    Hart.build_args.out = out;
+    Hart.build_args.cap = sizeof(out);
     Hart.build(hart_work);
-    TEST_ASSERT_EQUAL_size_t(0u, HartV.n);
-    HartV.build_args.delimiter = HART_DELIM_STX;
-    HartV.build_args.addr = ADDR5;
-    HartV.build_args.addr_len = 0;
-    HartV.build_args.command = 0;
-    HartV.build_args.data = NULL;
-    HartV.build_args.data_len = 0;
-    HartV.build_args.out = out;
-    HartV.build_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_size_t(0u, Hart.n);
+    Hart.build_args.delimiter = HART_DELIM_STX;
+    Hart.build_args.addr = ADDR5;
+    Hart.build_args.addr_len = 0;
+    Hart.build_args.command = 0;
+    Hart.build_args.data = NULL;
+    Hart.build_args.data_len = 0;
+    Hart.build_args.out = out;
+    Hart.build_args.cap = sizeof(out);
     Hart.build(hart_work);
-    TEST_ASSERT_EQUAL_size_t(0u, HartV.n);
-    HartV.build_args.delimiter = HART_DELIM_STX;
-    HartV.build_args.addr = NULL;
-    HartV.build_args.addr_len = 1;
-    HartV.build_args.command = 0;
-    HartV.build_args.data = NULL;
-    HartV.build_args.data_len = 0;
-    HartV.build_args.out = out;
-    HartV.build_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_size_t(0u, Hart.n);
+    Hart.build_args.delimiter = HART_DELIM_STX;
+    Hart.build_args.addr = NULL;
+    Hart.build_args.addr_len = 1;
+    Hart.build_args.command = 0;
+    Hart.build_args.data = NULL;
+    Hart.build_args.data_len = 0;
+    Hart.build_args.out = out;
+    Hart.build_args.cap = sizeof(out);
     Hart.build(hart_work);
-    TEST_ASSERT_EQUAL_size_t(0u, HartV.n);
+    TEST_ASSERT_EQUAL_size_t(0u, Hart.n);
 }
 
 // Every data length from empty to the widest this test carries survives build then parse.
@@ -187,25 +187,25 @@ void test_frame_round_trip(void)
     for (size_t n = 0; n <= sizeof(DATA); n++)
     {
         uint8_t out[32];
-        HartV.build_args.delimiter = HART_DELIM_ACK;
-        HartV.build_args.addr = ADDR;
-        HartV.build_args.addr_len = sizeof(ADDR);
-        HartV.build_args.command = 1;
-        HartV.build_args.data = n ? DATA : NULL;
-        HartV.build_args.data_len = n;
-        HartV.build_args.out = out;
-        HartV.build_args.cap = sizeof(out);
+        Hart.build_args.delimiter = HART_DELIM_ACK;
+        Hart.build_args.addr = ADDR;
+        Hart.build_args.addr_len = sizeof(ADDR);
+        Hart.build_args.command = 1;
+        Hart.build_args.data = n ? DATA : NULL;
+        Hart.build_args.data_len = n;
+        Hart.build_args.out = out;
+        Hart.build_args.cap = sizeof(out);
         Hart.build(hart_work);
-        size_t len = HartV.n;
+        size_t len = Hart.n;
         TEST_ASSERT_EQUAL_size_t(n + 5u, len);
 
         HartFrame f;
         memset(&f, 0, sizeof(f));
-        HartV.parse_args.frame = out;
-        HartV.parse_args.len = len;
-        HartV.parse_args.out = &f;
+        Hart.parse_args.frame = out;
+        Hart.parse_args.len = len;
+        Hart.parse_args.out = &f;
         Hart.parse(hart_work);
-        TEST_ASSERT_TRUE(HartV.ok);
+        TEST_ASSERT_TRUE(Hart.ok);
         TEST_ASSERT_EQUAL_UINT8((uint8_t)n, f.byte_count);
         TEST_ASSERT_EQUAL_size_t(n, f.data_len);
         if (n)
@@ -225,16 +225,16 @@ void test_single_bit_corruption_is_refused(void)
     static const uint8_t ADDR[1] = {0x80};
     static const uint8_t DATA[3] = {0x11, 0x22, 0x33};
     uint8_t frame[16];
-    HartV.build_args.delimiter = HART_DELIM_STX;
-    HartV.build_args.addr = ADDR;
-    HartV.build_args.addr_len = sizeof(ADDR);
-    HartV.build_args.command = 6;
-    HartV.build_args.data = DATA;
-    HartV.build_args.data_len = sizeof(DATA);
-    HartV.build_args.out = frame;
-    HartV.build_args.cap = sizeof(frame);
+    Hart.build_args.delimiter = HART_DELIM_STX;
+    Hart.build_args.addr = ADDR;
+    Hart.build_args.addr_len = sizeof(ADDR);
+    Hart.build_args.command = 6;
+    Hart.build_args.data = DATA;
+    Hart.build_args.data_len = sizeof(DATA);
+    Hart.build_args.out = frame;
+    Hart.build_args.cap = sizeof(frame);
     Hart.build(hart_work);
-    size_t len = HartV.n;
+    size_t len = Hart.n;
 
     for (size_t i = 0; i < len; i++)
     {
@@ -248,11 +248,11 @@ void test_single_bit_corruption_is_refused(void)
         memcpy(bad, frame, len);
         bad[i] ^= 0x01;
         HartFrame f;
-        HartV.parse_args.frame = bad;
-        HartV.parse_args.len = len;
-        HartV.parse_args.out = &f;
+        Hart.parse_args.frame = bad;
+        Hart.parse_args.len = len;
+        Hart.parse_args.out = &f;
         Hart.parse(hart_work);
-        TEST_ASSERT_FALSE(HartV.ok);
+        TEST_ASSERT_FALSE(Hart.ok);
     }
 }
 
@@ -262,44 +262,44 @@ void test_parse_refuses_a_truncated_frame(void)
     static const uint8_t ADDR[1] = {0x80};
     static const uint8_t DATA[4] = {1, 2, 3, 4};
     uint8_t frame[16];
-    HartV.build_args.delimiter = HART_DELIM_STX;
-    HartV.build_args.addr = ADDR;
-    HartV.build_args.addr_len = sizeof(ADDR);
-    HartV.build_args.command = 3;
-    HartV.build_args.data = DATA;
-    HartV.build_args.data_len = sizeof(DATA);
-    HartV.build_args.out = frame;
-    HartV.build_args.cap = sizeof(frame);
+    Hart.build_args.delimiter = HART_DELIM_STX;
+    Hart.build_args.addr = ADDR;
+    Hart.build_args.addr_len = sizeof(ADDR);
+    Hart.build_args.command = 3;
+    Hart.build_args.data = DATA;
+    Hart.build_args.data_len = sizeof(DATA);
+    Hart.build_args.out = frame;
+    Hart.build_args.cap = sizeof(frame);
     Hart.build(hart_work);
-    size_t len = HartV.n;
+    size_t len = Hart.n;
     TEST_ASSERT_EQUAL_size_t(9u, len);
 
     HartFrame f;
-    HartV.parse_args.frame = frame;
-    HartV.parse_args.len = len;
-    HartV.parse_args.out = &f;
+    Hart.parse_args.frame = frame;
+    Hart.parse_args.len = len;
+    Hart.parse_args.out = &f;
     Hart.parse(hart_work);
-    TEST_ASSERT_TRUE(HartV.ok);
-    HartV.parse_args.frame = frame;
-    HartV.parse_args.len = len - 1;
-    HartV.parse_args.out = &f;
+    TEST_ASSERT_TRUE(Hart.ok);
+    Hart.parse_args.frame = frame;
+    Hart.parse_args.len = len - 1;
+    Hart.parse_args.out = &f;
     Hart.parse(hart_work);
-    TEST_ASSERT_FALSE(HartV.ok); // the check byte is missing
-    HartV.parse_args.frame = frame;
-    HartV.parse_args.len = 4;
-    HartV.parse_args.out = &f;
+    TEST_ASSERT_FALSE(Hart.ok); // the check byte is missing
+    Hart.parse_args.frame = frame;
+    Hart.parse_args.len = 4;
+    Hart.parse_args.out = &f;
     Hart.parse(hart_work);
-    TEST_ASSERT_FALSE(HartV.ok); // shorter than the smallest frame
-    HartV.parse_args.frame = NULL;
-    HartV.parse_args.len = len;
-    HartV.parse_args.out = &f;
+    TEST_ASSERT_FALSE(Hart.ok); // shorter than the smallest frame
+    Hart.parse_args.frame = NULL;
+    Hart.parse_args.len = len;
+    Hart.parse_args.out = &f;
     Hart.parse(hart_work);
-    TEST_ASSERT_FALSE(HartV.ok);
-    HartV.parse_args.frame = frame;
-    HartV.parse_args.len = len;
-    HartV.parse_args.out = NULL;
+    TEST_ASSERT_FALSE(Hart.ok);
+    Hart.parse_args.frame = frame;
+    Hart.parse_args.len = len;
+    Hart.parse_args.out = NULL;
     Hart.parse(hart_work);
-    TEST_ASSERT_FALSE(HartV.ok);
+    TEST_ASSERT_FALSE(Hart.ok);
 }
 
 // The HART-IP header is eight octets: version, message type, message id, status, then a big-endian
@@ -315,34 +315,34 @@ void test_hartip_header_octets(void)
         0x00, 0x0D, // byte count: 8 header + 5 payload = 13
     };
     uint8_t out[16];
-    HartV.ip_build_header_args.msg_type = HARTIP_MSG_REQUEST;
-    HartV.ip_build_header_args.msg_id = HARTIP_ID_TOKEN_PDU;
-    HartV.ip_build_header_args.status = 0;
-    HartV.ip_build_header_args.seq = 0x1234;
-    HartV.ip_build_header_args.total_len = 13;
-    HartV.ip_build_header_args.out = out;
-    HartV.ip_build_header_args.cap = sizeof(out);
+    Hart.ip_build_header_args.msg_type = HARTIP_MSG_REQUEST;
+    Hart.ip_build_header_args.msg_id = HARTIP_ID_TOKEN_PDU;
+    Hart.ip_build_header_args.status = 0;
+    Hart.ip_build_header_args.seq = 0x1234;
+    Hart.ip_build_header_args.total_len = 13;
+    Hart.ip_build_header_args.out = out;
+    Hart.ip_build_header_args.cap = sizeof(out);
     Hart.ip_build_header(hart_work);
-    TEST_ASSERT_EQUAL_size_t(8u, HartV.n);
+    TEST_ASSERT_EQUAL_size_t(8u, Hart.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));
-    HartV.ip_build_header_args.msg_type = 0;
-    HartV.ip_build_header_args.msg_id = 0;
-    HartV.ip_build_header_args.status = 0;
-    HartV.ip_build_header_args.seq = 0;
-    HartV.ip_build_header_args.total_len = 8;
-    HartV.ip_build_header_args.out = out;
-    HartV.ip_build_header_args.cap = 7;
+    Hart.ip_build_header_args.msg_type = 0;
+    Hart.ip_build_header_args.msg_id = 0;
+    Hart.ip_build_header_args.status = 0;
+    Hart.ip_build_header_args.seq = 0;
+    Hart.ip_build_header_args.total_len = 8;
+    Hart.ip_build_header_args.out = out;
+    Hart.ip_build_header_args.cap = 7;
     Hart.ip_build_header(hart_work);
-    TEST_ASSERT_EQUAL_size_t(0u, HartV.n);
-    HartV.ip_build_header_args.msg_type = 0;
-    HartV.ip_build_header_args.msg_id = 0;
-    HartV.ip_build_header_args.status = 0;
-    HartV.ip_build_header_args.seq = 0;
-    HartV.ip_build_header_args.total_len = 8;
-    HartV.ip_build_header_args.out = NULL;
-    HartV.ip_build_header_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_size_t(0u, Hart.n);
+    Hart.ip_build_header_args.msg_type = 0;
+    Hart.ip_build_header_args.msg_id = 0;
+    Hart.ip_build_header_args.status = 0;
+    Hart.ip_build_header_args.seq = 0;
+    Hart.ip_build_header_args.total_len = 8;
+    Hart.ip_build_header_args.out = NULL;
+    Hart.ip_build_header_args.cap = sizeof(out);
     Hart.ip_build_header(hart_work);
-    TEST_ASSERT_EQUAL_size_t(0u, HartV.n);
+    TEST_ASSERT_EQUAL_size_t(0u, Hart.n);
 }
 
 // The header's byte count slices the payload, which for a token PDU is a whole HART frame.
@@ -350,24 +350,24 @@ void test_hartip_payload_slice(void)
 {
     static const uint8_t PDU[5] = {0x02, 0x80, 0x00, 0x00, 0x82}; // the command-0 frame
     uint8_t msg[16];
-    HartV.ip_build_header_args.msg_type = HARTIP_MSG_REQUEST;
-    HartV.ip_build_header_args.msg_id = HARTIP_ID_TOKEN_PDU;
-    HartV.ip_build_header_args.status = 0;
-    HartV.ip_build_header_args.seq = 1;
-    HartV.ip_build_header_args.total_len = (uint16_t)(8 + sizeof(PDU));
-    HartV.ip_build_header_args.out = msg;
-    HartV.ip_build_header_args.cap = sizeof(msg);
+    Hart.ip_build_header_args.msg_type = HARTIP_MSG_REQUEST;
+    Hart.ip_build_header_args.msg_id = HARTIP_ID_TOKEN_PDU;
+    Hart.ip_build_header_args.status = 0;
+    Hart.ip_build_header_args.seq = 1;
+    Hart.ip_build_header_args.total_len = (uint16_t)(8 + sizeof(PDU));
+    Hart.ip_build_header_args.out = msg;
+    Hart.ip_build_header_args.cap = sizeof(msg);
     Hart.ip_build_header(hart_work);
-    TEST_ASSERT_EQUAL_size_t(8u, HartV.n);
+    TEST_ASSERT_EQUAL_size_t(8u, Hart.n);
     memcpy(msg + 8, PDU, sizeof(PDU));
 
     HartIpHeader h;
     memset(&h, 0, sizeof(h));
-    HartV.ip_parse_header_args.buf = msg;
-    HartV.ip_parse_header_args.len = 13;
-    HartV.ip_parse_header_args.out = &h;
+    Hart.ip_parse_header_args.buf = msg;
+    Hart.ip_parse_header_args.len = 13;
+    Hart.ip_parse_header_args.out = &h;
     Hart.ip_parse_header(hart_work);
-    TEST_ASSERT_TRUE(HartV.ok);
+    TEST_ASSERT_TRUE(Hart.ok);
     TEST_ASSERT_EQUAL_UINT8(1u, h.version);
     TEST_ASSERT_EQUAL_UINT8(HARTIP_MSG_REQUEST, h.msg_type);
     TEST_ASSERT_EQUAL_UINT8(HARTIP_ID_TOKEN_PDU, h.msg_id);
@@ -379,11 +379,11 @@ void test_hartip_payload_slice(void)
 
     // The sliced payload is itself a valid HART frame.
     HartFrame f;
-    HartV.parse_args.frame = h.payload;
-    HartV.parse_args.len = h.payload_len;
-    HartV.parse_args.out = &f;
+    Hart.parse_args.frame = h.payload;
+    Hart.parse_args.len = h.payload_len;
+    Hart.parse_args.out = &f;
     Hart.parse(hart_work);
-    TEST_ASSERT_TRUE(HartV.ok);
+    TEST_ASSERT_TRUE(Hart.ok);
     TEST_ASSERT_EQUAL_HEX8(0x00u, f.command);
 }
 
@@ -397,42 +397,42 @@ void test_hartip_refuses_impossible_byte_counts(void)
 
     msg[6] = 0x00;
     msg[7] = 0x07; // below the 8-octet header
-    HartV.ip_parse_header_args.buf = msg;
-    HartV.ip_parse_header_args.len = 16;
-    HartV.ip_parse_header_args.out = &h;
+    Hart.ip_parse_header_args.buf = msg;
+    Hart.ip_parse_header_args.len = 16;
+    Hart.ip_parse_header_args.out = &h;
     Hart.ip_parse_header(hart_work);
-    TEST_ASSERT_FALSE(HartV.ok);
+    TEST_ASSERT_FALSE(Hart.ok);
 
     msg[7] = 0x08; // exactly the header, no payload
-    HartV.ip_parse_header_args.buf = msg;
-    HartV.ip_parse_header_args.len = 16;
-    HartV.ip_parse_header_args.out = &h;
+    Hart.ip_parse_header_args.buf = msg;
+    Hart.ip_parse_header_args.len = 16;
+    Hart.ip_parse_header_args.out = &h;
     Hart.ip_parse_header(hart_work);
-    TEST_ASSERT_TRUE(HartV.ok);
+    TEST_ASSERT_TRUE(Hart.ok);
     TEST_ASSERT_EQUAL_size_t(0u, h.payload_len);
     TEST_ASSERT_NULL(h.payload);
 
     msg[7] = 0x11; // 17 octets declared, 16 present
-    HartV.ip_parse_header_args.buf = msg;
-    HartV.ip_parse_header_args.len = 16;
-    HartV.ip_parse_header_args.out = &h;
+    Hart.ip_parse_header_args.buf = msg;
+    Hart.ip_parse_header_args.len = 16;
+    Hart.ip_parse_header_args.out = &h;
     Hart.ip_parse_header(hart_work);
-    TEST_ASSERT_FALSE(HartV.ok);
+    TEST_ASSERT_FALSE(Hart.ok);
 
     msg[7] = 0x08;
-    HartV.ip_parse_header_args.buf = msg;
-    HartV.ip_parse_header_args.len = 7;
-    HartV.ip_parse_header_args.out = &h;
+    Hart.ip_parse_header_args.buf = msg;
+    Hart.ip_parse_header_args.len = 7;
+    Hart.ip_parse_header_args.out = &h;
     Hart.ip_parse_header(hart_work);
-    TEST_ASSERT_FALSE(HartV.ok);
-    HartV.ip_parse_header_args.buf = NULL;
-    HartV.ip_parse_header_args.len = 16;
-    HartV.ip_parse_header_args.out = &h;
+    TEST_ASSERT_FALSE(Hart.ok);
+    Hart.ip_parse_header_args.buf = NULL;
+    Hart.ip_parse_header_args.len = 16;
+    Hart.ip_parse_header_args.out = &h;
     Hart.ip_parse_header(hart_work);
-    TEST_ASSERT_FALSE(HartV.ok);
-    HartV.ip_parse_header_args.buf = msg;
-    HartV.ip_parse_header_args.len = 16;
-    HartV.ip_parse_header_args.out = NULL;
+    TEST_ASSERT_FALSE(Hart.ok);
+    Hart.ip_parse_header_args.buf = msg;
+    Hart.ip_parse_header_args.len = 16;
+    Hart.ip_parse_header_args.out = NULL;
     Hart.ip_parse_header(hart_work);
-    TEST_ASSERT_FALSE(HartV.ok);
+    TEST_ASSERT_FALSE(Hart.ok);
 }

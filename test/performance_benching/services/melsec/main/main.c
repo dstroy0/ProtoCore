@@ -45,19 +45,21 @@ void dbench_run(void)
 
         // Batch-read request build: read 5 words of D100 (data register), monitoring timer 0x0010 -
         // the exact args from test_melsec's test_build_read_bytes. Cheap pure builder -> large N.
-        MelsecV.build_read_args.buf = req;
-        MelsecV.build_read_args.cap = sizeof(req);
-        MelsecV.build_read_args.device_code = MELSEC_DEV_D;
-        MelsecV.build_read_args.head_device = 100;
-        MelsecV.build_read_args.points = 5;
-        MelsecV.build_read_args.monitoring_timer = 0x0010;
-        DBENCH_OP("Melsec.build_read D100 x5", 200000, sink += (Melsec.build_read(melsec_work), MelsecV.n));
+        Melsec.build_read_args.buf = req;
+        Melsec.build_read_args.cap = sizeof(req);
+        Melsec.build_read_args.device_code = MELSEC_DEV_D;
+        Melsec.build_read_args.head_device = 100;
+        Melsec.build_read_args.points = 5;
+        Melsec.build_read_args.monitoring_timer = 0x0010;
+        DBENCH_OP("Melsec.build_read D100 x5", 200000,
+                  sink += (Melsec.build_read(melsec_work), Melsec.n));
 
         // Response parse + validate over the known-good 0xD000 frame. Cheap pure parser -> large N.
-        MelsecV.parse_response_args.buf = resp_ok;
-        MelsecV.parse_response_args.len = sizeof(resp_ok);
-        MelsecV.parse_response_args.out = &parsed;
-        DBENCH_OP("Melsec.parse_response ok", 200000, sinkb ^= (Melsec.parse_response(melsec_work), MelsecV.ok));
+        Melsec.parse_response_args.buf = resp_ok;
+        Melsec.parse_response_args.len = sizeof(resp_ok);
+        Melsec.parse_response_args.out = &parsed;
+        DBENCH_OP("Melsec.parse_response ok", 200000,
+                  sinkb ^= (Melsec.parse_response(melsec_work), Melsec.ok));
 
         (void)sink;
         (void)sinkb;

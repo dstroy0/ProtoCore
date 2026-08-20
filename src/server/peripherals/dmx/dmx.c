@@ -21,26 +21,26 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_dmx_rdm_checksum(uint8_t *restrict work);
+static void dmx_rdm_checksum(uint8_t *restrict work);
 
-void protocore_dmx_build(uint8_t *restrict work)
+static void dmx_build(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = DmxV.build_args.buf;
-    size_t cap = DmxV.build_args.cap;
-    uint8_t start_code = DmxV.build_args.start_code;
-    const uint8_t *channels = DmxV.build_args.channels;
-    uint16_t n = DmxV.build_args.n;
+    uint8_t *buf = Dmx.build_args.buf;
+    size_t cap = Dmx.build_args.cap;
+    uint8_t start_code = Dmx.build_args.start_code;
+    const uint8_t *channels = Dmx.build_args.channels;
+    uint16_t n = Dmx.build_args.n;
 
     if (!buf || n > DMX_MAX_CHANNELS || (n && !channels))
     {
-        DmxV.n = 0;
+        Dmx.n = 0;
         return;
     }
     size_t total = (size_t)1 + n;
     if (cap < total)
     {
-        DmxV.n = 0;
+        Dmx.n = 0;
         return;
     }
     buf[0] = start_code;
@@ -48,45 +48,45 @@ void protocore_dmx_build(uint8_t *restrict work)
     {
         mem.cpy(buf + 1, channels, n);
     }
-    DmxV.n = total;
+    Dmx.n = total;
 }
 
-void protocore_dmx_get_channel(uint8_t *restrict work)
+static void dmx_get_channel(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = DmxV.get_channel_args.buf;
-    size_t len = DmxV.get_channel_args.len;
-    uint16_t ch = DmxV.get_channel_args.ch;
+    const uint8_t *buf = Dmx.get_channel_args.buf;
+    size_t len = Dmx.get_channel_args.len;
+    uint16_t ch = Dmx.get_channel_args.ch;
 
     if (!buf || ch < 1 || ch > DMX_MAX_CHANNELS || (size_t)ch >= len)
     {
-        DmxV.u8 = 0;
+        Dmx.u8 = 0;
         return; // slot ch lives at buf[ch] (buf[0] is the start code)
     }
-    DmxV.u8 = buf[ch];
+    Dmx.u8 = buf[ch];
 }
 
-void protocore_dmx_rdm_uid(uint8_t *restrict work)
+static void dmx_rdm_uid(uint8_t *restrict work)
 {
     (void)work;
-    uint16_t manufacturer = DmxV.rdm_uid_args.manufacturer;
-    uint32_t device = DmxV.rdm_uid_args.device;
+    uint16_t manufacturer = Dmx.rdm_uid_args.manufacturer;
+    uint32_t device = Dmx.rdm_uid_args.device;
 
-    DmxV.uid = ((uint64_t)manufacturer << 32) | device;
+    Dmx.uid = ((uint64_t)manufacturer << 32) | device;
 }
 
-void protocore_dmx_rdm_checksum(uint8_t *restrict work)
+static void dmx_rdm_checksum(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = DmxV.rdm_checksum_args.buf;
-    size_t len = DmxV.rdm_checksum_args.len;
+    const uint8_t *buf = Dmx.rdm_checksum_args.buf;
+    size_t len = Dmx.rdm_checksum_args.len;
 
     uint16_t s = 0;
     for (size_t i = 0; i < len; i++)
     {
         s = (uint16_t)(s + buf[i]);
     }
-    DmxV.checksum = s;
+    Dmx.checksum = s;
 }
 
 // Write a 48-bit UID big-endian (manufacturer high).
@@ -106,25 +106,25 @@ static uint64_t get_uid(const uint8_t *p)
            ((uint64_t)p[4] << 8) | (uint64_t)p[5];
 }
 
-void protocore_dmx_rdm_build(uint8_t *restrict work)
+static void dmx_rdm_build(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = DmxV.rdm_build_args.buf;
-    size_t cap = DmxV.rdm_build_args.cap;
-    const RdmPacket *p = DmxV.rdm_build_args.p;
-    const uint8_t *pdata = DmxV.rdm_build_args.pdata;
-    uint8_t pdl = DmxV.rdm_build_args.pdl;
+    uint8_t *buf = Dmx.rdm_build_args.buf;
+    size_t cap = Dmx.rdm_build_args.cap;
+    const RdmPacket *p = Dmx.rdm_build_args.p;
+    const uint8_t *pdata = Dmx.rdm_build_args.pdata;
+    uint8_t pdl = Dmx.rdm_build_args.pdl;
 
     if (!buf || !p || (pdl && !pdata))
     {
-        DmxV.n = 0;
+        Dmx.n = 0;
         return;
     }
     uint8_t ml = (uint8_t)(24 + pdl); // message length: SC..end of parameter data (excludes checksum)
     size_t total = (size_t)ml + 2;
     if (cap < total)
     {
-        DmxV.n = 0;
+        Dmx.n = 0;
         return;
     }
     buf[0] = RDM_SC;
@@ -145,58 +145,58 @@ void protocore_dmx_rdm_build(uint8_t *restrict work)
     {
         mem.cpy(buf + 24, pdata, pdl);
     }
-    DmxV.rdm_checksum_args.buf = buf;
-    DmxV.rdm_checksum_args.len = ml;
-    protocore_dmx_rdm_checksum(work);
-    uint16_t cs = DmxV.checksum; // checksum over SC..end of parameter data
+    Dmx.rdm_checksum_args.buf = buf;
+    Dmx.rdm_checksum_args.len = ml;
+    dmx_rdm_checksum(work);
+    uint16_t cs = Dmx.checksum; // checksum over SC..end of parameter data
     buf[ml] = (uint8_t)(cs >> 8);
     buf[ml + 1] = (uint8_t)cs;
-    DmxV.n = total;
+    Dmx.n = total;
 }
 
-void protocore_dmx_rdm_parse(uint8_t *restrict work)
+static void dmx_rdm_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = DmxV.rdm_parse_args.buf;
-    size_t len = DmxV.rdm_parse_args.len;
-    RdmPacket *out = DmxV.rdm_parse_args.out;
-    size_t *consumed = DmxV.rdm_parse_args.consumed;
+    const uint8_t *buf = Dmx.rdm_parse_args.buf;
+    size_t len = Dmx.rdm_parse_args.len;
+    RdmPacket *out = Dmx.rdm_parse_args.out;
+    size_t *consumed = Dmx.rdm_parse_args.consumed;
 
     if (!buf || !out || len < RDM_OVERHEAD)
     {
-        DmxV.ok = PROTO_FALSE;
+        Dmx.ok = PROTO_FALSE;
         return;
     }
     if (buf[0] != RDM_SC || buf[1] != RDM_SUB_SC)
     {
-        DmxV.ok = PROTO_FALSE;
+        Dmx.ok = PROTO_FALSE;
         return;
     }
     uint8_t ml = buf[2];
     if (ml < 24)
     {
-        DmxV.ok = PROTO_FALSE;
+        Dmx.ok = PROTO_FALSE;
         return;
     }
     uint8_t pdl = buf[23];
     if (ml != (uint8_t)(24 + pdl))
     {
-        DmxV.ok = PROTO_FALSE;
+        Dmx.ok = PROTO_FALSE;
         return; // message length must match the declared PDL
     }
     size_t total = (size_t)ml + 2;
     if (len < total)
     {
-        DmxV.ok = PROTO_FALSE;
+        Dmx.ok = PROTO_FALSE;
         return;
     }
     uint16_t cs = (uint16_t)((buf[ml] << 8) | buf[ml + 1]);
-    DmxV.rdm_checksum_args.buf = buf;
-    DmxV.rdm_checksum_args.len = ml;
-    protocore_dmx_rdm_checksum(work);
-    if (cs != DmxV.checksum)
+    Dmx.rdm_checksum_args.buf = buf;
+    Dmx.rdm_checksum_args.len = ml;
+    dmx_rdm_checksum(work);
+    if (cs != Dmx.checksum)
     {
-        DmxV.ok = PROTO_FALSE;
+        Dmx.ok = PROTO_FALSE;
         return;
     }
 
@@ -214,19 +214,19 @@ void protocore_dmx_rdm_parse(uint8_t *restrict work)
     {
         *consumed = total;
     }
-    DmxV.ok = PROTO_TRUE;
+    Dmx.ok = PROTO_TRUE;
 }
 
-void protocore_dmx_rdm_decode_disc_response(uint8_t *restrict work)
+static void dmx_rdm_decode_disc_response(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = DmxV.rdm_decode_disc_response_args.buf;
-    size_t len = DmxV.rdm_decode_disc_response_args.len;
-    uint64_t *uid = DmxV.rdm_decode_disc_response_args.uid;
+    const uint8_t *buf = Dmx.rdm_decode_disc_response_args.buf;
+    size_t len = Dmx.rdm_decode_disc_response_args.len;
+    uint64_t *uid = Dmx.rdm_decode_disc_response_args.uid;
 
     if (!buf || !uid)
     {
-        DmxV.ok = PROTO_FALSE;
+        Dmx.ok = PROTO_FALSE;
         return;
     }
     // Skip the optional preamble (up to 7 octets of 0xFE), then require the 0xAA separator.
@@ -237,13 +237,13 @@ void protocore_dmx_rdm_decode_disc_response(uint8_t *restrict work)
     }
     if (p >= len || buf[p] != 0xAA)
     {
-        DmxV.ok = PROTO_FALSE;
+        Dmx.ok = PROTO_FALSE;
         return;
     }
     p++;
     if (len - p < 16) // 12 encoded UID octets + 4 encoded checksum octets
     {
-        DmxV.ok = PROTO_FALSE;
+        Dmx.ok = PROTO_FALSE;
         return;
     }
     const uint8_t *euid = buf + p;
@@ -257,7 +257,7 @@ void protocore_dmx_rdm_decode_disc_response(uint8_t *restrict work)
     uint8_t csum_lo = (uint8_t)(euid[14] & euid[15]);
     if ((uint16_t)(((uint16_t)csum_hi << 8) | csum_lo) != sum)
     {
-        DmxV.ok = PROTO_FALSE;
+        Dmx.ok = PROTO_FALSE;
         return;
     }
     // Recover the 6 UID octets (MSB first); each is the AND of its 0xAA / 0x55 encoded copies.
@@ -267,26 +267,26 @@ void protocore_dmx_rdm_decode_disc_response(uint8_t *restrict work)
         u = (u << 8) | (uint8_t)(euid[i * 2] & euid[i * 2 + 1]);
     }
     *uid = u;
-    DmxV.ok = PROTO_TRUE;
+    Dmx.ok = PROTO_TRUE;
 }
 
-void protocore_dmx_rdm_build_disc_response(uint8_t *restrict work)
+static void dmx_rdm_build_disc_response(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = DmxV.rdm_build_disc_response_args.buf;
-    size_t cap = DmxV.rdm_build_disc_response_args.cap;
-    uint64_t uid = DmxV.rdm_build_disc_response_args.uid;
-    uint8_t preamble_len = DmxV.rdm_build_disc_response_args.preamble_len;
+    uint8_t *buf = Dmx.rdm_build_disc_response_args.buf;
+    size_t cap = Dmx.rdm_build_disc_response_args.cap;
+    uint64_t uid = Dmx.rdm_build_disc_response_args.uid;
+    uint8_t preamble_len = Dmx.rdm_build_disc_response_args.preamble_len;
 
     if (!buf || preamble_len > 7) // E1.20 allows 0..7 preamble octets
     {
-        DmxV.n = 0;
+        Dmx.n = 0;
         return;
     }
     size_t total = (size_t)preamble_len + 1 + 16; // preamble + 0xAA separator + 12 UID + 4 checksum octets
     if (cap < total)
     {
-        DmxV.n = 0;
+        Dmx.n = 0;
         return;
     }
     size_t p = 0;
@@ -312,19 +312,19 @@ void protocore_dmx_rdm_build_disc_response(uint8_t *restrict work)
     buf[p++] = (uint8_t)(csum_hi | 0x55);
     buf[p++] = (uint8_t)(csum_lo | 0xAA);
     buf[p++] = (uint8_t)(csum_lo | 0x55);
-    DmxV.n = p;
+    Dmx.n = p;
 }
 
-void protocore_dmx_rdm_build_device_info(uint8_t *restrict work)
+static void dmx_rdm_build_device_info(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *pdata = DmxV.rdm_build_device_info_args.pdata;
-    size_t cap = DmxV.rdm_build_device_info_args.cap;
-    const RdmDeviceInfo *info = DmxV.rdm_build_device_info_args.info;
+    uint8_t *pdata = Dmx.rdm_build_device_info_args.pdata;
+    size_t cap = Dmx.rdm_build_device_info_args.cap;
+    const RdmDeviceInfo *info = Dmx.rdm_build_device_info_args.info;
 
     if (!pdata || !info || cap < PROTOCORE_RDM_DEVICE_INFO_PDL)
     {
-        DmxV.n = 0;
+        Dmx.n = 0;
         return;
     }
     pdata[0] = info->proto_major;
@@ -346,19 +346,19 @@ void protocore_dmx_rdm_build_device_info(uint8_t *restrict work)
     pdata[16] = (uint8_t)(info->sub_device_count >> 8);
     pdata[17] = (uint8_t)info->sub_device_count;
     pdata[18] = info->sensor_count;
-    DmxV.n = PROTOCORE_RDM_DEVICE_INFO_PDL;
+    Dmx.n = PROTOCORE_RDM_DEVICE_INFO_PDL;
 }
 
-void protocore_dmx_rdm_parse_device_info(uint8_t *restrict work)
+static void dmx_rdm_parse_device_info(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *pdata = DmxV.rdm_parse_device_info_args.pdata;
-    uint8_t pdl = DmxV.rdm_parse_device_info_args.pdl;
-    RdmDeviceInfo *out = DmxV.rdm_parse_device_info_args.out;
+    const uint8_t *pdata = Dmx.rdm_parse_device_info_args.pdata;
+    uint8_t pdl = Dmx.rdm_parse_device_info_args.pdl;
+    RdmDeviceInfo *out = Dmx.rdm_parse_device_info_args.out;
 
     if (!pdata || !out || pdl < PROTOCORE_RDM_DEVICE_INFO_PDL)
     {
-        DmxV.ok = PROTO_FALSE;
+        Dmx.ok = PROTO_FALSE;
         return;
     }
     out->proto_major = pdata[0];
@@ -373,11 +373,19 @@ void protocore_dmx_rdm_parse_device_info(uint8_t *restrict work)
     out->dmx_start_address = (uint16_t)((pdata[14] << 8) | pdata[15]);
     out->sub_device_count = (uint16_t)((pdata[16] << 8) | pdata[17]);
     out->sensor_count = pdata[18];
-    DmxV.ok = PROTO_TRUE;
+    Dmx.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-DmxVars DmxV;
+DmxNs Dmx = {.build = dmx_build,
+             .get_channel = dmx_get_channel,
+             .rdm_uid = dmx_rdm_uid,
+             .rdm_checksum = dmx_rdm_checksum,
+             .rdm_build = dmx_rdm_build,
+             .rdm_parse = dmx_rdm_parse,
+             .rdm_decode_disc_response = dmx_rdm_decode_disc_response,
+             .rdm_build_disc_response = dmx_rdm_build_disc_response,
+             .rdm_build_device_info = dmx_rdm_build_device_info,
+             .rdm_parse_device_info = dmx_rdm_parse_device_info};
 
 PROTOCORE_END_DECLS
 

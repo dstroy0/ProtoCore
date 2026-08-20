@@ -117,15 +117,15 @@ static int bridge_find_free(uint8_t *restrict work)
 static int a_recv(void *c, uint8_t *buf, size_t cap)
 {
     RelayBridge *br = (RelayBridge *)c;
-    ConnPoolV.slot = br->conn_slot;
+    ConnPool.slot = br->conn_slot;
     ConnPool.available(protocore_conn_pool_span());
-    if (ConnPoolV.n)
+    if (ConnPool.n)
     {
-        ConnPoolV.slot = br->conn_slot;
-        ConnPoolV.io.buf = buf;
-        ConnPoolV.io.cap = cap;
+        ConnPool.slot = br->conn_slot;
+        ConnPool.io.buf = buf;
+        ConnPool.io.cap = cap;
         ConnPool.read(protocore_conn_pool_span());
-        return (int)ConnPoolV.n;
+        return (int)ConnPool.n;
     }
     return 0;
 }
@@ -135,45 +135,45 @@ static int a_send(void *c, const uint8_t *buf, size_t len)
     // Send as much as the inbound TCP send window currently allows (partial), not all-or-nothing: a
     // whole PROTOCORE_RELAY_BUF chunk rarely fits tcp_sndbuf in one shot, and a failed all-or-nothing send
     // forwards zero bytes and stalls the transfer. room==0 is real backpressure - the pump retries.
-    ConnPoolV.slot = br->conn_slot;
+    ConnPool.slot = br->conn_slot;
     ConnPool.sndbuf(protocore_conn_pool_span());
-    proto_u16 room = ConnPoolV.u16;
+    proto_u16 room = ConnPool.u16;
     if (room == 0)
     {
         return 0;
     }
     proto_u16 n = (len < (size_t)room) ? (proto_u16)len : room;
-    ConnPoolV.slot = br->conn_slot;
-    ConnPoolV.io.data = buf;
-    ConnPoolV.io.len = n;
-    ConnPoolV.send(protocore_conn_pool_span());
-    return ConnPoolV.ok ? (int)n : 0;
+    ConnPool.slot = br->conn_slot;
+    ConnPool.io.data = buf;
+    ConnPool.io.len = n;
+    ConnPool.send(protocore_conn_pool_span());
+    return ConnPool.ok ? (int)n : 0;
 }
 // Origin (b) = the outbound protocore_client; it reports EOF through the recv seam.
 static int b_recv(void *c, uint8_t *buf, size_t cap)
 {
     RelayBridge *br = (RelayBridge *)c;
-    TcpClientV.cid = br->origin_cid;
-    TcpClientV.io.buf = buf;
-    TcpClientV.io.cap = cap;
-    TcpClientV.read(protocore_tcp_client_span());
-    size_t n = TcpClientV.n;
+    TcpClient.cid = br->origin_cid;
+    TcpClient.io.buf = buf;
+    TcpClient.io.cap = cap;
+    TcpClient.read(protocore_tcp_client_span());
+    size_t n = TcpClient.n;
     if (n)
     {
         return (int)n;
     }
-    TcpClientV.cid = br->origin_cid;
+    TcpClient.cid = br->origin_cid;
     TcpClient.is_closed(protocore_tcp_client_span());
-    return TcpClientV.ok ? -1 : 0;
+    return TcpClient.ok ? -1 : 0;
 }
 static int b_send(void *c, const uint8_t *buf, size_t len)
 {
     RelayBridge *br = (RelayBridge *)c;
-    TcpClientV.cid = br->origin_cid;
-    TcpClientV.io.data = buf;
-    TcpClientV.io.len = len;
+    TcpClient.cid = br->origin_cid;
+    TcpClient.io.data = buf;
+    TcpClient.io.len = len;
     TcpClient.send(protocore_tcp_client_span());
-    return TcpClientV.ok ? (int)len : 0;
+    return TcpClient.ok ? (int)len : 0;
 }
 
 // Close the origin (and optionally the inbound) and free the bridge. active=false first so a
@@ -184,12 +184,12 @@ static void teardown(RelayBridge *br, proto_bool close_inbound)
 #if PROTOCORE_ENABLE_RADIO_POWER
     Radio.busy_release(protocore_radio_power_span()); // this bridge is done relaying
 #endif
-    TcpClientV.cid = br->origin_cid;
+    TcpClient.cid = br->origin_cid;
     TcpClient.close(protocore_tcp_client_span());
     if (close_inbound)
     {
-        ConnPoolV.slot = br->conn_slot;
-        ConnPoolV.close(protocore_conn_pool_span());
+        ConnPool.slot = br->conn_slot;
+        ConnPool.close(protocore_conn_pool_span());
     }
 }
 
@@ -207,9 +207,9 @@ static void service(uint8_t *restrict work, uint8_t slot)
     for (int pass = 0; pass < PROTOCORE_RELAY_DRAIN_MAX; pass++)
     {
         uint32_t moved = br->relay.bytes_a2b + br->relay.bytes_b2a;
-        RelayV.step_args.r = &br->relay;
+        Relay.step_args.r = &br->relay;
         Relay.step(relay_work);
-        protocore_relay_status st = RelayV.status;
+        protocore_relay_status st = Relay.status;
         if (st == PROTOCORE_RELAY_ERROR || st == PROTOCORE_RELAY_DONE)
         {
             teardown(br, PROTO_TRUE);
@@ -221,12 +221,12 @@ static void service(uint8_t *restrict work, uint8_t slot)
         }
     }
     // origin closed and everything it sent has been forwarded -> nothing more to do
-    TcpClientV.cid = br->origin_cid;
+    TcpClient.cid = br->origin_cid;
     TcpClient.is_closed(protocore_tcp_client_span());
-    const proto_bool origin_closed = TcpClientV.ok;
-    TcpClientV.cid = br->origin_cid;
+    const proto_bool origin_closed = TcpClient.ok;
+    TcpClient.cid = br->origin_cid;
     TcpClient.available(protocore_tcp_client_span());
-    if (origin_closed && TcpClientV.n == 0 && br->relay.b2a_off >= br->relay.b2a_len)
+    if (origin_closed && TcpClient.n == 0 && br->relay.b2a_off >= br->relay.b2a_len)
     {
         teardown(br, PROTO_TRUE);
     }
@@ -238,34 +238,34 @@ static void relay_on_accept(uint8_t slot)
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_relay_listener_span();
 
-    ConnPoolV.slot = slot;
+    ConnPool.slot = slot;
     ConnPool.listener_id(protocore_conn_pool_span());
-    RelayBind *bd = bind_by_listener(work, ConnPoolV.u8);
+    RelayBind *bd = bind_by_listener(work, ConnPool.u8);
     if (!bd)
     {
-        ConnPoolV.slot = slot;
-        ConnPoolV.close(protocore_conn_pool_span()); // no origin published for this listener
+        ConnPool.slot = slot;
+        ConnPool.close(protocore_conn_pool_span()); // no origin published for this listener
         return;
     }
     int idx = bridge_find_free(work);
     if (idx < 0)
     {
-        ConnPoolV.slot = slot;
-        ConnPoolV.close(protocore_conn_pool_span()); // bridge table full
+        ConnPool.slot = slot;
+        ConnPool.close(protocore_conn_pool_span()); // bridge table full
         return;
     }
     // open() takes a slot and returns; the origin is not up yet. The bridge arms anyway: the pump
     // steps the connect through b_recv's is_closed, a send before it is up reads as backpressure and
     // retries, and the slot's own PROTOCORE_RELAY_CONNECT_MS is what ends an origin that never answers.
-    TcpClientV.dial.host = bd->host;
-    TcpClientV.dial.port = bd->port;
-    TcpClientV.dial.timeout_ms = PROTOCORE_RELAY_CONNECT_MS;
+    TcpClient.dial.host = bd->host;
+    TcpClient.dial.port = bd->port;
+    TcpClient.dial.timeout_ms = PROTOCORE_RELAY_CONNECT_MS;
     TcpClient.open(protocore_tcp_client_span());
-    int cid = TcpClientV.i32;
+    int cid = TcpClient.i32;
     if (cid < 0)
     {
-        ConnPoolV.slot = slot;
-        ConnPoolV.close(protocore_conn_pool_span()); // no free client slot
+        ConnPool.slot = slot;
+        ConnPool.close(protocore_conn_pool_span()); // no free client slot
         return;
     }
     RelayBridge *br = &RELAY_LISTENER_CTX(work)->bridges[idx];
@@ -274,9 +274,9 @@ static void relay_on_accept(uint8_t slot)
     br->origin_cid = cid;
     protocore_relay_end a = {a_recv, a_send, NULL, br};
     protocore_relay_end b = {b_recv, b_send, NULL, br};
-    RelayV.init_args.r = &br->relay;
-    RelayV.init_args.client = &a;
-    RelayV.init_args.origin = &b;
+    Relay.init_args.r = &br->relay;
+    Relay.init_args.client = &a;
+    Relay.init_args.origin = &b;
     Relay.init(relay_work);
 #if PROTOCORE_ENABLE_RADIO_POWER
     Radio.busy_hold(protocore_radio_power_span()); // hold the radio awake for the life of this bridge
@@ -298,9 +298,9 @@ static void relay_on_poll(uint8_t slot)
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_relay_listener_span();
 
-    ConnPoolV.slot = slot;
+    ConnPool.slot = slot;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPoolV.ok)
+    if (!ConnPool.ok)
     {
         return;
     }
@@ -345,21 +345,21 @@ uint8_t *protocore_relay_listener_span(void)
     return s_own.span;
 }
 
-void protocore_relay_listener_publish(uint8_t *restrict work)
+static void relay_listener_publish(uint8_t *restrict work)
 {
-    uint8_t listener_id = RelayListenerV.publish_args.listener_id;
-    const char *origin_host = RelayListenerV.publish_args.origin_host;
-    uint16_t origin_port = RelayListenerV.publish_args.origin_port;
+    uint8_t listener_id = RelayListener.publish_args.listener_id;
+    const char *origin_host = RelayListener.publish_args.origin_host;
+    uint16_t origin_port = RelayListener.publish_args.origin_port;
 
     if (!origin_host)
     {
-        RelayListenerV.ok = PROTO_FALSE;
+        RelayListener.ok = PROTO_FALSE;
         return;
     }
     size_t hl = str.len(origin_host, PROTOCORE_RELAY_HOST_MAX + 1);
     if (hl == 0 || hl >= PROTOCORE_RELAY_HOST_MAX)
     {
-        RelayListenerV.ok = PROTO_FALSE;
+        RelayListener.ok = PROTO_FALSE;
         return;
     }
     int idx = -1;
@@ -373,7 +373,7 @@ void protocore_relay_listener_publish(uint8_t *restrict work)
     }
     if (idx < 0)
     {
-        RelayListenerV.ok = PROTO_FALSE;
+        RelayListener.ok = PROTO_FALSE;
         return;
     }
     RELAY_LISTENER_CTX(work)->binds[idx].active = PROTO_TRUE;
@@ -382,15 +382,15 @@ void protocore_relay_listener_publish(uint8_t *restrict work)
     RELAY_LISTENER_CTX(work)->binds[idx].port = origin_port;
     if (!RELAY_LISTENER_CTX(work)->registered)
     {
-        SessionV.proto->proto = PROTO_RELAY;
-        SessionV.proto->h = &s_relay_handler;
-        SessionV.proto->add(protocore_session_span());
+        Session.proto->proto = PROTO_RELAY;
+        Session.proto->h = &s_relay_handler;
+        Session.proto->add(protocore_session_span());
         RELAY_LISTENER_CTX(work)->registered = PROTO_TRUE;
     }
-    RelayListenerV.ok = PROTO_TRUE;
+    RelayListener.ok = PROTO_TRUE;
 }
 
-void protocore_relay_listener_reset(uint8_t *restrict work)
+static void relay_listener_reset(uint8_t *restrict work)
 {
     for (int i = 0; i < PROTOCORE_RELAY_MAX_PUBLISH; i++)
     {
@@ -408,8 +408,7 @@ void protocore_relay_listener_reset(uint8_t *restrict work)
     }
 }
 
-/** @brief The operands and the outcome. */
-RelayListenerVars RelayListenerV;
+RelayListenerNs RelayListener = {.publish = relay_listener_publish, .reset = relay_listener_reset};
 
 PROTOCORE_END_DECLS
 

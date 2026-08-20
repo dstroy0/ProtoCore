@@ -24,38 +24,38 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_interbus_fcs(uint8_t *restrict work);
+static void interbus_fcs(uint8_t *restrict work);
 
-void protocore_interbus_fcs(uint8_t *restrict work)
+static void interbus_fcs(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *bytes = InterbusV.fcs_args.bytes;
-    size_t len = InterbusV.fcs_args.len;
+    const uint8_t *bytes = Interbus.fcs_args.bytes;
+    size_t len = Interbus.fcs_args.len;
 
     // CRC-16/CCITT-FALSE: poly 0x1021, init 0xFFFF, no reflection, xorout 0 - cataloged as CRC-16/IBM-3740.
-    CrcV.args.params = &PROTOCORE_CRC16_IBM_3740;
-    CrcV.args.data = bytes;
-    CrcV.args.len = len;
+    Crc.args.params = &PROTOCORE_CRC16_IBM_3740;
+    Crc.args.data = bytes;
+    Crc.args.len = len;
     Crc.compute(crc_work);
-    InterbusV.value = (uint16_t)CrcV.value;
+    Interbus.value = (uint16_t)Crc.value;
 }
 
-void protocore_interbus_build(uint8_t *restrict work)
+static void interbus_build(uint8_t *restrict work)
 {
-    const uint16_t *words = InterbusV.build_args.words;
-    size_t word_count = InterbusV.build_args.word_count;
-    uint8_t *out = InterbusV.build_args.out;
-    size_t cap = InterbusV.build_args.cap;
+    const uint16_t *words = Interbus.build_args.words;
+    size_t word_count = Interbus.build_args.word_count;
+    uint8_t *out = Interbus.build_args.out;
+    size_t cap = Interbus.build_args.cap;
 
     if (!out || (word_count && !words))
     {
-        InterbusV.n = 0;
+        Interbus.n = 0;
         return;
     }
     size_t n = 2 + word_count * 2 + 2; // loopback + words + FCS
     if (n > cap)
     {
-        InterbusV.n = 0;
+        Interbus.n = 0;
         return;
     }
     size_t i = 0;
@@ -66,52 +66,52 @@ void protocore_interbus_build(uint8_t *restrict work)
         out[i++] = (uint8_t)(words[w] >> 8); // big-endian
         out[i++] = (uint8_t)words[w];
     }
-    InterbusV.fcs_args.bytes = out;
-    InterbusV.fcs_args.len = i;
-    protocore_interbus_fcs(work);
-    uint16_t crc = InterbusV.value; // FCS over loopback + words
+    Interbus.fcs_args.bytes = out;
+    Interbus.fcs_args.len = i;
+    interbus_fcs(work);
+    uint16_t crc = Interbus.value; // FCS over loopback + words
     out[i++] = (uint8_t)(crc >> 8);
     out[i++] = (uint8_t)crc;
-    InterbusV.n = i;
+    Interbus.n = i;
 }
 
-void protocore_interbus_parse(uint8_t *restrict work)
+static void interbus_parse(uint8_t *restrict work)
 {
-    const uint8_t *frame = InterbusV.parse_args.frame;
-    size_t len = InterbusV.parse_args.len;
-    uint16_t *out_words = InterbusV.parse_args.out_words;
-    size_t max_words = InterbusV.parse_args.max_words;
-    size_t *out_count = InterbusV.parse_args.out_count;
+    const uint8_t *frame = Interbus.parse_args.frame;
+    size_t len = Interbus.parse_args.len;
+    uint16_t *out_words = Interbus.parse_args.out_words;
+    size_t max_words = Interbus.parse_args.max_words;
+    size_t *out_count = Interbus.parse_args.out_count;
 
     if (!frame || !out_words || !out_count || len < 4) // loopback + FCS minimum
     {
-        InterbusV.ok = PROTO_FALSE;
+        Interbus.ok = PROTO_FALSE;
         return;
     }
     if (((frame[0] << 8) | frame[1]) != PROTOCORE_INTERBUS_LOOPBACK)
     {
-        InterbusV.ok = PROTO_FALSE;
+        Interbus.ok = PROTO_FALSE;
         return;
     }
     if ((len - 4) % 2 != 0) // the words region must be whole 16-bit words
     {
-        InterbusV.ok = PROTO_FALSE;
+        Interbus.ok = PROTO_FALSE;
         return;
     }
     size_t word_count = (len - 4) / 2;
     if (word_count > max_words)
     {
-        InterbusV.ok = PROTO_FALSE;
+        Interbus.ok = PROTO_FALSE;
         return;
     }
-    InterbusV.fcs_args.bytes = frame;
-    InterbusV.fcs_args.len = len - 2;
-    protocore_interbus_fcs(work);
-    uint16_t want = InterbusV.value;
+    Interbus.fcs_args.bytes = frame;
+    Interbus.fcs_args.len = len - 2;
+    interbus_fcs(work);
+    uint16_t want = Interbus.value;
     uint16_t got = (uint16_t)((frame[len - 2] << 8) | frame[len - 1]);
     if (want != got)
     {
-        InterbusV.ok = PROTO_FALSE;
+        Interbus.ok = PROTO_FALSE;
         return;
     }
     for (size_t w = 0; w < word_count; w++)
@@ -119,11 +119,10 @@ void protocore_interbus_parse(uint8_t *restrict work)
         out_words[w] = (uint16_t)((frame[2 + w * 2] << 8) | frame[2 + w * 2 + 1]);
     }
     *out_count = word_count;
-    InterbusV.ok = PROTO_TRUE;
+    Interbus.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-InterbusVars InterbusV;
+InterbusNs Interbus = {.fcs = interbus_fcs, .build = interbus_build, .parse = interbus_parse};
 
 PROTOCORE_END_DECLS
 

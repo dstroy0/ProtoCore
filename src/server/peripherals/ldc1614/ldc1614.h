@@ -67,17 +67,20 @@ typedef struct
     uint16_t msb_reg;
     uint16_t lsb_reg;
 } Ldc1614DataArgs;
+
 /** @brief What error takes: msb_reg. */
 typedef struct
 {
     uint16_t msb_reg;
 } Ldc1614ErrorArgs;
+
 /** @brief What sensor_freq_hz takes: data28, fref_hz. */
 typedef struct
 {
     uint32_t data28;
     uint32_t fref_hz;
 } Ldc1614SensorFreqHzArgs;
+
 /** @brief What build_config takes: buf, cap, rcount, settlecount. */
 typedef struct
 {
@@ -86,6 +89,7 @@ typedef struct
     uint16_t rcount;
     uint16_t settlecount;
 } Ldc1614BuildConfigArgs;
+
 /** @brief What begin takes: addr, rcount, settlecount. */
 typedef struct
 {
@@ -93,11 +97,13 @@ typedef struct
     uint16_t rcount;
     uint16_t settlecount;
 } Ldc1614BeginArgs;
+
 /** @brief What read_ch0 takes: out. */
 typedef struct
 {
     uint32_t *out;
 } Ldc1614ReadCh0Args;
+
 /**
  * @brief TI LDC1614 inductance-to-digital field-sensing codec (PROTOCORE_ENABLE_LDC1614).
  *
@@ -139,19 +145,13 @@ typedef struct
     Ldc1614BuildConfigArgs build_config_args;
     Ldc1614BeginArgs begin_args;
     Ldc1614ReadCh0Args read_ch0_args;
+
     proto_bool ok;
     uint32_t value;
     uint8_t flags;
     uint64_t hz;
     size_t n;
-} Ldc1614Vars;
 
-/** @brief The operands and the outcome. */
-extern Ldc1614Vars Ldc1614V;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const data)(uint8_t *restrict work);
     void (*const error)(uint8_t *restrict work);
     void (*const sensor_freq_hz)(uint8_t *restrict work);
@@ -160,27 +160,8 @@ typedef struct
     void (*const read_ch0)(uint8_t *restrict work);
 } Ldc1614Ns;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in Ldc1614V or a region of the borrow at a fixed offset.
-void protocore_ldc1614_data(uint8_t *restrict work);
-void protocore_ldc1614_error(uint8_t *restrict work);
-void protocore_ldc1614_sensor_freq_hz(uint8_t *restrict work);
-void protocore_ldc1614_build_config(uint8_t *restrict work);
-void protocore_ldc1614_begin(uint8_t *restrict work);
-void protocore_ldc1614_read_ch0(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Ldc1614.data(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const Ldc1614Ns Ldc1614 __attribute__((unused)) = {
-    .data = protocore_ldc1614_data,
-    .error = protocore_ldc1614_error,
-    .sensor_freq_hz = protocore_ldc1614_sensor_freq_hz,
-    .build_config = protocore_ldc1614_build_config,
-    .begin = protocore_ldc1614_begin,
-    .read_ch0 = protocore_ldc1614_read_ch0,
-};
+/** @brief The one symbol this module exports. */
+extern Ldc1614Ns Ldc1614;
 
 /**
  * @brief The PROTOCORE_I2C_DEVICE_BORROW bytes this module's state lives in.

@@ -47,120 +47,120 @@ static void build_nonce(const uint8_t iv[12], uint64_t full_pn, uint8_t nonce[12
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_quic_crypto_keys_from_secret(uint8_t *restrict work);
+static void quic_crypto_keys_from_secret(uint8_t *restrict work);
 
-void protocore_quic_crypto_keys_from_secret(uint8_t *restrict work)
+static void quic_crypto_keys_from_secret(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *keys_work = QuicCryptoV.keys_from_secret_args.keys_work;
-    const uint8_t *secret = QuicCryptoV.keys_from_secret_args.secret;
-    QuicPacketKeys *out = QuicCryptoV.keys_from_secret_args.out;
+    uint8_t *keys_work = QuicCrypto.keys_from_secret_args.keys_work;
+    const uint8_t *secret = QuicCrypto.keys_from_secret_args.secret;
+    QuicPacketKeys *out = QuicCrypto.keys_from_secret_args.out;
 
     // RFC 9001 sec 5.1: every encryption level's packet keys are these three Expand-Labels of the
     // level's traffic secret (the Initial secrets below, or the TLS handshake / application secrets).
     // The key becomes a context here and the raw bytes are wiped: nothing downstream needs them.
     uint8_t *k = keys_work + PROTOCORE_HKDF_BORROW;
     uint8_t *hpk = k + PROTOCORE_AES128GCM_KEY_LEN;
-    HkdfV.expand_label_args.secret = secret;
-    HkdfV.expand_label_args.label = "quic key";
-    HkdfV.expand_label_args.out = k;
-    HkdfV.expand_label_args.out_len = PROTOCORE_AES128GCM_KEY_LEN;
-    HkdfV.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
+    Hkdf.expand_label_args.secret = secret;
+    Hkdf.expand_label_args.label = "quic key";
+    Hkdf.expand_label_args.out = k;
+    Hkdf.expand_label_args.out_len = PROTOCORE_AES128GCM_KEY_LEN;
+    Hkdf.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
     Hkdf.expand_label(keys_work);
-    Aes128GcmV.key_args.key = k;
+    Aes128Gcm.key_args.key = k;
     Aes128Gcm.key_init(out->gcm);
-    HkdfV.expand_label_args.secret = secret;
-    HkdfV.expand_label_args.label = "quic iv";
-    HkdfV.expand_label_args.out = out->iv;
-    HkdfV.expand_label_args.out_len = sizeof(out->iv);
-    HkdfV.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
+    Hkdf.expand_label_args.secret = secret;
+    Hkdf.expand_label_args.label = "quic iv";
+    Hkdf.expand_label_args.out = out->iv;
+    Hkdf.expand_label_args.out_len = sizeof(out->iv);
+    Hkdf.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
     Hkdf.expand_label(keys_work);
-    HkdfV.expand_label_args.secret = secret;
-    HkdfV.expand_label_args.label = "quic hp";
-    HkdfV.expand_label_args.out = hpk;
-    HkdfV.expand_label_args.out_len = PROTOCORE_AES128GCM_KEY_LEN;
-    HkdfV.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
+    Hkdf.expand_label_args.secret = secret;
+    Hkdf.expand_label_args.label = "quic hp";
+    Hkdf.expand_label_args.out = hpk;
+    Hkdf.expand_label_args.out_len = PROTOCORE_AES128GCM_KEY_LEN;
+    Hkdf.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
     Hkdf.expand_label(keys_work);
-    Aes128GcmV.block_key_args.key = hpk;
+    Aes128Gcm.block_key_args.key = hpk;
     Aes128Gcm.block_init(out->gcm);
     protocore_secure_wipe(k, 2 * PROTOCORE_AES128GCM_KEY_LEN);
 }
 
-void protocore_quic_crypto_derive_initial_secrets(uint8_t *restrict work)
+static void quic_crypto_derive_initial_secrets(uint8_t *restrict work)
 {
-    uint8_t *keys_work = QuicCryptoV.derive_initial_secrets_args.keys_work;
-    const uint8_t *dcid = QuicCryptoV.derive_initial_secrets_args.dcid;
-    size_t dcid_len = QuicCryptoV.derive_initial_secrets_args.dcid_len;
-    QuicInitialSecrets *out = QuicCryptoV.derive_initial_secrets_args.out;
+    uint8_t *keys_work = QuicCrypto.derive_initial_secrets_args.keys_work;
+    const uint8_t *dcid = QuicCrypto.derive_initial_secrets_args.dcid;
+    size_t dcid_len = QuicCrypto.derive_initial_secrets_args.dcid_len;
+    QuicInitialSecrets *out = QuicCrypto.derive_initial_secrets_args.out;
 
     uint8_t initial_secret[PROTOCORE_HKDF_HASH_LEN];
-    HkdfV.extract_args.salt = INITIAL_SALT;
-    HkdfV.extract_args.salt_len = sizeof(INITIAL_SALT);
-    HkdfV.extract_args.ikm = dcid;
-    HkdfV.extract_args.ikm_len = dcid_len;
-    HkdfV.extract_args.prk = initial_secret;
+    Hkdf.extract_args.salt = INITIAL_SALT;
+    Hkdf.extract_args.salt_len = sizeof(INITIAL_SALT);
+    Hkdf.extract_args.ikm = dcid;
+    Hkdf.extract_args.ikm_len = dcid_len;
+    Hkdf.extract_args.prk = initial_secret;
     Hkdf.extract(keys_work);
 
     uint8_t client_secret[PROTOCORE_HKDF_HASH_LEN];
     uint8_t server_secret[PROTOCORE_HKDF_HASH_LEN];
-    HkdfV.expand_label_args.secret = initial_secret;
-    HkdfV.expand_label_args.label = "client in";
-    HkdfV.expand_label_args.out = client_secret;
-    HkdfV.expand_label_args.out_len = sizeof(client_secret);
-    HkdfV.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
+    Hkdf.expand_label_args.secret = initial_secret;
+    Hkdf.expand_label_args.label = "client in";
+    Hkdf.expand_label_args.out = client_secret;
+    Hkdf.expand_label_args.out_len = sizeof(client_secret);
+    Hkdf.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
     Hkdf.expand_label(keys_work);
-    HkdfV.expand_label_args.secret = initial_secret;
-    HkdfV.expand_label_args.label = "server in";
-    HkdfV.expand_label_args.out = server_secret;
-    HkdfV.expand_label_args.out_len = sizeof(server_secret);
-    HkdfV.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
+    Hkdf.expand_label_args.secret = initial_secret;
+    Hkdf.expand_label_args.label = "server in";
+    Hkdf.expand_label_args.out = server_secret;
+    Hkdf.expand_label_args.out_len = sizeof(server_secret);
+    Hkdf.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
     Hkdf.expand_label(keys_work);
 
-    QuicCryptoV.keys_from_secret_args.keys_work = keys_work;
-    QuicCryptoV.keys_from_secret_args.secret = client_secret;
-    QuicCryptoV.keys_from_secret_args.out = &out->client;
-    protocore_quic_crypto_keys_from_secret(work);
-    QuicCryptoV.keys_from_secret_args.keys_work = keys_work;
-    QuicCryptoV.keys_from_secret_args.secret = server_secret;
-    QuicCryptoV.keys_from_secret_args.out = &out->server;
-    protocore_quic_crypto_keys_from_secret(work);
+    QuicCrypto.keys_from_secret_args.keys_work = keys_work;
+    QuicCrypto.keys_from_secret_args.secret = client_secret;
+    QuicCrypto.keys_from_secret_args.out = &out->client;
+    quic_crypto_keys_from_secret(work);
+    QuicCrypto.keys_from_secret_args.keys_work = keys_work;
+    QuicCrypto.keys_from_secret_args.secret = server_secret;
+    QuicCrypto.keys_from_secret_args.out = &out->server;
+    quic_crypto_keys_from_secret(work);
 }
 
-void protocore_quic_crypto_packet_protect(uint8_t *restrict work)
+static void quic_crypto_packet_protect(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *pkt = QuicCryptoV.packet_protect_args.pkt;
-    size_t cap = QuicCryptoV.packet_protect_args.cap;
-    size_t pn_offset = QuicCryptoV.packet_protect_args.pn_offset;
-    uint8_t pn_len = QuicCryptoV.packet_protect_args.pn_len;
-    uint64_t full_pn = QuicCryptoV.packet_protect_args.full_pn;
-    size_t payload_len = QuicCryptoV.packet_protect_args.payload_len;
-    QuicPacketKeys *keys = QuicCryptoV.packet_protect_args.keys;
-    proto_bool is_long = QuicCryptoV.packet_protect_args.is_long;
+    uint8_t *pkt = QuicCrypto.packet_protect_args.pkt;
+    size_t cap = QuicCrypto.packet_protect_args.cap;
+    size_t pn_offset = QuicCrypto.packet_protect_args.pn_offset;
+    uint8_t pn_len = QuicCrypto.packet_protect_args.pn_len;
+    uint64_t full_pn = QuicCrypto.packet_protect_args.full_pn;
+    size_t payload_len = QuicCrypto.packet_protect_args.payload_len;
+    QuicPacketKeys *keys = QuicCrypto.packet_protect_args.keys;
+    proto_bool is_long = QuicCrypto.packet_protect_args.is_long;
 
     if (pn_len < 1 || pn_len > 4)
     {
-        QuicCryptoV.n = 0;
+        QuicCrypto.n = 0;
         return;
     }
     size_t hdr_len = pn_offset + pn_len;
     size_t total = hdr_len + payload_len + PROTOCORE_AES128GCM_TAG_LEN;
     if (total > cap)
     {
-        QuicCryptoV.n = 0;
+        QuicCrypto.n = 0;
         return;
     }
 
     // AEAD-seal the payload in place; associated data is the unprotected header.
     uint8_t nonce[12];
     build_nonce(keys->iv, full_pn, nonce);
-    Aes128GcmV.seal_args.nonce = nonce;
-    Aes128GcmV.seal_args.aad = pkt;
-    Aes128GcmV.seal_args.aad_len = hdr_len;
-    Aes128GcmV.seal_args.pt = pkt + hdr_len;
-    Aes128GcmV.seal_args.pt_len = payload_len;
-    Aes128GcmV.seal_args.ct_out = pkt + hdr_len;
-    Aes128GcmV.seal_args.tag_out = pkt + hdr_len + payload_len;
+    Aes128Gcm.seal_args.nonce = nonce;
+    Aes128Gcm.seal_args.aad = pkt;
+    Aes128Gcm.seal_args.aad_len = hdr_len;
+    Aes128Gcm.seal_args.pt = pkt + hdr_len;
+    Aes128Gcm.seal_args.pt_len = payload_len;
+    Aes128Gcm.seal_args.ct_out = pkt + hdr_len;
+    Aes128Gcm.seal_args.tag_out = pkt + hdr_len + payload_len;
     Aes128Gcm.seal(keys->gcm);
 
     // Header protection (RFC 9001 sec 5.4): sample 16 bytes at pn_offset + 4 (always inside the
@@ -169,8 +169,8 @@ void protocore_quic_crypto_packet_protect(uint8_t *restrict work)
     // costs ~556 cycles per packet plus a pool borrow and wipe. (The ECB block itself is ~7,842 - a
     // single HW-AES operation is expensive on this die, and that is the bigger target.)
     uint8_t mask[16];
-    Aes128GcmV.block_args.in = pkt + pn_offset + 4;
-    Aes128GcmV.block_args.out = mask;
+    Aes128Gcm.block_args.in = pkt + pn_offset + 4;
+    Aes128Gcm.block_args.out = mask;
     Aes128Gcm.block_encrypt(keys->gcm);
 
     pkt[0] ^= mask[0] & (is_long ? 0x0f : 0x1f);
@@ -179,34 +179,34 @@ void protocore_quic_crypto_packet_protect(uint8_t *restrict work)
         pkt[pn_offset + i] ^= mask[1 + i];
     }
 
-    QuicCryptoV.n = total;
+    QuicCrypto.n = total;
 }
 
-void protocore_quic_crypto_packet_unprotect(uint8_t *restrict work)
+static void quic_crypto_packet_unprotect(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *pkt = QuicCryptoV.packet_unprotect_args.pkt;
-    size_t pn_offset = QuicCryptoV.packet_unprotect_args.pn_offset;
-    size_t length = QuicCryptoV.packet_unprotect_args.length;
-    uint64_t largest_pn = QuicCryptoV.packet_unprotect_args.largest_pn;
-    QuicPacketKeys *keys = QuicCryptoV.packet_unprotect_args.keys;
-    proto_bool is_long = QuicCryptoV.packet_unprotect_args.is_long;
-    uint8_t *out = QuicCryptoV.packet_unprotect_args.out;
-    uint64_t *out_pn = QuicCryptoV.packet_unprotect_args.out_pn;
+    uint8_t *pkt = QuicCrypto.packet_unprotect_args.pkt;
+    size_t pn_offset = QuicCrypto.packet_unprotect_args.pn_offset;
+    size_t length = QuicCrypto.packet_unprotect_args.length;
+    uint64_t largest_pn = QuicCrypto.packet_unprotect_args.largest_pn;
+    QuicPacketKeys *keys = QuicCrypto.packet_unprotect_args.keys;
+    proto_bool is_long = QuicCrypto.packet_unprotect_args.is_long;
+    uint8_t *out = QuicCrypto.packet_unprotect_args.out;
+    uint64_t *out_pn = QuicCrypto.packet_unprotect_args.out_pn;
 
     // Header protection needs a full 16-byte sample starting at pn_offset + 4, and the AEAD region
     // must carry at least the 16-byte tag once the (<=4-byte) packet number is removed.
     if (length < 4 + PROTOCORE_AES128GCM_TAG_LEN)
     {
-        QuicCryptoV.n = (size_t)-1;
+        QuicCrypto.n = (size_t)-1;
         return;
     }
 
     // The header-protection context is already keyed and lives in the key material; building one here
     // would cost ~8,400 cycles to encrypt sixteen bytes.
     uint8_t mask[16];
-    Aes128GcmV.block_args.in = pkt + pn_offset + 4;
-    Aes128GcmV.block_args.out = mask;
+    Aes128Gcm.block_args.in = pkt + pn_offset + 4;
+    Aes128Gcm.block_args.out = mask;
     Aes128Gcm.block_encrypt(keys->gcm);
 
     pkt[0] ^= mask[0] & (is_long ? 0x0f : 0x1f);
@@ -218,11 +218,11 @@ void protocore_quic_crypto_packet_unprotect(uint8_t *restrict work)
         pkt[pn_offset + i] ^= mask[1 + i];
         truncated_pn = (truncated_pn << 8) | pkt[pn_offset + i];
     }
-    QuicPacketV.pn_decode_args.largest_pn = largest_pn;
-    QuicPacketV.pn_decode_args.truncated_pn = truncated_pn;
-    QuicPacketV.pn_decode_args.pn_nbits = (uint8_t)(pn_len * 8);
+    QuicPacket.pn_decode_args.largest_pn = largest_pn;
+    QuicPacket.pn_decode_args.truncated_pn = truncated_pn;
+    QuicPacket.pn_decode_args.pn_nbits = (uint8_t)(pn_len * 8);
     QuicPacket.pn_decode(quic_packet_work);
-    uint64_t full_pn = QuicPacketV.u64;
+    uint64_t full_pn = QuicPacket.u64;
     if (out_pn)
     {
         *out_pn = full_pn;
@@ -236,40 +236,40 @@ void protocore_quic_crypto_packet_unprotect(uint8_t *restrict work)
     // huge size_t rather than fail. This guard used to live inside the AEAD open itself.
     if (ct_len < PROTOCORE_AES128GCM_TAG_LEN)
     {
-        QuicCryptoV.n = (size_t)-1;
+        QuicCrypto.n = (size_t)-1;
         return;
     }
     uint8_t nonce[12];
     build_nonce(keys->iv, full_pn, nonce);
     const size_t pt_len = ct_len - PROTOCORE_AES128GCM_TAG_LEN;
-    Aes128GcmV.open_args.nonce = nonce;
-    Aes128GcmV.open_args.aad = pkt;
-    Aes128GcmV.open_args.aad_len = hdr_len;
-    Aes128GcmV.open_args.ct = pkt + hdr_len;
-    Aes128GcmV.open_args.ct_len = pt_len;
-    Aes128GcmV.open_args.tag = pkt + hdr_len + pt_len;
-    Aes128GcmV.open_args.out = out;
+    Aes128Gcm.open_args.nonce = nonce;
+    Aes128Gcm.open_args.aad = pkt;
+    Aes128Gcm.open_args.aad_len = hdr_len;
+    Aes128Gcm.open_args.ct = pkt + hdr_len;
+    Aes128Gcm.open_args.ct_len = pt_len;
+    Aes128Gcm.open_args.tag = pkt + hdr_len + pt_len;
+    Aes128Gcm.open_args.out = out;
     Aes128Gcm.open(keys->gcm);
-    if (!Aes128GcmV.ok)
+    if (!Aes128Gcm.ok)
     {
-        QuicCryptoV.n = (size_t)-1;
+        QuicCrypto.n = (size_t)-1;
         return;
     }
 
     // On success pkt[0] holds the unprotected first byte, which is where the caller reads the
     // RFC 9000 sec 17.2 / 17.3.1 Reserved Bits: this is the only point at which both protections
     // are off, and only the connection can answer a violation with a CONNECTION_CLOSE.
-    QuicCryptoV.n = ct_len - PROTOCORE_AES128GCM_TAG_LEN;
+    QuicCrypto.n = ct_len - PROTOCORE_AES128GCM_TAG_LEN;
 }
 
-void protocore_quic_crypto_retry_integrity_tag(uint8_t *restrict work)
+static void quic_crypto_retry_integrity_tag(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *odcid = QuicCryptoV.retry_integrity_tag_args.odcid;
-    size_t odcid_len = QuicCryptoV.retry_integrity_tag_args.odcid_len;
-    const uint8_t *retry = QuicCryptoV.retry_integrity_tag_args.retry;
-    size_t retry_len = QuicCryptoV.retry_integrity_tag_args.retry_len;
-    uint8_t *tag = QuicCryptoV.retry_integrity_tag_args.tag;
+    const uint8_t *odcid = QuicCrypto.retry_integrity_tag_args.odcid;
+    size_t odcid_len = QuicCrypto.retry_integrity_tag_args.odcid_len;
+    const uint8_t *retry = QuicCrypto.retry_integrity_tag_args.retry;
+    size_t retry_len = QuicCrypto.retry_integrity_tag_args.retry_len;
+    uint8_t *tag = QuicCrypto.retry_integrity_tag_args.tag;
 
     // AAD = Retry Pseudo-Packet: ODCID Length (1 byte) || ODCID || Retry packet (sans tag).
     // Assemble it into a scratch buffer; a Retry is small (short token), so a fixed cap suffices.
@@ -290,23 +290,28 @@ void protocore_quic_crypto_retry_integrity_tag(uint8_t *restrict work)
     { // fixed RFC 9001 key, once per Retry packet - not worth a resident context
         size_t mark = protocore_secure_mark();
         uint8_t *rk = protocore_secure_alloc(PROTOCORE_AES128GCM_BORROW, 8);
-        Aes128GcmV.key_args.key = RETRY_KEY;
+        Aes128Gcm.key_args.key = RETRY_KEY;
         Aes128Gcm.key_init(rk);
-        Aes128GcmV.seal_args.nonce = RETRY_NONCE;
-        Aes128GcmV.seal_args.aad = aad;
-        Aes128GcmV.seal_args.aad_len = p;
-        Aes128GcmV.seal_args.pt = NULL;
-        Aes128GcmV.seal_args.pt_len = 0;
-        Aes128GcmV.seal_args.ct_out = tag;
-        Aes128GcmV.seal_args.tag_out = tag;
+        Aes128Gcm.seal_args.nonce = RETRY_NONCE;
+        Aes128Gcm.seal_args.aad = aad;
+        Aes128Gcm.seal_args.aad_len = p;
+        Aes128Gcm.seal_args.pt = NULL;
+        Aes128Gcm.seal_args.pt_len = 0;
+        Aes128Gcm.seal_args.ct_out = tag;
+        Aes128Gcm.seal_args.tag_out = tag;
         Aes128Gcm.seal(rk);
         Aes128Gcm.key_wipe(rk);
         protocore_secure_release(mark);
     }
 }
 
-/** @brief The operands and the outcome. */
-QuicCryptoVars QuicCryptoV;
+QuicCryptoNs QuicCrypto = {
+    .derive_initial_secrets = quic_crypto_derive_initial_secrets,
+    .keys_from_secret = quic_crypto_keys_from_secret,
+    .packet_protect = quic_crypto_packet_protect,
+    .packet_unprotect = quic_crypto_packet_unprotect,
+    .retry_integrity_tag = quic_crypto_retry_integrity_tag,
+};
 
 PROTOCORE_END_DECLS
 

@@ -80,6 +80,7 @@ typedef struct
     uint8_t present;       ///< presence output (0/1) - @ref stable, extended by @ref hold_ms.
     uint8_t changed;       ///< set when @ref present flipped; cleared by @ref protocore_presence_take_event.
 } PresenceCore;
+
 /** @brief What presence_init takes: c, debounce_ms, hold_ms, now. */
 typedef struct
 {
@@ -88,6 +89,7 @@ typedef struct
     uint32_t hold_ms;     ///< 0 disables the hold (presence follows the debounced level exactly)
     uint32_t now;
 } Rcwl0516PresenceInitArgs;
+
 /** @brief What presence_update takes: c, pin_high, now. */
 typedef struct
 {
@@ -95,27 +97,32 @@ typedef struct
     proto_bool pin_high;
     uint32_t now;
 } Rcwl0516PresenceUpdateArgs;
+
 /** @brief What presence_get takes: c. */
 typedef struct
 {
     const PresenceCore *c;
 } Rcwl0516PresenceGetArgs;
+
 /** @brief What presence_take_event takes: c. */
 typedef struct
 {
     PresenceCore *c;
 } Rcwl0516PresenceTakeEventArgs;
+
 /** @brief What core_init takes: c, now. */
 typedef struct
 {
     PresenceCore *c;
     uint32_t now;
 } Rcwl0516CoreInitArgs;
+
 /** @brief What begin takes: out_pin. */
 typedef struct
 {
     int out_pin;
 } Rcwl0516BeginArgs;
+
 /**
  * @brief RCWL-0516 microwave Doppler presence sensor, and the shared one-GPIO presence facade
  * (PROTOCORE_ENABLE_RCWL0516).
@@ -157,15 +164,9 @@ typedef struct
     Rcwl0516PresenceTakeEventArgs presence_take_event_args;
     Rcwl0516CoreInitArgs core_init_args;
     Rcwl0516BeginArgs begin_args;
+
     proto_bool ok;
-} Rcwl0516Vars;
 
-/** @brief The operands and the outcome. */
-extern Rcwl0516Vars Rcwl0516V;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const presence_init)(uint8_t *restrict work);
     void (*const presence_update)(uint8_t *restrict work);
     void (*const presence_get)(uint8_t *restrict work);
@@ -176,31 +177,8 @@ typedef struct
     void (*const present)(uint8_t *restrict work);
 } Rcwl0516Ns;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in Rcwl0516V or a region of the borrow at a fixed offset.
-void protocore_rcwl0516_presence_init(uint8_t *restrict work);
-void protocore_rcwl0516_presence_update(uint8_t *restrict work);
-void protocore_rcwl0516_presence_get(uint8_t *restrict work);
-void protocore_rcwl0516_presence_take_event(uint8_t *restrict work);
-void protocore_rcwl0516_core_init(uint8_t *restrict work);
-void protocore_rcwl0516_begin(uint8_t *restrict work);
-void protocore_rcwl0516_poll(uint8_t *restrict work);
-void protocore_rcwl0516_present(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Rcwl0516.presence_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const Rcwl0516Ns Rcwl0516 __attribute__((unused)) = {
-    .presence_init = protocore_rcwl0516_presence_init,
-    .presence_update = protocore_rcwl0516_presence_update,
-    .presence_get = protocore_rcwl0516_presence_get,
-    .presence_take_event = protocore_rcwl0516_presence_take_event,
-    .core_init = protocore_rcwl0516_core_init,
-    .begin = protocore_rcwl0516_begin,
-    .poll = protocore_rcwl0516_poll,
-    .present = protocore_rcwl0516_present,
-};
+/** @brief The one symbol this module exports. */
+extern Rcwl0516Ns Rcwl0516;
 
 /**
  * @brief The PROTOCORE_RCWL0516_BORROW bytes this module's state lives in.

@@ -52,29 +52,34 @@ typedef struct
 {
     uint16_t raw;
 } Ina219BusMvArgs;
+
 /** @brief What shunt_uv takes: raw. */
 typedef struct
 {
     int16_t raw;
 } Ina219ShuntUvArgs;
+
 /** @brief What calibration takes: current_lsb_ua, shunt_mohm. */
 typedef struct
 {
     uint32_t current_lsb_ua;
     uint32_t shunt_mohm;
 } Ina219CalibrationArgs;
+
 /** @brief What current_ua takes: raw, current_lsb_ua. */
 typedef struct
 {
     int16_t raw;
     uint32_t current_lsb_ua;
 } Ina219CurrentUaArgs;
+
 /** @brief What power_uw takes: raw, current_lsb_ua. */
 typedef struct
 {
     int16_t raw;
     uint32_t current_lsb_ua;
 } Ina219PowerUwArgs;
+
 /** @brief What begin takes: addr, current_lsb_ua, shunt_mohm. */
 typedef struct
 {
@@ -82,26 +87,31 @@ typedef struct
     uint32_t current_lsb_ua;
     uint32_t shunt_mohm;
 } Ina219BeginArgs;
+
 /** @brief What read_bus_mv takes: millivolts. */
 typedef struct
 {
     int32_t *millivolts;
 } Ina219ReadBusMvArgs;
+
 /** @brief What read_shunt_uv takes: microvolts. */
 typedef struct
 {
     int32_t *microvolts;
 } Ina219ReadShuntUvArgs;
+
 /** @brief What read_current_ua takes: microamps. */
 typedef struct
 {
     int32_t *microamps;
 } Ina219ReadCurrentUaArgs;
+
 /** @brief What read_power_uw takes: microwatts. */
 typedef struct
 {
     int32_t *microwatts;
 } Ina219ReadPowerUwArgs;
+
 /**
  * @brief TI INA219 high-side current / power monitor codec (PROTOCORE_ENABLE_INA219).
  *
@@ -152,17 +162,11 @@ typedef struct
     Ina219ReadShuntUvArgs read_shunt_uv_args;
     Ina219ReadCurrentUaArgs read_current_ua_args;
     Ina219ReadPowerUwArgs read_power_uw_args;
+
     proto_bool ok;
     int32_t value;
     uint16_t cal;
-} Ina219Vars;
 
-/** @brief The operands and the outcome. */
-extern Ina219Vars Ina219V;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const bus_mv)(uint8_t *restrict work);
     void (*const shunt_uv)(uint8_t *restrict work);
     void (*const calibration)(uint8_t *restrict work);
@@ -175,35 +179,8 @@ typedef struct
     void (*const read_power_uw)(uint8_t *restrict work);
 } Ina219Ns;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in Ina219V or a region of the borrow at a fixed offset.
-void protocore_ina219_bus_mv(uint8_t *restrict work);
-void protocore_ina219_shunt_uv(uint8_t *restrict work);
-void protocore_ina219_calibration(uint8_t *restrict work);
-void protocore_ina219_current_ua(uint8_t *restrict work);
-void protocore_ina219_power_uw(uint8_t *restrict work);
-void protocore_ina219_begin(uint8_t *restrict work);
-void protocore_ina219_read_bus_mv(uint8_t *restrict work);
-void protocore_ina219_read_shunt_uv(uint8_t *restrict work);
-void protocore_ina219_read_current_ua(uint8_t *restrict work);
-void protocore_ina219_read_power_uw(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Ina219.bus_mv(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const Ina219Ns Ina219 __attribute__((unused)) = {
-    .bus_mv = protocore_ina219_bus_mv,
-    .shunt_uv = protocore_ina219_shunt_uv,
-    .calibration = protocore_ina219_calibration,
-    .current_ua = protocore_ina219_current_ua,
-    .power_uw = protocore_ina219_power_uw,
-    .begin = protocore_ina219_begin,
-    .read_bus_mv = protocore_ina219_read_bus_mv,
-    .read_shunt_uv = protocore_ina219_read_shunt_uv,
-    .read_current_ua = protocore_ina219_read_current_ua,
-    .read_power_uw = protocore_ina219_read_power_uw,
-};
+/** @brief The one symbol this module exports. */
+extern Ina219Ns Ina219;
 
 /**
  * @brief The PROTOCORE_I2C_DEVICE_BORROW bytes this module's state lives in.

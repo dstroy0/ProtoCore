@@ -39,17 +39,20 @@ typedef struct
     const uint8_t *regs; ///< the 7 register bytes as read from register 0 RTC_REG_COUNT bytes.
     uint32_t *epoch;     ///< out: seconds since 1970-01-01 UTC
 } RtcRegsToEpochArgs;
+
 /** @brief What epoch_to_regs takes: epoch, regs. */
 typedef struct
 {
     uint32_t epoch;
     uint8_t *regs; ///< RTC_REG_COUNT bytes.
 } RtcEpochToRegsArgs;
+
 /** @brief What set_epoch takes: epoch. */
 typedef struct
 {
     uint32_t epoch;
 } RtcSetEpochArgs;
+
 /**
  * @brief I2C real-time-clock driver (DS1307 / DS3231) - a battery-backed time source. A DS1307 or DS3231 keeps the ...
  *
@@ -82,16 +85,10 @@ typedef struct
     RtcRegsToEpochArgs regs_to_epoch_args;
     RtcEpochToRegsArgs epoch_to_regs_args;
     RtcSetEpochArgs set_epoch_args;
+
     proto_bool ok;
     uint32_t epoch;
-} RtcVars;
 
-/** @brief The operands and the outcome. */
-extern RtcVars RtcV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const regs_to_epoch)(uint8_t *restrict work);
     void (*const epoch_to_regs)(uint8_t *restrict work);
     void (*const begin)(uint8_t *restrict work);
@@ -100,27 +97,8 @@ typedef struct
     void (*const time_source)(uint8_t *restrict work);
 } RtcNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in RtcV or a region of the borrow at a fixed offset.
-void protocore_rtc_regs_to_epoch(uint8_t *restrict work);
-void protocore_rtc_epoch_to_regs(uint8_t *restrict work);
-void protocore_rtc_begin(uint8_t *restrict work);
-void protocore_rtc_read_epoch(uint8_t *restrict work);
-void protocore_rtc_set_epoch(uint8_t *restrict work);
-void protocore_rtc_time_source(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Rtc.regs_to_epoch(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const RtcNs Rtc __attribute__((unused)) = {
-    .regs_to_epoch = protocore_rtc_regs_to_epoch,
-    .epoch_to_regs = protocore_rtc_epoch_to_regs,
-    .begin = protocore_rtc_begin,
-    .read_epoch = protocore_rtc_read_epoch,
-    .set_epoch = protocore_rtc_set_epoch,
-    .time_source = protocore_rtc_time_source,
-};
+/** @brief The one symbol this module exports. */
+extern RtcNs Rtc;
 
 /**
  * @brief The PROTOCORE_I2C_DEVICE_BORROW bytes this module's state lives in.

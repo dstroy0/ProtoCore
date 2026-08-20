@@ -31,24 +31,24 @@ static const uint8_t RFC_SECRET[20] = {0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
 
 static uint32_t hotp_of(uint64_t counter, uint8_t digit)
 {
-    TotpV.k = RFC_SECRET;
-    TotpV.keylen = sizeof(RFC_SECRET);
-    TotpV.digit = digit;
-    TotpV.step.counter = counter;
+    Totp.k = RFC_SECRET;
+    Totp.keylen = sizeof(RFC_SECRET);
+    Totp.digit = digit;
+    Totp.step.counter = counter;
     Totp.hotp(totp_work);
-    return TotpV.u32;
+    return Totp.u32;
 }
 
 static uint32_t totp_of(uint64_t unix_time, uint64_t t0, uint32_t x, uint8_t digit)
 {
-    TotpV.k = RFC_SECRET;
-    TotpV.keylen = sizeof(RFC_SECRET);
-    TotpV.digit = digit;
-    TotpV.step.unix_time = unix_time;
-    TotpV.step.t0 = t0;
-    TotpV.step.x = x;
+    Totp.k = RFC_SECRET;
+    Totp.keylen = sizeof(RFC_SECRET);
+    Totp.digit = digit;
+    Totp.step.unix_time = unix_time;
+    Totp.step.t0 = t0;
+    Totp.step.x = x;
     Totp.totp(totp_work);
-    return TotpV.u32;
+    return Totp.u32;
 }
 
 // The load-bearing case: RFC 4226 Appendix D Table 2, the HOTP column for counts 0 through 9.
@@ -170,16 +170,16 @@ void test_time_step_honors_x(void)
 
 static proto_bool verify_at(uint64_t unix_time, uint32_t otp, int32_t drift)
 {
-    TotpV.k = RFC_SECRET;
-    TotpV.keylen = sizeof(RFC_SECRET);
-    TotpV.digit = 8;
-    TotpV.step.unix_time = unix_time;
-    TotpV.step.t0 = 0;
-    TotpV.step.x = 30;
-    TotpV.check.otp = otp;
-    TotpV.check.drift = drift;
+    Totp.k = RFC_SECRET;
+    Totp.keylen = sizeof(RFC_SECRET);
+    Totp.digit = 8;
+    Totp.step.unix_time = unix_time;
+    Totp.step.t0 = 0;
+    Totp.step.x = 30;
+    Totp.check.otp = otp;
+    Totp.check.drift = drift;
     Totp.verify(totp_work);
-    return TotpV.ok;
+    return Totp.ok;
 }
 
 // RFC 6238 sec 6: a validator accepts an OTP generated within the drift window it allows, and only
@@ -216,11 +216,11 @@ void test_verify_window_clamps_at_the_epoch(void)
 
 static int32_t b32(const char *text, uint8_t *out, size_t cap)
 {
-    TotpV.secret.b32 = text;
-    TotpV.secret.out = out;
-    TotpV.secret.cap = cap;
+    Totp.secret.b32 = text;
+    Totp.secret.out = out;
+    Totp.secret.cap = cap;
     Totp.base32_decode(totp_work);
-    return TotpV.i32;
+    return Totp.i32;
 }
 
 // RFC 4648 sec 10 prints the base32 encoding of every prefix of "foobar"; decoding each must give
@@ -288,31 +288,31 @@ void test_long_key_is_hashed_to_the_block(void)
     {
         longk[i] = (uint8_t)i;
     }
-    TotpV.k = longk;
-    TotpV.keylen = sizeof(longk);
-    TotpV.digit = 6;
-    TotpV.step.counter = 1;
+    Totp.k = longk;
+    Totp.keylen = sizeof(longk);
+    Totp.digit = 6;
+    Totp.step.counter = 1;
     Totp.hotp(totp_work);
-    uint32_t from_long = TotpV.u32;
+    uint32_t from_long = Totp.u32;
 
     uint8_t exact[64];
     for (unsigned i = 0; i < sizeof(exact); i++)
     {
         exact[i] = (uint8_t)i;
     }
-    TotpV.k = exact;
-    TotpV.keylen = sizeof(exact);
-    TotpV.step.counter = 1;
+    Totp.k = exact;
+    Totp.keylen = sizeof(exact);
+    Totp.step.counter = 1;
     Totp.hotp(totp_work);
     // 65 bytes takes the hashed path, 64 the padded one, so the two OTPs must differ.
-    TEST_ASSERT_NOT_EQUAL_UINT32(from_long, TotpV.u32);
+    TEST_ASSERT_NOT_EQUAL_UINT32(from_long, Totp.u32);
 
     // The same 65-byte key always produces the same OTP: the call holds no state between uses.
-    TotpV.k = longk;
-    TotpV.keylen = sizeof(longk);
-    TotpV.step.counter = 1;
+    Totp.k = longk;
+    Totp.keylen = sizeof(longk);
+    Totp.step.counter = 1;
     Totp.hotp(totp_work);
-    TEST_ASSERT_EQUAL_UINT32(from_long, TotpV.u32);
+    TEST_ASSERT_EQUAL_UINT32(from_long, Totp.u32);
 }
 
 // A counter is 8 octets high-order byte first (RFC 4226 sec 5.2), so counters that differ only

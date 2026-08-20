@@ -34,14 +34,14 @@ void tearDown(void)
 
 static proto_bool load(X509Cert *out, const uint8_t *der, size_t len)
 {
-    X509V.parse_args.der = der;
-    X509V.parse_args.len = len;
+    X509.parse_args.der = der;
+    X509.parse_args.len = len;
     X509.parse(NULL);
-    if (X509V.ok)
+    if (X509.ok)
     {
-        *out = X509V.cert;
+        *out = X509.cert;
     }
-    return X509V.ok;
+    return X509.ok;
 }
 
 // A time inside every fixture certificate's validity: the leaves are issued now and last a year.
@@ -52,14 +52,14 @@ static uint64_t inside(void)
 
 static protocore_x509_status link_of(const X509Cert *cert, const X509Cert *issuer, uint64_t now)
 {
-    X509VerifyV.link_args.cert = cert;
-    X509VerifyV.link_args.issuer = issuer;
-    X509VerifyV.time_args.cert = cert;
-    X509VerifyV.time_args.now = now;
-    X509VerifyV.issuer_args.issuer = issuer;
-    X509VerifyV.issuer_args.depth = 0;
-    X509VerifyV.link(protocore_x509_verify_span());
-    return X509VerifyV.status;
+    X509Verify.link_args.cert = cert;
+    X509Verify.link_args.issuer = issuer;
+    X509Verify.time_args.cert = cert;
+    X509Verify.time_args.now = now;
+    X509Verify.issuer_args.issuer = issuer;
+    X509Verify.issuer_args.depth = 0;
+    X509Verify.link(protocore_x509_verify_span());
+    return X509Verify.status;
 }
 
 // ---------------------------------------------------------------------------
@@ -141,10 +141,10 @@ void test_a_flipped_body_bit_fails(void)
         // The signature alone, not the whole link: these offsets fall inside the issuer Name, so a
         // link would refuse on the name match (sec 6.1.3 (a)(4)) before reaching the signature, and
         // the half this case is for is the one that hashes the TBSCertificate's own octets.
-        X509VerifyV.link_args.cert = &g_leaf;
-        X509VerifyV.link_args.issuer = &g_ca;
+        X509Verify.link_args.cert = &g_leaf;
+        X509Verify.link_args.issuer = &g_ca;
         X509Verify.signature(protocore_x509_verify_span());
-        TEST_ASSERT_EQUAL_MESSAGE(PROTOCORE_X509_ERR_BAD_SIGNATURE, X509VerifyV.status,
+        TEST_ASSERT_EQUAL_MESSAGE(PROTOCORE_X509_ERR_BAD_SIGNATURE, X509Verify.status,
                                   "a modified certificate body verified");
     }
 }
@@ -160,11 +160,11 @@ void test_another_cas_key_does_not_verify_the_leaf(void)
     // A different Ed25519 CA: the p256 and rsa CAs are different keys, but of other algorithms, so
     // the one that isolates "wrong key, right algorithm" is the leaf's own key.
     X509Cert leaf_as_issuer = g_leaf;
-    X509VerifyV.link_args.cert = &g_leaf;
-    X509VerifyV.link_args.issuer = &leaf_as_issuer;
+    X509Verify.link_args.cert = &g_leaf;
+    X509Verify.link_args.issuer = &leaf_as_issuer;
     X509Verify.signature(protocore_x509_verify_span());
-    TEST_ASSERT_FALSE(X509VerifyV.ok);
-    TEST_ASSERT_EQUAL(PROTOCORE_X509_ERR_BAD_SIGNATURE, X509VerifyV.status);
+    TEST_ASSERT_FALSE(X509Verify.ok);
+    TEST_ASSERT_EQUAL(PROTOCORE_X509_ERR_BAD_SIGNATURE, X509Verify.status);
 }
 
 // A key of the wrong algorithm entirely is refused before any verification is attempted.
@@ -173,11 +173,11 @@ void test_an_issuer_key_of_the_wrong_algorithm_is_refused(void)
     TEST_ASSERT_TRUE(load(&g_leaf, X509_ED25519_DER, sizeof(X509_ED25519_DER)));
     TEST_ASSERT_TRUE(load(&g_ca, X509_CA_RSA_DER, sizeof(X509_CA_RSA_DER))); // RSA key, Ed25519 signature
 
-    X509VerifyV.link_args.cert = &g_leaf;
-    X509VerifyV.link_args.issuer = &g_ca;
+    X509Verify.link_args.cert = &g_leaf;
+    X509Verify.link_args.issuer = &g_ca;
     X509Verify.signature(protocore_x509_verify_span());
-    TEST_ASSERT_FALSE(X509VerifyV.ok);
-    TEST_ASSERT_EQUAL(PROTOCORE_X509_ERR_KEY_MALFORMED, X509VerifyV.status);
+    TEST_ASSERT_FALSE(X509Verify.ok);
+    TEST_ASSERT_EQUAL(PROTOCORE_X509_ERR_KEY_MALFORMED, X509Verify.status);
 }
 
 // ---------------------------------------------------------------------------
@@ -187,33 +187,33 @@ void test_an_issuer_key_of_the_wrong_algorithm_is_refused(void)
 void test_a_certificate_is_valid_inside_its_window_and_at_both_ends(void)
 {
     TEST_ASSERT_TRUE(load(&g_leaf, X509_ED25519_DER, sizeof(X509_ED25519_DER)));
-    X509VerifyV.time_args.cert = &g_leaf;
+    X509Verify.time_args.cert = &g_leaf;
 
     // sec 4.1.2.5 makes notBefore and notAfter the first and last instant it is valid, so both ends
     // are inside the window rather than outside it.
-    X509VerifyV.time_args.now = g_leaf.not_before;
+    X509Verify.time_args.now = g_leaf.not_before;
     X509Verify.validity(NULL);
-    TEST_ASSERT_TRUE(X509VerifyV.ok);
+    TEST_ASSERT_TRUE(X509Verify.ok);
 
-    X509VerifyV.time_args.now = g_leaf.not_after;
+    X509Verify.time_args.now = g_leaf.not_after;
     X509Verify.validity(NULL);
-    TEST_ASSERT_TRUE(X509VerifyV.ok);
+    TEST_ASSERT_TRUE(X509Verify.ok);
 }
 
 void test_a_certificate_before_its_window_and_after_it_are_told_apart(void)
 {
     TEST_ASSERT_TRUE(load(&g_leaf, X509_ED25519_DER, sizeof(X509_ED25519_DER)));
-    X509VerifyV.time_args.cert = &g_leaf;
+    X509Verify.time_args.cert = &g_leaf;
 
-    X509VerifyV.time_args.now = g_leaf.not_before - 1u;
+    X509Verify.time_args.now = g_leaf.not_before - 1u;
     X509Verify.validity(NULL);
-    TEST_ASSERT_FALSE(X509VerifyV.ok);
-    TEST_ASSERT_EQUAL(PROTOCORE_X509_ERR_NOT_YET_VALID, X509VerifyV.status);
+    TEST_ASSERT_FALSE(X509Verify.ok);
+    TEST_ASSERT_EQUAL(PROTOCORE_X509_ERR_NOT_YET_VALID, X509Verify.status);
 
-    X509VerifyV.time_args.now = g_leaf.not_after + 1u;
+    X509Verify.time_args.now = g_leaf.not_after + 1u;
     X509Verify.validity(NULL);
-    TEST_ASSERT_FALSE(X509VerifyV.ok);
-    TEST_ASSERT_EQUAL(PROTOCORE_X509_ERR_EXPIRED, X509VerifyV.status);
+    TEST_ASSERT_FALSE(X509Verify.ok);
+    TEST_ASSERT_EQUAL(PROTOCORE_X509_ERR_EXPIRED, X509Verify.status);
 }
 
 // An expired certificate is refused by the whole link, not only by the time check on its own - the
@@ -244,20 +244,20 @@ void test_an_issuer_that_did_not_issue_it_is_refused(void)
 void test_a_leaf_may_not_sign(void)
 {
     TEST_ASSERT_TRUE(load(&g_leaf, X509_ED25519_DER, sizeof(X509_ED25519_DER)));
-    X509VerifyV.issuer_args.issuer = &g_leaf;
-    X509VerifyV.issuer_args.depth = 0;
+    X509Verify.issuer_args.issuer = &g_leaf;
+    X509Verify.issuer_args.depth = 0;
     X509Verify.may_sign(NULL);
-    TEST_ASSERT_FALSE(X509VerifyV.ok);
-    TEST_ASSERT_EQUAL(PROTOCORE_X509_ERR_NOT_A_CA, X509VerifyV.status);
+    TEST_ASSERT_FALSE(X509Verify.ok);
+    TEST_ASSERT_EQUAL(PROTOCORE_X509_ERR_NOT_A_CA, X509Verify.status);
 }
 
 void test_a_ca_may_sign(void)
 {
     TEST_ASSERT_TRUE(load(&g_ca, X509_CA_ED25519_DER, sizeof(X509_CA_ED25519_DER)));
-    X509VerifyV.issuer_args.issuer = &g_ca;
-    X509VerifyV.issuer_args.depth = 0;
+    X509Verify.issuer_args.issuer = &g_ca;
+    X509Verify.issuer_args.depth = 0;
     X509Verify.may_sign(NULL);
-    TEST_ASSERT_TRUE(X509VerifyV.ok);
+    TEST_ASSERT_TRUE(X509Verify.ok);
 }
 
 // sec 6.1.4 (m): pathLenConstraint is how many certificates may follow in the path. The fixture CA
@@ -268,15 +268,15 @@ void test_the_path_length_constraint_bounds_the_depth(void)
     TEST_ASSERT_TRUE(g_ca.has_path_len);
     TEST_ASSERT_EQUAL_UINT32(1, g_ca.path_len);
 
-    X509VerifyV.issuer_args.issuer = &g_ca;
-    X509VerifyV.issuer_args.depth = 1;
+    X509Verify.issuer_args.issuer = &g_ca;
+    X509Verify.issuer_args.depth = 1;
     X509Verify.may_sign(NULL);
-    TEST_ASSERT_TRUE(X509VerifyV.ok);
+    TEST_ASSERT_TRUE(X509Verify.ok);
 
-    X509VerifyV.issuer_args.depth = 2;
+    X509Verify.issuer_args.depth = 2;
     X509Verify.may_sign(NULL);
-    TEST_ASSERT_FALSE(X509VerifyV.ok);
-    TEST_ASSERT_EQUAL(PROTOCORE_X509_ERR_PATH_LEN, X509VerifyV.status);
+    TEST_ASSERT_FALSE(X509Verify.ok);
+    TEST_ASSERT_EQUAL(PROTOCORE_X509_ERR_PATH_LEN, X509Verify.status);
 }
 
 // ---------------------------------------------------------------------------
@@ -289,3 +289,4 @@ void test_a_link_needs_both_certificates(void)
     TEST_ASSERT_EQUAL(PROTOCORE_X509_ERR_ARGS, link_of(&g_leaf, NULL, inside()));
     TEST_ASSERT_EQUAL(PROTOCORE_X509_ERR_ARGS, link_of(NULL, &g_leaf, inside()));
 }
+

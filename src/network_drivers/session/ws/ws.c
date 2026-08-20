@@ -22,16 +22,16 @@ static void session_ws_open(uint8_t *restrict work)
 {
     (void)work;
     Ws.alloc(protocore_ws_span());
-    SessionWsV.ok = WsV.found != NULL;
-    if (!SessionWsV.ok)
+    SessionWs.ok = Ws.found != NULL;
+    if (!SessionWs.ok)
     {
         return;
     }
 
     Ws.route_connect(protocore_ws_span());
-    if (WsV.connect_handler != NULL)
+    if (Ws.connect_handler != NULL)
     {
-        WsV.connect_handler(WsV.found->ws_id);
+        Ws.connect_handler(Ws.found->ws_id);
     }
 }
 
@@ -43,25 +43,24 @@ static void session_ws_close(uint8_t *restrict work)
 {
     (void)work;
     Ws.find(protocore_ws_span());
-    SessionWsV.ok = WsV.found != NULL;
-    if (!SessionWsV.ok)
+    SessionWs.ok = Ws.found != NULL;
+    if (!SessionWs.ok)
     {
         return; // no channel on this connection: nothing to inform and nothing to release
     }
 
-    const uint8_t ws_id = WsV.found->ws_id;
-    WsV.id = WsV.found->route_id;
+    const uint8_t ws_id = Ws.found->ws_id;
+    Ws.id = Ws.found->route_id;
     Ws.route_close(protocore_ws_span());
-    if (WsV.close_handler != NULL)
+    if (Ws.close_handler != NULL)
     {
-        WsV.close_handler(ws_id);
+        Ws.close_handler(ws_id);
     }
     Ws.free(protocore_ws_span());
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-SessionWsVars SessionWsV;
+SessionWsNs SessionWs = {.open = session_ws_open, .close = session_ws_close};
 
 PROTOCORE_END_DECLS
 

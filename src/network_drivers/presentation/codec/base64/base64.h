@@ -38,6 +38,7 @@ typedef struct
     size_t src_len;
     char *dst;
 } Base64EncodeArgs;
+
 /** @brief What decode takes: src, dst, dst_cap. */
 typedef struct
 {
@@ -45,6 +46,7 @@ typedef struct
     uint8_t *dst;
     size_t dst_cap;
 } Base64DecodeArgs;
+
 /** @brief What url_encode takes: src, src_len, dst. */
 typedef struct
 {
@@ -52,6 +54,7 @@ typedef struct
     size_t src_len;
     char *dst;
 } Base64UrlEncodeArgs;
+
 /** @brief What url_decode takes: src, src_len, dst, dst_cap. */
 typedef struct
 {
@@ -60,6 +63,7 @@ typedef struct
     uint8_t *dst;
     size_t dst_cap;
 } Base64UrlDecodeArgs;
+
 /**
  * @brief Base64 encoder/decoder.
  *
@@ -92,39 +96,18 @@ typedef struct
     Base64DecodeArgs decode_args;
     Base64UrlEncodeArgs url_encode_args;
     Base64UrlDecodeArgs url_decode_args;
+
     proto_bool ok;
     size_t n;
-} Base64Vars;
 
-/** @brief The operands and the outcome. */
-extern Base64Vars Base64V;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const encode)(uint8_t *restrict work);
     void (*const decode)(uint8_t *restrict work);
     void (*const url_encode)(uint8_t *restrict work);
     void (*const url_decode)(uint8_t *restrict work);
 } Base64Ns;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in Base64V or a region of the borrow at a fixed offset.
-void protocore_base64_encode(uint8_t *restrict work);
-void protocore_base64_decode(uint8_t *restrict work);
-void protocore_base64_url_encode(uint8_t *restrict work);
-void protocore_base64_url_decode(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Base64.encode(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const Base64Ns Base64 __attribute__((unused)) = {
-    .encode = protocore_base64_encode,
-    .decode = protocore_base64_decode,
-    .url_encode = protocore_base64_url_encode,
-    .url_decode = protocore_base64_url_decode,
-};
+/** @brief The one symbol this module exports. */
+extern Base64Ns Base64;
 
 PROTOCORE_END_DECLS
 

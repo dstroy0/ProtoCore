@@ -16,15 +16,15 @@ static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
 
 static uint32_t crc_one(const protocore_crc_params *p, const uint8_t *d, size_t n)
 {
-    CrcV.args.params = p;
-    CrcV.args.data = d;
-    CrcV.args.len = n;
+    Crc.args.params = p;
+    Crc.args.data = d;
+    Crc.args.len = n;
     Crc.begin(crc_work);
-    CrcV.args.crc = CrcV.value;
+    Crc.args.crc = Crc.value;
     Crc.update(crc_work);
-    CrcV.args.crc = CrcV.value;
+    Crc.args.crc = Crc.value;
     Crc.final(crc_work);
-    return CrcV.value;
+    return Crc.value;
 }
 
 void dbench_run(void)

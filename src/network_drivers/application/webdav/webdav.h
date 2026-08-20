@@ -74,22 +74,26 @@ typedef struct
     proto_bool active;         ///< false = free slot
     uint32_t expiry_s;         ///< monotonic second the lock expires (0 = no timeout); swept by _sweep
 } DavLock;
+
 /** @brief The server-global lock table (one instance, not per-connection). */
 typedef struct
 {
     DavLock locks[PROTOCORE_DAV_LOCK_MAX];
 } DavLockTable;
+
 /** @brief What method takes: m. */
 typedef struct
 {
     const char *m;
 } WebdavMethodArgs;
+
 /** @brief What depth takes: depth_hdr, dflt. */
 typedef struct
 {
     const char *depth_hdr;
     int dflt;
 } WebdavDepthArgs;
+
 /** @brief What xml_escape takes: dst, cap, src. */
 typedef struct
 {
@@ -97,6 +101,7 @@ typedef struct
     size_t cap;
     const char *src;
 } WebdavXmlEscapeArgs;
+
 /** @brief What dest_path takes: destination, out, cap. */
 typedef struct
 {
@@ -104,6 +109,7 @@ typedef struct
     char *out;
     size_t cap;
 } WebdavDestPathArgs;
+
 /** @brief What ms_begin takes: buf, cap, len. */
 typedef struct
 {
@@ -111,6 +117,7 @@ typedef struct
     size_t cap;
     size_t len;
 } WebdavMsBeginArgs;
+
 /** @brief What ms_entry takes: buf, cap, len, href, is_collection, ... */
 typedef struct
 {
@@ -123,6 +130,7 @@ typedef struct
     const char *rfc1123_mtime; ///< Last-Modified string, or "" to omit
     const char *content_type;  ///< MIME type (files only), or "" to omit
 } WebdavMsEntryArgs;
+
 /** @brief What ms_end takes: buf, cap, len. */
 typedef struct
 {
@@ -130,6 +138,7 @@ typedef struct
     size_t cap;
     size_t len;
 } WebdavMsEndArgs;
+
 /** @brief What proppatch_ms takes: buf, cap, href, body, body_len. */
 typedef struct
 {
@@ -139,11 +148,13 @@ typedef struct
     const char *body; ///< the PROPPATCH request body (not required to be NUL-terminated)
     size_t body_len;  ///< length of body
 } WebdavProppatchMsArgs;
+
 /** @brief What lock_init takes: t. */
 typedef struct
 {
     DavLockTable *t;
 } WebdavLockInitArgs;
+
 /** @brief What lock_acquire takes: t, path, token, exclusive, ... */
 typedef struct
 {
@@ -154,12 +165,14 @@ typedef struct
     proto_bool depth_infinity;
     uint32_t expiry_s; ///< the monotonic second the lock expires (0 = no timeout); protocore_dav_lock_sweep drops a ...
 } WebdavLockAcquireArgs;
+
 /** @brief What lock_sweep takes: t, now_s. */
 typedef struct
 {
     DavLockTable *t;
     uint32_t now_s; ///< the caller's current monotonic second
 } WebdavLockSweepArgs;
+
 /** @brief What lock_refresh takes: t, token, new_expiry_s. */
 typedef struct
 {
@@ -167,18 +180,21 @@ typedef struct
     const char *token;
     uint32_t new_expiry_s;
 } WebdavLockRefreshArgs;
+
 /** @brief What lock_find takes: t, path. */
 typedef struct
 {
     const DavLockTable *t;
     const char *path;
 } WebdavLockFindArgs;
+
 /** @brief What lock_release takes: t, token. */
 typedef struct
 {
     DavLockTable *t;
     const char *token;
 } WebdavLockReleaseArgs;
+
 /** @brief What lock_can_write takes: t, path, presented_token. */
 typedef struct
 {
@@ -186,6 +202,7 @@ typedef struct
     const char *path;
     const char *presented_token;
 } WebdavLockCanWriteArgs;
+
 /** @brief What if_token takes: if_header, out, cap. */
 typedef struct
 {
@@ -193,6 +210,7 @@ typedef struct
     char *out;
     size_t cap;
 } WebdavIfTokenArgs;
+
 /**
  * @brief WebDAV wire format (RFC 4918): method classification, header parsing, and the 207 Multi-Status XML builder.
  *
@@ -263,19 +281,13 @@ typedef struct
     WebdavLockReleaseArgs lock_release_args;
     WebdavLockCanWriteArgs lock_can_write_args;
     WebdavIfTokenArgs if_token_args;
+
     proto_bool ok;
     WebDavMethod value;
     int i32;
     size_t n;
     const DavLock *ptr;
-} WebdavVars;
 
-/** @brief The operands and the outcome. */
-extern WebdavVars WebdavV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const method)(uint8_t *restrict work);
     void (*const depth)(uint8_t *restrict work);
     void (*const xml_escape)(uint8_t *restrict work);
@@ -294,47 +306,8 @@ typedef struct
     void (*const if_token)(uint8_t *restrict work);
 } WebdavNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in WebdavV or a region of the borrow at a fixed offset.
-void protocore_webdav_method(uint8_t *restrict work);
-void protocore_webdav_depth(uint8_t *restrict work);
-void protocore_webdav_xml_escape(uint8_t *restrict work);
-void protocore_webdav_dest_path(uint8_t *restrict work);
-void protocore_webdav_ms_begin(uint8_t *restrict work);
-void protocore_webdav_ms_entry(uint8_t *restrict work);
-void protocore_webdav_ms_end(uint8_t *restrict work);
-void protocore_webdav_proppatch_ms(uint8_t *restrict work);
-void protocore_webdav_lock_init(uint8_t *restrict work);
-void protocore_webdav_lock_acquire(uint8_t *restrict work);
-void protocore_webdav_lock_sweep(uint8_t *restrict work);
-void protocore_webdav_lock_refresh(uint8_t *restrict work);
-void protocore_webdav_lock_find(uint8_t *restrict work);
-void protocore_webdav_lock_release(uint8_t *restrict work);
-void protocore_webdav_lock_can_write(uint8_t *restrict work);
-void protocore_webdav_if_token(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Webdav.method(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const WebdavNs Webdav __attribute__((unused)) = {
-    .method = protocore_webdav_method,
-    .depth = protocore_webdav_depth,
-    .xml_escape = protocore_webdav_xml_escape,
-    .dest_path = protocore_webdav_dest_path,
-    .ms_begin = protocore_webdav_ms_begin,
-    .ms_entry = protocore_webdav_ms_entry,
-    .ms_end = protocore_webdav_ms_end,
-    .proppatch_ms = protocore_webdav_proppatch_ms,
-    .lock_init = protocore_webdav_lock_init,
-    .lock_acquire = protocore_webdav_lock_acquire,
-    .lock_sweep = protocore_webdav_lock_sweep,
-    .lock_refresh = protocore_webdav_lock_refresh,
-    .lock_find = protocore_webdav_lock_find,
-    .lock_release = protocore_webdav_lock_release,
-    .lock_can_write = protocore_webdav_lock_can_write,
-    .if_token = protocore_webdav_if_token,
-};
+/** @brief The one symbol this module exports. */
+extern WebdavNs Webdav;
 
 PROTOCORE_END_DECLS
 

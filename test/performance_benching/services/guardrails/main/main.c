@@ -38,24 +38,24 @@ void dbench_run(void)
         volatile uint8_t sink8 = 0;
         volatile int sinki = 0;
 
-        GuardrailsV.floors.heap_min = heap_min;
-        GuardrailsV.floors.frag_min_block = frag_min;
-        GuardrailsV.floors.stack_min = stack_min;
+        Guardrails.floors.heap_min = heap_min;
+        Guardrails.floors.frag_min_block = frag_min;
+        Guardrails.floors.stack_min = stack_min;
 
         // Threshold evaluator - a handful of unsigned compares + bit-ORs; cheap, so large N.
-        GuardrailsV.health = &clear;
+        Guardrails.health = &clear;
         DBENCH_OP("Guardrails.eval all-clear", 200000, Guardrails.eval(protocore_guardrails_span());
-                  sink8 += GuardrailsV.breaches);
+                  sink8 += Guardrails.breaches);
 
-        GuardrailsV.health = &breach;
+        Guardrails.health = &breach;
         DBENCH_OP("Guardrails.eval all-breach", 200000, Guardrails.eval(protocore_guardrails_span());
-                  sink8 += GuardrailsV.breaches);
+                  sink8 += Guardrails.breaches);
 
         // JSON serializer - one snprintf of four uint32s; still cheap, moderate N.
-        GuardrailsV.health = &clear;
-        GuardrailsV.out.out = json;
-        GuardrailsV.out.cap = sizeof(json);
-        DBENCH_OP("Guardrails.json", 50000, Guardrails.json(protocore_guardrails_span()); sinki += GuardrailsV.n);
+        Guardrails.health = &clear;
+        Guardrails.out.out = json;
+        Guardrails.out.cap = sizeof(json);
+        DBENCH_OP("Guardrails.json", 50000, Guardrails.json(protocore_guardrails_span()); sinki += Guardrails.n);
 
         (void)sink8;
         (void)sinki;

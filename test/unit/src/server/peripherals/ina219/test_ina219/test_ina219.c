@@ -41,25 +41,25 @@ void tearDown(void)
 // Each expectation is (raw >> 3) * 4 written out from that layout.
 void test_sbos448_bus_voltage_register(void)
 {
-    Ina219V.bus_mv_args.raw = 0x0000u;
+    Ina219.bus_mv_args.raw = 0x0000u;
     Ina219.bus_mv(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(0, Ina219V.value);
+    TEST_ASSERT_EQUAL_INT32(0, Ina219.value);
     // one LSB: bit 3 set -> 4 mV
-    Ina219V.bus_mv_args.raw = 0x0008u;
+    Ina219.bus_mv_args.raw = 0x0008u;
     Ina219.bus_mv(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(4, Ina219V.value);
+    TEST_ASSERT_EQUAL_INT32(4, Ina219.value);
     // 12.000 V = 3000 LSBs -> 3000 << 3 = 0x5DC0
-    Ina219V.bus_mv_args.raw = 0x5DC0u;
+    Ina219.bus_mv_args.raw = 0x5DC0u;
     Ina219.bus_mv(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(12000, Ina219V.value);
+    TEST_ASSERT_EQUAL_INT32(12000, Ina219.value);
     // 32.000 V = 8000 LSBs -> 8000 << 3 = 0xFA00, the top of the 32 V range
-    Ina219V.bus_mv_args.raw = 0xFA00u;
+    Ina219.bus_mv_args.raw = 0xFA00u;
     Ina219.bus_mv(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(32000, Ina219V.value);
+    TEST_ASSERT_EQUAL_INT32(32000, Ina219.value);
     // the full 13-bit field: 8191 LSBs * 4 mV = 32764 mV
-    Ina219V.bus_mv_args.raw = 0xFFF8u;
+    Ina219.bus_mv_args.raw = 0xFFF8u;
     Ina219.bus_mv(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(32764, Ina219V.value);
+    TEST_ASSERT_EQUAL_INT32(32764, Ina219.value);
 }
 
 // The CNVR and OVF status bits share the register below the voltage field and must not reach the
@@ -70,12 +70,12 @@ void test_sbos448_bus_status_bits_do_not_reach_the_voltage(void)
     {
         uint16_t clean = (uint16_t)(lsbs << 3);
         int32_t want = (int32_t)(lsbs * 4u);
-        Ina219V.bus_mv_args.raw = clean;
+        Ina219.bus_mv_args.raw = clean;
         Ina219.bus_mv(protocore_ina219_span());
-        TEST_ASSERT_EQUAL_INT32(want, Ina219V.value);
-        Ina219V.bus_mv_args.raw = (uint16_t)(clean | 0x0007u);
+        TEST_ASSERT_EQUAL_INT32(want, Ina219.value);
+        Ina219.bus_mv_args.raw = (uint16_t)(clean | 0x0007u);
         Ina219.bus_mv(protocore_ina219_span());
-        TEST_ASSERT_EQUAL_INT32(want, Ina219V.value);
+        TEST_ASSERT_EQUAL_INT32(want, Ina219.value);
     }
 }
 
@@ -83,33 +83,33 @@ void test_sbos448_bus_status_bits_do_not_reach_the_voltage(void)
 // count of 10 uV steps.
 void test_sbos448_shunt_voltage_register(void)
 {
-    Ina219V.shunt_uv_args.raw = 0;
+    Ina219.shunt_uv_args.raw = 0;
     Ina219.shunt_uv(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(0, Ina219V.value);
-    Ina219V.shunt_uv_args.raw = 1;
+    TEST_ASSERT_EQUAL_INT32(0, Ina219.value);
+    Ina219.shunt_uv_args.raw = 1;
     Ina219.shunt_uv(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(10, Ina219V.value);
-    Ina219V.shunt_uv_args.raw = -1;
+    TEST_ASSERT_EQUAL_INT32(10, Ina219.value);
+    Ina219.shunt_uv_args.raw = -1;
     Ina219.shunt_uv(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(-10, Ina219V.value);
+    TEST_ASSERT_EQUAL_INT32(-10, Ina219.value);
     // 320 mV, the full-scale of the /8 PGA range: 320000 uV / 10 = 32000 counts
-    Ina219V.shunt_uv_args.raw = 32000;
+    Ina219.shunt_uv_args.raw = 32000;
     Ina219.shunt_uv(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(320000, Ina219V.value);
-    Ina219V.shunt_uv_args.raw = -32000;
+    TEST_ASSERT_EQUAL_INT32(320000, Ina219.value);
+    Ina219.shunt_uv_args.raw = -32000;
     Ina219.shunt_uv(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(-320000, Ina219V.value);
+    TEST_ASSERT_EQUAL_INT32(-320000, Ina219.value);
     // 40 mV, the /1 PGA range: 4000 counts
-    Ina219V.shunt_uv_args.raw = 4000;
+    Ina219.shunt_uv_args.raw = 4000;
     Ina219.shunt_uv(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(40000, Ina219V.value);
+    TEST_ASSERT_EQUAL_INT32(40000, Ina219.value);
     // the register's own extremes
-    Ina219V.shunt_uv_args.raw = 32767;
+    Ina219.shunt_uv_args.raw = 32767;
     Ina219.shunt_uv(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(327670, Ina219V.value);
-    Ina219V.shunt_uv_args.raw = (int16_t)-32768;
+    TEST_ASSERT_EQUAL_INT32(327670, Ina219.value);
+    Ina219.shunt_uv_args.raw = (int16_t)-32768;
     Ina219.shunt_uv(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(-327680, Ina219V.value);
+    TEST_ASSERT_EQUAL_INT32(-327680, Ina219.value);
 }
 
 // SBOS448: "Cal = trunc(0.04096 / (Current_LSB x R_SHUNT))", with Current_LSB in amps and R_SHUNT
@@ -122,76 +122,76 @@ void test_sbos448_shunt_voltage_register(void)
 //  1000 uA/bit over   2 mohm  -> 0.04096 / (0.001 * 0.002) = 20480
 void test_sbos448_calibration_equation(void)
 {
-    Ina219V.calibration_args.current_lsb_ua = 100u;
-    Ina219V.calibration_args.shunt_mohm = 100u;
+    Ina219.calibration_args.current_lsb_ua = 100u;
+    Ina219.calibration_args.shunt_mohm = 100u;
     Ina219.calibration(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_HEX16(4096u, Ina219V.cal);
-    Ina219V.calibration_args.current_lsb_ua = 50u;
-    Ina219V.calibration_args.shunt_mohm = 100u;
+    TEST_ASSERT_EQUAL_HEX16(4096u, Ina219.cal);
+    Ina219.calibration_args.current_lsb_ua = 50u;
+    Ina219.calibration_args.shunt_mohm = 100u;
     Ina219.calibration(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_HEX16(8192u, Ina219V.cal);
-    Ina219V.calibration_args.current_lsb_ua = 10u;
-    Ina219V.calibration_args.shunt_mohm = 100u;
+    TEST_ASSERT_EQUAL_HEX16(8192u, Ina219.cal);
+    Ina219.calibration_args.current_lsb_ua = 10u;
+    Ina219.calibration_args.shunt_mohm = 100u;
     Ina219.calibration(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_HEX16(40960u, Ina219V.cal);
-    Ina219V.calibration_args.current_lsb_ua = 100u;
-    Ina219V.calibration_args.shunt_mohm = 10u;
+    TEST_ASSERT_EQUAL_HEX16(40960u, Ina219.cal);
+    Ina219.calibration_args.current_lsb_ua = 100u;
+    Ina219.calibration_args.shunt_mohm = 10u;
     Ina219.calibration(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_HEX16(40960u, Ina219V.cal);
-    Ina219V.calibration_args.current_lsb_ua = 400u;
-    Ina219V.calibration_args.shunt_mohm = 100u;
+    TEST_ASSERT_EQUAL_HEX16(40960u, Ina219.cal);
+    Ina219.calibration_args.current_lsb_ua = 400u;
+    Ina219.calibration_args.shunt_mohm = 100u;
     Ina219.calibration(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_HEX16(1024u, Ina219V.cal);
-    Ina219V.calibration_args.current_lsb_ua = 1000u;
-    Ina219V.calibration_args.shunt_mohm = 2u;
+    TEST_ASSERT_EQUAL_HEX16(1024u, Ina219.cal);
+    Ina219.calibration_args.current_lsb_ua = 1000u;
+    Ina219.calibration_args.shunt_mohm = 2u;
     Ina219.calibration(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_HEX16(20480u, Ina219V.cal);
+    TEST_ASSERT_EQUAL_HEX16(20480u, Ina219.cal);
 }
 
 // The equation truncates: 40960000 / (3 * 100) = 136533.33 clamps at the register width, while
 // 40960000 / (7 * 100) = 58514.28 truncates to 58514.
 void test_calibration_truncates_and_clamps_to_sixteen_bits(void)
 {
-    Ina219V.calibration_args.current_lsb_ua = 7u;
-    Ina219V.calibration_args.shunt_mohm = 100u;
+    Ina219.calibration_args.current_lsb_ua = 7u;
+    Ina219.calibration_args.shunt_mohm = 100u;
     Ina219.calibration(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_HEX16(58514u, Ina219V.cal);
+    TEST_ASSERT_EQUAL_HEX16(58514u, Ina219.cal);
     // anything at or beyond 65535 saturates rather than wrapping into a small calibration
-    Ina219V.calibration_args.current_lsb_ua = 3u;
-    Ina219V.calibration_args.shunt_mohm = 100u;
+    Ina219.calibration_args.current_lsb_ua = 3u;
+    Ina219.calibration_args.shunt_mohm = 100u;
     Ina219.calibration(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_HEX16(0xFFFFu, Ina219V.cal);
-    Ina219V.calibration_args.current_lsb_ua = 1u;
-    Ina219V.calibration_args.shunt_mohm = 1u;
+    TEST_ASSERT_EQUAL_HEX16(0xFFFFu, Ina219.cal);
+    Ina219.calibration_args.current_lsb_ua = 1u;
+    Ina219.calibration_args.shunt_mohm = 1u;
     Ina219.calibration(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_HEX16(0xFFFFu, Ina219V.cal);
+    TEST_ASSERT_EQUAL_HEX16(0xFFFFu, Ina219.cal);
     // 40960000 / 625 = 65536, one past the register, so it saturates too
-    Ina219V.calibration_args.current_lsb_ua = 25u;
-    Ina219V.calibration_args.shunt_mohm = 25u;
+    Ina219.calibration_args.current_lsb_ua = 25u;
+    Ina219.calibration_args.shunt_mohm = 25u;
     Ina219.calibration(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_HEX16(0xFFFFu, Ina219V.cal);
+    TEST_ASSERT_EQUAL_HEX16(0xFFFFu, Ina219.cal);
     // 40960000 / 626 = 65431.0 -> 65431, the first value that fits
-    Ina219V.calibration_args.current_lsb_ua = 626u;
-    Ina219V.calibration_args.shunt_mohm = 1u;
+    Ina219.calibration_args.current_lsb_ua = 626u;
+    Ina219.calibration_args.shunt_mohm = 1u;
     Ina219.calibration(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_HEX16(65431u, Ina219V.cal);
+    TEST_ASSERT_EQUAL_HEX16(65431u, Ina219.cal);
 }
 
 // A zero denominator has no calibration, so it reports 0 rather than dividing by zero.
 void test_calibration_zero_denominator(void)
 {
-    Ina219V.calibration_args.current_lsb_ua = 0u;
-    Ina219V.calibration_args.shunt_mohm = 100u;
+    Ina219.calibration_args.current_lsb_ua = 0u;
+    Ina219.calibration_args.shunt_mohm = 100u;
     Ina219.calibration(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_HEX16(0u, Ina219V.cal);
-    Ina219V.calibration_args.current_lsb_ua = 100u;
-    Ina219V.calibration_args.shunt_mohm = 0u;
+    TEST_ASSERT_EQUAL_HEX16(0u, Ina219.cal);
+    Ina219.calibration_args.current_lsb_ua = 100u;
+    Ina219.calibration_args.shunt_mohm = 0u;
     Ina219.calibration(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_HEX16(0u, Ina219V.cal);
-    Ina219V.calibration_args.current_lsb_ua = 0u;
-    Ina219V.calibration_args.shunt_mohm = 0u;
+    TEST_ASSERT_EQUAL_HEX16(0u, Ina219.cal);
+    Ina219.calibration_args.current_lsb_ua = 0u;
+    Ina219.calibration_args.shunt_mohm = 0u;
     Ina219.calibration(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_HEX16(0u, Ina219V.cal);
+    TEST_ASSERT_EQUAL_HEX16(0u, Ina219.cal);
 }
 
 // A coarser current LSB or a smaller shunt both need a smaller calibration value, since the
@@ -201,86 +201,86 @@ void test_calibration_falls_as_the_denominator_grows(void)
     uint16_t prev = 0xFFFFu;
     for (uint32_t lsb = 100u; lsb <= 2000u; lsb += 25u)
     {
-        Ina219V.calibration_args.current_lsb_ua = lsb;
-        Ina219V.calibration_args.shunt_mohm = 100u;
+        Ina219.calibration_args.current_lsb_ua = lsb;
+        Ina219.calibration_args.shunt_mohm = 100u;
         Ina219.calibration(protocore_ina219_span());
-        uint16_t cal = Ina219V.cal;
+        uint16_t cal = Ina219.cal;
         TEST_ASSERT_TRUE(cal <= prev);
         prev = cal;
     }
     // The smaller shunt is captured before the larger one runs: both report through the one
     // namespace, so comparing them in a single expression would compare the second with itself.
-    Ina219V.calibration_args.current_lsb_ua = 100u;
-    Ina219V.calibration_args.shunt_mohm = 10u;
+    Ina219.calibration_args.current_lsb_ua = 100u;
+    Ina219.calibration_args.shunt_mohm = 10u;
     Ina219.calibration(protocore_ina219_span());
-    const uint16_t small_shunt = Ina219V.cal;
-    Ina219V.calibration_args.current_lsb_ua = 100u;
-    Ina219V.calibration_args.shunt_mohm = 100u;
+    const uint16_t small_shunt = Ina219.cal;
+    Ina219.calibration_args.current_lsb_ua = 100u;
+    Ina219.calibration_args.shunt_mohm = 100u;
     Ina219.calibration(protocore_ina219_span());
-    TEST_ASSERT_TRUE(small_shunt > Ina219V.cal);
+    TEST_ASSERT_TRUE(small_shunt > Ina219.cal);
 }
 
 // SBOS448: the current register is a count of Current_LSB, so microamps is that count times the
 // LSB in microamps.
 void test_sbos448_current_scaling(void)
 {
-    Ina219V.current_ua_args.raw = 0;
-    Ina219V.current_ua_args.current_lsb_ua = 100u;
+    Ina219.current_ua_args.raw = 0;
+    Ina219.current_ua_args.current_lsb_ua = 100u;
     Ina219.current_ua(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(0, Ina219V.value);
-    Ina219V.current_ua_args.raw = 1;
-    Ina219V.current_ua_args.current_lsb_ua = 100u;
+    TEST_ASSERT_EQUAL_INT32(0, Ina219.value);
+    Ina219.current_ua_args.raw = 1;
+    Ina219.current_ua_args.current_lsb_ua = 100u;
     Ina219.current_ua(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(100, Ina219V.value);
+    TEST_ASSERT_EQUAL_INT32(100, Ina219.value);
     // 1 A at 100 uA/bit is 10000 counts
-    Ina219V.current_ua_args.raw = 10000;
-    Ina219V.current_ua_args.current_lsb_ua = 100u;
+    Ina219.current_ua_args.raw = 10000;
+    Ina219.current_ua_args.current_lsb_ua = 100u;
     Ina219.current_ua(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(1000000, Ina219V.value);
+    TEST_ASSERT_EQUAL_INT32(1000000, Ina219.value);
     // current flowing the other way is negative
-    Ina219V.current_ua_args.raw = -10000;
-    Ina219V.current_ua_args.current_lsb_ua = 100u;
+    Ina219.current_ua_args.raw = -10000;
+    Ina219.current_ua_args.current_lsb_ua = 100u;
     Ina219.current_ua(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(-1000000, Ina219V.value);
+    TEST_ASSERT_EQUAL_INT32(-1000000, Ina219.value);
     // the register's positive extreme at 100 uA/bit: 32767 * 100 = 3.2767 A
-    Ina219V.current_ua_args.raw = 32767;
-    Ina219V.current_ua_args.current_lsb_ua = 100u;
+    Ina219.current_ua_args.raw = 32767;
+    Ina219.current_ua_args.current_lsb_ua = 100u;
     Ina219.current_ua(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(3276700, Ina219V.value);
-    Ina219V.current_ua_args.raw = (int16_t)-32768;
-    Ina219V.current_ua_args.current_lsb_ua = 100u;
+    TEST_ASSERT_EQUAL_INT32(3276700, Ina219.value);
+    Ina219.current_ua_args.raw = (int16_t)-32768;
+    Ina219.current_ua_args.current_lsb_ua = 100u;
     Ina219.current_ua(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(-3276800, Ina219V.value);
+    TEST_ASSERT_EQUAL_INT32(-3276800, Ina219.value);
 }
 
 // SBOS448: "Power_LSB = 20 x Current_LSB", so a power count is worth twenty times what the same
 // current count is.
 void test_sbos448_power_lsb_is_twenty_times_the_current_lsb(void)
 {
-    Ina219V.power_uw_args.raw = 0;
-    Ina219V.power_uw_args.current_lsb_ua = 100u;
+    Ina219.power_uw_args.raw = 0;
+    Ina219.power_uw_args.current_lsb_ua = 100u;
     Ina219.power_uw(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(0, Ina219V.value);
-    Ina219V.power_uw_args.raw = 1;
-    Ina219V.power_uw_args.current_lsb_ua = 100u;
+    TEST_ASSERT_EQUAL_INT32(0, Ina219.value);
+    Ina219.power_uw_args.raw = 1;
+    Ina219.power_uw_args.current_lsb_ua = 100u;
     Ina219.power_uw(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(2000, Ina219V.value);
+    TEST_ASSERT_EQUAL_INT32(2000, Ina219.value);
     // 1 W at a 100 uA current LSB (2 mW power LSB) is 500 counts
-    Ina219V.power_uw_args.raw = 500;
-    Ina219V.power_uw_args.current_lsb_ua = 100u;
+    Ina219.power_uw_args.raw = 500;
+    Ina219.power_uw_args.current_lsb_ua = 100u;
     Ina219.power_uw(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_INT32(1000000, Ina219V.value);
+    TEST_ASSERT_EQUAL_INT32(1000000, Ina219.value);
     for (int32_t raw = -30000; raw < 30000; raw += 3701)
     {
         // The current is captured before the power runs: both report through the one namespace.
-        Ina219V.current_ua_args.raw = (int16_t)raw;
-        Ina219V.current_ua_args.current_lsb_ua = 100u;
+        Ina219.current_ua_args.raw = (int16_t)raw;
+        Ina219.current_ua_args.current_lsb_ua = 100u;
         Ina219.current_ua(protocore_ina219_span());
-        const int32_t current = Ina219V.value;
-        Ina219V.power_uw_args.raw = (int16_t)raw;
-        Ina219V.power_uw_args.current_lsb_ua = 100u;
+        const int32_t current = Ina219.value;
+        Ina219.power_uw_args.raw = (int16_t)raw;
+        Ina219.power_uw_args.current_lsb_ua = 100u;
         Ina219.power_uw(protocore_ina219_span());
-        TEST_ASSERT_EQUAL_INT32(20 * current, Ina219V.value);
+        TEST_ASSERT_EQUAL_INT32(20 * current, Ina219.value);
     }
 }
 
@@ -291,22 +291,22 @@ void test_current_and_power_are_odd_about_zero(void)
     {
         // Each positive reading is captured before its negative runs: both report through the one
         // namespace, so testing them in a single expression would test the second one twice.
-        Ina219V.current_ua_args.raw = (int16_t)raw;
-        Ina219V.current_ua_args.current_lsb_ua = 250u;
+        Ina219.current_ua_args.raw = (int16_t)raw;
+        Ina219.current_ua_args.current_lsb_ua = 250u;
         Ina219.current_ua(protocore_ina219_span());
-        const int32_t current_pos = Ina219V.value;
-        Ina219V.current_ua_args.raw = (int16_t)(-raw);
-        Ina219V.current_ua_args.current_lsb_ua = 250u;
+        const int32_t current_pos = Ina219.value;
+        Ina219.current_ua_args.raw = (int16_t)(-raw);
+        Ina219.current_ua_args.current_lsb_ua = 250u;
         Ina219.current_ua(protocore_ina219_span());
-        TEST_ASSERT_EQUAL_INT32(-current_pos, Ina219V.value);
-        Ina219V.power_uw_args.raw = (int16_t)raw;
-        Ina219V.power_uw_args.current_lsb_ua = 250u;
+        TEST_ASSERT_EQUAL_INT32(-current_pos, Ina219.value);
+        Ina219.power_uw_args.raw = (int16_t)raw;
+        Ina219.power_uw_args.current_lsb_ua = 250u;
         Ina219.power_uw(protocore_ina219_span());
-        const int32_t power_pos = Ina219V.value;
-        Ina219V.power_uw_args.raw = (int16_t)(-raw);
-        Ina219V.power_uw_args.current_lsb_ua = 250u;
+        const int32_t power_pos = Ina219.value;
+        Ina219.power_uw_args.raw = (int16_t)(-raw);
+        Ina219.power_uw_args.current_lsb_ua = 250u;
         Ina219.power_uw(protocore_ina219_span());
-        TEST_ASSERT_EQUAL_INT32(-power_pos, Ina219V.value);
+        TEST_ASSERT_EQUAL_INT32(-power_pos, Ina219.value);
     }
 }
 
@@ -328,9 +328,9 @@ void test_bus_voltage_is_monotone(void)
     int32_t prev = -1;
     for (uint32_t lsbs = 0u; lsbs <= 8191u; lsbs++)
     {
-        Ina219V.bus_mv_args.raw = (uint16_t)(lsbs << 3);
+        Ina219.bus_mv_args.raw = (uint16_t)(lsbs << 3);
         Ina219.bus_mv(protocore_ina219_span());
-        int32_t mv = Ina219V.value;
+        int32_t mv = Ina219.value;
         TEST_ASSERT_TRUE(mv > prev);
         prev = mv;
     }
@@ -372,11 +372,11 @@ void test_sbos448g_model_reset_values_and_a_persistent_address_pointer(void)
 // continuous config word - two writes, in that order, to the device address.
 void test_sbos448g_begin_programs_the_calibration_then_the_config(void)
 {
-    Ina219V.begin_args.addr = (uint8_t)PROTOCORE_INA219_I2C_ADDR;
-    Ina219V.begin_args.current_lsb_ua = 100u;
-    Ina219V.begin_args.shunt_mohm = 100u;
+    Ina219.begin_args.addr = (uint8_t)PROTOCORE_INA219_I2C_ADDR;
+    Ina219.begin_args.current_lsb_ua = 100u;
+    Ina219.begin_args.shunt_mohm = 100u;
     Ina219.begin(protocore_ina219_span());
-    TEST_ASSERT_TRUE(Ina219V.ok);
+    TEST_ASSERT_TRUE(Ina219.ok);
 
     uint32_t len = 0u;
     const uint8_t *tx = protocore_bus_host_written(&len);
@@ -401,9 +401,9 @@ void test_sbos448g_the_bus_reading_is_the_applied_voltage(void)
 {
     s_part.bus_uv = 12000000;
     int32_t mv = 0;
-    Ina219V.read_bus_mv_args.millivolts = &mv;
+    Ina219.read_bus_mv_args.millivolts = &mv;
     Ina219.read_bus_mv(protocore_ina219_span());
-    TEST_ASSERT_TRUE(Ina219V.ok);
+    TEST_ASSERT_TRUE(Ina219.ok);
     TEST_ASSERT_EQUAL_INT32(12000, mv);
 }
 
@@ -413,14 +413,14 @@ void test_sbos448g_the_shunt_reading_is_the_applied_drop(void)
 {
     s_part.shunt_uv = 100000;
     int32_t uv = 0;
-    Ina219V.read_shunt_uv_args.microvolts = &uv;
+    Ina219.read_shunt_uv_args.microvolts = &uv;
     Ina219.read_shunt_uv(protocore_ina219_span());
-    TEST_ASSERT_TRUE(Ina219V.ok);
+    TEST_ASSERT_TRUE(Ina219.ok);
     TEST_ASSERT_EQUAL_INT32(100000, uv);
     s_part.shunt_uv = -100000;
-    Ina219V.read_shunt_uv_args.microvolts = &uv;
+    Ina219.read_shunt_uv_args.microvolts = &uv;
     Ina219.read_shunt_uv(protocore_ina219_span());
-    TEST_ASSERT_TRUE(Ina219V.ok);
+    TEST_ASSERT_TRUE(Ina219.ok);
     TEST_ASSERT_EQUAL_INT32(-100000, uv);
 }
 
@@ -430,14 +430,14 @@ void test_sbos448g_a_drop_past_the_pga_range_clips(void)
 {
     s_part.shunt_uv = 400000;
     int32_t uv = 0;
-    Ina219V.read_shunt_uv_args.microvolts = &uv;
+    Ina219.read_shunt_uv_args.microvolts = &uv;
     Ina219.read_shunt_uv(protocore_ina219_span());
-    TEST_ASSERT_TRUE(Ina219V.ok);
+    TEST_ASSERT_TRUE(Ina219.ok);
     TEST_ASSERT_EQUAL_INT32(320000, uv);
     s_part.shunt_uv = -400000;
-    Ina219V.read_shunt_uv_args.microvolts = &uv;
+    Ina219.read_shunt_uv_args.microvolts = &uv;
     Ina219.read_shunt_uv(protocore_ina219_span());
-    TEST_ASSERT_TRUE(Ina219V.ok);
+    TEST_ASSERT_TRUE(Ina219.ok);
     TEST_ASSERT_EQUAL_INT32(-320000, uv);
 }
 
@@ -446,23 +446,23 @@ void test_sbos448g_a_drop_past_the_pga_range_clips(void)
 // LSB: 1.000 A through a 100 mohm shunt is a 100 mV drop, and at 100 uA/bit it reads 1000000 uA.
 void test_sbos448g_one_amp_through_the_shunt_reads_one_amp(void)
 {
-    Ina219V.begin_args.addr = (uint8_t)PROTOCORE_INA219_I2C_ADDR;
-    Ina219V.begin_args.current_lsb_ua = 100u;
-    Ina219V.begin_args.shunt_mohm = 100u;
+    Ina219.begin_args.addr = (uint8_t)PROTOCORE_INA219_I2C_ADDR;
+    Ina219.begin_args.current_lsb_ua = 100u;
+    Ina219.begin_args.shunt_mohm = 100u;
     Ina219.begin(protocore_ina219_span());
-    TEST_ASSERT_TRUE(Ina219V.ok);
+    TEST_ASSERT_TRUE(Ina219.ok);
 
     s_part.shunt_uv = 100000; // 1.000 A across 100 mohm
     int32_t ua = 0;
-    Ina219V.read_current_ua_args.microamps = &ua;
+    Ina219.read_current_ua_args.microamps = &ua;
     Ina219.read_current_ua(protocore_ina219_span());
-    TEST_ASSERT_TRUE(Ina219V.ok);
+    TEST_ASSERT_TRUE(Ina219.ok);
     TEST_ASSERT_EQUAL_INT32(1000000, ua);
 
     s_part.shunt_uv = -100000; // and the other way
-    Ina219V.read_current_ua_args.microamps = &ua;
+    Ina219.read_current_ua_args.microamps = &ua;
     Ina219.read_current_ua(protocore_ina219_span());
-    TEST_ASSERT_TRUE(Ina219V.ok);
+    TEST_ASSERT_TRUE(Ina219.ok);
     TEST_ASSERT_EQUAL_INT32(-1000000, ua);
 }
 
@@ -470,17 +470,17 @@ void test_sbos448g_one_amp_through_the_shunt_reads_one_amp(void)
 // times amps. 12.000 V at 1.000 A is 12 W, reached through the part's own two divisions.
 void test_sbos448g_power_is_the_bus_voltage_times_the_current(void)
 {
-    Ina219V.begin_args.addr = (uint8_t)PROTOCORE_INA219_I2C_ADDR;
-    Ina219V.begin_args.current_lsb_ua = 100u;
-    Ina219V.begin_args.shunt_mohm = 100u;
+    Ina219.begin_args.addr = (uint8_t)PROTOCORE_INA219_I2C_ADDR;
+    Ina219.begin_args.current_lsb_ua = 100u;
+    Ina219.begin_args.shunt_mohm = 100u;
     Ina219.begin(protocore_ina219_span());
 
     s_part.bus_uv = 12000000; // 12.000 V
     s_part.shunt_uv = 100000; // 1.000 A across 100 mohm
     int32_t uw = 0;
-    Ina219V.read_power_uw_args.microwatts = &uw;
+    Ina219.read_power_uw_args.microwatts = &uw;
     Ina219.read_power_uw(protocore_ina219_span());
-    TEST_ASSERT_TRUE(Ina219V.ok);
+    TEST_ASSERT_TRUE(Ina219.ok);
     TEST_ASSERT_EQUAL_INT32(12000000, uw);
 }
 
@@ -491,14 +491,14 @@ void test_sbos448g_current_reads_zero_until_the_calibration_is_programmed(void)
     s_part.shunt_uv = 100000;
     s_part.bus_uv = 12000000;
     int32_t ua = -1;
-    Ina219V.read_current_ua_args.microamps = &ua;
+    Ina219.read_current_ua_args.microamps = &ua;
     Ina219.read_current_ua(protocore_ina219_span());
-    TEST_ASSERT_TRUE(Ina219V.ok);
+    TEST_ASSERT_TRUE(Ina219.ok);
     TEST_ASSERT_EQUAL_INT32(0, ua);
     int32_t uw = -1;
-    Ina219V.read_power_uw_args.microwatts = &uw;
+    Ina219.read_power_uw_args.microwatts = &uw;
     Ina219.read_power_uw(protocore_ina219_span());
-    TEST_ASSERT_TRUE(Ina219V.ok);
+    TEST_ASSERT_TRUE(Ina219.ok);
     TEST_ASSERT_EQUAL_INT32(0, uw);
 }
 
@@ -509,15 +509,15 @@ void test_the_reading_is_independent_of_the_programmed_current_lsb(void)
     static const uint32_t LSB_UA[3] = {50u, 100u, 200u};
     for (uint32_t i = 0; i < 3u; i++)
     {
-        Ina219V.begin_args.addr = (uint8_t)PROTOCORE_INA219_I2C_ADDR;
-        Ina219V.begin_args.current_lsb_ua = LSB_UA[i];
-        Ina219V.begin_args.shunt_mohm = 100u;
+        Ina219.begin_args.addr = (uint8_t)PROTOCORE_INA219_I2C_ADDR;
+        Ina219.begin_args.current_lsb_ua = LSB_UA[i];
+        Ina219.begin_args.shunt_mohm = 100u;
         Ina219.begin(protocore_ina219_span());
         s_part.shunt_uv = 100000; // 1.000 A across 100 mohm
         int32_t ua = 0;
-        Ina219V.read_current_ua_args.microamps = &ua;
+        Ina219.read_current_ua_args.microamps = &ua;
         Ina219.read_current_ua(protocore_ina219_span());
-        TEST_ASSERT_TRUE(Ina219V.ok);
+        TEST_ASSERT_TRUE(Ina219.ok);
         TEST_ASSERT_EQUAL_INT32(1000000, ua);
     }
 }
@@ -529,22 +529,23 @@ void test_begin_sends_later_transfers_to_the_address_it_was_given(void)
 {
     protocore_bus_host_detach_all();
     protocore_ina219_dev_place(&s_part, 0x41u);
-    Ina219V.begin_args.addr = 0x41u;
-    Ina219V.begin_args.current_lsb_ua = 100u;
-    Ina219V.begin_args.shunt_mohm = 100u;
+    Ina219.begin_args.addr = 0x41u;
+    Ina219.begin_args.current_lsb_ua = 100u;
+    Ina219.begin_args.shunt_mohm = 100u;
     Ina219.begin(protocore_ina219_span());
-    TEST_ASSERT_TRUE(Ina219V.ok);
+    TEST_ASSERT_TRUE(Ina219.ok);
     s_part.shunt_uv = 100000;
     int32_t ua = 0;
-    Ina219V.read_current_ua_args.microamps = &ua;
+    Ina219.read_current_ua_args.microamps = &ua;
     Ina219.read_current_ua(protocore_ina219_span());
     TEST_ASSERT_EQUAL_INT32(1000000, ua);
     TEST_ASSERT_EQUAL_HEX16(0x41u, protocore_bus_host_log[protocore_bus_host_log_len - 1u].target);
-    Ina219V.begin_args.addr = 0u;
-    Ina219V.begin_args.current_lsb_ua = 100u;
-    Ina219V.begin_args.shunt_mohm = 100u;
+    Ina219.begin_args.addr = 0u;
+    Ina219.begin_args.current_lsb_ua = 100u;
+    Ina219.begin_args.shunt_mohm = 100u;
     Ina219.begin(protocore_ina219_span());
-    TEST_ASSERT_EQUAL_HEX16(PROTOCORE_INA219_I2C_ADDR, protocore_bus_host_log[protocore_bus_host_log_len - 1u].target);
+    TEST_ASSERT_EQUAL_HEX16(PROTOCORE_INA219_I2C_ADDR,
+                            protocore_bus_host_log[protocore_bus_host_log_len - 1u].target);
 }
 
 // A part at another address does not answer, so the reading returns nothing rather than someone
@@ -555,9 +556,9 @@ void test_a_part_at_another_address_is_not_read(void)
     protocore_ina219_dev_place(&s_part, (uint16_t)(PROTOCORE_INA219_I2C_ADDR + 1));
     s_part.bus_uv = 12000000;
     int32_t mv = -1;
-    Ina219V.read_bus_mv_args.millivolts = &mv;
+    Ina219.read_bus_mv_args.millivolts = &mv;
     Ina219.read_bus_mv(protocore_ina219_span());
-    TEST_ASSERT_TRUE(Ina219V.ok); // the transfer completed; nothing answered it
+    TEST_ASSERT_TRUE(Ina219.ok); // the transfer completed; nothing answered it
     TEST_ASSERT_EQUAL_INT32(0, mv);
 }
 
@@ -567,9 +568,9 @@ void test_a_refused_transfer_fails_the_reading(void)
     s_part.bus_uv = 12000000;
     protocore_bus_host_fail = 1u;
     int32_t mv = 12345;
-    Ina219V.read_bus_mv_args.millivolts = &mv;
+    Ina219.read_bus_mv_args.millivolts = &mv;
     Ina219.read_bus_mv(protocore_ina219_span());
-    TEST_ASSERT_FALSE(Ina219V.ok);
+    TEST_ASSERT_FALSE(Ina219.ok);
     TEST_ASSERT_EQUAL_INT32(12345, mv);
     TEST_ASSERT_EQUAL_UINT32(0u, protocore_bus_host_log_len);
 }
@@ -578,9 +579,9 @@ void test_a_refused_transfer_fails_the_reading(void)
 void test_begin_reports_a_refused_write(void)
 {
     protocore_bus_host_fail = 1u;
-    Ina219V.begin_args.addr = (uint8_t)PROTOCORE_INA219_I2C_ADDR;
-    Ina219V.begin_args.current_lsb_ua = 100u;
-    Ina219V.begin_args.shunt_mohm = 100u;
+    Ina219.begin_args.addr = (uint8_t)PROTOCORE_INA219_I2C_ADDR;
+    Ina219.begin_args.current_lsb_ua = 100u;
+    Ina219.begin_args.shunt_mohm = 100u;
     Ina219.begin(protocore_ina219_span());
-    TEST_ASSERT_FALSE(Ina219V.ok);
+    TEST_ASSERT_FALSE(Ina219.ok);
 }

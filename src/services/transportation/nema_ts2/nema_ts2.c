@@ -17,11 +17,11 @@ static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
 uint16_t protocore_nema_ts2_crc(const uint8_t *bytes, size_t len)
 {
     // CRC-16/X-25: reflected poly 0x8408 (reverse of 0x1021), init 0xFFFF, xorout 0xFFFF.
-    CrcV.args.params = &PROTOCORE_CRC16_X25;
-    CrcV.args.data = bytes;
-    CrcV.args.len = len;
+    Crc.args.params = &PROTOCORE_CRC16_X25;
+    Crc.args.data = bytes;
+    Crc.args.len = len;
     Crc.compute(crc_work);
-    return (uint16_t)CrcV.value;
+    return (uint16_t)Crc.value;
 }
 
 size_t protocore_nema_ts2_build(uint8_t address, uint8_t control, uint8_t frame_type, const uint8_t *data,

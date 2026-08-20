@@ -63,17 +63,17 @@ uint8_t *protocore_radio_power_span(void)
 
 static void radio_ps_name(uint8_t *restrict work)
 {
-    switch (RadioV.ps.mode)
+    switch (Radio.ps.mode)
     {
     case PROTOCORE_PHY_PS_MIN_MODEM:
-        RadioV.text = "min_modem";
+        Radio.text = "min_modem";
         break;
     case PROTOCORE_PHY_PS_MAX_MODEM:
-        RadioV.text = "max_modem";
+        Radio.text = "max_modem";
         break;
     case PROTOCORE_PHY_PS_NONE:
     default:
-        RadioV.text = "none";
+        Radio.text = "none";
         break;
     }
 }
@@ -112,28 +112,28 @@ static void radio_busy_release(uint8_t *restrict work)
 // 802.11-2020 6.3.2.2 MLME-POWERMGT.request: select active mode or PS mode.
 static void radio_ps_set(uint8_t *restrict work)
 {
-    RadioV.ok = protocore_phy_ps_set(RadioV.ps.mode);
+    Radio.ok = protocore_phy_ps_set(Radio.ps.mode);
 }
 
 static void radio_ps_mode(uint8_t *restrict work)
 {
-    RadioV.mode = protocore_phy_ps_get();
+    Radio.mode = protocore_phy_ps_get();
 }
 
 // 802.11-2020 11.7.6 transmit power selection, bounded by 11.7.5.
 static void radio_tx_power_set(uint8_t *restrict work)
 {
-    RadioV.ok = protocore_phy_tx_power_set(RadioV.tx.dbm);
+    Radio.ok = protocore_phy_tx_power_set(Radio.tx.dbm);
 }
 
 static void radio_monitor_begin(uint8_t *restrict work)
 {
-    RadioV.ok = protocore_phy_monitor_begin(RadioV.monitor.channel, RadioV.monitor.on_frame);
+    Radio.ok = protocore_phy_monitor_begin(Radio.monitor.channel, Radio.monitor.on_frame);
 }
 
 static void radio_monitor_set_channel(uint8_t *restrict work)
 {
-    protocore_phy_monitor_set_channel(RadioV.monitor.channel);
+    protocore_phy_monitor_set_channel(Radio.monitor.channel);
 }
 
 static void radio_monitor_end(uint8_t *restrict work)
@@ -143,5 +143,16 @@ static void radio_monitor_end(uint8_t *restrict work)
 
 // Designated, so a member's position in the struct does not decide what it binds to. The table is
 // split by a feature flag, where a positional list shifts every member below the arm at once.
-/** @brief The operands and the outcome. */
-RadioVars RadioV;
+RadioNs Radio = {
+#if PROTOCORE_ENABLE_RADIO_POWER
+    .power = radio_power,
+    .ps_name = radio_ps_name,
+    .busy_hold = radio_busy_hold,
+    .busy_release = radio_busy_release,
+#endif
+    .ps_set = radio_ps_set,
+    .ps_mode = radio_ps_mode,
+    .tx_power_set = radio_tx_power_set,
+    .monitor_begin = radio_monitor_begin,
+    .monitor_set_channel = radio_monitor_set_channel,
+    .monitor_end = radio_monitor_end};

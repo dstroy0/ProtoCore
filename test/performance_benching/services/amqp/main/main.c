@@ -32,43 +32,43 @@ void dbench_run(void)
     static uint8_t heartbeat_buf[8];
 
     // Pre-build a method frame once so the parsers have a real, known-good frame to chew on.
-    AmqpV.out.buf = method_buf;
-    AmqpV.out.cap = sizeof(method_buf);
-    AmqpV.frame.channel = 1;
-    AmqpV.method.class_id = 10;
-    AmqpV.method.method_id = 10;
-    AmqpV.method.args = method_args;
-    AmqpV.method.args_len = sizeof(method_args);
+    Amqp.out.buf = method_buf;
+    Amqp.out.cap = sizeof(method_buf);
+    Amqp.frame.channel = 1;
+    Amqp.method.class_id = 10;
+    Amqp.method.method_id = 10;
+    Amqp.method.args = method_args;
+    Amqp.method.args_len = sizeof(method_args);
     Amqp.build_method(amqp_work);
-    size_t method_len = AmqpV.n;
+    size_t method_len = Amqp.n;
 
     for (;;)
     {
         DBENCH_BANNER("amqp");
         volatile size_t sink = 0;
 
-        AmqpV.out.buf = hdr_buf;
-        AmqpV.out.cap = sizeof(hdr_buf);
-        DBENCH_OP("Amqp.protocol_header", 200000, Amqp.protocol_header(amqp_work); sink += AmqpV.n);
+        Amqp.out.buf = hdr_buf;
+        Amqp.out.cap = sizeof(hdr_buf);
+        DBENCH_OP("Amqp.protocol_header", 200000, Amqp.protocol_header(amqp_work); sink += Amqp.n);
 
-        AmqpV.out.buf = method_buf;
-        AmqpV.out.cap = sizeof(method_buf);
-        AmqpV.frame.channel = 1;
-        AmqpV.method.class_id = 10;
-        AmqpV.method.method_id = 10;
-        AmqpV.method.args = method_args;
-        AmqpV.method.args_len = sizeof(method_args);
-        DBENCH_OP("Amqp.build_method", 100000, Amqp.build_method(amqp_work); sink += AmqpV.n);
+        Amqp.out.buf = method_buf;
+        Amqp.out.cap = sizeof(method_buf);
+        Amqp.frame.channel = 1;
+        Amqp.method.class_id = 10;
+        Amqp.method.method_id = 10;
+        Amqp.method.args = method_args;
+        Amqp.method.args_len = sizeof(method_args);
+        DBENCH_OP("Amqp.build_method", 100000, Amqp.build_method(amqp_work); sink += Amqp.n);
 
-        AmqpV.out.buf = heartbeat_buf;
-        AmqpV.out.cap = sizeof(heartbeat_buf);
-        DBENCH_OP("Amqp.build_heartbeat", 200000, Amqp.build_heartbeat(amqp_work); sink += AmqpV.n);
+        Amqp.out.buf = heartbeat_buf;
+        Amqp.out.cap = sizeof(heartbeat_buf);
+        DBENCH_OP("Amqp.build_heartbeat", 200000, Amqp.build_heartbeat(amqp_work); sink += Amqp.n);
 
-        AmqpV.in.buf = method_buf;
-        AmqpV.in.len = method_len;
-        DBENCH_OP("Amqp.parse_frame", 100000, Amqp.parse_frame(amqp_work); sink += AmqpV.ok ? AmqpV.consumed : 0);
+        Amqp.in.buf = method_buf;
+        Amqp.in.len = method_len;
+        DBENCH_OP("Amqp.parse_frame", 100000, Amqp.parse_frame(amqp_work); sink += Amqp.ok ? Amqp.consumed : 0);
 
-        DBENCH_OP("Amqp.parse_method", 100000, Amqp.parse_method(amqp_work); sink += AmqpV.ok ? 1 : 0);
+        DBENCH_OP("Amqp.parse_method", 100000, Amqp.parse_method(amqp_work); sink += Amqp.ok ? 1 : 0);
 
         (void)sink;
         DBENCH_DONE();

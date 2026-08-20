@@ -36,6 +36,7 @@ typedef struct
     size_t len;          ///< how many
     uint8_t *out;        ///< PROTOCORE_SHA1_DIGEST_LEN bytes
 } Sha1HashArgs;
+
 /**
  * @brief SHA-1 (FIPS 180-4).
  *
@@ -62,29 +63,14 @@ typedef struct
 typedef struct
 {
     Sha1HashArgs hash_args;
+
     proto_bool ok;
-} Sha1Vars;
 
-/** @brief The operands and the outcome. */
-extern Sha1Vars Sha1V;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const hash)(uint8_t *restrict work);
 } Sha1Ns;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in Sha1V or a region of the borrow at a fixed offset.
-void protocore_sha1_hash(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Sha1.hash(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const Sha1Ns Sha1 __attribute__((unused)) = {
-    .hash = protocore_sha1_hash,
-};
+/** @brief The one symbol this module exports. */
+extern Sha1Ns Sha1;
 
 PROTOCORE_END_DECLS
 

@@ -45,26 +45,26 @@ static size_t write_job_header(uint8_t *buf, uint16_t pdu_ref, uint16_t param_le
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_s7comm_build_setup(uint8_t *restrict work)
+static void s7comm_build_setup(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = S7commV.build_setup_args.buf;
-    size_t cap = S7commV.build_setup_args.cap;
-    uint16_t pdu_ref = S7commV.build_setup_args.pdu_ref;
-    uint16_t max_amq_calling = S7commV.build_setup_args.max_amq_calling;
-    uint16_t max_amq_called = S7commV.build_setup_args.max_amq_called;
-    uint16_t pdu_size = S7commV.build_setup_args.pdu_size;
+    uint8_t *buf = S7comm.build_setup_args.buf;
+    size_t cap = S7comm.build_setup_args.cap;
+    uint16_t pdu_ref = S7comm.build_setup_args.pdu_ref;
+    uint16_t max_amq_calling = S7comm.build_setup_args.max_amq_calling;
+    uint16_t max_amq_called = S7comm.build_setup_args.max_amq_called;
+    uint16_t pdu_size = S7comm.build_setup_args.pdu_size;
 
     if (!buf)
     {
-        S7commV.n = 0;
+        S7comm.n = 0;
         return;
     }
     const uint16_t param_len = 8;
     size_t total = 10 + param_len;
     if (total > cap)
     {
-        S7commV.n = 0;
+        S7comm.n = 0;
         return;
     }
     size_t p = write_job_header(buf, pdu_ref, param_len, 0);
@@ -73,28 +73,28 @@ void protocore_s7comm_build_setup(uint8_t *restrict work)
     p += put16(buf + p, max_amq_calling);
     p += put16(buf + p, max_amq_called);
     p += put16(buf + p, pdu_size);
-    S7commV.n = p;
+    S7comm.n = p;
 }
 
-void protocore_s7comm_build_read_request(uint8_t *restrict work)
+static void s7comm_build_read_request(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = S7commV.build_read_request_args.buf;
-    size_t cap = S7commV.build_read_request_args.cap;
-    uint16_t pdu_ref = S7commV.build_read_request_args.pdu_ref;
-    const S7ReadItem *items = S7commV.build_read_request_args.items;
-    size_t n = S7commV.build_read_request_args.n;
+    uint8_t *buf = S7comm.build_read_request_args.buf;
+    size_t cap = S7comm.build_read_request_args.cap;
+    uint16_t pdu_ref = S7comm.build_read_request_args.pdu_ref;
+    const S7ReadItem *items = S7comm.build_read_request_args.items;
+    size_t n = S7comm.build_read_request_args.n;
 
     if (!buf || !items || n == 0 || n > 0xFF)
     {
-        S7commV.n = 0;
+        S7comm.n = 0;
         return;
     }
     uint16_t param_len = (uint16_t)(2 + 12 * n); // func + count + items
     size_t total = 10 + param_len;
     if (total > cap)
     {
-        S7commV.n = 0;
+        S7comm.n = 0;
         return;
     }
     size_t p = write_job_header(buf, pdu_ref, param_len, 0);
@@ -115,7 +115,7 @@ void protocore_s7comm_build_read_request(uint8_t *restrict work)
         buf[p++] = (uint8_t)(addr >> 8);
         buf[p++] = (uint8_t)(addr & 0xFF);
     }
-    S7commV.n = p;
+    S7comm.n = p;
 }
 
 // The 2-octet data-item length is expressed in bits for the bit/byte/int data transport sizes, else in bytes
@@ -129,18 +129,18 @@ static uint16_t s7_data_wire_len(uint8_t data_transport_size, uint16_t data_len)
     return data_len;
 }
 
-void protocore_s7comm_build_write_request(uint8_t *restrict work)
+static void s7comm_build_write_request(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = S7commV.build_write_request_args.buf;
-    size_t cap = S7commV.build_write_request_args.cap;
-    uint16_t pdu_ref = S7commV.build_write_request_args.pdu_ref;
-    const S7WriteItem *items = S7commV.build_write_request_args.items;
-    size_t n = S7commV.build_write_request_args.n;
+    uint8_t *buf = S7comm.build_write_request_args.buf;
+    size_t cap = S7comm.build_write_request_args.cap;
+    uint16_t pdu_ref = S7comm.build_write_request_args.pdu_ref;
+    const S7WriteItem *items = S7comm.build_write_request_args.items;
+    size_t n = S7comm.build_write_request_args.n;
 
     if (!buf || !items || n == 0 || n > 0xFF)
     {
-        S7commV.n = 0;
+        S7comm.n = 0;
         return;
     }
     uint16_t param_len = (uint16_t)(2 + 12 * n); // func + count + item specs (same 12-octet spec as a read)
@@ -150,7 +150,7 @@ void protocore_s7comm_build_write_request(uint8_t *restrict work)
     {
         if (items[i].data_len && !items[i].data)
         {
-            S7commV.n = 0;
+            S7comm.n = 0;
             return;
         }
         size_t item_bytes = 4 + items[i].data_len;
@@ -162,13 +162,13 @@ void protocore_s7comm_build_write_request(uint8_t *restrict work)
     }
     if (data_len > 0xFFFF)
     {
-        S7commV.n = 0;
+        S7comm.n = 0;
         return;
     }
     size_t total = 10 + param_len + data_len;
     if (total > cap)
     {
-        S7commV.n = 0;
+        S7comm.n = 0;
         return;
     }
 
@@ -206,24 +206,24 @@ void protocore_s7comm_build_write_request(uint8_t *restrict work)
             buf[p++] = 0x00;
         }
     }
-    S7commV.n = p;
+    S7comm.n = p;
 }
 
-void protocore_s7comm_parse_header(uint8_t *restrict work)
+static void s7comm_parse_header(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = S7commV.parse_header_args.buf;
-    size_t len = S7commV.parse_header_args.len;
-    S7Header *out = S7commV.parse_header_args.out;
+    const uint8_t *buf = S7comm.parse_header_args.buf;
+    size_t len = S7comm.parse_header_args.len;
+    S7Header *out = S7comm.parse_header_args.out;
 
     if (!buf || !out || len < 10)
     {
-        S7commV.ok = PROTO_FALSE;
+        S7comm.ok = PROTO_FALSE;
         return;
     }
     if (buf[0] != S7_PROTOCOL_ID)
     {
-        S7commV.ok = PROTO_FALSE;
+        S7comm.ok = PROTO_FALSE;
         return;
     }
     out->rosctr = buf[1];
@@ -238,7 +238,7 @@ void protocore_s7comm_parse_header(uint8_t *restrict work)
     {
         if (len < 12)
         {
-            S7commV.ok = PROTO_FALSE;
+            S7comm.ok = PROTO_FALSE;
             return;
         }
         out->error_class = buf[10];
@@ -246,31 +246,31 @@ void protocore_s7comm_parse_header(uint8_t *restrict work)
     }
     if (out->header_len + (size_t)out->param_len + (size_t)out->data_len > len)
     {
-        S7commV.ok = PROTO_FALSE;
+        S7comm.ok = PROTO_FALSE;
         return; // not fully buffered
     }
     out->param = buf + out->header_len;
     out->data = out->param + out->param_len;
-    S7commV.ok = PROTO_TRUE;
+    S7comm.ok = PROTO_TRUE;
 }
 
-void protocore_s7comm_read_next_item(uint8_t *restrict work)
+static void s7comm_read_next_item(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *data = S7commV.read_next_item_args.data;
-    size_t data_len = S7commV.read_next_item_args.data_len;
-    size_t *offset = S7commV.read_next_item_args.offset;
-    S7DataItem *out = S7commV.read_next_item_args.out;
+    const uint8_t *data = S7comm.read_next_item_args.data;
+    size_t data_len = S7comm.read_next_item_args.data_len;
+    size_t *offset = S7comm.read_next_item_args.offset;
+    S7DataItem *out = S7comm.read_next_item_args.out;
 
     if (!data || !offset || !out)
     {
-        S7commV.ok = PROTO_FALSE;
+        S7comm.ok = PROTO_FALSE;
         return;
     }
     size_t o = *offset;
     if (o + 4 > data_len) // return code + transport size + 2-octet length
     {
-        S7commV.ok = PROTO_FALSE;
+        S7comm.ok = PROTO_FALSE;
         return;
     }
     out->return_code = data[o];
@@ -290,7 +290,7 @@ void protocore_s7comm_read_next_item(uint8_t *restrict work)
 
     if (o + 4 + bytes > data_len)
     {
-        S7commV.ok = PROTO_FALSE;
+        S7comm.ok = PROTO_FALSE;
         return;
     }
     out->data = data + o + 4;
@@ -303,11 +303,14 @@ void protocore_s7comm_read_next_item(uint8_t *restrict work)
         o++;
     }
     *offset = o;
-    S7commV.ok = PROTO_TRUE;
+    S7comm.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-S7commVars S7commV;
+S7commNs S7comm = {.build_setup = s7comm_build_setup,
+                   .build_read_request = s7comm_build_read_request,
+                   .build_write_request = s7comm_build_write_request,
+                   .parse_header = s7comm_parse_header,
+                   .read_next_item = s7comm_read_next_item};
 
 PROTOCORE_END_DECLS
 

@@ -27,15 +27,15 @@ static int sb_modbus_read_span(protocore_sb_modbus_ctx *c, uint32_t first, int32
     }
 
     uint8_t req[12];
-    ModbusMasterV.build_read_args.fc = (uint8_t)c->fc;
-    ModbusMasterV.build_read_args.txid = c->txid++;
-    ModbusMasterV.build_read_args.unit = c->unit;
-    ModbusMasterV.build_read_args.start = (uint16_t)first;
-    ModbusMasterV.build_read_args.count = (uint16_t)n;
-    ModbusMasterV.build_read_args.out = req;
-    ModbusMasterV.build_read_args.cap = sizeof(req);
+    ModbusMaster.build_read_args.fc = (uint8_t)c->fc;
+    ModbusMaster.build_read_args.txid = c->txid++;
+    ModbusMaster.build_read_args.unit = c->unit;
+    ModbusMaster.build_read_args.start = (uint16_t)first;
+    ModbusMaster.build_read_args.count = (uint16_t)n;
+    ModbusMaster.build_read_args.out = req;
+    ModbusMaster.build_read_args.cap = sizeof(req);
     ModbusMaster.build_read(modbus_master_work);
-    size_t rn = ModbusMasterV.n;
+    size_t rn = ModbusMaster.n;
     if (rn == 0)
     {
         return SB_ERR_ARG;
@@ -50,13 +50,13 @@ static int sb_modbus_read_span(protocore_sb_modbus_ctx *c, uint32_t first, int32
 
     uint16_t regs[125];
     uint8_t ex = 0;
-    ModbusMasterV.parse_response_args.adu = resp;
-    ModbusMasterV.parse_response_args.len = (size_t)pn;
-    ModbusMasterV.parse_response_args.regs_out = regs;
-    ModbusMasterV.parse_response_args.max_regs = n;
-    ModbusMasterV.parse_response_args.exception_out = &ex;
+    ModbusMaster.parse_response_args.adu = resp;
+    ModbusMaster.parse_response_args.len = (size_t)pn;
+    ModbusMaster.parse_response_args.regs_out = regs;
+    ModbusMaster.parse_response_args.max_regs = n;
+    ModbusMaster.parse_response_args.exception_out = &ex;
     ModbusMaster.parse_response(modbus_master_work);
-    int got = ModbusMasterV.i32;
+    int got = ModbusMaster.i32;
     if (got < 0)
     {
         return SB_ERR_ARG; // malformed / short frame
@@ -102,12 +102,12 @@ static int sb_modbus_write_txn(protocore_sb_modbus_ctx *c, const uint8_t *req, s
         return pn; // transport error, propagated unchanged
     }
     uint8_t ex = 0;
-    ModbusMasterV.parse_write_response_args.adu = resp;
-    ModbusMasterV.parse_write_response_args.len = (size_t)pn;
-    ModbusMasterV.parse_write_response_args.addr_out = NULL;
-    ModbusMasterV.parse_write_response_args.exception_out = &ex;
+    ModbusMaster.parse_write_response_args.adu = resp;
+    ModbusMaster.parse_write_response_args.len = (size_t)pn;
+    ModbusMaster.parse_write_response_args.addr_out = NULL;
+    ModbusMaster.parse_write_response_args.exception_out = &ex;
     ModbusMaster.parse_write_response(modbus_master_work);
-    int w = ModbusMasterV.i32;
+    int w = ModbusMaster.i32;
     if (w < 0)
     {
         return SB_ERR_ARG; // malformed / short frame
@@ -128,14 +128,14 @@ static int sb_modbus_write(void *vctx, uint32_t point, int32_t value)
         return SB_ERR_ARG;
     }
     uint8_t req[12];
-    ModbusMasterV.build_write_single_args.txid = c->txid++;
-    ModbusMasterV.build_write_single_args.unit = c->unit;
-    ModbusMasterV.build_write_single_args.addr = (uint16_t)point;
-    ModbusMasterV.build_write_single_args.value = (uint16_t)value;
-    ModbusMasterV.build_write_single_args.out = req;
-    ModbusMasterV.build_write_single_args.cap = sizeof(req);
+    ModbusMaster.build_write_single_args.txid = c->txid++;
+    ModbusMaster.build_write_single_args.unit = c->unit;
+    ModbusMaster.build_write_single_args.addr = (uint16_t)point;
+    ModbusMaster.build_write_single_args.value = (uint16_t)value;
+    ModbusMaster.build_write_single_args.out = req;
+    ModbusMaster.build_write_single_args.cap = sizeof(req);
     ModbusMaster.build_write_single(modbus_master_work);
-    size_t rn = ModbusMasterV.n;
+    size_t rn = ModbusMaster.n;
     if (rn == 0)
     {
         return SB_ERR_ARG;
@@ -166,15 +166,15 @@ static int sb_modbus_write_block(void *vctx, uint32_t first, const int32_t *in, 
         vals[i] = (uint16_t)in[i];
     }
     uint8_t req[13 + 2 * 123];
-    ModbusMasterV.build_write_multiple_args.txid = c->txid++;
-    ModbusMasterV.build_write_multiple_args.unit = c->unit;
-    ModbusMasterV.build_write_multiple_args.start = (uint16_t)first;
-    ModbusMasterV.build_write_multiple_args.values = vals;
-    ModbusMasterV.build_write_multiple_args.count = (uint16_t)n;
-    ModbusMasterV.build_write_multiple_args.out = req;
-    ModbusMasterV.build_write_multiple_args.cap = sizeof(req);
+    ModbusMaster.build_write_multiple_args.txid = c->txid++;
+    ModbusMaster.build_write_multiple_args.unit = c->unit;
+    ModbusMaster.build_write_multiple_args.start = (uint16_t)first;
+    ModbusMaster.build_write_multiple_args.values = vals;
+    ModbusMaster.build_write_multiple_args.count = (uint16_t)n;
+    ModbusMaster.build_write_multiple_args.out = req;
+    ModbusMaster.build_write_multiple_args.cap = sizeof(req);
     ModbusMaster.build_write_multiple(modbus_master_work);
-    size_t rn = ModbusMasterV.n;
+    size_t rn = ModbusMaster.n;
     if (rn == 0)
     {
         return SB_ERR_ARG;
@@ -186,51 +186,50 @@ static int sb_modbus_write_block(void *vctx, uint32_t first, const int32_t *in, 
 static void init(uint8_t *restrict work)
 {
     (void)work;
-    protocore_sb_modbus_ctx *c = SbModbusV.ctx;
-    if (!c || !SbModbusV.txn)
+    protocore_sb_modbus_ctx *c = SbModbus.ctx;
+    if (!c || !SbModbus.txn)
     {
-        SbModbusV.i32 = SB_ERR_ARG;
+        SbModbus.i32 = SB_ERR_ARG;
         return;
     }
-    if (SbModbusV.fc != MODBUS_FC_READ_HOLDING_REGS && SbModbusV.fc != MODBUS_FC_READ_INPUT_REGS)
+    if (SbModbus.fc != MODBUS_FC_READ_HOLDING_REGS && SbModbus.fc != MODBUS_FC_READ_INPUT_REGS)
     {
-        SbModbusV.i32 = SB_ERR_ARG;
+        SbModbus.i32 = SB_ERR_ARG;
         return;
     }
-    c->txn = SbModbusV.txn;
-    c->io = SbModbusV.io;
-    c->fc = SbModbusV.fc;
-    c->unit = SbModbusV.unit;
+    c->txn = SbModbus.txn;
+    c->io = SbModbus.io;
+    c->fc = SbModbus.fc;
+    c->unit = SbModbus.unit;
     c->txid = 0;
     c->last_exception = 0;
-    SbModbusV.i32 = SB_OK;
+    SbModbus.i32 = SB_OK;
 }
 
 // Bind the vtable the southbound registry dispatches through to one instance.
 static void driver(uint8_t *restrict work)
 {
     (void)work;
-    protocore_sb_modbus_ctx *c = SbModbusV.ctx;
-    SouthboundDriver *drv_out = SbModbusV.drv_out;
-    if (!drv_out || !SbModbusV.name || !c || !c->txn)
+    protocore_sb_modbus_ctx *c = SbModbus.ctx;
+    SouthboundDriver *drv_out = SbModbus.drv_out;
+    if (!drv_out || !SbModbus.name || !c || !c->txn)
     {
-        SbModbusV.i32 = SB_ERR_ARG;
+        SbModbus.i32 = SB_ERR_ARG;
         return;
     }
     // Holding registers are read/write; input registers are read-only (a Modbus input register cannot be
     // written), so an input-register driver leaves write / write_block unbound (framework: SB_ERR_UNSUPPORTED).
     proto_bool writable = (c->fc == MODBUS_FC_READ_HOLDING_REGS);
-    drv_out->name = SbModbusV.name;
+    drv_out->name = SbModbus.name;
     drv_out->read = &sb_modbus_read;
     drv_out->write = writable ? &sb_modbus_write : NULL;
     drv_out->read_block = &sb_modbus_read_block;
     drv_out->write_block = writable ? &sb_modbus_write_block : NULL;
     drv_out->ctx = c;
-    SbModbusV.i32 = SB_OK;
+    SbModbus.i32 = SB_OK;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-SbModbusVars SbModbusV;
+SbModbusNs SbModbus = {.init = init, .driver = driver};
 
 #endif // PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER

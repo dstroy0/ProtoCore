@@ -31,35 +31,35 @@ static TelemetryTotalizer g_t;
 
 static void window_init(uint16_t cap)
 {
-    TelemetryV.window.w = &g_w;
-    TelemetryV.window.buf = g_buf;
-    TelemetryV.window.cap = cap;
+    Telemetry.window.w = &g_w;
+    Telemetry.window.buf = g_buf;
+    Telemetry.window.cap = cap;
     Telemetry.window_init(telemetry_work);
 }
 
 static void push(float sample)
 {
-    TelemetryV.window.w = &g_w;
-    TelemetryV.window.sample = sample;
+    Telemetry.window.w = &g_w;
+    Telemetry.window.sample = sample;
     Telemetry.window_push(telemetry_work);
 }
 
 static float rate(float value, uint32_t now_ms)
 {
-    TelemetryV.rate.r = &g_r;
-    TelemetryV.rate.value = value;
-    TelemetryV.rate.now_ms = now_ms;
+    Telemetry.rate.r = &g_r;
+    Telemetry.rate.value = value;
+    Telemetry.rate.now_ms = now_ms;
     Telemetry.rate_update(telemetry_work);
-    return TelemetryV.f32;
+    return Telemetry.f32;
 }
 
 static double integrate(float r, uint32_t now_ms)
 {
-    TelemetryV.totalizer.t = &g_t;
-    TelemetryV.totalizer.rate = r;
-    TelemetryV.totalizer.now_ms = now_ms;
+    Telemetry.totalizer.t = &g_t;
+    Telemetry.totalizer.rate = r;
+    Telemetry.totalizer.now_ms = now_ms;
     Telemetry.totalizer_add(telemetry_work);
-    return TelemetryV.f64;
+    return Telemetry.f64;
 }
 
 // The samples 2 4 4 4 5 5 7 9.
@@ -78,26 +78,26 @@ void test_window_mean_variance_stddev(void)
         push(S[i]);
     }
 
-    TelemetryV.window.w = &g_w;
+    Telemetry.window.w = &g_w;
     Telemetry.window_count(telemetry_work);
-    TEST_ASSERT_TRUE(TelemetryV.ok);
-    TEST_ASSERT_EQUAL_UINT16(8u, TelemetryV.u16);
+    TEST_ASSERT_TRUE(Telemetry.ok);
+    TEST_ASSERT_EQUAL_UINT16(8u, Telemetry.u16);
 
     Telemetry.window_mean(telemetry_work);
-    TEST_ASSERT_TRUE(TelemetryV.ok);
-    TEST_ASSERT_EQUAL_FLOAT(5.0f, TelemetryV.f32);
+    TEST_ASSERT_TRUE(Telemetry.ok);
+    TEST_ASSERT_EQUAL_FLOAT(5.0f, Telemetry.f32);
 
     Telemetry.window_variance(telemetry_work);
-    TEST_ASSERT_EQUAL_FLOAT(4.0f, TelemetryV.f32);
+    TEST_ASSERT_EQUAL_FLOAT(4.0f, Telemetry.f32);
 
     Telemetry.window_stddev(telemetry_work);
-    TEST_ASSERT_EQUAL_FLOAT(2.0f, TelemetryV.f32);
+    TEST_ASSERT_EQUAL_FLOAT(2.0f, Telemetry.f32);
 
     Telemetry.window_min(telemetry_work);
-    TEST_ASSERT_EQUAL_FLOAT(2.0f, TelemetryV.f32);
+    TEST_ASSERT_EQUAL_FLOAT(2.0f, Telemetry.f32);
 
     Telemetry.window_max(telemetry_work);
-    TEST_ASSERT_EQUAL_FLOAT(9.0f, TelemetryV.f32);
+    TEST_ASSERT_EQUAL_FLOAT(9.0f, Telemetry.f32);
 }
 
 // A window of capacity 4 fed five samples holds the last four, 2 3 4 5:
@@ -111,23 +111,23 @@ void test_window_evicts_the_oldest_sample(void)
     push(3.0f);
     push(4.0f);
 
-    TelemetryV.window.w = &g_w;
+    Telemetry.window.w = &g_w;
     Telemetry.window_mean(telemetry_work);
-    TEST_ASSERT_EQUAL_FLOAT(2.5f, TelemetryV.f32); // (1+2+3+4)/4
+    TEST_ASSERT_EQUAL_FLOAT(2.5f, Telemetry.f32); // (1+2+3+4)/4
 
     push(5.0f);
-    TelemetryV.window.w = &g_w;
+    Telemetry.window.w = &g_w;
     Telemetry.window_count(telemetry_work);
-    TEST_ASSERT_EQUAL_UINT16(4u, TelemetryV.u16);
+    TEST_ASSERT_EQUAL_UINT16(4u, Telemetry.u16);
 
     Telemetry.window_mean(telemetry_work);
-    TEST_ASSERT_EQUAL_FLOAT(3.5f, TelemetryV.f32);
+    TEST_ASSERT_EQUAL_FLOAT(3.5f, Telemetry.f32);
 
     Telemetry.window_min(telemetry_work);
-    TEST_ASSERT_EQUAL_FLOAT(2.0f, TelemetryV.f32);
+    TEST_ASSERT_EQUAL_FLOAT(2.0f, Telemetry.f32);
 
     Telemetry.window_max(telemetry_work);
-    TEST_ASSERT_EQUAL_FLOAT(5.0f, TelemetryV.f32);
+    TEST_ASSERT_EQUAL_FLOAT(5.0f, Telemetry.f32);
 }
 
 // The count grows one per push and stops at the capacity, never past it.
@@ -137,10 +137,10 @@ void test_window_count_stops_at_capacity(void)
     for (uint16_t i = 0; i < 10; i++)
     {
         push((float)i);
-        TelemetryV.window.w = &g_w;
+        Telemetry.window.w = &g_w;
         Telemetry.window_count(telemetry_work);
         const uint16_t want = (uint16_t)((i + 1u) < 3u ? (i + 1u) : 3u);
-        TEST_ASSERT_EQUAL_UINT16(want, TelemetryV.u16);
+        TEST_ASSERT_EQUAL_UINT16(want, Telemetry.u16);
     }
 }
 
@@ -153,13 +153,13 @@ void test_window_variance_of_a_constant_is_zero(void)
     {
         push(1000000.0f);
     }
-    TelemetryV.window.w = &g_w;
+    Telemetry.window.w = &g_w;
     Telemetry.window_variance(telemetry_work);
-    TEST_ASSERT_TRUE(TelemetryV.ok);
-    TEST_ASSERT_EQUAL_FLOAT(0.0f, TelemetryV.f32);
+    TEST_ASSERT_TRUE(Telemetry.ok);
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, Telemetry.f32);
 
     Telemetry.window_stddev(telemetry_work);
-    TEST_ASSERT_EQUAL_FLOAT(0.0f, TelemetryV.f32);
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, Telemetry.f32);
 }
 
 // One sample is a whole window: the mean is that sample, the variance zero, min and max both it.
@@ -167,37 +167,37 @@ void test_window_of_one_sample(void)
 {
     window_init(8);
     push(-3.5f);
-    TelemetryV.window.w = &g_w;
+    Telemetry.window.w = &g_w;
     Telemetry.window_mean(telemetry_work);
-    TEST_ASSERT_EQUAL_FLOAT(-3.5f, TelemetryV.f32);
+    TEST_ASSERT_EQUAL_FLOAT(-3.5f, Telemetry.f32);
     Telemetry.window_variance(telemetry_work);
-    TEST_ASSERT_EQUAL_FLOAT(0.0f, TelemetryV.f32);
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, Telemetry.f32);
     Telemetry.window_min(telemetry_work);
-    TEST_ASSERT_EQUAL_FLOAT(-3.5f, TelemetryV.f32);
+    TEST_ASSERT_EQUAL_FLOAT(-3.5f, Telemetry.f32);
     Telemetry.window_max(telemetry_work);
-    TEST_ASSERT_EQUAL_FLOAT(-3.5f, TelemetryV.f32);
+    TEST_ASSERT_EQUAL_FLOAT(-3.5f, Telemetry.f32);
 }
 
 // An empty window has no mean to report, so every statistic refuses rather than dividing by zero.
 void test_window_statistics_need_a_sample(void)
 {
     window_init(8);
-    TelemetryV.window.w = &g_w;
+    Telemetry.window.w = &g_w;
 
     Telemetry.window_count(telemetry_work);
-    TEST_ASSERT_TRUE(TelemetryV.ok); // the count itself is known: it is zero
-    TEST_ASSERT_EQUAL_UINT16(0u, TelemetryV.u16);
+    TEST_ASSERT_TRUE(Telemetry.ok); // the count itself is known: it is zero
+    TEST_ASSERT_EQUAL_UINT16(0u, Telemetry.u16);
 
     Telemetry.window_mean(telemetry_work);
-    TEST_ASSERT_FALSE(TelemetryV.ok);
+    TEST_ASSERT_FALSE(Telemetry.ok);
     Telemetry.window_variance(telemetry_work);
-    TEST_ASSERT_FALSE(TelemetryV.ok);
+    TEST_ASSERT_FALSE(Telemetry.ok);
     Telemetry.window_stddev(telemetry_work);
-    TEST_ASSERT_FALSE(TelemetryV.ok);
+    TEST_ASSERT_FALSE(Telemetry.ok);
     Telemetry.window_min(telemetry_work);
-    TEST_ASSERT_FALSE(TelemetryV.ok);
+    TEST_ASSERT_FALSE(Telemetry.ok);
     Telemetry.window_max(telemetry_work);
-    TEST_ASSERT_FALSE(TelemetryV.ok);
+    TEST_ASSERT_FALSE(Telemetry.ok);
 }
 
 // An init re-empties a window that already held samples, so the previous run's sums cannot leak
@@ -209,30 +209,30 @@ void test_window_init_empties_the_window(void)
     push(200.0f);
     window_init(8);
 
-    TelemetryV.window.w = &g_w;
+    Telemetry.window.w = &g_w;
     Telemetry.window_count(telemetry_work);
-    TEST_ASSERT_EQUAL_UINT16(0u, TelemetryV.u16);
+    TEST_ASSERT_EQUAL_UINT16(0u, Telemetry.u16);
 
     push(1.0f);
-    TelemetryV.window.w = &g_w;
+    Telemetry.window.w = &g_w;
     Telemetry.window_mean(telemetry_work);
-    TEST_ASSERT_EQUAL_FLOAT(1.0f, TelemetryV.f32);
+    TEST_ASSERT_EQUAL_FLOAT(1.0f, Telemetry.f32);
 }
 
 // A push with no storage bound, and a zero capacity, are both refused: there is nowhere to put the
 // sample and no window to summarize.
 void test_window_push_needs_bound_storage(void)
 {
-    TelemetryV.window.w = &g_w;
-    TelemetryV.window.buf = NULL;
-    TelemetryV.window.cap = 8;
+    Telemetry.window.w = &g_w;
+    Telemetry.window.buf = NULL;
+    Telemetry.window.cap = 8;
     Telemetry.window_init(telemetry_work);
     push(1.0f);
-    TEST_ASSERT_FALSE(TelemetryV.ok);
+    TEST_ASSERT_FALSE(Telemetry.ok);
 
     window_init(0);
     push(1.0f);
-    TEST_ASSERT_FALSE(TelemetryV.ok);
+    TEST_ASSERT_FALSE(Telemetry.ok);
 }
 
 // The first difference over the elapsed seconds:
@@ -242,9 +242,9 @@ void test_window_push_needs_bound_storage(void)
 //   15 at t = 3500 ms: (15 - 20) / 1                    = -5, so a falling value reads negative.
 void test_rate_is_the_first_difference_per_second(void)
 {
-    TelemetryV.rate.r = &g_r;
+    Telemetry.rate.r = &g_r;
     Telemetry.rate_init(telemetry_work);
-    TEST_ASSERT_TRUE(TelemetryV.ok);
+    TEST_ASSERT_TRUE(Telemetry.ok);
 
     TEST_ASSERT_EQUAL_FLOAT(0.0f, rate(10.0f, 1000u));
     TEST_ASSERT_EQUAL_FLOAT(10.0f, rate(20.0f, 2000u));
@@ -255,7 +255,7 @@ void test_rate_is_the_first_difference_per_second(void)
 // A quarter second is a quarter of the divisor: 5 over 0.25 s is 20 per second.
 void test_rate_scales_a_sub_second_interval(void)
 {
-    TelemetryV.rate.r = &g_r;
+    Telemetry.rate.r = &g_r;
     Telemetry.rate_init(telemetry_work);
     (void)rate(0.0f, 0u);
     TEST_ASSERT_EQUAL_FLOAT(20.0f, rate(5.0f, 250u));
@@ -265,7 +265,7 @@ void test_rate_scales_a_sub_second_interval(void)
 // as zero rather than an infinity.
 void test_rate_of_a_zero_interval_is_zero(void)
 {
-    TelemetryV.rate.r = &g_r;
+    Telemetry.rate.r = &g_r;
     Telemetry.rate_init(telemetry_work);
     (void)rate(1.0f, 5000u);
     TEST_ASSERT_EQUAL_FLOAT(0.0f, rate(9.0f, 5000u));
@@ -278,7 +278,7 @@ void test_rate_of_a_zero_interval_is_zero(void)
 // so a rise of 10 over that interval is 10 per second, exactly as if the counter had not wrapped.
 void test_rate_across_a_counter_rollover(void)
 {
-    TelemetryV.rate.r = &g_r;
+    Telemetry.rate.r = &g_r;
     Telemetry.rate_init(telemetry_work);
     (void)rate(100.0f, 4294966796u);
     TEST_ASSERT_EQUAL_FLOAT(10.0f, rate(110.0f, 500u));
@@ -288,12 +288,12 @@ void test_rate_across_a_counter_rollover(void)
 // value from the last run.
 void test_rate_init_drops_the_prior_sample(void)
 {
-    TelemetryV.rate.r = &g_r;
+    Telemetry.rate.r = &g_r;
     Telemetry.rate_init(telemetry_work);
     (void)rate(0.0f, 0u);
     (void)rate(1000.0f, 1000u);
 
-    TelemetryV.rate.r = &g_r;
+    Telemetry.rate.r = &g_r;
     Telemetry.rate_init(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(0.0f, rate(50.0f, 2000u));
     TEST_ASSERT_EQUAL_FLOAT(0.0f, rate(50.0f, 3000u));
@@ -307,35 +307,35 @@ void test_rate_init_drops_the_prior_sample(void)
 // The total is SenML's Sum: the integrated sum of the values over time (RFC 8428 sec 4.2).
 void test_totalizer_is_the_trapezoidal_integral(void)
 {
-    TelemetryV.totalizer.t = &g_t;
+    Telemetry.totalizer.t = &g_t;
     Telemetry.totalizer_init(telemetry_work);
-    TEST_ASSERT_TRUE(TelemetryV.ok);
+    TEST_ASSERT_TRUE(Telemetry.ok);
 
     // The first sample only seeds an endpoint, so nothing is integrated yet.
     TEST_ASSERT_EQUAL_FLOAT(0.0f, (float)integrate(0.0f, 0u));
     TEST_ASSERT_EQUAL_FLOAT(5.0f, (float)integrate(10.0f, 1000u));
     TEST_ASSERT_EQUAL_FLOAT(15.0f, (float)integrate(10.0f, 2000u));
 
-    TelemetryV.totalizer.t = &g_t;
+    Telemetry.totalizer.t = &g_t;
     Telemetry.totalizer_total(telemetry_work);
-    TEST_ASSERT_TRUE(TelemetryV.ok);
-    TEST_ASSERT_EQUAL_FLOAT(15.0f, (float)TelemetryV.f64);
+    TEST_ASSERT_TRUE(Telemetry.ok);
+    TEST_ASSERT_EQUAL_FLOAT(15.0f, (float)Telemetry.f64);
 }
 
 // A rate held constant integrates to rate multiplied by elapsed time, whatever the step count:
 // 100 per second over ten one-second steps is 1000, in rate units multiplied by seconds.
 void test_totalizer_of_a_constant_rate(void)
 {
-    TelemetryV.totalizer.t = &g_t;
+    Telemetry.totalizer.t = &g_t;
     Telemetry.totalizer_init(telemetry_work);
     (void)integrate(100.0f, 0u);
     for (uint32_t i = 1; i <= 10u; i++)
     {
         (void)integrate(100.0f, i * 1000u);
     }
-    TelemetryV.totalizer.t = &g_t;
+    Telemetry.totalizer.t = &g_t;
     Telemetry.totalizer_total(telemetry_work);
-    TEST_ASSERT_EQUAL_FLOAT(1000.0f, (float)TelemetryV.f64);
+    TEST_ASSERT_EQUAL_FLOAT(1000.0f, (float)Telemetry.f64);
 }
 
 // A negative rate takes the total back down: 10 for a second then -10 for a second nets to zero.
@@ -344,7 +344,7 @@ void test_totalizer_of_a_constant_rate(void)
 //   step 3 (-10 -> 0 over 1 s):  (-10 + 0)/2 = -5, total 0
 void test_totalizer_integrates_a_negative_rate(void)
 {
-    TelemetryV.totalizer.t = &g_t;
+    Telemetry.totalizer.t = &g_t;
     Telemetry.totalizer_init(telemetry_work);
     (void)integrate(0.0f, 0u);
     TEST_ASSERT_EQUAL_FLOAT(5.0f, (float)integrate(10.0f, 1000u));
@@ -356,18 +356,18 @@ void test_totalizer_integrates_a_negative_rate(void)
 // endpoint instead of integrating across the gap.
 void test_totalizer_reset(void)
 {
-    TelemetryV.totalizer.t = &g_t;
+    Telemetry.totalizer.t = &g_t;
     Telemetry.totalizer_init(telemetry_work);
     (void)integrate(10.0f, 0u);
     (void)integrate(10.0f, 1000u);
 
-    TelemetryV.totalizer.t = &g_t;
+    Telemetry.totalizer.t = &g_t;
     Telemetry.totalizer_reset(telemetry_work);
-    TEST_ASSERT_TRUE(TelemetryV.ok);
+    TEST_ASSERT_TRUE(Telemetry.ok);
 
-    TelemetryV.totalizer.t = &g_t;
+    Telemetry.totalizer.t = &g_t;
     Telemetry.totalizer_total(telemetry_work);
-    TEST_ASSERT_EQUAL_FLOAT(0.0f, (float)TelemetryV.f64);
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, (float)Telemetry.f64);
 
     TEST_ASSERT_EQUAL_FLOAT(0.0f, (float)integrate(10.0f, 9000u));
     TEST_ASSERT_EQUAL_FLOAT(10.0f, (float)integrate(10.0f, 10000u));
@@ -378,7 +378,7 @@ void test_totalizer_reset(void)
 //   last = 4294966796, now = 500 -> 1000 ms, at a constant 10 per second, adds 10.
 void test_totalizer_across_a_counter_rollover(void)
 {
-    TelemetryV.totalizer.t = &g_t;
+    Telemetry.totalizer.t = &g_t;
     Telemetry.totalizer_init(telemetry_work);
     (void)integrate(10.0f, 4294966796u);
     TEST_ASSERT_EQUAL_FLOAT(10.0f, (float)integrate(10.0f, 500u));
@@ -387,29 +387,29 @@ void test_totalizer_across_a_counter_rollover(void)
 // Every call names its accumulator through the handle; a null one is reported, not written through.
 void test_calls_refuse_a_null_accumulator(void)
 {
-    TelemetryV.window.w = NULL;
+    Telemetry.window.w = NULL;
     Telemetry.window_init(telemetry_work);
-    TEST_ASSERT_FALSE(TelemetryV.ok);
+    TEST_ASSERT_FALSE(Telemetry.ok);
     Telemetry.window_push(telemetry_work);
-    TEST_ASSERT_FALSE(TelemetryV.ok);
+    TEST_ASSERT_FALSE(Telemetry.ok);
     Telemetry.window_count(telemetry_work);
-    TEST_ASSERT_FALSE(TelemetryV.ok);
-    TEST_ASSERT_EQUAL_UINT16(0u, TelemetryV.u16);
+    TEST_ASSERT_FALSE(Telemetry.ok);
+    TEST_ASSERT_EQUAL_UINT16(0u, Telemetry.u16);
 
-    TelemetryV.rate.r = NULL;
+    Telemetry.rate.r = NULL;
     Telemetry.rate_init(telemetry_work);
-    TEST_ASSERT_FALSE(TelemetryV.ok);
+    TEST_ASSERT_FALSE(Telemetry.ok);
     Telemetry.rate_update(telemetry_work);
-    TEST_ASSERT_FALSE(TelemetryV.ok);
-    TEST_ASSERT_EQUAL_FLOAT(0.0f, TelemetryV.f32);
+    TEST_ASSERT_FALSE(Telemetry.ok);
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, Telemetry.f32);
 
-    TelemetryV.totalizer.t = NULL;
+    Telemetry.totalizer.t = NULL;
     Telemetry.totalizer_init(telemetry_work);
-    TEST_ASSERT_FALSE(TelemetryV.ok);
+    TEST_ASSERT_FALSE(Telemetry.ok);
     Telemetry.totalizer_add(telemetry_work);
-    TEST_ASSERT_FALSE(TelemetryV.ok);
+    TEST_ASSERT_FALSE(Telemetry.ok);
     Telemetry.totalizer_total(telemetry_work);
-    TEST_ASSERT_FALSE(TelemetryV.ok);
+    TEST_ASSERT_FALSE(Telemetry.ok);
 }
 
 // Two windows over separate storage do not share sums: the accumulator is the caller's, and the
@@ -423,19 +423,19 @@ void test_two_windows_are_independent(void)
     push(10.0f);
     push(20.0f);
 
-    TelemetryV.window.w = &other;
-    TelemetryV.window.buf = other_buf;
-    TelemetryV.window.cap = 4;
+    Telemetry.window.w = &other;
+    Telemetry.window.buf = other_buf;
+    Telemetry.window.cap = 4;
     Telemetry.window_init(telemetry_work);
-    TelemetryV.window.w = &other;
-    TelemetryV.window.sample = 1.0f;
+    Telemetry.window.w = &other;
+    Telemetry.window.sample = 1.0f;
     Telemetry.window_push(telemetry_work);
 
-    TelemetryV.window.w = &other;
+    Telemetry.window.w = &other;
     Telemetry.window_mean(telemetry_work);
-    TEST_ASSERT_EQUAL_FLOAT(1.0f, TelemetryV.f32);
+    TEST_ASSERT_EQUAL_FLOAT(1.0f, Telemetry.f32);
 
-    TelemetryV.window.w = &g_w;
+    Telemetry.window.w = &g_w;
     Telemetry.window_mean(telemetry_work);
-    TEST_ASSERT_EQUAL_FLOAT(15.0f, TelemetryV.f32);
+    TEST_ASSERT_EQUAL_FLOAT(15.0f, Telemetry.f32);
 }

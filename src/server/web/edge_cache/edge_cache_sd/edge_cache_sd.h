@@ -49,6 +49,7 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } EdgeCacheSdSerializeArgs;
+
 /** @brief What deserialize takes: entry_buf, buf, len, e. */
 typedef struct
 {
@@ -57,6 +58,7 @@ typedef struct
     size_t len;
     struct EdgeEntry *e;
 } EdgeCacheSdDeserializeArgs;
+
 /** @brief What put takes: db, e, scratch, scratch_cap. */
 typedef struct
 {
@@ -65,6 +67,7 @@ typedef struct
     uint8_t *scratch;
     size_t scratch_cap;
 } EdgeCacheSdPutArgs;
+
 /** @brief What get takes: entry_buf, db, digest, e, scratch, scratch_cap. */
 typedef struct
 {
@@ -75,12 +78,14 @@ typedef struct
     uint8_t *scratch;
     size_t scratch_cap;
 } EdgeCacheSdGetArgs;
+
 /** @brief What del takes: db, digest. */
 typedef struct
 {
     struct protocore_dbm *db;
     const uint8_t *digest; ///< 32 bytes.
 } EdgeCacheSdDelArgs;
+
 /** @brief What purge_prefix takes: db, path_prefix, scratch, ... */
 typedef struct
 {
@@ -89,11 +94,13 @@ typedef struct
     uint8_t *scratch;
     size_t scratch_cap;
 } EdgeCacheSdPurgePrefixArgs;
+
 /** @brief What purge_all takes: db. */
 typedef struct
 {
     struct protocore_dbm *db;
 } EdgeCacheSdPurgeAllArgs;
+
 /**
  * @brief CDN edge-cache tier - L2 SD persistence (PROTOCORE_ENABLE_EDGE_CACHE && PROTOCORE_ENABLE_DBM). The persistent
  * ...
@@ -138,53 +145,26 @@ typedef struct
     EdgeCacheSdDelArgs del_args;
     EdgeCacheSdPurgePrefixArgs purge_prefix_args;
     EdgeCacheSdPurgeAllArgs purge_all_args;
+
     proto_bool ok;
     size_t n;
     uint32_t count;
+
+    void (*const serialize)(uint8_t *restrict work);
+    void (*const deserialize)(uint8_t *restrict work);
     // The store operations are the only part that needs a key/value database behind it, so they
     // are the only part the flag gates. The codec above is pure and is always here.
 #if PROTOCORE_ENABLE_DBM
-#endif
-} EdgeCacheSdVars;
-
-/** @brief The operands and the outcome. */
-extern EdgeCacheSdVars EdgeCacheSdV;
-
-/** @brief The entries. */
-typedef struct
-{
-    void (*const serialize)(uint8_t *restrict work);
-    void (*const deserialize)(uint8_t *restrict work);
     void (*const put)(uint8_t *restrict work);
     void (*const get)(uint8_t *restrict work);
     void (*const del)(uint8_t *restrict work);
     void (*const purge_prefix)(uint8_t *restrict work);
     void (*const purge_all)(uint8_t *restrict work);
+#endif
 } EdgeCacheSdNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in EdgeCacheSdV or a region of the borrow at a fixed offset.
-void protocore_edge_cache_sd_serialize(uint8_t *restrict work);
-void protocore_edge_cache_sd_deserialize(uint8_t *restrict work);
-void protocore_edge_cache_sd_put(uint8_t *restrict work);
-void protocore_edge_cache_sd_get(uint8_t *restrict work);
-void protocore_edge_cache_sd_del(uint8_t *restrict work);
-void protocore_edge_cache_sd_purge_prefix(uint8_t *restrict work);
-void protocore_edge_cache_sd_purge_all(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `EdgeCacheSd.serialize(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const EdgeCacheSdNs EdgeCacheSd __attribute__((unused)) = {
-    .serialize = protocore_edge_cache_sd_serialize,
-    .deserialize = protocore_edge_cache_sd_deserialize,
-    .put = protocore_edge_cache_sd_put,
-    .get = protocore_edge_cache_sd_get,
-    .del = protocore_edge_cache_sd_del,
-    .purge_prefix = protocore_edge_cache_sd_purge_prefix,
-    .purge_all = protocore_edge_cache_sd_purge_all,
-};
+/** @brief The one symbol this module exports. */
+extern EdgeCacheSdNs EdgeCacheSd;
 
 PROTOCORE_END_DECLS
 

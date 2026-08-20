@@ -67,14 +67,14 @@ void test_lontalk_nv_header_is_two_octets(void)
     static const uint8_t VALUE[3] = {0xAA, 0xBB, 0xCC};
     uint8_t out[16];
 
-    LonworksV.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
-    LonworksV.build_nv_args.selector = 0x1234u;
-    LonworksV.build_nv_args.value = VALUE;
-    LonworksV.build_nv_args.value_len = sizeof(VALUE);
-    LonworksV.build_nv_args.out = out;
-    LonworksV.build_nv_args.cap = sizeof(out);
+    Lonworks.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
+    Lonworks.build_nv_args.selector = 0x1234u;
+    Lonworks.build_nv_args.value = VALUE;
+    Lonworks.build_nv_args.value_len = sizeof(VALUE);
+    Lonworks.build_nv_args.out = out;
+    Lonworks.build_nv_args.cap = sizeof(out);
     Lonworks.build_nv(lonworks_work);
-    TEST_ASSERT_EQUAL_size_t(2u + sizeof(VALUE), LonworksV.n);
+    TEST_ASSERT_EQUAL_size_t(2u + sizeof(VALUE), Lonworks.n);
     TEST_ASSERT_EQUAL_HEX8(0x80u, (uint8_t)(out[0] & 0x80u));
     TEST_ASSERT_EQUAL_HEX16(0x1234u, (uint16_t)(((uint16_t)(out[0] & 0x3Fu) << 8) | out[1]));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(VALUE, out + 2, sizeof(VALUE));
@@ -89,11 +89,11 @@ void test_lontalk_parse_reads_the_two_octet_header(void)
     LonNv nv;
     memset(&nv, 0, sizeof(nv));
 
-    LonworksV.parse_nv_args.pdu = PDU;
-    LonworksV.parse_nv_args.len = sizeof(PDU);
-    LonworksV.parse_nv_args.out = &nv;
+    Lonworks.parse_nv_args.pdu = PDU;
+    Lonworks.parse_nv_args.len = sizeof(PDU);
+    Lonworks.parse_nv_args.out = &nv;
     Lonworks.parse_nv(lonworks_work);
-    TEST_ASSERT_TRUE(LonworksV.ok);
+    TEST_ASSERT_TRUE(Lonworks.ok);
     TEST_ASSERT_EQUAL_HEX16(0x1234u, nv.selector);
     TEST_ASSERT_EQUAL_size_t(2u, nv.value_len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(PDU + 2, nv.value, 2);
@@ -108,11 +108,11 @@ void test_lontalk_a_poll_response_is_header_only(void)
     LonNv nv;
     memset(&nv, 0, sizeof(nv));
 
-    LonworksV.parse_nv_args.pdu = PDU;
-    LonworksV.parse_nv_args.len = sizeof(PDU);
-    LonworksV.parse_nv_args.out = &nv;
+    Lonworks.parse_nv_args.pdu = PDU;
+    Lonworks.parse_nv_args.len = sizeof(PDU);
+    Lonworks.parse_nv_args.out = &nv;
     Lonworks.parse_nv(lonworks_work);
-    TEST_ASSERT_TRUE(LonworksV.ok);
+    TEST_ASSERT_TRUE(Lonworks.ok);
     TEST_ASSERT_EQUAL_HEX16(0x1234u, nv.selector);
     TEST_ASSERT_EQUAL_size_t(0u, nv.value_len);
 }
@@ -124,39 +124,39 @@ void test_nv_selector_bounds_and_round_trip(void)
     uint8_t out[8];
     LonNv nv;
 
-    LonworksV.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
-    LonworksV.build_nv_args.selector = 0x4000u;
-    LonworksV.build_nv_args.value = NULL;
-    LonworksV.build_nv_args.value_len = 0;
-    LonworksV.build_nv_args.out = out;
-    LonworksV.build_nv_args.cap = sizeof(out);
+    Lonworks.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
+    Lonworks.build_nv_args.selector = 0x4000u;
+    Lonworks.build_nv_args.value = NULL;
+    Lonworks.build_nv_args.value_len = 0;
+    Lonworks.build_nv_args.out = out;
+    Lonworks.build_nv_args.cap = sizeof(out);
     Lonworks.build_nv(lonworks_work);
-    TEST_ASSERT_EQUAL_size_t(0u, LonworksV.n);
-    LonworksV.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
-    LonworksV.build_nv_args.selector = 0xFFFFu;
-    LonworksV.build_nv_args.value = NULL;
-    LonworksV.build_nv_args.value_len = 0;
-    LonworksV.build_nv_args.out = out;
-    LonworksV.build_nv_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_size_t(0u, Lonworks.n);
+    Lonworks.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
+    Lonworks.build_nv_args.selector = 0xFFFFu;
+    Lonworks.build_nv_args.value = NULL;
+    Lonworks.build_nv_args.value_len = 0;
+    Lonworks.build_nv_args.out = out;
+    Lonworks.build_nv_args.cap = sizeof(out);
     Lonworks.build_nv(lonworks_work);
-    TEST_ASSERT_EQUAL_size_t(0u, LonworksV.n);
+    TEST_ASSERT_EQUAL_size_t(0u, Lonworks.n);
 
     for (uint32_t s = 0; s <= LON_NV_SELECTOR_MAX; s++)
     {
-        LonworksV.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
-        LonworksV.build_nv_args.selector = (uint16_t)s;
-        LonworksV.build_nv_args.value = NULL;
-        LonworksV.build_nv_args.value_len = 0;
-        LonworksV.build_nv_args.out = out;
-        LonworksV.build_nv_args.cap = sizeof(out);
+        Lonworks.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
+        Lonworks.build_nv_args.selector = (uint16_t)s;
+        Lonworks.build_nv_args.value = NULL;
+        Lonworks.build_nv_args.value_len = 0;
+        Lonworks.build_nv_args.out = out;
+        Lonworks.build_nv_args.cap = sizeof(out);
         Lonworks.build_nv(lonworks_work);
-        size_t n = LonworksV.n;
+        size_t n = Lonworks.n;
         TEST_ASSERT_TRUE(n != 0u);
-        LonworksV.parse_nv_args.pdu = out;
-        LonworksV.parse_nv_args.len = n;
-        LonworksV.parse_nv_args.out = &nv;
+        Lonworks.parse_nv_args.pdu = out;
+        Lonworks.parse_nv_args.len = n;
+        Lonworks.parse_nv_args.out = &nv;
         Lonworks.parse_nv(lonworks_work);
-        TEST_ASSERT_TRUE(LonworksV.ok);
+        TEST_ASSERT_TRUE(Lonworks.ok);
         TEST_ASSERT_EQUAL_HEX16((uint16_t)s, nv.selector);
     }
 }
@@ -169,20 +169,20 @@ void test_nv_value_round_trip(void)
     uint8_t out[16];
     LonNv nv;
 
-    LonworksV.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
-    LonworksV.build_nv_args.selector = 0x2AAAu;
-    LonworksV.build_nv_args.value = VALUE;
-    LonworksV.build_nv_args.value_len = sizeof(VALUE);
-    LonworksV.build_nv_args.out = out;
-    LonworksV.build_nv_args.cap = sizeof(out);
+    Lonworks.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
+    Lonworks.build_nv_args.selector = 0x2AAAu;
+    Lonworks.build_nv_args.value = VALUE;
+    Lonworks.build_nv_args.value_len = sizeof(VALUE);
+    Lonworks.build_nv_args.out = out;
+    Lonworks.build_nv_args.cap = sizeof(out);
     Lonworks.build_nv(lonworks_work);
-    size_t n = LonworksV.n;
+    size_t n = Lonworks.n;
     TEST_ASSERT_TRUE(n != 0u);
-    LonworksV.parse_nv_args.pdu = out;
-    LonworksV.parse_nv_args.len = n;
-    LonworksV.parse_nv_args.out = &nv;
+    Lonworks.parse_nv_args.pdu = out;
+    Lonworks.parse_nv_args.len = n;
+    Lonworks.parse_nv_args.out = &nv;
     Lonworks.parse_nv(lonworks_work);
-    TEST_ASSERT_TRUE(LonworksV.ok);
+    TEST_ASSERT_TRUE(Lonworks.ok);
     TEST_ASSERT_EQUAL_HEX16(0x2AAAu, nv.selector);
     TEST_ASSERT_EQUAL_size_t(sizeof(VALUE), nv.value_len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(VALUE, nv.value, sizeof(VALUE));
@@ -206,37 +206,37 @@ void test_snvt_temp_published_scaling(void)
     static const uint8_t ZERO_C[2] = {0x0A, 0xB4};
     static const uint8_t MAX[2] = {0xFF, 0xFF};
 
-    LonworksV.snvt_temp_decode_args.in = MIN;
+    Lonworks.snvt_temp_decode_args.in = MIN;
     Lonworks.snvt_temp_decode(lonworks_work);
-    TEST_ASSERT_EQUAL_DOUBLE(-274.0, LonworksV.value);
-    LonworksV.snvt_temp_decode_args.in = ZERO_C;
+    TEST_ASSERT_EQUAL_DOUBLE(-274.0, Lonworks.value);
+    Lonworks.snvt_temp_decode_args.in = ZERO_C;
     Lonworks.snvt_temp_decode(lonworks_work);
-    TEST_ASSERT_EQUAL_DOUBLE(0.0, LonworksV.value);
-    LonworksV.snvt_temp_decode_args.in = MAX;
+    TEST_ASSERT_EQUAL_DOUBLE(0.0, Lonworks.value);
+    Lonworks.snvt_temp_decode_args.in = MAX;
     Lonworks.snvt_temp_decode(lonworks_work);
-    TEST_ASSERT_EQUAL_DOUBLE(6279.5, LonworksV.value);
+    TEST_ASSERT_EQUAL_DOUBLE(6279.5, Lonworks.value);
 
     uint8_t enc[2];
-    LonworksV.snvt_temp_encode_args.celsius = -274.0;
-    LonworksV.snvt_temp_encode_args.out = enc;
+    Lonworks.snvt_temp_encode_args.celsius = -274.0;
+    Lonworks.snvt_temp_encode_args.out = enc;
     Lonworks.snvt_temp_encode(lonworks_work);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(MIN, enc, 2);
-    LonworksV.snvt_temp_encode_args.celsius = 0.0;
-    LonworksV.snvt_temp_encode_args.out = enc;
+    Lonworks.snvt_temp_encode_args.celsius = 0.0;
+    Lonworks.snvt_temp_encode_args.out = enc;
     Lonworks.snvt_temp_encode(lonworks_work);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ZERO_C, enc, 2);
-    LonworksV.snvt_temp_encode_args.celsius = 6279.5;
-    LonworksV.snvt_temp_encode_args.out = enc;
+    Lonworks.snvt_temp_encode_args.celsius = 6279.5;
+    Lonworks.snvt_temp_encode_args.out = enc;
     Lonworks.snvt_temp_encode(lonworks_work);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(MAX, enc, 2);
 
-    LonworksV.snvt_temp_encode_args.celsius = 20.0;
-    LonworksV.snvt_temp_encode_args.out = enc;
+    Lonworks.snvt_temp_encode_args.celsius = 20.0;
+    Lonworks.snvt_temp_encode_args.out = enc;
     Lonworks.snvt_temp_encode(lonworks_work);
     TEST_ASSERT_EQUAL_HEX8(0x0Bu, enc[0]);
     TEST_ASSERT_EQUAL_HEX8(0x7Cu, enc[1]);
-    LonworksV.snvt_temp_encode_args.celsius = 20.1;
-    LonworksV.snvt_temp_encode_args.out = enc;
+    Lonworks.snvt_temp_encode_args.celsius = 20.1;
+    Lonworks.snvt_temp_encode_args.out = enc;
     Lonworks.snvt_temp_encode(lonworks_work);
     TEST_ASSERT_EQUAL_HEX8(0x7Du, enc[1]);
 }
@@ -247,32 +247,32 @@ void test_snvt_temp_published_scaling(void)
 void test_snvt_temp_saturates_at_the_published_bounds(void)
 {
     uint8_t enc[2];
-    LonworksV.snvt_temp_encode_args.celsius = -1000.0;
-    LonworksV.snvt_temp_encode_args.out = enc;
+    Lonworks.snvt_temp_encode_args.celsius = -1000.0;
+    Lonworks.snvt_temp_encode_args.out = enc;
     Lonworks.snvt_temp_encode(lonworks_work);
     TEST_ASSERT_EQUAL_HEX8(0x00u, enc[0]);
     TEST_ASSERT_EQUAL_HEX8(0x00u, enc[1]);
-    LonworksV.snvt_temp_decode_args.in = enc;
+    Lonworks.snvt_temp_decode_args.in = enc;
     Lonworks.snvt_temp_decode(lonworks_work);
-    TEST_ASSERT_EQUAL_DOUBLE(-274.0, LonworksV.value);
+    TEST_ASSERT_EQUAL_DOUBLE(-274.0, Lonworks.value);
 
-    LonworksV.snvt_temp_encode_args.celsius = 1e9;
-    LonworksV.snvt_temp_encode_args.out = enc;
+    Lonworks.snvt_temp_encode_args.celsius = 1e9;
+    Lonworks.snvt_temp_encode_args.out = enc;
     Lonworks.snvt_temp_encode(lonworks_work);
     TEST_ASSERT_EQUAL_HEX8(0xFFu, enc[0]);
     TEST_ASSERT_EQUAL_HEX8(0xFFu, enc[1]);
-    LonworksV.snvt_temp_decode_args.in = enc;
+    Lonworks.snvt_temp_decode_args.in = enc;
     Lonworks.snvt_temp_decode(lonworks_work);
-    TEST_ASSERT_EQUAL_DOUBLE(6279.5, LonworksV.value);
+    TEST_ASSERT_EQUAL_DOUBLE(6279.5, Lonworks.value);
 
     for (uint32_t raw = 0; raw <= 65535u; raw += 271u)
     {
         uint8_t in[2] = {(uint8_t)(raw >> 8), (uint8_t)raw};
         uint8_t back[2];
-        LonworksV.snvt_temp_decode_args.in = in;
+        Lonworks.snvt_temp_decode_args.in = in;
         Lonworks.snvt_temp_decode(lonworks_work);
-        LonworksV.snvt_temp_encode_args.celsius = LonworksV.value;
-        LonworksV.snvt_temp_encode_args.out = back;
+        Lonworks.snvt_temp_encode_args.celsius = Lonworks.value;
+        Lonworks.snvt_temp_encode_args.out = back;
         Lonworks.snvt_temp_encode(lonworks_work);
         TEST_ASSERT_EQUAL_HEX8_ARRAY(in, back, 2);
     }
@@ -294,54 +294,54 @@ void test_snvt_switch_published_states(void)
 {
     uint8_t enc[2];
 
-    LonworksV.snvt_switch_encode_args.percent = 0.0;
-    LonworksV.snvt_switch_encode_args.state = 0;
-    LonworksV.snvt_switch_encode_args.out = enc;
+    Lonworks.snvt_switch_encode_args.percent = 0.0;
+    Lonworks.snvt_switch_encode_args.state = 0;
+    Lonworks.snvt_switch_encode_args.out = enc;
     Lonworks.snvt_switch_encode(lonworks_work);
     TEST_ASSERT_EQUAL_HEX8(0x00u, enc[0]);
     TEST_ASSERT_EQUAL_HEX8(0x00u, enc[1]);
 
-    LonworksV.snvt_switch_encode_args.percent = 100.0;
-    LonworksV.snvt_switch_encode_args.state = 1;
-    LonworksV.snvt_switch_encode_args.out = enc;
+    Lonworks.snvt_switch_encode_args.percent = 100.0;
+    Lonworks.snvt_switch_encode_args.state = 1;
+    Lonworks.snvt_switch_encode_args.out = enc;
     Lonworks.snvt_switch_encode(lonworks_work);
     TEST_ASSERT_EQUAL_HEX8(0xC8u, enc[0]);
     TEST_ASSERT_EQUAL_HEX8(0x01u, enc[1]);
 
-    LonworksV.snvt_switch_encode_args.percent = 50.0;
-    LonworksV.snvt_switch_encode_args.state = 1;
-    LonworksV.snvt_switch_encode_args.out = enc;
+    Lonworks.snvt_switch_encode_args.percent = 50.0;
+    Lonworks.snvt_switch_encode_args.state = 1;
+    Lonworks.snvt_switch_encode_args.out = enc;
     Lonworks.snvt_switch_encode(lonworks_work);
     TEST_ASSERT_EQUAL_HEX8(0x64u, enc[0]);
-    LonworksV.snvt_switch_encode_args.percent = 0.5;
-    LonworksV.snvt_switch_encode_args.state = 1;
-    LonworksV.snvt_switch_encode_args.out = enc;
+    Lonworks.snvt_switch_encode_args.percent = 0.5;
+    Lonworks.snvt_switch_encode_args.state = 1;
+    Lonworks.snvt_switch_encode_args.out = enc;
     Lonworks.snvt_switch_encode(lonworks_work);
     TEST_ASSERT_EQUAL_HEX8(0x01u, enc[0]);
 
     double pct = -1.0;
     uint8_t state = 0xAA;
-    LonworksV.snvt_switch_decode_args.in = enc;
-    LonworksV.snvt_switch_decode_args.percent = &pct;
-    LonworksV.snvt_switch_decode_args.state = &state;
+    Lonworks.snvt_switch_decode_args.in = enc;
+    Lonworks.snvt_switch_decode_args.percent = &pct;
+    Lonworks.snvt_switch_decode_args.state = &state;
     Lonworks.snvt_switch_decode(lonworks_work);
     TEST_ASSERT_EQUAL_DOUBLE(0.5, pct);
     TEST_ASSERT_EQUAL_HEX8(0x01u, state);
 
     // -1 in a signed 8-bit field is 0xFF, the published NULL state.
-    LonworksV.snvt_switch_encode_args.percent = 100.0;
-    LonworksV.snvt_switch_encode_args.state = 0xFF;
-    LonworksV.snvt_switch_encode_args.out = enc;
+    Lonworks.snvt_switch_encode_args.percent = 100.0;
+    Lonworks.snvt_switch_encode_args.state = 0xFF;
+    Lonworks.snvt_switch_encode_args.out = enc;
     Lonworks.snvt_switch_encode(lonworks_work);
     TEST_ASSERT_EQUAL_HEX8(0xFFu, enc[1]);
-    LonworksV.snvt_switch_decode_args.in = enc;
-    LonworksV.snvt_switch_decode_args.percent = NULL;
-    LonworksV.snvt_switch_decode_args.state = &state;
+    Lonworks.snvt_switch_decode_args.in = enc;
+    Lonworks.snvt_switch_decode_args.percent = NULL;
+    Lonworks.snvt_switch_decode_args.state = &state;
     Lonworks.snvt_switch_decode(lonworks_work);
     TEST_ASSERT_EQUAL_HEX8(0xFFu, state);
-    LonworksV.snvt_switch_decode_args.in = enc;
-    LonworksV.snvt_switch_decode_args.percent = &pct;
-    LonworksV.snvt_switch_decode_args.state = NULL;
+    Lonworks.snvt_switch_decode_args.in = enc;
+    Lonworks.snvt_switch_decode_args.percent = &pct;
+    Lonworks.snvt_switch_decode_args.state = NULL;
     Lonworks.snvt_switch_decode(lonworks_work);
     TEST_ASSERT_EQUAL_DOUBLE(100.0, pct);
 }
@@ -351,19 +351,19 @@ void test_snvt_switch_published_states(void)
 void test_snvt_switch_clamps_to_the_published_range(void)
 {
     uint8_t enc[2];
-    LonworksV.snvt_switch_encode_args.percent = -5.0;
-    LonworksV.snvt_switch_encode_args.state = 1;
-    LonworksV.snvt_switch_encode_args.out = enc;
+    Lonworks.snvt_switch_encode_args.percent = -5.0;
+    Lonworks.snvt_switch_encode_args.state = 1;
+    Lonworks.snvt_switch_encode_args.out = enc;
     Lonworks.snvt_switch_encode(lonworks_work);
     TEST_ASSERT_EQUAL_HEX8(0x00u, enc[0]);
-    LonworksV.snvt_switch_encode_args.percent = 200.0;
-    LonworksV.snvt_switch_encode_args.state = 1;
-    LonworksV.snvt_switch_encode_args.out = enc;
+    Lonworks.snvt_switch_encode_args.percent = 200.0;
+    Lonworks.snvt_switch_encode_args.state = 1;
+    Lonworks.snvt_switch_encode_args.out = enc;
     Lonworks.snvt_switch_encode(lonworks_work);
     TEST_ASSERT_EQUAL_HEX8(0xC8u, enc[0]);
-    LonworksV.snvt_switch_encode_args.percent = 100.5;
-    LonworksV.snvt_switch_encode_args.state = 1;
-    LonworksV.snvt_switch_encode_args.out = enc;
+    Lonworks.snvt_switch_encode_args.percent = 100.5;
+    Lonworks.snvt_switch_encode_args.state = 1;
+    Lonworks.snvt_switch_encode_args.out = enc;
     Lonworks.snvt_switch_encode(lonworks_work);
     TEST_ASSERT_EQUAL_HEX8(0xC8u, enc[0]);
 
@@ -372,13 +372,13 @@ void test_snvt_switch_clamps_to_the_published_range(void)
         uint8_t in[2] = {(uint8_t)raw, 1};
         uint8_t back[2];
         double pct = 0;
-        LonworksV.snvt_switch_decode_args.in = in;
-        LonworksV.snvt_switch_decode_args.percent = &pct;
-        LonworksV.snvt_switch_decode_args.state = NULL;
+        Lonworks.snvt_switch_decode_args.in = in;
+        Lonworks.snvt_switch_decode_args.percent = &pct;
+        Lonworks.snvt_switch_decode_args.state = NULL;
         Lonworks.snvt_switch_decode(lonworks_work);
-        LonworksV.snvt_switch_encode_args.percent = pct;
-        LonworksV.snvt_switch_encode_args.state = 1;
-        LonworksV.snvt_switch_encode_args.out = back;
+        Lonworks.snvt_switch_encode_args.percent = pct;
+        Lonworks.snvt_switch_encode_args.state = 1;
+        Lonworks.snvt_switch_encode_args.out = back;
         Lonworks.snvt_switch_encode(lonworks_work);
         TEST_ASSERT_EQUAL_HEX8(in[0], back[0]);
     }
@@ -392,53 +392,53 @@ void test_guards(void)
     static const uint8_t VALUE[3] = {1, 2, 3};
     LonNv nv;
 
-    LonworksV.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
-    LonworksV.build_nv_args.selector = 1;
-    LonworksV.build_nv_args.value = VALUE;
-    LonworksV.build_nv_args.value_len = sizeof(VALUE);
-    LonworksV.build_nv_args.out = out;
-    LonworksV.build_nv_args.cap = sizeof(out);
+    Lonworks.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
+    Lonworks.build_nv_args.selector = 1;
+    Lonworks.build_nv_args.value = VALUE;
+    Lonworks.build_nv_args.value_len = sizeof(VALUE);
+    Lonworks.build_nv_args.out = out;
+    Lonworks.build_nv_args.cap = sizeof(out);
     Lonworks.build_nv(lonworks_work);
-    size_t n = LonworksV.n;
+    size_t n = Lonworks.n;
     TEST_ASSERT_TRUE(n != 0u);
-    LonworksV.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
-    LonworksV.build_nv_args.selector = 1;
-    LonworksV.build_nv_args.value = VALUE;
-    LonworksV.build_nv_args.value_len = sizeof(VALUE);
-    LonworksV.build_nv_args.out = out;
-    LonworksV.build_nv_args.cap = n - 1u;
+    Lonworks.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
+    Lonworks.build_nv_args.selector = 1;
+    Lonworks.build_nv_args.value = VALUE;
+    Lonworks.build_nv_args.value_len = sizeof(VALUE);
+    Lonworks.build_nv_args.out = out;
+    Lonworks.build_nv_args.cap = n - 1u;
     Lonworks.build_nv(lonworks_work);
-    TEST_ASSERT_EQUAL_size_t(0u, LonworksV.n);
-    LonworksV.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
-    LonworksV.build_nv_args.selector = 1;
-    LonworksV.build_nv_args.value = VALUE;
-    LonworksV.build_nv_args.value_len = sizeof(VALUE);
-    LonworksV.build_nv_args.out = NULL;
-    LonworksV.build_nv_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_size_t(0u, Lonworks.n);
+    Lonworks.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
+    Lonworks.build_nv_args.selector = 1;
+    Lonworks.build_nv_args.value = VALUE;
+    Lonworks.build_nv_args.value_len = sizeof(VALUE);
+    Lonworks.build_nv_args.out = NULL;
+    Lonworks.build_nv_args.cap = sizeof(out);
     Lonworks.build_nv(lonworks_work);
-    TEST_ASSERT_EQUAL_size_t(0u, LonworksV.n);
-    LonworksV.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
-    LonworksV.build_nv_args.selector = 1;
-    LonworksV.build_nv_args.value = NULL;
-    LonworksV.build_nv_args.value_len = sizeof(VALUE);
-    LonworksV.build_nv_args.out = out;
-    LonworksV.build_nv_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_size_t(0u, Lonworks.n);
+    Lonworks.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
+    Lonworks.build_nv_args.selector = 1;
+    Lonworks.build_nv_args.value = NULL;
+    Lonworks.build_nv_args.value_len = sizeof(VALUE);
+    Lonworks.build_nv_args.out = out;
+    Lonworks.build_nv_args.cap = sizeof(out);
     Lonworks.build_nv(lonworks_work);
-    TEST_ASSERT_EQUAL_size_t(0u, LonworksV.n);
+    TEST_ASSERT_EQUAL_size_t(0u, Lonworks.n);
 
-    LonworksV.parse_nv_args.pdu = out;
-    LonworksV.parse_nv_args.len = 1;
-    LonworksV.parse_nv_args.out = &nv;
+    Lonworks.parse_nv_args.pdu = out;
+    Lonworks.parse_nv_args.len = 1;
+    Lonworks.parse_nv_args.out = &nv;
     Lonworks.parse_nv(lonworks_work);
-    TEST_ASSERT_FALSE(LonworksV.ok);
-    LonworksV.parse_nv_args.pdu = NULL;
-    LonworksV.parse_nv_args.len = n;
-    LonworksV.parse_nv_args.out = &nv;
+    TEST_ASSERT_FALSE(Lonworks.ok);
+    Lonworks.parse_nv_args.pdu = NULL;
+    Lonworks.parse_nv_args.len = n;
+    Lonworks.parse_nv_args.out = &nv;
     Lonworks.parse_nv(lonworks_work);
-    TEST_ASSERT_FALSE(LonworksV.ok);
-    LonworksV.parse_nv_args.pdu = out;
-    LonworksV.parse_nv_args.len = n;
-    LonworksV.parse_nv_args.out = NULL;
+    TEST_ASSERT_FALSE(Lonworks.ok);
+    Lonworks.parse_nv_args.pdu = out;
+    Lonworks.parse_nv_args.len = n;
+    Lonworks.parse_nv_args.out = NULL;
     Lonworks.parse_nv(lonworks_work);
-    TEST_ASSERT_FALSE(LonworksV.ok);
+    TEST_ASSERT_FALSE(Lonworks.ok);
 }

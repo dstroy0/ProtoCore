@@ -81,6 +81,7 @@ typedef struct
     char *accept;              ///< |Sec-WebSocket-Accept|, written by one call and compared by another (sec 11.3.3)
     size_t accept_cap;         ///< its room, at least ::PROTOCORE_WS_ACCEPT_CAP
 } WsHandshakeArgs;
+
 /** @brief RFC 6455 sec 5.2: the base framing protocol's fields, set by a build and filled by a parse. */
 typedef struct
 {
@@ -92,6 +93,7 @@ typedef struct
     size_t consumed;            ///< the whole frame a parse read: header plus Payload data
     const uint8_t *masking_key; ///< the 4-octet Masking-key a build applies (RFC 6455 sec 5.3)
 } WsFrameArgs;
+
 /** @brief The octets a codec call moves: one buffer it writes, one it reads. */
 typedef struct
 {
@@ -100,6 +102,7 @@ typedef struct
     const uint8_t *in; ///< the octets a parse or a check reads
     size_t avail;      ///< how many are readable there
 } WsBufArgs;
+
 /** @brief RFC 6455 sec 5.6: the Application data a Data frame carries, and where an inbound one lands. */
 typedef struct
 {
@@ -108,6 +111,7 @@ typedef struct
     size_t len;                   ///< its octet count
     WsClientMessageCb on_message; ///< where a reassembled Text or Binary message is delivered
 } WsMessageArgs;
+
 /**
  * @brief The client end of the WebSocket Protocol (RFC 6455).
  *
@@ -157,16 +161,10 @@ typedef struct
     WsFrameArgs frame;         ///< the base framing protocol's fields
     WsBufArgs buf;             ///< the octets a codec call moves
     WsMessageArgs msg;         ///< the Application data a Data frame carries
+
     proto_bool ok;
     size_t n;
-} WsClientVars;
 
-/** @brief The operands and the outcome. */
-extern WsClientVars WsClientV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const accept_for_key)(uint8_t *restrict work);
     void (*const build_opening_handshake)(uint8_t *restrict work);
     void (*const check_server_handshake)(uint8_t *restrict work);
@@ -181,39 +179,8 @@ typedef struct
     void (*const close)(uint8_t *restrict work);
 } WsClientNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in WsClientV or a region of the borrow at a fixed offset.
-void protocore_ws_client_accept_for_key(uint8_t *restrict work);
-void protocore_ws_client_build_opening_handshake(uint8_t *restrict work);
-void protocore_ws_client_check_server_handshake(uint8_t *restrict work);
-void protocore_ws_client_build_frame(uint8_t *restrict work);
-void protocore_ws_client_parse_frame(uint8_t *restrict work);
-void protocore_ws_client_on_message(uint8_t *restrict work);
-void protocore_ws_client_connect(uint8_t *restrict work);
-void protocore_ws_client_send_text(uint8_t *restrict work);
-void protocore_ws_client_send_binary(uint8_t *restrict work);
-void protocore_ws_client_loop(uint8_t *restrict work);
-void protocore_ws_client_connected(uint8_t *restrict work);
-void protocore_ws_client_close(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `WsClient.accept_for_key(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const WsClientNs WsClient __attribute__((unused)) = {
-    .accept_for_key = protocore_ws_client_accept_for_key,
-    .build_opening_handshake = protocore_ws_client_build_opening_handshake,
-    .check_server_handshake = protocore_ws_client_check_server_handshake,
-    .build_frame = protocore_ws_client_build_frame,
-    .parse_frame = protocore_ws_client_parse_frame,
-    .on_message = protocore_ws_client_on_message,
-    .connect = protocore_ws_client_connect,
-    .send_text = protocore_ws_client_send_text,
-    .send_binary = protocore_ws_client_send_binary,
-    .loop = protocore_ws_client_loop,
-    .connected = protocore_ws_client_connected,
-    .close = protocore_ws_client_close,
-};
+/** @brief The one symbol this module exports. */
+extern WsClientNs WsClient;
 
 /**
  * @brief The PROTOCORE_WS_CLIENT_BORROW bytes this module's state lives in.

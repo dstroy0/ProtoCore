@@ -36,52 +36,51 @@ static int select_best(const LinkManager *m)
 static void link_select(uint8_t *restrict work)
 {
     (void)work;
-    LinkV.i32 = select_best(LinkV.args.m_ro);
+    Link.i32 = select_best(Link.args.m_ro);
 }
 
 static void link_init(uint8_t *restrict work)
 {
     (void)work;
-    LinkManager *m = LinkV.args.m;
+    LinkManager *m = Link.args.m;
     if (!m)
     {
         return;
     }
-    m->ifaces = LinkV.args.ifaces;
-    m->n = LinkV.args.ifaces ? LinkV.args.n : 0;
+    m->ifaces = Link.args.ifaces;
+    m->n = Link.args.ifaces ? Link.args.n : 0;
     m->active = select_best(m);
 }
 
 static void link_active(uint8_t *restrict work)
 {
     (void)work;
-    const LinkManager *m = LinkV.args.m_ro;
-    LinkV.i32 = m ? m->active : -1;
+    const LinkManager *m = Link.args.m_ro;
+    Link.i32 = m ? m->active : -1;
 }
 
 static void link_set(uint8_t *restrict work)
 {
     (void)work;
-    LinkManager *m = LinkV.args.m;
-    const size_t idx = LinkV.args.idx;
+    LinkManager *m = Link.args.m;
+    const size_t idx = Link.args.idx;
 
     if (!m || !m->ifaces || idx >= m->n)
     {
-        LinkV.from = m ? m->active : -1;
-        LinkV.to = LinkV.from;
-        LinkV.changed = PROTO_FALSE;
+        Link.from = m ? m->active : -1;
+        Link.to = Link.from;
+        Link.changed = PROTO_FALSE;
         return;
     }
     int prev = m->active;
-    m->ifaces[idx].up = LinkV.args.up;
+    m->ifaces[idx].up = Link.args.up;
     m->active = select_best(m);
-    LinkV.from = prev;
-    LinkV.to = m->active;
-    LinkV.changed = (m->active != prev);
+    Link.from = prev;
+    Link.to = m->active;
+    Link.changed = (m->active != prev);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-LinkVars LinkV;
+LinkManagerNs Link = {.init = link_init, .select = link_select, .active = link_active, .set = link_set};
 
 #endif // PROTOCORE_ENABLE_LINK_MANAGER

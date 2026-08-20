@@ -76,6 +76,7 @@ typedef struct
     protocore_deferred_fn fn; ///< what the worker runs
     void *arg;                ///< the opaque context it is given
 } WorkerDeferArgs;
+
 /**
  * @brief The Workers module.
  *
@@ -97,49 +98,25 @@ typedef struct
 {
     int worker_id;                 ///< the worker every call names
     protocore_worker_pump_fn pump; ///< what a started worker runs each time it wakes
-    WorkerDeferArgs defer_args;    ///< the call handed to a worker to run in its own context
+
+    WorkerDeferArgs defer_args; ///< the call handed to a worker to run in its own context
+
     proto_bool ok;
-#if PROTOCORE_ENABLE_PREEMPT_QUEUE
-    // The lane the workers jump. They run without it; it only changes what runs first.
-    PreemptQueueNs *queue;
-#endif
-} WorkersVars;
 
-/** @brief The operands and the outcome. */
-extern WorkersVars WorkersV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const run_deferred)(uint8_t *restrict work);
     void (*const running)(uint8_t *restrict work);
     void (*const start)(uint8_t *restrict work);
     void (*const stop)(uint8_t *restrict work);
     void (*const wake)(uint8_t *restrict work);
     void (*const defer)(uint8_t *restrict work);
+#if PROTOCORE_ENABLE_PREEMPT_QUEUE
+    // The lane the workers jump. They run without it; it only changes what runs first.
+    PreemptQueueNs *queue;
+#endif
 } WorkerNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in WorkersV or a region of the borrow at a fixed offset.
-void protocore_worker_run_deferred(uint8_t *restrict work);
-void protocore_worker_running(uint8_t *restrict work);
-void protocore_worker_start(uint8_t *restrict work);
-void protocore_worker_stop(uint8_t *restrict work);
-void protocore_worker_wake(uint8_t *restrict work);
-void protocore_worker_defer(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Workers.run_deferred(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const WorkerNs Workers __attribute__((unused)) = {
-    .run_deferred = protocore_worker_run_deferred,
-    .running = protocore_worker_running,
-    .start = protocore_worker_start,
-    .stop = protocore_worker_stop,
-    .wake = protocore_worker_wake,
-    .defer = protocore_worker_defer,
-};
+/** @brief The one symbol this module exports. */
+extern WorkerNs Workers;
 
 /**
  * @brief The PROTOCORE_WORKER_BORROW bytes this module's state lives in.

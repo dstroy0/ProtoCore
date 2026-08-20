@@ -66,6 +66,7 @@ typedef struct
     uint8_t light;                                ///< photosensor level (0-255)
     uint8_t out_pin;                              ///< OUT pin level (0/1)
 } Ld2410Report;
+
 /** @brief Byte-by-byte report-frame reassembler (fixed buffer, resyncs on noise). */
 typedef struct
 {
@@ -75,6 +76,7 @@ typedef struct
     uint8_t hdr_match;             ///< header bytes matched while syncing (phase = pos<4)
     uint8_t phase;                 ///< 0 sync, 1 length, 2 body
 } Ld2410Stream;
+
 /** @brief A decoded command-ACK frame. @ref payload points into the caller's frame (not copied). */
 typedef struct
 {
@@ -83,6 +85,7 @@ typedef struct
     const uint8_t *payload; ///< command-specific data after the status word (nullptr if none).
     size_t payload_len;     ///< octets at @ref payload.
 } Ld2410Ack;
+
 /** @brief What parse_report takes: frame, len, out. */
 typedef struct
 {
@@ -90,11 +93,13 @@ typedef struct
     size_t len;
     Ld2410Report *out;
 } Ld2410ParseReportArgs;
+
 /** @brief What stream_reset takes: s. */
 typedef struct
 {
     Ld2410Stream *s;
 } Ld2410StreamResetArgs;
+
 /** @brief What stream_push takes: s, byte, out. */
 typedef struct
 {
@@ -102,28 +107,33 @@ typedef struct
     uint8_t byte;
     Ld2410Report *out;
 } Ld2410StreamPushArgs;
+
 /** @brief What present takes: r. */
 typedef struct
 {
     const Ld2410Report *r;
 } Ld2410PresentArgs;
+
 /** @brief What distance_cm takes: r. */
 typedef struct
 {
     const Ld2410Report *r;
 } Ld2410DistanceCmArgs;
+
 /** @brief What cmd_config_enable takes: buf, cap. */
 typedef struct
 {
     uint8_t *buf;
     size_t cap;
 } Ld2410CmdConfigEnableArgs;
+
 /** @brief What cmd_config_end takes: buf, cap. */
 typedef struct
 {
     uint8_t *buf;
     size_t cap;
 } Ld2410CmdConfigEndArgs;
+
 /** @brief What cmd_engineering takes: buf, cap, on. */
 typedef struct
 {
@@ -131,12 +141,14 @@ typedef struct
     size_t cap;
     proto_bool on;
 } Ld2410CmdEngineeringArgs;
+
 /** @brief What cmd_restart takes: buf, cap. */
 typedef struct
 {
     uint8_t *buf;
     size_t cap;
 } Ld2410CmdRestartArgs;
+
 /** @brief What cmd_bluetooth takes: buf, cap, on. */
 typedef struct
 {
@@ -144,12 +156,14 @@ typedef struct
     size_t cap;
     proto_bool on;
 } Ld2410CmdBluetoothArgs;
+
 /** @brief What cmd_get_mac takes: buf, cap. */
 typedef struct
 {
     uint8_t *buf;
     size_t cap;
 } Ld2410CmdGetMacArgs;
+
 /** @brief What cmd_set_bt_password takes: buf, cap, password. */
 typedef struct
 {
@@ -157,6 +171,7 @@ typedef struct
     size_t cap;
     const char *password; ///< 6 bytes.
 } Ld2410CmdSetBtPasswordArgs;
+
 /** @brief What parse_ack takes: frame, len, out. */
 typedef struct
 {
@@ -164,28 +179,33 @@ typedef struct
     size_t len;
     Ld2410Ack *out;
 } Ld2410ParseAckArgs;
+
 /** @brief What ack_ok takes: ack. */
 typedef struct
 {
     const Ld2410Ack *ack;
 } Ld2410AckOkArgs;
+
 /** @brief What ack_mac takes: ack, mac. */
 typedef struct
 {
     const Ld2410Ack *ack;
     uint8_t *mac; ///< 6 bytes.
 } Ld2410AckMacArgs;
+
 /** @brief What begin takes: rx_pin, tx_pin. */
 typedef struct
 {
     int rx_pin;
     int tx_pin;
 } Ld2410BeginArgs;
+
 /** @brief What set_engineering takes: on. */
 typedef struct
 {
     proto_bool on;
 } Ld2410SetEngineeringArgs;
+
 /**
  * @brief HLK-LD2410 24 GHz mmWave presence / motion radar codec (PROTOCORE_ENABLE_LD2410). The LD2410 streams a framed
  * ...
@@ -264,18 +284,12 @@ typedef struct
     Ld2410AckMacArgs ack_mac_args;
     Ld2410BeginArgs begin_args;
     Ld2410SetEngineeringArgs set_engineering_args;
+
     proto_bool ok;
     uint16_t cm;
     size_t n;
     const Ld2410Report *report;
-} Ld2410Vars;
 
-/** @brief The operands and the outcome. */
-extern Ld2410Vars Ld2410V;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const parse_report)(uint8_t *restrict work);
     void (*const stream_reset)(uint8_t *restrict work);
     void (*const stream_push)(uint8_t *restrict work);
@@ -298,55 +312,8 @@ typedef struct
     void (*const restart)(uint8_t *restrict work);
 } Ld2410Ns;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in Ld2410V or a region of the borrow at a fixed offset.
-void protocore_ld2410_parse_report(uint8_t *restrict work);
-void protocore_ld2410_stream_reset(uint8_t *restrict work);
-void protocore_ld2410_stream_push(uint8_t *restrict work);
-void protocore_ld2410_present(uint8_t *restrict work);
-void protocore_ld2410_distance_cm(uint8_t *restrict work);
-void protocore_ld2410_cmd_config_enable(uint8_t *restrict work);
-void protocore_ld2410_cmd_config_end(uint8_t *restrict work);
-void protocore_ld2410_cmd_engineering(uint8_t *restrict work);
-void protocore_ld2410_cmd_restart(uint8_t *restrict work);
-void protocore_ld2410_cmd_bluetooth(uint8_t *restrict work);
-void protocore_ld2410_cmd_get_mac(uint8_t *restrict work);
-void protocore_ld2410_cmd_set_bt_password(uint8_t *restrict work);
-void protocore_ld2410_parse_ack(uint8_t *restrict work);
-void protocore_ld2410_ack_ok(uint8_t *restrict work);
-void protocore_ld2410_ack_mac(uint8_t *restrict work);
-void protocore_ld2410_begin(uint8_t *restrict work);
-void protocore_ld2410_poll(uint8_t *restrict work);
-void protocore_ld2410_last(uint8_t *restrict work);
-void protocore_ld2410_set_engineering(uint8_t *restrict work);
-void protocore_ld2410_restart(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Ld2410.parse_report(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const Ld2410Ns Ld2410 __attribute__((unused)) = {
-    .parse_report = protocore_ld2410_parse_report,
-    .stream_reset = protocore_ld2410_stream_reset,
-    .stream_push = protocore_ld2410_stream_push,
-    .present = protocore_ld2410_present,
-    .distance_cm = protocore_ld2410_distance_cm,
-    .cmd_config_enable = protocore_ld2410_cmd_config_enable,
-    .cmd_config_end = protocore_ld2410_cmd_config_end,
-    .cmd_engineering = protocore_ld2410_cmd_engineering,
-    .cmd_restart = protocore_ld2410_cmd_restart,
-    .cmd_bluetooth = protocore_ld2410_cmd_bluetooth,
-    .cmd_get_mac = protocore_ld2410_cmd_get_mac,
-    .cmd_set_bt_password = protocore_ld2410_cmd_set_bt_password,
-    .parse_ack = protocore_ld2410_parse_ack,
-    .ack_ok = protocore_ld2410_ack_ok,
-    .ack_mac = protocore_ld2410_ack_mac,
-    .begin = protocore_ld2410_begin,
-    .poll = protocore_ld2410_poll,
-    .last = protocore_ld2410_last,
-    .set_engineering = protocore_ld2410_set_engineering,
-    .restart = protocore_ld2410_restart,
-};
+/** @brief The one symbol this module exports. */
+extern Ld2410Ns Ld2410;
 
 /**
  * @brief The PROTOCORE_LD2410_BORROW bytes this module's state lives in.

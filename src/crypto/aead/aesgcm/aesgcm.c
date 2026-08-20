@@ -179,7 +179,7 @@ static void gcm_key_setup(uint8_t *restrict work)
     GcmWork *w = AESGCM_CTX(work);
     mem.zero(w->ks, 16);        // zero input for H (reuses the keystream slot; overwritten by gctr later)
     aes256_ecb(w, w->ks, w->h); // H = E(K, 0^128)
-    GhashV.key_args.h = w->h;
+    Ghash.key_args.h = w->h;
     Ghash.key_init(AESGCM_GHASH(work));
 }
 
@@ -220,17 +220,17 @@ static void gcm_tag(uint8_t *restrict work, const uint8_t *aad, size_t aad_len, 
 {
     GcmWork *w = AESGCM_CTX(work);
     mem.zero(w->acc, 16);
-    GhashV.update_args.acc = w->acc;
-    GhashV.update_args.data = aad;
-    GhashV.update_args.len = aad_len;
+    Ghash.update_args.acc = w->acc;
+    Ghash.update_args.data = aad;
+    Ghash.update_args.len = aad_len;
     Ghash.update(AESGCM_GHASH(work));
-    GhashV.update_args.data = cipher;
-    GhashV.update_args.len = cipher_len;
+    Ghash.update_args.data = cipher;
+    Ghash.update_args.len = cipher_len;
     Ghash.update(AESGCM_GHASH(work));
     put_be64(w->lb, (uint64_t)aad_len * 8);
     put_be64(w->lb + 8, (uint64_t)cipher_len * 8);
     xor16(w->acc, w->lb);
-    GhashV.mul_args.acc = w->acc;
+    Ghash.mul_args.acc = w->acc;
     Ghash.mul(AESGCM_GHASH(work));
     aes256_ecb(w, w->j0, w->ej0);
     for (int i = 0; i < 16; i++)
@@ -285,60 +285,60 @@ static proto_bool aesgcm_open_record(uint8_t *restrict work, const uint8_t *nonc
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_aesgcm_key_init(uint8_t *restrict work)
+static void aesgcm_key_init(uint8_t *restrict work)
 {
-    AesGcmV.ok = PROTO_FALSE;
-    if (!AesGcmV.key_args.key)
+    AesGcm.ok = PROTO_FALSE;
+    if (!AesGcm.key_args.key)
     {
         return;
     }
-    AesGcmV.ok = aesgcm_key_load(work, AesGcmV.key_args.key);
+    AesGcm.ok = aesgcm_key_load(work, AesGcm.key_args.key);
 }
 
 // Release what the context attached. The bytes themselves are the caller's: it releases the borrow and
 // the pool wipes it.
-void protocore_aesgcm_key_wipe(uint8_t *restrict work)
+static void aesgcm_key_wipe(uint8_t *restrict work)
 {
-    AesGcmV.ok = PROTO_FALSE;
+    AesGcm.ok = PROTO_FALSE;
     aesgcm_key_release(work);
-    AesGcmV.ok = PROTO_TRUE;
+    AesGcm.ok = PROTO_TRUE;
 }
 
-void protocore_aesgcm_seal(uint8_t *restrict work)
+static void aesgcm_seal(uint8_t *restrict work)
 {
-    AesGcmV.ok = PROTO_FALSE;
-    if (!AesGcmV.seal_args.nonce || !AesGcmV.seal_args.ct_out || !AesGcmV.seal_args.tag_out)
+    AesGcm.ok = PROTO_FALSE;
+    if (!AesGcm.seal_args.nonce || !AesGcm.seal_args.ct_out || !AesGcm.seal_args.tag_out)
     {
         return;
     }
-    AesGcmV.ok = aesgcm_seal_record(work, AesGcmV.seal_args.nonce, AesGcmV.seal_args.aad, AesGcmV.seal_args.aad_len,
-                                    AesGcmV.seal_args.pt, AesGcmV.seal_args.pt_len, AesGcmV.seal_args.ct_out,
-                                    AesGcmV.seal_args.tag_out);
+    AesGcm.ok = aesgcm_seal_record(work, AesGcm.seal_args.nonce, AesGcm.seal_args.aad, AesGcm.seal_args.aad_len,
+                                   AesGcm.seal_args.pt, AesGcm.seal_args.pt_len, AesGcm.seal_args.ct_out,
+                                   AesGcm.seal_args.tag_out);
 }
 
-void protocore_aesgcm_open(uint8_t *restrict work)
+static void aesgcm_open(uint8_t *restrict work)
 {
-    AesGcmV.ok = PROTO_FALSE;
-    if (!AesGcmV.open_args.nonce || !AesGcmV.open_args.tag || !AesGcmV.open_args.out)
+    AesGcm.ok = PROTO_FALSE;
+    if (!AesGcm.open_args.nonce || !AesGcm.open_args.tag || !AesGcm.open_args.out)
     {
         return;
     }
-    AesGcmV.ok = aesgcm_open_record(work, AesGcmV.open_args.nonce, AesGcmV.open_args.aad, AesGcmV.open_args.aad_len,
-                                    AesGcmV.open_args.ct, AesGcmV.open_args.ct_len, AesGcmV.open_args.tag,
-                                    AesGcmV.open_args.out);
+    AesGcm.ok =
+        aesgcm_open_record(work, AesGcm.open_args.nonce, AesGcm.open_args.aad, AesGcm.open_args.aad_len,
+                           AesGcm.open_args.ct, AesGcm.open_args.ct_len, AesGcm.open_args.tag, AesGcm.open_args.out);
 }
 
 // Advance the RFC 5647 invocation counter: the low 8 bytes of the 12-byte nonce, big-endian; the 4-byte
 // fixed field never changes. The nonce is the caller's own, so the borrow goes unread.
-void protocore_aesgcm_iv_increment(uint8_t *restrict work)
+static void aesgcm_iv_increment(uint8_t *restrict work)
 {
     (void)work;
-    AesGcmV.ok = PROTO_FALSE;
-    if (!AesGcmV.iv_args.iv)
+    AesGcm.ok = PROTO_FALSE;
+    if (!AesGcm.iv_args.iv)
     {
         return;
     }
-    uint8_t *nonce = AesGcmV.iv_args.iv;
+    uint8_t *nonce = AesGcm.iv_args.iv;
     for (int j = PROTOCORE_AESGCM_IV_LEN - 1; j >= 4; j--)
     {
         if (++nonce[j])
@@ -346,11 +346,14 @@ void protocore_aesgcm_iv_increment(uint8_t *restrict work)
             break;
         }
     }
-    AesGcmV.ok = PROTO_TRUE;
+    AesGcm.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-AesGcmVars AesGcmV;
+AesGcmNs AesGcm = {.key_init = aesgcm_key_init,
+                   .key_wipe = aesgcm_key_wipe,
+                   .seal = aesgcm_seal,
+                   .open = aesgcm_open,
+                   .iv_increment = aesgcm_iv_increment};
 
 PROTOCORE_END_DECLS
 

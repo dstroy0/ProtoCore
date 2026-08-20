@@ -58,15 +58,15 @@ void test_msnlmp_smb2_header_layout(void)
     uint8_t buf[PROTOCORE_SMB2_HEADER_SIZE];
     memset(buf, 0xEE, sizeof(buf));
     TEST_ASSERT_EQUAL_INT(64, PROTOCORE_SMB2_HEADER_SIZE);
-    Smb2V.build_header_args.buf = buf;
-    Smb2V.build_header_args.cap = sizeof(buf);
-    Smb2V.build_header_args.command = SMB2_TREE_CONNECT;
-    Smb2V.build_header_args.credit_request = 0x0100;
-    Smb2V.build_header_args.message_id = 0x0123456789ABCDEFull;
-    Smb2V.build_header_args.tree_id = 0x11223344u;
-    Smb2V.build_header_args.session_id = 0xFEDCBA9876543210ull;
+    Smb2.build_header_args.buf = buf;
+    Smb2.build_header_args.cap = sizeof(buf);
+    Smb2.build_header_args.command = SMB2_TREE_CONNECT;
+    Smb2.build_header_args.credit_request = 0x0100;
+    Smb2.build_header_args.message_id = 0x0123456789ABCDEFull;
+    Smb2.build_header_args.tree_id = 0x11223344u;
+    Smb2.build_header_args.session_id = 0xFEDCBA9876543210ull;
     Smb2.build_header(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(64, Smb2V.n);
+    TEST_ASSERT_EQUAL_size_t(64, Smb2.n);
 
     static const uint8_t PROTOCOL_ID[4] = {0xFE, 'S', 'M', 'B'};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(PROTOCOL_ID, buf, 4);
@@ -89,11 +89,11 @@ void test_msnlmp_smb2_header_layout(void)
 
     Smb2Header h;
     memset(&h, 0xEE, sizeof(h));
-    Smb2V.parse_header_args.buf = buf;
-    Smb2V.parse_header_args.len = sizeof(buf);
-    Smb2V.parse_header_args.out = &h;
+    Smb2.parse_header_args.buf = buf;
+    Smb2.parse_header_args.len = sizeof(buf);
+    Smb2.parse_header_args.out = &h;
     Smb2.parse_header(smb2_work);
-    TEST_ASSERT_TRUE(Smb2V.ok);
+    TEST_ASSERT_TRUE(Smb2.ok);
     TEST_ASSERT_EQUAL_INT(SMB2_TREE_CONNECT, h.command);
     TEST_ASSERT_EQUAL_UINT32(0, h.status);
     TEST_ASSERT_EQUAL_UINT32(0, h.flags);
@@ -109,80 +109,80 @@ void test_header_parse_fails_closed(void)
 {
     uint8_t buf[PROTOCORE_SMB2_HEADER_SIZE];
     Smb2Header h;
-    Smb2V.build_header_args.buf = buf;
-    Smb2V.build_header_args.cap = sizeof(buf);
-    Smb2V.build_header_args.command = SMB2_NEGOTIATE;
-    Smb2V.build_header_args.credit_request = 1;
-    Smb2V.build_header_args.message_id = 0;
-    Smb2V.build_header_args.tree_id = 0;
-    Smb2V.build_header_args.session_id = 0;
+    Smb2.build_header_args.buf = buf;
+    Smb2.build_header_args.cap = sizeof(buf);
+    Smb2.build_header_args.command = SMB2_NEGOTIATE;
+    Smb2.build_header_args.credit_request = 1;
+    Smb2.build_header_args.message_id = 0;
+    Smb2.build_header_args.tree_id = 0;
+    Smb2.build_header_args.session_id = 0;
     Smb2.build_header(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(64, Smb2V.n);
-    Smb2V.parse_header_args.buf = buf;
-    Smb2V.parse_header_args.len = sizeof(buf);
-    Smb2V.parse_header_args.out = &h;
+    TEST_ASSERT_EQUAL_size_t(64, Smb2.n);
+    Smb2.parse_header_args.buf = buf;
+    Smb2.parse_header_args.len = sizeof(buf);
+    Smb2.parse_header_args.out = &h;
     Smb2.parse_header(smb2_work);
-    TEST_ASSERT_TRUE(Smb2V.ok);
+    TEST_ASSERT_TRUE(Smb2.ok);
 
-    Smb2V.parse_header_args.buf = buf;
-    Smb2V.parse_header_args.len = 63;
-    Smb2V.parse_header_args.out = &h;
+    Smb2.parse_header_args.buf = buf;
+    Smb2.parse_header_args.len = 63;
+    Smb2.parse_header_args.out = &h;
     Smb2.parse_header(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
+    TEST_ASSERT_FALSE(Smb2.ok);
 
     uint8_t bad[PROTOCORE_SMB2_HEADER_SIZE];
     memcpy(bad, buf, sizeof(bad));
     bad[0] = 0xFF; // not 0xFE
-    Smb2V.parse_header_args.buf = bad;
-    Smb2V.parse_header_args.len = sizeof(bad);
-    Smb2V.parse_header_args.out = &h;
+    Smb2.parse_header_args.buf = bad;
+    Smb2.parse_header_args.len = sizeof(bad);
+    Smb2.parse_header_args.out = &h;
     Smb2.parse_header(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
+    TEST_ASSERT_FALSE(Smb2.ok);
 
     memcpy(bad, buf, sizeof(bad));
     bad[1] = 'X'; // not 'S'
-    Smb2V.parse_header_args.buf = bad;
-    Smb2V.parse_header_args.len = sizeof(bad);
-    Smb2V.parse_header_args.out = &h;
+    Smb2.parse_header_args.buf = bad;
+    Smb2.parse_header_args.len = sizeof(bad);
+    Smb2.parse_header_args.out = &h;
     Smb2.parse_header(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
+    TEST_ASSERT_FALSE(Smb2.ok);
 
     memcpy(bad, buf, sizeof(bad));
     bad[4] = 65; // StructureSize
-    Smb2V.parse_header_args.buf = bad;
-    Smb2V.parse_header_args.len = sizeof(bad);
-    Smb2V.parse_header_args.out = &h;
+    Smb2.parse_header_args.buf = bad;
+    Smb2.parse_header_args.len = sizeof(bad);
+    Smb2.parse_header_args.out = &h;
     Smb2.parse_header(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
+    TEST_ASSERT_FALSE(Smb2.ok);
 
-    Smb2V.parse_header_args.buf = NULL;
-    Smb2V.parse_header_args.len = 64;
-    Smb2V.parse_header_args.out = &h;
+    Smb2.parse_header_args.buf = NULL;
+    Smb2.parse_header_args.len = 64;
+    Smb2.parse_header_args.out = &h;
     Smb2.parse_header(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
-    Smb2V.parse_header_args.buf = buf;
-    Smb2V.parse_header_args.len = 64;
-    Smb2V.parse_header_args.out = NULL;
+    TEST_ASSERT_FALSE(Smb2.ok);
+    Smb2.parse_header_args.buf = buf;
+    Smb2.parse_header_args.len = 64;
+    Smb2.parse_header_args.out = NULL;
     Smb2.parse_header(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
-    Smb2V.build_header_args.buf = buf;
-    Smb2V.build_header_args.cap = 63;
-    Smb2V.build_header_args.command = SMB2_NEGOTIATE;
-    Smb2V.build_header_args.credit_request = 1;
-    Smb2V.build_header_args.message_id = 0;
-    Smb2V.build_header_args.tree_id = 0;
-    Smb2V.build_header_args.session_id = 0;
+    TEST_ASSERT_FALSE(Smb2.ok);
+    Smb2.build_header_args.buf = buf;
+    Smb2.build_header_args.cap = 63;
+    Smb2.build_header_args.command = SMB2_NEGOTIATE;
+    Smb2.build_header_args.credit_request = 1;
+    Smb2.build_header_args.message_id = 0;
+    Smb2.build_header_args.tree_id = 0;
+    Smb2.build_header_args.session_id = 0;
     Smb2.build_header(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
-    Smb2V.build_header_args.buf = NULL;
-    Smb2V.build_header_args.cap = 64;
-    Smb2V.build_header_args.command = SMB2_NEGOTIATE;
-    Smb2V.build_header_args.credit_request = 1;
-    Smb2V.build_header_args.message_id = 0;
-    Smb2V.build_header_args.tree_id = 0;
-    Smb2V.build_header_args.session_id = 0;
+    TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
+    Smb2.build_header_args.buf = NULL;
+    Smb2.build_header_args.cap = 64;
+    Smb2.build_header_args.command = SMB2_NEGOTIATE;
+    Smb2.build_header_args.credit_request = 1;
+    Smb2.build_header_args.message_id = 0;
+    Smb2.build_header_args.tree_id = 0;
+    Smb2.build_header_args.session_id = 0;
     Smb2.build_header(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
+    TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
 }
 
 // The command codes of sec 2.2.1.2's Command table, the dialect revisions of sec 2.2.4, the Flags
@@ -247,74 +247,74 @@ void test_direct_tcp_transport_framing(void)
 {
     static const uint8_t MSG[5] = {1, 2, 3, 4, 5};
     uint8_t out[16];
-    Smb2V.transport_frame_args.out = out;
-    Smb2V.transport_frame_args.cap = sizeof(out);
-    Smb2V.transport_frame_args.msg = MSG;
-    Smb2V.transport_frame_args.msg_len = sizeof(MSG);
+    Smb2.transport_frame_args.out = out;
+    Smb2.transport_frame_args.cap = sizeof(out);
+    Smb2.transport_frame_args.msg = MSG;
+    Smb2.transport_frame_args.msg_len = sizeof(MSG);
     Smb2.transport_frame(smb2_work);
-    size_t n = Smb2V.n;
+    size_t n = Smb2.n;
     TEST_ASSERT_EQUAL_size_t(9, n);
     static const uint8_t WANT[9] = {0x00, 0x00, 0x00, 0x05, 1, 2, 3, 4, 5};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));
 
-    Smb2V.transport_len_args.buf = out;
-    Smb2V.transport_len_args.len = n;
+    Smb2.transport_len_args.buf = out;
+    Smb2.transport_len_args.len = n;
     Smb2.transport_len(smb2_work);
-    TEST_ASSERT_EQUAL_UINT32(5, Smb2V.u32);
+    TEST_ASSERT_EQUAL_UINT32(5, Smb2.u32);
 
     // The three length octets are big-endian, so a value using all three is unambiguous.
     static const uint8_t BIG[4] = {0x00, 0x12, 0x34, 0x56};
-    Smb2V.transport_len_args.buf = BIG;
-    Smb2V.transport_len_args.len = sizeof(BIG);
+    Smb2.transport_len_args.buf = BIG;
+    Smb2.transport_len_args.len = sizeof(BIG);
     Smb2.transport_len(smb2_work);
-    TEST_ASSERT_EQUAL_UINT32(0x123456u, Smb2V.u32);
+    TEST_ASSERT_EQUAL_UINT32(0x123456u, Smb2.u32);
 
     // A non-zero first octet is not a Direct TCP frame.
     static const uint8_t BAD[4] = {0x01, 0x00, 0x00, 0x05};
-    Smb2V.transport_len_args.buf = BAD;
-    Smb2V.transport_len_args.len = sizeof(BAD);
+    Smb2.transport_len_args.buf = BAD;
+    Smb2.transport_len_args.len = sizeof(BAD);
     Smb2.transport_len(smb2_work);
-    TEST_ASSERT_EQUAL_UINT32(0, Smb2V.u32);
-    Smb2V.transport_len_args.buf = out;
-    Smb2V.transport_len_args.len = 3;
+    TEST_ASSERT_EQUAL_UINT32(0, Smb2.u32);
+    Smb2.transport_len_args.buf = out;
+    Smb2.transport_len_args.len = 3;
     Smb2.transport_len(smb2_work);
-    TEST_ASSERT_EQUAL_UINT32(0, Smb2V.u32);
-    Smb2V.transport_len_args.buf = NULL;
-    Smb2V.transport_len_args.len = 4;
+    TEST_ASSERT_EQUAL_UINT32(0, Smb2.u32);
+    Smb2.transport_len_args.buf = NULL;
+    Smb2.transport_len_args.len = 4;
     Smb2.transport_len(smb2_work);
-    TEST_ASSERT_EQUAL_UINT32(0, Smb2V.u32);
+    TEST_ASSERT_EQUAL_UINT32(0, Smb2.u32);
 
     // A length past 24 bits has no encoding, and the destination must hold prefix plus message.
-    Smb2V.transport_frame_args.out = out;
-    Smb2V.transport_frame_args.cap = sizeof(out);
-    Smb2V.transport_frame_args.msg = MSG;
-    Smb2V.transport_frame_args.msg_len = 0x01000000u;
+    Smb2.transport_frame_args.out = out;
+    Smb2.transport_frame_args.cap = sizeof(out);
+    Smb2.transport_frame_args.msg = MSG;
+    Smb2.transport_frame_args.msg_len = 0x01000000u;
     Smb2.transport_frame(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
-    Smb2V.transport_frame_args.out = out;
-    Smb2V.transport_frame_args.cap = 8;
-    Smb2V.transport_frame_args.msg = MSG;
-    Smb2V.transport_frame_args.msg_len = sizeof(MSG);
+    TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
+    Smb2.transport_frame_args.out = out;
+    Smb2.transport_frame_args.cap = 8;
+    Smb2.transport_frame_args.msg = MSG;
+    Smb2.transport_frame_args.msg_len = sizeof(MSG);
     Smb2.transport_frame(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
-    Smb2V.transport_frame_args.out = out;
-    Smb2V.transport_frame_args.cap = 9;
-    Smb2V.transport_frame_args.msg = MSG;
-    Smb2V.transport_frame_args.msg_len = sizeof(MSG);
+    TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
+    Smb2.transport_frame_args.out = out;
+    Smb2.transport_frame_args.cap = 9;
+    Smb2.transport_frame_args.msg = MSG;
+    Smb2.transport_frame_args.msg_len = sizeof(MSG);
     Smb2.transport_frame(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(9, Smb2V.n);
-    Smb2V.transport_frame_args.out = NULL;
-    Smb2V.transport_frame_args.cap = 16;
-    Smb2V.transport_frame_args.msg = MSG;
-    Smb2V.transport_frame_args.msg_len = sizeof(MSG);
+    TEST_ASSERT_EQUAL_size_t(9, Smb2.n);
+    Smb2.transport_frame_args.out = NULL;
+    Smb2.transport_frame_args.cap = 16;
+    Smb2.transport_frame_args.msg = MSG;
+    Smb2.transport_frame_args.msg_len = sizeof(MSG);
     Smb2.transport_frame(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
-    Smb2V.transport_frame_args.out = out;
-    Smb2V.transport_frame_args.cap = 16;
-    Smb2V.transport_frame_args.msg = NULL;
-    Smb2V.transport_frame_args.msg_len = sizeof(MSG);
+    TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
+    Smb2.transport_frame_args.out = out;
+    Smb2.transport_frame_args.cap = 16;
+    Smb2.transport_frame_args.msg = NULL;
+    Smb2.transport_frame_args.msg_len = sizeof(MSG);
     Smb2.transport_frame(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
+    TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
 }
 
 // MS-SMB2 sec 2.2.3: the NEGOTIATE request body is StructureSize(2) = 36, DialectCount(2),
@@ -326,12 +326,12 @@ void test_negotiate_request_body(void)
     static const uint8_t GUID[16] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
                                      0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
     uint8_t buf[256];
-    Smb2V.build_negotiate_args.buf = buf;
-    Smb2V.build_negotiate_args.cap = sizeof(buf);
-    Smb2V.build_negotiate_args.client_guid = GUID;
-    Smb2V.build_negotiate_args.security_mode = SMB2_NEGOTIATE_SIGNING_ENABLED;
+    Smb2.build_negotiate_args.buf = buf;
+    Smb2.build_negotiate_args.cap = sizeof(buf);
+    Smb2.build_negotiate_args.client_guid = GUID;
+    Smb2.build_negotiate_args.security_mode = SMB2_NEGOTIATE_SIGNING_ENABLED;
     Smb2.build_negotiate(smb2_work);
-    size_t n = Smb2V.n;
+    size_t n = Smb2.n;
     TEST_ASSERT_EQUAL_size_t(108, n);
 
     const uint8_t *b = buf + PROTOCORE_SMB2_HEADER_SIZE;
@@ -347,39 +347,39 @@ void test_negotiate_request_body(void)
 
     // The header in front of it is a NEGOTIATE with no session and no tree, per sec 2.2.1.2.
     Smb2Header h;
-    Smb2V.parse_header_args.buf = buf;
-    Smb2V.parse_header_args.len = n;
-    Smb2V.parse_header_args.out = &h;
+    Smb2.parse_header_args.buf = buf;
+    Smb2.parse_header_args.len = n;
+    Smb2.parse_header_args.out = &h;
     Smb2.parse_header(smb2_work);
-    TEST_ASSERT_TRUE(Smb2V.ok);
+    TEST_ASSERT_TRUE(Smb2.ok);
     TEST_ASSERT_EQUAL_INT(SMB2_NEGOTIATE, h.command);
     TEST_ASSERT_EQUAL_HEX64(0, h.session_id);
     TEST_ASSERT_EQUAL_HEX32(0, h.tree_id);
 
-    Smb2V.build_negotiate_args.buf = buf;
-    Smb2V.build_negotiate_args.cap = 107;
-    Smb2V.build_negotiate_args.client_guid = GUID;
-    Smb2V.build_negotiate_args.security_mode = 0;
+    Smb2.build_negotiate_args.buf = buf;
+    Smb2.build_negotiate_args.cap = 107;
+    Smb2.build_negotiate_args.client_guid = GUID;
+    Smb2.build_negotiate_args.security_mode = 0;
     Smb2.build_negotiate(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
-    Smb2V.build_negotiate_args.buf = buf;
-    Smb2V.build_negotiate_args.cap = 108;
-    Smb2V.build_negotiate_args.client_guid = GUID;
-    Smb2V.build_negotiate_args.security_mode = 0;
+    TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
+    Smb2.build_negotiate_args.buf = buf;
+    Smb2.build_negotiate_args.cap = 108;
+    Smb2.build_negotiate_args.client_guid = GUID;
+    Smb2.build_negotiate_args.security_mode = 0;
     Smb2.build_negotiate(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(108, Smb2V.n);
-    Smb2V.build_negotiate_args.buf = buf;
-    Smb2V.build_negotiate_args.cap = sizeof(buf);
-    Smb2V.build_negotiate_args.client_guid = NULL;
-    Smb2V.build_negotiate_args.security_mode = 0;
+    TEST_ASSERT_EQUAL_size_t(108, Smb2.n);
+    Smb2.build_negotiate_args.buf = buf;
+    Smb2.build_negotiate_args.cap = sizeof(buf);
+    Smb2.build_negotiate_args.client_guid = NULL;
+    Smb2.build_negotiate_args.security_mode = 0;
     Smb2.build_negotiate(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
-    Smb2V.build_negotiate_args.buf = NULL;
-    Smb2V.build_negotiate_args.cap = sizeof(buf);
-    Smb2V.build_negotiate_args.client_guid = GUID;
-    Smb2V.build_negotiate_args.security_mode = 0;
+    TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
+    Smb2.build_negotiate_args.buf = NULL;
+    Smb2.build_negotiate_args.cap = sizeof(buf);
+    Smb2.build_negotiate_args.client_guid = GUID;
+    Smb2.build_negotiate_args.security_mode = 0;
     Smb2.build_negotiate(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
+    TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
 }
 
 // MS-SMB2 sec 2.2.4: the NEGOTIATE response body is StructureSize(2) = 65, SecurityMode(2),
@@ -394,15 +394,15 @@ void test_negotiate_response_parse(void)
 
     uint8_t msg[256];
     memset(msg, 0, sizeof(msg));
-    Smb2V.build_header_args.buf = msg;
-    Smb2V.build_header_args.cap = sizeof(msg);
-    Smb2V.build_header_args.command = SMB2_NEGOTIATE;
-    Smb2V.build_header_args.credit_request = 1;
-    Smb2V.build_header_args.message_id = 0;
-    Smb2V.build_header_args.tree_id = 0;
-    Smb2V.build_header_args.session_id = 0;
+    Smb2.build_header_args.buf = msg;
+    Smb2.build_header_args.cap = sizeof(msg);
+    Smb2.build_header_args.command = SMB2_NEGOTIATE;
+    Smb2.build_header_args.credit_request = 1;
+    Smb2.build_header_args.message_id = 0;
+    Smb2.build_header_args.tree_id = 0;
+    Smb2.build_header_args.session_id = 0;
     Smb2.build_header(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(64, Smb2V.n);
+    TEST_ASSERT_EQUAL_size_t(64, Smb2.n);
     msg[16] = SMB2_FLAGS_SERVER_TO_REDIR; // a response
 
     uint8_t *b = msg + 64;
@@ -432,11 +432,11 @@ void test_negotiate_response_parse(void)
 
     Smb2NegotiateResp r;
     memset(&r, 0xEE, sizeof(r));
-    Smb2V.parse_negotiate_response_args.msg = msg;
-    Smb2V.parse_negotiate_response_args.len = sec_off + sizeof(SEC_BUF);
-    Smb2V.parse_negotiate_response_args.out = &r;
+    Smb2.parse_negotiate_response_args.msg = msg;
+    Smb2.parse_negotiate_response_args.len = sec_off + sizeof(SEC_BUF);
+    Smb2.parse_negotiate_response_args.out = &r;
     Smb2.parse_negotiate_response(smb2_work);
-    TEST_ASSERT_TRUE(Smb2V.ok);
+    TEST_ASSERT_TRUE(Smb2.ok);
     TEST_ASSERT_EQUAL_UINT16(SMB2_NEGOTIATE_SIGNING_ENABLED, r.security_mode);
     TEST_ASSERT_EQUAL_UINT16(SMB2_DIALECT_0311, r.dialect);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(SERVER_GUID, r.server_guid, 16);
@@ -449,47 +449,47 @@ void test_negotiate_response_parse(void)
 
     // A StructureSize other than 65 is not a NEGOTIATE response body.
     b[0] = 64;
-    Smb2V.parse_negotiate_response_args.msg = msg;
-    Smb2V.parse_negotiate_response_args.len = sec_off + sizeof(SEC_BUF);
-    Smb2V.parse_negotiate_response_args.out = &r;
+    Smb2.parse_negotiate_response_args.msg = msg;
+    Smb2.parse_negotiate_response_args.len = sec_off + sizeof(SEC_BUF);
+    Smb2.parse_negotiate_response_args.out = &r;
     Smb2.parse_negotiate_response(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
+    TEST_ASSERT_FALSE(Smb2.ok);
     b[0] = 65;
 
     // A security buffer that runs past the message is refused rather than pointed at.
     b[58] = 0xFF;
     b[59] = 0xFF;
-    Smb2V.parse_negotiate_response_args.msg = msg;
-    Smb2V.parse_negotiate_response_args.len = sec_off + sizeof(SEC_BUF);
-    Smb2V.parse_negotiate_response_args.out = &r;
+    Smb2.parse_negotiate_response_args.msg = msg;
+    Smb2.parse_negotiate_response_args.len = sec_off + sizeof(SEC_BUF);
+    Smb2.parse_negotiate_response_args.out = &r;
     Smb2.parse_negotiate_response(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
+    TEST_ASSERT_FALSE(Smb2.ok);
     b[58] = (uint8_t)sizeof(SEC_BUF);
     b[59] = 0;
 
     // A wrong command in the header, and a message too short for the body.
     msg[12] = SMB2_SESSION_SETUP;
-    Smb2V.parse_negotiate_response_args.msg = msg;
-    Smb2V.parse_negotiate_response_args.len = sec_off + sizeof(SEC_BUF);
-    Smb2V.parse_negotiate_response_args.out = &r;
+    Smb2.parse_negotiate_response_args.msg = msg;
+    Smb2.parse_negotiate_response_args.len = sec_off + sizeof(SEC_BUF);
+    Smb2.parse_negotiate_response_args.out = &r;
     Smb2.parse_negotiate_response(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
+    TEST_ASSERT_FALSE(Smb2.ok);
     msg[12] = SMB2_NEGOTIATE;
-    Smb2V.parse_negotiate_response_args.msg = msg;
-    Smb2V.parse_negotiate_response_args.len = 64;
-    Smb2V.parse_negotiate_response_args.out = &r;
+    Smb2.parse_negotiate_response_args.msg = msg;
+    Smb2.parse_negotiate_response_args.len = 64;
+    Smb2.parse_negotiate_response_args.out = &r;
     Smb2.parse_negotiate_response(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
-    Smb2V.parse_negotiate_response_args.msg = NULL;
-    Smb2V.parse_negotiate_response_args.len = 128;
-    Smb2V.parse_negotiate_response_args.out = &r;
+    TEST_ASSERT_FALSE(Smb2.ok);
+    Smb2.parse_negotiate_response_args.msg = NULL;
+    Smb2.parse_negotiate_response_args.len = 128;
+    Smb2.parse_negotiate_response_args.out = &r;
     Smb2.parse_negotiate_response(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
-    Smb2V.parse_negotiate_response_args.msg = msg;
-    Smb2V.parse_negotiate_response_args.len = 128;
-    Smb2V.parse_negotiate_response_args.out = NULL;
+    TEST_ASSERT_FALSE(Smb2.ok);
+    Smb2.parse_negotiate_response_args.msg = msg;
+    Smb2.parse_negotiate_response_args.len = 128;
+    Smb2.parse_negotiate_response_args.out = NULL;
     Smb2.parse_negotiate_response(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
+    TEST_ASSERT_FALSE(Smb2.ok);
 }
 
 // MS-SMB2 sec 3.1.4.1: signing "MUST set the SMB2_FLAGS_SIGNED bit", zero the Signature, MAC the
@@ -502,13 +502,13 @@ void test_signing_round_trip_and_tamper_detection(void)
                                     0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
     uint8_t msg[128];
     memset(msg, 0, sizeof(msg));
-    Smb2V.build_header_args.buf = msg;
-    Smb2V.build_header_args.cap = sizeof(msg);
-    Smb2V.build_header_args.command = SMB2_TREE_CONNECT;
-    Smb2V.build_header_args.credit_request = 1;
-    Smb2V.build_header_args.message_id = 42;
-    Smb2V.build_header_args.tree_id = 7;
-    Smb2V.build_header_args.session_id = 0xAABBCCDDEEFF0011ull;
+    Smb2.build_header_args.buf = msg;
+    Smb2.build_header_args.cap = sizeof(msg);
+    Smb2.build_header_args.command = SMB2_TREE_CONNECT;
+    Smb2.build_header_args.credit_request = 1;
+    Smb2.build_header_args.message_id = 42;
+    Smb2.build_header_args.tree_id = 7;
+    Smb2.build_header_args.session_id = 0xAABBCCDDEEFF0011ull;
     Smb2.build_header(smb2_work);
     for (size_t i = 64; i < sizeof(msg); i++)
     {
@@ -518,93 +518,93 @@ void test_signing_round_trip_and_tamper_detection(void)
     uint8_t plain[128];
     memcpy(plain, msg, sizeof(plain));
 
-    Smb2V.sign_args.crypto_work = g_work;
-    Smb2V.sign_args.key = KEY;
-    Smb2V.sign_args.msg = msg;
-    Smb2V.sign_args.msg_len = sizeof(msg);
+    Smb2.sign_args.crypto_work = g_work;
+    Smb2.sign_args.key = KEY;
+    Smb2.sign_args.msg = msg;
+    Smb2.sign_args.msg_len = sizeof(msg);
     Smb2.sign(smb2_work);
     TEST_ASSERT_TRUE((le32(msg + 16) & SMB2_FLAGS_SIGNED) != 0);
     TEST_ASSERT_TRUE(memcmp(msg + 48, plain + 48, 16) != 0); // a signature was written
-    Smb2V.verify_args.crypto_work = g_work;
-    Smb2V.verify_args.key = KEY;
-    Smb2V.verify_args.msg = msg;
-    Smb2V.verify_args.msg_len = sizeof(msg);
+    Smb2.verify_args.crypto_work = g_work;
+    Smb2.verify_args.key = KEY;
+    Smb2.verify_args.msg = msg;
+    Smb2.verify_args.msg_len = sizeof(msg);
     Smb2.verify(smb2_work);
-    TEST_ASSERT_TRUE(Smb2V.ok);
+    TEST_ASSERT_TRUE(Smb2.ok);
 
     // Verification leaves the message as it found it, so a caller can hand it on.
     uint8_t after[128];
     memcpy(after, msg, sizeof(after));
-    Smb2V.verify_args.crypto_work = g_work;
-    Smb2V.verify_args.key = KEY;
-    Smb2V.verify_args.msg = msg;
-    Smb2V.verify_args.msg_len = sizeof(msg);
+    Smb2.verify_args.crypto_work = g_work;
+    Smb2.verify_args.key = KEY;
+    Smb2.verify_args.msg = msg;
+    Smb2.verify_args.msg_len = sizeof(msg);
     Smb2.verify(smb2_work);
-    TEST_ASSERT_TRUE(Smb2V.ok);
+    TEST_ASSERT_TRUE(Smb2.ok);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(after, msg, sizeof(after));
 
     // A single flipped body bit, a changed header field, and a wrong key all fail.
     msg[70] ^= 0x01;
-    Smb2V.verify_args.crypto_work = g_work;
-    Smb2V.verify_args.key = KEY;
-    Smb2V.verify_args.msg = msg;
-    Smb2V.verify_args.msg_len = sizeof(msg);
+    Smb2.verify_args.crypto_work = g_work;
+    Smb2.verify_args.key = KEY;
+    Smb2.verify_args.msg = msg;
+    Smb2.verify_args.msg_len = sizeof(msg);
     Smb2.verify(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
+    TEST_ASSERT_FALSE(Smb2.ok);
     msg[70] ^= 0x01;
-    Smb2V.verify_args.crypto_work = g_work;
-    Smb2V.verify_args.key = KEY;
-    Smb2V.verify_args.msg = msg;
-    Smb2V.verify_args.msg_len = sizeof(msg);
+    Smb2.verify_args.crypto_work = g_work;
+    Smb2.verify_args.key = KEY;
+    Smb2.verify_args.msg = msg;
+    Smb2.verify_args.msg_len = sizeof(msg);
     Smb2.verify(smb2_work);
-    TEST_ASSERT_TRUE(Smb2V.ok);
+    TEST_ASSERT_TRUE(Smb2.ok);
 
     msg[36] ^= 0x01; // TreeId
-    Smb2V.verify_args.crypto_work = g_work;
-    Smb2V.verify_args.key = KEY;
-    Smb2V.verify_args.msg = msg;
-    Smb2V.verify_args.msg_len = sizeof(msg);
+    Smb2.verify_args.crypto_work = g_work;
+    Smb2.verify_args.key = KEY;
+    Smb2.verify_args.msg = msg;
+    Smb2.verify_args.msg_len = sizeof(msg);
     Smb2.verify(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
+    TEST_ASSERT_FALSE(Smb2.ok);
     msg[36] ^= 0x01;
 
     msg[48] ^= 0x80; // the signature itself
-    Smb2V.verify_args.crypto_work = g_work;
-    Smb2V.verify_args.key = KEY;
-    Smb2V.verify_args.msg = msg;
-    Smb2V.verify_args.msg_len = sizeof(msg);
+    Smb2.verify_args.crypto_work = g_work;
+    Smb2.verify_args.key = KEY;
+    Smb2.verify_args.msg = msg;
+    Smb2.verify_args.msg_len = sizeof(msg);
     Smb2.verify(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
+    TEST_ASSERT_FALSE(Smb2.ok);
     msg[48] ^= 0x80;
 
     uint8_t other_key[16];
     memcpy(other_key, KEY, sizeof(other_key));
     other_key[0] ^= 0x01;
-    Smb2V.verify_args.crypto_work = g_work;
-    Smb2V.verify_args.key = other_key;
-    Smb2V.verify_args.msg = msg;
-    Smb2V.verify_args.msg_len = sizeof(msg);
+    Smb2.verify_args.crypto_work = g_work;
+    Smb2.verify_args.key = other_key;
+    Smb2.verify_args.msg = msg;
+    Smb2.verify_args.msg_len = sizeof(msg);
     Smb2.verify(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
+    TEST_ASSERT_FALSE(Smb2.ok);
 
     // A message shorter than the header carries no signature field, so it is left untouched.
     uint8_t stub[32];
     memset(stub, 0x5A, sizeof(stub));
-    Smb2V.sign_args.crypto_work = g_work;
-    Smb2V.sign_args.key = KEY;
-    Smb2V.sign_args.msg = stub;
-    Smb2V.sign_args.msg_len = sizeof(stub);
+    Smb2.sign_args.crypto_work = g_work;
+    Smb2.sign_args.key = KEY;
+    Smb2.sign_args.msg = stub;
+    Smb2.sign_args.msg_len = sizeof(stub);
     Smb2.sign(smb2_work);
     for (size_t i = 0; i < sizeof(stub); i++)
     {
         TEST_ASSERT_EQUAL_HEX8(0x5A, stub[i]);
     }
-    Smb2V.verify_args.crypto_work = g_work;
-    Smb2V.verify_args.key = KEY;
-    Smb2V.verify_args.msg = stub;
-    Smb2V.verify_args.msg_len = sizeof(stub);
+    Smb2.verify_args.crypto_work = g_work;
+    Smb2.verify_args.key = KEY;
+    Smb2.verify_args.msg = stub;
+    Smb2.verify_args.msg_len = sizeof(stub);
     Smb2.verify(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
+    TEST_ASSERT_FALSE(Smb2.ok);
 }
 
 // sec 3.1.4.1 selects AES-CMAC for the SMB 3.x dialects. The framing is the same, so the round trip
@@ -615,52 +615,52 @@ void test_cmac_signing_is_a_distinct_algorithm(void)
                                     0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00};
     uint8_t msg[96];
     memset(msg, 0, sizeof(msg));
-    Smb2V.build_header_args.buf = msg;
-    Smb2V.build_header_args.cap = sizeof(msg);
-    Smb2V.build_header_args.command = SMB2_WRITE;
-    Smb2V.build_header_args.credit_request = 1;
-    Smb2V.build_header_args.message_id = 9;
-    Smb2V.build_header_args.tree_id = 3;
-    Smb2V.build_header_args.session_id = 0x1122334455667788ull;
+    Smb2.build_header_args.buf = msg;
+    Smb2.build_header_args.cap = sizeof(msg);
+    Smb2.build_header_args.command = SMB2_WRITE;
+    Smb2.build_header_args.credit_request = 1;
+    Smb2.build_header_args.message_id = 9;
+    Smb2.build_header_args.tree_id = 3;
+    Smb2.build_header_args.session_id = 0x1122334455667788ull;
     Smb2.build_header(smb2_work);
     for (size_t i = 64; i < sizeof(msg); i++)
     {
         msg[i] = (uint8_t)(i * 3);
     }
 
-    Smb2V.sign_cmac_args.crypto_work = g_work;
-    Smb2V.sign_cmac_args.key = KEY;
-    Smb2V.sign_cmac_args.msg = msg;
-    Smb2V.sign_cmac_args.msg_len = sizeof(msg);
+    Smb2.sign_cmac_args.crypto_work = g_work;
+    Smb2.sign_cmac_args.key = KEY;
+    Smb2.sign_cmac_args.msg = msg;
+    Smb2.sign_cmac_args.msg_len = sizeof(msg);
     Smb2.sign_cmac(smb2_work);
     TEST_ASSERT_TRUE((le32(msg + 16) & SMB2_FLAGS_SIGNED) != 0);
-    Smb2V.verify_cmac_args.crypto_work = g_work;
-    Smb2V.verify_cmac_args.key = KEY;
-    Smb2V.verify_cmac_args.msg = msg;
-    Smb2V.verify_cmac_args.msg_len = sizeof(msg);
+    Smb2.verify_cmac_args.crypto_work = g_work;
+    Smb2.verify_cmac_args.key = KEY;
+    Smb2.verify_cmac_args.msg = msg;
+    Smb2.verify_cmac_args.msg_len = sizeof(msg);
     Smb2.verify_cmac(smb2_work);
-    TEST_ASSERT_TRUE(Smb2V.ok);
-    Smb2V.verify_args.crypto_work = g_work;
-    Smb2V.verify_args.key = KEY;
-    Smb2V.verify_args.msg = msg;
-    Smb2V.verify_args.msg_len = sizeof(msg);
+    TEST_ASSERT_TRUE(Smb2.ok);
+    Smb2.verify_args.crypto_work = g_work;
+    Smb2.verify_args.key = KEY;
+    Smb2.verify_args.msg = msg;
+    Smb2.verify_args.msg_len = sizeof(msg);
     Smb2.verify(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
+    TEST_ASSERT_FALSE(Smb2.ok);
 
     msg[80] ^= 0x40;
-    Smb2V.verify_cmac_args.crypto_work = g_work;
-    Smb2V.verify_cmac_args.key = KEY;
-    Smb2V.verify_cmac_args.msg = msg;
-    Smb2V.verify_cmac_args.msg_len = sizeof(msg);
+    Smb2.verify_cmac_args.crypto_work = g_work;
+    Smb2.verify_cmac_args.key = KEY;
+    Smb2.verify_cmac_args.msg = msg;
+    Smb2.verify_cmac_args.msg_len = sizeof(msg);
     Smb2.verify_cmac(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
+    TEST_ASSERT_FALSE(Smb2.ok);
     msg[80] ^= 0x40;
-    Smb2V.verify_cmac_args.crypto_work = g_work;
-    Smb2V.verify_cmac_args.key = KEY;
-    Smb2V.verify_cmac_args.msg = msg;
-    Smb2V.verify_cmac_args.msg_len = sizeof(msg);
+    Smb2.verify_cmac_args.crypto_work = g_work;
+    Smb2.verify_cmac_args.key = KEY;
+    Smb2.verify_cmac_args.msg = msg;
+    Smb2.verify_cmac_args.msg_len = sizeof(msg);
     Smb2.verify_cmac(smb2_work);
-    TEST_ASSERT_TRUE(Smb2V.ok);
+    TEST_ASSERT_TRUE(Smb2.ok);
 }
 
 // MS-SMB2 sec 2.2.41: the TRANSFORM_HEADER is ProtocolId(4) = 0xFD 'S' 'M' 'B', Signature(16),
@@ -711,13 +711,13 @@ void test_transform_round_trip_for_every_cipher(void)
     memset(nonce, 0, sizeof(nonce));
     nonce[0] = 0x01;
     memset(msg, 0, sizeof(msg));
-    Smb2V.build_header_args.buf = msg;
-    Smb2V.build_header_args.cap = sizeof(msg);
-    Smb2V.build_header_args.command = SMB2_READ;
-    Smb2V.build_header_args.credit_request = 1;
-    Smb2V.build_header_args.message_id = 5;
-    Smb2V.build_header_args.tree_id = 2;
-    Smb2V.build_header_args.session_id = 0x0102030405060708ull;
+    Smb2.build_header_args.buf = msg;
+    Smb2.build_header_args.cap = sizeof(msg);
+    Smb2.build_header_args.command = SMB2_READ;
+    Smb2.build_header_args.credit_request = 1;
+    Smb2.build_header_args.message_id = 5;
+    Smb2.build_header_args.tree_id = 2;
+    Smb2.build_header_args.session_id = 0x0102030405060708ull;
     Smb2.build_header(smb2_work);
     for (size_t i = 64; i < sizeof(msg); i++)
     {
@@ -727,16 +727,16 @@ void test_transform_round_trip_for_every_cipher(void)
     for (size_t c = 0; c < 4; c++)
     {
         const uint16_t cipher = CIPHERS[c];
-        Smb2V.encrypt_args.cipher = cipher;
-        Smb2V.encrypt_args.key = key;
-        Smb2V.encrypt_args.nonce = nonce;
-        Smb2V.encrypt_args.session_id = 0x0102030405060708ull;
-        Smb2V.encrypt_args.msg = msg;
-        Smb2V.encrypt_args.msg_len = sizeof(msg);
-        Smb2V.encrypt_args.out = blob;
-        Smb2V.encrypt_args.out_cap = sizeof(blob);
+        Smb2.encrypt_args.cipher = cipher;
+        Smb2.encrypt_args.key = key;
+        Smb2.encrypt_args.nonce = nonce;
+        Smb2.encrypt_args.session_id = 0x0102030405060708ull;
+        Smb2.encrypt_args.msg = msg;
+        Smb2.encrypt_args.msg_len = sizeof(msg);
+        Smb2.encrypt_args.out = blob;
+        Smb2.encrypt_args.out_cap = sizeof(blob);
         Smb2.encrypt(smb2_work);
-        size_t n = Smb2V.n;
+        size_t n = Smb2.n;
         TEST_ASSERT_EQUAL_size_t(PROTOCORE_SMB2_TRANSFORM_HDR_LEN + sizeof(msg), n);
 
         // The header sec 2.2.41 describes, at its own offsets.
@@ -748,80 +748,80 @@ void test_transform_round_trip_for_every_cipher(void)
         // The plaintext is not in the blob.
         TEST_ASSERT_TRUE(memcmp(blob + PROTOCORE_SMB2_TRANSFORM_HDR_LEN, msg, sizeof(msg)) != 0);
 
-        Smb2V.decrypt_args.cipher = cipher;
-        Smb2V.decrypt_args.key = key;
-        Smb2V.decrypt_args.in = blob;
-        Smb2V.decrypt_args.in_len = n;
-        Smb2V.decrypt_args.out = back;
-        Smb2V.decrypt_args.out_cap = sizeof(back);
+        Smb2.decrypt_args.cipher = cipher;
+        Smb2.decrypt_args.key = key;
+        Smb2.decrypt_args.in = blob;
+        Smb2.decrypt_args.in_len = n;
+        Smb2.decrypt_args.out = back;
+        Smb2.decrypt_args.out_cap = sizeof(back);
         Smb2.decrypt(smb2_work);
-        size_t m = Smb2V.n;
+        size_t m = Smb2.n;
         TEST_ASSERT_EQUAL_size_t(sizeof(msg), m);
         TEST_ASSERT_EQUAL_HEX8_ARRAY(msg, back, sizeof(msg));
 
         // A flipped ciphertext bit, a flipped tag bit and a flipped AAD bit each fail the tag check.
         blob[PROTOCORE_SMB2_TRANSFORM_HDR_LEN] ^= 0x01;
-        Smb2V.decrypt_args.cipher = cipher;
-        Smb2V.decrypt_args.key = key;
-        Smb2V.decrypt_args.in = blob;
-        Smb2V.decrypt_args.in_len = n;
-        Smb2V.decrypt_args.out = back;
-        Smb2V.decrypt_args.out_cap = sizeof(back);
+        Smb2.decrypt_args.cipher = cipher;
+        Smb2.decrypt_args.key = key;
+        Smb2.decrypt_args.in = blob;
+        Smb2.decrypt_args.in_len = n;
+        Smb2.decrypt_args.out = back;
+        Smb2.decrypt_args.out_cap = sizeof(back);
         Smb2.decrypt(smb2_work);
-        TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
+        TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
         blob[PROTOCORE_SMB2_TRANSFORM_HDR_LEN] ^= 0x01;
 
         blob[4] ^= 0x01; // Signature (the AEAD tag)
-        Smb2V.decrypt_args.cipher = cipher;
-        Smb2V.decrypt_args.key = key;
-        Smb2V.decrypt_args.in = blob;
-        Smb2V.decrypt_args.in_len = n;
-        Smb2V.decrypt_args.out = back;
-        Smb2V.decrypt_args.out_cap = sizeof(back);
+        Smb2.decrypt_args.cipher = cipher;
+        Smb2.decrypt_args.key = key;
+        Smb2.decrypt_args.in = blob;
+        Smb2.decrypt_args.in_len = n;
+        Smb2.decrypt_args.out = back;
+        Smb2.decrypt_args.out_cap = sizeof(back);
         Smb2.decrypt(smb2_work);
-        TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
+        TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
         blob[4] ^= 0x01;
 
         blob[44] ^= 0x01; // SessionId, which is inside the AAD
-        Smb2V.decrypt_args.cipher = cipher;
-        Smb2V.decrypt_args.key = key;
-        Smb2V.decrypt_args.in = blob;
-        Smb2V.decrypt_args.in_len = n;
-        Smb2V.decrypt_args.out = back;
-        Smb2V.decrypt_args.out_cap = sizeof(back);
+        Smb2.decrypt_args.cipher = cipher;
+        Smb2.decrypt_args.key = key;
+        Smb2.decrypt_args.in = blob;
+        Smb2.decrypt_args.in_len = n;
+        Smb2.decrypt_args.out = back;
+        Smb2.decrypt_args.out_cap = sizeof(back);
         Smb2.decrypt(smb2_work);
-        TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
+        TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
         blob[44] ^= 0x01;
 
         blob[0] ^= 0x01; // ProtocolId
-        Smb2V.decrypt_args.cipher = cipher;
-        Smb2V.decrypt_args.key = key;
-        Smb2V.decrypt_args.in = blob;
-        Smb2V.decrypt_args.in_len = n;
-        Smb2V.decrypt_args.out = back;
-        Smb2V.decrypt_args.out_cap = sizeof(back);
+        Smb2.decrypt_args.cipher = cipher;
+        Smb2.decrypt_args.key = key;
+        Smb2.decrypt_args.in = blob;
+        Smb2.decrypt_args.in_len = n;
+        Smb2.decrypt_args.out = back;
+        Smb2.decrypt_args.out_cap = sizeof(back);
         Smb2.decrypt(smb2_work);
-        TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
+        TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
         blob[0] ^= 0x01;
 
         // The right blob under the wrong cipher is not decryptable either.
-        Smb2V.decrypt_args.cipher = CIPHERS[(c + 1) % 4];
-        Smb2V.decrypt_args.key = key;
-        Smb2V.decrypt_args.in = blob;
-        Smb2V.decrypt_args.in_len = n;
-        Smb2V.decrypt_args.out = back;
-        Smb2V.decrypt_args.out_cap = sizeof(back);
+        Smb2.decrypt_args.cipher = CIPHERS[(c + 1) % 4];
+        Smb2.decrypt_args.key = key;
+        Smb2.decrypt_args.in = blob;
+        Smb2.decrypt_args.in_len = n;
+        Smb2.decrypt_args.out = back;
+        Smb2.decrypt_args.out_cap = sizeof(back);
         Smb2.decrypt(smb2_work);
-        TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
+        TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
 
-        Smb2V.decrypt_args.cipher = cipher;
-        Smb2V.decrypt_args.key = key;
-        Smb2V.decrypt_args.in = blob;
-        Smb2V.decrypt_args.in_len = n;
-        Smb2V.decrypt_args.out = back;
-        Smb2V.decrypt_args.out_cap = sizeof(back);
+        Smb2.decrypt_args.cipher = cipher;
+        Smb2.decrypt_args.key = key;
+        Smb2.decrypt_args.in = blob;
+        Smb2.decrypt_args.in_len = n;
+        Smb2.decrypt_args.out = back;
+        Smb2.decrypt_args.out_cap = sizeof(back);
         Smb2.decrypt(smb2_work);
-        TEST_ASSERT_EQUAL_size_t(m, Smb2V.n);
+        TEST_ASSERT_EQUAL_size_t(m, Smb2.n);
     }
 }
 
@@ -838,88 +838,88 @@ void test_transform_fails_closed(void)
     memset(nonce, 0x22, sizeof(nonce));
     memset(msg, 0x33, sizeof(msg));
 
-    Smb2V.encrypt_args.cipher = 0x0099;
-    Smb2V.encrypt_args.key = key;
-    Smb2V.encrypt_args.nonce = nonce;
-    Smb2V.encrypt_args.session_id = 0;
-    Smb2V.encrypt_args.msg = msg;
-    Smb2V.encrypt_args.msg_len = sizeof(msg);
-    Smb2V.encrypt_args.out = blob;
-    Smb2V.encrypt_args.out_cap = sizeof(blob);
+    Smb2.encrypt_args.cipher = 0x0099;
+    Smb2.encrypt_args.key = key;
+    Smb2.encrypt_args.nonce = nonce;
+    Smb2.encrypt_args.session_id = 0;
+    Smb2.encrypt_args.msg = msg;
+    Smb2.encrypt_args.msg_len = sizeof(msg);
+    Smb2.encrypt_args.out = blob;
+    Smb2.encrypt_args.out_cap = sizeof(blob);
     Smb2.encrypt(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
-    Smb2V.encrypt_args.cipher = SMB2_ENCRYPTION_AES128_GCM;
-    Smb2V.encrypt_args.key = NULL;
-    Smb2V.encrypt_args.nonce = nonce;
-    Smb2V.encrypt_args.session_id = 0;
-    Smb2V.encrypt_args.msg = msg;
-    Smb2V.encrypt_args.msg_len = sizeof(msg);
-    Smb2V.encrypt_args.out = blob;
-    Smb2V.encrypt_args.out_cap = sizeof(blob);
+    TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
+    Smb2.encrypt_args.cipher = SMB2_ENCRYPTION_AES128_GCM;
+    Smb2.encrypt_args.key = NULL;
+    Smb2.encrypt_args.nonce = nonce;
+    Smb2.encrypt_args.session_id = 0;
+    Smb2.encrypt_args.msg = msg;
+    Smb2.encrypt_args.msg_len = sizeof(msg);
+    Smb2.encrypt_args.out = blob;
+    Smb2.encrypt_args.out_cap = sizeof(blob);
     Smb2.encrypt(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
-    Smb2V.encrypt_args.cipher = SMB2_ENCRYPTION_AES128_GCM;
-    Smb2V.encrypt_args.key = key;
-    Smb2V.encrypt_args.nonce = nonce;
-    Smb2V.encrypt_args.session_id = 0;
-    Smb2V.encrypt_args.msg = msg;
-    Smb2V.encrypt_args.msg_len = sizeof(msg);
-    Smb2V.encrypt_args.out = blob;
-    Smb2V.encrypt_args.out_cap = PROTOCORE_SMB2_TRANSFORM_HDR_LEN + sizeof(msg) - 1;
+    TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
+    Smb2.encrypt_args.cipher = SMB2_ENCRYPTION_AES128_GCM;
+    Smb2.encrypt_args.key = key;
+    Smb2.encrypt_args.nonce = nonce;
+    Smb2.encrypt_args.session_id = 0;
+    Smb2.encrypt_args.msg = msg;
+    Smb2.encrypt_args.msg_len = sizeof(msg);
+    Smb2.encrypt_args.out = blob;
+    Smb2.encrypt_args.out_cap = PROTOCORE_SMB2_TRANSFORM_HDR_LEN + sizeof(msg) - 1;
     Smb2.encrypt(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
-    Smb2V.encrypt_args.cipher = SMB2_ENCRYPTION_AES128_GCM;
-    Smb2V.encrypt_args.key = key;
-    Smb2V.encrypt_args.nonce = nonce;
-    Smb2V.encrypt_args.session_id = 0;
-    Smb2V.encrypt_args.msg = msg;
-    Smb2V.encrypt_args.msg_len = sizeof(msg);
-    Smb2V.encrypt_args.out = blob;
-    Smb2V.encrypt_args.out_cap = PROTOCORE_SMB2_TRANSFORM_HDR_LEN + sizeof(msg);
+    TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
+    Smb2.encrypt_args.cipher = SMB2_ENCRYPTION_AES128_GCM;
+    Smb2.encrypt_args.key = key;
+    Smb2.encrypt_args.nonce = nonce;
+    Smb2.encrypt_args.session_id = 0;
+    Smb2.encrypt_args.msg = msg;
+    Smb2.encrypt_args.msg_len = sizeof(msg);
+    Smb2.encrypt_args.out = blob;
+    Smb2.encrypt_args.out_cap = PROTOCORE_SMB2_TRANSFORM_HDR_LEN + sizeof(msg);
     Smb2.encrypt(smb2_work);
-    size_t n = Smb2V.n;
+    size_t n = Smb2.n;
     TEST_ASSERT_EQUAL_size_t(PROTOCORE_SMB2_TRANSFORM_HDR_LEN + sizeof(msg), n);
 
-    Smb2V.decrypt_args.cipher = 0x0099;
-    Smb2V.decrypt_args.key = key;
-    Smb2V.decrypt_args.in = blob;
-    Smb2V.decrypt_args.in_len = n;
-    Smb2V.decrypt_args.out = back;
-    Smb2V.decrypt_args.out_cap = sizeof(back);
+    Smb2.decrypt_args.cipher = 0x0099;
+    Smb2.decrypt_args.key = key;
+    Smb2.decrypt_args.in = blob;
+    Smb2.decrypt_args.in_len = n;
+    Smb2.decrypt_args.out = back;
+    Smb2.decrypt_args.out_cap = sizeof(back);
     Smb2.decrypt(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
-    Smb2V.decrypt_args.cipher = SMB2_ENCRYPTION_AES128_GCM;
-    Smb2V.decrypt_args.key = key;
-    Smb2V.decrypt_args.in = blob;
-    Smb2V.decrypt_args.in_len = PROTOCORE_SMB2_TRANSFORM_HDR_LEN - 1;
-    Smb2V.decrypt_args.out = back;
-    Smb2V.decrypt_args.out_cap = sizeof(back);
+    TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
+    Smb2.decrypt_args.cipher = SMB2_ENCRYPTION_AES128_GCM;
+    Smb2.decrypt_args.key = key;
+    Smb2.decrypt_args.in = blob;
+    Smb2.decrypt_args.in_len = PROTOCORE_SMB2_TRANSFORM_HDR_LEN - 1;
+    Smb2.decrypt_args.out = back;
+    Smb2.decrypt_args.out_cap = sizeof(back);
     Smb2.decrypt(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
-    Smb2V.decrypt_args.cipher = SMB2_ENCRYPTION_AES128_GCM;
-    Smb2V.decrypt_args.key = key;
-    Smb2V.decrypt_args.in = NULL;
-    Smb2V.decrypt_args.in_len = n;
-    Smb2V.decrypt_args.out = back;
-    Smb2V.decrypt_args.out_cap = sizeof(back);
+    TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
+    Smb2.decrypt_args.cipher = SMB2_ENCRYPTION_AES128_GCM;
+    Smb2.decrypt_args.key = key;
+    Smb2.decrypt_args.in = NULL;
+    Smb2.decrypt_args.in_len = n;
+    Smb2.decrypt_args.out = back;
+    Smb2.decrypt_args.out_cap = sizeof(back);
     Smb2.decrypt(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
-    Smb2V.decrypt_args.cipher = SMB2_ENCRYPTION_AES128_GCM;
-    Smb2V.decrypt_args.key = key;
-    Smb2V.decrypt_args.in = blob;
-    Smb2V.decrypt_args.in_len = n;
-    Smb2V.decrypt_args.out = back;
-    Smb2V.decrypt_args.out_cap = sizeof(msg) - 1;
+    TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
+    Smb2.decrypt_args.cipher = SMB2_ENCRYPTION_AES128_GCM;
+    Smb2.decrypt_args.key = key;
+    Smb2.decrypt_args.in = blob;
+    Smb2.decrypt_args.in_len = n;
+    Smb2.decrypt_args.out = back;
+    Smb2.decrypt_args.out_cap = sizeof(msg) - 1;
     Smb2.decrypt(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(0, Smb2V.n);
-    Smb2V.decrypt_args.cipher = SMB2_ENCRYPTION_AES128_GCM;
-    Smb2V.decrypt_args.key = key;
-    Smb2V.decrypt_args.in = blob;
-    Smb2V.decrypt_args.in_len = n;
-    Smb2V.decrypt_args.out = back;
-    Smb2V.decrypt_args.out_cap = sizeof(msg);
+    TEST_ASSERT_EQUAL_size_t(0, Smb2.n);
+    Smb2.decrypt_args.cipher = SMB2_ENCRYPTION_AES128_GCM;
+    Smb2.decrypt_args.key = key;
+    Smb2.decrypt_args.in = blob;
+    Smb2.decrypt_args.in_len = n;
+    Smb2.decrypt_args.out = back;
+    Smb2.decrypt_args.out_cap = sizeof(msg);
     Smb2.decrypt(smb2_work);
-    TEST_ASSERT_EQUAL_size_t(sizeof(msg), Smb2V.n);
+    TEST_ASSERT_EQUAL_size_t(sizeof(msg), Smb2.n);
 }
 
 // sec 3.1.4.2 derives the signing and cipher keys from the session key. Different labels must give
@@ -934,58 +934,58 @@ void test_key_derivation_separates_its_outputs(void)
 
     uint8_t sign_311[16];
     uint8_t sign_300[16];
-    Smb2V.derive_signing_key_args.session_key = SESSION_KEY;
-    Smb2V.derive_signing_key_args.dialect = SMB2_DIALECT_0311;
-    Smb2V.derive_signing_key_args.preauth = preauth;
-    Smb2V.derive_signing_key_args.out_key = sign_311;
+    Smb2.derive_signing_key_args.session_key = SESSION_KEY;
+    Smb2.derive_signing_key_args.dialect = SMB2_DIALECT_0311;
+    Smb2.derive_signing_key_args.preauth = preauth;
+    Smb2.derive_signing_key_args.out_key = sign_311;
     Smb2.derive_signing_key(smb2_work);
-    TEST_ASSERT_TRUE(Smb2V.ok);
-    Smb2V.derive_signing_key_args.session_key = SESSION_KEY;
-    Smb2V.derive_signing_key_args.dialect = SMB2_DIALECT_0300;
-    Smb2V.derive_signing_key_args.preauth = NULL;
-    Smb2V.derive_signing_key_args.out_key = sign_300;
+    TEST_ASSERT_TRUE(Smb2.ok);
+    Smb2.derive_signing_key_args.session_key = SESSION_KEY;
+    Smb2.derive_signing_key_args.dialect = SMB2_DIALECT_0300;
+    Smb2.derive_signing_key_args.preauth = NULL;
+    Smb2.derive_signing_key_args.out_key = sign_300;
     Smb2.derive_signing_key(smb2_work);
-    TEST_ASSERT_TRUE(Smb2V.ok);
+    TEST_ASSERT_TRUE(Smb2.ok);
     TEST_ASSERT_TRUE(memcmp(sign_311, sign_300, 16) != 0); // different labels, different keys
 
     // 3.1.1 requires the preauth hash: without it there is nothing to bind the key to.
     uint8_t tmp[16];
-    Smb2V.derive_signing_key_args.session_key = SESSION_KEY;
-    Smb2V.derive_signing_key_args.dialect = SMB2_DIALECT_0311;
-    Smb2V.derive_signing_key_args.preauth = NULL;
-    Smb2V.derive_signing_key_args.out_key = tmp;
+    Smb2.derive_signing_key_args.session_key = SESSION_KEY;
+    Smb2.derive_signing_key_args.dialect = SMB2_DIALECT_0311;
+    Smb2.derive_signing_key_args.preauth = NULL;
+    Smb2.derive_signing_key_args.out_key = tmp;
     Smb2.derive_signing_key(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
-    Smb2V.derive_signing_key_args.session_key = NULL;
-    Smb2V.derive_signing_key_args.dialect = SMB2_DIALECT_0300;
-    Smb2V.derive_signing_key_args.preauth = NULL;
-    Smb2V.derive_signing_key_args.out_key = tmp;
+    TEST_ASSERT_FALSE(Smb2.ok);
+    Smb2.derive_signing_key_args.session_key = NULL;
+    Smb2.derive_signing_key_args.dialect = SMB2_DIALECT_0300;
+    Smb2.derive_signing_key_args.preauth = NULL;
+    Smb2.derive_signing_key_args.out_key = tmp;
     Smb2.derive_signing_key(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
+    TEST_ASSERT_FALSE(Smb2.ok);
 
     // A different preauth hash gives a different signing key.
     uint8_t other_preauth[PROTOCORE_SMB2_PREAUTH_HASH_LEN];
     memcpy(other_preauth, preauth, sizeof(other_preauth));
     other_preauth[0] ^= 0x01;
-    Smb2V.derive_signing_key_args.session_key = SESSION_KEY;
-    Smb2V.derive_signing_key_args.dialect = SMB2_DIALECT_0311;
-    Smb2V.derive_signing_key_args.preauth = other_preauth;
-    Smb2V.derive_signing_key_args.out_key = tmp;
+    Smb2.derive_signing_key_args.session_key = SESSION_KEY;
+    Smb2.derive_signing_key_args.dialect = SMB2_DIALECT_0311;
+    Smb2.derive_signing_key_args.preauth = other_preauth;
+    Smb2.derive_signing_key_args.out_key = tmp;
     Smb2.derive_signing_key(smb2_work);
-    TEST_ASSERT_TRUE(Smb2V.ok);
+    TEST_ASSERT_TRUE(Smb2.ok);
     TEST_ASSERT_TRUE(memcmp(sign_311, tmp, 16) != 0);
 
     // The two directions of the cipher keys differ from each other and from the signing key.
     uint8_t c2s[PROTOCORE_SMB2_MAX_CIPHER_KEY_LEN];
     uint8_t s2c[PROTOCORE_SMB2_MAX_CIPHER_KEY_LEN];
-    Smb2V.derive_encryption_keys_args.session_key = SESSION_KEY;
-    Smb2V.derive_encryption_keys_args.dialect = SMB2_DIALECT_0311;
-    Smb2V.derive_encryption_keys_args.preauth = preauth;
-    Smb2V.derive_encryption_keys_args.key_len = 16;
-    Smb2V.derive_encryption_keys_args.out_c2s = c2s;
-    Smb2V.derive_encryption_keys_args.out_s2c = s2c;
+    Smb2.derive_encryption_keys_args.session_key = SESSION_KEY;
+    Smb2.derive_encryption_keys_args.dialect = SMB2_DIALECT_0311;
+    Smb2.derive_encryption_keys_args.preauth = preauth;
+    Smb2.derive_encryption_keys_args.key_len = 16;
+    Smb2.derive_encryption_keys_args.out_c2s = c2s;
+    Smb2.derive_encryption_keys_args.out_s2c = s2c;
     Smb2.derive_encryption_keys(smb2_work);
-    TEST_ASSERT_TRUE(Smb2V.ok);
+    TEST_ASSERT_TRUE(Smb2.ok);
     TEST_ASSERT_TRUE(memcmp(c2s, s2c, 16) != 0);
     TEST_ASSERT_TRUE(memcmp(c2s, sign_311, 16) != 0);
     TEST_ASSERT_TRUE(memcmp(s2c, sign_311, 16) != 0);
@@ -993,38 +993,38 @@ void test_key_derivation_separates_its_outputs(void)
     // A 256-bit request yields a different key than the 128-bit one, since [L] is in the KDF input.
     uint8_t c2s256[PROTOCORE_SMB2_MAX_CIPHER_KEY_LEN];
     uint8_t s2c256[PROTOCORE_SMB2_MAX_CIPHER_KEY_LEN];
-    Smb2V.derive_encryption_keys_args.session_key = SESSION_KEY;
-    Smb2V.derive_encryption_keys_args.dialect = SMB2_DIALECT_0311;
-    Smb2V.derive_encryption_keys_args.preauth = preauth;
-    Smb2V.derive_encryption_keys_args.key_len = 32;
-    Smb2V.derive_encryption_keys_args.out_c2s = c2s256;
-    Smb2V.derive_encryption_keys_args.out_s2c = s2c256;
+    Smb2.derive_encryption_keys_args.session_key = SESSION_KEY;
+    Smb2.derive_encryption_keys_args.dialect = SMB2_DIALECT_0311;
+    Smb2.derive_encryption_keys_args.preauth = preauth;
+    Smb2.derive_encryption_keys_args.key_len = 32;
+    Smb2.derive_encryption_keys_args.out_c2s = c2s256;
+    Smb2.derive_encryption_keys_args.out_s2c = s2c256;
     Smb2.derive_encryption_keys(smb2_work);
-    TEST_ASSERT_TRUE(Smb2V.ok);
+    TEST_ASSERT_TRUE(Smb2.ok);
     TEST_ASSERT_TRUE(memcmp(c2s, c2s256, 16) != 0);
 
-    Smb2V.derive_encryption_keys_args.session_key = SESSION_KEY;
-    Smb2V.derive_encryption_keys_args.dialect = SMB2_DIALECT_0311;
-    Smb2V.derive_encryption_keys_args.preauth = NULL;
-    Smb2V.derive_encryption_keys_args.key_len = 16;
-    Smb2V.derive_encryption_keys_args.out_c2s = c2s;
-    Smb2V.derive_encryption_keys_args.out_s2c = s2c;
+    Smb2.derive_encryption_keys_args.session_key = SESSION_KEY;
+    Smb2.derive_encryption_keys_args.dialect = SMB2_DIALECT_0311;
+    Smb2.derive_encryption_keys_args.preauth = NULL;
+    Smb2.derive_encryption_keys_args.key_len = 16;
+    Smb2.derive_encryption_keys_args.out_c2s = c2s;
+    Smb2.derive_encryption_keys_args.out_s2c = s2c;
     Smb2.derive_encryption_keys(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
-    Smb2V.derive_encryption_keys_args.session_key = SESSION_KEY;
-    Smb2V.derive_encryption_keys_args.dialect = SMB2_DIALECT_0311;
-    Smb2V.derive_encryption_keys_args.preauth = preauth;
-    Smb2V.derive_encryption_keys_args.key_len = 24;
-    Smb2V.derive_encryption_keys_args.out_c2s = c2s;
-    Smb2V.derive_encryption_keys_args.out_s2c = s2c;
+    TEST_ASSERT_FALSE(Smb2.ok);
+    Smb2.derive_encryption_keys_args.session_key = SESSION_KEY;
+    Smb2.derive_encryption_keys_args.dialect = SMB2_DIALECT_0311;
+    Smb2.derive_encryption_keys_args.preauth = preauth;
+    Smb2.derive_encryption_keys_args.key_len = 24;
+    Smb2.derive_encryption_keys_args.out_c2s = c2s;
+    Smb2.derive_encryption_keys_args.out_s2c = s2c;
     Smb2.derive_encryption_keys(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
-    Smb2V.derive_encryption_keys_args.session_key = NULL;
-    Smb2V.derive_encryption_keys_args.dialect = SMB2_DIALECT_0300;
-    Smb2V.derive_encryption_keys_args.preauth = NULL;
-    Smb2V.derive_encryption_keys_args.key_len = 16;
-    Smb2V.derive_encryption_keys_args.out_c2s = c2s;
-    Smb2V.derive_encryption_keys_args.out_s2c = s2c;
+    TEST_ASSERT_FALSE(Smb2.ok);
+    Smb2.derive_encryption_keys_args.session_key = NULL;
+    Smb2.derive_encryption_keys_args.dialect = SMB2_DIALECT_0300;
+    Smb2.derive_encryption_keys_args.preauth = NULL;
+    Smb2.derive_encryption_keys_args.key_len = 16;
+    Smb2.derive_encryption_keys_args.out_c2s = c2s;
+    Smb2.derive_encryption_keys_args.out_s2c = s2c;
     Smb2.derive_encryption_keys(smb2_work);
-    TEST_ASSERT_FALSE(Smb2V.ok);
+    TEST_ASSERT_FALSE(Smb2.ok);
 }

@@ -147,16 +147,19 @@ typedef struct
 {
     uint16_t statusword;
 } Cia402StateArgs;
+
 /** @brief What controlword takes: cmd. */
 typedef struct
 {
     Cia402Command cmd;
 } Cia402ControlwordArgs;
+
 /** @brief What enable_sequence takes: state. */
 typedef struct
 {
     Cia402State state;
 } Cia402EnableSequenceArgs;
+
 /** @brief What sdo_set_controlword takes: out, node, controlword. */
 typedef struct
 {
@@ -164,6 +167,7 @@ typedef struct
     uint8_t node;
     uint16_t controlword;
 } Cia402SdoSetControlwordArgs;
+
 /** @brief What sdo_set_mode takes: out, node, mode. */
 typedef struct
 {
@@ -171,6 +175,7 @@ typedef struct
     uint8_t node;
     Cia402Mode mode;
 } Cia402SdoSetModeArgs;
+
 /** @brief What sdo_set_target_position takes: out, node, position. */
 typedef struct
 {
@@ -178,6 +183,7 @@ typedef struct
     uint8_t node;
     int32_t position;
 } Cia402SdoSetTargetPositionArgs;
+
 /** @brief What sdo_set_target_velocity takes: out, node, velocity. */
 typedef struct
 {
@@ -185,6 +191,7 @@ typedef struct
     uint8_t node;
     int32_t velocity;
 } Cia402SdoSetTargetVelocityArgs;
+
 /** @brief What sdo_set_target_torque takes: out, node, torque. */
 typedef struct
 {
@@ -192,6 +199,7 @@ typedef struct
     uint8_t node;
     int16_t torque;
 } Cia402SdoSetTargetTorqueArgs;
+
 /** @brief What sdo_read takes: out, node, index, sub. */
 typedef struct
 {
@@ -200,6 +208,7 @@ typedef struct
     uint16_t index;
     uint8_t sub;
 } Cia402SdoReadArgs;
+
 /** @brief What sdo_get_u16 takes: f, want_index, value. */
 typedef struct
 {
@@ -207,6 +216,7 @@ typedef struct
     uint16_t want_index;
     uint16_t *value;
 } Cia402SdoGetU16Args;
+
 /** @brief What sdo_get_i32 takes: f, want_index, value. */
 typedef struct
 {
@@ -214,6 +224,7 @@ typedef struct
     uint16_t want_index;
     int32_t *value;
 } Cia402SdoGetI32Args;
+
 /** @brief What pack_command takes: buf, cap, controlword, target. */
 typedef struct
 {
@@ -222,6 +233,7 @@ typedef struct
     uint16_t controlword;
     int32_t target;
 } Cia402PackCommandArgs;
+
 /** @brief What unpack_status takes: buf, len, statusword, actual. */
 typedef struct
 {
@@ -230,6 +242,7 @@ typedef struct
     uint16_t *statusword;
     int32_t *actual;
 } Cia402UnpackStatusArgs;
+
 /**
  * @brief CiA 402 / IEC 61800-7-201 drive + motion profile (PROTOCORE_ENABLE_CIA402) over CANopen.
  *
@@ -290,18 +303,12 @@ typedef struct
     Cia402SdoGetI32Args sdo_get_i32_args;
     Cia402PackCommandArgs pack_command_args;
     Cia402UnpackStatusArgs unpack_status_args;
+
     proto_bool ok;
     Cia402State value;
     uint16_t u16;
     size_t n;
-} Cia402Vars;
 
-/** @brief The operands and the outcome. */
-extern Cia402Vars Cia402V;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const state)(uint8_t *restrict work);
     void (*const controlword)(uint8_t *restrict work);
     void (*const enable_sequence)(uint8_t *restrict work);
@@ -317,41 +324,8 @@ typedef struct
     void (*const unpack_status)(uint8_t *restrict work);
 } Cia402Ns;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in Cia402V or a region of the borrow at a fixed offset.
-void protocore_cia402_state(uint8_t *restrict work);
-void protocore_cia402_controlword(uint8_t *restrict work);
-void protocore_cia402_enable_sequence(uint8_t *restrict work);
-void protocore_cia402_sdo_set_controlword(uint8_t *restrict work);
-void protocore_cia402_sdo_set_mode(uint8_t *restrict work);
-void protocore_cia402_sdo_set_target_position(uint8_t *restrict work);
-void protocore_cia402_sdo_set_target_velocity(uint8_t *restrict work);
-void protocore_cia402_sdo_set_target_torque(uint8_t *restrict work);
-void protocore_cia402_sdo_read(uint8_t *restrict work);
-void protocore_cia402_sdo_get_u16(uint8_t *restrict work);
-void protocore_cia402_sdo_get_i32(uint8_t *restrict work);
-void protocore_cia402_pack_command(uint8_t *restrict work);
-void protocore_cia402_unpack_status(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Cia402.state(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const Cia402Ns Cia402 __attribute__((unused)) = {
-    .state = protocore_cia402_state,
-    .controlword = protocore_cia402_controlword,
-    .enable_sequence = protocore_cia402_enable_sequence,
-    .sdo_set_controlword = protocore_cia402_sdo_set_controlword,
-    .sdo_set_mode = protocore_cia402_sdo_set_mode,
-    .sdo_set_target_position = protocore_cia402_sdo_set_target_position,
-    .sdo_set_target_velocity = protocore_cia402_sdo_set_target_velocity,
-    .sdo_set_target_torque = protocore_cia402_sdo_set_target_torque,
-    .sdo_read = protocore_cia402_sdo_read,
-    .sdo_get_u16 = protocore_cia402_sdo_get_u16,
-    .sdo_get_i32 = protocore_cia402_sdo_get_i32,
-    .pack_command = protocore_cia402_pack_command,
-    .unpack_status = protocore_cia402_unpack_status,
-};
+/** @brief The one symbol this module exports. */
+extern Cia402Ns Cia402;
 
 PROTOCORE_END_DECLS
 

@@ -13,10 +13,10 @@
 static void wear_pick(uint8_t *restrict work)
 {
     (void)work;
-    const uint32_t *counts = WearlevelV.args.counts;
-    const size_t n = WearlevelV.args.n;
+    const uint32_t *counts = Wearlevel.args.counts;
+    const size_t n = Wearlevel.args.n;
 
-    WearlevelV.n_out = 0;
+    Wearlevel.n_out = 0;
     if (!counts || n == 0)
     {
         return;
@@ -31,16 +31,16 @@ static void wear_pick(uint8_t *restrict work)
             best = i;
         }
     }
-    WearlevelV.n_out = best;
+    Wearlevel.n_out = best;
 }
 
 static void wear_mark(uint8_t *restrict work)
 {
     (void)work;
-    uint32_t *counts = WearlevelV.args.counts_rw;
-    const size_t idx = WearlevelV.args.idx;
+    uint32_t *counts = Wearlevel.args.counts_rw;
+    const size_t idx = Wearlevel.args.idx;
 
-    if (!counts || idx >= WearlevelV.args.n)
+    if (!counts || idx >= Wearlevel.args.n)
     {
         return;
     }
@@ -53,10 +53,10 @@ static void wear_mark(uint8_t *restrict work)
 static void wear_imbalance(uint8_t *restrict work)
 {
     (void)work;
-    const uint32_t *counts = WearlevelV.args.counts;
-    const size_t n = WearlevelV.args.n;
+    const uint32_t *counts = Wearlevel.args.counts;
+    const size_t n = Wearlevel.args.n;
 
-    WearlevelV.spread = 0;
+    Wearlevel.spread = 0;
     if (!counts || n == 0)
     {
         return;
@@ -74,10 +74,9 @@ static void wear_imbalance(uint8_t *restrict work)
             hi = counts[i];
         }
     }
-    WearlevelV.spread = hi - lo;
+    Wearlevel.spread = hi - lo;
 }
 
-/** @brief The operands and the outcome. */
-WearlevelVars WearlevelV;
+WearlevelNs Wearlevel = {.pick = wear_pick, .mark = wear_mark, .imbalance = wear_imbalance};
 
 #endif // PROTOCORE_ENABLE_WEARLEVEL

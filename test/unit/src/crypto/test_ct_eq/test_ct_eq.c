@@ -30,11 +30,11 @@ static uint8_t g_ws[64] __attribute__((aligned(8)));
 
 static proto_bool eq(const void *a, const void *b, size_t n)
 {
-    CtEqV.eq_args.a = a;
-    CtEqV.eq_args.b = b;
-    CtEqV.eq_args.n = n;
+    CtEq.eq_args.a = a;
+    CtEq.eq_args.b = b;
+    CtEq.eq_args.n = n;
     CtEq.eq(g_ws);
-    return CtEqV.equal;
+    return CtEq.equal;
 }
 
 void test_identical_buffers_are_equal(void)
@@ -44,7 +44,7 @@ void test_identical_buffers_are_equal(void)
     uint8_t b[16];
     memcpy(b, A, sizeof(A));
     TEST_ASSERT_TRUE(eq(A, b, sizeof(A)));
-    TEST_ASSERT_TRUE(CtEqV.ok);
+    TEST_ASSERT_TRUE(CtEq.ok);
 }
 
 // A difference at ANY position must be caught, so every position is tried. An implementation that
@@ -105,18 +105,18 @@ void test_same_pointer_is_equal(void)
 void test_null_operands_are_refused(void)
 {
     static const uint8_t A[4] = {1, 2, 3, 4};
-    CtEqV.eq_args.a = NULL;
-    CtEqV.eq_args.b = A;
-    CtEqV.eq_args.n = sizeof(A);
+    CtEq.eq_args.a = NULL;
+    CtEq.eq_args.b = A;
+    CtEq.eq_args.n = sizeof(A);
     CtEq.eq(g_ws);
-    TEST_ASSERT_FALSE(CtEqV.ok);
-    TEST_ASSERT_FALSE(CtEqV.equal);
+    TEST_ASSERT_FALSE(CtEq.ok);
+    TEST_ASSERT_FALSE(CtEq.equal);
 
-    CtEqV.eq_args.a = A;
-    CtEqV.eq_args.b = NULL;
+    CtEq.eq_args.a = A;
+    CtEq.eq_args.b = NULL;
     CtEq.eq(g_ws);
-    TEST_ASSERT_FALSE(CtEqV.ok);
-    TEST_ASSERT_FALSE(CtEqV.equal);
+    TEST_ASSERT_FALSE(CtEq.ok);
+    TEST_ASSERT_FALSE(CtEq.equal);
 }
 
 // The inline the whole library calls directly and the namespace entry must be the same function.

@@ -13,9 +13,9 @@
 #include "network_drivers/tls/record/record.h"
 
 #include "crypto/aead/aes128gcm/aes128gcm.h" // Aes128Gcm - the 0x1301 record AEAD
-#include "crypto/aead/aesgcm/aesgcm.h"       // AesGcm - the 0x1302 record AEAD
-#include "mmgr/protomem/protomem.h"          // mem.cpy / mem.zero
-#include "mmgr/secure/secure.h"              // the secure pool: key/iv material during derivation
+#include "crypto/aead/aesgcm/aesgcm.h"    // AesGcm - the 0x1302 record AEAD
+#include "mmgr/protomem/protomem.h"         // mem.cpy / mem.zero
+#include "mmgr/secure/secure.h"           // the secure pool: key/iv material during derivation
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 
 /**
@@ -73,13 +73,13 @@ static proto_bool aead_key_init(TlsCipher c, uint8_t *ctx, const uint8_t *key)
 {
     if (c == TLS_CIPHER_AES_256_GCM_SHA384)
     {
-        AesGcmV.key_args.key = key;
+        AesGcm.key_args.key = key;
         AesGcm.key_init(ctx);
-        return AesGcmV.ok;
+        return AesGcm.ok;
     }
-    Aes128GcmV.key_args.key = key;
+    Aes128Gcm.key_args.key = key;
     Aes128Gcm.key_init(ctx);
-    return Aes128GcmV.ok;
+    return Aes128Gcm.ok;
 }
 
 static void aead_key_wipe(TlsCipher c, uint8_t *ctx)
@@ -98,25 +98,25 @@ static proto_bool aead_open(TlsRecordKeys *keys, const uint8_t *aad, size_t aad_
 {
     if (keys->cipher == TLS_CIPHER_AES_256_GCM_SHA384)
     {
-        AesGcmV.open_args.nonce = keys->nonce;
-        AesGcmV.open_args.aad = aad;
-        AesGcmV.open_args.aad_len = aad_len;
-        AesGcmV.open_args.ct = ct;
-        AesGcmV.open_args.ct_len = ct_len;
-        AesGcmV.open_args.tag = tag;
-        AesGcmV.open_args.out = out;
+        AesGcm.open_args.nonce = keys->nonce;
+        AesGcm.open_args.aad = aad;
+        AesGcm.open_args.aad_len = aad_len;
+        AesGcm.open_args.ct = ct;
+        AesGcm.open_args.ct_len = ct_len;
+        AesGcm.open_args.tag = tag;
+        AesGcm.open_args.out = out;
         AesGcm.open(keys->gcm);
-        return AesGcmV.ok;
+        return AesGcm.ok;
     }
-    Aes128GcmV.open_args.nonce = keys->nonce;
-    Aes128GcmV.open_args.aad = aad;
-    Aes128GcmV.open_args.aad_len = aad_len;
-    Aes128GcmV.open_args.ct = ct;
-    Aes128GcmV.open_args.ct_len = ct_len;
-    Aes128GcmV.open_args.tag = tag;
-    Aes128GcmV.open_args.out = out;
+    Aes128Gcm.open_args.nonce = keys->nonce;
+    Aes128Gcm.open_args.aad = aad;
+    Aes128Gcm.open_args.aad_len = aad_len;
+    Aes128Gcm.open_args.ct = ct;
+    Aes128Gcm.open_args.ct_len = ct_len;
+    Aes128Gcm.open_args.tag = tag;
+    Aes128Gcm.open_args.out = out;
     Aes128Gcm.open(keys->gcm);
-    return Aes128GcmV.ok;
+    return Aes128Gcm.ok;
 }
 
 // Seal pt_len octets in place under the bound key, tag detached.
@@ -125,25 +125,25 @@ static proto_bool aead_seal(TlsRecordKeys *keys, const uint8_t *aad, size_t aad_
 {
     if (keys->cipher == TLS_CIPHER_AES_256_GCM_SHA384)
     {
-        AesGcmV.seal_args.nonce = keys->nonce;
-        AesGcmV.seal_args.aad = aad;
-        AesGcmV.seal_args.aad_len = aad_len;
-        AesGcmV.seal_args.pt = pt;
-        AesGcmV.seal_args.pt_len = pt_len;
-        AesGcmV.seal_args.ct_out = pt;
-        AesGcmV.seal_args.tag_out = tag_out;
+        AesGcm.seal_args.nonce = keys->nonce;
+        AesGcm.seal_args.aad = aad;
+        AesGcm.seal_args.aad_len = aad_len;
+        AesGcm.seal_args.pt = pt;
+        AesGcm.seal_args.pt_len = pt_len;
+        AesGcm.seal_args.ct_out = pt;
+        AesGcm.seal_args.tag_out = tag_out;
         AesGcm.seal(keys->gcm);
-        return AesGcmV.ok;
+        return AesGcm.ok;
     }
-    Aes128GcmV.seal_args.nonce = keys->nonce;
-    Aes128GcmV.seal_args.aad = aad;
-    Aes128GcmV.seal_args.aad_len = aad_len;
-    Aes128GcmV.seal_args.pt = pt;
-    Aes128GcmV.seal_args.pt_len = pt_len;
-    Aes128GcmV.seal_args.ct_out = pt;
-    Aes128GcmV.seal_args.tag_out = tag_out;
+    Aes128Gcm.seal_args.nonce = keys->nonce;
+    Aes128Gcm.seal_args.aad = aad;
+    Aes128Gcm.seal_args.aad_len = aad_len;
+    Aes128Gcm.seal_args.pt = pt;
+    Aes128Gcm.seal_args.pt_len = pt_len;
+    Aes128Gcm.seal_args.ct_out = pt;
+    Aes128Gcm.seal_args.tag_out = tag_out;
     Aes128Gcm.seal(keys->gcm);
-    return Aes128GcmV.ok;
+    return Aes128Gcm.ok;
 }
 
 // Write the 5-byte record header: type, legacy_record_version, and the body length.
@@ -160,20 +160,20 @@ static void hdr_write(uint8_t *out, uint8_t content_type, size_t body_len)
 static void expand_label(TlsCipher cipher, uint8_t *work, const uint8_t *secret, const char *label, uint8_t *out,
                          size_t out_len)
 {
-    Tls13KsV.bind.kdf = &TLS13_KDF;
-    Tls13KsV.bind.is384 = protocore_tls_cipher_is384(cipher);
-    Tls13KsV.derive_args.work = work;
-    Tls13KsV.derive_args.secret = secret;
-    Tls13KsV.derive_args.label = label;
-    Tls13KsV.derive_args.out = out;
-    Tls13KsV.derive_args.out_len = out_len;
+    Tls13Ks.bind.kdf = &TLS13_KDF;
+    Tls13Ks.bind.is384 = protocore_tls_cipher_is384(cipher);
+    Tls13Ks.derive_args.work = work;
+    Tls13Ks.derive_args.secret = secret;
+    Tls13Ks.derive_args.label = label;
+    Tls13Ks.derive_args.out = out;
+    Tls13Ks.derive_args.out_len = out_len;
     Tls13Ks.expand_label(NULL);
 }
 
-void protocore_record_keys_derive(uint8_t *restrict work)
+static void record_keys_derive(uint8_t *restrict work)
 {
-    TlsRecordKeys *out = TlsRecordV.key.keys;
-    out->cipher = TlsRecordV.key.cipher;
+    TlsRecordKeys *out = TlsRecord.key.keys;
+    out->cipher = TlsRecord.key.cipher;
     out->seq = 0;
     out->ready = PROTO_FALSE;
 
@@ -192,16 +192,16 @@ void protocore_record_keys_derive(uint8_t *restrict work)
         mem.zero(out->iv, sizeof(out->iv));
         return; // no key material: every protect/unprotect below fails closed on the unkeyed context
     }
-    expand_label(out->cipher, ws.buf, TlsRecordV.key.secret, "key", k.buf, key_len);
-    expand_label(out->cipher, ws.buf, TlsRecordV.key.secret, "iv", out->iv, sizeof(out->iv));
+    expand_label(out->cipher, ws.buf, TlsRecord.key.secret, "key", k.buf, key_len);
+    expand_label(out->cipher, ws.buf, TlsRecord.key.secret, "iv", out->iv, sizeof(out->iv));
     // The arm may refuse the key; without a keyed context every record operation must refuse too.
     out->ready = aead_key_init(out->cipher, out->gcm, k.buf);
     protocore_secure_release(mark);
 }
 
-void protocore_record_keys_wipe(uint8_t *restrict work)
+static void record_keys_wipe(uint8_t *restrict work)
 {
-    TlsRecordKeys *keys = TlsRecordV.key.keys;
+    TlsRecordKeys *keys = TlsRecord.key.keys;
     aead_key_wipe(keys->cipher, keys->gcm);
     protocore_secure_wipe(keys->iv, sizeof(keys->iv));
     protocore_secure_wipe(keys->nonce, sizeof(keys->nonce));
@@ -215,27 +215,27 @@ void protocore_record_keys_wipe(uint8_t *restrict work)
 
 static void plaintext_build(uint8_t *restrict work)
 {
-    const size_t frag_len = TlsRecordV.plain.frag_len;
-    uint8_t *out = TlsRecordV.out_args.out;
+    const size_t frag_len = TlsRecord.plain.frag_len;
+    uint8_t *out = TlsRecord.out_args.out;
     const size_t total = PROTOCORE_TLS_PLAINTEXT_HDR_LEN + frag_len;
-    TlsRecordV.n = 0;
-    if (total > TlsRecordV.out_args.out_cap || frag_len > PROTOCORE_TLS_MAX_PLAINTEXT)
+    TlsRecord.n = 0;
+    if (total > TlsRecord.out_args.out_cap || frag_len > PROTOCORE_TLS_MAX_PLAINTEXT)
     {
         return;
     }
-    hdr_write(out, TlsRecordV.content_type, frag_len);
+    hdr_write(out, TlsRecord.content_type, frag_len);
     if (frag_len != 0)
     {
-        mem.cpy(out + PROTOCORE_TLS_PLAINTEXT_HDR_LEN, TlsRecordV.plain.fragment, frag_len);
+        mem.cpy(out + PROTOCORE_TLS_PLAINTEXT_HDR_LEN, TlsRecord.plain.fragment, frag_len);
     }
-    TlsRecordV.n = total;
+    TlsRecord.n = total;
 }
 
 static void plaintext_parse(uint8_t *restrict work)
 {
-    const uint8_t *rec = TlsRecordV.sealed.rec;
-    const size_t rec_len = TlsRecordV.sealed.rec_len;
-    TlsRecordV.n = 0;
+    const uint8_t *rec = TlsRecord.sealed.rec;
+    const size_t rec_len = TlsRecord.sealed.rec_len;
+    TlsRecord.n = 0;
     if (rec_len < PROTOCORE_TLS_PLAINTEXT_HDR_LEN)
     {
         return;
@@ -247,25 +247,25 @@ static void plaintext_parse(uint8_t *restrict work)
     }
     // legacy_record_version is not checked: RFC 8446 sec 5.1 requires receivers to ignore it, and a
     // real ClientHello arrives carrying 0x0301.
-    TlsRecordV.plain.view->content_type = rec[0];
-    TlsRecordV.plain.view->fragment = rec + PROTOCORE_TLS_PLAINTEXT_HDR_LEN;
-    TlsRecordV.plain.view->frag_len = length;
-    TlsRecordV.n = PROTOCORE_TLS_PLAINTEXT_HDR_LEN + length;
+    TlsRecord.plain.view->content_type = rec[0];
+    TlsRecord.plain.view->fragment = rec + PROTOCORE_TLS_PLAINTEXT_HDR_LEN;
+    TlsRecord.plain.view->frag_len = length;
+    TlsRecord.n = PROTOCORE_TLS_PLAINTEXT_HDR_LEN + length;
 }
 
 // ---------------------------------------------------------------------------
 // TLSCiphertext (RFC 8446 sec 5.2): AEAD-protected record
 // ---------------------------------------------------------------------------
 
-void protocore_record_protect(uint8_t *restrict work)
+static void record_protect(uint8_t *restrict work)
 {
-    TlsRecordKeys *keys = TlsRecordV.key.keys;
-    const uint8_t content_type = TlsRecordV.content_type;
-    const uint8_t *pt = TlsRecordV.sealed.pt;
-    const size_t pt_len = TlsRecordV.sealed.pt_len;
-    uint8_t *out = TlsRecordV.out_args.out;
+    TlsRecordKeys *keys = TlsRecord.key.keys;
+    const uint8_t content_type = TlsRecord.content_type;
+    const uint8_t *pt = TlsRecord.sealed.pt;
+    const size_t pt_len = TlsRecord.sealed.pt_len;
+    uint8_t *out = TlsRecord.out_args.out;
 
-    TlsRecordV.n = 0;
+    TlsRecord.n = 0;
     if (!keys->ready || pt_len > PROTOCORE_TLS_MAX_PLAINTEXT)
     {
         return;
@@ -280,7 +280,7 @@ void protocore_record_protect(uint8_t *restrict work)
     const size_t inner_len = pt_len + 1;
     const size_t body_len = inner_len + PROTOCORE_TLS_TAG_LEN;
     const size_t total = PROTOCORE_TLS_PLAINTEXT_HDR_LEN + body_len;
-    if (total > TlsRecordV.out_args.out_cap)
+    if (total > TlsRecord.out_args.out_cap)
     {
         return;
     }
@@ -300,18 +300,18 @@ void protocore_record_protect(uint8_t *restrict work)
     aead_seal(keys, out, PROTOCORE_TLS_PLAINTEXT_HDR_LEN, out + PROTOCORE_TLS_PLAINTEXT_HDR_LEN, inner_len,
               out + PROTOCORE_TLS_PLAINTEXT_HDR_LEN + inner_len);
     keys->seq++;
-    TlsRecordV.n = total;
+    TlsRecord.n = total;
 }
 
-void protocore_record_unprotect(uint8_t *restrict work)
+static void record_unprotect(uint8_t *restrict work)
 {
-    TlsRecordKeys *keys = TlsRecordV.key.keys;
-    const uint8_t *rec = TlsRecordV.sealed.rec;
-    const size_t rec_len = TlsRecordV.sealed.rec_len;
-    uint8_t *out = TlsRecordV.out_args.out;
-    TlsCiphertext *out_info = TlsRecordV.sealed.info;
+    TlsRecordKeys *keys = TlsRecord.key.keys;
+    const uint8_t *rec = TlsRecord.sealed.rec;
+    const size_t rec_len = TlsRecord.sealed.rec_len;
+    uint8_t *out = TlsRecord.out_args.out;
+    TlsCiphertext *out_info = TlsRecord.sealed.info;
 
-    TlsRecordV.ok = PROTO_FALSE;
+    TlsRecord.ok = PROTO_FALSE;
     if (!keys->ready || rec_len < PROTOCORE_TLS_PLAINTEXT_HDR_LEN)
     {
         return;
@@ -322,7 +322,7 @@ void protocore_record_unprotect(uint8_t *restrict work)
         return;
     }
     const size_t inner_len = body_len - PROTOCORE_TLS_TAG_LEN;
-    if (inner_len > TlsRecordV.out_args.out_cap || inner_len > PROTOCORE_TLS_MAX_PLAINTEXT + 1)
+    if (inner_len > TlsRecord.out_args.out_cap || inner_len > PROTOCORE_TLS_MAX_PLAINTEXT + 1)
     {
         return;
     }
@@ -355,10 +355,14 @@ void protocore_record_unprotect(uint8_t *restrict work)
         return;
     }
     keys->seq++;
-    TlsRecordV.ok = PROTO_TRUE;
+    TlsRecord.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-TlsRecordVars TlsRecordV;
+TlsRecordNs TlsRecord = {.keys_derive = record_keys_derive,
+                         .plaintext_build = plaintext_build,
+                         .plaintext_parse = plaintext_parse,
+                         .protect = record_protect,
+                         .unprotect = record_unprotect,
+                         .keys_wipe = record_keys_wipe};
 
 #endif // PROTOCORE_TLS_SOFTWARE

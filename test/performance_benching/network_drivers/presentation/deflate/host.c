@@ -38,13 +38,13 @@ int main(void)
     uint8_t plain[512];
     size_t clen = 0, plen = 0;
 
-    DeflateV.raw_args.src = (const uint8_t *)MSG;
-    DeflateV.raw_args.src_len = n;
-    DeflateV.raw_args.dst = comp;
-    DeflateV.raw_args.dst_cap = sizeof(comp);
-    DeflateV.raw_args.out_len = &clen;
-    DeflateV.raw_args.scratch = dscratch;
-    DeflateV.raw_args.scratch_len = DEFLATE_SCRATCH_SIZE;
+    Deflate.raw_args.src = (const uint8_t *)MSG;
+    Deflate.raw_args.src_len = n;
+    Deflate.raw_args.dst = comp;
+    Deflate.raw_args.dst_cap = sizeof(comp);
+    Deflate.raw_args.out_len = &clen;
+    Deflate.raw_args.scratch = dscratch;
+    Deflate.raw_args.scratch_len = DEFLATE_SCRATCH_SIZE;
     Deflate.raw(deflate_work);
     // permessage-deflate (RFC 7692) strips the 00 00 FF FF sync-flush trailer on send; the receiver
     // appends it back before inflating (Inflate.raw is called with comp_len + 4).
@@ -63,15 +63,15 @@ int main(void)
             200000,
             {
                 size_t o = 0;
-                DeflateV.raw_args.src = (const uint8_t *)MSG;
-                DeflateV.raw_args.src_len = n;
-                DeflateV.raw_args.dst = comp;
-                DeflateV.raw_args.dst_cap = sizeof(comp);
-                DeflateV.raw_args.out_len = &o;
-                DeflateV.raw_args.scratch = dscratch;
-                DeflateV.raw_args.scratch_len = DEFLATE_SCRATCH_SIZE;
+                Deflate.raw_args.src = (const uint8_t *)MSG;
+                Deflate.raw_args.src_len = n;
+                Deflate.raw_args.dst = comp;
+                Deflate.raw_args.dst_cap = sizeof(comp);
+                Deflate.raw_args.out_len = &o;
+                Deflate.raw_args.scratch = dscratch;
+                Deflate.raw_args.scratch_len = DEFLATE_SCRATCH_SIZE;
                 Deflate.raw(deflate_work);
-                sink += (int)DeflateV.value;
+                sink += (int)Deflate.value;
             },
             ns);
         hbench_row("ws-deflate", "deflate (json msg)", ns, (double)n);
@@ -85,15 +85,15 @@ int main(void)
             200000,
             {
                 plen = 0;
-                InflateV.raw_args.src = comp;
-                InflateV.raw_args.src_len = clen + 4;
-                InflateV.raw_args.dst = plain;
-                InflateV.raw_args.dst_cap = sizeof(plain);
-                InflateV.raw_args.out_len = &plen;
-                InflateV.raw_args.scratch = iscratch;
-                InflateV.raw_args.scratch_len = INFLATE_SCRATCH_SIZE;
+                Inflate.raw_args.src = comp;
+                Inflate.raw_args.src_len = clen + 4;
+                Inflate.raw_args.dst = plain;
+                Inflate.raw_args.dst_cap = sizeof(plain);
+                Inflate.raw_args.out_len = &plen;
+                Inflate.raw_args.scratch = iscratch;
+                Inflate.raw_args.scratch_len = INFLATE_SCRATCH_SIZE;
                 Inflate.raw(inflate_work);
-                sink += (int)InflateV.value;
+                sink += (int)Inflate.value;
             },
             ns);
         hbench_row("ws-deflate", "inflate (json msg)", ns, (double)plen);

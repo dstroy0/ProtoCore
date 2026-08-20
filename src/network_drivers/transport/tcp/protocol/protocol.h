@@ -24,9 +24,9 @@
 #ifndef PROTOCORE_TCP_PROTOCOL_H
 #define PROTOCORE_TCP_PROTOCOL_H
 
-#include "../evt.h"                   // ConnState, TcpEvt, and the observability hook
+#include "../evt.h"                                       // ConnState, TcpEvt, and the observability hook
 #include "config/platform/platform.h" // protocore_pcb, protocore_net_err: the types a call names
-#include "shared/ip/ip.h"             // protocore_ip: where a peer address is written
+#include "shared/ip/ip.h" // protocore_ip: where a peer address is written
 
 #include "protocore_config.h"
 
@@ -53,12 +53,14 @@ typedef struct
     size_t off;       ///< a peek's offset from the tail
     size_t count;     ///< bytes a peek copies, or a consume drops
 } ConnIoArgs;
+
 /** @brief What a pool lifecycle call reads: the idle deadline it sweeps against, and whose slots. */
 typedef struct
 {
     proto_u32 conn_timeout_ms; ///< milliseconds of inactivity before the sweep closes a slot
     int worker_id;             ///< whose slots the sweep reaps
 } ConnLifeArgs;
+
 #if PROTOCORE_ENABLE_OBSERVABILITY
 /** @brief What an observability call records; nothing on the byte path reads these. */
 typedef struct
@@ -70,6 +72,7 @@ typedef struct
     protocore_conn_counters counters;    ///< where counters_get reports
 } ConnObsArgs;
 #endif
+
 /**
  * @brief The pool of accepted connections: the user/TCP interface for one connection.
  *
@@ -148,11 +151,13 @@ typedef struct
     ConnState st;       ///< the state a write installs
     protocore_pcb *pcb; ///< the control block a raw call acts on, or the one pcb_of reports
     const TcpEvt *evt;  ///< the event an enqueue posts
-    ConnIoArgs io;      ///< the bytes a send or a receive moves (RFC 9293 sec 3.9.1)
-    ConnLifeArgs life;  ///< what a pool lifecycle call reads
+
+    ConnIoArgs io;     ///< the bytes a send or a receive moves (RFC 9293 sec 3.9.1)
+    ConnLifeArgs life; ///< what a pool lifecycle call reads
 #if PROTOCORE_ENABLE_OBSERVABILITY
     ConnObsArgs obs; ///< what an observability call records
 #endif
+
     proto_bool ok;
     proto_u16 u16;
     uint32_t u32;
@@ -162,18 +167,7 @@ typedef struct
     protocore_if_kind if_kind;
     ProtoConn proto;
     protocore_ip *out; ///< where a peer address is written
-#if PROTOCORE_ENABLE_OBSERVABILITY
-#endif
-    // The receive ring, and what a slot is. Transport owns the ring: a layer above drains it only
-    // through these, and never indexes the buffer or advances the tail itself.
-} ConnPoolVars;
 
-/** @brief The operands and the outcome. */
-extern ConnPoolVars ConnPoolV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const set_state)(uint8_t *restrict work);
     void (*const alloc_free)(uint8_t *restrict work);
     void (*const timeout_ms)(uint8_t *restrict work);
@@ -196,12 +190,17 @@ typedef struct
     void (*const remote_addr)(uint8_t *restrict work);
     void (*const touch_active)(uint8_t *restrict work);
     void (*const check_timeouts)(uint8_t *restrict work);
+#if PROTOCORE_ENABLE_OBSERVABILITY
     void (*const on_event)(uint8_t *restrict work);
     void (*const counters_get)(uint8_t *restrict work);
     void (*const counters_reset)(uint8_t *restrict work);
     void (*const obs_bump)(uint8_t *restrict work);
     void (*const obs_transition)(uint8_t *restrict work);
     void (*const obs_notice)(uint8_t *restrict work);
+#endif
+
+    // The receive ring, and what a slot is. Transport owns the ring: a layer above drains it only
+    // through these, and never indexes the buffer or advances the tail itself.
     void (*const available)(uint8_t *restrict work);
     void (*const read_byte)(uint8_t *restrict work);
     void (*const peek)(uint8_t *restrict work);
@@ -216,95 +215,8 @@ typedef struct
     void (*const pcb_of)(uint8_t *restrict work);
 } ConnPoolNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in ConnPoolV or a region of the borrow at a fixed offset.
-void protocore_protocol_set_state(uint8_t *restrict work);
-void protocore_protocol_alloc_free(uint8_t *restrict work);
-void protocore_protocol_timeout_ms(uint8_t *restrict work);
-void protocore_protocol_send(uint8_t *restrict work);
-void protocore_protocol_send_flush(uint8_t *restrict work);
-void protocore_protocol_sndbuf(uint8_t *restrict work);
-void protocore_protocol_flush(uint8_t *restrict work);
-void protocore_protocol_ack_consumed(uint8_t *restrict work);
-void protocore_protocol_raw_send(uint8_t *restrict work);
-void protocore_protocol_close(uint8_t *restrict work);
-void protocore_protocol_abort_slot(uint8_t *restrict work);
-void protocore_protocol_closing_finalize(uint8_t *restrict work);
-void protocore_protocol_closing_check(uint8_t *restrict work);
-void protocore_protocol_begin_close(uint8_t *restrict work);
-void protocore_protocol_enqueue(uint8_t *restrict work);
-void protocore_protocol_init(uint8_t *restrict work);
-void protocore_protocol_stop(uint8_t *restrict work);
-void protocore_protocol_active_count(uint8_t *restrict work);
-void protocore_protocol_remote_ip(uint8_t *restrict work);
-void protocore_protocol_remote_addr(uint8_t *restrict work);
-void protocore_protocol_touch_active(uint8_t *restrict work);
-void protocore_protocol_check_timeouts(uint8_t *restrict work);
-void protocore_protocol_on_event(uint8_t *restrict work);
-void protocore_protocol_counters_get(uint8_t *restrict work);
-void protocore_protocol_counters_reset(uint8_t *restrict work);
-void protocore_protocol_obs_bump(uint8_t *restrict work);
-void protocore_protocol_obs_transition(uint8_t *restrict work);
-void protocore_protocol_obs_notice(uint8_t *restrict work);
-void protocore_protocol_available(uint8_t *restrict work);
-void protocore_protocol_read_byte(uint8_t *restrict work);
-void protocore_protocol_peek(uint8_t *restrict work);
-void protocore_protocol_consume(uint8_t *restrict work);
-void protocore_protocol_read(uint8_t *restrict work);
-void protocore_protocol_active(uint8_t *restrict work);
-void protocore_protocol_iface(uint8_t *restrict work);
-void protocore_protocol_listener_id(uint8_t *restrict work);
-void protocore_protocol_tls(uint8_t *restrict work);
-void protocore_protocol_owner(uint8_t *restrict work);
-void protocore_protocol_proto_of(uint8_t *restrict work);
-void protocore_protocol_pcb_of(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `ConnPool.set_state(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const ConnPoolNs ConnPool __attribute__((unused)) = {
-    .set_state = protocore_protocol_set_state,
-    .alloc_free = protocore_protocol_alloc_free,
-    .timeout_ms = protocore_protocol_timeout_ms,
-    .send = protocore_protocol_send,
-    .send_flush = protocore_protocol_send_flush,
-    .sndbuf = protocore_protocol_sndbuf,
-    .flush = protocore_protocol_flush,
-    .ack_consumed = protocore_protocol_ack_consumed,
-    .raw_send = protocore_protocol_raw_send,
-    .close = protocore_protocol_close,
-    .abort_slot = protocore_protocol_abort_slot,
-    .closing_finalize = protocore_protocol_closing_finalize,
-    .closing_check = protocore_protocol_closing_check,
-    .begin_close = protocore_protocol_begin_close,
-    .enqueue = protocore_protocol_enqueue,
-    .init = protocore_protocol_init,
-    .stop = protocore_protocol_stop,
-    .active_count = protocore_protocol_active_count,
-    .remote_ip = protocore_protocol_remote_ip,
-    .remote_addr = protocore_protocol_remote_addr,
-    .touch_active = protocore_protocol_touch_active,
-    .check_timeouts = protocore_protocol_check_timeouts,
-    .on_event = protocore_protocol_on_event,
-    .counters_get = protocore_protocol_counters_get,
-    .counters_reset = protocore_protocol_counters_reset,
-    .obs_bump = protocore_protocol_obs_bump,
-    .obs_transition = protocore_protocol_obs_transition,
-    .obs_notice = protocore_protocol_obs_notice,
-    .available = protocore_protocol_available,
-    .read_byte = protocore_protocol_read_byte,
-    .peek = protocore_protocol_peek,
-    .consume = protocore_protocol_consume,
-    .read = protocore_protocol_read,
-    .active = protocore_protocol_active,
-    .iface = protocore_protocol_iface,
-    .listener_id = protocore_protocol_listener_id,
-    .tls = protocore_protocol_tls,
-    .owner = protocore_protocol_owner,
-    .proto_of = protocore_protocol_proto_of,
-    .pcb_of = protocore_protocol_pcb_of,
-};
+/** @brief The one symbol this module exports. */
+extern ConnPoolNs ConnPool;
 
 /**
  * @brief The PROTOCORE_CONN_POOL_BORROW bytes this module's state lives in.

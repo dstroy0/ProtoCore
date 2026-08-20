@@ -71,10 +71,10 @@ static void reset_counts()
 
 void setUp()
 {
-    HotswapV.core_init_args.c = &c;
-    HotswapV.core_init_args.fail_threshold = 3;
-    HotswapV.core_init_args.probe_interval_ms = 2000;
-    HotswapV.core_init_args.now = 100000;
+    Hotswap.core_init_args.c = &c;
+    Hotswap.core_init_args.fail_threshold = 3;
+    Hotswap.core_init_args.probe_interval_ms = 2000;
+    Hotswap.core_init_args.now = 100000;
     Hotswap.core_init(protocore_hotswap_span());
     Clock.src.fn = test_clock;
     Clock.src.ticks_per_second = 1000;
@@ -90,10 +90,10 @@ void tearDown()
 
 static void mount_it(uint32_t now)
 {
-    HotswapV.core_probe_args.c = &c;
-    HotswapV.core_probe_args.present = PROTO_TRUE;
-    HotswapV.core_probe_args.mounted = PROTO_TRUE;
-    HotswapV.core_probe_args.now = now;
+    Hotswap.core_probe_args.c = &c;
+    Hotswap.core_probe_args.present = PROTO_TRUE;
+    Hotswap.core_probe_args.mounted = PROTO_TRUE;
+    Hotswap.core_probe_args.now = now;
     Hotswap.core_probe(protocore_hotswap_span());
 }
 
@@ -108,54 +108,54 @@ void test_starts_absent_not_ready()
 void test_first_probe_is_due_immediately()
 {
 
-    HotswapV.core_due_args.c = &c;
-    HotswapV.core_due_args.now = 100000;
+    Hotswap.core_due_args.c = &c;
+    Hotswap.core_due_args.now = 100000;
     Hotswap.core_due(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
+    TEST_ASSERT_TRUE(Hotswap.ok);
 }
 
 void test_first_probe_is_due_when_init_time_is_near_zero()
 {
 
-    HotswapV.core_init_args.c = &c;
-    HotswapV.core_init_args.fail_threshold = 3;
-    HotswapV.core_init_args.probe_interval_ms = 2000;
-    HotswapV.core_init_args.now = 5;
+    Hotswap.core_init_args.c = &c;
+    Hotswap.core_init_args.fail_threshold = 3;
+    Hotswap.core_init_args.probe_interval_ms = 2000;
+    Hotswap.core_init_args.now = 5;
     Hotswap.core_init(protocore_hotswap_span());
-    HotswapV.core_due_args.c = &c;
-    HotswapV.core_due_args.now = 5;
+    Hotswap.core_due_args.c = &c;
+    Hotswap.core_due_args.now = 5;
     Hotswap.core_due(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
-    HotswapV.core_due_args.c = &c;
-    HotswapV.core_due_args.now = 6;
+    TEST_ASSERT_TRUE(Hotswap.ok);
+    Hotswap.core_due_args.c = &c;
+    Hotswap.core_due_args.now = 6;
     Hotswap.core_due(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
+    TEST_ASSERT_TRUE(Hotswap.ok);
 }
 
 void test_zero_threshold_is_clamped_to_one()
 {
-    HotswapV.core_init_args.c = &c;
-    HotswapV.core_init_args.fail_threshold = 0;
-    HotswapV.core_init_args.probe_interval_ms = 2000;
-    HotswapV.core_init_args.now = 0;
+    Hotswap.core_init_args.c = &c;
+    Hotswap.core_init_args.fail_threshold = 0;
+    Hotswap.core_init_args.probe_interval_ms = 2000;
+    Hotswap.core_init_args.now = 0;
     Hotswap.core_init(protocore_hotswap_span());
     TEST_ASSERT_EQUAL_UINT8(1, c.fail_threshold);
     mount_it(0);
 
-    HotswapV.core_io_args.c = &c;
-    HotswapV.core_io_args.ok = PROTO_FALSE;
+    Hotswap.core_io_args.c = &c;
+    Hotswap.core_io_args.ok = PROTO_FALSE;
     Hotswap.core_io(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
+    TEST_ASSERT_TRUE(Hotswap.ok);
     TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)c.state);
 }
 
 void test_one_failure_does_not_fault_a_healthy_volume()
 {
     mount_it(100000);
-    HotswapV.core_io_args.c = &c;
-    HotswapV.core_io_args.ok = PROTO_FALSE;
+    Hotswap.core_io_args.c = &c;
+    Hotswap.core_io_args.ok = PROTO_FALSE;
     Hotswap.core_io(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
+    TEST_ASSERT_FALSE(Hotswap.ok);
     TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)c.state);
     TEST_ASSERT_EQUAL_UINT8(1, c.fail_run);
 }
@@ -163,18 +163,18 @@ void test_one_failure_does_not_fault_a_healthy_volume()
 void test_threshold_run_faults_and_counts()
 {
     mount_it(100000);
-    HotswapV.core_io_args.c = &c;
-    HotswapV.core_io_args.ok = PROTO_FALSE;
+    Hotswap.core_io_args.c = &c;
+    Hotswap.core_io_args.ok = PROTO_FALSE;
     Hotswap.core_io(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
-    HotswapV.core_io_args.c = &c;
-    HotswapV.core_io_args.ok = PROTO_FALSE;
+    TEST_ASSERT_FALSE(Hotswap.ok);
+    Hotswap.core_io_args.c = &c;
+    Hotswap.core_io_args.ok = PROTO_FALSE;
     Hotswap.core_io(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
-    HotswapV.core_io_args.c = &c;
-    HotswapV.core_io_args.ok = PROTO_FALSE;
+    TEST_ASSERT_FALSE(Hotswap.ok);
+    Hotswap.core_io_args.c = &c;
+    Hotswap.core_io_args.ok = PROTO_FALSE;
     Hotswap.core_io(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
+    TEST_ASSERT_TRUE(Hotswap.ok);
     TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)c.state);
     TEST_ASSERT_EQUAL_UINT32(1, c.faults);
 }
@@ -182,25 +182,25 @@ void test_threshold_run_faults_and_counts()
 void test_a_success_resets_the_failure_run()
 {
     mount_it(100000);
-    HotswapV.core_io_args.c = &c;
-    HotswapV.core_io_args.ok = PROTO_FALSE;
+    Hotswap.core_io_args.c = &c;
+    Hotswap.core_io_args.ok = PROTO_FALSE;
     Hotswap.core_io(protocore_hotswap_span());
-    HotswapV.core_io_args.c = &c;
-    HotswapV.core_io_args.ok = PROTO_FALSE;
+    Hotswap.core_io_args.c = &c;
+    Hotswap.core_io_args.ok = PROTO_FALSE;
     Hotswap.core_io(protocore_hotswap_span());
-    HotswapV.core_io_args.c = &c;
-    HotswapV.core_io_args.ok = PROTO_TRUE;
+    Hotswap.core_io_args.c = &c;
+    Hotswap.core_io_args.ok = PROTO_TRUE;
     Hotswap.core_io(protocore_hotswap_span());
     TEST_ASSERT_EQUAL_UINT8(0, c.fail_run);
 
-    HotswapV.core_io_args.c = &c;
-    HotswapV.core_io_args.ok = PROTO_FALSE;
+    Hotswap.core_io_args.c = &c;
+    Hotswap.core_io_args.ok = PROTO_FALSE;
     Hotswap.core_io(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
-    HotswapV.core_io_args.c = &c;
-    HotswapV.core_io_args.ok = PROTO_FALSE;
+    TEST_ASSERT_FALSE(Hotswap.ok);
+    Hotswap.core_io_args.c = &c;
+    Hotswap.core_io_args.ok = PROTO_FALSE;
     Hotswap.core_io(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
+    TEST_ASSERT_FALSE(Hotswap.ok);
     TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)c.state);
 }
 
@@ -209,46 +209,46 @@ void test_further_failures_while_faulted_are_ignored()
     mount_it(100000);
     for (int i = 0; i < 3; i++)
     {
-        HotswapV.core_io_args.c = &c;
-        HotswapV.core_io_args.ok = PROTO_FALSE;
+        Hotswap.core_io_args.c = &c;
+        Hotswap.core_io_args.ok = PROTO_FALSE;
         Hotswap.core_io(protocore_hotswap_span());
     }
     TEST_ASSERT_EQUAL_UINT32(1, c.faults);
 
-    HotswapV.core_io_args.c = &c;
-    HotswapV.core_io_args.ok = PROTO_FALSE;
+    Hotswap.core_io_args.c = &c;
+    Hotswap.core_io_args.ok = PROTO_FALSE;
     Hotswap.core_io(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
-    HotswapV.core_io_args.c = &c;
-    HotswapV.core_io_args.ok = PROTO_TRUE;
+    TEST_ASSERT_FALSE(Hotswap.ok);
+    Hotswap.core_io_args.c = &c;
+    Hotswap.core_io_args.ok = PROTO_TRUE;
     Hotswap.core_io(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
+    TEST_ASSERT_FALSE(Hotswap.ok);
     TEST_ASSERT_EQUAL_UINT32(1, c.faults);
     TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)c.state);
 }
 
 void test_io_while_absent_is_ignored()
 {
-    HotswapV.core_io_args.c = &c;
-    HotswapV.core_io_args.ok = PROTO_FALSE;
+    Hotswap.core_io_args.c = &c;
+    Hotswap.core_io_args.ok = PROTO_FALSE;
     Hotswap.core_io(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
+    TEST_ASSERT_FALSE(Hotswap.ok);
     TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_ABSENT, (int)c.state);
     TEST_ASSERT_EQUAL_UINT32(0, c.faults);
 }
 
 void test_fail_run_saturates_instead_of_wrapping()
 {
-    HotswapV.core_init_args.c = &c;
-    HotswapV.core_init_args.fail_threshold = 255;
-    HotswapV.core_init_args.probe_interval_ms = 2000;
-    HotswapV.core_init_args.now = 0;
+    Hotswap.core_init_args.c = &c;
+    Hotswap.core_init_args.fail_threshold = 255;
+    Hotswap.core_init_args.probe_interval_ms = 2000;
+    Hotswap.core_init_args.now = 0;
     Hotswap.core_init(protocore_hotswap_span());
     mount_it(0);
     for (int i = 0; i < 400; i++)
     {
-        HotswapV.core_io_args.c = &c;
-        HotswapV.core_io_args.ok = PROTO_FALSE;
+        Hotswap.core_io_args.c = &c;
+        Hotswap.core_io_args.ok = PROTO_FALSE;
         Hotswap.core_io(protocore_hotswap_span());
     }
 
@@ -258,17 +258,17 @@ void test_fail_run_saturates_instead_of_wrapping()
 void test_fail_run_at_the_uint8_ceiling_does_not_wrap()
 {
 
-    HotswapV.core_init_args.c = &c;
-    HotswapV.core_init_args.fail_threshold = 255;
-    HotswapV.core_init_args.probe_interval_ms = 2000;
-    HotswapV.core_init_args.now = 0;
+    Hotswap.core_init_args.c = &c;
+    Hotswap.core_init_args.fail_threshold = 255;
+    Hotswap.core_init_args.probe_interval_ms = 2000;
+    Hotswap.core_init_args.now = 0;
     Hotswap.core_init(protocore_hotswap_span());
     mount_it(0);
     c.fail_run = 0xFF;
-    HotswapV.core_io_args.c = &c;
-    HotswapV.core_io_args.ok = PROTO_FALSE;
+    Hotswap.core_io_args.c = &c;
+    Hotswap.core_io_args.ok = PROTO_FALSE;
     Hotswap.core_io(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
+    TEST_ASSERT_TRUE(Hotswap.ok);
     TEST_ASSERT_EQUAL_UINT8(0xFF, c.fail_run);
     TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)c.state);
 }
@@ -276,76 +276,76 @@ void test_fail_run_at_the_uint8_ceiling_does_not_wrap()
 void test_no_probe_while_ready()
 {
     mount_it(100000);
-    HotswapV.core_due_args.c = &c;
-    HotswapV.core_due_args.now = 100000 + 999999;
+    Hotswap.core_due_args.c = &c;
+    Hotswap.core_due_args.now = 100000 + 999999;
     Hotswap.core_due(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
+    TEST_ASSERT_FALSE(Hotswap.ok);
 }
 
 void test_probe_is_rate_limited_while_absent()
 {
-    HotswapV.core_probe_args.c = &c;
-    HotswapV.core_probe_args.present = PROTO_FALSE;
-    HotswapV.core_probe_args.mounted = PROTO_FALSE;
-    HotswapV.core_probe_args.now = 100000;
+    Hotswap.core_probe_args.c = &c;
+    Hotswap.core_probe_args.present = PROTO_FALSE;
+    Hotswap.core_probe_args.mounted = PROTO_FALSE;
+    Hotswap.core_probe_args.now = 100000;
     Hotswap.core_probe(protocore_hotswap_span());
-    HotswapV.core_due_args.c = &c;
-    HotswapV.core_due_args.now = 100000 + 1999;
+    Hotswap.core_due_args.c = &c;
+    Hotswap.core_due_args.now = 100000 + 1999;
     Hotswap.core_due(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
-    HotswapV.core_due_args.c = &c;
-    HotswapV.core_due_args.now = 100000 + 2000;
+    TEST_ASSERT_FALSE(Hotswap.ok);
+    Hotswap.core_due_args.c = &c;
+    Hotswap.core_due_args.now = 100000 + 2000;
     Hotswap.core_due(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
+    TEST_ASSERT_TRUE(Hotswap.ok);
 }
 
 void test_probe_pacing_is_wrapsafe_across_rollover()
 {
 
-    HotswapV.core_probe_args.c = &c;
-    HotswapV.core_probe_args.present = PROTO_FALSE;
-    HotswapV.core_probe_args.mounted = PROTO_FALSE;
-    HotswapV.core_probe_args.now = 0xFFFFF000u;
+    Hotswap.core_probe_args.c = &c;
+    Hotswap.core_probe_args.present = PROTO_FALSE;
+    Hotswap.core_probe_args.mounted = PROTO_FALSE;
+    Hotswap.core_probe_args.now = 0xFFFFF000u;
     Hotswap.core_probe(protocore_hotswap_span());
-    HotswapV.core_due_args.c = &c;
-    HotswapV.core_due_args.now = 0xFFFFF000u + 1999;
+    Hotswap.core_due_args.c = &c;
+    Hotswap.core_due_args.now = 0xFFFFF000u + 1999;
     Hotswap.core_due(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
-    HotswapV.core_due_args.c = &c;
-    HotswapV.core_due_args.now = 0xFFFFF000u + 2000;
+    TEST_ASSERT_FALSE(Hotswap.ok);
+    Hotswap.core_due_args.c = &c;
+    Hotswap.core_due_args.now = 0xFFFFF000u + 2000;
     Hotswap.core_due(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
+    TEST_ASSERT_TRUE(Hotswap.ok);
 }
 
 void test_present_but_unmountable_stays_absent()
 {
 
-    HotswapV.core_probe_args.c = &c;
-    HotswapV.core_probe_args.present = PROTO_TRUE;
-    HotswapV.core_probe_args.mounted = PROTO_FALSE;
-    HotswapV.core_probe_args.now = 100000;
+    Hotswap.core_probe_args.c = &c;
+    Hotswap.core_probe_args.present = PROTO_TRUE;
+    Hotswap.core_probe_args.mounted = PROTO_FALSE;
+    Hotswap.core_probe_args.now = 100000;
     Hotswap.core_probe(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
+    TEST_ASSERT_FALSE(Hotswap.ok);
     TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_ABSENT, (int)c.state);
     TEST_ASSERT_EQUAL_UINT32(0, c.mounts);
 }
 
 void test_mount_counts_only_on_transition()
 {
-    HotswapV.core_probe_args.c = &c;
-    HotswapV.core_probe_args.present = PROTO_TRUE;
-    HotswapV.core_probe_args.mounted = PROTO_TRUE;
-    HotswapV.core_probe_args.now = 100000;
+    Hotswap.core_probe_args.c = &c;
+    Hotswap.core_probe_args.present = PROTO_TRUE;
+    Hotswap.core_probe_args.mounted = PROTO_TRUE;
+    Hotswap.core_probe_args.now = 100000;
     Hotswap.core_probe(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
+    TEST_ASSERT_TRUE(Hotswap.ok);
     TEST_ASSERT_EQUAL_UINT32(1, c.mounts);
 
-    HotswapV.core_probe_args.c = &c;
-    HotswapV.core_probe_args.present = PROTO_TRUE;
-    HotswapV.core_probe_args.mounted = PROTO_TRUE;
-    HotswapV.core_probe_args.now = 101000;
+    Hotswap.core_probe_args.c = &c;
+    Hotswap.core_probe_args.present = PROTO_TRUE;
+    Hotswap.core_probe_args.mounted = PROTO_TRUE;
+    Hotswap.core_probe_args.now = 101000;
     Hotswap.core_probe(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
+    TEST_ASSERT_FALSE(Hotswap.ok);
     TEST_ASSERT_EQUAL_UINT32(1, c.mounts);
 }
 
@@ -356,42 +356,42 @@ void test_full_removal_and_reinsertion_cycle()
 
     for (int i = 0; i < 3; i++)
     {
-        HotswapV.core_io_args.c = &c;
-        HotswapV.core_io_args.ok = PROTO_FALSE;
+        Hotswap.core_io_args.c = &c;
+        Hotswap.core_io_args.ok = PROTO_FALSE;
         Hotswap.core_io(protocore_hotswap_span());
     }
     TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)c.state);
 
-    HotswapV.core_due_args.c = &c;
-    HotswapV.core_due_args.now = 102000;
+    Hotswap.core_due_args.c = &c;
+    Hotswap.core_due_args.now = 102000;
     Hotswap.core_due(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
-    HotswapV.core_probe_args.c = &c;
-    HotswapV.core_probe_args.present = PROTO_FALSE;
-    HotswapV.core_probe_args.mounted = PROTO_FALSE;
-    HotswapV.core_probe_args.now = 102000;
+    TEST_ASSERT_TRUE(Hotswap.ok);
+    Hotswap.core_probe_args.c = &c;
+    Hotswap.core_probe_args.present = PROTO_FALSE;
+    Hotswap.core_probe_args.mounted = PROTO_FALSE;
+    Hotswap.core_probe_args.now = 102000;
     Hotswap.core_probe(protocore_hotswap_span());
     TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_ABSENT, (int)c.state);
 
-    HotswapV.core_due_args.c = &c;
-    HotswapV.core_due_args.now = 104000;
+    Hotswap.core_due_args.c = &c;
+    Hotswap.core_due_args.now = 104000;
     Hotswap.core_due(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
-    HotswapV.core_probe_args.c = &c;
-    HotswapV.core_probe_args.present = PROTO_TRUE;
-    HotswapV.core_probe_args.mounted = PROTO_TRUE;
-    HotswapV.core_probe_args.now = 104000;
+    TEST_ASSERT_TRUE(Hotswap.ok);
+    Hotswap.core_probe_args.c = &c;
+    Hotswap.core_probe_args.present = PROTO_TRUE;
+    Hotswap.core_probe_args.mounted = PROTO_TRUE;
+    Hotswap.core_probe_args.now = 104000;
     Hotswap.core_probe(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
+    TEST_ASSERT_TRUE(Hotswap.ok);
     TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)c.state);
     TEST_ASSERT_EQUAL_UINT32(2, c.mounts);
     TEST_ASSERT_EQUAL_UINT32(1, c.faults);
     TEST_ASSERT_EQUAL_UINT8(0, c.fail_run);
 
-    HotswapV.core_io_args.c = &c;
-    HotswapV.core_io_args.ok = PROTO_FALSE;
+    Hotswap.core_io_args.c = &c;
+    Hotswap.core_io_args.ok = PROTO_FALSE;
     Hotswap.core_io(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
+    TEST_ASSERT_FALSE(Hotswap.ok);
     TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)c.state);
 }
 
@@ -401,94 +401,94 @@ void test_faulted_volume_can_go_straight_back_to_ready()
     mount_it(100000);
     for (int i = 0; i < 3; i++)
     {
-        HotswapV.core_io_args.c = &c;
-        HotswapV.core_io_args.ok = PROTO_FALSE;
+        Hotswap.core_io_args.c = &c;
+        Hotswap.core_io_args.ok = PROTO_FALSE;
         Hotswap.core_io(protocore_hotswap_span());
     }
-    HotswapV.core_probe_args.c = &c;
-    HotswapV.core_probe_args.present = PROTO_TRUE;
-    HotswapV.core_probe_args.mounted = PROTO_TRUE;
-    HotswapV.core_probe_args.now = 102000;
+    Hotswap.core_probe_args.c = &c;
+    Hotswap.core_probe_args.present = PROTO_TRUE;
+    Hotswap.core_probe_args.mounted = PROTO_TRUE;
+    Hotswap.core_probe_args.now = 102000;
     Hotswap.core_probe(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
+    TEST_ASSERT_TRUE(Hotswap.ok);
     TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)c.state);
     TEST_ASSERT_EQUAL_UINT32(2, c.mounts);
 }
 
 void test_null_core_is_not_a_crash()
 {
-    HotswapV.core_init_args.c = NULL;
-    HotswapV.core_init_args.fail_threshold = 3;
-    HotswapV.core_init_args.probe_interval_ms = 2000;
-    HotswapV.core_init_args.now = 0;
+    Hotswap.core_init_args.c = NULL;
+    Hotswap.core_init_args.fail_threshold = 3;
+    Hotswap.core_init_args.probe_interval_ms = 2000;
+    Hotswap.core_init_args.now = 0;
     Hotswap.core_init(protocore_hotswap_span());
-    HotswapV.core_io_args.c = NULL;
-    HotswapV.core_io_args.ok = PROTO_FALSE;
+    Hotswap.core_io_args.c = NULL;
+    Hotswap.core_io_args.ok = PROTO_FALSE;
     Hotswap.core_io(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
-    HotswapV.core_due_args.c = NULL;
-    HotswapV.core_due_args.now = 0;
+    TEST_ASSERT_FALSE(Hotswap.ok);
+    Hotswap.core_due_args.c = NULL;
+    Hotswap.core_due_args.now = 0;
     Hotswap.core_due(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
-    HotswapV.core_probe_args.c = NULL;
-    HotswapV.core_probe_args.present = PROTO_TRUE;
-    HotswapV.core_probe_args.mounted = PROTO_TRUE;
-    HotswapV.core_probe_args.now = 0;
+    TEST_ASSERT_FALSE(Hotswap.ok);
+    Hotswap.core_probe_args.c = NULL;
+    Hotswap.core_probe_args.present = PROTO_TRUE;
+    Hotswap.core_probe_args.mounted = PROTO_TRUE;
+    Hotswap.core_probe_args.now = 0;
     Hotswap.core_probe(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
+    TEST_ASSERT_FALSE(Hotswap.ok);
 }
 
 void test_state_names()
 {
-    HotswapV.state_name_args.s = STORAGE_STATE_ABSENT;
+    Hotswap.state_name_args.s = STORAGE_STATE_ABSENT;
     Hotswap.state_name(protocore_hotswap_span());
-    TEST_ASSERT_EQUAL_STRING("absent", HotswapV.text);
-    HotswapV.state_name_args.s = STORAGE_STATE_READY;
+    TEST_ASSERT_EQUAL_STRING("absent", Hotswap.text);
+    Hotswap.state_name_args.s = STORAGE_STATE_READY;
     Hotswap.state_name(protocore_hotswap_span());
-    TEST_ASSERT_EQUAL_STRING("ready", HotswapV.text);
-    HotswapV.state_name_args.s = STORAGE_STATE_FAULTED;
+    TEST_ASSERT_EQUAL_STRING("ready", Hotswap.text);
+    Hotswap.state_name_args.s = STORAGE_STATE_FAULTED;
     Hotswap.state_name(protocore_hotswap_span());
-    TEST_ASSERT_EQUAL_STRING("faulted", HotswapV.text);
+    TEST_ASSERT_EQUAL_STRING("faulted", Hotswap.text);
 }
 
 void test_json_and_overflow_is_fail_closed()
 {
     char buf[64];
-    HotswapV.json_args.out = buf;
-    HotswapV.json_args.cap = sizeof(buf);
+    Hotswap.json_args.out = buf;
+    Hotswap.json_args.cap = sizeof(buf);
     Hotswap.json(protocore_hotswap_span());
-    size_t n = HotswapV.n;
+    size_t n = Hotswap.n;
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_STRING("{\"storage\":\"absent\",\"mounts\":0,\"faults\":0}", buf);
 
     char tiny[8];
-    HotswapV.json_args.out = tiny;
-    HotswapV.json_args.cap = sizeof(tiny);
+    Hotswap.json_args.out = tiny;
+    Hotswap.json_args.cap = sizeof(tiny);
     Hotswap.json(protocore_hotswap_span());
-    TEST_ASSERT_EQUAL_UINT32(0, HotswapV.n);
+    TEST_ASSERT_EQUAL_UINT32(0, Hotswap.n);
     TEST_ASSERT_EQUAL_STRING("", tiny);
-    HotswapV.json_args.out = NULL;
-    HotswapV.json_args.cap = 16;
+    Hotswap.json_args.out = NULL;
+    Hotswap.json_args.cap = 16;
     Hotswap.json(protocore_hotswap_span());
-    TEST_ASSERT_EQUAL_UINT32(0, HotswapV.n);
+    TEST_ASSERT_EQUAL_UINT32(0, Hotswap.n);
 
-    HotswapV.json_args.out = buf;
-    HotswapV.json_args.cap = 0;
+    Hotswap.json_args.out = buf;
+    Hotswap.json_args.cap = 0;
     Hotswap.json(protocore_hotswap_span());
-    TEST_ASSERT_EQUAL_UINT32(0, HotswapV.n);
+    TEST_ASSERT_EQUAL_UINT32(0, Hotswap.n);
 }
 
 void test_binding_poll_before_begin_does_nothing()
 {
 
-    HotswapV.poll_at_args.now = 500000;
-    HotswapV.poll_at(protocore_hotswap_span());
+    Hotswap.poll_at_args.now = 500000;
+    Hotswap.poll_at(protocore_hotswap_span());
     TEST_ASSERT_EQUAL_INT(0, g_mount_calls);
     TEST_ASSERT_EQUAL_INT(0, g_present_calls);
-    HotswapV.state(protocore_hotswap_span());
-    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_ABSENT, (int)HotswapV.value);
+    Hotswap.state(protocore_hotswap_span());
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_ABSENT, (int)Hotswap.value);
     Hotswap.ready(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
+    TEST_ASSERT_FALSE(Hotswap.ok);
 }
 
 static void bind_and_mount(uint32_t now)
@@ -496,15 +496,15 @@ static void bind_and_mount(uint32_t now)
     g_present_ok = PROTO_TRUE;
     g_mount_ok = PROTO_TRUE;
     advance_to(now);
-    HotswapV.begin_args.mount = fake_mount;
-    HotswapV.begin_args.unmount = fake_unmount;
-    HotswapV.begin_args.present = fake_present;
-    HotswapV.begin_args.ctx = &g_ctx_token;
+    Hotswap.begin_args.mount = fake_mount;
+    Hotswap.begin_args.unmount = fake_unmount;
+    Hotswap.begin_args.present = fake_present;
+    Hotswap.begin_args.ctx = &g_ctx_token;
     Hotswap.begin(protocore_hotswap_span());
-    HotswapV.set_event_cb_args.cb = fake_event;
+    Hotswap.set_event_cb_args.cb = fake_event;
     Hotswap.set_event_cb(protocore_hotswap_span());
-    HotswapV.poll_at_args.now = now;
-    HotswapV.poll_at(protocore_hotswap_span());
+    Hotswap.poll_at_args.now = now;
+    Hotswap.poll_at(protocore_hotswap_span());
     reset_counts();
 }
 
@@ -514,23 +514,23 @@ void test_binding_mounts_on_the_first_poll_and_notifies()
     g_present_ok = PROTO_TRUE;
     g_mount_ok = PROTO_TRUE;
     advance_to(10000);
-    HotswapV.begin_args.mount = fake_mount;
-    HotswapV.begin_args.unmount = fake_unmount;
-    HotswapV.begin_args.present = fake_present;
-    HotswapV.begin_args.ctx = &g_ctx_token;
+    Hotswap.begin_args.mount = fake_mount;
+    Hotswap.begin_args.unmount = fake_unmount;
+    Hotswap.begin_args.present = fake_present;
+    Hotswap.begin_args.ctx = &g_ctx_token;
     Hotswap.begin(protocore_hotswap_span());
-    HotswapV.set_event_cb_args.cb = fake_event;
+    Hotswap.set_event_cb_args.cb = fake_event;
     Hotswap.set_event_cb(protocore_hotswap_span());
     Hotswap.ready(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
+    TEST_ASSERT_FALSE(Hotswap.ok);
     reset_counts();
 
-    HotswapV.poll_at_args.now = 10000;
-    HotswapV.poll_at(protocore_hotswap_span());
+    Hotswap.poll_at_args.now = 10000;
+    Hotswap.poll_at(protocore_hotswap_span());
     Hotswap.ready(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
-    HotswapV.state(protocore_hotswap_span());
-    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)HotswapV.value);
+    TEST_ASSERT_TRUE(Hotswap.ok);
+    Hotswap.state(protocore_hotswap_span());
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)Hotswap.value);
     TEST_ASSERT_EQUAL_INT(1, g_present_calls);
     TEST_ASSERT_EQUAL_INT(1, g_mount_calls);
     TEST_ASSERT_EQUAL_INT(0, g_unmount_calls);
@@ -544,41 +544,41 @@ void test_binding_ready_volume_is_never_reprobed()
 {
 
     bind_and_mount(20000);
-    HotswapV.poll_at_args.now = 20000 + 999999;
-    HotswapV.poll_at(protocore_hotswap_span());
+    Hotswap.poll_at_args.now = 20000 + 999999;
+    Hotswap.poll_at(protocore_hotswap_span());
     TEST_ASSERT_EQUAL_INT(0, g_present_calls);
     TEST_ASSERT_EQUAL_INT(0, g_mount_calls);
     TEST_ASSERT_EQUAL_INT(0, g_event_calls);
     Hotswap.ready(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
+    TEST_ASSERT_TRUE(Hotswap.ok);
 }
 
 void test_binding_io_fault_unmounts_immediately_and_notifies()
 {
 
     bind_and_mount(30000);
-    HotswapV.io_args.ok = PROTO_FALSE;
+    Hotswap.io_args.ok = PROTO_FALSE;
     Hotswap.io(protocore_hotswap_span());
-    HotswapV.io_args.ok = PROTO_FALSE;
+    Hotswap.io_args.ok = PROTO_FALSE;
     Hotswap.io(protocore_hotswap_span());
     Hotswap.ready(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
+    TEST_ASSERT_TRUE(Hotswap.ok);
     TEST_ASSERT_EQUAL_INT(0, g_unmount_calls);
 
-    HotswapV.io_args.ok = PROTO_FALSE;
+    Hotswap.io_args.ok = PROTO_FALSE;
     Hotswap.io(protocore_hotswap_span());
     Hotswap.ready(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
-    HotswapV.state(protocore_hotswap_span());
-    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)HotswapV.value);
+    TEST_ASSERT_FALSE(Hotswap.ok);
+    Hotswap.state(protocore_hotswap_span());
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)Hotswap.value);
     TEST_ASSERT_EQUAL_INT(1, g_unmount_calls);
     TEST_ASSERT_EQUAL_INT(1, g_event_calls);
     TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)g_event_from);
     TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)g_event_to);
 
-    HotswapV.io_args.ok = PROTO_FALSE;
+    Hotswap.io_args.ok = PROTO_FALSE;
     Hotswap.io(protocore_hotswap_span());
-    HotswapV.io_args.ok = PROTO_TRUE;
+    Hotswap.io_args.ok = PROTO_TRUE;
     Hotswap.io(protocore_hotswap_span());
     TEST_ASSERT_EQUAL_INT(1, g_unmount_calls);
     TEST_ASSERT_EQUAL_INT(1, g_event_calls);
@@ -590,19 +590,19 @@ void test_binding_drops_a_faulted_mount_before_retrying()
     bind_and_mount(50000);
     for (int i = 0; i < 3; i++)
     {
-        HotswapV.io_args.ok = PROTO_FALSE;
+        Hotswap.io_args.ok = PROTO_FALSE;
         Hotswap.io(protocore_hotswap_span());
     }
     TEST_ASSERT_EQUAL_INT(1, g_unmount_calls);
-    HotswapV.state(protocore_hotswap_span());
-    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)HotswapV.value);
+    Hotswap.state(protocore_hotswap_span());
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)Hotswap.value);
 
-    HotswapV.poll_at_args.now = 52000;
-    HotswapV.poll_at(protocore_hotswap_span());
+    Hotswap.poll_at_args.now = 52000;
+    Hotswap.poll_at(protocore_hotswap_span());
     TEST_ASSERT_EQUAL_INT(2, g_unmount_calls);
     TEST_ASSERT_EQUAL_INT(1, g_mount_calls);
     Hotswap.ready(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
+    TEST_ASSERT_TRUE(Hotswap.ok);
     TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)g_event_from);
     TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)g_event_to);
 }
@@ -613,37 +613,37 @@ void test_binding_faults_and_retries_without_an_unmount_callback()
     g_present_ok = PROTO_TRUE;
     g_mount_ok = PROTO_TRUE;
     advance_to(40000);
-    HotswapV.begin_args.mount = fake_mount;
-    HotswapV.begin_args.unmount = NULL;
-    HotswapV.begin_args.present = fake_present;
-    HotswapV.begin_args.ctx = &g_ctx_token;
+    Hotswap.begin_args.mount = fake_mount;
+    Hotswap.begin_args.unmount = NULL;
+    Hotswap.begin_args.present = fake_present;
+    Hotswap.begin_args.ctx = &g_ctx_token;
     Hotswap.begin(protocore_hotswap_span());
-    HotswapV.set_event_cb_args.cb = fake_event;
+    Hotswap.set_event_cb_args.cb = fake_event;
     Hotswap.set_event_cb(protocore_hotswap_span());
-    HotswapV.poll_at_args.now = 40000;
-    HotswapV.poll_at(protocore_hotswap_span());
+    Hotswap.poll_at_args.now = 40000;
+    Hotswap.poll_at(protocore_hotswap_span());
     reset_counts();
     Hotswap.ready(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
+    TEST_ASSERT_TRUE(Hotswap.ok);
 
     for (int i = 0; i < 3; i++)
     {
-        HotswapV.io_args.ok = PROTO_FALSE;
+        Hotswap.io_args.ok = PROTO_FALSE;
         Hotswap.io(protocore_hotswap_span());
     }
-    HotswapV.state(protocore_hotswap_span());
-    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)HotswapV.value);
+    Hotswap.state(protocore_hotswap_span());
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)Hotswap.value);
     TEST_ASSERT_EQUAL_INT(0, g_unmount_calls);
     TEST_ASSERT_EQUAL_INT(1, g_event_calls);
 
     g_present_ok = PROTO_FALSE;
-    HotswapV.poll_at_args.now = 42000;
-    HotswapV.poll_at(protocore_hotswap_span());
+    Hotswap.poll_at_args.now = 42000;
+    Hotswap.poll_at(protocore_hotswap_span());
     TEST_ASSERT_EQUAL_INT(0, g_unmount_calls);
     TEST_ASSERT_EQUAL_INT(1, g_present_calls);
     TEST_ASSERT_EQUAL_INT(0, g_mount_calls);
-    HotswapV.state(protocore_hotswap_span());
-    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_ABSENT, (int)HotswapV.value);
+    Hotswap.state(protocore_hotswap_span());
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_ABSENT, (int)Hotswap.value);
     TEST_ASSERT_EQUAL_INT(2, g_event_calls);
     TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_ABSENT, (int)g_event_to);
 }
@@ -653,28 +653,28 @@ void test_binding_without_card_detect_lets_the_mount_decide()
 
     advance_to(60000);
     g_mount_ok = PROTO_FALSE;
-    HotswapV.begin_args.mount = fake_mount;
-    HotswapV.begin_args.unmount = fake_unmount;
-    HotswapV.begin_args.present = NULL;
-    HotswapV.begin_args.ctx = &g_ctx_token;
+    Hotswap.begin_args.mount = fake_mount;
+    Hotswap.begin_args.unmount = fake_unmount;
+    Hotswap.begin_args.present = NULL;
+    Hotswap.begin_args.ctx = &g_ctx_token;
     Hotswap.begin(protocore_hotswap_span());
-    HotswapV.set_event_cb_args.cb = fake_event;
+    Hotswap.set_event_cb_args.cb = fake_event;
     Hotswap.set_event_cb(protocore_hotswap_span());
     reset_counts();
 
-    HotswapV.poll_at_args.now = 60000;
-    HotswapV.poll_at(protocore_hotswap_span());
+    Hotswap.poll_at_args.now = 60000;
+    Hotswap.poll_at(protocore_hotswap_span());
     TEST_ASSERT_EQUAL_INT(0, g_present_calls);
     TEST_ASSERT_EQUAL_INT(1, g_mount_calls);
     Hotswap.ready(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
+    TEST_ASSERT_FALSE(Hotswap.ok);
     TEST_ASSERT_EQUAL_INT(0, g_event_calls);
 
     g_mount_ok = PROTO_TRUE;
-    HotswapV.poll_at_args.now = 62000;
-    HotswapV.poll_at(protocore_hotswap_span());
+    Hotswap.poll_at_args.now = 62000;
+    Hotswap.poll_at(protocore_hotswap_span());
     Hotswap.ready(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
+    TEST_ASSERT_TRUE(Hotswap.ok);
     TEST_ASSERT_EQUAL_INT(1, g_event_calls);
     TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)g_event_to);
 }
@@ -684,52 +684,52 @@ void test_binding_without_a_mount_callback_never_becomes_ready()
 
     advance_to(70000);
     g_present_ok = PROTO_TRUE;
-    HotswapV.begin_args.mount = NULL;
-    HotswapV.begin_args.unmount = fake_unmount;
-    HotswapV.begin_args.present = fake_present;
-    HotswapV.begin_args.ctx = &g_ctx_token;
+    Hotswap.begin_args.mount = NULL;
+    Hotswap.begin_args.unmount = fake_unmount;
+    Hotswap.begin_args.present = fake_present;
+    Hotswap.begin_args.ctx = &g_ctx_token;
     Hotswap.begin(protocore_hotswap_span());
-    HotswapV.set_event_cb_args.cb = fake_event;
+    Hotswap.set_event_cb_args.cb = fake_event;
     Hotswap.set_event_cb(protocore_hotswap_span());
     reset_counts();
 
-    HotswapV.poll_at_args.now = 70000;
-    HotswapV.poll_at(protocore_hotswap_span());
+    Hotswap.poll_at_args.now = 70000;
+    Hotswap.poll_at(protocore_hotswap_span());
     TEST_ASSERT_EQUAL_INT(1, g_present_calls);
     TEST_ASSERT_EQUAL_INT(0, g_mount_calls);
     Hotswap.ready(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
-    HotswapV.state(protocore_hotswap_span());
-    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_ABSENT, (int)HotswapV.value);
+    TEST_ASSERT_FALSE(Hotswap.ok);
+    Hotswap.state(protocore_hotswap_span());
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_ABSENT, (int)Hotswap.value);
 }
 
 void test_binding_event_callback_is_optional()
 {
 
-    HotswapV.set_event_cb_args.cb = NULL;
+    Hotswap.set_event_cb_args.cb = NULL;
     Hotswap.set_event_cb(protocore_hotswap_span());
     advance_to(80000);
     g_present_ok = PROTO_TRUE;
     g_mount_ok = PROTO_TRUE;
-    HotswapV.begin_args.mount = fake_mount;
-    HotswapV.begin_args.unmount = fake_unmount;
-    HotswapV.begin_args.present = fake_present;
-    HotswapV.begin_args.ctx = &g_ctx_token;
+    Hotswap.begin_args.mount = fake_mount;
+    Hotswap.begin_args.unmount = fake_unmount;
+    Hotswap.begin_args.present = fake_present;
+    Hotswap.begin_args.ctx = &g_ctx_token;
     Hotswap.begin(protocore_hotswap_span());
     reset_counts();
 
-    HotswapV.poll_at_args.now = 80000;
-    HotswapV.poll_at(protocore_hotswap_span());
+    Hotswap.poll_at_args.now = 80000;
+    Hotswap.poll_at(protocore_hotswap_span());
     Hotswap.ready(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
+    TEST_ASSERT_TRUE(Hotswap.ok);
     TEST_ASSERT_EQUAL_INT(0, g_event_calls);
     for (int i = 0; i < 3; i++)
     {
-        HotswapV.io_args.ok = PROTO_FALSE;
+        Hotswap.io_args.ok = PROTO_FALSE;
         Hotswap.io(protocore_hotswap_span());
     }
-    HotswapV.state(protocore_hotswap_span());
-    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)HotswapV.value);
+    Hotswap.state(protocore_hotswap_span());
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)Hotswap.value);
     TEST_ASSERT_EQUAL_INT(1, g_unmount_calls);
     TEST_ASSERT_EQUAL_INT(0, g_event_calls);
 }
@@ -740,19 +740,19 @@ void test_binding_poll_reads_the_library_clock()
     advance_to(90000);
     g_present_ok = PROTO_FALSE;
     g_mount_ok = PROTO_TRUE;
-    HotswapV.begin_args.mount = fake_mount;
-    HotswapV.begin_args.unmount = fake_unmount;
-    HotswapV.begin_args.present = fake_present;
-    HotswapV.begin_args.ctx = &g_ctx_token;
+    Hotswap.begin_args.mount = fake_mount;
+    Hotswap.begin_args.unmount = fake_unmount;
+    Hotswap.begin_args.present = fake_present;
+    Hotswap.begin_args.ctx = &g_ctx_token;
     Hotswap.begin(protocore_hotswap_span());
-    HotswapV.set_event_cb_args.cb = fake_event;
+    Hotswap.set_event_cb_args.cb = fake_event;
     Hotswap.set_event_cb(protocore_hotswap_span());
     reset_counts();
 
     Hotswap.poll(protocore_hotswap_span());
     TEST_ASSERT_EQUAL_INT(1, g_present_calls);
     Hotswap.ready(protocore_hotswap_span());
-    TEST_ASSERT_FALSE(HotswapV.ok);
+    TEST_ASSERT_FALSE(Hotswap.ok);
 
     advance_to(91000);
     Hotswap.poll(protocore_hotswap_span());
@@ -763,6 +763,7 @@ void test_binding_poll_reads_the_library_clock()
     Hotswap.poll(protocore_hotswap_span());
     TEST_ASSERT_EQUAL_INT(2, g_present_calls);
     Hotswap.ready(protocore_hotswap_span());
-    TEST_ASSERT_TRUE(HotswapV.ok);
+    TEST_ASSERT_TRUE(Hotswap.ok);
     TEST_ASSERT_EQUAL_INT(1, g_event_calls);
 }
+

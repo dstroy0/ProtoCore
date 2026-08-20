@@ -32,34 +32,34 @@ void dbench_run(void)
 
         // The entry call stays inside DBENCH_OP so the timed loop measures the decision, not the
         // read that follows it. The args are staged once: they do not change across iterations.
-        NetadaptV.window_args.reserve = 8000;
-        NetadaptV.window_args.min_win = 1024;
-        NetadaptV.window_args.max_win = 16384;
+        Netadapt.window_args.reserve = 8000;
+        Netadapt.window_args.min_win = 1024;
+        Netadapt.window_args.max_win = 16384;
 
         // TCP window sizing: scaling case (free=40000, reserve=8000 -> 32000/4 = 8000, in-band),
         // taken straight from test/test_netadapt (test_window_scales_with_heap).
-        NetadaptV.window_args.free_heap = 40000;
-        DBENCH_OP("Netadapt.window scale", 200000, (Netadapt.window(netadapt_work), sink32 += NetadaptV.u32));
+        Netadapt.window_args.free_heap = 40000;
+        DBENCH_OP("Netadapt.window scale", 200000, (Netadapt.window(netadapt_work), sink32 += Netadapt.u32));
         // Ceiling-clamp case (huge heap -> clamped to max_win); exercises the upper clamp branch.
-        NetadaptV.window_args.free_heap = 200000;
-        DBENCH_OP("Netadapt.window clamp", 200000, (Netadapt.window(netadapt_work), sink32 += NetadaptV.u32));
+        Netadapt.window_args.free_heap = 200000;
+        DBENCH_OP("Netadapt.window clamp", 200000, (Netadapt.window(netadapt_work), sink32 += Netadapt.u32));
         // Low-heap floor case (heap <= reserve -> min_win); exercises the early-return branch.
-        NetadaptV.window_args.free_heap = 5000;
-        DBENCH_OP("Netadapt.window floor", 200000, (Netadapt.window(netadapt_work), sink32 += NetadaptV.u32));
+        Netadapt.window_args.free_heap = 5000;
+        DBENCH_OP("Netadapt.window floor", 200000, (Netadapt.window(netadapt_work), sink32 += Netadapt.u32));
 
-        NetadaptV.dhcp_fallback_args.timeout_ms = 10000;
-        NetadaptV.dhcp_fallback_args.max_attempts = 5;
+        Netadapt.dhcp_fallback_args.timeout_ms = 10000;
+        Netadapt.dhcp_fallback_args.max_attempts = 5;
 
         // DHCP->static fallback: within budget (both triggers false - the full-check path).
-        NetadaptV.dhcp_fallback_args.elapsed_ms = 9000;
-        NetadaptV.dhcp_fallback_args.attempts = 1;
+        Netadapt.dhcp_fallback_args.elapsed_ms = 9000;
+        Netadapt.dhcp_fallback_args.attempts = 1;
         DBENCH_OP("Netadapt.dhcp_fallback wait", 200000,
-                  (Netadapt.dhcp_fallback(netadapt_work), sinkb += NetadaptV.ok ? 1u : 0u));
+                  (Netadapt.dhcp_fallback(netadapt_work), sinkb += Netadapt.ok ? 1u : 0u));
         // Fallback fires on the attempt budget.
-        NetadaptV.dhcp_fallback_args.elapsed_ms = 1000;
-        NetadaptV.dhcp_fallback_args.attempts = 5;
+        Netadapt.dhcp_fallback_args.elapsed_ms = 1000;
+        Netadapt.dhcp_fallback_args.attempts = 5;
         DBENCH_OP("Netadapt.dhcp_fallback trip", 200000,
-                  (Netadapt.dhcp_fallback(netadapt_work), sinkb += NetadaptV.ok ? 1u : 0u));
+                  (Netadapt.dhcp_fallback(netadapt_work), sinkb += Netadapt.ok ? 1u : 0u));
 
         (void)sink32;
         (void)sinkb;

@@ -38,11 +38,11 @@ void tearDown(void)
 
 static protocore_if_kind classify(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip)
 {
-    PhysicalV.route.egress_ip = egress_ip;
-    PhysicalV.route.sta_ip = sta_ip;
-    PhysicalV.route.ap_ip = ap_ip;
+    Physical.route.egress_ip = egress_ip;
+    Physical.route.sta_ip = sta_ip;
+    Physical.route.ap_ip = ap_ip;
     Physical.classify_ip(protocore_physical_span());
-    return PhysicalV.if_kind;
+    return Physical.if_kind;
 }
 
 // Each arm answers with a different kind, so no other member could stand in for this one.
@@ -80,19 +80,19 @@ void test_station_is_compared_before_the_softap(void)
 void test_egress_follows_the_live_default_route(void)
 {
     Physical.egress(protocore_physical_span());
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_ANY, PhysicalV.if_kind);
-    PhysicalV.egress_ip(protocore_physical_span());
-    TEST_ASSERT_EQUAL_UINT32(0, PhysicalV.u32);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_ANY, Physical.if_kind);
+    Physical.egress_ip(protocore_physical_span());
+    TEST_ASSERT_EQUAL_UINT32(0, Physical.u32);
 
-    PhysicalV.wifi.ssid = "protocore-net";
-    PhysicalV.wifi.password = "passphrase";
+    Physical.wifi.ssid = "protocore-net";
+    Physical.wifi.password = "passphrase";
     Physical.wifi_init(protocore_physical_span());
-    TEST_ASSERT_TRUE(PhysicalV.ok);
+    TEST_ASSERT_TRUE(Physical.ok);
 
     Physical.egress(protocore_physical_span());
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_WIFI_STA, PhysicalV.if_kind);
-    PhysicalV.egress_ip(protocore_physical_span());
-    TEST_ASSERT_NOT_EQUAL_UINT32(0, PhysicalV.u32);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_WIFI_STA, Physical.if_kind);
+    Physical.egress_ip(protocore_physical_span());
+    TEST_ASSERT_NOT_EQUAL_UINT32(0, Physical.u32);
 }
 
 // A wired link comes up and takes the default route from the station: a stack prefers wired when
@@ -100,34 +100,34 @@ void test_egress_follows_the_live_default_route(void)
 void test_a_wired_link_takes_the_route(void)
 {
     Physical.eth_init(protocore_physical_span());
-    TEST_ASSERT_TRUE(PhysicalV.ok);
+    TEST_ASSERT_TRUE(Physical.ok);
     Physical.eth_ready(protocore_physical_span());
-    TEST_ASSERT_TRUE(PhysicalV.ok);
+    TEST_ASSERT_TRUE(Physical.ok);
 
     Physical.egress(protocore_physical_span());
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_ETH, PhysicalV.if_kind);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_ETH, Physical.if_kind);
 }
 
 // Bring-up associates the station and the readiness poll answers from the link, not from a
 // constant. IPv6 is a separate bring-up, so it is not ready until it is asked for.
 void test_wifi_bring_up_associates_the_station(void)
 {
-    PhysicalV.wifi.ssid = "protocore-net";
-    PhysicalV.wifi.password = "passphrase";
+    Physical.wifi.ssid = "protocore-net";
+    Physical.wifi.password = "passphrase";
     Physical.wifi_init(protocore_physical_span());
-    TEST_ASSERT_TRUE(PhysicalV.ok);
+    TEST_ASSERT_TRUE(Physical.ok);
 
     Physical.wifi_ready(protocore_physical_span());
-    TEST_ASSERT_TRUE(PhysicalV.ok);
+    TEST_ASSERT_TRUE(Physical.ok);
 
-    PhysicalV.wifi.channel = 6;
+    Physical.wifi.channel = 6;
     Physical.wifi_radio_init(protocore_physical_span());
-    TEST_ASSERT_TRUE(PhysicalV.ok);
+    TEST_ASSERT_TRUE(Physical.ok);
     Physical.wifi_channel(protocore_physical_span());
-    TEST_ASSERT_EQUAL_UINT8(6, PhysicalV.u8);
+    TEST_ASSERT_EQUAL_UINT8(6, Physical.u8);
 
     Physical.ip6_ready(protocore_physical_span());
-    TEST_ASSERT_FALSE(PhysicalV.ok);
+    TEST_ASSERT_FALSE(Physical.ok);
 }
 
 // Dual IP layer operation (RFC 4213 sec 2): bring-up autoconfigures the interface, after which
@@ -139,22 +139,22 @@ void test_ipv6_autoconfigures_a_global_address(void)
     memset(&addr, 0, sizeof(addr));
 
     Physical.ip6_ready(protocore_physical_span());
-    TEST_ASSERT_FALSE(PhysicalV.ok); // not brought up yet
+    TEST_ASSERT_FALSE(Physical.ok); // not brought up yet
 
     Physical.ip6_init(protocore_physical_span());
-    TEST_ASSERT_TRUE(PhysicalV.ok);
+    TEST_ASSERT_TRUE(Physical.ok);
 
     Physical.ip6_ready(protocore_physical_span());
-    TEST_ASSERT_TRUE(PhysicalV.ok);
+    TEST_ASSERT_TRUE(Physical.ok);
 
-    PhysicalV.read.ip6 = &addr;
+    Physical.read.ip6 = &addr;
     Physical.ip6_global(protocore_physical_span());
-    TEST_ASSERT_TRUE(PhysicalV.ok);
+    TEST_ASSERT_TRUE(Physical.ok);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_IP_V6, addr.family);
 
-    PhysicalV.read.ip6 = NULL;
+    Physical.read.ip6 = NULL;
     Physical.ip6_global(protocore_physical_span());
-    TEST_ASSERT_FALSE(PhysicalV.ok);
+    TEST_ASSERT_FALSE(Physical.ok);
 }
 
 // The radio-derived readouts answer from the link. Not associated they are the empty values;
@@ -162,24 +162,24 @@ void test_ipv6_autoconfigures_a_global_address(void)
 void test_radio_readouts_answer_from_the_link(void)
 {
     Physical.wifi_ap_ip(protocore_physical_span());
-    TEST_ASSERT_EQUAL_UINT32(0, PhysicalV.u32); // no softAP started
+    TEST_ASSERT_EQUAL_UINT32(0, Physical.u32); // no softAP started
 
-    PhysicalV.wifi.ssid = "protocore-net";
-    PhysicalV.wifi.password = "passphrase";
+    Physical.wifi.ssid = "protocore-net";
+    Physical.wifi.password = "passphrase";
     Physical.wifi_init(protocore_physical_span());
 
     Physical.wifi_rssi(protocore_physical_span());
-    TEST_ASSERT_NOT_EQUAL_INT8(0, PhysicalV.i8); // associated: a real signal strength
+    TEST_ASSERT_NOT_EQUAL_INT8(0, Physical.i8); // associated: a real signal strength
 
     Physical.wifi_channel(protocore_physical_span());
-    TEST_ASSERT_NOT_EQUAL_UINT8(0, PhysicalV.u8);
+    TEST_ASSERT_NOT_EQUAL_UINT8(0, Physical.u8);
 
-    PhysicalV.wifi.ssid = "protocore-ap";
-    PhysicalV.wifi.password = "passphrase";
+    Physical.wifi.ssid = "protocore-ap";
+    Physical.wifi.password = "passphrase";
     Physical.wifi_ap_init(protocore_physical_span());
-    TEST_ASSERT_TRUE(PhysicalV.ok);
+    TEST_ASSERT_TRUE(Physical.ok);
     Physical.wifi_ap_ip(protocore_physical_span());
-    TEST_ASSERT_NOT_EQUAL_UINT32(0, PhysicalV.u32);
+    TEST_ASSERT_NOT_EQUAL_UINT32(0, Physical.u32);
 }
 
 // RFC 826 sizes a hardware address at ar$hln = 6 octets. With a link up both readouts fill the
@@ -190,27 +190,27 @@ void test_mac_readouts_fill_six_octets(void)
     uint8_t mac[6];
     memcpy(mac, BEFORE, sizeof(mac));
 
-    PhysicalV.wifi.ssid = "protocore-net";
-    PhysicalV.wifi.password = "passphrase";
+    Physical.wifi.ssid = "protocore-net";
+    Physical.wifi.password = "passphrase";
     Physical.wifi_init(protocore_physical_span());
 
-    PhysicalV.read.mac = mac;
+    Physical.read.mac = mac;
     Physical.egress_mac(protocore_physical_span());
-    TEST_ASSERT_TRUE(PhysicalV.ok);
+    TEST_ASSERT_TRUE(Physical.ok);
     TEST_ASSERT_TRUE(memcmp(BEFORE, mac, 6) != 0); // the readout wrote the six octets
 
     memcpy(mac, BEFORE, sizeof(mac));
-    PhysicalV.read.mac = mac;
+    Physical.read.mac = mac;
     Physical.wifi_mac(protocore_physical_span());
-    TEST_ASSERT_TRUE(PhysicalV.ok);
+    TEST_ASSERT_TRUE(Physical.ok);
     TEST_ASSERT_TRUE(memcmp(BEFORE, mac, 6) != 0); // the readout wrote the six octets
 
-    PhysicalV.read.mac = NULL;
+    Physical.read.mac = NULL;
     Physical.egress_mac(protocore_physical_span());
-    TEST_ASSERT_FALSE(PhysicalV.ok);
-    PhysicalV.read.mac = NULL;
+    TEST_ASSERT_FALSE(Physical.ok);
+    Physical.read.mac = NULL;
     Physical.wifi_mac(protocore_physical_span());
-    TEST_ASSERT_FALSE(PhysicalV.ok);
+    TEST_ASSERT_FALSE(Physical.ok);
 }
 
 // Radio control reaches a radio, so an applied mode reads back. These are the L1 seam entry
@@ -239,5 +239,5 @@ void test_radio_control_applies_and_reads_back(void)
 void test_layer_handle_is_bound(void)
 {
     TEST_ASSERT_NOT_NULL(protocore_physical_span());
-    TEST_ASSERT_NOT_NULL(PhysicalV.radio);
+    TEST_ASSERT_NOT_NULL(Physical.radio);
 }

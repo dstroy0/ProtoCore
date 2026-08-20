@@ -69,12 +69,14 @@ typedef struct
     const uint8_t *body;   ///< the Message, or the trailer-section when @c trailers is set
     size_t body_len;       ///< Message-Length, the octets @c body spans
 } GrpcWebFrame;
+
 /** @brief Where a builder writes the Length-Prefixed-Message it assembles. */
 typedef struct
 {
     uint8_t *buf; ///< the octets a builder writes into
     size_t cap;   ///< how many octets it may write
 } GrpcWebOutArgs;
+
 /** @brief The frame byte and the Message a data frame carries (PROTOCOL-HTTP2.md "Requests"). */
 typedef struct
 {
@@ -83,18 +85,21 @@ typedef struct
     uint8_t flags;         ///< the whole 1st gRPC frame byte, when a caller sets it outright
     proto_bool compressed; ///< Compressed-Flag, the bit a frame_message sets in @c flags
 } GrpcWebMessageArgs;
+
 /** @brief The trailer-section a trailers frame carries (PROTOCOL-HTTP2.md "Responses"). */
 typedef struct
 {
     int32_t status;      ///< Status, the "grpc-status" value as 1*DIGIT
     const char *message; ///< Status-Message, the "grpc-message" value; NULL or "" omits the line
 } GrpcWebTrailersArgs;
+
 /** @brief The octets a parse decodes, or a Trailers read scans. */
 typedef struct
 {
     const uint8_t *data; ///< a frame stream, or one decoded trailer-section
     size_t len;          ///< how many octets are buffered there
 } GrpcWebInArgs;
+
 /**
  * @brief The gRPC-Web framing codec.
  *
@@ -126,20 +131,14 @@ typedef struct
     GrpcWebMessageArgs msg;       ///< what a data frame carries
     GrpcWebTrailersArgs trailers; ///< what a trailers frame carries
     GrpcWebInArgs in;             ///< what a read consumes
+
     proto_bool ok;
     size_t n;
     GrpcWebFrame parsed;
     int32_t i32;
     const char *text;
     size_t text_len;
-} GrpcWebVars;
 
-/** @brief The operands and the outcome. */
-extern GrpcWebVars GrpcWebV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const frame)(uint8_t *restrict work);
     void (*const frame_message)(uint8_t *restrict work);
     void (*const frame_trailers)(uint8_t *restrict work);
@@ -148,27 +147,8 @@ typedef struct
     void (*const trailers_message)(uint8_t *restrict work);
 } GrpcWebNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in GrpcWebV or a region of the borrow at a fixed offset.
-void protocore_grpcweb_frame(uint8_t *restrict work);
-void protocore_grpcweb_frame_message(uint8_t *restrict work);
-void protocore_grpcweb_frame_trailers(uint8_t *restrict work);
-void protocore_grpcweb_parse(uint8_t *restrict work);
-void protocore_grpcweb_trailers_status(uint8_t *restrict work);
-void protocore_grpcweb_trailers_message(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `GrpcWeb.frame(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const GrpcWebNs GrpcWeb __attribute__((unused)) = {
-    .frame = protocore_grpcweb_frame,
-    .frame_message = protocore_grpcweb_frame_message,
-    .frame_trailers = protocore_grpcweb_frame_trailers,
-    .parse = protocore_grpcweb_parse,
-    .trailers_status = protocore_grpcweb_trailers_status,
-    .trailers_message = protocore_grpcweb_trailers_message,
-};
+/** @brief The one symbol this module exports. */
+extern GrpcWebNs GrpcWeb;
 
 PROTOCORE_END_DECLS
 

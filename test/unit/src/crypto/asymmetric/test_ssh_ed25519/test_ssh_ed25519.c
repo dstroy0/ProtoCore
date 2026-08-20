@@ -33,43 +33,43 @@ void tearDown(void)
 // The namespaces, called the way the vectors below read: operands in, one call, answer out.
 static void x25519(uint8_t *out, const uint8_t *scalar, const uint8_t *point)
 {
-    Curve25519V.x25519_args.scalar = scalar;
-    Curve25519V.x25519_args.point = point;
-    Curve25519V.x25519_args.out = out;
+    Curve25519.x25519_args.scalar = scalar;
+    Curve25519.x25519_args.point = point;
+    Curve25519.x25519_args.out = out;
     Curve25519.x25519(g_c25519);
 }
 
 static void x25519_base(uint8_t *out, const uint8_t *scalar)
 {
-    Curve25519V.x25519_base_args.scalar = scalar;
-    Curve25519V.x25519_base_args.out = out;
+    Curve25519.x25519_base_args.scalar = scalar;
+    Curve25519.x25519_base_args.out = out;
     Curve25519.x25519_base(g_c25519);
 }
 
 static void ed_pubkey(uint8_t *w, uint8_t *pub, const uint8_t *seed)
 {
-    Ed25519V.pubkey_args.seed = seed;
-    Ed25519V.pubkey_args.pub = pub;
+    Ed25519.pubkey_args.seed = seed;
+    Ed25519.pubkey_args.pub = pub;
     Ed25519.pubkey(w);
 }
 
 static void ed_sign(uint8_t *w, uint8_t *sig, const uint8_t *msg, size_t mlen, const uint8_t *seed)
 {
-    Ed25519V.sign_args.seed = seed;
-    Ed25519V.sign_args.msg = msg;
-    Ed25519V.sign_args.msg_len = mlen;
-    Ed25519V.sign_args.sig = sig;
+    Ed25519.sign_args.seed = seed;
+    Ed25519.sign_args.msg = msg;
+    Ed25519.sign_args.msg_len = mlen;
+    Ed25519.sign_args.sig = sig;
     Ed25519.sign(w);
 }
 
 static proto_bool ed_verify(uint8_t *w, const uint8_t *pub, const uint8_t *msg, size_t mlen, const uint8_t *sig)
 {
-    Ed25519V.verify_args.pub = pub;
-    Ed25519V.verify_args.msg = msg;
-    Ed25519V.verify_args.msg_len = mlen;
-    Ed25519V.verify_args.sig = sig;
+    Ed25519.verify_args.pub = pub;
+    Ed25519.verify_args.msg = msg;
+    Ed25519.verify_args.msg_len = mlen;
+    Ed25519.verify_args.sig = sig;
     Ed25519.verify(w);
-    return Ed25519V.ok;
+    return Ed25519.ok;
 }
 
 static uint8_t nib(char c)

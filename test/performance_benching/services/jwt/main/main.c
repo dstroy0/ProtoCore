@@ -52,28 +52,28 @@ void dbench_run(void)
         char strbuf[32];
 
         // --- Crypto path: real HMAC-SHA-256 over ~100 bytes + base64url encode/compare (small N). ---
-        JwtV.token.jws = TOKEN;
-        JwtV.token.jws_len = token_len;
-        JwtV.key.secret = secret;
-        JwtV.key.secret_len = secret_len;
-        DBENCH_OP("Jwt.verify_mac", 2000, JwtV.verify_mac(jwt_work); sink += JwtV.ok ? 1 : 0);
+        Jwt.token.jws = TOKEN;
+        Jwt.token.jws_len = token_len;
+        Jwt.key.secret = secret;
+        Jwt.key.secret_len = secret_len;
+        DBENCH_OP("Jwt.verify_mac", 2000, Jwt.verify_mac(jwt_work); sink += Jwt.ok ? 1 : 0);
 
-        JwtV.token.credentials = auth_hdr;
-        DBENCH_OP("Jwt.verify_bearer", 2000, JwtV.verify_bearer(jwt_work); sink += JwtV.ok ? 1 : 0);
+        Jwt.token.credentials = auth_hdr;
+        DBENCH_OP("Jwt.verify_bearer", 2000, Jwt.verify_bearer(jwt_work); sink += Jwt.ok ? 1 : 0);
 
         // --- Codec path: base64url-decode the payload + scan JSON for a claim (medium N). ---
-        JwtV.claim.name = "exp";
-        DBENCH_OP("Jwt.claim_int", 10000, JwtV.claim_int(jwt_work); lsink = JwtV.num; sink += JwtV.ok ? 1 : 0);
+        Jwt.claim.name = "exp";
+        DBENCH_OP("Jwt.claim_int", 10000, Jwt.claim_int(jwt_work); lsink = Jwt.num; sink += Jwt.ok ? 1 : 0);
 
-        JwtV.claim.name = "sub";
-        JwtV.claim.out = strbuf;
-        JwtV.claim.out_cap = sizeof(strbuf);
-        DBENCH_OP("Jwt.claim_str", 10000, JwtV.claim_str(jwt_work); sink += JwtV.ok ? 1 : 0);
+        Jwt.claim.name = "sub";
+        Jwt.claim.out = strbuf;
+        Jwt.claim.out_cap = sizeof(strbuf);
+        DBENCH_OP("Jwt.claim_str", 10000, Jwt.claim_str(jwt_work); sink += Jwt.ok ? 1 : 0);
 
         // --- Pure string path: whole-token scope match, no decode (large N). ---
-        JwtV.scope.claim = scope_claim;
-        JwtV.scope.required = "admin";
-        DBENCH_OP("Jwt.scope_allows", 50000, JwtV.scope_allows(jwt_work); sink += JwtV.ok ? 1 : 0);
+        Jwt.scope.claim = scope_claim;
+        Jwt.scope.required = "admin";
+        DBENCH_OP("Jwt.scope_allows", 50000, Jwt.scope_allows(jwt_work); sink += Jwt.ok ? 1 : 0);
 
         (void)sink;
         (void)lsink;

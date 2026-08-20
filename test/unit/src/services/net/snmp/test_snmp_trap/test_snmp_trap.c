@@ -43,33 +43,33 @@ static BerDec g_dec;
 
 static void dec_open(const uint8_t *buf, size_t len)
 {
-    SnmpBerV.dec = &g_dec;
-    SnmpBerV.buf.in = buf;
-    SnmpBerV.buf.cap = len;
+    SnmpBer.dec = &g_dec;
+    SnmpBer.buf.in = buf;
+    SnmpBer.buf.cap = len;
     SnmpBer.dec_init(snmp_ber_work);
 }
 
 static proto_bool read_header(void)
 {
     SnmpBer.read_header(snmp_ber_work);
-    return SnmpBerV.ok;
+    return SnmpBer.ok;
 }
 
 static proto_bool read_integer(void)
 {
     SnmpBer.read_integer(snmp_ber_work);
-    return SnmpBerV.ok;
+    return SnmpBer.ok;
 }
 
 // Read the next OBJECT IDENTIFIER and assert it names exactly the arcs given.
 static void expect_oid(const uint32_t *want, size_t n, const char *msg)
 {
     uint32_t got[SNMP_MAX_OID_LEN];
-    SnmpBerV.read_args.arc_out = got;
-    SnmpBerV.read_args.arc_cap = SNMP_MAX_OID_LEN;
+    SnmpBer.read_args.arc_out = got;
+    SnmpBer.read_args.arc_cap = SNMP_MAX_OID_LEN;
     SnmpBer.read_oid(snmp_ber_work);
-    TEST_ASSERT_TRUE_MESSAGE(SnmpBerV.ok, msg);
-    TEST_ASSERT_EQUAL_size_t_MESSAGE(n, SnmpBerV.n, msg);
+    TEST_ASSERT_TRUE_MESSAGE(SnmpBer.ok, msg);
+    TEST_ASSERT_EQUAL_size_t_MESSAGE(n, SnmpBer.n, msg);
     for (size_t i = 0; i < n; i++)
     {
         TEST_ASSERT_EQUAL_UINT32_MESSAGE(want[i], got[i], msg);
@@ -78,26 +78,26 @@ static void expect_oid(const uint32_t *want, size_t n, const char *msg)
 
 static void skip_value(size_t n)
 {
-    SnmpBerV.read_args.skip = n;
-    SnmpBerV.skip(snmp_ber_work);
+    SnmpBer.read_args.skip = n;
+    SnmpBer.skip(snmp_ber_work);
 }
 
 // Set every PDU member a build reads, then build a complete SNMPv2c message.
 static size_t build(uint8_t *out, size_t cap, uint8_t pdu_tag, uint32_t request_id, uint32_t uptime,
                     const SnmpVarbind *vbs, size_t vb_count, const char *community)
 {
-    SnmpNotifyV.pdu.pdu_tag = pdu_tag;
-    SnmpNotifyV.pdu.request_id = request_id;
-    SnmpNotifyV.pdu.trap_oid = TRAP_OID;
-    SnmpNotifyV.pdu.trap_oid_len = sizeof(TRAP_OID) / sizeof(TRAP_OID[0]);
-    SnmpNotifyV.pdu.uptime_ticks = uptime;
-    SnmpNotifyV.pdu.vbs = vbs;
-    SnmpNotifyV.pdu.vb_count = vb_count;
-    SnmpNotifyV.dst.community = community;
-    SnmpNotifyV.buf.out = out;
-    SnmpNotifyV.buf.cap = cap;
+    SnmpNotify.pdu.pdu_tag = pdu_tag;
+    SnmpNotify.pdu.request_id = request_id;
+    SnmpNotify.pdu.trap_oid = TRAP_OID;
+    SnmpNotify.pdu.trap_oid_len = sizeof(TRAP_OID) / sizeof(TRAP_OID[0]);
+    SnmpNotify.pdu.uptime_ticks = uptime;
+    SnmpNotify.pdu.vbs = vbs;
+    SnmpNotify.pdu.vb_count = vb_count;
+    SnmpNotify.dst.community = community;
+    SnmpNotify.buf.out = out;
+    SnmpNotify.buf.cap = cap;
     SnmpNotify.build_v2c(protocore_snmp_notify_span());
-    return SnmpNotifyV.n;
+    return SnmpNotify.n;
 }
 
 // Walk the RFC 1901 sec 3 wrapper and the RFC 3416 sec 3 PDU header, leaving the cursor on the
@@ -106,26 +106,26 @@ static uint8_t walk_to_varbinds(const uint8_t *msg, size_t len, const char *comm
 {
     dec_open(msg, len);
     TEST_ASSERT_TRUE(read_header()); // Message ::= SEQUENCE
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_SEQUENCE, SnmpBerV.tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_SEQUENCE, SnmpBer.tag);
     TEST_ASSERT_TRUE(read_integer()); // version(1), RFC 1901 sec 3
-    TEST_ASSERT_EQUAL_INT(1, SnmpBerV.ival);
+    TEST_ASSERT_EQUAL_INT(1, SnmpBer.ival);
     TEST_ASSERT_TRUE(read_header()); // community OCTET STRING
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_OCTET_STRING, SnmpBerV.tag);
-    TEST_ASSERT_EQUAL_size_t(strlen(community), SnmpBerV.vlen);
-    TEST_ASSERT_EQUAL_MEMORY(community, g_dec.buf + g_dec.pos, SnmpBerV.vlen);
-    skip_value(SnmpBerV.vlen);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_OCTET_STRING, SnmpBer.tag);
+    TEST_ASSERT_EQUAL_size_t(strlen(community), SnmpBer.vlen);
+    TEST_ASSERT_EQUAL_MEMORY(community, g_dec.buf + g_dec.pos, SnmpBer.vlen);
+    skip_value(SnmpBer.vlen);
 
     TEST_ASSERT_TRUE(read_header()); // the notification PDU
-    const uint8_t pdu_tag = SnmpBerV.tag;
+    const uint8_t pdu_tag = SnmpBer.tag;
     TEST_ASSERT_TRUE(read_integer()); // request-id
-    const long request_id = SnmpBerV.ival;
+    const long request_id = SnmpBer.ival;
     (void)request_id;
     TEST_ASSERT_TRUE(read_integer()); // error-status, 0 in a notification (RFC 3416 sec 4.2.6)
-    TEST_ASSERT_EQUAL_INT(0, SnmpBerV.ival);
+    TEST_ASSERT_EQUAL_INT(0, SnmpBer.ival);
     TEST_ASSERT_TRUE(read_integer()); // error-index, 0
-    TEST_ASSERT_EQUAL_INT(0, SnmpBerV.ival);
+    TEST_ASSERT_EQUAL_INT(0, SnmpBer.ival);
     TEST_ASSERT_TRUE(read_header()); // variable-bindings SEQUENCE
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_SEQUENCE, SnmpBerV.tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_SEQUENCE, SnmpBer.tag);
     return pdu_tag;
 }
 
@@ -142,7 +142,7 @@ void test_rfc3416_trap_variable_bindings(void)
 
     uint8_t msg[256];
     const size_t n = build(msg, sizeof(msg), (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2, 7, 12345, &vb, 1, "public");
-    TEST_ASSERT_TRUE(SnmpNotifyV.ok);
+    TEST_ASSERT_TRUE(SnmpNotify.ok);
     TEST_ASSERT_TRUE(n > 0);
 
     const uint8_t pdu_tag = walk_to_varbinds(msg, n, "public");
@@ -150,24 +150,24 @@ void test_rfc3416_trap_variable_bindings(void)
 
     // binding 1: sysUpTime.0 with a TimeTicks value
     TEST_ASSERT_TRUE(read_header());
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_SEQUENCE, SnmpBerV.tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_SEQUENCE, SnmpBer.tag);
     expect_oid(OID_SYSUPTIME_0, sizeof(OID_SYSUPTIME_0) / sizeof(OID_SYSUPTIME_0[0]), "sysUpTime.0");
     TEST_ASSERT_TRUE(read_header());
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_TIMETICKS, SnmpBerV.tag);
-    skip_value(SnmpBerV.vlen);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_TIMETICKS, SnmpBer.tag);
+    skip_value(SnmpBer.vlen);
 
     // binding 2: snmpTrapOID.0 whose value is the notification's own name
     TEST_ASSERT_TRUE(read_header());
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_SEQUENCE, SnmpBerV.tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_SEQUENCE, SnmpBer.tag);
     expect_oid(OID_SNMPTRAPOID_0, sizeof(OID_SNMPTRAPOID_0) / sizeof(OID_SNMPTRAPOID_0[0]), "snmpTrapOID.0");
     expect_oid(TRAP_OID, sizeof(TRAP_OID) / sizeof(TRAP_OID[0]), "trap OID value");
 
     // binding 3: the caller's Gauge32
     TEST_ASSERT_TRUE(read_header());
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_SEQUENCE, SnmpBerV.tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_SEQUENCE, SnmpBer.tag);
     expect_oid(VB_OID, sizeof(VB_OID) / sizeof(VB_OID[0]), "caller binding");
     TEST_ASSERT_TRUE(read_header());
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_GAUGE32, SnmpBerV.tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_GAUGE32, SnmpBer.tag);
 }
 
 // The uptime a caller states is the TimeTicks value of the first binding, and RFC 2578 sec 7.1.8
@@ -183,8 +183,8 @@ void test_sysuptime_value_is_the_caller_uptime(void)
     TEST_ASSERT_TRUE(read_header()); // binding SEQUENCE
     expect_oid(OID_SYSUPTIME_0, sizeof(OID_SYSUPTIME_0) / sizeof(OID_SYSUPTIME_0[0]), "sysUpTime.0");
     TEST_ASSERT_TRUE(read_header());
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_TIMETICKS, SnmpBerV.tag);
-    TEST_ASSERT_EQUAL_size_t(5, SnmpBerV.vlen);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_TIMETICKS, SnmpBer.tag);
+    TEST_ASSERT_EQUAL_size_t(5, SnmpBer.vlen);
     static const uint8_t WANT[5] = {0x00, 0x80, 0x00, 0x00, 0x00};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, g_dec.buf + g_dec.pos, 5);
 }
@@ -216,11 +216,11 @@ void test_request_id_is_the_callers(void)
     TEST_ASSERT_TRUE(read_header()); // Message SEQUENCE
     TEST_ASSERT_TRUE(read_integer());
     TEST_ASSERT_TRUE(read_header()); // community
-    SnmpBerV.read_args.skip = SnmpBerV.vlen;
-    SnmpBerV.skip(snmp_ber_work);
+    SnmpBer.read_args.skip = SnmpBer.vlen;
+    SnmpBer.skip(snmp_ber_work);
     TEST_ASSERT_TRUE(read_header()); // PDU
     TEST_ASSERT_TRUE(read_integer());
-    TEST_ASSERT_EQUAL_INT(305419896, SnmpBerV.ival);
+    TEST_ASSERT_EQUAL_INT(305419896, SnmpBer.ival);
 }
 
 // RFC 1901 sec 3: the wrapper is SEQUENCE { version INTEGER {version(1)}, community OCTET STRING,
@@ -266,13 +266,13 @@ void test_rfc2578_varbind_value_tags(void)
 
     uint8_t msg[512];
     const size_t n = build(msg, sizeof(msg), (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2, 1, 1, vbs, 6, "public");
-    TEST_ASSERT_TRUE(SnmpNotifyV.ok);
+    TEST_ASSERT_TRUE(SnmpNotify.ok);
     (void)walk_to_varbinds(msg, n, "public");
 
     for (int i = 0; i < 2; i++) // the two mandatory bindings come first
     {
         TEST_ASSERT_TRUE(read_header());
-        skip_value(SnmpBerV.vlen);
+        skip_value(SnmpBer.vlen);
     }
     static const uint8_t WANT[6] = {0x02,  // INTEGER
                                     0x04,  // OCTET STRING
@@ -283,11 +283,11 @@ void test_rfc2578_varbind_value_tags(void)
     for (int i = 0; i < 6; i++)
     {
         TEST_ASSERT_TRUE(read_header()); // binding SEQUENCE
-        TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_SEQUENCE, SnmpBerV.tag);
+        TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_SEQUENCE, SnmpBer.tag);
         expect_oid(NAME, sizeof(NAME) / sizeof(NAME[0]), "binding name");
         TEST_ASSERT_TRUE(read_header()); // the typed value
-        TEST_ASSERT_EQUAL_HEX8(WANT[i], SnmpBerV.tag);
-        skip_value(SnmpBerV.vlen);
+        TEST_ASSERT_EQUAL_HEX8(WANT[i], SnmpBer.tag);
+        skip_value(SnmpBer.vlen);
     }
 }
 
@@ -311,13 +311,13 @@ void test_rfc2578_ipaddress_is_four_octets(void)
     for (int i = 0; i < 2; i++)
     {
         TEST_ASSERT_TRUE(read_header());
-        skip_value(SnmpBerV.vlen);
+        skip_value(SnmpBer.vlen);
     }
     TEST_ASSERT_TRUE(read_header());
     expect_oid(NAME, sizeof(NAME) / sizeof(NAME[0]), "binding name");
     TEST_ASSERT_TRUE(read_header());
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_IPADDRESS, SnmpBerV.tag);
-    TEST_ASSERT_EQUAL_size_t(4, SnmpBerV.vlen);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_IPADDRESS, SnmpBer.tag);
+    TEST_ASSERT_EQUAL_size_t(4, SnmpBer.vlen);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(IPV4, g_dec.buf + g_dec.pos, 4);
 }
 
@@ -327,28 +327,28 @@ void test_build_pdu_appends_to_an_open_encoder(void)
 {
     uint8_t buf[256];
     BerEnc e;
-    SnmpBerV.enc = &e;
-    SnmpBerV.buf.out = buf;
-    SnmpBerV.buf.cap = sizeof(buf);
+    SnmpBer.enc = &e;
+    SnmpBer.buf.out = buf;
+    SnmpBer.buf.cap = sizeof(buf);
     SnmpBer.enc_init(snmp_ber_work);
 
-    SnmpNotifyV.pdu.pdu_tag = (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2;
-    SnmpNotifyV.pdu.request_id = 3;
-    SnmpNotifyV.pdu.trap_oid = TRAP_OID;
-    SnmpNotifyV.pdu.trap_oid_len = sizeof(TRAP_OID) / sizeof(TRAP_OID[0]);
-    SnmpNotifyV.pdu.uptime_ticks = 9;
-    SnmpNotifyV.pdu.vbs = NULL;
-    SnmpNotifyV.pdu.vb_count = 0;
-    SnmpNotifyV.buf.enc = &e;
+    SnmpNotify.pdu.pdu_tag = (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2;
+    SnmpNotify.pdu.request_id = 3;
+    SnmpNotify.pdu.trap_oid = TRAP_OID;
+    SnmpNotify.pdu.trap_oid_len = sizeof(TRAP_OID) / sizeof(TRAP_OID[0]);
+    SnmpNotify.pdu.uptime_ticks = 9;
+    SnmpNotify.pdu.vbs = NULL;
+    SnmpNotify.pdu.vb_count = 0;
+    SnmpNotify.buf.enc = &e;
     SnmpNotify.build_pdu(protocore_snmp_notify_span());
-    TEST_ASSERT_TRUE(SnmpNotifyV.ok);
+    TEST_ASSERT_TRUE(SnmpNotify.ok);
     TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2, buf[0]);
 
     dec_open(buf, e.len);
     TEST_ASSERT_TRUE(read_header());
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2, SnmpBerV.tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2, SnmpBer.tag);
     TEST_ASSERT_TRUE(read_integer());
-    TEST_ASSERT_EQUAL_INT(3, SnmpBerV.ival);
+    TEST_ASSERT_EQUAL_INT(3, SnmpBer.ival);
     TEST_ASSERT_TRUE(read_integer());
     TEST_ASSERT_TRUE(read_integer());
     TEST_ASSERT_TRUE(read_header()); // variable-bindings SEQUENCE
@@ -363,7 +363,7 @@ void test_short_buffer_writes_nothing(void)
     uint8_t small[8];
     const size_t n = build(small, sizeof(small), (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2, 1, 1, NULL, 0, "public");
     TEST_ASSERT_EQUAL_size_t(0, n);
-    TEST_ASSERT_FALSE(SnmpNotifyV.ok);
+    TEST_ASSERT_FALSE(SnmpNotify.ok);
 }
 
 // A binding whose type is none of the ::SnmpVbType values has no encoding, so the whole build
@@ -380,7 +380,7 @@ void test_unknown_varbind_type_fails_closed(void)
     uint8_t msg[256];
     const size_t n = build(msg, sizeof(msg), (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2, 1, 1, &vb, 1, "public");
     TEST_ASSERT_EQUAL_size_t(0, n);
-    TEST_ASSERT_FALSE(SnmpNotifyV.ok);
+    TEST_ASSERT_FALSE(SnmpNotify.ok);
 }
 
 // A missing destination buffer, community, or notification name is refused before anything is
@@ -392,42 +392,42 @@ void test_missing_arguments_are_refused(void)
     TEST_ASSERT_EQUAL_size_t(0, build(NULL, sizeof(msg), (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2, 1, 1, NULL, 0, "public"));
     TEST_ASSERT_EQUAL_size_t(0, build(msg, sizeof(msg), (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2, 1, 1, NULL, 0, NULL));
 
-    SnmpNotifyV.pdu.pdu_tag = (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2;
-    SnmpNotifyV.pdu.trap_oid = NULL;
-    SnmpNotifyV.pdu.trap_oid_len = 0;
-    SnmpNotifyV.dst.community = "public";
-    SnmpNotifyV.buf.out = msg;
-    SnmpNotifyV.buf.cap = sizeof(msg);
+    SnmpNotify.pdu.pdu_tag = (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2;
+    SnmpNotify.pdu.trap_oid = NULL;
+    SnmpNotify.pdu.trap_oid_len = 0;
+    SnmpNotify.dst.community = "public";
+    SnmpNotify.buf.out = msg;
+    SnmpNotify.buf.cap = sizeof(msg);
     SnmpNotify.build_v2c(protocore_snmp_notify_span());
-    TEST_ASSERT_EQUAL_size_t(0, SnmpNotifyV.n);
-    TEST_ASSERT_FALSE(SnmpNotifyV.ok);
+    TEST_ASSERT_EQUAL_size_t(0, SnmpNotify.n);
+    TEST_ASSERT_FALSE(SnmpNotify.ok);
 
     // build_pdu with no open encoder is the same refusal.
-    SnmpNotifyV.buf.enc = NULL;
-    SnmpNotifyV.pdu.trap_oid = TRAP_OID;
-    SnmpNotifyV.pdu.trap_oid_len = sizeof(TRAP_OID) / sizeof(TRAP_OID[0]);
+    SnmpNotify.buf.enc = NULL;
+    SnmpNotify.pdu.trap_oid = TRAP_OID;
+    SnmpNotify.pdu.trap_oid_len = sizeof(TRAP_OID) / sizeof(TRAP_OID[0]);
     SnmpNotify.build_pdu(protocore_snmp_notify_span());
-    TEST_ASSERT_FALSE(SnmpNotifyV.ok);
+    TEST_ASSERT_FALSE(SnmpNotify.ok);
 }
 
 // RFC 3417 sec 3.1 carries a notification on a UDP datagram. This build has no transport, so the
 // two send calls report that nothing was transmitted instead of claiming success.
 void test_sends_report_no_transport(void)
 {
-    SnmpNotifyV.pdu.trap_oid = TRAP_OID;
-    SnmpNotifyV.pdu.trap_oid_len = sizeof(TRAP_OID) / sizeof(TRAP_OID[0]);
-    SnmpNotifyV.pdu.vbs = NULL;
-    SnmpNotifyV.pdu.vb_count = 0;
-    SnmpNotifyV.dst.dst_ip = "127.0.0.1";
-    SnmpNotifyV.dst.port = 162; // RFC 3417 sec 3.2
-    SnmpNotifyV.dst.community = "public";
+    SnmpNotify.pdu.trap_oid = TRAP_OID;
+    SnmpNotify.pdu.trap_oid_len = sizeof(TRAP_OID) / sizeof(TRAP_OID[0]);
+    SnmpNotify.pdu.vbs = NULL;
+    SnmpNotify.pdu.vb_count = 0;
+    SnmpNotify.dst.dst_ip = "127.0.0.1";
+    SnmpNotify.dst.port = 162; // RFC 3417 sec 3.2
+    SnmpNotify.dst.community = "public";
 
     SnmpNotify.trap_v2c(protocore_snmp_notify_span());
-    TEST_ASSERT_FALSE(SnmpNotifyV.ok);
-    TEST_ASSERT_EQUAL_size_t(0, SnmpNotifyV.n);
+    TEST_ASSERT_FALSE(SnmpNotify.ok);
+    TEST_ASSERT_EQUAL_size_t(0, SnmpNotify.n);
 
-    SnmpNotifyV.pdu.request_id = 1;
+    SnmpNotify.pdu.request_id = 1;
     SnmpNotify.inform_v2c(protocore_snmp_notify_span());
-    TEST_ASSERT_FALSE(SnmpNotifyV.ok);
-    TEST_ASSERT_EQUAL_size_t(0, SnmpNotifyV.n);
+    TEST_ASSERT_FALSE(SnmpNotify.ok);
+    TEST_ASSERT_EQUAL_size_t(0, SnmpNotify.n);
 }

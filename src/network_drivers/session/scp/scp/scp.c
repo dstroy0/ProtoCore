@@ -38,17 +38,17 @@ static void apply_scp_flags(const char *tok, size_t tlen, ScpMode *mode)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_scp_parse_cmd(uint8_t *restrict work)
+static void scp_parse_cmd(uint8_t *restrict work)
 {
     (void)work;
-    const char *cmd = ScpV.parse_cmd_args.cmd;
-    size_t cmd_len = ScpV.parse_cmd_args.cmd_len;
-    char *path_out = ScpV.parse_cmd_args.path_out;
-    size_t path_cap = ScpV.parse_cmd_args.path_cap;
+    const char *cmd = Scp.parse_cmd_args.cmd;
+    size_t cmd_len = Scp.parse_cmd_args.cmd_len;
+    char *path_out = Scp.parse_cmd_args.path_out;
+    size_t path_cap = Scp.parse_cmd_args.path_cap;
 
     if (!cmd || !path_out || path_cap == 0)
     {
-        ScpV.value = SCP_MODE_INVALID;
+        Scp.value = SCP_MODE_INVALID;
         return;
     }
     ScpMode mode = SCP_MODE_INVALID;
@@ -87,27 +87,27 @@ void protocore_scp_parse_cmd(uint8_t *restrict work)
     // other three conditions here are covered.
     if (mode == SCP_MODE_INVALID || !last_tok || last_len == 0 || last_len >= path_cap)
     {
-        ScpV.value = SCP_MODE_INVALID;
+        Scp.value = SCP_MODE_INVALID;
         return;
     }
     mem.cpy(path_out, last_tok, last_len);
     path_out[last_len] = '\0';
-    ScpV.value = mode;
+    Scp.value = mode;
 }
 
-void protocore_scp_parse_cline(uint8_t *restrict work)
+static void scp_parse_cline(uint8_t *restrict work)
 {
     (void)work;
-    const char *line = ScpV.parse_cline_args.line;
-    size_t len = ScpV.parse_cline_args.len;
-    uint32_t *mode_out = ScpV.parse_cline_args.mode_out;
-    uint64_t *size_out = ScpV.parse_cline_args.size_out;
-    char *name_out = ScpV.parse_cline_args.name_out;
-    size_t name_cap = ScpV.parse_cline_args.name_cap;
+    const char *line = Scp.parse_cline_args.line;
+    size_t len = Scp.parse_cline_args.len;
+    uint32_t *mode_out = Scp.parse_cline_args.mode_out;
+    uint64_t *size_out = Scp.parse_cline_args.size_out;
+    char *name_out = Scp.parse_cline_args.name_out;
+    size_t name_cap = Scp.parse_cline_args.name_cap;
 
     if (!line || len < 1 || line[0] != 'C') // only plain file records (not D/E directory records)
     {
-        ScpV.ok = PROTO_FALSE;
+        Scp.ok = PROTO_FALSE;
         return;
     }
     size_t i = 1;
@@ -121,7 +121,7 @@ void protocore_scp_parse_cline(uint8_t *restrict work)
     }
     if (i == ms || i >= len || line[i] != ' ')
     {
-        ScpV.ok = PROTO_FALSE;
+        Scp.ok = PROTO_FALSE;
         return;
     }
     i++;
@@ -135,7 +135,7 @@ void protocore_scp_parse_cline(uint8_t *restrict work)
     }
     if (i == ss || i >= len || line[i] != ' ')
     {
-        ScpV.ok = PROTO_FALSE;
+        Scp.ok = PROTO_FALSE;
         return;
     }
     i++;
@@ -148,7 +148,7 @@ void protocore_scp_parse_cline(uint8_t *restrict work)
     size_t nlen = i - ns;
     if (nlen == 0 || nlen >= name_cap)
     {
-        ScpV.ok = PROTO_FALSE;
+        Scp.ok = PROTO_FALSE;
         return;
     }
     mem.cpy(name_out, line + ns, nlen);
@@ -162,17 +162,17 @@ void protocore_scp_parse_cline(uint8_t *restrict work)
     {
         *size_out = size;
     }
-    ScpV.ok = PROTO_TRUE;
+    Scp.ok = PROTO_TRUE;
 }
 
-void protocore_scp_build_cline(uint8_t *restrict work)
+static void scp_build_cline(uint8_t *restrict work)
 {
     (void)work;
-    uint32_t mode = ScpV.build_cline_args.mode;
-    uint64_t size = ScpV.build_cline_args.size;
-    const char *name = ScpV.build_cline_args.name;
-    char *out = ScpV.build_cline_args.out;
-    size_t cap = ScpV.build_cline_args.cap;
+    uint32_t mode = Scp.build_cline_args.mode;
+    uint64_t size = Scp.build_cline_args.size;
+    const char *name = Scp.build_cline_args.name;
+    char *out = Scp.build_cline_args.out;
+    size_t cap = Scp.build_cline_args.cap;
 
     protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
     Sb.put(&sb_out, "C");
@@ -189,14 +189,17 @@ void protocore_scp_build_cline(uint8_t *restrict work)
     // covered. The guard stays as defense against a non-conforming libc.
     if (n <= 0 || (size_t)n >= cap)
     {
-        ScpV.n = 0;
+        Scp.n = 0;
         return;
     }
-    ScpV.n = (size_t)n;
+    Scp.n = (size_t)n;
 }
 
-/** @brief The operands and the outcome. */
-ScpVars ScpV;
+ScpNs Scp = {
+    .parse_cmd = scp_parse_cmd,
+    .parse_cline = scp_parse_cline,
+    .build_cline = scp_build_cline,
+};
 
 PROTOCORE_END_DECLS
 

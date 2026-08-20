@@ -35,6 +35,7 @@ typedef struct
     SshStreamKind kind; ///< which pool that handle indexes
     uint32_t channel;   ///< the channel a bridge call names
 } SshStreamRef;
+
 /** @brief The message bytes an emit or a write carries. */
 typedef struct
 {
@@ -42,6 +43,7 @@ typedef struct
     size_t len;             ///< how many
     size_t plen;            ///< the payload length already built in the region
 } SshNetMsgArgs;
+
 /** @brief RFC 4254 sec 7.2: where a bridged channel dials, and the client slot it takes. */
 typedef struct
 {
@@ -50,12 +52,14 @@ typedef struct
     uint32_t timeout_ms; ///< what that open is given
     int cid;             ///< the client slot a channel adopts, or the one a lookup names
 } SshChanDialArgs;
+
 /** @brief Where a channel read writes. */
 typedef struct
 {
     uint8_t *out; ///< where a channel read writes
     size_t cap;   ///< how much room it has; a region lookup reports its own here
 } SshChanReadArgs;
+
 /**
  * @brief The binding between an SSH slot and the byte stream underneath it.
  *
@@ -89,32 +93,24 @@ typedef struct
  * @var SshNetworkNs::n           a byte count a call reports
  * @var SshNetworkNs::region      the span a message may be built in for a frame without a copy
  */
+
 typedef struct
 {
-    uint8_t ssh_slot;          ///< the SSH slot a call acts on
-    uint8_t conn_slot;         ///< the stream slot it is bound to
-    int handle;                ///< the stream handle a claim binds
+    uint8_t ssh_slot;  ///< the SSH slot a call acts on
+    uint8_t conn_slot; ///< the stream slot it is bound to
+    int handle;        ///< the stream handle a claim binds
+
     SshStreamRef stream;       ///< which pool that handle indexes, and the channel it carries
     SshNetMsgArgs msg;         ///< the message bytes an emit or a write carries
     SshChanDialArgs dial;      ///< where a bridged channel dials
     SshChanReadArgs read_args; ///< where a channel read writes
+
     proto_bool ok;
     int i32;
     uint8_t u8;
     size_t n;
     uint8_t *region;
-#if PROTOCORE_NEED_CLIENT
-    // Bridging a channel to a socket of our own needs the client half of the transport, so these
-    // exist exactly when TcpClient does.
-#endif // PROTOCORE_NEED_CLIENT
-} SshNetworkVars;
 
-/** @brief The operands and the outcome. */
-extern SshNetworkVars SshNetworkV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const claim)(uint8_t *restrict work);
     void (*const release)(uint8_t *restrict work);
     void (*const slot_free)(uint8_t *restrict work);
@@ -124,6 +120,9 @@ typedef struct
     void (*const write_msg)(uint8_t *restrict work);
     void (*const payload_region)(uint8_t *restrict work);
     void (*const write_msg_at)(uint8_t *restrict work);
+#if PROTOCORE_NEED_CLIENT
+    // Bridging a channel to a socket of our own needs the client half of the transport, so these
+    // exist exactly when TcpClient does.
     void (*const chan_open)(uint8_t *restrict work);
     void (*const chan_adopt)(uint8_t *restrict work);
     void (*const chan_by_cid)(uint8_t *restrict work);
@@ -133,53 +132,11 @@ typedef struct
     void (*const chan_drained)(uint8_t *restrict work);
     void (*const chan_close)(uint8_t *restrict work);
     void (*const chan_close_all)(uint8_t *restrict work);
+#endif // PROTOCORE_NEED_CLIENT
 } SshNetworkNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in SshNetworkV or a region of the borrow at a fixed offset.
-void protocore_network_claim(uint8_t *restrict work);
-void protocore_network_release(uint8_t *restrict work);
-void protocore_network_slot_free(uint8_t *restrict work);
-void protocore_network_owns(uint8_t *restrict work);
-void protocore_network_tx_drain(uint8_t *restrict work);
-void protocore_network_emit(uint8_t *restrict work);
-void protocore_network_write_msg(uint8_t *restrict work);
-void protocore_network_payload_region(uint8_t *restrict work);
-void protocore_network_write_msg_at(uint8_t *restrict work);
-void protocore_network_chan_open(uint8_t *restrict work);
-void protocore_network_chan_adopt(uint8_t *restrict work);
-void protocore_network_chan_by_cid(uint8_t *restrict work);
-void protocore_network_chan_write(uint8_t *restrict work);
-void protocore_network_chan_read(uint8_t *restrict work);
-void protocore_network_chan_avail(uint8_t *restrict work);
-void protocore_network_chan_drained(uint8_t *restrict work);
-void protocore_network_chan_close(uint8_t *restrict work);
-void protocore_network_chan_close_all(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `SshNetwork.claim(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const SshNetworkNs SshNetwork __attribute__((unused)) = {
-    .claim = protocore_network_claim,
-    .release = protocore_network_release,
-    .slot_free = protocore_network_slot_free,
-    .owns = protocore_network_owns,
-    .tx_drain = protocore_network_tx_drain,
-    .emit = protocore_network_emit,
-    .write_msg = protocore_network_write_msg,
-    .payload_region = protocore_network_payload_region,
-    .write_msg_at = protocore_network_write_msg_at,
-    .chan_open = protocore_network_chan_open,
-    .chan_adopt = protocore_network_chan_adopt,
-    .chan_by_cid = protocore_network_chan_by_cid,
-    .chan_write = protocore_network_chan_write,
-    .chan_read = protocore_network_chan_read,
-    .chan_avail = protocore_network_chan_avail,
-    .chan_drained = protocore_network_chan_drained,
-    .chan_close = protocore_network_chan_close,
-    .chan_close_all = protocore_network_chan_close_all,
-};
+/** @brief The one instance, defined in network.c. */
+extern SshNetworkNs SshNetwork;
 
 /**
  * @brief The PROTOCORE_SSH_NETWORK_BORROW bytes this module's state lives in.

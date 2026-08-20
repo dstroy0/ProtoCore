@@ -83,16 +83,19 @@ typedef struct
     const uint32_t *oid; ///< the OBJECT IDENTIFIER subidentifiers, not owned
     size_t oid_len;      ///< how many
 } SnmpValue;
+
 /** @brief Read a dynamic object's value: fill @p out and return true, or false for noSuchInstance. */
 typedef proto_bool (*SnmpGetFn)(SnmpValue *out);
 /** @brief Write a read-write object (RFC 2578 sec 7.3): true on success, false to reject the value. */
 typedef proto_bool (*SnmpSetFn)(const SnmpValue *in);
+
 /** @brief RFC 1157 sec 3.2.5: the communities a message is authenticated against. */
 typedef struct
 {
     const char *ro; ///< the community that authorizes reads; NULL keeps the built-in default
     const char *rw; ///< the community that authorizes a SetRequest-PDU; NULL or empty refuses every write
 } SnmpCommunityArgs;
+
 /** @brief RFC 2578 sec 7: one managed object instance and how its value is reached. */
 typedef struct
 {
@@ -104,6 +107,7 @@ typedef struct
     SnmpGetFn getter;    ///< what a dynamic object's value is read through
     SnmpSetFn setter;    ///< what a write reaches; NULL leaves the object read-only (RFC 2578 sec 7.3)
 } SnmpObjectArgs;
+
 /** @brief RFC 3418 sec 2: the system group under 1.3.6.1.2.1.1. */
 typedef struct
 {
@@ -113,6 +117,7 @@ typedef struct
     const char *location; ///< sysLocation.0
     long services;        ///< sysServices.0, the layer bitmask
 } SnmpSystemArgs;
+
 /** @brief RFC 3417 sec 3.1: the serialized message read, and the one written back. */
 typedef struct
 {
@@ -121,6 +126,7 @@ typedef struct
     uint8_t *resp;      ///< where the response message is written
     size_t resp_cap;    ///< how many octets that holds
 } SnmpMsgArgs;
+
 /** @brief RFC 3416 sec 4.2: the request PDU dispatched, and the Response-PDU written. */
 typedef struct
 {
@@ -131,6 +137,7 @@ typedef struct
     proto_bool allow_write; ///< a SetRequest-PDU is authorized (RFC 3416 sec 4.2.5)
     proto_bool v2c;         ///< report per-binding exceptions rather than v1 error-status
 } SnmpPduArgs;
+
 /**
  * @brief The command responder: the MIB, the PDU processing, and the message framing.
  *
@@ -157,22 +164,17 @@ typedef struct
  */
 typedef struct
 {
-    uint16_t port;               ///< the UDP port a listen binds
+    uint16_t port; ///< the UDP port a listen binds
+
     SnmpCommunityArgs community; ///< what authenticates a message (RFC 1157 sec 3.2.5)
     SnmpObjectArgs object;       ///< what a registration binds (RFC 2578 sec 7)
     SnmpSystemArgs system;       ///< the system group values (RFC 3418 sec 2)
     SnmpMsgArgs msg;             ///< the message pair (RFC 3417 sec 3.1)
     SnmpPduArgs pdu;             ///< the PDU pair (RFC 3416 sec 4.2)
+
     proto_bool ok;
     size_t n;
-} SnmpAgentVars;
 
-/** @brief The operands and the outcome. */
-extern SnmpAgentVars SnmpAgentV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const init)(uint8_t *restrict work);
     void (*const set_rw_community)(uint8_t *restrict work);
     void (*const set_system)(uint8_t *restrict work);
@@ -184,33 +186,8 @@ typedef struct
     void (*const listen)(uint8_t *restrict work);
 } SnmpAgentNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in SnmpAgentV or a region of the borrow at a fixed offset.
-void protocore_snmp_agent_init(uint8_t *restrict work);
-void protocore_snmp_agent_set_rw_community(uint8_t *restrict work);
-void protocore_snmp_agent_set_system(uint8_t *restrict work);
-void protocore_snmp_agent_add_string(uint8_t *restrict work);
-void protocore_snmp_agent_add_integer(uint8_t *restrict work);
-void protocore_snmp_agent_add_dynamic(uint8_t *restrict work);
-void protocore_snmp_agent_dispatch_pdu(uint8_t *restrict work);
-void protocore_snmp_agent_process(uint8_t *restrict work);
-void protocore_snmp_agent_listen(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `SnmpAgent.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const SnmpAgentNs SnmpAgent __attribute__((unused)) = {
-    .init = protocore_snmp_agent_init,
-    .set_rw_community = protocore_snmp_agent_set_rw_community,
-    .set_system = protocore_snmp_agent_set_system,
-    .add_string = protocore_snmp_agent_add_string,
-    .add_integer = protocore_snmp_agent_add_integer,
-    .add_dynamic = protocore_snmp_agent_add_dynamic,
-    .dispatch_pdu = protocore_snmp_agent_dispatch_pdu,
-    .process = protocore_snmp_agent_process,
-    .listen = protocore_snmp_agent_listen,
-};
+/** @brief The one symbol this module exports. */
+extern SnmpAgentNs SnmpAgent;
 
 /**
  * @brief The PROTOCORE_SNMP_AGENT_BORROW bytes this module's state lives in.
@@ -226,5 +203,6 @@ uint8_t *protocore_snmp_agent_span(void);
 PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SNMP
+
 
 #endif // PROTOCORE_SNMP_AGENT_H

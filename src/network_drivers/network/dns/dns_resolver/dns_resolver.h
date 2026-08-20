@@ -79,6 +79,7 @@ typedef struct
 {
     uint32_t ip; ///< the IPv4 address, host order (e.g. (10u << 24) | (0u << 16) | (0u << 8) | 1u)
 } DnsAddrArgs;
+
 /** @brief RFC 1035 sec 4.1.2 question section: the name asked for, its ID, and where it is written. */
 typedef struct
 {
@@ -87,17 +88,20 @@ typedef struct
     uint8_t *out;     ///< where a build writes the query message
     size_t cap;       ///< how many octets that has
 } DnsQueryArgs;
+
 /** @brief RFC 1035 sec 4.1.3 answer section: the response message a parse reads. */
 typedef struct
 {
     const uint8_t *pkt; ///< the response message as it arrived
     size_t len;         ///< its length in octets
 } DnsAnswerArgs;
+
 /** @brief The nameserver the portable backend sends its queries to (RFC 1035 sec 4.2.1). */
 typedef struct
 {
     const char *ip; ///< its address as a dotted quad
 } DnsServerArgs;
+
 /**
  * @brief The DNS resolver.
  *
@@ -147,19 +151,13 @@ typedef struct
     DnsQueryArgs query;   ///< what a question names (RFC 1035 sec 4.1.2)
     DnsAnswerArgs answer; ///< what a parse reads (RFC 1035 sec 4.1.3)
     DnsServerArgs server; ///< where a portable query is sent (RFC 1035 sec 4.2.1)
+
     proto_bool ok;
     size_t n;
     uint32_t u32;
     protocore_ip_class cls;
     protocore_dns_state state;
-} ResolverVars;
 
-/** @brief The operands and the outcome. */
-extern ResolverVars ResolverV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const classify)(uint8_t *restrict work);
     void (*const verify)(uint8_t *restrict work);
     void (*const query_build)(uint8_t *restrict work);
@@ -170,31 +168,8 @@ typedef struct
     void (*const set_server)(uint8_t *restrict work);
 } ResolverNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in ResolverV or a region of the borrow at a fixed offset.
-void protocore_dns_resolver_classify(uint8_t *restrict work);
-void protocore_dns_resolver_verify(uint8_t *restrict work);
-void protocore_dns_resolver_query_build(uint8_t *restrict work);
-void protocore_dns_resolver_answer_parse(uint8_t *restrict work);
-void protocore_dns_resolver_resolve(uint8_t *restrict work);
-void protocore_dns_resolver_resolve_verified(uint8_t *restrict work);
-void protocore_dns_resolver_busy(uint8_t *restrict work);
-void protocore_dns_resolver_set_server(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Resolver.classify(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const ResolverNs Resolver __attribute__((unused)) = {
-    .classify = protocore_dns_resolver_classify,
-    .verify = protocore_dns_resolver_verify,
-    .query_build = protocore_dns_resolver_query_build,
-    .answer_parse = protocore_dns_resolver_answer_parse,
-    .resolve = protocore_dns_resolver_resolve,
-    .resolve_verified = protocore_dns_resolver_resolve_verified,
-    .busy = protocore_dns_resolver_busy,
-    .set_server = protocore_dns_resolver_set_server,
-};
+/** @brief The one symbol this module exports. */
+extern ResolverNs Resolver;
 
 /**
  * @brief The PROTOCORE_DNS_RESOLVER_BORROW bytes this module's state lives in.

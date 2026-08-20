@@ -49,14 +49,14 @@ static const PowerCfg CFG = {
 static PowerPlan decide_cfg(const PowerCfg *cfg, uint8_t load_pct, int16_t temp_c, proto_bool brownout,
                             uint32_t since_boot_ms, proto_bool was_throttled)
 {
-    PowerV.plan_args.cfg = cfg;
-    PowerV.plan_args.load_pct = load_pct;
-    PowerV.plan_args.temp_c = temp_c;
-    PowerV.plan_args.brownout_boot = brownout;
-    PowerV.plan_args.since_boot_ms = since_boot_ms;
-    PowerV.plan_args.was_throttled = was_throttled;
+    Power.plan_args.cfg = cfg;
+    Power.plan_args.load_pct = load_pct;
+    Power.plan_args.temp_c = temp_c;
+    Power.plan_args.brownout_boot = brownout;
+    Power.plan_args.since_boot_ms = since_boot_ms;
+    Power.plan_args.was_throttled = was_throttled;
     Power.decide(protocore_power_mgmt_span());
-    return PowerV.plan;
+    return Power.plan;
 }
 
 static PowerPlan decide(uint8_t load_pct, int16_t temp_c, proto_bool brownout, uint32_t since_boot_ms,
@@ -253,7 +253,7 @@ void test_the_defaults_carry_each_build_flag(void)
 {
     PowerCfg cfg;
     memset(&cfg, 0xA5, sizeof(cfg));
-    PowerV.cfg_out = &cfg;
+    Power.cfg_out = &cfg;
     Power.defaults(protocore_power_mgmt_span());
 
     TEST_ASSERT_EQUAL_UINT16(PROTOCORE_POWER_MHZ_MAX, cfg.mhz_max);
@@ -272,11 +272,11 @@ void test_the_defaults_carry_each_build_flag(void)
 void test_defaults_refuse_a_null_destination(void)
 {
     PowerCfg cfg;
-    PowerV.cfg_out = NULL;
+    Power.cfg_out = NULL;
     Power.defaults(protocore_power_mgmt_span());
 
     memset(&cfg, 0xA5, sizeof(cfg));
-    PowerV.cfg_out = &cfg;
+    Power.cfg_out = &cfg;
     Power.defaults(protocore_power_mgmt_span());
     TEST_ASSERT_EQUAL_UINT16(PROTOCORE_POWER_MHZ_MAX, cfg.mhz_max);
 }
@@ -289,10 +289,10 @@ static char g_json[128];
 
 static const char *report(const PowerPlan *plan, int16_t temp_c, size_t cap)
 {
-    PowerV.out_args.plan = plan;
-    PowerV.out_args.temp_c = temp_c;
-    PowerV.out_args.out = g_json;
-    PowerV.out_args.cap = cap;
+    Power.out_args.plan = plan;
+    Power.out_args.temp_c = temp_c;
+    Power.out_args.out = g_json;
+    Power.out_args.cap = cap;
     Power.json(protocore_power_mgmt_span());
     return g_json;
 }
@@ -619,7 +619,7 @@ void test_every_report_is_a_json_text(void)
                 p.throttled = thr ? PROTO_TRUE : PROTO_FALSE;
                 p.recovering = rec ? PROTO_TRUE : PROTO_FALSE;
                 TEST_ASSERT_TRUE_MESSAGE(json_ok(report(&p, TEMP[t], sizeof(g_json))), g_json);
-                TEST_ASSERT_EQUAL_UINT((unsigned)strlen(g_json), (unsigned)PowerV.n);
+                TEST_ASSERT_EQUAL_UINT((unsigned)strlen(g_json), (unsigned)Power.n);
             }
         }
     }
@@ -703,18 +703,18 @@ void test_a_short_buffer_yields_nothing_not_a_prefix(void)
     p.throttled = PROTO_TRUE;
     p.recovering = PROTO_TRUE;
     (void)report(&p, -40, sizeof(g_json));
-    const size_t full = PowerV.n;
+    const size_t full = Power.n;
     TEST_ASSERT_TRUE(full > 0u);
 
     for (size_t cap = 1; cap <= full; cap++)
     {
         (void)report(&p, -40, cap);
-        TEST_ASSERT_EQUAL_UINT(0u, (unsigned)PowerV.n);
+        TEST_ASSERT_EQUAL_UINT(0u, (unsigned)Power.n);
         TEST_ASSERT_EQUAL_CHAR('\0', g_json[0]);
     }
 
     (void)report(&p, -40, full + 1u);
-    TEST_ASSERT_EQUAL_UINT((unsigned)full, (unsigned)PowerV.n);
+    TEST_ASSERT_EQUAL_UINT((unsigned)full, (unsigned)Power.n);
     TEST_ASSERT_TRUE(json_ok(g_json));
 }
 
@@ -726,22 +726,22 @@ void test_the_report_refuses_what_it_cannot_write(void)
     p.throttled = PROTO_FALSE;
     p.recovering = PROTO_FALSE;
 
-    PowerV.out_args.plan = NULL;
-    PowerV.out_args.temp_c = 25;
-    PowerV.out_args.out = g_json;
-    PowerV.out_args.cap = sizeof(g_json);
+    Power.out_args.plan = NULL;
+    Power.out_args.temp_c = 25;
+    Power.out_args.out = g_json;
+    Power.out_args.cap = sizeof(g_json);
     Power.json(protocore_power_mgmt_span());
-    TEST_ASSERT_EQUAL_UINT(0u, (unsigned)PowerV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, (unsigned)Power.n);
 
-    PowerV.out_args.plan = &p;
-    PowerV.out_args.out = NULL;
+    Power.out_args.plan = &p;
+    Power.out_args.out = NULL;
     Power.json(protocore_power_mgmt_span());
-    TEST_ASSERT_EQUAL_UINT(0u, (unsigned)PowerV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, (unsigned)Power.n);
 
-    PowerV.out_args.out = g_json;
-    PowerV.out_args.cap = 0;
+    Power.out_args.out = g_json;
+    Power.out_args.cap = 0;
     g_json[0] = 'x';
     Power.json(protocore_power_mgmt_span());
-    TEST_ASSERT_EQUAL_UINT(0u, (unsigned)PowerV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, (unsigned)Power.n);
     TEST_ASSERT_EQUAL_CHAR('x', g_json[0]);
 }

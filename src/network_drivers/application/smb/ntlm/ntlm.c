@@ -13,9 +13,9 @@
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/application/smb/ntlm/ntlm.h"
 
-#include "crypto/hash/md/md.h"  // Md: MD4, MD5 and HMAC-MD5
-#include "mmgr/secure/secure.h" // the pool the digest borrow comes from
-#include "mmgr/span/span.h"     // protocore_span, span.ok
+#include "crypto/hash/md/md.h" // Md: MD4, MD5 and HMAC-MD5
+#include "mmgr/secure/secure.h"    // the pool the digest borrow comes from
+#include "mmgr/span/span.h"      // protocore_span, span.ok
 
 PROTOCORE_BEGIN_DECLS
 
@@ -24,11 +24,11 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_ntlm_nt_hash(uint8_t *restrict work)
+static void ntlm_nt_hash(uint8_t *restrict work)
 {
     (void)work;
-    const char *password = NtlmV.nt_hash_args.password;
-    uint8_t *nt_hash = NtlmV.nt_hash_args.nt_hash;
+    const char *password = Ntlm.nt_hash_args.password;
+    uint8_t *nt_hash = Ntlm.nt_hash_args.nt_hash;
 
     size_t mark = protocore_secure_mark();
     protocore_span w = protocore_secure_span(PROTOCORE_MD_BORROW, 0);
@@ -41,22 +41,22 @@ void protocore_ntlm_nt_hash(uint8_t *restrict work)
     for (const char *p = password; *p; p++)
     {
         uint8_t pair[2] = {(uint8_t)*p, 0}; // UTF-16LE (ASCII/UTF-8 code unit + high byte 0)
-        MdV.update_args.data = pair;
-        MdV.update_args.len = 2;
+        Md.update_args.data = pair;
+        Md.update_args.len = 2;
         Md.update(w.buf);
     }
-    MdV.final_args.out = nt_hash;
+    Md.final_args.out = nt_hash;
     Md.final(w.buf);
     protocore_secure_release(mark);
 }
 
-void protocore_ntlm_ntowfv2(uint8_t *restrict work)
+static void ntlm_ntowfv2(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *nt_hash = NtlmV.ntowfv2_args.nt_hash;
-    const char *user = NtlmV.ntowfv2_args.user;
-    const char *domain = NtlmV.ntowfv2_args.domain;
-    uint8_t *owf = NtlmV.ntowfv2_args.owf;
+    const uint8_t *nt_hash = Ntlm.ntowfv2_args.nt_hash;
+    const char *user = Ntlm.ntowfv2_args.user;
+    const char *domain = Ntlm.ntowfv2_args.domain;
+    uint8_t *owf = Ntlm.ntowfv2_args.owf;
 
     uint8_t buf[512]; // UTF-16LE of Uppercase(user) + domain; 256 chars max
     size_t n = 0;
@@ -69,7 +69,7 @@ void protocore_ntlm_ntowfv2(uint8_t *restrict work)
         }
         if (n + 2 > sizeof(buf))
         {
-            NtlmV.ok = PROTO_FALSE;
+            Ntlm.ok = PROTO_FALSE;
             return;
         }
         buf[n++] = (uint8_t)up;
@@ -79,7 +79,7 @@ void protocore_ntlm_ntowfv2(uint8_t *restrict work)
     {
         if (n + 2 > sizeof(buf))
         {
-            NtlmV.ok = PROTO_FALSE;
+            Ntlm.ok = PROTO_FALSE;
             return;
         }
         buf[n++] = (uint8_t)*p;
@@ -90,17 +90,17 @@ void protocore_ntlm_ntowfv2(uint8_t *restrict work)
     if (!span.ok(w))
     {
         protocore_secure_release(mark);
-        NtlmV.ok = PROTO_FALSE;
+        Ntlm.ok = PROTO_FALSE;
         return;
     }
-    MdV.hmac_args.key = nt_hash;
-    MdV.hmac_args.key_len = 16;
-    MdV.hmac_args.msg = buf;
-    MdV.hmac_args.msg_len = n;
-    MdV.hmac_args.out = owf;
+    Md.hmac_args.key = nt_hash;
+    Md.hmac_args.key_len = 16;
+    Md.hmac_args.msg = buf;
+    Md.hmac_args.msg_len = n;
+    Md.hmac_args.out = owf;
     Md.hmac_md5(w.buf);
     protocore_secure_release(mark);
-    NtlmV.ok = PROTO_TRUE;
+    Ntlm.ok = PROTO_TRUE;
 }
 
 // HMAC-MD5 over a two-part message (the key here is always the 16-byte NTOWFv2, < 64 bytes,
@@ -125,50 +125,50 @@ static void protocore_hmac_md5_2(const uint8_t key[16], const uint8_t *m1, size_
         return;
     }
     Md.md5_init(w.buf);
-    MdV.update_args.data = ipad;
-    MdV.update_args.len = 64;
+    Md.update_args.data = ipad;
+    Md.update_args.len = 64;
     Md.update(w.buf);
-    MdV.update_args.data = m1;
-    MdV.update_args.len = l1;
+    Md.update_args.data = m1;
+    Md.update_args.len = l1;
     Md.update(w.buf);
     if (m2 && l2)
     {
-        MdV.update_args.data = m2;
-        MdV.update_args.len = l2;
+        Md.update_args.data = m2;
+        Md.update_args.len = l2;
         Md.update(w.buf);
     }
-    MdV.final_args.out = inner;
+    Md.final_args.out = inner;
     Md.final(w.buf);
     Md.md5_init(w.buf);
-    MdV.update_args.data = opad;
-    MdV.update_args.len = 64;
+    Md.update_args.data = opad;
+    Md.update_args.len = 64;
     Md.update(w.buf);
-    MdV.update_args.data = inner;
-    MdV.update_args.len = 16;
+    Md.update_args.data = inner;
+    Md.update_args.len = 16;
     Md.update(w.buf);
-    MdV.final_args.out = out;
+    Md.final_args.out = out;
     Md.final(w.buf);
     protocore_secure_release(mark);
 }
 
-void protocore_ntlm_v2_response(uint8_t *restrict work)
+static void ntlm_v2_response(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *owf = NtlmV.v2_response_args.owf;
-    const uint8_t *server_challenge = NtlmV.v2_response_args.server_challenge;
-    const uint8_t *client_challenge = NtlmV.v2_response_args.client_challenge;
-    const uint8_t *timestamp = NtlmV.v2_response_args.timestamp;
-    const uint8_t *target_info = NtlmV.v2_response_args.target_info;
-    size_t ti_len = NtlmV.v2_response_args.ti_len;
-    uint8_t *out = NtlmV.v2_response_args.out;
-    size_t out_cap = NtlmV.v2_response_args.out_cap;
-    uint8_t *session_key = NtlmV.v2_response_args.session_key;
+    const uint8_t *owf = Ntlm.v2_response_args.owf;
+    const uint8_t *server_challenge = Ntlm.v2_response_args.server_challenge;
+    const uint8_t *client_challenge = Ntlm.v2_response_args.client_challenge;
+    const uint8_t *timestamp = Ntlm.v2_response_args.timestamp;
+    const uint8_t *target_info = Ntlm.v2_response_args.target_info;
+    size_t ti_len = Ntlm.v2_response_args.ti_len;
+    uint8_t *out = Ntlm.v2_response_args.out;
+    size_t out_cap = Ntlm.v2_response_args.out_cap;
+    uint8_t *session_key = Ntlm.v2_response_args.session_key;
 
     const size_t temp_len = 2 + 6 + 8 + 8 + 4 + ti_len + 4; // MS-NLMP temp layout
     const size_t protocore_resp_len = 16 + temp_len;        // NTProofStr(16) + temp
     if (!out || protocore_resp_len > out_cap)
     {
-        NtlmV.n = 0;
+        Ntlm.n = 0;
         return;
     }
 
@@ -198,29 +198,29 @@ void protocore_ntlm_v2_response(uint8_t *restrict work)
         protocore_span w = protocore_secure_span(PROTOCORE_MD_BORROW, 0);
         if (span.ok(w))
         {
-            MdV.hmac_args.key = owf;
-            MdV.hmac_args.key_len = 16;
-            MdV.hmac_args.msg = ntproof;
-            MdV.hmac_args.msg_len = 16;
-            MdV.hmac_args.out = session_key;
+            Md.hmac_args.key = owf;
+            Md.hmac_args.key_len = 16;
+            Md.hmac_args.msg = ntproof;
+            Md.hmac_args.msg_len = 16;
+            Md.hmac_args.out = session_key;
             Md.hmac_md5(w.buf);
         }
         protocore_secure_release(mark);
     }
-    NtlmV.n = protocore_resp_len;
+    Ntlm.n = protocore_resp_len;
 }
 
-void protocore_ntlm_set_mic_flag(uint8_t *restrict work)
+static void ntlm_set_mic_flag(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *target_info = NtlmV.set_mic_flag_args.target_info;
-    size_t ti_len = NtlmV.set_mic_flag_args.ti_len;
-    uint8_t *out = NtlmV.set_mic_flag_args.out;
-    size_t out_cap = NtlmV.set_mic_flag_args.out_cap;
+    const uint8_t *target_info = Ntlm.set_mic_flag_args.target_info;
+    size_t ti_len = Ntlm.set_mic_flag_args.ti_len;
+    uint8_t *out = Ntlm.set_mic_flag_args.out;
+    size_t out_cap = Ntlm.set_mic_flag_args.out_cap;
 
     if (!target_info || !out)
     {
-        NtlmV.n = 0;
+        Ntlm.n = 0;
         return;
     }
     // Walk the AV_PAIR list (AvId u16, AvLen u16, Value[AvLen]), copying it and, if an MsvAvFlags pair
@@ -228,7 +228,7 @@ void protocore_ntlm_set_mic_flag(uint8_t *restrict work)
     // missing pair can be inserted there.
     if (ti_len > out_cap)
     {
-        NtlmV.n = 0;
+        Ntlm.n = 0;
         return;
     }
     mem.cpy(out, target_info, ti_len);
@@ -251,14 +251,14 @@ void protocore_ntlm_set_mic_flag(uint8_t *restrict work)
         }
         if (p + 4 + len < p + 4) // overflow guard
         {
-            NtlmV.n = 0;
+            Ntlm.n = 0;
             return;
         }
         p += 4 + len;
     }
     if (found)
     {
-        NtlmV.n = ti_len;
+        Ntlm.n = ti_len;
         return;
     }
     // Insert a fresh MsvAvFlags pair (AvId 6, AvLen 4, value 0x00000002). A well-formed list has an EOL
@@ -266,7 +266,7 @@ void protocore_ntlm_set_mic_flag(uint8_t *restrict work)
     // end) gets the pair appended at the tail, matching the pre-MIC pass-through leniency (never fail here).
     if (ti_len + 8 > out_cap)
     {
-        NtlmV.n = 0;
+        Ntlm.n = 0;
         return;
     }
     const size_t at = eol != ti_len ? eol : ti_len;
@@ -282,20 +282,20 @@ void protocore_ntlm_set_mic_flag(uint8_t *restrict work)
     out[at + 5] = 0x00;
     out[at + 6] = 0x00;
     out[at + 7] = 0x00;
-    NtlmV.n = ti_len + 8;
+    Ntlm.n = ti_len + 8;
 }
 
-void protocore_ntlm_mic(uint8_t *restrict work)
+static void ntlm_mic(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *session_key = NtlmV.mic_args.session_key;
-    const uint8_t *neg = NtlmV.mic_args.neg;
-    size_t neg_len = NtlmV.mic_args.neg_len;
-    const uint8_t *chal = NtlmV.mic_args.chal;
-    size_t chal_len = NtlmV.mic_args.chal_len;
-    const uint8_t *auth = NtlmV.mic_args.auth;
-    size_t auth_len = NtlmV.mic_args.auth_len;
-    uint8_t *out = NtlmV.mic_args.out;
+    const uint8_t *session_key = Ntlm.mic_args.session_key;
+    const uint8_t *neg = Ntlm.mic_args.neg;
+    size_t neg_len = Ntlm.mic_args.neg_len;
+    const uint8_t *chal = Ntlm.mic_args.chal;
+    size_t chal_len = Ntlm.mic_args.chal_len;
+    const uint8_t *auth = Ntlm.mic_args.auth;
+    size_t auth_len = Ntlm.mic_args.auth_len;
+    uint8_t *out = Ntlm.mic_args.out;
 
     // HMAC-MD5(session_key, neg || chal || auth), streamed. The key is 16 bytes (< 64), no shortening.
     uint8_t ipad[64];
@@ -315,34 +315,39 @@ void protocore_ntlm_mic(uint8_t *restrict work)
     }
     uint8_t inner[16];
     Md.md5_init(w.buf);
-    MdV.update_args.data = ipad;
-    MdV.update_args.len = 64;
+    Md.update_args.data = ipad;
+    Md.update_args.len = 64;
     Md.update(w.buf);
-    MdV.update_args.data = neg;
-    MdV.update_args.len = neg_len;
+    Md.update_args.data = neg;
+    Md.update_args.len = neg_len;
     Md.update(w.buf);
-    MdV.update_args.data = chal;
-    MdV.update_args.len = chal_len;
+    Md.update_args.data = chal;
+    Md.update_args.len = chal_len;
     Md.update(w.buf);
-    MdV.update_args.data = auth;
-    MdV.update_args.len = auth_len;
+    Md.update_args.data = auth;
+    Md.update_args.len = auth_len;
     Md.update(w.buf);
-    MdV.final_args.out = inner;
+    Md.final_args.out = inner;
     Md.final(w.buf);
     Md.md5_init(w.buf);
-    MdV.update_args.data = opad;
-    MdV.update_args.len = 64;
+    Md.update_args.data = opad;
+    Md.update_args.len = 64;
     Md.update(w.buf);
-    MdV.update_args.data = inner;
-    MdV.update_args.len = 16;
+    Md.update_args.data = inner;
+    Md.update_args.len = 16;
     Md.update(w.buf);
-    MdV.final_args.out = out;
+    Md.final_args.out = out;
     Md.final(w.buf);
     protocore_secure_release(mark);
 }
 
-/** @brief The operands and the outcome. */
-NtlmVars NtlmV;
+NtlmNs Ntlm = {
+    .nt_hash = ntlm_nt_hash,
+    .ntowfv2 = ntlm_ntowfv2,
+    .v2_response = ntlm_v2_response,
+    .set_mic_flag = ntlm_set_mic_flag,
+    .mic = ntlm_mic,
+};
 
 PROTOCORE_END_DECLS
 

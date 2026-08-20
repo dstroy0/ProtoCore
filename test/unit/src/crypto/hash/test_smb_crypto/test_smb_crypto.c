@@ -20,27 +20,27 @@ static uint8_t g_md[PROTOCORE_MD_BORROW];
 // One-shot MD5 / MD4 over the suite's borrow.
 static void md5_of(const uint8_t *data, size_t len, uint8_t out[16])
 {
-    MdV.update_args.data = data;
-    MdV.update_args.len = len;
-    MdV.final_args.out = out;
+    Md.update_args.data = data;
+    Md.update_args.len = len;
+    Md.final_args.out = out;
     Md.md5(g_md);
 }
 
 static void md4_of(const uint8_t *data, size_t len, uint8_t out[16])
 {
-    MdV.update_args.data = data;
-    MdV.update_args.len = len;
-    MdV.final_args.out = out;
+    Md.update_args.data = data;
+    Md.update_args.len = len;
+    Md.final_args.out = out;
     Md.md4(g_md);
 }
 
 static void hmac_md5_of(const uint8_t *key, size_t key_len, const uint8_t *msg, size_t msg_len, uint8_t out[16])
 {
-    MdV.hmac_args.key = key;
-    MdV.hmac_args.key_len = key_len;
-    MdV.hmac_args.msg = msg;
-    MdV.hmac_args.msg_len = msg_len;
-    MdV.hmac_args.out = out;
+    Md.hmac_args.key = key;
+    Md.hmac_args.key_len = key_len;
+    Md.hmac_args.msg = msg;
+    Md.hmac_args.msg_len = msg_len;
+    Md.hmac_args.out = out;
     Md.hmac_md5(g_md);
 }
 
@@ -189,24 +189,24 @@ void test_streaming_matches_one_shot(void)
     for (size_t cut = 0; cut <= n; cut += 7)
     {
         Md.md5_init(g_md);
-        MdV.update_args.data = (const uint8_t *)MSG;
-        MdV.update_args.len = cut;
+        Md.update_args.data = (const uint8_t *)MSG;
+        Md.update_args.len = cut;
         Md.update(g_md);
-        MdV.update_args.data = (const uint8_t *)MSG + cut;
-        MdV.update_args.len = n - cut;
+        Md.update_args.data = (const uint8_t *)MSG + cut;
+        Md.update_args.len = n - cut;
         Md.update(g_md);
-        MdV.final_args.out = got;
+        Md.final_args.out = got;
         Md.final(g_md);
         TEST_ASSERT_EQUAL_HEX8_ARRAY(want5, got, 16);
 
         Md.md4_init(g_md);
-        MdV.update_args.data = (const uint8_t *)MSG;
-        MdV.update_args.len = cut;
+        Md.update_args.data = (const uint8_t *)MSG;
+        Md.update_args.len = cut;
         Md.update(g_md);
-        MdV.update_args.data = (const uint8_t *)MSG + cut;
-        MdV.update_args.len = n - cut;
+        Md.update_args.data = (const uint8_t *)MSG + cut;
+        Md.update_args.len = n - cut;
         Md.update(g_md);
-        MdV.final_args.out = got;
+        Md.final_args.out = got;
         Md.final(g_md);
         TEST_ASSERT_EQUAL_HEX8_ARRAY(want4, got, 16);
     }
@@ -226,16 +226,16 @@ void test_md4_and_md5_are_distinct(void)
 
     uint8_t got[16];
     Md.md4_init(g_md);
-    MdV.update_args.data = (const uint8_t *)"abc";
-    MdV.update_args.len = 3;
+    Md.update_args.data = (const uint8_t *)"abc";
+    Md.update_args.len = 3;
     Md.update(g_md);
-    MdV.final_args.out = got;
+    Md.final_args.out = got;
     Md.final(g_md);
     Md.md5_init(g_md); // the same borrow, now an MD5
-    MdV.update_args.data = (const uint8_t *)"abc";
-    MdV.update_args.len = 3;
+    Md.update_args.data = (const uint8_t *)"abc";
+    Md.update_args.len = 3;
     Md.update(g_md);
-    MdV.final_args.out = got;
+    Md.final_args.out = got;
     Md.final(g_md);
     char hex[33];
     tohex(got, hex);

@@ -31,23 +31,23 @@ static char g_out[512];
 
 static int build_url(const char *event, const char *key, char *out, size_t cap)
 {
-    WebhookV.ifttt.event = event;
-    WebhookV.ifttt.key = key;
-    WebhookV.build.out = out;
-    WebhookV.build.cap = cap;
+    Webhook.ifttt.event = event;
+    Webhook.ifttt.key = key;
+    Webhook.build.out = out;
+    Webhook.build.cap = cap;
     Webhook.ifttt_url(webhook_work);
-    return WebhookV.n;
+    return Webhook.n;
 }
 
 static int build_payload(const char *v1, const char *v2, const char *v3, char *out, size_t cap)
 {
-    WebhookV.ifttt.value1 = v1;
-    WebhookV.ifttt.value2 = v2;
-    WebhookV.ifttt.value3 = v3;
-    WebhookV.build.out = out;
-    WebhookV.build.cap = cap;
+    Webhook.ifttt.value1 = v1;
+    Webhook.ifttt.value2 = v2;
+    Webhook.ifttt.value3 = v3;
+    Webhook.build.out = out;
+    Webhook.build.cap = cap;
     Webhook.ifttt_payload(webhook_work);
-    return WebhookV.n;
+    return Webhook.n;
 }
 
 // RFC 3986 sec 3.3: a path is segments separated by "/". The Maker URI names the event and the key
@@ -182,55 +182,55 @@ void test_builder_argument_guards(void)
 // status code: RFC 9110 sec 15.1 status codes are three digits, and a negative value is not one.
 void test_post_reports_no_transport(void)
 {
-    WebhookV.request.target_uri = "https://maker.ifttt.com/trigger/e/with/key/k";
-    WebhookV.request.content = "{}";
+    Webhook.request.target_uri = "https://maker.ifttt.com/trigger/e/with/key/k";
+    Webhook.request.content = "{}";
     Webhook.post(webhook_work);
-    TEST_ASSERT_EQUAL_INT(-1, WebhookV.i32);
-    TEST_ASSERT_TRUE(WebhookV.i32 < 0);
+    TEST_ASSERT_EQUAL_INT(-1, Webhook.i32);
+    TEST_ASSERT_TRUE(Webhook.i32 < 0);
 }
 
 // A trigger builds both frames, then posts: with no transport under it the result is the same -1,
 // and it reports -1 for a build that does not fit before any POST is formed.
 void test_trigger_builds_then_posts(void)
 {
-    WebhookV.ifttt.event = "evt";
-    WebhookV.ifttt.key = "key";
-    WebhookV.ifttt.value1 = "1";
-    WebhookV.ifttt.value2 = "2";
-    WebhookV.ifttt.value3 = "3";
+    Webhook.ifttt.event = "evt";
+    Webhook.ifttt.key = "key";
+    Webhook.ifttt.value1 = "1";
+    Webhook.ifttt.value2 = "2";
+    Webhook.ifttt.value3 = "3";
     Webhook.ifttt_trigger(webhook_work);
-    TEST_ASSERT_EQUAL_INT(-1, WebhookV.i32);
+    TEST_ASSERT_EQUAL_INT(-1, Webhook.i32);
 
     char long_event[200];
     memset(long_event, 'e', 190);
     long_event[190] = '\0';
-    WebhookV.ifttt.event = long_event; // the URI frame is 160 octets
+    Webhook.ifttt.event = long_event; // the URI frame is 160 octets
     Webhook.ifttt_trigger(webhook_work);
-    TEST_ASSERT_EQUAL_INT(-1, WebhookV.i32);
-    TEST_ASSERT_EQUAL_INT(0, WebhookV.n);
+    TEST_ASSERT_EQUAL_INT(-1, Webhook.i32);
+    TEST_ASSERT_EQUAL_INT(0, Webhook.n);
 
     char long_value[400];
     memset(long_value, 'v', 350);
     long_value[350] = '\0';
-    WebhookV.ifttt.event = "evt";
-    WebhookV.ifttt.value1 = long_value; // the content frame is 256 octets
-    WebhookV.ifttt.value2 = NULL;
-    WebhookV.ifttt.value3 = NULL;
+    Webhook.ifttt.event = "evt";
+    Webhook.ifttt.value1 = long_value; // the content frame is 256 octets
+    Webhook.ifttt.value2 = NULL;
+    Webhook.ifttt.value3 = NULL;
     Webhook.ifttt_trigger(webhook_work);
-    TEST_ASSERT_EQUAL_INT(-1, WebhookV.i32);
-    TEST_ASSERT_EQUAL_INT(0, WebhookV.n);
+    TEST_ASSERT_EQUAL_INT(-1, Webhook.i32);
+    TEST_ASSERT_EQUAL_INT(0, Webhook.n);
 }
 
 // A POST with no target URI or no content names nothing to send, so it never reaches a transport.
 void test_post_argument_guards(void)
 {
-    WebhookV.request.target_uri = NULL;
-    WebhookV.request.content = "{}";
+    Webhook.request.target_uri = NULL;
+    Webhook.request.content = "{}";
     Webhook.post(webhook_work);
-    TEST_ASSERT_TRUE(WebhookV.i32 < 0);
+    TEST_ASSERT_TRUE(Webhook.i32 < 0);
 
-    WebhookV.request.target_uri = "https://example.com/hook";
-    WebhookV.request.content = NULL;
+    Webhook.request.target_uri = "https://example.com/hook";
+    Webhook.request.content = NULL;
     Webhook.post(webhook_work);
-    TEST_ASSERT_TRUE(WebhookV.i32 < 0);
+    TEST_ASSERT_TRUE(Webhook.i32 < 0);
 }

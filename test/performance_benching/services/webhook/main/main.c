@@ -18,24 +18,24 @@ static uint8_t webhook_work[16]; // the borrow an entry takes; Webhook never rea
 /** @brief Build the Maker target URI into @p out; the octets written. */
 static int ifttt_url(char *out, size_t cap)
 {
-    WebhookV.build.out = out;
-    WebhookV.build.cap = cap;
-    WebhookV.ifttt.event = "temp_alert";
-    WebhookV.ifttt.key = "bXlrZXktMTIzNDU";
+    Webhook.build.out = out;
+    Webhook.build.cap = cap;
+    Webhook.ifttt.event = "temp_alert";
+    Webhook.ifttt.key = "bXlrZXktMTIzNDU";
     Webhook.ifttt_url(webhook_work);
-    return WebhookV.n;
+    return Webhook.n;
 }
 
 /** @brief Build the value1/value2/value3 object into @p out; the octets written. */
 static int ifttt_payload(char *out, size_t cap)
 {
-    WebhookV.build.out = out;
-    WebhookV.build.cap = cap;
-    WebhookV.ifttt.value1 = "84.0";
-    WebhookV.ifttt.value2 = "threshold";
-    WebhookV.ifttt.value3 = "rig-1";
+    Webhook.build.out = out;
+    Webhook.build.cap = cap;
+    Webhook.ifttt.value1 = "84.0";
+    Webhook.ifttt.value2 = "threshold";
+    Webhook.ifttt.value3 = "rig-1";
     Webhook.ifttt_payload(webhook_work);
-    return WebhookV.n;
+    return Webhook.n;
 }
 
 void dbench_run(void)

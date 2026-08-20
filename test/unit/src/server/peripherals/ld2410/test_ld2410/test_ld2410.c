@@ -49,11 +49,11 @@ void test_v102_published_report_frames(void)
 {
     Ld2410Report r;
     memset(&r, 0xEE, sizeof(r));
-    Ld2410V.parse_report_args.frame = BASIC;
-    Ld2410V.parse_report_args.len = sizeof(BASIC);
-    Ld2410V.parse_report_args.out = &r;
+    Ld2410.parse_report_args.frame = BASIC;
+    Ld2410.parse_report_args.len = sizeof(BASIC);
+    Ld2410.parse_report_args.out = &r;
     Ld2410.parse_report(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
+    TEST_ASSERT_TRUE(Ld2410.ok);
     TEST_ASSERT_EQUAL_UINT8(0u, r.engineering);
     TEST_ASSERT_EQUAL_UINT8(LD2410_STATE_STATIC, r.state); // 0x02, Table 12 "Stationary target"
     TEST_ASSERT_EQUAL_UINT16(81u, r.moving_cm);            // 0x0051
@@ -68,11 +68,11 @@ void test_v102_published_report_frames(void)
     TEST_ASSERT_EQUAL_UINT8(0u, r.out_pin);
 
     memset(&r, 0xEE, sizeof(r));
-    Ld2410V.parse_report_args.frame = ENGINEERING;
-    Ld2410V.parse_report_args.len = sizeof(ENGINEERING);
-    Ld2410V.parse_report_args.out = &r;
+    Ld2410.parse_report_args.frame = ENGINEERING;
+    Ld2410.parse_report_args.len = sizeof(ENGINEERING);
+    Ld2410.parse_report_args.out = &r;
     Ld2410.parse_report(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
+    TEST_ASSERT_TRUE(Ld2410.ok);
     TEST_ASSERT_EQUAL_UINT8(1u, r.engineering);
     TEST_ASSERT_EQUAL_UINT8(LD2410_STATE_BOTH, r.state); // 0x03
     TEST_ASSERT_EQUAL_UINT16(30u, r.moving_cm);          // 0x001E
@@ -116,44 +116,44 @@ void test_v102_target_state_drives_presence_and_distance(void)
     r.static_cm = 222u;
 
     r.state = LD2410_STATE_NONE;
-    Ld2410V.present_args.r = &r;
+    Ld2410.present_args.r = &r;
     Ld2410.present(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
-    Ld2410V.distance_cm_args.r = &r;
+    TEST_ASSERT_FALSE(Ld2410.ok);
+    Ld2410.distance_cm_args.r = &r;
     Ld2410.distance_cm(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_UINT16(0u, Ld2410V.cm);
+    TEST_ASSERT_EQUAL_UINT16(0u, Ld2410.cm);
 
     r.state = LD2410_STATE_MOVING;
-    Ld2410V.present_args.r = &r;
+    Ld2410.present_args.r = &r;
     Ld2410.present(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
-    Ld2410V.distance_cm_args.r = &r;
+    TEST_ASSERT_TRUE(Ld2410.ok);
+    Ld2410.distance_cm_args.r = &r;
     Ld2410.distance_cm(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_UINT16(111u, Ld2410V.cm);
+    TEST_ASSERT_EQUAL_UINT16(111u, Ld2410.cm);
 
     r.state = LD2410_STATE_STATIC;
-    Ld2410V.present_args.r = &r;
+    Ld2410.present_args.r = &r;
     Ld2410.present(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
-    Ld2410V.distance_cm_args.r = &r;
+    TEST_ASSERT_TRUE(Ld2410.ok);
+    Ld2410.distance_cm_args.r = &r;
     Ld2410.distance_cm(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_UINT16(222u, Ld2410V.cm);
+    TEST_ASSERT_EQUAL_UINT16(222u, Ld2410.cm);
 
     // Both targets present: the moving one is the one being tracked.
     r.state = LD2410_STATE_BOTH;
-    Ld2410V.present_args.r = &r;
+    Ld2410.present_args.r = &r;
     Ld2410.present(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
-    Ld2410V.distance_cm_args.r = &r;
+    TEST_ASSERT_TRUE(Ld2410.ok);
+    Ld2410.distance_cm_args.r = &r;
     Ld2410.distance_cm(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_UINT16(111u, Ld2410V.cm);
+    TEST_ASSERT_EQUAL_UINT16(111u, Ld2410.cm);
 
-    Ld2410V.present_args.r = NULL;
+    Ld2410.present_args.r = NULL;
     Ld2410.present(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
-    Ld2410V.distance_cm_args.r = NULL;
+    TEST_ASSERT_FALSE(Ld2410.ok);
+    Ld2410.distance_cm_args.r = NULL;
     Ld2410.distance_cm(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_UINT16(0u, Ld2410V.cm);
+    TEST_ASSERT_EQUAL_UINT16(0u, Ld2410.cm);
 }
 
 // Every guard sec 2.3.1 states: the frame header, the length agreeing with the buffer, the footer,
@@ -163,101 +163,101 @@ void test_malformed_report_frames_are_refused(void)
     Ld2410Report r;
     uint8_t bad[sizeof(ENGINEERING)];
 
-    Ld2410V.parse_report_args.frame = NULL;
-    Ld2410V.parse_report_args.len = sizeof(BASIC);
-    Ld2410V.parse_report_args.out = &r;
+    Ld2410.parse_report_args.frame = NULL;
+    Ld2410.parse_report_args.len = sizeof(BASIC);
+    Ld2410.parse_report_args.out = &r;
     Ld2410.parse_report(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
-    Ld2410V.parse_report_args.frame = BASIC;
-    Ld2410V.parse_report_args.len = sizeof(BASIC);
-    Ld2410V.parse_report_args.out = NULL;
+    TEST_ASSERT_FALSE(Ld2410.ok);
+    Ld2410.parse_report_args.frame = BASIC;
+    Ld2410.parse_report_args.len = sizeof(BASIC);
+    Ld2410.parse_report_args.out = NULL;
     Ld2410.parse_report(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
-    Ld2410V.parse_report_args.frame = BASIC;
-    Ld2410V.parse_report_args.len = 22u;
-    Ld2410V.parse_report_args.out = &r;
+    TEST_ASSERT_FALSE(Ld2410.ok);
+    Ld2410.parse_report_args.frame = BASIC;
+    Ld2410.parse_report_args.len = 22u;
+    Ld2410.parse_report_args.out = &r;
     Ld2410.parse_report(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok); // length disagrees with the buffer
-    Ld2410V.parse_report_args.frame = BASIC;
-    Ld2410V.parse_report_args.len = 12u;
-    Ld2410V.parse_report_args.out = &r;
+    TEST_ASSERT_FALSE(Ld2410.ok); // length disagrees with the buffer
+    Ld2410.parse_report_args.frame = BASIC;
+    Ld2410.parse_report_args.len = 12u;
+    Ld2410.parse_report_args.out = &r;
     Ld2410.parse_report(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok); // shorter than the smallest frame
+    TEST_ASSERT_FALSE(Ld2410.ok); // shorter than the smallest frame
 
     for (size_t k = 0; k < 4u; k++)
     {
         memcpy(bad, BASIC, sizeof(BASIC));
         bad[k] ^= 0xFFu; // header octet
-        Ld2410V.parse_report_args.frame = bad;
-        Ld2410V.parse_report_args.len = sizeof(BASIC);
-        Ld2410V.parse_report_args.out = &r;
+        Ld2410.parse_report_args.frame = bad;
+        Ld2410.parse_report_args.len = sizeof(BASIC);
+        Ld2410.parse_report_args.out = &r;
         Ld2410.parse_report(protocore_ld2410_span());
-        TEST_ASSERT_FALSE(Ld2410V.ok);
+        TEST_ASSERT_FALSE(Ld2410.ok);
 
         memcpy(bad, BASIC, sizeof(BASIC));
         bad[19u + k] ^= 0xFFu; // footer octet
-        Ld2410V.parse_report_args.frame = bad;
-        Ld2410V.parse_report_args.len = sizeof(BASIC);
-        Ld2410V.parse_report_args.out = &r;
+        Ld2410.parse_report_args.frame = bad;
+        Ld2410.parse_report_args.len = sizeof(BASIC);
+        Ld2410.parse_report_args.out = &r;
         Ld2410.parse_report(protocore_ld2410_span());
-        TEST_ASSERT_FALSE(Ld2410V.ok);
+        TEST_ASSERT_FALSE(Ld2410.ok);
     }
 
     memcpy(bad, BASIC, sizeof(BASIC));
     bad[6] = 0x03u; // Table 10 defines only 0x01 and 0x02
-    Ld2410V.parse_report_args.frame = bad;
-    Ld2410V.parse_report_args.len = sizeof(BASIC);
-    Ld2410V.parse_report_args.out = &r;
+    Ld2410.parse_report_args.frame = bad;
+    Ld2410.parse_report_args.len = sizeof(BASIC);
+    Ld2410.parse_report_args.out = &r;
     Ld2410.parse_report(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
+    TEST_ASSERT_FALSE(Ld2410.ok);
 
     memcpy(bad, BASIC, sizeof(BASIC));
     bad[6] = 0x01u; // engineering type with the basic length
-    Ld2410V.parse_report_args.frame = bad;
-    Ld2410V.parse_report_args.len = sizeof(BASIC);
-    Ld2410V.parse_report_args.out = &r;
+    Ld2410.parse_report_args.frame = bad;
+    Ld2410.parse_report_args.len = sizeof(BASIC);
+    Ld2410.parse_report_args.out = &r;
     Ld2410.parse_report(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
+    TEST_ASSERT_FALSE(Ld2410.ok);
 
     memcpy(bad, ENGINEERING, sizeof(ENGINEERING));
     bad[6] = 0x02u; // basic type with the engineering length
-    Ld2410V.parse_report_args.frame = bad;
-    Ld2410V.parse_report_args.len = sizeof(ENGINEERING);
-    Ld2410V.parse_report_args.out = &r;
+    Ld2410.parse_report_args.frame = bad;
+    Ld2410.parse_report_args.len = sizeof(ENGINEERING);
+    Ld2410.parse_report_args.out = &r;
     Ld2410.parse_report(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
+    TEST_ASSERT_FALSE(Ld2410.ok);
 
     memcpy(bad, BASIC, sizeof(BASIC));
     bad[7] = 0x00u; // intra-frame head marker
-    Ld2410V.parse_report_args.frame = bad;
-    Ld2410V.parse_report_args.len = sizeof(BASIC);
-    Ld2410V.parse_report_args.out = &r;
+    Ld2410.parse_report_args.frame = bad;
+    Ld2410.parse_report_args.len = sizeof(BASIC);
+    Ld2410.parse_report_args.out = &r;
     Ld2410.parse_report(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
+    TEST_ASSERT_FALSE(Ld2410.ok);
 
     memcpy(bad, BASIC, sizeof(BASIC));
     bad[17] = 0x00u; // tail
-    Ld2410V.parse_report_args.frame = bad;
-    Ld2410V.parse_report_args.len = sizeof(BASIC);
-    Ld2410V.parse_report_args.out = &r;
+    Ld2410.parse_report_args.frame = bad;
+    Ld2410.parse_report_args.len = sizeof(BASIC);
+    Ld2410.parse_report_args.out = &r;
     Ld2410.parse_report(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
+    TEST_ASSERT_FALSE(Ld2410.ok);
 
     memcpy(bad, ENGINEERING, sizeof(ENGINEERING));
     bad[39] = 0x00u; // engineering tail
-    Ld2410V.parse_report_args.frame = bad;
-    Ld2410V.parse_report_args.len = sizeof(ENGINEERING);
-    Ld2410V.parse_report_args.out = &r;
+    Ld2410.parse_report_args.frame = bad;
+    Ld2410.parse_report_args.len = sizeof(ENGINEERING);
+    Ld2410.parse_report_args.out = &r;
     Ld2410.parse_report(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
+    TEST_ASSERT_FALSE(Ld2410.ok);
 
     memcpy(bad, BASIC, sizeof(BASIC));
     bad[4] = 0x0Cu; // the length no longer frames the buffer
-    Ld2410V.parse_report_args.frame = bad;
-    Ld2410V.parse_report_args.len = sizeof(BASIC);
-    Ld2410V.parse_report_args.out = &r;
+    Ld2410.parse_report_args.frame = bad;
+    Ld2410.parse_report_args.len = sizeof(BASIC);
+    Ld2410.parse_report_args.out = &r;
     Ld2410.parse_report(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
+    TEST_ASSERT_FALSE(Ld2410.ok);
 }
 
 // The reassembler must find a frame in a stream that starts mid-noise, and must not report one
@@ -267,11 +267,11 @@ static void feed_noise(Ld2410Stream *s, Ld2410Report *r)
     static const uint8_t NOISE[] = {0x00, 0xF4, 0xF3, 0x11, 0xFF, 0xF4, 0x00, 0x5A};
     for (size_t i = 0; i < sizeof(NOISE); i++)
     {
-        Ld2410V.stream_push_args.s = s;
-        Ld2410V.stream_push_args.byte = NOISE[i];
-        Ld2410V.stream_push_args.out = r;
+        Ld2410.stream_push_args.s = s;
+        Ld2410.stream_push_args.byte = NOISE[i];
+        Ld2410.stream_push_args.out = r;
         Ld2410.stream_push(protocore_ld2410_span());
-        TEST_ASSERT_FALSE(Ld2410V.ok);
+        TEST_ASSERT_FALSE(Ld2410.ok);
     }
 }
 
@@ -279,23 +279,23 @@ void test_stream_resyncs_past_noise_and_reports_once(void)
 {
     Ld2410Stream s;
     Ld2410Report r;
-    Ld2410V.stream_reset_args.s = &s;
+    Ld2410.stream_reset_args.s = &s;
     Ld2410.stream_reset(protocore_ld2410_span());
 
     feed_noise(&s, &r);
     for (size_t i = 0; i + 1u < sizeof(BASIC); i++)
     {
-        Ld2410V.stream_push_args.s = &s;
-        Ld2410V.stream_push_args.byte = BASIC[i];
-        Ld2410V.stream_push_args.out = &r;
+        Ld2410.stream_push_args.s = &s;
+        Ld2410.stream_push_args.byte = BASIC[i];
+        Ld2410.stream_push_args.out = &r;
         Ld2410.stream_push(protocore_ld2410_span());
-        TEST_ASSERT_FALSE_MESSAGE(Ld2410V.ok, "reported before the last octet");
+        TEST_ASSERT_FALSE_MESSAGE(Ld2410.ok, "reported before the last octet");
     }
-    Ld2410V.stream_push_args.s = &s;
-    Ld2410V.stream_push_args.byte = BASIC[sizeof(BASIC) - 1u];
-    Ld2410V.stream_push_args.out = &r;
+    Ld2410.stream_push_args.s = &s;
+    Ld2410.stream_push_args.byte = BASIC[sizeof(BASIC) - 1u];
+    Ld2410.stream_push_args.out = &r;
     Ld2410.stream_push(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
+    TEST_ASSERT_TRUE(Ld2410.ok);
     TEST_ASSERT_EQUAL_UINT16(81u, r.moving_cm);
     TEST_ASSERT_EQUAL_UINT8(LD2410_STATE_STATIC, r.state);
 
@@ -303,17 +303,17 @@ void test_stream_resyncs_past_noise_and_reports_once(void)
     feed_noise(&s, &r);
     for (size_t i = 0; i + 1u < sizeof(ENGINEERING); i++)
     {
-        Ld2410V.stream_push_args.s = &s;
-        Ld2410V.stream_push_args.byte = ENGINEERING[i];
-        Ld2410V.stream_push_args.out = &r;
+        Ld2410.stream_push_args.s = &s;
+        Ld2410.stream_push_args.byte = ENGINEERING[i];
+        Ld2410.stream_push_args.out = &r;
         Ld2410.stream_push(protocore_ld2410_span());
-        TEST_ASSERT_FALSE(Ld2410V.ok);
+        TEST_ASSERT_FALSE(Ld2410.ok);
     }
-    Ld2410V.stream_push_args.s = &s;
-    Ld2410V.stream_push_args.byte = ENGINEERING[sizeof(ENGINEERING) - 1u];
-    Ld2410V.stream_push_args.out = &r;
+    Ld2410.stream_push_args.s = &s;
+    Ld2410.stream_push_args.byte = ENGINEERING[sizeof(ENGINEERING) - 1u];
+    Ld2410.stream_push_args.out = &r;
     Ld2410.stream_push(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
+    TEST_ASSERT_TRUE(Ld2410.ok);
     TEST_ASSERT_EQUAL_UINT8(1u, r.engineering);
     TEST_ASSERT_EQUAL_UINT16(30u, r.moving_cm);
 }
@@ -324,31 +324,31 @@ void test_stream_handles_a_partial_header_before_the_real_one(void)
 {
     Ld2410Stream s;
     Ld2410Report r;
-    Ld2410V.stream_reset_args.s = &s;
+    Ld2410.stream_reset_args.s = &s;
     Ld2410.stream_reset(protocore_ld2410_span());
 
     static const uint8_t PARTIAL[] = {0xF4, 0xF3, 0xF2, 0xF4, 0xF4, 0xF3};
     for (size_t i = 0; i < sizeof(PARTIAL); i++)
     {
-        Ld2410V.stream_push_args.s = &s;
-        Ld2410V.stream_push_args.byte = PARTIAL[i];
-        Ld2410V.stream_push_args.out = &r;
+        Ld2410.stream_push_args.s = &s;
+        Ld2410.stream_push_args.byte = PARTIAL[i];
+        Ld2410.stream_push_args.out = &r;
         Ld2410.stream_push(protocore_ld2410_span());
-        TEST_ASSERT_FALSE(Ld2410V.ok);
+        TEST_ASSERT_FALSE(Ld2410.ok);
     }
     for (size_t i = 0; i + 1u < sizeof(BASIC); i++)
     {
-        Ld2410V.stream_push_args.s = &s;
-        Ld2410V.stream_push_args.byte = BASIC[i];
-        Ld2410V.stream_push_args.out = &r;
+        Ld2410.stream_push_args.s = &s;
+        Ld2410.stream_push_args.byte = BASIC[i];
+        Ld2410.stream_push_args.out = &r;
         Ld2410.stream_push(protocore_ld2410_span());
-        TEST_ASSERT_FALSE(Ld2410V.ok);
+        TEST_ASSERT_FALSE(Ld2410.ok);
     }
-    Ld2410V.stream_push_args.s = &s;
-    Ld2410V.stream_push_args.byte = BASIC[sizeof(BASIC) - 1u];
-    Ld2410V.stream_push_args.out = &r;
+    Ld2410.stream_push_args.s = &s;
+    Ld2410.stream_push_args.byte = BASIC[sizeof(BASIC) - 1u];
+    Ld2410.stream_push_args.out = &r;
     Ld2410.stream_push(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
+    TEST_ASSERT_TRUE(Ld2410.ok);
     TEST_ASSERT_EQUAL_UINT16(81u, r.moving_cm);
 }
 
@@ -358,34 +358,34 @@ void test_stream_drops_an_absurd_length_and_recovers(void)
 {
     Ld2410Stream s;
     Ld2410Report r;
-    Ld2410V.stream_reset_args.s = &s;
+    Ld2410.stream_reset_args.s = &s;
     Ld2410.stream_reset(protocore_ld2410_span());
 
     static const uint8_t OVERSIZE[6] = {0xF4, 0xF3, 0xF2, 0xF1, 0xFF, 0xFF};
     for (size_t i = 0; i < sizeof(OVERSIZE); i++)
     {
-        Ld2410V.stream_push_args.s = &s;
-        Ld2410V.stream_push_args.byte = OVERSIZE[i];
-        Ld2410V.stream_push_args.out = &r;
+        Ld2410.stream_push_args.s = &s;
+        Ld2410.stream_push_args.byte = OVERSIZE[i];
+        Ld2410.stream_push_args.out = &r;
         Ld2410.stream_push(protocore_ld2410_span());
-        TEST_ASSERT_FALSE(Ld2410V.ok);
+        TEST_ASSERT_FALSE(Ld2410.ok);
     }
     TEST_ASSERT_EQUAL_UINT16(0u, s.pos);
     TEST_ASSERT_EQUAL_UINT8(0u, s.phase);
 
     for (size_t i = 0; i + 1u < sizeof(BASIC); i++)
     {
-        Ld2410V.stream_push_args.s = &s;
-        Ld2410V.stream_push_args.byte = BASIC[i];
-        Ld2410V.stream_push_args.out = &r;
+        Ld2410.stream_push_args.s = &s;
+        Ld2410.stream_push_args.byte = BASIC[i];
+        Ld2410.stream_push_args.out = &r;
         Ld2410.stream_push(protocore_ld2410_span());
-        TEST_ASSERT_FALSE(Ld2410V.ok);
+        TEST_ASSERT_FALSE(Ld2410.ok);
     }
-    Ld2410V.stream_push_args.s = &s;
-    Ld2410V.stream_push_args.byte = BASIC[sizeof(BASIC) - 1u];
-    Ld2410V.stream_push_args.out = &r;
+    Ld2410.stream_push_args.s = &s;
+    Ld2410.stream_push_args.byte = BASIC[sizeof(BASIC) - 1u];
+    Ld2410.stream_push_args.out = &r;
     Ld2410.stream_push(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
+    TEST_ASSERT_TRUE(Ld2410.ok);
 }
 
 // A frame whose body fails the parser is dropped, and the reassembler resyncs rather than staying
@@ -398,29 +398,29 @@ void test_stream_drops_a_bad_frame_and_keeps_going(void)
     memcpy(bad, BASIC, sizeof(BASIC));
     bad[7] = 0x00u; // no 0xAA head marker
 
-    Ld2410V.stream_reset_args.s = &s;
+    Ld2410.stream_reset_args.s = &s;
     Ld2410.stream_reset(protocore_ld2410_span());
     for (size_t i = 0; i < sizeof(bad); i++)
     {
-        Ld2410V.stream_push_args.s = &s;
-        Ld2410V.stream_push_args.byte = bad[i];
-        Ld2410V.stream_push_args.out = &r;
+        Ld2410.stream_push_args.s = &s;
+        Ld2410.stream_push_args.byte = bad[i];
+        Ld2410.stream_push_args.out = &r;
         Ld2410.stream_push(protocore_ld2410_span());
-        TEST_ASSERT_FALSE(Ld2410V.ok);
+        TEST_ASSERT_FALSE(Ld2410.ok);
     }
     for (size_t i = 0; i + 1u < sizeof(BASIC); i++)
     {
-        Ld2410V.stream_push_args.s = &s;
-        Ld2410V.stream_push_args.byte = BASIC[i];
-        Ld2410V.stream_push_args.out = &r;
+        Ld2410.stream_push_args.s = &s;
+        Ld2410.stream_push_args.byte = BASIC[i];
+        Ld2410.stream_push_args.out = &r;
         Ld2410.stream_push(protocore_ld2410_span());
-        TEST_ASSERT_FALSE(Ld2410V.ok);
+        TEST_ASSERT_FALSE(Ld2410.ok);
     }
-    Ld2410V.stream_push_args.s = &s;
-    Ld2410V.stream_push_args.byte = BASIC[sizeof(BASIC) - 1u];
-    Ld2410V.stream_push_args.out = &r;
+    Ld2410.stream_push_args.s = &s;
+    Ld2410.stream_push_args.byte = BASIC[sizeof(BASIC) - 1u];
+    Ld2410.stream_push_args.out = &r;
     Ld2410.stream_push(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
+    TEST_ASSERT_TRUE(Ld2410.ok);
 }
 
 // V1.02 sec 2.2: every command frame the document prints, octet for octet.
@@ -431,44 +431,44 @@ void test_v102_published_command_frames(void)
     // 2.2.1 enable configuration: word 0x00FF, value 0x0001
     static const uint8_t ENABLE[14] = {0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xFF,
                                        0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01};
-    Ld2410V.cmd_config_enable_args.buf = buf;
-    Ld2410V.cmd_config_enable_args.cap = sizeof(buf);
+    Ld2410.cmd_config_enable_args.buf = buf;
+    Ld2410.cmd_config_enable_args.cap = sizeof(buf);
     Ld2410.cmd_config_enable(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(14u, Ld2410V.n);
+    TEST_ASSERT_EQUAL_size_t(14u, Ld2410.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ENABLE, buf, 14u);
 
     // 2.2.2 end configuration: word 0x00FE, no value
     static const uint8_t END[12] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xFE, 0x00, 0x04, 0x03, 0x02, 0x01};
-    Ld2410V.cmd_config_end_args.buf = buf;
-    Ld2410V.cmd_config_end_args.cap = sizeof(buf);
+    Ld2410.cmd_config_end_args.buf = buf;
+    Ld2410.cmd_config_end_args.cap = sizeof(buf);
     Ld2410.cmd_config_end(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(12u, Ld2410V.n);
+    TEST_ASSERT_EQUAL_size_t(12u, Ld2410.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(END, buf, 12u);
 
     // 2.2.5 enable engineering mode: word 0x0062
     static const uint8_t ENG_ON[12] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0x62, 0x00, 0x04, 0x03, 0x02, 0x01};
-    Ld2410V.cmd_engineering_args.buf = buf;
-    Ld2410V.cmd_engineering_args.cap = sizeof(buf);
-    Ld2410V.cmd_engineering_args.on = PROTO_TRUE;
+    Ld2410.cmd_engineering_args.buf = buf;
+    Ld2410.cmd_engineering_args.cap = sizeof(buf);
+    Ld2410.cmd_engineering_args.on = PROTO_TRUE;
     Ld2410.cmd_engineering(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(12u, Ld2410V.n);
+    TEST_ASSERT_EQUAL_size_t(12u, Ld2410.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ENG_ON, buf, 12u);
 
     // 2.2.6 close engineering mode: word 0x0063
     static const uint8_t ENG_OFF[12] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0x63, 0x00, 0x04, 0x03, 0x02, 0x01};
-    Ld2410V.cmd_engineering_args.buf = buf;
-    Ld2410V.cmd_engineering_args.cap = sizeof(buf);
-    Ld2410V.cmd_engineering_args.on = PROTO_FALSE;
+    Ld2410.cmd_engineering_args.buf = buf;
+    Ld2410.cmd_engineering_args.cap = sizeof(buf);
+    Ld2410.cmd_engineering_args.on = PROTO_FALSE;
     Ld2410.cmd_engineering(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(12u, Ld2410V.n);
+    TEST_ASSERT_EQUAL_size_t(12u, Ld2410.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ENG_OFF, buf, 12u);
 
     // 2.2.11 restart the module: word 0x00A3
     static const uint8_t RESTART[12] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xA3, 0x00, 0x04, 0x03, 0x02, 0x01};
-    Ld2410V.cmd_restart_args.buf = buf;
-    Ld2410V.cmd_restart_args.cap = sizeof(buf);
+    Ld2410.cmd_restart_args.buf = buf;
+    Ld2410.cmd_restart_args.cap = sizeof(buf);
     Ld2410.cmd_restart(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(12u, Ld2410V.n);
+    TEST_ASSERT_EQUAL_size_t(12u, Ld2410.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(RESTART, buf, 12u);
 }
 
@@ -483,91 +483,91 @@ void test_ld2410b_command_frames_follow_the_same_envelope(void)
                                       0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01};
     static const uint8_t BT_OFF[14] = {0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xA4,
                                        0x00, 0x00, 0x00, 0x04, 0x03, 0x02, 0x01};
-    Ld2410V.cmd_bluetooth_args.buf = buf;
-    Ld2410V.cmd_bluetooth_args.cap = sizeof(buf);
-    Ld2410V.cmd_bluetooth_args.on = PROTO_TRUE;
+    Ld2410.cmd_bluetooth_args.buf = buf;
+    Ld2410.cmd_bluetooth_args.cap = sizeof(buf);
+    Ld2410.cmd_bluetooth_args.on = PROTO_TRUE;
     Ld2410.cmd_bluetooth(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(14u, Ld2410V.n);
+    TEST_ASSERT_EQUAL_size_t(14u, Ld2410.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(BT_ON, buf, 14u);
-    Ld2410V.cmd_bluetooth_args.buf = buf;
-    Ld2410V.cmd_bluetooth_args.cap = sizeof(buf);
-    Ld2410V.cmd_bluetooth_args.on = PROTO_FALSE;
+    Ld2410.cmd_bluetooth_args.buf = buf;
+    Ld2410.cmd_bluetooth_args.cap = sizeof(buf);
+    Ld2410.cmd_bluetooth_args.on = PROTO_FALSE;
     Ld2410.cmd_bluetooth(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(14u, Ld2410V.n);
+    TEST_ASSERT_EQUAL_size_t(14u, Ld2410.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(BT_OFF, buf, 14u);
 
     // Get MAC: word 0x00A5, value 0x0001
     static const uint8_t MAC[14] = {0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xA5, 0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01};
-    Ld2410V.cmd_get_mac_args.buf = buf;
-    Ld2410V.cmd_get_mac_args.cap = sizeof(buf);
+    Ld2410.cmd_get_mac_args.buf = buf;
+    Ld2410.cmd_get_mac_args.cap = sizeof(buf);
     Ld2410.cmd_get_mac(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(14u, Ld2410V.n);
+    TEST_ASSERT_EQUAL_size_t(14u, Ld2410.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(MAC, buf, 14u);
 
     // Set Bluetooth password: word 0x00A9, six octets in natural order. The factory default is the
     // ASCII "HiLink" = 48 69 4C 69 6E 6B.
     static const uint8_t PWD[18] = {0xFD, 0xFC, 0xFB, 0xFA, 0x08, 0x00, 0xA9, 0x00, 0x48,
                                     0x69, 0x4C, 0x69, 0x6E, 0x6B, 0x04, 0x03, 0x02, 0x01};
-    Ld2410V.cmd_set_bt_password_args.buf = buf;
-    Ld2410V.cmd_set_bt_password_args.cap = sizeof(buf);
-    Ld2410V.cmd_set_bt_password_args.password = "HiLink";
+    Ld2410.cmd_set_bt_password_args.buf = buf;
+    Ld2410.cmd_set_bt_password_args.cap = sizeof(buf);
+    Ld2410.cmd_set_bt_password_args.password = "HiLink";
     Ld2410.cmd_set_bt_password(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(18u, Ld2410V.n);
+    TEST_ASSERT_EQUAL_size_t(18u, Ld2410.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(PWD, buf, 18u);
-    Ld2410V.cmd_set_bt_password_args.buf = buf;
-    Ld2410V.cmd_set_bt_password_args.cap = sizeof(buf);
-    Ld2410V.cmd_set_bt_password_args.password = NULL;
+    Ld2410.cmd_set_bt_password_args.buf = buf;
+    Ld2410.cmd_set_bt_password_args.cap = sizeof(buf);
+    Ld2410.cmd_set_bt_password_args.password = NULL;
     Ld2410.cmd_set_bt_password(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(0u, Ld2410V.n);
+    TEST_ASSERT_EQUAL_size_t(0u, Ld2410.n);
 }
 
 // Every command encoder writes nothing into a buffer that cannot hold the whole frame.
 void test_command_encoders_fail_closed(void)
 {
     uint8_t buf[24];
-    Ld2410V.cmd_config_enable_args.buf = NULL;
-    Ld2410V.cmd_config_enable_args.cap = sizeof(buf);
+    Ld2410.cmd_config_enable_args.buf = NULL;
+    Ld2410.cmd_config_enable_args.cap = sizeof(buf);
     Ld2410.cmd_config_enable(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(0u, Ld2410V.n);
-    Ld2410V.cmd_config_enable_args.buf = buf;
-    Ld2410V.cmd_config_enable_args.cap = 13u;
+    TEST_ASSERT_EQUAL_size_t(0u, Ld2410.n);
+    Ld2410.cmd_config_enable_args.buf = buf;
+    Ld2410.cmd_config_enable_args.cap = 13u;
     Ld2410.cmd_config_enable(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(0u, Ld2410V.n);
-    Ld2410V.cmd_config_enable_args.buf = buf;
-    Ld2410V.cmd_config_enable_args.cap = 14u;
+    TEST_ASSERT_EQUAL_size_t(0u, Ld2410.n);
+    Ld2410.cmd_config_enable_args.buf = buf;
+    Ld2410.cmd_config_enable_args.cap = 14u;
     Ld2410.cmd_config_enable(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(14u, Ld2410V.n);
-    Ld2410V.cmd_config_end_args.buf = buf;
-    Ld2410V.cmd_config_end_args.cap = 11u;
+    TEST_ASSERT_EQUAL_size_t(14u, Ld2410.n);
+    Ld2410.cmd_config_end_args.buf = buf;
+    Ld2410.cmd_config_end_args.cap = 11u;
     Ld2410.cmd_config_end(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(0u, Ld2410V.n);
-    Ld2410V.cmd_config_end_args.buf = buf;
-    Ld2410V.cmd_config_end_args.cap = 12u;
+    TEST_ASSERT_EQUAL_size_t(0u, Ld2410.n);
+    Ld2410.cmd_config_end_args.buf = buf;
+    Ld2410.cmd_config_end_args.cap = 12u;
     Ld2410.cmd_config_end(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(12u, Ld2410V.n);
-    Ld2410V.cmd_engineering_args.buf = buf;
-    Ld2410V.cmd_engineering_args.cap = 11u;
-    Ld2410V.cmd_engineering_args.on = PROTO_TRUE;
+    TEST_ASSERT_EQUAL_size_t(12u, Ld2410.n);
+    Ld2410.cmd_engineering_args.buf = buf;
+    Ld2410.cmd_engineering_args.cap = 11u;
+    Ld2410.cmd_engineering_args.on = PROTO_TRUE;
     Ld2410.cmd_engineering(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(0u, Ld2410V.n);
-    Ld2410V.cmd_restart_args.buf = buf;
-    Ld2410V.cmd_restart_args.cap = 11u;
+    TEST_ASSERT_EQUAL_size_t(0u, Ld2410.n);
+    Ld2410.cmd_restart_args.buf = buf;
+    Ld2410.cmd_restart_args.cap = 11u;
     Ld2410.cmd_restart(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(0u, Ld2410V.n);
-    Ld2410V.cmd_bluetooth_args.buf = buf;
-    Ld2410V.cmd_bluetooth_args.cap = 13u;
-    Ld2410V.cmd_bluetooth_args.on = PROTO_TRUE;
+    TEST_ASSERT_EQUAL_size_t(0u, Ld2410.n);
+    Ld2410.cmd_bluetooth_args.buf = buf;
+    Ld2410.cmd_bluetooth_args.cap = 13u;
+    Ld2410.cmd_bluetooth_args.on = PROTO_TRUE;
     Ld2410.cmd_bluetooth(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(0u, Ld2410V.n);
-    Ld2410V.cmd_get_mac_args.buf = buf;
-    Ld2410V.cmd_get_mac_args.cap = 13u;
+    TEST_ASSERT_EQUAL_size_t(0u, Ld2410.n);
+    Ld2410.cmd_get_mac_args.buf = buf;
+    Ld2410.cmd_get_mac_args.cap = 13u;
     Ld2410.cmd_get_mac(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(0u, Ld2410V.n);
-    Ld2410V.cmd_set_bt_password_args.buf = buf;
-    Ld2410V.cmd_set_bt_password_args.cap = 17u;
-    Ld2410V.cmd_set_bt_password_args.password = "HiLink";
+    TEST_ASSERT_EQUAL_size_t(0u, Ld2410.n);
+    Ld2410.cmd_set_bt_password_args.buf = buf;
+    Ld2410.cmd_set_bt_password_args.cap = 17u;
+    Ld2410.cmd_set_bt_password_args.password = "HiLink";
     Ld2410.cmd_set_bt_password(protocore_ld2410_span());
-    TEST_ASSERT_EQUAL_size_t(0u, Ld2410V.n);
+    TEST_ASSERT_EQUAL_size_t(0u, Ld2410.n);
 }
 
 // V1.02 Table 5: an ACK's command word is the request's with 0x0100 set, followed by a 2-octet
@@ -578,16 +578,16 @@ void test_v102_published_ack_frames(void)
     static const uint8_t ENABLE_ACK[18] = {0xFD, 0xFC, 0xFB, 0xFA, 0x08, 0x00, 0xFF, 0x01, 0x00,
                                            0x00, 0x01, 0x00, 0x40, 0x00, 0x04, 0x03, 0x02, 0x01};
     Ld2410Ack a;
-    Ld2410V.parse_ack_args.frame = ENABLE_ACK;
-    Ld2410V.parse_ack_args.len = sizeof(ENABLE_ACK);
-    Ld2410V.parse_ack_args.out = &a;
+    Ld2410.parse_ack_args.frame = ENABLE_ACK;
+    Ld2410.parse_ack_args.len = sizeof(ENABLE_ACK);
+    Ld2410.parse_ack_args.out = &a;
     Ld2410.parse_ack(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
+    TEST_ASSERT_TRUE(Ld2410.ok);
     TEST_ASSERT_EQUAL_HEX16(0x01FFu, a.command); // 0x00FF | 0x0100
     TEST_ASSERT_EQUAL_HEX16(0x0000u, a.status);
-    Ld2410V.ack_ok_args.ack = &a;
+    Ld2410.ack_ok_args.ack = &a;
     Ld2410.ack_ok(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
+    TEST_ASSERT_TRUE(Ld2410.ok);
     TEST_ASSERT_EQUAL_size_t(4u, a.payload_len);
     static const uint8_t PAYLOAD[4] = {0x01, 0x00, 0x40, 0x00};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(PAYLOAD, a.payload, 4u);
@@ -595,35 +595,35 @@ void test_v102_published_ack_frames(void)
     // 2.2.2 end-configuration ACK: status 0, no further data
     static const uint8_t END_ACK[14] = {0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xFE,
                                         0x01, 0x00, 0x00, 0x04, 0x03, 0x02, 0x01};
-    Ld2410V.parse_ack_args.frame = END_ACK;
-    Ld2410V.parse_ack_args.len = sizeof(END_ACK);
-    Ld2410V.parse_ack_args.out = &a;
+    Ld2410.parse_ack_args.frame = END_ACK;
+    Ld2410.parse_ack_args.len = sizeof(END_ACK);
+    Ld2410.parse_ack_args.out = &a;
     Ld2410.parse_ack(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
+    TEST_ASSERT_TRUE(Ld2410.ok);
     TEST_ASSERT_EQUAL_HEX16(0x01FEu, a.command);
     TEST_ASSERT_EQUAL_HEX16(0x0000u, a.status);
     TEST_ASSERT_EQUAL_size_t(0u, a.payload_len);
     TEST_ASSERT_NULL(a.payload);
-    Ld2410V.ack_ok_args.ack = &a;
+    Ld2410.ack_ok_args.ack = &a;
     Ld2410.ack_ok(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
+    TEST_ASSERT_TRUE(Ld2410.ok);
 
     // "0 success, 1 failure": a non-zero status is not an accepted command.
     uint8_t fail[14];
     memcpy(fail, END_ACK, sizeof(END_ACK));
     fail[8] = 0x01u;
-    Ld2410V.parse_ack_args.frame = fail;
-    Ld2410V.parse_ack_args.len = sizeof(fail);
-    Ld2410V.parse_ack_args.out = &a;
+    Ld2410.parse_ack_args.frame = fail;
+    Ld2410.parse_ack_args.len = sizeof(fail);
+    Ld2410.parse_ack_args.out = &a;
     Ld2410.parse_ack(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
+    TEST_ASSERT_TRUE(Ld2410.ok);
     TEST_ASSERT_EQUAL_HEX16(0x0001u, a.status);
-    Ld2410V.ack_ok_args.ack = &a;
+    Ld2410.ack_ok_args.ack = &a;
     Ld2410.ack_ok(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
-    Ld2410V.ack_ok_args.ack = NULL;
+    TEST_ASSERT_FALSE(Ld2410.ok);
+    Ld2410.ack_ok_args.ack = NULL;
     Ld2410.ack_ok(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
+    TEST_ASSERT_FALSE(Ld2410.ok);
 }
 
 // The get-MAC reply is command word 0x01A5 with six address octets after the status; the document
@@ -635,17 +635,17 @@ void test_get_mac_ack_yields_the_address(void)
                                         0x8F, 0x27, 0x2E, 0x1A, 0xCB, 0x36, 0x04, 0x03, 0x02, 0x01};
     Ld2410Ack a;
     uint8_t mac[6] = {0};
-    Ld2410V.parse_ack_args.frame = MAC_ACK;
-    Ld2410V.parse_ack_args.len = sizeof(MAC_ACK);
-    Ld2410V.parse_ack_args.out = &a;
+    Ld2410.parse_ack_args.frame = MAC_ACK;
+    Ld2410.parse_ack_args.len = sizeof(MAC_ACK);
+    Ld2410.parse_ack_args.out = &a;
     Ld2410.parse_ack(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
+    TEST_ASSERT_TRUE(Ld2410.ok);
     TEST_ASSERT_EQUAL_HEX16(0x01A5u, a.command);
     TEST_ASSERT_EQUAL_size_t(6u, a.payload_len);
-    Ld2410V.ack_mac_args.ack = &a;
-    Ld2410V.ack_mac_args.mac = mac;
+    Ld2410.ack_mac_args.ack = &a;
+    Ld2410.ack_mac_args.mac = mac;
     Ld2410.ack_mac(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
+    TEST_ASSERT_TRUE(Ld2410.ok);
     static const uint8_t WANT[6] = {0x8F, 0x27, 0x2E, 0x1A, 0xCB, 0x36};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, mac, 6u);
 
@@ -653,36 +653,36 @@ void test_get_mac_ack_yields_the_address(void)
     uint8_t bad[20];
     memcpy(bad, MAC_ACK, sizeof(MAC_ACK));
     bad[8] = 0x01u; // status failure
-    Ld2410V.parse_ack_args.frame = bad;
-    Ld2410V.parse_ack_args.len = sizeof(bad);
-    Ld2410V.parse_ack_args.out = &a;
+    Ld2410.parse_ack_args.frame = bad;
+    Ld2410.parse_ack_args.len = sizeof(bad);
+    Ld2410.parse_ack_args.out = &a;
     Ld2410.parse_ack(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
-    Ld2410V.ack_mac_args.ack = &a;
-    Ld2410V.ack_mac_args.mac = mac;
+    TEST_ASSERT_TRUE(Ld2410.ok);
+    Ld2410.ack_mac_args.ack = &a;
+    Ld2410.ack_mac_args.mac = mac;
     Ld2410.ack_mac(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
+    TEST_ASSERT_FALSE(Ld2410.ok);
 
     memcpy(bad, MAC_ACK, sizeof(MAC_ACK));
     bad[6] = 0xA4u; // the Bluetooth-enable ACK, not get-MAC
-    Ld2410V.parse_ack_args.frame = bad;
-    Ld2410V.parse_ack_args.len = sizeof(bad);
-    Ld2410V.parse_ack_args.out = &a;
+    Ld2410.parse_ack_args.frame = bad;
+    Ld2410.parse_ack_args.len = sizeof(bad);
+    Ld2410.parse_ack_args.out = &a;
     Ld2410.parse_ack(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
-    Ld2410V.ack_mac_args.ack = &a;
-    Ld2410V.ack_mac_args.mac = mac;
+    TEST_ASSERT_TRUE(Ld2410.ok);
+    Ld2410.ack_mac_args.ack = &a;
+    Ld2410.ack_mac_args.mac = mac;
     Ld2410.ack_mac(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
+    TEST_ASSERT_FALSE(Ld2410.ok);
 
-    Ld2410V.ack_mac_args.ack = NULL;
-    Ld2410V.ack_mac_args.mac = mac;
+    Ld2410.ack_mac_args.ack = NULL;
+    Ld2410.ack_mac_args.mac = mac;
     Ld2410.ack_mac(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
-    Ld2410V.ack_mac_args.ack = &a;
-    Ld2410V.ack_mac_args.mac = NULL;
+    TEST_ASSERT_FALSE(Ld2410.ok);
+    Ld2410.ack_mac_args.ack = &a;
+    Ld2410.ack_mac_args.mac = NULL;
     Ld2410.ack_mac(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
+    TEST_ASSERT_FALSE(Ld2410.ok);
 }
 
 // Table 4: header, an intra-frame length that frames the buffer exactly, and the MFR footer. An
@@ -694,72 +694,72 @@ void test_malformed_ack_frames_are_refused(void)
     Ld2410Ack a;
     uint8_t bad[14];
 
-    Ld2410V.parse_ack_args.frame = NULL;
-    Ld2410V.parse_ack_args.len = sizeof(GOOD);
-    Ld2410V.parse_ack_args.out = &a;
+    Ld2410.parse_ack_args.frame = NULL;
+    Ld2410.parse_ack_args.len = sizeof(GOOD);
+    Ld2410.parse_ack_args.out = &a;
     Ld2410.parse_ack(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
-    Ld2410V.parse_ack_args.frame = GOOD;
-    Ld2410V.parse_ack_args.len = sizeof(GOOD);
-    Ld2410V.parse_ack_args.out = NULL;
+    TEST_ASSERT_FALSE(Ld2410.ok);
+    Ld2410.parse_ack_args.frame = GOOD;
+    Ld2410.parse_ack_args.len = sizeof(GOOD);
+    Ld2410.parse_ack_args.out = NULL;
     Ld2410.parse_ack(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
-    Ld2410V.parse_ack_args.frame = GOOD;
-    Ld2410V.parse_ack_args.len = sizeof(GOOD);
-    Ld2410V.parse_ack_args.out = &a;
+    TEST_ASSERT_FALSE(Ld2410.ok);
+    Ld2410.parse_ack_args.frame = GOOD;
+    Ld2410.parse_ack_args.len = sizeof(GOOD);
+    Ld2410.parse_ack_args.out = &a;
     Ld2410.parse_ack(protocore_ld2410_span());
-    TEST_ASSERT_TRUE(Ld2410V.ok);
-    Ld2410V.parse_ack_args.frame = GOOD;
-    Ld2410V.parse_ack_args.len = 13u;
-    Ld2410V.parse_ack_args.out = &a;
+    TEST_ASSERT_TRUE(Ld2410.ok);
+    Ld2410.parse_ack_args.frame = GOOD;
+    Ld2410.parse_ack_args.len = 13u;
+    Ld2410.parse_ack_args.out = &a;
     Ld2410.parse_ack(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok); // shorter than the smallest ACK
+    TEST_ASSERT_FALSE(Ld2410.ok); // shorter than the smallest ACK
 
     for (size_t k = 0; k < 4u; k++)
     {
         memcpy(bad, GOOD, sizeof(GOOD));
         bad[k] ^= 0xFFu;
-        Ld2410V.parse_ack_args.frame = bad;
-        Ld2410V.parse_ack_args.len = sizeof(GOOD);
-        Ld2410V.parse_ack_args.out = &a;
+        Ld2410.parse_ack_args.frame = bad;
+        Ld2410.parse_ack_args.len = sizeof(GOOD);
+        Ld2410.parse_ack_args.out = &a;
         Ld2410.parse_ack(protocore_ld2410_span());
-        TEST_ASSERT_FALSE(Ld2410V.ok);
+        TEST_ASSERT_FALSE(Ld2410.ok);
 
         memcpy(bad, GOOD, sizeof(GOOD));
         bad[10u + k] ^= 0xFFu;
-        Ld2410V.parse_ack_args.frame = bad;
-        Ld2410V.parse_ack_args.len = sizeof(GOOD);
-        Ld2410V.parse_ack_args.out = &a;
+        Ld2410.parse_ack_args.frame = bad;
+        Ld2410.parse_ack_args.len = sizeof(GOOD);
+        Ld2410.parse_ack_args.out = &a;
         Ld2410.parse_ack(protocore_ld2410_span());
-        TEST_ASSERT_FALSE(Ld2410V.ok);
+        TEST_ASSERT_FALSE(Ld2410.ok);
     }
 
     memcpy(bad, GOOD, sizeof(GOOD));
     bad[4] = 0x03u; // below the command word plus status
-    Ld2410V.parse_ack_args.frame = bad;
-    Ld2410V.parse_ack_args.len = sizeof(GOOD);
-    Ld2410V.parse_ack_args.out = &a;
+    Ld2410.parse_ack_args.frame = bad;
+    Ld2410.parse_ack_args.len = sizeof(GOOD);
+    Ld2410.parse_ack_args.out = &a;
     Ld2410.parse_ack(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
+    TEST_ASSERT_FALSE(Ld2410.ok);
 
     memcpy(bad, GOOD, sizeof(GOOD));
     bad[4] = 0x06u; // a length the buffer cannot hold
-    Ld2410V.parse_ack_args.frame = bad;
-    Ld2410V.parse_ack_args.len = sizeof(GOOD);
-    Ld2410V.parse_ack_args.out = &a;
+    Ld2410.parse_ack_args.frame = bad;
+    Ld2410.parse_ack_args.len = sizeof(GOOD);
+    Ld2410.parse_ack_args.out = &a;
     Ld2410.parse_ack(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
+    TEST_ASSERT_FALSE(Ld2410.ok);
 
     // A report frame is not an ACK: the two envelopes never accept each other's frames.
-    Ld2410V.parse_ack_args.frame = BASIC;
-    Ld2410V.parse_ack_args.len = sizeof(BASIC);
-    Ld2410V.parse_ack_args.out = &a;
+    Ld2410.parse_ack_args.frame = BASIC;
+    Ld2410.parse_ack_args.len = sizeof(BASIC);
+    Ld2410.parse_ack_args.out = &a;
     Ld2410.parse_ack(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
+    TEST_ASSERT_FALSE(Ld2410.ok);
     Ld2410Report r;
-    Ld2410V.parse_report_args.frame = GOOD;
-    Ld2410V.parse_report_args.len = sizeof(GOOD);
-    Ld2410V.parse_report_args.out = &r;
+    Ld2410.parse_report_args.frame = GOOD;
+    Ld2410.parse_report_args.len = sizeof(GOOD);
+    Ld2410.parse_report_args.out = &r;
     Ld2410.parse_report(protocore_ld2410_span());
-    TEST_ASSERT_FALSE(Ld2410V.ok);
+    TEST_ASSERT_FALSE(Ld2410.ok);
 }

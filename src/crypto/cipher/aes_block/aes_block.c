@@ -27,34 +27,33 @@ PROTOCORE_BEGIN_DECLS
 // --- the entries -----------------------------------------------------------
 
 // Expand the key into 4 * (nk + 7) round-key words in the caller's rk.
-void protocore_aes_block_key_expand(uint8_t *restrict work)
+static void aes_block_key_expand(uint8_t *restrict work)
 {
     (void)work;
-    AesBlockV.ok = PROTO_FALSE;
-    if (!AesBlockV.key_expand_args.key || !AesBlockV.key_expand_args.rk)
+    AesBlock.ok = PROTO_FALSE;
+    if (!AesBlock.key_expand_args.key || !AesBlock.key_expand_args.rk)
     {
         return;
     }
-    protocore_aes_key_expand(AesBlockV.key_expand_args.key, AesBlockV.key_expand_args.nk, AesBlockV.key_expand_args.rk);
-    AesBlockV.ok = PROTO_TRUE;
+    protocore_aes_key_expand(AesBlock.key_expand_args.key, AesBlock.key_expand_args.nk, AesBlock.key_expand_args.rk);
+    AesBlock.ok = PROTO_TRUE;
 }
 
 // Encrypt one 16-byte block under the caller's schedule, nr rounds.
-void protocore_aes_block_encrypt_block(uint8_t *restrict work)
+static void aes_block_encrypt_block(uint8_t *restrict work)
 {
     (void)work;
-    AesBlockV.ok = PROTO_FALSE;
-    if (!AesBlockV.encrypt_block_args.rk || !AesBlockV.encrypt_block_args.in || !AesBlockV.encrypt_block_args.out)
+    AesBlock.ok = PROTO_FALSE;
+    if (!AesBlock.encrypt_block_args.rk || !AesBlock.encrypt_block_args.in || !AesBlock.encrypt_block_args.out)
     {
         return;
     }
-    protocore_aes_encrypt_block(AesBlockV.encrypt_block_args.rk, AesBlockV.encrypt_block_args.nr,
-                                AesBlockV.encrypt_block_args.in, AesBlockV.encrypt_block_args.out);
-    AesBlockV.ok = PROTO_TRUE;
+    protocore_aes_encrypt_block(AesBlock.encrypt_block_args.rk, AesBlock.encrypt_block_args.nr,
+                                AesBlock.encrypt_block_args.in, AesBlock.encrypt_block_args.out);
+    AesBlock.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-AesBlockVars AesBlockV;
+AesBlockNs AesBlock = {.key_expand = aes_block_key_expand, .encrypt_block = aes_block_encrypt_block};
 
 PROTOCORE_END_DECLS
 

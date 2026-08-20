@@ -31,14 +31,14 @@ void dbench_run(void)
 
     // A pre-built PReq (MN 240 -> CN 5, 4-byte PDO) to feed the parse bench: [PREQ][dest][src][payload].
     static uint8_t preq_frame[16];
-    PowerlinkV.preq_args.dest_cn = 5;
-    PowerlinkV.preq_args.source = EPL_NODE_MN;
-    PowerlinkV.preq_args.pdo = pdo;
-    PowerlinkV.preq_args.pdo_len = sizeof(pdo);
-    PowerlinkV.preq_args.out = preq_frame;
-    PowerlinkV.preq_args.cap = sizeof(preq_frame);
+    Powerlink.preq_args.dest_cn = 5;
+    Powerlink.preq_args.source = EPL_NODE_MN;
+    Powerlink.preq_args.pdo = pdo;
+    Powerlink.preq_args.pdo_len = sizeof(pdo);
+    Powerlink.preq_args.out = preq_frame;
+    Powerlink.preq_args.cap = sizeof(preq_frame);
     Powerlink.preq(powerlink_work);
-    size_t preq_len = PowerlinkV.n;
+    size_t preq_len = Powerlink.n;
 
     for (;;)
     {
@@ -47,31 +47,32 @@ void dbench_run(void)
         volatile bool bsink = false;
 
         // SoC: MN -> broadcast, no payload (start of the isochronous cycle).
-        PowerlinkV.soc_args.source = EPL_NODE_MN;
-        PowerlinkV.soc_args.out = out;
-        PowerlinkV.soc_args.cap = sizeof(out);
-        DBENCH_OP("Powerlink.soc", 200000, sink += (Powerlink.soc(powerlink_work), PowerlinkV.n));
+        Powerlink.soc_args.source = EPL_NODE_MN;
+        Powerlink.soc_args.out = out;
+        Powerlink.soc_args.cap = sizeof(out);
+        DBENCH_OP("Powerlink.soc", 200000, sink += (Powerlink.soc(powerlink_work), Powerlink.n));
         // PReq: MN -> CN 5 carrying the 4-byte output PDO.
-        PowerlinkV.preq_args.dest_cn = 5;
-        PowerlinkV.preq_args.source = EPL_NODE_MN;
-        PowerlinkV.preq_args.pdo = pdo;
-        PowerlinkV.preq_args.pdo_len = sizeof(pdo);
-        PowerlinkV.preq_args.out = out;
-        PowerlinkV.preq_args.cap = sizeof(out);
-        DBENCH_OP("Powerlink.preq x4B", 200000, sink += (Powerlink.preq(powerlink_work), PowerlinkV.n));
+        Powerlink.preq_args.dest_cn = 5;
+        Powerlink.preq_args.source = EPL_NODE_MN;
+        Powerlink.preq_args.pdo = pdo;
+        Powerlink.preq_args.pdo_len = sizeof(pdo);
+        Powerlink.preq_args.out = out;
+        Powerlink.preq_args.cap = sizeof(out);
+        DBENCH_OP("Powerlink.preq x4B", 200000,
+                  sink += (Powerlink.preq(powerlink_work), Powerlink.n));
         // PRes: CN 5 -> broadcast carrying its 4-byte input PDO.
-        PowerlinkV.pres_args.source_cn = 5;
-        PowerlinkV.pres_args.pdo = pdo;
-        PowerlinkV.pres_args.pdo_len = sizeof(pdo);
-        PowerlinkV.pres_args.out = out;
-        PowerlinkV.pres_args.cap = sizeof(out);
-        DBENCH_OP("Powerlink.pres x4B", 200000, sink += (Powerlink.pres(powerlink_work), PowerlinkV.n));
+        Powerlink.pres_args.source_cn = 5;
+        Powerlink.pres_args.pdo = pdo;
+        Powerlink.pres_args.pdo_len = sizeof(pdo);
+        Powerlink.pres_args.out = out;
+        Powerlink.pres_args.cap = sizeof(out);
+        DBENCH_OP("Powerlink.pres x4B", 200000, sink += (Powerlink.pres(powerlink_work), Powerlink.n));
         // Parse the pre-built PReq back into an EplFrame.
         EplFrame f;
-        PowerlinkV.parse_args.frame = preq_frame;
-        PowerlinkV.parse_args.len = preq_len;
-        PowerlinkV.parse_args.out = &f;
-        DBENCH_OP("Powerlink.parse preq", 200000, bsink |= (Powerlink.parse(powerlink_work), PowerlinkV.ok));
+        Powerlink.parse_args.frame = preq_frame;
+        Powerlink.parse_args.len = preq_len;
+        Powerlink.parse_args.out = &f;
+        DBENCH_OP("Powerlink.parse preq", 200000, bsink |= (Powerlink.parse(powerlink_work), Powerlink.ok));
 
         (void)sink;
         (void)bsink;

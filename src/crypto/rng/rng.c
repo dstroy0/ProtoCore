@@ -86,12 +86,12 @@ static RngOwnCtx s_rng;
 static void rng_chacha(uint8_t *restrict work, const uint8_t *key, const uint8_t *iv, uint64_t counter,
                        const uint8_t *in, uint8_t *out, size_t len)
 {
-    Chacha20V.xor_args.key = key;
-    Chacha20V.xor_args.iv = iv;
-    Chacha20V.xor_args.counter = counter;
-    Chacha20V.xor_args.in = in;
-    Chacha20V.xor_args.out = out;
-    Chacha20V.xor_args.len = len;
+    Chacha20.xor_args.key = key;
+    Chacha20.xor_args.iv = iv;
+    Chacha20.xor_args.counter = counter;
+    Chacha20.xor_args.in = in;
+    Chacha20.xor_args.out = out;
+    Chacha20.xor_args.len = len;
     Chacha20.xor_(RNG_CHACHA(work));
 }
 
@@ -125,10 +125,10 @@ uint8_t *protocore_rng_span(void)
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_rng_fill(uint8_t *restrict work)
+static void rng_fill(uint8_t *restrict work)
 {
-    RngV.ok = PROTO_FALSE;
-    if (!RngV.fill_args.out || RngV.fill_args.len == 0)
+    Rng.ok = PROTO_FALSE;
+    if (!Rng.fill_args.out || Rng.fill_args.len == 0)
     {
         return;
     }
@@ -136,28 +136,27 @@ void protocore_rng_fill(uint8_t *restrict work)
     uint8_t *key = RNG_KEY(work);
     uint8_t *iv = RNG_IV(work);
     uint8_t *next = RNG_NEXT(work);
-    const size_t len = RngV.fill_args.len;
+    const size_t len = Rng.fill_args.len;
     if (!ctx->seeded || ctx->drawn >= PROTOCORE_RAND_RESEED_BYTES || len >= PROTOCORE_RAND_RESEED_BYTES - ctx->drawn)
     {
         rng_platform_seed(work);
     }
     rng_chacha(work, key, iv, 0, NULL, next, PROTOCORE_RAND_SEED_LEN);
-    rng_chacha(work, key, iv, 1, NULL, RngV.fill_args.out, len);
+    rng_chacha(work, key, iv, 1, NULL, Rng.fill_args.out, len);
     mem.cpy(key, next, PROTOCORE_RAND_SEED_LEN);
     protocore_secure_wipe(next, PROTOCORE_RAND_SEED_LEN);
     ctx->drawn += len;
-    RngV.ok = PROTO_TRUE;
+    Rng.ok = PROTO_TRUE;
 }
 
-void protocore_rng_reseed(uint8_t *restrict work)
+static void rng_reseed(uint8_t *restrict work)
 {
-    RngV.ok = PROTO_FALSE;
+    Rng.ok = PROTO_FALSE;
     rng_platform_seed(work);
-    RngV.ok = PROTO_TRUE;
+    Rng.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-RngVars RngV;
+RngNs Rng = {.fill = rng_fill, .reseed = rng_reseed};
 
 PROTOCORE_END_DECLS
 

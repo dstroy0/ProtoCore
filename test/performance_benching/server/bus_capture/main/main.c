@@ -64,17 +64,17 @@ void dbench_run(void)
     {
         DBENCH_BANNER("bus_capture");
         volatile size_t sink = 0;
-        BusCaptureV.can_to_socketcan_args.f = &std8;
-        BusCaptureV.can_to_socketcan_args.out = out;
-        BusCaptureV.can_to_socketcan_args.cap = sizeof(out);
+        BusCapture.can_to_socketcan_args.f = &std8;
+        BusCapture.can_to_socketcan_args.out = out;
+        BusCapture.can_to_socketcan_args.cap = sizeof(out);
         DBENCH_BULK("can_to_socketcan std8", 100000, PROTOCORE_SOCKETCAN_FRAME_LEN,
-                    (BusCapture.can_to_socketcan(protocore_bus_capture_span()), sink += BusCaptureV.n));
+                    (BusCapture.can_to_socketcan(protocore_bus_capture_span()), sink += BusCapture.n));
         DBENCH_OP("can_to_socketcan ext2", 100000, sink += can_to_socketcan(&ext2, out, sizeof(out)));
         DBENCH_OP("can_to_socketcan rtr4", 100000, sink += can_to_socketcan(&rtr4, out, sizeof(out)));
-        PcapV.args.out = pcap_hdr;
-        PcapV.args.cap = sizeof(pcap_hdr);
-        PcapV.args.linktype = PROTOCORE_DLT_CAN_SOCKETCAN;
-        DBENCH_OP("Pcap.global_header can", 100000, Pcap.global_header(pcap_work); sink += PcapV.n);
+        Pcap.args.out = pcap_hdr;
+        Pcap.args.cap = sizeof(pcap_hdr);
+        Pcap.args.linktype = PROTOCORE_DLT_CAN_SOCKETCAN;
+        DBENCH_OP("Pcap.global_header can", 100000, Pcap.global_header(pcap_work); sink += Pcap.n);
         (void)sink;
         DBENCH_DONE();
     }

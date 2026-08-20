@@ -29,6 +29,7 @@
 
 PROTOCORE_BEGIN_DECLS
 
+
 #define PROTOCORE_H2_FRAME_HDR_CAP 16u
 /** @brief The widest frame a received frame provokes us to send: a header plus 8 opaque bytes. */
 #define PROTOCORE_H2_CTL_FRAME_MAX 17u
@@ -60,17 +61,20 @@ typedef struct
     void *io;  ///< opaque, passed to write()
     void *app; ///< opaque, passed to the on_* callbacks
 } H2Callbacks;
+
 /** @brief What ::H2ConnNs::init installs. */
 typedef struct
 {
     const H2Callbacks *cb; ///< the callbacks the engine drives
 } H2ConnInitArgs;
+
 /** @brief The inbound bytes ::H2ConnNs::recv feeds through the state machine. */
 typedef struct
 {
     const uint8_t *data; ///< the bytes that arrived
     size_t len;          ///< how many
 } H2ConnRecvArgs;
+
 /** @brief RFC 9113 sec 8.3: what one HEADERS + DATA response carries. */
 typedef struct
 {
@@ -80,11 +84,13 @@ typedef struct
     const char *body;         ///< its body bytes
     size_t body_len;          ///< how many
 } H2ConnRespondArgs;
+
 /** @brief RFC 9113 sec 6.8: the error a graceful shutdown reports. */
 typedef struct
 {
     uint32_t error; ///< the code the GOAWAY carries
 } H2ConnGoawayArgs;
+
 /**
  * @brief One HTTP/2 connection's engine (RFC 9113).
  *
@@ -110,38 +116,17 @@ typedef struct
     H2ConnRecvArgs recv_args;       ///< the members ::H2ConnNs::recv takes
     H2ConnRespondArgs respond_args; ///< the members ::H2ConnNs::respond takes
     H2ConnGoawayArgs goaway_args;   ///< the members ::H2ConnNs::goaway takes
-    proto_bool ok;                  ///< a call's true/false outcome
-} H2ConnVars;
 
-/** @brief The operands and the outcome. */
-extern H2ConnVars H2ConnV;
+    proto_bool ok; ///< a call's true/false outcome
 
-/** @brief The entries. */
-typedef struct
-{
     void (*const init)(uint8_t *restrict work);
     void (*const recv)(uint8_t *restrict work);
     void (*const respond)(uint8_t *restrict work);
     void (*const goaway)(uint8_t *restrict work);
 } H2ConnNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in H2ConnV or a region of the borrow at a fixed offset.
-void protocore_h2_conn_init(uint8_t *restrict work);
-void protocore_h2_conn_recv(uint8_t *restrict work);
-void protocore_h2_conn_respond(uint8_t *restrict work);
-void protocore_h2_conn_goaway(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `H2Conn.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const H2ConnNs H2Conn __attribute__((unused)) = {
-    .init = protocore_h2_conn_init,
-    .recv = protocore_h2_conn_recv,
-    .respond = protocore_h2_conn_respond,
-    .goaway = protocore_h2_conn_goaway,
-};
+/** @brief The one symbol this module exports. */
+extern H2ConnNs H2Conn;
 
 PROTOCORE_END_DECLS
 

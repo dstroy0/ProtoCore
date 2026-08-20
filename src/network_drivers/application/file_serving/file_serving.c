@@ -118,36 +118,36 @@ static int file_root(uint8_t *restrict work)
 {
     if (FILE_SERVING_CTX(work)->root < 0)
     {
-        FsV.mount = "/";
+        Fs.mount = "/";
         Fs.begin(protocore_filesystem_span());
-        FILE_SERVING_CTX(work)->root = FsV.i32;
+        FILE_SERVING_CTX(work)->root = Fs.i32;
     }
     return FILE_SERVING_CTX(work)->root;
 }
 
 // The entries this file calls before reaching their definitions.
-void protocore_file_serving_file_send_pump(uint8_t *restrict work);
-void protocore_file_serving_http_rfc1123(uint8_t *restrict work);
-void protocore_file_serving_serve_file_internal(uint8_t *restrict work);
+static void file_serving_file_send_pump(uint8_t *restrict work);
+static void file_serving_http_rfc1123(uint8_t *restrict work);
+static void file_serving_serve_file_internal(uint8_t *restrict work);
 
-void protocore_file_serving_holds_slot(uint8_t *restrict work)
+static void file_serving_holds_slot(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t slot = FileServingV.holds_slot_args.slot;
+    uint8_t slot = FileServing.holds_slot_args.slot;
 
-    FileServingV.ok = file_send[slot].active;
+    FileServing.ok = file_send[slot].active;
 }
 
 // HTTP-date helpers (shared by file serving's Last-Modified / If-Modified-Since and
 // WebDAV's getlastmodified / creationdate). WEBDAV requires FILE_SERVING, so this is
 // the single home for both. Format a time_t as an RFC 1123 GMT date; leaves @p out
 // empty when the timestamp is zero/unavailable.
-void protocore_file_serving_http_rfc1123(uint8_t *restrict work)
+static void file_serving_http_rfc1123(uint8_t *restrict work)
 {
     (void)work;
-    int64_t epoch = FileServingV.http_rfc1123_args.epoch;
-    char *out = FileServingV.http_rfc1123_args.out;
-    size_t cap = FileServingV.http_rfc1123_args.cap;
+    int64_t epoch = FileServing.http_rfc1123_args.epoch;
+    char *out = FileServing.http_rfc1123_args.out;
+    size_t cap = FileServing.http_rfc1123_args.cap;
 
     out[0] = '\0';
     if (epoch <= 0)
@@ -157,10 +157,10 @@ void protocore_file_serving_http_rfc1123(uint8_t *restrict work)
     // The API states its own width; time_t is whatever the toolchain picked (32 or 64 bit) and
     // only the conversion seam is allowed to name it.
     struct tm tmv;
-    TimeCompatV.args.epoch = epoch;
-    TimeCompatV.args.out = &tmv;
+    TimeCompat.args.epoch = epoch;
+    TimeCompat.args.out = &tmv;
     TimeCompat.gmtime(time_compat_work); // reentrant: never the shared static buffer (worker-safe)
-    if (!TimeCompatV.tm_out)
+    if (!TimeCompat.tm_out)
     {
         return;
     }
@@ -201,10 +201,10 @@ static proto_bool http_not_modified_since(time_t mtime, const char *ims)
     int imon = (int)(mp - MONTHS) / 3; // 0-based, matches struct tm tm_mon
 
     struct tm tf;
-    TimeCompatV.args.epoch = (uint32_t)mtime;
-    TimeCompatV.args.out = &tf;
+    TimeCompat.args.epoch = (uint32_t)mtime;
+    TimeCompat.args.out = &tf;
     TimeCompat.gmtime(time_compat_work); // reentrant: never the shared static buffer (worker-safe)
-    if (!TimeCompatV.tm_out)
+    if (!TimeCompat.tm_out)
     {
         return PROTO_FALSE;
     }
@@ -284,49 +284,49 @@ static proto_bool inm_matches(const char *inm, const char *etag)
     return PROTO_FALSE;
 }
 
-void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
+static void file_serving_serve_file_internal(uint8_t *restrict work)
 {
-    uint8_t slot_id = FileServingV.serve_file_internal_args.slot_id;
-    proto_bool head = FileServingV.serve_file_internal_args.head;
-    const protocore_mnt_backend *file_sys = FileServingV.serve_file_internal_args.file_sys;
-    const char *fs_path = FileServingV.serve_file_internal_args.fs_path;
-    const char *content_type = FileServingV.serve_file_internal_args.content_type;
-    const char *content_encoding = FileServingV.serve_file_internal_args.content_encoding;
+    uint8_t slot_id = FileServing.serve_file_internal_args.slot_id;
+    proto_bool head = FileServing.serve_file_internal_args.head;
+    const protocore_mnt_backend *file_sys = FileServing.serve_file_internal_args.file_sys;
+    const char *fs_path = FileServing.serve_file_internal_args.fs_path;
+    const char *content_type = FileServing.serve_file_internal_args.content_type;
+    const char *content_encoding = FileServing.serve_file_internal_args.content_encoding;
 
-    FsV.path.root = file_root(work);
-    FsV.path.dir = fs_path;
-    FsV.path.name = "";
-    FsV.io.mode = PROTOCORE_MNT_READ;
+    Fs.path.root = file_root(work);
+    Fs.path.dir = fs_path;
+    Fs.path.name = "";
+    Fs.io.mode = PROTOCORE_MNT_READ;
     Fs.open(protocore_filesystem_span());
-    int fh = FsV.i32;
+    int fh = Fs.i32;
     if (fh < 0)
     {
         send_text(slot_id, 404, PROTOCORE_MIME_TEXT_PLAIN, "Not Found");
         return;
     }
 
-    ConnPoolV.slot = slot_id;
+    ConnPool.slot = slot_id;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPoolV.ok)
+    if (!ConnPool.ok)
     {
-        FsV.io.handle = fh;
+        Fs.io.handle = fh;
         Fs.close(protocore_filesystem_span());
-        HttpParserV.reset_args.req = &http_pool[slot_id];
-        HttpParserV.reset(protocore_http_parser_span());
+        HttpParser.reset_args.req = &http_pool[slot_id];
+        HttpParser.reset(protocore_http_parser_span());
         return;
     }
 
     // Size and mtime come from one stat, not two calls on the handle: they are two fields of the same
     // directory record, and asking separately is two lookups of what one read already had.
     protocore_mnt_stat st;
-    FsV.path.root = file_root(work);
-    FsV.path.dir = fs_path;
-    FsV.path.name = "";
-    FsV.io.stat = &st;
-    FsV.stat(protocore_filesystem_span());
-    if (!FsV.ok)
+    Fs.path.root = file_root(work);
+    Fs.path.dir = fs_path;
+    Fs.path.name = "";
+    Fs.io.stat = &st;
+    Fs.stat(protocore_filesystem_span());
+    if (!Fs.ok)
     {
-        FsV.io.handle = fh;
+        Fs.io.handle = fh;
         Fs.close(protocore_filesystem_span());
         send_text(slot_id, 404, PROTOCORE_MIME_TEXT_PLAIN, "Not Found");
         return;
@@ -372,10 +372,10 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
     char lm_date[40];
     char lastmod_line[17 + sizeof(lm_date)]; // "Last-Modified: " + date + "\r\n" + NUL
     lastmod_line[0] = '\0';
-    FileServingV.http_rfc1123_args.epoch = mtime;
-    FileServingV.http_rfc1123_args.out = lm_date;
-    FileServingV.http_rfc1123_args.cap = sizeof(lm_date);
-    protocore_file_serving_http_rfc1123(work);
+    FileServing.http_rfc1123_args.epoch = mtime;
+    FileServing.http_rfc1123_args.out = lm_date;
+    FileServing.http_rfc1123_args.cap = sizeof(lm_date);
+    file_serving_http_rfc1123(work);
     if (lm_date[0])
     {
         protocore_sb sb_lastmod_line = {lastmod_line, sizeof(lastmod_line), 0, PROTO_TRUE};
@@ -390,18 +390,18 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
 
     // Both reads are staged before the choice: each is a lookup over the request's own headers, so
     // taking both costs a scan and neither can be left in the middle of the conditional.
-    HttpParserV.get_header_args.req = &http_pool[slot_id];
-    HttpParserV.get_header_args.key = "If-None-Match";
-    HttpParserV.get_header(protocore_http_parser_span());
-    const char *inm = HttpParserV.text;
-    HttpParserV.get_header_args.req = &http_pool[slot_id];
-    HttpParserV.get_header_args.key = "If-Modified-Since";
-    HttpParserV.get_header(protocore_http_parser_span());
-    const char *ims = HttpParserV.text;
+    HttpParser.get_header_args.req = &http_pool[slot_id];
+    HttpParser.get_header_args.key = "If-None-Match";
+    HttpParser.get_header(protocore_http_parser_span());
+    const char *inm = HttpParser.text;
+    HttpParser.get_header_args.req = &http_pool[slot_id];
+    HttpParser.get_header_args.key = "If-Modified-Since";
+    HttpParser.get_header(protocore_http_parser_span());
+    const char *ims = HttpParser.text;
     proto_bool not_modified = inm ? inm_matches(inm, etag) : http_not_modified_since(mtime, ims);
     if (not_modified)
     {
-        FsV.io.handle = fh;
+        Fs.io.handle = fh;
         Fs.close(protocore_filesystem_span());
         char h304[RESP_HDR_BUF_SIZE];
         protocore_sb sb_h304 = {h304, sizeof(h304), 0, PROTO_TRUE};
@@ -414,9 +414,9 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
         Sb.put(&sb_h304, cl);
         Sb.put(&sb_h304, "\r\n");
         int n304 = (int)Sb.finish(&sb_h304);
-        ConnPoolV.slot = slot_id;
-        ConnPoolV.io.data = h304;
-        ConnPoolV.io.len = (proto_u16)n304;
+        ConnPool.slot = slot_id;
+        ConnPool.io.data = h304;
+        ConnPool.io.len = (proto_u16)n304;
         ConnPool.send_flush(protocore_conn_pool_span()); // header-only reply: write and flush in one marshal
         protocore_resp_end(slot_id, 304, 0, keep, /*pre_flushed=*/PROTO_TRUE);
         return;
@@ -447,19 +447,19 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
     accept_ranges = "Accept-Ranges: bytes\r\n"; // advertise range support on every file response
     size_t r_start = 0;
     size_t r_end = 0;
-    HttpParserV.get_header_args.req = &http_pool[slot_id];
-    HttpParserV.get_header_args.key = "Range";
-    HttpParserV.get_header(protocore_http_parser_span());
-    HttpRangeV.http_parse_byte_range_args.hdr = HttpParserV.text;
-    HttpRangeV.http_parse_byte_range_args.size = file_size;
-    HttpRangeV.http_parse_byte_range_args.out_start = &r_start;
-    HttpRangeV.http_parse_byte_range_args.out_end = &r_end;
+    HttpParser.get_header_args.req = &http_pool[slot_id];
+    HttpParser.get_header_args.key = "Range";
+    HttpParser.get_header(protocore_http_parser_span());
+    HttpRange.http_parse_byte_range_args.hdr = HttpParser.text;
+    HttpRange.http_parse_byte_range_args.size = file_size;
+    HttpRange.http_parse_byte_range_args.out_start = &r_start;
+    HttpRange.http_parse_byte_range_args.out_end = &r_end;
     HttpRange.http_parse_byte_range(http_range_work);
-    int rr = HttpRangeV.n;
+    int rr = HttpRange.n;
     if (rr < 0)
     {
         // Unsatisfiable range -> 416 with Content-Range: bytes */<size>.
-        FsV.io.handle = fh;
+        Fs.io.handle = fh;
         Fs.close(protocore_filesystem_span());
         char h416[RESP_HDR_BUF_SIZE];
         protocore_sb sb_h416 = {h416, sizeof(h416), 0, PROTO_TRUE};
@@ -470,9 +470,9 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
         Sb.put(&sb_h416, cl);
         Sb.put(&sb_h416, "\r\n");
         int n416 = (int)Sb.finish(&sb_h416);
-        ConnPoolV.slot = slot_id;
-        ConnPoolV.io.data = h416;
-        ConnPoolV.io.len = (proto_u16)n416;
+        ConnPool.slot = slot_id;
+        ConnPool.io.data = h416;
+        ConnPool.io.len = (proto_u16)n416;
         ConnPool.send_flush(protocore_conn_pool_span());
         protocore_resp_end(slot_id, 416, 0, keep, /*pre_flushed=*/PROTO_TRUE);
         return;
@@ -495,10 +495,10 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
         }
         // A backend that cannot seek serves the whole representation instead, which keeps the body
         // matching the headers. RFC 9110 14.2 permits a server to ignore Range.
-        FsV.io.handle = fh;
-        FsV.io.off = (uint64_t)r_start;
+        Fs.io.handle = fh;
+        Fs.io.off = (uint64_t)r_start;
         Fs.seek(protocore_filesystem_span());
-        if (FsV.ok)
+        if (Fs.ok)
         {
             body_off = r_start;
         }
@@ -516,9 +516,9 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
     Sb.put(&sb_header, "HTTP/1.1 ");
     Sb.i64(&sb_header, (int64_t)(status));
     Sb.put(&sb_header, " ");
-    HttpV.code = status;
+    Http.code = status;
     Http.status_text(protocore_http_span());
-    Sb.put(&sb_header, HttpV.text);
+    Sb.put(&sb_header, Http.text);
     Sb.put(&sb_header, "\r\nContent-Type: ");
     Sb.put(&sb_header, content_type);
     Sb.put(&sb_header, "\r\nContent-Length: ");
@@ -539,15 +539,15 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
         header[0] = '\0';
     }
 
-    ConnPoolV.slot = slot_id;
-    ConnPoolV.io.data = header;
-    ConnPoolV.io.len = (proto_u16)hlen;
-    ConnPoolV.send(protocore_conn_pool_span());
+    ConnPool.slot = slot_id;
+    ConnPool.io.data = header;
+    ConnPool.io.len = (proto_u16)hlen;
+    ConnPool.send(protocore_conn_pool_span());
 
     // HEAD or empty body: headers only, finish now.
     if (head || body_len == 0)
     {
-        FsV.io.handle = fh;
+        Fs.io.handle = fh;
         Fs.close(protocore_filesystem_span());
         protocore_resp_end(slot_id, status, 0, keep, /*pre_flushed=*/PROTO_FALSE);
         return;
@@ -565,18 +565,18 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
     s->total = (int)body_len;
     s->keep = keep;
     s->active = PROTO_TRUE;
-    FileServingV.file_send_pump_args.slot_id = slot_id;
-    protocore_file_serving_file_send_pump(work);
+    FileServing.file_send_pump_args.slot_id = slot_id;
+    file_serving_file_send_pump(work);
 }
 
 // Page out a pending file response across worker loops: send up to ConnPool.sndbuf()
 // bytes now and return; the next loop resumes (woken by the sent callback) until the
 // whole body has been queued, then finish the response. Bounded per loop, never
 // truncates, never blocks the worker.
-void protocore_file_serving_file_send_pump(uint8_t *restrict work)
+static void file_serving_file_send_pump(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t slot_id = FileServingV.file_send_pump_args.slot_id;
+    uint8_t slot_id = FileServing.file_send_pump_args.slot_id;
 
     FileSend *s = &file_send[slot_id];
     if (!s->active)
@@ -584,12 +584,12 @@ void protocore_file_serving_file_send_pump(uint8_t *restrict work)
         return;
     }
 
-    ConnPoolV.slot = slot_id;
+    ConnPool.slot = slot_id;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPoolV.ok)
+    if (!ConnPool.ok)
     {
         // Connection went away mid-transfer: drop the source and the continuation.
-        FsV.io.handle = s->fh;
+        Fs.io.handle = s->fh;
         Fs.close(protocore_filesystem_span());
         s->active = PROTO_FALSE;
         return;
@@ -597,18 +597,18 @@ void protocore_file_serving_file_send_pump(uint8_t *restrict work)
 
     // A file body still being paged out is active, not idle: keep the CONN_TIMEOUT_MS idle sweep
     // off it so a transient send stall on a large file cannot reap the slot mid-transfer.
-    ConnPoolV.slot = slot_id;
+    ConnPool.slot = slot_id;
     ConnPool.touch_active(protocore_conn_pool_span());
 
     uint8_t chunk[FILE_CHUNK_SIZE];
     while (s->remaining > 0)
     {
-        ConnPoolV.slot = slot_id;
+        ConnPool.slot = slot_id;
         ConnPool.sndbuf(protocore_conn_pool_span());
-        proto_u16 avail = ConnPoolV.u16;
+        proto_u16 avail = ConnPool.u16;
         if (avail == 0)
         {
-            ConnPoolV.slot = slot_id;
+            ConnPool.slot = slot_id;
             ConnPool.flush(protocore_conn_pool_span()); // push what is queued; resume on a later loop
             return;
         }
@@ -619,35 +619,35 @@ void protocore_file_serving_file_send_pump(uint8_t *restrict work)
         }
         // The backend reports a fault as -1 and end-of-data as 0; both stop the transfer, and the
         // comparison is <= so a fault can never be added to the offset as a negative count.
-        FsV.io.handle = s->fh;
-        FsV.io.buf = chunk;
-        FsV.io.n = want;
+        Fs.io.handle = s->fh;
+        Fs.io.buf = chunk;
+        Fs.io.n = want;
         Fs.read(protocore_filesystem_span());
-        int n = FsV.i32;
+        int n = Fs.i32;
         if (n <= 0)
         {
             s->remaining = 0; // read error / short file: stop (response will be short)
             break;
         }
-        ConnPoolV.slot = slot_id;
-        ConnPoolV.io.data = chunk;
-        ConnPoolV.io.len = (proto_u16)n;
-        ConnPoolV.send(protocore_conn_pool_span());
-        if (!ConnPoolV.ok)
+        ConnPool.slot = slot_id;
+        ConnPool.io.data = chunk;
+        ConnPool.io.len = (proto_u16)n;
+        ConnPool.send(protocore_conn_pool_span());
+        if (!ConnPool.ok)
         {
             // Un-read the bytes that did not go out so the next loop resends them. A backend that
             // cannot rewind would resume at the wrong offset, so the transfer ends there instead.
-            FsV.io.handle = s->fh;
-            FsV.io.off = s->off;
+            Fs.io.handle = s->fh;
+            Fs.io.off = s->off;
             Fs.seek(protocore_filesystem_span());
-            if (!FsV.ok)
+            if (!Fs.ok)
             {
-                FsV.io.handle = s->fh;
+                Fs.io.handle = s->fh;
                 Fs.close(protocore_filesystem_span());
                 s->active = PROTO_FALSE;
                 s->remaining = 0;
             }
-            ConnPoolV.slot = slot_id;
+            ConnPool.slot = slot_id;
             ConnPool.flush(protocore_conn_pool_span());
             return;
         }
@@ -656,41 +656,41 @@ void protocore_file_serving_file_send_pump(uint8_t *restrict work)
     }
 
     // Whole body queued: finish the response (flush, keep-alive/close, log, reset).
-    FsV.io.handle = s->fh;
+    Fs.io.handle = s->fh;
     Fs.close(protocore_filesystem_span());
     s->active = PROTO_FALSE;
-    ConnPoolV.slot = slot_id;
+    ConnPool.slot = slot_id;
     ConnPool.flush(protocore_conn_pool_span());
     protocore_resp_end(slot_id, s->status, s->total, s->keep, /*pre_flushed=*/PROTO_FALSE);
 }
 
-void protocore_file_serving_serve_file(uint8_t *restrict work)
+static void file_serving_serve_file(uint8_t *restrict work)
 {
-    uint8_t slot_id = FileServingV.serve_file_args.slot_id;
-    const protocore_mnt_backend *file_sys = FileServingV.serve_file_args.file_sys;
-    const char *fs_path = FileServingV.serve_file_args.fs_path;
-    const char *content_type = FileServingV.serve_file_args.content_type;
+    uint8_t slot_id = FileServing.serve_file_args.slot_id;
+    const protocore_mnt_backend *file_sys = FileServing.serve_file_args.file_sys;
+    const char *fs_path = FileServing.serve_file_args.fs_path;
+    const char *content_type = FileServing.serve_file_args.content_type;
 
-    HttpV.slot = slot_id;
+    Http.slot = slot_id;
     Http.req_is_head(protocore_http_span());
-    FileServingV.serve_file_internal_args.slot_id = slot_id;
-    FileServingV.serve_file_internal_args.head = HttpV.ok;
-    FileServingV.serve_file_internal_args.file_sys = file_sys;
-    FileServingV.serve_file_internal_args.fs_path = fs_path;
-    FileServingV.serve_file_internal_args.content_type = content_type;
-    FileServingV.serve_file_internal_args.content_encoding = NULL;
-    protocore_file_serving_serve_file_internal(work);
+    FileServing.serve_file_internal_args.slot_id = slot_id;
+    FileServing.serve_file_internal_args.head = Http.ok;
+    FileServing.serve_file_internal_args.file_sys = file_sys;
+    FileServing.serve_file_internal_args.fs_path = fs_path;
+    FileServing.serve_file_internal_args.content_type = content_type;
+    FileServing.serve_file_internal_args.content_encoding = NULL;
+    file_serving_serve_file_internal(work);
 }
 
-void protocore_file_serving_serve_static(uint8_t *restrict work)
+static void file_serving_serve_static(uint8_t *restrict work)
 {
     (void)work;
-    const char *url_prefix = FileServingV.serve_static_args.url_prefix;
-    const protocore_mnt_backend *file_sys = FileServingV.serve_static_args.file_sys;
-    const char *fs_root = FileServingV.serve_static_args.fs_root;
+    const char *url_prefix = FileServing.serve_static_args.url_prefix;
+    const protocore_mnt_backend *file_sys = FileServing.serve_static_args.file_sys;
+    const char *fs_root = FileServing.serve_static_args.fs_root;
 
     HttpRoutes.add(protocore_http_route_span());
-    HttpRoute *r = HttpRoutesV.ptr;
+    HttpRoute *r = HttpRoutes.ptr;
     if (r == NULL)
     {
         return;
@@ -718,17 +718,17 @@ void protocore_file_serving_serve_static(uint8_t *restrict work)
     fill_route_base(r, pat);
     r->type = ROUTE_STATIC;
     r->method = HTTP_GET;
-    MntV.args.backend = file_sys;
-    MntV.args.root = fs_root;
+    Mnt.args.backend = file_sys;
+    Mnt.args.root = fs_root;
     Mnt.point_add(mnt_work); // null backend is legal: whatever is mounted
-    r->mnt_id = MntV.u8;
+    r->mnt_id = Mnt.u8;
 }
 
-void protocore_file_serving_serve_static_request(uint8_t *restrict work)
+static void file_serving_serve_static_request(uint8_t *restrict work)
 {
-    uint8_t slot_id = FileServingV.serve_static_request_args.slot_id;
-    HttpReq *req = FileServingV.serve_static_request_args.req;
-    const HttpRoute *r = FileServingV.serve_static_request_args.r;
+    uint8_t slot_id = FileServing.serve_static_request_args.slot_id;
+    HttpReq *req = FileServing.serve_static_request_args.req;
+    const HttpRoute *r = FileServing.serve_static_request_args.r;
 
     // No null-check on the backend: storage is reached by layer, through the accessor, so a null
     // names a preference and never the path. A null one is what serve_static() documents as legal
@@ -752,9 +752,9 @@ void protocore_file_serving_serve_static_request(uint8_t *restrict work)
         return;
     }
 
-    MntV.args.id = r->mnt_id;
+    Mnt.args.id = r->mnt_id;
     Mnt.root_of(mnt_work);
-    const char *root = MntV.text;
+    const char *root = Mnt.text;
     size_t rlen = str.len(root, MAX_PATH_LEN);
     proto_bool root_slash = (rlen > 0 && root[rlen - 1] == '/');
     if (root_slash && sub[0] == '/') // avoid a doubled separator
@@ -786,16 +786,16 @@ void protocore_file_serving_serve_static_request(uint8_t *restrict work)
     }
 
     const char *ctype = mime_type(fs_path);
-    HttpV.slot = slot_id;
+    Http.slot = slot_id;
     Http.req_is_head(protocore_http_span());
-    proto_bool head = HttpV.ok;
+    proto_bool head = Http.ok;
 
     // Pre-compressed variant: serve <path>.gz if the client accepts gzip and it
     // exists. Content-Type stays that of the original (uncompressed) resource.
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Accept-Encoding";
-    HttpParserV.get_header(protocore_http_parser_span());
-    const char *ae = HttpParserV.text;
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Accept-Encoding";
+    HttpParser.get_header(protocore_http_parser_span());
+    const char *ae = HttpParser.text;
     if (ae && str.has(ae, MAX_VAL_LEN, "gzip", sizeof("gzip"), PROTO_FALSE))
     {
         char gz[260];
@@ -807,37 +807,44 @@ void protocore_file_serving_serve_static_request(uint8_t *restrict work)
         // always under gz's 260. Both are kept because the two buffer sizes are independent
         // constants. The exclusion is per-line, so it also drops the exists() halves - those ARE
         // exercised both ways (see the gzip tests).
-        FsV.path.root = file_root(work);
-        FsV.path.dir = gz;
-        FsV.path.name = "";
+        Fs.path.root = file_root(work);
+        Fs.path.dir = gz;
+        Fs.path.name = "";
         Fs.exists(protocore_filesystem_span());
-        if (gn > 0 && gn < (int)sizeof(gz) && FsV.ok)
+        if (gn > 0 && gn < (int)sizeof(gz) && Fs.ok)
         {
-            MntV.args.id = r->mnt_id;
+            Mnt.args.id = r->mnt_id;
             Mnt.point_of(mnt_work);
-            FileServingV.serve_file_internal_args.slot_id = slot_id;
-            FileServingV.serve_file_internal_args.head = head;
-            FileServingV.serve_file_internal_args.file_sys = MntV.backend;
-            FileServingV.serve_file_internal_args.fs_path = gz;
-            FileServingV.serve_file_internal_args.content_type = ctype;
-            FileServingV.serve_file_internal_args.content_encoding = "gzip";
-            protocore_file_serving_serve_file_internal(work);
+            FileServing.serve_file_internal_args.slot_id = slot_id;
+            FileServing.serve_file_internal_args.head = head;
+            FileServing.serve_file_internal_args.file_sys = Mnt.backend;
+            FileServing.serve_file_internal_args.fs_path = gz;
+            FileServing.serve_file_internal_args.content_type = ctype;
+            FileServing.serve_file_internal_args.content_encoding = "gzip";
+            file_serving_serve_file_internal(work);
             return;
         }
     }
 
-    MntV.args.id = r->mnt_id;
+    Mnt.args.id = r->mnt_id;
     Mnt.point_of(mnt_work);
-    FileServingV.serve_file_internal_args.slot_id = slot_id;
-    FileServingV.serve_file_internal_args.head = head;
-    FileServingV.serve_file_internal_args.file_sys = MntV.backend;
-    FileServingV.serve_file_internal_args.fs_path = fs_path;
-    FileServingV.serve_file_internal_args.content_type = ctype;
-    FileServingV.serve_file_internal_args.content_encoding = NULL;
-    protocore_file_serving_serve_file_internal(work);
+    FileServing.serve_file_internal_args.slot_id = slot_id;
+    FileServing.serve_file_internal_args.head = head;
+    FileServing.serve_file_internal_args.file_sys = Mnt.backend;
+    FileServing.serve_file_internal_args.fs_path = fs_path;
+    FileServing.serve_file_internal_args.content_type = ctype;
+    FileServing.serve_file_internal_args.content_encoding = NULL;
+    file_serving_serve_file_internal(work);
 }
-/** @brief The operands and the outcome. */
-FileServingVars FileServingV;
+FileServingNs FileServing = {
+    .http_rfc1123 = file_serving_http_rfc1123,
+    .serve_static_request = file_serving_serve_static_request,
+    .serve_file_internal = file_serving_serve_file_internal,
+    .file_send_pump = file_serving_file_send_pump,
+    .holds_slot = file_serving_holds_slot,
+    .serve_file = file_serving_serve_file,
+    .serve_static = file_serving_serve_static,
+};
 
 PROTOCORE_END_DECLS
 

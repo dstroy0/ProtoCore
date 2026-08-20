@@ -22,26 +22,26 @@ static uint8_t stomp_work[16]; // the borrow an entry takes; Stomp never reads i
 static size_t stomp_send_frame(char *out, size_t cap, const char *const *hk, const char *const *hv, const char *body,
                                size_t blen)
 {
-    StompV.buf.out = out;
-    StompV.buf.cap = cap;
-    StompV.build_args.command = "SEND";
-    StompV.build_args.header_names = hk;
-    StompV.build_args.header_values = hv;
-    StompV.build_args.header_count = 2;
-    StompV.build_args.body = body;
-    StompV.build_args.body_len = blen;
+    Stomp.buf.out = out;
+    Stomp.buf.cap = cap;
+    Stomp.build_args.command = "SEND";
+    Stomp.build_args.header_names = hk;
+    Stomp.build_args.header_values = hv;
+    Stomp.build_args.header_count = 2;
+    Stomp.build_args.body = body;
+    Stomp.build_args.body_len = blen;
     Stomp.build(stomp_work);
-    return StompV.n;
+    return Stomp.n;
 }
 
 /** @brief Take one frame from the head of @p in into @p f; the octets it occupied, 0 on a refusal. */
 static size_t stomp_take_frame(StompFrame *f, const char *in, size_t len)
 {
-    StompV.frame = f;
-    StompV.buf.in = in;
-    StompV.buf.len = len;
+    Stomp.frame = f;
+    Stomp.buf.in = in;
+    Stomp.buf.len = len;
     Stomp.parse(stomp_work);
-    return StompV.ok ? StompV.consumed : 0;
+    return Stomp.ok ? Stomp.consumed : 0;
 }
 
 int main(void)

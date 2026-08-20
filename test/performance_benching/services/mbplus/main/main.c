@@ -30,14 +30,14 @@ void dbench_run(void)
     // A pre-built, known-good frame for the parse bench: station 5, data control, 3-byte payload.
     static uint8_t frame[16];
     static size_t frame_len = 0;
-    MbplusV.build_args.address = 5;
-    MbplusV.build_args.control = MBPLUS_CTRL_DATA;
-    MbplusV.build_args.payload = payload;
-    MbplusV.build_args.payload_len = sizeof(payload);
-    MbplusV.build_args.out = frame;
-    MbplusV.build_args.cap = sizeof(frame);
+    Mbplus.build_args.address = 5;
+    Mbplus.build_args.control = MBPLUS_CTRL_DATA;
+    Mbplus.build_args.payload = payload;
+    Mbplus.build_args.payload_len = sizeof(payload);
+    Mbplus.build_args.out = frame;
+    Mbplus.build_args.cap = sizeof(frame);
     Mbplus.build(mbplus_work);
-    frame_len = MbplusV.n;
+    frame_len = Mbplus.n;
 
     static uint8_t out[32];
 
@@ -50,27 +50,29 @@ void dbench_run(void)
         volatile bool sinkb = false;
 
         // CRC-16/X-25 FCS over the 9-byte check vector - bulk op, so we also get ns/byte + MB/s.
-        MbplusV.crc_args.bytes = crc_vec;
-        MbplusV.crc_args.len = sizeof(crc_vec);
-        DBENCH_BULK("Mbplus.crc (X-25)", 100000, sizeof(crc_vec), sink16 += (Mbplus.crc(mbplus_work), MbplusV.value));
+        Mbplus.crc_args.bytes = crc_vec;
+        Mbplus.crc_args.len = sizeof(crc_vec);
+        DBENCH_BULK("Mbplus.crc (X-25)", 100000, sizeof(crc_vec),
+                    sink16 += (Mbplus.crc(mbplus_work), Mbplus.value));
         // Build a full HDLC data frame (flags + addr + ctrl + payload + CRC).
-        MbplusV.build_args.address = 5;
-        MbplusV.build_args.control = MBPLUS_CTRL_DATA;
-        MbplusV.build_args.payload = payload;
-        MbplusV.build_args.payload_len = sizeof(payload);
-        MbplusV.build_args.out = out;
-        MbplusV.build_args.cap = sizeof(out);
-        DBENCH_OP("Mbplus.build (data+3B)", 50000, sink += (Mbplus.build(mbplus_work), MbplusV.n));
+        Mbplus.build_args.address = 5;
+        Mbplus.build_args.control = MBPLUS_CTRL_DATA;
+        Mbplus.build_args.payload = payload;
+        Mbplus.build_args.payload_len = sizeof(payload);
+        Mbplus.build_args.out = out;
+        Mbplus.build_args.cap = sizeof(out);
+        DBENCH_OP("Mbplus.build (data+3B)", 50000,
+                  sink += (Mbplus.build(mbplus_work), Mbplus.n));
         // Validate flags + CRC and parse the pre-built frame.
         MbPlusFrame f;
-        MbplusV.parse_args.frame = frame;
-        MbplusV.parse_args.len = frame_len;
-        MbplusV.parse_args.out = &f;
-        DBENCH_OP("Mbplus.parse", 50000, sinkb = (Mbplus.parse(mbplus_work), MbplusV.ok));
+        Mbplus.parse_args.frame = frame;
+        Mbplus.parse_args.len = frame_len;
+        Mbplus.parse_args.out = &f;
+        DBENCH_OP("Mbplus.parse", 50000, sinkb = (Mbplus.parse(mbplus_work), Mbplus.ok));
         // Token-ring rotation helper (the token-bus MAC's next-holder computation).
-        MbplusV.next_token_args.current = sink8;
-        MbplusV.next_token_args.max_station = 64;
-        DBENCH_OP("Mbplus.next_token", 200000, sink8 += (Mbplus.next_token(mbplus_work), MbplusV.value));
+        Mbplus.next_token_args.current = sink8;
+        Mbplus.next_token_args.max_station = 64;
+        DBENCH_OP("Mbplus.next_token", 200000, sink8 += (Mbplus.next_token(mbplus_work), Mbplus.value));
 
         (void)sink;
         (void)sink16;

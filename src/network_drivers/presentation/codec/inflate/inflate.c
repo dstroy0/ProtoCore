@@ -34,7 +34,7 @@ typedef struct
     short *symbol;
 } Huffman;
 
-// All the table memory protocore_inflate_raw() needs, laid over the caller's scratch.
+// All the table memory inflate_raw() needs, laid over the caller's scratch.
 typedef struct
 {
     short lcount[PROTOCORE_MAXBITS + 1];
@@ -177,7 +177,7 @@ static InflateResult codes(State *s, const Huffman *lencode, const Huffman *dist
             {
                 return INFLATE_ERR_MALFORMED; // invalid length code (286/287)
             }
-            int len = Rfc1951V.len_base[symbol] + bits(s, Rfc1951V.len_extra[symbol]);
+            int len = Rfc1951.len_base[symbol] + bits(s, Rfc1951.len_extra[symbol]);
             if (s->err)
             {
                 return INFLATE_ERR_MALFORMED;
@@ -188,7 +188,7 @@ static InflateResult codes(State *s, const Huffman *lencode, const Huffman *dist
             {
                 return INFLATE_ERR_MALFORMED;
             }
-            size_t dist = (size_t)(Rfc1951V.dist_base[symbol] + bits(s, Rfc1951V.dist_extra[symbol]));
+            size_t dist = (size_t)(Rfc1951.dist_base[symbol] + bits(s, Rfc1951.dist_extra[symbol]));
             if (s->err)
             {
                 return INFLATE_ERR_MALFORMED;
@@ -380,20 +380,20 @@ static InflateResult dynamic(State *s, Huffman *lencode, Huffman *distcode, shor
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_inflate_raw(uint8_t *restrict work)
+static void inflate_raw(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *src = InflateV.raw_args.src;
-    size_t src_len = InflateV.raw_args.src_len;
-    uint8_t *dst = InflateV.raw_args.dst;
-    size_t dst_cap = InflateV.raw_args.dst_cap;
-    size_t *out_len = InflateV.raw_args.out_len;
-    void *scratch = InflateV.raw_args.scratch;
-    size_t scratch_len = InflateV.raw_args.scratch_len;
+    const uint8_t *src = Inflate.raw_args.src;
+    size_t src_len = Inflate.raw_args.src_len;
+    uint8_t *dst = Inflate.raw_args.dst;
+    size_t dst_cap = Inflate.raw_args.dst_cap;
+    size_t *out_len = Inflate.raw_args.out_len;
+    void *scratch = Inflate.raw_args.scratch;
+    size_t scratch_len = Inflate.raw_args.scratch_len;
 
     if (scratch_len < INFLATE_SCRATCH_SIZE)
     {
-        InflateV.value = INFLATE_ERR_SCRATCH;
+        Inflate.value = INFLATE_ERR_SCRATCH;
         return;
     }
 
@@ -426,7 +426,7 @@ void protocore_inflate_raw(uint8_t *restrict work)
         int type = bits(&s, 2);
         if (s.err)
         {
-            InflateV.value = INFLATE_ERR_MALFORMED;
+            Inflate.value = INFLATE_ERR_MALFORMED;
             return;
         }
 
@@ -445,23 +445,24 @@ void protocore_inflate_raw(uint8_t *restrict work)
         }
         else
         {
-            InflateV.value = INFLATE_ERR_MALFORMED; // type 3 is reserved
+            Inflate.value = INFLATE_ERR_MALFORMED; // type 3 is reserved
             return;
         }
 
         if (rc != INFLATE_OK)
         {
-            InflateV.value = rc;
+            Inflate.value = rc;
             return;
         }
     } while (!last);
 
     *out_len = s.outcnt;
-    InflateV.value = INFLATE_OK;
+    Inflate.value = INFLATE_OK;
 }
 
-/** @brief The operands and the outcome. */
-InflateVars InflateV;
+InflateNs Inflate = {
+    .raw = inflate_raw,
+};
 
 PROTOCORE_END_DECLS
 

@@ -67,38 +67,17 @@ static inline uint8_t protocore_dscp_to_tos(uint8_t dscp)
 typedef struct
 {
     uint8_t dscp;
+
     uint8_t u8;
-} DiffServVars;
 
-/** @brief The operands and the outcome. */
-extern DiffServVars DiffServV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const set_default)(uint8_t *restrict work);
     void (*const default_dscp)(uint8_t *restrict work);
     void (*const set_udp)(uint8_t *restrict work);
     void (*const udp_dscp)(uint8_t *restrict work);
 } DiffServNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in DiffServV or a region of the borrow at a fixed offset.
-void protocore_diffserv_set_default(uint8_t *restrict work);
-void protocore_diffserv_default_dscp(uint8_t *restrict work);
-void protocore_diffserv_set_udp(uint8_t *restrict work);
-void protocore_diffserv_udp_dscp(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `DiffServ.set_default(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const DiffServNs DiffServ __attribute__((unused)) = {
-    .set_default = protocore_diffserv_set_default,
-    .default_dscp = protocore_diffserv_default_dscp,
-    .set_udp = protocore_diffserv_set_udp,
-    .udp_dscp = protocore_diffserv_udp_dscp,
-};
+/** @brief The one symbol this module exports. */
+extern DiffServNs DiffServ;
 
 /**
  * @brief The PROTOCORE_DIFFSERV_BORROW bytes this module's state lives in.

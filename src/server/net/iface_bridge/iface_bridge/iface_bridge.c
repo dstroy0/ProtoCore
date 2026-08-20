@@ -41,7 +41,7 @@ static_assert(
 #define IFACE_BRIDGE_CTX(w) ((BridgeCtx *)(void *)((w) + IFACE_BRIDGE_OFF_CTX))
 
 // The entries this file calls before reaching their definitions.
-void protocore_iface_bridge_find(uint8_t *restrict work);
+static void iface_bridge_find(uint8_t *restrict work);
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -63,7 +63,7 @@ uint8_t *protocore_iface_bridge_span(void)
     return s_own.span;
 }
 
-void protocore_iface_bridge_clear(uint8_t *restrict work)
+static void iface_bridge_clear(uint8_t *restrict work)
 {
 
     for (uint8_t i = 0; i < PROTOCORE_BRIDGE_MAX_RULES; i++)
@@ -73,21 +73,21 @@ void protocore_iface_bridge_clear(uint8_t *restrict work)
     IFACE_BRIDGE_CTX(work)->count = 0;
 }
 
-void protocore_iface_bridge_add(uint8_t *restrict work)
+static void iface_bridge_add(uint8_t *restrict work)
 {
-    const BridgeRule *rule = IfaceBridgeV.add_args.rule;
+    const BridgeRule *rule = IfaceBridge.add_args.rule;
 
     if (!rule)
     {
-        IfaceBridgeV.ok = PROTO_FALSE;
+        IfaceBridge.ok = PROTO_FALSE;
         return;
     }
-    IfaceBridgeV.find_args.port = rule->listen_port;
-    IfaceBridgeV.find_args.proto = rule->proto;
-    protocore_iface_bridge_find(work);
-    if (IfaceBridgeV.rule)
+    IfaceBridge.find_args.port = rule->listen_port;
+    IfaceBridge.find_args.proto = rule->proto;
+    iface_bridge_find(work);
+    if (IfaceBridge.rule)
     {
-        IfaceBridgeV.ok = PROTO_FALSE;
+        IfaceBridge.ok = PROTO_FALSE;
         return; // a rule already binds this port+proto
     }
     for (uint8_t i = 0; i < PROTOCORE_BRIDGE_MAX_RULES; i++)
@@ -97,25 +97,25 @@ void protocore_iface_bridge_add(uint8_t *restrict work)
             IFACE_BRIDGE_CTX(work)->rules[i] = *rule;
             IFACE_BRIDGE_CTX(work)->rules[i].used = PROTO_TRUE;
             IFACE_BRIDGE_CTX(work)->count++;
-            IfaceBridgeV.ok = PROTO_TRUE;
+            IfaceBridge.ok = PROTO_TRUE;
             return;
         }
     }
-    IfaceBridgeV.ok = PROTO_FALSE;
+    IfaceBridge.ok = PROTO_FALSE;
     return; // table full
 }
 
-void protocore_iface_bridge_map(uint8_t *restrict work)
+static void iface_bridge_map(uint8_t *restrict work)
 {
     (void)work;
-    const char *ip = IfaceBridgeV.map_args.ip;
-    uint16_t port = IfaceBridgeV.map_args.port;
-    BridgeProto proto = IfaceBridgeV.map_args.proto;
-    const BridgeTarget *target = IfaceBridgeV.map_args.target;
+    const char *ip = IfaceBridge.map_args.ip;
+    uint16_t port = IfaceBridge.map_args.port;
+    BridgeProto proto = IfaceBridge.map_args.proto;
+    const BridgeTarget *target = IfaceBridge.map_args.target;
 
     if (!target)
     {
-        IfaceBridgeV.ok = PROTO_FALSE;
+        IfaceBridge.ok = PROTO_FALSE;
         return;
     }
     BridgeRule r;
@@ -123,64 +123,64 @@ void protocore_iface_bridge_map(uint8_t *restrict work)
     r.listen_ip.family = PROTOCORE_IP_NONE; // "any interface" unless a valid address is given
     if (ip && ip[0])
     {
-        IpV.args.text = ip;
-        IpV.args.out = &r.listen_ip;
+        Ip.args.text = ip;
+        Ip.args.out = &r.listen_ip;
         Ip.parse(ip_work);
-        if (!IpV.ok)
+        if (!Ip.ok)
         {
-            IfaceBridgeV.ok = PROTO_FALSE;
+            IfaceBridge.ok = PROTO_FALSE;
             return; // malformed bind address
         }
     }
     r.listen_port = port;
     r.proto = proto;
     r.target = *target;
-    IfaceBridgeV.add_args.rule = &r;
-    protocore_iface_bridge_add(work);
+    IfaceBridge.add_args.rule = &r;
+    iface_bridge_add(work);
 }
 
-void protocore_iface_bridge_find(uint8_t *restrict work)
+static void iface_bridge_find(uint8_t *restrict work)
 {
-    uint16_t port = IfaceBridgeV.find_args.port;
-    BridgeProto proto = IfaceBridgeV.find_args.proto;
+    uint16_t port = IfaceBridge.find_args.port;
+    BridgeProto proto = IfaceBridge.find_args.proto;
 
     for (uint8_t i = 0; i < PROTOCORE_BRIDGE_MAX_RULES; i++)
     {
         if (IFACE_BRIDGE_CTX(work)->rules[i].used && IFACE_BRIDGE_CTX(work)->rules[i].listen_port == port &&
             IFACE_BRIDGE_CTX(work)->rules[i].proto == proto)
         {
-            IfaceBridgeV.rule = &IFACE_BRIDGE_CTX(work)->rules[i];
+            IfaceBridge.rule = &IFACE_BRIDGE_CTX(work)->rules[i];
             return;
         }
     }
-    IfaceBridgeV.rule = NULL;
+    IfaceBridge.rule = NULL;
 }
 
-void protocore_iface_bridge_count(uint8_t *restrict work)
+static void iface_bridge_count(uint8_t *restrict work)
 {
 
-    IfaceBridgeV.u8 = IFACE_BRIDGE_CTX(work)->count;
+    IfaceBridge.u8 = IFACE_BRIDGE_CTX(work)->count;
 }
 
-void protocore_iface_bridge_txn_parse(uint8_t *restrict work)
+static void iface_bridge_txn_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = IfaceBridgeV.txn_parse_args.buf;
-    size_t len = IfaceBridgeV.txn_parse_args.len;
-    uint16_t *write_len = IfaceBridgeV.txn_parse_args.write_len;
-    uint16_t *read_len = IfaceBridgeV.txn_parse_args.read_len;
-    const uint8_t **write_data = IfaceBridgeV.txn_parse_args.write_data;
+    const uint8_t *buf = IfaceBridge.txn_parse_args.buf;
+    size_t len = IfaceBridge.txn_parse_args.len;
+    uint16_t *write_len = IfaceBridge.txn_parse_args.write_len;
+    uint16_t *read_len = IfaceBridge.txn_parse_args.read_len;
+    const uint8_t **write_data = IfaceBridge.txn_parse_args.write_data;
 
     if (!buf || len < (size_t)PROTOCORE_BRIDGE_TXN_HDR)
     {
-        IfaceBridgeV.n = 0;
+        IfaceBridge.n = 0;
         return;
     }
     uint16_t wl = (uint16_t)(((uint16_t)buf[0] << 8) | buf[1]);
     uint16_t rl = (uint16_t)(((uint16_t)buf[2] << 8) | buf[3]);
     if (len < (size_t)PROTOCORE_BRIDGE_TXN_HDR + wl)
     {
-        IfaceBridgeV.n = 0;
+        IfaceBridge.n = 0;
         return; // the write payload has not fully arrived yet
     }
     if (write_len)
@@ -195,22 +195,22 @@ void protocore_iface_bridge_txn_parse(uint8_t *restrict work)
     {
         *write_data = buf + PROTOCORE_BRIDGE_TXN_HDR;
     }
-    IfaceBridgeV.n = (size_t)PROTOCORE_BRIDGE_TXN_HDR + wl;
+    IfaceBridge.n = (size_t)PROTOCORE_BRIDGE_TXN_HDR + wl;
 }
 
-void protocore_iface_bridge_txn_build(uint8_t *restrict work)
+static void iface_bridge_txn_build(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *out = IfaceBridgeV.txn_build_args.out;
-    size_t cap = IfaceBridgeV.txn_build_args.cap;
-    const uint8_t *write_data = IfaceBridgeV.txn_build_args.write_data;
-    uint16_t write_len = IfaceBridgeV.txn_build_args.write_len;
-    uint16_t read_len = IfaceBridgeV.txn_build_args.read_len;
+    uint8_t *out = IfaceBridge.txn_build_args.out;
+    size_t cap = IfaceBridge.txn_build_args.cap;
+    const uint8_t *write_data = IfaceBridge.txn_build_args.write_data;
+    uint16_t write_len = IfaceBridge.txn_build_args.write_len;
+    uint16_t read_len = IfaceBridge.txn_build_args.read_len;
 
     size_t need = (size_t)PROTOCORE_BRIDGE_TXN_HDR + write_len;
     if (!out || cap < need)
     {
-        IfaceBridgeV.n = 0;
+        IfaceBridge.n = 0;
         return;
     }
     out[0] = (uint8_t)(write_len >> 8);
@@ -221,11 +221,16 @@ void protocore_iface_bridge_txn_build(uint8_t *restrict work)
     {
         mem.cpy(out + PROTOCORE_BRIDGE_TXN_HDR, write_data, write_len);
     }
-    IfaceBridgeV.n = need;
+    IfaceBridge.n = need;
 }
 
-/** @brief The operands and the outcome. */
-IfaceBridgeVars IfaceBridgeV;
+IfaceBridgeNs IfaceBridge = {.clear = iface_bridge_clear,
+                             .add = iface_bridge_add,
+                             .map = iface_bridge_map,
+                             .find = iface_bridge_find,
+                             .count = iface_bridge_count,
+                             .txn_parse = iface_bridge_txn_parse,
+                             .txn_build = iface_bridge_txn_build};
 
 PROTOCORE_END_DECLS
 

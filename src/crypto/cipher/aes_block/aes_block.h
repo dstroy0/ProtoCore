@@ -177,6 +177,7 @@ typedef struct
     int nk;             ///< key words: 4 for AES-128, 8 for AES-256
     uint32_t *rk;       ///< 4 * (@c nk + 7) round-key words
 } AesBlockKeyExpandArgs;
+
 /** @brief The schedule, the round count and the one block an encryption runs over. */
 typedef struct
 {
@@ -185,6 +186,7 @@ typedef struct
     const uint8_t *in;  ///< 16 input bytes
     uint8_t *out;       ///< 16 output bytes; may alias @c in
 } AesBlockEncryptBlockArgs;
+
 /**
  * @brief AES key schedule and single-block encrypt (FIPS 197).
  *
@@ -226,32 +228,15 @@ typedef struct
 {
     AesBlockKeyExpandArgs key_expand_args;
     AesBlockEncryptBlockArgs encrypt_block_args;
+
     proto_bool ok;
-} AesBlockVars;
 
-/** @brief The operands and the outcome. */
-extern AesBlockVars AesBlockV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const key_expand)(uint8_t *restrict work);
     void (*const encrypt_block)(uint8_t *restrict work);
 } AesBlockNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in AesBlockV or a region of the borrow at a fixed offset.
-void protocore_aes_block_key_expand(uint8_t *restrict work);
-void protocore_aes_block_encrypt_block(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `AesBlock.key_expand(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const AesBlockNs AesBlock __attribute__((unused)) = {
-    .key_expand = protocore_aes_block_key_expand,
-    .encrypt_block = protocore_aes_block_encrypt_block,
-};
+/** @brief The one symbol this module exports. */
+extern AesBlockNs AesBlock;
 
 PROTOCORE_END_DECLS
 

@@ -53,31 +53,31 @@ void test_e120_table_6_6_checksum_example(void)
     p.pid = 0x0030u;
 
     uint8_t buf[32];
-    DmxV.rdm_build_args.buf = buf;
-    DmxV.rdm_build_args.cap = sizeof(buf);
-    DmxV.rdm_build_args.p = &p;
-    DmxV.rdm_build_args.pdata = PD;
-    DmxV.rdm_build_args.pdl = 1u;
+    Dmx.rdm_build_args.buf = buf;
+    Dmx.rdm_build_args.cap = sizeof(buf);
+    Dmx.rdm_build_args.p = &p;
+    Dmx.rdm_build_args.pdata = PD;
+    Dmx.rdm_build_args.pdl = 1u;
     Dmx.rdm_build(dmx_work);
-    size_t n = DmxV.n;
+    size_t n = Dmx.n;
     TEST_ASSERT_EQUAL_size_t(27u, n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 27u);
 
     // 6.2.11: the checksum is the additive sum of slots 0 through 24.
-    DmxV.rdm_checksum_args.buf = WANT;
-    DmxV.rdm_checksum_args.len = 25u;
+    Dmx.rdm_checksum_args.buf = WANT;
+    Dmx.rdm_checksum_args.len = 25u;
     Dmx.rdm_checksum(dmx_work);
-    TEST_ASSERT_EQUAL_HEX16(0x066Au, DmxV.checksum);
+    TEST_ASSERT_EQUAL_HEX16(0x066Au, Dmx.checksum);
 
     // The same octets parse back to the same fields, checksum and all.
     RdmPacket g;
     size_t consumed = 0u;
-    DmxV.rdm_parse_args.buf = WANT;
-    DmxV.rdm_parse_args.len = sizeof(WANT);
-    DmxV.rdm_parse_args.out = &g;
-    DmxV.rdm_parse_args.consumed = &consumed;
+    Dmx.rdm_parse_args.buf = WANT;
+    Dmx.rdm_parse_args.len = sizeof(WANT);
+    Dmx.rdm_parse_args.out = &g;
+    Dmx.rdm_parse_args.consumed = &consumed;
     Dmx.rdm_parse(dmx_work);
-    TEST_ASSERT_TRUE(DmxV.ok);
+    TEST_ASSERT_TRUE(Dmx.ok);
     TEST_ASSERT_EQUAL_size_t(27u, consumed);
     TEST_ASSERT_EQUAL_HEX64(0x123456789ABCULL, g.dest_uid);
     TEST_ASSERT_EQUAL_HEX64(0xCBA987654321ULL, g.src_uid);
@@ -133,32 +133,32 @@ void test_e120_message_length_points_at_the_checksum_high_slot(void)
         p.pid = RDM_PID_DMX_START_ADDRESS;
 
         uint8_t buf[64];
-        DmxV.rdm_build_args.buf = buf;
-        DmxV.rdm_build_args.cap = sizeof(buf);
-        DmxV.rdm_build_args.p = &p;
-        DmxV.rdm_build_args.pdata = pdl ? PD : NULL;
-        DmxV.rdm_build_args.pdl = pdl;
+        Dmx.rdm_build_args.buf = buf;
+        Dmx.rdm_build_args.cap = sizeof(buf);
+        Dmx.rdm_build_args.p = &p;
+        Dmx.rdm_build_args.pdata = pdl ? PD : NULL;
+        Dmx.rdm_build_args.pdl = pdl;
         Dmx.rdm_build(dmx_work);
-        size_t n = DmxV.n;
+        size_t n = Dmx.n;
         TEST_ASSERT_EQUAL_size_t((size_t)RDM_OVERHEAD + pdl, n);
         TEST_ASSERT_EQUAL_UINT8((uint8_t)(24u + pdl), buf[2]);
         TEST_ASSERT_EQUAL_UINT8(pdl, buf[23]);
         TEST_ASSERT_EQUAL_size_t((size_t)buf[2] + 2u, n);
 
-        DmxV.rdm_checksum_args.buf = buf;
-        DmxV.rdm_checksum_args.len = buf[2];
+        Dmx.rdm_checksum_args.buf = buf;
+        Dmx.rdm_checksum_args.len = buf[2];
         Dmx.rdm_checksum(dmx_work);
-        uint16_t cs = DmxV.checksum;
+        uint16_t cs = Dmx.checksum;
         TEST_ASSERT_EQUAL_HEX8((uint8_t)(cs >> 8), buf[buf[2]]);
         TEST_ASSERT_EQUAL_HEX8((uint8_t)(cs & 0xFFu), buf[buf[2] + 1u]);
 
         RdmPacket g;
-        DmxV.rdm_parse_args.buf = buf;
-        DmxV.rdm_parse_args.len = n;
-        DmxV.rdm_parse_args.out = &g;
-        DmxV.rdm_parse_args.consumed = NULL;
+        Dmx.rdm_parse_args.buf = buf;
+        Dmx.rdm_parse_args.len = n;
+        Dmx.rdm_parse_args.out = &g;
+        Dmx.rdm_parse_args.consumed = NULL;
         Dmx.rdm_parse(dmx_work);
-        TEST_ASSERT_TRUE(DmxV.ok);
+        TEST_ASSERT_TRUE(Dmx.ok);
         TEST_ASSERT_EQUAL_UINT8(pdl, g.pdl);
         if (pdl)
         {
@@ -175,39 +175,39 @@ void test_e120_message_length_points_at_the_checksum_high_slot(void)
 // rides the wire big-endian (6.1 Byte Ordering: most significant byte first).
 void test_e120_uid_is_manufacturer_above_device(void)
 {
-    DmxV.rdm_uid_args.manufacturer = 0x1234u;
-    DmxV.rdm_uid_args.device = 0x56789ABCu;
+    Dmx.rdm_uid_args.manufacturer = 0x1234u;
+    Dmx.rdm_uid_args.device = 0x56789ABCu;
     Dmx.rdm_uid(dmx_work);
-    TEST_ASSERT_EQUAL_HEX64(0x123456789ABCULL, DmxV.uid);
-    DmxV.rdm_uid_args.manufacturer = 0xFFFFu;
-    DmxV.rdm_uid_args.device = 0xFFFFFFFFu;
+    TEST_ASSERT_EQUAL_HEX64(0x123456789ABCULL, Dmx.uid);
+    Dmx.rdm_uid_args.manufacturer = 0xFFFFu;
+    Dmx.rdm_uid_args.device = 0xFFFFFFFFu;
     Dmx.rdm_uid(dmx_work);
-    TEST_ASSERT_EQUAL_HEX64(0xFFFFFFFFFFFFULL, DmxV.uid); // BROADCAST_ALL_DEVICES_ID
-    DmxV.rdm_uid_args.manufacturer = 0x7A70u;
-    DmxV.rdm_uid_args.device = 0xFFFFFFFFu;
+    TEST_ASSERT_EQUAL_HEX64(0xFFFFFFFFFFFFULL, Dmx.uid); // BROADCAST_ALL_DEVICES_ID
+    Dmx.rdm_uid_args.manufacturer = 0x7A70u;
+    Dmx.rdm_uid_args.device = 0xFFFFFFFFu;
     Dmx.rdm_uid(dmx_work);
-    TEST_ASSERT_EQUAL_HEX64(0x7A70FFFFFFFFULL, DmxV.uid); // ALL_DEVICES_ID for 0x7A70
+    TEST_ASSERT_EQUAL_HEX64(0x7A70FFFFFFFFULL, Dmx.uid); // ALL_DEVICES_ID for 0x7A70
 
     RdmPacket p;
     memset(&p, 0, sizeof(p));
-    DmxV.rdm_uid_args.manufacturer = 0x1234u;
-    DmxV.rdm_uid_args.device = 0x56789ABCu;
+    Dmx.rdm_uid_args.manufacturer = 0x1234u;
+    Dmx.rdm_uid_args.device = 0x56789ABCu;
     Dmx.rdm_uid(dmx_work);
-    p.dest_uid = DmxV.uid;
-    DmxV.rdm_uid_args.manufacturer = 0x7A70u;
-    DmxV.rdm_uid_args.device = 0x000000AAu;
+    p.dest_uid = Dmx.uid;
+    Dmx.rdm_uid_args.manufacturer = 0x7A70u;
+    Dmx.rdm_uid_args.device = 0x000000AAu;
     Dmx.rdm_uid(dmx_work);
-    p.src_uid = DmxV.uid;
+    p.src_uid = Dmx.uid;
     p.cc = RDM_CC_GET;
     p.pid = RDM_PID_DEVICE_INFO;
     uint8_t buf[32];
-    DmxV.rdm_build_args.buf = buf;
-    DmxV.rdm_build_args.cap = sizeof(buf);
-    DmxV.rdm_build_args.p = &p;
-    DmxV.rdm_build_args.pdata = NULL;
-    DmxV.rdm_build_args.pdl = 0u;
+    Dmx.rdm_build_args.buf = buf;
+    Dmx.rdm_build_args.cap = sizeof(buf);
+    Dmx.rdm_build_args.p = &p;
+    Dmx.rdm_build_args.pdata = NULL;
+    Dmx.rdm_build_args.pdl = 0u;
     Dmx.rdm_build(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(RDM_OVERHEAD, DmxV.n);
+    TEST_ASSERT_EQUAL_size_t(RDM_OVERHEAD, Dmx.n);
     static const uint8_t DEST[6] = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC};
     static const uint8_t SRC[6] = {0x7A, 0x70, 0x00, 0x00, 0x00, 0xAA};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(DEST, buf + 3, 6u);
@@ -229,12 +229,12 @@ void test_e120_table_7_1_discovery_response_encoding(void)
 
     uint8_t buf[32];
     // Table 7-1 shows the full seven preamble slots; 7.5 allows 0 to 7.
-    DmxV.rdm_build_disc_response_args.buf = buf;
-    DmxV.rdm_build_disc_response_args.cap = sizeof(buf);
-    DmxV.rdm_build_disc_response_args.uid = uid;
-    DmxV.rdm_build_disc_response_args.preamble_len = 7u;
+    Dmx.rdm_build_disc_response_args.buf = buf;
+    Dmx.rdm_build_disc_response_args.cap = sizeof(buf);
+    Dmx.rdm_build_disc_response_args.uid = uid;
+    Dmx.rdm_build_disc_response_args.preamble_len = 7u;
     Dmx.rdm_build_disc_response(dmx_work);
-    size_t n = DmxV.n;
+    size_t n = Dmx.n;
     TEST_ASSERT_EQUAL_size_t(24u, n); // 7 preamble + separator + 12 EUID + 4 ECS
     for (size_t i = 0; i < 7u; i++)
     {
@@ -244,21 +244,21 @@ void test_e120_table_7_1_discovery_response_encoding(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(EUID_ECS, buf + 8, 16u);
 
     // The checksum slots carry the sum of the twelve encoded UID octets, 0x0864.
-    DmxV.rdm_checksum_args.buf = EUID_ECS;
-    DmxV.rdm_checksum_args.len = 12u;
+    Dmx.rdm_checksum_args.buf = EUID_ECS;
+    Dmx.rdm_checksum_args.len = 12u;
     Dmx.rdm_checksum(dmx_work);
-    uint16_t sum = DmxV.checksum;
+    uint16_t sum = Dmx.checksum;
     TEST_ASSERT_EQUAL_HEX16(0x0864u, sum);
 
     // Every legal preamble length shortens only the preamble; the encoded body never moves.
     for (uint8_t pre = 0u; pre <= 7u; pre++)
     {
-        DmxV.rdm_build_disc_response_args.buf = buf;
-        DmxV.rdm_build_disc_response_args.cap = sizeof(buf);
-        DmxV.rdm_build_disc_response_args.uid = uid;
-        DmxV.rdm_build_disc_response_args.preamble_len = pre;
+        Dmx.rdm_build_disc_response_args.buf = buf;
+        Dmx.rdm_build_disc_response_args.cap = sizeof(buf);
+        Dmx.rdm_build_disc_response_args.uid = uid;
+        Dmx.rdm_build_disc_response_args.preamble_len = pre;
         Dmx.rdm_build_disc_response(dmx_work);
-        size_t m = DmxV.n;
+        size_t m = Dmx.n;
         TEST_ASSERT_EQUAL_size_t((size_t)pre + 17u, m);
         TEST_ASSERT_EQUAL_HEX8(0xAAu, buf[pre]);
         TEST_ASSERT_EQUAL_HEX8_ARRAY(EUID_ECS, buf + pre + 1u, 16u);
@@ -273,22 +273,22 @@ void test_e120_table_7_2_discovery_response_decoding(void)
     static const uint8_t RESP[24] = {0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xAA, 0xBA, 0x57, 0xBE, 0x75,
                                      0xFE, 0x57, 0xFA, 0x7D, 0xBA, 0xDF, 0xBE, 0xFD, 0xAA, 0x5D, 0xEE, 0x75};
     uint64_t uid = 0u;
-    DmxV.rdm_decode_disc_response_args.buf = RESP;
-    DmxV.rdm_decode_disc_response_args.len = sizeof(RESP);
-    DmxV.rdm_decode_disc_response_args.uid = &uid;
+    Dmx.rdm_decode_disc_response_args.buf = RESP;
+    Dmx.rdm_decode_disc_response_args.len = sizeof(RESP);
+    Dmx.rdm_decode_disc_response_args.uid = &uid;
     Dmx.rdm_decode_disc_response(dmx_work);
-    TEST_ASSERT_TRUE(DmxV.ok);
+    TEST_ASSERT_TRUE(Dmx.ok);
     TEST_ASSERT_EQUAL_HEX64(0x123456789ABCULL, uid);
 
     // 7.5: "The controller shall be able to process response packets with 0-7 bytes of preamble."
     for (size_t drop = 0u; drop <= 7u; drop++)
     {
         uid = 0u;
-        DmxV.rdm_decode_disc_response_args.buf = RESP + drop;
-        DmxV.rdm_decode_disc_response_args.len = sizeof(RESP) - drop;
-        DmxV.rdm_decode_disc_response_args.uid = &uid;
+        Dmx.rdm_decode_disc_response_args.buf = RESP + drop;
+        Dmx.rdm_decode_disc_response_args.len = sizeof(RESP) - drop;
+        Dmx.rdm_decode_disc_response_args.uid = &uid;
         Dmx.rdm_decode_disc_response(dmx_work);
-        TEST_ASSERT_TRUE(DmxV.ok);
+        TEST_ASSERT_TRUE(Dmx.ok);
         TEST_ASSERT_EQUAL_HEX64(0x123456789ABCULL, uid);
     }
 
@@ -298,35 +298,35 @@ void test_e120_table_7_2_discovery_response_decoding(void)
         uint8_t bad[24];
         memcpy(bad, RESP, sizeof(RESP));
         bad[i] ^= 0x10u;
-        DmxV.rdm_decode_disc_response_args.buf = bad;
-        DmxV.rdm_decode_disc_response_args.len = sizeof(bad);
-        DmxV.rdm_decode_disc_response_args.uid = &uid;
+        Dmx.rdm_decode_disc_response_args.buf = bad;
+        Dmx.rdm_decode_disc_response_args.len = sizeof(bad);
+        Dmx.rdm_decode_disc_response_args.uid = &uid;
         Dmx.rdm_decode_disc_response(dmx_work);
-        TEST_ASSERT_FALSE_MESSAGE(DmxV.ok, "corrupt EUID accepted");
+        TEST_ASSERT_FALSE_MESSAGE(Dmx.ok, "corrupt EUID accepted");
     }
 
     // Without the 0xAA separator there is no response, and 16 encoded octets must be present.
     static const uint8_t NOSEP[8] = {0xFE, 0xFE, 0xFE, 0x00, 0x00, 0x00, 0x00, 0x00};
-    DmxV.rdm_decode_disc_response_args.buf = NOSEP;
-    DmxV.rdm_decode_disc_response_args.len = sizeof(NOSEP);
-    DmxV.rdm_decode_disc_response_args.uid = &uid;
+    Dmx.rdm_decode_disc_response_args.buf = NOSEP;
+    Dmx.rdm_decode_disc_response_args.len = sizeof(NOSEP);
+    Dmx.rdm_decode_disc_response_args.uid = &uid;
     Dmx.rdm_decode_disc_response(dmx_work);
-    TEST_ASSERT_FALSE(DmxV.ok);
-    DmxV.rdm_decode_disc_response_args.buf = RESP;
-    DmxV.rdm_decode_disc_response_args.len = 23u;
-    DmxV.rdm_decode_disc_response_args.uid = &uid;
+    TEST_ASSERT_FALSE(Dmx.ok);
+    Dmx.rdm_decode_disc_response_args.buf = RESP;
+    Dmx.rdm_decode_disc_response_args.len = 23u;
+    Dmx.rdm_decode_disc_response_args.uid = &uid;
     Dmx.rdm_decode_disc_response(dmx_work);
-    TEST_ASSERT_FALSE(DmxV.ok);
-    DmxV.rdm_decode_disc_response_args.buf = NULL;
-    DmxV.rdm_decode_disc_response_args.len = sizeof(RESP);
-    DmxV.rdm_decode_disc_response_args.uid = &uid;
+    TEST_ASSERT_FALSE(Dmx.ok);
+    Dmx.rdm_decode_disc_response_args.buf = NULL;
+    Dmx.rdm_decode_disc_response_args.len = sizeof(RESP);
+    Dmx.rdm_decode_disc_response_args.uid = &uid;
     Dmx.rdm_decode_disc_response(dmx_work);
-    TEST_ASSERT_FALSE(DmxV.ok);
-    DmxV.rdm_decode_disc_response_args.buf = RESP;
-    DmxV.rdm_decode_disc_response_args.len = sizeof(RESP);
-    DmxV.rdm_decode_disc_response_args.uid = NULL;
+    TEST_ASSERT_FALSE(Dmx.ok);
+    Dmx.rdm_decode_disc_response_args.buf = RESP;
+    Dmx.rdm_decode_disc_response_args.len = sizeof(RESP);
+    Dmx.rdm_decode_disc_response_args.uid = NULL;
     Dmx.rdm_decode_disc_response(dmx_work);
-    TEST_ASSERT_FALSE(DmxV.ok);
+    TEST_ASSERT_FALSE(Dmx.ok);
 }
 
 // Builder and decoder are inverses over the whole UID space sampled across every octet position.
@@ -339,18 +339,18 @@ void test_discovery_response_round_trips(void)
     {
         uint8_t buf[32];
         uint64_t back = 0u;
-        DmxV.rdm_build_disc_response_args.buf = buf;
-        DmxV.rdm_build_disc_response_args.cap = sizeof(buf);
-        DmxV.rdm_build_disc_response_args.uid = UID[i];
-        DmxV.rdm_build_disc_response_args.preamble_len = (uint8_t)(i % 8u);
+        Dmx.rdm_build_disc_response_args.buf = buf;
+        Dmx.rdm_build_disc_response_args.cap = sizeof(buf);
+        Dmx.rdm_build_disc_response_args.uid = UID[i];
+        Dmx.rdm_build_disc_response_args.preamble_len = (uint8_t)(i % 8u);
         Dmx.rdm_build_disc_response(dmx_work);
-        size_t n = DmxV.n;
+        size_t n = Dmx.n;
         TEST_ASSERT_TRUE(n > 0u);
-        DmxV.rdm_decode_disc_response_args.buf = buf;
-        DmxV.rdm_decode_disc_response_args.len = n;
-        DmxV.rdm_decode_disc_response_args.uid = &back;
+        Dmx.rdm_decode_disc_response_args.buf = buf;
+        Dmx.rdm_decode_disc_response_args.len = n;
+        Dmx.rdm_decode_disc_response_args.uid = &back;
         Dmx.rdm_decode_disc_response(dmx_work);
-        TEST_ASSERT_TRUE(DmxV.ok);
+        TEST_ASSERT_TRUE(Dmx.ok);
         TEST_ASSERT_EQUAL_HEX64(UID[i], back);
     }
 }
@@ -360,36 +360,36 @@ void test_discovery_response_round_trips(void)
 void test_discovery_response_builder_guards(void)
 {
     uint8_t buf[32];
-    DmxV.rdm_build_disc_response_args.buf = buf;
-    DmxV.rdm_build_disc_response_args.cap = sizeof(buf);
-    DmxV.rdm_build_disc_response_args.uid = 1ULL;
-    DmxV.rdm_build_disc_response_args.preamble_len = 8u;
+    Dmx.rdm_build_disc_response_args.buf = buf;
+    Dmx.rdm_build_disc_response_args.cap = sizeof(buf);
+    Dmx.rdm_build_disc_response_args.uid = 1ULL;
+    Dmx.rdm_build_disc_response_args.preamble_len = 8u;
     Dmx.rdm_build_disc_response(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(0u, DmxV.n);
-    DmxV.rdm_build_disc_response_args.buf = buf;
-    DmxV.rdm_build_disc_response_args.cap = sizeof(buf);
-    DmxV.rdm_build_disc_response_args.uid = 1ULL;
-    DmxV.rdm_build_disc_response_args.preamble_len = 255u;
+    TEST_ASSERT_EQUAL_size_t(0u, Dmx.n);
+    Dmx.rdm_build_disc_response_args.buf = buf;
+    Dmx.rdm_build_disc_response_args.cap = sizeof(buf);
+    Dmx.rdm_build_disc_response_args.uid = 1ULL;
+    Dmx.rdm_build_disc_response_args.preamble_len = 255u;
     Dmx.rdm_build_disc_response(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(0u, DmxV.n);
-    DmxV.rdm_build_disc_response_args.buf = NULL;
-    DmxV.rdm_build_disc_response_args.cap = sizeof(buf);
-    DmxV.rdm_build_disc_response_args.uid = 1ULL;
-    DmxV.rdm_build_disc_response_args.preamble_len = 7u;
+    TEST_ASSERT_EQUAL_size_t(0u, Dmx.n);
+    Dmx.rdm_build_disc_response_args.buf = NULL;
+    Dmx.rdm_build_disc_response_args.cap = sizeof(buf);
+    Dmx.rdm_build_disc_response_args.uid = 1ULL;
+    Dmx.rdm_build_disc_response_args.preamble_len = 7u;
     Dmx.rdm_build_disc_response(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(0u, DmxV.n);
-    DmxV.rdm_build_disc_response_args.buf = buf;
-    DmxV.rdm_build_disc_response_args.cap = 23u;
-    DmxV.rdm_build_disc_response_args.uid = 1ULL;
-    DmxV.rdm_build_disc_response_args.preamble_len = 7u;
+    TEST_ASSERT_EQUAL_size_t(0u, Dmx.n);
+    Dmx.rdm_build_disc_response_args.buf = buf;
+    Dmx.rdm_build_disc_response_args.cap = 23u;
+    Dmx.rdm_build_disc_response_args.uid = 1ULL;
+    Dmx.rdm_build_disc_response_args.preamble_len = 7u;
     Dmx.rdm_build_disc_response(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(0u, DmxV.n); // needs 24
-    DmxV.rdm_build_disc_response_args.buf = buf;
-    DmxV.rdm_build_disc_response_args.cap = 24u;
-    DmxV.rdm_build_disc_response_args.uid = 1ULL;
-    DmxV.rdm_build_disc_response_args.preamble_len = 7u;
+    TEST_ASSERT_EQUAL_size_t(0u, Dmx.n); // needs 24
+    Dmx.rdm_build_disc_response_args.buf = buf;
+    Dmx.rdm_build_disc_response_args.cap = 24u;
+    Dmx.rdm_build_disc_response_args.uid = 1ULL;
+    Dmx.rdm_build_disc_response_args.preamble_len = 7u;
     Dmx.rdm_build_disc_response(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(24u, DmxV.n);
+    TEST_ASSERT_EQUAL_size_t(24u, Dmx.n);
 }
 
 // E1.20 sec 10.5.1: the DEVICE_INFO GET response carries PDL 0x13 = 19 octets, in the order
@@ -424,20 +424,20 @@ void test_e120_device_info_block(void)
                                      0x00, 0x00,             // sub-device count
                                      0x02};                  // sensor count
     uint8_t pd[24];
-    DmxV.rdm_build_device_info_args.pdata = pd;
-    DmxV.rdm_build_device_info_args.cap = sizeof(pd);
-    DmxV.rdm_build_device_info_args.info = &in;
+    Dmx.rdm_build_device_info_args.pdata = pd;
+    Dmx.rdm_build_device_info_args.cap = sizeof(pd);
+    Dmx.rdm_build_device_info_args.info = &in;
     Dmx.rdm_build_device_info(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(19u, DmxV.n);
+    TEST_ASSERT_EQUAL_size_t(19u, Dmx.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, pd, 19u);
 
     RdmDeviceInfo out;
     memset(&out, 0, sizeof(out));
-    DmxV.rdm_parse_device_info_args.pdata = WANT;
-    DmxV.rdm_parse_device_info_args.pdl = 19u;
-    DmxV.rdm_parse_device_info_args.out = &out;
+    Dmx.rdm_parse_device_info_args.pdata = WANT;
+    Dmx.rdm_parse_device_info_args.pdl = 19u;
+    Dmx.rdm_parse_device_info_args.out = &out;
     Dmx.rdm_parse_device_info(dmx_work);
-    TEST_ASSERT_TRUE(DmxV.ok);
+    TEST_ASSERT_TRUE(Dmx.ok);
     TEST_ASSERT_EQUAL_UINT8(1u, out.proto_major);
     TEST_ASSERT_EQUAL_UINT8(0u, out.proto_minor);
     TEST_ASSERT_EQUAL_HEX16(0x1234u, out.device_model_id);
@@ -452,45 +452,45 @@ void test_e120_device_info_block(void)
 
     // 10.6.3: 0xFFFF is the start address of a device that uses no DMX512 slots.
     in.dmx_start_address = 0xFFFFu;
-    DmxV.rdm_build_device_info_args.pdata = pd;
-    DmxV.rdm_build_device_info_args.cap = sizeof(pd);
-    DmxV.rdm_build_device_info_args.info = &in;
+    Dmx.rdm_build_device_info_args.pdata = pd;
+    Dmx.rdm_build_device_info_args.cap = sizeof(pd);
+    Dmx.rdm_build_device_info_args.info = &in;
     Dmx.rdm_build_device_info(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(19u, DmxV.n);
+    TEST_ASSERT_EQUAL_size_t(19u, Dmx.n);
     TEST_ASSERT_EQUAL_HEX8(0xFFu, pd[14]);
     TEST_ASSERT_EQUAL_HEX8(0xFFu, pd[15]);
 
     // A block shorter than the standard's PDL is not a DEVICE_INFO.
-    DmxV.rdm_build_device_info_args.pdata = pd;
-    DmxV.rdm_build_device_info_args.cap = 18u;
-    DmxV.rdm_build_device_info_args.info = &in;
+    Dmx.rdm_build_device_info_args.pdata = pd;
+    Dmx.rdm_build_device_info_args.cap = 18u;
+    Dmx.rdm_build_device_info_args.info = &in;
     Dmx.rdm_build_device_info(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(0u, DmxV.n);
-    DmxV.rdm_build_device_info_args.pdata = NULL;
-    DmxV.rdm_build_device_info_args.cap = sizeof(pd);
-    DmxV.rdm_build_device_info_args.info = &in;
+    TEST_ASSERT_EQUAL_size_t(0u, Dmx.n);
+    Dmx.rdm_build_device_info_args.pdata = NULL;
+    Dmx.rdm_build_device_info_args.cap = sizeof(pd);
+    Dmx.rdm_build_device_info_args.info = &in;
     Dmx.rdm_build_device_info(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(0u, DmxV.n);
-    DmxV.rdm_build_device_info_args.pdata = pd;
-    DmxV.rdm_build_device_info_args.cap = sizeof(pd);
-    DmxV.rdm_build_device_info_args.info = NULL;
+    TEST_ASSERT_EQUAL_size_t(0u, Dmx.n);
+    Dmx.rdm_build_device_info_args.pdata = pd;
+    Dmx.rdm_build_device_info_args.cap = sizeof(pd);
+    Dmx.rdm_build_device_info_args.info = NULL;
     Dmx.rdm_build_device_info(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(0u, DmxV.n);
-    DmxV.rdm_parse_device_info_args.pdata = WANT;
-    DmxV.rdm_parse_device_info_args.pdl = 18u;
-    DmxV.rdm_parse_device_info_args.out = &out;
+    TEST_ASSERT_EQUAL_size_t(0u, Dmx.n);
+    Dmx.rdm_parse_device_info_args.pdata = WANT;
+    Dmx.rdm_parse_device_info_args.pdl = 18u;
+    Dmx.rdm_parse_device_info_args.out = &out;
     Dmx.rdm_parse_device_info(dmx_work);
-    TEST_ASSERT_FALSE(DmxV.ok);
-    DmxV.rdm_parse_device_info_args.pdata = NULL;
-    DmxV.rdm_parse_device_info_args.pdl = 19u;
-    DmxV.rdm_parse_device_info_args.out = &out;
+    TEST_ASSERT_FALSE(Dmx.ok);
+    Dmx.rdm_parse_device_info_args.pdata = NULL;
+    Dmx.rdm_parse_device_info_args.pdl = 19u;
+    Dmx.rdm_parse_device_info_args.out = &out;
     Dmx.rdm_parse_device_info(dmx_work);
-    TEST_ASSERT_FALSE(DmxV.ok);
-    DmxV.rdm_parse_device_info_args.pdata = WANT;
-    DmxV.rdm_parse_device_info_args.pdl = 19u;
-    DmxV.rdm_parse_device_info_args.out = NULL;
+    TEST_ASSERT_FALSE(Dmx.ok);
+    Dmx.rdm_parse_device_info_args.pdata = WANT;
+    Dmx.rdm_parse_device_info_args.pdl = 19u;
+    Dmx.rdm_parse_device_info_args.out = NULL;
     Dmx.rdm_parse_device_info(dmx_work);
-    TEST_ASSERT_FALSE(DmxV.ok);
+    TEST_ASSERT_FALSE(Dmx.ok);
 }
 
 // A DEVICE_INFO block carried as the parameter data of a real GET_COMMAND_RESPONSE comes back out
@@ -507,52 +507,52 @@ void test_device_info_rides_a_get_response_packet(void)
     in.personality_count = 1u;
 
     uint8_t pd[19];
-    DmxV.rdm_build_device_info_args.pdata = pd;
-    DmxV.rdm_build_device_info_args.cap = sizeof(pd);
-    DmxV.rdm_build_device_info_args.info = &in;
+    Dmx.rdm_build_device_info_args.pdata = pd;
+    Dmx.rdm_build_device_info_args.cap = sizeof(pd);
+    Dmx.rdm_build_device_info_args.info = &in;
     Dmx.rdm_build_device_info(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(19u, DmxV.n);
+    TEST_ASSERT_EQUAL_size_t(19u, Dmx.n);
 
     RdmPacket p;
     memset(&p, 0, sizeof(p));
-    DmxV.rdm_uid_args.manufacturer = 0x7A70u;
-    DmxV.rdm_uid_args.device = 0x000000AAu;
+    Dmx.rdm_uid_args.manufacturer = 0x7A70u;
+    Dmx.rdm_uid_args.device = 0x000000AAu;
     Dmx.rdm_uid(dmx_work);
-    p.dest_uid = DmxV.uid;
-    DmxV.rdm_uid_args.manufacturer = 0x4444u;
-    DmxV.rdm_uid_args.device = 0x00000001u;
+    p.dest_uid = Dmx.uid;
+    Dmx.rdm_uid_args.manufacturer = 0x4444u;
+    Dmx.rdm_uid_args.device = 0x00000001u;
     Dmx.rdm_uid(dmx_work);
-    p.src_uid = DmxV.uid;
+    p.src_uid = Dmx.uid;
     p.port_id = RDM_RESPONSE_ACK;
     p.cc = RDM_CC_GET_RESPONSE;
     p.pid = RDM_PID_DEVICE_INFO;
 
     uint8_t buf[64];
-    DmxV.rdm_build_args.buf = buf;
-    DmxV.rdm_build_args.cap = sizeof(buf);
-    DmxV.rdm_build_args.p = &p;
-    DmxV.rdm_build_args.pdata = pd;
-    DmxV.rdm_build_args.pdl = 19u;
+    Dmx.rdm_build_args.buf = buf;
+    Dmx.rdm_build_args.cap = sizeof(buf);
+    Dmx.rdm_build_args.p = &p;
+    Dmx.rdm_build_args.pdata = pd;
+    Dmx.rdm_build_args.pdl = 19u;
     Dmx.rdm_build(dmx_work);
-    size_t n = DmxV.n;
+    size_t n = Dmx.n;
     TEST_ASSERT_EQUAL_size_t((size_t)RDM_OVERHEAD + 19u, n);
     TEST_ASSERT_EQUAL_UINT8(43u, buf[2]); // message length 24 + 19
 
     RdmPacket g;
-    DmxV.rdm_parse_args.buf = buf;
-    DmxV.rdm_parse_args.len = n;
-    DmxV.rdm_parse_args.out = &g;
-    DmxV.rdm_parse_args.consumed = NULL;
+    Dmx.rdm_parse_args.buf = buf;
+    Dmx.rdm_parse_args.len = n;
+    Dmx.rdm_parse_args.out = &g;
+    Dmx.rdm_parse_args.consumed = NULL;
     Dmx.rdm_parse(dmx_work);
-    TEST_ASSERT_TRUE(DmxV.ok);
+    TEST_ASSERT_TRUE(Dmx.ok);
     TEST_ASSERT_EQUAL_HEX8(RDM_CC_GET_RESPONSE, g.cc);
     TEST_ASSERT_EQUAL_HEX8(RDM_RESPONSE_ACK, g.port_id);
     RdmDeviceInfo out;
-    DmxV.rdm_parse_device_info_args.pdata = g.pdata;
-    DmxV.rdm_parse_device_info_args.pdl = g.pdl;
-    DmxV.rdm_parse_device_info_args.out = &out;
+    Dmx.rdm_parse_device_info_args.pdata = g.pdata;
+    Dmx.rdm_parse_device_info_args.pdl = g.pdl;
+    Dmx.rdm_parse_device_info_args.out = &out;
     Dmx.rdm_parse_device_info(dmx_work);
-    TEST_ASSERT_TRUE(DmxV.ok);
+    TEST_ASSERT_TRUE(Dmx.ok);
     TEST_ASSERT_EQUAL_HEX16(0xBEEFu, out.device_model_id);
     TEST_ASSERT_EQUAL_UINT16(512u, out.dmx_footprint);
 }
@@ -566,13 +566,13 @@ void test_e120_parse_discards_malformed_packets(void)
     p.cc = RDM_CC_GET;
     p.pid = RDM_PID_IDENTIFY_DEVICE;
     uint8_t good[64];
-    DmxV.rdm_build_args.buf = good;
-    DmxV.rdm_build_args.cap = sizeof(good);
-    DmxV.rdm_build_args.p = &p;
-    DmxV.rdm_build_args.pdata = NULL;
-    DmxV.rdm_build_args.pdl = 0u;
+    Dmx.rdm_build_args.buf = good;
+    Dmx.rdm_build_args.cap = sizeof(good);
+    Dmx.rdm_build_args.p = &p;
+    Dmx.rdm_build_args.pdata = NULL;
+    Dmx.rdm_build_args.pdl = 0u;
     Dmx.rdm_build(dmx_work);
-    size_t n = DmxV.n;
+    size_t n = Dmx.n;
 
     RdmPacket g;
     size_t c;
@@ -580,92 +580,92 @@ void test_e120_parse_discards_malformed_packets(void)
 
     memcpy(bad, good, n);
     bad[n - 1u] ^= 0xFFu; // checksum low corrupted
-    DmxV.rdm_parse_args.buf = bad;
-    DmxV.rdm_parse_args.len = n;
-    DmxV.rdm_parse_args.out = &g;
-    DmxV.rdm_parse_args.consumed = &c;
+    Dmx.rdm_parse_args.buf = bad;
+    Dmx.rdm_parse_args.len = n;
+    Dmx.rdm_parse_args.out = &g;
+    Dmx.rdm_parse_args.consumed = &c;
     Dmx.rdm_parse(dmx_work);
-    TEST_ASSERT_FALSE(DmxV.ok);
+    TEST_ASSERT_FALSE(Dmx.ok);
 
     memcpy(bad, good, n);
     bad[n - 2u] ^= 0xFFu; // checksum high corrupted
-    DmxV.rdm_parse_args.buf = bad;
-    DmxV.rdm_parse_args.len = n;
-    DmxV.rdm_parse_args.out = &g;
-    DmxV.rdm_parse_args.consumed = &c;
+    Dmx.rdm_parse_args.buf = bad;
+    Dmx.rdm_parse_args.len = n;
+    Dmx.rdm_parse_args.out = &g;
+    Dmx.rdm_parse_args.consumed = &c;
     Dmx.rdm_parse(dmx_work);
-    TEST_ASSERT_FALSE(DmxV.ok);
+    TEST_ASSERT_FALSE(Dmx.ok);
 
     memcpy(bad, good, n);
     bad[0] = 0x00u; // not SC_RDM
-    DmxV.rdm_parse_args.buf = bad;
-    DmxV.rdm_parse_args.len = n;
-    DmxV.rdm_parse_args.out = &g;
-    DmxV.rdm_parse_args.consumed = &c;
+    Dmx.rdm_parse_args.buf = bad;
+    Dmx.rdm_parse_args.len = n;
+    Dmx.rdm_parse_args.out = &g;
+    Dmx.rdm_parse_args.consumed = &c;
     Dmx.rdm_parse(dmx_work);
-    TEST_ASSERT_FALSE(DmxV.ok);
+    TEST_ASSERT_FALSE(Dmx.ok);
 
     memcpy(bad, good, n);
     bad[1] = 0xAAu; // not SC_SUB_MESSAGE
-    DmxV.rdm_parse_args.buf = bad;
-    DmxV.rdm_parse_args.len = n;
-    DmxV.rdm_parse_args.out = &g;
-    DmxV.rdm_parse_args.consumed = &c;
+    Dmx.rdm_parse_args.buf = bad;
+    Dmx.rdm_parse_args.len = n;
+    Dmx.rdm_parse_args.out = &g;
+    Dmx.rdm_parse_args.consumed = &c;
     Dmx.rdm_parse(dmx_work);
-    TEST_ASSERT_FALSE(DmxV.ok);
+    TEST_ASSERT_FALSE(Dmx.ok);
 
     memcpy(bad, good, n);
     bad[2] = 23u; // 6.2.3: the message length range starts at 24
-    DmxV.rdm_parse_args.buf = bad;
-    DmxV.rdm_parse_args.len = n;
-    DmxV.rdm_parse_args.out = &g;
-    DmxV.rdm_parse_args.consumed = &c;
+    Dmx.rdm_parse_args.buf = bad;
+    Dmx.rdm_parse_args.len = n;
+    Dmx.rdm_parse_args.out = &g;
+    Dmx.rdm_parse_args.consumed = &c;
     Dmx.rdm_parse(dmx_work);
-    TEST_ASSERT_FALSE(DmxV.ok);
+    TEST_ASSERT_FALSE(Dmx.ok);
 
     memcpy(bad, good, n);
     bad[23] = 5u; // PDL claims 5 octets the message length does not account for
-    DmxV.rdm_parse_args.buf = bad;
-    DmxV.rdm_parse_args.len = n;
-    DmxV.rdm_parse_args.out = &g;
-    DmxV.rdm_parse_args.consumed = &c;
+    Dmx.rdm_parse_args.buf = bad;
+    Dmx.rdm_parse_args.len = n;
+    Dmx.rdm_parse_args.out = &g;
+    Dmx.rdm_parse_args.consumed = &c;
     Dmx.rdm_parse(dmx_work);
-    TEST_ASSERT_FALSE(DmxV.ok);
+    TEST_ASSERT_FALSE(Dmx.ok);
 
     memcpy(bad, good, n);
     bad[2] = 40u; // a length that agrees with its PDL but runs past the buffer
     bad[23] = 16u;
-    DmxV.rdm_parse_args.buf = bad;
-    DmxV.rdm_parse_args.len = n;
-    DmxV.rdm_parse_args.out = &g;
-    DmxV.rdm_parse_args.consumed = &c;
+    Dmx.rdm_parse_args.buf = bad;
+    Dmx.rdm_parse_args.len = n;
+    Dmx.rdm_parse_args.out = &g;
+    Dmx.rdm_parse_args.consumed = &c;
     Dmx.rdm_parse(dmx_work);
-    TEST_ASSERT_FALSE(DmxV.ok);
+    TEST_ASSERT_FALSE(Dmx.ok);
 
-    DmxV.rdm_parse_args.buf = good;
-    DmxV.rdm_parse_args.len = RDM_OVERHEAD - 1u;
-    DmxV.rdm_parse_args.out = &g;
-    DmxV.rdm_parse_args.consumed = &c;
+    Dmx.rdm_parse_args.buf = good;
+    Dmx.rdm_parse_args.len = RDM_OVERHEAD - 1u;
+    Dmx.rdm_parse_args.out = &g;
+    Dmx.rdm_parse_args.consumed = &c;
     Dmx.rdm_parse(dmx_work);
-    TEST_ASSERT_FALSE(DmxV.ok);
-    DmxV.rdm_parse_args.buf = NULL;
-    DmxV.rdm_parse_args.len = n;
-    DmxV.rdm_parse_args.out = &g;
-    DmxV.rdm_parse_args.consumed = &c;
+    TEST_ASSERT_FALSE(Dmx.ok);
+    Dmx.rdm_parse_args.buf = NULL;
+    Dmx.rdm_parse_args.len = n;
+    Dmx.rdm_parse_args.out = &g;
+    Dmx.rdm_parse_args.consumed = &c;
     Dmx.rdm_parse(dmx_work);
-    TEST_ASSERT_FALSE(DmxV.ok);
-    DmxV.rdm_parse_args.buf = good;
-    DmxV.rdm_parse_args.len = n;
-    DmxV.rdm_parse_args.out = NULL;
-    DmxV.rdm_parse_args.consumed = &c;
+    TEST_ASSERT_FALSE(Dmx.ok);
+    Dmx.rdm_parse_args.buf = good;
+    Dmx.rdm_parse_args.len = n;
+    Dmx.rdm_parse_args.out = NULL;
+    Dmx.rdm_parse_args.consumed = &c;
     Dmx.rdm_parse(dmx_work);
-    TEST_ASSERT_FALSE(DmxV.ok);
-    DmxV.rdm_parse_args.buf = good;
-    DmxV.rdm_parse_args.len = n;
-    DmxV.rdm_parse_args.out = &g;
-    DmxV.rdm_parse_args.consumed = NULL;
+    TEST_ASSERT_FALSE(Dmx.ok);
+    Dmx.rdm_parse_args.buf = good;
+    Dmx.rdm_parse_args.len = n;
+    Dmx.rdm_parse_args.out = &g;
+    Dmx.rdm_parse_args.consumed = NULL;
     Dmx.rdm_parse(dmx_work);
-    TEST_ASSERT_TRUE(DmxV.ok); // consumed is optional
+    TEST_ASSERT_TRUE(Dmx.ok); // consumed is optional
 }
 
 void test_rdm_build_guards(void)
@@ -677,48 +677,48 @@ void test_rdm_build_guards(void)
     uint8_t buf[64];
     static const uint8_t PD[2] = {1, 2};
 
-    DmxV.rdm_build_args.buf = NULL;
-    DmxV.rdm_build_args.cap = sizeof(buf);
-    DmxV.rdm_build_args.p = &p;
-    DmxV.rdm_build_args.pdata = NULL;
-    DmxV.rdm_build_args.pdl = 0u;
+    Dmx.rdm_build_args.buf = NULL;
+    Dmx.rdm_build_args.cap = sizeof(buf);
+    Dmx.rdm_build_args.p = &p;
+    Dmx.rdm_build_args.pdata = NULL;
+    Dmx.rdm_build_args.pdl = 0u;
     Dmx.rdm_build(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(0u, DmxV.n);
-    DmxV.rdm_build_args.buf = buf;
-    DmxV.rdm_build_args.cap = sizeof(buf);
-    DmxV.rdm_build_args.p = NULL;
-    DmxV.rdm_build_args.pdata = NULL;
-    DmxV.rdm_build_args.pdl = 0u;
+    TEST_ASSERT_EQUAL_size_t(0u, Dmx.n);
+    Dmx.rdm_build_args.buf = buf;
+    Dmx.rdm_build_args.cap = sizeof(buf);
+    Dmx.rdm_build_args.p = NULL;
+    Dmx.rdm_build_args.pdata = NULL;
+    Dmx.rdm_build_args.pdl = 0u;
     Dmx.rdm_build(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(0u, DmxV.n);
-    DmxV.rdm_build_args.buf = buf;
-    DmxV.rdm_build_args.cap = sizeof(buf);
-    DmxV.rdm_build_args.p = &p;
-    DmxV.rdm_build_args.pdata = NULL;
-    DmxV.rdm_build_args.pdl = 2u;
+    TEST_ASSERT_EQUAL_size_t(0u, Dmx.n);
+    Dmx.rdm_build_args.buf = buf;
+    Dmx.rdm_build_args.cap = sizeof(buf);
+    Dmx.rdm_build_args.p = &p;
+    Dmx.rdm_build_args.pdata = NULL;
+    Dmx.rdm_build_args.pdl = 2u;
     Dmx.rdm_build(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(0u, DmxV.n);
-    DmxV.rdm_build_args.buf = buf;
-    DmxV.rdm_build_args.cap = RDM_OVERHEAD - 1u;
-    DmxV.rdm_build_args.p = &p;
-    DmxV.rdm_build_args.pdata = NULL;
-    DmxV.rdm_build_args.pdl = 0u;
+    TEST_ASSERT_EQUAL_size_t(0u, Dmx.n);
+    Dmx.rdm_build_args.buf = buf;
+    Dmx.rdm_build_args.cap = RDM_OVERHEAD - 1u;
+    Dmx.rdm_build_args.p = &p;
+    Dmx.rdm_build_args.pdata = NULL;
+    Dmx.rdm_build_args.pdl = 0u;
     Dmx.rdm_build(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(0u, DmxV.n);
-    DmxV.rdm_build_args.buf = buf;
-    DmxV.rdm_build_args.cap = RDM_OVERHEAD;
-    DmxV.rdm_build_args.p = &p;
-    DmxV.rdm_build_args.pdata = NULL;
-    DmxV.rdm_build_args.pdl = 0u;
+    TEST_ASSERT_EQUAL_size_t(0u, Dmx.n);
+    Dmx.rdm_build_args.buf = buf;
+    Dmx.rdm_build_args.cap = RDM_OVERHEAD;
+    Dmx.rdm_build_args.p = &p;
+    Dmx.rdm_build_args.pdata = NULL;
+    Dmx.rdm_build_args.pdl = 0u;
     Dmx.rdm_build(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(RDM_OVERHEAD, DmxV.n);
-    DmxV.rdm_build_args.buf = buf;
-    DmxV.rdm_build_args.cap = RDM_OVERHEAD + 1u;
-    DmxV.rdm_build_args.p = &p;
-    DmxV.rdm_build_args.pdata = PD;
-    DmxV.rdm_build_args.pdl = 2u;
+    TEST_ASSERT_EQUAL_size_t(RDM_OVERHEAD, Dmx.n);
+    Dmx.rdm_build_args.buf = buf;
+    Dmx.rdm_build_args.cap = RDM_OVERHEAD + 1u;
+    Dmx.rdm_build_args.p = &p;
+    Dmx.rdm_build_args.pdata = PD;
+    Dmx.rdm_build_args.pdl = 2u;
     Dmx.rdm_build(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(0u, DmxV.n);
+    TEST_ASSERT_EQUAL_size_t(0u, Dmx.n);
 }
 
 // ANSI E1.11 (DMX512-A): the packet body is a start code followed by up to 512 slots, and the NULL
@@ -727,51 +727,51 @@ void test_e111_slot_array(void)
 {
     static const uint8_t CH[4] = {10u, 20u, 30u, 255u};
     uint8_t buf[8];
-    DmxV.build_args.buf = buf;
-    DmxV.build_args.cap = sizeof(buf);
-    DmxV.build_args.start_code = DMX_SC_DIMMER;
-    DmxV.build_args.channels = CH;
-    DmxV.build_args.n = 4u;
+    Dmx.build_args.buf = buf;
+    Dmx.build_args.cap = sizeof(buf);
+    Dmx.build_args.start_code = DMX_SC_DIMMER;
+    Dmx.build_args.channels = CH;
+    Dmx.build_args.n = 4u;
     Dmx.build(dmx_work);
-    size_t n = DmxV.n;
+    size_t n = Dmx.n;
     TEST_ASSERT_EQUAL_size_t(5u, n);
     TEST_ASSERT_EQUAL_HEX8(0x00u, buf[0]);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(CH, buf + 1, 4u);
 
-    DmxV.get_channel_args.buf = buf;
-    DmxV.get_channel_args.len = n;
-    DmxV.get_channel_args.ch = 1u;
+    Dmx.get_channel_args.buf = buf;
+    Dmx.get_channel_args.len = n;
+    Dmx.get_channel_args.ch = 1u;
     Dmx.get_channel(dmx_work);
-    TEST_ASSERT_EQUAL_UINT8(10u, DmxV.u8);
-    DmxV.get_channel_args.buf = buf;
-    DmxV.get_channel_args.len = n;
-    DmxV.get_channel_args.ch = 2u;
+    TEST_ASSERT_EQUAL_UINT8(10u, Dmx.u8);
+    Dmx.get_channel_args.buf = buf;
+    Dmx.get_channel_args.len = n;
+    Dmx.get_channel_args.ch = 2u;
     Dmx.get_channel(dmx_work);
-    TEST_ASSERT_EQUAL_UINT8(20u, DmxV.u8);
-    DmxV.get_channel_args.buf = buf;
-    DmxV.get_channel_args.len = n;
-    DmxV.get_channel_args.ch = 4u;
+    TEST_ASSERT_EQUAL_UINT8(20u, Dmx.u8);
+    Dmx.get_channel_args.buf = buf;
+    Dmx.get_channel_args.len = n;
+    Dmx.get_channel_args.ch = 4u;
     Dmx.get_channel(dmx_work);
-    TEST_ASSERT_EQUAL_UINT8(255u, DmxV.u8);
-    DmxV.get_channel_args.buf = buf;
-    DmxV.get_channel_args.len = n;
-    DmxV.get_channel_args.ch = 0u;
+    TEST_ASSERT_EQUAL_UINT8(255u, Dmx.u8);
+    Dmx.get_channel_args.buf = buf;
+    Dmx.get_channel_args.len = n;
+    Dmx.get_channel_args.ch = 0u;
     Dmx.get_channel(dmx_work);
-    TEST_ASSERT_EQUAL_UINT8(0u, DmxV.u8); // slot 0 is the start code
-    DmxV.get_channel_args.buf = buf;
-    DmxV.get_channel_args.len = n;
-    DmxV.get_channel_args.ch = 5u;
+    TEST_ASSERT_EQUAL_UINT8(0u, Dmx.u8); // slot 0 is the start code
+    Dmx.get_channel_args.buf = buf;
+    Dmx.get_channel_args.len = n;
+    Dmx.get_channel_args.ch = 5u;
     Dmx.get_channel(dmx_work);
-    TEST_ASSERT_EQUAL_UINT8(0u, DmxV.u8); // past the packet
+    TEST_ASSERT_EQUAL_UINT8(0u, Dmx.u8); // past the packet
 
     // A start code other than 0x00 is carried through: RDM rides the same wire as SC 0xCC.
-    DmxV.build_args.buf = buf;
-    DmxV.build_args.cap = sizeof(buf);
-    DmxV.build_args.start_code = RDM_SC;
-    DmxV.build_args.channels = CH;
-    DmxV.build_args.n = 4u;
+    Dmx.build_args.buf = buf;
+    Dmx.build_args.cap = sizeof(buf);
+    Dmx.build_args.start_code = RDM_SC;
+    Dmx.build_args.channels = CH;
+    Dmx.build_args.n = 4u;
     Dmx.build(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(5u, DmxV.n);
+    TEST_ASSERT_EQUAL_size_t(5u, Dmx.n);
     TEST_ASSERT_EQUAL_HEX8(0xCCu, buf[0]);
 }
 
@@ -784,83 +784,83 @@ void test_e111_universe_is_512_slots(void)
     {
         src[i] = (uint8_t)(i & 0xFFu);
     }
-    DmxV.build_args.buf = buf;
-    DmxV.build_args.cap = sizeof(buf);
-    DmxV.build_args.start_code = DMX_SC_DIMMER;
-    DmxV.build_args.channels = src;
-    DmxV.build_args.n = DMX_MAX_CHANNELS;
+    Dmx.build_args.buf = buf;
+    Dmx.build_args.cap = sizeof(buf);
+    Dmx.build_args.start_code = DMX_SC_DIMMER;
+    Dmx.build_args.channels = src;
+    Dmx.build_args.n = DMX_MAX_CHANNELS;
     Dmx.build(dmx_work);
-    size_t n = DmxV.n;
+    size_t n = Dmx.n;
     TEST_ASSERT_EQUAL_size_t((size_t)DMX_MAX_CHANNELS + 1u, n);
-    DmxV.get_channel_args.buf = buf;
-    DmxV.get_channel_args.len = n;
-    DmxV.get_channel_args.ch = 1u;
+    Dmx.get_channel_args.buf = buf;
+    Dmx.get_channel_args.len = n;
+    Dmx.get_channel_args.ch = 1u;
     Dmx.get_channel(dmx_work);
-    TEST_ASSERT_EQUAL_UINT8(src[0], DmxV.u8);
-    DmxV.get_channel_args.buf = buf;
-    DmxV.get_channel_args.len = n;
-    DmxV.get_channel_args.ch = DMX_MAX_CHANNELS;
+    TEST_ASSERT_EQUAL_UINT8(src[0], Dmx.u8);
+    Dmx.get_channel_args.buf = buf;
+    Dmx.get_channel_args.len = n;
+    Dmx.get_channel_args.ch = DMX_MAX_CHANNELS;
     Dmx.get_channel(dmx_work);
-    TEST_ASSERT_EQUAL_UINT8(src[DMX_MAX_CHANNELS - 1u], DmxV.u8);
-    DmxV.get_channel_args.buf = buf;
-    DmxV.get_channel_args.len = n;
-    DmxV.get_channel_args.ch = DMX_MAX_CHANNELS + 1u;
+    TEST_ASSERT_EQUAL_UINT8(src[DMX_MAX_CHANNELS - 1u], Dmx.u8);
+    Dmx.get_channel_args.buf = buf;
+    Dmx.get_channel_args.len = n;
+    Dmx.get_channel_args.ch = DMX_MAX_CHANNELS + 1u;
     Dmx.get_channel(dmx_work);
-    TEST_ASSERT_EQUAL_UINT8(0u, DmxV.u8);
+    TEST_ASSERT_EQUAL_UINT8(0u, Dmx.u8);
 
-    DmxV.build_args.buf = buf;
-    DmxV.build_args.cap = sizeof(buf);
-    DmxV.build_args.start_code = DMX_SC_DIMMER;
-    DmxV.build_args.channels = src;
-    DmxV.build_args.n = DMX_MAX_CHANNELS + 1u;
+    Dmx.build_args.buf = buf;
+    Dmx.build_args.cap = sizeof(buf);
+    Dmx.build_args.start_code = DMX_SC_DIMMER;
+    Dmx.build_args.channels = src;
+    Dmx.build_args.n = DMX_MAX_CHANNELS + 1u;
     Dmx.build(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(0u, DmxV.n);
+    TEST_ASSERT_EQUAL_size_t(0u, Dmx.n);
 }
 
 void test_dmx_build_guards(void)
 {
     static const uint8_t CH[4] = {1u, 2u, 3u, 4u};
     uint8_t buf[8];
-    DmxV.build_args.buf = NULL;
-    DmxV.build_args.cap = sizeof(buf);
-    DmxV.build_args.start_code = DMX_SC_DIMMER;
-    DmxV.build_args.channels = CH;
-    DmxV.build_args.n = 4u;
+    Dmx.build_args.buf = NULL;
+    Dmx.build_args.cap = sizeof(buf);
+    Dmx.build_args.start_code = DMX_SC_DIMMER;
+    Dmx.build_args.channels = CH;
+    Dmx.build_args.n = 4u;
     Dmx.build(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(0u, DmxV.n);
-    DmxV.build_args.buf = buf;
-    DmxV.build_args.cap = 4u;
-    DmxV.build_args.start_code = DMX_SC_DIMMER;
-    DmxV.build_args.channels = CH;
-    DmxV.build_args.n = 4u;
+    TEST_ASSERT_EQUAL_size_t(0u, Dmx.n);
+    Dmx.build_args.buf = buf;
+    Dmx.build_args.cap = 4u;
+    Dmx.build_args.start_code = DMX_SC_DIMMER;
+    Dmx.build_args.channels = CH;
+    Dmx.build_args.n = 4u;
     Dmx.build(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(0u, DmxV.n); // needs 5
-    DmxV.build_args.buf = buf;
-    DmxV.build_args.cap = sizeof(buf);
-    DmxV.build_args.start_code = DMX_SC_DIMMER;
-    DmxV.build_args.channels = NULL;
-    DmxV.build_args.n = 4u;
+    TEST_ASSERT_EQUAL_size_t(0u, Dmx.n); // needs 5
+    Dmx.build_args.buf = buf;
+    Dmx.build_args.cap = sizeof(buf);
+    Dmx.build_args.start_code = DMX_SC_DIMMER;
+    Dmx.build_args.channels = NULL;
+    Dmx.build_args.n = 4u;
     Dmx.build(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(0u, DmxV.n);
+    TEST_ASSERT_EQUAL_size_t(0u, Dmx.n);
 
     // No slots at all is a legal packet: the start code alone.
-    DmxV.build_args.buf = buf;
-    DmxV.build_args.cap = sizeof(buf);
-    DmxV.build_args.start_code = DMX_SC_DIMMER;
-    DmxV.build_args.channels = NULL;
-    DmxV.build_args.n = 0u;
+    Dmx.build_args.buf = buf;
+    Dmx.build_args.cap = sizeof(buf);
+    Dmx.build_args.start_code = DMX_SC_DIMMER;
+    Dmx.build_args.channels = NULL;
+    Dmx.build_args.n = 0u;
     Dmx.build(dmx_work);
-    TEST_ASSERT_EQUAL_size_t(1u, DmxV.n);
+    TEST_ASSERT_EQUAL_size_t(1u, Dmx.n);
     TEST_ASSERT_EQUAL_HEX8(0x00u, buf[0]);
 
-    DmxV.get_channel_args.buf = NULL;
-    DmxV.get_channel_args.len = 8u;
-    DmxV.get_channel_args.ch = 1u;
+    Dmx.get_channel_args.buf = NULL;
+    Dmx.get_channel_args.len = 8u;
+    Dmx.get_channel_args.ch = 1u;
     Dmx.get_channel(dmx_work);
-    TEST_ASSERT_EQUAL_UINT8(0u, DmxV.u8);
-    DmxV.get_channel_args.buf = buf;
-    DmxV.get_channel_args.len = 8u;
-    DmxV.get_channel_args.ch = DMX_MAX_CHANNELS + 1u;
+    TEST_ASSERT_EQUAL_UINT8(0u, Dmx.u8);
+    Dmx.get_channel_args.buf = buf;
+    Dmx.get_channel_args.len = 8u;
+    Dmx.get_channel_args.ch = DMX_MAX_CHANNELS + 1u;
     Dmx.get_channel(dmx_work);
-    TEST_ASSERT_EQUAL_UINT8(0u, DmxV.u8);
+    TEST_ASSERT_EQUAL_UINT8(0u, Dmx.u8);
 }

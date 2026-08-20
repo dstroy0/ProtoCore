@@ -54,24 +54,24 @@ static proto_bool contains(const char *hay, uint16_t len, const char *needle)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_sigfox_build_uplink(uint8_t *restrict work)
+static void sigfox_build_uplink(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *payload = SigfoxV.build_uplink_args.payload;
-    uint8_t len = SigfoxV.build_uplink_args.len;
-    char *out = SigfoxV.build_uplink_args.out;
-    uint16_t cap = SigfoxV.build_uplink_args.cap;
+    const uint8_t *payload = Sigfox.build_uplink_args.payload;
+    uint8_t len = Sigfox.build_uplink_args.len;
+    char *out = Sigfox.build_uplink_args.out;
+    uint16_t cap = Sigfox.build_uplink_args.cap;
 
     if (!out || !payload || len == 0 || len > PROTOCORE_SIGFOX_MAX_PAYLOAD)
     {
-        SigfoxV.value = 0;
+        Sigfox.value = 0;
         return;
     }
     // "AT$SF=" (6) + 2*len hex + "\r\n" (2) + NUL (1)
     uint16_t need = (uint16_t)(6 + 2 * len + 2 + 1);
     if (need > cap)
     {
-        SigfoxV.value = 0;
+        Sigfox.value = 0;
         return;
     }
     const char *pfx = "AT$SF=";
@@ -88,35 +88,34 @@ void protocore_sigfox_build_uplink(uint8_t *restrict work)
     out[p++] = '\r';
     out[p++] = '\n';
     out[p] = '\0';
-    SigfoxV.value = p;
+    Sigfox.value = p;
 }
 
-void protocore_sigfox_parse_response(uint8_t *restrict work)
+static void sigfox_parse_response(uint8_t *restrict work)
 {
     (void)work;
-    const char *buf = SigfoxV.parse_response_args.buf;
-    uint16_t len = SigfoxV.parse_response_args.len;
+    const char *buf = Sigfox.parse_response_args.buf;
+    uint16_t len = Sigfox.parse_response_args.len;
 
     if (!buf || len == 0)
     {
-        SigfoxV.status = SIGFOX_PENDING;
+        Sigfox.status = SIGFOX_PENDING;
         return;
     }
     if (contains(buf, len, "ERROR"))
     {
-        SigfoxV.status = SIGFOX_ERROR;
+        Sigfox.status = SIGFOX_ERROR;
         return;
     }
     if (contains(buf, len, "OK"))
     {
-        SigfoxV.status = SIGFOX_OK;
+        Sigfox.status = SIGFOX_OK;
         return;
     }
-    SigfoxV.status = SIGFOX_PENDING;
+    Sigfox.status = SIGFOX_PENDING;
 }
 
-/** @brief The operands and the outcome. */
-SigfoxVars SigfoxV;
+SigfoxNs Sigfox = {.build_uplink = sigfox_build_uplink, .parse_response = sigfox_parse_response};
 
 PROTOCORE_END_DECLS
 

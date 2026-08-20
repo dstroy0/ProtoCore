@@ -69,51 +69,51 @@ uint8_t *protocore_config_store_span(void)
     return s_own.span;
 }
 
-void protocore_config_store_begin(uint8_t *restrict work)
+static void config_store_begin(uint8_t *restrict work)
 {
     (void)work;
-    const char *ns = ConfigStoreV.begin_args.ns;
+    const char *ns = ConfigStore.begin_args.ns;
 
     if (!ns || !ns[0] || str.len(ns, PROTOCORE_CONFIG_KEY_MAX) >= PROTOCORE_CONFIG_KEY_MAX)
     {
         CONFIG_STORE_CTX(work)->ns[0] = '\0';
-        ConfigStoreV.ok = PROTO_FALSE;
+        ConfigStore.ok = PROTO_FALSE;
         return;
     }
     str.copy(CONFIG_STORE_CTX(work)->ns, ns, sizeof(CONFIG_STORE_CTX(work)->ns));
     CONFIG_STORE_CTX(work)->ns[PROTOCORE_CONFIG_KEY_MAX - 1] = '\0';
-    ConfigStoreV.ok = PROTO_TRUE;
+    ConfigStore.ok = PROTO_TRUE;
     return;
 }
 
-void protocore_config_store_set_str(uint8_t *restrict work)
+static void config_store_set_str(uint8_t *restrict work)
 {
     (void)work;
-    const char *key = ConfigStoreV.set_str_args.key;
-    const char *val = ConfigStoreV.set_str_args.val;
+    const char *key = ConfigStore.set_str_args.key;
+    const char *val = ConfigStore.set_str_args.val;
 
-    ConfigStoreV.ok = protocore_nvs_put_str(CONFIG_STORE_CTX(work)->ns, key, val);
+    ConfigStore.ok = protocore_nvs_put_str(CONFIG_STORE_CTX(work)->ns, key, val);
     return;
 }
 
-void protocore_config_store_get_str(uint8_t *restrict work)
+static void config_store_get_str(uint8_t *restrict work)
 {
     (void)work;
-    ConfigStoreV.n = 0;
-    const char *key = ConfigStoreV.get_str_args.key;
-    char *out = ConfigStoreV.get_str_args.out;
-    size_t out_cap = ConfigStoreV.get_str_args.out_cap;
-    const char *def = ConfigStoreV.get_str_args.def;
+    ConfigStore.n = 0;
+    const char *key = ConfigStore.get_str_args.key;
+    char *out = ConfigStore.get_str_args.out;
+    size_t out_cap = ConfigStore.get_str_args.out_cap;
+    const char *def = ConfigStore.get_str_args.def;
 
     if (!out || out_cap == 0)
     {
-        ConfigStoreV.n = 0;
+        ConfigStore.n = 0;
         return;
     }
     size_t n = protocore_nvs_get_str(CONFIG_STORE_CTX(work)->ns, key, out, out_cap);
     if (n > 0)
     {
-        ConfigStoreV.n = n;
+        ConfigStore.n = n;
         return;
     }
     // Absent: the default is this layer's, so the seam never has to know there is one.
@@ -127,73 +127,80 @@ void protocore_config_store_get_str(uint8_t *restrict work)
         mem.cpy(out, def, n);
     }
     out[n] = '\0';
-    ConfigStoreV.n = n;
+    ConfigStore.n = n;
     return;
 }
 
-void protocore_config_store_set_u32(uint8_t *restrict work)
+static void config_store_set_u32(uint8_t *restrict work)
 {
     (void)work;
-    const char *key = ConfigStoreV.set_u32_args.key;
-    uint32_t val = ConfigStoreV.set_u32_args.val;
+    const char *key = ConfigStore.set_u32_args.key;
+    uint32_t val = ConfigStore.set_u32_args.val;
 
-    ConfigStoreV.ok = protocore_nvs_put_u32(CONFIG_STORE_CTX(work)->ns, key, val);
+    ConfigStore.ok = protocore_nvs_put_u32(CONFIG_STORE_CTX(work)->ns, key, val);
     return;
 }
 
-void protocore_config_store_get_u32(uint8_t *restrict work)
+static void config_store_get_u32(uint8_t *restrict work)
 {
     (void)work;
-    ConfigStoreV.ms = 0;
-    const char *key = ConfigStoreV.get_u32_args.key;
-    uint32_t def = ConfigStoreV.get_u32_args.def;
+    ConfigStore.ms = 0;
+    const char *key = ConfigStore.get_u32_args.key;
+    uint32_t def = ConfigStore.get_u32_args.def;
 
-    ConfigStoreV.ms = protocore_nvs_get_u32(CONFIG_STORE_CTX(work)->ns, key, def);
+    ConfigStore.ms = protocore_nvs_get_u32(CONFIG_STORE_CTX(work)->ns, key, def);
     return;
 }
 
-void protocore_config_store_set_blob(uint8_t *restrict work)
+static void config_store_set_blob(uint8_t *restrict work)
 {
     (void)work;
-    const char *key = ConfigStoreV.set_blob_args.key;
-    const void *data = ConfigStoreV.set_blob_args.data;
-    size_t len = ConfigStoreV.set_blob_args.len;
+    const char *key = ConfigStore.set_blob_args.key;
+    const void *data = ConfigStore.set_blob_args.data;
+    size_t len = ConfigStore.set_blob_args.len;
 
-    ConfigStoreV.ok = protocore_nvs_put_blob(CONFIG_STORE_CTX(work)->ns, key, data, len);
+    ConfigStore.ok = protocore_nvs_put_blob(CONFIG_STORE_CTX(work)->ns, key, data, len);
     return;
 }
 
-void protocore_config_store_get_blob(uint8_t *restrict work)
+static void config_store_get_blob(uint8_t *restrict work)
 {
     (void)work;
-    ConfigStoreV.n = 0;
-    const char *key = ConfigStoreV.get_blob_args.key;
-    void *out = ConfigStoreV.get_blob_args.out;
-    size_t out_cap = ConfigStoreV.get_blob_args.out_cap;
+    ConfigStore.n = 0;
+    const char *key = ConfigStore.get_blob_args.key;
+    void *out = ConfigStore.get_blob_args.out;
+    size_t out_cap = ConfigStore.get_blob_args.out_cap;
 
-    ConfigStoreV.n = protocore_nvs_get_blob(CONFIG_STORE_CTX(work)->ns, key, out, out_cap);
+    ConfigStore.n = protocore_nvs_get_blob(CONFIG_STORE_CTX(work)->ns, key, out, out_cap);
     return;
 }
 
-void protocore_config_store_erase(uint8_t *restrict work)
+static void config_store_erase(uint8_t *restrict work)
 {
     (void)work;
-    const char *key = ConfigStoreV.erase_args.key;
+    const char *key = ConfigStore.erase_args.key;
 
-    ConfigStoreV.ok = protocore_nvs_erase(CONFIG_STORE_CTX(work)->ns, key);
+    ConfigStore.ok = protocore_nvs_erase(CONFIG_STORE_CTX(work)->ns, key);
     return;
 }
 
-void protocore_config_store_clear(uint8_t *restrict work)
+static void config_store_clear(uint8_t *restrict work)
 {
     (void)work;
 
-    ConfigStoreV.ok = protocore_nvs_clear(CONFIG_STORE_CTX(work)->ns);
+    ConfigStore.ok = protocore_nvs_clear(CONFIG_STORE_CTX(work)->ns);
     return;
 }
 
-/** @brief The operands and the outcome. */
-ConfigStoreVars ConfigStoreV;
+ConfigStoreNs ConfigStore = {.begin = config_store_begin,
+                             .set_str = config_store_set_str,
+                             .get_str = config_store_get_str,
+                             .set_u32 = config_store_set_u32,
+                             .get_u32 = config_store_get_u32,
+                             .set_blob = config_store_set_blob,
+                             .get_blob = config_store_get_blob,
+                             .erase = config_store_erase,
+                             .clear = config_store_clear};
 
 PROTOCORE_END_DECLS
 

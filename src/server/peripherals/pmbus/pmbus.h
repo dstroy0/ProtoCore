@@ -136,43 +136,51 @@ typedef struct
 {
     uint8_t vout_mode;
 } PmbusVoutModeKindArgs;
+
 /** @brief What vout_exponent takes: vout_mode. */
 typedef struct
 {
     uint8_t vout_mode;
 } PmbusVoutExponentArgs;
+
 /** @brief What l11_mantissa takes: word. */
 typedef struct
 {
     uint16_t word;
 } PmbusL11MantissaArgs;
+
 /** @brief What l11_exponent takes: word. */
 typedef struct
 {
     uint16_t word;
 } PmbusL11ExponentArgs;
+
 /** @brief What linear11_micro takes: word. */
 typedef struct
 {
     uint16_t word;
 } PmbusLinear11MicroArgs;
+
 /** @brief What linear11_encode takes: micro. */
 typedef struct
 {
     int32_t micro;
 } PmbusLinear11EncodeArgs;
+
 /** @brief What linear16_micro takes: word, exponent. */
 typedef struct
 {
     uint16_t word;
     int8_t exponent;
 } PmbusLinear16MicroArgs;
+
 /** @brief What linear16_encode takes: micro, exponent. */
 typedef struct
 {
     int32_t micro;
     int8_t exponent;
 } PmbusLinear16EncodeArgs;
+
 /** @brief What direct_micro takes: word, m, b, r. */
 typedef struct
 {
@@ -181,18 +189,21 @@ typedef struct
     int16_t b;
     int8_t r;
 } PmbusDirectMicroArgs;
+
 /** @brief What set_page takes: addr, page. */
 typedef struct
 {
     uint8_t addr;
     uint8_t page;
 } PmbusSetPageArgs;
+
 /** @brief What read_vout_mode takes: addr, out. */
 typedef struct
 {
     uint8_t addr;
     uint8_t *out;
 } PmbusReadVoutModeArgs;
+
 /** @brief What read_linear11 takes: addr, cmd, micro. */
 typedef struct
 {
@@ -200,6 +211,7 @@ typedef struct
     uint8_t cmd;
     int32_t *micro;
 } PmbusReadLinear11Args;
+
 /** @brief What read_linear16 takes: addr, cmd, exponent, micro. */
 typedef struct
 {
@@ -208,6 +220,7 @@ typedef struct
     int8_t exponent;
     int32_t *micro;
 } PmbusReadLinear16Args;
+
 /** @brief What write_linear16 takes: addr, cmd, exponent, micro. */
 typedef struct
 {
@@ -216,23 +229,27 @@ typedef struct
     int8_t exponent;
     int32_t micro;
 } PmbusWriteLinear16Args;
+
 /** @brief What status_byte takes: addr, out. */
 typedef struct
 {
     uint8_t addr;
     uint8_t *out;
 } PmbusStatusByteArgs;
+
 /** @brief What status_word takes: addr, out. */
 typedef struct
 {
     uint8_t addr;
     uint16_t *out;
 } PmbusStatusWordArgs;
+
 /** @brief What clear_faults takes: addr. */
 typedef struct
 {
     uint8_t addr;
 } PmbusClearFaultsArgs;
+
 /** @brief What read_mfr_string takes: addr, cmd, out, cap, len. */
 typedef struct
 {
@@ -242,6 +259,7 @@ typedef struct
     size_t cap;
     size_t *len;
 } PmbusReadMfrStringArgs;
+
 /**
  * @brief PMBus 1.3 power-management command set over SMBus. PMBus is SMBus with the command codes fixed and the ...
  *
@@ -320,20 +338,14 @@ typedef struct
     PmbusStatusWordArgs status_word_args;
     PmbusClearFaultsArgs clear_faults_args;
     PmbusReadMfrStringArgs read_mfr_string_args;
+
     proto_bool ok;
     uint8_t kind;
     int8_t exp;
     int16_t mantissa;
     int32_t micro;
     uint16_t word;
-} PmbusVars;
 
-/** @brief The operands and the outcome. */
-extern PmbusVars PmbusV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const vout_mode_kind)(uint8_t *restrict work);
     void (*const vout_exponent)(uint8_t *restrict work);
     void (*const l11_mantissa)(uint8_t *restrict work);
@@ -355,53 +367,8 @@ typedef struct
     void (*const read_mfr_string)(uint8_t *restrict work);
 } PmbusNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in PmbusV or a region of the borrow at a fixed offset.
-void protocore_pmbus_vout_mode_kind(uint8_t *restrict work);
-void protocore_pmbus_vout_exponent(uint8_t *restrict work);
-void protocore_pmbus_l11_mantissa(uint8_t *restrict work);
-void protocore_pmbus_l11_exponent(uint8_t *restrict work);
-void protocore_pmbus_linear11_micro(uint8_t *restrict work);
-void protocore_pmbus_linear11_encode(uint8_t *restrict work);
-void protocore_pmbus_linear16_micro(uint8_t *restrict work);
-void protocore_pmbus_linear16_encode(uint8_t *restrict work);
-void protocore_pmbus_direct_micro(uint8_t *restrict work);
-void protocore_pmbus_begin(uint8_t *restrict work);
-void protocore_pmbus_set_page(uint8_t *restrict work);
-void protocore_pmbus_read_vout_mode(uint8_t *restrict work);
-void protocore_pmbus_read_linear11(uint8_t *restrict work);
-void protocore_pmbus_read_linear16(uint8_t *restrict work);
-void protocore_pmbus_write_linear16(uint8_t *restrict work);
-void protocore_pmbus_status_byte(uint8_t *restrict work);
-void protocore_pmbus_status_word(uint8_t *restrict work);
-void protocore_pmbus_clear_faults(uint8_t *restrict work);
-void protocore_pmbus_read_mfr_string(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Pmbus.vout_mode_kind(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const PmbusNs Pmbus __attribute__((unused)) = {
-    .vout_mode_kind = protocore_pmbus_vout_mode_kind,
-    .vout_exponent = protocore_pmbus_vout_exponent,
-    .l11_mantissa = protocore_pmbus_l11_mantissa,
-    .l11_exponent = protocore_pmbus_l11_exponent,
-    .linear11_micro = protocore_pmbus_linear11_micro,
-    .linear11_encode = protocore_pmbus_linear11_encode,
-    .linear16_micro = protocore_pmbus_linear16_micro,
-    .linear16_encode = protocore_pmbus_linear16_encode,
-    .direct_micro = protocore_pmbus_direct_micro,
-    .begin = protocore_pmbus_begin,
-    .set_page = protocore_pmbus_set_page,
-    .read_vout_mode = protocore_pmbus_read_vout_mode,
-    .read_linear11 = protocore_pmbus_read_linear11,
-    .read_linear16 = protocore_pmbus_read_linear16,
-    .write_linear16 = protocore_pmbus_write_linear16,
-    .status_byte = protocore_pmbus_status_byte,
-    .status_word = protocore_pmbus_status_word,
-    .clear_faults = protocore_pmbus_clear_faults,
-    .read_mfr_string = protocore_pmbus_read_mfr_string,
-};
+/** @brief The one symbol this module exports. */
+extern PmbusNs Pmbus;
 
 PROTOCORE_END_DECLS
 

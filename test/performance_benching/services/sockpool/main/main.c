@@ -26,33 +26,33 @@ void dbench_run(void)
     {
         DBENCH_BANNER("sockpool");
         volatile uint32_t sink = 0;
-        SockpoolV.init_args.p = &pool;
-        SockpoolV.init_args.slots = slots;
-        SockpoolV.init_args.n = POOL_N;
+        Sockpool.init_args.p = &pool;
+        Sockpool.init_args.slots = slots;
+        Sockpool.init_args.n = POOL_N;
         Sockpool.init(sockpool_work);
         uint32_t id = 1, now = 0;
         // A churn of acquires: fills, then steadily recycles the LRU slot.
         DBENCH_OP("Sockpool.acquire (LRU)", 200000, {
             size_t idx = 0;
             uint32_t evicted = 0;
-            SockpoolV.acquire_args.p = &pool;
-            SockpoolV.acquire_args.id = id++;
-            SockpoolV.acquire_args.now = now++;
-            SockpoolV.acquire_args.idx = &idx;
-            SockpoolV.acquire_args.evicted_id = &evicted;
+            Sockpool.acquire_args.p = &pool;
+            Sockpool.acquire_args.id = id++;
+            Sockpool.acquire_args.now = now++;
+            Sockpool.acquire_args.idx = &idx;
+            Sockpool.acquire_args.evicted_id = &evicted;
             Sockpool.acquire(sockpool_work);
-            sink += (uint32_t)SockpoolV.acq;
+            sink += (uint32_t)Sockpool.acq;
         });
         size_t fidx = 0;
-        SockpoolV.find_args.p = &pool;
-        SockpoolV.find_args.id = id - 4;
-        SockpoolV.find_args.idx = &fidx;
+        Sockpool.find_args.p = &pool;
+        Sockpool.find_args.id = id - 4;
+        Sockpool.find_args.idx = &fidx;
         // The entry call stays inside DBENCH_OP so the timed loop measures the lookup itself.
-        DBENCH_OP("Sockpool.find", 200000, (Sockpool.find(sockpool_work), sink += SockpoolV.ok));
+        DBENCH_OP("Sockpool.find", 200000, (Sockpool.find(sockpool_work), sink += Sockpool.ok));
         DBENCH_OP("Sockpool.touch", 200000, {
-            SockpoolV.touch_args.p = &pool;
-            SockpoolV.touch_args.idx = 0;
-            SockpoolV.touch_args.now = now++;
+            Sockpool.touch_args.p = &pool;
+            Sockpool.touch_args.idx = 0;
+            Sockpool.touch_args.now = now++;
             Sockpool.touch(sockpool_work);
             sink += now;
         });

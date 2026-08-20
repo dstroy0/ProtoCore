@@ -116,59 +116,59 @@ static uint8_t g_ws[PROTOCORE_SHA3_BORROW] __attribute__((aligned(8)));
 // The namespace, called the way the vectors below read: operands in, one call, answer out.
 static void sha3_256(uint8_t *out, const uint8_t *in, size_t inlen)
 {
-    Sha3V.digest_args.out = out;
-    Sha3V.digest_args.in = in;
-    Sha3V.digest_args.inlen = inlen;
+    Sha3.digest_args.out = out;
+    Sha3.digest_args.in = in;
+    Sha3.digest_args.inlen = inlen;
     Sha3.sha3_256(g_ws);
 }
 
 static void sha3_512(uint8_t *out, const uint8_t *in, size_t inlen)
 {
-    Sha3V.digest_args.out = out;
-    Sha3V.digest_args.in = in;
-    Sha3V.digest_args.inlen = inlen;
+    Sha3.digest_args.out = out;
+    Sha3.digest_args.in = in;
+    Sha3.digest_args.inlen = inlen;
     Sha3.sha3_512(g_ws);
 }
 
 static void shake128(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen)
 {
-    Sha3V.xof_args.out = out;
-    Sha3V.xof_args.outlen = outlen;
-    Sha3V.xof_args.in = in;
-    Sha3V.xof_args.inlen = inlen;
+    Sha3.xof_args.out = out;
+    Sha3.xof_args.outlen = outlen;
+    Sha3.xof_args.in = in;
+    Sha3.xof_args.inlen = inlen;
     Sha3.shake128(g_ws);
 }
 
 static void shake256(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen)
 {
-    Sha3V.xof_args.out = out;
-    Sha3V.xof_args.outlen = outlen;
-    Sha3V.xof_args.in = in;
-    Sha3V.xof_args.inlen = inlen;
+    Sha3.xof_args.out = out;
+    Sha3.xof_args.outlen = outlen;
+    Sha3.xof_args.in = in;
+    Sha3.xof_args.inlen = inlen;
     Sha3.shake256(g_ws);
 }
 
 static void shake128_absorb(const uint8_t *in, size_t inlen)
 {
-    Sha3V.shake128_absorb_args.in = in;
-    Sha3V.shake128_absorb_args.inlen = inlen;
+    Sha3.shake128_absorb_args.in = in;
+    Sha3.shake128_absorb_args.inlen = inlen;
     Sha3.shake128_absorb(g_ws);
 }
 
 static void keccak_absorb(uint32_t rate, const uint8_t *in, size_t inlen, uint8_t domain)
 {
-    Sha3V.absorb_args.rate = rate;
-    Sha3V.absorb_args.in = in;
-    Sha3V.absorb_args.inlen = inlen;
-    Sha3V.absorb_args.domain = domain;
+    Sha3.absorb_args.rate = rate;
+    Sha3.absorb_args.in = in;
+    Sha3.absorb_args.inlen = inlen;
+    Sha3.absorb_args.domain = domain;
     Sha3.absorb(g_ws);
 }
 
 static void keccak_squeeze(uint8_t *out, size_t outlen)
 {
-    Sha3V.squeeze_args.out = out;
-    Sha3V.squeeze_args.outlen = outlen;
-    Sha3V.squeeze(g_ws);
+    Sha3.squeeze_args.out = out;
+    Sha3.squeeze_args.outlen = outlen;
+    Sha3.squeeze(g_ws);
 }
 
 static uint8_t g_msg[512];

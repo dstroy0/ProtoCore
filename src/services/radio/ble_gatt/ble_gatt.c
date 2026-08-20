@@ -22,35 +22,35 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_ble_gatt_att_read_req(uint8_t *restrict work)
+static void ble_gatt_att_read_req(uint8_t *restrict work)
 {
     (void)work;
-    uint16_t handle = BleGattV.att_read_req_args.handle;
-    uint8_t *out = BleGattV.att_read_req_args.out;
-    size_t cap = BleGattV.att_read_req_args.cap;
+    uint16_t handle = BleGatt.att_read_req_args.handle;
+    uint8_t *out = BleGatt.att_read_req_args.out;
+    size_t cap = BleGatt.att_read_req_args.cap;
 
     if (!out || cap < 3)
     {
-        BleGattV.n = 0;
+        BleGatt.n = 0;
         return;
     }
     out[0] = ATT_OP_READ_REQ;
     out[1] = (uint8_t)handle;
     out[2] = (uint8_t)(handle >> 8);
-    BleGattV.n = 3;
+    BleGatt.n = 3;
 }
 
-void protocore_ble_gatt_att_read_rsp(uint8_t *restrict work)
+static void ble_gatt_att_read_rsp(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *val = BleGattV.att_read_rsp_args.val;
-    size_t vlen = BleGattV.att_read_rsp_args.vlen;
-    uint8_t *out = BleGattV.att_read_rsp_args.out;
-    size_t cap = BleGattV.att_read_rsp_args.cap;
+    const uint8_t *val = BleGatt.att_read_rsp_args.val;
+    size_t vlen = BleGatt.att_read_rsp_args.vlen;
+    uint8_t *out = BleGatt.att_read_rsp_args.out;
+    size_t cap = BleGatt.att_read_rsp_args.cap;
 
     if (!out || (vlen && !val) || cap < 1 + vlen)
     {
-        BleGattV.n = 0;
+        BleGatt.n = 0;
         return;
     }
     out[0] = ATT_OP_READ_RSP;
@@ -58,7 +58,7 @@ void protocore_ble_gatt_att_read_rsp(uint8_t *restrict work)
     {
         mem.cpy(out + 1, val, vlen);
     }
-    BleGattV.n = 1 + vlen;
+    BleGatt.n = 1 + vlen;
 }
 
 static size_t att_handle_value(uint8_t op, uint16_t handle, const uint8_t *val, size_t vlen, uint8_t *out, size_t cap)
@@ -77,42 +77,42 @@ static size_t att_handle_value(uint8_t op, uint16_t handle, const uint8_t *val, 
     return 3 + vlen;
 }
 
-void protocore_ble_gatt_att_write_req(uint8_t *restrict work)
+static void ble_gatt_att_write_req(uint8_t *restrict work)
 {
     (void)work;
-    uint16_t handle = BleGattV.att_write_req_args.handle;
-    const uint8_t *val = BleGattV.att_write_req_args.val;
-    size_t vlen = BleGattV.att_write_req_args.vlen;
-    uint8_t *out = BleGattV.att_write_req_args.out;
-    size_t cap = BleGattV.att_write_req_args.cap;
+    uint16_t handle = BleGatt.att_write_req_args.handle;
+    const uint8_t *val = BleGatt.att_write_req_args.val;
+    size_t vlen = BleGatt.att_write_req_args.vlen;
+    uint8_t *out = BleGatt.att_write_req_args.out;
+    size_t cap = BleGatt.att_write_req_args.cap;
 
-    BleGattV.n = att_handle_value(ATT_OP_WRITE_REQ, handle, val, vlen, out, cap);
+    BleGatt.n = att_handle_value(ATT_OP_WRITE_REQ, handle, val, vlen, out, cap);
 }
 
-void protocore_ble_gatt_att_notify(uint8_t *restrict work)
+static void ble_gatt_att_notify(uint8_t *restrict work)
 {
     (void)work;
-    uint16_t handle = BleGattV.att_notify_args.handle;
-    const uint8_t *val = BleGattV.att_notify_args.val;
-    size_t vlen = BleGattV.att_notify_args.vlen;
-    uint8_t *out = BleGattV.att_notify_args.out;
-    size_t cap = BleGattV.att_notify_args.cap;
+    uint16_t handle = BleGatt.att_notify_args.handle;
+    const uint8_t *val = BleGatt.att_notify_args.val;
+    size_t vlen = BleGatt.att_notify_args.vlen;
+    uint8_t *out = BleGatt.att_notify_args.out;
+    size_t cap = BleGatt.att_notify_args.cap;
 
-    BleGattV.n = att_handle_value(ATT_OP_HANDLE_VALUE_NTF, handle, val, vlen, out, cap);
+    BleGatt.n = att_handle_value(ATT_OP_HANDLE_VALUE_NTF, handle, val, vlen, out, cap);
 }
 
-void protocore_ble_gatt_att_error_rsp(uint8_t *restrict work)
+static void ble_gatt_att_error_rsp(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t req_op = BleGattV.att_error_rsp_args.req_op;
-    uint16_t handle = BleGattV.att_error_rsp_args.handle;
-    uint8_t error = BleGattV.att_error_rsp_args.error;
-    uint8_t *out = BleGattV.att_error_rsp_args.out;
-    size_t cap = BleGattV.att_error_rsp_args.cap;
+    uint8_t req_op = BleGatt.att_error_rsp_args.req_op;
+    uint16_t handle = BleGatt.att_error_rsp_args.handle;
+    uint8_t error = BleGatt.att_error_rsp_args.error;
+    uint8_t *out = BleGatt.att_error_rsp_args.out;
+    size_t cap = BleGatt.att_error_rsp_args.cap;
 
     if (!out || cap < 5)
     {
-        BleGattV.n = 0;
+        BleGatt.n = 0;
         return;
     }
     out[0] = ATT_OP_ERROR_RSP;
@@ -120,19 +120,19 @@ void protocore_ble_gatt_att_error_rsp(uint8_t *restrict work)
     out[2] = (uint8_t)handle;
     out[3] = (uint8_t)(handle >> 8);
     out[4] = error;
-    BleGattV.n = 5;
+    BleGatt.n = 5;
 }
 
-void protocore_ble_gatt_att_parse(uint8_t *restrict work)
+static void ble_gatt_att_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *pdu = BleGattV.att_parse_args.pdu;
-    size_t len = BleGattV.att_parse_args.len;
-    AttPdu *out = BleGattV.att_parse_args.out;
+    const uint8_t *pdu = BleGatt.att_parse_args.pdu;
+    size_t len = BleGatt.att_parse_args.len;
+    AttPdu *out = BleGatt.att_parse_args.out;
 
     if (!pdu || !out || len < 1)
     {
-        BleGattV.ok = PROTO_FALSE;
+        BleGatt.ok = PROTO_FALSE;
         return;
     }
     out->opcode = pdu[0];
@@ -147,22 +147,22 @@ void protocore_ble_gatt_att_parse(uint8_t *restrict work)
     case ATT_OP_ERROR_RSP:
         if (len < 5)
         {
-            BleGattV.ok = PROTO_FALSE;
+            BleGatt.ok = PROTO_FALSE;
             return;
         }
         out->req_op = pdu[1];
         out->handle = (uint16_t)(pdu[2] | (pdu[3] << 8));
         out->error = pdu[4];
-        BleGattV.ok = PROTO_TRUE;
+        BleGatt.ok = PROTO_TRUE;
         return;
     case ATT_OP_READ_REQ:
         if (len < 3)
         {
-            BleGattV.ok = PROTO_FALSE;
+            BleGatt.ok = PROTO_FALSE;
             return;
         }
         out->handle = (uint16_t)(pdu[1] | (pdu[2] << 8));
-        BleGattV.ok = PROTO_TRUE;
+        BleGatt.ok = PROTO_TRUE;
         return;
     case ATT_OP_READ_RSP:
         if (len > 1)
@@ -170,13 +170,13 @@ void protocore_ble_gatt_att_parse(uint8_t *restrict work)
             out->value = pdu + 1;
             out->value_len = len - 1;
         }
-        BleGattV.ok = PROTO_TRUE;
+        BleGatt.ok = PROTO_TRUE;
         return;
     case ATT_OP_WRITE_REQ:
     case ATT_OP_HANDLE_VALUE_NTF:
         if (len < 3)
         {
-            BleGattV.ok = PROTO_FALSE;
+            BleGatt.ok = PROTO_FALSE;
             return;
         }
         out->handle = (uint16_t)(pdu[1] | (pdu[2] << 8));
@@ -185,13 +185,13 @@ void protocore_ble_gatt_att_parse(uint8_t *restrict work)
             out->value = pdu + 3;
             out->value_len = len - 3;
         }
-        BleGattV.ok = PROTO_TRUE;
+        BleGatt.ok = PROTO_TRUE;
         return;
     case ATT_OP_WRITE_RSP:
-        BleGattV.ok = PROTO_TRUE;
+        BleGatt.ok = PROTO_TRUE;
         return;
     default:
-        BleGattV.ok = PROTO_TRUE; // unknown opcode: still report it, no fixed fields
+        BleGatt.ok = PROTO_TRUE; // unknown opcode: still report it, no fixed fields
         return;
     }
 }
@@ -206,17 +206,17 @@ static void put_hex16(protocore_sb *b, uint16_t v)
     Sb.put(b, t);
 }
 
-void protocore_ble_gatt_char_json(uint8_t *restrict work)
+static void ble_gatt_char_json(uint8_t *restrict work)
 {
     (void)work;
-    const GattChar *chars = BleGattV.char_json_args.chars;
-    size_t n = BleGattV.char_json_args.n;
-    char *out = BleGattV.char_json_args.out;
-    size_t cap = BleGattV.char_json_args.cap;
+    const GattChar *chars = BleGatt.char_json_args.chars;
+    size_t n = BleGatt.char_json_args.n;
+    char *out = BleGatt.char_json_args.out;
+    size_t cap = BleGatt.char_json_args.cap;
 
     if (!out || cap == 0 || (n && !chars))
     {
-        BleGattV.n = 0;
+        BleGatt.n = 0;
         return;
     }
     protocore_sb b = {out, cap, 0, PROTO_TRUE};
@@ -238,15 +238,20 @@ void protocore_ble_gatt_char_json(uint8_t *restrict work)
     Sb.put(&b, "]");
     if (!b.ok)
     {
-        BleGattV.n = 0;
+        BleGatt.n = 0;
         return;
     }
     out[b.len] = '\0';
-    BleGattV.n = b.len;
+    BleGatt.n = b.len;
 }
 
-/** @brief The operands and the outcome. */
-BleGattVars BleGattV;
+BleGattNs BleGatt = {.att_read_req = ble_gatt_att_read_req,
+                     .att_read_rsp = ble_gatt_att_read_rsp,
+                     .att_write_req = ble_gatt_att_write_req,
+                     .att_notify = ble_gatt_att_notify,
+                     .att_error_rsp = ble_gatt_att_error_rsp,
+                     .att_parse = ble_gatt_att_parse,
+                     .char_json = ble_gatt_char_json};
 
 PROTOCORE_END_DECLS
 

@@ -16,8 +16,8 @@
  */
 
 #include "network_drivers/physical/physical/physical.h"
-#include "mmgr/plaintext/plaintext.h"                         // the persistent end this module's state is taken from
-#include "network_drivers/physical/radio_power/radio_power.h" // Radio: the layer carries the radio handle
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "network_drivers/physical/radio_power/radio_power.h"    // Radio: the layer carries the radio handle
 
 // ---------------------------------------------------------------------------
 // The seam this module implements itself
@@ -105,110 +105,109 @@ uint8_t *protocore_physical_span(void)
 static void phy_wifi_init(uint8_t *restrict work)
 {
     (void)work;
-    PhysicalV.ok = init_wifi_physical(PhysicalV.wifi.ssid, PhysicalV.wifi.password);
+    Physical.ok = init_wifi_physical(Physical.wifi.ssid, Physical.wifi.password);
 }
 
 static void phy_wifi_ready(uint8_t *restrict work)
 {
     (void)work;
-    PhysicalV.ok = wifi_ready();
+    Physical.ok = wifi_ready();
 }
 
 static void phy_wifi_radio_init(uint8_t *restrict work)
 {
     (void)work;
-    PhysicalV.ok = init_wifi_radio_physical(PhysicalV.wifi.channel);
+    Physical.ok = init_wifi_radio_physical(Physical.wifi.channel);
 }
 
 static void phy_wifi_ap_init(uint8_t *restrict work)
 {
     (void)work;
-    PhysicalV.ok = init_wifi_ap_physical(PhysicalV.wifi.ssid, PhysicalV.wifi.password);
+    Physical.ok = init_wifi_ap_physical(Physical.wifi.ssid, Physical.wifi.password);
 }
 
 static void phy_wifi_ssid(uint8_t *restrict work)
 {
     (void)work;
-    PhysicalV.n = protocore_net_ssid(PhysicalV.read.text, PhysicalV.read.cap);
+    Physical.n = protocore_net_ssid(Physical.read.text, Physical.read.cap);
 }
 
 static void phy_wifi_channel(uint8_t *restrict work)
 {
     (void)work;
-    PhysicalV.u8 = protocore_net_channel();
+    Physical.u8 = protocore_net_channel();
 }
 
 static void phy_wifi_rssi(uint8_t *restrict work)
 {
     (void)work;
-    PhysicalV.i8 = protocore_net_rssi();
+    Physical.i8 = protocore_net_rssi();
 }
 
 static void phy_wifi_ap_ip(uint8_t *restrict work)
 {
     (void)work;
-    PhysicalV.u32 = protocore_net_ap_ip();
+    Physical.u32 = protocore_net_ap_ip();
 }
 
 static void phy_wifi_mac(uint8_t *restrict work)
 {
     (void)work;
-    PhysicalV.ok = protocore_net_mac(PhysicalV.read.mac);
+    Physical.ok = protocore_net_mac(Physical.read.mac);
 }
 
 static void phy_eth_init(uint8_t *restrict work)
 {
     (void)work;
-    PhysicalV.ok = init_eth_physical();
+    Physical.ok = init_eth_physical();
 }
 
 static void phy_eth_ready(uint8_t *restrict work)
 {
     (void)work;
-    PhysicalV.ok = eth_ready();
+    Physical.ok = eth_ready();
 }
 
 static void phy_ip6_init(uint8_t *restrict work)
 {
     (void)work;
-    PhysicalV.ok = init_ipv6_physical();
+    Physical.ok = init_ipv6_physical();
 }
 
 static void phy_ip6_global(uint8_t *restrict work)
 {
     (void)work;
-    PhysicalV.ok = net_global_ipv6(PhysicalV.read.ip6);
+    Physical.ok = net_global_ipv6(Physical.read.ip6);
 }
 
 static void phy_ip6_ready(uint8_t *restrict work)
 {
     (void)work;
-    PhysicalV.ok = protocore_ipv6_ready();
+    Physical.ok = protocore_ipv6_ready();
 }
 
 static void phy_egress(uint8_t *restrict work)
 {
     (void)work;
-    PhysicalV.if_kind = protocore_net_egress();
+    Physical.if_kind = protocore_net_egress();
 }
 
 static void phy_egress_ip(uint8_t *restrict work)
 {
     (void)work;
-    PhysicalV.u32 = protocore_net_egress_ip();
+    Physical.u32 = protocore_net_egress_ip();
 }
 
 static void phy_egress_mac(uint8_t *restrict work)
 {
     (void)work;
-    PhysicalV.ok = protocore_net_egress_mac(PhysicalV.read.mac);
+    Physical.ok = protocore_net_egress_mac(Physical.read.mac);
 }
 
 static void phy_classify_ip(uint8_t *restrict work)
 {
     (void)work;
-    PhysicalV.if_kind =
-        protocore_net_classify_ip(PhysicalV.route.egress_ip, PhysicalV.route.sta_ip, PhysicalV.route.ap_ip);
+    Physical.if_kind = protocore_net_classify_ip(Physical.route.egress_ip, Physical.route.sta_ip, Physical.route.ap_ip);
 }
 
 // ---------------------------------------------------------------------------
@@ -220,7 +219,7 @@ static IfaceRow *row_of(uint8_t *restrict work)
 {
     for (uint8_t i = 0; i < PROTOCORE_PHY_MAX_IFACES; i++)
     {
-        if (PHYSICAL_CTX(work)->row[i].used && PHYSICAL_CTX(work)->row[i].id == PhysicalV.iface.id)
+        if (PHYSICAL_CTX(work)->row[i].used && PHYSICAL_CTX(work)->row[i].id == Physical.iface.id)
         {
             return &PHYSICAL_CTX(work)->row[i];
         }
@@ -230,8 +229,8 @@ static IfaceRow *row_of(uint8_t *restrict work)
 
 static void phy_iface_add(uint8_t *restrict work)
 {
-    PhysicalV.ok = PROTO_FALSE;
-    if (PhysicalV.iface.send == NULL || row_of(work) != NULL)
+    Physical.ok = PROTO_FALSE;
+    if (Physical.iface.send == NULL || row_of(work) != NULL)
     {
         return;
     }
@@ -241,12 +240,12 @@ static void phy_iface_add(uint8_t *restrict work)
         {
             continue;
         }
-        PHYSICAL_CTX(work)->row[i].send = PhysicalV.iface.send;
-        PHYSICAL_CTX(work)->row[i].ctx = PhysicalV.iface.ctx;
-        PHYSICAL_CTX(work)->row[i].id = PhysicalV.iface.id;
-        PHYSICAL_CTX(work)->row[i].kind = PhysicalV.iface.kind;
+        PHYSICAL_CTX(work)->row[i].send = Physical.iface.send;
+        PHYSICAL_CTX(work)->row[i].ctx = Physical.iface.ctx;
+        PHYSICAL_CTX(work)->row[i].id = Physical.iface.id;
+        PHYSICAL_CTX(work)->row[i].kind = Physical.iface.kind;
         PHYSICAL_CTX(work)->row[i].used = PROTO_TRUE;
-        PhysicalV.ok = PROTO_TRUE;
+        Physical.ok = PROTO_TRUE;
         return;
     }
 }
@@ -262,26 +261,26 @@ static void phy_iface_reset(uint8_t *restrict work)
 
 static void phy_iface_present(uint8_t *restrict work)
 {
-    PhysicalV.ok = row_of(work) != NULL;
+    Physical.ok = row_of(work) != NULL;
 }
 
 static void phy_iface_kind(uint8_t *restrict work)
 {
     const IfaceRow *r = row_of(work);
 
-    PhysicalV.if_kind = (r == NULL) ? PROTOCORE_IF_ANY : r->kind;
+    Physical.if_kind = (r == NULL) ? PROTOCORE_IF_ANY : r->kind;
 }
 
 static void phy_iface_at(uint8_t *restrict work)
 {
-    const uint8_t i = PhysicalV.iface.i;
+    const uint8_t i = Physical.iface.i;
 
-    PhysicalV.i16 = PROTOCORE_IF_NONE;
+    Physical.i16 = PROTOCORE_IF_NONE;
     if (i >= PROTOCORE_PHY_MAX_IFACES || !PHYSICAL_CTX(work)->row[i].used)
     {
         return;
     }
-    PhysicalV.i16 = (int16_t)PHYSICAL_CTX(work)->row[i].id;
+    Physical.i16 = (int16_t)PHYSICAL_CTX(work)->row[i].id;
 }
 
 static void phy_iface_count(uint8_t *restrict work)
@@ -295,23 +294,47 @@ static void phy_iface_count(uint8_t *restrict work)
             n++;
         }
     }
-    PhysicalV.u8 = n;
+    Physical.u8 = n;
 }
 
 static void phy_iface_send(uint8_t *restrict work)
 {
     IfaceRow *r = row_of(work);
 
-    PhysicalV.ok = PROTO_FALSE;
+    Physical.ok = PROTO_FALSE;
     if (r == NULL)
     {
         return;
     }
-    PhysicalV.ok = r->send(r->id, PhysicalV.iface.data, PhysicalV.iface.len, r->ctx);
+    Physical.ok = r->send(r->id, Physical.iface.data, Physical.iface.len, r->ctx);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to. The calls name
 // the seam, so the handle reaches whichever backend the PROTOCORE_VENDOR_* selector compiled: the
 // no-op definitions above, a part's backend under test/core_setup/physical/, or a suite's mock.
-/** @brief The operands and the outcome. */
-PhysicalVars PhysicalV;
+PhysicalNs Physical = {.wifi_init = phy_wifi_init,
+                       .wifi_ready = phy_wifi_ready,
+                       .wifi_radio_init = phy_wifi_radio_init,
+                       .wifi_ap_init = phy_wifi_ap_init,
+                       .wifi_ssid = phy_wifi_ssid,
+                       .wifi_channel = phy_wifi_channel,
+                       .wifi_rssi = phy_wifi_rssi,
+                       .wifi_ap_ip = phy_wifi_ap_ip,
+                       .wifi_mac = phy_wifi_mac,
+                       .eth_init = phy_eth_init,
+                       .eth_ready = phy_eth_ready,
+                       .ip6_init = phy_ip6_init,
+                       .ip6_global = phy_ip6_global,
+                       .ip6_ready = phy_ip6_ready,
+                       .egress = phy_egress,
+                       .egress_ip = phy_egress_ip,
+                       .egress_mac = phy_egress_mac,
+                       .classify_ip = phy_classify_ip,
+                       .iface_add = phy_iface_add,
+                       .iface_reset = phy_iface_reset,
+                       .iface_present = phy_iface_present,
+                       .iface_kind = phy_iface_kind,
+                       .iface_at = phy_iface_at,
+                       .iface_count = phy_iface_count,
+                       .iface_send = phy_iface_send,
+                       .radio = &Radio};

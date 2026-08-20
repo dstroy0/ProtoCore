@@ -72,61 +72,61 @@ static SouthboundDriver g_full = {"fake", fake_read, fake_write, fake_read_block
 // Register one borrowed driver and report the code.
 static int32_t sb_add(const SouthboundDriver *drv)
 {
-    SouthboundV.drv = drv;
+    Southbound.drv = drv;
     Southbound.add(protocore_southbound_span());
-    return SouthboundV.i32;
+    return Southbound.i32;
 }
 
 // Look up a name and report the driver it matched.
 static const SouthboundDriver *sb_find(const char *name)
 {
-    SouthboundV.name = name;
+    Southbound.name = name;
     Southbound.find(protocore_southbound_span());
-    return SouthboundV.driver;
+    return Southbound.driver;
 }
 
 static int32_t sb_read(const char *name, uint32_t point, int32_t *value_out)
 {
-    SouthboundV.name = name;
-    SouthboundV.point.point = point;
-    SouthboundV.point.value_out = value_out;
+    Southbound.name = name;
+    Southbound.point.point = point;
+    Southbound.point.value_out = value_out;
     Southbound.read(protocore_southbound_span());
-    return SouthboundV.i32;
+    return Southbound.i32;
 }
 
 static int32_t sb_write(const char *name, uint32_t point, int32_t value)
 {
-    SouthboundV.name = name;
-    SouthboundV.point.point = point;
-    SouthboundV.point.value = value;
+    Southbound.name = name;
+    Southbound.point.point = point;
+    Southbound.point.value = value;
     Southbound.write(protocore_southbound_span());
-    return SouthboundV.i32;
+    return Southbound.i32;
 }
 
 static int32_t sb_read_block(const char *name, uint32_t first, int32_t *out, size_t n)
 {
-    SouthboundV.name = name;
-    SouthboundV.block.first = first;
-    SouthboundV.block.out = out;
-    SouthboundV.block.n = n;
+    Southbound.name = name;
+    Southbound.block.first = first;
+    Southbound.block.out = out;
+    Southbound.block.n = n;
     Southbound.read_block(protocore_southbound_span());
-    return SouthboundV.i32;
+    return Southbound.i32;
 }
 
 static int32_t sb_write_block(const char *name, uint32_t first, const int32_t *in, size_t n)
 {
-    SouthboundV.name = name;
-    SouthboundV.block.first = first;
-    SouthboundV.block.in = in;
-    SouthboundV.block.n = n;
+    Southbound.name = name;
+    Southbound.block.first = first;
+    Southbound.block.in = in;
+    Southbound.block.n = n;
     Southbound.write_block(protocore_southbound_span());
-    return SouthboundV.i32;
+    return Southbound.i32;
 }
 
 static size_t sb_count(void)
 {
     Southbound.count(protocore_southbound_span());
-    return SouthboundV.n;
+    return Southbound.n;
 }
 
 void setUp(void)
@@ -275,3 +275,4 @@ void test_block_not_found_and_arg_edges(void)
     TEST_ASSERT_EQUAL_INT(SB_ERR_ARG, sb_read_block("fake", 0, NULL, 2));
     TEST_ASSERT_EQUAL_INT(SB_ERR_ARG, sb_write_block("fake", 0, in, 0));
 }
+

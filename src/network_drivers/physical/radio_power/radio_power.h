@@ -40,18 +40,22 @@ typedef struct
 {
     protocore_phy_ps mode; ///< active mode or PS mode, in L1's own protocore_phy_ps terms
 } RadioPsArgs;
+
 /** @brief The transmit power a cap applies (802.11-2020 11.7.6). */
 typedef struct
 {
     int8_t dbm; ///< maximum transmit power in whole dBm; 802.11-2020 11.7.5 bounds it
 } RadioTxArgs;
+
 /** @brief What a monitor capture tunes to, and where its frames go. */
 typedef struct
 {
     uint8_t channel;                 ///< channel number in the radio's operating class (802.11-2020 Annex E)
     protocore_phy_frame_fn on_frame; ///< each captured frame, FCS stripped (802.11-2020 9.2.4.8)
 } RadioMonitorArgs;
+
 /** @brief The radio's own state and the calls that reach it, described only in radio_power.c. */
+
 /**
  * @brief The radio: its power management mode, its transmit power cap, and monitor capture.
  *
@@ -86,60 +90,28 @@ typedef struct RadioNs
     RadioPsArgs ps;           ///< the power management mode a call applies or renders (802.11-2020 11.2.3.2)
     RadioTxArgs tx;           ///< the transmit power a cap applies (802.11-2020 11.7)
     RadioMonitorArgs monitor; ///< what a capture tunes to, and where its frames go
+
     proto_bool ok;
     protocore_phy_ps mode;
     const char *text;
+
 #if PROTOCORE_ENABLE_RADIO_POWER
-#endif
-} RadioVars;
-
-/** @brief The operands and the outcome. */
-extern RadioVars RadioV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const power)(uint8_t *restrict work);
     void (*const ps_name)(uint8_t *restrict work);
     void (*const busy_hold)(uint8_t *restrict work);
     void (*const busy_release)(uint8_t *restrict work);
+#endif
     void (*const ps_set)(uint8_t *restrict work);
     void (*const ps_mode)(uint8_t *restrict work);
     void (*const tx_power_set)(uint8_t *restrict work);
     void (*const monitor_begin)(uint8_t *restrict work);
     void (*const monitor_set_channel)(uint8_t *restrict work);
     void (*const monitor_end)(uint8_t *restrict work);
+
 } RadioNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in RadioV or a region of the borrow at a fixed offset.
-void protocore_radio_power_power(uint8_t *restrict work);
-void protocore_radio_power_ps_name(uint8_t *restrict work);
-void protocore_radio_power_busy_hold(uint8_t *restrict work);
-void protocore_radio_power_busy_release(uint8_t *restrict work);
-void protocore_radio_power_ps_set(uint8_t *restrict work);
-void protocore_radio_power_ps_mode(uint8_t *restrict work);
-void protocore_radio_power_tx_power_set(uint8_t *restrict work);
-void protocore_radio_power_monitor_begin(uint8_t *restrict work);
-void protocore_radio_power_monitor_set_channel(uint8_t *restrict work);
-void protocore_radio_power_monitor_end(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Radio.power(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const RadioNs Radio __attribute__((unused)) = {
-    .power = protocore_radio_power_power,
-    .ps_name = protocore_radio_power_ps_name,
-    .busy_hold = protocore_radio_power_busy_hold,
-    .busy_release = protocore_radio_power_busy_release,
-    .ps_set = protocore_radio_power_ps_set,
-    .ps_mode = protocore_radio_power_ps_mode,
-    .tx_power_set = protocore_radio_power_tx_power_set,
-    .monitor_begin = protocore_radio_power_monitor_begin,
-    .monitor_set_channel = protocore_radio_power_monitor_set_channel,
-    .monitor_end = protocore_radio_power_monitor_end,
-};
+/** @brief The one symbol this module exports. */
+extern RadioNs Radio;
 
 /**
  * @brief The PROTOCORE_RADIO_POWER_BORROW bytes this module's state lives in.

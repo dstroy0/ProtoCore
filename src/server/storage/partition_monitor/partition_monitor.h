@@ -39,12 +39,14 @@ typedef struct
     uint32_t size;      ///< partition size (bytes).
     proto_bool running; ///< true for the currently-running app partition.
 } protocore_partition_info;
+
 /** @brief What kind takes: type, subtype. */
 typedef struct
 {
     uint8_t type;
     uint8_t subtype;
 } PartitionMonitorKindArgs;
+
 /** @brief What json takes: parts, count, out, cap. */
 typedef struct
 {
@@ -53,17 +55,20 @@ typedef struct
     char *out;
     uint32_t cap;
 } PartitionMonitorJsonArgs;
+
 /** @brief What collect takes: out, max. */
 typedef struct
 {
     protocore_partition_info *out;
     uint8_t max;
 } PartitionMonitorCollectArgs;
+
 /** @brief What begin takes: path. */
 typedef struct
 {
     const char *path;
 } PartitionMonitorBeginArgs;
+
 /**
  * @brief Flash partition-map monitor (PROTOCORE_ENABLE_PARTITION_MONITOR). Reports the device's flash partition table
  * ...
@@ -99,41 +104,20 @@ typedef struct
     PartitionMonitorJsonArgs json_args;
     PartitionMonitorCollectArgs collect_args;
     PartitionMonitorBeginArgs begin_args;
+
     proto_bool ok;
     const char *text;
     int32_t n;
     uint8_t u8;
-} PartitionMonitorVars;
 
-/** @brief The operands and the outcome. */
-extern PartitionMonitorVars PartitionMonitorV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const kind)(uint8_t *restrict work);
     void (*const json)(uint8_t *restrict work);
     void (*const collect)(uint8_t *restrict work);
     void (*const begin)(uint8_t *restrict work);
 } PartitionMonitorNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in PartitionMonitorV or a region of the borrow at a fixed offset.
-void protocore_partition_monitor_kind(uint8_t *restrict work);
-void protocore_partition_monitor_json(uint8_t *restrict work);
-void protocore_partition_monitor_collect(uint8_t *restrict work);
-void protocore_partition_monitor_begin(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `PartitionMonitor.kind(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const PartitionMonitorNs PartitionMonitor __attribute__((unused)) = {
-    .kind = protocore_partition_monitor_kind,
-    .json = protocore_partition_monitor_json,
-    .collect = protocore_partition_monitor_collect,
-    .begin = protocore_partition_monitor_begin,
-};
+/** @brief The one symbol this module exports. */
+extern PartitionMonitorNs PartitionMonitor;
 
 PROTOCORE_END_DECLS
 

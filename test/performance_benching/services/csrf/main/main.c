@@ -35,35 +35,35 @@ static const uint8_t SECRET[32] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x7
 /** @brief Render @p raw as CSRF_NONCE_BYTES * 2 lowercase hex characters plus a NUL at @p out. */
 static void hex_encode_nonce(const uint8_t *raw, char *out)
 {
-    HexV.io.in = raw;
-    HexV.io.n = CSRF_NONCE_BYTES;
-    HexV.io.out = out;
-    HexV.args.upper = PROTO_FALSE;
+    Hex.io.in = raw;
+    Hex.io.n = CSRF_NONCE_BYTES;
+    Hex.io.out = out;
+    Hex.args.upper = PROTO_FALSE;
     Hex.encode(hex_work);
 }
 
 /** @brief Read CSRF_NONCE_BYTES * 2 hex characters at @p text back into @p out; bytes written. */
 static int32_t hex_decode_nonce(const char *text, uint8_t *out)
 {
-    HexV.io.text = text;
-    HexV.io.n = CSRF_NONCE_BYTES * 2;
-    HexV.io.bytes = out;
-    HexV.io.cap = CSRF_NONCE_BYTES;
+    Hex.io.text = text;
+    Hex.io.n = CSRF_NONCE_BYTES * 2;
+    Hex.io.bytes = out;
+    Hex.io.cap = CSRF_NONCE_BYTES;
     Hex.decode(hex_work);
-    return HexV.i32;
+    return Hex.i32;
 }
 
 void dbench_run(void)
 {
-    CsrfV.secret_args.secret = SECRET;
-    CsrfV.secret_args.len = sizeof(SECRET);
+    Csrf.secret_args.secret = SECRET;
+    Csrf.secret_args.len = sizeof(SECRET);
     Csrf.set_secret(protocore_csrf_span());
 
     static char token[CSRF_TOKEN_BUF];
-    CsrfV.issue_args.out = token;
-    CsrfV.issue_args.cap = sizeof(token);
+    Csrf.issue_args.out = token;
+    Csrf.issue_args.cap = sizeof(token);
     Csrf.issue(protocore_csrf_span()); // seed a valid token for the verify bench
-    int tlen = CsrfV.n;
+    int tlen = Csrf.n;
     (void)tlen;
 
     static const uint8_t raw6[CSRF_NONCE_BYTES] = {0xde, 0xad, 0xbe, 0xef, 0x01, 0x02};
@@ -77,16 +77,16 @@ void dbench_run(void)
         volatile int sinki = 0;
         volatile bool sinkb = false;
 
-        CsrfV.issue_args.out = token;
-        CsrfV.issue_args.cap = sizeof(token);
+        Csrf.issue_args.out = token;
+        Csrf.issue_args.cap = sizeof(token);
         DBENCH_OP("Csrf.issue", 20000, {
             Csrf.issue(protocore_csrf_span());
-            sinki += CsrfV.n;
+            sinki += Csrf.n;
         });
-        CsrfV.verify_args.token = token;
+        Csrf.verify_args.token = token;
         DBENCH_OP("Csrf.verify", 20000, {
             Csrf.verify(protocore_csrf_span());
-            sinkb = CsrfV.valid;
+            sinkb = Csrf.valid;
         });
         DBENCH_OP("Hex.encode (6B nonce)", 50000, hex_encode_nonce(raw6, hex_out));
         DBENCH_OP("Hex.decode (6B nonce)", 50000, sinki += hex_decode_nonce(hex_out, bin_out));

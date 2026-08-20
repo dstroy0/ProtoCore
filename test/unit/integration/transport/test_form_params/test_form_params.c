@@ -14,24 +14,24 @@ static proto_bool g_found_a, g_found_b, g_found_missing;
 
 static void h_form(uint8_t slot, HttpReq *req)
 {
-    HttpParserV.get_form_args.req = req;
-    HttpParserV.get_form_args.key = "a";
-    HttpParserV.get_form_args.out = g_a;
-    HttpParserV.get_form_args.out_size = sizeof(g_a);
-    HttpParserV.get_form(protocore_http_parser_span());
-    g_found_a = HttpParserV.ok;
-    HttpParserV.get_form_args.req = req;
-    HttpParserV.get_form_args.key = "b";
-    HttpParserV.get_form_args.out = g_b;
-    HttpParserV.get_form_args.out_size = sizeof(g_b);
-    HttpParserV.get_form(protocore_http_parser_span());
-    g_found_b = HttpParserV.ok;
-    HttpParserV.get_form_args.req = req;
-    HttpParserV.get_form_args.key = "nope";
-    HttpParserV.get_form_args.out = g_missing;
-    HttpParserV.get_form_args.out_size = sizeof(g_missing);
-    HttpParserV.get_form(protocore_http_parser_span());
-    g_found_missing = HttpParserV.ok;
+    HttpParser.get_form_args.req = req;
+    HttpParser.get_form_args.key = "a";
+    HttpParser.get_form_args.out = g_a;
+    HttpParser.get_form_args.out_size = sizeof(g_a);
+    HttpParser.get_form(protocore_http_parser_span());
+    g_found_a = HttpParser.ok;
+    HttpParser.get_form_args.req = req;
+    HttpParser.get_form_args.key = "b";
+    HttpParser.get_form_args.out = g_b;
+    HttpParser.get_form_args.out_size = sizeof(g_b);
+    HttpParser.get_form(protocore_http_parser_span());
+    g_found_b = HttpParser.ok;
+    HttpParser.get_form_args.req = req;
+    HttpParser.get_form_args.key = "nope";
+    HttpParser.get_form_args.out = g_missing;
+    HttpParser.get_form_args.out_size = sizeof(g_missing);
+    HttpParser.get_form(protocore_http_parser_span());
+    g_found_missing = HttpParser.ok;
     send_text(slot, 200, "text/plain", "ok");
 }
 
@@ -39,12 +39,12 @@ static char g_trunc[4];
 static proto_bool g_found_trunc;
 static void h_form_trunc(uint8_t slot, HttpReq *req)
 {
-    HttpParserV.get_form_args.req = req;
-    HttpParserV.get_form_args.key = "a";
-    HttpParserV.get_form_args.out = g_trunc;
-    HttpParserV.get_form_args.out_size = sizeof(g_trunc);
-    HttpParserV.get_form(protocore_http_parser_span());
-    g_found_trunc = HttpParserV.ok;
+    HttpParser.get_form_args.req = req;
+    HttpParser.get_form_args.key = "a";
+    HttpParser.get_form_args.out = g_trunc;
+    HttpParser.get_form_args.out_size = sizeof(g_trunc);
+    HttpParser.get_form(protocore_http_parser_span());
+    g_found_trunc = HttpParser.ok;
     send_text(slot, 200, "text/plain", "ok");
 }
 
@@ -60,7 +60,7 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        HttpConnV.slot = i;
+        HttpConn.slot = i;
         HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
@@ -76,7 +76,7 @@ void tearDown()
 static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
-    HttpConnV.slot = slot;
+    HttpConn.slot = slot;
     HttpConn.parse(protocore_http_conn_span());
     handle();
 }
@@ -132,3 +132,4 @@ void test_form_value_truncated_to_buffer()
 
     TEST_ASSERT_EQUAL_STRING("abc", g_trunc);
 }
+

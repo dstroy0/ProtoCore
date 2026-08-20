@@ -71,6 +71,7 @@ typedef struct
     uint16_t cipher_pref;    ///< preferred Smb2Cipher to negotiate (moved to the front of the offer); 0 = default
                              ///< order (AES-128-GCM, AES-256-GCM, AES-128-CCM, AES-256-CCM).
 } SmbConfig;
+
 /** @brief An open file on an authenticated session; the ids thread the follow-up requests. */
 typedef struct
 {
@@ -88,6 +89,7 @@ typedef struct
     uint8_t enc_s2c[PROTOCORE_SMB2_MAX_CIPHER_KEY_LEN]; ///< server->client cipher key (decrypts responses)
     uint64_t enc_nonce; ///< monotonic per-session AEAD nonce counter, persisted across read/write/close
 } SmbHandle;
+
 /** @brief What smb_open takes: cfg, h, send, recv, ctx. */
 typedef struct
 {
@@ -97,6 +99,7 @@ typedef struct
     SmbRecvFn recv;
     void *ctx;
 } SmbClientSmbOpenArgs;
+
 /** @brief What smb_close takes: h, send, recv, ctx. */
 typedef struct
 {
@@ -105,6 +108,7 @@ typedef struct
     SmbRecvFn recv;
     void *ctx;
 } SmbClientSmbCloseArgs;
+
 /** @brief What smb_read takes: h, offset, out, cap, out_len, send, ... */
 typedef struct
 {
@@ -117,6 +121,7 @@ typedef struct
     SmbRecvFn recv;
     void *ctx;
 } SmbClientSmbReadArgs;
+
 /** @brief What smb_write takes: h, offset, data, len, written, send, ... */
 typedef struct
 {
@@ -129,6 +134,7 @@ typedef struct
     SmbRecvFn recv;
     void *ctx;
 } SmbClientSmbWriteArgs;
+
 /**
  * @brief SMB2 client dialogue engine (PROTOCORE_ENABLE_SMB) - drives the smb2 / ntlm / spnego wire codecs through a
  * real session to open a file on a Windows share.
@@ -165,39 +171,18 @@ typedef struct
     SmbClientSmbCloseArgs smb_close_args;
     SmbClientSmbReadArgs smb_read_args;
     SmbClientSmbWriteArgs smb_write_args;
+
     proto_bool ok;
     SmbResult value;
-} SmbClientVars;
 
-/** @brief The operands and the outcome. */
-extern SmbClientVars SmbClientV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const smb_open)(uint8_t *restrict work);
     void (*const smb_close)(uint8_t *restrict work);
     void (*const smb_read)(uint8_t *restrict work);
     void (*const smb_write)(uint8_t *restrict work);
 } SmbClientNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in SmbClientV or a region of the borrow at a fixed offset.
-void protocore_smb_client_smb_open(uint8_t *restrict work);
-void protocore_smb_client_smb_close(uint8_t *restrict work);
-void protocore_smb_client_smb_read(uint8_t *restrict work);
-void protocore_smb_client_smb_write(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `SmbClient.smb_open(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const SmbClientNs SmbClient __attribute__((unused)) = {
-    .smb_open = protocore_smb_client_smb_open,
-    .smb_close = protocore_smb_client_smb_close,
-    .smb_read = protocore_smb_client_smb_read,
-    .smb_write = protocore_smb_client_smb_write,
-};
+/** @brief The one symbol this module exports. */
+extern SmbClientNs SmbClient;
 
 /**
  * @brief The PROTOCORE_SMB_CLIENT_BORROW bytes this module's state lives in.

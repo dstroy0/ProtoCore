@@ -50,8 +50,8 @@
 // The .c, so the Read and Browse resolvers are reachable: they answer the OPC UA server's handler
 // contract (Part 4 sec 5.9.2 / sec 5.11.2), so they are internal to the module and the env does not
 // build this .c itself.
-#include "services/opcua/models/euromap77/euromap77.c"
 #include "services/opcua/opcua.h"
+#include "services/opcua/models/euromap77/euromap77.c"
 
 #include <string.h>
 #include <unity.h>
@@ -108,7 +108,7 @@ static void bind_machine(void)
     g_imm.active_job_values.job_good_parts_counter = 4900;
     g_imm.active_job_values.job_bad_parts_counter = 36;
     g_imm.active_job_values.job_status = EM_JOB_IN_PRODUCTION;
-    Euromap77V.bind_args.imm = &g_imm;
+    Euromap77.bind_args.imm = &g_imm;
     Euromap77.bind(protocore_euromap77_span());
 }
 
@@ -143,7 +143,7 @@ static uint32_t node_at(const char *a, const char *b)
     const char *const path[2] = {a, b};
     for (size_t i = 0; i < 2 && path[i]; i++)
     {
-        const int32_t n = browse(Euromap77V.ns, id);
+        const int32_t n = browse(Euromap77.ns, id);
         const OpcUaReference *r = child(g_refs, n, path[i]);
         TEST_ASSERT_NOT_NULL_MESSAGE(r, path[i]);
         id = r->target_id;
@@ -154,7 +154,7 @@ static uint32_t node_at(const char *a, const char *b)
 static proto_bool read_value(uint32_t id, OpcUaVariant *out)
 {
     memset(out, 0, sizeof(*out));
-    return em77_read(Euromap77V.ns, id, OPCUA_ATTR_VALUE, out);
+    return em77_read(Euromap77.ns, id, OPCUA_ATTR_VALUE, out);
 }
 
 // One Variable of the IMM_MES_Interface as OPC 40077 publishes it: where it hangs, its BrowseName,
@@ -214,7 +214,7 @@ static const struct PublishedLeaf LEAF[] = {
 
 static const OpcUaReference *leaf_ref(const struct PublishedLeaf *l)
 {
-    const int32_t n = browse(Euromap77V.ns, node_at(l->container, l->sub));
+    const int32_t n = browse(Euromap77.ns, node_at(l->container, l->sub));
     const OpcUaReference *r = child(g_refs, n, l->name);
     TEST_ASSERT_NOT_NULL_MESSAGE(r, l->name);
     return r;
@@ -274,21 +274,21 @@ void test_the_browse_hierarchy_carries_the_published_browsenames(void)
 {
     bind_machine();
 
-    int32_t n = browse(Euromap77V.ns, interface_id());
+    int32_t n = browse(Euromap77.ns, interface_id());
     TEST_ASSERT_EQUAL_INT32(3, n);
     TEST_ASSERT_NOT_NULL(child(g_refs, n, "MachineInformation"));
     TEST_ASSERT_NOT_NULL(child(g_refs, n, "MachineStatus"));
     TEST_ASSERT_NOT_NULL(child(g_refs, n, "Jobs"));
 
-    n = browse(Euromap77V.ns, node_at("Jobs", NULL));
+    n = browse(Euromap77.ns, node_at("Jobs", NULL));
     TEST_ASSERT_EQUAL_INT32(2, n);
     TEST_ASSERT_NOT_NULL(child(g_refs, n, "ActiveJob"));
     TEST_ASSERT_NOT_NULL(child(g_refs, n, "ActiveJobValues"));
 
-    TEST_ASSERT_EQUAL_INT32(8, browse(Euromap77V.ns, node_at("MachineInformation", NULL)));
-    TEST_ASSERT_EQUAL_INT32(2, browse(Euromap77V.ns, node_at("MachineStatus", NULL)));
-    TEST_ASSERT_EQUAL_INT32(8, browse(Euromap77V.ns, node_at("Jobs", "ActiveJob")));
-    TEST_ASSERT_EQUAL_INT32(8, browse(Euromap77V.ns, node_at("Jobs", "ActiveJobValues")));
+    TEST_ASSERT_EQUAL_INT32(8, browse(Euromap77.ns, node_at("MachineInformation", NULL)));
+    TEST_ASSERT_EQUAL_INT32(2, browse(Euromap77.ns, node_at("MachineStatus", NULL)));
+    TEST_ASSERT_EQUAL_INT32(8, browse(Euromap77.ns, node_at("Jobs", "ActiveJob")));
+    TEST_ASSERT_EQUAL_INT32(8, browse(Euromap77.ns, node_at("Jobs", "ActiveJobValues")));
 
     for (size_t i = 0; i < LEAF_N; i++)
     {
@@ -302,7 +302,7 @@ void test_the_containers_are_objects_and_the_leaves_are_variables(void)
     bind_machine();
 
     static const char *const CONTAINER[3] = {"MachineInformation", "MachineStatus", "Jobs"};
-    const int32_t n = browse(Euromap77V.ns, interface_id());
+    const int32_t n = browse(Euromap77.ns, interface_id());
     for (size_t i = 0; i < 3; i++)
     {
         const OpcUaReference *r = child(g_refs, n, CONTAINER[i]);
@@ -312,7 +312,7 @@ void test_the_containers_are_objects_and_the_leaves_are_variables(void)
         TEST_ASSERT_EQUAL_UINT32(UA_BASE_OBJECT_TYPE, r->type_def_id);
     }
 
-    const int32_t jn = browse(Euromap77V.ns, node_at("Jobs", NULL));
+    const int32_t jn = browse(Euromap77.ns, node_at("Jobs", NULL));
     static const char *const JOB_CONTAINER[2] = {"ActiveJob", "ActiveJobValues"};
     for (size_t i = 0; i < 2; i++)
     {
@@ -387,7 +387,7 @@ void test_every_value_comes_from_the_bound_model(void)
     };
     for (size_t i = 0; i < sizeof(STR) / sizeof(STR[0]); i++)
     {
-        const int32_t n = browse(Euromap77V.ns, node_at(STR[i].container, STR[i].sub));
+        const int32_t n = browse(Euromap77.ns, node_at(STR[i].container, STR[i].sub));
         const OpcUaReference *r = child(g_refs, n, STR[i].name);
         TEST_ASSERT_NOT_NULL_MESSAGE(r, STR[i].name);
         OpcUaVariant v;
@@ -411,7 +411,7 @@ void test_every_value_comes_from_the_bound_model(void)
     };
     for (size_t i = 0; i < sizeof(U64) / sizeof(U64[0]); i++)
     {
-        const int32_t n = browse(Euromap77V.ns, node_at("Jobs", U64[i].sub));
+        const int32_t n = browse(Euromap77.ns, node_at("Jobs", U64[i].sub));
         const OpcUaReference *r = child(g_refs, n, U64[i].name);
         TEST_ASSERT_NOT_NULL_MESSAGE(r, U64[i].name);
         OpcUaVariant v;
@@ -431,7 +431,7 @@ void test_every_value_comes_from_the_bound_model(void)
     };
     for (size_t i = 0; i < sizeof(F64) / sizeof(F64[0]); i++)
     {
-        const int32_t n = browse(Euromap77V.ns, node_at("Jobs", F64[i].sub));
+        const int32_t n = browse(Euromap77.ns, node_at("Jobs", F64[i].sub));
         const OpcUaReference *r = child(g_refs, n, F64[i].name);
         TEST_ASSERT_NOT_NULL_MESSAGE(r, F64[i].name);
         OpcUaVariant v;
@@ -440,17 +440,17 @@ void test_every_value_comes_from_the_bound_model(void)
     }
 
     OpcUaVariant v;
-    const int32_t sn = browse(Euromap77V.ns, node_at("MachineStatus", NULL));
+    const int32_t sn = browse(Euromap77.ns, node_at("MachineStatus", NULL));
     TEST_ASSERT_TRUE(read_value(child(g_refs, sn, "MachineMode")->target_id, &v));
     TEST_ASSERT_EQUAL_INT32((int32_t)EM_MODE_AUTOMATIC, v.i32);
     TEST_ASSERT_TRUE(read_value(child(g_refs, sn, "IsPresent")->target_id, &v));
     TEST_ASSERT_TRUE(v.b);
 
-    const int32_t an = browse(Euromap77V.ns, node_at("Jobs", "ActiveJob"));
+    const int32_t an = browse(Euromap77.ns, node_at("Jobs", "ActiveJob"));
     TEST_ASSERT_TRUE(read_value(child(g_refs, an, "NumCavities")->target_id, &v));
     TEST_ASSERT_EQUAL_UINT32(4u, v.u32);
 
-    const int32_t vn = browse(Euromap77V.ns, node_at("Jobs", "ActiveJobValues"));
+    const int32_t vn = browse(Euromap77.ns, node_at("Jobs", "ActiveJobValues"));
     TEST_ASSERT_TRUE(read_value(child(g_refs, vn, "JobStatus")->target_id, &v));
     TEST_ASSERT_EQUAL_INT32((int32_t)EM_JOB_IN_PRODUCTION, v.i32);
 }
@@ -467,11 +467,11 @@ void test_the_counters_keep_the_full_published_uint64_width(void)
         g_imm.active_job.nominal_parts = WIDE[w];
 
         OpcUaVariant v;
-        const int32_t vn = browse(Euromap77V.ns, node_at("Jobs", "ActiveJobValues"));
+        const int32_t vn = browse(Euromap77.ns, node_at("Jobs", "ActiveJobValues"));
         TEST_ASSERT_TRUE(read_value(child(g_refs, vn, "MachineCycleCounter")->target_id, &v));
         TEST_ASSERT_EQUAL_UINT64(WIDE[w], v.u64);
 
-        const int32_t an = browse(Euromap77V.ns, node_at("Jobs", "ActiveJob"));
+        const int32_t an = browse(Euromap77.ns, node_at("Jobs", "ActiveJob"));
         TEST_ASSERT_TRUE(read_value(child(g_refs, an, "NominalParts")->target_id, &v));
         TEST_ASSERT_EQUAL_UINT64(WIDE[w], v.u64);
     }
@@ -482,7 +482,7 @@ void test_the_counters_keep_the_full_published_uint64_width(void)
 void test_a_read_follows_the_model_without_a_rebind(void)
 {
     bind_machine();
-    const int32_t vn = browse(Euromap77V.ns, node_at("Jobs", "ActiveJobValues"));
+    const int32_t vn = browse(Euromap77.ns, node_at("Jobs", "ActiveJobValues"));
     const uint32_t cycles = child(g_refs, vn, "JobCycleCounter")->target_id;
 
     OpcUaVariant v;
@@ -502,14 +502,14 @@ void test_absent_strings_read_as_empty(void)
     g_imm.info.model = NULL;
     g_imm.active_job.job_name = NULL;
 
-    const int32_t n = browse(Euromap77V.ns, node_at("MachineInformation", NULL));
+    const int32_t n = browse(Euromap77.ns, node_at("MachineInformation", NULL));
     OpcUaVariant v;
     TEST_ASSERT_TRUE(read_value(child(g_refs, n, "Model")->target_id, &v));
     TEST_ASSERT_EQUAL_INT(OPCUA_VAR_STRING, v.type);
     TEST_ASSERT_EQUAL_INT32(0, v.str_len);
     TEST_ASSERT_NOT_NULL(v.str);
 
-    const int32_t an = browse(Euromap77V.ns, node_at("Jobs", "ActiveJob"));
+    const int32_t an = browse(Euromap77.ns, node_at("Jobs", "ActiveJob"));
     TEST_ASSERT_TRUE(read_value(child(g_refs, an, "JobName")->target_id, &v));
     TEST_ASSERT_EQUAL_INT32(0, v.str_len);
     TEST_ASSERT_NOT_NULL(v.str);
@@ -539,7 +539,7 @@ void test_the_objects_folder_organizes_the_interface(void)
     TEST_ASSERT_EQUAL_UINT32(UA_ORGANIZES, g_refs[0].ref_type_id);
     TEST_ASSERT_EQUAL_UINT32(OPCUA_NODECLASS_OBJECT, g_refs[0].node_class);
     TEST_ASSERT_TRUE(g_refs[0].is_forward);
-    TEST_ASSERT_EQUAL_UINT(Euromap77V.ns, g_refs[0].target_ns);
+    TEST_ASSERT_EQUAL_UINT(Euromap77.ns, g_refs[0].target_ns);
 }
 
 // Every reference the model hands out points forward into the model's own namespace, and names its
@@ -553,13 +553,13 @@ void test_every_reference_is_forward_and_in_the_models_namespace(void)
     };
     for (size_t c = 0; c < sizeof(container) / sizeof(container[0]); c++)
     {
-        const int32_t n = browse(Euromap77V.ns, container[c]);
+        const int32_t n = browse(Euromap77.ns, container[c]);
         TEST_ASSERT_TRUE(n > 0);
         for (int32_t i = 0; i < n; i++)
         {
             TEST_ASSERT_TRUE(g_refs[i].is_forward);
-            TEST_ASSERT_EQUAL_UINT(Euromap77V.ns, g_refs[i].target_ns);
-            TEST_ASSERT_EQUAL_UINT(Euromap77V.ns, g_refs[i].browse_name_ns);
+            TEST_ASSERT_EQUAL_UINT(Euromap77.ns, g_refs[i].target_ns);
+            TEST_ASSERT_EQUAL_UINT(Euromap77.ns, g_refs[i].browse_name_ns);
             TEST_ASSERT_EQUAL_STRING(g_refs[i].browse_name, g_refs[i].display_name);
         }
     }
@@ -571,14 +571,14 @@ void test_reads_outside_the_model_are_refused(void)
 {
     bind_machine();
     const uint32_t root = interface_id();
-    const int32_t n = browse(Euromap77V.ns, node_at("MachineInformation", NULL));
+    const int32_t n = browse(Euromap77.ns, node_at("MachineInformation", NULL));
     const uint32_t manufacturer = child(g_refs, n, "Manufacturer")->target_id;
     OpcUaVariant v;
 
-    TEST_ASSERT_FALSE(em77_read(Euromap77V.ns, 1u, OPCUA_ATTR_VALUE, &v));
-    TEST_ASSERT_FALSE(em77_read(Euromap77V.ns, root, OPCUA_ATTR_VALUE, &v));
-    TEST_ASSERT_FALSE(em77_read((uint16_t)(Euromap77V.ns + 1u), manufacturer, OPCUA_ATTR_VALUE, &v));
-    TEST_ASSERT_FALSE(em77_read(Euromap77V.ns, manufacturer, OPCUA_ATTR_VALUE + 1u, &v));
+    TEST_ASSERT_FALSE(em77_read(Euromap77.ns, 1u, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_FALSE(em77_read(Euromap77.ns, root, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_FALSE(em77_read((uint16_t)(Euromap77.ns + 1u), manufacturer, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_FALSE(em77_read(Euromap77.ns, manufacturer, OPCUA_ATTR_VALUE + 1u, &v));
 }
 
 // euromap77.h:168-174: a node outside the model browses to -1, which is not the 0 a childless node
@@ -587,24 +587,24 @@ void test_browse_outside_the_model_is_refused(void)
 {
     bind_machine();
     const uint32_t root = interface_id();
-    const int32_t n = browse(Euromap77V.ns, node_at("MachineInformation", NULL));
+    const int32_t n = browse(Euromap77.ns, node_at("MachineInformation", NULL));
     const uint32_t manufacturer = child(g_refs, n, "Manufacturer")->target_id;
 
-    TEST_ASSERT_EQUAL_INT32(-1, browse(Euromap77V.ns, manufacturer));
-    TEST_ASSERT_EQUAL_INT32(-1, browse(Euromap77V.ns, 1u));
-    TEST_ASSERT_EQUAL_INT32(-1, browse((uint16_t)(Euromap77V.ns + 1u), root));
+    TEST_ASSERT_EQUAL_INT32(-1, browse(Euromap77.ns, manufacturer));
+    TEST_ASSERT_EQUAL_INT32(-1, browse(Euromap77.ns, 1u));
+    TEST_ASSERT_EQUAL_INT32(-1, browse((uint16_t)(Euromap77.ns + 1u), root));
 }
 
 // euromap77.c:64-66: a Read or Browse before the bind is a clean miss, so the server never
 // dereferences a model that is not there.
 void test_an_unbound_model_serves_nothing(void)
 {
-    Euromap77V.bind_args.imm = NULL;
+    Euromap77.bind_args.imm = NULL;
     Euromap77.bind(protocore_euromap77_span());
     OpcUaVariant v;
-    TEST_ASSERT_FALSE(em77_read(Euromap77V.ns, 7101u, OPCUA_ATTR_VALUE, &v));
+    TEST_ASSERT_FALSE(em77_read(Euromap77.ns, 7101u, OPCUA_ATTR_VALUE, &v));
     TEST_ASSERT_EQUAL_INT32(-1, browse(0, UA_OBJECTS_FOLDER));
-    TEST_ASSERT_EQUAL_INT32(-1, browse(Euromap77V.ns, 7000u));
+    TEST_ASSERT_EQUAL_INT32(-1, browse(Euromap77.ns, 7000u));
     bind_machine();
 }
 
@@ -617,7 +617,7 @@ void test_browse_respects_the_caller_bound(void)
 
     OpcUaReference few[3];
     memset(few, 0, sizeof(few));
-    const int32_t n = em77_browse(Euromap77V.ns, info, few, 3u);
+    const int32_t n = em77_browse(Euromap77.ns, info, few, 3u);
     TEST_ASSERT_EQUAL_INT32(3, n);
     for (int32_t i = 0; i < n; i++)
     {
@@ -626,6 +626,6 @@ void test_browse_respects_the_caller_bound(void)
 
     OpcUaReference one[1];
     memset(one, 0, sizeof(one));
-    TEST_ASSERT_EQUAL_INT32(0, em77_browse(Euromap77V.ns, info, one, 0u));
+    TEST_ASSERT_EQUAL_INT32(0, em77_browse(Euromap77.ns, info, one, 0u));
     TEST_ASSERT_NULL(one[0].browse_name);
 }

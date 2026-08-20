@@ -40,6 +40,7 @@ typedef struct
     uint32_t conn_id;   ///< the QUIC connection a response routes back on
     uint64_t stream_id; ///< the stream it is written on
 } H3StreamRef;
+
 /** @brief RFC 9114 sec 4.3.1 request pseudo-headers, and the body that follows them. */
 typedef struct
 {
@@ -49,12 +50,14 @@ typedef struct
     const uint8_t *body;   ///< its body bytes
     size_t body_len;       ///< how many
 } H3ReqArgs;
+
 /** @brief Where random bytes are drawn. */
 typedef struct
 {
     uint8_t *out; ///< where rng writes
     size_t len;   ///< how many bytes it draws
 } H3RngArgs;
+
 /**
  * @brief The HTTP/3 request bridge: a QUIC stream's request, run through the route table.
  *
@@ -71,31 +74,13 @@ typedef struct
     H3StreamRef stream; ///< the connection and stream a request arrived on
     H3ReqArgs req;      ///< the request that stream carried
     H3RngArgs rng_args; ///< where random bytes are drawn
-} H3ServerVars;
 
-/** @brief The operands and the outcome. */
-extern H3ServerVars H3ServerV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const request)(uint8_t *restrict work);
     void (*const rng)(uint8_t *restrict work);
 } H3ServerNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in H3ServerV or a region of the borrow at a fixed offset.
-void protocore_h3_server_request(uint8_t *restrict work);
-void protocore_h3_server_rng(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `H3Server.request(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const H3ServerNs H3Server __attribute__((unused)) = {
-    .request = protocore_h3_server_request,
-    .rng = protocore_h3_server_rng,
-};
+/** @brief The one symbol this module exports. */
+extern H3ServerNs H3Server;
 
 // The QUIC server's seam dictates these two shapes, so they stay plain functions and carry their
 // arguments onto the handle before the call that does the work.

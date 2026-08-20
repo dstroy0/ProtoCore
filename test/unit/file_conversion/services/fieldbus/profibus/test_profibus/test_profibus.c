@@ -69,11 +69,11 @@ static void every_single_bit_flip_is_refused(const uint8_t *frame, size_t len)
         {
             memcpy(f, frame, len);
             f[i] ^= (uint8_t)(1u << b);
-            ProfibusV.parse_args.frame = f;
-            ProfibusV.parse_args.len = len;
-            ProfibusV.parse_args.out = &t;
+            Profibus.parse_args.frame = f;
+            Profibus.parse_args.len = len;
+            Profibus.parse_args.out = &t;
             Profibus.parse(profibus_work);
-            TEST_ASSERT_FALSE(ProfibusV.ok);
+            TEST_ASSERT_FALSE(Profibus.ok);
         }
     }
 }
@@ -130,27 +130,27 @@ void test_frame_control_function_codes(void)
 void test_fcs_is_the_arithmetic_sum_with_carries_discarded(void)
 {
     static const uint8_t A[3] = {0x03, 0x02, 0x49};
-    ProfibusV.fcs_args.bytes = A;
-    ProfibusV.fcs_args.len = 3;
+    Profibus.fcs_args.bytes = A;
+    Profibus.fcs_args.len = 3;
     Profibus.fcs(profibus_work);
-    TEST_ASSERT_EQUAL_HEX8(0x4E, ProfibusV.value);
+    TEST_ASSERT_EQUAL_HEX8(0x4E, Profibus.value);
 
     static const uint8_t B[3] = {0xFF, 0xFF, 0x02};
-    ProfibusV.fcs_args.bytes = B;
-    ProfibusV.fcs_args.len = 3;
+    Profibus.fcs_args.bytes = B;
+    Profibus.fcs_args.len = 3;
     Profibus.fcs(profibus_work);
-    TEST_ASSERT_EQUAL_HEX8(0x00, ProfibusV.value);
+    TEST_ASSERT_EQUAL_HEX8(0x00, Profibus.value);
 
     static const uint8_t C[4] = {0x80, 0x80, 0x80, 0x81};
-    ProfibusV.fcs_args.bytes = C;
-    ProfibusV.fcs_args.len = 4;
+    Profibus.fcs_args.bytes = C;
+    Profibus.fcs_args.len = 4;
     Profibus.fcs(profibus_work);
-    TEST_ASSERT_EQUAL_HEX8(0x01, ProfibusV.value);
+    TEST_ASSERT_EQUAL_HEX8(0x01, Profibus.value);
 
-    ProfibusV.fcs_args.bytes = A;
-    ProfibusV.fcs_args.len = 0;
+    Profibus.fcs_args.bytes = A;
+    Profibus.fcs_args.len = 0;
     Profibus.fcs(profibus_work);
-    TEST_ASSERT_EQUAL_HEX8(0x00, ProfibusV.value);
+    TEST_ASSERT_EQUAL_HEX8(0x00, Profibus.value);
 }
 
 // [TF] telegram without data field: SD1 DA SA FC FCS ED, six octets.
@@ -165,21 +165,21 @@ void test_sd1_telegram(void)
     uint8_t out[32];
     PbTelegram t;
 
-    ProfibusV.build_sd1_args.da = 0x03;
-    ProfibusV.build_sd1_args.sa = 0x02;
-    ProfibusV.build_sd1_args.fc = 0x49;
-    ProfibusV.build_sd1_args.out = out;
-    ProfibusV.build_sd1_args.cap = sizeof(out);
+    Profibus.build_sd1_args.da = 0x03;
+    Profibus.build_sd1_args.sa = 0x02;
+    Profibus.build_sd1_args.fc = 0x49;
+    Profibus.build_sd1_args.out = out;
+    Profibus.build_sd1_args.cap = sizeof(out);
     Profibus.build_sd1(profibus_work);
-    TEST_ASSERT_EQUAL_UINT(6u, ProfibusV.n);
+    TEST_ASSERT_EQUAL_UINT(6u, Profibus.n);
     static const uint8_t WANT[6] = {0x10, 0x03, 0x02, 0x49, 0x4E, 0x16};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));
 
-    ProfibusV.parse_args.frame = WANT;
-    ProfibusV.parse_args.len = sizeof(WANT);
-    ProfibusV.parse_args.out = &t;
+    Profibus.parse_args.frame = WANT;
+    Profibus.parse_args.len = sizeof(WANT);
+    Profibus.parse_args.out = &t;
     Profibus.parse(profibus_work);
-    TEST_ASSERT_TRUE(ProfibusV.ok);
+    TEST_ASSERT_TRUE(Profibus.ok);
     TEST_ASSERT_EQUAL_HEX8(PB_SD1, t.sd);
     TEST_ASSERT_EQUAL_HEX8(0x03, t.da);
     TEST_ASSERT_EQUAL_HEX8(0x02, t.sa);
@@ -207,23 +207,23 @@ void test_sd2_telegram(void)
     PbTelegram t;
     static const uint8_t PDU[4] = {0x11, 0x22, 0x33, 0x44};
 
-    ProfibusV.build_sd2_args.da = 0x05;
-    ProfibusV.build_sd2_args.sa = 0x02;
-    ProfibusV.build_sd2_args.fc = 0x6C;
-    ProfibusV.build_sd2_args.data = PDU;
-    ProfibusV.build_sd2_args.data_len = sizeof(PDU);
-    ProfibusV.build_sd2_args.out = out;
-    ProfibusV.build_sd2_args.cap = sizeof(out);
+    Profibus.build_sd2_args.da = 0x05;
+    Profibus.build_sd2_args.sa = 0x02;
+    Profibus.build_sd2_args.fc = 0x6C;
+    Profibus.build_sd2_args.data = PDU;
+    Profibus.build_sd2_args.data_len = sizeof(PDU);
+    Profibus.build_sd2_args.out = out;
+    Profibus.build_sd2_args.cap = sizeof(out);
     Profibus.build_sd2(profibus_work);
-    TEST_ASSERT_EQUAL_UINT(13u, ProfibusV.n);
+    TEST_ASSERT_EQUAL_UINT(13u, Profibus.n);
     static const uint8_t WANT[13] = {0x68, 0x07, 0x07, 0x68, 0x05, 0x02, 0x6C, 0x11, 0x22, 0x33, 0x44, 0x1D, 0x16};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));
 
-    ProfibusV.parse_args.frame = WANT;
-    ProfibusV.parse_args.len = sizeof(WANT);
-    ProfibusV.parse_args.out = &t;
+    Profibus.parse_args.frame = WANT;
+    Profibus.parse_args.len = sizeof(WANT);
+    Profibus.parse_args.out = &t;
     Profibus.parse(profibus_work);
-    TEST_ASSERT_TRUE(ProfibusV.ok);
+    TEST_ASSERT_TRUE(Profibus.ok);
     TEST_ASSERT_EQUAL_HEX8(PB_SD2, t.sd);
     TEST_ASSERT_EQUAL_HEX8(0x05, t.da);
     TEST_ASSERT_EQUAL_HEX8(0x02, t.sa);
@@ -250,22 +250,22 @@ void test_sd3_telegram(void)
     PbTelegram t;
     static const uint8_t EIGHT[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
-    ProfibusV.build_sd3_args.da = 0x05;
-    ProfibusV.build_sd3_args.sa = 0x02;
-    ProfibusV.build_sd3_args.fc = 0x7D;
-    ProfibusV.build_sd3_args.data = EIGHT;
-    ProfibusV.build_sd3_args.out = out;
-    ProfibusV.build_sd3_args.cap = sizeof(out);
+    Profibus.build_sd3_args.da = 0x05;
+    Profibus.build_sd3_args.sa = 0x02;
+    Profibus.build_sd3_args.fc = 0x7D;
+    Profibus.build_sd3_args.data = EIGHT;
+    Profibus.build_sd3_args.out = out;
+    Profibus.build_sd3_args.cap = sizeof(out);
     Profibus.build_sd3(profibus_work);
-    TEST_ASSERT_EQUAL_UINT(14u, ProfibusV.n);
+    TEST_ASSERT_EQUAL_UINT(14u, Profibus.n);
     static const uint8_t WANT[14] = {0xA2, 0x05, 0x02, 0x7D, 1, 2, 3, 4, 5, 6, 7, 8, 0xA8, 0x16};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));
 
-    ProfibusV.parse_args.frame = WANT;
-    ProfibusV.parse_args.len = sizeof(WANT);
-    ProfibusV.parse_args.out = &t;
+    Profibus.parse_args.frame = WANT;
+    Profibus.parse_args.len = sizeof(WANT);
+    Profibus.parse_args.out = &t;
     Profibus.parse(profibus_work);
-    TEST_ASSERT_TRUE(ProfibusV.ok);
+    TEST_ASSERT_TRUE(Profibus.ok);
     TEST_ASSERT_EQUAL_HEX8(PB_SD3, t.sd);
     TEST_ASSERT_EQUAL_HEX8(0x05, t.da);
     TEST_ASSERT_EQUAL_HEX8(0x02, t.sa);
@@ -284,58 +284,58 @@ void test_frame_control_macros_build_the_derived_telegrams(void)
     static const uint8_t EIGHT[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     static const uint8_t PDU[4] = {0x11, 0x22, 0x33, 0x44};
 
-    ProfibusV.build_sd1_args.da = 0x03;
-    ProfibusV.build_sd1_args.sa = 0x02;
-    ProfibusV.build_sd1_args.fc = 0x49;
-    ProfibusV.build_sd1_args.out = a;
-    ProfibusV.build_sd1_args.cap = sizeof(a);
+    Profibus.build_sd1_args.da = 0x03;
+    Profibus.build_sd1_args.sa = 0x02;
+    Profibus.build_sd1_args.fc = 0x49;
+    Profibus.build_sd1_args.out = a;
+    Profibus.build_sd1_args.cap = sizeof(a);
     Profibus.build_sd1(profibus_work);
-    TEST_ASSERT_EQUAL_UINT(6u, ProfibusV.n);
-    ProfibusV.build_sd1_args.da = 0x03;
-    ProfibusV.build_sd1_args.sa = 0x02;
-    ProfibusV.build_sd1_args.fc = PB_FC_REQUEST_FDL_STATUS;
-    ProfibusV.build_sd1_args.out = b;
-    ProfibusV.build_sd1_args.cap = sizeof(b);
+    TEST_ASSERT_EQUAL_UINT(6u, Profibus.n);
+    Profibus.build_sd1_args.da = 0x03;
+    Profibus.build_sd1_args.sa = 0x02;
+    Profibus.build_sd1_args.fc = PB_FC_REQUEST_FDL_STATUS;
+    Profibus.build_sd1_args.out = b;
+    Profibus.build_sd1_args.cap = sizeof(b);
     Profibus.build_sd1(profibus_work);
-    TEST_ASSERT_EQUAL_UINT(6u, ProfibusV.n);
+    TEST_ASSERT_EQUAL_UINT(6u, Profibus.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(a, b, 6);
 
-    ProfibusV.build_sd2_args.da = 0x05;
-    ProfibusV.build_sd2_args.sa = 0x02;
-    ProfibusV.build_sd2_args.fc = 0x6C;
-    ProfibusV.build_sd2_args.data = PDU;
-    ProfibusV.build_sd2_args.data_len = sizeof(PDU);
-    ProfibusV.build_sd2_args.out = a;
-    ProfibusV.build_sd2_args.cap = sizeof(a);
+    Profibus.build_sd2_args.da = 0x05;
+    Profibus.build_sd2_args.sa = 0x02;
+    Profibus.build_sd2_args.fc = 0x6C;
+    Profibus.build_sd2_args.data = PDU;
+    Profibus.build_sd2_args.data_len = sizeof(PDU);
+    Profibus.build_sd2_args.out = a;
+    Profibus.build_sd2_args.cap = sizeof(a);
     Profibus.build_sd2(profibus_work);
-    TEST_ASSERT_EQUAL_UINT(13u, ProfibusV.n);
-    ProfibusV.build_sd2_args.da = 0x05;
-    ProfibusV.build_sd2_args.sa = 0x02;
-    ProfibusV.build_sd2_args.fc = PB_FC_SRD_LOW;
-    ProfibusV.build_sd2_args.data = PDU;
-    ProfibusV.build_sd2_args.data_len = sizeof(PDU);
-    ProfibusV.build_sd2_args.out = b;
-    ProfibusV.build_sd2_args.cap = sizeof(b);
+    TEST_ASSERT_EQUAL_UINT(13u, Profibus.n);
+    Profibus.build_sd2_args.da = 0x05;
+    Profibus.build_sd2_args.sa = 0x02;
+    Profibus.build_sd2_args.fc = PB_FC_SRD_LOW;
+    Profibus.build_sd2_args.data = PDU;
+    Profibus.build_sd2_args.data_len = sizeof(PDU);
+    Profibus.build_sd2_args.out = b;
+    Profibus.build_sd2_args.cap = sizeof(b);
     Profibus.build_sd2(profibus_work);
-    TEST_ASSERT_EQUAL_UINT(13u, ProfibusV.n);
+    TEST_ASSERT_EQUAL_UINT(13u, Profibus.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(a, b, 13);
 
-    ProfibusV.build_sd3_args.da = 0x05;
-    ProfibusV.build_sd3_args.sa = 0x02;
-    ProfibusV.build_sd3_args.fc = 0x7D;
-    ProfibusV.build_sd3_args.data = EIGHT;
-    ProfibusV.build_sd3_args.out = a;
-    ProfibusV.build_sd3_args.cap = sizeof(a);
+    Profibus.build_sd3_args.da = 0x05;
+    Profibus.build_sd3_args.sa = 0x02;
+    Profibus.build_sd3_args.fc = 0x7D;
+    Profibus.build_sd3_args.data = EIGHT;
+    Profibus.build_sd3_args.out = a;
+    Profibus.build_sd3_args.cap = sizeof(a);
     Profibus.build_sd3(profibus_work);
-    TEST_ASSERT_EQUAL_UINT(14u, ProfibusV.n);
-    ProfibusV.build_sd3_args.da = 0x05;
-    ProfibusV.build_sd3_args.sa = 0x02;
-    ProfibusV.build_sd3_args.fc = PB_FC_SRD_HIGH;
-    ProfibusV.build_sd3_args.data = EIGHT;
-    ProfibusV.build_sd3_args.out = b;
-    ProfibusV.build_sd3_args.cap = sizeof(b);
+    TEST_ASSERT_EQUAL_UINT(14u, Profibus.n);
+    Profibus.build_sd3_args.da = 0x05;
+    Profibus.build_sd3_args.sa = 0x02;
+    Profibus.build_sd3_args.fc = PB_FC_SRD_HIGH;
+    Profibus.build_sd3_args.data = EIGHT;
+    Profibus.build_sd3_args.out = b;
+    Profibus.build_sd3_args.cap = sizeof(b);
     Profibus.build_sd3(profibus_work);
-    TEST_ASSERT_EQUAL_UINT(14u, ProfibusV.n);
+    TEST_ASSERT_EQUAL_UINT(14u, Profibus.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(a, b, 14);
 }
 
@@ -353,48 +353,48 @@ void test_sd2_length_field_across_the_range(void)
 
     for (size_t dl = 1; dl <= sizeof(data); dl++)
     {
-        ProfibusV.build_sd2_args.da = 0x03;
-        ProfibusV.build_sd2_args.sa = 0x02;
-        ProfibusV.build_sd2_args.fc = 0x6C;
-        ProfibusV.build_sd2_args.data = data;
-        ProfibusV.build_sd2_args.data_len = dl;
-        ProfibusV.build_sd2_args.out = out;
-        ProfibusV.build_sd2_args.cap = sizeof(out);
+        Profibus.build_sd2_args.da = 0x03;
+        Profibus.build_sd2_args.sa = 0x02;
+        Profibus.build_sd2_args.fc = 0x6C;
+        Profibus.build_sd2_args.data = data;
+        Profibus.build_sd2_args.data_len = dl;
+        Profibus.build_sd2_args.out = out;
+        Profibus.build_sd2_args.cap = sizeof(out);
         Profibus.build_sd2(profibus_work);
-        size_t n = ProfibusV.n;
+        size_t n = Profibus.n;
         TEST_ASSERT_EQUAL_UINT(9u + dl, n);
         TEST_ASSERT_EQUAL_HEX8((uint8_t)(3 + dl), out[1]);
         TEST_ASSERT_EQUAL_HEX8(out[1], out[2]);
         TEST_ASSERT_EQUAL_HEX8(PB_SD2, out[3]);
 
         PbTelegram t;
-        ProfibusV.parse_args.frame = out;
-        ProfibusV.parse_args.len = n;
-        ProfibusV.parse_args.out = &t;
+        Profibus.parse_args.frame = out;
+        Profibus.parse_args.len = n;
+        Profibus.parse_args.out = &t;
         Profibus.parse(profibus_work);
-        TEST_ASSERT_TRUE(ProfibusV.ok);
+        TEST_ASSERT_TRUE(Profibus.ok);
         TEST_ASSERT_EQUAL_UINT(dl, t.data_len);
         TEST_ASSERT_EQUAL_HEX8_ARRAY(data, t.data, dl);
     }
 
-    ProfibusV.build_sd2_args.da = 0x03;
-    ProfibusV.build_sd2_args.sa = 0x02;
-    ProfibusV.build_sd2_args.fc = 0x6C;
-    ProfibusV.build_sd2_args.data = data;
-    ProfibusV.build_sd2_args.data_len = 246;
-    ProfibusV.build_sd2_args.out = out;
-    ProfibusV.build_sd2_args.cap = sizeof(out);
+    Profibus.build_sd2_args.da = 0x03;
+    Profibus.build_sd2_args.sa = 0x02;
+    Profibus.build_sd2_args.fc = 0x6C;
+    Profibus.build_sd2_args.data = data;
+    Profibus.build_sd2_args.data_len = 246;
+    Profibus.build_sd2_args.out = out;
+    Profibus.build_sd2_args.cap = sizeof(out);
     Profibus.build_sd2(profibus_work);
-    TEST_ASSERT_EQUAL_UINT(255u, ProfibusV.n);
-    ProfibusV.build_sd2_args.da = 0x03;
-    ProfibusV.build_sd2_args.sa = 0x02;
-    ProfibusV.build_sd2_args.fc = 0x6C;
-    ProfibusV.build_sd2_args.data = data;
-    ProfibusV.build_sd2_args.data_len = 247;
-    ProfibusV.build_sd2_args.out = out;
-    ProfibusV.build_sd2_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_UINT(255u, Profibus.n);
+    Profibus.build_sd2_args.da = 0x03;
+    Profibus.build_sd2_args.sa = 0x02;
+    Profibus.build_sd2_args.fc = 0x6C;
+    Profibus.build_sd2_args.data = data;
+    Profibus.build_sd2_args.data_len = 247;
+    Profibus.build_sd2_args.out = out;
+    Profibus.build_sd2_args.cap = sizeof(out);
     Profibus.build_sd2(profibus_work);
-    TEST_ASSERT_EQUAL_UINT(0u, ProfibusV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, Profibus.n);
 }
 
 // [LI]: "No value <4 is allowed, because a telegram must comprise at least one DA, SA, FC and a data
@@ -403,24 +403,24 @@ void test_sd2_length_field_across_the_range(void)
 void test_sd2_length_field_minimum_is_four(void)
 {
     uint8_t out[16];
-    ProfibusV.build_sd2_args.da = 0x7F;
-    ProfibusV.build_sd2_args.sa = 0x02;
-    ProfibusV.build_sd2_args.fc = 0x49;
-    ProfibusV.build_sd2_args.data = NULL;
-    ProfibusV.build_sd2_args.data_len = 0;
-    ProfibusV.build_sd2_args.out = out;
-    ProfibusV.build_sd2_args.cap = sizeof(out);
+    Profibus.build_sd2_args.da = 0x7F;
+    Profibus.build_sd2_args.sa = 0x02;
+    Profibus.build_sd2_args.fc = 0x49;
+    Profibus.build_sd2_args.data = NULL;
+    Profibus.build_sd2_args.data_len = 0;
+    Profibus.build_sd2_args.out = out;
+    Profibus.build_sd2_args.cap = sizeof(out);
     Profibus.build_sd2(profibus_work);
-    TEST_ASSERT_EQUAL_UINT(0u, ProfibusV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, Profibus.n);
 
     // SD2 LE=3 LEr=3 SD2 DA=0x7F SA=0x02 FC=0x49, FCS = 127 + 2 + 73 = 202 = 0xCA, ED.
     static const uint8_t LE_THREE[9] = {0x68, 0x03, 0x03, 0x68, 0x7F, 0x02, 0x49, 0xCA, 0x16};
     PbTelegram t;
-    ProfibusV.parse_args.frame = LE_THREE;
-    ProfibusV.parse_args.len = sizeof(LE_THREE);
-    ProfibusV.parse_args.out = &t;
+    Profibus.parse_args.frame = LE_THREE;
+    Profibus.parse_args.len = sizeof(LE_THREE);
+    Profibus.parse_args.out = &t;
     Profibus.parse(profibus_work);
-    TEST_ASSERT_FALSE(ProfibusV.ok);
+    TEST_ASSERT_FALSE(Profibus.ok);
 }
 
 // Structural refusals that do not depend on the FCS: LEr must repeat LE, the SD2 octet is repeated
@@ -434,33 +434,33 @@ void test_parse_refuses_a_malformed_frame(void)
 
     memcpy(f, SD2, sizeof(SD2));
     f[2] = 0x08; // LEr no longer repeats LE
-    ProfibusV.parse_args.frame = f;
-    ProfibusV.parse_args.len = sizeof(SD2);
-    ProfibusV.parse_args.out = &t;
+    Profibus.parse_args.frame = f;
+    Profibus.parse_args.len = sizeof(SD2);
+    Profibus.parse_args.out = &t;
     Profibus.parse(profibus_work);
-    TEST_ASSERT_FALSE(ProfibusV.ok);
+    TEST_ASSERT_FALSE(Profibus.ok);
 
     memcpy(f, SD2, sizeof(SD2));
     f[3] = 0x10; // the repeated start delimiter is not SD2
-    ProfibusV.parse_args.frame = f;
-    ProfibusV.parse_args.len = sizeof(SD2);
-    ProfibusV.parse_args.out = &t;
+    Profibus.parse_args.frame = f;
+    Profibus.parse_args.len = sizeof(SD2);
+    Profibus.parse_args.out = &t;
     Profibus.parse(profibus_work);
-    TEST_ASSERT_FALSE(ProfibusV.ok);
+    TEST_ASSERT_FALSE(Profibus.ok);
 
     static const uint8_t SD4[6] = {0xDC, 0x03, 0x02, 0x00, 0x00, 0x16};
-    ProfibusV.parse_args.frame = SD4;
-    ProfibusV.parse_args.len = sizeof(SD4);
-    ProfibusV.parse_args.out = &t;
+    Profibus.parse_args.frame = SD4;
+    Profibus.parse_args.len = sizeof(SD4);
+    Profibus.parse_args.out = &t;
     Profibus.parse(profibus_work);
-    TEST_ASSERT_FALSE(ProfibusV.ok);
+    TEST_ASSERT_FALSE(Profibus.ok);
 
     static const uint8_t UNKNOWN[6] = {0x11, 0x03, 0x02, 0x49, 0x4E, 0x16};
-    ProfibusV.parse_args.frame = UNKNOWN;
-    ProfibusV.parse_args.len = sizeof(UNKNOWN);
-    ProfibusV.parse_args.out = &t;
+    Profibus.parse_args.frame = UNKNOWN;
+    Profibus.parse_args.len = sizeof(UNKNOWN);
+    Profibus.parse_args.out = &t;
     Profibus.parse(profibus_work);
-    TEST_ASSERT_FALSE(ProfibusV.ok);
+    TEST_ASSERT_FALSE(Profibus.ok);
 }
 
 // A telegram is only a telegram once its end delimiter has arrived, so every prefix is refused.
@@ -470,31 +470,31 @@ void test_parse_refuses_a_truncated_telegram(void)
     static const uint8_t SD2[13] = {0x68, 0x07, 0x07, 0x68, 0x05, 0x02, 0x6C, 0x11, 0x22, 0x33, 0x44, 0x1D, 0x16};
     for (size_t n = 0; n < sizeof(SD2); n++)
     {
-        ProfibusV.parse_args.frame = SD2;
-        ProfibusV.parse_args.len = n;
-        ProfibusV.parse_args.out = &t;
+        Profibus.parse_args.frame = SD2;
+        Profibus.parse_args.len = n;
+        Profibus.parse_args.out = &t;
         Profibus.parse(profibus_work);
-        TEST_ASSERT_FALSE(ProfibusV.ok);
+        TEST_ASSERT_FALSE(Profibus.ok);
     }
     static const uint8_t SD3[14] = {0xA2, 0x05, 0x02, 0x7D, 1, 2, 3, 4, 5, 6, 7, 8, 0xA8, 0x16};
     for (size_t n = 0; n < sizeof(SD3); n++)
     {
-        ProfibusV.parse_args.frame = SD3;
-        ProfibusV.parse_args.len = n;
-        ProfibusV.parse_args.out = &t;
+        Profibus.parse_args.frame = SD3;
+        Profibus.parse_args.len = n;
+        Profibus.parse_args.out = &t;
         Profibus.parse(profibus_work);
-        TEST_ASSERT_FALSE(ProfibusV.ok);
+        TEST_ASSERT_FALSE(Profibus.ok);
     }
-    ProfibusV.parse_args.frame = NULL;
-    ProfibusV.parse_args.len = 6;
-    ProfibusV.parse_args.out = &t;
+    Profibus.parse_args.frame = NULL;
+    Profibus.parse_args.len = 6;
+    Profibus.parse_args.out = &t;
     Profibus.parse(profibus_work);
-    TEST_ASSERT_FALSE(ProfibusV.ok);
-    ProfibusV.parse_args.frame = SD2;
-    ProfibusV.parse_args.len = sizeof(SD2);
-    ProfibusV.parse_args.out = NULL;
+    TEST_ASSERT_FALSE(Profibus.ok);
+    Profibus.parse_args.frame = SD2;
+    Profibus.parse_args.len = sizeof(SD2);
+    Profibus.parse_args.out = NULL;
     Profibus.parse(profibus_work);
-    TEST_ASSERT_FALSE(ProfibusV.ok);
+    TEST_ASSERT_FALSE(Profibus.ok);
 }
 
 // The three formats [TF] are 6, 9 + PDU and 14 octets long, so one octet short of each writes
@@ -507,62 +507,62 @@ void test_builders_refuse_a_short_buffer(void)
 
     for (size_t cap = 0; cap < 6; cap++)
     {
-        ProfibusV.build_sd1_args.da = 0x03;
-        ProfibusV.build_sd1_args.sa = 0x02;
-        ProfibusV.build_sd1_args.fc = 0x49;
-        ProfibusV.build_sd1_args.out = out;
-        ProfibusV.build_sd1_args.cap = cap;
+        Profibus.build_sd1_args.da = 0x03;
+        Profibus.build_sd1_args.sa = 0x02;
+        Profibus.build_sd1_args.fc = 0x49;
+        Profibus.build_sd1_args.out = out;
+        Profibus.build_sd1_args.cap = cap;
         Profibus.build_sd1(profibus_work);
-        TEST_ASSERT_EQUAL_UINT(0u, ProfibusV.n);
+        TEST_ASSERT_EQUAL_UINT(0u, Profibus.n);
     }
     for (size_t cap = 0; cap < 13; cap++)
     {
-        ProfibusV.build_sd2_args.da = 0x05;
-        ProfibusV.build_sd2_args.sa = 0x02;
-        ProfibusV.build_sd2_args.fc = 0x6C;
-        ProfibusV.build_sd2_args.data = PDU;
-        ProfibusV.build_sd2_args.data_len = sizeof(PDU);
-        ProfibusV.build_sd2_args.out = out;
-        ProfibusV.build_sd2_args.cap = cap;
+        Profibus.build_sd2_args.da = 0x05;
+        Profibus.build_sd2_args.sa = 0x02;
+        Profibus.build_sd2_args.fc = 0x6C;
+        Profibus.build_sd2_args.data = PDU;
+        Profibus.build_sd2_args.data_len = sizeof(PDU);
+        Profibus.build_sd2_args.out = out;
+        Profibus.build_sd2_args.cap = cap;
         Profibus.build_sd2(profibus_work);
-        TEST_ASSERT_EQUAL_UINT(0u, ProfibusV.n);
+        TEST_ASSERT_EQUAL_UINT(0u, Profibus.n);
     }
     for (size_t cap = 0; cap < 14; cap++)
     {
-        ProfibusV.build_sd3_args.da = 0x05;
-        ProfibusV.build_sd3_args.sa = 0x02;
-        ProfibusV.build_sd3_args.fc = 0x7D;
-        ProfibusV.build_sd3_args.data = EIGHT;
-        ProfibusV.build_sd3_args.out = out;
-        ProfibusV.build_sd3_args.cap = cap;
+        Profibus.build_sd3_args.da = 0x05;
+        Profibus.build_sd3_args.sa = 0x02;
+        Profibus.build_sd3_args.fc = 0x7D;
+        Profibus.build_sd3_args.data = EIGHT;
+        Profibus.build_sd3_args.out = out;
+        Profibus.build_sd3_args.cap = cap;
         Profibus.build_sd3(profibus_work);
-        TEST_ASSERT_EQUAL_UINT(0u, ProfibusV.n);
+        TEST_ASSERT_EQUAL_UINT(0u, Profibus.n);
     }
 
-    ProfibusV.build_sd1_args.da = 0x03;
-    ProfibusV.build_sd1_args.sa = 0x02;
-    ProfibusV.build_sd1_args.fc = 0x49;
-    ProfibusV.build_sd1_args.out = NULL;
-    ProfibusV.build_sd1_args.cap = sizeof(out);
+    Profibus.build_sd1_args.da = 0x03;
+    Profibus.build_sd1_args.sa = 0x02;
+    Profibus.build_sd1_args.fc = 0x49;
+    Profibus.build_sd1_args.out = NULL;
+    Profibus.build_sd1_args.cap = sizeof(out);
     Profibus.build_sd1(profibus_work);
-    TEST_ASSERT_EQUAL_UINT(0u, ProfibusV.n);
-    ProfibusV.build_sd2_args.da = 0x05;
-    ProfibusV.build_sd2_args.sa = 0x02;
-    ProfibusV.build_sd2_args.fc = 0x6C;
-    ProfibusV.build_sd2_args.data = NULL;
-    ProfibusV.build_sd2_args.data_len = 4;
-    ProfibusV.build_sd2_args.out = out;
-    ProfibusV.build_sd2_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_UINT(0u, Profibus.n);
+    Profibus.build_sd2_args.da = 0x05;
+    Profibus.build_sd2_args.sa = 0x02;
+    Profibus.build_sd2_args.fc = 0x6C;
+    Profibus.build_sd2_args.data = NULL;
+    Profibus.build_sd2_args.data_len = 4;
+    Profibus.build_sd2_args.out = out;
+    Profibus.build_sd2_args.cap = sizeof(out);
     Profibus.build_sd2(profibus_work);
-    TEST_ASSERT_EQUAL_UINT(0u, ProfibusV.n);
-    ProfibusV.build_sd3_args.da = 0x05;
-    ProfibusV.build_sd3_args.sa = 0x02;
-    ProfibusV.build_sd3_args.fc = 0x7D;
-    ProfibusV.build_sd3_args.data = NULL;
-    ProfibusV.build_sd3_args.out = out;
-    ProfibusV.build_sd3_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_UINT(0u, Profibus.n);
+    Profibus.build_sd3_args.da = 0x05;
+    Profibus.build_sd3_args.sa = 0x02;
+    Profibus.build_sd3_args.fc = 0x7D;
+    Profibus.build_sd3_args.data = NULL;
+    Profibus.build_sd3_args.out = out;
+    Profibus.build_sd3_args.cap = sizeof(out);
     Profibus.build_sd3(profibus_work);
-    TEST_ASSERT_EQUAL_UINT(0u, ProfibusV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, Profibus.n);
 }
 
 // DA and SA are single octets [TF], so every one of the 256 values must survive a build and parse
@@ -573,19 +573,19 @@ void test_address_octets_round_trip(void)
     PbTelegram t;
     for (unsigned da = 0; da < 256; da++)
     {
-        ProfibusV.build_sd1_args.da = (uint8_t)da;
-        ProfibusV.build_sd1_args.sa = (uint8_t)(255 - da);
-        ProfibusV.build_sd1_args.fc = 0x6C;
-        ProfibusV.build_sd1_args.out = out;
-        ProfibusV.build_sd1_args.cap = sizeof(out);
+        Profibus.build_sd1_args.da = (uint8_t)da;
+        Profibus.build_sd1_args.sa = (uint8_t)(255 - da);
+        Profibus.build_sd1_args.fc = 0x6C;
+        Profibus.build_sd1_args.out = out;
+        Profibus.build_sd1_args.cap = sizeof(out);
         Profibus.build_sd1(profibus_work);
-        size_t n = ProfibusV.n;
+        size_t n = Profibus.n;
         TEST_ASSERT_EQUAL_UINT(6u, n);
-        ProfibusV.parse_args.frame = out;
-        ProfibusV.parse_args.len = n;
-        ProfibusV.parse_args.out = &t;
+        Profibus.parse_args.frame = out;
+        Profibus.parse_args.len = n;
+        Profibus.parse_args.out = &t;
         Profibus.parse(profibus_work);
-        TEST_ASSERT_TRUE(ProfibusV.ok);
+        TEST_ASSERT_TRUE(Profibus.ok);
         TEST_ASSERT_EQUAL_HEX8((uint8_t)da, t.da);
         TEST_ASSERT_EQUAL_HEX8((uint8_t)(255 - da), t.sa);
     }

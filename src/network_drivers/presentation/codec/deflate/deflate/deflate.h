@@ -70,6 +70,7 @@ typedef struct
     void *scratch;
     size_t scratch_len;
 } DeflateRawArgs;
+
 /**
  * @brief Bounded RFC 1951 DEFLATE compressor (DEFLATE) - no heap.
  *
@@ -98,30 +99,15 @@ typedef struct
 typedef struct
 {
     DeflateRawArgs raw_args;
+
     proto_bool ok;
     DeflateResult value;
-} DeflateVars;
 
-/** @brief The operands and the outcome. */
-extern DeflateVars DeflateV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const raw)(uint8_t *restrict work);
 } DeflateNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in DeflateV or a region of the borrow at a fixed offset.
-void protocore_deflate_raw(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Deflate.raw(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const DeflateNs Deflate __attribute__((unused)) = {
-    .raw = protocore_deflate_raw,
-};
+/** @brief The one symbol this module exports. */
+extern DeflateNs Deflate;
 
 PROTOCORE_END_DECLS
 

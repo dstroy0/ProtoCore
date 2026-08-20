@@ -63,6 +63,7 @@ typedef struct
     uint8_t ed25519_seed[32];              ///< Ed25519 private seed matching the certificate
     void (*rng)(uint8_t *out, size_t len); ///< fills @p out with @p len random bytes (ephemeral keys, SCIDs)
 } QuicServerConfig;
+
 /** @brief What binding the server takes: the port, its keys, and where requests go. */
 typedef struct
 {
@@ -71,12 +72,14 @@ typedef struct
     QuicServerRequestFn on_request; ///< what a completed request is delivered to, on the poll thread
     void *app;                      ///< the opaque pointer that callback is given back
 } QuicBeginArgs;
+
 /** @brief RFC 9000 sec 2.1: the connection and stream a response is written on. */
 typedef struct
 {
     uint32_t conn_id;   ///< the connection a response routes back on
     uint64_t stream_id; ///< the stream it finishes
 } QuicStreamRef;
+
 /** @brief What one response carries. */
 typedef struct
 {
@@ -85,6 +88,7 @@ typedef struct
     const uint8_t *body;      ///< its body bytes
     size_t body_len;          ///< how many
 } QuicRespArgs;
+
 /**
  * @brief The HTTP/3 server: a QUIC connection pool over one bound UDP port.
  *
@@ -107,46 +111,25 @@ typedef struct
  */
 typedef struct
 {
-    uint32_t now_ms;          ///< the caller's monotonic clock, so this module stays platform-agnostic
+    uint32_t now_ms; ///< the caller's monotonic clock, so this module stays platform-agnostic
+
     QuicBeginArgs begin_args; ///< what binding the server takes
     QuicStreamRef stream;     ///< the connection and stream a response names
     QuicRespArgs resp;        ///< what that response carries
+
     proto_bool ok;
     uint8_t u8;
-} QuicServerVars;
 
-/** @brief The operands and the outcome. */
-extern QuicServerVars QuicServerV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const begin)(uint8_t *restrict work);
     void (*const poll)(uint8_t *restrict work);
     void (*const respond)(uint8_t *restrict work);
     void (*const active_conns)(uint8_t *restrict work);
     void (*const stop)(uint8_t *restrict work);
+
 } QuicServerNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in QuicServerV or a region of the borrow at a fixed offset.
-void protocore_quic_server_begin(uint8_t *restrict work);
-void protocore_quic_server_poll(uint8_t *restrict work);
-void protocore_quic_server_respond(uint8_t *restrict work);
-void protocore_quic_server_active_conns(uint8_t *restrict work);
-void protocore_quic_server_stop(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `QuicServer.begin(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const QuicServerNs QuicServer __attribute__((unused)) = {
-    .begin = protocore_quic_server_begin,
-    .poll = protocore_quic_server_poll,
-    .respond = protocore_quic_server_respond,
-    .active_conns = protocore_quic_server_active_conns,
-    .stop = protocore_quic_server_stop,
-};
+/** @brief The one symbol this module exports. */
+extern QuicServerNs QuicServer;
 
 /**
  * @brief The PROTOCORE_QUIC_SERVER_BORROW bytes this server runs out of.

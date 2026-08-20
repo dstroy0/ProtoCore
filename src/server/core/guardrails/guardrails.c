@@ -7,7 +7,7 @@
  */
 
 #include "server/core/guardrails/guardrails.h"
-#include "mmgr/membuild/membuild.h"   // protocore_sb frame builder
+#include "mmgr/membuild/membuild.h"  // protocore_sb frame builder
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
 #if PROTOCORE_ENABLE_GUARDRAILS
@@ -49,18 +49,18 @@ uint8_t *protocore_guardrails_span(void)
     return s_own.span;
 }
 
-void protocore_guardrails_eval(uint8_t *restrict work)
+static void guardrails_eval(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_health *h = GuardrailsV.health;
-    const uint32_t heap_min = GuardrailsV.floors.heap_min;
-    const uint32_t frag_min_block = GuardrailsV.floors.frag_min_block;
-    const uint32_t stack_min = GuardrailsV.floors.stack_min;
+    const protocore_health *h = Guardrails.health;
+    const uint32_t heap_min = Guardrails.floors.heap_min;
+    const uint32_t frag_min_block = Guardrails.floors.frag_min_block;
+    const uint32_t stack_min = Guardrails.floors.stack_min;
 
     uint8_t b = PROTOCORE_BREACH_NONE;
     if (!h)
     {
-        GuardrailsV.breaches = b;
+        Guardrails.breaches = b;
         return;
     }
     if (h->free_heap < heap_min)
@@ -75,17 +75,17 @@ void protocore_guardrails_eval(uint8_t *restrict work)
     {
         b |= PROTOCORE_BREACH_STACK;
     }
-    GuardrailsV.breaches = b;
+    Guardrails.breaches = b;
 }
 
-void protocore_guardrails_json(uint8_t *restrict work)
+static void guardrails_json(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_health *h = GuardrailsV.health;
-    char *out = GuardrailsV.out.out;
-    const size_t cap = GuardrailsV.out.cap;
+    const protocore_health *h = Guardrails.health;
+    char *out = Guardrails.out.out;
+    const size_t cap = Guardrails.out.cap;
 
-    GuardrailsV.n = 0;
+    Guardrails.n = 0;
     if (!out || cap == 0)
     {
         return;
@@ -113,13 +113,13 @@ void protocore_guardrails_json(uint8_t *restrict work)
         out[0] = '\0';
         return;
     }
-    GuardrailsV.n = w;
+    Guardrails.n = w;
 }
 
-void protocore_guardrails_sample(uint8_t *restrict work)
+static void guardrails_sample(uint8_t *restrict work)
 {
     (void)work;
-    protocore_health *h = GuardrailsV.health;
+    protocore_health *h = Guardrails.health;
     if (!h)
     {
         return;
@@ -135,30 +135,33 @@ void protocore_guardrails_sample(uint8_t *restrict work)
 #endif
 }
 
-void protocore_guardrails_begin(uint8_t *restrict work)
+static void guardrails_begin(uint8_t *restrict work)
 {
-    GUARDRAILS_CTX(work)->cb = GuardrailsV.cb;
+    GUARDRAILS_CTX(work)->cb = Guardrails.cb;
 }
 
-void protocore_guardrails_check(uint8_t *restrict work)
+static void guardrails_check(uint8_t *restrict work)
 {
     protocore_health h;
-    GuardrailsV.health = &h;
-    protocore_guardrails_sample(work);
-    GuardrailsV.health = &h;
-    GuardrailsV.floors.heap_min = PROTOCORE_GUARDRAIL_HEAP_MIN;
-    GuardrailsV.floors.frag_min_block = PROTOCORE_GUARDRAIL_FRAG_MIN_BLOCK;
-    GuardrailsV.floors.stack_min = PROTOCORE_GUARDRAIL_STACK_MIN;
-    protocore_guardrails_eval(work);
-    if (GuardrailsV.breaches != PROTOCORE_BREACH_NONE && GUARDRAILS_CTX(work)->cb)
+    Guardrails.health = &h;
+    guardrails_sample(work);
+    Guardrails.health = &h;
+    Guardrails.floors.heap_min = PROTOCORE_GUARDRAIL_HEAP_MIN;
+    Guardrails.floors.frag_min_block = PROTOCORE_GUARDRAIL_FRAG_MIN_BLOCK;
+    Guardrails.floors.stack_min = PROTOCORE_GUARDRAIL_STACK_MIN;
+    guardrails_eval(work);
+    if (Guardrails.breaches != PROTOCORE_BREACH_NONE && GUARDRAILS_CTX(work)->cb)
     {
-        GUARDRAILS_CTX(work)->cb(GuardrailsV.breaches, &h);
+        GUARDRAILS_CTX(work)->cb(Guardrails.breaches, &h);
     }
-    GuardrailsV.health = NULL;
+    Guardrails.health = NULL;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-GuardrailsVars GuardrailsV;
+GuardrailsNs Guardrails = {.eval = guardrails_eval,
+                           .json = guardrails_json,
+                           .sample = guardrails_sample,
+                           .begin = guardrails_begin,
+                           .check = guardrails_check};
 
 #endif // PROTOCORE_ENABLE_GUARDRAILS

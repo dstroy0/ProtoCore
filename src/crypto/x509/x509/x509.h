@@ -66,6 +66,7 @@ typedef struct
     const uint8_t *p; ///< into the caller's encoding
     size_t len;       ///< how many octets
 } X509Bytes;
+
 /**
  * @brief One certificate, as a view over the DER it was read from.
  *
@@ -100,8 +101,10 @@ typedef struct
     X509Bytes key;
     X509Bytes sig;
     X509Bytes san;
+
     uint64_t not_before;
     uint64_t not_after;
+
     protocore_x509_sig_alg sig_alg;
     protocore_x509_key_alg key_alg;
     uint16_t key_usage;
@@ -112,12 +115,14 @@ typedef struct
     proto_bool has_ku;
     proto_bool has_path_len;
 } X509Cert;
+
 /** @brief The encoding a parse reads. */
 typedef struct
 {
     const uint8_t *der; ///< one Certificate, DER
     size_t len;         ///< how many octets
 } X509ParseArgs;
+
 /** @brief What a name match judges: the presented certificate, and the name asked for. */
 typedef struct
 {
@@ -125,6 +130,7 @@ typedef struct
     const char *host;     ///< the name the caller asked for, NUL terminated
     size_t host_len;      ///< its length, or 0 to measure it
 } X509MatchArgs;
+
 /**
  * @brief Certificates: read one, and judge whether it speaks for a name.
  *
@@ -147,33 +153,16 @@ typedef struct
 {
     X509ParseArgs parse_args;
     X509MatchArgs match_args;
+
     X509Cert cert;
     proto_bool ok;
-} X509Vars;
 
-/** @brief The operands and the outcome. */
-extern X509Vars X509V;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const parse)(uint8_t *restrict work);
     void (*const name_match)(uint8_t *restrict work);
 } X509Ns;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in X509V or a region of the borrow at a fixed offset.
-void protocore_x509_parse(uint8_t *restrict work);
-void protocore_x509_name_match(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `X509.parse(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const X509Ns X509 __attribute__((unused)) = {
-    .parse = protocore_x509_parse,
-    .name_match = protocore_x509_name_match,
-};
+/** @brief The one symbol this module exports. */
+extern X509Ns X509;
 
 PROTOCORE_END_DECLS
 

@@ -57,15 +57,15 @@ uint8_t *protocore_provisioning_service_span(void)
     return s_own.span;
 }
 
-void protocore_provisioning_service_form_field(uint8_t *restrict work);
+static void provisioning_service_form_field(uint8_t *restrict work);
 
-void protocore_provisioning_service_form_field(uint8_t *restrict work)
+static void provisioning_service_form_field(uint8_t *restrict work)
 {
     (void)work;
-    const char *body = ProvV.form_field_args.body;
-    const char *key = ProvV.form_field_args.key;
-    char *out = ProvV.form_field_args.out;
-    size_t cap = ProvV.form_field_args.cap;
+    const char *body = Prov.form_field_args.body;
+    const char *key = Prov.form_field_args.key;
+    char *out = Prov.form_field_args.out;
+    size_t cap = Prov.form_field_args.cap;
 
     if (out && cap)
     {
@@ -73,7 +73,7 @@ void protocore_provisioning_service_form_field(uint8_t *restrict work)
     }
     if (!body || !key || !out || cap == 0)
     {
-        ProvV.ok = PROTO_FALSE;
+        Prov.ok = PROTO_FALSE;
         return;
     }
 
@@ -95,7 +95,7 @@ void protocore_provisioning_service_form_field(uint8_t *restrict work)
     }
     if (!val)
     {
-        ProvV.ok = PROTO_FALSE;
+        Prov.ok = PROTO_FALSE;
         return;
     }
 
@@ -109,15 +109,15 @@ void protocore_provisioning_service_form_field(uint8_t *restrict work)
         }
         else if (c == '%')
         {
-            HexV.args.ch = q[1];
+            Hex.args.ch = q[1];
             Hex.val(hex_work);
-            int h = HexV.i8;
+            int h = Hex.i8;
             int l = -1;
             if (h >= 0)
             {
-                HexV.args.ch = q[2];
+                Hex.args.ch = q[2];
                 Hex.val(hex_work);
-                l = HexV.i8;
+                l = Hex.i8;
             }
             if (h >= 0 && l >= 0)
             {
@@ -135,7 +135,7 @@ void protocore_provisioning_service_form_field(uint8_t *restrict work)
         }
     }
     out[o] = '\0';
-    ProvV.ok = PROTO_TRUE;
+    Prov.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -239,19 +239,19 @@ static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct protocor
     resp[n++] = ap_octet(work, 2);
     resp[n++] = ap_octet(work, 3);
 
-    UdpListenerV.peer_args.peer = peer;
-    UdpListenerV.send_args.data = resp;
-    UdpListenerV.send_args.len = n;
+    UdpListener.peer_args.peer = peer;
+    UdpListener.send_args.data = resp;
+    UdpListener.send_args.len = n;
     UdpListener.reply(protocore_udp_listener_span());
 }
 
-void protocore_provisioning_service_load(uint8_t *restrict work)
+static void provisioning_service_load(uint8_t *restrict work)
 {
     (void)work;
-    char *ssid = ProvV.load_args.ssid;
-    size_t ssid_cap = ProvV.load_args.ssid_cap;
-    char *psk = ProvV.load_args.psk;
-    size_t psk_cap = ProvV.load_args.psk_cap;
+    char *ssid = Prov.load_args.ssid;
+    size_t ssid_cap = Prov.load_args.ssid_cap;
+    char *psk = Prov.load_args.psk;
+    size_t psk_cap = Prov.load_args.psk_cap;
 
     if (ssid && ssid_cap)
     {
@@ -264,7 +264,7 @@ void protocore_provisioning_service_load(uint8_t *restrict work)
     if (!ssid || ssid_cap == 0 ||
         protocore_nvs_get_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_SSID, ssid, ssid_cap) == 0)
     {
-        ProvV.ok = PROTO_FALSE;
+        Prov.ok = PROTO_FALSE;
         return;
     }
     if (psk && psk_cap)
@@ -272,10 +272,10 @@ void protocore_provisioning_service_load(uint8_t *restrict work)
         (void)protocore_nvs_get_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_PSK, psk,
                                     psk_cap); // an open AP has none
     }
-    ProvV.ok = PROTO_TRUE;
+    Prov.ok = PROTO_TRUE;
 }
 
-void protocore_provisioning_service_clear(uint8_t *restrict work)
+static void provisioning_service_clear(uint8_t *restrict work)
 {
     (void)work;
 
@@ -296,17 +296,17 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
 
     char ssid[33];
     char psk[64];
-    ProvV.form_field_args.body = (const char *)req->body;
-    ProvV.form_field_args.key = PROTOCORE_PROV_KEY_SSID;
-    ProvV.form_field_args.out = ssid;
-    ProvV.form_field_args.cap = sizeof(ssid);
-    protocore_provisioning_service_form_field(work);
-    proto_bool have_ssid = ProvV.ok && ssid[0] != '\0';
-    ProvV.form_field_args.body = (const char *)req->body;
-    ProvV.form_field_args.key = PROTOCORE_PROV_KEY_PSK;
-    ProvV.form_field_args.out = psk;
-    ProvV.form_field_args.cap = sizeof(psk);
-    protocore_provisioning_service_form_field(work);
+    Prov.form_field_args.body = (const char *)req->body;
+    Prov.form_field_args.key = PROTOCORE_PROV_KEY_SSID;
+    Prov.form_field_args.out = ssid;
+    Prov.form_field_args.cap = sizeof(ssid);
+    provisioning_service_form_field(work);
+    proto_bool have_ssid = Prov.ok && ssid[0] != '\0';
+    Prov.form_field_args.body = (const char *)req->body;
+    Prov.form_field_args.key = PROTOCORE_PROV_KEY_PSK;
+    Prov.form_field_args.out = psk;
+    Prov.form_field_args.cap = sizeof(psk);
+    provisioning_service_form_field(work);
     if (!have_ssid)
     {
         send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "SSID required");
@@ -319,33 +319,35 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
     protocore_platform_restart();
 }
 
-void protocore_provisioning_service_begin(uint8_t *restrict work)
+static void provisioning_service_begin(uint8_t *restrict work)
 {
-    const char *ap_ssid = ProvV.begin_args.ap_ssid;
+    const char *ap_ssid = Prov.begin_args.ap_ssid;
 
-    PhysicalV.wifi.ssid = ap_ssid;
-    PhysicalV.wifi.password = NULL;
+    Physical.wifi.ssid = ap_ssid;
+    Physical.wifi.password = NULL;
     Physical.wifi_ap_init(protocore_physical_span()); // AP mode is implied by which bring-up you call
     Physical.wifi_ap_ip(protocore_physical_span());
-    uint32_t ip = PhysicalV.u32; // network byte order
+    uint32_t ip = Physical.u32; // network byte order
     PROVISIONING_SERVICE_CTX(work)->ap_ip[0] = (uint8_t)(ip & 0xFF);
     PROVISIONING_SERVICE_CTX(work)->ap_ip[1] = (uint8_t)((ip >> 8) & 0xFF);
     PROVISIONING_SERVICE_CTX(work)->ap_ip[2] = (uint8_t)((ip >> 16) & 0xFF);
     PROVISIONING_SERVICE_CTX(work)->ap_ip[3] = (uint8_t)((ip >> 24) & 0xFF);
 
     // Catch-all DNS on UDP/53 via the transport-layer UDP service (callback-driven).
-    UdpListenerV.port = 53;
-    UdpListenerV.bind.handler = prov_dns_recv;
-    UdpListenerV.bind.handler_ctx = NULL;
-    UdpListenerV.bind.group_ip = NULL;
+    UdpListener.port = 53;
+    UdpListener.bind.handler = prov_dns_recv;
+    UdpListener.bind.handler_ctx = NULL;
+    UdpListener.bind.group_ip = NULL;
     UdpListener.listen(protocore_udp_listener_span());
 
     on_http("/save", HTTP_POST, prov_save_handler);
     on_http("/*", HTTP_GET, prov_form_handler); // any other path -> the form
 }
 
-/** @brief The operands and the outcome. */
-ProvVars ProvV;
+ProvNs Prov = {.form_field = provisioning_service_form_field,
+               .load = provisioning_service_load,
+               .begin = provisioning_service_begin,
+               .clear = provisioning_service_clear};
 
 PROTOCORE_END_DECLS
 

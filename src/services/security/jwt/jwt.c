@@ -93,12 +93,12 @@ static proto_bool jws_split(const char *jws, size_t jws_len, JwsParts *parts)
 static proto_bool alg_is_hs256(const char *header, size_t header_len)
 {
     uint8_t buf[JWT_JOSE_HDR_CAP];
-    Base64V.url_decode_args.src = header;
-    Base64V.url_decode_args.src_len = header_len;
-    Base64V.url_decode_args.dst = buf;
-    Base64V.url_decode_args.dst_cap = sizeof(buf) - 1u;
+    Base64.url_decode_args.src = header;
+    Base64.url_decode_args.src_len = header_len;
+    Base64.url_decode_args.dst = buf;
+    Base64.url_decode_args.dst_cap = sizeof(buf) - 1u;
     Base64.url_decode(base64_work);
-    const size_t n = Base64V.n;
+    const size_t n = Base64.n;
     if (n == 0)
     {
         return PROTO_FALSE;
@@ -164,12 +164,12 @@ static const char *claim_value(const char *jws, size_t jws_len, const char *name
     {
         return NULL;
     }
-    Base64V.url_decode_args.src = parts.payload;
-    Base64V.url_decode_args.src_len = parts.payload_len;
-    Base64V.url_decode_args.dst = buf;
-    Base64V.url_decode_args.dst_cap = buf_cap - 1u;
+    Base64.url_decode_args.src = parts.payload;
+    Base64.url_decode_args.src_len = parts.payload_len;
+    Base64.url_decode_args.dst = buf;
+    Base64.url_decode_args.dst_cap = buf_cap - 1u;
     Base64.url_decode(base64_work);
-    const size_t n = Base64V.n;
+    const size_t n = Base64.n;
     if (n == 0)
     {
         return NULL;
@@ -225,15 +225,15 @@ static proto_bool claim_num(const char *jws, size_t jws_len, const char *name, l
 static void verify_mac(uint8_t *restrict work)
 {
     (void)work;
-    const char *jws = JwtV.token.jws;
-    const size_t jws_len = JwtV.token.jws_len;
-    JwtV.ok = PROTO_FALSE;
+    const char *jws = Jwt.token.jws;
+    const size_t jws_len = Jwt.token.jws_len;
+    Jwt.ok = PROTO_FALSE;
     if (!jws || jws_len < 5u || jws_len > PROTOCORE_JWT_MAX_LEN)
     {
         return;
     }
     // A key length with no key octets behind it would be hashed from a null address.
-    if (!JwtV.key.secret && JwtV.key.secret_len)
+    if (!Jwt.key.secret && Jwt.key.secret_len)
     {
         return;
     }
@@ -261,38 +261,38 @@ static void verify_mac(uint8_t *restrict work)
         protocore_secure_release(mark);
         return;
     }
-    HmacSha256V.mac_args.key = JwtV.key.secret;
-    HmacSha256V.mac_args.key_len = JwtV.key.secret_len;
-    HmacSha256V.mac_args.data = (const uint8_t *)jws;
-    HmacSha256V.mac_args.len = parts.signing_len;
-    HmacSha256V.mac_args.out = mac;
+    HmacSha256.mac_args.key = Jwt.key.secret;
+    HmacSha256.mac_args.key_len = Jwt.key.secret_len;
+    HmacSha256.mac_args.data = (const uint8_t *)jws;
+    HmacSha256.mac_args.len = parts.signing_len;
+    HmacSha256.mac_args.out = mac;
     HmacSha256.mac(ws.buf);
     protocore_secure_release(mark);
 
     char computed[JWT_SIG_B64_CAP];
     // A 32-byte MAC is always 43 base64url characters, so this length test never fires.
-    Base64V.url_encode_args.src = mac;
-    Base64V.url_encode_args.src_len = sizeof(mac);
-    Base64V.url_encode_args.dst = computed;
+    Base64.url_encode_args.src = mac;
+    Base64.url_encode_args.src_len = sizeof(mac);
+    Base64.url_encode_args.dst = computed;
     Base64.url_encode(base64_work);
-    if (Base64V.n != JWT_SIG_B64_LEN)
+    if (Base64.n != JWT_SIG_B64_LEN)
     {
         return;
     }
-    JwtV.ok = protocore_ct_eq(computed, parts.signature, JWT_SIG_B64_LEN);
+    Jwt.ok = protocore_ct_eq(computed, parts.signature, JWT_SIG_B64_LEN);
 }
 
 // The same validation on the b64token inside the Authorization field value (RFC 6750 sec 2.1).
 static void verify_bearer(uint8_t *restrict work)
 {
-    const char *tok = bearer_token(JwtV.token.credentials);
+    const char *tok = bearer_token(Jwt.token.credentials);
     if (!tok)
     {
-        JwtV.ok = PROTO_FALSE;
+        Jwt.ok = PROTO_FALSE;
         return;
     }
-    JwtV.token.jws = tok;
-    JwtV.token.jws_len = str.len(tok, PROTOCORE_JWT_MAX_LEN + 1u);
+    Jwt.token.jws = tok;
+    Jwt.token.jws_len = str.len(tok, PROTOCORE_JWT_MAX_LEN + 1u);
     verify_mac(work);
 }
 
@@ -305,11 +305,11 @@ static void verify_bearer(uint8_t *restrict work)
 static void time_claims_valid(uint8_t *restrict work)
 {
     (void)work;
-    const char *jws = JwtV.token.jws;
-    const size_t jws_len = JwtV.token.jws_len;
-    const long now = JwtV.time.now;
-    const long leeway_s = JwtV.time.leeway_s;
-    JwtV.ok = PROTO_TRUE;
+    const char *jws = Jwt.token.jws;
+    const size_t jws_len = Jwt.token.jws_len;
+    const long now = Jwt.time.now;
+    const long leeway_s = Jwt.time.leeway_s;
+    Jwt.ok = PROTO_TRUE;
     if (!jws || now <= 0)
     {
         return; // no wall clock: neither claim can be judged, and the MAC is the gate
@@ -318,14 +318,14 @@ static void time_claims_valid(uint8_t *restrict work)
     long exp = 0;
     if (claim_num(jws, jws_len, "exp", &exp) && (exp <= 0 || now - exp > leeway_s))
     {
-        JwtV.ok = PROTO_FALSE;
+        Jwt.ok = PROTO_FALSE;
         return;
     }
 
     long nbf = 0;
     if (claim_num(jws, jws_len, "nbf", &nbf) && nbf > 0 && nbf - now > leeway_s)
     {
-        JwtV.ok = PROTO_FALSE;
+        Jwt.ok = PROTO_FALSE;
     }
 }
 
@@ -333,7 +333,7 @@ static void time_claims_valid(uint8_t *restrict work)
 static void verify_mac_at(uint8_t *restrict work)
 {
     verify_mac(work);
-    if (!JwtV.ok)
+    if (!Jwt.ok)
     {
         return;
     }
@@ -343,7 +343,7 @@ static void verify_mac_at(uint8_t *restrict work)
 static void verify_bearer_at(uint8_t *restrict work)
 {
     verify_bearer(work);
-    if (!JwtV.ok)
+    if (!Jwt.ok)
     {
         return;
     }
@@ -354,10 +354,10 @@ static void claim_int(uint8_t *restrict work)
 {
     (void)work;
     long v = 0;
-    JwtV.ok = claim_num(JwtV.token.jws, JwtV.token.jws_len, JwtV.claim.name, &v);
-    if (JwtV.ok)
+    Jwt.ok = claim_num(Jwt.token.jws, Jwt.token.jws_len, Jwt.claim.name, &v);
+    if (Jwt.ok)
     {
-        JwtV.num = v;
+        Jwt.num = v;
     }
 }
 
@@ -366,9 +366,9 @@ static void claim_int(uint8_t *restrict work)
 static void claim_str(uint8_t *restrict work)
 {
     (void)work;
-    char *out = JwtV.claim.out;
-    const size_t out_cap = JwtV.claim.out_cap;
-    JwtV.ok = PROTO_FALSE;
+    char *out = Jwt.claim.out;
+    const size_t out_cap = Jwt.claim.out_cap;
+    Jwt.ok = PROTO_FALSE;
     if (!out || out_cap == 0)
     {
         return;
@@ -376,7 +376,7 @@ static void claim_str(uint8_t *restrict work)
     out[0] = '\0';
 
     uint8_t buf[PROTOCORE_JWT_MAX_LEN];
-    const char *p = claim_value(JwtV.token.jws, JwtV.token.jws_len, JwtV.claim.name, buf, sizeof(buf));
+    const char *p = claim_value(Jwt.token.jws, Jwt.token.jws_len, Jwt.claim.name, buf, sizeof(buf));
     if (!p || *p != '"') // absent, or not a string-valued claim
     {
         return;
@@ -397,7 +397,7 @@ static void claim_str(uint8_t *restrict work)
         return;
     }
     out[i] = '\0';
-    JwtV.ok = PROTO_TRUE;
+    Jwt.ok = PROTO_TRUE;
 }
 
 // RFC 6749 sec 3.3: a scope is a list of space-delimited, case-sensitive strings, which is the
@@ -406,9 +406,9 @@ static void claim_str(uint8_t *restrict work)
 static void scope_allows(uint8_t *restrict work)
 {
     (void)work;
-    const char *claim = JwtV.scope.claim;
-    const char *required = JwtV.scope.required;
-    JwtV.ok = PROTO_FALSE;
+    const char *claim = Jwt.scope.claim;
+    const char *required = Jwt.scope.required;
+    Jwt.ok = PROTO_FALSE;
     if (!claim || !required || !*required)
     {
         return;
@@ -428,14 +428,20 @@ static void scope_allows(uint8_t *restrict work)
         }
         if ((size_t)(p - start) == rlen && mem.cmp(start, required, rlen) == 0)
         {
-            JwtV.ok = PROTO_TRUE;
+            Jwt.ok = PROTO_TRUE;
             return;
         }
     }
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-JwtVars JwtV;
+JwtNs Jwt = {.verify_mac = verify_mac,
+             .verify_bearer = verify_bearer,
+             .time_claims_valid = time_claims_valid,
+             .verify_mac_at = verify_mac_at,
+             .verify_bearer_at = verify_bearer_at,
+             .claim_int = claim_int,
+             .claim_str = claim_str,
+             .scope_allows = scope_allows};
 
 #endif // PROTOCORE_ENABLE_JWT

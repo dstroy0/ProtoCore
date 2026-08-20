@@ -45,61 +45,61 @@ uint8_t *protocore_ina219_span(void)
     return s_own.span;
 }
 
-void protocore_ina219_bus_mv(uint8_t *restrict work);
-void protocore_ina219_calibration(uint8_t *restrict work);
-void protocore_ina219_current_ua(uint8_t *restrict work);
-void protocore_ina219_power_uw(uint8_t *restrict work);
-void protocore_ina219_shunt_uv(uint8_t *restrict work);
+static void ina219_bus_mv(uint8_t *restrict work);
+static void ina219_calibration(uint8_t *restrict work);
+static void ina219_current_ua(uint8_t *restrict work);
+static void ina219_power_uw(uint8_t *restrict work);
+static void ina219_shunt_uv(uint8_t *restrict work);
 
-void protocore_ina219_bus_mv(uint8_t *restrict work)
+static void ina219_bus_mv(uint8_t *restrict work)
 {
     (void)work;
-    uint16_t raw = Ina219V.bus_mv_args.raw;
+    uint16_t raw = Ina219.bus_mv_args.raw;
 
-    Ina219V.value = (int32_t)((raw >> 3) * 4); // value in bits [15:3], LSB 4 mV
+    Ina219.value = (int32_t)((raw >> 3) * 4); // value in bits [15:3], LSB 4 mV
 }
 
-void protocore_ina219_shunt_uv(uint8_t *restrict work)
+static void ina219_shunt_uv(uint8_t *restrict work)
 {
     (void)work;
-    int16_t raw = Ina219V.shunt_uv_args.raw;
+    int16_t raw = Ina219.shunt_uv_args.raw;
 
-    Ina219V.value = (int32_t)raw * 10; // LSB 10 uV, signed
+    Ina219.value = (int32_t)raw * 10; // LSB 10 uV, signed
 }
 
-void protocore_ina219_calibration(uint8_t *restrict work)
+static void ina219_calibration(uint8_t *restrict work)
 {
     (void)work;
-    uint32_t current_lsb_ua = Ina219V.calibration_args.current_lsb_ua;
-    uint32_t shunt_mohm = Ina219V.calibration_args.shunt_mohm;
+    uint32_t current_lsb_ua = Ina219.calibration_args.current_lsb_ua;
+    uint32_t shunt_mohm = Ina219.calibration_args.shunt_mohm;
 
     uint32_t denom = current_lsb_ua * shunt_mohm;
     if (denom == 0)
     {
-        Ina219V.cal = 0;
+        Ina219.cal = 0;
         return;
     }
     // 0.04096 / (lsb[A] * R[ohm]) = 40960000 / (lsb_ua * shunt_mohm).
     uint32_t cal = 40960000u / denom;
-    Ina219V.cal = (uint16_t)(cal > 0xFFFF ? 0xFFFF : cal);
+    Ina219.cal = (uint16_t)(cal > 0xFFFF ? 0xFFFF : cal);
 }
 
-void protocore_ina219_current_ua(uint8_t *restrict work)
+static void ina219_current_ua(uint8_t *restrict work)
 {
     (void)work;
-    int16_t raw = Ina219V.current_ua_args.raw;
-    uint32_t current_lsb_ua = Ina219V.current_ua_args.current_lsb_ua;
+    int16_t raw = Ina219.current_ua_args.raw;
+    uint32_t current_lsb_ua = Ina219.current_ua_args.current_lsb_ua;
 
-    Ina219V.value = (int32_t)((int64_t)raw * current_lsb_ua);
+    Ina219.value = (int32_t)((int64_t)raw * current_lsb_ua);
 }
 
-void protocore_ina219_power_uw(uint8_t *restrict work)
+static void ina219_power_uw(uint8_t *restrict work)
 {
     (void)work;
-    int16_t raw = Ina219V.power_uw_args.raw;
-    uint32_t current_lsb_ua = Ina219V.power_uw_args.current_lsb_ua;
+    int16_t raw = Ina219.power_uw_args.raw;
+    uint32_t current_lsb_ua = Ina219.power_uw_args.current_lsb_ua;
 
-    Ina219V.value = (int32_t)((int64_t)raw * 20 * current_lsb_ua); // power LSB = 20 * current LSB
+    Ina219.value = (int32_t)((int64_t)raw * 20 * current_lsb_ua); // power LSB = 20 * current LSB
 }
 
 // ---------------------------------------------------------------------------
@@ -168,104 +168,112 @@ static proto_bool rd16(uint8_t *restrict work, uint8_t reg, uint16_t *v)
     return PROTO_TRUE;
 }
 
-void protocore_ina219_begin(uint8_t *restrict work)
+static void ina219_begin(uint8_t *restrict work)
 {
-    uint8_t addr = Ina219V.begin_args.addr;
-    uint32_t current_lsb_ua = Ina219V.begin_args.current_lsb_ua;
-    uint32_t shunt_mohm = Ina219V.begin_args.shunt_mohm;
+    uint8_t addr = Ina219.begin_args.addr;
+    uint32_t current_lsb_ua = Ina219.begin_args.current_lsb_ua;
+    uint32_t shunt_mohm = Ina219.begin_args.shunt_mohm;
 
     INA219_CTX(work)->addr = addr ? addr : (uint8_t)PROTOCORE_INA219_I2C_ADDR;
     INA219_CTX(work)->lsb_ua = current_lsb_ua ? current_lsb_ua : (uint32_t)PROTOCORE_INA219_CURRENT_LSB_UA;
     protocore_i2c_begin();
     proto_bool ok = PROTO_TRUE;
-    Ina219V.calibration_args.current_lsb_ua = dev_lsb_ua(work);
-    Ina219V.calibration_args.shunt_mohm = shunt_mohm ? shunt_mohm : (uint32_t)PROTOCORE_INA219_SHUNT_MOHM;
-    protocore_ina219_calibration(work);
-    ok &= wr16(work, INA219_REG_CALIBRATION, Ina219V.cal);
+    Ina219.calibration_args.current_lsb_ua = dev_lsb_ua(work);
+    Ina219.calibration_args.shunt_mohm = shunt_mohm ? shunt_mohm : (uint32_t)PROTOCORE_INA219_SHUNT_MOHM;
+    ina219_calibration(work);
+    ok &= wr16(work, INA219_REG_CALIBRATION, Ina219.cal);
     ok &= wr16(work, INA219_REG_CONFIG, 0x399F); // 32 V range, /8 gain (320 mV), 12-bit, continuous
-    Ina219V.ok = ok;
+    Ina219.ok = ok;
 }
 
-void protocore_ina219_read_bus_mv(uint8_t *restrict work)
+static void ina219_read_bus_mv(uint8_t *restrict work)
 {
-    int32_t *millivolts = Ina219V.read_bus_mv_args.millivolts;
+    int32_t *millivolts = Ina219.read_bus_mv_args.millivolts;
 
     uint16_t v = 0;
     if (!rd16(work, INA219_REG_BUS, &v))
     {
-        Ina219V.ok = PROTO_FALSE;
+        Ina219.ok = PROTO_FALSE;
         return;
     }
     if (millivolts)
     {
-        Ina219V.bus_mv_args.raw = v;
-        protocore_ina219_bus_mv(work);
-        *millivolts = Ina219V.value;
+        Ina219.bus_mv_args.raw = v;
+        ina219_bus_mv(work);
+        *millivolts = Ina219.value;
     }
-    Ina219V.ok = PROTO_TRUE;
+    Ina219.ok = PROTO_TRUE;
 }
 
-void protocore_ina219_read_shunt_uv(uint8_t *restrict work)
+static void ina219_read_shunt_uv(uint8_t *restrict work)
 {
-    int32_t *microvolts = Ina219V.read_shunt_uv_args.microvolts;
+    int32_t *microvolts = Ina219.read_shunt_uv_args.microvolts;
 
     uint16_t v = 0;
     if (!rd16(work, INA219_REG_SHUNT, &v))
     {
-        Ina219V.ok = PROTO_FALSE;
+        Ina219.ok = PROTO_FALSE;
         return;
     }
     if (microvolts)
     {
-        Ina219V.shunt_uv_args.raw = (int16_t)v;
-        protocore_ina219_shunt_uv(work);
-        *microvolts = Ina219V.value;
+        Ina219.shunt_uv_args.raw = (int16_t)v;
+        ina219_shunt_uv(work);
+        *microvolts = Ina219.value;
     }
-    Ina219V.ok = PROTO_TRUE;
+    Ina219.ok = PROTO_TRUE;
 }
 
-void protocore_ina219_read_current_ua(uint8_t *restrict work)
+static void ina219_read_current_ua(uint8_t *restrict work)
 {
-    int32_t *microamps = Ina219V.read_current_ua_args.microamps;
+    int32_t *microamps = Ina219.read_current_ua_args.microamps;
 
     uint16_t v = 0;
     if (!rd16(work, INA219_REG_CURRENT, &v))
     {
-        Ina219V.ok = PROTO_FALSE;
+        Ina219.ok = PROTO_FALSE;
         return;
     }
     if (microamps)
     {
-        Ina219V.current_ua_args.raw = (int16_t)v;
-        Ina219V.current_ua_args.current_lsb_ua = dev_lsb_ua(work);
-        protocore_ina219_current_ua(work);
-        *microamps = Ina219V.value;
+        Ina219.current_ua_args.raw = (int16_t)v;
+        Ina219.current_ua_args.current_lsb_ua = dev_lsb_ua(work);
+        ina219_current_ua(work);
+        *microamps = Ina219.value;
     }
-    Ina219V.ok = PROTO_TRUE;
+    Ina219.ok = PROTO_TRUE;
 }
 
-void protocore_ina219_read_power_uw(uint8_t *restrict work)
+static void ina219_read_power_uw(uint8_t *restrict work)
 {
-    int32_t *microwatts = Ina219V.read_power_uw_args.microwatts;
+    int32_t *microwatts = Ina219.read_power_uw_args.microwatts;
 
     uint16_t v = 0;
     if (!rd16(work, INA219_REG_POWER, &v))
     {
-        Ina219V.ok = PROTO_FALSE;
+        Ina219.ok = PROTO_FALSE;
         return;
     }
     if (microwatts)
     {
-        Ina219V.power_uw_args.raw = (int16_t)v;
-        Ina219V.power_uw_args.current_lsb_ua = dev_lsb_ua(work);
-        protocore_ina219_power_uw(work);
-        *microwatts = Ina219V.value;
+        Ina219.power_uw_args.raw = (int16_t)v;
+        Ina219.power_uw_args.current_lsb_ua = dev_lsb_ua(work);
+        ina219_power_uw(work);
+        *microwatts = Ina219.value;
     }
-    Ina219V.ok = PROTO_TRUE;
+    Ina219.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-Ina219Vars Ina219V;
+Ina219Ns Ina219 = {.bus_mv = ina219_bus_mv,
+                   .shunt_uv = ina219_shunt_uv,
+                   .calibration = ina219_calibration,
+                   .current_ua = ina219_current_ua,
+                   .power_uw = ina219_power_uw,
+                   .begin = ina219_begin,
+                   .read_bus_mv = ina219_read_bus_mv,
+                   .read_shunt_uv = ina219_read_shunt_uv,
+                   .read_current_ua = ina219_read_current_ua,
+                   .read_power_uw = ina219_read_power_uw};
 
 PROTOCORE_END_DECLS
 

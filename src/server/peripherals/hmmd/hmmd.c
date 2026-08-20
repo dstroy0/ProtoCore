@@ -55,36 +55,36 @@ uint8_t *protocore_hmmd_span(void)
     return s_own.span;
 }
 
-void protocore_hmmd_cmd_build(uint8_t *restrict work);
-void protocore_hmmd_parse_report(uint8_t *restrict work);
-void protocore_hmmd_stream_push(uint8_t *restrict work);
-void protocore_hmmd_stream_reset(uint8_t *restrict work);
+static void hmmd_cmd_build(uint8_t *restrict work);
+static void hmmd_parse_report(uint8_t *restrict work);
+static void hmmd_stream_push(uint8_t *restrict work);
+static void hmmd_stream_reset(uint8_t *restrict work);
 
-void protocore_hmmd_parse_report(uint8_t *restrict work)
+static void hmmd_parse_report(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *f = HmmdV.parse_report_args.frame;
-    size_t len = HmmdV.parse_report_args.len;
-    HmmdReport *out = HmmdV.parse_report_args.out;
+    const uint8_t *f = Hmmd.parse_report_args.frame;
+    size_t len = Hmmd.parse_report_args.len;
+    HmmdReport *out = Hmmd.parse_report_args.out;
 
     if (!f || !out || len != PROTOCORE_HMMD_FRAME_MAX)
     {
-        HmmdV.ok = PROTO_FALSE;
+        Hmmd.ok = PROTO_FALSE;
         return;
     }
     if (mem.cmp(f, HDR, 4) != 0)
     {
-        HmmdV.ok = PROTO_FALSE;
+        Hmmd.ok = PROTO_FALSE;
         return;
     }
     if (rd16(f + 4) != PROTOCORE_HMMD_REPORT_LEN)
     {
-        HmmdV.ok = PROTO_FALSE;
+        Hmmd.ok = PROTO_FALSE;
         return; // the only report length this module emits
     }
     if (mem.cmp(f + 6 + PROTOCORE_HMMD_REPORT_LEN, FTR, 4) != 0)
     {
-        HmmdV.ok = PROTO_FALSE;
+        Hmmd.ok = PROTO_FALSE;
         return;
     }
 
@@ -98,13 +98,13 @@ void protocore_hmmd_parse_report(uint8_t *restrict work)
         r.gate_energy[i] = rd16(p + 3 + 2 * i);
     }
     *out = r;
-    HmmdV.ok = PROTO_TRUE;
+    Hmmd.ok = PROTO_TRUE;
 }
 
-void protocore_hmmd_stream_reset(uint8_t *restrict work)
+static void hmmd_stream_reset(uint8_t *restrict work)
 {
     (void)work;
-    HmmdStream *s = HmmdV.stream_reset_args.s;
+    HmmdStream *s = Hmmd.stream_reset_args.s;
 
     if (!s)
     {
@@ -116,16 +116,16 @@ void protocore_hmmd_stream_reset(uint8_t *restrict work)
     s->phase = 0;
 }
 
-void protocore_hmmd_stream_push(uint8_t *restrict work)
+static void hmmd_stream_push(uint8_t *restrict work)
 {
     (void)work;
-    HmmdStream *s = HmmdV.stream_push_args.s;
-    uint8_t b = HmmdV.stream_push_args.byte;
-    HmmdReport *out = HmmdV.stream_push_args.out;
+    HmmdStream *s = Hmmd.stream_push_args.s;
+    uint8_t b = Hmmd.stream_push_args.byte;
+    HmmdReport *out = Hmmd.stream_push_args.out;
 
     if (!s || !out)
     {
-        HmmdV.ok = PROTO_FALSE;
+        Hmmd.ok = PROTO_FALSE;
         return;
     }
     switch (s->phase)
@@ -148,7 +148,7 @@ void protocore_hmmd_stream_push(uint8_t *restrict work)
                 s->buf[0] = b;
             }
         }
-        HmmdV.ok = PROTO_FALSE;
+        Hmmd.ok = PROTO_FALSE;
         return;
     case 1: // little-endian length field
         s->buf[s->pos++] = b;
@@ -158,71 +158,71 @@ void protocore_hmmd_stream_push(uint8_t *restrict work)
             uint32_t total = 6u + (uint32_t)rd16(s->buf + 4) + 4u;
             if (total > PROTOCORE_HMMD_FRAME_MAX)
             {
-                HmmdV.stream_reset_args.s = s;
-                protocore_hmmd_stream_reset(work); // absurd length: drop and resync
-                HmmdV.ok = PROTO_FALSE;
+                Hmmd.stream_reset_args.s = s;
+                hmmd_stream_reset(work); // absurd length: drop and resync
+                Hmmd.ok = PROTO_FALSE;
                 return;
             }
             s->total = (uint16_t)total;
             s->phase = 2;
         }
-        HmmdV.ok = PROTO_FALSE;
+        Hmmd.ok = PROTO_FALSE;
         return;
     default: // body + footer
         s->buf[s->pos++] = b;
         if (s->pos >= s->total)
         {
-            HmmdV.parse_report_args.frame = s->buf;
-            HmmdV.parse_report_args.len = s->total;
-            HmmdV.parse_report_args.out = out;
-            protocore_hmmd_parse_report(work);
-            proto_bool ok = HmmdV.ok;
-            HmmdV.stream_reset_args.s = s;
-            protocore_hmmd_stream_reset(work);
-            HmmdV.ok = ok;
+            Hmmd.parse_report_args.frame = s->buf;
+            Hmmd.parse_report_args.len = s->total;
+            Hmmd.parse_report_args.out = out;
+            hmmd_parse_report(work);
+            proto_bool ok = Hmmd.ok;
+            Hmmd.stream_reset_args.s = s;
+            hmmd_stream_reset(work);
+            Hmmd.ok = ok;
             return;
         }
-        HmmdV.ok = PROTO_FALSE;
+        Hmmd.ok = PROTO_FALSE;
         return;
     }
 }
 
-void protocore_hmmd_present(uint8_t *restrict work)
+static void hmmd_present(uint8_t *restrict work)
 {
     (void)work;
-    const HmmdReport *r = HmmdV.present_args.r;
+    const HmmdReport *r = Hmmd.present_args.r;
 
-    HmmdV.ok = r && r->detected != 0;
+    Hmmd.ok = r && r->detected != 0;
 }
 
-void protocore_hmmd_distance_cm(uint8_t *restrict work)
+static void hmmd_distance_cm(uint8_t *restrict work)
 {
     (void)work;
-    const HmmdReport *r = HmmdV.distance_cm_args.r;
+    const HmmdReport *r = Hmmd.distance_cm_args.r;
 
-    HmmdV.cm = (r && r->detected) ? r->distance_cm : 0;
+    Hmmd.cm = (r && r->detected) ? r->distance_cm : 0;
 }
 
 // --- command encoders ------------------------------------------------------
 
-void protocore_hmmd_cmd_build(uint8_t *restrict work)
+static void hmmd_cmd_build(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = HmmdV.cmd_build_args.buf;
-    size_t cap = HmmdV.cmd_build_args.cap;
-    uint16_t word = HmmdV.cmd_build_args.word;
-    const uint8_t *value = HmmdV.cmd_build_args.value;
-    size_t vlen = HmmdV.cmd_build_args.vlen;
+    uint8_t *buf = Hmmd.cmd_build_args.buf;
+    size_t cap = Hmmd.cmd_build_args.cap;
+    uint16_t word = Hmmd.cmd_build_args.word;
+    const uint8_t *value = Hmmd.cmd_build_args.value;
+    size_t vlen = Hmmd.cmd_build_args.vlen;
 
     if (vlen && !value)
     {
-        HmmdV.n = 0;
+        Hmmd.n = 0;
         return;
     }
     size_t need = 4 + 2 + 2 + vlen + 4;
     if (!buf || cap < need)
     {
-        HmmdV.n = 0;
+        Hmmd.n = 0;
         return;
     }
     size_t i = 0;
@@ -243,140 +243,140 @@ void protocore_hmmd_cmd_build(uint8_t *restrict work)
     {
         buf[i++] = CMD_FTR[k];
     }
-    HmmdV.n = i;
+    Hmmd.n = i;
 }
 
-void protocore_hmmd_cmd_open(uint8_t *restrict work)
+static void hmmd_cmd_open(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = HmmdV.cmd_open_args.buf;
-    size_t cap = HmmdV.cmd_open_args.cap;
+    uint8_t *buf = Hmmd.cmd_open_args.buf;
+    size_t cap = Hmmd.cmd_open_args.cap;
 
     static const uint8_t v[2] = {0x01, 0x00}; // value 0x0001
-    HmmdV.cmd_build_args.buf = buf;
-    HmmdV.cmd_build_args.cap = cap;
-    HmmdV.cmd_build_args.word = 0x00FF;
-    HmmdV.cmd_build_args.value = v;
-    HmmdV.cmd_build_args.vlen = 2;
-    protocore_hmmd_cmd_build(work);
+    Hmmd.cmd_build_args.buf = buf;
+    Hmmd.cmd_build_args.cap = cap;
+    Hmmd.cmd_build_args.word = 0x00FF;
+    Hmmd.cmd_build_args.value = v;
+    Hmmd.cmd_build_args.vlen = 2;
+    hmmd_cmd_build(work);
 }
 
-void protocore_hmmd_cmd_close(uint8_t *restrict work)
+static void hmmd_cmd_close(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = HmmdV.cmd_close_args.buf;
-    size_t cap = HmmdV.cmd_close_args.cap;
+    uint8_t *buf = Hmmd.cmd_close_args.buf;
+    size_t cap = Hmmd.cmd_close_args.cap;
 
-    HmmdV.cmd_build_args.buf = buf;
-    HmmdV.cmd_build_args.cap = cap;
-    HmmdV.cmd_build_args.word = 0x00FE;
-    HmmdV.cmd_build_args.value = NULL;
-    HmmdV.cmd_build_args.vlen = 0;
-    protocore_hmmd_cmd_build(work);
+    Hmmd.cmd_build_args.buf = buf;
+    Hmmd.cmd_build_args.cap = cap;
+    Hmmd.cmd_build_args.word = 0x00FE;
+    Hmmd.cmd_build_args.value = NULL;
+    Hmmd.cmd_build_args.vlen = 0;
+    hmmd_cmd_build(work);
 }
 
-void protocore_hmmd_cmd_read_firmware(uint8_t *restrict work)
+static void hmmd_cmd_read_firmware(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = HmmdV.cmd_read_firmware_args.buf;
-    size_t cap = HmmdV.cmd_read_firmware_args.cap;
+    uint8_t *buf = Hmmd.cmd_read_firmware_args.buf;
+    size_t cap = Hmmd.cmd_read_firmware_args.cap;
 
-    HmmdV.cmd_build_args.buf = buf;
-    HmmdV.cmd_build_args.cap = cap;
-    HmmdV.cmd_build_args.word = 0x0000;
-    HmmdV.cmd_build_args.value = NULL;
-    HmmdV.cmd_build_args.vlen = 0;
-    protocore_hmmd_cmd_build(work);
+    Hmmd.cmd_build_args.buf = buf;
+    Hmmd.cmd_build_args.cap = cap;
+    Hmmd.cmd_build_args.word = 0x0000;
+    Hmmd.cmd_build_args.value = NULL;
+    Hmmd.cmd_build_args.vlen = 0;
+    hmmd_cmd_build(work);
 }
 
-void protocore_hmmd_cmd_read_serial(uint8_t *restrict work)
+static void hmmd_cmd_read_serial(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = HmmdV.cmd_read_serial_args.buf;
-    size_t cap = HmmdV.cmd_read_serial_args.cap;
+    uint8_t *buf = Hmmd.cmd_read_serial_args.buf;
+    size_t cap = Hmmd.cmd_read_serial_args.cap;
 
-    HmmdV.cmd_build_args.buf = buf;
-    HmmdV.cmd_build_args.cap = cap;
-    HmmdV.cmd_build_args.word = 0x0011;
-    HmmdV.cmd_build_args.value = NULL;
-    HmmdV.cmd_build_args.vlen = 0;
-    protocore_hmmd_cmd_build(work);
+    Hmmd.cmd_build_args.buf = buf;
+    Hmmd.cmd_build_args.cap = cap;
+    Hmmd.cmd_build_args.word = 0x0011;
+    Hmmd.cmd_build_args.value = NULL;
+    Hmmd.cmd_build_args.vlen = 0;
+    hmmd_cmd_build(work);
 }
 
-void protocore_hmmd_cmd_read_config(uint8_t *restrict work)
+static void hmmd_cmd_read_config(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = HmmdV.cmd_read_config_args.buf;
-    size_t cap = HmmdV.cmd_read_config_args.cap;
+    uint8_t *buf = Hmmd.cmd_read_config_args.buf;
+    size_t cap = Hmmd.cmd_read_config_args.cap;
 
-    HmmdV.cmd_build_args.buf = buf;
-    HmmdV.cmd_build_args.cap = cap;
-    HmmdV.cmd_build_args.word = 0x0008;
-    HmmdV.cmd_build_args.value = NULL;
-    HmmdV.cmd_build_args.vlen = 0;
-    protocore_hmmd_cmd_build(work);
+    Hmmd.cmd_build_args.buf = buf;
+    Hmmd.cmd_build_args.cap = cap;
+    Hmmd.cmd_build_args.word = 0x0008;
+    Hmmd.cmd_build_args.value = NULL;
+    Hmmd.cmd_build_args.vlen = 0;
+    hmmd_cmd_build(work);
 }
 
-void protocore_hmmd_cmd_read_register(uint8_t *restrict work)
+static void hmmd_cmd_read_register(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = HmmdV.cmd_read_register_args.buf;
-    size_t cap = HmmdV.cmd_read_register_args.cap;
-    const uint8_t *value = HmmdV.cmd_read_register_args.value;
-    size_t vlen = HmmdV.cmd_read_register_args.vlen;
+    uint8_t *buf = Hmmd.cmd_read_register_args.buf;
+    size_t cap = Hmmd.cmd_read_register_args.cap;
+    const uint8_t *value = Hmmd.cmd_read_register_args.value;
+    size_t vlen = Hmmd.cmd_read_register_args.vlen;
 
-    HmmdV.cmd_build_args.buf = buf;
-    HmmdV.cmd_build_args.cap = cap;
-    HmmdV.cmd_build_args.word = 0x0002;
-    HmmdV.cmd_build_args.value = value;
-    HmmdV.cmd_build_args.vlen = vlen;
-    protocore_hmmd_cmd_build(work);
+    Hmmd.cmd_build_args.buf = buf;
+    Hmmd.cmd_build_args.cap = cap;
+    Hmmd.cmd_build_args.word = 0x0002;
+    Hmmd.cmd_build_args.value = value;
+    Hmmd.cmd_build_args.vlen = vlen;
+    hmmd_cmd_build(work);
 }
 
 // --- command-ACK decoding --------------------------------------------------
 
-void protocore_hmmd_parse_ack(uint8_t *restrict work)
+static void hmmd_parse_ack(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *f = HmmdV.parse_ack_args.frame;
-    size_t len = HmmdV.parse_ack_args.len;
-    HmmdAck *out = HmmdV.parse_ack_args.out;
+    const uint8_t *f = Hmmd.parse_ack_args.frame;
+    size_t len = Hmmd.parse_ack_args.len;
+    HmmdAck *out = Hmmd.parse_ack_args.out;
 
     // layout: four header bytes, two length bytes, two command-word bytes, optional data, four footer bytes
     if (!f || !out || len < 12)
     {
-        HmmdV.ok = PROTO_FALSE;
+        Hmmd.ok = PROTO_FALSE;
         return;
     }
     if (mem.cmp(f, CMD_HDR, 4) != 0)
     {
-        HmmdV.ok = PROTO_FALSE;
+        Hmmd.ok = PROTO_FALSE;
         return;
     }
     size_t dl = (size_t)rd16(f + 4); // command word + data
     if (dl < 2 || len != 4 + 2 + dl + 4)
     {
-        HmmdV.ok = PROTO_FALSE;
+        Hmmd.ok = PROTO_FALSE;
         return; // the declared length must account for exactly this frame
     }
     if (mem.cmp(f + 6 + dl, CMD_FTR, 4) != 0)
     {
-        HmmdV.ok = PROTO_FALSE;
+        Hmmd.ok = PROTO_FALSE;
         return;
     }
     out->command = rd16(f + 6);
     out->payload_len = dl - 2;
     out->payload = out->payload_len ? f + 8 : NULL;
-    HmmdV.ok = PROTO_TRUE;
+    Hmmd.ok = PROTO_TRUE;
 }
 
-void protocore_hmmd_ack_matches(uint8_t *restrict work)
+static void hmmd_ack_matches(uint8_t *restrict work)
 {
     (void)work;
-    const HmmdAck *ack = HmmdV.ack_matches_args.ack;
-    uint16_t word = HmmdV.ack_matches_args.word;
+    const HmmdAck *ack = Hmmd.ack_matches_args.ack;
+    uint16_t word = Hmmd.ack_matches_args.word;
 
-    HmmdV.ok = ack && (uint8_t)(ack->command & 0xFF) == (uint8_t)(word & 0xFF);
+    Hmmd.ok = ack && (uint8_t)(ack->command & 0xFF) == (uint8_t)(word & 0xFF);
 }
 
 // ---------------------------------------------------------------------------
@@ -419,18 +419,18 @@ static_assert(HMMD_OFF_CTX % _Alignof(HmmdCtx) == 0,
 // The region, at its offset in the caller's borrow.
 #define HMMD_CTX(w) ((HmmdCtx *)(void *)((w) + HMMD_OFF_CTX))
 
-void protocore_hmmd_begin(uint8_t *restrict work)
+static void hmmd_begin(uint8_t *restrict work)
 {
-    int rx_pin = HmmdV.begin_args.rx_pin;
-    int tx_pin = HmmdV.begin_args.tx_pin;
+    int rx_pin = Hmmd.begin_args.rx_pin;
+    int tx_pin = Hmmd.begin_args.tx_pin;
 
-    HmmdV.stream_reset_args.s = &HMMD_CTX(work)->stream;
-    protocore_hmmd_stream_reset(work);
+    Hmmd.stream_reset_args.s = &HMMD_CTX(work)->stream;
+    hmmd_stream_reset(work);
     HMMD_CTX(work)->have = PROTO_FALSE;
-    HmmdV.ok = protocore_uart_begin((uint8_t)PROTOCORE_HMMD_UART, PROTOCORE_HMMD_BAUD, rx_pin, tx_pin);
+    Hmmd.ok = protocore_uart_begin((uint8_t)PROTOCORE_HMMD_UART, PROTOCORE_HMMD_BAUD, rx_pin, tx_pin);
 }
 
-void protocore_hmmd_poll(uint8_t *restrict work)
+static void hmmd_poll(uint8_t *restrict work)
 {
 
     proto_bool fresh = PROTO_FALSE;
@@ -438,24 +438,24 @@ void protocore_hmmd_poll(uint8_t *restrict work)
     for (size_t i = 0; i < n; i++)
     {
         HmmdReport r;
-        HmmdV.stream_push_args.s = &HMMD_CTX(work)->stream;
-        HmmdV.stream_push_args.byte = HMMD_CTX(work)->rx[i];
-        HmmdV.stream_push_args.out = &r;
-        protocore_hmmd_stream_push(work);
-        if (HmmdV.ok)
+        Hmmd.stream_push_args.s = &HMMD_CTX(work)->stream;
+        Hmmd.stream_push_args.byte = HMMD_CTX(work)->rx[i];
+        Hmmd.stream_push_args.out = &r;
+        hmmd_stream_push(work);
+        if (Hmmd.ok)
         {
             HMMD_CTX(work)->last = r;
             HMMD_CTX(work)->have = PROTO_TRUE;
             fresh = PROTO_TRUE;
         }
     }
-    HmmdV.ok = fresh;
+    Hmmd.ok = fresh;
 }
 
-void protocore_hmmd_last(uint8_t *restrict work)
+static void hmmd_last(uint8_t *restrict work)
 {
 
-    HmmdV.report = HMMD_CTX(work)->have ? &HMMD_CTX(work)->last : NULL;
+    Hmmd.report = HMMD_CTX(work)->have ? &HMMD_CTX(work)->last : NULL;
 }
 
 #else // no bus seam
@@ -479,8 +479,23 @@ const HmmdReport *protocore_hmmd_last(void)
 
 #endif // PROTOCORE_HAS_BUS
 
-/** @brief The operands and the outcome. */
-HmmdVars HmmdV;
+HmmdNs Hmmd = {.parse_report = hmmd_parse_report,
+               .stream_reset = hmmd_stream_reset,
+               .stream_push = hmmd_stream_push,
+               .present = hmmd_present,
+               .distance_cm = hmmd_distance_cm,
+               .cmd_build = hmmd_cmd_build,
+               .cmd_open = hmmd_cmd_open,
+               .cmd_close = hmmd_cmd_close,
+               .cmd_read_firmware = hmmd_cmd_read_firmware,
+               .cmd_read_serial = hmmd_cmd_read_serial,
+               .cmd_read_config = hmmd_cmd_read_config,
+               .cmd_read_register = hmmd_cmd_read_register,
+               .parse_ack = hmmd_parse_ack,
+               .ack_matches = hmmd_ack_matches,
+               .begin = hmmd_begin,
+               .poll = hmmd_poll,
+               .last = hmmd_last};
 
 PROTOCORE_END_DECLS
 

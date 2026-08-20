@@ -19,6 +19,7 @@
 
 #include <unity.h>
 
+
 // The borrow the entries take. Without a net stack this module holds no state and has no span, and
 // NULL is what a short pool hands over too, which every entry already refuses on.
 static uint8_t *mqtt_work(void)
@@ -43,10 +44,10 @@ static char g_topic[64];
 
 static void bind_buffers(void)
 {
-    MqttV.buf.out = g_out;
-    MqttV.buf.cap = sizeof(g_out);
-    MqttV.buf.body = g_body;
-    MqttV.buf.body_cap = sizeof(g_body);
+    Mqtt.buf.out = g_out;
+    Mqtt.buf.cap = sizeof(g_out);
+    Mqtt.buf.body = g_body;
+    Mqtt.buf.body_cap = sizeof(g_body);
     memset(g_out, 0, sizeof(g_out));
 }
 
@@ -74,19 +75,19 @@ void test_table_2_4_remaining_length_boundaries(void)
     for (size_t i = 0; i < sizeof(TABLE) / sizeof(TABLE[0]); i++)
     {
         bind_buffers();
-        MqttV.packet.remaining_length = TABLE[i].value;
-        MqttV.encode_remaining_length(mqtt_work());
-        TEST_ASSERT_TRUE(MqttV.ok);
-        TEST_ASSERT_EQUAL_UINT(TABLE[i].len, MqttV.n);
+        Mqtt.packet.remaining_length = TABLE[i].value;
+        Mqtt.encode_remaining_length(mqtt_work());
+        TEST_ASSERT_TRUE(Mqtt.ok);
+        TEST_ASSERT_EQUAL_UINT(TABLE[i].len, Mqtt.n);
         TEST_ASSERT_EQUAL_UINT8_ARRAY(TABLE[i].octets, g_out, TABLE[i].len);
 
-        MqttV.buf.in = TABLE[i].octets;
-        MqttV.buf.avail = 4;
-        MqttV.packet.remaining_length = 0xFFFFFFFFu;
-        MqttV.decode_remaining_length(mqtt_work());
-        TEST_ASSERT_TRUE(MqttV.ok);
-        TEST_ASSERT_EQUAL_UINT32(TABLE[i].value, MqttV.packet.remaining_length);
-        TEST_ASSERT_EQUAL_UINT(TABLE[i].len, MqttV.n);
+        Mqtt.buf.in = TABLE[i].octets;
+        Mqtt.buf.avail = 4;
+        Mqtt.packet.remaining_length = 0xFFFFFFFFu;
+        Mqtt.decode_remaining_length(mqtt_work());
+        TEST_ASSERT_TRUE(Mqtt.ok);
+        TEST_ASSERT_EQUAL_UINT32(TABLE[i].value, Mqtt.packet.remaining_length);
+        TEST_ASSERT_EQUAL_UINT(TABLE[i].len, Mqtt.n);
     }
 }
 
@@ -96,15 +97,15 @@ void test_table_2_4_remaining_length_boundaries(void)
 void test_remaining_length_worked_examples(void)
 {
     bind_buffers();
-    MqttV.packet.remaining_length = 64u;
-    MqttV.encode_remaining_length(mqtt_work());
-    TEST_ASSERT_EQUAL_UINT(1u, MqttV.n);
+    Mqtt.packet.remaining_length = 64u;
+    Mqtt.encode_remaining_length(mqtt_work());
+    TEST_ASSERT_EQUAL_UINT(1u, Mqtt.n);
     TEST_ASSERT_EQUAL_HEX8(0x40, g_out[0]);
 
     bind_buffers();
-    MqttV.packet.remaining_length = 321u;
-    MqttV.encode_remaining_length(mqtt_work());
-    TEST_ASSERT_EQUAL_UINT(2u, MqttV.n);
+    Mqtt.packet.remaining_length = 321u;
+    Mqtt.encode_remaining_length(mqtt_work());
+    TEST_ASSERT_EQUAL_UINT(2u, Mqtt.n);
     TEST_ASSERT_EQUAL_UINT8(193, g_out[0]);
     TEST_ASSERT_EQUAL_UINT8(2, g_out[1]);
 }
@@ -114,37 +115,37 @@ void test_remaining_length_worked_examples(void)
 void test_remaining_length_bounds(void)
 {
     bind_buffers();
-    MqttV.packet.remaining_length = 268435456u; // one past the table's largest
-    MqttV.encode_remaining_length(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, MqttV.n);
+    Mqtt.packet.remaining_length = 268435456u; // one past the table's largest
+    Mqtt.encode_remaining_length(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, Mqtt.n);
 
     // Four continuation octets: the field would run to a fifth.
     static const uint8_t FIVE[5] = {0x80, 0x80, 0x80, 0x80, 0x01};
-    MqttV.buf.in = FIVE;
-    MqttV.buf.avail = sizeof(FIVE);
-    MqttV.decode_remaining_length(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
+    Mqtt.buf.in = FIVE;
+    Mqtt.buf.avail = sizeof(FIVE);
+    Mqtt.decode_remaining_length(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
 
     // A field whose continuation octet is the last one buffered is incomplete, not malformed.
     static const uint8_t PARTIAL[1] = {0x80};
-    MqttV.buf.in = PARTIAL;
-    MqttV.buf.avail = 1;
-    MqttV.decode_remaining_length(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
+    Mqtt.buf.in = PARTIAL;
+    Mqtt.buf.avail = 1;
+    Mqtt.decode_remaining_length(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
 
     // One octet short of what the field needs, and a null source.
     bind_buffers();
-    MqttV.buf.cap = 1;
-    MqttV.packet.remaining_length = 128u;
-    MqttV.encode_remaining_length(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
-    MqttV.buf.out = NULL;
-    MqttV.encode_remaining_length(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
-    MqttV.buf.in = NULL;
-    MqttV.decode_remaining_length(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
+    Mqtt.buf.cap = 1;
+    Mqtt.packet.remaining_length = 128u;
+    Mqtt.encode_remaining_length(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
+    Mqtt.buf.out = NULL;
+    Mqtt.encode_remaining_length(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
+    Mqtt.buf.in = NULL;
+    Mqtt.decode_remaining_length(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
 }
 
 // sec 3.1.2.1 Figure 3.2: the Protocol Name is the UTF-8 encoded string "MQTT", so bytes 1..6 of the
@@ -169,19 +170,19 @@ void test_connect_matches_figure_3_6(void)
         0x00, 0x01, 0x70,                   // Password "p"
     };
     bind_buffers();
-    MqttV.session.client_id = "c";
-    MqttV.session.user_name = "u";
-    MqttV.session.password = "p";
-    MqttV.session.keep_alive = 10;
-    MqttV.session.clean_session = PROTO_TRUE;
-    MqttV.will.topic = "wt";
-    MqttV.will.message = WILL;
-    MqttV.will.message_len = sizeof(WILL);
-    MqttV.will.qos = 1;
-    MqttV.will.retain = PROTO_FALSE;
-    MqttV.build_connect(mqtt_work());
-    TEST_ASSERT_TRUE(MqttV.ok);
-    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), MqttV.n);
+    Mqtt.session.client_id = "c";
+    Mqtt.session.user_name = "u";
+    Mqtt.session.password = "p";
+    Mqtt.session.keep_alive = 10;
+    Mqtt.session.clean_session = PROTO_TRUE;
+    Mqtt.will.topic = "wt";
+    Mqtt.will.message = WILL;
+    Mqtt.will.message_len = sizeof(WILL);
+    Mqtt.will.qos = 1;
+    Mqtt.will.retain = PROTO_FALSE;
+    Mqtt.build_connect(mqtt_work());
+    TEST_ASSERT_TRUE(Mqtt.ok);
+    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Mqtt.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT, g_out, sizeof(WANT));
     TEST_ASSERT_EQUAL_HEX8(0x04, PROTOCORE_MQTT_PROTOCOL_LEVEL);
 }
@@ -199,27 +200,27 @@ void test_connect_flags_follow_the_fields_present(void)
         0x00, 0x00,                         // a zero-length Client Identifier (sec 3.1.3.1)
     };
     bind_buffers();
-    MqttV.session.client_id = "";
-    MqttV.session.user_name = NULL;
-    MqttV.session.password = NULL;
-    MqttV.session.keep_alive = 0;
-    MqttV.session.clean_session = PROTO_FALSE;
-    MqttV.will.topic = NULL;
-    MqttV.will.message = NULL;
-    MqttV.will.message_len = 0;
-    MqttV.will.qos = 2;
-    MqttV.will.retain = PROTO_TRUE;
-    MqttV.build_connect(mqtt_work());
-    TEST_ASSERT_TRUE(MqttV.ok);
-    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), MqttV.n);
+    Mqtt.session.client_id = "";
+    Mqtt.session.user_name = NULL;
+    Mqtt.session.password = NULL;
+    Mqtt.session.keep_alive = 0;
+    Mqtt.session.clean_session = PROTO_FALSE;
+    Mqtt.will.topic = NULL;
+    Mqtt.will.message = NULL;
+    Mqtt.will.message_len = 0;
+    Mqtt.will.qos = 2;
+    Mqtt.will.retain = PROTO_TRUE;
+    Mqtt.build_connect(mqtt_work());
+    TEST_ASSERT_TRUE(Mqtt.ok);
+    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Mqtt.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT, g_out, sizeof(WANT));
 
     // Will QoS 2 and Will Retain set, with a Will Topic present this time: bits 4-3 are 10 and bit 5
     // is 1, so the flags byte is 0b0011_0100 = 0x34.
     bind_buffers();
-    MqttV.will.topic = "t";
-    MqttV.build_connect(mqtt_work());
-    TEST_ASSERT_TRUE(MqttV.ok);
+    Mqtt.will.topic = "t";
+    Mqtt.build_connect(mqtt_work());
+    TEST_ASSERT_TRUE(Mqtt.ok);
     TEST_ASSERT_EQUAL_HEX8(0x34, g_out[9]);
 }
 
@@ -235,16 +236,16 @@ void test_publish_matches_figure_3_11(void)
         0x00, 0x0A,                   // Packet Identifier 10
     };
     bind_buffers();
-    MqttV.message.topic_name = "a/b";
-    MqttV.message.payload = NULL;
-    MqttV.message.payload_len = 0;
-    MqttV.message.qos = 1;
-    MqttV.message.retain = PROTO_FALSE;
-    MqttV.message.dup = PROTO_FALSE;
-    MqttV.packet.packet_id = 10;
-    MqttV.build_publish(mqtt_work());
-    TEST_ASSERT_TRUE(MqttV.ok);
-    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), MqttV.n);
+    Mqtt.message.topic_name = "a/b";
+    Mqtt.message.payload = NULL;
+    Mqtt.message.payload_len = 0;
+    Mqtt.message.qos = 1;
+    Mqtt.message.retain = PROTO_FALSE;
+    Mqtt.message.dup = PROTO_FALSE;
+    Mqtt.packet.packet_id = 10;
+    Mqtt.build_publish(mqtt_work());
+    TEST_ASSERT_TRUE(Mqtt.ok);
+    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Mqtt.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT, g_out, sizeof(WANT));
 }
 
@@ -271,24 +272,24 @@ void test_publish_fixed_header_flags(void)
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
         bind_buffers();
-        MqttV.message.topic_name = "a/b";
-        MqttV.message.payload = PAYLOAD;
-        MqttV.message.payload_len = sizeof(PAYLOAD);
-        MqttV.message.qos = CASES[i].qos;
-        MqttV.message.retain = CASES[i].retain;
-        MqttV.message.dup = CASES[i].dup;
-        MqttV.packet.packet_id = 10;
-        MqttV.build_publish(mqtt_work());
-        TEST_ASSERT_TRUE(MqttV.ok);
+        Mqtt.message.topic_name = "a/b";
+        Mqtt.message.payload = PAYLOAD;
+        Mqtt.message.payload_len = sizeof(PAYLOAD);
+        Mqtt.message.qos = CASES[i].qos;
+        Mqtt.message.retain = CASES[i].retain;
+        Mqtt.message.dup = CASES[i].dup;
+        Mqtt.packet.packet_id = 10;
+        Mqtt.build_publish(mqtt_work());
+        TEST_ASSERT_TRUE(Mqtt.ok);
         TEST_ASSERT_EQUAL_HEX8(CASES[i].byte1, g_out[0]);
-        TEST_ASSERT_EQUAL_UINT(CASES[i].total, MqttV.n);
+        TEST_ASSERT_EQUAL_UINT(CASES[i].total, Mqtt.n);
     }
 
     // A QoS above 2 has no encoding.
     bind_buffers();
-    MqttV.message.qos = 3;
-    MqttV.build_publish(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
+    Mqtt.message.qos = 3;
+    Mqtt.build_publish(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
 }
 
 // MQTT-3.3.2-2: "The Topic Name in the PUBLISH Packet MUST NOT contain wildcard characters." A
@@ -299,24 +300,24 @@ void test_publish_refuses_wildcards(void)
     for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++)
     {
         bind_buffers();
-        MqttV.message.topic_name = BAD[i];
-        MqttV.message.payload = NULL;
-        MqttV.message.payload_len = 0;
-        MqttV.message.qos = 0;
-        MqttV.message.retain = PROTO_FALSE;
-        MqttV.message.dup = PROTO_FALSE;
-        MqttV.build_publish(mqtt_work());
-        TEST_ASSERT_FALSE_MESSAGE(MqttV.ok, BAD[i]);
+        Mqtt.message.topic_name = BAD[i];
+        Mqtt.message.payload = NULL;
+        Mqtt.message.payload_len = 0;
+        Mqtt.message.qos = 0;
+        Mqtt.message.retain = PROTO_FALSE;
+        Mqtt.message.dup = PROTO_FALSE;
+        Mqtt.build_publish(mqtt_work());
+        TEST_ASSERT_FALSE_MESSAGE(Mqtt.ok, BAD[i]);
     }
     // The same filters are accepted by a SUBSCRIBE.
     for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++)
     {
         bind_buffers();
-        MqttV.filter.topic_filter = BAD[i];
-        MqttV.filter.qos = 0;
-        MqttV.packet.packet_id = 1;
-        MqttV.build_subscribe(mqtt_work());
-        TEST_ASSERT_TRUE_MESSAGE(MqttV.ok, BAD[i]);
+        Mqtt.filter.topic_filter = BAD[i];
+        Mqtt.filter.qos = 0;
+        Mqtt.packet.packet_id = 1;
+        Mqtt.build_subscribe(mqtt_work());
+        TEST_ASSERT_TRUE_MESSAGE(Mqtt.ok, BAD[i]);
     }
 }
 
@@ -332,19 +333,19 @@ void test_subscribe_matches_figure_3_23(void)
         0x01,                         // Requested QoS 1
     };
     bind_buffers();
-    MqttV.filter.topic_filter = "a/b";
-    MqttV.filter.qos = 1;
-    MqttV.packet.packet_id = 10;
-    MqttV.build_subscribe(mqtt_work());
-    TEST_ASSERT_TRUE(MqttV.ok);
-    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), MqttV.n);
+    Mqtt.filter.topic_filter = "a/b";
+    Mqtt.filter.qos = 1;
+    Mqtt.packet.packet_id = 10;
+    Mqtt.build_subscribe(mqtt_work());
+    TEST_ASSERT_TRUE(Mqtt.ok);
+    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Mqtt.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT, g_out, sizeof(WANT));
 
     // MQTT-3.8.3-4: the Requested QoS must be 0, 1 or 2.
     bind_buffers();
-    MqttV.filter.qos = 3;
-    MqttV.build_subscribe(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
+    Mqtt.filter.qos = 3;
+    Mqtt.build_subscribe(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
 }
 
 // sec 3.10.1 Table 2.2: UNSUBSCRIBE carries the same reserved flags 0,0,1,0, and its payload is the
@@ -355,11 +356,11 @@ void test_unsubscribe_reserved_flags(void)
         0xA2, 0x07, 0x00, 0x0A, 0x00, 0x03, 0x61, 0x2F, 0x62,
     };
     bind_buffers();
-    MqttV.filter.topic_filter = "a/b";
-    MqttV.packet.packet_id = 10;
-    MqttV.build_unsubscribe(mqtt_work());
-    TEST_ASSERT_TRUE(MqttV.ok);
-    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), MqttV.n);
+    Mqtt.filter.topic_filter = "a/b";
+    Mqtt.packet.packet_id = 10;
+    Mqtt.build_unsubscribe(mqtt_work());
+    TEST_ASSERT_TRUE(Mqtt.ok);
+    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Mqtt.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT, g_out, sizeof(WANT));
 }
 
@@ -381,11 +382,11 @@ void test_ack_packets_are_four_octets(void)
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
         bind_buffers();
-        MqttV.packet.type = CASES[i].type;
-        MqttV.packet.packet_id = 0x1234;
-        MqttV.build_ack(mqtt_work());
-        TEST_ASSERT_TRUE(MqttV.ok);
-        TEST_ASSERT_EQUAL_UINT(4u, MqttV.n);
+        Mqtt.packet.type = CASES[i].type;
+        Mqtt.packet.packet_id = 0x1234;
+        Mqtt.build_ack(mqtt_work());
+        TEST_ASSERT_TRUE(Mqtt.ok);
+        TEST_ASSERT_EQUAL_UINT(4u, Mqtt.n);
         TEST_ASSERT_EQUAL_HEX8(CASES[i].byte1, g_out[0]);
         TEST_ASSERT_EQUAL_HEX8(0x02, g_out[1]);
         TEST_ASSERT_EQUAL_HEX8(0x12, g_out[2]);
@@ -414,15 +415,15 @@ void test_pingreq_and_disconnect_are_two_octets(void)
 {
     bind_buffers();
     Mqtt.build_pingreq(mqtt_work());
-    TEST_ASSERT_TRUE(MqttV.ok);
-    TEST_ASSERT_EQUAL_UINT(2u, MqttV.n);
+    TEST_ASSERT_TRUE(Mqtt.ok);
+    TEST_ASSERT_EQUAL_UINT(2u, Mqtt.n);
     TEST_ASSERT_EQUAL_HEX8(0xC0, g_out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[1]);
 
     bind_buffers();
     Mqtt.build_disconnect(mqtt_work());
-    TEST_ASSERT_TRUE(MqttV.ok);
-    TEST_ASSERT_EQUAL_UINT(2u, MqttV.n);
+    TEST_ASSERT_TRUE(Mqtt.ok);
+    TEST_ASSERT_EQUAL_UINT(2u, Mqtt.n);
     TEST_ASSERT_EQUAL_HEX8(0xE0, g_out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[1]);
 }
@@ -432,42 +433,42 @@ void test_pingreq_and_disconnect_are_two_octets(void)
 void test_parse_fixed_header(void)
 {
     bind_buffers();
-    MqttV.message.topic_name = "a/b";
-    MqttV.message.payload = NULL;
-    MqttV.message.payload_len = 0;
-    MqttV.message.qos = 2;
-    MqttV.message.retain = PROTO_TRUE;
-    MqttV.message.dup = PROTO_FALSE;
-    MqttV.packet.packet_id = 10;
-    MqttV.build_publish(mqtt_work());
-    const size_t total = MqttV.n;
+    Mqtt.message.topic_name = "a/b";
+    Mqtt.message.payload = NULL;
+    Mqtt.message.payload_len = 0;
+    Mqtt.message.qos = 2;
+    Mqtt.message.retain = PROTO_TRUE;
+    Mqtt.message.dup = PROTO_FALSE;
+    Mqtt.packet.packet_id = 10;
+    Mqtt.build_publish(mqtt_work());
+    const size_t total = Mqtt.n;
 
-    MqttV.buf.in = g_out;
-    MqttV.buf.avail = total;
-    MqttV.parse_fixed_header(mqtt_work());
-    TEST_ASSERT_TRUE(MqttV.ok);
-    TEST_ASSERT_EQUAL_UINT(2u, MqttV.n);
-    TEST_ASSERT_EQUAL_INT(MQTT_PUBLISH, MqttV.packet.type);
-    TEST_ASSERT_EQUAL_HEX8(0x05, MqttV.packet.flags); // QoS 2 in bits 2-1, RETAIN in bit 0
-    TEST_ASSERT_EQUAL_UINT32(total - 2u, MqttV.packet.remaining_length);
+    Mqtt.buf.in = g_out;
+    Mqtt.buf.avail = total;
+    Mqtt.parse_fixed_header(mqtt_work());
+    TEST_ASSERT_TRUE(Mqtt.ok);
+    TEST_ASSERT_EQUAL_UINT(2u, Mqtt.n);
+    TEST_ASSERT_EQUAL_INT(MQTT_PUBLISH, Mqtt.packet.type);
+    TEST_ASSERT_EQUAL_HEX8(0x05, Mqtt.packet.flags); // QoS 2 in bits 2-1, RETAIN in bit 0
+    TEST_ASSERT_EQUAL_UINT32(total - 2u, Mqtt.packet.remaining_length);
 
     // One octet is never a whole fixed header.
-    MqttV.buf.avail = 1;
-    MqttV.parse_fixed_header(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
-    MqttV.buf.in = NULL;
-    MqttV.buf.avail = total;
-    MqttV.parse_fixed_header(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
+    Mqtt.buf.avail = 1;
+    Mqtt.parse_fixed_header(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
+    Mqtt.buf.in = NULL;
+    Mqtt.buf.avail = total;
+    Mqtt.parse_fixed_header(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
 
     // A two-octet Remaining Length is read as two octets.
     static const uint8_t LONG_HEADER[4] = {0x30, 0x80, 0x01, 0x00};
-    MqttV.buf.in = LONG_HEADER;
-    MqttV.buf.avail = sizeof(LONG_HEADER);
-    MqttV.parse_fixed_header(mqtt_work());
-    TEST_ASSERT_TRUE(MqttV.ok);
-    TEST_ASSERT_EQUAL_UINT(3u, MqttV.n);
-    TEST_ASSERT_EQUAL_UINT32(128u, MqttV.packet.remaining_length);
+    Mqtt.buf.in = LONG_HEADER;
+    Mqtt.buf.avail = sizeof(LONG_HEADER);
+    Mqtt.parse_fixed_header(mqtt_work());
+    TEST_ASSERT_TRUE(Mqtt.ok);
+    TEST_ASSERT_EQUAL_UINT(3u, Mqtt.n);
+    TEST_ASSERT_EQUAL_UINT32(128u, Mqtt.packet.remaining_length);
 }
 
 // sec 3.3: the PUBLISH body is the Topic Name, the Packet Identifier when QoS is above 0, then the
@@ -476,58 +477,58 @@ void test_parse_publish_round_trip(void)
 {
     static const uint8_t PAYLOAD[3] = {0xde, 0xad, 0x01};
     bind_buffers();
-    MqttV.message.topic_name = "sport/tennis";
-    MqttV.message.payload = PAYLOAD;
-    MqttV.message.payload_len = sizeof(PAYLOAD);
-    MqttV.message.qos = 1;
-    MqttV.message.retain = PROTO_TRUE;
-    MqttV.message.dup = PROTO_TRUE;
-    MqttV.packet.packet_id = 0x0102;
-    MqttV.build_publish(mqtt_work());
-    TEST_ASSERT_TRUE(MqttV.ok);
-    const size_t total = MqttV.n;
+    Mqtt.message.topic_name = "sport/tennis";
+    Mqtt.message.payload = PAYLOAD;
+    Mqtt.message.payload_len = sizeof(PAYLOAD);
+    Mqtt.message.qos = 1;
+    Mqtt.message.retain = PROTO_TRUE;
+    Mqtt.message.dup = PROTO_TRUE;
+    Mqtt.packet.packet_id = 0x0102;
+    Mqtt.build_publish(mqtt_work());
+    TEST_ASSERT_TRUE(Mqtt.ok);
+    const size_t total = Mqtt.n;
 
-    MqttV.buf.in = g_out;
-    MqttV.buf.avail = total;
-    MqttV.parse_fixed_header(mqtt_work());
-    TEST_ASSERT_TRUE(MqttV.ok);
-    const size_t hdr = MqttV.n;
+    Mqtt.buf.in = g_out;
+    Mqtt.buf.avail = total;
+    Mqtt.parse_fixed_header(mqtt_work());
+    TEST_ASSERT_TRUE(Mqtt.ok);
+    const size_t hdr = Mqtt.n;
 
-    MqttV.buf.in = g_out + hdr;
-    MqttV.buf.avail = total - hdr;
-    MqttV.message.topic_out = g_topic;
-    MqttV.message.topic_cap = sizeof(g_topic);
-    MqttV.parse_publish(mqtt_work());
-    TEST_ASSERT_TRUE(MqttV.ok);
+    Mqtt.buf.in = g_out + hdr;
+    Mqtt.buf.avail = total - hdr;
+    Mqtt.message.topic_out = g_topic;
+    Mqtt.message.topic_cap = sizeof(g_topic);
+    Mqtt.parse_publish(mqtt_work());
+    TEST_ASSERT_TRUE(Mqtt.ok);
     TEST_ASSERT_EQUAL_STRING("sport/tennis", g_topic);
-    TEST_ASSERT_EQUAL_UINT(12u, MqttV.message.topic_len);
-    TEST_ASSERT_EQUAL_UINT8(1, MqttV.message.qos);
-    TEST_ASSERT_TRUE(MqttV.message.retain);
-    TEST_ASSERT_TRUE(MqttV.message.dup);
-    TEST_ASSERT_EQUAL_UINT16(0x0102, MqttV.packet.packet_id);
-    TEST_ASSERT_EQUAL_UINT(sizeof(PAYLOAD), MqttV.message.payload_len);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(PAYLOAD, MqttV.message.payload, sizeof(PAYLOAD));
+    TEST_ASSERT_EQUAL_UINT(12u, Mqtt.message.topic_len);
+    TEST_ASSERT_EQUAL_UINT8(1, Mqtt.message.qos);
+    TEST_ASSERT_TRUE(Mqtt.message.retain);
+    TEST_ASSERT_TRUE(Mqtt.message.dup);
+    TEST_ASSERT_EQUAL_UINT16(0x0102, Mqtt.packet.packet_id);
+    TEST_ASSERT_EQUAL_UINT(sizeof(PAYLOAD), Mqtt.message.payload_len);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(PAYLOAD, Mqtt.message.payload, sizeof(PAYLOAD));
 
     // sec 3.3.2.2: at QoS 0 there is no Packet Identifier, so the whole body past the Topic Name is
     // Payload.
     bind_buffers();
-    MqttV.message.topic_name = "a";
-    MqttV.message.payload = PAYLOAD;
-    MqttV.message.payload_len = sizeof(PAYLOAD);
-    MqttV.message.qos = 0;
-    MqttV.message.retain = PROTO_FALSE;
-    MqttV.message.dup = PROTO_FALSE;
-    MqttV.build_publish(mqtt_work());
-    MqttV.buf.in = g_out + 2;
-    MqttV.buf.avail = MqttV.n - 2;
-    MqttV.packet.remaining_length = (uint32_t)(MqttV.n - 2);
-    MqttV.packet.flags = 0x00;
-    MqttV.message.topic_out = g_topic;
-    MqttV.message.topic_cap = sizeof(g_topic);
-    MqttV.parse_publish(mqtt_work());
-    TEST_ASSERT_TRUE(MqttV.ok);
-    TEST_ASSERT_EQUAL_UINT16(0, MqttV.packet.packet_id);
-    TEST_ASSERT_EQUAL_UINT(sizeof(PAYLOAD), MqttV.message.payload_len);
+    Mqtt.message.topic_name = "a";
+    Mqtt.message.payload = PAYLOAD;
+    Mqtt.message.payload_len = sizeof(PAYLOAD);
+    Mqtt.message.qos = 0;
+    Mqtt.message.retain = PROTO_FALSE;
+    Mqtt.message.dup = PROTO_FALSE;
+    Mqtt.build_publish(mqtt_work());
+    Mqtt.buf.in = g_out + 2;
+    Mqtt.buf.avail = Mqtt.n - 2;
+    Mqtt.packet.remaining_length = (uint32_t)(Mqtt.n - 2);
+    Mqtt.packet.flags = 0x00;
+    Mqtt.message.topic_out = g_topic;
+    Mqtt.message.topic_cap = sizeof(g_topic);
+    Mqtt.parse_publish(mqtt_work());
+    TEST_ASSERT_TRUE(Mqtt.ok);
+    TEST_ASSERT_EQUAL_UINT16(0, Mqtt.packet.packet_id);
+    TEST_ASSERT_EQUAL_UINT(sizeof(PAYLOAD), Mqtt.message.payload_len);
 }
 
 // MQTT-3.3.1-4: "A PUBLISH Packet MUST NOT have both QoS bits set to 1." MQTT-1.5.3-1 and
@@ -536,69 +537,69 @@ void test_parse_publish_refuses_a_malformed_body(void)
 {
     // Both QoS bits set.
     static const uint8_t BODY[5] = {0x00, 0x01, 'a', 0x00, 0x0A};
-    MqttV.buf.in = BODY;
-    MqttV.buf.avail = sizeof(BODY);
-    MqttV.packet.remaining_length = sizeof(BODY);
-    MqttV.packet.flags = 0x06; // QoS bits 2-1 both set
-    MqttV.message.topic_out = g_topic;
-    MqttV.message.topic_cap = sizeof(g_topic);
-    MqttV.parse_publish(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
+    Mqtt.buf.in = BODY;
+    Mqtt.buf.avail = sizeof(BODY);
+    Mqtt.packet.remaining_length = sizeof(BODY);
+    Mqtt.packet.flags = 0x06; // QoS bits 2-1 both set
+    Mqtt.message.topic_out = g_topic;
+    Mqtt.message.topic_cap = sizeof(g_topic);
+    Mqtt.parse_publish(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
 
     // A Topic Name that is not well-formed UTF-8.
     static const uint8_t BAD_UTF8[3] = {0x00, 0x01, 0xFF};
-    MqttV.buf.in = BAD_UTF8;
-    MqttV.buf.avail = sizeof(BAD_UTF8);
-    MqttV.packet.remaining_length = sizeof(BAD_UTF8);
-    MqttV.packet.flags = 0x00;
-    MqttV.parse_publish(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
+    Mqtt.buf.in = BAD_UTF8;
+    Mqtt.buf.avail = sizeof(BAD_UTF8);
+    Mqtt.packet.remaining_length = sizeof(BAD_UTF8);
+    Mqtt.packet.flags = 0x00;
+    Mqtt.parse_publish(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
 
     // A Topic Name encoding U+0000.
     static const uint8_t NUL_IN_TOPIC[4] = {0x00, 0x02, 'a', 0x00};
-    MqttV.buf.in = NUL_IN_TOPIC;
-    MqttV.buf.avail = sizeof(NUL_IN_TOPIC);
-    MqttV.packet.remaining_length = sizeof(NUL_IN_TOPIC);
-    MqttV.parse_publish(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
+    Mqtt.buf.in = NUL_IN_TOPIC;
+    Mqtt.buf.avail = sizeof(NUL_IN_TOPIC);
+    Mqtt.packet.remaining_length = sizeof(NUL_IN_TOPIC);
+    Mqtt.parse_publish(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
 
     // A Topic Name longer than the Remaining Length allows.
     static const uint8_t OVER[4] = {0x00, 0x40, 'a', 'b'};
-    MqttV.buf.in = OVER;
-    MqttV.buf.avail = sizeof(OVER);
-    MqttV.packet.remaining_length = sizeof(OVER);
-    MqttV.parse_publish(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
+    Mqtt.buf.in = OVER;
+    Mqtt.buf.avail = sizeof(OVER);
+    Mqtt.packet.remaining_length = sizeof(OVER);
+    Mqtt.parse_publish(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
 
     // A Topic Name that does not fit the caller's buffer, NUL included.
     static const uint8_t THREE[5] = {0x00, 0x03, 'a', 'b', 'c'};
-    MqttV.buf.in = THREE;
-    MqttV.buf.avail = sizeof(THREE);
-    MqttV.packet.remaining_length = sizeof(THREE);
-    MqttV.message.topic_cap = 3; // three octets plus a NUL needs four
-    MqttV.parse_publish(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
-    MqttV.message.topic_cap = 4;
-    MqttV.parse_publish(mqtt_work());
-    TEST_ASSERT_TRUE(MqttV.ok);
+    Mqtt.buf.in = THREE;
+    Mqtt.buf.avail = sizeof(THREE);
+    Mqtt.packet.remaining_length = sizeof(THREE);
+    Mqtt.message.topic_cap = 3; // three octets plus a NUL needs four
+    Mqtt.parse_publish(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
+    Mqtt.message.topic_cap = 4;
+    Mqtt.parse_publish(mqtt_work());
+    TEST_ASSERT_TRUE(Mqtt.ok);
     TEST_ASSERT_EQUAL_STRING("abc", g_topic);
 
     // A body too short to hold even the Topic Name's length prefix.
     static const uint8_t STUB[1] = {0x00};
-    MqttV.buf.in = STUB;
-    MqttV.buf.avail = 1;
-    MqttV.packet.remaining_length = 1;
-    MqttV.message.topic_cap = sizeof(g_topic);
-    MqttV.parse_publish(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
+    Mqtt.buf.in = STUB;
+    Mqtt.buf.avail = 1;
+    Mqtt.packet.remaining_length = 1;
+    Mqtt.message.topic_cap = sizeof(g_topic);
+    Mqtt.parse_publish(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
 
     // No destination for the Topic Name at all.
-    MqttV.buf.in = THREE;
-    MqttV.buf.avail = sizeof(THREE);
-    MqttV.packet.remaining_length = sizeof(THREE);
-    MqttV.message.topic_out = NULL;
-    MqttV.parse_publish(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
+    Mqtt.buf.in = THREE;
+    Mqtt.buf.avail = sizeof(THREE);
+    Mqtt.packet.remaining_length = sizeof(THREE);
+    Mqtt.message.topic_out = NULL;
+    Mqtt.parse_publish(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
 }
 
 // sec 3.2.2.3 Table 3.1 "Connect Return code values": 0 accepted, 1 unacceptable protocol version,
@@ -609,30 +610,30 @@ void test_parse_connack_table_3_1(void)
     for (uint8_t code = 0; code <= 5; code++)
     {
         const uint8_t body[2] = {0x00, code};
-        MqttV.buf.in = body;
-        MqttV.buf.avail = sizeof(body);
-        MqttV.packet.remaining_length = 2;
-        MqttV.parse_connack(mqtt_work());
-        TEST_ASSERT_TRUE(MqttV.ok);
-        TEST_ASSERT_EQUAL_INT32(code, MqttV.i32);
-        TEST_ASSERT_FALSE(MqttV.session_present);
+        Mqtt.buf.in = body;
+        Mqtt.buf.avail = sizeof(body);
+        Mqtt.packet.remaining_length = 2;
+        Mqtt.parse_connack(mqtt_work());
+        TEST_ASSERT_TRUE(Mqtt.ok);
+        TEST_ASSERT_EQUAL_INT32(code, Mqtt.i32);
+        TEST_ASSERT_FALSE(Mqtt.session_present);
     }
 
     static const uint8_t PRESENT[2] = {0x01, 0x00};
-    MqttV.buf.in = PRESENT;
-    MqttV.buf.avail = sizeof(PRESENT);
-    MqttV.packet.remaining_length = 2;
-    MqttV.parse_connack(mqtt_work());
-    TEST_ASSERT_TRUE(MqttV.ok);
-    TEST_ASSERT_TRUE(MqttV.session_present);
-    TEST_ASSERT_EQUAL_INT32(0, MqttV.i32);
+    Mqtt.buf.in = PRESENT;
+    Mqtt.buf.avail = sizeof(PRESENT);
+    Mqtt.packet.remaining_length = 2;
+    Mqtt.parse_connack(mqtt_work());
+    TEST_ASSERT_TRUE(Mqtt.ok);
+    TEST_ASSERT_TRUE(Mqtt.session_present);
+    TEST_ASSERT_EQUAL_INT32(0, Mqtt.i32);
 
     // A body shorter than the two octets sec 3.2.2 defines reports -1 rather than a code.
-    MqttV.packet.remaining_length = 1;
-    MqttV.parse_connack(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
-    TEST_ASSERT_EQUAL_INT32(-1, MqttV.i32);
-    TEST_ASSERT_FALSE(MqttV.session_present);
+    Mqtt.packet.remaining_length = 1;
+    Mqtt.parse_connack(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
+    TEST_ASSERT_EQUAL_INT32(-1, Mqtt.i32);
+    TEST_ASSERT_FALSE(Mqtt.session_present);
 }
 
 // sec 3.9.3: a SUBACK payload return code is 0x00 (max QoS 0), 0x01 (max QoS 1), 0x02 (max QoS 2) or
@@ -644,23 +645,23 @@ void test_parse_suback_return_codes(void)
     for (size_t i = 0; i < sizeof(CODE) / sizeof(CODE[0]); i++)
     {
         const uint8_t body[3] = {0x00, 0x0A, CODE[i]};
-        MqttV.buf.in = body;
-        MqttV.buf.avail = sizeof(body);
-        MqttV.packet.remaining_length = 3;
-        MqttV.parse_suback(mqtt_work());
-        TEST_ASSERT_TRUE(MqttV.ok);
-        TEST_ASSERT_EQUAL_UINT16(10, MqttV.packet.packet_id);
-        TEST_ASSERT_EQUAL_HEX8(CODE[i], MqttV.u8);
+        Mqtt.buf.in = body;
+        Mqtt.buf.avail = sizeof(body);
+        Mqtt.packet.remaining_length = 3;
+        Mqtt.parse_suback(mqtt_work());
+        TEST_ASSERT_TRUE(Mqtt.ok);
+        TEST_ASSERT_EQUAL_UINT16(10, Mqtt.packet.packet_id);
+        TEST_ASSERT_EQUAL_HEX8(CODE[i], Mqtt.u8);
     }
 
     // A SUBACK with no return code at all reports Failure rather than a subscription that took.
     static const uint8_t SHORT[2] = {0x00, 0x0A};
-    MqttV.buf.in = SHORT;
-    MqttV.buf.avail = sizeof(SHORT);
-    MqttV.packet.remaining_length = 2;
-    MqttV.parse_suback(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
-    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_MQTT_SUBACK_FAILURE, MqttV.u8);
+    Mqtt.buf.in = SHORT;
+    Mqtt.buf.avail = sizeof(SHORT);
+    Mqtt.packet.remaining_length = 2;
+    Mqtt.parse_suback(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
+    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_MQTT_SUBACK_FAILURE, Mqtt.u8);
 }
 
 // sec 2.3.1: a PUBACK, PUBREC, PUBREL, PUBCOMP or UNSUBACK body is the two-octet Packet Identifier,
@@ -668,23 +669,23 @@ void test_parse_suback_return_codes(void)
 void test_parse_ack_packet_identifier(void)
 {
     bind_buffers();
-    MqttV.packet.type = MQTT_PUBREL;
-    MqttV.packet.packet_id = 0xBEEF;
-    MqttV.build_ack(mqtt_work());
-    TEST_ASSERT_EQUAL_UINT(4u, MqttV.n);
+    Mqtt.packet.type = MQTT_PUBREL;
+    Mqtt.packet.packet_id = 0xBEEF;
+    Mqtt.build_ack(mqtt_work());
+    TEST_ASSERT_EQUAL_UINT(4u, Mqtt.n);
 
-    MqttV.packet.packet_id = 0;
-    MqttV.buf.in = g_out + 2;
-    MqttV.buf.avail = 2;
-    MqttV.packet.remaining_length = 2;
-    MqttV.parse_ack(mqtt_work());
-    TEST_ASSERT_TRUE(MqttV.ok);
-    TEST_ASSERT_EQUAL_UINT16(0xBEEF, MqttV.packet.packet_id);
+    Mqtt.packet.packet_id = 0;
+    Mqtt.buf.in = g_out + 2;
+    Mqtt.buf.avail = 2;
+    Mqtt.packet.remaining_length = 2;
+    Mqtt.parse_ack(mqtt_work());
+    TEST_ASSERT_TRUE(Mqtt.ok);
+    TEST_ASSERT_EQUAL_UINT16(0xBEEF, Mqtt.packet.packet_id);
 
-    MqttV.packet.remaining_length = 1;
-    MqttV.parse_ack(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
-    TEST_ASSERT_EQUAL_UINT16(0, MqttV.packet.packet_id);
+    Mqtt.packet.remaining_length = 1;
+    Mqtt.parse_ack(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
+    TEST_ASSERT_EQUAL_UINT16(0, Mqtt.packet.packet_id);
 }
 
 // A build that cannot fit the whole Control Packet writes nothing and reports 0, so a truncated
@@ -692,55 +693,55 @@ void test_parse_ack_packet_identifier(void)
 void test_builds_refuse_short_buffers(void)
 {
     bind_buffers();
-    MqttV.buf.cap = 8;
-    MqttV.message.topic_name = "a/b";
-    MqttV.message.payload = NULL;
-    MqttV.message.payload_len = 0;
-    MqttV.message.qos = 1;
-    MqttV.message.retain = PROTO_FALSE;
-    MqttV.message.dup = PROTO_FALSE;
-    MqttV.packet.packet_id = 10;
-    MqttV.build_publish(mqtt_work()); // needs 9
-    TEST_ASSERT_FALSE(MqttV.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, MqttV.n);
+    Mqtt.buf.cap = 8;
+    Mqtt.message.topic_name = "a/b";
+    Mqtt.message.payload = NULL;
+    Mqtt.message.payload_len = 0;
+    Mqtt.message.qos = 1;
+    Mqtt.message.retain = PROTO_FALSE;
+    Mqtt.message.dup = PROTO_FALSE;
+    Mqtt.packet.packet_id = 10;
+    Mqtt.build_publish(mqtt_work()); // needs 9
+    TEST_ASSERT_FALSE(Mqtt.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, Mqtt.n);
 
     // The body scratch is checked before a single octet of it is used.
     bind_buffers();
-    MqttV.buf.body_cap = 4;
-    MqttV.build_publish(mqtt_work()); // the body alone needs 7
-    TEST_ASSERT_FALSE(MqttV.ok);
+    Mqtt.buf.body_cap = 4;
+    Mqtt.build_publish(mqtt_work()); // the body alone needs 7
+    TEST_ASSERT_FALSE(Mqtt.ok);
 
     bind_buffers();
-    MqttV.buf.out = NULL;
-    MqttV.build_publish(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
+    Mqtt.buf.out = NULL;
+    Mqtt.build_publish(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
     bind_buffers();
-    MqttV.buf.body = NULL;
-    MqttV.build_publish(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
+    Mqtt.buf.body = NULL;
+    Mqtt.build_publish(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
     bind_buffers();
-    MqttV.message.topic_name = NULL;
-    MqttV.build_publish(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
+    Mqtt.message.topic_name = NULL;
+    Mqtt.build_publish(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
 
     // A CONNECT with no Client Identifier has no payload it can write (MQTT-3.1.3-3).
     bind_buffers();
-    MqttV.session.client_id = NULL;
-    MqttV.build_connect(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
+    Mqtt.session.client_id = NULL;
+    Mqtt.build_connect(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
 
     // The four-octet and two-octet packets check their own room.
     bind_buffers();
-    MqttV.buf.cap = 3;
-    MqttV.packet.type = MQTT_PUBACK;
-    MqttV.build_ack(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
+    Mqtt.buf.cap = 3;
+    Mqtt.packet.type = MQTT_PUBACK;
+    Mqtt.build_ack(mqtt_work());
+    TEST_ASSERT_FALSE(Mqtt.ok);
     bind_buffers();
-    MqttV.buf.cap = 1;
+    Mqtt.buf.cap = 1;
     Mqtt.build_pingreq(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
+    TEST_ASSERT_FALSE(Mqtt.ok);
     bind_buffers();
-    MqttV.buf.cap = 1;
+    Mqtt.buf.cap = 1;
     Mqtt.build_disconnect(mqtt_work());
-    TEST_ASSERT_FALSE(MqttV.ok);
+    TEST_ASSERT_FALSE(Mqtt.ok);
 }

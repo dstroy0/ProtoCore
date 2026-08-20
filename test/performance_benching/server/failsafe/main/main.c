@@ -37,45 +37,45 @@ static void on_breach(int id, const char *name, void *arg)
 /** @brief Arm one lifeline named @p name against @p now with deadline @p deadline_ms. */
 static int failsafe_add(const char *name, uint32_t deadline_ms, uint32_t now)
 {
-    FailsafeV.args.name = name;
-    FailsafeV.args.deadline_ms = deadline_ms;
-    FailsafeV.args.now = now;
+    Failsafe.args.name = name;
+    Failsafe.args.deadline_ms = deadline_ms;
+    Failsafe.args.now = now;
     Failsafe.add(protocore_failsafe_span());
-    return FailsafeV.i32;
+    return Failsafe.i32;
 }
 
 /** @brief Check lifeline @p id in against @p now. */
 static proto_bool failsafe_feed(int id, uint32_t now)
 {
-    FailsafeV.args.id = id;
-    FailsafeV.args.now = now;
+    Failsafe.args.id = id;
+    Failsafe.args.now = now;
     Failsafe.feed(protocore_failsafe_span());
-    return FailsafeV.ok;
+    return Failsafe.ok;
 }
 
 /** @brief Judge every armed lifeline against @p now; one bit per lifeline that went overdue. */
 static uint32_t failsafe_check(uint32_t now)
 {
-    FailsafeV.args.now = now;
-    FailsafeV.check(protocore_failsafe_span());
-    return FailsafeV.breached;
+    Failsafe.args.now = now;
+    Failsafe.check(protocore_failsafe_span());
+    return Failsafe.breached;
 }
 
 /** @brief Report every armed lifeline as JSON into @p out; the characters written. */
 static int failsafe_json(uint32_t now, char *out, size_t cap)
 {
-    FailsafeV.args.now = now;
-    FailsafeV.out_args.out = out;
-    FailsafeV.out_args.cap = cap;
+    Failsafe.args.now = now;
+    Failsafe.out_args.out = out;
+    Failsafe.out_args.cap = cap;
     Failsafe.json(protocore_failsafe_span());
-    return FailsafeV.n;
+    return Failsafe.n;
 }
 
 void dbench_run(void)
 {
     Failsafe.reset(protocore_failsafe_span());
-    FailsafeV.out_args.cb = on_breach;
-    FailsafeV.out_args.arg = NULL;
+    Failsafe.out_args.cb = on_breach;
+    Failsafe.out_args.arg = NULL;
     Failsafe.on_breach(protocore_failsafe_span());
 
     // Fill the registry (PROTOCORE_FAILSAFE_MAX_LIFELINES lifelines), mirroring test_failsafe.cpp's

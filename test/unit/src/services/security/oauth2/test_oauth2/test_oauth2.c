@@ -17,6 +17,7 @@
 
 #include <unity.h>
 
+
 // The borrow the entries take. Without the state this module keeps behind PROTOCORE_ENABLE_HTTP_CLIENT it has no
 // span, and NULL is what a short pool hands over too, which every entry already refuses on.
 static uint8_t *oauth2_work(void)
@@ -41,15 +42,15 @@ static int32_t build_code(const char *code, const char *redirect_uri, const char
                           const char *verifier, size_t cap)
 {
     memset(g_body, 0, sizeof(g_body));
-    Oauth2V.code_grant.code = code;
-    Oauth2V.code_grant.redirect_uri = redirect_uri;
-    Oauth2V.code_grant.code_verifier = verifier;
-    Oauth2V.client.client_id = client_id;
-    Oauth2V.client.client_secret = secret;
-    Oauth2V.request.out = g_body;
-    Oauth2V.request.cap = cap;
+    Oauth2.code_grant.code = code;
+    Oauth2.code_grant.redirect_uri = redirect_uri;
+    Oauth2.code_grant.code_verifier = verifier;
+    Oauth2.client.client_id = client_id;
+    Oauth2.client.client_secret = secret;
+    Oauth2.request.out = g_body;
+    Oauth2.request.cap = cap;
     Oauth2.build_code_request(oauth2_work());
-    return Oauth2V.i32;
+    return Oauth2.i32;
 }
 
 // RFC 6749 sec 4.1.3: grant_type=authorization_code with code, redirect_uri and client_id, the
@@ -120,17 +121,17 @@ void test_rfc6749_sec6_refresh_body(void)
                                "&client_id=s6BhdRkqt3"
                                "&client_secret=gX1fBat3bV";
     memset(g_body, 0, sizeof(g_body));
-    Oauth2V.refresh_grant.refresh_token = "tGzv3JOkF0XG5Qx2TlKWIA";
-    Oauth2V.client.client_id = "s6BhdRkqt3";
-    Oauth2V.client.client_secret = "gX1fBat3bV";
-    Oauth2V.request.out = g_body;
-    Oauth2V.request.cap = sizeof(g_body);
+    Oauth2.refresh_grant.refresh_token = "tGzv3JOkF0XG5Qx2TlKWIA";
+    Oauth2.client.client_id = "s6BhdRkqt3";
+    Oauth2.client.client_secret = "gX1fBat3bV";
+    Oauth2.request.out = g_body;
+    Oauth2.request.cap = sizeof(g_body);
     Oauth2.build_refresh_request(oauth2_work());
     TEST_ASSERT_EQUAL_STRING(WANT, g_body);
-    TEST_ASSERT_EQUAL_INT32((int32_t)(sizeof(WANT) - 1), Oauth2V.i32);
+    TEST_ASSERT_EQUAL_INT32((int32_t)(sizeof(WANT) - 1), Oauth2.i32);
 
     // A public client sends no secret.
-    Oauth2V.client.client_secret = NULL;
+    Oauth2.client.client_secret = NULL;
     Oauth2.build_refresh_request(oauth2_work());
     TEST_ASSERT_EQUAL_STRING("grant_type=refresh_token&refresh_token=tGzv3JOkF0XG5Qx2TlKWIA&client_id=s6BhdRkqt3",
                              g_body);
@@ -144,20 +145,20 @@ void test_build_refuses_incomplete_requests(void)
     TEST_ASSERT_EQUAL_INT32(0, build_code("c", "https://x/cb", NULL, NULL, NULL, sizeof(g_body)));
     TEST_ASSERT_EQUAL_INT32(0, build_code("c", "https://x/cb", "id", NULL, NULL, 0));
 
-    Oauth2V.code_grant.code = "c";
-    Oauth2V.code_grant.redirect_uri = "https://x/cb";
-    Oauth2V.code_grant.code_verifier = NULL;
-    Oauth2V.client.client_id = "id";
-    Oauth2V.client.client_secret = NULL;
-    Oauth2V.request.out = NULL;
-    Oauth2V.request.cap = sizeof(g_body);
+    Oauth2.code_grant.code = "c";
+    Oauth2.code_grant.redirect_uri = "https://x/cb";
+    Oauth2.code_grant.code_verifier = NULL;
+    Oauth2.client.client_id = "id";
+    Oauth2.client.client_secret = NULL;
+    Oauth2.request.out = NULL;
+    Oauth2.request.cap = sizeof(g_body);
     Oauth2.build_code_request(oauth2_work());
-    TEST_ASSERT_EQUAL_INT32(0, Oauth2V.i32);
+    TEST_ASSERT_EQUAL_INT32(0, Oauth2.i32);
 
-    Oauth2V.refresh_grant.refresh_token = NULL;
-    Oauth2V.request.out = g_body;
+    Oauth2.refresh_grant.refresh_token = NULL;
+    Oauth2.request.out = g_body;
     Oauth2.build_refresh_request(oauth2_work());
-    TEST_ASSERT_EQUAL_INT32(0, Oauth2V.i32);
+    TEST_ASSERT_EQUAL_INT32(0, Oauth2.i32);
 }
 
 // A buffer one octet short of the encoded body plus its terminator writes no body: half a form is a
@@ -188,10 +189,10 @@ void test_rfc6749_51_token_response(void)
                                "  \"example_parameter\":\"example_value\"\n"
                                "}";
     Oauth2Tokens t;
-    Oauth2V.response.json = JSON;
-    Oauth2V.response.tokens = &t;
+    Oauth2.response.json = JSON;
+    Oauth2.response.tokens = &t;
     Oauth2.parse_token_response(oauth2_work());
-    TEST_ASSERT_TRUE(Oauth2V.ok);
+    TEST_ASSERT_TRUE(Oauth2.ok);
     TEST_ASSERT_EQUAL_STRING("2YotnFZFEjr1zCsicMWpAA", t.access_token);
     TEST_ASSERT_EQUAL_STRING("example", t.token_type);
     TEST_ASSERT_EQUAL_INT32(3600L, t.expires_in);
@@ -206,10 +207,10 @@ void test_bearer_response_with_id_token(void)
     static const char JSON[] = "{\"access_token\":\"mF_9.B5f-4.1JqM\",\"token_type\":\"Bearer\","
                                "\"expires_in\":3600,\"id_token\":\"a.b.c\",\"scope\":\"openid email\"}";
     Oauth2Tokens t;
-    Oauth2V.response.json = JSON;
-    Oauth2V.response.tokens = &t;
+    Oauth2.response.json = JSON;
+    Oauth2.response.tokens = &t;
     Oauth2.parse_token_response(oauth2_work());
-    TEST_ASSERT_TRUE(Oauth2V.ok);
+    TEST_ASSERT_TRUE(Oauth2.ok);
     TEST_ASSERT_EQUAL_STRING("mF_9.B5f-4.1JqM", t.access_token); // RFC 6750 sec 1.2's example token
     TEST_ASSERT_EQUAL_STRING("Bearer", t.token_type);
     TEST_ASSERT_EQUAL_STRING("a.b.c", t.id_token);
@@ -231,10 +232,10 @@ void test_rfc6749_52_error_object_is_not_a_success(void)
     {
         Oauth2Tokens t;
         memset(&t, 0xAA, sizeof(t));
-        Oauth2V.response.json = ERRORS[i];
-        Oauth2V.response.tokens = &t;
+        Oauth2.response.json = ERRORS[i];
+        Oauth2.response.tokens = &t;
         Oauth2.parse_token_response(oauth2_work());
-        TEST_ASSERT_FALSE_MESSAGE(Oauth2V.ok, ERRORS[i]);
+        TEST_ASSERT_FALSE_MESSAGE(Oauth2.ok, ERRORS[i]);
         TEST_ASSERT_EQUAL_STRING("", t.access_token); // cleared, never left holding old octets
         TEST_ASSERT_EQUAL_STRING("", t.refresh_token);
         TEST_ASSERT_EQUAL_INT32(0L, t.expires_in);
@@ -245,20 +246,20 @@ void test_rfc6749_52_error_object_is_not_a_success(void)
 void test_parse_null_arguments(void)
 {
     Oauth2Tokens t;
-    Oauth2V.response.json = NULL;
-    Oauth2V.response.tokens = &t;
+    Oauth2.response.json = NULL;
+    Oauth2.response.tokens = &t;
     Oauth2.parse_token_response(oauth2_work());
-    TEST_ASSERT_FALSE(Oauth2V.ok);
+    TEST_ASSERT_FALSE(Oauth2.ok);
 
-    Oauth2V.response.json = "{\"access_token\":\"x\"}";
-    Oauth2V.response.tokens = NULL;
+    Oauth2.response.json = "{\"access_token\":\"x\"}";
+    Oauth2.response.tokens = NULL;
     Oauth2.parse_token_response(oauth2_work());
-    TEST_ASSERT_FALSE(Oauth2V.ok);
+    TEST_ASSERT_FALSE(Oauth2.ok);
 
-    Oauth2V.response.json = "not json at all";
-    Oauth2V.response.tokens = &t;
+    Oauth2.response.json = "not json at all";
+    Oauth2.response.tokens = &t;
     Oauth2.parse_token_response(oauth2_work());
-    TEST_ASSERT_FALSE(Oauth2V.ok);
+    TEST_ASSERT_FALSE(Oauth2.ok);
 }
 
 // The two builders and the parser compose: a body is built, the endpoint's reply is read, and the
@@ -272,14 +273,14 @@ void test_code_exchange_then_refresh(void)
     static const char JSON[] = "{\"access_token\":\"2YotnFZFEjr1zCsicMWpAA\",\"token_type\":\"Bearer\","
                                "\"expires_in\":3600,\"refresh_token\":\"tGzv3JOkF0XG5Qx2TlKWIA\"}";
     Oauth2Tokens t;
-    Oauth2V.response.json = JSON;
-    Oauth2V.response.tokens = &t;
+    Oauth2.response.json = JSON;
+    Oauth2.response.tokens = &t;
     Oauth2.parse_token_response(oauth2_work());
-    TEST_ASSERT_TRUE(Oauth2V.ok);
+    TEST_ASSERT_TRUE(Oauth2.ok);
 
-    Oauth2V.refresh_grant.refresh_token = t.refresh_token;
-    Oauth2V.request.out = g_body;
-    Oauth2V.request.cap = sizeof(g_body);
+    Oauth2.refresh_grant.refresh_token = t.refresh_token;
+    Oauth2.request.out = g_body;
+    Oauth2.request.cap = sizeof(g_body);
     Oauth2.build_refresh_request(oauth2_work());
     TEST_ASSERT_EQUAL_STRING("grant_type=refresh_token&refresh_token=tGzv3JOkF0XG5Qx2TlKWIA"
                              "&client_id=s6BhdRkqt3&client_secret=gX1fBat3bV",

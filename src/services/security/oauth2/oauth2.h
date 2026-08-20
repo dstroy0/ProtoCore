@@ -53,6 +53,7 @@ typedef struct
     char token_type[PROTOCORE_OAUTH2_TOKEN_TYPE_LEN]; ///< the token type, "Bearer" per RFC 6750 sec 6.1.1
     long expires_in;                                  ///< the access token lifetime in seconds, 0 when absent
 } Oauth2Tokens;
+
 /** @brief Negative outcomes of a transport call. An HTTP status code is positive. */
 typedef enum PROTO_ENUM_PACKED
 {
@@ -60,6 +61,7 @@ typedef enum PROTO_ENUM_PACKED
     PROTOCORE_OAUTH2_ERR_TRANSPORT = -2, ///< the HTTP client reached no endpoint
     PROTOCORE_OAUTH2_ERR_RESPONSE = -3,  ///< the body carried no access_token (RFC 6749 sec 5.2)
 } Oauth2Result;
+
 /**
  * @brief RFC 6749 sec 3.2.1: the client identity a token request carries.
  *
@@ -71,6 +73,7 @@ typedef struct
     const char *client_id;     ///< the client identifier, required when the client does not authenticate (sec 4.1.3)
     const char *client_secret; ///< the confidential client's secret (sec 2.3.1), or NULL for a public client
 } Oauth2ClientArgs;
+
 /** @brief RFC 6749 sec 4.1.3 authorization_code grant, plus the PKCE verifier RFC 7636 sec 4.5 sends. */
 typedef struct
 {
@@ -78,11 +81,13 @@ typedef struct
     const char *redirect_uri;  ///< the redirection URI of the sec 4.1.1 authorization request, identical to it
     const char *code_verifier; ///< the PKCE code verifier (RFC 7636 sec 4.1), or NULL
 } Oauth2CodeGrantArgs;
+
 /** @brief RFC 6749 sec 6: what refreshing an access token presents. */
 typedef struct
 {
     const char *refresh_token; ///< the refresh token issued alongside the access token (sec 5.1)
 } Oauth2RefreshArgs;
+
 /** @brief The endpoint a request goes to (RFC 6749 sec 3.2) and the form body it is built into. */
 typedef struct
 {
@@ -90,12 +95,14 @@ typedef struct
     char *out;                  ///< where a build writes the Appendix B encoded body
     size_t cap;                 ///< how much room that has, the NUL included
 } Oauth2RequestArgs;
+
 /** @brief The token-endpoint reply (RFC 6749 sec 5.1 / 5.2) and where its parameters land. */
 typedef struct
 {
     const char *json;     ///< the response body a parse reads
     Oauth2Tokens *tokens; ///< where the parsed parameters are written
 } Oauth2ResponseArgs;
+
 /**
  * @brief The token-endpoint client: two grants out, one token response back.
  *
@@ -130,44 +137,21 @@ typedef struct
     Oauth2RefreshArgs refresh_grant; ///< the refresh_token grant
     Oauth2RequestArgs request;       ///< where the request goes and where its body is built
     Oauth2ResponseArgs response;     ///< the reply and the tokens read out of it
+
     proto_bool ok;
     int32_t i32;
-#if PROTOCORE_ENABLE_HTTP_CLIENT
-#endif
-} Oauth2Vars;
 
-/** @brief The operands and the outcome. */
-extern Oauth2Vars Oauth2V;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const build_code_request)(uint8_t *restrict work);
     void (*const build_refresh_request)(uint8_t *restrict work);
     void (*const parse_token_response)(uint8_t *restrict work);
+#if PROTOCORE_ENABLE_HTTP_CLIENT
     void (*const exchange_code)(uint8_t *restrict work);
     void (*const refresh)(uint8_t *restrict work);
+#endif
 } Oauth2Ns;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in Oauth2V or a region of the borrow at a fixed offset.
-void protocore_oauth2_build_code_request(uint8_t *restrict work);
-void protocore_oauth2_build_refresh_request(uint8_t *restrict work);
-void protocore_oauth2_parse_token_response(uint8_t *restrict work);
-void protocore_oauth2_exchange_code(uint8_t *restrict work);
-void protocore_oauth2_refresh(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Oauth2.build_code_request(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const Oauth2Ns Oauth2 __attribute__((unused)) = {
-    .build_code_request = protocore_oauth2_build_code_request,
-    .build_refresh_request = protocore_oauth2_build_refresh_request,
-    .parse_token_response = protocore_oauth2_parse_token_response,
-    .exchange_code = protocore_oauth2_exchange_code,
-    .refresh = protocore_oauth2_refresh,
-};
+/** @brief The one symbol this module exports. */
+extern Oauth2Ns Oauth2;
 
 /**
  * @brief The PROTOCORE_OAUTH2_BORROW bytes this module's state lives in.

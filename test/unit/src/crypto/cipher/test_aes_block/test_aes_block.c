@@ -32,18 +32,18 @@ static const uint8_t PT[16] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
 
 static void expand(const uint8_t *key, int nk, uint32_t *rk)
 {
-    AesBlockV.key_expand_args.key = key;
-    AesBlockV.key_expand_args.nk = nk;
-    AesBlockV.key_expand_args.rk = rk;
+    AesBlock.key_expand_args.key = key;
+    AesBlock.key_expand_args.nk = nk;
+    AesBlock.key_expand_args.rk = rk;
     AesBlock.key_expand(g_ws);
 }
 
 static void encrypt(const uint32_t *rk, int nr, const uint8_t *in, uint8_t *out)
 {
-    AesBlockV.encrypt_block_args.rk = rk;
-    AesBlockV.encrypt_block_args.nr = nr;
-    AesBlockV.encrypt_block_args.in = in;
-    AesBlockV.encrypt_block_args.out = out;
+    AesBlock.encrypt_block_args.rk = rk;
+    AesBlock.encrypt_block_args.nr = nr;
+    AesBlock.encrypt_block_args.in = in;
+    AesBlock.encrypt_block_args.out = out;
     AesBlock.encrypt_block(g_ws);
 }
 
@@ -149,18 +149,18 @@ void test_null_operands_are_refused(void)
     uint8_t out[16];
     memset(out, 0x5A, sizeof(out));
 
-    AesBlockV.key_expand_args.key = NULL;
-    AesBlockV.key_expand_args.nk = 4;
-    AesBlockV.key_expand_args.rk = rk;
+    AesBlock.key_expand_args.key = NULL;
+    AesBlock.key_expand_args.nk = 4;
+    AesBlock.key_expand_args.rk = rk;
     AesBlock.key_expand(g_ws);
-    TEST_ASSERT_FALSE(AesBlockV.ok);
+    TEST_ASSERT_FALSE(AesBlock.ok);
 
-    AesBlockV.encrypt_block_args.rk = NULL;
-    AesBlockV.encrypt_block_args.nr = 10;
-    AesBlockV.encrypt_block_args.in = PT;
-    AesBlockV.encrypt_block_args.out = out;
+    AesBlock.encrypt_block_args.rk = NULL;
+    AesBlock.encrypt_block_args.nr = 10;
+    AesBlock.encrypt_block_args.in = PT;
+    AesBlock.encrypt_block_args.out = out;
     AesBlock.encrypt_block(g_ws);
-    TEST_ASSERT_FALSE(AesBlockV.ok);
+    TEST_ASSERT_FALSE(AesBlock.ok);
     for (unsigned i = 0; i < 16u; i++)
     {
         TEST_ASSERT_EQUAL_HEX8(0x5A, out[i]);

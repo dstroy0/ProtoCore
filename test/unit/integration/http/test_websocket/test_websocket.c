@@ -85,6 +85,7 @@ static size_t build_frame(uint8_t *dst, WsOpcode opcode, proto_bool fin, const u
     return pos;
 }
 
+
 void setUp()
 {
     Ws.init(protocore_ws_span());
@@ -104,9 +105,9 @@ void tearDown()
 void test_sha1_empty_string()
 {
     uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN];
-    Sha1V.hash_args.data = (const uint8_t *)"";
-    Sha1V.hash_args.len = 0;
-    Sha1V.hash_args.out = digest;
+    Sha1.hash_args.data = (const uint8_t *)"";
+    Sha1.hash_args.len = 0;
+    Sha1.hash_args.out = digest;
     Sha1.hash(tw);
     const uint8_t expected[PROTOCORE_SHA1_DIGEST_LEN] = {0xDA, 0x39, 0xA3, 0xEE, 0x5E, 0x6B, 0x4B, 0x0D, 0x32, 0x55,
                                                          0xBF, 0xEF, 0x95, 0x60, 0x18, 0x90, 0xAF, 0xD8, 0x07, 0x09};
@@ -116,9 +117,9 @@ void test_sha1_empty_string()
 void test_sha1_abc()
 {
     uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN];
-    Sha1V.hash_args.data = (const uint8_t *)"abc";
-    Sha1V.hash_args.len = 3;
-    Sha1V.hash_args.out = digest;
+    Sha1.hash_args.data = (const uint8_t *)"abc";
+    Sha1.hash_args.len = 3;
+    Sha1.hash_args.out = digest;
     Sha1.hash(tw);
     const uint8_t expected[PROTOCORE_SHA1_DIGEST_LEN] = {0xA9, 0x99, 0x3E, 0x36, 0x47, 0x06, 0x81, 0x6A, 0xBA, 0x3E,
                                                          0x25, 0x71, 0x78, 0x50, 0xC2, 0x6C, 0x9C, 0xD0, 0xD8, 0x9D};
@@ -130,9 +131,9 @@ void test_sha1_rfc6455_handshake_key()
 
     const char *input = "dGhlIHNhbXBsZSBub25jZQ==258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
     uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN];
-    Sha1V.hash_args.data = (const uint8_t *)input;
-    Sha1V.hash_args.len = strlen(input);
-    Sha1V.hash_args.out = digest;
+    Sha1.hash_args.data = (const uint8_t *)input;
+    Sha1.hash_args.len = strlen(input);
+    Sha1.hash_args.out = digest;
     Sha1.hash(tw);
 
     const uint8_t expected[PROTOCORE_SHA1_DIGEST_LEN] = {0xB3, 0x7A, 0x4F, 0x2C, 0xC0, 0x62, 0x4F, 0x16, 0x90, 0xF6,
@@ -143,13 +144,13 @@ void test_sha1_rfc6455_handshake_key()
 void test_sha1_different_inputs_different_digests()
 {
     uint8_t d1[PROTOCORE_SHA1_DIGEST_LEN], d2[PROTOCORE_SHA1_DIGEST_LEN];
-    Sha1V.hash_args.data = (const uint8_t *)"abc";
-    Sha1V.hash_args.len = 3;
-    Sha1V.hash_args.out = d1;
+    Sha1.hash_args.data = (const uint8_t *)"abc";
+    Sha1.hash_args.len = 3;
+    Sha1.hash_args.out = d1;
     Sha1.hash(tw);
-    Sha1V.hash_args.data = (const uint8_t *)"abd";
-    Sha1V.hash_args.len = 3;
-    Sha1V.hash_args.out = d2;
+    Sha1.hash_args.data = (const uint8_t *)"abd";
+    Sha1.hash_args.len = 3;
+    Sha1.hash_args.out = d2;
     Sha1.hash(tw);
     TEST_ASSERT_NOT_EQUAL(0, memcmp(d1, d2, PROTOCORE_SHA1_DIGEST_LEN));
 }
@@ -158,9 +159,9 @@ void test_base64_encode_one_byte()
 {
     const uint8_t src[] = {0x4D};
     char out[8] = {0};
-    Base64V.encode_args.src = src;
-    Base64V.encode_args.src_len = 1;
-    Base64V.encode_args.dst = out;
+    Base64.encode_args.src = src;
+    Base64.encode_args.src_len = 1;
+    Base64.encode_args.dst = out;
     Base64.encode(base64_work);
     TEST_ASSERT_EQUAL_STRING("TQ==", out);
 }
@@ -169,9 +170,9 @@ void test_base64_encode_two_bytes()
 {
     const uint8_t src[] = {0x4D, 0x61};
     char out[8] = {0};
-    Base64V.encode_args.src = src;
-    Base64V.encode_args.src_len = 2;
-    Base64V.encode_args.dst = out;
+    Base64.encode_args.src = src;
+    Base64.encode_args.src_len = 2;
+    Base64.encode_args.dst = out;
     Base64.encode(base64_work);
     TEST_ASSERT_EQUAL_STRING("TWE=", out);
 }
@@ -180,9 +181,9 @@ void test_base64_encode_three_bytes()
 {
     const uint8_t src[] = {0x4D, 0x61, 0x6E};
     char out[8] = {0};
-    Base64V.encode_args.src = src;
-    Base64V.encode_args.src_len = 3;
-    Base64V.encode_args.dst = out;
+    Base64.encode_args.src = src;
+    Base64.encode_args.src_len = 3;
+    Base64.encode_args.dst = out;
     Base64.encode(base64_work);
     TEST_ASSERT_EQUAL_STRING("TWFu", out);
 }
@@ -192,9 +193,9 @@ void test_base64_encode_ws_accept_key()
     const uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN] = {0xB3, 0x7A, 0x4F, 0x2C, 0xC0, 0x62, 0x4F, 0x16, 0x90, 0xF6,
                                                        0x46, 0x06, 0xCF, 0x38, 0x59, 0x45, 0xB2, 0xBE, 0xC4, 0xEA};
     char out[32] = {0};
-    Base64V.encode_args.src = digest;
-    Base64V.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
-    Base64V.encode_args.dst = out;
+    Base64.encode_args.src = digest;
+    Base64.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
+    Base64.encode_args.dst = out;
     Base64.encode(base64_work);
     TEST_ASSERT_EQUAL_STRING("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", out);
 }
@@ -202,11 +203,11 @@ void test_base64_encode_ws_accept_key()
 void test_base64_decode_one_byte()
 {
     uint8_t dst[4] = {0};
-    Base64V.decode_args.src = "TQ==";
-    Base64V.decode_args.dst = dst;
-    Base64V.decode_args.dst_cap = sizeof(dst);
+    Base64.decode_args.src = "TQ==";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    size_t n = Base64V.n;
+    size_t n = Base64.n;
     TEST_ASSERT_EQUAL(1, (int)n);
     TEST_ASSERT_EQUAL(0x4D, (int)dst[0]);
 }
@@ -214,11 +215,11 @@ void test_base64_decode_one_byte()
 void test_base64_decode_two_bytes()
 {
     uint8_t dst[4] = {0};
-    Base64V.decode_args.src = "TWE=";
-    Base64V.decode_args.dst = dst;
-    Base64V.decode_args.dst_cap = sizeof(dst);
+    Base64.decode_args.src = "TWE=";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    size_t n = Base64V.n;
+    size_t n = Base64.n;
     TEST_ASSERT_EQUAL(2, (int)n);
     TEST_ASSERT_EQUAL(0x4D, (int)dst[0]);
     TEST_ASSERT_EQUAL(0x61, (int)dst[1]);
@@ -227,11 +228,11 @@ void test_base64_decode_two_bytes()
 void test_base64_decode_three_bytes()
 {
     uint8_t dst[4] = {0};
-    Base64V.decode_args.src = "TWFu";
-    Base64V.decode_args.dst = dst;
-    Base64V.decode_args.dst_cap = sizeof(dst);
+    Base64.decode_args.src = "TWFu";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    size_t n = Base64V.n;
+    size_t n = Base64.n;
     TEST_ASSERT_EQUAL(3, (int)n);
     TEST_ASSERT_EQUAL(0x4D, (int)dst[0]);
     TEST_ASSERT_EQUAL(0x61, (int)dst[1]);
@@ -241,11 +242,11 @@ void test_base64_decode_three_bytes()
 void test_base64_decode_ws_accept_key()
 {
     uint8_t dst[PROTOCORE_SHA1_DIGEST_LEN + 4] = {0};
-    Base64V.decode_args.src = "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=";
-    Base64V.decode_args.dst = dst;
-    Base64V.decode_args.dst_cap = sizeof(dst);
+    Base64.decode_args.src = "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    size_t n = Base64V.n;
+    size_t n = Base64.n;
     TEST_ASSERT_EQUAL(PROTOCORE_SHA1_DIGEST_LEN, (int)n);
     const uint8_t expected[PROTOCORE_SHA1_DIGEST_LEN] = {0xB3, 0x7A, 0x4F, 0x2C, 0xC0, 0x62, 0x4F, 0x16, 0x90, 0xF6,
                                                          0x46, 0x06, 0xCF, 0x38, 0x59, 0x45, 0xB2, 0xBE, 0xC4, 0xEA};
@@ -257,15 +258,15 @@ void test_base64_round_trip()
     const uint8_t src[] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0xFE, 0xDC, 0xBA, 0x98};
     char encoded[24] = {0};
     uint8_t decoded[16] = {0};
-    Base64V.encode_args.src = src;
-    Base64V.encode_args.src_len = sizeof(src);
-    Base64V.encode_args.dst = encoded;
+    Base64.encode_args.src = src;
+    Base64.encode_args.src_len = sizeof(src);
+    Base64.encode_args.dst = encoded;
     Base64.encode(base64_work);
-    Base64V.decode_args.src = encoded;
-    Base64V.decode_args.dst = decoded;
-    Base64V.decode_args.dst_cap = sizeof(decoded);
+    Base64.decode_args.src = encoded;
+    Base64.decode_args.dst = decoded;
+    Base64.decode_args.dst_cap = sizeof(decoded);
     Base64.decode(base64_work);
-    size_t n = Base64V.n;
+    size_t n = Base64.n;
     TEST_ASSERT_EQUAL((int)sizeof(src), (int)n);
     TEST_ASSERT_EQUAL_MEMORY(src, decoded, sizeof(src));
 }
@@ -273,61 +274,61 @@ void test_base64_round_trip()
 void test_base64_decode_rejects_misplaced_padding()
 {
     uint8_t dst[8] = {0};
-    Base64V.decode_args.src = "A=BC";
-    Base64V.decode_args.dst = dst;
-    Base64V.decode_args.dst_cap = sizeof(dst);
+    Base64.decode_args.src = "A=BC";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    TEST_ASSERT_EQUAL(0, (int)Base64V.n);
-    Base64V.decode_args.src = "AB=C";
-    Base64V.decode_args.dst = dst;
-    Base64V.decode_args.dst_cap = sizeof(dst);
+    TEST_ASSERT_EQUAL(0, (int)Base64.n);
+    Base64.decode_args.src = "AB=C";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    TEST_ASSERT_EQUAL(0, (int)Base64V.n);
-    Base64V.decode_args.src = "=BCD";
-    Base64V.decode_args.dst = dst;
-    Base64V.decode_args.dst_cap = sizeof(dst);
+    TEST_ASSERT_EQUAL(0, (int)Base64.n);
+    Base64.decode_args.src = "=BCD";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    TEST_ASSERT_EQUAL(0, (int)Base64V.n);
-    Base64V.decode_args.src = "TWE=TWFu";
-    Base64V.decode_args.dst = dst;
-    Base64V.decode_args.dst_cap = sizeof(dst);
+    TEST_ASSERT_EQUAL(0, (int)Base64.n);
+    Base64.decode_args.src = "TWE=TWFu";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    TEST_ASSERT_EQUAL(0, (int)Base64V.n);
-    Base64V.decode_args.src = "TWF";
-    Base64V.decode_args.dst = dst;
-    Base64V.decode_args.dst_cap = sizeof(dst);
+    TEST_ASSERT_EQUAL(0, (int)Base64.n);
+    Base64.decode_args.src = "TWF";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    TEST_ASSERT_EQUAL(0, (int)Base64V.n);
+    TEST_ASSERT_EQUAL(0, (int)Base64.n);
 
-    Base64V.decode_args.src = "TQ==";
-    Base64V.decode_args.dst = dst;
-    Base64V.decode_args.dst_cap = sizeof(dst);
+    Base64.decode_args.src = "TQ==";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    TEST_ASSERT_EQUAL(1, (int)Base64V.n);
-    Base64V.decode_args.src = "TWE=";
-    Base64V.decode_args.dst = dst;
-    Base64V.decode_args.dst_cap = sizeof(dst);
+    TEST_ASSERT_EQUAL(1, (int)Base64.n);
+    Base64.decode_args.src = "TWE=";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    TEST_ASSERT_EQUAL(2, (int)Base64V.n);
+    TEST_ASSERT_EQUAL(2, (int)Base64.n);
 }
 
 void test_base64_decode_respects_capacity()
 {
 
     uint8_t dst[2] = {0};
-    Base64V.decode_args.src = "TWFu";
-    Base64V.decode_args.dst = dst;
-    Base64V.decode_args.dst_cap = sizeof(dst);
+    Base64.decode_args.src = "TWFu";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    size_t n = Base64V.n;
+    size_t n = Base64.n;
     TEST_ASSERT_EQUAL(0, (int)n);
 
     uint8_t dst3[3] = {0};
-    Base64V.decode_args.src = "TWFu";
-    Base64V.decode_args.dst = dst3;
-    Base64V.decode_args.dst_cap = sizeof(dst3);
+    Base64.decode_args.src = "TWFu";
+    Base64.decode_args.dst = dst3;
+    Base64.decode_args.dst_cap = sizeof(dst3);
     Base64.decode(base64_work);
-    TEST_ASSERT_EQUAL(3, (int)Base64V.n);
+    TEST_ASSERT_EQUAL(3, (int)Base64.n);
 }
 
 void test_ws_pool_size()
@@ -353,153 +354,153 @@ void test_ws_all_inactive_after_init()
 
 void test_ws_alloc_returns_non_null()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    TEST_ASSERT_NOT_NULL(WsV.found);
+    TEST_ASSERT_NOT_NULL(Ws.found);
 }
 
 void test_ws_alloc_sets_active()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     TEST_ASSERT_TRUE(ws->active);
 }
 
 void test_ws_alloc_sets_slot_id()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     TEST_ASSERT_EQUAL(0, (int)ws->slot_id);
 }
 
 void test_ws_alloc_sets_parse_state_header1()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     TEST_ASSERT_EQUAL(WS_HEADER1, ws->parse_state);
 }
 
 void test_ws_alloc_pool_full_returns_null()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    TEST_ASSERT_NOT_NULL(WsV.found);
-    WsV.slot = 1;
+    TEST_ASSERT_NOT_NULL(Ws.found);
+    Ws.slot = 1;
     Ws.alloc(protocore_ws_span());
-    TEST_ASSERT_NOT_NULL(WsV.found);
-    WsV.slot = 2;
+    TEST_ASSERT_NOT_NULL(Ws.found);
+    Ws.slot = 2;
     Ws.alloc(protocore_ws_span());
-    TEST_ASSERT_NULL(WsV.found);
+    TEST_ASSERT_NULL(Ws.found);
 }
 
 void test_ws_active_reflects_pool_state()
 {
-    WsV.ws_id = 0;
-    WsV.active(protocore_ws_span());
-    TEST_ASSERT_FALSE(WsV.ok);
-    WsV.slot = 0;
+    Ws.ws_id = 0;
+    Ws.active(protocore_ws_span());
+    TEST_ASSERT_FALSE(Ws.ok);
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsV.ws_id = 0;
-    WsV.active(protocore_ws_span());
-    TEST_ASSERT_TRUE(WsV.ok);
-    WsV.ws_id = (uint8_t)MAX_WS_CONNS;
-    WsV.active(protocore_ws_span());
-    TEST_ASSERT_FALSE(WsV.ok);
+    Ws.ws_id = 0;
+    Ws.active(protocore_ws_span());
+    TEST_ASSERT_TRUE(Ws.ok);
+    Ws.ws_id = (uint8_t)MAX_WS_CONNS;
+    Ws.active(protocore_ws_span());
+    TEST_ASSERT_FALSE(Ws.ok);
 }
 
 void test_ws_payload_returns_buf_or_null()
 {
-    WsV.ws_id = 0;
+    Ws.ws_id = 0;
     Ws.payload_of(protocore_ws_span());
-    TEST_ASSERT_NULL(WsV.text);
-    WsV.slot = 0;
+    TEST_ASSERT_NULL(Ws.text);
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
-    WsV.ws_id = 0;
+    WsConn *ws = Ws.found;
+    Ws.ws_id = 0;
     Ws.payload_of(protocore_ws_span());
-    TEST_ASSERT_EQUAL_PTR((const char *)ws->buf, WsV.text);
-    WsV.ws_id = (uint8_t)MAX_WS_CONNS;
+    TEST_ASSERT_EQUAL_PTR((const char *)ws->buf, Ws.text);
+    Ws.ws_id = (uint8_t)MAX_WS_CONNS;
     Ws.payload_of(protocore_ws_span());
-    TEST_ASSERT_NULL(WsV.text);
+    TEST_ASSERT_NULL(Ws.text);
 }
 
 void test_ws_find_returns_correct_conn()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *allocated = WsV.found;
-    WsV.slot = 0;
+    WsConn *allocated = Ws.found;
+    Ws.slot = 0;
     Ws.find(protocore_ws_span());
-    WsConn *found = WsV.found;
+    WsConn *found = Ws.found;
     TEST_ASSERT_NOT_NULL(found);
     TEST_ASSERT_EQUAL_PTR(allocated, found);
 }
 
 void test_ws_find_returns_null_when_empty()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.find(protocore_ws_span());
-    TEST_ASSERT_NULL(WsV.found);
+    TEST_ASSERT_NULL(Ws.found);
 }
 
 void test_ws_find_returns_null_for_different_slot()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsV.slot = 1;
+    Ws.slot = 1;
     Ws.find(protocore_ws_span());
-    TEST_ASSERT_NULL(WsV.found);
+    TEST_ASSERT_NULL(Ws.found);
 }
 
 void test_ws_find_after_both_slots_allocated()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsV.slot = 1;
+    Ws.slot = 1;
     Ws.alloc(protocore_ws_span());
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.find(protocore_ws_span());
-    TEST_ASSERT_NOT_NULL(WsV.found);
-    WsV.slot = 1;
+    TEST_ASSERT_NOT_NULL(Ws.found);
+    Ws.slot = 1;
     Ws.find(protocore_ws_span());
-    TEST_ASSERT_NOT_NULL(WsV.found);
+    TEST_ASSERT_NOT_NULL(Ws.found);
 }
 
 void test_ws_free_deactivates_slot()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.free(protocore_ws_span());
     TEST_ASSERT_FALSE(ws_pool[0].active);
 }
 
 void test_ws_free_restores_ws_id()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.free(protocore_ws_span());
     TEST_ASSERT_EQUAL(0, (int)ws_pool[0].ws_id);
 }
 
 void test_ws_free_makes_slot_findable_as_null()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.free(protocore_ws_span());
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.find(protocore_ws_span());
-    TEST_ASSERT_NULL(WsV.found);
+    TEST_ASSERT_NULL(Ws.found);
 }
 
 void test_ws_free_nop_on_unallocated()
 {
-    WsV.slot = 2;
+    Ws.slot = 2;
     Ws.free(protocore_ws_span());
     TEST_ASSERT_FALSE(ws_pool[0].active);
     TEST_ASSERT_FALSE(ws_pool[1].active);
@@ -508,27 +509,27 @@ void test_ws_free_nop_on_unallocated()
 
 void test_ws_free_skips_active_slot_with_different_id()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsV.slot = 1;
+    Ws.slot = 1;
     Ws.alloc(protocore_ws_span());
-    WsV.slot = 1;
+    Ws.slot = 1;
     Ws.free(protocore_ws_span());
     TEST_ASSERT_TRUE(ws_pool[0].active);
-    WsV.slot = 1;
+    Ws.slot = 1;
     Ws.find(protocore_ws_span());
-    TEST_ASSERT_NULL(WsV.found);
+    TEST_ASSERT_NULL(Ws.found);
 }
 
 void test_ws_alloc_after_free_succeeds()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.free(protocore_ws_span());
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     TEST_ASSERT_TRUE(ws->active);
     TEST_ASSERT_EQUAL(0, (int)ws->slot_id);
@@ -536,28 +537,28 @@ void test_ws_alloc_after_free_succeeds()
 
 void test_ws_parse_text_frame_sets_ready()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     const uint8_t payload[] = {'H', 'i'};
     uint8_t frame[12];
     size_t flen = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, payload, 2, PROTO_TRUE);
     push_bytes(0, frame, flen);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
 }
 
 void test_ws_parse_payload_stored_correctly()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     const char *text = "Hello";
     uint8_t frame[16];
     size_t flen = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)text, (uint16_t)strlen(text), PROTO_TRUE);
     push_bytes(0, frame, flen);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL(5, (int)ws->payload_len);
@@ -566,14 +567,14 @@ void test_ws_parse_payload_stored_correctly()
 
 void test_ws_parse_binary_frame_sets_ready()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     const uint8_t payload[] = {0x01, 0x02, 0x03};
     uint8_t frame[16];
     size_t flen = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, payload, 3, PROTO_TRUE);
     push_bytes(0, frame, flen);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL(WS_OP_BINARY, ws->opcode);
@@ -585,26 +586,26 @@ void test_ws_parse_binary_frame_sets_ready()
 
 void test_ws_parse_zero_length_unmasked_frame()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
 
     uint8_t frame[2] = {0x81, 0x00};
     push_bytes(0, frame, 2);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_parse_zero_length_masked_frame()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
 
     uint8_t frame[6] = {0x81, 0x80, 0x00, 0x00, 0x00, 0x00};
     push_bytes(0, frame, 6);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL(0, (int)ws->payload_len);
@@ -612,61 +613,61 @@ void test_ws_parse_zero_length_masked_frame()
 
 void test_ws_reject_unmasked_data_frame()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
 
     uint8_t frame[5] = {0x81, 0x03, 'a', 'b', 'c'};
     push_bytes(0, frame, 5);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_reject_reserved_opcode()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
 
     uint8_t frame[2] = {0x83, 0x80};
     push_bytes(0, frame, 2);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_reject_fragmented_control_frame()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
 
     uint8_t frame[2] = {0x09, 0x80};
     push_bytes(0, frame, 2);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_reject_oversized_control_frame()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
 
     uint8_t frame[2] = {0x89, (uint8_t)(0x80u | 126u)};
     push_bytes(0, frame, 2);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_parse_16bit_length_frame()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
 
     static uint8_t payload[130];
     for (int i = 0; i < 130; i++)
@@ -678,7 +679,7 @@ void test_ws_parse_16bit_length_frame()
     size_t flen = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, payload, 130, PROTO_TRUE);
 
     push_bytes(0, frame, flen);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL(130, (int)ws->payload_len);
@@ -688,78 +689,78 @@ void test_ws_parse_16bit_length_frame()
 
 void test_ws_parse_rsv1_set_closes_protocol()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
 
     uint8_t frame[2] = {0xC1, 0x00};
     push_bytes(0, frame, 2);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_parse_rsv2_set_closes_protocol()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
 
     uint8_t frame[2] = {0xA1, 0x00};
     push_bytes(0, frame, 2);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_parse_rsv3_set_closes_protocol()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
 
     uint8_t frame[2] = {0x91, 0x00};
     push_bytes(0, frame, 2);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_parse_64bit_length_closes_too_big()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
 
     uint8_t frame[10] = {0x81, 0xFF, 0, 0, 0, 0, 0, 0, 0, 1};
     push_bytes(0, frame, sizeof(frame));
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_parse_oversized_16bit_length_closes_too_big()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     uint16_t big_len = (uint16_t)WS_FRAME_SIZE + 1;
     uint8_t frame[4] = {0x81, 0xFE, (uint8_t)(big_len >> 8), (uint8_t)(big_len)};
     push_bytes(0, frame, sizeof(frame));
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_fragment_start_waits_for_continuation()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
 
     uint8_t frame[8] = {0x01, 0x82, 0, 0, 0, 0, 'H', 'i'};
     push_bytes(0, frame, sizeof(frame));
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_NOT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_NOT_EQUAL(WS_ERROR, ws->parse_state);
@@ -768,20 +769,20 @@ void test_ws_fragment_start_waits_for_continuation()
 
 void test_ws_fragmented_message_reassembled()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     uint8_t f1[16], f2[16];
     size_t n1 = build_frame(f1, WS_OP_TEXT, PROTO_FALSE, (const uint8_t *)"He", 2, PROTO_TRUE);
     size_t n2 = build_frame(f2, WS_OP_CONTINUATION, PROTO_TRUE, (const uint8_t *)"llo", 3, PROTO_TRUE);
 
     push_bytes(0, f1, n1);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_TRUE(ws->fragmenting);
 
     push_bytes(0, f2, n2);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL(WS_OP_TEXT, ws->opcode);
@@ -791,9 +792,9 @@ void test_ws_fragmented_message_reassembled()
 
 void test_ws_control_frame_interleaved_in_fragments()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     uint8_t f1[16], pf[16], f2[16];
     size_t n1 = build_frame(f1, WS_OP_TEXT, PROTO_FALSE, (const uint8_t *)"He", 2, PROTO_TRUE);
     size_t np = build_frame(pf, WS_OP_PING, PROTO_TRUE, (const uint8_t *)"x", 1, PROTO_TRUE);
@@ -802,7 +803,7 @@ void test_ws_control_frame_interleaved_in_fragments()
     push_bytes(0, f1, n1);
     push_bytes(0, pf, np);
     push_bytes(0, f2, n2);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL(WS_OP_TEXT, ws->opcode);
@@ -812,9 +813,9 @@ void test_ws_control_frame_interleaved_in_fragments()
 
 void test_ws_fragment_accumulation_overflow_rejected()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     static uint8_t payload[WS_FRAME_SIZE];
     static uint8_t frame[WS_FRAME_SIZE + 8];
     for (int i = 0; i < WS_FRAME_SIZE; i++)
@@ -824,7 +825,7 @@ void test_ws_fragment_accumulation_overflow_rejected()
 
     size_t n1 = build_frame(frame, WS_OP_TEXT, PROTO_FALSE, payload, (uint16_t)WS_FRAME_SIZE, PROTO_TRUE);
     push_bytes(0, frame, n1);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_TRUE(ws->fragmenting);
     TEST_ASSERT_NOT_EQUAL(WS_ERROR, ws->parse_state);
@@ -832,49 +833,49 @@ void test_ws_fragment_accumulation_overflow_rejected()
     uint8_t one = 'x';
     size_t n2 = build_frame(frame, WS_OP_CONTINUATION, PROTO_TRUE, &one, 1, PROTO_TRUE);
     push_bytes(0, frame, n2);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_continuation_without_start_rejected()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
 
     uint8_t frame[8] = {0x80, 0x82, 0, 0, 0, 0, 'H', 'i'};
     push_bytes(0, frame, sizeof(frame));
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_new_data_frame_during_fragmentation_rejected()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     uint8_t f1[16], f2[16];
     size_t n1 = build_frame(f1, WS_OP_TEXT, PROTO_FALSE, (const uint8_t *)"He", 2, PROTO_TRUE);
 
     size_t n2 = build_frame(f2, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)"llo", 3, PROTO_TRUE);
     push_bytes(0, f1, n1);
     push_bytes(0, f2, n2);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_parse_ping_auto_pong_resets_frame()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
 
     uint8_t frame[10] = {0x89, 0x84, 0, 0, 0, 0, 'p', 'i', 'n', 'g'};
     push_bytes(0, frame, sizeof(frame));
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
 
     TEST_ASSERT_EQUAL(WS_HEADER1, ws->parse_state);
@@ -882,35 +883,35 @@ void test_ws_parse_ping_auto_pong_resets_frame()
 
 void test_ws_parse_pong_silently_ignored()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
 
     uint8_t frame[8] = {0x8A, 0x82, 0, 0, 0, 0, 0, 0};
     push_bytes(0, frame, sizeof(frame));
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_HEADER1, ws->parse_state);
 }
 
 void test_ws_parse_close_marks_ws_closed()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
 
     uint8_t frame[8] = {0x88, 0x82, 0, 0, 0, 0, 0x03, 0xE8};
     push_bytes(0, frame, sizeof(frame));
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_CLOSED, ws->parse_state);
 }
 
 void test_ws_parse_stops_at_frame_ready()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     const uint8_t p[] = {'A'};
     uint8_t f1[8], f2[8];
     size_t l1 = build_frame(f1, WS_OP_TEXT, PROTO_TRUE, p, 1, PROTO_TRUE);
@@ -918,7 +919,7 @@ void test_ws_parse_stops_at_frame_ready()
 
     push_bytes(0, f1, l1);
     push_bytes(0, f2, l2);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
 
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
@@ -926,9 +927,9 @@ void test_ws_parse_stops_at_frame_ready()
 
 void test_ws_parse_stops_after_close()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     uint8_t close_frame[8] = {0x88, 0x82, 0, 0, 0, 0, 0x03, 0xE8};
     const uint8_t p[] = {'z'};
     uint8_t next[8];
@@ -936,7 +937,7 @@ void test_ws_parse_stops_after_close()
 
     push_bytes(0, close_frame, sizeof(close_frame));
     push_bytes(0, next, nlen);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
 
     TEST_ASSERT_EQUAL(WS_CLOSED, ws->parse_state);
@@ -944,9 +945,9 @@ void test_ws_parse_stops_after_close()
 
 void test_ws_reset_frame_clears_fields()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     ws->parse_state = WS_FRAME_READY;
     ws->payload_len = 10;
     ws->payload_idx = 10;
@@ -956,7 +957,7 @@ void test_ws_reset_frame_clears_fields()
     ws->buf[0] = 'X';
     ws->len64_count = 5;
 
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.reset_frame(protocore_ws_span());
 
     TEST_ASSERT_EQUAL(WS_HEADER1, ws->parse_state);
@@ -970,13 +971,13 @@ void test_ws_reset_frame_clears_fields()
 
 void test_ws_feed_byte_unknown_parse_state_is_nop()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     ws->parse_state = (WsParseState)99;
     ws->payload_idx = 0;
-    WsV.conn = ws;
-    WsV.byte = 0x42;
+    Ws.conn = ws;
+    Ws.byte = 0x42;
     Ws.feed_byte(protocore_ws_span());
     TEST_ASSERT_EQUAL((WsParseState)99, ws->parse_state);
     TEST_ASSERT_EQUAL(0, (int)ws->payload_idx);
@@ -984,15 +985,15 @@ void test_ws_feed_byte_unknown_parse_state_is_nop()
 
 void test_ws_payload_ctl_buf_capacity_guard_direct()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     ws->opcode = WS_OP_PING;
     ws->parse_state = WS_PAYLOAD;
     ws->payload_len = 200;
     ws->payload_idx = sizeof(ws->ctl_buf) - 1;
-    WsV.conn = ws;
-    WsV.byte = 'X';
+    Ws.conn = ws;
+    Ws.byte = 'X';
     Ws.feed_byte(protocore_ws_span());
     TEST_ASSERT_EQUAL(sizeof(ws->ctl_buf), (size_t)ws->payload_idx);
     TEST_ASSERT_EQUAL('\0', (char)ws->ctl_buf[sizeof(ws->ctl_buf) - 1]);
@@ -1000,16 +1001,16 @@ void test_ws_payload_ctl_buf_capacity_guard_direct()
 
 void test_ws_payload_data_buf_capacity_guard_direct()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     ws->opcode = WS_OP_BINARY;
     ws->parse_state = WS_PAYLOAD;
     ws->msg_len = WS_FRAME_SIZE;
     ws->payload_len = 10;
     ws->payload_idx = 0;
-    WsV.conn = ws;
-    WsV.byte = 'Y';
+    Ws.conn = ws;
+    Ws.byte = 'Y';
     Ws.feed_byte(protocore_ws_span());
     TEST_ASSERT_EQUAL(1, (int)ws->payload_idx);
     TEST_ASSERT_EQUAL('\0', (char)ws->buf[WS_FRAME_SIZE]);
@@ -1017,13 +1018,13 @@ void test_ws_payload_data_buf_capacity_guard_direct()
 
 void test_ws_parse_mask_applied_correctly()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
 
     uint8_t frame[8] = {0x81, 0x81, 0x37, 0xFA, 0x21, 0x3D, 0x7F};
     push_bytes(0, frame, sizeof(frame));
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL('H', (char)ws->buf[0]);
@@ -1031,28 +1032,28 @@ void test_ws_parse_mask_applied_correctly()
 
 void test_ws_text_invalid_utf8_rejected()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     const uint8_t bad[] = {0xC3, 0x28};
     uint8_t frame[16];
     size_t n = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, bad, 2, PROTO_TRUE);
     push_bytes(0, frame, n);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_text_valid_utf8_accepted()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     const uint8_t ok[] = {'h', 0xC3, 0xA9, 'l', 'l', 'o'};
     uint8_t frame[16];
     size_t n = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, ok, (uint16_t)sizeof(ok), PROTO_TRUE);
     push_bytes(0, frame, n);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL((int)sizeof(ok), (int)ws->payload_len);
@@ -1060,14 +1061,14 @@ void test_ws_text_valid_utf8_accepted()
 
 void test_ws_binary_arbitrary_bytes_accepted()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     const uint8_t bin[] = {0xFF, 0xFE, 0x00, 0xC3, 0x28};
     uint8_t frame[16];
     size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, bin, (uint16_t)sizeof(bin), PROTO_TRUE);
     push_bytes(0, frame, n);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
 }
@@ -1079,16 +1080,16 @@ void stress_ws_parse_reset_100_cycles()
     size_t flen = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)text, 4, PROTO_TRUE);
     for (int i = 0; i < 100; i++)
     {
-        WsV.slot = 0;
+        Ws.slot = 0;
         Ws.alloc(protocore_ws_span());
-        WsConn *ws = WsV.found;
+        WsConn *ws = Ws.found;
         TEST_ASSERT_NOT_NULL_MESSAGE(ws, "alloc failed");
         push_bytes(0, frame, flen);
-        WsV.conn = ws;
+        Ws.conn = ws;
         Ws.parse(protocore_ws_span());
         TEST_ASSERT_EQUAL_MESSAGE(WS_FRAME_READY, ws->parse_state, "not FRAME_READY");
         TEST_ASSERT_EQUAL_STRING_MESSAGE(text, (const char *)ws->buf, "payload mismatch");
-        WsV.slot = 0;
+        Ws.slot = 0;
         Ws.free(protocore_ws_span());
         conn_pool[0].rx_head = conn_pool[0].rx_tail = 0;
     }
@@ -1098,29 +1099,29 @@ void stress_ws_alloc_free_pool_cycle()
 {
     for (int cycle = 0; cycle < 50; cycle++)
     {
-        WsV.slot = 0;
+        Ws.slot = 0;
         Ws.alloc(protocore_ws_span());
-        WsConn *w0 = WsV.found;
-        WsV.slot = 1;
+        WsConn *w0 = Ws.found;
+        Ws.slot = 1;
         Ws.alloc(protocore_ws_span());
-        WsConn *w1 = WsV.found;
+        WsConn *w1 = Ws.found;
         TEST_ASSERT_NOT_NULL(w0);
         TEST_ASSERT_NOT_NULL(w1);
-        WsV.slot = 2;
+        Ws.slot = 2;
         Ws.alloc(protocore_ws_span());
-        TEST_ASSERT_NULL(WsV.found);
+        TEST_ASSERT_NULL(Ws.found);
 
-        WsV.slot = 0;
+        Ws.slot = 0;
         Ws.free(protocore_ws_span());
-        WsV.slot = 0;
+        Ws.slot = 0;
         Ws.alloc(protocore_ws_span());
-        WsConn *w0b = WsV.found;
+        WsConn *w0b = Ws.found;
         TEST_ASSERT_NOT_NULL(w0b);
         TEST_ASSERT_EQUAL(0, (int)w0b->slot_id);
 
-        WsV.slot = 0;
+        Ws.slot = 0;
         Ws.free(protocore_ws_span());
-        WsV.slot = 1;
+        Ws.slot = 1;
         Ws.free(protocore_ws_span());
         TEST_ASSERT_FALSE(ws_pool[0].active);
         TEST_ASSERT_FALSE(ws_pool[1].active);
@@ -1129,16 +1130,16 @@ void stress_ws_alloc_free_pool_cycle()
 
 void stress_ws_parse_incremental_byte_by_byte()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     const char *text = "Incremental";
     uint8_t frame[20];
     size_t flen = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)text, (uint16_t)strlen(text), PROTO_TRUE);
     for (size_t i = 0; i < flen; i++)
     {
         push_bytes(0, &frame[i], 1);
-        WsV.conn = ws;
+        Ws.conn = ws;
         Ws.parse(protocore_ws_span());
         if (i < flen - 1)
         {
@@ -1151,9 +1152,9 @@ void stress_ws_parse_incremental_byte_by_byte()
 
 void stress_ws_parse_max_payload()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     static uint8_t payload[WS_FRAME_SIZE];
     static uint8_t frame[WS_FRAME_SIZE + 8];
 
@@ -1164,7 +1165,7 @@ void stress_ws_parse_max_payload()
 
     size_t flen = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, payload, (uint16_t)WS_FRAME_SIZE, PROTO_TRUE);
     push_bytes(0, frame, flen);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
 
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
@@ -1176,9 +1177,9 @@ void stress_ws_parse_max_payload()
 
 void stress_ws_parse_two_consecutive_frames()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     const char *t1 = "first";
     const char *t2 = "second";
     uint8_t f1[16], f2[16];
@@ -1186,15 +1187,15 @@ void stress_ws_parse_two_consecutive_frames()
     size_t l2 = build_frame(f2, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)t2, (uint16_t)strlen(t2), PROTO_TRUE);
 
     push_bytes(0, f1, l1);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL_STRING(t1, (const char *)ws->buf);
 
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.reset_frame(protocore_ws_span());
     push_bytes(0, f2, l2);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL_STRING(t2, (const char *)ws->buf);
@@ -1206,9 +1207,9 @@ void test_ws_permessage_deflate_inbound()
 {
 
     static const uint8_t comp[] = {242, 72, 205, 201, 201, 215, 81, 8, 207, 47, 202, 73, 81, 4, 0};
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
@@ -1217,7 +1218,7 @@ void test_ws_permessage_deflate_inbound()
     frame[0] |= 0x40;
 
     push_bytes(0, frame, n);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_EQUAL_size_t(13, ws->msg_len);
@@ -1226,25 +1227,25 @@ void test_ws_permessage_deflate_inbound()
 
 void test_ws_rsv1_without_negotiation_closes()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_FALSE;
     uint8_t frame[16];
     size_t n = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)"x", 1, PROTO_TRUE);
     frame[0] |= 0x40;
     push_bytes(0, frame, n);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
 
 void test_ws_permessage_deflate_outbound()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
@@ -1252,12 +1253,12 @@ void test_ws_permessage_deflate_outbound()
     uint16_t mlen = (uint16_t)strlen(msg);
 
     tcp_capture_reset();
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_TEXT;
-    WsV.frame.payload = (const uint8_t *)msg;
-    WsV.frame.len = mlen;
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_TEXT;
+    Ws.frame.payload = (const uint8_t *)msg;
+    Ws.frame.len = mlen;
     Ws.send_frame(protocore_ws_span());
-    TEST_ASSERT_TRUE(WsV.ok);
+    TEST_ASSERT_TRUE(Ws.ok);
     tcp_capture_disable();
 
     const uint8_t *sent = (const uint8_t *)tcp_captured();
@@ -1286,15 +1287,15 @@ void test_ws_permessage_deflate_outbound()
     uint8_t out[256];
     uint8_t scr[INFLATE_SCRATCH_SIZE];
     size_t out_len = 0;
-    InflateV.raw_args.src = comp;
-    InflateV.raw_args.src_len = plen + 4;
-    InflateV.raw_args.dst = out;
-    InflateV.raw_args.dst_cap = sizeof(out);
-    InflateV.raw_args.out_len = &out_len;
-    InflateV.raw_args.scratch = scr;
-    InflateV.raw_args.scratch_len = sizeof(scr);
+    Inflate.raw_args.src = comp;
+    Inflate.raw_args.src_len = plen + 4;
+    Inflate.raw_args.dst = out;
+    Inflate.raw_args.dst_cap = sizeof(out);
+    Inflate.raw_args.out_len = &out_len;
+    Inflate.raw_args.scratch = scr;
+    Inflate.raw_args.scratch_len = sizeof(scr);
     Inflate.raw(inflate_work);
-    int rc = (int)InflateV.value;
+    int rc = (int)Inflate.value;
     TEST_ASSERT_EQUAL_INT(INFLATE_OK, rc);
     TEST_ASSERT_EQUAL_size_t(mlen, out_len);
     TEST_ASSERT_EQUAL_MEMORY(msg, out, mlen);
@@ -1302,19 +1303,19 @@ void test_ws_permessage_deflate_outbound()
 
 void test_ws_outbound_incompressible_not_flagged()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
     tcp_capture_reset();
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_TEXT;
-    WsV.frame.payload = (const uint8_t *)"x";
-    WsV.frame.len = 1;
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_TEXT;
+    Ws.frame.payload = (const uint8_t *)"x";
+    Ws.frame.len = 1;
     Ws.send_frame(protocore_ws_span());
-    TEST_ASSERT_TRUE(WsV.ok);
+    TEST_ASSERT_TRUE(Ws.ok);
     tcp_capture_disable();
     const uint8_t *sent = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(0x80 | (uint8_t)WS_OP_TEXT, sent[0]);
@@ -1322,12 +1323,12 @@ void test_ws_outbound_incompressible_not_flagged()
     TEST_ASSERT_EQUAL_UINT8('x', sent[2]);
 
     tcp_capture_reset();
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_PONG;
-    WsV.frame.payload = (const uint8_t *)"AAAAAAAAAAAAAAAA";
-    WsV.frame.len = 16;
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_PONG;
+    Ws.frame.payload = (const uint8_t *)"AAAAAAAAAAAAAAAA";
+    Ws.frame.len = 16;
     Ws.send_frame(protocore_ws_span());
-    TEST_ASSERT_TRUE(WsV.ok);
+    TEST_ASSERT_TRUE(Ws.ok);
     tcp_capture_disable();
     sent = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(0x80 | (uint8_t)WS_OP_PONG, sent[0]);
@@ -1336,16 +1337,16 @@ void test_ws_outbound_incompressible_not_flagged()
 void test_ws_deflate_inflate_error_closes()
 {
     static const uint8_t garbage[] = {0xFF, 0xFF, 0xFF};
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
     uint8_t frame[32];
     size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, garbage, (uint16_t)sizeof(garbage), PROTO_TRUE);
     frame[0] |= 0x40;
     push_bytes(0, frame, n);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
@@ -1353,9 +1354,9 @@ void test_ws_deflate_inflate_error_closes()
 void test_ws_permessage_deflate_inflate_overflow_closes()
 {
     static const uint8_t comp[] = {114, 116, 28, 5, 163, 128, 250, 0, 0};
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
@@ -1363,7 +1364,7 @@ void test_ws_permessage_deflate_inflate_overflow_closes()
     size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, comp, (uint16_t)sizeof(comp), PROTO_TRUE);
     frame[0] |= 0x40;
     push_bytes(0, frame, n);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
@@ -1371,9 +1372,9 @@ void test_ws_permessage_deflate_inflate_overflow_closes()
 void test_ws_permessage_deflate_scratch_exhausted_closes()
 {
     static const uint8_t comp[] = {242, 72, 205, 201, 201, 215, 81, 8, 207, 47, 202, 73, 81, 4, 0};
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
@@ -1384,7 +1385,7 @@ void test_ws_permessage_deflate_scratch_exhausted_closes()
     size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, comp, (uint16_t)sizeof(comp), PROTO_TRUE);
     frame[0] |= 0x40;
     push_bytes(0, frame, n);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 
@@ -1395,11 +1396,11 @@ static void feed_compressed_with_arena_leaving(size_t leave)
 {
     static const uint8_t comp[] = {242, 72, 205, 201, 201, 215, 81, 8, 207, 47, 202, 73, 81, 4, 0};
     conn_pool[0].rx_head = conn_pool[0].rx_tail = 0;
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.free(protocore_ws_span());
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
@@ -1411,7 +1412,7 @@ static void feed_compressed_with_arena_leaving(size_t leave)
     size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, comp, (uint16_t)sizeof(comp), PROTO_TRUE);
     frame[0] |= 0x40;
     push_bytes(0, frame, n);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
     protocore_plaintext_reset();
@@ -1425,16 +1426,16 @@ void test_ws_permessage_deflate_partial_scratch_failures()
 
 void test_ws_pmd_negotiated_uncompressed_frame_accepted()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
     const char *text = "plain";
     uint8_t frame[16];
     size_t n = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)text, (uint16_t)strlen(text), PROTO_TRUE);
     push_bytes(0, frame, n);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
     TEST_ASSERT_FALSE(ws->msg_compressed);
@@ -1443,12 +1444,12 @@ void test_ws_pmd_negotiated_uncompressed_frame_accepted()
 
 void test_ws_outbound_binary_and_scratch_starved()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
-    WsV.frag_size = 0;
+    Ws.frag_size = 0;
     Ws.set_frag_size(protocore_ws_span());
 
     static uint8_t bin[64];
@@ -1457,12 +1458,12 @@ void test_ws_outbound_binary_and_scratch_starved()
         bin[i] = (uint8_t)(i & 1);
     }
     tcp_capture_reset();
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_BINARY;
-    WsV.frame.payload = bin;
-    WsV.frame.len = sizeof(bin);
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_BINARY;
+    Ws.frame.payload = bin;
+    Ws.frame.len = sizeof(bin);
     Ws.send_frame(protocore_ws_span());
-    TEST_ASSERT_TRUE(WsV.ok);
+    TEST_ASSERT_TRUE(Ws.ok);
     const uint8_t *s = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(0x80 | 0x40 | (uint8_t)WS_OP_BINARY, s[0]);
     tcp_capture_disable();
@@ -1471,12 +1472,12 @@ void test_ws_outbound_binary_and_scratch_starved()
     void *hog = protocore_plaintext_alloc(ws_scratch_available(), 1);
     TEST_ASSERT_NOT_NULL(hog);
     tcp_capture_reset();
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_BINARY;
-    WsV.frame.payload = bin;
-    WsV.frame.len = sizeof(bin);
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_BINARY;
+    Ws.frame.payload = bin;
+    Ws.frame.len = sizeof(bin);
     Ws.send_frame(protocore_ws_span());
-    TEST_ASSERT_TRUE(WsV.ok);
+    TEST_ASSERT_TRUE(Ws.ok);
     s = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(0x80 | (uint8_t)WS_OP_BINARY, s[0]);
     tcp_capture_disable();
@@ -1485,12 +1486,12 @@ void test_ws_outbound_binary_and_scratch_starved()
     hog = protocore_plaintext_alloc(ws_scratch_available() - (DEFLATE_SCRATCH_SIZE + 8), 1);
     TEST_ASSERT_NOT_NULL(hog);
     tcp_capture_reset();
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_BINARY;
-    WsV.frame.payload = bin;
-    WsV.frame.len = sizeof(bin);
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_BINARY;
+    Ws.frame.payload = bin;
+    Ws.frame.len = sizeof(bin);
     Ws.send_frame(protocore_ws_span());
-    TEST_ASSERT_TRUE(WsV.ok);
+    TEST_ASSERT_TRUE(Ws.ok);
     s = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(0x80 | (uint8_t)WS_OP_BINARY, s[0]);
     tcp_capture_disable();
@@ -1499,45 +1500,45 @@ void test_ws_outbound_binary_and_scratch_starved()
 
 void test_ws_outbound_pmd_zero_len_and_control()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
-    WsV.frag_size = 0;
+    Ws.frag_size = 0;
     Ws.set_frag_size(protocore_ws_span());
 
     tcp_capture_reset();
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_TEXT;
-    WsV.frame.payload = NULL;
-    WsV.frame.len = 0;
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_TEXT;
+    Ws.frame.payload = NULL;
+    Ws.frame.len = 0;
     Ws.send_frame(protocore_ws_span());
-    TEST_ASSERT_TRUE(WsV.ok);
+    TEST_ASSERT_TRUE(Ws.ok);
     tcp_capture_disable();
 
     tcp_capture_reset();
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_PING;
-    WsV.frame.payload = (const uint8_t *)"AAAA";
-    WsV.frame.len = 4;
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_PING;
+    Ws.frame.payload = (const uint8_t *)"AAAA";
+    Ws.frame.len = 4;
     Ws.send_frame(protocore_ws_span());
-    TEST_ASSERT_TRUE(WsV.ok);
+    TEST_ASSERT_TRUE(Ws.ok);
     tcp_capture_disable();
 }
 
 void test_ws_pmd_continuation_with_rsv1_rejected()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
     uint8_t f1[16];
     size_t n1 = build_frame(f1, WS_OP_TEXT, PROTO_FALSE, (const uint8_t *)"He", 2, PROTO_TRUE);
     push_bytes(0, f1, n1);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_TRUE(ws->fragmenting);
 
@@ -1545,7 +1546,7 @@ void test_ws_pmd_continuation_with_rsv1_rejected()
     size_t n2 = build_frame(f2, WS_OP_CONTINUATION, PROTO_TRUE, (const uint8_t *)"llo", 3, PROTO_TRUE);
     f2[0] |= 0x40;
     push_bytes(0, f2, n2);
-    WsV.conn = ws;
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 }
@@ -1554,26 +1555,26 @@ void test_ws_pmd_continuation_with_rsv1_rejected()
 
 void test_ws_outbound_fragmentation()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
 #if PROTOCORE_ENABLE_WS_DEFLATE
     ws->pmd = PROTO_FALSE;
 #endif
     const uint8_t msg[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
-    WsV.frag_size = 4;
+    Ws.frag_size = 4;
     Ws.set_frag_size(protocore_ws_span());
     tcp_capture_reset();
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_BINARY;
-    WsV.frame.payload = msg;
-    WsV.frame.len = sizeof(msg);
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_BINARY;
+    Ws.frame.payload = msg;
+    Ws.frame.len = sizeof(msg);
     Ws.send_frame(protocore_ws_span());
-    TEST_ASSERT_TRUE(WsV.ok);
+    TEST_ASSERT_TRUE(Ws.ok);
     tcp_capture_disable();
-    WsV.frag_size = 0;
+    Ws.frag_size = 0;
     Ws.set_frag_size(protocore_ws_span());
 
     const uint8_t *s = (const uint8_t *)tcp_captured();
@@ -1591,12 +1592,12 @@ void test_ws_outbound_fragmentation()
     TEST_ASSERT_EQUAL_UINT8(10, s[15]);
 
     tcp_capture_reset();
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_BINARY;
-    WsV.frame.payload = msg;
-    WsV.frame.len = sizeof(msg);
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_BINARY;
+    Ws.frame.payload = msg;
+    Ws.frame.len = sizeof(msg);
     Ws.send_frame(protocore_ws_span());
-    TEST_ASSERT_TRUE(WsV.ok);
+    TEST_ASSERT_TRUE(Ws.ok);
     tcp_capture_disable();
     s = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(0x80 | (uint8_t)WS_OP_BINARY, s[0]);
@@ -1605,10 +1606,10 @@ void test_ws_outbound_fragmentation()
 
 void test_ws_send_frame_paths_and_parse_guard()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
-    WsV.frag_size = 0;
+    WsConn *ws = Ws.found;
+    Ws.frag_size = 0;
     Ws.set_frag_size(protocore_ws_span());
     uint8_t payload[200];
     for (int i = 0; i < 200; i++)
@@ -1617,171 +1618,171 @@ void test_ws_send_frame_paths_and_parse_guard()
     }
 
     tcp_capture_reset();
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_BINARY;
-    WsV.frame.payload = payload;
-    WsV.frame.len = 200;
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_BINARY;
+    Ws.frame.payload = payload;
+    Ws.frame.len = 200;
     Ws.send_frame(protocore_ws_span());
-    TEST_ASSERT_TRUE(WsV.ok);
+    TEST_ASSERT_TRUE(Ws.ok);
     const uint8_t *sent = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(126, sent[1]);
     TEST_ASSERT_EQUAL_UINT8(0, sent[2]);
     TEST_ASSERT_EQUAL_UINT8(200, sent[3]);
     tcp_capture_disable();
 
-    WsV.frag_size = 64;
+    Ws.frag_size = 64;
     Ws.set_frag_size(protocore_ws_span());
     tcp_capture_reset();
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_TEXT;
-    WsV.frame.payload = payload;
-    WsV.frame.len = 200;
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_TEXT;
+    Ws.frame.payload = payload;
+    Ws.frame.len = 200;
     Ws.send_frame(protocore_ws_span());
-    TEST_ASSERT_TRUE(WsV.ok);
+    TEST_ASSERT_TRUE(Ws.ok);
     TEST_ASSERT_TRUE(tcp_captured_len() > 200);
     tcp_capture_disable();
-    WsV.frag_size = 0;
+    Ws.frag_size = 0;
     Ws.set_frag_size(protocore_ws_span());
 
     conn_pool[0].state = CONN_CLOSING;
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_TEXT;
-    WsV.frame.payload = payload;
-    WsV.frame.len = 10;
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_TEXT;
+    Ws.frame.payload = payload;
+    Ws.frame.len = 10;
     Ws.send_frame(protocore_ws_span());
-    TEST_ASSERT_FALSE(WsV.ok);
-    WsV.conn = ws;
+    TEST_ASSERT_FALSE(Ws.ok);
+    Ws.conn = ws;
     Ws.parse(protocore_ws_span());
     conn_pool[0].state = CONN_ACTIVE;
 }
 
 void test_ws_send_frame_header_write_failure()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
-    WsV.frag_size = 0;
+    WsConn *ws = Ws.found;
+    Ws.frag_size = 0;
     Ws.set_frag_size(protocore_ws_span());
     tcp_capture_reset();
     mock_send_fail_after(0);
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_TEXT;
-    WsV.frame.payload = (const uint8_t *)"hi";
-    WsV.frame.len = 2;
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_TEXT;
+    Ws.frame.payload = (const uint8_t *)"hi";
+    Ws.frame.len = 2;
     Ws.send_frame(protocore_ws_span());
-    TEST_ASSERT_FALSE(WsV.ok);
+    TEST_ASSERT_FALSE(Ws.ok);
     mock_send_fail_after(-1);
     tcp_capture_disable();
 }
 
 void test_ws_send_frame_payload_write_failure()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
-    WsV.frag_size = 0;
+    WsConn *ws = Ws.found;
+    Ws.frag_size = 0;
     Ws.set_frag_size(protocore_ws_span());
     tcp_capture_reset();
     mock_send_fail_after(1);
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_TEXT;
-    WsV.frame.payload = (const uint8_t *)"hi";
-    WsV.frame.len = 2;
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_TEXT;
+    Ws.frame.payload = (const uint8_t *)"hi";
+    Ws.frame.len = 2;
     Ws.send_frame(protocore_ws_span());
-    TEST_ASSERT_FALSE(WsV.ok);
+    TEST_ASSERT_FALSE(Ws.ok);
     mock_send_fail_after(-1);
     tcp_capture_disable();
 }
 
 void test_ws_send_frame_zero_length_payload()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
-    WsV.frag_size = 0;
+    WsConn *ws = Ws.found;
+    Ws.frag_size = 0;
     Ws.set_frag_size(protocore_ws_span());
     tcp_capture_reset();
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_PONG;
-    WsV.frame.payload = NULL;
-    WsV.frame.len = 0;
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_PONG;
+    Ws.frame.payload = NULL;
+    Ws.frame.len = 0;
     Ws.send_frame(protocore_ws_span());
-    TEST_ASSERT_TRUE(WsV.ok);
+    TEST_ASSERT_TRUE(Ws.ok);
     TEST_ASSERT_EQUAL_size_t(2, tcp_captured_len());
     tcp_capture_disable();
 }
 
 void test_ws_send_frame_null_payload_with_nonzero_length()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
-    WsV.frag_size = 0;
+    WsConn *ws = Ws.found;
+    Ws.frag_size = 0;
     Ws.set_frag_size(protocore_ws_span());
     tcp_capture_reset();
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_PING;
-    WsV.frame.payload = NULL;
-    WsV.frame.len = 5;
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_PING;
+    Ws.frame.payload = NULL;
+    Ws.frame.len = 5;
     Ws.send_frame(protocore_ws_span());
-    TEST_ASSERT_TRUE(WsV.ok);
+    TEST_ASSERT_TRUE(Ws.ok);
     TEST_ASSERT_EQUAL_size_t(2, tcp_captured_len());
     tcp_capture_disable();
 }
 
 void test_ws_send_frame_fits_within_frag_size_single_frame()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
-    WsV.frag_size = 100;
+    WsConn *ws = Ws.found;
+    Ws.frag_size = 100;
     Ws.set_frag_size(protocore_ws_span());
     tcp_capture_reset();
     const uint8_t msg[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_BINARY;
-    WsV.frame.payload = msg;
-    WsV.frame.len = sizeof(msg);
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_BINARY;
+    Ws.frame.payload = msg;
+    Ws.frame.len = sizeof(msg);
     Ws.send_frame(protocore_ws_span());
-    TEST_ASSERT_TRUE(WsV.ok);
+    TEST_ASSERT_TRUE(Ws.ok);
     const uint8_t *s = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(0x80 | (uint8_t)WS_OP_BINARY, s[0]);
     TEST_ASSERT_EQUAL_UINT8(10, s[1]);
     tcp_capture_disable();
-    WsV.frag_size = 0;
+    Ws.frag_size = 0;
     Ws.set_frag_size(protocore_ws_span());
 }
 
 void test_ws_send_frame_fragmentation_mid_send_failure()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
-    WsV.frag_size = 4;
+    WsConn *ws = Ws.found;
+    Ws.frag_size = 4;
     Ws.set_frag_size(protocore_ws_span());
     const uint8_t msg[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     tcp_capture_reset();
     mock_send_fail_after(2);
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_BINARY;
-    WsV.frame.payload = msg;
-    WsV.frame.len = sizeof(msg);
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_BINARY;
+    Ws.frame.payload = msg;
+    Ws.frame.len = sizeof(msg);
     Ws.send_frame(protocore_ws_span());
-    TEST_ASSERT_FALSE(WsV.ok);
+    TEST_ASSERT_FALSE(Ws.ok);
     mock_send_fail_after(-1);
     tcp_capture_disable();
-    WsV.frag_size = 0;
+    Ws.frag_size = 0;
     Ws.set_frag_size(protocore_ws_span());
 }
 
 void test_ws_close_when_conn_inactive_skips_flush()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     conn_pool[0].state = CONN_CLOSING;
-    WsV.conn = ws;
-    WsV.frame.code = WS_CLOSE_NORMAL;
+    Ws.conn = ws;
+    Ws.frame.code = WS_CLOSE_NORMAL;
     Ws.close(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_CLOSED, ws->parse_state);
     conn_pool[0].state = CONN_ACTIVE;
@@ -1789,15 +1790,15 @@ void test_ws_close_when_conn_inactive_skips_flush()
 
 void test_ws_ping_flush_skipped_when_conn_inactive()
 {
-    WsV.slot = 0;
+    Ws.slot = 0;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     uint8_t frame[6] = {0x89, 0x80, 0, 0, 0, 0};
     conn_pool[0].state = CONN_CLOSING;
     for (size_t i = 0; i < sizeof(frame); i++)
     {
-        WsV.conn = ws;
-        WsV.byte = frame[i];
+        Ws.conn = ws;
+        Ws.byte = frame[i];
         Ws.feed_byte(protocore_ws_span());
     }
     TEST_ASSERT_EQUAL(WS_HEADER1, ws->parse_state);

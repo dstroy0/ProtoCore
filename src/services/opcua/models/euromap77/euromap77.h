@@ -110,12 +110,14 @@ typedef struct
     const char *device_revision;   ///< DeviceRevision.
     const char *manufacturer_uri;  ///< ManufacturerUri.
 } EmMachineInformation;
+
 /** @brief IMM live status (EUROMAP 77 MachineStatus, common subset). */
 typedef struct
 {
     proto_bool is_present;      ///< IsPresent.
     EmMachineMode machine_mode; ///< MachineMode.
 } EmMachineStatus;
+
 /** @brief The active job's static parameters (EUROMAP 77 Jobs.ActiveJob, common subset). */
 typedef struct
 {
@@ -128,6 +130,7 @@ typedef struct
     uint32_t num_cavities;       ///< NumCavities.
     uint64_t nominal_parts;      ///< NominalParts.
 } EmActiveJob;
+
 /** @brief The active job's live production counters (EUROMAP 77 Jobs.ActiveJobValues; counters UInt64). */
 typedef struct
 {
@@ -140,6 +143,7 @@ typedef struct
     uint64_t job_bad_parts_counter;  ///< JobBadPartsCounter.
     EmJobStatus job_status;          ///< JobStatus.
 } EmActiveJobValues;
+
 /**
  * @brief The whole IMM_MES_Interface the server exposes. Own it in your sketch and refresh its fields
  *        each loop from your machine I/O; the resolvers read straight out of it (no copy). String fields
@@ -153,16 +157,19 @@ typedef struct
     EmActiveJob active_job;              ///< Jobs.ActiveJob.
     EmActiveJobValues active_job_values; ///< Jobs.ActiveJobValues.
 } EmImm;
+
 /** @brief What bind takes: imm. */
 typedef struct
 {
     const EmImm *imm;
 } Euromap77BindArgs;
+
 /** @brief What install takes: imm. */
 typedef struct
 {
     const EmImm *imm;
 } Euromap77InstallArgs;
+
 /**
  * @brief EUROMAP 77 / OPC 40077 - OPC UA for injection moulding machines (IMM <-> MES), the IMM_MES_Interface
  * information model (PROTOCORE_ENABLE_EUROMAP77).
@@ -188,33 +195,16 @@ typedef struct
 {
     Euromap77BindArgs bind_args;
     Euromap77InstallArgs install_args;
+
     proto_bool ok;
     uint16_t ns;
-} Euromap77Vars;
 
-/** @brief The operands and the outcome. */
-extern Euromap77Vars Euromap77V;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const bind)(uint8_t *restrict work);
     void (*const install)(uint8_t *restrict work);
 } Euromap77Ns;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in Euromap77V or a region of the borrow at a fixed offset.
-void protocore_euromap77_bind(uint8_t *restrict work);
-void protocore_euromap77_install(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Euromap77.bind(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const Euromap77Ns Euromap77 __attribute__((unused)) = {
-    .bind = protocore_euromap77_bind,
-    .install = protocore_euromap77_install,
-};
+/** @brief The one symbol this module exports. */
+extern Euromap77Ns Euromap77;
 
 /**
  * @brief The PROTOCORE_EUROMAP77_BORROW bytes this module's state lives in.

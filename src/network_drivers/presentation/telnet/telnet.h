@@ -49,6 +49,7 @@ typedef struct
     const struct protocore_fval *val;   ///< the values that fill it
     size_t nv;                          ///< how many
 } TelnetOutArgs;
+
 /**
  * @brief The console an application drives, and the three arms the session layer turns.
  *
@@ -86,59 +87,31 @@ typedef struct
  *   Telnet.frame(Telnet.internal);
  * @endcode
  */
+
 typedef struct
 {
     uint8_t slot;       ///< the NVT every call names
     TelnetCommandCb cb; ///< what a received command line is dispatched to
-    TelnetOutArgs out;  ///< what a write puts on the NVT
+
+    TelnetOutArgs out; ///< what a write puts on the NVT
+
     uint8_t u8;
     const struct ProtoHandler *handler;
-} TelnetVars;
 
-/** @brief The operands and the outcome. */
-extern TelnetVars TelnetV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const on_command)(uint8_t *restrict work);
     void (*const print)(uint8_t *restrict work);
     void (*const println)(uint8_t *restrict work);
     void (*const frame)(uint8_t *restrict work);
     void (*const client_count)(uint8_t *restrict work);
+
     void (*const accept)(uint8_t *restrict work);
     void (*const rx)(uint8_t *restrict work);
     void (*const close)(uint8_t *restrict work);
     void (*const proto_handler)(uint8_t *restrict work);
 } TelnetNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in TelnetV or a region of the borrow at a fixed offset.
-void protocore_telnet_on_command(uint8_t *restrict work);
-void protocore_telnet_print(uint8_t *restrict work);
-void protocore_telnet_println(uint8_t *restrict work);
-void protocore_telnet_frame(uint8_t *restrict work);
-void protocore_telnet_client_count(uint8_t *restrict work);
-void protocore_telnet_accept(uint8_t *restrict work);
-void protocore_telnet_rx(uint8_t *restrict work);
-void protocore_telnet_close(uint8_t *restrict work);
-void protocore_telnet_proto_handler(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Telnet.on_command(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const TelnetNs Telnet __attribute__((unused)) = {
-    .on_command = protocore_telnet_on_command,
-    .print = protocore_telnet_print,
-    .println = protocore_telnet_println,
-    .frame = protocore_telnet_frame,
-    .client_count = protocore_telnet_client_count,
-    .accept = protocore_telnet_accept,
-    .rx = protocore_telnet_rx,
-    .close = protocore_telnet_close,
-    .proto_handler = protocore_telnet_proto_handler,
-};
+/** @brief The one symbol this module exports. */
+extern TelnetNs Telnet;
 
 /**
  * @brief The PROTOCORE_TELNET_BORROW bytes this module's state lives in.

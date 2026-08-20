@@ -78,7 +78,7 @@ uint8_t *protocore_http_span(void)
 
 static void set_not_found(uint8_t *restrict work)
 {
-    HTTP_CTX(work)->not_found = HttpV.cb;
+    HTTP_CTX(work)->not_found = Http.cb;
 }
 
 // Every other owner protocore_server_reset() calls exposes this; without it a handler registered here
@@ -110,99 +110,99 @@ static void set_edge_poll(uint8_t *restrict work)
 static void status_text(uint8_t *restrict work)
 {
     (void)work;
-    const int code = HttpV.code;
+    const int code = Http.code;
     switch (code)
     {
     case 200:
-        HttpV.text = "OK";
+        Http.text = "OK";
         return;
     case 201:
-        HttpV.text = "Created";
+        Http.text = "Created";
         return;
     case 204:
-        HttpV.text = "No Content";
+        Http.text = "No Content";
         return;
     case 206:
-        HttpV.text = "Partial Content";
+        Http.text = "Partial Content";
         return;
 #if PROTOCORE_ENABLE_WEBDAV
     case 207:
-        HttpV.text = "Multi-Status";
+        Http.text = "Multi-Status";
         return;
 #endif
     case 301:
-        HttpV.text = "Moved Permanently";
+        Http.text = "Moved Permanently";
         return;
     case 302:
-        HttpV.text = "Found";
+        Http.text = "Found";
         return;
     case 303:
-        HttpV.text = "See Other";
+        Http.text = "See Other";
         return;
     case 304:
-        HttpV.text = "Not Modified";
+        Http.text = "Not Modified";
         return;
     case 307:
-        HttpV.text = "Temporary Redirect";
+        Http.text = "Temporary Redirect";
         return;
     case 308:
-        HttpV.text = "Permanent Redirect";
+        Http.text = "Permanent Redirect";
         return;
     case 400:
-        HttpV.text = "Bad Request";
+        Http.text = "Bad Request";
         return;
     case 401:
-        HttpV.text = "Unauthorized";
+        Http.text = "Unauthorized";
         return;
     case 403:
-        HttpV.text = "Forbidden";
+        Http.text = "Forbidden";
         return;
     case 404:
-        HttpV.text = "Not Found";
+        Http.text = "Not Found";
         return;
     case 405:
-        HttpV.text = "Method Not Allowed";
+        Http.text = "Method Not Allowed";
         return;
     case 408:
-        HttpV.text = "Request Timeout";
+        Http.text = "Request Timeout";
         return;
     case 409:
-        HttpV.text = "Conflict";
+        Http.text = "Conflict";
         return;
 #if PROTOCORE_ENABLE_WEBDAV
     case 412:
-        HttpV.text = "Precondition Failed";
+        Http.text = "Precondition Failed";
         return;
     case 423:
-        HttpV.text = "Locked";
+        Http.text = "Locked";
         return;
     case 502:
-        HttpV.text = "Bad Gateway";
+        Http.text = "Bad Gateway";
         return;
 #endif
     case 413:
-        HttpV.text = "Payload Too Large";
+        Http.text = "Payload Too Large";
         return;
     case 414:
-        HttpV.text = "URI Too Long";
+        Http.text = "URI Too Long";
         return;
     case 416:
-        HttpV.text = "Range Not Satisfiable";
+        Http.text = "Range Not Satisfiable";
         return;
     case 429:
-        HttpV.text = "Too Many Requests";
+        Http.text = "Too Many Requests";
         return;
     case 500:
-        HttpV.text = "Internal Server Error";
+        Http.text = "Internal Server Error";
         return;
     case 501:
-        HttpV.text = "Not Implemented";
+        Http.text = "Not Implemented";
         return;
     case 503:
-        HttpV.text = "Service Unavailable";
+        Http.text = "Service Unavailable";
         return;
     default:
-        HttpV.text = "Unknown";
+        Http.text = "Unknown";
         return;
     }
 }
@@ -220,47 +220,47 @@ static void status_text(uint8_t *restrict work)
 static void parse_method(uint8_t *restrict work)
 {
     (void)work;
-    const char *m = HttpV.method_args.token;
+    const char *m = Http.method_args.token;
     // Each compare is bounded by the token it is comparing against, not by the buffer @p m came
     // from: one more byte than the literal is already enough to decide, because a longer method
     // scans to the bound without finding its terminator and fails on length before any byte is
     // compared. That keeps this function honest about a caller it does not otherwise constrain.
     if (str.eq(m, "GET", sizeof("GET"), PROTO_FALSE))
     {
-        HttpV.method_of = HTTP_GET;
+        Http.method_of = HTTP_GET;
         return;
     }
     if (str.eq(m, "POST", sizeof("POST"), PROTO_FALSE))
     {
-        HttpV.method_of = HTTP_POST;
+        Http.method_of = HTTP_POST;
         return;
     }
     if (str.eq(m, "PUT", sizeof("PUT"), PROTO_FALSE))
     {
-        HttpV.method_of = HTTP_PUT;
+        Http.method_of = HTTP_PUT;
         return;
     }
     if (str.eq(m, "DELETE", sizeof("DELETE"), PROTO_FALSE))
     {
-        HttpV.method_of = HTTP_DELETE;
+        Http.method_of = HTTP_DELETE;
         return;
     }
     if (str.eq(m, "PATCH", sizeof("PATCH"), PROTO_FALSE))
     {
-        HttpV.method_of = HTTP_PATCH;
+        Http.method_of = HTTP_PATCH;
         return;
     }
     if (str.eq(m, "HEAD", sizeof("HEAD"), PROTO_FALSE))
     {
-        HttpV.method_of = HTTP_HEAD;
+        Http.method_of = HTTP_HEAD;
         return;
     }
     if (str.eq(m, "OPTIONS", sizeof("OPTIONS"), PROTO_FALSE))
     {
-        HttpV.method_of = HTTP_OPTIONS;
+        Http.method_of = HTTP_OPTIONS;
         return;
     }
-    HttpV.method_of = HTTP_METHOD_UNKNOWN;
+    Http.method_of = HTTP_METHOD_UNKNOWN;
     return;
 }
 
@@ -270,32 +270,32 @@ static void parse_method(uint8_t *restrict work)
 static void method_name(uint8_t *restrict work)
 {
     (void)work;
-    const HttpMethod m = HttpV.method_args.method;
+    const HttpMethod m = Http.method_args.method;
     switch (m)
     {
     case HTTP_GET:
-        HttpV.text = "GET";
+        Http.text = "GET";
         return;
     case HTTP_POST:
-        HttpV.text = "POST";
+        Http.text = "POST";
         return;
     case HTTP_PUT:
-        HttpV.text = "PUT";
+        Http.text = "PUT";
         return;
     case HTTP_DELETE:
-        HttpV.text = "DELETE";
+        Http.text = "DELETE";
         return;
     case HTTP_PATCH:
-        HttpV.text = "PATCH";
+        Http.text = "PATCH";
         return;
     case HTTP_HEAD:
-        HttpV.text = "HEAD";
+        Http.text = "HEAD";
         return;
     case HTTP_OPTIONS:
-        HttpV.text = "OPTIONS";
+        Http.text = "OPTIONS";
         return;
     default:
-        HttpV.text = "";
+        Http.text = "";
         return;
     }
 }
@@ -314,19 +314,19 @@ static void method_name(uint8_t *restrict work)
 static void path_matches(uint8_t *restrict work)
 {
     (void)work;
-    const char *route = HttpV.route_args.route;
-    const proto_bool is_wildcard = HttpV.route_args.is_wildcard;
-    const char *req_path = HttpV.route_args.path;
+    const char *route = Http.route_args.route;
+    const proto_bool is_wildcard = Http.route_args.is_wildcard;
+    const char *req_path = Http.route_args.path;
     if (!is_wildcard)
     {
-        HttpV.ok = str.eq(route, req_path, MAX_PATH_LEN, PROTO_FALSE);
+        Http.ok = str.eq(route, req_path, MAX_PATH_LEN, PROTO_FALSE);
         return;
     }
 
     // Prefix match: compare everything up to (but not including) the '*'. A first difference AT the
     // bound is the whole prefix agreeing, which is what the scan returns when it never parts.
     size_t prefix_len = str.len(route, MAX_PATH_LEN) - 1;
-    HttpV.ok = str.diff(route, req_path, prefix_len, PROTO_FALSE) == prefix_len;
+    Http.ok = str.diff(route, req_path, prefix_len, PROTO_FALSE) == prefix_len;
 }
 
 // Record one `:name` path parameter (key from the route segment, value from the path segment).
@@ -366,9 +366,9 @@ static void capture_path_param(HttpReq *req, const char *key, size_t klen, const
 static void match_path_params(uint8_t *restrict work)
 {
     (void)work;
-    const char *route = HttpV.route_args.route;
-    const char *path = HttpV.route_args.path;
-    HttpReq *req = HttpV.route_args.req;
+    const char *route = Http.route_args.route;
+    const char *path = Http.route_args.path;
+    HttpReq *req = Http.route_args.req;
     req->path_param_count = 0;
     const char *r = route;
     const char *p = path;
@@ -394,20 +394,20 @@ static void match_path_params(uint8_t *restrict work)
         {
             if (plen == 0)
             {
-                HttpV.ok = PROTO_FALSE;
+                Http.ok = PROTO_FALSE;
                 return; // a `:name` segment must capture a non-empty value
             }
             capture_path_param(req, rseg + 1, rlen - 1, pseg, plen);
         }
         else if (rlen != plen || str.diff(rseg, pseg, rlen, PROTO_FALSE) != rlen)
         {
-            HttpV.ok = PROTO_FALSE;
+            Http.ok = PROTO_FALSE;
             return; // literal segment mismatch
         }
     }
 
     // Both strings must be fully consumed (identical segment counts).
-    HttpV.ok = (*r == '\0' && *p == '\0');
+    Http.ok = (*r == '\0' && *p == '\0');
 }
 
 // True when the request on this slot used the HEAD method, whose response must
@@ -416,16 +416,16 @@ static void match_path_params(uint8_t *restrict work)
 static void req_is_head(uint8_t *restrict work)
 {
     (void)work;
-    HttpV.ok = str.eq(http_pool[HttpV.slot].method, "HEAD", sizeof("HEAD"), PROTO_FALSE);
+    Http.ok = str.eq(http_pool[Http.slot].method, "HEAD", sizeof("HEAD"), PROTO_FALSE);
 }
 
 // Append a method token to a comma-separated Allow list, de-duplicating.
 static void allow_append(uint8_t *restrict work)
 {
     (void)work;
-    char *buf = HttpV.allow.buf;
-    const size_t cap = HttpV.allow.cap;
-    const char *m = HttpV.method_args.token;
+    char *buf = Http.allow.buf;
+    const size_t cap = Http.allow.cap;
+    const char *m = Http.method_args.token;
     // method_name() hands back one of the seven method literals, so the longest of them is the
     // bound on @p m - the Allow buffer's capacity is the bound on `buf` and says nothing about it.
     //
@@ -468,7 +468,7 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
     TcpConn *conn = &conn_pool[slot_id];
     if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
     {
-        HttpConnV.slot = slot_id;
+        HttpConn.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
         return;
     }
@@ -491,28 +491,28 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
 
     // The last write carries the flush: send_flush is write+output in one marshal, so
     // the response leaves in a single trip whether or not a body follows the header.
-    HttpV.slot = slot_id;
+    Http.slot = slot_id;
     Http.req_is_head(protocore_http_span());
-    if (blen > 0 && !HttpV.ok)
+    if (blen > 0 && !Http.ok)
     {
-        ConnPoolV.slot = slot_id;
-        ConnPoolV.io.data = header;
-        ConnPoolV.io.len = (proto_u16)hlen;
-        ConnPoolV.send(protocore_conn_pool_span());
-        ConnPoolV.io.data = body;
-        ConnPoolV.io.len = (proto_u16)blen;
+        ConnPool.slot = slot_id;
+        ConnPool.io.data = header;
+        ConnPool.io.len = (proto_u16)hlen;
+        ConnPool.send(protocore_conn_pool_span());
+        ConnPool.io.data = body;
+        ConnPool.io.len = (proto_u16)blen;
         ConnPool.send_flush(protocore_conn_pool_span());
     }
     else
     {
-        ConnPoolV.slot = slot_id;
-        ConnPoolV.io.data = header;
-        ConnPoolV.io.len = (proto_u16)hlen;
+        ConnPool.slot = slot_id;
+        ConnPool.io.data = header;
+        ConnPool.io.len = (proto_u16)hlen;
         ConnPool.send_flush(protocore_conn_pool_span());
     }
-    ConnPoolV.slot = slot_id;
+    ConnPool.slot = slot_id;
     ConnPool.begin_close(protocore_conn_pool_span()); // dwell in CONN_CLOSING until the response drains
-    HttpConnV.slot = slot_id;
+    HttpConn.slot = slot_id;
     HttpConn.reset(protocore_http_conn_span());
 }
 
@@ -539,8 +539,8 @@ static protocore_ip lockout_client_ip(uint8_t slot_id)
 {
     protocore_ip ip;
     ip.family = PROTOCORE_IP_NONE;
-    ConnPoolV.slot = slot_id;
-    ConnPoolV.out = &ip;
+    ConnPool.slot = slot_id;
+    ConnPool.out = &ip;
     ConnPool.remote_addr(protocore_conn_pool_span());
     return ip;
 }
@@ -569,20 +569,20 @@ static proto_bool route_admits(const HttpRoute *r, uint8_t slot_id, HttpReq *req
         return PROTO_FALSE;
     }
     proto_bool matched = r->is_regex ? regex_match(r->path, req->path)
-                                     : (HttpV.route_args.route = r->path, HttpV.route_args.path = req->path,
-                                        HttpV.route_args.req = req, HttpV.route_args.is_wildcard = r->is_wildcard,
+                                     : (Http.route_args.route = r->path, Http.route_args.path = req->path,
+                                        Http.route_args.req = req, Http.route_args.is_wildcard = r->is_wildcard,
                                         r->is_param ? Http.match_path_params(protocore_http_span())
                                                     : Http.path_matches(protocore_http_span()),
-                                        HttpV.ok);
+                                        Http.ok);
     if (!matched)
     {
         return PROTO_FALSE;
     }
     // Per-route interface gate: a route bound to STA/AP is invisible on the
     // other interface (falls through to other routes / 404).
-    ConnPoolV.slot = slot_id;
+    ConnPool.slot = slot_id;
     ConnPool.iface(protocore_conn_pool_span());
-    if (r->iface_filter != PROTOCORE_IF_ANY && r->iface_filter != ConnPoolV.if_kind)
+    if (r->iface_filter != PROTOCORE_IF_ANY && r->iface_filter != ConnPool.if_kind)
     {
         return PROTO_FALSE;
     }
@@ -597,10 +597,10 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
     if (method == HTTP_GET && str.eq(req->path, "/csrf", sizeof("/csrf"), PROTO_FALSE))
     {
         char tok[CSRF_TOKEN_BUF];
-        CsrfV.issue_args.out = tok;
-        CsrfV.issue_args.cap = sizeof(tok);
+        Csrf.issue_args.out = tok;
+        Csrf.issue_args.cap = sizeof(tok);
         Csrf.issue(protocore_csrf_span());
-        if (CsrfV.n > 0)
+        if (Csrf.n > 0)
         {
             set_cookie(slot_id, "csrf", tok, "Path=/; SameSite=Strict");
             char body[CSRF_TOKEN_BUF + 16];
@@ -625,13 +625,13 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
     // X-CSRF-Token header (GET / HEAD / OPTIONS are exempt - not state-changing).
     if (method == HTTP_POST || method == HTTP_PUT || method == HTTP_PATCH || method == HTTP_DELETE)
     {
-        HttpParserV.get_header_args.req = req;
-        HttpParserV.get_header_args.key = "X-CSRF-Token";
-        HttpParserV.get_header(protocore_http_parser_span());
-        const char *tok = HttpParserV.text;
-        CsrfV.verify_args.token = tok;
+        HttpParser.get_header_args.req = req;
+        HttpParser.get_header_args.key = "X-CSRF-Token";
+        HttpParser.get_header(protocore_http_parser_span());
+        const char *tok = HttpParser.text;
+        Csrf.verify_args.token = tok;
         Csrf.verify(protocore_csrf_span());
-        if (!tok || !CsrfV.valid)
+        if (!tok || !Csrf.valid)
         {
             send_text(slot_id, 403, PROTOCORE_MIME_TEXT_PLAIN, "CSRF token missing or invalid");
             return PROTO_TRUE;
@@ -644,30 +644,30 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
 #if PROTOCORE_ENABLE_WEBSOCKET
 static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const HttpRoute *r)
 {
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Upgrade";
-    HttpParserV.get_header(protocore_http_parser_span());
-    const char *upgrade_hdr = HttpParserV.text;
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Upgrade";
+    HttpParser.get_header(protocore_http_parser_span());
+    const char *upgrade_hdr = HttpParser.text;
     // RFC 6455 4.2.1: a valid handshake needs Upgrade: websocket AND a Connection
     // header that includes the "Upgrade" token.
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Connection";
-    HttpParserV.get_header(protocore_http_parser_span());
-    HttpConnV.hdr_args.hdr = HttpParserV.text;
-    HttpConnV.hdr_args.token = "upgrade";
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Connection";
+    HttpParser.get_header(protocore_http_parser_span());
+    HttpConn.hdr_args.hdr = HttpParser.text;
+    HttpConn.hdr_args.token = "upgrade";
     HttpConn.has_token(protocore_http_conn_span());
     proto_bool is_ws_upgrade = (method == HTTP_GET) && (upgrade_hdr != NULL) &&
-                               str.eq(upgrade_hdr, "websocket", sizeof("websocket"), PROTO_TRUE) && HttpConnV.ok;
+                               str.eq(upgrade_hdr, "websocket", sizeof("websocket"), PROTO_TRUE) && HttpConn.ok;
     if (!is_ws_upgrade)
     {
         send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "WebSocket upgrade required");
         return;
     }
     // RFC 6455 §4.2.1: only version 13 is supported; otherwise 426.
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Sec-WebSocket-Version";
-    HttpParserV.get_header(protocore_http_parser_span());
-    const char *ws_ver = HttpParserV.text;
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Sec-WebSocket-Version";
+    HttpParser.get_header(protocore_http_parser_span());
+    const char *ws_ver = HttpParser.text;
     if (ws_ver == NULL || !str.eq(ws_ver, "13", sizeof("13"), PROTO_FALSE))
     {
         ws_send_version_required(slot_id);
@@ -701,12 +701,12 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     // spoofed header can neither evade a lockout nor frame another address.
     {
         char fbuf[PROTOCORE_IP_STR_MAX];
-        HttpParserV.forwarded_client_args.req = req;
-        HttpParserV.forwarded_client_args.ip_out = fbuf;
-        HttpParserV.forwarded_client_args.ip_cap = sizeof(fbuf);
-        HttpParserV.forwarded_client_args.is_https = NULL;
-        HttpParserV.forwarded_client(protocore_http_parser_span());
-        const char *fwd = HttpParserV.ok ? fbuf : NULL;
+        HttpParser.forwarded_client_args.req = req;
+        HttpParser.forwarded_client_args.ip_out = fbuf;
+        HttpParser.forwarded_client_args.ip_cap = sizeof(fbuf);
+        HttpParser.forwarded_client_args.is_https = NULL;
+        HttpParser.forwarded_client(protocore_http_parser_span());
+        const char *fwd = HttpParser.ok ? fbuf : NULL;
         protocore_ip eff;
         ForwardedTrust.effective_ip_args.peer = &cip;
         ForwardedTrust.effective_ip_args.fwd_ip_str = fwd;
@@ -716,10 +716,10 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     }
 #endif
     uint32_t now = (uint32_t)Clock.ms;
-    AuthLockoutV.args.ip = &cip;
-    AuthLockoutV.args.now_ms = now;
+    AuthLockout.args.ip = &cip;
+    AuthLockout.args.now_ms = now;
     AuthLockout.remaining(protocore_auth_lockout_span());
-    uint32_t remain = AuthLockoutV.ms;
+    uint32_t remain = AuthLockout.ms;
     if (remain > 0)
     {
         // Address is locked out: 429 + Retry-After, no credential check.
@@ -735,33 +735,33 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     {
         return PROTO_FALSE; // pool exhausted: fail closed
     }
-    AuthV.slot = slot_id;
-    AuthV.req = req;
-    AuthV.id = r->auth_id;
-    AuthV.nonce_args.stale = PROTO_FALSE;
+    Auth.slot = slot_id;
+    Auth.req = req;
+    Auth.id = r->auth_id;
+    Auth.nonce_args.stale = PROTO_FALSE;
     Auth.check(auth_ws);
-    proto_bool stale = AuthV.nonce_args.stale;
-    proto_bool ok = AuthV.ok;
+    proto_bool stale = Auth.nonce_args.stale;
+    proto_bool ok = Auth.ok;
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
     // A stale-nonce retry carries valid credentials, so it is not a failed
     // attempt: don't count it toward the lockout (nor reset the counter).
     if (ok)
     {
-        AuthLockoutV.args.ip = &cip;
+        AuthLockout.args.ip = &cip;
         AuthLockout.succeed(protocore_auth_lockout_span());
     }
     else if (!stale)
     {
-        AuthLockoutV.args.ip = &cip;
-        AuthLockoutV.args.now_ms = now;
+        AuthLockout.args.ip = &cip;
+        AuthLockout.args.now_ms = now;
         AuthLockout.fail(protocore_auth_lockout_span());
     }
 #endif
     if (!ok)
     {
-        AuthV.slot = slot_id;
-        AuthV.id = r->auth_id;
-        AuthV.nonce_args.stale = stale;
+        Auth.slot = slot_id;
+        Auth.id = r->auth_id;
+        Auth.nonce_args.stale = stale;
         Auth.challenge(auth_ws);
         return PROTO_FALSE;
     }
@@ -798,17 +798,17 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
         if (method != HTTP_GET && method != HTTP_HEAD)
         {
             *path_matched = PROTO_TRUE;
-            HttpV.allow.buf = allow_buf;
-            HttpV.allow.cap = allow_cap;
-            HttpV.method_args.token = "GET";
+            Http.allow.buf = allow_buf;
+            Http.allow.cap = allow_cap;
+            Http.method_args.token = "GET";
             Http.allow_append(protocore_http_span());
-            HttpV.method_args.token = "HEAD";
+            Http.method_args.token = "HEAD";
             Http.allow_append(protocore_http_span());
             return PROTO_FALSE;
         }
-        FileServingV.serve_static_request_args.slot_id = slot_id;
-        FileServingV.serve_static_request_args.req = req;
-        FileServingV.serve_static_request_args.r = r;
+        FileServing.serve_static_request_args.slot_id = slot_id;
+        FileServing.serve_static_request_args.req = req;
+        FileServing.serve_static_request_args.r = r;
         FileServing.serve_static_request(protocore_file_serving_span());
         return PROTO_TRUE;
     }
@@ -821,18 +821,18 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
     {
         // Path matches but method differs - record it for a 405 + Allow.
         *path_matched = PROTO_TRUE;
-        HttpV.method_args.method = r->method;
+        Http.method_args.method = r->method;
         Http.method_name(protocore_http_span());
-        HttpV.allow.buf = allow_buf;
-        HttpV.allow.cap = allow_cap;
-        HttpV.method_args.token = HttpV.text;
+        Http.allow.buf = allow_buf;
+        Http.allow.cap = allow_cap;
+        Http.method_args.token = Http.text;
         Http.allow_append(protocore_http_span());
         // A GET route also answers HEAD, so advertise it in Allow.
         if (r->method == HTTP_GET)
         {
-            HttpV.allow.buf = allow_buf;
-            HttpV.allow.cap = allow_cap;
-            HttpV.method_args.token = "HEAD";
+            Http.allow.buf = allow_buf;
+            Http.allow.cap = allow_cap;
+            Http.method_args.token = "HEAD";
             Http.allow_append(protocore_http_span());
         }
         return PROTO_FALSE;
@@ -849,11 +849,11 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
 
 static void match_and_execute(uint8_t *restrict work)
 {
-    const uint8_t slot_id = HttpV.slot;
+    const uint8_t slot_id = Http.slot;
     HttpReq *req = &http_pool[slot_id];
-    HttpV.method_args.token = req->method;
+    Http.method_args.token = req->method;
     Http.parse_method(work);
-    HttpMethod method = HttpV.method_of;
+    HttpMethod method = Http.method_of;
 
     // Start each request with no carried-over custom response headers or
     // captured path parameters.
@@ -875,10 +875,10 @@ static void match_and_execute(uint8_t *restrict work)
     // A WebDAV mount owns its whole subtree and every method on it (including
     // PROPFIND/MKCOL/etc., which Http.parse_method() does not recognize), so intercept
     // before the unknown-method 501 and the normal route loop.
-    DavV.try_serve_dav_args.slot_id = slot_id;
-    DavV.try_serve_dav_args.req = req;
+    Dav.try_serve_dav_args.slot_id = slot_id;
+    Dav.try_serve_dav_args.req = req;
     Dav.try_serve_dav(protocore_webdav_handler_span());
-    if (DavV.ok)
+    if (Dav.ok)
     {
         return;
     }
@@ -899,10 +899,10 @@ static void match_and_execute(uint8_t *restrict work)
 #endif
 
     // RFC 7230 §3.3.1: reject Transfer-Encoding
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Transfer-Encoding";
-    HttpParserV.get_header(protocore_http_parser_span());
-    if (HttpParserV.text != NULL)
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Transfer-Encoding";
+    HttpParser.get_header(protocore_http_parser_span());
+    if (HttpParser.text != NULL)
     {
         send_text(slot_id, 501, PROTOCORE_MIME_TEXT_PLAIN, "Not Implemented");
         return;
@@ -922,11 +922,11 @@ static void match_and_execute(uint8_t *restrict work)
     allow_buf[0] = '\0';
 
     HttpRoutes.count(protocore_http_route_span());
-    for (uint8_t i = 0; i < HttpRoutesV.value; i++)
+    for (uint8_t i = 0; i < HttpRoutes.value; i++)
     {
-        HttpRoutesV.at_args.i = i;
+        HttpRoutes.at_args.i = i;
         HttpRoutes.at(protocore_http_route_span());
-        HttpRoute *r = HttpRoutesV.ptr;
+        HttpRoute *r = HttpRoutes.ptr;
         if (!route_admits(r, slot_id, req))
         {
             continue;
@@ -960,7 +960,7 @@ static void match_and_execute(uint8_t *restrict work)
 // dispatches a completed request into the route table.
 static void poll_slot(uint8_t *restrict work)
 {
-    const uint8_t i = HttpV.slot;
+    const uint8_t i = Http.slot;
 #if PROTOCORE_ENABLE_EDGE_CACHE
     // An edge-cache origin fetch in flight for this slot owns it: pump the fetch and skip the rest of the
     // HTTP pipeline until it completes (and hands off to send_chunked for the cached response).
@@ -972,11 +972,11 @@ static void poll_slot(uint8_t *restrict work)
 #if PROTOCORE_ENABLE_FILE_SERVING
     // A file response in flight owns the slot: page out the next window and
     // skip the rest of the pipeline until the whole body has been sent.
-    FileServingV.holds_slot_args.slot = i;
+    FileServing.holds_slot_args.slot = i;
     FileServing.holds_slot(protocore_file_serving_span());
-    if (FileServingV.ok)
+    if (FileServing.ok)
     {
-        FileServingV.file_send_pump_args.slot_id = i;
+        FileServing.file_send_pump_args.slot_id = i;
         FileServing.file_send_pump(protocore_file_serving_span());
         return;
     }
@@ -990,15 +990,15 @@ static void poll_slot(uint8_t *restrict work)
 
 #if PROTOCORE_ENABLE_WEBSOCKET
     // WebSocket slot - drain ring buffer and dispatch ready frames
-    WsV.slot = i;
+    Ws.slot = i;
     Ws.find(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     if (ws)
     {
 #if PROTOCORE_ENABLE_TLS
-        ConnPoolV.slot = i;
+        ConnPool.slot = i;
         ConnPool.tls(protocore_conn_pool_span());
-        if (ConnPoolV.ok)
+        if (ConnPool.ok)
         {
             // wss://: the bytes are ciphertext, so decrypt records here and
             // feed the frame parser, dispatching each completed frame as it
@@ -1009,13 +1009,13 @@ static void poll_slot(uint8_t *restrict work)
             {
                 for (int k = 0; k < n; k++)
                 {
-                    WsV.conn = ws;
-                    WsV.byte = tbuf[k];
+                    Ws.conn = ws;
+                    Ws.byte = tbuf[k];
                     Ws.feed_byte(protocore_ws_span());
                     if (ws->parse_state == WS_FRAME_READY)
                     {
                         ws_dispatch_message(ws);
-                        WsV.conn = ws;
+                        Ws.conn = ws;
                         Ws.reset_frame(protocore_ws_span());
                     }
                     else if (ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR)
@@ -1031,38 +1031,38 @@ static void poll_slot(uint8_t *restrict work)
             if (ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR || n < 0)
             {
                 ws_dispatch_close(ws);
-                WsV.slot = i;
+                Ws.slot = i;
                 Ws.free(protocore_ws_span());
-                ConnPoolV.slot = i;
+                ConnPool.slot = i;
                 ConnPool.abort_slot(protocore_conn_pool_span()); // transport owns TLS-free + detach + reset + RST
-                HttpConnV.slot = i;
+                HttpConn.slot = i;
                 HttpConn.reset(protocore_http_conn_span());
             }
             return;
         }
 #endif // PROTOCORE_ENABLE_TLS
 
-        WsV.conn = ws;
+        Ws.conn = ws;
         Ws.parse(protocore_ws_span());
 
         if (ws->parse_state == WS_FRAME_READY)
         {
             ws_dispatch_message(ws);
-            WsV.conn = ws;
+            Ws.conn = ws;
             Ws.reset_frame(protocore_ws_span());
         }
         else if (ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR)
         {
             ws_dispatch_close(ws);
-            WsV.slot = i;
+            Ws.slot = i;
             Ws.free(protocore_ws_span());
             // RFC 6455 5.5.1: close the underlying TCP connection after the close
             // handshake. begin_close moves the slot out of CONN_ACTIVE so the
             // post-close bytes are NOT re-parsed as a new HTTP request (the
             // close-frame the WS layer queued still flushes during the dwell).
-            ConnPoolV.slot = i;
+            ConnPool.slot = i;
             ConnPool.begin_close(protocore_conn_pool_span());
-            HttpConnV.slot = i;
+            HttpConn.slot = i;
             HttpConn.reset(protocore_http_conn_span());
         }
         return; // slot is owned by WS; skip HTTP dispatch
@@ -1071,9 +1071,9 @@ static void poll_slot(uint8_t *restrict work)
 
 #if PROTOCORE_ENABLE_SSE
     // SSE slot - connection stays open, nothing to parse from client
-    SseV.slot = i;
+    Sse.slot = i;
     Sse.find(protocore_sse_span());
-    if (SseV.conn)
+    if (Sse.conn)
     {
         return;
     }
@@ -1084,16 +1084,16 @@ static void poll_slot(uint8_t *restrict work)
     // (pipelined) request in its ring buffer with no new EVT_DATA to trigger a
     // parse. Drain it here each tick so it gets dispatched. TLS slots are
     // skipped - their ring holds ciphertext, decrypted in the session layer.
-    ConnPoolV.slot = i;
+    ConnPool.slot = i;
     ConnPool.active(protocore_conn_pool_span());
-    proto_bool live = ConnPoolV.ok;
+    proto_bool live = ConnPool.ok;
 #if PROTOCORE_ENABLE_TLS
     ConnPool.tls(protocore_conn_pool_span());
-    live = live && !ConnPoolV.ok;
+    live = live && !ConnPool.ok;
 #endif
     if (live && http_pool[i].parse_state != PARSE_COMPLETE)
     {
-        HttpConnV.slot = i;
+        HttpConn.slot = i;
         HttpConn.parse(protocore_http_conn_span());
     }
 #endif
@@ -1108,9 +1108,9 @@ static void poll_slot(uint8_t *restrict work)
     // enum) so it never reaps a legitimate slow body: a large streaming upload sits in PARSE_BODY for its whole
     // duration and is governed by the streaming handler + idle timer, not this deadline. WebSocket / SSE were
     // already returned above.
-    ConnPoolV.slot = i;
+    ConnPool.slot = i;
     ConnPool.active(protocore_conn_pool_span());
-    if (ConnPoolV.ok && http_req_start_ms[i] != 0 && http_pool[i].parse_state < PARSE_BODY &&
+    if (ConnPool.ok && http_req_start_ms[i] != 0 && http_pool[i].parse_state < PARSE_BODY &&
         (Clock.ms - http_req_start_ms[i]) >= PROTOCORE_REQUEST_TIMEOUT_MS)
     {
         http_req_start_ms[i] = 0;
@@ -1123,11 +1123,11 @@ static void poll_slot(uint8_t *restrict work)
     if (http_pool[i].parse_state == PARSE_COMPLETE)
     {
         http_req_start_ms[i] = 0; // request complete: disarm; the next keep-alive request re-arms on its 1st byte
-        HttpV.slot = i;
+        Http.slot = i;
         Http.match_and_execute(work);
         if (http_pool[i].parse_state == PARSE_COMPLETE)
         {
-            HttpConnV.slot = i;
+            HttpConn.slot = i;
             HttpConn.reset(protocore_http_conn_span());
         }
     }
@@ -1146,5 +1146,19 @@ static void poll_slot(uint8_t *restrict work)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-HttpVars HttpV;
+HttpNs Http = {
+    .status_text = status_text,
+    .parse_method = parse_method,
+    .method_name = method_name,
+    .path_matches = path_matches,
+    .match_path_params = match_path_params,
+    .req_is_head = req_is_head,
+    .allow_append = allow_append,
+    .match_and_execute = match_and_execute,
+    .set_not_found = set_not_found,
+    .poll_slot = poll_slot,
+    .reset = reset,
+#if PROTOCORE_ENABLE_EDGE_CACHE
+    .set_edge_poll = set_edge_poll,
+#endif
+};

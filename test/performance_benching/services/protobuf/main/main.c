@@ -32,49 +32,49 @@
 // returns the encoded byte count (0 on overflow). Mirrors test_round_trip_reader.
 static size_t pb_encode_sample(uint8_t *buf, size_t cap)
 {
-    ProtobufV.slot = PB_WRITER_SLOT;
-    ProtobufV.writer.buf = buf;
-    ProtobufV.writer.cap = cap;
+    Protobuf.slot = PB_WRITER_SLOT;
+    Protobuf.writer.buf = buf;
+    Protobuf.writer.cap = cap;
     Protobuf.writer_open(protocore_protobuf_span());
 
-    ProtobufV.tag.field_number = 1;
-    ProtobufV.value.u64 = 150;
+    Protobuf.tag.field_number = 1;
+    Protobuf.value.u64 = 150;
     Protobuf.write_uint64(protocore_protobuf_span());
 
-    ProtobufV.tag.field_number = 2;
-    ProtobufV.value.text = "hi";
+    Protobuf.tag.field_number = 2;
+    Protobuf.value.text = "hi";
     Protobuf.write_string(protocore_protobuf_span());
 
-    ProtobufV.tag.field_number = 3;
-    ProtobufV.value.u32 = 0x01020304;
+    Protobuf.tag.field_number = 3;
+    Protobuf.value.u32 = 0x01020304;
     Protobuf.write_fixed32(protocore_protobuf_span());
 
-    ProtobufV.tag.field_number = 4;
-    ProtobufV.value.f64 = 2.5;
+    Protobuf.tag.field_number = 4;
+    Protobuf.value.f64 = 2.5;
     Protobuf.write_double(protocore_protobuf_span());
 
-    ProtobufV.tag.field_number = 5;
-    ProtobufV.value.i64 = -1234567;
+    Protobuf.tag.field_number = 5;
+    Protobuf.value.i64 = -1234567;
     Protobuf.write_sint64(protocore_protobuf_span());
 
     Protobuf.writer_finish(protocore_protobuf_span());
-    return ProtobufV.n;
+    return Protobuf.n;
 }
 
 // Cursor-read every field in `buf`; returns the field count (the reader stops at end-of-buffer).
 static size_t pb_decode_all(const uint8_t *buf, size_t len)
 {
-    ProtobufV.slot = PB_READER_SLOT;
-    ProtobufV.source.buf = buf;
-    ProtobufV.source.len = len;
-    ProtobufV.source.pos = 0;
+    Protobuf.slot = PB_READER_SLOT;
+    Protobuf.source.buf = buf;
+    Protobuf.source.len = len;
+    Protobuf.source.pos = 0;
     Protobuf.reader_open(protocore_protobuf_span());
 
     size_t count = 0;
     for (;;)
     {
         Protobuf.read_record(protocore_protobuf_span());
-        if (!ProtobufV.ok)
+        if (!Protobuf.ok)
         {
             return count;
         }
@@ -85,34 +85,34 @@ static size_t pb_decode_all(const uint8_t *buf, size_t len)
 // Encode a single raw varint into `buf`; returns the byte count.
 static size_t pb_write_one_varint(uint8_t *buf, size_t cap, uint64_t v)
 {
-    ProtobufV.slot = PB_WRITER_SLOT;
-    ProtobufV.writer.buf = buf;
-    ProtobufV.writer.cap = cap;
+    Protobuf.slot = PB_WRITER_SLOT;
+    Protobuf.writer.buf = buf;
+    Protobuf.writer.cap = cap;
     Protobuf.writer_open(protocore_protobuf_span());
-    ProtobufV.value.u64 = v;
+    Protobuf.value.u64 = v;
     Protobuf.write_varint(protocore_protobuf_span());
     Protobuf.writer_finish(protocore_protobuf_span());
-    return ProtobufV.n;
+    return Protobuf.n;
 }
 
 // Decode a single raw varint from `buf`; returns its value (0 on malformed).
 static uint64_t pb_read_one_varint(const uint8_t *buf, size_t len)
 {
-    ProtobufV.slot = PB_READER_SLOT;
-    ProtobufV.source.buf = buf;
-    ProtobufV.source.len = len;
-    ProtobufV.source.pos = 0;
+    Protobuf.slot = PB_READER_SLOT;
+    Protobuf.source.buf = buf;
+    Protobuf.source.len = len;
+    Protobuf.source.pos = 0;
     Protobuf.reader_open(protocore_protobuf_span());
     Protobuf.read_varint(protocore_protobuf_span());
-    return ProtobufV.u64;
+    return Protobuf.u64;
 }
 
 // The sint64 the ZigZag varint `v` stands for.
 static int64_t pb_zigzag64(uint64_t v)
 {
-    ProtobufV.value.u64 = v;
+    Protobuf.value.u64 = v;
     Protobuf.zigzag64(protocore_protobuf_span());
-    return ProtobufV.i64;
+    return Protobuf.i64;
 }
 
 void dbench_run(void)

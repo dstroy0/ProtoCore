@@ -215,11 +215,11 @@ uint8_t *protocore_euromap77_span(void)
     return s_own.span;
 }
 
-void protocore_euromap77_bind(uint8_t *restrict work);
+static void euromap77_bind(uint8_t *restrict work);
 
-void protocore_euromap77_bind(uint8_t *restrict work)
+static void euromap77_bind(uint8_t *restrict work)
 {
-    const EmImm *imm = Euromap77V.bind_args.imm;
+    const EmImm *imm = Euromap77.bind_args.imm;
 
     EuroMap77Ctx *c = EUROMAP77_CTX(work);
     c->imm = imm;
@@ -227,8 +227,8 @@ void protocore_euromap77_bind(uint8_t *restrict work)
     // at are whatever it gave these two URIs rather than a number this model picked.
     c->ns = protocore_opcua_namespace_index(EUROMAP77_NS_URI);
     c->ns_gt = protocore_opcua_namespace_index(EUROMAP83_NS_URI);
-    Euromap77V.ns = c->ns;
-    Euromap77V.ok = PROTO_TRUE;
+    Euromap77.ns = c->ns;
+    Euromap77.ok = PROTO_TRUE;
 }
 
 // OPC UA Part 4 sec 5.11.2: Read is a Server service over the Server's AddressSpace, so this is the
@@ -412,13 +412,13 @@ static int32_t em77_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32
     }
 }
 
-void protocore_euromap77_install(uint8_t *restrict work)
+static void euromap77_install(uint8_t *restrict work)
 {
-    const EmImm *imm = Euromap77V.install_args.imm;
+    const EmImm *imm = Euromap77.install_args.imm;
 
-    Euromap77V.bind_args.imm = imm;
-    protocore_euromap77_bind(work);
-    if (!Euromap77V.ok)
+    Euromap77.bind_args.imm = imm;
+    euromap77_bind(work);
+    if (!Euromap77.ok)
     {
         return;
     }
@@ -426,8 +426,7 @@ void protocore_euromap77_install(uint8_t *restrict work)
     protocore_opcua_set_browse_handler(em77_browse);
 }
 
-/** @brief The operands and the outcome. */
-Euromap77Vars Euromap77V;
+Euromap77Ns Euromap77 = {.bind = euromap77_bind, .install = euromap77_install};
 
 PROTOCORE_END_DECLS
 

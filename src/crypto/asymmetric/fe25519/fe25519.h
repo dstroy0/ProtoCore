@@ -243,33 +243,39 @@ typedef struct
     const uint32_t *x; ///< the first factor, canonical
     const uint32_t *y; ///< the second factor, canonical
 } Fe25519MulArgs;
+
 /** @brief The square a squaring writes and the element it reads. */
 typedef struct
 {
     uint32_t *o;       ///< the destination fe, eight limbs
     const uint32_t *x; ///< the element squared
 } Fe25519SqArgs;
+
 /** @brief The destination and source of a field-element copy. */
 typedef struct
 {
     uint32_t *o;       ///< the destination fe, eight limbs
     const uint32_t *a; ///< the source fe
 } Fe25519CopyArgs;
+
 /** @brief The element set to zero. */
 typedef struct
 {
     uint32_t *o; ///< the destination fe, eight limbs
 } Fe25519ZeroArgs;
+
 /** @brief The element set to one. */
 typedef struct
 {
     uint32_t *o; ///< the destination fe, eight limbs
 } Fe25519OneArgs;
+
 /** @brief The element canonicalized in place. */
 typedef struct
 {
     uint32_t *o; ///< the fe reduced in place, in [p, 2p) on entry
 } Fe25519ReduceArgs;
+
 /** @brief The sum an addition writes and the two terms it reads. */
 typedef struct
 {
@@ -277,6 +283,7 @@ typedef struct
     const uint32_t *x; ///< the first term, < p
     const uint32_t *y; ///< the second term, < p
 } Fe25519AddArgs;
+
 /** @brief The difference a subtraction writes and the two terms it reads. */
 typedef struct
 {
@@ -284,6 +291,7 @@ typedef struct
     const uint32_t *x; ///< the minuend, < p
     const uint32_t *y; ///< the subtrahend, < p
 } Fe25519SubArgs;
+
 /** @brief The two elements a conditional swap exchanges, and the bit selecting it. */
 typedef struct
 {
@@ -291,41 +299,48 @@ typedef struct
     uint32_t *y;   ///< the second fe, exchanged in place
     uint32_t swap; ///< 1 swaps, 0 leaves both alone
 } Fe25519CswapArgs;
+
 /** @brief The 32 bytes a decode reads and the element it writes. */
 typedef struct
 {
     uint32_t *o;      ///< the destination fe, eight limbs
     const uint8_t *b; ///< 32 little-endian bytes; bit 255 is ignored
 } Fe25519FromBytesArgs;
+
 /** @brief The element an encode reads and the 32 bytes it writes. */
 typedef struct
 {
     uint8_t *b;        ///< 32 little-endian bytes of the canonical residue
     const uint32_t *a; ///< the source fe
 } Fe25519ToBytesArgs;
+
 /** @brief The inverse an inversion writes and the element it reads. */
 typedef struct
 {
     uint32_t *o;       ///< the destination fe, eight limbs
     const uint32_t *a; ///< the element inverted
 } Fe25519InvertArgs;
+
 /** @brief The power a^((p-5)/8) writes and the element it reads. */
 typedef struct
 {
     uint32_t *o;       ///< the destination fe, eight limbs
     const uint32_t *a; ///< the base
 } Fe25519Pow2523Args;
+
 /** @brief The element a parity read is taken over. */
 typedef struct
 {
     const uint32_t *a; ///< the fe whose canonical encoding supplies the low bit
 } Fe25519ParityArgs;
+
 /** @brief The two elements an equality test compares. */
 typedef struct
 {
     const uint32_t *a; ///< the first fe
     const uint32_t *b; ///< the second fe
 } Fe25519NeqArgs;
+
 /**
  * @brief GF(2^255-19) on the RSA/MPI accelerator.
  *
@@ -403,17 +418,11 @@ typedef struct
     Fe25519Pow2523Args pow2523_args;
     Fe25519ParityArgs parity_args;
     Fe25519NeqArgs neq_args;
+
     proto_bool ok;
     int parity;
     int neq;
-} Fe25519Vars;
 
-/** @brief The operands and the outcome. */
-extern Fe25519Vars Fe25519V;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const hw_enable)(uint8_t *restrict work);
     void (*const hw_disable)(uint8_t *restrict work);
     void (*const mul)(uint8_t *restrict work);
@@ -433,49 +442,8 @@ typedef struct
     void (*const get_neq)(uint8_t *restrict work);
 } Fe25519Ns;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in Fe25519V or a region of the borrow at a fixed offset.
-void protocore_fe25519_hw_enable(uint8_t *restrict work);
-void protocore_fe25519_hw_disable(uint8_t *restrict work);
-void protocore_fe25519_mul(uint8_t *restrict work);
-void protocore_fe25519_sq(uint8_t *restrict work);
-void protocore_fe25519_copy(uint8_t *restrict work);
-void protocore_fe25519_zero(uint8_t *restrict work);
-void protocore_fe25519_one(uint8_t *restrict work);
-void protocore_fe25519_reduce_once(uint8_t *restrict work);
-void protocore_fe25519_add(uint8_t *restrict work);
-void protocore_fe25519_sub(uint8_t *restrict work);
-void protocore_fe25519_cswap(uint8_t *restrict work);
-void protocore_fe25519_frombytes(uint8_t *restrict work);
-void protocore_fe25519_tobytes(uint8_t *restrict work);
-void protocore_fe25519_invert(uint8_t *restrict work);
-void protocore_fe25519_pow2523(uint8_t *restrict work);
-void protocore_fe25519_get_parity(uint8_t *restrict work);
-void protocore_fe25519_get_neq(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Fe25519.hw_enable(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const Fe25519Ns Fe25519 __attribute__((unused)) = {
-    .hw_enable = protocore_fe25519_hw_enable,
-    .hw_disable = protocore_fe25519_hw_disable,
-    .mul = protocore_fe25519_mul,
-    .sq = protocore_fe25519_sq,
-    .copy = protocore_fe25519_copy,
-    .zero = protocore_fe25519_zero,
-    .one = protocore_fe25519_one,
-    .reduce_once = protocore_fe25519_reduce_once,
-    .add = protocore_fe25519_add,
-    .sub = protocore_fe25519_sub,
-    .cswap = protocore_fe25519_cswap,
-    .frombytes = protocore_fe25519_frombytes,
-    .tobytes = protocore_fe25519_tobytes,
-    .invert = protocore_fe25519_invert,
-    .pow2523 = protocore_fe25519_pow2523,
-    .get_parity = protocore_fe25519_get_parity,
-    .get_neq = protocore_fe25519_get_neq,
-};
+/** @brief The one symbol this module exports. */
+extern Fe25519Ns Fe25519;
 
 #endif // PROTOCORE_FE25519_MPI_HW
 

@@ -63,22 +63,22 @@ static_assert(
 static void cp_chacha(uint8_t *restrict work, const uint8_t *key, const uint8_t iv[8], uint64_t counter,
                       const uint8_t *in, uint8_t *out, size_t len)
 {
-    Chacha20V.xor_args.key = key;
-    Chacha20V.xor_args.iv = iv;
-    Chacha20V.xor_args.counter = counter;
-    Chacha20V.xor_args.in = in;
-    Chacha20V.xor_args.out = out;
-    Chacha20V.xor_args.len = len;
+    Chacha20.xor_args.key = key;
+    Chacha20.xor_args.iv = iv;
+    Chacha20.xor_args.counter = counter;
+    Chacha20.xor_args.in = in;
+    Chacha20.xor_args.out = out;
+    Chacha20.xor_args.len = len;
     Chacha20.xor_(CHACHAPOLY_CHACHA(work));
 }
 
 // One tag through the Poly1305 namespace.
 static void cp_poly(uint8_t *restrict work, const uint8_t *poly_key, const uint8_t *msg, size_t len, uint8_t *out)
 {
-    Poly1305V.mac_args.key = poly_key;
-    Poly1305V.mac_args.msg = msg;
-    Poly1305V.mac_args.len = len;
-    Poly1305V.mac_args.out = out;
+    Poly1305.mac_args.key = poly_key;
+    Poly1305.mac_args.msg = msg;
+    Poly1305.mac_args.len = len;
+    Poly1305.mac_args.out = out;
     Poly1305.mac(CHACHAPOLY_POLY(work));
 }
 
@@ -98,56 +98,56 @@ static void seq_nonce(uint32_t seqnr, uint8_t iv[8])
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_chachapoly_get_length(uint8_t *restrict work)
+static void chachapoly_get_length(uint8_t *restrict work)
 {
-    ChachaPolyV.ok = PROTO_FALSE;
-    if (!ChachaPolyV.length_args.key || !ChachaPolyV.length_args.enc_len)
+    ChachaPoly.ok = PROTO_FALSE;
+    if (!ChachaPoly.length_args.key || !ChachaPoly.length_args.enc_len)
     {
         return;
     }
     ChachaPolyCtx *ctx = CHACHAPOLY_CTX(work);
-    const uint8_t *key = ChachaPolyV.length_args.key;
-    seq_nonce(ChachaPolyV.length_args.seqnr, ctx->iv);
+    const uint8_t *key = ChachaPoly.length_args.key;
+    seq_nonce(ChachaPoly.length_args.seqnr, ctx->iv);
     // header key, counter 0
-    cp_chacha(work, key + 32, ctx->iv, 0, ChachaPolyV.length_args.enc_len, ctx->len, 4);
-    ChachaPolyV.length =
+    cp_chacha(work, key + 32, ctx->iv, 0, ChachaPoly.length_args.enc_len, ctx->len, 4);
+    ChachaPoly.length =
         ((uint32_t)ctx->len[0] << 24) | ((uint32_t)ctx->len[1] << 16) | ((uint32_t)ctx->len[2] << 8) | ctx->len[3];
-    ChachaPolyV.ok = PROTO_TRUE;
+    ChachaPoly.ok = PROTO_TRUE;
 }
 
-void protocore_chachapoly_encrypt(uint8_t *restrict work)
+static void chachapoly_encrypt(uint8_t *restrict work)
 {
-    ChachaPolyV.ok = PROTO_FALSE;
-    if (!ChachaPolyV.encrypt_args.key || !ChachaPolyV.encrypt_args.src || !ChachaPolyV.encrypt_args.dest)
+    ChachaPoly.ok = PROTO_FALSE;
+    if (!ChachaPoly.encrypt_args.key || !ChachaPoly.encrypt_args.src || !ChachaPoly.encrypt_args.dest)
     {
         return;
     }
     ChachaPolyCtx *ctx = CHACHAPOLY_CTX(work);
-    const uint8_t *key = ChachaPolyV.encrypt_args.key;
-    const uint8_t *src = ChachaPolyV.encrypt_args.src;
-    uint8_t *dest = ChachaPolyV.encrypt_args.dest;
-    const uint32_t payload_len = ChachaPolyV.encrypt_args.payload_len;
-    seq_nonce(ChachaPolyV.encrypt_args.seqnr, ctx->iv);
+    const uint8_t *key = ChachaPoly.encrypt_args.key;
+    const uint8_t *src = ChachaPoly.encrypt_args.src;
+    uint8_t *dest = ChachaPoly.encrypt_args.dest;
+    const uint32_t payload_len = ChachaPoly.encrypt_args.payload_len;
+    seq_nonce(ChachaPoly.encrypt_args.seqnr, ctx->iv);
     cp_chacha(work, key, ctx->iv, 0, NULL, ctx->poly_key, 32);        // Poly1305 key = K_main block 0
     cp_chacha(work, key + 32, ctx->iv, 0, src, dest, 4);              // length field: K_header, counter 0
     cp_chacha(work, key, ctx->iv, 1, src + 4, dest + 4, payload_len); // payload: K_main, counter 1
     cp_poly(work, ctx->poly_key, dest, 4 + payload_len, dest + 4 + payload_len);
-    ChachaPolyV.ok = PROTO_TRUE;
+    ChachaPoly.ok = PROTO_TRUE;
 }
 
-void protocore_chachapoly_decrypt(uint8_t *restrict work)
+static void chachapoly_decrypt(uint8_t *restrict work)
 {
-    ChachaPolyV.ok = PROTO_FALSE;
-    if (!ChachaPolyV.decrypt_args.key || !ChachaPolyV.decrypt_args.src || !ChachaPolyV.decrypt_args.dest)
+    ChachaPoly.ok = PROTO_FALSE;
+    if (!ChachaPoly.decrypt_args.key || !ChachaPoly.decrypt_args.src || !ChachaPoly.decrypt_args.dest)
     {
         return;
     }
     ChachaPolyCtx *ctx = CHACHAPOLY_CTX(work);
-    const uint8_t *key = ChachaPolyV.decrypt_args.key;
-    const uint8_t *src = ChachaPolyV.decrypt_args.src;
-    uint8_t *dest = ChachaPolyV.decrypt_args.dest;
-    const uint32_t payload_len = ChachaPolyV.decrypt_args.payload_len;
-    seq_nonce(ChachaPolyV.decrypt_args.seqnr, ctx->iv);
+    const uint8_t *key = ChachaPoly.decrypt_args.key;
+    const uint8_t *src = ChachaPoly.decrypt_args.src;
+    uint8_t *dest = ChachaPoly.decrypt_args.dest;
+    const uint32_t payload_len = ChachaPoly.decrypt_args.payload_len;
+    seq_nonce(ChachaPoly.decrypt_args.seqnr, ctx->iv);
     cp_chacha(work, key, ctx->iv, 0, NULL, ctx->poly_key, 32);
     cp_poly(work, ctx->poly_key, src, 4 + payload_len, ctx->tag); // MAC over the ciphertext (length || payload)
     if (!protocore_ct_eq(ctx->tag, src + 4 + payload_len, 16))
@@ -156,11 +156,11 @@ void protocore_chachapoly_decrypt(uint8_t *restrict work)
     }
     cp_chacha(work, key + 32, ctx->iv, 0, src, dest, 4);
     cp_chacha(work, key, ctx->iv, 1, src + 4, dest + 4, payload_len);
-    ChachaPolyV.ok = PROTO_TRUE;
+    ChachaPoly.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-ChachaPolyVars ChachaPolyV;
+ChachaPolyNs ChachaPoly = {
+    .get_length = chachapoly_get_length, .encrypt = chachapoly_encrypt, .decrypt = chachapoly_decrypt};
 
 PROTOCORE_END_DECLS
 

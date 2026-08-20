@@ -190,7 +190,7 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        HttpConnV.slot = i;
+        HttpConn.slot = i;
         HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
@@ -210,7 +210,7 @@ void tearDown()
 static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
-    HttpConnV.slot = slot;
+    HttpConn.slot = slot;
     HttpConn.parse(protocore_http_conn_span());
     handle();
 }
@@ -367,10 +367,10 @@ void test_chunked_source_overreport_clamped()
 void test_hex_u32_size_line()
 {
     char out[8];
-    HexV.args.v = 0;
-    HexV.io.out = out;
+    Hex.args.v = 0;
+    Hex.io.out = out;
     Hex.u32(hex_work);
-    TEST_ASSERT_EQUAL_size_t(1, (size_t)HexV.u8);
+    TEST_ASSERT_EQUAL_size_t(1, (size_t)Hex.u8);
     TEST_ASSERT_EQUAL_HEX8('0', out[0]);
 
     const uint32_t vals[] = {1, 0xF, 0x10, 0x5A0, 0xFFFF, 0x12345, 0xFFFFFFFFu};
@@ -378,10 +378,11 @@ void test_hex_u32_size_line()
     {
         char ref[16];
         int rn = snprintf(ref, sizeof(ref), "%x", (unsigned)vals[i]);
-        HexV.args.v = vals[i];
-        HexV.io.out = out;
+        Hex.args.v = vals[i];
+        Hex.io.out = out;
         Hex.u32(hex_work);
-        TEST_ASSERT_EQUAL_size_t((size_t)rn, (size_t)HexV.u8);
-        TEST_ASSERT_EQUAL_MEMORY(ref, out, (size_t)HexV.u8);
+        TEST_ASSERT_EQUAL_size_t((size_t)rn, (size_t)Hex.u8);
+        TEST_ASSERT_EQUAL_MEMORY(ref, out, (size_t)Hex.u8);
     }
 }
+

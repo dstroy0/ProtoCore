@@ -7,10 +7,13 @@
 add_subdirectory(dns)
 add_subdirectory(forward)
 
-protocore_module(pc_network_drivers_network
-  SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/network.c"
-  PUBLIC
-    pc_network_drivers_network_dns_dns
-    pc_network_drivers_network_forward
-    pc_shared_ip
-)
+
+if(PROTOCORE_ENABLE_DNS)
+  protocore_module(pc_network_drivers_network
+    SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/network.c"
+    PUBLIC
+      pc_network_drivers_network_dns_dns
+      pc_network_drivers_network_forward
+      pc_shared_ip
+  )
+endif()

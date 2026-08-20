@@ -28,29 +28,29 @@ void tearDown(void)
 void test_datasheet_crc_check_value(void)
 {
     static const uint8_t BEEF[2] = {0xBE, 0xEF};
-    Sht3xV.crc8_args.data = BEEF;
-    Sht3xV.crc8_args.len = sizeof(BEEF);
+    Sht3x.crc8_args.data = BEEF;
+    Sht3x.crc8_args.len = sizeof(BEEF);
     Sht3x.crc8(protocore_sht3x_span());
-    TEST_ASSERT_EQUAL_HEX8(0x92, Sht3xV.crc);
+    TEST_ASSERT_EQUAL_HEX8(0x92, Sht3x.crc);
 
     // the CRC covers exactly the two data bytes, so a different pair gives a different check byte
     static const uint8_t OTHER[2] = {0xBE, 0xEE};
-    Sht3xV.crc8_args.data = OTHER;
-    Sht3xV.crc8_args.len = sizeof(OTHER);
+    Sht3x.crc8_args.data = OTHER;
+    Sht3x.crc8_args.len = sizeof(OTHER);
     Sht3x.crc8(protocore_sht3x_span());
-    TEST_ASSERT_NOT_EQUAL(0x92, Sht3xV.crc);
+    TEST_ASSERT_NOT_EQUAL(0x92, Sht3x.crc);
     static const uint8_t SWAPPED[2] = {0xEF, 0xBE};
-    Sht3xV.crc8_args.data = SWAPPED;
-    Sht3xV.crc8_args.len = sizeof(SWAPPED);
+    Sht3x.crc8_args.data = SWAPPED;
+    Sht3x.crc8_args.len = sizeof(SWAPPED);
     Sht3x.crc8(protocore_sht3x_span());
-    TEST_ASSERT_NOT_EQUAL(0x92, Sht3xV.crc);
+    TEST_ASSERT_NOT_EQUAL(0x92, Sht3x.crc);
 
     // an initialization of 0xFF rather than 0x00 is what makes a zero word check non-zero
     static const uint8_t ZEROS[2] = {0x00, 0x00};
-    Sht3xV.crc8_args.data = ZEROS;
-    Sht3xV.crc8_args.len = sizeof(ZEROS);
+    Sht3x.crc8_args.data = ZEROS;
+    Sht3x.crc8_args.len = sizeof(ZEROS);
     Sht3x.crc8(protocore_sht3x_span());
-    TEST_ASSERT_NOT_EQUAL(0x00, Sht3xV.crc);
+    TEST_ASSERT_NOT_EQUAL(0x00, Sht3x.crc);
 }
 
 // Section 4.13: T[C] = -45 + 175 * S_T / (2^16 - 1). In milli-degrees, and with 65535 = 5 * 13107,
@@ -62,62 +62,62 @@ void test_datasheet_crc_check_value(void)
 //   S = 65535 -> -45000 + 175000                       = 130000
 void test_datasheet_temperature_formula(void)
 {
-    Sht3xV.temp_mc_args.raw = 0;
-    Sht3xV.temp_mc(protocore_sht3x_span());
-    TEST_ASSERT_EQUAL_INT32(-45000, Sht3xV.milli);
-    Sht3xV.temp_mc_args.raw = 13107;
-    Sht3xV.temp_mc(protocore_sht3x_span());
-    TEST_ASSERT_EQUAL_INT32(-10000, Sht3xV.milli);
-    Sht3xV.temp_mc_args.raw = 26214;
-    Sht3xV.temp_mc(protocore_sht3x_span());
-    TEST_ASSERT_EQUAL_INT32(25000, Sht3xV.milli);
-    Sht3xV.temp_mc_args.raw = 39321;
-    Sht3xV.temp_mc(protocore_sht3x_span());
-    TEST_ASSERT_EQUAL_INT32(60000, Sht3xV.milli);
-    Sht3xV.temp_mc_args.raw = 65535;
-    Sht3xV.temp_mc(protocore_sht3x_span());
-    TEST_ASSERT_EQUAL_INT32(130000, Sht3xV.milli);
+    Sht3x.temp_mc_args.raw = 0;
+    Sht3x.temp_mc(protocore_sht3x_span());
+    TEST_ASSERT_EQUAL_INT32(-45000, Sht3x.milli);
+    Sht3x.temp_mc_args.raw = 13107;
+    Sht3x.temp_mc(protocore_sht3x_span());
+    TEST_ASSERT_EQUAL_INT32(-10000, Sht3x.milli);
+    Sht3x.temp_mc_args.raw = 26214;
+    Sht3x.temp_mc(protocore_sht3x_span());
+    TEST_ASSERT_EQUAL_INT32(25000, Sht3x.milli);
+    Sht3x.temp_mc_args.raw = 39321;
+    Sht3x.temp_mc(protocore_sht3x_span());
+    TEST_ASSERT_EQUAL_INT32(60000, Sht3x.milli);
+    Sht3x.temp_mc_args.raw = 65535;
+    Sht3x.temp_mc(protocore_sht3x_span());
+    TEST_ASSERT_EQUAL_INT32(130000, Sht3x.milli);
 }
 
 // Section 4.13: RH[%] = 100 * S_RH / (2^16 - 1), in milli-percent, at the same exact points.
 //   S = 0 -> 0; 13107 -> 20000; 26214 -> 40000; 39321 -> 60000; 65535 -> 100000
 void test_datasheet_humidity_formula(void)
 {
-    Sht3xV.rh_mpct_args.raw = 0;
-    Sht3xV.rh_mpct(protocore_sht3x_span());
-    TEST_ASSERT_EQUAL_INT32(0, Sht3xV.milli);
-    Sht3xV.rh_mpct_args.raw = 13107;
-    Sht3xV.rh_mpct(protocore_sht3x_span());
-    TEST_ASSERT_EQUAL_INT32(20000, Sht3xV.milli);
-    Sht3xV.rh_mpct_args.raw = 26214;
-    Sht3xV.rh_mpct(protocore_sht3x_span());
-    TEST_ASSERT_EQUAL_INT32(40000, Sht3xV.milli);
-    Sht3xV.rh_mpct_args.raw = 39321;
-    Sht3xV.rh_mpct(protocore_sht3x_span());
-    TEST_ASSERT_EQUAL_INT32(60000, Sht3xV.milli);
-    Sht3xV.rh_mpct_args.raw = 65535;
-    Sht3xV.rh_mpct(protocore_sht3x_span());
-    TEST_ASSERT_EQUAL_INT32(100000, Sht3xV.milli);
+    Sht3x.rh_mpct_args.raw = 0;
+    Sht3x.rh_mpct(protocore_sht3x_span());
+    TEST_ASSERT_EQUAL_INT32(0, Sht3x.milli);
+    Sht3x.rh_mpct_args.raw = 13107;
+    Sht3x.rh_mpct(protocore_sht3x_span());
+    TEST_ASSERT_EQUAL_INT32(20000, Sht3x.milli);
+    Sht3x.rh_mpct_args.raw = 26214;
+    Sht3x.rh_mpct(protocore_sht3x_span());
+    TEST_ASSERT_EQUAL_INT32(40000, Sht3x.milli);
+    Sht3x.rh_mpct_args.raw = 39321;
+    Sht3x.rh_mpct(protocore_sht3x_span());
+    TEST_ASSERT_EQUAL_INT32(60000, Sht3x.milli);
+    Sht3x.rh_mpct_args.raw = 65535;
+    Sht3x.rh_mpct(protocore_sht3x_span());
+    TEST_ASSERT_EQUAL_INT32(100000, Sht3x.milli);
 }
 
 // The formulas are monotonic in the raw tick and never leave the sensor's own range: full scale is
 // -45 C .. 130 C and 0 .. 100 %RH, and a reading past either end is a decode bug, not a reading.
 void test_conversions_stay_inside_the_sensor_range(void)
 {
-    Sht3xV.temp_mc_args.raw = 0;
-    Sht3xV.temp_mc(protocore_sht3x_span());
-    int32_t prev_t = Sht3xV.milli;
-    Sht3xV.rh_mpct_args.raw = 0;
-    Sht3xV.rh_mpct(protocore_sht3x_span());
-    int32_t prev_h = Sht3xV.milli;
+    Sht3x.temp_mc_args.raw = 0;
+    Sht3x.temp_mc(protocore_sht3x_span());
+    int32_t prev_t = Sht3x.milli;
+    Sht3x.rh_mpct_args.raw = 0;
+    Sht3x.rh_mpct(protocore_sht3x_span());
+    int32_t prev_h = Sht3x.milli;
     for (uint32_t raw = 257; raw <= 65535u; raw += 257)
     {
-        Sht3xV.temp_mc_args.raw = (uint16_t)raw;
-        Sht3xV.temp_mc(protocore_sht3x_span());
-        const int32_t t = Sht3xV.milli;
-        Sht3xV.rh_mpct_args.raw = (uint16_t)raw;
-        Sht3xV.rh_mpct(protocore_sht3x_span());
-        const int32_t h = Sht3xV.milli;
+        Sht3x.temp_mc_args.raw = (uint16_t)raw;
+        Sht3x.temp_mc(protocore_sht3x_span());
+        const int32_t t = Sht3x.milli;
+        Sht3x.rh_mpct_args.raw = (uint16_t)raw;
+        Sht3x.rh_mpct(protocore_sht3x_span());
+        const int32_t h = Sht3x.milli;
         TEST_ASSERT_TRUE(t >= prev_t);
         TEST_ASSERT_TRUE(h >= prev_h);
         TEST_ASSERT_TRUE(t >= -45000 && t <= 130000);
@@ -139,32 +139,32 @@ void test_six_byte_response(void)
     static const uint8_t RESP[6] = {0xBE, 0xEF, 0x92, 0xBE, 0xEF, 0x92};
     int32_t t = 0;
     int32_t h = 0;
-    Sht3xV.parse_args.resp = RESP;
-    Sht3xV.parse_args.temp_mc = &t;
-    Sht3xV.parse_args.rh_mpct = &h;
+    Sht3x.parse_args.resp = RESP;
+    Sht3x.parse_args.temp_mc = &t;
+    Sht3x.parse_args.rh_mpct = &h;
     Sht3x.parse(protocore_sht3x_span());
-    TEST_ASSERT_TRUE(Sht3xV.ok);
+    TEST_ASSERT_TRUE(Sht3x.ok);
     TEST_ASSERT_EQUAL_INT32(85523, t);
     TEST_ASSERT_EQUAL_INT32(74584, h);
 
     // either output is optional; the CRCs are still checked
-    Sht3xV.parse_args.resp = RESP;
-    Sht3xV.parse_args.temp_mc = NULL;
-    Sht3xV.parse_args.rh_mpct = &h;
+    Sht3x.parse_args.resp = RESP;
+    Sht3x.parse_args.temp_mc = NULL;
+    Sht3x.parse_args.rh_mpct = &h;
     Sht3x.parse(protocore_sht3x_span());
-    TEST_ASSERT_TRUE(Sht3xV.ok);
+    TEST_ASSERT_TRUE(Sht3x.ok);
     TEST_ASSERT_EQUAL_INT32(74584, h);
-    Sht3xV.parse_args.resp = RESP;
-    Sht3xV.parse_args.temp_mc = &t;
-    Sht3xV.parse_args.rh_mpct = NULL;
+    Sht3x.parse_args.resp = RESP;
+    Sht3x.parse_args.temp_mc = &t;
+    Sht3x.parse_args.rh_mpct = NULL;
     Sht3x.parse(protocore_sht3x_span());
-    TEST_ASSERT_TRUE(Sht3xV.ok);
+    TEST_ASSERT_TRUE(Sht3x.ok);
     TEST_ASSERT_EQUAL_INT32(85523, t);
-    Sht3xV.parse_args.resp = RESP;
-    Sht3xV.parse_args.temp_mc = NULL;
-    Sht3xV.parse_args.rh_mpct = NULL;
+    Sht3x.parse_args.resp = RESP;
+    Sht3x.parse_args.temp_mc = NULL;
+    Sht3x.parse_args.rh_mpct = NULL;
     Sht3x.parse(protocore_sht3x_span());
-    TEST_ASSERT_TRUE(Sht3xV.ok);
+    TEST_ASSERT_TRUE(Sht3x.ok);
 }
 
 // A corrupted read is refused rather than converted: an SHT3x on a long or noisy bus is exactly
@@ -184,21 +184,21 @@ void test_corrupt_response_is_refused(void)
             bad[k] = GOOD[k];
         }
         bad[i] ^= 0x01;
-        Sht3xV.parse_args.resp = bad;
-        Sht3xV.parse_args.temp_mc = &t;
-        Sht3xV.parse_args.rh_mpct = &h;
+        Sht3x.parse_args.resp = bad;
+        Sht3x.parse_args.temp_mc = &t;
+        Sht3x.parse_args.rh_mpct = &h;
         Sht3x.parse(protocore_sht3x_span());
-        TEST_ASSERT_FALSE(Sht3xV.ok);
+        TEST_ASSERT_FALSE(Sht3x.ok);
     }
     // nothing was written through on the refusal
     TEST_ASSERT_EQUAL_INT32(0x5A5A5A, t);
     TEST_ASSERT_EQUAL_INT32(0x5A5A5A, h);
 
-    Sht3xV.parse_args.resp = NULL;
-    Sht3xV.parse_args.temp_mc = &t;
-    Sht3xV.parse_args.rh_mpct = &h;
+    Sht3x.parse_args.resp = NULL;
+    Sht3x.parse_args.temp_mc = &t;
+    Sht3x.parse_args.rh_mpct = &h;
     Sht3x.parse(protocore_sht3x_span());
-    TEST_ASSERT_FALSE(Sht3xV.ok);
+    TEST_ASSERT_FALSE(Sht3x.ok);
 }
 
 // Tables 9, 14, 16 and 17: the 16-bit commands, sent most significant byte first.

@@ -36,12 +36,14 @@ typedef struct
     uint32_t id;        ///< application connection id (e.g. a socket fd / handle).
     uint32_t last_used; ///< tick of the last acquire/touch (for LRU).
 } SockSlot;
+
 /** @brief A fixed pool of connection slots (storage is caller-owned). */
 typedef struct
 {
     SockSlot *slots;
     size_t n;
 } SockPool;
+
 /** @brief Acquire outcome (the sole return of protocore_sockpool_acquire). */
 typedef enum PROTO_ENUM_PACKED
 {
@@ -49,6 +51,7 @@ typedef enum PROTO_ENUM_PACKED
     SOCK_ACQ_RECYCLED = 1, ///< the pool was full; the LRU slot was recycled (see evicted_id).
     SOCK_ACQ_FAIL = 2      ///< the pool has zero slots / bad args.
 } SockAcq;
+
 /** @brief What init takes: p, slots, n. */
 typedef struct
 {
@@ -56,6 +59,7 @@ typedef struct
     SockSlot *slots;
     size_t n;
 } SockpoolInitArgs;
+
 /** @brief What acquire takes: p, id, now, idx, evicted_id. */
 typedef struct
 {
@@ -65,6 +69,7 @@ typedef struct
     size_t *idx; ///< (may be null) receives the chosen slot index
     uint32_t *evicted_id;
 } SockpoolAcquireArgs;
+
 /** @brief What touch takes: p, idx, now. */
 typedef struct
 {
@@ -72,12 +77,14 @@ typedef struct
     size_t idx;
     uint32_t now;
 } SockpoolTouchArgs;
+
 /** @brief What release takes: p, idx. */
 typedef struct
 {
     SockPool *p;
     size_t idx;
 } SockpoolReleaseArgs;
+
 /** @brief What find takes: p, id, idx. */
 typedef struct
 {
@@ -85,11 +92,13 @@ typedef struct
     uint32_t id;
     size_t *idx;
 } SockpoolFindArgs;
+
 /** @brief What in_use takes: p. */
 typedef struct
 {
     const SockPool *p;
 } SockpoolInUseArgs;
+
 /**
  * @brief Dynamic socket recycling: an LRU connection-slot pool (PROTOCORE_ENABLE_SOCKPOOL). A device serves a bounded
  * ...
@@ -130,17 +139,11 @@ typedef struct
     SockpoolReleaseArgs release_args;
     SockpoolFindArgs find_args;
     SockpoolInUseArgs in_use_args;
+
     proto_bool ok;
     SockAcq acq;
     size_t n;
-} SockpoolVars;
 
-/** @brief The operands and the outcome. */
-extern SockpoolVars SockpoolV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const init)(uint8_t *restrict work);
     void (*const acquire)(uint8_t *restrict work);
     void (*const touch)(uint8_t *restrict work);
@@ -149,27 +152,8 @@ typedef struct
     void (*const in_use)(uint8_t *restrict work);
 } SockpoolNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in SockpoolV or a region of the borrow at a fixed offset.
-void protocore_sockpool_init(uint8_t *restrict work);
-void protocore_sockpool_acquire(uint8_t *restrict work);
-void protocore_sockpool_touch(uint8_t *restrict work);
-void protocore_sockpool_release(uint8_t *restrict work);
-void protocore_sockpool_find(uint8_t *restrict work);
-void protocore_sockpool_in_use(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Sockpool.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const SockpoolNs Sockpool __attribute__((unused)) = {
-    .init = protocore_sockpool_init,
-    .acquire = protocore_sockpool_acquire,
-    .touch = protocore_sockpool_touch,
-    .release = protocore_sockpool_release,
-    .find = protocore_sockpool_find,
-    .in_use = protocore_sockpool_in_use,
-};
+/** @brief The one symbol this module exports. */
+extern SockpoolNs Sockpool;
 
 PROTOCORE_END_DECLS
 
