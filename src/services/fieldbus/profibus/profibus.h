@@ -54,14 +54,12 @@ typedef struct
     const uint8_t *data;
     size_t data_len;
 } PbTelegram;
-
 /** @brief What fcs takes: bytes, len. */
 typedef struct
 {
     const uint8_t *bytes;
     size_t len;
 } ProfibusFcsArgs;
-
 /** @brief What build_sd1 takes: da, sa, fc, out, cap. */
 typedef struct
 {
@@ -71,7 +69,6 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } ProfibusBuildSd1Args;
-
 /** @brief What build_sd2 takes: da, sa, fc, data, data_len, out, cap. */
 typedef struct
 {
@@ -83,7 +80,6 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } ProfibusBuildSd2Args;
-
 /** @brief What build_sd3 takes: da, sa, fc, data, out, cap. */
 typedef struct
 {
@@ -94,7 +90,6 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } ProfibusBuildSd3Args;
-
 /** @brief What parse takes: frame, len, out. */
 typedef struct
 {
@@ -102,7 +97,6 @@ typedef struct
     size_t len;
     PbTelegram *out;
 } ProfibusParseArgs;
-
 /**
  * @brief PROFIBUS-DP FDL telegram codec (PROTOCORE_ENABLE_PROFIBUS).
  *
@@ -139,11 +133,17 @@ typedef struct
     ProfibusBuildSd2Args build_sd2_args;
     ProfibusBuildSd3Args build_sd3_args;
     ProfibusParseArgs parse_args;
-
     proto_bool ok;
     uint8_t value;
     size_t n;
+} ProfibusVars;
 
+/** @brief The operands and the outcome. */
+extern ProfibusVars ProfibusV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const fcs)(uint8_t *restrict work);
     void (*const build_sd1)(uint8_t *restrict work);
     void (*const build_sd2)(uint8_t *restrict work);
@@ -151,8 +151,25 @@ typedef struct
     void (*const parse)(uint8_t *restrict work);
 } ProfibusNs;
 
-/** @brief The one symbol this module exports. */
-extern ProfibusNs Profibus;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ProfibusV or a region of the borrow at a fixed offset.
+void protocore_profibus_fcs(uint8_t *restrict work);
+void protocore_profibus_build_sd1(uint8_t *restrict work);
+void protocore_profibus_build_sd2(uint8_t *restrict work);
+void protocore_profibus_build_sd3(uint8_t *restrict work);
+void protocore_profibus_parse(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Profibus.fcs(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ProfibusNs Profibus __attribute__((unused)) = {
+    .fcs = protocore_profibus_fcs,
+    .build_sd1 = protocore_profibus_build_sd1,
+    .build_sd2 = protocore_profibus_build_sd2,
+    .build_sd3 = protocore_profibus_build_sd3,
+    .parse = protocore_profibus_parse,
+};
 
 PROTOCORE_END_DECLS
 

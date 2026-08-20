@@ -73,7 +73,6 @@ typedef struct
 {
     protocore_cache_control *cc;
 } HttpcacheControlInitArgs;
-
 /** @brief What control_build takes: buf, cap, cc. */
 typedef struct
 {
@@ -81,7 +80,6 @@ typedef struct
     size_t cap;
     const protocore_cache_control *cc;
 } HttpcacheControlBuildArgs;
-
 /** @brief What control_parse takes: s, len, cc. */
 typedef struct
 {
@@ -89,14 +87,12 @@ typedef struct
     size_t len;
     protocore_cache_control *cc;
 } HttpcacheControlParseArgs;
-
 /** @brief What immutable_asset takes: cc, max_age. */
 typedef struct
 {
     protocore_cache_control *cc;
     uint32_t max_age;
 } HttpcacheImmutableAssetArgs;
-
 /** @brief What revalidatable takes: cc, max_age, ... */
 typedef struct
 {
@@ -104,13 +100,11 @@ typedef struct
     uint32_t max_age;
     int32_t stale_while_revalidate;
 } HttpcacheRevalidatableArgs;
-
 /** @brief What no_store takes: cc. */
 typedef struct
 {
     protocore_cache_control *cc;
 } HttpcacheNoStoreArgs;
-
 /** @brief What shared takes: cc, max_age, s_maxage. */
 typedef struct
 {
@@ -118,7 +112,6 @@ typedef struct
     uint32_t max_age;
     uint32_t s_maxage;
 } HttpcacheSharedArgs;
-
 /** @brief What freshness_lifetime takes: cc, shared, ... */
 typedef struct
 {
@@ -126,7 +119,6 @@ typedef struct
     proto_bool shared;       ///< true for a shared cache (honors s-maxage)
     long expires_minus_date; ///< `Expires` minus `Date` in seconds, or < 0 when that pair is absent
 } HttpcacheFreshnessLifetimeArgs;
-
 /**
  * @brief HTTP `Cache-Control` directive builder + parser + freshness helper (RFC 9111), PROTOCORE_ENABLE_HTTP_CACHE.
  *
@@ -170,11 +162,17 @@ typedef struct
     HttpcacheNoStoreArgs no_store_args;
     HttpcacheSharedArgs shared_args;
     HttpcacheFreshnessLifetimeArgs freshness_lifetime_args;
-
     proto_bool ok;
     size_t n;
     long value;
+} HttpcacheVars;
 
+/** @brief The operands and the outcome. */
+extern HttpcacheVars HttpcacheV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const control_init)(uint8_t *restrict work);
     void (*const control_build)(uint8_t *restrict work);
     void (*const control_parse)(uint8_t *restrict work);
@@ -185,8 +183,31 @@ typedef struct
     void (*const freshness_lifetime)(uint8_t *restrict work);
 } HttpcacheNs;
 
-/** @brief The one symbol this module exports. */
-extern HttpcacheNs Httpcache;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HttpcacheV or a region of the borrow at a fixed offset.
+void protocore_httpcache_control_init(uint8_t *restrict work);
+void protocore_httpcache_control_build(uint8_t *restrict work);
+void protocore_httpcache_control_parse(uint8_t *restrict work);
+void protocore_httpcache_immutable_asset(uint8_t *restrict work);
+void protocore_httpcache_revalidatable(uint8_t *restrict work);
+void protocore_httpcache_no_store(uint8_t *restrict work);
+void protocore_httpcache_shared(uint8_t *restrict work);
+void protocore_httpcache_freshness_lifetime(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Httpcache.control_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HttpcacheNs Httpcache __attribute__((unused)) = {
+    .control_init = protocore_httpcache_control_init,
+    .control_build = protocore_httpcache_control_build,
+    .control_parse = protocore_httpcache_control_parse,
+    .immutable_asset = protocore_httpcache_immutable_asset,
+    .revalidatable = protocore_httpcache_revalidatable,
+    .no_store = protocore_httpcache_no_store,
+    .shared = protocore_httpcache_shared,
+    .freshness_lifetime = protocore_httpcache_freshness_lifetime,
+};
 
 PROTOCORE_END_DECLS
 

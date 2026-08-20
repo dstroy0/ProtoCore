@@ -13,44 +13,44 @@
 // outcome off the same handle.
 static SseConn *sse_alloc(uint8_t slot, const char *path)
 {
-    Sse.slot = slot;
-    Sse.route.path = path;
+    SseV.slot = slot;
+    SseV.route.path = path;
     Sse.alloc(protocore_sse_span());
-    return Sse.conn;
+    return SseV.conn;
 }
 
 static SseConn *sse_find(uint8_t slot)
 {
-    Sse.slot = slot;
+    SseV.slot = slot;
     Sse.find(protocore_sse_span());
-    return Sse.conn;
+    return SseV.conn;
 }
 
 static void sse_free(uint8_t slot)
 {
-    Sse.slot = slot;
+    SseV.slot = slot;
     Sse.free(protocore_sse_span());
 }
 
 static int sse_format(char *buf, size_t cap, const char *data, const char *event, const char *event_id)
 {
-    Sse.out.buf = buf;
-    Sse.out.cap = cap;
-    Sse.event_args.data = data;
-    Sse.event_args.event = event;
-    Sse.event_args.event_id = event_id;
+    SseV.out.buf = buf;
+    SseV.out.cap = cap;
+    SseV.event_args.data = data;
+    SseV.event_args.event = event;
+    SseV.event_args.event_id = event_id;
     Sse.format(protocore_sse_span());
-    return Sse.n;
+    return SseV.n;
 }
 
 static proto_bool sse_write(SseConn *stream, const char *data, const char *event, const char *event_id)
 {
-    Sse.stream = stream;
-    Sse.event_args.data = data;
-    Sse.event_args.event = event;
-    Sse.event_args.event_id = event_id;
+    SseV.stream = stream;
+    SseV.event_args.data = data;
+    SseV.event_args.event = event;
+    SseV.event_args.event_id = event_id;
     Sse.write(protocore_sse_span());
-    return Sse.ok;
+    return SseV.ok;
 }
 
 void setUp()
@@ -315,7 +315,7 @@ void test_http_conn_open_releases_stale_sse_binding()
 {
     sse_alloc(0, "/events");
     TEST_ASSERT_NOT_NULL(sse_find(0));
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.conn_open(protocore_http_conn_span());
     TEST_ASSERT_NULL(sse_find(0));
 }
@@ -324,7 +324,7 @@ void test_http_conn_open_leaves_other_slot_sse_binding()
 {
     sse_alloc(0, "/events");
     sse_alloc(1, "/metrics");
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.conn_open(protocore_http_conn_span());
     TEST_ASSERT_NULL(sse_find(0));
     TEST_ASSERT_NOT_NULL(sse_find(1));

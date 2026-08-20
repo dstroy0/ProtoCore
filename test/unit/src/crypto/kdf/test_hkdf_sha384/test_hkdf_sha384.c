@@ -88,13 +88,13 @@ void test_extract(void)
         size_t slen = unhex(v->salt, salt);
         size_t ilen = unhex(v->ikm, ikm);
         TEST_ASSERT_EQUAL_UINT_MESSAGE(PROTOCORE_HKDF_SHA384_HASH_LEN, (unsigned)unhex(v->prk, want), v->prk);
-        HkdfSha384.extract_args.salt = slen ? salt : NULL;
-        HkdfSha384.extract_args.salt_len = slen;
-        HkdfSha384.extract_args.ikm = ikm;
-        HkdfSha384.extract_args.ikm_len = ilen;
-        HkdfSha384.extract_args.prk = got;
+        HkdfSha384V.extract_args.salt = slen ? salt : NULL;
+        HkdfSha384V.extract_args.salt_len = slen;
+        HkdfSha384V.extract_args.ikm = ikm;
+        HkdfSha384V.extract_args.ikm_len = ilen;
+        HkdfSha384V.extract_args.prk = got;
         HkdfSha384.extract(g_work);
-        TEST_ASSERT_TRUE(HkdfSha384.ok);
+        TEST_ASSERT_TRUE(HkdfSha384V.ok);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, PROTOCORE_HKDF_SHA384_HASH_LEN, v->prk);
     }
 }
@@ -111,13 +111,13 @@ void test_expand(void)
         size_t wlen = unhex(v->okm, want);
         TEST_ASSERT_EQUAL_UINT32_MESSAGE(v->l, (uint32_t)wlen, v->okm);
         memset(got, 0, sizeof(got));
-        HkdfSha384.expand_args.prk = prk;
-        HkdfSha384.expand_args.info = ilen ? info : NULL;
-        HkdfSha384.expand_args.info_len = ilen;
-        HkdfSha384.expand_args.out = got;
-        HkdfSha384.expand_args.out_len = wlen;
+        HkdfSha384V.expand_args.prk = prk;
+        HkdfSha384V.expand_args.info = ilen ? info : NULL;
+        HkdfSha384V.expand_args.info_len = ilen;
+        HkdfSha384V.expand_args.out = got;
+        HkdfSha384V.expand_args.out_len = wlen;
         HkdfSha384.expand(g_work);
-        TEST_ASSERT_TRUE(HkdfSha384.ok);
+        TEST_ASSERT_TRUE(HkdfSha384V.ok);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, wlen, v->okm);
     }
 }
@@ -137,25 +137,25 @@ void test_expand_label(void)
         memset(got, 0, sizeof(got));
         if (clen)
         {
-            HkdfSha384.expand_label_ctx_args.secret = secret;
-            HkdfSha384.expand_label_ctx_args.label = v->label;
-            HkdfSha384.expand_label_ctx_args.context = ctx;
-            HkdfSha384.expand_label_ctx_args.context_len = clen;
-            HkdfSha384.expand_label_ctx_args.out = got;
-            HkdfSha384.expand_label_ctx_args.out_len = wlen;
-            HkdfSha384.expand_label_ctx_args.label_prefix = PROTOCORE_HKDF_SHA384_LABEL_PREFIX;
+            HkdfSha384V.expand_label_ctx_args.secret = secret;
+            HkdfSha384V.expand_label_ctx_args.label = v->label;
+            HkdfSha384V.expand_label_ctx_args.context = ctx;
+            HkdfSha384V.expand_label_ctx_args.context_len = clen;
+            HkdfSha384V.expand_label_ctx_args.out = got;
+            HkdfSha384V.expand_label_ctx_args.out_len = wlen;
+            HkdfSha384V.expand_label_ctx_args.label_prefix = PROTOCORE_HKDF_SHA384_LABEL_PREFIX;
             HkdfSha384.expand_label_ctx(g_work);
         }
         else
         {
-            HkdfSha384.expand_label_args.secret = secret;
-            HkdfSha384.expand_label_args.label = v->label;
-            HkdfSha384.expand_label_args.out = got;
-            HkdfSha384.expand_label_args.out_len = wlen;
-            HkdfSha384.expand_label_args.label_prefix = PROTOCORE_HKDF_SHA384_LABEL_PREFIX;
+            HkdfSha384V.expand_label_args.secret = secret;
+            HkdfSha384V.expand_label_args.label = v->label;
+            HkdfSha384V.expand_label_args.out = got;
+            HkdfSha384V.expand_label_args.out_len = wlen;
+            HkdfSha384V.expand_label_args.label_prefix = PROTOCORE_HKDF_SHA384_LABEL_PREFIX;
             HkdfSha384.expand_label(g_work);
         }
-        TEST_ASSERT_TRUE(HkdfSha384.ok);
+        TEST_ASSERT_TRUE(HkdfSha384V.ok);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, wlen, v->out);
     }
 }
@@ -168,20 +168,20 @@ void test_the_two_label_forms_agree_on_an_empty_context(void)
     uint8_t plain[PROTOCORE_HKDF_SHA384_HASH_LEN], with_ctx[PROTOCORE_HKDF_SHA384_HASH_LEN];
     unhex(KAT_HKDF384_LABEL[0].secret, secret);
 
-    HkdfSha384.expand_label_args.secret = secret;
-    HkdfSha384.expand_label_args.label = "finished";
-    HkdfSha384.expand_label_args.out = plain;
-    HkdfSha384.expand_label_args.out_len = sizeof(plain);
-    HkdfSha384.expand_label_args.label_prefix = PROTOCORE_HKDF_SHA384_LABEL_PREFIX;
+    HkdfSha384V.expand_label_args.secret = secret;
+    HkdfSha384V.expand_label_args.label = "finished";
+    HkdfSha384V.expand_label_args.out = plain;
+    HkdfSha384V.expand_label_args.out_len = sizeof(plain);
+    HkdfSha384V.expand_label_args.label_prefix = PROTOCORE_HKDF_SHA384_LABEL_PREFIX;
     HkdfSha384.expand_label(g_work);
 
-    HkdfSha384.expand_label_ctx_args.secret = secret;
-    HkdfSha384.expand_label_ctx_args.label = "finished";
-    HkdfSha384.expand_label_ctx_args.context = NULL;
-    HkdfSha384.expand_label_ctx_args.context_len = 0;
-    HkdfSha384.expand_label_ctx_args.out = with_ctx;
-    HkdfSha384.expand_label_ctx_args.out_len = sizeof(with_ctx);
-    HkdfSha384.expand_label_ctx_args.label_prefix = PROTOCORE_HKDF_SHA384_LABEL_PREFIX;
+    HkdfSha384V.expand_label_ctx_args.secret = secret;
+    HkdfSha384V.expand_label_ctx_args.label = "finished";
+    HkdfSha384V.expand_label_ctx_args.context = NULL;
+    HkdfSha384V.expand_label_ctx_args.context_len = 0;
+    HkdfSha384V.expand_label_ctx_args.out = with_ctx;
+    HkdfSha384V.expand_label_ctx_args.out_len = sizeof(with_ctx);
+    HkdfSha384V.expand_label_ctx_args.label_prefix = PROTOCORE_HKDF_SHA384_LABEL_PREFIX;
     HkdfSha384.expand_label_ctx(g_work);
 
     TEST_ASSERT_EQUAL_HEX8_ARRAY(plain, with_ctx, sizeof(plain));
@@ -194,20 +194,20 @@ void test_the_label_and_prefix_are_bound_in(void)
     uint8_t a[32], b[32], c[32];
     unhex(KAT_HKDF384_LABEL[0].secret, secret);
 
-    HkdfSha384.expand_label_args.secret = secret;
-    HkdfSha384.expand_label_args.label = "key";
-    HkdfSha384.expand_label_args.out = a;
-    HkdfSha384.expand_label_args.out_len = sizeof(a);
-    HkdfSha384.expand_label_args.label_prefix = PROTOCORE_HKDF_SHA384_LABEL_PREFIX;
+    HkdfSha384V.expand_label_args.secret = secret;
+    HkdfSha384V.expand_label_args.label = "key";
+    HkdfSha384V.expand_label_args.out = a;
+    HkdfSha384V.expand_label_args.out_len = sizeof(a);
+    HkdfSha384V.expand_label_args.label_prefix = PROTOCORE_HKDF_SHA384_LABEL_PREFIX;
     HkdfSha384.expand_label(g_work);
 
-    HkdfSha384.expand_label_args.label = "iv";
-    HkdfSha384.expand_label_args.out = b;
+    HkdfSha384V.expand_label_args.label = "iv";
+    HkdfSha384V.expand_label_args.out = b;
     HkdfSha384.expand_label(g_work);
 
-    HkdfSha384.expand_label_args.label = "key";
-    HkdfSha384.expand_label_args.label_prefix = "dtls13";
-    HkdfSha384.expand_label_args.out = c;
+    HkdfSha384V.expand_label_args.label = "key";
+    HkdfSha384V.expand_label_args.label_prefix = "dtls13";
+    HkdfSha384V.expand_label_args.out = c;
     HkdfSha384.expand_label(g_work);
 
     TEST_ASSERT_TRUE(memcmp(a, b, sizeof(a)) != 0);
@@ -226,22 +226,22 @@ void test_the_expand_cap_is_at_the_sha384_block(void)
 
     // One octet past the cap: refused, and the buffer is left zeroed rather than half-filled.
     memset(out, 0xA5, sizeof(out));
-    HkdfSha384.expand_args.prk = prk;
-    HkdfSha384.expand_args.info = NULL;
-    HkdfSha384.expand_args.info_len = 0;
-    HkdfSha384.expand_args.out = out;
-    HkdfSha384.expand_args.out_len = (size_t)255 * 48 + 1;
+    HkdfSha384V.expand_args.prk = prk;
+    HkdfSha384V.expand_args.info = NULL;
+    HkdfSha384V.expand_args.info_len = 0;
+    HkdfSha384V.expand_args.out = out;
+    HkdfSha384V.expand_args.out_len = (size_t)255 * 48 + 1;
     HkdfSha384.expand(g_work);
-    TEST_ASSERT_FALSE(HkdfSha384.ok);
+    TEST_ASSERT_FALSE(HkdfSha384V.ok);
     for (size_t i = 0; i < (size_t)255 * 48 + 1; i++)
     {
         TEST_ASSERT_EQUAL_UINT8(0u, out[i]);
     }
 
     // A length that would be over a 32-octet block but is under this one still derives.
-    HkdfSha384.expand_args.out_len = (size_t)255 * 32 + 16;
+    HkdfSha384V.expand_args.out_len = (size_t)255 * 32 + 16;
     HkdfSha384.expand(g_work);
-    TEST_ASSERT_TRUE(HkdfSha384.ok);
+    TEST_ASSERT_TRUE(HkdfSha384V.ok);
 }
 
 // The null operands each entry names leave ok false. The BORROW is not among them: it comes from
@@ -251,25 +251,25 @@ void test_null_operands_are_refused(void)
     uint8_t prk[PROTOCORE_HKDF_SHA384_HASH_LEN], out[32];
     unhex(KAT_HKDF384_EXTRACT[0].prk, prk);
 
-    HkdfSha384.extract_args.salt = NULL;
-    HkdfSha384.extract_args.salt_len = 0;
-    HkdfSha384.extract_args.ikm = prk;
-    HkdfSha384.extract_args.ikm_len = sizeof(prk);
-    HkdfSha384.extract_args.prk = NULL;
+    HkdfSha384V.extract_args.salt = NULL;
+    HkdfSha384V.extract_args.salt_len = 0;
+    HkdfSha384V.extract_args.ikm = prk;
+    HkdfSha384V.extract_args.ikm_len = sizeof(prk);
+    HkdfSha384V.extract_args.prk = NULL;
     HkdfSha384.extract(g_work);
-    TEST_ASSERT_FALSE(HkdfSha384.ok);
+    TEST_ASSERT_FALSE(HkdfSha384V.ok);
 
-    HkdfSha384.expand_args.prk = NULL;
-    HkdfSha384.expand_args.out = out;
-    HkdfSha384.expand_args.out_len = sizeof(out);
+    HkdfSha384V.expand_args.prk = NULL;
+    HkdfSha384V.expand_args.out = out;
+    HkdfSha384V.expand_args.out_len = sizeof(out);
     HkdfSha384.expand(g_work);
-    TEST_ASSERT_FALSE(HkdfSha384.ok);
+    TEST_ASSERT_FALSE(HkdfSha384V.ok);
 
-    HkdfSha384.expand_label_args.secret = prk;
-    HkdfSha384.expand_label_args.label = NULL;
-    HkdfSha384.expand_label_args.out = out;
-    HkdfSha384.expand_label_args.out_len = sizeof(out);
-    HkdfSha384.expand_label_args.label_prefix = PROTOCORE_HKDF_SHA384_LABEL_PREFIX;
+    HkdfSha384V.expand_label_args.secret = prk;
+    HkdfSha384V.expand_label_args.label = NULL;
+    HkdfSha384V.expand_label_args.out = out;
+    HkdfSha384V.expand_label_args.out_len = sizeof(out);
+    HkdfSha384V.expand_label_args.label_prefix = PROTOCORE_HKDF_SHA384_LABEL_PREFIX;
     HkdfSha384.expand_label(g_work);
-    TEST_ASSERT_FALSE(HkdfSha384.ok);
+    TEST_ASSERT_FALSE(HkdfSha384V.ok);
 }

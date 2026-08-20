@@ -50,7 +50,6 @@ typedef struct
     const char *user; ///< username, or nullptr for "anonymous"
     const char *pass; ///< password, or nullptr for "" (anonymous)
 } FtpTarget;
-
 /**
  * @brief Fill up to @p cap bytes of the payload starting at @p offset.
  *
@@ -61,7 +60,6 @@ typedef struct
  * @return bytes written into @p buf.
  */
 typedef size_t (*protocore_ftp_source)(void *ctx, size_t offset, uint8_t *buf, size_t cap);
-
 /** @brief What store takes: target, remote_path, total, ... */
 typedef struct
 {
@@ -71,7 +69,6 @@ typedef struct
     protocore_ftp_source src;
     void *ctx;
 } FtpSessionStoreArgs;
-
 /**
  * @brief FTP client session driver: the two sockets the ftp.h codec deliberately does not own. ftp.h is pure
  * bytes-on-the-wire.
@@ -99,15 +96,30 @@ typedef struct
 typedef struct
 {
     FtpSessionStoreArgs store_args;
-
     proto_bool ok;
     protocore_ftp_state value;
+} FtpSessionVars;
 
+/** @brief The operands and the outcome. */
+extern FtpSessionVars FtpSessionV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const store)(uint8_t *restrict work);
 } FtpSessionNs;
 
-/** @brief The one symbol this module exports. */
-extern FtpSessionNs FtpSession;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in FtpSessionV or a region of the borrow at a fixed offset.
+void protocore_ftp_session_store(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `FtpSession.store(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const FtpSessionNs FtpSession __attribute__((unused)) = {
+    .store = protocore_ftp_session_store,
+};
 
 /**
  * @brief The PROTOCORE_FTP_SESSION_BORROW bytes this module's state lives in.

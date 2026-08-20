@@ -115,7 +115,6 @@ typedef struct
     uint8_t node_id; ///< 1..127, or 0 for a broadcast (NMT / SYNC / TIME)
     uint8_t pdo_num; ///< 1..4 for TPDO / RPDO, else 0
 } CanopenMsg;
-
 /** @brief A decoded SDO initiate response (from protocore_canopen_parse_sdo_response). */
 typedef struct
 {
@@ -128,7 +127,6 @@ typedef struct
     uint8_t data[4];      ///< expedited upload payload
     uint8_t len;          ///< expedited payload length 0..4
 } CanopenSdoResponse;
-
 /** @brief Decoded CANopen TIME_OF_DAY (the TIME message payload, CiA 301 §7.2.6). The CANopen epoch is
  *  January 1, 1984, so @c days_since_1984 plus @c ms_since_midnight locate an absolute instant. */
 typedef struct
@@ -136,7 +134,6 @@ typedef struct
     uint32_t ms_since_midnight; ///< milliseconds after midnight (28-bit; 0..86'399'999)
     uint16_t days_since_1984;   ///< days since January 1, 1984
 } CanopenTime;
-
 /** @brief Segmented-upload reassembly state (accumulates segment data into a caller buffer). */
 typedef struct
 {
@@ -146,9 +143,7 @@ typedef struct
     proto_bool expect_toggle; ///< the toggle the next segment must carry (starts false)
     proto_bool done;          ///< set once the last segment is accepted
 } CanopenSdoReasm;
-
 #include "shared/can/can.h" // CanFrame: the type a parameter points at
-
 /** @brief What build_nmt takes: out, command, node_id. */
 typedef struct
 {
@@ -156,13 +151,11 @@ typedef struct
     uint8_t command;
     uint8_t node_id;
 } CanopenBuildNmtArgs;
-
 /** @brief What build_sync takes: out. */
 typedef struct
 {
     CanFrame *out;
 } CanopenBuildSyncArgs;
-
 /** @brief What build_time takes: out, ms_since_midnight, ... */
 typedef struct
 {
@@ -170,7 +163,6 @@ typedef struct
     uint32_t ms_since_midnight;
     uint16_t days_since_1984;
 } CanopenBuildTimeArgs;
-
 /** @brief What build_heartbeat takes: out, node_id, state. */
 typedef struct
 {
@@ -178,7 +170,6 @@ typedef struct
     uint8_t node_id;
     uint8_t state;
 } CanopenBuildHeartbeatArgs;
-
 /** @brief What build_emcy takes: out, node_id, error_code, error_reg, ... */
 typedef struct
 {
@@ -188,7 +179,6 @@ typedef struct
     uint8_t error_reg;
     const uint8_t *msef; ///< 5 bytes.
 } CanopenBuildEmcyArgs;
-
 /** @brief What build_tpdo takes: out, pdo_num, node_id, data, len. */
 typedef struct
 {
@@ -198,7 +188,6 @@ typedef struct
     const uint8_t *data;
     uint8_t len;
 } CanopenBuildTpdoArgs;
-
 /** @brief What build_rpdo takes: out, pdo_num, node_id, data, len. */
 typedef struct
 {
@@ -208,7 +197,6 @@ typedef struct
     const uint8_t *data;
     uint8_t len;
 } CanopenBuildRpdoArgs;
-
 /** @brief What build_sdo_read takes: out, node_id, index, sub. */
 typedef struct
 {
@@ -217,7 +205,6 @@ typedef struct
     uint16_t index;
     uint8_t sub;
 } CanopenBuildSdoReadArgs;
-
 /** @brief What build_sdo_write takes: out, node_id, index, sub, data, ... */
 typedef struct
 {
@@ -228,7 +215,6 @@ typedef struct
     const uint8_t *data;
     uint8_t len;
 } CanopenBuildSdoWriteArgs;
-
 /** @brief What build_sdo_abort takes: out, node_id, index, sub, ... */
 typedef struct
 {
@@ -239,14 +225,12 @@ typedef struct
     uint32_t abort_code;
     proto_bool to_server;
 } CanopenBuildSdoAbortArgs;
-
 /** @brief What parse takes: f, out. */
 typedef struct
 {
     const CanFrame *f;
     CanopenMsg *out;
 } CanopenParseArgs;
-
 /** @brief What parse_emcy takes: f, node_id, error_code, error_reg, ... */
 typedef struct
 {
@@ -256,7 +240,6 @@ typedef struct
     uint8_t *error_reg;
     uint8_t *msef; ///< 5 bytes.
 } CanopenParseEmcyArgs;
-
 /** @brief What parse_heartbeat takes: f, node_id, state. */
 typedef struct
 {
@@ -264,21 +247,18 @@ typedef struct
     uint8_t *node_id;
     uint8_t *state;
 } CanopenParseHeartbeatArgs;
-
 /** @brief What parse_time takes: f, out. */
 typedef struct
 {
     const CanFrame *f;
     CanopenTime *out;
 } CanopenParseTimeArgs;
-
 /** @brief What parse_sdo_response takes: f, out. */
 typedef struct
 {
     const CanFrame *f;
     CanopenSdoResponse *out;
 } CanopenParseSdoResponseArgs;
-
 /** @brief What build_sdo_download_init takes: out, node_id, index, ... */
 typedef struct
 {
@@ -288,7 +268,6 @@ typedef struct
     uint8_t sub;
     uint32_t total_size;
 } CanopenBuildSdoDownloadInitArgs;
-
 /** @brief What build_sdo_download_segment takes: out, node_id, ... */
 typedef struct
 {
@@ -299,7 +278,6 @@ typedef struct
     uint8_t len;
     proto_bool last; ///< true on the final segment
 } CanopenBuildSdoDownloadSegmentArgs;
-
 /** @brief What build_sdo_upload_segment_req takes: out, node_id, ... */
 typedef struct
 {
@@ -307,7 +285,6 @@ typedef struct
     uint8_t node_id;
     proto_bool toggle;
 } CanopenBuildSdoUploadSegmentReqArgs;
-
 /** @brief What parse_sdo_segment takes: f, toggle, data, len, last. */
 typedef struct
 {
@@ -317,7 +294,6 @@ typedef struct
     uint8_t *len;
     proto_bool *last;
 } CanopenParseSdoSegmentArgs;
-
 /** @brief What sdo_reasm_init takes: r, buf, cap. */
 typedef struct
 {
@@ -325,7 +301,6 @@ typedef struct
     uint8_t *buf;
     size_t cap;
 } CanopenSdoReasmInitArgs;
-
 /** @brief What sdo_reasm_feed takes: r, data, len, toggle, last. */
 typedef struct
 {
@@ -335,7 +310,6 @@ typedef struct
     proto_bool toggle;
     proto_bool last;
 } CanopenSdoReasmFeedArgs;
-
 /**
  * @brief CANopen (CiA 301) application-layer message codec (PROTOCORE_ENABLE_CANOPEN).
  *
@@ -419,9 +393,15 @@ typedef struct
     CanopenParseSdoSegmentArgs parse_sdo_segment_args;
     CanopenSdoReasmInitArgs sdo_reasm_init_args;
     CanopenSdoReasmFeedArgs sdo_reasm_feed_args;
-
     proto_bool ok;
+} CanopenVars;
 
+/** @brief The operands and the outcome. */
+extern CanopenVars CanopenV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_nmt)(uint8_t *restrict work);
     void (*const build_sync)(uint8_t *restrict work);
     void (*const build_time)(uint8_t *restrict work);
@@ -445,8 +425,57 @@ typedef struct
     void (*const sdo_reasm_feed)(uint8_t *restrict work);
 } CanopenNs;
 
-/** @brief The one symbol this module exports. */
-extern CanopenNs Canopen;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in CanopenV or a region of the borrow at a fixed offset.
+void protocore_canopen_build_nmt(uint8_t *restrict work);
+void protocore_canopen_build_sync(uint8_t *restrict work);
+void protocore_canopen_build_time(uint8_t *restrict work);
+void protocore_canopen_build_heartbeat(uint8_t *restrict work);
+void protocore_canopen_build_emcy(uint8_t *restrict work);
+void protocore_canopen_build_tpdo(uint8_t *restrict work);
+void protocore_canopen_build_rpdo(uint8_t *restrict work);
+void protocore_canopen_build_sdo_read(uint8_t *restrict work);
+void protocore_canopen_build_sdo_write(uint8_t *restrict work);
+void protocore_canopen_build_sdo_abort(uint8_t *restrict work);
+void protocore_canopen_parse(uint8_t *restrict work);
+void protocore_canopen_parse_emcy(uint8_t *restrict work);
+void protocore_canopen_parse_heartbeat(uint8_t *restrict work);
+void protocore_canopen_parse_time(uint8_t *restrict work);
+void protocore_canopen_parse_sdo_response(uint8_t *restrict work);
+void protocore_canopen_build_sdo_download_init(uint8_t *restrict work);
+void protocore_canopen_build_sdo_download_segment(uint8_t *restrict work);
+void protocore_canopen_build_sdo_upload_segment_req(uint8_t *restrict work);
+void protocore_canopen_parse_sdo_segment(uint8_t *restrict work);
+void protocore_canopen_sdo_reasm_init(uint8_t *restrict work);
+void protocore_canopen_sdo_reasm_feed(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Canopen.build_nmt(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const CanopenNs Canopen __attribute__((unused)) = {
+    .build_nmt = protocore_canopen_build_nmt,
+    .build_sync = protocore_canopen_build_sync,
+    .build_time = protocore_canopen_build_time,
+    .build_heartbeat = protocore_canopen_build_heartbeat,
+    .build_emcy = protocore_canopen_build_emcy,
+    .build_tpdo = protocore_canopen_build_tpdo,
+    .build_rpdo = protocore_canopen_build_rpdo,
+    .build_sdo_read = protocore_canopen_build_sdo_read,
+    .build_sdo_write = protocore_canopen_build_sdo_write,
+    .build_sdo_abort = protocore_canopen_build_sdo_abort,
+    .parse = protocore_canopen_parse,
+    .parse_emcy = protocore_canopen_parse_emcy,
+    .parse_heartbeat = protocore_canopen_parse_heartbeat,
+    .parse_time = protocore_canopen_parse_time,
+    .parse_sdo_response = protocore_canopen_parse_sdo_response,
+    .build_sdo_download_init = protocore_canopen_build_sdo_download_init,
+    .build_sdo_download_segment = protocore_canopen_build_sdo_download_segment,
+    .build_sdo_upload_segment_req = protocore_canopen_build_sdo_upload_segment_req,
+    .parse_sdo_segment = protocore_canopen_parse_sdo_segment,
+    .sdo_reasm_init = protocore_canopen_sdo_reasm_init,
+    .sdo_reasm_feed = protocore_canopen_sdo_reasm_feed,
+};
 
 PROTOCORE_END_DECLS
 

@@ -65,7 +65,6 @@ typedef struct
     uint32_t responses_2xx;
     uint32_t responses_4xx;
     uint32_t responses_5xx;
-
     // Masks, not counts. Which slot and which listener is the fact the pools already hold, and a
     // count throws it away: __builtin_popcount recovers the tally from the mask in one instruction,
     // while nothing recovers the identity from a tally. It is the shape the pools are allocated with
@@ -74,10 +73,8 @@ typedef struct
     uint32_t conns_active; ///< One bit per connection slot in use.
     uint32_t listeners_up; ///< One bit per bound listener.
 } protocore_signal_snapshot;
-
 static_assert(CONN_POOL_SLOTS <= 32, "protocore_signal_snapshot::conns_active is one 32-bit word, one bit per slot");
 static_assert(MAX_LISTENERS <= 32, "protocore_signal_snapshot::listeners_up is one 32-bit word, one bit per listener");
-
 /** @brief What one deposit carries: a response's status, or the loop's own figures. */
 typedef struct
 {
@@ -86,7 +83,6 @@ typedef struct
     uint32_t conns_active; ///< one bit per occupied connection slot
     uint32_t listeners_up; ///< one bit per listener that is bound
 } SignalPutArgs;
-
 /**
  * @brief The server's signalling bucket.
  *
@@ -119,7 +115,14 @@ typedef struct
     SignalPutArgs put;
     uint8_t slot;
     protocore_signal_snapshot *out;
+} SignalVars;
 
+/** @brief The operands and the outcome. */
+extern SignalVars SignalV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const know)(uint8_t *restrict work);
     void (*const reset)(uint8_t *restrict work);
     void (*const put_response)(uint8_t *restrict work);
@@ -127,8 +130,25 @@ typedef struct
     void (*const kill)(uint8_t *restrict work);
 } SignalingNs;
 
-/** @brief The one symbol this module exports. */
-extern SignalingNs Signal;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SignalV or a region of the borrow at a fixed offset.
+void protocore_signaling_know(uint8_t *restrict work);
+void protocore_signaling_reset(uint8_t *restrict work);
+void protocore_signaling_put_response(uint8_t *restrict work);
+void protocore_signaling_put_tick(uint8_t *restrict work);
+void protocore_signaling_kill(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Signal.know(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SignalingNs Signal __attribute__((unused)) = {
+    .know = protocore_signaling_know,
+    .reset = protocore_signaling_reset,
+    .put_response = protocore_signaling_put_response,
+    .put_tick = protocore_signaling_put_tick,
+    .kill = protocore_signaling_kill,
+};
 
 /**
  * @brief The PROTOCORE_SIGNALING_BORROW bytes this module's state lives in.

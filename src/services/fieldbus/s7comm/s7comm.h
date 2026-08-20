@@ -91,7 +91,6 @@ typedef struct
     uint8_t transport_size; ///< S7_TS_* (element type)
     uint16_t count;         ///< number of elements
 } S7ReadItem;
-
 /** @brief One Write Var item: an S7-ANY pointer (as for a read) plus the value bytes to write. */
 typedef struct
 {
@@ -104,7 +103,6 @@ typedef struct
     const uint8_t *data;         ///< value bytes to write
     uint16_t data_len;           ///< value length in BYTES
 } S7WriteItem;
-
 /** @brief A parsed S7comm header. @ref param / @ref data point INTO the source buffer. */
 typedef struct
 {
@@ -118,7 +116,6 @@ typedef struct
     const uint8_t *param;
     const uint8_t *data;
 } S7Header;
-
 /** @brief One Read Var response data item. @ref data points INTO the source buffer. */
 typedef struct
 {
@@ -127,7 +124,6 @@ typedef struct
     const uint8_t *data;    ///< value bytes
     size_t data_len;        ///< value length in BYTES (the bit length is converted)
 } S7DataItem;
-
 /** @brief What build_setup takes: buf, cap, pdu_ref, max_amq_calling, ... */
 typedef struct
 {
@@ -138,7 +134,6 @@ typedef struct
     uint16_t max_amq_called;
     uint16_t pdu_size;
 } S7commBuildSetupArgs;
-
 /** @brief What build_read_request takes: buf, cap, pdu_ref, items, n. */
 typedef struct
 {
@@ -148,7 +143,6 @@ typedef struct
     const S7ReadItem *items;
     size_t n;
 } S7commBuildReadRequestArgs;
-
 /** @brief What build_write_request takes: buf, cap, pdu_ref, items, n. */
 typedef struct
 {
@@ -158,7 +152,6 @@ typedef struct
     const S7WriteItem *items;
     size_t n;
 } S7commBuildWriteRequestArgs;
-
 /** @brief What parse_header takes: buf, len, out. */
 typedef struct
 {
@@ -166,7 +159,6 @@ typedef struct
     size_t len;
     S7Header *out;
 } S7commParseHeaderArgs;
-
 /** @brief What read_next_item takes: data, data_len, offset, out. */
 typedef struct
 {
@@ -175,7 +167,6 @@ typedef struct
     size_t *offset; ///< in/out cursor, start at 0; advanced past the item (and its even-pad)
     S7DataItem *out;
 } S7commReadNextItemArgs;
-
 /**
  * @brief Siemens S7comm PDU codec (PROTOCORE_ENABLE_S7COMM) - zero-heap builder + parser for the S7-300/400
  * communication PDUs, carried inside a COTP Data TPDU (services/fieldbus/cotp) over ISO-on-TCP (port 102).
@@ -216,10 +207,16 @@ typedef struct
     S7commBuildWriteRequestArgs build_write_request_args;
     S7commParseHeaderArgs parse_header_args;
     S7commReadNextItemArgs read_next_item_args;
-
     proto_bool ok;
     size_t n;
+} S7commVars;
 
+/** @brief The operands and the outcome. */
+extern S7commVars S7commV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_setup)(uint8_t *restrict work);
     void (*const build_read_request)(uint8_t *restrict work);
     void (*const build_write_request)(uint8_t *restrict work);
@@ -227,8 +224,25 @@ typedef struct
     void (*const read_next_item)(uint8_t *restrict work);
 } S7commNs;
 
-/** @brief The one symbol this module exports. */
-extern S7commNs S7comm;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in S7commV or a region of the borrow at a fixed offset.
+void protocore_s7comm_build_setup(uint8_t *restrict work);
+void protocore_s7comm_build_read_request(uint8_t *restrict work);
+void protocore_s7comm_build_write_request(uint8_t *restrict work);
+void protocore_s7comm_parse_header(uint8_t *restrict work);
+void protocore_s7comm_read_next_item(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `S7comm.build_setup(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const S7commNs S7comm __attribute__((unused)) = {
+    .build_setup = protocore_s7comm_build_setup,
+    .build_read_request = protocore_s7comm_build_read_request,
+    .build_write_request = protocore_s7comm_build_write_request,
+    .parse_header = protocore_s7comm_parse_header,
+    .read_next_item = protocore_s7comm_read_next_item,
+};
 
 PROTOCORE_END_DECLS
 

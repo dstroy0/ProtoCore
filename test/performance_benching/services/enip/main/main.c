@@ -34,68 +34,66 @@ void dbench_run(void)
     static uint8_t rr_buf[64];
 
     // Pre-build a SendRRData block once so parse/extract bench a real, valid wire capture.
-    Enip.build_send_rr_data_args.buf = rr_buf;
-    Enip.build_send_rr_data_args.cap = sizeof(rr_buf);
-    Enip.build_send_rr_data_args.session_handle = 0x12345678;
-    Enip.build_send_rr_data_args.sender_context = sender_context;
-    Enip.build_send_rr_data_args.timeout = 5;
-    Enip.build_send_rr_data_args.cip = cip;
-    Enip.build_send_rr_data_args.cip_len = sizeof(cip);
+    EnipV.build_send_rr_data_args.buf = rr_buf;
+    EnipV.build_send_rr_data_args.cap = sizeof(rr_buf);
+    EnipV.build_send_rr_data_args.session_handle = 0x12345678;
+    EnipV.build_send_rr_data_args.sender_context = sender_context;
+    EnipV.build_send_rr_data_args.timeout = 5;
+    EnipV.build_send_rr_data_args.cip = cip;
+    EnipV.build_send_rr_data_args.cip_len = sizeof(cip);
     Enip.build_send_rr_data(enip_work);
-    size_t rr_len = Enip.n;
+    size_t rr_len = EnipV.n;
 
     for (;;)
     {
         DBENCH_BANNER("enip");
         volatile size_t sink = 0;
 
-        Enip.build_register_session_args.buf = reg_buf;
-        Enip.build_register_session_args.cap = sizeof(reg_buf);
-        Enip.build_register_session_args.sender_context = sender_context;
-        DBENCH_OP("Enip.build_register_session", 100000,
-                  sink += (Enip.build_register_session(enip_work), Enip.n));
+        EnipV.build_register_session_args.buf = reg_buf;
+        EnipV.build_register_session_args.cap = sizeof(reg_buf);
+        EnipV.build_register_session_args.sender_context = sender_context;
+        DBENCH_OP("Enip.build_register_session", 100000, sink += (Enip.build_register_session(enip_work), EnipV.n));
 
-        Enip.build_send_rr_data_args.buf = rr_buf;
-        Enip.build_send_rr_data_args.cap = sizeof(rr_buf);
-        Enip.build_send_rr_data_args.session_handle = 0x12345678;
-        Enip.build_send_rr_data_args.sender_context = sender_context;
-        Enip.build_send_rr_data_args.timeout = 5;
-        Enip.build_send_rr_data_args.cip = cip;
-        Enip.build_send_rr_data_args.cip_len = sizeof(cip);
-        DBENCH_OP("Enip.build_send_rr_data", 50000,
-                  sink += (Enip.build_send_rr_data(enip_work), Enip.n));
+        EnipV.build_send_rr_data_args.buf = rr_buf;
+        EnipV.build_send_rr_data_args.cap = sizeof(rr_buf);
+        EnipV.build_send_rr_data_args.session_handle = 0x12345678;
+        EnipV.build_send_rr_data_args.sender_context = sender_context;
+        EnipV.build_send_rr_data_args.timeout = 5;
+        EnipV.build_send_rr_data_args.cip = cip;
+        EnipV.build_send_rr_data_args.cip_len = sizeof(cip);
+        DBENCH_OP("Enip.build_send_rr_data", 50000, sink += (Enip.build_send_rr_data(enip_work), EnipV.n));
 
         DBENCH_OP("Enip.parse", 100000, {
             EipHeader h;
             const uint8_t *data;
             size_t data_len;
-            Enip.parse_args.buf = rr_buf;
-            Enip.parse_args.len = rr_len;
-            Enip.parse_args.out = &h;
-            Enip.parse_args.data = &data;
-            Enip.parse_args.data_len = &data_len;
+            EnipV.parse_args.buf = rr_buf;
+            EnipV.parse_args.len = rr_len;
+            EnipV.parse_args.out = &h;
+            EnipV.parse_args.data = &data;
+            EnipV.parse_args.data_len = &data_len;
             Enip.parse(enip_work);
-            sink += Enip.ok ? 1 : 0;
+            sink += EnipV.ok ? 1 : 0;
         });
 
         DBENCH_OP("Enip.parse_send_rr_data", 100000, {
             EipHeader h;
             const uint8_t *data;
             size_t data_len;
-            Enip.parse_args.buf = rr_buf;
-            Enip.parse_args.len = rr_len;
-            Enip.parse_args.out = &h;
-            Enip.parse_args.data = &data;
-            Enip.parse_args.data_len = &data_len;
+            EnipV.parse_args.buf = rr_buf;
+            EnipV.parse_args.len = rr_len;
+            EnipV.parse_args.out = &h;
+            EnipV.parse_args.data = &data;
+            EnipV.parse_args.data_len = &data_len;
             Enip.parse(enip_work);
             const uint8_t *out_cip;
             size_t out_len;
-            Enip.parse_send_rr_data_args.data = data;
-            Enip.parse_send_rr_data_args.data_len = data_len;
-            Enip.parse_send_rr_data_args.cip = &out_cip;
-            Enip.parse_send_rr_data_args.cip_len = &out_len;
+            EnipV.parse_send_rr_data_args.data = data;
+            EnipV.parse_send_rr_data_args.data_len = data_len;
+            EnipV.parse_send_rr_data_args.cip = &out_cip;
+            EnipV.parse_send_rr_data_args.cip_len = &out_len;
             Enip.parse_send_rr_data(enip_work);
-            sink += Enip.ok ? 1 : 0;
+            sink += EnipV.ok ? 1 : 0;
         });
 
         (void)sink;

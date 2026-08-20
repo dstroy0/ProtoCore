@@ -44,27 +44,27 @@ void dbench_run(void)
 
         // The arguments are set outside the timed expression and the entry is called inside it, so
         // what is timed is one call and not the staging that precedes it.
-        Mpr121.touched_args.status_lo = status_lo;
-        Mpr121.touched_args.status_hi = status_hi;
-        DBENCH_OP("Mpr121.touched decode", 200000, (Mpr121.touched(w), sink16 += Mpr121.value));
-        Mpr121.is_touched_args.mask = (uint16_t)(status_lo | (status_hi << 8));
-        Mpr121.is_touched_args.e = 7;
-        DBENCH_OP("Mpr121.is_touched e7", 200000, (Mpr121.is_touched(w), sinkb += Mpr121.ok ? 1u : 0u));
+        Mpr121V.touched_args.status_lo = status_lo;
+        Mpr121V.touched_args.status_hi = status_hi;
+        DBENCH_OP("Mpr121.touched decode", 200000, (Mpr121.touched(w), sink16 += Mpr121V.value));
+        Mpr121V.is_touched_args.mask = (uint16_t)(status_lo | (status_hi << 8));
+        Mpr121V.is_touched_args.e = 7;
+        DBENCH_OP("Mpr121.is_touched e7", 200000, (Mpr121.is_touched(w), sinkb += Mpr121V.ok ? 1u : 0u));
         // Two entries in one timed expression, so this reads as the pair and not as either alone.
-        Mpr121.proximity_args.status_hi = status_hi;
-        Mpr121.overcurrent_args.status_hi = status_hi;
-        DBENCH_OP("Mpr121.proximity+overcurrent flags", 200000,
-                  (Mpr121.proximity(w), sinkb += Mpr121.ok ? 1u : 0u, Mpr121.overcurrent(w),
-                   sinkb += Mpr121.ok ? 2u : 0u));
-        Mpr121.word10_args.lsb = filt_lsb;
-        Mpr121.word10_args.msb = filt_msb;
-        DBENCH_OP("Mpr121.word10 combine", 200000, (Mpr121.word10(w), sink16 += Mpr121.value));
-        Mpr121.build_init_args.buf = initbuf;
-        Mpr121.build_init_args.cap = sizeof(initbuf);
-        Mpr121.build_init_args.n_electrodes = MPR121_ELECTRODES;
-        Mpr121.build_init_args.touch_thr = 12;
-        Mpr121.build_init_args.release_thr = 6;
-        DBENCH_OP("Mpr121.build_init x12", 50000, (Mpr121.build_init(w), sinksz += Mpr121.n));
+        Mpr121V.proximity_args.status_hi = status_hi;
+        Mpr121V.overcurrent_args.status_hi = status_hi;
+        DBENCH_OP(
+            "Mpr121.proximity+overcurrent flags", 200000,
+            (Mpr121.proximity(w), sinkb += Mpr121V.ok ? 1u : 0u, Mpr121.overcurrent(w), sinkb += Mpr121V.ok ? 2u : 0u));
+        Mpr121V.word10_args.lsb = filt_lsb;
+        Mpr121V.word10_args.msb = filt_msb;
+        DBENCH_OP("Mpr121.word10 combine", 200000, (Mpr121.word10(w), sink16 += Mpr121V.value));
+        Mpr121V.build_init_args.buf = initbuf;
+        Mpr121V.build_init_args.cap = sizeof(initbuf);
+        Mpr121V.build_init_args.n_electrodes = MPR121_ELECTRODES;
+        Mpr121V.build_init_args.touch_thr = 12;
+        Mpr121V.build_init_args.release_thr = 6;
+        DBENCH_OP("Mpr121.build_init x12", 50000, (Mpr121.build_init(w), sinksz += Mpr121V.n));
 
         (void)sink16;
         (void)sinkb;

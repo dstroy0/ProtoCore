@@ -72,62 +72,62 @@ static void on_dma(const void *item, void *ctx)
 
 static proto_bool lane_start(protocore_pq_lane lane, const protocore_pq_config *cfg)
 {
-    PreemptQueue.lane = lane;
-    PreemptQueue.cfg = cfg;
+    PreemptQueueV.lane = lane;
+    PreemptQueueV.cfg = cfg;
     PreemptQueue.start(protocore_preempt_queue_span());
-    return PreemptQueue.ok;
+    return PreemptQueueV.ok;
 }
 
 static proto_bool lane_post(protocore_pq_lane lane, const void *item)
 {
-    PreemptQueue.lane = lane;
-    PreemptQueue.post_args.item = item;
-    PreemptQueue.post_args.timeout_ticks = 0;
+    PreemptQueueV.lane = lane;
+    PreemptQueueV.post_args.item = item;
+    PreemptQueueV.post_args.timeout_ticks = 0;
     PreemptQueue.post(protocore_preempt_queue_span());
-    return PreemptQueue.ok;
+    return PreemptQueueV.ok;
 }
 
 static proto_bool lane_post_urgent(protocore_pq_lane lane, const void *item)
 {
-    PreemptQueue.lane = lane;
-    PreemptQueue.post_args.item = item;
-    PreemptQueue.post_args.timeout_ticks = 0;
+    PreemptQueueV.lane = lane;
+    PreemptQueueV.post_args.item = item;
+    PreemptQueueV.post_args.timeout_ticks = 0;
     PreemptQueue.post_urgent(protocore_preempt_queue_span());
-    return PreemptQueue.ok;
+    return PreemptQueueV.ok;
 }
 
 static proto_bool lane_post_isr(protocore_pq_lane lane, const void *item)
 {
-    PreemptQueue.lane = lane;
-    PreemptQueue.post_args.item = item;
+    PreemptQueueV.lane = lane;
+    PreemptQueueV.post_args.item = item;
     PreemptQueue.post_from_isr(protocore_preempt_queue_span());
-    return PreemptQueue.ok;
+    return PreemptQueueV.ok;
 }
 
 static proto_bool lane_running(protocore_pq_lane lane)
 {
-    PreemptQueue.lane = lane;
+    PreemptQueueV.lane = lane;
     PreemptQueue.running(protocore_preempt_queue_span());
-    return PreemptQueue.ok;
+    return PreemptQueueV.ok;
 }
 
 static size_t lane_high_water(protocore_pq_lane lane)
 {
-    PreemptQueue.lane = lane;
+    PreemptQueueV.lane = lane;
     PreemptQueue.high_water(protocore_preempt_queue_span());
-    return PreemptQueue.n;
+    return PreemptQueueV.n;
 }
 
 static uint8_t lane_rank(protocore_pq_lane lane)
 {
-    PreemptQueue.lane = lane;
-    PreemptQueue.priority(protocore_preempt_queue_span());
-    return PreemptQueue.u8;
+    PreemptQueueV.lane = lane;
+    PreemptQueueV.priority(protocore_preempt_queue_span());
+    return PreemptQueueV.u8;
 }
 
 static void lane_stop(protocore_pq_lane lane)
 {
-    PreemptQueue.lane = lane;
+    PreemptQueueV.lane = lane;
     PreemptQueue.stop(protocore_preempt_queue_span());
 }
 

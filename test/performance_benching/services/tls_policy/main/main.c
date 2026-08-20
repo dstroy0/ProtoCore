@@ -24,17 +24,17 @@ void dbench_run(void)
     {
         DBENCH_BANNER("tls_policy");
         volatile uint32_t sink = 0;
-        TlsPolicy.negotiate_args.client_max = 0x0304;
-        TlsPolicy.negotiate_args.server_min = 0x0303;
-        TlsPolicy.negotiate_args.server_max = 0x0304;
-        DBENCH_OP("TlsPolicy.negotiate", 200000, (TlsPolicy.negotiate(tw), sink += TlsPolicy.version));
-        TlsPolicy.select_args.client_offered = offered;
-        TlsPolicy.select_args.n_client = 5;
-        TlsPolicy.select_args.server_pinned = pinned;
-        TlsPolicy.select_args.n_server = 3;
-        DBENCH_OP("TlsPolicy.select", 200000, (TlsPolicy.select(tw), sink += TlsPolicy.suite));
-        TlsPolicy.aead_args.suite = 0x1301;
-        DBENCH_OP("TlsPolicy.is_aead", 200000, (TlsPolicy.is_aead(tw), sink += TlsPolicy.aead));
+        TlsPolicyV.negotiate_args.client_max = 0x0304;
+        TlsPolicyV.negotiate_args.server_min = 0x0303;
+        TlsPolicyV.negotiate_args.server_max = 0x0304;
+        DBENCH_OP("TlsPolicy.negotiate", 200000, (TlsPolicy.negotiate(tw), sink += TlsPolicyV.version));
+        TlsPolicyV.select_args.client_offered = offered;
+        TlsPolicyV.select_args.n_client = 5;
+        TlsPolicyV.select_args.server_pinned = pinned;
+        TlsPolicyV.select_args.n_server = 3;
+        DBENCH_OP("TlsPolicy.select", 200000, (TlsPolicy.select(tw), sink += TlsPolicyV.suite));
+        TlsPolicyV.aead_args.suite = 0x1301;
+        DBENCH_OP("TlsPolicy.is_aead", 200000, (TlsPolicy.is_aead(tw), sink += TlsPolicyV.aead));
         (void)sink;
         DBENCH_DONE();
     }

@@ -49,7 +49,6 @@ typedef struct
     size_t out_cap;       ///< octets that buffer holds
     proto_bool allow_ptr; ///< follow a pointer (RFC 1035 sec 4.1.4); false makes one a decode failure
 } DnsWireMsgArgs;
-
 /**
  * @brief The dotted name to write, and where its label sequence lands (RFC 1035 sec 3.1).
  */
@@ -59,14 +58,12 @@ typedef struct
     uint8_t *out;       ///< where the labels and the root octet are written
     size_t out_cap;     ///< octets that buffer holds
 } DnsWireTextArgs;
-
 /** @brief The pair a case-insensitive compare judges (RFC 1035 sec 2.3.3). */
 typedef struct
 {
     const char *a; ///< the left dotted name
     const char *b; ///< the right dotted name
 } DnsWireCmpArgs;
-
 /**
  * @brief The DNS name codec: labels to a dotted string, a dotted string to labels, and the compare.
  *
@@ -106,18 +103,37 @@ typedef struct
     DnsWireMsgArgs msg;   ///< what a decode reads (RFC 1035 sec 4.1.4)
     DnsWireTextArgs text; ///< what an encode writes (RFC 1035 sec 3.1)
     DnsWireCmpArgs cmp;   ///< what a compare judges (RFC 1035 sec 2.3.3)
-
     proto_bool ok;
     size_t next;
     size_t n;
+} DnsWireVars;
 
+/** @brief The operands and the outcome. */
+extern DnsWireVars DnsWireV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const decode)(uint8_t *restrict work);
     void (*const encode)(uint8_t *restrict work);
     void (*const eq)(uint8_t *restrict work);
 } DnsWireNs;
 
-/** @brief The one symbol this module exports. */
-extern DnsWireNs DnsWire;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in DnsWireV or a region of the borrow at a fixed offset.
+void protocore_dns_wire_decode(uint8_t *restrict work);
+void protocore_dns_wire_encode(uint8_t *restrict work);
+void protocore_dns_wire_eq(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `DnsWire.decode(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const DnsWireNs DnsWire __attribute__((unused)) = {
+    .decode = protocore_dns_wire_decode,
+    .encode = protocore_dns_wire_encode,
+    .eq = protocore_dns_wire_eq,
+};
 
 PROTOCORE_END_DECLS
 

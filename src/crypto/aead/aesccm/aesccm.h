@@ -51,7 +51,6 @@ typedef struct
     uint8_t *ct_out;      ///< pt_len ciphertext bytes; may alias @c pt
     uint8_t *tag_out;     ///< PROTOCORE_AESCCM_TAG_LEN bytes
 } AesCcmSealArgs;
-
 /** @brief One record opened under the key given with it. */
 typedef struct
 {
@@ -66,7 +65,6 @@ typedef struct
     const uint8_t *tag;   ///< PROTOCORE_AESCCM_TAG_LEN bytes to verify against
     uint8_t *out;         ///< ct_len plaintext bytes; may alias @c ct
 } AesCcmOpenArgs;
-
 /**
  * @brief AES-CCM (NIST SP 800-38C, RFC 3610).
  *
@@ -109,15 +107,32 @@ typedef struct
 {
     AesCcmSealArgs seal_args;
     AesCcmOpenArgs open_args;
-
     proto_bool ok;
+} AesCcmVars;
 
+/** @brief The operands and the outcome. */
+extern AesCcmVars AesCcmV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const seal)(uint8_t *restrict work);
     void (*const open)(uint8_t *restrict work);
 } AesCcmNs;
 
-/** @brief The one symbol this module exports. */
-extern AesCcmNs AesCcm;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in AesCcmV or a region of the borrow at a fixed offset.
+void protocore_aesccm_seal(uint8_t *restrict work);
+void protocore_aesccm_open(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `AesCcm.seal(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const AesCcmNs AesCcm __attribute__((unused)) = {
+    .seal = protocore_aesccm_seal,
+    .open = protocore_aesccm_open,
+};
 
 PROTOCORE_END_DECLS
 

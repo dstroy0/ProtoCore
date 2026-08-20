@@ -32,35 +32,35 @@ static uint8_t checksum(const uint8_t *p, size_t n)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void mbus_build_short(uint8_t *restrict work);
-static void mbus_dif_data_len(uint8_t *restrict work);
+void protocore_mbus_build_short(uint8_t *restrict work);
+void protocore_mbus_dif_data_len(uint8_t *restrict work);
 
-static void mbus_build_ack(uint8_t *restrict work)
+void protocore_mbus_build_ack(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Mbus.build_ack_args.buf;
-    size_t cap = Mbus.build_ack_args.cap;
+    uint8_t *buf = MbusV.build_ack_args.buf;
+    size_t cap = MbusV.build_ack_args.cap;
 
     if (!buf || cap < 1)
     {
-        Mbus.n = 0;
+        MbusV.n = 0;
         return;
     }
     buf[0] = MBUS_ACK;
-    Mbus.n = 1;
+    MbusV.n = 1;
 }
 
-static void mbus_build_short(uint8_t *restrict work)
+void protocore_mbus_build_short(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Mbus.build_short_args.buf;
-    size_t cap = Mbus.build_short_args.cap;
-    uint8_t c = Mbus.build_short_args.c;
-    uint8_t a = Mbus.build_short_args.a;
+    uint8_t *buf = MbusV.build_short_args.buf;
+    size_t cap = MbusV.build_short_args.cap;
+    uint8_t c = MbusV.build_short_args.c;
+    uint8_t a = MbusV.build_short_args.a;
 
     if (!buf || cap < 5)
     {
-        Mbus.n = 0;
+        MbusV.n = 0;
         return;
     }
     buf[0] = MBUS_START_SHORT;
@@ -68,30 +68,30 @@ static void mbus_build_short(uint8_t *restrict work)
     buf[2] = a;
     buf[3] = (uint8_t)(c + a); // checksum over C + A
     buf[4] = MBUS_STOP;
-    Mbus.n = 5;
+    MbusV.n = 5;
 }
 
-static void mbus_build_long(uint8_t *restrict work)
+void protocore_mbus_build_long(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Mbus.build_long_args.buf;
-    size_t cap = Mbus.build_long_args.cap;
-    uint8_t c = Mbus.build_long_args.c;
-    uint8_t a = Mbus.build_long_args.a;
-    uint8_t ci = Mbus.build_long_args.ci;
-    const uint8_t *data = Mbus.build_long_args.data;
-    uint8_t data_len = Mbus.build_long_args.data_len;
+    uint8_t *buf = MbusV.build_long_args.buf;
+    size_t cap = MbusV.build_long_args.cap;
+    uint8_t c = MbusV.build_long_args.c;
+    uint8_t a = MbusV.build_long_args.a;
+    uint8_t ci = MbusV.build_long_args.ci;
+    const uint8_t *data = MbusV.build_long_args.data;
+    uint8_t data_len = MbusV.build_long_args.data_len;
 
     if (!buf || data_len > MBUS_MAX_DATA || (data_len && !data))
     {
-        Mbus.n = 0;
+        MbusV.n = 0;
         return;
     }
     uint8_t L = (uint8_t)(3 + data_len); // L counts C + A + CI + user data
     size_t total = (size_t)6 + L;        // 68 L L 68 [L octets] CS 16
     if (cap < total)
     {
-        Mbus.n = 0;
+        MbusV.n = 0;
         return;
     }
     buf[0] = MBUS_START_LONG;
@@ -107,61 +107,61 @@ static void mbus_build_long(uint8_t *restrict work)
     }
     buf[4 + L] = checksum(buf + 4, L); // sum of C..end of user data
     buf[5 + L] = MBUS_STOP;
-    Mbus.n = total;
+    MbusV.n = total;
 }
 
-static void mbus_build_snd_nke(uint8_t *restrict work)
+void protocore_mbus_build_snd_nke(uint8_t *restrict work)
 {
-    uint8_t *buf = Mbus.build_snd_nke_args.buf;
-    size_t cap = Mbus.build_snd_nke_args.cap;
-    uint8_t a = Mbus.build_snd_nke_args.a;
+    uint8_t *buf = MbusV.build_snd_nke_args.buf;
+    size_t cap = MbusV.build_snd_nke_args.cap;
+    uint8_t a = MbusV.build_snd_nke_args.a;
 
-    Mbus.build_short_args.buf = buf;
-    Mbus.build_short_args.cap = cap;
-    Mbus.build_short_args.c = MBUS_C_SND_NKE;
-    Mbus.build_short_args.a = a;
-    mbus_build_short(work);
+    MbusV.build_short_args.buf = buf;
+    MbusV.build_short_args.cap = cap;
+    MbusV.build_short_args.c = MBUS_C_SND_NKE;
+    MbusV.build_short_args.a = a;
+    protocore_mbus_build_short(work);
 }
 
-static void mbus_build_req_ud2(uint8_t *restrict work)
+void protocore_mbus_build_req_ud2(uint8_t *restrict work)
 {
-    uint8_t *buf = Mbus.build_req_ud2_args.buf;
-    size_t cap = Mbus.build_req_ud2_args.cap;
-    uint8_t a = Mbus.build_req_ud2_args.a;
-    proto_bool fcb = Mbus.build_req_ud2_args.fcb;
+    uint8_t *buf = MbusV.build_req_ud2_args.buf;
+    size_t cap = MbusV.build_req_ud2_args.cap;
+    uint8_t a = MbusV.build_req_ud2_args.a;
+    proto_bool fcb = MbusV.build_req_ud2_args.fcb;
 
-    Mbus.build_short_args.buf = buf;
-    Mbus.build_short_args.cap = cap;
-    Mbus.build_short_args.c = (uint8_t)(fcb ? 0x7Bu : MBUS_C_REQ_UD2);
-    Mbus.build_short_args.a = a;
-    mbus_build_short(work);
+    MbusV.build_short_args.buf = buf;
+    MbusV.build_short_args.cap = cap;
+    MbusV.build_short_args.c = (uint8_t)(fcb ? 0x7Bu : MBUS_C_REQ_UD2);
+    MbusV.build_short_args.a = a;
+    protocore_mbus_build_short(work);
 }
 
-static void mbus_build_req_ud1(uint8_t *restrict work)
+void protocore_mbus_build_req_ud1(uint8_t *restrict work)
 {
-    uint8_t *buf = Mbus.build_req_ud1_args.buf;
-    size_t cap = Mbus.build_req_ud1_args.cap;
-    uint8_t a = Mbus.build_req_ud1_args.a;
-    proto_bool fcb = Mbus.build_req_ud1_args.fcb;
+    uint8_t *buf = MbusV.build_req_ud1_args.buf;
+    size_t cap = MbusV.build_req_ud1_args.cap;
+    uint8_t a = MbusV.build_req_ud1_args.a;
+    proto_bool fcb = MbusV.build_req_ud1_args.fcb;
 
-    Mbus.build_short_args.buf = buf;
-    Mbus.build_short_args.cap = cap;
-    Mbus.build_short_args.c = (uint8_t)(fcb ? 0x7Au : MBUS_C_REQ_UD1);
-    Mbus.build_short_args.a = a;
-    mbus_build_short(work);
+    MbusV.build_short_args.buf = buf;
+    MbusV.build_short_args.cap = cap;
+    MbusV.build_short_args.c = (uint8_t)(fcb ? 0x7Au : MBUS_C_REQ_UD1);
+    MbusV.build_short_args.a = a;
+    protocore_mbus_build_short(work);
 }
 
-static void mbus_parse(uint8_t *restrict work)
+void protocore_mbus_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = Mbus.parse_args.buf;
-    size_t len = Mbus.parse_args.len;
-    MbusFrame *out = Mbus.parse_args.out;
-    size_t *consumed = Mbus.parse_args.consumed;
+    const uint8_t *buf = MbusV.parse_args.buf;
+    size_t len = MbusV.parse_args.len;
+    MbusFrame *out = MbusV.parse_args.out;
+    size_t *consumed = MbusV.parse_args.consumed;
 
     if (!buf || !out || len < 1)
     {
-        Mbus.ok = PROTO_FALSE;
+        MbusV.ok = PROTO_FALSE;
         return;
     }
     out->type = MBUS_FRAME_NONE;
@@ -176,19 +176,19 @@ static void mbus_parse(uint8_t *restrict work)
         {
             *consumed = 1;
         }
-        Mbus.ok = PROTO_TRUE;
+        MbusV.ok = PROTO_TRUE;
         return;
     }
     if (buf[0] == MBUS_START_SHORT)
     {
         if (len < 5 || buf[4] != MBUS_STOP)
         {
-            Mbus.ok = PROTO_FALSE;
+            MbusV.ok = PROTO_FALSE;
             return;
         }
         if (buf[3] != (uint8_t)(buf[1] + buf[2]))
         {
-            Mbus.ok = PROTO_FALSE;
+            MbusV.ok = PROTO_FALSE;
             return;
         }
         out->type = MBUS_FRAME_SHORT;
@@ -198,31 +198,31 @@ static void mbus_parse(uint8_t *restrict work)
         {
             *consumed = 5;
         }
-        Mbus.ok = PROTO_TRUE;
+        MbusV.ok = PROTO_TRUE;
         return;
     }
     if (buf[0] == MBUS_START_LONG)
     {
         if (len < 4)
         {
-            Mbus.ok = PROTO_FALSE;
+            MbusV.ok = PROTO_FALSE;
             return;
         }
         uint8_t L = buf[1];
         if (L < 3 || buf[2] != L || buf[3] != MBUS_START_LONG)
         {
-            Mbus.ok = PROTO_FALSE;
+            MbusV.ok = PROTO_FALSE;
             return;
         }
         size_t total = (size_t)6 + L;
         if (len < total || buf[5 + L] != MBUS_STOP)
         {
-            Mbus.ok = PROTO_FALSE;
+            MbusV.ok = PROTO_FALSE;
             return;
         }
         if (checksum(buf + 4, L) != buf[4 + L])
         {
-            Mbus.ok = PROTO_FALSE;
+            MbusV.ok = PROTO_FALSE;
             return;
         }
         out->type = MBUS_FRAME_LONG;
@@ -235,80 +235,80 @@ static void mbus_parse(uint8_t *restrict work)
         {
             *consumed = total;
         }
-        Mbus.ok = PROTO_TRUE;
+        MbusV.ok = PROTO_TRUE;
         return;
     }
-    Mbus.ok = PROTO_FALSE;
+    MbusV.ok = PROTO_FALSE;
 }
 
-static void mbus_dif_data_len(uint8_t *restrict work)
+void protocore_mbus_dif_data_len(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t coding = Mbus.dif_data_len_args.coding;
+    uint8_t coding = MbusV.dif_data_len_args.coding;
 
     switch ((MbusDifCoding)(coding & 0x0Fu))
     {
     case MBUS_DIF_NONE:
-        Mbus.value = 0;
+        MbusV.value = 0;
         return;
     case MBUS_DIF_INT8:
-        Mbus.value = 1;
+        MbusV.value = 1;
         return;
     case MBUS_DIF_INT16:
-        Mbus.value = 2;
+        MbusV.value = 2;
         return;
     case MBUS_DIF_INT24:
-        Mbus.value = 3;
+        MbusV.value = 3;
         return;
     case MBUS_DIF_INT32:
-        Mbus.value = 4;
+        MbusV.value = 4;
         return;
     case MBUS_DIF_REAL32:
-        Mbus.value = 4;
+        MbusV.value = 4;
         return;
     case MBUS_DIF_INT48:
-        Mbus.value = 6;
+        MbusV.value = 6;
         return;
     case MBUS_DIF_INT64:
-        Mbus.value = 8;
+        MbusV.value = 8;
         return;
     case MBUS_DIF_READOUT:
-        Mbus.value = 0;
+        MbusV.value = 0;
         return;
     case MBUS_DIF_BCD2:
-        Mbus.value = 1;
+        MbusV.value = 1;
         return;
     case MBUS_DIF_BCD4:
-        Mbus.value = 2;
+        MbusV.value = 2;
         return;
     case MBUS_DIF_BCD6:
-        Mbus.value = 3;
+        MbusV.value = 3;
         return;
     case MBUS_DIF_BCD8:
-        Mbus.value = 4;
+        MbusV.value = 4;
         return;
     case MBUS_DIF_VARIABLE:
-        Mbus.value = 0; // length carried in the LVAR octet
+        MbusV.value = 0; // length carried in the LVAR octet
         return;
     case MBUS_DIF_BCD12:
-        Mbus.value = 6;
+        MbusV.value = 6;
         return;
     default: // MBUS_DIF_SPECIAL
-        Mbus.value = 0;
+        MbusV.value = 0;
         return;
     }
 }
 
-static void mbus_record_next(uint8_t *restrict work)
+void protocore_mbus_record_next(uint8_t *restrict work)
 {
-    const uint8_t *body = Mbus.record_next_args.body;
-    size_t len = Mbus.record_next_args.len;
-    size_t *pos = Mbus.record_next_args.pos;
-    MbusRecord *out = Mbus.record_next_args.out;
+    const uint8_t *body = MbusV.record_next_args.body;
+    size_t len = MbusV.record_next_args.len;
+    size_t *pos = MbusV.record_next_args.pos;
+    MbusRecord *out = MbusV.record_next_args.out;
 
     if (!body || !pos || !out || *pos >= len)
     {
-        Mbus.ok = PROTO_FALSE;
+        MbusV.ok = PROTO_FALSE;
         return;
     }
     size_t p = *pos;
@@ -321,7 +321,7 @@ static void mbus_record_next(uint8_t *restrict work)
     {
         if (p >= len)
         {
-            Mbus.ok = PROTO_FALSE;
+            MbusV.ok = PROTO_FALSE;
             return;
         }
         ext = body[p++];
@@ -336,14 +336,14 @@ static void mbus_record_next(uint8_t *restrict work)
     if (coding == (uint8_t)MBUS_DIF_SPECIAL) // manufacturer-specific / idle: no VIF, no fixed data
     {
         *pos = p;
-        Mbus.ok = PROTO_TRUE;
+        MbusV.ok = PROTO_TRUE;
         return;
     }
 
     // VIF (mandatory) + its VIFE extension chain.
     if (p >= len)
     {
-        Mbus.ok = PROTO_FALSE;
+        MbusV.ok = PROTO_FALSE;
         return;
     }
     out->vif = body[p++];
@@ -352,7 +352,7 @@ static void mbus_record_next(uint8_t *restrict work)
     {
         if (p >= len)
         {
-            Mbus.ok = PROTO_FALSE;
+            MbusV.ok = PROTO_FALSE;
             return;
         }
         ext = body[p++];
@@ -363,33 +363,33 @@ static void mbus_record_next(uint8_t *restrict work)
     {
         if (p >= len)
         {
-            Mbus.ok = PROTO_FALSE;
+            MbusV.ok = PROTO_FALSE;
             return;
         }
         uint8_t lvar = body[p++];
         if (lvar > 0xBFu)
         {
-            Mbus.ok = PROTO_FALSE; // only the LVAR raw/ASCII form (0x00..0xBF) is supported
+            MbusV.ok = PROTO_FALSE; // only the LVAR raw/ASCII form (0x00..0xBF) is supported
             return;
         }
         dlen = lvar;
     }
     else
     {
-        Mbus.dif_data_len_args.coding = coding;
-        mbus_dif_data_len(work);
-        dlen = Mbus.value;
+        MbusV.dif_data_len_args.coding = coding;
+        protocore_mbus_dif_data_len(work);
+        dlen = MbusV.value;
     }
 
     if (p + dlen > len)
     {
-        Mbus.ok = PROTO_FALSE;
+        MbusV.ok = PROTO_FALSE;
         return;
     }
     out->data = dlen ? body + p : NULL;
     out->data_len = dlen;
     *pos = p + dlen;
-    Mbus.ok = PROTO_TRUE;
+    MbusV.ok = PROTO_TRUE;
 }
 
 // --- record value + unit decoding ---
@@ -443,15 +443,15 @@ static proto_bool mbus_decode_bcd(const uint8_t *d, uint8_t n, int64_t *out)
     return PROTO_TRUE;
 }
 
-static void mbus_record_value_int(uint8_t *restrict work)
+void protocore_mbus_record_value_int(uint8_t *restrict work)
 {
     (void)work;
-    const MbusRecord *r = Mbus.record_value_int_args.r;
-    int64_t *out = Mbus.record_value_int_args.out;
+    const MbusRecord *r = MbusV.record_value_int_args.r;
+    int64_t *out = MbusV.record_value_int_args.out;
 
     if (!r || !out || !r->data)
     {
-        Mbus.ok = PROTO_FALSE;
+        MbusV.ok = PROTO_FALSE;
         return;
     }
     const uint8_t *d = r->data;
@@ -464,44 +464,44 @@ static void mbus_record_value_int(uint8_t *restrict work)
     case MBUS_DIF_INT32:
     case MBUS_DIF_INT48:
     case MBUS_DIF_INT64:
-        Mbus.ok = mbus_decode_int(d, n, out);
+        MbusV.ok = mbus_decode_int(d, n, out);
         return;
     case MBUS_DIF_BCD2:
     case MBUS_DIF_BCD4:
     case MBUS_DIF_BCD6:
     case MBUS_DIF_BCD8:
     case MBUS_DIF_BCD12:
-        Mbus.ok = mbus_decode_bcd(d, n, out);
+        MbusV.ok = mbus_decode_bcd(d, n, out);
         return;
     default:
-        Mbus.ok = PROTO_FALSE; // real / variable / no-data codings are not integers
+        MbusV.ok = PROTO_FALSE; // real / variable / no-data codings are not integers
         return;
     }
 }
 
-static void mbus_record_value_real(uint8_t *restrict work)
+void protocore_mbus_record_value_real(uint8_t *restrict work)
 {
     (void)work;
-    const MbusRecord *r = Mbus.record_value_real_args.r;
-    float *out = Mbus.record_value_real_args.out;
+    const MbusRecord *r = MbusV.record_value_real_args.r;
+    float *out = MbusV.record_value_real_args.out;
 
     if (!r || !out || !r->data || (MbusDifCoding)r->coding != MBUS_DIF_REAL32 || r->data_len < 4)
     {
-        Mbus.ok = PROTO_FALSE;
+        MbusV.ok = PROTO_FALSE;
         return;
     }
     uint32_t bits = (uint32_t)r->data[0] | ((uint32_t)r->data[1] << 8) | ((uint32_t)r->data[2] << 16) |
                     ((uint32_t)r->data[3] << 24);
     mem.cpy(out, &bits, 4);
-    Mbus.ok = PROTO_TRUE;
+    MbusV.ok = PROTO_TRUE;
 }
 
-static void mbus_vif_decode(uint8_t *restrict work)
+void protocore_mbus_vif_decode(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t vif = Mbus.vif_decode_args.vif;
-    MbusUnit *unit = Mbus.vif_decode_args.unit;
-    int8_t *exp10 = Mbus.vif_decode_args.exp10;
+    uint8_t vif = MbusV.vif_decode_args.vif;
+    MbusUnit *unit = MbusV.vif_decode_args.unit;
+    int8_t *exp10 = MbusV.vif_decode_args.exp10;
 
     MbusUnit u = MBUS_UNIT_UNKNOWN;
     int8_t e = 0;
@@ -566,19 +566,19 @@ static void mbus_vif_decode(uint8_t *restrict work)
     {
         *exp10 = e;
     }
-    Mbus.ok = u != MBUS_UNIT_UNKNOWN;
+    MbusV.ok = u != MBUS_UNIT_UNKNOWN;
 }
 
-static void mbus_parse_var_header(uint8_t *restrict work)
+void protocore_mbus_parse_var_header(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *body = Mbus.parse_var_header_args.body;
-    size_t len = Mbus.parse_var_header_args.len;
-    MbusVarHeader *out = Mbus.parse_var_header_args.out;
+    const uint8_t *body = MbusV.parse_var_header_args.body;
+    size_t len = MbusV.parse_var_header_args.len;
+    MbusVarHeader *out = MbusV.parse_var_header_args.out;
 
     if (!body || !out || len < MBUS_VAR_HEADER_LEN)
     {
-        Mbus.ok = PROTO_FALSE;
+        MbusV.ok = PROTO_FALSE;
         return;
     }
     // Identification number: 4 octets of BCD, least-significant octet first.
@@ -589,7 +589,7 @@ static void mbus_parse_var_header(uint8_t *restrict work)
         uint8_t lo = (uint8_t)(body[i] & 0x0Fu);
         if (hi > 9 || lo > 9) // the identification number must be valid BCD
         {
-            Mbus.ok = PROTO_FALSE;
+            MbusV.ok = PROTO_FALSE;
             return;
         }
         id = id * 100u + (uint32_t)(hi * 10u + lo);
@@ -607,22 +607,11 @@ static void mbus_parse_var_header(uint8_t *restrict work)
     out->access_no = body[8];
     out->status = body[9];
     out->signature = (uint16_t)(body[10] | (body[11] << 8));
-    Mbus.ok = PROTO_TRUE;
+    MbusV.ok = PROTO_TRUE;
 }
 
-MbusNs Mbus = {.build_ack = mbus_build_ack,
-               .build_short = mbus_build_short,
-               .build_long = mbus_build_long,
-               .build_snd_nke = mbus_build_snd_nke,
-               .build_req_ud2 = mbus_build_req_ud2,
-               .build_req_ud1 = mbus_build_req_ud1,
-               .parse = mbus_parse,
-               .dif_data_len = mbus_dif_data_len,
-               .record_next = mbus_record_next,
-               .record_value_int = mbus_record_value_int,
-               .record_value_real = mbus_record_value_real,
-               .vif_decode = mbus_vif_decode,
-               .parse_var_header = mbus_parse_var_header};
+/** @brief The operands and the outcome. */
+MbusVars MbusV;
 
 PROTOCORE_END_DECLS
 

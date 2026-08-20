@@ -40,7 +40,6 @@ typedef struct
     uint8_t priority; ///< higher wins when up (ties break to the lower index).
     proto_bool up;    ///< link currently up.
 } LinkIface;
-
 /** @brief The link-manager state over a caller-owned interface table. */
 typedef struct
 {
@@ -48,7 +47,6 @@ typedef struct
     size_t n;
     int active; ///< index of the active egress, or -1 if none is up.
 } LinkManager;
-
 /** @brief The table a call acts on, and the interface it names. */
 typedef struct
 {
@@ -59,7 +57,6 @@ typedef struct
     size_t idx;              ///< the interface whose state a set changes
     proto_bool up;           ///< that interface's new carrier state
 } LinkArgs;
-
 /**
  * @brief The interface failover policy over a caller-owned manager.
  *
@@ -82,20 +79,41 @@ typedef struct
 typedef struct
 {
     LinkArgs args;
-
     int i32;
     int from;
     int to;
     proto_bool changed;
+} LinkVars;
 
+/** @brief The operands and the outcome. */
+extern LinkVars LinkV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const select)(uint8_t *restrict work);
     void (*const active)(uint8_t *restrict work);
     void (*const set)(uint8_t *restrict work);
 } LinkManagerNs;
 
-/** @brief The one symbol this module exports. */
-extern LinkManagerNs Link;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in LinkV or a region of the borrow at a fixed offset.
+void protocore_link_manager_init(uint8_t *restrict work);
+void protocore_link_manager_select(uint8_t *restrict work);
+void protocore_link_manager_active(uint8_t *restrict work);
+void protocore_link_manager_set(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Link.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const LinkManagerNs Link __attribute__((unused)) = {
+    .init = protocore_link_manager_init,
+    .select = protocore_link_manager_select,
+    .active = protocore_link_manager_active,
+    .set = protocore_link_manager_set,
+};
 
 PROTOCORE_END_DECLS
 

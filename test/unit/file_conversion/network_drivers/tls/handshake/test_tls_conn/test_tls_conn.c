@@ -251,56 +251,56 @@ static size_t build_client_hello(uint8_t *out, proto_bool with_x25519_group, pro
 
 static void init_server(void)
 {
-    TlsConnection.conn = &g_conn;
-    TlsConnection.init_args.role = TLS_ROLE_SERVER;
-    TlsConnection.init_args.cfg = &g_cfg;
+    TlsConnectionV.conn = &g_conn;
+    TlsConnectionV.init_args.role = TLS_ROLE_SERVER;
+    TlsConnectionV.init_args.cfg = &g_cfg;
     TlsConnection.init(NULL);
-    TEST_ASSERT_TRUE(TlsConnection.ok);
+    TEST_ASSERT_TRUE(TlsConnectionV.ok);
 }
 
 static int feed(const uint8_t *rec, size_t rec_len)
 {
     memcpy(g_conn.rx, rec, rec_len);
-    TlsConnection.conn = &g_conn;
-    TlsConnection.io.rx_len = rec_len;
-    TlsConnection.out_args.out = g_srv_out;
-    TlsConnection.out_args.out_cap = sizeof(g_srv_out);
+    TlsConnectionV.conn = &g_conn;
+    TlsConnectionV.io.rx_len = rec_len;
+    TlsConnectionV.out_args.out = g_srv_out;
+    TlsConnectionV.out_args.out_cap = sizeof(g_srv_out);
     TlsConnection.process(NULL);
-    return TlsConnection.i32;
+    return TlsConnectionV.i32;
 }
 
 // Wrap @p frag in a TLSPlaintext record (sec 5.1) and hand it to the server.
 static int feed_plaintext(uint8_t content_type, const uint8_t *frag, size_t frag_len, uint8_t *rec, size_t rec_cap)
 {
-    TlsRecord.content_type = content_type;
-    TlsRecord.plain.fragment = frag;
-    TlsRecord.plain.frag_len = frag_len;
-    TlsRecord.out_args.out = rec;
-    TlsRecord.out_args.out_cap = rec_cap;
+    TlsRecordV.content_type = content_type;
+    TlsRecordV.plain.fragment = frag;
+    TlsRecordV.plain.frag_len = frag_len;
+    TlsRecordV.out_args.out = rec;
+    TlsRecordV.out_args.out_cap = rec_cap;
     TlsRecord.plaintext_build(NULL);
-    TEST_ASSERT_TRUE(TlsRecord.n > 0);
-    return feed(rec, TlsRecord.n);
+    TEST_ASSERT_TRUE(TlsRecordV.n > 0);
+    return feed(rec, TlsRecordV.n);
 }
 
 static uint8_t server_alert(void)
 {
-    TlsConnection.conn = &g_conn;
-    TlsConnection.alert(NULL);
-    return TlsConnection.u8;
+    TlsConnectionV.conn = &g_conn;
+    TlsConnectionV.alert(NULL);
+    return TlsConnectionV.u8;
 }
 
 static proto_bool server_established(void)
 {
-    TlsConnection.conn = &g_conn;
+    TlsConnectionV.conn = &g_conn;
     TlsConnection.established(NULL);
-    return TlsConnection.ok;
+    return TlsConnectionV.ok;
 }
 
 static void cli_keys(TlsRecordKeys *keys, const uint8_t *secret)
 {
-    TlsRecord.key.keys = keys;
-    TlsRecord.key.cipher = TLS_CIPHER_AES_128_GCM_SHA256;
-    TlsRecord.key.secret = secret;
+    TlsRecordV.key.keys = keys;
+    TlsRecordV.key.cipher = TLS_CIPHER_AES_128_GCM_SHA256;
+    TlsRecordV.key.secret = secret;
     TlsRecord.keys_derive(NULL);
 }
 
@@ -326,25 +326,25 @@ void test_rfc8446_cert_verify_content_worked_example(void)
     want[97] = 0x00;
     memset(want + 98, 0x01, 32);
 
-    Tls13Msg.cert_verify_content_args.out = out;
-    Tls13Msg.cert_verify_content_args.cap = sizeof(out);
-    Tls13Msg.cert_verify_content_args.transcript_hash = hash;
-    Tls13Msg.cert_verify_content_args.hash_len = 32;
-    Tls13Msg.cert_verify_content_args.is_server = PROTO_TRUE;
+    Tls13MsgV.cert_verify_content_args.out = out;
+    Tls13MsgV.cert_verify_content_args.cap = sizeof(out);
+    Tls13MsgV.cert_verify_content_args.transcript_hash = hash;
+    Tls13MsgV.cert_verify_content_args.hash_len = 32;
+    Tls13MsgV.cert_verify_content_args.is_server = PROTO_TRUE;
     Tls13Msg.cert_verify_content(tls13_msg_work);
-    TEST_ASSERT_EQUAL_UINT(130u, Tls13Msg.n);
+    TEST_ASSERT_EQUAL_UINT(130u, Tls13MsgV.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, out, 130);
 
     // Same section: the client's context string differs by one word, so the two contents must not
     // be equal - that separation is the whole point of the string.
     memcpy(want + 64, CLIENT_CTX, 33);
-    Tls13Msg.cert_verify_content_args.out = out;
-    Tls13Msg.cert_verify_content_args.cap = sizeof(out);
-    Tls13Msg.cert_verify_content_args.transcript_hash = hash;
-    Tls13Msg.cert_verify_content_args.hash_len = 32;
-    Tls13Msg.cert_verify_content_args.is_server = PROTO_FALSE;
+    Tls13MsgV.cert_verify_content_args.out = out;
+    Tls13MsgV.cert_verify_content_args.cap = sizeof(out);
+    Tls13MsgV.cert_verify_content_args.transcript_hash = hash;
+    Tls13MsgV.cert_verify_content_args.hash_len = 32;
+    Tls13MsgV.cert_verify_content_args.is_server = PROTO_FALSE;
     Tls13Msg.cert_verify_content(tls13_msg_work);
-    TEST_ASSERT_EQUAL_UINT(130u, Tls13Msg.n);
+    TEST_ASSERT_EQUAL_UINT(130u, Tls13MsgV.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, out, 130);
 }
 
@@ -358,16 +358,16 @@ void test_full_handshake_on_rfc8448_key_material(void)
     uint8_t scratch[32];
 
     // The two published pairs: base(priv) is the public half each document prints.
-    Curve25519.x25519_base_args.out = scratch;
-    Curve25519.x25519_base_args.scalar = CLIENT_X25519_PRIV;
+    Curve25519V.x25519_base_args.out = scratch;
+    Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(g_sign_work);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(CLIENT_X25519_PUB, scratch, 32);
-    Curve25519.x25519_base_args.out = scratch;
-    Curve25519.x25519_base_args.scalar = SERVER_X25519_PRIV;
+    Curve25519V.x25519_base_args.out = scratch;
+    Curve25519V.x25519_base_args.scalar = SERVER_X25519_PRIV;
     Curve25519.x25519_base(g_sign_work);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(SERVER_X25519_PUB, scratch, 32);
-    Ed25519.pubkey_args.pub = scratch;
-    Ed25519.pubkey_args.seed = SERVER_ED_SEED;
+    Ed25519V.pubkey_args.pub = scratch;
+    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
     Ed25519.pubkey(g_sign_work);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(SERVER_ED_PUB, scratch, 32);
 
@@ -376,8 +376,8 @@ void test_full_handshake_on_rfc8448_key_material(void)
     Sha256.init(g_cli_transcript);
 
     size_t ch_len = build_client_hello(ch, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
-    Sha256.update_args.data = ch;
-    Sha256.update_args.len = ch_len;
+    Sha256V.update_args.data = ch;
+    Sha256V.update_args.len = ch_len;
     Sha256.update(g_cli_transcript);
 
     int wrote = feed_plaintext(PROTOCORE_TLS_CT_HANDSHAKE, ch, ch_len, rec, sizeof(rec));
@@ -390,15 +390,15 @@ void test_full_handshake_on_rfc8448_key_material(void)
     TEST_ASSERT_EQUAL_HEX16(0x0303, be16(g_srv_out + 1));
 
     TlsPlaintext view;
-    TlsRecord.sealed.rec = g_srv_out;
-    TlsRecord.sealed.rec_len = (size_t)wrote;
-    TlsRecord.plain.view = &view;
+    TlsRecordV.sealed.rec = g_srv_out;
+    TlsRecordV.sealed.rec_len = (size_t)wrote;
+    TlsRecordV.plain.view = &view;
     TlsRecord.plaintext_parse(NULL);
-    size_t off = TlsRecord.n;
+    size_t off = TlsRecordV.n;
     TEST_ASSERT_TRUE(off > 0);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_TLS_CT_HANDSHAKE, view.content_type);
-    Sha256.update_args.data = view.fragment;
-    Sha256.update_args.len = view.frag_len;
+    Sha256V.update_args.data = view.fragment;
+    Sha256V.update_args.len = view.frag_len;
     Sha256.update(g_cli_transcript);
 
     // ServerHello, sec 4.1.3: msg_type(1) legacy_version(2) random(32) legacy_session_id_echo<0..32>
@@ -433,25 +433,25 @@ void test_full_handshake_on_rfc8448_key_material(void)
 
     // The shared secret RFC 8448 sec 3 feeds into HKDF-Extract as the "handshake" IKM.
     uint8_t ecdhe[32];
-    Curve25519.x25519_args.out = ecdhe;
-    Curve25519.x25519_args.scalar = CLIENT_X25519_PRIV;
-    Curve25519.x25519_args.point = server_share;
+    Curve25519V.x25519_args.out = ecdhe;
+    Curve25519V.x25519_args.scalar = CLIENT_X25519_PRIV;
+    Curve25519V.x25519_args.point = server_share;
     Curve25519.x25519(g_sign_work);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(RFC8448_ECDHE, ecdhe, 32);
 
     uint8_t ch_sh_hash[32];
-    Sha256.final_args.out = ch_sh_hash;
+    Sha256V.final_args.out = ch_sh_hash;
     Sha256.final(g_cli_transcript);
 
-    Tls13Ks.bind.kdf = &TLS13_KDF;
-    Tls13Ks.bind.ks = &g_cli_ks;
-    Tls13Ks.bind.s = g_cli_ks_bytes;
-    Tls13Ks.early(NULL);
-    TEST_ASSERT_TRUE(Tls13Ks.ok);
-    Tls13Ks.bind.ks = &g_cli_ks;
-    Tls13Ks.step.ecdhe = ecdhe;
-    Tls13Ks.step.ecdhe_len = sizeof(ecdhe);
-    Tls13Ks.step.ch_sh_hash = ch_sh_hash;
+    Tls13KsV.bind.kdf = &TLS13_KDF;
+    Tls13KsV.bind.ks = &g_cli_ks;
+    Tls13KsV.bind.s = g_cli_ks_bytes;
+    Tls13KsV.early(NULL);
+    TEST_ASSERT_TRUE(Tls13KsV.ok);
+    Tls13KsV.bind.ks = &g_cli_ks;
+    Tls13KsV.step.ecdhe = ecdhe;
+    Tls13KsV.step.ecdhe_len = sizeof(ecdhe);
+    Tls13KsV.step.ch_sh_hash = ch_sh_hash;
     Tls13Ks.handshake(NULL);
 
     cli_keys(&g_cli_hs_rx, g_cli_ks.s + TLS13_KS_SERVER_HS);
@@ -476,14 +476,14 @@ void test_full_handshake_on_rfc8448_key_material(void)
         TEST_ASSERT_EQUAL_HEX8(PROTOCORE_TLS_CT_APPLICATION_DATA, g_srv_out[off]);
         TEST_ASSERT_EQUAL_HEX16(0x0303, be16(g_srv_out + off + 1));
 
-        TlsRecord.key.keys = &g_cli_hs_rx;
-        TlsRecord.sealed.rec = g_srv_out + off;
-        TlsRecord.sealed.rec_len = whole;
-        TlsRecord.sealed.info = &info;
-        TlsRecord.out_args.out = pt;
-        TlsRecord.out_args.out_cap = sizeof(pt);
+        TlsRecordV.key.keys = &g_cli_hs_rx;
+        TlsRecordV.sealed.rec = g_srv_out + off;
+        TlsRecordV.sealed.rec_len = whole;
+        TlsRecordV.sealed.info = &info;
+        TlsRecordV.out_args.out = pt;
+        TlsRecordV.out_args.out_cap = sizeof(pt);
         TlsRecord.unprotect(NULL);
-        TEST_ASSERT_TRUE_MESSAGE(TlsRecord.ok, "the client could not open a server handshake record");
+        TEST_ASSERT_TRUE_MESSAGE(TlsRecordV.ok, "the client could not open a server handshake record");
         TEST_ASSERT_EQUAL_UINT8(PROTOCORE_TLS_CT_HANDSHAKE, info.content_type);
         off += whole;
 
@@ -518,7 +518,7 @@ void test_full_handshake_on_rfc8448_key_material(void)
             // sec 4.4.3: algorithm(2) then signature<0..2^16-1>, over
             // Transcript-Hash(Handshake Context, Certificate). ed25519 = 0x0807 (sec 4.2.3) and
             // RFC 8032 sec 5.1.6 makes an Ed25519 signature 64 octets.
-            Sha256.final_args.out = cert_verify_hash;
+            Sha256V.final_args.out = cert_verify_hash;
             Sha256.final(g_cli_transcript);
             TEST_ASSERT_EQUAL_HEX16(TLS_SIG_ED25519, be16(msg + 4));
             TEST_ASSERT_EQUAL_UINT(64u, (size_t)be16(msg + 6));
@@ -530,53 +530,53 @@ void test_full_handshake_on_rfc8448_key_material(void)
             // sec 4.4.4: "struct { opaque verify_data[Hash.length]; } Finished", Hash = SHA-256.
             uint8_t hash[32];
             uint8_t expect[32];
-            Sha256.final_args.out = hash;
+            Sha256V.final_args.out = hash;
             Sha256.final(g_cli_transcript);
-            Tls13Ks.bind.ks = &g_cli_ks;
-            Tls13Ks.finished_args.base_secret = g_cli_ks.s + TLS13_KS_SERVER_HS;
-            Tls13Ks.finished_args.transcript_hash = hash;
-            Tls13Ks.finished_args.out = expect;
+            Tls13KsV.bind.ks = &g_cli_ks;
+            Tls13KsV.finished_args.base_secret = g_cli_ks.s + TLS13_KS_SERVER_HS;
+            Tls13KsV.finished_args.transcript_hash = hash;
+            Tls13KsV.finished_args.out = expect;
             Tls13Ks.finished_mac(NULL);
             TEST_ASSERT_EQUAL_UINT(32u, body_len);
             TEST_ASSERT_EQUAL_UINT8_ARRAY(expect, msg + 4, 32);
         }
-        Sha256.update_args.data = msg;
-        Sha256.update_args.len = info.pt_len;
+        Sha256V.update_args.data = msg;
+        Sha256V.update_args.len = info.pt_len;
         Sha256.update(g_cli_transcript);
         seen++;
     }
     TEST_ASSERT_EQUAL_UINT(sizeof(FLIGHT), seen);
 
     uint8_t content[160];
-    Tls13Msg.cert_verify_content_args.out = content;
-    Tls13Msg.cert_verify_content_args.cap = sizeof(content);
-    Tls13Msg.cert_verify_content_args.transcript_hash = cert_verify_hash;
-    Tls13Msg.cert_verify_content_args.hash_len = 32;
-    Tls13Msg.cert_verify_content_args.is_server = PROTO_TRUE;
+    Tls13MsgV.cert_verify_content_args.out = content;
+    Tls13MsgV.cert_verify_content_args.cap = sizeof(content);
+    Tls13MsgV.cert_verify_content_args.transcript_hash = cert_verify_hash;
+    Tls13MsgV.cert_verify_content_args.hash_len = 32;
+    Tls13MsgV.cert_verify_content_args.is_server = PROTO_TRUE;
     Tls13Msg.cert_verify_content(tls13_msg_work);
-    size_t clen = Tls13Msg.n;
+    size_t clen = Tls13MsgV.n;
     TEST_ASSERT_EQUAL_UINT(130u, clen);
-    Ed25519.verify_args.pub = peer_pub;
-    Ed25519.verify_args.msg = content;
-    Ed25519.verify_args.msg_len = clen;
-    Ed25519.verify_args.sig = cv_sig;
+    Ed25519V.verify_args.pub = peer_pub;
+    Ed25519V.verify_args.msg = content;
+    Ed25519V.verify_args.msg_len = clen;
+    Ed25519V.verify_args.sig = cv_sig;
     Ed25519.verify(g_sign_work);
-    TEST_ASSERT_TRUE_MESSAGE(Ed25519.ok, "the server's CertificateVerify did not verify under the key it presented");
+    TEST_ASSERT_TRUE_MESSAGE(Ed25519V.ok, "the server's CertificateVerify did not verify under the key it presented");
 
     uint8_t ch_sfin_hash[32];
-    Sha256.final_args.out = ch_sfin_hash;
+    Sha256V.final_args.out = ch_sfin_hash;
     Sha256.final(g_cli_transcript);
-    Tls13Ks.bind.ks = &g_cli_ks;
-    Tls13Ks.step.ch_sfin_hash = ch_sfin_hash;
+    Tls13KsV.bind.ks = &g_cli_ks;
+    Tls13KsV.step.ch_sfin_hash = ch_sfin_hash;
     Tls13Ks.master(NULL);
     cli_keys(&g_cli_ap_rx, g_cli_ks.s + TLS13_KS_SERVER_AP);
     cli_keys(&g_cli_ap_tx, g_cli_ks.s + TLS13_KS_CLIENT_AP);
 
     uint8_t verify[32];
-    Tls13Ks.bind.ks = &g_cli_ks;
-    Tls13Ks.finished_args.base_secret = g_cli_ks.s + TLS13_KS_CLIENT_HS;
-    Tls13Ks.finished_args.transcript_hash = ch_sfin_hash;
-    Tls13Ks.finished_args.out = verify;
+    Tls13KsV.bind.ks = &g_cli_ks;
+    Tls13KsV.finished_args.base_secret = g_cli_ks.s + TLS13_KS_CLIENT_HS;
+    Tls13KsV.finished_args.transcript_hash = ch_sfin_hash;
+    Tls13KsV.finished_args.out = verify;
     Tls13Ks.finished_mac(NULL);
 
     uint8_t fin_msg[4 + 32];
@@ -586,14 +586,14 @@ void test_full_handshake_on_rfc8448_key_material(void)
     fin_msg[3] = 32;
     memcpy(fin_msg + 4, verify, 32);
 
-    TlsRecord.key.keys = &g_cli_hs_tx;
-    TlsRecord.content_type = PROTOCORE_TLS_CT_HANDSHAKE;
-    TlsRecord.sealed.pt = fin_msg;
-    TlsRecord.sealed.pt_len = sizeof(fin_msg);
-    TlsRecord.out_args.out = rec;
-    TlsRecord.out_args.out_cap = sizeof(rec);
+    TlsRecordV.key.keys = &g_cli_hs_tx;
+    TlsRecordV.content_type = PROTOCORE_TLS_CT_HANDSHAKE;
+    TlsRecordV.sealed.pt = fin_msg;
+    TlsRecordV.sealed.pt_len = sizeof(fin_msg);
+    TlsRecordV.out_args.out = rec;
+    TlsRecordV.out_args.out_cap = sizeof(rec);
     TlsRecord.protect(NULL);
-    size_t rec_len = TlsRecord.n;
+    size_t rec_len = TlsRecordV.n;
     TEST_ASSERT_TRUE(rec_len > 0);
 
     TEST_ASSERT_EQUAL_INT(0, feed(rec, rec_len));
@@ -603,47 +603,47 @@ void test_full_handshake_on_rfc8448_key_material(void)
     // Application data both ways under the keys each end derived independently: what the two ends
     // installed must open what the other sealed.
     static const uint8_t SERVER_MSG[13] = "hello, client";
-    TlsConnection.conn = &g_conn;
-    TlsConnection.io.data = SERVER_MSG;
-    TlsConnection.io.len = sizeof(SERVER_MSG);
-    TlsConnection.out_args.out = g_srv_out;
-    TlsConnection.out_args.out_cap = sizeof(g_srv_out);
+    TlsConnectionV.conn = &g_conn;
+    TlsConnectionV.io.data = SERVER_MSG;
+    TlsConnectionV.io.len = sizeof(SERVER_MSG);
+    TlsConnectionV.out_args.out = g_srv_out;
+    TlsConnectionV.out_args.out_cap = sizeof(g_srv_out);
     TlsConnection.seal_app(NULL);
-    size_t app_len = TlsConnection.n;
+    size_t app_len = TlsConnectionV.n;
     TEST_ASSERT_TRUE(app_len > 0);
 
     TlsCiphertext info;
-    TlsRecord.key.keys = &g_cli_ap_rx;
-    TlsRecord.sealed.rec = g_srv_out;
-    TlsRecord.sealed.rec_len = app_len;
-    TlsRecord.sealed.info = &info;
-    TlsRecord.out_args.out = pt;
-    TlsRecord.out_args.out_cap = sizeof(pt);
+    TlsRecordV.key.keys = &g_cli_ap_rx;
+    TlsRecordV.sealed.rec = g_srv_out;
+    TlsRecordV.sealed.rec_len = app_len;
+    TlsRecordV.sealed.info = &info;
+    TlsRecordV.out_args.out = pt;
+    TlsRecordV.out_args.out_cap = sizeof(pt);
     TlsRecord.unprotect(NULL);
-    TEST_ASSERT_TRUE_MESSAGE(TlsRecord.ok, "the client could not open the server's application record");
+    TEST_ASSERT_TRUE_MESSAGE(TlsRecordV.ok, "the client could not open the server's application record");
     TEST_ASSERT_EQUAL_UINT(sizeof(SERVER_MSG), info.pt_len);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(SERVER_MSG, pt, sizeof(SERVER_MSG));
 
     static const uint8_t CLIENT_MSG[13] = "hello, server";
-    TlsRecord.key.keys = &g_cli_ap_tx;
-    TlsRecord.content_type = PROTOCORE_TLS_CT_APPLICATION_DATA;
-    TlsRecord.sealed.pt = CLIENT_MSG;
-    TlsRecord.sealed.pt_len = sizeof(CLIENT_MSG);
-    TlsRecord.out_args.out = rec;
-    TlsRecord.out_args.out_cap = sizeof(rec);
+    TlsRecordV.key.keys = &g_cli_ap_tx;
+    TlsRecordV.content_type = PROTOCORE_TLS_CT_APPLICATION_DATA;
+    TlsRecordV.sealed.pt = CLIENT_MSG;
+    TlsRecordV.sealed.pt_len = sizeof(CLIENT_MSG);
+    TlsRecordV.out_args.out = rec;
+    TlsRecordV.out_args.out_cap = sizeof(rec);
     TlsRecord.protect(NULL);
-    rec_len = TlsRecord.n;
+    rec_len = TlsRecordV.n;
     TEST_ASSERT_TRUE(rec_len > 0);
 
     size_t got = 0;
-    TlsConnection.conn = &g_conn;
-    TlsConnection.io.rec = rec;
-    TlsConnection.io.rec_len = rec_len;
-    TlsConnection.out_args.out = pt;
-    TlsConnection.out_args.out_cap = sizeof(pt);
-    TlsConnection.out_args.out_len = &got;
+    TlsConnectionV.conn = &g_conn;
+    TlsConnectionV.io.rec = rec;
+    TlsConnectionV.io.rec_len = rec_len;
+    TlsConnectionV.out_args.out = pt;
+    TlsConnectionV.out_args.out_cap = sizeof(pt);
+    TlsConnectionV.out_args.out_len = &got;
     TlsConnection.open_app(NULL);
-    TEST_ASSERT_TRUE_MESSAGE(TlsConnection.ok, "the server could not open the client's application record");
+    TEST_ASSERT_TRUE_MESSAGE(TlsConnectionV.ok, "the server could not open the client's application record");
     TEST_ASSERT_EQUAL_UINT(sizeof(CLIENT_MSG), got);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(CLIENT_MSG, pt, sizeof(CLIENT_MSG));
 }
@@ -699,11 +699,11 @@ void test_a_missing_key_share_owes_a_hello_retry_request(void)
     TEST_ASSERT_TRUE_MESSAGE(wrote > 0, "RFC 8446 sec 4.1.1 MUST: a missing key_share owes a HelloRetryRequest");
 
     TlsPlaintext view;
-    TlsRecord.sealed.rec = g_srv_out;
-    TlsRecord.sealed.rec_len = (size_t)wrote;
-    TlsRecord.plain.view = &view;
+    TlsRecordV.sealed.rec = g_srv_out;
+    TlsRecordV.sealed.rec_len = (size_t)wrote;
+    TlsRecordV.plain.view = &view;
     TlsRecord.plaintext_parse(NULL);
-    TEST_ASSERT_TRUE(TlsRecord.n > 0);
+    TEST_ASSERT_TRUE(TlsRecordV.n > 0);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_TLS_CT_HANDSHAKE, view.content_type);
     TEST_ASSERT_EQUAL_HEX8(TLS_HS_SERVER_HELLO, view.fragment[0]);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(HRR_RANDOM, view.fragment + 6, 32);
@@ -787,39 +787,39 @@ void test_a_wrong_client_finished_is_decrypt_error(void)
     g_cli_transcript = g_cli_hash_work;
     Sha256.init(g_cli_transcript);
     size_t ch_len = build_client_hello(ch, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
-    Sha256.update_args.data = ch;
-    Sha256.update_args.len = ch_len;
+    Sha256V.update_args.data = ch;
+    Sha256V.update_args.len = ch_len;
     Sha256.update(g_cli_transcript);
     int wrote = feed_plaintext(PROTOCORE_TLS_CT_HANDSHAKE, ch, ch_len, rec, sizeof(rec));
     TEST_ASSERT_TRUE(wrote > 0);
 
     TlsPlaintext view;
-    TlsRecord.sealed.rec = g_srv_out;
-    TlsRecord.sealed.rec_len = (size_t)wrote;
-    TlsRecord.plain.view = &view;
+    TlsRecordV.sealed.rec = g_srv_out;
+    TlsRecordV.sealed.rec_len = (size_t)wrote;
+    TlsRecordV.plain.view = &view;
     TlsRecord.plaintext_parse(NULL);
-    Sha256.update_args.data = view.fragment;
-    Sha256.update_args.len = view.frag_len;
+    Sha256V.update_args.data = view.fragment;
+    Sha256V.update_args.len = view.frag_len;
     Sha256.update(g_cli_transcript);
     const uint8_t *server_share = view.fragment + 52;
     TEST_ASSERT_EQUAL_UINT8_ARRAY(SERVER_X25519_PUB, server_share, 32);
 
     uint8_t ecdhe[32];
     uint8_t ch_sh_hash[32];
-    Curve25519.x25519_args.out = ecdhe;
-    Curve25519.x25519_args.scalar = CLIENT_X25519_PRIV;
-    Curve25519.x25519_args.point = server_share;
+    Curve25519V.x25519_args.out = ecdhe;
+    Curve25519V.x25519_args.scalar = CLIENT_X25519_PRIV;
+    Curve25519V.x25519_args.point = server_share;
     Curve25519.x25519(g_sign_work);
-    Sha256.final_args.out = ch_sh_hash;
+    Sha256V.final_args.out = ch_sh_hash;
     Sha256.final(g_cli_transcript);
-    Tls13Ks.bind.kdf = &TLS13_KDF;
-    Tls13Ks.bind.ks = &g_cli_ks;
-    Tls13Ks.bind.s = g_cli_ks_bytes;
-    Tls13Ks.early(NULL);
-    Tls13Ks.bind.ks = &g_cli_ks;
-    Tls13Ks.step.ecdhe = ecdhe;
-    Tls13Ks.step.ecdhe_len = sizeof(ecdhe);
-    Tls13Ks.step.ch_sh_hash = ch_sh_hash;
+    Tls13KsV.bind.kdf = &TLS13_KDF;
+    Tls13KsV.bind.ks = &g_cli_ks;
+    Tls13KsV.bind.s = g_cli_ks_bytes;
+    Tls13KsV.early(NULL);
+    Tls13KsV.bind.ks = &g_cli_ks;
+    Tls13KsV.step.ecdhe = ecdhe;
+    Tls13KsV.step.ecdhe_len = sizeof(ecdhe);
+    Tls13KsV.step.ch_sh_hash = ch_sh_hash;
     Tls13Ks.handshake(NULL);
     cli_keys(&g_cli_hs_tx, g_cli_ks.s + TLS13_KS_CLIENT_HS);
 
@@ -830,15 +830,15 @@ void test_a_wrong_client_finished_is_decrypt_error(void)
     fin_msg[2] = 0;
     fin_msg[3] = 32;
 
-    TlsRecord.key.keys = &g_cli_hs_tx;
-    TlsRecord.content_type = PROTOCORE_TLS_CT_HANDSHAKE;
-    TlsRecord.sealed.pt = fin_msg;
-    TlsRecord.sealed.pt_len = sizeof(fin_msg);
-    TlsRecord.out_args.out = rec;
-    TlsRecord.out_args.out_cap = sizeof(rec);
+    TlsRecordV.key.keys = &g_cli_hs_tx;
+    TlsRecordV.content_type = PROTOCORE_TLS_CT_HANDSHAKE;
+    TlsRecordV.sealed.pt = fin_msg;
+    TlsRecordV.sealed.pt_len = sizeof(fin_msg);
+    TlsRecordV.out_args.out = rec;
+    TlsRecordV.out_args.out_cap = sizeof(rec);
     TlsRecord.protect(NULL);
 
-    TEST_ASSERT_EQUAL_INT(-1, feed(rec, TlsRecord.n));
+    TEST_ASSERT_EQUAL_INT(-1, feed(rec, TlsRecordV.n));
     TEST_ASSERT_EQUAL_UINT8(ALERT_DECRYPT_ERROR, server_alert());
     TEST_ASSERT_FALSE(server_established());
 }
@@ -853,22 +853,22 @@ void test_application_data_needs_the_handshake(void)
     static const uint8_t MSG[4] = {1, 2, 3, 4};
 
     init_server();
-    TlsConnection.conn = &g_conn;
-    TlsConnection.io.data = MSG;
-    TlsConnection.io.len = sizeof(MSG);
-    TlsConnection.out_args.out = buf;
-    TlsConnection.out_args.out_cap = sizeof(buf);
+    TlsConnectionV.conn = &g_conn;
+    TlsConnectionV.io.data = MSG;
+    TlsConnectionV.io.len = sizeof(MSG);
+    TlsConnectionV.out_args.out = buf;
+    TlsConnectionV.out_args.out_cap = sizeof(buf);
     TlsConnection.seal_app(NULL);
-    TEST_ASSERT_EQUAL_UINT(0u, TlsConnection.n);
+    TEST_ASSERT_EQUAL_UINT(0u, TlsConnectionV.n);
 
-    TlsConnection.conn = &g_conn;
-    TlsConnection.io.rec = buf;
-    TlsConnection.io.rec_len = sizeof(buf);
-    TlsConnection.out_args.out = buf;
-    TlsConnection.out_args.out_cap = sizeof(buf);
-    TlsConnection.out_args.out_len = &got;
+    TlsConnectionV.conn = &g_conn;
+    TlsConnectionV.io.rec = buf;
+    TlsConnectionV.io.rec_len = sizeof(buf);
+    TlsConnectionV.out_args.out = buf;
+    TlsConnectionV.out_args.out_cap = sizeof(buf);
+    TlsConnectionV.out_args.out_len = &got;
     TlsConnection.open_app(NULL);
-    TEST_ASSERT_FALSE(TlsConnection.ok);
+    TEST_ASSERT_FALSE(TlsConnectionV.ok);
     TEST_ASSERT_FALSE(server_established());
 }
 
@@ -915,14 +915,14 @@ static size_t feed_records(TlsConn *into, const uint8_t *buf, size_t len, uint8_
     {
         const size_t rn = record_len(buf + off, len - off);
         TEST_ASSERT_NOT_EQUAL_MESSAGE(0u, rn, "a record ran past the flight");
-        TlsConnection.conn = into;
+        TlsConnectionV.conn = into;
         memcpy(into->rx, buf + off, rn);
-        TlsConnection.io.rx_len = rn;
-        TlsConnection.out_args.out = out + written;
-        TlsConnection.out_args.out_cap = out_cap - written;
+        TlsConnectionV.io.rx_len = rn;
+        TlsConnectionV.out_args.out = out + written;
+        TlsConnectionV.out_args.out_cap = out_cap - written;
         TlsConnection.process(NULL);
-        TEST_ASSERT_GREATER_OR_EQUAL_MESSAGE(0, TlsConnection.i32, "a record was refused");
-        written += (size_t)TlsConnection.i32;
+        TEST_ASSERT_GREATER_OR_EQUAL_MESSAGE(0, TlsConnectionV.i32, "a record was refused");
+        written += (size_t)TlsConnectionV.i32;
         off += rn;
     }
     return written;
@@ -940,24 +940,24 @@ static void drive_full_handshake(TlsCipher cipher)
     g_cli_cfg.cipher = cipher;
     g_cfg.cipher = cipher;
 
-    TlsConnection.conn = &g_cli_conn;
-    TlsConnection.init_args.role = TLS_ROLE_CLIENT;
-    TlsConnection.init_args.cfg = &g_cli_cfg;
+    TlsConnectionV.conn = &g_cli_conn;
+    TlsConnectionV.init_args.role = TLS_ROLE_CLIENT;
+    TlsConnectionV.init_args.cfg = &g_cli_cfg;
     TlsConnection.init(NULL);
-    TEST_ASSERT_TRUE(TlsConnection.ok);
+    TEST_ASSERT_TRUE(TlsConnectionV.ok);
 
-    TlsConnection.conn = &g_conn;
-    TlsConnection.init_args.role = TLS_ROLE_SERVER;
-    TlsConnection.init_args.cfg = &g_cfg;
+    TlsConnectionV.conn = &g_conn;
+    TlsConnectionV.init_args.role = TLS_ROLE_SERVER;
+    TlsConnectionV.init_args.cfg = &g_cfg;
     TlsConnection.init(NULL);
-    TEST_ASSERT_TRUE(TlsConnection.ok);
+    TEST_ASSERT_TRUE(TlsConnectionV.ok);
 
     // ClientHello.
-    TlsConnection.conn = &g_cli_conn;
-    TlsConnection.out_args.out = g_cli_out;
-    TlsConnection.out_args.out_cap = sizeof(g_cli_out);
+    TlsConnectionV.conn = &g_cli_conn;
+    TlsConnectionV.out_args.out = g_cli_out;
+    TlsConnectionV.out_args.out_cap = sizeof(g_cli_out);
     TlsConnection.start(NULL);
-    const size_t ch = TlsConnection.n;
+    const size_t ch = TlsConnectionV.n;
     TEST_ASSERT_NOT_EQUAL_MESSAGE(0u, ch, "the client wrote no ClientHello");
 
     // The server answers with ServerHello + its encrypted flight.
@@ -966,11 +966,11 @@ static void drive_full_handshake(TlsCipher cipher)
 
     // The client consumes that flight and answers with its Finished.
     const size_t fin = feed_records(&g_cli_conn, g_srv_out, flight, g_cli_out, sizeof(g_cli_out));
-    TlsConnection.conn = &g_cli_conn;
+    TlsConnectionV.conn = &g_cli_conn;
     TlsConnection.established(NULL);
-    TEST_ASSERT_TRUE_MESSAGE(TlsConnection.ok, "the client did not complete");
-    TlsConnection.alert(NULL);
-    TEST_ASSERT_EQUAL_UINT8(0u, TlsConnection.u8);
+    TEST_ASSERT_TRUE_MESSAGE(TlsConnectionV.ok, "the client did not complete");
+    TlsConnectionV.alert(NULL);
+    TEST_ASSERT_EQUAL_UINT8(0u, TlsConnectionV.u8);
     TEST_ASSERT_NOT_EQUAL_MESSAGE(0u, fin, "the client wrote no Finished");
 
     // The server accepts it and is done too.
@@ -984,45 +984,45 @@ static void drive_full_handshake(TlsCipher cipher)
     uint8_t got[256];
     size_t got_len = 0;
 
-    TlsConnection.conn = &g_cli_conn;
-    TlsConnection.io.data = PING;
-    TlsConnection.io.len = sizeof(PING);
-    TlsConnection.out_args.out = rec;
-    TlsConnection.out_args.out_cap = sizeof(rec);
+    TlsConnectionV.conn = &g_cli_conn;
+    TlsConnectionV.io.data = PING;
+    TlsConnectionV.io.len = sizeof(PING);
+    TlsConnectionV.out_args.out = rec;
+    TlsConnectionV.out_args.out_cap = sizeof(rec);
     TlsConnection.seal_app(NULL);
-    const size_t sealed = TlsConnection.n;
+    const size_t sealed = TlsConnectionV.n;
     TEST_ASSERT_NOT_EQUAL(0u, sealed);
 
-    TlsConnection.conn = &g_conn;
-    TlsConnection.io.rec = rec;
-    TlsConnection.io.rec_len = sealed;
-    TlsConnection.out_args.out = got;
-    TlsConnection.out_args.out_cap = sizeof(got);
-    TlsConnection.out_args.out_len = &got_len;
+    TlsConnectionV.conn = &g_conn;
+    TlsConnectionV.io.rec = rec;
+    TlsConnectionV.io.rec_len = sealed;
+    TlsConnectionV.out_args.out = got;
+    TlsConnectionV.out_args.out_cap = sizeof(got);
+    TlsConnectionV.out_args.out_len = &got_len;
     TlsConnection.open_app(NULL);
-    TEST_ASSERT_TRUE_MESSAGE(TlsConnection.ok, "the server could not open the client's record");
+    TEST_ASSERT_TRUE_MESSAGE(TlsConnectionV.ok, "the server could not open the client's record");
     TEST_ASSERT_EQUAL_UINT(sizeof(PING), got_len);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(PING, got, sizeof(PING));
 
     // And the other direction, which uses the opposite pair of traffic keys.
-    TlsConnection.conn = &g_conn;
-    TlsConnection.io.data = PING;
-    TlsConnection.io.len = sizeof(PING);
-    TlsConnection.out_args.out = rec;
-    TlsConnection.out_args.out_cap = sizeof(rec);
+    TlsConnectionV.conn = &g_conn;
+    TlsConnectionV.io.data = PING;
+    TlsConnectionV.io.len = sizeof(PING);
+    TlsConnectionV.out_args.out = rec;
+    TlsConnectionV.out_args.out_cap = sizeof(rec);
     TlsConnection.seal_app(NULL);
-    const size_t sealed2 = TlsConnection.n;
+    const size_t sealed2 = TlsConnectionV.n;
     TEST_ASSERT_NOT_EQUAL(0u, sealed2);
 
     got_len = 0;
-    TlsConnection.conn = &g_cli_conn;
-    TlsConnection.io.rec = rec;
-    TlsConnection.io.rec_len = sealed2;
-    TlsConnection.out_args.out = got;
-    TlsConnection.out_args.out_cap = sizeof(got);
-    TlsConnection.out_args.out_len = &got_len;
+    TlsConnectionV.conn = &g_cli_conn;
+    TlsConnectionV.io.rec = rec;
+    TlsConnectionV.io.rec_len = sealed2;
+    TlsConnectionV.out_args.out = got;
+    TlsConnectionV.out_args.out_cap = sizeof(got);
+    TlsConnectionV.out_args.out_len = &got_len;
     TlsConnection.open_app(NULL);
-    TEST_ASSERT_TRUE_MESSAGE(TlsConnection.ok, "the client could not open the server's record");
+    TEST_ASSERT_TRUE_MESSAGE(TlsConnectionV.ok, "the client could not open the server's record");
     TEST_ASSERT_EQUAL_UINT(sizeof(PING), got_len);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(PING, got, sizeof(PING));
 }
@@ -1060,32 +1060,32 @@ void test_a_client_that_did_not_offer_the_listeners_suite_is_refused(void)
     g_cli_cfg.cipher = TLS_CIPHER_AES_128_GCM_SHA256;
     g_cfg.cipher = TLS_CIPHER_AES_256_GCM_SHA384;
 
-    TlsConnection.conn = &g_cli_conn;
-    TlsConnection.init_args.role = TLS_ROLE_CLIENT;
-    TlsConnection.init_args.cfg = &g_cli_cfg;
+    TlsConnectionV.conn = &g_cli_conn;
+    TlsConnectionV.init_args.role = TLS_ROLE_CLIENT;
+    TlsConnectionV.init_args.cfg = &g_cli_cfg;
     TlsConnection.init(NULL);
-    TEST_ASSERT_TRUE(TlsConnection.ok);
+    TEST_ASSERT_TRUE(TlsConnectionV.ok);
 
-    TlsConnection.conn = &g_conn;
-    TlsConnection.init_args.role = TLS_ROLE_SERVER;
-    TlsConnection.init_args.cfg = &g_cfg;
+    TlsConnectionV.conn = &g_conn;
+    TlsConnectionV.init_args.role = TLS_ROLE_SERVER;
+    TlsConnectionV.init_args.cfg = &g_cfg;
     TlsConnection.init(NULL);
-    TEST_ASSERT_TRUE(TlsConnection.ok);
+    TEST_ASSERT_TRUE(TlsConnectionV.ok);
 
-    TlsConnection.conn = &g_cli_conn;
-    TlsConnection.out_args.out = g_cli_out;
-    TlsConnection.out_args.out_cap = sizeof(g_cli_out);
+    TlsConnectionV.conn = &g_cli_conn;
+    TlsConnectionV.out_args.out = g_cli_out;
+    TlsConnectionV.out_args.out_cap = sizeof(g_cli_out);
     TlsConnection.start(NULL);
-    const size_t ch = TlsConnection.n;
+    const size_t ch = TlsConnectionV.n;
     TEST_ASSERT_NOT_EQUAL(0u, ch);
 
-    TlsConnection.conn = &g_conn;
+    TlsConnectionV.conn = &g_conn;
     memcpy(g_conn.rx, g_cli_out, ch);
-    TlsConnection.io.rx_len = ch;
-    TlsConnection.out_args.out = g_srv_out;
-    TlsConnection.out_args.out_cap = sizeof(g_srv_out);
+    TlsConnectionV.io.rx_len = ch;
+    TlsConnectionV.out_args.out = g_srv_out;
+    TlsConnectionV.out_args.out_cap = sizeof(g_srv_out);
     TlsConnection.process(NULL);
-    TEST_ASSERT_EQUAL_INT(-1, TlsConnection.i32);
+    TEST_ASSERT_EQUAL_INT(-1, TlsConnectionV.i32);
     TEST_ASSERT_EQUAL_UINT8(ALERT_HANDSHAKE_FAILURE, server_alert());
 }
 
@@ -1102,20 +1102,20 @@ void test_a_client_refuses_the_wrong_peer_key(void)
     g_cli_cfg.random = SERVER_RANDOM;
     g_cli_cfg.peer_pub = WRONG;
 
-    TlsConnection.conn = &g_cli_conn;
-    TlsConnection.init_args.role = TLS_ROLE_CLIENT;
-    TlsConnection.init_args.cfg = &g_cli_cfg;
+    TlsConnectionV.conn = &g_cli_conn;
+    TlsConnectionV.init_args.role = TLS_ROLE_CLIENT;
+    TlsConnectionV.init_args.cfg = &g_cli_cfg;
     TlsConnection.init(NULL);
-    TlsConnection.conn = &g_conn;
-    TlsConnection.init_args.role = TLS_ROLE_SERVER;
-    TlsConnection.init_args.cfg = &g_cfg;
+    TlsConnectionV.conn = &g_conn;
+    TlsConnectionV.init_args.role = TLS_ROLE_SERVER;
+    TlsConnectionV.init_args.cfg = &g_cfg;
     TlsConnection.init(NULL);
 
-    TlsConnection.conn = &g_cli_conn;
-    TlsConnection.out_args.out = g_cli_out;
-    TlsConnection.out_args.out_cap = sizeof(g_cli_out);
+    TlsConnectionV.conn = &g_cli_conn;
+    TlsConnectionV.out_args.out = g_cli_out;
+    TlsConnectionV.out_args.out_cap = sizeof(g_cli_out);
     TlsConnection.start(NULL);
-    const size_t ch = TlsConnection.n;
+    const size_t ch = TlsConnectionV.n;
     const size_t flight = feed_records(&g_conn, g_cli_out, ch, g_srv_out, sizeof(g_srv_out));
 
     // The flight is fed record by record until one is refused; the Certificate is that one.
@@ -1124,13 +1124,13 @@ void test_a_client_refuses_the_wrong_peer_key(void)
     {
         const size_t rn = record_len(g_srv_out + off, flight - off);
         TEST_ASSERT_NOT_EQUAL(0u, rn);
-        TlsConnection.conn = &g_cli_conn;
+        TlsConnectionV.conn = &g_cli_conn;
         memcpy(g_cli_conn.rx, g_srv_out + off, rn);
-        TlsConnection.io.rx_len = rn;
-        TlsConnection.out_args.out = g_cli_out;
-        TlsConnection.out_args.out_cap = sizeof(g_cli_out);
+        TlsConnectionV.io.rx_len = rn;
+        TlsConnectionV.out_args.out = g_cli_out;
+        TlsConnectionV.out_args.out_cap = sizeof(g_cli_out);
         TlsConnection.process(NULL);
-        if (TlsConnection.i32 < 0)
+        if (TlsConnectionV.i32 < 0)
         {
             refused = PROTO_TRUE;
             break;
@@ -1138,11 +1138,11 @@ void test_a_client_refuses_the_wrong_peer_key(void)
         off += rn;
     }
     TEST_ASSERT_TRUE_MESSAGE(refused, "the client accepted a key it was not configured for");
-    TlsConnection.conn = &g_cli_conn;
+    TlsConnectionV.conn = &g_cli_conn;
     TlsConnection.established(NULL);
-    TEST_ASSERT_FALSE(TlsConnection.ok);
-    TlsConnection.alert(NULL);
-    TEST_ASSERT_EQUAL_UINT8(ALERT_HANDSHAKE_FAILURE, TlsConnection.u8);
+    TEST_ASSERT_FALSE(TlsConnectionV.ok);
+    TlsConnectionV.alert(NULL);
+    TEST_ASSERT_EQUAL_UINT8(ALERT_HANDSHAKE_FAILURE, TlsConnectionV.u8);
 }
 
 // ---------------------------------------------------------------------------
@@ -1156,28 +1156,28 @@ void test_a_client_refuses_the_wrong_peer_key(void)
 // Drive one full handshake with the two configurations given. Returns the client's state.
 static proto_bool run_handshake(TlsConnConfig *cli_cfg, TlsConnConfig *srv_cfg)
 {
-    TlsConnection.conn = &g_cli_conn;
-    TlsConnection.init_args.role = TLS_ROLE_CLIENT;
-    TlsConnection.init_args.cfg = cli_cfg;
+    TlsConnectionV.conn = &g_cli_conn;
+    TlsConnectionV.init_args.role = TLS_ROLE_CLIENT;
+    TlsConnectionV.init_args.cfg = cli_cfg;
     TlsConnection.init(NULL);
-    if (!TlsConnection.ok)
+    if (!TlsConnectionV.ok)
     {
         return PROTO_FALSE;
     }
-    TlsConnection.conn = &g_conn;
-    TlsConnection.init_args.role = TLS_ROLE_SERVER;
-    TlsConnection.init_args.cfg = srv_cfg;
+    TlsConnectionV.conn = &g_conn;
+    TlsConnectionV.init_args.role = TLS_ROLE_SERVER;
+    TlsConnectionV.init_args.cfg = srv_cfg;
     TlsConnection.init(NULL);
-    if (!TlsConnection.ok)
+    if (!TlsConnectionV.ok)
     {
         return PROTO_FALSE;
     }
 
-    TlsConnection.conn = &g_cli_conn;
-    TlsConnection.out_args.out = g_cli_out;
-    TlsConnection.out_args.out_cap = sizeof(g_cli_out);
+    TlsConnectionV.conn = &g_cli_conn;
+    TlsConnectionV.out_args.out = g_cli_out;
+    TlsConnectionV.out_args.out_cap = sizeof(g_cli_out);
     TlsConnection.start(NULL);
-    const size_t ch = TlsConnection.n;
+    const size_t ch = TlsConnectionV.n;
     if (ch == 0)
     {
         return PROTO_FALSE;
@@ -1198,22 +1198,22 @@ static proto_bool run_handshake(TlsConnConfig *cli_cfg, TlsConnConfig *srv_cfg)
         {
             return PROTO_FALSE;
         }
-        TlsConnection.conn = &g_cli_conn;
+        TlsConnectionV.conn = &g_cli_conn;
         memcpy(g_cli_conn.rx, g_srv_out + off, rn);
-        TlsConnection.io.rx_len = rn;
-        TlsConnection.out_args.out = g_cli_out + back;
-        TlsConnection.out_args.out_cap = sizeof(g_cli_out) - back;
+        TlsConnectionV.io.rx_len = rn;
+        TlsConnectionV.out_args.out = g_cli_out + back;
+        TlsConnectionV.out_args.out_cap = sizeof(g_cli_out) - back;
         TlsConnection.process(NULL);
-        if (TlsConnection.i32 < 0)
+        if (TlsConnectionV.i32 < 0)
         {
             return PROTO_FALSE;
         }
-        back += (size_t)TlsConnection.i32; // the client's Finished, once the flight is closed
+        back += (size_t)TlsConnectionV.i32; // the client's Finished, once the flight is closed
         off += rn;
     }
-    TlsConnection.conn = &g_cli_conn;
+    TlsConnectionV.conn = &g_cli_conn;
     TlsConnection.established(NULL);
-    if (!TlsConnection.ok)
+    if (!TlsConnectionV.ok)
     {
         return PROTO_FALSE;
     }
@@ -1247,9 +1247,9 @@ void test_a_certificate_chain_authenticates_the_server(void)
     TlsConnConfig cli, srv;
     x509_configs(&cli, &srv, "leaf.example.com");
     TEST_ASSERT_TRUE_MESSAGE(run_handshake(&cli, &srv), "the certificate handshake did not complete");
-    TlsConnection.conn = &g_cli_conn;
-    TlsConnection.alert(NULL);
-    TEST_ASSERT_EQUAL_UINT8(0u, TlsConnection.u8);
+    TlsConnectionV.conn = &g_cli_conn;
+    TlsConnectionV.alert(NULL);
+    TEST_ASSERT_EQUAL_UINT8(0u, TlsConnectionV.u8);
     TEST_ASSERT_TRUE_MESSAGE(server_established(), "the server did not complete");
 }
 
@@ -1260,9 +1260,9 @@ void test_a_certificate_for_another_name_is_refused(void)
     TlsConnConfig cli, srv;
     x509_configs(&cli, &srv, "wrong.example.com");
     TEST_ASSERT_FALSE_MESSAGE(run_handshake(&cli, &srv), "a certificate for another name was accepted");
-    TlsConnection.conn = &g_cli_conn;
-    TlsConnection.alert(NULL);
-    TEST_ASSERT_EQUAL_UINT8(ALERT_HANDSHAKE_FAILURE, TlsConnection.u8);
+    TlsConnectionV.conn = &g_cli_conn;
+    TlsConnectionV.alert(NULL);
+    TEST_ASSERT_EQUAL_UINT8(ALERT_HANDSHAKE_FAILURE, TlsConnectionV.u8);
 }
 
 // RFC 5280 sec 6.1: the chain has to reach the anchor the client was configured with. A different
@@ -1274,9 +1274,9 @@ void test_a_chain_to_another_anchor_is_refused(void)
     cli.ca_der = X509_CA_P256_DER; // a real CA, and not the one that signed this leaf
     cli.ca_len = sizeof(X509_CA_P256_DER);
     TEST_ASSERT_FALSE_MESSAGE(run_handshake(&cli, &srv), "a chain to the wrong anchor was accepted");
-    TlsConnection.conn = &g_cli_conn;
-    TlsConnection.alert(NULL);
-    TEST_ASSERT_EQUAL_UINT8(ALERT_HANDSHAKE_FAILURE, TlsConnection.u8);
+    TlsConnectionV.conn = &g_cli_conn;
+    TlsConnectionV.alert(NULL);
+    TEST_ASSERT_EQUAL_UINT8(ALERT_HANDSHAKE_FAILURE, TlsConnectionV.u8);
 }
 
 // sec 6.1.3 (a)(2): a certificate outside its validity window is refused, both ways.
@@ -1304,7 +1304,7 @@ void test_a_certificate_signed_by_the_wrong_key_is_refused(void)
     x509_configs(&cli, &srv, "leaf.example.com");
     srv.ed25519_seed = other_seed;
     TEST_ASSERT_FALSE_MESSAGE(run_handshake(&cli, &srv), "a CertificateVerify under the wrong key was accepted");
-    TlsConnection.conn = &g_cli_conn;
-    TlsConnection.alert(NULL);
-    TEST_ASSERT_EQUAL_UINT8(ALERT_DECRYPT_ERROR, TlsConnection.u8);
+    TlsConnectionV.conn = &g_cli_conn;
+    TlsConnectionV.alert(NULL);
+    TEST_ASSERT_EQUAL_UINT8(ALERT_DECRYPT_ERROR, TlsConnectionV.u8);
 }

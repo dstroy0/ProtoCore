@@ -11,13 +11,13 @@
 
 static void feed_request(uint8_t slot, const char *raw)
 {
-    HttpParser.reset_args.req = &http_pool[slot];
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParserV.reset_args.req = &http_pool[slot];
+    HttpParserV.reset(protocore_http_parser_span());
     for (const char *s = raw; *s; s++)
     {
-        HttpParser.feed_args.req = &http_pool[slot];
-        HttpParser.feed_args.byte = (uint8_t)*s;
-        HttpParser.feed(protocore_http_parser_span());
+        HttpParserV.feed_args.req = &http_pool[slot];
+        HttpParserV.feed_args.byte = (uint8_t)*s;
+        HttpParserV.feed(protocore_http_parser_span());
     }
 }
 
@@ -27,8 +27,8 @@ void setUp()
     {
         http_pool[i] = (HttpReq){0};
         http_pool[i].slot_id = (uint8_t)i;
-        HttpParser.reset_args.req = &http_pool[i];
-        HttpParser.reset(protocore_http_parser_span());
+        HttpParserV.reset_args.req = &http_pool[i];
+        HttpParserV.reset(protocore_http_parser_span());
     }
 }
 
@@ -149,4 +149,3 @@ void test_transfer_encoding_case_insensitive_rejected()
     feed_request(0, "POST / HTTP/1.1\r\nHost: x\r\ntRaNsFeR-eNcOdInG: chunked\r\n\r\n0\r\n\r\n");
     TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
 }
-

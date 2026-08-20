@@ -93,7 +93,6 @@ typedef struct
     uint8_t pdl;          ///< parameter data length
     const uint8_t *pdata; ///< parameter data (points into the parsed buffer); nullptr when pdl 0
 } RdmPacket;
-
 /** @brief Decoded DEVICE_INFO (PID 0x0060) parameter data - the descriptor every RDM responder must
  *  answer, carrying the fields a controller needs to patch and identify the device. */
 typedef struct
@@ -110,7 +109,6 @@ typedef struct
     uint16_t sub_device_count;    ///< number of sub-devices (0 = none)
     uint8_t sensor_count;         ///< number of sensors
 } RdmDeviceInfo;
-
 /** @brief What build takes: buf, cap, start_code, channels, n. */
 typedef struct
 {
@@ -120,7 +118,6 @@ typedef struct
     const uint8_t *channels;
     uint16_t n;
 } DmxBuildArgs;
-
 /** @brief What get_channel takes: buf, len, ch. */
 typedef struct
 {
@@ -128,21 +125,18 @@ typedef struct
     size_t len;
     uint16_t ch;
 } DmxGetChannelArgs;
-
 /** @brief What rdm_uid takes: manufacturer, device. */
 typedef struct
 {
     uint16_t manufacturer;
     uint32_t device;
 } DmxRdmUidArgs;
-
 /** @brief What rdm_checksum takes: buf, len. */
 typedef struct
 {
     const uint8_t *buf;
     size_t len;
 } DmxRdmChecksumArgs;
-
 /** @brief What rdm_build takes: buf, cap, p, pdata, pdl. */
 typedef struct
 {
@@ -152,7 +146,6 @@ typedef struct
     const uint8_t *pdata;
     uint8_t pdl;
 } DmxRdmBuildArgs;
-
 /** @brief What rdm_parse takes: buf, len, out, consumed. */
 typedef struct
 {
@@ -161,7 +154,6 @@ typedef struct
     RdmPacket *out;
     size_t *consumed;
 } DmxRdmParseArgs;
-
 /** @brief What rdm_decode_disc_response takes: buf, len, uid. */
 typedef struct
 {
@@ -169,7 +161,6 @@ typedef struct
     size_t len;
     uint64_t *uid;
 } DmxRdmDecodeDiscResponseArgs;
-
 /** @brief What rdm_build_disc_response takes: buf, cap, uid, ... */
 typedef struct
 {
@@ -178,7 +169,6 @@ typedef struct
     uint64_t uid;
     uint8_t preamble_len;
 } DmxRdmBuildDiscResponseArgs;
-
 /** @brief What rdm_build_device_info takes: pdata, cap, info. */
 typedef struct
 {
@@ -186,7 +176,6 @@ typedef struct
     size_t cap;
     const RdmDeviceInfo *info;
 } DmxRdmBuildDeviceInfoArgs;
-
 /** @brief What rdm_parse_device_info takes: pdata, pdl, out. */
 typedef struct
 {
@@ -194,7 +183,6 @@ typedef struct
     uint8_t pdl;
     RdmDeviceInfo *out;
 } DmxRdmParseDeviceInfoArgs;
-
 /**
  * @brief DMX512 framing + RDM (ANSI E1.20) management codec (PROTOCORE_ENABLE_DMX). DMX512 (lighting / stage control
  * ...
@@ -252,13 +240,19 @@ typedef struct
     DmxRdmBuildDiscResponseArgs rdm_build_disc_response_args;
     DmxRdmBuildDeviceInfoArgs rdm_build_device_info_args;
     DmxRdmParseDeviceInfoArgs rdm_parse_device_info_args;
-
     proto_bool ok;
     size_t n;
     uint8_t u8;
     uint64_t uid;
     uint16_t checksum;
+} DmxVars;
 
+/** @brief The operands and the outcome. */
+extern DmxVars DmxV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build)(uint8_t *restrict work);
     void (*const get_channel)(uint8_t *restrict work);
     void (*const rdm_uid)(uint8_t *restrict work);
@@ -271,8 +265,35 @@ typedef struct
     void (*const rdm_parse_device_info)(uint8_t *restrict work);
 } DmxNs;
 
-/** @brief The one symbol this module exports. */
-extern DmxNs Dmx;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in DmxV or a region of the borrow at a fixed offset.
+void protocore_dmx_build(uint8_t *restrict work);
+void protocore_dmx_get_channel(uint8_t *restrict work);
+void protocore_dmx_rdm_uid(uint8_t *restrict work);
+void protocore_dmx_rdm_checksum(uint8_t *restrict work);
+void protocore_dmx_rdm_build(uint8_t *restrict work);
+void protocore_dmx_rdm_parse(uint8_t *restrict work);
+void protocore_dmx_rdm_decode_disc_response(uint8_t *restrict work);
+void protocore_dmx_rdm_build_disc_response(uint8_t *restrict work);
+void protocore_dmx_rdm_build_device_info(uint8_t *restrict work);
+void protocore_dmx_rdm_parse_device_info(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Dmx.build(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const DmxNs Dmx __attribute__((unused)) = {
+    .build = protocore_dmx_build,
+    .get_channel = protocore_dmx_get_channel,
+    .rdm_uid = protocore_dmx_rdm_uid,
+    .rdm_checksum = protocore_dmx_rdm_checksum,
+    .rdm_build = protocore_dmx_rdm_build,
+    .rdm_parse = protocore_dmx_rdm_parse,
+    .rdm_decode_disc_response = protocore_dmx_rdm_decode_disc_response,
+    .rdm_build_disc_response = protocore_dmx_rdm_build_disc_response,
+    .rdm_build_device_info = protocore_dmx_rdm_build_device_info,
+    .rdm_parse_device_info = protocore_dmx_rdm_parse_device_info,
+};
 
 PROTOCORE_END_DECLS
 

@@ -45,46 +45,46 @@ uint8_t *protocore_fdc2214_span(void)
     return s_own.span;
 }
 
-static void fdc2214_build_config(uint8_t *restrict work);
-static void fdc2214_data(uint8_t *restrict work);
+void protocore_fdc2214_build_config(uint8_t *restrict work);
+void protocore_fdc2214_data(uint8_t *restrict work);
 
-static void fdc2214_data(uint8_t *restrict work)
+void protocore_fdc2214_data(uint8_t *restrict work)
 {
     (void)work;
-    uint16_t msb_reg = Fdc2214.data_args.msb_reg;
-    uint16_t lsb_reg = Fdc2214.data_args.lsb_reg;
+    uint16_t msb_reg = Fdc2214V.data_args.msb_reg;
+    uint16_t lsb_reg = Fdc2214V.data_args.lsb_reg;
 
-    Fdc2214.value = ((uint32_t)(msb_reg & 0x0FFF) << 16) | lsb_reg;
+    Fdc2214V.value = ((uint32_t)(msb_reg & 0x0FFF) << 16) | lsb_reg;
 }
 
-static void fdc2214_error(uint8_t *restrict work)
+void protocore_fdc2214_error(uint8_t *restrict work)
 {
     (void)work;
-    uint16_t msb_reg = Fdc2214.error_args.msb_reg;
+    uint16_t msb_reg = Fdc2214V.error_args.msb_reg;
 
-    Fdc2214.flags = (uint8_t)((msb_reg >> 12) & 0x0F);
+    Fdc2214V.flags = (uint8_t)((msb_reg >> 12) & 0x0F);
 }
 
-static void fdc2214_sensor_freq_hz(uint8_t *restrict work)
+void protocore_fdc2214_sensor_freq_hz(uint8_t *restrict work)
 {
     (void)work;
-    uint32_t data28 = Fdc2214.sensor_freq_hz_args.data28;
-    uint32_t fref_hz = Fdc2214.sensor_freq_hz_args.fref_hz;
+    uint32_t data28 = Fdc2214V.sensor_freq_hz_args.data28;
+    uint32_t fref_hz = Fdc2214V.sensor_freq_hz_args.fref_hz;
 
-    Fdc2214.hz = ((uint64_t)data28 * fref_hz) >> 28;
+    Fdc2214V.hz = ((uint64_t)data28 * fref_hz) >> 28;
 }
 
-static void fdc2214_build_config(uint8_t *restrict work)
+void protocore_fdc2214_build_config(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Fdc2214.build_config_args.buf;
-    size_t cap = Fdc2214.build_config_args.cap;
-    uint16_t rcount = Fdc2214.build_config_args.rcount;
-    uint16_t settlecount = Fdc2214.build_config_args.settlecount;
+    uint8_t *buf = Fdc2214V.build_config_args.buf;
+    size_t cap = Fdc2214V.build_config_args.cap;
+    uint16_t rcount = Fdc2214V.build_config_args.rcount;
+    uint16_t settlecount = Fdc2214V.build_config_args.settlecount;
 
     if (!buf || cap < FDC2214_CONFIG_MAX)
     {
-        Fdc2214.n = 0;
+        Fdc2214V.n = 0;
         return;
     }
     // (register, value) writes; CONFIG is written last because it starts the conversion.
@@ -104,7 +104,7 @@ static void fdc2214_build_config(uint8_t *restrict work)
         buf[o++] = (uint8_t)(seq[i][1] >> 8);
         buf[o++] = (uint8_t)seq[i][1];
     }
-    Fdc2214.n = o;
+    Fdc2214V.n = o;
 }
 
 // All FDC2214 I2C-binding state, owned by one instance (internal linkage): the device address, the
@@ -162,71 +162,67 @@ static proto_bool write16(uint8_t *restrict work, uint8_t reg, uint16_t val)
     return protocore_i2c_write(dev_addr(work), FDC2214_CTX(work)->frame, sizeof(FDC2214_CTX(work)->frame));
 }
 
-static void fdc2214_begin(uint8_t *restrict work)
+void protocore_fdc2214_begin(uint8_t *restrict work)
 {
-    uint8_t addr = Fdc2214.begin_args.addr;
-    uint16_t rcount = Fdc2214.begin_args.rcount;
-    uint16_t settlecount = Fdc2214.begin_args.settlecount;
+    uint8_t addr = Fdc2214V.begin_args.addr;
+    uint16_t rcount = Fdc2214V.begin_args.rcount;
+    uint16_t settlecount = Fdc2214V.begin_args.settlecount;
 
     protocore_i2c_begin();
     FDC2214_CTX(work)->addr = addr ? addr : (uint8_t)PROTOCORE_FDC2214_I2C_ADDR;
     uint16_t id = 0;
     if (!read16(work, FDC2214_REG_DEVICE_ID, &id))
     {
-        Fdc2214.ok = PROTO_FALSE;
+        Fdc2214V.ok = PROTO_FALSE;
         return;
     }
     if (id != FDC2214_DEVICE_ID && id != 0x3054) // 0x3054 = FDC2114 (12-bit sibling)
     {
-        Fdc2214.ok = PROTO_FALSE;
+        Fdc2214V.ok = PROTO_FALSE;
         return;
     }
-    Fdc2214.build_config_args.buf = FDC2214_CTX(work)->config;
-    Fdc2214.build_config_args.cap = sizeof(FDC2214_CTX(work)->config);
-    Fdc2214.build_config_args.rcount = rcount;
-    Fdc2214.build_config_args.settlecount = settlecount;
-    fdc2214_build_config(work);
-    size_t n = Fdc2214.n;
+    Fdc2214V.build_config_args.buf = FDC2214_CTX(work)->config;
+    Fdc2214V.build_config_args.cap = sizeof(FDC2214_CTX(work)->config);
+    Fdc2214V.build_config_args.rcount = rcount;
+    Fdc2214V.build_config_args.settlecount = settlecount;
+    protocore_fdc2214_build_config(work);
+    size_t n = Fdc2214V.n;
     for (size_t i = 0; i + 3 <= n; i += 3)
     {
         if (!write16(work, FDC2214_CTX(work)->config[i], endian.rd16be(&FDC2214_CTX(work)->config[i + 1])))
         {
-            Fdc2214.ok = PROTO_FALSE;
+            Fdc2214V.ok = PROTO_FALSE;
             return;
         }
     }
-    Fdc2214.ok = PROTO_TRUE;
+    Fdc2214V.ok = PROTO_TRUE;
 }
 
-static void fdc2214_read_ch0(uint8_t *restrict work)
+void protocore_fdc2214_read_ch0(uint8_t *restrict work)
 {
-    uint32_t *out = Fdc2214.read_ch0_args.out;
+    uint32_t *out = Fdc2214V.read_ch0_args.out;
 
     if (!out)
     {
-        Fdc2214.ok = PROTO_FALSE;
+        Fdc2214V.ok = PROTO_FALSE;
         return;
     }
     uint16_t msb = 0;
     uint16_t lsb = 0;
     if (!read16(work, FDC2214_REG_DATA_CH0_MSB, &msb) || !read16(work, FDC2214_REG_DATA_CH0_LSB, &lsb))
     {
-        Fdc2214.ok = PROTO_FALSE;
+        Fdc2214V.ok = PROTO_FALSE;
         return;
     }
-    Fdc2214.data_args.msb_reg = msb;
-    Fdc2214.data_args.lsb_reg = lsb;
-    fdc2214_data(work);
-    *out = Fdc2214.value;
-    Fdc2214.ok = PROTO_TRUE;
+    Fdc2214V.data_args.msb_reg = msb;
+    Fdc2214V.data_args.lsb_reg = lsb;
+    protocore_fdc2214_data(work);
+    *out = Fdc2214V.value;
+    Fdc2214V.ok = PROTO_TRUE;
 }
 
-Fdc2214Ns Fdc2214 = {.data = fdc2214_data,
-                     .error = fdc2214_error,
-                     .sensor_freq_hz = fdc2214_sensor_freq_hz,
-                     .build_config = fdc2214_build_config,
-                     .begin = fdc2214_begin,
-                     .read_ch0 = fdc2214_read_ch0};
+/** @brief The operands and the outcome. */
+Fdc2214Vars Fdc2214V;
 
 PROTOCORE_END_DECLS
 

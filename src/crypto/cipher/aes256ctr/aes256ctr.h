@@ -52,7 +52,6 @@ typedef struct
     uint8_t *out;       ///< where they land; may equal @c in
     size_t len;         ///< how many
 } Aes256CtrCryptArgs;
-
 /** @brief The key, the counter and the four encrypted length bytes a peek reads. */
 typedef struct
 {
@@ -60,7 +59,6 @@ typedef struct
     const uint8_t *counter; ///< PROTOCORE_AES256CTR_CTR_LEN bytes, read and not advanced
     const uint8_t *enc4;    ///< the 4 encrypted length bytes at the start of the packet
 } Aes256CtrGetLengthArgs;
-
 /**
  * @brief AES-256-CTR (RFC 4344 §4).
  *
@@ -102,16 +100,33 @@ typedef struct
 {
     Aes256CtrCryptArgs crypt_args;
     Aes256CtrGetLengthArgs get_length_args;
-
     proto_bool ok;
     uint32_t length;
+} Aes256CtrVars;
 
+/** @brief The operands and the outcome. */
+extern Aes256CtrVars Aes256CtrV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const crypt)(uint8_t *restrict work);
     void (*const get_length)(uint8_t *restrict work);
 } Aes256CtrNs;
 
-/** @brief The one symbol this module exports. */
-extern Aes256CtrNs Aes256Ctr;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Aes256CtrV or a region of the borrow at a fixed offset.
+void protocore_aes256ctr_crypt(uint8_t *restrict work);
+void protocore_aes256ctr_get_length(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Aes256Ctr.crypt(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Aes256CtrNs Aes256Ctr __attribute__((unused)) = {
+    .crypt = protocore_aes256ctr_crypt,
+    .get_length = protocore_aes256ctr_get_length,
+};
 
 PROTOCORE_END_DECLS
 

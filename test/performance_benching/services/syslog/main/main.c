@@ -17,15 +17,15 @@
 /** @brief Format one local0/info SYSLOG-MSG carrying @p msg into @p out; the octets written. */
 static size_t syslog_line(char *out, size_t cap, const char *msg)
 {
-    Syslog.line.out = out;
-    Syslog.line.cap = cap;
-    Syslog.header.facility = SYSLOG_FAC_LOCAL0;
-    Syslog.header.hostname = "pc-rig";
-    Syslog.header.app_name = "rig-app";
-    Syslog.record.severity = SYSLOG_INFO;
-    Syslog.record.msg = msg;
+    SyslogV.line.out = out;
+    SyslogV.line.cap = cap;
+    SyslogV.header.facility = SYSLOG_FAC_LOCAL0;
+    SyslogV.header.hostname = "pc-rig";
+    SyslogV.header.app_name = "rig-app";
+    SyslogV.record.severity = SYSLOG_INFO;
+    SyslogV.record.msg = msg;
     Syslog.format(protocore_syslog_span());
-    return Syslog.n;
+    return SyslogV.n;
 }
 
 void dbench_run(void)

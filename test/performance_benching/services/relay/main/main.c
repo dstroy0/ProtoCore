@@ -41,13 +41,13 @@ void dbench_run(void)
     {
         DBENCH_BANNER("relay");
         volatile int sink = 0;
-        Relay.init_args.r = &r;
-        Relay.init_args.client = &client;
-        Relay.init_args.origin = &origin;
+        RelayV.init_args.r = &r;
+        RelayV.init_args.client = &client;
+        RelayV.init_args.origin = &origin;
         Relay.init(relay_work);
-        Relay.step_args.r = &r;
+        RelayV.step_args.r = &r;
         // The entry call stays inside DBENCH_OP so the timed loop measures the pump, not the read.
-        DBENCH_OP("Relay.step (pump both dirs)", 200000, (Relay.step(relay_work), sink += (int)Relay.status));
+        DBENCH_OP("Relay.step (pump both dirs)", 200000, (Relay.step(relay_work), sink += (int)RelayV.status));
         (void)sink;
         DBENCH_DONE();
     }

@@ -99,15 +99,15 @@ static void cmd(const nrf_bus *b, uint8_t c)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void nrf24_init(uint8_t *restrict work)
+void protocore_nrf24_init(uint8_t *restrict work)
 {
     (void)work;
-    const nrf_bus *bus = Nrf24.init_args.bus;
-    const nrf_config *cfg = Nrf24.init_args.cfg;
+    const nrf_bus *bus = Nrf24V.init_args.bus;
+    const nrf_config *cfg = Nrf24V.init_args.cfg;
 
     if (!bus || !bus->spi || !bus->ce || !cfg || !cfg->address)
     {
-        Nrf24.ok = PROTO_FALSE;
+        Nrf24V.ok = PROTO_FALSE;
         return;
     }
     bus->ce(PROTO_FALSE, bus->ctx);
@@ -116,7 +116,7 @@ static void nrf24_init(uint8_t *restrict work)
     reg_write(bus, REG_RF_CH, cfg->channel);
     if (reg_read(bus, REG_RF_CH) != cfg->channel)
     {
-        Nrf24.ok = PROTO_FALSE; // written value did not read back -> no chip on the bus
+        Nrf24V.ok = PROTO_FALSE; // written value did not read back -> no chip on the bus
         return;
     }
 
@@ -144,19 +144,19 @@ static void nrf24_init(uint8_t *restrict work)
 
     reg_write(bus, REG_CONFIG,
               CFG_EN_CRC | CFG_CRCO | CFG_PWR_UP); // power up (standby)
-    Nrf24.ok = PROTO_TRUE;
+    Nrf24V.ok = PROTO_TRUE;
 }
 
-static void nrf24_send(uint8_t *restrict work)
+void protocore_nrf24_send(uint8_t *restrict work)
 {
     (void)work;
-    const nrf_bus *bus = Nrf24.send_args.bus;
-    const uint8_t *data = Nrf24.send_args.data;
-    uint8_t len = Nrf24.send_args.len;
+    const nrf_bus *bus = Nrf24V.send_args.bus;
+    const uint8_t *data = Nrf24V.send_args.data;
+    uint8_t len = Nrf24V.send_args.len;
 
     if (!bus || !data || len == 0 || len > PROTOCORE_NRF24_PAYLOAD)
     {
-        Nrf24.ok = PROTO_FALSE;
+        Nrf24V.ok = PROTO_FALSE;
         return;
     }
     bus->ce(PROTO_FALSE, bus->ctx);
@@ -173,32 +173,32 @@ static void nrf24_send(uint8_t *restrict work)
     bus->spi(tx, rx, (uint8_t)(PROTOCORE_NRF24_PAYLOAD + 1), bus->ctx);
 
     bus->ce(PROTO_TRUE, bus->ctx); // key the transmit
-    Nrf24.ok = PROTO_TRUE;
+    Nrf24V.ok = PROTO_TRUE;
 }
 
-static void nrf24_tx_done(uint8_t *restrict work)
+void protocore_nrf24_tx_done(uint8_t *restrict work)
 {
     (void)work;
-    const nrf_bus *bus = Nrf24.tx_done_args.bus;
+    const nrf_bus *bus = Nrf24V.tx_done_args.bus;
 
     if (!bus)
     {
-        Nrf24.ok = PROTO_FALSE;
+        Nrf24V.ok = PROTO_FALSE;
         return;
     }
     if (status(bus) & ST_TX_DS)
     {
         reg_write(bus, REG_STATUS, ST_TX_DS); // write-1-to-clear
-        Nrf24.ok = PROTO_TRUE;
+        Nrf24V.ok = PROTO_TRUE;
         return;
     }
-    Nrf24.ok = PROTO_FALSE;
+    Nrf24V.ok = PROTO_FALSE;
 }
 
-static void nrf24_set_rx(uint8_t *restrict work)
+void protocore_nrf24_set_rx(uint8_t *restrict work)
 {
     (void)work;
-    const nrf_bus *bus = Nrf24.set_rx_args.bus;
+    const nrf_bus *bus = Nrf24V.set_rx_args.bus;
 
     if (!bus)
     {
@@ -209,30 +209,30 @@ static void nrf24_set_rx(uint8_t *restrict work)
     bus->ce(PROTO_TRUE, bus->ctx);
 }
 
-static void nrf24_recv(uint8_t *restrict work)
+void protocore_nrf24_recv(uint8_t *restrict work)
 {
     (void)work;
-    const nrf_bus *bus = Nrf24.recv_args.bus;
-    uint8_t *buf = Nrf24.recv_args.buf;
-    uint8_t cap = Nrf24.recv_args.cap;
-    uint8_t *pipe = Nrf24.recv_args.pipe;
+    const nrf_bus *bus = Nrf24V.recv_args.bus;
+    uint8_t *buf = Nrf24V.recv_args.buf;
+    uint8_t cap = Nrf24V.recv_args.cap;
+    uint8_t *pipe = Nrf24V.recv_args.pipe;
 
     if (!bus || !buf)
     {
-        Nrf24.n = -1;
+        Nrf24V.n = -1;
         return;
     }
     uint8_t st = status(bus);
     if (!(st & ST_RX_DR))
     {
-        Nrf24.n = -1; // nothing received
+        Nrf24V.n = -1; // nothing received
         return;
     }
     uint8_t p = (uint8_t)((st & ST_RX_P_NO) >> 1);
     if (p > 5) // 0x07 = RX FIFO empty
     {
         reg_write(bus, REG_STATUS, ST_RX_DR);
-        Nrf24.n = -1;
+        Nrf24V.n = -1;
         return;
     }
     uint8_t tx[1 + PROTOCORE_NRF24_PAYLOAD];
@@ -254,11 +254,11 @@ static void nrf24_recv(uint8_t *restrict work)
         *pipe = p;
     }
     reg_write(bus, REG_STATUS, ST_RX_DR); // clear
-    Nrf24.n = (int)n;
+    Nrf24V.n = (int)n;
 }
 
-Nrf24Ns Nrf24 = {
-    .init = nrf24_init, .send = nrf24_send, .tx_done = nrf24_tx_done, .set_rx = nrf24_set_rx, .recv = nrf24_recv};
+/** @brief The operands and the outcome. */
+Nrf24Vars Nrf24V;
 
 PROTOCORE_END_DECLS
 

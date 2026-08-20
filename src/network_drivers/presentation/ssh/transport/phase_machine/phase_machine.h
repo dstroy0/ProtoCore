@@ -45,122 +45,102 @@ typedef struct
 {
     uint8_t i;
 } PhaseMachineGetArgs;
-
 /** @brief What is takes: i, p. */
 typedef struct
 {
     uint8_t i;
     SshPhase p;
 } PhaseMachineIsArgs;
-
 /** @brief What reset takes: i. */
 typedef struct
 {
     uint8_t i;
 } PhaseMachineResetArgs;
-
 /** @brief What ident_done takes: i. */
 typedef struct
 {
     uint8_t i;
 } PhaseMachineIdentDoneArgs;
-
 /** @brief What kexinit_done takes: i. */
 typedef struct
 {
     uint8_t i;
 } PhaseMachineKexinitDoneArgs;
-
 /** @brief What kex_done takes: i. */
 typedef struct
 {
     uint8_t i;
 } PhaseMachineKexDoneArgs;
-
 /** @brief What newkeys_done takes: i. */
 typedef struct
 {
     uint8_t i;
 } PhaseMachineNewkeysDoneArgs;
-
 /** @brief What service_done takes: i. */
 typedef struct
 {
     uint8_t i;
 } PhaseMachineServiceDoneArgs;
-
 /** @brief What auth_done takes: i. */
 typedef struct
 {
     uint8_t i;
 } PhaseMachineAuthDoneArgs;
-
 /** @brief What rekey_begin takes: i. */
 typedef struct
 {
     uint8_t i;
 } PhaseMachineRekeyBeginArgs;
-
 /** @brief What admits_ident takes: i. */
 typedef struct
 {
     uint8_t i;
 } PhaseMachineAdmitsIdentArgs;
-
 /** @brief What admits_kexinit takes: i. */
 typedef struct
 {
     uint8_t i;
 } PhaseMachineAdmitsKexinitArgs;
-
 /** @brief What kexinit_needs_reply takes: i. */
 typedef struct
 {
     uint8_t i;
 } PhaseMachineKexinitNeedsReplyArgs;
-
 /** @brief What admits_kexdh_init takes: i. */
 typedef struct
 {
     uint8_t i;
 } PhaseMachineAdmitsKexdhInitArgs;
-
 /** @brief What admits_newkeys takes: i. */
 typedef struct
 {
     uint8_t i;
 } PhaseMachineAdmitsNewkeysArgs;
-
 /** @brief What admits_service_request takes: i. */
 typedef struct
 {
     uint8_t i;
 } PhaseMachineAdmitsServiceRequestArgs;
-
 /** @brief What admits_userauth takes: i. */
 typedef struct
 {
     uint8_t i;
 } PhaseMachineAdmitsUserauthArgs;
-
 /** @brief What auth_complete takes: i. */
 typedef struct
 {
     uint8_t i;
 } PhaseMachineAuthCompleteArgs;
-
 /** @brief What admits_rekey takes: i. */
 typedef struct
 {
     uint8_t i;
 } PhaseMachineAdmitsRekeyArgs;
-
 /** @brief What is_open takes: i. */
 typedef struct
 {
     uint8_t i;
 } PhaseMachineIsOpenArgs;
-
 /**
  * @brief The handshake phase machine, RFC 4253 sec 4.2 through sec 10.
  *
@@ -240,10 +220,16 @@ typedef struct
     PhaseMachineAuthCompleteArgs auth_complete_args;
     PhaseMachineAdmitsRekeyArgs admits_rekey_args;
     PhaseMachineIsOpenArgs is_open_args;
-
     proto_bool ok;
     SshPhase value;
+} PhaseMachineVars;
 
+/** @brief The operands and the outcome. */
+extern PhaseMachineVars PhaseMachineV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const get)(uint8_t *restrict work);
     void (*const is)(uint8_t *restrict work);
     void (*const reset)(uint8_t *restrict work);
@@ -266,8 +252,55 @@ typedef struct
     void (*const is_open)(uint8_t *restrict work);
 } PhaseMachineNs;
 
-/** @brief The one symbol this module exports. */
-extern PhaseMachineNs PhaseMachine;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in PhaseMachineV or a region of the borrow at a fixed offset.
+void protocore_phase_machine_get(uint8_t *restrict work);
+void protocore_phase_machine_is(uint8_t *restrict work);
+void protocore_phase_machine_reset(uint8_t *restrict work);
+void protocore_phase_machine_ident_done(uint8_t *restrict work);
+void protocore_phase_machine_kexinit_done(uint8_t *restrict work);
+void protocore_phase_machine_kex_done(uint8_t *restrict work);
+void protocore_phase_machine_newkeys_done(uint8_t *restrict work);
+void protocore_phase_machine_service_done(uint8_t *restrict work);
+void protocore_phase_machine_auth_done(uint8_t *restrict work);
+void protocore_phase_machine_rekey_begin(uint8_t *restrict work);
+void protocore_phase_machine_admits_ident(uint8_t *restrict work);
+void protocore_phase_machine_admits_kexinit(uint8_t *restrict work);
+void protocore_phase_machine_kexinit_needs_reply(uint8_t *restrict work);
+void protocore_phase_machine_admits_kexdh_init(uint8_t *restrict work);
+void protocore_phase_machine_admits_newkeys(uint8_t *restrict work);
+void protocore_phase_machine_admits_service_request(uint8_t *restrict work);
+void protocore_phase_machine_admits_userauth(uint8_t *restrict work);
+void protocore_phase_machine_auth_complete(uint8_t *restrict work);
+void protocore_phase_machine_admits_rekey(uint8_t *restrict work);
+void protocore_phase_machine_is_open(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `PhaseMachine.get(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const PhaseMachineNs PhaseMachine __attribute__((unused)) = {
+    .get = protocore_phase_machine_get,
+    .is = protocore_phase_machine_is,
+    .reset = protocore_phase_machine_reset,
+    .ident_done = protocore_phase_machine_ident_done,
+    .kexinit_done = protocore_phase_machine_kexinit_done,
+    .kex_done = protocore_phase_machine_kex_done,
+    .newkeys_done = protocore_phase_machine_newkeys_done,
+    .service_done = protocore_phase_machine_service_done,
+    .auth_done = protocore_phase_machine_auth_done,
+    .rekey_begin = protocore_phase_machine_rekey_begin,
+    .admits_ident = protocore_phase_machine_admits_ident,
+    .admits_kexinit = protocore_phase_machine_admits_kexinit,
+    .kexinit_needs_reply = protocore_phase_machine_kexinit_needs_reply,
+    .admits_kexdh_init = protocore_phase_machine_admits_kexdh_init,
+    .admits_newkeys = protocore_phase_machine_admits_newkeys,
+    .admits_service_request = protocore_phase_machine_admits_service_request,
+    .admits_userauth = protocore_phase_machine_admits_userauth,
+    .auth_complete = protocore_phase_machine_auth_complete,
+    .admits_rekey = protocore_phase_machine_admits_rekey,
+    .is_open = protocore_phase_machine_is_open,
+};
 
 PROTOCORE_END_DECLS
 

@@ -60,7 +60,6 @@ typedef struct
 {
     uint8_t *b; ///< PROTOCORE_QUIC_CONN_BORROW plaintext bytes; stream TX and CRYPTO RX
 } QuicConnBind;
-
 /** @brief HTTP/3 (or test) hooks the engine drives. All nullable. */
 typedef struct
 {
@@ -70,7 +69,6 @@ typedef struct
     void (*on_handshake_done)(void *app, uint8_t *qc);
     void *app; ///< opaque, passed back to the callbacks
 } QuicConnCallbacks;
-
 /** @brief The client's first Initial packet, as a connection is opened from it. */
 typedef struct
 {
@@ -82,27 +80,23 @@ typedef struct
     const uint8_t *our_scid;         ///< the connection ID we choose for ourselves (its DCID toward us)
     uint8_t our_scid_len;            ///< its length
 } QuicConnInitArgs;
-
 /** @brief One received datagram (one or more coalesced QUIC packets). */
 typedef struct
 {
     const uint8_t *datagram; ///< the bytes as they arrived
     size_t len;              ///< how many
 } QuicConnRecvArgs;
-
 /** @brief Where the next outbound datagram lands. */
 typedef struct
 {
     uint8_t *out; ///< the buffer
     size_t cap;   ///< its capacity
 } QuicConnSendArgs;
-
 /** @brief The caller's monotonic clock, read for loss recovery. */
 typedef struct
 {
     uint32_t now_ms; ///< milliseconds; this engine keeps no clock of its own
 } QuicConnTimeoutArgs;
-
 /** @brief Bytes queued to send on one stream. */
 typedef struct
 {
@@ -111,20 +105,17 @@ typedef struct
     size_t len;          ///< how many
     proto_bool fin;      ///< finish the stream after these bytes
 } QuicConnStreamSendArgs;
-
 /** @brief A received Destination Connection ID, asked of a connection. */
 typedef struct
 {
     const uint8_t *dcid; ///< the DCID the datagram carries
     uint8_t dcid_len;    ///< its length; a short header's is the server's own SCID length
 } QuicConnOwnsArgs;
-
 /** @brief The error a close reports. */
 typedef struct
 {
     uint64_t error_code; ///< RFC 9000 sec 20.1, or the application's own space for close_app
 } QuicConnCloseArgs;
-
 /**
  * @brief QUIC v1 server connection (RFC 9000 / RFC 9001).
  *
@@ -185,12 +176,18 @@ typedef struct
     QuicConnStreamSendArgs stream_send_args;
     QuicConnOwnsArgs owns_args;
     QuicConnCloseArgs close_args;
-
     proto_bool ok;
     size_t n;
     proto_bool established;
     proto_bool closed;
+} QuicConnVars;
 
+/** @brief The operands and the outcome. */
+extern QuicConnVars QuicConnV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const callbacks)(uint8_t *restrict work);
     void (*const recv)(uint8_t *restrict work);
@@ -202,11 +199,39 @@ typedef struct
     void (*const close_app)(uint8_t *restrict work);
     void (*const is_established)(uint8_t *restrict work);
     void (*const is_closed)(uint8_t *restrict work);
-
 } QuicConnNs;
 
-/** @brief The one symbol this module exports. */
-extern QuicConnNs QuicConn;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in QuicConnV or a region of the borrow at a fixed offset.
+void protocore_quic_conn_init(uint8_t *restrict work);
+void protocore_quic_conn_callbacks(uint8_t *restrict work);
+void protocore_quic_conn_recv(uint8_t *restrict work);
+void protocore_quic_conn_send(uint8_t *restrict work);
+void protocore_quic_conn_on_timeout(uint8_t *restrict work);
+void protocore_quic_conn_stream_send(uint8_t *restrict work);
+void protocore_quic_conn_owns(uint8_t *restrict work);
+void protocore_quic_conn_close(uint8_t *restrict work);
+void protocore_quic_conn_close_app(uint8_t *restrict work);
+void protocore_quic_conn_is_established(uint8_t *restrict work);
+void protocore_quic_conn_is_closed(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `QuicConn.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const QuicConnNs QuicConn __attribute__((unused)) = {
+    .init = protocore_quic_conn_init,
+    .callbacks = protocore_quic_conn_callbacks,
+    .recv = protocore_quic_conn_recv,
+    .send = protocore_quic_conn_send,
+    .on_timeout = protocore_quic_conn_on_timeout,
+    .stream_send = protocore_quic_conn_stream_send,
+    .owns = protocore_quic_conn_owns,
+    .close = protocore_quic_conn_close,
+    .close_app = protocore_quic_conn_close_app,
+    .is_established = protocore_quic_conn_is_established,
+    .is_closed = protocore_quic_conn_is_closed,
+};
 
 PROTOCORE_END_DECLS
 

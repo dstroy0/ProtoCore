@@ -93,7 +93,6 @@ typedef struct
     uint16_t len;  ///< fragment length
     uint8_t epoch; ///< 0 (DTLSPlaintext) or 2 (DTLSCiphertext)
 } DtlsFlightMsg;
-
 /** @brief Handshake progress. */
 typedef enum PROTO_ENUM_PACKED
 {
@@ -102,7 +101,6 @@ typedef enum PROTO_ENUM_PACKED
     DTLS_CONN_STATE_DONE,          ///< handshake complete; application keys installed
     DTLS_CONN_STATE_FAILED         ///< fatal error (see @ref protocore_dtls_conn_alert)
 } DtlsConnState;
-
 /**
  * @brief The server's long-lived identity plus this handshake's fresh randomness.
  *
@@ -120,14 +118,12 @@ typedef struct
     const uint8_t *cookie_key;     ///< 32-byte server-wide secret keying the HelloRetryRequest cookie MAC (§5.1)
     uint16_t pmtu;                 ///< largest datagram this path takes; 0 uses PROTOCORE_DTLS_PMTU_DEFAULT (§4.3)
 } DtlsServerConfig;
-
 /** @brief One DTLS 1.3 server handshake. Owns all per-connection state; no heap. */
 typedef struct
 {
     DtlsServerConfig cfg;
     DtlsConnState state;
-    uint8_t alert; ///< RFC 8446 §6 alert code when @c state is FAILED (0 otherwise)
-
+    uint8_t alert;                               ///< RFC 8446 §6 alert code when @c state is FAILED (0 otherwise)
     uint8_t *transcript;                         ///< running Transcript-Hash over the TLS handshake messages
     Tls13KeySchedule ks;                         ///< TLS 1.3 key schedule, over @ref ks_store
     uint8_t ks_store[PROTOCORE_TLS13_KS_BORROW]; ///< the schedule's terms and its HKDF's bytes
@@ -144,10 +140,9 @@ typedef struct
     proto_bool ep2_ready;                           ///< epoch 2 keys installed
     proto_bool ep3_ready;                           ///< epoch 3 keys installed
     uint8_t hs_finished_hash[TLS13_SECRET_MAX];     ///< Transcript-Hash(CH..server Finished)
-
-    uint64_t tx_seq_ep0;         ///< next outbound record sequence number, epoch 0
-    uint64_t tx_seq_ep2;         ///< next outbound record sequence number, epoch 2
-    uint64_t tx_seq_ep3;         ///< next outbound record sequence number, epoch 3
+    uint64_t tx_seq_ep0;                            ///< next outbound record sequence number, epoch 0
+    uint64_t tx_seq_ep2;                            ///< next outbound record sequence number, epoch 2
+    uint64_t tx_seq_ep3;                            ///< next outbound record sequence number, epoch 3
     uint16_t tx_msg_seq;         ///< next outbound handshake message_seq (advances across an optional HRR)
     proto_bool hrr_sent;         ///< a HelloRetryRequest was sent; the next ClientHello is the retry (§5.1)
     uint16_t next_recv_msg_seq;  ///< handshake message_seq expected next from the client
@@ -157,7 +152,6 @@ typedef struct
     proto_bool hs_ack_sent;      ///< the client Finished has been acknowledged (RFC 9147 §5.8.3 / §7)
     uint8_t peer_addr[PROTOCORE_DTLS_PEER_ADDR_MAX]; ///< serialized peer address the HRR cookie is bound to (§5.1)
     uint8_t peer_addr_len;                           ///< bytes of @ref peer_addr in use (0 = no address bound)
-
     // Connection ids (RFC 9146 / RFC 9147 §9), negotiated by the connection_id extension.
     proto_bool cid_negotiated;                ///< the client offered connection_id and we accepted it
     uint8_t peer_cid[PROTOCORE_DTLS_CID_MAX]; ///< the client's CID: placed in every record we send to the client (may
@@ -166,7 +160,6 @@ typedef struct
     uint8_t
         local_cid[PROTOCORE_DTLS_CID_MAX]; ///< the CID we chose: the client places it in every record it sends to us
     uint8_t local_cid_len;                 ///< bytes of @ref local_cid in use
-
     // Retransmission (RFC 9147 §5.8): the current outbound flight, buffered as fragments so it can be
     // re-sent with fresh record sequence numbers, plus the exponential-backoff timer state.
     DtlsFlightMsg flight_msgs[PROTOCORE_DTLS_FLIGHT_MSGS]; ///< the flight's messages (index into @ref flight_buf)
@@ -179,14 +172,12 @@ typedef struct
     uint16_t pmtu;                              ///< largest datagram this connection puts on the wire (sec 4.3)
     uint32_t pto_ms;                            ///< current retransmission timeout (doubles each retransmit)
     uint32_t flight_sent_ms;                    ///< protocore_millis() when the flight was last (re)transmitted
-
-    DtlsHsReasm reasm;                                    ///< inbound handshake reassembler
+    DtlsHsReasm reasm;                          ///< inbound handshake reassembler
     uint8_t reasm_buf[4 + PROTOCORE_DTLS_CONN_REASM_CAP]; ///< TLS message = 4-byte header [0..3] + body [4..]
     uint8_t msgbuf[PROTOCORE_DTLS_CONN_MSG_CAP];          ///< scratch for one outbound TLS message
     uint8_t
         flight_buf[PROTOCORE_DTLS_FLIGHT_CAP]; ///< the current flight's DTLS handshake fragments, for retransmission
 } DtlsConn;
-
 /** @brief What init takes: c, cfg, peer_addr, peer_addr_len. */
 typedef struct
 {
@@ -195,7 +186,6 @@ typedef struct
     const uint8_t *peer_addr;
     size_t peer_addr_len;
 } DtlsServerInitArgs;
-
 /** @brief What process takes: c, dgram, len, out, out_cap. */
 typedef struct
 {
@@ -205,13 +195,11 @@ typedef struct
     uint8_t *out;
     size_t out_cap;
 } DtlsServerProcessArgs;
-
 /** @brief What timeout_ms takes: c. */
 typedef struct
 {
     const DtlsConn *c;
 } DtlsServerTimeoutMsArgs;
-
 /** @brief What on_timeout takes: c, out, out_cap. */
 typedef struct
 {
@@ -219,38 +207,32 @@ typedef struct
     uint8_t *out;
     size_t out_cap;
 } DtlsServerOnTimeoutArgs;
-
 /** @brief What established takes: c. */
 typedef struct
 {
     const DtlsConn *c;
 } DtlsServerEstablishedArgs;
-
 /** @brief What alert takes: c. */
 typedef struct
 {
     const DtlsConn *c;
 } DtlsServerAlertArgs;
-
 /** @brief What app_write_keys takes: c. */
 typedef struct
 {
     DtlsConn *c;
 } DtlsServerAppWriteKeysArgs;
-
 /** @brief What app_read_keys takes: c. */
 typedef struct
 {
     DtlsConn *c;
 } DtlsServerAppReadKeysArgs;
-
 /** @brief What local_cid takes: c, out. */
 typedef struct
 {
     const DtlsConn *c;
     uint8_t *out;
 } DtlsServerLocalCidArgs;
-
 /** @brief What open_app takes: c, rec, rec_len, out, out_cap, out_len. */
 typedef struct
 {
@@ -261,7 +243,6 @@ typedef struct
     size_t out_cap;
     size_t *out_len;
 } DtlsServerOpenAppArgs;
-
 /** @brief What seal_app takes: c, data, len, out, out_cap. */
 typedef struct
 {
@@ -271,7 +252,6 @@ typedef struct
     uint8_t *out;
     size_t out_cap;
 } DtlsServerSealAppArgs;
-
 /**
  * @brief DTLS 1.3 server handshake state machine (RFC 9147 §5-6).
  *
@@ -328,12 +308,18 @@ typedef struct
     DtlsServerLocalCidArgs local_cid_args;
     DtlsServerOpenAppArgs open_app_args;
     DtlsServerSealAppArgs seal_app_args;
-
     proto_bool ok;
     int n;
     uint8_t value;
     DtlsRecordKeys *ptr;
+} DtlsServerVars;
 
+/** @brief The operands and the outcome. */
+extern DtlsServerVars DtlsServerV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const process)(uint8_t *restrict work);
     void (*const timeout_ms)(uint8_t *restrict work);
@@ -347,8 +333,37 @@ typedef struct
     void (*const seal_app)(uint8_t *restrict work);
 } DtlsConnNs;
 
-/** @brief The one symbol this module exports. */
-extern DtlsConnNs DtlsServer;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in DtlsServerV or a region of the borrow at a fixed offset.
+void protocore_dtls_conn_init(uint8_t *restrict work);
+void protocore_dtls_conn_process(uint8_t *restrict work);
+void protocore_dtls_conn_timeout_ms(uint8_t *restrict work);
+void protocore_dtls_conn_on_timeout(uint8_t *restrict work);
+void protocore_dtls_conn_established(uint8_t *restrict work);
+void protocore_dtls_conn_alert(uint8_t *restrict work);
+void protocore_dtls_conn_app_write_keys(uint8_t *restrict work);
+void protocore_dtls_conn_app_read_keys(uint8_t *restrict work);
+void protocore_dtls_conn_local_cid(uint8_t *restrict work);
+void protocore_dtls_conn_open_app(uint8_t *restrict work);
+void protocore_dtls_conn_seal_app(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `DtlsServer.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const DtlsConnNs DtlsServer __attribute__((unused)) = {
+    .init = protocore_dtls_conn_init,
+    .process = protocore_dtls_conn_process,
+    .timeout_ms = protocore_dtls_conn_timeout_ms,
+    .on_timeout = protocore_dtls_conn_on_timeout,
+    .established = protocore_dtls_conn_established,
+    .alert = protocore_dtls_conn_alert,
+    .app_write_keys = protocore_dtls_conn_app_write_keys,
+    .app_read_keys = protocore_dtls_conn_app_read_keys,
+    .local_cid = protocore_dtls_conn_local_cid,
+    .open_app = protocore_dtls_conn_open_app,
+    .seal_app = protocore_dtls_conn_seal_app,
+};
 
 PROTOCORE_END_DECLS
 

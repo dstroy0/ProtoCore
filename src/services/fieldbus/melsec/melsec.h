@@ -90,7 +90,6 @@ typedef struct
     const uint8_t *data; ///< response payload (empty on error)
     size_t data_len;
 } MelsecResponse;
-
 /** @brief What build_read takes: buf, cap, device_code, head_device, ... */
 typedef struct
 {
@@ -101,7 +100,6 @@ typedef struct
     uint16_t points;           ///< number of word points to read
     uint16_t monitoring_timer; ///< the CPU monitoring timer (units of 250 ms; 0 = wait indefinitely)
 } MelsecBuildReadArgs;
-
 /** @brief What build_write takes: buf, cap, device_code, head_device, ... */
 typedef struct
 {
@@ -114,7 +112,6 @@ typedef struct
     const uint8_t *data;
     size_t data_len;
 } MelsecBuildWriteArgs;
-
 /** @brief What parse_response takes: buf, len, out. */
 typedef struct
 {
@@ -122,7 +119,6 @@ typedef struct
     size_t len;
     MelsecResponse *out;
 } MelsecParseResponseArgs;
-
 /**
  * @brief Mitsubishi MELSEC MC protocol (binary 3E frame) codec (PROTOCORE_ENABLE_MELSEC) - zero-heap batch-read request
  * builder + response parser for MELSEC PLCs over TCP/UDP.
@@ -157,17 +153,36 @@ typedef struct
     MelsecBuildReadArgs build_read_args;
     MelsecBuildWriteArgs build_write_args;
     MelsecParseResponseArgs parse_response_args;
-
     proto_bool ok;
     size_t n;
+} MelsecVars;
 
+/** @brief The operands and the outcome. */
+extern MelsecVars MelsecV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_read)(uint8_t *restrict work);
     void (*const build_write)(uint8_t *restrict work);
     void (*const parse_response)(uint8_t *restrict work);
 } MelsecNs;
 
-/** @brief The one symbol this module exports. */
-extern MelsecNs Melsec;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in MelsecV or a region of the borrow at a fixed offset.
+void protocore_melsec_build_read(uint8_t *restrict work);
+void protocore_melsec_build_write(uint8_t *restrict work);
+void protocore_melsec_parse_response(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Melsec.build_read(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const MelsecNs Melsec __attribute__((unused)) = {
+    .build_read = protocore_melsec_build_read,
+    .build_write = protocore_melsec_build_write,
+    .parse_response = protocore_melsec_parse_response,
+};
 
 PROTOCORE_END_DECLS
 

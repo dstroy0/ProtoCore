@@ -145,14 +145,14 @@ static_assert(AUTH_OFF_SHA + PROTOCORE_SHA256_BORROW <= PROTOCORE_HTTP_AUTH_BORR
 static void sha256_hex(uint8_t *work, const uint8_t *data, size_t len, char out[65])
 {
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
-    Sha256.hash_args.data = data;
-    Sha256.hash_args.len = len;
-    Sha256.hash_args.out = d;
+    Sha256V.hash_args.data = data;
+    Sha256V.hash_args.len = len;
+    Sha256V.hash_args.out = d;
     Sha256.hash(AUTH_SHA(work));
-    Hex.io.in = d;
-    Hex.io.n = PROTOCORE_SHA256_DIGEST_LEN;
-    Hex.io.out = out;
-    Hex.args.upper = PROTO_FALSE;
+    HexV.io.in = d;
+    HexV.io.n = PROTOCORE_SHA256_DIGEST_LEN;
+    HexV.io.out = out;
+    HexV.args.upper = PROTO_FALSE;
     Hex.encode(hex_work);
 }
 
@@ -191,15 +191,15 @@ static void add(uint8_t *restrict work)
     struct AuthStorage *a = AUTH_TABLE(work);
     if (a->count >= MAX_ROUTES)
     {
-        Auth.u8 = PROTOCORE_AUTH_NONE;
+        AuthV.u8 = PROTOCORE_AUTH_NONE;
         return;
     }
     AuthCred *c = &a->cred[a->count];
-    (void)str.copy(c->realm, Auth.cred.realm, MAX_AUTH_LEN);
-    (void)str.copy(c->user, Auth.cred.user, MAX_AUTH_LEN);
-    (void)str.copy(c->pass, Auth.cred.pass, MAX_AUTH_LEN);
-    c->digest = Auth.cred.digest;
-    Auth.u8 = a->count++;
+    (void)str.copy(c->realm, AuthV.cred.realm, MAX_AUTH_LEN);
+    (void)str.copy(c->user, AuthV.cred.user, MAX_AUTH_LEN);
+    (void)str.copy(c->pass, AuthV.cred.pass, MAX_AUTH_LEN);
+    c->digest = AuthV.cred.digest;
+    AuthV.u8 = a->count++;
 }
 
 static void rekey(uint8_t *restrict work)
@@ -223,9 +223,9 @@ static void rekey(uint8_t *restrict work)
     raw.put_u32(seed + 16, c);
     raw.put_u32(seed + 20, t);
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
-    Sha256.hash_args.data = seed;
-    Sha256.hash_args.len = sizeof(seed);
-    Sha256.hash_args.out = d;
+    Sha256V.hash_args.data = seed;
+    Sha256V.hash_args.len = sizeof(seed);
+    Sha256V.hash_args.out = d;
     Sha256.hash(AUTH_SHA(work));
     raw.read(a->digest_secret, d, sizeof(a->digest_secret)); // first 128 bits
 }
@@ -241,28 +241,28 @@ static uint32_t digest_nonce_mac(uint8_t *work, const uint8_t *secret, uint32_t 
     raw.read(material, secret, 16);
     raw.put_u32(material + 16, issue); // endian-symmetric: minted and verified the same way
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
-    Sha256.hash_args.data = material;
-    Sha256.hash_args.len = sizeof(material);
-    Sha256.hash_args.out = d;
+    Sha256V.hash_args.data = material;
+    Sha256V.hash_args.len = sizeof(material);
+    Sha256V.hash_args.out = d;
     Sha256.hash(AUTH_SHA(work));
-    Hex.io.in = d;
-    Hex.io.n = 16;
-    Hex.io.out = mac_hex;
-    Hex.args.upper = PROTO_FALSE;
+    HexV.io.in = d;
+    HexV.io.n = 16;
+    HexV.io.out = mac_hex;
+    HexV.args.upper = PROTO_FALSE;
     Hex.encode(hex_work); // 16 bytes -> 32 hex chars + NUL
     return issue;
 }
 
 static void mint_nonce(uint8_t *restrict work)
 {
-    char *out = Auth.nonce_args.out;
-    const size_t cap = Auth.nonce_args.cap;
+    char *out = AuthV.nonce_args.out;
+    const size_t cap = AuthV.nonce_args.cap;
     uint32_t issue = Clock.ms;
     char issue_hex[9];
-    Hex.io.in = (const uint8_t *)&issue;
-    Hex.io.n = 4;
-    Hex.io.out = issue_hex;
-    Hex.args.upper = PROTO_FALSE;
+    HexV.io.in = (const uint8_t *)&issue;
+    HexV.io.n = 4;
+    HexV.io.out = issue_hex;
+    HexV.args.upper = PROTO_FALSE;
     Hex.encode(hex_work); // 4 bytes -> 8 hex chars
     char mac_hex[33];
     digest_nonce_mac(work, AUTH_TABLE(work)->digest_secret, issue, mac_hex);
@@ -278,21 +278,21 @@ static void mint_nonce(uint8_t *restrict work)
 
 static void verify_nonce(uint8_t *restrict work)
 {
-    const char *nonce = Auth.nonce_args.nonce;
-    Auth.expired = PROTO_FALSE;
-    Auth.ok = PROTO_FALSE;
+    const char *nonce = AuthV.nonce_args.nonce;
+    AuthV.expired = PROTO_FALSE;
+    AuthV.ok = PROTO_FALSE;
     // Expected shape: 8 hex (issue) + '.' + 32 hex (MAC).
     if (str.len(nonce, 42) != 8 + 1 + 32 || nonce[8] != '.')
     {
         return;
     }
     uint32_t issue;
-    Hex.io.text = nonce;
-    Hex.io.n = 8;
-    Hex.io.bytes = (uint8_t *)&issue;
-    Hex.io.cap = 4;
+    HexV.io.text = nonce;
+    HexV.io.n = 8;
+    HexV.io.bytes = (uint8_t *)&issue;
+    HexV.io.cap = 4;
     Hex.decode(hex_work);
-    if (Hex.i32 != 4)
+    if (HexV.i32 != 4)
     {
         return;
     }
@@ -311,26 +311,26 @@ static void verify_nonce(uint8_t *restrict work)
         return; // not a nonce this server minted
     }
     uint32_t age = Clock.ms - issue; // unsigned: tolerant of the 32-bit millis wrap
-    Auth.expired = (age > PROTOCORE_DIGEST_NONCE_LIFETIME_MS);
-    Auth.ok = PROTO_TRUE;
+    AuthV.expired = (age > PROTOCORE_DIGEST_NONCE_LIFETIME_MS);
+    AuthV.ok = PROTO_TRUE;
 }
 
 static void challenge(uint8_t *restrict work)
 {
-    const uint8_t slot_id = Auth.slot;
-    const proto_bool stale = Auth.nonce_args.stale;
-    const AuthCred *c = cred_at(work, Auth.id);
+    const uint8_t slot_id = AuthV.slot;
+    const proto_bool stale = AuthV.nonce_args.stale;
+    const AuthCred *c = cred_at(work, AuthV.id);
     if (c == NULL)
     {
-        HttpConn.slot = slot_id;
+        HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
         return;
     }
-    ConnPool.slot = slot_id;
+    ConnPoolV.slot = slot_id;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok)
+    if (!ConnPoolV.ok)
     {
-        HttpConn.slot = slot_id;
+        HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
         return;
     }
@@ -343,8 +343,8 @@ static void challenge(uint8_t *restrict work)
     if (c->digest)
     {
         char nonce[48];
-        Auth.nonce_args.out = nonce;
-        Auth.nonce_args.cap = sizeof(nonce);
+        AuthV.nonce_args.out = nonce;
+        AuthV.nonce_args.cap = sizeof(nonce);
         mint_nonce(work); // a fresh, timestamped nonce per challenge
         protocore_sb sb_challenge = {challenge, sizeof(challenge), 0, PROTO_TRUE};
         Sb.put(&sb_challenge, "WWW-Authenticate: Digest realm=\"");
@@ -389,23 +389,23 @@ static void challenge(uint8_t *restrict work)
 
     // The flush rides the final write, so the challenge leaves in one marshal whether or not a body
     // follows the header.
-    Http.slot = slot_id;
+    HttpV.slot = slot_id;
     Http.req_is_head(protocore_http_span());
-    if (!Http.ok)
+    if (!HttpV.ok)
     {
-        ConnPool.slot = slot_id;
-        ConnPool.io.data = header;
-        ConnPool.io.len = (proto_u16)hlen;
-        ConnPool.send(protocore_conn_pool_span());
-        ConnPool.io.data = body;
-        ConnPool.io.len = (proto_u16)(sizeof(body) - 1);
+        ConnPoolV.slot = slot_id;
+        ConnPoolV.io.data = header;
+        ConnPoolV.io.len = (proto_u16)hlen;
+        ConnPoolV.send(protocore_conn_pool_span());
+        ConnPoolV.io.data = body;
+        ConnPoolV.io.len = (proto_u16)(sizeof(body) - 1);
         ConnPool.send_flush(protocore_conn_pool_span());
     }
     else
     {
-        ConnPool.slot = slot_id;
-        ConnPool.io.data = header;
-        ConnPool.io.len = (proto_u16)hlen;
+        ConnPoolV.slot = slot_id;
+        ConnPoolV.io.data = header;
+        ConnPoolV.io.len = (proto_u16)hlen;
         ConnPool.send_flush(protocore_conn_pool_span());
     }
 
@@ -415,10 +415,10 @@ static void challenge(uint8_t *restrict work)
 static proto_bool check_basic(uint8_t slot_id, HttpReq *req, const AuthCred *c)
 {
     (void)slot_id;
-    HttpParser.get_header_args.req = req;
-    HttpParser.get_header_args.key = "Authorization";
-    HttpParser.get_header(protocore_http_parser_span());
-    const char *auth_hdr = HttpParser.text;
+    HttpParserV.get_header_args.req = req;
+    HttpParserV.get_header_args.key = "Authorization";
+    HttpParserV.get_header(protocore_http_parser_span());
+    const char *auth_hdr = HttpParserV.text;
     if (!auth_hdr || !str.starts(auth_hdr, "Basic ", sizeof("Basic "), PROTO_FALSE))
     {
         return PROTO_FALSE;
@@ -427,11 +427,11 @@ static proto_bool check_basic(uint8_t slot_id, HttpReq *req, const AuthCred *c)
     uint8_t decoded[MAX_AUTH_LEN * 2 + 2];
     // Bound the write to leave room for the null terminator at decoded[n]; an
     // over-long Authorization value now fails the decode instead of overrunning.
-    Base64.decode_args.src = auth_hdr + 6;
-    Base64.decode_args.dst = decoded;
-    Base64.decode_args.dst_cap = sizeof(decoded) - 1;
+    Base64V.decode_args.src = auth_hdr + 6;
+    Base64V.decode_args.dst = decoded;
+    Base64V.decode_args.dst_cap = sizeof(decoded) - 1;
     Base64.decode(base64_work);
-    size_t n = Base64.n;
+    size_t n = Base64V.n;
     if (n == 0)
     {
         return PROTO_FALSE;
@@ -497,10 +497,10 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
     // The nonce must be one this server minted (authentic MAC). A stale (expired)
     // nonce is still authentic - we finish the credential check below and let the
     // caller reissue with stale=true rather than rejecting outright (RFC 7616 3.3).
-    Auth.nonce_args.nonce = nonce;
+    AuthV.nonce_args.nonce = nonce;
     verify_nonce(work);
-    const proto_bool nonce_expired = Auth.expired;
-    if (!Auth.ok)
+    const proto_bool nonce_expired = AuthV.expired;
+    if (!AuthV.ok)
     {
         return PROTO_FALSE;
     }
@@ -594,18 +594,18 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
 // nothing above this file has to know whether that set is Basic or Digest.
 static void check(uint8_t *restrict work)
 {
-    const AuthCred *c = cred_at(work, Auth.id);
+    const AuthCred *c = cred_at(work, AuthV.id);
     if (c == NULL)
     {
-        Auth.ok = PROTO_FALSE;
+        AuthV.ok = PROTO_FALSE;
         return;
     }
     if (c->digest)
     {
-        Auth.ok = check_digest(work, Auth.slot, Auth.req, c, &Auth.nonce_args.stale);
+        AuthV.ok = check_digest(work, AuthV.slot, AuthV.req, c, &AuthV.nonce_args.stale);
         return;
     }
-    Auth.ok = check_basic(Auth.slot, Auth.req, c);
+    AuthV.ok = check_basic(AuthV.slot, AuthV.req, c);
 }
 
 // The count is the table, and a row is wiped on hand-out, so nothing below the count can carry a
@@ -617,12 +617,7 @@ static void reset(uint8_t *restrict work)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-AuthNs Auth = {.add = add,
-               .check = check,
-               .challenge = challenge,
-               .rekey = rekey,
-               .mint_nonce = mint_nonce,
-               .verify_nonce = verify_nonce,
-               .reset = reset};
+/** @brief The operands and the outcome. */
+AuthVars AuthV;
 
 #endif // PROTOCORE_ENABLE_AUTH

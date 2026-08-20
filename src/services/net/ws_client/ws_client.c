@@ -145,9 +145,9 @@ uint8_t *protocore_ws_client_span(void)
 static void ws_accept_for_key(uint8_t *restrict work)
 {
     (void)work;
-    char *accept = WsClient.handshake.accept;
-    const size_t cap = WsClient.handshake.accept_cap;
-    const char *key = WsClient.handshake.key;
+    char *accept = WsClientV.handshake.accept;
+    const size_t cap = WsClientV.handshake.accept_cap;
+    const char *key = WsClientV.handshake.key;
     if (!accept || cap == 0)
     {
         return;
@@ -174,14 +174,14 @@ static void ws_accept_for_key(uint8_t *restrict work)
         protocore_secure_release(mark);
         return;
     }
-    Sha1.hash_args.data = (const uint8_t *)concat;
-    Sha1.hash_args.len = klen + glen;
-    Sha1.hash_args.out = digest;
+    Sha1V.hash_args.data = (const uint8_t *)concat;
+    Sha1V.hash_args.len = klen + glen;
+    Sha1V.hash_args.out = digest;
     Sha1.hash(w.buf);
     protocore_secure_release(mark);
-    Base64.encode_args.src = digest;
-    Base64.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
-    Base64.encode_args.dst = accept;
+    Base64V.encode_args.src = digest;
+    Base64V.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
+    Base64V.encode_args.dst = accept;
     Base64.encode(base64_work);
 }
 
@@ -191,13 +191,13 @@ static void ws_accept_for_key(uint8_t *restrict work)
 static void ws_build_opening_handshake(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *out = WsClient.buf.out;
-    const size_t cap = WsClient.buf.cap;
-    const char *host = WsClient.handshake.host;
-    const char *resource_name = WsClient.handshake.resource_name;
-    const char *key = WsClient.handshake.key;
-    const char *subprotocol = WsClient.handshake.subprotocol;
-    WsClient.n = 0;
+    uint8_t *out = WsClientV.buf.out;
+    const size_t cap = WsClientV.buf.cap;
+    const char *host = WsClientV.handshake.host;
+    const char *resource_name = WsClientV.handshake.resource_name;
+    const char *key = WsClientV.handshake.key;
+    const char *subprotocol = WsClientV.handshake.subprotocol;
+    WsClientV.n = 0;
     if (!out || !host || !resource_name || !key)
     {
         return;
@@ -218,7 +218,7 @@ static void ws_build_opening_handshake(uint8_t *restrict work)
     const size_t n = Sb.finish(&sb);
     if (sb.ok)
     {
-        WsClient.n = n;
+        WsClientV.n = n;
     }
 }
 
@@ -266,10 +266,10 @@ static const char *field_value(const uint8_t *buf, size_t len, const char *name,
 static void ws_check_server_handshake(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = WsClient.buf.in;
-    const size_t len = WsClient.buf.avail;
-    const char *accept = WsClient.handshake.accept;
-    WsClient.ok = PROTO_FALSE;
+    const uint8_t *buf = WsClientV.buf.in;
+    const size_t len = WsClientV.buf.avail;
+    const char *accept = WsClientV.handshake.accept;
+    WsClientV.ok = PROTO_FALSE;
     if (!buf || len < WSC_STATUS_MIN || !accept)
     {
         return;
@@ -298,7 +298,7 @@ static void ws_check_server_handshake(uint8_t *restrict work)
     {
         return;
     }
-    WsClient.ok = (vlen == str.len(accept, vlen + 1)) && mem.cmp(got, accept, vlen) == 0;
+    WsClientV.ok = (vlen == str.len(accept, vlen + 1)) && mem.cmp(got, accept, vlen) == 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -310,13 +310,13 @@ static void ws_check_server_handshake(uint8_t *restrict work)
 static void ws_build_frame(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *out = WsClient.buf.out;
-    const size_t cap = WsClient.buf.cap;
-    const uint8_t opcode = WsClient.frame.opcode;
-    const uint8_t *payload = WsClient.frame.payload;
-    const size_t len = WsClient.frame.payload_len;
-    const uint8_t *mask = WsClient.frame.masking_key;
-    WsClient.n = 0;
+    uint8_t *out = WsClientV.buf.out;
+    const size_t cap = WsClientV.buf.cap;
+    const uint8_t opcode = WsClientV.frame.opcode;
+    const uint8_t *payload = WsClientV.frame.payload;
+    const size_t len = WsClientV.frame.payload_len;
+    const uint8_t *mask = WsClientV.frame.masking_key;
+    WsClientV.n = 0;
     if (!out || !mask)
     {
         return;
@@ -361,7 +361,7 @@ static void ws_build_frame(uint8_t *restrict work)
     {
         out[i + j] = (uint8_t)(payload[j] ^ mask[j & 3]);
     }
-    WsClient.n = i + len;
+    WsClientV.n = i + len;
 }
 
 // One inbound frame's header, read back into the frame members. False while fewer octets than the
@@ -369,9 +369,9 @@ static void ws_build_frame(uint8_t *restrict work)
 static void ws_parse_frame(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = WsClient.buf.in;
-    const size_t avail = WsClient.buf.avail;
-    WsClient.ok = PROTO_FALSE;
+    const uint8_t *buf = WsClientV.buf.in;
+    const size_t avail = WsClientV.buf.avail;
+    WsClientV.ok = PROTO_FALSE;
     if (!buf || avail < 2)
     {
         return;
@@ -416,12 +416,12 @@ static void ws_parse_frame(uint8_t *restrict work)
     {
         return;
     }
-    WsClient.frame.opcode = (uint8_t)(b0 & 0x0F);
-    WsClient.frame.fin = (b0 & 0x80) != 0;
-    WsClient.frame.payload_off = off;
-    WsClient.frame.payload_len = (size_t)len;
-    WsClient.frame.consumed = off + (size_t)len;
-    WsClient.ok = PROTO_TRUE;
+    WsClientV.frame.opcode = (uint8_t)(b0 & 0x0F);
+    WsClientV.frame.fin = (b0 & 0x80) != 0;
+    WsClientV.frame.payload_off = off;
+    WsClientV.frame.payload_len = (size_t)len;
+    WsClientV.frame.consumed = off + (size_t)len;
+    WsClientV.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -463,11 +463,11 @@ static void ring_write(uint8_t *restrict work, const uint8_t *src, size_t n)
 
 static proto_bool ws_tx_plain(uint8_t *restrict work, const uint8_t *data, size_t len)
 {
-    TcpClient.cid = WS_CLIENT_CTX(work)->cid;
-    TcpClient.io.data = data;
-    TcpClient.io.len = len;
+    TcpClientV.cid = WS_CLIENT_CTX(work)->cid;
+    TcpClientV.io.data = data;
+    TcpClientV.io.len = len;
     TcpClient.send(protocore_tcp_client_span());
-    return TcpClient.ok;
+    return TcpClientV.ok;
 }
 
 // Drain plaintext octets from the transport slot into the receive ring.
@@ -481,16 +481,16 @@ static void ws_pump_plain(uint8_t *restrict work)
         {
             break;
         }
-        TcpClient.cid = WS_CLIENT_CTX(work)->cid;
-        TcpClient.io.buf = tmp;
-        TcpClient.io.cap = room < sizeof(tmp) ? room : sizeof(tmp);
-        TcpClient.read(protocore_tcp_client_span());
-        const size_t n = TcpClient.n;
+        TcpClientV.cid = WS_CLIENT_CTX(work)->cid;
+        TcpClientV.io.buf = tmp;
+        TcpClientV.io.cap = room < sizeof(tmp) ? room : sizeof(tmp);
+        TcpClientV.read(protocore_tcp_client_span());
+        const size_t n = TcpClientV.n;
         if (n == 0)
         {
-            TcpClient.cid = WS_CLIENT_CTX(work)->cid;
+            TcpClientV.cid = WS_CLIENT_CTX(work)->cid;
             TcpClient.is_closed(protocore_tcp_client_span());
-            if (TcpClient.ok)
+            if (TcpClientV.ok)
             {
                 WS_CLIENT_CTX(work)->closed = PROTO_TRUE;
             }
@@ -513,16 +513,16 @@ static int ws_tls_send(void *bio, const unsigned char *buf, size_t len)
 static int ws_tls_recv(void *bio, unsigned char *buf, size_t len)
 {
     (void)bio;
-    TcpClient.cid = s_ws.store->cid;
-    TcpClient.io.buf = buf;
-    TcpClient.io.cap = len;
-    TcpClient.read(protocore_tcp_client_span());
-    const size_t n = TcpClient.n;
+    TcpClientV.cid = s_ws.store->cid;
+    TcpClientV.io.buf = buf;
+    TcpClientV.io.cap = len;
+    TcpClientV.read(protocore_tcp_client_span());
+    const size_t n = TcpClientV.n;
     if (n == 0)
     {
-        TcpClient.cid = s_ws.store->cid;
+        TcpClientV.cid = s_ws.store->cid;
         TcpClient.is_closed(protocore_tcp_client_span());
-        return TcpClient.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
+        return TcpClientV.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
     }
     return (int)n;
 }
@@ -586,17 +586,17 @@ static proto_bool ws_emit_frame(uint8_t *restrict work, uint8_t opcode, const ui
         return PROTO_FALSE;
     }
     uint8_t mask[4];
-    Rng.fill_args.out = mask;
-    Rng.fill_args.len = sizeof(mask);
+    RngV.fill_args.out = mask;
+    RngV.fill_args.len = sizeof(mask);
     Rng.fill(protocore_rng_span());
-    WsClient.frame.opcode = opcode;
-    WsClient.frame.payload = payload;
-    WsClient.frame.payload_len = len;
-    WsClient.frame.masking_key = mask;
-    WsClient.buf.out = WS_CLIENT_CTX(work)->tx;
-    WsClient.buf.cap = sizeof(WS_CLIENT_CTX(work)->tx);
+    WsClientV.frame.opcode = opcode;
+    WsClientV.frame.payload = payload;
+    WsClientV.frame.payload_len = len;
+    WsClientV.frame.masking_key = mask;
+    WsClientV.buf.out = WS_CLIENT_CTX(work)->tx;
+    WsClientV.buf.cap = sizeof(WS_CLIENT_CTX(work)->tx);
     ws_build_frame(work);
-    const size_t n = WsClient.n;
+    const size_t n = WsClientV.n;
     return n != 0 && ws_tx(work, WS_CLIENT_CTX(work)->tx, n);
 }
 
@@ -611,7 +611,7 @@ static void ws_close_transport(uint8_t *restrict work)
 #endif
     if (WS_CLIENT_CTX(work)->cid >= 0)
     {
-        TcpClient.cid = WS_CLIENT_CTX(work)->cid;
+        TcpClientV.cid = WS_CLIENT_CTX(work)->cid;
         TcpClient.close(protocore_tcp_client_span());
     }
     WS_CLIENT_CTX(work)->cid = -1;
@@ -690,18 +690,18 @@ static void ws_process_rx(uint8_t *restrict work)
         {
             hdr[i] = ring_peek(work, i);
         }
-        WsClient.buf.in = hdr;
-        WsClient.buf.avail = avail;
+        WsClientV.buf.in = hdr;
+        WsClientV.buf.avail = avail;
         ws_parse_frame(work);
-        if (!WsClient.ok)
+        if (!WsClientV.ok)
         {
             return; // the header or the frame it names has not fully arrived
         }
-        const uint8_t opcode = WsClient.frame.opcode;
-        const proto_bool fin = WsClient.frame.fin;
-        const size_t off = WsClient.frame.payload_off;
-        const size_t plen = WsClient.frame.payload_len;
-        const size_t consumed = WsClient.frame.consumed;
+        const uint8_t opcode = WsClientV.frame.opcode;
+        const proto_bool fin = WsClientV.frame.fin;
+        const size_t off = WsClientV.frame.payload_off;
+        const size_t plen = WsClientV.frame.payload_len;
+        const size_t consumed = WsClientV.frame.consumed;
         if (consumed > sizeof(WS_CLIENT_CTX(work)->pkt))
         {
             ring_advance(work, consumed); // a frame no buffer holds: drop it
@@ -715,18 +715,18 @@ static void ws_process_rx(uint8_t *restrict work)
 
 static void ws_on_message(uint8_t *restrict work)
 {
-    WS_CLIENT_CTX(work)->on_message = WsClient.msg.on_message;
+    WS_CLIENT_CTX(work)->on_message = WsClientV.msg.on_message;
 }
 
 // RFC 6455 sec 4.1: dial /host/ and /port/, raise TLS when /secure/ is set, send the client's
 // opening handshake and verify the server's. The connection is established when that verifies.
 static void ws_connect(uint8_t *restrict work)
 {
-    const char *host = WsClient.handshake.host;
-    const char *resource_name = WsClient.handshake.resource_name;
-    const uint16_t port = WsClient.handshake.port;
-    const proto_bool secure = WsClient.handshake.secure;
-    WsClient.ok = PROTO_FALSE;
+    const char *host = WsClientV.handshake.host;
+    const char *resource_name = WsClientV.handshake.resource_name;
+    const uint16_t port = WsClientV.handshake.port;
+    const proto_bool secure = WsClientV.handshake.secure;
+    WsClientV.ok = PROTO_FALSE;
     if (!host || !resource_name)
     {
         return;
@@ -746,11 +746,11 @@ static void ws_connect(uint8_t *restrict work)
 
     const uint32_t deadline = Clock.ms + WSC_CONNECT_TIMEOUT_MS;
 
-    TcpClient.dial.host = host;
-    TcpClient.dial.port = port;
-    TcpClient.dial.timeout_ms = WSC_CONNECT_TIMEOUT_MS;
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = port;
+    TcpClientV.dial.timeout_ms = WSC_CONNECT_TIMEOUT_MS;
     TcpClient.open(protocore_tcp_client_span());
-    WS_CLIENT_CTX(work)->cid = TcpClient.i32;
+    WS_CLIENT_CTX(work)->cid = TcpClientV.i32;
     if (WS_CLIENT_CTX(work)->cid < 0)
     {
         WSC_DBG("[wsc] open failed (%d)\n", WS_CLIENT_CTX(work)->cid);
@@ -762,16 +762,16 @@ static void ws_connect(uint8_t *restrict work)
     proto_bool up = PROTO_FALSE;
     while ((int32_t)(deadline - Clock.ms) > 0)
     {
-        TcpClient.cid = WS_CLIENT_CTX(work)->cid;
+        TcpClientV.cid = WS_CLIENT_CTX(work)->cid;
         TcpClient.connected(protocore_tcp_client_span());
-        up = TcpClient.ok;
+        up = TcpClientV.ok;
         if (up)
         {
             break;
         }
-        TcpClient.cid = WS_CLIENT_CTX(work)->cid;
+        TcpClientV.cid = WS_CLIENT_CTX(work)->cid;
         TcpClient.is_closed(protocore_tcp_client_span());
-        if (TcpClient.ok)
+        if (TcpClientV.ok)
         {
             break;
         }
@@ -812,24 +812,24 @@ static void ws_connect(uint8_t *restrict work)
     // |Sec-WebSocket-Key| is 16 fresh random octets, base64-encoded (RFC 6455 sec 4.1); the accept
     // it implies is computed now and compared against the field the server sends back.
     uint8_t key_raw[16];
-    Rng.fill_args.out = key_raw;
-    Rng.fill_args.len = sizeof(key_raw);
+    RngV.fill_args.out = key_raw;
+    RngV.fill_args.len = sizeof(key_raw);
     Rng.fill(protocore_rng_span());
     char key_b64[PROTOCORE_WS_KEY_CAP];
-    Base64.encode_args.src = key_raw;
-    Base64.encode_args.src_len = sizeof(key_raw);
-    Base64.encode_args.dst = key_b64;
+    Base64V.encode_args.src = key_raw;
+    Base64V.encode_args.src_len = sizeof(key_raw);
+    Base64V.encode_args.dst = key_b64;
     Base64.encode(base64_work);
     char accept[PROTOCORE_WS_ACCEPT_CAP];
-    WsClient.handshake.key = key_b64;
-    WsClient.handshake.accept = accept;
-    WsClient.handshake.accept_cap = sizeof(accept);
+    WsClientV.handshake.key = key_b64;
+    WsClientV.handshake.accept = accept;
+    WsClientV.handshake.accept_cap = sizeof(accept);
     ws_accept_for_key(work);
 
-    WsClient.buf.out = WS_CLIENT_CTX(work)->tx;
-    WsClient.buf.cap = sizeof(WS_CLIENT_CTX(work)->tx);
+    WsClientV.buf.out = WS_CLIENT_CTX(work)->tx;
+    WsClientV.buf.cap = sizeof(WS_CLIENT_CTX(work)->tx);
     ws_build_opening_handshake(work);
-    const size_t n = WsClient.n;
+    const size_t n = WsClientV.n;
     if (n == 0 || !ws_tx(work, WS_CLIENT_CTX(work)->tx, n))
     {
         ws_close_transport(work);
@@ -860,14 +860,14 @@ static void ws_connect(uint8_t *restrict work)
             pcdelay(WSC_POLL_MS);
         }
     }
-    WsClient.ok = PROTO_FALSE;
+    WsClientV.ok = PROTO_FALSE;
     if (done)
     {
-        WsClient.buf.in = resp;
-        WsClient.buf.avail = rlen;
+        WsClientV.buf.in = resp;
+        WsClientV.buf.avail = rlen;
         ws_check_server_handshake(work);
     }
-    if (!WsClient.ok)
+    if (!WsClientV.ok)
     {
         WSC_DBG("[wsc] handshake fail done=%d rlen=%u resp:\n%.*s\n", (int)done, (unsigned)rlen, (int)rlen,
                 (const char *)resp);
@@ -875,24 +875,24 @@ static void ws_connect(uint8_t *restrict work)
         return;
     }
     WS_CLIENT_CTX(work)->established = PROTO_TRUE;
-    WsClient.ok = PROTO_TRUE;
+    WsClientV.ok = PROTO_TRUE;
 }
 
 static void ws_send_text(uint8_t *restrict work)
 {
-    const char *text = WsClient.msg.text;
+    const char *text = WsClientV.msg.text;
     const size_t len = text ? str.len(text, PROTOCORE_WS_CLIENT_BUF_SIZE) : 0;
-    WsClient.ok = ws_emit_frame(work, (uint8_t)WSC_OP_TEXT, (const uint8_t *)text, len);
+    WsClientV.ok = ws_emit_frame(work, (uint8_t)WSC_OP_TEXT, (const uint8_t *)text, len);
 }
 
 static void ws_send_binary(uint8_t *restrict work)
 {
-    WsClient.ok = ws_emit_frame(work, (uint8_t)WSC_OP_BINARY, WsClient.msg.data, WsClient.msg.len);
+    WsClientV.ok = ws_emit_frame(work, (uint8_t)WSC_OP_BINARY, WsClientV.msg.data, WsClientV.msg.len);
 }
 
 static void ws_loop(uint8_t *restrict work)
 {
-    WsClient.ok = PROTO_FALSE;
+    WsClientV.ok = PROTO_FALSE;
     if (!WS_CLIENT_CTX(work)->established)
     {
         return;
@@ -903,12 +903,12 @@ static void ws_loop(uint8_t *restrict work)
         ws_close_transport(work);
         return;
     }
-    WsClient.ok = PROTO_TRUE;
+    WsClientV.ok = PROTO_TRUE;
 }
 
 static void ws_connected(uint8_t *restrict work)
 {
-    WsClient.ok = WS_CLIENT_CTX(work)->established;
+    WsClientV.ok = WS_CLIENT_CTX(work)->established;
 }
 
 // RFC 6455 sec 5.5.1 then sec 7.1.1: send a Close frame, then close the WebSocket connection.
@@ -931,31 +931,31 @@ static void ws_on_message(uint8_t *restrict work)
 static void ws_connect(uint8_t *restrict work)
 {
     (void)work;
-    WsClient.ok = PROTO_FALSE;
+    WsClientV.ok = PROTO_FALSE;
 }
 
 static void ws_send_text(uint8_t *restrict work)
 {
     (void)work;
-    WsClient.ok = PROTO_FALSE;
+    WsClientV.ok = PROTO_FALSE;
 }
 
 static void ws_send_binary(uint8_t *restrict work)
 {
     (void)work;
-    WsClient.ok = PROTO_FALSE;
+    WsClientV.ok = PROTO_FALSE;
 }
 
 static void ws_loop(uint8_t *restrict work)
 {
     (void)work;
-    WsClient.ok = PROTO_FALSE;
+    WsClientV.ok = PROTO_FALSE;
 }
 
 static void ws_connected(uint8_t *restrict work)
 {
     (void)work;
-    WsClient.ok = PROTO_FALSE;
+    WsClientV.ok = PROTO_FALSE;
 }
 
 static void ws_close(uint8_t *restrict work)
@@ -966,17 +966,7 @@ static void ws_close(uint8_t *restrict work)
 #endif // PROTOCORE_HAS_NET_STACK
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-WsClientNs WsClient = {.accept_for_key = ws_accept_for_key,
-                       .build_opening_handshake = ws_build_opening_handshake,
-                       .check_server_handshake = ws_check_server_handshake,
-                       .build_frame = ws_build_frame,
-                       .parse_frame = ws_parse_frame,
-                       .on_message = ws_on_message,
-                       .connect = ws_connect,
-                       .send_text = ws_send_text,
-                       .send_binary = ws_send_binary,
-                       .loop = ws_loop,
-                       .connected = ws_connected,
-                       .close = ws_close};
+/** @brief The operands and the outcome. */
+WsClientVars WsClientV;
 
 #endif // PROTOCORE_ENABLE_WS_CLIENT

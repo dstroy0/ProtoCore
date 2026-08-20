@@ -37,33 +37,33 @@ void tearDown(void)
 // The namespace, called the way the vectors below read: operands in, one call, answer out.
 static void cp_encrypt(const uint8_t *key, uint32_t seqnr, uint8_t *dest, const uint8_t *src, uint32_t payload_len)
 {
-    ChachaPoly.encrypt_args.key = key;
-    ChachaPoly.encrypt_args.src = src;
-    ChachaPoly.encrypt_args.dest = dest;
-    ChachaPoly.encrypt_args.seqnr = seqnr;
-    ChachaPoly.encrypt_args.payload_len = payload_len;
+    ChachaPolyV.encrypt_args.key = key;
+    ChachaPolyV.encrypt_args.src = src;
+    ChachaPolyV.encrypt_args.dest = dest;
+    ChachaPolyV.encrypt_args.seqnr = seqnr;
+    ChachaPolyV.encrypt_args.payload_len = payload_len;
     ChachaPoly.encrypt(g_ws);
 }
 
 static proto_bool cp_decrypt(const uint8_t *key, uint32_t seqnr, uint8_t *dest, const uint8_t *src,
                              uint32_t payload_len)
 {
-    ChachaPoly.decrypt_args.key = key;
-    ChachaPoly.decrypt_args.src = src;
-    ChachaPoly.decrypt_args.dest = dest;
-    ChachaPoly.decrypt_args.seqnr = seqnr;
-    ChachaPoly.decrypt_args.payload_len = payload_len;
+    ChachaPolyV.decrypt_args.key = key;
+    ChachaPolyV.decrypt_args.src = src;
+    ChachaPolyV.decrypt_args.dest = dest;
+    ChachaPolyV.decrypt_args.seqnr = seqnr;
+    ChachaPolyV.decrypt_args.payload_len = payload_len;
     ChachaPoly.decrypt(g_ws);
-    return ChachaPoly.ok;
+    return ChachaPolyV.ok;
 }
 
 static uint32_t cp_get_length(const uint8_t *key, uint32_t seqnr, const uint8_t *enc_len)
 {
-    ChachaPoly.length_args.key = key;
-    ChachaPoly.length_args.enc_len = enc_len;
-    ChachaPoly.length_args.seqnr = seqnr;
+    ChachaPolyV.length_args.key = key;
+    ChachaPolyV.length_args.enc_len = enc_len;
+    ChachaPolyV.length_args.seqnr = seqnr;
     ChachaPoly.get_length(g_ws);
-    return ChachaPoly.length;
+    return ChachaPolyV.length;
 }
 
 // RFC 8439 A.1 Test Vector #1: key 0^32, nonce 0^12, block counter 0.

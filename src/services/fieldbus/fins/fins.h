@@ -73,7 +73,6 @@ typedef struct
     uint8_t sa2; ///< source network / node / unit
     uint8_t sid; ///< service id
 } FinsHeader;
-
 /** @brief A parsed command (request side). @ref params points INTO the source buffer. */
 typedef struct
 {
@@ -83,7 +82,6 @@ typedef struct
     const uint8_t *params;
     size_t params_len;
 } FinsCommand;
-
 /** @brief A parsed response. @ref data points INTO the source buffer. */
 typedef struct
 {
@@ -95,7 +93,6 @@ typedef struct
     const uint8_t *data;
     size_t data_len;
 } FinsResponse;
-
 /** @brief What build_command takes: buf, cap, h, mrc, src, params, ... */
 typedef struct
 {
@@ -107,7 +104,6 @@ typedef struct
     const uint8_t *params;
     size_t params_len;
 } FinsBuildCommandArgs;
-
 /** @brief What build_memory_area_read takes: buf, cap, h, area, ... */
 typedef struct
 {
@@ -119,7 +115,6 @@ typedef struct
     uint8_t bit;
     uint16_t count;
 } FinsBuildMemoryAreaReadArgs;
-
 /** @brief What build_memory_area_write takes: buf, cap, h, area, ... */
 typedef struct
 {
@@ -133,7 +128,6 @@ typedef struct
     const uint8_t *data;
     size_t data_len;
 } FinsBuildMemoryAreaWriteArgs;
-
 /** @brief What build_run takes: buf, cap, h, mode. */
 typedef struct
 {
@@ -142,7 +136,6 @@ typedef struct
     const FinsHeader *h;
     FinsRunMode mode;
 } FinsBuildRunArgs;
-
 /** @brief What build_stop takes: buf, cap, h. */
 typedef struct
 {
@@ -150,7 +143,6 @@ typedef struct
     size_t cap;
     const FinsHeader *h;
 } FinsBuildStopArgs;
-
 /** @brief What parse_command takes: buf, len, out. */
 typedef struct
 {
@@ -158,7 +150,6 @@ typedef struct
     size_t len;
     FinsCommand *out;
 } FinsParseCommandArgs;
-
 /** @brief What parse_response takes: buf, len, out. */
 typedef struct
 {
@@ -166,7 +157,6 @@ typedef struct
     size_t len;
     FinsResponse *out;
 } FinsParseResponseArgs;
-
 /**
  * @brief Omron FINS frame codec (PROTOCORE_ENABLE_FINS) - zero-heap command/response builder + parser for the Factory
  * Interface Network Service (FINS/UDP), so a device can talk to an Omron PLC over the shipped UDP transport.
@@ -214,10 +204,16 @@ typedef struct
     FinsBuildStopArgs build_stop_args;
     FinsParseCommandArgs parse_command_args;
     FinsParseResponseArgs parse_response_args;
-
     proto_bool ok;
     size_t n;
+} FinsVars;
 
+/** @brief The operands and the outcome. */
+extern FinsVars FinsV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_command)(uint8_t *restrict work);
     void (*const build_memory_area_read)(uint8_t *restrict work);
     void (*const build_memory_area_write)(uint8_t *restrict work);
@@ -227,8 +223,29 @@ typedef struct
     void (*const parse_response)(uint8_t *restrict work);
 } FinsNs;
 
-/** @brief The one symbol this module exports. */
-extern FinsNs Fins;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in FinsV or a region of the borrow at a fixed offset.
+void protocore_fins_build_command(uint8_t *restrict work);
+void protocore_fins_build_memory_area_read(uint8_t *restrict work);
+void protocore_fins_build_memory_area_write(uint8_t *restrict work);
+void protocore_fins_build_run(uint8_t *restrict work);
+void protocore_fins_build_stop(uint8_t *restrict work);
+void protocore_fins_parse_command(uint8_t *restrict work);
+void protocore_fins_parse_response(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Fins.build_command(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const FinsNs Fins __attribute__((unused)) = {
+    .build_command = protocore_fins_build_command,
+    .build_memory_area_read = protocore_fins_build_memory_area_read,
+    .build_memory_area_write = protocore_fins_build_memory_area_write,
+    .build_run = protocore_fins_build_run,
+    .build_stop = protocore_fins_build_stop,
+    .parse_command = protocore_fins_parse_command,
+    .parse_response = protocore_fins_parse_response,
+};
 
 PROTOCORE_END_DECLS
 

@@ -32,32 +32,27 @@ typedef struct
 {
     uint8_t i;
 } CompResetArgs;
-
 /** @brief What set_s2c takes: i, alg. */
 typedef struct
 {
     uint8_t i;
     SshCompAlg alg;
 } CompSetS2cArgs;
-
 /** @brief What on_newkeys takes: i. */
 typedef struct
 {
     uint8_t i;
 } CompOnNewkeysArgs;
-
 /** @brief What on_auth_success takes: i. */
 typedef struct
 {
     uint8_t i;
 } CompOnAuthSuccessArgs;
-
 /** @brief What s2c_active takes: i. */
 typedef struct
 {
     uint8_t i;
 } CompS2cActiveArgs;
-
 /** @brief What s2c takes: i, src, src_len, dst, dst_cap, out_len. */
 typedef struct
 {
@@ -68,20 +63,17 @@ typedef struct
     size_t dst_cap;
     size_t *out_len;
 } CompS2cArgs;
-
 /** @brief What set_c2s takes: i, alg. */
 typedef struct
 {
     uint8_t i;
     SshCompAlg alg;
 } CompSetC2sArgs;
-
 /** @brief What c2s_active takes: i. */
 typedef struct
 {
     uint8_t i;
 } CompC2sActiveArgs;
-
 /** @brief What c2s takes: i, src, src_len, dst, dst_cap, out_len. */
 typedef struct
 {
@@ -92,7 +84,6 @@ typedef struct
     size_t dst_cap;
     size_t *out_len;
 } CompC2sArgs;
-
 /**
  * @brief RFC 4253 sec 6.2 compression: the negotiated stream, both directions.
  *
@@ -138,10 +129,16 @@ typedef struct
     CompSetC2sArgs set_c2s_args;
     CompC2sActiveArgs c2s_active_args;
     CompC2sArgs c2s_args;
-
     proto_bool ok;
     int n;
+} CompVars;
 
+/** @brief The operands and the outcome. */
+extern CompVars CompV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const reset)(uint8_t *restrict work);
     void (*const set_s2c)(uint8_t *restrict work);
     void (*const on_newkeys)(uint8_t *restrict work);
@@ -153,8 +150,33 @@ typedef struct
     void (*const c2s)(uint8_t *restrict work);
 } CompNs;
 
-/** @brief The one symbol this module exports. */
-extern CompNs Comp;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in CompV or a region of the borrow at a fixed offset.
+void protocore_comp_reset(uint8_t *restrict work);
+void protocore_comp_set_s2c(uint8_t *restrict work);
+void protocore_comp_on_newkeys(uint8_t *restrict work);
+void protocore_comp_on_auth_success(uint8_t *restrict work);
+void protocore_comp_s2c_active(uint8_t *restrict work);
+void protocore_comp_s2c(uint8_t *restrict work);
+void protocore_comp_set_c2s(uint8_t *restrict work);
+void protocore_comp_c2s_active(uint8_t *restrict work);
+void protocore_comp_c2s(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Comp.reset(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const CompNs Comp __attribute__((unused)) = {
+    .reset = protocore_comp_reset,
+    .set_s2c = protocore_comp_set_s2c,
+    .on_newkeys = protocore_comp_on_newkeys,
+    .on_auth_success = protocore_comp_on_auth_success,
+    .s2c_active = protocore_comp_s2c_active,
+    .s2c = protocore_comp_s2c,
+    .set_c2s = protocore_comp_set_c2s,
+    .c2s_active = protocore_comp_c2s_active,
+    .c2s = protocore_comp_c2s,
+};
 
 /**
  * @brief The bytes every entry here runs out of: one compressor per SSH connection.

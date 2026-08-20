@@ -24,39 +24,39 @@ static uint8_t g_work[PROTOCORE_ECDSA_BORROW] __attribute__((aligned(8)));
 // pointer stays a parameter on sign and verify because the cases pass it explicitly.
 static proto_bool ec_pubkey(uint8_t *pub, const uint8_t *priv)
 {
-    Ecdsa.pubkey_args.priv = priv;
-    Ecdsa.pubkey_args.pub = pub;
+    EcdsaV.pubkey_args.priv = priv;
+    EcdsaV.pubkey_args.pub = pub;
     Ecdsa.pubkey(g_work);
-    return Ecdsa.ok;
+    return EcdsaV.ok;
 }
 
 static proto_bool ec_sign(uint8_t *sig, uint8_t *w, const uint8_t *msg, size_t mlen, const uint8_t *priv)
 {
-    Ecdsa.sign_args.msg = msg;
-    Ecdsa.sign_args.mlen = mlen;
-    Ecdsa.sign_args.priv = priv;
-    Ecdsa.sign_args.sig = sig;
+    EcdsaV.sign_args.msg = msg;
+    EcdsaV.sign_args.mlen = mlen;
+    EcdsaV.sign_args.priv = priv;
+    EcdsaV.sign_args.sig = sig;
     Ecdsa.sign(w);
-    return Ecdsa.ok;
+    return EcdsaV.ok;
 }
 
 static proto_bool ec_verify(const uint8_t *pub, uint8_t *w, const uint8_t *msg, size_t mlen, const uint8_t *sig)
 {
-    Ecdsa.verify_args.pub = pub;
-    Ecdsa.verify_args.msg = msg;
-    Ecdsa.verify_args.mlen = mlen;
-    Ecdsa.verify_args.sig = sig;
+    EcdsaV.verify_args.pub = pub;
+    EcdsaV.verify_args.msg = msg;
+    EcdsaV.verify_args.mlen = mlen;
+    EcdsaV.verify_args.sig = sig;
     Ecdsa.verify(w);
-    return Ecdsa.ok;
+    return EcdsaV.ok;
 }
 
 static proto_bool ec_ecdh(uint8_t *shared_x, const uint8_t *peer_pub, const uint8_t *priv)
 {
-    Ecdsa.ecdh_args.peer_pub = peer_pub;
-    Ecdsa.ecdh_args.priv = priv;
-    Ecdsa.ecdh_args.shared_x = shared_x;
+    EcdsaV.ecdh_args.peer_pub = peer_pub;
+    EcdsaV.ecdh_args.priv = priv;
+    EcdsaV.ecdh_args.shared_x = shared_x;
     Ecdsa.ecdh(g_work);
-    return Ecdsa.ok;
+    return EcdsaV.ok;
 }
 
 void setUp(void)

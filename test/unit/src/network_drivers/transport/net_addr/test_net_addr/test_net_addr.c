@@ -26,7 +26,7 @@ void setUp(void)
 {
     memset(&g_stack, 0, sizeof(g_stack));
     memset(&g_lib, 0, sizeof(g_lib));
-    NetAddr.ok = PROTO_FALSE;
+    NetAddrV.ok = PROTO_FALSE;
 }
 
 void tearDown(void)
@@ -165,8 +165,8 @@ void test_a_null_destination_cannot_be_written(void)
 void test_the_entry_reads_the_operands_off_the_handle(void)
 {
     protocore_net_ip4_set(&g_stack, 203, 0, 113, 42);
-    NetAddr.in.addr = &g_stack;
-    NetAddr.in.out_ip = &g_lib;
+    NetAddrV.in.addr = &g_stack;
+    NetAddrV.in.out_ip = &g_lib;
 
     NetAddr.to_ip(NULL);
 
@@ -181,12 +181,12 @@ void test_the_entry_reads_the_operands_off_the_handle(void)
 void test_the_entry_reports_the_outcome_on_the_handle(void)
 {
     g_lib = protocore_ip_from_v4_octets(203, 0, 113, 42);
-    NetAddr.out.ip = &g_lib;
-    NetAddr.out.out_addr = &g_stack;
+    NetAddrV.out.ip = &g_lib;
+    NetAddrV.out.out_addr = &g_stack;
 
     NetAddr.from_ip(NULL);
 
-    TEST_ASSERT_TRUE(NetAddr.ok);
+    TEST_ASSERT_TRUE(NetAddrV.ok);
     TEST_ASSERT_TRUE(protocore_net_ip_is_v4(&g_stack));
 }
 
@@ -194,13 +194,13 @@ void test_the_entry_reports_the_outcome_on_the_handle(void)
 void test_the_entry_reports_a_refusal_on_the_handle(void)
 {
     g_lib.family = PROTOCORE_IP_NONE;
-    NetAddr.out.ip = &g_lib;
-    NetAddr.out.out_addr = &g_stack;
-    NetAddr.ok = PROTO_TRUE;
+    NetAddrV.out.ip = &g_lib;
+    NetAddrV.out.out_addr = &g_stack;
+    NetAddrV.ok = PROTO_TRUE;
 
     NetAddr.from_ip(NULL);
 
-    TEST_ASSERT_FALSE(NetAddr.ok);
+    TEST_ASSERT_FALSE(NetAddrV.ok);
 }
 
 // A table of same-typed function pointers initialized by position binds to whatever order the
@@ -209,23 +209,23 @@ void test_the_entry_reports_a_refusal_on_the_handle(void)
 void test_each_entry_reaches_the_call_its_name_promises(void)
 {
     protocore_net_ip4_set(&g_stack, 203, 0, 113, 42);
-    NetAddr.in.addr = &g_stack;
-    NetAddr.in.out_ip = &g_lib;
-    NetAddr.ok = PROTO_TRUE;
+    NetAddrV.in.addr = &g_stack;
+    NetAddrV.in.out_ip = &g_lib;
+    NetAddrV.ok = PROTO_TRUE;
 
     NetAddr.to_ip(NULL); // reads; leaves ok alone
 
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_IP_V4, g_lib.family);
-    TEST_ASSERT_TRUE(NetAddr.ok);
+    TEST_ASSERT_TRUE(NetAddrV.ok);
 
     protocore_net_ip other;
     memset(&other, 0, sizeof(other));
-    NetAddr.out.ip = &g_lib;
-    NetAddr.out.out_addr = &other;
+    NetAddrV.out.ip = &g_lib;
+    NetAddrV.out.out_addr = &other;
 
     NetAddr.from_ip(NULL); // writes; reports
 
-    TEST_ASSERT_TRUE(NetAddr.ok);
+    TEST_ASSERT_TRUE(NetAddrV.ok);
     TEST_ASSERT_TRUE(protocore_net_ip_is_v4(&other));
 }
 

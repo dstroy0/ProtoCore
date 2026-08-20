@@ -388,44 +388,45 @@ static void sha384_finish(uint8_t *restrict work, uint8_t digest[PROTOCORE_SHA38
 
 // --- the entries -----------------------------------------------------------
 
-static void sha384_init(uint8_t *restrict work)
+void protocore_sha384_init(uint8_t *restrict work)
 {
     sha384_state_init(work);
-    Sha384.ok = PROTO_TRUE;
+    Sha384V.ok = PROTO_TRUE;
 }
 
-static void sha384_update(uint8_t *restrict work)
+void protocore_sha384_update(uint8_t *restrict work)
 {
-    sha384_absorb(work, Sha384.update_args.data, Sha384.update_args.len);
-    Sha384.ok = PROTO_TRUE;
+    sha384_absorb(work, Sha384V.update_args.data, Sha384V.update_args.len);
+    Sha384V.ok = PROTO_TRUE;
 }
 
-static void sha384_final(uint8_t *restrict work)
+void protocore_sha384_final(uint8_t *restrict work)
 {
-    if (!Sha384.final_args.out)
+    if (!Sha384V.final_args.out)
     {
-        Sha384.ok = PROTO_FALSE;
+        Sha384V.ok = PROTO_FALSE;
         return;
     }
-    sha384_finish(work, Sha384.final_args.out);
-    Sha384.ok = PROTO_TRUE;
+    sha384_finish(work, Sha384V.final_args.out);
+    Sha384V.ok = PROTO_TRUE;
 }
 
 // One-shot over the members already set: init, absorb, finish.
-static void sha384_hash(uint8_t *restrict work)
+void protocore_sha384_hash(uint8_t *restrict work)
 {
-    Sha384.ok = PROTO_FALSE;
-    if (!Sha384.hash_args.out)
+    Sha384V.ok = PROTO_FALSE;
+    if (!Sha384V.hash_args.out)
     {
         return;
     }
     sha384_state_init(work);
-    sha384_absorb(work, Sha384.hash_args.data, Sha384.hash_args.len);
-    sha384_finish(work, Sha384.hash_args.out);
-    Sha384.ok = PROTO_TRUE;
+    sha384_absorb(work, Sha384V.hash_args.data, Sha384V.hash_args.len);
+    sha384_finish(work, Sha384V.hash_args.out);
+    Sha384V.ok = PROTO_TRUE;
 }
 
-Sha384Ns Sha384 = {.init = sha384_init, .update = sha384_update, .final = sha384_final, .hash = sha384_hash};
+/** @brief The operands and the outcome. */
+Sha384Vars Sha384V;
 
 PROTOCORE_END_DECLS
 

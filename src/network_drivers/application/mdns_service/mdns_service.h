@@ -38,14 +38,12 @@ typedef struct
     const char *hostname; ///< Host label without the `.local` suffix (e.g. "mydevice")
     uint16_t http_port;   ///< TCP port the HTTP server listens on (default 80)
 } MdnsServiceBeginArgs;
-
 /** @brief What txt takes: key, value. */
 typedef struct
 {
     const char *key;
     const char *value;
 } MdnsServiceTxtArgs;
-
 /** @brief What add_service takes: service_type, proto, port. */
 typedef struct
 {
@@ -53,7 +51,6 @@ typedef struct
     const char *proto;        ///< `"_tcp"` or `"_udp"`
     uint16_t port;            ///< TCP/UDP port the service listens on
 } MdnsServiceAddServiceArgs;
-
 /**
  * @brief Optional mDNS / DNS-SD advertisement (PROTOCORE_ENABLE_MDNS).
  *
@@ -82,16 +79,35 @@ typedef struct
     MdnsServiceBeginArgs begin_args;
     MdnsServiceTxtArgs txt_args;
     MdnsServiceAddServiceArgs add_service_args;
-
     proto_bool ok;
+} MdnsServiceVars;
 
+/** @brief The operands and the outcome. */
+extern MdnsServiceVars MdnsServiceV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const begin)(uint8_t *restrict work);
     void (*const txt)(uint8_t *restrict work);
     void (*const add_service)(uint8_t *restrict work);
 } MdnsServiceNs;
 
-/** @brief The one symbol this module exports. */
-extern MdnsServiceNs MdnsService;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in MdnsServiceV or a region of the borrow at a fixed offset.
+void protocore_mdns_service_begin(uint8_t *restrict work);
+void protocore_mdns_service_txt(uint8_t *restrict work);
+void protocore_mdns_service_add_service(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `MdnsService.begin(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const MdnsServiceNs MdnsService __attribute__((unused)) = {
+    .begin = protocore_mdns_service_begin,
+    .txt = protocore_mdns_service_txt,
+    .add_service = protocore_mdns_service_add_service,
+};
 
 /**
  * @brief The PROTOCORE_MDNS_SERVICE_BORROW bytes this module's state lives in.

@@ -22,19 +22,19 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void melsec_build_read(uint8_t *restrict work)
+void protocore_melsec_build_read(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Melsec.build_read_args.buf;
-    size_t cap = Melsec.build_read_args.cap;
-    uint8_t device_code = Melsec.build_read_args.device_code;
-    uint32_t head_device = Melsec.build_read_args.head_device;
-    uint16_t points = Melsec.build_read_args.points;
-    uint16_t monitoring_timer = Melsec.build_read_args.monitoring_timer;
+    uint8_t *buf = MelsecV.build_read_args.buf;
+    size_t cap = MelsecV.build_read_args.cap;
+    uint8_t device_code = MelsecV.build_read_args.device_code;
+    uint32_t head_device = MelsecV.build_read_args.head_device;
+    uint16_t points = MelsecV.build_read_args.points;
+    uint16_t monitoring_timer = MelsecV.build_read_args.monitoring_timer;
 
     if (!buf || cap < MELSEC_3E_READ_REQ_LEN)
     {
-        Melsec.n = 0;
+        MelsecV.n = 0;
         return;
     }
     size_t p = 0;
@@ -55,34 +55,34 @@ static void melsec_build_read(uint8_t *restrict work)
     buf[p++] = (uint8_t)((head_device >> 16) & 0xFF);
     buf[p++] = device_code;
     p += endian.wr16le(buf + p, points);
-    Melsec.n = p; // == MELSEC_3E_READ_REQ_LEN
+    MelsecV.n = p; // == MELSEC_3E_READ_REQ_LEN
 }
 
-static void melsec_build_write(uint8_t *restrict work)
+void protocore_melsec_build_write(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Melsec.build_write_args.buf;
-    size_t cap = Melsec.build_write_args.cap;
-    uint8_t device_code = Melsec.build_write_args.device_code;
-    uint32_t head_device = Melsec.build_write_args.head_device;
-    uint16_t points = Melsec.build_write_args.points;
-    uint16_t monitoring_timer = Melsec.build_write_args.monitoring_timer;
-    const uint8_t *data = Melsec.build_write_args.data;
-    size_t data_len = Melsec.build_write_args.data_len;
+    uint8_t *buf = MelsecV.build_write_args.buf;
+    size_t cap = MelsecV.build_write_args.cap;
+    uint8_t device_code = MelsecV.build_write_args.device_code;
+    uint32_t head_device = MelsecV.build_write_args.head_device;
+    uint16_t points = MelsecV.build_write_args.points;
+    uint16_t monitoring_timer = MelsecV.build_write_args.monitoring_timer;
+    const uint8_t *data = MelsecV.build_write_args.data;
+    size_t data_len = MelsecV.build_write_args.data_len;
 
     if (!buf || (data_len && !data))
     {
-        Melsec.n = 0;
+        MelsecV.n = 0;
         return;
     }
     if (data_len > (size_t)(0xFFFFu - MELSEC_3E_READ_REQ_DATA_LEN)) // the request-length field is 16-bit
     {
-        Melsec.n = 0;
+        MelsecV.n = 0;
         return;
     }
     if (cap < MELSEC_3E_READ_REQ_LEN + data_len)
     {
-        Melsec.n = 0;
+        MelsecV.n = 0;
         return;
     }
     size_t p = 0;
@@ -107,46 +107,46 @@ static void melsec_build_write(uint8_t *restrict work)
         mem.cpy(buf + p, data, data_len);
         p += data_len;
     }
-    Melsec.n = p; // == MELSEC_3E_READ_REQ_LEN + data_len
+    MelsecV.n = p; // == MELSEC_3E_READ_REQ_LEN + data_len
 }
 
-static void melsec_parse_response(uint8_t *restrict work)
+void protocore_melsec_parse_response(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = Melsec.parse_response_args.buf;
-    size_t len = Melsec.parse_response_args.len;
-    MelsecResponse *out = Melsec.parse_response_args.out;
+    const uint8_t *buf = MelsecV.parse_response_args.buf;
+    size_t len = MelsecV.parse_response_args.len;
+    MelsecResponse *out = MelsecV.parse_response_args.out;
 
     // subheader(2)+net(1)+pc(1)+io(2)+multidrop(1)+length(2)+endcode(2) = MELSEC_3E_RES_MIN_LEN
     if (!buf || !out || len < MELSEC_3E_RES_MIN_LEN)
     {
-        Melsec.ok = PROTO_FALSE;
+        MelsecV.ok = PROTO_FALSE;
         return;
     }
     if (buf[0] != MELSEC_3E_RES_SUBHEADER0 || buf[1] != MELSEC_3E_RES_SUBHEADER1)
     {
-        Melsec.ok = PROTO_FALSE;
+        MelsecV.ok = PROTO_FALSE;
         return;
     }
     uint16_t data_length = endian.rd16le(buf + MELSEC_3E_RES_LEN_OFFSET); // covers the end code + the response data
     if (data_length < MELSEC_ENDCODE_LEN)
     {
-        Melsec.ok = PROTO_FALSE;
+        MelsecV.ok = PROTO_FALSE;
         return;
     }
     if (MELSEC_3E_RES_DATALEN_BASE + (size_t)data_length > len)
     {
-        Melsec.ok = PROTO_FALSE;
+        MelsecV.ok = PROTO_FALSE;
         return;
     }
     out->end_code = endian.rd16le(buf + MELSEC_3E_RES_DATALEN_BASE);
     out->data = buf + MELSEC_3E_RES_DATA_OFFSET;
     out->data_len = (size_t)data_length - MELSEC_ENDCODE_LEN; // minus the 2-octet end code
-    Melsec.ok = PROTO_TRUE;
+    MelsecV.ok = PROTO_TRUE;
 }
 
-MelsecNs Melsec = {
-    .build_read = melsec_build_read, .build_write = melsec_build_write, .parse_response = melsec_parse_response};
+/** @brief The operands and the outcome. */
+MelsecVars MelsecV;
 
 PROTOCORE_END_DECLS
 

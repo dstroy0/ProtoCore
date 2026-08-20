@@ -45,7 +45,6 @@ typedef struct
     size_t hist;            ///< bytes of history currently at the front of @ref work.
     proto_bool header_sent; ///< true once the leading 2-byte zlib header has been emitted.
 } SshDeflate;
-
 /**
  * @brief Worst-case compressed size for @p src_len input (header + block overhead + sync marker).
  *
@@ -56,7 +55,6 @@ static inline size_t ssh_deflate_bound(size_t src_len)
 {
     return 2 + src_len + (src_len >> 3) + 32;
 }
-
 /** @brief What init takes: z, win, head, prev, ll_code, ll_len, ... */
 typedef struct
 {
@@ -69,7 +67,6 @@ typedef struct
     uint16_t *d_code;
     uint8_t *d_len;
 } ZlibInitArgs;
-
 /** @brief What packet takes: z, src, src_len, dst, dst_cap, out_len. */
 typedef struct
 {
@@ -80,7 +77,6 @@ typedef struct
     size_t dst_cap;
     size_t *out_len; ///< set to the compressed length on success
 } ZlibPacketArgs;
-
 /**
  * @brief RFC 1950 / 1951 deflate, as SSH negotiates it.
  *
@@ -112,16 +108,33 @@ typedef struct
 {
     ZlibInitArgs init_args;
     ZlibPacketArgs packet_args;
-
     proto_bool ok;
     int n;
+} ZlibVars;
 
+/** @brief The operands and the outcome. */
+extern ZlibVars ZlibV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const packet)(uint8_t *restrict work);
 } ZlibNs;
 
-/** @brief The one symbol this module exports. */
-extern ZlibNs Zlib;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ZlibV or a region of the borrow at a fixed offset.
+void protocore_zlib_init(uint8_t *restrict work);
+void protocore_zlib_packet(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Zlib.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ZlibNs Zlib __attribute__((unused)) = {
+    .init = protocore_zlib_init,
+    .packet = protocore_zlib_packet,
+};
 
 PROTOCORE_END_DECLS
 

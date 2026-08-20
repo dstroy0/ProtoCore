@@ -43,18 +43,18 @@ static uint8_t config_io_work[16]; // the borrow an entry takes; ConfigIo never 
 
 void dbench_run(void)
 {
-    ConfigStore.begin_args.ns = "bench";
+    ConfigStoreV.begin_args.ns = "bench";
     ConfigStore.begin(protocore_config_store_span());
     // Seed the schema's values once, outside the timed loop (mirrors modbus's one-time
     // Modbus.set_holding_reg seeding) - the export bench below re-serializes these every call.
-    ConfigStore.set_str_args.key = "ssid";
-    ConfigStore.set_str_args.val = "myssid";
+    ConfigStoreV.set_str_args.key = "ssid";
+    ConfigStoreV.set_str_args.val = "myssid";
     ConfigStore.set_str(protocore_config_store_span());
-    ConfigStore.set_u32_args.key = "port";
-    ConfigStore.set_u32_args.val = 8080;
+    ConfigStoreV.set_u32_args.key = "port";
+    ConfigStoreV.set_u32_args.val = 8080;
     ConfigStore.set_u32(protocore_config_store_span());
-    ConfigStore.set_str_args.key = "name";
-    ConfigStore.set_str_args.val = "node1";
+    ConfigStoreV.set_str_args.key = "name";
+    ConfigStoreV.set_str_args.val = "node1";
     ConfigStore.set_str(protocore_config_store_span());
 
     static char buf[256];
@@ -66,19 +66,19 @@ void dbench_run(void)
         // The entry call stays inside DBENCH_OP so the timed loop measures the NVS round trip, not
         // the read that follows it. The args do not vary, so they are staged once.
         // Reopens NVS + 3 reads per call; small N bounds real flash latency, not just CPU cycles.
-        ConfigIo.export_args.ns = "bench";
-        ConfigIo.export_args.fields = SCHEMA;
-        ConfigIo.export_args.n = N_FIELDS;
-        ConfigIo.export_args.out = buf;
-        ConfigIo.export_args.cap = sizeof(buf);
-        DBENCH_OP("ConfigIo.export", 50, (ConfigIo.export(config_io_work), sink += ConfigIo.n));
+        ConfigIoV.export_args.ns = "bench";
+        ConfigIoV.export_args.fields = SCHEMA;
+        ConfigIoV.export_args.n = N_FIELDS;
+        ConfigIoV.export_args.out = buf;
+        ConfigIoV.export_args.cap = sizeof(buf);
+        DBENCH_OP("ConfigIo.export", 50, (ConfigIo.export(config_io_work), sink += ConfigIoV.n));
         // Reopens NVS + 3 writes per call (real flash commits); smaller N than export.
-        ConfigIo.import_args.ns = "bench";
-        ConfigIo.import_args.fields = SCHEMA;
-        ConfigIo.import_args.n = N_FIELDS;
-        ConfigIo.import_args.text = IMPORT_BLOB;
-        ConfigIo.import_args.len = sizeof(IMPORT_BLOB) - 1;
-        DBENCH_OP("ConfigIo.import", 20, (ConfigIo.import(config_io_work), sink += ConfigIo.n));
+        ConfigIoV.import_args.ns = "bench";
+        ConfigIoV.import_args.fields = SCHEMA;
+        ConfigIoV.import_args.n = N_FIELDS;
+        ConfigIoV.import_args.text = IMPORT_BLOB;
+        ConfigIoV.import_args.len = sizeof(IMPORT_BLOB) - 1;
+        DBENCH_OP("ConfigIo.import", 20, (ConfigIo.import(config_io_work), sink += ConfigIoV.n));
         (void)sink;
         DBENCH_DONE();
     }

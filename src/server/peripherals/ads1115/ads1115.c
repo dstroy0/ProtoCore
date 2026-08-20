@@ -56,16 +56,16 @@ uint8_t *protocore_ads1115_span(void)
     return s_own.span;
 }
 
-static void ads1115_config_single(uint8_t *restrict work);
-static void ads1115_raw_to_uv(uint8_t *restrict work);
-static void ads1115_read_raw(uint8_t *restrict work);
+void protocore_ads1115_config_single(uint8_t *restrict work);
+void protocore_ads1115_raw_to_uv(uint8_t *restrict work);
+void protocore_ads1115_read_raw(uint8_t *restrict work);
 
-static void ads1115_config_single(uint8_t *restrict work)
+void protocore_ads1115_config_single(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t channel = Ads1115.config_single_args.channel;
-    uint8_t gain = Ads1115.config_single_args.gain;
-    uint8_t dr = Ads1115.config_single_args.dr;
+    uint8_t channel = Ads1115V.config_single_args.channel;
+    uint8_t gain = Ads1115V.config_single_args.gain;
+    uint8_t dr = Ads1115V.config_single_args.dr;
 
     if (channel > 3)
     {
@@ -89,20 +89,20 @@ static void ads1115_config_single(uint8_t *restrict work)
     cfg |= MODE_SINGLE;
     cfg |= (uint16_t)((uint16_t)dr << 5); // data-rate bits [7:5]
     cfg |= COMP_DISABLE;
-    Ads1115.word = cfg;
+    Ads1115V.word = cfg;
 }
 
-static void ads1115_raw_to_uv(uint8_t *restrict work)
+void protocore_ads1115_raw_to_uv(uint8_t *restrict work)
 {
     (void)work;
-    int16_t raw = Ads1115.raw_to_uv_args.raw;
-    uint8_t gain = Ads1115.raw_to_uv_args.gain;
+    int16_t raw = Ads1115V.raw_to_uv_args.raw;
+    uint8_t gain = Ads1115V.raw_to_uv_args.gain;
 
     if (gain > ADS1115_GAIN_16)
     {
         gain = (uint8_t)PROTOCORE_ADS1115_GAIN;
     }
-    Ads1115.uv = (int32_t)((int64_t)raw * FSR_UV[gain] / 32768);
+    Ads1115V.uv = (int32_t)((int64_t)raw * FSR_UV[gain] / 32768);
 }
 
 // ---------------------------------------------------------------------------
@@ -162,25 +162,25 @@ static proto_bool rd16(uint8_t *restrict work, uint8_t reg, uint16_t *v)
     return PROTO_TRUE;
 }
 
-static void ads1115_begin(uint8_t *restrict work)
+void protocore_ads1115_begin(uint8_t *restrict work)
 {
-    uint8_t addr = Ads1115.begin_args.addr;
+    uint8_t addr = Ads1115V.begin_args.addr;
 
     ADS1115_CTX(work)->addr = addr ? addr : (uint8_t)PROTOCORE_ADS1115_I2C_ADDR;
     protocore_i2c_begin();
-    Ads1115.ok = PROTO_TRUE;
+    Ads1115V.ok = PROTO_TRUE;
 }
 
-static void ads1115_read_raw(uint8_t *restrict work)
+void protocore_ads1115_read_raw(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t channel = Ads1115.read_raw_args.channel;
-    uint8_t gain = Ads1115.read_raw_args.gain;
-    int16_t *raw = Ads1115.read_raw_args.raw;
+    uint8_t channel = Ads1115V.read_raw_args.channel;
+    uint8_t gain = Ads1115V.read_raw_args.gain;
+    int16_t *raw = Ads1115V.read_raw_args.raw;
 
     if (!raw)
     {
-        Ads1115.ok = PROTO_FALSE;
+        Ads1115V.ok = PROTO_FALSE;
         return;
     }
     uint8_t dr = (uint8_t)PROTOCORE_ADS1115_DR;
@@ -188,13 +188,13 @@ static void ads1115_read_raw(uint8_t *restrict work)
     {
         dr = ADS1115_DR_128;
     }
-    Ads1115.config_single_args.channel = channel;
-    Ads1115.config_single_args.gain = gain;
-    Ads1115.config_single_args.dr = dr;
-    ads1115_config_single(work);
-    if (!wr16(work, ADS1115_REG_CONFIG, Ads1115.word))
+    Ads1115V.config_single_args.channel = channel;
+    Ads1115V.config_single_args.gain = gain;
+    Ads1115V.config_single_args.dr = dr;
+    protocore_ads1115_config_single(work);
+    if (!wr16(work, ADS1115_REG_CONFIG, Ads1115V.word))
     {
-        Ads1115.ok = PROTO_FALSE;
+        Ads1115V.ok = PROTO_FALSE;
         return;
     }
     // Single-shot conversion time tracks the data rate (~1000/SPS ms); wait it out plus a 1 ms margin.
@@ -203,45 +203,42 @@ static void ads1115_read_raw(uint8_t *restrict work)
     uint16_t v = 0;
     if (!rd16(work, ADS1115_REG_CONVERSION, &v))
     {
-        Ads1115.ok = PROTO_FALSE;
+        Ads1115V.ok = PROTO_FALSE;
         return;
     }
     *raw = (int16_t)v;
-    Ads1115.ok = PROTO_TRUE;
+    Ads1115V.ok = PROTO_TRUE;
 }
 
-static void ads1115_read_uv(uint8_t *restrict work)
+void protocore_ads1115_read_uv(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t channel = Ads1115.read_uv_args.channel;
-    uint8_t gain = Ads1115.read_uv_args.gain;
-    int32_t *microvolts = Ads1115.read_uv_args.microvolts;
+    uint8_t channel = Ads1115V.read_uv_args.channel;
+    uint8_t gain = Ads1115V.read_uv_args.gain;
+    int32_t *microvolts = Ads1115V.read_uv_args.microvolts;
 
     int16_t raw = 0;
-    Ads1115.read_raw_args.channel = channel;
-    Ads1115.read_raw_args.gain = gain;
-    Ads1115.read_raw_args.raw = &raw;
-    ads1115_read_raw(work);
-    if (!Ads1115.ok)
+    Ads1115V.read_raw_args.channel = channel;
+    Ads1115V.read_raw_args.gain = gain;
+    Ads1115V.read_raw_args.raw = &raw;
+    protocore_ads1115_read_raw(work);
+    if (!Ads1115V.ok)
     {
-        Ads1115.ok = PROTO_FALSE;
+        Ads1115V.ok = PROTO_FALSE;
         return;
     }
     if (microvolts)
     {
-        Ads1115.raw_to_uv_args.raw = raw;
-        Ads1115.raw_to_uv_args.gain = gain;
-        ads1115_raw_to_uv(work);
-        *microvolts = Ads1115.uv;
+        Ads1115V.raw_to_uv_args.raw = raw;
+        Ads1115V.raw_to_uv_args.gain = gain;
+        protocore_ads1115_raw_to_uv(work);
+        *microvolts = Ads1115V.uv;
     }
-    Ads1115.ok = PROTO_TRUE;
+    Ads1115V.ok = PROTO_TRUE;
 }
 
-Ads1115Ns Ads1115 = {.config_single = ads1115_config_single,
-                     .raw_to_uv = ads1115_raw_to_uv,
-                     .begin = ads1115_begin,
-                     .read_raw = ads1115_read_raw,
-                     .read_uv = ads1115_read_uv};
+/** @brief The operands and the outcome. */
+Ads1115Vars Ads1115V;
 
 PROTOCORE_END_DECLS
 

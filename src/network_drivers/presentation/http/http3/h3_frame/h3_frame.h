@@ -73,15 +73,13 @@ typedef struct
     uint64_t length;   ///< payload length
     size_t header_len; ///< bytes of the type + length varints
 } H3FrameHeader;
-
 /** @brief The settings we track, with defaults after ::H3FrameNs::settings_defaults. */
 typedef struct
 {
     uint64_t qpack_max_table_capacity; ///< default 0
-    uint64_t max_field_section_size;             ///< default "unlimited"
+    uint64_t max_field_section_size;   ///< default "unlimited"
     uint64_t qpack_blocked_streams;    ///< default 0
 } H3Settings;
-
 /** @brief What parse_header takes: buf, len, out. */
 typedef struct
 {
@@ -89,7 +87,6 @@ typedef struct
     size_t len;
     H3FrameHeader *out;
 } H3FrameParseHeaderArgs;
-
 /** @brief What write_header takes: out, cap, type, length. */
 typedef struct
 {
@@ -98,19 +95,16 @@ typedef struct
     uint64_t type;
     uint64_t length;
 } H3FrameWriteHeaderArgs;
-
 /** @brief What type_reserved takes: type. */
 typedef struct
 {
     uint64_t type;
 } H3FrameTypeReservedArgs;
-
 /** @brief What settings_defaults takes: s. */
 typedef struct
 {
     H3Settings *s;
 } H3FrameSettingsDefaultsArgs;
-
 /** @brief What parse_settings takes: payload, len, s. */
 typedef struct
 {
@@ -118,7 +112,6 @@ typedef struct
     size_t len;
     H3Settings *s;
 } H3FrameParseSettingsArgs;
-
 /** @brief What build_data takes: out, cap, data, len. */
 typedef struct
 {
@@ -127,7 +120,6 @@ typedef struct
     const uint8_t *data;
     size_t len;
 } H3FrameBuildDataArgs;
-
 /** @brief What build_headers takes: out, cap, block, len. */
 typedef struct
 {
@@ -136,7 +128,6 @@ typedef struct
     const uint8_t *block;
     size_t len;
 } H3FrameBuildHeadersArgs;
-
 /** @brief What build_settings takes: out, cap, ids, vals, n. */
 typedef struct
 {
@@ -146,7 +137,6 @@ typedef struct
     const uint64_t *vals;
     size_t n;
 } H3FrameBuildSettingsArgs;
-
 /** @brief What build_goaway takes: out, cap, stream_id. */
 typedef struct
 {
@@ -154,7 +144,6 @@ typedef struct
     size_t cap;
     uint64_t stream_id;
 } H3FrameBuildGoawayArgs;
-
 /**
  * @brief HTTP/3 framing (RFC 9114 sec 7) over QUIC varints.
  *
@@ -203,10 +192,16 @@ typedef struct
     H3FrameBuildHeadersArgs build_headers_args;
     H3FrameBuildSettingsArgs build_settings_args;
     H3FrameBuildGoawayArgs build_goaway_args;
-
     proto_bool ok;
     size_t n;
+} H3FrameVars;
 
+/** @brief The operands and the outcome. */
+extern H3FrameVars H3FrameV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const parse_header)(uint8_t *restrict work);
     void (*const write_header)(uint8_t *restrict work);
     void (*const type_reserved)(uint8_t *restrict work);
@@ -218,8 +213,33 @@ typedef struct
     void (*const build_goaway)(uint8_t *restrict work);
 } H3FrameNs;
 
-/** @brief The one symbol this module exports. */
-extern H3FrameNs H3Frame;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in H3FrameV or a region of the borrow at a fixed offset.
+void protocore_h3_frame_parse_header(uint8_t *restrict work);
+void protocore_h3_frame_write_header(uint8_t *restrict work);
+void protocore_h3_frame_type_reserved(uint8_t *restrict work);
+void protocore_h3_frame_settings_defaults(uint8_t *restrict work);
+void protocore_h3_frame_parse_settings(uint8_t *restrict work);
+void protocore_h3_frame_build_data(uint8_t *restrict work);
+void protocore_h3_frame_build_headers(uint8_t *restrict work);
+void protocore_h3_frame_build_settings(uint8_t *restrict work);
+void protocore_h3_frame_build_goaway(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `H3Frame.parse_header(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const H3FrameNs H3Frame __attribute__((unused)) = {
+    .parse_header = protocore_h3_frame_parse_header,
+    .write_header = protocore_h3_frame_write_header,
+    .type_reserved = protocore_h3_frame_type_reserved,
+    .settings_defaults = protocore_h3_frame_settings_defaults,
+    .parse_settings = protocore_h3_frame_parse_settings,
+    .build_data = protocore_h3_frame_build_data,
+    .build_headers = protocore_h3_frame_build_headers,
+    .build_settings = protocore_h3_frame_build_settings,
+    .build_goaway = protocore_h3_frame_build_goaway,
+};
 
 PROTOCORE_END_DECLS
 

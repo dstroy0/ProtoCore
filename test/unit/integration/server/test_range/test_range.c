@@ -17,10 +17,10 @@ static const char FILE_DATA[] = "0123456789ABCDEFGHIJ";
 static void serve_data(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    FileServing.serve_file_args.slot_id = slot_id;
-    FileServing.serve_file_args.file_sys = lfsm();
-    FileServing.serve_file_args.fs_path = "/data.bin";
-    FileServing.serve_file_args.content_type = "application/octet-stream";
+    FileServingV.serve_file_args.slot_id = slot_id;
+    FileServingV.serve_file_args.file_sys = lfsm();
+    FileServingV.serve_file_args.fs_path = "/data.bin";
+    FileServingV.serve_file_args.content_type = "application/octet-stream";
     FileServing.serve_file(protocore_file_serving_span());
 }
 
@@ -28,10 +28,10 @@ static void serve_data_conn_gone(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     conn_pool[slot_id].pcb = NULL;
-    FileServing.serve_file_args.slot_id = slot_id;
-    FileServing.serve_file_args.file_sys = lfsm();
-    FileServing.serve_file_args.fs_path = "/data.bin";
-    FileServing.serve_file_args.content_type = "application/octet-stream";
+    FileServingV.serve_file_args.slot_id = slot_id;
+    FileServingV.serve_file_args.file_sys = lfsm();
+    FileServingV.serve_file_args.fs_path = "/data.bin";
+    FileServingV.serve_file_args.content_type = "application/octet-stream";
     FileServing.serve_file(protocore_file_serving_span());
 }
 
@@ -46,13 +46,13 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        HttpConn.slot = i;
+        HttpConnV.slot = i;
         HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
     Sse.init(protocore_sse_span());
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text("/data.bin", FILE_DATA));
     tcp_capture_reset();
@@ -92,7 +92,7 @@ static void request(const char *range_hdr)
         snprintf(req, sizeof(req), "GET /data HTTP/1.1\r\n\r\n");
     }
     push_str(0, req);
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     handle();
 }
@@ -212,7 +212,7 @@ void test_range_suffix_zero_unsatisfiable()
 void test_head_with_range_no_body()
 {
     push_str(0, "HEAD /data HTTP/1.1\r\nRange: bytes=0-3\r\n\r\n");
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     handle();
     const char *r = tcp_captured();
@@ -299,7 +299,7 @@ void test_serve_file_connection_gone()
 {
     on_http("/gone", HTTP_GET, serve_data_conn_gone);
     push_str(0, "GET /gone HTTP/1.1\r\n\r\n");
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     handle();
     TEST_ASSERT_EQUAL_UINT(0, tcp_captured_len());
@@ -310,7 +310,7 @@ void test_unsatisfiable_range_416_carries_cors()
 {
     set_cors("*");
     push_str(0, "GET /data HTTP/1.1\r\nHost: x\r\nRange: bytes=100-200\r\n\r\n");
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     handle();
     const char *out = tcp_captured();

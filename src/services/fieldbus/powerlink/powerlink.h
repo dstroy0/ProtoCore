@@ -51,7 +51,6 @@ typedef struct
     const uint8_t *payload;
     size_t payload_len;
 } EplFrame;
-
 /** @brief What build takes: msg_type, dest, source, payload, ... */
 typedef struct
 {
@@ -63,7 +62,6 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } PowerlinkBuildArgs;
-
 /** @brief What soc takes: source, out, cap. */
 typedef struct
 {
@@ -71,7 +69,6 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } PowerlinkSocArgs;
-
 /** @brief What preq takes: dest_cn, source, pdo, pdo_len, out, cap. */
 typedef struct
 {
@@ -82,7 +79,6 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } PowerlinkPreqArgs;
-
 /** @brief What pres takes: source_cn, pdo, pdo_len, out, cap. */
 typedef struct
 {
@@ -92,7 +88,6 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } PowerlinkPresArgs;
-
 /** @brief What soa takes: source, payload, payload_len, out, cap. */
 typedef struct
 {
@@ -102,7 +97,6 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } PowerlinkSoaArgs;
-
 /** @brief What asnd takes: dest, source, payload, payload_len, out, ... */
 typedef struct
 {
@@ -113,7 +107,6 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } PowerlinkAsndArgs;
-
 /** @brief What parse takes: frame, len, out. */
 typedef struct
 {
@@ -121,7 +114,6 @@ typedef struct
     size_t len;
     EplFrame *out;
 } PowerlinkParseArgs;
-
 /**
  * @brief Ethernet POWERLINK (EPSG) basic frame codec (PROTOCORE_ENABLE_POWERLINK).
  *
@@ -168,10 +160,16 @@ typedef struct
     PowerlinkSoaArgs soa_args;
     PowerlinkAsndArgs asnd_args;
     PowerlinkParseArgs parse_args;
-
     proto_bool ok;
     size_t n;
+} PowerlinkVars;
 
+/** @brief The operands and the outcome. */
+extern PowerlinkVars PowerlinkV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build)(uint8_t *restrict work);
     void (*const soc)(uint8_t *restrict work);
     void (*const preq)(uint8_t *restrict work);
@@ -181,8 +179,29 @@ typedef struct
     void (*const parse)(uint8_t *restrict work);
 } PowerlinkNs;
 
-/** @brief The one symbol this module exports. */
-extern PowerlinkNs Powerlink;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in PowerlinkV or a region of the borrow at a fixed offset.
+void protocore_powerlink_build(uint8_t *restrict work);
+void protocore_powerlink_soc(uint8_t *restrict work);
+void protocore_powerlink_preq(uint8_t *restrict work);
+void protocore_powerlink_pres(uint8_t *restrict work);
+void protocore_powerlink_soa(uint8_t *restrict work);
+void protocore_powerlink_asnd(uint8_t *restrict work);
+void protocore_powerlink_parse(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Powerlink.build(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const PowerlinkNs Powerlink __attribute__((unused)) = {
+    .build = protocore_powerlink_build,
+    .soc = protocore_powerlink_soc,
+    .preq = protocore_powerlink_preq,
+    .pres = protocore_powerlink_pres,
+    .soa = protocore_powerlink_soa,
+    .asnd = protocore_powerlink_asnd,
+    .parse = protocore_powerlink_parse,
+};
 
 PROTOCORE_END_DECLS
 

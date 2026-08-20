@@ -34,13 +34,13 @@ proto_bool protocore_n2k_fastpacket_build_frame(CanFrame *out, uint8_t seq, uint
         return PROTO_FALSE;
     }
     uint32_t id;
-    J1939.encode_id_args.id = &id;
-    J1939.encode_id_args.priority = priority;
-    J1939.encode_id_args.pgn = pgn;
-    J1939.encode_id_args.sa = sa;
-    J1939.encode_id_args.da = da;
+    J1939V.encode_id_args.id = &id;
+    J1939V.encode_id_args.priority = priority;
+    J1939V.encode_id_args.pgn = pgn;
+    J1939V.encode_id_args.sa = sa;
+    J1939V.encode_id_args.da = da;
     J1939.encode_id(protocore_j1939_span());
-    if (!J1939.ok)
+    if (!J1939V.ok)
     {
         return PROTO_FALSE;
     }
@@ -82,10 +82,10 @@ N2kFpResult protocore_n2k_fastpacket_feed(N2kFastPacketRx *rx, const CanFrame *f
         return N2K_FP_IGNORED;
     }
     J1939Id id;
-    J1939.decode_id_args.id = f->id;
-    J1939.decode_id_args.out = &id;
+    J1939V.decode_id_args.id = f->id;
+    J1939V.decode_id_args.out = &id;
     J1939.decode_id(protocore_j1939_span());
-    if (!J1939.ok)
+    if (!J1939V.ok)
     // out, and &id is non-null
     {
         return N2K_FP_IGNORED;
@@ -146,15 +146,15 @@ N2kFpResult protocore_n2k_fastpacket_feed(N2kFastPacketRx *rx, const CanFrame *f
 proto_bool protocore_n2k_build_single(CanFrame *out, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da,
                                       const uint8_t *data, uint8_t len)
 {
-    J1939.build_message_args.out = out;
-    J1939.build_message_args.priority = priority;
-    J1939.build_message_args.pgn = pgn;
-    J1939.build_message_args.sa = sa;
-    J1939.build_message_args.da = da;
-    J1939.build_message_args.data = data;
-    J1939.build_message_args.len = len;
+    J1939V.build_message_args.out = out;
+    J1939V.build_message_args.priority = priority;
+    J1939V.build_message_args.pgn = pgn;
+    J1939V.build_message_args.sa = sa;
+    J1939V.build_message_args.da = da;
+    J1939V.build_message_args.data = data;
+    J1939V.build_message_args.len = len;
     J1939.build_message(protocore_j1939_span());
-    return J1939.ok;
+    return J1939V.ok;
 }
 
 // --- typed PGN decoders ---

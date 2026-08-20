@@ -50,156 +50,158 @@ static proto_bool ce_present(const char *s)
 
 // Build the one JSON object of Structured Content Mode into ns->envelope, and report its octet
 // count in ns->n.
-static void cloudevents_build_structured(uint8_t *restrict work)
+void protocore_cloudevents_build_structured(uint8_t *restrict work)
 {
     (void)work;
-    CloudEvents.ok = PROTO_FALSE;
-    CloudEvents.n = 0;
+    CloudEventsV.ok = PROTO_FALSE;
+    CloudEventsV.n = 0;
 
-    char *out = CloudEvents.envelope.out;
-    const size_t cap = CloudEvents.envelope.cap;
+    char *out = CloudEventsV.envelope.out;
+    const size_t cap = CloudEventsV.envelope.cap;
     if (!out || cap == 0)
     {
         return;
     }
     // id, source and type are REQUIRED (CloudEvents 1.0.2, section "REQUIRED Attributes").
-    if (!ce_present(CloudEvents.attr.id) || !ce_present(CloudEvents.attr.source) || !ce_present(CloudEvents.attr.type))
+    if (!ce_present(CloudEventsV.attr.id) || !ce_present(CloudEventsV.attr.source) ||
+        !ce_present(CloudEventsV.attr.type))
     {
         return;
     }
 
     protocore_json_writer w = {0};
-    Json.init_args.w = &w;
-    Json.init_args.buf = out;
-    Json.init_args.cap = cap;
+    JsonV.init_args.w = &w;
+    JsonV.init_args.buf = out;
+    JsonV.init_args.cap = cap;
     Json.init(json_work);
-    Json.begin_object_args.w = &w;
+    JsonV.begin_object_args.w = &w;
     Json.begin_object(json_work);
-    Json.kv_str_args.w = &w;
-    Json.kv_str_args.k = CE_ATTR_SPECVERSION;
-    Json.kv_str_args.v = PROTOCORE_CLOUDEVENTS_SPECVERSION;
+    JsonV.kv_str_args.w = &w;
+    JsonV.kv_str_args.k = CE_ATTR_SPECVERSION;
+    JsonV.kv_str_args.v = PROTOCORE_CLOUDEVENTS_SPECVERSION;
     Json.kv_str(json_work);
-    Json.kv_str_args.w = &w;
-    Json.kv_str_args.k = CE_ATTR_ID;
-    Json.kv_str_args.v = CloudEvents.attr.id;
+    JsonV.kv_str_args.w = &w;
+    JsonV.kv_str_args.k = CE_ATTR_ID;
+    JsonV.kv_str_args.v = CloudEventsV.attr.id;
     Json.kv_str(json_work);
-    Json.kv_str_args.w = &w;
-    Json.kv_str_args.k = CE_ATTR_SOURCE;
-    Json.kv_str_args.v = CloudEvents.attr.source;
+    JsonV.kv_str_args.w = &w;
+    JsonV.kv_str_args.k = CE_ATTR_SOURCE;
+    JsonV.kv_str_args.v = CloudEventsV.attr.source;
     Json.kv_str(json_work);
-    Json.kv_str_args.w = &w;
-    Json.kv_str_args.k = CE_ATTR_TYPE;
-    Json.kv_str_args.v = CloudEvents.attr.type;
+    JsonV.kv_str_args.w = &w;
+    JsonV.kv_str_args.k = CE_ATTR_TYPE;
+    JsonV.kv_str_args.v = CloudEventsV.attr.type;
     Json.kv_str(json_work);
-    if (ce_present(CloudEvents.attr.subject))
+    if (ce_present(CloudEventsV.attr.subject))
     {
-        Json.kv_str_args.w = &w;
-        Json.kv_str_args.k = CE_ATTR_SUBJECT;
-        Json.kv_str_args.v = CloudEvents.attr.subject;
+        JsonV.kv_str_args.w = &w;
+        JsonV.kv_str_args.k = CE_ATTR_SUBJECT;
+        JsonV.kv_str_args.v = CloudEventsV.attr.subject;
         Json.kv_str(json_work);
     }
 
     // A JSON value goes out verbatim, a plain string goes out escaped, and either way the member is
     // named `data` (JSON Event Format 1.0.2 sec 3.1.1). A JSON value with no stated datacontenttype
     // takes the implied one.
-    if (ce_present(CloudEvents.data.json))
+    if (ce_present(CloudEventsV.data.json))
     {
         const char *dct = CE_IMPLIED_DATACONTENTTYPE;
-        if (ce_present(CloudEvents.attr.datacontenttype))
+        if (ce_present(CloudEventsV.attr.datacontenttype))
         {
-            dct = CloudEvents.attr.datacontenttype;
+            dct = CloudEventsV.attr.datacontenttype;
         }
-        Json.kv_str_args.w = &w;
-        Json.kv_str_args.k = CE_ATTR_DATACONTENTTYPE;
-        Json.kv_str_args.v = dct;
+        JsonV.kv_str_args.w = &w;
+        JsonV.kv_str_args.k = CE_ATTR_DATACONTENTTYPE;
+        JsonV.kv_str_args.v = dct;
         Json.kv_str(json_work);
-        Json.key_args.w = &w;
-        Json.key_args.k = CE_MEMBER_DATA;
-        Json.key(json_work);
-        Json.put_raw_args.w = &w;
-        Json.put_raw_args.literal = CloudEvents.data.json;
+        JsonV.key_args.w = &w;
+        JsonV.key_args.k = CE_MEMBER_DATA;
+        JsonV.key(json_work);
+        JsonV.put_raw_args.w = &w;
+        JsonV.put_raw_args.literal = CloudEventsV.data.json;
         Json.put_raw(json_work);
     }
-    else if (CloudEvents.data.str)
+    else if (CloudEventsV.data.str)
     {
-        if (ce_present(CloudEvents.attr.datacontenttype))
+        if (ce_present(CloudEventsV.attr.datacontenttype))
         {
-            Json.kv_str_args.w = &w;
-            Json.kv_str_args.k = CE_ATTR_DATACONTENTTYPE;
-            Json.kv_str_args.v = CloudEvents.attr.datacontenttype;
+            JsonV.kv_str_args.w = &w;
+            JsonV.kv_str_args.k = CE_ATTR_DATACONTENTTYPE;
+            JsonV.kv_str_args.v = CloudEventsV.attr.datacontenttype;
             Json.kv_str(json_work);
         }
-        Json.kv_str_args.w = &w;
-        Json.kv_str_args.k = CE_MEMBER_DATA;
-        Json.kv_str_args.v = CloudEvents.data.str;
+        JsonV.kv_str_args.w = &w;
+        JsonV.kv_str_args.k = CE_MEMBER_DATA;
+        JsonV.kv_str_args.v = CloudEventsV.data.str;
         Json.kv_str(json_work);
     }
-    else if (ce_present(CloudEvents.attr.datacontenttype))
+    else if (ce_present(CloudEventsV.attr.datacontenttype))
     {
-        Json.kv_str_args.w = &w;
-        Json.kv_str_args.k = CE_ATTR_DATACONTENTTYPE;
-        Json.kv_str_args.v = CloudEvents.attr.datacontenttype;
+        JsonV.kv_str_args.w = &w;
+        JsonV.kv_str_args.k = CE_ATTR_DATACONTENTTYPE;
+        JsonV.kv_str_args.v = CloudEventsV.attr.datacontenttype;
         Json.kv_str(json_work);
     }
 
-    Json.end_object_args.w = &w;
+    JsonV.end_object_args.w = &w;
     Json.end_object(json_work);
     if (!protocore_json_ok(&w))
     {
         return;
     }
-    CloudEvents.n = protocore_json_length(&w);
-    CloudEvents.ok = PROTO_TRUE;
+    CloudEventsV.n = protocore_json_length(&w);
+    CloudEventsV.ok = PROTO_TRUE;
 }
 
 // Take the context attributes off the message's headers, and report whether the three REQUIRED ones
 // arrived. The payload is the HTTP body in this mode (HTTP Protocol Binding 1.0.2 sec 3.1.2), so the
 // data members are cleared rather than filled.
-static void cloudevents_read_binary(uint8_t *restrict work)
+void protocore_cloudevents_read_binary(uint8_t *restrict work)
 {
     (void)work;
-    CloudEvents.ok = PROTO_FALSE;
-    CloudEvents.n = 0;
-    CloudEvents.attr.id = NULL;
-    CloudEvents.attr.source = NULL;
-    CloudEvents.attr.type = NULL;
-    CloudEvents.attr.subject = NULL;
-    CloudEvents.attr.datacontenttype = NULL;
-    CloudEvents.data.json = NULL;
-    CloudEvents.data.str = NULL;
-    if (!CloudEvents.msg.req)
+    CloudEventsV.ok = PROTO_FALSE;
+    CloudEventsV.n = 0;
+    CloudEventsV.attr.id = NULL;
+    CloudEventsV.attr.source = NULL;
+    CloudEventsV.attr.type = NULL;
+    CloudEventsV.attr.subject = NULL;
+    CloudEventsV.attr.datacontenttype = NULL;
+    CloudEventsV.data.json = NULL;
+    CloudEventsV.data.str = NULL;
+    if (!CloudEventsV.msg.req)
     {
         return;
     }
 
-    HttpParser.get_header_args.req = CloudEvents.msg.req;
-    HttpParser.get_header_args.key = CE_HDR_ID;
-    HttpParser.get_header(protocore_http_parser_span());
-    CloudEvents.attr.id = HttpParser.text;
-    HttpParser.get_header_args.req = CloudEvents.msg.req;
-    HttpParser.get_header_args.key = CE_HDR_SOURCE;
-    HttpParser.get_header(protocore_http_parser_span());
-    CloudEvents.attr.source = HttpParser.text;
-    HttpParser.get_header_args.req = CloudEvents.msg.req;
-    HttpParser.get_header_args.key = CE_HDR_TYPE;
-    HttpParser.get_header(protocore_http_parser_span());
-    CloudEvents.attr.type = HttpParser.text;
-    HttpParser.get_header_args.req = CloudEvents.msg.req;
-    HttpParser.get_header_args.key = CE_HDR_SUBJECT;
-    HttpParser.get_header(protocore_http_parser_span());
-    CloudEvents.attr.subject = HttpParser.text;
+    HttpParserV.get_header_args.req = CloudEventsV.msg.req;
+    HttpParserV.get_header_args.key = CE_HDR_ID;
+    HttpParserV.get_header(protocore_http_parser_span());
+    CloudEventsV.attr.id = HttpParserV.text;
+    HttpParserV.get_header_args.req = CloudEventsV.msg.req;
+    HttpParserV.get_header_args.key = CE_HDR_SOURCE;
+    HttpParserV.get_header(protocore_http_parser_span());
+    CloudEventsV.attr.source = HttpParserV.text;
+    HttpParserV.get_header_args.req = CloudEventsV.msg.req;
+    HttpParserV.get_header_args.key = CE_HDR_TYPE;
+    HttpParserV.get_header(protocore_http_parser_span());
+    CloudEventsV.attr.type = HttpParserV.text;
+    HttpParserV.get_header_args.req = CloudEventsV.msg.req;
+    HttpParserV.get_header_args.key = CE_HDR_SUBJECT;
+    HttpParserV.get_header(protocore_http_parser_span());
+    CloudEventsV.attr.subject = HttpParserV.text;
     // datacontenttype rides in Content-Type, and a ce-datacontenttype header "MUST NOT also be
     // present in the message" (HTTP Protocol Binding 1.0.2 sec 3.1.1).
-    HttpParser.get_header_args.req = CloudEvents.msg.req;
-    HttpParser.get_header_args.key = CE_HDR_CONTENT_TYPE;
-    HttpParser.get_header(protocore_http_parser_span());
-    CloudEvents.attr.datacontenttype = HttpParser.text;
+    HttpParserV.get_header_args.req = CloudEventsV.msg.req;
+    HttpParserV.get_header_args.key = CE_HDR_CONTENT_TYPE;
+    HttpParserV.get_header(protocore_http_parser_span());
+    CloudEventsV.attr.datacontenttype = HttpParserV.text;
 
-    CloudEvents.ok =
-        ce_present(CloudEvents.attr.id) && ce_present(CloudEvents.attr.source) && ce_present(CloudEvents.attr.type);
+    CloudEventsV.ok =
+        ce_present(CloudEventsV.attr.id) && ce_present(CloudEventsV.attr.source) && ce_present(CloudEventsV.attr.type);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-CloudEventsNs CloudEvents = {.build_structured = cloudevents_build_structured, .read_binary = cloudevents_read_binary};
+/** @brief The operands and the outcome. */
+CloudEventsVars CloudEventsV;
 
 #endif // PROTOCORE_ENABLE_CLOUDEVENTS

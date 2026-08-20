@@ -48,7 +48,6 @@ typedef struct
     char model[7];          ///< 6-character sensor model number + NUL
     char sensor_version[4]; ///< 3-character sensor version + NUL
 } Sdi12Identity;
-
 /** @brief What build takes: buf, cap, addr, body. */
 typedef struct
 {
@@ -57,7 +56,6 @@ typedef struct
     char addr;
     const char *body;
 } Sdi12BuildArgs;
-
 /** @brief What build_ack takes: buf, cap, addr. */
 typedef struct
 {
@@ -65,7 +63,6 @@ typedef struct
     size_t cap;
     char addr;
 } Sdi12BuildAckArgs;
-
 /** @brief What build_identify takes: buf, cap, addr. */
 typedef struct
 {
@@ -73,7 +70,6 @@ typedef struct
     size_t cap;
     char addr;
 } Sdi12BuildIdentifyArgs;
-
 /** @brief What build_measure takes: buf, cap, addr, with_crc. */
 typedef struct
 {
@@ -82,7 +78,6 @@ typedef struct
     char addr;
     proto_bool with_crc;
 } Sdi12BuildMeasureArgs;
-
 /** @brief What build_concurrent takes: buf, cap, addr, with_crc. */
 typedef struct
 {
@@ -91,7 +86,6 @@ typedef struct
     char addr;
     proto_bool with_crc;
 } Sdi12BuildConcurrentArgs;
-
 /** @brief What build_measure_additional takes: buf, cap, addr, ... */
 typedef struct
 {
@@ -101,7 +95,6 @@ typedef struct
     uint8_t m_index;
     proto_bool with_crc;
 } Sdi12BuildMeasureAdditionalArgs;
-
 /** @brief What build_concurrent_additional takes: buf, cap, addr, ... */
 typedef struct
 {
@@ -111,7 +104,6 @@ typedef struct
     uint8_t c_index;
     proto_bool with_crc;
 } Sdi12BuildConcurrentAdditionalArgs;
-
 /** @brief What build_continuous takes: buf, cap, addr, r_index, ... */
 typedef struct
 {
@@ -121,7 +113,6 @@ typedef struct
     uint8_t r_index;
     proto_bool with_crc;
 } Sdi12BuildContinuousArgs;
-
 /** @brief What build_verify takes: buf, cap, addr. */
 typedef struct
 {
@@ -129,7 +120,6 @@ typedef struct
     size_t cap;
     char addr;
 } Sdi12BuildVerifyArgs;
-
 /** @brief What build_data takes: buf, cap, addr, d_index. */
 typedef struct
 {
@@ -138,7 +128,6 @@ typedef struct
     char addr;
     uint8_t d_index;
 } Sdi12BuildDataArgs;
-
 /** @brief What build_change_address takes: buf, cap, addr, new_addr. */
 typedef struct
 {
@@ -147,14 +136,12 @@ typedef struct
     char addr;
     char new_addr;
 } Sdi12BuildChangeAddressArgs;
-
 /** @brief What build_query_address takes: buf, cap. */
 typedef struct
 {
     char *buf;
     size_t cap;
 } Sdi12BuildQueryAddressArgs;
-
 /** @brief What parse_measure takes: resp, len, addr, ready_sec, ... */
 typedef struct
 {
@@ -164,7 +151,6 @@ typedef struct
     uint16_t *ready_sec;
     uint8_t *num_values;
 } Sdi12ParseMeasureArgs;
-
 /** @brief What parse_values takes: resp, len, out, max, n. */
 typedef struct
 {
@@ -174,7 +160,6 @@ typedef struct
     size_t max;
     size_t *n;
 } Sdi12ParseValuesArgs;
-
 /** @brief What parse_identify takes: resp, len, out. */
 typedef struct
 {
@@ -182,28 +167,24 @@ typedef struct
     size_t len;
     Sdi12Identity *out;
 } Sdi12ParseIdentifyArgs;
-
 /** @brief What crc16 takes: data, len. */
 typedef struct
 {
     const uint8_t *data;
     size_t len;
 } Sdi12Crc16Args;
-
 /** @brief What crc_encode takes: crc, out. */
 typedef struct
 {
     uint16_t crc;
     char *out; ///< SDI12_CRC_CHARS bytes.
 } Sdi12CrcEncodeArgs;
-
 /** @brief What check_crc takes: resp, len. */
 typedef struct
 {
     const char *resp;
     size_t len;
 } Sdi12CheckCrcArgs;
-
 /**
  * @brief SDI-12 sensor-bus command / response codec (PROTOCORE_ENABLE_SDI12). SDI-12 is the 1200-baud single-wire ...
  *
@@ -281,11 +262,17 @@ typedef struct
     Sdi12Crc16Args crc16_args;
     Sdi12CrcEncodeArgs crc_encode_args;
     Sdi12CheckCrcArgs check_crc_args;
-
     proto_bool ok;
     size_t n;
     uint16_t crc;
+} Sdi12Vars;
 
+/** @brief The operands and the outcome. */
+extern Sdi12Vars Sdi12V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build)(uint8_t *restrict work);
     void (*const build_ack)(uint8_t *restrict work);
     void (*const build_identify)(uint8_t *restrict work);
@@ -306,8 +293,51 @@ typedef struct
     void (*const check_crc)(uint8_t *restrict work);
 } Sdi12Ns;
 
-/** @brief The one symbol this module exports. */
-extern Sdi12Ns Sdi12;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Sdi12V or a region of the borrow at a fixed offset.
+void protocore_sdi12_build(uint8_t *restrict work);
+void protocore_sdi12_build_ack(uint8_t *restrict work);
+void protocore_sdi12_build_identify(uint8_t *restrict work);
+void protocore_sdi12_build_measure(uint8_t *restrict work);
+void protocore_sdi12_build_concurrent(uint8_t *restrict work);
+void protocore_sdi12_build_measure_additional(uint8_t *restrict work);
+void protocore_sdi12_build_concurrent_additional(uint8_t *restrict work);
+void protocore_sdi12_build_continuous(uint8_t *restrict work);
+void protocore_sdi12_build_verify(uint8_t *restrict work);
+void protocore_sdi12_build_data(uint8_t *restrict work);
+void protocore_sdi12_build_change_address(uint8_t *restrict work);
+void protocore_sdi12_build_query_address(uint8_t *restrict work);
+void protocore_sdi12_parse_measure(uint8_t *restrict work);
+void protocore_sdi12_parse_values(uint8_t *restrict work);
+void protocore_sdi12_parse_identify(uint8_t *restrict work);
+void protocore_sdi12_crc16(uint8_t *restrict work);
+void protocore_sdi12_crc_encode(uint8_t *restrict work);
+void protocore_sdi12_check_crc(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Sdi12.build(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Sdi12Ns Sdi12 __attribute__((unused)) = {
+    .build = protocore_sdi12_build,
+    .build_ack = protocore_sdi12_build_ack,
+    .build_identify = protocore_sdi12_build_identify,
+    .build_measure = protocore_sdi12_build_measure,
+    .build_concurrent = protocore_sdi12_build_concurrent,
+    .build_measure_additional = protocore_sdi12_build_measure_additional,
+    .build_concurrent_additional = protocore_sdi12_build_concurrent_additional,
+    .build_continuous = protocore_sdi12_build_continuous,
+    .build_verify = protocore_sdi12_build_verify,
+    .build_data = protocore_sdi12_build_data,
+    .build_change_address = protocore_sdi12_build_change_address,
+    .build_query_address = protocore_sdi12_build_query_address,
+    .parse_measure = protocore_sdi12_parse_measure,
+    .parse_values = protocore_sdi12_parse_values,
+    .parse_identify = protocore_sdi12_parse_identify,
+    .crc16 = protocore_sdi12_crc16,
+    .crc_encode = protocore_sdi12_crc_encode,
+    .check_crc = protocore_sdi12_check_crc,
+};
 
 PROTOCORE_END_DECLS
 

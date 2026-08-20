@@ -93,9 +93,9 @@ static void term_ws_message(uint8_t ws_id)
     // exercised by the suite (with and without a registered command callback).
     if (WEB_TERMINAL_CTX(work)->cb && ws_id < MAX_WS_CONNS)
     {
-        Ws.ws_id = ws_id;
+        WsV.ws_id = ws_id;
         Ws.payload_of(protocore_ws_span());
-        WEB_TERMINAL_CTX(work)->cb(Ws.text, ws_id);
+        WEB_TERMINAL_CTX(work)->cb(WsV.text, ws_id);
     }
 }
 
@@ -132,10 +132,10 @@ uint8_t *protocore_web_terminal_span(void)
     return s_own.span;
 }
 
-static void web_terminal_begin(uint8_t *restrict work)
+void protocore_web_terminal_begin(uint8_t *restrict work)
 {
     (void)work;
-    const char *path = WebTerminal.begin_args.path;
+    const char *path = WebTerminalV.begin_args.path;
 
     for (uint8_t i = 0; i < MAX_WS_CONNS; i++)
     {
@@ -158,18 +158,18 @@ static void web_terminal_begin(uint8_t *restrict work)
     on_ws(WEB_TERMINAL_CTX(work)->ws_path, term_ws_connect, term_ws_message, term_ws_close);
 }
 
-static void web_terminal_on_command(uint8_t *restrict work)
+void protocore_web_terminal_on_command(uint8_t *restrict work)
 {
     (void)work;
-    TermCommandCb cb = WebTerminal.on_command_args.cb;
+    TermCommandCb cb = WebTerminalV.on_command_args.cb;
 
     WEB_TERMINAL_CTX(work)->cb = cb;
 }
 
-static void web_terminal_print(uint8_t *restrict work)
+void protocore_web_terminal_print(uint8_t *restrict work)
 {
     (void)work;
-    const char *s = WebTerminal.print_args.s;
+    const char *s = WebTerminalV.print_args.s;
 
     if (!s)
     {
@@ -179,9 +179,9 @@ static void web_terminal_print(uint8_t *restrict work)
     {
         if (WEB_TERMINAL_CTX(work)->is_client[i])
         {
-            Ws.ws_id = i;
-            Ws.active(protocore_ws_span());
-            if (Ws.ok)
+            WsV.ws_id = i;
+            WsV.active(protocore_ws_span());
+            if (WsV.ok)
             {
                 ws_send_text(i, s);
             }
@@ -189,50 +189,47 @@ static void web_terminal_print(uint8_t *restrict work)
     }
 }
 
-static void web_terminal_println(uint8_t *restrict work)
+void protocore_web_terminal_println(uint8_t *restrict work)
 {
     (void)work;
-    const char *s = WebTerminal.println_args.s;
+    const char *s = WebTerminalV.println_args.s;
 
     char buf[TERM_TX_BUF_SIZE];
     protocore_sb sb_buf = {buf, sizeof(buf), 0, PROTO_TRUE};
     Sb.put(&sb_buf, s ? s : "");
     Sb.put(&sb_buf, "\n");
-    WebTerminal.print_args.s = buf;
-    web_terminal_print(work);
+    WebTerminalV.print_args.s = buf;
+    protocore_web_terminal_print(work);
     if (Sb.finish(&sb_buf) == 0)
     {
         buf[0] = '\0';
     }
 }
 
-static void web_terminal_client_count(uint8_t *restrict work)
+void protocore_web_terminal_client_count(uint8_t *restrict work)
 {
     (void)work;
-    WebTerminal.value = 0;
+    WebTerminalV.value = 0;
 
     uint8_t n = 0;
     for (uint8_t i = 0; i < MAX_WS_CONNS; i++)
     {
         if (WEB_TERMINAL_CTX(work)->is_client[i])
         {
-            Ws.ws_id = i;
-            Ws.active(protocore_ws_span());
-            if (Ws.ok)
+            WsV.ws_id = i;
+            WsV.active(protocore_ws_span());
+            if (WsV.ok)
             {
                 n++;
             }
         }
     }
-    WebTerminal.value = n;
+    WebTerminalV.value = n;
     return;
 }
 
-WebTerminalNs WebTerminal = {.begin = web_terminal_begin,
-                             .on_command = web_terminal_on_command,
-                             .print = web_terminal_print,
-                             .println = web_terminal_println,
-                             .client_count = web_terminal_client_count};
+/** @brief The operands and the outcome. */
+WebTerminalVars WebTerminalV;
 
 PROTOCORE_END_DECLS
 

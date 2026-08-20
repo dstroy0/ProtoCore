@@ -68,24 +68,20 @@ typedef struct
     uint8_t cookie_key[32];                ///< the HelloRetryRequest cookie secret (RFC 9147 sec 5.1)
     void (*rng)(uint8_t *out, size_t len); ///< the CSPRNG each handshake draws its ephemeral and random from
 } CoapsServerIdentityArgs;
-
 /** @brief The UDP endpoint the server receives on (RFC 7252 sec 12.7: port 5684, service "coaps"). */
 typedef struct
 {
     uint16_t port; ///< the port a begin binds, or 0 for @ref PROTOCORE_COAPS_PORT
 } CoapsServerBindArgs;
-
 #if !PROTOCORE_HAS_NET_STACK
 /** @brief Where an outbound datagram goes where the build has no network stack. */
 typedef void (*CoapsServerOutFn)(void *ctx, const uint8_t *datagram, size_t len, const char *ip, uint16_t port);
-
 /** @brief The outbound sink and the context it is handed back. */
 typedef struct
 {
     CoapsServerOutFn fn; ///< what every outbound datagram is given to
     void *ctx;           ///< the opaque context that sink is given back
 } CoapsServerSinkArgs;
-
 /** @brief One datagram injected in place of a receive, and the peer it is attributed to. */
 typedef struct
 {
@@ -95,7 +91,6 @@ typedef struct
     uint16_t port;       ///< its port
 } CoapsServerIngestArgs;
 #endif
-
 /**
  * @brief The CoAP-over-DTLS server.
  *
@@ -127,22 +122,47 @@ typedef struct
     CoapsServerSinkArgs sink;    ///< where the replies go
     CoapsServerIngestArgs dgram; ///< what an injected datagram carries
 #endif
-
     proto_bool ok;
     uint8_t u8;
+#if !PROTOCORE_HAS_NET_STACK
+#endif
+} CoapsServerVars;
 
+/** @brief The operands and the outcome. */
+extern CoapsServerVars CoapsServerV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const begin)(uint8_t *restrict work);
     void (*const poll)(uint8_t *restrict work);
     void (*const active_conns)(uint8_t *restrict work);
     void (*const stop)(uint8_t *restrict work);
-#if !PROTOCORE_HAS_NET_STACK
     void (*const set_out_sink)(uint8_t *restrict work);
     void (*const ingest)(uint8_t *restrict work);
-#endif
 } CoapsServerNs;
 
-/** @brief The one symbol this module exports. */
-extern CoapsServerNs CoapsServer;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in CoapsServerV or a region of the borrow at a fixed offset.
+void protocore_coaps_server_begin(uint8_t *restrict work);
+void protocore_coaps_server_poll(uint8_t *restrict work);
+void protocore_coaps_server_active_conns(uint8_t *restrict work);
+void protocore_coaps_server_stop(uint8_t *restrict work);
+void protocore_coaps_server_set_out_sink(uint8_t *restrict work);
+void protocore_coaps_server_ingest(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `CoapsServer.begin(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const CoapsServerNs CoapsServer __attribute__((unused)) = {
+    .begin = protocore_coaps_server_begin,
+    .poll = protocore_coaps_server_poll,
+    .active_conns = protocore_coaps_server_active_conns,
+    .stop = protocore_coaps_server_stop,
+    .set_out_sink = protocore_coaps_server_set_out_sink,
+    .ingest = protocore_coaps_server_ingest,
+};
 
 /**
  * @brief The PROTOCORE_COAPS_SERVER_BORROW bytes this module's state lives in.

@@ -27,16 +27,16 @@ void dbench_run(void)
         DBENCH_BANNER("base64");
         volatile size_t sink = 0;
         DBENCH_BULK("Base64.encode (1 KiB)", 100000, 1024, {
-            Base64.encode_args.src = src;
-            Base64.encode_args.src_len = 1024;
-            Base64.encode_args.dst = enc;
+            Base64V.encode_args.src = src;
+            Base64V.encode_args.src_len = 1024;
+            Base64V.encode_args.dst = enc;
             Base64.encode(base64_work);
             sink += 1;
         });
-        Base64.decode_args.src = enc;
-        Base64.decode_args.dst = dec;
-        Base64.decode_args.dst_cap = sizeof(dec);
-        DBENCH_BULK("Base64.decode (1 KiB)", 100000, 1024, sink += (Base64.decode(base64_work), Base64.n));
+        Base64V.decode_args.src = enc;
+        Base64V.decode_args.dst = dec;
+        Base64V.decode_args.dst_cap = sizeof(dec);
+        DBENCH_BULK("Base64.decode (1 KiB)", 100000, 1024, sink += (Base64.decode(base64_work), Base64V.n));
         (void)sink;
         DBENCH_DONE();
     }

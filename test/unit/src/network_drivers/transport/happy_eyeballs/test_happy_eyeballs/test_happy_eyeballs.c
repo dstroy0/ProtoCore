@@ -29,10 +29,10 @@ void tearDown(void)
 static protocore_ip addr(const char *text)
 {
     protocore_ip ip;
-    Ip.args.text = text;
-    Ip.args.out = &ip;
+    IpV.args.text = text;
+    IpV.args.out = &ip;
     Ip.parse(ip_work);
-    TEST_ASSERT_TRUE_MESSAGE(Ip.ok, text);
+    TEST_ASSERT_TRUE_MESSAGE(IpV.ok, text);
     return ip;
 }
 
@@ -40,9 +40,9 @@ static protocore_ip addr(const char *text)
 static const char *at(const protocore_ip *list, size_t i)
 {
     static char buf[PROTOCORE_IP_STR_MAX];
-    Ip.args.ip = &list[i];
-    Ip.args.buf = buf;
-    Ip.args.cap = sizeof(buf);
+    IpV.args.ip = &list[i];
+    IpV.args.buf = buf;
+    IpV.args.cap = sizeof(buf);
     Ip.format(ip_work);
     return buf;
 }
@@ -54,9 +54,9 @@ static const char *at(const protocore_ip *list, size_t i)
 // reports one result at a time, so each call's value is taken out before the next call runs.
 static int pref(const protocore_ip *ip)
 {
-    HappyEyeballs.pref_args.ip = ip;
+    HappyEyeballsV.pref_args.ip = ip;
     HappyEyeballs.pref(protocore_happy_eyeballs_span());
-    return HappyEyeballs.n;
+    return HappyEyeballsV.n;
 }
 
 void test_rfc8305_4_interleaves_families(void)
@@ -69,8 +69,8 @@ void test_rfc8305_4_interleaves_families(void)
     list[4] = addr("198.51.100.2");
     list[5] = addr("198.51.100.3");
 
-    HappyEyeballs.order_args.list = list;
-    HappyEyeballs.order_args.n = 6;
+    HappyEyeballsV.order_args.list = list;
+    HappyEyeballsV.order_args.n = 6;
     HappyEyeballs.order(protocore_happy_eyeballs_span());
 
     TEST_ASSERT_EQUAL_STRING("2001:db8::1", at(list, 0));
@@ -91,8 +91,8 @@ void test_rfc8305_4_leading_family_follows_the_first_address(void)
     v4only[0] = addr("198.51.100.1");
     v4only[1] = addr("198.51.100.2");
     v4only[2] = addr("198.51.100.3");
-    HappyEyeballs.order_args.list = v4only;
-    HappyEyeballs.order_args.n = 3;
+    HappyEyeballsV.order_args.list = v4only;
+    HappyEyeballsV.order_args.n = 3;
     HappyEyeballs.order(protocore_happy_eyeballs_span());
     TEST_ASSERT_EQUAL_STRING("198.51.100.1", at(v4only, 0));
     TEST_ASSERT_EQUAL_STRING("198.51.100.2", at(v4only, 1));
@@ -103,8 +103,8 @@ void test_rfc8305_4_leading_family_follows_the_first_address(void)
     v6only[0] = addr("2001:db8::1");
     v6only[1] = addr("2001:db8::2");
     v6only[2] = addr("2001:db8::3");
-    HappyEyeballs.order_args.list = v6only;
-    HappyEyeballs.order_args.n = 3;
+    HappyEyeballsV.order_args.list = v6only;
+    HappyEyeballsV.order_args.n = 3;
     HappyEyeballs.order(protocore_happy_eyeballs_span());
     TEST_ASSERT_EQUAL_STRING("2001:db8::1", at(v6only, 0));
     TEST_ASSERT_EQUAL_STRING("2001:db8::2", at(v6only, 1));
@@ -114,8 +114,8 @@ void test_rfc8305_4_leading_family_follows_the_first_address(void)
     protocore_ip pair[2];
     pair[0] = addr("198.51.100.9");
     pair[1] = addr("2001:db8::9");
-    HappyEyeballs.order_args.list = pair;
-    HappyEyeballs.order_args.n = 2;
+    HappyEyeballsV.order_args.list = pair;
+    HappyEyeballsV.order_args.n = 2;
     HappyEyeballs.order(protocore_happy_eyeballs_span());
     TEST_ASSERT_EQUAL_STRING("2001:db8::9", at(pair, 0)); // native v6 outranks v4 at equal scope
     TEST_ASSERT_EQUAL_STRING("198.51.100.9", at(pair, 1));
@@ -132,8 +132,8 @@ void test_interleave_drains_the_shorter_family(void)
     list[3] = addr("2001:db8::4");
     list[4] = addr("198.51.100.1");
 
-    HappyEyeballs.order_args.list = list;
-    HappyEyeballs.order_args.n = 5;
+    HappyEyeballsV.order_args.list = list;
+    HappyEyeballsV.order_args.n = 5;
     HappyEyeballs.order(protocore_happy_eyeballs_span());
 
     TEST_ASSERT_EQUAL_STRING("2001:db8::1", at(list, 0));
@@ -179,12 +179,12 @@ void test_preference_follows_the_scope_ladder(void)
     protocore_ip none;
     memset(&none, 0, sizeof(none));
     none.family = PROTOCORE_IP_NONE;
-    HappyEyeballs.pref_args.ip = &none;
+    HappyEyeballsV.pref_args.ip = &none;
     HappyEyeballs.pref(protocore_happy_eyeballs_span());
-    TEST_ASSERT_EQUAL_INT(-1, HappyEyeballs.n);
-    HappyEyeballs.pref_args.ip = NULL;
+    TEST_ASSERT_EQUAL_INT(-1, HappyEyeballsV.n);
+    HappyEyeballsV.pref_args.ip = NULL;
     HappyEyeballs.pref(protocore_happy_eyeballs_span());
-    TEST_ASSERT_EQUAL_INT(-1, HappyEyeballs.n);
+    TEST_ASSERT_EQUAL_INT(-1, HappyEyeballsV.n);
 }
 
 // RFC 4291 sec 2.5.5.2: an IPv4-mapped address (::ffff:a.b.c.d) carries an IPv4 destination inside
@@ -203,8 +203,8 @@ void test_v4_mapped_counts_as_ipv4(void)
     list[0] = addr("::ffff:198.51.100.1");
     list[1] = addr("2001:db8::1");
     list[2] = addr("::ffff:198.51.100.2");
-    HappyEyeballs.order_args.list = list;
-    HappyEyeballs.order_args.n = 3;
+    HappyEyeballsV.order_args.list = list;
+    HappyEyeballsV.order_args.n = 3;
     HappyEyeballs.order(protocore_happy_eyeballs_span());
     TEST_ASSERT_EQUAL_STRING("2001:db8::1", at(list, 0));
     TEST_ASSERT_EQUAL_STRING("::ffff:198.51.100.1", at(list, 1));
@@ -222,8 +222,8 @@ void test_equal_preference_keeps_input_order(void)
     list[2] = addr("198.51.100.4");
     list[3] = addr("198.51.100.2");
 
-    HappyEyeballs.order_args.list = list;
-    HappyEyeballs.order_args.n = 4;
+    HappyEyeballsV.order_args.list = list;
+    HappyEyeballsV.order_args.n = 4;
     HappyEyeballs.order(protocore_happy_eyeballs_span());
 
     TEST_ASSERT_EQUAL_STRING("198.51.100.3", at(list, 0));
@@ -242,8 +242,8 @@ void test_scope_beats_family(void)
     list[2] = addr("fe80::2");
     list[3] = addr("198.51.100.2");
 
-    HappyEyeballs.order_args.list = list;
-    HappyEyeballs.order_args.n = 4;
+    HappyEyeballsV.order_args.list = list;
+    HappyEyeballsV.order_args.n = 4;
     HappyEyeballs.order(protocore_happy_eyeballs_span());
 
     TEST_ASSERT_EQUAL_STRING("198.51.100.1", at(list, 0));
@@ -260,68 +260,68 @@ void test_rfc8305_5_attempt_delay_gate(void)
     // sec 8: "Connection Attempt Delay ... Recommended to be 250 milliseconds."
     TEST_ASSERT_EQUAL_UINT32(250u, (uint32_t)PROTOCORE_HE_ATTEMPT_DELAY_MS);
 
-    HappyEyeballs.attempt_due_args.last_start_ms = 1000u;
-    HappyEyeballs.attempt_due_args.now_ms = 1000u;
-    HappyEyeballs.attempt_due_args.attempt_delay_ms = 250u;
+    HappyEyeballsV.attempt_due_args.last_start_ms = 1000u;
+    HappyEyeballsV.attempt_due_args.now_ms = 1000u;
+    HappyEyeballsV.attempt_due_args.attempt_delay_ms = 250u;
     HappyEyeballs.attempt_due(protocore_happy_eyeballs_span());
-    TEST_ASSERT_FALSE(HappyEyeballs.ok);
-    HappyEyeballs.attempt_due_args.last_start_ms = 1000u;
-    HappyEyeballs.attempt_due_args.now_ms = 1249u;
-    HappyEyeballs.attempt_due_args.attempt_delay_ms = 250u;
+    TEST_ASSERT_FALSE(HappyEyeballsV.ok);
+    HappyEyeballsV.attempt_due_args.last_start_ms = 1000u;
+    HappyEyeballsV.attempt_due_args.now_ms = 1249u;
+    HappyEyeballsV.attempt_due_args.attempt_delay_ms = 250u;
     HappyEyeballs.attempt_due(protocore_happy_eyeballs_span());
-    TEST_ASSERT_FALSE(HappyEyeballs.ok);
-    HappyEyeballs.attempt_due_args.last_start_ms = 1000u;
-    HappyEyeballs.attempt_due_args.now_ms = 1250u;
-    HappyEyeballs.attempt_due_args.attempt_delay_ms = 250u;
+    TEST_ASSERT_FALSE(HappyEyeballsV.ok);
+    HappyEyeballsV.attempt_due_args.last_start_ms = 1000u;
+    HappyEyeballsV.attempt_due_args.now_ms = 1250u;
+    HappyEyeballsV.attempt_due_args.attempt_delay_ms = 250u;
     HappyEyeballs.attempt_due(protocore_happy_eyeballs_span());
-    TEST_ASSERT_TRUE(HappyEyeballs.ok);
-    HappyEyeballs.attempt_due_args.last_start_ms = 1000u;
-    HappyEyeballs.attempt_due_args.now_ms = 5000u;
-    HappyEyeballs.attempt_due_args.attempt_delay_ms = 250u;
+    TEST_ASSERT_TRUE(HappyEyeballsV.ok);
+    HappyEyeballsV.attempt_due_args.last_start_ms = 1000u;
+    HappyEyeballsV.attempt_due_args.now_ms = 5000u;
+    HappyEyeballsV.attempt_due_args.attempt_delay_ms = 250u;
     HappyEyeballs.attempt_due(protocore_happy_eyeballs_span());
-    TEST_ASSERT_TRUE(HappyEyeballs.ok);
+    TEST_ASSERT_TRUE(HappyEyeballsV.ok);
 
     // sec 8: "Minimum Connection Attempt Delay ... Recommended to be 100 milliseconds. MUST NOT be
     // less than 10 milliseconds." Both floors behave the same way at their own boundary.
-    HappyEyeballs.attempt_due_args.last_start_ms = 0u;
-    HappyEyeballs.attempt_due_args.now_ms = 99u;
-    HappyEyeballs.attempt_due_args.attempt_delay_ms = 100u;
+    HappyEyeballsV.attempt_due_args.last_start_ms = 0u;
+    HappyEyeballsV.attempt_due_args.now_ms = 99u;
+    HappyEyeballsV.attempt_due_args.attempt_delay_ms = 100u;
     HappyEyeballs.attempt_due(protocore_happy_eyeballs_span());
-    TEST_ASSERT_FALSE(HappyEyeballs.ok);
-    HappyEyeballs.attempt_due_args.last_start_ms = 0u;
-    HappyEyeballs.attempt_due_args.now_ms = 100u;
-    HappyEyeballs.attempt_due_args.attempt_delay_ms = 100u;
+    TEST_ASSERT_FALSE(HappyEyeballsV.ok);
+    HappyEyeballsV.attempt_due_args.last_start_ms = 0u;
+    HappyEyeballsV.attempt_due_args.now_ms = 100u;
+    HappyEyeballsV.attempt_due_args.attempt_delay_ms = 100u;
     HappyEyeballs.attempt_due(protocore_happy_eyeballs_span());
-    TEST_ASSERT_TRUE(HappyEyeballs.ok);
-    HappyEyeballs.attempt_due_args.last_start_ms = 0u;
-    HappyEyeballs.attempt_due_args.now_ms = 9u;
-    HappyEyeballs.attempt_due_args.attempt_delay_ms = 10u;
+    TEST_ASSERT_TRUE(HappyEyeballsV.ok);
+    HappyEyeballsV.attempt_due_args.last_start_ms = 0u;
+    HappyEyeballsV.attempt_due_args.now_ms = 9u;
+    HappyEyeballsV.attempt_due_args.attempt_delay_ms = 10u;
     HappyEyeballs.attempt_due(protocore_happy_eyeballs_span());
-    TEST_ASSERT_FALSE(HappyEyeballs.ok);
-    HappyEyeballs.attempt_due_args.last_start_ms = 0u;
-    HappyEyeballs.attempt_due_args.now_ms = 10u;
-    HappyEyeballs.attempt_due_args.attempt_delay_ms = 10u;
+    TEST_ASSERT_FALSE(HappyEyeballsV.ok);
+    HappyEyeballsV.attempt_due_args.last_start_ms = 0u;
+    HappyEyeballsV.attempt_due_args.now_ms = 10u;
+    HappyEyeballsV.attempt_due_args.attempt_delay_ms = 10u;
     HappyEyeballs.attempt_due(protocore_happy_eyeballs_span());
-    TEST_ASSERT_TRUE(HappyEyeballs.ok);
+    TEST_ASSERT_TRUE(HappyEyeballsV.ok);
 
     // sec 8: "Maximum Connection Attempt Delay ... Recommended to be 2 seconds."
-    HappyEyeballs.attempt_due_args.last_start_ms = 0u;
-    HappyEyeballs.attempt_due_args.now_ms = 1999u;
-    HappyEyeballs.attempt_due_args.attempt_delay_ms = 2000u;
+    HappyEyeballsV.attempt_due_args.last_start_ms = 0u;
+    HappyEyeballsV.attempt_due_args.now_ms = 1999u;
+    HappyEyeballsV.attempt_due_args.attempt_delay_ms = 2000u;
     HappyEyeballs.attempt_due(protocore_happy_eyeballs_span());
-    TEST_ASSERT_FALSE(HappyEyeballs.ok);
-    HappyEyeballs.attempt_due_args.last_start_ms = 0u;
-    HappyEyeballs.attempt_due_args.now_ms = 2000u;
-    HappyEyeballs.attempt_due_args.attempt_delay_ms = 2000u;
+    TEST_ASSERT_FALSE(HappyEyeballsV.ok);
+    HappyEyeballsV.attempt_due_args.last_start_ms = 0u;
+    HappyEyeballsV.attempt_due_args.now_ms = 2000u;
+    HappyEyeballsV.attempt_due_args.attempt_delay_ms = 2000u;
     HappyEyeballs.attempt_due(protocore_happy_eyeballs_span());
-    TEST_ASSERT_TRUE(HappyEyeballs.ok);
+    TEST_ASSERT_TRUE(HappyEyeballsV.ok);
 
     // A zero delay is always due.
-    HappyEyeballs.attempt_due_args.last_start_ms = 1234u;
-    HappyEyeballs.attempt_due_args.now_ms = 1234u;
-    HappyEyeballs.attempt_due_args.attempt_delay_ms = 0u;
+    HappyEyeballsV.attempt_due_args.last_start_ms = 1234u;
+    HappyEyeballsV.attempt_due_args.now_ms = 1234u;
+    HappyEyeballsV.attempt_due_args.attempt_delay_ms = 0u;
     HappyEyeballs.attempt_due(protocore_happy_eyeballs_span());
-    TEST_ASSERT_TRUE(HappyEyeballs.ok);
+    TEST_ASSERT_TRUE(HappyEyeballsV.ok);
 }
 
 // The millisecond clock is a uint32 and wraps every 49.7 days. The gate reads the elapsed time as a
@@ -330,29 +330,29 @@ void test_rfc8305_5_attempt_delay_gate(void)
 void test_attempt_gate_survives_the_millis_wrap(void)
 {
     const uint32_t before = 0xFFFFFF00u; // 256 ms before the wrap
-    HappyEyeballs.attempt_due_args.last_start_ms = before;
-    HappyEyeballs.attempt_due_args.now_ms = before + 249u;
-    HappyEyeballs.attempt_due_args.attempt_delay_ms = 250u;
+    HappyEyeballsV.attempt_due_args.last_start_ms = before;
+    HappyEyeballsV.attempt_due_args.now_ms = before + 249u;
+    HappyEyeballsV.attempt_due_args.attempt_delay_ms = 250u;
     HappyEyeballs.attempt_due(protocore_happy_eyeballs_span());
-    TEST_ASSERT_FALSE(HappyEyeballs.ok);
-    HappyEyeballs.attempt_due_args.last_start_ms = before;
-    HappyEyeballs.attempt_due_args.now_ms = before + 250u;
-    HappyEyeballs.attempt_due_args.attempt_delay_ms = 250u;
+    TEST_ASSERT_FALSE(HappyEyeballsV.ok);
+    HappyEyeballsV.attempt_due_args.last_start_ms = before;
+    HappyEyeballsV.attempt_due_args.now_ms = before + 250u;
+    HappyEyeballsV.attempt_due_args.attempt_delay_ms = 250u;
     HappyEyeballs.attempt_due(protocore_happy_eyeballs_span());
-    TEST_ASSERT_TRUE(HappyEyeballs.ok);
+    TEST_ASSERT_TRUE(HappyEyeballsV.ok);
 
     // before + 300 wraps past zero to 0x2c; the difference is still 300.
     TEST_ASSERT_EQUAL_UINT32(0x2cu, (uint32_t)(before + 300u));
-    HappyEyeballs.attempt_due_args.last_start_ms = before;
-    HappyEyeballs.attempt_due_args.now_ms = 0x2cu;
-    HappyEyeballs.attempt_due_args.attempt_delay_ms = 250u;
+    HappyEyeballsV.attempt_due_args.last_start_ms = before;
+    HappyEyeballsV.attempt_due_args.now_ms = 0x2cu;
+    HappyEyeballsV.attempt_due_args.attempt_delay_ms = 250u;
     HappyEyeballs.attempt_due(protocore_happy_eyeballs_span());
-    TEST_ASSERT_TRUE(HappyEyeballs.ok);
-    HappyEyeballs.attempt_due_args.last_start_ms = before;
-    HappyEyeballs.attempt_due_args.now_ms = 0x2cu;
-    HappyEyeballs.attempt_due_args.attempt_delay_ms = 301u;
+    TEST_ASSERT_TRUE(HappyEyeballsV.ok);
+    HappyEyeballsV.attempt_due_args.last_start_ms = before;
+    HappyEyeballsV.attempt_due_args.now_ms = 0x2cu;
+    HappyEyeballsV.attempt_due_args.attempt_delay_ms = 301u;
     HappyEyeballs.attempt_due(protocore_happy_eyeballs_span());
-    TEST_ASSERT_FALSE(HappyEyeballs.ok);
+    TEST_ASSERT_FALSE(HappyEyeballsV.ok);
 }
 
 // Degenerate lists are left exactly as they are rather than read past.
@@ -360,18 +360,18 @@ void test_short_and_null_lists_are_left_alone(void)
 {
     protocore_ip one = addr("2001:db8::1");
     protocore_ip saved = one;
-    HappyEyeballs.order_args.list = &one;
-    HappyEyeballs.order_args.n = 1;
+    HappyEyeballsV.order_args.list = &one;
+    HappyEyeballsV.order_args.n = 1;
     HappyEyeballs.order(protocore_happy_eyeballs_span());
     TEST_ASSERT_EQUAL_INT(0, memcmp(&saved, &one, sizeof(one)));
 
-    HappyEyeballs.order_args.list = &one;
-    HappyEyeballs.order_args.n = 0;
+    HappyEyeballsV.order_args.list = &one;
+    HappyEyeballsV.order_args.n = 0;
     HappyEyeballs.order(protocore_happy_eyeballs_span());
     TEST_ASSERT_EQUAL_INT(0, memcmp(&saved, &one, sizeof(one)));
 
-    HappyEyeballs.order_args.list = NULL;
-    HappyEyeballs.order_args.n = 4;
+    HappyEyeballsV.order_args.list = NULL;
+    HappyEyeballsV.order_args.n = 4;
     HappyEyeballs.order(protocore_happy_eyeballs_span()); // no list to read
 }
 
@@ -385,8 +385,8 @@ void test_oversized_lists_are_sorted_without_interleaving(void)
         // Alternate a link-local v6 and a global v4 so the sort has something to do.
         list[i] = (i % 2 == 0) ? addr("fe80::1") : addr("198.51.100.1");
     }
-    HappyEyeballs.order_args.list = list;
-    HappyEyeballs.order_args.n = PROTOCORE_HE_MAX + 1;
+    HappyEyeballsV.order_args.list = list;
+    HappyEyeballsV.order_args.n = PROTOCORE_HE_MAX + 1;
     HappyEyeballs.order(protocore_happy_eyeballs_span());
 
     // Every global v4 comes first, then every link-local v6: sorted, not interleaved.

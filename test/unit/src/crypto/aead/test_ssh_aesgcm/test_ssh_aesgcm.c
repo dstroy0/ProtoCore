@@ -36,7 +36,7 @@ static uint8_t *keyed(const uint8_t *key)
         AesGcm.key_wipe(g_ws);
     }
     g_live = PROTO_TRUE;
-    AesGcm.key_args.key = key;
+    AesGcmV.key_args.key = key;
     AesGcm.key_init(g_ws);
     return g_ws;
 }
@@ -46,13 +46,13 @@ static void gcm_seal(const uint8_t *key, const uint8_t *iv, const uint8_t *aad, 
                      size_t ptn, uint8_t *ct_out, uint8_t *tag_out)
 {
     uint8_t *w = keyed(key);
-    AesGcm.seal_args.nonce = iv;
-    AesGcm.seal_args.aad = aad;
-    AesGcm.seal_args.aad_len = aadn;
-    AesGcm.seal_args.pt = pt;
-    AesGcm.seal_args.pt_len = ptn;
-    AesGcm.seal_args.ct_out = ct_out;
-    AesGcm.seal_args.tag_out = tag_out;
+    AesGcmV.seal_args.nonce = iv;
+    AesGcmV.seal_args.aad = aad;
+    AesGcmV.seal_args.aad_len = aadn;
+    AesGcmV.seal_args.pt = pt;
+    AesGcmV.seal_args.pt_len = ptn;
+    AesGcmV.seal_args.ct_out = ct_out;
+    AesGcmV.seal_args.tag_out = tag_out;
     AesGcm.seal(w);
 }
 
@@ -61,21 +61,21 @@ static proto_bool gcm_open(const uint8_t *key, const uint8_t *iv, const uint8_t 
                            size_t ctn, const uint8_t *tag, uint8_t *out)
 {
     uint8_t *w = keyed(key);
-    AesGcm.open_args.nonce = iv;
-    AesGcm.open_args.aad = aad;
-    AesGcm.open_args.aad_len = aadn;
-    AesGcm.open_args.ct = ct;
-    AesGcm.open_args.ct_len = ctn;
-    AesGcm.open_args.tag = tag;
-    AesGcm.open_args.out = out;
+    AesGcmV.open_args.nonce = iv;
+    AesGcmV.open_args.aad = aad;
+    AesGcmV.open_args.aad_len = aadn;
+    AesGcmV.open_args.ct = ct;
+    AesGcmV.open_args.ct_len = ctn;
+    AesGcmV.open_args.tag = tag;
+    AesGcmV.open_args.out = out;
     AesGcm.open(w);
-    return AesGcm.ok;
+    return AesGcmV.ok;
 }
 
 // The nonce is the caller's own, so the counter advance reads nothing out of the borrow.
 static void gcm_iv_increment(uint8_t *iv)
 {
-    AesGcm.iv_args.iv = iv;
+    AesGcmV.iv_args.iv = iv;
     AesGcm.iv_increment(g_ws);
 }
 
@@ -152,7 +152,7 @@ static void seal_matches(const struct kat *v)
     unhex(v->tag, tag);
 
     gcm_seal(key, iv, aad, aadn, pt, ptn, got_ct, got_tag);
-    TEST_ASSERT_TRUE(AesGcm.ok);
+    TEST_ASSERT_TRUE(AesGcmV.ok);
     if (ptn)
     {
         TEST_ASSERT_EQUAL_UINT8_ARRAY(ct, got_ct, ptn);

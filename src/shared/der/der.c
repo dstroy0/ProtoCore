@@ -72,72 +72,72 @@ static proto_bool tlv_at(const uint8_t *buf, size_t len, size_t pos, uint8_t *ta
     return PROTO_TRUE;
 }
 
-static void der_read(uint8_t *restrict work)
+void protocore_der_read(uint8_t *restrict work)
 {
     (void)work;
     size_t content = 0;
     size_t clen = 0;
     uint8_t tag = 0;
-    Der.ok = tlv_at(Der.read_args.buf, Der.read_args.len, Der.read_args.pos, &tag, &content, &clen);
-    if (!Der.ok)
+    DerV.ok = tlv_at(DerV.read_args.buf, DerV.read_args.len, DerV.read_args.pos, &tag, &content, &clen);
+    if (!DerV.ok)
     {
         return;
     }
-    Der.tlv.tag = tag;
-    Der.tlv.content = Der.read_args.buf + content;
-    Der.tlv.len = clen;
-    Der.tlv.next = content + clen;
+    DerV.tlv.tag = tag;
+    DerV.tlv.content = DerV.read_args.buf + content;
+    DerV.tlv.len = clen;
+    DerV.tlv.next = content + clen;
 }
 
-static void der_enter(uint8_t *restrict work)
+void protocore_der_enter(uint8_t *restrict work)
 {
-    der_read(work);
-    if (!Der.ok)
+    protocore_der_read(work);
+    if (!DerV.ok)
     {
         return;
     }
     // X.690 sec 8.1.2.5: only a constructed value holds other values.
-    if ((Der.tlv.tag & PROTOCORE_DER_CONSTRUCTED) == 0u)
+    if ((DerV.tlv.tag & PROTOCORE_DER_CONSTRUCTED) == 0u)
     {
-        Der.ok = PROTO_FALSE;
+        DerV.ok = PROTO_FALSE;
         return;
     }
-    if (Der.tlv.len == 0u)
+    if (DerV.tlv.len == 0u)
     {
-        Der.ok = PROTO_FALSE; // nothing inside to step to
+        DerV.ok = PROTO_FALSE; // nothing inside to step to
         return;
     }
-    const size_t inner = (size_t)(Der.tlv.content - Der.read_args.buf);
-    Der.read_args.pos = inner;
-    der_read(work);
+    const size_t inner = (size_t)(DerV.tlv.content - DerV.read_args.buf);
+    DerV.read_args.pos = inner;
+    protocore_der_read(work);
 }
 
-static void der_uint(uint8_t *restrict work)
+void protocore_der_uint(uint8_t *restrict work)
 {
-    der_read(work);
-    if (!Der.ok)
+    protocore_der_read(work);
+    if (!DerV.ok)
     {
         return;
     }
-    if (Der.tlv.tag != PROTOCORE_DER_INTEGER || Der.tlv.len == 0u)
+    if (DerV.tlv.tag != PROTOCORE_DER_INTEGER || DerV.tlv.len == 0u)
     {
-        Der.ok = PROTO_FALSE;
+        DerV.ok = PROTO_FALSE;
         return;
     }
-    const uint8_t *v = Der.tlv.content;
-    size_t n = Der.tlv.len;
+    const uint8_t *v = DerV.tlv.content;
+    size_t n = DerV.tlv.len;
     // X.690 sec 8.3.3: two's complement, and the shortest form. A leading 0x00 is present only to
     // keep a value with the high bit set positive; any other leading 0x00 is a second encoding.
     if (v[0] == 0x00u)
     {
         if (n == 1u)
         {
-            Der.u64 = 0;
+            DerV.u64 = 0;
             return;
         }
         if ((v[1] & 0x80u) == 0u)
         {
-            Der.ok = PROTO_FALSE;
+            DerV.ok = PROTO_FALSE;
             return;
         }
         v++;
@@ -145,12 +145,12 @@ static void der_uint(uint8_t *restrict work)
     }
     else if (v[0] & 0x80u)
     {
-        Der.ok = PROTO_FALSE; // negative; no field this profile reads is
+        DerV.ok = PROTO_FALSE; // negative; no field this profile reads is
         return;
     }
     if (n > 8u)
     {
-        Der.ok = PROTO_FALSE; // wider than the value this reports
+        DerV.ok = PROTO_FALSE; // wider than the value this reports
         return;
     }
     uint64_t out = 0;
@@ -158,46 +158,46 @@ static void der_uint(uint8_t *restrict work)
     {
         out = (out << 8) | v[i];
     }
-    Der.u64 = out;
+    DerV.u64 = out;
 }
 
-static void der_bitstring(uint8_t *restrict work)
+void protocore_der_bitstring(uint8_t *restrict work)
 {
-    der_read(work);
-    if (!Der.ok)
+    protocore_der_read(work);
+    if (!DerV.ok)
     {
         return;
     }
-    if (Der.tlv.tag != PROTOCORE_DER_BIT_STRING || Der.tlv.len == 0u)
+    if (DerV.tlv.tag != PROTOCORE_DER_BIT_STRING || DerV.tlv.len == 0u)
     {
-        Der.ok = PROTO_FALSE;
+        DerV.ok = PROTO_FALSE;
         return;
     }
     // X.690 sec 8.6.2.2: the first content octet is the count of unused bits in the last one. A key
     // and a signature are whole octets, so any count but zero is refused rather than shifted out.
-    if (Der.tlv.content[0] != 0x00u)
+    if (DerV.tlv.content[0] != 0x00u)
     {
-        Der.ok = PROTO_FALSE;
+        DerV.ok = PROTO_FALSE;
         return;
     }
-    Der.tlv.content++;
-    Der.tlv.len--;
+    DerV.tlv.content++;
+    DerV.tlv.len--;
 }
 
-static void der_oid_eq(uint8_t *restrict work)
+void protocore_der_oid_eq(uint8_t *restrict work)
 {
-    der_read(work);
-    if (!Der.ok)
+    protocore_der_read(work);
+    if (!DerV.ok)
     {
         return;
     }
-    if (Der.tlv.tag != PROTOCORE_DER_OID || Der.oid_args.oid == NULL)
+    if (DerV.tlv.tag != PROTOCORE_DER_OID || DerV.oid_args.oid == NULL)
     {
-        Der.ok = PROTO_FALSE;
+        DerV.ok = PROTO_FALSE;
         return;
     }
-    Der.ok = (Der.tlv.len == Der.oid_args.oid_len) &&
-             (mem.cmp(Der.tlv.content, Der.oid_args.oid, Der.oid_args.oid_len) == 0);
+    DerV.ok = (DerV.tlv.len == DerV.oid_args.oid_len) &&
+              (mem.cmp(DerV.tlv.content, DerV.oid_args.oid, DerV.oid_args.oid_len) == 0);
 }
 
 // Four ASCII digits as a number, or -1 when any of them is not a digit.
@@ -233,53 +233,53 @@ static uint64_t epoch_of(int32_t y, int32_t mon, int32_t day, int32_t hh, int32_
     return (uint64_t)(((days * 24 + hh) * 60 + mm) * 60 + ss);
 }
 
-static void der_time(uint8_t *restrict work)
+void protocore_der_time(uint8_t *restrict work)
 {
-    der_read(work);
-    if (!Der.ok)
+    protocore_der_read(work);
+    if (!DerV.ok)
     {
         return;
     }
-    const uint8_t *v = Der.tlv.content;
+    const uint8_t *v = DerV.tlv.content;
     int32_t year = 0;
     size_t at = 0;
 
-    if (Der.tlv.tag == PROTOCORE_DER_UTC_TIME)
+    if (DerV.tlv.tag == PROTOCORE_DER_UTC_TIME)
     {
         // RFC 5280 sec 4.1.2.5.1: YYMMDDHHMMSSZ, seconds always present, Zulu always.
-        if (Der.tlv.len != 13u || v[12] != 'Z')
+        if (DerV.tlv.len != 13u || v[12] != 'Z')
         {
-            Der.ok = PROTO_FALSE;
+            DerV.ok = PROTO_FALSE;
             return;
         }
         const int32_t yy = digits(v, 2);
         if (yy < 0)
         {
-            Der.ok = PROTO_FALSE;
+            DerV.ok = PROTO_FALSE;
             return;
         }
         year = (yy >= 50) ? (1900 + yy) : (2000 + yy); // sec 4.1.2.5.1: the pivot is 50
         at = 2;
     }
-    else if (Der.tlv.tag == PROTOCORE_DER_GENERALIZED_TIME)
+    else if (DerV.tlv.tag == PROTOCORE_DER_GENERALIZED_TIME)
     {
         // RFC 5280 sec 4.1.2.5.2: YYYYMMDDHHMMSSZ, seconds always present, no fractional part.
-        if (Der.tlv.len != 15u || v[14] != 'Z')
+        if (DerV.tlv.len != 15u || v[14] != 'Z')
         {
-            Der.ok = PROTO_FALSE;
+            DerV.ok = PROTO_FALSE;
             return;
         }
         year = digits(v, 4);
         if (year < 0)
         {
-            Der.ok = PROTO_FALSE;
+            DerV.ok = PROTO_FALSE;
             return;
         }
         at = 4;
     }
     else
     {
-        Der.ok = PROTO_FALSE;
+        DerV.ok = PROTO_FALSE;
         return;
     }
 
@@ -291,20 +291,14 @@ static void der_time(uint8_t *restrict work)
     if (mon < 1 || mon > 12 || day < 1 || day > 31 || hh < 0 || hh > 23 || mm < 0 || mm > 59 || ss < 0 || ss > 60 ||
         year < 1970)
     {
-        Der.ok = PROTO_FALSE; // ss 60 is a leap second, which X.690 permits and the epoch folds
+        DerV.ok = PROTO_FALSE; // ss 60 is a leap second, which X.690 permits and the epoch folds
         return;
     }
-    Der.u64 = epoch_of(year, mon, day, hh, mm, (ss == 60) ? 59 : ss);
+    DerV.u64 = epoch_of(year, mon, day, hh, mm, (ss == 60) ? 59 : ss);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-DerNs Der = {
-    .read = der_read,
-    .enter = der_enter,
-    .uint = der_uint,
-    .bitstring = der_bitstring,
-    .oid_eq = der_oid_eq,
-    .time = der_time,
-};
+/** @brief The operands and the outcome. */
+DerVars DerV;
 
 PROTOCORE_END_DECLS

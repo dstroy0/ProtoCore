@@ -75,8 +75,8 @@ uint8_t *protocore_x509_verify_span(void)
 // Report a verdict and the reason for it, so a caller that fails knows which condition it was.
 static void verdict(protocore_x509_status st)
 {
-    X509Verify.status = st;
-    X509Verify.ok = (st == PROTOCORE_X509_OK);
+    X509VerifyV.status = st;
+    X509VerifyV.ok = (st == PROTOCORE_X509_OK);
 }
 
 // ---------------------------------------------------------------------------
@@ -90,17 +90,17 @@ static void verdict(protocore_x509_status st)
 // build cannot verify rather than one to truncate.
 static proto_bool rsa_key_split(const uint8_t *der, size_t len, uint8_t *n_out, uint8_t *e_out)
 {
-    Der.read_args.buf = der;
-    Der.read_args.len = len;
-    Der.read_args.pos = 0;
+    DerV.read_args.buf = der;
+    DerV.read_args.len = len;
+    DerV.read_args.pos = 0;
     Der.enter(NULL); // into RSAPublicKey, landing on modulus
-    if (!Der.ok || Der.tlv.tag != PROTOCORE_DER_INTEGER)
+    if (!DerV.ok || DerV.tlv.tag != PROTOCORE_DER_INTEGER)
     {
         return PROTO_FALSE;
     }
-    const uint8_t *m = Der.tlv.content;
-    size_t mlen = Der.tlv.len;
-    const size_t after_mod = Der.tlv.next;
+    const uint8_t *m = DerV.tlv.content;
+    size_t mlen = DerV.tlv.len;
+    const size_t after_mod = DerV.tlv.next;
     // X.690 sec 8.3.2: the leading zero is there to keep the modulus positive, and is not part of it.
     if (mlen > 0u && m[0] == 0x00u)
     {
@@ -114,14 +114,14 @@ static proto_bool rsa_key_split(const uint8_t *der, size_t len, uint8_t *n_out, 
     mem.set(n_out, 0, PROTOCORE_RSA_KEY_BYTES);
     mem.cpy(n_out + (PROTOCORE_RSA_KEY_BYTES - mlen), m, mlen);
 
-    Der.read_args.pos = after_mod;
+    DerV.read_args.pos = after_mod;
     Der.read(NULL);
-    if (!Der.ok || Der.tlv.tag != PROTOCORE_DER_INTEGER)
+    if (!DerV.ok || DerV.tlv.tag != PROTOCORE_DER_INTEGER)
     {
         return PROTO_FALSE;
     }
-    const uint8_t *e = Der.tlv.content;
-    size_t elen = Der.tlv.len;
+    const uint8_t *e = DerV.tlv.content;
+    size_t elen = DerV.tlv.len;
     if (elen > 0u && e[0] == 0x00u)
     {
         e++;
@@ -140,11 +140,11 @@ static proto_bool rsa_key_split(const uint8_t *der, size_t len, uint8_t *n_out, 
 // takes r || s as two fixed 32-octet big-endian fields. Each is left-padded into its half.
 static proto_bool ecdsa_sig_split(const uint8_t *der, size_t len, uint8_t out[PROTOCORE_ECDSA_P256_SIG_LEN])
 {
-    Der.read_args.buf = der;
-    Der.read_args.len = len;
-    Der.read_args.pos = 0;
+    DerV.read_args.buf = der;
+    DerV.read_args.len = len;
+    DerV.read_args.pos = 0;
     Der.enter(NULL); // into the SEQUENCE, landing on r
-    if (!Der.ok || Der.tlv.tag != PROTOCORE_DER_INTEGER)
+    if (!DerV.ok || DerV.tlv.tag != PROTOCORE_DER_INTEGER)
     {
         return PROTO_FALSE;
     }
@@ -155,13 +155,13 @@ static proto_bool ecdsa_sig_split(const uint8_t *der, size_t len, uint8_t out[PR
         if (half == 1u)
         {
             Der.read(NULL);
-            if (!Der.ok || Der.tlv.tag != PROTOCORE_DER_INTEGER)
+            if (!DerV.ok || DerV.tlv.tag != PROTOCORE_DER_INTEGER)
             {
                 return PROTO_FALSE;
             }
         }
-        const uint8_t *v = Der.tlv.content;
-        size_t vlen = Der.tlv.len;
+        const uint8_t *v = DerV.tlv.content;
+        size_t vlen = DerV.tlv.len;
         if (vlen > 0u && v[0] == 0x00u)
         {
             v++;
@@ -174,7 +174,7 @@ static proto_bool ecdsa_sig_split(const uint8_t *der, size_t len, uint8_t out[PR
         mem.cpy(out + half * 32u + (32u - vlen), v, vlen);
         if (half == 0u)
         {
-            Der.read_args.pos = Der.tlv.next;
+            DerV.read_args.pos = DerV.tlv.next;
         }
     }
     return PROTO_TRUE;
@@ -199,12 +199,12 @@ static void verify_under(const X509Cert *signer, protocore_x509_sig_alg alg, con
             verdict(PROTOCORE_X509_ERR_KEY_MALFORMED);
             return;
         }
-        Ed25519.verify_args.pub = signer->key.p;
-        Ed25519.verify_args.msg = msg;
-        Ed25519.verify_args.msg_len = msg_len;
-        Ed25519.verify_args.sig = sig;
+        Ed25519V.verify_args.pub = signer->key.p;
+        Ed25519V.verify_args.msg = msg;
+        Ed25519V.verify_args.msg_len = msg_len;
+        Ed25519V.verify_args.sig = sig;
         Ed25519.verify(X509_VERIFY_ALG(work));
-        verdict(Ed25519.ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
+        verdict(Ed25519V.ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
         return;
 
     case PROTOCORE_X509_SIG_ECDSA_SHA256: {
@@ -219,12 +219,12 @@ static void verify_under(const X509Cert *signer, protocore_x509_sig_alg alg, con
             verdict(PROTOCORE_X509_ERR_SIG_MALFORMED);
             return;
         }
-        Ecdsa.verify_args.pub = signer->key.p;
-        Ecdsa.verify_args.msg = msg;
-        Ecdsa.verify_args.mlen = msg_len;
-        Ecdsa.verify_args.sig = rs;
+        EcdsaV.verify_args.pub = signer->key.p;
+        EcdsaV.verify_args.msg = msg;
+        EcdsaV.verify_args.mlen = msg_len;
+        EcdsaV.verify_args.sig = rs;
         Ecdsa.verify(X509_VERIFY_ALG(work));
-        verdict(Ecdsa.ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
+        verdict(EcdsaV.ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
         return;
     }
 
@@ -248,17 +248,17 @@ static void verify_under(const X509Cert *signer, protocore_x509_sig_alg alg, con
             verdict(PROTOCORE_X509_ERR_SIG_MALFORMED);
             return;
         }
-        Rsa.verify_args.n = n;
-        Rsa.verify_args.e = e;
-        Rsa.verify_args.msg = msg;
-        Rsa.verify_args.msg_len = msg_len;
-        Rsa.verify_args.sig = sig;
-        Rsa.verify_args.sig_len = sig_len;
-        Rsa.verify_args.hash = (alg == PROTOCORE_X509_SIG_RSA_SHA512) ? PROTOCORE_RSA_HASH_SHA512
-                               : (alg == PROTOCORE_X509_SIG_RSA_PSS)  ? PROTOCORE_RSA_HASH_PSS_SHA256
-                                                                      : PROTOCORE_RSA_HASH_SHA256;
+        RsaV.verify_args.n = n;
+        RsaV.verify_args.e = e;
+        RsaV.verify_args.msg = msg;
+        RsaV.verify_args.msg_len = msg_len;
+        RsaV.verify_args.sig = sig;
+        RsaV.verify_args.sig_len = sig_len;
+        RsaV.verify_args.hash = (alg == PROTOCORE_X509_SIG_RSA_SHA512) ? PROTOCORE_RSA_HASH_SHA512
+                                : (alg == PROTOCORE_X509_SIG_RSA_PSS)  ? PROTOCORE_RSA_HASH_PSS_SHA256
+                                                                       : PROTOCORE_RSA_HASH_SHA256;
         Rsa.verify(X509_VERIFY_ALG(work));
-        verdict(Rsa.ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
+        verdict(RsaV.ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
         return;
     }
 
@@ -272,8 +272,8 @@ static void verify_under(const X509Cert *signer, protocore_x509_sig_alg alg, con
 
 static void x509_signature(uint8_t *restrict work)
 {
-    const X509Cert *cert = X509Verify.link_args.cert;
-    const X509Cert *issuer = X509Verify.link_args.issuer;
+    const X509Cert *cert = X509VerifyV.link_args.cert;
+    const X509Cert *issuer = X509VerifyV.link_args.issuer;
     if (cert == NULL || issuer == NULL || cert->tbs.p == NULL || cert->sig.p == NULL || issuer->key.p == NULL)
     {
         verdict(PROTOCORE_X509_ERR_ARGS);
@@ -284,22 +284,22 @@ static void x509_signature(uint8_t *restrict work)
 
 static void x509_message(uint8_t *restrict work)
 {
-    const X509Cert *signer = X509Verify.message_args.signer;
-    const uint8_t *msg = X509Verify.message_args.msg;
-    const uint8_t *sig = X509Verify.message_args.sig;
+    const X509Cert *signer = X509VerifyV.message_args.signer;
+    const uint8_t *msg = X509VerifyV.message_args.msg;
+    const uint8_t *sig = X509VerifyV.message_args.sig;
     if (signer == NULL || signer->key.p == NULL || msg == NULL || sig == NULL)
     {
         verdict(PROTOCORE_X509_ERR_ARGS);
         return;
     }
-    verify_under(signer, X509Verify.message_args.alg, msg, X509Verify.message_args.msg_len, sig,
-                 X509Verify.message_args.sig_len, work);
+    verify_under(signer, X509VerifyV.message_args.alg, msg, X509VerifyV.message_args.msg_len, sig,
+                 X509VerifyV.message_args.sig_len, work);
 }
 
 static void x509_validity(uint8_t *restrict work)
 {
     (void)work;
-    const X509Cert *cert = X509Verify.time_args.cert;
+    const X509Cert *cert = X509VerifyV.time_args.cert;
     if (cert == NULL)
     {
         verdict(PROTOCORE_X509_ERR_ARGS);
@@ -307,7 +307,7 @@ static void x509_validity(uint8_t *restrict work)
     }
     // RFC 5280 sec 6.1.3 (a)(2): the period includes the current time. Both ends are inclusive
     // (sec 4.1.2.5 makes them the first and last instant the certificate is valid).
-    const uint64_t now = X509Verify.time_args.now;
+    const uint64_t now = X509VerifyV.time_args.now;
     if (now < cert->not_before)
     {
         verdict(PROTOCORE_X509_ERR_NOT_YET_VALID);
@@ -324,7 +324,7 @@ static void x509_validity(uint8_t *restrict work)
 static void x509_may_sign(uint8_t *restrict work)
 {
     (void)work;
-    const X509Cert *issuer = X509Verify.issuer_args.issuer;
+    const X509Cert *issuer = X509VerifyV.issuer_args.issuer;
     if (issuer == NULL)
     {
         verdict(PROTOCORE_X509_ERR_ARGS);
@@ -346,7 +346,7 @@ static void x509_may_sign(uint8_t *restrict work)
     }
     // sec 6.1.4 (m): pathLenConstraint is how many non-self-issued certificates may follow this one
     // in the path. depth is how many are below it, so a constraint under that does not reach.
-    if (issuer->has_path_len && issuer->path_len < X509Verify.issuer_args.depth)
+    if (issuer->has_path_len && issuer->path_len < X509VerifyV.issuer_args.depth)
     {
         verdict(PROTOCORE_X509_ERR_PATH_LEN);
         return;
@@ -356,8 +356,8 @@ static void x509_may_sign(uint8_t *restrict work)
 
 static void x509_link(uint8_t *restrict work)
 {
-    const X509Cert *cert = X509Verify.link_args.cert;
-    const X509Cert *issuer = X509Verify.link_args.issuer;
+    const X509Cert *cert = X509VerifyV.link_args.cert;
+    const X509Cert *issuer = X509VerifyV.link_args.issuer;
     if (cert == NULL || issuer == NULL)
     {
         verdict(PROTOCORE_X509_ERR_ARGS);
@@ -374,12 +374,12 @@ static void x509_link(uint8_t *restrict work)
     }
 
     x509_validity(work);
-    if (!X509Verify.ok)
+    if (!X509VerifyV.ok)
     {
         return;
     }
     x509_may_sign(work);
-    if (!X509Verify.ok)
+    if (!X509VerifyV.ok)
     {
         return;
     }
@@ -387,12 +387,7 @@ static void x509_link(uint8_t *restrict work)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-X509VerifyNs X509Verify = {
-    .signature = x509_signature,
-    .validity = x509_validity,
-    .may_sign = x509_may_sign,
-    .link = x509_link,
-    .message = x509_message,
-};
+/** @brief The operands and the outcome. */
+X509VerifyVars X509VerifyV;
 
 PROTOCORE_END_DECLS

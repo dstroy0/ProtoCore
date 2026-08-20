@@ -26,9 +26,9 @@ static void client_end(void)
 // the feature is compiled in, and this file is empty without it.
 static proto_bool client_begin(const protocore_ssh_client_cfg *cfg)
 {
-    SshClient.cfg = cfg;
+    SshClientV.cfg = cfg;
     SshClient.begin(protocore_ssh_client_span());
-    return SshClient.ok;
+    return SshClientV.ok;
 }
 
 void setUp(void)
@@ -45,9 +45,9 @@ void tearDown(void)
 // Before anything is asked of it, the role has not started.
 static void test_the_role_starts_idle(void)
 {
-    TEST_ASSERT_EQUAL(PROTOCORE_SSH_CLIENT_IDLE, (SshClient.state(protocore_ssh_client_span()), SshClient.state_of));
-    TEST_ASSERT_EQUAL(PROTOCORE_SSH_CLIENT_IDLE, (SshClient.state(protocore_ssh_client_span()), SshClient.state_of));
-    TEST_ASSERT_FALSE((SshClient.state(protocore_ssh_client_span()), SshClient.state_of == PROTOCORE_SSH_CLIENT_UP));
+    TEST_ASSERT_EQUAL(PROTOCORE_SSH_CLIENT_IDLE, (SshClient.state(protocore_ssh_client_span()), SshClientV.state_of));
+    TEST_ASSERT_EQUAL(PROTOCORE_SSH_CLIENT_IDLE, (SshClient.state(protocore_ssh_client_span()), SshClientV.state_of));
+    TEST_ASSERT_FALSE((SshClient.state(protocore_ssh_client_span()), SshClientV.state_of == PROTOCORE_SSH_CLIENT_UP));
 }
 
 // A configuration with no relay to dial cannot start, and the role says so rather than reporting
@@ -63,8 +63,8 @@ static void test_a_configuration_without_a_host_does_not_start(void)
     cfg.local_port = 80;
 
     TEST_ASSERT_FALSE(client_begin(&cfg));
-    TEST_ASSERT_NOT_EQUAL(PROTOCORE_SSH_CLIENT_UP, (SshClient.state(protocore_ssh_client_span()), SshClient.state_of));
-    TEST_ASSERT_FALSE((SshClient.state(protocore_ssh_client_span()), SshClient.state_of == PROTOCORE_SSH_CLIENT_UP));
+    TEST_ASSERT_NOT_EQUAL(PROTOCORE_SSH_CLIENT_UP, (SshClient.state(protocore_ssh_client_span()), SshClientV.state_of));
+    TEST_ASSERT_FALSE((SshClient.state(protocore_ssh_client_span()), SshClientV.state_of == PROTOCORE_SSH_CLIENT_UP));
 }
 
 // RFC 4252 sec 7 authenticates with a key, so a configuration without one cannot authenticate.
@@ -78,22 +78,22 @@ static void test_a_configuration_without_a_key_does_not_start(void)
     cfg.local_port = 80;
 
     TEST_ASSERT_FALSE(client_begin(&cfg));
-    TEST_ASSERT_FALSE((SshClient.state(protocore_ssh_client_span()), SshClient.state_of == PROTOCORE_SSH_CLIENT_UP));
+    TEST_ASSERT_FALSE((SshClient.state(protocore_ssh_client_span()), SshClientV.state_of == PROTOCORE_SSH_CLIENT_UP));
 }
 
 // A null configuration is not one.
 static void test_a_null_configuration_does_not_start(void)
 {
     TEST_ASSERT_FALSE(client_begin(NULL));
-    TEST_ASSERT_FALSE((SshClient.state(protocore_ssh_client_span()), SshClient.state_of == PROTOCORE_SSH_CLIENT_UP));
+    TEST_ASSERT_FALSE((SshClient.state(protocore_ssh_client_span()), SshClientV.state_of == PROTOCORE_SSH_CLIENT_UP));
 }
 
 // Ending returns the role to where it began, so a slot is not left claimed behind it.
 static void test_end_returns_the_role_to_idle(void)
 {
     client_end();
-    TEST_ASSERT_EQUAL(PROTOCORE_SSH_CLIENT_IDLE, (SshClient.state(protocore_ssh_client_span()), SshClient.state_of));
-    TEST_ASSERT_FALSE((SshClient.state(protocore_ssh_client_span()), SshClient.state_of == PROTOCORE_SSH_CLIENT_UP));
+    TEST_ASSERT_EQUAL(PROTOCORE_SSH_CLIENT_IDLE, (SshClient.state(protocore_ssh_client_span()), SshClientV.state_of));
+    TEST_ASSERT_FALSE((SshClient.state(protocore_ssh_client_span()), SshClientV.state_of == PROTOCORE_SSH_CLIENT_UP));
 }
 
 // Ending twice, or ending something never started, is not an error.
@@ -101,7 +101,7 @@ static void test_end_is_idempotent(void)
 {
     client_end();
     client_end();
-    TEST_ASSERT_EQUAL(PROTOCORE_SSH_CLIENT_IDLE, (SshClient.state(protocore_ssh_client_span()), SshClient.state_of));
+    TEST_ASSERT_EQUAL(PROTOCORE_SSH_CLIENT_IDLE, (SshClient.state(protocore_ssh_client_span()), SshClientV.state_of));
 }
 
 // Polling an idle role does nothing and does not invent a connection.
@@ -109,16 +109,17 @@ static void test_polling_an_idle_role_is_inert(void)
 {
     client_poll();
     client_poll();
-    TEST_ASSERT_EQUAL(PROTOCORE_SSH_CLIENT_IDLE, (SshClient.state(protocore_ssh_client_span()), SshClient.state_of));
+    TEST_ASSERT_EQUAL(PROTOCORE_SSH_CLIENT_IDLE, (SshClient.state(protocore_ssh_client_span()), SshClientV.state_of));
 }
 
 // The role works out of its slot's own bytes - the same borrow the wire and the packet MAC come
 // from - so the scratch is there whenever the pool covers the slot.
 static void test_crypto_work_comes_from_the_slot(void)
 {
-    uint8_t *work = (SshClient.crypto_work(protocore_ssh_client_span()), SshClient.work);
+    uint8_t *work = (SshClient.crypto_work(protocore_ssh_client_span()), SshClientV.work);
     TEST_ASSERT_NOT_NULL(work);
-    TEST_ASSERT_EQUAL_PTR(work, (SshClient.crypto_work(protocore_ssh_client_span()), SshClient.work)); // the same bytes each time
+    TEST_ASSERT_EQUAL_PTR(
+        work, (SshClient.crypto_work(protocore_ssh_client_span()), SshClientV.work)); // the same bytes each time
 }
 
 int main(void)

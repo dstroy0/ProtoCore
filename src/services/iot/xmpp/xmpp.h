@@ -54,21 +54,18 @@ typedef struct
     char *buf;  ///< the buffer the call writes into
     size_t cap; ///< how much room it has, the NUL included
 } XmppOutArgs;
-
 /** @brief The character data an escape reads (XML 1.0 sec 2.4). */
 typedef struct
 {
     const char *in; ///< the octets to escape
     size_t len;     ///< how many of them
 } XmppTextArgs;
-
 /** @brief RFC 6120 sec 4.7: the addresses the initial stream header carries (sec 4.2). */
 typedef struct
 {
     const char *from; ///< 'from' (sec 4.7.1), the initiating entity's JID; NULL leaves it out
     const char *to;   ///< 'to' (sec 4.7.2), the domainpart the initiator expects the receiver to service
 } XmppStreamArgs;
-
 /** @brief RFC 6120 sec 8.1: the common attributes a stanza carries. A NULL member leaves one out. */
 typedef struct
 {
@@ -77,14 +74,12 @@ typedef struct
     const char *type; ///< 'type' (sec 8.1.4), one of the values its stanza kind defines
     const char *id;   ///< 'id' (sec 8.1.3), REQUIRED on an IQ; only the IQ builder emits it
 } XmppCommonArgs;
-
 /** @brief What a stanza carries below its start-tag. A NULL member leaves that child out. */
 typedef struct
 {
     const char *body;      ///< the `<body/>` character data of a message (RFC 6121 sec 5.2.3), escaped on the way out
     const char *extension; ///< the extension element of an IQ (RFC 6120 sec 8.4), copied through verbatim
 } XmppChildArgs;
-
 /** @brief The received stanza a read walks, and the attribute name it looks up. */
 typedef struct
 {
@@ -92,7 +87,6 @@ typedef struct
     size_t len;       ///< how many of them
     const char *attr; ///< the attribute name to find in the start-tag (XML 1.0 sec 3.1)
 } XmppStanzaArgs;
-
 /**
  * @brief The XMPP stanza codec.
  *
@@ -130,10 +124,16 @@ typedef struct
     XmppCommonArgs common; ///< what a stanza's start-tag says
     XmppChildArgs child;   ///< what a stanza carries below it
     XmppStanzaArgs stanza; ///< what a read walks
-
     proto_bool ok;
     size_t n;
+} XmppVars;
 
+/** @brief The operands and the outcome. */
+extern XmppVars XmppV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const escape)(uint8_t *restrict work);
     void (*const stream_open)(uint8_t *restrict work);
     void (*const message)(uint8_t *restrict work);
@@ -143,8 +143,29 @@ typedef struct
     void (*const attr)(uint8_t *restrict work);
 } XmppNs;
 
-/** @brief The one symbol this module exports. */
-extern XmppNs Xmpp;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in XmppV or a region of the borrow at a fixed offset.
+void protocore_xmpp_escape(uint8_t *restrict work);
+void protocore_xmpp_stream_open(uint8_t *restrict work);
+void protocore_xmpp_message(uint8_t *restrict work);
+void protocore_xmpp_presence(uint8_t *restrict work);
+void protocore_xmpp_iq(uint8_t *restrict work);
+void protocore_xmpp_stanza_name(uint8_t *restrict work);
+void protocore_xmpp_attr(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Xmpp.escape(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const XmppNs Xmpp __attribute__((unused)) = {
+    .escape = protocore_xmpp_escape,
+    .stream_open = protocore_xmpp_stream_open,
+    .message = protocore_xmpp_message,
+    .presence = protocore_xmpp_presence,
+    .iq = protocore_xmpp_iq,
+    .stanza_name = protocore_xmpp_stanza_name,
+    .attr = protocore_xmpp_attr,
+};
 
 PROTOCORE_END_DECLS
 

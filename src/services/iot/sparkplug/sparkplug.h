@@ -130,7 +130,6 @@ typedef struct
     proto_bool bool_value;    ///< boolean_value, field 14
     const char *string_value; ///< string_value, field 15
 } SpbMetric;
-
 /** @brief A decoded Payload's top-level fields (Sparkplug 3.0.0 sec 6.4.5); metrics are iterated separately. */
 typedef struct
 {
@@ -139,7 +138,6 @@ typedef struct
     proto_bool has_seq;
     uint64_t seq; ///< seq, field 3
 } SpbPayloadHeader;
-
 /** @brief A decoded Metric (Sparkplug 3.0.0 sec 6.4.6). name and string_value point INTO the source, un-terminated. */
 typedef struct
 {
@@ -160,7 +158,6 @@ typedef struct
     const char *string_value; ///< string_value bytes, field 15, un-terminated, or nullptr
     size_t string_value_len;
 } SpbMetricDecoded;
-
 /** @brief Sparkplug 3.0.0 sec 4.1 topic namespace elements, less the fixed namespace element. */
 typedef struct
 {
@@ -169,35 +166,30 @@ typedef struct
     const char *edge_node_id; ///< edge_node_id (sec 4.1.4)
     const char *device_id;    ///< device_id (sec 4.1.5); NULL for an Edge Node topic
 } SpbTopicArgs;
-
 /** @brief Where a built topic string lands. */
 typedef struct
 {
     char *out;  ///< the buffer a topic build writes into
     size_t cap; ///< how much room it has, the NUL included
 } SpbTopicOutArgs;
-
 /** @brief Where encoded Protocol Buffers octets land. */
 typedef struct
 {
     uint8_t *buf; ///< the buffer a Payload or Metric build writes into
     size_t cap;   ///< how many octets it holds
 } SpbOutArgs;
-
 /** @brief The Payload header fields a build stamps (Sparkplug 3.0.0 sec 6.4.5). */
 typedef struct
 {
     uint64_t timestamp; ///< timestamp, field 1, milliseconds since epoch; MUST be UTC
     uint64_t seq;       ///< seq, field 3; 0..255, incrementing by one and wrapping to zero
 } SpbPayloadArgs;
-
 /** @brief The Metrics a build serializes (Sparkplug 3.0.0 sec 6.4.6). */
 typedef struct
 {
     const SpbMetric *list; ///< the Metric array; a Metric build serializes list[0]
     size_t count;          ///< how many of them a Payload build writes
 } SpbMetricsArgs;
-
 /** @brief The octets a decode reads, and the cursor an iteration carries across calls. */
 typedef struct
 {
@@ -205,7 +197,6 @@ typedef struct
     size_t len;         ///< how many octets it holds
     size_t cursor;      ///< the metrics iteration position; set 0 to start, advanced by each call
 } SpbSourceArgs;
-
 /**
  * @brief The Sparkplug B codec: the sec 4.1 topic namespace and the sec 6.4.1 payload schema.
  *
@@ -241,14 +232,20 @@ typedef struct
     SpbPayloadArgs payload;    ///< what a Payload header says
     SpbMetricsArgs metrics;    ///< what a build serializes
     SpbSourceArgs source;      ///< what a decode reads
-
     proto_bool ok;
     size_t n;
     SpbPayloadHeader header;
     SpbMetricDecoded metric;
     const uint8_t *metric_bytes;
     size_t metric_len;
+} SparkplugVars;
 
+/** @brief The operands and the outcome. */
+extern SparkplugVars SparkplugV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_topic)(uint8_t *restrict work);
     void (*const build_metric)(uint8_t *restrict work);
     void (*const build_payload)(uint8_t *restrict work);
@@ -257,8 +254,27 @@ typedef struct
     void (*const parse_metric)(uint8_t *restrict work);
 } SparkplugNs;
 
-/** @brief The one symbol this module exports. */
-extern SparkplugNs Sparkplug;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SparkplugV or a region of the borrow at a fixed offset.
+void protocore_sparkplug_build_topic(uint8_t *restrict work);
+void protocore_sparkplug_build_metric(uint8_t *restrict work);
+void protocore_sparkplug_build_payload(uint8_t *restrict work);
+void protocore_sparkplug_parse_payload(uint8_t *restrict work);
+void protocore_sparkplug_next_metric(uint8_t *restrict work);
+void protocore_sparkplug_parse_metric(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Sparkplug.build_topic(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SparkplugNs Sparkplug __attribute__((unused)) = {
+    .build_topic = protocore_sparkplug_build_topic,
+    .build_metric = protocore_sparkplug_build_metric,
+    .build_payload = protocore_sparkplug_build_payload,
+    .parse_payload = protocore_sparkplug_parse_payload,
+    .next_metric = protocore_sparkplug_next_metric,
+    .parse_metric = protocore_sparkplug_parse_metric,
+};
 
 /**
  * @brief The PROTOCORE_SPARKPLUG_BORROW bytes this module's state lives in.

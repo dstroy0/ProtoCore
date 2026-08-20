@@ -48,7 +48,6 @@ typedef struct
     uint8_t addr;
     uint8_t rw;
 } SmbusAddrByteArgs;
-
 /** @brief What pec_write takes: addr, payload, len. */
 typedef struct
 {
@@ -56,7 +55,6 @@ typedef struct
     const uint8_t *payload; ///< everything after the address byte (command, then data)
     size_t len;
 } SmbusPecWriteArgs;
-
 /** @brief What pec_read takes: addr, sent, slen, got, glen. */
 typedef struct
 {
@@ -66,34 +64,29 @@ typedef struct
     const uint8_t *got;
     size_t glen;
 } SmbusPecReadArgs;
-
 /** @brief What set_pec takes: on. */
 typedef struct
 {
     proto_bool on;
 } SmbusSetPecArgs;
-
 /** @brief What quick takes: addr, rw. */
 typedef struct
 {
     uint8_t addr;
     uint8_t rw;
 } SmbusQuickArgs;
-
 /** @brief What send_byte takes: addr, value. */
 typedef struct
 {
     uint8_t addr;
     uint8_t value;
 } SmbusSendByteArgs;
-
 /** @brief What receive_byte takes: addr, out. */
 typedef struct
 {
     uint8_t addr;
     uint8_t *out;
 } SmbusReceiveByteArgs;
-
 /** @brief What write_byte takes: addr, cmd, value. */
 typedef struct
 {
@@ -101,7 +94,6 @@ typedef struct
     uint8_t cmd;
     uint8_t value;
 } SmbusWriteByteArgs;
-
 /** @brief What read_byte takes: addr, cmd, out. */
 typedef struct
 {
@@ -109,7 +101,6 @@ typedef struct
     uint8_t cmd;
     uint8_t *out;
 } SmbusReadByteArgs;
-
 /** @brief What write_word takes: addr, cmd, value. */
 typedef struct
 {
@@ -117,7 +108,6 @@ typedef struct
     uint8_t cmd;
     uint16_t value;
 } SmbusWriteWordArgs;
-
 /** @brief What read_word takes: addr, cmd, out. */
 typedef struct
 {
@@ -125,7 +115,6 @@ typedef struct
     uint8_t cmd;
     uint16_t *out;
 } SmbusReadWordArgs;
-
 /** @brief What write_block takes: addr, cmd, buf, len. */
 typedef struct
 {
@@ -134,7 +123,6 @@ typedef struct
     const uint8_t *buf;
     size_t len;
 } SmbusWriteBlockArgs;
-
 /** @brief What read_block takes: addr, cmd, out, cap, len. */
 typedef struct
 {
@@ -144,7 +132,6 @@ typedef struct
     size_t cap;
     size_t *len; ///< out: how many bytes the part returned
 } SmbusReadBlockArgs;
-
 /** @brief What process_call takes: addr, cmd, value, out. */
 typedef struct
 {
@@ -153,7 +140,6 @@ typedef struct
     uint16_t value;
     uint16_t *out;
 } SmbusProcessCallArgs;
-
 /** @brief What block_process_call takes: addr, cmd, buf, len, out, ... */
 typedef struct
 {
@@ -165,7 +151,6 @@ typedef struct
     size_t cap;
     size_t *out_len;
 } SmbusBlockProcessCallArgs;
-
 /**
  * @brief SMBus 3.1 transaction shapes over the shared I2C bus.
  *
@@ -233,10 +218,16 @@ typedef struct
     SmbusReadBlockArgs read_block_args;
     SmbusProcessCallArgs process_call_args;
     SmbusBlockProcessCallArgs block_process_call_args;
-
     proto_bool ok;
     uint8_t value;
+} SmbusVars;
 
+/** @brief The operands and the outcome. */
+extern SmbusVars SmbusV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const addr_byte)(uint8_t *restrict work);
     void (*const pec_write)(uint8_t *restrict work);
     void (*const pec_read)(uint8_t *restrict work);
@@ -256,8 +247,49 @@ typedef struct
     void (*const block_process_call)(uint8_t *restrict work);
 } SmbusNs;
 
-/** @brief The one symbol this module exports. */
-extern SmbusNs Smbus;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SmbusV or a region of the borrow at a fixed offset.
+void protocore_smbus_addr_byte(uint8_t *restrict work);
+void protocore_smbus_pec_write(uint8_t *restrict work);
+void protocore_smbus_pec_read(uint8_t *restrict work);
+void protocore_smbus_set_pec(uint8_t *restrict work);
+void protocore_smbus_pec_enabled(uint8_t *restrict work);
+void protocore_smbus_begin(uint8_t *restrict work);
+void protocore_smbus_quick(uint8_t *restrict work);
+void protocore_smbus_send_byte(uint8_t *restrict work);
+void protocore_smbus_receive_byte(uint8_t *restrict work);
+void protocore_smbus_write_byte(uint8_t *restrict work);
+void protocore_smbus_read_byte(uint8_t *restrict work);
+void protocore_smbus_write_word(uint8_t *restrict work);
+void protocore_smbus_read_word(uint8_t *restrict work);
+void protocore_smbus_write_block(uint8_t *restrict work);
+void protocore_smbus_read_block(uint8_t *restrict work);
+void protocore_smbus_process_call(uint8_t *restrict work);
+void protocore_smbus_block_process_call(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Smbus.addr_byte(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SmbusNs Smbus __attribute__((unused)) = {
+    .addr_byte = protocore_smbus_addr_byte,
+    .pec_write = protocore_smbus_pec_write,
+    .pec_read = protocore_smbus_pec_read,
+    .set_pec = protocore_smbus_set_pec,
+    .pec_enabled = protocore_smbus_pec_enabled,
+    .begin = protocore_smbus_begin,
+    .quick = protocore_smbus_quick,
+    .send_byte = protocore_smbus_send_byte,
+    .receive_byte = protocore_smbus_receive_byte,
+    .write_byte = protocore_smbus_write_byte,
+    .read_byte = protocore_smbus_read_byte,
+    .write_word = protocore_smbus_write_word,
+    .read_word = protocore_smbus_read_word,
+    .write_block = protocore_smbus_write_block,
+    .read_block = protocore_smbus_read_block,
+    .process_call = protocore_smbus_process_call,
+    .block_process_call = protocore_smbus_block_process_call,
+};
 
 /**
  * @brief The PROTOCORE_SMBUS_BORROW bytes this module's state lives in.

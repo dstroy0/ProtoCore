@@ -51,7 +51,6 @@ typedef struct
     BridgeProto proto;                 ///< TCP or UDP (matches how the listener was opened)
     const struct BridgeTarget *target; ///< the UART / SPI / I2C endpoint (copied into the rule)
 } IfaceBridgeHwPublishArgs;
-
 /**
  * @brief Bus glue for the interface bridge (PROTOCORE_ENABLE_IFACE_BRIDGE): the PROTO_BRIDGE listener that wires an ...
  *
@@ -77,15 +76,32 @@ typedef struct
 typedef struct
 {
     IfaceBridgeHwPublishArgs publish_args;
-
     proto_bool ok;
+} IfaceBridgeHwVars;
 
+/** @brief The operands and the outcome. */
+extern IfaceBridgeHwVars IfaceBridgeHwV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const publish)(uint8_t *restrict work);
     void (*const reset)(uint8_t *restrict work);
 } IfaceBridgeHwNs;
 
-/** @brief The one symbol this module exports. */
-extern IfaceBridgeHwNs IfaceBridgeHw;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in IfaceBridgeHwV or a region of the borrow at a fixed offset.
+void protocore_iface_bridge_hw_publish(uint8_t *restrict work);
+void protocore_iface_bridge_hw_reset(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `IfaceBridgeHw.publish(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const IfaceBridgeHwNs IfaceBridgeHw __attribute__((unused)) = {
+    .publish = protocore_iface_bridge_hw_publish,
+    .reset = protocore_iface_bridge_hw_reset,
+};
 
 /**
  * @brief The PROTOCORE_IFACE_BRIDGE_HW_BORROW bytes this module's state lives in.

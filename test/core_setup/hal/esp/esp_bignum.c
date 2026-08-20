@@ -55,14 +55,14 @@ void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, cons
     uint8_t *exp_be = w->exp_be;
     uint8_t *p_be = w->p_be;
     uint8_t *res_be = w->res_be;
-    Bignum.to_bytes_args.bytes = base_be;
-    Bignum.to_bytes_args.in = base;
+    BignumV.to_bytes_args.bytes = base_be;
+    BignumV.to_bytes_args.in = base;
     Bignum.to_bytes(w->bn);
-    Bignum.to_bytes_args.bytes = exp_be;
-    Bignum.to_bytes_args.in = exp;
+    BignumV.to_bytes_args.bytes = exp_be;
+    BignumV.to_bytes_args.in = exp;
     Bignum.to_bytes(w->bn);
-    Bignum.to_bytes_args.bytes = p_be;
-    Bignum.to_bytes_args.in = &group14_p;
+    BignumV.to_bytes_args.bytes = p_be;
+    BignumV.to_bytes_args.in = &group14_p;
     Bignum.to_bytes(w->bn);
 
     mbedtls_mpi B;
@@ -86,9 +86,9 @@ void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, cons
     mbedtls_mpi_free(&P);
     mbedtls_mpi_free(&R);
 
-    Bignum.from_bytes_args.out = out;
-    Bignum.from_bytes_args.bytes = res_be;
-    Bignum.from_bytes_args.len = 256;
+    BignumV.from_bytes_args.out = out;
+    BignumV.from_bytes_args.bytes = res_be;
+    BignumV.from_bytes_args.len = 256;
     Bignum.from_bytes(w->bn);
     protocore_secure_release(mark);
 }

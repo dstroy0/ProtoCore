@@ -50,28 +50,28 @@ static void read_header(const uint8_t *buf, FinsHeader *h)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void fins_build_command(uint8_t *restrict work);
+void protocore_fins_build_command(uint8_t *restrict work);
 
-static void fins_build_command(uint8_t *restrict work)
+void protocore_fins_build_command(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Fins.build_command_args.buf;
-    size_t cap = Fins.build_command_args.cap;
-    const FinsHeader *h = Fins.build_command_args.h;
-    uint8_t mrc = Fins.build_command_args.mrc;
-    uint8_t src = Fins.build_command_args.src;
-    const uint8_t *params = Fins.build_command_args.params;
-    size_t params_len = Fins.build_command_args.params_len;
+    uint8_t *buf = FinsV.build_command_args.buf;
+    size_t cap = FinsV.build_command_args.cap;
+    const FinsHeader *h = FinsV.build_command_args.h;
+    uint8_t mrc = FinsV.build_command_args.mrc;
+    uint8_t src = FinsV.build_command_args.src;
+    const uint8_t *params = FinsV.build_command_args.params;
+    size_t params_len = FinsV.build_command_args.params_len;
 
     if (!buf || !h || (params_len && !params))
     {
-        Fins.n = 0;
+        FinsV.n = 0;
         return;
     }
     size_t total = FINS_HEADER_SIZE + 2 + params_len;
     if (total > cap)
     {
-        Fins.n = 0;
+        FinsV.n = 0;
         return;
     }
     size_t p = write_header(buf, h);
@@ -82,18 +82,18 @@ static void fins_build_command(uint8_t *restrict work)
         mem.cpy(buf + p, params, params_len);
         p += params_len;
     }
-    Fins.n = p;
+    FinsV.n = p;
 }
 
-static void fins_build_memory_area_read(uint8_t *restrict work)
+void protocore_fins_build_memory_area_read(uint8_t *restrict work)
 {
-    uint8_t *buf = Fins.build_memory_area_read_args.buf;
-    size_t cap = Fins.build_memory_area_read_args.cap;
-    const FinsHeader *h = Fins.build_memory_area_read_args.h;
-    uint8_t area = Fins.build_memory_area_read_args.area;
-    uint16_t address = Fins.build_memory_area_read_args.address;
-    uint8_t bit = Fins.build_memory_area_read_args.bit;
-    uint16_t count = Fins.build_memory_area_read_args.count;
+    uint8_t *buf = FinsV.build_memory_area_read_args.buf;
+    size_t cap = FinsV.build_memory_area_read_args.cap;
+    const FinsHeader *h = FinsV.build_memory_area_read_args.h;
+    uint8_t area = FinsV.build_memory_area_read_args.area;
+    uint16_t address = FinsV.build_memory_area_read_args.address;
+    uint8_t bit = FinsV.build_memory_area_read_args.bit;
+    uint16_t count = FinsV.build_memory_area_read_args.count;
 
     uint8_t params[6];
     params[0] = area;
@@ -102,31 +102,31 @@ static void fins_build_memory_area_read(uint8_t *restrict work)
     params[3] = bit;
     params[4] = (uint8_t)(count >> 8);
     params[5] = (uint8_t)(count & 0xFF);
-    Fins.build_command_args.buf = buf;
-    Fins.build_command_args.cap = cap;
-    Fins.build_command_args.h = h;
-    Fins.build_command_args.mrc = FINS_MRC_MEMORY_AREA;
-    Fins.build_command_args.src = FINS_SRC_MEMORY_AREA_READ;
-    Fins.build_command_args.params = params;
-    Fins.build_command_args.params_len = sizeof(params);
-    fins_build_command(work);
+    FinsV.build_command_args.buf = buf;
+    FinsV.build_command_args.cap = cap;
+    FinsV.build_command_args.h = h;
+    FinsV.build_command_args.mrc = FINS_MRC_MEMORY_AREA;
+    FinsV.build_command_args.src = FINS_SRC_MEMORY_AREA_READ;
+    FinsV.build_command_args.params = params;
+    FinsV.build_command_args.params_len = sizeof(params);
+    protocore_fins_build_command(work);
 }
 
-static void fins_build_memory_area_write(uint8_t *restrict work)
+void protocore_fins_build_memory_area_write(uint8_t *restrict work)
 {
-    uint8_t *buf = Fins.build_memory_area_write_args.buf;
-    size_t cap = Fins.build_memory_area_write_args.cap;
-    const FinsHeader *h = Fins.build_memory_area_write_args.h;
-    uint8_t area = Fins.build_memory_area_write_args.area;
-    uint16_t address = Fins.build_memory_area_write_args.address;
-    uint8_t bit = Fins.build_memory_area_write_args.bit;
-    uint16_t count = Fins.build_memory_area_write_args.count;
-    const uint8_t *data = Fins.build_memory_area_write_args.data;
-    size_t data_len = Fins.build_memory_area_write_args.data_len;
+    uint8_t *buf = FinsV.build_memory_area_write_args.buf;
+    size_t cap = FinsV.build_memory_area_write_args.cap;
+    const FinsHeader *h = FinsV.build_memory_area_write_args.h;
+    uint8_t area = FinsV.build_memory_area_write_args.area;
+    uint16_t address = FinsV.build_memory_area_write_args.address;
+    uint8_t bit = FinsV.build_memory_area_write_args.bit;
+    uint16_t count = FinsV.build_memory_area_write_args.count;
+    const uint8_t *data = FinsV.build_memory_area_write_args.data;
+    size_t data_len = FinsV.build_memory_area_write_args.data_len;
 
     if (data_len && !data)
     {
-        Fins.n = 0;
+        FinsV.n = 0;
         return;
     }
     uint8_t prefix[6];
@@ -137,79 +137,79 @@ static void fins_build_memory_area_write(uint8_t *restrict work)
     prefix[4] = (uint8_t)(count >> 8);
     prefix[5] = (uint8_t)(count & 0xFF);
     // The command builder lays down header + MRC + SRC + the 6-octet prefix; the write data follows it.
-    Fins.build_command_args.buf = buf;
-    Fins.build_command_args.cap = cap;
-    Fins.build_command_args.h = h;
-    Fins.build_command_args.mrc = FINS_MRC_MEMORY_AREA;
-    Fins.build_command_args.src = FINS_SRC_MEMORY_AREA_WRITE;
-    Fins.build_command_args.params = prefix;
-    Fins.build_command_args.params_len = sizeof(prefix);
-    fins_build_command(work);
-    size_t n = Fins.n;
+    FinsV.build_command_args.buf = buf;
+    FinsV.build_command_args.cap = cap;
+    FinsV.build_command_args.h = h;
+    FinsV.build_command_args.mrc = FINS_MRC_MEMORY_AREA;
+    FinsV.build_command_args.src = FINS_SRC_MEMORY_AREA_WRITE;
+    FinsV.build_command_args.params = prefix;
+    FinsV.build_command_args.params_len = sizeof(prefix);
+    protocore_fins_build_command(work);
+    size_t n = FinsV.n;
     if (!n)
     {
-        Fins.n = 0; // header + prefix did not fit
+        FinsV.n = 0; // header + prefix did not fit
         return;
     }
     if (data_len)
     {
         if (n + data_len > cap)
         {
-            Fins.n = 0; // the write data does not fit
+            FinsV.n = 0; // the write data does not fit
             return;
         }
         mem.cpy(buf + n, data, data_len);
     }
-    Fins.n = n + data_len;
+    FinsV.n = n + data_len;
 }
 
-static void fins_build_run(uint8_t *restrict work)
+void protocore_fins_build_run(uint8_t *restrict work)
 {
-    uint8_t *buf = Fins.build_run_args.buf;
-    size_t cap = Fins.build_run_args.cap;
-    const FinsHeader *h = Fins.build_run_args.h;
-    FinsRunMode mode = Fins.build_run_args.mode;
+    uint8_t *buf = FinsV.build_run_args.buf;
+    size_t cap = FinsV.build_run_args.cap;
+    const FinsHeader *h = FinsV.build_run_args.h;
+    FinsRunMode mode = FinsV.build_run_args.mode;
 
     uint8_t params[3];
     params[0] = 0xFF;          // program number 0xFFFF (all programs)
     params[1] = 0xFF;          //
     params[2] = (uint8_t)mode; // wire byte: 0x02 MONITOR / 0x04 RUN
-    Fins.build_command_args.buf = buf;
-    Fins.build_command_args.cap = cap;
-    Fins.build_command_args.h = h;
-    Fins.build_command_args.mrc = FINS_MRC_OPERATING_MODE;
-    Fins.build_command_args.src = FINS_SRC_RUN;
-    Fins.build_command_args.params = params;
-    Fins.build_command_args.params_len = sizeof(params);
-    fins_build_command(work);
+    FinsV.build_command_args.buf = buf;
+    FinsV.build_command_args.cap = cap;
+    FinsV.build_command_args.h = h;
+    FinsV.build_command_args.mrc = FINS_MRC_OPERATING_MODE;
+    FinsV.build_command_args.src = FINS_SRC_RUN;
+    FinsV.build_command_args.params = params;
+    FinsV.build_command_args.params_len = sizeof(params);
+    protocore_fins_build_command(work);
 }
 
-static void fins_build_stop(uint8_t *restrict work)
+void protocore_fins_build_stop(uint8_t *restrict work)
 {
-    uint8_t *buf = Fins.build_stop_args.buf;
-    size_t cap = Fins.build_stop_args.cap;
-    const FinsHeader *h = Fins.build_stop_args.h;
+    uint8_t *buf = FinsV.build_stop_args.buf;
+    size_t cap = FinsV.build_stop_args.cap;
+    const FinsHeader *h = FinsV.build_stop_args.h;
 
-    Fins.build_command_args.buf = buf;
-    Fins.build_command_args.cap = cap;
-    Fins.build_command_args.h = h;
-    Fins.build_command_args.mrc = FINS_MRC_OPERATING_MODE;
-    Fins.build_command_args.src = FINS_SRC_STOP;
-    Fins.build_command_args.params = NULL;
-    Fins.build_command_args.params_len = 0;
-    fins_build_command(work);
+    FinsV.build_command_args.buf = buf;
+    FinsV.build_command_args.cap = cap;
+    FinsV.build_command_args.h = h;
+    FinsV.build_command_args.mrc = FINS_MRC_OPERATING_MODE;
+    FinsV.build_command_args.src = FINS_SRC_STOP;
+    FinsV.build_command_args.params = NULL;
+    FinsV.build_command_args.params_len = 0;
+    protocore_fins_build_command(work);
 }
 
-static void fins_parse_command(uint8_t *restrict work)
+void protocore_fins_parse_command(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = Fins.parse_command_args.buf;
-    size_t len = Fins.parse_command_args.len;
-    FinsCommand *out = Fins.parse_command_args.out;
+    const uint8_t *buf = FinsV.parse_command_args.buf;
+    size_t len = FinsV.parse_command_args.len;
+    FinsCommand *out = FinsV.parse_command_args.out;
 
     if (!buf || !out || len < FINS_HEADER_SIZE + 2)
     {
-        Fins.ok = PROTO_FALSE;
+        FinsV.ok = PROTO_FALSE;
         return;
     }
     read_header(buf, &out->header);
@@ -217,19 +217,19 @@ static void fins_parse_command(uint8_t *restrict work)
     out->src = buf[FINS_HEADER_SIZE + 1];
     out->params = buf + FINS_HEADER_SIZE + 2;
     out->params_len = len - (FINS_HEADER_SIZE + 2);
-    Fins.ok = PROTO_TRUE;
+    FinsV.ok = PROTO_TRUE;
 }
 
-static void fins_parse_response(uint8_t *restrict work)
+void protocore_fins_parse_response(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = Fins.parse_response_args.buf;
-    size_t len = Fins.parse_response_args.len;
-    FinsResponse *out = Fins.parse_response_args.out;
+    const uint8_t *buf = FinsV.parse_response_args.buf;
+    size_t len = FinsV.parse_response_args.len;
+    FinsResponse *out = FinsV.parse_response_args.out;
 
     if (!buf || !out || len < FINS_HEADER_SIZE + 4) // header + MRC + SRC + MRES + SRES
     {
-        Fins.ok = PROTO_FALSE;
+        FinsV.ok = PROTO_FALSE;
         return;
     }
     read_header(buf, &out->header);
@@ -239,16 +239,11 @@ static void fins_parse_response(uint8_t *restrict work)
     out->sres = buf[FINS_HEADER_SIZE + 3];
     out->data = buf + FINS_HEADER_SIZE + 4;
     out->data_len = len - (FINS_HEADER_SIZE + 4);
-    Fins.ok = PROTO_TRUE;
+    FinsV.ok = PROTO_TRUE;
 }
 
-FinsNs Fins = {.build_command = fins_build_command,
-               .build_memory_area_read = fins_build_memory_area_read,
-               .build_memory_area_write = fins_build_memory_area_write,
-               .build_run = fins_build_run,
-               .build_stop = fins_build_stop,
-               .parse_command = fins_parse_command,
-               .parse_response = fins_parse_response};
+/** @brief The operands and the outcome. */
+FinsVars FinsV;
 
 PROTOCORE_END_DECLS
 

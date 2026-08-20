@@ -241,8 +241,8 @@ static proto_bool parse_double(const uint8_t *buf, size_t from, size_t end, doub
 static proto_bool parse_bulk_body(uint8_t *restrict work, uint8_t first_byte, size_t header_from, size_t header_to,
                                   size_t after_header)
 {
-    const uint8_t *buf = Resp.wire.buf;
-    const size_t len = Resp.wire.len;
+    const uint8_t *buf = RespV.wire.buf;
+    const size_t len = RespV.wire.len;
     int64_t blen;
     if (!parse_int(buf, header_from, header_to, &blen))
     {
@@ -252,8 +252,8 @@ static proto_bool parse_bulk_body(uint8_t *restrict work, uint8_t first_byte, si
     // has an encoding, so it is a malformed reply rather than another spelling of null.
     if (first_byte == '$' && blen == -1)
     {
-        Resp.reply.type = RESP_NULL;
-        Resp.n = after_header;
+        RespV.reply.type = RESP_NULL;
+        RespV.n = after_header;
         return PROTO_TRUE;
     }
     if (blen < 0)
@@ -272,19 +272,19 @@ static proto_bool parse_bulk_body(uint8_t *restrict work, uint8_t first_byte, si
     }
     if (first_byte == '$')
     {
-        Resp.reply.type = RESP_BULK_STRING;
+        RespV.reply.type = RESP_BULK_STRING;
     }
     else if (first_byte == '!')
     {
-        Resp.reply.type = RESP_BULK_ERROR;
+        RespV.reply.type = RESP_BULK_ERROR;
     }
     else
     {
-        Resp.reply.type = RESP_VERBATIM_STRING;
+        RespV.reply.type = RESP_VERBATIM_STRING;
     }
-    Resp.reply.str = (const char *)(buf + after_header);
-    Resp.reply.str_len = (size_t)blen;
-    Resp.n = after_header + (size_t)blen + 2; // the body and its trailing CRLF
+    RespV.reply.str = (const char *)(buf + after_header);
+    RespV.reply.str_len = (size_t)blen;
+    RespV.n = after_header + (size_t)blen + 2; // the body and its trailing CRLF
     return PROTO_TRUE;
 }
 
@@ -293,7 +293,7 @@ static proto_bool parse_bulk_body(uint8_t *restrict work, uint8_t first_byte, si
 static proto_bool parse_aggregate(uint8_t *restrict work, uint8_t first_byte, size_t header_from, size_t header_to,
                                   size_t after_header)
 {
-    const uint8_t *buf = Resp.wire.buf;
+    const uint8_t *buf = RespV.wire.buf;
     int64_t elements;
     if (!parse_int(buf, header_from, header_to, &elements))
     {
@@ -302,8 +302,8 @@ static proto_bool parse_aggregate(uint8_t *restrict work, uint8_t first_byte, si
     // The Null array is the length -1 exactly ("Null arrays"), as for the Null bulk string above.
     if (first_byte == '*' && elements == -1)
     {
-        Resp.reply.type = RESP_NULL;
-        Resp.n = after_header;
+        RespV.reply.type = RESP_NULL;
+        RespV.n = after_header;
         return PROTO_TRUE;
     }
     if (elements < 0)
@@ -312,19 +312,19 @@ static proto_bool parse_aggregate(uint8_t *restrict work, uint8_t first_byte, si
     }
     if (first_byte == '*')
     {
-        Resp.reply.type = RESP_ARRAY;
+        RespV.reply.type = RESP_ARRAY;
     }
     else if (first_byte == '~')
     {
-        Resp.reply.type = RESP_SET;
+        RespV.reply.type = RESP_SET;
     }
     else
     {
-        Resp.reply.type = RESP_PUSH;
+        RespV.reply.type = RESP_PUSH;
     }
-    Resp.reply.ival = elements;
-    Resp.reply.count = elements;
-    Resp.n = after_header; // the header alone
+    RespV.reply.ival = elements;
+    RespV.reply.count = elements;
+    RespV.n = after_header; // the header alone
     return PROTO_TRUE;
 }
 
@@ -333,14 +333,14 @@ static proto_bool parse_aggregate(uint8_t *restrict work, uint8_t first_byte, si
 static void resp_encode_command(uint8_t *restrict work)
 {
     (void)work;
-    char *buf = Resp.out.buf;
-    const size_t cap = Resp.out.cap;
-    const char *const *argv = Resp.command.argv;
-    const size_t *argv_len = Resp.command.argv_len;
-    const size_t argc = Resp.command.argc;
+    char *buf = RespV.out.buf;
+    const size_t cap = RespV.out.cap;
+    const char *const *argv = RespV.command.argv;
+    const size_t *argv_len = RespV.command.argv_len;
+    const size_t argc = RespV.command.argc;
 
-    Resp.ok = PROTO_FALSE;
-    Resp.n = 0;
+    RespV.ok = PROTO_FALSE;
+    RespV.n = 0;
     if (!buf || cap == 0 || !argv || argc == 0)
     {
         return;
@@ -371,19 +371,19 @@ static void resp_encode_command(uint8_t *restrict work)
         buf[pos++] = '\n';
     }
     buf[pos] = '\0';
-    Resp.n = pos;
-    Resp.ok = PROTO_TRUE;
+    RespV.n = pos;
+    RespV.ok = PROTO_TRUE;
 }
 
 // Decode the value at the head of ns->wire into ns->reply, and report the octets it occupied in
 // ns->n. An aggregate header reports the header alone and its child count.
 static void resp_parse_reply(uint8_t *restrict work)
 {
-    const uint8_t *buf = Resp.wire.buf;
-    const size_t len = Resp.wire.len;
+    const uint8_t *buf = RespV.wire.buf;
+    const size_t len = RespV.wire.len;
 
-    Resp.ok = PROTO_FALSE;
-    Resp.n = 0;
+    RespV.ok = PROTO_FALSE;
+    RespV.n = 0;
     if (!buf || len < 3) // the shortest value is a first byte and its CRLF
     {
         return;
@@ -398,22 +398,22 @@ static void resp_parse_reply(uint8_t *restrict work)
     const size_t header_to = crlf;
     const size_t after_header = crlf + 2; // past the CRLF terminator
 
-    Resp.reply.str = NULL;
-    Resp.reply.str_len = 0;
-    Resp.reply.ival = 0;
-    Resp.reply.dval = 0;
-    Resp.reply.count = 0;
+    RespV.reply.str = NULL;
+    RespV.reply.str_len = 0;
+    RespV.reply.ival = 0;
+    RespV.reply.dval = 0;
+    RespV.reply.count = 0;
 
     switch (buf[0])
     {
     // Simple strings (+) and Simple errors (-): the line itself, CRLF excluded.
     case '+':
     case '-':
-        Resp.reply.type = (buf[0] == '+') ? RESP_SIMPLE_STRING : RESP_SIMPLE_ERROR;
-        Resp.reply.str = (const char *)(buf + header_from);
-        Resp.reply.str_len = header_to - header_from;
-        Resp.n = after_header;
-        Resp.ok = PROTO_TRUE;
+        RespV.reply.type = (buf[0] == '+') ? RESP_SIMPLE_STRING : RESP_SIMPLE_ERROR;
+        RespV.reply.str = (const char *)(buf + header_from);
+        RespV.reply.str_len = header_to - header_from;
+        RespV.n = after_header;
+        RespV.ok = PROTO_TRUE;
         return;
 
     case ':': { // Integers: a signed, base-10, 64-bit value
@@ -422,10 +422,10 @@ static void resp_parse_reply(uint8_t *restrict work)
         {
             return;
         }
-        Resp.reply.type = RESP_INTEGER;
-        Resp.reply.ival = v;
-        Resp.n = after_header;
-        Resp.ok = PROTO_TRUE;
+        RespV.reply.type = RESP_INTEGER;
+        RespV.reply.ival = v;
+        RespV.n = after_header;
+        RespV.ok = PROTO_TRUE;
         return;
     }
 
@@ -433,14 +433,14 @@ static void resp_parse_reply(uint8_t *restrict work)
     case '$':
     case '!':
     case '=':
-        Resp.ok = parse_bulk_body(work, buf[0], header_from, header_to, after_header);
+        RespV.ok = parse_bulk_body(work, buf[0], header_from, header_to, after_header);
         return;
 
     // The aggregates whose children follow: Arrays (*), Sets (~), Pushes (>).
     case '*':
     case '~':
     case '>':
-        Resp.ok = parse_aggregate(work, buf[0], header_from, header_to, after_header);
+        RespV.ok = parse_aggregate(work, buf[0], header_from, header_to, after_header);
         return;
 
     case '%': { // Maps: N entries, so 2N children follow, one per key and one per value
@@ -450,18 +450,18 @@ static void resp_parse_reply(uint8_t *restrict work)
             return;
         }
         const int64_t children = (int64_t)((uint64_t)entries * 2u); // doubled unsigned, then reinterpreted
-        Resp.reply.type = RESP_MAP;
-        Resp.reply.ival = children;
-        Resp.reply.count = children;
-        Resp.n = after_header;
-        Resp.ok = PROTO_TRUE;
+        RespV.reply.type = RESP_MAP;
+        RespV.reply.ival = children;
+        RespV.reply.count = children;
+        RespV.n = after_header;
+        RespV.ok = PROTO_TRUE;
         return;
     }
 
     case '_': // Nulls
-        Resp.reply.type = RESP_NULL;
-        Resp.n = after_header;
-        Resp.ok = PROTO_TRUE;
+        RespV.reply.type = RESP_NULL;
+        RespV.n = after_header;
+        RespV.ok = PROTO_TRUE;
         return;
 
     case '#': { // Booleans: exactly one octet, 't' or 'f'
@@ -469,28 +469,28 @@ static void resp_parse_reply(uint8_t *restrict work)
         {
             return;
         }
-        Resp.reply.type = RESP_BOOLEAN;
-        Resp.reply.ival = (buf[header_from] == 't') ? 1 : 0;
-        Resp.n = after_header;
-        Resp.ok = PROTO_TRUE;
+        RespV.reply.type = RESP_BOOLEAN;
+        RespV.reply.ival = (buf[header_from] == 't') ? 1 : 0;
+        RespV.n = after_header;
+        RespV.ok = PROTO_TRUE;
         return;
     }
 
     case ',': // Doubles: the text is authoritative, dval is decoded from it
-        Resp.reply.type = RESP_DOUBLE;
-        Resp.reply.str = (const char *)(buf + header_from);
-        Resp.reply.str_len = header_to - header_from;
-        parse_double(buf, header_from, header_to, &Resp.reply.dval);
-        Resp.n = after_header;
-        Resp.ok = PROTO_TRUE;
+        RespV.reply.type = RESP_DOUBLE;
+        RespV.reply.str = (const char *)(buf + header_from);
+        RespV.reply.str_len = header_to - header_from;
+        parse_double(buf, header_from, header_to, &RespV.reply.dval);
+        RespV.n = after_header;
+        RespV.ok = PROTO_TRUE;
         return;
 
     case '(': // Big numbers: the digits stay text
-        Resp.reply.type = RESP_BIG_NUMBER;
-        Resp.reply.str = (const char *)(buf + header_from);
-        Resp.reply.str_len = header_to - header_from;
-        Resp.n = after_header;
-        Resp.ok = PROTO_TRUE;
+        RespV.reply.type = RESP_BIG_NUMBER;
+        RespV.reply.str = (const char *)(buf + header_from);
+        RespV.reply.str_len = header_to - header_from;
+        RespV.n = after_header;
+        RespV.ok = PROTO_TRUE;
         return;
 
     default: // no RESP type claims this first byte
@@ -499,6 +499,7 @@ static void resp_parse_reply(uint8_t *restrict work)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-RespNs Resp = {.encode_command = resp_encode_command, .parse_reply = resp_parse_reply};
+/** @brief The operands and the outcome. */
+RespVars RespV;
 
 #endif // PROTOCORE_ENABLE_REDIS

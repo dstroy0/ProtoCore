@@ -15,13 +15,13 @@
 
 #if PROTOCORE_ENABLE_IKEV2
 
-#include "crypto/aead/aesgcm/aesgcm.h"           // the Encrypted payload's AEAD (RFC 5282)
+#include "crypto/aead/aesgcm/aesgcm.h"               // the Encrypted payload's AEAD (RFC 5282)
 #include "crypto/asymmetric/curve25519/curve25519.h" // Diffie-Hellman Group Num 31 (RFC 8031)
-#include "crypto/asymmetric/ecdsa/ecdsa.h"      // ECDSA-P256 AUTH (RFC 7427 sec 3)
-#include "crypto/asymmetric/rsa/rsa.h"        // RSA AUTH verify (RFC 7296 sec 3.8)
-#include "crypto/hash/sha256/sha256.h"           // the COOKIE hash (RFC 7296 sec 2.6)
-#include "crypto/mac/hmac_sha256/hmac_sha256.h"       // the PRF: PRF_HMAC_SHA2_256 (RFC 4868 sec 4)
-#include "mmgr/secure/secure.h"                  // the per-call AEAD context borrow
+#include "crypto/asymmetric/ecdsa/ecdsa.h"           // ECDSA-P256 AUTH (RFC 7427 sec 3)
+#include "crypto/asymmetric/rsa/rsa.h"               // RSA AUTH verify (RFC 7296 sec 3.8)
+#include "crypto/hash/sha256/sha256.h"               // the COOKIE hash (RFC 7296 sec 2.6)
+#include "crypto/mac/hmac_sha256/hmac_sha256.h"      // the PRF: PRF_HMAC_SHA2_256 (RFC 4868 sec 4)
+#include "mmgr/secure/secure.h"                      // the per-call AEAD context borrow
 
 // ---------------------------------------------------------------------------
 // Literals
@@ -129,19 +129,19 @@ static proto_bool ike_set_length(uint8_t *buf, size_t buf_cap, uint32_t total_le
 static void hdr_build(uint8_t *restrict work)
 {
     (void)work;
-    Ike.n = ike_hdr_build(Ike.out.buf, Ike.out.cap, &Ike.hdr);
+    IkeV.n = ike_hdr_build(IkeV.out.buf, IkeV.out.cap, &IkeV.hdr);
 }
 
 static void hdr_parse(uint8_t *restrict work)
 {
     (void)work;
-    Ike.ok = ike_hdr_parse(Ike.wire.msg, Ike.wire.len, &Ike.hdr);
+    IkeV.ok = ike_hdr_parse(IkeV.wire.msg, IkeV.wire.len, &IkeV.hdr);
 }
 
 static void set_length(uint8_t *restrict work)
 {
     (void)work;
-    Ike.ok = ike_set_length(Ike.out.buf, Ike.out.cap, Ike.msg.length);
+    IkeV.ok = ike_set_length(IkeV.out.buf, IkeV.out.cap, IkeV.msg.length);
 }
 
 // ---------------------------------------------------------------------------
@@ -197,39 +197,39 @@ static proto_bool ike_payload_next(IkePayloadIter *it, IkePayload *out)
 static void payload_iter_init(uint8_t *restrict work)
 {
     (void)work;
-    ike_payload_iter_init(Ike.walk.chain, Ike.walk.first_type, Ike.wire.msg, Ike.wire.len);
+    ike_payload_iter_init(IkeV.walk.chain, IkeV.walk.first_type, IkeV.wire.msg, IkeV.wire.len);
 }
 
 static void payload_next(uint8_t *restrict work)
 {
     (void)work;
-    Ike.ok = ike_payload_next(Ike.walk.chain, &Ike.payload);
+    IkeV.ok = ike_payload_next(IkeV.walk.chain, &IkeV.payload);
 }
 
 static void payload_build(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Ike.out.buf;
-    const uint8_t *body = Ike.pl.data;
-    size_t body_len = Ike.pl.data_len;
-    Ike.n = 0;
+    uint8_t *buf = IkeV.out.buf;
+    const uint8_t *body = IkeV.pl.data;
+    size_t body_len = IkeV.pl.data_len;
+    IkeV.n = 0;
     if (!buf || (body_len && !body))
     {
         return;
     }
     size_t total = PROTOCORE_IKE_PAYLOAD_HDR_LEN + body_len;
-    if (total > 0xFFFF || Ike.out.cap < total)
+    if (total > 0xFFFF || IkeV.out.cap < total)
     {
         return;
     }
-    buf[0] = (uint8_t)Ike.pl.next_payload;
-    buf[1] = Ike.pl.critical ? PROTOCORE_IKE_CRITICAL : 0x00;
+    buf[0] = (uint8_t)IkeV.pl.next_payload;
+    buf[1] = IkeV.pl.critical ? PROTOCORE_IKE_CRITICAL : 0x00;
     put16(buf + 2, (uint16_t)total);
     if (body_len)
     {
         mem.cpy(buf + PROTOCORE_IKE_PAYLOAD_HDR_LEN, body, body_len);
     }
-    Ike.n = total;
+    IkeV.n = total;
 }
 
 // ---------------------------------------------------------------------------
@@ -430,76 +430,79 @@ static size_t ike_notify_build(uint8_t *buf, size_t cap, IkePayloadType next_pay
 static void sa_build(uint8_t *restrict work)
 {
     (void)work;
-    Ike.n = ike_sa_build(Ike.out.buf, Ike.out.cap, Ike.pl.next_payload, Ike.prop.proposal_num, Ike.prop.protocol_id,
-                         Ike.prop.spi, Ike.prop.spi_size, Ike.prop.transforms, Ike.prop.num_transforms);
+    IkeV.n =
+        ike_sa_build(IkeV.out.buf, IkeV.out.cap, IkeV.pl.next_payload, IkeV.prop.proposal_num, IkeV.prop.protocol_id,
+                     IkeV.prop.spi, IkeV.prop.spi_size, IkeV.prop.transforms, IkeV.prop.num_transforms);
 }
 
 static void ke_build(uint8_t *restrict work)
 {
     (void)work;
-    Ike.n = ike_ke_build(Ike.out.buf, Ike.out.cap, Ike.pl.next_payload, Ike.ke.dh_group, Ike.pl.data, Ike.pl.data_len);
+    IkeV.n = ike_ke_build(IkeV.out.buf, IkeV.out.cap, IkeV.pl.next_payload, IkeV.ke.dh_group, IkeV.pl.data,
+                          IkeV.pl.data_len);
 }
 
 static void nonce_build(uint8_t *restrict work)
 {
     (void)work;
-    Ike.n = ike_nonce_build(Ike.out.buf, Ike.out.cap, Ike.pl.next_payload, Ike.pl.data, Ike.pl.data_len);
+    IkeV.n = ike_nonce_build(IkeV.out.buf, IkeV.out.cap, IkeV.pl.next_payload, IkeV.pl.data, IkeV.pl.data_len);
 }
 
 static void id_build(uint8_t *restrict work)
 {
     (void)work;
-    Ike.n = ike_id_build(Ike.out.buf, Ike.out.cap, Ike.pl.next_payload, Ike.id.id_type, Ike.pl.data, Ike.pl.data_len);
+    IkeV.n =
+        ike_id_build(IkeV.out.buf, IkeV.out.cap, IkeV.pl.next_payload, IkeV.id.id_type, IkeV.pl.data, IkeV.pl.data_len);
 }
 
 static void auth_build(uint8_t *restrict work)
 {
     (void)work;
-    Ike.n = ike_auth_build(Ike.out.buf, Ike.out.cap, Ike.pl.next_payload, Ike.auth.auth_method, Ike.pl.data,
-                           Ike.pl.data_len);
+    IkeV.n = ike_auth_build(IkeV.out.buf, IkeV.out.cap, IkeV.pl.next_payload, IkeV.auth.auth_method, IkeV.pl.data,
+                            IkeV.pl.data_len);
 }
 
 // CERT and CERTREQ share the layout: Cert Encoding then the data (sec 3.6, sec 3.7).
 static void cert_build(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Ike.out.buf;
-    const uint8_t *data = Ike.pl.data;
-    size_t data_len = Ike.pl.data_len;
-    Ike.n = 0;
+    uint8_t *buf = IkeV.out.buf;
+    const uint8_t *data = IkeV.pl.data;
+    size_t data_len = IkeV.pl.data_len;
+    IkeV.n = 0;
     if (!buf || (data_len && !data))
     {
         return;
     }
     size_t total = PROTOCORE_IKE_PAYLOAD_HDR_LEN + 1 + data_len;
-    if (!put_pl_hdr(buf, Ike.out.cap, Ike.pl.next_payload, total))
+    if (!put_pl_hdr(buf, IkeV.out.cap, IkeV.pl.next_payload, total))
     {
         return;
     }
-    buf[4] = Ike.id.cert_encoding;
+    buf[4] = IkeV.id.cert_encoding;
     if (data_len)
     {
         mem.cpy(buf + 5, data, data_len);
     }
-    Ike.n = total;
+    IkeV.n = total;
 }
 
 static void notify_build(uint8_t *restrict work)
 {
     (void)work;
-    Ike.n = ike_notify_build(Ike.out.buf, Ike.out.cap, Ike.pl.next_payload, Ike.prop.protocol_id, Ike.prop.spi,
-                             Ike.prop.spi_size, Ike.notify.notify_type, Ike.pl.data, Ike.pl.data_len);
+    IkeV.n = ike_notify_build(IkeV.out.buf, IkeV.out.cap, IkeV.pl.next_payload, IkeV.prop.protocol_id, IkeV.prop.spi,
+                              IkeV.prop.spi_size, IkeV.notify.notify_type, IkeV.pl.data, IkeV.pl.data_len);
 }
 
 // Delete payload: Protocol ID, SPI Size, Num of SPIs, then the SPI list (sec 3.11).
 static void delete_build(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Ike.out.buf;
-    uint8_t spi_size = Ike.prop.spi_size;
-    uint16_t num_spis = Ike.prop.num_spis;
-    const uint8_t *spis = Ike.pl.data;
-    Ike.n = 0;
+    uint8_t *buf = IkeV.out.buf;
+    uint8_t spi_size = IkeV.prop.spi_size;
+    uint16_t num_spis = IkeV.prop.num_spis;
+    const uint8_t *spis = IkeV.pl.data;
+    IkeV.n = 0;
     if (!buf)
     {
         return;
@@ -510,29 +513,29 @@ static void delete_build(uint8_t *restrict work)
         return;
     }
     size_t total = PROTOCORE_IKE_PAYLOAD_HDR_LEN + 4 + spis_len;
-    if (!put_pl_hdr(buf, Ike.out.cap, Ike.pl.next_payload, total))
+    if (!put_pl_hdr(buf, IkeV.out.cap, IkeV.pl.next_payload, total))
     {
         return;
     }
-    buf[4] = (uint8_t)Ike.prop.protocol_id;
+    buf[4] = (uint8_t)IkeV.prop.protocol_id;
     buf[5] = spi_size;
     put16(buf + 6, num_spis);
     if (spis_len)
     {
         mem.cpy(buf + 8, spis, spis_len);
     }
-    Ike.n = total;
+    IkeV.n = total;
 }
 
 // TS payload: Number of TSs, three RESERVED octets, then each Traffic Selector (sec 3.13, sec 3.13.1).
 static void ts_build(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Ike.out.buf;
-    size_t cap = Ike.out.cap;
-    const IkeTrafficSelector *sels = Ike.ts.sels;
-    uint8_t num = Ike.ts.num;
-    Ike.n = 0;
+    uint8_t *buf = IkeV.out.buf;
+    size_t cap = IkeV.out.cap;
+    const IkeTrafficSelector *sels = IkeV.ts.sels;
+    uint8_t num = IkeV.ts.num;
+    IkeV.n = 0;
     if (!buf || !sels || num == 0)
     {
         return;
@@ -567,24 +570,24 @@ static void ts_build(uint8_t *restrict work)
     {
         return;
     }
-    buf[0] = (uint8_t)Ike.pl.next_payload;
+    buf[0] = (uint8_t)IkeV.pl.next_payload;
     buf[1] = 0;
     put16(buf + 2, (uint16_t)off);
     buf[4] = num;
     buf[5] = 0;
     buf[6] = 0;
     buf[7] = 0;
-    Ike.n = off;
+    IkeV.n = off;
 }
 
 // CP payload: CFG Type, three RESERVED octets, then each attribute as type, length, value (sec 3.15.1).
 static void cp_build(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Ike.out.buf;
-    const IkeCfgAttr *attrs = Ike.cp.attrs;
-    uint8_t num_attrs = Ike.cp.num_attrs;
-    Ike.n = 0;
+    uint8_t *buf = IkeV.out.buf;
+    const IkeCfgAttr *attrs = IkeV.cp.attrs;
+    uint8_t num_attrs = IkeV.cp.num_attrs;
+    IkeV.n = 0;
     if (!buf || (num_attrs && !attrs))
     {
         return;
@@ -599,11 +602,11 @@ static void cp_build(uint8_t *restrict work)
         attrs_len += 4 + attrs[i].value_len;
     }
     size_t total = PROTOCORE_IKE_PAYLOAD_HDR_LEN + 4 + attrs_len;
-    if (!put_pl_hdr(buf, Ike.out.cap, Ike.pl.next_payload, total))
+    if (!put_pl_hdr(buf, IkeV.out.cap, IkeV.pl.next_payload, total))
     {
         return;
     }
-    buf[4] = (uint8_t)Ike.cp.cfg_type;
+    buf[4] = (uint8_t)IkeV.cp.cfg_type;
     buf[5] = 0;
     buf[6] = 0;
     buf[7] = 0;
@@ -619,7 +622,7 @@ static void cp_build(uint8_t *restrict work)
             off += attrs[i].value_len;
         }
     }
-    Ike.n = total;
+    IkeV.n = total;
 }
 
 // Encrypted payload envelope: the generic header, then IV, Ciphertext and Integrity Checksum Data
@@ -627,20 +630,20 @@ static void cp_build(uint8_t *restrict work)
 static void sk_build(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Ike.out.buf;
-    const uint8_t *iv = Ike.sk.iv;
-    size_t iv_len = Ike.sk.iv_len;
-    const uint8_t *ct = Ike.sk.ct;
-    size_t ct_len = Ike.sk.ct_len;
-    const uint8_t *icv = Ike.sk.icv;
-    size_t icv_len = Ike.sk.icv_len;
-    Ike.n = 0;
+    uint8_t *buf = IkeV.out.buf;
+    const uint8_t *iv = IkeV.sk.iv;
+    size_t iv_len = IkeV.sk.iv_len;
+    const uint8_t *ct = IkeV.sk.ct;
+    size_t ct_len = IkeV.sk.ct_len;
+    const uint8_t *icv = IkeV.sk.icv;
+    size_t icv_len = IkeV.sk.icv_len;
+    IkeV.n = 0;
     if (!buf || (iv_len && !iv) || (ct_len && !ct) || (icv_len && !icv))
     {
         return;
     }
     size_t total = PROTOCORE_IKE_PAYLOAD_HDR_LEN + iv_len + ct_len + icv_len;
-    if (!put_pl_hdr(buf, Ike.out.cap, Ike.pl.next_payload, total))
+    if (!put_pl_hdr(buf, IkeV.out.cap, IkeV.pl.next_payload, total))
     {
         return;
     }
@@ -659,7 +662,7 @@ static void sk_build(uint8_t *restrict work)
     {
         mem.cpy(buf + off, icv, icv_len);
     }
-    Ike.n = total;
+    IkeV.n = total;
 }
 
 // ---------------------------------------------------------------------------
@@ -671,16 +674,16 @@ static void sk_build(uint8_t *restrict work)
 static void skf_build(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Ike.out.buf;
-    uint16_t frag_num = Ike.frag.frag_num;
-    uint16_t total = Ike.frag.total;
-    const uint8_t *iv = Ike.sk.iv;
-    size_t iv_len = Ike.sk.iv_len;
-    const uint8_t *ct = Ike.sk.ct;
-    size_t ct_len = Ike.sk.ct_len;
-    const uint8_t *icv = Ike.sk.icv;
-    size_t icv_len = Ike.sk.icv_len;
-    Ike.n = 0;
+    uint8_t *buf = IkeV.out.buf;
+    uint16_t frag_num = IkeV.frag.frag_num;
+    uint16_t total = IkeV.frag.total;
+    const uint8_t *iv = IkeV.sk.iv;
+    size_t iv_len = IkeV.sk.iv_len;
+    const uint8_t *ct = IkeV.sk.ct;
+    size_t ct_len = IkeV.sk.ct_len;
+    const uint8_t *icv = IkeV.sk.icv;
+    size_t icv_len = IkeV.sk.icv_len;
+    IkeV.n = 0;
     if (!buf || (iv_len && !iv) || (ct_len && !ct) || (icv_len && !icv))
     {
         return;
@@ -690,7 +693,7 @@ static void skf_build(uint8_t *restrict work)
         return;
     }
     size_t body = PROTOCORE_IKE_PAYLOAD_HDR_LEN + 4 + iv_len + ct_len + icv_len;
-    if (!put_pl_hdr(buf, Ike.out.cap, Ike.pl.next_payload, body))
+    if (!put_pl_hdr(buf, IkeV.out.cap, IkeV.pl.next_payload, body))
     {
         return;
     }
@@ -711,18 +714,18 @@ static void skf_build(uint8_t *restrict work)
     {
         mem.cpy(buf + off, icv, icv_len);
     }
-    Ike.n = body;
+    IkeV.n = body;
 }
 
 static void skf_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *body = Ike.wire.msg;
-    size_t body_len = Ike.wire.len;
-    size_t iv_len = Ike.sk.iv_len;
-    size_t icv_len = Ike.sk.icv_len;
-    mem.set(&Ike.sk_ref, 0, sizeof(Ike.sk_ref));
-    Ike.ok = PROTO_FALSE;
+    const uint8_t *body = IkeV.wire.msg;
+    size_t body_len = IkeV.wire.len;
+    size_t iv_len = IkeV.sk.iv_len;
+    size_t icv_len = IkeV.sk.icv_len;
+    mem.set(&IkeV.sk_ref, 0, sizeof(IkeV.sk_ref));
+    IkeV.ok = PROTO_FALSE;
     if (!body || body_len < 4 + iv_len + icv_len)
     {
         return;
@@ -733,13 +736,13 @@ static void skf_parse(uint8_t *restrict work)
     {
         return;
     }
-    Ike.sk_ref.frag_num = fn;
-    Ike.sk_ref.total = tf;
-    Ike.sk_ref.iv = body + 4;
-    Ike.sk_ref.ct = body + 4 + iv_len;
-    Ike.sk_ref.ct_len = body_len - 4 - iv_len - icv_len;
-    Ike.sk_ref.icv = body + body_len - icv_len;
-    Ike.ok = PROTO_TRUE;
+    IkeV.sk_ref.frag_num = fn;
+    IkeV.sk_ref.total = tf;
+    IkeV.sk_ref.iv = body + 4;
+    IkeV.sk_ref.ct = body + 4 + iv_len;
+    IkeV.sk_ref.ct_len = body_len - 4 - iv_len - icv_len;
+    IkeV.sk_ref.icv = body + body_len - icv_len;
+    IkeV.ok = PROTO_TRUE;
 }
 
 static proto_bool ike_frag_reasm_complete(const IkeFragReasm *r)
@@ -750,7 +753,7 @@ static proto_bool ike_frag_reasm_complete(const IkeFragReasm *r)
 static void frag_reasm_init(uint8_t *restrict work)
 {
     (void)work;
-    IkeFragReasm *r = Ike.frag.reasm;
+    IkeFragReasm *r = IkeV.frag.reasm;
     if (!r)
     {
         return;
@@ -758,8 +761,8 @@ static void frag_reasm_init(uint8_t *restrict work)
     r->total = 0;
     r->count = 0;
     mem.set(r->present, 0, sizeof(r->present));
-    r->pool = Ike.out.buf;
-    r->pool_cap = Ike.out.cap;
+    r->pool = IkeV.out.buf;
+    r->pool_cap = IkeV.out.cap;
     r->pool_used = 0;
 }
 
@@ -768,12 +771,12 @@ static void frag_reasm_init(uint8_t *restrict work)
 static void frag_reasm_add(uint8_t *restrict work)
 {
     (void)work;
-    IkeFragReasm *r = Ike.frag.reasm;
-    uint16_t frag_num = Ike.frag.frag_num;
-    uint16_t total = Ike.frag.total;
-    const uint8_t *chunk = Ike.frag.chunk;
-    size_t len = Ike.frag.chunk_len;
-    Ike.ok = PROTO_FALSE;
+    IkeFragReasm *r = IkeV.frag.reasm;
+    uint16_t frag_num = IkeV.frag.frag_num;
+    uint16_t total = IkeV.frag.total;
+    const uint8_t *chunk = IkeV.frag.chunk;
+    size_t len = IkeV.frag.chunk_len;
+    IkeV.ok = PROTO_FALSE;
     if (!r || !r->pool || (len && !chunk))
     {
         return;
@@ -808,22 +811,22 @@ static void frag_reasm_add(uint8_t *restrict work)
     r->present[idx] = PROTO_TRUE;
     r->pool_used += len;
     r->count++;
-    Ike.ok = PROTO_TRUE;
+    IkeV.ok = PROTO_TRUE;
 }
 
 static void frag_reasm_complete(uint8_t *restrict work)
 {
     (void)work;
-    Ike.ok = ike_frag_reasm_complete(Ike.frag.reasm);
+    IkeV.ok = ike_frag_reasm_complete(IkeV.frag.reasm);
 }
 
 // Merge the staged contents 1..Total into one Encrypted payload content (RFC 7383 sec 2.6).
 static void frag_reasm_assemble(uint8_t *restrict work)
 {
     (void)work;
-    const IkeFragReasm *r = Ike.frag.reasm;
-    uint8_t *out = Ike.out.buf;
-    Ike.n = 0;
+    const IkeFragReasm *r = IkeV.frag.reasm;
+    uint8_t *out = IkeV.out.buf;
+    IkeV.n = 0;
     if (!ike_frag_reasm_complete(r) || !out)
     {
         return;
@@ -831,7 +834,7 @@ static void frag_reasm_assemble(uint8_t *restrict work)
     size_t off = 0;
     for (uint16_t i = 0; i < r->total; i++)
     {
-        if (off + r->len[i] > Ike.out.cap)
+        if (off + r->len[i] > IkeV.out.cap)
         {
             return;
         }
@@ -841,7 +844,7 @@ static void frag_reasm_assemble(uint8_t *restrict work)
         }
         off += r->len[i];
     }
-    Ike.n = off;
+    IkeV.n = off;
 }
 
 // ---------------------------------------------------------------------------
@@ -864,27 +867,27 @@ static size_t ike_cookie_compute(uint8_t *work, uint8_t version, const uint8_t *
     Sha256.init(work);
     if (ni_len)
     {
-        Sha256.update_args.data = ni;
-        Sha256.update_args.len = ni_len;
+        Sha256V.update_args.data = ni;
+        Sha256V.update_args.len = ni_len;
         Sha256.update(work);
     }
     if (ipi_len)
     {
-        Sha256.update_args.data = ipi;
-        Sha256.update_args.len = ipi_len;
+        Sha256V.update_args.data = ipi;
+        Sha256V.update_args.len = ipi_len;
         Sha256.update(work);
     }
-    Sha256.update_args.data = spii;
-    Sha256.update_args.len = PROTOCORE_IKE_SPI_LEN;
+    Sha256V.update_args.data = spii;
+    Sha256V.update_args.len = PROTOCORE_IKE_SPI_LEN;
     Sha256.update(work);
     if (secret_len)
     {
-        Sha256.update_args.data = secret;
-        Sha256.update_args.len = secret_len;
+        Sha256V.update_args.data = secret;
+        Sha256V.update_args.len = secret_len;
         Sha256.update(work);
     }
     out[0] = version;
-    Sha256.final_args.out = out + 1;
+    Sha256V.final_args.out = out + 1;
     Sha256.final(work);
     return PROTOCORE_IKE_COOKIE_LEN;
 }
@@ -892,24 +895,24 @@ static size_t ike_cookie_compute(uint8_t *work, uint8_t version, const uint8_t *
 static void cookie_compute(uint8_t *restrict work)
 {
     (void)work;
-    Ike.n = ike_cookie_compute(Ike.work, Ike.notify.version, Ike.notify.secret, Ike.notify.secret_len, Ike.notify.ni,
-                               Ike.notify.ni_len, Ike.notify.ipi, Ike.notify.ipi_len, Ike.notify.spii, Ike.out.buf,
-                               Ike.out.cap);
+    IkeV.n = ike_cookie_compute(IkeV.work, IkeV.notify.version, IkeV.notify.secret, IkeV.notify.secret_len,
+                                IkeV.notify.ni, IkeV.notify.ni_len, IkeV.notify.ipi, IkeV.notify.ipi_len,
+                                IkeV.notify.spii, IkeV.out.buf, IkeV.out.cap);
 }
 
 // The VersionIDofSecret octet names which secret to recompute with, so it comes off the cookie itself.
 static void cookie_verify(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *cookie = Ike.notify.cookie;
-    Ike.ok = PROTO_FALSE;
-    if (!cookie || Ike.notify.cookie_len != PROTOCORE_IKE_COOKIE_LEN)
+    const uint8_t *cookie = IkeV.notify.cookie;
+    IkeV.ok = PROTO_FALSE;
+    if (!cookie || IkeV.notify.cookie_len != PROTOCORE_IKE_COOKIE_LEN)
     {
         return;
     }
     uint8_t expect[PROTOCORE_IKE_COOKIE_LEN];
-    if (ike_cookie_compute(Ike.work, cookie[0], Ike.notify.secret, Ike.notify.secret_len, Ike.notify.ni,
-                           Ike.notify.ni_len, Ike.notify.ipi, Ike.notify.ipi_len, Ike.notify.spii, expect,
+    if (ike_cookie_compute(IkeV.work, cookie[0], IkeV.notify.secret, IkeV.notify.secret_len, IkeV.notify.ni,
+                           IkeV.notify.ni_len, IkeV.notify.ipi, IkeV.notify.ipi_len, IkeV.notify.spii, expect,
                            sizeof(expect)) != PROTOCORE_IKE_COOKIE_LEN)
     {
         return;
@@ -920,15 +923,15 @@ static void cookie_verify(uint8_t *restrict work)
     {
         diff |= (uint8_t)(expect[i] ^ cookie[i]);
     }
-    Ike.ok = diff == 0;
+    IkeV.ok = diff == 0;
 }
 
 // A COOKIE is a Notify with Protocol ID and SPI Size zero (RFC 7296 sec 2.6, sec 3.10).
 static void cookie_notify_build(uint8_t *restrict work)
 {
     (void)work;
-    Ike.n = ike_notify_build(Ike.out.buf, Ike.out.cap, Ike.pl.next_payload, IKE_PROTO_NONE, NULL, 0,
-                             PROTOCORE_IKE_N_COOKIE, Ike.notify.cookie, Ike.notify.cookie_len);
+    IkeV.n = ike_notify_build(IkeV.out.buf, IkeV.out.cap, IkeV.pl.next_payload, IKE_PROTO_NONE, NULL, 0,
+                              PROTOCORE_IKE_N_COOKIE, IkeV.notify.cookie, IkeV.notify.cookie_len);
 }
 
 // ---------------------------------------------------------------------------
@@ -951,26 +954,26 @@ static proto_bool ike_ke_parse(const uint8_t *body, size_t body_len, IkeKeRef *o
 static void ke_parse(uint8_t *restrict work)
 {
     (void)work;
-    Ike.ok = ike_ke_parse(Ike.wire.msg, Ike.wire.len, &Ike.ke_ref);
+    IkeV.ok = ike_ke_parse(IkeV.wire.msg, IkeV.wire.len, &IkeV.ke_ref);
 }
 
 // ID Type then three RESERVED octets precede Identification Data (sec 3.5).
 static void id_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *body = Ike.wire.msg;
-    size_t body_len = Ike.wire.len;
-    mem.set(&Ike.id_ref, 0, sizeof(Ike.id_ref));
-    Ike.id_ref.id_type = IKE_ID_RESERVED;
-    Ike.ok = PROTO_FALSE;
+    const uint8_t *body = IkeV.wire.msg;
+    size_t body_len = IkeV.wire.len;
+    mem.set(&IkeV.id_ref, 0, sizeof(IkeV.id_ref));
+    IkeV.id_ref.id_type = IKE_ID_RESERVED;
+    IkeV.ok = PROTO_FALSE;
     if (!body || body_len < 4)
     {
         return;
     }
-    Ike.id_ref.id_type = (IkeIdType)body[0];
-    Ike.id_ref.id_data = body + 4;
-    Ike.id_ref.id_len = body_len - 4;
-    Ike.ok = PROTO_TRUE;
+    IkeV.id_ref.id_type = (IkeIdType)body[0];
+    IkeV.id_ref.id_data = body + 4;
+    IkeV.id_ref.id_len = body_len - 4;
+    IkeV.ok = PROTO_TRUE;
 }
 
 // Auth Method then three RESERVED octets precede Authentication Data (sec 3.8).
@@ -991,17 +994,17 @@ static proto_bool ike_auth_parse(const uint8_t *body, size_t body_len, IkeAuthRe
 static void auth_parse(uint8_t *restrict work)
 {
     (void)work;
-    Ike.ok = ike_auth_parse(Ike.wire.msg, Ike.wire.len, &Ike.auth_ref);
+    IkeV.ok = ike_auth_parse(IkeV.wire.msg, IkeV.wire.len, &IkeV.auth_ref);
 }
 
 // Protocol ID, SPI Size, Notify Message Type, then the SPI and Notification Data (sec 3.10).
 static void notify_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *body = Ike.wire.msg;
-    size_t body_len = Ike.wire.len;
-    mem.set(&Ike.notify_ref, 0, sizeof(Ike.notify_ref));
-    Ike.ok = PROTO_FALSE;
+    const uint8_t *body = IkeV.wire.msg;
+    size_t body_len = IkeV.wire.len;
+    mem.set(&IkeV.notify_ref, 0, sizeof(IkeV.notify_ref));
+    IkeV.ok = PROTO_FALSE;
     if (!body || body_len < 4)
     {
         return;
@@ -1011,23 +1014,23 @@ static void notify_parse(uint8_t *restrict work)
     {
         return;
     }
-    Ike.notify_ref.protocol_id = (IkeProtocol)body[0];
-    Ike.notify_ref.spi_size = ss;
-    Ike.notify_ref.notify_type = get16(body + 2);
-    Ike.notify_ref.spi = ss ? body + 4 : NULL;
-    Ike.notify_ref.data = body + 4 + ss;
-    Ike.notify_ref.data_len = body_len - 4 - ss;
-    Ike.ok = PROTO_TRUE;
+    IkeV.notify_ref.protocol_id = (IkeProtocol)body[0];
+    IkeV.notify_ref.spi_size = ss;
+    IkeV.notify_ref.notify_type = get16(body + 2);
+    IkeV.notify_ref.spi = ss ? body + 4 : NULL;
+    IkeV.notify_ref.data = body + 4 + ss;
+    IkeV.notify_ref.data_len = body_len - 4 - ss;
+    IkeV.ok = PROTO_TRUE;
 }
 
 // Protocol ID, SPI Size, Num of SPIs, then that many SPIs (sec 3.11).
 static void delete_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *body = Ike.wire.msg;
-    size_t body_len = Ike.wire.len;
-    mem.set(&Ike.delete_ref, 0, sizeof(Ike.delete_ref));
-    Ike.ok = PROTO_FALSE;
+    const uint8_t *body = IkeV.wire.msg;
+    size_t body_len = IkeV.wire.len;
+    mem.set(&IkeV.delete_ref, 0, sizeof(IkeV.delete_ref));
+    IkeV.ok = PROTO_FALSE;
     if (!body || body_len < 4)
     {
         return;
@@ -1038,32 +1041,32 @@ static void delete_parse(uint8_t *restrict work)
     {
         return;
     }
-    Ike.delete_ref.protocol_id = (IkeProtocol)body[0];
-    Ike.delete_ref.spi_size = ss;
-    Ike.delete_ref.num_spis = num;
-    Ike.delete_ref.spis = (ss && num) ? body + 4 : NULL;
-    Ike.ok = PROTO_TRUE;
+    IkeV.delete_ref.protocol_id = (IkeProtocol)body[0];
+    IkeV.delete_ref.spi_size = ss;
+    IkeV.delete_ref.num_spis = num;
+    IkeV.delete_ref.spis = (ss && num) ? body + 4 : NULL;
+    IkeV.ok = PROTO_TRUE;
 }
 
 // The Encrypted payload body carves into IV, Ciphertext and ICV by the negotiated lengths (sec 3.14).
 static void sk_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *body = Ike.wire.msg;
-    size_t body_len = Ike.wire.len;
-    size_t iv_len = Ike.sk.iv_len;
-    size_t icv_len = Ike.sk.icv_len;
-    mem.set(&Ike.sk_ref, 0, sizeof(Ike.sk_ref));
-    Ike.ok = PROTO_FALSE;
+    const uint8_t *body = IkeV.wire.msg;
+    size_t body_len = IkeV.wire.len;
+    size_t iv_len = IkeV.sk.iv_len;
+    size_t icv_len = IkeV.sk.icv_len;
+    mem.set(&IkeV.sk_ref, 0, sizeof(IkeV.sk_ref));
+    IkeV.ok = PROTO_FALSE;
     if (!body || body_len < iv_len + icv_len)
     {
         return;
     }
-    Ike.sk_ref.iv = iv_len ? body : NULL;
-    Ike.sk_ref.ct = body + iv_len;
-    Ike.sk_ref.ct_len = body_len - iv_len - icv_len;
-    Ike.sk_ref.icv = icv_len ? body + body_len - icv_len : NULL;
-    Ike.ok = PROTO_TRUE;
+    IkeV.sk_ref.iv = iv_len ? body : NULL;
+    IkeV.sk_ref.ct = body + iv_len;
+    IkeV.sk_ref.ct_len = body_len - iv_len - icv_len;
+    IkeV.sk_ref.icv = icv_len ? body + body_len - icv_len : NULL;
+    IkeV.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -1098,14 +1101,14 @@ static proto_bool ike_sa_first_proposal(const uint8_t *body, size_t body_len, Ik
 static void sa_first_proposal(uint8_t *restrict work)
 {
     (void)work;
-    Ike.ok = ike_sa_first_proposal(Ike.wire.msg, Ike.wire.len, &Ike.proposal);
+    IkeV.ok = ike_sa_first_proposal(IkeV.wire.msg, IkeV.wire.len, &IkeV.proposal);
 }
 
 static void transform_iter_init(uint8_t *restrict work)
 {
     (void)work;
-    IkeTransformIter *it = Ike.walk.transforms;
-    const IkeProposalRef *p = Ike.walk.proposal;
+    IkeTransformIter *it = IkeV.walk.transforms;
+    const IkeProposalRef *p = IkeV.walk.proposal;
     if (!it)
     {
         return;
@@ -1120,13 +1123,13 @@ static void transform_iter_init(uint8_t *restrict work)
 static void transform_next(uint8_t *restrict work)
 {
     (void)work;
-    IkeTransformIter *it = Ike.walk.transforms;
-    IkeTransformRef *out = &Ike.transform;
+    IkeTransformIter *it = IkeV.walk.transforms;
+    IkeTransformRef *out = &IkeV.transform;
     out->type = IKE_TRANSFORM_ENCR;
     out->id = 0;
     out->key_length = -1;
     out->last = PROTO_TRUE;
-    Ike.ok = PROTO_FALSE;
+    IkeV.ok = PROTO_FALSE;
     if (!it || !it->area || it->off + 8 > it->len)
     {
         return;
@@ -1161,7 +1164,7 @@ static void transform_next(uint8_t *restrict work)
         }
     }
     it->off += tlen;
-    Ike.ok = PROTO_TRUE;
+    IkeV.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -1171,8 +1174,8 @@ static void transform_next(uint8_t *restrict work)
 static void ts_count(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *body = Ike.wire.msg;
-    Ike.u8 = (!body || Ike.wire.len < 4) ? 0 : body[0];
+    const uint8_t *body = IkeV.wire.msg;
+    IkeV.u8 = (!body || IkeV.wire.len < 4) ? 0 : body[0];
 }
 
 // Selector Length bounds each selector; its address halves are equal, so the remainder after the
@@ -1180,12 +1183,12 @@ static void ts_count(uint8_t *restrict work)
 static void ts_get(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *body = Ike.wire.msg;
-    size_t body_len = Ike.wire.len;
-    uint8_t index = Ike.ts.index;
-    IkeTrafficSelector *out = &Ike.sel;
+    const uint8_t *body = IkeV.wire.msg;
+    size_t body_len = IkeV.wire.len;
+    uint8_t index = IkeV.ts.index;
+    IkeTrafficSelector *out = &IkeV.sel;
     mem.set(out, 0, sizeof(*out));
-    Ike.ok = PROTO_FALSE;
+    IkeV.ok = PROTO_FALSE;
     if (!body || body_len < 4)
     {
         return;
@@ -1219,7 +1222,7 @@ static void ts_get(uint8_t *restrict work)
             out->start_addr = body + off + 8;
             out->end_addr = body + off + 8 + addr_len;
             out->addr_len = addr_len;
-            Ike.ok = PROTO_TRUE;
+            IkeV.ok = PROTO_TRUE;
             return;
         }
         off += sel_len;
@@ -1230,31 +1233,31 @@ static void ts_get(uint8_t *restrict work)
 static void cp_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *body = Ike.wire.msg;
-    size_t body_len = Ike.wire.len;
-    mem.set(&Ike.cp_ref, 0, sizeof(Ike.cp_ref));
-    Ike.cp_ref.cfg_type = IKE_CFG_REQUEST;
-    Ike.ok = PROTO_FALSE;
+    const uint8_t *body = IkeV.wire.msg;
+    size_t body_len = IkeV.wire.len;
+    mem.set(&IkeV.cp_ref, 0, sizeof(IkeV.cp_ref));
+    IkeV.cp_ref.cfg_type = IKE_CFG_REQUEST;
+    IkeV.ok = PROTO_FALSE;
     if (!body || body_len < 4)
     {
         return;
     }
-    Ike.cp_ref.cfg_type = (IkeCfgType)body[0];
-    Ike.cp_ref.attrs = body + 4;
-    Ike.cp_ref.attrs_len = body_len - 4;
-    Ike.ok = PROTO_TRUE;
+    IkeV.cp_ref.cfg_type = (IkeCfgType)body[0];
+    IkeV.cp_ref.attrs = body + 4;
+    IkeV.cp_ref.attrs_len = body_len - 4;
+    IkeV.ok = PROTO_TRUE;
 }
 
 static void cp_attr_iter_init(uint8_t *restrict work)
 {
     (void)work;
-    IkeCfgAttrIter *it = Ike.walk.attrs;
+    IkeCfgAttrIter *it = IkeV.walk.attrs;
     if (!it)
     {
         return;
     }
-    it->area = Ike.wire.msg;
-    it->len = Ike.wire.len;
+    it->area = IkeV.wire.msg;
+    it->len = IkeV.wire.len;
     it->off = 0;
 }
 
@@ -1262,9 +1265,9 @@ static void cp_attr_iter_init(uint8_t *restrict work)
 static void cp_attr_next(uint8_t *restrict work)
 {
     (void)work;
-    IkeCfgAttrIter *it = Ike.walk.attrs;
-    IkeCfgAttr *out = &Ike.attr;
-    Ike.ok = PROTO_FALSE;
+    IkeCfgAttrIter *it = IkeV.walk.attrs;
+    IkeCfgAttr *out = &IkeV.attr;
+    IkeV.ok = PROTO_FALSE;
     if (!it || !it->area)
     {
         return;
@@ -1283,7 +1286,7 @@ static void cp_attr_next(uint8_t *restrict work)
     out->value_len = vlen;
     out->value = vlen ? (p + 4) : NULL;
     it->off += 4 + vlen;
-    Ike.ok = PROTO_TRUE;
+    IkeV.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -1311,22 +1314,22 @@ static proto_bool ike_prf_plus(uint8_t *work, const uint8_t *key, size_t key_len
     while (produced < out_len)
     {
         counter++;
-        HmacSha256.key_args.key = key;
-        HmacSha256.key_args.key_len = key_len;
+        HmacSha256V.key_args.key = key;
+        HmacSha256V.key_args.key_len = key_len;
         HmacSha256.init(work);
         if (t_len)
         {
-            HmacSha256.update_args.data = t;
-            HmacSha256.update_args.len = t_len;
+            HmacSha256V.update_args.data = t;
+            HmacSha256V.update_args.len = t_len;
             HmacSha256.update(work);
         }
-        HmacSha256.update_args.data = seed;
-        HmacSha256.update_args.len = seed_len;
+        HmacSha256V.update_args.data = seed;
+        HmacSha256V.update_args.len = seed_len;
         HmacSha256.update(work);
-        HmacSha256.update_args.data = &counter;
-        HmacSha256.update_args.len = 1;
+        HmacSha256V.update_args.data = &counter;
+        HmacSha256V.update_args.len = 1;
         HmacSha256.update(work);
-        HmacSha256.final_args.out = t;
+        HmacSha256V.final_args.out = t;
         HmacSha256.final(work);
         t_len = PROTOCORE_HMAC_SHA256_LEN;
 
@@ -1344,8 +1347,8 @@ static proto_bool ike_prf_plus(uint8_t *work, const uint8_t *key, size_t key_len
 static void prf_plus(uint8_t *restrict work)
 {
     (void)work;
-    Ike.ok = ike_prf_plus(Ike.work, Ike.keymat.prf_key, Ike.keymat.prf_key_len, Ike.keymat.seed, Ike.keymat.seed_len,
-                          Ike.out.buf, Ike.out.cap);
+    IkeV.ok = ike_prf_plus(IkeV.work, IkeV.keymat.prf_key, IkeV.keymat.prf_key_len, IkeV.keymat.seed,
+                           IkeV.keymat.seed_len, IkeV.out.buf, IkeV.out.cap);
 }
 
 // Build S = Ni | Nr | SPIi | SPIr; returns its length, or 0 on a nonce length out of range.
@@ -1420,11 +1423,11 @@ static proto_bool ike_derive_keys(uint8_t *work, const uint8_t *dh_secret, size_
         return PROTO_FALSE;
     }
     uint8_t skeyseed[PROTOCORE_IKE_PRF_LEN];
-    HmacSha256.mac_args.key = s;
-    HmacSha256.mac_args.key_len = ni_len + nr_len;
-    HmacSha256.mac_args.data = dh_secret;
-    HmacSha256.mac_args.len = dh_len;
-    HmacSha256.mac_args.out = skeyseed;
+    HmacSha256V.mac_args.key = s;
+    HmacSha256V.mac_args.key_len = ni_len + nr_len;
+    HmacSha256V.mac_args.data = dh_secret;
+    HmacSha256V.mac_args.len = dh_len;
+    HmacSha256V.mac_args.out = skeyseed;
     HmacSha256.mac(work);
     return sk_split_from_skeyseed(work, skeyseed, s, s_len, lens, out);
 }
@@ -1432,25 +1435,25 @@ static proto_bool ike_derive_keys(uint8_t *work, const uint8_t *dh_secret, size_
 static void derive_keys(uint8_t *restrict work)
 {
     (void)work;
-    Ike.ok = ike_derive_keys(Ike.work, Ike.keymat.dh_secret, Ike.keymat.dh_len, Ike.keymat.ni, Ike.keymat.ni_len,
-                             Ike.keymat.nr, Ike.keymat.nr_len, Ike.keymat.spi_i, Ike.keymat.spi_r, Ike.keymat.lens,
-                             Ike.keymat.keys);
+    IkeV.ok = ike_derive_keys(IkeV.work, IkeV.keymat.dh_secret, IkeV.keymat.dh_len, IkeV.keymat.ni, IkeV.keymat.ni_len,
+                              IkeV.keymat.nr, IkeV.keymat.nr_len, IkeV.keymat.spi_i, IkeV.keymat.spi_r,
+                              IkeV.keymat.lens, IkeV.keymat.keys);
 }
 
 // SKEYSEED = prf(SK_d (old), g^ir (new) | Ni | Nr), then the sec 2.14 split with the new SPIs (sec 2.18).
 static void rekey_derive_keys(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *sk_d_old = Ike.keymat.sk_d;
-    const uint8_t *dh_secret = Ike.keymat.dh_secret;
-    size_t dh_len = Ike.keymat.dh_len;
-    const uint8_t *ni = Ike.keymat.ni;
-    size_t ni_len = Ike.keymat.ni_len;
-    const uint8_t *nr = Ike.keymat.nr;
-    size_t nr_len = Ike.keymat.nr_len;
-    Ike.ok = PROTO_FALSE;
-    if (!sk_d_old || !dh_secret || !ni || !nr || !Ike.keymat.spi_i || !Ike.keymat.spi_r || !Ike.keymat.lens ||
-        !Ike.keymat.keys)
+    const uint8_t *sk_d_old = IkeV.keymat.sk_d;
+    const uint8_t *dh_secret = IkeV.keymat.dh_secret;
+    size_t dh_len = IkeV.keymat.dh_len;
+    const uint8_t *ni = IkeV.keymat.ni;
+    size_t ni_len = IkeV.keymat.ni_len;
+    const uint8_t *nr = IkeV.keymat.nr;
+    size_t nr_len = IkeV.keymat.nr_len;
+    IkeV.ok = PROTO_FALSE;
+    if (!sk_d_old || !dh_secret || !ni || !nr || !IkeV.keymat.spi_i || !IkeV.keymat.spi_r || !IkeV.keymat.lens ||
+        !IkeV.keymat.keys)
     {
         return;
     }
@@ -1468,35 +1471,35 @@ static void rekey_derive_keys(uint8_t *restrict work)
     mem.cpy(seed + sl, nr, nr_len);
     sl += nr_len;
     uint8_t skeyseed[PROTOCORE_IKE_PRF_LEN];
-    HmacSha256.mac_args.key = sk_d_old;
-    HmacSha256.mac_args.key_len = Ike.keymat.sk_d_len;
-    HmacSha256.mac_args.data = seed;
-    HmacSha256.mac_args.len = sl;
-    HmacSha256.mac_args.out = skeyseed;
-    HmacSha256.mac(Ike.work);
+    HmacSha256V.mac_args.key = sk_d_old;
+    HmacSha256V.mac_args.key_len = IkeV.keymat.sk_d_len;
+    HmacSha256V.mac_args.data = seed;
+    HmacSha256V.mac_args.len = sl;
+    HmacSha256V.mac_args.out = skeyseed;
+    HmacSha256.mac(IkeV.work);
 
     uint8_t s[2 * PROTOCORE_IKE_NONCE_MAX + 2 * PROTOCORE_IKE_SPI_LEN];
-    size_t s_len = build_ni_nr_spi(s, ni, ni_len, nr, nr_len, Ike.keymat.spi_i, Ike.keymat.spi_r);
+    size_t s_len = build_ni_nr_spi(s, ni, ni_len, nr, nr_len, IkeV.keymat.spi_i, IkeV.keymat.spi_r);
     if (s_len == 0)
     {
         return;
     }
-    Ike.ok = sk_split_from_skeyseed(Ike.work, skeyseed, s, s_len, Ike.keymat.lens, Ike.keymat.keys);
+    IkeV.ok = sk_split_from_skeyseed(IkeV.work, skeyseed, s, s_len, IkeV.keymat.lens, IkeV.keymat.keys);
 }
 
 // KEYMAT = prf+(SK_d, Ni | Nr), or prf+(SK_d, g^ir (new) | Ni | Nr) when the exchange carried KE (sec 2.17).
 static void child_keymat(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *sk_d = Ike.keymat.sk_d;
-    const uint8_t *dh_secret = Ike.keymat.dh_secret;
-    size_t dh_len = Ike.keymat.dh_len;
-    const uint8_t *ni = Ike.keymat.ni;
-    size_t ni_len = Ike.keymat.ni_len;
-    const uint8_t *nr = Ike.keymat.nr;
-    size_t nr_len = Ike.keymat.nr_len;
-    Ike.ok = PROTO_FALSE;
-    if (!sk_d || !ni || !nr || !Ike.out.buf || Ike.out.cap == 0)
+    const uint8_t *sk_d = IkeV.keymat.sk_d;
+    const uint8_t *dh_secret = IkeV.keymat.dh_secret;
+    size_t dh_len = IkeV.keymat.dh_len;
+    const uint8_t *ni = IkeV.keymat.ni;
+    size_t ni_len = IkeV.keymat.ni_len;
+    const uint8_t *nr = IkeV.keymat.nr;
+    size_t nr_len = IkeV.keymat.nr_len;
+    IkeV.ok = PROTO_FALSE;
+    if (!sk_d || !ni || !nr || !IkeV.out.buf || IkeV.out.cap == 0)
     {
         return;
     }
@@ -1516,7 +1519,7 @@ static void child_keymat(uint8_t *restrict work)
     o += ni_len;
     mem.cpy(seed + o, nr, nr_len);
     o += nr_len;
-    Ike.ok = ike_prf_plus(Ike.work, sk_d, Ike.keymat.sk_d_len, seed, o, Ike.out.buf, Ike.out.cap);
+    IkeV.ok = ike_prf_plus(IkeV.work, sk_d, IkeV.keymat.sk_d_len, seed, o, IkeV.out.buf, IkeV.out.cap);
 }
 
 // SK_d, SK_pi and SK_pr take the PRF's preferred key length (sec 2.13); the cipher key takes the Key
@@ -1568,7 +1571,7 @@ static proto_bool ike_suite_keylengths(const IkeSuite *suite, IkeKeyLengths *out
 static void suite_keylengths(uint8_t *restrict work)
 {
     (void)work;
-    Ike.ok = Ike.keymat.lens != NULL && ike_suite_keylengths(Ike.keymat.suite, Ike.keymat.lens);
+    IkeV.ok = IkeV.keymat.lens != NULL && ike_suite_keylengths(IkeV.keymat.suite, IkeV.keymat.lens);
 }
 
 // ---------------------------------------------------------------------------
@@ -1596,15 +1599,15 @@ static proto_bool ike_sk_aead_seal(const uint8_t *key, const uint8_t *salt, cons
     {
         size_t mark = protocore_secure_mark();
         uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
-        AesGcm.key_args.key = key;
+        AesGcmV.key_args.key = key;
         AesGcm.key_init(gcm);
-        AesGcm.seal_args.nonce = nonce;
-        AesGcm.seal_args.aad = aad;
-        AesGcm.seal_args.aad_len = aad_len;
-        AesGcm.seal_args.pt = pt;
-        AesGcm.seal_args.pt_len = pt_len;
-        AesGcm.seal_args.ct_out = out;
-        AesGcm.seal_args.tag_out = out + pt_len;
+        AesGcmV.seal_args.nonce = nonce;
+        AesGcmV.seal_args.aad = aad;
+        AesGcmV.seal_args.aad_len = aad_len;
+        AesGcmV.seal_args.pt = pt;
+        AesGcmV.seal_args.pt_len = pt_len;
+        AesGcmV.seal_args.ct_out = out;
+        AesGcmV.seal_args.tag_out = out + pt_len;
         AesGcm.seal(gcm);
         AesGcm.key_wipe(gcm);
         protocore_secure_release(mark);
@@ -1625,17 +1628,17 @@ static proto_bool ike_sk_aead_open(const uint8_t *key, const uint8_t *salt, cons
     {
         size_t mark = protocore_secure_mark();
         uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
-        AesGcm.key_args.key = key;
+        AesGcmV.key_args.key = key;
         AesGcm.key_init(gcm);
-        AesGcm.open_args.nonce = nonce;
-        AesGcm.open_args.aad = aad;
-        AesGcm.open_args.aad_len = aad_len;
-        AesGcm.open_args.ct = ct;
-        AesGcm.open_args.ct_len = ct_len;
-        AesGcm.open_args.tag = icv;
-        AesGcm.open_args.out = out;
+        AesGcmV.open_args.nonce = nonce;
+        AesGcmV.open_args.aad = aad;
+        AesGcmV.open_args.aad_len = aad_len;
+        AesGcmV.open_args.ct = ct;
+        AesGcmV.open_args.ct_len = ct_len;
+        AesGcmV.open_args.tag = icv;
+        AesGcmV.open_args.out = out;
         AesGcm.open(gcm);
-        ok = AesGcm.ok;
+        ok = AesGcmV.ok;
         AesGcm.key_wipe(gcm);
         protocore_secure_release(mark);
     }
@@ -1645,15 +1648,15 @@ static proto_bool ike_sk_aead_open(const uint8_t *key, const uint8_t *salt, cons
 static void sk_aead_seal(uint8_t *restrict work)
 {
     (void)work;
-    Ike.ok = ike_sk_aead_seal(Ike.sk.key, Ike.sk.salt, Ike.sk.iv, Ike.sk.aad, Ike.sk.aad_len, Ike.sk.pt, Ike.sk.pt_len,
-                              Ike.out.buf);
+    IkeV.ok = ike_sk_aead_seal(IkeV.sk.key, IkeV.sk.salt, IkeV.sk.iv, IkeV.sk.aad, IkeV.sk.aad_len, IkeV.sk.pt,
+                               IkeV.sk.pt_len, IkeV.out.buf);
 }
 
 static void sk_aead_open(uint8_t *restrict work)
 {
     (void)work;
-    Ike.ok = ike_sk_aead_open(Ike.sk.key, Ike.sk.salt, Ike.sk.iv, Ike.sk.aad, Ike.sk.aad_len, Ike.sk.ct, Ike.sk.ct_len,
-                              Ike.sk.icv, Ike.out.buf);
+    IkeV.ok = ike_sk_aead_open(IkeV.sk.key, IkeV.sk.salt, IkeV.sk.iv, IkeV.sk.aad, IkeV.sk.aad_len, IkeV.sk.ct,
+                               IkeV.sk.ct_len, IkeV.sk.icv, IkeV.out.buf);
 }
 
 // ---------------------------------------------------------------------------
@@ -1673,18 +1676,18 @@ static proto_bool ike_x25519(proto_bool base, const uint8_t *scalar, const uint8
     }
     if (base)
     {
-        Curve25519.x25519_base_args.scalar = scalar;
-        Curve25519.x25519_base_args.out = out;
+        Curve25519V.x25519_base_args.scalar = scalar;
+        Curve25519V.x25519_base_args.out = out;
         Curve25519.x25519_base(w.buf);
     }
     else
     {
-        Curve25519.x25519_args.scalar = scalar;
-        Curve25519.x25519_args.point = point;
-        Curve25519.x25519_args.out = out;
+        Curve25519V.x25519_args.scalar = scalar;
+        Curve25519V.x25519_args.point = point;
+        Curve25519V.x25519_args.out = out;
         Curve25519.x25519(w.buf);
     }
-    const proto_bool ok = Curve25519.ok;
+    const proto_bool ok = Curve25519V.ok;
     protocore_secure_release(mark);
     return ok;
 }
@@ -1693,16 +1696,16 @@ static proto_bool ike_x25519(proto_bool base, const uint8_t *scalar, const uint8
 static void dh_public(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *our_priv = Ike.ke.our_priv;
-    uint8_t *out = Ike.out.buf;
-    Ike.n = 0;
+    const uint8_t *our_priv = IkeV.ke.our_priv;
+    uint8_t *out = IkeV.out.buf;
+    IkeV.n = 0;
     if (!our_priv || !out)
     {
         return;
     }
-    if (Ike.ke.dh_group == IKE_DH_CURVE25519)
+    if (IkeV.ke.dh_group == IKE_DH_CURVE25519)
     {
-        if (Ike.ke.our_priv_len != PROTOCORE_IKE_X25519_LEN || Ike.out.cap < PROTOCORE_IKE_X25519_LEN)
+        if (IkeV.ke.our_priv_len != PROTOCORE_IKE_X25519_LEN || IkeV.out.cap < PROTOCORE_IKE_X25519_LEN)
         {
             return;
         }
@@ -1710,7 +1713,7 @@ static void dh_public(uint8_t *restrict work)
         {
             return;
         }
-        Ike.n = PROTOCORE_IKE_X25519_LEN;
+        IkeV.n = PROTOCORE_IKE_X25519_LEN;
     }
     // Groups 19 and 14 are a later increment.
 }
@@ -1742,8 +1745,8 @@ static size_t ike_dh_compute(uint16_t group, const uint8_t *our_priv, size_t pri
 static void dh_compute(uint8_t *restrict work)
 {
     (void)work;
-    Ike.n = ike_dh_compute(Ike.ke.dh_group, Ike.ke.our_priv, Ike.ke.our_priv_len, Ike.ke.peer_pub, Ike.ke.peer_pub_len,
-                           Ike.out.buf, Ike.out.cap);
+    IkeV.n = ike_dh_compute(IkeV.ke.dh_group, IkeV.ke.our_priv, IkeV.ke.our_priv_len, IkeV.ke.peer_pub,
+                            IkeV.ke.peer_pub_len, IkeV.out.buf, IkeV.out.cap);
 }
 
 // ---------------------------------------------------------------------------
@@ -1762,36 +1765,36 @@ static proto_bool ike_auth_psk(uint8_t *work, const uint8_t *psk, size_t psk_len
     }
 
     uint8_t macid[PROTOCORE_IKE_AUTH_LEN];
-    HmacSha256.mac_args.key = sk_p;
-    HmacSha256.mac_args.key_len = sk_p_len;
-    HmacSha256.mac_args.data = id_body;
-    HmacSha256.mac_args.len = id_body_len;
-    HmacSha256.mac_args.out = macid;
+    HmacSha256V.mac_args.key = sk_p;
+    HmacSha256V.mac_args.key_len = sk_p_len;
+    HmacSha256V.mac_args.data = id_body;
+    HmacSha256V.mac_args.len = id_body_len;
+    HmacSha256V.mac_args.out = macid;
     HmacSha256.mac(work);
 
     uint8_t keypad[PROTOCORE_IKE_AUTH_LEN];
     static const char pad[] = PROTOCORE_IKE_PSK_PAD; // 17 characters, the NUL is not sent
-    HmacSha256.mac_args.key = psk;
-    HmacSha256.mac_args.key_len = psk_len;
-    HmacSha256.mac_args.data = (const uint8_t *)pad;
-    HmacSha256.mac_args.len = sizeof(pad) - 1;
-    HmacSha256.mac_args.out = keypad;
+    HmacSha256V.mac_args.key = psk;
+    HmacSha256V.mac_args.key_len = psk_len;
+    HmacSha256V.mac_args.data = (const uint8_t *)pad;
+    HmacSha256V.mac_args.len = sizeof(pad) - 1;
+    HmacSha256V.mac_args.out = keypad;
     HmacSha256.mac(work);
 
     // Streamed, so RealMessage is never copied again.
-    HmacSha256.key_args.key = keypad;
-    HmacSha256.key_args.key_len = sizeof(keypad);
+    HmacSha256V.key_args.key = keypad;
+    HmacSha256V.key_args.key_len = sizeof(keypad);
     HmacSha256.init(work);
-    HmacSha256.update_args.data = real_msg;
-    HmacSha256.update_args.len = real_len;
+    HmacSha256V.update_args.data = real_msg;
+    HmacSha256V.update_args.len = real_len;
     HmacSha256.update(work);
-    HmacSha256.update_args.data = peer_nonce;
-    HmacSha256.update_args.len = nonce_len;
+    HmacSha256V.update_args.data = peer_nonce;
+    HmacSha256V.update_args.len = nonce_len;
     HmacSha256.update(work);
-    HmacSha256.update_args.data = macid;
-    HmacSha256.update_args.len = sizeof(macid);
+    HmacSha256V.update_args.data = macid;
+    HmacSha256V.update_args.len = sizeof(macid);
     HmacSha256.update(work);
-    HmacSha256.final_args.out = out;
+    HmacSha256V.final_args.out = out;
     HmacSha256.final(work);
     return PROTO_TRUE;
 }
@@ -1799,10 +1802,10 @@ static proto_bool ike_auth_psk(uint8_t *work, const uint8_t *psk, size_t psk_len
 static void auth_psk(uint8_t *restrict work)
 {
     (void)work;
-    Ike.ok = Ike.out.cap >= PROTOCORE_IKE_AUTH_LEN &&
-             ike_auth_psk(Ike.work, Ike.auth.psk, Ike.auth.psk_len, Ike.auth.real_msg, Ike.auth.real_len,
-                          Ike.auth.peer_nonce, Ike.auth.peer_nonce_len, Ike.auth.sk_p, Ike.auth.sk_p_len,
-                          Ike.id.id_body, Ike.id.id_body_len, Ike.out.buf);
+    IkeV.ok = IkeV.out.cap >= PROTOCORE_IKE_AUTH_LEN &&
+              ike_auth_psk(IkeV.work, IkeV.auth.psk, IkeV.auth.psk_len, IkeV.auth.real_msg, IkeV.auth.real_len,
+                           IkeV.auth.peer_nonce, IkeV.auth.peer_nonce_len, IkeV.auth.sk_p, IkeV.auth.sk_p_len,
+                           IkeV.id.id_body, IkeV.id.id_body_len, IkeV.out.buf);
 }
 
 // SignedOctets = RealMessage | NonceData | MACedID, assembled whole because a signer hashes it whole.
@@ -1821,11 +1824,11 @@ static size_t ike_signed_octets(uint8_t *work, uint8_t *scratch, size_t cap, con
     }
     mem.cpy(scratch, real, real_len);
     mem.cpy(scratch + real_len, nonce, nonce_len);
-    HmacSha256.mac_args.key = sk_p;
-    HmacSha256.mac_args.key_len = sk_p_len;
-    HmacSha256.mac_args.data = id_body;
-    HmacSha256.mac_args.len = id_body_len;
-    HmacSha256.mac_args.out = scratch + real_len + nonce_len;
+    HmacSha256V.mac_args.key = sk_p;
+    HmacSha256V.mac_args.key_len = sk_p_len;
+    HmacSha256V.mac_args.data = id_body;
+    HmacSha256V.mac_args.len = id_body_len;
+    HmacSha256V.mac_args.out = scratch + real_len + nonce_len;
     HmacSha256.mac(work);
     return total;
 }
@@ -1833,83 +1836,83 @@ static size_t ike_signed_octets(uint8_t *work, uint8_t *scratch, size_t cap, con
 static void signed_octets(uint8_t *restrict work)
 {
     (void)work;
-    Ike.n = ike_signed_octets(Ike.work, Ike.auth.scratch, Ike.auth.scratch_cap, Ike.auth.real_msg, Ike.auth.real_len,
-                              Ike.auth.peer_nonce, Ike.auth.peer_nonce_len, Ike.auth.sk_p, Ike.auth.sk_p_len,
-                              Ike.id.id_body, Ike.id.id_body_len);
+    IkeV.n = ike_signed_octets(IkeV.work, IkeV.auth.scratch, IkeV.auth.scratch_cap, IkeV.auth.real_msg,
+                               IkeV.auth.real_len, IkeV.auth.peer_nonce, IkeV.auth.peer_nonce_len, IkeV.auth.sk_p,
+                               IkeV.auth.sk_p_len, IkeV.id.id_body, IkeV.id.id_body_len);
 }
 
 // The signer hashes the assembled octets with SHA-256 itself (RFC 7427 sec 3).
 static void auth_sign_ecdsa_p256(uint8_t *restrict work)
 {
     (void)work;
-    Ike.ok = PROTO_FALSE;
-    if (!Ike.out.buf || Ike.out.cap < PROTOCORE_IKE_ECDSA_P256_SIG_LEN || !Ike.auth.priv)
+    IkeV.ok = PROTO_FALSE;
+    if (!IkeV.out.buf || IkeV.out.cap < PROTOCORE_IKE_ECDSA_P256_SIG_LEN || !IkeV.auth.priv)
     {
         return;
     }
-    size_t n = ike_signed_octets(Ike.work, Ike.auth.scratch, Ike.auth.scratch_cap, Ike.auth.real_msg, Ike.auth.real_len,
-                                 Ike.auth.peer_nonce, Ike.auth.peer_nonce_len, Ike.auth.sk_p, Ike.auth.sk_p_len,
-                                 Ike.id.id_body, Ike.id.id_body_len);
+    size_t n = ike_signed_octets(IkeV.work, IkeV.auth.scratch, IkeV.auth.scratch_cap, IkeV.auth.real_msg,
+                                 IkeV.auth.real_len, IkeV.auth.peer_nonce, IkeV.auth.peer_nonce_len, IkeV.auth.sk_p,
+                                 IkeV.auth.sk_p_len, IkeV.id.id_body, IkeV.id.id_body_len);
     if (n == 0)
     {
         return;
     }
-    Ecdsa.sign_args.msg = Ike.auth.scratch;
-    Ecdsa.sign_args.mlen = n;
-    Ecdsa.sign_args.priv = Ike.auth.priv;
-    Ecdsa.sign_args.sig = Ike.out.buf;
-    Ecdsa.sign(Ike.work);
-    Ike.ok = Ecdsa.ok;
+    EcdsaV.sign_args.msg = IkeV.auth.scratch;
+    EcdsaV.sign_args.mlen = n;
+    EcdsaV.sign_args.priv = IkeV.auth.priv;
+    EcdsaV.sign_args.sig = IkeV.out.buf;
+    Ecdsa.sign(IkeV.work);
+    IkeV.ok = EcdsaV.ok;
 }
 
 static void auth_verify_ecdsa_p256(uint8_t *restrict work)
 {
     (void)work;
-    Ike.ok = PROTO_FALSE;
-    if (!Ike.auth.pub || !Ike.auth.sig)
+    IkeV.ok = PROTO_FALSE;
+    if (!IkeV.auth.pub || !IkeV.auth.sig)
     {
         return;
     }
-    size_t n = ike_signed_octets(Ike.work, Ike.auth.scratch, Ike.auth.scratch_cap, Ike.auth.real_msg, Ike.auth.real_len,
-                                 Ike.auth.peer_nonce, Ike.auth.peer_nonce_len, Ike.auth.sk_p, Ike.auth.sk_p_len,
-                                 Ike.id.id_body, Ike.id.id_body_len);
+    size_t n = ike_signed_octets(IkeV.work, IkeV.auth.scratch, IkeV.auth.scratch_cap, IkeV.auth.real_msg,
+                                 IkeV.auth.real_len, IkeV.auth.peer_nonce, IkeV.auth.peer_nonce_len, IkeV.auth.sk_p,
+                                 IkeV.auth.sk_p_len, IkeV.id.id_body, IkeV.id.id_body_len);
     if (n == 0)
     {
         return;
     }
-    Ecdsa.verify_args.pub = Ike.auth.pub;
-    Ecdsa.verify_args.msg = Ike.auth.scratch;
-    Ecdsa.verify_args.mlen = n;
-    Ecdsa.verify_args.sig = Ike.auth.sig;
-    Ecdsa.verify(Ike.work);
-    Ike.ok = Ecdsa.ok;
+    EcdsaV.verify_args.pub = IkeV.auth.pub;
+    EcdsaV.verify_args.msg = IkeV.auth.scratch;
+    EcdsaV.verify_args.mlen = n;
+    EcdsaV.verify_args.sig = IkeV.auth.sig;
+    Ecdsa.verify(IkeV.work);
+    IkeV.ok = EcdsaV.ok;
 }
 
 // Auth Method 1, RSA Digital Signature: RSASSA-PKCS1-v1_5 over the same octets (RFC 7296 sec 3.8).
 static void auth_verify_rsa_sha256(uint8_t *restrict work)
 {
     (void)work;
-    Ike.ok = PROTO_FALSE;
-    if (!Ike.auth.rsa_n || !Ike.auth.rsa_e || !Ike.auth.sig)
+    IkeV.ok = PROTO_FALSE;
+    if (!IkeV.auth.rsa_n || !IkeV.auth.rsa_e || !IkeV.auth.sig)
     {
         return;
     }
-    size_t n = ike_signed_octets(Ike.work, Ike.auth.scratch, Ike.auth.scratch_cap, Ike.auth.real_msg, Ike.auth.real_len,
-                                 Ike.auth.peer_nonce, Ike.auth.peer_nonce_len, Ike.auth.sk_p, Ike.auth.sk_p_len,
-                                 Ike.id.id_body, Ike.id.id_body_len);
+    size_t n = ike_signed_octets(IkeV.work, IkeV.auth.scratch, IkeV.auth.scratch_cap, IkeV.auth.real_msg,
+                                 IkeV.auth.real_len, IkeV.auth.peer_nonce, IkeV.auth.peer_nonce_len, IkeV.auth.sk_p,
+                                 IkeV.auth.sk_p_len, IkeV.id.id_body, IkeV.id.id_body_len);
     if (n == 0)
     {
         return;
     }
-    Rsa.verify_args.n = Ike.auth.rsa_n;
-    Rsa.verify_args.e = Ike.auth.rsa_e;
-    Rsa.verify_args.msg = Ike.auth.scratch;
-    Rsa.verify_args.msg_len = n;
-    Rsa.verify_args.sig = Ike.auth.sig;
-    Rsa.verify_args.sig_len = Ike.auth.sig_len;
-    Rsa.verify_args.hash = PROTOCORE_RSA_HASH_SHA256;
-    Rsa.verify(Ike.work);
-    Ike.ok = Rsa.ok;
+    RsaV.verify_args.n = IkeV.auth.rsa_n;
+    RsaV.verify_args.e = IkeV.auth.rsa_e;
+    RsaV.verify_args.msg = IkeV.auth.scratch;
+    RsaV.verify_args.msg_len = n;
+    RsaV.verify_args.sig = IkeV.auth.sig;
+    RsaV.verify_args.sig_len = IkeV.auth.sig_len;
+    RsaV.verify_args.hash = PROTOCORE_RSA_HASH_SHA256;
+    Rsa.verify(IkeV.work);
+    IkeV.ok = RsaV.ok;
 }
 
 // ---------------------------------------------------------------------------
@@ -1971,10 +1974,10 @@ static size_t ike_sa_init_build(uint8_t *buf, size_t cap, const uint8_t *init_sp
 static void sa_init_build(uint8_t *restrict work)
 {
     (void)work;
-    Ike.n = ike_sa_init_build(Ike.out.buf, Ike.out.cap, Ike.msg.init_spi, Ike.msg.resp_spi, Ike.msg.message_id,
-                              Ike.msg.is_response, Ike.prop.proposal_num, Ike.prop.transforms, Ike.prop.num_transforms,
-                              Ike.ke.dh_group, Ike.ke.our_pub, Ike.ke.our_pub_len, Ike.sess.our_nonce,
-                              Ike.sess.our_nonce_len);
+    IkeV.n = ike_sa_init_build(IkeV.out.buf, IkeV.out.cap, IkeV.msg.init_spi, IkeV.msg.resp_spi, IkeV.msg.message_id,
+                               IkeV.msg.is_response, IkeV.prop.proposal_num, IkeV.prop.transforms,
+                               IkeV.prop.num_transforms, IkeV.ke.dh_group, IkeV.ke.our_pub, IkeV.ke.our_pub_len,
+                               IkeV.sess.our_nonce, IkeV.sess.our_nonce_len);
 }
 
 // A Length that lies about the message fails closed.
@@ -2031,7 +2034,7 @@ static proto_bool ike_sa_init_parse(const uint8_t *msg, size_t len, IkeSaInitMsg
 static void sa_init_parse(uint8_t *restrict work)
 {
     (void)work;
-    Ike.ok = ike_sa_init_parse(Ike.wire.msg, Ike.wire.len, &Ike.sa_init);
+    IkeV.ok = ike_sa_init_parse(IkeV.wire.msg, IkeV.wire.len, &IkeV.sa_init);
 }
 
 // ---------------------------------------------------------------------------
@@ -2104,9 +2107,9 @@ static size_t ike_auth_msg_build(uint8_t *buf, size_t cap, const uint8_t *init_s
 static void auth_msg_build(uint8_t *restrict work)
 {
     (void)work;
-    Ike.n = ike_auth_msg_build(Ike.out.buf, Ike.out.cap, Ike.msg.init_spi, Ike.msg.resp_spi, Ike.msg.message_id,
-                               Ike.msg.is_response, Ike.msg.first_inner_type, Ike.msg.inner, Ike.msg.inner_len,
-                               Ike.sk.key, Ike.sk.salt, Ike.sk.iv);
+    IkeV.n = ike_auth_msg_build(IkeV.out.buf, IkeV.out.cap, IkeV.msg.init_spi, IkeV.msg.resp_spi, IkeV.msg.message_id,
+                                IkeV.msg.is_response, IkeV.msg.first_inner_type, IkeV.msg.inner, IkeV.msg.inner_len,
+                                IkeV.sk.key, IkeV.sk.salt, IkeV.sk.iv);
 }
 
 // Verify the ICV, decrypt in place, then strip Padding and Pad Length (sec 3.14).
@@ -2164,7 +2167,7 @@ static proto_bool ike_auth_msg_open(uint8_t *msg, size_t len, const uint8_t *key
 static void auth_msg_open(uint8_t *restrict work)
 {
     (void)work;
-    Ike.ok = ike_auth_msg_open(Ike.sk.msg, Ike.sk.msg_len, Ike.sk.key, Ike.sk.salt, &Ike.opened);
+    IkeV.ok = ike_auth_msg_open(IkeV.sk.msg, IkeV.sk.msg_len, IkeV.sk.key, IkeV.sk.salt, &IkeV.opened);
 }
 
 // ---------------------------------------------------------------------------
@@ -2199,9 +2202,9 @@ static proto_bool ike_sa_keys_from_init(IkeSa *sa, const uint8_t *our_dh_priv, s
 static void sa_keys_from_init(uint8_t *restrict work)
 {
     (void)work;
-    Ike.ok =
-        ike_sa_keys_from_init(Ike.sess.sa, Ike.ke.our_priv, Ike.ke.our_priv_len, Ike.ke.peer_pub, Ike.ke.peer_pub_len,
-                              Ike.keymat.ni, Ike.keymat.ni_len, Ike.keymat.nr, Ike.keymat.nr_len);
+    IkeV.ok = ike_sa_keys_from_init(IkeV.sess.sa, IkeV.ke.our_priv, IkeV.ke.our_priv_len, IkeV.ke.peer_pub,
+                                    IkeV.ke.peer_pub_len, IkeV.keymat.ni, IkeV.keymat.ni_len, IkeV.keymat.nr,
+                                    IkeV.keymat.nr_len);
 }
 
 // ---------------------------------------------------------------------------
@@ -2213,16 +2216,16 @@ static void sa_keys_from_init(uint8_t *restrict work)
 static void initiator_start(uint8_t *restrict work)
 {
     (void)work;
-    IkeHandshake *hs = Ike.sess.hs;
-    const uint8_t *our_spi = Ike.sess.our_spi;
-    const uint8_t *our_dh_priv = Ike.ke.our_priv;
-    const uint8_t *our_dh_pub = Ike.ke.our_pub;
-    const uint8_t *our_nonce = Ike.sess.our_nonce;
-    size_t nonce_len = Ike.sess.our_nonce_len;
-    const IkeSuite *suite = Ike.keymat.suite;
-    Ike.n = 0;
-    if (!hs || !our_spi || !our_dh_priv || !our_dh_pub || !our_nonce || !suite || !Ike.prop.transforms ||
-        Ike.prop.num_transforms == 0)
+    IkeHandshake *hs = IkeV.sess.hs;
+    const uint8_t *our_spi = IkeV.sess.our_spi;
+    const uint8_t *our_dh_priv = IkeV.ke.our_priv;
+    const uint8_t *our_dh_pub = IkeV.ke.our_pub;
+    const uint8_t *our_nonce = IkeV.sess.our_nonce;
+    size_t nonce_len = IkeV.sess.our_nonce_len;
+    const IkeSuite *suite = IkeV.keymat.suite;
+    IkeV.n = 0;
+    if (!hs || !our_spi || !our_dh_priv || !our_dh_pub || !our_nonce || !suite || !IkeV.prop.transforms ||
+        IkeV.prop.num_transforms == 0)
     {
         return;
     }
@@ -2240,28 +2243,28 @@ static void initiator_start(uint8_t *restrict work)
     hs->our_nonce_len = (uint16_t)nonce_len;
 
     uint8_t zero_spi[PROTOCORE_IKE_SPI_LEN] = {0};
-    size_t n = ike_sa_init_build(Ike.out.buf, Ike.out.cap, our_spi, zero_spi, 0, PROTO_FALSE, 1, Ike.prop.transforms,
-                                 Ike.prop.num_transforms, suite->dh, our_dh_pub, PROTOCORE_IKE_X25519_LEN, our_nonce,
+    size_t n = ike_sa_init_build(IkeV.out.buf, IkeV.out.cap, our_spi, zero_spi, 0, PROTO_FALSE, 1, IkeV.prop.transforms,
+                                 IkeV.prop.num_transforms, suite->dh, our_dh_pub, PROTOCORE_IKE_X25519_LEN, our_nonce,
                                  nonce_len);
     if (n == 0 || n > PROTOCORE_IKE_MSG_MAX) // RealMessage1 has to fit the stored copy (sec 2.15)
     {
         hs->state = IKE_ST_FAILED;
         return;
     }
-    mem.cpy(hs->init_msg, Ike.out.buf, n);
+    mem.cpy(hs->init_msg, IkeV.out.buf, n);
     hs->init_msg_len = (uint16_t)n;
     hs->state = IKE_ST_SA_INIT_SENT;
-    Ike.n = n;
+    IkeV.n = n;
 }
 
 // The response must carry the R flag, echo our Initiator's SPI, and offer the group we proposed.
 static void initiator_on_sa_init(uint8_t *restrict work)
 {
     (void)work;
-    IkeHandshake *hs = Ike.sess.hs;
-    const uint8_t *resp = Ike.wire.msg;
-    size_t resp_len = Ike.wire.len;
-    Ike.ok = PROTO_FALSE;
+    IkeHandshake *hs = IkeV.sess.hs;
+    const uint8_t *resp = IkeV.wire.msg;
+    size_t resp_len = IkeV.wire.len;
+    IkeV.ok = PROTO_FALSE;
     if (!hs || !resp || hs->state != IKE_ST_SA_INIT_SENT)
     {
         return;
@@ -2307,7 +2310,7 @@ static void initiator_on_sa_init(uint8_t *restrict work)
         return;
     }
     hs->state = IKE_ST_SA_INIT_DONE;
-    Ike.ok = PROTO_TRUE;
+    IkeV.ok = PROTO_TRUE;
 }
 
 // Compare an AUTH value without an early out.
@@ -2363,13 +2366,13 @@ static proto_bool ike_find_id_auth(IkePayloadType first, const uint8_t *inner, s
 static void initiator_build_auth_psk(uint8_t *restrict work)
 {
     (void)work;
-    IkeHandshake *hs = Ike.sess.hs;
-    const uint8_t *idi_data = Ike.pl.data;
-    size_t idi_len = Ike.pl.data_len;
-    const uint8_t *psk = Ike.auth.psk;
-    const uint8_t *iv = Ike.sk.iv;
-    Ike.n = 0;
-    if (!hs || !idi_data || !psk || !iv || !Ike.out.buf)
+    IkeHandshake *hs = IkeV.sess.hs;
+    const uint8_t *idi_data = IkeV.pl.data;
+    size_t idi_len = IkeV.pl.data_len;
+    const uint8_t *psk = IkeV.auth.psk;
+    const uint8_t *iv = IkeV.sk.iv;
+    IkeV.n = 0;
+    if (!hs || !idi_data || !psk || !iv || !IkeV.out.buf)
     {
         return;
     }
@@ -2379,7 +2382,7 @@ static void initiator_build_auth_psk(uint8_t *restrict work)
     }
 
     uint8_t inner[PROTOCORE_IKE_MSG_MAX];
-    size_t idn = ike_id_build(inner, sizeof(inner), IKE_PL_AUTH, Ike.id.id_type, idi_data, idi_len);
+    size_t idn = ike_id_build(inner, sizeof(inner), IKE_PL_AUTH, IkeV.id.id_type, idi_data, idi_len);
     if (idn == 0)
     {
         return;
@@ -2388,7 +2391,7 @@ static void initiator_build_auth_psk(uint8_t *restrict work)
     const uint8_t *idi_body = inner + PROTOCORE_IKE_PAYLOAD_HDR_LEN;
     size_t idi_body_len = idn - PROTOCORE_IKE_PAYLOAD_HDR_LEN;
     uint8_t auth[PROTOCORE_IKE_AUTH_LEN];
-    if (!ike_auth_psk(hs->sa.work, psk, Ike.auth.psk_len, hs->init_msg, hs->init_msg_len, hs->peer_nonce,
+    if (!ike_auth_psk(hs->sa.work, psk, IkeV.auth.psk_len, hs->init_msg, hs->init_msg_len, hs->peer_nonce,
                       hs->peer_nonce_len, hs->sa.keys.sk_pi, hs->sa.keys.sk_p_len, idi_body, idi_body_len, auth))
     {
         return;
@@ -2400,25 +2403,25 @@ static void initiator_build_auth_psk(uint8_t *restrict work)
     }
 
     size_t n =
-        ike_auth_msg_build(Ike.out.buf, Ike.out.cap, hs->sa.init_spi, hs->sa.resp_spi, 1, PROTO_FALSE, IKE_PL_IDI,
+        ike_auth_msg_build(IkeV.out.buf, IkeV.out.cap, hs->sa.init_spi, hs->sa.resp_spi, 1, PROTO_FALSE, IKE_PL_IDI,
                            inner, idn + an, hs->sa.keys.sk_ei, hs->sa.keys.sk_ei + PROTOCORE_IKE_AEAD_KEY_LEN, iv);
     if (n == 0)
     {
         return;
     }
     hs->state = IKE_ST_AUTH_SENT;
-    Ike.n = n;
+    IkeV.n = n;
 }
 
 // The responder's AUTH covers RealMessage2 | NonceIData | prf(SK_pr, RestOfRespIDPayload) (sec 2.15).
 static void initiator_on_auth_psk(uint8_t *restrict work)
 {
     (void)work;
-    IkeHandshake *hs = Ike.sess.hs;
-    const uint8_t *resp = Ike.wire.msg;
-    size_t resp_len = Ike.wire.len;
-    const uint8_t *psk = Ike.auth.psk;
-    Ike.ok = PROTO_FALSE;
+    IkeHandshake *hs = IkeV.sess.hs;
+    const uint8_t *resp = IkeV.wire.msg;
+    size_t resp_len = IkeV.wire.len;
+    const uint8_t *psk = IkeV.auth.psk;
+    IkeV.ok = PROTO_FALSE;
     if (!hs || !resp || !psk || hs->state != IKE_ST_AUTH_SENT)
     {
         return;
@@ -2445,7 +2448,7 @@ static void initiator_on_auth_psk(uint8_t *restrict work)
     }
 
     uint8_t expect[PROTOCORE_IKE_AUTH_LEN];
-    if (!ike_auth_psk(hs->sa.work, psk, Ike.auth.psk_len, hs->resp_msg, hs->resp_msg_len, hs->our_nonce,
+    if (!ike_auth_psk(hs->sa.work, psk, IkeV.auth.psk_len, hs->resp_msg, hs->resp_msg_len, hs->our_nonce,
                       hs->our_nonce_len, hs->sa.keys.sk_pr, hs->sa.keys.sk_p_len, idr_body, idr_body_len, expect) ||
         !ike_ct_eq32(expect, authdata))
     {
@@ -2454,7 +2457,7 @@ static void initiator_on_auth_psk(uint8_t *restrict work)
     }
 
     hs->state = IKE_ST_ESTABLISHED;
-    Ike.ok = PROTO_TRUE;
+    IkeV.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -2466,18 +2469,18 @@ static void initiator_on_auth_psk(uint8_t *restrict work)
 static void responder_on_sa_init(uint8_t *restrict work)
 {
     (void)work;
-    IkeHandshake *hs = Ike.sess.hs;
-    const uint8_t *req = Ike.wire.msg;
-    size_t req_len = Ike.wire.len;
-    const uint8_t *our_spi = Ike.sess.our_spi;
-    const uint8_t *our_dh_priv = Ike.ke.our_priv;
-    const uint8_t *our_dh_pub = Ike.ke.our_pub;
-    const uint8_t *our_nonce = Ike.sess.our_nonce;
-    size_t nonce_len = Ike.sess.our_nonce_len;
-    const IkeSuite *suite = Ike.keymat.suite;
-    Ike.n = 0;
-    if (!hs || !req || !our_spi || !our_dh_priv || !our_dh_pub || !our_nonce || !suite || !Ike.prop.transforms ||
-        Ike.prop.num_transforms == 0)
+    IkeHandshake *hs = IkeV.sess.hs;
+    const uint8_t *req = IkeV.wire.msg;
+    size_t req_len = IkeV.wire.len;
+    const uint8_t *our_spi = IkeV.sess.our_spi;
+    const uint8_t *our_dh_priv = IkeV.ke.our_priv;
+    const uint8_t *our_dh_pub = IkeV.ke.our_pub;
+    const uint8_t *our_nonce = IkeV.sess.our_nonce;
+    size_t nonce_len = IkeV.sess.our_nonce_len;
+    const IkeSuite *suite = IkeV.keymat.suite;
+    IkeV.n = 0;
+    if (!hs || !req || !our_spi || !our_dh_priv || !our_dh_pub || !our_nonce || !suite || !IkeV.prop.transforms ||
+        IkeV.prop.num_transforms == 0)
     {
         return;
     }
@@ -2510,15 +2513,15 @@ static void responder_on_sa_init(uint8_t *restrict work)
     mem.cpy(hs->init_msg, req, req_len);
     hs->init_msg_len = (uint16_t)req_len;
 
-    size_t n = ike_sa_init_build(Ike.out.buf, Ike.out.cap, m.init_spi, our_spi, 0, PROTO_TRUE, 1, Ike.prop.transforms,
-                                 Ike.prop.num_transforms, suite->dh, our_dh_pub, PROTOCORE_IKE_X25519_LEN, our_nonce,
-                                 nonce_len);
+    size_t n = ike_sa_init_build(IkeV.out.buf, IkeV.out.cap, m.init_spi, our_spi, 0, PROTO_TRUE, 1,
+                                 IkeV.prop.transforms, IkeV.prop.num_transforms, suite->dh, our_dh_pub,
+                                 PROTOCORE_IKE_X25519_LEN, our_nonce, nonce_len);
     if (n == 0 || n > PROTOCORE_IKE_MSG_MAX)
     {
         hs->state = IKE_ST_FAILED;
         return;
     }
-    mem.cpy(hs->resp_msg, Ike.out.buf, n);
+    mem.cpy(hs->resp_msg, IkeV.out.buf, n);
     hs->resp_msg_len = (uint16_t)n;
 
     // For the responder Ni is the peer's and Nr is ours.
@@ -2529,23 +2532,23 @@ static void responder_on_sa_init(uint8_t *restrict work)
         return;
     }
     hs->state = IKE_ST_SA_INIT_DONE;
-    Ike.n = n;
+    IkeV.n = n;
 }
 
 // Verify SK{ IDi, AUTH } keyed by SK_ei, then emit SK{ IDr, AUTH } keyed by SK_er (sec 2.14, 2.15).
 static void responder_on_auth_psk(uint8_t *restrict work)
 {
     (void)work;
-    IkeHandshake *hs = Ike.sess.hs;
-    const uint8_t *req = Ike.wire.msg;
-    size_t req_len = Ike.wire.len;
-    const uint8_t *psk = Ike.auth.psk;
-    size_t psk_len = Ike.auth.psk_len;
-    const uint8_t *idr_data = Ike.pl.data;
-    size_t idr_len = Ike.pl.data_len;
-    const uint8_t *iv = Ike.sk.iv;
-    Ike.n = 0;
-    if (!hs || !req || !psk || !idr_data || !iv || !Ike.out.buf)
+    IkeHandshake *hs = IkeV.sess.hs;
+    const uint8_t *req = IkeV.wire.msg;
+    size_t req_len = IkeV.wire.len;
+    const uint8_t *psk = IkeV.auth.psk;
+    size_t psk_len = IkeV.auth.psk_len;
+    const uint8_t *idr_data = IkeV.pl.data;
+    size_t idr_len = IkeV.pl.data_len;
+    const uint8_t *iv = IkeV.sk.iv;
+    IkeV.n = 0;
+    if (!hs || !req || !psk || !idr_data || !iv || !IkeV.out.buf)
     {
         return;
     }
@@ -2584,7 +2587,7 @@ static void responder_on_auth_psk(uint8_t *restrict work)
 
     // Ours covers RealMessage2 | NonceIData | prf(SK_pr, RestOfRespIDPayload).
     uint8_t rinner[PROTOCORE_IKE_MSG_MAX];
-    size_t ridn = ike_id_build(rinner, sizeof(rinner), IKE_PL_AUTH, Ike.id.id_type, idr_data, idr_len);
+    size_t ridn = ike_id_build(rinner, sizeof(rinner), IKE_PL_AUTH, IkeV.id.id_type, idr_data, idr_len);
     if (ridn == 0)
     {
         hs->state = IKE_ST_FAILED;
@@ -2605,7 +2608,7 @@ static void responder_on_auth_psk(uint8_t *restrict work)
         return;
     }
     size_t n =
-        ike_auth_msg_build(Ike.out.buf, Ike.out.cap, hs->sa.init_spi, hs->sa.resp_spi, 1, PROTO_TRUE, IKE_PL_IDR,
+        ike_auth_msg_build(IkeV.out.buf, IkeV.out.cap, hs->sa.init_spi, hs->sa.resp_spi, 1, PROTO_TRUE, IKE_PL_IDR,
                            rinner, ridn + ran, hs->sa.keys.sk_er, hs->sa.keys.sk_er + PROTOCORE_IKE_AEAD_KEY_LEN, iv);
     if (n == 0)
     {
@@ -2613,7 +2616,7 @@ static void responder_on_auth_psk(uint8_t *restrict work)
         return;
     }
     hs->state = IKE_ST_ESTABLISHED;
-    Ike.n = n;
+    IkeV.n = n;
 }
 
 // ---------------------------------------------------------------------------
@@ -2641,101 +2644,35 @@ static size_t ike_sk_send_build(const IkeSa *sa, proto_bool is_response, uint32_
 static void informational_build(uint8_t *restrict work)
 {
     (void)work;
-    Ike.n = ike_sk_send_build(Ike.sess.sa, Ike.msg.is_response, Ike.msg.message_id, IKE_INFORMATIONAL,
-                              Ike.msg.first_inner_type, Ike.msg.inner, Ike.msg.inner_len, Ike.sk.iv, Ike.out.buf,
-                              Ike.out.cap);
+    IkeV.n = ike_sk_send_build(IkeV.sess.sa, IkeV.msg.is_response, IkeV.msg.message_id, IKE_INFORMATIONAL,
+                               IkeV.msg.first_inner_type, IkeV.msg.inner, IkeV.msg.inner_len, IkeV.sk.iv, IkeV.out.buf,
+                               IkeV.out.cap);
 }
 
 static void create_child_sa_build(uint8_t *restrict work)
 {
     (void)work;
-    Ike.n = ike_sk_send_build(Ike.sess.sa, Ike.msg.is_response, Ike.msg.message_id, IKE_CREATE_CHILD_SA,
-                              Ike.msg.first_inner_type, Ike.msg.inner, Ike.msg.inner_len, Ike.sk.iv, Ike.out.buf,
-                              Ike.out.cap);
+    IkeV.n = ike_sk_send_build(IkeV.sess.sa, IkeV.msg.is_response, IkeV.msg.message_id, IKE_CREATE_CHILD_SA,
+                               IkeV.msg.first_inner_type, IkeV.msg.inner, IkeV.msg.inner_len, IkeV.sk.iv, IkeV.out.buf,
+                               IkeV.out.cap);
 }
 
 // The ingress key is the peer's egress key: SK_er when the peer is the responder, SK_ei otherwise.
 static void informational_open(uint8_t *restrict work)
 {
     (void)work;
-    const IkeSa *sa = Ike.sess.sa;
-    Ike.ok = PROTO_FALSE;
+    const IkeSa *sa = IkeV.sess.sa;
+    IkeV.ok = PROTO_FALSE;
     if (!sa)
     {
         return;
     }
     const uint8_t *key = sa->is_initiator ? sa->keys.sk_er : sa->keys.sk_ei;
-    Ike.ok = ike_auth_msg_open(Ike.sk.msg, Ike.sk.msg_len, key, key + PROTOCORE_IKE_AEAD_KEY_LEN, &Ike.opened);
+    IkeV.ok = ike_auth_msg_open(IkeV.sk.msg, IkeV.sk.msg_len, key, key + PROTOCORE_IKE_AEAD_KEY_LEN, &IkeV.opened);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-IkeNs Ike = {.hdr_build = hdr_build,
-             .hdr_parse = hdr_parse,
-             .set_length = set_length,
-             .payload_iter_init = payload_iter_init,
-             .payload_next = payload_next,
-             .payload_build = payload_build,
-             .sa_build = sa_build,
-             .ke_build = ke_build,
-             .nonce_build = nonce_build,
-             .id_build = id_build,
-             .auth_build = auth_build,
-             .cert_build = cert_build,
-             .notify_build = notify_build,
-             .delete_build = delete_build,
-             .ts_build = ts_build,
-             .cp_build = cp_build,
-             .sk_build = sk_build,
-             .skf_build = skf_build,
-             .skf_parse = skf_parse,
-             .frag_reasm_init = frag_reasm_init,
-             .frag_reasm_add = frag_reasm_add,
-             .frag_reasm_complete = frag_reasm_complete,
-             .frag_reasm_assemble = frag_reasm_assemble,
-             .cookie_compute = cookie_compute,
-             .cookie_verify = cookie_verify,
-             .cookie_notify_build = cookie_notify_build,
-             .ke_parse = ke_parse,
-             .id_parse = id_parse,
-             .auth_parse = auth_parse,
-             .notify_parse = notify_parse,
-             .delete_parse = delete_parse,
-             .sk_parse = sk_parse,
-             .sa_first_proposal = sa_first_proposal,
-             .transform_iter_init = transform_iter_init,
-             .transform_next = transform_next,
-             .ts_count = ts_count,
-             .ts_get = ts_get,
-             .cp_parse = cp_parse,
-             .cp_attr_iter_init = cp_attr_iter_init,
-             .cp_attr_next = cp_attr_next,
-             .prf_plus = prf_plus,
-             .derive_keys = derive_keys,
-             .rekey_derive_keys = rekey_derive_keys,
-             .child_keymat = child_keymat,
-             .suite_keylengths = suite_keylengths,
-             .sa_keys_from_init = sa_keys_from_init,
-             .sk_aead_seal = sk_aead_seal,
-             .sk_aead_open = sk_aead_open,
-             .dh_public = dh_public,
-             .dh_compute = dh_compute,
-             .auth_psk = auth_psk,
-             .signed_octets = signed_octets,
-             .auth_sign_ecdsa_p256 = auth_sign_ecdsa_p256,
-             .auth_verify_ecdsa_p256 = auth_verify_ecdsa_p256,
-             .auth_verify_rsa_sha256 = auth_verify_rsa_sha256,
-             .sa_init_build = sa_init_build,
-             .sa_init_parse = sa_init_parse,
-             .auth_msg_build = auth_msg_build,
-             .auth_msg_open = auth_msg_open,
-             .initiator_start = initiator_start,
-             .initiator_on_sa_init = initiator_on_sa_init,
-             .initiator_build_auth_psk = initiator_build_auth_psk,
-             .initiator_on_auth_psk = initiator_on_auth_psk,
-             .responder_on_sa_init = responder_on_sa_init,
-             .responder_on_auth_psk = responder_on_auth_psk,
-             .informational_build = informational_build,
-             .informational_open = informational_open,
-             .create_child_sa_build = create_child_sa_build};
+/** @brief The operands and the outcome. */
+IkeVars IkeV;
 
 #endif // PROTOCORE_ENABLE_IKEV2

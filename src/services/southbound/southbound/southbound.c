@@ -7,8 +7,8 @@
  */
 
 #include "services/southbound/southbound/southbound.h"
-#include "mmgr/protostr/protostr.h" // str.eq: the driver registry name lookup
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/protostr/protostr.h"   // str.eq: the driver registry name lookup
 
 #if PROTOCORE_ENABLE_SOUTHBOUND
 
@@ -88,24 +88,24 @@ static const SouthboundDriver *lookup(const struct SouthboundStorage *store, con
 // Append a borrowed driver to the table.
 static void add(uint8_t *restrict work)
 {
-    const SouthboundDriver *drv = Southbound.drv;
+    const SouthboundDriver *drv = SouthboundV.drv;
     if (!drv || !drv->name)
     {
-        Southbound.i32 = SB_ERR_ARG;
+        SouthboundV.i32 = SB_ERR_ARG;
         return;
     }
     if (lookup(SOUTHBOUND_CTX(work), drv->name))
     {
-        Southbound.i32 = SB_ERR_DUP;
+        SouthboundV.i32 = SB_ERR_DUP;
         return;
     }
     if (SOUTHBOUND_CTX(work)->count >= PROTOCORE_SOUTHBOUND_MAX_DRIVERS)
     {
-        Southbound.i32 = SB_ERR_FULL;
+        SouthboundV.i32 = SB_ERR_FULL;
         return;
     }
     SOUTHBOUND_CTX(work)->drivers[SOUTHBOUND_CTX(work)->count++] = drv;
-    Southbound.i32 = SB_OK;
+    SouthboundV.i32 = SB_OK;
 }
 
 // Empty the table and its count together.
@@ -120,105 +120,99 @@ static void clear(uint8_t *restrict work)
 
 static void count(uint8_t *restrict work)
 {
-    Southbound.n = SOUTHBOUND_CTX(work)->count;
+    SouthboundV.n = SOUTHBOUND_CTX(work)->count;
 }
 
 static void find(uint8_t *restrict work)
 {
-    Southbound.driver = lookup(SOUTHBOUND_CTX(work), Southbound.name);
+    SouthboundV.driver = lookup(SOUTHBOUND_CTX(work), SouthboundV.name);
 }
 
 // Read one point through the named driver's read callback.
 static void read(uint8_t *restrict work)
 {
-    if (!Southbound.point.value_out)
+    if (!SouthboundV.point.value_out)
     {
-        Southbound.i32 = SB_ERR_ARG;
+        SouthboundV.i32 = SB_ERR_ARG;
         return;
     }
-    const SouthboundDriver *d = lookup(SOUTHBOUND_CTX(work), Southbound.name);
+    const SouthboundDriver *d = lookup(SOUTHBOUND_CTX(work), SouthboundV.name);
     if (!d)
     {
-        Southbound.i32 = SB_ERR_NOT_FOUND;
+        SouthboundV.i32 = SB_ERR_NOT_FOUND;
         return;
     }
     if (!d->read)
     {
-        Southbound.i32 = SB_ERR_UNSUPPORTED;
+        SouthboundV.i32 = SB_ERR_UNSUPPORTED;
         return;
     }
-    Southbound.i32 = d->read(d->ctx, Southbound.point.point, Southbound.point.value_out);
+    SouthboundV.i32 = d->read(d->ctx, SouthboundV.point.point, SouthboundV.point.value_out);
 }
 
 // Write one point through the named driver's write callback.
 static void write(uint8_t *restrict work)
 {
-    const SouthboundDriver *d = lookup(SOUTHBOUND_CTX(work), Southbound.name);
+    const SouthboundDriver *d = lookup(SOUTHBOUND_CTX(work), SouthboundV.name);
     if (!d)
     {
-        Southbound.i32 = SB_ERR_NOT_FOUND;
+        SouthboundV.i32 = SB_ERR_NOT_FOUND;
         return;
     }
     if (!d->write)
     {
-        Southbound.i32 = SB_ERR_UNSUPPORTED;
+        SouthboundV.i32 = SB_ERR_UNSUPPORTED;
         return;
     }
-    Southbound.i32 = d->write(d->ctx, Southbound.point.point, Southbound.point.value);
+    SouthboundV.i32 = d->write(d->ctx, SouthboundV.point.point, SouthboundV.point.value);
 }
 
 // Read a contiguous span of points in one driver call.
 static void read_block(uint8_t *restrict work)
 {
-    if (!Southbound.block.out || Southbound.block.n == 0)
+    if (!SouthboundV.block.out || SouthboundV.block.n == 0)
     {
-        Southbound.i32 = SB_ERR_ARG;
+        SouthboundV.i32 = SB_ERR_ARG;
         return;
     }
-    const SouthboundDriver *d = lookup(SOUTHBOUND_CTX(work), Southbound.name);
+    const SouthboundDriver *d = lookup(SOUTHBOUND_CTX(work), SouthboundV.name);
     if (!d)
     {
-        Southbound.i32 = SB_ERR_NOT_FOUND;
+        SouthboundV.i32 = SB_ERR_NOT_FOUND;
         return;
     }
     if (!d->read_block)
     {
-        Southbound.i32 = SB_ERR_UNSUPPORTED;
+        SouthboundV.i32 = SB_ERR_UNSUPPORTED;
         return;
     }
-    Southbound.i32 = d->read_block(d->ctx, Southbound.block.first, Southbound.block.out, Southbound.block.n);
+    SouthboundV.i32 = d->read_block(d->ctx, SouthboundV.block.first, SouthboundV.block.out, SouthboundV.block.n);
 }
 
 // Write a contiguous span of points in one driver call.
 static void write_block(uint8_t *restrict work)
 {
-    if (!Southbound.block.in || Southbound.block.n == 0)
+    if (!SouthboundV.block.in || SouthboundV.block.n == 0)
     {
-        Southbound.i32 = SB_ERR_ARG;
+        SouthboundV.i32 = SB_ERR_ARG;
         return;
     }
-    const SouthboundDriver *d = lookup(SOUTHBOUND_CTX(work), Southbound.name);
+    const SouthboundDriver *d = lookup(SOUTHBOUND_CTX(work), SouthboundV.name);
     if (!d)
     {
-        Southbound.i32 = SB_ERR_NOT_FOUND;
+        SouthboundV.i32 = SB_ERR_NOT_FOUND;
         return;
     }
     if (!d->write_block)
     {
-        Southbound.i32 = SB_ERR_UNSUPPORTED;
+        SouthboundV.i32 = SB_ERR_UNSUPPORTED;
         return;
     }
-    Southbound.i32 = d->write_block(d->ctx, Southbound.block.first, Southbound.block.in, Southbound.block.n);
+    SouthboundV.i32 = d->write_block(d->ctx, SouthboundV.block.first, SouthboundV.block.in, SouthboundV.block.n);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-SouthboundNs Southbound = {.add = add,
-                           .clear = clear,
-                           .count = count,
-                           .find = find,
-                           .read = read,
-                           .write = write,
-                           .read_block = read_block,
-                           .write_block = write_block};
+/** @brief The operands and the outcome. */
+SouthboundVars SouthboundV;
 
 #endif // PROTOCORE_ENABLE_SOUTHBOUND

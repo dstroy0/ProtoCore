@@ -32,25 +32,25 @@ int main(void)
     // A DCP Identify response naming the station "et200sp" (a NameOfStation block).
     const char *name = "et200sp";
     uint8_t blocks[64];
-    Profinet.dcp_block_args.option = PN_DCP_OPT_DEVICE;
-    Profinet.dcp_block_args.suboption = PN_DCP_SUB_DEV_NAME_OF_STATION;
-    Profinet.dcp_block_args.value = (const uint8_t *)name;
-    Profinet.dcp_block_args.value_len = strlen(name);
-    Profinet.dcp_block_args.out = blocks;
-    Profinet.dcp_block_args.cap = sizeof(blocks);
+    ProfinetV.dcp_block_args.option = PN_DCP_OPT_DEVICE;
+    ProfinetV.dcp_block_args.suboption = PN_DCP_SUB_DEV_NAME_OF_STATION;
+    ProfinetV.dcp_block_args.value = (const uint8_t *)name;
+    ProfinetV.dcp_block_args.value_len = strlen(name);
+    ProfinetV.dcp_block_args.out = blocks;
+    ProfinetV.dcp_block_args.cap = sizeof(blocks);
     Profinet.dcp_block(profinet_work);
-    size_t blen = Profinet.n;
+    size_t blen = ProfinetV.n;
     uint8_t hdr[16];
-    Profinet.dcp_header_args.frame_id = PN_FRAMEID_DCP_IDENT_RES;
-    Profinet.dcp_header_args.service_id = PN_DCP_SERVICE_IDENTIFY;
-    Profinet.dcp_header_args.service_type = PN_DCP_TYPE_RESPONSE_SUCCESS;
-    Profinet.dcp_header_args.xid = 0x12345678u;
-    Profinet.dcp_header_args.response_delay = 0;
-    Profinet.dcp_header_args.data_length = (uint16_t)blen;
-    Profinet.dcp_header_args.out = hdr;
-    Profinet.dcp_header_args.cap = sizeof(hdr);
+    ProfinetV.dcp_header_args.frame_id = PN_FRAMEID_DCP_IDENT_RES;
+    ProfinetV.dcp_header_args.service_id = PN_DCP_SERVICE_IDENTIFY;
+    ProfinetV.dcp_header_args.service_type = PN_DCP_TYPE_RESPONSE_SUCCESS;
+    ProfinetV.dcp_header_args.xid = 0x12345678u;
+    ProfinetV.dcp_header_args.response_delay = 0;
+    ProfinetV.dcp_header_args.data_length = (uint16_t)blen;
+    ProfinetV.dcp_header_args.out = hdr;
+    ProfinetV.dcp_header_args.cap = sizeof(hdr);
     Profinet.dcp_header(profinet_work);
-    size_t hlen = Profinet.n;
+    size_t hlen = ProfinetV.n;
 
     hbench_header();
 
@@ -59,16 +59,16 @@ int main(void)
         uint8_t buf[16];
         volatile size_t sink = 0;
         double ns = 0.0;
-        Profinet.dcp_header_args.frame_id = PN_FRAMEID_DCP_IDENT_RES;
-        Profinet.dcp_header_args.service_id = PN_DCP_SERVICE_IDENTIFY;
-        Profinet.dcp_header_args.service_type = PN_DCP_TYPE_RESPONSE_SUCCESS;
-        Profinet.dcp_header_args.xid = 0x12345678u;
-        Profinet.dcp_header_args.response_delay = 0;
-        Profinet.dcp_header_args.data_length = (uint16_t)blen;
-        Profinet.dcp_header_args.out = buf;
-        Profinet.dcp_header_args.cap = sizeof(buf);
+        ProfinetV.dcp_header_args.frame_id = PN_FRAMEID_DCP_IDENT_RES;
+        ProfinetV.dcp_header_args.service_id = PN_DCP_SERVICE_IDENTIFY;
+        ProfinetV.dcp_header_args.service_type = PN_DCP_TYPE_RESPONSE_SUCCESS;
+        ProfinetV.dcp_header_args.xid = 0x12345678u;
+        ProfinetV.dcp_header_args.response_delay = 0;
+        ProfinetV.dcp_header_args.data_length = (uint16_t)blen;
+        ProfinetV.dcp_header_args.out = buf;
+        ProfinetV.dcp_header_args.cap = sizeof(buf);
         Profinet.dcp_header(profinet_work);
-        HBENCH_NS(5000000, sink += Profinet.n, ns);
+        HBENCH_NS(5000000, sink += ProfinetV.n, ns);
         hbench_row("profinet", "dcp_header (build)", ns, (double)hlen);
         (void)sink;
     }
@@ -81,11 +81,11 @@ int main(void)
             10000000,
             {
                 PnDcpHeader out;
-                Profinet.dcp_parse_header_args.frame = hdr;
-                Profinet.dcp_parse_header_args.len = hlen;
-                Profinet.dcp_parse_header_args.out = &out;
+                ProfinetV.dcp_parse_header_args.frame = hdr;
+                ProfinetV.dcp_parse_header_args.len = hlen;
+                ProfinetV.dcp_parse_header_args.out = &out;
                 Profinet.dcp_parse_header(profinet_work);
-                if (Profinet.ok)
+                if (ProfinetV.ok)
                 {
                     sink += out.data_length + out.xid;
                 }
@@ -104,12 +104,12 @@ int main(void)
             10000000,
             {
                 size_t acc = 0;
-                Profinet.dcp_walk_args.blocks = blocks;
-                Profinet.dcp_walk_args.len = blen;
-                Profinet.dcp_walk_args.cb = walk_cb;
-                Profinet.dcp_walk_args.arg = &acc;
+                ProfinetV.dcp_walk_args.blocks = blocks;
+                ProfinetV.dcp_walk_args.len = blen;
+                ProfinetV.dcp_walk_args.cb = walk_cb;
+                ProfinetV.dcp_walk_args.arg = &acc;
                 Profinet.dcp_walk(profinet_work);
-                if (Profinet.ok)
+                if (ProfinetV.ok)
                 {
                     sink += acc;
                 }

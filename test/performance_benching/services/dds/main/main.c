@@ -46,61 +46,61 @@ void dbench_run(void)
 
     // A full RTPS message: header + INFO_TS (8B, LE) + DATA (4B, LE) - mirrors test_parse_message.
     static uint8_t msg[64];
-    Rtps.hdr.guid_prefix = GUID;
-    Rtps.hdr.vendor_id = VENDOR;
-    Rtps.out.buf = msg;
-    Rtps.out.cap = sizeof(msg);
+    RtpsV.hdr.guid_prefix = GUID;
+    RtpsV.hdr.vendor_id = VENDOR;
+    RtpsV.out.buf = msg;
+    RtpsV.out.cap = sizeof(msg);
     Rtps.header(dds_work);
-    size_t msg_len = Rtps.n;
+    size_t msg_len = RtpsV.n;
 
     uint8_t ts_body[8] = {0};
-    Rtps.sub.submessage_id = RTPS_SM_INFO_TS;
-    Rtps.sub.flags = RTPS_FLAG_ENDIAN;
-    Rtps.sub.contents = ts_body;
-    Rtps.sub.contents_len = 8;
-    Rtps.out.buf = msg + msg_len;
-    Rtps.out.cap = sizeof(msg) - msg_len;
+    RtpsV.sub.submessage_id = RTPS_SM_INFO_TS;
+    RtpsV.sub.flags = RTPS_FLAG_ENDIAN;
+    RtpsV.sub.contents = ts_body;
+    RtpsV.sub.contents_len = 8;
+    RtpsV.out.buf = msg + msg_len;
+    RtpsV.out.cap = sizeof(msg) - msg_len;
     Rtps.submessage(dds_work);
-    msg_len += Rtps.n;
+    msg_len += RtpsV.n;
 
     uint8_t data_body[4] = {0xDE, 0xAD, 0xBE, 0xEF};
-    Rtps.sub.submessage_id = RTPS_SM_DATA;
-    Rtps.sub.flags = RTPS_FLAG_ENDIAN;
-    Rtps.sub.contents = data_body;
-    Rtps.sub.contents_len = 4;
-    Rtps.out.buf = msg + msg_len;
-    Rtps.out.cap = sizeof(msg) - msg_len;
+    RtpsV.sub.submessage_id = RTPS_SM_DATA;
+    RtpsV.sub.flags = RTPS_FLAG_ENDIAN;
+    RtpsV.sub.contents = data_body;
+    RtpsV.sub.contents_len = 4;
+    RtpsV.out.buf = msg + msg_len;
+    RtpsV.out.cap = sizeof(msg) - msg_len;
     Rtps.submessage(dds_work);
-    msg_len += Rtps.n;
+    msg_len += RtpsV.n;
 
     for (;;)
     {
         DBENCH_BANNER("dds");
         volatile size_t sink = 0;
 
-        Rtps.hdr.guid_prefix = GUID;
-        Rtps.hdr.vendor_id = VENDOR;
-        Rtps.out.buf = hdr_out;
-        Rtps.out.cap = sizeof(hdr_out);
-        DBENCH_OP("Rtps.header", 100000, Rtps.header(dds_work); sink += Rtps.n);
+        RtpsV.hdr.guid_prefix = GUID;
+        RtpsV.hdr.vendor_id = VENDOR;
+        RtpsV.out.buf = hdr_out;
+        RtpsV.out.cap = sizeof(hdr_out);
+        DBENCH_OP("Rtps.header", 100000, Rtps.header(dds_work); sink += RtpsV.n);
 
-        Rtps.sub.submessage_id = RTPS_SM_INFO_TS;
-        Rtps.sub.flags = RTPS_FLAG_ENDIAN;
-        Rtps.sub.contents = sm_body;
-        Rtps.sub.contents_len = sizeof(sm_body);
-        Rtps.out.buf = sm_out;
-        Rtps.out.cap = sizeof(sm_out);
-        DBENCH_OP("Rtps.submessage LE", 100000, Rtps.submessage(dds_work); sink += Rtps.n);
+        RtpsV.sub.submessage_id = RTPS_SM_INFO_TS;
+        RtpsV.sub.flags = RTPS_FLAG_ENDIAN;
+        RtpsV.sub.contents = sm_body;
+        RtpsV.sub.contents_len = sizeof(sm_body);
+        RtpsV.out.buf = sm_out;
+        RtpsV.out.cap = sizeof(sm_out);
+        DBENCH_OP("Rtps.submessage LE", 100000, Rtps.submessage(dds_work); sink += RtpsV.n);
 
-        Rtps.sub.submessage_id = RTPS_SM_DATA;
-        Rtps.sub.flags = 0x00;
-        DBENCH_OP("Rtps.submessage BE", 100000, Rtps.submessage(dds_work); sink += Rtps.n);
+        RtpsV.sub.submessage_id = RTPS_SM_DATA;
+        RtpsV.sub.flags = 0x00;
+        DBENCH_OP("Rtps.submessage BE", 100000, Rtps.submessage(dds_work); sink += RtpsV.n);
 
-        Rtps.msg.msg = msg;
-        Rtps.msg.len = msg_len;
-        Rtps.sink.on_submessage = count_submessage;
-        Rtps.sink.arg = NULL;
-        DBENCH_BULK("Rtps.parse", 50000, msg_len, Rtps.parse(dds_work); sink += Rtps.ok ? 1 : 0);
+        RtpsV.msg.msg = msg;
+        RtpsV.msg.len = msg_len;
+        RtpsV.sink.on_submessage = count_submessage;
+        RtpsV.sink.arg = NULL;
+        DBENCH_BULK("Rtps.parse", 50000, msg_len, Rtps.parse(dds_work); sink += RtpsV.ok ? 1 : 0);
 
         (void)sink;
         DBENCH_DONE();

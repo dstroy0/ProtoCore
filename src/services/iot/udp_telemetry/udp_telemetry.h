@@ -51,7 +51,6 @@ typedef struct
     const char *addr; ///< the collector's address as text, v4 or v6, parsed once by a begin
     uint16_t port;    ///< its UDP port
 } UdpTelemetryCollectorArgs;
-
 /** @brief Where one line is built, and the measurement it opens with (line protocol element 1). */
 typedef struct
 {
@@ -59,14 +58,12 @@ typedef struct
     size_t cap;              ///< how much room it has, the NUL included
     const char *measurement; ///< the measurement name; NULL opens the line with nothing
 } UdpTelemetryLineArgs;
-
 /** @brief One tag set entry, `,tag_key=tag_value` (line protocol element 2). */
 typedef struct
 {
     const char *key;   ///< the tag key; comma, equals and space are escaped
     const char *value; ///< its tag value, escaped the same way; NULL writes nothing after the equals
 } UdpTelemetryTagArgs;
-
 /** @brief One field set entry, `field_key=field_value` (line protocol element 3). */
 typedef struct
 {
@@ -76,20 +73,17 @@ typedef struct
     float f32;        ///< the value a field_float writes, unsuffixed
     uint8_t decimals; ///< digits after the point a field_float writes
 } UdpTelemetryFieldArgs;
-
 /** @brief The trailing timestamp (line protocol element 4). */
 typedef struct
 {
     int64_t unix_ns; ///< the point's time in Unix nanoseconds, the default precision
 } UdpTelemetryTimestampArgs;
-
 /** @brief The octets one datagram carries. */
 typedef struct
 {
     const char *data; ///< the bytes a send hands the stack
     size_t len;       ///< how many
 } UdpTelemetryPayloadArgs;
-
 /**
  * @brief The line protocol caster.
  *
@@ -128,11 +122,17 @@ typedef struct
     UdpTelemetryFieldArgs fields;        ///< one field set entry
     UdpTelemetryTimestampArgs time;      ///< the trailing timestamp
     UdpTelemetryPayloadArgs payload;     ///< what a send carries
-
     proto_bool ok;
     proto_bool overflow;
     size_t n;
+} UdpTelemetryVars;
 
+/** @brief The operands and the outcome. */
+extern UdpTelemetryVars UdpTelemetryV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const begin)(uint8_t *restrict work);
     void (*const measurement)(uint8_t *restrict work);
     void (*const tag)(uint8_t *restrict work);
@@ -144,8 +144,33 @@ typedef struct
     void (*const write)(uint8_t *restrict work);
 } UdpTelemetryNs;
 
-/** @brief The one symbol this module exports. */
-extern UdpTelemetryNs UdpTelemetry;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in UdpTelemetryV or a region of the borrow at a fixed offset.
+void protocore_udp_telemetry_begin(uint8_t *restrict work);
+void protocore_udp_telemetry_measurement(uint8_t *restrict work);
+void protocore_udp_telemetry_tag(uint8_t *restrict work);
+void protocore_udp_telemetry_field_int(uint8_t *restrict work);
+void protocore_udp_telemetry_field_uint(uint8_t *restrict work);
+void protocore_udp_telemetry_field_float(uint8_t *restrict work);
+void protocore_udp_telemetry_timestamp(uint8_t *restrict work);
+void protocore_udp_telemetry_send(uint8_t *restrict work);
+void protocore_udp_telemetry_write(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `UdpTelemetry.begin(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const UdpTelemetryNs UdpTelemetry __attribute__((unused)) = {
+    .begin = protocore_udp_telemetry_begin,
+    .measurement = protocore_udp_telemetry_measurement,
+    .tag = protocore_udp_telemetry_tag,
+    .field_int = protocore_udp_telemetry_field_int,
+    .field_uint = protocore_udp_telemetry_field_uint,
+    .field_float = protocore_udp_telemetry_field_float,
+    .timestamp = protocore_udp_telemetry_timestamp,
+    .send = protocore_udp_telemetry_send,
+    .write = protocore_udp_telemetry_write,
+};
 
 /**
  * @brief The PROTOCORE_UDP_TELEMETRY_BORROW bytes this module's state lives in.

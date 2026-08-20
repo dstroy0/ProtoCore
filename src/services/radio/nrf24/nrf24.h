@@ -49,7 +49,6 @@ typedef struct
     nrf_ce_fn ce;
     void *ctx;
 } nrf_bus;
-
 /** @brief Radio configuration applied by protocore_nrf24_init(). */
 typedef struct
 {
@@ -58,14 +57,12 @@ typedef struct
     uint8_t data_rate;      ///< 0 = 1 Mbps, 1 = 2 Mbps, 2 = 250 kbps.
     uint8_t tx_power;       ///< power level 0..3 (-18, -12, -6, 0 dBm).
 } nrf_config;
-
 /** @brief What init takes: bus, cfg. */
 typedef struct
 {
     const nrf_bus *bus;
     const nrf_config *cfg;
 } Nrf24InitArgs;
-
 /** @brief What send takes: bus, data, len. */
 typedef struct
 {
@@ -73,19 +70,16 @@ typedef struct
     const uint8_t *data;
     uint8_t len;
 } Nrf24SendArgs;
-
 /** @brief What tx_done takes: bus. */
 typedef struct
 {
     const nrf_bus *bus;
 } Nrf24TxDoneArgs;
-
 /** @brief What set_rx takes: bus. */
 typedef struct
 {
     const nrf_bus *bus;
 } Nrf24SetRxArgs;
-
 /** @brief What recv takes: bus, buf, cap, pipe. */
 typedef struct
 {
@@ -94,7 +88,6 @@ typedef struct
     uint8_t cap;
     uint8_t *pipe;
 } Nrf24RecvArgs;
-
 /**
  * @brief nRF24L01+ radio driver (PROTOCORE_ENABLE_NRF24) - Nordic 2.4 GHz over SPI.
  *
@@ -130,10 +123,16 @@ typedef struct
     Nrf24TxDoneArgs tx_done_args;
     Nrf24SetRxArgs set_rx_args;
     Nrf24RecvArgs recv_args;
-
     proto_bool ok;
     int n;
+} Nrf24Vars;
 
+/** @brief The operands and the outcome. */
+extern Nrf24Vars Nrf24V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const send)(uint8_t *restrict work);
     void (*const tx_done)(uint8_t *restrict work);
@@ -141,8 +140,25 @@ typedef struct
     void (*const recv)(uint8_t *restrict work);
 } Nrf24Ns;
 
-/** @brief The one symbol this module exports. */
-extern Nrf24Ns Nrf24;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Nrf24V or a region of the borrow at a fixed offset.
+void protocore_nrf24_init(uint8_t *restrict work);
+void protocore_nrf24_send(uint8_t *restrict work);
+void protocore_nrf24_tx_done(uint8_t *restrict work);
+void protocore_nrf24_set_rx(uint8_t *restrict work);
+void protocore_nrf24_recv(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Nrf24.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Nrf24Ns Nrf24 __attribute__((unused)) = {
+    .init = protocore_nrf24_init,
+    .send = protocore_nrf24_send,
+    .tx_done = protocore_nrf24_tx_done,
+    .set_rx = protocore_nrf24_set_rx,
+    .recv = protocore_nrf24_recv,
+};
 
 PROTOCORE_END_DECLS
 

@@ -74,7 +74,6 @@ typedef struct
     const uint8_t *guid_prefix; ///< guidPrefix, the 12-octet default GUID prefix for the Message
     const uint8_t *vendor_id;   ///< vendorId, 2 octets; VENDORID_UNKNOWN is {0, 0} (sec 9.3.2.1)
 } RtpsHeaderArgs;
-
 /** @brief sec 8.3.3.3 Table 8.16: one Submessage, its SubmessageHeader fields and its contents. */
 typedef struct
 {
@@ -83,28 +82,24 @@ typedef struct
     uint8_t submessage_id;   ///< the SubmessageKind octet, one of RTPS_SM_*
     uint8_t flags;           ///< the 8 SubmessageFlags; OR RTPS_FLAG_ENDIAN for little-endian
 } RtpsSubmessageArgs;
-
 /** @brief Where a build lays its octets down. */
 typedef struct
 {
     uint8_t *buf; ///< the buffer a build writes into
     size_t cap;   ///< how much room it has
 } RtpsOutArgs;
-
 /** @brief The Message a parse walks, its length supplied by the transport (sec 9.4.1). */
 typedef struct
 {
     const uint8_t *msg; ///< the whole Message, Header first
     size_t len;         ///< its octet count, over UDP the payload length
 } RtpsMessageArgs;
-
 /** @brief Where a parse surfaces each Submessage it walks. */
 typedef struct
 {
     protocore_rtps_submessage_cb on_submessage; ///< called once per Submessage, NULL to only validate
     void *arg;                                  ///< handed back to it untouched
 } RtpsSinkArgs;
-
 /**
  * @brief The DDSI-RTPS Message framing codec.
  *
@@ -131,20 +126,39 @@ typedef struct
     RtpsOutArgs out;        ///< where a build lands
     RtpsMessageArgs msg;    ///< what a parse walks
     RtpsSinkArgs sink;      ///< where a parse reports
-
     proto_bool ok;
     size_t n;
+} RtpsVars;
 
+/** @brief The operands and the outcome. */
+extern RtpsVars RtpsV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const header)(uint8_t *restrict work);
     void (*const submessage)(uint8_t *restrict work);
     void (*const parse)(uint8_t *restrict work);
 } RtpsNs;
 
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in RtpsV or a region of the borrow at a fixed offset.
+void protocore_dds_header(uint8_t *restrict work);
+void protocore_dds_submessage(uint8_t *restrict work);
+void protocore_dds_parse(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Rtps.header(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const RtpsNs Rtps __attribute__((unused)) = {
+    .header = protocore_dds_header,
+    .submessage = protocore_dds_submessage,
+    .parse = protocore_dds_parse,
+};
+
 /** @brief The protocol version a built Header stamps, major then minor (sec 8.3.3.1). */
 extern const uint8_t RTPS_VERSION[2];
-
-/** @brief The one symbol this module exports. */
-extern RtpsNs Rtps;
 
 PROTOCORE_END_DECLS
 

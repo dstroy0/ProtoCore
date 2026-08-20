@@ -32,23 +32,23 @@ void dbench_run(void)
                                0xAB,  // process data
                                0xCD,  // process data
                                0x00}; // CKT (type 2, checksum 0), filled below
-    Iolink.mc_args.read = false;
-    Iolink.mc_args.channel = IOL_CH_PROCESS;
-    Iolink.mc_args.address = 0x01;
-    Iolink.mc(iolink_work);
-    frame[0] = Iolink.value;
-    Iolink.ckt_args.mseq_type = IOL_MSEQ_TYPE_2;
-    Iolink.ckt_args.checksum6 = 0;
+    IolinkV.mc_args.read = false;
+    IolinkV.mc_args.channel = IOL_CH_PROCESS;
+    IolinkV.mc_args.address = 0x01;
+    IolinkV.mc(iolink_work);
+    frame[0] = IolinkV.value;
+    IolinkV.ckt_args.mseq_type = IOL_MSEQ_TYPE_2;
+    IolinkV.ckt_args.checksum6 = 0;
     Iolink.ckt(iolink_work);
-    frame[3] = Iolink.value;
+    frame[3] = IolinkV.value;
     static const size_t check_idx = 3;
 
     // A finalized copy so protocore_iol_verify runs against a valid checksum on every iteration.
     static uint8_t vframe[4];
     memcpy(vframe, frame, sizeof(vframe));
-    Iolink.finalize_args.msg = vframe;
-    Iolink.finalize_args.len = sizeof(vframe);
-    Iolink.finalize_args.check_idx = check_idx;
+    IolinkV.finalize_args.msg = vframe;
+    IolinkV.finalize_args.len = sizeof(vframe);
+    IolinkV.finalize_args.check_idx = check_idx;
     Iolink.finalize(iolink_work);
 
     for (;;)
@@ -58,37 +58,36 @@ void dbench_run(void)
         volatile bool sinkb = false;
 
         // Control-octet builders: cheap bit-packing, large N.
-        Iolink.mc_args.read = true;
-        Iolink.mc_args.channel = IOL_CH_PAGE;
-        Iolink.mc_args.address = 0x10;
-        DBENCH_OP("Iolink.mc build", 200000, sink8 += (Iolink.mc(iolink_work), Iolink.value));
-        Iolink.ckt_args.mseq_type = IOL_MSEQ_TYPE_1;
-        Iolink.ckt_args.checksum6 = 0x15;
-        DBENCH_OP("Iolink.ckt build", 200000, sink8 += (Iolink.ckt(iolink_work), Iolink.value));
-        Iolink.cks_args.event = true;
-        Iolink.cks_args.pd_invalid = false;
-        Iolink.cks_args.checksum6 = 0x0A;
-        DBENCH_OP("Iolink.cks build", 200000, sink8 += (Iolink.cks(iolink_work), Iolink.value));
+        IolinkV.mc_args.read = true;
+        IolinkV.mc_args.channel = IOL_CH_PAGE;
+        IolinkV.mc_args.address = 0x10;
+        DBENCH_OP("Iolink.mc build", 200000, sink8 += (IolinkV.mc(iolink_work), IolinkV.value));
+        IolinkV.ckt_args.mseq_type = IOL_MSEQ_TYPE_1;
+        IolinkV.ckt_args.checksum6 = 0x15;
+        DBENCH_OP("Iolink.ckt build", 200000, sink8 += (Iolink.ckt(iolink_work), IolinkV.value));
+        IolinkV.cks_args.event = true;
+        IolinkV.cks_args.pd_invalid = false;
+        IolinkV.cks_args.checksum6 = 0x0A;
+        DBENCH_OP("Iolink.cks build", 200000, sink8 += (Iolink.cks(iolink_work), IolinkV.value));
 
         // SDCI checksum over the 4-octet frame (seed 0x52 + 8->6 compression); bulk reports MB/s.
-        Iolink.checksum6_args.msg = frame;
-        Iolink.checksum6_args.len = sizeof(frame);
+        IolinkV.checksum6_args.msg = frame;
+        IolinkV.checksum6_args.len = sizeof(frame);
         DBENCH_BULK("Iolink.checksum6 x4B", 100000, sizeof(frame),
-                    sink8 += (Iolink.checksum6(iolink_work), Iolink.value));
+                    sink8 += (IolinkV.checksum6(iolink_work), IolinkV.value));
 
         // Finalize-in-place (zero checksum field, recompute, OR in) - idempotent, so re-running
         // on the same buffer stays valid.
-        Iolink.finalize_args.msg = frame;
-        Iolink.finalize_args.len = sizeof(frame);
-        Iolink.finalize_args.check_idx = check_idx;
-        DBENCH_OP("Iolink.finalize x4B", 100000,
-                  sink8 += (Iolink.finalize(iolink_work), Iolink.value));
+        IolinkV.finalize_args.msg = frame;
+        IolinkV.finalize_args.len = sizeof(frame);
+        IolinkV.finalize_args.check_idx = check_idx;
+        DBENCH_OP("Iolink.finalize x4B", 100000, sink8 += (Iolink.finalize(iolink_work), IolinkV.value));
 
         // Verify a known-good frame (recompute + compare the 6-bit field).
-        Iolink.verify_args.msg = vframe;
-        Iolink.verify_args.len = sizeof(vframe);
-        Iolink.verify_args.check_idx = check_idx;
-        DBENCH_OP("Iolink.verify x4B", 100000, sinkb = (Iolink.verify(iolink_work), Iolink.ok));
+        IolinkV.verify_args.msg = vframe;
+        IolinkV.verify_args.len = sizeof(vframe);
+        IolinkV.verify_args.check_idx = check_idx;
+        DBENCH_OP("Iolink.verify x4B", 100000, sinkb = (Iolink.verify(iolink_work), IolinkV.ok));
 
         (void)sink8;
         (void)sinkb;

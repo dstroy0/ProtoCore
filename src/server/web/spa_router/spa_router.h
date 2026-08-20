@@ -63,10 +63,8 @@ typedef struct
     proto_bool client_scripting; ///< will the client run the SPA (false = text browser, curl, no-JS)?
     proto_bool degraded;         ///< force the plain control page (recovery mode, failsafe, low memory).
 } protocore_spa_ctx;
-
 /** @brief Predicate deciding whether a fragment is part of this render. */
 typedef proto_bool (*protocore_ui_when_fn)(void *ctx);
-
 /** @brief One UI panel and the condition under which it is shown. Nothing is copied. */
 typedef struct
 {
@@ -74,7 +72,6 @@ typedef struct
     const char *html;          ///< the fragment body (borrowed).
     protocore_ui_when_fn when; ///< nullptr = always included.
 } protocore_ui_fragment;
-
 /** @brief Cursor over a fragment set. Resumes mid-fragment, so output is chunk-size independent. */
 typedef struct
 {
@@ -85,27 +82,23 @@ typedef struct
     size_t off; ///< bytes of the current fragment already emitted.
     proto_bool done;
 } protocore_ui_stream;
-
 /** @brief What has_extension takes: path. */
 typedef struct
 {
     const char *path;
 } SpaRouterHasExtensionArgs;
-
 /** @brief What route takes: path, api_prefix. */
 typedef struct
 {
     const char *path;       ///< the request path (e.g. "/devices/42", "/app.js", "/api/state")
     const char *api_prefix; ///< a prefix whose paths pass through to handlers (e.g. "/api/"); null/empty = none
 } SpaRouterRouteArgs;
-
 /** @brief What route_ex takes: path, ctx. */
 typedef struct
 {
     const char *path;
     const protocore_spa_ctx *ctx;
 } SpaRouterRouteExArgs;
-
 /** @brief What ui_stream_begin takes: s, frags, count, ctx. */
 typedef struct
 {
@@ -114,7 +107,6 @@ typedef struct
     size_t count;
     void *ctx;
 } SpaRouterUiStreamBeginArgs;
-
 /** @brief What ui_stream_next takes: s, out, cap. */
 typedef struct
 {
@@ -122,13 +114,11 @@ typedef struct
     char *out;
     size_t cap;
 } SpaRouterUiStreamNextArgs;
-
 /** @brief What ui_stream_done takes: s. */
 typedef struct
 {
     const protocore_ui_stream *s;
 } SpaRouterUiStreamDoneArgs;
-
 /**
  * @brief Single-page-app micro-routing + conditional UI streaming (PROTOCORE_ENABLE_SPA_ROUTER). A single-page web UI
  * ...
@@ -168,11 +158,17 @@ typedef struct
     SpaRouterUiStreamBeginArgs ui_stream_begin_args;
     SpaRouterUiStreamNextArgs ui_stream_next_args;
     SpaRouterUiStreamDoneArgs ui_stream_done_args;
-
     proto_bool ok;
     protocore_spa_action action;
     size_t n;
+} SpaRouterVars;
 
+/** @brief The operands and the outcome. */
+extern SpaRouterVars SpaRouterV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const has_extension)(uint8_t *restrict work);
     void (*const route)(uint8_t *restrict work);
     void (*const route_ex)(uint8_t *restrict work);
@@ -181,8 +177,27 @@ typedef struct
     void (*const ui_stream_done)(uint8_t *restrict work);
 } SpaRouterNs;
 
-/** @brief The one symbol this module exports. */
-extern SpaRouterNs SpaRouter;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SpaRouterV or a region of the borrow at a fixed offset.
+void protocore_spa_router_has_extension(uint8_t *restrict work);
+void protocore_spa_router_route(uint8_t *restrict work);
+void protocore_spa_router_route_ex(uint8_t *restrict work);
+void protocore_spa_router_ui_stream_begin(uint8_t *restrict work);
+void protocore_spa_router_ui_stream_next(uint8_t *restrict work);
+void protocore_spa_router_ui_stream_done(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `SpaRouter.has_extension(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SpaRouterNs SpaRouter __attribute__((unused)) = {
+    .has_extension = protocore_spa_router_has_extension,
+    .route = protocore_spa_router_route,
+    .route_ex = protocore_spa_router_route_ex,
+    .ui_stream_begin = protocore_spa_router_ui_stream_begin,
+    .ui_stream_next = protocore_spa_router_ui_stream_next,
+    .ui_stream_done = protocore_spa_router_ui_stream_done,
+};
 
 PROTOCORE_END_DECLS
 

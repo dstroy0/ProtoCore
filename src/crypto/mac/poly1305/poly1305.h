@@ -40,7 +40,6 @@ typedef struct
     size_t len;         ///< its length
     uint8_t *out;       ///< PROTOCORE_POLY1305_TAG_LEN bytes
 } Poly1305MacArgs;
-
 /**
  * @brief Poly1305 one-time authenticator (RFC 8439 Section 2.5).
  *
@@ -70,14 +69,29 @@ typedef struct
 typedef struct
 {
     Poly1305MacArgs mac_args;
-
     proto_bool ok;
+} Poly1305Vars;
 
+/** @brief The operands and the outcome. */
+extern Poly1305Vars Poly1305V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const mac)(uint8_t *restrict work);
 } Poly1305Ns;
 
-/** @brief The one symbol this module exports. */
-extern Poly1305Ns Poly1305;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Poly1305V or a region of the borrow at a fixed offset.
+void protocore_poly1305_mac(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Poly1305.mac(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Poly1305Ns Poly1305 __attribute__((unused)) = {
+    .mac = protocore_poly1305_mac,
+};
 
 PROTOCORE_END_DECLS
 

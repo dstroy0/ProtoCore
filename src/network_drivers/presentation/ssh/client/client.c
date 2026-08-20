@@ -164,8 +164,8 @@ static proto_bool send_service_request(void)
     protocore_span w = span.from(out, sizeof(out));
     bytes.put(&w, SSH_MSG_SERVICE_REQUEST);
     protocore_ssh_wr_cstr(&w, "ssh-userauth");
-    return span.ok(w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos, cli_send(protocore_ssh_client_span()),
-                          SshClient.ok);
+    return span.ok(w) && (SshClientV.msg.payload = out, SshClientV.msg.len = w.pos,
+                          cli_send(protocore_ssh_client_span()), SshClientV.ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -183,7 +183,7 @@ static proto_bool compute_k(const uint8_t *srv_pub, uint32_t srv_pub_len, uint8_
     SshKexEphemeral e = {.alg = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex,
                          .priv = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv,
                          .hybrid_sk = NULL,
-                         .work = (cli_crypto_work(protocore_ssh_client_span()), SshClient.work)};
+                         .work = (cli_crypto_work(protocore_ssh_client_span()), SshClientV.work)};
 #if PROTOCORE_ENABLE_PQC_KEX
     if (SSH_CLIENT_CTX(protocore_ssh_client_span())->kex == SSH_KEX_MLKEM768_X25519)
     {
@@ -218,15 +218,15 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
     }
 
     // Pin the relay by the SHA-256 fingerprint of its host-key blob (type-agnostic, like known_hosts).
-    uint8_t *fwork = (cli_crypto_work(protocore_ssh_client_span()), SshClient.work);
+    uint8_t *fwork = (cli_crypto_work(protocore_ssh_client_span()), SshClientV.work);
     if (fwork == NULL)
     {
         return PROTO_FALSE;
     }
     uint8_t fp[32];
-    Sha256.hash_args.data = ks;
-    Sha256.hash_args.len = ks_len;
-    Sha256.hash_args.out = fp;
+    Sha256V.hash_args.data = ks;
+    Sha256V.hash_args.len = ks_len;
+    Sha256V.hash_args.out = fp;
     Sha256.hash(fwork);
     if (mem.cmp(fp, SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.host_pin, 32) != 0)
     {
@@ -266,26 +266,26 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
 #endif
     uint8_t H[SSH_KEXHASH_MAX_LEN];
     size_t h_len = 0;
-    SshTransport.slot = SSH_CLI_SLOT;
-    SshTransport.kexhash.pub_is_string = pub_is_string;
-    SshTransport.kexhash.cpub = hs->cpub;
-    SshTransport.kexhash.cpub_len = hs->cpub_len;
-    SshTransport.kexhash.spub = srv_pub;
-    SshTransport.kexhash.spub_len = sp_len;
-    SshTransport.kexhash.k_be = k_hash;
-    SshTransport.kexhash.k_len = k_hash_len;
-    SshTransport.kexhash.ks = ks;
-    SshTransport.kexhash.ks_len = ks_len;
-    SshTransport.kexhash.k_is_string = k_is_string;
-    SshTransport.kexhash.is512 = ssh_kex_is_sha512(SSH_CLIENT_CTX(protocore_ssh_client_span())->kex);
+    SshTransportV.slot = SSH_CLI_SLOT;
+    SshTransportV.kexhash.pub_is_string = pub_is_string;
+    SshTransportV.kexhash.cpub = hs->cpub;
+    SshTransportV.kexhash.cpub_len = hs->cpub_len;
+    SshTransportV.kexhash.spub = srv_pub;
+    SshTransportV.kexhash.spub_len = sp_len;
+    SshTransportV.kexhash.k_be = k_hash;
+    SshTransportV.kexhash.k_len = k_hash_len;
+    SshTransportV.kexhash.ks = ks;
+    SshTransportV.kexhash.ks_len = ks_len;
+    SshTransportV.kexhash.k_is_string = k_is_string;
+    SshTransportV.kexhash.is512 = ssh_kex_is_sha512(SSH_CLIENT_CTX(protocore_ssh_client_span())->kex);
     SshTransport.exchange_hash(protocore_ssh_transport_span());
-    if (SshTransport.i32 != 0)
+    if (SshTransportV.i32 != 0)
     {
         protocore_secure_wipe(k_be, sizeof(k_be));
         return PROTO_FALSE;
     }
-    h_len = SshTransport.kexhash.hash_len;
-    mem.cpy(H, SshTransport.kexhash.hash, h_len);
+    h_len = SshTransportV.kexhash.hash_len;
+    mem.cpy(H, SshTransportV.kexhash.hash, h_len);
 
     if (!ssh_hostkey_verify(SSH_CLI_SLOT, ks, ks_len, sig, sig_len, H, h_len))
     {
@@ -311,7 +311,7 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
     // encode K as a fixed 32/64-byte string (k_is_string); the classical methods as an mpint. The
     // -sha512 method derives over SHA-512 (is512), so H and the session_id are 64 bytes.
     const proto_bool is512 = ssh_kex_is_sha512(SSH_CLIENT_CTX(protocore_ssh_client_span())->kex);
-    const SshKdfInputs kdf_in = {.work = (cli_crypto_work(protocore_ssh_client_span()), SshClient.work),
+    const SshKdfInputs kdf_in = {.work = (cli_crypto_work(protocore_ssh_client_span()), SshClientV.work),
                                  .K_be = k_be,
                                  .H = H,
                                  .session_id = sid,
@@ -329,11 +329,11 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
 #endif
 
     uint8_t nk = SSH_MSG_NEWKEYS;
-    if (!(SshClient.msg.payload = &nk, SshClient.msg.len = 1, cli_send(protocore_ssh_client_span()), SshClient.ok))
+    if (!(SshClientV.msg.payload = &nk, SshClientV.msg.len = 1, cli_send(protocore_ssh_client_span()), SshClientV.ok))
     {
         return PROTO_FALSE;
     }
-    (SshTransport.slot = SSH_CLI_SLOT,
+    (SshTransportV.slot = SSH_CLI_SLOT,
      SshTransport.newkeys_sent(protocore_ssh_transport_span())); // outbound switches to the epoch this exchange derived
     return PROTO_TRUE;
 }
@@ -350,38 +350,38 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
 // connection's own storage and kept as I_C by the transport.
 static proto_bool build_kexinit(void)
 {
-    Ssh.conn_slot_args.i = SSH_CLI_SLOT;
+    SshV.conn_slot_args.i = SSH_CLI_SLOT;
     Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *base = Ssh.ptr;
+    uint8_t *base = SshV.ptr;
     if (base == NULL)
     {
         return PROTO_FALSE;
     }
     uint8_t *out = base + SSH_OFF_KEXINIT;
     size_t n = 0;
-    if ((SshTransport.slot = SSH_CLI_SLOT, SshTransport.out_args.out = out,
-         SshTransport.out_args.cap = PROTOCORE_SSH_KEXINIT_S_MAX,
-         SshTransport.kexinit_build(protocore_ssh_transport_span()), n = SshTransport.out_args.out_len,
-         SshTransport.i32) != 0)
+    if ((SshTransportV.slot = SSH_CLI_SLOT, SshTransportV.out_args.out = out,
+         SshTransportV.out_args.cap = PROTOCORE_SSH_KEXINIT_S_MAX,
+         SshTransport.kexinit_build(protocore_ssh_transport_span()), n = SshTransportV.out_args.out_len,
+         SshTransportV.i32) != 0)
     {
         return PROTO_FALSE;
     }
-    return (SshClient.msg.payload = out, SshClient.msg.len = n, cli_send(protocore_ssh_client_span()), SshClient.ok);
+    return (SshClientV.msg.payload = out, SshClientV.msg.len = n, cli_send(protocore_ssh_client_span()), SshClientV.ok);
 }
 
 // Generate our KEX ephemeral for the negotiated method and build Q_C / e into
 // SSH_CLIENT_CTX(protocore_ssh_client_span())->qc.
 static proto_bool build_kex_public(void)
 {
-    uint8_t *work = (cli_crypto_work(protocore_ssh_client_span()), SshClient.work);
+    uint8_t *work = (cli_crypto_work(protocore_ssh_client_span()), SshClientV.work);
     switch (SSH_CLIENT_CTX(protocore_ssh_client_span())->kex)
     {
     case SSH_KEX_CURVE25519:
-        Rng.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-        Rng.fill_args.len = 32;
+        RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+        RngV.fill_args.len = 32;
         Rng.fill(protocore_rng_span());
-        Curve25519.x25519_base_args.scalar = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-        Curve25519.x25519_base_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
+        Curve25519V.x25519_base_args.scalar = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+        Curve25519V.x25519_base_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
         Curve25519.x25519_base(work);
         SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len = 32;
         return PROTO_TRUE;
@@ -389,13 +389,13 @@ static proto_bool build_kex_public(void)
         // Draw a valid P-256 scalar (pubkey derivation rejects 0 / >= group order).
         for (int tries = 0; tries < 8; tries++)
         {
-            Rng.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-            Rng.fill_args.len = 32;
+            RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+            RngV.fill_args.len = 32;
             Rng.fill(protocore_rng_span());
-            Ecdsa.pubkey_args.priv = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-            Ecdsa.pubkey_args.pub = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
+            EcdsaV.pubkey_args.priv = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+            EcdsaV.pubkey_args.pub = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
             Ecdsa.pubkey(work);
-            if (Ecdsa.ok)
+            if (EcdsaV.ok)
             {
                 SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len = PROTOCORE_ECDSA_P256_PUB_LEN; // 65
                 return PROTO_TRUE;
@@ -404,25 +404,25 @@ static proto_bool build_kex_public(void)
         return PROTO_FALSE;
     case SSH_KEX_DH_GROUP14: {
         // e = g^x mod p, g = 2 (RFC 3526 group 14). x is a 256-bit exponent.
-        Rng.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-        Rng.fill_args.len = 32;
+        RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+        RngV.fill_args.len = 32;
         Rng.fill(protocore_rng_span());
         protocore_bignum g, x, e;
         uint8_t two = 2;
-        Bignum.from_bytes_args.out = &g;
-        Bignum.from_bytes_args.bytes = &two;
-        Bignum.from_bytes_args.len = 1;
+        BignumV.from_bytes_args.out = &g;
+        BignumV.from_bytes_args.bytes = &two;
+        BignumV.from_bytes_args.len = 1;
         Bignum.from_bytes(work);
-        Bignum.from_bytes_args.out = &x;
-        Bignum.from_bytes_args.bytes = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-        Bignum.from_bytes_args.len = 32;
+        BignumV.from_bytes_args.out = &x;
+        BignumV.from_bytes_args.bytes = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+        BignumV.from_bytes_args.len = 32;
         Bignum.from_bytes(work);
-        Bignum.expmod_args.out = &e;
-        Bignum.expmod_args.base = &g;
-        Bignum.expmod_args.exp = &x;
+        BignumV.expmod_args.out = &e;
+        BignumV.expmod_args.base = &g;
+        BignumV.expmod_args.exp = &x;
         Bignum.expmod_group14(work);
-        Bignum.to_bytes_args.bytes = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
-        Bignum.to_bytes_args.in = &e;
+        BignumV.to_bytes_args.bytes = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
+        BignumV.to_bytes_args.in = &e;
         Bignum.to_bytes(work);
         SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len = 256;
         protocore_secure_wipe(&x, sizeof(x));
@@ -434,25 +434,25 @@ static proto_bool build_kex_public(void)
         // ML-KEM-768 keypair (dk kept for Decaps; ek is embedded in dk) + an X25519 ephemeral. C_INIT
         // (ek || Q_C) is assembled at send time; Q_C lives in qc[0..31].
         uint8_t d[32], z[32], ek[MLKEM768_EK_BYTES];
-        Rng.fill_args.out = d;
-        Rng.fill_args.len = sizeof(d);
+        RngV.fill_args.out = d;
+        RngV.fill_args.len = sizeof(d);
         Rng.fill(protocore_rng_span());
-        Rng.fill_args.out = z;
-        Rng.fill_args.len = sizeof(z);
+        RngV.fill_args.out = z;
+        RngV.fill_args.len = sizeof(z);
         Rng.fill(protocore_rng_span());
-        MlKem.keygen_args.d = d;
-        MlKem.keygen_args.z = z;
-        MlKem.keygen_args.ek = ek;
-        MlKem.keygen_args.dk = SSH_CLIENT_CTX(protocore_ssh_client_span())->hyb.mlkem_dk;
+        MlKemV.keygen_args.d = d;
+        MlKemV.keygen_args.z = z;
+        MlKemV.keygen_args.ek = ek;
+        MlKemV.keygen_args.dk = SSH_CLIENT_CTX(protocore_ssh_client_span())->hyb.mlkem_dk;
         MlKem.keygen(work);
         protocore_secure_wipe(d, sizeof(d));
         protocore_secure_wipe(z, sizeof(z));
         protocore_secure_wipe(ek, sizeof(ek)); // ek persists inside mlkem_dk
-        Rng.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-        Rng.fill_args.len = 32;
+        RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+        RngV.fill_args.len = 32;
         Rng.fill(protocore_rng_span());
-        Curve25519.x25519_base_args.scalar = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-        Curve25519.x25519_base_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
+        Curve25519V.x25519_base_args.scalar = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+        Curve25519V.x25519_base_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
         Curve25519.x25519_base(work);
         SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len = 32;
         return PROTO_TRUE;
@@ -469,15 +469,15 @@ static proto_bool build_kex_public(void)
         {
             return PROTO_FALSE;
         }
-        Sntrup761.keypair_args.pk = pk;
-        Sntrup761.keypair_args.sk = SSH_CLIENT_CTX(protocore_ssh_client_span())->hyb.sntrup_sk;
+        Sntrup761V.keypair_args.pk = pk;
+        Sntrup761V.keypair_args.sk = SSH_CLIENT_CTX(protocore_ssh_client_span())->hyb.sntrup_sk;
         Sntrup761.keypair(work);
         protocore_plaintext_release(mark); // pk persists inside sntrup_sk at PROTOCORE_SNTRUP761_SK_PK_OFFSET
-        Rng.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-        Rng.fill_args.len = 32;
+        RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+        RngV.fill_args.len = 32;
         Rng.fill(protocore_rng_span());
-        Curve25519.x25519_base_args.scalar = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-        Curve25519.x25519_base_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
+        Curve25519V.x25519_base_args.scalar = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+        Curve25519V.x25519_base_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
         Curve25519.x25519_base(work);
         SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len = 32;
         return PROTO_TRUE;
@@ -491,8 +491,8 @@ static proto_bool build_kex_public(void)
 static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
 {
     // RFC 4253 sec 7.1 parse + negotiate, the one implementation both roles consume.
-    if ((SshTransport.slot = SSH_CLI_SLOT, SshTransport.pkt.payload = p, SshTransport.pkt.len = len,
-         SshTransport.kexinit_parse(protocore_ssh_transport_span()), SshTransport.i32) != 0)
+    if ((SshTransportV.slot = SSH_CLI_SLOT, SshTransportV.pkt.payload = p, SshTransportV.pkt.len = len,
+         SshTransport.kexinit_parse(protocore_ssh_transport_span()), SshTransportV.i32) != 0)
     {
         return PROTO_FALSE;
     }
@@ -530,8 +530,8 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         bytes.put(&w, SSH_MSG_KEXDH_INIT);
         bytes.put_be(&w, (uint32_t)clen, 4);
         bytes.raw(&w, hs->cpub, clen);
-        proto_bool ok = span.ok(w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos,
-                                       cli_send(protocore_ssh_client_span()), SshClient.ok);
+        proto_bool ok = span.ok(w) && (SshClientV.msg.payload = out, SshClientV.msg.len = w.pos,
+                                       cli_send(protocore_ssh_client_span()), SshClientV.ok);
         protocore_plaintext_release(mark);
         return ok;
     }
@@ -560,8 +560,8 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         bytes.put(&w, SSH_MSG_KEXDH_INIT);
         bytes.put_be(&w, (uint32_t)clen, 4);
         bytes.raw(&w, hs->cpub, clen);
-        proto_bool ok = span.ok(w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos,
-                                       cli_send(protocore_ssh_client_span()), SshClient.ok);
+        proto_bool ok = span.ok(w) && (SshClientV.msg.payload = out, SshClientV.msg.len = w.pos,
+                                       cli_send(protocore_ssh_client_span()), SshClientV.ok);
         protocore_plaintext_release(mark);
         return ok;
     }
@@ -600,8 +600,8 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         protocore_ssh_wr_str(&w, SSH_CLIENT_CTX(protocore_ssh_client_span())->qc,
                              SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len);
     }
-    return span.ok(w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos, cli_send(protocore_ssh_client_span()),
-                          SshClient.ok);
+    return span.ok(w) && (SshClientV.msg.payload = out, SshClientV.msg.len = w.pos,
+                          cli_send(protocore_ssh_client_span()), SshClientV.ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -615,10 +615,10 @@ static void cli_crypto_work(uint8_t *restrict work)
     (void)work;
     if (!ssh_pkt_slot_storage(&ssh_pkt[SSH_CLI_SLOT]))
     {
-        SshClient.work = NULL;
+        SshClientV.work = NULL;
         return;
     }
-    SshClient.work = ssh_pkt[SSH_CLI_SLOT].crypto_work;
+    SshClientV.work = ssh_pkt[SSH_CLI_SLOT].crypto_work;
 }
 
 // Algorithm names, in the client's preference order per category (first = most preferred). The
@@ -635,45 +635,41 @@ static const char NAME_ED25519[] = "ssh-ed25519";
 static void cli_send(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *payload = SshClient.msg.payload;
-    const size_t len = SshClient.msg.len;
-    Ssh.conn_slot_args.i = SSH_CLI_SLOT;
+    const uint8_t *payload = SshClientV.msg.payload;
+    const size_t len = SshClientV.msg.len;
+    SshV.conn_slot_args.i = SSH_CLI_SLOT;
     Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *wire = Ssh.ptr;
+    uint8_t *wire = SshV.ptr;
     if (wire == NULL)
     {
-        SshClient.ok = PROTO_FALSE;
+        SshClientV.ok = PROTO_FALSE;
         return;
     }
     wire += SSH_OFF_WIRE;
     size_t wlen = 0;
     if (ssh_pkt_send(SSH_CLI_SLOT, payload, len, wire, &wlen, SSH_WIRE_CAP, &ssh_sess[SSH_CLI_SLOT].out) != 0)
     {
-        SshClient.ok = PROTO_FALSE;
+        SshClientV.ok = PROTO_FALSE;
         return;
     }
-    TcpClient.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
-    TcpClient.io.data = wire;
-    TcpClient.io.len = wlen;
+    TcpClientV.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
+    TcpClientV.io.data = wire;
+    TcpClientV.io.len = wlen;
     TcpClient.send(protocore_tcp_client_span());
-    SshClient.ok = TcpClient.ok;
+    SshClientV.ok = TcpClientV.ok;
     return;
 }
 
 static void cli_state(uint8_t *restrict work)
 {
     (void)work;
-    SshClient.state_of = SSH_CLIENT_CTX(protocore_ssh_client_span())->state;
+    SshClientV.state_of = SSH_CLIENT_CTX(protocore_ssh_client_span())->state;
     return;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-SshClientNs SshClient = {.send = cli_send,
-                         .crypto_work = cli_crypto_work,
-                         .state = cli_state,
-                         .begin = protocore_ssh_client_begin,
-                         .poll = protocore_ssh_client_poll,
-                         .end = protocore_ssh_client_end};
+/** @brief The operands and the outcome. */
+SshClientVars SshClientV;
 // ---------------------------------------------------------------------------
 // RFC 4254 sec 7.1 - the outbound role's tcpip-forward request
 // ---------------------------------------------------------------------------
@@ -689,8 +685,8 @@ static proto_bool send_tcpip_forward(void)
                                   ? SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.bind_addr
                                   : "");
     bytes.put_be(&w, SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.bind_port, 4);
-    return span.ok(w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos, cli_send(protocore_ssh_client_span()),
-                          SshClient.ok);
+    return span.ok(w) && (SshClientV.msg.payload = out, SshClientV.msg.len = w.pos,
+                          cli_send(protocore_ssh_client_span()), SshClientV.ok);
 }
 // ---------------------------------------------------------------------------
 // RFC 4252 sec 7 - the outbound role's publickey request
@@ -699,10 +695,10 @@ static proto_bool send_tcpip_forward(void)
 static proto_bool send_userauth_publickey(void)
 {
     const char *user = SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.user;
-    uint8_t *work = (SshClient.crypto_work(protocore_ssh_client_span()), SshClient.work);
+    uint8_t *work = (SshClient.crypto_work(protocore_ssh_client_span()), SshClientV.work);
     uint8_t pub[32];
-    Ed25519.pubkey_args.seed = SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.auth_seed;
-    Ed25519.pubkey_args.pub = pub;
+    Ed25519V.pubkey_args.seed = SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.auth_seed;
+    Ed25519V.pubkey_args.pub = pub;
     Ed25519.pubkey(work);
 
     // The device's public-key blob: string("ssh-ed25519") || string(pub32).
@@ -726,14 +722,14 @@ static proto_bool send_userauth_publickey(void)
     }
     uint8_t signed_data[256 + SSH_KEXHASH_MAX_LEN];
     protocore_span sd = span.from(signed_data, sizeof(signed_data));
-    SshAuth.out_args.w = &sd;
-    SshAuth.userauth.sid = sid;
-    SshAuth.userauth.sid_len = sid_len;
-    SshAuth.userauth.user = user;
-    SshAuth.userauth.service = "ssh-connection";
-    SshAuth.userauth.pk_algo = NAME_ED25519;
-    SshAuth.userauth.pk_blob = pkblob;
-    SshAuth.userauth.pk_len = pw.pos;
+    SshAuthV.out_args.w = &sd;
+    SshAuthV.userauth.sid = sid;
+    SshAuthV.userauth.sid_len = sid_len;
+    SshAuthV.userauth.user = user;
+    SshAuthV.userauth.service = "ssh-connection";
+    SshAuthV.userauth.pk_algo = NAME_ED25519;
+    SshAuthV.userauth.pk_blob = pkblob;
+    SshAuthV.userauth.pk_len = pw.pos;
     SshAuth.write_publickey_request(protocore_ssh_auth_span());
     if (!span.ok(sd))
     {
@@ -741,10 +737,10 @@ static proto_bool send_userauth_publickey(void)
     }
 
     uint8_t sig[64];
-    Ed25519.sign_args.seed = SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.auth_seed;
-    Ed25519.sign_args.msg = signed_data;
-    Ed25519.sign_args.msg_len = sd.pos;
-    Ed25519.sign_args.sig = sig;
+    Ed25519V.sign_args.seed = SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.auth_seed;
+    Ed25519V.sign_args.msg = signed_data;
+    Ed25519V.sign_args.msg_len = sd.pos;
+    Ed25519V.sign_args.sig = sig;
     Ed25519.sign(work);
 
     // Signature blob: string("ssh-ed25519") || string(sig64).
@@ -760,24 +756,24 @@ static proto_bool send_userauth_publickey(void)
     // The full USERAUTH_REQUEST is the signed prefix (minus the session_id) plus the signature.
     uint8_t out[300];
     protocore_span w = span.from(out, sizeof(out));
-    SshAuth.out_args.w = &w;
-    SshAuth.userauth.sid = NULL;
-    SshAuth.userauth.sid_len = 0;
-    SshAuth.userauth.user = user;
-    SshAuth.userauth.service = "ssh-connection";
-    SshAuth.userauth.pk_algo = NAME_ED25519;
-    SshAuth.userauth.pk_blob = pkblob;
-    SshAuth.userauth.pk_len = pw.pos;
+    SshAuthV.out_args.w = &w;
+    SshAuthV.userauth.sid = NULL;
+    SshAuthV.userauth.sid_len = 0;
+    SshAuthV.userauth.user = user;
+    SshAuthV.userauth.service = "ssh-connection";
+    SshAuthV.userauth.pk_algo = NAME_ED25519;
+    SshAuthV.userauth.pk_blob = pkblob;
+    SshAuthV.userauth.pk_len = pw.pos;
     SshAuth.write_publickey_request(protocore_ssh_auth_span());
     protocore_ssh_wr_str(&w, sigblob, sg.pos);
     if (!span.ok(w))
     {
         return PROTO_FALSE;
     }
-    SshClient.msg.payload = out;
-    SshClient.msg.len = w.pos;
+    SshClientV.msg.payload = out;
+    SshClientV.msg.len = w.pos;
     SshClient.send(work);
-    return SshClient.ok;
+    return SshClientV.ok;
 }
 
 // ---------------------------------------------------------------------------
@@ -826,10 +822,10 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
     proto_bool kexinit_unexpected = PROTO_FALSE;
     if (type == SSH_MSG_KEXINIT)
     {
-        PhaseMachine.is_args.i = SSH_CLI_SLOT;
-        PhaseMachine.is_args.p = SSH_PHASE_KEXINIT;
+        PhaseMachineV.is_args.i = SSH_CLI_SLOT;
+        PhaseMachineV.is_args.p = SSH_PHASE_KEXINIT;
         PhaseMachine.is(phase_machine_work);
-        kexinit_unexpected = !PhaseMachine.ok;
+        kexinit_unexpected = !PhaseMachineV.ok;
     }
     if (kexinit_unexpected)
     {
@@ -838,9 +834,9 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
             cli_fail("KEXINIT negotiation failed");
             return;
         }
-        PhaseMachine.kexinit_needs_reply_args.i = SSH_CLI_SLOT;
+        PhaseMachineV.kexinit_needs_reply_args.i = SSH_CLI_SLOT;
         PhaseMachine.kexinit_needs_reply(phase_machine_work);
-        if (PhaseMachine.ok && !build_kexinit())
+        if (PhaseMachineV.ok && !build_kexinit())
         {
             cli_fail("KEXINIT reply send failed");
         }
@@ -865,7 +861,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
             handled = PROTO_TRUE;
             if (handle_kexdh_reply(payload, len))
             {
-                PhaseMachine.kex_done_args.i = SSH_CLI_SLOT;
+                PhaseMachineV.kex_done_args.i = SSH_CLI_SLOT;
                 PhaseMachine.kex_done(phase_machine_work);
             }
             else if (SSH_CLIENT_CTX(protocore_ssh_client_span())->state != PROTOCORE_SSH_CLIENT_FAILED)
@@ -879,8 +875,8 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
         {
             handled = PROTO_TRUE;
             // RFC 4253 sec 7.3: a NEWKEYS that ends no key exchange is a protocol error.
-            if ((SshTransport.slot = SSH_CLI_SLOT, SshTransport.newkeys_complete(protocore_ssh_transport_span()),
-                 SshTransport.i32) != 0) // -> SSH_PHASE_SERVICE
+            if ((SshTransportV.slot = SSH_CLI_SLOT, SshTransport.newkeys_complete(protocore_ssh_transport_span()),
+                 SshTransportV.i32) != 0) // -> SSH_PHASE_SERVICE
             {
                 cli_fail("NEWKEYS outside a key exchange");
             }
@@ -896,7 +892,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
             handled = PROTO_TRUE;
             if (send_userauth_publickey())
             {
-                PhaseMachine.service_done_args.i = SSH_CLI_SLOT;
+                PhaseMachineV.service_done_args.i = SSH_CLI_SLOT;
                 PhaseMachine.service_done(phase_machine_work);
             }
             else
@@ -911,7 +907,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
             handled = PROTO_TRUE;
             if (send_tcpip_forward())
             {
-                PhaseMachine.auth_done_args.i = SSH_CLI_SLOT;
+                PhaseMachineV.auth_done_args.i = SSH_CLI_SLOT;
                 PhaseMachine.auth_done(phase_machine_work);
             }
             else
@@ -948,12 +944,12 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
         }
         // RFC 4254 messages 80 and above belong to the connection layer, which owns them for both
         // roles; a zero return means it consumed the message.
-        SshConnection.chan.slot = SSH_CLI_SLOT;
-        SshConnection.msg_type = type;
-        SshConnection.chan.payload = payload;
-        SshConnection.chan.len = len;
+        SshConnectionV.chan.slot = SSH_CLI_SLOT;
+        SshConnectionV.msg_type = type;
+        SshConnectionV.chan.payload = payload;
+        SshConnectionV.chan.len = len;
         SshConnection.dispatch(protocore_ssh_connection_span());
-        handled = (SshConnection.i32 == 0);
+        handled = (SshConnectionV.i32 == 0);
         break;
     default:
         break;
@@ -968,8 +964,8 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
         size_t n = 0;
         if (ssh_pkt_unimplemented(SSH_CLI_SLOT, out, &n, sizeof(out)) == 0)
         {
-            (void)(SshClient.msg.payload = out, SshClient.msg.len = n, cli_send(protocore_ssh_client_span()),
-                   SshClient.ok);
+            (void)(SshClientV.msg.payload = out, SshClientV.msg.len = n, cli_send(protocore_ssh_client_span()),
+                   SshClientV.ok);
         }
     }
 }
@@ -981,17 +977,17 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
 static void protocore_ssh_client_begin(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_ssh_client_cfg *cfg = SshClient.cfg;
+    const protocore_ssh_client_cfg *cfg = SshClientV.cfg;
     if (!cfg || !cfg->host || !cfg->user || !cfg->auth_seed || !cfg->host_pin)
     {
-        SshClient.ok = PROTO_FALSE;
+        SshClientV.ok = PROTO_FALSE;
         return;
     }
 
     protocore_ssh_client_end(work);
     mem.set(protocore_ssh_client_span(), 0, sizeof(SshClientStorage));
     SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg = *cfg;
-    SshConnection.chan.slot = SSH_CLI_SLOT;
+    SshConnectionV.chan.slot = SSH_CLI_SLOT;
     SshConnection.channel_init(protocore_ssh_connection_span()); // the channel table this slot's bridges hang off
 
     // Own a dedicated scratch arena, distinct from the server's worker(s): packet decryption borrows
@@ -1000,29 +996,29 @@ static void protocore_ssh_client_begin(uint8_t *restrict work)
     protocore_worker_set_self(PROTOCORE_GHOST_WORKER_SLOT);
 
     uint16_t port = cfg->port ? cfg->port : 22;
-    TcpClient.dial.host = cfg->host;
-    TcpClient.dial.port = port;
-    TcpClient.dial.timeout_ms = 8000;
+    TcpClientV.dial.host = cfg->host;
+    TcpClientV.dial.port = port;
+    TcpClientV.dial.timeout_ms = 8000;
     TcpClient.open(protocore_tcp_client_span());
-    SSH_CLIENT_CTX(protocore_ssh_client_span())->cid = TcpClient.i32;
+    SSH_CLIENT_CTX(protocore_ssh_client_span())->cid = TcpClientV.i32;
     if (SSH_CLIENT_CTX(protocore_ssh_client_span())->cid < 0)
     {
         SSH_CLIENT_CTX(protocore_ssh_client_span())->state = PROTOCORE_SSH_CLIENT_FAILED;
-        SshClient.ok = PROTO_FALSE;
+        SshClientV.ok = PROTO_FALSE;
         return;
     }
     // The slot is ours for the life of the forward, so an inbound accept passes over it.
-    SshNetwork.ssh_slot = SSH_CLI_SLOT;
-    SshNetwork.handle = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
-    SshNetwork.stream.kind = SSH_STREAM_DIALED;
+    SshNetworkV.ssh_slot = SSH_CLI_SLOT;
+    SshNetworkV.handle = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
+    SshNetworkV.stream.kind = SSH_STREAM_DIALED;
     SshNetwork.claim(protocore_ssh_network_span());
-    if (SshNetwork.i32 != 0)
+    if (SshNetworkV.i32 != 0)
     {
-        TcpClient.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
+        TcpClientV.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
         TcpClient.close(protocore_tcp_client_span());
         SSH_CLIENT_CTX(protocore_ssh_client_span())->cid = -1;
         SSH_CLIENT_CTX(protocore_ssh_client_span())->state = PROTOCORE_SSH_CLIENT_FAILED;
-        SshClient.ok = PROTO_FALSE;
+        SshClientV.ok = PROTO_FALSE;
         return;
     }
 
@@ -1035,22 +1031,22 @@ static void protocore_ssh_client_begin(uint8_t *restrict work)
     uint8_t banner[SSH_VERSION_MAX + 2];
     size_t n = 0;
     const int ident =
-        (SshTransport.slot = SSH_CLI_SLOT, SshTransport.out_args.out = banner,
-         SshTransport.out_args.cap = sizeof(banner), SshTransport.send_ident(protocore_ssh_transport_span()),
-         n = SshTransport.out_args.out_len, SshTransport.i32);
-    TcpClient.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
-    TcpClient.io.data = banner;
-    TcpClient.io.len = n;
+        (SshTransportV.slot = SSH_CLI_SLOT, SshTransportV.out_args.out = banner,
+         SshTransportV.out_args.cap = sizeof(banner), SshTransport.send_ident(protocore_ssh_transport_span()),
+         n = SshTransportV.out_args.out_len, SshTransportV.i32);
+    TcpClientV.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
+    TcpClientV.io.data = banner;
+    TcpClientV.io.len = n;
     TcpClient.send(protocore_tcp_client_span());
-    if (ident != 0 || !TcpClient.ok)
+    if (ident != 0 || !TcpClientV.ok)
     {
         cli_fail("banner send failed");
-        SshClient.ok = PROTO_FALSE;
+        SshClientV.ok = PROTO_FALSE;
         return;
     }
     SSH_CLIENT_CTX(protocore_ssh_client_span())->state = PROTOCORE_SSH_CLIENT_CONNECTING;
     SSH_CLIENT_CTX(protocore_ssh_client_span())->deadline_ms = Clock.ms + 15000;
-    SshClient.ok = PROTO_TRUE;
+    SshClientV.ok = PROTO_TRUE;
     return;
 }
 
@@ -1064,12 +1060,12 @@ static void protocore_ssh_client_poll(uint8_t *restrict work)
         return;
     }
 
-    TcpClient.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
+    TcpClientV.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
     TcpClient.is_closed(protocore_tcp_client_span());
-    const proto_bool peer_closed = TcpClient.ok;
-    TcpClient.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
+    const proto_bool peer_closed = TcpClientV.ok;
+    TcpClientV.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
     TcpClient.available(protocore_tcp_client_span());
-    if (peer_closed && TcpClient.n == 0)
+    if (peer_closed && TcpClientV.n == 0)
     {
         cli_fail("relay closed the connection");
         return;
@@ -1082,17 +1078,17 @@ static void protocore_ssh_client_poll(uint8_t *restrict work)
     }
 
     uint8_t buf[1024];
-    TcpClient.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
-    TcpClient.io.buf = buf;
-    TcpClient.io.cap = sizeof(buf);
-    TcpClient.read(protocore_tcp_client_span());
-    size_t got = TcpClient.n;
+    TcpClientV.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
+    TcpClientV.io.buf = buf;
+    TcpClientV.io.cap = sizeof(buf);
+    TcpClientV.read(protocore_tcp_client_span());
+    size_t got = TcpClientV.n;
     if (got)
     {
         size_t off = 0;
-        PhaseMachine.admits_ident_args.i = SSH_CLI_SLOT;
+        PhaseMachineV.admits_ident_args.i = SSH_CLI_SLOT;
         PhaseMachine.admits_ident(phase_machine_work);
-        if (PhaseMachine.ok)
+        if (PhaseMachineV.ok)
         {
             int ident = ssh_transport_version_exchange_recv(SSH_CLI_SLOT, buf, got, &off);
             if (ident < 0)
@@ -1118,7 +1114,7 @@ static void protocore_ssh_client_poll(uint8_t *restrict work)
 #if PROTOCORE_SSH_PORT_FORWARD
     if (SSH_CLIENT_CTX(protocore_ssh_client_span())->state == PROTOCORE_SSH_CLIENT_UP)
     {
-        SshConnection.fwd.slot = SSH_CLI_SLOT;
+        SshConnectionV.fwd.slot = SSH_CLI_SLOT;
         SshConnection.forward_pump(protocore_ssh_connection_span());
     }
 #endif
@@ -1127,14 +1123,14 @@ static void protocore_ssh_client_poll(uint8_t *restrict work)
 static void protocore_ssh_client_end(uint8_t *restrict work)
 {
     (void)work;
-    SshNetwork.ssh_slot = SSH_CLI_SLOT;
+    SshNetworkV.ssh_slot = SSH_CLI_SLOT;
     SshNetwork.chan_close_all(protocore_ssh_network_span());
     if (SSH_CLIENT_CTX(protocore_ssh_client_span())->cid >= 0)
     {
-        TcpClient.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
+        TcpClientV.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
         TcpClient.close(protocore_tcp_client_span());
     }
-    SshNetwork.ssh_slot = SSH_CLI_SLOT;
+    SshNetworkV.ssh_slot = SSH_CLI_SLOT;
     SshNetwork.release(protocore_ssh_network_span());
     ssh_keymat_wipe(SSH_CLI_SLOT);
     cli_wipe();
@@ -1147,15 +1143,15 @@ static void cli_fail(const char *why)
 {
     PROTOCORE_LOGW(LOG_FWD_FAIL, ((const protocore_fval[]){PROTOCORE_VSTR(why)}), 1);
     SSH_CLIENT_CTX(protocore_ssh_client_span())->state = PROTOCORE_SSH_CLIENT_FAILED;
-    SshNetwork.ssh_slot = SSH_CLI_SLOT;
+    SshNetworkV.ssh_slot = SSH_CLI_SLOT;
     SshNetwork.chan_close_all(protocore_ssh_network_span());
     if (SSH_CLIENT_CTX(protocore_ssh_client_span())->cid >= 0)
     {
-        TcpClient.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
+        TcpClientV.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
         TcpClient.close(protocore_tcp_client_span());
     }
     SSH_CLIENT_CTX(protocore_ssh_client_span())->cid = -1;
-    SshNetwork.ssh_slot = SSH_CLI_SLOT;
+    SshNetworkV.ssh_slot = SSH_CLI_SLOT;
     SshNetwork.release(protocore_ssh_network_span());
     ssh_keymat_wipe(SSH_CLI_SLOT);
     cli_wipe();

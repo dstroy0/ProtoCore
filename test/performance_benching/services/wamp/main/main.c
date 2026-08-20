@@ -18,44 +18,44 @@ static uint8_t wamp_work[16]; // the borrow an entry takes; Wamp never reads it
 /** @brief Build `[HELLO, Realm|uri, Details|dict]` into @p buf; the octets written. */
 static size_t wamp_hello(char *buf, size_t cap)
 {
-    Wamp.out.buf = buf;
-    Wamp.out.cap = cap;
-    Wamp.uri.realm = "realm1";
-    Wamp.payload.details = "{\"roles\":{\"subscriber\":{}}}";
+    WampV.out.buf = buf;
+    WampV.out.cap = cap;
+    WampV.uri.realm = "realm1";
+    WampV.payload.details = "{\"roles\":{\"subscriber\":{}}}";
     Wamp.build_hello(wamp_work);
-    return Wamp.n;
+    return WampV.n;
 }
 
 /** @brief Build `[SUBSCRIBE, Request|id, Options|dict, Topic|uri]` into @p buf; the octets written. */
 static size_t wamp_subscribe(char *buf, size_t cap)
 {
-    Wamp.out.buf = buf;
-    Wamp.out.cap = cap;
-    Wamp.id.request = 713845233ull;
-    Wamp.uri.topic = "com.pc.telemetry";
-    Wamp.payload.options = NULL;
+    WampV.out.buf = buf;
+    WampV.out.cap = cap;
+    WampV.id.request = 713845233ull;
+    WampV.uri.topic = "com.pc.telemetry";
+    WampV.payload.options = NULL;
     Wamp.build_subscribe(wamp_work);
-    return Wamp.n;
+    return WampV.n;
 }
 
 /** @brief Build `[GOODBYE, Details|dict, Reason|uri]` into @p buf; the octets written. */
 static size_t wamp_goodbye(char *buf, size_t cap)
 {
-    Wamp.out.buf = buf;
-    Wamp.out.cap = cap;
-    Wamp.uri.reason = "wamp.close.normal";
-    Wamp.payload.details = NULL;
+    WampV.out.buf = buf;
+    WampV.out.cap = cap;
+    WampV.uri.reason = "wamp.close.normal";
+    WampV.payload.details = NULL;
     Wamp.build_goodbye(wamp_work);
-    return Wamp.n;
+    return WampV.n;
 }
 
 /** @brief Read the message type code of @p msg into @p type; whether element 0 held one. */
 static proto_bool wamp_type(const char *msg, int32_t *type)
 {
-    Wamp.parse.msg = msg;
+    WampV.parse.msg = msg;
     Wamp.get_type(wamp_work);
-    *type = Wamp.i32;
-    return Wamp.ok;
+    *type = WampV.i32;
+    return WampV.ok;
 }
 
 void dbench_run(void)

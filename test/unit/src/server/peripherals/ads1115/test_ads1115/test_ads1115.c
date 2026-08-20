@@ -46,11 +46,11 @@ void tearDown(void)
 // the same settings is 0x8583 | 0x4000 = 0xC583.
 void test_sbas444_reset_value_with_the_mux_moved_to_ain0_gnd(void)
 {
-    Ads1115.config_single_args.channel = 0u;
-    Ads1115.config_single_args.gain = ADS1115_GAIN_2;
-    Ads1115.config_single_args.dr = ADS1115_DR_128;
+    Ads1115V.config_single_args.channel = 0u;
+    Ads1115V.config_single_args.gain = ADS1115_GAIN_2;
+    Ads1115V.config_single_args.dr = ADS1115_DR_128;
     Ads1115.config_single(protocore_ads1115_span());
-    TEST_ASSERT_EQUAL_HEX16(0xC583u, Ads1115.word);
+    TEST_ASSERT_EQUAL_HEX16(0xC583u, Ads1115V.word);
 }
 
 // Bits [14:12] MUX: 100/101/110/111 select AIN0/AIN1/AIN2/AIN3 against GND. Every other field is
@@ -60,11 +60,11 @@ void test_sbas444_mux_encoding_for_each_single_ended_channel(void)
     static const uint16_t WANT[4] = {0xC583u, 0xD583u, 0xE583u, 0xF583u};
     for (uint8_t ch = 0u; ch < 4u; ch++)
     {
-        Ads1115.config_single_args.channel = ch;
-        Ads1115.config_single_args.gain = ADS1115_GAIN_2;
-        Ads1115.config_single_args.dr = ADS1115_DR_128;
+        Ads1115V.config_single_args.channel = ch;
+        Ads1115V.config_single_args.gain = ADS1115_GAIN_2;
+        Ads1115V.config_single_args.dr = ADS1115_DR_128;
         Ads1115.config_single(protocore_ads1115_span());
-        uint16_t cfg = Ads1115.word;
+        uint16_t cfg = Ads1115V.word;
         TEST_ASSERT_EQUAL_HEX16(WANT[ch], cfg);
         TEST_ASSERT_EQUAL_HEX16((uint16_t)(0x4u | ch), (uint16_t)((cfg >> 12) & 0x7u));
     }
@@ -77,11 +77,11 @@ void test_sbas444_pga_encoding(void)
     static const uint16_t WANT[6] = {0xC183u, 0xC383u, 0xC583u, 0xC783u, 0xC983u, 0xCB83u};
     for (uint8_t g = ADS1115_GAIN_TWOTHIRDS; g <= ADS1115_GAIN_16; g++)
     {
-        Ads1115.config_single_args.channel = 0u;
-        Ads1115.config_single_args.gain = g;
-        Ads1115.config_single_args.dr = ADS1115_DR_128;
+        Ads1115V.config_single_args.channel = 0u;
+        Ads1115V.config_single_args.gain = g;
+        Ads1115V.config_single_args.dr = ADS1115_DR_128;
         Ads1115.config_single(protocore_ads1115_span());
-        uint16_t cfg = Ads1115.word;
+        uint16_t cfg = Ads1115V.word;
         TEST_ASSERT_EQUAL_HEX16(WANT[g], cfg);
         TEST_ASSERT_EQUAL_HEX16((uint16_t)g, (uint16_t)((cfg >> 9) & 0x7u));
     }
@@ -93,11 +93,11 @@ void test_sbas444_data_rate_encoding(void)
     static const uint16_t WANT[8] = {0xC503u, 0xC523u, 0xC543u, 0xC563u, 0xC583u, 0xC5A3u, 0xC5C3u, 0xC5E3u};
     for (uint8_t dr = ADS1115_DR_8; dr <= ADS1115_DR_860; dr++)
     {
-        Ads1115.config_single_args.channel = 0u;
-        Ads1115.config_single_args.gain = ADS1115_GAIN_2;
-        Ads1115.config_single_args.dr = dr;
+        Ads1115V.config_single_args.channel = 0u;
+        Ads1115V.config_single_args.gain = ADS1115_GAIN_2;
+        Ads1115V.config_single_args.dr = dr;
         Ads1115.config_single(protocore_ads1115_span());
-        uint16_t cfg = Ads1115.word;
+        uint16_t cfg = Ads1115V.word;
         TEST_ASSERT_EQUAL_HEX16(WANT[dr], cfg);
         TEST_ASSERT_EQUAL_HEX16((uint16_t)dr, (uint16_t)((cfg >> 5) & 0x7u));
     }
@@ -114,11 +114,11 @@ void test_sbas444_start_single_shot_and_comparator_disabled(void)
         {
             for (uint8_t dr = ADS1115_DR_8; dr <= ADS1115_DR_860; dr++)
             {
-                Ads1115.config_single_args.channel = ch;
-                Ads1115.config_single_args.gain = g;
-                Ads1115.config_single_args.dr = dr;
+                Ads1115V.config_single_args.channel = ch;
+                Ads1115V.config_single_args.gain = g;
+                Ads1115V.config_single_args.dr = dr;
                 Ads1115.config_single(protocore_ads1115_span());
-                uint16_t cfg = Ads1115.word;
+                uint16_t cfg = Ads1115V.word;
                 TEST_ASSERT_EQUAL_HEX16(0x8000u, (uint16_t)(cfg & 0x8000u)); // OS = 1
                 TEST_ASSERT_EQUAL_HEX16(0x0100u, (uint16_t)(cfg & 0x0100u)); // MODE = 1
                 TEST_ASSERT_EQUAL_HEX16(0x0003u, (uint16_t)(cfg & 0x0003u)); // COMP_QUE = 11
@@ -132,42 +132,42 @@ void test_sbas444_start_single_shot_and_comparator_disabled(void)
 // data sheet's own default for the two fields that have one.
 void test_out_of_range_fields_fall_back_to_the_defaults(void)
 {
-    Ads1115.config_single_args.channel = 0u;
-    Ads1115.config_single_args.gain = ADS1115_GAIN_2;
-    Ads1115.config_single_args.dr = ADS1115_DR_128;
+    Ads1115V.config_single_args.channel = 0u;
+    Ads1115V.config_single_args.gain = ADS1115_GAIN_2;
+    Ads1115V.config_single_args.dr = ADS1115_DR_128;
     Ads1115.config_single(protocore_ads1115_span());
-    uint16_t want = Ads1115.word;
+    uint16_t want = Ads1115V.word;
     TEST_ASSERT_EQUAL_HEX16(0xC583u, want);
-    Ads1115.config_single_args.channel = 4u;
-    Ads1115.config_single_args.gain = ADS1115_GAIN_2;
-    Ads1115.config_single_args.dr = ADS1115_DR_128;
+    Ads1115V.config_single_args.channel = 4u;
+    Ads1115V.config_single_args.gain = ADS1115_GAIN_2;
+    Ads1115V.config_single_args.dr = ADS1115_DR_128;
     Ads1115.config_single(protocore_ads1115_span());
-    TEST_ASSERT_EQUAL_HEX16(want, Ads1115.word);
-    Ads1115.config_single_args.channel = 255u;
-    Ads1115.config_single_args.gain = ADS1115_GAIN_2;
-    Ads1115.config_single_args.dr = ADS1115_DR_128;
+    TEST_ASSERT_EQUAL_HEX16(want, Ads1115V.word);
+    Ads1115V.config_single_args.channel = 255u;
+    Ads1115V.config_single_args.gain = ADS1115_GAIN_2;
+    Ads1115V.config_single_args.dr = ADS1115_DR_128;
     Ads1115.config_single(protocore_ads1115_span());
-    TEST_ASSERT_EQUAL_HEX16(want, Ads1115.word);
-    Ads1115.config_single_args.channel = 0u;
-    Ads1115.config_single_args.gain = 6u;
-    Ads1115.config_single_args.dr = ADS1115_DR_128;
+    TEST_ASSERT_EQUAL_HEX16(want, Ads1115V.word);
+    Ads1115V.config_single_args.channel = 0u;
+    Ads1115V.config_single_args.gain = 6u;
+    Ads1115V.config_single_args.dr = ADS1115_DR_128;
     Ads1115.config_single(protocore_ads1115_span());
-    TEST_ASSERT_EQUAL_HEX16(want, Ads1115.word);
-    Ads1115.config_single_args.channel = 0u;
-    Ads1115.config_single_args.gain = 255u;
-    Ads1115.config_single_args.dr = ADS1115_DR_128;
+    TEST_ASSERT_EQUAL_HEX16(want, Ads1115V.word);
+    Ads1115V.config_single_args.channel = 0u;
+    Ads1115V.config_single_args.gain = 255u;
+    Ads1115V.config_single_args.dr = ADS1115_DR_128;
     Ads1115.config_single(protocore_ads1115_span());
-    TEST_ASSERT_EQUAL_HEX16(want, Ads1115.word);
-    Ads1115.config_single_args.channel = 0u;
-    Ads1115.config_single_args.gain = ADS1115_GAIN_2;
-    Ads1115.config_single_args.dr = 8u;
+    TEST_ASSERT_EQUAL_HEX16(want, Ads1115V.word);
+    Ads1115V.config_single_args.channel = 0u;
+    Ads1115V.config_single_args.gain = ADS1115_GAIN_2;
+    Ads1115V.config_single_args.dr = 8u;
     Ads1115.config_single(protocore_ads1115_span());
-    TEST_ASSERT_EQUAL_HEX16(want, Ads1115.word);
-    Ads1115.config_single_args.channel = 255u;
-    Ads1115.config_single_args.gain = 255u;
-    Ads1115.config_single_args.dr = 255u;
+    TEST_ASSERT_EQUAL_HEX16(want, Ads1115V.word);
+    Ads1115V.config_single_args.channel = 255u;
+    Ads1115V.config_single_args.gain = 255u;
+    Ads1115V.config_single_args.dr = 255u;
     Ads1115.config_single(protocore_ads1115_span());
-    TEST_ASSERT_EQUAL_HEX16(want, Ads1115.word);
+    TEST_ASSERT_EQUAL_HEX16(want, Ads1115V.word);
 }
 
 // SBAS444B Table 4 "Input Signal versus Ideal Output Code": +FS/2^15 is code 0001h, so one LSB is
@@ -181,30 +181,30 @@ void test_out_of_range_fields_fall_back_to_the_defaults(void)
 //   +/-0.256 V:  256000/32768 =    7.8125 uV/LSB, x128 = 1000 uV
 void test_sbas444_lsb_is_full_scale_over_32768(void)
 {
-    Ads1115.raw_to_uv_args.raw = 16;
-    Ads1115.raw_to_uv_args.gain = ADS1115_GAIN_TWOTHIRDS;
+    Ads1115V.raw_to_uv_args.raw = 16;
+    Ads1115V.raw_to_uv_args.gain = ADS1115_GAIN_TWOTHIRDS;
     Ads1115.raw_to_uv(protocore_ads1115_span());
-    TEST_ASSERT_EQUAL_INT32(3000, Ads1115.uv);
-    Ads1115.raw_to_uv_args.raw = 8;
-    Ads1115.raw_to_uv_args.gain = ADS1115_GAIN_1;
+    TEST_ASSERT_EQUAL_INT32(3000, Ads1115V.uv);
+    Ads1115V.raw_to_uv_args.raw = 8;
+    Ads1115V.raw_to_uv_args.gain = ADS1115_GAIN_1;
     Ads1115.raw_to_uv(protocore_ads1115_span());
-    TEST_ASSERT_EQUAL_INT32(1000, Ads1115.uv);
-    Ads1115.raw_to_uv_args.raw = 16;
-    Ads1115.raw_to_uv_args.gain = ADS1115_GAIN_2;
+    TEST_ASSERT_EQUAL_INT32(1000, Ads1115V.uv);
+    Ads1115V.raw_to_uv_args.raw = 16;
+    Ads1115V.raw_to_uv_args.gain = ADS1115_GAIN_2;
     Ads1115.raw_to_uv(protocore_ads1115_span());
-    TEST_ASSERT_EQUAL_INT32(1000, Ads1115.uv);
-    Ads1115.raw_to_uv_args.raw = 32;
-    Ads1115.raw_to_uv_args.gain = ADS1115_GAIN_4;
+    TEST_ASSERT_EQUAL_INT32(1000, Ads1115V.uv);
+    Ads1115V.raw_to_uv_args.raw = 32;
+    Ads1115V.raw_to_uv_args.gain = ADS1115_GAIN_4;
     Ads1115.raw_to_uv(protocore_ads1115_span());
-    TEST_ASSERT_EQUAL_INT32(1000, Ads1115.uv);
-    Ads1115.raw_to_uv_args.raw = 64;
-    Ads1115.raw_to_uv_args.gain = ADS1115_GAIN_8;
+    TEST_ASSERT_EQUAL_INT32(1000, Ads1115V.uv);
+    Ads1115V.raw_to_uv_args.raw = 64;
+    Ads1115V.raw_to_uv_args.gain = ADS1115_GAIN_8;
     Ads1115.raw_to_uv(protocore_ads1115_span());
-    TEST_ASSERT_EQUAL_INT32(1000, Ads1115.uv);
-    Ads1115.raw_to_uv_args.raw = 128;
-    Ads1115.raw_to_uv_args.gain = ADS1115_GAIN_16;
+    TEST_ASSERT_EQUAL_INT32(1000, Ads1115V.uv);
+    Ads1115V.raw_to_uv_args.raw = 128;
+    Ads1115V.raw_to_uv_args.gain = ADS1115_GAIN_16;
     Ads1115.raw_to_uv(protocore_ads1115_span());
-    TEST_ASSERT_EQUAL_INT32(1000, Ads1115.uv);
+    TEST_ASSERT_EQUAL_INT32(1000, Ads1115V.uv);
 }
 
 // Table 4: code 0 is 0 V, code 8000h is -FS, code 7FFFh is FS(2^15-1)/2^15. The negative end is
@@ -214,20 +214,20 @@ void test_sbas444_table4_endpoints(void)
     static const int32_t FS_UV[6] = {6144000, 4096000, 2048000, 1024000, 512000, 256000};
     for (uint8_t g = ADS1115_GAIN_TWOTHIRDS; g <= ADS1115_GAIN_16; g++)
     {
-        Ads1115.raw_to_uv_args.raw = 0;
-        Ads1115.raw_to_uv_args.gain = g;
+        Ads1115V.raw_to_uv_args.raw = 0;
+        Ads1115V.raw_to_uv_args.gain = g;
         Ads1115.raw_to_uv(protocore_ads1115_span());
-        TEST_ASSERT_EQUAL_INT32(0, Ads1115.uv);
+        TEST_ASSERT_EQUAL_INT32(0, Ads1115V.uv);
         // 8000h = -32768: -FS exactly, since -32768 * FS / 32768 = -FS
-        Ads1115.raw_to_uv_args.raw = (int16_t)-32768;
-        Ads1115.raw_to_uv_args.gain = g;
+        Ads1115V.raw_to_uv_args.raw = (int16_t)-32768;
+        Ads1115V.raw_to_uv_args.gain = g;
         Ads1115.raw_to_uv(protocore_ads1115_span());
-        TEST_ASSERT_EQUAL_INT32(-FS_UV[g], Ads1115.uv);
+        TEST_ASSERT_EQUAL_INT32(-FS_UV[g], Ads1115V.uv);
         // 7FFFh = 32767: FS * 32767 / 32768, one LSB below full scale
-        Ads1115.raw_to_uv_args.raw = 32767;
-        Ads1115.raw_to_uv_args.gain = g;
+        Ads1115V.raw_to_uv_args.raw = 32767;
+        Ads1115V.raw_to_uv_args.gain = g;
         Ads1115.raw_to_uv(protocore_ads1115_span());
-        TEST_ASSERT_EQUAL_INT32((int32_t)(((int64_t)32767 * FS_UV[g]) / 32768), Ads1115.uv);
+        TEST_ASSERT_EQUAL_INT32((int32_t)(((int64_t)32767 * FS_UV[g]) / 32768), Ads1115V.uv);
     }
 }
 
@@ -239,14 +239,14 @@ void test_conversion_is_odd_about_zero(void)
     {
         for (int32_t raw = 1; raw <= 32767; raw += 977)
         {
-            Ads1115.raw_to_uv_args.raw = (int16_t)raw;
-            Ads1115.raw_to_uv_args.gain = g;
+            Ads1115V.raw_to_uv_args.raw = (int16_t)raw;
+            Ads1115V.raw_to_uv_args.gain = g;
             Ads1115.raw_to_uv(protocore_ads1115_span());
-            int32_t pos = Ads1115.uv;
-            Ads1115.raw_to_uv_args.raw = (int16_t)(-raw);
-            Ads1115.raw_to_uv_args.gain = g;
+            int32_t pos = Ads1115V.uv;
+            Ads1115V.raw_to_uv_args.raw = (int16_t)(-raw);
+            Ads1115V.raw_to_uv_args.gain = g;
             Ads1115.raw_to_uv(protocore_ads1115_span());
-            int32_t neg = Ads1115.uv;
+            int32_t neg = Ads1115V.uv;
             TEST_ASSERT_EQUAL_INT32(pos, -neg);
         }
     }
@@ -260,14 +260,14 @@ void test_lower_gain_reads_a_larger_voltage_for_the_same_code(void)
     {
         // The wider range is captured before the narrower one runs: both report through the one
         // namespace, so comparing them in a single expression would compare the second with itself.
-        Ads1115.raw_to_uv_args.raw = 1000;
-        Ads1115.raw_to_uv_args.gain = g;
+        Ads1115V.raw_to_uv_args.raw = 1000;
+        Ads1115V.raw_to_uv_args.gain = g;
         Ads1115.raw_to_uv(protocore_ads1115_span());
-        const int32_t wider = Ads1115.uv;
-        Ads1115.raw_to_uv_args.raw = 1000;
-        Ads1115.raw_to_uv_args.gain = (uint8_t)(g + 1u);
+        const int32_t wider = Ads1115V.uv;
+        Ads1115V.raw_to_uv_args.raw = 1000;
+        Ads1115V.raw_to_uv_args.gain = (uint8_t)(g + 1u);
         Ads1115.raw_to_uv(protocore_ads1115_span());
-        const int32_t narrower = Ads1115.uv;
+        const int32_t narrower = Ads1115V.uv;
         TEST_ASSERT_TRUE(wider > narrower);
     }
 }
@@ -276,19 +276,19 @@ void test_lower_gain_reads_a_larger_voltage_for_the_same_code(void)
 // end of the full-scale table.
 void test_raw_to_uv_out_of_range_gain_falls_back(void)
 {
-    Ads1115.raw_to_uv_args.raw = 16;
-    Ads1115.raw_to_uv_args.gain = ADS1115_GAIN_2;
+    Ads1115V.raw_to_uv_args.raw = 16;
+    Ads1115V.raw_to_uv_args.gain = ADS1115_GAIN_2;
     Ads1115.raw_to_uv(protocore_ads1115_span());
-    int32_t want = Ads1115.uv;
+    int32_t want = Ads1115V.uv;
     TEST_ASSERT_EQUAL_INT32(1000, want);
-    Ads1115.raw_to_uv_args.raw = 16;
-    Ads1115.raw_to_uv_args.gain = 6u;
+    Ads1115V.raw_to_uv_args.raw = 16;
+    Ads1115V.raw_to_uv_args.gain = 6u;
     Ads1115.raw_to_uv(protocore_ads1115_span());
-    TEST_ASSERT_EQUAL_INT32(want, Ads1115.uv);
-    Ads1115.raw_to_uv_args.raw = 16;
-    Ads1115.raw_to_uv_args.gain = 255u;
+    TEST_ASSERT_EQUAL_INT32(want, Ads1115V.uv);
+    Ads1115V.raw_to_uv_args.raw = 16;
+    Ads1115V.raw_to_uv_args.gain = 255u;
     Ads1115.raw_to_uv(protocore_ads1115_span());
-    TEST_ASSERT_EQUAL_INT32(want, Ads1115.uv);
+    TEST_ASSERT_EQUAL_INT32(want, Ads1115V.uv);
 }
 
 // The register addresses the codec writes to, per SBAS444B Table 6 "Register Address".
@@ -332,18 +332,18 @@ void test_sbas444e_model_reset_values_and_a_persistent_address_pointer(void)
 // transfers to the device address, and the config word on the wire is the one the encoder built.
 void test_sbas444e_one_reading_is_a_config_write_then_a_conversion_read(void)
 {
-    Ads1115.config_single_args.channel = 0u;
-    Ads1115.config_single_args.gain = ADS1115_GAIN_2;
-    Ads1115.config_single_args.dr = (uint8_t)PROTOCORE_ADS1115_DR;
+    Ads1115V.config_single_args.channel = 0u;
+    Ads1115V.config_single_args.gain = ADS1115_GAIN_2;
+    Ads1115V.config_single_args.dr = (uint8_t)PROTOCORE_ADS1115_DR;
     Ads1115.config_single(protocore_ads1115_span());
-    const uint16_t want_cfg = Ads1115.word;
+    const uint16_t want_cfg = Ads1115V.word;
 
     int16_t raw = 0;
-    Ads1115.read_raw_args.channel = 0u;
-    Ads1115.read_raw_args.gain = ADS1115_GAIN_2;
-    Ads1115.read_raw_args.raw = &raw;
+    Ads1115V.read_raw_args.channel = 0u;
+    Ads1115V.read_raw_args.gain = ADS1115_GAIN_2;
+    Ads1115V.read_raw_args.raw = &raw;
     Ads1115.read_raw(protocore_ads1115_span());
-    TEST_ASSERT_TRUE(Ads1115.ok);
+    TEST_ASSERT_TRUE(Ads1115V.ok);
 
     uint32_t len = 0u;
     const uint8_t *tx = protocore_bus_host_written(&len);
@@ -370,11 +370,11 @@ void test_sbas444e_a_reading_is_the_input_divided_by_the_lsb(void)
 {
     s_part.ain_uv[0] = 1000000;
     int16_t raw = 0;
-    Ads1115.read_raw_args.channel = 0u;
-    Ads1115.read_raw_args.gain = ADS1115_GAIN_2;
-    Ads1115.read_raw_args.raw = &raw;
+    Ads1115V.read_raw_args.channel = 0u;
+    Ads1115V.read_raw_args.gain = ADS1115_GAIN_2;
+    Ads1115V.read_raw_args.raw = &raw;
     Ads1115.read_raw(protocore_ads1115_span());
-    TEST_ASSERT_TRUE(Ads1115.ok);
+    TEST_ASSERT_TRUE(Ads1115V.ok);
     TEST_ASSERT_EQUAL_INT16(16000, raw);
 }
 
@@ -384,11 +384,11 @@ void test_sbas444e_read_uv_returns_the_applied_voltage(void)
 {
     s_part.ain_uv[0] = 1000000;
     int32_t uv = 0;
-    Ads1115.read_uv_args.channel = 0u;
-    Ads1115.read_uv_args.gain = ADS1115_GAIN_2;
-    Ads1115.read_uv_args.microvolts = &uv;
+    Ads1115V.read_uv_args.channel = 0u;
+    Ads1115V.read_uv_args.gain = ADS1115_GAIN_2;
+    Ads1115V.read_uv_args.microvolts = &uv;
     Ads1115.read_uv(protocore_ads1115_span());
-    TEST_ASSERT_TRUE(Ads1115.ok);
+    TEST_ASSERT_TRUE(Ads1115V.ok);
     TEST_ASSERT_EQUAL_INT32(1000000, uv);
 }
 
@@ -399,19 +399,19 @@ void test_sbas444e_a_negative_input_reads_a_twos_complement_code(void)
 {
     s_part.ain_uv[0] = -1000000;
     int16_t raw = 0;
-    Ads1115.read_raw_args.channel = 0u;
-    Ads1115.read_raw_args.gain = ADS1115_GAIN_2;
-    Ads1115.read_raw_args.raw = &raw;
+    Ads1115V.read_raw_args.channel = 0u;
+    Ads1115V.read_raw_args.gain = ADS1115_GAIN_2;
+    Ads1115V.read_raw_args.raw = &raw;
     Ads1115.read_raw(protocore_ads1115_span());
-    TEST_ASSERT_TRUE(Ads1115.ok);
+    TEST_ASSERT_TRUE(Ads1115V.ok);
     TEST_ASSERT_EQUAL_INT16(-16000, raw);
     TEST_ASSERT_EQUAL_HEX16(0xC180u, (uint16_t)raw);
     int32_t uv = 0;
-    Ads1115.read_uv_args.channel = 0u;
-    Ads1115.read_uv_args.gain = ADS1115_GAIN_2;
-    Ads1115.read_uv_args.microvolts = &uv;
+    Ads1115V.read_uv_args.channel = 0u;
+    Ads1115V.read_uv_args.gain = ADS1115_GAIN_2;
+    Ads1115V.read_uv_args.microvolts = &uv;
     Ads1115.read_uv(protocore_ads1115_span());
-    TEST_ASSERT_TRUE(Ads1115.ok);
+    TEST_ASSERT_TRUE(Ads1115V.ok);
     TEST_ASSERT_EQUAL_INT32(-1000000, uv);
 }
 
@@ -421,18 +421,18 @@ void test_sbas444e_an_input_past_full_scale_clips(void)
 {
     s_part.ain_uv[0] = 3000000;
     int16_t raw = 0;
-    Ads1115.read_raw_args.channel = 0u;
-    Ads1115.read_raw_args.gain = ADS1115_GAIN_2;
-    Ads1115.read_raw_args.raw = &raw;
+    Ads1115V.read_raw_args.channel = 0u;
+    Ads1115V.read_raw_args.gain = ADS1115_GAIN_2;
+    Ads1115V.read_raw_args.raw = &raw;
     Ads1115.read_raw(protocore_ads1115_span());
-    TEST_ASSERT_TRUE(Ads1115.ok);
+    TEST_ASSERT_TRUE(Ads1115V.ok);
     TEST_ASSERT_EQUAL_HEX16(0x7FFFu, (uint16_t)raw);
     s_part.ain_uv[0] = -3000000;
-    Ads1115.read_raw_args.channel = 0u;
-    Ads1115.read_raw_args.gain = ADS1115_GAIN_2;
-    Ads1115.read_raw_args.raw = &raw;
+    Ads1115V.read_raw_args.channel = 0u;
+    Ads1115V.read_raw_args.gain = ADS1115_GAIN_2;
+    Ads1115V.read_raw_args.raw = &raw;
     Ads1115.read_raw(protocore_ads1115_span());
-    TEST_ASSERT_TRUE(Ads1115.ok);
+    TEST_ASSERT_TRUE(Ads1115V.ok);
     TEST_ASSERT_EQUAL_HEX16(0x8000u, (uint16_t)raw);
 }
 
@@ -449,11 +449,11 @@ void test_sbas444e_each_channel_reads_its_own_pin(void)
     for (uint8_t ch = 0u; ch < 4u; ch++)
     {
         int16_t raw = 0;
-        Ads1115.read_raw_args.channel = ch;
-        Ads1115.read_raw_args.gain = ADS1115_GAIN_2;
-        Ads1115.read_raw_args.raw = &raw;
+        Ads1115V.read_raw_args.channel = ch;
+        Ads1115V.read_raw_args.gain = ADS1115_GAIN_2;
+        Ads1115V.read_raw_args.raw = &raw;
         Ads1115.read_raw(protocore_ads1115_span());
-        TEST_ASSERT_TRUE(Ads1115.ok);
+        TEST_ASSERT_TRUE(Ads1115V.ok);
         TEST_ASSERT_EQUAL_INT16(WANT[ch], raw);
     }
 }
@@ -468,11 +468,11 @@ void test_sbas444e_the_gain_selects_the_range_the_part_converts_against(void)
     for (uint8_t g = ADS1115_GAIN_TWOTHIRDS; g <= ADS1115_GAIN_16; g++)
     {
         int16_t raw = 0;
-        Ads1115.read_raw_args.channel = 0u;
-        Ads1115.read_raw_args.gain = g;
-        Ads1115.read_raw_args.raw = &raw;
+        Ads1115V.read_raw_args.channel = 0u;
+        Ads1115V.read_raw_args.gain = g;
+        Ads1115V.read_raw_args.raw = &raw;
         Ads1115.read_raw(protocore_ads1115_span());
-        TEST_ASSERT_TRUE(Ads1115.ok);
+        TEST_ASSERT_TRUE(Ads1115V.ok);
         TEST_ASSERT_EQUAL_INT16((int16_t)((int64_t)128000 * 32768 / FS_UV[g]), raw);
     }
 }
@@ -483,15 +483,15 @@ void test_a_second_reading_sees_the_new_input(void)
 {
     int16_t raw = 0;
     s_part.ain_uv[0] = 62500; // 1000 LSB
-    Ads1115.read_raw_args.channel = 0u;
-    Ads1115.read_raw_args.gain = ADS1115_GAIN_2;
-    Ads1115.read_raw_args.raw = &raw;
+    Ads1115V.read_raw_args.channel = 0u;
+    Ads1115V.read_raw_args.gain = ADS1115_GAIN_2;
+    Ads1115V.read_raw_args.raw = &raw;
     Ads1115.read_raw(protocore_ads1115_span());
     TEST_ASSERT_EQUAL_INT16(1000, raw);
     s_part.ain_uv[0] = 125000; // 2000 LSB
-    Ads1115.read_raw_args.channel = 0u;
-    Ads1115.read_raw_args.gain = ADS1115_GAIN_2;
-    Ads1115.read_raw_args.raw = &raw;
+    Ads1115V.read_raw_args.channel = 0u;
+    Ads1115V.read_raw_args.gain = ADS1115_GAIN_2;
+    Ads1115V.read_raw_args.raw = &raw;
     Ads1115.read_raw(protocore_ads1115_span());
     TEST_ASSERT_EQUAL_INT16(2000, raw);
 }
@@ -504,11 +504,11 @@ void test_a_part_at_another_address_is_not_read(void)
     protocore_ads1115_dev_place(&s_part, (uint16_t)(PROTOCORE_ADS1115_I2C_ADDR + 1));
     s_part.ain_uv[0] = 1000000;
     int16_t raw = -1;
-    Ads1115.read_raw_args.channel = 0u;
-    Ads1115.read_raw_args.gain = ADS1115_GAIN_2;
-    Ads1115.read_raw_args.raw = &raw;
+    Ads1115V.read_raw_args.channel = 0u;
+    Ads1115V.read_raw_args.gain = ADS1115_GAIN_2;
+    Ads1115V.read_raw_args.raw = &raw;
     Ads1115.read_raw(protocore_ads1115_span());
-    TEST_ASSERT_TRUE(Ads1115.ok); // the transfers completed; nothing answered them
+    TEST_ASSERT_TRUE(Ads1115V.ok); // the transfers completed; nothing answered them
     TEST_ASSERT_EQUAL_INT16(0, raw);
 }
 
@@ -518,26 +518,25 @@ void test_begin_sends_later_transfers_to_the_address_it_was_given(void)
     protocore_bus_host_detach_all();
     protocore_ads1115_dev_place(&s_part, 0x4Bu); // ADDR tied so A1 A0 = 11
     s_part.ain_uv[0] = 1000000;
-    Ads1115.begin_args.addr = 0x4Bu;
+    Ads1115V.begin_args.addr = 0x4Bu;
     Ads1115.begin(protocore_ads1115_span());
-    TEST_ASSERT_TRUE(Ads1115.ok);
+    TEST_ASSERT_TRUE(Ads1115V.ok);
     int16_t raw = 0;
-    Ads1115.read_raw_args.channel = 0u;
-    Ads1115.read_raw_args.gain = ADS1115_GAIN_2;
-    Ads1115.read_raw_args.raw = &raw;
+    Ads1115V.read_raw_args.channel = 0u;
+    Ads1115V.read_raw_args.gain = ADS1115_GAIN_2;
+    Ads1115V.read_raw_args.raw = &raw;
     Ads1115.read_raw(protocore_ads1115_span());
-    TEST_ASSERT_TRUE(Ads1115.ok);
+    TEST_ASSERT_TRUE(Ads1115V.ok);
     TEST_ASSERT_EQUAL_INT16(16000, raw);
     TEST_ASSERT_EQUAL_HEX16(0x4Bu, protocore_bus_host_log[protocore_bus_host_log_len - 1u].target);
     // and back to the strapped default, so the address is state and not a constant
-    Ads1115.begin_args.addr = 0u;
+    Ads1115V.begin_args.addr = 0u;
     Ads1115.begin(protocore_ads1115_span());
-    Ads1115.read_raw_args.channel = 0u;
-    Ads1115.read_raw_args.gain = ADS1115_GAIN_2;
-    Ads1115.read_raw_args.raw = &raw;
+    Ads1115V.read_raw_args.channel = 0u;
+    Ads1115V.read_raw_args.gain = ADS1115_GAIN_2;
+    Ads1115V.read_raw_args.raw = &raw;
     Ads1115.read_raw(protocore_ads1115_span());
-    TEST_ASSERT_EQUAL_HEX16(PROTOCORE_ADS1115_I2C_ADDR,
-                            protocore_bus_host_log[protocore_bus_host_log_len - 1u].target);
+    TEST_ASSERT_EQUAL_HEX16(PROTOCORE_ADS1115_I2C_ADDR, protocore_bus_host_log[protocore_bus_host_log_len - 1u].target);
 }
 
 // A bus that refuses the config write is reported, not converted: the reading fails before it
@@ -547,11 +546,11 @@ void test_a_refused_config_write_fails_the_reading(void)
     s_part.ain_uv[0] = 1000000;
     protocore_bus_host_fail = 1u;
     int16_t raw = -1;
-    Ads1115.read_raw_args.channel = 0u;
-    Ads1115.read_raw_args.gain = ADS1115_GAIN_2;
-    Ads1115.read_raw_args.raw = &raw;
+    Ads1115V.read_raw_args.channel = 0u;
+    Ads1115V.read_raw_args.gain = ADS1115_GAIN_2;
+    Ads1115V.read_raw_args.raw = &raw;
     Ads1115.read_raw(protocore_ads1115_span());
-    TEST_ASSERT_FALSE(Ads1115.ok);
+    TEST_ASSERT_FALSE(Ads1115V.ok);
     TEST_ASSERT_EQUAL_UINT32(0u, protocore_bus_host_log_len); // the refused transfer never ran
 }
 
@@ -562,11 +561,11 @@ void test_a_refused_conversion_read_fails_the_reading(void)
     s_part.ain_uv[0] = 1000000;
     protocore_bus_host_fail = 2u; // let the config write through, refuse the read after it
     int16_t raw = -1;
-    Ads1115.read_raw_args.channel = 0u;
-    Ads1115.read_raw_args.gain = ADS1115_GAIN_2;
-    Ads1115.read_raw_args.raw = &raw;
+    Ads1115V.read_raw_args.channel = 0u;
+    Ads1115V.read_raw_args.gain = ADS1115_GAIN_2;
+    Ads1115V.read_raw_args.raw = &raw;
     Ads1115.read_raw(protocore_ads1115_span());
-    TEST_ASSERT_FALSE(Ads1115.ok);
+    TEST_ASSERT_FALSE(Ads1115V.ok);
 }
 
 // read_uv fails the same way read_raw does, and leaves the caller's microvolts alone.
@@ -575,21 +574,21 @@ void test_read_uv_reports_a_failed_transfer(void)
     s_part.ain_uv[0] = 1000000;
     protocore_bus_host_fail = 1u;
     int32_t uv = 12345;
-    Ads1115.read_uv_args.channel = 0u;
-    Ads1115.read_uv_args.gain = ADS1115_GAIN_2;
-    Ads1115.read_uv_args.microvolts = &uv;
+    Ads1115V.read_uv_args.channel = 0u;
+    Ads1115V.read_uv_args.gain = ADS1115_GAIN_2;
+    Ads1115V.read_uv_args.microvolts = &uv;
     Ads1115.read_uv(protocore_ads1115_span());
-    TEST_ASSERT_FALSE(Ads1115.ok);
+    TEST_ASSERT_FALSE(Ads1115V.ok);
     TEST_ASSERT_EQUAL_INT32(12345, uv);
 }
 
 // A null destination is refused before anything reaches the bus.
 void test_read_raw_refuses_a_null_destination(void)
 {
-    Ads1115.read_raw_args.channel = 0u;
-    Ads1115.read_raw_args.gain = ADS1115_GAIN_2;
-    Ads1115.read_raw_args.raw = 0;
+    Ads1115V.read_raw_args.channel = 0u;
+    Ads1115V.read_raw_args.gain = ADS1115_GAIN_2;
+    Ads1115V.read_raw_args.raw = 0;
     Ads1115.read_raw(protocore_ads1115_span());
-    TEST_ASSERT_FALSE(Ads1115.ok);
+    TEST_ASSERT_FALSE(Ads1115V.ok);
     TEST_ASSERT_EQUAL_UINT32(0u, protocore_bus_host_log_len);
 }

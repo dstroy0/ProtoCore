@@ -45,19 +45,19 @@ void test_extension_lives_in_the_last_segment(void)
     };
     for (size_t i = 0; i < sizeof(HAS) / sizeof(HAS[0]); i++)
     {
-        SpaRouter.has_extension_args.path = HAS[i];
+        SpaRouterV.has_extension_args.path = HAS[i];
         SpaRouter.has_extension(spa_router_work);
-        TEST_ASSERT_TRUE_MESSAGE(SpaRouter.ok, HAS[i]);
+        TEST_ASSERT_TRUE_MESSAGE(SpaRouterV.ok, HAS[i]);
     }
     for (size_t i = 0; i < sizeof(HAS_NOT) / sizeof(HAS_NOT[0]); i++)
     {
-        SpaRouter.has_extension_args.path = HAS_NOT[i];
+        SpaRouterV.has_extension_args.path = HAS_NOT[i];
         SpaRouter.has_extension(spa_router_work);
-        TEST_ASSERT_FALSE_MESSAGE(SpaRouter.ok, HAS_NOT[i]);
+        TEST_ASSERT_FALSE_MESSAGE(SpaRouterV.ok, HAS_NOT[i]);
     }
-    SpaRouter.has_extension_args.path = NULL;
+    SpaRouterV.has_extension_args.path = NULL;
     SpaRouter.has_extension(spa_router_work);
-    TEST_ASSERT_FALSE(SpaRouter.ok);
+    TEST_ASSERT_FALSE(SpaRouterV.ok);
 }
 
 // --- the routing decision -------------------------------------------------------------------------
@@ -65,72 +65,72 @@ void test_extension_lives_in_the_last_segment(void)
 // "/" and "" are the app entry point, so they serve the shell rather than looking for a file.
 void test_root_serves_the_shell(void)
 {
-    SpaRouter.route_args.path = "/";
-    SpaRouter.route_args.api_prefix = "/api/";
+    SpaRouterV.route_args.path = "/";
+    SpaRouterV.route_args.api_prefix = "/api/";
     SpaRouter.route(spa_router_work);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_SHELL, SpaRouter.action);
-    SpaRouter.route_args.path = "";
-    SpaRouter.route_args.api_prefix = "/api/";
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_SHELL, SpaRouterV.action);
+    SpaRouterV.route_args.path = "";
+    SpaRouterV.route_args.api_prefix = "/api/";
     SpaRouter.route(spa_router_work);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_SHELL, SpaRouter.action);
-    SpaRouter.route_args.path = NULL;
-    SpaRouter.route_args.api_prefix = "/api/";
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_SHELL, SpaRouterV.action);
+    SpaRouterV.route_args.path = NULL;
+    SpaRouterV.route_args.api_prefix = "/api/";
     SpaRouter.route(spa_router_work);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_SHELL, SpaRouter.action);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_SHELL, SpaRouterV.action);
 }
 
 // The API prefix is tested before the extension rule, so an endpoint that happens to end in a dotted
 // segment still reaches its handler instead of being looked up on the filesystem.
 void test_api_prefix_passes_through(void)
 {
-    SpaRouter.route_args.path = "/api/state";
-    SpaRouter.route_args.api_prefix = "/api/";
+    SpaRouterV.route_args.path = "/api/state";
+    SpaRouterV.route_args.api_prefix = "/api/";
     SpaRouter.route(spa_router_work);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_PASSTHROUGH, SpaRouter.action);
-    SpaRouter.route_args.path = "/api/";
-    SpaRouter.route_args.api_prefix = "/api/";
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_PASSTHROUGH, SpaRouterV.action);
+    SpaRouterV.route_args.path = "/api/";
+    SpaRouterV.route_args.api_prefix = "/api/";
     SpaRouter.route(spa_router_work);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_PASSTHROUGH, SpaRouter.action);
-    SpaRouter.route_args.path = "/api/v1/device.json";
-    SpaRouter.route_args.api_prefix = "/api/";
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_PASSTHROUGH, SpaRouterV.action);
+    SpaRouterV.route_args.path = "/api/v1/device.json";
+    SpaRouterV.route_args.api_prefix = "/api/";
     SpaRouter.route(spa_router_work);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_PASSTHROUGH, SpaRouter.action);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_PASSTHROUGH, SpaRouterV.action);
     // A path that only shares a leading substring with the prefix is not under it.
-    SpaRouter.route_args.path = "/apiary";
-    SpaRouter.route_args.api_prefix = "/api/";
+    SpaRouterV.route_args.path = "/apiary";
+    SpaRouterV.route_args.api_prefix = "/api/";
     SpaRouter.route(spa_router_work);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_SHELL, SpaRouter.action);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_SHELL, SpaRouterV.action);
     // No prefix configured: nothing passes through.
-    SpaRouter.route_args.path = "/api/state";
-    SpaRouter.route_args.api_prefix = NULL;
+    SpaRouterV.route_args.path = "/api/state";
+    SpaRouterV.route_args.api_prefix = NULL;
     SpaRouter.route(spa_router_work);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_SHELL, SpaRouter.action);
-    SpaRouter.route_args.path = "/api/state";
-    SpaRouter.route_args.api_prefix = "";
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_SHELL, SpaRouterV.action);
+    SpaRouterV.route_args.path = "/api/state";
+    SpaRouterV.route_args.api_prefix = "";
     SpaRouter.route(spa_router_work);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_SHELL, SpaRouter.action);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_SHELL, SpaRouterV.action);
 }
 
 // An extensionless path is a client route the browser's own router owns; anything with an extension
 // is a real file on disk.
 void test_client_routes_get_the_shell_and_assets_get_the_file(void)
 {
-    SpaRouter.route_args.path = "/dashboard";
-    SpaRouter.route_args.api_prefix = "/api/";
+    SpaRouterV.route_args.path = "/dashboard";
+    SpaRouterV.route_args.api_prefix = "/api/";
     SpaRouter.route(spa_router_work);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_SHELL, SpaRouter.action);
-    SpaRouter.route_args.path = "/devices/42";
-    SpaRouter.route_args.api_prefix = "/api/";
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_SHELL, SpaRouterV.action);
+    SpaRouterV.route_args.path = "/devices/42";
+    SpaRouterV.route_args.api_prefix = "/api/";
     SpaRouter.route(spa_router_work);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_SHELL, SpaRouter.action);
-    SpaRouter.route_args.path = "/app.js";
-    SpaRouter.route_args.api_prefix = "/api/";
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_SHELL, SpaRouterV.action);
+    SpaRouterV.route_args.path = "/app.js";
+    SpaRouterV.route_args.api_prefix = "/api/";
     SpaRouter.route(spa_router_work);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_FILE, SpaRouter.action);
-    SpaRouter.route_args.path = "/assets/style.css";
-    SpaRouter.route_args.api_prefix = "/api/";
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_FILE, SpaRouterV.action);
+    SpaRouterV.route_args.path = "/assets/style.css";
+    SpaRouterV.route_args.api_prefix = "/api/";
     SpaRouter.route(spa_router_work);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_FILE, SpaRouter.action);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_FILE, SpaRouterV.action);
 }
 
 // --- the fallback HMI -----------------------------------------------------------------------------
@@ -154,20 +154,20 @@ void test_route_ex_matches_plain_route_when_healthy(void)
     {
         // The plain decision is captured before the extended one runs: both report through
         // SpaRouter.action, so comparing them in one expression would compare the second with itself.
-        SpaRouter.route_args.path = PATHS[i];
-        SpaRouter.route_args.api_prefix = "/api/";
+        SpaRouterV.route_args.path = PATHS[i];
+        SpaRouterV.route_args.api_prefix = "/api/";
         SpaRouter.route(spa_router_work);
-        const protocore_spa_action plain = SpaRouter.action;
-        SpaRouter.route_ex_args.path = PATHS[i];
-        SpaRouter.route_ex_args.ctx = &c;
+        const protocore_spa_action plain = SpaRouterV.action;
+        SpaRouterV.route_ex_args.path = PATHS[i];
+        SpaRouterV.route_ex_args.ctx = &c;
         SpaRouter.route_ex(spa_router_work);
-        TEST_ASSERT_EQUAL_INT_MESSAGE(plain, SpaRouter.action, PATHS[i]);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(plain, SpaRouterV.action, PATHS[i]);
     }
     // A null context degrades to the no-prefix plain route.
-    SpaRouter.route_ex_args.path = "/api/state";
-    SpaRouter.route_ex_args.ctx = NULL;
+    SpaRouterV.route_ex_args.path = "/api/state";
+    SpaRouterV.route_ex_args.ctx = NULL;
     SpaRouter.route_ex(spa_router_work);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_SHELL, SpaRouter.action);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_SHELL, SpaRouterV.action);
 }
 
 // Each of the three conditions on its own turns a shell decision into the no-JS control page, and
@@ -184,22 +184,22 @@ void test_only_the_shell_decision_degrades(void)
     const protocore_spa_ctx *CASES[3] = {&no_shell, &no_js, &degraded};
     for (int i = 0; i < 3; i++)
     {
-        SpaRouter.route_ex_args.path = "/";
-        SpaRouter.route_ex_args.ctx = CASES[i];
+        SpaRouterV.route_ex_args.path = "/";
+        SpaRouterV.route_ex_args.ctx = CASES[i];
         SpaRouter.route_ex(spa_router_work);
-        TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_FALLBACK, SpaRouter.action);
-        SpaRouter.route_ex_args.path = "/dashboard";
-        SpaRouter.route_ex_args.ctx = CASES[i];
+        TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_FALLBACK, SpaRouterV.action);
+        SpaRouterV.route_ex_args.path = "/dashboard";
+        SpaRouterV.route_ex_args.ctx = CASES[i];
         SpaRouter.route_ex(spa_router_work);
-        TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_FALLBACK, SpaRouter.action);
-        SpaRouter.route_ex_args.path = "/app.js";
-        SpaRouter.route_ex_args.ctx = CASES[i];
+        TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_FALLBACK, SpaRouterV.action);
+        SpaRouterV.route_ex_args.path = "/app.js";
+        SpaRouterV.route_ex_args.ctx = CASES[i];
         SpaRouter.route_ex(spa_router_work);
-        TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_FILE, SpaRouter.action);
-        SpaRouter.route_ex_args.path = "/api/state";
-        SpaRouter.route_ex_args.ctx = CASES[i];
+        TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_SERVE_FILE, SpaRouterV.action);
+        SpaRouterV.route_ex_args.path = "/api/state";
+        SpaRouterV.route_ex_args.ctx = CASES[i];
         SpaRouter.route_ex(spa_router_work);
-        TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_PASSTHROUGH, SpaRouter.action);
+        TEST_ASSERT_EQUAL_INT(PROTOCORE_SPA_PASSTHROUGH, SpaRouterV.action);
     }
 }
 
@@ -229,27 +229,27 @@ static size_t drain(const protocore_ui_fragment *frags, size_t count, void *ctx,
     protocore_ui_stream s;
     char chunk[64];
     size_t total = 0;
-    SpaRouter.ui_stream_begin_args.s = &s;
-    SpaRouter.ui_stream_begin_args.frags = frags;
-    SpaRouter.ui_stream_begin_args.count = count;
-    SpaRouter.ui_stream_begin_args.ctx = ctx;
+    SpaRouterV.ui_stream_begin_args.s = &s;
+    SpaRouterV.ui_stream_begin_args.frags = frags;
+    SpaRouterV.ui_stream_begin_args.count = count;
+    SpaRouterV.ui_stream_begin_args.ctx = ctx;
     SpaRouter.ui_stream_begin(spa_router_work);
     for (;;)
     {
         // The done test is read into a local rather than sitting in the loop condition: the
         // condition is re-evaluated every iteration, and the namespace reports through one member.
-        SpaRouter.ui_stream_done_args.s = &s;
+        SpaRouterV.ui_stream_done_args.s = &s;
         SpaRouter.ui_stream_done(spa_router_work);
-        const proto_bool done = SpaRouter.ok;
+        const proto_bool done = SpaRouterV.ok;
         if (done)
         {
             break;
         }
-        SpaRouter.ui_stream_next_args.s = &s;
-        SpaRouter.ui_stream_next_args.out = chunk;
-        SpaRouter.ui_stream_next_args.cap = cap;
+        SpaRouterV.ui_stream_next_args.s = &s;
+        SpaRouterV.ui_stream_next_args.out = chunk;
+        SpaRouterV.ui_stream_next_args.cap = cap;
         SpaRouter.ui_stream_next(spa_router_work);
-        size_t n = SpaRouter.n;
+        size_t n = SpaRouterV.n;
         if (n == 0)
         {
             break;
@@ -299,28 +299,28 @@ void test_predicates_run_as_the_stream_reaches_them(void)
     protocore_ui_stream s;
     char buf[64];
     flag = 0;
-    SpaRouter.ui_stream_begin_args.s = &s;
-    SpaRouter.ui_stream_begin_args.frags = FRAGS;
-    SpaRouter.ui_stream_begin_args.count = 2;
-    SpaRouter.ui_stream_begin_args.ctx = &flag;
+    SpaRouterV.ui_stream_begin_args.s = &s;
+    SpaRouterV.ui_stream_begin_args.frags = FRAGS;
+    SpaRouterV.ui_stream_begin_args.count = 2;
+    SpaRouterV.ui_stream_begin_args.ctx = &flag;
     SpaRouter.ui_stream_begin(spa_router_work);
-    SpaRouter.ui_stream_next_args.s = &s;
-    SpaRouter.ui_stream_next_args.out = buf;
-    SpaRouter.ui_stream_next_args.cap = 4;
+    SpaRouterV.ui_stream_next_args.s = &s;
+    SpaRouterV.ui_stream_next_args.out = buf;
+    SpaRouterV.ui_stream_next_args.cap = 4;
     SpaRouter.ui_stream_next(spa_router_work);
-    size_t n = SpaRouter.n;
+    size_t n = SpaRouterV.n;
     TEST_ASSERT_EQUAL_UINT(4u, n);
     flag = 1;
-    SpaRouter.ui_stream_next_args.s = &s;
-    SpaRouter.ui_stream_next_args.out = buf;
-    SpaRouter.ui_stream_next_args.cap = 64;
+    SpaRouterV.ui_stream_next_args.s = &s;
+    SpaRouterV.ui_stream_next_args.out = buf;
+    SpaRouterV.ui_stream_next_args.cap = 64;
     SpaRouter.ui_stream_next(spa_router_work);
-    size_t m = SpaRouter.n;
+    size_t m = SpaRouterV.n;
     TEST_ASSERT_EQUAL_UINT(4u, m);
     TEST_ASSERT_EQUAL_MEMORY("BBBB", buf, 4);
-    SpaRouter.ui_stream_done_args.s = &s;
+    SpaRouterV.ui_stream_done_args.s = &s;
     SpaRouter.ui_stream_done(spa_router_work);
-    TEST_ASSERT_TRUE(SpaRouter.ok);
+    TEST_ASSERT_TRUE(SpaRouterV.ok);
 }
 
 // A fragment set with nothing to emit finishes without ever writing an octet.
@@ -329,49 +329,49 @@ void test_empty_and_all_skipped_streams_finish_immediately(void)
     protocore_ui_stream s;
     char buf[32];
 
-    SpaRouter.ui_stream_begin_args.s = &s;
-    SpaRouter.ui_stream_begin_args.frags = PAGE;
-    SpaRouter.ui_stream_begin_args.count = 0;
-    SpaRouter.ui_stream_begin_args.ctx = NULL;
+    SpaRouterV.ui_stream_begin_args.s = &s;
+    SpaRouterV.ui_stream_begin_args.frags = PAGE;
+    SpaRouterV.ui_stream_begin_args.count = 0;
+    SpaRouterV.ui_stream_begin_args.ctx = NULL;
     SpaRouter.ui_stream_begin(spa_router_work);
-    SpaRouter.ui_stream_done_args.s = &s;
+    SpaRouterV.ui_stream_done_args.s = &s;
     SpaRouter.ui_stream_done(spa_router_work);
-    TEST_ASSERT_TRUE(SpaRouter.ok);
-    SpaRouter.ui_stream_next_args.s = &s;
-    SpaRouter.ui_stream_next_args.out = buf;
-    SpaRouter.ui_stream_next_args.cap = sizeof(buf);
+    TEST_ASSERT_TRUE(SpaRouterV.ok);
+    SpaRouterV.ui_stream_next_args.s = &s;
+    SpaRouterV.ui_stream_next_args.out = buf;
+    SpaRouterV.ui_stream_next_args.cap = sizeof(buf);
     SpaRouter.ui_stream_next(spa_router_work);
-    TEST_ASSERT_EQUAL_UINT(0u, SpaRouter.n);
+    TEST_ASSERT_EQUAL_UINT(0u, SpaRouterV.n);
 
-    SpaRouter.ui_stream_begin_args.s = &s;
-    SpaRouter.ui_stream_begin_args.frags = NULL;
-    SpaRouter.ui_stream_begin_args.count = 4;
-    SpaRouter.ui_stream_begin_args.ctx = NULL;
+    SpaRouterV.ui_stream_begin_args.s = &s;
+    SpaRouterV.ui_stream_begin_args.frags = NULL;
+    SpaRouterV.ui_stream_begin_args.count = 4;
+    SpaRouterV.ui_stream_begin_args.ctx = NULL;
     SpaRouter.ui_stream_begin(spa_router_work);
-    SpaRouter.ui_stream_done_args.s = &s;
+    SpaRouterV.ui_stream_done_args.s = &s;
     SpaRouter.ui_stream_done(spa_router_work);
-    TEST_ASSERT_TRUE(SpaRouter.ok);
+    TEST_ASSERT_TRUE(SpaRouterV.ok);
 
     static const protocore_ui_fragment NONE[] = {
         {"a", "AAAA", always_false},
         {"b", "BBBB", always_false},
     };
-    SpaRouter.ui_stream_begin_args.s = &s;
-    SpaRouter.ui_stream_begin_args.frags = NONE;
-    SpaRouter.ui_stream_begin_args.count = 2;
-    SpaRouter.ui_stream_begin_args.ctx = NULL;
+    SpaRouterV.ui_stream_begin_args.s = &s;
+    SpaRouterV.ui_stream_begin_args.frags = NONE;
+    SpaRouterV.ui_stream_begin_args.count = 2;
+    SpaRouterV.ui_stream_begin_args.ctx = NULL;
     SpaRouter.ui_stream_begin(spa_router_work);
-    SpaRouter.ui_stream_done_args.s = &s;
+    SpaRouterV.ui_stream_done_args.s = &s;
     SpaRouter.ui_stream_done(spa_router_work);
-    TEST_ASSERT_FALSE(SpaRouter.ok);
-    SpaRouter.ui_stream_next_args.s = &s;
-    SpaRouter.ui_stream_next_args.out = buf;
-    SpaRouter.ui_stream_next_args.cap = sizeof(buf);
+    TEST_ASSERT_FALSE(SpaRouterV.ok);
+    SpaRouterV.ui_stream_next_args.s = &s;
+    SpaRouterV.ui_stream_next_args.out = buf;
+    SpaRouterV.ui_stream_next_args.cap = sizeof(buf);
     SpaRouter.ui_stream_next(spa_router_work);
-    TEST_ASSERT_EQUAL_UINT(0u, SpaRouter.n);
-    SpaRouter.ui_stream_done_args.s = &s;
+    TEST_ASSERT_EQUAL_UINT(0u, SpaRouterV.n);
+    SpaRouterV.ui_stream_done_args.s = &s;
     SpaRouter.ui_stream_done(spa_router_work);
-    TEST_ASSERT_TRUE(SpaRouter.ok);
+    TEST_ASSERT_TRUE(SpaRouterV.ok);
 }
 
 // A fragment whose html pointer is null is skipped like a false predicate rather than dereferenced.
@@ -392,28 +392,28 @@ void test_stream_refuses_bad_arguments(void)
     protocore_ui_stream s;
     char buf[8];
     buf[0] = 'x';
-    SpaRouter.ui_stream_begin_args.s = &s;
-    SpaRouter.ui_stream_begin_args.frags = PAGE;
-    SpaRouter.ui_stream_begin_args.count = 4;
-    SpaRouter.ui_stream_begin_args.ctx = NULL;
+    SpaRouterV.ui_stream_begin_args.s = &s;
+    SpaRouterV.ui_stream_begin_args.frags = PAGE;
+    SpaRouterV.ui_stream_begin_args.count = 4;
+    SpaRouterV.ui_stream_begin_args.ctx = NULL;
     SpaRouter.ui_stream_begin(spa_router_work);
-    SpaRouter.ui_stream_next_args.s = &s;
-    SpaRouter.ui_stream_next_args.out = NULL;
-    SpaRouter.ui_stream_next_args.cap = sizeof(buf);
+    SpaRouterV.ui_stream_next_args.s = &s;
+    SpaRouterV.ui_stream_next_args.out = NULL;
+    SpaRouterV.ui_stream_next_args.cap = sizeof(buf);
     SpaRouter.ui_stream_next(spa_router_work);
-    TEST_ASSERT_EQUAL_UINT(0u, SpaRouter.n);
-    SpaRouter.ui_stream_next_args.s = &s;
-    SpaRouter.ui_stream_next_args.out = buf;
-    SpaRouter.ui_stream_next_args.cap = 0;
+    TEST_ASSERT_EQUAL_UINT(0u, SpaRouterV.n);
+    SpaRouterV.ui_stream_next_args.s = &s;
+    SpaRouterV.ui_stream_next_args.out = buf;
+    SpaRouterV.ui_stream_next_args.cap = 0;
     SpaRouter.ui_stream_next(spa_router_work);
-    TEST_ASSERT_EQUAL_UINT(0u, SpaRouter.n);
+    TEST_ASSERT_EQUAL_UINT(0u, SpaRouterV.n);
     TEST_ASSERT_EQUAL_CHAR('x', buf[0]);
-    SpaRouter.ui_stream_next_args.s = NULL;
-    SpaRouter.ui_stream_next_args.out = buf;
-    SpaRouter.ui_stream_next_args.cap = sizeof(buf);
+    SpaRouterV.ui_stream_next_args.s = NULL;
+    SpaRouterV.ui_stream_next_args.out = buf;
+    SpaRouterV.ui_stream_next_args.cap = sizeof(buf);
     SpaRouter.ui_stream_next(spa_router_work);
-    TEST_ASSERT_EQUAL_UINT(0u, SpaRouter.n);
-    SpaRouter.ui_stream_done_args.s = NULL;
+    TEST_ASSERT_EQUAL_UINT(0u, SpaRouterV.n);
+    SpaRouterV.ui_stream_done_args.s = NULL;
     SpaRouter.ui_stream_done(spa_router_work);
-    TEST_ASSERT_TRUE(SpaRouter.ok);
+    TEST_ASSERT_TRUE(SpaRouterV.ok);
 }

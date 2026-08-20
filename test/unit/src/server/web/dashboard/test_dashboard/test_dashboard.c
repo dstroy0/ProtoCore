@@ -41,10 +41,10 @@ void setUp(void)
     g_key[0] = '\0';
     g_value = 0.0f;
     g_calls = 0;
-    Dashboard.on_control_args.cb = NULL;
+    DashboardV.on_control_args.cb = NULL;
     Dashboard.on_control(protocore_dashboard_span());
-    Dashboard.configure_args.widgets = WIDGETS;
-    Dashboard.configure_args.count = (uint8_t)NW;
+    DashboardV.configure_args.widgets = WIDGETS;
+    DashboardV.configure_args.count = (uint8_t)NW;
     Dashboard.configure(protocore_dashboard_span());
 }
 void tearDown(void)
@@ -54,8 +54,8 @@ void tearDown(void)
 static const char *layout(void)
 {
     static char buf[2048];
-    Dashboard.layout_json_args.out = buf;
-    Dashboard.layout_json_args.cap = (uint32_t)sizeof(buf);
+    DashboardV.layout_json_args.out = buf;
+    DashboardV.layout_json_args.cap = (uint32_t)sizeof(buf);
     Dashboard.layout_json(protocore_dashboard_span());
     return buf;
 }
@@ -63,8 +63,8 @@ static const char *layout(void)
 static const char *values(void)
 {
     static char buf[2048];
-    Dashboard.values_json_args.out = buf;
-    Dashboard.values_json_args.cap = (uint32_t)sizeof(buf);
+    DashboardV.values_json_args.out = buf;
+    DashboardV.values_json_args.cap = (uint32_t)sizeof(buf);
     Dashboard.values_json(protocore_dashboard_span());
     return buf;
 }
@@ -82,10 +82,10 @@ void test_layout_is_an_rfc8259_array_of_objects(void)
                              layout());
 
     char buf[512];
-    Dashboard.layout_json_args.out = buf;
-    Dashboard.layout_json_args.cap = (uint32_t)sizeof(buf);
+    DashboardV.layout_json_args.out = buf;
+    DashboardV.layout_json_args.cap = (uint32_t)sizeof(buf);
     Dashboard.layout_json(protocore_dashboard_span());
-    int32_t n = Dashboard.value;
+    int32_t n = DashboardV.value;
     TEST_ASSERT_EQUAL_INT32((int32_t)strlen(buf), n);
 }
 
@@ -96,23 +96,23 @@ void test_values_is_an_rfc8259_object_of_every_key(void)
 {
     TEST_ASSERT_EQUAL_STRING("{\"temp\":0,\"up\":0}", values());
 
-    Dashboard.set_args.key = "temp";
-    Dashboard.set_args.value = 23.5f;
+    DashboardV.set_args.key = "temp";
+    DashboardV.set_args.value = 23.5f;
     Dashboard.set(protocore_dashboard_span());
-    TEST_ASSERT_TRUE(Dashboard.ok);
+    TEST_ASSERT_TRUE(DashboardV.ok);
     TEST_ASSERT_EQUAL_STRING("{\"temp\":23.5,\"up\":0}", values());
 
-    Dashboard.set_args.key = "up";
-    Dashboard.set_args.value = 0.25f;
+    DashboardV.set_args.key = "up";
+    DashboardV.set_args.value = 0.25f;
     Dashboard.set(protocore_dashboard_span());
-    TEST_ASSERT_TRUE(Dashboard.ok);
+    TEST_ASSERT_TRUE(DashboardV.ok);
     TEST_ASSERT_EQUAL_STRING("{\"temp\":23.5,\"up\":0.25}", values());
 
     // Negative readings keep their sign, which sec 6's number production carries as a leading minus.
-    Dashboard.set_args.key = "temp";
-    Dashboard.set_args.value = -12.5f;
+    DashboardV.set_args.key = "temp";
+    DashboardV.set_args.value = -12.5f;
     Dashboard.set(protocore_dashboard_span());
-    TEST_ASSERT_TRUE(Dashboard.ok);
+    TEST_ASSERT_TRUE(DashboardV.ok);
     TEST_ASSERT_EQUAL_STRING("{\"temp\":-12.5,\"up\":0.25}", values());
 }
 
@@ -120,18 +120,18 @@ void test_values_is_an_rfc8259_object_of_every_key(void)
 // on a neighbouring widget.
 void test_a_reading_for_an_undeclared_key_is_refused(void)
 {
-    Dashboard.set_args.key = "nosuch";
-    Dashboard.set_args.value = 1.0f;
+    DashboardV.set_args.key = "nosuch";
+    DashboardV.set_args.value = 1.0f;
     Dashboard.set(protocore_dashboard_span());
-    TEST_ASSERT_FALSE(Dashboard.ok);
-    Dashboard.set_args.key = NULL;
-    Dashboard.set_args.value = 1.0f;
+    TEST_ASSERT_FALSE(DashboardV.ok);
+    DashboardV.set_args.key = NULL;
+    DashboardV.set_args.value = 1.0f;
     Dashboard.set(protocore_dashboard_span());
-    TEST_ASSERT_FALSE(Dashboard.ok);
-    Dashboard.set_args.key = "";
-    Dashboard.set_args.value = 1.0f;
+    TEST_ASSERT_FALSE(DashboardV.ok);
+    DashboardV.set_args.key = "";
+    DashboardV.set_args.value = 1.0f;
     Dashboard.set(protocore_dashboard_span());
-    TEST_ASSERT_FALSE(Dashboard.ok);
+    TEST_ASSERT_FALSE(DashboardV.ok);
     TEST_ASSERT_EQUAL_STRING("{\"temp\":0,\"up\":0}", values());
 }
 
@@ -139,12 +139,12 @@ void test_a_reading_for_an_undeclared_key_is_refused(void)
 // up under the new one.
 void test_rebinding_the_table_clears_the_readings(void)
 {
-    Dashboard.set_args.key = "temp";
-    Dashboard.set_args.value = 99.0f;
+    DashboardV.set_args.key = "temp";
+    DashboardV.set_args.value = 99.0f;
     Dashboard.set(protocore_dashboard_span());
-    TEST_ASSERT_TRUE(Dashboard.ok);
-    Dashboard.configure_args.widgets = WIDGETS;
-    Dashboard.configure_args.count = (uint8_t)NW;
+    TEST_ASSERT_TRUE(DashboardV.ok);
+    DashboardV.configure_args.widgets = WIDGETS;
+    DashboardV.configure_args.count = (uint8_t)NW;
     Dashboard.configure(protocore_dashboard_span());
     TEST_ASSERT_EQUAL_STRING("{\"temp\":0,\"up\":0}", values());
 }
@@ -166,8 +166,8 @@ void test_every_widget_style_has_a_name(void)
                                         "\"type\":\"toggle\",\"label\":\"g\"", "\"type\":\"slider\",\"label\":\"h\"",
                                         "\"type\":\"value\",\"label\":\"i\""};
 
-    Dashboard.configure_args.widgets = ALL;
-    Dashboard.configure_args.count = (uint8_t)(sizeof(ALL) / sizeof(ALL[0]));
+    DashboardV.configure_args.widgets = ALL;
+    DashboardV.configure_args.count = (uint8_t)(sizeof(ALL) / sizeof(ALL[0]));
     Dashboard.configure(protocore_dashboard_span());
     const char *doc = layout();
     for (size_t i = 0; i < sizeof(NAMES) / sizeof(NAMES[0]); i++)
@@ -183,8 +183,8 @@ void test_a_label_is_escaped_per_rfc8259_section_7(void)
     static const protocore_widget QUOTED[] = {
         {PROTOCORE_WIDGET_VALUE, "say \"hi\"", "back\\slash", 0.0f, 1.0f, "\""},
     };
-    Dashboard.configure_args.widgets = QUOTED;
-    Dashboard.configure_args.count = 1;
+    DashboardV.configure_args.widgets = QUOTED;
+    DashboardV.configure_args.count = 1;
     Dashboard.configure(protocore_dashboard_span());
 
     const char *doc = layout();
@@ -204,8 +204,8 @@ void test_a_control_character_in_a_label_is_escaped(void)
     static const protocore_widget CTRL[] = {
         {PROTOCORE_WIDGET_VALUE, "line\nfeed\ttab", "k", 0.0f, 1.0f, ""},
     };
-    Dashboard.configure_args.widgets = CTRL;
-    Dashboard.configure_args.count = 1;
+    DashboardV.configure_args.widgets = CTRL;
+    DashboardV.configure_args.count = 1;
     Dashboard.configure(protocore_dashboard_span());
 
     const char *doc = layout();
@@ -222,42 +222,42 @@ void test_a_control_message_yields_its_key_and_value(void)
     char key[32];
     float v = 0.0f;
 
-    Dashboard.parse_control_args.msg = "{\"k\":\"temp\",\"v\":42.5}";
-    Dashboard.parse_control_args.key_out = key;
-    Dashboard.parse_control_args.key_cap = sizeof(key);
-    Dashboard.parse_control_args.value_out = &v;
+    DashboardV.parse_control_args.msg = "{\"k\":\"temp\",\"v\":42.5}";
+    DashboardV.parse_control_args.key_out = key;
+    DashboardV.parse_control_args.key_cap = sizeof(key);
+    DashboardV.parse_control_args.value_out = &v;
     Dashboard.parse_control(protocore_dashboard_span());
-    TEST_ASSERT_TRUE(Dashboard.ok);
+    TEST_ASSERT_TRUE(DashboardV.ok);
     TEST_ASSERT_EQUAL_STRING("temp", key);
     TEST_ASSERT_EQUAL_FLOAT(42.5f, v);
 
     // A key beginning with the letters the parser searches for is not mistaken for them.
-    Dashboard.parse_control_args.msg = "{\"k\":\"volts\",\"v\":-3.25}";
-    Dashboard.parse_control_args.key_out = key;
-    Dashboard.parse_control_args.key_cap = sizeof(key);
-    Dashboard.parse_control_args.value_out = &v;
+    DashboardV.parse_control_args.msg = "{\"k\":\"volts\",\"v\":-3.25}";
+    DashboardV.parse_control_args.key_out = key;
+    DashboardV.parse_control_args.key_cap = sizeof(key);
+    DashboardV.parse_control_args.value_out = &v;
     Dashboard.parse_control(protocore_dashboard_span());
-    TEST_ASSERT_TRUE(Dashboard.ok);
+    TEST_ASSERT_TRUE(DashboardV.ok);
     TEST_ASSERT_EQUAL_STRING("volts", key);
     TEST_ASSERT_EQUAL_FLOAT(-3.25f, v);
 
     // Whitespace around the separators is skipped.
-    Dashboard.parse_control_args.msg = "{\"k\" : \"led\", \"v\" : 1}";
-    Dashboard.parse_control_args.key_out = key;
-    Dashboard.parse_control_args.key_cap = sizeof(key);
-    Dashboard.parse_control_args.value_out = &v;
+    DashboardV.parse_control_args.msg = "{\"k\" : \"led\", \"v\" : 1}";
+    DashboardV.parse_control_args.key_out = key;
+    DashboardV.parse_control_args.key_cap = sizeof(key);
+    DashboardV.parse_control_args.value_out = &v;
     Dashboard.parse_control(protocore_dashboard_span());
-    TEST_ASSERT_TRUE(Dashboard.ok);
+    TEST_ASSERT_TRUE(DashboardV.ok);
     TEST_ASSERT_EQUAL_STRING("led", key);
     TEST_ASSERT_EQUAL_FLOAT(1.0f, v);
 
     // The two members may arrive in either order.
-    Dashboard.parse_control_args.msg = "{\"v\":7,\"k\":\"led\"}";
-    Dashboard.parse_control_args.key_out = key;
-    Dashboard.parse_control_args.key_cap = sizeof(key);
-    Dashboard.parse_control_args.value_out = &v;
+    DashboardV.parse_control_args.msg = "{\"v\":7,\"k\":\"led\"}";
+    DashboardV.parse_control_args.key_out = key;
+    DashboardV.parse_control_args.key_cap = sizeof(key);
+    DashboardV.parse_control_args.value_out = &v;
     Dashboard.parse_control(protocore_dashboard_span());
-    TEST_ASSERT_TRUE(Dashboard.ok);
+    TEST_ASSERT_TRUE(DashboardV.ok);
     TEST_ASSERT_EQUAL_STRING("led", key);
     TEST_ASSERT_EQUAL_FLOAT(7.0f, v);
 }
@@ -269,101 +269,101 @@ void test_a_malformed_control_message_is_refused(void)
     char key[32];
     float v = 0.0f;
 
-    Dashboard.parse_control_args.msg = "{\"k\":\"led\"}";
-    Dashboard.parse_control_args.key_out = key;
-    Dashboard.parse_control_args.key_cap = sizeof(key);
-    Dashboard.parse_control_args.value_out = &v;
+    DashboardV.parse_control_args.msg = "{\"k\":\"led\"}";
+    DashboardV.parse_control_args.key_out = key;
+    DashboardV.parse_control_args.key_cap = sizeof(key);
+    DashboardV.parse_control_args.value_out = &v;
     Dashboard.parse_control(protocore_dashboard_span());
-    TEST_ASSERT_FALSE(Dashboard.ok);
-    Dashboard.parse_control_args.msg = "{\"v\":1}";
-    Dashboard.parse_control_args.key_out = key;
-    Dashboard.parse_control_args.key_cap = sizeof(key);
-    Dashboard.parse_control_args.value_out = &v;
+    TEST_ASSERT_FALSE(DashboardV.ok);
+    DashboardV.parse_control_args.msg = "{\"v\":1}";
+    DashboardV.parse_control_args.key_out = key;
+    DashboardV.parse_control_args.key_cap = sizeof(key);
+    DashboardV.parse_control_args.value_out = &v;
     Dashboard.parse_control(protocore_dashboard_span());
-    TEST_ASSERT_FALSE(Dashboard.ok);
-    Dashboard.parse_control_args.msg = "{\"k\":\"led\",\"v\":}";
-    Dashboard.parse_control_args.key_out = key;
-    Dashboard.parse_control_args.key_cap = sizeof(key);
-    Dashboard.parse_control_args.value_out = &v;
+    TEST_ASSERT_FALSE(DashboardV.ok);
+    DashboardV.parse_control_args.msg = "{\"k\":\"led\",\"v\":}";
+    DashboardV.parse_control_args.key_out = key;
+    DashboardV.parse_control_args.key_cap = sizeof(key);
+    DashboardV.parse_control_args.value_out = &v;
     Dashboard.parse_control(protocore_dashboard_span());
-    TEST_ASSERT_FALSE(Dashboard.ok);
-    Dashboard.parse_control_args.msg = "{\"k\":\"led\",\"v\":abc}";
-    Dashboard.parse_control_args.key_out = key;
-    Dashboard.parse_control_args.key_cap = sizeof(key);
-    Dashboard.parse_control_args.value_out = &v;
+    TEST_ASSERT_FALSE(DashboardV.ok);
+    DashboardV.parse_control_args.msg = "{\"k\":\"led\",\"v\":abc}";
+    DashboardV.parse_control_args.key_out = key;
+    DashboardV.parse_control_args.key_cap = sizeof(key);
+    DashboardV.parse_control_args.value_out = &v;
     Dashboard.parse_control(protocore_dashboard_span());
-    TEST_ASSERT_FALSE(Dashboard.ok);
-    Dashboard.parse_control_args.msg = "{\"k\":led,\"v\":1}";
-    Dashboard.parse_control_args.key_out = key;
-    Dashboard.parse_control_args.key_cap = sizeof(key);
-    Dashboard.parse_control_args.value_out = &v;
+    TEST_ASSERT_FALSE(DashboardV.ok);
+    DashboardV.parse_control_args.msg = "{\"k\":led,\"v\":1}";
+    DashboardV.parse_control_args.key_out = key;
+    DashboardV.parse_control_args.key_cap = sizeof(key);
+    DashboardV.parse_control_args.value_out = &v;
     Dashboard.parse_control(protocore_dashboard_span());
-    TEST_ASSERT_FALSE(Dashboard.ok);
-    Dashboard.parse_control_args.msg = "";
-    Dashboard.parse_control_args.key_out = key;
-    Dashboard.parse_control_args.key_cap = sizeof(key);
-    Dashboard.parse_control_args.value_out = &v;
+    TEST_ASSERT_FALSE(DashboardV.ok);
+    DashboardV.parse_control_args.msg = "";
+    DashboardV.parse_control_args.key_out = key;
+    DashboardV.parse_control_args.key_cap = sizeof(key);
+    DashboardV.parse_control_args.value_out = &v;
     Dashboard.parse_control(protocore_dashboard_span());
-    TEST_ASSERT_FALSE(Dashboard.ok);
+    TEST_ASSERT_FALSE(DashboardV.ok);
 
     // A key longer than the destination is refused rather than silently shortened into another key.
     char small[4];
-    Dashboard.parse_control_args.msg = "{\"k\":\"toolong\",\"v\":1}";
-    Dashboard.parse_control_args.key_out = small;
-    Dashboard.parse_control_args.key_cap = sizeof(small);
-    Dashboard.parse_control_args.value_out = &v;
+    DashboardV.parse_control_args.msg = "{\"k\":\"toolong\",\"v\":1}";
+    DashboardV.parse_control_args.key_out = small;
+    DashboardV.parse_control_args.key_cap = sizeof(small);
+    DashboardV.parse_control_args.value_out = &v;
     Dashboard.parse_control(protocore_dashboard_span());
-    TEST_ASSERT_FALSE(Dashboard.ok);
+    TEST_ASSERT_FALSE(DashboardV.ok);
     TEST_ASSERT_EQUAL_STRING("", small);
 
-    Dashboard.parse_control_args.msg = NULL;
-    Dashboard.parse_control_args.key_out = key;
-    Dashboard.parse_control_args.key_cap = sizeof(key);
-    Dashboard.parse_control_args.value_out = &v;
+    DashboardV.parse_control_args.msg = NULL;
+    DashboardV.parse_control_args.key_out = key;
+    DashboardV.parse_control_args.key_cap = sizeof(key);
+    DashboardV.parse_control_args.value_out = &v;
     Dashboard.parse_control(protocore_dashboard_span());
-    TEST_ASSERT_FALSE(Dashboard.ok);
-    Dashboard.parse_control_args.msg = "{\"k\":\"led\",\"v\":1}";
-    Dashboard.parse_control_args.key_out = NULL;
-    Dashboard.parse_control_args.key_cap = sizeof(key);
-    Dashboard.parse_control_args.value_out = &v;
+    TEST_ASSERT_FALSE(DashboardV.ok);
+    DashboardV.parse_control_args.msg = "{\"k\":\"led\",\"v\":1}";
+    DashboardV.parse_control_args.key_out = NULL;
+    DashboardV.parse_control_args.key_cap = sizeof(key);
+    DashboardV.parse_control_args.value_out = &v;
     Dashboard.parse_control(protocore_dashboard_span());
-    TEST_ASSERT_FALSE(Dashboard.ok);
-    Dashboard.parse_control_args.msg = "{\"k\":\"led\",\"v\":1}";
-    Dashboard.parse_control_args.key_out = key;
-    Dashboard.parse_control_args.key_cap = 0;
-    Dashboard.parse_control_args.value_out = &v;
+    TEST_ASSERT_FALSE(DashboardV.ok);
+    DashboardV.parse_control_args.msg = "{\"k\":\"led\",\"v\":1}";
+    DashboardV.parse_control_args.key_out = key;
+    DashboardV.parse_control_args.key_cap = 0;
+    DashboardV.parse_control_args.value_out = &v;
     Dashboard.parse_control(protocore_dashboard_span());
-    TEST_ASSERT_FALSE(Dashboard.ok);
-    Dashboard.parse_control_args.msg = "{\"k\":\"led\",\"v\":1}";
-    Dashboard.parse_control_args.key_out = key;
-    Dashboard.parse_control_args.key_cap = sizeof(key);
-    Dashboard.parse_control_args.value_out = NULL;
+    TEST_ASSERT_FALSE(DashboardV.ok);
+    DashboardV.parse_control_args.msg = "{\"k\":\"led\",\"v\":1}";
+    DashboardV.parse_control_args.key_out = key;
+    DashboardV.parse_control_args.key_cap = sizeof(key);
+    DashboardV.parse_control_args.value_out = NULL;
     Dashboard.parse_control(protocore_dashboard_span());
-    TEST_ASSERT_FALSE(Dashboard.ok);
+    TEST_ASSERT_FALSE(DashboardV.ok);
 }
 
 // The dispatch delivers a well-formed message to the registered callback, and reports false when
 // there is nobody registered to deliver it to.
 void test_dispatch_reaches_the_registered_callback(void)
 {
-    Dashboard.dispatch_control_args.msg = "{\"k\":\"temp\",\"v\":5}";
+    DashboardV.dispatch_control_args.msg = "{\"k\":\"temp\",\"v\":5}";
     Dashboard.dispatch_control(protocore_dashboard_span());
-    TEST_ASSERT_FALSE(Dashboard.ok);
+    TEST_ASSERT_FALSE(DashboardV.ok);
     TEST_ASSERT_EQUAL_INT(0, g_calls);
 
-    Dashboard.on_control_args.cb = on_control;
+    DashboardV.on_control_args.cb = on_control;
     Dashboard.on_control(protocore_dashboard_span());
-    Dashboard.dispatch_control_args.msg = "{\"k\":\"temp\",\"v\":5}";
+    DashboardV.dispatch_control_args.msg = "{\"k\":\"temp\",\"v\":5}";
     Dashboard.dispatch_control(protocore_dashboard_span());
-    TEST_ASSERT_TRUE(Dashboard.ok);
+    TEST_ASSERT_TRUE(DashboardV.ok);
     TEST_ASSERT_EQUAL_INT(1, g_calls);
     TEST_ASSERT_EQUAL_STRING("temp", g_key);
     TEST_ASSERT_EQUAL_FLOAT(5.0f, g_value);
 
     // A malformed message never reaches the callback.
-    Dashboard.dispatch_control_args.msg = "{\"k\":\"temp\"}";
+    DashboardV.dispatch_control_args.msg = "{\"k\":\"temp\"}";
     Dashboard.dispatch_control(protocore_dashboard_span());
-    TEST_ASSERT_FALSE(Dashboard.ok);
+    TEST_ASSERT_FALSE(DashboardV.ok);
     TEST_ASSERT_EQUAL_INT(1, g_calls);
 }
 
@@ -385,8 +385,8 @@ void test_a_table_past_the_widget_limit_is_clamped(void)
         many[i].max = 1.0f;
         many[i].unit = "";
     }
-    Dashboard.configure_args.widgets = many;
-    Dashboard.configure_args.count = (uint8_t)(sizeof(many) / sizeof(many[0]));
+    DashboardV.configure_args.widgets = many;
+    DashboardV.configure_args.count = (uint8_t)(sizeof(many) / sizeof(many[0]));
     Dashboard.configure(protocore_dashboard_span());
 
     // One member per widget means one colon per widget, so counting them counts the widgets.
@@ -404,43 +404,43 @@ void test_a_table_past_the_widget_limit_is_clamped(void)
 void test_serializing_with_nothing_to_serialize_is_refused(void)
 {
     char out[128];
-    Dashboard.layout_json_args.out = NULL;
-    Dashboard.layout_json_args.cap = sizeof(out);
+    DashboardV.layout_json_args.out = NULL;
+    DashboardV.layout_json_args.cap = sizeof(out);
     Dashboard.layout_json(protocore_dashboard_span());
-    TEST_ASSERT_EQUAL_INT32(0, Dashboard.value);
-    Dashboard.values_json_args.out = NULL;
-    Dashboard.values_json_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_INT32(0, DashboardV.value);
+    DashboardV.values_json_args.out = NULL;
+    DashboardV.values_json_args.cap = sizeof(out);
     Dashboard.values_json(protocore_dashboard_span());
-    TEST_ASSERT_EQUAL_INT32(0, Dashboard.value);
+    TEST_ASSERT_EQUAL_INT32(0, DashboardV.value);
 
     char sentinel[8] = {'z', '\0'};
-    Dashboard.layout_json_args.out = sentinel;
-    Dashboard.layout_json_args.cap = 0;
+    DashboardV.layout_json_args.out = sentinel;
+    DashboardV.layout_json_args.cap = 0;
     Dashboard.layout_json(protocore_dashboard_span());
-    TEST_ASSERT_EQUAL_INT32(0, Dashboard.value);
-    Dashboard.values_json_args.out = sentinel;
-    Dashboard.values_json_args.cap = 0;
+    TEST_ASSERT_EQUAL_INT32(0, DashboardV.value);
+    DashboardV.values_json_args.out = sentinel;
+    DashboardV.values_json_args.cap = 0;
     Dashboard.values_json(protocore_dashboard_span());
-    TEST_ASSERT_EQUAL_INT32(0, Dashboard.value);
+    TEST_ASSERT_EQUAL_INT32(0, DashboardV.value);
     TEST_ASSERT_EQUAL_CHAR('z', sentinel[0]);
 
-    Dashboard.configure_args.widgets = NULL;
-    Dashboard.configure_args.count = 2;
+    DashboardV.configure_args.widgets = NULL;
+    DashboardV.configure_args.count = 2;
     Dashboard.configure(protocore_dashboard_span());
-    Dashboard.layout_json_args.out = out;
-    Dashboard.layout_json_args.cap = sizeof(out);
+    DashboardV.layout_json_args.out = out;
+    DashboardV.layout_json_args.cap = sizeof(out);
     Dashboard.layout_json(protocore_dashboard_span());
-    TEST_ASSERT_EQUAL_INT32(0, Dashboard.value);
+    TEST_ASSERT_EQUAL_INT32(0, DashboardV.value);
     TEST_ASSERT_EQUAL_STRING("", out);
-    Dashboard.values_json_args.out = out;
-    Dashboard.values_json_args.cap = sizeof(out);
+    DashboardV.values_json_args.out = out;
+    DashboardV.values_json_args.cap = sizeof(out);
     Dashboard.values_json(protocore_dashboard_span());
-    TEST_ASSERT_EQUAL_INT32(0, Dashboard.value);
+    TEST_ASSERT_EQUAL_INT32(0, DashboardV.value);
     TEST_ASSERT_EQUAL_STRING("", out);
-    Dashboard.set_args.key = "temp";
-    Dashboard.set_args.value = 1.0f;
+    DashboardV.set_args.key = "temp";
+    DashboardV.set_args.value = 1.0f;
     Dashboard.set(protocore_dashboard_span());
-    TEST_ASSERT_FALSE(Dashboard.ok);
+    TEST_ASSERT_FALSE(DashboardV.ok);
 }
 
 // A buffer too small for the whole document reports 0 and is left empty: half an array is not
@@ -449,34 +449,34 @@ void test_serializing_with_nothing_to_serialize_is_refused(void)
 void test_a_short_buffer_fails_closed(void)
 {
     char full[512];
-    Dashboard.layout_json_args.out = full;
-    Dashboard.layout_json_args.cap = (uint32_t)sizeof(full);
+    DashboardV.layout_json_args.out = full;
+    DashboardV.layout_json_args.cap = (uint32_t)sizeof(full);
     Dashboard.layout_json(protocore_dashboard_span());
-    int32_t n = Dashboard.value;
+    int32_t n = DashboardV.value;
     TEST_ASSERT_TRUE(n > 0);
 
     // One byte short of the whole document: the count fits but the terminator does not.
     char tight[512];
-    Dashboard.layout_json_args.out = tight;
-    Dashboard.layout_json_args.cap = (uint32_t)n;
+    DashboardV.layout_json_args.out = tight;
+    DashboardV.layout_json_args.cap = (uint32_t)n;
     Dashboard.layout_json(protocore_dashboard_span());
-    TEST_ASSERT_EQUAL_INT32(0, Dashboard.value);
+    TEST_ASSERT_EQUAL_INT32(0, DashboardV.value);
     TEST_ASSERT_EQUAL_STRING("", tight);
-    Dashboard.layout_json_args.out = tight;
-    Dashboard.layout_json_args.cap = (uint32_t)n + 1;
+    DashboardV.layout_json_args.out = tight;
+    DashboardV.layout_json_args.cap = (uint32_t)n + 1;
     Dashboard.layout_json(protocore_dashboard_span());
-    TEST_ASSERT_EQUAL_INT32(n, Dashboard.value);
+    TEST_ASSERT_EQUAL_INT32(n, DashboardV.value);
 
     // Room for the opening bracket but not the first widget, so the failure lands mid-document.
     char tiny[4];
-    Dashboard.layout_json_args.out = tiny;
-    Dashboard.layout_json_args.cap = sizeof(tiny);
+    DashboardV.layout_json_args.out = tiny;
+    DashboardV.layout_json_args.cap = sizeof(tiny);
     Dashboard.layout_json(protocore_dashboard_span());
-    TEST_ASSERT_EQUAL_INT32(0, Dashboard.value);
+    TEST_ASSERT_EQUAL_INT32(0, DashboardV.value);
     TEST_ASSERT_EQUAL_STRING("", tiny);
-    Dashboard.values_json_args.out = tiny;
-    Dashboard.values_json_args.cap = sizeof(tiny);
+    DashboardV.values_json_args.out = tiny;
+    DashboardV.values_json_args.cap = sizeof(tiny);
     Dashboard.values_json(protocore_dashboard_span());
-    TEST_ASSERT_EQUAL_INT32(0, Dashboard.value);
+    TEST_ASSERT_EQUAL_INT32(0, DashboardV.value);
     TEST_ASSERT_EQUAL_STRING("", tiny);
 }

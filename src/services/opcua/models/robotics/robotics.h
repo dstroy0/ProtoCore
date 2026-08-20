@@ -108,7 +108,6 @@ typedef struct
     double actual_acceleration;           ///< ActualAcceleration.
     RoboticsMotionProfile motion_profile; ///< MotionProfile.
 } RoboticsAxis;
-
 /** @brief The Controller identity + software (OPC 40010-1 ControllerType + SoftwareType). */
 typedef struct
 {
@@ -120,7 +119,6 @@ typedef struct
     const char *sw_model;        ///< Software.Model (String).
     const char *sw_revision;     ///< Software.SoftwareRevision (String).
 } RoboticsController;
-
 /** @brief The SafetyState (OPC 40010-1 SafetyStateType, common subset). */
 typedef struct
 {
@@ -128,7 +126,6 @@ typedef struct
     proto_bool emergency_stop;                ///< ParameterSet.EmergencyStop.
     proto_bool protective_stop;               ///< ParameterSet.ProtectiveStop.
 } RoboticsSafetyState;
-
 /** @brief One MotionDevice: identity + live motion state (OPC 40010-1 MotionDeviceType, common subset). */
 typedef struct
 {
@@ -143,7 +140,6 @@ typedef struct
     uint32_t axis_count;                        ///< number of Axes exposed (<= PROTOCORE_ROBOTICS_AXES).
     RoboticsAxis axes[PROTOCORE_ROBOTICS_AXES]; ///< the axes (axes[0..axis_count-1] are live).
 } RoboticsMotionDevice;
-
 /**
  * @brief The whole MotionDeviceSystem the server exposes. Own it in your sketch and refresh its fields
  *        each loop from your robot I/O; the robotics resolvers read straight out of it (no copy). String
@@ -156,19 +152,16 @@ typedef struct
     RoboticsController controller; ///< the Controller.
     RoboticsSafetyState safety;    ///< the SafetyState.
 } RoboticsMotionDeviceSystem;
-
 /** @brief What bind takes: mds. */
 typedef struct
 {
     const RoboticsMotionDeviceSystem *mds;
 } RoboticsBindArgs;
-
 /** @brief What install takes: mds. */
 typedef struct
 {
     const RoboticsMotionDeviceSystem *mds;
 } RoboticsInstallArgs;
-
 /**
  * @brief OPC UA for Robotics (OPC 40010-1) MotionDevice information model (PROTOCORE_ENABLE_ROBOTICS).
  *
@@ -192,15 +185,32 @@ typedef struct
 {
     RoboticsBindArgs bind_args;
     RoboticsInstallArgs install_args;
-
     proto_bool ok;
+} RoboticsVars;
 
+/** @brief The operands and the outcome. */
+extern RoboticsVars RoboticsV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const bind)(uint8_t *restrict work);
     void (*const install)(uint8_t *restrict work);
 } RoboticsNs;
 
-/** @brief The one symbol this module exports. */
-extern RoboticsNs Robotics;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in RoboticsV or a region of the borrow at a fixed offset.
+void protocore_robotics_bind(uint8_t *restrict work);
+void protocore_robotics_install(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Robotics.bind(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const RoboticsNs Robotics __attribute__((unused)) = {
+    .bind = protocore_robotics_bind,
+    .install = protocore_robotics_install,
+};
 
 /**
  * @brief The PROTOCORE_ROBOTICS_BORROW bytes this module's state lives in.

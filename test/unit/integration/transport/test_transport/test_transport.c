@@ -31,12 +31,12 @@ static protocore_ip v4w(uint32_t host_order)
 void setUp()
 {
     set_now_ms(0);
-    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
+    ConnPoolV.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
-    TcpListener.idx = 0;
-    TcpListener.bind.port = 80;
-    TcpListener.bind.proto = PROTO_HTTP;
-    TcpListener.bind.tls = PROTO_FALSE;
+    TcpListenerV.idx = 0;
+    TcpListenerV.bind.port = 80;
+    TcpListenerV.bind.proto = PROTO_HTTP;
+    TcpListenerV.bind.tls = PROTO_FALSE;
     TcpListener.add(protocore_tcp_listener_span());
 }
 
@@ -141,7 +141,7 @@ void test_timeout_does_not_fire_on_free_slot()
 {
     conn_pool[0].state = CONN_FREE;
     set_now_ms(CONN_TIMEOUT_MS + 1);
-    ConnPool.life.worker_id = 0;
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 }
@@ -152,7 +152,7 @@ void test_timeout_does_not_fire_before_deadline()
     conn_pool[0].pcb = NULL;
     conn_pool[0].last_activity_ms = 0;
     set_now_ms(CONN_TIMEOUT_MS - 1);
-    ConnPool.life.worker_id = 0;
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
 }
@@ -163,7 +163,7 @@ void test_timeout_fires_at_deadline()
     conn_pool[0].pcb = NULL;
     conn_pool[0].last_activity_ms = 0;
     set_now_ms(CONN_TIMEOUT_MS);
-    ConnPool.life.worker_id = 0;
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_NULL(conn_pool[0].pcb);
@@ -180,7 +180,7 @@ void test_timeout_fires_only_on_stale_slots()
     conn_pool[1].last_activity_ms = CONN_TIMEOUT_MS;
 
     set_now_ms(CONN_TIMEOUT_MS);
-    ConnPool.life.worker_id = 0;
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
 
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
@@ -198,9 +198,9 @@ void test_active_send_not_reaped()
     conn_pool[1].last_activity_ms = 0;
 
     set_now_ms(CONN_TIMEOUT_MS + 10);
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.touch_active(protocore_conn_pool_span());
-    ConnPool.life.worker_id = 0;
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
 
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
@@ -209,90 +209,90 @@ void test_active_send_not_reaped()
 
 void test_pool_init_applies_custom_config()
 {
-    ConnPool.life.conn_timeout_ms = 12345;
+    ConnPoolV.life.conn_timeout_ms = 12345;
     ConnPool.init(protocore_conn_pool_span());
     ConnPool.timeout_ms(protocore_conn_pool_span());
 
-    TEST_ASSERT_EQUAL_UINT32(12345, ConnPool.u32);
-    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
+    TEST_ASSERT_EQUAL_UINT32(12345, ConnPoolV.u32);
+    ConnPoolV.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
 }
 
 void test_init_succeeds_on_native()
 {
-    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
+    ConnPoolV.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
-    TcpListener.idx = 0;
-    TcpListener.bind.port = 80;
-    TcpListener.bind.proto = PROTO_HTTP;
-    TcpListener.bind.tls = PROTO_FALSE;
+    TcpListenerV.idx = 0;
+    TcpListenerV.bind.port = 80;
+    TcpListenerV.bind.proto = PROTO_HTTP;
+    TcpListenerV.bind.tls = PROTO_FALSE;
     TcpListener.add(protocore_tcp_listener_span());
 
-    int32_t ok = TcpListener.i32;
+    int32_t ok = TcpListenerV.i32;
     TEST_ASSERT_EQUAL(1, ok);
 }
 
 void test_listener_add_bounds_and_lwip_failure_paths()
 {
-    TcpListener.idx = (uint8_t)MAX_LISTENERS;
-    TcpListener.bind.port = 80;
-    TcpListener.bind.proto = PROTO_HTTP;
-    TcpListener.bind.tls = PROTO_FALSE;
+    TcpListenerV.idx = (uint8_t)MAX_LISTENERS;
+    TcpListenerV.bind.port = 80;
+    TcpListenerV.bind.proto = PROTO_HTTP;
+    TcpListenerV.bind.tls = PROTO_FALSE;
     TcpListener.add(protocore_tcp_listener_span());
 
-    TEST_ASSERT_EQUAL_INT32(-1, TcpListener.i32);
+    TEST_ASSERT_EQUAL_INT32(-1, TcpListenerV.i32);
 
     mock_new_pcb_fail_once();
-    TcpListener.idx = 1;
-    TcpListener.bind.port = 81;
-    TcpListener.bind.proto = PROTO_HTTP;
-    TcpListener.bind.tls = PROTO_FALSE;
+    TcpListenerV.idx = 1;
+    TcpListenerV.bind.port = 81;
+    TcpListenerV.bind.proto = PROTO_HTTP;
+    TcpListenerV.bind.tls = PROTO_FALSE;
     TcpListener.add(protocore_tcp_listener_span());
 
-    TEST_ASSERT_EQUAL_INT32(-1, TcpListener.i32);
+    TEST_ASSERT_EQUAL_INT32(-1, TcpListenerV.i32);
 
     mock_bind_fail_once();
-    TcpListener.idx = 1;
-    TcpListener.bind.port = 81;
-    TcpListener.bind.proto = PROTO_HTTP;
-    TcpListener.bind.tls = PROTO_FALSE;
+    TcpListenerV.idx = 1;
+    TcpListenerV.bind.port = 81;
+    TcpListenerV.bind.proto = PROTO_HTTP;
+    TcpListenerV.bind.tls = PROTO_FALSE;
     TcpListener.add(protocore_tcp_listener_span());
 
-    TEST_ASSERT_EQUAL_INT32(-1, TcpListener.i32);
+    TEST_ASSERT_EQUAL_INT32(-1, TcpListenerV.i32);
 
     mock_listen_fail_once();
     int before = mock_abort_call_count();
-    TcpListener.idx = 1;
-    TcpListener.bind.port = 81;
-    TcpListener.bind.proto = PROTO_HTTP;
-    TcpListener.bind.tls = PROTO_FALSE;
+    TcpListenerV.idx = 1;
+    TcpListenerV.bind.port = 81;
+    TcpListenerV.bind.proto = PROTO_HTTP;
+    TcpListenerV.bind.tls = PROTO_FALSE;
     TcpListener.add(protocore_tcp_listener_span());
 
-    TEST_ASSERT_EQUAL_INT32(-1, TcpListener.i32);
+    TEST_ASSERT_EQUAL_INT32(-1, TcpListenerV.i32);
     TEST_ASSERT_EQUAL_INT(before + 1, mock_abort_call_count());
 
     mock_queue_create_fail_once();
-    TcpListener.idx = 1;
-    TcpListener.bind.port = 81;
-    TcpListener.bind.proto = PROTO_HTTP;
-    TcpListener.bind.tls = PROTO_FALSE;
+    TcpListenerV.idx = 1;
+    TcpListenerV.bind.port = 81;
+    TcpListenerV.bind.proto = PROTO_HTTP;
+    TcpListenerV.bind.tls = PROTO_FALSE;
     TcpListener.add(protocore_tcp_listener_span());
 
-    TEST_ASSERT_EQUAL_INT32(-1, TcpListener.i32);
-    TcpListener.idx = 1;
-    TcpListener.bind.port = 81;
-    TcpListener.bind.proto = PROTO_HTTP;
-    TcpListener.bind.tls = PROTO_FALSE;
+    TEST_ASSERT_EQUAL_INT32(-1, TcpListenerV.i32);
+    TcpListenerV.idx = 1;
+    TcpListenerV.bind.port = 81;
+    TcpListenerV.bind.proto = PROTO_HTTP;
+    TcpListenerV.bind.tls = PROTO_FALSE;
     TcpListener.add(protocore_tcp_listener_span());
 
-    TEST_ASSERT_EQUAL_INT32(1, TcpListener.i32);
-    TcpListener.idx = 1;
+    TEST_ASSERT_EQUAL_INT32(1, TcpListenerV.i32);
+    TcpListenerV.idx = 1;
     TcpListener.stop(protocore_tcp_listener_span());
 }
 
 void test_listener_stop_rejects_out_of_range_idx()
 {
-    TcpListener.idx = (uint8_t)MAX_LISTENERS;
+    TcpListenerV.idx = (uint8_t)MAX_LISTENERS;
     TcpListener.stop(protocore_tcp_listener_span());
 }
 
@@ -300,17 +300,17 @@ void test_listener_stop_and_stop_dynamic_tolerate_a_missing_queue()
 {
     listener_pool[0].active = PROTO_TRUE;
     listener_pool[0].queue = NULL;
-    TcpListener.idx = 0;
+    TcpListenerV.idx = 0;
     TcpListener.stop(protocore_tcp_listener_span());
     TEST_ASSERT_FALSE(listener_pool[0].active);
-    TcpListener.idx = 1;
-    TcpListener.bind.port = 5555;
-    TcpListener.bind.proto = PROTO_HTTP;
+    TcpListenerV.idx = 1;
+    TcpListenerV.bind.port = 5555;
+    TcpListenerV.bind.proto = PROTO_HTTP;
     TcpListener.add_dynamic(protocore_tcp_listener_span());
 
-    TEST_ASSERT_EQUAL_INT32(1, TcpListener.i32);
+    TEST_ASSERT_EQUAL_INT32(1, TcpListenerV.i32);
     listener_pool[1].queue = NULL;
-    TcpListener.idx = 1;
+    TcpListenerV.idx = 1;
     TcpListener.stop_dynamic(protocore_tcp_listener_span());
     TEST_ASSERT_FALSE(listener_pool[1].active);
 }
@@ -397,7 +397,7 @@ void stress_all_slots_timeout_simultaneously()
     }
 
     set_now_ms(CONN_TIMEOUT_MS);
-    ConnPool.life.worker_id = 0;
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
 
     for (int i = 0; i < MAX_CONNS; i++)
@@ -420,7 +420,7 @@ void stress_timeout_arm_recover_cycle()
         }
 
         set_now_ms((uint32_t)(CONN_TIMEOUT_MS * (cycle + 1)));
-        ConnPool.life.worker_id = 0;
+        ConnPoolV.life.worker_id = 0;
         ConnPool.check_timeouts(protocore_conn_pool_span());
 
         for (int i = 0; i < MAX_CONNS; i++)
@@ -445,7 +445,7 @@ void stress_check_timeouts_high_call_rate()
 
     for (int i = 0; i < 2000; i++)
     {
-        ConnPool.life.worker_id = 0;
+        ConnPoolV.life.worker_id = 0;
         ConnPool.check_timeouts(protocore_conn_pool_span());
     }
 
@@ -490,15 +490,15 @@ void test_accept_throttle_blocks_over_budget()
     TcpListener.accept_throttle_reset(protocore_tcp_listener_span());
     for (int i = 0; i < PROTOCORE_ACCEPT_THROTTLE_MAX; i++)
     {
-        TcpListener.gate.now_ms = 0;
+        TcpListenerV.gate.now_ms = 0;
         TcpListener.accept_allowed(protocore_tcp_listener_span());
 
-        TEST_ASSERT_TRUE(TcpListener.ok);
+        TEST_ASSERT_TRUE(TcpListenerV.ok);
     }
-    TcpListener.gate.now_ms = 0;
+    TcpListenerV.gate.now_ms = 0;
     TcpListener.accept_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 }
 
 void test_accept_throttle_window_refills()
@@ -506,33 +506,33 @@ void test_accept_throttle_window_refills()
     TcpListener.accept_throttle_reset(protocore_tcp_listener_span());
     for (int i = 0; i < PROTOCORE_ACCEPT_THROTTLE_MAX; i++)
     {
-        TcpListener.gate.now_ms = 10;
+        TcpListenerV.gate.now_ms = 10;
         TcpListener.accept_allowed(protocore_tcp_listener_span());
 
-        TEST_ASSERT_TRUE(TcpListener.ok);
+        TEST_ASSERT_TRUE(TcpListenerV.ok);
     }
-    TcpListener.gate.now_ms = 10;
+    TcpListenerV.gate.now_ms = 10;
     TcpListener.accept_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
-    TcpListener.gate.now_ms = 10 + PROTOCORE_ACCEPT_THROTTLE_WINDOW_MS;
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
+    TcpListenerV.gate.now_ms = 10 + PROTOCORE_ACCEPT_THROTTLE_WINDOW_MS;
     TcpListener.accept_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
 }
 
 void test_accept_throttle_handles_rollover()
 {
     TcpListener.accept_throttle_reset(protocore_tcp_listener_span());
     uint32_t near_max = 0xFFFFFFFFu - 5;
-    TcpListener.gate.now_ms = near_max;
+    TcpListenerV.gate.now_ms = near_max;
     TcpListener.accept_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.now_ms = near_max + PROTOCORE_ACCEPT_THROTTLE_WINDOW_MS;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.now_ms = near_max + PROTOCORE_ACCEPT_THROTTLE_WINDOW_MS;
     TcpListener.accept_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
 }
 
 void test_per_ip_throttle_blocks_over_budget()
@@ -541,17 +541,17 @@ void test_per_ip_throttle_blocks_over_budget()
     protocore_ip ip = v4w(0xC0A80005u);
     for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_MAX; i++)
     {
-        TcpListener.gate.addr = &ip;
-        TcpListener.gate.now_ms = 0;
+        TcpListenerV.gate.addr = &ip;
+        TcpListenerV.gate.now_ms = 0;
         TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
 
-        TEST_ASSERT_TRUE(TcpListener.ok);
+        TEST_ASSERT_TRUE(TcpListenerV.ok);
     }
-    TcpListener.gate.addr = &ip;
-    TcpListener.gate.now_ms = 0;
+    TcpListenerV.gate.addr = &ip;
+    TcpListenerV.gate.now_ms = 0;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 }
 
 void test_per_ip_throttle_isolates_addresses()
@@ -560,22 +560,22 @@ void test_per_ip_throttle_isolates_addresses()
     protocore_ip noisy = v4w(0x0A000001u), quiet = v4w(0x0A000002u);
     for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_MAX; i++)
     {
-        TcpListener.gate.addr = &noisy;
-        TcpListener.gate.now_ms = 0;
+        TcpListenerV.gate.addr = &noisy;
+        TcpListenerV.gate.now_ms = 0;
         TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
 
-        TEST_ASSERT_TRUE(TcpListener.ok);
+        TEST_ASSERT_TRUE(TcpListenerV.ok);
     }
-    TcpListener.gate.addr = &noisy;
-    TcpListener.gate.now_ms = 0;
+    TcpListenerV.gate.addr = &noisy;
+    TcpListenerV.gate.now_ms = 0;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
-    TcpListener.gate.addr = &quiet;
-    TcpListener.gate.now_ms = 0;
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &quiet;
+    TcpListenerV.gate.now_ms = 0;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
 }
 
 void test_per_ip_throttle_window_refills()
@@ -584,22 +584,22 @@ void test_per_ip_throttle_window_refills()
     protocore_ip ip = v4w(0x0A000003u);
     for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_MAX; i++)
     {
-        TcpListener.gate.addr = &ip;
-        TcpListener.gate.now_ms = 50;
+        TcpListenerV.gate.addr = &ip;
+        TcpListenerV.gate.now_ms = 50;
         TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
 
-        TEST_ASSERT_TRUE(TcpListener.ok);
+        TEST_ASSERT_TRUE(TcpListenerV.ok);
     }
-    TcpListener.gate.addr = &ip;
-    TcpListener.gate.now_ms = 50;
+    TcpListenerV.gate.addr = &ip;
+    TcpListenerV.gate.now_ms = 50;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
-    TcpListener.gate.addr = &ip;
-    TcpListener.gate.now_ms = 50 + PROTOCORE_PER_IP_THROTTLE_WINDOW_MS;
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &ip;
+    TcpListenerV.gate.now_ms = 50 + PROTOCORE_PER_IP_THROTTLE_WINDOW_MS;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
 }
 
 void test_per_ip_throttle_evicts_when_full()
@@ -608,18 +608,18 @@ void test_per_ip_throttle_evicts_when_full()
     for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_SLOTS; i++)
     {
         protocore_ip ip = v4w(0xAC100001u + (uint32_t)i);
-        TcpListener.gate.addr = &ip;
-        TcpListener.gate.now_ms = 100;
+        TcpListenerV.gate.addr = &ip;
+        TcpListenerV.gate.now_ms = 100;
         TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
 
-        TEST_ASSERT_TRUE(TcpListener.ok);
+        TEST_ASSERT_TRUE(TcpListenerV.ok);
     }
     protocore_ip fresh = v4w(0xDEADBEEFu);
-    TcpListener.gate.addr = &fresh;
-    TcpListener.gate.now_ms = 100;
+    TcpListenerV.gate.addr = &fresh;
+    TcpListenerV.gate.now_ms = 100;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
 }
 
 void test_per_ip_throttle_zero_ip_always_allowed()
@@ -629,11 +629,11 @@ void test_per_ip_throttle_zero_ip_always_allowed()
     none.family = PROTOCORE_IP_NONE;
     for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_MAX + 5; i++)
     {
-        TcpListener.gate.addr = &none;
-        TcpListener.gate.now_ms = 0;
+        TcpListenerV.gate.addr = &none;
+        TcpListenerV.gate.now_ms = 0;
         TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
 
-        TEST_ASSERT_TRUE(TcpListener.ok);
+        TEST_ASSERT_TRUE(TcpListenerV.ok);
     }
 }
 
@@ -644,32 +644,32 @@ void test_per_ip_throttle_v6_distinct()
     a.family = PROTOCORE_IP_NONE;
     protocore_ip b;
     b.family = PROTOCORE_IP_NONE;
-    Ip.args.text = "2001:db8::1";
-    Ip.args.out = &a;
+    IpV.args.text = "2001:db8::1";
+    IpV.args.out = &a;
     Ip.parse(ip_work);
-    TEST_ASSERT_TRUE(Ip.ok);
-    Ip.args.text = "2001:db8::2";
-    Ip.args.out = &b;
+    TEST_ASSERT_TRUE(IpV.ok);
+    IpV.args.text = "2001:db8::2";
+    IpV.args.out = &b;
     Ip.parse(ip_work);
-    TEST_ASSERT_TRUE(Ip.ok);
+    TEST_ASSERT_TRUE(IpV.ok);
     for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_MAX; i++)
     {
-        TcpListener.gate.addr = &a;
-        TcpListener.gate.now_ms = 0;
+        TcpListenerV.gate.addr = &a;
+        TcpListenerV.gate.now_ms = 0;
         TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
 
-        TEST_ASSERT_TRUE(TcpListener.ok);
+        TEST_ASSERT_TRUE(TcpListenerV.ok);
     }
-    TcpListener.gate.addr = &a;
-    TcpListener.gate.now_ms = 0;
+    TcpListenerV.gate.addr = &a;
+    TcpListenerV.gate.now_ms = 0;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
-    TcpListener.gate.addr = &b;
-    TcpListener.gate.now_ms = 0;
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &b;
+    TcpListenerV.gate.now_ms = 0;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
 }
 
 void test_per_ip_throttle_handles_rollover()
@@ -677,16 +677,16 @@ void test_per_ip_throttle_handles_rollover()
     TcpListener.per_ip_throttle_reset(protocore_tcp_listener_span());
     protocore_ip ip = v4w(0x0A000009u);
     uint32_t near_max = 0xFFFFFFFFu - 5;
-    TcpListener.gate.addr = &ip;
-    TcpListener.gate.now_ms = near_max;
+    TcpListenerV.gate.addr = &ip;
+    TcpListenerV.gate.now_ms = near_max;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &ip;
-    TcpListener.gate.now_ms = near_max + PROTOCORE_PER_IP_THROTTLE_WINDOW_MS;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &ip;
+    TcpListenerV.gate.now_ms = near_max + PROTOCORE_PER_IP_THROTTLE_WINDOW_MS;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
 }
 
 void test_ip_allowlist_empty_allows_all()
@@ -695,180 +695,180 @@ void test_ip_allowlist_empty_allows_all()
     protocore_ip a = v4w(0xC0A8010Au), b = v4w(0x08080808u);
     protocore_ip none;
     none.family = PROTOCORE_IP_NONE;
-    TcpListener.gate.addr = &a;
+    TcpListenerV.gate.addr = &a;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &b;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &b;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &none;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &none;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
 }
 
 void test_ip_allowlist_host_match()
 {
     TcpListener.ip_allowlist_reset(protocore_tcp_listener_span());
     protocore_ip net = v4w(0xC0A8010Au);
-    TcpListener.gate.addr = &net;
-    TcpListener.gate.prefix_len = 32;
+    TcpListenerV.gate.addr = &net;
+    TcpListenerV.gate.prefix_len = 32;
     TcpListener.ip_allow_add(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
     protocore_ip host = v4w(0xC0A8010Au), near = v4w(0xC0A8010Bu), far = v4w(0x0A000001u);
-    TcpListener.gate.addr = &host;
+    TcpListenerV.gate.addr = &host;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &near;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &near;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
-    TcpListener.gate.addr = &far;
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &far;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 }
 
 void test_ip_allowlist_cidr_match()
 {
     TcpListener.ip_allowlist_reset(protocore_tcp_listener_span());
     protocore_ip net = v4w(0xC0A80100u);
-    TcpListener.gate.addr = &net;
-    TcpListener.gate.prefix_len = 24;
+    TcpListenerV.gate.addr = &net;
+    TcpListenerV.gate.prefix_len = 24;
     TcpListener.ip_allow_add(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
     protocore_ip lo = v4w(0xC0A80101u), hi = v4w(0xC0A801FEu), out = v4w(0xC0A80201u);
-    TcpListener.gate.addr = &lo;
+    TcpListenerV.gate.addr = &lo;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &hi;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &hi;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &out;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &out;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 }
 
 void test_ip_allowlist_masks_host_bits()
 {
     TcpListener.ip_allowlist_reset(protocore_tcp_listener_span());
     protocore_ip net = v4w(0xC0A80137u);
-    TcpListener.gate.addr = &net;
-    TcpListener.gate.prefix_len = 24;
+    TcpListenerV.gate.addr = &net;
+    TcpListenerV.gate.prefix_len = 24;
     TcpListener.ip_allow_add(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
     protocore_ip lo = v4w(0xC0A80101u), hi = v4w(0xC0A801C8u);
-    TcpListener.gate.addr = &lo;
+    TcpListenerV.gate.addr = &lo;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &hi;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &hi;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
 }
 
 void test_ip_allowlist_multiple_rules()
 {
     TcpListener.ip_allowlist_reset(protocore_tcp_listener_span());
     protocore_ip r1 = v4w(0x0A000000u), r2 = v4w(0xC0A80000u);
-    TcpListener.gate.addr = &r1;
-    TcpListener.gate.prefix_len = 8;
+    TcpListenerV.gate.addr = &r1;
+    TcpListenerV.gate.prefix_len = 8;
     TcpListener.ip_allow_add(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &r2;
-    TcpListener.gate.prefix_len = 16;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &r2;
+    TcpListenerV.gate.prefix_len = 16;
     TcpListener.ip_allow_add(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
     protocore_ip a = v4w(0x0A010203u), b = v4w(0xC0A80505u), out = v4w(0xAC100001u);
-    TcpListener.gate.addr = &a;
+    TcpListenerV.gate.addr = &a;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &b;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &b;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &out;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &out;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 }
 
 void test_ip_allowlist_zero_prefix_matches_all()
 {
     TcpListener.ip_allowlist_reset(protocore_tcp_listener_span());
     protocore_ip z = v4w(0u);
-    TcpListener.gate.addr = &z;
-    TcpListener.gate.prefix_len = 0;
+    TcpListenerV.gate.addr = &z;
+    TcpListenerV.gate.prefix_len = 0;
     TcpListener.ip_allow_add(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
     protocore_ip a = v4w(0x01020304u), b = v4w(0xFFFFFFFFu);
-    TcpListener.gate.addr = &a;
+    TcpListenerV.gate.addr = &a;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &b;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &b;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
 }
 
 void test_ip_allowlist_v6_cidr()
 {
     TcpListener.ip_allowlist_reset(protocore_tcp_listener_span());
-    TcpListener.gate.cidr = "2001:db8::/32";
+    TcpListenerV.gate.cidr = "2001:db8::/32";
     TcpListener.ip_allow_add_cidr(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
     protocore_ip in;
     in.family = PROTOCORE_IP_NONE;
     protocore_ip out;
     out.family = PROTOCORE_IP_NONE;
-    Ip.args.text = "2001:db8:0:0:1234::abcd";
-    Ip.args.out = &in;
+    IpV.args.text = "2001:db8:0:0:1234::abcd";
+    IpV.args.out = &in;
     Ip.parse(ip_work);
-    TEST_ASSERT_TRUE(Ip.ok);
-    Ip.args.text = "2001:db9::1";
-    Ip.args.out = &out;
+    TEST_ASSERT_TRUE(IpV.ok);
+    IpV.args.text = "2001:db9::1";
+    IpV.args.out = &out;
     Ip.parse(ip_work);
-    TEST_ASSERT_TRUE(Ip.ok);
-    TcpListener.gate.addr = &in;
+    TEST_ASSERT_TRUE(IpV.ok);
+    TcpListenerV.gate.addr = &in;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &out;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &out;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
     protocore_ip v4peer = v4w(0xC0A80101u);
-    TcpListener.gate.addr = &v4peer;
+    TcpListenerV.gate.addr = &v4peer;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 }
 
 void test_ip_allowlist_rejects_bad_prefix()
 {
     TcpListener.ip_allowlist_reset(protocore_tcp_listener_span());
     protocore_ip net = v4w(0xC0A80100u);
-    TcpListener.gate.addr = &net;
-    TcpListener.gate.prefix_len = 33;
+    TcpListenerV.gate.addr = &net;
+    TcpListenerV.gate.prefix_len = 33;
     TcpListener.ip_allow_add(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 }
 
 void test_ip_allowlist_table_full()
@@ -877,18 +877,18 @@ void test_ip_allowlist_table_full()
     for (int i = 0; i < PROTOCORE_IP_ALLOWLIST_SLOTS; i++)
     {
         protocore_ip r = v4w(0x0A000000u + (uint32_t)i);
-        TcpListener.gate.addr = &r;
-        TcpListener.gate.prefix_len = 32;
+        TcpListenerV.gate.addr = &r;
+        TcpListenerV.gate.prefix_len = 32;
         TcpListener.ip_allow_add(protocore_tcp_listener_span());
 
-        TEST_ASSERT_TRUE(TcpListener.ok);
+        TEST_ASSERT_TRUE(TcpListenerV.ok);
     }
     protocore_ip overflow = v4w(0x0A010000u);
-    TcpListener.gate.addr = &overflow;
-    TcpListener.gate.prefix_len = 32;
+    TcpListenerV.gate.addr = &overflow;
+    TcpListenerV.gate.prefix_len = 32;
     TcpListener.ip_allow_add(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 }
 
 void test_per_ip_throttle_scans_expired_and_lru_across_a_full_table()
@@ -898,41 +898,41 @@ void test_per_ip_throttle_scans_expired_and_lru_across_a_full_table()
     {
         protocore_ip ip = v4w(0x0A000000u + (uint32_t)(i + 1));
         uint32_t start = (uint32_t)(PROTOCORE_PER_IP_THROTTLE_SLOTS - 1 - i) * 100;
-        TcpListener.gate.addr = &ip;
-        TcpListener.gate.now_ms = start;
+        TcpListenerV.gate.addr = &ip;
+        TcpListenerV.gate.now_ms = start;
         TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
 
-        TEST_ASSERT_TRUE(TcpListener.ok);
+        TEST_ASSERT_TRUE(TcpListenerV.ok);
     }
     uint32_t now = PROTOCORE_PER_IP_THROTTLE_WINDOW_MS + (uint32_t)PROTOCORE_PER_IP_THROTTLE_SLOTS * 100;
     protocore_ip fresh = v4w(0xAC100001u);
-    TcpListener.gate.addr = &fresh;
-    TcpListener.gate.now_ms = now;
+    TcpListenerV.gate.addr = &fresh;
+    TcpListenerV.gate.now_ms = now;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
 
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
 }
 
 void test_ip_allowlist_rejects_null_args()
 {
     TcpListener.ip_allowlist_reset(protocore_tcp_listener_span());
-    TcpListener.gate.addr = NULL;
-    TcpListener.gate.prefix_len = 24;
+    TcpListenerV.gate.addr = NULL;
+    TcpListenerV.gate.prefix_len = 24;
     TcpListener.ip_allow_add(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
-    TcpListener.gate.cidr = NULL;
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
+    TcpListenerV.gate.cidr = NULL;
     TcpListener.ip_allow_add_cidr(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 
     protocore_ip none;
     none.family = PROTOCORE_IP_NONE;
-    TcpListener.gate.addr = &none;
-    TcpListener.gate.prefix_len = 24;
+    TcpListenerV.gate.addr = &none;
+    TcpListenerV.gate.prefix_len = 24;
     TcpListener.ip_allow_add(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 }
 
 void test_ip_allowlist_rejects_overlong_address_text()
@@ -944,91 +944,91 @@ void test_ip_allowlist_rejects_overlong_address_text()
         too_long[i] = '1';
     }
     too_long[60] = '\0';
-    TcpListener.gate.cidr = too_long;
+    TcpListenerV.gate.cidr = too_long;
     TcpListener.ip_allow_add_cidr(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 }
 
 void test_ip_allowlist_rejects_non_digit_prefix()
 {
     TcpListener.ip_allowlist_reset(protocore_tcp_listener_span());
-    TcpListener.gate.cidr = "10.0.0.0/2x";
+    TcpListenerV.gate.cidr = "10.0.0.0/2x";
     TcpListener.ip_allow_add_cidr(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
-    TcpListener.gate.cidr = "10.0.0.0/-1";
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
+    TcpListenerV.gate.cidr = "10.0.0.0/-1";
     TcpListener.ip_allow_add_cidr(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 }
 
 void test_enqueue_rejects_out_of_range_listener_id()
 {
     TcpEvt evt = {EVT_DATA, 0, 0};
-    TcpListener.idx = (uint8_t)MAX_LISTENERS;
-    TcpListener.q.evt = &evt;
+    TcpListenerV.idx = (uint8_t)MAX_LISTENERS;
+    TcpListenerV.q.evt = &evt;
     TcpListener.enqueue(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 
     mock_queue_send_fail_once();
-    TcpListener.idx = 0;
-    TcpListener.q.evt = &evt;
+    TcpListenerV.idx = 0;
+    TcpListenerV.q.evt = &evt;
     TcpListener.enqueue(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 
     listener_pool[0].active = PROTO_TRUE;
     listener_pool[0].queue = NULL;
-    TcpListener.idx = 0;
-    TcpListener.q.evt = &evt;
+    TcpListenerV.idx = 0;
+    TcpListenerV.q.evt = &evt;
     TcpListener.enqueue(protocore_tcp_listener_span());
 
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 }
 
 void test_dynamic_listener_lifecycle()
 {
-    TcpListener.idx = (uint8_t)MAX_LISTENERS;
-    TcpListener.bind.port = 2222;
-    TcpListener.bind.proto = PROTO_HTTP;
+    TcpListenerV.idx = (uint8_t)MAX_LISTENERS;
+    TcpListenerV.bind.port = 2222;
+    TcpListenerV.bind.proto = PROTO_HTTP;
     TcpListener.add_dynamic(protocore_tcp_listener_span());
 
-    TEST_ASSERT_EQUAL_INT32(-1, TcpListener.i32);
+    TEST_ASSERT_EQUAL_INT32(-1, TcpListenerV.i32);
 
     mock_queue_create_fail_once();
-    TcpListener.idx = 1;
-    TcpListener.bind.port = 2222;
-    TcpListener.bind.proto = PROTO_HTTP;
+    TcpListenerV.idx = 1;
+    TcpListenerV.bind.port = 2222;
+    TcpListenerV.bind.proto = PROTO_HTTP;
     TcpListener.add_dynamic(protocore_tcp_listener_span());
 
-    TEST_ASSERT_EQUAL_INT32(-1, TcpListener.i32);
-    TcpListener.idx = 1;
-    TcpListener.bind.port = 2222;
-    TcpListener.bind.proto = PROTO_HTTP;
+    TEST_ASSERT_EQUAL_INT32(-1, TcpListenerV.i32);
+    TcpListenerV.idx = 1;
+    TcpListenerV.bind.port = 2222;
+    TcpListenerV.bind.proto = PROTO_HTTP;
     TcpListener.add_dynamic(protocore_tcp_listener_span());
 
-    TEST_ASSERT_EQUAL_INT32(1, TcpListener.i32);
+    TEST_ASSERT_EQUAL_INT32(1, TcpListenerV.i32);
     TEST_ASSERT_TRUE(listener_pool[1].active);
     TEST_ASSERT_FALSE(listener_pool[1].tls);
     TEST_ASSERT_NOT_NULL(listener_pool[1].queue);
     TEST_ASSERT_NOT_NULL(listener_pool[1].listen_pcb);
-    TcpListener.idx = 1;
-    TcpListener.bind.port = 3333;
-    TcpListener.bind.proto = PROTO_HTTP;
+    TcpListenerV.idx = 1;
+    TcpListenerV.bind.port = 3333;
+    TcpListenerV.bind.proto = PROTO_HTTP;
     TcpListener.add_dynamic(protocore_tcp_listener_span());
 
-    TEST_ASSERT_EQUAL_INT32(1, TcpListener.i32);
+    TEST_ASSERT_EQUAL_INT32(1, TcpListenerV.i32);
     TEST_ASSERT_EQUAL_UINT16(3333, listener_pool[1].port);
-    TcpListener.idx = (uint8_t)MAX_LISTENERS;
+    TcpListenerV.idx = (uint8_t)MAX_LISTENERS;
     TcpListener.stop_dynamic(protocore_tcp_listener_span());
-    TcpListener.idx = 1;
+    TcpListenerV.idx = 1;
     TcpListener.stop_dynamic(protocore_tcp_listener_span());
     TEST_ASSERT_FALSE(listener_pool[1].active);
     TEST_ASSERT_NULL(listener_pool[1].queue);
     TEST_ASSERT_NULL(listener_pool[1].listen_pcb);
-    TcpListener.idx = 1;
+    TcpListenerV.idx = 1;
     TcpListener.stop_dynamic(protocore_tcp_listener_span());
     TEST_ASSERT_FALSE(listener_pool[1].active);
 }
@@ -1037,69 +1037,69 @@ void test_freeslot_bitmask_alloc()
 {
     ConnPool.alloc_free(protocore_conn_pool_span());
 
-    TEST_ASSERT_EQUAL_INT32(0, ConnPool.i32);
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_ACTIVE;
+    TEST_ASSERT_EQUAL_INT32(0, ConnPoolV.i32);
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
     ConnPool.alloc_free(protocore_conn_pool_span());
 
-    TEST_ASSERT_EQUAL_INT32(1, ConnPool.i32);
+    TEST_ASSERT_EQUAL_INT32(1, ConnPoolV.i32);
 
     for (uint8_t i = 1; i < MAX_CONNS; i++)
     {
-        ConnPool.slot = i;
-        ConnPool.st = CONN_ACTIVE;
+        ConnPoolV.slot = i;
+        ConnPoolV.st = CONN_ACTIVE;
         ConnPool.set_state(protocore_conn_pool_span());
     }
     ConnPool.alloc_free(protocore_conn_pool_span());
 
-    TEST_ASSERT_EQUAL_INT32(-1, ConnPool.i32);
-    ConnPool.slot = 3;
-    ConnPool.st = CONN_FREE;
+    TEST_ASSERT_EQUAL_INT32(-1, ConnPoolV.i32);
+    ConnPoolV.slot = 3;
+    ConnPoolV.st = CONN_FREE;
     ConnPool.set_state(protocore_conn_pool_span());
     ConnPool.alloc_free(protocore_conn_pool_span());
 
-    TEST_ASSERT_EQUAL_INT32(3, ConnPool.i32);
-    ConnPool.slot = 1;
-    ConnPool.st = CONN_FREE;
+    TEST_ASSERT_EQUAL_INT32(3, ConnPoolV.i32);
+    ConnPoolV.slot = 1;
+    ConnPoolV.st = CONN_FREE;
     ConnPool.set_state(protocore_conn_pool_span());
     ConnPool.alloc_free(protocore_conn_pool_span());
 
-    TEST_ASSERT_EQUAL_INT32(1, ConnPool.i32);
-    ConnPool.slot = 1;
-    ConnPool.st = CONN_ACTIVE;
+    TEST_ASSERT_EQUAL_INT32(1, ConnPoolV.i32);
+    ConnPoolV.slot = 1;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
-    ConnPool.slot = 1;
-    ConnPool.st = CONN_CLOSING;
+    ConnPoolV.slot = 1;
+    ConnPoolV.st = CONN_CLOSING;
     ConnPool.set_state(protocore_conn_pool_span());
     ConnPool.alloc_free(protocore_conn_pool_span());
 
-    TEST_ASSERT_EQUAL_INT32(3, ConnPool.i32);
+    TEST_ASSERT_EQUAL_INT32(3, ConnPoolV.i32);
 }
 
 void test_bounds_guards_reject_out_of_range_slots()
 {
     ConnPool.alloc_free(protocore_conn_pool_span());
 
-    int32_t before = ConnPool.i32;
-    ConnPool.slot = (uint8_t)CONN_POOL_SLOTS;
-    ConnPool.st = CONN_ACTIVE;
+    int32_t before = ConnPoolV.i32;
+    ConnPoolV.slot = (uint8_t)CONN_POOL_SLOTS;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
     ConnPool.alloc_free(protocore_conn_pool_span());
 
-    TEST_ASSERT_EQUAL_INT32(before, ConnPool.i32);
-    ConnPool.slot = (uint8_t)(MAX_CONNS + 50);
+    TEST_ASSERT_EQUAL_INT32(before, ConnPoolV.i32);
+    ConnPoolV.slot = (uint8_t)(MAX_CONNS + 50);
     ConnPool.ack_consumed(protocore_conn_pool_span());
-    ConnPool.slot = (uint8_t)(MAX_CONNS + 50);
-    ConnPool.close(protocore_conn_pool_span());
-    ConnPool.slot = (uint8_t)(MAX_CONNS + 50);
+    ConnPoolV.slot = (uint8_t)(MAX_CONNS + 50);
+    ConnPoolV.close(protocore_conn_pool_span());
+    ConnPoolV.slot = (uint8_t)(MAX_CONNS + 50);
     ConnPool.abort_slot(protocore_conn_pool_span());
-    ConnPool.slot = (uint8_t)(MAX_CONNS + 50);
+    ConnPoolV.slot = (uint8_t)(MAX_CONNS + 50);
     ConnPool.touch_active(protocore_conn_pool_span());
 
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].last_activity_ms = 0;
-    ConnPool.slot = (uint8_t)(MAX_CONNS + 50);
+    ConnPoolV.slot = (uint8_t)(MAX_CONNS + 50);
     ConnPool.begin_close(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
 }
@@ -1107,46 +1107,46 @@ void test_bounds_guards_reject_out_of_range_slots()
 void test_null_pcb_slots_are_safe_no_ops()
 {
     conn_pool[0].pcb = NULL;
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.sndbuf(protocore_conn_pool_span());
 
-    TEST_ASSERT_EQUAL_UINT16(0, ConnPool.u16);
-    ConnPool.slot = 0;
-    ConnPool.close(protocore_conn_pool_span());
-    ConnPool.slot = 0;
+    TEST_ASSERT_EQUAL_UINT16(0, ConnPoolV.u16);
+    ConnPoolV.slot = 0;
+    ConnPoolV.close(protocore_conn_pool_span());
+    ConnPoolV.slot = 0;
     ConnPool.abort_slot(protocore_conn_pool_span());
 
     protocore_pcb fake = {0};
     conn_pool[1].pcb = &fake;
-    ConnPool.slot = 1;
+    ConnPoolV.slot = 1;
     ConnPool.sndbuf(protocore_conn_pool_span());
 
-    TEST_ASSERT_EQUAL_UINT16(MOCK_SNDBUF_DEFAULT, ConnPool.u16);
+    TEST_ASSERT_EQUAL_UINT16(MOCK_SNDBUF_DEFAULT, ConnPoolV.u16);
 }
 
 void test_ack_consumed_bounds_inactive_and_real_advance()
 {
-    ConnPool.slot = (uint8_t)(MAX_CONNS + 1);
+    ConnPoolV.slot = (uint8_t)(MAX_CONNS + 1);
     ConnPool.ack_consumed(protocore_conn_pool_span());
 
     conn_pool[0].state = CONN_FREE;
     conn_pool[0].rx_tail = 5;
     conn_pool[0].rx_acked = 0;
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.ack_consumed(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(0u, (size_t)conn_pool[0].rx_acked);
 
     protocore_pcb fake = {0};
     conn_pool[0].pcb = &fake;
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
     conn_pool[0].rx_tail = 5;
     conn_pool[0].rx_acked = 2;
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.ack_consumed(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(5u, (size_t)conn_pool[0].rx_acked);
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.ack_consumed(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(5u, (size_t)conn_pool[0].rx_acked);
 }
@@ -1155,55 +1155,55 @@ void test_send_flush_success_and_write_failure()
 {
     protocore_pcb fake = {0};
     conn_pool[0].pcb = &fake;
-    ConnPool.slot = 0;
-    ConnPool.io.data = "x";
-    ConnPool.io.len = 1;
+    ConnPoolV.slot = 0;
+    ConnPoolV.io.data = "x";
+    ConnPoolV.io.len = 1;
     ConnPool.send_flush(protocore_conn_pool_span());
 
-    TEST_ASSERT_TRUE(ConnPool.ok);
+    TEST_ASSERT_TRUE(ConnPoolV.ok);
 
     mock_send_fail_after(0);
-    ConnPool.slot = 0;
-    ConnPool.io.data = "x";
-    ConnPool.io.len = 1;
+    ConnPoolV.slot = 0;
+    ConnPoolV.io.data = "x";
+    ConnPoolV.io.len = 1;
     ConnPool.send_flush(protocore_conn_pool_span());
 
-    TEST_ASSERT_FALSE(ConnPool.ok);
+    TEST_ASSERT_FALSE(ConnPoolV.ok);
     mock_send_fail_after(-1);
 }
 
 void test_raw_send_null_success_and_failure()
 {
-    ConnPool.pcb = NULL;
-    ConnPool.io.data = "x";
-    ConnPool.io.len = 1;
+    ConnPoolV.pcb = NULL;
+    ConnPoolV.io.data = "x";
+    ConnPoolV.io.len = 1;
     ConnPool.raw_send(protocore_conn_pool_span());
 
-    TEST_ASSERT_FALSE(ConnPool.ok);
+    TEST_ASSERT_FALSE(ConnPoolV.ok);
 
     protocore_pcb fake = {0};
-    ConnPool.pcb = &fake;
-    ConnPool.io.data = "hello";
-    ConnPool.io.len = 5;
+    ConnPoolV.pcb = &fake;
+    ConnPoolV.io.data = "hello";
+    ConnPoolV.io.len = 5;
     ConnPool.raw_send(protocore_conn_pool_span());
 
-    TEST_ASSERT_FALSE(ConnPool.ok);
+    TEST_ASSERT_FALSE(ConnPoolV.ok);
 
     conn_pool[0].pcb = &fake;
-    ConnPool.pcb = &fake;
-    ConnPool.io.data = "hello";
-    ConnPool.io.len = 5;
+    ConnPoolV.pcb = &fake;
+    ConnPoolV.io.data = "hello";
+    ConnPoolV.io.len = 5;
     ConnPool.raw_send(protocore_conn_pool_span());
 
-    TEST_ASSERT_TRUE(ConnPool.ok);
+    TEST_ASSERT_TRUE(ConnPoolV.ok);
 
     mock_send_fail_after(0);
-    ConnPool.pcb = &fake;
-    ConnPool.io.data = "x";
-    ConnPool.io.len = 1;
+    ConnPoolV.pcb = &fake;
+    ConnPoolV.io.data = "x";
+    ConnPoolV.io.len = 1;
     ConnPool.raw_send(protocore_conn_pool_span());
 
-    TEST_ASSERT_FALSE(ConnPool.ok);
+    TEST_ASSERT_FALSE(ConnPoolV.ok);
     mock_send_fail_after(-1);
 
     conn_pool[0].pcb = NULL;
@@ -1214,24 +1214,24 @@ void test_close_falls_back_to_abort_on_tcp_close_failure()
     protocore_pcb fake = {0};
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
 
     int before = mock_abort_call_count();
     mock_close_fail_once();
-    ConnPool.slot = 0;
-    ConnPool.close(protocore_conn_pool_span());
+    ConnPoolV.slot = 0;
+    ConnPoolV.close(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT(before + 1, mock_abort_call_count());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 
     conn_pool[0].pcb = &fake;
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
     before = mock_abort_call_count();
-    ConnPool.slot = 0;
-    ConnPool.close(protocore_conn_pool_span());
+    ConnPoolV.slot = 0;
+    ConnPoolV.close(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT(before, mock_abort_call_count());
 }
 
@@ -1240,21 +1240,21 @@ void test_begin_close_finalizes_immediately_with_and_without_a_pcb()
 
     conn_pool[1].id = 1;
     conn_pool[1].pcb = NULL;
-    ConnPool.slot = 1;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = 1;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
-    ConnPool.slot = 1;
+    ConnPoolV.slot = 1;
     ConnPool.begin_close(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[1].state);
 
     protocore_pcb fake = {0};
     conn_pool[2].id = 2;
     conn_pool[2].pcb = &fake;
-    ConnPool.slot = 2;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = 2;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
     int before = mock_abort_call_count();
-    ConnPool.slot = 2;
+    ConnPoolV.slot = 2;
     ConnPool.begin_close(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[2].state);
     TEST_ASSERT_EQUAL_INT(before, mock_abort_call_count());
@@ -1262,35 +1262,35 @@ void test_begin_close_finalizes_immediately_with_and_without_a_pcb()
     protocore_pcb fake2 = {0};
     conn_pool[3].id = 3;
     conn_pool[3].pcb = &fake2;
-    ConnPool.slot = 3;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = 3;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
     mock_close_fail_once();
     before = mock_abort_call_count();
-    ConnPool.slot = 3;
+    ConnPoolV.slot = 3;
     ConnPool.begin_close(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT(before + 1, mock_abort_call_count());
 }
 
 void test_remote_addr_accessors_host_stub()
 {
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.remote_ip(protocore_conn_pool_span());
 
-    TEST_ASSERT_EQUAL_UINT32(0, ConnPool.u32);
+    TEST_ASSERT_EQUAL_UINT32(0, ConnPoolV.u32);
 
     protocore_ip out;
-    ConnPool.slot = 0;
-    ConnPool.out = &out;
+    ConnPoolV.slot = 0;
+    ConnPoolV.out = &out;
     ConnPool.remote_addr(protocore_conn_pool_span());
 
-    TEST_ASSERT_FALSE(ConnPool.ok);
+    TEST_ASSERT_FALSE(ConnPoolV.ok);
     TEST_ASSERT_EQUAL_INT((int)PROTOCORE_IP_NONE, (int)out.family);
-    ConnPool.slot = 0;
-    ConnPool.out = NULL;
+    ConnPoolV.slot = 0;
+    ConnPoolV.out = NULL;
     ConnPool.remote_addr(protocore_conn_pool_span());
 
-    TEST_ASSERT_FALSE(ConnPool.ok);
+    TEST_ASSERT_FALSE(ConnPoolV.ok);
 }
 
 void test_stop_aborts_live_slots_and_skips_the_rest()
@@ -1300,26 +1300,26 @@ void test_stop_aborts_live_slots_and_skips_the_rest()
 
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake_active;
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
 
     conn_pool[1].id = 1;
     conn_pool[1].pcb = &fake_closing;
-    ConnPool.slot = 1;
-    ConnPool.st = CONN_CLOSING;
+    ConnPoolV.slot = 1;
+    ConnPoolV.st = CONN_CLOSING;
     ConnPool.set_state(protocore_conn_pool_span());
 
     conn_pool[2].id = 2;
     conn_pool[2].pcb = NULL;
-    ConnPool.slot = 2;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = 2;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
 
     conn_pool[3].id = 3;
     conn_pool[3].pcb = NULL;
-    ConnPool.slot = 3;
-    ConnPool.st = CONN_FREE;
+    ConnPoolV.slot = 3;
+    ConnPoolV.st = CONN_FREE;
     ConnPool.set_state(protocore_conn_pool_span());
 
     int before = mock_abort_call_count();
@@ -1339,27 +1339,27 @@ void test_check_timeouts_reaps_stale_closing_slots()
 
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_CLOSING;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_CLOSING;
     ConnPool.set_state(protocore_conn_pool_span());
     conn_pool[0].last_activity_ms = 0;
 
     conn_pool[1].id = 1;
     conn_pool[1].pcb = NULL;
-    ConnPool.slot = 1;
-    ConnPool.st = CONN_CLOSING;
+    ConnPoolV.slot = 1;
+    ConnPoolV.st = CONN_CLOSING;
     ConnPool.set_state(protocore_conn_pool_span());
     conn_pool[1].last_activity_ms = 0;
 
     set_now_ms(PROTOCORE_CLOSING_TIMEOUT_MS - 1);
-    ConnPool.life.worker_id = 0;
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[1].state);
 
     int before = mock_abort_call_count();
     set_now_ms(PROTOCORE_CLOSING_TIMEOUT_MS);
-    ConnPool.life.worker_id = 0;
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_NULL(conn_pool[0].pcb);
@@ -1372,14 +1372,14 @@ void test_check_timeouts_detaches_and_aborts_a_real_pcb()
     protocore_pcb fake = {0};
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
     conn_pool[0].last_activity_ms = 0;
 
     int before = mock_abort_call_count();
     set_now_ms(CONN_TIMEOUT_MS);
-    ConnPool.life.worker_id = 0;
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_NULL(conn_pool[0].pcb);
@@ -1388,13 +1388,13 @@ void test_check_timeouts_detaches_and_aborts_a_real_pcb()
 
 void test_touch_active_bounds_and_state_guard()
 {
-    ConnPool.slot = (uint8_t)(MAX_CONNS + 1);
+    ConnPoolV.slot = (uint8_t)(MAX_CONNS + 1);
     ConnPool.touch_active(protocore_conn_pool_span());
 
     conn_pool[0].state = CONN_FREE;
     conn_pool[0].last_activity_ms = 111;
     set_now_ms(999);
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.touch_active(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_UINT32(111, conn_pool[0].last_activity_ms);
 }
@@ -1406,8 +1406,8 @@ void test_recv_cb_null_arg_and_closing_reset()
 
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_CLOSING;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_CLOSING;
     ConnPool.set_state(protocore_conn_pool_span());
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, NULL, PROTOCORE_NET_OK));
@@ -1432,8 +1432,8 @@ void test_recv_cb_fin_close_falls_back_to_abort_on_tcp_close_failure()
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
     conn_pool[0].listener_id = 0;
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
 
     mock_close_fail_once();
@@ -1450,8 +1450,8 @@ void test_recv_cb_fin_close_ordinary_path_does_not_abort()
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
     conn_pool[0].listener_id = 0;
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
 
     int before = mock_abort_call_count();
@@ -1465,8 +1465,8 @@ void test_recv_cb_rejects_non_active_slot()
     protocore_pcb fake = {0};
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_FREE;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_FREE;
     ConnPool.set_state(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_ERR_VAL, lowlevel_recv_cb(&conn_pool[0], &fake, NULL, PROTOCORE_NET_OK));
 }
@@ -1476,8 +1476,8 @@ void test_recv_cb_refuses_a_segment_that_does_not_fit()
     protocore_pcb fake = {0};
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
     conn_pool[0].rx_head = RX_BUF_SIZE - 2;
     conn_pool[0].rx_tail = 0;
@@ -1500,8 +1500,8 @@ void test_recv_cb_accepts_and_copies_a_two_pbuf_segment()
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
     conn_pool[0].listener_id = 0;
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
     conn_pool[0].rx_head = 0;
     conn_pool[0].rx_tail = 0;
@@ -1548,8 +1548,8 @@ void test_recv_cb_zero_clock_and_zero_length_segment_edge_cases()
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
     conn_pool[0].listener_id = 0;
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
     conn_pool[0].rx_head = 0;
     conn_pool[0].rx_tail = 0;
@@ -1579,8 +1579,8 @@ void test_sent_cb_null_active_and_closing()
     protocore_pcb fake = {0};
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
     conn_pool[0].last_activity_ms = 0;
     set_now_ms(777);
@@ -1590,8 +1590,8 @@ void test_sent_cb_null_active_and_closing()
 
     conn_pool[1].id = 1;
     conn_pool[1].pcb = &fake;
-    ConnPool.slot = 1;
-    ConnPool.st = CONN_CLOSING;
+    ConnPoolV.slot = 1;
+    ConnPoolV.st = CONN_CLOSING;
     ConnPool.set_state(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, lowlevel_sent_cb(&conn_pool[1], &fake, 0));
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[1].state);
@@ -1604,8 +1604,8 @@ void test_err_cb_null_active_and_closing()
     protocore_pcb fake = {0};
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
     lowlevel_err_cb(&conn_pool[0], PROTOCORE_NET_ERR_ABRT);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
@@ -1613,8 +1613,8 @@ void test_err_cb_null_active_and_closing()
 
     conn_pool[1].id = 1;
     conn_pool[1].pcb = &fake;
-    ConnPool.slot = 1;
-    ConnPool.st = CONN_CLOSING;
+    ConnPoolV.slot = 1;
+    ConnPoolV.st = CONN_CLOSING;
     ConnPool.set_state(protocore_conn_pool_span());
     lowlevel_err_cb(&conn_pool[1], PROTOCORE_NET_ERR_ABRT);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[1].state);
@@ -1626,18 +1626,18 @@ void test_accept_cb_rejects_error_and_null_pcb()
     protocore_pcb fake = {0};
     ConnPool.alloc_free(protocore_conn_pool_span());
 
-    int32_t before = ConnPool.i32;
+    int32_t before = ConnPoolV.i32;
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_ERR_VAL,
                           listener_accept_cb((void *)(uintptr_t)0, &fake, PROTOCORE_NET_ERR_ABRT));
     ConnPool.alloc_free(protocore_conn_pool_span());
 
-    TEST_ASSERT_EQUAL_INT32(before, ConnPool.i32);
+    TEST_ASSERT_EQUAL_INT32(before, ConnPoolV.i32);
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_ERR_VAL, listener_accept_cb((void *)(uintptr_t)0, NULL, PROTOCORE_NET_OK));
     ConnPool.alloc_free(protocore_conn_pool_span());
 
-    TEST_ASSERT_EQUAL_INT32(before, ConnPool.i32);
+    TEST_ASSERT_EQUAL_INT32(before, ConnPoolV.i32);
 }
 
 void test_accept_cb_rejects_out_of_range_listener_idx()
@@ -1653,13 +1653,13 @@ void test_accept_cb_rejects_when_pool_full()
 {
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
-        ConnPool.slot = i;
-        ConnPool.st = CONN_ACTIVE;
+        ConnPoolV.slot = i;
+        ConnPoolV.st = CONN_ACTIVE;
         ConnPool.set_state(protocore_conn_pool_span());
     }
     ConnPool.alloc_free(protocore_conn_pool_span());
 
-    TEST_ASSERT_EQUAL_INT32(-1, ConnPool.i32);
+    TEST_ASSERT_EQUAL_INT32(-1, ConnPoolV.i32);
 
     protocore_pcb fake = {0};
     int before_aborts = mock_abort_call_count();

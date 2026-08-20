@@ -69,7 +69,7 @@ static size_t u32_dec(uint32_t v, char *out)
     return n;
 }
 
-static void failsafe_reset(uint8_t *restrict work)
+void protocore_failsafe_reset(uint8_t *restrict work)
 {
     const protocore_lifeline blank = {0};
     for (int i = 0; i < PROTOCORE_FAILSAFE_MAX_LIFELINES; i++)
@@ -80,11 +80,11 @@ static void failsafe_reset(uint8_t *restrict work)
     FAILSAFE_CTX(work)->cb_arg = NULL;
 }
 
-static void failsafe_add(uint8_t *restrict work)
+void protocore_failsafe_add(uint8_t *restrict work)
 {
-    const char *name = Failsafe.args.name;
-    const uint32_t deadline_ms = Failsafe.args.deadline_ms;
-    const uint32_t now = Failsafe.args.now;
+    const char *name = FailsafeV.args.name;
+    const uint32_t deadline_ms = FailsafeV.args.deadline_ms;
+    const uint32_t now = FailsafeV.args.now;
 
     for (int i = 0; i < PROTOCORE_FAILSAFE_MAX_LIFELINES; i++)
     {
@@ -95,38 +95,38 @@ static void failsafe_add(uint8_t *restrict work)
             FAILSAFE_CTX(work)->lines[i].last_feed_ms = now; // starts fed, so it is not instantly overdue
             FAILSAFE_CTX(work)->lines[i].armed = PROTO_TRUE;
             FAILSAFE_CTX(work)->lines[i].breached = PROTO_FALSE;
-            Failsafe.i32 = i;
+            FailsafeV.i32 = i;
             return;
         }
     }
-    Failsafe.i32 = -1;
+    FailsafeV.i32 = -1;
 }
 
-static void failsafe_feed(uint8_t *restrict work)
+void protocore_failsafe_feed(uint8_t *restrict work)
 {
-    const int id = Failsafe.args.id;
-    const uint32_t now = Failsafe.args.now;
+    const int id = FailsafeV.args.id;
+    const uint32_t now = FailsafeV.args.now;
 
     if (id < 0 || id >= PROTOCORE_FAILSAFE_MAX_LIFELINES || !FAILSAFE_CTX(work)->lines[id].armed)
     {
-        Failsafe.ok = PROTO_FALSE;
+        FailsafeV.ok = PROTO_FALSE;
         return;
     }
     FAILSAFE_CTX(work)->lines[id].last_feed_ms = now;
     FAILSAFE_CTX(work)->lines[id].breached =
         PROTO_FALSE; // a fresh check-in clears the breach so it can fire again next time
-    Failsafe.ok = PROTO_TRUE;
+    FailsafeV.ok = PROTO_TRUE;
 }
 
-static void failsafe_on_breach(uint8_t *restrict work)
+void protocore_failsafe_on_breach(uint8_t *restrict work)
 {
-    FAILSAFE_CTX(work)->cb = Failsafe.out_args.cb;
-    FAILSAFE_CTX(work)->cb_arg = Failsafe.out_args.arg;
+    FAILSAFE_CTX(work)->cb = FailsafeV.out_args.cb;
+    FAILSAFE_CTX(work)->cb_arg = FailsafeV.out_args.arg;
 }
 
-static void failsafe_check(uint8_t *restrict work)
+void protocore_failsafe_check(uint8_t *restrict work)
 {
-    const uint32_t now = Failsafe.args.now;
+    const uint32_t now = FailsafeV.args.now;
 
     uint32_t mask = 0;
     for (int i = 0; i < PROTOCORE_FAILSAFE_MAX_LIFELINES; i++)
@@ -151,7 +151,7 @@ static void failsafe_check(uint8_t *restrict work)
             FAILSAFE_CTX(work)->cb(i, l->name, FAILSAFE_CTX(work)->cb_arg);
         }
     }
-    Failsafe.breached = mask;
+    FailsafeV.breached = mask;
 }
 
 // append a literal into out[*n], bounded by cap (leaving room for the NUL); truncates safely on overflow.
@@ -173,14 +173,14 @@ static void fs_put_u32(char *out, size_t cap, size_t *n, uint32_t v)
     }
 }
 
-static void failsafe_json(uint8_t *restrict work)
+void protocore_failsafe_json(uint8_t *restrict work)
 {
-    const uint32_t now = Failsafe.args.now;
-    char *out = Failsafe.out_args.out;
-    const size_t cap = Failsafe.out_args.cap;
+    const uint32_t now = FailsafeV.args.now;
+    char *out = FailsafeV.out_args.out;
+    const size_t cap = FailsafeV.out_args.cap;
 
     // {"lifelines":[{"name":"...","overdue":false,"age_ms":N,"deadline_ms":N},...]}
-    Failsafe.n = 0;
+    FailsafeV.n = 0;
     if (!out || cap == 0)
     {
         return;
@@ -214,15 +214,11 @@ static void failsafe_json(uint8_t *restrict work)
     // The n >= cap arm is unreachable: fs_put/fs_put_u32 only ever advance n while n + 1 < cap, so n
     // can never reach cap by the time we get here (cap > 0 was already established above).
     out[n < cap ? n : cap - 1] = '\0';
-    Failsafe.n = (int)n;
+    FailsafeV.n = (int)n;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-FailsafeNs Failsafe = {.reset = failsafe_reset,
-                       .add = failsafe_add,
-                       .feed = failsafe_feed,
-                       .on_breach = failsafe_on_breach,
-                       .check = failsafe_check,
-                       .json = failsafe_json};
+/** @brief The operands and the outcome. */
+FailsafeVars FailsafeV;
 
 #endif // PROTOCORE_ENABLE_FAILSAFE

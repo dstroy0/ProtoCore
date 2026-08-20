@@ -85,23 +85,19 @@ typedef struct
     uint8_t hash_work2[PROTOCORE_TLS13_TRANSCRIPT_BORROW];
     uint8_t sign_work[PROTOCORE_SHA512_BORROW];    ///< the CertificateVerify signature's SHA-512
     uint8_t keys_work[PROTOCORE_QUIC_KEYS_BORROW]; ///< the packet-key expansion at each encryption level
-
     QtlsState state;
     uint8_t alert; ///< TLS alert code (RFC 8446 sec 6) when state == QTLS_FAILED
 #if PROTOCORE_ENABLE_PQC_KEX
     proto_bool hrr_sent; ///< a HelloRetryRequest was sent (X25519MLKEM768); the next ClientHello is the retry
 #endif
-    proto_bool hs_keys_ready; ///< Handshake-level keys derived (after ServerHello)
-    proto_bool ap_keys_ready; ///< 1-RTT keys derived (after the server Finished)
-    proto_bool complete;      ///< client Finished verified
-
-    QuicPacketKeys hs_client; ///< Handshake: opens client packets
-    QuicPacketKeys hs_server; ///< Handshake: seals server packets
-    QuicPacketKeys ap_client; ///< 1-RTT: opens client packets
-    QuicPacketKeys ap_server; ///< 1-RTT: seals server packets
-
+    proto_bool hs_keys_ready;                   ///< Handshake-level keys derived (after ServerHello)
+    proto_bool ap_keys_ready;                   ///< 1-RTT keys derived (after the server Finished)
+    proto_bool complete;                        ///< client Finished verified
+    QuicPacketKeys hs_client;                   ///< Handshake: opens client packets
+    QuicPacketKeys hs_server;                   ///< Handshake: seals server packets
+    QuicPacketKeys ap_client;                   ///< 1-RTT: opens client packets
+    QuicPacketKeys ap_server;                   ///< 1-RTT: seals server packets
     uint8_t hs_finished_hash[TLS13_SECRET_MAX]; ///< H(ClientHello..server Finished), to verify client Finished
-
 #if PROTOCORE_ENABLE_PQC_KEX
     uint8_t flight_initial[1400]; ///< outbound Initial CRYPTO (ServerHello; hybrid key_share is ~1.1 KB)
 #else
@@ -110,18 +106,15 @@ typedef struct
     size_t flight_initial_len;
     uint8_t flight_hs[PROTOCORE_H3_CRYPTO_BUF]; ///< outbound Handshake CRYPTO (EE..Finished)
     size_t flight_hs_len;
-
     QuicTransportParams peer; ///< the client's parsed transport parameters
     proto_bool have_peer;
 } QuicTls;
-
 /** @brief What server_init takes: qt, cfg. */
 typedef struct
 {
     QuicTls *qt;
     const QuicTlsConfig *cfg;
 } QuicTlsServerServerInitArgs;
-
 /** @brief What recv_crypto takes: qt, level, data, len. */
 typedef struct
 {
@@ -130,7 +123,6 @@ typedef struct
     const uint8_t *data;
     size_t len;
 } QuicTlsServerRecvCryptoArgs;
-
 /** @brief What flight takes: qt, level, len. */
 typedef struct
 {
@@ -138,7 +130,6 @@ typedef struct
     int level;
     size_t *len;
 } QuicTlsServerFlightArgs;
-
 /** @brief What keys takes: qt, level, is_server. */
 typedef struct
 {
@@ -146,13 +137,11 @@ typedef struct
     int level;
     proto_bool is_server;
 } QuicTlsServerKeysArgs;
-
 /** @brief What peer_params takes: qt. */
 typedef struct
 {
     const QuicTls *qt;
 } QuicTlsServerPeerParamsArgs;
-
 /**
  * @brief TLS 1.3 server handshake state machine for QUIC (RFC 9001 / RFC 8446).
  *
@@ -190,13 +179,19 @@ typedef struct
     QuicTlsServerFlightArgs flight_args;
     QuicTlsServerKeysArgs keys_args;
     QuicTlsServerPeerParamsArgs peer_params_args;
-
     proto_bool ok;
     size_t n;
     const uint8_t *bytes;
     QuicPacketKeys *pkt_keys;
     const QuicTransportParams *peer;
+} QuicTlsServerVars;
 
+/** @brief The operands and the outcome. */
+extern QuicTlsServerVars QuicTlsServerV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const server_init)(uint8_t *restrict work);
     void (*const recv_crypto)(uint8_t *restrict work);
     void (*const flight)(uint8_t *restrict work);
@@ -204,8 +199,25 @@ typedef struct
     void (*const peer_params)(uint8_t *restrict work);
 } QuicTlsServerNs;
 
-/** @brief The one symbol this module exports. */
-extern QuicTlsServerNs QuicTlsServer;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in QuicTlsServerV or a region of the borrow at a fixed offset.
+void protocore_quic_tls_server_init(uint8_t *restrict work);
+void protocore_quic_tls_recv_crypto(uint8_t *restrict work);
+void protocore_quic_tls_flight(uint8_t *restrict work);
+void protocore_quic_tls_keys(uint8_t *restrict work);
+void protocore_quic_tls_peer_params(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `QuicTlsServer.server_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const QuicTlsServerNs QuicTlsServer __attribute__((unused)) = {
+    .server_init = protocore_quic_tls_server_init,
+    .recv_crypto = protocore_quic_tls_recv_crypto,
+    .flight = protocore_quic_tls_flight,
+    .keys = protocore_quic_tls_keys,
+    .peer_params = protocore_quic_tls_peer_params,
+};
 
 PROTOCORE_END_DECLS
 

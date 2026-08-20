@@ -19,23 +19,23 @@ static uint8_t redis_resp_work[16]; // the borrow an entry takes; Resp never rea
 /** @brief Encode @p argc bulk strings as one command into @p out; the octets written. */
 static size_t resp_encode(char *out, size_t cap, const char *const *argv, size_t argc)
 {
-    Resp.out.buf = out;
-    Resp.out.cap = cap;
-    Resp.command.argv = argv;
-    Resp.command.argv_len = NULL;
-    Resp.command.argc = argc;
+    RespV.out.buf = out;
+    RespV.out.cap = cap;
+    RespV.command.argv = argv;
+    RespV.command.argv_len = NULL;
+    RespV.command.argc = argc;
     Resp.encode_command(redis_resp_work);
-    return Resp.n;
+    return RespV.n;
 }
 
 /** @brief Decode the one value at the head of @p buf into @p r; the octets it consumed, 0 on a refusal. */
 static size_t resp_take(RespReply *r, const uint8_t *buf, size_t len)
 {
-    Resp.wire.buf = buf;
-    Resp.wire.len = len;
+    RespV.wire.buf = buf;
+    RespV.wire.len = len;
     Resp.parse_reply(redis_resp_work);
-    *r = Resp.reply;
-    return Resp.ok ? Resp.n : 0;
+    *r = RespV.reply;
+    return RespV.ok ? RespV.n : 0;
 }
 
 void dbench_run(void)

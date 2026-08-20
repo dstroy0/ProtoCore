@@ -84,7 +84,6 @@ typedef struct
     uint8_t msg_id; ///< message id within the group
     uint8_t mac_id; ///< source / node MAC id (0..63; not present for Group 4)
 } DeviceNetId;
-
 /** @brief Result of feeding a frame to the fragmentation reassembler. */
 typedef enum PROTO_ENUM_PACKED
 {
@@ -94,7 +93,6 @@ typedef enum PROTO_ENUM_PACKED
     DEVICENET_FRAG_COMPLETE,
     DEVICENET_FRAG_ERR,
 } DeviceNetFragResult;
-
 /** @brief Fragmented-message reassembly context. */
 typedef struct
 {
@@ -103,9 +101,7 @@ typedef struct
     uint16_t len;                             ///< octets stored so far
     uint8_t buf[PROTOCORE_DEVICENET_MSG_MAX]; ///< reassembled body (excludes the fragmentation octets)
 } DeviceNetFragRx;
-
 #include "shared/can/can.h" // CanFrame: the type a parameter points at
-
 /** @brief What encode_id takes: id, group, msg_id, mac_id. */
 typedef struct
 {
@@ -114,14 +110,12 @@ typedef struct
     uint8_t msg_id;
     uint8_t mac_id;
 } DevicenetEncodeIdArgs;
-
 /** @brief What decode_id takes: can_id, out. */
 typedef struct
 {
     uint32_t can_id;
     DeviceNetId *out;
 } DevicenetDecodeIdArgs;
-
 /** @brief What msg_header takes: frag, xid, mac_id. */
 typedef struct
 {
@@ -129,14 +123,12 @@ typedef struct
     proto_bool xid;
     uint8_t mac_id;
 } DevicenetMsgHeaderArgs;
-
 /** @brief What frag_octet takes: type, count. */
 typedef struct
 {
     uint8_t type;
     uint8_t count;
 } DevicenetFragOctetArgs;
-
 /** @brief What build_explicit takes: out, group, msg_id, mac_id, ... */
 typedef struct
 {
@@ -147,7 +139,6 @@ typedef struct
     const uint8_t *body;
     uint8_t body_len;
 } DevicenetBuildExplicitArgs;
-
 /** @brief What build_fragment takes: out, group, msg_id, mac_id, xid, ... */
 typedef struct
 {
@@ -161,13 +152,11 @@ typedef struct
     const uint8_t *data;
     uint8_t data_len;
 } DevicenetBuildFragmentArgs;
-
 /** @brief What frag_reset takes: rx. */
 typedef struct
 {
     DeviceNetFragRx *rx;
 } DevicenetFragResetArgs;
-
 /** @brief What frag_feed takes: rx, body, body_len. */
 typedef struct
 {
@@ -175,7 +164,6 @@ typedef struct
     const uint8_t *body;
     uint8_t body_len;
 } DevicenetFragFeedArgs;
-
 /**
  * @brief DeviceNet link-adaptation codec (PROTOCORE_ENABLE_DEVICENET) - the CAN-specific layer of "CIP over CAN".
  * DeviceNet (ODVA) carries CIP over classic CAN.
@@ -224,11 +212,17 @@ typedef struct
     DevicenetBuildFragmentArgs build_fragment_args;
     DevicenetFragResetArgs frag_reset_args;
     DevicenetFragFeedArgs frag_feed_args;
-
     proto_bool ok;
     uint8_t value;
     DeviceNetFragResult frag;
+} DevicenetVars;
 
+/** @brief The operands and the outcome. */
+extern DevicenetVars DevicenetV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const encode_id)(uint8_t *restrict work);
     void (*const decode_id)(uint8_t *restrict work);
     void (*const msg_header)(uint8_t *restrict work);
@@ -239,8 +233,31 @@ typedef struct
     void (*const frag_feed)(uint8_t *restrict work);
 } DevicenetNs;
 
-/** @brief The one symbol this module exports. */
-extern DevicenetNs Devicenet;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in DevicenetV or a region of the borrow at a fixed offset.
+void protocore_devicenet_encode_id(uint8_t *restrict work);
+void protocore_devicenet_decode_id(uint8_t *restrict work);
+void protocore_devicenet_msg_header(uint8_t *restrict work);
+void protocore_devicenet_frag_octet(uint8_t *restrict work);
+void protocore_devicenet_build_explicit(uint8_t *restrict work);
+void protocore_devicenet_build_fragment(uint8_t *restrict work);
+void protocore_devicenet_frag_reset(uint8_t *restrict work);
+void protocore_devicenet_frag_feed(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Devicenet.encode_id(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const DevicenetNs Devicenet __attribute__((unused)) = {
+    .encode_id = protocore_devicenet_encode_id,
+    .decode_id = protocore_devicenet_decode_id,
+    .msg_header = protocore_devicenet_msg_header,
+    .frag_octet = protocore_devicenet_frag_octet,
+    .build_explicit = protocore_devicenet_build_explicit,
+    .build_fragment = protocore_devicenet_build_fragment,
+    .frag_reset = protocore_devicenet_frag_reset,
+    .frag_feed = protocore_devicenet_frag_feed,
+};
 
 PROTOCORE_END_DECLS
 

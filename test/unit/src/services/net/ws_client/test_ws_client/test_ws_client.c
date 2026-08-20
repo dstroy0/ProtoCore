@@ -17,7 +17,6 @@
 
 #include <unity.h>
 
-
 // The borrow the entries take. Without the state this module keeps behind PROTOCORE_HAS_NET_STACK it has no
 // span, and NULL is what a short pool hands over too, which every entry already refuses on.
 static uint8_t *ws_client_work(void)
@@ -40,24 +39,24 @@ static char g_accept[PROTOCORE_WS_ACCEPT_CAP];
 
 static const char *accept_for(const char *key, char *out, size_t cap)
 {
-    WsClient.handshake.key = key;
-    WsClient.handshake.accept = out;
-    WsClient.handshake.accept_cap = cap;
-    WsClient.accept_for_key(ws_client_work());
+    WsClientV.handshake.key = key;
+    WsClientV.handshake.accept = out;
+    WsClientV.handshake.accept_cap = cap;
+    WsClientV.accept_for_key(ws_client_work());
     return out;
 }
 
 static size_t build_handshake(uint8_t *out, size_t cap, const char *host, const char *resource, const char *key,
                               const char *subprotocol)
 {
-    WsClient.handshake.host = host;
-    WsClient.handshake.resource_name = resource;
-    WsClient.handshake.key = key;
-    WsClient.handshake.subprotocol = subprotocol;
-    WsClient.buf.out = out;
-    WsClient.buf.cap = cap;
-    WsClient.build_opening_handshake(ws_client_work());
-    return WsClient.n;
+    WsClientV.handshake.host = host;
+    WsClientV.handshake.resource_name = resource;
+    WsClientV.handshake.key = key;
+    WsClientV.handshake.subprotocol = subprotocol;
+    WsClientV.buf.out = out;
+    WsClientV.buf.cap = cap;
+    WsClientV.build_opening_handshake(ws_client_work());
+    return WsClientV.n;
 }
 
 // The handshake's accept member is both written by the computation and read by the check, so it is
@@ -66,8 +65,8 @@ static char g_expect[64];
 
 static proto_bool check_response(const char *response, const char *accept)
 {
-    WsClient.buf.in = (const uint8_t *)response;
-    WsClient.buf.avail = strlen(response);
+    WsClientV.buf.in = (const uint8_t *)response;
+    WsClientV.buf.avail = strlen(response);
     if (accept)
     {
         size_t i = 0;
@@ -77,30 +76,30 @@ static proto_bool check_response(const char *response, const char *accept)
         }
         g_expect[i] = '\0';
     }
-    WsClient.handshake.accept = accept ? g_expect : NULL;
-    WsClient.check_server_handshake(ws_client_work());
-    return WsClient.ok;
+    WsClientV.handshake.accept = accept ? g_expect : NULL;
+    WsClientV.check_server_handshake(ws_client_work());
+    return WsClientV.ok;
 }
 
 static size_t build_frame(uint8_t *out, size_t cap, uint8_t opcode, const uint8_t *payload, size_t len,
                           const uint8_t *mask)
 {
-    WsClient.buf.out = out;
-    WsClient.buf.cap = cap;
-    WsClient.frame.opcode = opcode;
-    WsClient.frame.payload = payload;
-    WsClient.frame.payload_len = len;
-    WsClient.frame.masking_key = mask;
-    WsClient.build_frame(ws_client_work());
-    return WsClient.n;
+    WsClientV.buf.out = out;
+    WsClientV.buf.cap = cap;
+    WsClientV.frame.opcode = opcode;
+    WsClientV.frame.payload = payload;
+    WsClientV.frame.payload_len = len;
+    WsClientV.frame.masking_key = mask;
+    WsClientV.build_frame(ws_client_work());
+    return WsClientV.n;
 }
 
 static proto_bool parse_frame(const uint8_t *in, size_t avail)
 {
-    WsClient.buf.in = in;
-    WsClient.buf.avail = avail;
-    WsClient.parse_frame(ws_client_work());
-    return WsClient.ok;
+    WsClientV.buf.in = in;
+    WsClientV.buf.avail = avail;
+    WsClientV.parse_frame(ws_client_work());
+    return WsClientV.ok;
 }
 
 // RFC 6455 sec 1.3: "the |Sec-WebSocket-Key| header field had the value 'dGhlIHNhbXBsZSBub25jZQ==',
@@ -226,12 +225,12 @@ void test_rfc6455_parse_unmasked_text_frame(void)
 {
     static const uint8_t FRAME[] = {0x81, 0x05, 0x48, 0x65, 0x6c, 0x6c, 0x6f};
     TEST_ASSERT_TRUE(parse_frame(FRAME, sizeof(FRAME)));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)WSC_OP_TEXT, WsClient.frame.opcode);
-    TEST_ASSERT_TRUE(WsClient.frame.fin);
-    TEST_ASSERT_EQUAL_size_t(2, WsClient.frame.payload_off);
-    TEST_ASSERT_EQUAL_size_t(5, WsClient.frame.payload_len);
-    TEST_ASSERT_EQUAL_size_t(7, WsClient.frame.consumed);
-    TEST_ASSERT_EQUAL_MEMORY("Hello", FRAME + WsClient.frame.payload_off, 5);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)WSC_OP_TEXT, WsClientV.frame.opcode);
+    TEST_ASSERT_TRUE(WsClientV.frame.fin);
+    TEST_ASSERT_EQUAL_size_t(2, WsClientV.frame.payload_off);
+    TEST_ASSERT_EQUAL_size_t(5, WsClientV.frame.payload_len);
+    TEST_ASSERT_EQUAL_size_t(7, WsClientV.frame.consumed);
+    TEST_ASSERT_EQUAL_MEMORY("Hello", FRAME + WsClientV.frame.payload_off, 5);
 }
 
 // RFC 6455 sec 5.7: "A fragmented unmasked text message ...
@@ -243,17 +242,17 @@ void test_rfc6455_fragmented_message(void)
 {
     static const uint8_t FIRST[] = {0x01, 0x03, 0x48, 0x65, 0x6c};
     TEST_ASSERT_TRUE(parse_frame(FIRST, sizeof(FIRST)));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)WSC_OP_TEXT, WsClient.frame.opcode);
-    TEST_ASSERT_FALSE(WsClient.frame.fin);
-    TEST_ASSERT_EQUAL_size_t(3, WsClient.frame.payload_len);
-    TEST_ASSERT_EQUAL_size_t(5, WsClient.frame.consumed);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)WSC_OP_TEXT, WsClientV.frame.opcode);
+    TEST_ASSERT_FALSE(WsClientV.frame.fin);
+    TEST_ASSERT_EQUAL_size_t(3, WsClientV.frame.payload_len);
+    TEST_ASSERT_EQUAL_size_t(5, WsClientV.frame.consumed);
 
     static const uint8_t LAST[] = {0x80, 0x02, 0x6c, 0x6f};
     TEST_ASSERT_TRUE(parse_frame(LAST, sizeof(LAST)));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)WSC_OP_CONT, WsClient.frame.opcode);
-    TEST_ASSERT_TRUE(WsClient.frame.fin);
-    TEST_ASSERT_EQUAL_size_t(2, WsClient.frame.payload_len);
-    TEST_ASSERT_EQUAL_size_t(4, WsClient.frame.consumed);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)WSC_OP_CONT, WsClientV.frame.opcode);
+    TEST_ASSERT_TRUE(WsClientV.frame.fin);
+    TEST_ASSERT_EQUAL_size_t(2, WsClientV.frame.payload_len);
+    TEST_ASSERT_EQUAL_size_t(4, WsClientV.frame.consumed);
 }
 
 // RFC 6455 sec 5.7: "Unmasked Ping request and masked Ping response ...
@@ -264,8 +263,8 @@ void test_rfc6455_control_frames(void)
 {
     static const uint8_t PING[] = {0x89, 0x05, 0x48, 0x65, 0x6c, 0x6c, 0x6f};
     TEST_ASSERT_TRUE(parse_frame(PING, sizeof(PING)));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)WSC_OP_PING, WsClient.frame.opcode);
-    TEST_ASSERT_TRUE(WsClient.frame.fin);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)WSC_OP_PING, WsClientV.frame.opcode);
+    TEST_ASSERT_TRUE(WsClientV.frame.fin);
 
     // The masked Pong the RFC pairs with it is exactly what this end builds for opcode 0xA.
     static const uint8_t MASK[4] = {0x37, 0xfa, 0x21, 0x3d};
@@ -331,9 +330,9 @@ void test_rfc6455_256_octet_frame(void)
     server[3] = 0x00;
     memset(server + 4, 0x5A, 256);
     TEST_ASSERT_TRUE(parse_frame(server, sizeof(server)));
-    TEST_ASSERT_EQUAL_size_t(4, WsClient.frame.payload_off);
-    TEST_ASSERT_EQUAL_size_t(256, WsClient.frame.payload_len);
-    TEST_ASSERT_EQUAL_size_t(260, WsClient.frame.consumed);
+    TEST_ASSERT_EQUAL_size_t(4, WsClientV.frame.payload_off);
+    TEST_ASSERT_EQUAL_size_t(256, WsClientV.frame.payload_len);
+    TEST_ASSERT_EQUAL_size_t(260, WsClientV.frame.consumed);
 }
 
 // RFC 6455 sec 5.7: "64KiB binary message in a single unmasked frame
@@ -357,9 +356,9 @@ void test_rfc6455_64kib_frame(void)
     memcpy(g_out64k + 2, LEN64, 8);
     memset(g_out64k + 10, 0x11, 65536);
     TEST_ASSERT_TRUE(parse_frame(g_out64k, 10 + 65536));
-    TEST_ASSERT_EQUAL_size_t(10, WsClient.frame.payload_off);
-    TEST_ASSERT_EQUAL_size_t(65536, WsClient.frame.payload_len);
-    TEST_ASSERT_EQUAL_size_t(65546, WsClient.frame.consumed);
+    TEST_ASSERT_EQUAL_size_t(10, WsClientV.frame.payload_off);
+    TEST_ASSERT_EQUAL_size_t(65536, WsClientV.frame.payload_len);
+    TEST_ASSERT_EQUAL_size_t(65546, WsClientV.frame.consumed);
 }
 
 // A frame is delivered only once all of it has arrived: an announced length longer than what is
@@ -398,9 +397,9 @@ void test_parse_stays_aligned_past_a_masking_key(void)
 {
     static const uint8_t MASKED[] = {0x81, 0x82, 0, 0, 0, 0, 'a', 'b'};
     TEST_ASSERT_TRUE(parse_frame(MASKED, sizeof(MASKED)));
-    TEST_ASSERT_EQUAL_size_t(6, WsClient.frame.payload_off);
-    TEST_ASSERT_EQUAL_size_t(2, WsClient.frame.payload_len);
-    TEST_ASSERT_EQUAL_size_t(8, WsClient.frame.consumed);
+    TEST_ASSERT_EQUAL_size_t(6, WsClientV.frame.payload_off);
+    TEST_ASSERT_EQUAL_size_t(2, WsClientV.frame.payload_len);
+    TEST_ASSERT_EQUAL_size_t(8, WsClientV.frame.consumed);
 }
 
 // A frame is built whole or not at all: RFC 6455 sec 5.3 makes the Masking-key mandatory on this
@@ -455,11 +454,11 @@ void test_build_handshake_fails_closed(void)
 // no line ending, or no accept value to compare against.
 void test_check_server_handshake_fails_closed(void)
 {
-    WsClient.buf.in = NULL;
-    WsClient.buf.avail = 100;
-    WsClient.handshake.accept = g_accept;
-    WsClient.check_server_handshake(ws_client_work());
-    TEST_ASSERT_FALSE(WsClient.ok);
+    WsClientV.buf.in = NULL;
+    WsClientV.buf.avail = 100;
+    WsClientV.handshake.accept = g_accept;
+    WsClientV.check_server_handshake(ws_client_work());
+    TEST_ASSERT_FALSE(WsClientV.ok);
 
     TEST_ASSERT_FALSE(check_response("abcd", "acc"));                   // shorter than "HTTP/1.1 101"
     TEST_ASSERT_FALSE(check_response("HTTP/1.1 101 Switching", "acc")); // no line ending
@@ -471,30 +470,30 @@ void test_check_server_handshake_fails_closed(void)
 // the codec's buffers.
 void test_transport_reports_no_connection(void)
 {
-    WsClient.msg.on_message = NULL;
-    WsClient.on_message(ws_client_work());
+    WsClientV.msg.on_message = NULL;
+    WsClientV.on_message(ws_client_work());
 
-    WsClient.handshake.host = "example.com";
-    WsClient.handshake.port = 80;
-    WsClient.handshake.secure = PROTO_FALSE;
-    WsClient.handshake.resource_name = "/";
-    WsClient.connect(ws_client_work());
-    TEST_ASSERT_FALSE(WsClient.ok);
+    WsClientV.handshake.host = "example.com";
+    WsClientV.handshake.port = 80;
+    WsClientV.handshake.secure = PROTO_FALSE;
+    WsClientV.handshake.resource_name = "/";
+    WsClientV.connect(ws_client_work());
+    TEST_ASSERT_FALSE(WsClientV.ok);
 
-    WsClient.msg.text = "hi";
+    WsClientV.msg.text = "hi";
     WsClient.send_text(ws_client_work());
-    TEST_ASSERT_FALSE(WsClient.ok);
+    TEST_ASSERT_FALSE(WsClientV.ok);
 
-    WsClient.msg.data = (const uint8_t *)"x";
-    WsClient.msg.len = 1;
+    WsClientV.msg.data = (const uint8_t *)"x";
+    WsClientV.msg.len = 1;
     WsClient.send_binary(ws_client_work());
-    TEST_ASSERT_FALSE(WsClient.ok);
+    TEST_ASSERT_FALSE(WsClientV.ok);
 
-    WsClient.loop(ws_client_work());
-    TEST_ASSERT_FALSE(WsClient.ok);
+    WsClientV.loop(ws_client_work());
+    TEST_ASSERT_FALSE(WsClientV.ok);
 
     WsClient.connected(ws_client_work());
-    TEST_ASSERT_FALSE(WsClient.ok);
+    TEST_ASSERT_FALSE(WsClientV.ok);
 
-    WsClient.close(ws_client_work());
+    WsClientV.close(ws_client_work());
 }

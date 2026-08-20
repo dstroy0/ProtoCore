@@ -44,7 +44,6 @@ typedef struct
     const char *origin_host; ///< the internal host to forward to (dotted-quad or a name; copied)
     uint16_t origin_port;    ///< the internal port
 } RelayListenerPublishArgs;
-
 /**
  * @brief Server-side TCP relay / DNAT listener (PROTOCORE_ENABLE_RELAY) - publish an internal `host:port` on a server
  * ...
@@ -70,15 +69,32 @@ typedef struct
 typedef struct
 {
     RelayListenerPublishArgs publish_args;
-
     proto_bool ok;
+} RelayListenerVars;
 
+/** @brief The operands and the outcome. */
+extern RelayListenerVars RelayListenerV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const publish)(uint8_t *restrict work);
     void (*const reset)(uint8_t *restrict work);
 } RelayListenerNs;
 
-/** @brief The one symbol this module exports. */
-extern RelayListenerNs RelayListener;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in RelayListenerV or a region of the borrow at a fixed offset.
+void protocore_relay_listener_publish(uint8_t *restrict work);
+void protocore_relay_listener_reset(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `RelayListener.publish(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const RelayListenerNs RelayListener __attribute__((unused)) = {
+    .publish = protocore_relay_listener_publish,
+    .reset = protocore_relay_listener_reset,
+};
 
 /**
  * @brief The PROTOCORE_RELAY_LISTENER_BORROW bytes this module's state lives in.

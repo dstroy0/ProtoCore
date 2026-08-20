@@ -68,10 +68,10 @@ static_assert(CSRF_OFF_CTX % _Alignof(CsrfCtx) == 0,
 // Lowercase hex of @p n bytes at @p in, plus a NUL, into @p out.
 static void hex_of(const uint8_t *in, uint32_t n, char *out)
 {
-    Hex.args.upper = PROTO_FALSE;
-    Hex.io.in = in;
-    Hex.io.n = n;
-    Hex.io.out = out;
+    HexV.args.upper = PROTO_FALSE;
+    HexV.io.in = in;
+    HexV.io.n = n;
+    HexV.io.out = out;
     Hex.encode(hex_work);
 }
 
@@ -80,11 +80,11 @@ static void sign_nonce(uint8_t *restrict work, const uint8_t *nonce, size_t nlen
 {
     const CsrfCtx *c = CSRF_CTX(work);
     uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
-    HmacSha256.mac_args.key = c->secret;
-    HmacSha256.mac_args.key_len = c->secret_len;
-    HmacSha256.mac_args.data = nonce;
-    HmacSha256.mac_args.len = nlen;
-    HmacSha256.mac_args.out = mac;
+    HmacSha256V.mac_args.key = c->secret;
+    HmacSha256V.mac_args.key_len = c->secret_len;
+    HmacSha256V.mac_args.data = nonce;
+    HmacSha256V.mac_args.len = nlen;
+    HmacSha256V.mac_args.out = mac;
     HmacSha256.mac(CSRF_MAC(work));
     hex_of(mac, CSRF_SIG_BYTES, sig_hex); // truncate the MAC to CSRF_SIG_BYTES
 }
@@ -113,28 +113,28 @@ uint8_t *protocore_csrf_span(void)
 
 // --- the entries -----------------------------------------------------------
 
-static void csrf_set_secret(uint8_t *restrict work)
+void protocore_csrf_set_secret(uint8_t *restrict work)
 {
-    Csrf.ok = PROTO_FALSE;
+    CsrfV.ok = PROTO_FALSE;
     CsrfCtx *c = CSRF_CTX(work);
-    const uint8_t *secret = Csrf.secret_args.secret;
+    const uint8_t *secret = CsrfV.secret_args.secret;
     if (!secret)
     {
         c->secret_len = 0;
-        Csrf.ok = PROTO_TRUE;
+        CsrfV.ok = PROTO_TRUE;
         return;
     }
-    const size_t len = Csrf.secret_args.len;
+    const size_t len = CsrfV.secret_args.len;
     c->secret_len = len > sizeof(c->secret) ? sizeof(c->secret) : len;
     mem.cpy(c->secret, secret, c->secret_len);
-    Csrf.ok = PROTO_TRUE;
+    CsrfV.ok = PROTO_TRUE;
 }
 
-static void csrf_issue(uint8_t *restrict work)
+void protocore_csrf_issue(uint8_t *restrict work)
 {
-    Csrf.ok = PROTO_FALSE;
-    Csrf.n = 0;
-    if (!Csrf.issue_args.out || Csrf.issue_args.cap < CSRF_TOKEN_BUF)
+    CsrfV.ok = PROTO_FALSE;
+    CsrfV.n = 0;
+    if (!CsrfV.issue_args.out || CsrfV.issue_args.cap < CSRF_TOKEN_BUF)
     {
         return;
     }
@@ -157,16 +157,16 @@ static void csrf_issue(uint8_t *restrict work)
     sign_nonce(work, nonce, CSRF_NONCE_BYTES, shex);
 
     // The frame's contract is this entry's contract: the length written, or 0 and out emptied.
-    Csrf.n = frame.build(Csrf.issue_args.out, Csrf.issue_args.cap, CSRF_TOKEN,
-                         (const protocore_fval[]){PROTOCORE_VSTR(nhex), PROTOCORE_VSTR(shex)}, 2);
-    Csrf.ok = (Csrf.n > 0);
+    CsrfV.n = frame.build(CsrfV.issue_args.out, CsrfV.issue_args.cap, CSRF_TOKEN,
+                          (const protocore_fval[]){PROTOCORE_VSTR(nhex), PROTOCORE_VSTR(shex)}, 2);
+    CsrfV.ok = (CsrfV.n > 0);
 }
 
-static void csrf_verify(uint8_t *restrict work)
+void protocore_csrf_verify(uint8_t *restrict work)
 {
-    Csrf.ok = PROTO_FALSE;
-    Csrf.valid = PROTO_FALSE;
-    const char *token = Csrf.verify_args.token;
+    CsrfV.ok = PROTO_FALSE;
+    CsrfV.valid = PROTO_FALSE;
+    const char *token = CsrfV.verify_args.token;
     if (!token)
     {
         return;
@@ -190,12 +190,12 @@ static void csrf_verify(uint8_t *restrict work)
     }
 
     uint8_t nonce[CSRF_NONCE_BYTES];
-    Hex.io.text = token;
-    Hex.io.n = (uint32_t)nhexlen;
-    Hex.io.bytes = nonce;
-    Hex.io.cap = (uint32_t)sizeof(nonce);
+    HexV.io.text = token;
+    HexV.io.n = (uint32_t)nhexlen;
+    HexV.io.bytes = nonce;
+    HexV.io.cap = (uint32_t)sizeof(nonce);
     Hex.decode(hex_work);
-    if (Hex.i32 != CSRF_NONCE_BYTES)
+    if (HexV.i32 != CSRF_NONCE_BYTES)
     {
         return;
     }
@@ -208,21 +208,22 @@ static void csrf_verify(uint8_t *restrict work)
 
     char expect[CSRF_SIG_BYTES * 2 + 1];
     sign_nonce(work, nonce, CSRF_NONCE_BYTES, expect);
-    Csrf.valid = protocore_ct_eq(sig, expect, CSRF_SIG_BYTES * 2);
-    Csrf.ok = PROTO_TRUE;
+    CsrfV.valid = protocore_ct_eq(sig, expect, CSRF_SIG_BYTES * 2);
+    CsrfV.ok = PROTO_TRUE;
 }
 
-static void csrf_reset(uint8_t *restrict work)
+void protocore_csrf_reset(uint8_t *restrict work)
 {
-    Csrf.ok = PROTO_FALSE;
+    CsrfV.ok = PROTO_FALSE;
     CsrfCtx *c = CSRF_CTX(work);
     mem.set(c->secret, 0, sizeof(c->secret));
     c->secret_len = 0;
     c->counter = 0;
-    Csrf.ok = PROTO_TRUE;
+    CsrfV.ok = PROTO_TRUE;
 }
 
-CsrfNs Csrf = {.set_secret = csrf_set_secret, .issue = csrf_issue, .verify = csrf_verify, .reset = csrf_reset};
+/** @brief The operands and the outcome. */
+CsrfVars CsrfV;
 
 PROTOCORE_END_DECLS
 

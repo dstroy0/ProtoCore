@@ -100,7 +100,7 @@ static void find_conn(uint8_t *restrict work)
     TELNET_CTX(work)->conn = NULL;
     for (int i = 0; i < MAX_TELNET_CONNS; i++)
     {
-        if (TELNET_CTX(work)->tn[i].used && TELNET_CTX(work)->tn[i].slot == Telnet.slot)
+        if (TELNET_CTX(work)->tn[i].used && TELNET_CTX(work)->tn[i].slot == TelnetV.slot)
         {
             TELNET_CTX(work)->conn = &TELNET_CTX(work)->tn[i];
             return;
@@ -110,9 +110,9 @@ static void find_conn(uint8_t *restrict work)
 
 static void command_send(uint8_t slot, const void *data, size_t n)
 {
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok ||
+    if (!ConnPoolV.ok ||
         // fixed nonzero literal length. (Marker must sit on this line: gcov attributes
         // the whole multi-line condition's branches to the "if" line, not the operand's
         // own line - a marker on the next line silently fails to exclude anything.)
@@ -120,9 +120,9 @@ static void command_send(uint8_t slot, const void *data, size_t n)
     {
         return;
     }
-    ConnPool.io.data = data;
-    ConnPool.io.len = (proto_u16)n;
-    ConnPool.send(protocore_conn_pool_span());
+    ConnPoolV.io.data = data;
+    ConnPoolV.io.len = (proto_u16)n;
+    ConnPoolV.send(protocore_conn_pool_span());
     ConnPool.flush(protocore_conn_pool_span());
 }
 
@@ -132,9 +132,9 @@ static void command_send(uint8_t slot, const void *data, size_t n)
 // (IAC WILL/DO/...) use command_send directly - they send IAC intentionally.
 static void data_send(uint8_t slot, const void *data, size_t n)
 {
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok || n == 0)
+    if (!ConnPoolV.ok || n == 0)
     {
         return;
     }
@@ -146,21 +146,21 @@ static void data_send(uint8_t slot, const void *data, size_t n)
         {
             if (i > start)
             {
-                ConnPool.io.data = b + start;
-                ConnPool.io.len = (proto_u16)(i - start);
-                ConnPool.send(protocore_conn_pool_span());
+                ConnPoolV.io.data = b + start;
+                ConnPoolV.io.len = (proto_u16)(i - start);
+                ConnPoolV.send(protocore_conn_pool_span());
             }
-            ConnPool.io.data = "\xff\xff"; // doubled IAC
-            ConnPool.io.len = 2;
-            ConnPool.send(protocore_conn_pool_span());
+            ConnPoolV.io.data = "\xff\xff"; // doubled IAC
+            ConnPoolV.io.len = 2;
+            ConnPoolV.send(protocore_conn_pool_span());
             start = i + 1;
         }
     }
     if (n > start)
     {
-        ConnPool.io.data = b + start;
-        ConnPool.io.len = (proto_u16)(n - start);
-        ConnPool.send(protocore_conn_pool_span());
+        ConnPoolV.io.data = b + start;
+        ConnPoolV.io.len = (proto_u16)(n - start);
+        ConnPoolV.send(protocore_conn_pool_span());
     }
     ConnPool.flush(protocore_conn_pool_span());
 }
@@ -183,21 +183,21 @@ static void accept_conn(uint8_t *restrict work)
     if (!t)
     {
         // No Telnet capacity: drop the connection (transport owns the teardown).
-        ConnPool.slot = Telnet.slot;
-        ConnPool.close(protocore_conn_pool_span());
+        ConnPoolV.slot = TelnetV.slot;
+        ConnPoolV.close(protocore_conn_pool_span());
         return;
     }
     mem.set(t, 0, sizeof(*t));
     t->used = PROTO_TRUE;
-    t->slot = Telnet.slot;
+    t->slot = TelnetV.slot;
     t->st = TN_NORMAL;
     TELNET_CTX(work)->conn = t;
 
     // Server-side echo + character-at-a-time (suppress go-ahead).
     static const uint8_t neg[] = {T_IAC, T_WILL, OPT_ECHO, T_IAC, T_WILL, OPT_SGA};
-    command_send(Telnet.slot, neg, sizeof(neg));
+    command_send(TelnetV.slot, neg, sizeof(neg));
     static const char greet[] = "PC Telnet ready\r\n> ";
-    command_send(Telnet.slot, greet, sizeof(greet) - 1);
+    command_send(TelnetV.slot, greet, sizeof(greet) - 1);
 }
 
 static void close_conn(uint8_t *restrict work)
@@ -275,15 +275,15 @@ static void rx(uint8_t *restrict work)
     {
         return;
     }
-    const uint8_t slot = Telnet.slot;
+    const uint8_t slot = TelnetV.slot;
     Nvt *t = TELNET_CTX(work)->conn;
 
-    ConnPool.slot = slot;
-    ConnPool.io.buf = TELNET_CTX(work)->rx;
-    ConnPool.io.cap = sizeof(TELNET_CTX(work)->rx);
+    ConnPoolV.slot = slot;
+    ConnPoolV.io.buf = TELNET_CTX(work)->rx;
+    ConnPoolV.io.cap = sizeof(TELNET_CTX(work)->rx);
     ConnPool.read(protocore_conn_pool_span());
 
-    for (size_t i = 0; i < ConnPool.n; i++)
+    for (size_t i = 0; i < ConnPoolV.n; i++)
     {
         const uint8_t b = TELNET_CTX(work)->rx[i];
         switch (t->st)
@@ -366,7 +366,7 @@ static void rx(uint8_t *restrict work)
 
 static void on_command(uint8_t *restrict work)
 {
-    TELNET_CTX(work)->cmd_cb = Telnet.cb;
+    TELNET_CTX(work)->cmd_cb = TelnetV.cb;
 }
 
 // RFC 854: application output travels the NVT data stream, so a literal IAC is doubled on the way.
@@ -383,17 +383,17 @@ static void broadcast(uint8_t *restrict work, const char *s, size_t n)
 
 static void print(uint8_t *restrict work)
 {
-    if (Telnet.out.text)
+    if (TelnetV.out.text)
     {
-        broadcast(work, Telnet.out.text, str.len(Telnet.out.text, TELNET_BUF_SIZE)); // line-oriented console
+        broadcast(work, TelnetV.out.text, str.len(TelnetV.out.text, TELNET_BUF_SIZE)); // line-oriented console
     }
 }
 
 static void println(uint8_t *restrict work)
 {
-    if (Telnet.out.text)
+    if (TelnetV.out.text)
     {
-        broadcast(work, Telnet.out.text, str.len(Telnet.out.text, TELNET_BUF_SIZE));
+        broadcast(work, TelnetV.out.text, str.len(TelnetV.out.text, TELNET_BUF_SIZE));
     }
     broadcast(work, "\r\n", 2);
 }
@@ -401,7 +401,7 @@ static void println(uint8_t *restrict work)
 static void frame_out(uint8_t *restrict work)
 {
     char buf[TELNET_BUF_SIZE];
-    size_t n = frame.build(buf, sizeof(buf), Telnet.out.spec, Telnet.out.val, Telnet.out.nv);
+    size_t n = frame.build(buf, sizeof(buf), TelnetV.out.spec, TelnetV.out.val, TelnetV.out.nv);
     if (n > 0)
     {
         broadcast(work, buf, n);
@@ -418,24 +418,24 @@ static void client_count(uint8_t *restrict work)
             c++;
         }
     }
-    Telnet.u8 = c;
+    TelnetV.u8 = c;
 }
 
 // The session layer's seam dictates these shapes, so they stay as they are and carry the slot onto
 // the handle before the call that does the work.
 static void evt_accept(uint8_t slot)
 {
-    Telnet.slot = slot;
+    TelnetV.slot = slot;
     accept_conn(protocore_telnet_span());
 }
 static void evt_rx(uint8_t slot)
 {
-    Telnet.slot = slot;
+    TelnetV.slot = slot;
     rx(protocore_telnet_span());
 }
 static void evt_close(uint8_t slot)
 {
-    Telnet.slot = slot;
+    TelnetV.slot = slot;
     close_conn(protocore_telnet_span());
 }
 
@@ -448,18 +448,11 @@ static const ProtoHandler s_telnet_handler = {.on_accept = evt_accept, .on_data 
 static void proto_handler(uint8_t *restrict work)
 {
     (void)work;
-    Telnet.handler = &s_telnet_handler;
+    TelnetV.handler = &s_telnet_handler;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-TelnetNs Telnet = {.on_command = on_command,
-                   .print = print,
-                   .println = println,
-                   .frame = frame_out,
-                   .client_count = client_count,
-                   .accept = accept_conn,
-                   .rx = rx,
-                   .close = close_conn,
-                   .proto_handler = proto_handler};
+/** @brief The operands and the outcome. */
+TelnetVars TelnetV;
 
 #endif // PROTOCORE_ENABLE_TELNET

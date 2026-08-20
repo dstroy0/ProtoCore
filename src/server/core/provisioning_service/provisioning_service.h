@@ -40,7 +40,6 @@ typedef struct
     char *out;        ///< Destination buffer
     size_t cap;       ///< Capacity of out (>= 1)
 } ProvFormFieldArgs;
-
 /** @brief What load takes: ssid, ssid_cap, psk, psk_cap. */
 typedef struct
 {
@@ -49,13 +48,11 @@ typedef struct
     char *psk;       ///< Destination for the stored passphrase (always null-terminated)
     size_t psk_cap;  ///< Capacity of psk
 } ProvLoadArgs;
-
 /** @brief What begin takes: ap_ssid. */
 typedef struct
 {
     const char *ap_ssid;
 } ProvBeginArgs;
-
 /**
  * @brief First-boot WiFi provisioning via a captive portal (PROTOCORE_ENABLE_PROVISIONING).
  *
@@ -87,17 +84,38 @@ typedef struct
     ProvFormFieldArgs form_field_args;
     ProvLoadArgs load_args;
     ProvBeginArgs begin_args;
-
     proto_bool ok;
+} ProvVars;
 
+/** @brief The operands and the outcome. */
+extern ProvVars ProvV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const form_field)(uint8_t *restrict work);
     void (*const load)(uint8_t *restrict work);
     void (*const begin)(uint8_t *restrict work);
     void (*const clear)(uint8_t *restrict work);
 } ProvNs;
 
-/** @brief The one symbol this module exports. */
-extern ProvNs Prov;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ProvV or a region of the borrow at a fixed offset.
+void protocore_provisioning_service_form_field(uint8_t *restrict work);
+void protocore_provisioning_service_load(uint8_t *restrict work);
+void protocore_provisioning_service_begin(uint8_t *restrict work);
+void protocore_provisioning_service_clear(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Prov.form_field(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ProvNs Prov __attribute__((unused)) = {
+    .form_field = protocore_provisioning_service_form_field,
+    .load = protocore_provisioning_service_load,
+    .begin = protocore_provisioning_service_begin,
+    .clear = protocore_provisioning_service_clear,
+};
 
 /**
  * @brief The PROTOCORE_PROVISIONING_BORROW bytes this module's state lives in.

@@ -43,14 +43,12 @@ typedef struct
     const uint8_t *payload; ///< the bit+word data region.
     size_t payload_len;
 } CcLinkFrame;
-
 /** @brief What sum takes: bytes, len. */
 typedef struct
 {
     const uint8_t *bytes;
     size_t len;
 } CclinkSumArgs;
-
 /** @brief What build takes: station, command, bits, bit_len, words, ... */
 typedef struct
 {
@@ -63,7 +61,6 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } CclinkBuildArgs;
-
 /** @brief What parse takes: frame, len, out. */
 typedef struct
 {
@@ -71,7 +68,6 @@ typedef struct
     size_t len;
     CcLinkFrame *out;
 } CclinkParseArgs;
-
 /** @brief What get_bit takes: bits, bit_len, index. */
 typedef struct
 {
@@ -79,7 +75,6 @@ typedef struct
     size_t bit_len;
     size_t index;
 } CclinkGetBitArgs;
-
 /** @brief What set_bit takes: bits, bit_len, index, value. */
 typedef struct
 {
@@ -88,7 +83,6 @@ typedef struct
     size_t index;
     proto_bool value;
 } CclinkSetBitArgs;
-
 /** @brief What get_word takes: words, word_len, index. */
 typedef struct
 {
@@ -96,7 +90,6 @@ typedef struct
     size_t word_len;
     size_t index;
 } CclinkGetWordArgs;
-
 /**
  * @brief CC-Link (CLPA) cyclic fieldbus frame codec (PROTOCORE_ENABLE_CCLINK).
  *
@@ -136,12 +129,18 @@ typedef struct
     CclinkGetBitArgs get_bit_args;
     CclinkSetBitArgs set_bit_args;
     CclinkGetWordArgs get_word_args;
-
     proto_bool ok;
     uint8_t value; ///< the checksum a sum reports
     uint16_t u16;  ///< the word a get_word reports: its own member, since value is an octet
     size_t n;
+} CclinkVars;
 
+/** @brief The operands and the outcome. */
+extern CclinkVars CclinkV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const sum)(uint8_t *restrict work);
     void (*const build)(uint8_t *restrict work);
     void (*const parse)(uint8_t *restrict work);
@@ -150,8 +149,27 @@ typedef struct
     void (*const get_word)(uint8_t *restrict work);
 } CclinkNs;
 
-/** @brief The one symbol this module exports. */
-extern CclinkNs Cclink;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in CclinkV or a region of the borrow at a fixed offset.
+void protocore_cclink_sum(uint8_t *restrict work);
+void protocore_cclink_build(uint8_t *restrict work);
+void protocore_cclink_parse(uint8_t *restrict work);
+void protocore_cclink_get_bit(uint8_t *restrict work);
+void protocore_cclink_set_bit(uint8_t *restrict work);
+void protocore_cclink_get_word(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Cclink.sum(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const CclinkNs Cclink __attribute__((unused)) = {
+    .sum = protocore_cclink_sum,
+    .build = protocore_cclink_build,
+    .parse = protocore_cclink_parse,
+    .get_bit = protocore_cclink_get_bit,
+    .set_bit = protocore_cclink_set_bit,
+    .get_word = protocore_cclink_get_word,
+};
 
 PROTOCORE_END_DECLS
 

@@ -29,15 +29,15 @@ void tearDown(void)
 void test_published_check_value(void)
 {
     static const uint8_t CHECK[9] = {'1', '2', '3', '4', '5', '6', '7', '8', '9'};
-    Interbus.fcs_args.bytes = CHECK;
-    Interbus.fcs_args.len = sizeof(CHECK);
+    InterbusV.fcs_args.bytes = CHECK;
+    InterbusV.fcs_args.len = sizeof(CHECK);
     Interbus.fcs(interbus_work);
-    TEST_ASSERT_EQUAL_HEX16(0x29B1u, Interbus.value);
+    TEST_ASSERT_EQUAL_HEX16(0x29B1u, InterbusV.value);
     // init=0xffff, xorout=0x0000: an empty message leaves the seed untouched.
-    Interbus.fcs_args.bytes = CHECK;
-    Interbus.fcs_args.len = 0;
+    InterbusV.fcs_args.bytes = CHECK;
+    InterbusV.fcs_args.len = 0;
     Interbus.fcs(interbus_work);
-    TEST_ASSERT_EQUAL_HEX16(0xFFFFu, Interbus.value);
+    TEST_ASSERT_EQUAL_HEX16(0xFFFFu, InterbusV.value);
 }
 
 // The loopback word that opens every summation frame, all ones so an open ring cannot spell it.
@@ -53,59 +53,59 @@ void test_frame_layout(void)
 {
     static const uint16_t WORDS[2] = {0x1234, 0x5678};
     uint8_t out[16];
-    Interbus.build_args.words = WORDS;
-    Interbus.build_args.word_count = 2;
-    Interbus.build_args.out = out;
-    Interbus.build_args.cap = sizeof(out);
+    InterbusV.build_args.words = WORDS;
+    InterbusV.build_args.word_count = 2;
+    InterbusV.build_args.out = out;
+    InterbusV.build_args.cap = sizeof(out);
     Interbus.build(interbus_work);
-    size_t n = Interbus.n;
+    size_t n = InterbusV.n;
     TEST_ASSERT_EQUAL_size_t(8u, n); // 2 + 2*2 + 2
 
     static const uint8_t HEAD[6] = {0xFF, 0xFF, 0x12, 0x34, 0x56, 0x78};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(HEAD, out, sizeof(HEAD));
 
     // The trailing FCS is the CRC of everything before it, big-endian.
-    Interbus.fcs_args.bytes = out;
-    Interbus.fcs_args.len = 6;
+    InterbusV.fcs_args.bytes = out;
+    InterbusV.fcs_args.len = 6;
     Interbus.fcs(interbus_work);
-    uint16_t fcs = Interbus.value;
+    uint16_t fcs = InterbusV.value;
     TEST_ASSERT_EQUAL_HEX8((uint8_t)(fcs >> 8), out[6]);
     TEST_ASSERT_EQUAL_HEX8((uint8_t)fcs, out[7]);
 
     // residue=0x0000: the CRC over the frame including its own FCS folds to zero.
-    Interbus.fcs_args.bytes = out;
-    Interbus.fcs_args.len = n;
+    InterbusV.fcs_args.bytes = out;
+    InterbusV.fcs_args.len = n;
     Interbus.fcs(interbus_work);
-    TEST_ASSERT_EQUAL_HEX16(0x0000u, Interbus.value);
+    TEST_ASSERT_EQUAL_HEX16(0x0000u, InterbusV.value);
 }
 
 // An empty ring is still a frame: loopback plus FCS, no device slices.
 void test_zero_word_frame(void)
 {
     uint8_t out[16];
-    Interbus.build_args.words = NULL;
-    Interbus.build_args.word_count = 0;
-    Interbus.build_args.out = out;
-    Interbus.build_args.cap = sizeof(out);
+    InterbusV.build_args.words = NULL;
+    InterbusV.build_args.word_count = 0;
+    InterbusV.build_args.out = out;
+    InterbusV.build_args.cap = sizeof(out);
     Interbus.build(interbus_work);
-    size_t n = Interbus.n;
+    size_t n = InterbusV.n;
     TEST_ASSERT_EQUAL_size_t(4u, n);
     TEST_ASSERT_EQUAL_HEX8(0xFFu, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0xFFu, out[1]);
-    Interbus.fcs_args.bytes = out;
-    Interbus.fcs_args.len = n;
+    InterbusV.fcs_args.bytes = out;
+    InterbusV.fcs_args.len = n;
     Interbus.fcs(interbus_work);
-    TEST_ASSERT_EQUAL_HEX16(0x0000u, Interbus.value);
+    TEST_ASSERT_EQUAL_HEX16(0x0000u, InterbusV.value);
 
     uint16_t words[4];
     size_t count = 99;
-    Interbus.parse_args.frame = out;
-    Interbus.parse_args.len = n;
-    Interbus.parse_args.out_words = words;
-    Interbus.parse_args.max_words = 4;
-    Interbus.parse_args.out_count = &count;
+    InterbusV.parse_args.frame = out;
+    InterbusV.parse_args.len = n;
+    InterbusV.parse_args.out_words = words;
+    InterbusV.parse_args.max_words = 4;
+    InterbusV.parse_args.out_count = &count;
     Interbus.parse(interbus_work);
-    TEST_ASSERT_TRUE(Interbus.ok);
+    TEST_ASSERT_TRUE(InterbusV.ok);
     TEST_ASSERT_EQUAL_size_t(0u, count);
 }
 
@@ -116,24 +116,24 @@ void test_round_trip(void)
     for (size_t n = 0; n <= sizeof(WORDS) / sizeof(WORDS[0]); n++)
     {
         uint8_t frame[32];
-        Interbus.build_args.words = n ? WORDS : NULL;
-        Interbus.build_args.word_count = n;
-        Interbus.build_args.out = frame;
-        Interbus.build_args.cap = sizeof(frame);
+        InterbusV.build_args.words = n ? WORDS : NULL;
+        InterbusV.build_args.word_count = n;
+        InterbusV.build_args.out = frame;
+        InterbusV.build_args.cap = sizeof(frame);
         Interbus.build(interbus_work);
-        size_t len = Interbus.n;
+        size_t len = InterbusV.n;
         TEST_ASSERT_EQUAL_size_t(4u + n * 2u, len);
 
         uint16_t got[8];
         size_t count = 0;
         memset(got, 0, sizeof(got));
-        Interbus.parse_args.frame = frame;
-        Interbus.parse_args.len = len;
-        Interbus.parse_args.out_words = got;
-        Interbus.parse_args.max_words = 8;
-        Interbus.parse_args.out_count = &count;
+        InterbusV.parse_args.frame = frame;
+        InterbusV.parse_args.len = len;
+        InterbusV.parse_args.out_words = got;
+        InterbusV.parse_args.max_words = 8;
+        InterbusV.parse_args.out_count = &count;
         Interbus.parse(interbus_work);
-        TEST_ASSERT_TRUE(Interbus.ok);
+        TEST_ASSERT_TRUE(InterbusV.ok);
         TEST_ASSERT_EQUAL_size_t(n, count);
         for (size_t w = 0; w < n; w++)
         {
@@ -148,12 +148,12 @@ void test_single_bit_corruption_is_refused(void)
 {
     static const uint16_t WORDS[3] = {0x1111, 0x2222, 0x3333};
     uint8_t frame[16];
-    Interbus.build_args.words = WORDS;
-    Interbus.build_args.word_count = 3;
-    Interbus.build_args.out = frame;
-    Interbus.build_args.cap = sizeof(frame);
+    InterbusV.build_args.words = WORDS;
+    InterbusV.build_args.word_count = 3;
+    InterbusV.build_args.out = frame;
+    InterbusV.build_args.cap = sizeof(frame);
     Interbus.build(interbus_work);
-    size_t len = Interbus.n;
+    size_t len = InterbusV.n;
 
     for (size_t i = 0; i < len; i++)
     {
@@ -164,13 +164,13 @@ void test_single_bit_corruption_is_refused(void)
             bad[i] ^= (uint8_t)(1u << bit);
             uint16_t got[4];
             size_t count = 0;
-            Interbus.parse_args.frame = bad;
-            Interbus.parse_args.len = len;
-            Interbus.parse_args.out_words = got;
-            Interbus.parse_args.max_words = 4;
-            Interbus.parse_args.out_count = &count;
+            InterbusV.parse_args.frame = bad;
+            InterbusV.parse_args.len = len;
+            InterbusV.parse_args.out_words = got;
+            InterbusV.parse_args.max_words = 4;
+            InterbusV.parse_args.out_count = &count;
             Interbus.parse(interbus_work);
-            TEST_ASSERT_FALSE(Interbus.ok);
+            TEST_ASSERT_FALSE(InterbusV.ok);
         }
     }
 }
@@ -181,31 +181,31 @@ void test_open_ring_is_refused(void)
 {
     static const uint16_t WORDS[1] = {0xABCD};
     uint8_t frame[16];
-    Interbus.build_args.words = WORDS;
-    Interbus.build_args.word_count = 1;
-    Interbus.build_args.out = frame;
-    Interbus.build_args.cap = sizeof(frame);
+    InterbusV.build_args.words = WORDS;
+    InterbusV.build_args.word_count = 1;
+    InterbusV.build_args.out = frame;
+    InterbusV.build_args.cap = sizeof(frame);
     Interbus.build(interbus_work);
-    size_t len = Interbus.n;
+    size_t len = InterbusV.n;
 
     uint16_t got[4];
     size_t count = 0;
-    Interbus.parse_args.frame = frame;
-    Interbus.parse_args.len = len;
-    Interbus.parse_args.out_words = got;
-    Interbus.parse_args.max_words = 4;
-    Interbus.parse_args.out_count = &count;
+    InterbusV.parse_args.frame = frame;
+    InterbusV.parse_args.len = len;
+    InterbusV.parse_args.out_words = got;
+    InterbusV.parse_args.max_words = 4;
+    InterbusV.parse_args.out_count = &count;
     Interbus.parse(interbus_work);
-    TEST_ASSERT_TRUE(Interbus.ok);
+    TEST_ASSERT_TRUE(InterbusV.ok);
 
     frame[0] = 0x00; // loopback no longer all ones
-    Interbus.parse_args.frame = frame;
-    Interbus.parse_args.len = len;
-    Interbus.parse_args.out_words = got;
-    Interbus.parse_args.max_words = 4;
-    Interbus.parse_args.out_count = &count;
+    InterbusV.parse_args.frame = frame;
+    InterbusV.parse_args.len = len;
+    InterbusV.parse_args.out_words = got;
+    InterbusV.parse_args.max_words = 4;
+    InterbusV.parse_args.out_count = &count;
     Interbus.parse(interbus_work);
-    TEST_ASSERT_FALSE(Interbus.ok);
+    TEST_ASSERT_FALSE(InterbusV.ok);
 }
 
 // A word region that is not a whole number of 16-bit words, a frame shorter than loopback + FCS,
@@ -214,66 +214,66 @@ void test_parse_refuses_malformed_lengths(void)
 {
     uint8_t frame[16];
     static const uint16_t WORDS[2] = {0x1234, 0x5678};
-    Interbus.build_args.words = WORDS;
-    Interbus.build_args.word_count = 2;
-    Interbus.build_args.out = frame;
-    Interbus.build_args.cap = sizeof(frame);
+    InterbusV.build_args.words = WORDS;
+    InterbusV.build_args.word_count = 2;
+    InterbusV.build_args.out = frame;
+    InterbusV.build_args.cap = sizeof(frame);
     Interbus.build(interbus_work);
-    size_t len = Interbus.n;
+    size_t len = InterbusV.n;
     TEST_ASSERT_EQUAL_size_t(8u, len);
 
     uint16_t got[4];
     size_t count = 0;
-    Interbus.parse_args.frame = frame;
-    Interbus.parse_args.len = 7;
-    Interbus.parse_args.out_words = got;
-    Interbus.parse_args.max_words = 4;
-    Interbus.parse_args.out_count = &count;
+    InterbusV.parse_args.frame = frame;
+    InterbusV.parse_args.len = 7;
+    InterbusV.parse_args.out_words = got;
+    InterbusV.parse_args.max_words = 4;
+    InterbusV.parse_args.out_count = &count;
     Interbus.parse(interbus_work);
-    TEST_ASSERT_FALSE(Interbus.ok); // odd word region
-    Interbus.parse_args.frame = frame;
-    Interbus.parse_args.len = 3;
-    Interbus.parse_args.out_words = got;
-    Interbus.parse_args.max_words = 4;
-    Interbus.parse_args.out_count = &count;
+    TEST_ASSERT_FALSE(InterbusV.ok); // odd word region
+    InterbusV.parse_args.frame = frame;
+    InterbusV.parse_args.len = 3;
+    InterbusV.parse_args.out_words = got;
+    InterbusV.parse_args.max_words = 4;
+    InterbusV.parse_args.out_count = &count;
     Interbus.parse(interbus_work);
-    TEST_ASSERT_FALSE(Interbus.ok); // shorter than loopback + FCS
-    Interbus.parse_args.frame = frame;
-    Interbus.parse_args.len = len;
-    Interbus.parse_args.out_words = got;
-    Interbus.parse_args.max_words = 1;
-    Interbus.parse_args.out_count = &count;
+    TEST_ASSERT_FALSE(InterbusV.ok); // shorter than loopback + FCS
+    InterbusV.parse_args.frame = frame;
+    InterbusV.parse_args.len = len;
+    InterbusV.parse_args.out_words = got;
+    InterbusV.parse_args.max_words = 1;
+    InterbusV.parse_args.out_count = &count;
     Interbus.parse(interbus_work);
-    TEST_ASSERT_FALSE(Interbus.ok); // 2 words, room for 1
-    Interbus.parse_args.frame = frame;
-    Interbus.parse_args.len = len;
-    Interbus.parse_args.out_words = got;
-    Interbus.parse_args.max_words = 2;
-    Interbus.parse_args.out_count = &count;
+    TEST_ASSERT_FALSE(InterbusV.ok); // 2 words, room for 1
+    InterbusV.parse_args.frame = frame;
+    InterbusV.parse_args.len = len;
+    InterbusV.parse_args.out_words = got;
+    InterbusV.parse_args.max_words = 2;
+    InterbusV.parse_args.out_count = &count;
     Interbus.parse(interbus_work);
-    TEST_ASSERT_TRUE(Interbus.ok); // exactly enough room
+    TEST_ASSERT_TRUE(InterbusV.ok); // exactly enough room
 
-    Interbus.parse_args.frame = NULL;
-    Interbus.parse_args.len = len;
-    Interbus.parse_args.out_words = got;
-    Interbus.parse_args.max_words = 4;
-    Interbus.parse_args.out_count = &count;
+    InterbusV.parse_args.frame = NULL;
+    InterbusV.parse_args.len = len;
+    InterbusV.parse_args.out_words = got;
+    InterbusV.parse_args.max_words = 4;
+    InterbusV.parse_args.out_count = &count;
     Interbus.parse(interbus_work);
-    TEST_ASSERT_FALSE(Interbus.ok);
-    Interbus.parse_args.frame = frame;
-    Interbus.parse_args.len = len;
-    Interbus.parse_args.out_words = NULL;
-    Interbus.parse_args.max_words = 4;
-    Interbus.parse_args.out_count = &count;
+    TEST_ASSERT_FALSE(InterbusV.ok);
+    InterbusV.parse_args.frame = frame;
+    InterbusV.parse_args.len = len;
+    InterbusV.parse_args.out_words = NULL;
+    InterbusV.parse_args.max_words = 4;
+    InterbusV.parse_args.out_count = &count;
     Interbus.parse(interbus_work);
-    TEST_ASSERT_FALSE(Interbus.ok);
-    Interbus.parse_args.frame = frame;
-    Interbus.parse_args.len = len;
-    Interbus.parse_args.out_words = got;
-    Interbus.parse_args.max_words = 4;
-    Interbus.parse_args.out_count = NULL;
+    TEST_ASSERT_FALSE(InterbusV.ok);
+    InterbusV.parse_args.frame = frame;
+    InterbusV.parse_args.len = len;
+    InterbusV.parse_args.out_words = got;
+    InterbusV.parse_args.max_words = 4;
+    InterbusV.parse_args.out_count = NULL;
     Interbus.parse(interbus_work);
-    TEST_ASSERT_FALSE(Interbus.ok);
+    TEST_ASSERT_FALSE(InterbusV.ok);
 }
 
 // A buffer that cannot hold the whole frame yields 0 rather than a frame with no FCS.
@@ -281,28 +281,28 @@ void test_build_refuses_a_short_buffer(void)
 {
     static const uint16_t WORDS[2] = {0x1234, 0x5678};
     uint8_t out[16];
-    Interbus.build_args.words = WORDS;
-    Interbus.build_args.word_count = 2;
-    Interbus.build_args.out = out;
-    Interbus.build_args.cap = 7;
+    InterbusV.build_args.words = WORDS;
+    InterbusV.build_args.word_count = 2;
+    InterbusV.build_args.out = out;
+    InterbusV.build_args.cap = 7;
     Interbus.build(interbus_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Interbus.n);
-    Interbus.build_args.words = WORDS;
-    Interbus.build_args.word_count = 2;
-    Interbus.build_args.out = out;
-    Interbus.build_args.cap = 8;
+    TEST_ASSERT_EQUAL_size_t(0u, InterbusV.n);
+    InterbusV.build_args.words = WORDS;
+    InterbusV.build_args.word_count = 2;
+    InterbusV.build_args.out = out;
+    InterbusV.build_args.cap = 8;
     Interbus.build(interbus_work);
-    TEST_ASSERT_EQUAL_size_t(8u, Interbus.n);
-    Interbus.build_args.words = WORDS;
-    Interbus.build_args.word_count = 2;
-    Interbus.build_args.out = NULL;
-    Interbus.build_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_size_t(8u, InterbusV.n);
+    InterbusV.build_args.words = WORDS;
+    InterbusV.build_args.word_count = 2;
+    InterbusV.build_args.out = NULL;
+    InterbusV.build_args.cap = sizeof(out);
     Interbus.build(interbus_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Interbus.n);
-    Interbus.build_args.words = NULL;
-    Interbus.build_args.word_count = 2;
-    Interbus.build_args.out = out;
-    Interbus.build_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_size_t(0u, InterbusV.n);
+    InterbusV.build_args.words = NULL;
+    InterbusV.build_args.word_count = 2;
+    InterbusV.build_args.out = out;
+    InterbusV.build_args.cap = sizeof(out);
     Interbus.build(interbus_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Interbus.n);
+    TEST_ASSERT_EQUAL_size_t(0u, InterbusV.n);
 }

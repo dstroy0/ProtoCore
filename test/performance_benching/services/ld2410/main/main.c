@@ -66,11 +66,11 @@ static bool feed_frame(Ld2410Stream *s, const uint8_t *f, size_t n, Ld2410Report
     bool got = false;
     for (size_t i = 0; i < n; i++)
     {
-        Ld2410.stream_push_args.s = s;
-        Ld2410.stream_push_args.byte = f[i];
-        Ld2410.stream_push_args.out = out;
+        Ld2410V.stream_push_args.s = s;
+        Ld2410V.stream_push_args.byte = f[i];
+        Ld2410V.stream_push_args.out = out;
         Ld2410.stream_push(protocore_ld2410_span());
-        if (Ld2410.ok)
+        if (Ld2410V.ok)
         {
             got = true;
         }
@@ -84,7 +84,7 @@ void dbench_run(void)
     static Ld2410Ack ack;
     static Ld2410Stream stream;
     static uint8_t cmd[32];
-    Ld2410.stream_reset_args.s = &stream;
+    Ld2410V.stream_reset_args.s = &stream;
     Ld2410.stream_reset(protocore_ld2410_span());
 
     for (;;)
@@ -94,25 +94,25 @@ void dbench_run(void)
 
         // Each entry call stays inside its DBENCH_OP / DBENCH_BULK so the timed loop measures the
         // codec, not the read that follows it. Args that do not vary are staged just above.
-        Ld2410.parse_report_args.frame = BASIC;
-        Ld2410.parse_report_args.len = sizeof(BASIC);
-        Ld2410.parse_report_args.out = &rep;
+        Ld2410V.parse_report_args.frame = BASIC;
+        Ld2410V.parse_report_args.len = sizeof(BASIC);
+        Ld2410V.parse_report_args.out = &rep;
         DBENCH_OP("Ld2410.parse_report basic", 100000,
-                  (Ld2410.parse_report(protocore_ld2410_span()), sink += Ld2410.ok));
-        Ld2410.parse_report_args.frame = ENG;
-        Ld2410.parse_report_args.len = sizeof(ENG);
+                  (Ld2410.parse_report(protocore_ld2410_span()), sink += Ld2410V.ok));
+        Ld2410V.parse_report_args.frame = ENG;
+        Ld2410V.parse_report_args.len = sizeof(ENG);
         DBENCH_OP("Ld2410.parse_report eng", 100000,
-                  (Ld2410.parse_report(protocore_ld2410_span()), sink += Ld2410.ok));
+                  (Ld2410.parse_report(protocore_ld2410_span()), sink += Ld2410V.ok));
         // Per-byte UART reassembly throughput over a whole basic frame (reports ns/B, MB/s).
         DBENCH_BULK("Ld2410.stream_push basic", 20000, sizeof(BASIC),
                     sink += feed_frame(&stream, BASIC, sizeof(BASIC), &rep));
-        Ld2410.parse_ack_args.frame = MAC_ACK;
-        Ld2410.parse_ack_args.len = sizeof(MAC_ACK);
-        Ld2410.parse_ack_args.out = &ack;
-        DBENCH_OP("Ld2410.parse_ack mac", 100000, (Ld2410.parse_ack(protocore_ld2410_span()), sink += Ld2410.ok));
-        Ld2410.cmd_get_mac_args.buf = cmd;
-        Ld2410.cmd_get_mac_args.cap = sizeof(cmd);
-        DBENCH_OP("Ld2410.cmd_get_mac build", 100000, (Ld2410.cmd_get_mac(protocore_ld2410_span()), sink += Ld2410.n));
+        Ld2410V.parse_ack_args.frame = MAC_ACK;
+        Ld2410V.parse_ack_args.len = sizeof(MAC_ACK);
+        Ld2410V.parse_ack_args.out = &ack;
+        DBENCH_OP("Ld2410.parse_ack mac", 100000, (Ld2410.parse_ack(protocore_ld2410_span()), sink += Ld2410V.ok));
+        Ld2410V.cmd_get_mac_args.buf = cmd;
+        Ld2410V.cmd_get_mac_args.cap = sizeof(cmd);
+        DBENCH_OP("Ld2410.cmd_get_mac build", 100000, (Ld2410.cmd_get_mac(protocore_ld2410_span()), sink += Ld2410V.n));
 
         (void)sink;
         DBENCH_DONE();

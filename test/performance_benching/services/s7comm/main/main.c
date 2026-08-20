@@ -26,39 +26,37 @@ void dbench_run(void)
         {S7_AREA_FLAGS, 0, 0, S7_TS_BIT, 1},
     };
     static uint8_t req[256];
-    S7comm.build_read_request_args.buf = req;
-    S7comm.build_read_request_args.cap = sizeof(req);
-    S7comm.build_read_request_args.pdu_ref = 0x0002;
-    S7comm.build_read_request_args.items = items;
-    S7comm.build_read_request_args.n = 3;
+    S7commV.build_read_request_args.buf = req;
+    S7commV.build_read_request_args.cap = sizeof(req);
+    S7commV.build_read_request_args.pdu_ref = 0x0002;
+    S7commV.build_read_request_args.items = items;
+    S7commV.build_read_request_args.n = 3;
     S7comm.build_read_request(s7comm_work);
-    size_t req_len = S7comm.n;
+    size_t req_len = S7commV.n;
 
     for (;;)
     {
         DBENCH_BANNER("s7comm");
         volatile size_t sink = 0;
         static uint8_t buf[256];
-        S7comm.build_setup_args.buf = buf;
-        S7comm.build_setup_args.cap = sizeof(buf);
-        S7comm.build_setup_args.pdu_ref = 0x0001;
-        S7comm.build_setup_args.max_amq_calling = 1;
-        S7comm.build_setup_args.max_amq_called = 1;
-        S7comm.build_setup_args.pdu_size = 480;
-        DBENCH_OP("S7comm.build_setup", 200000,
-                  sink += (S7comm.build_setup(s7comm_work), S7comm.n));
-        S7comm.build_read_request_args.buf = buf;
-        S7comm.build_read_request_args.cap = sizeof(buf);
-        S7comm.build_read_request_args.pdu_ref = 0x0002;
-        S7comm.build_read_request_args.items = items;
-        S7comm.build_read_request_args.n = 3;
-        DBENCH_OP("S7comm.build_read_request x3", 200000,
-                  sink += (S7comm.build_read_request(s7comm_work), S7comm.n));
+        S7commV.build_setup_args.buf = buf;
+        S7commV.build_setup_args.cap = sizeof(buf);
+        S7commV.build_setup_args.pdu_ref = 0x0001;
+        S7commV.build_setup_args.max_amq_calling = 1;
+        S7commV.build_setup_args.max_amq_called = 1;
+        S7commV.build_setup_args.pdu_size = 480;
+        DBENCH_OP("S7comm.build_setup", 200000, sink += (S7comm.build_setup(s7comm_work), S7commV.n));
+        S7commV.build_read_request_args.buf = buf;
+        S7commV.build_read_request_args.cap = sizeof(buf);
+        S7commV.build_read_request_args.pdu_ref = 0x0002;
+        S7commV.build_read_request_args.items = items;
+        S7commV.build_read_request_args.n = 3;
+        DBENCH_OP("S7comm.build_read_request x3", 200000, sink += (S7comm.build_read_request(s7comm_work), S7commV.n));
         S7Header h;
-        S7comm.parse_header_args.buf = req;
-        S7comm.parse_header_args.len = req_len;
-        S7comm.parse_header_args.out = &h;
-        DBENCH_OP("S7comm.parse_header", 200000, sink += (S7comm.parse_header(s7comm_work), S7comm.ok));
+        S7commV.parse_header_args.buf = req;
+        S7commV.parse_header_args.len = req_len;
+        S7commV.parse_header_args.out = &h;
+        DBENCH_OP("S7comm.parse_header", 200000, sink += (S7comm.parse_header(s7comm_work), S7commV.ok));
         (void)sink;
         DBENCH_DONE();
     }

@@ -15,7 +15,7 @@ static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
 
 #include "crypto/hash/sha1/sha1.h"
 #include "mmgr/secure/secure.h" // the pool the digest borrow comes from
-#include "mmgr/span/span.h"   // protocore_span, span.ok
+#include "mmgr/span/span.h"     // protocore_span, span.ok
 
 // RFC 4122 DNS namespace UUID (6ba7b810-9dad-11d1-80b4-00c04fd430c8).
 static const uint8_t NS_DNS[16] = {0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1,
@@ -24,17 +24,17 @@ static const uint8_t NS_DNS[16] = {0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd
 // The lowercase hex character for one nibble.
 static char hex_digit(uint8_t nibble)
 {
-    Hex.args.nibble = nibble;
-    Hex.args.upper = PROTO_FALSE;
-    Hex.digit(hex_work);
-    return Hex.ch;
+    HexV.args.nibble = nibble;
+    HexV.args.upper = PROTO_FALSE;
+    HexV.digit(hex_work);
+    return HexV.ch;
 }
 
 static void devid_from_mac(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *mac = DeviceId.args.mac;
-    char *out = DeviceId.args.out;
+    const uint8_t *mac = DeviceIdV.args.mac;
+    char *out = DeviceIdV.args.out;
 
     // UUIDv5 name = lowercase MAC hex (12 chars, no separators).
     uint8_t input[16 + 12];
@@ -57,9 +57,9 @@ static void devid_from_mac(uint8_t *restrict work)
         out[0] = '\0';
         return;
     }
-    Sha1.hash_args.data = input;
-    Sha1.hash_args.len = sizeof(input);
-    Sha1.hash_args.out = h;
+    Sha1V.hash_args.data = input;
+    Sha1V.hash_args.len = sizeof(input);
+    Sha1V.hash_args.out = h;
     Sha1.hash(w.buf);
     protocore_secure_release(mark);
     h[6] = (uint8_t)((h[6] & 0x0F) | 0x50); // version 5
@@ -90,16 +90,12 @@ static void devid_uuid(uint8_t *restrict work)
 {
     uint8_t mac[6] = {0};
     (void)protocore_platform_mac_read(mac); // the stable factory address; leaves zeros when it has none
-    DeviceId.args.mac = mac;
+    DeviceIdV.args.mac = mac;
     devid_from_mac(work);
 }
 #endif
 
-DeviceIdNs DeviceId = {
-    .from_mac = devid_from_mac,
-#if PROTOCORE_HAS_VENDOR_MAC
-    .uuid = devid_uuid,
-#endif
-};
+/** @brief The operands and the outcome. */
+DeviceIdVars DeviceIdV;
 
 #endif // PROTOCORE_ENABLE_DEVICE_ID

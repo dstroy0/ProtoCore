@@ -56,7 +56,6 @@ typedef struct
     uint64_t instance_id; ///< the agent's boot id (the Header instanceId)
     const char *sender;   ///< the agent's own name (the Header sender, MTC1.4 HeaderType)
 } MtConnectDocArgs;
-
 /** @brief What opening a streams document takes beyond the document itself. */
 typedef struct
 {
@@ -66,7 +65,6 @@ typedef struct
     const char *component;    ///< the ComponentStream component name
     const char *component_id; ///< its id, which ComponentStreamType marks required
 } MtConnectStreamsArgs;
-
 /** @brief One observation added to the open component. */
 typedef struct
 {
@@ -77,7 +75,6 @@ typedef struct
     const char *timestamp;      ///< its ISO-8601 timestamp
     const char *value;          ///< its value, or the Condition sub-element name
 } MtConnectObsArgs;
-
 /** @brief The window a sample response reports, beyond the streams members. */
 typedef struct
 {
@@ -85,7 +82,6 @@ typedef struct
     uint64_t last_seq;    ///< the newest one written
     uint32_t buffer_size; ///< how many observations the agent retains
 } MtConnectWindowArgs;
-
 /** @brief What opening a probe document takes. */
 typedef struct
 {
@@ -93,7 +89,6 @@ typedef struct
     const char *device_name; ///< its name
     const char *uuid;        ///< its uuid
 } MtConnectDeviceArgs;
-
 /** @brief One DataItem in the probe document. */
 typedef struct
 {
@@ -103,14 +98,12 @@ typedef struct
     const char *name;           ///< optional name (omitted when null/empty)
     const char *units;          ///< optional units (omitted when null/empty)
 } MtConnectItemArgs;
-
 /** @brief What opening an asset document takes. */
 typedef struct
 {
     uint32_t asset_count;       ///< assets in this response (the Header assetCount)
     uint32_t asset_buffer_size; ///< the agent's asset capacity (the Header assetBufferSize)
 } MtConnectAssetsArgs;
-
 /** @brief One CuttingTool and the status its life cycle opens with. */
 typedef struct
 {
@@ -121,7 +114,6 @@ typedef struct
     const char *timestamp;     ///< optional ISO-8601 timestamp
     const char *cutter_status; ///< the CutterStatus the life cycle opens with (minOccurs=1)
 } MtConnectToolArgs;
-
 /** @brief One ToolLife element. LifeType marks all four attributes required. */
 typedef struct
 {
@@ -131,21 +123,18 @@ typedef struct
     const char *limit;           ///< the threshold the count runs to
     const char *value;           ///< the current life
 } MtConnectLifeArgs;
-
 /** @brief The error an MTConnectError document reports. */
 typedef struct
 {
     const char *error_code; ///< the errorCode attribute
     const char *message;    ///< the element text
 } MtConnectErrorArgs;
-
 /** @brief The sub-window a sample replay asks the ring for. */
 typedef struct
 {
     uint64_t from;  ///< the first sequence wanted
     uint32_t count; ///< how many at most
 } MtConnectQueryArgs;
-
 /**
  * @brief MTConnect (ANSI/MTC1.4) agent responses.
  *
@@ -219,11 +208,17 @@ typedef struct
     MtConnectLifeArgs life;
     MtConnectErrorArgs err;
     MtConnectQueryArgs query;
-
     proto_bool ok;
     size_t n;
     uint64_t seq;
+} MtConnectVars;
 
+/** @brief The operands and the outcome. */
+extern MtConnectVars MtConnectV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const streams_begin)(uint8_t *restrict work);
     void (*const streams_add)(uint8_t *restrict work);
     void (*const streams_end)(uint8_t *restrict work);
@@ -241,8 +236,45 @@ typedef struct
     void (*const ring_query)(uint8_t *restrict work);
 } MtConnectNs;
 
-/** @brief The one symbol this module exports. */
-extern MtConnectNs MtConnect;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in MtConnectV or a region of the borrow at a fixed offset.
+void protocore_mtconnect_streams_begin(uint8_t *restrict work);
+void protocore_mtconnect_streams_add(uint8_t *restrict work);
+void protocore_mtconnect_streams_end(uint8_t *restrict work);
+void protocore_mtconnect_error(uint8_t *restrict work);
+void protocore_mtconnect_devices_begin(uint8_t *restrict work);
+void protocore_mtconnect_devices_add(uint8_t *restrict work);
+void protocore_mtconnect_devices_end(uint8_t *restrict work);
+void protocore_mtconnect_assets_begin(uint8_t *restrict work);
+void protocore_mtconnect_tool_begin(uint8_t *restrict work);
+void protocore_mtconnect_tool_life(uint8_t *restrict work);
+void protocore_mtconnect_tool_end(uint8_t *restrict work);
+void protocore_mtconnect_assets_end(uint8_t *restrict work);
+void protocore_mtconnect_ring_init(uint8_t *restrict work);
+void protocore_mtconnect_ring_add(uint8_t *restrict work);
+void protocore_mtconnect_ring_query(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `MtConnect.streams_begin(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const MtConnectNs MtConnect __attribute__((unused)) = {
+    .streams_begin = protocore_mtconnect_streams_begin,
+    .streams_add = protocore_mtconnect_streams_add,
+    .streams_end = protocore_mtconnect_streams_end,
+    .error = protocore_mtconnect_error,
+    .devices_begin = protocore_mtconnect_devices_begin,
+    .devices_add = protocore_mtconnect_devices_add,
+    .devices_end = protocore_mtconnect_devices_end,
+    .assets_begin = protocore_mtconnect_assets_begin,
+    .tool_begin = protocore_mtconnect_tool_begin,
+    .tool_life = protocore_mtconnect_tool_life,
+    .tool_end = protocore_mtconnect_tool_end,
+    .assets_end = protocore_mtconnect_assets_end,
+    .ring_init = protocore_mtconnect_ring_init,
+    .ring_add = protocore_mtconnect_ring_add,
+    .ring_query = protocore_mtconnect_ring_query,
+};
 
 /**
  * @brief The bytes every entry here runs out of: the running document and the observation ring.

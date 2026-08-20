@@ -55,7 +55,6 @@ typedef struct
     const char *verb;
     const char *arg; ///< the argument, or nullptr / "" for a bare verb (no trailing space)
 } FtpBuildCommandArgs;
-
 /** @brief What build_port takes: buf, cap, ip, port. */
 typedef struct
 {
@@ -64,7 +63,6 @@ typedef struct
     const uint8_t *ip; ///< 4 bytes.
     uint16_t port;
 } FtpBuildPortArgs;
-
 /** @brief What build_eprt takes: buf, cap, ip_str, ipv6, port. */
 typedef struct
 {
@@ -74,7 +72,6 @@ typedef struct
     proto_bool ipv6;    ///< false => net-prt 1 (IPv4), true => net-prt 2 (IPv6)
     uint16_t port;
 } FtpBuildEprtArgs;
-
 /** @brief What parse_reply takes: buf, len, code, consumed. */
 typedef struct
 {
@@ -83,7 +80,6 @@ typedef struct
     int *code;
     size_t *consumed;
 } FtpParseReplyArgs;
-
 /** @brief What parse_pasv takes: buf, len, ip, port. */
 typedef struct
 {
@@ -92,7 +88,6 @@ typedef struct
     uint8_t *ip; ///< 4 bytes.
     uint16_t *port;
 } FtpParsePasvArgs;
-
 /** @brief What parse_epsv takes: buf, len, port. */
 typedef struct
 {
@@ -100,7 +95,6 @@ typedef struct
     size_t len;
     uint16_t *port;
 } FtpParseEpsvArgs;
-
 /**
  * @brief FTP client wire codec (RFC 959 + RFC 2428 + RFC 3659), PROTOCORE_ENABLE_FTP.
  *
@@ -141,10 +135,16 @@ typedef struct
     FtpParseReplyArgs parse_reply_args;
     FtpParsePasvArgs parse_pasv_args;
     FtpParseEpsvArgs parse_epsv_args;
-
     proto_bool ok;
     size_t n;
+} FtpVars;
 
+/** @brief The operands and the outcome. */
+extern FtpVars FtpV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_command)(uint8_t *restrict work);
     void (*const build_port)(uint8_t *restrict work);
     void (*const build_eprt)(uint8_t *restrict work);
@@ -153,8 +153,27 @@ typedef struct
     void (*const parse_epsv)(uint8_t *restrict work);
 } FtpNs;
 
-/** @brief The one symbol this module exports. */
-extern FtpNs Ftp;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in FtpV or a region of the borrow at a fixed offset.
+void protocore_ftp_build_command(uint8_t *restrict work);
+void protocore_ftp_build_port(uint8_t *restrict work);
+void protocore_ftp_build_eprt(uint8_t *restrict work);
+void protocore_ftp_parse_reply(uint8_t *restrict work);
+void protocore_ftp_parse_pasv(uint8_t *restrict work);
+void protocore_ftp_parse_epsv(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Ftp.build_command(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const FtpNs Ftp __attribute__((unused)) = {
+    .build_command = protocore_ftp_build_command,
+    .build_port = protocore_ftp_build_port,
+    .build_eprt = protocore_ftp_build_eprt,
+    .parse_reply = protocore_ftp_parse_reply,
+    .parse_pasv = protocore_ftp_parse_pasv,
+    .parse_epsv = protocore_ftp_parse_epsv,
+};
 
 PROTOCORE_END_DECLS
 

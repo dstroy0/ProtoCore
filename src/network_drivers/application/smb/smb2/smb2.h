@@ -189,7 +189,6 @@ typedef struct
     uint64_t session_id;
     uint16_t credit_response;
 } Smb2Header;
-
 /** @brief Parsed SMB 3.1.1 NEGOTIATE-response negotiate contexts (MS-SMB2 §2.2.4 / §2.2.3.1). */
 typedef struct
 {
@@ -202,7 +201,6 @@ typedef struct
     proto_bool have_encryption; ///< an ENCRYPTION_CAPABILITIES context was present
     uint16_t cipher;            ///< the server's chosen cipher
 } Smb2NegotiateContexts;
-
 /** @brief Parsed NEGOTIATE response (MS-SMB2 §2.2.4). */
 typedef struct
 {
@@ -216,7 +214,6 @@ typedef struct
     const uint8_t *sec_buf; ///< SPNEGO/NTLM security token (points into @p msg), or nullptr
     uint16_t sec_buf_len;
 } Smb2NegotiateResp;
-
 /**
  * @brief The SMB 3.1.1 preauth-integrity hash value (MS-SMB2 §3.1.5.2): a running SHA-512 chained over
  *        every NEGOTIATE and SESSION_SETUP message of the handshake. Its final value binds the whole
@@ -226,7 +223,6 @@ typedef struct
 {
     uint8_t hash[PROTOCORE_SMB2_PREAUTH_HASH_LEN];
 } SmbPreauth;
-
 /** @brief Parsed SESSION_SETUP response (MS-SMB2 §2.2.6). */
 typedef struct
 {
@@ -234,7 +230,6 @@ typedef struct
     const uint8_t *sec_buf; ///< the server's SPNEGO/NTLM token (points into @p msg), or nullptr
     uint16_t sec_buf_len;
 } Smb2SessionSetupResp;
-
 /** @brief Parsed TREE_CONNECT response (MS-SMB2 §2.2.10). The TreeId is in the response header. */
 typedef struct
 {
@@ -243,7 +238,6 @@ typedef struct
     uint32_t capabilities;
     uint32_t maximal_access;
 } Smb2TreeConnectResp;
-
 /** @brief Parsed CREATE response (MS-SMB2 §2.2.14). */
 typedef struct
 {
@@ -252,34 +246,29 @@ typedef struct
     uint32_t create_action;
     uint32_t file_attributes;
 } Smb2CreateResp;
-
 /** @brief Parsed CLOSE response (MS-SMB2 §2.2.16). */
 typedef struct
 {
     uint64_t end_of_file;
     uint32_t file_attributes;
 } Smb2CloseResp;
-
 /** @brief Parsed READ response (MS-SMB2 §2.2.20). */
 typedef struct
 {
     const uint8_t *data; ///< the file bytes read (points into @p msg), or nullptr when DataLength is 0
     uint32_t data_len;
 } Smb2ReadResp;
-
 /** @brief Parsed WRITE response (MS-SMB2 §2.2.22). */
 typedef struct
 {
     uint32_t count; ///< bytes actually written
 } Smb2WriteResp;
-
 /** @brief The per-session message-signing algorithm the client selects from the negotiated dialect. */
 typedef enum PROTO_ENUM_PACKED
 {
     SMB2_SIGN_ALGO_HMAC_SHA256 = 0, ///< SMB 2.0.2 / 2.1 (key = the NTLMv2 session key)
     SMB2_SIGN_ALGO_AES_CMAC = 1,    ///< SMB 3.0 / 3.0.2 / 3.1.1 (key = the SP800-108-derived signing key)
 } Smb2SignAlgo;
-
 /** @brief AES key length in bytes for an SMB2 cipher id: 16 for the -128 ciphers, 32 for the -256 ciphers,
  *         0 if @p cipher is not a recognized cipher id. */
 static inline size_t protocore_smb2_cipher_key_len(uint16_t cipher)
@@ -296,7 +285,6 @@ static inline size_t protocore_smb2_cipher_key_len(uint16_t cipher)
         return 0;
     }
 }
-
 /** @brief AEAD nonce length in bytes for an SMB2 cipher id: 12 for the GCM ciphers, 11 for the CCM ciphers
  *         (MS-SMB2 §3.1.4.3), 0 if unrecognized. Both are written into the 16-byte TRANSFORM_HEADER Nonce
  *         field with the remaining bytes zero. */
@@ -314,7 +302,6 @@ static inline size_t protocore_smb2_cipher_nonce_len(uint16_t cipher)
         return 0;
     }
 }
-
 /** @brief What transport_frame takes: out, cap, msg, msg_len. */
 typedef struct
 {
@@ -323,14 +310,12 @@ typedef struct
     const uint8_t *msg;
     size_t msg_len;
 } Smb2TransportFrameArgs;
-
 /** @brief What transport_len takes: buf, len. */
 typedef struct
 {
     const uint8_t *buf;
     size_t len;
 } Smb2TransportLenArgs;
-
 /** @brief What build_header takes: buf, cap, command, credit_request, ... */
 typedef struct
 {
@@ -342,7 +327,6 @@ typedef struct
     uint32_t tree_id;
     uint64_t session_id;
 } Smb2BuildHeaderArgs;
-
 /** @brief What parse_header takes: buf, len, out. */
 typedef struct
 {
@@ -350,7 +334,6 @@ typedef struct
     size_t len;
     Smb2Header *out;
 } Smb2ParseHeaderArgs;
-
 /** @brief What build_negotiate takes: buf, cap, client_guid, ... */
 typedef struct
 {
@@ -359,7 +342,6 @@ typedef struct
     const uint8_t *client_guid; ///< the 16-byte client GUID 16 bytes.
     uint16_t security_mode;     ///< SMB2_NEGOTIATE_SIGNING_ENABLED and/or _REQUIRED
 } Smb2BuildNegotiateArgs;
-
 /** @brief What parse_negotiate_response takes: msg, len, out. */
 typedef struct
 {
@@ -367,7 +349,6 @@ typedef struct
     size_t len;
     Smb2NegotiateResp *out;
 } Smb2ParseNegotiateResponseArgs;
-
 /** @brief What build_negotiate_311 takes: buf, cap, client_guid, ... */
 typedef struct
 {
@@ -381,7 +362,6 @@ typedef struct
         *ciphers; ///< cipher ids to offer, most-preferred first (a server picks the first it supports, in this ...
     size_t cipher_count; ///< number of entries in ciphers (0 .. PROTOCORE_SMB2_MAX_OFFER_CIPHERS)
 } Smb2BuildNegotiate311Args;
-
 /** @brief What parse_negotiate_contexts takes: msg, len, out. */
 typedef struct
 {
@@ -389,13 +369,11 @@ typedef struct
     size_t len;
     Smb2NegotiateContexts *out;
 } Smb2ParseNegotiateContextsArgs;
-
 /** @brief What preauth_init takes: p. */
 typedef struct
 {
     SmbPreauth *p;
 } Smb2ProtocoreSmbPreauthInitArgs;
-
 /** @brief What preauth_update takes: crypto_work, p, ... */
 typedef struct
 {
@@ -404,7 +382,6 @@ typedef struct
     const uint8_t *msg;
     size_t len;
 } Smb2ProtocoreSmbPreauthUpdateArgs;
-
 /** @brief What build_session_setup takes: buf, cap, message_id, ... */
 typedef struct
 {
@@ -416,7 +393,6 @@ typedef struct
     const uint8_t *sec_buf;
     size_t sec_len;
 } Smb2BuildSessionSetupArgs;
-
 /** @brief What parse_session_setup_response takes: msg, len, out. */
 typedef struct
 {
@@ -424,7 +400,6 @@ typedef struct
     size_t len;
     Smb2SessionSetupResp *out;
 } Smb2ParseSessionSetupResponseArgs;
-
 /** @brief What build_tree_connect takes: buf, cap, message_id, ... */
 typedef struct
 {
@@ -435,7 +410,6 @@ typedef struct
     const uint8_t *path_utf16; ///< the UNC path `\\server\share` in UTF-16LE (no NUL); path_len its byte length
     size_t path_len;
 } Smb2BuildTreeConnectArgs;
-
 /** @brief What parse_tree_connect_response takes: msg, len, out. */
 typedef struct
 {
@@ -443,7 +417,6 @@ typedef struct
     size_t len;
     Smb2TreeConnectResp *out;
 } Smb2ParseTreeConnectResponseArgs;
-
 /** @brief What build_create takes: buf, cap, message_id, session_id, ... */
 typedef struct
 {
@@ -460,7 +433,6 @@ typedef struct
         *name_utf16; ///< the file name relative to the share root in UTF-16LE (no leading backslash, no NUL); ...
     size_t name_len;
 } Smb2BuildCreateArgs;
-
 /** @brief What parse_create_response takes: msg, len, out. */
 typedef struct
 {
@@ -468,7 +440,6 @@ typedef struct
     size_t len;
     Smb2CreateResp *out;
 } Smb2ParseCreateResponseArgs;
-
 /** @brief What build_close takes: buf, cap, message_id, session_id, ... */
 typedef struct
 {
@@ -479,7 +450,6 @@ typedef struct
     uint32_t tree_id;
     const uint8_t *file_id; ///< 16 bytes.
 } Smb2BuildCloseArgs;
-
 /** @brief What parse_close_response takes: msg, len, out. */
 typedef struct
 {
@@ -487,7 +457,6 @@ typedef struct
     size_t len;
     Smb2CloseResp *out;
 } Smb2ParseCloseResponseArgs;
-
 /** @brief What build_read takes: buf, cap, message_id, session_id, ... */
 typedef struct
 {
@@ -500,7 +469,6 @@ typedef struct
     uint32_t length;
     uint64_t offset;
 } Smb2BuildReadArgs;
-
 /** @brief What parse_read_response takes: msg, len, out. */
 typedef struct
 {
@@ -508,7 +476,6 @@ typedef struct
     size_t len;
     Smb2ReadResp *out;
 } Smb2ParseReadResponseArgs;
-
 /** @brief What build_write takes: buf, cap, message_id, session_id, ... */
 typedef struct
 {
@@ -522,7 +489,6 @@ typedef struct
     size_t data_len;
     uint64_t offset;
 } Smb2BuildWriteArgs;
-
 /** @brief What parse_write_response takes: msg, len, out. */
 typedef struct
 {
@@ -530,7 +496,6 @@ typedef struct
     size_t len;
     Smb2WriteResp *out;
 } Smb2ParseWriteResponseArgs;
-
 /** @brief What sign takes: crypto_work, key, msg, msg_len. */
 typedef struct
 {
@@ -539,7 +504,6 @@ typedef struct
     uint8_t *msg;       ///< the full message (header + body), modified in place; must be at least a 64-byte header
     size_t msg_len;     ///< total message length. A message shorter than the header is left untouched
 } Smb2SignArgs;
-
 /** @brief What verify takes: crypto_work, key, msg, msg_len. */
 typedef struct
 {
@@ -548,7 +512,6 @@ typedef struct
     uint8_t *msg;
     size_t msg_len;
 } Smb2VerifyArgs;
-
 /** @brief What sign_cmac takes: crypto_work, key, msg, msg_len. */
 typedef struct
 {
@@ -557,7 +520,6 @@ typedef struct
     uint8_t *msg;
     size_t msg_len;
 } Smb2SignCmacArgs;
-
 /** @brief What verify_cmac takes: crypto_work, key, msg, msg_len. */
 typedef struct
 {
@@ -566,7 +528,6 @@ typedef struct
     uint8_t *msg;
     size_t msg_len;
 } Smb2VerifyCmacArgs;
-
 /** @brief What derive_signing_key takes: session_key, ... */
 typedef struct
 {
@@ -576,7 +537,6 @@ typedef struct
     const uint8_t *preauth; ///< the 64-byte final preauth-integrity hash; required iff dialect == 3.1.1, else ignored
     uint8_t *out_key;       ///< receives the 16-byte signing key 16 bytes.
 } Smb2ProtocoreSmb3DeriveSigningKeyArgs;
-
 /** @brief What derive_encryption_keys takes: ... */
 typedef struct
 {
@@ -587,7 +547,6 @@ typedef struct
     uint8_t *out_c2s; ///< client->server key (ENCRYPTS our requests); out_s2c server->client key (DECRYPTS ...
     uint8_t *out_s2c;
 } Smb2ProtocoreSmb3DeriveEncryptionKeysArgs;
-
 /** @brief What encrypt takes: cipher, key, nonce, session_id, msg, ... */
 typedef struct
 {
@@ -601,7 +560,6 @@ typedef struct
     uint8_t *out;
     size_t out_cap;
 } Smb2EncryptArgs;
-
 /** @brief What decrypt takes: cipher, key, in, in_len, out, out_cap. */
 typedef struct
 {
@@ -612,7 +570,6 @@ typedef struct
     uint8_t *out;
     size_t out_cap;
 } Smb2DecryptArgs;
-
 /**
  * @brief SMB2 client wire codec (MS-SMB2), PROTOCORE_ENABLE_SMB - increment 1: the transport frame, the 64-byte sync
  * packet header, and the NEGOTIATE exchange.
@@ -727,11 +684,17 @@ typedef struct
     Smb2ProtocoreSmb3DeriveEncryptionKeysArgs derive_encryption_keys_args;
     Smb2EncryptArgs encrypt_args;
     Smb2DecryptArgs decrypt_args;
-
     proto_bool ok;
     size_t n;
     uint32_t u32;
+} Smb2Vars;
 
+/** @brief The operands and the outcome. */
+extern Smb2Vars Smb2V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const transport_frame)(uint8_t *restrict work);
     void (*const transport_len)(uint8_t *restrict work);
     void (*const build_header)(uint8_t *restrict work);
@@ -764,8 +727,75 @@ typedef struct
     void (*const decrypt)(uint8_t *restrict work);
 } Smb2Ns;
 
-/** @brief The one symbol this module exports. */
-extern Smb2Ns Smb2;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Smb2V or a region of the borrow at a fixed offset.
+void protocore_smb2_transport_frame(uint8_t *restrict work);
+void protocore_smb2_transport_len(uint8_t *restrict work);
+void protocore_smb2_build_header(uint8_t *restrict work);
+void protocore_smb2_parse_header(uint8_t *restrict work);
+void protocore_smb2_build_negotiate(uint8_t *restrict work);
+void protocore_smb2_parse_negotiate_response(uint8_t *restrict work);
+void protocore_smb2_build_negotiate_311(uint8_t *restrict work);
+void protocore_smb2_parse_negotiate_contexts(uint8_t *restrict work);
+void protocore_smb2_preauth_init(uint8_t *restrict work);
+void protocore_smb2_preauth_update(uint8_t *restrict work);
+void protocore_smb2_build_session_setup(uint8_t *restrict work);
+void protocore_smb2_parse_session_setup_response(uint8_t *restrict work);
+void protocore_smb2_build_tree_connect(uint8_t *restrict work);
+void protocore_smb2_parse_tree_connect_response(uint8_t *restrict work);
+void protocore_smb2_build_create(uint8_t *restrict work);
+void protocore_smb2_parse_create_response(uint8_t *restrict work);
+void protocore_smb2_build_close(uint8_t *restrict work);
+void protocore_smb2_parse_close_response(uint8_t *restrict work);
+void protocore_smb2_build_read(uint8_t *restrict work);
+void protocore_smb2_parse_read_response(uint8_t *restrict work);
+void protocore_smb2_build_write(uint8_t *restrict work);
+void protocore_smb2_parse_write_response(uint8_t *restrict work);
+void protocore_smb2_sign(uint8_t *restrict work);
+void protocore_smb2_verify(uint8_t *restrict work);
+void protocore_smb2_sign_cmac(uint8_t *restrict work);
+void protocore_smb2_verify_cmac(uint8_t *restrict work);
+void protocore_smb2_derive_signing_key(uint8_t *restrict work);
+void protocore_smb2_derive_encryption_keys(uint8_t *restrict work);
+void protocore_smb2_encrypt(uint8_t *restrict work);
+void protocore_smb2_decrypt(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Smb2.transport_frame(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Smb2Ns Smb2 __attribute__((unused)) = {
+    .transport_frame = protocore_smb2_transport_frame,
+    .transport_len = protocore_smb2_transport_len,
+    .build_header = protocore_smb2_build_header,
+    .parse_header = protocore_smb2_parse_header,
+    .build_negotiate = protocore_smb2_build_negotiate,
+    .parse_negotiate_response = protocore_smb2_parse_negotiate_response,
+    .build_negotiate_311 = protocore_smb2_build_negotiate_311,
+    .parse_negotiate_contexts = protocore_smb2_parse_negotiate_contexts,
+    .preauth_init = protocore_smb2_preauth_init,
+    .preauth_update = protocore_smb2_preauth_update,
+    .build_session_setup = protocore_smb2_build_session_setup,
+    .parse_session_setup_response = protocore_smb2_parse_session_setup_response,
+    .build_tree_connect = protocore_smb2_build_tree_connect,
+    .parse_tree_connect_response = protocore_smb2_parse_tree_connect_response,
+    .build_create = protocore_smb2_build_create,
+    .parse_create_response = protocore_smb2_parse_create_response,
+    .build_close = protocore_smb2_build_close,
+    .parse_close_response = protocore_smb2_parse_close_response,
+    .build_read = protocore_smb2_build_read,
+    .parse_read_response = protocore_smb2_parse_read_response,
+    .build_write = protocore_smb2_build_write,
+    .parse_write_response = protocore_smb2_parse_write_response,
+    .sign = protocore_smb2_sign,
+    .verify = protocore_smb2_verify,
+    .sign_cmac = protocore_smb2_sign_cmac,
+    .verify_cmac = protocore_smb2_verify_cmac,
+    .derive_signing_key = protocore_smb2_derive_signing_key,
+    .derive_encryption_keys = protocore_smb2_derive_encryption_keys,
+    .encrypt = protocore_smb2_encrypt,
+    .decrypt = protocore_smb2_decrypt,
+};
 
 PROTOCORE_END_DECLS
 

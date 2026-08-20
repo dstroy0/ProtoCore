@@ -50,7 +50,6 @@ typedef struct
     char *path_out;
     size_t path_cap;
 } ScpParseCmdArgs;
-
 /** @brief What parse_cline takes: line, len, mode_out, size_out, ... */
 typedef struct
 {
@@ -61,7 +60,6 @@ typedef struct
     char *name_out;
     size_t name_cap;
 } ScpParseClineArgs;
-
 /** @brief What build_cline takes: mode, size, name, out, cap. */
 typedef struct
 {
@@ -71,7 +69,6 @@ typedef struct
     char *out;
     size_t cap;
 } ScpBuildClineArgs;
-
 /**
  * @brief SCP (RCP) protocol wire codec - the pure, host-testable half of the SCP-over-SSH server
  * (PROTOCORE_ENABLE_SSH_SCP).
@@ -105,18 +102,37 @@ typedef struct
     ScpParseCmdArgs parse_cmd_args;
     ScpParseClineArgs parse_cline_args;
     ScpBuildClineArgs build_cline_args;
-
     proto_bool ok;
     ScpMode value;
     size_t n;
+} ScpVars;
 
+/** @brief The operands and the outcome. */
+extern ScpVars ScpV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const parse_cmd)(uint8_t *restrict work);
     void (*const parse_cline)(uint8_t *restrict work);
     void (*const build_cline)(uint8_t *restrict work);
 } ScpNs;
 
-/** @brief The one symbol this module exports. */
-extern ScpNs Scp;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ScpV or a region of the borrow at a fixed offset.
+void protocore_scp_parse_cmd(uint8_t *restrict work);
+void protocore_scp_parse_cline(uint8_t *restrict work);
+void protocore_scp_build_cline(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Scp.parse_cmd(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ScpNs Scp __attribute__((unused)) = {
+    .parse_cmd = protocore_scp_parse_cmd,
+    .parse_cline = protocore_scp_parse_cline,
+    .build_cline = protocore_scp_build_cline,
+};
 
 PROTOCORE_END_DECLS
 

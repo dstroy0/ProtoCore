@@ -36,13 +36,11 @@ typedef struct
     const uint8_t *data; ///< the bytes
     size_t len;          ///< how many
 } MdUpdateArgs;
-
 /** @brief Where a finished digest lands. */
 typedef struct
 {
     uint8_t *out; ///< PROTOCORE_MD_DIGEST_LEN bytes
 } MdFinalArgs;
-
 /** @brief The key and message an HMAC-MD5 is taken over. */
 typedef struct
 {
@@ -52,7 +50,6 @@ typedef struct
     size_t msg_len;     ///< its length
     uint8_t *out;       ///< PROTOCORE_MD_DIGEST_LEN bytes
 } MdHmacArgs;
-
 /**
  * @brief MD4 / MD5 / HMAC-MD5.
  *
@@ -93,9 +90,15 @@ typedef struct
     MdUpdateArgs update_args;
     MdFinalArgs final_args;
     MdHmacArgs hmac_args;
-
     proto_bool ok;
+} MdVars;
 
+/** @brief The operands and the outcome. */
+extern MdVars MdV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const md5_init)(uint8_t *restrict work);
     void (*const md4_init)(uint8_t *restrict work);
     void (*const update)(uint8_t *restrict work);
@@ -105,8 +108,29 @@ typedef struct
     void (*const hmac_md5)(uint8_t *restrict work);
 } MdNs;
 
-/** @brief The one symbol this module exports. */
-extern MdNs Md;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in MdV or a region of the borrow at a fixed offset.
+void protocore_md_md5_init(uint8_t *restrict work);
+void protocore_md_md4_init(uint8_t *restrict work);
+void protocore_md_update(uint8_t *restrict work);
+void protocore_md_final(uint8_t *restrict work);
+void protocore_md_md5(uint8_t *restrict work);
+void protocore_md_md4(uint8_t *restrict work);
+void protocore_md_hmac_md5(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Md.md5_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const MdNs Md __attribute__((unused)) = {
+    .md5_init = protocore_md_md5_init,
+    .md4_init = protocore_md_md4_init,
+    .update = protocore_md_update,
+    .final = protocore_md_final,
+    .md5 = protocore_md_md5,
+    .md4 = protocore_md_md4,
+    .hmac_md5 = protocore_md_hmac_md5,
+};
 
 PROTOCORE_END_DECLS
 

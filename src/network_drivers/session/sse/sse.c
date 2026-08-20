@@ -22,16 +22,16 @@ static void session_sse_open(uint8_t *restrict work)
 {
     (void)work;
     Sse.alloc(protocore_sse_span());
-    SessionSse.ok = Sse.conn != NULL;
-    if (!SessionSse.ok)
+    SessionSseV.ok = SseV.conn != NULL;
+    if (!SessionSseV.ok)
     {
         return;
     }
 
     Sse.route_connect(protocore_sse_span());
-    if (Sse.handler != NULL)
+    if (SseV.handler != NULL)
     {
-        Sse.handler(Sse.conn->protocore_sse_id);
+        SseV.handler(SseV.conn->protocore_sse_id);
     }
 }
 
@@ -41,8 +41,8 @@ static void session_sse_close(uint8_t *restrict work)
 {
     (void)work;
     Sse.find(protocore_sse_span());
-    SessionSse.ok = Sse.conn != NULL;
-    if (!SessionSse.ok)
+    SessionSseV.ok = SseV.conn != NULL;
+    if (!SessionSseV.ok)
     {
         return; // no stream on this connection: nothing to release
     }
@@ -51,7 +51,8 @@ static void session_sse_close(uint8_t *restrict work)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-SessionSseNs SessionSse = {.open = session_sse_open, .close = session_sse_close};
+/** @brief The operands and the outcome. */
+SessionSseVars SessionSseV;
 
 PROTOCORE_END_DECLS
 

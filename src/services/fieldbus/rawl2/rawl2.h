@@ -54,7 +54,6 @@ typedef struct
     const uint8_t *payload;
     size_t payload_len;
 } EthFrame;
-
 /** @brief What build takes: dst, src, ethertype, payload, ... */
 typedef struct
 {
@@ -66,7 +65,6 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } Rawl2BuildArgs;
-
 /** @brief What build_vlan takes: dst, src, pcp, dei, vid, ethertype, ... */
 typedef struct
 {
@@ -81,7 +79,6 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } Rawl2BuildVlanArgs;
-
 /** @brief What parse takes: frame, len, out. */
 typedef struct
 {
@@ -89,14 +86,12 @@ typedef struct
     size_t len;
     EthFrame *out;
 } Rawl2ParseArgs;
-
 /** @brief What fcs takes: bytes, len. */
 typedef struct
 {
     const uint8_t *bytes;
     size_t len;
 } Rawl2FcsArgs;
-
 /**
  * @brief Raw Layer-2 Ethernet frame codec (PROTOCORE_ENABLE_RAWL2).
  *
@@ -135,19 +130,40 @@ typedef struct
     Rawl2BuildVlanArgs build_vlan_args;
     Rawl2ParseArgs parse_args;
     Rawl2FcsArgs fcs_args;
-
     proto_bool ok;
     size_t n;
     uint32_t u32;
+} Rawl2Vars;
 
+/** @brief The operands and the outcome. */
+extern Rawl2Vars Rawl2V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build)(uint8_t *restrict work);
     void (*const build_vlan)(uint8_t *restrict work);
     void (*const parse)(uint8_t *restrict work);
     void (*const fcs)(uint8_t *restrict work);
 } Rawl2Ns;
 
-/** @brief The one symbol this module exports. */
-extern Rawl2Ns Rawl2;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Rawl2V or a region of the borrow at a fixed offset.
+void protocore_rawl2_build(uint8_t *restrict work);
+void protocore_rawl2_build_vlan(uint8_t *restrict work);
+void protocore_rawl2_parse(uint8_t *restrict work);
+void protocore_rawl2_fcs(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Rawl2.build(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Rawl2Ns Rawl2 __attribute__((unused)) = {
+    .build = protocore_rawl2_build,
+    .build_vlan = protocore_rawl2_build_vlan,
+    .parse = protocore_rawl2_parse,
+    .fcs = protocore_rawl2_fcs,
+};
 
 PROTOCORE_END_DECLS
 

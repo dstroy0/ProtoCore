@@ -23,7 +23,7 @@
 #ifndef PROTOCORE_BUS_CAPTURE_H
 #define PROTOCORE_BUS_CAPTURE_H
 
-#include "shared/can/can.h"   // the complete type a public struct below holds by value
+#include "shared/can/can.h" // the complete type a public struct below holds by value
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
@@ -46,7 +46,6 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Sink for one captured CAN frame (already decoded into a ::CanFrame). */
 typedef void (*bus_capture_sink_fn)(const CanFrame *frame);
 
-
 /** @brief What can_to_socketcan takes: f, out, cap. */
 typedef struct
 {
@@ -54,7 +53,6 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } BusCaptureCanToSocketcanArgs;
-
 /** @brief What begin takes: tx_pin, rx_pin, bitrate, sink. */
 typedef struct
 {
@@ -63,7 +61,6 @@ typedef struct
     uint32_t bitrate; ///< bus bit rate (125000, 250000, 500000, or 1000000)
     bus_capture_sink_fn sink;
 } BusCaptureBeginArgs;
-
 /**
  * @brief Wired field-bus listen-only capture (PROTOCORE_ENABLE_BUS_CAPTURE) - passive CAN sniffing. The wired ...
  *
@@ -93,18 +90,39 @@ typedef struct
 {
     BusCaptureCanToSocketcanArgs can_to_socketcan_args;
     BusCaptureBeginArgs begin_args;
-
     proto_bool ok;
     size_t n;
+} BusCaptureVars;
 
+/** @brief The operands and the outcome. */
+extern BusCaptureVars BusCaptureV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const can_to_socketcan)(uint8_t *restrict work);
     void (*const begin)(uint8_t *restrict work);
     void (*const poll)(uint8_t *restrict work);
     void (*const end)(uint8_t *restrict work);
 } BusCaptureNs;
 
-/** @brief The one symbol this module exports. */
-extern BusCaptureNs BusCapture;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in BusCaptureV or a region of the borrow at a fixed offset.
+void protocore_bus_capture_can_to_socketcan(uint8_t *restrict work);
+void protocore_bus_capture_begin(uint8_t *restrict work);
+void protocore_bus_capture_poll(uint8_t *restrict work);
+void protocore_bus_capture_end(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `BusCapture.can_to_socketcan(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const BusCaptureNs BusCapture __attribute__((unused)) = {
+    .can_to_socketcan = protocore_bus_capture_can_to_socketcan,
+    .begin = protocore_bus_capture_begin,
+    .poll = protocore_bus_capture_poll,
+    .end = protocore_bus_capture_end,
+};
 
 /**
  * @brief The PROTOCORE_BUS_CAPTURE_BORROW bytes this module's state lives in.

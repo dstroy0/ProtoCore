@@ -43,14 +43,12 @@ typedef struct
     const char *target_uri; ///< the https URI a POST is sent to (RFC 9110 sec 4.2.2)
     const char *content;    ///< the JSON object it carries (RFC 8259 sec 4)
 } WebhookRequestArgs;
-
 /** @brief The caller region a builder writes into. */
 typedef struct
 {
     char *out;  ///< where the built octets land
     size_t cap; ///< how much room they have, terminator included
 } WebhookBuildArgs;
-
 /** @brief The IFTTT Maker event: the two path segments its URI carries and its three values. */
 typedef struct
 {
@@ -60,7 +58,6 @@ typedef struct
     const char *value2; ///< second member; NULL omits it
     const char *value3; ///< third member; NULL omits it
 } WebhookIftttArgs;
-
 /**
  * @brief The outbound webhook module: build a target URI and a JSON object, then POST them.
  *
@@ -87,18 +84,39 @@ typedef struct
     WebhookRequestArgs request; ///< what a POST names and carries
     WebhookBuildArgs build;     ///< where a builder writes
     WebhookIftttArgs ifttt;     ///< the Maker event fields
-
     int n;
     int i32;
+} WebhookVars;
 
+/** @brief The operands and the outcome. */
+extern WebhookVars WebhookV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const ifttt_url)(uint8_t *restrict work);
     void (*const ifttt_payload)(uint8_t *restrict work);
     void (*const post)(uint8_t *restrict work);
     void (*const ifttt_trigger)(uint8_t *restrict work);
 } WebhookNs;
 
-/** @brief The one symbol this module exports. */
-extern WebhookNs Webhook;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in WebhookV or a region of the borrow at a fixed offset.
+void protocore_webhook_ifttt_url(uint8_t *restrict work);
+void protocore_webhook_ifttt_payload(uint8_t *restrict work);
+void protocore_webhook_post(uint8_t *restrict work);
+void protocore_webhook_ifttt_trigger(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Webhook.ifttt_url(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const WebhookNs Webhook __attribute__((unused)) = {
+    .ifttt_url = protocore_webhook_ifttt_url,
+    .ifttt_payload = protocore_webhook_ifttt_payload,
+    .post = protocore_webhook_post,
+    .ifttt_trigger = protocore_webhook_ifttt_trigger,
+};
 
 PROTOCORE_END_DECLS
 

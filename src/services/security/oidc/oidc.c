@@ -301,12 +301,12 @@ static proto_bool parse_rsa_jwk(const char *s, const char *e, protocore_oidc_key
         return PROTO_FALSE;
     }
     uint8_t tmp[PROTOCORE_OIDC_RSA_BYTES + 8];
-    Base64.url_decode_args.src = b64;
-    Base64.url_decode_args.src_len = str.len(b64, sizeof(b64));
-    Base64.url_decode_args.dst = tmp;
-    Base64.url_decode_args.dst_cap = sizeof(tmp);
+    Base64V.url_decode_args.src = b64;
+    Base64V.url_decode_args.src_len = str.len(b64, sizeof(b64));
+    Base64V.url_decode_args.dst = tmp;
+    Base64V.url_decode_args.dst_cap = sizeof(tmp);
     Base64.url_decode(base64_work);
-    size_t nlen = Base64.n;
+    size_t nlen = Base64V.n;
     if (nlen == 0 || !right_align(tmp, nlen, key->n, PROTOCORE_OIDC_RSA_BYTES))
     {
         return PROTO_FALSE;
@@ -317,12 +317,12 @@ static proto_bool parse_rsa_jwk(const char *s, const char *e, protocore_oidc_key
         return PROTO_FALSE;
     }
     uint8_t e_tmp[8];
-    Base64.url_decode_args.src = b64;
-    Base64.url_decode_args.src_len = str.len(b64, sizeof(b64));
-    Base64.url_decode_args.dst = e_tmp;
-    Base64.url_decode_args.dst_cap = sizeof(e_tmp);
+    Base64V.url_decode_args.src = b64;
+    Base64V.url_decode_args.src_len = str.len(b64, sizeof(b64));
+    Base64V.url_decode_args.dst = e_tmp;
+    Base64V.url_decode_args.dst_cap = sizeof(e_tmp);
     Base64.url_decode(base64_work);
-    size_t elen = Base64.n;
+    size_t elen = Base64V.n;
     if (elen == 0 || !right_align(e_tmp, elen, key->e, 4))
     {
         return PROTO_FALSE;
@@ -345,31 +345,31 @@ static void claims_clear(protocore_oidc_claims *claims)
 static void token_kid(uint8_t *restrict work)
 {
     (void)work;
-    Oidc.text[0] = '\0';
-    Oidc.ok = PROTO_FALSE;
-    if (!Oidc.token)
+    OidcV.text[0] = '\0';
+    OidcV.ok = PROTO_FALSE;
+    if (!OidcV.token)
     {
         return;
     }
     const char *seg[3];
     size_t seglen[3];
-    if (!split_compact(Oidc.token, Oidc.token_len, seg, seglen))
+    if (!split_compact(OidcV.token, OidcV.token_len, seg, seglen))
     {
         return;
     }
     uint8_t hdr[PROTOCORE_OIDC_HDR_LEN];
-    Base64.url_decode_args.src = seg[OIDC_SEG_HEADER];
-    Base64.url_decode_args.src_len = seglen[OIDC_SEG_HEADER];
-    Base64.url_decode_args.dst = hdr;
-    Base64.url_decode_args.dst_cap = sizeof(hdr) - 1;
+    Base64V.url_decode_args.src = seg[OIDC_SEG_HEADER];
+    Base64V.url_decode_args.src_len = seglen[OIDC_SEG_HEADER];
+    Base64V.url_decode_args.dst = hdr;
+    Base64V.url_decode_args.dst_cap = sizeof(hdr) - 1;
     Base64.url_decode(base64_work);
-    size_t hn = Base64.n;
+    size_t hn = Base64V.n;
     if (hn == 0)
     {
         return;
     }
     hdr[hn] = '\0';
-    Oidc.ok = get_str((const char *)hdr, (const char *)hdr + hn, "kid", Oidc.text, sizeof(Oidc.text));
+    OidcV.ok = get_str((const char *)hdr, (const char *)hdr + hn, "kid", OidcV.text, sizeof(OidcV.text));
 }
 
 // The RSA JWK the `kid` names, out of the JWK Set (RFC 7517 sec 5.1). Each member of the "keys"
@@ -378,16 +378,16 @@ static void jwks_find(uint8_t *restrict work)
 {
     (void)work;
     size_t scratch = protocore_plaintext_mark();
-    Oidc.ok = PROTO_FALSE;
-    Oidc.key.rsa.loaded = PROTO_FALSE;
-    if (!Oidc.key.jwks)
+    OidcV.ok = PROTO_FALSE;
+    OidcV.key.rsa.loaded = PROTO_FALSE;
+    if (!OidcV.key.jwks)
     {
         protocore_plaintext_release(scratch);
         return;
     }
-    const char *want_kid = Oidc.key.kid;
+    const char *want_kid = OidcV.key.kid;
     size_t want_len = want_kid ? str.len(want_kid, PROTOCORE_OIDC_KID_LEN) : 0u;
-    const char *jwks = Oidc.key.jwks;
+    const char *jwks = OidcV.key.jwks;
     const char *all_end = jwks + str.len(jwks, PROTOCORE_OIDC_JWKS_MAX);
     const char *p = mem_find(jwks, all_end, "\"keys\"");
     p = p ? (const char *)mem.chr(p, (size_t)(all_end - p), '[') : NULL;
@@ -427,9 +427,9 @@ static void jwks_find(uint8_t *restrict work)
             want = PROTO_TRUE; // no `kid` requested -> first usable RSA JWK
         }
 
-        if (want && parse_rsa_jwk(obj, end, &Oidc.key.rsa))
+        if (want && parse_rsa_jwk(obj, end, &OidcV.key.rsa))
         {
-            Oidc.ok = PROTO_TRUE;
+            OidcV.ok = PROTO_TRUE;
             protocore_plaintext_release(scratch);
             return;
         }
@@ -448,13 +448,13 @@ static void jwks_find(uint8_t *restrict work)
 static void verify_with_key(uint8_t *restrict work)
 {
     (void)work;
-    claims_clear(&Oidc.claims);
-    const char *token = Oidc.token;
-    size_t token_len = Oidc.token_len;
-    const protocore_oidc_key *key = &Oidc.key.rsa;
+    claims_clear(&OidcV.claims);
+    const char *token = OidcV.token;
+    size_t token_len = OidcV.token_len;
+    const protocore_oidc_key *key = &OidcV.key.rsa;
     if (!token || !key->loaded || token_len == 0 || token_len > PROTOCORE_OIDC_MAX_LEN)
     {
-        Oidc.result = PROTOCORE_OIDC_ERR_FORMAT;
+        OidcV.result = PROTOCORE_OIDC_ERR_FORMAT;
         return;
     }
 
@@ -462,7 +462,7 @@ static void verify_with_key(uint8_t *restrict work)
     size_t seglen[3];
     if (!split_compact(token, token_len, seg, seglen))
     {
-        Oidc.result = PROTOCORE_OIDC_ERR_FORMAT;
+        OidcV.result = PROTOCORE_OIDC_ERR_FORMAT;
         return;
     }
 
@@ -478,22 +478,22 @@ static void verify_with_key(uint8_t *restrict work)
     if (!hdr || !sig || !pl || !iss)
     {
         protocore_plaintext_release(scope);
-        Oidc.result = PROTOCORE_OIDC_ERR_FORMAT; // scratch exhausted: fail closed
+        OidcV.result = PROTOCORE_OIDC_ERR_FORMAT; // scratch exhausted: fail closed
         return;
     }
 
     // JOSE Header: require `alg` == RS256 (RFC 7515 sec 4.1.1), which rejects alg:none and the
     // MAC-based algorithms of OIDC Core sec 3.1.3.7 step 8.
-    Base64.url_decode_args.src = seg[OIDC_SEG_HEADER];
-    Base64.url_decode_args.src_len = seglen[OIDC_SEG_HEADER];
-    Base64.url_decode_args.dst = hdr;
-    Base64.url_decode_args.dst_cap = PROTOCORE_OIDC_HDR_LEN - 1;
+    Base64V.url_decode_args.src = seg[OIDC_SEG_HEADER];
+    Base64V.url_decode_args.src_len = seglen[OIDC_SEG_HEADER];
+    Base64V.url_decode_args.dst = hdr;
+    Base64V.url_decode_args.dst_cap = PROTOCORE_OIDC_HDR_LEN - 1;
     Base64.url_decode(base64_work);
-    size_t hn = Base64.n;
+    size_t hn = Base64V.n;
     if (hn == 0)
     {
         protocore_plaintext_release(scope);
-        Oidc.result = PROTOCORE_OIDC_ERR_FORMAT;
+        OidcV.result = PROTOCORE_OIDC_ERR_FORMAT;
         return;
     }
     hdr[hn] = '\0';
@@ -502,20 +502,20 @@ static void verify_with_key(uint8_t *restrict work)
         !str.eq(alg, "RS256", sizeof("RS256"), PROTO_FALSE))
     {
         protocore_plaintext_release(scope);
-        Oidc.result = PROTOCORE_OIDC_ERR_ALG;
+        OidcV.result = PROTOCORE_OIDC_ERR_ALG;
         return;
     }
 
     // JWS Signature: RSA-2048 -> exactly 256 bytes (RFC 7518 sec 3.3).
-    Base64.url_decode_args.src = seg[OIDC_SEG_SIGNATURE];
-    Base64.url_decode_args.src_len = seglen[OIDC_SEG_SIGNATURE];
-    Base64.url_decode_args.dst = sig;
-    Base64.url_decode_args.dst_cap = PROTOCORE_OIDC_RSA_BYTES;
+    Base64V.url_decode_args.src = seg[OIDC_SEG_SIGNATURE];
+    Base64V.url_decode_args.src_len = seglen[OIDC_SEG_SIGNATURE];
+    Base64V.url_decode_args.dst = sig;
+    Base64V.url_decode_args.dst_cap = PROTOCORE_OIDC_RSA_BYTES;
     Base64.url_decode(base64_work);
-    if (Base64.n != PROTOCORE_OIDC_RSA_BYTES)
+    if (Base64V.n != PROTOCORE_OIDC_RSA_BYTES)
     {
         protocore_plaintext_release(scope);
-        Oidc.result = PROTOCORE_OIDC_ERR_FORMAT;
+        OidcV.result = PROTOCORE_OIDC_ERR_FORMAT;
         return;
     }
 
@@ -529,37 +529,37 @@ static void verify_with_key(uint8_t *restrict work)
     {
         protocore_secure_release(vmark);
         protocore_plaintext_release(scope);
-        Oidc.result = PROTOCORE_OIDC_ERR_SIGNATURE; // pool exhausted: fail closed
+        OidcV.result = PROTOCORE_OIDC_ERR_SIGNATURE; // pool exhausted: fail closed
         return;
     }
-    Rsa.verify_args.n = key->n;
-    Rsa.verify_args.e = key->e;
-    Rsa.verify_args.msg = (const uint8_t *)token;
-    Rsa.verify_args.msg_len = signing_input_len;
-    Rsa.verify_args.sig = sig;
-    Rsa.verify_args.sig_len = PROTOCORE_OIDC_RSA_BYTES;
-    Rsa.verify_args.hash = PROTOCORE_RSA_HASH_SHA256;
+    RsaV.verify_args.n = key->n;
+    RsaV.verify_args.e = key->e;
+    RsaV.verify_args.msg = (const uint8_t *)token;
+    RsaV.verify_args.msg_len = signing_input_len;
+    RsaV.verify_args.sig = sig;
+    RsaV.verify_args.sig_len = PROTOCORE_OIDC_RSA_BYTES;
+    RsaV.verify_args.hash = PROTOCORE_RSA_HASH_SHA256;
     Rsa.verify(vws.buf);
-    const proto_bool verified = Rsa.ok;
+    const proto_bool verified = RsaV.ok;
     protocore_secure_release(vmark);
     if (!verified)
     {
         protocore_plaintext_release(scope);
-        Oidc.result = PROTOCORE_OIDC_ERR_SIGNATURE;
+        OidcV.result = PROTOCORE_OIDC_ERR_SIGNATURE;
         return;
     }
 
     // JWS Payload: the Claims, trusted only now that the signature verifies.
-    Base64.url_decode_args.src = seg[OIDC_SEG_PAYLOAD];
-    Base64.url_decode_args.src_len = seglen[OIDC_SEG_PAYLOAD];
-    Base64.url_decode_args.dst = pl;
-    Base64.url_decode_args.dst_cap = PROTOCORE_OIDC_MAX_LEN - 1;
+    Base64V.url_decode_args.src = seg[OIDC_SEG_PAYLOAD];
+    Base64V.url_decode_args.src_len = seglen[OIDC_SEG_PAYLOAD];
+    Base64V.url_decode_args.dst = pl;
+    Base64V.url_decode_args.dst_cap = PROTOCORE_OIDC_MAX_LEN - 1;
     Base64.url_decode(base64_work);
-    size_t pn = Base64.n;
+    size_t pn = Base64V.n;
     if (pn == 0)
     {
         protocore_plaintext_release(scope);
-        Oidc.result = PROTOCORE_OIDC_ERR_FORMAT;
+        OidcV.result = PROTOCORE_OIDC_ERR_FORMAT;
         return;
     }
     pl[pn] = '\0';
@@ -568,7 +568,7 @@ static void verify_with_key(uint8_t *restrict work)
 
     // Step 2: `iss` must equal the Issuer Identifier exactly (RFC 7519 sec 4.1.1). The compare reads
     // one byte past the expected string's characters, which is its terminator.
-    const char *want_iss = Oidc.expect.iss;
+    const char *want_iss = OidcV.expect.iss;
     if (want_iss && *want_iss)
     {
         size_t want_len = str.len(want_iss, PROTOCORE_OIDC_ISS_LEN);
@@ -576,65 +576,66 @@ static void verify_with_key(uint8_t *restrict work)
             !str.eq(iss, want_iss, want_len + 1u, PROTO_FALSE))
         {
             protocore_plaintext_release(scope);
-            Oidc.result = PROTOCORE_OIDC_ERR_ISS;
+            OidcV.result = PROTOCORE_OIDC_ERR_ISS;
             return;
         }
     }
     // Step 3: `aud` must contain the client_id.
-    const char *want_aud = Oidc.expect.aud;
+    const char *want_aud = OidcV.expect.aud;
     if (want_aud && *want_aud)
     {
         if (!aud_contains(ps, pe, want_aud))
         {
             protocore_plaintext_release(scope);
-            Oidc.result = PROTOCORE_OIDC_ERR_AUD;
+            OidcV.result = PROTOCORE_OIDC_ERR_AUD;
             return;
         }
     }
 
     // Step 9: now must be before `exp` (RFC 7519 sec 4.1.4), and at or after `nbf` when the token
     // carries one (RFC 7519 sec 4.1.5).
-    int64_t now = (int64_t)Oidc.expect.now_unix;
+    int64_t now = (int64_t)OidcV.expect.now_unix;
     int64_t exp = 0;
     if (!get_int64(ps, pe, "exp", &exp) || now >= exp)
     {
         protocore_plaintext_release(scope);
-        Oidc.result = PROTOCORE_OIDC_ERR_EXPIRED;
+        OidcV.result = PROTOCORE_OIDC_ERR_EXPIRED;
         return;
     }
     int64_t nbf = 0;
     if (get_int64(ps, pe, "nbf", &nbf) && now < nbf)
     {
         protocore_plaintext_release(scope);
-        Oidc.result = PROTOCORE_OIDC_ERR_NOT_YET;
+        OidcV.result = PROTOCORE_OIDC_ERR_NOT_YET;
         return;
     }
 
-    Oidc.claims.exp = exp;
-    get_str(ps, pe, "sub", Oidc.claims.sub, sizeof(Oidc.claims.sub));
-    get_str(ps, pe, "email", Oidc.claims.email, sizeof(Oidc.claims.email));
-    get_int64(ps, pe, "iat", &Oidc.claims.iat);
+    OidcV.claims.exp = exp;
+    get_str(ps, pe, "sub", OidcV.claims.sub, sizeof(OidcV.claims.sub));
+    get_str(ps, pe, "email", OidcV.claims.email, sizeof(OidcV.claims.email));
+    get_int64(ps, pe, "iat", &OidcV.claims.iat);
     protocore_plaintext_release(scope);
-    Oidc.result = PROTOCORE_OIDC_OK;
+    OidcV.result = PROTOCORE_OIDC_OK;
 }
 
 // The whole of OIDC Core sec 3.1.3.7: resolve the signing key from the JWK Set by the token's `kid`,
 // then validate against it. A token with no `kid` takes the first usable RSA JWK.
 static void verify(uint8_t *restrict work)
 {
-    claims_clear(&Oidc.claims);
+    claims_clear(&OidcV.claims);
     token_kid(work);
-    Oidc.key.kid = Oidc.text[0] ? Oidc.text : NULL;
+    OidcV.key.kid = OidcV.text[0] ? OidcV.text : NULL;
     jwks_find(work);
-    if (!Oidc.ok)
+    if (!OidcV.ok)
     {
-        Oidc.result = PROTOCORE_OIDC_ERR_KEY;
+        OidcV.result = PROTOCORE_OIDC_ERR_KEY;
         return;
     }
     verify_with_key(work);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-OidcNs Oidc = {.token_kid = token_kid, .jwks_find = jwks_find, .verify_with_key = verify_with_key, .verify = verify};
+/** @brief The operands and the outcome. */
+OidcVars OidcV;
 
 #endif // PROTOCORE_ENABLE_OIDC

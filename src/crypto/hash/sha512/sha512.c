@@ -382,44 +382,45 @@ static void sha512_finish(uint8_t *restrict work, uint8_t digest[PROTOCORE_SHA51
 
 // --- the entries -----------------------------------------------------------
 
-static void sha512_init(uint8_t *restrict work)
+void protocore_sha512_init(uint8_t *restrict work)
 {
     sha512_state_init(work);
-    Sha512.ok = PROTO_TRUE;
+    Sha512V.ok = PROTO_TRUE;
 }
 
-static void sha512_update(uint8_t *restrict work)
+void protocore_sha512_update(uint8_t *restrict work)
 {
-    sha512_absorb(work, Sha512.update_args.data, Sha512.update_args.len);
-    Sha512.ok = PROTO_TRUE;
+    sha512_absorb(work, Sha512V.update_args.data, Sha512V.update_args.len);
+    Sha512V.ok = PROTO_TRUE;
 }
 
-static void sha512_final(uint8_t *restrict work)
+void protocore_sha512_final(uint8_t *restrict work)
 {
-    if (!Sha512.final_args.out)
+    if (!Sha512V.final_args.out)
     {
-        Sha512.ok = PROTO_FALSE;
+        Sha512V.ok = PROTO_FALSE;
         return;
     }
-    sha512_finish(work, Sha512.final_args.out);
-    Sha512.ok = PROTO_TRUE;
+    sha512_finish(work, Sha512V.final_args.out);
+    Sha512V.ok = PROTO_TRUE;
 }
 
 // One-shot over the members already set: init, absorb, finish.
-static void sha512_hash(uint8_t *restrict work)
+void protocore_sha512_hash(uint8_t *restrict work)
 {
-    Sha512.ok = PROTO_FALSE;
-    if (!Sha512.hash_args.out)
+    Sha512V.ok = PROTO_FALSE;
+    if (!Sha512V.hash_args.out)
     {
         return;
     }
     sha512_state_init(work);
-    sha512_absorb(work, Sha512.hash_args.data, Sha512.hash_args.len);
-    sha512_finish(work, Sha512.hash_args.out);
-    Sha512.ok = PROTO_TRUE;
+    sha512_absorb(work, Sha512V.hash_args.data, Sha512V.hash_args.len);
+    sha512_finish(work, Sha512V.hash_args.out);
+    Sha512V.ok = PROTO_TRUE;
 }
 
-Sha512Ns Sha512 = {.init = sha512_init, .update = sha512_update, .final = sha512_final, .hash = sha512_hash};
+/** @brief The operands and the outcome. */
+Sha512Vars Sha512V;
 
 PROTOCORE_END_DECLS
 

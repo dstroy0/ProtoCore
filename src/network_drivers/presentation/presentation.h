@@ -130,7 +130,6 @@ typedef struct
     const char *hdr;   ///< the field value scanned
     const char *token; ///< the token looked for, case-insensitive
 } HttpHdrArgs;
-
 /**
  * @brief Layer 6 - the HTTP connection: what wires a transport slot to the HTTP parser.
  *
@@ -154,27 +153,53 @@ typedef struct
 {
     uint8_t slot;               ///< the connection every call names
     void (*poll)(uint8_t slot); ///< what set_poll installs as the per-tick step
-
-    HttpHdrArgs hdr_args; ///< the header a token scan reads
-
+    HttpHdrArgs hdr_args;       ///< the header a token scan reads
     proto_bool ok;
     const struct ProtoHandler *handler;
+#if PROTOCORE_ENABLE_KEEPALIVE
+#endif
+#if PROTOCORE_ENABLE_KEEPALIVE || PROTOCORE_ENABLE_WEBSOCKET
+#endif
+} HttpConnVars;
 
+/** @brief The operands and the outcome. */
+extern HttpConnVars HttpConnV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const reset)(uint8_t *restrict work);
     void (*const conn_open)(uint8_t *restrict work);
     void (*const parse)(uint8_t *restrict work);
-#if PROTOCORE_ENABLE_KEEPALIVE
     void (*const keepalive_eval)(uint8_t *restrict work);
-#endif
-#if PROTOCORE_ENABLE_KEEPALIVE || PROTOCORE_ENABLE_WEBSOCKET
     void (*const has_token)(uint8_t *restrict work);
-#endif
     void (*const proto_handler)(uint8_t *restrict work);
     void (*const set_poll)(uint8_t *restrict work);
 } HttpConnNs;
 
-/** @brief The one symbol this module exports. */
-extern HttpConnNs HttpConn;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HttpConnV or a region of the borrow at a fixed offset.
+void protocore_presentation_reset(uint8_t *restrict work);
+void protocore_presentation_conn_open(uint8_t *restrict work);
+void protocore_presentation_parse(uint8_t *restrict work);
+void protocore_presentation_keepalive_eval(uint8_t *restrict work);
+void protocore_presentation_has_token(uint8_t *restrict work);
+void protocore_presentation_proto_handler(uint8_t *restrict work);
+void protocore_presentation_set_poll(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `HttpConn.reset(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HttpConnNs HttpConn __attribute__((unused)) = {
+    .reset = protocore_presentation_reset,
+    .conn_open = protocore_presentation_conn_open,
+    .parse = protocore_presentation_parse,
+    .keepalive_eval = protocore_presentation_keepalive_eval,
+    .has_token = protocore_presentation_has_token,
+    .proto_handler = protocore_presentation_proto_handler,
+    .set_poll = protocore_presentation_set_poll,
+};
 
 /**
  * @brief The PROTOCORE_HTTP_CONN_BORROW bytes this module's state lives in.

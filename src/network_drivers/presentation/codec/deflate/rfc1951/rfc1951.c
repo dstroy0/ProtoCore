@@ -34,11 +34,11 @@ static const short dist_extra[30] = {0, 0, 0, 0, 1, 1, 2, 2,  3,  3,  4,  4,  5,
 // never read.
 
 // r = the low len bits of code, in the opposite order (a Huffman code goes on the wire MSB-first).
-static void rfc1951_reverse_bits(uint8_t *restrict work)
+void protocore_rfc1951_reverse_bits(uint8_t *restrict work)
 {
     (void)work;
-    uint16_t code = Rfc1951.reverse_bits_args.code;
-    int len = Rfc1951.reverse_bits_args.len;
+    uint16_t code = Rfc1951V.reverse_bits_args.code;
+    int len = Rfc1951V.reverse_bits_args.len;
 
     uint16_t r = 0;
     for (int k = 0; k < len; k++)
@@ -46,17 +46,17 @@ static void rfc1951_reverse_bits(uint8_t *restrict work)
         r = (uint16_t)((r << 1) | (code & 1));
         code >>= 1;
     }
-    Rfc1951.u16 = r;
+    Rfc1951V.u16 = r;
 }
 
 // The fixed Huffman code/length tables (RFC 1951 sec 3.2.6), each code bit-reversed. ll_code /
 // ll_len hold 288 entries, d_code / d_len hold 30.
-static void rfc1951_build_fixed(uint8_t *restrict work)
+void protocore_rfc1951_build_fixed(uint8_t *restrict work)
 {
-    uint16_t *ll_code = Rfc1951.build_fixed_args.ll_code;
-    uint8_t *ll_len = Rfc1951.build_fixed_args.ll_len;
-    uint16_t *d_code = Rfc1951.build_fixed_args.d_code;
-    uint8_t *d_len = Rfc1951.build_fixed_args.d_len;
+    uint16_t *ll_code = Rfc1951V.build_fixed_args.ll_code;
+    uint8_t *ll_len = Rfc1951V.build_fixed_args.ll_len;
+    uint16_t *d_code = Rfc1951V.build_fixed_args.d_code;
+    uint8_t *d_len = Rfc1951V.build_fixed_args.d_len;
 
     int sym = 0;
     for (; sym < 144; sym++)
@@ -98,46 +98,46 @@ static void rfc1951_build_fixed(uint8_t *restrict work)
     for (sym = 0; sym < 288; sym++)
     {
         int len = ll_len[sym];
-        Rfc1951.reverse_bits_args.code = next_code[len];
-        Rfc1951.reverse_bits_args.len = len;
-        rfc1951_reverse_bits(work);
-        ll_code[sym] = Rfc1951.u16;
+        Rfc1951V.reverse_bits_args.code = next_code[len];
+        Rfc1951V.reverse_bits_args.len = len;
+        protocore_rfc1951_reverse_bits(work);
+        ll_code[sym] = Rfc1951V.u16;
         next_code[len]++;
     }
 
     // Distance alphabet: 30 codes all of length 5 -> codes 0..29 in order.
     for (sym = 0; sym < 30; sym++)
     {
-        Rfc1951.reverse_bits_args.code = (uint16_t)sym;
-        Rfc1951.reverse_bits_args.len = 5;
-        rfc1951_reverse_bits(work);
-        d_code[sym] = Rfc1951.u16;
+        Rfc1951V.reverse_bits_args.code = (uint16_t)sym;
+        Rfc1951V.reverse_bits_args.len = 5;
+        protocore_rfc1951_reverse_bits(work);
+        d_code[sym] = Rfc1951V.u16;
     }
 }
 
 // One literal byte through the fixed lit/length code.
-static void rfc1951_emit_literal(uint8_t *restrict work)
+void protocore_rfc1951_emit_literal(uint8_t *restrict work)
 {
     (void)work;
-    protocore_bit_writer *w = Rfc1951.emit_literal_args.w;
-    const uint16_t *ll_code = Rfc1951.emit_literal_args.ll_code;
-    const uint8_t *ll_len = Rfc1951.emit_literal_args.ll_len;
-    uint8_t b = Rfc1951.emit_literal_args.b;
+    protocore_bit_writer *w = Rfc1951V.emit_literal_args.w;
+    const uint16_t *ll_code = Rfc1951V.emit_literal_args.ll_code;
+    const uint8_t *ll_len = Rfc1951V.emit_literal_args.ll_len;
+    uint8_t b = Rfc1951V.emit_literal_args.b;
 
     bitw.put(w, ll_code[b], ll_len[b]);
 }
 
 // A (len, dist) back-reference through the fixed code tables (RFC 1951 sec 3.2.5).
-static void rfc1951_emit_match(uint8_t *restrict work)
+void protocore_rfc1951_emit_match(uint8_t *restrict work)
 {
     (void)work;
-    protocore_bit_writer *w = Rfc1951.emit_match_args.w;
-    const uint16_t *ll_code = Rfc1951.emit_match_args.ll_code;
-    const uint8_t *ll_len = Rfc1951.emit_match_args.ll_len;
-    const uint16_t *d_code = Rfc1951.emit_match_args.d_code;
-    const uint8_t *d_len = Rfc1951.emit_match_args.d_len;
-    int len = Rfc1951.emit_match_args.len;
-    int dist = Rfc1951.emit_match_args.dist;
+    protocore_bit_writer *w = Rfc1951V.emit_match_args.w;
+    const uint16_t *ll_code = Rfc1951V.emit_match_args.ll_code;
+    const uint8_t *ll_len = Rfc1951V.emit_match_args.ll_len;
+    const uint16_t *d_code = Rfc1951V.emit_match_args.d_code;
+    const uint8_t *d_len = Rfc1951V.emit_match_args.d_len;
+    int len = Rfc1951V.emit_match_args.len;
+    int dist = Rfc1951V.emit_match_args.dist;
 
     int li = 0;
     while (li < 28 && len >= len_base[li + 1])
@@ -163,16 +163,8 @@ static void rfc1951_emit_match(uint8_t *restrict work)
     }
 }
 
-Rfc1951Ns Rfc1951 = {
-    .len_base = len_base,
-    .len_extra = len_extra,
-    .dist_base = dist_base,
-    .dist_extra = dist_extra,
-    .reverse_bits = rfc1951_reverse_bits,
-    .build_fixed = rfc1951_build_fixed,
-    .emit_literal = rfc1951_emit_literal,
-    .emit_match = rfc1951_emit_match,
-};
+/** @brief The operands and the outcome. */
+Rfc1951Vars Rfc1951V;
 
 PROTOCORE_END_DECLS
 

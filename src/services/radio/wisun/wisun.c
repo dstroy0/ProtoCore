@@ -94,31 +94,31 @@ static proto_bool emit_option(uint8_t *out, size_t *o, size_t cap, uint16_t delt
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void wisun_node_find(uint8_t *restrict work);
+void protocore_wisun_node_find(uint8_t *restrict work);
 
-static void wisun_build_coap(uint8_t *restrict work)
+void protocore_wisun_build_coap(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t type = Wisun.build_coap_args.type;
-    uint8_t code = Wisun.build_coap_args.code;
-    uint16_t msg_id = Wisun.build_coap_args.msg_id;
-    const uint8_t *token = Wisun.build_coap_args.token;
-    uint8_t tkl = Wisun.build_coap_args.tkl;
-    const char *uri_path = Wisun.build_coap_args.uri_path;
-    const uint8_t *payload = Wisun.build_coap_args.payload;
-    size_t plen = Wisun.build_coap_args.plen;
-    uint8_t *out = Wisun.build_coap_args.out;
-    size_t cap = Wisun.build_coap_args.cap;
+    uint8_t type = WisunV.build_coap_args.type;
+    uint8_t code = WisunV.build_coap_args.code;
+    uint16_t msg_id = WisunV.build_coap_args.msg_id;
+    const uint8_t *token = WisunV.build_coap_args.token;
+    uint8_t tkl = WisunV.build_coap_args.tkl;
+    const char *uri_path = WisunV.build_coap_args.uri_path;
+    const uint8_t *payload = WisunV.build_coap_args.payload;
+    size_t plen = WisunV.build_coap_args.plen;
+    uint8_t *out = WisunV.build_coap_args.out;
+    size_t cap = WisunV.build_coap_args.cap;
 
     if (!out || tkl > 8 || (tkl && !token) || (plen && !payload))
     {
-        Wisun.n = 0;
+        WisunV.n = 0;
         return;
     }
     size_t o = 0;
     if (cap < (size_t)(4 + tkl))
     {
-        Wisun.n = 0;
+        WisunV.n = 0;
         return;
     }
     out[o++] = (uint8_t)(0x40 | ((type & 0x03) << 4) | (tkl & 0x0F)); // version 1
@@ -149,7 +149,7 @@ static void wisun_build_coap(uint8_t *restrict work)
         uint16_t delta = (uint16_t)(11 - last);
         if (!emit_option(out, &o, cap, delta, (const uint8_t *)seg, seglen))
         {
-            Wisun.n = 0;
+            WisunV.n = 0;
             return;
         }
         last = 11;
@@ -159,7 +159,7 @@ static void wisun_build_coap(uint8_t *restrict work)
     {
         if (o + 1 + plen > cap)
         {
-            Wisun.n = 0;
+            WisunV.n = 0;
             return;
         }
         out[o++] = 0xFF; // payload marker
@@ -168,16 +168,16 @@ static void wisun_build_coap(uint8_t *restrict work)
             out[o++] = payload[i];
         }
     }
-    Wisun.n = o;
+    WisunV.n = o;
 }
 
-static void wisun_init(uint8_t *restrict work)
+void protocore_wisun_init(uint8_t *restrict work)
 {
     (void)work;
-    WisunFan *fan = Wisun.init_args.fan;
-    const protocore_ip *border_router = Wisun.init_args.border_router;
-    WisunNode *storage = Wisun.init_args.storage;
-    size_t cap = Wisun.init_args.cap;
+    WisunFan *fan = WisunV.init_args.fan;
+    const protocore_ip *border_router = WisunV.init_args.border_router;
+    WisunNode *storage = WisunV.init_args.storage;
+    size_t cap = WisunV.init_args.cap;
 
     if (!fan)
     {
@@ -196,78 +196,78 @@ static void wisun_init(uint8_t *restrict work)
     fan->count = 0;
 }
 
-static void wisun_node_register(uint8_t *restrict work)
+void protocore_wisun_node_register(uint8_t *restrict work)
 {
-    WisunFan *fan = Wisun.node_register_args.fan;
-    const protocore_ip *addr = Wisun.node_register_args.addr;
-    uint32_t now = Wisun.node_register_args.now;
+    WisunFan *fan = WisunV.node_register_args.fan;
+    const protocore_ip *addr = WisunV.node_register_args.addr;
+    uint32_t now = WisunV.node_register_args.now;
 
     if (!fan || !fan->nodes || !addr)
     {
-        Wisun.i32 = -1;
+        WisunV.i32 = -1;
         return;
     }
     size_t idx = 0;
-    Wisun.node_find_args.fan = fan;
-    Wisun.node_find_args.addr = addr;
-    Wisun.node_find_args.idx = &idx;
-    wisun_node_find(work);
-    if (Wisun.ok)
+    WisunV.node_find_args.fan = fan;
+    WisunV.node_find_args.addr = addr;
+    WisunV.node_find_args.idx = &idx;
+    protocore_wisun_node_find(work);
+    if (WisunV.ok)
     {
         fan->nodes[idx].joined = PROTO_TRUE;
         fan->nodes[idx].last_seen = now;
-        Wisun.i32 = (int)idx;
+        WisunV.i32 = (int)idx;
         return;
     }
     if (fan->count >= fan->cap)
     {
-        Wisun.i32 = -1;
+        WisunV.i32 = -1;
         return;
     }
     fan->nodes[fan->count].addr = *addr;
     fan->nodes[fan->count].joined = PROTO_TRUE;
     fan->nodes[fan->count].last_seen = now;
-    Wisun.i32 = (int)fan->count++;
+    WisunV.i32 = (int)fan->count++;
 }
 
-static void wisun_node_find(uint8_t *restrict work)
+void protocore_wisun_node_find(uint8_t *restrict work)
 {
     (void)work;
-    const WisunFan *fan = Wisun.node_find_args.fan;
-    const protocore_ip *addr = Wisun.node_find_args.addr;
-    size_t *idx = Wisun.node_find_args.idx;
+    const WisunFan *fan = WisunV.node_find_args.fan;
+    const protocore_ip *addr = WisunV.node_find_args.addr;
+    size_t *idx = WisunV.node_find_args.idx;
 
     if (!fan || !fan->nodes || !addr)
     {
-        Wisun.ok = PROTO_FALSE;
+        WisunV.ok = PROTO_FALSE;
         return;
     }
     for (size_t i = 0; i < fan->count; i++)
     {
-        Ip.args.ip = &fan->nodes[i].addr;
-        Ip.args.b = addr;
+        IpV.args.ip = &fan->nodes[i].addr;
+        IpV.args.b = addr;
         Ip.equal(ip_work);
-        if (Ip.ok)
+        if (IpV.ok)
         {
             if (idx)
             {
                 *idx = i;
             }
-            Wisun.ok = PROTO_TRUE;
+            WisunV.ok = PROTO_TRUE;
             return;
         }
     }
-    Wisun.ok = PROTO_FALSE;
+    WisunV.ok = PROTO_FALSE;
 }
 
-static void wisun_joined_count(uint8_t *restrict work)
+void protocore_wisun_joined_count(uint8_t *restrict work)
 {
     (void)work;
-    const WisunFan *fan = Wisun.joined_count_args.fan;
+    const WisunFan *fan = WisunV.joined_count_args.fan;
 
     if (!fan || !fan->nodes)
     {
-        Wisun.n = 0;
+        WisunV.n = 0;
         return;
     }
     size_t c = 0;
@@ -278,19 +278,19 @@ static void wisun_joined_count(uint8_t *restrict work)
             c++;
         }
     }
-    Wisun.n = c;
+    WisunV.n = c;
 }
 
-static void wisun_nodes_json(uint8_t *restrict work)
+void protocore_wisun_nodes_json(uint8_t *restrict work)
 {
     (void)work;
-    const WisunFan *fan = Wisun.nodes_json_args.fan;
-    char *out = Wisun.nodes_json_args.out;
-    size_t cap = Wisun.nodes_json_args.cap;
+    const WisunFan *fan = WisunV.nodes_json_args.fan;
+    char *out = WisunV.nodes_json_args.out;
+    size_t cap = WisunV.nodes_json_args.cap;
 
     if (!fan || !out || cap == 0)
     {
-        Wisun.n = 0;
+        WisunV.n = 0;
         return;
     }
     protocore_sb b = {out, cap, 0, PROTO_TRUE};
@@ -303,9 +303,9 @@ static void wisun_nodes_json(uint8_t *restrict work)
         }
         char astr[PROTOCORE_IP_STR_MAX];
         astr[0] = '\0'; // a family-less address formats to nothing rather than to stack contents
-        Ip.args.ip = &fan->nodes[i].addr;
-        Ip.args.buf = astr;
-        Ip.args.cap = sizeof(astr);
+        IpV.args.ip = &fan->nodes[i].addr;
+        IpV.args.buf = astr;
+        IpV.args.cap = sizeof(astr);
         Ip.format(ip_work);
         Sb.put(&b, "{\"addr\":\"");
         Sb.put(&b, astr);
@@ -316,19 +316,15 @@ static void wisun_nodes_json(uint8_t *restrict work)
     Sb.put(&b, "]");
     if (!b.ok)
     {
-        Wisun.n = 0;
+        WisunV.n = 0;
         return;
     }
     out[b.len] = '\0';
-    Wisun.n = b.len;
+    WisunV.n = b.len;
 }
 
-WisunNs Wisun = {.build_coap = wisun_build_coap,
-                 .init = wisun_init,
-                 .node_register = wisun_node_register,
-                 .node_find = wisun_node_find,
-                 .joined_count = wisun_joined_count,
-                 .nodes_json = wisun_nodes_json};
+/** @brief The operands and the outcome. */
+WisunVars WisunV;
 
 PROTOCORE_END_DECLS
 

@@ -26,7 +26,6 @@
 
 #include "crypto/x509/x509/x509.h" // X509Cert: what a check is given
 
-
 PROTOCORE_BEGIN_DECLS
 
 /** @brief Why a link was refused. A caller that only needs yes or no reads ::X509VerifyNs::ok. */
@@ -52,21 +51,18 @@ typedef struct
     const X509Cert *cert;   ///< the certificate being checked
     const X509Cert *issuer; ///< the certificate whose subjectPublicKey signed it
 } X509LinkArgs;
-
 /** @brief What a time check is given. */
 typedef struct
 {
     const X509Cert *cert; ///< the certificate being checked
     uint64_t now;         ///< seconds since the POSIX epoch
 } X509TimeArgs;
-
 /** @brief What an issuer check is given: the candidate, and how far down the chain it sits. */
 typedef struct
 {
     const X509Cert *issuer; ///< the candidate issuer
     uint32_t depth;         ///< certificates below it in the path, 0 for the one that signs a leaf
 } X509IssuerArgs;
-
 /** @brief What a message check is given: whose key verifies it, and the bytes it covers. */
 typedef struct
 {
@@ -77,7 +73,6 @@ typedef struct
     const uint8_t *sig;         ///< the signature over them
     size_t sig_len;             ///< its length
 } X509MessageArgs;
-
 /**
  * @brief One link of a certification path.
  *
@@ -106,10 +101,16 @@ typedef struct
     X509TimeArgs time_args;
     X509IssuerArgs issuer_args;
     X509MessageArgs message_args;
-
     proto_bool ok;
     protocore_x509_status status;
+} X509VerifyVars;
 
+/** @brief The operands and the outcome. */
+extern X509VerifyVars X509VerifyV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const signature)(uint8_t *restrict work);
     void (*const validity)(uint8_t *restrict work);
     void (*const may_sign)(uint8_t *restrict work);
@@ -117,8 +118,25 @@ typedef struct
     void (*const message)(uint8_t *restrict work);
 } X509VerifyNs;
 
-/** @brief The one symbol this module exports. */
-extern X509VerifyNs X509Verify;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in X509VerifyV or a region of the borrow at a fixed offset.
+void protocore_x509_verify_signature(uint8_t *restrict work);
+void protocore_x509_verify_validity(uint8_t *restrict work);
+void protocore_x509_verify_may_sign(uint8_t *restrict work);
+void protocore_x509_verify_link(uint8_t *restrict work);
+void protocore_x509_verify_message(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `X509Verify.signature(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const X509VerifyNs X509Verify __attribute__((unused)) = {
+    .signature = protocore_x509_verify_signature,
+    .validity = protocore_x509_verify_validity,
+    .may_sign = protocore_x509_verify_may_sign,
+    .link = protocore_x509_verify_link,
+    .message = protocore_x509_verify_message,
+};
 
 /**
  * @brief The PROTOCORE_X509_VERIFY_BORROW bytes a signature check runs out of.

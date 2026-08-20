@@ -64,13 +64,13 @@ static uint64_t seq_decode(uint64_t expected, uint64_t truncated, unsigned bits)
 // HKDF-Expand-Label of a traffic secret under the "dtls13" prefix (RFC 9147 §5.9), into out.
 static void expand_label(uint8_t *work, const uint8_t *secret, const char *label, uint8_t *out, size_t out_len)
 {
-    Tls13Ks.bind.kdf = &DTLS13_KDF;
-    Tls13Ks.bind.is384 = PROTO_FALSE; // the record keys of a TLS_AES_128_GCM_SHA256 connection
-    Tls13Ks.derive_args.work = work;
-    Tls13Ks.derive_args.secret = secret;
-    Tls13Ks.derive_args.label = label;
-    Tls13Ks.derive_args.out = out;
-    Tls13Ks.derive_args.out_len = out_len;
+    Tls13KsV.bind.kdf = &DTLS13_KDF;
+    Tls13KsV.bind.is384 = PROTO_FALSE; // the record keys of a TLS_AES_128_GCM_SHA256 connection
+    Tls13KsV.derive_args.work = work;
+    Tls13KsV.derive_args.secret = secret;
+    Tls13KsV.derive_args.label = label;
+    Tls13KsV.derive_args.out = out;
+    Tls13KsV.derive_args.out_len = out_len;
     Tls13Ks.expand_label(NULL);
 }
 
@@ -79,13 +79,13 @@ static void expand_label(uint8_t *work, const uint8_t *secret, const char *label
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void dtls_record_keys_derive(uint8_t *restrict work)
+void protocore_dtls_record_keys_derive(uint8_t *restrict work)
 {
     (void)work;
-    DtlsRecordKeys *out = DtlsRecord.keys_derive_args.out;
-    DtlsCipher cipher = DtlsRecord.keys_derive_args.cipher;
-    uint16_t epoch = DtlsRecord.keys_derive_args.epoch;
-    const uint8_t *secret = DtlsRecord.keys_derive_args.secret;
+    DtlsRecordKeys *out = DtlsRecordV.keys_derive_args.out;
+    DtlsCipher cipher = DtlsRecordV.keys_derive_args.cipher;
+    uint16_t epoch = DtlsRecordV.keys_derive_args.epoch;
+    const uint8_t *secret = DtlsRecordV.keys_derive_args.secret;
 
     out->cipher = cipher;
     out->epoch = epoch;
@@ -104,11 +104,11 @@ static void dtls_record_keys_derive(uint8_t *restrict work)
         return; // unkeyed: every protect/unprotect over these keys refuses
     }
     expand_label(ws.buf, secret, "key", k.buf, PROTOCORE_AES128GCM_KEY_LEN);
-    Aes128Gcm.key_args.key = k.buf;
+    Aes128GcmV.key_args.key = k.buf;
     Aes128Gcm.key_init(out->gcm);
     expand_label(ws.buf, secret, "iv", out->iv, sizeof(out->iv));
     expand_label(ws.buf, secret, "sn", snk.buf, PROTOCORE_AES128GCM_KEY_LEN);
-    Aes128Gcm.block_key_args.key = snk.buf;
+    Aes128GcmV.block_key_args.key = snk.buf;
     Aes128Gcm.block_init(out->gcm);
     protocore_secure_release(mark);
 }
@@ -117,21 +117,21 @@ static void dtls_record_keys_derive(uint8_t *restrict work)
 // DTLSPlaintext
 // ---------------------------------------------------------------------------
 
-static void dtls_record_plaintext_build(uint8_t *restrict work)
+void protocore_dtls_record_plaintext_build(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t content_type = DtlsRecord.plaintext_build_args.content_type;
-    uint16_t epoch = DtlsRecord.plaintext_build_args.epoch;
-    uint64_t seq = DtlsRecord.plaintext_build_args.seq;
-    const uint8_t *fragment = DtlsRecord.plaintext_build_args.fragment;
-    size_t frag_len = DtlsRecord.plaintext_build_args.frag_len;
-    uint8_t *out = DtlsRecord.plaintext_build_args.out;
-    size_t out_cap = DtlsRecord.plaintext_build_args.out_cap;
+    uint8_t content_type = DtlsRecordV.plaintext_build_args.content_type;
+    uint16_t epoch = DtlsRecordV.plaintext_build_args.epoch;
+    uint64_t seq = DtlsRecordV.plaintext_build_args.seq;
+    const uint8_t *fragment = DtlsRecordV.plaintext_build_args.fragment;
+    size_t frag_len = DtlsRecordV.plaintext_build_args.frag_len;
+    uint8_t *out = DtlsRecordV.plaintext_build_args.out;
+    size_t out_cap = DtlsRecordV.plaintext_build_args.out_cap;
 
     size_t total = PROTOCORE_DTLS_PLAINTEXT_HDR_LEN + frag_len;
     if (total > out_cap || frag_len > 0xFFFF)
     {
-        DtlsRecord.n = 0;
+        DtlsRecordV.n = 0;
         return;
     }
     out[0] = content_type;
@@ -151,19 +151,19 @@ static void dtls_record_plaintext_build(uint8_t *restrict work)
     {
         mem.cpy(out + PROTOCORE_DTLS_PLAINTEXT_HDR_LEN, fragment, frag_len);
     }
-    DtlsRecord.n = total;
+    DtlsRecordV.n = total;
 }
 
-static void dtls_record_plaintext_parse(uint8_t *restrict work)
+void protocore_dtls_record_plaintext_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *rec = DtlsRecord.plaintext_parse_args.rec;
-    size_t rec_len = DtlsRecord.plaintext_parse_args.rec_len;
-    DtlsPlaintext *out = DtlsRecord.plaintext_parse_args.out;
+    const uint8_t *rec = DtlsRecordV.plaintext_parse_args.rec;
+    size_t rec_len = DtlsRecordV.plaintext_parse_args.rec_len;
+    DtlsPlaintext *out = DtlsRecordV.plaintext_parse_args.out;
 
     if (rec_len < PROTOCORE_DTLS_PLAINTEXT_HDR_LEN)
     {
-        DtlsRecord.n = 0;
+        DtlsRecordV.n = 0;
         return;
     }
     // sec 4: legacy_record_version is {254,253} on every record but an initial ClientHello, where
@@ -176,39 +176,39 @@ static void dtls_record_plaintext_parse(uint8_t *restrict work)
     size_t length = ((size_t)rec[11] << 8) | rec[12];
     if (PROTOCORE_DTLS_PLAINTEXT_HDR_LEN + length > rec_len)
     {
-        DtlsRecord.n = 0;
+        DtlsRecordV.n = 0;
         return;
     }
     out->fragment = rec + PROTOCORE_DTLS_PLAINTEXT_HDR_LEN;
     out->frag_len = length;
-    DtlsRecord.n = PROTOCORE_DTLS_PLAINTEXT_HDR_LEN + length;
+    DtlsRecordV.n = PROTOCORE_DTLS_PLAINTEXT_HDR_LEN + length;
 }
 
 // ---------------------------------------------------------------------------
 // DTLSCiphertext
 // ---------------------------------------------------------------------------
 
-static void dtls_record_protect(uint8_t *restrict work)
+void protocore_dtls_record_protect(uint8_t *restrict work)
 {
     (void)work;
-    DtlsRecordKeys *keys = DtlsRecord.protect_args.keys;
-    uint64_t seq = DtlsRecord.protect_args.seq;
-    uint8_t content_type = DtlsRecord.protect_args.content_type;
-    const uint8_t *plaintext = DtlsRecord.protect_args.plaintext;
-    size_t pt_len = DtlsRecord.protect_args.pt_len;
-    uint8_t *out = DtlsRecord.protect_args.out;
-    size_t out_cap = DtlsRecord.protect_args.out_cap;
-    const uint8_t *cid = DtlsRecord.protect_args.cid;
-    size_t cid_len = DtlsRecord.protect_args.cid_len;
+    DtlsRecordKeys *keys = DtlsRecordV.protect_args.keys;
+    uint64_t seq = DtlsRecordV.protect_args.seq;
+    uint8_t content_type = DtlsRecordV.protect_args.content_type;
+    const uint8_t *plaintext = DtlsRecordV.protect_args.plaintext;
+    size_t pt_len = DtlsRecordV.protect_args.pt_len;
+    uint8_t *out = DtlsRecordV.protect_args.out;
+    size_t out_cap = DtlsRecordV.protect_args.out_cap;
+    const uint8_t *cid = DtlsRecordV.protect_args.cid;
+    size_t cid_len = DtlsRecordV.protect_args.cid_len;
 
     if (keys->cipher != DTLS_CIPHER_AES_128_GCM_SHA256)
     {
-        DtlsRecord.n = 0;
+        DtlsRecordV.n = 0;
         return;
     }
     if (cid_len > PROTOCORE_DTLS_CID_MAX || (cid_len && !cid))
     {
-        DtlsRecord.n = 0;
+        DtlsRecordV.n = 0;
         return;
     }
     // Unified header: [C] connection id, S=1 (16-bit seq), L=1 (length). hdr = byte0 || [cid] || seq16 ||
@@ -219,7 +219,7 @@ static void dtls_record_protect(uint8_t *restrict work)
     size_t total = hdr_len + enc_len;
     if (total > out_cap)
     {
-        DtlsRecord.n = 0;
+        DtlsRecordV.n = 0;
         return;
     }
 
@@ -247,13 +247,13 @@ static void dtls_record_protect(uint8_t *restrict work)
     build_nonce(keys->iv, seq, nonce);
     // AAD = the whole unified header (including any connection id) carrying the plaintext sequence
     // number (before §4.2.3 encryption).
-    Aes128Gcm.seal_args.nonce = nonce;
-    Aes128Gcm.seal_args.aad = out;
-    Aes128Gcm.seal_args.aad_len = hdr_len;
-    Aes128Gcm.seal_args.pt = out + hdr_len;
-    Aes128Gcm.seal_args.pt_len = inner_len;
-    Aes128Gcm.seal_args.ct_out = out + hdr_len;
-    Aes128Gcm.seal_args.tag_out = out + hdr_len + inner_len;
+    Aes128GcmV.seal_args.nonce = nonce;
+    Aes128GcmV.seal_args.aad = out;
+    Aes128GcmV.seal_args.aad_len = hdr_len;
+    Aes128GcmV.seal_args.pt = out + hdr_len;
+    Aes128GcmV.seal_args.pt_len = inner_len;
+    Aes128GcmV.seal_args.ct_out = out + hdr_len;
+    Aes128GcmV.seal_args.tag_out = out + hdr_len + inner_len;
     Aes128Gcm.seal(keys->gcm);
 
     // Encrypt the sequence number (RFC 9147 §4.2.3): mask = AES-ECB(sn_key, ciphertext[0..15]).
@@ -261,46 +261,46 @@ static void dtls_record_protect(uint8_t *restrict work)
     // The sequence-number context is already keyed and lives in the key material; rebuilding it here
     // costs ~556 cycles per record plus a pool borrow and wipe, independent of record size.
     uint8_t mask[16];
-    Aes128Gcm.block_args.in = out + hdr_len;
-    Aes128Gcm.block_args.out = mask;
+    Aes128GcmV.block_args.in = out + hdr_len;
+    Aes128GcmV.block_args.out = mask;
     Aes128Gcm.block_encrypt(keys->gcm);
     out[seq_off] ^= mask[0];
     out[seq_off + 1] ^= mask[1];
-    DtlsRecord.n = total;
+    DtlsRecordV.n = total;
 }
 
-static void dtls_record_unprotect(uint8_t *restrict work)
+void protocore_dtls_record_unprotect(uint8_t *restrict work)
 {
     (void)work;
-    DtlsRecordKeys *keys = DtlsRecord.unprotect_args.keys;
-    uint64_t next_seq = DtlsRecord.unprotect_args.next_seq;
-    const uint8_t *rec = DtlsRecord.unprotect_args.rec;
-    size_t rec_len = DtlsRecord.unprotect_args.rec_len;
-    uint8_t *out = DtlsRecord.unprotect_args.out;
-    size_t out_cap = DtlsRecord.unprotect_args.out_cap;
-    DtlsCiphertext *info = DtlsRecord.unprotect_args.info;
-    const uint8_t *expected_cid = DtlsRecord.unprotect_args.expected_cid;
-    size_t expected_cid_len = DtlsRecord.unprotect_args.expected_cid_len;
+    DtlsRecordKeys *keys = DtlsRecordV.unprotect_args.keys;
+    uint64_t next_seq = DtlsRecordV.unprotect_args.next_seq;
+    const uint8_t *rec = DtlsRecordV.unprotect_args.rec;
+    size_t rec_len = DtlsRecordV.unprotect_args.rec_len;
+    uint8_t *out = DtlsRecordV.unprotect_args.out;
+    size_t out_cap = DtlsRecordV.unprotect_args.out_cap;
+    DtlsCiphertext *info = DtlsRecordV.unprotect_args.info;
+    const uint8_t *expected_cid = DtlsRecordV.unprotect_args.expected_cid;
+    size_t expected_cid_len = DtlsRecordV.unprotect_args.expected_cid_len;
 
     if (keys->cipher != DTLS_CIPHER_AES_128_GCM_SHA256 || rec_len < 1)
     {
-        DtlsRecord.ok = PROTO_FALSE;
+        DtlsRecordV.ok = PROTO_FALSE;
         return;
     }
     if (expected_cid_len > PROTOCORE_DTLS_CID_MAX)
     {
-        DtlsRecord.ok = PROTO_FALSE;
+        DtlsRecordV.ok = PROTO_FALSE;
         return;
     }
     uint8_t b0 = rec[0];
     if ((b0 & DTLS_UH_FIXED_MASK) != DTLS_UH_FIXED)
     {
-        DtlsRecord.ok = PROTO_FALSE; // top 3 bits must be 001
+        DtlsRecordV.ok = PROTO_FALSE; // top 3 bits must be 001
         return;
     }
     if ((b0 & DTLS_UH_EPOCH_MASK) != (keys->epoch & DTLS_UH_EPOCH_MASK))
     {
-        DtlsRecord.ok = PROTO_FALSE; // wrong epoch keys for this record
+        DtlsRecordV.ok = PROTO_FALSE; // wrong epoch keys for this record
         return;
     }
 
@@ -312,21 +312,21 @@ static void dtls_record_unprotect(uint8_t *restrict work)
         if (expected_cid_len == 0 || off + expected_cid_len > rec_len ||
             mem.cmp(rec + off, expected_cid, expected_cid_len) != 0)
         {
-            DtlsRecord.ok = PROTO_FALSE;
+            DtlsRecordV.ok = PROTO_FALSE;
             return;
         }
         off += expected_cid_len;
     }
     else if (expected_cid_len != 0)
     {
-        DtlsRecord.ok = PROTO_FALSE; // a CID was negotiated for this direction but the record carries none
+        DtlsRecordV.ok = PROTO_FALSE; // a CID was negotiated for this direction but the record carries none
         return;
     }
 
     size_t seq_len = (b0 & DTLS_UH_SEQ16) ? 2 : 1;
     if (off + seq_len > rec_len)
     {
-        DtlsRecord.ok = PROTO_FALSE;
+        DtlsRecordV.ok = PROTO_FALSE;
         return;
     }
     size_t seq_off = off;
@@ -337,7 +337,7 @@ static void dtls_record_unprotect(uint8_t *restrict work)
     {
         if (off + 2 > rec_len)
         {
-            DtlsRecord.ok = PROTO_FALSE;
+            DtlsRecordV.ok = PROTO_FALSE;
             return;
         }
         enc_len = ((size_t)rec[off] << 8) | rec[off + 1];
@@ -349,7 +349,7 @@ static void dtls_record_unprotect(uint8_t *restrict work)
     }
     if (off + enc_len > rec_len || enc_len < 16 || enc_len < PROTOCORE_DTLS_TAG_LEN + 1)
     {
-        DtlsRecord.ok = PROTO_FALSE; // need >= 16 bytes for the SN sample and >= tag + one inner byte
+        DtlsRecordV.ok = PROTO_FALSE; // need >= 16 bytes for the SN sample and >= tag + one inner byte
         return;
     }
 
@@ -364,8 +364,8 @@ static void dtls_record_unprotect(uint8_t *restrict work)
     // The sequence-number context is already keyed and lives in the key material; rebuilding it here
     // costs ~556 cycles per record plus a pool borrow and wipe, independent of record size.
     uint8_t mask[16];
-    Aes128Gcm.block_args.in = enc;
-    Aes128Gcm.block_args.out = mask;
+    Aes128GcmV.block_args.in = enc;
+    Aes128GcmV.block_args.out = mask;
     Aes128Gcm.block_encrypt(keys->gcm);
     uint64_t trunc = 0;
     for (size_t i = 0; i < seq_len; i++)
@@ -381,30 +381,30 @@ static void dtls_record_unprotect(uint8_t *restrict work)
     // but that is an accident of a downstream comparison, not a check.
     if (enc_len < PROTOCORE_DTLS_TAG_LEN)
     {
-        DtlsRecord.ok = PROTO_FALSE;
+        DtlsRecordV.ok = PROTO_FALSE;
         return;
     }
     size_t inner_len = enc_len - PROTOCORE_DTLS_TAG_LEN; // == the ciphertext length the AEAD wants
     if (inner_len > out_cap)
     {
-        DtlsRecord.ok = PROTO_FALSE;
+        DtlsRecordV.ok = PROTO_FALSE;
         return;
     }
 
     uint8_t nonce[12];
     build_nonce(keys->iv, full_seq, nonce);
     const size_t pt_len = inner_len;
-    Aes128Gcm.open_args.nonce = nonce;
-    Aes128Gcm.open_args.aad = hdr;
-    Aes128Gcm.open_args.aad_len = hdr_len;
-    Aes128Gcm.open_args.ct = enc;
-    Aes128Gcm.open_args.ct_len = pt_len;
-    Aes128Gcm.open_args.tag = enc + pt_len;
-    Aes128Gcm.open_args.out = out;
+    Aes128GcmV.open_args.nonce = nonce;
+    Aes128GcmV.open_args.aad = hdr;
+    Aes128GcmV.open_args.aad_len = hdr_len;
+    Aes128GcmV.open_args.ct = enc;
+    Aes128GcmV.open_args.ct_len = pt_len;
+    Aes128GcmV.open_args.tag = enc + pt_len;
+    Aes128GcmV.open_args.out = out;
     Aes128Gcm.open(keys->gcm);
-    if (!Aes128Gcm.ok)
+    if (!Aes128GcmV.ok)
     {
-        DtlsRecord.ok = PROTO_FALSE;
+        DtlsRecordV.ok = PROTO_FALSE;
         return;
     }
 
@@ -416,55 +416,55 @@ static void dtls_record_unprotect(uint8_t *restrict work)
     }
     if (n == 0)
     {
-        DtlsRecord.ok = PROTO_FALSE; // no content type -> invalid record
+        DtlsRecordV.ok = PROTO_FALSE; // no content type -> invalid record
         return;
     }
     info->content_type = out[n - 1];
     info->pt_len = n - 1;
     info->seq = full_seq;
     info->epoch = keys->epoch;
-    DtlsRecord.ok = PROTO_TRUE;
+    DtlsRecordV.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
 // Anti-replay sliding window (RFC 9147 §4.5.1)
 // ---------------------------------------------------------------------------
 
-static void dtls_record_replay_init(uint8_t *restrict work)
+void protocore_dtls_record_replay_init(uint8_t *restrict work)
 {
     (void)work;
-    DtlsReplayWindow *w = DtlsRecord.replay_init_args.w;
+    DtlsReplayWindow *w = DtlsRecordV.replay_init_args.w;
 
     w->highest = 0;
     w->bitmap = 0;
     w->seeded = PROTO_FALSE;
 }
 
-static void dtls_record_replay_check(uint8_t *restrict work)
+void protocore_dtls_record_replay_check(uint8_t *restrict work)
 {
     (void)work;
-    const DtlsReplayWindow *w = DtlsRecord.replay_check_args.w;
-    uint64_t seq = DtlsRecord.replay_check_args.seq;
+    const DtlsReplayWindow *w = DtlsRecordV.replay_check_args.w;
+    uint64_t seq = DtlsRecordV.replay_check_args.seq;
 
     if (!w->seeded || seq > w->highest)
     {
-        DtlsRecord.ok = PROTO_TRUE; // first record, or ahead of the window
+        DtlsRecordV.ok = PROTO_TRUE; // first record, or ahead of the window
         return;
     }
     uint64_t diff = w->highest - seq;
     if (diff >= 64)
     {
-        DtlsRecord.ok = PROTO_FALSE; // older than the window
+        DtlsRecordV.ok = PROTO_FALSE; // older than the window
         return;
     }
-    DtlsRecord.ok = ((w->bitmap >> diff) & 1u) == 0; // set bit => already seen (replay)
+    DtlsRecordV.ok = ((w->bitmap >> diff) & 1u) == 0; // set bit => already seen (replay)
 }
 
-static void dtls_record_replay_mark(uint8_t *restrict work)
+void protocore_dtls_record_replay_mark(uint8_t *restrict work)
 {
     (void)work;
-    DtlsReplayWindow *w = DtlsRecord.replay_mark_args.w;
-    uint64_t seq = DtlsRecord.replay_mark_args.seq;
+    DtlsReplayWindow *w = DtlsRecordV.replay_mark_args.w;
+    uint64_t seq = DtlsRecordV.replay_mark_args.seq;
 
     if (!w->seeded)
     {
@@ -487,16 +487,8 @@ static void dtls_record_replay_mark(uint8_t *restrict work)
     }
 }
 
-DtlsRecordNs DtlsRecord = {
-    .keys_derive = dtls_record_keys_derive,
-    .plaintext_build = dtls_record_plaintext_build,
-    .plaintext_parse = dtls_record_plaintext_parse,
-    .protect = dtls_record_protect,
-    .unprotect = dtls_record_unprotect,
-    .replay_init = dtls_record_replay_init,
-    .replay_check = dtls_record_replay_check,
-    .replay_mark = dtls_record_replay_mark,
-};
+/** @brief The operands and the outcome. */
+DtlsRecordVars DtlsRecordV;
 
 PROTOCORE_END_DECLS
 

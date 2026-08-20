@@ -264,7 +264,6 @@ typedef struct
     uint32_t message_id;                     ///< Message ID
     uint32_t length;                         ///< Length of the whole message
 } IkeHeader;
-
 /** @brief One payload off the chain: its type, the following type, and its body (RFC 7296 sec 3.2). */
 typedef struct
 {
@@ -274,7 +273,6 @@ typedef struct
     const uint8_t *body;         ///< the octets after the generic payload header
     size_t body_len;
 } IkePayload;
-
 /** @brief Forward walk of a message's payload chain (RFC 7296 sec 3.2). */
 typedef struct
 {
@@ -283,7 +281,6 @@ typedef struct
     size_t off;               ///< current offset into @c area
     IkePayloadType next_type; ///< type of the payload at @c off; IKE_PL_NONE is done
 } IkePayloadIter;
-
 /** @brief One Transform Substructure to encode (RFC 7296 sec 3.3.2). */
 typedef struct
 {
@@ -291,7 +288,6 @@ typedef struct
     uint16_t id;           ///< Transform ID
     int32_t key_length;    ///< Key Length attribute in bits (sec 3.3.5), or below zero for none
 } IkeTransform;
-
 /** @brief One decoded Transform Substructure (RFC 7296 sec 3.3.2). */
 typedef struct
 {
@@ -300,7 +296,6 @@ typedef struct
     int32_t key_length;    ///< decoded Key Length attribute, or below zero when absent
     proto_bool last;       ///< Last Substruc was 0: no transform follows
 } IkeTransformRef;
-
 /** @brief One decoded Proposal Substructure (RFC 7296 sec 3.3.1). */
 typedef struct
 {
@@ -313,7 +308,6 @@ typedef struct
     size_t transforms_len;
     proto_bool last; ///< Last Substruc was 0: no proposal follows
 } IkeProposalRef;
-
 /** @brief Walk of the Transform Substructures inside one proposal (RFC 7296 sec 3.3.2). */
 typedef struct
 {
@@ -321,7 +315,6 @@ typedef struct
     size_t len;
     size_t off;
 } IkeTransformIter;
-
 /** @brief One Traffic Selector (RFC 7296 sec 3.13.1). */
 typedef struct
 {
@@ -333,7 +326,6 @@ typedef struct
     const uint8_t *end_addr;   ///< Ending Address, the same length
     size_t addr_len;           ///< 4 or 16
 } IkeTrafficSelector;
-
 /** @brief One Configuration Attribute: a 15-bit type and its value (RFC 7296 sec 3.15.1). */
 typedef struct
 {
@@ -341,7 +333,6 @@ typedef struct
     const uint8_t *value; ///< Value, or nullptr when @c value_len is zero
     uint16_t value_len;   ///< Length
 } IkeCfgAttr;
-
 /** @brief Walk of a Configuration payload's attribute area (RFC 7296 sec 3.15.1). */
 typedef struct
 {
@@ -349,7 +340,6 @@ typedef struct
     size_t len;
     size_t off;
 } IkeCfgAttrIter;
-
 /**
  * @brief Reassembly of one fragmented message (RFC 7383 sec 2.6).
  *
@@ -367,7 +357,6 @@ typedef struct
     size_t pool_cap;
     size_t pool_used;
 } IkeFragReasm;
-
 /** @brief Per-key lengths of the SK_* chain, in octets (RFC 7296 sec 2.13, sec 2.14). */
 typedef struct
 {
@@ -376,7 +365,6 @@ typedef struct
     size_t sk_e; ///< SK_ei / SK_er: the cipher key plus any AEAD salt
     size_t sk_p; ///< SK_pi / SK_pr: the PRF's preferred key length
 } IkeKeyLengths;
-
 /** @brief The seven keys taken in order from prf+ (RFC 7296 sec 2.14). */
 typedef struct
 {
@@ -392,7 +380,6 @@ typedef struct
     size_t sk_e_len; ///< valid octets in sk_ei / sk_er
     size_t sk_p_len; ///< valid octets in sk_pi / sk_pr
 } IkeKeyMaterial;
-
 /** @brief The four transforms negotiated for an IKE SA (RFC 7296 sec 2.13). */
 typedef struct
 {
@@ -402,7 +389,6 @@ typedef struct
     uint16_t integ;      ///< Integrity Algorithm transform id, zero for an AEAD cipher
     uint16_t dh;         ///< Diffie-Hellman Group Num
 } IkeSuite;
-
 /** @brief One IKE SA after IKE_SA_INIT: the SPIs, the negotiated suite, and the SK_* keys. */
 typedef struct
 {
@@ -415,7 +401,6 @@ typedef struct
     // sized for the largest serves them all.
     uint8_t work[PROTOCORE_IKE_BORROW];
 } IkeSa;
-
 /** @brief The salient contents of a parsed IKE_SA_INIT; slices point into the message (sec 1.2). */
 typedef struct
 {
@@ -429,7 +414,6 @@ typedef struct
     const uint8_t *nonce; ///< Ni or Nr data
     size_t nonce_len;
 } IkeSaInitMsg;
-
 /** @brief Handshake context: the SA under construction and what the next step signs over. */
 typedef struct
 {
@@ -445,7 +429,6 @@ typedef struct
     uint8_t resp_msg[PROTOCORE_IKE_MSG_MAX]; ///< RealMessage2: the IKE_SA_INIT response (sec 2.15)
     uint16_t resp_msg_len;
 } IkeHandshake;
-
 /** @brief A decoded Key Exchange payload (RFC 7296 sec 3.4). */
 typedef struct
 {
@@ -453,7 +436,6 @@ typedef struct
     const uint8_t *ke_data; ///< Key Exchange Data
     size_t ke_len;
 } IkeKeRef;
-
 /** @brief A decoded Identification payload (RFC 7296 sec 3.5). */
 typedef struct
 {
@@ -461,7 +443,6 @@ typedef struct
     const uint8_t *id_data; ///< Identification Data
     size_t id_len;
 } IkeIdRef;
-
 /** @brief A decoded Authentication payload (RFC 7296 sec 3.8). */
 typedef struct
 {
@@ -469,7 +450,6 @@ typedef struct
     const uint8_t *auth_data;  ///< Authentication Data
     size_t auth_len;
 } IkeAuthRef;
-
 /** @brief A decoded Notify payload (RFC 7296 sec 3.10). */
 typedef struct
 {
@@ -480,7 +460,6 @@ typedef struct
     const uint8_t *data;     ///< Notification Data
     size_t data_len;
 } IkeNotifyRef;
-
 /** @brief A decoded Delete payload (RFC 7296 sec 3.11). */
 typedef struct
 {
@@ -489,7 +468,6 @@ typedef struct
     uint16_t num_spis;       ///< Num of SPIs
     const uint8_t *spis;     ///< the SPI list, or nullptr when it is empty
 } IkeDeleteRef;
-
 /** @brief A sliced Encrypted or Encrypted Fragment payload body (RFC 7296 sec 3.14, RFC 7383 sec 2.5). */
 typedef struct
 {
@@ -500,7 +478,6 @@ typedef struct
     size_t ct_len;
     const uint8_t *icv; ///< Integrity Checksum Data
 } IkeSkRef;
-
 /** @brief A decoded Configuration payload (RFC 7296 sec 3.15). */
 typedef struct
 {
@@ -508,7 +485,6 @@ typedef struct
     const uint8_t *attrs; ///< the Configuration Attribute area
     size_t attrs_len;
 } IkeCpRef;
-
 /** @brief The inner payload chain an Encrypted payload was carrying (RFC 7296 sec 3.14). */
 typedef struct
 {
@@ -516,21 +492,18 @@ typedef struct
     const uint8_t *inner;            ///< the decrypted chain, inside the caller's message buffer
     size_t inner_len;
 } IkeInnerRef;
-
 /** @brief Where a build, a hash or a signature writes. */
 typedef struct
 {
     uint8_t *buf; ///< the octets a call writes
     size_t cap;   ///< room there; prf+ and child_keymat fill it exactly
 } IkeOutArgs;
-
 /** @brief The octets a parse reads: a whole message, or one payload body (RFC 7296 sec 3.2). */
 typedef struct
 {
     const uint8_t *msg; ///< a message, a payload body, or an attribute area
     size_t len;
 } IkeWireArgs;
-
 /** @brief The generic payload header a build writes, and the payload's own variable field (sec 3.2). */
 typedef struct
 {
@@ -539,7 +512,6 @@ typedef struct
     const uint8_t *data;         ///< this payload's variable field, named per payload by each call
     size_t data_len;
 } IkePayloadArgs;
-
 /** @brief The Proposal Substructure a build encodes, and the SPIs a Notify or Delete names (sec 3.3.1). */
 typedef struct
 {
@@ -551,7 +523,6 @@ typedef struct
     const IkeTransform *transforms; ///< the Transform Substructures to encode (sec 3.3.2)
     uint8_t num_transforms;         ///< Num Transforms
 } IkeProposalArgs;
-
 /** @brief The key exchange: the group and the values (RFC 7296 sec 3.4, RFC 8031 sec 3). */
 typedef struct
 {
@@ -563,7 +534,6 @@ typedef struct
     const uint8_t *peer_pub; ///< the peer's Key Exchange Data
     size_t peer_pub_len;     ///< its length
 } IkeKeArgs;
-
 /** @brief The identity: the ID payload's fields and its signed remainder (sec 3.5, 3.6, 2.15). */
 typedef struct
 {
@@ -572,7 +542,6 @@ typedef struct
     size_t id_body_len;
     uint8_t cert_encoding; ///< Cert Encoding for a CERT or CERTREQ payload (sec 3.6)
 } IkeIdArgs;
-
 /** @brief Authentication: the method and every input the AUTH value is computed from (sec 2.15). */
 typedef struct
 {
@@ -594,7 +563,6 @@ typedef struct
     const uint8_t *rsa_n; ///< the peer's RSA modulus, 256 octets big endian
     const uint8_t *rsa_e; ///< the peer's RSA exponent, 4 octets big endian
 } IkeAuthArgs;
-
 /** @brief The Notify payload's own fields and the COOKIE it carries (sec 3.10, sec 2.6). */
 typedef struct
 {
@@ -610,7 +578,6 @@ typedef struct
     const uint8_t *cookie; ///< the cookie a verify judges or a build carries
     size_t cookie_len;
 } IkeNotifyArgs;
-
 /** @brief The Traffic Selectors a build encodes and the one a get names (RFC 7296 sec 3.13). */
 typedef struct
 {
@@ -618,7 +585,6 @@ typedef struct
     uint8_t num;                    ///< Number of TSs
     uint8_t index;                  ///< which selector a get decodes, zero based
 } IkeTsArgs;
-
 /** @brief The Configuration payload a build encodes (RFC 7296 sec 3.15). */
 typedef struct
 {
@@ -626,7 +592,6 @@ typedef struct
     const IkeCfgAttr *attrs; ///< the Configuration Attributes to encode
     uint8_t num_attrs;       ///< how many
 } IkeCpArgs;
-
 /** @brief The Encrypted payload and its AEAD inputs (RFC 7296 sec 3.14, RFC 5282 sec 3, 4, 5.1). */
 typedef struct
 {
@@ -645,7 +610,6 @@ typedef struct
     const uint8_t *pt; ///< the plaintext a seal encrypts
     size_t pt_len;
 } IkeSkArgs;
-
 /** @brief The Encrypted Fragment counters and the chunk a reassembler stages (RFC 7383 sec 2.5, 2.6). */
 typedef struct
 {
@@ -655,7 +619,6 @@ typedef struct
     const uint8_t *chunk; ///< one fragment's decrypted content
     size_t chunk_len;
 } IkeFragArgs;
-
 /** @brief The key schedule's inputs and outputs (RFC 7296 sec 2.13, 2.14, 2.17, 2.18). */
 typedef struct
 {
@@ -677,7 +640,6 @@ typedef struct
     const uint8_t *sk_d;  ///< SK_d: the old SA's for a rekey, this SA's for a Child SA
     size_t sk_d_len;
 } IkeKeyArgs;
-
 /** @brief What a whole-message build stamps into the header and wraps (sec 3.1, sec 3.14). */
 typedef struct
 {
@@ -690,7 +652,6 @@ typedef struct
     const uint8_t *inner;            ///< the chained inner payloads to encrypt
     size_t inner_len;
 } IkeMsgArgs;
-
 /** @brief The walks a caller owns, so nested walks do not share one cursor (RFC 7296 sec 3.2). */
 typedef struct
 {
@@ -700,7 +661,6 @@ typedef struct
     const IkeProposalRef *proposal; ///< the proposal a transform walk starts on
     IkePayloadType first_type;      ///< the header's Next Payload, where a chain walk starts
 } IkeWalkArgs;
-
 /** @brief The session an SA-level or handshake call acts on (RFC 7296 sec 1.2). */
 typedef struct
 {
@@ -710,7 +670,6 @@ typedef struct
     const uint8_t *our_nonce; ///< the nonce this side sends
     size_t our_nonce_len;
 } IkeSessionArgs;
-
 /**
  * @brief The IKEv2 handle (RFC 7296).
  *
@@ -828,8 +787,7 @@ typedef struct
  */
 typedef struct
 {
-    uint8_t *work; ///< the caller's scratch region the hash, PRF and signature calls borrow
-
+    uint8_t *work;        ///< the caller's scratch region the hash, PRF and signature calls borrow
     IkeHeader hdr;        ///< the IKE header a build encodes and a parse decodes (sec 3.1)
     IkeOutArgs out;       ///< where a build writes
     IkeWireArgs wire;     ///< the octets a parse reads
@@ -847,7 +805,6 @@ typedef struct
     IkeMsgArgs msg;       ///< whole-message assembly (sec 3.1, 3.14)
     IkeWalkArgs walk;     ///< the caller-owned walks (sec 3.2)
     IkeSessionArgs sess;  ///< the SA or handshake a call acts on (sec 1.2)
-
     proto_bool ok;
     size_t n;
     uint8_t u8;
@@ -865,14 +822,20 @@ typedef struct
     IkeCpRef cp_ref;
     IkeInnerRef opened;
     IkeSaInitMsg sa_init;
+} IkeVars;
 
+/** @brief The operands and the outcome. */
+extern IkeVars IkeV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const hdr_build)(uint8_t *restrict work);
     void (*const hdr_parse)(uint8_t *restrict work);
     void (*const set_length)(uint8_t *restrict work);
     void (*const payload_iter_init)(uint8_t *restrict work);
     void (*const payload_next)(uint8_t *restrict work);
     void (*const payload_build)(uint8_t *restrict work);
-
     void (*const sa_build)(uint8_t *restrict work);
     void (*const ke_build)(uint8_t *restrict work);
     void (*const nonce_build)(uint8_t *restrict work);
@@ -884,18 +847,15 @@ typedef struct
     void (*const ts_build)(uint8_t *restrict work);
     void (*const cp_build)(uint8_t *restrict work);
     void (*const sk_build)(uint8_t *restrict work);
-
     void (*const skf_build)(uint8_t *restrict work);
     void (*const skf_parse)(uint8_t *restrict work);
     void (*const frag_reasm_init)(uint8_t *restrict work);
     void (*const frag_reasm_add)(uint8_t *restrict work);
     void (*const frag_reasm_complete)(uint8_t *restrict work);
     void (*const frag_reasm_assemble)(uint8_t *restrict work);
-
     void (*const cookie_compute)(uint8_t *restrict work);
     void (*const cookie_verify)(uint8_t *restrict work);
     void (*const cookie_notify_build)(uint8_t *restrict work);
-
     void (*const ke_parse)(uint8_t *restrict work);
     void (*const id_parse)(uint8_t *restrict work);
     void (*const auth_parse)(uint8_t *restrict work);
@@ -910,44 +870,181 @@ typedef struct
     void (*const cp_parse)(uint8_t *restrict work);
     void (*const cp_attr_iter_init)(uint8_t *restrict work);
     void (*const cp_attr_next)(uint8_t *restrict work);
-
     void (*const prf_plus)(uint8_t *restrict work);
     void (*const derive_keys)(uint8_t *restrict work);
     void (*const rekey_derive_keys)(uint8_t *restrict work);
     void (*const child_keymat)(uint8_t *restrict work);
     void (*const suite_keylengths)(uint8_t *restrict work);
     void (*const sa_keys_from_init)(uint8_t *restrict work);
-
     void (*const sk_aead_seal)(uint8_t *restrict work);
     void (*const sk_aead_open)(uint8_t *restrict work);
     void (*const dh_public)(uint8_t *restrict work);
     void (*const dh_compute)(uint8_t *restrict work);
-
     void (*const auth_psk)(uint8_t *restrict work);
     void (*const signed_octets)(uint8_t *restrict work);
     void (*const auth_sign_ecdsa_p256)(uint8_t *restrict work);
     void (*const auth_verify_ecdsa_p256)(uint8_t *restrict work);
     void (*const auth_verify_rsa_sha256)(uint8_t *restrict work);
-
     void (*const sa_init_build)(uint8_t *restrict work);
     void (*const sa_init_parse)(uint8_t *restrict work);
     void (*const auth_msg_build)(uint8_t *restrict work);
     void (*const auth_msg_open)(uint8_t *restrict work);
-
     void (*const initiator_start)(uint8_t *restrict work);
     void (*const initiator_on_sa_init)(uint8_t *restrict work);
     void (*const initiator_build_auth_psk)(uint8_t *restrict work);
     void (*const initiator_on_auth_psk)(uint8_t *restrict work);
     void (*const responder_on_sa_init)(uint8_t *restrict work);
     void (*const responder_on_auth_psk)(uint8_t *restrict work);
-
     void (*const informational_build)(uint8_t *restrict work);
     void (*const informational_open)(uint8_t *restrict work);
     void (*const create_child_sa_build)(uint8_t *restrict work);
 } IkeNs;
 
-/** @brief The one symbol this module exports. */
-extern IkeNs Ike;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in IkeV or a region of the borrow at a fixed offset.
+void protocore_ikev2_hdr_build(uint8_t *restrict work);
+void protocore_ikev2_hdr_parse(uint8_t *restrict work);
+void protocore_ikev2_set_length(uint8_t *restrict work);
+void protocore_ikev2_payload_iter_init(uint8_t *restrict work);
+void protocore_ikev2_payload_next(uint8_t *restrict work);
+void protocore_ikev2_payload_build(uint8_t *restrict work);
+void protocore_ikev2_sa_build(uint8_t *restrict work);
+void protocore_ikev2_ke_build(uint8_t *restrict work);
+void protocore_ikev2_nonce_build(uint8_t *restrict work);
+void protocore_ikev2_id_build(uint8_t *restrict work);
+void protocore_ikev2_auth_build(uint8_t *restrict work);
+void protocore_ikev2_cert_build(uint8_t *restrict work);
+void protocore_ikev2_notify_build(uint8_t *restrict work);
+void protocore_ikev2_delete_build(uint8_t *restrict work);
+void protocore_ikev2_ts_build(uint8_t *restrict work);
+void protocore_ikev2_cp_build(uint8_t *restrict work);
+void protocore_ikev2_sk_build(uint8_t *restrict work);
+void protocore_ikev2_skf_build(uint8_t *restrict work);
+void protocore_ikev2_skf_parse(uint8_t *restrict work);
+void protocore_ikev2_frag_reasm_init(uint8_t *restrict work);
+void protocore_ikev2_frag_reasm_add(uint8_t *restrict work);
+void protocore_ikev2_frag_reasm_complete(uint8_t *restrict work);
+void protocore_ikev2_frag_reasm_assemble(uint8_t *restrict work);
+void protocore_ikev2_cookie_compute(uint8_t *restrict work);
+void protocore_ikev2_cookie_verify(uint8_t *restrict work);
+void protocore_ikev2_cookie_notify_build(uint8_t *restrict work);
+void protocore_ikev2_ke_parse(uint8_t *restrict work);
+void protocore_ikev2_id_parse(uint8_t *restrict work);
+void protocore_ikev2_auth_parse(uint8_t *restrict work);
+void protocore_ikev2_notify_parse(uint8_t *restrict work);
+void protocore_ikev2_delete_parse(uint8_t *restrict work);
+void protocore_ikev2_sk_parse(uint8_t *restrict work);
+void protocore_ikev2_sa_first_proposal(uint8_t *restrict work);
+void protocore_ikev2_transform_iter_init(uint8_t *restrict work);
+void protocore_ikev2_transform_next(uint8_t *restrict work);
+void protocore_ikev2_ts_count(uint8_t *restrict work);
+void protocore_ikev2_ts_get(uint8_t *restrict work);
+void protocore_ikev2_cp_parse(uint8_t *restrict work);
+void protocore_ikev2_cp_attr_iter_init(uint8_t *restrict work);
+void protocore_ikev2_cp_attr_next(uint8_t *restrict work);
+void protocore_ikev2_prf_plus(uint8_t *restrict work);
+void protocore_ikev2_derive_keys(uint8_t *restrict work);
+void protocore_ikev2_rekey_derive_keys(uint8_t *restrict work);
+void protocore_ikev2_child_keymat(uint8_t *restrict work);
+void protocore_ikev2_suite_keylengths(uint8_t *restrict work);
+void protocore_ikev2_sa_keys_from_init(uint8_t *restrict work);
+void protocore_ikev2_sk_aead_seal(uint8_t *restrict work);
+void protocore_ikev2_sk_aead_open(uint8_t *restrict work);
+void protocore_ikev2_dh_public(uint8_t *restrict work);
+void protocore_ikev2_dh_compute(uint8_t *restrict work);
+void protocore_ikev2_auth_psk(uint8_t *restrict work);
+void protocore_ikev2_signed_octets(uint8_t *restrict work);
+void protocore_ikev2_auth_sign_ecdsa_p256(uint8_t *restrict work);
+void protocore_ikev2_auth_verify_ecdsa_p256(uint8_t *restrict work);
+void protocore_ikev2_auth_verify_rsa_sha256(uint8_t *restrict work);
+void protocore_ikev2_sa_init_build(uint8_t *restrict work);
+void protocore_ikev2_sa_init_parse(uint8_t *restrict work);
+void protocore_ikev2_auth_msg_build(uint8_t *restrict work);
+void protocore_ikev2_auth_msg_open(uint8_t *restrict work);
+void protocore_ikev2_initiator_start(uint8_t *restrict work);
+void protocore_ikev2_initiator_on_sa_init(uint8_t *restrict work);
+void protocore_ikev2_initiator_build_auth_psk(uint8_t *restrict work);
+void protocore_ikev2_initiator_on_auth_psk(uint8_t *restrict work);
+void protocore_ikev2_responder_on_sa_init(uint8_t *restrict work);
+void protocore_ikev2_responder_on_auth_psk(uint8_t *restrict work);
+void protocore_ikev2_informational_build(uint8_t *restrict work);
+void protocore_ikev2_informational_open(uint8_t *restrict work);
+void protocore_ikev2_create_child_sa_build(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Ike.hdr_build(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const IkeNs Ike __attribute__((unused)) = {
+    .hdr_build = protocore_ikev2_hdr_build,
+    .hdr_parse = protocore_ikev2_hdr_parse,
+    .set_length = protocore_ikev2_set_length,
+    .payload_iter_init = protocore_ikev2_payload_iter_init,
+    .payload_next = protocore_ikev2_payload_next,
+    .payload_build = protocore_ikev2_payload_build,
+    .sa_build = protocore_ikev2_sa_build,
+    .ke_build = protocore_ikev2_ke_build,
+    .nonce_build = protocore_ikev2_nonce_build,
+    .id_build = protocore_ikev2_id_build,
+    .auth_build = protocore_ikev2_auth_build,
+    .cert_build = protocore_ikev2_cert_build,
+    .notify_build = protocore_ikev2_notify_build,
+    .delete_build = protocore_ikev2_delete_build,
+    .ts_build = protocore_ikev2_ts_build,
+    .cp_build = protocore_ikev2_cp_build,
+    .sk_build = protocore_ikev2_sk_build,
+    .skf_build = protocore_ikev2_skf_build,
+    .skf_parse = protocore_ikev2_skf_parse,
+    .frag_reasm_init = protocore_ikev2_frag_reasm_init,
+    .frag_reasm_add = protocore_ikev2_frag_reasm_add,
+    .frag_reasm_complete = protocore_ikev2_frag_reasm_complete,
+    .frag_reasm_assemble = protocore_ikev2_frag_reasm_assemble,
+    .cookie_compute = protocore_ikev2_cookie_compute,
+    .cookie_verify = protocore_ikev2_cookie_verify,
+    .cookie_notify_build = protocore_ikev2_cookie_notify_build,
+    .ke_parse = protocore_ikev2_ke_parse,
+    .id_parse = protocore_ikev2_id_parse,
+    .auth_parse = protocore_ikev2_auth_parse,
+    .notify_parse = protocore_ikev2_notify_parse,
+    .delete_parse = protocore_ikev2_delete_parse,
+    .sk_parse = protocore_ikev2_sk_parse,
+    .sa_first_proposal = protocore_ikev2_sa_first_proposal,
+    .transform_iter_init = protocore_ikev2_transform_iter_init,
+    .transform_next = protocore_ikev2_transform_next,
+    .ts_count = protocore_ikev2_ts_count,
+    .ts_get = protocore_ikev2_ts_get,
+    .cp_parse = protocore_ikev2_cp_parse,
+    .cp_attr_iter_init = protocore_ikev2_cp_attr_iter_init,
+    .cp_attr_next = protocore_ikev2_cp_attr_next,
+    .prf_plus = protocore_ikev2_prf_plus,
+    .derive_keys = protocore_ikev2_derive_keys,
+    .rekey_derive_keys = protocore_ikev2_rekey_derive_keys,
+    .child_keymat = protocore_ikev2_child_keymat,
+    .suite_keylengths = protocore_ikev2_suite_keylengths,
+    .sa_keys_from_init = protocore_ikev2_sa_keys_from_init,
+    .sk_aead_seal = protocore_ikev2_sk_aead_seal,
+    .sk_aead_open = protocore_ikev2_sk_aead_open,
+    .dh_public = protocore_ikev2_dh_public,
+    .dh_compute = protocore_ikev2_dh_compute,
+    .auth_psk = protocore_ikev2_auth_psk,
+    .signed_octets = protocore_ikev2_signed_octets,
+    .auth_sign_ecdsa_p256 = protocore_ikev2_auth_sign_ecdsa_p256,
+    .auth_verify_ecdsa_p256 = protocore_ikev2_auth_verify_ecdsa_p256,
+    .auth_verify_rsa_sha256 = protocore_ikev2_auth_verify_rsa_sha256,
+    .sa_init_build = protocore_ikev2_sa_init_build,
+    .sa_init_parse = protocore_ikev2_sa_init_parse,
+    .auth_msg_build = protocore_ikev2_auth_msg_build,
+    .auth_msg_open = protocore_ikev2_auth_msg_open,
+    .initiator_start = protocore_ikev2_initiator_start,
+    .initiator_on_sa_init = protocore_ikev2_initiator_on_sa_init,
+    .initiator_build_auth_psk = protocore_ikev2_initiator_build_auth_psk,
+    .initiator_on_auth_psk = protocore_ikev2_initiator_on_auth_psk,
+    .responder_on_sa_init = protocore_ikev2_responder_on_sa_init,
+    .responder_on_auth_psk = protocore_ikev2_responder_on_auth_psk,
+    .informational_build = protocore_ikev2_informational_build,
+    .informational_open = protocore_ikev2_informational_open,
+    .create_child_sa_build = protocore_ikev2_create_child_sa_build,
+};
 
 PROTOCORE_END_DECLS
 

@@ -110,11 +110,11 @@ uint8_t *protocore_lwm2m_tlv_span(void)
 // write and the finish fail closed.
 static void tlv_open(uint8_t *restrict work)
 {
-    LWM2M_TLV_CTX(work)->w.buf = Lwm2mTlv.sink.buf;
-    LWM2M_TLV_CTX(work)->w.cap = Lwm2mTlv.sink.cap;
+    LWM2M_TLV_CTX(work)->w.buf = Lwm2mTlvV.sink.buf;
+    LWM2M_TLV_CTX(work)->w.cap = Lwm2mTlvV.sink.cap;
     LWM2M_TLV_CTX(work)->w.pos = 0;
-    LWM2M_TLV_CTX(work)->w.overflow = (Lwm2mTlv.sink.buf == NULL);
-    Lwm2mTlv.ok = !LWM2M_TLV_CTX(work)->w.overflow;
+    LWM2M_TLV_CTX(work)->w.overflow = (Lwm2mTlvV.sink.buf == NULL);
+    Lwm2mTlvV.ok = !LWM2M_TLV_CTX(work)->w.overflow;
 }
 
 // Emit one entry: the Type byte, the Identifier field, the Length field the Value's size calls for,
@@ -122,16 +122,16 @@ static void tlv_open(uint8_t *restrict work)
 static void tlv_write(uint8_t *restrict work)
 {
     Lwm2mTlvWriteCursor *w = &LWM2M_TLV_CTX(work)->w;
-    const uint8_t *value = Lwm2mTlv.val.opaque;
-    const size_t value_len = Lwm2mTlv.val.len;
-    Lwm2mTlv.ok = PROTO_FALSE;
+    const uint8_t *value = Lwm2mTlvV.val.opaque;
+    const size_t value_len = Lwm2mTlvV.val.len;
+    Lwm2mTlvV.ok = PROTO_FALSE;
     if (value_len && !value)
     {
         return;
     }
 
-    uint8_t type = (uint8_t)(Lwm2mTlv.hdr.id_type & LWM2M_TLV_IDTYPE_MASK);
-    proto_bool id16 = Lwm2mTlv.hdr.id > 0xFF; // past 255 the Identifier field is 16 bits
+    uint8_t type = (uint8_t)(Lwm2mTlvV.hdr.id_type & LWM2M_TLV_IDTYPE_MASK);
+    proto_bool id16 = Lwm2mTlvV.hdr.id > 0xFF; // past 255 the Identifier field is 16 bits
     if (id16)
     {
         type |= LWM2M_TLV_ID16_FLAG;
@@ -173,9 +173,9 @@ static void tlv_write(uint8_t *restrict work)
     w->buf[w->pos++] = type;
     if (id16)
     {
-        w->buf[w->pos++] = (uint8_t)(Lwm2mTlv.hdr.id >> 8);
+        w->buf[w->pos++] = (uint8_t)(Lwm2mTlvV.hdr.id >> 8);
     }
-    w->buf[w->pos++] = (uint8_t)Lwm2mTlv.hdr.id;
+    w->buf[w->pos++] = (uint8_t)Lwm2mTlvV.hdr.id;
     store_be(w->buf + w->pos, (uint64_t)value_len, lenbytes);
     w->pos += lenbytes;
     if (value_len)
@@ -183,25 +183,25 @@ static void tlv_write(uint8_t *restrict work)
         mem.cpy(w->buf + w->pos, value, value_len);
         w->pos += value_len;
     }
-    Lwm2mTlv.ok = PROTO_TRUE;
+    Lwm2mTlvV.ok = PROTO_TRUE;
 }
 
 // Stage the Integer in its shortest width and emit it.
 static void tlv_write_integer(uint8_t *restrict work)
 {
-    const size_t n = integer_octets(Lwm2mTlv.val.integer_value);
-    store_be(LWM2M_TLV_CTX(work)->w.scalar, (uint64_t)Lwm2mTlv.val.integer_value, n);
-    Lwm2mTlv.val.opaque = LWM2M_TLV_CTX(work)->w.scalar;
-    Lwm2mTlv.val.len = n;
+    const size_t n = integer_octets(Lwm2mTlvV.val.integer_value);
+    store_be(LWM2M_TLV_CTX(work)->w.scalar, (uint64_t)Lwm2mTlvV.val.integer_value, n);
+    Lwm2mTlvV.val.opaque = LWM2M_TLV_CTX(work)->w.scalar;
+    Lwm2mTlvV.val.len = n;
     tlv_write(work);
 }
 
 // Stage the Boolean as one octet and emit it: the Length of a Boolean is always 1.
 static void tlv_write_boolean(uint8_t *restrict work)
 {
-    LWM2M_TLV_CTX(work)->w.scalar[0] = Lwm2mTlv.val.boolean_value ? 1 : 0;
-    Lwm2mTlv.val.opaque = LWM2M_TLV_CTX(work)->w.scalar;
-    Lwm2mTlv.val.len = 1;
+    LWM2M_TLV_CTX(work)->w.scalar[0] = Lwm2mTlvV.val.boolean_value ? 1 : 0;
+    Lwm2mTlvV.val.opaque = LWM2M_TLV_CTX(work)->w.scalar;
+    Lwm2mTlvV.val.len = 1;
     tlv_write(work);
 }
 
@@ -209,13 +209,13 @@ static void tlv_write_boolean(uint8_t *restrict work)
 // cannot fit beside a Type byte and an Identifier, so the write poisons the cursor.
 static void tlv_write_string(uint8_t *restrict work)
 {
-    if (!Lwm2mTlv.val.string_value)
+    if (!Lwm2mTlvV.val.string_value)
     {
-        Lwm2mTlv.ok = PROTO_FALSE;
+        Lwm2mTlvV.ok = PROTO_FALSE;
         return;
     }
-    Lwm2mTlv.val.opaque = (const uint8_t *)Lwm2mTlv.val.string_value;
-    Lwm2mTlv.val.len = str.len(Lwm2mTlv.val.string_value, LWM2M_TLV_CTX(work)->w.cap);
+    Lwm2mTlvV.val.opaque = (const uint8_t *)Lwm2mTlvV.val.string_value;
+    Lwm2mTlvV.val.len = str.len(Lwm2mTlvV.val.string_value, LWM2M_TLV_CTX(work)->w.cap);
     tlv_write(work);
 }
 
@@ -223,28 +223,28 @@ static void tlv_write_string(uint8_t *restrict work)
 static void tlv_write_float(uint8_t *restrict work)
 {
     uint64_t bits;
-    double v = Lwm2mTlv.val.float_value;
+    double v = Lwm2mTlvV.val.float_value;
     mem.cpy(&bits, &v, 8);
     store_be(LWM2M_TLV_CTX(work)->w.scalar, bits, 8);
-    Lwm2mTlv.val.opaque = LWM2M_TLV_CTX(work)->w.scalar;
-    Lwm2mTlv.val.len = 8;
+    Lwm2mTlvV.val.opaque = LWM2M_TLV_CTX(work)->w.scalar;
+    Lwm2mTlvV.val.len = 8;
     tlv_write(work);
 }
 
 // Count the octets emitted. A poisoned cursor reports 0, so a truncated payload never leaves.
 static void tlv_finish(uint8_t *restrict work)
 {
-    Lwm2mTlv.ok = !LWM2M_TLV_CTX(work)->w.overflow;
-    Lwm2mTlv.n = LWM2M_TLV_CTX(work)->w.overflow ? 0 : LWM2M_TLV_CTX(work)->w.pos;
+    Lwm2mTlvV.ok = !LWM2M_TLV_CTX(work)->w.overflow;
+    Lwm2mTlvV.n = LWM2M_TLV_CTX(work)->w.overflow ? 0 : LWM2M_TLV_CTX(work)->w.pos;
 }
 
 // Bind the source buffer and put the reader cursor at its first entry.
 static void tlv_parse(uint8_t *restrict work)
 {
-    LWM2M_TLV_CTX(work)->r.buf = Lwm2mTlv.source.buf;
-    LWM2M_TLV_CTX(work)->r.len = Lwm2mTlv.source.len;
+    LWM2M_TLV_CTX(work)->r.buf = Lwm2mTlvV.source.buf;
+    LWM2M_TLV_CTX(work)->r.len = Lwm2mTlvV.source.len;
     LWM2M_TLV_CTX(work)->r.pos = 0;
-    Lwm2mTlv.ok = (Lwm2mTlv.source.buf != NULL);
+    Lwm2mTlvV.ok = (Lwm2mTlvV.source.buf != NULL);
 }
 
 // Decode the entry at the cursor into hdr and val, and step the cursor past its Value. False at the
@@ -254,7 +254,7 @@ static void tlv_next(uint8_t *restrict work)
     const Lwm2mTlvReadCursor *r = &LWM2M_TLV_CTX(work)->r;
     const uint8_t *buf = r->buf;
     const size_t len = r->len;
-    Lwm2mTlv.ok = PROTO_FALSE;
+    Lwm2mTlvV.ok = PROTO_FALSE;
     if (!buf || r->pos >= len)
     {
         return;
@@ -296,21 +296,21 @@ static void tlv_next(uint8_t *restrict work)
         return;
     }
 
-    Lwm2mTlv.hdr.id_type = (Lwm2mTlvIdType)(type & LWM2M_TLV_IDTYPE_MASK);
-    Lwm2mTlv.hdr.id = id;
-    Lwm2mTlv.val.opaque = buf + p;
-    Lwm2mTlv.val.len = value_len;
+    Lwm2mTlvV.hdr.id_type = (Lwm2mTlvIdType)(type & LWM2M_TLV_IDTYPE_MASK);
+    Lwm2mTlvV.hdr.id = id;
+    Lwm2mTlvV.val.opaque = buf + p;
+    Lwm2mTlvV.val.len = value_len;
     LWM2M_TLV_CTX(work)->r.pos = p + value_len;
-    Lwm2mTlv.ok = PROTO_TRUE;
+    Lwm2mTlvV.ok = PROTO_TRUE;
 }
 
 // Read a Value as an Integer: 1, 2, 4 or 8 octets, network byte order, two's complement.
 static void tlv_value_integer(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *value = Lwm2mTlv.val.opaque;
-    const size_t len = Lwm2mTlv.val.len;
-    Lwm2mTlv.ok = PROTO_FALSE;
+    const uint8_t *value = Lwm2mTlvV.val.opaque;
+    const size_t len = Lwm2mTlvV.val.len;
+    Lwm2mTlvV.ok = PROTO_FALSE;
     if (!value || (len != 1 && len != 2 && len != 4 && len != 8))
     {
         return;
@@ -320,20 +320,12 @@ static void tlv_value_integer(uint8_t *restrict work)
     {
         v = (int64_t)(((uint64_t)v << 8) | value[i]);
     }
-    Lwm2mTlv.val.integer_value = v;
-    Lwm2mTlv.ok = PROTO_TRUE;
+    Lwm2mTlvV.val.integer_value = v;
+    Lwm2mTlvV.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-Lwm2mTlvNs Lwm2mTlv = {.open = tlv_open,
-                       .write = tlv_write,
-                       .write_integer = tlv_write_integer,
-                       .write_boolean = tlv_write_boolean,
-                       .write_string = tlv_write_string,
-                       .write_float = tlv_write_float,
-                       .finish = tlv_finish,
-                       .parse = tlv_parse,
-                       .next = tlv_next,
-                       .value_integer = tlv_value_integer};
+/** @brief The operands and the outcome. */
+Lwm2mTlvVars Lwm2mTlvV;
 
 #endif // PROTOCORE_ENABLE_LWM2M

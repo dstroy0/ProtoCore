@@ -49,85 +49,85 @@ uint8_t *protocore_sht3x_span(void)
     return s_own.span;
 }
 
-static void sht3x_crc8(uint8_t *restrict work);
-static void sht3x_parse(uint8_t *restrict work);
-static void sht3x_rh_mpct(uint8_t *restrict work);
-static void sht3x_temp_mc(uint8_t *restrict work);
+void protocore_sht3x_crc8(uint8_t *restrict work);
+void protocore_sht3x_parse(uint8_t *restrict work);
+void protocore_sht3x_rh_mpct(uint8_t *restrict work);
+void protocore_sht3x_temp_mc(uint8_t *restrict work);
 
-static void sht3x_crc8(uint8_t *restrict work)
+void protocore_sht3x_crc8(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *data = Sht3x.crc8_args.data;
-    size_t len = Sht3x.crc8_args.len;
+    const uint8_t *data = Sht3xV.crc8_args.data;
+    size_t len = Sht3xV.crc8_args.len;
 
     // The Sensirion CRC-8 is the cataloge's CRC-8/NRSC-5 (poly 0x31, init 0xFF, no reflection, no final XOR).
-    Crc.args.params = &PROTOCORE_CRC8_NRSC5;
-    Crc.args.data = data;
-    Crc.args.len = len;
+    CrcV.args.params = &PROTOCORE_CRC8_NRSC5;
+    CrcV.args.data = data;
+    CrcV.args.len = len;
     Crc.compute(crc_work);
-    Sht3x.crc = (uint8_t)Crc.value;
+    Sht3xV.crc = (uint8_t)CrcV.value;
 }
 
-static void sht3x_temp_mc(uint8_t *restrict work)
+void protocore_sht3x_temp_mc(uint8_t *restrict work)
 {
     (void)work;
-    uint16_t raw = Sht3x.temp_mc_args.raw;
+    uint16_t raw = Sht3xV.temp_mc_args.raw;
 
     // T[C] = -45 + 175 * raw / 65535, in milli-degrees (64-bit to avoid overflow).
-    Sht3x.milli = (int32_t)(-45000 + (int64_t)175000 * raw / 65535);
+    Sht3xV.milli = (int32_t)(-45000 + (int64_t)175000 * raw / 65535);
 }
 
-static void sht3x_rh_mpct(uint8_t *restrict work)
+void protocore_sht3x_rh_mpct(uint8_t *restrict work)
 {
     (void)work;
-    uint16_t raw = Sht3x.rh_mpct_args.raw;
+    uint16_t raw = Sht3xV.rh_mpct_args.raw;
 
     int32_t v = (int32_t)((int64_t)100000 * raw / 65535); // RH[%] = 100 * raw / 65535
-    Sht3x.milli = v > 100000 ? 100000 : v;
+    Sht3xV.milli = v > 100000 ? 100000 : v;
 }
 
-static void sht3x_parse(uint8_t *restrict work)
+void protocore_sht3x_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *resp = Sht3x.parse_args.resp;
-    int32_t *temp_mc = Sht3x.parse_args.temp_mc;
-    int32_t *rh_mpct = Sht3x.parse_args.rh_mpct;
+    const uint8_t *resp = Sht3xV.parse_args.resp;
+    int32_t *temp_mc = Sht3xV.parse_args.temp_mc;
+    int32_t *rh_mpct = Sht3xV.parse_args.rh_mpct;
 
     if (!resp)
     {
-        Sht3x.ok = PROTO_FALSE;
+        Sht3xV.ok = PROTO_FALSE;
         return;
     }
     // Each checksum is captured before the next runs: both report through the one namespace, so
     // testing them in a single expression would test the second one twice.
-    Sht3x.crc8_args.data = resp;
-    Sht3x.crc8_args.len = 2;
-    sht3x_crc8(work);
-    const uint8_t crc_t = Sht3x.crc;
-    Sht3x.crc8_args.data = resp + 3;
-    Sht3x.crc8_args.len = 2;
-    sht3x_crc8(work);
-    const uint8_t crc_h = Sht3x.crc;
+    Sht3xV.crc8_args.data = resp;
+    Sht3xV.crc8_args.len = 2;
+    protocore_sht3x_crc8(work);
+    const uint8_t crc_t = Sht3xV.crc;
+    Sht3xV.crc8_args.data = resp + 3;
+    Sht3xV.crc8_args.len = 2;
+    protocore_sht3x_crc8(work);
+    const uint8_t crc_h = Sht3xV.crc;
     if (crc_t != resp[2] || crc_h != resp[5])
     {
-        Sht3x.ok = PROTO_FALSE;
+        Sht3xV.ok = PROTO_FALSE;
         return;
     }
     uint16_t traw = (uint16_t)(((uint16_t)resp[0] << 8) | resp[1]);
     uint16_t hraw = (uint16_t)(((uint16_t)resp[3] << 8) | resp[4]);
     if (temp_mc)
     {
-        Sht3x.temp_mc_args.raw = traw;
-        sht3x_temp_mc(work);
-        *temp_mc = Sht3x.milli;
+        Sht3xV.temp_mc_args.raw = traw;
+        protocore_sht3x_temp_mc(work);
+        *temp_mc = Sht3xV.milli;
     }
     if (rh_mpct)
     {
-        Sht3x.rh_mpct_args.raw = hraw;
-        sht3x_rh_mpct(work);
-        *rh_mpct = Sht3x.milli;
+        Sht3xV.rh_mpct_args.raw = hraw;
+        protocore_sht3x_rh_mpct(work);
+        *rh_mpct = Sht3xV.milli;
     }
-    Sht3x.ok = PROTO_TRUE;
+    Sht3xV.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -177,45 +177,41 @@ static proto_bool send_cmd(uint8_t *restrict work, uint16_t cmd)
     return protocore_i2c_write(dev_addr(work), SHT3X_CTX(work)->frame, 2);
 }
 
-static void sht3x_begin(uint8_t *restrict work)
+void protocore_sht3x_begin(uint8_t *restrict work)
 {
-    uint8_t addr = Sht3x.begin_args.addr;
+    uint8_t addr = Sht3xV.begin_args.addr;
 
     SHT3X_CTX(work)->addr = addr ? addr : (uint8_t)PROTOCORE_SHT3X_I2C_ADDR;
     protocore_i2c_begin();
     proto_bool ok = send_cmd(work, SHT3X_CMD_SOFT_RESET);
     pcdelay(2); // soft reset completes in < 1.5 ms
-    Sht3x.ok = ok;
+    Sht3xV.ok = ok;
 }
 
-static void sht3x_read(uint8_t *restrict work)
+void protocore_sht3x_read(uint8_t *restrict work)
 {
-    int32_t *temp_mc = Sht3x.read_args.temp_mc;
-    int32_t *rh_mpct = Sht3x.read_args.rh_mpct;
+    int32_t *temp_mc = Sht3xV.read_args.temp_mc;
+    int32_t *rh_mpct = Sht3xV.read_args.rh_mpct;
 
     if (!send_cmd(work, SHT3X_CMD_SINGLE_HIGH))
     {
-        Sht3x.ok = PROTO_FALSE;
+        Sht3xV.ok = PROTO_FALSE;
         return;
     }
     pcdelay(20); // a high-repeatability measurement completes in < 15 ms
     if (!protocore_i2c_read(dev_addr(work), SHT3X_CTX(work)->frame, sizeof(SHT3X_CTX(work)->frame)))
     {
-        Sht3x.ok = PROTO_FALSE;
+        Sht3xV.ok = PROTO_FALSE;
         return;
     }
-    Sht3x.parse_args.resp = SHT3X_CTX(work)->frame;
-    Sht3x.parse_args.temp_mc = temp_mc;
-    Sht3x.parse_args.rh_mpct = rh_mpct;
-    sht3x_parse(work);
+    Sht3xV.parse_args.resp = SHT3X_CTX(work)->frame;
+    Sht3xV.parse_args.temp_mc = temp_mc;
+    Sht3xV.parse_args.rh_mpct = rh_mpct;
+    protocore_sht3x_parse(work);
 }
 
-Sht3xNs Sht3x = {.crc8 = sht3x_crc8,
-                 .temp_mc = sht3x_temp_mc,
-                 .rh_mpct = sht3x_rh_mpct,
-                 .parse = sht3x_parse,
-                 .begin = sht3x_begin,
-                 .read = sht3x_read};
+/** @brief The operands and the outcome. */
+Sht3xVars Sht3xV;
 
 PROTOCORE_END_DECLS
 

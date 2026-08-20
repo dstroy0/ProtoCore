@@ -90,7 +90,6 @@ typedef struct
     const char *product_instance_uri; ///< ProductInstanceUri (String) - the unique instance URI.
     uint16_t year_of_construction;    ///< YearOfConstruction (UInt16, exposed as UInt32).
 } UmatiIdentification;
-
 /** @brief One Channel's live monitoring values (OPC 40501-1 ChannelType, common subset). */
 typedef struct
 {
@@ -99,7 +98,6 @@ typedef struct
     double rapid_override;      ///< RapidOverride (%).
     const char *active_program; ///< ActiveProgram.Name (the running NC program).
 } UmatiChannel;
-
 /** @brief One Spindle's live monitoring values (OPC 40501-1 SpindleType, common subset). */
 typedef struct
 {
@@ -107,13 +105,11 @@ typedef struct
     double override_value;  ///< OverrideValue (%).
     proto_bool is_rotating; ///< IsRotating.
 } UmatiSpindle;
-
 /** @brief One linear Axis' live monitoring value (OPC 40501-1 LinearAxisType, common subset). */
 typedef struct
 {
     double actual_position; ///< ActualPosition (mm).
 } UmatiAxis;
-
 /**
  * @brief The whole MachineTool the server exposes. Own it in your sketch and refresh its fields each
  *        loop from your machine I/O; the umati resolvers read straight out of it (no copy). String
@@ -135,19 +131,16 @@ typedef struct
     const char *message_text;          ///< Notification.ActiveMessage (most-recent active message text).
     uint32_t message_severity;         ///< Notification.Severity (0..1000, OPC UA event severity scale).
 } UmatiMachineTool;
-
 /** @brief What bind takes: mt. */
 typedef struct
 {
     const UmatiMachineTool *mt;
 } UmatiBindArgs;
-
 /** @brief What install takes: mt. */
 typedef struct
 {
     const UmatiMachineTool *mt;
 } UmatiInstallArgs;
-
 /**
  * @brief umati - OPC UA for Machine Tools (OPC 40501-1) information model (PROTOCORE_ENABLE_UMATI). umati ("universal
  * machine technology interface") is the OPC UA companion specification for machine tools (VDW / OPC Foundation, OPC
@@ -173,15 +166,32 @@ typedef struct
 {
     UmatiBindArgs bind_args;
     UmatiInstallArgs install_args;
-
     proto_bool ok;
+} UmatiVars;
 
+/** @brief The operands and the outcome. */
+extern UmatiVars UmatiV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const bind)(uint8_t *restrict work);
     void (*const install)(uint8_t *restrict work);
 } UmatiNs;
 
-/** @brief The one symbol this module exports. */
-extern UmatiNs Umati;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in UmatiV or a region of the borrow at a fixed offset.
+void protocore_umati_bind(uint8_t *restrict work);
+void protocore_umati_install(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Umati.bind(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const UmatiNs Umati __attribute__((unused)) = {
+    .bind = protocore_umati_bind,
+    .install = protocore_umati_install,
+};
 
 /**
  * @brief The PROTOCORE_UMATI_BORROW bytes this module's state lives in.

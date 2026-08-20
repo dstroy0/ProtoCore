@@ -19,14 +19,14 @@ void dbench_run(void)
 {
     static const uint8_t data[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
     static uint8_t frame[32];
-    Zwave.build_frame_args.type = ZWAVE_REQ;
-    Zwave.build_frame_args.cmd = 0x13;
-    Zwave.build_frame_args.data = data;
-    Zwave.build_frame_args.data_len = sizeof(data);
-    Zwave.build_frame_args.out = frame;
-    Zwave.build_frame_args.cap = sizeof(frame);
+    ZwaveV.build_frame_args.type = ZWAVE_REQ;
+    ZwaveV.build_frame_args.cmd = 0x13;
+    ZwaveV.build_frame_args.data = data;
+    ZwaveV.build_frame_args.data_len = sizeof(data);
+    ZwaveV.build_frame_args.out = frame;
+    ZwaveV.build_frame_args.cap = sizeof(frame);
     Zwave.build_frame(zwave_work);
-    uint16_t flen = Zwave.value;
+    uint16_t flen = ZwaveV.value;
 
     for (;;)
     {
@@ -40,14 +40,14 @@ void dbench_run(void)
             uint8_t cmd;
             const uint8_t *pdata;
             uint8_t pdata_len;
-            Zwave.parse_frame_args.raw = frame;
-            Zwave.parse_frame_args.len = flen;
-            Zwave.parse_frame_args.type = &type;
-            Zwave.parse_frame_args.cmd = &cmd;
-            Zwave.parse_frame_args.pdata = &pdata;
-            Zwave.parse_frame_args.pdata_len = &pdata_len;
+            ZwaveV.parse_frame_args.raw = frame;
+            ZwaveV.parse_frame_args.len = flen;
+            ZwaveV.parse_frame_args.type = &type;
+            ZwaveV.parse_frame_args.cmd = &cmd;
+            ZwaveV.parse_frame_args.pdata = &pdata;
+            ZwaveV.parse_frame_args.pdata_len = &pdata_len;
             Zwave.parse_frame(zwave_work);
-            sink += Zwave.n >= 0 ? cmd : 0;
+            sink += ZwaveV.n >= 0 ? cmd : 0;
         });
         DBENCH_OP("protocore_zwave_build_ack", 200000, sink += protocore_zwave_build_ack(out, sizeof(out)));
         (void)sink;

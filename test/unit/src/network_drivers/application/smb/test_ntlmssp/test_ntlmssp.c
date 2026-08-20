@@ -57,11 +57,11 @@ void test_msnlmp_challenge_message(void)
 {
     NtlmChallenge c;
     memset(&c, 0, sizeof(c));
-    Ntlmssp.parse_challenge_args.msg = CHALLENGE;
-    Ntlmssp.parse_challenge_args.len = sizeof(CHALLENGE);
-    Ntlmssp.parse_challenge_args.out = &c;
+    NtlmsspV.parse_challenge_args.msg = CHALLENGE;
+    NtlmsspV.parse_challenge_args.len = sizeof(CHALLENGE);
+    NtlmsspV.parse_challenge_args.out = &c;
     Ntlmssp.parse_challenge(ntlmssp_work);
-    TEST_ASSERT_TRUE(Ntlmssp.ok);
+    TEST_ASSERT_TRUE(NtlmsspV.ok);
 
     static const uint8_t WANT_CHALLENGE[8] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT_CHALLENGE, c.server_challenge, sizeof(WANT_CHALLENGE));
@@ -85,11 +85,11 @@ void test_negotiate_message_layout(void)
 {
     uint8_t buf[64];
     memset(buf, 0xEE, sizeof(buf));
-    Ntlmssp.build_negotiate_args.buf = buf;
-    Ntlmssp.build_negotiate_args.cap = sizeof(buf);
-    Ntlmssp.build_negotiate_args.flags = NTLMSSP_CLIENT_DEFAULT_FLAGS;
+    NtlmsspV.build_negotiate_args.buf = buf;
+    NtlmsspV.build_negotiate_args.cap = sizeof(buf);
+    NtlmsspV.build_negotiate_args.flags = NTLMSSP_CLIENT_DEFAULT_FLAGS;
     Ntlmssp.build_negotiate(ntlmssp_work);
-    size_t n = Ntlmssp.n;
+    size_t n = NtlmsspV.n;
     TEST_ASSERT_EQUAL_size_t(32, n);
 
     TEST_ASSERT_EQUAL_HEX8_ARRAY("NTLMSSP\0", buf, 8);
@@ -104,21 +104,21 @@ void test_negotiate_message_layout(void)
     TEST_ASSERT_EQUAL_UINT32(32, le32(buf + 28));
 
     TEST_ASSERT_EQUAL_HEX8(0xEE, buf[32]); // nothing past the fixed part
-    Ntlmssp.build_negotiate_args.buf = buf;
-    Ntlmssp.build_negotiate_args.cap = 31;
-    Ntlmssp.build_negotiate_args.flags = 0;
+    NtlmsspV.build_negotiate_args.buf = buf;
+    NtlmsspV.build_negotiate_args.cap = 31;
+    NtlmsspV.build_negotiate_args.flags = 0;
     Ntlmssp.build_negotiate(ntlmssp_work);
-    TEST_ASSERT_EQUAL_size_t(0, Ntlmssp.n);
-    Ntlmssp.build_negotiate_args.buf = buf;
-    Ntlmssp.build_negotiate_args.cap = 32;
-    Ntlmssp.build_negotiate_args.flags = 0;
+    TEST_ASSERT_EQUAL_size_t(0, NtlmsspV.n);
+    NtlmsspV.build_negotiate_args.buf = buf;
+    NtlmsspV.build_negotiate_args.cap = 32;
+    NtlmsspV.build_negotiate_args.flags = 0;
     Ntlmssp.build_negotiate(ntlmssp_work);
-    TEST_ASSERT_EQUAL_size_t(32, Ntlmssp.n);
-    Ntlmssp.build_negotiate_args.buf = NULL;
-    Ntlmssp.build_negotiate_args.cap = 64;
-    Ntlmssp.build_negotiate_args.flags = 0;
+    TEST_ASSERT_EQUAL_size_t(32, NtlmsspV.n);
+    NtlmsspV.build_negotiate_args.buf = NULL;
+    NtlmsspV.build_negotiate_args.cap = 64;
+    NtlmsspV.build_negotiate_args.flags = 0;
     Ntlmssp.build_negotiate(ntlmssp_work);
-    TEST_ASSERT_EQUAL_size_t(0, Ntlmssp.n);
+    TEST_ASSERT_EQUAL_size_t(0, NtlmsspV.n);
 }
 
 // MS-NLMP 2.2.2.5 assigns the NegotiateFlags bits. The default set a v2 client offers is
@@ -186,19 +186,19 @@ void test_msnlmp_authenticate_message(void)
                                              0x55, 0x00, 0x54, 0x00, 0x45, 0x00, 0x52, 0x00};
 
     uint8_t buf[512];
-    Ntlmssp.build_authenticate_args.buf = buf;
-    Ntlmssp.build_authenticate_args.cap = sizeof(buf);
-    Ntlmssp.build_authenticate_args.lm_resp = LM_RESP;
-    Ntlmssp.build_authenticate_args.lm_len = sizeof(LM_RESP);
-    Ntlmssp.build_authenticate_args.nt_resp = NT_RESP;
-    Ntlmssp.build_authenticate_args.nt_len = sizeof(NT_RESP);
-    Ntlmssp.build_authenticate_args.domain = "Domain";
-    Ntlmssp.build_authenticate_args.user = "User";
-    Ntlmssp.build_authenticate_args.workstation = "COMPUTER";
-    Ntlmssp.build_authenticate_args.flags = 0xe2888235u;
-    Ntlmssp.build_authenticate_args.with_mic = PROTO_FALSE;
+    NtlmsspV.build_authenticate_args.buf = buf;
+    NtlmsspV.build_authenticate_args.cap = sizeof(buf);
+    NtlmsspV.build_authenticate_args.lm_resp = LM_RESP;
+    NtlmsspV.build_authenticate_args.lm_len = sizeof(LM_RESP);
+    NtlmsspV.build_authenticate_args.nt_resp = NT_RESP;
+    NtlmsspV.build_authenticate_args.nt_len = sizeof(NT_RESP);
+    NtlmsspV.build_authenticate_args.domain = "Domain";
+    NtlmsspV.build_authenticate_args.user = "User";
+    NtlmsspV.build_authenticate_args.workstation = "COMPUTER";
+    NtlmsspV.build_authenticate_args.flags = 0xe2888235u;
+    NtlmsspV.build_authenticate_args.with_mic = PROTO_FALSE;
     Ntlmssp.build_authenticate(ntlmssp_work);
-    size_t n = Ntlmssp.n;
+    size_t n = NtlmsspV.n;
     // 64 fixed + 24 LM + 84 NT + 12 "Domain" + 8 "User" + 16 "COMPUTER" = 208, no key exchange.
     TEST_ASSERT_EQUAL_size_t(208, n);
 
@@ -231,19 +231,19 @@ void test_authenticate_with_mic_reserves_version_and_mic(void)
     static const uint8_t NT_RESP[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     uint8_t buf[256];
     memset(buf, 0xEE, sizeof(buf));
-    Ntlmssp.build_authenticate_args.buf = buf;
-    Ntlmssp.build_authenticate_args.cap = sizeof(buf);
-    Ntlmssp.build_authenticate_args.lm_resp = NULL;
-    Ntlmssp.build_authenticate_args.lm_len = 0;
-    Ntlmssp.build_authenticate_args.nt_resp = NT_RESP;
-    Ntlmssp.build_authenticate_args.nt_len = sizeof(NT_RESP);
-    Ntlmssp.build_authenticate_args.domain = "D";
-    Ntlmssp.build_authenticate_args.user = "U";
-    Ntlmssp.build_authenticate_args.workstation = NULL;
-    Ntlmssp.build_authenticate_args.flags = NTLMSSP_CLIENT_DEFAULT_FLAGS;
-    Ntlmssp.build_authenticate_args.with_mic = PROTO_TRUE;
+    NtlmsspV.build_authenticate_args.buf = buf;
+    NtlmsspV.build_authenticate_args.cap = sizeof(buf);
+    NtlmsspV.build_authenticate_args.lm_resp = NULL;
+    NtlmsspV.build_authenticate_args.lm_len = 0;
+    NtlmsspV.build_authenticate_args.nt_resp = NT_RESP;
+    NtlmsspV.build_authenticate_args.nt_len = sizeof(NT_RESP);
+    NtlmsspV.build_authenticate_args.domain = "D";
+    NtlmsspV.build_authenticate_args.user = "U";
+    NtlmsspV.build_authenticate_args.workstation = NULL;
+    NtlmsspV.build_authenticate_args.flags = NTLMSSP_CLIENT_DEFAULT_FLAGS;
+    NtlmsspV.build_authenticate_args.with_mic = PROTO_TRUE;
     Ntlmssp.build_authenticate(ntlmssp_work);
-    size_t n = Ntlmssp.n;
+    size_t n = NtlmsspV.n;
     // 88 fixed + 0 LM + 8 NT + 2 "D" + 2 "U" + 0 workstation = 100
     TEST_ASSERT_EQUAL_size_t(100, n);
 
@@ -265,19 +265,19 @@ void test_authenticate_with_mic_reserves_version_and_mic(void)
     TEST_ASSERT_TRUE((le32(buf + 60) & NTLMSSP_NEGOTIATE_VERSION) != 0);
 
     // Without a MIC the fixed part is 64 and neither field is reserved.
-    Ntlmssp.build_authenticate_args.buf = buf;
-    Ntlmssp.build_authenticate_args.cap = sizeof(buf);
-    Ntlmssp.build_authenticate_args.lm_resp = NULL;
-    Ntlmssp.build_authenticate_args.lm_len = 0;
-    Ntlmssp.build_authenticate_args.nt_resp = NT_RESP;
-    Ntlmssp.build_authenticate_args.nt_len = sizeof(NT_RESP);
-    Ntlmssp.build_authenticate_args.domain = "D";
-    Ntlmssp.build_authenticate_args.user = "U";
-    Ntlmssp.build_authenticate_args.workstation = NULL;
-    Ntlmssp.build_authenticate_args.flags = NTLMSSP_CLIENT_DEFAULT_FLAGS;
-    Ntlmssp.build_authenticate_args.with_mic = PROTO_FALSE;
+    NtlmsspV.build_authenticate_args.buf = buf;
+    NtlmsspV.build_authenticate_args.cap = sizeof(buf);
+    NtlmsspV.build_authenticate_args.lm_resp = NULL;
+    NtlmsspV.build_authenticate_args.lm_len = 0;
+    NtlmsspV.build_authenticate_args.nt_resp = NT_RESP;
+    NtlmsspV.build_authenticate_args.nt_len = sizeof(NT_RESP);
+    NtlmsspV.build_authenticate_args.domain = "D";
+    NtlmsspV.build_authenticate_args.user = "U";
+    NtlmsspV.build_authenticate_args.workstation = NULL;
+    NtlmsspV.build_authenticate_args.flags = NTLMSSP_CLIENT_DEFAULT_FLAGS;
+    NtlmsspV.build_authenticate_args.with_mic = PROTO_FALSE;
     Ntlmssp.build_authenticate(ntlmssp_work);
-    n = Ntlmssp.n;
+    n = NtlmsspV.n;
     TEST_ASSERT_EQUAL_size_t(76, n); // 64 + 8 + 2 + 2
     assert_field(buf, n, 20, NT_RESP, sizeof(NT_RESP));
     for (size_t at = 12; at <= 52; at += 8)
@@ -297,73 +297,73 @@ void test_challenge_parse_fails_closed(void)
 
     memcpy(bad, CHALLENGE, sizeof(bad));
     bad[0] = 'X'; // signature
-    Ntlmssp.parse_challenge_args.msg = bad;
-    Ntlmssp.parse_challenge_args.len = sizeof(bad);
-    Ntlmssp.parse_challenge_args.out = &c;
+    NtlmsspV.parse_challenge_args.msg = bad;
+    NtlmsspV.parse_challenge_args.len = sizeof(bad);
+    NtlmsspV.parse_challenge_args.out = &c;
     Ntlmssp.parse_challenge(ntlmssp_work);
-    TEST_ASSERT_FALSE(Ntlmssp.ok);
+    TEST_ASSERT_FALSE(NtlmsspV.ok);
 
     memcpy(bad, CHALLENGE, sizeof(bad));
     bad[8] = 3; // MessageType 3 is an AUTHENTICATE, not a CHALLENGE
-    Ntlmssp.parse_challenge_args.msg = bad;
-    Ntlmssp.parse_challenge_args.len = sizeof(bad);
-    Ntlmssp.parse_challenge_args.out = &c;
+    NtlmsspV.parse_challenge_args.msg = bad;
+    NtlmsspV.parse_challenge_args.len = sizeof(bad);
+    NtlmsspV.parse_challenge_args.out = &c;
     Ntlmssp.parse_challenge(ntlmssp_work);
-    TEST_ASSERT_FALSE(Ntlmssp.ok);
+    TEST_ASSERT_FALSE(NtlmsspV.ok);
 
     // Shorter than the fixed fields through TargetInfoFields (48 octets), and short of what the
     // TargetInfoFields triplet says the message carries (68 + 36 = 104).
-    Ntlmssp.parse_challenge_args.msg = CHALLENGE;
-    Ntlmssp.parse_challenge_args.len = 47;
-    Ntlmssp.parse_challenge_args.out = &c;
+    NtlmsspV.parse_challenge_args.msg = CHALLENGE;
+    NtlmsspV.parse_challenge_args.len = 47;
+    NtlmsspV.parse_challenge_args.out = &c;
     Ntlmssp.parse_challenge(ntlmssp_work);
-    TEST_ASSERT_FALSE(Ntlmssp.ok);
-    Ntlmssp.parse_challenge_args.msg = CHALLENGE;
-    Ntlmssp.parse_challenge_args.len = 48;
-    Ntlmssp.parse_challenge_args.out = &c;
+    TEST_ASSERT_FALSE(NtlmsspV.ok);
+    NtlmsspV.parse_challenge_args.msg = CHALLENGE;
+    NtlmsspV.parse_challenge_args.len = 48;
+    NtlmsspV.parse_challenge_args.out = &c;
     Ntlmssp.parse_challenge(ntlmssp_work);
-    TEST_ASSERT_FALSE(Ntlmssp.ok);
-    Ntlmssp.parse_challenge_args.msg = CHALLENGE;
-    Ntlmssp.parse_challenge_args.len = sizeof(CHALLENGE) - 1;
-    Ntlmssp.parse_challenge_args.out = &c;
+    TEST_ASSERT_FALSE(NtlmsspV.ok);
+    NtlmsspV.parse_challenge_args.msg = CHALLENGE;
+    NtlmsspV.parse_challenge_args.len = sizeof(CHALLENGE) - 1;
+    NtlmsspV.parse_challenge_args.out = &c;
     Ntlmssp.parse_challenge(ntlmssp_work);
-    TEST_ASSERT_FALSE(Ntlmssp.ok);
-    Ntlmssp.parse_challenge_args.msg = CHALLENGE;
-    Ntlmssp.parse_challenge_args.len = sizeof(CHALLENGE);
-    Ntlmssp.parse_challenge_args.out = &c;
+    TEST_ASSERT_FALSE(NtlmsspV.ok);
+    NtlmsspV.parse_challenge_args.msg = CHALLENGE;
+    NtlmsspV.parse_challenge_args.len = sizeof(CHALLENGE);
+    NtlmsspV.parse_challenge_args.out = &c;
     Ntlmssp.parse_challenge(ntlmssp_work);
-    TEST_ASSERT_TRUE(Ntlmssp.ok);
+    TEST_ASSERT_TRUE(NtlmsspV.ok);
 
     // A target-info offset past the end of the message.
     memcpy(bad, CHALLENGE, sizeof(bad));
     bad[44] = 0xFF;
     bad[45] = 0xFF;
-    Ntlmssp.parse_challenge_args.msg = bad;
-    Ntlmssp.parse_challenge_args.len = sizeof(bad);
-    Ntlmssp.parse_challenge_args.out = &c;
+    NtlmsspV.parse_challenge_args.msg = bad;
+    NtlmsspV.parse_challenge_args.len = sizeof(bad);
+    NtlmsspV.parse_challenge_args.out = &c;
     Ntlmssp.parse_challenge(ntlmssp_work);
-    TEST_ASSERT_FALSE(Ntlmssp.ok);
+    TEST_ASSERT_FALSE(NtlmsspV.ok);
 
     // A target-info length that runs past the end.
     memcpy(bad, CHALLENGE, sizeof(bad));
     bad[40] = 0xFF;
     bad[41] = 0x00;
-    Ntlmssp.parse_challenge_args.msg = bad;
-    Ntlmssp.parse_challenge_args.len = sizeof(bad);
-    Ntlmssp.parse_challenge_args.out = &c;
+    NtlmsspV.parse_challenge_args.msg = bad;
+    NtlmsspV.parse_challenge_args.len = sizeof(bad);
+    NtlmsspV.parse_challenge_args.out = &c;
     Ntlmssp.parse_challenge(ntlmssp_work);
-    TEST_ASSERT_FALSE(Ntlmssp.ok);
+    TEST_ASSERT_FALSE(NtlmsspV.ok);
 
-    Ntlmssp.parse_challenge_args.msg = NULL;
-    Ntlmssp.parse_challenge_args.len = sizeof(CHALLENGE);
-    Ntlmssp.parse_challenge_args.out = &c;
+    NtlmsspV.parse_challenge_args.msg = NULL;
+    NtlmsspV.parse_challenge_args.len = sizeof(CHALLENGE);
+    NtlmsspV.parse_challenge_args.out = &c;
     Ntlmssp.parse_challenge(ntlmssp_work);
-    TEST_ASSERT_FALSE(Ntlmssp.ok);
-    Ntlmssp.parse_challenge_args.msg = CHALLENGE;
-    Ntlmssp.parse_challenge_args.len = sizeof(CHALLENGE);
-    Ntlmssp.parse_challenge_args.out = NULL;
+    TEST_ASSERT_FALSE(NtlmsspV.ok);
+    NtlmsspV.parse_challenge_args.msg = CHALLENGE;
+    NtlmsspV.parse_challenge_args.len = sizeof(CHALLENGE);
+    NtlmsspV.parse_challenge_args.out = NULL;
     Ntlmssp.parse_challenge(ntlmssp_work);
-    TEST_ASSERT_FALSE(Ntlmssp.ok);
+    TEST_ASSERT_FALSE(NtlmsspV.ok);
 }
 
 // A CHALLENGE with TargetInfoLen 0 is legal - the server simply offered no AV_PAIRs - and must
@@ -380,11 +380,11 @@ void test_challenge_without_target_info(void)
     NtlmChallenge c;
     c.target_info = CHALLENGE;
     c.target_info_len = 99;
-    Ntlmssp.parse_challenge_args.msg = msg;
-    Ntlmssp.parse_challenge_args.len = sizeof(msg);
-    Ntlmssp.parse_challenge_args.out = &c;
+    NtlmsspV.parse_challenge_args.msg = msg;
+    NtlmsspV.parse_challenge_args.len = sizeof(msg);
+    NtlmsspV.parse_challenge_args.out = &c;
     Ntlmssp.parse_challenge(ntlmssp_work);
-    TEST_ASSERT_TRUE(Ntlmssp.ok);
+    TEST_ASSERT_TRUE(NtlmsspV.ok);
     TEST_ASSERT_NULL(c.target_info);
     TEST_ASSERT_EQUAL_UINT16(0, c.target_info_len);
     TEST_ASSERT_EQUAL_HEX8(0xDE, c.server_challenge[0]);
@@ -398,73 +398,73 @@ void test_authenticate_fails_closed(void)
     static const uint8_t NT_RESP[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     uint8_t buf[256];
     // 64 + 8 + 2 + 2 = 76 with no MIC.
-    Ntlmssp.build_authenticate_args.buf = buf;
-    Ntlmssp.build_authenticate_args.cap = 75;
-    Ntlmssp.build_authenticate_args.lm_resp = NULL;
-    Ntlmssp.build_authenticate_args.lm_len = 0;
-    Ntlmssp.build_authenticate_args.nt_resp = NT_RESP;
-    Ntlmssp.build_authenticate_args.nt_len = sizeof(NT_RESP);
-    Ntlmssp.build_authenticate_args.domain = "D";
-    Ntlmssp.build_authenticate_args.user = "U";
-    Ntlmssp.build_authenticate_args.workstation = NULL;
-    Ntlmssp.build_authenticate_args.flags = 0;
-    Ntlmssp.build_authenticate_args.with_mic = PROTO_FALSE;
+    NtlmsspV.build_authenticate_args.buf = buf;
+    NtlmsspV.build_authenticate_args.cap = 75;
+    NtlmsspV.build_authenticate_args.lm_resp = NULL;
+    NtlmsspV.build_authenticate_args.lm_len = 0;
+    NtlmsspV.build_authenticate_args.nt_resp = NT_RESP;
+    NtlmsspV.build_authenticate_args.nt_len = sizeof(NT_RESP);
+    NtlmsspV.build_authenticate_args.domain = "D";
+    NtlmsspV.build_authenticate_args.user = "U";
+    NtlmsspV.build_authenticate_args.workstation = NULL;
+    NtlmsspV.build_authenticate_args.flags = 0;
+    NtlmsspV.build_authenticate_args.with_mic = PROTO_FALSE;
     Ntlmssp.build_authenticate(ntlmssp_work);
-    TEST_ASSERT_EQUAL_size_t(0, Ntlmssp.n);
-    Ntlmssp.build_authenticate_args.buf = buf;
-    Ntlmssp.build_authenticate_args.cap = 76;
-    Ntlmssp.build_authenticate_args.lm_resp = NULL;
-    Ntlmssp.build_authenticate_args.lm_len = 0;
-    Ntlmssp.build_authenticate_args.nt_resp = NT_RESP;
-    Ntlmssp.build_authenticate_args.nt_len = sizeof(NT_RESP);
-    Ntlmssp.build_authenticate_args.domain = "D";
-    Ntlmssp.build_authenticate_args.user = "U";
-    Ntlmssp.build_authenticate_args.workstation = NULL;
-    Ntlmssp.build_authenticate_args.flags = 0;
-    Ntlmssp.build_authenticate_args.with_mic = PROTO_FALSE;
+    TEST_ASSERT_EQUAL_size_t(0, NtlmsspV.n);
+    NtlmsspV.build_authenticate_args.buf = buf;
+    NtlmsspV.build_authenticate_args.cap = 76;
+    NtlmsspV.build_authenticate_args.lm_resp = NULL;
+    NtlmsspV.build_authenticate_args.lm_len = 0;
+    NtlmsspV.build_authenticate_args.nt_resp = NT_RESP;
+    NtlmsspV.build_authenticate_args.nt_len = sizeof(NT_RESP);
+    NtlmsspV.build_authenticate_args.domain = "D";
+    NtlmsspV.build_authenticate_args.user = "U";
+    NtlmsspV.build_authenticate_args.workstation = NULL;
+    NtlmsspV.build_authenticate_args.flags = 0;
+    NtlmsspV.build_authenticate_args.with_mic = PROTO_FALSE;
     Ntlmssp.build_authenticate(ntlmssp_work);
-    TEST_ASSERT_EQUAL_size_t(76, Ntlmssp.n);
-    Ntlmssp.build_authenticate_args.buf = NULL;
-    Ntlmssp.build_authenticate_args.cap = 256;
-    Ntlmssp.build_authenticate_args.lm_resp = NULL;
-    Ntlmssp.build_authenticate_args.lm_len = 0;
-    Ntlmssp.build_authenticate_args.nt_resp = NT_RESP;
-    Ntlmssp.build_authenticate_args.nt_len = sizeof(NT_RESP);
-    Ntlmssp.build_authenticate_args.domain = "D";
-    Ntlmssp.build_authenticate_args.user = "U";
-    Ntlmssp.build_authenticate_args.workstation = NULL;
-    Ntlmssp.build_authenticate_args.flags = 0;
-    Ntlmssp.build_authenticate_args.with_mic = PROTO_FALSE;
+    TEST_ASSERT_EQUAL_size_t(76, NtlmsspV.n);
+    NtlmsspV.build_authenticate_args.buf = NULL;
+    NtlmsspV.build_authenticate_args.cap = 256;
+    NtlmsspV.build_authenticate_args.lm_resp = NULL;
+    NtlmsspV.build_authenticate_args.lm_len = 0;
+    NtlmsspV.build_authenticate_args.nt_resp = NT_RESP;
+    NtlmsspV.build_authenticate_args.nt_len = sizeof(NT_RESP);
+    NtlmsspV.build_authenticate_args.domain = "D";
+    NtlmsspV.build_authenticate_args.user = "U";
+    NtlmsspV.build_authenticate_args.workstation = NULL;
+    NtlmsspV.build_authenticate_args.flags = 0;
+    NtlmsspV.build_authenticate_args.with_mic = PROTO_FALSE;
     Ntlmssp.build_authenticate(ntlmssp_work);
-    TEST_ASSERT_EQUAL_size_t(0, Ntlmssp.n);
+    TEST_ASSERT_EQUAL_size_t(0, NtlmsspV.n);
 
     // With a MIC the fixed part alone is 88, so anything under that cannot hold the message.
-    Ntlmssp.build_authenticate_args.buf = buf;
-    Ntlmssp.build_authenticate_args.cap = 87;
-    Ntlmssp.build_authenticate_args.lm_resp = NULL;
-    Ntlmssp.build_authenticate_args.lm_len = 0;
-    Ntlmssp.build_authenticate_args.nt_resp = NULL;
-    Ntlmssp.build_authenticate_args.nt_len = 0;
-    Ntlmssp.build_authenticate_args.domain = NULL;
-    Ntlmssp.build_authenticate_args.user = NULL;
-    Ntlmssp.build_authenticate_args.workstation = NULL;
-    Ntlmssp.build_authenticate_args.flags = 0;
-    Ntlmssp.build_authenticate_args.with_mic = PROTO_TRUE;
+    NtlmsspV.build_authenticate_args.buf = buf;
+    NtlmsspV.build_authenticate_args.cap = 87;
+    NtlmsspV.build_authenticate_args.lm_resp = NULL;
+    NtlmsspV.build_authenticate_args.lm_len = 0;
+    NtlmsspV.build_authenticate_args.nt_resp = NULL;
+    NtlmsspV.build_authenticate_args.nt_len = 0;
+    NtlmsspV.build_authenticate_args.domain = NULL;
+    NtlmsspV.build_authenticate_args.user = NULL;
+    NtlmsspV.build_authenticate_args.workstation = NULL;
+    NtlmsspV.build_authenticate_args.flags = 0;
+    NtlmsspV.build_authenticate_args.with_mic = PROTO_TRUE;
     Ntlmssp.build_authenticate(ntlmssp_work);
-    TEST_ASSERT_EQUAL_size_t(0, Ntlmssp.n);
-    Ntlmssp.build_authenticate_args.buf = buf;
-    Ntlmssp.build_authenticate_args.cap = 88;
-    Ntlmssp.build_authenticate_args.lm_resp = NULL;
-    Ntlmssp.build_authenticate_args.lm_len = 0;
-    Ntlmssp.build_authenticate_args.nt_resp = NULL;
-    Ntlmssp.build_authenticate_args.nt_len = 0;
-    Ntlmssp.build_authenticate_args.domain = NULL;
-    Ntlmssp.build_authenticate_args.user = NULL;
-    Ntlmssp.build_authenticate_args.workstation = NULL;
-    Ntlmssp.build_authenticate_args.flags = 0;
-    Ntlmssp.build_authenticate_args.with_mic = PROTO_TRUE;
+    TEST_ASSERT_EQUAL_size_t(0, NtlmsspV.n);
+    NtlmsspV.build_authenticate_args.buf = buf;
+    NtlmsspV.build_authenticate_args.cap = 88;
+    NtlmsspV.build_authenticate_args.lm_resp = NULL;
+    NtlmsspV.build_authenticate_args.lm_len = 0;
+    NtlmsspV.build_authenticate_args.nt_resp = NULL;
+    NtlmsspV.build_authenticate_args.nt_len = 0;
+    NtlmsspV.build_authenticate_args.domain = NULL;
+    NtlmsspV.build_authenticate_args.user = NULL;
+    NtlmsspV.build_authenticate_args.workstation = NULL;
+    NtlmsspV.build_authenticate_args.flags = 0;
+    NtlmsspV.build_authenticate_args.with_mic = PROTO_TRUE;
     Ntlmssp.build_authenticate(ntlmssp_work);
-    TEST_ASSERT_EQUAL_size_t(88, Ntlmssp.n);
+    TEST_ASSERT_EQUAL_size_t(88, NtlmsspV.n);
 }
 
 // A null identity string is an absent field, not an empty one written somewhere unexpected: its
@@ -472,19 +472,19 @@ void test_authenticate_fails_closed(void)
 void test_absent_identity_fields(void)
 {
     uint8_t buf[256];
-    Ntlmssp.build_authenticate_args.buf = buf;
-    Ntlmssp.build_authenticate_args.cap = sizeof(buf);
-    Ntlmssp.build_authenticate_args.lm_resp = NULL;
-    Ntlmssp.build_authenticate_args.lm_len = 0;
-    Ntlmssp.build_authenticate_args.nt_resp = NULL;
-    Ntlmssp.build_authenticate_args.nt_len = 0;
-    Ntlmssp.build_authenticate_args.domain = NULL;
-    Ntlmssp.build_authenticate_args.user = NULL;
-    Ntlmssp.build_authenticate_args.workstation = NULL;
-    Ntlmssp.build_authenticate_args.flags = 0;
-    Ntlmssp.build_authenticate_args.with_mic = PROTO_FALSE;
+    NtlmsspV.build_authenticate_args.buf = buf;
+    NtlmsspV.build_authenticate_args.cap = sizeof(buf);
+    NtlmsspV.build_authenticate_args.lm_resp = NULL;
+    NtlmsspV.build_authenticate_args.lm_len = 0;
+    NtlmsspV.build_authenticate_args.nt_resp = NULL;
+    NtlmsspV.build_authenticate_args.nt_len = 0;
+    NtlmsspV.build_authenticate_args.domain = NULL;
+    NtlmsspV.build_authenticate_args.user = NULL;
+    NtlmsspV.build_authenticate_args.workstation = NULL;
+    NtlmsspV.build_authenticate_args.flags = 0;
+    NtlmsspV.build_authenticate_args.with_mic = PROTO_FALSE;
     Ntlmssp.build_authenticate(ntlmssp_work);
-    size_t n = Ntlmssp.n;
+    size_t n = NtlmsspV.n;
     TEST_ASSERT_EQUAL_size_t(64, n);
     for (size_t at = 12; at <= 52; at += 8)
     {

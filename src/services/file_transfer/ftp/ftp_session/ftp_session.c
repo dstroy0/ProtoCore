@@ -115,24 +115,24 @@ static const protocore_field LOG_CTRL_CONNECT_FAILED[] = {{PROTOCORE_FK_LIT, 0, 
 /** @brief Send one command line on the control connection and arm its reply deadline. */
 static proto_bool ftp_send(uint8_t *restrict work, const char *verb, const char *arg)
 {
-    Ftp.build_command_args.buf = FTP_SESSION_CTX(work)->cmd;
-    Ftp.build_command_args.cap = sizeof(FTP_SESSION_CTX(work)->cmd);
-    Ftp.build_command_args.verb = verb;
-    Ftp.build_command_args.arg = arg;
+    FtpV.build_command_args.buf = FTP_SESSION_CTX(work)->cmd;
+    FtpV.build_command_args.cap = sizeof(FTP_SESSION_CTX(work)->cmd);
+    FtpV.build_command_args.verb = verb;
+    FtpV.build_command_args.arg = arg;
     Ftp.build_command(ftp_work);
-    size_t n = Ftp.n;
+    size_t n = FtpV.n;
     if (n == 0)
     {
         PROTOCORE_LOGW(LOG_BUILD_FAILED, ((const protocore_fval[]){PROTOCORE_VSTR(verb)}), 1);
         return PROTO_FALSE;
     }
     PROTOCORE_LOGD(LOG_SENT, ((const protocore_fval[]){PROTOCORE_VSTR(verb)}), 1);
-    TcpClient.cid = FTP_SESSION_CTX(work)->ctrl;
-    TcpClient.io.data = (const uint8_t *)FTP_SESSION_CTX(work)->cmd;
-    TcpClient.io.len = n;
+    TcpClientV.cid = FTP_SESSION_CTX(work)->ctrl;
+    TcpClientV.io.data = (const uint8_t *)FTP_SESSION_CTX(work)->cmd;
+    TcpClientV.io.len = n;
     TcpClient.send(protocore_tcp_client_span());
     FTP_SESSION_CTX(work)->deadline = Clock.ms + PROTOCORE_FTP_TIMEOUT_MS;
-    return TcpClient.ok;
+    return TcpClientV.ok;
 }
 
 /**
@@ -160,24 +160,24 @@ static protocore_ftp_state ftp_await(uint8_t *restrict work, int *code, size_t *
         {
             break;
         }
-        TcpClient.cid = FTP_SESSION_CTX(work)->ctrl;
-        TcpClient.io.buf = (uint8_t *)FTP_SESSION_CTX(work)->rx + FTP_SESSION_CTX(work)->rx_len;
-        TcpClient.io.cap = room;
-        TcpClient.read(protocore_tcp_client_span());
-        if (TcpClient.n == 0)
+        TcpClientV.cid = FTP_SESSION_CTX(work)->ctrl;
+        TcpClientV.io.buf = (uint8_t *)FTP_SESSION_CTX(work)->rx + FTP_SESSION_CTX(work)->rx_len;
+        TcpClientV.io.cap = room;
+        TcpClientV.read(protocore_tcp_client_span());
+        if (TcpClientV.n == 0)
         {
             break;
         }
-        FTP_SESSION_CTX(work)->rx_len += TcpClient.n;
+        FTP_SESSION_CTX(work)->rx_len += TcpClientV.n;
     }
 
     size_t consumed = 0;
-    Ftp.parse_reply_args.buf = FTP_SESSION_CTX(work)->rx;
-    Ftp.parse_reply_args.len = FTP_SESSION_CTX(work)->rx_len;
-    Ftp.parse_reply_args.code = code;
-    Ftp.parse_reply_args.consumed = &consumed;
+    FtpV.parse_reply_args.buf = FTP_SESSION_CTX(work)->rx;
+    FtpV.parse_reply_args.len = FTP_SESSION_CTX(work)->rx_len;
+    FtpV.parse_reply_args.code = code;
+    FtpV.parse_reply_args.consumed = &consumed;
     Ftp.parse_reply(ftp_work);
-    if (Ftp.ok)
+    if (FtpV.ok)
     {
         FTP_SESSION_CTX(work)->rx_consumed = consumed;
         if (rlen)
@@ -193,13 +193,13 @@ static protocore_ftp_state ftp_await(uint8_t *restrict work, int *code, size_t *
                        ((const protocore_fval[]){PROTOCORE_VU32((uint32_t)sizeof(FTP_SESSION_CTX(work)->rx))}), 1);
         return PROTOCORE_FTP_FAILED; // a reply that cannot fit is malformed, not incomplete
     }
-    TcpClient.cid = FTP_SESSION_CTX(work)->ctrl;
+    TcpClientV.cid = FTP_SESSION_CTX(work)->ctrl;
     TcpClient.is_closed(protocore_tcp_client_span());
-    if (TcpClient.ok)
+    if (TcpClientV.ok)
     {
-        TcpClient.cid = FTP_SESSION_CTX(work)->ctrl;
+        TcpClientV.cid = FTP_SESSION_CTX(work)->ctrl;
         TcpClient.available(protocore_tcp_client_span());
-        if (TcpClient.n == 0)
+        if (TcpClientV.n == 0)
         {
             PROTOCORE_LOGW(LOG_CTRL_CLOSED,
                            ((const protocore_fval[]){PROTOCORE_VU32((uint32_t)FTP_SESSION_CTX(work)->rx_len)}), 1);
@@ -223,11 +223,11 @@ static proto_bool ftp_data_connect(uint8_t *restrict work, const char *host, uin
     {
         return PROTO_FALSE;
     }
-    TcpClient.dial.host = host;
-    TcpClient.dial.port = port;
-    TcpClient.dial.timeout_ms = PROTOCORE_FTP_TIMEOUT_MS;
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = port;
+    TcpClientV.dial.timeout_ms = PROTOCORE_FTP_TIMEOUT_MS;
     TcpClient.open(protocore_tcp_client_span());
-    FTP_SESSION_CTX(work)->data = TcpClient.i32;
+    FTP_SESSION_CTX(work)->data = TcpClientV.i32;
     if (FTP_SESSION_CTX(work)->data < 0)
     {
         PROTOCORE_LOGW(LOG_DATA_CONNECT_FAILED,
@@ -262,13 +262,13 @@ static void ftp_teardown(uint8_t *restrict work)
 {
     if (FTP_SESSION_CTX(work)->data >= 0)
     {
-        TcpClient.cid = FTP_SESSION_CTX(work)->data;
+        TcpClientV.cid = FTP_SESSION_CTX(work)->data;
         TcpClient.close(protocore_tcp_client_span());
         FTP_SESSION_CTX(work)->data = -1;
     }
     if (FTP_SESSION_CTX(work)->ctrl >= 0)
     {
-        TcpClient.cid = FTP_SESSION_CTX(work)->ctrl;
+        TcpClientV.cid = FTP_SESSION_CTX(work)->ctrl;
         TcpClient.close(protocore_tcp_client_span());
         FTP_SESSION_CTX(work)->ctrl = -1;
     }
@@ -305,17 +305,17 @@ uint8_t *protocore_ftp_session_span(void)
     return s_own.span;
 }
 
-static void ftp_session_store(uint8_t *restrict work)
+void protocore_ftp_session_store(uint8_t *restrict work)
 {
-    const FtpTarget *target = FtpSession.store_args.target;
-    const char *remote_path = FtpSession.store_args.remote_path;
-    size_t total = FtpSession.store_args.total;
-    protocore_ftp_source src = FtpSession.store_args.src;
-    void *ctx = FtpSession.store_args.ctx;
+    const FtpTarget *target = FtpSessionV.store_args.target;
+    const char *remote_path = FtpSessionV.store_args.remote_path;
+    size_t total = FtpSessionV.store_args.total;
+    protocore_ftp_source src = FtpSessionV.store_args.src;
+    void *ctx = FtpSessionV.store_args.ctx;
 
     if (!target || !target->host || !remote_path || remote_path[0] == '\0' || !src)
     {
-        FtpSession.value = PROTOCORE_FTP_FAILED;
+        FtpSessionV.value = PROTOCORE_FTP_FAILED;
         return;
     }
 
@@ -325,17 +325,17 @@ static void ftp_session_store(uint8_t *restrict work)
         FTP_SESSION_CTX(work)->rx_len = 0;
         FTP_SESSION_CTX(work)->rx_consumed = 0;
         FTP_SESSION_CTX(work)->off = 0;
-        TcpClient.dial.host = target->host;
-        TcpClient.dial.port = ctrl_port;
-        TcpClient.dial.timeout_ms = PROTOCORE_FTP_TIMEOUT_MS;
+        TcpClientV.dial.host = target->host;
+        TcpClientV.dial.port = ctrl_port;
+        TcpClientV.dial.timeout_ms = PROTOCORE_FTP_TIMEOUT_MS;
         TcpClient.open(protocore_tcp_client_span());
-        FTP_SESSION_CTX(work)->ctrl = TcpClient.i32;
+        FTP_SESSION_CTX(work)->ctrl = TcpClientV.i32;
         if (FTP_SESSION_CTX(work)->ctrl < 0)
         {
             PROTOCORE_LOGW(
                 LOG_CTRL_CONNECT_FAILED,
                 ((const protocore_fval[]){PROTOCORE_VSTR(target->host), PROTOCORE_VU32((uint32_t)ctrl_port)}), 2);
-            FtpSession.value = PROTOCORE_FTP_FAILED;
+            FtpSessionV.value = PROTOCORE_FTP_FAILED;
             return;
         }
         FTP_SESSION_CTX(work)->deadline = Clock.ms + PROTOCORE_FTP_TIMEOUT_MS;
@@ -358,7 +358,7 @@ static void ftp_session_store(uint8_t *restrict work)
             st = ftp_await(work, &code, NULL);
             if (st == PROTOCORE_FTP_BUSY)
             {
-                FtpSession.value = PROTOCORE_FTP_BUSY;
+                FtpSessionV.value = PROTOCORE_FTP_BUSY;
                 return;
             }
             if (st == PROTOCORE_FTP_FAILED || code != 220)
@@ -377,7 +377,7 @@ static void ftp_session_store(uint8_t *restrict work)
             st = ftp_await(work, &code, NULL);
             if (st == PROTOCORE_FTP_BUSY)
             {
-                FtpSession.value = PROTOCORE_FTP_BUSY;
+                FtpSessionV.value = PROTOCORE_FTP_BUSY;
                 return;
             }
             if (st == PROTOCORE_FTP_FAILED)
@@ -409,7 +409,7 @@ static void ftp_session_store(uint8_t *restrict work)
             st = ftp_await(work, &code, NULL);
             if (st == PROTOCORE_FTP_BUSY)
             {
-                FtpSession.value = PROTOCORE_FTP_BUSY;
+                FtpSessionV.value = PROTOCORE_FTP_BUSY;
                 return;
             }
             if (st == PROTOCORE_FTP_FAILED || !protocore_ftp_reply_ok(code) || !ftp_send(work, "TYPE", "I"))
@@ -423,7 +423,7 @@ static void ftp_session_store(uint8_t *restrict work)
             st = ftp_await(work, &code, NULL);
             if (st == PROTOCORE_FTP_BUSY)
             {
-                FtpSession.value = PROTOCORE_FTP_BUSY;
+                FtpSessionV.value = PROTOCORE_FTP_BUSY;
                 return;
             }
             // EPSV first (RFC 2428): it carries only a port, so it survives the NAT that makes
@@ -439,22 +439,22 @@ static void ftp_session_store(uint8_t *restrict work)
             st = ftp_await(work, &code, &rlen);
             if (st == PROTOCORE_FTP_BUSY)
             {
-                FtpSession.value = PROTOCORE_FTP_BUSY;
+                FtpSessionV.value = PROTOCORE_FTP_BUSY;
                 return;
             }
             if (st == PROTOCORE_FTP_FAILED)
             {
                 break;
             }
-            Ftp.ok = PROTO_FALSE;
+            FtpV.ok = PROTO_FALSE;
             if (code == 229)
             {
-                Ftp.parse_epsv_args.buf = FTP_SESSION_CTX(work)->rx;
-                Ftp.parse_epsv_args.len = rlen;
-                Ftp.parse_epsv_args.port = &port;
+                FtpV.parse_epsv_args.buf = FTP_SESSION_CTX(work)->rx;
+                FtpV.parse_epsv_args.len = rlen;
+                FtpV.parse_epsv_args.port = &port;
                 Ftp.parse_epsv(ftp_work);
             }
-            if (Ftp.ok)
+            if (FtpV.ok)
             {
                 // Extended passive mode reuses the control connection's host.
                 str.copy(host, target->host, sizeof(host));
@@ -478,19 +478,19 @@ static void ftp_session_store(uint8_t *restrict work)
             st = ftp_await(work, &code, &rlen);
             if (st == PROTOCORE_FTP_BUSY)
             {
-                FtpSession.value = PROTOCORE_FTP_BUSY;
+                FtpSessionV.value = PROTOCORE_FTP_BUSY;
                 return;
             }
-            Ftp.ok = PROTO_FALSE;
+            FtpV.ok = PROTO_FALSE;
             if (st != PROTOCORE_FTP_FAILED && code == 227)
             {
-                Ftp.parse_pasv_args.buf = FTP_SESSION_CTX(work)->rx;
-                Ftp.parse_pasv_args.len = rlen;
-                Ftp.parse_pasv_args.ip = ip;
-                Ftp.parse_pasv_args.port = &port;
+                FtpV.parse_pasv_args.buf = FTP_SESSION_CTX(work)->rx;
+                FtpV.parse_pasv_args.len = rlen;
+                FtpV.parse_pasv_args.ip = ip;
+                FtpV.parse_pasv_args.port = &port;
                 Ftp.parse_pasv(ftp_work);
             }
-            if (!Ftp.ok)
+            if (!FtpV.ok)
             {
                 break;
             }
@@ -508,7 +508,7 @@ static void ftp_session_store(uint8_t *restrict work)
             st = ftp_await(work, &code, NULL);
             if (st == PROTOCORE_FTP_BUSY)
             {
-                FtpSession.value = PROTOCORE_FTP_BUSY;
+                FtpSessionV.value = PROTOCORE_FTP_BUSY;
                 return;
             }
             if (st == PROTOCORE_FTP_FAILED || protocore_ftp_reply_class(code) != 1)
@@ -526,11 +526,11 @@ static void ftp_session_store(uint8_t *restrict work)
                                         ? total - FTP_SESSION_CTX(work)->off
                                         : sizeof(FTP_SESSION_CTX(work)->chunk);
                 const size_t got = src(ctx, FTP_SESSION_CTX(work)->off, FTP_SESSION_CTX(work)->chunk, want);
-                TcpClient.cid = FTP_SESSION_CTX(work)->data;
-                TcpClient.io.data = FTP_SESSION_CTX(work)->chunk;
-                TcpClient.io.len = got;
+                TcpClientV.cid = FTP_SESSION_CTX(work)->data;
+                TcpClientV.io.data = FTP_SESSION_CTX(work)->chunk;
+                TcpClientV.io.len = got;
                 TcpClient.send(protocore_tcp_client_span());
-                if (got != want || !TcpClient.ok)
+                if (got != want || !TcpClientV.ok)
                 {
                     sent = PROTO_FALSE;
                     break;
@@ -539,7 +539,7 @@ static void ftp_session_store(uint8_t *restrict work)
             }
             // Closing the data connection is what marks end-of-file for a STOR, so it happens
             // before the completion reply is read - and on failure too, so the server stops waiting.
-            TcpClient.cid = FTP_SESSION_CTX(work)->data;
+            TcpClientV.cid = FTP_SESSION_CTX(work)->data;
             TcpClient.close(protocore_tcp_client_span());
             FTP_SESSION_CTX(work)->data = -1;
             if (!sent)
@@ -555,7 +555,7 @@ static void ftp_session_store(uint8_t *restrict work)
             st = ftp_await(work, &code, NULL);
             if (st == PROTOCORE_FTP_BUSY)
             {
-                FtpSession.value = PROTOCORE_FTP_BUSY;
+                FtpSessionV.value = PROTOCORE_FTP_BUSY;
                 return;
             }
             if (st == PROTOCORE_FTP_FAILED || code != 226)
@@ -564,7 +564,7 @@ static void ftp_session_store(uint8_t *restrict work)
             }
             ftp_send(work, "QUIT", NULL); // best effort; the transfer is already decided
             ftp_teardown(work);
-            FtpSession.value = PROTOCORE_FTP_READY;
+            FtpSessionV.value = PROTOCORE_FTP_READY;
             return;
 
         case FTP_STEP_IDLE:
@@ -574,14 +574,13 @@ static void ftp_session_store(uint8_t *restrict work)
 
         ftp_send(work, "QUIT", NULL); // best effort; the transfer is already decided
         ftp_teardown(work);
-        FtpSession.value = PROTOCORE_FTP_FAILED;
+        FtpSessionV.value = PROTOCORE_FTP_FAILED;
         return;
     }
 }
 
-FtpSessionNs FtpSession = {
-    .store = ftp_session_store,
-};
+/** @brief The operands and the outcome. */
+FtpSessionVars FtpSessionV;
 
 PROTOCORE_END_DECLS
 

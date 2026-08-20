@@ -39,18 +39,18 @@ static J1939TpRx g_tp_rx;
 // TP.DT data packet in order. Returns the final reassembler verdict (J1939_TP_COMPLETE on success).
 static J1939TpResult j1939_tp_reassemble(void)
 {
-    J1939.tp_reset_args.rx = &g_tp_rx;
+    J1939V.tp_reset_args.rx = &g_tp_rx;
     J1939.tp_reset(protocore_j1939_span());
-    J1939.tp_feed_args.rx = &g_tp_rx;
-    J1939.tp_feed_args.f = &g_tp_cm;
+    J1939V.tp_feed_args.rx = &g_tp_rx;
+    J1939V.tp_feed_args.f = &g_tp_cm;
     J1939.tp_feed(protocore_j1939_span());
     J1939TpResult r = J1939_TP_IGNORED;
     for (uint8_t s = 0; s < g_tp_packets; s++)
     {
-        J1939.tp_feed_args.rx = &g_tp_rx;
-        J1939.tp_feed_args.f = &g_tp_dt[s];
+        J1939V.tp_feed_args.rx = &g_tp_rx;
+        J1939V.tp_feed_args.f = &g_tp_dt[s];
         J1939.tp_feed(protocore_j1939_span());
-        r = J1939.tp;
+        r = J1939V.tp;
     }
     return r;
 }
@@ -67,11 +67,11 @@ void dbench_run(void)
 
     // A pre-encoded id to feed the decode bench (the encode step is timed separately below).
     uint32_t enc_id = 0;
-    J1939.encode_id_args.id = &enc_id;
-    J1939.encode_id_args.priority = priority;
-    J1939.encode_id_args.pgn = pgn;
-    J1939.encode_id_args.sa = sa;
-    J1939.encode_id_args.da = da;
+    J1939V.encode_id_args.id = &enc_id;
+    J1939V.encode_id_args.priority = priority;
+    J1939V.encode_id_args.pgn = pgn;
+    J1939V.encode_id_args.sa = sa;
+    J1939V.encode_id_args.da = da;
     J1939.encode_id(protocore_j1939_span());
 
     // Build the TP reassembly fixtures once: a 16-octet BAM message split into 3 TP.DT packets.
@@ -81,24 +81,24 @@ void dbench_run(void)
         tp_msg[i] = (uint8_t)(0xA0 + i);
     }
     const uint32_t tp_pgn = 0x00FECA; // DM1-style broadcast PGN
-    J1939.build_bam_cm_args.out = &g_tp_cm;
-    J1939.build_bam_cm_args.sa = sa;
-    J1939.build_bam_cm_args.pgn = tp_pgn;
-    J1939.build_bam_cm_args.total_size = 16;
+    J1939V.build_bam_cm_args.out = &g_tp_cm;
+    J1939V.build_bam_cm_args.sa = sa;
+    J1939V.build_bam_cm_args.pgn = tp_pgn;
+    J1939V.build_bam_cm_args.total_size = 16;
     J1939.build_bam_cm(protocore_j1939_span());
-    J1939.tp_num_packets_args.total_size = 16;
+    J1939V.tp_num_packets_args.total_size = 16;
     J1939.tp_num_packets(protocore_j1939_span());
-    g_tp_packets = J1939.u8; // 3
+    g_tp_packets = J1939V.u8; // 3
     for (uint8_t seq = 1; seq <= g_tp_packets; seq++)
     {
         uint16_t off = (uint16_t)((seq - 1) * J1939_TP_DT_LEN);
         uint8_t len = (uint8_t)((16 - off) < J1939_TP_DT_LEN ? (16 - off) : J1939_TP_DT_LEN);
-        J1939.build_tp_dt_args.out = &g_tp_dt[seq - 1];
-        J1939.build_tp_dt_args.sa = sa;
-        J1939.build_tp_dt_args.da = J1939_ADDR_GLOBAL;
-        J1939.build_tp_dt_args.seq = seq;
-        J1939.build_tp_dt_args.chunk = tp_msg + off;
-        J1939.build_tp_dt_args.chunk_len = len;
+        J1939V.build_tp_dt_args.out = &g_tp_dt[seq - 1];
+        J1939V.build_tp_dt_args.sa = sa;
+        J1939V.build_tp_dt_args.da = J1939_ADDR_GLOBAL;
+        J1939V.build_tp_dt_args.seq = seq;
+        J1939V.build_tp_dt_args.chunk = tp_msg + off;
+        J1939V.build_tp_dt_args.chunk_len = len;
         J1939.build_tp_dt(protocore_j1939_span());
     }
 
@@ -112,39 +112,39 @@ void dbench_run(void)
 
         DBENCH_OP("J1939.encode_id (PDU2)", 200000, {
             uint32_t _id = 0;
-            J1939.encode_id_args.id = &_id;
-            J1939.encode_id_args.priority = priority;
-            J1939.encode_id_args.pgn = pgn;
-            J1939.encode_id_args.sa = sa;
-            J1939.encode_id_args.da = da;
+            J1939V.encode_id_args.id = &_id;
+            J1939V.encode_id_args.priority = priority;
+            J1939V.encode_id_args.pgn = pgn;
+            J1939V.encode_id_args.sa = sa;
+            J1939V.encode_id_args.da = da;
             J1939.encode_id(protocore_j1939_span());
-            sink += J1939.ok ? _id : 0;
+            sink += J1939V.ok ? _id : 0;
         });
-        J1939.decode_id_args.id = enc_id;
-        J1939.decode_id_args.out = &decoded;
+        J1939V.decode_id_args.id = enc_id;
+        J1939V.decode_id_args.out = &decoded;
         DBENCH_OP("J1939.decode_id", 200000,
-                  sink += (J1939.decode_id(protocore_j1939_span()), J1939.ok) ? decoded.pgn : 0);
-        J1939.build_message_args.out = &frame;
-        J1939.build_message_args.priority = priority;
-        J1939.build_message_args.pgn = pgn;
-        J1939.build_message_args.sa = sa;
-        J1939.build_message_args.da = da;
-        J1939.build_message_args.data = payload8;
-        J1939.build_message_args.len = 8;
+                  sink += (J1939.decode_id(protocore_j1939_span()), J1939V.ok) ? decoded.pgn : 0);
+        J1939V.build_message_args.out = &frame;
+        J1939V.build_message_args.priority = priority;
+        J1939V.build_message_args.pgn = pgn;
+        J1939V.build_message_args.sa = sa;
+        J1939V.build_message_args.da = da;
+        J1939V.build_message_args.data = payload8;
+        J1939V.build_message_args.len = 8;
         DBENCH_OP("J1939.build_message x8", 100000,
-                  sink += (J1939.build_message(protocore_j1939_span()), J1939.ok) ? frame.id : 0);
-        J1939.build_request_args.out = &frame;
-        J1939.build_request_args.sa = sa;
-        J1939.build_request_args.da = 0x00;
-        J1939.build_request_args.requested_pgn = 0x00FEEC;
+                  sink += (J1939.build_message(protocore_j1939_span()), J1939V.ok) ? frame.id : 0);
+        J1939V.build_request_args.out = &frame;
+        J1939V.build_request_args.sa = sa;
+        J1939V.build_request_args.da = 0x00;
+        J1939V.build_request_args.requested_pgn = 0x00FEEC;
         DBENCH_OP("J1939.build_request", 100000,
-                  sink += (J1939.build_request(protocore_j1939_span()), J1939.ok) ? frame.id : 0);
-        J1939.build_bam_cm_args.out = &frame;
-        J1939.build_bam_cm_args.sa = sa;
-        J1939.build_bam_cm_args.pgn = tp_pgn;
-        J1939.build_bam_cm_args.total_size = 16;
+                  sink += (J1939.build_request(protocore_j1939_span()), J1939V.ok) ? frame.id : 0);
+        J1939V.build_bam_cm_args.out = &frame;
+        J1939V.build_bam_cm_args.sa = sa;
+        J1939V.build_bam_cm_args.pgn = tp_pgn;
+        J1939V.build_bam_cm_args.total_size = 16;
         DBENCH_OP("J1939.build_bam_cm", 100000,
-                  sink += (J1939.build_bam_cm(protocore_j1939_span()), J1939.ok) ? frame.id : 0);
+                  sink += (J1939.build_bam_cm(protocore_j1939_span()), J1939V.ok) ? frame.id : 0);
         DBENCH_BULK("j1939 TP reassemble 16B", 50000, 16, sink += (uint32_t)j1939_tp_reassemble());
 
         (void)sink;

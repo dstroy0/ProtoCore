@@ -29,7 +29,7 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        HttpConn.slot = i;
+        HttpConnV.slot = i;
         HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
@@ -50,14 +50,14 @@ static proto_bool hit(const char *method, const char *path)
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.reset(protocore_http_conn_span());
     tcp_capture_reset();
     g_called = PROTO_FALSE;
     char req[160];
     snprintf(req, sizeof(req), "%s %s HTTP/1.1\r\n\r\n", method, path);
     push_str(0, req);
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     handle();
     return g_called;
@@ -265,4 +265,3 @@ void test_escape_class_space_direct()
     TEST_ASSERT_FALSE(regex_match("\\S", "\t"));
     TEST_ASSERT_TRUE(regex_match("\\S", "q"));
 }
-

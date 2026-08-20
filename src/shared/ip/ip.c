@@ -431,15 +431,15 @@ static protocore_ip_scope classify_v6(const uint8_t *b)
 // Public API
 // -------------------------------------------------------------------------------------------
 
-static void ip_parse(uint8_t *restrict work)
+void protocore_ip_parse(uint8_t *restrict work)
 {
     (void)work;
-    const char *s = Ip.args.text;
-    protocore_ip *out = Ip.args.out;
+    const char *s = IpV.args.text;
+    protocore_ip *out = IpV.args.out;
 
     if (!s || !out)
     {
-        Ip.ok = PROTO_FALSE;
+        IpV.ok = PROTO_FALSE;
         return;
     }
     // A ':' means it is v6; a '.' (and no ':') means v4. Bound the scan to a legal length.
@@ -458,13 +458,13 @@ static void ip_parse(uint8_t *restrict work)
         }
         if (++len > 45)
         {
-            Ip.ok = PROTO_FALSE;
+            IpV.ok = PROTO_FALSE;
             return; // longer than any legal textual address
         }
     }
     if (len == 0)
     {
-        Ip.ok = PROTO_FALSE;
+        IpV.ok = PROTO_FALSE;
         return;
     }
 
@@ -473,47 +473,47 @@ static void ip_parse(uint8_t *restrict work)
     {
         if (!parse_v6(s, len, out->bytes))
         {
-            Ip.ok = PROTO_FALSE;
+            IpV.ok = PROTO_FALSE;
             return;
         }
         out->family = PROTOCORE_IP_V6;
-        Ip.ok = PROTO_TRUE;
+        IpV.ok = PROTO_TRUE;
         return;
     }
     if (dot)
     {
         if (!parse_v4(s, len, out->bytes))
         {
-            Ip.ok = PROTO_FALSE;
+            IpV.ok = PROTO_FALSE;
             return;
         }
         out->family = PROTOCORE_IP_V4;
-        Ip.ok = PROTO_TRUE;
+        IpV.ok = PROTO_TRUE;
         return;
     }
-    Ip.ok = PROTO_FALSE;
+    IpV.ok = PROTO_FALSE;
 }
 
-static void ip_format(uint8_t *restrict work)
+void protocore_ip_format(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_ip *ip = Ip.args.ip;
-    char *out = Ip.args.buf;
-    const size_t cap = Ip.args.cap;
+    const protocore_ip *ip = IpV.args.ip;
+    char *out = IpV.args.buf;
+    const size_t cap = IpV.args.cap;
 
     if (!ip || !out || cap == 0)
     {
-        Ip.n = 0;
+        IpV.n = 0;
         return;
     }
     if (ip->family == PROTOCORE_IP_V4)
     {
-        Ip.n = format_v4(ip->bytes, out, cap);
+        IpV.n = format_v4(ip->bytes, out, cap);
         return;
     }
     if (ip->family != PROTOCORE_IP_V6)
     {
-        Ip.n = 0;
+        IpV.n = 0;
         return;
     }
 
@@ -526,13 +526,13 @@ static void ip_format(uint8_t *restrict work)
         // ("255.255.255.255", 15 chars + NUL) always fits, so format_v4 can't fail on this call.
         if (tn == 0 || 7 + tn + 1 > cap)
         {
-            Ip.n = 0;
+            IpV.n = 0;
             return;
         }
         mem.cpy(out, "::ffff:", 7);
         mem.cpy(out + 7, tail, tn);
         out[7 + tn] = '\0';
-        Ip.n = 7 + tn;
+        IpV.n = 7 + tn;
         return;
     }
 
@@ -572,12 +572,12 @@ static void ip_format(uint8_t *restrict work)
 
     if (n + 1 > cap)
     {
-        Ip.n = 0;
+        IpV.n = 0;
         return;
     }
     mem.cpy(out, tmp, n);
     out[n] = '\0';
-    Ip.n = n;
+    IpV.n = n;
 }
 
 proto_bool protocore_ip_is_v4_mapped(const protocore_ip *ip)
@@ -602,21 +602,21 @@ static protocore_ip_scope classify_of(const protocore_ip *ip)
     return PROTOCORE_IP_SCOPE_UNSPECIFIED;
 }
 
-static void ip_classify(uint8_t *restrict work)
+void protocore_ip_classify(uint8_t *restrict work)
 {
     (void)work;
-    Ip.scope = classify_of(Ip.args.ip);
+    IpV.scope = classify_of(IpV.args.ip);
 }
 
-static void ip_equal(uint8_t *restrict work)
+void protocore_ip_equal(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_ip *a = Ip.args.ip;
-    const protocore_ip *b = Ip.args.b;
+    const protocore_ip *a = IpV.args.ip;
+    const protocore_ip *b = IpV.args.b;
 
     if (!a || !b || a->family != b->family)
     {
-        Ip.ok = PROTO_FALSE;
+        IpV.ok = PROTO_FALSE;
         return;
     }
     int n = 0;
@@ -630,10 +630,10 @@ static void ip_equal(uint8_t *restrict work)
     }
     if (n == 0)
     {
-        Ip.ok = PROTO_TRUE;
+        IpV.ok = PROTO_TRUE;
         return; // both the same non-address family (PROTOCORE_IP_NONE)
     }
-    Ip.ok = mem.cmp(a->bytes, b->bytes, (size_t)n) == 0;
+    IpV.ok = mem.cmp(a->bytes, b->bytes, (size_t)n) == 0;
 }
 
 protocore_ip protocore_ip_from_v4_octets(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
@@ -674,14 +674,14 @@ uint32_t protocore_ip_to_v4_be(const protocore_ip *ip)
     return 0;
 }
 
-static void ip_is_unspecified(uint8_t *restrict work)
+void protocore_ip_is_unspecified(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_ip *ip = Ip.args.ip;
+    const protocore_ip *ip = IpV.args.ip;
 
     if (!ip || ip->family == PROTOCORE_IP_NONE)
     {
-        Ip.ok = PROTO_TRUE;
+        IpV.ok = PROTO_TRUE;
         return;
     }
     int n = (ip->family == PROTOCORE_IP_V4) ? 4 : 16;
@@ -689,29 +689,29 @@ static void ip_is_unspecified(uint8_t *restrict work)
     {
         if (ip->bytes[i])
         {
-            Ip.ok = PROTO_FALSE;
+            IpV.ok = PROTO_FALSE;
             return;
         }
     }
-    Ip.ok = PROTO_TRUE;
+    IpV.ok = PROTO_TRUE;
 }
 
-static void ip_prefix_match(uint8_t *restrict work)
+void protocore_ip_prefix_match(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_ip *addr = Ip.args.ip;
-    const protocore_ip *net = Ip.args.b;
-    const uint8_t prefix_len = Ip.args.prefix_len;
+    const protocore_ip *addr = IpV.args.ip;
+    const protocore_ip *net = IpV.args.b;
+    const uint8_t prefix_len = IpV.args.prefix_len;
 
     if (!addr || !net || addr->family != net->family)
     {
-        Ip.ok = PROTO_FALSE;
+        IpV.ok = PROTO_FALSE;
         return;
     }
     int bits = (addr->family == PROTOCORE_IP_V4) ? 32 : (addr->family == PROTOCORE_IP_V6 ? 128 : 0);
     if (bits == 0 || prefix_len > bits)
     {
-        Ip.ok = PROTO_FALSE;
+        IpV.ok = PROTO_FALSE;
         return;
     }
     int whole = prefix_len / 8; // bytes that must match exactly
@@ -719,7 +719,7 @@ static void ip_prefix_match(uint8_t *restrict work)
     {
         if (addr->bytes[i] != net->bytes[i])
         {
-            Ip.ok = PROTO_FALSE;
+            IpV.ok = PROTO_FALSE;
             return;
         }
     }
@@ -729,17 +729,13 @@ static void ip_prefix_match(uint8_t *restrict work)
         uint8_t mask = (uint8_t)(0xFF << (8 - rem));
         if ((addr->bytes[whole] & mask) != (net->bytes[whole] & mask))
         {
-            Ip.ok = PROTO_FALSE;
+            IpV.ok = PROTO_FALSE;
             return;
         }
     }
-    Ip.ok = PROTO_TRUE;
+    IpV.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-IpNs Ip = {.parse = ip_parse,
-           .format = ip_format,
-           .classify = ip_classify,
-           .equal = ip_equal,
-           .is_unspecified = ip_is_unspecified,
-           .prefix_match = ip_prefix_match};
+/** @brief The operands and the outcome. */
+IpVars IpV;

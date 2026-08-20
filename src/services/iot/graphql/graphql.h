@@ -72,10 +72,8 @@ typedef struct
     proto_bool b;            ///< the Boolean.
     const char *s;           ///< the String.
 } protocore_gql_value;
-
 /** @brief The argument values in scope at a resolved field (spec sec 6.4.1 coercedValues). */
 struct protocore_gql_args;
-
 /**
  * @brief ResolveFieldValue (spec sec 6.4.2): the scalar at dotted @p path, e.g. "device.uptime".
  *
@@ -85,7 +83,6 @@ struct protocore_gql_args;
  */
 typedef proto_bool (*protocore_gql_resolver_fn)(const char *path, const struct protocore_gql_args *args,
                                                 protocore_gql_value *out);
-
 /** @brief What one execute reports. */
 typedef enum PROTO_ENUM_PACKED
 {
@@ -94,7 +91,6 @@ typedef enum PROTO_ENUM_PACKED
     PROTOCORE_GQL_ERR_LIMIT = -2,   ///< Request error (sec 7.1.2): a PROTOCORE_GQL_* bound was exceeded.
     PROTOCORE_GQL_ERR_OVERFLOW = -3 ///< The serialized response did not fit the buffer.
 } protocore_gql_result;
-
 /** @brief ExecuteRequest (spec sec 6.1): the document to run and the resolver its leaves call. */
 typedef struct
 {
@@ -102,21 +98,18 @@ typedef struct
     size_t len;                         ///< how many octets of it there are
     protocore_gql_resolver_fn resolver; ///< ResolveFieldValue (sec 6.4.2); NULL completes every leaf as null
 } GraphQLRequestArgs;
-
 /** @brief Where the response map is serialized (spec sec 7.1, in the sec 7.2.1 JSON form). */
 typedef struct
 {
     char *out;  ///< the buffer the response is written into
     size_t cap; ///< how much room it has, the NUL included
 } GraphQLResponseArgs;
-
 /** @brief One Argument read by name out of the values in scope (spec sec 2.6). */
 typedef struct
 {
     const struct protocore_gql_args *values; ///< the argument values a resolver was handed (sec 6.4.1)
     const char *name;                        ///< the argument's Name, matched case-sensitively (sec 2.1.9)
 } GraphQLArgumentArgs;
-
 /**
  * @brief The GraphQL executor (GraphQL spec, October 2021 release; not an IETF standard).
  *
@@ -148,22 +141,43 @@ typedef struct
     GraphQLRequestArgs request;   ///< what an execute runs
     GraphQLResponseArgs response; ///< where its response lands
     GraphQLArgumentArgs argument; ///< what an accessor reads
-
     proto_bool ok;
     size_t n;
     protocore_gql_result result;
     long long i64;
     const char *text;
     proto_bool b;
+} GraphQLVars;
 
+/** @brief The operands and the outcome. */
+extern GraphQLVars GraphQLV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const execute)(uint8_t *restrict work);
     void (*const arg_int)(uint8_t *restrict work);
     void (*const arg_str)(uint8_t *restrict work);
     void (*const arg_bool)(uint8_t *restrict work);
 } GraphQLNs;
 
-/** @brief The one symbol this module exports. */
-extern GraphQLNs GraphQL;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in GraphQLV or a region of the borrow at a fixed offset.
+void protocore_graphql_execute(uint8_t *restrict work);
+void protocore_graphql_arg_int(uint8_t *restrict work);
+void protocore_graphql_arg_str(uint8_t *restrict work);
+void protocore_graphql_arg_bool(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `GraphQL.execute(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const GraphQLNs GraphQL __attribute__((unused)) = {
+    .execute = protocore_graphql_execute,
+    .arg_int = protocore_graphql_arg_int,
+    .arg_str = protocore_graphql_arg_str,
+    .arg_bool = protocore_graphql_arg_bool,
+};
 
 /**
  * @brief The PROTOCORE_GRAPHQL_BORROW bytes this module's state lives in.

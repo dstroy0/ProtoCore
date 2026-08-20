@@ -29,7 +29,6 @@ typedef struct
     proto_bool is_password;               ///< True if a password method-request was parsed.
     proto_bool is_pw_change;              ///< True if the request set the change-password flag.
     proto_bool is_kbdint;                 ///< True if a keyboard-interactive method-request was parsed (RFC 4256).
-
     // publickey method (RFC 4252 §7)
     proto_bool is_pubkey;            ///< True if a publickey method-request was parsed.
     proto_bool has_signature;        ///< True if the request carried a signature.
@@ -41,15 +40,12 @@ typedef struct
     const uint8_t *signed_prefix;    ///< Bytes of the request that the signature covers.
     size_t signed_prefix_len;        ///< Length of signed_prefix (payload up to the signature).
 } SshAuthReq;
-
 /**
  * @brief Application callback that validates a username/password pair.
  * @return true to accept the credentials.
  */
 typedef proto_bool (*SshPasswordCb)(const char *user, const char *password);
-
 /** @brief Install the password-verification callback (nullptr → all fail). */
-
 /**
  * @brief Application callback that STARTS a password change (RFC 4252 sec 8) for slot @p slot.
  *
@@ -60,7 +56,6 @@ typedef proto_bool (*SshPasswordCb)(const char *user, const char *password);
  * is never held on the store. @p old_password / @p new_password are wiped once this returns.
  */
 typedef void (*SshPasswordChangeCb)(uint8_t slot, const char *user, const char *old_password, const char *new_password);
-
 /** @brief A slot's password-change state: idle, handed to the application, or finished either way. */
 typedef enum
 {
@@ -69,9 +64,7 @@ typedef enum
     PROTOCORE_SSH_PW_CHANGE_OK,
     PROTOCORE_SSH_PW_CHANGE_FAIL,
 } SshPwChange;
-
 /** @brief Install the password-change start callback (nullptr → change requests are refused busy). */
-
 /**
  * @brief Report the outcome of the change the start callback began for slot @p slot.
  *
@@ -79,7 +72,6 @@ typedef enum
  * FAIL, which the next poll drains into the deferred reply. A no-op when no change is in flight
  * (a stale report after the connection left).
  */
-
 /**
  * @brief Take slot @p i's finished change outcome, clearing it back to NONE.
  *
@@ -112,7 +104,6 @@ typedef enum
  * @param pk_blob  Public key blob.
  * @param pk_len   Length of @p pk_blob.
  */
-
 /**
  * @brief True once slot @p i has gone too long without authenticating (RFC 4252 sec 4).
  *
@@ -121,41 +112,32 @@ typedef enum
  * starts on the first call for a slot and stops once authentication completes; SSH_AUTH_TIMEOUT_MS
  * of 0 disables it. Poll it, and disconnect when it answers true.
  */
-
 SshPwChange protocore_ssh_auth_pw_change_take(uint8_t i);
-
 /**
  * @brief Drop a parked password change without replying to it.
  *
  * RFC 4252 sec 5.1 sends SSH_MSG_USERAUTH_SUCCESS once, so a change whose answer arrives after some
  * other method already succeeded is discarded rather than answered.
  */
-
 /**
  * @brief Drop slot @p i's half-finished authentication state and wipe its username.
  *
  * A keyboard-interactive exchange is armed by the USERAUTH_REQUEST and consumed by the matching
  * INFO_RESPONSE. A connection that leaves between the two ends here.
  */
-
 /**
  * @brief Application callback that decides whether a public key is authorized
  *        for @p user. @p blob is the "ssh-rsa" public-key blob.
  * @return true if the key may authenticate this user.
  */
 typedef proto_bool (*SshPubkeyCb)(const char *user, const uint8_t *blob, size_t blob_len);
-
 /** @brief Install the publickey-authorization callback (nullptr → all fail). */
-
 /**
  * @brief Parse an SSH_MSG_USERAUTH_REQUEST into @p req.
  * @return 0 on success, -1 if malformed.
  */
-
 /** @brief Build SSH_MSG_USERAUTH_FAILURE advertising "password". */
-
 /** @brief Build SSH_MSG_USERAUTH_SUCCESS. */
-
 /**
  * @brief Handle a USERAUTH_REQUEST end-to-end for slot @p i.
  *
@@ -166,7 +148,6 @@ typedef proto_bool (*SshPubkeyCb)(const char *user, const uint8_t *blob, size_t 
  * @return 0 if a response was produced (check the message type), -1 on parse
  *         error.
  */
-
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
 /**
  * @brief Handle an SSH_MSG_USERAUTH_INFO_RESPONSE (RFC 4256 §3.4) for slot @p i.
@@ -179,18 +160,14 @@ typedef proto_bool (*SshPubkeyCb)(const char *user, const uint8_t *blob, size_t 
  * @return 0 if a response was produced (check the message type), -1 on parse error / no exchange pending.
  */
 #endif
-
 /** @brief Dispatch messages 50 to 79; 80 and above need authentication (RFC 4252 sec 6). */
-
 /** @brief Send the reply a finished password change (RFC 4252 sec 8) deferred on slot @p i. */
-
 /** @brief RFC 4252 sec 5: the body of one userauth message. */
 typedef struct
 {
     const uint8_t *payload; ///< the message body
     size_t len;             ///< how many bytes it has
 } SshAuthMsgArgs;
-
 /** @brief Where a reply is written, either as a buffer or as a span. */
 typedef struct
 {
@@ -199,7 +176,6 @@ typedef struct
     size_t cap;        ///< how much room it has
     protocore_span *w; ///< the span a publickey request is built in
 } SshAuthOutArgs;
-
 /** @brief RFC 4252 sec 5 / sec 7: the names one USERAUTH_REQUEST carries, and the key it offers. */
 typedef struct
 {
@@ -211,7 +187,6 @@ typedef struct
     const uint8_t *pk_blob; ///< the public key blob
     size_t pk_len;          ///< its length
 } SshUserauthArgs;
-
 /** @brief RFC 4252 sec 7 / sec 8: what an attempt of each method is checked against. */
 typedef struct
 {
@@ -219,7 +194,6 @@ typedef struct
     SshPasswordChangeCb password_change_cb; ///< what a change request is handed to
     SshPubkeyCb pubkey_cb;                  ///< what a public key is checked against
 } SshAuthCbs;
-
 /**
  * @brief The SSH authentication protocol (RFC 4252): what a slot must satisfy before a service runs.
  *
@@ -254,19 +228,26 @@ typedef struct
  */
 typedef struct
 {
-    uint8_t slot;       ///< the SSH slot a call acts on
-    uint8_t msg_type;   ///< the message a dispatch routes
-    SshAuthReq *req;    ///< where a parse lands the request (sec 5)
-    proto_bool partial; ///< the failure is a partial success (sec 5.1)
-
+    uint8_t slot;             ///< the SSH slot a call acts on
+    uint8_t msg_type;         ///< the message a dispatch routes
+    SshAuthReq *req;          ///< where a parse lands the request (sec 5)
+    proto_bool partial;       ///< the failure is a partial success (sec 5.1)
     SshAuthMsgArgs msg;       ///< sec 5 the message body a dispatch is given
     SshAuthOutArgs out_args;  ///< where a reply is written
     SshUserauthArgs userauth; ///< sec 5 / sec 7 the fields one request names
     SshAuthCbs cbs;           ///< what an attempt is checked against
-
     proto_bool ok;
     int i32;
+#if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
+#endif
+} SshAuthVars;
 
+/** @brief The operands and the outcome. */
+extern SshAuthVars SshAuthV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const set_password_cb)(uint8_t *restrict work);
     void (*const set_password_change_cb)(uint8_t *restrict work);
     void (*const set_pubkey_cb)(uint8_t *restrict work);
@@ -280,14 +261,49 @@ typedef struct
     void (*const build_failure)(uint8_t *restrict work);
     void (*const build_success)(uint8_t *restrict work);
     void (*const handle_request)(uint8_t *restrict work);
-#if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
     void (*const handle_info_response)(uint8_t *restrict work);
-#endif
     void (*const dispatch)(uint8_t *restrict work);
 } SshAuthNs;
 
-/** @brief The one symbol this module exports. */
-extern SshAuthNs SshAuth;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SshAuthV or a region of the borrow at a fixed offset.
+void protocore_auth_set_password_cb(uint8_t *restrict work);
+void protocore_auth_set_password_change_cb(uint8_t *restrict work);
+void protocore_auth_set_pubkey_cb(uint8_t *restrict work);
+void protocore_auth_pw_change_report(uint8_t *restrict work);
+void protocore_auth_pw_change_clear(uint8_t *restrict work);
+void protocore_auth_passwd_change_reply(uint8_t *restrict work);
+void protocore_auth_write_publickey_request(uint8_t *restrict work);
+void protocore_auth_timed_out(uint8_t *restrict work);
+void protocore_auth_reset(uint8_t *restrict work);
+void protocore_auth_parse_request(uint8_t *restrict work);
+void protocore_auth_build_failure(uint8_t *restrict work);
+void protocore_auth_build_success(uint8_t *restrict work);
+void protocore_auth_handle_request(uint8_t *restrict work);
+void protocore_auth_handle_info_response(uint8_t *restrict work);
+void protocore_auth_dispatch(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `SshAuth.set_password_cb(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SshAuthNs SshAuth __attribute__((unused)) = {
+    .set_password_cb = protocore_auth_set_password_cb,
+    .set_password_change_cb = protocore_auth_set_password_change_cb,
+    .set_pubkey_cb = protocore_auth_set_pubkey_cb,
+    .pw_change_report = protocore_auth_pw_change_report,
+    .pw_change_clear = protocore_auth_pw_change_clear,
+    .passwd_change_reply = protocore_auth_passwd_change_reply,
+    .write_publickey_request = protocore_auth_write_publickey_request,
+    .timed_out = protocore_auth_timed_out,
+    .reset = protocore_auth_reset,
+    .parse_request = protocore_auth_parse_request,
+    .build_failure = protocore_auth_build_failure,
+    .build_success = protocore_auth_build_success,
+    .handle_request = protocore_auth_handle_request,
+    .handle_info_response = protocore_auth_handle_info_response,
+    .dispatch = protocore_auth_dispatch,
+};
 
 /**
  * @brief The PROTOCORE_SSH_AUTH_BORROW bytes this module's state lives in.

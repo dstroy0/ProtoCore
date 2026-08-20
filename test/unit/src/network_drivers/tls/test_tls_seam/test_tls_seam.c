@@ -16,7 +16,6 @@
 // one asserts on behavior a stub cannot produce.
 
 #include "network_drivers/tls/tls.h"
-#include "network_drivers/tls/tls.h"
 #include "network_drivers/transport/tcp/common.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include <string.h>
@@ -36,7 +35,7 @@ static protocore_pcb g_pcb;
 void setUp(void)
 {
     memset(&g_pcb, 0, sizeof(g_pcb));
-    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
+    ConnPoolV.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
     protocore_net_host_reset();
 }
@@ -53,8 +52,8 @@ static void arm_slot(uint8_t slot)
     conn_pool[slot].pcb = &g_pcb;
     conn_pool[slot].listener_id = 0;
     conn_pool[slot].owner = 0;
-    ConnPool.slot = slot;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = slot;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
 }
 
@@ -148,9 +147,9 @@ void test_a_partial_record_is_left_in_the_ring(void)
 
     TEST_ASSERT_EQUAL_INT(0, protocore_tls_handshake(0)); // still handshaking, nothing consumed
 
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.available(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT(13, ConnPool.n); // every byte still there, awaiting the rest
+    TEST_ASSERT_EQUAL_UINT(13, ConnPoolV.n); // every byte still there, awaiting the rest
 }
 
 // Fewer bytes than a header is the same answer, and consumes nothing.
@@ -164,9 +163,9 @@ void test_less_than_a_header_consumes_nothing(void)
     push(0, two, sizeof(two));
 
     TEST_ASSERT_EQUAL_INT(0, protocore_tls_handshake(0));
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.available(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT(2, ConnPool.n);
+    TEST_ASSERT_EQUAL_UINT(2, ConnPoolV.n);
 }
 
 // A fragment longer than this build's record cap is not framed: sec 5.1 bounds TLSPlaintext, and a

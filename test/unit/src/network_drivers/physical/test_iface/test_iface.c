@@ -60,48 +60,48 @@ static proto_bool cap_send(uint8_t id, const uint8_t *d, uint16_t n, void *ctx)
 
 static proto_bool add(uint8_t id, protocore_if_kind kind, protocore_if_send_fn fn, void *ctx)
 {
-    Physical.iface.id = id;
-    Physical.iface.kind = kind;
-    Physical.iface.send = fn;
-    Physical.iface.ctx = ctx;
+    PhysicalV.iface.id = id;
+    PhysicalV.iface.kind = kind;
+    PhysicalV.iface.send = fn;
+    PhysicalV.iface.ctx = ctx;
     Physical.iface_add(protocore_physical_span());
-    return Physical.ok;
+    return PhysicalV.ok;
 }
 
 static uint8_t count(void)
 {
     Physical.iface_count(protocore_physical_span());
-    return Physical.u8;
+    return PhysicalV.u8;
 }
 
 static proto_bool present(uint8_t id)
 {
-    Physical.iface.id = id;
+    PhysicalV.iface.id = id;
     Physical.iface_present(protocore_physical_span());
-    return Physical.ok;
+    return PhysicalV.ok;
 }
 
 static protocore_if_kind kind_of(uint8_t id)
 {
-    Physical.iface.id = id;
+    PhysicalV.iface.id = id;
     Physical.iface_kind(protocore_physical_span());
-    return Physical.if_kind;
+    return PhysicalV.if_kind;
 }
 
 static int16_t at(uint8_t i)
 {
-    Physical.iface.i = i;
+    PhysicalV.iface.i = i;
     Physical.iface_at(protocore_physical_span());
-    return Physical.i16;
+    return PhysicalV.i16;
 }
 
 static proto_bool send(uint8_t id, const char *text, uint16_t n)
 {
-    Physical.iface.id = id;
-    Physical.iface.data = (const uint8_t *)text;
-    Physical.iface.len = n;
+    PhysicalV.iface.id = id;
+    PhysicalV.iface.data = (const uint8_t *)text;
+    PhysicalV.iface.len = n;
     Physical.iface_send(protocore_physical_span());
-    return Physical.ok;
+    return PhysicalV.ok;
 }
 
 void setUp(void)

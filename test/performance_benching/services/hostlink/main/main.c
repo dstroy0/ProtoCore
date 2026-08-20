@@ -30,14 +30,14 @@ void dbench_run(void)
     const size_t body_len = sizeof(body) - 1; // exclude the NUL
 
     static char frame[32];
-    Hostlink.build_args.buf = frame;
-    Hostlink.build_args.cap = sizeof(frame);
-    Hostlink.build_args.node = 0;
-    Hostlink.build_args.header_code = "RD";
-    Hostlink.build_args.text = "00000010";
-    Hostlink.build_args.text_len = 8;
+    HostlinkV.build_args.buf = frame;
+    HostlinkV.build_args.cap = sizeof(frame);
+    HostlinkV.build_args.node = 0;
+    HostlinkV.build_args.header_code = "RD";
+    HostlinkV.build_args.text = "00000010";
+    HostlinkV.build_args.text_len = 8;
     Hostlink.build(hostlink_work);
-    const size_t frame_len = Hostlink.n;
+    const size_t frame_len = HostlinkV.n;
 
     static char outbuf[32];
 
@@ -47,37 +47,36 @@ void dbench_run(void)
         volatile uint32_t sink = 0;
 
         // FCS: 8-bit XOR over the ASCII body (throughput over the frame body bytes).
-        Hostlink.fcs_args.data = body;
-        Hostlink.fcs_args.len = body_len;
-        DBENCH_BULK("Hostlink.fcs", 100000, body_len, sink += (Hostlink.fcs(hostlink_work), Hostlink.value));
+        HostlinkV.fcs_args.data = body;
+        HostlinkV.fcs_args.len = body_len;
+        DBENCH_BULK("Hostlink.fcs", 100000, body_len, sink += (Hostlink.fcs(hostlink_work), HostlinkV.value));
 
         // Build a full DM-read command frame (@UU + header + text + FCS + *CR).
-        Hostlink.build_args.buf = outbuf;
-        Hostlink.build_args.cap = sizeof(outbuf);
-        Hostlink.build_args.node = 0;
-        Hostlink.build_args.header_code = "RD";
-        Hostlink.build_args.text = "00000010";
-        Hostlink.build_args.text_len = 8;
-        DBENCH_OP("Hostlink.build RD", 100000,
-                  sink += (Hostlink.build(hostlink_work), Hostlink.n));
+        HostlinkV.build_args.buf = outbuf;
+        HostlinkV.build_args.cap = sizeof(outbuf);
+        HostlinkV.build_args.node = 0;
+        HostlinkV.build_args.header_code = "RD";
+        HostlinkV.build_args.text = "00000010";
+        HostlinkV.build_args.text_len = 8;
+        DBENCH_OP("Hostlink.build RD", 100000, sink += (Hostlink.build(hostlink_work), HostlinkV.n));
 
         // Parse + FCS-validate a complete frame.
         HostlinkFrame f;
-        Hostlink.parse_args.buf = frame;
-        Hostlink.parse_args.len = frame_len;
-        Hostlink.parse_args.out = &f;
-        DBENCH_OP("Hostlink.parse", 100000, sink += (Hostlink.parse(hostlink_work), Hostlink.ok));
+        HostlinkV.parse_args.buf = frame;
+        HostlinkV.parse_args.len = frame_len;
+        HostlinkV.parse_args.out = &f;
+        DBENCH_OP("Hostlink.parse", 100000, sink += (Hostlink.parse(hostlink_work), HostlinkV.ok));
 
         // Read the response end code (first 2 text chars) off an already-parsed frame.
-        Hostlink.parse_args.buf = frame;
-        Hostlink.parse_args.len = frame_len;
-        Hostlink.parse_args.out = &f;
+        HostlinkV.parse_args.buf = frame;
+        HostlinkV.parse_args.len = frame_len;
+        HostlinkV.parse_args.out = &f;
         Hostlink.parse(hostlink_work);
-        (void)Hostlink.ok;
+        (void)HostlinkV.ok;
         uint8_t code = 0;
-        Hostlink.end_code_args.f = &f;
-        Hostlink.end_code_args.code = &code;
-        DBENCH_OP("Hostlink.end_code", 200000, sink += (Hostlink.end_code(hostlink_work), Hostlink.ok));
+        HostlinkV.end_code_args.f = &f;
+        HostlinkV.end_code_args.code = &code;
+        DBENCH_OP("Hostlink.end_code", 200000, sink += (Hostlink.end_code(hostlink_work), HostlinkV.ok));
 
         (void)sink;
         DBENCH_DONE();

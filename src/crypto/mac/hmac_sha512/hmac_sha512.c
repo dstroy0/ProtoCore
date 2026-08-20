@@ -74,9 +74,9 @@ static void build_key_block(const uint8_t *key, size_t key_len, uint8_t block[PR
     if (key_len > PROTOCORE_SHA512_BLOCK_LEN)
     {
         // Keys longer than the block become their SHA-512 hash: 64 bytes, the remaining 64 stay zero.
-        Sha512.hash_args.data = key;
-        Sha512.hash_args.len = key_len;
-        Sha512.hash_args.out = kpad;
+        Sha512V.hash_args.data = key;
+        Sha512V.hash_args.len = key_len;
+        Sha512V.hash_args.out = kpad;
         Sha512.hash(hw);
     }
     else
@@ -95,87 +95,89 @@ static void hmac_init(uint8_t *restrict work)
 {
     Hmac512Work *w = HMAC512_WORK(work);
     // ipad -> scratch (opad slot holds the padded key), opad -> the slot final reads it back from
-    build_key_block(HmacSha512.key_args.key, HmacSha512.key_args.key_len, w->ipad, 0x36u, w->opad, HMAC512_HASH(work));
-    build_key_block(HmacSha512.key_args.key, HmacSha512.key_args.key_len, HMAC512_OKEY(work), 0x5cu, w->opad,
+    build_key_block(HmacSha512V.key_args.key, HmacSha512V.key_args.key_len, w->ipad, 0x36u, w->opad,
+                    HMAC512_HASH(work));
+    build_key_block(HmacSha512V.key_args.key, HmacSha512V.key_args.key_len, HMAC512_OKEY(work), 0x5cu, w->opad,
                     HMAC512_HASH(work));
 
     Sha512.init(HMAC512_INNER(work));
-    Sha512.update_args.data = w->ipad;
-    Sha512.update_args.len = PROTOCORE_SHA512_BLOCK_LEN;
+    Sha512V.update_args.data = w->ipad;
+    Sha512V.update_args.len = PROTOCORE_SHA512_BLOCK_LEN;
     Sha512.update(HMAC512_INNER(work));
-    HmacSha512.ok = PROTO_TRUE;
+    HmacSha512V.ok = PROTO_TRUE;
 }
 
 static void hmac_update(uint8_t *restrict work)
 {
-    Sha512.update_args.data = HmacSha512.update_args.data;
-    Sha512.update_args.len = HmacSha512.update_args.len;
+    Sha512V.update_args.data = HmacSha512V.update_args.data;
+    Sha512V.update_args.len = HmacSha512V.update_args.len;
     Sha512.update(HMAC512_INNER(work));
-    HmacSha512.ok = PROTO_TRUE;
+    HmacSha512V.ok = PROTO_TRUE;
 }
 
 static void hmac_final(uint8_t *restrict work)
 {
-    if (!HmacSha512.final_args.out)
+    if (!HmacSha512V.final_args.out)
     {
-        HmacSha512.ok = PROTO_FALSE;
+        HmacSha512V.ok = PROTO_FALSE;
         return;
     }
     Hmac512Work *w = HMAC512_WORK(work);
-    Sha512.final_args.out = w->inner_digest;
+    Sha512V.final_args.out = w->inner_digest;
     Sha512.final(HMAC512_INNER(work));
 
     // Outer hash: H(okey || inner_digest)
     Sha512.init(HMAC512_HASH(work));
-    Sha512.update_args.data = HMAC512_OKEY(work);
-    Sha512.update_args.len = PROTOCORE_SHA512_BLOCK_LEN;
+    Sha512V.update_args.data = HMAC512_OKEY(work);
+    Sha512V.update_args.len = PROTOCORE_SHA512_BLOCK_LEN;
     Sha512.update(HMAC512_HASH(work));
-    Sha512.update_args.data = w->inner_digest;
-    Sha512.update_args.len = PROTOCORE_SHA512_DIGEST_LEN;
+    Sha512V.update_args.data = w->inner_digest;
+    Sha512V.update_args.len = PROTOCORE_SHA512_DIGEST_LEN;
     Sha512.update(HMAC512_HASH(work));
-    Sha512.final_args.out = HmacSha512.final_args.out;
+    Sha512V.final_args.out = HmacSha512V.final_args.out;
     Sha512.final(HMAC512_HASH(work));
-    HmacSha512.ok = PROTO_TRUE;
+    HmacSha512V.ok = PROTO_TRUE;
 }
 
 static void hmac_mac(uint8_t *restrict work)
 {
-    HmacSha512.ok = PROTO_FALSE;
-    if (!HmacSha512.mac_args.out)
+    HmacSha512V.ok = PROTO_FALSE;
+    if (!HmacSha512V.mac_args.out)
     {
         return;
     }
     // Self-contained: ipad block first, fold it into the inner hash, then reuse its slot as the opad
     // key-padding scratch - so no key block ever lands on the stack.
-    const uint8_t *key = HmacSha512.mac_args.key;
-    const size_t key_len = HmacSha512.mac_args.key_len;
+    const uint8_t *key = HmacSha512V.mac_args.key;
+    const size_t key_len = HmacSha512V.mac_args.key_len;
     Hmac512Work *w = HMAC512_WORK(work);
     uint8_t *hw = HMAC512_HASH(work);
     build_key_block(key, key_len, w->ipad, 0x36u, w->opad, hw); // ipad block (opad slot as key-pad scratch)
     Sha512.init(hw);
-    Sha512.update_args.data = w->ipad;
-    Sha512.update_args.len = PROTOCORE_SHA512_BLOCK_LEN;
+    Sha512V.update_args.data = w->ipad;
+    Sha512V.update_args.len = PROTOCORE_SHA512_BLOCK_LEN;
     Sha512.update(hw);
-    Sha512.update_args.data = HmacSha512.mac_args.data;
-    Sha512.update_args.len = HmacSha512.mac_args.len;
+    Sha512V.update_args.data = HmacSha512V.mac_args.data;
+    Sha512V.update_args.len = HmacSha512V.mac_args.len;
     Sha512.update(hw);
-    Sha512.final_args.out = w->inner_digest;
+    Sha512V.final_args.out = w->inner_digest;
     Sha512.final(hw); // inner = H((K XOR ipad) || m)
 
     build_key_block(key, key_len, w->opad, 0x5cu, w->ipad, hw); // opad block (ipad slot now free as scratch)
     Sha512.init(hw);
-    Sha512.update_args.data = w->opad;
-    Sha512.update_args.len = PROTOCORE_SHA512_BLOCK_LEN;
+    Sha512V.update_args.data = w->opad;
+    Sha512V.update_args.len = PROTOCORE_SHA512_BLOCK_LEN;
     Sha512.update(hw);
-    Sha512.update_args.data = w->inner_digest;
-    Sha512.update_args.len = PROTOCORE_SHA512_DIGEST_LEN;
+    Sha512V.update_args.data = w->inner_digest;
+    Sha512V.update_args.len = PROTOCORE_SHA512_DIGEST_LEN;
     Sha512.update(hw);
-    Sha512.final_args.out = HmacSha512.mac_args.out;
+    Sha512V.final_args.out = HmacSha512V.mac_args.out;
     Sha512.final(hw); // HMAC = H((K XOR opad) || inner)
-    HmacSha512.ok = PROTO_TRUE;
+    HmacSha512V.ok = PROTO_TRUE;
 }
 
-HmacSha512Ns HmacSha512 = {.init = hmac_init, .update = hmac_update, .final = hmac_final, .mac = hmac_mac};
+/** @brief The operands and the outcome. */
+HmacSha512Vars HmacSha512V;
 
 PROTOCORE_END_DECLS
 

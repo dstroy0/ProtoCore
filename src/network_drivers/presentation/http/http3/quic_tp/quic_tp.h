@@ -24,7 +24,7 @@
 
 #include "network_drivers/presentation/http/http3/quic_packet/quic_packet.h" // the complete type a public struct below holds by value
 
-#include "protocore_config.h"                                    // the entry point: protocore_types.h for the widths
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HTTP3
 
@@ -64,7 +64,6 @@ typedef struct
     proto_bool has_retry_scid;
     uint8_t retry_scid[QUIC_MAX_CID_LEN];
     uint8_t retry_scid_len;
-
     uint64_t max_idle_timeout;           ///< default 0
     uint64_t max_udp_payload_size;       ///< default 65527
     uint64_t initial_max_data;           ///< default 0
@@ -78,13 +77,11 @@ typedef struct
     uint64_t active_connection_id_limit; ///< default 2
     proto_bool disable_active_migration; ///< default false
 } QuicTransportParams;
-
 /** @brief What defaults takes: tp. */
 typedef struct
 {
     QuicTransportParams *tp;
 } QuicTpDefaultsArgs;
-
 /** @brief What encode takes: tp, out, cap. */
 typedef struct
 {
@@ -92,7 +89,6 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } QuicTpEncodeArgs;
-
 /** @brief What parse takes: buf, len, tp. */
 typedef struct
 {
@@ -100,7 +96,6 @@ typedef struct
     size_t len;
     QuicTransportParams *tp;
 } QuicTpParseArgs;
-
 /**
  * @brief QUIC transport parameters (RFC 9000 sec 18) carried in the TLS quic_transport_parameters extension
  * (RFC 9001 sec 8.2).
@@ -129,17 +124,36 @@ typedef struct
     QuicTpDefaultsArgs defaults_args;
     QuicTpEncodeArgs encode_args;
     QuicTpParseArgs parse_args;
-
     proto_bool ok;
     size_t n;
+} QuicTpVars;
 
+/** @brief The operands and the outcome. */
+extern QuicTpVars QuicTpV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const defaults)(uint8_t *restrict work);
     void (*const encode)(uint8_t *restrict work);
     void (*const parse)(uint8_t *restrict work);
 } QuicTpNs;
 
-/** @brief The one symbol this module exports. */
-extern QuicTpNs QuicTp;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in QuicTpV or a region of the borrow at a fixed offset.
+void protocore_quic_tp_defaults(uint8_t *restrict work);
+void protocore_quic_tp_encode(uint8_t *restrict work);
+void protocore_quic_tp_parse(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `QuicTp.defaults(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const QuicTpNs QuicTp __attribute__((unused)) = {
+    .defaults = protocore_quic_tp_defaults,
+    .encode = protocore_quic_tp_encode,
+    .parse = protocore_quic_tp_parse,
+};
 
 PROTOCORE_END_DECLS
 

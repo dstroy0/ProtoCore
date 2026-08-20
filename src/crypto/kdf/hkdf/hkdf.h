@@ -46,7 +46,6 @@ typedef struct
     size_t ikm_len;      ///< its length
     uint8_t *prk;        ///< PROTOCORE_HKDF_HASH_LEN bytes
 } HkdfExtractArgs;
-
 /** @brief The PRK, context and output span of a bare HKDF-Expand. */
 typedef struct
 {
@@ -56,7 +55,6 @@ typedef struct
     uint8_t *out;        ///< output keying material
     size_t out_len;      ///< bytes requested; past 255*PROTOCORE_HKDF_HASH_LEN out is zeroed instead
 } HkdfExpandArgs;
-
 /** @brief The secret and label an HKDF-Expand-Label derives from, with an empty HkdfLabel context. */
 typedef struct
 {
@@ -66,7 +64,6 @@ typedef struct
     size_t out_len;           ///< bytes requested
     const char *label_prefix; ///< PROTOCORE_HKDF_LABEL_PREFIX, or "dtls13" for DTLS 1.3
 } HkdfExpandLabelArgs;
-
 /** @brief The same with an explicit HkdfLabel context. */
 typedef struct
 {
@@ -78,7 +75,6 @@ typedef struct
     size_t out_len;           ///< bytes requested
     const char *label_prefix; ///< PROTOCORE_HKDF_LABEL_PREFIX, or "dtls13" for DTLS 1.3
 } HkdfExpandLabelCtxArgs;
-
 /**
  * @brief HKDF-SHA256 (RFC 5869) and HKDF-Expand-Label (RFC 8446 sec 7.1).
  *
@@ -126,17 +122,38 @@ typedef struct
     HkdfExpandArgs expand_args;
     HkdfExpandLabelArgs expand_label_args;
     HkdfExpandLabelCtxArgs expand_label_ctx_args;
-
     proto_bool ok;
+} HkdfVars;
 
+/** @brief The operands and the outcome. */
+extern HkdfVars HkdfV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const extract)(uint8_t *restrict work);
     void (*const expand)(uint8_t *restrict work);
     void (*const expand_label)(uint8_t *restrict work);
     void (*const expand_label_ctx)(uint8_t *restrict work);
 } HkdfNs;
 
-/** @brief The one symbol this module exports. */
-extern HkdfNs Hkdf;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HkdfV or a region of the borrow at a fixed offset.
+void protocore_hkdf_extract(uint8_t *restrict work);
+void protocore_hkdf_expand(uint8_t *restrict work);
+void protocore_hkdf_expand_label(uint8_t *restrict work);
+void protocore_hkdf_expand_label_ctx(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Hkdf.extract(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HkdfNs Hkdf __attribute__((unused)) = {
+    .extract = protocore_hkdf_extract,
+    .expand = protocore_hkdf_expand,
+    .expand_label = protocore_hkdf_expand_label,
+    .expand_label_ctx = protocore_hkdf_expand_label_ctx,
+};
 
 PROTOCORE_END_DECLS
 
