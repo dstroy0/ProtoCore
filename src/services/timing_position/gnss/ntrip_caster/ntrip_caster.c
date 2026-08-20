@@ -14,6 +14,8 @@
 #include "mmgr/protomem/protomem.h"
 #include "services/timing_position/gnss/ntrip_caster/ntrip_caster.h"
 
+PROTOCORE_BEGIN_DECLS
+
 static char lower(char c)
 {
     return (c >= 'A' && c <= 'Z') ? (char)(c - 'A' + 'a') : c;
@@ -364,5 +366,7 @@ size_t protocore_ntrip_build_sourcetable(char *out, size_t cap, NtripVersion ver
     out[pos] = '\0';
     return pos;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTRIP_CASTER

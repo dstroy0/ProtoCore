@@ -23,6 +23,8 @@
 
 #include "mmgr/endian/endian.h"
 
+PROTOCORE_BEGIN_DECLS
+
 #define FLOW_V5_VERSION 5 ///< vendor NetFlow Version 5 packet Version field
 
 #define FLOW_V9_VERSION 9             ///< RFC 3954 sec 5.1 Version
@@ -418,5 +420,7 @@ void protocore_flow_export_message_finish(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 FlowExportVars FlowExportV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FLOW_EXPORT

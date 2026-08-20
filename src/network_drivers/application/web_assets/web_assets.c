@@ -10,6 +10,8 @@
 
 #include "network_drivers/application/web_assets/web_assets.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // ---- html ----
 const char PROTOCORE_DASHBOARD_PAGE[] =
     "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\" /><meta name=\"viewport\" content=\"width=devic"
@@ -181,5 +183,7 @@ const char PROTOCORE_METRICS_PROM[] =
     "protocore_heap_size_bytes {{heap_size}}\n# HELP protocore_max_alloc_heap_bytes Largest contiguous allocatable "
     "heap block, in bytes.\n# TYPE protocore_max_alloc_heap_bytes gauge\nprotocore_max_alloc_heap_bytes {{max_alloc"
     "_heap}}\n";
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WEB_ASSETS

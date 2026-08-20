@@ -13,6 +13,8 @@
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "server/signaling/hw_health/hw_health.h"
 
+PROTOCORE_BEGIN_DECLS
+
 void protocore_hw_health_rail_init(uint8_t *restrict work)
 {
     (void)work;
@@ -201,5 +203,7 @@ void protocore_hw_health_cap_leak(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 HwHealthVars HwHealthV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HW_HEALTH

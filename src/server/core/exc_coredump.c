@@ -21,6 +21,8 @@
 
 #if PROTOCORE_ENABLE_EXC_DECODER && PROTOCORE_HAS_VENDOR_COREDUMP
 
+PROTOCORE_BEGIN_DECLS
+
 void protocore_exc_cd_present(uint8_t *restrict work)
 {
     (void)work;
@@ -163,5 +165,7 @@ void protocore_exc_cd_erase(uint8_t *restrict work)
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
     ExcV.ok = protocore_platform_crashdump_erase() ? PROTO_TRUE : PROTO_FALSE;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EXC_DECODER && PROTOCORE_HAS_VENDOR_COREDUMP

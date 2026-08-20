@@ -21,6 +21,8 @@
 
 #include "network_drivers/presentation/codec/base64/base64.h" // Base64.encode: RFC 4648 sec 4
 
+PROTOCORE_BEGIN_DECLS
+
 #if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/tcp/client/client.h" // TcpClient: the outbound transport
 #if PROTOCORE_ENABLE_SMTP_TLS
@@ -874,5 +876,7 @@ void protocore_smtp_send(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SmtpVars SmtpV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SMTP

@@ -15,6 +15,8 @@
 
 #include "mmgr/endian/endian.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // SUPER_USED bytes are CRC-covered; the u32 CRC follows immediately.
 static const size_t SUPER_USED = 28;
 
@@ -306,5 +308,7 @@ proto_bool protocore_wal_store_pread(WalStore *s, uint64_t off, uint8_t *buf, si
     }
     return dev_read(&s->dev, s->data_off + off, buf, len);
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WAL

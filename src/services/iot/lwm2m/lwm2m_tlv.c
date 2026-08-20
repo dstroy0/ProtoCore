@@ -20,6 +20,8 @@
 #include "mmgr/protomem/protomem.h" // mem.cpy: the Value octets a write copies, and the Float bit pattern
 #include "mmgr/protostr/protostr.h" // str.len: the bounded String measure
 
+PROTOCORE_BEGIN_DECLS
+
 // The writer cursor: the caller buffer, how far into it the last write reached, and the poison an
 // entry that did not fit leaves behind. scalar holds the octets a typed write stages.
 typedef struct
@@ -329,5 +331,7 @@ void protocore_lwm2m_tlv_value_integer(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 Lwm2mTlvVars Lwm2mTlvV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LWM2M

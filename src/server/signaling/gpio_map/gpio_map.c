@@ -22,6 +22,8 @@
 
 #include "mmgr/protoframe/protoframe.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // The wire name for a direction, so the serializer names one without going through the handle it is
 // itself being called on.
 static const char *dir_name_of(protocore_gpio_dir dir)
@@ -307,5 +309,7 @@ __attribute__((weak)) void protocore_gpio_map_begin(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 GpioMapVars GpioMapV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GPIO_MAP

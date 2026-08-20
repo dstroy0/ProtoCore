@@ -13,6 +13,8 @@
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "services/energy/sep2/sep2.h"
 
+PROTOCORE_BEGIN_DECLS
+
 static void put_i64(protocore_sb *b, int64_t v)
 {
     if (!b->ok)
@@ -99,5 +101,7 @@ size_t protocore_sep2_der_control(const char *mrid, uint32_t start, uint32_t dur
     Sb.put(&b3, "</opModFixedW></DERControlBase></DERControl>");
     return Sb.finish(&b3);
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SEP2

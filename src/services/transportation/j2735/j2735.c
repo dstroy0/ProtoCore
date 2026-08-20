@@ -12,6 +12,8 @@
 
 #include "services/transportation/j2735/j2735.h"
 
+PROTOCORE_BEGIN_DECLS
+
 void protocore_uper_writer_init(UperWriter *w, uint8_t *buf, size_t cap)
 {
     w->buf = buf;
@@ -278,5 +280,7 @@ proto_bool protocore_j2735_map_decode(const uint8_t *in, size_t len, J2735MapInt
     *out_count = count;
     return PROTO_TRUE;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_J2735

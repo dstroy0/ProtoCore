@@ -13,6 +13,8 @@
 #include "mmgr/protomem/protomem.h"
 #include "services/timing_position/gnss/gnss_survey/gnss_survey.h"
 
+PROTOCORE_BEGIN_DECLS
+
 #if PROTOCORE_NEED_NMEA0183
 #include "mmgr/protostr/protostr.h"
 #include "services/timing_position/nmea0183/nmea0183.h"
@@ -244,5 +246,7 @@ proto_bool protocore_gnss_survey_add_gga(GnssSurvey *s, const Nmea0183 *m)
 }
 
 #endif // PROTOCORE_NEED_NMEA0183
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTRIP_CASTER

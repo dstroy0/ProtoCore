@@ -12,6 +12,8 @@
 
 #include "server/storage/wearlevel/wearlevel.h"
 
+PROTOCORE_BEGIN_DECLS
+
 void protocore_wearlevel_pick(uint8_t *restrict work)
 {
     (void)work;
@@ -81,5 +83,7 @@ void protocore_wearlevel_imbalance(uint8_t *restrict work)
 
 /** @brief The operands and the outcome. */
 WearlevelVars WearlevelV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WEARLEVEL

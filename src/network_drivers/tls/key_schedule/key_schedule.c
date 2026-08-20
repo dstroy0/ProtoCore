@@ -19,6 +19,8 @@
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"
 #include "crypto/mac/hmac_sha384/hmac_sha384.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // RFC 8446 sec 7.1 ("tls13 ") and RFC 9147 sec 5.9 ("dtls13") HKDF-Expand-Label prefixes.
 const Tls13Kdf TLS13_KDF = {"tls13 "};
 const Tls13Kdf DTLS13_KDF = {"dtls13"};
@@ -280,5 +282,7 @@ void protocore_tls13_ks_transcript_peek(uint8_t *restrict work)
 
 /** @brief The operands and the outcome. */
 Tls13KsVars Tls13KsV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE

@@ -18,6 +18,8 @@
 // Pure decision
 // ---------------------------------------------------------------------------
 
+PROTOCORE_BEGIN_DECLS
+
 /**
  * @brief The governor's compile-time storage: what it latched about this boot.
  */
@@ -234,5 +236,7 @@ void protocore_power_gate_bt(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 PowerVars PowerV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_POWER_MGMT

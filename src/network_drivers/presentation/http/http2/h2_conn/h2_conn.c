@@ -17,6 +17,8 @@
 #include "network_drivers/presentation/http/http2/h2_frame/h2_frame.h" // H2Settings, the SETTINGS ids
 #include "network_drivers/presentation/http/http2/hpack/hpack.h"       // the dynamic table this context carries
 
+PROTOCORE_BEGIN_DECLS
+
 /** @brief Per-stream state (RFC 9113 sec 5.1, server side of a client-initiated stream). A
  *  mutually-exclusive internal lifecycle state, not a wire value. */
 typedef enum PROTO_ENUM_PACKED
@@ -885,5 +887,7 @@ void protocore_h2_conn_goaway(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 H2ConnVars H2ConnV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP2

@@ -19,6 +19,8 @@
 #include "mmgr/protomem/protomem.h" // mem.cpy: the argument octets an encode moves
 #include "mmgr/protostr/protostr.h" // str.len: the bounded length of a NUL-terminated argument
 
+PROTOCORE_BEGIN_DECLS
+
 // Write "<first_byte><decimal n>\r\n" into buf at *pos and advance it. The digits fall out low first
 // into tmp and are emitted reversed. False when the prefix would reach cap with the NUL reserved.
 static proto_bool put_len_prefix(char *buf, size_t cap, size_t *pos, char first_byte, size_t n)
@@ -503,5 +505,7 @@ void protocore_resp_parse_reply(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 RespVars RespV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_REDIS

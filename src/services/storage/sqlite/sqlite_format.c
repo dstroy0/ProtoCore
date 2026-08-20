@@ -14,6 +14,8 @@
 #include "mmgr/protostr/protostr.h"
 #include "services/storage/sqlite/sqlite_format.h"
 
+PROTOCORE_BEGIN_DECLS
+
 static uint16_t be16(const uint8_t *p)
 {
     return (uint16_t)(((uint16_t)p[0] << 8) | p[1]);
@@ -924,5 +926,7 @@ uint32_t protocore_sqlite_build_table_db(uint32_t page_size, const char *table_n
 
     return page_size * 2;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SQLITE

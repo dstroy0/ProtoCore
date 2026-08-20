@@ -16,6 +16,8 @@ static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
 #include "mmgr/endian/endian.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_IBM_3740
 
+PROTOCORE_BEGIN_DECLS
+
 uint16_t protocore_c37118_crc(const uint8_t *data, size_t len)
 {
     // IEEE C37.118 uses CRC-CCITT (poly 0x1021, init 0xFFFF, unreflected), cataloged as CRC-16/IBM-3740.
@@ -129,5 +131,7 @@ proto_bool protocore_c37118_decode_stat(const C37118Frame *f, C37118Stat *out)
     out->trigger_reason = (uint8_t)(s & 0x0Fu);       // bits 3-0
     return PROTO_TRUE;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_C37118

@@ -19,6 +19,8 @@
 // Literals
 // ---------------------------------------------------------------------------
 
+PROTOCORE_BEGIN_DECLS
+
 // SPIi(8) | SPIr(8) | IP(4 or 16) | Port(2): the largest detection digest input (RFC 7296 sec 2.23).
 #define PROTOCORE_NATD_INPUT_MAX (PROTOCORE_IKE_SPI_LEN + PROTOCORE_IKE_SPI_LEN + 16 + 2)
 
@@ -187,5 +189,7 @@ void protocore_ike_natt_is_ike(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 IkeNattVars IkeNattV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IKEV2

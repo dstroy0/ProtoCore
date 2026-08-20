@@ -13,6 +13,8 @@
 #include "mmgr/protomem/protomem.h" // mem.cmp / mem.cpy / mem.zero
 #include "network_drivers/datalink/roaming/roaming.h"
 
+PROTOCORE_BEGIN_DECLS
+
 /** @brief A BSSID is six octets, and every compare and copy below moves exactly that. */
 #define PROTOCORE_ROAM_BSSID_LEN 6u
 
@@ -224,5 +226,7 @@ void protocore_roam_parse_btm_request(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 RoamVars RoamV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ROAMING

@@ -16,6 +16,8 @@
 
 #include "mmgr/endian/endian.h"
 
+PROTOCORE_BEGIN_DECLS
+
 static const uint32_t RPC_MSGTYPE_CALL = 0;
 static const uint32_t RPC_MSGTYPE_REPLY = 1;
 
@@ -447,5 +449,7 @@ const char *protocore_vxi11_error_str(int32_t error)
         return "unknown error";
     }
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_VXI11

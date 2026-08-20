@@ -18,6 +18,8 @@ static uint8_t gpio_map_work[16]; // the borrow an entry takes; GpioMap never re
 #include "protocore.h"
 #include "shared/mime/mime.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // All gpio-map-routes state, owned by one instance (internal linkage): the server handle plus
 // the pin table pointer and count, grouped so it is one named owner, unreachable cross-TU.
 // (The route handlers are fixed-signature callbacks, so they reach this single owner directly.)
@@ -96,5 +98,7 @@ void protocore_gpio_route_begin(uint8_t *restrict work)
     on_http(p, HTTP_GET, gpio_get_handler);
     on_http(p, HTTP_POST, gpio_post_handler);
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GPIO_MAP

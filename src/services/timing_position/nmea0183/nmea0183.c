@@ -13,6 +13,8 @@
 
 #include "mmgr/protostr/protostr.h"
 
+PROTOCORE_BEGIN_DECLS
+
 uint8_t protocore_nmea0183_checksum(const char *s, size_t len)
 {
     uint8_t cs = 0;
@@ -547,5 +549,7 @@ proto_bool protocore_nmea0183_parse_vlw(const Nmea0183 *m, protocore_nmea_vlw *o
     protocore_nmea0183_field_float(m, 3, &out->trip_water_nm);  // since the last reset
     return PROTO_TRUE;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_NEED_NMEA0183

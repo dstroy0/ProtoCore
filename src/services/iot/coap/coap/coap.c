@@ -21,6 +21,8 @@
 #include "server/clock/clock.h"                          // Clock.millis: entry freshness and notification sequencing
 #include "shared/ip/ip.h"                                // Ip.parse: an observer's address, per notification
 
+PROTOCORE_BEGIN_DECLS
+
 // The option numbers this server reads (RFC 7252 sec 5.10, RFC 7641 sec 2, RFC 7959 sec 2.1). Every
 // other option number falls to the critical/elective rule in sec 5.4.1.
 #define COAP_OPT_OBSERVE 6         ///< Observe (RFC 7641 sec 2)
@@ -1253,5 +1255,7 @@ void protocore_coap_begin(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 CoapVars CoapV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_COAP

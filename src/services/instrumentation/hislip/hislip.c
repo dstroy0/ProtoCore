@@ -16,6 +16,8 @@
 
 #include "mmgr/endian/endian.h"
 
+PROTOCORE_BEGIN_DECLS
+
 size_t protocore_hislip_build_header(uint8_t *buf, size_t cap, HislipMsg type, uint8_t control, uint32_t parameter,
                                      uint64_t payload_len)
 {
@@ -135,5 +137,7 @@ proto_bool protocore_hislip_parse_initialize_response(const uint8_t *buf, size_t
     out->encryption_mandatory = (h.control & PROTOCORE_HISLIP_INITRESP_ENC_MANDATORY) != 0;
     return PROTO_TRUE;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HISLIP

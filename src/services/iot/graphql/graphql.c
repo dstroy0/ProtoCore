@@ -26,6 +26,8 @@
 #include "mmgr/protomem/protomem.h" // mem.cpy: the spans a name and a decoded String move with
 #include "mmgr/protostr/protostr.h" // str.eq / str.len: the bounded compares and measures
 
+PROTOCORE_BEGIN_DECLS
+
 // The argument values in scope at a field (spec sec 6.4.1): indices into the document's argument
 // pool, in the order the path collected them.
 typedef struct protocore_gql_args
@@ -912,5 +914,7 @@ void protocore_graph_ql_execute(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 GraphQLVars GraphQLV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GRAPHQL

@@ -23,6 +23,8 @@
 // Literals
 // ---------------------------------------------------------------------------
 
+PROTOCORE_BEGIN_DECLS
+
 #define MQTTSN_LEN1_MAX 255   // the 1-octet Length form reaches this total (sec 5.2.1)
 #define MQTTSN_LEN3_OCTETS 3  // the 3-octet Length form: the prefix and a big-endian uint16
 #define MQTTSN_LEN_MAX 0xFFFF // what the 3-octet form can encode (sec 5.2.1)
@@ -533,5 +535,7 @@ void protocore_mqttsn_parse_register(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 MqttsnVars MqttsnV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MQTT_SN

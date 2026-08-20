@@ -14,6 +14,8 @@
 #include "mmgr/protostr/protostr.h"
 #include "services/energy/goose/goose.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // Number of octets to encode a BER definite length.
 static size_t len_octets(size_t len)
 {
@@ -304,5 +306,7 @@ proto_bool protocore_goose_parse_frame(const uint8_t *buf, size_t len, protocore
     }
     return PROTO_TRUE;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GOOSE

@@ -14,6 +14,8 @@
 #include "mmgr/protostr/protostr.h"
 #include "services/energy/mms/mms.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // BER definite-length octet count for a length value < 64 KiB.
 static size_t len_octets(size_t len)
 {
@@ -322,5 +324,7 @@ proto_bool protocore_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out)
     }
     return PROTO_TRUE;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MMS

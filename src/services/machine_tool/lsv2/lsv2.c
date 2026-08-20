@@ -15,6 +15,8 @@
 
 // memcpy / memcmp / memset (framing + parsing are hand-rolled)
 
+PROTOCORE_BEGIN_DECLS
+
 // Write the fixed 8-byte header (big-endian payload length + 4-char mnemonic) once the payload is in
 // place, and return the total telegram length. Callers guarantee the buffer holds header + payload.
 static size_t finalize(uint8_t *buf, const char *mnemonic, size_t payload_len)
@@ -194,5 +196,7 @@ proto_bool protocore_lsv2_error(const Lsv2Telegram *t, uint8_t *err_class, uint8
     }
     return PROTO_TRUE;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LSV2

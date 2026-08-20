@@ -14,6 +14,8 @@
 #include "network_drivers/presentation/ssh/common.h"
 #include "network_drivers/presentation/ssh/ssh.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // The connections' storage, owned by one instance (internal linkage). Reached only through
 // ssh_conn_slot(), at the offsets common.h names.
 typedef struct
@@ -72,6 +74,8 @@ void protocore_ssh_conn_slot(uint8_t *restrict work)
 }
 /** @brief The operands and the outcome. */
 SshVars SshV;
+
+PROTOCORE_END_DECLS
 
 PROTOCORE_END_DECLS
 

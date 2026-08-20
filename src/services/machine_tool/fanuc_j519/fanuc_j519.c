@@ -21,6 +21,8 @@
 #include "mmgr/endian/endian.h"
 // memcpy (string.h is allowed; the no-stdlib rule is about stdlib.h/malloc)
 
+PROTOCORE_BEGIN_DECLS
+
 // --- float <-> big-endian binary32 -----------------------------------------------------------
 static size_t wr_f32be(uint8_t *p, float v)
 {
@@ -252,5 +254,7 @@ proto_bool protocore_j519_parse_ack(const uint8_t *buf, size_t len, J519Ack *out
     rd_f32_block(buf + 104, out->threshold_max_load, PROTOCORE_J519_THRESHOLDS);
     return PROTO_TRUE;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FANUC_J519

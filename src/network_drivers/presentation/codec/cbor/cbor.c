@@ -14,6 +14,8 @@
 
 #include "mmgr/bytes/bytes.h"
 
+PROTOCORE_BEGIN_DECLS
+
 static void put(protocore_span *w, uint8_t b)
 {
     bytes.put(w, b);
@@ -400,5 +402,7 @@ const protocore_codec Cbor = {
     protocore_cbor_read_array, protocore_cbor_read_map, protocore_cbor_read_bool,  protocore_cbor_read_null,
     protocore_cbor_read_float,
 };
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_NEED_CBOR

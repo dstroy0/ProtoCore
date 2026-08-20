@@ -22,6 +22,8 @@
 #include "mmgr/secure/secure.h" // the pool the digest borrow comes from
 #include "mmgr/span/span.h"     // protocore_span, span.ok
 
+PROTOCORE_BEGIN_DECLS
+
 /** @brief B: the block length HMAC pads K out to for SHA-1 (RFC 2104 sec 2). */
 #define PROTOCORE_TOTP_HMAC_B 64
 
@@ -231,5 +233,7 @@ void protocore_totp_base32_decode(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 TotpVars TotpV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TOTP

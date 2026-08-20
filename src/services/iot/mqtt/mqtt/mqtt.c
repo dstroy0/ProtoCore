@@ -20,6 +20,8 @@
 #include "mmgr/protostr/protostr.h" // str.len: the bounded field lengths
 #include "shared/utf8/utf8.h"       // Utf8.valid: a Topic Name is a UTF-8 encoded string (sec 1.5.3)
 
+PROTOCORE_BEGIN_DECLS
+
 #if PROTOCORE_HAS_NET_STACK
 #include "mmgr/secure/secure.h"                          // secure.persist_span: this module's storage
 #include "mmgr/span/span.h"                              // span.ok: the borrow landed
@@ -1506,5 +1508,7 @@ void protocore_mqtt_disconnect(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 MqttVars MqttV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MQTT

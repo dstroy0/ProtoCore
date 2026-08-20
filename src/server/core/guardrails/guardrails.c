@@ -14,6 +14,8 @@
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "server/core/guardrails/guardrails.h"
 
+PROTOCORE_BEGIN_DECLS
+
 /** @brief The guardrails' compile-time storage: the breach callback, for the length of a build. */
 struct GuardrailsStorage
 {
@@ -162,5 +164,7 @@ void protocore_guardrails_check(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 GuardrailsVars GuardrailsV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GUARDRAILS

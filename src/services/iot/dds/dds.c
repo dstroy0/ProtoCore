@@ -18,6 +18,8 @@
 
 #include "mmgr/protomem/protomem.h" // mem.cpy: the guidPrefix and the Submessage contents
 
+PROTOCORE_BEGIN_DECLS
+
 // SubmessageHeader: submessageId 1 + flags 1 + octetsToNextHeader 2 (sec 9.4.5.1).
 #define RTPS_SUBMESSAGE_HEADER_LEN 4
 
@@ -152,5 +154,7 @@ void protocore_rtps_parse(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 RtpsVars RtpsV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DDS

@@ -20,6 +20,8 @@
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // Designated, so a member's position in the struct does not decide what it binds to.
 TcpNs Tcp = {
     .conn = &ConnPool,
@@ -28,5 +30,7 @@ TcpNs Tcp = {
     .client = &TcpClient,
 #endif
 };
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TCP

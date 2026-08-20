@@ -18,6 +18,8 @@
 #include "network_drivers/tls/tls.h"
 #include "network_drivers/transport/tcp/tcp.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // The per-slot engines are large (~28 KB each), so the pool does not fit internal DRAM alongside
 // TLS - it lives in PSRAM (PROTOCORE_H2_POOL_IN_PSRAM). Same mechanism/caveat as the TLS arena: it
 // needs a framework built with CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y (the stock
@@ -437,5 +439,7 @@ uint8_t *protocore_h2_server_span(void)
 }
 
 H2ServerNs H2Server = {.open = open_conn, .data = data, .respond = respond, .close = close_conn};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS

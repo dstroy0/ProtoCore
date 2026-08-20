@@ -25,6 +25,8 @@
 #include "server/clock/clock.h" // protocore_cycles()
                                 // memset
 
+PROTOCORE_BEGIN_DECLS
+
 /**
  * @brief The capture's compile-time storage: the pre-roll ring, the assembled window, and the
  *        cursors over both.
@@ -206,5 +208,7 @@ void protocore_trace_capture_end(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 TraceCaptureVars TraceCaptureV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TRACE_CAPTURE

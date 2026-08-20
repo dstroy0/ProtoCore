@@ -13,6 +13,8 @@
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "services/energy/openadr/openadr.h"
 
+PROTOCORE_BEGIN_DECLS
+
 static void put_u64(protocore_sb *b, uint64_t v)
 {
     char tmp[21];
@@ -106,5 +108,7 @@ size_t protocore_openadr_report(const char *program_id, const char *event_id, co
     Sb.put(&b2, "]}]}]}]}");
     return Sb.finish(&b2);
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OPENADR

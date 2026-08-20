@@ -18,6 +18,8 @@
 #include "mmgr/secure/secure.h" // the persistent end this module's key material is taken from
 #include "services/net/http_client/http_client.h"
 
+PROTOCORE_BEGIN_DECLS
+
 #if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/tcp/client/client.h" // ::TcpClient, the shared outbound transport
 #include "server/clock/clock.h"                          // ::Clock and pcdelay
@@ -816,5 +818,7 @@ void protocore_http_client_post(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 HttpClientVars HttpClientV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP_CLIENT

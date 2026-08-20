@@ -17,6 +17,8 @@
 #include "diffserv.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
+PROTOCORE_BEGIN_DECLS
+
 /**
  * @brief The two code points this server marks with, held where only this file describes them.
  *
@@ -99,5 +101,7 @@ uint8_t protocore_diffserv_udp_dscp(void)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 DiffServVars DiffServV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DIFFSERV

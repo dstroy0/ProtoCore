@@ -15,6 +15,8 @@
 
 // --- -104 APCI ---
 
+PROTOCORE_BEGIN_DECLS
+
 size_t protocore_iec104_build_i(uint8_t *buf, size_t cap, uint16_t ns, uint16_t nr, const uint8_t *asdu,
                                 size_t asdu_len)
 {
@@ -573,5 +575,7 @@ proto_bool protocore_iec101_parse(const uint8_t *buf, size_t len, Iec101Frame *o
     }
     return PROTO_FALSE;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IEC60870

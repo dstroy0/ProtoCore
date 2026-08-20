@@ -16,6 +16,8 @@
 
 #include "network_drivers/network/dns/dns/dns.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // The two components RFC 1034 sec 2.4 defines as programs. Designated, so a member's position in
 // the struct does not decide what it binds to.
 DnsNs Dns = {
@@ -29,5 +31,7 @@ DnsNs Dns = {
     .present = PROTO_FALSE,
 #endif
 };
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DNS

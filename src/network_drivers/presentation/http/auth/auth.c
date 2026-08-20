@@ -29,6 +29,8 @@
 // ---------------------------------------------------------------------------
 
 #if PROTOCORE_ENABLE_AUTH
+PROTOCORE_BEGIN_DECLS
+
 // Extract the value of @p key from a Digest auth header into @p out.
 // Handles both quoted ("value") and token (value) forms. The match must sit on
 // a field boundary (start, or after ' '/',') and be immediately followed by '='
@@ -615,5 +617,7 @@ void protocore_auth_reset(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 AuthVars AuthV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AUTH

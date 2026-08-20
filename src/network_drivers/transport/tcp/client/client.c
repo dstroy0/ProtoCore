@@ -47,6 +47,8 @@ uint8_t *protocore_tcp_client_span(void)
 #include "network_drivers/transport/tcp/lower/lower.h"             // TcpLower: the TTL stamp on the outbound pcb
 #include "server/clock/clock.h"                                    // Clock.millis
 
+PROTOCORE_BEGIN_DECLS
+
 typedef struct
 {
     protocore_pcb *pcb;
@@ -458,5 +460,7 @@ void protocore_tcp_client_close(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 TcpClientVars TcpClientV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_NEED_CLIENT

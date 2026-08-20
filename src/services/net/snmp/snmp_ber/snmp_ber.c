@@ -17,6 +17,8 @@
 // state, so each takes that cursor rather than the handle.
 // ---------------------------------------------------------------------------
 
+PROTOCORE_BEGIN_DECLS
+
 static void enc_byte(BerEnc *e, uint8_t b)
 {
     if (!e->ok)
@@ -427,5 +429,7 @@ void protocore_snmp_ber_skip(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SnmpBerVars SnmpBerV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SNMP

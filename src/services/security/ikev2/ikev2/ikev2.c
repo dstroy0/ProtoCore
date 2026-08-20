@@ -29,6 +29,8 @@
 // Literals
 // ---------------------------------------------------------------------------
 
+PROTOCORE_BEGIN_DECLS
+
 // Octet layout of an SK-framed message (RFC 7296 sec 3.14 with RFC 5282 sec 3): [0,28) IKE header,
 // [28,32) the Encrypted payload's generic header, [32,40) IV, then Ciphertext and its 16-octet ICV.
 // The associated data is [0,32) (RFC 5282 sec 5.1).
@@ -2676,5 +2678,7 @@ void protocore_ike_informational_open(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 IkeVars IkeV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IKEV2

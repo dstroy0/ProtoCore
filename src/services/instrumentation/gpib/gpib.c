@@ -14,6 +14,8 @@
 #include "mmgr/protomem/protomem.h"
 #include "services/instrumentation/gpib/gpib.h"
 
+PROTOCORE_BEGIN_DECLS
+
 size_t protocore_gpib_command(char *buf, size_t cap, const char *cmd)
 {
     if (!buf || cap == 0 || !cmd)
@@ -279,5 +281,7 @@ proto_bool protocore_gpib_parse_version(const char *s, size_t len, const char **
     }
     return PROTO_FALSE;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GPIB

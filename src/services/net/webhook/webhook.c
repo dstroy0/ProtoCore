@@ -20,6 +20,8 @@
 #include "mmgr/protostr/protostr.h" // str.len: bounded length, no stdlib
 #include "services/net/webhook/webhook.h"
 
+PROTOCORE_BEGIN_DECLS
+
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 #include "services/net/http_client/http_client.h"
 #endif
@@ -228,5 +230,7 @@ void protocore_webhook_ifttt_trigger(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 WebhookVars WebhookV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WEBHOOK

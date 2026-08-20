@@ -21,6 +21,8 @@ static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads
 #include "shared/mime/mime.h"
 #include <Update.h>
 
+PROTOCORE_BEGIN_DECLS
+
 // All OTA-service state, owned by one instance (internal linkage): the server handle, the
 // route path, the Basic-auth credentials, and the per-upload flags (one upload at a time on
 // this single-task device). Grouped so it is one named owner, unreachable cross-TU.
@@ -174,5 +176,7 @@ void protocore_ota_service_begin(uint8_t *restrict work)
 
 /** @brief The operands and the outcome. */
 OtaServiceVars OtaServiceV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OTA && PROTOCORE_HAS_VENDOR_OTA

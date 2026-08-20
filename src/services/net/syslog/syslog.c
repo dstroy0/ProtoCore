@@ -20,6 +20,8 @@
 #include "network_drivers/transport/udp/client/client.h" // UdpClient.sendto: one message, one datagram
 #include "shared/ip/ip.h"                                // Ip.parse: the collector address, once
 
+PROTOCORE_BEGIN_DECLS
+
 /**
  * @brief The originator's compile-time storage: the collector, the stored HEADER, and the line scratch.
  *
@@ -189,5 +191,7 @@ void protocore_syslog_log(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SyslogVars SyslogV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SYSLOG

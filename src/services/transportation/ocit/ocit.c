@@ -13,6 +13,8 @@
 #include "mmgr/protomem/protomem.h"
 #include "services/transportation/ocit/ocit.h"
 
+PROTOCORE_BEGIN_DECLS
+
 size_t protocore_ocit_build(uint8_t msg_type, uint16_t object_type, uint16_t instance, uint8_t data_type,
                             const uint8_t *value, size_t value_len, uint8_t *out, size_t cap)
 {
@@ -67,5 +69,7 @@ uint16_t protocore_ocit_value_u16(const OcitMsg *m)
     }
     return (uint16_t)((m->value[0] << 8) | m->value[1]);
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OCIT

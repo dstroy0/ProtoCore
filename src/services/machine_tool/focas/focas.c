@@ -13,6 +13,8 @@
 #include "mmgr/protomem/protomem.h"
 #include "services/machine_tool/focas/focas.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // FOCAS is big-endian throughout.
 static size_t put16be(uint8_t *p, uint16_t v)
 {
@@ -255,5 +257,7 @@ float protocore_focas_value_f(const FocasValue *v)
     }
     return (float)v->data / div;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FOCAS

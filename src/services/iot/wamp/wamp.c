@@ -18,6 +18,8 @@
 
 #include "network_drivers/presentation/codec/json/json.h" // Json: the bounded writer a build emits through
 
+PROTOCORE_BEGIN_DECLS
+
 // Emit a uint64 as a JSON number: digits generated low end first, then reversed into the writer.
 static void emit_uint(uint8_t *restrict work, protocore_json_writer *w, uint64_t v)
 {
@@ -482,5 +484,7 @@ void protocore_wamp_get_uri(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 WampVars WampV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WAMP

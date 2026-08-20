@@ -14,6 +14,8 @@ static uint8_t modbus_master_work[16]; // the borrow an entry takes; ModbusMaste
 
 #include "services/fieldbus/modbus/modbus_master/modbus_master.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // Read a contiguous span of `n` registers (1..125) at `first` in one Modbus request; write the parsed
 // values to `out` as int32. Shared by the single-point and block reads. Returns the register count
 // (>= 0), a negative transport error (propagated from txn), PROTOCORE_SB_MODBUS_EXCEPTION on a Modbus
@@ -232,5 +234,7 @@ void protocore_sb_modbus_driver(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SbModbusVars SbModbusV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER

@@ -13,6 +13,8 @@
 
 #if PROTOCORE_ENABLE_SNMP_TRAP
 
+PROTOCORE_BEGIN_DECLS
+
 #if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/udp/client/client.h" // UdpClient: the datagram out
 #include "server/clock/clock.h"                          // protocore_millis(): the library's clock seam
@@ -301,5 +303,7 @@ void protocore_snmp_notify_inform_v2c(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SnmpNotifyVars SnmpNotifyV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SNMP_TRAP

@@ -16,6 +16,8 @@
 #include "mmgr/protostr/protostr.h"
 #include "server/core/logbuf/logbuf.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // A log line is its severity letter, a space, then the message.
 static const protocore_field LOG_LINE[] = {PROTOCORE_CH, {PROTOCORE_FK_LIT, 0, 1, " "}, PROTOCORE_STR, PROTOCORE_END};
 
@@ -169,5 +171,7 @@ void protocore_logbuf_set_trap(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 LogbufVars LogbufV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LOGBUF

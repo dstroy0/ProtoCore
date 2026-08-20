@@ -20,6 +20,8 @@
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/core/proto_handler.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // One published mountpoint on a listener.
 typedef struct
 {
@@ -416,5 +418,7 @@ void protocore_ntrip_caster_reset(void)
         s_ctx.rovers[i].active = PROTO_FALSE;
     }
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTRIP_CASTER

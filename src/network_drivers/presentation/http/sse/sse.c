@@ -17,6 +17,8 @@
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a stream sends on
 #include "sse.h"
 
+PROTOCORE_BEGIN_DECLS
+
 SseConn protocore_sse_pool[MAX_SSE_CONNS];
 
 // The per-route subscribe handlers and the framing buffer. A handler belongs here rather than in
@@ -226,5 +228,7 @@ uint8_t *protocore_sse_span(void)
 
 /** @brief The operands and the outcome. */
 SseVars SseV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSE

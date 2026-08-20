@@ -16,6 +16,8 @@
 #include "mmgr/protostr/protostr.h"
 #include "services/opcua/opcua_client/opcua_client.h"
 
+PROTOCORE_BEGIN_DECLS
+
 void protocore_opcua_client_init(OpcUaClient *c)
 {
     mem.set(c, 0, sizeof(*c));
@@ -584,5 +586,7 @@ int32_t protocore_opcua_client_on_browse(const uint8_t *msg, size_t len, OpcUaCl
     }
     return r.err ? -1 : (int32_t)out_n;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OPCUA_CLIENT

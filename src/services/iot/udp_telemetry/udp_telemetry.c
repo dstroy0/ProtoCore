@@ -19,6 +19,8 @@
 #include "mmgr/protomem/protomem.h" // mem.cpy: the spans a line is assembled from
 #include "mmgr/protostr/protostr.h" // str.len: the bounded measure of an appended span
 
+PROTOCORE_BEGIN_DECLS
+
 #if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/udp/client/client.h" // UdpClient.sendto: one line, one datagram
 #include "shared/ip/ip.h"                                // Ip.parse: the collector address, once
@@ -306,5 +308,7 @@ void protocore_udp_telemetry_write(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 UdpTelemetryVars UdpTelemetryV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_UDP_TELEMETRY

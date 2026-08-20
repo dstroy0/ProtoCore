@@ -15,6 +15,8 @@
 #include "mmgr/secure/secure.h" // the pool the digest borrow comes from
 #include "mmgr/span/span.h"     // protocore_span, span.ok
 
+PROTOCORE_BEGIN_DECLS
+
 // RFC 4122 DNS namespace UUID (6ba7b810-9dad-11d1-80b4-00c04fd430c8).
 static const uint8_t NS_DNS[16] = {0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1,
                                    0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8};
@@ -95,5 +97,7 @@ void protocore_device_id_uuid(uint8_t *restrict work)
 
 /** @brief The operands and the outcome. */
 DeviceIdVars DeviceIdV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DEVICE_ID

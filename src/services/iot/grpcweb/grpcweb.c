@@ -22,6 +22,8 @@
 #include "mmgr/protomem/protomem.h" // mem.cpy / mem.cmp: the spans a frame is assembled from and matched on
 #include "mmgr/protostr/protostr.h" // str.len: the bounded length of a field-line's text
 
+PROTOCORE_BEGIN_DECLS
+
 // Write Message-Length as a 4 byte unsigned integer, big endian.
 static void put_be32(uint8_t *buf, uint32_t v)
 {
@@ -257,5 +259,7 @@ void protocore_grpc_web_trailers_message(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 GrpcWebVars GrpcWebV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GRPC_WEB

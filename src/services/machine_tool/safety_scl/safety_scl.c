@@ -17,6 +17,8 @@
 
 #include "services/machine_tool/safety_scl/safety_scl.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // Latch the first fault: once fail-safe, later failures do not overwrite the diagnostically
 // interesting one that actually broke the connection.
 static void trip(SclConn *c, SclFault why)
@@ -139,5 +141,7 @@ uint32_t protocore_scl_next_counter(uint32_t counter, uint32_t counter_mod)
     uint32_t n = counter + 1u; // wraps naturally at 2^32 when no modulus is set
     return counter_mod ? (n % counter_mod) : n;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SAFETY_SCL

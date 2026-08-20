@@ -14,6 +14,8 @@
 
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 
+PROTOCORE_BEGIN_DECLS
+
 // Trim leading and trailing spaces from [s, s+len); updates s and len in place.
 static void trim(const char **s, size_t *len)
 {
@@ -333,5 +335,7 @@ proto_bool protocore_haas_mdc_dprnt_line(const char *buf, size_t len, const char
     }
     return PROTO_TRUE;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HAAS_MDC

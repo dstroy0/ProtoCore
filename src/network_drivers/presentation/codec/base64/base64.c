@@ -29,6 +29,8 @@
 #include "protocore_config.h"       // PROTOCORE_BASE64_SWAR (scalar vs SWAR constant-time decode; default SWAR)
                                     // strnlen
 
+PROTOCORE_BEGIN_DECLS
+
 static const char B64_TABLE[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 // The entries this file calls before reaching their definitions.
@@ -411,6 +413,8 @@ void protocore_base64_url_decode(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 Base64Vars Base64V;
+
+PROTOCORE_END_DECLS
 
 PROTOCORE_END_DECLS
 

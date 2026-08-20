@@ -15,6 +15,8 @@
 #include "mmgr/protostr/protostr.h" // str.eq: the string-field find compare
 #include "network_drivers/presentation/codec/json/json.h"
 
+PROTOCORE_BEGIN_DECLS
+
 static uint8_t json_work[16]; // the borrow an entry takes; Json never reads it
 
 void protocore_docstore_open(protocore_doc_store *ds, struct protocore_dbm *db)
@@ -182,5 +184,7 @@ uint32_t protocore_docstore_find_bool(protocore_doc_store *ds, const char *field
     f.user_ctx = ctx;
     return run_find(&f);
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DOCSTORE

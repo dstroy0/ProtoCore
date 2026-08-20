@@ -18,6 +18,8 @@
 #include "crypto/cipher/aes_sbox.h"
 #include "crypto/hash/sha256/sha256.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // The scan for the password's end stops here, so a password that carries no terminator cannot be
 // read past. The derivation repeats whatever it finds, so a shorter password is not rejected.
 #define PROTOCORE_SNMP_USM_PASS_MAX 256
@@ -244,5 +246,7 @@ void protocore_snmp_crypto_aes_cfb128(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SnmpCryptoVars SnmpCryptoV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SNMP_V3

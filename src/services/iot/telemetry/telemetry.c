@@ -19,6 +19,8 @@
 
 #include <math.h> // sqrtf: the standard deviation
 
+PROTOCORE_BEGIN_DECLS
+
 // Population variance from the running sums, clamped at 0 where rounding drives the difference
 // below it. The caller checks count first.
 static double window_variance_of(const TelemetryWindow *w)
@@ -302,5 +304,7 @@ void protocore_telemetry_totalizer_total(uint8_t *restrict work)
 // the one function.
 /** @brief The operands and the outcome. */
 TelemetryVars TelemetryV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TELEMETRY

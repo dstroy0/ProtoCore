@@ -17,6 +17,8 @@
 #include "network_drivers/network/dns/dns_wire/dns_wire.h" // the name codec both DNS halves read and write
 #include "network_drivers/transport/udp/server/server.h"   // UdpListener: the port 53 bind and the reply
 
+PROTOCORE_BEGIN_DECLS
+
 /**
  * @brief The name table's compile-time storage: the A records and the response stage.
  *
@@ -291,5 +293,7 @@ void protocore_dns_server_begin(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 DnsServerVars DnsServerV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DNS_SERVER

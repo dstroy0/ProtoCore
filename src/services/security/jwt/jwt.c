@@ -20,6 +20,8 @@
 #include "mmgr/secure/secure.h"                 // the MAC's working set, wiped on release
 #include "network_drivers/presentation/codec/base64/base64.h" // base64url, RFC 4648 sec 5
 
+PROTOCORE_BEGIN_DECLS
+
 // HS256 emits a 32-byte MAC, and 32 bytes in base64url with the padding skipped are 43 characters
 // (RFC 4648 sec 5).
 #define JWT_SIG_B64_LEN 43u
@@ -436,5 +438,7 @@ void protocore_jwt_scope_allows(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 JwtVars JwtV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_JWT
