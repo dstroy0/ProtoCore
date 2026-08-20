@@ -22,6 +22,51 @@
 
 PROTOCORE_BEGIN_DECLS
 
+// --- the borrow, carved above the capability gate ---------------------------
+//
+// Above it, because the borrow is the MODULE's and not the seam's: same size, same offset, same
+// alignment, whether or not a UART exists behind it. The carving used to sit inside
+// `#if PROTOCORE_HAS_BUS` while protocore_ld2410_span() hands the bytes out unconditionally, so
+// with the capability off the module owned a borrow and had nothing to read it with.
+
+// Bytes taken from the UART per poll. A report frame is far shorter, so one poll carries at least
+// a whole frame and the read stays bounded (SRC_LAW rule 5).
+#define LD2410_RX_CHUNK 64
+
+// Widest command frame this driver builds: header, length, word, value and footer.
+#define LD2410_CMD_MAX 16
+
+// All LD2410 UART-binding state, owned by one instance (internal linkage): the frame stream
+// assembler, the last decoded report, the have-report flag, the receive chunk, and the command
+// frame, grouped so it is one named owner, unreachable from any other translation unit. Both
+// buffers are members rather than locals because each is filled on the request path.
+typedef struct
+{
+    Ld2410Stream stream;
+    Ld2410Report last;
+    proto_bool have;
+    uint8_t rx[LD2410_RX_CHUNK];
+    uint8_t cmd[LD2410_CMD_MAX];
+} Ld2410Ctx;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define LD2410_OFF_CTX 0u
+static_assert(LD2410_OFF_CTX + sizeof(Ld2410Ctx) <= PROTOCORE_LD2410_BORROW,
+              "PROTOCORE_LD2410_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(LD2410_OFF_CTX % _Alignof(Ld2410Ctx) == 0,
+              "LD2410_OFF_CTX is not a multiple of alignof(Ld2410Ctx) - LD2410_CTX() would return a misaligned "
+              "pointer; pad the region ahead of it");
+
+// The region, at its offset in the caller's borrow.
+#define LD2410_CTX(w) ((Ld2410Ctx *)(void *)((w) + LD2410_OFF_CTX))
+
 #if PROTOCORE_HAS_BUS
 #include "server/peripherals/uart.h" // the shared UART owner
 #endif
@@ -67,8 +112,6 @@ static size_t cmd_frame(uint8_t *buf, size_t cap, uint16_t word, const uint8_t *
     return i;
 }
 
-// The entries this file calls before reaching their definitions.
-
 // --- the program's shared state, beside the namespace not on it -------------
 
 // The one owned instance, private to this TU: the pointer to the bytes this module took for
@@ -89,6 +132,7 @@ uint8_t *protocore_ld2410_span(void)
     return s_own.span;
 }
 
+// The entries this file calls before reaching their definitions.
 static void ld2410_cmd_config_enable(uint8_t *restrict work);
 static void ld2410_cmd_config_end(uint8_t *restrict work);
 static void ld2410_cmd_engineering(uint8_t *restrict work);
@@ -453,44 +497,6 @@ static void ld2410_ack_mac(uint8_t *restrict work)
 
 #if PROTOCORE_HAS_BUS
 
-// Bytes taken from the UART per poll. A report frame is far shorter, so one poll carries at least
-// a whole frame and the read stays bounded (SRC_LAW rule 5).
-#define LD2410_RX_CHUNK 64
-
-// Widest command frame this driver builds: header, length, word, value and footer.
-#define LD2410_CMD_MAX 16
-
-// All LD2410 UART-binding state, owned by one instance (internal linkage): the frame stream
-// assembler, the last decoded report, the have-report flag, the receive chunk, and the command
-// frame, grouped so it is one named owner, unreachable from any other translation unit. Both
-// buffers are members rather than locals because each is filled on the request path.
-typedef struct
-{
-    Ld2410Stream stream;
-    Ld2410Report last;
-    proto_bool have;
-    uint8_t rx[LD2410_RX_CHUNK];
-    uint8_t cmd[LD2410_CMD_MAX];
-} Ld2410Ctx;
-// The caller's borrow, split: the context at its offset. One pointer arrives and every
-// region is that pointer plus a compile-time offset, so the assert below proves the span
-// covers them before anything runs.
-#define LD2410_OFF_CTX 0u
-static_assert(LD2410_OFF_CTX + sizeof(Ld2410Ctx) <= PROTOCORE_LD2410_BORROW,
-              "PROTOCORE_LD2410_BORROW is short of the module context - raise it in protocore_config.h, which"
-              " sums it into its arena");
-
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
-// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
-// assert above bounds the far end of the chain and says nothing about where a region begins.
-static_assert(LD2410_OFF_CTX % _Alignof(Ld2410Ctx) == 0,
-              "LD2410_OFF_CTX is not a multiple of alignof(Ld2410Ctx) - LD2410_CTX() would return a misaligned "
-              "pointer; pad the region ahead of it");
-
-// The region, at its offset in the caller's borrow.
-#define LD2410_CTX(w) ((Ld2410Ctx *)(void *)((w) + LD2410_OFF_CTX))
-
 static void ld2410_begin(uint8_t *restrict work)
 {
     int rx_pin = Ld2410.begin_args.rx_pin;
@@ -576,30 +582,47 @@ static void ld2410_restart(uint8_t *restrict work)
     Ld2410.ok = ok;
 }
 
-#else // no bus seam. The codec above is host-tested.
+#else // no bus seam: the codec above is host-tested, and these five answer "nothing here"
 
-proto_bool protocore_ld2410_begin(int rx_pin, int tx_pin)
+// The SAME FIVE ENTRIES the table binds, not a second API beside it. This arm used to define
+// protocore_ld2410_begin(int, int) and four more in the flat shape from before the namespace, so
+// with PROTOCORE_HAS_BUS at 0 the table still named ld2410_begin and nothing defined it - the arm
+// did not compile at all. Nothing noticed, because every host env states
+// PROTOCORE_PLATFORM_HAS_BUS 1. The flat five were declared by no header and called by nothing.
+
+static void ld2410_begin(uint8_t *restrict work)
 {
-    (void)rx_pin;
-    (void)tx_pin;
-    return PROTO_FALSE;
+    // The stream still resets: the reassembler is pure, so a caller that pushes captured bytes at
+    // it after begin() gets the same answers here as it does with a radio wired up.
+    Ld2410.stream_reset_args.s = &LD2410_CTX(work)->stream;
+    ld2410_stream_reset(work);
+    LD2410_CTX(work)->have = PROTO_FALSE;
+    Ld2410.ok = PROTO_FALSE; // no UART was opened, and no caller should act as though one was
 }
-proto_bool protocore_ld2410_poll(void)
+
+static void ld2410_poll(uint8_t *restrict work)
 {
-    return PROTO_FALSE;
+    (void)work;
+    Ld2410.ok = PROTO_FALSE; // nothing to read from
 }
-const Ld2410Report *protocore_ld2410_last(void)
+
+static void ld2410_last(uint8_t *restrict work)
 {
-    return NULL;
+    // Whatever the reassembler last accepted, exactly as the bus arm reports it: a report only ever
+    // arrives through stream_push, which does not need the seam.
+    Ld2410.report = LD2410_CTX(work)->have ? &LD2410_CTX(work)->last : NULL;
 }
-proto_bool protocore_ld2410_set_engineering(proto_bool on)
+
+static void ld2410_set_engineering(uint8_t *restrict work)
 {
-    (void)on;
-    return PROTO_FALSE;
+    (void)work;
+    Ld2410.ok = PROTO_FALSE; // the three config frames build fine; there is nowhere to send them
 }
-proto_bool protocore_ld2410_restart(void)
+
+static void ld2410_restart(uint8_t *restrict work)
 {
-    return PROTO_FALSE;
+    (void)work;
+    Ld2410.ok = PROTO_FALSE;
 }
 
 #endif // PROTOCORE_HAS_BUS

@@ -3218,6 +3218,30 @@
         "pre:test/gen_test_runners.py"
       ]
     },
+    
+    "native_hmmd_nobus": {
+      "desc": "The HMMD codec with PROTOCORE_HAS_BUS at 0: the same suite as native_hmmd against the no-bus arm of hmmd.c. Every host env states PROTOCORE_PLATFORM_HAS_BUS 1, so that arm had never been compiled by anything - it defined the pre-namespace flat API while the table bound entries nothing defined, and it did not build. The suite touches only the codec (framing, the resyncing reassembler, the command builders), which is identical in both arms; what this env proves is that the seam half still compiles and still answers.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_HMMD=1",
+        "-DPROTOCORE_HAS_BUS=0"
+      ],
+      "src": [
+        "+<server/peripherals/hmmd/hmmd.c>",
+        "+<mmgr/protomem/protomem.c>",
+        "+<mmgr/rawmemcpy/rawmemcpy.c>",
+        "+<mmgr/swar/swar.c>",
+        "+<mmgr/secure/secure.c>",
+        "+<mmgr/span/span.c>",
+        "+<mmgr/arena/arena.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>"
+      ],
+      "tests": [
+        "unit/src/server/peripherals/hmmd/test_hmmd"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
+    },
     "native_hostlink": {
       "desc": "Omron Host Link (C-mode) frame codec (services/fieldbus/hostlink): the FCS (XOR), the ASCII\ncommand builder (@UU + header + text + FCS + *CR), and the FCS-validating parser +\nend-code reader. Pure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_HOSTLINK=1"],
@@ -3922,6 +3946,30 @@
       "desc": "LD2410 mmWave radar codec (server/peripherals/ld2410): decoding a basic and an engineering-mode\nreport frame, rejecting malformed frames, the byte-by-byte stream reassembler (resync past\nnoise, split feeds, absurd-length drop), the presence/distance helpers, and the exact bytes\nof the config-command encoders. Pure - the UART pump is ESP32-only.",
       "flags": [
         "-DPROTOCORE_ENABLE_LD2410=1"
+      ],
+      "src": [
+        "+<server/peripherals/ld2410/ld2410.c>",
+        "+<mmgr/protomem/protomem.c>",
+        "+<mmgr/rawmemcpy/rawmemcpy.c>",
+        "+<mmgr/swar/swar.c>",
+        "+<mmgr/secure/secure.c>",
+        "+<mmgr/span/span.c>",
+        "+<mmgr/arena/arena.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>"
+      ],
+      "tests": [
+        "unit/src/server/peripherals/ld2410/test_ld2410"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
+    },
+    
+    "native_ld2410_nobus": {
+      "desc": "The LD2410 codec with PROTOCORE_HAS_BUS at 0: the same suite as native_ld2410 against the no-bus arm of ld2410.c. That arm had never been compiled - every host env states PROTOCORE_PLATFORM_HAS_BUS 1 - and it defined five pre-namespace flat functions while the table bound five entries nothing defined. The suite exercises the codec (framing, the resyncing reassembler, the command builders including cmd_restart, which builds a frame rather than sending one), identical in both arms.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_LD2410=1",
+        "-DPROTOCORE_HAS_BUS=0"
       ],
       "src": [
         "+<server/peripherals/ld2410/ld2410.c>",
@@ -5501,7 +5549,8 @@
         "pre:test/gen_test_runners.py"
       ]
     },
-    "native_pn532": {
+    
+        "native_pn532": {
       "desc": "PN532 NFC frame codec (server/peripherals/pn532), v5 radio plugin: the normal-information-frame\nbuild/parse against the documented GetFirmwareVersion command + response frames (LEN/LCS +\nDCS checksums), a round trip, malformed framing (bad preamble / start / LCS / DCS), the ACK\nframe, and over-length rejection. Pure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_PN532=1", "-DPROTOCORE_PN532_MAX_DATA=8"],
       "src": [

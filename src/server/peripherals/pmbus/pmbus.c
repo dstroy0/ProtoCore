@@ -14,6 +14,15 @@
 
 #if PROTOCORE_ENABLE_PMBUS
 
+// A bus owner, through Smbus: every transaction below is an Smbus call. smbus.c refuses the same
+// way, so PMBUS on a vendor with no bus master is not a configuration - it is two requirements
+// that cannot both hold, and the failure belongs here rather than three includes deep.
+#if !PROTOCORE_HAS_BUS
+#error                                                                                                                 \
+    "ProtoCore: PROTOCORE_ENABLE_PMBUS needs a bus master (an I2C master). Provide one in test/core_setup/hal/<vendor>, or\
+ turn the driver off - there is no software stand-in for a part on the other end of a bus."
+#endif
+
 #include "server/peripherals/pmbus/pmbus.h"
 
 #include "server/peripherals/smbus/smbus.h"
@@ -27,12 +36,12 @@ PROTOCORE_BEGIN_DECLS
 #define PROTOCORE_PMBUS_MAX_MICRO 2147483647LL
 #define PROTOCORE_PMBUS_MIN_MICRO (-2147483647LL - 1)
 
-// The entries this file calls before reaching their definitions.
 // --- the entries -----------------------------------------------------------
 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
+// The entries this file calls before reaching their definitions.
 static void pmbus_l11_exponent(uint8_t *restrict work);
 static void pmbus_l11_mantissa(uint8_t *restrict work);
 static void pmbus_linear11_micro(uint8_t *restrict work);
@@ -412,83 +421,6 @@ static void pmbus_read_mfr_string(uint8_t *restrict work)
     SmbusV.read_block_args.len = len;
     Smbus.read_block(protocore_smbus_span());
     Pmbus.ok = SmbusV.ok;
-}
-
-#else // no bus seam. The encodings above are host-tested.
-
-proto_bool protocore_pmbus_begin(void)
-{
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_pmbus_set_page(uint8_t addr, uint8_t page)
-{
-    (void)addr;
-    (void)page;
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_pmbus_read_vout_mode(uint8_t addr, uint8_t *out)
-{
-    (void)addr;
-    (void)out;
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_pmbus_read_linear11(uint8_t addr, uint8_t cmd, int32_t *micro)
-{
-    (void)addr;
-    (void)cmd;
-    (void)micro;
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_pmbus_read_linear16(uint8_t addr, uint8_t cmd, int8_t exponent, int32_t *micro)
-{
-    (void)addr;
-    (void)cmd;
-    (void)exponent;
-    (void)micro;
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_pmbus_write_linear16(uint8_t addr, uint8_t cmd, int8_t exponent, int32_t micro)
-{
-    (void)addr;
-    (void)cmd;
-    (void)exponent;
-    (void)micro;
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_pmbus_status_byte(uint8_t addr, uint8_t *out)
-{
-    (void)addr;
-    (void)out;
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_pmbus_status_word(uint8_t addr, uint16_t *out)
-{
-    (void)addr;
-    (void)out;
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_pmbus_clear_faults(uint8_t addr)
-{
-    (void)addr;
-    return PROTO_FALSE;
-}
-
-proto_bool protocore_pmbus_read_mfr_string(uint8_t addr, uint8_t cmd, uint8_t *out, size_t cap, size_t *len)
-{
-    (void)addr;
-    (void)cmd;
-    (void)out;
-    (void)cap;
-    (void)len;
-    return PROTO_FALSE;
 }
 
 #endif // PROTOCORE_HAS_BUS
