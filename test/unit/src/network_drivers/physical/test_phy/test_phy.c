@@ -76,15 +76,15 @@ static size_t read_ssid(char *out, size_t cap)
 
 static protocore_phy_ps ps_mode(void)
 {
-    PhysicalV.radio->ps_mode(protocore_radio_power_span());
-    return PhysicalV.radio->mode;
+    Radio.ps_mode(protocore_radio_power_span());
+    return Radio.mode;
 }
 
 static proto_bool ps_set(protocore_phy_ps mode)
 {
-    PhysicalV.radio->ps.mode = mode;
-    PhysicalV.radio->ps_set(protocore_radio_power_span());
-    return PhysicalV.radio->ok;
+    Radio.ps.mode = mode;
+    Radio.ps_set(protocore_radio_power_span());
+    return Radio.ok;
 }
 
 // ---- nothing up -----------------------------------------------------------
@@ -316,12 +316,12 @@ void test_k_power_save_mode_round_trips(void)
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, ps_mode());
 
     // 802.11-2020 11.7.6 selects a transmit power in dBm; a cap may be negative.
-    PhysicalV.radio->tx.dbm = 11;
-    PhysicalV.radio->tx_power_set(protocore_radio_power_span());
-    TEST_ASSERT_TRUE(PhysicalV.radio->ok);
-    PhysicalV.radio->tx.dbm = -4;
-    PhysicalV.radio->tx_power_set(protocore_radio_power_span());
-    TEST_ASSERT_TRUE(PhysicalV.radio->ok);
+    Radio.tx.dbm = 11;
+    Radio.tx_power_set(protocore_radio_power_span());
+    TEST_ASSERT_TRUE(Radio.ok);
+    Radio.tx.dbm = -4;
+    Radio.tx_power_set(protocore_radio_power_span());
+    TEST_ASSERT_TRUE(Radio.ok);
 }
 
 // The keep-awake refcount: the first hold puts the radio in active mode so a bulk transfer crosses
@@ -330,19 +330,19 @@ void test_l_busy_hold_refcount_gates_doze(void)
 {
     TEST_ASSERT_TRUE(ps_set(PROTOCORE_PHY_PS_MAX_MODEM));
 
-    PhysicalV.radio->busy_hold(protocore_radio_power_span());
+    Radio.busy_hold(protocore_radio_power_span());
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, ps_mode());
 
-    PhysicalV.radio->busy_hold(protocore_radio_power_span()); // nested: still held
-    PhysicalV.radio->busy_release(protocore_radio_power_span());
+    Radio.busy_hold(protocore_radio_power_span()); // nested: still held
+    Radio.busy_release(protocore_radio_power_span());
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, ps_mode());
 
-    PhysicalV.radio->busy_release(protocore_radio_power_span());
+    Radio.busy_release(protocore_radio_power_span());
     TEST_ASSERT_EQUAL_UINT8((uint8_t)PROTOCORE_RADIO_WIFI_PS, ps_mode());
 
     // An unbalanced release cannot drive the count negative or change the mode again.
     protocore_phy_ps before = ps_mode();
-    PhysicalV.radio->busy_release(protocore_radio_power_span());
+    Radio.busy_release(protocore_radio_power_span());
     TEST_ASSERT_EQUAL_UINT8((uint8_t)before, ps_mode());
 }
 
@@ -350,7 +350,7 @@ void test_l_busy_hold_refcount_gates_doze(void)
 void test_m_power_applies_the_configured_mode(void)
 {
     TEST_ASSERT_TRUE(ps_set(PROTOCORE_PHY_PS_MIN_MODEM));
-    PhysicalV.radio->power(protocore_radio_power_span());
+    Radio.power(protocore_radio_power_span());
     TEST_ASSERT_EQUAL_UINT8((uint8_t)PROTOCORE_RADIO_WIFI_PS, ps_mode());
 }
 
@@ -366,25 +366,18 @@ static void on_frame(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t ch
 // deliver its frames.
 void test_n_monitor_mode_tunes_and_refuses_a_null_sink(void)
 {
-    PhysicalV.radio->monitor.channel = 6;
-    PhysicalV.radio->monitor.on_frame = NULL;
-    PhysicalV.radio->monitor_begin(protocore_radio_power_span());
-    TEST_ASSERT_FALSE(PhysicalV.radio->ok);
+    TEST_ASSERT_FALSE(protocore_phy_monitor_begin(6, NULL));
 
-    PhysicalV.radio->monitor.on_frame = on_frame;
-    PhysicalV.radio->monitor_begin(protocore_radio_power_span());
-    TEST_ASSERT_TRUE(PhysicalV.radio->ok);
+    TEST_ASSERT_TRUE(protocore_phy_monitor_begin(6, on_frame));
     TEST_ASSERT_EQUAL_UINT8(6, channel());
 
-    PhysicalV.radio->monitor.channel = 11;
-    PhysicalV.radio->monitor_set_channel(protocore_radio_power_span());
+    protocore_phy_monitor_set_channel(11);
     TEST_ASSERT_EQUAL_UINT8(11, channel());
 
-    PhysicalV.radio->monitor.channel = 0; // 0 leaves the channel to whoever captures
-    PhysicalV.radio->monitor_set_channel(protocore_radio_power_span());
+    protocore_phy_monitor_set_channel(0); // 0 leaves the channel to whoever captures
     TEST_ASSERT_EQUAL_UINT8(11, channel());
 
-    PhysicalV.radio->monitor_end(protocore_radio_power_span());
+    protocore_phy_monitor_end();
     TEST_ASSERT_EQUAL_UINT8(11, channel()); // ending does not retune
 }
 
@@ -392,19 +385,19 @@ void test_n_monitor_mode_tunes_and_refuses_a_null_sink(void)
 // the active mode of 802.11-2020 11.2.3.2 rather than as a made-up name.
 void test_o_power_save_names(void)
 {
-    PhysicalV.radio->ps.mode = PROTOCORE_PHY_PS_NONE;
-    PhysicalV.radio->ps_name(protocore_radio_power_span());
-    TEST_ASSERT_EQUAL_STRING("none", PhysicalV.radio->text);
+    Radio.ps.mode = PROTOCORE_PHY_PS_NONE;
+    Radio.ps_name(protocore_radio_power_span());
+    TEST_ASSERT_EQUAL_STRING("none", Radio.text);
 
-    PhysicalV.radio->ps.mode = PROTOCORE_PHY_PS_MIN_MODEM;
-    PhysicalV.radio->ps_name(protocore_radio_power_span());
-    TEST_ASSERT_EQUAL_STRING("min_modem", PhysicalV.radio->text);
+    Radio.ps.mode = PROTOCORE_PHY_PS_MIN_MODEM;
+    Radio.ps_name(protocore_radio_power_span());
+    TEST_ASSERT_EQUAL_STRING("min_modem", Radio.text);
 
-    PhysicalV.radio->ps.mode = PROTOCORE_PHY_PS_MAX_MODEM;
-    PhysicalV.radio->ps_name(protocore_radio_power_span());
-    TEST_ASSERT_EQUAL_STRING("max_modem", PhysicalV.radio->text);
+    Radio.ps.mode = PROTOCORE_PHY_PS_MAX_MODEM;
+    Radio.ps_name(protocore_radio_power_span());
+    TEST_ASSERT_EQUAL_STRING("max_modem", Radio.text);
 
-    PhysicalV.radio->ps.mode = (protocore_phy_ps)99;
-    PhysicalV.radio->ps_name(protocore_radio_power_span());
-    TEST_ASSERT_EQUAL_STRING("none", PhysicalV.radio->text);
+    Radio.ps.mode = (protocore_phy_ps)99;
+    Radio.ps_name(protocore_radio_power_span());
+    TEST_ASSERT_EQUAL_STRING("none", Radio.text);
 }

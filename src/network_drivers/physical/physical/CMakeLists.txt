@@ -10,5 +10,4 @@ protocore_module(pc_network_drivers_physical_physical
     pc_shared_ip
   PRIVATE
     pc_mmgr_plaintext
-    pc_network_drivers_physical_radio_power
 )

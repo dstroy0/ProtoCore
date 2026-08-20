@@ -13,8 +13,7 @@
 
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem/protomem.h"
-#include "network_drivers/physical/physical/physical.h"
-#include "network_drivers/physical/radio_power/radio_power.h" // Radio: the monitor-mode seam this drives
+#include "network_drivers/physical/physical/physical.h" // protocore_phy_monitor_*: the L1 seam this drives
 #include "services/radio/promisc/promisc.h"
 #include "shared/pcap/pcap.h"
 
@@ -176,10 +175,7 @@ void protocore_promisc_begin(uint8_t *restrict work)
     PROMISC_CTX(work)->sink = sink;
     // protocore_promisc_sink_fn and protocore_phy_frame_fn are the same neutral shape, so the sink goes
     // straight down; the platform's received-packet struct is unwrapped in the backend.
-    Radio.monitor.channel = channel;
-    Radio.monitor.on_frame = sink;
-    Radio.monitor_begin(protocore_radio_power_span());
-    if (!Radio.ok)
+    if (!protocore_phy_monitor_begin(channel, sink))
     {
         PROMISC_CTX(work)->sink = NULL;
         PromiscV.ok = PROTO_FALSE;
@@ -193,14 +189,13 @@ void protocore_promisc_set_channel(uint8_t *restrict work)
     (void)work;
     uint8_t channel = PromiscV.set_channel_args.channel;
 
-    Radio.monitor.channel = channel;
-    Radio.monitor_set_channel(protocore_radio_power_span());
+    protocore_phy_monitor_set_channel(channel);
 }
 
 void protocore_promisc_end(uint8_t *restrict work)
 {
 
-    Radio.monitor_end(protocore_radio_power_span());
+    protocore_phy_monitor_end();
     PROMISC_CTX(work)->sink = NULL;
 }
 

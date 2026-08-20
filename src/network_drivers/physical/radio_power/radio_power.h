@@ -3,8 +3,8 @@
 
 /**
  * @file radio_power.h
- * @brief Layer 1 (Physical) - 802.11 power management, transmit power control, and monitor
- *        capture (PROTOCORE_ENABLE_RADIO_POWER).
+ * @brief Layer 1 (Physical) - 802.11 power management and transmit power control
+ *        (PROTOCORE_ENABLE_RADIO_POWER).
  *
  * IEEE Std 802.11-2020 is the normative source for every call here; no IETF RFC governs radio
  * power management. 11.2.3.2 (Non-AP STA power management modes) names the two modes a non-AP
@@ -29,9 +29,11 @@
 #ifndef PROTOCORE_RADIO_POWER_H
 #define PROTOCORE_RADIO_POWER_H
 
-#include "network_drivers/physical/physical/physical.h" // protocore_phy_ps, protocore_phy_frame_fn: the L1 contract
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-#include "protocore_config.h"
+#if PROTOCORE_ENABLE_RADIO_POWER
+
+#include "network_drivers/physical/physical/physical.h" // protocore_phy_ps: the L1 contract
 
 PROTOCORE_BEGIN_DECLS
 
@@ -47,24 +49,16 @@ typedef struct
     int8_t dbm; ///< maximum transmit power in whole dBm; 802.11-2020 11.7.5 bounds it
 } RadioTxArgs;
 
-/** @brief What a monitor capture tunes to, and where its frames go. */
-typedef struct
-{
-    uint8_t channel;                 ///< channel number in the radio's operating class (802.11-2020 Annex E)
-    protocore_phy_frame_fn on_frame; ///< each captured frame, FCS stripped (802.11-2020 9.2.4.8)
-} RadioMonitorArgs;
-
 /** @brief The radio's own state and the calls that reach it, described only in radio_power.c. */
 
 /**
- * @brief The radio: its power management mode, its transmit power cap, and monitor capture.
+ * @brief The radio: its power management mode and its transmit power cap.
  *
  * A caller sets the members a call takes, invokes it through ::Radio, and reads the outcome off the
  * same handle. The keep-awake count is behind @ref internal.
  *
  * @var RadioNs::ps       the power management mode a call applies or renders (802.11-2020 11.2.3.2)
  * @var RadioNs::tx       the transmit power a cap applies (802.11-2020 11.7)
- * @var RadioNs::monitor  what a capture tunes to, and where its frames go
  * @var RadioNs::ok       a call's true/false outcome
  * @var RadioNs::mode     the mode the radio reports, in L1's own protocore_phy_ps terms
  * @var RadioNs::text     the name a render reports ("none" / "min_modem" / "max_modem")
@@ -75,9 +69,6 @@ typedef struct
  * @var RadioNs::ps_set       select active mode or PS mode (802.11-2020 6.3.2.2)
  * @var RadioNs::ps_mode      read the mode back into @ref RadioNs::mode
  * @var RadioNs::tx_power_set cap transmit power at @ref RadioTxArgs::dbm (802.11-2020 11.7.6)
- * @var RadioNs::monitor_begin        start capture on @ref RadioMonitorArgs::channel
- * @var RadioNs::monitor_set_channel  retune capture to @ref RadioMonitorArgs::channel
- * @var RadioNs::monitor_end          stop capture
  *
  * The first @ref RadioNs::busy_hold puts the radio in active mode so a long transfer crosses no
  * doze interval; the matching release, once the count returns to zero, applies the configured
@@ -87,26 +78,20 @@ typedef struct
  */
 typedef struct RadioNs
 {
-    RadioPsArgs ps;           ///< the power management mode a call applies or renders (802.11-2020 11.2.3.2)
-    RadioTxArgs tx;           ///< the transmit power a cap applies (802.11-2020 11.7)
-    RadioMonitorArgs monitor; ///< what a capture tunes to, and where its frames go
+    RadioPsArgs ps; ///< the power management mode a call applies or renders (802.11-2020 11.2.3.2)
+    RadioTxArgs tx; ///< the transmit power a cap applies (802.11-2020 11.7)
 
     proto_bool ok;
     protocore_phy_ps mode;
     const char *text;
 
-#if PROTOCORE_ENABLE_RADIO_POWER
     void (*const power)(uint8_t *restrict work);
     void (*const ps_name)(uint8_t *restrict work);
     void (*const busy_hold)(uint8_t *restrict work);
     void (*const busy_release)(uint8_t *restrict work);
-#endif
     void (*const ps_set)(uint8_t *restrict work);
     void (*const ps_mode)(uint8_t *restrict work);
     void (*const tx_power_set)(uint8_t *restrict work);
-    void (*const monitor_begin)(uint8_t *restrict work);
-    void (*const monitor_set_channel)(uint8_t *restrict work);
-    void (*const monitor_end)(uint8_t *restrict work);
 
 } RadioNs;
 
@@ -124,5 +109,7 @@ extern RadioNs Radio;
 uint8_t *protocore_radio_power_span(void);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_RADIO_POWER
 
 #endif // PROTOCORE_RADIO_POWER_H

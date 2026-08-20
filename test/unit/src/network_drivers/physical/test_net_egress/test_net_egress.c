@@ -234,10 +234,9 @@ void test_radio_control_applies_and_reads_back(void)
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_MIN_MODEM, protocore_phy_ps_get());
 }
 
-// The registry the layer owns is reached through the span it publishes, and the radio child through
-// the handle, so a missing binding is a null deref at the first call rather than a link error.
+// The registry the layer owns is reached through the span it publishes, so a pool too short to
+// carve it is a null at the first call rather than a link error.
 void test_layer_handle_is_bound(void)
 {
     TEST_ASSERT_NOT_NULL(protocore_physical_span());
-    TEST_ASSERT_NOT_NULL(PhysicalV.radio);
 }

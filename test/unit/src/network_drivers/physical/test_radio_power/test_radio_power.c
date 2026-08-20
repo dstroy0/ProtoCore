@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Host tests for 802.11 power management, driven against the radio the host build compiles
-// (network_drivers/physical/radio_power.h).
+// (network_drivers/physical/radio_power/radio_power.h). Monitor capture is not here: it is the L1
+// seam promisc drives, asserted where that seam lives - test_phy tunes it against a real backend
+// and reads the channel back, test_net_egress refuses a capture with nowhere to deliver.
 //
 // IEEE Std 802.11-2020 governs every call here and no IETF RFC does. 11.2.3.2 names the two modes a
 // non-AP STA runs in, active mode and PS mode, 6.3.2.2 (MLME-POWERMGT.request) is the primitive that
@@ -82,32 +84,6 @@ void test_apply_sets_the_mode_and_reads_it_back(void)
     Radio.tx.dbm = -4;
     Radio.tx_power_set(protocore_radio_power_span());
     TEST_ASSERT_TRUE(Radio.ok);
-}
-
-static void on_frame(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t channel)
-{
-    (void)frame;
-    (void)len;
-    (void)rssi;
-    (void)channel;
-}
-
-// Capture with nowhere to deliver is a caller bug, so it is refused; with a sink the radio arms,
-// retunes, and stops.
-void test_monitor_arms_and_refuses_a_null_sink(void)
-{
-    Radio.monitor.channel = 6;
-    Radio.monitor.on_frame = NULL;
-    Radio.monitor_begin(protocore_radio_power_span());
-    TEST_ASSERT_FALSE(Radio.ok);
-
-    Radio.monitor.on_frame = on_frame;
-    Radio.monitor_begin(protocore_radio_power_span());
-    TEST_ASSERT_TRUE(Radio.ok);
-
-    Radio.monitor.channel = 11;
-    Radio.monitor_set_channel(protocore_radio_power_span());
-    Radio.monitor_end(protocore_radio_power_span());
 }
 
 // Applying the configured mode puts it on whatever the radio was left in.

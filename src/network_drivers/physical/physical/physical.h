@@ -285,15 +285,6 @@ typedef struct
 } PhysicalIfaceArgs;
 
 /**
- * @brief The radio interface, defined in radio_power.h.
- *
- * Named here rather than included: radio_power.h needs this file's protocore_phy_ps and
- * protocore_phy_frame_fn, so the dependency runs one way. A child is a pointer, so its declaration
- * is all this needs.
- */
-typedef struct RadioNs RadioNs;
-
-/**
  * @brief Layer 1: link bring-up, what the live link reports, and the interfaces this device has.
  *
  * A caller sets the members a call takes, invokes it through ::Physical, and reads the outcome off
@@ -351,7 +342,6 @@ typedef struct
     uint8_t u8;
     int8_t i8;
     int16_t i16;
-    RadioNs *radio;
 } PhysicalVars;
 
 /** @brief The operands and the outcome. */

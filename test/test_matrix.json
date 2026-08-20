@@ -2663,7 +2663,6 @@
       "src": [
         "+<network_drivers/network/forward/forward.c>",
         "+<network_drivers/physical/physical/physical.c>",
-        "+<network_drivers/physical/radio_power/radio_power.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem/protomem.c>",
         "+<mmgr/rawmemcpy/rawmemcpy.c>",
@@ -4326,7 +4325,6 @@
         "-DPROTOCORE_ENABLE_MDNS=1",
         "-DPROTOCORE_ENABLE_PROMISC=1",
         "-DPROTOCORE_PHYSICAL_HAS_BACKEND=1",
-        "-DPROTOCORE_ENABLE_RADIO_POWER=1",
         "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
@@ -4350,7 +4348,6 @@
         "+<mmgr/protostr/protostr.c>",
         "+<mmgr/secure/secure.c>",
         "+<network_drivers/network/dns/dns_wire/dns_wire.c>",
-        "+<network_drivers/physical/radio_power/radio_power.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/transport/udp/client/client.c>",
         "+<network_drivers/transport/udp/server/server.c>",
@@ -4379,7 +4376,6 @@
         "+<mmgr/secure/secure.c>",
         "+<network_drivers/network/dns/dns_wire/dns_wire.c>",
         "+<network_drivers/physical/physical/physical.c>",
-        "+<network_drivers/physical/radio_power/radio_power.c>",
         "+<network_drivers/transport/udp/udp.c>",
         "+<network_drivers/transport/udp/server/server.c>",
         "+<network_drivers/transport/udp/client/client.c>",
@@ -4761,7 +4757,6 @@
       "desc": "Egress-interface reporting (network_drivers/physical). The esp_netif default-\nroute lookups are ESP32-only; the pure interface-key classifier host-tests here.",
       "src": [
         "+<network_drivers/physical/physical/physical.c>",
-        "+<network_drivers/physical/radio_power/radio_power.c>",
         "+<mmgr/protomem/protomem.c>",
         "+<mmgr/rawmemcpy/rawmemcpy.c>",
         "+<mmgr/swar/swar.c>",
@@ -4792,7 +4787,6 @@
       ],
       "src": [
         "+<network_drivers/physical/physical/physical.c>",
-        "+<network_drivers/physical/radio_power/radio_power.c>",
         "+<shared/ip/ip.c>",
         "+<shared/hex/hex.c>",
         "+<mmgr/protomem/protomem.c>",
@@ -5652,7 +5646,6 @@
       ],
       "src": [
         "+<network_drivers/physical/physical/physical.c>",
-        "+<network_drivers/physical/radio_power/radio_power.c>",
         "+<mmgr/protomem/protomem.c>",
         "+<mmgr/rawmemcpy/rawmemcpy.c>",
         "+<mmgr/swar/swar.c>",
@@ -5970,8 +5963,7 @@
       "desc": "Wi-Fi promiscuous capture helpers (services/radio/promisc/promisc.c): the IEEE 802.11 MAC header parser against clause 9.2.4.1 Frame Control, the clause 9.3.2 address-field table for all four To DS / From DS combinations, clause 9.2.4.4 sequence control, and the QoS Control and HT Control header extensions; plus the libpcap savefile global and record headers with LINKTYPE_IEEE802_11 105. Pure host tests.",
       "flags": [
         "-DPROTOCORE_ENABLE_PROMISC=1",
-        "-DPROTOCORE_PHYSICAL_HAS_BACKEND=1",
-        "-DPROTOCORE_ENABLE_RADIO_POWER=1"
+        "-DPROTOCORE_PHYSICAL_HAS_BACKEND=1"
       ],
       "src": [
         "+<services/radio/promisc/promisc.c>",
@@ -5987,7 +5979,6 @@
         "+<mmgr/arena/arena.c>",
         "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<network_drivers/physical/physical/physical.c>",
-        "+<network_drivers/physical/radio_power/radio_power.c>",
         "+<test/core_setup/hal/host/physical/physical_mock.c>"
       ],
       "tests": [
@@ -6096,7 +6087,6 @@
         "+<network_drivers/transport/udp/server/server.c>",
         "+<test/core_setup/hal/host/host_nvs.c>",
         "+<test/core_setup/hal/host/physical/physical_mock.c>",
-        "+<network_drivers/physical/radio_power/radio_power.c>",
         "+<network_drivers/transport/udp/client/client.c>",
         "+<test/core_setup/hal/host/protocore_dma_host.c>",
         "+<server/io/http_clock/http_clock.c>"
@@ -10557,8 +10547,7 @@
       "flags": [
         "-DPROTOCORE_ENABLE_WIFI_SNIFFER=1",
         "-DPROTOCORE_ENABLE_PROMISC=1",
-        "-DPROTOCORE_PHYSICAL_HAS_BACKEND=1",
-        "-DPROTOCORE_ENABLE_RADIO_POWER=1"
+        "-DPROTOCORE_PHYSICAL_HAS_BACKEND=1"
       ],
       "src": [
         "+<services/radio/wifi_sniffer/wifi_sniffer.c>",
@@ -10574,7 +10563,6 @@
         "+<test/core_setup/hal/portable/portable_platform.c>",
         "+<services/radio/promisc/promisc.c>",
         "+<network_drivers/physical/physical/physical.c>",
-        "+<network_drivers/physical/radio_power/radio_power.c>",
         "+<test/core_setup/hal/host/physical/physical_mock.c>",
         "+<shared/ip/ip.c>",
         "+<shared/hex/hex.c>"
