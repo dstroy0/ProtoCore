@@ -290,7 +290,7 @@ void protocore_edge_fetcher_pump(uint8_t *restrict work)
         HttpClientV.message.buf = f->buf;
         HttpClientV.message.len = f->got;
         // parse_response reads the caller's buffer and holds nothing, so it takes no borrow.
-        HttpClient.parse_response(NULL);
+        HttpClient.parse_response(work);
         int status = (int)HttpClientV.status;
         if (status < 0)
         {

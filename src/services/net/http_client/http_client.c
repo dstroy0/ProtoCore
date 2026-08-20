@@ -54,7 +54,14 @@
 // Typedefs
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HAS_NET_STACK
+// --- the borrow, carved above the capability gate ---------------------------
+//
+// Above it, because the borrow is the MODULE's and not the network's: same size, same offset,
+// same alignment, stack or no stack. All of this used to sit inside `#if PROTOCORE_HAS_NET_STACK`
+// while http_client.h declares the span unconditionally, so with no stack the module published a
+// span nothing defined and a caller asking for its borrow failed to link. oauth2.c worked around
+// that by passing NULL in the other arm - a null borrow handed to an entry that dereferences it
+// when a stack IS present. Only the entries belong under the capability.
 /**
  * @brief The user agent's compile-time storage: one exchange's buffers and its connection.
  *
@@ -68,13 +75,11 @@ struct HttpClientStorage
     char req[HTTP_CLIENT_REQ_CAP];              ///< the request message a build writes
     int cid;                                    ///< the outbound connection slot, -1 when none
 };
-#endif // PROTOCORE_HAS_NET_STACK
 
 // ---------------------------------------------------------------------------
 // The one instance
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HAS_NET_STACK
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
 // region is that pointer plus a compile-time offset, so the assert below proves the span
 // covers them before anything runs.
@@ -107,7 +112,6 @@ uint8_t *protocore_http_client_span(void)
     }
     return s_own.span;
 }
-#endif
 
 // ---------------------------------------------------------------------------
 // The target URI (RFC 9110 sec 7.1)

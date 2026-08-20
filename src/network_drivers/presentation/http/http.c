@@ -642,7 +642,7 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
 #endif // PROTOCORE_ENABLE_CSRF
 
 #if PROTOCORE_ENABLE_WEBSOCKET
-static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const HttpRoute *r)
+static void handle_ws_route(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, HttpMethod method, const HttpRoute *r)
 {
     HttpParserV.get_header_args.req = req;
     HttpParserV.get_header_args.key = "Upgrade";
@@ -683,7 +683,7 @@ static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, co
     }
     // A failed upgrade here means a malformed/oversized Sec-WebSocket-Key (a
     // client error, RFC 6455 4.2.1), so answer 400 rather than 503.
-    if (!ws_do_upgrade(slot_id, req, r->ws_id))
+    if (!ws_do_upgrade(work, slot_id, req, r->ws_id))
     {
         send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "Bad WebSocket handshake");
     }
@@ -769,13 +769,13 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
 }
 #endif // PROTOCORE_ENABLE_AUTH
 
-static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, HttpRoute *r,
+static proto_bool dispatch_matched_route(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, HttpMethod method, HttpRoute *r,
                                          proto_bool *path_matched, char *allow_buf, size_t allow_cap)
 {
 #if PROTOCORE_ENABLE_WEBSOCKET
     if (r->type == ROUTE_WS)
     {
-        handle_ws_route(slot_id, req, method, r);
+        handle_ws_route(work, slot_id, req, method, r);
         return PROTO_TRUE;
     }
 #endif // PROTOCORE_ENABLE_WEBSOCKET
@@ -783,7 +783,7 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
 #if PROTOCORE_ENABLE_SSE
     if (r->type == ROUTE_SSE)
     {
-        if (!protocore_sse_do_upgrade(slot_id, req, r->sse_id))
+        if (!protocore_sse_do_upgrade(work, slot_id, req, r->sse_id))
         {
             send_text(slot_id, 503, PROTOCORE_MIME_TEXT_PLAIN, "Service Unavailable");
         }
@@ -931,7 +931,7 @@ void protocore_http_match_and_execute(uint8_t *restrict work)
         {
             continue;
         }
-        if (dispatch_matched_route(slot_id, req, method, r, &path_matched, allow_buf, sizeof(allow_buf)))
+        if (dispatch_matched_route(work, slot_id, req, method, r, &path_matched, allow_buf, sizeof(allow_buf)))
         {
             return;
         }

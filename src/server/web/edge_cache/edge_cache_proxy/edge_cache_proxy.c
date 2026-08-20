@@ -1765,7 +1765,7 @@ void protocore_edge_proxy_map(uint8_t *restrict work)
     HttpClientV.target.path = ignore_path;
     HttpClientV.target.path_cap = sizeof(ignore_path);
     // parse_target_uri reads the caller's buffer and holds nothing, so it takes no borrow.
-    HttpClient.parse_target_uri(NULL);
+    HttpClient.parse_target_uri(work);
     if (!HttpClientV.ok)
     {
         EdgeProxyV.ok = PROTO_FALSE;

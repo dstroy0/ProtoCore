@@ -72,13 +72,13 @@ static void ks_bind(QuicTls *qt)
 }
 
 // verify_data over @p transcript_hash under @p base_secret (RFC 8446 sec 4.4.4).
-static void ks_finished(QuicTls *qt, const uint8_t *base_secret, const uint8_t *transcript_hash, uint8_t *out)
+static void ks_finished(uint8_t *restrict work, QuicTls *qt, const uint8_t *base_secret, const uint8_t *transcript_hash, uint8_t *out)
 {
     ks_bind(qt);
     Tls13KsV.finished_args.base_secret = base_secret;
     Tls13KsV.finished_args.transcript_hash = transcript_hash;
     Tls13KsV.finished_args.out = out;
-    Tls13Ks.finished_mac(NULL);
+    Tls13Ks.finished_mac(work);
 }
 
 // The Transcript-Hash runs under the suite's hash (RFC 8446 sec 4.4.1), so it goes through the key
@@ -176,7 +176,7 @@ static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_l
 }
 #endif
 
-static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t msg_len)
+static proto_bool process_client_hello(uint8_t *restrict work, QuicTls *qt, const uint8_t *msg, size_t msg_len)
 {
     Tls13ClientHello ch;
     Tls13MsgV.parse_client_hello_args.msg = msg;
@@ -340,11 +340,11 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     uint8_t hash[TLS13_SECRET_MAX];
     snapshot_hash(qt, qt->transcript, hash);
     ks_bind(qt);
-    Tls13Ks.early(NULL);
+    Tls13Ks.early(work);
     Tls13KsV.step.ecdhe = ecdhe;
     Tls13KsV.step.ecdhe_len = ecdhe_len;
     Tls13KsV.step.ch_sh_hash = hash;
-    Tls13Ks.handshake(NULL);
+    Tls13Ks.handshake(work);
     QuicCryptoV.keys_from_secret_args.keys_work = qt->keys_work;
     QuicCryptoV.keys_from_secret_args.secret = qt->ks.s + TLS13_KS_CLIENT_HS;
     QuicCryptoV.keys_from_secret_args.out = &qt->hs_client;
@@ -406,7 +406,7 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     // Server Finished over Transcript-Hash(ClientHello..CertificateVerify).
     snapshot_hash(qt, qt->transcript, hash);
     uint8_t verify[TLS13_SECRET_MAX];
-    ks_finished(qt, qt->ks.s + TLS13_KS_SERVER_HS, hash, verify);
+    ks_finished(work, qt, qt->ks.s + TLS13_KS_SERVER_HS, hash, verify);
     Tls13MsgV.build_finished_args.out = qt->flight_hs + qt->flight_hs_len;
     Tls13MsgV.build_finished_args.cap = sizeof(qt->flight_hs) - qt->flight_hs_len;
     Tls13MsgV.build_finished_args.verify_data = verify;
@@ -423,7 +423,7 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     snapshot_hash(qt, qt->transcript, qt->hs_finished_hash);
     ks_bind(qt);
     Tls13KsV.step.ch_sfin_hash = qt->hs_finished_hash;
-    Tls13Ks.master(NULL);
+    Tls13Ks.master(work);
     QuicCryptoV.keys_from_secret_args.keys_work = qt->keys_work;
     QuicCryptoV.keys_from_secret_args.secret = qt->ks.s + TLS13_KS_CLIENT_AP;
     QuicCryptoV.keys_from_secret_args.out = &qt->ap_client;
@@ -438,14 +438,14 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     return PROTO_TRUE;
 }
 
-static proto_bool process_client_finished(QuicTls *qt, const uint8_t *msg, size_t msg_len)
+static proto_bool process_client_finished(uint8_t *restrict work, QuicTls *qt, const uint8_t *msg, size_t msg_len)
 {
     if (msg[0] != TLS_HS_FINISHED || msg_len != 4 + 32)
     { // Finished here, so the type arm cannot be taken
         fail(qt, TLS_ALERT_DECODE_ERROR);
         return PROTO_FALSE;
     }
-    ks_finished(qt, qt->ks.s + TLS13_KS_CLIENT_HS, qt->hs_finished_hash, qt->ks.s + TLS13_KS_VERIFY);
+    ks_finished(work, qt, qt->ks.s + TLS13_KS_CLIENT_HS, qt->hs_finished_hash, qt->ks.s + TLS13_KS_VERIFY);
     if (!protocore_ct_eq(qt->ks.s + TLS13_KS_VERIFY, msg + 4, qt->ks.len))
     {
         fail(qt, TLS_ALERT_DECRYPT_ERROR);
@@ -457,15 +457,15 @@ static proto_bool process_client_finished(QuicTls *qt, const uint8_t *msg, size_
     return PROTO_TRUE;
 }
 
-static proto_bool process_message(QuicTls *qt, int level, const uint8_t *msg, size_t msg_len)
+static proto_bool process_message(uint8_t *restrict work, QuicTls *qt, int level, const uint8_t *msg, size_t msg_len)
 {
     if (level == QUIC_ENC_INITIAL && qt->state == QTLS_START && msg[0] == TLS_HS_CLIENT_HELLO)
     {
-        return process_client_hello(qt, msg, msg_len);
+        return process_client_hello(work, qt, msg, msg_len);
     }
     if (level == QUIC_ENC_HANDSHAKE && qt->state == QTLS_WAIT_FINISHED && msg[0] == TLS_HS_FINISHED)
     {
-        return process_client_finished(qt, msg, msg_len);
+        return process_client_finished(work, qt, msg, msg_len);
     }
     fail(qt, TLS_ALERT_UNEXPECTED_MESSAGE);
     return PROTO_FALSE;
@@ -511,7 +511,7 @@ void protocore_quic_tls_server_recv_crypto(uint8_t *restrict work)
         {
             break; // an incomplete trailing message; wait for more bytes
         }
-        if (!process_message(qt, level, data + off, total))
+        if (!process_message(work, qt, level, data + off, total))
         {
             QuicTlsServerV.n = off + total; // consumed through the offending message; state is FAILED/handled
             return;

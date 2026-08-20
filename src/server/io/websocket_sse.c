@@ -138,7 +138,7 @@ void ws_send_version_required(uint8_t slot_id)
  * Does NOT close the TCP connection: the slot moves from HTTP parse ownership to WS frame parse
  * ownership.
  */
-proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id)
+proto_bool ws_do_upgrade(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, uint8_t route_id)
 {
     HttpParserV.get_header_args.req = req;
     HttpParserV.get_header_args.key = "Sec-WebSocket-Key";
@@ -211,7 +211,7 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id)
 #if PROTOCORE_ENABLE_WS_DEFLATE
     WsV.pmd = pmd;
 #endif
-    SessionWs.open(NULL);
+    SessionWs.open(work);
     if (!SessionWsV.ok)
     {
         // No channel available -- abort the connection (transport owns the teardown)
@@ -232,7 +232,7 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id)
 /**
  * @brief Send the HTTP 200 + SSE headers and promote the slot to SSE mode.
  */
-proto_bool protocore_sse_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id)
+proto_bool protocore_sse_do_upgrade(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, uint8_t route_id)
 {
     ConnPoolV.slot = slot_id;
     ConnPool.active(protocore_conn_pool_span());
@@ -266,7 +266,7 @@ proto_bool protocore_sse_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route
     SseV.slot = slot_id;
     SseV.route.path = path;
     SseV.id = route_id;
-    SessionSse.open(NULL);
+    SessionSse.open(work);
     if (!SessionSseV.ok)
     {
         ConnPoolV.slot = slot_id;

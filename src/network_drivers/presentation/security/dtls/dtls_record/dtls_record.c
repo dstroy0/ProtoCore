@@ -62,16 +62,16 @@ static uint64_t seq_decode(uint64_t expected, uint64_t truncated, unsigned bits)
 }
 
 // HKDF-Expand-Label of a traffic secret under the "dtls13" prefix (RFC 9147 §5.9), into out.
-static void expand_label(uint8_t *work, const uint8_t *secret, const char *label, uint8_t *out, size_t out_len)
+static void expand_label(uint8_t *restrict work, uint8_t *scratch, const uint8_t *secret, const char *label, uint8_t *out, size_t out_len)
 {
     Tls13KsV.bind.kdf = &DTLS13_KDF;
     Tls13KsV.bind.is384 = PROTO_FALSE; // the record keys of a TLS_AES_128_GCM_SHA256 connection
-    Tls13KsV.derive_args.work = work;
+    Tls13KsV.derive_args.work = scratch;
     Tls13KsV.derive_args.secret = secret;
     Tls13KsV.derive_args.label = label;
     Tls13KsV.derive_args.out = out;
     Tls13KsV.derive_args.out_len = out_len;
-    Tls13Ks.expand_label(NULL);
+    Tls13Ks.expand_label(work);
 }
 
 // --- the entries -----------------------------------------------------------
@@ -103,11 +103,11 @@ void protocore_dtls_record_keys_derive(uint8_t *restrict work)
         mem.zero(out->iv, sizeof(out->iv));
         return; // unkeyed: every protect/unprotect over these keys refuses
     }
-    expand_label(ws.buf, secret, "key", k.buf, PROTOCORE_AES128GCM_KEY_LEN);
+    expand_label(work, ws.buf, secret, "key", k.buf, PROTOCORE_AES128GCM_KEY_LEN);
     Aes128GcmV.key_args.key = k.buf;
     Aes128Gcm.key_init(out->gcm);
-    expand_label(ws.buf, secret, "iv", out->iv, sizeof(out->iv));
-    expand_label(ws.buf, secret, "sn", snk.buf, PROTOCORE_AES128GCM_KEY_LEN);
+    expand_label(work, ws.buf, secret, "iv", out->iv, sizeof(out->iv));
+    expand_label(work, ws.buf, secret, "sn", snk.buf, PROTOCORE_AES128GCM_KEY_LEN);
     Aes128GcmV.block_key_args.key = snk.buf;
     Aes128Gcm.block_init(out->gcm);
     protocore_secure_release(mark);

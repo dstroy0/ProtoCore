@@ -157,17 +157,17 @@ static void hdr_write(uint8_t *out, uint8_t content_type, size_t body_len)
 }
 
 // HKDF-Expand-Label of the traffic secret under the "tls13 " prefix, into out.
-static void expand_label(TlsCipher cipher, uint8_t *work, const uint8_t *secret, const char *label, uint8_t *out,
+static void expand_label(uint8_t *restrict work, TlsCipher cipher, uint8_t *scratch, const uint8_t *secret, const char *label, uint8_t *out,
                          size_t out_len)
 {
     Tls13KsV.bind.kdf = &TLS13_KDF;
     Tls13KsV.bind.is384 = protocore_tls_cipher_is384(cipher);
-    Tls13KsV.derive_args.work = work;
+    Tls13KsV.derive_args.work = scratch;
     Tls13KsV.derive_args.secret = secret;
     Tls13KsV.derive_args.label = label;
     Tls13KsV.derive_args.out = out;
     Tls13KsV.derive_args.out_len = out_len;
-    Tls13Ks.expand_label(NULL);
+    Tls13Ks.expand_label(work);
 }
 
 void protocore_tls_record_keys_derive(uint8_t *restrict work)
@@ -192,8 +192,8 @@ void protocore_tls_record_keys_derive(uint8_t *restrict work)
         mem.zero(out->iv, sizeof(out->iv));
         return; // no key material: every protect/unprotect below fails closed on the unkeyed context
     }
-    expand_label(out->cipher, ws.buf, TlsRecordV.key.secret, "key", k.buf, key_len);
-    expand_label(out->cipher, ws.buf, TlsRecordV.key.secret, "iv", out->iv, sizeof(out->iv));
+    expand_label(work, out->cipher, ws.buf, TlsRecordV.key.secret, "key", k.buf, key_len);
+    expand_label(work, out->cipher, ws.buf, TlsRecordV.key.secret, "iv", out->iv, sizeof(out->iv));
     // The arm may refuse the key; without a keyed context every record operation must refuse too.
     out->ready = aead_key_init(out->cipher, out->gcm, k.buf);
     protocore_secure_release(mark);

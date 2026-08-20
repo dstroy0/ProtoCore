@@ -2264,14 +2264,14 @@ void test_upgrade_entry_points_on_dead_slot(void)
                 "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n");
     conn_pool[0].pcb = NULL;
     tcp_capture_reset();
-    TEST_ASSERT_FALSE(ws_do_upgrade(0, &http_pool[0], 0));
+    TEST_ASSERT_FALSE(ws_do_upgrade(protocore_http_span(), 0, &http_pool[0], 0));
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 #endif
 #if PROTOCORE_ENABLE_SSE
     arm_slot(0, "GET /e HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = NULL;
     tcp_capture_reset();
-    TEST_ASSERT_FALSE(protocore_sse_do_upgrade(0, &http_pool[0], 0));
+    TEST_ASSERT_FALSE(protocore_sse_do_upgrade(protocore_http_span(), 0, &http_pool[0], 0));
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 #endif
     tcp_capture_disable();

@@ -107,11 +107,11 @@ static inline void http_release_upgrade_bindings(uint8_t slot_id)
     // The channel's close is the session layer's: it informs the application before the number is
     // released (RFC 9293 sec 3.6 MUST-12), which a bare release does not.
     WsV.slot = slot_id;
-    SessionWs.close(NULL);
+    SessionWs.close(protocore_http_conn_span());
 #endif
 #if PROTOCORE_ENABLE_SSE
     SseV.slot = slot_id;
-    SessionSse.close(NULL);
+    SessionSse.close(protocore_http_conn_span());
 #endif
 }
 

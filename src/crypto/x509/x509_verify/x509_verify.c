@@ -93,7 +93,7 @@ static proto_bool rsa_key_split(const uint8_t *der, size_t len, uint8_t *n_out, 
     DerV.read_args.buf = der;
     DerV.read_args.len = len;
     DerV.read_args.pos = 0;
-    Der.enter(NULL); // into RSAPublicKey, landing on modulus
+    Der.enter(protocore_x509_verify_span()); // into RSAPublicKey, landing on modulus
     if (!DerV.ok || DerV.tlv.tag != PROTOCORE_DER_INTEGER)
     {
         return PROTO_FALSE;
@@ -115,7 +115,7 @@ static proto_bool rsa_key_split(const uint8_t *der, size_t len, uint8_t *n_out, 
     mem.cpy(n_out + (PROTOCORE_RSA_KEY_BYTES - mlen), m, mlen);
 
     DerV.read_args.pos = after_mod;
-    Der.read(NULL);
+    Der.read(protocore_x509_verify_span());
     if (!DerV.ok || DerV.tlv.tag != PROTOCORE_DER_INTEGER)
     {
         return PROTO_FALSE;
@@ -143,7 +143,7 @@ static proto_bool ecdsa_sig_split(const uint8_t *der, size_t len, uint8_t out[PR
     DerV.read_args.buf = der;
     DerV.read_args.len = len;
     DerV.read_args.pos = 0;
-    Der.enter(NULL); // into the SEQUENCE, landing on r
+    Der.enter(protocore_x509_verify_span()); // into the SEQUENCE, landing on r
     if (!DerV.ok || DerV.tlv.tag != PROTOCORE_DER_INTEGER)
     {
         return PROTO_FALSE;
@@ -154,7 +154,7 @@ static proto_bool ecdsa_sig_split(const uint8_t *der, size_t len, uint8_t out[PR
     {
         if (half == 1u)
         {
-            Der.read(NULL);
+            Der.read(protocore_x509_verify_span());
             if (!DerV.ok || DerV.tlv.tag != PROTOCORE_DER_INTEGER)
             {
                 return PROTO_FALSE;

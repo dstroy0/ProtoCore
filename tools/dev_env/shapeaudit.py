@@ -129,6 +129,10 @@ DEEP_NS_ACCESS = re.compile(r"\b(?P<head>\w+V)\s*\.\s*(?P<mid>\w+)(?:\s*->\s*|(?
 # past it would read as unbound.
 HANDLE_TABLE = re.compile(r"static\s+const\s+(?P<ns>\w+Ns)\s+(?P<obj>\w+)[^=;]*=\s*\{")
 
+# A call handing NULL where a borrow goes. `X.entry(NULL)` - the argument an entry takes is the
+# borrow and nothing else, so a null there contradicts the guarantee the arena makes.
+NULL_BORROW_ARG = re.compile(r"\b[A-Za-z_]\w*\s*\.\s*[a-z_]\w*\s*\(\s*(?:NULL|nullptr)\s*\)")
+
 NULL_BORROW_TEST = re.compile(
     r"(?P<pre>[-.>\w]{0,2})\bwork\s*(?:==|!=)\s*(?:NULL|0|nullptr)\b|!\s*(?P<pre2>[-.>]{0,2})\bwork\b\s*(?=[)&|])"
 )
@@ -351,6 +355,9 @@ def read_design(path):
     #
     # A `work` reached through `->` or `.` is a struct member that happens to carry the name. It is
     # not the borrow, it can legitimately be null, and ssh transport has two of them.
+    for m in NULL_BORROW_ARG.finditer(code):
+        take(m.start(), "null_borrow_arg", text=" ".join(m.group(0).split()))
+
     for m in NULL_BORROW_TEST.finditer(code):
         pre = (m.group("pre") or "") + (m.group("pre2") or "")
         if pre.strip().endswith((">", ".")):
@@ -590,6 +597,13 @@ def traits(design, which):
     # condition that is always true, and an `if`-shaped search walked straight past it.
     t["null_borrow_tests"] = sum(1 for d in design if d["kind"] == "null_borrow_test")
 
+    # A call site spelling the borrow as null. Kept as text, because the fix is per-site: the
+    # borrow either threads down from the entry that started the work or comes from the callee's
+    # own span, and which one it is depends on whether the callee reads what it is handed.
+    nulls = [d["text"] for d in design if d["kind"] == "null_borrow_arg"]
+    t["null_borrow_args"] = len(nulls)
+    t["null_borrow_calls"] = sorted(set(nulls))
+
     # Reaching a namespace through another module's Vars. Counted, and the chains kept, because the
     # fix is per-site: each one becomes the direct `<X>V.member` the flattened table already offers.
     # Only the hops that land in another module's TABLE. A `->` through an operand that happens to
@@ -726,6 +740,7 @@ def _collapse(seq):
 # module's args records are named after itself, and listing them would report every module as
 # divergent from every other. The structural traits are compared exactly.
 SHAPE_ONLY = (
+    "null_borrow_calls",
     "deep_ns_chains",
     "args_records",
     "ns_records",
@@ -956,6 +971,13 @@ CHECKS = [
         # A test asserting a null borrow is refused is the stale half of that deletion - delete the
         # test, never restore the branch.
         lambda h, c, gh, gc: c["null_borrow_tests"] == gc["null_borrow_tests"],
+        "convert unnull",
+    ),
+    (
+        "no null borrow passed",
+        "is the file free of calls handing null where a borrow goes?",
+        lambda h, c, gh, gc: h["null_borrow_args"] == gh["null_borrow_args"]
+        and c["null_borrow_args"] == gc["null_borrow_args"],
         "convert unnull",
     ),
     (
