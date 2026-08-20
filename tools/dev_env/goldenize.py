@@ -2452,6 +2452,118 @@ def prune_header(p):
     return dropped
 
 
+# A test of the BORROW for null. `work` bare, never `e->work` or `s->work`: those name a struct
+# member that happens to be called work, is not the borrow, and can legitimately be null.
+NULL_BORROW = re.compile(r"^\s*(?:!\s*work|work\s*==\s*NULL|NULL\s*==\s*work)\s*$")
+MEMBER_WORK = re.compile(r"(?:->|\.)\s*work\b")
+
+
+def split_or(cond):
+    """Top-level `||` operands of a condition, literal- and paren-aware, with their separators."""
+    mask = code_mask(cond)
+    parts, depth, start = [], 0, 0
+    i = 0
+    while i < len(cond):
+        if not mask[i]:
+            i += 1
+            continue
+        c = cond[i]
+        if c in "([":
+            depth += 1
+        elif c in ")]":
+            depth -= 1
+        elif depth == 0 and c == "|" and i + 1 < len(cond) and cond[i + 1] == "|":
+            parts.append(cond[start:i])
+            start = i + 2
+            i += 2
+            continue
+        i += 1
+    parts.append(cond[start:])
+    return parts
+
+
+def drop_null_borrow(src, notes):
+    """Remove every `!work` disjunct from an `if` condition. Returns the new text.
+
+    A borrow comes from the arena, so `if (!work)` is dead on every call: the branch cannot be
+    taken, and the code it guards cannot run. Removing the DISJUNCT leaves the rest of the guard
+    standing - `if (!work || !X.args.out)` becomes `if (!X.args.out)`, because an args member is
+    set by the caller and genuinely can be null.
+
+    An `if` whose ONLY condition was the borrow is reported rather than rewritten: deleting it
+    means deleting the block it guards, and that is a control-flow change to read rather than to
+    apply in a sweep of 33 files.
+    """
+    mask = code_mask(src)
+    out, i, changed = [], 0, 0
+    pos = 0
+    for m in re.finditer(r"\bif\s*\(", src):
+        if not mask[m.start()]:
+            continue
+        close = N.close_paren(src, m.end())
+        cond = src[m.end() : close - 1]
+        if "work" not in cond or MEMBER_WORK.search(cond):
+            continue
+        parts = split_or(cond)
+        keep = [p for p in parts if not NULL_BORROW.match(p)]
+        if len(keep) == len(parts):
+            continue
+        line = src.count("\n", 0, m.start()) + 1
+        if not keep:
+            notes.append("line %d: `if (%s)` guards only the borrow; delete the block by hand" % (line, cond.strip()))
+            continue
+        out.append(src[pos : m.end()])
+        # Re-join on the separator the file already used, so a multi-line condition stays multi-line.
+        out.append("||".join(keep).strip())
+        pos = close - 1
+        changed += 1
+    out.append(src[pos:])
+    return "".join(out), changed
+
+
+def insert_align_asserts(src, regions):
+    """Add one alignment static_assert per unasserted cast region, after the offsets they read.
+
+    Anchored on the LAST thing the asserts depend on - the borrow's size assert if there is one,
+    otherwise the last `_OFF_` define - so the offsets and the types are both already declared. An
+    assert placed above its own offset does not compile, and an assert placed above the Ctx typedef
+    cannot take its alignment.
+
+    @p regions are shapeaudit's "MACRO->Type@OFFSET" strings.
+    """
+    mask = code_mask(src)
+    anchor = -1
+    for m in re.finditer(r"\bstatic_assert\s*\(", src):
+        if mask[m.start()] and re.search(r"\w+_BORROW", src[m.start() : src.find(";", m.start()) + 1]):
+            anchor = max(anchor, src.find(";", m.start()) + 1)
+    if anchor < 0:
+        for m in re.finditer(r"^[ \t]*#[ \t]*define[ \t]+\w*_OFF_\w+.*$", src, re.M):
+            anchor = max(anchor, m.end())
+    if anchor < 0:
+        return src
+
+    body = []
+    for r in regions:
+        macro, rest = r.split("->", 1)
+        typ, off = rest.split("@", 1)
+        if not off:
+            continue
+        body.append(
+            'static_assert(%s %% _Alignof(%s) == 0,\n'
+            '              "%s is not a multiple of alignof(%s) - %s() would return a misaligned "\n'
+            '              "pointer; pad the region ahead of it");' % (off, typ, off, typ, macro)
+        )
+    if not body:
+        return src
+    note = (
+        "\n\n// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to\n"
+        "// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are\n"
+        "// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size\n"
+        "// assert above bounds the far end of the chain and says nothing about where a region begins.\n"
+    )
+    return src[:anchor] + note + "\n".join(body) + src[anchor:]
+
+
 def main():
     global DRY
     # A header carries the section signs and dashes its RFC citations are written with, and the
@@ -2463,11 +2575,12 @@ def main():
             stream.reconfigure(encoding="utf-8", errors="replace")
     argv = [a for a in sys.argv if a != "--dry"]
     DRY = len(argv) != len(sys.argv)
-    if len(argv) < 3:
+    # `align` takes no operand: with no paths it sweeps src/, which is the usual way to run it.
+    if len(argv) < 3 and not (len(argv) == 2 and argv[1] in ("align", "unnull")):
         print(__doc__)
         return 2
     sys.argv = argv
-    cmd, arg = argv[1], argv[2]
+    cmd, arg = argv[1], (argv[2] if len(argv) > 2 else "")
     if DRY:
         print("--- DRY RUN: the diff below is what would be written, and nothing was ---")
     if cmd == "shape":
@@ -2509,6 +2622,73 @@ def main():
             print("   %-70s %d" % (rel, n))
         print("NEXT: state %s in protocore_config.h and sum it into the arena" % spec["borrow"])
         return 0
+    if cmd == "unnull":
+        # A BORROW IS NEVER NULL: it comes from the arena, so `if (!work)` is a dead branch on every
+        # call. This removes the DISJUNCT and leaves the rest of the guard standing, because an args
+        # member is set by the caller and genuinely can be null.
+        rels = [a for a in sys.argv[2:] if not a.startswith("-")]
+        if not rels:
+            rels = []
+            for dirpath, _, names in os.walk(os.path.join(R, "src")):
+                for n in names:
+                    if n.endswith(".c"):
+                        rels.append(os.path.relpath(os.path.join(dirpath, n), R).replace("\\", "/"))
+        total, files, notes = 0, 0, []
+        for rel in sorted(rels):
+            p = os.path.join(R, rel.replace("/", os.sep))
+            src = io.open(p, encoding="utf-8").read()
+            if "work" not in src:
+                continue
+            these = []
+            out, n = drop_null_borrow(src, these)
+            for x in these:
+                notes.append("%s %s" % (rel, x))
+            if not n:
+                continue
+            print("unnull: %-70s %d" % (rel, n))
+            emit(p, out)
+            total += n
+            files += 1
+        print("%d branch%s in %d file%s" % (total, "es"[: 2 * (total != 1)], files, "s"[: files != 1]))
+        for x in notes:
+            print("   NOTE " + x)
+        return 0
+
+    if cmd == "align":
+        # State, per region reached through a cast, that its OFFSET is a multiple of the alignment
+        # the cast requires. The arena aligns the base up to PROTOCORE_ARENA_MAX_ALIGN, so the
+        # offset is the whole claim - and it is a compile-time constant, so it is a static_assert
+        # and never a runtime branch. The size assert already in each file bounds the far end of the
+        # chain and says nothing about where any region BEGINS: one odd-sized region inserted
+        # earlier leaves every later cast misaligned while the total still fits.
+        #
+        # An assert that fails is the point, not a setback: it is a misalignment that was already
+        # there and had no diagnostic.
+        import shapeaudit as SA
+
+        rels = sys.argv[2:] or [r for r in SA.modules(["src"]) if r.endswith(".h")]
+        rels = [r for r in rels if not r.startswith("-")]
+        touched = 0
+        for rel in rels:
+            try:
+                _, _, c = SA.design_of(rel)
+            except Exception as ex:
+                print("   SKIPPED %s (%s)" % (rel, ex))
+                continue
+            if not c or not c["cast_regions_unaligned"]:
+                continue
+            cp = os.path.join(R, rel.replace("/", os.sep))[:-2] + ".c"
+            src = io.open(cp, encoding="utf-8").read()
+            out = insert_align_asserts(src, c["cast_regions_unaligned"])
+            if out == src:
+                print("   no anchor to insert after: %s" % rel)
+                continue
+            print("align:", rel, "->", ", ".join(c["cast_regions_unaligned"]))
+            emit(cp, out)
+            touched += 1
+        print("%d module%s" % (touched, "s"[: touched != 1]))
+        return 0
+
     if cmd == "funnel":
         # A module converted before the funnel existed has the names and not the point. This moves
         # its file-static context into the borrow without re-running the whole conversion.

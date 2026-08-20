@@ -176,10 +176,6 @@ uint8_t *protocore_http_auth_span(void)
 // not be borrowed. Every caller fails closed on NULL.
 static const AuthCred *cred_at(uint8_t *work, uint8_t id)
 {
-    if (work == NULL)
-    {
-        return NULL;
-    }
     const struct AuthStorage *a = AUTH_TABLE(work);
     if (id >= a->count)
     {
@@ -192,11 +188,6 @@ static const AuthCred *cred_at(uint8_t *work, uint8_t id)
 // full. Registration runs at setup, so there is no release path and none is offered.
 static void add(uint8_t *restrict work)
 {
-    if (work == NULL)
-    {
-        Auth.u8 = PROTOCORE_AUTH_NONE;
-        return;
-    }
     struct AuthStorage *a = AUTH_TABLE(work);
     if (a->count >= MAX_ROUTES)
     {
@@ -213,10 +204,6 @@ static void add(uint8_t *restrict work)
 
 static void rekey(uint8_t *restrict work)
 {
-    if (work == NULL)
-    {
-        return;
-    }
     struct AuthStorage *a = AUTH_TABLE(work);
     // Seed a 128-bit keying secret from the hardware CSPRNG (protocore_platform_rand_u32() on
     // ESP32; a non-crypto mock on native test builds), folded through SHA-256 with
@@ -270,11 +257,6 @@ static void mint_nonce(uint8_t *restrict work)
 {
     char *out = Auth.nonce_args.out;
     const size_t cap = Auth.nonce_args.cap;
-    if (work == NULL)
-    {
-        out[0] = '\0';
-        return;
-    }
     uint32_t issue = Clock.ms;
     char issue_hex[9];
     Hex.io.in = (const uint8_t *)&issue;
@@ -299,10 +281,6 @@ static void verify_nonce(uint8_t *restrict work)
     const char *nonce = Auth.nonce_args.nonce;
     Auth.expired = PROTO_FALSE;
     Auth.ok = PROTO_FALSE;
-    if (work == NULL)
-    {
-        return;
-    }
     // Expected shape: 8 hex (issue) + '.' + 32 hex (MAC).
     if (str.len(nonce, 42) != 8 + 1 + 32 || nonce[8] != '.')
     {
@@ -635,10 +613,7 @@ static void check(uint8_t *restrict work)
 // the server's, not a route's, and rekey() is what replaces it.
 static void reset(uint8_t *restrict work)
 {
-    if (work != NULL)
-    {
-        AUTH_TABLE(work)->count = 0;
-    }
+    AUTH_TABLE(work)->count = 0;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.

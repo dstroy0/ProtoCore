@@ -98,6 +98,14 @@ static_assert(H3_OFF_OUT + (size_t)PROTOCORE_H3_STREAM_BUF <= PROTOCORE_H3_CONN_
               "PROTOCORE_H3_CONN_BORROW is short of the context, one reassembly + pseudo-header region per "
               "stream, and the body and QPACK regions a dispatch reads - raise it in protocore_config.h");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(H3_OFF_CTX % _Alignof(H3ConnCtx) == 0,
+              "H3_OFF_CTX is not a multiple of alignof(H3ConnCtx) - H3_CTX() would return a misaligned "
+              "pointer; pad the region ahead of it");
+
 // The regions, at their offsets in the caller's span.
 #define H3_CTX(w) ((H3ConnCtx *)(void *)((w) + H3_OFF_CTX))
 // H3_OFF_CTX is 0, so a callback is handed back the span it was bound with.

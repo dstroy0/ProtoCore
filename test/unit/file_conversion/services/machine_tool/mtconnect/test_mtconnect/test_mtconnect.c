@@ -43,7 +43,10 @@
 // The sample-cursor cases are the window arithmetic mtconnect.h lines 162-199 states, with the
 // subtraction shown in the comment that carries it.
 
-#include "services/machine_tool/mtconnect/mtconnect.h"
+// The running context and the observation ring are the module's, carved out of the borrow, so the
+// cases that check the sequence bookkeeping reach them through MTC_CTX. That is in the .c, which is
+// included here and therefore not built by the env itself.
+#include "services/machine_tool/mtconnect/mtconnect.c"
 #include <string.h>
 
 #include <unity.h>
@@ -533,34 +536,95 @@ static char g_buf[8192];
 
 static size_t build_streams(void)
 {
-    protocore_mtc_streams s;
-    protocore_mtc_streams_begin(&s, g_buf, sizeof(g_buf), 7, 100, "VF2");
-    protocore_mtc_streams_add(&s, PROTOCORE_MTC_SAMPLE, "Position", "Xabs", 1, "2026-01-01T00:00:00Z", "1.5");
-    return protocore_mtc_streams_end(&s);
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.streams.component = "Device";
+    MtConnect.streams.component_id = "d1";
+    MtConnect.streams.device_uuid = "uuid-1";
+    MtConnect.window.buffer_size = PROTOCORE_MTC_SAMPLE_BUFFER;
+    MtConnect.window.first_seq = 1u;
+    MtConnect.window.last_seq = 0u;
+    MtConnect.doc.out = g_buf;
+    MtConnect.doc.cap = sizeof(g_buf);
+    MtConnect.doc.instance_id = 7;
+    MtConnect.streams.next_seq = 100;
+    MtConnect.streams.device_name = "VF2";
+    MtConnect.streams_begin(protocore_mtconnect_span());
+    MtConnect.obs.cat = PROTOCORE_MTC_SAMPLE;
+    MtConnect.obs.type = "Position";
+    MtConnect.obs.data_id = "Xabs";
+    MtConnect.obs.seq = 1;
+    MtConnect.obs.timestamp = "2026-01-01T00:00:00Z";
+    MtConnect.obs.value = "1.5";
+    MtConnect.streams_add(protocore_mtconnect_span());
+    MtConnect.streams_end(protocore_mtconnect_span());
+    return MtConnect.n;
 }
 
 static size_t build_devices(void)
 {
-    protocore_mtc_streams s;
-    protocore_mtc_devices_begin(&s, g_buf, sizeof(g_buf), 7, "d1", "VF2", "uuid-1");
-    protocore_mtc_devices_add_item(&s, PROTOCORE_MTC_SAMPLE, "Xabs", "POSITION", "Xpos", "MILLIMETER");
-    return protocore_mtc_devices_end(&s);
+    MtConnect.assets.asset_buffer_size = PROTOCORE_MTC_SAMPLE_BUFFER;
+    MtConnect.assets.asset_count = 0u;
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.doc.out = g_buf;
+    MtConnect.doc.cap = sizeof(g_buf);
+    MtConnect.doc.instance_id = 7;
+    MtConnect.device.device_id = "d1";
+    MtConnect.device.device_name = "VF2";
+    MtConnect.device.uuid = "uuid-1";
+    MtConnect.devices_begin(protocore_mtconnect_span());
+    MtConnect.item.cat = PROTOCORE_MTC_SAMPLE;
+    MtConnect.item.id = "Xabs";
+    MtConnect.item.type = "POSITION";
+    MtConnect.item.name = "Xpos";
+    MtConnect.item.units = "MILLIMETER";
+    MtConnect.devices_add(protocore_mtconnect_span());
+    MtConnect.devices_end(protocore_mtconnect_span());
+    return MtConnect.n;
 }
 
 static size_t build_assets(void)
 {
-    protocore_mtc_streams s;
-    protocore_mtc_assets_begin(&s, g_buf, sizeof(g_buf), 7, 1, 64);
-    protocore_mtc_assets_cutting_tool_begin(&s, "T5", "SN-9", "5", "uuid-1", "2026-01-01T00:00:00Z");
-    protocore_mtc_assets_tool_life(&s, "MINUTES", "DOWN", "100", "37");
-    protocore_mtc_assets_tool_life(&s, "PART_COUNT", "UP", NULL, "12");
-    protocore_mtc_assets_cutting_tool_end(&s);
-    return protocore_mtc_assets_end(&s);
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.doc.out = g_buf;
+    MtConnect.doc.cap = sizeof(g_buf);
+    MtConnect.doc.instance_id = 7;
+    MtConnect.assets.asset_count = 1;
+    MtConnect.assets.asset_buffer_size = 64;
+    MtConnect.assets_begin(protocore_mtconnect_span());
+    MtConnect.tool.asset_id = "T5";
+    MtConnect.tool.serial_number = "SN-9";
+    MtConnect.tool.tool_id = "5";
+    MtConnect.tool.device_uuid = "uuid-1";
+    MtConnect.tool.timestamp = "2026-01-01T00:00:00Z";
+    MtConnect.tool.cutter_status = "AVAILABLE";
+    MtConnect.tool_begin(protocore_mtconnect_span());
+    MtConnect.life.type = "MINUTES";
+    MtConnect.life.count_direction = "DOWN";
+    MtConnect.life.initial = "100";
+    MtConnect.life.limit = "0";
+    MtConnect.life.value = "37";
+    MtConnect.tool_life(protocore_mtconnect_span());
+    MtConnect.life.type = "PART_COUNT";
+    MtConnect.life.count_direction = "UP";
+    MtConnect.life.initial = "0";
+    MtConnect.life.limit = "500";
+    MtConnect.life.value = "12";
+    MtConnect.tool_life(protocore_mtconnect_span());
+    MtConnect.tool_end(protocore_mtconnect_span());
+    MtConnect.assets_end(protocore_mtconnect_span());
+    return MtConnect.n;
 }
 
 static size_t build_error(void)
 {
-    return protocore_mtc_error(42, "OUT_OF_RANGE", "'from' must be <= 99", g_buf, sizeof(g_buf));
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.doc.instance_id = 42;
+    MtConnect.err.error_code = "OUT_OF_RANGE";
+    MtConnect.err.message = "'from' must be <= 99";
+    MtConnect.doc.out = g_buf;
+    MtConnect.doc.cap = sizeof(g_buf);
+    MtConnect.error(protocore_mtconnect_span());
+    return MtConnect.n;
 }
 
 // Whatever else is wrong with them, all four documents have to parse.
@@ -575,10 +639,26 @@ void test_every_document_is_well_formed_xml(void)
     TEST_ASSERT_TRUE(build_error() > 0);
     TEST_ASSERT_TRUE_MESSAGE(xml_wf(g_buf), "MTConnectError");
 
-    static protocore_mtc_sample_buffer b;
-    protocore_mtc_sample_buffer_init(&b, 1000);
-    protocore_mtc_sample_buffer_add(&b, PROTOCORE_MTC_SAMPLE, "Position", "Xabs", "2026-01-01T00:00:00Z", "1.0");
-    TEST_ASSERT_TRUE(protocore_mtc_sample_query(&b, g_buf, sizeof(g_buf), 7, "VF2", 1000, 10) > 0);
+    MtConnect.streams.next_seq = 1000;
+    MtConnect.ring_init(protocore_mtconnect_span());
+    MtConnect.obs.cat = PROTOCORE_MTC_SAMPLE;
+    MtConnect.obs.type = "Position";
+    MtConnect.obs.data_id = "Xabs";
+    MtConnect.obs.timestamp = "2026-01-01T00:00:00Z";
+    MtConnect.obs.value = "1.0";
+    MtConnect.ring_add(protocore_mtconnect_span());
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.streams.component = "Device";
+    MtConnect.streams.component_id = "d1";
+    MtConnect.streams.device_uuid = "uuid-1";
+    MtConnect.doc.out = g_buf;
+    MtConnect.doc.cap = sizeof(g_buf);
+    MtConnect.doc.instance_id = 7;
+    MtConnect.streams.device_name = "VF2";
+    MtConnect.query.from = 1000;
+    MtConnect.query.count = 10;
+    MtConnect.ring_query(protocore_mtconnect_span());
+    TEST_ASSERT_TRUE(MtConnect.n > 0);
     TEST_ASSERT_TRUE_MESSAGE(xml_wf(g_buf), "sample response");
 }
 
@@ -657,10 +737,26 @@ void test_every_header_carries_the_attributes_its_schema_marks_required(void)
     TEST_ASSERT_TRUE(build_streams() > 0);
     require_attrs(g_buf, "Header", "streams", STREAMS, sizeof(STREAMS) / sizeof(STREAMS[0]));
 
-    static protocore_mtc_sample_buffer b;
-    protocore_mtc_sample_buffer_init(&b, 1000);
-    protocore_mtc_sample_buffer_add(&b, PROTOCORE_MTC_SAMPLE, "Position", "Xabs", "2026-01-01T00:00:00Z", "1.0");
-    TEST_ASSERT_TRUE(protocore_mtc_sample_query(&b, g_buf, sizeof(g_buf), 7, "VF2", 1000, 10) > 0);
+    MtConnect.streams.next_seq = 1000;
+    MtConnect.ring_init(protocore_mtconnect_span());
+    MtConnect.obs.cat = PROTOCORE_MTC_SAMPLE;
+    MtConnect.obs.type = "Position";
+    MtConnect.obs.data_id = "Xabs";
+    MtConnect.obs.timestamp = "2026-01-01T00:00:00Z";
+    MtConnect.obs.value = "1.0";
+    MtConnect.ring_add(protocore_mtconnect_span());
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.streams.component = "Device";
+    MtConnect.streams.component_id = "d1";
+    MtConnect.streams.device_uuid = "uuid-1";
+    MtConnect.doc.out = g_buf;
+    MtConnect.doc.cap = sizeof(g_buf);
+    MtConnect.doc.instance_id = 7;
+    MtConnect.streams.device_name = "VF2";
+    MtConnect.query.from = 1000;
+    MtConnect.query.count = 10;
+    MtConnect.ring_query(protocore_mtconnect_span());
+    TEST_ASSERT_TRUE(MtConnect.n > 0);
     require_attrs(g_buf, "Header", "sample", STREAMS, sizeof(STREAMS) / sizeof(STREAMS[0]));
 
     TEST_ASSERT_TRUE(build_devices() > 0);
@@ -685,10 +781,26 @@ void test_the_device_stream_carries_name_and_uuid(void)
     TEST_ASSERT_TRUE(build_streams() > 0);
     require_attrs(g_buf, "DeviceStream", "streams", REQ, 2);
 
-    static protocore_mtc_sample_buffer b;
-    protocore_mtc_sample_buffer_init(&b, 1000);
-    protocore_mtc_sample_buffer_add(&b, PROTOCORE_MTC_SAMPLE, "Position", "Xabs", "2026-01-01T00:00:00Z", "1.0");
-    TEST_ASSERT_TRUE(protocore_mtc_sample_query(&b, g_buf, sizeof(g_buf), 7, "VF2", 1000, 10) > 0);
+    MtConnect.streams.next_seq = 1000;
+    MtConnect.ring_init(protocore_mtconnect_span());
+    MtConnect.obs.cat = PROTOCORE_MTC_SAMPLE;
+    MtConnect.obs.type = "Position";
+    MtConnect.obs.data_id = "Xabs";
+    MtConnect.obs.timestamp = "2026-01-01T00:00:00Z";
+    MtConnect.obs.value = "1.0";
+    MtConnect.ring_add(protocore_mtconnect_span());
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.streams.component = "Device";
+    MtConnect.streams.component_id = "d1";
+    MtConnect.streams.device_uuid = "uuid-1";
+    MtConnect.doc.out = g_buf;
+    MtConnect.doc.cap = sizeof(g_buf);
+    MtConnect.doc.instance_id = 7;
+    MtConnect.streams.device_name = "VF2";
+    MtConnect.query.from = 1000;
+    MtConnect.query.count = 10;
+    MtConnect.ring_query(protocore_mtconnect_span());
+    TEST_ASSERT_TRUE(MtConnect.n > 0);
     require_attrs(g_buf, "DeviceStream", "sample", REQ, 2);
 
     TEST_ASSERT_EQUAL_STRING("", g_missing);
@@ -713,13 +825,49 @@ void test_the_component_stream_carries_component_and_component_id(void)
 // that order, however many observations it carries.
 void test_the_component_stream_groups_each_category_once_and_in_order(void)
 {
-    protocore_mtc_streams s;
-    protocore_mtc_streams_begin(&s, g_buf, sizeof(g_buf), 7, 100, "VF2");
-    protocore_mtc_streams_add(&s, PROTOCORE_MTC_SAMPLE, "Position", "Xabs", 1, "2026-01-01T00:00:00Z", "1.5");
-    protocore_mtc_streams_add(&s, PROTOCORE_MTC_EVENT, "Execution", "exec", 2, "2026-01-01T00:00:01Z", "ACTIVE");
-    protocore_mtc_streams_add(&s, PROTOCORE_MTC_SAMPLE, "Position", "Xabs", 3, "2026-01-01T00:00:02Z", "2.5");
-    protocore_mtc_streams_add(&s, PROTOCORE_MTC_CONDITION, "SYSTEM", "sys", 4, "2026-01-01T00:00:03Z", "Fault");
-    TEST_ASSERT_TRUE(protocore_mtc_streams_end(&s) > 0);
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.streams.component = "Device";
+    MtConnect.streams.component_id = "d1";
+    MtConnect.streams.device_uuid = "uuid-1";
+    MtConnect.window.buffer_size = PROTOCORE_MTC_SAMPLE_BUFFER;
+    MtConnect.window.first_seq = 1u;
+    MtConnect.window.last_seq = 0u;
+    MtConnect.doc.out = g_buf;
+    MtConnect.doc.cap = sizeof(g_buf);
+    MtConnect.doc.instance_id = 7;
+    MtConnect.streams.next_seq = 100;
+    MtConnect.streams.device_name = "VF2";
+    MtConnect.streams_begin(protocore_mtconnect_span());
+    MtConnect.obs.cat = PROTOCORE_MTC_SAMPLE;
+    MtConnect.obs.type = "Position";
+    MtConnect.obs.data_id = "Xabs";
+    MtConnect.obs.seq = 1;
+    MtConnect.obs.timestamp = "2026-01-01T00:00:00Z";
+    MtConnect.obs.value = "1.5";
+    MtConnect.streams_add(protocore_mtconnect_span());
+    MtConnect.obs.cat = PROTOCORE_MTC_EVENT;
+    MtConnect.obs.type = "Execution";
+    MtConnect.obs.data_id = "exec";
+    MtConnect.obs.seq = 2;
+    MtConnect.obs.timestamp = "2026-01-01T00:00:01Z";
+    MtConnect.obs.value = "ACTIVE";
+    MtConnect.streams_add(protocore_mtconnect_span());
+    MtConnect.obs.cat = PROTOCORE_MTC_SAMPLE;
+    MtConnect.obs.type = "Position";
+    MtConnect.obs.data_id = "Xabs";
+    MtConnect.obs.seq = 3;
+    MtConnect.obs.timestamp = "2026-01-01T00:00:02Z";
+    MtConnect.obs.value = "2.5";
+    MtConnect.streams_add(protocore_mtconnect_span());
+    MtConnect.obs.cat = PROTOCORE_MTC_CONDITION;
+    MtConnect.obs.type = "SYSTEM";
+    MtConnect.obs.data_id = "sys";
+    MtConnect.obs.seq = 4;
+    MtConnect.obs.timestamp = "2026-01-01T00:00:03Z";
+    MtConnect.obs.value = "Fault";
+    MtConnect.streams_add(protocore_mtconnect_span());
+    MtConnect.streams_end(protocore_mtconnect_span());
+    TEST_ASSERT_TRUE(MtConnect.n > 0);
     TEST_ASSERT_TRUE(xml_wf(g_buf));
 
     TEST_ASSERT_EQUAL_INT_MESSAGE(1, count_tag(g_buf, "Samples"), "maxOccurs=1 on Samples");
@@ -739,11 +887,35 @@ void test_the_component_stream_groups_each_category_once_and_in_order(void)
 void test_a_sample_and_an_event_carry_the_required_result_attributes(void)
 {
     static const char *const REQ[] = {"sequence", "timestamp", "dataItemId"};
-    protocore_mtc_streams s;
-    protocore_mtc_streams_begin(&s, g_buf, sizeof(g_buf), 7, 100, "VF2");
-    protocore_mtc_streams_add(&s, PROTOCORE_MTC_SAMPLE, "Position", "Xabs", 11, "2026-01-01T00:00:00Z", "1.5");
-    protocore_mtc_streams_add(&s, PROTOCORE_MTC_EVENT, "Execution", "exec", 12, "2026-01-01T00:00:01Z", "ACTIVE");
-    TEST_ASSERT_TRUE(protocore_mtc_streams_end(&s) > 0);
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.streams.component = "Device";
+    MtConnect.streams.component_id = "d1";
+    MtConnect.streams.device_uuid = "uuid-1";
+    MtConnect.window.buffer_size = PROTOCORE_MTC_SAMPLE_BUFFER;
+    MtConnect.window.first_seq = 1u;
+    MtConnect.window.last_seq = 0u;
+    MtConnect.doc.out = g_buf;
+    MtConnect.doc.cap = sizeof(g_buf);
+    MtConnect.doc.instance_id = 7;
+    MtConnect.streams.next_seq = 100;
+    MtConnect.streams.device_name = "VF2";
+    MtConnect.streams_begin(protocore_mtconnect_span());
+    MtConnect.obs.cat = PROTOCORE_MTC_SAMPLE;
+    MtConnect.obs.type = "Position";
+    MtConnect.obs.data_id = "Xabs";
+    MtConnect.obs.seq = 11;
+    MtConnect.obs.timestamp = "2026-01-01T00:00:00Z";
+    MtConnect.obs.value = "1.5";
+    MtConnect.streams_add(protocore_mtconnect_span());
+    MtConnect.obs.cat = PROTOCORE_MTC_EVENT;
+    MtConnect.obs.type = "Execution";
+    MtConnect.obs.data_id = "exec";
+    MtConnect.obs.seq = 12;
+    MtConnect.obs.timestamp = "2026-01-01T00:00:01Z";
+    MtConnect.obs.value = "ACTIVE";
+    MtConnect.streams_add(protocore_mtconnect_span());
+    MtConnect.streams_end(protocore_mtconnect_span());
+    TEST_ASSERT_TRUE(MtConnect.n > 0);
 
     missing_reset();
     require_attrs(g_buf, "Position", "Position", REQ, 3);
@@ -772,10 +944,28 @@ void test_a_condition_is_one_of_the_four_published_states(void)
 
     for (size_t i = 0; i < sizeof(STATE) / sizeof(STATE[0]); i++)
     {
-        protocore_mtc_streams s;
-        protocore_mtc_streams_begin(&s, g_buf, sizeof(g_buf), 7, 100, "VF2");
-        protocore_mtc_streams_add(&s, PROTOCORE_MTC_CONDITION, "SYSTEM", "sys", 5, "2026-01-01T00:00:00Z", STATE[i]);
-        TEST_ASSERT_TRUE(protocore_mtc_streams_end(&s) > 0);
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.streams.component = "Device";
+    MtConnect.streams.component_id = "d1";
+    MtConnect.streams.device_uuid = "uuid-1";
+    MtConnect.window.buffer_size = PROTOCORE_MTC_SAMPLE_BUFFER;
+    MtConnect.window.first_seq = 1u;
+    MtConnect.window.last_seq = 0u;
+    MtConnect.doc.out = g_buf;
+    MtConnect.doc.cap = sizeof(g_buf);
+    MtConnect.doc.instance_id = 7;
+    MtConnect.streams.next_seq = 100;
+    MtConnect.streams.device_name = "VF2";
+    MtConnect.streams_begin(protocore_mtconnect_span());
+        MtConnect.obs.cat = PROTOCORE_MTC_CONDITION;
+        MtConnect.obs.type = "SYSTEM";
+        MtConnect.obs.data_id = "sys";
+        MtConnect.obs.seq = 5;
+        MtConnect.obs.timestamp = "2026-01-01T00:00:00Z";
+        MtConnect.obs.value = STATE[i];
+        MtConnect.streams_add(protocore_mtconnect_span());
+        MtConnect.streams_end(protocore_mtconnect_span());
+        TEST_ASSERT_TRUE(MtConnect.n > 0);
         TEST_ASSERT_TRUE(xml_wf(g_buf));
 
         missing_reset();
@@ -788,10 +978,28 @@ void test_a_condition_is_one_of_the_four_published_states(void)
     }
 
     // No state named: the element still has to be one of the four the schema publishes.
-    protocore_mtc_streams s;
-    protocore_mtc_streams_begin(&s, g_buf, sizeof(g_buf), 7, 100, "VF2");
-    protocore_mtc_streams_add(&s, PROTOCORE_MTC_CONDITION, "SYSTEM", "sys", 5, "2026-01-01T00:00:00Z", NULL);
-    TEST_ASSERT_TRUE(protocore_mtc_streams_end(&s) > 0);
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.streams.component = "Device";
+    MtConnect.streams.component_id = "d1";
+    MtConnect.streams.device_uuid = "uuid-1";
+    MtConnect.window.buffer_size = PROTOCORE_MTC_SAMPLE_BUFFER;
+    MtConnect.window.first_seq = 1u;
+    MtConnect.window.last_seq = 0u;
+    MtConnect.doc.out = g_buf;
+    MtConnect.doc.cap = sizeof(g_buf);
+    MtConnect.doc.instance_id = 7;
+    MtConnect.streams.next_seq = 100;
+    MtConnect.streams.device_name = "VF2";
+    MtConnect.streams_begin(protocore_mtconnect_span());
+    MtConnect.obs.cat = PROTOCORE_MTC_CONDITION;
+    MtConnect.obs.type = "SYSTEM";
+    MtConnect.obs.data_id = "sys";
+    MtConnect.obs.seq = 5;
+    MtConnect.obs.timestamp = "2026-01-01T00:00:00Z";
+    MtConnect.obs.value = NULL;
+    MtConnect.streams_add(protocore_mtconnect_span());
+    MtConnect.streams_end(protocore_mtconnect_span());
+    TEST_ASSERT_TRUE(MtConnect.n > 0);
     int found = 0;
     for (size_t i = 0; i < sizeof(STATE) / sizeof(STATE[0]); i++)
     {
@@ -806,12 +1014,36 @@ void test_a_condition_is_one_of_the_four_published_states(void)
 void test_a_data_item_carries_its_required_attributes_and_a_published_category(void)
 {
     static const char *const REQ[] = {"id", "type", "category"};
-    protocore_mtc_streams s;
-    protocore_mtc_devices_begin(&s, g_buf, sizeof(g_buf), 7, "d1", "VF2", "uuid-1");
-    protocore_mtc_devices_add_item(&s, PROTOCORE_MTC_SAMPLE, "Xabs", "POSITION", "Xpos", "MILLIMETER");
-    protocore_mtc_devices_add_item(&s, PROTOCORE_MTC_EVENT, "exec", "EXECUTION", NULL, NULL);
-    protocore_mtc_devices_add_item(&s, PROTOCORE_MTC_CONDITION, "sys", "SYSTEM", "", "");
-    TEST_ASSERT_TRUE(protocore_mtc_devices_end(&s) > 0);
+    MtConnect.assets.asset_buffer_size = PROTOCORE_MTC_SAMPLE_BUFFER;
+    MtConnect.assets.asset_count = 0u;
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.doc.out = g_buf;
+    MtConnect.doc.cap = sizeof(g_buf);
+    MtConnect.doc.instance_id = 7;
+    MtConnect.device.device_id = "d1";
+    MtConnect.device.device_name = "VF2";
+    MtConnect.device.uuid = "uuid-1";
+    MtConnect.devices_begin(protocore_mtconnect_span());
+    MtConnect.item.cat = PROTOCORE_MTC_SAMPLE;
+    MtConnect.item.id = "Xabs";
+    MtConnect.item.type = "POSITION";
+    MtConnect.item.name = "Xpos";
+    MtConnect.item.units = "MILLIMETER";
+    MtConnect.devices_add(protocore_mtconnect_span());
+    MtConnect.item.cat = PROTOCORE_MTC_EVENT;
+    MtConnect.item.id = "exec";
+    MtConnect.item.type = "EXECUTION";
+    MtConnect.item.name = NULL;
+    MtConnect.item.units = NULL;
+    MtConnect.devices_add(protocore_mtconnect_span());
+    MtConnect.item.cat = PROTOCORE_MTC_CONDITION;
+    MtConnect.item.id = "sys";
+    MtConnect.item.type = "SYSTEM";
+    MtConnect.item.name = "";
+    MtConnect.item.units = "";
+    MtConnect.devices_add(protocore_mtconnect_span());
+    MtConnect.devices_end(protocore_mtconnect_span());
+    TEST_ASSERT_TRUE(MtConnect.n > 0);
     TEST_ASSERT_TRUE(xml_wf(g_buf));
     TEST_ASSERT_EQUAL_INT(3, count_tag(g_buf, "DataItem"));
 
@@ -867,10 +1099,28 @@ void test_markup_characters_in_values_are_escaped(void)
     static const char *const NAME = "A&B<C>\"D\"";
     static const char *const VALUE = "a<b>c&d\"e";
 
-    protocore_mtc_streams s;
-    protocore_mtc_streams_begin(&s, g_buf, sizeof(g_buf), 1, 1, NAME);
-    protocore_mtc_streams_add(&s, PROTOCORE_MTC_EVENT, "Message", "msg", 1, "2026-01-01T00:00:00Z", VALUE);
-    TEST_ASSERT_TRUE(protocore_mtc_streams_end(&s) > 0);
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.streams.component = "Device";
+    MtConnect.streams.component_id = "d1";
+    MtConnect.streams.device_uuid = "uuid-1";
+    MtConnect.window.buffer_size = PROTOCORE_MTC_SAMPLE_BUFFER;
+    MtConnect.window.first_seq = 1u;
+    MtConnect.window.last_seq = 0u;
+    MtConnect.doc.out = g_buf;
+    MtConnect.doc.cap = sizeof(g_buf);
+    MtConnect.doc.instance_id = 1;
+    MtConnect.streams.next_seq = 1;
+    MtConnect.streams.device_name = NAME;
+    MtConnect.streams_begin(protocore_mtconnect_span());
+    MtConnect.obs.cat = PROTOCORE_MTC_EVENT;
+    MtConnect.obs.type = "Message";
+    MtConnect.obs.data_id = "msg";
+    MtConnect.obs.seq = 1;
+    MtConnect.obs.timestamp = "2026-01-01T00:00:00Z";
+    MtConnect.obs.value = VALUE;
+    MtConnect.streams_add(protocore_mtconnect_span());
+    MtConnect.streams_end(protocore_mtconnect_span());
+    TEST_ASSERT_TRUE(MtConnect.n > 0);
     TEST_ASSERT_TRUE_MESSAGE(xml_wf(g_buf), "escaping produced a document that does not parse");
 
     char v[128];
@@ -956,18 +1206,63 @@ void test_the_cutting_tool_reports_its_asset_id_and_life_values(void)
 void test_overflow_reports_zero_length(void)
 {
     char small[64];
-    protocore_mtc_streams s;
-    protocore_mtc_streams_begin(&s, small, sizeof(small), 1, 1, "VF2");
-    protocore_mtc_streams_add(&s, PROTOCORE_MTC_SAMPLE, "Position", "Xabs", 1, "2026-01-01T00:00:00Z", "1.5");
-    TEST_ASSERT_FALSE(s.ok);
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_mtc_streams_end(&s));
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.streams.component = "Device";
+    MtConnect.streams.component_id = "d1";
+    MtConnect.streams.device_uuid = "uuid-1";
+    MtConnect.window.buffer_size = PROTOCORE_MTC_SAMPLE_BUFFER;
+    MtConnect.window.first_seq = 1u;
+    MtConnect.window.last_seq = 0u;
+    MtConnect.doc.out = small;
+    MtConnect.doc.cap = sizeof(small);
+    MtConnect.doc.instance_id = 1;
+    MtConnect.streams.next_seq = 1;
+    MtConnect.streams.device_name = "VF2";
+    MtConnect.streams_begin(protocore_mtconnect_span());
+    MtConnect.obs.cat = PROTOCORE_MTC_SAMPLE;
+    MtConnect.obs.type = "Position";
+    MtConnect.obs.data_id = "Xabs";
+    MtConnect.obs.seq = 1;
+    MtConnect.obs.timestamp = "2026-01-01T00:00:00Z";
+    MtConnect.obs.value = "1.5";
+    MtConnect.streams_add(protocore_mtconnect_span());
+    TEST_ASSERT_FALSE(MTC_CTX(protocore_mtconnect_span())->ok);
+    MtConnect.streams_end(protocore_mtconnect_span());
+    TEST_ASSERT_EQUAL_size_t(0u, MtConnect.n);
 
-    protocore_mtc_streams_begin(&s, NULL, 1024, 1, 1, "VF2");
-    TEST_ASSERT_FALSE(s.ok);
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_mtc_streams_end(&s));
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.streams.component = "Device";
+    MtConnect.streams.component_id = "d1";
+    MtConnect.streams.device_uuid = "uuid-1";
+    MtConnect.window.buffer_size = PROTOCORE_MTC_SAMPLE_BUFFER;
+    MtConnect.window.first_seq = 1u;
+    MtConnect.window.last_seq = 0u;
+    MtConnect.doc.out = NULL;
+    MtConnect.doc.cap = 1024;
+    MtConnect.doc.instance_id = 1;
+    MtConnect.streams.next_seq = 1;
+    MtConnect.streams.device_name = "VF2";
+    MtConnect.streams_begin(protocore_mtconnect_span());
+    TEST_ASSERT_FALSE(MTC_CTX(protocore_mtconnect_span())->ok);
+    MtConnect.streams_end(protocore_mtconnect_span());
+    TEST_ASSERT_EQUAL_size_t(0u, MtConnect.n);
 
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_mtc_error(42, "OUT_OF_RANGE", "x", small, 8));
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_mtc_error(42, "OUT_OF_RANGE", "x", NULL, sizeof(small)));
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.doc.instance_id = 42;
+    MtConnect.err.error_code = "OUT_OF_RANGE";
+    MtConnect.err.message = "x";
+    MtConnect.doc.out = small;
+    MtConnect.doc.cap = 8;
+    MtConnect.error(protocore_mtconnect_span());
+    TEST_ASSERT_EQUAL_size_t(0u, MtConnect.n);
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.doc.instance_id = 42;
+    MtConnect.err.error_code = "OUT_OF_RANGE";
+    MtConnect.err.message = "x";
+    MtConnect.doc.out = NULL;
+    MtConnect.doc.cap = sizeof(small);
+    MtConnect.error(protocore_mtconnect_span());
+    TEST_ASSERT_EQUAL_size_t(0u, MtConnect.n);
 
     TEST_ASSERT_TRUE(build_streams() > 0);
     TEST_ASSERT_EQUAL_size_t(strlen(g_buf), build_streams());
@@ -978,25 +1273,31 @@ void test_overflow_reports_zero_length(void)
 // and leave next_seq one past the newest.
 void test_sample_buffer_assigns_monotonic_sequences(void)
 {
-    static protocore_mtc_sample_buffer b;
-    protocore_mtc_sample_buffer_init(&b, 1000);
-    TEST_ASSERT_EQUAL_UINT64(1000u, b.next_seq);
-    TEST_ASSERT_EQUAL_UINT64(1000u, b.first_seq);
-    TEST_ASSERT_EQUAL_UINT32(0u, b.count);
+    MtConnect.streams.next_seq = 1000;
+    MtConnect.ring_init(protocore_mtconnect_span());
+    TEST_ASSERT_EQUAL_UINT64(1000u, MTC_CTX(protocore_mtconnect_span())->next_seq);
+    TEST_ASSERT_EQUAL_UINT64(1000u, MTC_CTX(protocore_mtconnect_span())->first_seq);
+    TEST_ASSERT_EQUAL_UINT32(0u, MTC_CTX(protocore_mtconnect_span())->count);
 
     for (uint32_t i = 0; i < 3; i++)
     {
-        const uint64_t seq = protocore_mtc_sample_buffer_add(&b, PROTOCORE_MTC_SAMPLE, "Position", "Xabs",
-                                                             "2026-01-01T00:00:00Z", "1.5");
+        MtConnect.obs.cat = PROTOCORE_MTC_SAMPLE;
+        MtConnect.obs.type = "Position";
+        MtConnect.obs.data_id = "Xabs";
+        MtConnect.obs.timestamp = "2026-01-01T00:00:00Z";
+        MtConnect.obs.value = "1.5";
+        MtConnect.ring_add(protocore_mtconnect_span());
+        const uint64_t seq = MtConnect.seq;
         TEST_ASSERT_EQUAL_UINT64((uint64_t)(1000 + i), seq);
     }
-    TEST_ASSERT_EQUAL_UINT32(3u, b.count);
-    TEST_ASSERT_EQUAL_UINT64(1003u, b.next_seq);
-    TEST_ASSERT_EQUAL_UINT64(1000u, b.first_seq);
+    TEST_ASSERT_EQUAL_UINT32(3u, MTC_CTX(protocore_mtconnect_span())->count);
+    TEST_ASSERT_EQUAL_UINT64(1003u, MTC_CTX(protocore_mtconnect_span())->next_seq);
+    TEST_ASSERT_EQUAL_UINT64(1000u, MTC_CTX(protocore_mtconnect_span())->first_seq);
 
-    protocore_mtc_sample_buffer_init(&b, 0);
-    TEST_ASSERT_EQUAL_UINT64(1u, b.next_seq);
-    TEST_ASSERT_EQUAL_UINT64(1u, b.first_seq);
+    MtConnect.streams.next_seq = 0;
+    MtConnect.ring_init(protocore_mtconnect_span());
+    TEST_ASSERT_EQUAL_UINT64(1u, MTC_CTX(protocore_mtconnect_span())->next_seq);
+    TEST_ASSERT_EQUAL_UINT64(1u, MTC_CTX(protocore_mtconnect_span())->first_seq);
 }
 
 // mtconnect.h lines 164-167: the retained window is always [first_seq, next_seq), holding at most
@@ -1004,16 +1305,21 @@ void test_sample_buffer_assigns_monotonic_sequences(void)
 // filled from 1000 the window is [1001, 1000 + BUFFER + 1) and its width is the count.
 void test_sample_buffer_eviction_advances_the_window(void)
 {
-    static protocore_mtc_sample_buffer b;
-    protocore_mtc_sample_buffer_init(&b, 1000);
+    MtConnect.streams.next_seq = 1000;
+    MtConnect.ring_init(protocore_mtconnect_span());
     for (uint32_t i = 0; i < PROTOCORE_MTC_SAMPLE_BUFFER + 1; i++)
     {
-        protocore_mtc_sample_buffer_add(&b, PROTOCORE_MTC_SAMPLE, "Position", "Xabs", "2026-01-01T00:00:00Z", "1.5");
+        MtConnect.obs.cat = PROTOCORE_MTC_SAMPLE;
+        MtConnect.obs.type = "Position";
+        MtConnect.obs.data_id = "Xabs";
+        MtConnect.obs.timestamp = "2026-01-01T00:00:00Z";
+        MtConnect.obs.value = "1.5";
+        MtConnect.ring_add(protocore_mtconnect_span());
     }
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_MTC_SAMPLE_BUFFER, b.count);
-    TEST_ASSERT_EQUAL_UINT64(1001u, b.first_seq);
-    TEST_ASSERT_EQUAL_UINT64((uint64_t)(1000 + PROTOCORE_MTC_SAMPLE_BUFFER + 1), b.next_seq);
-    TEST_ASSERT_EQUAL_UINT64((uint64_t)b.count, b.next_seq - b.first_seq);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_MTC_SAMPLE_BUFFER, MTC_CTX(protocore_mtconnect_span())->count);
+    TEST_ASSERT_EQUAL_UINT64(1001u, MTC_CTX(protocore_mtconnect_span())->first_seq);
+    TEST_ASSERT_EQUAL_UINT64((uint64_t)(1000 + PROTOCORE_MTC_SAMPLE_BUFFER + 1), MTC_CTX(protocore_mtconnect_span())->next_seq);
+    TEST_ASSERT_EQUAL_UINT64((uint64_t)MTC_CTX(protocore_mtconnect_span())->count, MTC_CTX(protocore_mtconnect_span())->next_seq - MTC_CTX(protocore_mtconnect_span())->first_seq);
 }
 
 // mtconnect.h lines 193-199: the query emits up to count observations from `from` onward and reports
@@ -1022,14 +1328,40 @@ void test_sample_buffer_eviction_advances_the_window(void)
 // nextSequence = 1001 + 1 = 1002 and neither neighbour appears.
 void test_sample_query_replays_the_requested_window(void)
 {
-    static protocore_mtc_sample_buffer b;
     char v[64];
-    protocore_mtc_sample_buffer_init(&b, 1000);
-    protocore_mtc_sample_buffer_add(&b, PROTOCORE_MTC_SAMPLE, "Position", "Xabs", "2026-01-01T00:00:00Z", "1.0");
-    protocore_mtc_sample_buffer_add(&b, PROTOCORE_MTC_SAMPLE, "Position", "Xabs", "2026-01-01T00:00:01Z", "2.0");
-    protocore_mtc_sample_buffer_add(&b, PROTOCORE_MTC_SAMPLE, "Position", "Xabs", "2026-01-01T00:00:02Z", "3.0");
+    MtConnect.streams.next_seq = 1000;
+    MtConnect.ring_init(protocore_mtconnect_span());
+    MtConnect.obs.cat = PROTOCORE_MTC_SAMPLE;
+    MtConnect.obs.type = "Position";
+    MtConnect.obs.data_id = "Xabs";
+    MtConnect.obs.timestamp = "2026-01-01T00:00:00Z";
+    MtConnect.obs.value = "1.0";
+    MtConnect.ring_add(protocore_mtconnect_span());
+    MtConnect.obs.cat = PROTOCORE_MTC_SAMPLE;
+    MtConnect.obs.type = "Position";
+    MtConnect.obs.data_id = "Xabs";
+    MtConnect.obs.timestamp = "2026-01-01T00:00:01Z";
+    MtConnect.obs.value = "2.0";
+    MtConnect.ring_add(protocore_mtconnect_span());
+    MtConnect.obs.cat = PROTOCORE_MTC_SAMPLE;
+    MtConnect.obs.type = "Position";
+    MtConnect.obs.data_id = "Xabs";
+    MtConnect.obs.timestamp = "2026-01-01T00:00:02Z";
+    MtConnect.obs.value = "3.0";
+    MtConnect.ring_add(protocore_mtconnect_span());
 
-    TEST_ASSERT_TRUE(protocore_mtc_sample_query(&b, g_buf, sizeof(g_buf), 7, "VF2", 1000, 10) > 0);
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.streams.component = "Device";
+    MtConnect.streams.component_id = "d1";
+    MtConnect.streams.device_uuid = "uuid-1";
+    MtConnect.doc.out = g_buf;
+    MtConnect.doc.cap = sizeof(g_buf);
+    MtConnect.doc.instance_id = 7;
+    MtConnect.streams.device_name = "VF2";
+    MtConnect.query.from = 1000;
+    MtConnect.query.count = 10;
+    MtConnect.ring_query(protocore_mtconnect_span());
+    TEST_ASSERT_TRUE(MtConnect.n > 0);
     const char *h = find_tag_from(g_buf, "Header");
     attr_value(h, "firstSequence", v, sizeof(v));
     TEST_ASSERT_EQUAL_STRING("1000", v);
@@ -1043,7 +1375,18 @@ void test_sample_query_replays_the_requested_window(void)
     text_of(g_buf, "Position", v, sizeof(v));
     TEST_ASSERT_EQUAL_STRING("1.0", v);
 
-    TEST_ASSERT_TRUE(protocore_mtc_sample_query(&b, g_buf, sizeof(g_buf), 7, "VF2", 1001, 1) > 0);
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.streams.component = "Device";
+    MtConnect.streams.component_id = "d1";
+    MtConnect.streams.device_uuid = "uuid-1";
+    MtConnect.doc.out = g_buf;
+    MtConnect.doc.cap = sizeof(g_buf);
+    MtConnect.doc.instance_id = 7;
+    MtConnect.streams.device_name = "VF2";
+    MtConnect.query.from = 1001;
+    MtConnect.query.count = 1;
+    MtConnect.ring_query(protocore_mtconnect_span());
+    TEST_ASSERT_TRUE(MtConnect.n > 0);
     attr_value(find_tag_from(g_buf, "Header"), "nextSequence", v, sizeof(v));
     TEST_ASSERT_EQUAL_STRING("1002", v);
     TEST_ASSERT_EQUAL_INT(1, count_tag(g_buf, "Position"));
@@ -1058,14 +1401,30 @@ void test_sample_query_replays_the_requested_window(void)
 // so from 0 with count 2 replays 1001 and 1002 and resumes at 1001 + 2 = 1003.
 void test_sample_query_clamps_a_stale_from(void)
 {
-    static protocore_mtc_sample_buffer b;
     char v[64];
-    protocore_mtc_sample_buffer_init(&b, 1000);
+    MtConnect.streams.next_seq = 1000;
+    MtConnect.ring_init(protocore_mtconnect_span());
     for (uint32_t i = 0; i < PROTOCORE_MTC_SAMPLE_BUFFER + 1; i++)
     {
-        protocore_mtc_sample_buffer_add(&b, PROTOCORE_MTC_EVENT, "Execution", "exec", "2026-01-01T00:00:00Z", "ACTIVE");
+        MtConnect.obs.cat = PROTOCORE_MTC_EVENT;
+        MtConnect.obs.type = "Execution";
+        MtConnect.obs.data_id = "exec";
+        MtConnect.obs.timestamp = "2026-01-01T00:00:00Z";
+        MtConnect.obs.value = "ACTIVE";
+        MtConnect.ring_add(protocore_mtconnect_span());
     }
-    TEST_ASSERT_TRUE(protocore_mtc_sample_query(&b, g_buf, sizeof(g_buf), 7, "VF2", 0, 2) > 0);
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.streams.component = "Device";
+    MtConnect.streams.component_id = "d1";
+    MtConnect.streams.device_uuid = "uuid-1";
+    MtConnect.doc.out = g_buf;
+    MtConnect.doc.cap = sizeof(g_buf);
+    MtConnect.doc.instance_id = 7;
+    MtConnect.streams.device_name = "VF2";
+    MtConnect.query.from = 0;
+    MtConnect.query.count = 2;
+    MtConnect.ring_query(protocore_mtconnect_span());
+    TEST_ASSERT_TRUE(MtConnect.n > 0);
 
     const char *h = find_tag_from(g_buf, "Header");
     attr_value(h, "firstSequence", v, sizeof(v));
@@ -1082,20 +1441,48 @@ void test_sample_query_clamps_a_stale_from(void)
 // buffer started at 1000 reports lastSequence = next - 1 = 999, the width [1000, 1000) being zero.
 void test_sample_query_past_the_newest_returns_no_observations(void)
 {
-    static protocore_mtc_sample_buffer b;
     char v[64];
-    protocore_mtc_sample_buffer_init(&b, 1000);
-    protocore_mtc_sample_buffer_add(&b, PROTOCORE_MTC_SAMPLE, "Position", "Xabs", "2026-01-01T00:00:00Z", "1.0");
+    MtConnect.streams.next_seq = 1000;
+    MtConnect.ring_init(protocore_mtconnect_span());
+    MtConnect.obs.cat = PROTOCORE_MTC_SAMPLE;
+    MtConnect.obs.type = "Position";
+    MtConnect.obs.data_id = "Xabs";
+    MtConnect.obs.timestamp = "2026-01-01T00:00:00Z";
+    MtConnect.obs.value = "1.0";
+    MtConnect.ring_add(protocore_mtconnect_span());
 
-    TEST_ASSERT_TRUE(protocore_mtc_sample_query(&b, g_buf, sizeof(g_buf), 7, "VF2", 1001, 10) > 0);
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.streams.component = "Device";
+    MtConnect.streams.component_id = "d1";
+    MtConnect.streams.device_uuid = "uuid-1";
+    MtConnect.doc.out = g_buf;
+    MtConnect.doc.cap = sizeof(g_buf);
+    MtConnect.doc.instance_id = 7;
+    MtConnect.streams.device_name = "VF2";
+    MtConnect.query.from = 1001;
+    MtConnect.query.count = 10;
+    MtConnect.ring_query(protocore_mtconnect_span());
+    TEST_ASSERT_TRUE(MtConnect.n > 0);
     attr_value(find_tag_from(g_buf, "Header"), "nextSequence", v, sizeof(v));
     TEST_ASSERT_EQUAL_STRING("1001", v);
     TEST_ASSERT_EQUAL_INT(0, count_tag(g_buf, "ComponentStream"));
     TEST_ASSERT_EQUAL_INT(1, count_tag(g_buf, "DeviceStream"));
     TEST_ASSERT_TRUE(xml_wf(g_buf));
 
-    protocore_mtc_sample_buffer_init(&b, 1000);
-    TEST_ASSERT_TRUE(protocore_mtc_sample_query(&b, g_buf, sizeof(g_buf), 7, "VF2", 1000, 10) > 0);
+    MtConnect.streams.next_seq = 1000;
+    MtConnect.ring_init(protocore_mtconnect_span());
+    MtConnect.doc.sender = "agent-1";
+    MtConnect.streams.component = "Device";
+    MtConnect.streams.component_id = "d1";
+    MtConnect.streams.device_uuid = "uuid-1";
+    MtConnect.doc.out = g_buf;
+    MtConnect.doc.cap = sizeof(g_buf);
+    MtConnect.doc.instance_id = 7;
+    MtConnect.streams.device_name = "VF2";
+    MtConnect.query.from = 1000;
+    MtConnect.query.count = 10;
+    MtConnect.ring_query(protocore_mtconnect_span());
+    TEST_ASSERT_TRUE(MtConnect.n > 0);
     const char *h = find_tag_from(g_buf, "Header");
     attr_value(h, "firstSequence", v, sizeof(v));
     TEST_ASSERT_EQUAL_STRING("1000", v);

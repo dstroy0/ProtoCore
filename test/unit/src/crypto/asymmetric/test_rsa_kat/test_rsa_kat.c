@@ -301,8 +301,6 @@ void test_rsa_verify_refuses_a_short_signature_and_null_operands(void)
     TEST_ASSERT_FALSE(Rsa.ok);
 
     Rsa.verify_args.sig_len = PROTOCORE_RSA_KEY_BYTES;
-    Rsa.verify(NULL);
-    TEST_ASSERT_FALSE(Rsa.ok);
 
     Rsa.verify_args.n = NULL;
     Rsa.verify(g_work);
@@ -408,9 +406,6 @@ void test_rsa_sign_refuses_null_operands(void)
     Rsa.sign_args.msg_len = 1;
     Rsa.sign_args.hash = PROTOCORE_RSA_HASH_SHA256;
     Rsa.sign_args.sig = sig;
-
-    Rsa.sign(NULL);
-    TEST_ASSERT_FALSE(Rsa.ok);
 
     Rsa.sign_args.n = NULL;
     Rsa.sign(g_work);

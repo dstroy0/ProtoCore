@@ -50,6 +50,17 @@ static_assert(SHA512_OFF_STATE + sizeof(uint64_t) * 8 <= PROTOCORE_SHA512_BORROW
               "PROTOCORE_SHA512_BORROW is short of the context, the two blocks and the state copy - "
               "raise it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(SHA512_OFF_CTX % _Alignof(Sha512Ctx) == 0,
+              "SHA512_OFF_CTX is not a multiple of alignof(Sha512Ctx) - SHA512_CTX() would return a misaligned "
+              "pointer; pad the region ahead of it");
+static_assert(SHA512_OFF_STATE % _Alignof(uint64_t) == 0,
+              "SHA512_OFF_STATE is not a multiple of alignof(uint64_t) - SHA512_FS() would return a misaligned "
+              "pointer; pad the region ahead of it");
+
 // The regions, at their offsets in the caller's borrow.
 #define SHA512_CTX(w) ((Sha512Ctx *)(void *)((w) + SHA512_OFF_CTX))
 #define SHA512_RX(w) ((w) + SHA512_OFF_RX)
@@ -380,11 +391,12 @@ static void sha512_init(uint8_t *restrict work)
 static void sha512_update(uint8_t *restrict work)
 {
     sha512_absorb(work, Sha512.update_args.data, Sha512.update_args.len);
+    Sha512.ok = PROTO_TRUE;
 }
 
 static void sha512_final(uint8_t *restrict work)
 {
-    if (!work || !Sha512.final_args.out)
+    if (!Sha512.final_args.out)
     {
         Sha512.ok = PROTO_FALSE;
         return;
@@ -397,7 +409,7 @@ static void sha512_final(uint8_t *restrict work)
 static void sha512_hash(uint8_t *restrict work)
 {
     Sha512.ok = PROTO_FALSE;
-    if (!work || !Sha512.hash_args.out)
+    if (!Sha512.hash_args.out)
     {
         return;
     }

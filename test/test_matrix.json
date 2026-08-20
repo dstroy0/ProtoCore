@@ -4478,18 +4478,27 @@
     },
     "native_mtconnect": {
       "desc": "MTConnect agent response codec (services/machine_tool/mtconnect, ANSI/MTC1.4): the incremental\nMTConnectStreams builder (header + Samples/Events/Condition), the MTConnectDevices probe (device\nmodel), the MTConnectAssets response (CuttingTool life cycle), the sample sequence cursor (a rolling\nobservation ring replayed as a from/count long-poll window), and the MTConnectError document,\nXML-escaped. Pure host tests with structural assertions.",
-      "flags": ["-DPROTOCORE_ENABLE_MTCONNECT=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_MTCONNECT=1"
+      ],
       "src": [
-        "+<services/machine_tool/mtconnect/mtconnect.c>",
         "+<mmgr/protomem/protomem.c>",
         "+<mmgr/rawmemcpy/rawmemcpy.c>",
         "+<mmgr/swar/swar.c>",
-        "+<mmgr/protostr/protostr.c>"
+        "+<mmgr/protostr/protostr.c>",
+        "+<shared/time_compat/time_compat.c>",
+        "+<server/clock/clock.c>",
+        "+<mmgr/plaintext/plaintext.c>",
+        "+<mmgr/arena/arena.c>",
+        "+<mmgr/span/span.c>",
+        "+<../test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/file_conversion/services/machine_tool/mtconnect/test_mtconnect"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_multipart": {
       "desc": "test_multipart against the native_stack_http stack.",

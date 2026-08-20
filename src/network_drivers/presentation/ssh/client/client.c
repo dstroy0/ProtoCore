@@ -107,6 +107,15 @@ static_assert(SSH_CLIENT_OFF_CTX + sizeof(SshClientStorage) <= PROTOCORE_SSH_CLI
               "PROTOCORE_SSH_CLIENT_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(
+    SSH_CLIENT_OFF_CTX % _Alignof(SshClientStorage) == 0,
+    "SSH_CLIENT_OFF_CTX is not a multiple of alignof(SshClientStorage) - SSH_CLIENT_CTX() would return a misaligned "
+    "pointer; pad the region ahead of it");
+
 // The region, at its offset in the caller's borrow.
 #define SSH_CLIENT_CTX(w) ((SshClientStorage *)(void *)((w) + SSH_CLIENT_OFF_CTX))
 
@@ -155,8 +164,8 @@ static proto_bool send_service_request(void)
     protocore_span w = span.from(out, sizeof(out));
     bytes.put(&w, SSH_MSG_SERVICE_REQUEST);
     protocore_ssh_wr_cstr(&w, "ssh-userauth");
-    return span.ok(w) &&
-           (SshClient.msg.payload = out, SshClient.msg.len = w.pos, cli_send(protocore_ssh_client_span()), SshClient.ok);
+    return span.ok(w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos, cli_send(protocore_ssh_client_span()),
+                          SshClient.ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -324,7 +333,8 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
     {
         return PROTO_FALSE;
     }
-    (SshTransport.slot = SSH_CLI_SLOT, SshTransport.newkeys_sent(protocore_ssh_transport_span())); // outbound switches to the epoch this exchange derived
+    (SshTransport.slot = SSH_CLI_SLOT,
+     SshTransport.newkeys_sent(protocore_ssh_transport_span())); // outbound switches to the epoch this exchange derived
     return PROTO_TRUE;
 }
 
@@ -349,7 +359,10 @@ static proto_bool build_kexinit(void)
     }
     uint8_t *out = base + SSH_OFF_KEXINIT;
     size_t n = 0;
-    if ((SshTransport.slot = SSH_CLI_SLOT, SshTransport.out_args.out = out, SshTransport.out_args.cap = PROTOCORE_SSH_KEXINIT_S_MAX, SshTransport.kexinit_build(protocore_ssh_transport_span()), n = SshTransport.out_args.out_len, SshTransport.i32) != 0)
+    if ((SshTransport.slot = SSH_CLI_SLOT, SshTransport.out_args.out = out,
+         SshTransport.out_args.cap = PROTOCORE_SSH_KEXINIT_S_MAX,
+         SshTransport.kexinit_build(protocore_ssh_transport_span()), n = SshTransport.out_args.out_len,
+         SshTransport.i32) != 0)
     {
         return PROTO_FALSE;
     }
@@ -478,7 +491,8 @@ static proto_bool build_kex_public(void)
 static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
 {
     // RFC 4253 sec 7.1 parse + negotiate, the one implementation both roles consume.
-    if ((SshTransport.slot = SSH_CLI_SLOT, SshTransport.pkt.payload = p, SshTransport.pkt.len = len, SshTransport.kexinit_parse(protocore_ssh_transport_span()), SshTransport.i32) != 0)
+    if ((SshTransport.slot = SSH_CLI_SLOT, SshTransport.pkt.payload = p, SshTransport.pkt.len = len,
+         SshTransport.kexinit_parse(protocore_ssh_transport_span()), SshTransport.i32) != 0)
     {
         return PROTO_FALSE;
     }
@@ -586,8 +600,8 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         protocore_ssh_wr_str(&w, SSH_CLIENT_CTX(protocore_ssh_client_span())->qc,
                              SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len);
     }
-    return span.ok(w) &&
-           (SshClient.msg.payload = out, SshClient.msg.len = w.pos, cli_send(protocore_ssh_client_span()), SshClient.ok);
+    return span.ok(w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos, cli_send(protocore_ssh_client_span()),
+                          SshClient.ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -675,8 +689,8 @@ static proto_bool send_tcpip_forward(void)
                                   ? SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.bind_addr
                                   : "");
     bytes.put_be(&w, SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.bind_port, 4);
-    return span.ok(w) &&
-           (SshClient.msg.payload = out, SshClient.msg.len = w.pos, cli_send(protocore_ssh_client_span()), SshClient.ok);
+    return span.ok(w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos, cli_send(protocore_ssh_client_span()),
+                          SshClient.ok);
 }
 // ---------------------------------------------------------------------------
 // RFC 4252 sec 7 - the outbound role's publickey request
@@ -865,7 +879,8 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
         {
             handled = PROTO_TRUE;
             // RFC 4253 sec 7.3: a NEWKEYS that ends no key exchange is a protocol error.
-            if ((SshTransport.slot = SSH_CLI_SLOT, SshTransport.newkeys_complete(protocore_ssh_transport_span()), SshTransport.i32) != 0) // -> SSH_PHASE_SERVICE
+            if ((SshTransport.slot = SSH_CLI_SLOT, SshTransport.newkeys_complete(protocore_ssh_transport_span()),
+                 SshTransport.i32) != 0) // -> SSH_PHASE_SERVICE
             {
                 cli_fail("NEWKEYS outside a key exchange");
             }
@@ -953,7 +968,8 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
         size_t n = 0;
         if (ssh_pkt_unimplemented(SSH_CLI_SLOT, out, &n, sizeof(out)) == 0)
         {
-            (void)(SshClient.msg.payload = out, SshClient.msg.len = n, cli_send(protocore_ssh_client_span()), SshClient.ok);
+            (void)(SshClient.msg.payload = out, SshClient.msg.len = n, cli_send(protocore_ssh_client_span()),
+                   SshClient.ok);
         }
     }
 }
@@ -1018,7 +1034,10 @@ static void protocore_ssh_client_begin(uint8_t *restrict work)
     // Send our identification string, then our KEXINIT.
     uint8_t banner[SSH_VERSION_MAX + 2];
     size_t n = 0;
-    const int ident = (SshTransport.slot = SSH_CLI_SLOT, SshTransport.out_args.out = banner, SshTransport.out_args.cap = sizeof(banner), SshTransport.send_ident(protocore_ssh_transport_span()), n = SshTransport.out_args.out_len, SshTransport.i32);
+    const int ident =
+        (SshTransport.slot = SSH_CLI_SLOT, SshTransport.out_args.out = banner,
+         SshTransport.out_args.cap = sizeof(banner), SshTransport.send_ident(protocore_ssh_transport_span()),
+         n = SshTransport.out_args.out_len, SshTransport.i32);
     TcpClient.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
     TcpClient.io.data = banner;
     TcpClient.io.len = n;

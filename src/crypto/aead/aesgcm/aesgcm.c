@@ -28,7 +28,7 @@
 #endif
 #include "crypto/aead/aesgcm/aesgcm.h"
 #include "crypto/crypto_opt.h"
-#include "crypto/ct_eq.h"     // protocore_ct_eq
+#include "crypto/ct_eq.h"           // protocore_ct_eq
 #include "crypto/mac/ghash/ghash.h" // the 4-bit-table GF(2^128) hash
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/rawmemcpy/rawmemcpy.h" // proto_raw_u32 - the aliasing-permitted word load
@@ -83,6 +83,14 @@ typedef struct
 static_assert(AESGCM_OFF_END <= PROTOCORE_AESGCM_BORROW,
               "PROTOCORE_AESGCM_BORROW is short of the keyed context and the nested GHASH borrow - raise "
               "it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
+
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(AESGCM_OFF_CTX % _Alignof(GcmWork) == 0,
+              "AESGCM_OFF_CTX is not a multiple of alignof(GcmWork) - AESGCM_CTX() would return a misaligned "
+              "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
 #define AESGCM_CTX(w) ((GcmWork *)(void *)((w) + AESGCM_OFF_CTX))
@@ -280,7 +288,7 @@ static proto_bool aesgcm_open_record(uint8_t *restrict work, const uint8_t *nonc
 static void aesgcm_key_init(uint8_t *restrict work)
 {
     AesGcm.ok = PROTO_FALSE;
-    if (!work || !AesGcm.key_args.key)
+    if (!AesGcm.key_args.key)
     {
         return;
     }
@@ -299,7 +307,7 @@ static void aesgcm_key_wipe(uint8_t *restrict work)
 static void aesgcm_seal(uint8_t *restrict work)
 {
     AesGcm.ok = PROTO_FALSE;
-    if (!work || !AesGcm.seal_args.nonce || !AesGcm.seal_args.ct_out || !AesGcm.seal_args.tag_out)
+    if (!AesGcm.seal_args.nonce || !AesGcm.seal_args.ct_out || !AesGcm.seal_args.tag_out)
     {
         return;
     }
@@ -311,7 +319,7 @@ static void aesgcm_seal(uint8_t *restrict work)
 static void aesgcm_open(uint8_t *restrict work)
 {
     AesGcm.ok = PROTO_FALSE;
-    if (!work || !AesGcm.open_args.nonce || !AesGcm.open_args.tag || !AesGcm.open_args.out)
+    if (!AesGcm.open_args.nonce || !AesGcm.open_args.tag || !AesGcm.open_args.out)
     {
         return;
     }

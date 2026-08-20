@@ -13,11 +13,13 @@
  * the UDP socket and the real-time cadence.
  *
  * Wire format (UDP port @ref PROTOCORE_J519_UDP_PORT, default 60015). Every packet opens with an 8-octet
- * header, and unlike FOCAS **every multi-octet field is LITTLE-endian** (floats are IEEE-754 binary32):
+ * header, and **every multi-octet field is BIG-endian**, network order (floats are IEEE-754
+ * binary32). The dissector cited below reads every one of them with Wireshark's big-endian calls,
+ * and the two Python clients pack them `>I` / `>H` / `>f`:
  * @code
  *   header (8)
- *     packet type (4)   u32 le - see J519Type
- *     version no  (4)   u32 le
+ *     packet type (4)   u32 be - see J519Type
+ *     version no  (4)   u32 be
  * @endcode
  *
  * The packet type does NOT identify a packet on its own: the numeric space is reused per direction

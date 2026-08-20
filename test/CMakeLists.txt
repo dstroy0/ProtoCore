@@ -7420,11 +7420,16 @@ protocore_env(native_msgpack_wire
 # MTConnect agent response codec (services/machine_tool/mtconnect, ANSI/MTC1.4): the incremental
 protocore_env(native_mtconnect
   SOURCES
-    "${PROTOCORE_ROOT}/src/services/machine_tool/mtconnect/mtconnect.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
+    "${PROTOCORE_ROOT}/src/shared/time_compat/time_compat.c"
+    "${PROTOCORE_ROOT}/src/server/clock/clock.c"
+    "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
+    "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
+    "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
+    "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/test/unit/file_conversion/services/machine_tool/mtconnect/test_mtconnect/test_mtconnect.c"
     "${PROTOCORE_ROOT}/test/unit/file_conversion/services/machine_tool/mtconnect/test_mtconnect/unity_runner.c"
   DEFINES

@@ -18,7 +18,7 @@
  */
 
 #include "mmgr/secure/secure.h" // protocore_secure_wipe: a schedule that is done is zeroed
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+#include "protocore_config.h"   // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_AES128GCM
 
@@ -29,7 +29,7 @@
 #endif
 #include "crypto/aead/aes128gcm/aes128gcm.h"
 #include "crypto/crypto_opt.h"
-#include "crypto/ct_eq.h"     // protocore_ct_eq
+#include "crypto/ct_eq.h"           // protocore_ct_eq
 #include "crypto/mac/ghash/ghash.h" // the 4-bit-table GF(2^128) hash
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/rawmemcpy/rawmemcpy.h" // proto_raw_u32 - the aliasing-permitted word load
@@ -122,6 +122,18 @@ static_assert(AES128GCM_OFF_END <= PROTOCORE_AES128GCM_BORROW,
               "PROTOCORE_AES128GCM_BORROW is short of the AEAD context, the nested GHASH borrow and the "
               "single-block context - raise it in protocore_config.h, which derives "
               "PROTOCORE_SECURE_ARENA_SIZE from it");
+
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(
+    AES128GCM_OFF_GCM % _Alignof(Aes128GcmWork) == 0,
+    "AES128GCM_OFF_GCM is not a multiple of alignof(Aes128GcmWork) - AES128GCM_GCM() would return a misaligned "
+    "pointer; pad the region ahead of it");
+static_assert(AES128GCM_OFF_BLOCK % _Alignof(Aes128Blk) == 0,
+              "AES128GCM_OFF_BLOCK is not a multiple of alignof(Aes128Blk) - AES128GCM_BLK() would return a misaligned "
+              "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
 #define AES128GCM_GCM(w) ((Aes128GcmWork *)(void *)((w) + AES128GCM_OFF_GCM))
@@ -306,7 +318,7 @@ static void aes128gcm_blk_release(uint8_t *restrict work)
 static void aes128gcm_key_init(uint8_t *restrict work)
 {
     Aes128Gcm.ok = PROTO_FALSE;
-    if (!work || !Aes128Gcm.key_args.key)
+    if (!Aes128Gcm.key_args.key)
     {
         return;
     }
@@ -325,7 +337,7 @@ static void aes128gcm_key_wipe(uint8_t *restrict work)
 static void aes128gcm_seal(uint8_t *restrict work)
 {
     Aes128Gcm.ok = PROTO_FALSE;
-    if (!work || !Aes128Gcm.seal_args.nonce || !Aes128Gcm.seal_args.ct_out || !Aes128Gcm.seal_args.tag_out)
+    if (!Aes128Gcm.seal_args.nonce || !Aes128Gcm.seal_args.ct_out || !Aes128Gcm.seal_args.tag_out)
     {
         return;
     }
@@ -335,7 +347,7 @@ static void aes128gcm_seal(uint8_t *restrict work)
 static void aes128gcm_open(uint8_t *restrict work)
 {
     Aes128Gcm.ok = PROTO_FALSE;
-    if (!work || !Aes128Gcm.open_args.nonce || !Aes128Gcm.open_args.tag || !Aes128Gcm.open_args.out)
+    if (!Aes128Gcm.open_args.nonce || !Aes128Gcm.open_args.tag || !Aes128Gcm.open_args.out)
     {
         return;
     }
@@ -345,7 +357,7 @@ static void aes128gcm_open(uint8_t *restrict work)
 static void aes128gcm_block_init(uint8_t *restrict work)
 {
     Aes128Gcm.ok = PROTO_FALSE;
-    if (!work || !Aes128Gcm.block_key_args.key)
+    if (!Aes128Gcm.block_key_args.key)
     {
         return;
     }
@@ -356,7 +368,7 @@ static void aes128gcm_block_init(uint8_t *restrict work)
 static void aes128gcm_block_encrypt(uint8_t *restrict work)
 {
     Aes128Gcm.ok = PROTO_FALSE;
-    if (!work || !Aes128Gcm.block_args.in || !Aes128Gcm.block_args.out)
+    if (!Aes128Gcm.block_args.in || !Aes128Gcm.block_args.out)
     {
         return;
     }

@@ -70,19 +70,6 @@ void test_the_span_is_taken_once(void)
     TEST_ASSERT_EQUAL_PTR(protocore_oauth2_span(), protocore_oauth2_span());
 }
 
-// NULL is what a short pool hands over, and an exchange that would write through it does nothing.
-void test_an_exchange_refuses_a_null_borrow(void)
-{
-    seat_code_grant();
-    Oauth2.i32 = 1234;
-    Oauth2.exchange_code(NULL);
-    TEST_ASSERT_EQUAL_INT32(1234, Oauth2.i32);
-
-    Oauth2.refresh_grant.refresh_token = "tGzv3JOkF0XG5Qx2TlKWIA";
-    Oauth2.refresh(NULL);
-    TEST_ASSERT_EQUAL_INT32(1234, Oauth2.i32);
-}
-
 // ---------------------------------------------------------------------------
 // What the exchange posts
 // ---------------------------------------------------------------------------

@@ -59,16 +59,10 @@ uint8_t *protocore_http_route_span(void)
 
 // --- the entries -----------------------------------------------------------
 
-// The table is the borrow: every entry reads it through ROUTE_CTX, and a null borrow is a pool that
-// could not be taken, which every one of them fails closed on.
+// The table is the borrow: every entry reads it through ROUTE_CTX.
 
 static void http_routes_add(uint8_t *restrict work)
 {
-    if (work == NULL)
-    {
-        HttpRoutes.ptr = NULL;
-        return;
-    }
     struct HttpRouteCtx *t = ROUTE_CTX(work);
     if (t->count >= MAX_ROUTES)
     {
@@ -88,14 +82,14 @@ static void http_routes_add(uint8_t *restrict work)
 
 static void http_routes_count(uint8_t *restrict work)
 {
-    HttpRoutes.value = work == NULL ? 0u : ROUTE_CTX(work)->count;
+    HttpRoutes.value = ROUTE_CTX(work)->count;
 }
 
 static void http_routes_at(uint8_t *restrict work)
 {
     uint8_t i = HttpRoutes.at_args.i;
 
-    if (work == NULL || i >= ROUTE_CTX(work)->count)
+    if (i >= ROUTE_CTX(work)->count)
     {
         HttpRoutes.ptr = NULL;
         return;
@@ -107,10 +101,7 @@ static void http_routes_reset(uint8_t *restrict work)
 {
     // The count is the table: add() zeroes an entry on hand-out, so nothing below the count can carry
     // a previous tenant's fields and there is nothing to wipe here.
-    if (work != NULL)
-    {
-        ROUTE_CTX(work)->count = 0;
-    }
+    ROUTE_CTX(work)->count = 0;
 }
 
 HttpRouteNs HttpRoutes = {

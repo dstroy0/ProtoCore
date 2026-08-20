@@ -119,6 +119,14 @@ static_assert(QUIC_OFF_CRYPTO + 3u * (size_t)PROTOCORE_QUIC_CRYPTO_RX <= PROTOCO
               "per packet-number space - raise it in protocore_config.h, which derives "
               "PROTOCORE_PLAINTEXT_ARENA_SIZE from it");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(QUIC_OFF_CTX % _Alignof(QuicConnCtx) == 0,
+              "QUIC_OFF_CTX is not a multiple of alignof(QuicConnCtx) - QUIC_CTX() would return a misaligned "
+              "pointer; pad the region ahead of it");
+
 // The handle a caller sets a call's members on, and the connection the bound span holds.
 // The regions, at their offsets in the caller's spans.
 #define QUIC_CTX(w) ((QuicConnCtx *)(void *)((w) + QUIC_OFF_CTX))

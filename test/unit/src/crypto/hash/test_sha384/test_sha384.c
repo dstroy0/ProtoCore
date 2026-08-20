@@ -295,22 +295,3 @@ void test_block_length_constants(void)
     TEST_ASSERT_TRUE(memcmp(full, short_, sizeof(full)) != 0);
 }
 
-// A null borrow leaves ok false and writes nothing.
-void test_a_null_borrow_is_refused(void)
-{
-    uint8_t d[PROTOCORE_SHA384_DIGEST_LEN];
-    memset(d, 0xA5, sizeof(d));
-
-    Sha384.hash_args.data = (const uint8_t *)"abc";
-    Sha384.hash_args.len = 3u;
-    Sha384.hash_args.out = d;
-    Sha384.hash(NULL);
-    TEST_ASSERT_FALSE(Sha384.ok);
-    for (size_t i = 0; i < sizeof(d); i++)
-    {
-        TEST_ASSERT_EQUAL_UINT8(0xA5, d[i]);
-    }
-
-    Sha384.init(NULL);
-    TEST_ASSERT_FALSE(Sha384.ok);
-}

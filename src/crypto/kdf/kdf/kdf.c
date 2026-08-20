@@ -42,6 +42,14 @@ static_assert(KDF_OFF_CTX + sizeof(KdfCtx) <= PROTOCORE_KDF_BORROW,
               "PROTOCORE_KDF_BORROW is short of the PRF's bytes, the counter and the block - raise it in "
               "protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(KDF_OFF_CTX % _Alignof(KdfCtx) == 0,
+              "KDF_OFF_CTX is not a multiple of alignof(KdfCtx) - KDF_CTX() would return a misaligned "
+              "pointer; pad the region ahead of it");
+
 // The regions, at their offsets in the caller's borrow.
 #define KDF_MAC(w) ((w) + KDF_OFF_MAC)
 #define KDF_CTX(w) ((KdfCtx *)(void *)((w) + KDF_OFF_CTX))
@@ -51,7 +59,7 @@ static_assert(KDF_OFF_CTX + sizeof(KdfCtx) <= PROTOCORE_KDF_BORROW,
 static void kdf_ctr_hmac_sha256(uint8_t *restrict work)
 {
     Kdf.ok = PROTO_FALSE;
-    if (!work || !Kdf.ctr_args.ki || !Kdf.ctr_args.fixed || !Kdf.ctr_args.out || Kdf.ctr_args.out_len == 0)
+    if (!Kdf.ctr_args.ki || !Kdf.ctr_args.fixed || !Kdf.ctr_args.out || Kdf.ctr_args.out_len == 0)
     {
         return;
     }

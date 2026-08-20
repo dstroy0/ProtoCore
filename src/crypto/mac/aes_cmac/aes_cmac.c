@@ -146,7 +146,7 @@ static void subkeys(uint8_t *restrict work)
 static void aes_cmac_mac(uint8_t *restrict work)
 {
     AesCmac.ok = PROTO_FALSE;
-    if (!work || !AesCmac.mac_args.key || !AesCmac.mac_args.out)
+    if (!AesCmac.mac_args.key || !AesCmac.mac_args.out)
     {
         return;
     }

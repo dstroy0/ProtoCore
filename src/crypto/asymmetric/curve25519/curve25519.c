@@ -93,6 +93,15 @@ static_assert(CURVE25519_OFF_END <= PROTOCORE_CURVE25519_BORROW,
               "PROTOCORE_CURVE25519_BORROW is short of the ladder's working set - raise it in "
               "protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(
+    CURVE25519_OFF_CTX % _Alignof(Curve25519Ctx) == 0,
+    "CURVE25519_OFF_CTX is not a multiple of alignof(Curve25519Ctx) - CURVE25519_CTX() would return a misaligned "
+    "pointer; pad the region ahead of it");
+
 // The region, at its offset in the caller's borrow.
 #define CURVE25519_CTX(w) ((Curve25519Ctx *)(void *)((w) + CURVE25519_OFF_CTX))
 
@@ -556,7 +565,7 @@ static void x25519_mult(uint8_t *restrict work, uint8_t out[32], const uint8_t s
 static void curve25519_x25519(uint8_t *restrict work)
 {
     Curve25519.ok = PROTO_FALSE;
-    if (!work || !Curve25519.x25519_args.out || !Curve25519.x25519_args.scalar || !Curve25519.x25519_args.point)
+    if (!Curve25519.x25519_args.out || !Curve25519.x25519_args.scalar || !Curve25519.x25519_args.point)
     {
         return;
     }
@@ -580,7 +589,7 @@ static void curve25519_x25519(uint8_t *restrict work)
 static void curve25519_x25519_base(uint8_t *restrict work)
 {
     Curve25519.ok = PROTO_FALSE;
-    if (!work || !Curve25519.x25519_base_args.out || !Curve25519.x25519_base_args.scalar)
+    if (!Curve25519.x25519_base_args.out || !Curve25519.x25519_base_args.scalar)
     {
         return;
     }

@@ -93,6 +93,15 @@ static_assert(AES256CTR_OFF_KS + PROTOCORE_AES256CTR_CTR_LEN <= PROTOCORE_AES256
               "PROTOCORE_AES256CTR_BORROW is short of the expanded key and the keystream block - raise it in "
               "protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(
+    AES256CTR_OFF_CTX % _Alignof(Aes256CtrCtx) == 0,
+    "AES256CTR_OFF_CTX is not a multiple of alignof(Aes256CtrCtx) - AES256CTR_CTX() would return a misaligned "
+    "pointer; pad the region ahead of it");
+
 // The regions, at their offsets in the caller's borrow.
 #define AES256CTR_CTX(w) ((Aes256CtrCtx *)(void *)((w) + AES256CTR_OFF_CTX))
 #define AES256CTR_KS(w) ((w) + AES256CTR_OFF_KS)
@@ -143,7 +152,7 @@ static void aes256ctr_keystream(uint8_t *restrict work, const uint8_t *key, cons
 static void aes256ctr_crypt(uint8_t *restrict work)
 {
     Aes256Ctr.ok = PROTO_FALSE;
-    if (!work || !Aes256Ctr.crypt_args.key || !Aes256Ctr.crypt_args.counter || !Aes256Ctr.crypt_args.in ||
+    if (!Aes256Ctr.crypt_args.key || !Aes256Ctr.crypt_args.counter || !Aes256Ctr.crypt_args.in ||
         !Aes256Ctr.crypt_args.out)
     {
         return;
@@ -158,8 +167,7 @@ static void aes256ctr_get_length(uint8_t *restrict work)
 {
     Aes256Ctr.ok = PROTO_FALSE;
     Aes256Ctr.length = 0;
-    if (!work || !Aes256Ctr.get_length_args.key || !Aes256Ctr.get_length_args.counter ||
-        !Aes256Ctr.get_length_args.enc4)
+    if (!Aes256Ctr.get_length_args.key || !Aes256Ctr.get_length_args.counter || !Aes256Ctr.get_length_args.enc4)
     {
         return;
     }

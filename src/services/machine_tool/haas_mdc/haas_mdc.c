@@ -85,7 +85,7 @@ size_t protocore_haas_mdc_build_q(char *buf, size_t cap, uint16_t qnum)
     protocore_sb sb_q = {buf, cap, 0, PROTO_TRUE};
     protocore_sb_lit(&sb_q, "?Q");
     Sb.u32(&sb_q, qnum);
-    Sb.ch(&sb_q, '\r');
+    Sb.ch(&sb_q, '\n'); // [NGC] Query Format: the query is "terminated with a new line"
     return Sb.finish(&sb_q);
 }
 
@@ -98,7 +98,7 @@ size_t protocore_haas_mdc_build_var(char *buf, size_t cap, uint32_t var)
     protocore_sb sb_var = {buf, cap, 0, PROTO_TRUE};
     protocore_sb_lit(&sb_var, "?Q600 ");
     Sb.u32(&sb_var, var);
-    Sb.ch(&sb_var, '\r');
+    Sb.ch(&sb_var, '\n'); // the ?Q600 line is a query in the ?Q### family, same sentence
     return Sb.finish(&sb_var);
 }
 
@@ -110,7 +110,14 @@ proto_bool protocore_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *ou
     }
     out->n_fields = 0;
 
-    // Locate the payload strictly between STX and the first following ETB (scan, never by offset).
+    // Two published frames carry the same CSV payload, and this codec serves both transports.
+    // [S143] RS-232: "<STX><CSV response><ETB><CR/LF><0x3E>" - the payload is strictly between STX
+    // and the first following ETB. [NGC] Ethernet: "Responses from the control begin with > and end
+    // with /r/n" - no STX, no ETB. The RS-232 window is looked for first, so a prompt and a CR/LF
+    // left over from a previous reply sit outside it and belong to no field.
+    const char *p = NULL;
+    size_t plen = 0;
+
     size_t stx = 0;
     proto_bool have_stx = PROTO_FALSE;
     for (size_t i = 0; i < len; i++)
@@ -122,28 +129,45 @@ proto_bool protocore_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *ou
             break;
         }
     }
-    if (!have_stx)
+    if (have_stx)
     {
-        return PROTO_FALSE;
-    }
-    size_t etb = 0;
-    proto_bool have_etb = PROTO_FALSE;
-    for (size_t i = stx + 1; i < len; i++)
-    {
-        if (buf[i] == PROTOCORE_HAAS_MDC_ETB)
+        for (size_t i = stx + 1; i < len; i++)
         {
-            etb = i;
-            have_etb = PROTO_TRUE;
-            break;
+            if (buf[i] == PROTOCORE_HAAS_MDC_ETB)
+            {
+                p = buf + stx + 1;
+                plen = i - stx - 1;
+                break;
+            }
         }
     }
-    if (!have_etb)
+    if (p == NULL)
     {
-        return PROTO_FALSE;
+        // The NGC frame BEGINS with the prompt and ENDS with CR/LF, so both bound the payload the
+        // same way STX and ETB do. A prompt anywhere else is the tail of the previous reply, and a
+        // reply with no terminator yet is incomplete rather than empty.
+        if (len < 2u || buf[0] != PROTOCORE_HAAS_MDC_PROMPT)
+        {
+            return PROTO_FALSE;
+        }
+        size_t end = 0;
+        proto_bool have_end = PROTO_FALSE;
+        for (size_t i = 1; i < len; i++)
+        {
+            if (buf[i] == '\r' || buf[i] == '\n')
+            {
+                end = i;
+                have_end = PROTO_TRUE;
+                break;
+            }
+        }
+        if (!have_end)
+        {
+            return PROTO_FALSE;
+        }
+        p = buf + 1;
+        plen = end - 1u;
     }
-
-    const char *p = buf + stx + 1;
-    size_t plen = etb - stx - 1;
 
     // Split the CSV payload; each field trimmed of surrounding spaces. Extra fields past the cap drop.
     size_t start = 0;

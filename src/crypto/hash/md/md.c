@@ -307,7 +307,7 @@ static void md_update(uint8_t *restrict work)
 
 static void md_final(uint8_t *restrict work)
 {
-    if (!work || !Md.final_args.out)
+    if (!Md.final_args.out)
     {
         Md.ok = PROTO_FALSE;
         return;
@@ -319,7 +319,7 @@ static void md_final(uint8_t *restrict work)
 // One-shot over the members already set: init, absorb, finish.
 static void md_one(uint8_t *restrict work, md_compress_fn compress)
 {
-    if (!work || !Md.final_args.out)
+    if (!Md.final_args.out)
     {
         Md.ok = PROTO_FALSE;
         return;
@@ -344,7 +344,7 @@ static void md_md4(uint8_t *restrict work)
 static void md_hmac_md5(uint8_t *restrict work)
 {
     Md.ok = PROTO_FALSE;
-    if (!work || !Md.hmac_args.out)
+    if (!Md.hmac_args.out)
     {
         return;
     }

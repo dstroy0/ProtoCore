@@ -58,6 +58,14 @@ static_assert(RNG_OFF_CHACHA + PROTOCORE_CHACHA20_BORROW <= PROTOCORE_RNG_BORROW
               "the nested borrow - raise it in protocore_config.h, which derives "
               "PROTOCORE_SECURE_ARENA_SIZE from it");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(RNG_OFF_CTX % _Alignof(RngCtx) == 0,
+              "RNG_OFF_CTX is not a multiple of alignof(RngCtx) - RNG_CTX() would return a misaligned "
+              "pointer; pad the region ahead of it");
+
 // The regions, at their offsets in the caller's borrow. The key and the nonce are adjacent, so one
 // platform draw of RNG_SEEDED_LEN bytes at RNG_KEY fills both.
 #define RNG_CTX(w) ((RngCtx *)(void *)((w) + RNG_OFF_CTX))
@@ -120,7 +128,7 @@ uint8_t *protocore_rng_span(void)
 static void rng_fill(uint8_t *restrict work)
 {
     Rng.ok = PROTO_FALSE;
-    if (!work || !Rng.fill_args.out || Rng.fill_args.len == 0)
+    if (!Rng.fill_args.out || Rng.fill_args.len == 0)
     {
         return;
     }

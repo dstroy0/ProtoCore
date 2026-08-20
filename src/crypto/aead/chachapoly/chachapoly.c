@@ -45,6 +45,15 @@ static_assert(CHACHAPOLY_OFF_POLY + PROTOCORE_POLY1305_BORROW <= PROTOCORE_CHACH
               "PROTOCORE_CHACHAPOLY_BORROW is short of the per-packet working set and the two nested "
               "borrows - raise it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(
+    CHACHAPOLY_OFF_CTX % _Alignof(ChachaPolyCtx) == 0,
+    "CHACHAPOLY_OFF_CTX is not a multiple of alignof(ChachaPolyCtx) - CHACHAPOLY_CTX() would return a misaligned "
+    "pointer; pad the region ahead of it");
+
 // The regions, at their offsets in the caller's borrow.
 #define CHACHAPOLY_CTX(w) ((ChachaPolyCtx *)(void *)((w) + CHACHAPOLY_OFF_CTX))
 #define CHACHAPOLY_CHACHA(w) ((w) + CHACHAPOLY_OFF_CHACHA)
@@ -92,7 +101,7 @@ static void seq_nonce(uint32_t seqnr, uint8_t iv[8])
 static void chachapoly_get_length(uint8_t *restrict work)
 {
     ChachaPoly.ok = PROTO_FALSE;
-    if (!work || !ChachaPoly.length_args.key || !ChachaPoly.length_args.enc_len)
+    if (!ChachaPoly.length_args.key || !ChachaPoly.length_args.enc_len)
     {
         return;
     }
@@ -109,7 +118,7 @@ static void chachapoly_get_length(uint8_t *restrict work)
 static void chachapoly_encrypt(uint8_t *restrict work)
 {
     ChachaPoly.ok = PROTO_FALSE;
-    if (!work || !ChachaPoly.encrypt_args.key || !ChachaPoly.encrypt_args.src || !ChachaPoly.encrypt_args.dest)
+    if (!ChachaPoly.encrypt_args.key || !ChachaPoly.encrypt_args.src || !ChachaPoly.encrypt_args.dest)
     {
         return;
     }
@@ -129,7 +138,7 @@ static void chachapoly_encrypt(uint8_t *restrict work)
 static void chachapoly_decrypt(uint8_t *restrict work)
 {
     ChachaPoly.ok = PROTO_FALSE;
-    if (!work || !ChachaPoly.decrypt_args.key || !ChachaPoly.decrypt_args.src || !ChachaPoly.decrypt_args.dest)
+    if (!ChachaPoly.decrypt_args.key || !ChachaPoly.decrypt_args.src || !ChachaPoly.decrypt_args.dest)
     {
         return;
     }

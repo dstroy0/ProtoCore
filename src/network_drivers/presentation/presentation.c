@@ -154,12 +154,29 @@ static void parse(uint8_t *restrict work)
 
     HttpReq *req = &http_pool[HttpConn.slot];
 
+    // Peeked, not read: a pipelined client sends the next request in the same segment as this one
+    // (RFC 9112 sec 9.3), and the parser stops at the end of the first. Reading drained the ring, so
+    // whatever followed the request was taken out of it and never fed to anything. Only the bytes
+    // this call actually consumed are dropped from the tail, and the rest stay for the next one -
+    // `rx` is one shared staging buffer, so the remainder cannot be held here.
     ConnPool.slot = HttpConn.slot;
+    ConnPool.available(protocore_conn_pool_span());
+    size_t have = ConnPool.n;
+    if (have > sizeof(HTTP_CONN_CTX(work)->rx))
+    {
+        have = sizeof(HTTP_CONN_CTX(work)->rx);
+    }
+    if (have == 0)
+    {
+        return;
+    }
     ConnPool.io.buf = HTTP_CONN_CTX(work)->rx;
-    ConnPool.io.cap = sizeof(HTTP_CONN_CTX(work)->rx);
-    ConnPool.read(protocore_conn_pool_span());
+    ConnPool.io.off = 0;
+    ConnPool.io.count = have;
+    ConnPool.peek(protocore_conn_pool_span());
 
-    for (size_t i = 0; i < ConnPool.n; i++)
+    size_t fed = 0;
+    while (fed < have)
     {
         switch (req->parse_state)
         {
@@ -167,14 +184,20 @@ static void parse(uint8_t *restrict work)
         case PARSE_ERROR:
         case PARSE_ENTITY_TOO_LARGE:
         case PARSE_URI_TOO_LONG:
-            return; // terminal state - feed nothing further
+            break; // terminal state - feed nothing further, and leave the rest in the ring
         default:
-            break;
+            HttpParser.feed_args.req = req;
+            HttpParser.feed_args.byte = HTTP_CONN_CTX(work)->rx[fed];
+            HttpParser.feed(protocore_http_parser_span());
+            fed++;
+            continue;
         }
-        HttpParser.feed_args.req = req;
-        HttpParser.feed_args.byte = HTTP_CONN_CTX(work)->rx[i];
-        HttpParser.feed(protocore_http_parser_span());
+        break;
     }
+
+    ConnPool.slot = HttpConn.slot;
+    ConnPool.io.count = fed;
+    ConnPool.consume(protocore_conn_pool_span());
 }
 
 // ---------------------------------------------------------------------------

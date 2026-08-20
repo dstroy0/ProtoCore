@@ -68,6 +68,14 @@ static_assert(RSA_OFF_CTX + sizeof(RsaCtx) <= PROTOCORE_RSA_BORROW,
               "PROTOCORE_RSA_BORROW is short of the two digest regions, the bignum region and the ladder's "
               "working set - raise it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(RSA_OFF_CTX % _Alignof(RsaCtx) == 0,
+              "RSA_OFF_CTX is not a multiple of alignof(RsaCtx) - RSA_CTX() would return a misaligned "
+              "pointer; pad the region ahead of it");
+
 // The regions, at their offsets in the caller's borrow.
 #define RSA_SHA256(w) ((w) + RSA_OFF_SHA256)
 #define RSA_SHA512(w) ((w) + RSA_OFF_SHA512)
@@ -448,7 +456,7 @@ static proto_bool rsa_pss_consistent(uint8_t *restrict work)
 static void rsa_verify(uint8_t *restrict work)
 {
     Rsa.ok = PROTO_FALSE;
-    if (!work || !Rsa.verify_args.n || !Rsa.verify_args.e || !Rsa.verify_args.sig ||
+    if (!Rsa.verify_args.n || !Rsa.verify_args.e || !Rsa.verify_args.sig ||
         Rsa.verify_args.sig_len != PROTOCORE_RSA_KEY_BYTES)
     {
         return;
@@ -507,7 +515,7 @@ static void rsa_verify(uint8_t *restrict work)
 static void rsa_sign(uint8_t *restrict work)
 {
     Rsa.ok = PROTO_FALSE;
-    if (!work || !Rsa.sign_args.n || !Rsa.sign_args.d || !Rsa.sign_args.sig)
+    if (!Rsa.sign_args.n || !Rsa.sign_args.d || !Rsa.sign_args.sig)
     {
         return;
     }

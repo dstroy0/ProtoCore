@@ -16,7 +16,7 @@ Everything under tools/ is reachable from here, so `harness.py help` is the whol
   measure       includes, pid, and the three standing probes
   crypto        test vectors and keys
   assets        diagrams, theme previews, favicons, svg tooltips
-  hooks         git hooks: install, status, cspell, dependabot
+  hooks         git: commit, install, status, cspell, dependabot
   build         THE BUILD: modules, cmake, split - plus envs, ccache, psram
   selftest      run the tools' own self-tests
   doc gen       regenerate the derived tables in tools/TOOLS.md
@@ -166,6 +166,13 @@ CONVERT = {
     "scan": T(
         GOLDENIZE,
         "scan <module.h>",
+        "READ src/crypto/hash/sha256/sha256.h AND sha256.c FIRST. They are the target, and reading "
+        "them answers what otherwise looks like a design question: there is NO caller-visible state "
+        "struct (the borrow IS the running state, so two documents are two borrows), EVERY operand "
+        "is an args member rather than a parameter, and the .c splits the borrow into named regions "
+        "at compile-time offsets under one static_assert with ONE pointer per translation unit. Do "
+        "not widen a flat signature, do not add a config struct, and do not pull in a module to "
+        "supply an operand - the caller states it. "
         "Prints the spec it infers, as JSON, and writes nothing. Check three fields before "
         'gen: "pool" (the scanner always writes "secure" because it cannot read what a module '
         "holds - key material takes the secure end, everything else the plaintext one), each "
@@ -185,6 +192,44 @@ CONVERT = {
         "PROTOCORE_<MOD>_BORROW in protocore_config.h AND add it to the arena sum: defining it "
         "without summing it is the defect five converted modules carried.",
         ["gen"],
+    ),
+    "unnull": T(
+        GOLDENIZE,
+        "unnull [file.c ...] [--dry]",
+        "Removes the `!work` DISJUNCT from every `if` that tests the borrow for null. A BORROW IS "
+        "NEVER NULL: it comes from the arena, so the branch cannot be taken and the code it guards "
+        "cannot run. "
+        "It removes the disjunct, not the guard: `if (!work || !X.args.out)` becomes "
+        "`if (!X.args.out)`, because an args member is set by the CALLER and genuinely can be null. "
+        "`e->work` and `s->work` are left alone - those name a struct member that happens to be "
+        "called work, are not the borrow, and can be null. "
+        "An `if` whose ONLY condition was the borrow is REPORTED rather than rewritten: removing it "
+        "means deleting the block it guarded, which is a control-flow change to read rather than to "
+        "apply in a sweep. "
+        "Never add one of these back, and never add one to make a test pass - a test asserting a "
+        "null borrow is refused is the stale half of this deletion, so delete the test. "
+        "With no paths it sweeps src/. Dry until you drop --dry.",
+        ["unnull"],
+    ),
+    "align": T(
+        GOLDENIZE,
+        "align [module.h ...] [--dry]",
+        "States, per region reached through a CAST, that its offset is a multiple of the alignment "
+        "that cast requires. The arena aligns the base up to PROTOCORE_ARENA_MAX_ALIGN, so - in "
+        "arena.c's own words - a borrow is met by aligning its offset alone: the offset is the "
+        "whole claim, it is a compile-time constant, and so it is a static_assert and NEVER a "
+        "runtime branch. "
+        "THE SIZE ASSERT ALREADY IN EACH FILE DOES NOT COVER THIS. It bounds the far end of the "
+        "chain and says nothing about where any region BEGINS, so one odd-sized region inserted "
+        "earlier leaves every later cast misaligned while the total still fits - undefined "
+        "behaviour on a part that traps it, a silent slow path on one that does not, and no "
+        "diagnostic on either. "
+        "A region yielding plain uint8_t* is skipped, and so is a cast to a type whose alignment is "
+        "1, where the assert would read `OFF % 1 == 0`. "
+        "AN ASSERT THAT FAILS IS THE POINT: it is a misalignment that was already there and had no "
+        "diagnostic. Fix it by padding the region ahead of it, never by deleting the assert. "
+        "With no paths it sweeps src/. Dry until you drop --dry, like every writing verb here.",
+        ["align"],
     ),
     "shape": T(
         GOLDENIZE,
@@ -207,8 +252,33 @@ CONVERT = {
         "funnel <module.c> [PROTOCORE_<MOD>_BORROW] [--dry]",
         "Moves a file-static context into the borrow, for a module converted before the funnel "
         "existed - it has the names and not the point. A module keeping its state in a file-static "
-        "still passes its tests; it just carries per-module BSS and proves nothing.",
+        "still passes its tests; it just carries per-module BSS and proves nothing. "
+        "A BORROW IS NEVER NULL: it comes from the arena, so `if (!work)` is a dead branch on every "
+        "call and 350 of them were deleted from src/ in one commit. Never add one back, and never "
+        "add one to make a test pass - a test asserting a null borrow is refused is the stale half "
+        "of that deletion, so delete the test. "
+        "It reports 'no file-static context to funnel' for two shapes it cannot see: a placement "
+        "attribute before the type (`static PSRAM_ATTR XCtx s_x;`) and a pointer bound lazily "
+        "(`static struct X *s_x;`). That message is not proof - sweep for file-scope mutables that "
+        "are neither a span holder nor a nominal <mod>_work[N].",
         ["funnel"],
+    ),
+    "audit": T(
+        "tools/dev_env/shapeaudit.py",
+        "audit [families|check|diff|design|selfcheck] [path ...]",
+        "WHICH modules are not the golden, and WHICH question each one answers no to. The golden is "
+        "not described in the tool - sha256.h and sha256.c are parsed by the same reader every "
+        "target is, so the reference is the file and editing the golden moves every target with it. "
+        "`families` groups the tree by the set of checks a module fails, which is how a dry-run "
+        "sample is chosen: one module per family stands for the family. `check <module.h>` is the "
+        "yes/no list for one module and names the verb each no routes to; `diff` is the trait-level "
+        "detail behind it; `design` is the raw record. "
+        "`selfcheck` asserts the GOLDEN answers yes to every check - run it after touching a check, "
+        "because a check the golden fails marks all 400 modules divergent on a question the target "
+        "of the conversion does not itself satisfy. "
+        "A check that cannot apply reports n/a, never no: a header with no .c answers nothing about "
+        "an implementation, and a module naming no borrow has no subject for the three questions "
+        "about how the borrow is carved. Read the n/a column - it is not a pass.",
     ),
     "nsmap": T(
         "tools/dev_env/nsmap.py",
@@ -219,7 +289,15 @@ CONVERT = {
         "that re-evaluates its argument, two calls to one namespace in one statement (one result "
         "member, so the first value is overwritten), and an argument count the map does not "
         "state. Each refusal is reported with its line; convert those by hand into the comma form "
-        "(Ns.entry(work), read).",
+        "(Ns.entry(work), read). "
+        "THIS IS THE TOOL FOR REWRITING CALL SITES - never hand-roll a sed or a Python pass over "
+        "them. A blind rename cannot see a literal, a macro that re-evaluates, or a braceless "
+        "if/else body, and every one of those changes behaviour while still compiling. "
+        'State "ctx" or the borrow defaults to <Object>.internal, which most modules do not have; '
+        "it is usually protocore_<mod>_span(). Where the flat form took a caller-declared handle "
+        "that is now the borrow, drop that argument first - the arity has to match the map or every "
+        'call is reported instead of rewritten. "seed" states the members the flat signature never '
+        "carried.",
     ),
 }
 
@@ -230,7 +308,10 @@ EDIT = {
         "Ranges are 1-indexed, inclusive, and read from the ORIGINAL numbering, so several "
         "--range flags at once do not shift each other. --expect-start / --expect-end are regexes "
         "checked against the first and last line before anything is written, and a failed guard "
-        "aborts with no change. Use them.",
+        "aborts with no change. Use them. "
+        "--src and --dst the SAME file is a silent no-op: the ranges are cut from the original and "
+        "spliced into the original independently, the last write wins, and nothing is reported. "
+        "Move a function within one file by hand.",
     ),
     "yank": T(
         "tools/dev_env/yank_includes.py",
@@ -469,6 +550,22 @@ BUILD = {
 }
 
 HOOKS = {
+    "commit": T(
+        "tools/dev_env/commit.py",
+        'commit "subject" "para" ["para" ...] [--amend] [--no-signoff] [--dry] [-- <git args>]',
+        "Commits a multi-paragraph message with no file to hold it: each argument after the subject "
+        "is one paragraph, and the assembled message goes to `git commit -F -` down a PIPE. That is "
+        "the whole point - a `-m` carrying embedded newlines is a heredoc, and a message written to "
+        "a temp file is a file to remember to delete. "
+        "THE TRAILER IS THE COMMITTER'S AND ONLY THE COMMITTER'S: git config user.name / "
+        "user.email, the same source `git commit -s` reads, with a parenthetical in the name "
+        "dropped so it matches the handle already in this log. No flag names a different author, "
+        "and that is deliberate. "
+        "A paragraph that is indented or opens a list, table or quote is emitted VERBATIM - only "
+        "prose is re-wrapped, so a command example keeps its shape and a wrapped `git commit ...` "
+        "does not become two broken halves. --dry prints the message and the git command and "
+        "commits nothing.",
+    ),
     "install": T(
         None,
         "install",
@@ -502,6 +599,7 @@ SELFTESTS = {
     "nsmap": "tools/dev_env/nsmap_test.py",
     "pimpl": "tools/dev_env/pimpl_test.py",
     "funnel": "tools/dev_env/funnel_test.py",
+    "shapeaudit": "tools/dev_env/shapeaudit_test.py",
 }
 
 # The dispatch groups, in the order `list` and `help` print them.
@@ -512,7 +610,7 @@ GROUPS = [
     ("measure", MEASURE, "what something costs, and the three standing probes"),
     ("crypto", CRYPTO, "test vectors and keys - test DATA, which is why it is not under ci_tooling"),
     ("assets", ASSETS, "renders images and packs web assets"),
-    ("hooks", HOOKS, "the git hooks, and pointing git at them"),
+    ("hooks", HOOKS, "git: the tracked hooks, pointing git at them, and committing through them"),
     ("build", BUILD, "build environments and toolchain wrappers"),
 ]
 

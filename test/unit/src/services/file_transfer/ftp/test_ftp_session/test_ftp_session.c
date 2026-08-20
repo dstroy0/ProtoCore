@@ -133,16 +133,6 @@ void test_both_handles_are_seated_closed(void)
     TEST_ASSERT_EQUAL_INT(-1, FTP_SESSION_CTX(work)->data);
 }
 
-// NULL is what a short pool hands over, and the session writes through the context, so it does
-// nothing rather than fault.
-void test_a_null_borrow_is_refused(void)
-{
-    FtpSession.value = PROTOCORE_FTP_READY;
-    FtpSession.store(NULL);
-    TEST_ASSERT_EQUAL_INT((int)PROTOCORE_FTP_READY, (int)FtpSession.value);
-    TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
-}
-
 // ---------------------------------------------------------------------------
 // What it refuses before dialing
 // ---------------------------------------------------------------------------

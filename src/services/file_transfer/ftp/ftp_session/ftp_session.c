@@ -10,15 +10,15 @@
 
 #if PROTOCORE_ENABLE_FTP_SESSION
 
-#include "mmgr/membuild/membuild.h"  // protocore_sb frame builder
+#include "mmgr/membuild/membuild.h"   // protocore_sb frame builder
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem/protomem.h"
 #include "services/file_transfer/ftp/ftp_session/ftp_session.h"
 
 static uint8_t ftp_work[16]; // the borrow an entry takes; Ftp never reads it
 
-#include "mmgr/protoframe/protoframe.h"                             // protocore_field / protocore_fval: the log frames
-#include "mmgr/protostr/protostr.h"                               // str.copy: the bounded host copy
+#include "mmgr/protoframe/protoframe.h"                  // protocore_field / protocore_fval: the log frames
+#include "mmgr/protostr/protostr.h"                      // str.copy: the bounded host copy
 #include "network_drivers/transport/tcp/client/client.h" // TcpClient: both connections
 #include "server/clock/clock.h"                          // Clock.ms: the reply deadline
 #include "services/file_transfer/ftp/ftp/ftp.h"
@@ -63,6 +63,15 @@ typedef enum PROTO_ENUM_PACKED
 static_assert(FTP_SESSION_OFF_CTX + sizeof(FtpSessionCtx) <= PROTOCORE_FTP_SESSION_BORROW,
               "PROTOCORE_FTP_SESSION_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
+
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(
+    FTP_SESSION_OFF_CTX % _Alignof(FtpSessionCtx) == 0,
+    "FTP_SESSION_OFF_CTX is not a multiple of alignof(FtpSessionCtx) - FTP_SESSION_CTX() would return a misaligned "
+    "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
 #define FTP_SESSION_CTX(w) ((FtpSessionCtx *)(void *)((w) + FTP_SESSION_OFF_CTX))

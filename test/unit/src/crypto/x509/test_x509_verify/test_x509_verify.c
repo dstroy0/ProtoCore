@@ -290,15 +290,3 @@ void test_a_link_needs_both_certificates(void)
     TEST_ASSERT_EQUAL(PROTOCORE_X509_ERR_ARGS, link_of(NULL, &g_leaf, inside()));
 }
 
-// A null borrow is refused rather than dereferenced: the accessor hands one back when the pool was
-// short, and every entry that reaches into it says so.
-void test_a_signature_check_without_its_borrow_is_refused(void)
-{
-    TEST_ASSERT_TRUE(load(&g_leaf, X509_ED25519_DER, sizeof(X509_ED25519_DER)));
-    TEST_ASSERT_TRUE(load(&g_ca, X509_CA_ED25519_DER, sizeof(X509_CA_ED25519_DER)));
-    X509Verify.link_args.cert = &g_leaf;
-    X509Verify.link_args.issuer = &g_ca;
-    X509Verify.signature(NULL);
-    TEST_ASSERT_FALSE(X509Verify.ok);
-    TEST_ASSERT_EQUAL(PROTOCORE_X509_ERR_ARGS, X509Verify.status);
-}
