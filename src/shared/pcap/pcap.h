@@ -17,7 +17,7 @@
 #ifndef PROTOCORE_PCAP_H
 #define PROTOCORE_PCAP_H
 
-#include "mmgr/endian/endian.h"      // endian.wr32le / endian.wr16le - libpcap headers are little-endian
+#include "mmgr/endian/endian.h" // endian.wr32le / endian.wr16le - libpcap headers are little-endian
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
@@ -65,14 +65,31 @@ typedef struct
 {
     PcapArgs args;
     PcapRecArgs rec;
-
     size_t n;
+} PcapVars;
 
+/** @brief The operands and the outcome. */
+extern PcapVars PcapV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const global_header)(uint8_t *restrict work);
     void (*const record_header)(uint8_t *restrict work);
 } PcapNs;
 
-/** @brief The one symbol this module exports. */
-extern PcapNs Pcap;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in PcapV or a region of the borrow at a fixed offset.
+void protocore_pcap_global_header(uint8_t *restrict work);
+void protocore_pcap_record_header(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Pcap.global_header(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const PcapNs Pcap __attribute__((unused)) = {
+    .global_header = protocore_pcap_global_header,
+    .record_header = protocore_pcap_record_header,
+};
 
 #endif // PROTOCORE_PCAP_H

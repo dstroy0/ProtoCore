@@ -60,18 +60,18 @@ static_assert(LOCKOUT_OFF_CTX % _Alignof(LockoutCtx) == 0,
 // Whether @p a and @p b are the same family and address.
 static proto_bool ip_same(const protocore_ip *a, const protocore_ip *b)
 {
-    Ip.args.ip = a;
-    Ip.args.b = b;
+    IpV.args.ip = a;
+    IpV.args.b = b;
     Ip.equal(ip_work);
-    return Ip.ok;
+    return IpV.ok;
 }
 
 // Whether @p ip names nothing: no family, or the all-zero address.
 static proto_bool ip_none(const protocore_ip *ip)
 {
-    Ip.args.ip = ip;
+    IpV.args.ip = ip;
     Ip.is_unspecified(ip_work);
-    return Ip.ok;
+    return IpV.ok;
 }
 
 // Returns a mutable bucket (callers mutate it), so it takes the owner by non-const reference.

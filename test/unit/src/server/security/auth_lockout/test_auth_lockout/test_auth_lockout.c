@@ -39,10 +39,10 @@ static protocore_ip v4(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
 static protocore_ip parsed(const char *text)
 {
     protocore_ip ip;
-    Ip.args.text = text;
-    Ip.args.out = &ip;
+    IpV.args.text = text;
+    IpV.args.out = &ip;
     Ip.parse(ip_work);
-    TEST_ASSERT_TRUE_MESSAGE(Ip.ok, text);
+    TEST_ASSERT_TRUE_MESSAGE(IpV.ok, text);
     return ip;
 }
 

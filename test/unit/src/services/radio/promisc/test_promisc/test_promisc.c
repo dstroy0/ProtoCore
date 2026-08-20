@@ -342,11 +342,11 @@ void test_pcap_global_header_declares_ieee80211(void)
 {
     uint8_t out[32];
     memset(out, 0xAA, sizeof(out));
-    Pcap.args.out = out;
-    Pcap.args.cap = sizeof(out);
-    Pcap.args.linktype = PROTOCORE_DLT_IEEE802_11;
+    PcapV.args.out = out;
+    PcapV.args.cap = sizeof(out);
+    PcapV.args.linktype = PROTOCORE_DLT_IEEE802_11;
     Pcap.global_header(pcap_work);
-    TEST_ASSERT_EQUAL_size_t(PROTOCORE_PCAP_GLOBAL_HDR_LEN, Pcap.n);
+    TEST_ASSERT_EQUAL_size_t(PROTOCORE_PCAP_GLOBAL_HDR_LEN, PcapV.n);
 
     static const uint8_t WANT[24] = {
         0xd4, 0xc3, 0xb2, 0xa1, // magic 0xa1b2c3d4, little-endian
@@ -366,14 +366,14 @@ void test_pcap_record_header(void)
 {
     uint8_t out[24];
     memset(out, 0xAA, sizeof(out));
-    Pcap.args.out = out;
-    Pcap.args.cap = sizeof(out);
-    Pcap.rec.ts_sec = 0x01020304u;
-    Pcap.rec.ts_usec = 999999u; // the largest microsecond offset within a second, 0x000F423F
-    Pcap.rec.caplen = 60;
-    Pcap.rec.origlen = 1500;
+    PcapV.args.out = out;
+    PcapV.args.cap = sizeof(out);
+    PcapV.rec.ts_sec = 0x01020304u;
+    PcapV.rec.ts_usec = 999999u; // the largest microsecond offset within a second, 0x000F423F
+    PcapV.rec.caplen = 60;
+    PcapV.rec.origlen = 1500;
     Pcap.record_header(pcap_work);
-    TEST_ASSERT_EQUAL_size_t(PROTOCORE_PCAP_REC_HDR_LEN, Pcap.n);
+    TEST_ASSERT_EQUAL_size_t(PROTOCORE_PCAP_REC_HDR_LEN, PcapV.n);
 
     static const uint8_t WANT[16] = {
         0x04, 0x03, 0x02, 0x01, // ts_sec
@@ -389,21 +389,21 @@ void test_pcap_record_header(void)
 void test_pcap_headers_fail_closed(void)
 {
     uint8_t out[24];
-    Pcap.args.out = out;
-    Pcap.args.cap = PROTOCORE_PCAP_GLOBAL_HDR_LEN - 1;
-    Pcap.args.linktype = PROTOCORE_DLT_IEEE802_11;
+    PcapV.args.out = out;
+    PcapV.args.cap = PROTOCORE_PCAP_GLOBAL_HDR_LEN - 1;
+    PcapV.args.linktype = PROTOCORE_DLT_IEEE802_11;
     Pcap.global_header(pcap_work);
-    TEST_ASSERT_EQUAL_size_t(0, Pcap.n);
+    TEST_ASSERT_EQUAL_size_t(0, PcapV.n);
 
-    Pcap.args.out = NULL;
-    Pcap.args.cap = sizeof(out);
+    PcapV.args.out = NULL;
+    PcapV.args.cap = sizeof(out);
     Pcap.global_header(pcap_work);
-    TEST_ASSERT_EQUAL_size_t(0, Pcap.n);
+    TEST_ASSERT_EQUAL_size_t(0, PcapV.n);
 
-    Pcap.args.out = out;
-    Pcap.args.cap = PROTOCORE_PCAP_REC_HDR_LEN - 1;
+    PcapV.args.out = out;
+    PcapV.args.cap = PROTOCORE_PCAP_REC_HDR_LEN - 1;
     Pcap.record_header(pcap_work);
-    TEST_ASSERT_EQUAL_size_t(0, Pcap.n);
+    TEST_ASSERT_EQUAL_size_t(0, PcapV.n);
 }
 
 // A sink with nowhere to deliver is a caller bug, so bring-up refuses it.

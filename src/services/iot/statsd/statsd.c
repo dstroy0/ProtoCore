@@ -190,11 +190,11 @@ void protocore_statsd_init(uint8_t *restrict work)
     {
         return;
     }
-    Ip.args.text = StatsdV.server.addr;
-    Ip.args.out = &STATSD_CTX(work)->server;
+    IpV.args.text = StatsdV.server.addr;
+    IpV.args.out = &STATSD_CTX(work)->server;
     Ip.parse(ip_work);
-    STATSD_CTX(work)->ready = Ip.ok;
-    StatsdV.ok = Ip.ok;
+    STATSD_CTX(work)->ready = IpV.ok;
+    StatsdV.ok = IpV.ok;
 }
 
 // Build one metric line into ns->line, and report its length in ns->n.

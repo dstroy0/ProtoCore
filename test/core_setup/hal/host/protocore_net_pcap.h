@@ -148,11 +148,11 @@ static inline size_t protocore_net_pcap_render(uint8_t *out, size_t cap)
     {
         return 0;
     }
-    Pcap.args.out = out;
-    Pcap.args.cap = cap;
-    Pcap.args.linktype = PROTOCORE_DLT_RAW;
+    PcapV.args.out = out;
+    PcapV.args.cap = cap;
+    PcapV.args.linktype = PROTOCORE_DLT_RAW;
     Pcap.global_header(pcap_work);
-    if (Pcap.n == 0)
+    if (PcapV.n == 0)
     {
         return 0;
     }
@@ -170,12 +170,12 @@ static inline size_t protocore_net_pcap_render(uint8_t *out, size_t cap)
         {
             return 0;
         }
-        Pcap.args.out = out + w;
-        Pcap.args.cap = cap - w;
-        Pcap.rec.ts_sec = d->ms / 1000u;
-        Pcap.rec.ts_usec = (d->ms % 1000u) * 1000u;
-        Pcap.rec.caplen = (uint32_t)n;
-        Pcap.rec.origlen = (uint32_t)n;
+        PcapV.args.out = out + w;
+        PcapV.args.cap = cap - w;
+        PcapV.rec.ts_sec = d->ms / 1000u;
+        PcapV.rec.ts_usec = (d->ms % 1000u) * 1000u;
+        PcapV.rec.caplen = (uint32_t)n;
+        PcapV.rec.origlen = (uint32_t)n;
         Pcap.record_header(pcap_work);
         w += PROTOCORE_PCAP_REC_HDR_LEN + n;
     }

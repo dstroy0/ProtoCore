@@ -727,11 +727,17 @@ typedef struct
     Smb2ProtocoreSmb3DeriveEncryptionKeysArgs derive_encryption_keys_args;
     Smb2EncryptArgs encrypt_args;
     Smb2DecryptArgs decrypt_args;
-
     proto_bool ok;
     size_t n;
     uint32_t u32;
+} Smb2Vars;
 
+/** @brief The operands and the outcome. */
+extern Smb2Vars Smb2V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const transport_frame)(uint8_t *restrict work);
     void (*const transport_len)(uint8_t *restrict work);
     void (*const build_header)(uint8_t *restrict work);
@@ -764,8 +770,75 @@ typedef struct
     void (*const decrypt)(uint8_t *restrict work);
 } Smb2Ns;
 
-/** @brief The one symbol this module exports. */
-extern Smb2Ns Smb2;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Smb2V or a region of the borrow at a fixed offset.
+void protocore_smb2_transport_frame(uint8_t *restrict work);
+void protocore_smb2_transport_len(uint8_t *restrict work);
+void protocore_smb2_build_header(uint8_t *restrict work);
+void protocore_smb2_parse_header(uint8_t *restrict work);
+void protocore_smb2_build_negotiate(uint8_t *restrict work);
+void protocore_smb2_parse_negotiate_response(uint8_t *restrict work);
+void protocore_smb2_build_negotiate_311(uint8_t *restrict work);
+void protocore_smb2_parse_negotiate_contexts(uint8_t *restrict work);
+void protocore_smb2_preauth_init(uint8_t *restrict work);
+void protocore_smb2_preauth_update(uint8_t *restrict work);
+void protocore_smb2_build_session_setup(uint8_t *restrict work);
+void protocore_smb2_parse_session_setup_response(uint8_t *restrict work);
+void protocore_smb2_build_tree_connect(uint8_t *restrict work);
+void protocore_smb2_parse_tree_connect_response(uint8_t *restrict work);
+void protocore_smb2_build_create(uint8_t *restrict work);
+void protocore_smb2_parse_create_response(uint8_t *restrict work);
+void protocore_smb2_build_close(uint8_t *restrict work);
+void protocore_smb2_parse_close_response(uint8_t *restrict work);
+void protocore_smb2_build_read(uint8_t *restrict work);
+void protocore_smb2_parse_read_response(uint8_t *restrict work);
+void protocore_smb2_build_write(uint8_t *restrict work);
+void protocore_smb2_parse_write_response(uint8_t *restrict work);
+void protocore_smb2_sign(uint8_t *restrict work);
+void protocore_smb2_verify(uint8_t *restrict work);
+void protocore_smb2_sign_cmac(uint8_t *restrict work);
+void protocore_smb2_verify_cmac(uint8_t *restrict work);
+void protocore_smb2_derive_signing_key(uint8_t *restrict work);
+void protocore_smb2_derive_encryption_keys(uint8_t *restrict work);
+void protocore_smb2_encrypt(uint8_t *restrict work);
+void protocore_smb2_decrypt(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Smb2.transport_frame(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Smb2Ns Smb2 __attribute__((unused)) = {
+    .transport_frame = protocore_smb2_transport_frame,
+    .transport_len = protocore_smb2_transport_len,
+    .build_header = protocore_smb2_build_header,
+    .parse_header = protocore_smb2_parse_header,
+    .build_negotiate = protocore_smb2_build_negotiate,
+    .parse_negotiate_response = protocore_smb2_parse_negotiate_response,
+    .build_negotiate_311 = protocore_smb2_build_negotiate_311,
+    .parse_negotiate_contexts = protocore_smb2_parse_negotiate_contexts,
+    .preauth_init = protocore_smb2_preauth_init,
+    .preauth_update = protocore_smb2_preauth_update,
+    .build_session_setup = protocore_smb2_build_session_setup,
+    .parse_session_setup_response = protocore_smb2_parse_session_setup_response,
+    .build_tree_connect = protocore_smb2_build_tree_connect,
+    .parse_tree_connect_response = protocore_smb2_parse_tree_connect_response,
+    .build_create = protocore_smb2_build_create,
+    .parse_create_response = protocore_smb2_parse_create_response,
+    .build_close = protocore_smb2_build_close,
+    .parse_close_response = protocore_smb2_parse_close_response,
+    .build_read = protocore_smb2_build_read,
+    .parse_read_response = protocore_smb2_parse_read_response,
+    .build_write = protocore_smb2_build_write,
+    .parse_write_response = protocore_smb2_parse_write_response,
+    .sign = protocore_smb2_sign,
+    .verify = protocore_smb2_verify,
+    .sign_cmac = protocore_smb2_sign_cmac,
+    .verify_cmac = protocore_smb2_verify_cmac,
+    .derive_signing_key = protocore_smb2_derive_signing_key,
+    .derive_encryption_keys = protocore_smb2_derive_encryption_keys,
+    .encrypt = protocore_smb2_encrypt,
+    .decrypt = protocore_smb2_decrypt,
+};
 
 PROTOCORE_END_DECLS
 

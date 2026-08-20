@@ -30,33 +30,33 @@ void dbench_run(void)
 {
     // Candidate fixtures copied verbatim from test/test_happy_eyeballs.cpp (known-good, spec-conformant).
     protocore_ip g6;
-    Ip.args.text = "2606:4700::1";
-    Ip.args.out = &g6;
+    IpV.args.text = "2606:4700::1";
+    IpV.args.out = &g6;
     Ip.parse(ip_work);                                               // global IPv6
     protocore_ip g4 = protocore_ip_from_v4_octets(93, 184, 216, 34); // global IPv4
 
     // 3-address mixed template, v4-first: the sort must move the two v6 ahead, then interleave alternates.
     protocore_ip tmpl3[3];
     tmpl3[0] = protocore_ip_from_v4_octets(93, 184, 216, 34);
-    Ip.args.text = "2606:4700::1";
-    Ip.args.out = &tmpl3[1];
+    IpV.args.text = "2606:4700::1";
+    IpV.args.out = &tmpl3[1];
     Ip.parse(ip_work);
-    Ip.args.text = "2606:4700::2";
-    Ip.args.out = &tmpl3[2];
+    IpV.args.text = "2606:4700::2";
+    IpV.args.out = &tmpl3[2];
     Ip.parse(ip_work);
 
     // 5-address mixed template (three v6 + two v4) to exercise the longer interleave path.
     protocore_ip tmpl5[5];
-    Ip.args.text = "2606:4700::1";
-    Ip.args.out = &tmpl5[0];
+    IpV.args.text = "2606:4700::1";
+    IpV.args.out = &tmpl5[0];
     Ip.parse(ip_work);
     tmpl5[1] = protocore_ip_from_v4_octets(8, 8, 8, 8);
-    Ip.args.text = "2606:4700::2";
-    Ip.args.out = &tmpl5[2];
+    IpV.args.text = "2606:4700::2";
+    IpV.args.out = &tmpl5[2];
     Ip.parse(ip_work);
     tmpl5[3] = protocore_ip_from_v4_octets(1, 1, 1, 1);
-    Ip.args.text = "2606:4700::3";
-    Ip.args.out = &tmpl5[4];
+    IpV.args.text = "2606:4700::3";
+    IpV.args.out = &tmpl5[4];
     Ip.parse(ip_work);
 
     protocore_ip work3[3];

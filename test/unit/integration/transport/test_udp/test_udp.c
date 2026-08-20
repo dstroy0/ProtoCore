@@ -17,8 +17,8 @@ static const protocore_ip *addr(const char *s)
 {
     static protocore_ip a;
     a = (protocore_ip){PROTOCORE_IP_NONE, {0}};
-    Ip.args.text = s;
-    Ip.args.out = &a;
+    IpV.args.text = s;
+    IpV.args.out = &a;
     Ip.parse(ip_work);
     return &a;
 }
@@ -114,10 +114,10 @@ void test_listener_peer_carries_v6()
     protocore_net_ip6_mark(&src);
     protocore_ip parsed;
     memset(&parsed, 0, sizeof(parsed));
-    Ip.args.text = "2001:db8::dead:beef";
-    Ip.args.out = &parsed;
+    IpV.args.text = "2001:db8::dead:beef";
+    IpV.args.out = &parsed;
     Ip.parse(ip_work);
-    TEST_ASSERT_TRUE(Ip.ok);
+    TEST_ASSERT_TRUE(IpV.ok);
     memcpy(protocore_net_ip6_wbytes(&src), parsed.bytes, 16);
 
     const uint8_t d[] = {0xEE};

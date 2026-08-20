@@ -32,19 +32,19 @@ void tearDown(void)
 static protocore_ip parsed(const char *text)
 {
     protocore_ip ip;
-    Ip.args.text = text;
-    Ip.args.out = &ip;
+    IpV.args.text = text;
+    IpV.args.out = &ip;
     Ip.parse(ip_work);
-    TEST_ASSERT_TRUE_MESSAGE(Ip.ok, text);
+    TEST_ASSERT_TRUE_MESSAGE(IpV.ok, text);
     return ip;
 }
 
 static proto_bool same(const protocore_ip *a, const protocore_ip *b)
 {
-    Ip.args.ip = a;
-    Ip.args.b = b;
+    IpV.args.ip = a;
+    IpV.args.b = b;
     Ip.equal(ip_work);
-    return Ip.ok;
+    return IpV.ok;
 }
 
 // An empty table trusts nothing, so no header is ever believed. This is the fail-safe default: a

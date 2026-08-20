@@ -80,15 +80,15 @@ static proto_bool add_port(uint8_t id, protocore_gateway_kind kind, uint16_t rat
     c.kind = kind;
     c.tx = withtx ? cap_tx : NULL;
     c.rate_cap = rate;
-    Gateway.add_port_args.cfg = &c;
+    GatewayV.add_port_args.cfg = &c;
     Gateway.add_port(protocore_gateway_span());
-    return Gateway.ok;
+    return GatewayV.ok;
 }
 
 static protocore_gateway_stats stats()
 {
     protocore_gateway_stats st;
-    Gateway.get_stats_args.out = &st;
+    GatewayV.get_stats_args.out = &st;
     Gateway.get_stats(protocore_gateway_span());
     return st;
 }
@@ -123,17 +123,17 @@ void tearDown()
 void test_uplink_envelopes_and_publishes()
 {
     TEST_ASSERT_TRUE(add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE));
-    Gateway.set_uplink_cb_args.fn = cap_uplink;
-    Gateway.set_uplink_cb_args.ctx = NULL;
+    GatewayV.set_uplink_cb_args.fn = cap_uplink;
+    GatewayV.set_uplink_cb_args.ctx = NULL;
     Gateway.set_uplink_cb(protocore_gateway_span());
     const uint8_t hi[2] = {'h', 'i'};
-    Gateway.uplink_args.port_id = 0;
-    Gateway.uplink_args.src_addr = 0x42;
-    Gateway.uplink_args.payload = hi;
-    Gateway.uplink_args.len = 2;
-    Gateway.uplink_args.rssi = -50;
+    GatewayV.uplink_args.port_id = 0;
+    GatewayV.uplink_args.src_addr = 0x42;
+    GatewayV.uplink_args.payload = hi;
+    GatewayV.uplink_args.len = 2;
+    GatewayV.uplink_args.rssi = -50;
     Gateway.uplink(protocore_gateway_span());
-    TEST_ASSERT_TRUE(Gateway.ok);
+    TEST_ASSERT_TRUE(GatewayV.ok);
     TEST_ASSERT_EQUAL_size_t(1, g_up_n);
     TEST_ASSERT_EQUAL_UINT16(0x42, g_up[0].src_addr);
     TEST_ASSERT_EQUAL_UINT8(0, g_up[0].port_id);
@@ -148,30 +148,30 @@ void test_uplink_no_sink_drops()
 {
     add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE);
     const uint8_t x[1] = {1};
-    Gateway.uplink_args.port_id = 0;
-    Gateway.uplink_args.src_addr = 1;
-    Gateway.uplink_args.payload = x;
-    Gateway.uplink_args.len = 1;
-    Gateway.uplink_args.rssi = 0;
+    GatewayV.uplink_args.port_id = 0;
+    GatewayV.uplink_args.src_addr = 1;
+    GatewayV.uplink_args.payload = x;
+    GatewayV.uplink_args.len = 1;
+    GatewayV.uplink_args.rssi = 0;
     Gateway.uplink(protocore_gateway_span());
-    TEST_ASSERT_FALSE(Gateway.ok);
+    TEST_ASSERT_FALSE(GatewayV.ok);
     TEST_ASSERT_EQUAL_UINT32(1, stats().up_dropped);
     TEST_ASSERT_EQUAL_UINT32(0, stats().up_published);
 }
 
 void test_uplink_unknown_port_drops()
 {
-    Gateway.set_uplink_cb_args.fn = cap_uplink;
-    Gateway.set_uplink_cb_args.ctx = NULL;
+    GatewayV.set_uplink_cb_args.fn = cap_uplink;
+    GatewayV.set_uplink_cb_args.ctx = NULL;
     Gateway.set_uplink_cb(protocore_gateway_span());
     const uint8_t x[1] = {1};
-    Gateway.uplink_args.port_id = 9;
-    Gateway.uplink_args.src_addr = 1;
-    Gateway.uplink_args.payload = x;
-    Gateway.uplink_args.len = 1;
-    Gateway.uplink_args.rssi = 0;
+    GatewayV.uplink_args.port_id = 9;
+    GatewayV.uplink_args.src_addr = 1;
+    GatewayV.uplink_args.payload = x;
+    GatewayV.uplink_args.len = 1;
+    GatewayV.uplink_args.rssi = 0;
     Gateway.uplink(protocore_gateway_span());
-    TEST_ASSERT_FALSE(Gateway.ok);
+    TEST_ASSERT_FALSE(GatewayV.ok);
     TEST_ASSERT_EQUAL_UINT32(1, stats().up_dropped);
     TEST_ASSERT_EQUAL_size_t(0, g_up_n);
 }
@@ -179,59 +179,59 @@ void test_uplink_unknown_port_drops()
 void test_uplink_rate_cap()
 {
     add_port(0, PROTOCORE_GW_NRF24, 2, PROTO_FALSE);
-    Gateway.set_uplink_cb_args.fn = cap_uplink;
-    Gateway.set_uplink_cb_args.ctx = NULL;
+    GatewayV.set_uplink_cb_args.fn = cap_uplink;
+    GatewayV.set_uplink_cb_args.ctx = NULL;
     Gateway.set_uplink_cb(protocore_gateway_span());
     const uint8_t x[1] = {7};
-    Gateway.uplink_args.port_id = 0;
-    Gateway.uplink_args.src_addr = 1;
-    Gateway.uplink_args.payload = x;
-    Gateway.uplink_args.len = 1;
-    Gateway.uplink_args.rssi = 0;
+    GatewayV.uplink_args.port_id = 0;
+    GatewayV.uplink_args.src_addr = 1;
+    GatewayV.uplink_args.payload = x;
+    GatewayV.uplink_args.len = 1;
+    GatewayV.uplink_args.rssi = 0;
     Gateway.uplink(protocore_gateway_span());
-    TEST_ASSERT_TRUE(Gateway.ok);
-    Gateway.uplink_args.port_id = 0;
-    Gateway.uplink_args.src_addr = 1;
-    Gateway.uplink_args.payload = x;
-    Gateway.uplink_args.len = 1;
-    Gateway.uplink_args.rssi = 0;
+    TEST_ASSERT_TRUE(GatewayV.ok);
+    GatewayV.uplink_args.port_id = 0;
+    GatewayV.uplink_args.src_addr = 1;
+    GatewayV.uplink_args.payload = x;
+    GatewayV.uplink_args.len = 1;
+    GatewayV.uplink_args.rssi = 0;
     Gateway.uplink(protocore_gateway_span());
-    TEST_ASSERT_TRUE(Gateway.ok);
-    Gateway.uplink_args.port_id = 0;
-    Gateway.uplink_args.src_addr = 1;
-    Gateway.uplink_args.payload = x;
-    Gateway.uplink_args.len = 1;
-    Gateway.uplink_args.rssi = 0;
+    TEST_ASSERT_TRUE(GatewayV.ok);
+    GatewayV.uplink_args.port_id = 0;
+    GatewayV.uplink_args.src_addr = 1;
+    GatewayV.uplink_args.payload = x;
+    GatewayV.uplink_args.len = 1;
+    GatewayV.uplink_args.rssi = 0;
     Gateway.uplink(protocore_gateway_span());
-    TEST_ASSERT_FALSE(Gateway.ok);
+    TEST_ASSERT_FALSE(GatewayV.ok);
     TEST_ASSERT_EQUAL_size_t(2, g_up_n);
     TEST_ASSERT_EQUAL_UINT32(1, stats().up_dropped);
     set_now(1000);
-    Gateway.uplink_args.port_id = 0;
-    Gateway.uplink_args.src_addr = 1;
-    Gateway.uplink_args.payload = x;
-    Gateway.uplink_args.len = 1;
-    Gateway.uplink_args.rssi = 0;
+    GatewayV.uplink_args.port_id = 0;
+    GatewayV.uplink_args.src_addr = 1;
+    GatewayV.uplink_args.payload = x;
+    GatewayV.uplink_args.len = 1;
+    GatewayV.uplink_args.rssi = 0;
     Gateway.uplink(protocore_gateway_span());
-    TEST_ASSERT_TRUE(Gateway.ok);
+    TEST_ASSERT_TRUE(GatewayV.ok);
     TEST_ASSERT_EQUAL_size_t(3, g_up_n);
 }
 
 void test_uplink_sink_refusal_counted()
 {
     add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE);
-    Gateway.set_uplink_cb_args.fn = cap_uplink;
-    Gateway.set_uplink_cb_args.ctx = NULL;
+    GatewayV.set_uplink_cb_args.fn = cap_uplink;
+    GatewayV.set_uplink_cb_args.ctx = NULL;
     Gateway.set_uplink_cb(protocore_gateway_span());
     g_up_accept = PROTO_FALSE;
     const uint8_t x[1] = {1};
-    Gateway.uplink_args.port_id = 0;
-    Gateway.uplink_args.src_addr = 1;
-    Gateway.uplink_args.payload = x;
-    Gateway.uplink_args.len = 1;
-    Gateway.uplink_args.rssi = 0;
+    GatewayV.uplink_args.port_id = 0;
+    GatewayV.uplink_args.src_addr = 1;
+    GatewayV.uplink_args.payload = x;
+    GatewayV.uplink_args.len = 1;
+    GatewayV.uplink_args.rssi = 0;
     Gateway.uplink(protocore_gateway_span());
-    TEST_ASSERT_FALSE(Gateway.ok);
+    TEST_ASSERT_FALSE(GatewayV.ok);
     TEST_ASSERT_EQUAL_UINT32(1, stats().up_dropped);
     TEST_ASSERT_EQUAL_UINT32(0, stats().up_published);
 }
@@ -240,12 +240,12 @@ void test_downlink_transmits()
 {
     add_port(0, PROTOCORE_GW_LORA, 0, PROTO_TRUE);
     const uint8_t cmd[3] = {'c', 'm', 'd'};
-    Gateway.downlink_args.port_id = 0;
-    Gateway.downlink_args.dst_addr = 0x10;
-    Gateway.downlink_args.payload = cmd;
-    Gateway.downlink_args.len = 3;
+    GatewayV.downlink_args.port_id = 0;
+    GatewayV.downlink_args.dst_addr = 0x10;
+    GatewayV.downlink_args.payload = cmd;
+    GatewayV.downlink_args.len = 3;
     Gateway.downlink(protocore_gateway_span());
-    TEST_ASSERT_TRUE(Gateway.ok);
+    TEST_ASSERT_TRUE(GatewayV.ok);
     TEST_ASSERT_EQUAL_size_t(1, g_down_n);
     TEST_ASSERT_EQUAL_UINT8(0, g_down[0].port_id);
     TEST_ASSERT_EQUAL_UINT16(0x10, g_down[0].dst);
@@ -257,18 +257,18 @@ void test_downlink_no_tx_or_unknown_port_drops()
 {
     add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE);
     const uint8_t x[1] = {1};
-    Gateway.downlink_args.port_id = 0;
-    Gateway.downlink_args.dst_addr = 1;
-    Gateway.downlink_args.payload = x;
-    Gateway.downlink_args.len = 1;
+    GatewayV.downlink_args.port_id = 0;
+    GatewayV.downlink_args.dst_addr = 1;
+    GatewayV.downlink_args.payload = x;
+    GatewayV.downlink_args.len = 1;
     Gateway.downlink(protocore_gateway_span());
-    TEST_ASSERT_FALSE(Gateway.ok);
-    Gateway.downlink_args.port_id = 9;
-    Gateway.downlink_args.dst_addr = 1;
-    Gateway.downlink_args.payload = x;
-    Gateway.downlink_args.len = 1;
+    TEST_ASSERT_FALSE(GatewayV.ok);
+    GatewayV.downlink_args.port_id = 9;
+    GatewayV.downlink_args.dst_addr = 1;
+    GatewayV.downlink_args.payload = x;
+    GatewayV.downlink_args.len = 1;
     Gateway.downlink(protocore_gateway_span());
-    TEST_ASSERT_FALSE(Gateway.ok);
+    TEST_ASSERT_FALSE(GatewayV.ok);
     TEST_ASSERT_EQUAL_UINT32(2, stats().down_dropped);
 }
 
@@ -277,12 +277,12 @@ void test_downlink_tx_refusal_counted()
     add_port(0, PROTOCORE_GW_LORA, 0, PROTO_TRUE);
     g_tx_accept = PROTO_FALSE;
     const uint8_t x[1] = {1};
-    Gateway.downlink_args.port_id = 0;
-    Gateway.downlink_args.dst_addr = 1;
-    Gateway.downlink_args.payload = x;
-    Gateway.downlink_args.len = 1;
+    GatewayV.downlink_args.port_id = 0;
+    GatewayV.downlink_args.dst_addr = 1;
+    GatewayV.downlink_args.payload = x;
+    GatewayV.downlink_args.len = 1;
     Gateway.downlink(protocore_gateway_span());
-    TEST_ASSERT_FALSE(Gateway.ok);
+    TEST_ASSERT_FALSE(GatewayV.ok);
     TEST_ASSERT_EQUAL_UINT32(1, stats().down_dropped);
     TEST_ASSERT_EQUAL_UINT32(0, stats().down_sent);
 }
@@ -293,50 +293,50 @@ void test_topic_format()
     m.port_id = 2;
     m.src_addr = 0x42;
     char buf[32];
-    Gateway.topic_args.msg = &m;
-    Gateway.topic_args.buf = buf;
-    Gateway.topic_args.buflen = sizeof(buf);
+    GatewayV.topic_args.msg = &m;
+    GatewayV.topic_args.buf = buf;
+    GatewayV.topic_args.buflen = sizeof(buf);
     Gateway.topic(protocore_gateway_span());
-    uint16_t n = Gateway.n;
+    uint16_t n = GatewayV.n;
     TEST_ASSERT_EQUAL_STRING("gw/2/66", buf);
     TEST_ASSERT_EQUAL_UINT16(7, n);
 
-    Gateway.set_topic_prefix_args.prefix = "lora";
+    GatewayV.set_topic_prefix_args.prefix = "lora";
     Gateway.set_topic_prefix(protocore_gateway_span());
-    Gateway.topic_args.msg = &m;
-    Gateway.topic_args.buf = buf;
-    Gateway.topic_args.buflen = sizeof(buf);
+    GatewayV.topic_args.msg = &m;
+    GatewayV.topic_args.buf = buf;
+    GatewayV.topic_args.buflen = sizeof(buf);
     Gateway.topic(protocore_gateway_span());
-    n = Gateway.n;
+    n = GatewayV.n;
     TEST_ASSERT_EQUAL_STRING("lora/2/66", buf);
 
-    Gateway.set_topic_prefix_args.prefix = NULL;
+    GatewayV.set_topic_prefix_args.prefix = NULL;
     Gateway.set_topic_prefix(protocore_gateway_span());
-    Gateway.topic_args.msg = &m;
-    Gateway.topic_args.buf = buf;
-    Gateway.topic_args.buflen = sizeof(buf);
+    GatewayV.topic_args.msg = &m;
+    GatewayV.topic_args.buf = buf;
+    GatewayV.topic_args.buflen = sizeof(buf);
     Gateway.topic(protocore_gateway_span());
-    n = Gateway.n;
+    n = GatewayV.n;
     TEST_ASSERT_EQUAL_STRING("gw/2/66", buf);
 
     char tiny[4];
-    Gateway.topic_args.msg = &m;
-    Gateway.topic_args.buf = tiny;
-    Gateway.topic_args.buflen = sizeof(tiny);
+    GatewayV.topic_args.msg = &m;
+    GatewayV.topic_args.buf = tiny;
+    GatewayV.topic_args.buflen = sizeof(tiny);
     Gateway.topic(protocore_gateway_span());
-    TEST_ASSERT_EQUAL_UINT16(0, Gateway.n);
-    Gateway.topic_args.msg = &m;
-    Gateway.topic_args.buf = NULL;
-    Gateway.topic_args.buflen = sizeof(buf);
+    TEST_ASSERT_EQUAL_UINT16(0, GatewayV.n);
+    GatewayV.topic_args.msg = &m;
+    GatewayV.topic_args.buf = NULL;
+    GatewayV.topic_args.buflen = sizeof(buf);
     Gateway.topic(protocore_gateway_span());
-    TEST_ASSERT_EQUAL_UINT16(0, Gateway.n);
+    TEST_ASSERT_EQUAL_UINT16(0, GatewayV.n);
 }
 
 void test_add_port_validation_and_table_full()
 {
-    Gateway.add_port_args.cfg = NULL;
+    GatewayV.add_port_args.cfg = NULL;
     Gateway.add_port(protocore_gateway_span());
-    TEST_ASSERT_FALSE(Gateway.ok);
+    TEST_ASSERT_FALSE(GatewayV.ok);
     TEST_ASSERT_TRUE(add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE));
     TEST_ASSERT_FALSE(add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE));
     TEST_ASSERT_TRUE(add_port(1, PROTOCORE_GW_NRF24, 0, PROTO_FALSE));
@@ -348,21 +348,21 @@ void test_add_port_validation_and_table_full()
 void test_seq_increments_per_uplink()
 {
     add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE);
-    Gateway.set_uplink_cb_args.fn = cap_uplink;
-    Gateway.set_uplink_cb_args.ctx = NULL;
+    GatewayV.set_uplink_cb_args.fn = cap_uplink;
+    GatewayV.set_uplink_cb_args.ctx = NULL;
     Gateway.set_uplink_cb(protocore_gateway_span());
     const uint8_t x[1] = {1};
-    Gateway.uplink_args.port_id = 0;
-    Gateway.uplink_args.src_addr = 1;
-    Gateway.uplink_args.payload = x;
-    Gateway.uplink_args.len = 1;
-    Gateway.uplink_args.rssi = 0;
+    GatewayV.uplink_args.port_id = 0;
+    GatewayV.uplink_args.src_addr = 1;
+    GatewayV.uplink_args.payload = x;
+    GatewayV.uplink_args.len = 1;
+    GatewayV.uplink_args.rssi = 0;
     Gateway.uplink(protocore_gateway_span());
-    Gateway.uplink_args.port_id = 0;
-    Gateway.uplink_args.src_addr = 2;
-    Gateway.uplink_args.payload = x;
-    Gateway.uplink_args.len = 1;
-    Gateway.uplink_args.rssi = 0;
+    GatewayV.uplink_args.port_id = 0;
+    GatewayV.uplink_args.src_addr = 2;
+    GatewayV.uplink_args.payload = x;
+    GatewayV.uplink_args.len = 1;
+    GatewayV.uplink_args.rssi = 0;
     Gateway.uplink(protocore_gateway_span());
     TEST_ASSERT_EQUAL_size_t(2, g_up_n);
     TEST_ASSERT_EQUAL_UINT32(0, g_up[0].seq);
@@ -372,52 +372,51 @@ void test_seq_increments_per_uplink()
 void test_topic_zero_and_overflow_steps()
 {
     Gateway.reset(protocore_gateway_span());
-    Gateway.set_topic_prefix_args.prefix = "gw";
+    GatewayV.set_topic_prefix_args.prefix = "gw";
     Gateway.set_topic_prefix(protocore_gateway_span());
     char buf[64];
     protocore_gateway_msg m = {0};
     m.port_id = 0;
     m.src_addr = 0;
-    Gateway.topic_args.msg = &m;
-    Gateway.topic_args.buf = buf;
-    Gateway.topic_args.buflen = sizeof(buf);
+    GatewayV.topic_args.msg = &m;
+    GatewayV.topic_args.buf = buf;
+    GatewayV.topic_args.buflen = sizeof(buf);
     Gateway.topic(protocore_gateway_span());
-    TEST_ASSERT_TRUE(Gateway.n > 0);
-    Gateway.topic_args.msg = NULL;
-    Gateway.topic_args.buf = buf;
-    Gateway.topic_args.buflen = sizeof(buf);
+    TEST_ASSERT_TRUE(GatewayV.n > 0);
+    GatewayV.topic_args.msg = NULL;
+    GatewayV.topic_args.buf = buf;
+    GatewayV.topic_args.buflen = sizeof(buf);
     Gateway.topic(protocore_gateway_span());
-    TEST_ASSERT_EQUAL_UINT16(0, Gateway.n);
-    Gateway.topic_args.msg = &m;
-    Gateway.topic_args.buf = buf;
-    Gateway.topic_args.buflen = 0;
+    TEST_ASSERT_EQUAL_UINT16(0, GatewayV.n);
+    GatewayV.topic_args.msg = &m;
+    GatewayV.topic_args.buf = buf;
+    GatewayV.topic_args.buflen = 0;
     Gateway.topic(protocore_gateway_span());
-    TEST_ASSERT_EQUAL_UINT16(0, Gateway.n);
+    TEST_ASSERT_EQUAL_UINT16(0, GatewayV.n);
     for (uint16_t cap = 1; cap <= 6; cap++)
     {
-        Gateway.topic_args.msg = &m;
-        Gateway.topic_args.buf = buf;
-        Gateway.topic_args.buflen = cap;
+        GatewayV.topic_args.msg = &m;
+        GatewayV.topic_args.buf = buf;
+        GatewayV.topic_args.buflen = cap;
         Gateway.topic(protocore_gateway_span());
-        TEST_ASSERT_EQUAL_UINT16(0, Gateway.n);
+        TEST_ASSERT_EQUAL_UINT16(0, GatewayV.n);
     }
 }
 
 void test_get_stats_null_out_is_noop()
 {
     add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE);
-    Gateway.set_uplink_cb_args.fn = cap_uplink;
-    Gateway.set_uplink_cb_args.ctx = NULL;
+    GatewayV.set_uplink_cb_args.fn = cap_uplink;
+    GatewayV.set_uplink_cb_args.ctx = NULL;
     Gateway.set_uplink_cb(protocore_gateway_span());
     const uint8_t x[1] = {1};
-    Gateway.uplink_args.port_id = 0;
-    Gateway.uplink_args.src_addr = 1;
-    Gateway.uplink_args.payload = x;
-    Gateway.uplink_args.len = 1;
-    Gateway.uplink_args.rssi = 0;
+    GatewayV.uplink_args.port_id = 0;
+    GatewayV.uplink_args.src_addr = 1;
+    GatewayV.uplink_args.payload = x;
+    GatewayV.uplink_args.len = 1;
+    GatewayV.uplink_args.rssi = 0;
     Gateway.uplink(protocore_gateway_span());
-    Gateway.get_stats_args.out = NULL;
+    GatewayV.get_stats_args.out = NULL;
     Gateway.get_stats(protocore_gateway_span());
     TEST_ASSERT_EQUAL_UINT32(1, stats().up_published);
 }
-

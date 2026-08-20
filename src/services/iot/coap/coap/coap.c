@@ -1071,10 +1071,10 @@ void protocore_coap_notify(uint8_t *restrict work)
                                      cresp.content_format, -1, -1, cresp.payload, cresp.payload_len);
         }
         protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
-        Ip.args.text = o->ip;
-        Ip.args.out = &dst;
+        IpV.args.text = o->ip;
+        IpV.args.out = &dst;
         Ip.parse(ip_work);
-        if (!n || !Ip.ok)
+        if (!n || !IpV.ok)
         {
             o->active = PROTO_FALSE; // unreachable, so the entry goes
             continue;

@@ -103,10 +103,10 @@ void tearDown()
 void test_init_configures_and_powers_up()
 {
     nrf_config c = default_cfg();
-    Nrf24.init_args.bus = &g_bus;
-    Nrf24.init_args.cfg = &c;
+    Nrf24V.init_args.bus = &g_bus;
+    Nrf24V.init_args.cfg = &c;
     Nrf24.init(nrf24_work);
-    TEST_ASSERT_TRUE(Nrf24.ok);
+    TEST_ASSERT_TRUE(Nrf24V.ok);
     TEST_ASSERT_EQUAL_HEX8(0x0E, g.reg[0x00]);
     TEST_ASSERT_EQUAL_UINT8(76, g.reg[0x05]);
     TEST_ASSERT_EQUAL_HEX8(0x03, g.reg[0x03]);
@@ -120,24 +120,24 @@ void test_init_fails_when_absent()
 {
     g.present = PROTO_FALSE;
     nrf_config c = default_cfg();
-    Nrf24.init_args.bus = &g_bus;
-    Nrf24.init_args.cfg = &c;
+    Nrf24V.init_args.bus = &g_bus;
+    Nrf24V.init_args.cfg = &c;
     Nrf24.init(nrf24_work);
-    TEST_ASSERT_FALSE(Nrf24.ok);
+    TEST_ASSERT_FALSE(Nrf24V.ok);
 }
 
 void test_send_pads_to_width_and_keys_tx()
 {
     nrf_config c = default_cfg();
-    Nrf24.init_args.bus = &g_bus;
-    Nrf24.init_args.cfg = &c;
+    Nrf24V.init_args.bus = &g_bus;
+    Nrf24V.init_args.cfg = &c;
     Nrf24.init(nrf24_work);
     const uint8_t data[3] = {0xAB, 0xCD, 0xEF};
-    Nrf24.send_args.bus = &g_bus;
-    Nrf24.send_args.data = data;
-    Nrf24.send_args.len = 3;
+    Nrf24V.send_args.bus = &g_bus;
+    Nrf24V.send_args.data = data;
+    Nrf24V.send_args.len = 3;
     Nrf24.send(nrf24_work);
-    TEST_ASSERT_TRUE(Nrf24.ok);
+    TEST_ASSERT_TRUE(Nrf24V.ok);
     TEST_ASSERT_EQUAL_UINT8(8, g.tx_len);
     TEST_ASSERT_EQUAL_MEMORY(data, g.tx_payload, 3);
     TEST_ASSERT_EQUAL_UINT8(0, g.tx_payload[3]);
@@ -148,30 +148,30 @@ void test_send_pads_to_width_and_keys_tx()
 void test_send_rejects_oversize()
 {
     const uint8_t big[9] = {0};
-    Nrf24.send_args.bus = &g_bus;
-    Nrf24.send_args.data = big;
-    Nrf24.send_args.len = 9;
+    Nrf24V.send_args.bus = &g_bus;
+    Nrf24V.send_args.data = big;
+    Nrf24V.send_args.len = 9;
     Nrf24.send(nrf24_work);
-    TEST_ASSERT_FALSE(Nrf24.ok);
+    TEST_ASSERT_FALSE(Nrf24V.ok);
 }
 
 void test_tx_done_flag()
 {
-    Nrf24.tx_done_args.bus = &g_bus;
+    Nrf24V.tx_done_args.bus = &g_bus;
     Nrf24.tx_done(nrf24_work);
-    TEST_ASSERT_FALSE(Nrf24.ok);
+    TEST_ASSERT_FALSE(Nrf24V.ok);
     g.reg[0x07] = 0x20;
-    Nrf24.tx_done_args.bus = &g_bus;
+    Nrf24V.tx_done_args.bus = &g_bus;
     Nrf24.tx_done(nrf24_work);
-    TEST_ASSERT_TRUE(Nrf24.ok);
-    Nrf24.tx_done_args.bus = &g_bus;
+    TEST_ASSERT_TRUE(Nrf24V.ok);
+    Nrf24V.tx_done_args.bus = &g_bus;
     Nrf24.tx_done(nrf24_work);
-    TEST_ASSERT_FALSE(Nrf24.ok);
+    TEST_ASSERT_FALSE(Nrf24V.ok);
 }
 
 void test_set_rx_enters_prx()
 {
-    Nrf24.set_rx_args.bus = &g_bus;
+    Nrf24V.set_rx_args.bus = &g_bus;
     Nrf24.set_rx(nrf24_work);
     TEST_ASSERT_EQUAL_HEX8(0x0F, g.reg[0x00]);
     TEST_ASSERT_TRUE(g.ce);
@@ -185,12 +185,12 @@ void test_recv_reads_payload_and_pipe()
     }
     g.reg[0x07] = 0x40 | (2 << 1);
     uint8_t buf[16], pipe = 0xFF;
-    Nrf24.recv_args.bus = &g_bus;
-    Nrf24.recv_args.buf = buf;
-    Nrf24.recv_args.cap = sizeof(buf);
-    Nrf24.recv_args.pipe = &pipe;
+    Nrf24V.recv_args.bus = &g_bus;
+    Nrf24V.recv_args.buf = buf;
+    Nrf24V.recv_args.cap = sizeof(buf);
+    Nrf24V.recv_args.pipe = &pipe;
     Nrf24.recv(nrf24_work);
-    int n = Nrf24.n;
+    int n = Nrf24V.n;
     TEST_ASSERT_EQUAL_INT(8, n);
     TEST_ASSERT_EQUAL_UINT8(2, pipe);
     TEST_ASSERT_EQUAL_MEMORY(g.rx_payload, buf, 8);
@@ -200,24 +200,24 @@ void test_recv_reads_payload_and_pipe()
 void test_recv_no_packet()
 {
     uint8_t buf[16];
-    Nrf24.recv_args.bus = &g_bus;
-    Nrf24.recv_args.buf = buf;
-    Nrf24.recv_args.cap = sizeof(buf);
-    Nrf24.recv_args.pipe = NULL;
+    Nrf24V.recv_args.bus = &g_bus;
+    Nrf24V.recv_args.buf = buf;
+    Nrf24V.recv_args.cap = sizeof(buf);
+    Nrf24V.recv_args.pipe = NULL;
     Nrf24.recv(nrf24_work);
-    TEST_ASSERT_EQUAL_INT(-1, Nrf24.n);
+    TEST_ASSERT_EQUAL_INT(-1, Nrf24V.n);
 }
 
 void test_recv_fifo_empty_pipe()
 {
     g.reg[0x07] = 0x40 | (7 << 1);
     uint8_t buf[16];
-    Nrf24.recv_args.bus = &g_bus;
-    Nrf24.recv_args.buf = buf;
-    Nrf24.recv_args.cap = sizeof(buf);
-    Nrf24.recv_args.pipe = NULL;
+    Nrf24V.recv_args.bus = &g_bus;
+    Nrf24V.recv_args.buf = buf;
+    Nrf24V.recv_args.cap = sizeof(buf);
+    Nrf24V.recv_args.pipe = NULL;
     Nrf24.recv(nrf24_work);
-    TEST_ASSERT_EQUAL_INT(-1, Nrf24.n);
+    TEST_ASSERT_EQUAL_INT(-1, Nrf24V.n);
     TEST_ASSERT_EQUAL_HEX8(0x00, g.reg[0x07] & 0x40);
 }
 
@@ -229,12 +229,12 @@ void test_recv_truncates_to_cap()
     }
     g.reg[0x07] = 0x40;
     uint8_t buf[4], pipe = 0xFF;
-    Nrf24.recv_args.bus = &g_bus;
-    Nrf24.recv_args.buf = buf;
-    Nrf24.recv_args.cap = sizeof(buf);
-    Nrf24.recv_args.pipe = &pipe;
+    Nrf24V.recv_args.bus = &g_bus;
+    Nrf24V.recv_args.buf = buf;
+    Nrf24V.recv_args.cap = sizeof(buf);
+    Nrf24V.recv_args.pipe = &pipe;
     Nrf24.recv(nrf24_work);
-    int n = Nrf24.n;
+    int n = Nrf24V.n;
     TEST_ASSERT_EQUAL_INT(4, n);
     TEST_ASSERT_EQUAL_UINT8(0, pipe);
     TEST_ASSERT_EQUAL_MEMORY(g.rx_payload, buf, 4);
@@ -244,99 +244,99 @@ void test_data_rate_variants()
 {
     nrf_config c = default_cfg();
     c.data_rate = 1;
-    Nrf24.init_args.bus = &g_bus;
-    Nrf24.init_args.cfg = &c;
+    Nrf24V.init_args.bus = &g_bus;
+    Nrf24V.init_args.cfg = &c;
     Nrf24.init(nrf24_work);
-    TEST_ASSERT_TRUE(Nrf24.ok);
+    TEST_ASSERT_TRUE(Nrf24V.ok);
     nrf_config c2 = default_cfg();
     c2.data_rate = 2;
-    Nrf24.init_args.bus = &g_bus;
-    Nrf24.init_args.cfg = &c2;
+    Nrf24V.init_args.bus = &g_bus;
+    Nrf24V.init_args.cfg = &c2;
     Nrf24.init(nrf24_work);
-    TEST_ASSERT_TRUE(Nrf24.ok);
+    TEST_ASSERT_TRUE(Nrf24V.ok);
 }
 
 void test_init_rejects_null_args()
 {
     nrf_config c = default_cfg();
-    Nrf24.init_args.bus = NULL;
-    Nrf24.init_args.cfg = &c;
+    Nrf24V.init_args.bus = NULL;
+    Nrf24V.init_args.cfg = &c;
     Nrf24.init(nrf24_work);
-    TEST_ASSERT_FALSE(Nrf24.ok);
+    TEST_ASSERT_FALSE(Nrf24V.ok);
 
     nrf_bus no_spi = {NULL, mock_ce, NULL};
-    Nrf24.init_args.bus = &no_spi;
-    Nrf24.init_args.cfg = &c;
+    Nrf24V.init_args.bus = &no_spi;
+    Nrf24V.init_args.cfg = &c;
     Nrf24.init(nrf24_work);
-    TEST_ASSERT_FALSE(Nrf24.ok);
+    TEST_ASSERT_FALSE(Nrf24V.ok);
 
     nrf_bus no_ce = {mock_spi, NULL, NULL};
-    Nrf24.init_args.bus = &no_ce;
-    Nrf24.init_args.cfg = &c;
+    Nrf24V.init_args.bus = &no_ce;
+    Nrf24V.init_args.cfg = &c;
     Nrf24.init(nrf24_work);
-    TEST_ASSERT_FALSE(Nrf24.ok);
+    TEST_ASSERT_FALSE(Nrf24V.ok);
 
-    Nrf24.init_args.bus = &g_bus;
-    Nrf24.init_args.cfg = NULL;
+    Nrf24V.init_args.bus = &g_bus;
+    Nrf24V.init_args.cfg = NULL;
     Nrf24.init(nrf24_work);
-    TEST_ASSERT_FALSE(Nrf24.ok);
+    TEST_ASSERT_FALSE(Nrf24V.ok);
 
     nrf_config no_addr = default_cfg();
     no_addr.address = NULL;
-    Nrf24.init_args.bus = &g_bus;
-    Nrf24.init_args.cfg = &no_addr;
+    Nrf24V.init_args.bus = &g_bus;
+    Nrf24V.init_args.cfg = &no_addr;
     Nrf24.init(nrf24_work);
-    TEST_ASSERT_FALSE(Nrf24.ok);
+    TEST_ASSERT_FALSE(Nrf24V.ok);
 }
 
 void test_send_rejects_null_args_and_zero_len()
 {
     const uint8_t data[3] = {0x01, 0x02, 0x03};
-    Nrf24.send_args.bus = NULL;
-    Nrf24.send_args.data = data;
-    Nrf24.send_args.len = 3;
+    Nrf24V.send_args.bus = NULL;
+    Nrf24V.send_args.data = data;
+    Nrf24V.send_args.len = 3;
     Nrf24.send(nrf24_work);
-    TEST_ASSERT_FALSE(Nrf24.ok);
-    Nrf24.send_args.bus = &g_bus;
-    Nrf24.send_args.data = NULL;
-    Nrf24.send_args.len = 3;
+    TEST_ASSERT_FALSE(Nrf24V.ok);
+    Nrf24V.send_args.bus = &g_bus;
+    Nrf24V.send_args.data = NULL;
+    Nrf24V.send_args.len = 3;
     Nrf24.send(nrf24_work);
-    TEST_ASSERT_FALSE(Nrf24.ok);
-    Nrf24.send_args.bus = &g_bus;
-    Nrf24.send_args.data = data;
-    Nrf24.send_args.len = 0;
+    TEST_ASSERT_FALSE(Nrf24V.ok);
+    Nrf24V.send_args.bus = &g_bus;
+    Nrf24V.send_args.data = data;
+    Nrf24V.send_args.len = 0;
     Nrf24.send(nrf24_work);
-    TEST_ASSERT_FALSE(Nrf24.ok);
+    TEST_ASSERT_FALSE(Nrf24V.ok);
 }
 
 void test_tx_done_null_bus()
 {
-    Nrf24.tx_done_args.bus = NULL;
+    Nrf24V.tx_done_args.bus = NULL;
     Nrf24.tx_done(nrf24_work);
-    TEST_ASSERT_FALSE(Nrf24.ok);
+    TEST_ASSERT_FALSE(Nrf24V.ok);
 }
 
 void test_set_rx_null_bus_is_noop()
 {
-    Nrf24.set_rx_args.bus = NULL;
+    Nrf24V.set_rx_args.bus = NULL;
     Nrf24.set_rx(nrf24_work);
 }
 
 void test_recv_rejects_null_args()
 {
     uint8_t buf[16];
-    Nrf24.recv_args.bus = NULL;
-    Nrf24.recv_args.buf = buf;
-    Nrf24.recv_args.cap = sizeof(buf);
-    Nrf24.recv_args.pipe = NULL;
+    Nrf24V.recv_args.bus = NULL;
+    Nrf24V.recv_args.buf = buf;
+    Nrf24V.recv_args.cap = sizeof(buf);
+    Nrf24V.recv_args.pipe = NULL;
     Nrf24.recv(nrf24_work);
-    TEST_ASSERT_EQUAL_INT(-1, Nrf24.n);
-    Nrf24.recv_args.bus = &g_bus;
-    Nrf24.recv_args.buf = NULL;
-    Nrf24.recv_args.cap = sizeof(buf);
-    Nrf24.recv_args.pipe = NULL;
+    TEST_ASSERT_EQUAL_INT(-1, Nrf24V.n);
+    Nrf24V.recv_args.bus = &g_bus;
+    Nrf24V.recv_args.buf = NULL;
+    Nrf24V.recv_args.cap = sizeof(buf);
+    Nrf24V.recv_args.pipe = NULL;
     Nrf24.recv(nrf24_work);
-    TEST_ASSERT_EQUAL_INT(-1, Nrf24.n);
+    TEST_ASSERT_EQUAL_INT(-1, Nrf24V.n);
 }
 
 void test_recv_with_null_pipe_out_ok()
@@ -347,14 +347,13 @@ void test_recv_with_null_pipe_out_ok()
     }
     g.reg[0x07] = 0x40 | (3 << 1);
     uint8_t buf[16];
-    Nrf24.recv_args.bus = &g_bus;
-    Nrf24.recv_args.buf = buf;
-    Nrf24.recv_args.cap = sizeof(buf);
-    Nrf24.recv_args.pipe = NULL;
+    Nrf24V.recv_args.bus = &g_bus;
+    Nrf24V.recv_args.buf = buf;
+    Nrf24V.recv_args.cap = sizeof(buf);
+    Nrf24V.recv_args.pipe = NULL;
     Nrf24.recv(nrf24_work);
-    int n = Nrf24.n;
+    int n = Nrf24V.n;
     TEST_ASSERT_EQUAL_INT(8, n);
     TEST_ASSERT_EQUAL_MEMORY(g.rx_payload, buf, 8);
     TEST_ASSERT_EQUAL_HEX8(0x00, g.reg[0x07] & 0x40);
 }
-

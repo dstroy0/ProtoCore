@@ -26,12 +26,12 @@ void dbench_run(void)
         DBENCH_OP("protocore_sht3x_temp_mc", 200000, sink += protocore_sht3x_temp_mc(0x613D));
         DBENCH_OP("protocore_sht3x_rh_mpct", 200000, sink += protocore_sht3x_rh_mpct(0x425C));
         int32_t t, rh;
-        Sht3x.parse_args.resp = resp;
-        Sht3x.parse_args.temp_mc = &t;
-        Sht3x.parse_args.rh_mpct = &rh;
+        Sht3xV.parse_args.resp = resp;
+        Sht3xV.parse_args.temp_mc = &t;
+        Sht3xV.parse_args.rh_mpct = &rh;
         DBENCH_OP("protocore_sht3x_parse (6B resp)", 200000, {
             Sht3x.parse(protocore_sht3x_span());
-            sink += Sht3x.ok ? t : 0;
+            sink += Sht3xV.ok ? t : 0;
         });
         (void)sink;
         DBENCH_DONE();

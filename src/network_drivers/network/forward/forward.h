@@ -168,8 +168,7 @@ typedef struct
  */
 typedef struct
 {
-    uint8_t src_if; ///< the source interface a forwarding call names
-
+    uint8_t src_if;     ///< the source interface a forwarding call names
     FwdRuleArgs rule;   ///< the (src, dst) pair a control governs
     FwdMatchArgs match; ///< the byte pattern an entry or a route matches on
     FwdAclArgs acl;     ///< the access list's verdicts
@@ -178,26 +177,58 @@ typedef struct
 #if PROTOCORE_FWD_INSPECT
     FwdInspectArgs inspect; ///< the ingress inspection hook
 #endif
-
     proto_bool ok;
     uint8_t n;
     protocore_forward_stats stats;
+#if PROTOCORE_FWD_INSPECT
+#endif
+} ForwardVars;
 
+/** @brief The operands and the outcome. */
+extern ForwardVars ForwardV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const reset)(uint8_t *restrict work);
     void (*const add_rule)(uint8_t *restrict work);
     void (*const acl_set_default)(uint8_t *restrict work);
     void (*const acl_add)(uint8_t *restrict work);
     void (*const route_add)(uint8_t *restrict work);
-#if PROTOCORE_FWD_INSPECT
     void (*const set_inspector)(uint8_t *restrict work);
-#endif
     void (*const ingress)(uint8_t *restrict work);
     void (*const get_stats)(uint8_t *restrict work);
-
 } ForwardNs;
 
-/** @brief The one symbol this module exports. */
-extern ForwardNs Forward;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ForwardV or a region of the borrow at a fixed offset.
+void protocore_forward_reset(uint8_t *restrict work);
+void protocore_forward_add_rule(uint8_t *restrict work);
+void protocore_forward_acl_set_default(uint8_t *restrict work);
+void protocore_forward_acl_add(uint8_t *restrict work);
+void protocore_forward_route_add(uint8_t *restrict work);
+#if PROTOCORE_FWD_INSPECT
+void protocore_forward_set_inspector(uint8_t *restrict work);
+#endif
+void protocore_forward_ingress(uint8_t *restrict work);
+void protocore_forward_get_stats(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Forward.reset(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ForwardNs Forward __attribute__((unused)) = {
+    .reset = protocore_forward_reset,
+    .add_rule = protocore_forward_add_rule,
+    .acl_set_default = protocore_forward_acl_set_default,
+    .acl_add = protocore_forward_acl_add,
+    .route_add = protocore_forward_route_add,
+#if PROTOCORE_FWD_INSPECT
+    .set_inspector = protocore_forward_set_inspector,
+#endif
+    .ingress = protocore_forward_ingress,
+    .get_stats = protocore_forward_get_stats,
+};
 
 /**
  * @brief The PROTOCORE_FORWARD_BORROW bytes this module's state lives in.

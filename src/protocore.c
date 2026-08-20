@@ -554,9 +554,9 @@ void on_sse(const char *path, SseConnectHandler on_connect)
 
     fill_route_base(r, path);
     r->type = ROUTE_SSE;
-    Sse.route.on_connect = on_connect;
+    SseV.route.on_connect = on_connect;
     Sse.route_add(protocore_sse_span());
-    r->sse_id = Sse.u8;
+    r->sse_id = SseV.u8;
 }
 #endif // PROTOCORE_ENABLE_SSE
 

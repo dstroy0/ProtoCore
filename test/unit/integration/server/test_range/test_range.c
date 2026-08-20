@@ -52,7 +52,7 @@ void setUp()
     Ws.init(protocore_ws_span());
     Sse.init(protocore_sse_span());
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text("/data.bin", FILE_DATA));
     tcp_capture_reset();

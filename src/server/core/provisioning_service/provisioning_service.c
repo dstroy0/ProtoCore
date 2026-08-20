@@ -57,15 +57,15 @@ uint8_t *protocore_provisioning_service_span(void)
     return s_own.span;
 }
 
-static void provisioning_service_form_field(uint8_t *restrict work);
+void protocore_prov_form_field(uint8_t *restrict work);
 
-static void provisioning_service_form_field(uint8_t *restrict work)
+void protocore_prov_form_field(uint8_t *restrict work)
 {
     (void)work;
-    const char *body = Prov.form_field_args.body;
-    const char *key = Prov.form_field_args.key;
-    char *out = Prov.form_field_args.out;
-    size_t cap = Prov.form_field_args.cap;
+    const char *body = ProvV.form_field_args.body;
+    const char *key = ProvV.form_field_args.key;
+    char *out = ProvV.form_field_args.out;
+    size_t cap = ProvV.form_field_args.cap;
 
     if (out && cap)
     {
@@ -73,7 +73,7 @@ static void provisioning_service_form_field(uint8_t *restrict work)
     }
     if (!body || !key || !out || cap == 0)
     {
-        Prov.ok = PROTO_FALSE;
+        ProvV.ok = PROTO_FALSE;
         return;
     }
 
@@ -95,7 +95,7 @@ static void provisioning_service_form_field(uint8_t *restrict work)
     }
     if (!val)
     {
-        Prov.ok = PROTO_FALSE;
+        ProvV.ok = PROTO_FALSE;
         return;
     }
 
@@ -135,7 +135,7 @@ static void provisioning_service_form_field(uint8_t *restrict work)
         }
     }
     out[o] = '\0';
-    Prov.ok = PROTO_TRUE;
+    ProvV.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -245,13 +245,13 @@ static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct protocor
     UdpListener.reply(protocore_udp_listener_span());
 }
 
-static void provisioning_service_load(uint8_t *restrict work)
+void protocore_prov_load(uint8_t *restrict work)
 {
     (void)work;
-    char *ssid = Prov.load_args.ssid;
-    size_t ssid_cap = Prov.load_args.ssid_cap;
-    char *psk = Prov.load_args.psk;
-    size_t psk_cap = Prov.load_args.psk_cap;
+    char *ssid = ProvV.load_args.ssid;
+    size_t ssid_cap = ProvV.load_args.ssid_cap;
+    char *psk = ProvV.load_args.psk;
+    size_t psk_cap = ProvV.load_args.psk_cap;
 
     if (ssid && ssid_cap)
     {
@@ -264,7 +264,7 @@ static void provisioning_service_load(uint8_t *restrict work)
     if (!ssid || ssid_cap == 0 ||
         protocore_nvs_get_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_SSID, ssid, ssid_cap) == 0)
     {
-        Prov.ok = PROTO_FALSE;
+        ProvV.ok = PROTO_FALSE;
         return;
     }
     if (psk && psk_cap)
@@ -272,10 +272,10 @@ static void provisioning_service_load(uint8_t *restrict work)
         (void)protocore_nvs_get_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_PSK, psk,
                                     psk_cap); // an open AP has none
     }
-    Prov.ok = PROTO_TRUE;
+    ProvV.ok = PROTO_TRUE;
 }
 
-static void provisioning_service_clear(uint8_t *restrict work)
+void protocore_prov_clear(uint8_t *restrict work)
 {
     (void)work;
 
@@ -296,17 +296,17 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
 
     char ssid[33];
     char psk[64];
-    Prov.form_field_args.body = (const char *)req->body;
-    Prov.form_field_args.key = PROTOCORE_PROV_KEY_SSID;
-    Prov.form_field_args.out = ssid;
-    Prov.form_field_args.cap = sizeof(ssid);
-    provisioning_service_form_field(work);
-    proto_bool have_ssid = Prov.ok && ssid[0] != '\0';
-    Prov.form_field_args.body = (const char *)req->body;
-    Prov.form_field_args.key = PROTOCORE_PROV_KEY_PSK;
-    Prov.form_field_args.out = psk;
-    Prov.form_field_args.cap = sizeof(psk);
-    provisioning_service_form_field(work);
+    ProvV.form_field_args.body = (const char *)req->body;
+    ProvV.form_field_args.key = PROTOCORE_PROV_KEY_SSID;
+    ProvV.form_field_args.out = ssid;
+    ProvV.form_field_args.cap = sizeof(ssid);
+    protocore_prov_form_field(work);
+    proto_bool have_ssid = ProvV.ok && ssid[0] != '\0';
+    ProvV.form_field_args.body = (const char *)req->body;
+    ProvV.form_field_args.key = PROTOCORE_PROV_KEY_PSK;
+    ProvV.form_field_args.out = psk;
+    ProvV.form_field_args.cap = sizeof(psk);
+    protocore_prov_form_field(work);
     if (!have_ssid)
     {
         send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "SSID required");
@@ -319,9 +319,9 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
     protocore_platform_restart();
 }
 
-static void provisioning_service_begin(uint8_t *restrict work)
+void protocore_prov_begin(uint8_t *restrict work)
 {
-    const char *ap_ssid = Prov.begin_args.ap_ssid;
+    const char *ap_ssid = ProvV.begin_args.ap_ssid;
 
     PhysicalV.wifi.ssid = ap_ssid;
     PhysicalV.wifi.password = NULL;
@@ -344,10 +344,8 @@ static void provisioning_service_begin(uint8_t *restrict work)
     on_http("/*", HTTP_GET, prov_form_handler); // any other path -> the form
 }
 
-ProvNs Prov = {.form_field = provisioning_service_form_field,
-               .load = provisioning_service_load,
-               .begin = provisioning_service_begin,
-               .clear = provisioning_service_clear};
+/** @brief The operands and the outcome. */
+ProvVars ProvV;
 
 PROTOCORE_END_DECLS
 

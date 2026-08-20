@@ -121,10 +121,16 @@ typedef struct
     NtlmV2ResponseArgs v2_response_args;
     NtlmSetMicFlagArgs set_mic_flag_args;
     NtlmMicArgs mic_args;
-
     proto_bool ok;
     size_t n;
+} NtlmVars;
 
+/** @brief The operands and the outcome. */
+extern NtlmVars NtlmV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const nt_hash)(uint8_t *restrict work);
     void (*const ntowfv2)(uint8_t *restrict work);
     void (*const v2_response)(uint8_t *restrict work);
@@ -132,8 +138,25 @@ typedef struct
     void (*const mic)(uint8_t *restrict work);
 } NtlmNs;
 
-/** @brief The one symbol this module exports. */
-extern NtlmNs Ntlm;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in NtlmV or a region of the borrow at a fixed offset.
+void protocore_ntlm_nt_hash(uint8_t *restrict work);
+void protocore_ntlm_ntowfv2(uint8_t *restrict work);
+void protocore_ntlm_v2_response(uint8_t *restrict work);
+void protocore_ntlm_set_mic_flag(uint8_t *restrict work);
+void protocore_ntlm_mic(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Ntlm.nt_hash(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const NtlmNs Ntlm __attribute__((unused)) = {
+    .nt_hash = protocore_ntlm_nt_hash,
+    .ntowfv2 = protocore_ntlm_ntowfv2,
+    .v2_response = protocore_ntlm_v2_response,
+    .set_mic_flag = protocore_ntlm_set_mic_flag,
+    .mic = protocore_ntlm_mic,
+};
 
 PROTOCORE_END_DECLS
 

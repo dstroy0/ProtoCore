@@ -25,7 +25,7 @@ static uint8_t suite_mnt_work[16]; // the borrow an entry takes; Mnt never reads
 void setUp(void)
 {
     Mnt.ram(suite_mnt_work);
-    Mnt.args.backend = Mnt.backend;
+    MntV.args.backend = MntV.backend;
     Mnt.mount(suite_mnt_work);
     Mnt.ram_format(suite_mnt_work);
 }

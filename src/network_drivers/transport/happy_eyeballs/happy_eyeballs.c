@@ -59,9 +59,9 @@ static proto_bool eff_is_v6(uint8_t *restrict work)
 
 static int scope_rank(uint8_t *restrict work)
 {
-    Ip.args.ip = HAPPY_EYEBALLS_CTX(work)->ip;
+    IpV.args.ip = HAPPY_EYEBALLS_CTX(work)->ip;
     Ip.classify(ip_work);
-    switch (Ip.scope)
+    switch (IpV.scope)
     {
     case PROTOCORE_IP_SCOPE_GLOBAL:
         return 5;

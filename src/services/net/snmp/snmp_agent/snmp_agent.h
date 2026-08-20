@@ -164,17 +164,22 @@ typedef struct
  */
 typedef struct
 {
-    uint16_t port; ///< the UDP port a listen binds
-
+    uint16_t port;               ///< the UDP port a listen binds
     SnmpCommunityArgs community; ///< what authenticates a message (RFC 1157 sec 3.2.5)
     SnmpObjectArgs object;       ///< what a registration binds (RFC 2578 sec 7)
     SnmpSystemArgs system;       ///< the system group values (RFC 3418 sec 2)
     SnmpMsgArgs msg;             ///< the message pair (RFC 3417 sec 3.1)
     SnmpPduArgs pdu;             ///< the PDU pair (RFC 3416 sec 4.2)
-
     proto_bool ok;
     size_t n;
+} SnmpAgentVars;
 
+/** @brief The operands and the outcome. */
+extern SnmpAgentVars SnmpAgentV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const set_rw_community)(uint8_t *restrict work);
     void (*const set_system)(uint8_t *restrict work);
@@ -186,8 +191,33 @@ typedef struct
     void (*const listen)(uint8_t *restrict work);
 } SnmpAgentNs;
 
-/** @brief The one symbol this module exports. */
-extern SnmpAgentNs SnmpAgent;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SnmpAgentV or a region of the borrow at a fixed offset.
+void protocore_snmp_agent_init(uint8_t *restrict work);
+void protocore_snmp_agent_set_rw_community(uint8_t *restrict work);
+void protocore_snmp_agent_set_system(uint8_t *restrict work);
+void protocore_snmp_agent_add_string(uint8_t *restrict work);
+void protocore_snmp_agent_add_integer(uint8_t *restrict work);
+void protocore_snmp_agent_add_dynamic(uint8_t *restrict work);
+void protocore_snmp_agent_dispatch_pdu(uint8_t *restrict work);
+void protocore_snmp_agent_process(uint8_t *restrict work);
+void protocore_snmp_agent_listen(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `SnmpAgent.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SnmpAgentNs SnmpAgent __attribute__((unused)) = {
+    .init = protocore_snmp_agent_init,
+    .set_rw_community = protocore_snmp_agent_set_rw_community,
+    .set_system = protocore_snmp_agent_set_system,
+    .add_string = protocore_snmp_agent_add_string,
+    .add_integer = protocore_snmp_agent_add_integer,
+    .add_dynamic = protocore_snmp_agent_add_dynamic,
+    .dispatch_pdu = protocore_snmp_agent_dispatch_pdu,
+    .process = protocore_snmp_agent_process,
+    .listen = protocore_snmp_agent_listen,
+};
 
 /**
  * @brief The PROTOCORE_SNMP_AGENT_BORROW bytes this module's state lives in.
@@ -203,6 +233,5 @@ uint8_t *protocore_snmp_agent_span(void);
 PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SNMP
-
 
 #endif // PROTOCORE_SNMP_AGENT_H

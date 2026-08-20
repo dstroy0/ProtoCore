@@ -496,10 +496,10 @@ void protocore_resolver_set_server(uint8_t *restrict work)
         return;
     }
     protocore_ip probe = {PROTOCORE_IP_NONE, {0}};
-    Ip.args.text = ip;
-    Ip.args.out = &probe;
+    IpV.args.text = ip;
+    IpV.args.out = &probe;
     Ip.parse(ip_work);
-    if (!Ip.ok)
+    if (!IpV.ok)
     {
         return;
     }
@@ -524,10 +524,10 @@ void protocore_resolver_resolve(uint8_t *restrict work)
     }
 
     protocore_ip literal = {PROTOCORE_IP_NONE, {0}};
-    Ip.args.text = host;
-    Ip.args.out = &literal;
+    IpV.args.text = host;
+    IpV.args.out = &literal;
     Ip.parse(ip_work);
-    if (Ip.ok) // a dotted quad answers itself, no query
+    if (IpV.ok) // a dotted quad answers itself, no query
     {
         ResolverV.u32 = ((uint32_t)literal.bytes[0] << 24) | ((uint32_t)literal.bytes[1] << 16) |
                         ((uint32_t)literal.bytes[2] << 8) | (uint32_t)literal.bytes[3];
@@ -559,10 +559,10 @@ void protocore_resolver_resolve(uint8_t *restrict work)
     {
         return;
     }
-    Ip.args.text = (const char *)DNS_RESOLVER_CTX(work)->server.buf;
-    Ip.args.out = &server;
+    IpV.args.text = (const char *)DNS_RESOLVER_CTX(work)->server.buf;
+    IpV.args.out = &server;
     Ip.parse(ip_work);
-    if (!Ip.ok)
+    if (!IpV.ok)
     {
         return;
     }

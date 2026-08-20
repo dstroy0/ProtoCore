@@ -123,10 +123,10 @@ void protocore_iface_bridge_map(uint8_t *restrict work)
     r.listen_ip.family = PROTOCORE_IP_NONE; // "any interface" unless a valid address is given
     if (ip && ip[0])
     {
-        Ip.args.text = ip;
-        Ip.args.out = &r.listen_ip;
+        IpV.args.text = ip;
+        IpV.args.out = &r.listen_ip;
         Ip.parse(ip_work);
-        if (!Ip.ok)
+        if (!IpV.ok)
         {
             IfaceBridgeV.ok = PROTO_FALSE;
             return; // malformed bind address

@@ -644,14 +644,14 @@ void test_per_ip_throttle_v6_distinct()
     a.family = PROTOCORE_IP_NONE;
     protocore_ip b;
     b.family = PROTOCORE_IP_NONE;
-    Ip.args.text = "2001:db8::1";
-    Ip.args.out = &a;
+    IpV.args.text = "2001:db8::1";
+    IpV.args.out = &a;
     Ip.parse(ip_work);
-    TEST_ASSERT_TRUE(Ip.ok);
-    Ip.args.text = "2001:db8::2";
-    Ip.args.out = &b;
+    TEST_ASSERT_TRUE(IpV.ok);
+    IpV.args.text = "2001:db8::2";
+    IpV.args.out = &b;
     Ip.parse(ip_work);
-    TEST_ASSERT_TRUE(Ip.ok);
+    TEST_ASSERT_TRUE(IpV.ok);
     for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_MAX; i++)
     {
         TcpListenerV.gate.addr = &a;
@@ -837,14 +837,14 @@ void test_ip_allowlist_v6_cidr()
     in.family = PROTOCORE_IP_NONE;
     protocore_ip out;
     out.family = PROTOCORE_IP_NONE;
-    Ip.args.text = "2001:db8:0:0:1234::abcd";
-    Ip.args.out = &in;
+    IpV.args.text = "2001:db8:0:0:1234::abcd";
+    IpV.args.out = &in;
     Ip.parse(ip_work);
-    TEST_ASSERT_TRUE(Ip.ok);
-    Ip.args.text = "2001:db9::1";
-    Ip.args.out = &out;
+    TEST_ASSERT_TRUE(IpV.ok);
+    IpV.args.text = "2001:db9::1";
+    IpV.args.out = &out;
     Ip.parse(ip_work);
-    TEST_ASSERT_TRUE(Ip.ok);
+    TEST_ASSERT_TRUE(IpV.ok);
     TcpListenerV.gate.addr = &in;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
 

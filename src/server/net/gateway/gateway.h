@@ -200,10 +200,16 @@ typedef struct
     GatewayDownlinkArgs downlink_args;
     GatewayTopicArgs topic_args;
     GatewayGetStatsArgs get_stats_args;
-
     proto_bool ok;
     uint16_t n;
+} GatewayVars;
 
+/** @brief The operands and the outcome. */
+extern GatewayVars GatewayV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const reset)(uint8_t *restrict work);
     void (*const add_port)(uint8_t *restrict work);
     void (*const set_uplink_cb)(uint8_t *restrict work);
@@ -214,8 +220,31 @@ typedef struct
     void (*const get_stats)(uint8_t *restrict work);
 } GatewayNs;
 
-/** @brief The one symbol this module exports. */
-extern GatewayNs Gateway;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in GatewayV or a region of the borrow at a fixed offset.
+void protocore_gateway_reset(uint8_t *restrict work);
+void protocore_gateway_add_port(uint8_t *restrict work);
+void protocore_gateway_set_uplink_cb(uint8_t *restrict work);
+void protocore_gateway_set_topic_prefix(uint8_t *restrict work);
+void protocore_gateway_uplink(uint8_t *restrict work);
+void protocore_gateway_downlink(uint8_t *restrict work);
+void protocore_gateway_topic(uint8_t *restrict work);
+void protocore_gateway_get_stats(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Gateway.reset(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const GatewayNs Gateway __attribute__((unused)) = {
+    .reset = protocore_gateway_reset,
+    .add_port = protocore_gateway_add_port,
+    .set_uplink_cb = protocore_gateway_set_uplink_cb,
+    .set_topic_prefix = protocore_gateway_set_topic_prefix,
+    .uplink = protocore_gateway_uplink,
+    .downlink = protocore_gateway_downlink,
+    .topic = protocore_gateway_topic,
+    .get_stats = protocore_gateway_get_stats,
+};
 
 /**
  * @brief The PROTOCORE_GATEWAY_BORROW bytes this module's state lives in.

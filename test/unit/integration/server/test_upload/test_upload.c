@@ -34,7 +34,7 @@ void setUp()
     Ws.init(protocore_ws_span());
     Sse.init(protocore_sse_span());
     mock_mnt_reset();
-    Mnt.args.backend = mock_mnt();
+    MntV.args.backend = mock_mnt();
     Mnt.mount(mnt_work);
     mock_mnt_write_reset();
     tcp_capture_reset();

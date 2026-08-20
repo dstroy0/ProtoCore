@@ -318,10 +318,10 @@ static void server_send(uint8_t *restrict work, const char *ip, uint16_t port, c
 {
 #if PROTOCORE_HAS_NET_STACK
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
-    Ip.args.text = ip;
-    Ip.args.out = &dst;
+    IpV.args.text = ip;
+    IpV.args.out = &dst;
     Ip.parse(ip_work);
-    if (!Ip.ok)
+    if (!IpV.ok)
     {
         return;
     }

@@ -110,7 +110,7 @@ static inline void http_release_upgrade_bindings(uint8_t slot_id)
     SessionWs.close(NULL);
 #endif
 #if PROTOCORE_ENABLE_SSE
-    Sse.slot = slot_id;
+    SseV.slot = slot_id;
     SessionSse.close(NULL);
 #endif
 }

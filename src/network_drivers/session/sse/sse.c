@@ -22,16 +22,16 @@ void protocore_session_sse_open(uint8_t *restrict work)
 {
     (void)work;
     Sse.alloc(protocore_sse_span());
-    SessionSseV.ok = Sse.conn != NULL;
+    SessionSseV.ok = SseV.conn != NULL;
     if (!SessionSseV.ok)
     {
         return;
     }
 
     Sse.route_connect(protocore_sse_span());
-    if (Sse.handler != NULL)
+    if (SseV.handler != NULL)
     {
-        Sse.handler(Sse.conn->protocore_sse_id);
+        SseV.handler(SseV.conn->protocore_sse_id);
     }
 }
 
@@ -41,7 +41,7 @@ void protocore_session_sse_close(uint8_t *restrict work)
 {
     (void)work;
     Sse.find(protocore_sse_span());
-    SessionSseV.ok = Sse.conn != NULL;
+    SessionSseV.ok = SseV.conn != NULL;
     if (!SessionSseV.ok)
     {
         return; // no stream on this connection: nothing to release

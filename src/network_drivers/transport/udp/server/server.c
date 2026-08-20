@@ -99,9 +99,9 @@ static proto_bool addr_is_group(const protocore_ip *a)
     {
         return PROTO_FALSE;
     }
-    Ip.args.ip = a;
+    IpV.args.ip = a;
     Ip.classify(ip_work);
-    return Ip.scope == PROTOCORE_IP_SCOPE_MULTICAST;
+    return IpV.scope == PROTOCORE_IP_SCOPE_MULTICAST;
 }
 
 /** @brief The slot index UDP_LISTENER_CTX(work)->slot sits at. */
@@ -492,10 +492,10 @@ void protocore_udp_listener_listen_multicast(uint8_t *restrict work)
 {
     protocore_ip group = {PROTOCORE_IP_NONE, {0}};
     UdpListenerV.ok = PROTO_FALSE;
-    Ip.args.text = UdpListenerV.bind.group_ip;
-    Ip.args.out = &group;
+    IpV.args.text = UdpListenerV.bind.group_ip;
+    IpV.args.out = &group;
     Ip.parse(ip_work);
-    if (!Ip.ok)
+    if (!IpV.ok)
     {
         return;
     }
@@ -582,11 +582,11 @@ void protocore_udp_listener_peer_addr(uint8_t *restrict work)
     {
         return;
     }
-    Ip.args.ip = &UdpListenerV.peer_args.peer->addr;
-    Ip.args.buf = UdpListenerV.peer_args.ip_out;
-    Ip.args.cap = UdpListenerV.peer_args.ip_cap;
+    IpV.args.ip = &UdpListenerV.peer_args.peer->addr;
+    IpV.args.buf = UdpListenerV.peer_args.ip_out;
+    IpV.args.cap = UdpListenerV.peer_args.ip_cap;
     Ip.format(ip_work);
-    if (Ip.n == 0)
+    if (IpV.n == 0)
     {
         return;
     }
@@ -632,11 +632,11 @@ void protocore_udp_listener_joined_group(uint8_t *restrict work)
     {
         return;
     }
-    Ip.args.ip = &UDP_LISTENER_CTX(work)->slot->group;
-    Ip.args.buf = UDP_LISTENER_CTX(work)->group_text;
-    Ip.args.cap = sizeof(UDP_LISTENER_CTX(work)->group_text);
+    IpV.args.ip = &UDP_LISTENER_CTX(work)->slot->group;
+    IpV.args.buf = UDP_LISTENER_CTX(work)->group_text;
+    IpV.args.cap = sizeof(UDP_LISTENER_CTX(work)->group_text);
     Ip.format(ip_work);
-    if (Ip.n == 0)
+    if (IpV.n == 0)
     {
         return;
     }

@@ -256,10 +256,10 @@ static void send_built(uint8_t *restrict work)
         return;
     }
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
-    Ip.args.text = SnmpNotifyV.dst.dst_ip;
-    Ip.args.out = &dst;
+    IpV.args.text = SnmpNotifyV.dst.dst_ip;
+    IpV.args.out = &dst;
     Ip.parse(ip_work);
-    if (!Ip.ok)
+    if (!IpV.ok)
     {
         SnmpNotifyV.ok = PROTO_FALSE;
         return;

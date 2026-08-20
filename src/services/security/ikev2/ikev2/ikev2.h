@@ -828,8 +828,7 @@ typedef struct
  */
 typedef struct
 {
-    uint8_t *work; ///< the caller's scratch region the hash, PRF and signature calls borrow
-
+    uint8_t *work;        ///< the caller's scratch region the hash, PRF and signature calls borrow
     IkeHeader hdr;        ///< the IKE header a build encodes and a parse decodes (sec 3.1)
     IkeOutArgs out;       ///< where a build writes
     IkeWireArgs wire;     ///< the octets a parse reads
@@ -847,7 +846,6 @@ typedef struct
     IkeMsgArgs msg;       ///< whole-message assembly (sec 3.1, 3.14)
     IkeWalkArgs walk;     ///< the caller-owned walks (sec 3.2)
     IkeSessionArgs sess;  ///< the SA or handshake a call acts on (sec 1.2)
-
     proto_bool ok;
     size_t n;
     uint8_t u8;
@@ -865,14 +863,20 @@ typedef struct
     IkeCpRef cp_ref;
     IkeInnerRef opened;
     IkeSaInitMsg sa_init;
+} IkeVars;
 
+/** @brief The operands and the outcome. */
+extern IkeVars IkeV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const hdr_build)(uint8_t *restrict work);
     void (*const hdr_parse)(uint8_t *restrict work);
     void (*const set_length)(uint8_t *restrict work);
     void (*const payload_iter_init)(uint8_t *restrict work);
     void (*const payload_next)(uint8_t *restrict work);
     void (*const payload_build)(uint8_t *restrict work);
-
     void (*const sa_build)(uint8_t *restrict work);
     void (*const ke_build)(uint8_t *restrict work);
     void (*const nonce_build)(uint8_t *restrict work);
@@ -884,18 +888,15 @@ typedef struct
     void (*const ts_build)(uint8_t *restrict work);
     void (*const cp_build)(uint8_t *restrict work);
     void (*const sk_build)(uint8_t *restrict work);
-
     void (*const skf_build)(uint8_t *restrict work);
     void (*const skf_parse)(uint8_t *restrict work);
     void (*const frag_reasm_init)(uint8_t *restrict work);
     void (*const frag_reasm_add)(uint8_t *restrict work);
     void (*const frag_reasm_complete)(uint8_t *restrict work);
     void (*const frag_reasm_assemble)(uint8_t *restrict work);
-
     void (*const cookie_compute)(uint8_t *restrict work);
     void (*const cookie_verify)(uint8_t *restrict work);
     void (*const cookie_notify_build)(uint8_t *restrict work);
-
     void (*const ke_parse)(uint8_t *restrict work);
     void (*const id_parse)(uint8_t *restrict work);
     void (*const auth_parse)(uint8_t *restrict work);
@@ -910,44 +911,181 @@ typedef struct
     void (*const cp_parse)(uint8_t *restrict work);
     void (*const cp_attr_iter_init)(uint8_t *restrict work);
     void (*const cp_attr_next)(uint8_t *restrict work);
-
     void (*const prf_plus)(uint8_t *restrict work);
     void (*const derive_keys)(uint8_t *restrict work);
     void (*const rekey_derive_keys)(uint8_t *restrict work);
     void (*const child_keymat)(uint8_t *restrict work);
     void (*const suite_keylengths)(uint8_t *restrict work);
     void (*const sa_keys_from_init)(uint8_t *restrict work);
-
     void (*const sk_aead_seal)(uint8_t *restrict work);
     void (*const sk_aead_open)(uint8_t *restrict work);
     void (*const dh_public)(uint8_t *restrict work);
     void (*const dh_compute)(uint8_t *restrict work);
-
     void (*const auth_psk)(uint8_t *restrict work);
     void (*const signed_octets)(uint8_t *restrict work);
     void (*const auth_sign_ecdsa_p256)(uint8_t *restrict work);
     void (*const auth_verify_ecdsa_p256)(uint8_t *restrict work);
     void (*const auth_verify_rsa_sha256)(uint8_t *restrict work);
-
     void (*const sa_init_build)(uint8_t *restrict work);
     void (*const sa_init_parse)(uint8_t *restrict work);
     void (*const auth_msg_build)(uint8_t *restrict work);
     void (*const auth_msg_open)(uint8_t *restrict work);
-
     void (*const initiator_start)(uint8_t *restrict work);
     void (*const initiator_on_sa_init)(uint8_t *restrict work);
     void (*const initiator_build_auth_psk)(uint8_t *restrict work);
     void (*const initiator_on_auth_psk)(uint8_t *restrict work);
     void (*const responder_on_sa_init)(uint8_t *restrict work);
     void (*const responder_on_auth_psk)(uint8_t *restrict work);
-
     void (*const informational_build)(uint8_t *restrict work);
     void (*const informational_open)(uint8_t *restrict work);
     void (*const create_child_sa_build)(uint8_t *restrict work);
 } IkeNs;
 
-/** @brief The one symbol this module exports. */
-extern IkeNs Ike;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in IkeV or a region of the borrow at a fixed offset.
+void protocore_ike_hdr_build(uint8_t *restrict work);
+void protocore_ike_hdr_parse(uint8_t *restrict work);
+void protocore_ike_set_length(uint8_t *restrict work);
+void protocore_ike_payload_iter_init(uint8_t *restrict work);
+void protocore_ike_payload_next(uint8_t *restrict work);
+void protocore_ike_payload_build(uint8_t *restrict work);
+void protocore_ike_sa_build(uint8_t *restrict work);
+void protocore_ike_ke_build(uint8_t *restrict work);
+void protocore_ike_nonce_build(uint8_t *restrict work);
+void protocore_ike_id_build(uint8_t *restrict work);
+void protocore_ike_auth_build(uint8_t *restrict work);
+void protocore_ike_cert_build(uint8_t *restrict work);
+void protocore_ike_notify_build(uint8_t *restrict work);
+void protocore_ike_delete_build(uint8_t *restrict work);
+void protocore_ike_ts_build(uint8_t *restrict work);
+void protocore_ike_cp_build(uint8_t *restrict work);
+void protocore_ike_sk_build(uint8_t *restrict work);
+void protocore_ike_skf_build(uint8_t *restrict work);
+void protocore_ike_skf_parse(uint8_t *restrict work);
+void protocore_ike_frag_reasm_init(uint8_t *restrict work);
+void protocore_ike_frag_reasm_add(uint8_t *restrict work);
+void protocore_ike_frag_reasm_complete(uint8_t *restrict work);
+void protocore_ike_frag_reasm_assemble(uint8_t *restrict work);
+void protocore_ike_cookie_compute(uint8_t *restrict work);
+void protocore_ike_cookie_verify(uint8_t *restrict work);
+void protocore_ike_cookie_notify_build(uint8_t *restrict work);
+void protocore_ike_ke_parse(uint8_t *restrict work);
+void protocore_ike_id_parse(uint8_t *restrict work);
+void protocore_ike_auth_parse(uint8_t *restrict work);
+void protocore_ike_notify_parse(uint8_t *restrict work);
+void protocore_ike_delete_parse(uint8_t *restrict work);
+void protocore_ike_sk_parse(uint8_t *restrict work);
+void protocore_ike_sa_first_proposal(uint8_t *restrict work);
+void protocore_ike_transform_iter_init(uint8_t *restrict work);
+void protocore_ike_transform_next(uint8_t *restrict work);
+void protocore_ike_ts_count(uint8_t *restrict work);
+void protocore_ike_ts_get(uint8_t *restrict work);
+void protocore_ike_cp_parse(uint8_t *restrict work);
+void protocore_ike_cp_attr_iter_init(uint8_t *restrict work);
+void protocore_ike_cp_attr_next(uint8_t *restrict work);
+void protocore_ike_prf_plus(uint8_t *restrict work);
+void protocore_ike_derive_keys(uint8_t *restrict work);
+void protocore_ike_rekey_derive_keys(uint8_t *restrict work);
+void protocore_ike_child_keymat(uint8_t *restrict work);
+void protocore_ike_suite_keylengths(uint8_t *restrict work);
+void protocore_ike_sa_keys_from_init(uint8_t *restrict work);
+void protocore_ike_sk_aead_seal(uint8_t *restrict work);
+void protocore_ike_sk_aead_open(uint8_t *restrict work);
+void protocore_ike_dh_public(uint8_t *restrict work);
+void protocore_ike_dh_compute(uint8_t *restrict work);
+void protocore_ike_auth_psk(uint8_t *restrict work);
+void protocore_ike_signed_octets(uint8_t *restrict work);
+void protocore_ike_auth_sign_ecdsa_p256(uint8_t *restrict work);
+void protocore_ike_auth_verify_ecdsa_p256(uint8_t *restrict work);
+void protocore_ike_auth_verify_rsa_sha256(uint8_t *restrict work);
+void protocore_ike_sa_init_build(uint8_t *restrict work);
+void protocore_ike_sa_init_parse(uint8_t *restrict work);
+void protocore_ike_auth_msg_build(uint8_t *restrict work);
+void protocore_ike_auth_msg_open(uint8_t *restrict work);
+void protocore_ike_initiator_start(uint8_t *restrict work);
+void protocore_ike_initiator_on_sa_init(uint8_t *restrict work);
+void protocore_ike_initiator_build_auth_psk(uint8_t *restrict work);
+void protocore_ike_initiator_on_auth_psk(uint8_t *restrict work);
+void protocore_ike_responder_on_sa_init(uint8_t *restrict work);
+void protocore_ike_responder_on_auth_psk(uint8_t *restrict work);
+void protocore_ike_informational_build(uint8_t *restrict work);
+void protocore_ike_informational_open(uint8_t *restrict work);
+void protocore_ike_create_child_sa_build(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Ike.hdr_build(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const IkeNs Ike __attribute__((unused)) = {
+    .hdr_build = protocore_ike_hdr_build,
+    .hdr_parse = protocore_ike_hdr_parse,
+    .set_length = protocore_ike_set_length,
+    .payload_iter_init = protocore_ike_payload_iter_init,
+    .payload_next = protocore_ike_payload_next,
+    .payload_build = protocore_ike_payload_build,
+    .sa_build = protocore_ike_sa_build,
+    .ke_build = protocore_ike_ke_build,
+    .nonce_build = protocore_ike_nonce_build,
+    .id_build = protocore_ike_id_build,
+    .auth_build = protocore_ike_auth_build,
+    .cert_build = protocore_ike_cert_build,
+    .notify_build = protocore_ike_notify_build,
+    .delete_build = protocore_ike_delete_build,
+    .ts_build = protocore_ike_ts_build,
+    .cp_build = protocore_ike_cp_build,
+    .sk_build = protocore_ike_sk_build,
+    .skf_build = protocore_ike_skf_build,
+    .skf_parse = protocore_ike_skf_parse,
+    .frag_reasm_init = protocore_ike_frag_reasm_init,
+    .frag_reasm_add = protocore_ike_frag_reasm_add,
+    .frag_reasm_complete = protocore_ike_frag_reasm_complete,
+    .frag_reasm_assemble = protocore_ike_frag_reasm_assemble,
+    .cookie_compute = protocore_ike_cookie_compute,
+    .cookie_verify = protocore_ike_cookie_verify,
+    .cookie_notify_build = protocore_ike_cookie_notify_build,
+    .ke_parse = protocore_ike_ke_parse,
+    .id_parse = protocore_ike_id_parse,
+    .auth_parse = protocore_ike_auth_parse,
+    .notify_parse = protocore_ike_notify_parse,
+    .delete_parse = protocore_ike_delete_parse,
+    .sk_parse = protocore_ike_sk_parse,
+    .sa_first_proposal = protocore_ike_sa_first_proposal,
+    .transform_iter_init = protocore_ike_transform_iter_init,
+    .transform_next = protocore_ike_transform_next,
+    .ts_count = protocore_ike_ts_count,
+    .ts_get = protocore_ike_ts_get,
+    .cp_parse = protocore_ike_cp_parse,
+    .cp_attr_iter_init = protocore_ike_cp_attr_iter_init,
+    .cp_attr_next = protocore_ike_cp_attr_next,
+    .prf_plus = protocore_ike_prf_plus,
+    .derive_keys = protocore_ike_derive_keys,
+    .rekey_derive_keys = protocore_ike_rekey_derive_keys,
+    .child_keymat = protocore_ike_child_keymat,
+    .suite_keylengths = protocore_ike_suite_keylengths,
+    .sa_keys_from_init = protocore_ike_sa_keys_from_init,
+    .sk_aead_seal = protocore_ike_sk_aead_seal,
+    .sk_aead_open = protocore_ike_sk_aead_open,
+    .dh_public = protocore_ike_dh_public,
+    .dh_compute = protocore_ike_dh_compute,
+    .auth_psk = protocore_ike_auth_psk,
+    .signed_octets = protocore_ike_signed_octets,
+    .auth_sign_ecdsa_p256 = protocore_ike_auth_sign_ecdsa_p256,
+    .auth_verify_ecdsa_p256 = protocore_ike_auth_verify_ecdsa_p256,
+    .auth_verify_rsa_sha256 = protocore_ike_auth_verify_rsa_sha256,
+    .sa_init_build = protocore_ike_sa_init_build,
+    .sa_init_parse = protocore_ike_sa_init_parse,
+    .auth_msg_build = protocore_ike_auth_msg_build,
+    .auth_msg_open = protocore_ike_auth_msg_open,
+    .initiator_start = protocore_ike_initiator_start,
+    .initiator_on_sa_init = protocore_ike_initiator_on_sa_init,
+    .initiator_build_auth_psk = protocore_ike_initiator_build_auth_psk,
+    .initiator_on_auth_psk = protocore_ike_initiator_on_auth_psk,
+    .responder_on_sa_init = protocore_ike_responder_on_sa_init,
+    .responder_on_auth_psk = protocore_ike_responder_on_auth_psk,
+    .informational_build = protocore_ike_informational_build,
+    .informational_open = protocore_ike_informational_open,
+    .create_child_sa_build = protocore_ike_create_child_sa_build,
+};
 
 PROTOCORE_END_DECLS
 

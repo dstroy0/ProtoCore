@@ -310,9 +310,9 @@ static void rfwd_on_accept(uint8_t conn_slot)
     ConnPool.remote_addr(protocore_conn_pool_span());
     if (ConnPoolV.ok)
     {
-        Ip.args.ip = &rip;
-        Ip.args.buf = orig;
-        Ip.args.cap = sizeof(orig);
+        IpV.args.ip = &rip;
+        IpV.args.buf = orig;
+        IpV.args.cap = sizeof(orig);
         Ip.format(ip_work);
     }
     // Open the forwarded-tcpip channel back to the client, echoing the requested bind

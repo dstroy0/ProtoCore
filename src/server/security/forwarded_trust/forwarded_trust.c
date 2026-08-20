@@ -51,28 +51,28 @@ static_assert(FORWARDED_TRUST_OFF_CTX % _Alignof(protocore_forwarded_trust_ctx) 
 // Read @p text as an address into @p out.
 static proto_bool ip_parse(const char *text, protocore_ip *out)
 {
-    Ip.args.text = text;
-    Ip.args.out = out;
+    IpV.args.text = text;
+    IpV.args.out = out;
     Ip.parse(ip_work);
-    return Ip.ok;
+    return IpV.ok;
 }
 
 // Whether @p addr falls inside @p net at @p prefix_len bits.
 static proto_bool ip_in_prefix(const protocore_ip *addr, const protocore_ip *net, uint8_t prefix_len)
 {
-    Ip.args.ip = addr;
-    Ip.args.b = net;
-    Ip.args.prefix_len = prefix_len;
+    IpV.args.ip = addr;
+    IpV.args.b = net;
+    IpV.args.prefix_len = prefix_len;
     Ip.prefix_match(ip_work);
-    return Ip.ok;
+    return IpV.ok;
 }
 
 // Whether @p ip names nothing: no family, or the all-zero address.
 static proto_bool ip_none(const protocore_ip *ip)
 {
-    Ip.args.ip = ip;
+    IpV.args.ip = ip;
     Ip.is_unspecified(ip_work);
-    return Ip.ok;
+    return IpV.ok;
 }
 
 // --- the program's shared state, beside the namespace not on it -------------
