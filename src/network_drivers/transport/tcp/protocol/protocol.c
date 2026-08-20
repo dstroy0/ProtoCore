@@ -951,7 +951,7 @@ protocore_net_err lowlevel_sent_cb(void *arg, protocore_pcb *tpcb, proto_u16 len
         {
             // The send window just freed: wake the owning worker so a paced response resumes now
             // rather than on the next idle sweep.
-            Workers.worker_id = slot->owner;
+            WorkersV.worker_id = slot->owner;
             Workers.wake(protocore_worker_span());
         }
     }

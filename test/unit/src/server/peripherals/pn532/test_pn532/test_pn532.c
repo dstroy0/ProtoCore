@@ -43,26 +43,26 @@ void test_um0701_getfirmwareversion_frames(void)
     // the command frame, built from its command code alone
     static const uint8_t GET_FIRMWARE_VERSION[1] = {0x02};
     uint8_t out[32];
-    Pn532.build_frame_args.tfi = PN532_TFI_HOST;
-    Pn532.build_frame_args.data = GET_FIRMWARE_VERSION;
-    Pn532.build_frame_args.len = 1;
-    Pn532.build_frame_args.out = out;
-    Pn532.build_frame_args.cap = sizeof(out);
+    Pn532V.build_frame_args.tfi = PN532_TFI_HOST;
+    Pn532V.build_frame_args.data = GET_FIRMWARE_VERSION;
+    Pn532V.build_frame_args.len = 1;
+    Pn532V.build_frame_args.out = out;
+    Pn532V.build_frame_args.cap = sizeof(out);
     Pn532.build_frame(pn532_work);
-    TEST_ASSERT_EQUAL_UINT16(sizeof(CMD), Pn532.len);
+    TEST_ASSERT_EQUAL_UINT16(sizeof(CMD), Pn532V.len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(CMD, out, sizeof(CMD));
 
     // the response frame, framed and checked
     uint8_t tfi = 0;
     const uint8_t *pdata = NULL;
     uint8_t pdata_len = 0;
-    Pn532.parse_frame_args.raw = RSP;
-    Pn532.parse_frame_args.len = sizeof(RSP);
-    Pn532.parse_frame_args.tfi = &tfi;
-    Pn532.parse_frame_args.pdata = &pdata;
-    Pn532.parse_frame_args.pdata_len = &pdata_len;
+    Pn532V.parse_frame_args.raw = RSP;
+    Pn532V.parse_frame_args.len = sizeof(RSP);
+    Pn532V.parse_frame_args.tfi = &tfi;
+    Pn532V.parse_frame_args.pdata = &pdata;
+    Pn532V.parse_frame_args.pdata_len = &pdata_len;
     Pn532.parse_frame(pn532_work);
-    TEST_ASSERT_EQUAL_INT((int)sizeof(RSP), Pn532.n);
+    TEST_ASSERT_EQUAL_INT((int)sizeof(RSP), Pn532V.n);
     TEST_ASSERT_EQUAL_HEX8(PN532_TFI_PN532, tfi);
     TEST_ASSERT_EQUAL_UINT8(5, pdata_len);
 
@@ -71,13 +71,13 @@ void test_um0701_getfirmwareversion_frames(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, pdata, sizeof(WANT));
 
     // and building it back from those five bytes reproduces the published frame.
-    Pn532.build_frame_args.tfi = PN532_TFI_PN532;
-    Pn532.build_frame_args.data = WANT;
-    Pn532.build_frame_args.len = 5;
-    Pn532.build_frame_args.out = out;
-    Pn532.build_frame_args.cap = sizeof(out);
+    Pn532V.build_frame_args.tfi = PN532_TFI_PN532;
+    Pn532V.build_frame_args.data = WANT;
+    Pn532V.build_frame_args.len = 5;
+    Pn532V.build_frame_args.out = out;
+    Pn532V.build_frame_args.cap = sizeof(out);
     Pn532.build_frame(pn532_work);
-    TEST_ASSERT_EQUAL_UINT16(sizeof(RSP), Pn532.len);
+    TEST_ASSERT_EQUAL_UINT16(sizeof(RSP), Pn532V.len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(RSP, out, sizeof(RSP));
 }
 
@@ -93,33 +93,33 @@ void test_ack_frame(void)
 {
     static const uint8_t ACK[6] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00};
     uint8_t out[6];
-    Pn532.build_ack_args.out = out;
-    Pn532.build_ack_args.cap = sizeof(out);
+    Pn532V.build_ack_args.out = out;
+    Pn532V.build_ack_args.cap = sizeof(out);
     Pn532.build_ack(pn532_work);
-    TEST_ASSERT_EQUAL_UINT16(6, Pn532.len);
+    TEST_ASSERT_EQUAL_UINT16(6, Pn532V.len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ACK, out, sizeof(ACK));
-    Pn532.is_ack_args.raw = ACK;
-    Pn532.is_ack_args.len = sizeof(ACK);
+    Pn532V.is_ack_args.raw = ACK;
+    Pn532V.is_ack_args.len = sizeof(ACK);
     Pn532.is_ack(pn532_work);
-    TEST_ASSERT_TRUE(Pn532.ok);
+    TEST_ASSERT_TRUE(Pn532V.ok);
 
     // five bytes cannot yet be told apart from the head of a longer frame
-    Pn532.is_ack_args.raw = ACK;
-    Pn532.is_ack_args.len = 5;
+    Pn532V.is_ack_args.raw = ACK;
+    Pn532V.is_ack_args.len = 5;
     Pn532.is_ack(pn532_work);
-    TEST_ASSERT_FALSE(Pn532.ok);
-    Pn532.is_ack_args.raw = NULL;
-    Pn532.is_ack_args.len = 6;
+    TEST_ASSERT_FALSE(Pn532V.ok);
+    Pn532V.is_ack_args.raw = NULL;
+    Pn532V.is_ack_args.len = 6;
     Pn532.is_ack(pn532_work);
-    TEST_ASSERT_FALSE(Pn532.ok);
-    Pn532.build_ack_args.out = out;
-    Pn532.build_ack_args.cap = 5;
+    TEST_ASSERT_FALSE(Pn532V.ok);
+    Pn532V.build_ack_args.out = out;
+    Pn532V.build_ack_args.cap = 5;
     Pn532.build_ack(pn532_work);
-    TEST_ASSERT_EQUAL_UINT16(0, Pn532.len);
-    Pn532.build_ack_args.out = NULL;
-    Pn532.build_ack_args.cap = 6;
+    TEST_ASSERT_EQUAL_UINT16(0, Pn532V.len);
+    Pn532V.build_ack_args.out = NULL;
+    Pn532V.build_ack_args.cap = 6;
     Pn532.build_ack(pn532_work);
-    TEST_ASSERT_EQUAL_UINT16(0, Pn532.len);
+    TEST_ASSERT_EQUAL_UINT16(0, Pn532V.len);
 }
 
 // Section 6.2.1.4, NACK frame: 00 00 FF FF 00 00. It shares the ACK's first three bytes and asks
@@ -127,31 +127,31 @@ void test_ack_frame(void)
 void test_nack_is_not_an_ack(void)
 {
     static const uint8_t NACK[6] = {0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00};
-    Pn532.is_ack_args.raw = NACK;
-    Pn532.is_ack_args.len = sizeof(NACK);
+    Pn532V.is_ack_args.raw = NACK;
+    Pn532V.is_ack_args.len = sizeof(NACK);
     Pn532.is_ack(pn532_work);
-    TEST_ASSERT_FALSE(Pn532.ok);
+    TEST_ASSERT_FALSE(Pn532V.ok);
     // nor is it an information frame: LEN + LCS is 0xFF, not 0x00.
-    Pn532.parse_frame_args.raw = NACK;
-    Pn532.parse_frame_args.len = sizeof(NACK);
-    Pn532.parse_frame_args.tfi = NULL;
-    Pn532.parse_frame_args.pdata = NULL;
-    Pn532.parse_frame_args.pdata_len = NULL;
+    Pn532V.parse_frame_args.raw = NACK;
+    Pn532V.parse_frame_args.len = sizeof(NACK);
+    Pn532V.parse_frame_args.tfi = NULL;
+    Pn532V.parse_frame_args.pdata = NULL;
+    Pn532V.parse_frame_args.pdata_len = NULL;
     Pn532.parse_frame(pn532_work);
-    TEST_ASSERT_EQUAL_INT(-1, Pn532.n);
+    TEST_ASSERT_EQUAL_INT(-1, Pn532V.n);
 }
 
 // An ACK is not an information frame either: LEN 0x00 with LCS 0xFF fails the length checksum.
 void test_ack_is_not_an_information_frame(void)
 {
     static const uint8_t ACK[6] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00};
-    Pn532.parse_frame_args.raw = ACK;
-    Pn532.parse_frame_args.len = sizeof(ACK);
-    Pn532.parse_frame_args.tfi = NULL;
-    Pn532.parse_frame_args.pdata = NULL;
-    Pn532.parse_frame_args.pdata_len = NULL;
+    Pn532V.parse_frame_args.raw = ACK;
+    Pn532V.parse_frame_args.len = sizeof(ACK);
+    Pn532V.parse_frame_args.tfi = NULL;
+    Pn532V.parse_frame_args.pdata = NULL;
+    Pn532V.parse_frame_args.pdata_len = NULL;
     Pn532.parse_frame(pn532_work);
-    TEST_ASSERT_EQUAL_INT(-1, Pn532.n);
+    TEST_ASSERT_EQUAL_INT(-1, Pn532V.n);
 }
 
 // Section 6.2.1.5, error frame: 00 00 FF 01 FF 7F 81 00. LEN 1 carries the TFI alone (0x7F, the
@@ -161,13 +161,13 @@ void test_um0701_error_frame(void)
     static const uint8_t ERR[8] = {0x00, 0x00, 0xFF, 0x01, 0xFF, 0x7F, 0x81, 0x00};
     uint8_t tfi = 0;
     uint8_t pdata_len = 0xFF;
-    Pn532.parse_frame_args.raw = ERR;
-    Pn532.parse_frame_args.len = sizeof(ERR);
-    Pn532.parse_frame_args.tfi = &tfi;
-    Pn532.parse_frame_args.pdata = NULL;
-    Pn532.parse_frame_args.pdata_len = &pdata_len;
+    Pn532V.parse_frame_args.raw = ERR;
+    Pn532V.parse_frame_args.len = sizeof(ERR);
+    Pn532V.parse_frame_args.tfi = &tfi;
+    Pn532V.parse_frame_args.pdata = NULL;
+    Pn532V.parse_frame_args.pdata_len = &pdata_len;
     Pn532.parse_frame(pn532_work);
-    TEST_ASSERT_EQUAL_INT(8, Pn532.n);
+    TEST_ASSERT_EQUAL_INT(8, Pn532V.n);
     TEST_ASSERT_EQUAL_HEX8(0x7F, tfi);
     TEST_ASSERT_EQUAL_UINT8(0, pdata_len);
 }
@@ -183,25 +183,25 @@ void test_round_trip(void)
     for (uint8_t len = 0; len <= PROTOCORE_PN532_MAX_DATA; len++)
     {
         uint8_t frame[8 + PROTOCORE_PN532_MAX_DATA];
-        Pn532.build_frame_args.tfi = PN532_TFI_HOST;
-        Pn532.build_frame_args.data = payload;
-        Pn532.build_frame_args.len = len;
-        Pn532.build_frame_args.out = frame;
-        Pn532.build_frame_args.cap = sizeof(frame);
+        Pn532V.build_frame_args.tfi = PN532_TFI_HOST;
+        Pn532V.build_frame_args.data = payload;
+        Pn532V.build_frame_args.len = len;
+        Pn532V.build_frame_args.out = frame;
+        Pn532V.build_frame_args.cap = sizeof(frame);
         Pn532.build_frame(pn532_work);
-        const uint16_t n = Pn532.len;
+        const uint16_t n = Pn532V.len;
         TEST_ASSERT_EQUAL_UINT16((uint16_t)(8 + len), n);
 
         uint8_t tfi = 0;
         const uint8_t *pdata = NULL;
         uint8_t got = 0xFF;
-        Pn532.parse_frame_args.raw = frame;
-        Pn532.parse_frame_args.len = n;
-        Pn532.parse_frame_args.tfi = &tfi;
-        Pn532.parse_frame_args.pdata = &pdata;
-        Pn532.parse_frame_args.pdata_len = &got;
+        Pn532V.parse_frame_args.raw = frame;
+        Pn532V.parse_frame_args.len = n;
+        Pn532V.parse_frame_args.tfi = &tfi;
+        Pn532V.parse_frame_args.pdata = &pdata;
+        Pn532V.parse_frame_args.pdata_len = &got;
         Pn532.parse_frame(pn532_work);
-        TEST_ASSERT_EQUAL_INT((int)n, Pn532.n);
+        TEST_ASSERT_EQUAL_INT((int)n, Pn532V.n);
         TEST_ASSERT_EQUAL_HEX8(PN532_TFI_HOST, tfi);
         TEST_ASSERT_EQUAL_UINT8(len, got);
         if (len)
@@ -218,21 +218,21 @@ void test_incomplete_frame_asks_for_more(void)
     for (uint16_t n = 0; n < (uint16_t)sizeof(RSP); n++)
     {
         // index 0..1 of a partial frame is still a legal preamble, so every prefix is "more needed"
-        Pn532.parse_frame_args.raw = RSP;
-        Pn532.parse_frame_args.len = n;
-        Pn532.parse_frame_args.tfi = NULL;
-        Pn532.parse_frame_args.pdata = NULL;
-        Pn532.parse_frame_args.pdata_len = NULL;
+        Pn532V.parse_frame_args.raw = RSP;
+        Pn532V.parse_frame_args.len = n;
+        Pn532V.parse_frame_args.tfi = NULL;
+        Pn532V.parse_frame_args.pdata = NULL;
+        Pn532V.parse_frame_args.pdata_len = NULL;
         Pn532.parse_frame(pn532_work);
-        TEST_ASSERT_EQUAL_INT_MESSAGE(0, Pn532.n, "prefix");
+        TEST_ASSERT_EQUAL_INT_MESSAGE(0, Pn532V.n, "prefix");
     }
-    Pn532.parse_frame_args.raw = NULL;
-    Pn532.parse_frame_args.len = sizeof(RSP);
-    Pn532.parse_frame_args.tfi = NULL;
-    Pn532.parse_frame_args.pdata = NULL;
-    Pn532.parse_frame_args.pdata_len = NULL;
+    Pn532V.parse_frame_args.raw = NULL;
+    Pn532V.parse_frame_args.len = sizeof(RSP);
+    Pn532V.parse_frame_args.tfi = NULL;
+    Pn532V.parse_frame_args.pdata = NULL;
+    Pn532V.parse_frame_args.pdata_len = NULL;
     Pn532.parse_frame(pn532_work);
-    TEST_ASSERT_EQUAL_INT(0, Pn532.n);
+    TEST_ASSERT_EQUAL_INT(0, Pn532V.n);
 }
 
 // Each field of the frame is checked, and a violation is -1: a resynchronizing reader must be able
@@ -243,63 +243,63 @@ void test_malformed_frames_are_refused(void)
 
     memcpy(bad, RSP, sizeof(RSP));
     bad[0] = 0x01; // preamble
-    Pn532.parse_frame_args.raw = bad;
-    Pn532.parse_frame_args.len = sizeof(bad);
-    Pn532.parse_frame_args.tfi = NULL;
-    Pn532.parse_frame_args.pdata = NULL;
-    Pn532.parse_frame_args.pdata_len = NULL;
+    Pn532V.parse_frame_args.raw = bad;
+    Pn532V.parse_frame_args.len = sizeof(bad);
+    Pn532V.parse_frame_args.tfi = NULL;
+    Pn532V.parse_frame_args.pdata = NULL;
+    Pn532V.parse_frame_args.pdata_len = NULL;
     Pn532.parse_frame(pn532_work);
-    TEST_ASSERT_EQUAL_INT(-1, Pn532.n);
+    TEST_ASSERT_EQUAL_INT(-1, Pn532V.n);
 
     memcpy(bad, RSP, sizeof(RSP));
     bad[2] = 0xFE; // start code 00 FF
-    Pn532.parse_frame_args.raw = bad;
-    Pn532.parse_frame_args.len = sizeof(bad);
-    Pn532.parse_frame_args.tfi = NULL;
-    Pn532.parse_frame_args.pdata = NULL;
-    Pn532.parse_frame_args.pdata_len = NULL;
+    Pn532V.parse_frame_args.raw = bad;
+    Pn532V.parse_frame_args.len = sizeof(bad);
+    Pn532V.parse_frame_args.tfi = NULL;
+    Pn532V.parse_frame_args.pdata = NULL;
+    Pn532V.parse_frame_args.pdata_len = NULL;
     Pn532.parse_frame(pn532_work);
-    TEST_ASSERT_EQUAL_INT(-1, Pn532.n);
+    TEST_ASSERT_EQUAL_INT(-1, Pn532V.n);
 
     memcpy(bad, RSP, sizeof(RSP));
     bad[4] = 0xFB; // LCS: 0x06 + 0xFB != 0x00
-    Pn532.parse_frame_args.raw = bad;
-    Pn532.parse_frame_args.len = sizeof(bad);
-    Pn532.parse_frame_args.tfi = NULL;
-    Pn532.parse_frame_args.pdata = NULL;
-    Pn532.parse_frame_args.pdata_len = NULL;
+    Pn532V.parse_frame_args.raw = bad;
+    Pn532V.parse_frame_args.len = sizeof(bad);
+    Pn532V.parse_frame_args.tfi = NULL;
+    Pn532V.parse_frame_args.pdata = NULL;
+    Pn532V.parse_frame_args.pdata_len = NULL;
     Pn532.parse_frame(pn532_work);
-    TEST_ASSERT_EQUAL_INT(-1, Pn532.n);
+    TEST_ASSERT_EQUAL_INT(-1, Pn532V.n);
 
     memcpy(bad, RSP, sizeof(RSP));
     bad[11] = 0xE8; // DCS one off
-    Pn532.parse_frame_args.raw = bad;
-    Pn532.parse_frame_args.len = sizeof(bad);
-    Pn532.parse_frame_args.tfi = NULL;
-    Pn532.parse_frame_args.pdata = NULL;
-    Pn532.parse_frame_args.pdata_len = NULL;
+    Pn532V.parse_frame_args.raw = bad;
+    Pn532V.parse_frame_args.len = sizeof(bad);
+    Pn532V.parse_frame_args.tfi = NULL;
+    Pn532V.parse_frame_args.pdata = NULL;
+    Pn532V.parse_frame_args.pdata_len = NULL;
     Pn532.parse_frame(pn532_work);
-    TEST_ASSERT_EQUAL_INT(-1, Pn532.n);
+    TEST_ASSERT_EQUAL_INT(-1, Pn532V.n);
 
     memcpy(bad, RSP, sizeof(RSP));
     bad[7] ^= 0x01; // a PData byte, which DCS covers
-    Pn532.parse_frame_args.raw = bad;
-    Pn532.parse_frame_args.len = sizeof(bad);
-    Pn532.parse_frame_args.tfi = NULL;
-    Pn532.parse_frame_args.pdata = NULL;
-    Pn532.parse_frame_args.pdata_len = NULL;
+    Pn532V.parse_frame_args.raw = bad;
+    Pn532V.parse_frame_args.len = sizeof(bad);
+    Pn532V.parse_frame_args.tfi = NULL;
+    Pn532V.parse_frame_args.pdata = NULL;
+    Pn532V.parse_frame_args.pdata_len = NULL;
     Pn532.parse_frame(pn532_work);
-    TEST_ASSERT_EQUAL_INT(-1, Pn532.n);
+    TEST_ASSERT_EQUAL_INT(-1, Pn532V.n);
 
     // LEN 0 has no room for the TFI section 6.2.1.1 requires. LCS keeps the relation.
     static const uint8_t EMPTY[8] = {0x00, 0x00, 0xFF, 0x00, 0x00, 0xD5, 0x2B, 0x00};
-    Pn532.parse_frame_args.raw = EMPTY;
-    Pn532.parse_frame_args.len = sizeof(EMPTY);
-    Pn532.parse_frame_args.tfi = NULL;
-    Pn532.parse_frame_args.pdata = NULL;
-    Pn532.parse_frame_args.pdata_len = NULL;
+    Pn532V.parse_frame_args.raw = EMPTY;
+    Pn532V.parse_frame_args.len = sizeof(EMPTY);
+    Pn532V.parse_frame_args.tfi = NULL;
+    Pn532V.parse_frame_args.pdata = NULL;
+    Pn532V.parse_frame_args.pdata_len = NULL;
     Pn532.parse_frame(pn532_work);
-    TEST_ASSERT_EQUAL_INT(-1, Pn532.n);
+    TEST_ASSERT_EQUAL_INT(-1, Pn532V.n);
 }
 
 // A declared length past what this build accepts is refused at the header, before the reader waits
@@ -308,24 +308,24 @@ void test_over_length_is_refused(void)
 {
     // LEN 20, LCS 0xEC keeps LEN + LCS == 0, so only the length itself is out of range.
     static const uint8_t LONG[8] = {0x00, 0x00, 0xFF, 20, 0xEC, 0xD5, 0x03, 0x00};
-    Pn532.parse_frame_args.raw = LONG;
-    Pn532.parse_frame_args.len = sizeof(LONG);
-    Pn532.parse_frame_args.tfi = NULL;
-    Pn532.parse_frame_args.pdata = NULL;
-    Pn532.parse_frame_args.pdata_len = NULL;
+    Pn532V.parse_frame_args.raw = LONG;
+    Pn532V.parse_frame_args.len = sizeof(LONG);
+    Pn532V.parse_frame_args.tfi = NULL;
+    Pn532V.parse_frame_args.pdata = NULL;
+    Pn532V.parse_frame_args.pdata_len = NULL;
     Pn532.parse_frame(pn532_work);
-    TEST_ASSERT_EQUAL_INT(-1, Pn532.n);
+    TEST_ASSERT_EQUAL_INT(-1, Pn532V.n);
 
     uint8_t payload[PROTOCORE_PN532_MAX_DATA + 1];
     uint8_t out[64];
     memset(payload, 0x5A, sizeof(payload));
-    Pn532.build_frame_args.tfi = PN532_TFI_HOST;
-    Pn532.build_frame_args.data = payload;
-    Pn532.build_frame_args.len = PROTOCORE_PN532_MAX_DATA + 1;
-    Pn532.build_frame_args.out = out;
-    Pn532.build_frame_args.cap = sizeof(out);
+    Pn532V.build_frame_args.tfi = PN532_TFI_HOST;
+    Pn532V.build_frame_args.data = payload;
+    Pn532V.build_frame_args.len = PROTOCORE_PN532_MAX_DATA + 1;
+    Pn532V.build_frame_args.out = out;
+    Pn532V.build_frame_args.cap = sizeof(out);
     Pn532.build_frame(pn532_work);
-    TEST_ASSERT_EQUAL_UINT16(0, Pn532.len);
+    TEST_ASSERT_EQUAL_UINT16(0, Pn532V.len);
 }
 
 // A frame is written whole or not at all, and a null payload with a non-zero length is a caller bug
@@ -335,34 +335,34 @@ void test_build_refuses_bad_arguments(void)
     uint8_t out[32];
     static const uint8_t DATA[2] = {0x02, 0x03};
     out[0] = 0xAA;
-    Pn532.build_frame_args.tfi = PN532_TFI_HOST;
-    Pn532.build_frame_args.data = DATA;
-    Pn532.build_frame_args.len = 2;
-    Pn532.build_frame_args.out = NULL;
-    Pn532.build_frame_args.cap = sizeof(out);
+    Pn532V.build_frame_args.tfi = PN532_TFI_HOST;
+    Pn532V.build_frame_args.data = DATA;
+    Pn532V.build_frame_args.len = 2;
+    Pn532V.build_frame_args.out = NULL;
+    Pn532V.build_frame_args.cap = sizeof(out);
     Pn532.build_frame(pn532_work);
-    TEST_ASSERT_EQUAL_UINT16(0, Pn532.len);
-    Pn532.build_frame_args.tfi = PN532_TFI_HOST;
-    Pn532.build_frame_args.data = DATA;
-    Pn532.build_frame_args.len = 2;
-    Pn532.build_frame_args.out = out;
-    Pn532.build_frame_args.cap = 9;
+    TEST_ASSERT_EQUAL_UINT16(0, Pn532V.len);
+    Pn532V.build_frame_args.tfi = PN532_TFI_HOST;
+    Pn532V.build_frame_args.data = DATA;
+    Pn532V.build_frame_args.len = 2;
+    Pn532V.build_frame_args.out = out;
+    Pn532V.build_frame_args.cap = 9;
     Pn532.build_frame(pn532_work);
-    TEST_ASSERT_EQUAL_UINT16(0, Pn532.len);
+    TEST_ASSERT_EQUAL_UINT16(0, Pn532V.len);
     TEST_ASSERT_EQUAL_HEX8(0xAA, out[0]); // untouched
-    Pn532.build_frame_args.tfi = PN532_TFI_HOST;
-    Pn532.build_frame_args.data = NULL;
-    Pn532.build_frame_args.len = 2;
-    Pn532.build_frame_args.out = out;
-    Pn532.build_frame_args.cap = sizeof(out);
+    Pn532V.build_frame_args.tfi = PN532_TFI_HOST;
+    Pn532V.build_frame_args.data = NULL;
+    Pn532V.build_frame_args.len = 2;
+    Pn532V.build_frame_args.out = out;
+    Pn532V.build_frame_args.cap = sizeof(out);
     Pn532.build_frame(pn532_work);
-    TEST_ASSERT_EQUAL_UINT16(0, Pn532.len);
+    TEST_ASSERT_EQUAL_UINT16(0, Pn532V.len);
     // a null payload with zero length is the empty frame, which is legal
-    Pn532.build_frame_args.tfi = PN532_TFI_HOST;
-    Pn532.build_frame_args.data = NULL;
-    Pn532.build_frame_args.len = 0;
-    Pn532.build_frame_args.out = out;
-    Pn532.build_frame_args.cap = sizeof(out);
+    Pn532V.build_frame_args.tfi = PN532_TFI_HOST;
+    Pn532V.build_frame_args.data = NULL;
+    Pn532V.build_frame_args.len = 0;
+    Pn532V.build_frame_args.out = out;
+    Pn532V.build_frame_args.cap = sizeof(out);
     Pn532.build_frame(pn532_work);
-    TEST_ASSERT_EQUAL_UINT16(8, Pn532.len);
+    TEST_ASSERT_EQUAL_UINT16(8, Pn532V.len);
 }

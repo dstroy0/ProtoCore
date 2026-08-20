@@ -134,19 +134,40 @@ typedef struct
     DshotDecodeArgs decode_args;
     DshotBitNsArgs bit_ns_args;
     DshotEscPwmNsArgs esc_pwm_ns_args;
-
     proto_bool ok;
     uint16_t frame;
     uint32_t ns;
+} DshotVars;
 
+/** @brief The operands and the outcome. */
+extern DshotVars DshotV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const encode)(uint8_t *restrict work);
     void (*const decode)(uint8_t *restrict work);
     void (*const bit_ns)(uint8_t *restrict work);
     void (*const esc_pwm_ns)(uint8_t *restrict work);
 } DshotNs;
 
-/** @brief The one symbol this module exports. */
-extern DshotNs Dshot;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in DshotV or a region of the borrow at a fixed offset.
+void protocore_dshot_encode(uint8_t *restrict work);
+void protocore_dshot_decode(uint8_t *restrict work);
+void protocore_dshot_bit_ns(uint8_t *restrict work);
+void protocore_dshot_esc_pwm_ns(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Dshot.encode(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const DshotNs Dshot __attribute__((unused)) = {
+    .encode = protocore_dshot_encode,
+    .decode = protocore_dshot_decode,
+    .bit_ns = protocore_dshot_bit_ns,
+    .esc_pwm_ns = protocore_dshot_esc_pwm_ns,
+};
 
 PROTOCORE_END_DECLS
 

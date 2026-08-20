@@ -71,27 +71,27 @@ void test_worker_self_id_roundtrip(void)
 void test_worker_lifecycle_raises_and_lowers_the_run_flag(void)
 {
     Workers.running(protocore_worker_span());
-    TEST_ASSERT_FALSE(Workers.ok);
-    Workers.pump = NULL;
+    TEST_ASSERT_FALSE(WorkersV.ok);
+    WorkersV.pump = NULL;
     Workers.start(protocore_worker_span());
     Workers.running(protocore_worker_span());
-    TEST_ASSERT_TRUE(Workers.ok);
-    Workers.pump = NULL;
+    TEST_ASSERT_TRUE(WorkersV.ok);
+    WorkersV.pump = NULL;
     Workers.start(protocore_worker_span());
     Workers.running(protocore_worker_span());
-    TEST_ASSERT_TRUE(Workers.ok);
-    Workers.worker_id = 0;
+    TEST_ASSERT_TRUE(WorkersV.ok);
+    WorkersV.worker_id = 0;
     Workers.wake(protocore_worker_span());
-    Workers.worker_id = -1;
+    WorkersV.worker_id = -1;
     Workers.wake(protocore_worker_span());
-    Workers.worker_id = PROTOCORE_WORKER_COUNT;
+    WorkersV.worker_id = PROTOCORE_WORKER_COUNT;
     Workers.wake(protocore_worker_span());
     Workers.stop(protocore_worker_span());
     Workers.running(protocore_worker_span());
-    TEST_ASSERT_FALSE(Workers.ok);
+    TEST_ASSERT_FALSE(WorkersV.ok);
     Workers.stop(protocore_worker_span());
     Workers.running(protocore_worker_span());
-    TEST_ASSERT_FALSE(Workers.ok);
+    TEST_ASSERT_FALSE(WorkersV.ok);
 }
 
 static void set_flag_to_42(void *arg)
@@ -102,39 +102,39 @@ static void set_flag_to_42(void *arg)
 void test_defer_queues_and_run_deferred_runs_it(void)
 {
     int flag = 0;
-    Workers.pump = NULL;
+    WorkersV.pump = NULL;
     Workers.start(protocore_worker_span());
 
-    Workers.worker_id = 0;
-    Workers.defer_args.fn = NULL;
-    Workers.defer_args.arg = NULL;
+    WorkersV.worker_id = 0;
+    WorkersV.defer_args.fn = NULL;
+    WorkersV.defer_args.arg = NULL;
     Workers.defer(protocore_worker_span());
-    TEST_ASSERT_FALSE(Workers.ok);
-    Workers.worker_id = -1;
-    Workers.defer_args.fn = set_flag_to_42;
-    Workers.defer_args.arg = &flag;
+    TEST_ASSERT_FALSE(WorkersV.ok);
+    WorkersV.worker_id = -1;
+    WorkersV.defer_args.fn = set_flag_to_42;
+    WorkersV.defer_args.arg = &flag;
     Workers.defer(protocore_worker_span());
-    TEST_ASSERT_FALSE(Workers.ok);
-    Workers.worker_id = PROTOCORE_WORKER_COUNT;
-    Workers.defer_args.fn = set_flag_to_42;
-    Workers.defer_args.arg = &flag;
+    TEST_ASSERT_FALSE(WorkersV.ok);
+    WorkersV.worker_id = PROTOCORE_WORKER_COUNT;
+    WorkersV.defer_args.fn = set_flag_to_42;
+    WorkersV.defer_args.arg = &flag;
     Workers.defer(protocore_worker_span());
-    TEST_ASSERT_FALSE(Workers.ok);
+    TEST_ASSERT_FALSE(WorkersV.ok);
 
-    Workers.worker_id = 0;
-    Workers.defer_args.fn = set_flag_to_42;
-    Workers.defer_args.arg = &flag;
+    WorkersV.worker_id = 0;
+    WorkersV.defer_args.fn = set_flag_to_42;
+    WorkersV.defer_args.arg = &flag;
     Workers.defer(protocore_worker_span());
-    TEST_ASSERT_TRUE(Workers.ok);
+    TEST_ASSERT_TRUE(WorkersV.ok);
     TEST_ASSERT_EQUAL_INT(0, flag);
-    Workers.worker_id = 0;
+    WorkersV.worker_id = 0;
     Workers.run_deferred(protocore_worker_span());
     TEST_ASSERT_EQUAL_INT(42, flag);
 
     flag = 0;
-    Workers.worker_id = 0;
+    WorkersV.worker_id = 0;
     Workers.run_deferred(protocore_worker_span());
-    Workers.worker_id = -1;
+    WorkersV.worker_id = -1;
     Workers.run_deferred(protocore_worker_span());
     TEST_ASSERT_EQUAL_INT(0, flag);
 

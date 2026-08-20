@@ -95,13 +95,13 @@ static void put_form_value(protocore_sb *b, const char *s)
             continue;
         }
         Sb.ch(b, '%');
-        Hex.args.upper = PROTO_TRUE;
-        Hex.args.nibble = (uint8_t)(c >> 4);
+        HexV.args.upper = PROTO_TRUE;
+        HexV.args.nibble = (uint8_t)(c >> 4);
         Hex.digit(hex_work);
-        Sb.ch(b, Hex.ch);
-        Hex.args.nibble = (uint8_t)(c & 0x0Fu);
+        Sb.ch(b, HexV.ch);
+        HexV.args.nibble = (uint8_t)(c & 0x0Fu);
         Hex.digit(hex_work);
-        Sb.ch(b, Hex.ch);
+        Sb.ch(b, HexV.ch);
     }
 }
 
@@ -183,36 +183,36 @@ void protocore_oauth2_parse_token_response(uint8_t *restrict work)
     t->token_type[0] = '\0';
     t->expires_in = 0;
 
-    Json.get_str_args.json = json;
-    Json.get_str_args.key = "access_token";
-    Json.get_str_args.out = t->access_token;
-    Json.get_str_args.out_cap = sizeof(t->access_token);
+    JsonV.get_str_args.json = json;
+    JsonV.get_str_args.key = "access_token";
+    JsonV.get_str_args.out = t->access_token;
+    JsonV.get_str_args.out_cap = sizeof(t->access_token);
     Json.get_str(json_work);
-    if (!Json.ok)
+    if (!JsonV.ok)
     {
         return;
     }
-    Json.get_str_args.json = json;
-    Json.get_str_args.key = "id_token";
-    Json.get_str_args.out = t->id_token;
-    Json.get_str_args.out_cap = sizeof(t->id_token);
+    JsonV.get_str_args.json = json;
+    JsonV.get_str_args.key = "id_token";
+    JsonV.get_str_args.out = t->id_token;
+    JsonV.get_str_args.out_cap = sizeof(t->id_token);
     Json.get_str(json_work);
-    Json.get_str_args.json = json;
-    Json.get_str_args.key = "refresh_token";
-    Json.get_str_args.out = t->refresh_token;
-    Json.get_str_args.out_cap = sizeof(t->refresh_token);
+    JsonV.get_str_args.json = json;
+    JsonV.get_str_args.key = "refresh_token";
+    JsonV.get_str_args.out = t->refresh_token;
+    JsonV.get_str_args.out_cap = sizeof(t->refresh_token);
     Json.get_str(json_work);
-    Json.get_str_args.json = json;
-    Json.get_str_args.key = "token_type";
-    Json.get_str_args.out = t->token_type;
-    Json.get_str_args.out_cap = sizeof(t->token_type);
+    JsonV.get_str_args.json = json;
+    JsonV.get_str_args.key = "token_type";
+    JsonV.get_str_args.out = t->token_type;
+    JsonV.get_str_args.out_cap = sizeof(t->token_type);
     Json.get_str(json_work);
     long e = 0;
-    Json.get_int_args.json = json;
-    Json.get_int_args.key = "expires_in";
-    Json.get_int_args.out = &e;
+    JsonV.get_int_args.json = json;
+    JsonV.get_int_args.key = "expires_in";
+    JsonV.get_int_args.out = &e;
     Json.get_int(json_work);
-    if (Json.ok)
+    if (JsonV.ok)
     {
         t->expires_in = e;
     }

@@ -132,10 +132,10 @@ uint8_t *protocore_web_terminal_span(void)
     return s_own.span;
 }
 
-static void web_terminal_begin(uint8_t *restrict work)
+void protocore_web_terminal_begin(uint8_t *restrict work)
 {
     (void)work;
-    const char *path = WebTerminal.begin_args.path;
+    const char *path = WebTerminalV.begin_args.path;
 
     for (uint8_t i = 0; i < MAX_WS_CONNS; i++)
     {
@@ -158,18 +158,18 @@ static void web_terminal_begin(uint8_t *restrict work)
     on_ws(WEB_TERMINAL_CTX(work)->ws_path, term_ws_connect, term_ws_message, term_ws_close);
 }
 
-static void web_terminal_on_command(uint8_t *restrict work)
+void protocore_web_terminal_on_command(uint8_t *restrict work)
 {
     (void)work;
-    TermCommandCb cb = WebTerminal.on_command_args.cb;
+    TermCommandCb cb = WebTerminalV.on_command_args.cb;
 
     WEB_TERMINAL_CTX(work)->cb = cb;
 }
 
-static void web_terminal_print(uint8_t *restrict work)
+void protocore_web_terminal_print(uint8_t *restrict work)
 {
     (void)work;
-    const char *s = WebTerminal.print_args.s;
+    const char *s = WebTerminalV.print_args.s;
 
     if (!s)
     {
@@ -189,27 +189,27 @@ static void web_terminal_print(uint8_t *restrict work)
     }
 }
 
-static void web_terminal_println(uint8_t *restrict work)
+void protocore_web_terminal_println(uint8_t *restrict work)
 {
     (void)work;
-    const char *s = WebTerminal.println_args.s;
+    const char *s = WebTerminalV.println_args.s;
 
     char buf[TERM_TX_BUF_SIZE];
     protocore_sb sb_buf = {buf, sizeof(buf), 0, PROTO_TRUE};
     Sb.put(&sb_buf, s ? s : "");
     Sb.put(&sb_buf, "\n");
-    WebTerminal.print_args.s = buf;
-    web_terminal_print(work);
+    WebTerminalV.print_args.s = buf;
+    protocore_web_terminal_print(work);
     if (Sb.finish(&sb_buf) == 0)
     {
         buf[0] = '\0';
     }
 }
 
-static void web_terminal_client_count(uint8_t *restrict work)
+void protocore_web_terminal_client_count(uint8_t *restrict work)
 {
     (void)work;
-    WebTerminal.value = 0;
+    WebTerminalV.value = 0;
 
     uint8_t n = 0;
     for (uint8_t i = 0; i < MAX_WS_CONNS; i++)
@@ -224,15 +224,12 @@ static void web_terminal_client_count(uint8_t *restrict work)
             }
         }
     }
-    WebTerminal.value = n;
+    WebTerminalV.value = n;
     return;
 }
 
-WebTerminalNs WebTerminal = {.begin = web_terminal_begin,
-                             .on_command = web_terminal_on_command,
-                             .print = web_terminal_print,
-                             .println = web_terminal_println,
-                             .client_count = web_terminal_client_count};
+/** @brief The operands and the outcome. */
+WebTerminalVars WebTerminalV;
 
 PROTOCORE_END_DECLS
 

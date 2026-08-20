@@ -294,7 +294,7 @@ int32_t proto_begin(const WebServerConfig *cfg)
 #if PROTOCORE_HAS_SCHEDULER
     // Routes/listeners are now fixed; start the worker task(s) that drive the
     // pipeline off the user's loop(). On host the pipeline runs inline via handle().
-    SessionV.workers->pump = protocore_pump_trampoline;
+    WorkersV.pump = protocore_pump_trampoline;
     SessionV.workers->start(protocore_worker_span());
 #endif
     return (int32_t)PROTOCORE_OK;
@@ -648,7 +648,7 @@ void handle(void)
 {
 #if PROTOCORE_HAS_SCHEDULER
     SessionV.workers->running(protocore_worker_span());
-    if (SessionV.workers->ok)
+    if (WorkersV.ok)
     {
         return;
     }
@@ -711,7 +711,7 @@ void service_once(int worker_id)
     }
 
     // Run any callbacks app code deferred to this worker (race-free push path).
-    SessionV.workers->worker_id = worker_id;
+    WorkersV.worker_id = worker_id;
     SessionV.workers->run_deferred(protocore_worker_span());
 }
 
@@ -723,11 +723,11 @@ proto_bool defer(uint8_t slot, protocore_deferred_fn fn, void *arg)
     }
     // HttpRoute to the worker that owns the slot so the callback runs single-threaded
     // alongside that slot's own processing.
-    SessionV.workers->worker_id = conn_pool[slot].owner;
-    SessionV.workers->defer_args.fn = fn;
-    SessionV.workers->defer_args.arg = arg;
+    WorkersV.worker_id = conn_pool[slot].owner;
+    WorkersV.defer_args.fn = fn;
+    WorkersV.defer_args.arg = arg;
     SessionV.workers->defer(protocore_worker_span());
-    return SessionV.workers->ok;
+    return WorkersV.ok;
 }
 
 // ---------------------------------------------------------------------------

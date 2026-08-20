@@ -19,18 +19,18 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void netadapt_window(uint8_t *restrict work)
+void protocore_netadapt_window(uint8_t *restrict work)
 {
     (void)work;
-    uint32_t free_heap = Netadapt.window_args.free_heap;
-    uint32_t reserve = Netadapt.window_args.reserve;
-    uint32_t min_win = Netadapt.window_args.min_win;
-    uint32_t max_win = Netadapt.window_args.max_win;
+    uint32_t free_heap = NetadaptV.window_args.free_heap;
+    uint32_t reserve = NetadaptV.window_args.reserve;
+    uint32_t min_win = NetadaptV.window_args.min_win;
+    uint32_t max_win = NetadaptV.window_args.max_win;
 
     uint32_t ceil_win = max_win < min_win ? min_win : max_win;
     if (free_heap <= reserve)
     {
-        Netadapt.u32 = min_win;
+        NetadaptV.u32 = min_win;
         return; // no spare heap: stay at the floor
     }
 
@@ -44,31 +44,32 @@ static void netadapt_window(uint8_t *restrict work)
     {
         win = ceil_win;
     }
-    Netadapt.u32 = win;
+    NetadaptV.u32 = win;
 }
 
-static void netadapt_dhcp_fallback(uint8_t *restrict work)
+void protocore_netadapt_dhcp_fallback(uint8_t *restrict work)
 {
     (void)work;
-    uint32_t elapsed_ms = Netadapt.dhcp_fallback_args.elapsed_ms;
-    uint32_t attempts = Netadapt.dhcp_fallback_args.attempts;
-    uint32_t timeout_ms = Netadapt.dhcp_fallback_args.timeout_ms;
-    uint32_t max_attempts = Netadapt.dhcp_fallback_args.max_attempts;
+    uint32_t elapsed_ms = NetadaptV.dhcp_fallback_args.elapsed_ms;
+    uint32_t attempts = NetadaptV.dhcp_fallback_args.attempts;
+    uint32_t timeout_ms = NetadaptV.dhcp_fallback_args.timeout_ms;
+    uint32_t max_attempts = NetadaptV.dhcp_fallback_args.max_attempts;
 
     if (elapsed_ms >= timeout_ms)
     {
-        Netadapt.ok = PROTO_TRUE;
+        NetadaptV.ok = PROTO_TRUE;
         return;
     }
     if (max_attempts > 0 && attempts >= max_attempts)
     {
-        Netadapt.ok = PROTO_TRUE;
+        NetadaptV.ok = PROTO_TRUE;
         return;
     }
-    Netadapt.ok = PROTO_FALSE;
+    NetadaptV.ok = PROTO_FALSE;
 }
 
-NetadaptNs Netadapt = {.window = netadapt_window, .dhcp_fallback = netadapt_dhcp_fallback};
+/** @brief The operands and the outcome. */
+NetadaptVars NetadaptV;
 
 PROTOCORE_END_DECLS
 

@@ -207,12 +207,18 @@ typedef struct
     HotswapIoArgs io_args;
     HotswapStateNameArgs state_name_args;
     HotswapJsonArgs json_args;
-
     proto_bool ok;
     StorageState value;
     const char *text;
     size_t n;
+} HotswapVars;
 
+/** @brief The operands and the outcome. */
+extern HotswapVars HotswapV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const core_init)(uint8_t *restrict work);
     void (*const core_io)(uint8_t *restrict work);
     void (*const core_due)(uint8_t *restrict work);
@@ -228,8 +234,41 @@ typedef struct
     void (*const json)(uint8_t *restrict work);
 } HotswapNs;
 
-/** @brief The one symbol this module exports. */
-extern HotswapNs Hotswap;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HotswapV or a region of the borrow at a fixed offset.
+void protocore_hotswap_core_init(uint8_t *restrict work);
+void protocore_hotswap_core_io(uint8_t *restrict work);
+void protocore_hotswap_core_due(uint8_t *restrict work);
+void protocore_hotswap_core_probe(uint8_t *restrict work);
+void protocore_hotswap_begin(uint8_t *restrict work);
+void protocore_hotswap_set_event_cb(uint8_t *restrict work);
+void protocore_hotswap_poll(uint8_t *restrict work);
+void protocore_hotswap_poll_at(uint8_t *restrict work);
+void protocore_hotswap_ready(uint8_t *restrict work);
+void protocore_hotswap_io(uint8_t *restrict work);
+void protocore_hotswap_state(uint8_t *restrict work);
+void protocore_hotswap_state_name(uint8_t *restrict work);
+void protocore_hotswap_json(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Hotswap.core_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HotswapNs Hotswap __attribute__((unused)) = {
+    .core_init = protocore_hotswap_core_init,
+    .core_io = protocore_hotswap_core_io,
+    .core_due = protocore_hotswap_core_due,
+    .core_probe = protocore_hotswap_core_probe,
+    .begin = protocore_hotswap_begin,
+    .set_event_cb = protocore_hotswap_set_event_cb,
+    .poll = protocore_hotswap_poll,
+    .poll_at = protocore_hotswap_poll_at,
+    .ready = protocore_hotswap_ready,
+    .io = protocore_hotswap_io,
+    .state = protocore_hotswap_state,
+    .state_name = protocore_hotswap_state_name,
+    .json = protocore_hotswap_json,
+};
 
 /**
  * @brief The PROTOCORE_HOTSWAP_BORROW bytes this module's state lives in.

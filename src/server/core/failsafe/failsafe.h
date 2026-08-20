@@ -102,12 +102,18 @@ typedef struct
 {
     FailsafeArgs args;
     FailsafeOutArgs out_args;
-
     proto_bool ok;
     int i32;
     uint32_t breached;
     int n;
+} FailsafeVars;
 
+/** @brief The operands and the outcome. */
+extern FailsafeVars FailsafeV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const reset)(uint8_t *restrict work);
     void (*const add)(uint8_t *restrict work);
     void (*const feed)(uint8_t *restrict work);
@@ -116,8 +122,27 @@ typedef struct
     void (*const json)(uint8_t *restrict work);
 } FailsafeNs;
 
-/** @brief The one symbol this module exports. */
-extern FailsafeNs Failsafe;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in FailsafeV or a region of the borrow at a fixed offset.
+void protocore_failsafe_reset(uint8_t *restrict work);
+void protocore_failsafe_add(uint8_t *restrict work);
+void protocore_failsafe_feed(uint8_t *restrict work);
+void protocore_failsafe_on_breach(uint8_t *restrict work);
+void protocore_failsafe_check(uint8_t *restrict work);
+void protocore_failsafe_json(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Failsafe.reset(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const FailsafeNs Failsafe __attribute__((unused)) = {
+    .reset = protocore_failsafe_reset,
+    .add = protocore_failsafe_add,
+    .feed = protocore_failsafe_feed,
+    .on_breach = protocore_failsafe_on_breach,
+    .check = protocore_failsafe_check,
+    .json = protocore_failsafe_json,
+};
 
 /**
  * @brief The PROTOCORE_FAILSAFE_BORROW bytes this module's state lives in.

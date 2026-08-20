@@ -248,15 +248,15 @@ static void webdav_dest_path(uint8_t *restrict work)
         char c = *p;
         if (c == '%')
         {
-            Hex.args.ch = p[1];
+            HexV.args.ch = p[1];
             Hex.val(hex_work);
-            const int hi = Hex.i8;
+            const int hi = HexV.i8;
             int lo = -1;
             if (hi >= 0)
             {
-                Hex.args.ch = p[2];
+                HexV.args.ch = p[2];
                 Hex.val(hex_work);
-                lo = Hex.i8;
+                lo = HexV.i8;
             }
             if (hi < 0 || lo < 0)
             {

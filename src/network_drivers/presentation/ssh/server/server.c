@@ -211,7 +211,7 @@ static void net_close(uint8_t conn_slot)
         // Zero all key material and session state for this slot. The span holds every byte the
         // connection used, so wiping it covers all four regions in one pass.
         ssh_keymat_wipe(j);
-        SshAuth.slot = j;
+        SshAuthV.slot = j;
         SshAuth.reset(protocore_ssh_auth_span());
         SshV.conn_slot_args.i = j;
         Ssh.conn_slot(protocore_ssh_span());
@@ -242,9 +242,9 @@ static void net_poll(uint8_t conn_slot)
     }
 
     // RFC 4252 sec 4: a connection that has not authenticated inside the timeout is disconnected.
-    SshAuth.slot = j;
+    SshAuthV.slot = j;
     SshAuth.timed_out(protocore_ssh_auth_span());
-    if (SshAuth.ok)
+    if (SshAuthV.ok)
     {
         static const char desc[] = "authentication timeout";
         uint8_t out[13 + sizeof(desc) - 1];
@@ -265,7 +265,7 @@ static void net_poll(uint8_t conn_slot)
     }
 
     ssh_transport_key_re_exchange(j);
-    SshAuth.slot = j;
+    SshAuthV.slot = j;
     SshAuth.passwd_change_reply(protocore_ssh_auth_span());
 
 #if PROTOCORE_SSH_PORT_FORWARD

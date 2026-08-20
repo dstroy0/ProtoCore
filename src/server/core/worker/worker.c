@@ -14,15 +14,15 @@
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
 #include "config/platform/platform.h" // the target's queues and tasks, under our names
-#include "mmgr/arena/arena.h" // protocore_worker_set_self: identity lives with the pools it indexes
-#include "mmgr/ring.h"  // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
+#include "mmgr/arena/arena.h"         // protocore_worker_set_self: identity lives with the pools it indexes
+#include "mmgr/ring.h"                // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
 
 // ---------------------------------------------------------------------------
 // Worker tasks
 // ---------------------------------------------------------------------------
 
 // Called by defer above its definition.
-static void wake(uint8_t *restrict work);
+void protocore_workers_wake(uint8_t *restrict work);
 
 // Per-worker deferred-callback queues: app code on any task hands a {fn, arg} to
 // the owning worker, which runs it in its own context (race-free push path).
@@ -103,13 +103,13 @@ static void worker_task(void *arg)
     protocore_platform_task_stop(NULL);
 }
 
-static void start(uint8_t *restrict work)
+void protocore_workers_start(uint8_t *restrict work)
 {
     if (PROTO_ATOMIC_LOAD(&WORKER_CTX(work)->run))
     {
         return; // already running
     }
-    WORKER_CTX(work)->pump = Workers.pump;
+    WORKER_CTX(work)->pump = WorkersV.pump;
     for (int i = 0; i < PROTOCORE_WORKER_COUNT; i++)
     {
         if (!WORKER_CTX(work)->dq[i])
@@ -128,49 +128,49 @@ static void start(uint8_t *restrict work)
     }
 }
 
-static void defer(uint8_t *restrict work)
+void protocore_workers_defer(uint8_t *restrict work)
 {
-    Workers.ok = PROTO_FALSE;
-    if (!Workers.defer_args.fn)
+    WorkersV.ok = PROTO_FALSE;
+    if (!WorkersV.defer_args.fn)
     {
         return;
     }
-    if (Workers.worker_id < 0 || Workers.worker_id >= PROTOCORE_WORKER_COUNT ||
-        !WORKER_CTX(work)->dq[Workers.worker_id])
+    if (WorkersV.worker_id < 0 || WorkersV.worker_id >= PROTOCORE_WORKER_COUNT ||
+        !WORKER_CTX(work)->dq[WorkersV.worker_id])
     {
         return;
     }
-    DeferCmd cmd = {Workers.defer_args.fn, Workers.defer_args.arg};
-    if (protocore_platform_queue_send(WORKER_CTX(work)->dq[Workers.worker_id], &cmd, 0) != PROTOCORE_PLATFORM_OK)
+    DeferCmd cmd = {WorkersV.defer_args.fn, WorkersV.defer_args.arg};
+    if (protocore_platform_queue_send(WORKER_CTX(work)->dq[WorkersV.worker_id], &cmd, 0) != PROTOCORE_PLATFORM_OK)
     {
         return;
     }
-    wake(work); // run the callback now, not on the next idle sweep
-    Workers.ok = PROTO_TRUE;
+    protocore_workers_wake(work); // run the callback now, not on the next idle sweep
+    WorkersV.ok = PROTO_TRUE;
 }
 
-static void wake(uint8_t *restrict work)
+void protocore_workers_wake(uint8_t *restrict work)
 {
-    if (Workers.worker_id < 0 || Workers.worker_id >= PROTOCORE_WORKER_COUNT)
+    if (WorkersV.worker_id < 0 || WorkersV.worker_id >= PROTOCORE_WORKER_COUNT)
     {
         return;
     }
-    protocore_platform_task t = WORKER_CTX(work)->tasks[Workers.worker_id];
+    protocore_platform_task t = WORKER_CTX(work)->tasks[WorkersV.worker_id];
     if (t)
     {
         protocore_platform_task_notify(t);
     }
 }
 
-static void run_deferred(uint8_t *restrict work)
+void protocore_workers_run_deferred(uint8_t *restrict work)
 {
-    if (Workers.worker_id < 0 || Workers.worker_id >= PROTOCORE_WORKER_COUNT ||
-        !WORKER_CTX(work)->dq[Workers.worker_id])
+    if (WorkersV.worker_id < 0 || WorkersV.worker_id >= PROTOCORE_WORKER_COUNT ||
+        !WORKER_CTX(work)->dq[WorkersV.worker_id])
     {
         return;
     }
     DeferCmd cmd;
-    while (protocore_platform_queue_recv(WORKER_CTX(work)->dq[Workers.worker_id], &cmd, 0) == PROTOCORE_PLATFORM_OK)
+    while (protocore_platform_queue_recv(WORKER_CTX(work)->dq[WorkersV.worker_id], &cmd, 0) == PROTOCORE_PLATFORM_OK)
     {
         if (cmd.fn)
         {
@@ -179,7 +179,7 @@ static void run_deferred(uint8_t *restrict work)
     }
 }
 
-static void stop(uint8_t *restrict work)
+void protocore_workers_stop(uint8_t *restrict work)
 {
     if (!PROTO_ATOMIC_LOAD(&WORKER_CTX(work)->run))
     {
@@ -191,19 +191,14 @@ static void stop(uint8_t *restrict work)
     protocore_platform_task_delay(3);
 }
 
-static void running(uint8_t *restrict work)
+void protocore_workers_running(uint8_t *restrict work)
 {
-    Workers.ok = PROTO_ATOMIC_LOAD(&WORKER_CTX(work)->run);
+    WorkersV.ok = PROTO_ATOMIC_LOAD(&WORKER_CTX(work)->run);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-WorkerNs Workers = {
-    .run_deferred = run_deferred,
-    .running = running,
-    .start = start,
-    .stop = stop,
-    .wake = wake,
-    .defer = defer,
+/** @brief The operands and the outcome. */
+WorkersVars WorkersV = {
 #if PROTOCORE_ENABLE_PREEMPT_QUEUE
     .queue = &PreemptQueue,
 #endif

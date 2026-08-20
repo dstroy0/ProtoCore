@@ -472,10 +472,10 @@ void chunk_send_pump(uint8_t slot_id)
             // not snprintf("%x") - the format-string parse dwarfed the few nibble writes on the hot
             // per-chunk path (performance_benching/server/send_pump: ~9x on the host, more on device).
             char digits[8];
-            Hex.args.v = (uint32_t)n;
-            Hex.io.out = digits;
+            HexV.args.v = (uint32_t)n;
+            HexV.io.out = digits;
             Hex.u32(hex_work);
-            size_t nd = Hex.u8;
+            size_t nd = HexV.u8;
             size_t sn = nd + 2; // "<hex>\r\n"
             uint8_t *start = body - sn;
             mem.cpy(start, digits, nd);

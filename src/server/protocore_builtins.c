@@ -42,7 +42,7 @@ void protocore_register_builtins(void)
     register_if(PROTO_HTTP, HttpConnV.handler);
 #if PROTOCORE_ENABLE_TELNET
     Telnet.proto_handler(protocore_telnet_span());
-    register_if(PROTO_TELNET, Telnet.handler);
+    register_if(PROTO_TELNET, TelnetV.handler);
 #endif
 #if PROTOCORE_ENABLE_SSH
     SshServer.proto_handler(protocore_ssh_server_span());
@@ -54,7 +54,7 @@ void protocore_register_builtins(void)
 #endif
 #if PROTOCORE_NEED_MODBUS
     Modbus.handler(protocore_modbus_span());
-    register_if(PROTO_MODBUS, Modbus.ptr);
+    register_if(PROTO_MODBUS, ModbusV.ptr);
 #endif
 #if PROTOCORE_ENABLE_OPCUA
     register_if(PROTO_OPCUA, protocore_opcua_protocore_handler());

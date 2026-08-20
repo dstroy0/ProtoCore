@@ -35,8 +35,8 @@ void dash_layout_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     char buf[PROTOCORE_DASHBOARD_JSON_BUF];
-    Dashboard.layout_json_args.out = buf;
-    Dashboard.layout_json_args.cap = sizeof(buf);
+    DashboardV.layout_json_args.out = buf;
+    DashboardV.layout_json_args.cap = sizeof(buf);
     Dashboard.layout_json(protocore_dashboard_span());
     send_text(slot_id, 200, PROTOCORE_MIME_JSON, buf);
 }
@@ -44,10 +44,10 @@ void dash_layout_handler(uint8_t slot_id, HttpReq *req)
 void dash_sse_connect(uint8_t protocore_sse_id)
 {
     char buf[PROTOCORE_DASHBOARD_JSON_BUF];
-    Dashboard.values_json_args.out = buf;
-    Dashboard.values_json_args.cap = sizeof(buf);
+    DashboardV.values_json_args.out = buf;
+    DashboardV.values_json_args.cap = sizeof(buf);
     Dashboard.values_json(protocore_dashboard_span());
-    if (Dashboard.value > 0)
+    if (DashboardV.value > 0)
     {
         protocore_sse_send(protocore_sse_id, buf, NULL, NULL); // seed the new client with the latest values
     }
@@ -65,7 +65,7 @@ void dash_ws_message(uint8_t ws_id)
     {
         WsV.ws_id = ws_id;
         Ws.payload_of(protocore_ws_span());
-        Dashboard.dispatch_control_args.msg = WsV.text;
+        DashboardV.dispatch_control_args.msg = WsV.text;
         Dashboard.dispatch_control(protocore_dashboard_span());
     }
 }

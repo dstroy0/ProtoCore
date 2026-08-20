@@ -17,15 +17,15 @@
 /** @brief Format one sampled, tagged counter line into @p out; the octets written. */
 static size_t statsd_counter_line(char *out, size_t cap)
 {
-    Statsd.line.out = out;
-    Statsd.line.cap = cap;
-    Statsd.metric.name = "api.requests";
-    Statsd.metric.type = STATSD_COUNTER;
-    Statsd.metric.rate = 0.1f;
-    Statsd.value.text = "1";
-    Statsd.tags.metric = "env:prod,host:pc-rig";
+    StatsdV.line.out = out;
+    StatsdV.line.cap = cap;
+    StatsdV.metric.name = "api.requests";
+    StatsdV.metric.type = STATSD_COUNTER;
+    StatsdV.metric.rate = 0.1f;
+    StatsdV.value.text = "1";
+    StatsdV.tags.metric = "env:prod,host:pc-rig";
     Statsd.format(protocore_statsd_span());
-    return Statsd.n;
+    return StatsdV.n;
 }
 
 void dbench_run(void)

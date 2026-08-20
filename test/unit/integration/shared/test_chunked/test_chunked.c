@@ -367,10 +367,10 @@ void test_chunked_source_overreport_clamped()
 void test_hex_u32_size_line()
 {
     char out[8];
-    Hex.args.v = 0;
-    Hex.io.out = out;
+    HexV.args.v = 0;
+    HexV.io.out = out;
     Hex.u32(hex_work);
-    TEST_ASSERT_EQUAL_size_t(1, (size_t)Hex.u8);
+    TEST_ASSERT_EQUAL_size_t(1, (size_t)HexV.u8);
     TEST_ASSERT_EQUAL_HEX8('0', out[0]);
 
     const uint32_t vals[] = {1, 0xF, 0x10, 0x5A0, 0xFFFF, 0x12345, 0xFFFFFFFFu};
@@ -378,10 +378,10 @@ void test_hex_u32_size_line()
     {
         char ref[16];
         int rn = snprintf(ref, sizeof(ref), "%x", (unsigned)vals[i]);
-        Hex.args.v = vals[i];
-        Hex.io.out = out;
+        HexV.args.v = vals[i];
+        HexV.io.out = out;
         Hex.u32(hex_work);
-        TEST_ASSERT_EQUAL_size_t((size_t)rn, (size_t)Hex.u8);
-        TEST_ASSERT_EQUAL_MEMORY(ref, out, (size_t)Hex.u8);
+        TEST_ASSERT_EQUAL_size_t((size_t)rn, (size_t)HexV.u8);
+        TEST_ASSERT_EQUAL_MEMORY(ref, out, (size_t)HexV.u8);
     }
 }

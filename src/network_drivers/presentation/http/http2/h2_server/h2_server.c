@@ -367,7 +367,7 @@ static void open_conn(uint8_t *restrict work)
     cb.io = (void *)(uintptr_t)slot;
     cb.app = (void *)(uintptr_t)slot;
     H2_SERVER_CTX(work)->slot[slot].hmask = 0;
-    H2Conn.init_args.cb = &cb;
+    H2ConnV.init_args.cb = &cb;
     H2Conn.init(s_conn[slot]); // emits our SETTINGS through cb_write
     HttpParserV.reset_args.req = &http_pool[slot];
     HttpParser.reset(protocore_http_parser_span());
@@ -381,12 +381,12 @@ static void data(uint8_t *restrict work)
     int n;
     while ((n = protocore_tls_read(slot, buf, sizeof buf)) > 0)
     {
-        H2Conn.recv_args.data = buf;
-        H2Conn.recv_args.len = (size_t)n;
+        H2ConnV.recv_args.data = buf;
+        H2ConnV.recv_args.len = (size_t)n;
         H2Conn.recv(s_conn[slot]);
-        if (!H2Conn.ok)
+        if (!H2ConnV.ok)
         {
-            H2Conn.goaway_args.error = 1; // PROTOCOL_ERROR
+            H2ConnV.goaway_args.error = 1; // PROTOCOL_ERROR
             H2Conn.goaway(s_conn[slot]);
             return;
         }
@@ -396,13 +396,13 @@ static void data(uint8_t *restrict work)
 static void respond(uint8_t *restrict work)
 {
     const uint8_t slot = H2Server.slot;
-    H2Conn.respond_args.stream_id = http_h2_stream[slot];
-    H2Conn.respond_args.status = H2Server.resp.code;
-    H2Conn.respond_args.content_type = H2Server.resp.content_type;
-    H2Conn.respond_args.body = H2Server.resp.body;
-    H2Conn.respond_args.body_len = H2Server.resp.len;
+    H2ConnV.respond_args.stream_id = http_h2_stream[slot];
+    H2ConnV.respond_args.status = H2Server.resp.code;
+    H2ConnV.respond_args.content_type = H2Server.resp.content_type;
+    H2ConnV.respond_args.body = H2Server.resp.body;
+    H2ConnV.respond_args.body_len = H2Server.resp.len;
     H2Conn.respond(s_conn[slot]);
-    H2Server.ok = H2Conn.ok;
+    H2Server.ok = H2ConnV.ok;
     HttpParserV.reset_args.req = &http_pool[slot];
     HttpParser.reset(protocore_http_parser_span()); // ready for the next stream; keep the connection open
 }

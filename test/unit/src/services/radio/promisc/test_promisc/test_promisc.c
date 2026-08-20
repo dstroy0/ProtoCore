@@ -61,22 +61,22 @@ void test_ieee80211_address_fields_by_ds_bits(void)
 
     // To DS 0, From DS 0 (IBSS or management): A1 = DA, A2 = SA, A3 = BSSID.
     header(f, 0x08, 0x00, 0); // Type 2 (Data), Subtype 0
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 24;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 24;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_EQUAL_PTR(f + 4, w.dst);
     TEST_ASSERT_EQUAL_PTR(f + 10, w.src);
     TEST_ASSERT_EQUAL_PTR(f + 16, w.bssid);
 
     // To DS 0, From DS 1 (AP to station): A1 = DA, A2 = BSSID, A3 = SA.
     header(f, 0x08, 0x02, 0);
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 24;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 24;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_FALSE(w.to_ds);
     TEST_ASSERT_TRUE(w.from_ds);
     TEST_ASSERT_EQUAL_PTR(f + 4, w.dst);
@@ -85,11 +85,11 @@ void test_ieee80211_address_fields_by_ds_bits(void)
 
     // To DS 1, From DS 0 (station to AP): A1 = BSSID, A2 = SA, A3 = DA.
     header(f, 0x08, 0x01, 0);
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 24;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 24;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_TRUE(w.to_ds);
     TEST_ASSERT_FALSE(w.from_ds);
     TEST_ASSERT_EQUAL_PTR(f + 4, w.bssid);
@@ -98,11 +98,11 @@ void test_ieee80211_address_fields_by_ds_bits(void)
 
     // To DS 1, From DS 1 (WDS): A3 = DA, A4 = SA, and there is no single BSSID field.
     header(f, 0x08, 0x03, 0);
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 30;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 30;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_EQUAL_UINT16(30, w.hdr_len);
     TEST_ASSERT_EQUAL_PTR(f + 16, w.dst);
     TEST_ASSERT_EQUAL_PTR(f + 24, w.src);
@@ -117,47 +117,47 @@ void test_ieee80211_frame_control_type_and_subtype(void)
     WifiFrameInfo w;
 
     header(f, 0x80, 0x00, 0); // Subtype 8, Type 0
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 24;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 24;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_EQUAL_INT(WIFI_FT_MGMT, w.type);
     TEST_ASSERT_EQUAL_UINT8(8, w.subtype);
 
     header(f, 0x08, 0x00, 0); // Subtype 0, Type 2
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 24;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 24;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_EQUAL_INT(WIFI_FT_DATA, w.type);
     TEST_ASSERT_EQUAL_UINT8(0, w.subtype);
 
     header(f, 0xB0, 0x00, 0); // Subtype 11 (Authentication), Type 0
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 24;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 24;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_EQUAL_INT(WIFI_FT_MGMT, w.type);
     TEST_ASSERT_EQUAL_UINT8(11, w.subtype);
 
     header(f, 0x0C, 0x00, 0); // Type 3 (Extension)
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 24;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 24;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_EQUAL_INT(WIFI_FT_EXT, w.type);
 
     // The Protocol Version bits are octet 0 bits 0-1 and belong to neither field.
     header(f, 0x83, 0x00, 0);
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 24;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 24;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_EQUAL_INT(WIFI_FT_MGMT, w.type);
     TEST_ASSERT_EQUAL_UINT8(8, w.subtype);
 }
@@ -171,28 +171,28 @@ void test_ieee80211_sequence_number(void)
 
     // Field value 0x1237: fragment 7, sequence number 0x123.
     header(f, 0x08, 0x00, 0x1237);
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 24;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 24;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_EQUAL_HEX16(0x123, w.seq);
 
     // The 12-bit field wraps at 4095, so 0xFFF is its largest value.
     header(f, 0x08, 0x00, 0xFFF0);
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 24;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 24;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_EQUAL_HEX16(0xFFF, w.seq);
 
     header(f, 0x08, 0x00, 0x0000);
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 24;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 24;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_EQUAL_HEX16(0, w.seq);
 }
 
@@ -205,46 +205,46 @@ void test_ieee80211_header_length(void)
     WifiFrameInfo w;
 
     header(f, 0x08, 0x00, 0); // Data, not QoS
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 24;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 24;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_EQUAL_UINT16(24, w.hdr_len);
     TEST_ASSERT_FALSE(w.is_qos);
 
     header(f, 0x88, 0x00, 0); // QoS Data: Subtype 8
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 26;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 26;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_TRUE(w.is_qos);
     TEST_ASSERT_EQUAL_UINT16(26, w.hdr_len);
 
     header(f, 0x88, 0x80, 0); // QoS Data with +HTC set: 24 + 2 + 4
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 30;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 30;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_EQUAL_UINT16(30, w.hdr_len);
 
     header(f, 0x88, 0x03, 0); // QoS Data, WDS: 24 + 6 + 2
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 32;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 32;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_EQUAL_UINT16(32, w.hdr_len);
 
     // Management frames carry no QoS Control even at a Subtype with bit 3 set.
     header(f, 0x88 ^ 0x08, 0x00, 0);
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 24;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 24;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_FALSE(w.is_qos);
 }
 
@@ -255,11 +255,11 @@ void test_ieee80211_control_frame(void)
     uint8_t f[32];
     WifiFrameInfo w;
     header(f, 0xD4, 0x00, 0); // Type 1 (Control), Subtype 13 (Acknowledgment)
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 10;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 10;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_EQUAL_INT(WIFI_FT_CTRL, w.type);
     TEST_ASSERT_EQUAL_UINT8(13, w.subtype);
     TEST_ASSERT_EQUAL_UINT16(10, w.hdr_len);
@@ -274,19 +274,19 @@ void test_ieee80211_protected_frame_bit(void)
     uint8_t f[32];
     WifiFrameInfo w;
     header(f, 0x08, 0x40, 0);
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 24;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 24;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_TRUE(w.protected_frame);
 
     header(f, 0x08, 0x00, 0);
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 24;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 24;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
     TEST_ASSERT_FALSE(w.protected_frame);
 }
 
@@ -297,41 +297,41 @@ void test_parse_refuses_a_short_frame(void)
     WifiFrameInfo w;
 
     header(f, 0x08, 0x00, 0);
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 9;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 9;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_FALSE(Promisc.ok); // shorter than Frame Control + Duration + A1
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 23;
-    Promisc.wifi_frame_parse_args.out = &w;
+    TEST_ASSERT_FALSE(PromiscV.ok); // shorter than Frame Control + Duration + A1
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 23;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_FALSE(Promisc.ok); // a 3-address header needs 24
+    TEST_ASSERT_FALSE(PromiscV.ok); // a 3-address header needs 24
 
     header(f, 0x88, 0x00, 0);
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 25;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 25;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_FALSE(Promisc.ok); // QoS Data needs 26
+    TEST_ASSERT_FALSE(PromiscV.ok); // QoS Data needs 26
 
     header(f, 0x08, 0x03, 0);
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 29;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 29;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_FALSE(Promisc.ok); // WDS needs 30
+    TEST_ASSERT_FALSE(PromiscV.ok); // WDS needs 30
 
-    Promisc.wifi_frame_parse_args.frame = NULL;
-    Promisc.wifi_frame_parse_args.len = 24;
-    Promisc.wifi_frame_parse_args.out = &w;
+    PromiscV.wifi_frame_parse_args.frame = NULL;
+    PromiscV.wifi_frame_parse_args.len = 24;
+    PromiscV.wifi_frame_parse_args.out = &w;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_FALSE(Promisc.ok);
-    Promisc.wifi_frame_parse_args.frame = f;
-    Promisc.wifi_frame_parse_args.len = 24;
-    Promisc.wifi_frame_parse_args.out = NULL;
+    TEST_ASSERT_FALSE(PromiscV.ok);
+    PromiscV.wifi_frame_parse_args.frame = f;
+    PromiscV.wifi_frame_parse_args.len = 24;
+    PromiscV.wifi_frame_parse_args.out = NULL;
     Promisc.wifi_frame_parse(protocore_promisc_span());
-    TEST_ASSERT_FALSE(Promisc.ok);
+    TEST_ASSERT_FALSE(PromiscV.ok);
 }
 
 // The libpcap savefile global header: the 0xa1b2c3d4 magic that declares microsecond timestamps
@@ -409,10 +409,10 @@ void test_pcap_headers_fail_closed(void)
 // A sink with nowhere to deliver is a caller bug, so bring-up refuses it.
 void test_capture_refuses_a_null_sink(void)
 {
-    Promisc.begin_args.channel = 6;
-    Promisc.begin_args.sink = NULL;
+    PromiscV.begin_args.channel = 6;
+    PromiscV.begin_args.sink = NULL;
     Promisc.begin(protocore_promisc_span());
-    TEST_ASSERT_FALSE(Promisc.ok);
+    TEST_ASSERT_FALSE(PromiscV.ok);
 }
 
 // What the radio handed the sink on the last delivery.
@@ -438,10 +438,10 @@ void test_capture_delivers_frames_through_the_radio(void)
     static const uint8_t beacon[] = {0x80, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x02, 0x00,
                                      0x00, 0x00, 0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x01, 0x10, 0x00};
     g_seen_count = 0;
-    Promisc.begin_args.channel = 6;
-    Promisc.begin_args.sink = capture_sink;
+    PromiscV.begin_args.channel = 6;
+    PromiscV.begin_args.sink = capture_sink;
     Promisc.begin(protocore_promisc_span());
-    TEST_ASSERT_TRUE(Promisc.ok);
+    TEST_ASSERT_TRUE(PromiscV.ok);
 
     TEST_ASSERT_TRUE(protocore_phy_mock_deliver(beacon, (uint16_t)sizeof(beacon), -42, 6));
     TEST_ASSERT_EQUAL_UINT(1, g_seen_count);
@@ -450,7 +450,7 @@ void test_capture_delivers_frames_through_the_radio(void)
     TEST_ASSERT_EQUAL_UINT8(6, g_seen_channel);
 
     // A retune is what the next frame arrives on; 0 means "whatever the radio is tuned to".
-    Promisc.set_channel_args.channel = 11;
+    PromiscV.set_channel_args.channel = 11;
     Promisc.set_channel(protocore_promisc_span());
     TEST_ASSERT_TRUE(protocore_phy_mock_deliver(beacon, (uint16_t)sizeof(beacon), -55, 0));
     TEST_ASSERT_EQUAL_UINT(2, g_seen_count);

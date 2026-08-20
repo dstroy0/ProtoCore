@@ -111,10 +111,10 @@ static void chain_hash(uint8_t *work, const uint8_t prev[PROTOCORE_AUDIT_HASH_LE
 // The lowercase hex character for one nibble.
 static char hex_digit(uint8_t nibble)
 {
-    Hex.args.nibble = nibble;
-    Hex.args.upper = PROTO_FALSE;
+    HexV.args.nibble = nibble;
+    HexV.args.upper = PROTO_FALSE;
     Hex.digit(hex_work);
-    return Hex.ch;
+    return HexV.ch;
 }
 
 // Append @p n JSON-escaped bytes of @p s into out[pos..cap); returns new pos, or

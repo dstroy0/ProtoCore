@@ -207,9 +207,9 @@ static void service(uint8_t *restrict work, uint8_t slot)
     for (int pass = 0; pass < PROTOCORE_RELAY_DRAIN_MAX; pass++)
     {
         uint32_t moved = br->relay.bytes_a2b + br->relay.bytes_b2a;
-        Relay.step_args.r = &br->relay;
+        RelayV.step_args.r = &br->relay;
         Relay.step(relay_work);
-        protocore_relay_status st = Relay.status;
+        protocore_relay_status st = RelayV.status;
         if (st == PROTOCORE_RELAY_ERROR || st == PROTOCORE_RELAY_DONE)
         {
             teardown(br, PROTO_TRUE);
@@ -274,9 +274,9 @@ static void relay_on_accept(uint8_t slot)
     br->origin_cid = cid;
     protocore_relay_end a = {a_recv, a_send, NULL, br};
     protocore_relay_end b = {b_recv, b_send, NULL, br};
-    Relay.init_args.r = &br->relay;
-    Relay.init_args.client = &a;
-    Relay.init_args.origin = &b;
+    RelayV.init_args.r = &br->relay;
+    RelayV.init_args.client = &a;
+    RelayV.init_args.origin = &b;
     Relay.init(relay_work);
 #if PROTOCORE_ENABLE_RADIO_POWER
     Radio.busy_hold(protocore_radio_power_span()); // hold the radio awake for the life of this bridge

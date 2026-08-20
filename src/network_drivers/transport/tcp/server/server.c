@@ -455,7 +455,7 @@ void protocore_tcp_listener_enqueue(uint8_t *restrict work)
     {
         return;
     }
-    Workers.worker_id = owner; // nudge the owning worker so it services this now
+    WorkersV.worker_id = owner; // nudge the owning worker so it services this now
     Workers.wake(protocore_worker_span());
 #else
     if (TcpListenerV.idx >= MAX_LISTENERS)
@@ -471,7 +471,7 @@ void protocore_tcp_listener_enqueue(uint8_t *restrict work)
     {
         return;
     }
-    Workers.worker_id = 0; // single worker owns every slot - nudge it now
+    WorkersV.worker_id = 0; // single worker owns every slot - nudge it now
     Workers.wake(protocore_worker_span());
 #endif
     TcpListenerV.ok = PROTO_TRUE;

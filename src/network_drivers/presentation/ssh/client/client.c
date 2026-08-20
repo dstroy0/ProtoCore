@@ -726,14 +726,14 @@ static proto_bool send_userauth_publickey(void)
     }
     uint8_t signed_data[256 + SSH_KEXHASH_MAX_LEN];
     protocore_span sd = span.from(signed_data, sizeof(signed_data));
-    SshAuth.out_args.w = &sd;
-    SshAuth.userauth.sid = sid;
-    SshAuth.userauth.sid_len = sid_len;
-    SshAuth.userauth.user = user;
-    SshAuth.userauth.service = "ssh-connection";
-    SshAuth.userauth.pk_algo = NAME_ED25519;
-    SshAuth.userauth.pk_blob = pkblob;
-    SshAuth.userauth.pk_len = pw.pos;
+    SshAuthV.out_args.w = &sd;
+    SshAuthV.userauth.sid = sid;
+    SshAuthV.userauth.sid_len = sid_len;
+    SshAuthV.userauth.user = user;
+    SshAuthV.userauth.service = "ssh-connection";
+    SshAuthV.userauth.pk_algo = NAME_ED25519;
+    SshAuthV.userauth.pk_blob = pkblob;
+    SshAuthV.userauth.pk_len = pw.pos;
     SshAuth.write_publickey_request(protocore_ssh_auth_span());
     if (!span.ok(sd))
     {
@@ -760,14 +760,14 @@ static proto_bool send_userauth_publickey(void)
     // The full USERAUTH_REQUEST is the signed prefix (minus the session_id) plus the signature.
     uint8_t out[300];
     protocore_span w = span.from(out, sizeof(out));
-    SshAuth.out_args.w = &w;
-    SshAuth.userauth.sid = NULL;
-    SshAuth.userauth.sid_len = 0;
-    SshAuth.userauth.user = user;
-    SshAuth.userauth.service = "ssh-connection";
-    SshAuth.userauth.pk_algo = NAME_ED25519;
-    SshAuth.userauth.pk_blob = pkblob;
-    SshAuth.userauth.pk_len = pw.pos;
+    SshAuthV.out_args.w = &w;
+    SshAuthV.userauth.sid = NULL;
+    SshAuthV.userauth.sid_len = 0;
+    SshAuthV.userauth.user = user;
+    SshAuthV.userauth.service = "ssh-connection";
+    SshAuthV.userauth.pk_algo = NAME_ED25519;
+    SshAuthV.userauth.pk_blob = pkblob;
+    SshAuthV.userauth.pk_len = pw.pos;
     SshAuth.write_publickey_request(protocore_ssh_auth_span());
     protocore_ssh_wr_str(&w, sigblob, sg.pos);
     if (!span.ok(w))

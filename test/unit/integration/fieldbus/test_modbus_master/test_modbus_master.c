@@ -75,11 +75,11 @@ void test_build_rejects_bad_args()
 
 void test_round_trip_holding_regs()
 {
-    Modbus.set_holding_reg_args.addr = 0;
-    Modbus.set_holding_reg_args.value = 0x1234;
+    ModbusV.set_holding_reg_args.addr = 0;
+    ModbusV.set_holding_reg_args.value = 0x1234;
     Modbus.set_holding_reg(protocore_modbus_span());
-    Modbus.set_holding_reg_args.addr = 1;
-    Modbus.set_holding_reg_args.value = 0xABCD;
+    ModbusV.set_holding_reg_args.addr = 1;
+    ModbusV.set_holding_reg_args.value = 0xABCD;
     Modbus.set_holding_reg(protocore_modbus_span());
 
     uint8_t req[16];
@@ -95,12 +95,12 @@ void test_round_trip_holding_regs()
     TEST_ASSERT_EQUAL_size_t(12, rn);
 
     uint8_t resp[MODBUS_ADU_MAX];
-    Modbus.process_adu_args.req = req;
-    Modbus.process_adu_args.req_len = rn;
-    Modbus.process_adu_args.resp = resp;
-    Modbus.process_adu_args.protocore_resp_cap = sizeof(resp);
+    ModbusV.process_adu_args.req = req;
+    ModbusV.process_adu_args.req_len = rn;
+    ModbusV.process_adu_args.resp = resp;
+    ModbusV.process_adu_args.protocore_resp_cap = sizeof(resp);
     Modbus.process_adu(protocore_modbus_span());
-    size_t pn = Modbus.n;
+    size_t pn = ModbusV.n;
     TEST_ASSERT_TRUE(pn > 0);
 
     uint16_t regs[4];
@@ -132,12 +132,12 @@ void test_round_trip_exception()
     ModbusMaster.build_read(modbus_master_work);
     size_t rn = ModbusMasterV.n;
     uint8_t resp[MODBUS_ADU_MAX];
-    Modbus.process_adu_args.req = req;
-    Modbus.process_adu_args.req_len = rn;
-    Modbus.process_adu_args.resp = resp;
-    Modbus.process_adu_args.protocore_resp_cap = sizeof(resp);
+    ModbusV.process_adu_args.req = req;
+    ModbusV.process_adu_args.req_len = rn;
+    ModbusV.process_adu_args.resp = resp;
+    ModbusV.process_adu_args.protocore_resp_cap = sizeof(resp);
     Modbus.process_adu(protocore_modbus_span());
-    size_t pn = Modbus.n;
+    size_t pn = ModbusV.n;
     TEST_ASSERT_TRUE(pn > 0);
 
     uint16_t regs[4];
@@ -347,12 +347,12 @@ void test_round_trip_write_single()
     ModbusMaster.build_write_single(modbus_master_work);
     size_t rn = ModbusMasterV.n;
     uint8_t resp[MODBUS_ADU_MAX];
-    Modbus.process_adu_args.req = req;
-    Modbus.process_adu_args.req_len = rn;
-    Modbus.process_adu_args.resp = resp;
-    Modbus.process_adu_args.protocore_resp_cap = sizeof(resp);
+    ModbusV.process_adu_args.req = req;
+    ModbusV.process_adu_args.req_len = rn;
+    ModbusV.process_adu_args.resp = resp;
+    ModbusV.process_adu_args.protocore_resp_cap = sizeof(resp);
     Modbus.process_adu(protocore_modbus_span());
-    size_t pn = Modbus.n;
+    size_t pn = ModbusV.n;
     TEST_ASSERT_TRUE(pn > 0);
 
     uint16_t addr = 0;
@@ -366,9 +366,9 @@ void test_round_trip_write_single()
     TEST_ASSERT_EQUAL_INT(1, w);
     TEST_ASSERT_EQUAL_UINT8(0, ex);
     TEST_ASSERT_EQUAL_HEX16(7, addr);
-    Modbus.get_holding_reg_args.addr = 7;
+    ModbusV.get_holding_reg_args.addr = 7;
     Modbus.get_holding_reg(protocore_modbus_span());
-    TEST_ASSERT_EQUAL_HEX16(0x5A5A, Modbus.value);
+    TEST_ASSERT_EQUAL_HEX16(0x5A5A, ModbusV.value);
 }
 
 void test_build_write_multiple_bytes()
@@ -405,12 +405,12 @@ void test_round_trip_write_multiple()
     ModbusMaster.build_write_multiple(modbus_master_work);
     size_t rn = ModbusMasterV.n;
     uint8_t resp[MODBUS_ADU_MAX];
-    Modbus.process_adu_args.req = req;
-    Modbus.process_adu_args.req_len = rn;
-    Modbus.process_adu_args.resp = resp;
-    Modbus.process_adu_args.protocore_resp_cap = sizeof(resp);
+    ModbusV.process_adu_args.req = req;
+    ModbusV.process_adu_args.req_len = rn;
+    ModbusV.process_adu_args.resp = resp;
+    ModbusV.process_adu_args.protocore_resp_cap = sizeof(resp);
     Modbus.process_adu(protocore_modbus_span());
-    size_t pn = Modbus.n;
+    size_t pn = ModbusV.n;
     TEST_ASSERT_TRUE(pn > 0);
 
     uint16_t start = 0;
@@ -424,15 +424,15 @@ void test_round_trip_write_multiple()
     TEST_ASSERT_EQUAL_INT(3, w);
     TEST_ASSERT_EQUAL_UINT8(0, ex);
     TEST_ASSERT_EQUAL_HEX16(30, start);
-    Modbus.get_holding_reg_args.addr = 30;
+    ModbusV.get_holding_reg_args.addr = 30;
     Modbus.get_holding_reg(protocore_modbus_span());
-    TEST_ASSERT_EQUAL_HEX16(0xDEAD, Modbus.value);
-    Modbus.get_holding_reg_args.addr = 31;
+    TEST_ASSERT_EQUAL_HEX16(0xDEAD, ModbusV.value);
+    ModbusV.get_holding_reg_args.addr = 31;
     Modbus.get_holding_reg(protocore_modbus_span());
-    TEST_ASSERT_EQUAL_HEX16(0xBEEF, Modbus.value);
-    Modbus.get_holding_reg_args.addr = 32;
+    TEST_ASSERT_EQUAL_HEX16(0xBEEF, ModbusV.value);
+    ModbusV.get_holding_reg_args.addr = 32;
     Modbus.get_holding_reg(protocore_modbus_span());
-    TEST_ASSERT_EQUAL_HEX16(0xF00D, Modbus.value);
+    TEST_ASSERT_EQUAL_HEX16(0xF00D, ModbusV.value);
 }
 
 void test_build_write_rejects_bad_args()
@@ -549,17 +549,17 @@ void test_parse_write_response_edges()
 
 void test_round_trip_read_coils()
 {
-    Modbus.set_coil_args.addr = 0;
-    Modbus.set_coil_args.on = PROTO_TRUE;
+    ModbusV.set_coil_args.addr = 0;
+    ModbusV.set_coil_args.on = PROTO_TRUE;
     Modbus.set_coil(protocore_modbus_span());
-    Modbus.set_coil_args.addr = 1;
-    Modbus.set_coil_args.on = PROTO_FALSE;
+    ModbusV.set_coil_args.addr = 1;
+    ModbusV.set_coil_args.on = PROTO_FALSE;
     Modbus.set_coil(protocore_modbus_span());
-    Modbus.set_coil_args.addr = 2;
-    Modbus.set_coil_args.on = PROTO_TRUE;
+    ModbusV.set_coil_args.addr = 2;
+    ModbusV.set_coil_args.on = PROTO_TRUE;
     Modbus.set_coil(protocore_modbus_span());
-    Modbus.set_coil_args.addr = 9;
-    Modbus.set_coil_args.on = PROTO_TRUE;
+    ModbusV.set_coil_args.addr = 9;
+    ModbusV.set_coil_args.on = PROTO_TRUE;
     Modbus.set_coil(protocore_modbus_span());
 
     uint8_t req[16];
@@ -576,12 +576,12 @@ void test_round_trip_read_coils()
     TEST_ASSERT_EQUAL_HEX8(0x01, req[7]);
 
     uint8_t resp[MODBUS_ADU_MAX];
-    Modbus.process_adu_args.req = req;
-    Modbus.process_adu_args.req_len = rn;
-    Modbus.process_adu_args.resp = resp;
-    Modbus.process_adu_args.protocore_resp_cap = sizeof(resp);
+    ModbusV.process_adu_args.req = req;
+    ModbusV.process_adu_args.req_len = rn;
+    ModbusV.process_adu_args.resp = resp;
+    ModbusV.process_adu_args.protocore_resp_cap = sizeof(resp);
     Modbus.process_adu(protocore_modbus_span());
-    size_t pn = Modbus.n;
+    size_t pn = ModbusV.n;
     TEST_ASSERT_TRUE(pn > 0);
 
     uint8_t bits[10];
@@ -605,11 +605,11 @@ void test_round_trip_read_coils()
 
 void test_round_trip_read_discrete_inputs()
 {
-    Modbus.set_discrete_input_args.addr = 3;
-    Modbus.set_discrete_input_args.on = PROTO_TRUE;
+    ModbusV.set_discrete_input_args.addr = 3;
+    ModbusV.set_discrete_input_args.on = PROTO_TRUE;
     Modbus.set_discrete_input(protocore_modbus_span());
-    Modbus.set_discrete_input_args.addr = 4;
-    Modbus.set_discrete_input_args.on = PROTO_TRUE;
+    ModbusV.set_discrete_input_args.addr = 4;
+    ModbusV.set_discrete_input_args.on = PROTO_TRUE;
     Modbus.set_discrete_input(protocore_modbus_span());
 
     uint8_t req[16];
@@ -624,12 +624,12 @@ void test_round_trip_read_discrete_inputs()
     size_t rn = ModbusMasterV.n;
     TEST_ASSERT_EQUAL_HEX8(0x02, req[7]);
     uint8_t resp[MODBUS_ADU_MAX];
-    Modbus.process_adu_args.req = req;
-    Modbus.process_adu_args.req_len = rn;
-    Modbus.process_adu_args.resp = resp;
-    Modbus.process_adu_args.protocore_resp_cap = sizeof(resp);
+    ModbusV.process_adu_args.req = req;
+    ModbusV.process_adu_args.req_len = rn;
+    ModbusV.process_adu_args.resp = resp;
+    ModbusV.process_adu_args.protocore_resp_cap = sizeof(resp);
     Modbus.process_adu(protocore_modbus_span());
-    size_t pn = Modbus.n;
+    size_t pn = ModbusV.n;
     uint8_t bits[6];
     uint8_t ex = 0xFF;
     ModbusMasterV.parse_read_bits_response_args.adu = resp;
@@ -648,8 +648,8 @@ void test_round_trip_read_discrete_inputs()
 
 void test_round_trip_write_single_coil()
 {
-    Modbus.set_coil_args.addr = 5;
-    Modbus.set_coil_args.on = PROTO_FALSE;
+    ModbusV.set_coil_args.addr = 5;
+    ModbusV.set_coil_args.on = PROTO_FALSE;
     Modbus.set_coil(protocore_modbus_span());
     uint8_t req[16];
     ModbusMasterV.build_write_single_coil_args.txid = 11;
@@ -666,12 +666,12 @@ void test_round_trip_write_single_coil()
     TEST_ASSERT_EQUAL_HEX8(0x00, req[11]);
 
     uint8_t resp[MODBUS_ADU_MAX];
-    Modbus.process_adu_args.req = req;
-    Modbus.process_adu_args.req_len = rn;
-    Modbus.process_adu_args.resp = resp;
-    Modbus.process_adu_args.protocore_resp_cap = sizeof(resp);
+    ModbusV.process_adu_args.req = req;
+    ModbusV.process_adu_args.req_len = rn;
+    ModbusV.process_adu_args.resp = resp;
+    ModbusV.process_adu_args.protocore_resp_cap = sizeof(resp);
     Modbus.process_adu(protocore_modbus_span());
-    size_t pn = Modbus.n;
+    size_t pn = ModbusV.n;
     uint16_t addr = 0xFFFF;
     uint8_t ex = 0xFF;
     ModbusMasterV.parse_write_response_args.adu = resp;
@@ -683,9 +683,9 @@ void test_round_trip_write_single_coil()
     TEST_ASSERT_EQUAL_INT(1, wrote);
     TEST_ASSERT_EQUAL_UINT8(0, ex);
     TEST_ASSERT_EQUAL_HEX16(5, addr);
-    Modbus.get_coil_args.addr = 5;
+    ModbusV.get_coil_args.addr = 5;
     Modbus.get_coil(protocore_modbus_span());
-    TEST_ASSERT_TRUE(Modbus.ok);
+    TEST_ASSERT_TRUE(ModbusV.ok);
 }
 
 void test_round_trip_write_multiple_coils()
@@ -693,8 +693,8 @@ void test_round_trip_write_multiple_coils()
 
     for (uint16_t a = 0; a < 12; a++)
     {
-        Modbus.set_coil_args.addr = a;
-        Modbus.set_coil_args.on = PROTO_FALSE;
+        ModbusV.set_coil_args.addr = a;
+        ModbusV.set_coil_args.on = PROTO_FALSE;
         Modbus.set_coil(protocore_modbus_span());
     }
     const uint8_t pattern[12] = {1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1};
@@ -716,12 +716,12 @@ void test_round_trip_write_multiple_coils()
     TEST_ASSERT_EQUAL_HEX8(0x0B, req[14]);
 
     uint8_t resp[MODBUS_ADU_MAX];
-    Modbus.process_adu_args.req = req;
-    Modbus.process_adu_args.req_len = rn;
-    Modbus.process_adu_args.resp = resp;
-    Modbus.process_adu_args.protocore_resp_cap = sizeof(resp);
+    ModbusV.process_adu_args.req = req;
+    ModbusV.process_adu_args.req_len = rn;
+    ModbusV.process_adu_args.resp = resp;
+    ModbusV.process_adu_args.protocore_resp_cap = sizeof(resp);
     Modbus.process_adu(protocore_modbus_span());
-    size_t pn = Modbus.n;
+    size_t pn = ModbusV.n;
     uint16_t addr = 0xFFFF;
     uint8_t ex = 0xFF;
     ModbusMasterV.parse_write_response_args.adu = resp;
@@ -734,9 +734,9 @@ void test_round_trip_write_multiple_coils()
     TEST_ASSERT_EQUAL_HEX16(0, addr);
     for (uint16_t a = 0; a < 12; a++)
     {
-        Modbus.get_coil_args.addr = a;
+        ModbusV.get_coil_args.addr = a;
         Modbus.get_coil(protocore_modbus_span());
-        TEST_ASSERT_EQUAL_UINT8(pattern[a], Modbus.ok ? 1 : 0);
+        TEST_ASSERT_EQUAL_UINT8(pattern[a], ModbusV.ok ? 1 : 0);
     }
 }
 
@@ -844,8 +844,8 @@ void test_bit_build_and_parse_guards()
 
 void test_round_trip_mask_write()
 {
-    Modbus.set_holding_reg_args.addr = 10;
-    Modbus.set_holding_reg_args.value = 0x1234;
+    ModbusV.set_holding_reg_args.addr = 10;
+    ModbusV.set_holding_reg_args.value = 0x1234;
     Modbus.set_holding_reg(protocore_modbus_span());
 
     uint8_t req[16];
@@ -862,12 +862,12 @@ void test_round_trip_mask_write()
     TEST_ASSERT_EQUAL_HEX8(0x16, req[7]);
 
     uint8_t resp[MODBUS_ADU_MAX];
-    Modbus.process_adu_args.req = req;
-    Modbus.process_adu_args.req_len = rn;
-    Modbus.process_adu_args.resp = resp;
-    Modbus.process_adu_args.protocore_resp_cap = sizeof(resp);
+    ModbusV.process_adu_args.req = req;
+    ModbusV.process_adu_args.req_len = rn;
+    ModbusV.process_adu_args.resp = resp;
+    ModbusV.process_adu_args.protocore_resp_cap = sizeof(resp);
     Modbus.process_adu(protocore_modbus_span());
-    size_t pn = Modbus.n;
+    size_t pn = ModbusV.n;
     uint16_t addr = 0, andm = 0, orm = 0;
     uint8_t ex = 0xFF;
     ModbusMasterV.parse_mask_write_response_args.adu = resp;
@@ -883,18 +883,18 @@ void test_round_trip_mask_write()
     TEST_ASSERT_EQUAL_HEX16(10, addr);
     TEST_ASSERT_EQUAL_HEX16(0xF0FF, andm);
     TEST_ASSERT_EQUAL_HEX16(0x0500, orm);
-    Modbus.get_holding_reg_args.addr = 10;
+    ModbusV.get_holding_reg_args.addr = 10;
     Modbus.get_holding_reg(protocore_modbus_span());
-    TEST_ASSERT_EQUAL_HEX16(0x1534, Modbus.value);
+    TEST_ASSERT_EQUAL_HEX16(0x1534, ModbusV.value);
 }
 
 void test_round_trip_read_write_multiple()
 {
-    Modbus.set_holding_reg_args.addr = 20;
-    Modbus.set_holding_reg_args.value = 0x1111;
+    ModbusV.set_holding_reg_args.addr = 20;
+    ModbusV.set_holding_reg_args.value = 0x1111;
     Modbus.set_holding_reg(protocore_modbus_span());
-    Modbus.set_holding_reg_args.addr = 21;
-    Modbus.set_holding_reg_args.value = 0x2222;
+    ModbusV.set_holding_reg_args.addr = 21;
+    ModbusV.set_holding_reg_args.value = 0x2222;
     Modbus.set_holding_reg(protocore_modbus_span());
 
     const uint16_t wvals[2] = {0xAAAA, 0xBBBB};
@@ -914,12 +914,12 @@ void test_round_trip_read_write_multiple()
     TEST_ASSERT_EQUAL_HEX8(0x17, req[7]);
 
     uint8_t resp[MODBUS_ADU_MAX];
-    Modbus.process_adu_args.req = req;
-    Modbus.process_adu_args.req_len = rn;
-    Modbus.process_adu_args.resp = resp;
-    Modbus.process_adu_args.protocore_resp_cap = sizeof(resp);
+    ModbusV.process_adu_args.req = req;
+    ModbusV.process_adu_args.req_len = rn;
+    ModbusV.process_adu_args.resp = resp;
+    ModbusV.process_adu_args.protocore_resp_cap = sizeof(resp);
     Modbus.process_adu(protocore_modbus_span());
-    size_t pn = Modbus.n;
+    size_t pn = ModbusV.n;
     uint16_t regs[2];
     uint8_t ex = 0xFF;
     ModbusMasterV.parse_response_args.adu = resp;
@@ -933,9 +933,9 @@ void test_round_trip_read_write_multiple()
     TEST_ASSERT_EQUAL_UINT8(0, ex);
     TEST_ASSERT_EQUAL_HEX16(0xAAAA, regs[0]);
     TEST_ASSERT_EQUAL_HEX16(0xBBBB, regs[1]);
-    Modbus.get_holding_reg_args.addr = 21;
+    ModbusV.get_holding_reg_args.addr = 21;
     Modbus.get_holding_reg(protocore_modbus_span());
-    TEST_ASSERT_EQUAL_HEX16(0xBBBB, Modbus.value);
+    TEST_ASSERT_EQUAL_HEX16(0xBBBB, ModbusV.value);
 }
 
 void test_fc16_17_guards()
@@ -1029,12 +1029,12 @@ void test_fc16_17_guards()
     ModbusMaster.build_mask_write(modbus_master_work);
     size_t rn = ModbusMasterV.n;
     uint8_t resp[MODBUS_ADU_MAX];
-    Modbus.process_adu_args.req = req;
-    Modbus.process_adu_args.req_len = rn;
-    Modbus.process_adu_args.resp = resp;
-    Modbus.process_adu_args.protocore_resp_cap = sizeof(resp);
+    ModbusV.process_adu_args.req = req;
+    ModbusV.process_adu_args.req_len = rn;
+    ModbusV.process_adu_args.resp = resp;
+    ModbusV.process_adu_args.protocore_resp_cap = sizeof(resp);
     Modbus.process_adu(protocore_modbus_span());
-    size_t pn = Modbus.n;
+    size_t pn = ModbusV.n;
     uint8_t ex = 0;
     ModbusMasterV.parse_mask_write_response_args.adu = resp;
     ModbusMasterV.parse_mask_write_response_args.len = pn;

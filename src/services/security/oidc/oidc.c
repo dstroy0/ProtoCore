@@ -532,15 +532,15 @@ void protocore_oidc_verify_with_key(uint8_t *restrict work)
         OidcV.result = PROTOCORE_OIDC_ERR_SIGNATURE; // pool exhausted: fail closed
         return;
     }
-    Rsa.verify_args.n = key->n;
-    Rsa.verify_args.e = key->e;
-    Rsa.verify_args.msg = (const uint8_t *)token;
-    Rsa.verify_args.msg_len = signing_input_len;
-    Rsa.verify_args.sig = sig;
-    Rsa.verify_args.sig_len = PROTOCORE_OIDC_RSA_BYTES;
-    Rsa.verify_args.hash = PROTOCORE_RSA_HASH_SHA256;
+    RsaV.verify_args.n = key->n;
+    RsaV.verify_args.e = key->e;
+    RsaV.verify_args.msg = (const uint8_t *)token;
+    RsaV.verify_args.msg_len = signing_input_len;
+    RsaV.verify_args.sig = sig;
+    RsaV.verify_args.sig_len = PROTOCORE_OIDC_RSA_BYTES;
+    RsaV.verify_args.hash = PROTOCORE_RSA_HASH_SHA256;
     Rsa.verify(vws.buf);
-    const proto_bool verified = Rsa.ok;
+    const proto_bool verified = RsaV.ok;
     protocore_secure_release(vmark);
     if (!verified)
     {

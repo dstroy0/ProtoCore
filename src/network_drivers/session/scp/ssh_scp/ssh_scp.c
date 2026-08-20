@@ -314,7 +314,7 @@ uint8_t *protocore_ssh_scp_span(void)
     return s_own.span;
 }
 
-static void ssh_scp_begin(uint8_t *restrict work)
+void protocore_ssh_scp_begin(uint8_t *restrict work)
 {
     // Bind the root this server answers from. Naming a different one than SFTP is how the two end up
     // over different storage; naming the same one shares it and costs one entry.
@@ -339,9 +339,8 @@ static void ssh_scp_begin(uint8_t *restrict work)
     }
 }
 
-SshScpNs SshScp = {
-    .begin = ssh_scp_begin,
-};
+/** @brief The operands and the outcome. */
+SshScpVars SshScpV;
 
 PROTOCORE_END_DECLS
 

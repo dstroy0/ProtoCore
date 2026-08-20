@@ -254,19 +254,26 @@ typedef struct
  */
 typedef struct
 {
-    uint8_t slot;       ///< the SSH slot a call acts on
-    uint8_t msg_type;   ///< the message a dispatch routes
-    SshAuthReq *req;    ///< where a parse lands the request (sec 5)
-    proto_bool partial; ///< the failure is a partial success (sec 5.1)
-
+    uint8_t slot;             ///< the SSH slot a call acts on
+    uint8_t msg_type;         ///< the message a dispatch routes
+    SshAuthReq *req;          ///< where a parse lands the request (sec 5)
+    proto_bool partial;       ///< the failure is a partial success (sec 5.1)
     SshAuthMsgArgs msg;       ///< sec 5 the message body a dispatch is given
     SshAuthOutArgs out_args;  ///< where a reply is written
     SshUserauthArgs userauth; ///< sec 5 / sec 7 the fields one request names
     SshAuthCbs cbs;           ///< what an attempt is checked against
-
     proto_bool ok;
     int i32;
+#if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
+#endif
+} SshAuthVars;
 
+/** @brief The operands and the outcome. */
+extern SshAuthVars SshAuthV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const set_password_cb)(uint8_t *restrict work);
     void (*const set_password_change_cb)(uint8_t *restrict work);
     void (*const set_pubkey_cb)(uint8_t *restrict work);
@@ -280,14 +287,53 @@ typedef struct
     void (*const build_failure)(uint8_t *restrict work);
     void (*const build_success)(uint8_t *restrict work);
     void (*const handle_request)(uint8_t *restrict work);
-#if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
     void (*const handle_info_response)(uint8_t *restrict work);
-#endif
     void (*const dispatch)(uint8_t *restrict work);
 } SshAuthNs;
 
-/** @brief The one symbol this module exports. */
-extern SshAuthNs SshAuth;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SshAuthV or a region of the borrow at a fixed offset.
+void protocore_ssh_auth_set_password_cb(uint8_t *restrict work);
+void protocore_ssh_auth_set_password_change_cb(uint8_t *restrict work);
+void protocore_ssh_auth_set_pubkey_cb(uint8_t *restrict work);
+void protocore_ssh_auth_pw_change_report(uint8_t *restrict work);
+void protocore_ssh_auth_pw_change_clear(uint8_t *restrict work);
+void protocore_ssh_auth_passwd_change_reply(uint8_t *restrict work);
+void protocore_ssh_auth_write_publickey_request(uint8_t *restrict work);
+void protocore_ssh_auth_timed_out(uint8_t *restrict work);
+void protocore_ssh_auth_reset(uint8_t *restrict work);
+void protocore_ssh_auth_parse_request(uint8_t *restrict work);
+void protocore_ssh_auth_build_failure(uint8_t *restrict work);
+void protocore_ssh_auth_build_success(uint8_t *restrict work);
+void protocore_ssh_auth_handle_request(uint8_t *restrict work);
+#if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
+void protocore_ssh_auth_handle_info_response(uint8_t *restrict work);
+#endif
+void protocore_ssh_auth_dispatch(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `SshAuth.set_password_cb(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SshAuthNs SshAuth __attribute__((unused)) = {
+    .set_password_cb = protocore_ssh_auth_set_password_cb,
+    .set_password_change_cb = protocore_ssh_auth_set_password_change_cb,
+    .set_pubkey_cb = protocore_ssh_auth_set_pubkey_cb,
+    .pw_change_report = protocore_ssh_auth_pw_change_report,
+    .pw_change_clear = protocore_ssh_auth_pw_change_clear,
+    .passwd_change_reply = protocore_ssh_auth_passwd_change_reply,
+    .write_publickey_request = protocore_ssh_auth_write_publickey_request,
+    .timed_out = protocore_ssh_auth_timed_out,
+    .reset = protocore_ssh_auth_reset,
+    .parse_request = protocore_ssh_auth_parse_request,
+    .build_failure = protocore_ssh_auth_build_failure,
+    .build_success = protocore_ssh_auth_build_success,
+    .handle_request = protocore_ssh_auth_handle_request,
+#if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
+    .handle_info_response = protocore_ssh_auth_handle_info_response,
+#endif
+    .dispatch = protocore_ssh_auth_dispatch,
+};
 
 /**
  * @brief The PROTOCORE_SSH_AUTH_BORROW bytes this module's state lives in.

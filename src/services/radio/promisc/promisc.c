@@ -40,16 +40,16 @@ uint8_t *protocore_promisc_span(void)
     return s_own.span;
 }
 
-static void promisc_wifi_frame_parse(uint8_t *restrict work)
+void protocore_promisc_wifi_frame_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *frame = Promisc.wifi_frame_parse_args.frame;
-    uint16_t len = Promisc.wifi_frame_parse_args.len;
-    WifiFrameInfo *out = Promisc.wifi_frame_parse_args.out;
+    const uint8_t *frame = PromiscV.wifi_frame_parse_args.frame;
+    uint16_t len = PromiscV.wifi_frame_parse_args.len;
+    WifiFrameInfo *out = PromiscV.wifi_frame_parse_args.out;
 
     if (!frame || !out || len < 10) // FC(2) + Duration(2) + Addr1(6) - the shortest control frame
     {
-        Promisc.ok = PROTO_FALSE;
+        PromiscV.ok = PROTO_FALSE;
         return;
     }
     mem.set(out, 0, sizeof(*out));
@@ -67,14 +67,14 @@ static void promisc_wifi_frame_parse(uint8_t *restrict work)
         // Control frames carry only Addr1 (the receiver); the rest vary by subtype.
         out->dst = frame + 4;
         out->hdr_len = 10;
-        Promisc.ok = PROTO_TRUE;
+        PromiscV.ok = PROTO_TRUE;
         return;
     }
 
     // Management / data / extension frames carry the full 3-address header + sequence control.
     if (len < 24)
     {
-        Promisc.ok = PROTO_FALSE;
+        PromiscV.ok = PROTO_FALSE;
         return;
     }
     out->seq = (uint16_t)(((uint16_t)frame[22] | ((uint16_t)frame[23] << 8)) >> 4);
@@ -96,7 +96,7 @@ static void promisc_wifi_frame_parse(uint8_t *restrict work)
     }
     if (len < hlen)
     {
-        Promisc.ok = PROTO_FALSE;
+        PromiscV.ok = PROTO_FALSE;
         return;
     }
     out->hdr_len = hlen;
@@ -130,7 +130,7 @@ static void promisc_wifi_frame_parse(uint8_t *restrict work)
         out->src = frame + 24;
         out->bssid = NULL;
     }
-    Promisc.ok = PROTO_TRUE;
+    PromiscV.ok = PROTO_TRUE;
 }
 
 // libpcap framing (Pcap.global_header / Pcap.record_header) is in shared/pcap/pcap.h - shared with
@@ -163,14 +163,14 @@ static_assert(PROMISC_OFF_CTX % _Alignof(PromiscCtx) == 0,
 // The region, at its offset in the caller's borrow.
 #define PROMISC_CTX(w) ((PromiscCtx *)(void *)((w) + PROMISC_OFF_CTX))
 
-static void promisc_begin(uint8_t *restrict work)
+void protocore_promisc_begin(uint8_t *restrict work)
 {
-    uint8_t channel = Promisc.begin_args.channel;
-    protocore_promisc_sink_fn sink = Promisc.begin_args.sink;
+    uint8_t channel = PromiscV.begin_args.channel;
+    protocore_promisc_sink_fn sink = PromiscV.begin_args.sink;
 
     if (!sink)
     {
-        Promisc.ok = PROTO_FALSE;
+        PromiscV.ok = PROTO_FALSE;
         return;
     }
     PROMISC_CTX(work)->sink = sink;
@@ -182,34 +182,30 @@ static void promisc_begin(uint8_t *restrict work)
     if (!Radio.ok)
     {
         PROMISC_CTX(work)->sink = NULL;
-        Promisc.ok = PROTO_FALSE;
+        PromiscV.ok = PROTO_FALSE;
         return;
     }
-    Promisc.ok = PROTO_TRUE;
+    PromiscV.ok = PROTO_TRUE;
 }
 
-static void promisc_set_channel(uint8_t *restrict work)
+void protocore_promisc_set_channel(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t channel = Promisc.set_channel_args.channel;
+    uint8_t channel = PromiscV.set_channel_args.channel;
 
     Radio.monitor.channel = channel;
     Radio.monitor_set_channel(protocore_radio_power_span());
 }
 
-static void promisc_end(uint8_t *restrict work)
+void protocore_promisc_end(uint8_t *restrict work)
 {
 
     Radio.monitor_end(protocore_radio_power_span());
     PROMISC_CTX(work)->sink = NULL;
 }
 
-PromiscNs Promisc = {
-    .wifi_frame_parse = promisc_wifi_frame_parse,
-    .begin = promisc_begin,
-    .set_channel = promisc_set_channel,
-    .end = promisc_end,
-};
+/** @brief The operands and the outcome. */
+PromiscVars PromiscV;
 
 PROTOCORE_END_DECLS
 

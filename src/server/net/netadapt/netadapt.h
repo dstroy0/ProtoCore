@@ -78,16 +78,33 @@ typedef struct
 {
     NetadaptWindowArgs window_args;
     NetadaptDhcpFallbackArgs dhcp_fallback_args;
-
     proto_bool ok;
     uint32_t u32;
+} NetadaptVars;
 
+/** @brief The operands and the outcome. */
+extern NetadaptVars NetadaptV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const window)(uint8_t *restrict work);
     void (*const dhcp_fallback)(uint8_t *restrict work);
 } NetadaptNs;
 
-/** @brief The one symbol this module exports. */
-extern NetadaptNs Netadapt;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in NetadaptV or a region of the borrow at a fixed offset.
+void protocore_netadapt_window(uint8_t *restrict work);
+void protocore_netadapt_dhcp_fallback(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Netadapt.window(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const NetadaptNs Netadapt __attribute__((unused)) = {
+    .window = protocore_netadapt_window,
+    .dhcp_fallback = protocore_netadapt_dhcp_fallback,
+};
 
 PROTOCORE_END_DECLS
 

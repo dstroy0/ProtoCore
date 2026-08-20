@@ -70,33 +70,33 @@ void protocore_cloud_events_build_structured(uint8_t *restrict work)
     }
 
     protocore_json_writer w = {0};
-    Json.init_args.w = &w;
-    Json.init_args.buf = out;
-    Json.init_args.cap = cap;
+    JsonV.init_args.w = &w;
+    JsonV.init_args.buf = out;
+    JsonV.init_args.cap = cap;
     Json.init(json_work);
-    Json.begin_object_args.w = &w;
+    JsonV.begin_object_args.w = &w;
     Json.begin_object(json_work);
-    Json.kv_str_args.w = &w;
-    Json.kv_str_args.k = CE_ATTR_SPECVERSION;
-    Json.kv_str_args.v = PROTOCORE_CLOUDEVENTS_SPECVERSION;
+    JsonV.kv_str_args.w = &w;
+    JsonV.kv_str_args.k = CE_ATTR_SPECVERSION;
+    JsonV.kv_str_args.v = PROTOCORE_CLOUDEVENTS_SPECVERSION;
     Json.kv_str(json_work);
-    Json.kv_str_args.w = &w;
-    Json.kv_str_args.k = CE_ATTR_ID;
-    Json.kv_str_args.v = CloudEventsV.attr.id;
+    JsonV.kv_str_args.w = &w;
+    JsonV.kv_str_args.k = CE_ATTR_ID;
+    JsonV.kv_str_args.v = CloudEventsV.attr.id;
     Json.kv_str(json_work);
-    Json.kv_str_args.w = &w;
-    Json.kv_str_args.k = CE_ATTR_SOURCE;
-    Json.kv_str_args.v = CloudEventsV.attr.source;
+    JsonV.kv_str_args.w = &w;
+    JsonV.kv_str_args.k = CE_ATTR_SOURCE;
+    JsonV.kv_str_args.v = CloudEventsV.attr.source;
     Json.kv_str(json_work);
-    Json.kv_str_args.w = &w;
-    Json.kv_str_args.k = CE_ATTR_TYPE;
-    Json.kv_str_args.v = CloudEventsV.attr.type;
+    JsonV.kv_str_args.w = &w;
+    JsonV.kv_str_args.k = CE_ATTR_TYPE;
+    JsonV.kv_str_args.v = CloudEventsV.attr.type;
     Json.kv_str(json_work);
     if (ce_present(CloudEventsV.attr.subject))
     {
-        Json.kv_str_args.w = &w;
-        Json.kv_str_args.k = CE_ATTR_SUBJECT;
-        Json.kv_str_args.v = CloudEventsV.attr.subject;
+        JsonV.kv_str_args.w = &w;
+        JsonV.kv_str_args.k = CE_ATTR_SUBJECT;
+        JsonV.kv_str_args.v = CloudEventsV.attr.subject;
         Json.kv_str(json_work);
     }
 
@@ -110,40 +110,40 @@ void protocore_cloud_events_build_structured(uint8_t *restrict work)
         {
             dct = CloudEventsV.attr.datacontenttype;
         }
-        Json.kv_str_args.w = &w;
-        Json.kv_str_args.k = CE_ATTR_DATACONTENTTYPE;
-        Json.kv_str_args.v = dct;
+        JsonV.kv_str_args.w = &w;
+        JsonV.kv_str_args.k = CE_ATTR_DATACONTENTTYPE;
+        JsonV.kv_str_args.v = dct;
         Json.kv_str(json_work);
-        Json.key_args.w = &w;
-        Json.key_args.k = CE_MEMBER_DATA;
+        JsonV.key_args.w = &w;
+        JsonV.key_args.k = CE_MEMBER_DATA;
         Json.key(json_work);
-        Json.put_raw_args.w = &w;
-        Json.put_raw_args.literal = CloudEventsV.data.json;
+        JsonV.put_raw_args.w = &w;
+        JsonV.put_raw_args.literal = CloudEventsV.data.json;
         Json.put_raw(json_work);
     }
     else if (CloudEventsV.data.str)
     {
         if (ce_present(CloudEventsV.attr.datacontenttype))
         {
-            Json.kv_str_args.w = &w;
-            Json.kv_str_args.k = CE_ATTR_DATACONTENTTYPE;
-            Json.kv_str_args.v = CloudEventsV.attr.datacontenttype;
+            JsonV.kv_str_args.w = &w;
+            JsonV.kv_str_args.k = CE_ATTR_DATACONTENTTYPE;
+            JsonV.kv_str_args.v = CloudEventsV.attr.datacontenttype;
             Json.kv_str(json_work);
         }
-        Json.kv_str_args.w = &w;
-        Json.kv_str_args.k = CE_MEMBER_DATA;
-        Json.kv_str_args.v = CloudEventsV.data.str;
+        JsonV.kv_str_args.w = &w;
+        JsonV.kv_str_args.k = CE_MEMBER_DATA;
+        JsonV.kv_str_args.v = CloudEventsV.data.str;
         Json.kv_str(json_work);
     }
     else if (ce_present(CloudEventsV.attr.datacontenttype))
     {
-        Json.kv_str_args.w = &w;
-        Json.kv_str_args.k = CE_ATTR_DATACONTENTTYPE;
-        Json.kv_str_args.v = CloudEventsV.attr.datacontenttype;
+        JsonV.kv_str_args.w = &w;
+        JsonV.kv_str_args.k = CE_ATTR_DATACONTENTTYPE;
+        JsonV.kv_str_args.v = CloudEventsV.attr.datacontenttype;
         Json.kv_str(json_work);
     }
 
-    Json.end_object_args.w = &w;
+    JsonV.end_object_args.w = &w;
     Json.end_object(json_work);
     if (!protocore_json_ok(&w))
     {

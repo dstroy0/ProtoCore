@@ -173,15 +173,32 @@ typedef struct
 {
     UmatiBindArgs bind_args;
     UmatiInstallArgs install_args;
-
     proto_bool ok;
+} UmatiVars;
 
+/** @brief The operands and the outcome. */
+extern UmatiVars UmatiV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const bind)(uint8_t *restrict work);
     void (*const install)(uint8_t *restrict work);
 } UmatiNs;
 
-/** @brief The one symbol this module exports. */
-extern UmatiNs Umati;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in UmatiV or a region of the borrow at a fixed offset.
+void protocore_umati_bind(uint8_t *restrict work);
+void protocore_umati_install(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Umati.bind(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const UmatiNs Umati __attribute__((unused)) = {
+    .bind = protocore_umati_bind,
+    .install = protocore_umati_install,
+};
 
 /**
  * @brief The PROTOCORE_UMATI_BORROW bytes this module's state lives in.

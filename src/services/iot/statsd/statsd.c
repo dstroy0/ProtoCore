@@ -173,42 +173,42 @@ uint8_t *protocore_statsd_span(void)
 }
 
 // Parse the daemon address and store the port and the tag list every later line carries.
-static void statsd_init(uint8_t *restrict work)
+void protocore_statsd_init(uint8_t *restrict work)
 {
     STATSD_CTX(work)->ready = PROTO_FALSE;
-    Statsd.ok = PROTO_FALSE;
-    STATSD_CTX(work)->port = Statsd.server.port ? Statsd.server.port : PROTOCORE_STATSD_PORT;
-    if (Statsd.tags.global && Statsd.tags.global[0])
+    StatsdV.ok = PROTO_FALSE;
+    STATSD_CTX(work)->port = StatsdV.server.port ? StatsdV.server.port : PROTOCORE_STATSD_PORT;
+    if (StatsdV.tags.global && StatsdV.tags.global[0])
     {
-        (void)str.copy(STATSD_CTX(work)->tags, Statsd.tags.global, sizeof(STATSD_CTX(work)->tags));
+        (void)str.copy(STATSD_CTX(work)->tags, StatsdV.tags.global, sizeof(STATSD_CTX(work)->tags));
     }
     else
     {
         STATSD_CTX(work)->tags[0] = '\0';
     }
-    if (!Statsd.server.addr)
+    if (!StatsdV.server.addr)
     {
         return;
     }
-    Ip.args.text = Statsd.server.addr;
+    Ip.args.text = StatsdV.server.addr;
     Ip.args.out = &STATSD_CTX(work)->server;
     Ip.parse(ip_work);
     STATSD_CTX(work)->ready = Ip.ok;
-    Statsd.ok = Ip.ok;
+    StatsdV.ok = Ip.ok;
 }
 
 // Build one metric line into ns->line, and report its length in ns->n.
-static void statsd_format(uint8_t *restrict work)
+void protocore_statsd_format(uint8_t *restrict work)
 {
     (void)work;
-    char *out = Statsd.line.out;
-    const size_t cap = Statsd.line.cap;
-    const char *name = Statsd.metric.name;
-    const char *value = Statsd.value.text;
-    const StatsdType type = Statsd.metric.type;
-    const char *tags = Statsd.tags.metric;
-    Statsd.n = 0;
-    Statsd.ok = PROTO_FALSE;
+    char *out = StatsdV.line.out;
+    const size_t cap = StatsdV.line.cap;
+    const char *name = StatsdV.metric.name;
+    const char *value = StatsdV.value.text;
+    const StatsdType type = StatsdV.metric.type;
+    const char *tags = StatsdV.tags.metric;
+    StatsdV.n = 0;
+    StatsdV.ok = PROTO_FALSE;
     if (!out || cap == 0 || !name || !name[0] || !value)
     {
         return;
@@ -241,7 +241,7 @@ static void statsd_format(uint8_t *restrict work)
 
     // `|@<rate>` then `|#<tags>`, each written only when it renders to something.
     char rbuf[PROTOCORE_STATSD_RATE_MAX];
-    const size_t rn = rate_str(rbuf, Statsd.metric.rate);
+    const size_t rn = rate_str(rbuf, StatsdV.metric.rate);
     if (rn && (!line_append(out, cap, &pos, "|@", 2) || !line_append(out, cap, &pos, rbuf, rn)))
     {
         return;
@@ -253,24 +253,24 @@ static void statsd_format(uint8_t *restrict work)
     }
 
     out[pos] = '\0'; // pos <= cap-1 by construction
-    Statsd.n = pos;
-    Statsd.ok = PROTO_TRUE;
+    StatsdV.n = pos;
+    StatsdV.ok = PROTO_TRUE;
 }
 
 // Stamp the stored tag list, format into the client's line storage, and send it as one datagram.
 static void statsd_emit(uint8_t *restrict work)
 {
-    Statsd.ok = PROTO_FALSE;
-    Statsd.n = 0;
+    StatsdV.ok = PROTO_FALSE;
+    StatsdV.n = 0;
     if (!STATSD_CTX(work)->ready)
     {
         return;
     }
-    Statsd.tags.metric = STATSD_CTX(work)->tags[0] ? STATSD_CTX(work)->tags : NULL;
-    Statsd.line.out = STATSD_CTX(work)->buf;
-    Statsd.line.cap = sizeof(STATSD_CTX(work)->buf);
-    statsd_format(work);
-    if (Statsd.n == 0)
+    StatsdV.tags.metric = STATSD_CTX(work)->tags[0] ? STATSD_CTX(work)->tags : NULL;
+    StatsdV.line.out = STATSD_CTX(work)->buf;
+    StatsdV.line.cap = sizeof(STATSD_CTX(work)->buf);
+    protocore_statsd_format(work);
+    if (StatsdV.n == 0)
     {
         return;
     }
@@ -278,66 +278,61 @@ static void statsd_emit(uint8_t *restrict work)
     UdpClientV.dst = &STATSD_CTX(work)->server;
     UdpClientV.dst_port = STATSD_CTX(work)->port;
     UdpClientV.data = (const uint8_t *)STATSD_CTX(work)->buf;
-    UdpClientV.len = Statsd.n;
+    UdpClientV.len = StatsdV.n;
     UdpClient.sendto(protocore_udp_client_span());
-    Statsd.ok = UdpClientV.ok;
+    StatsdV.ok = UdpClientV.ok;
 }
 
 // Add value.i64 to the bucket, annotated with metric.rate.
-static void statsd_count(uint8_t *restrict work)
+void protocore_statsd_count(uint8_t *restrict work)
 {
-    STATSD_CTX(work)->val[i64_str(STATSD_CTX(work)->val, Statsd.value.i64)] = '\0';
-    Statsd.value.text = STATSD_CTX(work)->val;
-    Statsd.metric.type = STATSD_COUNTER;
+    STATSD_CTX(work)->val[i64_str(STATSD_CTX(work)->val, StatsdV.value.i64)] = '\0';
+    StatsdV.value.text = STATSD_CTX(work)->val;
+    StatsdV.metric.type = STATSD_COUNTER;
     statsd_emit(work);
 }
 
 // Assign value.i64 to the bucket.
-static void statsd_gauge(uint8_t *restrict work)
+void protocore_statsd_gauge(uint8_t *restrict work)
 {
-    STATSD_CTX(work)->val[i64_str(STATSD_CTX(work)->val, Statsd.value.i64)] = '\0';
-    Statsd.value.text = STATSD_CTX(work)->val;
-    Statsd.metric.type = STATSD_GAUGE;
-    Statsd.metric.rate = 1.0f;
+    STATSD_CTX(work)->val[i64_str(STATSD_CTX(work)->val, StatsdV.value.i64)] = '\0';
+    StatsdV.value.text = STATSD_CTX(work)->val;
+    StatsdV.metric.type = STATSD_GAUGE;
+    StatsdV.metric.rate = 1.0f;
     statsd_emit(work);
 }
 
 // Adjust the bucket by value.i64, the sign written so the daemon adds rather than assigns.
-static void statsd_gauge_delta(uint8_t *restrict work)
+void protocore_statsd_gauge_delta(uint8_t *restrict work)
 {
-    STATSD_CTX(work)->val[i64_delta_str(STATSD_CTX(work)->val, Statsd.value.i64)] = '\0';
-    Statsd.value.text = STATSD_CTX(work)->val;
-    Statsd.metric.type = STATSD_GAUGE;
-    Statsd.metric.rate = 1.0f;
+    STATSD_CTX(work)->val[i64_delta_str(STATSD_CTX(work)->val, StatsdV.value.i64)] = '\0';
+    StatsdV.value.text = STATSD_CTX(work)->val;
+    StatsdV.metric.type = STATSD_GAUGE;
+    StatsdV.metric.rate = 1.0f;
     statsd_emit(work);
 }
 
 // Record value.ms milliseconds.
-static void statsd_timing(uint8_t *restrict work)
+void protocore_statsd_timing(uint8_t *restrict work)
 {
-    STATSD_CTX(work)->val[u64_str(STATSD_CTX(work)->val, Statsd.value.ms)] = '\0';
-    Statsd.value.text = STATSD_CTX(work)->val;
-    Statsd.metric.type = STATSD_TIMING;
-    Statsd.metric.rate = 1.0f;
+    STATSD_CTX(work)->val[u64_str(STATSD_CTX(work)->val, StatsdV.value.ms)] = '\0';
+    StatsdV.value.text = STATSD_CTX(work)->val;
+    StatsdV.metric.type = STATSD_TIMING;
+    StatsdV.metric.rate = 1.0f;
     statsd_emit(work);
 }
 
 // Count value.member as one unique occurrence. The member is sent where it lies, not copied.
-static void statsd_set(uint8_t *restrict work)
+void protocore_statsd_set(uint8_t *restrict work)
 {
-    Statsd.value.text = Statsd.value.member ? Statsd.value.member : "";
-    Statsd.metric.type = STATSD_SET;
-    Statsd.metric.rate = 1.0f;
+    StatsdV.value.text = StatsdV.value.member ? StatsdV.value.member : "";
+    StatsdV.metric.type = STATSD_SET;
+    StatsdV.metric.rate = 1.0f;
     statsd_emit(work);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-StatsdNs Statsd = {.init = statsd_init,
-                   .format = statsd_format,
-                   .count = statsd_count,
-                   .gauge = statsd_gauge,
-                   .gauge_delta = statsd_gauge_delta,
-                   .timing = statsd_timing,
-                   .set = statsd_set};
+/** @brief The operands and the outcome. */
+StatsdVars StatsdV;
 
 #endif // PROTOCORE_ENABLE_STATSD

@@ -85,12 +85,18 @@ typedef struct
 {
     HexArgs args;
     HexIoArgs io;
-
     char ch;
     int8_t i8;
     uint8_t u8;
     int32_t i32;
+} HexVars;
 
+/** @brief The operands and the outcome. */
+extern HexVars HexV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const digit)(uint8_t *restrict work);
     void (*const val)(uint8_t *restrict work);
     void (*const u32)(uint8_t *restrict work);
@@ -98,7 +104,24 @@ typedef struct
     void (*const decode)(uint8_t *restrict work);
 } HexNs;
 
-/** @brief The one symbol this module exports. */
-extern HexNs Hex;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HexV or a region of the borrow at a fixed offset.
+void protocore_hex_digit(uint8_t *restrict work);
+void protocore_hex_val(uint8_t *restrict work);
+void protocore_hex_u32(uint8_t *restrict work);
+void protocore_hex_encode(uint8_t *restrict work);
+void protocore_hex_decode(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Hex.digit(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HexNs Hex __attribute__((unused)) = {
+    .digit = protocore_hex_digit,
+    .val = protocore_hex_val,
+    .u32 = protocore_hex_u32,
+    .encode = protocore_hex_encode,
+    .decode = protocore_hex_decode,
+};
 
 #endif // PROTOCORE_HEX_H

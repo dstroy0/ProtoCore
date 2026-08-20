@@ -11,12 +11,12 @@ static uint8_t sb_modbus_work[16]; // the borrow an entry takes; SbModbus never 
 static int loopback_txn(void *io, const uint8_t *req, size_t req_len, uint8_t *resp, size_t resp_cap)
 {
     (void)io;
-    Modbus.process_adu_args.req = req;
-    Modbus.process_adu_args.req_len = req_len;
-    Modbus.process_adu_args.resp = resp;
-    Modbus.process_adu_args.protocore_resp_cap = resp_cap;
+    ModbusV.process_adu_args.req = req;
+    ModbusV.process_adu_args.req_len = req_len;
+    ModbusV.process_adu_args.resp = resp;
+    ModbusV.process_adu_args.protocore_resp_cap = resp_cap;
     Modbus.process_adu(protocore_modbus_span());
-    size_t pn = Modbus.n;
+    size_t pn = ModbusV.n;
     return (pn == 0) ? -1 : (int)pn;
 }
 
@@ -112,8 +112,8 @@ void tearDown()
 
 void test_read_single_holding()
 {
-    Modbus.set_holding_reg_args.addr = 10;
-    Modbus.set_holding_reg_args.value = 0xBEEF;
+    ModbusV.set_holding_reg_args.addr = 10;
+    ModbusV.set_holding_reg_args.value = 0xBEEF;
     Modbus.set_holding_reg(protocore_modbus_span());
     TEST_ASSERT_EQUAL_INT(SB_OK, sbm_init(&g_ctx, loopback_txn, NULL, MODBUS_FC_READ_HOLDING_REGS, 1));
     TEST_ASSERT_EQUAL_INT(SB_OK, sbm_driver(&g_drv, "plc", &g_ctx));
@@ -128,8 +128,8 @@ void test_read_block_matrix()
 {
     for (uint16_t i = 0; i < 4; i++)
     {
-        Modbus.set_holding_reg_args.addr = (uint16_t)(20 + i);
-        Modbus.set_holding_reg_args.value = (uint16_t)(0x1000 + i);
+        ModbusV.set_holding_reg_args.addr = (uint16_t)(20 + i);
+        ModbusV.set_holding_reg_args.value = (uint16_t)(0x1000 + i);
         Modbus.set_holding_reg(protocore_modbus_span());
     }
     sbm_init(&g_ctx, loopback_txn, NULL, MODBUS_FC_READ_HOLDING_REGS, 1);
@@ -146,8 +146,8 @@ void test_read_block_matrix()
 
 void test_read_input_registers()
 {
-    Modbus.set_input_reg_args.addr = 5;
-    Modbus.set_input_reg_args.value = 0x0777;
+    ModbusV.set_input_reg_args.addr = 5;
+    ModbusV.set_input_reg_args.value = 0x0777;
     Modbus.set_input_reg(protocore_modbus_span());
     sbm_init(&g_ctx, loopback_txn, NULL, MODBUS_FC_READ_INPUT_REGS, 1);
     sbm_driver(&g_drv, "sensor", &g_ctx);
@@ -189,9 +189,9 @@ void test_write_single_round_trip()
     sb_add(&g_drv);
 
     TEST_ASSERT_EQUAL_INT(SB_OK, sb_write("plc", 8, 0x4242));
-    Modbus.get_holding_reg_args.addr = 8;
+    ModbusV.get_holding_reg_args.addr = 8;
     Modbus.get_holding_reg(protocore_modbus_span());
-    TEST_ASSERT_EQUAL_HEX16(0x4242, Modbus.value);
+    TEST_ASSERT_EQUAL_HEX16(0x4242, ModbusV.value);
     int32_t v = 0;
     TEST_ASSERT_EQUAL_INT(SB_OK, sb_read("plc", 8, &v));
     TEST_ASSERT_EQUAL_INT32(0x4242, v);
@@ -266,8 +266,8 @@ void test_read_bounds()
 
 void test_txid_increments()
 {
-    Modbus.set_holding_reg_args.addr = 0;
-    Modbus.set_holding_reg_args.value = 0x0001;
+    ModbusV.set_holding_reg_args.addr = 0;
+    ModbusV.set_holding_reg_args.value = 0x0001;
     Modbus.set_holding_reg(protocore_modbus_span());
     sbm_init(&g_ctx, loopback_txn, NULL, MODBUS_FC_READ_HOLDING_REGS, 1);
     sbm_driver(&g_drv, "plc", &g_ctx);
