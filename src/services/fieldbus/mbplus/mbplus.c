@@ -8,8 +8,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
-
 #if PROTOCORE_ENABLE_MBPLUS
 
 #include "mmgr/protomem/protomem.h"
@@ -36,7 +34,7 @@ void protocore_mbplus_crc(uint8_t *restrict work)
     CrcV.args.params = &PROTOCORE_CRC16_X25;
     CrcV.args.data = bytes;
     CrcV.args.len = len;
-    Crc.compute(crc_work);
+    Crc.compute(work);
     MbplusV.value = (uint16_t)CrcV.value;
 }
 

@@ -7,8 +7,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
-
 #if PROTOCORE_ENABLE_FORWARDED_TRUST
 
 PROTOCORE_BEGIN_DECLS
@@ -53,7 +51,7 @@ static proto_bool ip_parse(const char *text, protocore_ip *out)
 {
     IpV.args.text = text;
     IpV.args.out = out;
-    Ip.parse(ip_work);
+    Ip.parse(protocore_forwarded_trust_span());
     return IpV.ok;
 }
 
@@ -63,7 +61,7 @@ static proto_bool ip_in_prefix(const protocore_ip *addr, const protocore_ip *net
     IpV.args.ip = addr;
     IpV.args.b = net;
     IpV.args.prefix_len = prefix_len;
-    Ip.prefix_match(ip_work);
+    Ip.prefix_match(protocore_forwarded_trust_span());
     return IpV.ok;
 }
 
@@ -71,7 +69,7 @@ static proto_bool ip_in_prefix(const protocore_ip *addr, const protocore_ip *net
 static proto_bool ip_none(const protocore_ip *ip)
 {
     IpV.args.ip = ip;
-    Ip.is_unspecified(ip_work);
+    Ip.is_unspecified(protocore_forwarded_trust_span());
     return IpV.ok;
 }
 

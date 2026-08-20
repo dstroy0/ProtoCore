@@ -17,10 +17,6 @@
 #include "mdns_service.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
-
-static uint8_t dns_wire_work[16]; // the borrow an entry takes; DnsWire never reads it
-
 PROTOCORE_BEGIN_DECLS
 
 // Both backends' includes, ahead of either backend's code: what a translation unit reaches for is
@@ -290,7 +286,7 @@ static proto_bool rr_put(uint8_t *out, size_t cap, size_t *n, const char *owner,
     DnsWireV.text.dotted = owner;
     DnsWireV.text.out = out + p;
     DnsWireV.text.out_cap = cap - p;
-    DnsWire.encode(dns_wire_work);
+    DnsWire.encode(protocore_mdns_service_span());
     size_t w = DnsWireV.n;
     if (w == 0)
     {
@@ -363,7 +359,7 @@ static uint16_t put_srv(uint8_t *restrict work, const MdnsSvc *s, size_t *n)
     DnsWireV.text.dotted = mdns_str(MDNS_SERVICE_CTX(work)->fqdn);
     DnsWireV.text.out = rd + 6;
     DnsWireV.text.out_cap = MDNS_SERVICE_CTX(work)->rd.cap - 6;
-    DnsWire.encode(dns_wire_work);
+    DnsWire.encode(work);
     size_t w = DnsWireV.n;
     if (w == 0)
     {
@@ -405,7 +401,7 @@ static uint16_t put_ptr(uint8_t *restrict work, const char *owner, const char *t
     DnsWireV.text.dotted = target;
     DnsWireV.text.out = MDNS_SERVICE_CTX(work)->rd.buf;
     DnsWireV.text.out_cap = MDNS_SERVICE_CTX(work)->rd.cap;
-    DnsWire.encode(dns_wire_work);
+    DnsWire.encode(work);
     size_t w = DnsWireV.n;
     if (w == 0)
     {
@@ -432,7 +428,7 @@ static uint16_t answer_for(uint8_t *restrict work, const char *qname, uint16_t q
 
     DnsWireV.cmp.a = qname;
     DnsWireV.cmp.b = mdns_str(MDNS_SERVICE_CTX(work)->fqdn);
-    DnsWire.eq(dns_wire_work);
+    DnsWire.eq(work);
     if (DnsWireV.ok && wants(qtype, PROTOCORE_MDNS_T_A))
     {
         added += put_a(work, n);
@@ -455,14 +451,14 @@ static uint16_t answer_for(uint8_t *restrict work, const char *qname, uint16_t q
         // The enumeration name lists the types on offer, not the instances.
         DnsWireV.cmp.a = qname;
         DnsWireV.cmp.b = PROTOCORE_MDNS_ENUM_NAME;
-        DnsWire.eq(dns_wire_work);
+        DnsWire.eq(work);
         if (DnsWireV.ok && wants(qtype, PROTOCORE_MDNS_T_PTR))
         {
             added += put_ptr(work, PROTOCORE_MDNS_ENUM_NAME, mdns_str(MDNS_SERVICE_CTX(work)->svc_name), n);
         }
         DnsWireV.cmp.a = qname;
         DnsWireV.cmp.b = mdns_str(MDNS_SERVICE_CTX(work)->svc_name);
-        DnsWire.eq(dns_wire_work);
+        DnsWire.eq(work);
         if (DnsWireV.ok && wants(qtype, PROTOCORE_MDNS_T_PTR))
         {
             added += put_ptr(work, mdns_str(MDNS_SERVICE_CTX(work)->svc_name),
@@ -470,7 +466,7 @@ static uint16_t answer_for(uint8_t *restrict work, const char *qname, uint16_t q
         }
         DnsWireV.cmp.a = qname;
         DnsWireV.cmp.b = mdns_str(MDNS_SERVICE_CTX(work)->inst_name);
-        DnsWire.eq(dns_wire_work);
+        DnsWire.eq(work);
         if (DnsWireV.ok)
         {
             if (wants(qtype, PROTOCORE_MDNS_T_SRV))
@@ -529,7 +525,7 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct proto
         DnsWireV.msg.out = mdns_str(MDNS_SERVICE_CTX(work)->qname);
         DnsWireV.msg.out_cap = MDNS_SERVICE_CTX(work)->qname.cap;
         DnsWireV.msg.allow_ptr = PROTO_TRUE;
-        DnsWire.decode(dns_wire_work);
+        DnsWire.decode(protocore_mdns_service_span());
         if (!DnsWireV.ok)
         {
             return; // a malformed question: the rest of the message cannot be located
@@ -553,7 +549,7 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct proto
     protocore_ip group = {PROTOCORE_IP_NONE, {0}};
     IpV.args.text = PROTOCORE_MDNS_GROUP;
     IpV.args.out = &group;
-    Ip.parse(ip_work);
+    Ip.parse(protocore_mdns_service_span());
     if (IpV.ok)
     {
         UdpListenerV.port = PROTOCORE_MDNS_PORT;

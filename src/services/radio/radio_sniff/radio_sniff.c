@@ -8,8 +8,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t pcap_work[16]; // the borrow an entry takes; Pcap never reads it
-
 #if PROTOCORE_ENABLE_RADIO_SNIFF
 
 #include "mmgr/endian/endian.h"
@@ -66,7 +64,7 @@ void protocore_radio_sniff_global_header(uint8_t *restrict work)
     PcapV.args.out = out;
     PcapV.args.cap = cap;
     PcapV.args.linktype = PROTOCORE_DLT_IEEE802_15_4_TAP;
-    Pcap.global_header(pcap_work);
+    Pcap.global_header(work);
     RadioSniffV.n = PcapV.n;
 }
 
@@ -101,7 +99,7 @@ void protocore_radio_sniff_tap_record(uint8_t *restrict work)
     PcapV.rec.ts_usec = ts_usec;
     PcapV.rec.caplen = (uint32_t)caplen;
     PcapV.rec.origlen = (uint32_t)caplen;
-    Pcap.record_header(pcap_work);
+    Pcap.record_header(work);
     uint8_t *p = out + PROTOCORE_PCAP_REC_HDR_LEN;
 
     // 802.15.4 TAP header: version(1)=0, reserved(1)=0, length(2 LE) = whole TAP block.

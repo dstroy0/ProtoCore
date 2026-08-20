@@ -13,8 +13,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
-
 #if PROTOCORE_ENABLE_CSRF
 
 #include "crypto/ct_eq.h" // protocore_ct_eq: the constant-time signature compare
@@ -72,7 +70,7 @@ static void hex_of(const uint8_t *in, uint32_t n, char *out)
     HexV.io.in = in;
     HexV.io.n = n;
     HexV.io.out = out;
-    Hex.encode(hex_work);
+    Hex.encode(protocore_csrf_span());
 }
 
 // Hex of the truncated HMAC-SHA256(secret, nonce) into sig_hex (2*CSRF_SIG_BYTES + 1).
@@ -194,7 +192,7 @@ void protocore_csrf_verify(uint8_t *restrict work)
     HexV.io.n = (uint32_t)nhexlen;
     HexV.io.bytes = nonce;
     HexV.io.cap = (uint32_t)sizeof(nonce);
-    Hex.decode(hex_work);
+    Hex.decode(work);
     if (HexV.i32 != CSRF_NONCE_BYTES)
     {
         return;

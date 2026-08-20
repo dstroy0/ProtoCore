@@ -17,8 +17,6 @@
 #include "protocore_config.h"
 #include "server/clock/clock.h" // protocore_millis, pcdelay
 
-static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads it
-
 #if PROTOCORE_ENABLE_SMTP
 
 #include "network_drivers/presentation/codec/base64/base64.h" // Base64.encode: RFC 4648 sec 4
@@ -328,7 +326,7 @@ static SmtpResult auth_response(uint8_t *restrict work, const char *secret)
     Base64V.encode_args.src = (const uint8_t *)secret;
     Base64V.encode_args.src_len = slen;
     Base64V.encode_args.dst = SMTP_CTX(work)->b64;
-    Base64.encode(base64_work);
+    Base64.encode(work);
     SMTP_CTX(work)->b64[elen] = '\r';
     SMTP_CTX(work)->b64[elen + 1] = '\n';
     SMTP_CTX(work)->b64[elen + 2] = '\0';

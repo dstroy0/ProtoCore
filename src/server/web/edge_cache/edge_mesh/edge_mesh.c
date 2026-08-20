@@ -18,8 +18,6 @@
 #include "server/web/edge_cache/edge_mesh/edge_mesh.h"
 #include "services/storage/dbm/dbm.h"
 
-static uint8_t edge_cache_sd_work[16]; // the borrow an entry takes; EdgeCacheSd never reads it
-
 PROTOCORE_BEGIN_DECLS
 
 static void put_u16(uint8_t *p, uint16_t v)
@@ -252,7 +250,7 @@ void protocore_edge_mesh_serialize_entry(uint8_t *restrict work)
     EdgeCacheSdV.serialize_args.e = e;
     EdgeCacheSdV.serialize_args.out = out + PROTOCORE_EDGE_MESH_TRAILER;
     EdgeCacheSdV.serialize_args.cap = cap - PROTOCORE_EDGE_MESH_TRAILER;
-    EdgeCacheSd.serialize(edge_cache_sd_work);
+    EdgeCacheSd.serialize(work);
     size_t n = EdgeCacheSdV.n;
     if (n == 0)
     {
@@ -285,7 +283,7 @@ void protocore_edge_mesh_deserialize_entry(uint8_t *restrict work)
     EdgeCacheSdV.deserialize_args.buf = buf + PROTOCORE_EDGE_MESH_TRAILER;
     EdgeCacheSdV.deserialize_args.len = len - PROTOCORE_EDGE_MESH_TRAILER;
     EdgeCacheSdV.deserialize_args.e = e;
-    EdgeCacheSd.deserialize(edge_cache_sd_work);
+    EdgeCacheSd.deserialize(work);
     if (!EdgeCacheSdV.ok)
     {
         EdgeMeshV.ok = PROTO_FALSE;

@@ -91,7 +91,7 @@ void protocore_gpio_route_begin(uint8_t *restrict work)
     s_gpior.pins = pins;
     s_gpior.count = count;
     GpioMapV.args.pins = pins;
-    GpioMap.begin_pins(gpio_map_work);
+    GpioMap.begin_pins(work);
     const char *p = (path && path[0]) ? path : "/gpio";
     on_http(p, HTTP_GET, gpio_get_handler);
     on_http(p, HTTP_POST, gpio_post_handler);

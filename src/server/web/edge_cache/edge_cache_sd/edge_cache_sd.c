@@ -10,8 +10,6 @@
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 #include "shared/http_date/http_date.h"
 
-static uint8_t edge_cache_work[16]; // the borrow an entry takes; EdgeCache never reads it
-
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
 #include "mmgr/protomem/protomem.h"
@@ -168,7 +166,7 @@ void protocore_edge_cache_sd_deserialize(uint8_t *restrict work)
     EdgeCacheV.key_digest_args.canon = e->key;
     EdgeCacheV.key_digest_args.len = str.len(e->key, sizeof(e->key));
     EdgeCacheV.key_digest_args.digest = e->digest;
-    EdgeCache.key_digest(edge_cache_work);
+    EdgeCache.key_digest(work);
     EdgeCacheSdV.ok = PROTO_TRUE;
 }
 
@@ -297,7 +295,7 @@ void protocore_edge_cache_sd_put(uint8_t *restrict work)
         return;
     }
     EdgeCacheV.entry_has_validator_args.e = e;
-    EdgeCache.entry_has_validator(edge_cache_work);
+    EdgeCache.entry_has_validator(work);
     if (!EdgeCacheV.ok)
     {
         EdgeCacheSdV.ok = PROTO_FALSE;

@@ -11,8 +11,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
-
 #if PROTOCORE_ENABLE_ENOCEAN
 
 #include "mmgr/protomem/protomem.h"
@@ -41,7 +39,7 @@ void protocore_enocean_esp3_crc8(uint8_t *restrict work)
     CrcV.args.params = &PROTOCORE_CRC8_SMBUS;
     CrcV.args.data = buf;
     CrcV.args.len = len;
-    Crc.compute(crc_work);
+    Crc.compute(work);
     EnoceanV.value = (uint8_t)CrcV.value;
 }
 

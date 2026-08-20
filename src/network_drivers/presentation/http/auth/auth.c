@@ -24,10 +24,6 @@
 #include "server/clock/clock.h" // protocore_millis() for the stateless nonce
 #include "shared/hex/hex.h"     // protocore_hex_encode/decode
 
-static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads it
-
-static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
-
 // ---------------------------------------------------------------------------
 // Basic Auth helpers
 // ---------------------------------------------------------------------------
@@ -153,7 +149,7 @@ static void sha256_hex(uint8_t *work, const uint8_t *data, size_t len, char out[
     HexV.io.n = PROTOCORE_SHA256_DIGEST_LEN;
     HexV.io.out = out;
     HexV.args.upper = PROTO_FALSE;
-    Hex.encode(hex_work);
+    Hex.encode(protocore_http_auth_span());
 }
 
 // The one owned instance, private to this TU: the pointer to the bytes taken for the table.
@@ -249,7 +245,7 @@ static uint32_t digest_nonce_mac(uint8_t *work, const uint8_t *secret, uint32_t 
     HexV.io.n = 16;
     HexV.io.out = mac_hex;
     HexV.args.upper = PROTO_FALSE;
-    Hex.encode(hex_work); // 16 bytes -> 32 hex chars + NUL
+    Hex.encode(protocore_http_auth_span()); // 16 bytes -> 32 hex chars + NUL
     return issue;
 }
 
@@ -263,7 +259,7 @@ void protocore_auth_mint_nonce(uint8_t *restrict work)
     HexV.io.n = 4;
     HexV.io.out = issue_hex;
     HexV.args.upper = PROTO_FALSE;
-    Hex.encode(hex_work); // 4 bytes -> 8 hex chars
+    Hex.encode(work); // 4 bytes -> 8 hex chars
     char mac_hex[33];
     digest_nonce_mac(work, AUTH_TABLE(work)->digest_secret, issue, mac_hex);
     protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
@@ -291,7 +287,7 @@ void protocore_auth_verify_nonce(uint8_t *restrict work)
     HexV.io.n = 8;
     HexV.io.bytes = (uint8_t *)&issue;
     HexV.io.cap = 4;
-    Hex.decode(hex_work);
+    Hex.decode(work);
     if (HexV.i32 != 4)
     {
         return;
@@ -430,7 +426,7 @@ static proto_bool check_basic(uint8_t slot_id, HttpReq *req, const AuthCred *c)
     Base64V.decode_args.src = auth_hdr + 6;
     Base64V.decode_args.dst = decoded;
     Base64V.decode_args.dst_cap = sizeof(decoded) - 1;
-    Base64.decode(base64_work);
+    Base64.decode(protocore_http_auth_span());
     size_t n = Base64V.n;
     if (n == 0)
     {

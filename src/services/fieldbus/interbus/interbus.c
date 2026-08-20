@@ -8,8 +8,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
-
 #if PROTOCORE_ENABLE_INTERBUS
 
 #include "services/fieldbus/interbus/interbus.h"
@@ -36,7 +34,7 @@ void protocore_interbus_fcs(uint8_t *restrict work)
     CrcV.args.params = &PROTOCORE_CRC16_IBM_3740;
     CrcV.args.data = bytes;
     CrcV.args.len = len;
-    Crc.compute(crc_work);
+    Crc.compute(work);
     InterbusV.value = (uint16_t)CrcV.value;
 }
 

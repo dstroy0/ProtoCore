@@ -8,8 +8,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t httpcache_work[16]; // the borrow an entry takes; Httpcache never reads it
-
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
 #include "mmgr/protomem/protomem.h"
@@ -398,7 +396,7 @@ void protocore_edge_cache_freshness_lifetime(uint8_t *restrict work)
     HttpcacheV.freshness_lifetime_args.cc = cc;
     HttpcacheV.freshness_lifetime_args.shared = shared;
     HttpcacheV.freshness_lifetime_args.expires_minus_date = -1;
-    Httpcache.freshness_lifetime(httpcache_work);
+    Httpcache.freshness_lifetime(work);
     long lifetime = HttpcacheV.value; // s-maxage / max-age, or -1
     if (lifetime >= 0)
     {
@@ -1095,12 +1093,12 @@ void protocore_edge_cache_apply_304(uint8_t *restrict work)
         HttpcacheV.control_parse_args.s = v;
         HttpcacheV.control_parse_args.len = str.len(v, sizeof(v));
         HttpcacheV.control_parse_args.cc = &cc;
-        Httpcache.control_parse(httpcache_work);
+        Httpcache.control_parse(work);
     }
     else
     {
         HttpcacheV.control_init_args.cc = &cc;
-        Httpcache.control_init(httpcache_work);
+        Httpcache.control_init(work);
     }
 
     int64_t date = -1;

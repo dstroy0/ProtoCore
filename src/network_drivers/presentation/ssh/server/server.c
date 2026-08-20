@@ -21,7 +21,6 @@
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h"
 #include "server/core/proto_handler.h"
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 #if PROTOCORE_ENABLE_SSH_ZLIB
 #include "network_drivers/presentation/ssh/transport/comp/comp.h"
@@ -313,7 +312,7 @@ static void rfwd_on_accept(uint8_t conn_slot)
         IpV.args.ip = &rip;
         IpV.args.buf = orig;
         IpV.args.cap = sizeof(orig);
-        Ip.format(ip_work);
+        Ip.format(protocore_ssh_server_span());
     }
     // Open the forwarded-tcpip channel back to the client, echoing the requested bind
     // address as the "address that was connected".

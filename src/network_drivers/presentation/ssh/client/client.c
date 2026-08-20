@@ -32,7 +32,6 @@
 #include "network_drivers/transport/tcp/tcp.h"           // protocore_client_*
 #include "server/clock/clock.h"                          // protocore_millis, pcdelay
 #include "shared/log/log.h"
-static uint8_t phase_machine_work[16]; // the borrow an entry takes; PhaseMachine never reads it
 
 #if PROTOCORE_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem/mlkem.h" // mlkem768x25519-sha256 hybrid (client: KeyGen + Decaps)
@@ -828,7 +827,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
     {
         PhaseMachineV.is_args.i = SSH_CLI_SLOT;
         PhaseMachineV.is_args.p = SSH_PHASE_KEXINIT;
-        PhaseMachine.is(phase_machine_work);
+        PhaseMachine.is(protocore_ssh_client_span());
         kexinit_unexpected = !PhaseMachineV.ok;
     }
     if (kexinit_unexpected)
@@ -839,7 +838,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
             return;
         }
         PhaseMachineV.kexinit_needs_reply_args.i = SSH_CLI_SLOT;
-        PhaseMachine.kexinit_needs_reply(phase_machine_work);
+        PhaseMachine.kexinit_needs_reply(protocore_ssh_client_span());
         if (PhaseMachineV.ok && !build_kexinit())
         {
             cli_fail("KEXINIT reply send failed");
@@ -866,7 +865,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
             if (handle_kexdh_reply(payload, len))
             {
                 PhaseMachineV.kex_done_args.i = SSH_CLI_SLOT;
-                PhaseMachine.kex_done(phase_machine_work);
+                PhaseMachine.kex_done(protocore_ssh_client_span());
             }
             else if (SSH_CLIENT_CTX(protocore_ssh_client_span())->state != PROTOCORE_SSH_CLIENT_FAILED)
             {
@@ -897,7 +896,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
             if (send_userauth_publickey())
             {
                 PhaseMachineV.service_done_args.i = SSH_CLI_SLOT;
-                PhaseMachine.service_done(phase_machine_work);
+                PhaseMachine.service_done(protocore_ssh_client_span());
             }
             else
             {
@@ -912,7 +911,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
             if (send_tcpip_forward())
             {
                 PhaseMachineV.auth_done_args.i = SSH_CLI_SLOT;
-                PhaseMachine.auth_done(phase_machine_work);
+                PhaseMachine.auth_done(protocore_ssh_client_span());
             }
             else
             {
@@ -1091,7 +1090,7 @@ static void protocore_ssh_client_poll(uint8_t *restrict work)
     {
         size_t off = 0;
         PhaseMachineV.admits_ident_args.i = SSH_CLI_SLOT;
-        PhaseMachine.admits_ident(phase_machine_work);
+        PhaseMachine.admits_ident(work);
         if (PhaseMachineV.ok)
         {
             int ident = ssh_transport_version_exchange_recv(SSH_CLI_SLOT, buf, got, &off);

@@ -13,8 +13,6 @@
 
 #include "services/net/ws_client/ws_client.h"
 
-static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads it
-
 #if PROTOCORE_ENABLE_WS_CLIENT
 
 #include "crypto/hash/sha1/sha1.h"                            // Sha1: the accept computation
@@ -182,7 +180,7 @@ void protocore_ws_client_accept_for_key(uint8_t *restrict work)
     Base64V.encode_args.src = digest;
     Base64V.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
     Base64V.encode_args.dst = accept;
-    Base64.encode(base64_work);
+    Base64.encode(work);
 }
 
 // The client's opening handshake: a GET request-line (RFC 9112 sec 3) and the field lines RFC 6455
@@ -819,7 +817,7 @@ void protocore_ws_client_connect(uint8_t *restrict work)
     Base64V.encode_args.src = key_raw;
     Base64V.encode_args.src_len = sizeof(key_raw);
     Base64V.encode_args.dst = key_b64;
-    Base64.encode(base64_work);
+    Base64.encode(work);
     char accept[PROTOCORE_WS_ACCEPT_CAP];
     WsClientV.handshake.key = key_b64;
     WsClientV.handshake.accept = accept;

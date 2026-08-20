@@ -16,8 +16,6 @@
 
 PROTOCORE_BEGIN_DECLS
 
-static uint8_t tls13_msg_work[16]; // the borrow an entry takes; Tls13Msg never reads it
-
 // --- the entries -----------------------------------------------------------
 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
@@ -80,7 +78,7 @@ void protocore_tls13_rpk_build_certificate(uint8_t *restrict work)
     Tls13MsgV.build_certificate_args.cap = cap;
     Tls13MsgV.build_certificate_args.cert_der = spki;
     Tls13MsgV.build_certificate_args.cert_len = sizeof(spki);
-    Tls13Msg.build_certificate(tls13_msg_work);
+    Tls13Msg.build_certificate(work);
     Tls13RpkV.n = Tls13MsgV.n;
 }
 

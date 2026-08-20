@@ -11,10 +11,6 @@
 #include "mmgr/protostr/protostr.h" // str.len: the community length, bounded
 #include "mmgr/secure/secure.h"     // the persistent end this module's key material is taken from
 
-static uint8_t snmp_ber_work[16]; // the borrow an entry takes; SnmpBer never reads it
-
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
-
 #if PROTOCORE_ENABLE_SNMP_TRAP
 
 #if PROTOCORE_HAS_NET_STACK
@@ -60,48 +56,48 @@ static void put_varbind(BerEnc *e, const SnmpVarbind *vb)
 {
     SnmpBerV.enc = e;
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
-    SnmpBer.seq_begin(snmp_ber_work);
+    SnmpBer.seq_begin(protocore_snmp_notify_span());
     const size_t t = SnmpBerV.tlv.token;
     SnmpBerV.tlv.arcs = vb->oid;
     SnmpBerV.tlv.arc_count = vb->oid_len;
-    SnmpBer.put_oid(snmp_ber_work);
+    SnmpBer.put_oid(protocore_snmp_notify_span());
     switch (vb->type)
     {
     case (uint8_t)SNMP_VB_INT:
         SnmpBerV.tlv.ival = vb->ival;
-        SnmpBer.put_integer(snmp_ber_work);
+        SnmpBer.put_integer(protocore_snmp_notify_span());
         break;
     case (uint8_t)SNMP_VB_STRING:
         SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
         SnmpBerV.tlv.bytes = vb->bytes;
         SnmpBerV.tlv.len = vb->blen;
-        SnmpBer.put_octet_string(snmp_ber_work);
+        SnmpBer.put_octet_string(protocore_snmp_notify_span());
         break;
     case (uint8_t)SNMP_VB_OID:
         SnmpBerV.tlv.arcs = vb->oid_val;
         SnmpBerV.tlv.arc_count = vb->oid_val_len;
-        SnmpBer.put_oid(snmp_ber_work);
+        SnmpBer.put_oid(protocore_snmp_notify_span());
         break;
     case (uint8_t)SNMP_VB_COUNTER32:
         SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_SNMP_COUNTER32;
         SnmpBerV.tlv.uval = (uint32_t)vb->ival;
-        SnmpBer.put_uint(snmp_ber_work);
+        SnmpBer.put_uint(protocore_snmp_notify_span());
         break;
     case (uint8_t)SNMP_VB_GAUGE32:
         SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_SNMP_GAUGE32;
         SnmpBerV.tlv.uval = (uint32_t)vb->ival;
-        SnmpBer.put_uint(snmp_ber_work);
+        SnmpBer.put_uint(protocore_snmp_notify_span());
         break;
     case (uint8_t)SNMP_VB_TIMETICKS:
         SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_SNMP_TIMETICKS;
         SnmpBerV.tlv.uval = (uint32_t)vb->ival;
-        SnmpBer.put_uint(snmp_ber_work);
+        SnmpBer.put_uint(protocore_snmp_notify_span());
         break;
     case (uint8_t)SNMP_VB_IPADDR:
         SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_SNMP_IPADDRESS;
         SnmpBerV.tlv.bytes = vb->bytes;
         SnmpBerV.tlv.len = vb->blen;
-        SnmpBer.put_octet_string(snmp_ber_work);
+        SnmpBer.put_octet_string(protocore_snmp_notify_span());
         break;
     default:
         e->ok = PROTO_FALSE;
@@ -109,7 +105,7 @@ static void put_varbind(BerEnc *e, const SnmpVarbind *vb)
     }
     SnmpBerV.enc = e;
     SnmpBerV.tlv.token = t;
-    SnmpBer.seq_end(snmp_ber_work);
+    SnmpBer.seq_end(protocore_snmp_notify_span());
 }
 
 // The notification PDU: request-id, error-status 0, error-index 0, then the VarBindList with
@@ -119,43 +115,43 @@ static void append_pdu(uint8_t *restrict work, BerEnc *e)
 {
     SnmpBerV.enc = e;
     SnmpBerV.tlv.tag = SnmpNotifyV.pdu.pdu_tag;
-    SnmpBer.seq_begin(snmp_ber_work);
+    SnmpBer.seq_begin(work);
     const size_t pdu = SnmpBerV.tlv.token;
     SnmpBerV.tlv.ival = (long)SnmpNotifyV.pdu.request_id;
-    SnmpBer.put_integer(snmp_ber_work);
+    SnmpBer.put_integer(work);
     SnmpBerV.tlv.ival = 0; // error-status
-    SnmpBer.put_integer(snmp_ber_work);
+    SnmpBer.put_integer(work);
     SnmpBerV.tlv.ival = 0; // error-index
-    SnmpBer.put_integer(snmp_ber_work);
+    SnmpBer.put_integer(work);
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
-    SnmpBer.seq_begin(snmp_ber_work);
+    SnmpBer.seq_begin(work);
     const size_t vbl = SnmpBerV.tlv.token;
 
     // sysUpTime.0 = TimeTicks
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
-    SnmpBer.seq_begin(snmp_ber_work);
+    SnmpBer.seq_begin(work);
     const size_t t0 = SnmpBerV.tlv.token;
     SnmpBerV.tlv.arcs = OID_SYSUPTIME_0;
     SnmpBerV.tlv.arc_count = sizeof(OID_SYSUPTIME_0) / sizeof(uint32_t);
-    SnmpBer.put_oid(snmp_ber_work);
+    SnmpBer.put_oid(work);
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_SNMP_TIMETICKS;
     SnmpBerV.tlv.uval = SnmpNotifyV.pdu.uptime_ticks;
-    SnmpBer.put_uint(snmp_ber_work);
+    SnmpBer.put_uint(work);
     SnmpBerV.tlv.token = t0;
-    SnmpBer.seq_end(snmp_ber_work);
+    SnmpBer.seq_end(work);
 
     // snmpTrapOID.0 = OBJECT IDENTIFIER
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
-    SnmpBer.seq_begin(snmp_ber_work);
+    SnmpBer.seq_begin(work);
     const size_t t1 = SnmpBerV.tlv.token;
     SnmpBerV.tlv.arcs = OID_SNMPTRAPOID_0;
     SnmpBerV.tlv.arc_count = sizeof(OID_SNMPTRAPOID_0) / sizeof(uint32_t);
-    SnmpBer.put_oid(snmp_ber_work);
+    SnmpBer.put_oid(work);
     SnmpBerV.tlv.arcs = SnmpNotifyV.pdu.trap_oid;
     SnmpBerV.tlv.arc_count = SnmpNotifyV.pdu.trap_oid_len;
-    SnmpBer.put_oid(snmp_ber_work);
+    SnmpBer.put_oid(work);
     SnmpBerV.tlv.token = t1;
-    SnmpBer.seq_end(snmp_ber_work);
+    SnmpBer.seq_end(work);
 
     for (size_t i = 0; i < SnmpNotifyV.pdu.vb_count; i++)
     {
@@ -164,9 +160,9 @@ static void append_pdu(uint8_t *restrict work, BerEnc *e)
 
     SnmpBerV.enc = e;
     SnmpBerV.tlv.token = vbl;
-    SnmpBer.seq_end(snmp_ber_work);
+    SnmpBer.seq_end(work);
     SnmpBerV.tlv.token = pdu;
-    SnmpBer.seq_end(snmp_ber_work);
+    SnmpBer.seq_end(work);
     SnmpNotifyV.n = e->len;
 }
 
@@ -218,22 +214,22 @@ void protocore_snmp_notify_build_v2c(uint8_t *restrict work)
     SnmpBerV.enc = &e;
     SnmpBerV.buf.out = SnmpNotifyV.buf.out;
     SnmpBerV.buf.cap = SnmpNotifyV.buf.cap;
-    SnmpBer.enc_init(snmp_ber_work);
+    SnmpBer.enc_init(work);
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
-    SnmpBer.seq_begin(snmp_ber_work);
+    SnmpBer.seq_begin(work);
     const size_t msg = SnmpBerV.tlv.token;
     SnmpBerV.tlv.ival = 1; // version: SNMPv2c
-    SnmpBer.put_integer(snmp_ber_work);
+    SnmpBer.put_integer(work);
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
     SnmpBerV.tlv.bytes = (const uint8_t *)SnmpNotifyV.dst.community;
     SnmpBerV.tlv.len = str.len(SnmpNotifyV.dst.community, SNMP_COMMUNITY_MAX + 1);
-    SnmpBer.put_octet_string(snmp_ber_work);
+    SnmpBer.put_octet_string(work);
 
     append_pdu(work, &e);
 
     SnmpBerV.enc = &e;
     SnmpBerV.tlv.token = msg;
-    SnmpBer.seq_end(snmp_ber_work);
+    SnmpBer.seq_end(work);
     SnmpNotifyV.n = e.ok ? e.len : 0;
     SnmpNotifyV.ok = e.ok;
 }
@@ -258,7 +254,7 @@ static void send_built(uint8_t *restrict work)
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
     IpV.args.text = SnmpNotifyV.dst.dst_ip;
     IpV.args.out = &dst;
-    Ip.parse(ip_work);
+    Ip.parse(work);
     if (!IpV.ok)
     {
         SnmpNotifyV.ok = PROTO_FALSE;

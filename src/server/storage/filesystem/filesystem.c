@@ -16,8 +16,6 @@
                                     // strncmp (root-name match), memcpy
 #include "server/storage/mnt/mnt.h" // Mnt.active: the filesystem every call works through
 
-static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
-
 // One bound root. The prefix is a copy, not the caller's pointer, and always ends '/', so the join
 // concatenates `root` and `dir` without adding a separator.
 typedef struct
@@ -93,7 +91,7 @@ uint8_t *protocore_filesystem_span(void)
 // so the absence is recorded in the status mask rather than returned as a bare false.
 static const protocore_mnt_backend *store(uint8_t *restrict work)
 {
-    Mnt.active(mnt_work);
+    Mnt.active(work);
     const protocore_mnt_backend *b = MntV.backend;
     if (b == NULL)
     {
@@ -177,7 +175,7 @@ static void fs_present(uint8_t *restrict work)
 
     // Asked of the mount directly, not of the mask: the mask says what has failed, this says what is
     // true now. A hotswap can attach a store between the two.
-    Mnt.active(mnt_work);
+    Mnt.active(work);
     Fs.ok = MntV.backend != NULL;
 }
 

@@ -17,12 +17,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t inflate_work[16]; // the borrow an entry takes; Inflate never reads it
-
-static uint8_t deflate_work[16]; // the borrow an entry takes; Deflate never reads it
-
-static uint8_t utf8_work[16]; // the borrow an entry takes; Utf8 never reads it
-
 #if PROTOCORE_ENABLE_WEBSOCKET
 
 #include "mmgr/protomem/protomem.h"
@@ -312,7 +306,7 @@ void protocore_ws_send_frame(uint8_t *restrict work)
             DeflateV.raw_args.out_len = &clen;
             DeflateV.raw_args.scratch = scr;
             DeflateV.raw_args.scratch_len = DEFLATE_SCRATCH_SIZE;
-            Deflate.raw(deflate_work);
+            Deflate.raw(work);
             DeflateResult rc = DeflateV.value;
             // Only adopt it if it actually shrank the message; otherwise send it
             // uncompressed (the per-message RSV1 flag makes that legal).
@@ -487,7 +481,7 @@ static void ws_finish_frame(uint8_t *restrict work, WsConn *ws)
             InflateV.raw_args.out_len = &dlen;
             InflateV.raw_args.scratch = tbl;
             InflateV.raw_args.scratch_len = INFLATE_SCRATCH_SIZE;
-            Inflate.raw(inflate_work);
+            Inflate.raw(work);
             InflateResult rc = InflateV.value;
             if (rc == INFLATE_ERR_OVERFLOW)
             {
@@ -519,7 +513,7 @@ static void ws_finish_frame(uint8_t *restrict work, WsConn *ws)
         // reassembled + decompressed message); otherwise fail the connection with 1007.
         Utf8V.args.s = ws->buf;
         Utf8V.args.n = n;
-        Utf8.valid(utf8_work);
+        Utf8.valid(work);
         if (ws->msg_opcode == WS_OP_TEXT && !Utf8V.ok)
         {
             WsV.conn = ws;

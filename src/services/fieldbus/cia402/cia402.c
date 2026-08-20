@@ -155,7 +155,7 @@ void protocore_cia402_sdo_set_controlword(uint8_t *restrict work)
     CanopenV.build_sdo_write_args.sub = 0;
     CanopenV.build_sdo_write_args.data = d;
     CanopenV.build_sdo_write_args.len = 2;
-    Canopen.build_sdo_write(canopen_work);
+    Canopen.build_sdo_write(work);
     Cia402V.ok = CanopenV.ok;
 }
 
@@ -173,7 +173,7 @@ void protocore_cia402_sdo_set_mode(uint8_t *restrict work)
     CanopenV.build_sdo_write_args.sub = 0;
     CanopenV.build_sdo_write_args.data = &d;
     CanopenV.build_sdo_write_args.len = 1;
-    Canopen.build_sdo_write(canopen_work);
+    Canopen.build_sdo_write(work);
     Cia402V.ok = CanopenV.ok;
 }
 
@@ -192,7 +192,7 @@ void protocore_cia402_sdo_set_target_position(uint8_t *restrict work)
     CanopenV.build_sdo_write_args.sub = 0;
     CanopenV.build_sdo_write_args.data = d;
     CanopenV.build_sdo_write_args.len = 4;
-    Canopen.build_sdo_write(canopen_work);
+    Canopen.build_sdo_write(work);
     Cia402V.ok = CanopenV.ok;
 }
 
@@ -211,7 +211,7 @@ void protocore_cia402_sdo_set_target_velocity(uint8_t *restrict work)
     CanopenV.build_sdo_write_args.sub = 0;
     CanopenV.build_sdo_write_args.data = d;
     CanopenV.build_sdo_write_args.len = 4;
-    Canopen.build_sdo_write(canopen_work);
+    Canopen.build_sdo_write(work);
     Cia402V.ok = CanopenV.ok;
 }
 
@@ -230,7 +230,7 @@ void protocore_cia402_sdo_set_target_torque(uint8_t *restrict work)
     CanopenV.build_sdo_write_args.sub = 0;
     CanopenV.build_sdo_write_args.data = d;
     CanopenV.build_sdo_write_args.len = 2;
-    Canopen.build_sdo_write(canopen_work);
+    Canopen.build_sdo_write(work);
     Cia402V.ok = CanopenV.ok;
 }
 
@@ -246,7 +246,7 @@ void protocore_cia402_sdo_read(uint8_t *restrict work)
     CanopenV.build_sdo_read_args.node_id = node;
     CanopenV.build_sdo_read_args.index = index;
     CanopenV.build_sdo_read_args.sub = sub;
-    Canopen.build_sdo_read(canopen_work);
+    Canopen.build_sdo_read(work);
     Cia402V.ok = CanopenV.ok;
 }
 

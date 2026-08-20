@@ -19,8 +19,6 @@
 
 #include "network_drivers/presentation/codec/json/json.h" // Json: the bounded writer an envelope is built with
 
-static uint8_t json_work[16]; // the borrow an entry takes; Json never reads it
-
 // The JSON member names an envelope carries (JSON Event Format 1.0.2 sec 3), spelled once so the
 // has-data and no-data paths emit the same keys.
 #define CE_ATTR_SPECVERSION "specversion"
@@ -75,31 +73,31 @@ void protocore_cloud_events_build_structured(uint8_t *restrict work)
     JsonV.init_args.w = &w;
     JsonV.init_args.buf = out;
     JsonV.init_args.cap = cap;
-    Json.init(json_work);
+    Json.init(work);
     JsonV.begin_object_args.w = &w;
-    Json.begin_object(json_work);
+    Json.begin_object(work);
     JsonV.kv_str_args.w = &w;
     JsonV.kv_str_args.k = CE_ATTR_SPECVERSION;
     JsonV.kv_str_args.v = PROTOCORE_CLOUDEVENTS_SPECVERSION;
-    Json.kv_str(json_work);
+    Json.kv_str(work);
     JsonV.kv_str_args.w = &w;
     JsonV.kv_str_args.k = CE_ATTR_ID;
     JsonV.kv_str_args.v = CloudEventsV.attr.id;
-    Json.kv_str(json_work);
+    Json.kv_str(work);
     JsonV.kv_str_args.w = &w;
     JsonV.kv_str_args.k = CE_ATTR_SOURCE;
     JsonV.kv_str_args.v = CloudEventsV.attr.source;
-    Json.kv_str(json_work);
+    Json.kv_str(work);
     JsonV.kv_str_args.w = &w;
     JsonV.kv_str_args.k = CE_ATTR_TYPE;
     JsonV.kv_str_args.v = CloudEventsV.attr.type;
-    Json.kv_str(json_work);
+    Json.kv_str(work);
     if (ce_present(CloudEventsV.attr.subject))
     {
         JsonV.kv_str_args.w = &w;
         JsonV.kv_str_args.k = CE_ATTR_SUBJECT;
         JsonV.kv_str_args.v = CloudEventsV.attr.subject;
-        Json.kv_str(json_work);
+        Json.kv_str(work);
     }
 
     // A JSON value goes out verbatim, a plain string goes out escaped, and either way the member is
@@ -115,13 +113,13 @@ void protocore_cloud_events_build_structured(uint8_t *restrict work)
         JsonV.kv_str_args.w = &w;
         JsonV.kv_str_args.k = CE_ATTR_DATACONTENTTYPE;
         JsonV.kv_str_args.v = dct;
-        Json.kv_str(json_work);
+        Json.kv_str(work);
         JsonV.key_args.w = &w;
         JsonV.key_args.k = CE_MEMBER_DATA;
-        Json.key(json_work);
+        Json.key(work);
         JsonV.put_raw_args.w = &w;
         JsonV.put_raw_args.literal = CloudEventsV.data.json;
-        Json.put_raw(json_work);
+        Json.put_raw(work);
     }
     else if (CloudEventsV.data.str)
     {
@@ -130,23 +128,23 @@ void protocore_cloud_events_build_structured(uint8_t *restrict work)
             JsonV.kv_str_args.w = &w;
             JsonV.kv_str_args.k = CE_ATTR_DATACONTENTTYPE;
             JsonV.kv_str_args.v = CloudEventsV.attr.datacontenttype;
-            Json.kv_str(json_work);
+            Json.kv_str(work);
         }
         JsonV.kv_str_args.w = &w;
         JsonV.kv_str_args.k = CE_MEMBER_DATA;
         JsonV.kv_str_args.v = CloudEventsV.data.str;
-        Json.kv_str(json_work);
+        Json.kv_str(work);
     }
     else if (ce_present(CloudEventsV.attr.datacontenttype))
     {
         JsonV.kv_str_args.w = &w;
         JsonV.kv_str_args.k = CE_ATTR_DATACONTENTTYPE;
         JsonV.kv_str_args.v = CloudEventsV.attr.datacontenttype;
-        Json.kv_str(json_work);
+        Json.kv_str(work);
     }
 
     JsonV.end_object_args.w = &w;
-    Json.end_object(json_work);
+    Json.end_object(work);
     if (!protocore_json_ok(&w))
     {
         return;

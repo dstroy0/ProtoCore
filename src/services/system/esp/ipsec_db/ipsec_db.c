@@ -13,8 +13,6 @@
 #include "mmgr/protomem/protomem.h"
 #include "services/system/esp/ipsec_db/ipsec_db.h"
 
-static uint8_t esp_work[16]; // the borrow an entry takes; Esp never reads it
-
 PROTOCORE_BEGIN_DECLS
 
 // addr is within the inclusive [lo, hi] range. Addresses are big-endian, so a byte-wise unsigned compare
@@ -261,7 +259,7 @@ void protocore_ipsec_db_protocore_ipsec_sad_add(uint8_t *restrict work)
     if (inbound)
     {
         EspV.replay_init_args.r = &e->replay;
-        Esp.replay_init(esp_work);
+        Esp.replay_init(work);
     }
     e->valid = PROTO_TRUE;
     sad->count++;

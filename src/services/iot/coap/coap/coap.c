@@ -13,8 +13,6 @@
 #include "services/iot/coap/coap/coap.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
-
 #if PROTOCORE_ENABLE_COAP
 
 #include "mmgr/protomem/protomem.h"                      // mem.cpy / mem.set / mem.cmp: the spans a message moves
@@ -1073,7 +1071,7 @@ void protocore_coap_notify(uint8_t *restrict work)
         protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
         IpV.args.text = o->ip;
         IpV.args.out = &dst;
-        Ip.parse(ip_work);
+        Ip.parse(work);
         if (!n || !IpV.ok)
         {
             o->active = PROTO_FALSE; // unreachable, so the entry goes

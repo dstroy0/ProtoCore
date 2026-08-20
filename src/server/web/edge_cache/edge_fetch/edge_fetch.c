@@ -10,8 +10,6 @@
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 #include "shared/http_date/http_date.h"
 
-static uint8_t edge_cache_work[16]; // the borrow an entry takes; EdgeCache never reads it
-
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
 #include "mmgr/protomem/protomem.h"
@@ -164,7 +162,7 @@ void protocore_edge_fetcher_edge_resp_complete(uint8_t *restrict work)
     EdgeCacheV.header_value_args.name = "Content-Length";
     EdgeCacheV.header_value_args.out = v;
     EdgeCacheV.header_value_args.out_cap = sizeof(v);
-    EdgeCache.header_value(edge_cache_work);
+    EdgeCache.header_value(work);
     if (EdgeCacheV.ok)
     {
         size_t cl = 0;
@@ -186,7 +184,7 @@ void protocore_edge_fetcher_edge_resp_complete(uint8_t *restrict work)
     EdgeCacheV.header_value_args.name = "Transfer-Encoding";
     EdgeCacheV.header_value_args.out = te;
     EdgeCacheV.header_value_args.out_cap = sizeof(te);
-    EdgeCache.header_value(edge_cache_work);
+    EdgeCache.header_value(work);
     if (EdgeCacheV.ok && has_chunked(te))
     {
         EdgeFetcherV.ok = chunked_complete(buf + h, len - h);

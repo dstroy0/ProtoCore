@@ -12,8 +12,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
-
 #if PROTOCORE_ENABLE_SMBUS
 
 #if !PROTOCORE_HAS_BUS
@@ -99,7 +97,7 @@ void protocore_smbus_addr_byte(uint8_t *restrict work)
 static uint32_t pec_begin(void)
 {
     CrcV.args.params = &PROTOCORE_CRC8_SMBUS;
-    Crc.begin(crc_work);
+    Crc.begin(protocore_smbus_span());
     return CrcV.value;
 }
 
@@ -110,7 +108,7 @@ static uint32_t pec_fold(uint32_t crc, const uint8_t *data, size_t len)
     CrcV.args.crc = crc;
     CrcV.args.data = data;
     CrcV.args.len = len;
-    Crc.update(crc_work);
+    Crc.update(protocore_smbus_span());
     return CrcV.value;
 }
 
@@ -119,7 +117,7 @@ static uint8_t pec_final(uint32_t crc)
 {
     CrcV.args.params = &PROTOCORE_CRC8_SMBUS;
     CrcV.args.crc = crc;
-    Crc.final(crc_work);
+    Crc.final(protocore_smbus_span());
     return (uint8_t)CrcV.value;
 }
 

@@ -12,8 +12,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
-
 #if PROTOCORE_ENABLE_ZIGBEE
 
 #include "services/radio/zigbee/zigbee.h"
@@ -67,7 +65,7 @@ void protocore_zigbee_ash_crc16(uint8_t *restrict work)
     CrcV.args.params = &PROTOCORE_CRC16_IBM_3740;
     CrcV.args.data = buf;
     CrcV.args.len = len;
-    Crc.compute(crc_work);
+    Crc.compute(work);
     ZigbeeV.value = (uint16_t)CrcV.value;
 }
 
@@ -88,17 +86,17 @@ void protocore_zigbee_ash_frame_encode(uint8_t *restrict work)
     // CRC over control + payload. They are not contiguous in memory, which is what the engine's
     // begin/update/final split is for - no scratch buffer to assemble them into.
     CrcV.args.params = &PROTOCORE_CRC16_IBM_3740;
-    Crc.begin(crc_work);
+    Crc.begin(work);
     CrcV.args.crc = CrcV.value;
     CrcV.args.data = &control;
     CrcV.args.len = 1;
-    Crc.update(crc_work);
+    Crc.update(work);
     CrcV.args.crc = CrcV.value;
     CrcV.args.data = payload;
     CrcV.args.len = len;
-    Crc.update(crc_work);
+    Crc.update(work);
     CrcV.args.crc = CrcV.value;
-    Crc.final(crc_work);
+    Crc.final(work);
     const uint16_t crc = (uint16_t)CrcV.value;
 
     uint16_t p = 0;

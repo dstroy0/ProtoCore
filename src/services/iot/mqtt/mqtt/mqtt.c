@@ -14,8 +14,6 @@
 
 #include "services/iot/mqtt/mqtt/mqtt.h"
 
-static uint8_t utf8_work[16]; // the borrow an entry takes; Utf8 never reads it
-
 #if PROTOCORE_ENABLE_MQTT
 
 #include "mmgr/protomem/protomem.h" // mem.cpy / mem.chr / mem.move / mem.set: the spans a packet is built from
@@ -634,7 +632,7 @@ void protocore_mqtt_parse_publish(uint8_t *restrict work)
     // U+0000 (MQTT-1.5.3-2).
     Utf8V.args.s = buf + off;
     Utf8V.args.n = tlen;
-    Utf8.valid(utf8_work);
+    Utf8.valid(work);
     if (!Utf8V.ok || mem.chr(buf + off, tlen, 0x00))
     {
         return;

@@ -18,7 +18,6 @@
 #include "network_drivers/presentation/ssh/ssh.h"
 #include "network_drivers/presentation/ssh/transport/transport/transport.h" // ssh_sess, ssh_pkt - session and packet state
 #include "shared/log/log.h"                                                 // PROTOCORE_LOGD
-static uint8_t ssh_app_server_work[16]; // the borrow an entry takes; SshAppServer never reads it
 
 #if PROTOCORE_ENABLE_SSH_SFTP || PROTOCORE_ENABLE_SSH_SCP
 #include "network_drivers/presentation/ssh/app/server/server.h" // SshAppServer: the service a channel request binds
@@ -1267,7 +1266,7 @@ void protocore_ssh_connection_channel_handle_request(uint8_t *restrict work)
     SshAppServerV.req.payload = payload;
     SshAppServerV.req.len = len;
     SshAppServerV.req.off = off;
-    SshAppServer.classify(ssh_app_server_work);
+    SshAppServer.classify(work);
     off = SshAppServerV.req.off;
     accept = SshAppServerV.accept;
 #endif

@@ -13,8 +13,6 @@
 #include "services/iot/udp_telemetry/udp_telemetry.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
-
 #if PROTOCORE_ENABLE_UDP_TELEMETRY
 
 #include "mmgr/membuild/membuild.h" // Sb: the field set's numeric renderings
@@ -160,7 +158,7 @@ void protocore_udp_telemetry_begin(uint8_t *restrict work)
 #if PROTOCORE_HAS_NET_STACK
     IpV.args.text = UdpTelemetryV.collector.addr;
     IpV.args.out = &UDP_TELEMETRY_CTX(work)->collector;
-    Ip.parse(ip_work);
+    Ip.parse(work);
     UDP_TELEMETRY_CTX(work)->ready = IpV.ok;
     UDP_TELEMETRY_CTX(work)->port = UdpTelemetryV.collector.port;
     UdpTelemetryV.ok = UDP_TELEMETRY_CTX(work)->ready;

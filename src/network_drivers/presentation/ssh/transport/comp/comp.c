@@ -8,10 +8,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t inflate_work[16]; // the borrow an entry takes; Inflate never reads it
-
-static uint8_t zlib_work[16]; // the borrow an entry takes; Zlib never reads it
-
 #if PROTOCORE_ENABLE_SSH_ZLIB
 
 #include "network_drivers/presentation/ssh/common.h"
@@ -98,7 +94,7 @@ static void start_s2c(SshCompState *c)
     ZlibV.init_args.ll_len = c->ll_len;
     ZlibV.init_args.d_code = c->d_code;
     ZlibV.init_args.d_len = c->d_len;
-    Zlib.init(zlib_work);
+    Zlib.init(protocore_ssh_comp_span());
     c->s2c_active = PROTO_TRUE;
 }
 
@@ -106,7 +102,7 @@ static void start_c2s(SshCompState *c)
 {
     InflateV.init_args.z = &c->inf;
     InflateV.init_args.window = c->inf_window;
-    Inflate.init(inflate_work);
+    Inflate.init(protocore_ssh_comp_span());
     c->c2s_active = PROTO_TRUE;
 }
 
@@ -225,7 +221,7 @@ void protocore_comp_s2c(uint8_t *restrict work)
     ZlibV.packet_args.dst = dst;
     ZlibV.packet_args.dst_cap = dst_cap;
     ZlibV.packet_args.out_len = out_len;
-    Zlib.packet(zlib_work);
+    Zlib.packet(work);
     CompV.n = ZlibV.n;
 }
 
@@ -256,7 +252,7 @@ void protocore_comp_c2s(uint8_t *restrict work)
     InflateV.packet_args.dst = dst;
     InflateV.packet_args.dst_cap = dst_cap;
     InflateV.packet_args.out_len = out_len;
-    Inflate.packet(inflate_work);
+    Inflate.packet(work);
     CompV.n = InflateV.n;
 }
 

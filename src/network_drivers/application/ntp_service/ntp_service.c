@@ -22,8 +22,6 @@ static uint8_t http_date_work[16];      // the borrow an entry takes; HttpDate n
 #include "network_drivers/application/ntp_service/ntp_service.h"
 #include <time.h> // time_t: the epoch this module reports
 
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
-
 #include "mmgr/endian/endian.h"                          // endian.rd32be / endian.wr32be: the timestamp fields
 #include "mmgr/secure/secure.h"                          // protocore_secure_persist_span: this module's storage
 #include "network_drivers/application/ntp/ntp.h"         // the packet this role asks with
@@ -178,7 +176,7 @@ void protocore_ntp_service_begin(uint8_t *restrict work)
     }
     IpV.args.text = host;
     IpV.args.out = &dst;
-    Ip.parse(ip_work);
+    Ip.parse(work);
     if (!IpV.ok)
     {
         NtpServiceV.ok = PROTO_FALSE; // a name, and this client has no resolver of its own
@@ -247,7 +245,7 @@ size_t protocore_ntp_http_date(char *out, size_t out_cap)
     HttpDateV.args.epoch = NtpServiceV.value;
     HttpDateV.args.out = out;
     HttpDateV.args.out_cap = (uint32_t)out_cap;
-    HttpDate.format(http_date_work);
+    HttpDate.format(protocore_ntp_service_span());
     return HttpDateV.n;
 }
 

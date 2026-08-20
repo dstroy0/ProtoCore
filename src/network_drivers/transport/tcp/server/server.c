@@ -30,8 +30,6 @@
 #include "server/clock/clock.h"        // protocore_millis() pluggable monotonic clock
 #include "server/core/worker/worker.h" // Workers.wake() - nudge the owning worker task
 
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
-
 // Listener pool - all storage in BSS.
 Listener listener_pool[MAX_LISTENERS];
 
@@ -184,7 +182,7 @@ void protocore_tcp_listener_accept_throttle_reset(uint8_t *restrict work)
 void protocore_tcp_listener_accept_allowed_ip(uint8_t *restrict work)
 {
     IpV.args.ip = TcpListenerV.gate.addr;
-    Ip.is_unspecified(ip_work);
+    Ip.is_unspecified(work);
     if (IpV.ok)
     {
         TcpListenerV.ok = PROTO_TRUE; // untrackable source - defer to the global accept throttle
@@ -199,7 +197,7 @@ void protocore_tcp_listener_accept_allowed_ip(uint8_t *restrict work)
         IpThrottleBucket *b = &TCP_LISTENER_CTX(work)->iptt.buckets[i];
         IpV.args.ip = &b->addr;
         IpV.args.b = TcpListenerV.gate.addr;
-        Ip.equal(ip_work);
+        Ip.equal(work);
         if (b->addr.family != PROTOCORE_IP_NONE && IpV.ok)
         {
             // Unsigned subtraction wraps correctly across the millis() rollover.
@@ -323,7 +321,7 @@ void protocore_tcp_listener_ip_allow_add_cidr(uint8_t *restrict work)
     net.family = PROTOCORE_IP_NONE;
     IpV.args.text = addr;
     IpV.args.out = &net;
-    Ip.parse(ip_work);
+    Ip.parse(work);
     if (!IpV.ok)
     {
         return;
@@ -373,7 +371,7 @@ void protocore_tcp_listener_ip_allowed(uint8_t *restrict work)
         IpV.args.ip = TcpListenerV.gate.addr;
         IpV.args.b = &TCP_LISTENER_CTX(work)->allow.rules[i].network;
         IpV.args.prefix_len = TCP_LISTENER_CTX(work)->allow.rules[i].prefix_len;
-        Ip.prefix_match(ip_work);
+        Ip.prefix_match(work);
         if (IpV.ok)
         {
             TcpListenerV.ok = PROTO_TRUE;

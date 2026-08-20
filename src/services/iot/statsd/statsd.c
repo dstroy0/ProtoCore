@@ -16,8 +16,6 @@
 #include "services/iot/statsd/statsd.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
-
 #if PROTOCORE_ENABLE_STATSD
 
 #include "mmgr/protomem/protomem.h"                      // mem.cpy: the spans a line is assembled from
@@ -192,7 +190,7 @@ void protocore_statsd_init(uint8_t *restrict work)
     }
     IpV.args.text = StatsdV.server.addr;
     IpV.args.out = &STATSD_CTX(work)->server;
-    Ip.parse(ip_work);
+    Ip.parse(work);
     STATSD_CTX(work)->ready = IpV.ok;
     StatsdV.ok = IpV.ok;
 }

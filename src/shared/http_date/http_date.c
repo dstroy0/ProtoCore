@@ -13,8 +13,6 @@
 
 #include "mmgr/membuild/membuild.h" // ::Sb: the builder each fixed-width field is appended through
 
-static uint8_t time_compat_work[16]; // the borrow an entry takes; TimeCompat never reads it
-
 // The day-name and month literals of RFC 9110 sec 5.6.7, in the order struct tm numbers them:
 // tm_wday counts from Sunday and tm_mon from January. The grammar spells both with ABNF's
 // case-sensitive %s prefix and states "HTTP-date is case sensitive", so these are the exact octets.
@@ -49,7 +47,7 @@ void protocore_http_date_format(uint8_t *restrict work)
     struct tm broken_down;
     TimeCompatV.args.epoch = HttpDateV.args.epoch;
     TimeCompatV.args.out = &broken_down;
-    TimeCompat.gmtime(time_compat_work);
+    TimeCompat.gmtime(work);
     if (!TimeCompatV.tm_out)
     {
         out[0] = '\0';

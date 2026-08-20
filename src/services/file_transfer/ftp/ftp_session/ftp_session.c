@@ -15,8 +15,6 @@
 #include "mmgr/protomem/protomem.h"
 #include "services/file_transfer/ftp/ftp_session/ftp_session.h"
 
-static uint8_t ftp_work[16]; // the borrow an entry takes; Ftp never reads it
-
 #include "mmgr/protoframe/protoframe.h"                  // protocore_field / protocore_fval: the log frames
 #include "mmgr/protostr/protostr.h"                      // str.copy: the bounded host copy
 #include "network_drivers/transport/tcp/client/client.h" // TcpClient: both connections
@@ -119,7 +117,7 @@ static proto_bool ftp_send(uint8_t *restrict work, const char *verb, const char 
     FtpV.build_command_args.cap = sizeof(FTP_SESSION_CTX(work)->cmd);
     FtpV.build_command_args.verb = verb;
     FtpV.build_command_args.arg = arg;
-    Ftp.build_command(ftp_work);
+    Ftp.build_command(work);
     size_t n = FtpV.n;
     if (n == 0)
     {
@@ -176,7 +174,7 @@ static protocore_ftp_state ftp_await(uint8_t *restrict work, int *code, size_t *
     FtpV.parse_reply_args.len = FTP_SESSION_CTX(work)->rx_len;
     FtpV.parse_reply_args.code = code;
     FtpV.parse_reply_args.consumed = &consumed;
-    Ftp.parse_reply(ftp_work);
+    Ftp.parse_reply(work);
     if (FtpV.ok)
     {
         FTP_SESSION_CTX(work)->rx_consumed = consumed;
@@ -452,7 +450,7 @@ void protocore_ftp_session_store(uint8_t *restrict work)
                 FtpV.parse_epsv_args.buf = FTP_SESSION_CTX(work)->rx;
                 FtpV.parse_epsv_args.len = rlen;
                 FtpV.parse_epsv_args.port = &port;
-                Ftp.parse_epsv(ftp_work);
+                Ftp.parse_epsv(work);
             }
             if (FtpV.ok)
             {
@@ -488,7 +486,7 @@ void protocore_ftp_session_store(uint8_t *restrict work)
                 FtpV.parse_pasv_args.len = rlen;
                 FtpV.parse_pasv_args.ip = ip;
                 FtpV.parse_pasv_args.port = &port;
-                Ftp.parse_pasv(ftp_work);
+                Ftp.parse_pasv(work);
             }
             if (!FtpV.ok)
             {

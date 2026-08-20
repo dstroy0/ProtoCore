@@ -11,8 +11,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
-
 #if PROTOCORE_ENABLE_PROVISIONING
 
 #include "mmgr/protomem/protomem.h"
@@ -110,13 +108,13 @@ void protocore_prov_form_field(uint8_t *restrict work)
         else if (c == '%')
         {
             HexV.args.ch = q[1];
-            Hex.val(hex_work);
+            Hex.val(work);
             int h = HexV.i8;
             int l = -1;
             if (h >= 0)
             {
                 HexV.args.ch = q[2];
-                Hex.val(hex_work);
+                Hex.val(work);
                 l = HexV.i8;
             }
             if (h >= 0 && l >= 0)

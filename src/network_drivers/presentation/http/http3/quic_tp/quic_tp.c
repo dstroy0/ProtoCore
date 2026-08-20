@@ -270,7 +270,7 @@ void protocore_quic_tp_parse(uint8_t *restrict work)
         QuicVarintV.decode_args.len = len - off;
         QuicVarintV.decode_args.value = &id;
         QuicVarintV.decode_args.consumed = &c;
-        QuicVarint.decode(quic_varint_work);
+        QuicVarint.decode(work);
         if (!QuicVarintV.ok)
         {
             QuicTpV.ok = PROTO_FALSE;
@@ -281,7 +281,7 @@ void protocore_quic_tp_parse(uint8_t *restrict work)
         QuicVarintV.decode_args.len = len - off;
         QuicVarintV.decode_args.value = &vlen;
         QuicVarintV.decode_args.consumed = &c;
-        QuicVarint.decode(quic_varint_work);
+        QuicVarint.decode(work);
         if (!QuicVarintV.ok)
         {
             QuicTpV.ok = PROTO_FALSE;

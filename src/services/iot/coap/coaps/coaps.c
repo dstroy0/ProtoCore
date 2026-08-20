@@ -8,8 +8,6 @@
 
 #include "services/iot/coap/coaps/coaps.h"
 
-static uint8_t dtls_server_work[16]; // the borrow an entry takes; DtlsServer never reads it
-
 #if PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
 
 #include "services/iot/coap/coap/coap.h" // Coap.process: the CoAP message inside an application record
@@ -42,7 +40,7 @@ void protocore_coaps_process(uint8_t *restrict work)
     }
 
     DtlsServerV.established_args.c = c;
-    DtlsServer.established(dtls_server_work);
+    DtlsServer.established(work);
     if (!DtlsServerV.ok)
     {
         DtlsServerV.process_args.c = c;
@@ -50,7 +48,7 @@ void protocore_coaps_process(uint8_t *restrict work)
         DtlsServerV.process_args.len = len;
         DtlsServerV.process_args.out = out;
         DtlsServerV.process_args.out_cap = out_cap;
-        DtlsServer.process(dtls_server_work);
+        DtlsServer.process(work);
         CoapsV.i32 = DtlsServerV.n; // still handshaking, or -1 fatal
         return;
     }
@@ -68,7 +66,7 @@ void protocore_coaps_process(uint8_t *restrict work)
         DtlsServerV.open_app_args.out = req;
         DtlsServerV.open_app_args.out_cap = sizeof(req);
         DtlsServerV.open_app_args.out_len = &req_len;
-        DtlsServer.open_app(dtls_server_work);
+        DtlsServer.open_app(work);
         if (!DtlsServerV.ok)
         {
             return; // replayed, truncated, or not application data
@@ -88,7 +86,7 @@ void protocore_coaps_process(uint8_t *restrict work)
         DtlsServerV.seal_app_args.len = CoapV.n;
         DtlsServerV.seal_app_args.out = out;
         DtlsServerV.seal_app_args.out_cap = out_cap;
-        DtlsServer.seal_app(dtls_server_work);
+        DtlsServer.seal_app(work);
         CoapsV.i32 = (int32_t)DtlsServerV.n;
         return;
     }
@@ -97,7 +95,7 @@ void protocore_coaps_process(uint8_t *restrict work)
     DtlsServerV.process_args.len = len;
     DtlsServerV.process_args.out = out;
     DtlsServerV.process_args.out_cap = out_cap;
-    DtlsServer.process(dtls_server_work);
+    DtlsServer.process(work);
     CoapsV.i32 = DtlsServerV.n;
 }
 

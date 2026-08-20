@@ -8,8 +8,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
-
 #if PROTOCORE_ENABLE_RAWL2
 
 #include "mmgr/protomem/protomem.h"
@@ -149,7 +147,7 @@ void protocore_rawl2_fcs(uint8_t *restrict work)
     CrcV.args.params = &PROTOCORE_CRC32_ISO_HDLC;
     CrcV.args.data = bytes;
     CrcV.args.len = len;
-    Crc.compute(crc_work);
+    Crc.compute(work);
     Rawl2V.u32 = CrcV.value;
 }
 
