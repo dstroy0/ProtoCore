@@ -15,6 +15,8 @@ static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
 
 #if PROTOCORE_ENABLE_DNP3
 
+PROTOCORE_BEGIN_DECLS
+
 uint16_t protocore_dnp3_crc(const uint8_t *data, size_t len)
 {
     // The DNP3 link-layer block check: reflected poly 0xA6BC = reflect(0x3D65), init 0, final XOR 0xFFFF -
@@ -504,5 +506,7 @@ proto_bool protocore_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dn
     out->objects_len = len - p;
     return PROTO_TRUE;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DNP3

@@ -15,6 +15,8 @@
 #include "server/core/exc_decoder/exc_decoder.h"
 #include "shared/hex/hex.h" // PROTOCORE_HEX: the shared digit tables
 
+PROTOCORE_BEGIN_DECLS
+
 static proto_bool hexval(char c, uint8_t *v)
 {
     if (c >= '0' && c <= '9')
@@ -351,5 +353,7 @@ void protocore_exc_erase(uint8_t *restrict work);
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 ExcVars ExcV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EXC_DECODER

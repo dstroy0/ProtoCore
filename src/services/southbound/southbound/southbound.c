@@ -14,6 +14,8 @@
 #include "mmgr/protostr/protostr.h"   // str.eq: the driver registry name lookup
 #include "services/southbound/southbound/southbound.h"
 
+PROTOCORE_BEGIN_DECLS
+
 #ifndef PROTOCORE_SOUTHBOUND_MAX_DRIVERS
 #define PROTOCORE_SOUTHBOUND_MAX_DRIVERS 8 ///< bounded registry; no heap.
 #endif
@@ -216,5 +218,7 @@ void protocore_southbound_write_block(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SouthboundVars SouthboundV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SOUTHBOUND

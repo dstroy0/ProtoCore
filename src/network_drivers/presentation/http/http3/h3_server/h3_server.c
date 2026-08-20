@@ -19,6 +19,8 @@ static uint8_t h3_server_work[16]; // the borrow an entry takes; H3Server never 
 #include "network_drivers/session/session.h"                 // the per-connection tables this reads
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the reserved dispatch slot
 
+PROTOCORE_BEGIN_DECLS
+
 // Randomness for the QUIC ephemeral X25519 key, the ServerHello random, and our connection IDs:
 // four bytes per platform draw, the last draw truncated to what is left.
 static void rng(uint8_t *restrict work)
@@ -171,5 +173,7 @@ void protocore_h3_server_request(void *app, uint32_t conn_id, uint64_t stream_id
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 H3ServerNs H3Server = {.request = request, .rng = rng};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP3

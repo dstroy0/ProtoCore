@@ -13,6 +13,8 @@
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "server/core/failsafe/failsafe.h"
 
+PROTOCORE_BEGIN_DECLS
+
 /**
  * @brief The lifelines' compile-time storage: the table, and what a breach fires.
  */
@@ -222,5 +224,7 @@ void protocore_failsafe_json(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 FailsafeVars FailsafeV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FAILSAFE

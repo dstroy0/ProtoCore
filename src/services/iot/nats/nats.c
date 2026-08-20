@@ -20,6 +20,8 @@
 #include "mmgr/protomem/protomem.h" // mem.cpy / mem.cmp: the spans an operation is laid from and matched against
 #include "mmgr/protostr/protostr.h" // str.len: the bounded length of a caller's NUL-terminated field
 
+PROTOCORE_BEGIN_DECLS
+
 // The terminator every protocol message ends with (NATS Protocol, Protocol conventions: Newlines).
 #define NATS_CRLF "\r\n"
 #define NATS_CRLF_LEN 2u
@@ -517,5 +519,7 @@ void protocore_nats_parse(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 NatsVars NatsV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NATS

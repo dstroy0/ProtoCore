@@ -13,6 +13,8 @@
 #include "mmgr/protomem/protomem.h"
 #include "services/timing_position/ubx/ubx.h"
 
+PROTOCORE_BEGIN_DECLS
+
 void protocore_ubx_checksum(const uint8_t *body, size_t len, uint8_t *ck_a, uint8_t *ck_b)
 {
     uint8_t a = 0, b = 0;
@@ -416,5 +418,7 @@ int protocore_ubx_stream_feed(protocore_ubx_stream *st, uint8_t b, protocore_ubx
         return PROTOCORE_UBX_NONE; //
     }
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_UBX

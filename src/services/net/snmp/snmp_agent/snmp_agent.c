@@ -14,6 +14,8 @@
 
 #if PROTOCORE_ENABLE_SNMP
 
+PROTOCORE_BEGIN_DECLS
+
 #if PROTOCORE_ENABLE_SNMP_V3
 #endif
 
@@ -1036,5 +1038,7 @@ void protocore_snmp_agent_listen(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SnmpAgentVars SnmpAgentV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SNMP

@@ -25,6 +25,8 @@
 // the PROTOCORE_HAS_NET_STACK guard below.
 #include "server/core/proto_handler.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // ---------------------------------------------------------------------------
 // Built-in type codec
 // ---------------------------------------------------------------------------
@@ -1559,5 +1561,7 @@ const ProtoHandler *protocore_opcua_protocore_handler(void)
 }
 
 #endif // PROTOCORE_HAS_NET_STACK
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OPCUA

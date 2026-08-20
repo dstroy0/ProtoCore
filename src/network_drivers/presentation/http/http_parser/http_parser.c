@@ -20,6 +20,8 @@
 #include "mmgr/protostr/protostr.h"
 #include "shared/ip/ip.h" // validate a recovered proxy client IP (v4/v6)
 
+PROTOCORE_BEGIN_DECLS
+
 HttpReq http_pool[CONN_POOL_SLOTS];
 
 // Streaming-body hooks (OTA / file upload), owned by one instance (internal linkage): null
@@ -1092,6 +1094,8 @@ void protocore_http_parser_get_param(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 HttpParserVars HttpParserV;
+
+PROTOCORE_END_DECLS
 
 PROTOCORE_END_DECLS
 

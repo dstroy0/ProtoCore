@@ -19,6 +19,8 @@
 #include "network_drivers/presentation/ssh/transport/ssh_rsa/ssh_rsa.h"
 #include "test/core_setup/hal/nvs.h" // the host key is read from non-volatile storage
 
+PROTOCORE_BEGIN_DECLS
+
 // Public host key (BSS - no secret material).
 SshRsaPubKey ssh_host_pubkey;
 
@@ -340,6 +342,8 @@ void protocore_ssh_rsa_encode_pubkey(uint8_t *restrict work)
 }
 /** @brief The operands and the outcome. */
 SshRsaVars SshRsaV;
+
+PROTOCORE_END_DECLS
 
 PROTOCORE_END_DECLS
 

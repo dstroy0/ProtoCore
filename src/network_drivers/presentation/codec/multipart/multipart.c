@@ -14,6 +14,8 @@
 #include "mmgr/protostr/protostr.h" // str.find: a quoted parameter key, and the boundary in a Content-Type
 #include "multipart.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // Longest parameter key the header scan will match ("name=", "filename=").
 #define MULTIPART_KEY_MAX 32
 
@@ -248,6 +250,8 @@ void protocore_multipart_get_field(uint8_t *restrict work)
 }
 /** @brief The operands and the outcome. */
 MultipartVars MultipartV;
+
+PROTOCORE_END_DECLS
 
 PROTOCORE_END_DECLS
 

@@ -12,6 +12,8 @@
 
 #include "services/iot/coap/coap/coap.h" // Coap.process: the CoAP message inside an application record
 
+PROTOCORE_BEGIN_DECLS
+
 // The largest CoAP message carried in one DTLS application record. RFC 7252 sec 4.6 puts a good
 // upper bound at 1152 octets for the message where nothing is known about the headers, so a larger
 // record is dropped rather than fragmented here.
@@ -102,5 +104,7 @@ void protocore_coaps_process(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 CoapsVars CoapsV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP

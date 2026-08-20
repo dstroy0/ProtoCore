@@ -14,6 +14,8 @@
 
 #include "server/clock/clock.h" // Clock - the monotonic source
 
+PROTOCORE_BEGIN_DECLS
+
 // The library's monotonic millisecond count.
 static uint32_t now_ms(void)
 {
@@ -349,5 +351,7 @@ void protocore_packml_svc_status(PackMlStatus *out)
     out->prod_processed = s_pml.prod_processed;
     out->prod_defective = s_pml.prod_defective;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PACKML

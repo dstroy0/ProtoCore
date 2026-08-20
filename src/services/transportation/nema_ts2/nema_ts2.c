@@ -14,6 +14,8 @@ static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
 
 #if PROTOCORE_ENABLE_NEMA_TS2
 
+PROTOCORE_BEGIN_DECLS
+
 uint16_t protocore_nema_ts2_crc(const uint8_t *bytes, size_t len)
 {
     // CRC-16/X-25: reflected poly 0x8408 (reverse of 0x1021), init 0xFFFF, xorout 0xFFFF.
@@ -69,5 +71,7 @@ proto_bool protocore_nema_ts2_parse(const uint8_t *frame, size_t len, NemaTs2Fra
     out->data_len = body - 3;
     return PROTO_TRUE;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NEMA_TS2

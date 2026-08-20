@@ -14,6 +14,8 @@
 #include "mmgr/protomem/protomem.h"
 #include "services/transportation/utmc/utmc.h"
 
+PROTOCORE_BEGIN_DECLS
+
 static void put_u(protocore_sb *b, uint32_t v)
 {
     char tmp[11];
@@ -91,5 +93,7 @@ size_t protocore_utmc_parse_request(const char *xml, size_t len, char *out, size
     }
     return 0;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_UTMC

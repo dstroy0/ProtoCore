@@ -14,6 +14,8 @@
 #include "mmgr/protostr/protostr.h" // str.eq: the FIO point name lookup
 #include "services/machine_tool/atc/atc.h"
 
+PROTOCORE_BEGIN_DECLS
+
 static void put_json_str(protocore_sb *b, const char *s)
 {
     Sb.put(b, "\"");
@@ -140,5 +142,7 @@ uint8_t protocore_atc_get(const AtcFieldIo *io, const char *name, proto_bool *fo
     }
     return 0;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ATC

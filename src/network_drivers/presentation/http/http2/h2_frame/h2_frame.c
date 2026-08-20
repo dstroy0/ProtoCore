@@ -13,6 +13,8 @@
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/http/http2/h2_frame/h2_frame.h"
 
+PROTOCORE_BEGIN_DECLS
+
 static void wr32(uint8_t *p, uint32_t v)
 {
     p[0] = (uint8_t)(v >> 24);
@@ -302,5 +304,7 @@ void protocore_h2_frame_build_data(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 H2FrameVars H2FrameV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP2

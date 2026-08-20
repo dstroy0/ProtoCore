@@ -20,6 +20,8 @@
 #include "server/core/proto_handler.h"
 #include <stdarg.h>
 
+PROTOCORE_BEGIN_DECLS
+
 // Telnet protocol bytes (RFC 854 / 858 / 857).
 #define T_SE 240
 #define T_SB 250
@@ -456,5 +458,7 @@ void protocore_telnet_proto_handler(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 TelnetVars TelnetV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TELNET

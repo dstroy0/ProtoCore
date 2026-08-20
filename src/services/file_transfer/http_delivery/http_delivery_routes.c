@@ -19,6 +19,8 @@ static uint8_t http_delivery_work[16]; // the borrow an entry takes; HttpDeliver
 #include "protocore.h"
 #include "shared/mime/mime.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // All service-worker route state, owned by one instance (internal linkage): the server handle plus
 // the borrowed precache list the manifest is rebuilt from on each request. The route handlers are
 // fixed-signature callbacks, so they reach this single owner directly.
@@ -78,5 +80,7 @@ void http_delivery_serve_sw(uint8_t *restrict work)
     on_http("/precache.json", HTTP_GET, sw_manifest_handler);
     HttpDeliveryV.ok = PROTO_TRUE;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP_DELIVERY

@@ -18,9 +18,13 @@
 #include "network_drivers/transport/udp/client/client.h"
 #include "network_drivers/transport/udp/server/server.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // RFC 768 gives the datagram a source port and a destination port; a bound port that receives is
 // the listener, and sending to a destination is the client. Designated, so a member's position in
 // the struct does not decide what it binds to.
 UdpNs Udp = {.listener = &UdpListener, .client = &UdpClient};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_UDP

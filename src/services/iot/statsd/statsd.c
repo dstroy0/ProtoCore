@@ -23,6 +23,8 @@
 #include "network_drivers/transport/udp/client/client.h" // UdpClient.sendto: one metric, one datagram
 #include "shared/ip/ip.h"                                // Ip.parse: the daemon address, once
 
+PROTOCORE_BEGIN_DECLS
+
 /** @brief Bytes the stored DogStatsD tag list occupies, the NUL included. */
 #ifndef PROTOCORE_STATSD_TAGS_MAX
 #define PROTOCORE_STATSD_TAGS_MAX 96
@@ -332,5 +334,7 @@ void protocore_statsd_set(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 StatsdVars StatsdV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_STATSD

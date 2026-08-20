@@ -18,6 +18,8 @@
 
 // --- the program's shared state, beside the namespace not on it -------------
 
+PROTOCORE_BEGIN_DECLS
+
 // The one owned instance, private to this TU: the pointer to the bytes this module took for
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
@@ -651,5 +653,7 @@ void protocore_resolver_busy(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 ResolverVars ResolverV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_NEED_DNS_RESOLVER

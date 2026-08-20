@@ -741,6 +741,8 @@ proto_bool defer(uint8_t slot, protocore_deferred_fn fn, void *arg)
 // runtime: each flag selects one of two literals and each sizing constant renders as a decimal.
 // A frame spec like every other here, so the conversions come from the shared engine.
 
+PROTOCORE_BEGIN_DECLS
+
 // A flag indexes this; !!flag is 0 or 1, so the selection is a load rather than a branch.
 static const char *const PROTOCORE_DIAG_BOOL[2] = {"false", "true"};
 
@@ -919,4 +921,6 @@ void diag(uint8_t slot_id)
     send_text(slot_id, 200, PROTOCORE_MIME_JSON, doc); // reads doc, so it runs before the release
     protocore_plaintext_release(mark);
 }
+PROTOCORE_END_DECLS
+
 #endif

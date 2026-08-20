@@ -12,6 +12,8 @@
 
 #include "mmgr/psram_pool/psram_pool.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // Does `size` fit in DRAM while still leaving `reserve` free? Subtracts instead of summing, so no
 // width of size_t can wrap the comparison.
 static proto_bool dram_fits(size_t size, size_t free_dram, size_t reserve)
@@ -87,5 +89,7 @@ uint8_t protocore_pingpong_swap(PingPong *pp)
     pp->fill_idx ^= 1u;
     return pp->fill_idx;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PSRAM_POOL

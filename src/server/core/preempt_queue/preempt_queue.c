@@ -20,6 +20,8 @@
 #include "config/platform/platform.h"
 #include "mmgr/secure/secure.h" // protocore_secure_persist_span: the item a lane's task receives into
 
+PROTOCORE_BEGIN_DECLS
+
 /**
  * @brief The lanes' compile-time storage: what each does with an item, and the queue behind it.
  *
@@ -289,5 +291,7 @@ void protocore_preempt_queue_priority(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 PreemptQueueVars PreemptQueueV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PREEMPT_QUEUE

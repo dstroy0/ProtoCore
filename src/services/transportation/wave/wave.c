@@ -13,6 +13,8 @@
 #include "mmgr/protomem/protomem.h"
 #include "services/transportation/wave/wave.h"
 
+PROTOCORE_BEGIN_DECLS
+
 size_t protocore_wave_encode_psid(uint32_t psid, uint8_t *out, size_t cap)
 {
     // P-encoding: the number of leading 1 bits in the first octet gives the length. The 4-octet form
@@ -187,5 +189,7 @@ size_t protocore_wave_1609dot2_wrap(uint8_t content_type, const uint8_t *payload
     }
     return n;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WAVE

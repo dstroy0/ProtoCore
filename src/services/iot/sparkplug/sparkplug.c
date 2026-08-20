@@ -22,6 +22,8 @@
 #include "mmgr/protostr/protostr.h"         // str.len: the bounded length of each topic element
 #include "services/iot/protobuf/protobuf.h" // the wire codec a Payload and a Metric are written with
 
+PROTOCORE_BEGIN_DECLS
+
 // Sparkplug 3.0.0 sec 4.1: the namespace element and the MQTT topic level separator that follows it.
 #define SPB_TOPIC_PREFIX SPB_NAMESPACE "/"
 #define SPB_TOPIC_PREFIX_LEN (sizeof(SPB_TOPIC_PREFIX) - 1)
@@ -494,5 +496,7 @@ void protocore_sparkplug_parse_metric(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SparkplugVars SparkplugV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SPARKPLUG

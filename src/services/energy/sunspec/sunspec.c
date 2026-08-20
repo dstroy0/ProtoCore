@@ -14,6 +14,8 @@
 #include "mmgr/protostr/protostr.h"
 #include "services/energy/sunspec/sunspec.h"
 
+PROTOCORE_BEGIN_DECLS
+
 static uint16_t be16(const uint8_t *p)
 {
     return (uint16_t)(((uint16_t)p[0] << 8) | p[1]);
@@ -202,5 +204,7 @@ size_t protocore_sunspec_writer_finish(SunSpecWriter *w)
 {
     return w->error ? 0 : w->pos;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SUNSPEC

@@ -12,6 +12,8 @@
 
 #include "server/signaling/link_manager/link_manager.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // The highest-priority interface that is up, or -1. Higher priority wins; the lower index breaks a
 // tie, because best is the first entry seen at that priority.
 static int select_best(const LinkManager *m)
@@ -85,5 +87,7 @@ void protocore_link_set(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 LinkVars LinkV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LINK_MANAGER

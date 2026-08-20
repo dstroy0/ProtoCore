@@ -22,6 +22,8 @@
 #include "mmgr/protomem/protomem.h" // mem.cpy / mem.cmp: the spans a frame is assembled from and matched over
 #include "mmgr/protostr/protostr.h" // str.len: the bounded length of a header-name needle
 
+PROTOCORE_BEGIN_DECLS
+
 /** @brief Octets a lookup reads from its header-name needle. Sec 4.5 leaves every size limit open. */
 #define PROTOCORE_STOMP_HEADER_NAME_MAX 128
 
@@ -422,5 +424,7 @@ void protocore_stomp_unescape(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 StompVars StompV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_STOMP

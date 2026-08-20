@@ -15,6 +15,8 @@
 #include "mmgr/protostr/protostr.h"
 #include "services/instrumentation/scpi/scpi.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // A response value is one number. 10 significant digits is the SCPI NR2/NR3 rendering.
 static const protocore_field SCPI_REAL[] = {{PROTOCORE_FK_G, 10, 0, NULL}, PROTOCORE_END};
 
@@ -714,5 +716,7 @@ proto_bool protocore_scpi_match(const char *input, size_t input_len, const char 
         irem -= in + 1;
     }
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SCPI

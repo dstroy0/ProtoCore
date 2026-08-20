@@ -16,6 +16,8 @@
 
 #include "mmgr/bytes/bytes.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // Thin local names over the shared byte verbs (bytes.h) so the call sites
 // below read the same as before; the cursor invariants live in one place.
 static void put(protocore_span *w, uint8_t b)
@@ -625,5 +627,7 @@ const protocore_codec MsgPack = {
     protocore_msgpack_read_array, protocore_msgpack_read_map, protocore_msgpack_read_bool,  protocore_msgpack_read_null,
     protocore_msgpack_read_float,
 };
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MSGPACK

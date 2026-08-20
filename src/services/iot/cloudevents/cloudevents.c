@@ -19,6 +19,8 @@
 
 #include "network_drivers/presentation/codec/json/json.h" // Json: the bounded writer an envelope is built with
 
+PROTOCORE_BEGIN_DECLS
+
 // The JSON member names an envelope carries (JSON Event Format 1.0.2 sec 3), spelled once so the
 // has-data and no-data paths emit the same keys.
 #define CE_ATTR_SPECVERSION "specversion"
@@ -203,5 +205,7 @@ void protocore_cloud_events_read_binary(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 CloudEventsVars CloudEventsV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CLOUDEVENTS

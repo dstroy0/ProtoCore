@@ -14,6 +14,8 @@
 #include "services/timing_position/nmea2000/nmea2000.h"
 #include "shared/can/can.h"
 
+PROTOCORE_BEGIN_DECLS
+
 uint8_t protocore_n2k_fastpacket_num_frames(uint16_t total_len)
 {
     if (total_len <= N2K_FP_F0_DATA)
@@ -437,5 +439,7 @@ proto_bool protocore_n2k_decode_vessel_heading(const uint8_t *payload, size_t le
     out->reference = (uint8_t)(payload[7] & 0x03u);
     return PROTO_TRUE;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NMEA2000

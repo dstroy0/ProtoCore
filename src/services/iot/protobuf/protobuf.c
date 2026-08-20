@@ -19,6 +19,8 @@
 #include "mmgr/protomem/protomem.h" // mem.cpy: the payload octets and the float bit patterns
 #include "mmgr/protostr/protostr.h" // str.len: the bounded length of a NUL-terminated LEN payload
 
+PROTOCORE_BEGIN_DECLS
+
 // One encoder row: the caller buffer it appends into, how far it has appended, and the sticky flag
 // an overflow sets.
 typedef struct
@@ -489,5 +491,7 @@ void protocore_protobuf_double_bits(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 ProtobufVars ProtobufV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_NEED_PROTOBUF

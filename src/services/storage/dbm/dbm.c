@@ -13,6 +13,8 @@
 #include "mmgr/protomem/protomem.h"
 #include "services/storage/dbm/dbm.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // dbm record payload header: op u8 | key_len u16 | val_len u32.
 static const size_t DBM_HDR = 7;
 
@@ -343,5 +345,7 @@ proto_bool protocore_dbm_compact(struct protocore_dbm *db, WalStore *dst)
     }
     return protocore_dbm_open(db, dst); // rebind to the compacted log + rebuild the index with fresh offsets
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DBM

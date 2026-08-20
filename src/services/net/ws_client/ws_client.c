@@ -25,6 +25,8 @@
 #include "network_drivers/presentation/codec/base64/base64.h" // Base64.encode (RFC 4648)
 #include "server/clock/clock.h"                               // protocore_millis, pcdelay
 
+PROTOCORE_BEGIN_DECLS
+
 #if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/tcp/client/client.h" // TcpClient: the outbound transport (L4)
 #endif
@@ -966,5 +968,7 @@ void protocore_ws_client_close(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 WsClientVars WsClientV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WS_CLIENT

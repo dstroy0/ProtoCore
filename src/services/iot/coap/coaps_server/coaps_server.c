@@ -38,6 +38,8 @@ uint8_t *protocore_coaps_server_span(void)
 #include "server/clock/clock.h"            // Clock.millis: the reclaim clock
 #include "services/iot/coap/coaps/coaps.h" // Coaps.process: the handshake and the CoAP exchange
 
+PROTOCORE_BEGIN_DECLS
+
 #if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/udp/server/server.h" // UdpListener: the bound port
 #include "shared/ip/ip.h"                                // Ip.parse: a reply's destination
@@ -540,5 +542,7 @@ void protocore_coaps_server_ingest(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 CoapsServerVars CoapsServerV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP

@@ -46,6 +46,8 @@
 // Port-forward logging (RFC 4254 sec 7)
 // ---------------------------------------------------------------------------
 
+PROTOCORE_BEGIN_DECLS
+
 // Log frames: each message's shape is fixed here, so nothing is parsed when one is emitted.
 static const protocore_field LOG_FWD_FAIL[] = {{PROTOCORE_FK_LIT, 0, 9, "ssh-fwd: "}, PROTOCORE_STR, PROTOCORE_END};
 static const protocore_field LOG_FWD_OPEN[] = {
@@ -1166,5 +1168,7 @@ static void cli_wipe(void)
 {
     protocore_secure_wipe(protocore_ssh_client_span(), sizeof(SshClientStorage));
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSH_CLIENT

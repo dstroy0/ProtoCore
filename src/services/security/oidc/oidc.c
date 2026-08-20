@@ -23,6 +23,8 @@
 #include "mmgr/secure/secure.h"       // the signature digest's working set, wiped on release
 #include "network_drivers/presentation/codec/base64/base64.h" // shared Base64.url_decode
 
+PROTOCORE_BEGIN_DECLS
+
 // The three parts of a JWS Compact Serialization (RFC 7515 sec 7.1).
 #define OIDC_SEG_HEADER 0u    ///< BASE64URL(UTF8(JWS Protected Header))
 #define OIDC_SEG_PAYLOAD 1u   ///< BASE64URL(JWS Payload)
@@ -635,5 +637,7 @@ void protocore_oidc_verify(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 OidcVars OidcV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OIDC

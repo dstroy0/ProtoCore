@@ -22,6 +22,8 @@
 
 #include "network_drivers/transport/udp/server/server.h" // UdpListener: the bound port datagrams arrive on
 
+PROTOCORE_BEGIN_DECLS
+
 // The pool (QuicConn + H3Conn per slot) and the ingest ring are large, so on a PSRAM board they can
 // be moved to external RAM (like the HTTP/2 pool). Default is internal DRAM; a build that overflows
 // sets PROTOCORE_QUIC_SERVER_IN_PSRAM=1 on a core built with CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY.
@@ -577,5 +579,7 @@ proto_bool protocore_quic_server_respond(uint32_t conn_id, uint64_t stream_id, i
 // Designated, so a member's position in the struct does not decide what it binds to.
 QuicServerNs QuicServer = {
     .begin = begin, .poll = poll, .respond = respond, .active_conns = active_conns, .stop = stop};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP3

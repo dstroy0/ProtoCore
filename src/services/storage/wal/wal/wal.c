@@ -15,6 +15,8 @@
 
 #include "mmgr/endian/endian.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // CRC-32 (IEEE 802.3, reflected, poly 0xEDB88320) byte lookup table. A table-driven step is several times
 // faster than the bit-by-bit form on the ESP32-S3, where the WAL write path is CRC-bound (~4.4 MB/s ->
 // table; see docs/FEATURE_PERFORMANCE.md section 4). 1 KiB of rodata.
@@ -130,5 +132,7 @@ size_t protocore_wal_replay(const uint8_t *img, size_t len, WalRecordCb cb, void
     }
     return off;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WAL

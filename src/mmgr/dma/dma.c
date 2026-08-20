@@ -16,6 +16,8 @@
 
 #include "mmgr/dma/dma.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // The driver stamps a completion, so the clock is its dependency rather than this front end's.
 __attribute__((weak)) proto_bool protocore_dma_hw_open(const protocore_dma_config *cfg)
 {
@@ -67,5 +69,7 @@ void protocore_dma_poll(void)
 {
     protocore_dma_hw_poll();
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DMA

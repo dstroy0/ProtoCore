@@ -17,6 +17,8 @@
 // CRC-24Q (poly 0x1864CFB, init 0). Computed over the preamble + header + payload of a frame.
 // ---------------------------------------------------------------------------------------------
 
+PROTOCORE_BEGIN_DECLS
+
 uint32_t protocore_rtcm3_crc24q(const uint8_t *data, size_t len)
 {
     uint32_t crc = 0;
@@ -257,5 +259,7 @@ proto_bool protocore_rtcm3_parse_1005(const uint8_t *payload, uint16_t payload_l
     }
     return PROTO_TRUE;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTRIP_CASTER

@@ -22,6 +22,8 @@
 
 #include "server/clock/clock.h" // Clock.millis: the one time source the rate cap reads
 
+PROTOCORE_BEGIN_DECLS
+
 // One control on forwarding: a (src, dst) pair, its verdict, and its rate window. RFC 1812 sec 5.3.11.
 typedef struct
 {
@@ -513,5 +515,7 @@ void protocore_forward_set_inspector(uint8_t *restrict work)
 // split by a feature flag, where a positional list shifts every member below the arm at once.
 /** @brief The operands and the outcome. */
 ForwardVars ForwardV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FORWARD

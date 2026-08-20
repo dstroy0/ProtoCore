@@ -12,6 +12,8 @@
 
 #include "services/machine_tool/dnc/dnc/dnc.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // EIA RS-244 punched-tape code. One source of truth for both translation directions.
 // Each EIA byte is the 8-track hole pattern (bit 0 = channel 1 .. bit 7 = channel 8) with
 // odd parity in channel 5 (0x10): every entry has an odd number of set bits. The digit and
@@ -345,5 +347,7 @@ DncEvent protocore_dnc_decode_feed(DncDecoder *d, uint8_t wire)
     d->line[d->len++] = (char)ascii;
     return DNC_EV_NONE;
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DNC

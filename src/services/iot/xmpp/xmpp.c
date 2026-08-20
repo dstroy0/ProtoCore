@@ -20,6 +20,8 @@
 #include "mmgr/protomem/protomem.h" // mem.cpy: a literal and an entity move whole
 #include "mmgr/protostr/protostr.h" // str.len / str.starts: the bounded length and the attribute-name match
 
+PROTOCORE_BEGIN_DECLS
+
 // RFC 6120 sec 8.1: the common attribute names, and RFC 6120 sec 4.7 the stream header's two.
 #define PROTOCORE_XMPP_ATTR_TO "to"
 #define PROTOCORE_XMPP_ATTR_FROM "from"
@@ -362,5 +364,7 @@ void protocore_xmpp_attr(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 XmppVars XmppV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_XMPP

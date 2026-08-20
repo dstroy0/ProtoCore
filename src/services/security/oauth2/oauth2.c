@@ -21,6 +21,8 @@
 
 #include "network_drivers/presentation/codec/json/json.h"
 
+PROTOCORE_BEGIN_DECLS
+
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 #include "services/net/http_client/http_client.h"
 
@@ -280,5 +282,7 @@ void protocore_oauth2_refresh(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 Oauth2Vars Oauth2V;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OAUTH2

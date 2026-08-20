@@ -22,6 +22,8 @@
 #include "mmgr/span/span.h"         // protocore_span: the region a binary build writes into
 #include "network_drivers/presentation/codec/json/json.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // RFC 8428 sec 6 Table 4: the integer map keys the binary representation uses for the labels. Base
 // fields take negative labels, the rest non-negative.
 #define SENML_LABEL_BASE_NAME (-2)
@@ -348,5 +350,7 @@ void protocore_senml_resolve(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SenmlVars SenmlV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SENML

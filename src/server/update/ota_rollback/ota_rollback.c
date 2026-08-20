@@ -12,6 +12,8 @@
 
 #include "server/update/ota_rollback/ota_rollback.h"
 
+PROTOCORE_BEGIN_DECLS
+
 #if PROTOCORE_HAS_VENDOR_OTA
 #include "server/clock/clock.h" // protocore_millis()
 #endif
@@ -102,5 +104,7 @@ void protocore_ota_rollback_tick(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 OtaRollbackVars OtaRollbackV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OTA_ROLLBACK

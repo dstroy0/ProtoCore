@@ -19,6 +19,8 @@
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h" // shared prefix-int + Huffman
 #include "network_drivers/presentation/http/http2/hpack/hpack.h"
 
+PROTOCORE_BEGIN_DECLS
+
 /** @brief One dynamic-table entry descriptor (its bytes live in the table's byte ring). */
 typedef struct
 {
@@ -520,5 +522,7 @@ void protocore_hpack_encode_header(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 HpackVars HpackV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP2

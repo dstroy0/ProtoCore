@@ -19,6 +19,8 @@
 #include "services/net/snmp/snmp_ber/snmp_ber.h"
 #include "services/net/snmp/snmp_crypto/snmp_crypto.h"
 
+PROTOCORE_BEGIN_DECLS
+
 #if PROTOCORE_ENABLE_SNMP_TRAP
 #include "network_drivers/transport/udp/client/client.h" // UdpClient: the notification out
 #include "services/net/snmp/snmp_notify/snmp_notify.h"   // SnmpNotify.build_pdu: the notification PDU
@@ -961,5 +963,7 @@ void protocore_snmp_v3_inform(uint8_t *restrict work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SnmpV3Vars SnmpV3V;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SNMP_V3

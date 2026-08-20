@@ -26,6 +26,8 @@
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a frame goes out on
 #include "shared/utf8/utf8.h"
 
+PROTOCORE_BEGIN_DECLS
+
 #if PROTOCORE_ENABLE_WS_DEFLATE
 #include "mmgr/plaintext/plaintext.h"
 #include "network_drivers/presentation/codec/deflate/deflate/deflate.h"
@@ -839,5 +841,7 @@ uint8_t *protocore_ws_span(void)
 
 /** @brief The operands and the outcome. */
 WsVars WsV;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WEBSOCKET
