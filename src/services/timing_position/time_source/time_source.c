@@ -15,6 +15,8 @@ static uint8_t http_date_work[16]; // the borrow an entry takes; HttpDate never 
 
 #if PROTOCORE_ENABLE_TIME_SOURCE
 
+PROTOCORE_BEGIN_DECLS
+
 typedef struct
 {
     const char *name;
@@ -126,5 +128,7 @@ const char *protocore_time_source_active(void)
 void protocore_time_source_reset(void)
 {
 }
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TIME_SOURCE

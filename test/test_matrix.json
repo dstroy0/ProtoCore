@@ -1069,7 +1069,7 @@
         "+<network_drivers/application/mdns_service/mdns_service.c>",
         "+<services/radio/promisc/promisc.c>",
         "+<network_drivers/network/dns/dns_wire/dns_wire.c>",
-        "+<server/io/http_clock/http_clock.c>"
+        "+<server/storage/mnt_ram/mnt_ram.c>"
       ],
       "tests": [
         "unit/integration/fieldbus/test_dispatch"
@@ -1525,8 +1525,7 @@
         "${env:native_stack_http.build_src_filter}",
         "+<mmgr/protomem/protomem.c>",
         "+<mmgr/rawmemcpy/rawmemcpy.c>",
-        "+<mmgr/swar/swar.c>",
-        "+<server/io/http_clock/http_clock.c>"
+        "+<mmgr/swar/swar.c>"
       ],
       "tests": [
         "unit/integration/transport/test_diag"
@@ -3211,8 +3210,7 @@
         "+<src/mmgr/plaintext/plaintext.c>",
         "+<src/mmgr/span/span.c>",
         "+<src/mmgr/arena/arena.c>",
-        "+<network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c>",
-        "+<server/io/http_clock/http_clock.c>"
+        "+<network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c>"
       ],
       "tests": [
         "unit/integration/http/test_h3_server"
@@ -4154,16 +4152,21 @@
     },
     "native_lfs_mock": {
       "desc": "The littlefs-backed protocore_mnt_backend used by the host tests that need a real tree\n(test/core_setup/hal/host/lfs_mock.h): round-trip, seek, directory listing, stat, rename/remove,\nappend, and a full volume refusing rather than pretending. Real littlefs on a RAM\nblock device, so the host answers the way the device does.",
-      "flags": ["-DPROTOCORE_ENABLE_MNT=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_MNT=1"
+      ],
       "src": [
         "-<*>",
         "+<server/storage/mnt/mnt.c>",
         "+<mmgr/protomem/protomem.c>",
         "+<mmgr/rawmemcpy/rawmemcpy.c>",
         "+<mmgr/swar/swar.c>",
-        "+<mmgr/protostr/protostr.c>"
+        "+<mmgr/protostr/protostr.c>",
+        "+<server/storage/mnt_ram/mnt_ram.c>"
       ],
-      "tests": ["unit/protocols/storage/test_lfs_mock"]
+      "tests": [
+        "unit/protocols/storage/test_lfs_mock"
+      ]
     },
     "native_link_manager": {
       "desc": "Multi-interface egress selection (server/signaling/link_manager): a table of interfaces (kind +\npriority + up/down) with deterministic best-link-up selection, graceful escalation to a higher-priority\ninterface, failover when it drops, and real-transition change detection. Pure host tests.",
@@ -4490,7 +4493,8 @@
         "+<mmgr/plaintext/plaintext.c>",
         "+<mmgr/span/span.c>",
         "+<mmgr/arena/arena.c>",
-        "+<test/core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<server/storage/mnt_ram/mnt_ram.c>"
       ],
       "tests": [
         "unit/protocols/storage/test_mnt"
@@ -6776,8 +6780,7 @@
             "+<shared/hex/hex.c>",
             "+<mmgr/plaintext/plaintext.c>",
             "+<mmgr/arena/arena.c>",
-            "+<test/core_setup/hal/portable/portable_platform.c>",
-            "+<server/io/http_clock/http_clock.c>"
+            "+<test/core_setup/hal/portable/portable_platform.c>"
           ],
           "tests": [
             "unit/integration/application/test_response_headers"
@@ -6999,7 +7002,8 @@
         "+<mmgr/plaintext/plaintext.c>",
         "+<mmgr/span/span.c>",
         "+<mmgr/arena/arena.c>",
-        "+<test/core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<server/storage/mnt_ram/mnt_ram.c>"
       ],
       "tests": [
         "unit/src/network_drivers/session/scp/test_scp"
@@ -7110,7 +7114,8 @@
         "+<shared/utf8/utf8.c>",
         "+<mmgr/float_bits/float_bits.c>",
         "+<crypto/mac/ghash/ghash.c>",
-        "+<network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c>"
+        "+<network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c>",
+        "+<server/storage/mnt_ram/mnt_ram.c>"
       ],
       "tests": [
         "unit/src/network_drivers/session/scp/test_ssh_scp"
@@ -7338,7 +7343,8 @@
         "+<network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c>",
         "+<src/mmgr/plaintext/plaintext.c>",
         "+<src/mmgr/span/span.c>",
-        "+<src/mmgr/arena/arena.c>"
+        "+<src/mmgr/arena/arena.c>",
+        "+<server/storage/mnt_ram/mnt_ram.c>"
       ],
       "tests": [
         "unit/src/network_drivers/application/sftp/test_ssh_sftp"
@@ -8043,7 +8049,8 @@
         "+<shared/log/log.c>",
         "+<mmgr/float_bits/float_bits.c>",
         "+<crypto/mac/ghash/ghash.c>",
-        "+<network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c>"
+        "+<network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c>",
+        "+<server/storage/mnt_ram/mnt_ram.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/ssh/transport/test_extension",
@@ -9007,7 +9014,8 @@
         "+<shared/log/log.c>",
         "+<mmgr/float_bits/float_bits.c>",
         "+<crypto/mac/ghash/ghash.c>",
-        "+<network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c>"
+        "+<network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c>",
+        "+<server/storage/mnt_ram/mnt_ram.c>"
       ],
       "tests": []
     },
@@ -9106,7 +9114,8 @@
         "+<mmgr/plaintext/plaintext.c>",
         "+<mmgr/span/span.c>",
         "+<mmgr/arena/arena.c>",
-        "+<test/core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<server/storage/mnt_ram/mnt_ram.c>"
       ],
       "tests": [
         "unit/src/network_drivers/application/sftp/test_ssh_sftp"
