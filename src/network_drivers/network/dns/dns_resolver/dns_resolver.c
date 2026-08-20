@@ -16,6 +16,15 @@
 #include "network_drivers/network/dns/dns_wire/dns_wire.h" // the name codec both DNS halves share
 #include "server/clock/clock.h"                            // Clock.millis: the deadline the resolve waits to
 
+#if PROTOCORE_HAS_VENDOR_DNS_RESOLVER
+#include "config/platform/platform.h" // the platform's own resolver, under our names
+#else
+#include "mmgr/protostr/protostr.h"                      // str: the bounded-run walks
+#include "mmgr/rawmemcpy/rawmemcpy.h"                    // raw.read: the server address moves whole
+#include "network_drivers/transport/udp/server/server.h" // UdpListener: the query port and the ask
+#include "shared/ip/ip.h"                                // Ip.parse: the server, and the dotted-quad fast path
+#endif
+
 // --- the program's shared state, beside the namespace not on it -------------
 
 PROTOCORE_BEGIN_DECLS
@@ -37,15 +46,6 @@ uint8_t *protocore_dns_resolver_span(void)
     }
     return s_own.span;
 }
-
-#if PROTOCORE_HAS_VENDOR_DNS_RESOLVER
-#include "config/platform/platform.h" // the platform's own resolver, under our names
-#else
-#include "mmgr/protostr/protostr.h"                      // str: the bounded-run walks
-#include "mmgr/rawmemcpy/rawmemcpy.h"                    // raw.read: the server address moves whole
-#include "network_drivers/transport/udp/server/server.h" // UdpListener: the query port and the ask
-#include "shared/ip/ip.h"                                // Ip.parse: the server, and the dotted-quad fast path
-#endif
 
 // ---------------------------------------------------------------------------
 // The wire constants

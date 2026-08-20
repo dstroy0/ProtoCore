@@ -58,6 +58,11 @@ SHARED_SUBSTRATE = {
     "ssh_host_pubkey",  # ssh/transport/ssh_rsa.c - the loaded RSA host public key
     "crypto_work",  # a SshPacketState member (ssh/transport/transport.h); no file-scope definition in src/
     "protocore_ap_ip",  # transport/tcp/protocol/protocol.c - the softAP IP (extern in tcp/common.h)
+    # ssh/transport/transport.c - KEX timing counters, and the only one here that does not exist in a
+    # production build: the whole definition sits under `#ifdef PROTOCORE_SSH_KEX_BENCH`. It is
+    # extern because reading it is the point - the pentest rig's firmware prints it from another TU -
+    # and a bench run has one active connection, so a plain instance suffices.
+    "protocore_ssh_kex_bench",
 }
 
 # A file-scope definition line (column 0). Optional ALL_CAPS attribute macros
@@ -150,6 +155,28 @@ def is_ns_type(type_str: str) -> bool:
     return _last_type_token(type_str).endswith("Ns")
 
 
+def is_vars_type(type_str: str) -> bool:
+    """True if the declared type is a module's operands object (`<Name>Vars`).
+
+    The sibling of `<Name>Ns`, and external for the same reason. The handle reshape split what the
+    table used to carry in two: the ENTRIES stayed in `<Name>Ns` and became a `static const` the
+    header initialises, while the OPERANDS moved to `<Name>Vars <Name>V;` - the one object the .c
+    still defines and the header still externs. The calling convention is what makes it external:
+
+        Sha256V.args.data = p;          // the caller writes the operands
+        Sha256.hash(work);              // and invokes the entry
+        n = Sha256V.n;                  // and reads the outcome off the same handle
+
+    Requiring internal linkage here forbids that, the same way it would have forbidden the table.
+    The state BEHIND it - Storage, Internal, the OwnCtx holding the module's span - is what the
+    guard still holds to static, and does.
+
+    Without this the guard reports 293 modules including sha256, which is the shape every one of
+    them is converted TOWARD: a check that fails the reference implementation is measuring the
+    wrong thing, and its number is unactionable rather than merely large."""
+    return _last_type_token(type_str).endswith("Vars")
+
+
 def classify(name: str, type_str: str, in_anon_ns: bool) -> bool:
     """True if this file-scope definition is allowed (owner / const / substrate / seam)."""
     if name in SHARED_SUBSTRATE:
@@ -174,8 +201,9 @@ def classify(name: str, type_str: str, in_anon_ns: bool) -> bool:
     # defined in a TU that used neither, `extern`'d into a shared header and reached by two others.
     if is_ctx_type(type_str):
         return bool(re.search(r"\bstatic\b", type_str)) or in_anon_ns
-    # The exported namespace table, whose external linkage is the point of it.
-    if is_ns_type(type_str):
+    # The exported namespace table, and the operands object beside it: external linkage is the
+    # point of both, because the calling convention writes one and reads the other.
+    if is_ns_type(type_str) or is_vars_type(type_str):
         return True
     return False
 

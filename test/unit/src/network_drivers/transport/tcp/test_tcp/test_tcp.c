@@ -97,7 +97,7 @@ void test_each_half_points_at_the_module_that_owns_it(void)
     TEST_ASSERT_EQUAL_PTR(ConnPool.close, Tcp.conn->close);
     TEST_ASSERT_NOT_NULL(Tcp.listener);
     TEST_ASSERT_EQUAL_PTR(TcpListener.add, Tcp.listener->add);
-#if PROTOCORE_NEED_CLIENT
+#if PROTOCORE_ENABLE_TCP_CLIENT
     TEST_ASSERT_NOT_NULL(Tcp.client);
     TEST_ASSERT_EQUAL_PTR(TcpClient.open, Tcp.client->open);
 #endif

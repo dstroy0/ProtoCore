@@ -241,8 +241,6 @@ TlsConn *protocore_tls_conn_at(uint8_t slot);
  */
 const char *protocore_tls_alpn(uint8_t slot);
 
-#endif // PROTOCORE_ENABLE_TLS
-
 /** @brief Where a stepped TLS exchange stands. */
 typedef enum PROTO_ENUM_PACKED
 {
@@ -254,11 +252,9 @@ typedef enum PROTO_ENUM_PACKED
 /**
  * @brief Install the credential this end presents, before any connection begins.
  *
- * The two arms take different credentials, because they are different engines:
- *   - software (PROTOCORE_ENABLE_TLS): RFC 7250 raw public keys. @p cert is the 32-byte Ed25519
- *     public key and @p key the 32-byte signing seed that matches it.
- *   - an X.509 chain and
- *     its private key for the mbedTLS binding.
+ * The credential is an RFC 7250 raw public key: @p cert is the 32-byte Ed25519 public key and
+ * @p key the 32-byte signing seed that matches it. This end presents no X.509 chain, and asks
+ * the peer for none.
  *
  * @return true once a connection may begin.
  */
@@ -307,5 +303,7 @@ void protocore_tls_conn_free(uint8_t slot);
 size_t protocore_tls_arena_peak(void);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_TLS
 
 #endif // PROTOCORE_TLS_H

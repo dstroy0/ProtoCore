@@ -202,6 +202,12 @@ Opt-in log-structured hash key-value store on the write-ahead log (services/dbm;
 
 Opt-in DDS / RTPS wire-protocol codec. When set, services/iot/dds provides the RTPS (DDSI-RTPS) message + submessage framing: the 20-octet header (magic / version / vendor / guidPrefix) and the typed submessages (INFO_TS, DATA, HEARTBEAT, ACKNACK, ...) with the endianness flag, built by protocore_rtps_header / _submessage and walked by protocore_rtps_parse. Pure framing (CDR payloads + SPDP/SEDP discovery layer on top). Default off.
 
+## Deflate RFC 1951 Tables
+
+`PROTOCORE_ENABLE_DEFLATE_RFC1951`
+
+The RFC 1951 sec 3.2.5 length and distance tables, and the fixed-Huffman coder over them (network_drivers/presentation/codec/deflate/rfc1951). Default off; turned on by whatever compresses. The four tables are defined once and read through one namespace, so the DEFLATE encoder and decoder and the SSH `zlib@openssh.com` stream codecs share a single copy instead of each carrying their own - which is the point of the separate flag. Pure, const, and host-tested against the RFC's own table values. See src/network_drivers/presentation/codec/deflate/rfc1951/rfc1951.h.
+
 ## Device ID
 
 `PROTOCORE_ENABLE_DEVICE_ID`
@@ -267,6 +273,12 @@ DNP3 (IEEE 1815) data-link frame codec. Default off. services/energy/dnp3 is a z
 `PROTOCORE_ENABLE_DNS_RESOLVER`
 
 Opt-in DNS resolver with answer verification. Default off. network_drivers/network/dns/dns_resolver resolves a hostname to an IPv4 address (lwIP dns_gethostbyname, marshalled to tcpip_thread like the http_client) and can reject suspicious answers - 0.0.0.0, broadcast, loopback, multicast - which are spoofing / DNS-rebinding indicators for a remote host. The address classifier / verifier is pure and host-tested; the resolve is ESP32-only (blocking, so call it off the request hot path).
+
+## DNS Wire Codec
+
+`PROTOCORE_ENABLE_DNS`
+
+The DNS message codec both DNS halves encode through (network_drivers/network/dns/dns_wire). Default off; turned on by whatever needs a name resolved or answered. RFC 1035 sec 3.1 names are written and read as labels - a length octet then that many octets, ending in the root's zero octet - and sec 4.1.4 compression pointers are followed when reading, with the two high bits of a length octet distinguishing the two forms. Bounded and pure: a name is decoded into a caller-supplied buffer with no allocation, a malformed length or a pointer loop is refused rather than followed, and nothing here touches a socket. The resolver (PROTOCORE_ENABLE_DNS_RESOLVER) and the server (PROTOCORE_ENABLE_DNS_SERVER) both sit on it, which is why it is its own flag: a build that has one, the other, or both compiles the codec once. See src/network_drivers/network/dns/dns_wire/dns_wire.h.
 
 ## DNS Server
 
@@ -508,6 +520,12 @@ Outbound HTTP client. Default off. When set, src/services/net/http_client/http_c
 
 Opt-in HTTP delivery optimizations that make a slow origin acceptable to a browser. Default off. **Stale-while-revalidate (RFC 5861):** `protocore_delivery_swr` decides FRESH / serve-stale-and-revalidate / EXPIRED from an age against `max-age` + `stale-while-revalidate`, and `protocore_delivery_cache_control` builds the matching header - wired into serving by `PC::set_cache_control_swr(max_age_s, swr_s)`, so every `serve_file` / `serve_static` response carries `public, max-age=N, stale-while-revalidate=M` and the header can never drift from the decision. **Service worker:** `protocore_delivery_sw_manifest` emits the versioned `{"version":..,"precache":[..]}` document, and `protocore_delivery_serve_sw(srv, paths, n, version)` registers `/sw.js` (a flash-resident worker shipped through the web-asset pipeline) plus `/precache.json`; the worker precaches the shell and then serves it stale-while-revalidate client-side, naming its cache after the version so a bump invalidates the old shell exactly once, and the manifest route answers 500 rather than serving truncated JSON if it would not fit `PROTOCORE_DELIVERY_MANIFEST_BUF` (`PROTOCORE_DELIVERY_PRECACHE_MAX` paths). **Byte ranges are NOT in this service** - `network_drivers/application/http_range.h` (`http_parse_byte_range`, `PROTOCORE_ENABLE_RANGE`) is the single owner of the RFC 7233 range math and is already wired into static file serving and the edge cache, emitting `Accept-Ranges`, the 206 `Content-Range`, and a 416 `bytes */size`; a duplicate parser here was removed rather than given a second call site. Pure cores host-tested (`native_http_delivery`) and **HW-verified on an ESP32-P4 serving from SD**: `bytes=10-19` / `bytes=-5` / `bytes=995-` each returned byte-exact 206 payloads with the right `Content-Range`, an out-of-range request returned 416 `bytes */1000`, and served files carried the SWR header. Example HttpDelivery. See src/services/file_transfer/http_delivery/http_delivery.h.
 
+## HTTP Route Table
+
+`PROTOCORE_ENABLE_HTTP_ROUTE`
+
+The route table a request is matched against (network_drivers/presentation/http/route). Default off; turned on by any HTTP server build. A row names a path pattern, a method, the handler to run, and the WebSocket / SSE / mount / credential id the request needs, so the per-route interface gate and the handler lookup are one decision in one place rather than a chain of checks at each call site. It sits under the HTTP root rather than at the network layer because every one of those fields is HTTP; the network layer routes datagrams. Fixed capacity, zero heap. See src/network_drivers/presentation/http/route/http_route.h.
+
 ## HTTP/1.1 Parser
 
 RFC 7230 request parser - validates method, path, header names and values byte-by-byte before storing anything. Always on.
@@ -605,6 +623,12 @@ Zero-heap JSON writer/reader (json.h) for request bodies and responses. Always o
 `PROTOCORE_ENABLE_JWT`
 
 JWT bearer-token authentication (HS256). Default off. When set, src/services/security/jwt/jwt.h verifies `Authorization: Bearer <jwt>` tokens signed with HMAC-SHA-256 (reusing the SSH crypto layer) and can read integer claims (e.g. `exp`) so a handler/middleware can gate routes on a stateless token. Signature verification is constant-time.
+
+## JSON
+
+`PROTOCORE_ENABLE_JSON`
+
+A bounded, zero-heap JSON writer and top-level reader (network_drivers/presentation/codec/json). Default off. Deliberately small: it covers the shapes IoT payloads actually take - a flat-ish object of strings, numbers and booleans, with bounded nesting - rather than the whole grammar. The writer formats into a caller-supplied buffer and reports truncation instead of growing one; the reader scans in place and hands back views into the caller's own bytes, so a document costs nothing but the bytes it arrived in. Pure and host-tested. See src/network_drivers/presentation/codec/json/json.h.
 
 ## Keep-Alive
 
@@ -1431,6 +1455,12 @@ Opt-in flash wear-leveling slot selector. When set, server/storage/wearlevel pro
 `PROTOCORE_ENABLE_WEB_TERMINAL`
 
 Browser "web serial" terminal over WebSocket (src/server/web/web_terminal). Serves a self-contained terminal page and a WebSocket endpoint: device output is broadcast to all connected browsers, browser input is delivered to a command callback. Requires WEBSOCKET. Default off.
+
+## Web Assets
+
+`PROTOCORE_ENABLE_WEB_ASSETS`
+
+The built-in dashboard, provisioning form and captive-portal pages, compiled in from flash (network_drivers/application/web_assets). Default off. One `const` array per document under src/web_assets/input/, its base name becoming the C symbol; on ESP32 these live in DROM and are served straight out of flash, so a device ships a working UI with no filesystem, no mount and no heap. Edit the sources under src/web_assets/input/ and re-run src/web_assets/wizard/build_assets.py to regenerate. See src/network_drivers/application/web_assets/web_assets.h.
 
 ## WebDAV
 

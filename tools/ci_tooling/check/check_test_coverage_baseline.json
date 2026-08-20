@@ -1,13 +1,15 @@
 [
- "src/network_drivers/application/binary_asset_blobs.c",
- "src/network_drivers/datalink/datalink.c",
+ "src/network_drivers/application/binary_asset_blobs/binary_asset_blobs.c",
+ "src/network_drivers/datalink/datalink/datalink.c",
+ "src/network_drivers/session/scp/ssh_scp/ssh_scp.c",
  "src/network_drivers/tls/tls.c",
- "src/server/core/exc_coredump.c",
- "src/server/net/iface_bridge/iface_bridge_hw.c",
- "src/server/net/relay/relay_listener.c",
- "src/server/update/ota_service.c",
- "src/server/web/edge_cache/edge_cache_proxy.c",
- "src/services/file_transfer/ftp/ftp_session.c",
- "src/services/file_transfer/http_delivery/http_delivery_routes.c",
- "src/services/timing_position/gnss/ntrip_caster_listener.c"
+ "src/server/net/iface_bridge/iface_bridge_hw/iface_bridge_hw.c",
+ "src/server/net/relay/relay_listener/relay_listener.c",
+ "src/server/update/ota_service/ota_service.c",
+ "src/services/file_transfer/ftp/ftp_session/ftp_session.c",
+ "src/services/opcua/models/euromap77/euromap77.c",
+ "src/services/opcua/models/robotics/robotics.c",
+ "src/services/opcua/models/umati/umati.c",
+ "src/services/timing_position/gnss/ntrip_caster_listener/ntrip_caster_listener.c",
+ "src/shared/der/der.c"
 ]

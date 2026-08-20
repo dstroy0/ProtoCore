@@ -27,7 +27,9 @@
  * name lookup included - is bounded by the timeout_ms it passed.
  */
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_TCP_CLIENT
 
 PROTOCORE_BEGIN_DECLS
 
@@ -133,5 +135,7 @@ static const TcpClientNs TcpClient __attribute__((unused)) = {
 uint8_t *protocore_tcp_client_span(void);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_TCP_CLIENT
 
 #endif // PROTOCORE_TCP_CLIENT_H

@@ -11,9 +11,9 @@
 #include "mmgr/protostr/protostr.h"
 #include "server/clock/clock.h" // pcdelay
 
-static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads it
-
 #if PROTOCORE_ENABLE_OTA && PROTOCORE_HAS_VENDOR_OTA
+
+static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads it
 
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
