@@ -365,10 +365,16 @@ typedef struct
     Tls13MsgBuildHelloRetryRequestArgs build_hello_retry_request_args;
     Tls13MsgBuildEncryptedExtensionsEmptyArgs build_encrypted_extensions_empty_args;
     Tls13MsgBuildMessageHashArgs build_message_hash_args;
-
     proto_bool ok;
     size_t n;
+} Tls13MsgVars;
 
+/** @brief The operands and the outcome. */
+extern Tls13MsgVars Tls13MsgV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const parse_client_hello)(uint8_t *restrict work);
     void (*const parse_server_hello)(uint8_t *restrict work);
     void (*const build_client_hello)(uint8_t *restrict work);
@@ -386,8 +392,45 @@ typedef struct
     void (*const build_message_hash)(uint8_t *restrict work);
 } Tls13MsgNs;
 
-/** @brief The one symbol this module exports. */
-extern Tls13MsgNs Tls13Msg;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Tls13MsgV or a region of the borrow at a fixed offset.
+void protocore_tls13_msg_parse_client_hello(uint8_t *restrict work);
+void protocore_tls13_msg_parse_server_hello(uint8_t *restrict work);
+void protocore_tls13_msg_build_client_hello(uint8_t *restrict work);
+void protocore_tls13_msg_parse_certificate(uint8_t *restrict work);
+void protocore_tls13_msg_parse_cert_verify(uint8_t *restrict work);
+void protocore_tls13_msg_parse_finished(uint8_t *restrict work);
+void protocore_tls13_msg_build_server_hello(uint8_t *restrict work);
+void protocore_tls13_msg_build_encrypted_extensions(uint8_t *restrict work);
+void protocore_tls13_msg_build_certificate(uint8_t *restrict work);
+void protocore_tls13_msg_build_cert_verify(uint8_t *restrict work);
+void protocore_tls13_msg_build_finished(uint8_t *restrict work);
+void protocore_tls13_msg_cert_verify_content(uint8_t *restrict work);
+void protocore_tls13_msg_build_hello_retry_request(uint8_t *restrict work);
+void protocore_tls13_msg_build_encrypted_extensions_empty(uint8_t *restrict work);
+void protocore_tls13_msg_build_message_hash(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Tls13Msg.parse_client_hello(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Tls13MsgNs Tls13Msg __attribute__((unused)) = {
+    .parse_client_hello = protocore_tls13_msg_parse_client_hello,
+    .parse_server_hello = protocore_tls13_msg_parse_server_hello,
+    .build_client_hello = protocore_tls13_msg_build_client_hello,
+    .parse_certificate = protocore_tls13_msg_parse_certificate,
+    .parse_cert_verify = protocore_tls13_msg_parse_cert_verify,
+    .parse_finished = protocore_tls13_msg_parse_finished,
+    .build_server_hello = protocore_tls13_msg_build_server_hello,
+    .build_encrypted_extensions = protocore_tls13_msg_build_encrypted_extensions,
+    .build_certificate = protocore_tls13_msg_build_certificate,
+    .build_cert_verify = protocore_tls13_msg_build_cert_verify,
+    .build_finished = protocore_tls13_msg_build_finished,
+    .cert_verify_content = protocore_tls13_msg_cert_verify_content,
+    .build_hello_retry_request = protocore_tls13_msg_build_hello_retry_request,
+    .build_encrypted_extensions_empty = protocore_tls13_msg_build_encrypted_extensions_empty,
+    .build_message_hash = protocore_tls13_msg_build_message_hash,
+};
 
 PROTOCORE_END_DECLS
 

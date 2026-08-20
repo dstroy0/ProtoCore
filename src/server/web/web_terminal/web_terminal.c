@@ -93,9 +93,9 @@ static void term_ws_message(uint8_t ws_id)
     // exercised by the suite (with and without a registered command callback).
     if (WEB_TERMINAL_CTX(work)->cb && ws_id < MAX_WS_CONNS)
     {
-        Ws.ws_id = ws_id;
+        WsV.ws_id = ws_id;
         Ws.payload_of(protocore_ws_span());
-        WEB_TERMINAL_CTX(work)->cb(Ws.text, ws_id);
+        WEB_TERMINAL_CTX(work)->cb(WsV.text, ws_id);
     }
 }
 
@@ -179,9 +179,9 @@ static void web_terminal_print(uint8_t *restrict work)
     {
         if (WEB_TERMINAL_CTX(work)->is_client[i])
         {
-            Ws.ws_id = i;
+            WsV.ws_id = i;
             Ws.active(protocore_ws_span());
-            if (Ws.ok)
+            if (WsV.ok)
             {
                 ws_send_text(i, s);
             }
@@ -216,9 +216,9 @@ static void web_terminal_client_count(uint8_t *restrict work)
     {
         if (WEB_TERMINAL_CTX(work)->is_client[i])
         {
-            Ws.ws_id = i;
+            WsV.ws_id = i;
             Ws.active(protocore_ws_span());
-            if (Ws.ok)
+            if (WsV.ok)
             {
                 n++;
             }

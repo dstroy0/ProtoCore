@@ -186,15 +186,15 @@ static void send_resp(uint8_t *restrict work, SftpSession *s, size_t n)
     {
         return;
     }
-    SshConnection.chan.slot = s->slot;
-    SshConnection.chan.channel = s->channel;
-    SshConnection.chan.data = SSH_SFTP_CTX(work)->out;
-    SshConnection.chan.len = n;
+    SshConnectionV.chan.slot = s->slot;
+    SshConnectionV.chan.channel = s->channel;
+    SshConnectionV.chan.data = SSH_SFTP_CTX(work)->out;
+    SshConnectionV.chan.len = n;
     SshConnection.channel_send_data(protocore_ssh_connection_span());
-    if (SshConnection.i32 < 0)
+    if (SshConnectionV.i32 < 0)
     {
-        SshConnection.chan.slot = s->slot;
-        SshConnection.chan.channel = s->channel;
+        SshConnectionV.chan.slot = s->slot;
+        SshConnectionV.chan.channel = s->channel;
         SshConnection.channel_send_close(protocore_ssh_connection_span());
         s->active = PROTO_FALSE;
     }
@@ -1011,8 +1011,8 @@ static void protocore_sftp_on_data(uint8_t slot, uint32_t channel, const uint8_t
         size_t space = sizeof(s->acc) - s->acc_len;
         if (space == 0)
         {
-            SshConnection.chan.slot = slot;
-            SshConnection.chan.channel = s->channel; // a non-WRITE packet too big to buffer
+            SshConnectionV.chan.slot = slot;
+            SshConnectionV.chan.channel = s->channel; // a non-WRITE packet too big to buffer
             SshConnection.channel_send_close(protocore_ssh_connection_span());
             s->active = PROTO_FALSE;
             return;
@@ -1024,8 +1024,8 @@ static void protocore_sftp_on_data(uint8_t slot, uint32_t channel, const uint8_t
         len -= take;
         if (!process_acc(work, s))
         {
-            SshConnection.chan.slot = slot;
-            SshConnection.chan.channel = s->channel;
+            SshConnectionV.chan.slot = slot;
+            SshConnectionV.chan.channel = s->channel;
             SshConnection.channel_send_close(protocore_ssh_connection_span());
             s->active = PROTO_FALSE;
             return;
@@ -1052,9 +1052,9 @@ static void ssh_sftp_begin(uint8_t *restrict work)
     }
     if (!SSH_SFTP_CTX(work)->registered)
     {
-        SshConnection.sftp_open_cb = protocore_sftp_on_open;
+        SshConnectionV.sftp_open_cb = protocore_sftp_on_open;
         SshConnection.set_sftp_open_cb(protocore_ssh_connection_span());
-        SshConnection.sftp_data_cb = protocore_sftp_on_data;
+        SshConnectionV.sftp_data_cb = protocore_sftp_on_data;
         SshConnection.set_sftp_data_cb(protocore_ssh_connection_span());
         SSH_SFTP_CTX(work)->registered = PROTO_TRUE;
     }

@@ -86,17 +86,36 @@ typedef struct
     SshKexHashInitArgs init_args;
     SshKexHashUpdateArgs update_args;
     SshKexHashFinalArgs final_args;
-
     proto_bool ok;
     size_t len;
+} SshKexHashVars;
 
+/** @brief The operands and the outcome. */
+extern SshKexHashVars SshKexHashV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const update)(uint8_t *restrict work);
     void (*const final)(uint8_t *restrict work);
 } SshKexHashNs;
 
-/** @brief The one symbol this module exports. */
-extern SshKexHashNs SshKexHash;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SshKexHashV or a region of the borrow at a fixed offset.
+void protocore_ssh_kex_hash_init(uint8_t *restrict work);
+void protocore_ssh_kex_hash_update(uint8_t *restrict work);
+void protocore_ssh_kex_hash_final(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `SshKexHash.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SshKexHashNs SshKexHash __attribute__((unused)) = {
+    .init = protocore_ssh_kex_hash_init,
+    .update = protocore_ssh_kex_hash_update,
+    .final = protocore_ssh_kex_hash_final,
+};
 
 PROTOCORE_END_DECLS
 

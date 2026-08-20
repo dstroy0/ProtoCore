@@ -237,10 +237,16 @@ typedef struct
     DtlsRecordReplayInitArgs replay_init_args;
     DtlsRecordReplayCheckArgs replay_check_args;
     DtlsRecordReplayMarkArgs replay_mark_args;
-
     proto_bool ok;
     size_t n;
+} DtlsRecordVars;
 
+/** @brief The operands and the outcome. */
+extern DtlsRecordVars DtlsRecordV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const keys_derive)(uint8_t *restrict work);
     void (*const plaintext_build)(uint8_t *restrict work);
     void (*const plaintext_parse)(uint8_t *restrict work);
@@ -251,8 +257,31 @@ typedef struct
     void (*const replay_mark)(uint8_t *restrict work);
 } DtlsRecordNs;
 
-/** @brief The one symbol this module exports. */
-extern DtlsRecordNs DtlsRecord;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in DtlsRecordV or a region of the borrow at a fixed offset.
+void protocore_dtls_record_keys_derive(uint8_t *restrict work);
+void protocore_dtls_record_plaintext_build(uint8_t *restrict work);
+void protocore_dtls_record_plaintext_parse(uint8_t *restrict work);
+void protocore_dtls_record_protect(uint8_t *restrict work);
+void protocore_dtls_record_unprotect(uint8_t *restrict work);
+void protocore_dtls_record_replay_init(uint8_t *restrict work);
+void protocore_dtls_record_replay_check(uint8_t *restrict work);
+void protocore_dtls_record_replay_mark(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `DtlsRecord.keys_derive(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const DtlsRecordNs DtlsRecord __attribute__((unused)) = {
+    .keys_derive = protocore_dtls_record_keys_derive,
+    .plaintext_build = protocore_dtls_record_plaintext_build,
+    .plaintext_parse = protocore_dtls_record_plaintext_parse,
+    .protect = protocore_dtls_record_protect,
+    .unprotect = protocore_dtls_record_unprotect,
+    .replay_init = protocore_dtls_record_replay_init,
+    .replay_check = protocore_dtls_record_replay_check,
+    .replay_mark = protocore_dtls_record_replay_mark,
+};
 
 PROTOCORE_END_DECLS
 

@@ -93,16 +93,16 @@ static int reasm_merge(DtlsHsReasm *r, uint32_t lo, uint32_t hi)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void dtls_handshake_header_parse(uint8_t *restrict work)
+void protocore_dtls_handshake_header_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *p = DtlsHandshake.header_parse_args.p;
-    size_t len = DtlsHandshake.header_parse_args.len;
-    DtlsHsHeader *out = DtlsHandshake.header_parse_args.out;
+    const uint8_t *p = DtlsHandshakeV.header_parse_args.p;
+    size_t len = DtlsHandshakeV.header_parse_args.len;
+    DtlsHsHeader *out = DtlsHandshakeV.header_parse_args.out;
 
     if (len < PROTOCORE_DTLS_HS_HDR_LEN)
     {
-        DtlsHandshake.n = 0;
+        DtlsHandshakeV.n = 0;
         return;
     }
     out->msg_type = p[0];
@@ -112,44 +112,44 @@ static void dtls_handshake_header_parse(uint8_t *restrict work)
     out->frag_length = ((uint32_t)p[9] << 16) | ((uint32_t)p[10] << 8) | p[11];
     if (out->frag_offset + out->frag_length > out->length)
     {
-        DtlsHandshake.n = 0; // fragment falls outside the declared message
+        DtlsHandshakeV.n = 0; // fragment falls outside the declared message
         return;
     }
     if (PROTOCORE_DTLS_HS_HDR_LEN + out->frag_length > len)
     {
-        DtlsHandshake.n = 0; // fragment bytes truncated
+        DtlsHandshakeV.n = 0; // fragment bytes truncated
         return;
     }
     out->fragment = p + PROTOCORE_DTLS_HS_HDR_LEN;
-    DtlsHandshake.n = PROTOCORE_DTLS_HS_HDR_LEN + out->frag_length;
+    DtlsHandshakeV.n = PROTOCORE_DTLS_HS_HDR_LEN + out->frag_length;
 }
 
-static void dtls_handshake_frag_build(uint8_t *restrict work)
+void protocore_dtls_handshake_frag_build(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t msg_type = DtlsHandshake.frag_build_args.msg_type;
-    uint16_t msg_seq = DtlsHandshake.frag_build_args.msg_seq;
-    uint32_t full_len = DtlsHandshake.frag_build_args.full_len;
-    uint32_t frag_offset = DtlsHandshake.frag_build_args.frag_offset;
-    const uint8_t *frag = DtlsHandshake.frag_build_args.frag;
-    uint32_t frag_len = DtlsHandshake.frag_build_args.frag_len;
-    uint8_t *out = DtlsHandshake.frag_build_args.out;
-    size_t out_cap = DtlsHandshake.frag_build_args.out_cap;
+    uint8_t msg_type = DtlsHandshakeV.frag_build_args.msg_type;
+    uint16_t msg_seq = DtlsHandshakeV.frag_build_args.msg_seq;
+    uint32_t full_len = DtlsHandshakeV.frag_build_args.full_len;
+    uint32_t frag_offset = DtlsHandshakeV.frag_build_args.frag_offset;
+    const uint8_t *frag = DtlsHandshakeV.frag_build_args.frag;
+    uint32_t frag_len = DtlsHandshakeV.frag_build_args.frag_len;
+    uint8_t *out = DtlsHandshakeV.frag_build_args.out;
+    size_t out_cap = DtlsHandshakeV.frag_build_args.out_cap;
 
     if (full_len > 0xFFFFFF || frag_offset > 0xFFFFFF || frag_len > 0xFFFFFF)
     {
-        DtlsHandshake.n = 0; // uint24 fields
+        DtlsHandshakeV.n = 0; // uint24 fields
         return;
     }
     if (frag_offset + frag_len > full_len)
     {
-        DtlsHandshake.n = 0;
+        DtlsHandshakeV.n = 0;
         return;
     }
     size_t total = PROTOCORE_DTLS_HS_HDR_LEN + frag_len;
     if (total > out_cap)
     {
-        DtlsHandshake.n = 0;
+        DtlsHandshakeV.n = 0;
         return;
     }
     out[0] = msg_type;
@@ -168,20 +168,20 @@ static void dtls_handshake_frag_build(uint8_t *restrict work)
     {
         mem.cpy(out + PROTOCORE_DTLS_HS_HDR_LEN, frag, frag_len);
     }
-    DtlsHandshake.n = total;
+    DtlsHandshakeV.n = total;
 }
 
 // ---------------------------------------------------------------------------
 // Message reassembly (RFC 9147 §5.4)
 // ---------------------------------------------------------------------------
 
-static void dtls_handshake_reasm_init(uint8_t *restrict work)
+void protocore_dtls_handshake_reasm_init(uint8_t *restrict work)
 {
     (void)work;
-    DtlsHsReasm *r = DtlsHandshake.reasm_init_args.r;
-    uint16_t msg_seq = DtlsHandshake.reasm_init_args.msg_seq;
-    uint8_t *buf = DtlsHandshake.reasm_init_args.buf;
-    size_t buf_cap = DtlsHandshake.reasm_init_args.buf_cap;
+    DtlsHsReasm *r = DtlsHandshakeV.reasm_init_args.r;
+    uint16_t msg_seq = DtlsHandshakeV.reasm_init_args.msg_seq;
+    uint8_t *buf = DtlsHandshakeV.reasm_init_args.buf;
+    size_t buf_cap = DtlsHandshakeV.reasm_init_args.buf_cap;
 
     r->active = PROTO_FALSE;
     r->have_len = PROTO_FALSE;
@@ -193,22 +193,22 @@ static void dtls_handshake_reasm_init(uint8_t *restrict work)
     r->range_count = 0;
 }
 
-static void dtls_handshake_reasm_add(uint8_t *restrict work)
+void protocore_dtls_handshake_reasm_add(uint8_t *restrict work)
 {
     (void)work;
-    DtlsHsReasm *r = DtlsHandshake.reasm_add_args.r;
-    const DtlsHsHeader *frag = DtlsHandshake.reasm_add_args.frag;
+    DtlsHsReasm *r = DtlsHandshakeV.reasm_add_args.r;
+    const DtlsHsHeader *frag = DtlsHandshakeV.reasm_add_args.frag;
 
     if (frag->msg_seq != r->msg_seq)
     {
-        DtlsHandshake.n = 0; // a different message; the state machine decides what to do with it
+        DtlsHandshakeV.n = 0; // a different message; the state machine decides what to do with it
         return;
     }
     if (!r->have_len)
     {
         if (frag->length > r->buf_cap)
         {
-            DtlsHandshake.n = -1; // message will not fit the reassembly buffer
+            DtlsHandshakeV.n = -1; // message will not fit the reassembly buffer
             return;
         }
         r->length = frag->length;
@@ -218,24 +218,24 @@ static void dtls_handshake_reasm_add(uint8_t *restrict work)
     }
     else if (frag->length != r->length)
     {
-        DtlsHandshake.n = -1; // fragments of one message must agree on its total length
+        DtlsHandshakeV.n = -1; // fragments of one message must agree on its total length
         return;
     }
     uint32_t lo = frag->frag_offset;
     uint32_t hi = frag->frag_offset + frag->frag_length;
     if (hi > r->length)
     {
-        DtlsHandshake.n = -1;
+        DtlsHandshakeV.n = -1;
         return;
     }
     if (r->length == 0)
     {
-        DtlsHandshake.n = 1; // empty body: complete as soon as the header is seen
+        DtlsHandshakeV.n = 1; // empty body: complete as soon as the header is seen
         return;
     }
     if (frag->frag_length == 0)
     {
-        DtlsHandshake.n = 0; // empty fragment of a non-empty message contributes nothing
+        DtlsHandshakeV.n = 0; // empty fragment of a non-empty message contributes nothing
         return;
     }
     // sec 5.5: "Senders MUST NOT change handshake message bytes upon retransmission. Receivers MAY
@@ -256,46 +256,46 @@ static void dtls_handshake_reasm_add(uint8_t *restrict work)
         }
         if (ov_lo < ov_hi && mem.cmp(r->buf + ov_lo, frag->fragment + (ov_lo - lo), ov_hi - ov_lo) != 0)
         {
-            DtlsHandshake.n = -1;
+            DtlsHandshakeV.n = -1;
             return;
         }
     }
     mem.cpy(r->buf + lo, frag->fragment, frag->frag_length);
     if (reasm_merge(r, lo, hi) < 0)
     {
-        DtlsHandshake.n = -1;
+        DtlsHandshakeV.n = -1;
         return;
     }
     if (r->range_count == 1 && r->range_lo[0] == 0 && r->range_hi[0] >= r->length)
     {
-        DtlsHandshake.n = 1;
+        DtlsHandshakeV.n = 1;
         return;
     }
-    DtlsHandshake.n = 0;
+    DtlsHandshakeV.n = 0;
 }
 
 // ---------------------------------------------------------------------------
 // ACK message (RFC 9147 §7)
 // ---------------------------------------------------------------------------
 
-static void dtls_handshake_ack_build(uint8_t *restrict work)
+void protocore_dtls_handshake_ack_build(uint8_t *restrict work)
 {
     (void)work;
-    const DtlsRecordNumber *nums = DtlsHandshake.ack_build_args.nums;
-    size_t count = DtlsHandshake.ack_build_args.count;
-    uint8_t *out = DtlsHandshake.ack_build_args.out;
-    size_t out_cap = DtlsHandshake.ack_build_args.out_cap;
+    const DtlsRecordNumber *nums = DtlsHandshakeV.ack_build_args.nums;
+    size_t count = DtlsHandshakeV.ack_build_args.count;
+    uint8_t *out = DtlsHandshakeV.ack_build_args.out;
+    size_t out_cap = DtlsHandshakeV.ack_build_args.out_cap;
 
     size_t list_len = count * 16;
     if (list_len > 0xFFFF)
     {
-        DtlsHandshake.n = 0;
+        DtlsHandshakeV.n = 0;
         return;
     }
     size_t total = 2 + list_len;
     if (total > out_cap)
     {
-        DtlsHandshake.n = 0;
+        DtlsHandshakeV.n = 0;
         return;
     }
     out[0] = (uint8_t)(list_len >> 8);
@@ -307,33 +307,33 @@ static void dtls_handshake_ack_build(uint8_t *restrict work)
         put_u64(out + o + 8, nums[i].seq);
         o += 16;
     }
-    DtlsHandshake.n = total;
+    DtlsHandshakeV.n = total;
 }
 
-static void dtls_handshake_ack_parse(uint8_t *restrict work)
+void protocore_dtls_handshake_ack_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *body = DtlsHandshake.ack_parse_args.body;
-    size_t len = DtlsHandshake.ack_parse_args.len;
-    DtlsRecordNumber *out = DtlsHandshake.ack_parse_args.out;
-    size_t out_cap = DtlsHandshake.ack_parse_args.out_cap;
-    size_t *out_count = DtlsHandshake.ack_parse_args.out_count;
+    const uint8_t *body = DtlsHandshakeV.ack_parse_args.body;
+    size_t len = DtlsHandshakeV.ack_parse_args.len;
+    DtlsRecordNumber *out = DtlsHandshakeV.ack_parse_args.out;
+    size_t out_cap = DtlsHandshakeV.ack_parse_args.out_cap;
+    size_t *out_count = DtlsHandshakeV.ack_parse_args.out_count;
 
     if (len < 2)
     {
-        DtlsHandshake.ok = PROTO_FALSE;
+        DtlsHandshakeV.ok = PROTO_FALSE;
         return;
     }
     size_t list_len = ((size_t)body[0] << 8) | body[1];
     if (list_len % 16 != 0 || 2 + list_len != len)
     {
-        DtlsHandshake.ok = PROTO_FALSE;
+        DtlsHandshakeV.ok = PROTO_FALSE;
         return;
     }
     size_t n = list_len / 16;
     if (n > out_cap)
     {
-        DtlsHandshake.ok = PROTO_FALSE;
+        DtlsHandshakeV.ok = PROTO_FALSE;
         return;
     }
     size_t o = 2;
@@ -344,36 +344,36 @@ static void dtls_handshake_ack_parse(uint8_t *restrict work)
         o += 16;
     }
     *out_count = n;
-    DtlsHandshake.ok = PROTO_TRUE;
+    DtlsHandshakeV.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
 // HelloRetryRequest cookie (RFC 9147 §5.1)
 // ---------------------------------------------------------------------------
 
-static void dtls_handshake_cookie_make(uint8_t *restrict work)
+void protocore_dtls_handshake_cookie_make(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *mac_work = DtlsHandshake.cookie_make_args.mac_work;
-    const uint8_t *protocore_hmac_key = DtlsHandshake.cookie_make_args.protocore_hmac_key;
-    uint64_t timestamp = DtlsHandshake.cookie_make_args.timestamp;
-    const uint8_t *payload = DtlsHandshake.cookie_make_args.payload;
-    size_t payload_len = DtlsHandshake.cookie_make_args.payload_len;
-    const uint8_t *client_addr = DtlsHandshake.cookie_make_args.client_addr;
-    size_t addr_len = DtlsHandshake.cookie_make_args.addr_len;
-    uint8_t *out = DtlsHandshake.cookie_make_args.out;
-    size_t out_cap = DtlsHandshake.cookie_make_args.out_cap;
+    uint8_t *mac_work = DtlsHandshakeV.cookie_make_args.mac_work;
+    const uint8_t *protocore_hmac_key = DtlsHandshakeV.cookie_make_args.protocore_hmac_key;
+    uint64_t timestamp = DtlsHandshakeV.cookie_make_args.timestamp;
+    const uint8_t *payload = DtlsHandshakeV.cookie_make_args.payload;
+    size_t payload_len = DtlsHandshakeV.cookie_make_args.payload_len;
+    const uint8_t *client_addr = DtlsHandshakeV.cookie_make_args.client_addr;
+    size_t addr_len = DtlsHandshakeV.cookie_make_args.addr_len;
+    uint8_t *out = DtlsHandshakeV.cookie_make_args.out;
+    size_t out_cap = DtlsHandshakeV.cookie_make_args.out_cap;
 
     if (payload_len > 0xFFFF)
     {
-        DtlsHandshake.n = 0;
+        DtlsHandshakeV.n = 0;
         return;
     }
     size_t body = 1 + 8 + 2 + payload_len; // version || timestamp || payload_len || payload
     size_t total = body + PROTOCORE_HMAC_SHA256_LEN;
     if (total > out_cap || total > PROTOCORE_DTLS_COOKIE_MAX)
     {
-        DtlsHandshake.n = 0;
+        DtlsHandshakeV.n = 0;
         return;
     }
     out[0] = 1; // cookie format version
@@ -400,39 +400,39 @@ static void dtls_handshake_cookie_make(uint8_t *restrict work)
     HmacSha256.update(mac_work);
     HmacSha256.final_args.out = out + body;
     HmacSha256.final(mac_work);
-    DtlsHandshake.n = total;
+    DtlsHandshakeV.n = total;
 }
 
-static void dtls_handshake_cookie_verify(uint8_t *restrict work)
+void protocore_dtls_handshake_cookie_verify(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *mac_work = DtlsHandshake.cookie_verify_args.mac_work;
-    const uint8_t *protocore_hmac_key = DtlsHandshake.cookie_verify_args.protocore_hmac_key;
-    uint64_t now = DtlsHandshake.cookie_verify_args.now;
-    uint64_t max_age = DtlsHandshake.cookie_verify_args.max_age;
-    const uint8_t *client_addr = DtlsHandshake.cookie_verify_args.client_addr;
-    size_t addr_len = DtlsHandshake.cookie_verify_args.addr_len;
-    const uint8_t *cookie = DtlsHandshake.cookie_verify_args.cookie;
-    size_t cookie_len = DtlsHandshake.cookie_verify_args.cookie_len;
-    uint8_t *payload_out = DtlsHandshake.cookie_verify_args.payload_out;
-    size_t payload_cap = DtlsHandshake.cookie_verify_args.payload_cap;
-    size_t *payload_len_out = DtlsHandshake.cookie_verify_args.payload_len_out;
+    uint8_t *mac_work = DtlsHandshakeV.cookie_verify_args.mac_work;
+    const uint8_t *protocore_hmac_key = DtlsHandshakeV.cookie_verify_args.protocore_hmac_key;
+    uint64_t now = DtlsHandshakeV.cookie_verify_args.now;
+    uint64_t max_age = DtlsHandshakeV.cookie_verify_args.max_age;
+    const uint8_t *client_addr = DtlsHandshakeV.cookie_verify_args.client_addr;
+    size_t addr_len = DtlsHandshakeV.cookie_verify_args.addr_len;
+    const uint8_t *cookie = DtlsHandshakeV.cookie_verify_args.cookie;
+    size_t cookie_len = DtlsHandshakeV.cookie_verify_args.cookie_len;
+    uint8_t *payload_out = DtlsHandshakeV.cookie_verify_args.payload_out;
+    size_t payload_cap = DtlsHandshakeV.cookie_verify_args.payload_cap;
+    size_t *payload_len_out = DtlsHandshakeV.cookie_verify_args.payload_len_out;
 
     if (cookie_len < 1 + 8 + 2 + PROTOCORE_HMAC_SHA256_LEN || cookie[0] != 1)
     {
-        DtlsHandshake.ok = PROTO_FALSE;
+        DtlsHandshakeV.ok = PROTO_FALSE;
         return;
     }
     size_t payload_len = ((size_t)cookie[9] << 8) | cookie[10];
     size_t body = 1 + 8 + 2 + payload_len;
     if (body + PROTOCORE_HMAC_SHA256_LEN != cookie_len) // exact-length: bounds payload before it is read
     {
-        DtlsHandshake.ok = PROTO_FALSE;
+        DtlsHandshakeV.ok = PROTO_FALSE;
         return;
     }
     if (payload_len > payload_cap)
     {
-        DtlsHandshake.ok = PROTO_FALSE;
+        DtlsHandshakeV.ok = PROTO_FALSE;
         return;
     }
     uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
@@ -452,7 +452,7 @@ static void dtls_handshake_cookie_verify(uint8_t *restrict work)
     HmacSha256.final(mac_work);
     if (!protocore_ct_eq(mac, cookie + body, PROTOCORE_HMAC_SHA256_LEN))
     {
-        DtlsHandshake.ok = PROTO_FALSE;
+        DtlsHandshakeV.ok = PROTO_FALSE;
         return;
     }
     if (max_age != 0)
@@ -460,7 +460,7 @@ static void dtls_handshake_cookie_verify(uint8_t *restrict work)
         uint64_t ts = get_u64(cookie + 1);
         if (ts > now || now - ts > max_age)
         {
-            DtlsHandshake.ok = PROTO_FALSE; // future-dated or stale
+            DtlsHandshakeV.ok = PROTO_FALSE; // future-dated or stale
             return;
         }
     }
@@ -469,19 +469,11 @@ static void dtls_handshake_cookie_verify(uint8_t *restrict work)
         mem.cpy(payload_out, cookie + 11, payload_len);
     }
     *payload_len_out = payload_len;
-    DtlsHandshake.ok = PROTO_TRUE;
+    DtlsHandshakeV.ok = PROTO_TRUE;
 }
 
-DtlsHandshakeNs DtlsHandshake = {
-    .header_parse = dtls_handshake_header_parse,
-    .frag_build = dtls_handshake_frag_build,
-    .reasm_init = dtls_handshake_reasm_init,
-    .reasm_add = dtls_handshake_reasm_add,
-    .ack_build = dtls_handshake_ack_build,
-    .ack_parse = dtls_handshake_ack_parse,
-    .cookie_make = dtls_handshake_cookie_make,
-    .cookie_verify = dtls_handshake_cookie_verify,
-};
+/** @brief The operands and the outcome. */
+DtlsHandshakeVars DtlsHandshakeV;
 
 PROTOCORE_END_DECLS
 

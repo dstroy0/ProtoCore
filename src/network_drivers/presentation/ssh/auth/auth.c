@@ -20,7 +20,7 @@
 #include "network_drivers/presentation/ssh/network/network.h"               // SshNetwork.emit()
 #include "network_drivers/presentation/ssh/transport/ssh_rsa/ssh_rsa.h"     // Rsa, PROTOCORE_RSA_KEY_BYTES
 #include "network_drivers/presentation/ssh/transport/transport/transport.h" // ssh_sess[], SshPhase
-#include "server/clock/clock.h" // protocore_millis(): the password-change cooldown clock
+#include "server/clock/clock.h"        // protocore_millis(): the password-change cooldown clock
 static uint8_t phase_machine_work[16]; // the borrow an entry takes; PhaseMachine never reads it
 
 #if PROTOCORE_ENABLE_SSH_ZLIB
@@ -122,9 +122,9 @@ static proto_bool auth_failure_over_threshold(uint8_t i, protocore_span out)
     if (ssh_pkt_build_disconnect(SSH_DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE, desc, sizeof(desc) - 1, out.buf, &n,
                                  out.cap) == 0)
     {
-        SshNetwork.ssh_slot = i;
-        SshNetwork.msg.payload = out.buf;
-        SshNetwork.msg.len = n;
+        SshNetworkV.ssh_slot = i;
+        SshNetworkV.msg.payload = out.buf;
+        SshNetworkV.msg.len = n;
         SshNetwork.emit(protocore_ssh_network_span());
     }
     return PROTO_TRUE;
@@ -201,9 +201,9 @@ void protocore_ssh_auth_timed_out(uint8_t *restrict work)
         SshAuth.ok = PROTO_FALSE;
         return;
     }
-    PhaseMachine.auth_complete_args.i = i;
+    PhaseMachineV.auth_complete_args.i = i;
     PhaseMachine.auth_complete(phase_machine_work);
-    if (PhaseMachine.ok)
+    if (PhaseMachineV.ok)
     {
         SshAuth.ok = PROTO_FALSE;
         return;
@@ -341,7 +341,7 @@ static int protocore_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, ui
     protocore_plaintext_release(mark);
     if (sig_ok)
     {
-        PhaseMachine.auth_done_args.i = i;
+        PhaseMachineV.auth_done_args.i = i;
         PhaseMachine.auth_done(phase_machine_work);
         SshAuth.out_args.out = out;
         SshAuth.out_args.cap = cap;
@@ -702,7 +702,7 @@ void protocore_ssh_auth_handle_request(uint8_t *restrict work)
 
     if (ok)
     {
-        PhaseMachine.auth_done_args.i = i;
+        PhaseMachineV.auth_done_args.i = i;
         PhaseMachine.auth_done(phase_machine_work);
         SshAuth.out_args.out = out;
         SshAuth.out_args.cap = cap;
@@ -759,7 +759,7 @@ SshPwChange protocore_ssh_auth_pw_change_take(uint8_t i)
     SSH_AUTH_CTX(protocore_ssh_auth_span())->pw_change[i] = PROTOCORE_SSH_PW_CHANGE_NONE;
     if (r == PROTOCORE_SSH_PW_CHANGE_OK)
     {
-        PhaseMachine.auth_done_args.i = i;
+        PhaseMachineV.auth_done_args.i = i;
         PhaseMachine.auth_done(phase_machine_work);
     }
     return r;
@@ -818,7 +818,7 @@ void protocore_ssh_auth_handle_info_response(uint8_t *restrict work)
 
     if (ok)
     {
-        PhaseMachine.auth_done_args.i = i;
+        PhaseMachineV.auth_done_args.i = i;
         PhaseMachine.auth_done(phase_machine_work);
         SshAuth.out_args.out = out;
         SshAuth.out_args.cap = cap;
@@ -867,17 +867,17 @@ void ssh_auth_dispatch(uint8_t *restrict work)
     {
     case SSH_MSG_USERAUTH_REQUEST:
         // RFC 4252 sec 5.1: a request that arrives after SUCCESS is silently ignored, not an error.
-        PhaseMachine.auth_complete_args.i = i;
+        PhaseMachineV.auth_complete_args.i = i;
         PhaseMachine.auth_complete(phase_machine_work);
-        if (PhaseMachine.ok)
+        if (PhaseMachineV.ok)
         {
             protocore_plaintext_release(mark);
             SshAuth.i32 = 0;
             return;
         }
-        PhaseMachine.admits_userauth_args.i = i;
+        PhaseMachineV.admits_userauth_args.i = i;
         PhaseMachine.admits_userauth(phase_machine_work);
-        if (!PhaseMachine.ok)
+        if (!PhaseMachineV.ok)
         {
             protocore_plaintext_release(mark);
             SshAuth.i32 = -1;
@@ -896,16 +896,16 @@ void ssh_auth_dispatch(uint8_t *restrict work)
             SshAuth.i32 = -1;
             return;
         }
-        SshNetwork.ssh_slot = i;
-        SshNetwork.msg.payload = reply.buf;
-        SshNetwork.msg.len = n;
+        SshNetworkV.ssh_slot = i;
+        SshNetworkV.msg.payload = reply.buf;
+        SshNetworkV.msg.len = n;
         SshNetwork.emit(protocore_ssh_network_span()); // SUCCESS (→ phase OPEN), PK_OK probe, or FAILURE
 #if PROTOCORE_ENABLE_SSH_ZLIB
         // zlib@openssh.com: the compression stream starts on the FIRST packet AFTER USERAUTH_SUCCESS
         // (which itself just went out uncompressed). Idempotent - a later re-auth cannot restart it.
         if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_SUCCESS)
         {
-            Comp.on_auth_success_args.i = i;
+            CompV.on_auth_success_args.i = i;
             Comp.on_auth_success(protocore_ssh_comp_span()); // returns 0 has written a reply
         }
 #endif
@@ -930,17 +930,17 @@ void ssh_auth_dispatch(uint8_t *restrict work)
         //
         // RFC 4252 sec 5.1 covers this one too: an answer arriving after SUCCESS is one of the
         // "further authentication requests" that is silently ignored, not a reason to disconnect.
-        PhaseMachine.auth_complete_args.i = i;
+        PhaseMachineV.auth_complete_args.i = i;
         PhaseMachine.auth_complete(phase_machine_work);
-        if (PhaseMachine.ok)
+        if (PhaseMachineV.ok)
         {
             protocore_plaintext_release(mark);
             SshAuth.i32 = 0;
             return;
         }
-        PhaseMachine.admits_userauth_args.i = i;
+        PhaseMachineV.admits_userauth_args.i = i;
         PhaseMachine.admits_userauth(phase_machine_work);
-        if (!PhaseMachine.ok)
+        if (!PhaseMachineV.ok)
         {
             protocore_plaintext_release(mark);
             SshAuth.i32 = -1;
@@ -959,14 +959,14 @@ void ssh_auth_dispatch(uint8_t *restrict work)
             SshAuth.i32 = -1;
             return;
         }
-        SshNetwork.ssh_slot = i;
-        SshNetwork.msg.payload = reply.buf;
-        SshNetwork.msg.len = n;
+        SshNetworkV.ssh_slot = i;
+        SshNetworkV.msg.payload = reply.buf;
+        SshNetworkV.msg.len = n;
         SshNetwork.emit(protocore_ssh_network_span());
 #if PROTOCORE_ENABLE_SSH_ZLIB
         if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_SUCCESS)
         {
-            Comp.on_auth_success_args.i = i;
+            CompV.on_auth_success_args.i = i;
             Comp.on_auth_success(protocore_ssh_comp_span());
         }
 #endif
@@ -990,18 +990,18 @@ void ssh_auth_dispatch(uint8_t *restrict work)
     // disconnecting, preferably with a proper disconnect message sent to ease troubleshooting."
     if (msg_type >= SSH_MSG_GLOBAL_REQUEST)
     {
-        PhaseMachine.auth_complete_args.i = i;
+        PhaseMachineV.auth_complete_args.i = i;
         PhaseMachine.auth_complete(phase_machine_work);
-        if (!PhaseMachine.ok)
+        if (!PhaseMachineV.ok)
         {
             static const char desc[] = "connection protocol message before authentication";
             size_t dn = 0;
             if (ssh_pkt_build_disconnect(SSH_DISCONNECT_PROTOCOL_ERROR, desc, sizeof(desc) - 1, reply.buf, &dn,
                                          reply.cap) == 0)
             {
-                SshNetwork.ssh_slot = i;
-                SshNetwork.msg.payload = reply.buf;
-                SshNetwork.msg.len = dn;
+                SshNetworkV.ssh_slot = i;
+                SshNetworkV.msg.payload = reply.buf;
+                SshNetworkV.msg.len = dn;
                 SshNetwork.emit(protocore_ssh_network_span());
             }
             protocore_plaintext_release(mark);
@@ -1009,12 +1009,12 @@ void ssh_auth_dispatch(uint8_t *restrict work)
             return;
         }
         protocore_plaintext_release(mark);
-        SshConnection.chan.slot = i;
-        SshConnection.msg_type = msg_type;
-        SshConnection.chan.payload = payload;
-        SshConnection.chan.len = len;
+        SshConnectionV.chan.slot = i;
+        SshConnectionV.msg_type = msg_type;
+        SshConnectionV.chan.payload = payload;
+        SshConnectionV.chan.len = len;
         SshConnection.dispatch(protocore_ssh_connection_span());
-        SshAuth.i32 = SshConnection.i32;
+        SshAuth.i32 = SshConnectionV.i32;
         return;
     }
 
@@ -1023,9 +1023,9 @@ void ssh_auth_dispatch(uint8_t *restrict work)
     size_t un = 0;
     if (ssh_pkt_unimplemented(i, reply.buf, &un, reply.cap) == 0)
     {
-        SshNetwork.ssh_slot = i;
-        SshNetwork.msg.payload = reply.buf;
-        SshNetwork.msg.len = un;
+        SshNetworkV.ssh_slot = i;
+        SshNetworkV.msg.payload = reply.buf;
+        SshNetworkV.msg.len = un;
         SshNetwork.emit(protocore_ssh_network_span());
     }
     protocore_plaintext_release(mark);
@@ -1046,9 +1046,9 @@ void ssh_auth_passwd_change_reply(uint8_t *restrict work)
     // been sent, any further authentication requests received after that SHOULD be silently
     // ignored." Another method may have completed while this change was parked. Checked before the
     // take, which advances the phase itself on an OK.
-    PhaseMachine.auth_complete_args.i = i;
+    PhaseMachineV.auth_complete_args.i = i;
     PhaseMachine.auth_complete(phase_machine_work);
-    if (PhaseMachine.ok)
+    if (PhaseMachineV.ok)
     {
         SshAuth.slot = i;
         protocore_ssh_auth_pw_change_clear(work);
@@ -1080,9 +1080,9 @@ void ssh_auth_passwd_change_reply(uint8_t *restrict work)
     }
     if (built == 0)
     {
-        SshNetwork.ssh_slot = i;
-        SshNetwork.msg.payload = reply.buf;
-        SshNetwork.msg.len = n;
+        SshNetworkV.ssh_slot = i;
+        SshNetworkV.msg.payload = reply.buf;
+        SshNetworkV.msg.len = n;
         SshNetwork.emit(protocore_ssh_network_span());
     }
     protocore_plaintext_release(mark);

@@ -285,7 +285,7 @@ static QuicSlot *open_conn(uint8_t *restrict work, const QuicLongHeader *lh, con
     tc.cert_der = QSRV_CTX(work)->cfg.cert_der;
     tc.cert_len = QSRV_CTX(work)->cfg.cert_len;
     mem.cpy(tc.ed25519_seed, QSRV_CTX(work)->cfg.ed25519_seed, sizeof tc.ed25519_seed);
-    QuicTp.defaults_args.tp = &tc.params;
+    QuicTpV.defaults_args.tp = &tc.params;
     QuicTp.defaults(quic_tp_work);
     // A real HTTP/3 endpoint must advertise flow-control room, or every request stream (and the
     // client's control / QPACK streams) is blocked - the RFC 9000 sec 18.2 defaults are all zero.

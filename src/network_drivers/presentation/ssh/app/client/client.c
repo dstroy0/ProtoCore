@@ -24,26 +24,26 @@
 // Public API
 // ---------------------------------------------------------------------------
 
-static void state_get(uint8_t *restrict work)
+void protocore_ssh_app_client_state_get(uint8_t *restrict work)
 {
     (void)work;
     SshClient.state(protocore_ssh_client_span());
-    SshAppClient.state = SshClient.state_of;
+    SshAppClientV.state = SshClient.state_of;
 }
 
-static void up(uint8_t *restrict work)
+void protocore_ssh_app_client_up(uint8_t *restrict work)
 {
     (void)work;
     SshClient.state(protocore_ssh_client_span());
-    SshAppClient.ok = SshClient.state_of == PROTOCORE_SSH_CLIENT_UP;
+    SshAppClientV.ok = SshClient.state_of == PROTOCORE_SSH_CLIENT_UP;
 }
 
 // Key derivation for provisioning: the seed's public half, without a connection.
-static void pubkey(uint8_t *restrict work)
+void protocore_ssh_app_client_pubkey(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *seed = SshAppClient.seed;
-    uint8_t *pub = SshAppClient.pub;
+    const uint8_t *seed = SshAppClientV.seed;
+    uint8_t *pub = SshAppClientV.pub;
     SshClient.crypto_work(protocore_ssh_client_span());
     uint8_t *crypto_work = SshClient.work;
     if (crypto_work == NULL)
@@ -58,25 +58,26 @@ static void pubkey(uint8_t *restrict work)
 
 #else
 
-static void state_get(uint8_t *restrict work)
+void protocore_ssh_app_client_state_get(uint8_t *restrict work)
 {
     (void)work;
-    SshAppClient.state = PROTOCORE_SSH_CLIENT_IDLE;
+    SshAppClientV.state = PROTOCORE_SSH_CLIENT_IDLE;
 }
 
-static void up(uint8_t *restrict work)
+void protocore_ssh_app_client_up(uint8_t *restrict work)
 {
     (void)work;
-    SshAppClient.ok = PROTO_FALSE;
+    SshAppClientV.ok = PROTO_FALSE;
 }
 
-static void pubkey(uint8_t *restrict work)
+void protocore_ssh_app_client_pubkey(uint8_t *restrict work)
 {
     (void)work;
-    mem.zero(SshAppClient.pub, 32);
+    mem.zero(SshAppClientV.pub, 32);
 }
 
 #endif // PROTOCORE_ENABLE_SSH_CLIENT
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-SshAppClientNs SshAppClient = {.state_get = state_get, .up = up, .pubkey = pubkey};
+/** @brief The operands and the outcome. */
+SshAppClientVars SshAppClientV;

@@ -24,7 +24,7 @@
 
 #include "network_drivers/presentation/http/http3/quic_packet/quic_packet.h" // the complete type a public struct below holds by value
 
-#include "protocore_config.h"                                    // the entry point: protocore_types.h for the widths
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HTTP3
 
@@ -129,17 +129,36 @@ typedef struct
     QuicTpDefaultsArgs defaults_args;
     QuicTpEncodeArgs encode_args;
     QuicTpParseArgs parse_args;
-
     proto_bool ok;
     size_t n;
+} QuicTpVars;
 
+/** @brief The operands and the outcome. */
+extern QuicTpVars QuicTpV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const defaults)(uint8_t *restrict work);
     void (*const encode)(uint8_t *restrict work);
     void (*const parse)(uint8_t *restrict work);
 } QuicTpNs;
 
-/** @brief The one symbol this module exports. */
-extern QuicTpNs QuicTp;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in QuicTpV or a region of the borrow at a fixed offset.
+void protocore_quic_tp_defaults(uint8_t *restrict work);
+void protocore_quic_tp_encode(uint8_t *restrict work);
+void protocore_quic_tp_parse(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `QuicTp.defaults(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const QuicTpNs QuicTp __attribute__((unused)) = {
+    .defaults = protocore_quic_tp_defaults,
+    .encode = protocore_quic_tp_encode,
+    .parse = protocore_quic_tp_parse,
+};
 
 PROTOCORE_END_DECLS
 

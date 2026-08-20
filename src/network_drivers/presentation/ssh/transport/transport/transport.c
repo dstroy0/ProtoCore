@@ -243,9 +243,9 @@ static void build_kex_list(char *out, size_t cap, proto_bool as_client)
     // The indicator is the list's last name, so it carries the separator that precedes it.
     char ext_info[SSH_EXT_INFO_INDICATOR_MAX];
     ext_info[0] = ',';
-    Extension.info_indicator_args.client_role = as_client;
+    ExtensionV.info_indicator_args.client_role = as_client;
     Extension.info_indicator(extension_work);
-    str.copy(ext_info + 1, Extension.text, sizeof(ext_info) - 1);
+    str.copy(ext_info + 1, ExtensionV.text, sizeof(ext_info) - 1);
     const char *c1 = KEX_C25519;
     const char *c2 = KEX_C25519_LIBSSH;
     const char *dh = KEX_DH;
@@ -498,9 +498,9 @@ void ssh_transport_init(uint8_t i)
     {
         return;
     }
-    Ssh.conn_slot_args.i = i;
+    SshV.conn_slot_args.i = i;
     Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *base = Ssh.ptr;
+    uint8_t *base = SshV.ptr;
     if (base == NULL)
     {
         return;
@@ -518,7 +518,7 @@ void ssh_transport_init(uint8_t i)
     s->session_id = base + SSH_OFF_SESSION_ID;
     s->ecdh_sk = base + SSH_OFF_ECDH_SK;
     s->ecdh_pk = base + SSH_OFF_ECDH_PK;
-    PhaseMachine.reset_args.i = i;
+    PhaseMachineV.reset_args.i = i;
     PhaseMachine.reset(phase_machine_work);
     s->kex_active = PROTO_TRUE; // the first exchange is running from the moment the slot opens
 
@@ -550,16 +550,16 @@ void ssh_transport_init(uint8_t i)
 // Identification string exchange (RFC 4253 §4.2)
 // ---------------------------------------------------------------------------
 
-void ssh_transport_send_ident(uint8_t *restrict work)
+void protocore_ssh_transport_send_ident(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t i = SshTransport.slot;
-    uint8_t *out = SshTransport.out_args.out;
-    size_t *out_len = &SshTransport.out_args.out_len;
-    const size_t cap = SshTransport.out_args.cap;
+    const uint8_t i = SshTransportV.slot;
+    uint8_t *out = SshTransportV.out_args.out;
+    size_t *out_len = &SshTransportV.out_args.out_len;
+    const size_t cap = SshTransportV.out_args.cap;
     if (i >= MAX_SSH_CONNS)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     SshSession *s = &ssh_sess[i];
@@ -579,7 +579,7 @@ void ssh_transport_send_ident(uint8_t *restrict work)
 
     if (vlen + 2 > cap)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     mem.cpy(out, ours, vlen);
@@ -590,7 +590,7 @@ void ssh_transport_send_ident(uint8_t *restrict work)
     mem.cpy(kept, ours, vlen);
     kept[vlen] = '\0';
     *kept_len = (uint16_t)vlen;
-    SshTransport.i32 = 0;
+    SshTransportV.i32 = 0;
     return;
 }
 
@@ -611,16 +611,16 @@ static proto_bool ident_protoversion_ok(const uint8_t *line, uint16_t n)
     return (vlen == 3 && mem.cmp(line + 4, "2.0", 3) == 0) || (vlen == 4 && mem.cmp(line + 4, "1.99", 4) == 0);
 }
 
-void ssh_transport_recv_ident(uint8_t *restrict work)
+void protocore_ssh_transport_recv_ident(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t i = SshTransport.slot;
-    const uint8_t *data = SshTransport.pkt.data;
-    const size_t len = SshTransport.pkt.len;
-    size_t *consumed = &SshTransport.pkt.consumed;
+    const uint8_t i = SshTransportV.slot;
+    const uint8_t *data = SshTransportV.pkt.data;
+    const size_t len = SshTransportV.pkt.len;
+    size_t *consumed = &SshTransportV.pkt.consumed;
     if (i >= MAX_SSH_CONNS)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     SshSession *s = &ssh_sess[i];
@@ -641,7 +641,7 @@ void ssh_transport_recv_ident(uint8_t *restrict work)
         // RFC 4253 sec 4.2: "The null character MUST NOT be sent."
         if (c == '\0')
         {
-            SshTransport.i32 = -1;
+            SshTransportV.i32 = -1;
             return;
         }
         if (c == '\n')
@@ -657,24 +657,24 @@ void ssh_transport_recv_ident(uint8_t *restrict work)
             {
                 if (n > SSH_VERSION_CONTENT_MAX || !ident_protoversion_ok(s->ident_buf, n))
                 {
-                    SshTransport.i32 = -1;
+                    SshTransportV.i32 = -1;
                     return;
                 }
                 mem.cpy(theirs, s->ident_buf, n);
                 theirs[n] = '\0';
                 *theirs_len = n;
                 s->ident_len = 0;
-                PhaseMachine.ident_done_args.i = i;
+                PhaseMachineV.ident_done_args.i = i;
                 PhaseMachine.ident_done(phase_machine_work);
                 *consumed = k;
-                SshTransport.i32 = 1;
+                SshTransportV.i32 = 1;
                 return;
             }
             // RFC 4253 sec 4.2 lets the server send other lines before its identification string
             // and requires the client to process them, so only the client skips a non-SSH line.
             if (!ssh_pkt[i].is_client)
             {
-                SshTransport.i32 = -1;
+                SshTransportV.i32 = -1;
                 return;
             }
             s->ident_len = 0;
@@ -683,14 +683,14 @@ void ssh_transport_recv_ident(uint8_t *restrict work)
 
         if (s->ident_len >= SSH_VERSION_MAX)
         {
-            SshTransport.i32 = -1;
+            SshTransportV.i32 = -1;
             return; // line too long
         }
         s->ident_buf[s->ident_len++] = c;
     }
 
     *consumed = k;
-    SshTransport.i32 = 0;
+    SshTransportV.i32 = 0;
     return; // need more data
 }
 
@@ -698,16 +698,16 @@ void ssh_transport_recv_ident(uint8_t *restrict work)
 // KEXINIT (RFC 4253 §7.1)
 // ---------------------------------------------------------------------------
 
-void ssh_kexinit_build(uint8_t *restrict work)
+void protocore_ssh_transport_kexinit_build(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t i = SshTransport.slot;
-    uint8_t *payload = SshTransport.out_args.out;
-    size_t *len = &SshTransport.out_args.out_len;
-    const size_t cap = SshTransport.out_args.cap;
+    const uint8_t i = SshTransportV.slot;
+    uint8_t *payload = SshTransportV.out_args.out;
+    size_t *len = &SshTransportV.out_args.out_len;
+    const size_t cap = SshTransportV.out_args.cap;
     if (i >= MAX_SSH_CONNS)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     SshSession *s = &ssh_sess[i];
@@ -743,7 +743,7 @@ void ssh_kexinit_build(uint8_t *restrict work)
 
     if (!span.ok(w))
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
 
@@ -759,14 +759,14 @@ void ssh_kexinit_build(uint8_t *restrict work)
     }
     if (w.pos > kept_cap)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     mem.cpy(kept, payload, w.pos);
     *kept_len = (uint16_t)w.pos;
 
     *len = w.pos;
-    SshTransport.i32 = 0;
+    SshTransportV.i32 = 0;
     return;
 }
 
@@ -847,33 +847,33 @@ static int negotiate_hostkey(const uint8_t *list, uint32_t nlen, SshHostkeyAlg *
     return idx;
 }
 
-void ssh_kexinit_parse(uint8_t *restrict work)
+void protocore_ssh_transport_kexinit_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t i = SshTransport.slot;
-    const uint8_t *payload = SshTransport.pkt.payload;
-    const size_t len = SshTransport.pkt.len;
+    const uint8_t i = SshTransportV.slot;
+    const uint8_t *payload = SshTransportV.pkt.payload;
+    const size_t len = SshTransportV.pkt.len;
     if (i >= MAX_SSH_CONNS)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     SshSession *s = &ssh_sess[i];
 
     if (len < 1 + 16 || payload[0] != SSH_MSG_KEXINIT)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
 
     // RFC 4253 sec 9: an exchange starts only when one is not already running. Between our KEXINIT
     // and NEWKEYS one is, and before the identification strings none can, so a KEXINIT arriving in
     // those phases is refused instead of discarding the state in flight.
-    PhaseMachine.admits_kexinit_args.i = i;
+    PhaseMachineV.admits_kexinit_args.i = i;
     PhaseMachine.admits_kexinit(phase_machine_work);
-    if (!PhaseMachine.ok)
+    if (!PhaseMachineV.ok)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     ssh_sess[i].kex_active = PROTO_TRUE; // an exchange is running from here to NEWKEYS
@@ -891,7 +891,7 @@ void ssh_kexinit_parse(uint8_t *restrict work)
     }
     if (len > peer_cap)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     mem.cpy(peer, payload, len);
@@ -905,28 +905,28 @@ void ssh_kexinit_parse(uint8_t *restrict work)
     // kex_algorithms: negotiate the KEX method by the CLIENT's preference (RFC 4253 §7.1).
     if (!bytes.rd_str(payload, len, &off, &list, &nlen))
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     // RFC 8308 sec 2.2: "If a server receives an 'ext-info-c', or a client receives an
     // 'ext-info-s', it MAY send an SSH_MSG_EXT_INFO message." The indicator is the peer's role's,
     // which is the opposite of this end's.
-    Extension.info_indicator_args.client_role = !as_client;
+    ExtensionV.info_indicator_args.client_role = !as_client;
     Extension.info_indicator(extension_work);
-    s->ext_info_enabled = namelist_contains(list, nlen, Extension.text);
+    s->ext_info_enabled = namelist_contains(list, nlen, ExtensionV.text);
     // sec 7.1: "The first algorithm in each name-list MUST be the preferred (guessed) algorithm."
     const uint8_t *peer_kex_first = list;
     const uint32_t peer_kex_first_len = namelist_first_len(list, nlen);
     const int kex_idx = negotiate_kex(list, nlen, &s->kex_alg, as_client);
     if (kex_idx < 0)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return; // no mutual KEX
     }
     // server_host_key_algorithms: negotiate, restricted to keys we actually hold.
     if (!bytes.rd_str(payload, len, &off, &list, &nlen))
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     const uint8_t *peer_hk_first = list;
@@ -934,7 +934,7 @@ void ssh_kexinit_parse(uint8_t *restrict work)
     const int hostkey_idx = negotiate_hostkey(list, nlen, &s->hostkey_alg, as_client);
     if (hostkey_idx < 0)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return; // no mutual host-key algorithm
     }
     // encryption c2s / s2c: negotiate chacha20-poly1305@openssh.com or aes256-gcm@openssh.com (both
@@ -944,24 +944,24 @@ void ssh_kexinit_parse(uint8_t *restrict work)
                            {ALG_CIPHER, SSH_CIPHER_AES256CTR, PROTO_TRUE}};
     if (!bytes.rd_str(payload, len, &off, &list, &nlen))
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     int c2s = 0;
     int s2c = 0;
     if (negotiate_alg(list, nlen, cc, 3, &c2s, as_client) < 0)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     if (!bytes.rd_str(payload, len, &off, &list, &nlen))
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     if (negotiate_alg(list, nlen, cc, 3, &s2c, as_client) < 0)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     s->cipher_alg_c2s = (uint8_t)c2s;
@@ -979,22 +979,22 @@ void ssh_kexinit_parse(uint8_t *restrict work)
     int m_s2c = SSH_MAC_HMAC_SHA256;
     if (!bytes.rd_str(payload, len, &off, &list, &nlen))
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     if (need_mac_c2s && negotiate_alg(list, nlen, mc, 4, &m_c2s, as_client) < 0)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     if (!bytes.rd_str(payload, len, &off, &list, &nlen))
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     if (need_mac_s2c && negotiate_alg(list, nlen, mc, 4, &m_s2c, as_client) < 0)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     s->mac_alg_c2s = (uint8_t)m_c2s;
@@ -1010,32 +1010,32 @@ void ssh_kexinit_parse(uint8_t *restrict work)
         if (!bytes.rd_str(payload, len, &off, &list, &nlen) ||
             negotiate_alg(list, nlen, compc, 3, &comp, as_client) < 0)
         {
-            SshTransport.i32 = -1;
+            SshTransportV.i32 = -1;
             return;
         }
-        Comp.set_c2s_args.i = i;
-        Comp.set_c2s_args.alg = comp;
+        CompV.set_c2s_args.i = i;
+        CompV.set_c2s_args.alg = comp;
         Comp.set_c2s(protocore_ssh_comp_span());
         if (!bytes.rd_str(payload, len, &off, &list, &nlen) ||
             negotiate_alg(list, nlen, compc, 3, &comp, as_client) < 0)
         {
-            SshTransport.i32 = -1;
+            SshTransportV.i32 = -1;
             return;
         }
-        Comp.set_s2c_args.i = i;
-        Comp.set_s2c_args.alg = comp;
+        CompV.set_s2c_args.i = i;
+        CompV.set_s2c_args.alg = comp;
         Comp.set_s2c(protocore_ssh_comp_span());
     }
 #else
     // Both directions must offer "none" (no compression built in).
     if (!bytes.rd_str(payload, len, &off, &list, &nlen) || !namelist_contains(list, nlen, ALG_COMP))
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     if (!bytes.rd_str(payload, len, &off, &list, &nlen) || !namelist_contains(list, nlen, ALG_COMP))
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
 #endif
@@ -1044,17 +1044,17 @@ void ssh_kexinit_parse(uint8_t *restrict work)
     // Each read advances off, so these are the first list and then the second.
     if (!bytes.rd_str(payload, len, &off, &list, &nlen))
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     if (!bytes.rd_str(payload, len, &off, &list, &nlen))
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     if (off + 1 + 4 > len)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     // "If both sides make the same guess, that algorithm MUST be used", and "If the other party's
@@ -1067,9 +1067,9 @@ void ssh_kexinit_parse(uint8_t *restrict work)
     (void)kex_idx;
     (void)hostkey_idx;
 
-    PhaseMachine.kexinit_done_args.i = i;
+    PhaseMachineV.kexinit_done_args.i = i;
     PhaseMachine.kexinit_done(phase_machine_work);
-    SshTransport.i32 = 0;
+    SshTransportV.i32 = 0;
     return;
 }
 // ---------------------------------------------------------------------------
@@ -1085,8 +1085,8 @@ static_assert(PROTOCORE_SSH_KEXHASH_BORROW <= PROTOCORE_CRYPTO_BORROW_MAX,
 // Absorb @p len bytes of @p data into the digest running in @p work.
 static void hash_bytes(uint8_t *work, const uint8_t *data, size_t len)
 {
-    SshKexHash.update_args.data = data;
-    SshKexHash.update_args.len = len;
+    SshKexHashV.update_args.data = data;
+    SshKexHashV.update_args.len = len;
     SshKexHash.update(work);
 }
 
@@ -1147,37 +1147,37 @@ proto_bool ssh_kex_is_sha512(SshKexAlg a)
 // canonical minimal encoding.
 // @p out holds SSH_KEXHASH_MAX_LEN; the exchange-hash length (32 or 64) is written to @p out_len and
 // selected by @p is512 (the negotiated KEX's hash). Returns 0, or -1 on a bad slot.
-void ssh_kex_exchange_hash(uint8_t *restrict work)
+void protocore_ssh_transport_exchange_hash(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t i = SshTransport.slot;
-    const proto_bool pub_is_string = SshTransport.kexhash.pub_is_string;
-    const uint8_t *cpub = SshTransport.kexhash.cpub;
-    const size_t cpub_len = SshTransport.kexhash.cpub_len;
-    const uint8_t *spub = SshTransport.kexhash.spub;
-    const size_t spub_len = SshTransport.kexhash.spub_len;
-    const uint8_t *k_be = SshTransport.kexhash.k_be;
-    const size_t k_len = SshTransport.kexhash.k_len;
-    const uint8_t *ks = SshTransport.kexhash.ks;
-    const size_t ks_len = SshTransport.kexhash.ks_len;
-    uint8_t *out = SshTransport.kexhash.hash;
-    size_t *out_len = &SshTransport.kexhash.hash_len;
-    const proto_bool k_is_string = SshTransport.kexhash.k_is_string;
-    const proto_bool is512 = SshTransport.kexhash.is512;
+    const uint8_t i = SshTransportV.slot;
+    const proto_bool pub_is_string = SshTransportV.kexhash.pub_is_string;
+    const uint8_t *cpub = SshTransportV.kexhash.cpub;
+    const size_t cpub_len = SshTransportV.kexhash.cpub_len;
+    const uint8_t *spub = SshTransportV.kexhash.spub;
+    const size_t spub_len = SshTransportV.kexhash.spub_len;
+    const uint8_t *k_be = SshTransportV.kexhash.k_be;
+    const size_t k_len = SshTransportV.kexhash.k_len;
+    const uint8_t *ks = SshTransportV.kexhash.ks;
+    const size_t ks_len = SshTransportV.kexhash.ks_len;
+    uint8_t *out = SshTransportV.kexhash.hash;
+    size_t *out_len = &SshTransportV.kexhash.hash_len;
+    const proto_bool k_is_string = SshTransportV.kexhash.k_is_string;
+    const proto_bool is512 = SshTransportV.kexhash.is512;
     if (i >= MAX_SSH_CONNS)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     SshSession *s = &ssh_sess[i];
     if (!ssh_pkt_slot_storage(&ssh_pkt[i]))
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
 
     uint8_t *hash_work = ssh_pkt[i].crypto_work;
-    SshKexHash.init_args.is512 = is512;
+    SshKexHashV.init_args.is512 = is512;
     SshKexHash.init(hash_work);
     hash_string(hash_work, (const uint8_t *)s->v_c, s->v_c_len); // V_C
     hash_string(hash_work, (const uint8_t *)s->v_s, s->v_s_len); // V_S
@@ -1202,10 +1202,10 @@ void ssh_kex_exchange_hash(uint8_t *restrict work)
     {
         hash_mpint(hash_work, k_be, k_len); // classical: K is an mpint
     }
-    SshKexHash.final_args.out = out;
+    SshKexHashV.final_args.out = out;
     SshKexHash.final(hash_work);
-    *out_len = SshKexHash.len;
-    SshTransport.i32 = 0;
+    *out_len = SshKexHashV.len;
+    SshTransportV.i32 = 0;
     return;
 }
 
@@ -1612,13 +1612,13 @@ static int build_kex_reply(uint8_t i, const uint8_t *ks, size_t ks_len, const ui
     return 0;
 }
 
-void ssh_kex_generate(uint8_t *restrict work)
+void protocore_ssh_transport_kex_generate(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t i = SshTransport.slot;
+    const uint8_t i = SshTransportV.slot;
     if (i >= MAX_SSH_CONNS)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     SshKexAlg a = ssh_sess[i].kex_alg;
@@ -1642,7 +1642,7 @@ void ssh_kex_generate(uint8_t *restrict work)
 #ifdef PROTOCORE_SSH_KEX_BENCH
         protocore_ssh_kex_bench.last_kexgen_us = (long long)(protocore_platform_micros() - kexgen_t0);
 #endif
-        SshTransport.i32 = 0;
+        SshTransportV.i32 = 0;
         return;
     }
     if (a == SSH_KEX_ECDH_NISTP256)
@@ -1661,14 +1661,14 @@ void ssh_kex_generate(uint8_t *restrict work)
             Ecdsa.pubkey(ssh_pkt[i].crypto_work);
             if (Ecdsa.ok)
             {
-                SshTransport.i32 = 0;
+                SshTransportV.i32 = 0;
                 return; // valid scalar with overwhelming probability
             }
         }
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
-    SshTransport.i32 = ssh_dh_generate(i);
+    SshTransportV.i32 = ssh_dh_generate(i);
 }
 
 #if PROTOCORE_ENABLE_PQC_KEX
@@ -1809,17 +1809,17 @@ static int hybrid_sntrup761_x25519(uint8_t *work, uint8_t i, const uint8_t *payl
 }
 #endif // PROTOCORE_ENABLE_SSH_SNTRUP761
 
-void ssh_kexdh_handle(uint8_t *restrict work)
+void protocore_ssh_transport_kexdh_reply(uint8_t *restrict work)
 {
-    const uint8_t i = SshTransport.slot;
-    const uint8_t *payload = SshTransport.pkt.payload;
-    const size_t len = SshTransport.pkt.len;
-    uint8_t *reply_out = SshTransport.out_args.out;
-    size_t *reply_len = &SshTransport.out_args.out_len;
-    const size_t cap = SshTransport.out_args.cap;
+    const uint8_t i = SshTransportV.slot;
+    const uint8_t *payload = SshTransportV.pkt.payload;
+    const size_t len = SshTransportV.pkt.len;
+    uint8_t *reply_out = SshTransportV.out_args.out;
+    size_t *reply_len = &SshTransportV.out_args.out_len;
+    const size_t cap = SshTransportV.out_args.cap;
     if (i >= MAX_SSH_CONNS)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     SshSession *s = &ssh_sess[i];
@@ -1854,7 +1854,7 @@ void ssh_kexdh_handle(uint8_t *restrict work)
         uint8_t kk[32];
         if (parse_ecdh_init(payload, len, qc) != 0)
         {
-            SshTransport.i32 = -1;
+            SshTransportV.i32 = -1;
             return;
         }
         Curve25519.x25519_args.scalar = s->ecdh_sk;
@@ -1870,7 +1870,7 @@ void ssh_kexdh_handle(uint8_t *restrict work)
         if (zacc == 0)
         {
             protocore_secure_wipe(kk, sizeof(kk));
-            SshTransport.i32 = -1;
+            SshTransportV.i32 = -1;
             return;
         }
         mem.cpy(k_be + (256 - 32), kk, 32);
@@ -1886,7 +1886,7 @@ void ssh_kexdh_handle(uint8_t *restrict work)
         // mlkem768x25519-sha256: K = SHA256(K_PQ || K_CL); C_INIT / S_REPLY and K hashed as strings.
         if (hybrid_mlkem_x25519(i, payload, len, s_reply, k_be + (256 - 32)) != 0)
         {
-            SshTransport.i32 = -1;
+            SshTransportV.i32 = -1;
             return;
         }
         cpub_p = payload + 5; // C_INIT (ek || Q_C), hashed verbatim as a string
@@ -1906,7 +1906,7 @@ void ssh_kexdh_handle(uint8_t *restrict work)
         if (!ssh_pkt_slot_storage(&ssh_pkt[i]) ||
             hybrid_sntrup761_x25519(ssh_pkt[i].crypto_work, i, payload, len, s_reply, k_be + (256 - 64)) != 0)
         {
-            SshTransport.i32 = -1;
+            SshTransportV.i32 = -1;
             return;
         }
         cpub_p = payload + 5; // C_INIT (sntrup761_pk || Q_C), hashed verbatim as a string
@@ -1925,7 +1925,7 @@ void ssh_kexdh_handle(uint8_t *restrict work)
         uint8_t qc[PROTOCORE_ECDSA_P256_PUB_LEN];
         if (parse_ecdh_init_p256(payload, len, qc) != 0)
         {
-            SshTransport.i32 = -1;
+            SshTransportV.i32 = -1;
             return;
         }
         uint8_t qs[PROTOCORE_ECDSA_P256_PUB_LEN];
@@ -1943,7 +1943,7 @@ void ssh_kexdh_handle(uint8_t *restrict work)
         Ecdsa.ecdh(ecw);
         if (!ec_ok || !Ecdsa.ok)
         {
-            SshTransport.i32 = -1;
+            SshTransportV.i32 = -1;
             return;
         }
         mem.cpy(k_be + (256 - PROTOCORE_ECDSA_P256_COORD_LEN), kk, PROTOCORE_ECDSA_P256_COORD_LEN);
@@ -1960,7 +1960,7 @@ void ssh_kexdh_handle(uint8_t *restrict work)
         uint8_t e_be[256];
         if (ssh_kexdh_parse_init(payload, len, e_be) != 0)
         {
-            SshTransport.i32 = -1;
+            SshTransportV.i32 = -1;
             return;
         }
         protocore_bignum e;
@@ -1972,7 +1972,7 @@ void ssh_kexdh_handle(uint8_t *restrict work)
         Bignum.dh_validate(ssh_pkt[i].crypto_work);
         if (!BignumV.ok)
         {
-            SshTransport.i32 = -1;
+            SshTransportV.i32 = -1;
             return;
         }
         protocore_bignum K;
@@ -1996,27 +1996,27 @@ void ssh_kexdh_handle(uint8_t *restrict work)
     if (encode_hostkey(i, ks, &ks_len, sizeof(ks)) != 0)
     {
         protocore_secure_wipe(k_be, sizeof(k_be));
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
 
     // 3. Exchange hash H (SHA-256 or SHA-512 per the KEX method); capture the session id on first KEX.
     const proto_bool is512 = ssh_kex_is_sha512(s->kex_alg);
-    SshTransport.slot = i;
-    SshTransport.kexhash.pub_is_string = pub_is_string;
-    SshTransport.kexhash.cpub = cpub_p;
-    SshTransport.kexhash.cpub_len = cpub_len;
-    SshTransport.kexhash.spub = spub_p;
-    SshTransport.kexhash.spub_len = spub_len;
-    SshTransport.kexhash.k_be = k_hash;
-    SshTransport.kexhash.k_len = k_hash_len;
-    SshTransport.kexhash.ks = ks;
-    SshTransport.kexhash.ks_len = ks_len;
-    SshTransport.kexhash.k_is_string = k_is_string;
-    SshTransport.kexhash.is512 = is512;
-    ssh_kex_exchange_hash(work);
-    uint8_t *const H = SshTransport.kexhash.hash;
-    const size_t h_len = SshTransport.kexhash.hash_len;
+    SshTransportV.slot = i;
+    SshTransportV.kexhash.pub_is_string = pub_is_string;
+    SshTransportV.kexhash.cpub = cpub_p;
+    SshTransportV.kexhash.cpub_len = cpub_len;
+    SshTransportV.kexhash.spub = spub_p;
+    SshTransportV.kexhash.spub_len = spub_len;
+    SshTransportV.kexhash.k_be = k_hash;
+    SshTransportV.kexhash.k_len = k_hash_len;
+    SshTransportV.kexhash.ks = ks;
+    SshTransportV.kexhash.ks_len = ks_len;
+    SshTransportV.kexhash.k_is_string = k_is_string;
+    SshTransportV.kexhash.is512 = is512;
+    protocore_ssh_transport_exchange_hash(work);
+    uint8_t *const H = SshTransportV.kexhash.hash;
+    const size_t h_len = SshTransportV.kexhash.hash_len;
     ssh_session_id_latch(i, H, h_len);
 
     // 4. Sign H with the negotiated host key (rsa-sha2-512/256 or ssh-ed25519).
@@ -2026,7 +2026,7 @@ void ssh_kexdh_handle(uint8_t *restrict work)
     if (sign_hash(i, H, h_len, sig, &sig_len, sizeof(sig), &sig_name) != 0)
     {
         protocore_secure_wipe(k_be, sizeof(k_be));
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
 
@@ -2034,7 +2034,7 @@ void ssh_kexdh_handle(uint8_t *restrict work)
     if (build_kex_reply(i, ks, ks_len, spub_p, spub_len, sig_name, sig, sig_len, reply_out, reply_len, cap) != 0)
     {
         protocore_secure_wipe(k_be, sizeof(k_be));
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     const SshKdfInputs kdf_in = {.work = ssh_pkt[i].crypto_work,
@@ -2048,20 +2048,20 @@ void ssh_kexdh_handle(uint8_t *restrict work)
     ssh_kex_install_keys(i, &kdf_in);
     protocore_secure_wipe(k_be, sizeof(k_be));
 
-    PhaseMachine.kex_done_args.i = i;
+    PhaseMachineV.kex_done_args.i = i;
     PhaseMachine.kex_done(phase_machine_work);
 #ifdef PROTOCORE_SSH_KEX_BENCH
     protocore_ssh_kex_bench.last_kexreply_us = (long long)(protocore_platform_micros() - kexreply_t0);
     protocore_ssh_kex_bench.kex_count++;
 #endif
-    SshTransport.i32 = 0;
+    SshTransportV.i32 = 0;
     return;
 }
 
-void ssh_newkeys_sent(uint8_t *restrict work)
+void protocore_ssh_transport_newkeys_sent(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t i = SshTransport.slot;
+    const uint8_t i = SshTransportV.slot;
     if (i >= MAX_SSH_CONNS)
     {
         return;
@@ -2074,27 +2074,27 @@ void ssh_newkeys_sent(uint8_t *restrict work)
     ssh_sess[i].kexinit_sent = PROTO_FALSE;
 #if PROTOCORE_ENABLE_SSH_ZLIB
     // "zlib" (non-delayed) starts its s2c (outbound) stream here; idempotent, so a re-key does not restart it.
-    Comp.on_newkeys_args.i = i;
+    CompV.on_newkeys_args.i = i;
     Comp.on_newkeys(protocore_ssh_comp_span());
 #endif
 }
 
-void ssh_newkeys_complete(uint8_t *restrict work)
+void protocore_ssh_transport_newkeys_complete(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t i = SshTransport.slot;
+    const uint8_t i = SshTransportV.slot;
     if (i >= MAX_SSH_CONNS)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     // RFC 4253 sec 7.3: NEWKEYS ends a key exchange, so one arriving in any other phase ends nothing
     // and the connection goes down.
-    PhaseMachine.admits_newkeys_args.i = i;
+    PhaseMachineV.admits_newkeys_args.i = i;
     PhaseMachine.admits_newkeys(phase_machine_work);
-    if (!PhaseMachine.ok)
+    if (!PhaseMachineV.ok)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     // We have received the peer's SSH_MSG_NEWKEYS: our inbound direction is now encrypted and reads
@@ -2128,87 +2128,78 @@ void ssh_newkeys_complete(uint8_t *restrict work)
     }
     // On the first KEX advance to the service phase; on a re-key the connection
     // is already authenticated, so resume the open (channel) phase.
-    PhaseMachine.newkeys_done_args.i = i;
+    PhaseMachineV.newkeys_done_args.i = i;
     PhaseMachine.newkeys_done(phase_machine_work);
     // Reset the re-key timer: the volume/time budget is measured from this completed KEX.
     ssh_sess[i].last_kex_ms = Clock.ms;
-    SshTransport.i32 = 0;
+    SshTransportV.i32 = 0;
     return;
 }
 
-void ssh_rekey_due(uint8_t *restrict work)
+void protocore_ssh_transport_rekey_due(uint8_t *restrict work)
 {
     (void)work;
-    const uint32_t seq_send = SshTransport.rekey.seq_send;
-    const uint32_t seq_recv = SshTransport.rekey.seq_recv;
-    const uint32_t elapsed_ms = SshTransport.rekey.elapsed_ms;
-    const uint32_t pkt_threshold = SshTransport.rekey.pkt_threshold;
-    const uint32_t time_threshold_ms = SshTransport.rekey.time_threshold_ms;
+    const uint32_t seq_send = SshTransportV.rekey.seq_send;
+    const uint32_t seq_recv = SshTransportV.rekey.seq_recv;
+    const uint32_t elapsed_ms = SshTransportV.rekey.elapsed_ms;
+    const uint32_t pkt_threshold = SshTransportV.rekey.pkt_threshold;
+    const uint32_t time_threshold_ms = SshTransportV.rekey.time_threshold_ms;
     if (seq_send >= pkt_threshold || seq_recv >= pkt_threshold)
     {
-        SshTransport.ok = PROTO_TRUE;
+        SshTransportV.ok = PROTO_TRUE;
         return; // volume budget (RFC 4253 sec 9: ~1 GB)
     }
     if (time_threshold_ms && elapsed_ms >= time_threshold_ms)
     {
-        SshTransport.ok = PROTO_TRUE;
+        SshTransportV.ok = PROTO_TRUE;
         return; // time budget (~1 hour)
     }
-    SshTransport.ok = PROTO_FALSE;
+    SshTransportV.ok = PROTO_FALSE;
     return;
 }
 
-void ssh_transport_begin_rekey(uint8_t *restrict work)
+void protocore_ssh_transport_begin_rekey(uint8_t *restrict work)
 {
-    const uint8_t i = SshTransport.slot;
-    uint8_t *out = SshTransport.out_args.out;
-    size_t *out_len = &SshTransport.out_args.out_len;
-    const size_t cap = SshTransport.out_args.cap;
+    const uint8_t i = SshTransportV.slot;
+    uint8_t *out = SshTransportV.out_args.out;
+    size_t *out_len = &SshTransportV.out_args.out_len;
+    const size_t cap = SshTransportV.out_args.cap;
     if (i >= MAX_SSH_CONNS)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     // Fresh server KEXINIT (re-stores I_S for the new exchange hash).
-    SshTransport.slot = i;
-    SshTransport.out_args.out = out;
-    SshTransport.out_args.cap = cap;
-    ssh_kexinit_build(work);
-    *out_len = SshTransport.out_args.out_len;
-    if (SshTransport.i32 != 0)
+    SshTransportV.slot = i;
+    SshTransportV.out_args.out = out;
+    SshTransportV.out_args.cap = cap;
+    protocore_ssh_transport_kexinit_build(work);
+    *out_len = SshTransportV.out_args.out_len;
+    if (SshTransportV.i32 != 0)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     // New ephemeral for forward secrecy across the re-key (re-generated for the finally
     // negotiated method once the peer's KEXINIT arrives; see the KEXINIT dispatch).
-    SshTransport.slot = i;
-    ssh_kex_generate(work);
-    if (SshTransport.i32 != 0)
+    SshTransportV.slot = i;
+    protocore_ssh_transport_kex_generate(work);
+    if (SshTransportV.i32 != 0)
     {
-        SshTransport.i32 = -1;
+        SshTransportV.i32 = -1;
         return;
     }
     ssh_sess[i].kex_active = PROTO_TRUE; // an exchange is running from here to NEWKEYS
-    PhaseMachine.rekey_begin_args.i = i;
+    PhaseMachineV.rekey_begin_args.i = i;
     PhaseMachine.rekey_begin(phase_machine_work);
-    SshTransport.i32 = 0;
+    SshTransportV.i32 = 0;
     return;
 }
 
 // The RFC 4253 transitions, named. One instance.
 // Designated, so a member's position in the struct does not decide what it binds to.
-SshTransportNs SshTransport = {.recv_ident = ssh_transport_recv_ident,
-                               .send_ident = ssh_transport_send_ident,
-                               .kexinit_build = ssh_kexinit_build,
-                               .kexinit_parse = ssh_kexinit_parse,
-                               .kex_generate = ssh_kex_generate,
-                               .exchange_hash = ssh_kex_exchange_hash,
-                               .kexdh_reply = ssh_kexdh_handle,
-                               .newkeys_sent = ssh_newkeys_sent,
-                               .newkeys_complete = ssh_newkeys_complete,
-                               .rekey_due = ssh_rekey_due,
-                               .begin_rekey = ssh_transport_begin_rekey};
+/** @brief The operands and the outcome. */
+SshTransportVars SshTransportV;
 // ---------------------------------------------------------------------------
 // RFC 4253 sec 6 - binary packet protocol: framing, encryption, MAC, reassembly
 // ---------------------------------------------------------------------------
@@ -2248,9 +2239,9 @@ proto_bool ssh_pkt_slot_storage(SshPacketState *s)
     {
         return PROTO_TRUE;
     }
-    Ssh.conn_slot_args.i = pkt_slot(s);
+    SshV.conn_slot_args.i = pkt_slot(s);
     Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *base = Ssh.ptr;
+    uint8_t *base = SshV.ptr;
     if (base == NULL)
     {
         return PROTO_FALSE;
@@ -2539,9 +2530,9 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
     // stream is active. The compressor is stateful (context takeover), so this call must be followed
     // by a full send - the same atomicity the stateful cipher below already requires. The wire buffer
     // is sized (SSH_WIRE_CAP) so the compressed payload can never overflow out_cap and desync.
-    Comp.s2c_active_args.i = i;
+    CompV.s2c_active_args.i = i;
     Comp.s2c_active(protocore_ssh_comp_span());
-    if (Comp.ok)
+    if (CompV.ok)
     {
         // TODO(slot): the compressor's output still borrows; it has no named offset yet.
         size_t bound = ssh_deflate_bound(payload_len);
@@ -2552,14 +2543,14 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
         proto_bool comp_failed = (cbuf == NULL);
         if (!comp_failed)
         {
-            Comp.s2c_args.i = i;
-            Comp.s2c_args.src = out + SSH_WIRE_PAYLOAD_OFF;
-            Comp.s2c_args.src_len = payload_len;
-            Comp.s2c_args.dst = cbuf;
-            Comp.s2c_args.dst_cap = bound;
-            Comp.s2c_args.out_len = &clen;
+            CompV.s2c_args.i = i;
+            CompV.s2c_args.src = out + SSH_WIRE_PAYLOAD_OFF;
+            CompV.s2c_args.src_len = payload_len;
+            CompV.s2c_args.dst = cbuf;
+            CompV.s2c_args.dst_cap = bound;
+            CompV.s2c_args.out_len = &clen;
             Comp.s2c(protocore_ssh_comp_span());
-            comp_failed = (Comp.n != 0);
+            comp_failed = (CompV.n != 0);
         }
         if (comp_failed)
         {
@@ -2725,9 +2716,9 @@ static int ssh_dispatch_payload(uint8_t i, const uint8_t *payload, size_t payloa
 {
     size_t inflate_scope = protocore_plaintext_mark();
 #if PROTOCORE_ENABLE_SSH_ZLIB
-    Comp.c2s_active_args.i = i;
+    CompV.c2s_active_args.i = i;
     Comp.c2s_active(protocore_ssh_comp_span());
-    if (Comp.ok)
+    if (CompV.ok)
     {
         uint8_t *dbuf = (uint8_t *)protocore_plaintext_alloc(SSH_PKT_BUF_SIZE, 16);
         size_t dlen = 0;
@@ -2736,14 +2727,14 @@ static int ssh_dispatch_payload(uint8_t i, const uint8_t *payload, size_t payloa
         proto_bool inflate_failed = (dbuf == NULL);
         if (!inflate_failed)
         {
-            Comp.c2s_args.i = i;
-            Comp.c2s_args.src = payload;
-            Comp.c2s_args.src_len = payload_len;
-            Comp.c2s_args.dst = dbuf;
-            Comp.c2s_args.dst_cap = SSH_PKT_BUF_SIZE;
-            Comp.c2s_args.out_len = &dlen;
+            CompV.c2s_args.i = i;
+            CompV.c2s_args.src = payload;
+            CompV.c2s_args.src_len = payload_len;
+            CompV.c2s_args.dst = dbuf;
+            CompV.c2s_args.dst_cap = SSH_PKT_BUF_SIZE;
+            CompV.c2s_args.out_len = &dlen;
             Comp.c2s(protocore_ssh_comp_span());
-            inflate_failed = (Comp.n != 0);
+            inflate_failed = (CompV.n != 0);
         }
         if (inflate_failed)
         {
@@ -3441,16 +3432,16 @@ void ssh_kdf_derive(const SshKdfInputs *in, char label, uint8_t *out, size_t out
     uint8_t *acc = in->work + SSH_KDF_OFF_ACC; // K1 || K2 || ... accumulated for the chain hash
     size_t have = 0;
 
-    SshKexHash.init_args.is512 = in->is512;
+    SshKexHashV.init_args.is512 = in->is512;
     SshKexHash.init(work);
-    const size_t blk = SshKexHash.len;       // 32 or 64, the bound hash's own length
-    const size_t k_str_len = SshKexHash.len; // a hybrid K is one HASH output wide
+    const size_t blk = SshKexHashV.len;       // 32 or 64, the bound hash's own length
+    const size_t k_str_len = SshKexHashV.len; // a hybrid K is one HASH output wide
     hash_K(work, in->K_be, in->k_is_string, k_str_len);
     hash_bytes(work, in->H, in->h_len);
     uint8_t lbl = (uint8_t)label;
     hash_bytes(work, &lbl, 1);
     hash_bytes(work, in->session_id, in->sid_len);
-    SshKexHash.final_args.out = acc; // acc[0..blk-1] = K1
+    SshKexHashV.final_args.out = acc; // acc[0..blk-1] = K1
     SshKexHash.final(work);
     have = blk;
 
@@ -3461,12 +3452,12 @@ void ssh_kdf_derive(const SshKdfInputs *in, char label, uint8_t *out, size_t out
     // always true.
     while (have < out_len && have + blk <= SSH_KDF_MAX)
     {
-        SshKexHash.init_args.is512 = in->is512;
+        SshKexHashV.init_args.is512 = in->is512;
         SshKexHash.init(work);
         hash_K(work, in->K_be, in->k_is_string, k_str_len);
         hash_bytes(work, in->H, in->h_len);
         hash_bytes(work, acc, have); // all prior blocks
-        SshKexHash.final_args.out = acc + have;
+        SshKexHashV.final_args.out = acc + have;
         SshKexHash.final(work);
         have += blk;
     }
@@ -3653,11 +3644,11 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
     case SSH_MSG_KEXINIT:
         // Initial KEX or an in-session re-key request. Negotiate, reply with our own KEXINIT unless
         // this one already was the reply to ours, generate a fresh ephemeral, and await KEXDH_INIT.
-        SshTransport.slot = i;
-        SshTransport.pkt.payload = payload;
-        SshTransport.pkt.len = len;
-        ssh_kexinit_parse(protocore_ssh_transport_span());
-        if (SshTransport.i32 != 0)
+        SshTransportV.slot = i;
+        SshTransportV.pkt.payload = payload;
+        SshTransportV.pkt.len = len;
+        protocore_ssh_transport_kexinit_parse(protocore_ssh_transport_span());
+        if (SshTransportV.i32 != 0)
         {
             protocore_plaintext_release(mark);
             return -1;
@@ -3665,13 +3656,13 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         // RFC 4253 sec 7.1: "a party MUST respond with its own SSH_MSG_KEXINIT message, except when
         // the received SSH_MSG_KEXINIT already was a reply." Answering a reply would both break that
         // and rebuild I_S with a fresh cookie after the peer has hashed the old one.
-        PhaseMachine.kexinit_needs_reply_args.i = i;
+        PhaseMachineV.kexinit_needs_reply_args.i = i;
         PhaseMachine.kexinit_needs_reply(phase_machine_work);
-        if (!PhaseMachine.ok)
+        if (!PhaseMachineV.ok)
         {
-            SshTransport.slot = i;
-            ssh_kex_generate(protocore_ssh_transport_span());
-            if (SshTransport.i32 != 0)
+            SshTransportV.slot = i;
+            protocore_ssh_transport_kex_generate(protocore_ssh_transport_span());
+            if (SshTransportV.i32 != 0)
             {
                 protocore_plaintext_release(mark);
                 return -1;
@@ -3679,23 +3670,23 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             protocore_plaintext_release(mark);
             return 0;
         }
-        SshTransport.slot = i;
-        SshTransport.out_args.out = reply.buf;
-        SshTransport.out_args.cap = reply.cap;
-        ssh_kexinit_build(protocore_ssh_transport_span());
-        n = SshTransport.out_args.out_len;
-        if (SshTransport.i32 != 0)
+        SshTransportV.slot = i;
+        SshTransportV.out_args.out = reply.buf;
+        SshTransportV.out_args.cap = reply.cap;
+        protocore_ssh_transport_kexinit_build(protocore_ssh_transport_span());
+        n = SshTransportV.out_args.out_len;
+        if (SshTransportV.i32 != 0)
         {
             protocore_plaintext_release(mark);
             return -1;
         }
-        SshNetwork.ssh_slot = i;
-        SshNetwork.msg.payload = reply.buf;
-        SshNetwork.msg.len = n;
+        SshNetworkV.ssh_slot = i;
+        SshNetworkV.msg.payload = reply.buf;
+        SshNetworkV.msg.len = n;
         SshNetwork.emit(protocore_ssh_network_span());
-        SshTransport.slot = i;
-        ssh_kex_generate(protocore_ssh_transport_span());
-        if (SshTransport.i32 != 0)
+        SshTransportV.slot = i;
+        protocore_ssh_transport_kex_generate(protocore_ssh_transport_span());
+        if (SshTransportV.i32 != 0)
         {
             protocore_plaintext_release(mark);
             return -1;
@@ -3704,9 +3695,9 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         return 0;
 
     case SSH_MSG_KEXDH_INIT:
-        PhaseMachine.admits_kexdh_init_args.i = i;
+        PhaseMachineV.admits_kexdh_init_args.i = i;
         PhaseMachine.admits_kexdh_init(phase_machine_work);
-        if (!PhaseMachine.ok)
+        if (!PhaseMachineV.ok)
         {
             protocore_plaintext_release(mark);
             return -1;
@@ -3719,30 +3710,30 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             protocore_plaintext_release(mark);
             return 0;
         }
-        SshTransport.slot = i;
-        SshTransport.pkt.payload = payload;
-        SshTransport.pkt.len = len;
-        SshTransport.out_args.out = reply.buf;
-        SshTransport.out_args.cap = reply.cap;
-        ssh_kexdh_handle(protocore_ssh_transport_span());
-        n = SshTransport.out_args.out_len;
-        if (SshTransport.i32 != 0)
+        SshTransportV.slot = i;
+        SshTransportV.pkt.payload = payload;
+        SshTransportV.pkt.len = len;
+        SshTransportV.out_args.out = reply.buf;
+        SshTransportV.out_args.cap = reply.cap;
+        protocore_ssh_transport_kexdh_reply(protocore_ssh_transport_span());
+        n = SshTransportV.out_args.out_len;
+        if (SshTransportV.i32 != 0)
         {
             protocore_plaintext_release(mark);
             return -1;
         }
-        SshNetwork.ssh_slot = i;
-        SshNetwork.msg.payload = reply.buf;
-        SshNetwork.msg.len = n;
+        SshNetworkV.ssh_slot = i;
+        SshNetworkV.msg.payload = reply.buf;
+        SshNetworkV.msg.len = n;
         SshNetwork.emit(protocore_ssh_network_span()); // KEXDH_REPLY
         {
             uint8_t newkeys = SSH_MSG_NEWKEYS;
-            SshNetwork.ssh_slot = i;
-            SshNetwork.msg.payload = &newkeys;
-            SshNetwork.msg.len = 1;
+            SshNetworkV.ssh_slot = i;
+            SshNetworkV.msg.payload = &newkeys;
+            SshNetworkV.msg.len = 1;
             SshNetwork.emit(protocore_ssh_network_span()); // server NEWKEYS (this one still goes out unencrypted)
-            SshTransport.slot = i;
-            ssh_newkeys_sent(
+            SshTransportV.slot = i;
+            protocore_ssh_transport_newkeys_sent(
                 protocore_ssh_transport_span()); // ...but our outbound is encrypted from the next packet on
         }
         protocore_plaintext_release(mark);
@@ -3751,9 +3742,9 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
     case SSH_MSG_NEWKEYS:
         // RFC 4253 sec 7.3: a NEWKEYS that ends no key exchange is a protocol error, so the
         // connection goes down rather than switching keys.
-        SshTransport.slot = i;
-        ssh_newkeys_complete(protocore_ssh_transport_span());
-        if (SshTransport.i32 != 0) // activate encryption; → SERVICE or OPEN
+        SshTransportV.slot = i;
+        protocore_ssh_transport_newkeys_complete(protocore_ssh_transport_span());
+        if (SshTransportV.i32 != 0) // activate encryption; → SERVICE or OPEN
         {
             protocore_plaintext_release(mark);
             return -1;
@@ -3770,18 +3761,18 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         proto_bool ext_info_built = PROTO_FALSE;
         if (s->ext_info_enabled && !s->ext_info_sent)
         {
-            Extension.build_args.out = reply.buf;
-            Extension.build_args.len = &n;
-            Extension.build_args.cap = reply.cap;
+            ExtensionV.build_args.out = reply.buf;
+            ExtensionV.build_args.len = &n;
+            ExtensionV.build_args.cap = reply.cap;
             Extension.build(extension_work);
-            ext_info_built = (Extension.n == 0);
+            ext_info_built = (ExtensionV.n == 0);
         }
         if (ext_info_built)
         {
             s->ext_info_sent = PROTO_TRUE;
-            SshNetwork.ssh_slot = i;
-            SshNetwork.msg.payload = reply.buf;
-            SshNetwork.msg.len = n;
+            SshNetworkV.ssh_slot = i;
+            SshNetworkV.msg.payload = reply.buf;
+            SshNetworkV.msg.len = n;
             SshNetwork.emit(protocore_ssh_network_span()); // fail: EXT_INFO is ~90 bytes and buf is SSH_PKT_BUF_SIZE
         }
         protocore_plaintext_release(mark);
@@ -3796,9 +3787,9 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         // advances the phase to SSH_PHASE_SERVICE and turns on encryption). Rejecting it in any earlier
         // phase stops a client from jumping from DH_INIT straight to userauth in cleartext, skipping the
         // whole key exchange + host-key verification. Found by the pentest's ssh_msgtype_abuse.
-        PhaseMachine.admits_service_request_args.i = i;
+        PhaseMachineV.admits_service_request_args.i = i;
         PhaseMachine.admits_service_request(phase_machine_work);
-        if (!PhaseMachine.ok)
+        if (!PhaseMachineV.ok)
         {
             protocore_plaintext_release(mark);
             return -1;
@@ -3812,19 +3803,19 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             if (ssh_pkt_build_disconnect(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE, desc, sizeof(desc) - 1, reply.buf, &dn,
                                          reply.cap) == 0)
             {
-                SshNetwork.ssh_slot = i;
-                SshNetwork.msg.payload = reply.buf;
-                SshNetwork.msg.len = dn;
+                SshNetworkV.ssh_slot = i;
+                SshNetworkV.msg.payload = reply.buf;
+                SshNetworkV.msg.len = dn;
                 SshNetwork.emit(protocore_ssh_network_span());
             }
             protocore_plaintext_release(mark);
             return -1;
         }
-        SshNetwork.ssh_slot = i;
-        SshNetwork.msg.payload = reply.buf;
-        SshNetwork.msg.len = n;
+        SshNetworkV.ssh_slot = i;
+        SshNetworkV.msg.payload = reply.buf;
+        SshNetworkV.msg.len = n;
         SshNetwork.emit(protocore_ssh_network_span());
-        PhaseMachine.service_done_args.i = i;
+        PhaseMachineV.service_done_args.i = i;
         PhaseMachine.service_done(phase_machine_work);
         protocore_plaintext_release(mark);
         return 0;
@@ -4237,39 +4228,39 @@ void ssh_transport_key_re_exchange(uint8_t i)
         return;
     }
     SshSession *s = &ssh_sess[i];
-    PhaseMachine.admits_rekey_args.i = i;
+    PhaseMachineV.admits_rekey_args.i = i;
     PhaseMachine.admits_rekey(phase_machine_work);
-    if (!PhaseMachine.ok)
+    if (!PhaseMachineV.ok)
     {
         return;
     }
     uint32_t elapsed = Clock.ms - s->last_kex_ms;
-    SshTransport.rekey.seq_send = ssh_pkt[i].seq_no_send;
-    SshTransport.rekey.seq_recv = ssh_pkt[i].seq_no_recv;
-    SshTransport.rekey.elapsed_ms = elapsed;
-    SshTransport.rekey.pkt_threshold = SSH_REKEY_PACKET_THRESHOLD;
-    SshTransport.rekey.time_threshold_ms = SSH_REKEY_TIME_MS;
-    ssh_rekey_due(protocore_ssh_transport_span());
-    if (!SshTransport.ok)
+    SshTransportV.rekey.seq_send = ssh_pkt[i].seq_no_send;
+    SshTransportV.rekey.seq_recv = ssh_pkt[i].seq_no_recv;
+    SshTransportV.rekey.elapsed_ms = elapsed;
+    SshTransportV.rekey.pkt_threshold = SSH_REKEY_PACKET_THRESHOLD;
+    SshTransportV.rekey.time_threshold_ms = SSH_REKEY_TIME_MS;
+    protocore_ssh_transport_rekey_due(protocore_ssh_transport_span());
+    if (!SshTransportV.ok)
     {
         return;
     }
     size_t mark = protocore_secure_mark();
     uint8_t *buf = (uint8_t *)protocore_secure_alloc(SSH_PKT_BUF_SIZE, 16);
     size_t n = 0;
-    SshTransport.slot = i;
-    SshTransport.out_args.out = buf;
-    SshTransport.out_args.cap = SSH_PKT_BUF_SIZE;
+    SshTransportV.slot = i;
+    SshTransportV.out_args.out = buf;
+    SshTransportV.out_args.cap = SSH_PKT_BUF_SIZE;
     if (buf)
     {
-        ssh_transport_begin_rekey(protocore_ssh_transport_span());
-        n = SshTransport.out_args.out_len;
+        protocore_ssh_transport_begin_rekey(protocore_ssh_transport_span());
+        n = SshTransportV.out_args.out_len;
     }
-    if (buf && SshTransport.i32 == 0)
+    if (buf && SshTransportV.i32 == 0)
     {
-        SshNetwork.ssh_slot = i;
-        SshNetwork.msg.payload = buf;
-        SshNetwork.msg.len = n;
+        SshNetworkV.ssh_slot = i;
+        SshNetworkV.msg.payload = buf;
+        SshNetworkV.msg.len = n;
         SshNetwork.emit(protocore_ssh_network_span());
     }
     protocore_secure_release(mark);
@@ -4288,18 +4279,18 @@ int ssh_transport_version_exchange_recv(uint8_t i, const uint8_t *buf, size_t n,
     {
         return -1;
     }
-    PhaseMachine.admits_ident_args.i = i;
+    PhaseMachineV.admits_ident_args.i = i;
     PhaseMachine.admits_ident(phase_machine_work);
-    if (!PhaseMachine.ok)
+    if (!PhaseMachineV.ok)
     {
         return 1;
     }
-    SshTransport.slot = i;
-    SshTransport.pkt.data = buf;
-    SshTransport.pkt.len = n;
-    ssh_transport_recv_ident(protocore_ssh_transport_span());
-    const size_t consumed = SshTransport.pkt.consumed;
-    const int rc = SshTransport.i32;
+    SshTransportV.slot = i;
+    SshTransportV.pkt.data = buf;
+    SshTransportV.pkt.len = n;
+    protocore_ssh_transport_recv_ident(protocore_ssh_transport_span());
+    const size_t consumed = SshTransportV.pkt.consumed;
+    const int rc = SshTransportV.i32;
     if (rc < 0)
     {
         return -1;

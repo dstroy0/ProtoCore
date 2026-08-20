@@ -25,12 +25,12 @@ static uint8_t cloudevents_work[16]; // the borrow an entry takes; CloudEvents n
 
 static void feed_request(uint8_t slot, const char *raw)
 {
-    HttpParser.reset_args.req = &http_pool[slot];
+    HttpParserV.reset_args.req = &http_pool[slot];
     HttpParser.reset(protocore_http_parser_span());
     for (const char *p = raw; *p; p++)
     {
-        HttpParser.feed_args.req = &http_pool[slot];
-        HttpParser.feed_args.byte = (uint8_t)*p;
+        HttpParserV.feed_args.req = &http_pool[slot];
+        HttpParserV.feed_args.byte = (uint8_t)*p;
         HttpParser.feed(protocore_http_parser_span());
     }
 }

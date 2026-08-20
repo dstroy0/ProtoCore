@@ -190,13 +190,19 @@ typedef struct
     QuicTlsServerFlightArgs flight_args;
     QuicTlsServerKeysArgs keys_args;
     QuicTlsServerPeerParamsArgs peer_params_args;
-
     proto_bool ok;
     size_t n;
     const uint8_t *bytes;
     QuicPacketKeys *pkt_keys;
     const QuicTransportParams *peer;
+} QuicTlsServerVars;
 
+/** @brief The operands and the outcome. */
+extern QuicTlsServerVars QuicTlsServerV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const server_init)(uint8_t *restrict work);
     void (*const recv_crypto)(uint8_t *restrict work);
     void (*const flight)(uint8_t *restrict work);
@@ -204,8 +210,25 @@ typedef struct
     void (*const peer_params)(uint8_t *restrict work);
 } QuicTlsServerNs;
 
-/** @brief The one symbol this module exports. */
-extern QuicTlsServerNs QuicTlsServer;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in QuicTlsServerV or a region of the borrow at a fixed offset.
+void protocore_quic_tls_server_server_init(uint8_t *restrict work);
+void protocore_quic_tls_server_recv_crypto(uint8_t *restrict work);
+void protocore_quic_tls_server_flight(uint8_t *restrict work);
+void protocore_quic_tls_server_keys(uint8_t *restrict work);
+void protocore_quic_tls_server_peer_params(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `QuicTlsServer.server_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const QuicTlsServerNs QuicTlsServer __attribute__((unused)) = {
+    .server_init = protocore_quic_tls_server_server_init,
+    .recv_crypto = protocore_quic_tls_server_recv_crypto,
+    .flight = protocore_quic_tls_server_flight,
+    .keys = protocore_quic_tls_server_keys,
+    .peer_params = protocore_quic_tls_server_peer_params,
+};
 
 PROTOCORE_END_DECLS
 

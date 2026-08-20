@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_MULTIPART
 
-#include "multipart.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h" // str.find: a quoted parameter key, and the boundary in a Content-Type
+#include "multipart.h"
 
 // Longest parameter key the header scan will match ("name=", "filename=").
 #define MULTIPART_KEY_MAX 32
@@ -73,10 +73,10 @@ static void multipart_parse(uint8_t *restrict work)
 
     mp->part_count = 0;
 
-    HttpParser.get_header_args.req = req;
-    HttpParser.get_header_args.key = "Content-Type";
+    HttpParserV.get_header_args.req = req;
+    HttpParserV.get_header_args.key = "Content-Type";
     HttpParser.get_header(protocore_http_parser_span());
-    const char *ct = HttpParser.text;
+    const char *ct = HttpParserV.text;
     if (!ct)
     {
         Multipart.ok = PROTO_FALSE;

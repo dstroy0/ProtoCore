@@ -37,7 +37,7 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        HttpConn.slot = i;
+        HttpConnV.slot = i;
         HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
@@ -54,7 +54,7 @@ void tearDown()
 static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
-    HttpConn.slot = slot;
+    HttpConnV.slot = slot;
     HttpConn.parse(protocore_http_conn_span());
     handle();
 }
@@ -141,7 +141,7 @@ void test_protected_and_unprotected_routes_coexist()
     conn_pool[1].state = CONN_ACTIVE;
     conn_pool[1].proto = PROTO_HTTP;
     conn_pool[1].pcb = protocore_net_host_pcb();
-    HttpConn.slot = 1;
+    HttpConnV.slot = 1;
     HttpConn.reset(protocore_http_conn_span());
     tcp_capture_reset();
 
@@ -184,12 +184,12 @@ void stress_auth_50_valid_requests()
         conn_pool[slot].state = CONN_ACTIVE;
         conn_pool[slot].proto = PROTO_HTTP;
         conn_pool[slot].pcb = protocore_net_host_pcb();
-        HttpConn.slot = slot;
+        HttpConnV.slot = slot;
         HttpConn.reset(protocore_http_conn_span());
 
         handler_called = PROTO_FALSE;
         push_str(slot, req);
-        HttpConn.slot = slot;
+        HttpConnV.slot = slot;
         HttpConn.parse(protocore_http_conn_span());
         handle();
         TEST_ASSERT_TRUE_MESSAGE(handler_called, "handler not called with valid creds");
@@ -210,12 +210,12 @@ void stress_auth_50_invalid_requests()
         conn_pool[slot].state = CONN_ACTIVE;
         conn_pool[slot].proto = PROTO_HTTP;
         conn_pool[slot].pcb = protocore_net_host_pcb();
-        HttpConn.slot = slot;
+        HttpConnV.slot = slot;
         HttpConn.reset(protocore_http_conn_span());
 
         handler_called = PROTO_FALSE;
         push_str(slot, req);
-        HttpConn.slot = slot;
+        HttpConnV.slot = slot;
         HttpConn.parse(protocore_http_conn_span());
         handle();
         TEST_ASSERT_FALSE_MESSAGE(handler_called, "handler called with bad creds");
@@ -229,7 +229,7 @@ static void rearm(uint8_t slot)
     conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = protocore_net_host_pcb();
-    HttpConn.slot = slot;
+    HttpConnV.slot = slot;
     HttpConn.reset(protocore_http_conn_span());
     tcp_capture_reset();
 }
@@ -280,7 +280,7 @@ void test_unauth_challenge_on_dead_connection()
 {
     on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", PROTO_FALSE);
     push_str(0, "GET /admin HTTP/1.1\r\n\r\n");
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     conn_pool[0].pcb = NULL;
     tcp_capture_reset();

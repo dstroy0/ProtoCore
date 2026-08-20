@@ -250,16 +250,21 @@ typedef struct
 
 typedef struct
 {
-    uint8_t slot; ///< the SSH slot a call acts on
-
+    uint8_t slot;             ///< the SSH slot a call acts on
     SshPacketArgs pkt;        ///< sec 6 the bytes one message occupies
     SshTransportOut out_args; ///< where a build or a send writes
     SshKexHashArgs kexhash;   ///< sec 8 the terms the exchange hash H is taken over
     SshRekeyArgs rekey;       ///< sec 9 the volume and time budget since the last exchange
-
     proto_bool ok;
     int i32;
+} SshTransportVars;
 
+/** @brief The operands and the outcome. */
+extern SshTransportVars SshTransportV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const recv_ident)(uint8_t *restrict work);
     void (*const send_ident)(uint8_t *restrict work);
     void (*const kexinit_build)(uint8_t *restrict work);
@@ -273,8 +278,37 @@ typedef struct
     void (*const begin_rekey)(uint8_t *restrict work);
 } SshTransportNs;
 
-/** @brief The one instance, defined in transport.c. */
-extern SshTransportNs SshTransport;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SshTransportV or a region of the borrow at a fixed offset.
+void protocore_ssh_transport_recv_ident(uint8_t *restrict work);
+void protocore_ssh_transport_send_ident(uint8_t *restrict work);
+void protocore_ssh_transport_kexinit_build(uint8_t *restrict work);
+void protocore_ssh_transport_kexinit_parse(uint8_t *restrict work);
+void protocore_ssh_transport_kex_generate(uint8_t *restrict work);
+void protocore_ssh_transport_exchange_hash(uint8_t *restrict work);
+void protocore_ssh_transport_kexdh_reply(uint8_t *restrict work);
+void protocore_ssh_transport_newkeys_sent(uint8_t *restrict work);
+void protocore_ssh_transport_newkeys_complete(uint8_t *restrict work);
+void protocore_ssh_transport_rekey_due(uint8_t *restrict work);
+void protocore_ssh_transport_begin_rekey(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `SshTransport.recv_ident(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SshTransportNs SshTransport __attribute__((unused)) = {
+    .recv_ident = protocore_ssh_transport_recv_ident,
+    .send_ident = protocore_ssh_transport_send_ident,
+    .kexinit_build = protocore_ssh_transport_kexinit_build,
+    .kexinit_parse = protocore_ssh_transport_kexinit_parse,
+    .kex_generate = protocore_ssh_transport_kex_generate,
+    .exchange_hash = protocore_ssh_transport_exchange_hash,
+    .kexdh_reply = protocore_ssh_transport_kexdh_reply,
+    .newkeys_sent = protocore_ssh_transport_newkeys_sent,
+    .newkeys_complete = protocore_ssh_transport_newkeys_complete,
+    .rekey_due = protocore_ssh_transport_rekey_due,
+    .begin_rekey = protocore_ssh_transport_begin_rekey,
+};
 
 /**
  * @brief The PROTOCORE_SSH_TRANSPORT_BORROW bytes this module's state lives in.

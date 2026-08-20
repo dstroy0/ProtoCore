@@ -446,9 +446,9 @@ void test_field_lookup_refuses_rather_than_truncates(void)
 
 static void parse_cc(const char *s, protocore_cache_control *cc)
 {
-    Httpcache.control_parse_args.s = s;
-    Httpcache.control_parse_args.len = strlen(s);
-    Httpcache.control_parse_args.cc = cc;
+    HttpcacheV.control_parse_args.s = s;
+    HttpcacheV.control_parse_args.len = strlen(s);
+    HttpcacheV.control_parse_args.cc = cc;
     Httpcache.control_parse(httpcache_work);
 }
 
@@ -481,7 +481,7 @@ void test_rfc9111_freshness_lifetime_precedence(void)
     TEST_ASSERT_EQUAL_INT32(50, EdgeCache.secs);
 
     protocore_cache_control none;
-    Httpcache.control_init_args.cc = &none;
+    HttpcacheV.control_init_args.cc = &none;
     Httpcache.control_init(httpcache_work);
     EdgeCache.freshness_lifetime_args.cc = &none;
     EdgeCache.freshness_lifetime_args.shared = PROTO_TRUE;
@@ -1190,7 +1190,7 @@ void test_sweep_drops_only_unrevalidatable_stale_entries(void)
 void test_rfc9111_storeability(void)
 {
     protocore_cache_control cc;
-    Httpcache.control_init_args.cc = &cc;
+    HttpcacheV.control_init_args.cc = &cc;
     Httpcache.control_init(httpcache_work);
     EdgeCache.is_storeable_args.status = 200;
     EdgeCache.is_storeable_args.method = "GET";
@@ -1396,7 +1396,7 @@ void test_freshness_falls_back_to_the_default_ttl(void)
     EdgeCache.store_init(edge_cache_work);
     EdgeEntry *e = store("/x", "");
     protocore_cache_control cc;
-    Httpcache.control_init_args.cc = &cc;
+    HttpcacheV.control_init_args.cc = &cc;
     Httpcache.control_init(httpcache_work);
 
     EdgeCache.entry_set_freshness_args.e = e;
@@ -1439,7 +1439,7 @@ void test_an_expires_in_the_past_stores_as_stale(void)
     EdgeCache.store_init(edge_cache_work);
     EdgeEntry *e = store("/x", "");
     protocore_cache_control cc;
-    Httpcache.control_init_args.cc = &cc;
+    HttpcacheV.control_init_args.cc = &cc;
     Httpcache.control_init(httpcache_work);
 
     EdgeCache.entry_set_freshness_args.e = e;

@@ -295,10 +295,8 @@ typedef struct
                     ///< as the handshake negotiated it. The layer that read the Sec-WebSocket-
                     ///< Extensions header is the only one that knows, so it states it here.
 #endif
-
     WsRouteArgs route; ///< the handlers one route records
     WsFrameArgs frame; ///< one frame's type, payload and close status
-
     proto_bool ok;
     uint8_t u8;
     const char *text;
@@ -306,7 +304,14 @@ typedef struct
     WsConnectHandler connect_handler;
     WsMessageHandler message_handler;
     WsCloseHandler close_handler;
+} WsVars;
 
+/** @brief The operands and the outcome. */
+extern WsVars WsV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const route_add)(uint8_t *restrict work);
     void (*const route_reset)(uint8_t *restrict work);
     void (*const route_connect)(uint8_t *restrict work);
@@ -326,8 +331,49 @@ typedef struct
     void (*const close)(uint8_t *restrict work);
 } WsNs;
 
-/** @brief The one symbol this module exports. */
-extern WsNs Ws;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in WsV or a region of the borrow at a fixed offset.
+void protocore_ws_route_add(uint8_t *restrict work);
+void protocore_ws_route_reset(uint8_t *restrict work);
+void protocore_ws_route_connect(uint8_t *restrict work);
+void protocore_ws_route_message(uint8_t *restrict work);
+void protocore_ws_route_close(uint8_t *restrict work);
+void protocore_ws_init(uint8_t *restrict work);
+void protocore_ws_active(uint8_t *restrict work);
+void protocore_ws_payload_of(uint8_t *restrict work);
+void protocore_ws_alloc(uint8_t *restrict work);
+void protocore_ws_find(uint8_t *restrict work);
+void protocore_ws_free(uint8_t *restrict work);
+void protocore_ws_parse(uint8_t *restrict work);
+void protocore_ws_feed_byte(uint8_t *restrict work);
+void protocore_ws_reset_frame(uint8_t *restrict work);
+void protocore_ws_send_frame(uint8_t *restrict work);
+void protocore_ws_set_frag_size(uint8_t *restrict work);
+void protocore_ws_close(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Ws.route_add(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const WsNs Ws __attribute__((unused)) = {
+    .route_add = protocore_ws_route_add,
+    .route_reset = protocore_ws_route_reset,
+    .route_connect = protocore_ws_route_connect,
+    .route_message = protocore_ws_route_message,
+    .route_close = protocore_ws_route_close,
+    .init = protocore_ws_init,
+    .active = protocore_ws_active,
+    .payload_of = protocore_ws_payload_of,
+    .alloc = protocore_ws_alloc,
+    .find = protocore_ws_find,
+    .free = protocore_ws_free,
+    .parse = protocore_ws_parse,
+    .feed_byte = protocore_ws_feed_byte,
+    .reset_frame = protocore_ws_reset_frame,
+    .send_frame = protocore_ws_send_frame,
+    .set_frag_size = protocore_ws_set_frag_size,
+    .close = protocore_ws_close,
+};
 
 /** @brief Not an entry: an entry takes a borrow and this is where that borrow comes from. */
 uint8_t *protocore_ws_span(void);

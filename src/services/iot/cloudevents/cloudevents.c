@@ -172,28 +172,28 @@ static void cloudevents_read_binary(uint8_t *restrict work)
         return;
     }
 
-    HttpParser.get_header_args.req = CloudEvents.msg.req;
-    HttpParser.get_header_args.key = CE_HDR_ID;
+    HttpParserV.get_header_args.req = CloudEvents.msg.req;
+    HttpParserV.get_header_args.key = CE_HDR_ID;
     HttpParser.get_header(protocore_http_parser_span());
-    CloudEvents.attr.id = HttpParser.text;
-    HttpParser.get_header_args.req = CloudEvents.msg.req;
-    HttpParser.get_header_args.key = CE_HDR_SOURCE;
+    CloudEvents.attr.id = HttpParserV.text;
+    HttpParserV.get_header_args.req = CloudEvents.msg.req;
+    HttpParserV.get_header_args.key = CE_HDR_SOURCE;
     HttpParser.get_header(protocore_http_parser_span());
-    CloudEvents.attr.source = HttpParser.text;
-    HttpParser.get_header_args.req = CloudEvents.msg.req;
-    HttpParser.get_header_args.key = CE_HDR_TYPE;
+    CloudEvents.attr.source = HttpParserV.text;
+    HttpParserV.get_header_args.req = CloudEvents.msg.req;
+    HttpParserV.get_header_args.key = CE_HDR_TYPE;
     HttpParser.get_header(protocore_http_parser_span());
-    CloudEvents.attr.type = HttpParser.text;
-    HttpParser.get_header_args.req = CloudEvents.msg.req;
-    HttpParser.get_header_args.key = CE_HDR_SUBJECT;
+    CloudEvents.attr.type = HttpParserV.text;
+    HttpParserV.get_header_args.req = CloudEvents.msg.req;
+    HttpParserV.get_header_args.key = CE_HDR_SUBJECT;
     HttpParser.get_header(protocore_http_parser_span());
-    CloudEvents.attr.subject = HttpParser.text;
+    CloudEvents.attr.subject = HttpParserV.text;
     // datacontenttype rides in Content-Type, and a ce-datacontenttype header "MUST NOT also be
     // present in the message" (HTTP Protocol Binding 1.0.2 sec 3.1.1).
-    HttpParser.get_header_args.req = CloudEvents.msg.req;
-    HttpParser.get_header_args.key = CE_HDR_CONTENT_TYPE;
+    HttpParserV.get_header_args.req = CloudEvents.msg.req;
+    HttpParserV.get_header_args.key = CE_HDR_CONTENT_TYPE;
     HttpParser.get_header(protocore_http_parser_span());
-    CloudEvents.attr.datacontenttype = HttpParser.text;
+    CloudEvents.attr.datacontenttype = HttpParserV.text;
 
     CloudEvents.ok =
         ce_present(CloudEvents.attr.id) && ce_present(CloudEvents.attr.source) && ce_present(CloudEvents.attr.type);

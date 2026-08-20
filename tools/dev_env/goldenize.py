@@ -2812,11 +2812,13 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
         old = bind.get(e)
         if not old or old == f:
             continue
-        # NOT preceded by `.` or `->`. A bound implementation is often a bare word - protocol.c
-        # binds `.reset = reset` - and renaming every occurrence of it also rewrites the MEMBER of
-        # that name on some other namespace: `HttpConn.reset(...)` came out as
-        # `HttpConn.protocore_auth_reset(...)`. Only the free-standing name is the function.
-        cout = re.sub(r"(?<![.\w])(?<!->)\b%s\b" % re.escape(old), f, cout)
+        # NOT preceded by `.` or `->`, and only where the bytes are CODE. A bound implementation is
+        # often a bare word - protocol.c binds `.reset = reset` - so a blind rename hits two things
+        # it must not: the MEMBER of that name on another namespace (`HttpConn.reset(...)` became
+        # `HttpConn.protocore_auth_reset(...)`), and the same text inside an #include path
+        # (`server/core/http_conn/...` became `server/core/protocore_http_conn_...`, and the file
+        # stopped existing).
+        cout = sub_code_only(cout, r"(?<![.\w])(?<!->)\b%s\b" % re.escape(old), f)
     # The entries have to lose `static`, wherever they are spelled. Stripping it only from the
     # definition leaves a forward declaration still static above it - "static declaration of X
     # follows non-static declaration", once per entry, in every module that forward-declares its
@@ -2840,6 +2842,26 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
         flags=re.S | re.M,
     )
     return hout, cout, objv, handle_members(data)
+
+
+def sub_code_only(text, pattern, repl):
+    """`re.sub`, but only where the bytes are CODE.
+
+    code_mask blanks comment and literal bytes, and an #include's path is a literal - so a rename
+    that runs over the raw text edits the path as readily as the identifier. That is how
+    `server/core/http_conn/...` became `server/core/protocore_http_conn_...` and the header stopped
+    existing. Prose in a comment naming the old spelling is left alone for the same reason.
+    """
+    mask = code_mask(text)
+    out, last = [], 0
+    for m in re.finditer(pattern, text):
+        if not mask[m.start()]:
+            continue
+        out.append(text[last : m.start()])
+        out.append(repl)
+        last = m.end()
+    out.append(text[last:])
+    return "".join(out)
 
 
 def move_operands(text, obj, objv, members):

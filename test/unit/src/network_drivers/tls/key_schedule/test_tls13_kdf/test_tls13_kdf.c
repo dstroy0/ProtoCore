@@ -1054,10 +1054,10 @@ static void transcript(size_t n, uint8_t out[32])
 
 static void bind_early(const Tls13Kdf *kdf)
 {
-    Tls13Ks.bind.kdf = kdf;
-    Tls13Ks.bind.ks = &g_ks;
-    Tls13Ks.bind.s = g_ks_bytes;
-    Tls13Ks.bind.is384 = PROTO_FALSE;
+    Tls13KsV.bind.kdf = kdf;
+    Tls13KsV.bind.ks = &g_ks;
+    Tls13KsV.bind.s = g_ks_bytes;
+    Tls13KsV.bind.is384 = PROTO_FALSE;
     Tls13Ks.early(NULL);
 }
 
@@ -1067,10 +1067,10 @@ static void bind_early(const Tls13Kdf *kdf)
 static void bind_early384(const Tls13Kdf *kdf)
 {
     memset(g_ks_bytes, 0, sizeof(g_ks_bytes));
-    Tls13Ks.bind.kdf = kdf;
-    Tls13Ks.bind.ks = &g_ks;
-    Tls13Ks.bind.s = g_ks_bytes;
-    Tls13Ks.bind.is384 = PROTO_TRUE;
+    Tls13KsV.bind.kdf = kdf;
+    Tls13KsV.bind.ks = &g_ks;
+    Tls13KsV.bind.s = g_ks_bytes;
+    Tls13KsV.bind.is384 = PROTO_TRUE;
     Tls13Ks.early(NULL);
 }
 
@@ -1107,13 +1107,13 @@ void test_rfc8448_secret_chain(void)
     transcript(SFIN_END, ch_sfin);
 
     bind_early(&TLS13_KDF);
-    TEST_ASSERT_TRUE(Tls13Ks.ok);
+    TEST_ASSERT_TRUE(Tls13KsV.ok);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(RFC8448_EARLY, g_ks.s + TLS13_KS_EARLY, 32);
 
-    Tls13Ks.bind.ks = &g_ks;
-    Tls13Ks.step.ecdhe = RFC8448_ECDHE;
-    Tls13Ks.step.ecdhe_len = sizeof(RFC8448_ECDHE);
-    Tls13Ks.step.ch_sh_hash = ch_sh;
+    Tls13KsV.bind.ks = &g_ks;
+    Tls13KsV.step.ecdhe = RFC8448_ECDHE;
+    Tls13KsV.step.ecdhe_len = sizeof(RFC8448_ECDHE);
+    Tls13KsV.step.ch_sh_hash = ch_sh;
     Tls13Ks.handshake(NULL);
 
     TEST_ASSERT_EQUAL_UINT8_ARRAY(RFC8448_DERIVED_EARLY, g_ks.s + TLS13_KS_DERIVED, 32);
@@ -1127,8 +1127,8 @@ void test_rfc8448_secret_chain(void)
                                       0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55};
     TEST_ASSERT_EQUAL_UINT8_ARRAY(EMPTY, g_ks.s + TLS13_KS_EMPTY_HASH, 32);
 
-    Tls13Ks.bind.ks = &g_ks;
-    Tls13Ks.step.ch_sfin_hash = ch_sfin;
+    Tls13KsV.bind.ks = &g_ks;
+    Tls13KsV.step.ch_sfin_hash = ch_sfin;
     Tls13Ks.master(NULL);
 
     TEST_ASSERT_EQUAL_UINT8_ARRAY(RFC8448_DERIVED_HS, g_ks.s + TLS13_KS_DERIVED, 32);
@@ -1148,10 +1148,10 @@ void test_rfc8446_4_4_4_finished_mac(void)
 
     uint8_t verify[32];
     bind_early(&TLS13_KDF);
-    Tls13Ks.bind.ks = &g_ks;
-    Tls13Ks.finished_args.base_secret = RFC8448_S_HS;
-    Tls13Ks.finished_args.transcript_hash = ch_cv;
-    Tls13Ks.finished_args.out = verify;
+    Tls13KsV.bind.ks = &g_ks;
+    Tls13KsV.finished_args.base_secret = RFC8448_S_HS;
+    Tls13KsV.finished_args.transcript_hash = ch_cv;
+    Tls13KsV.finished_args.out = verify;
     Tls13Ks.finished_mac(NULL);
 
     TEST_ASSERT_EQUAL_UINT8_ARRAY(RFC8448_FINISHED_KEY, g_ks.s + TLS13_KS_FINISHED_KEY, 32);
@@ -1164,10 +1164,10 @@ void test_rfc8446_4_4_4_finished_mac(void)
     uint8_t other_hash[32];
     uint8_t other[32];
     transcript(SFIN_END, other_hash);
-    Tls13Ks.bind.ks = &g_ks;
-    Tls13Ks.finished_args.base_secret = RFC8448_S_HS;
-    Tls13Ks.finished_args.transcript_hash = other_hash;
-    Tls13Ks.finished_args.out = other;
+    Tls13KsV.bind.ks = &g_ks;
+    Tls13KsV.finished_args.base_secret = RFC8448_S_HS;
+    Tls13KsV.finished_args.transcript_hash = other_hash;
+    Tls13KsV.finished_args.out = other;
     Tls13Ks.finished_mac(NULL);
     TEST_ASSERT_NOT_EQUAL(0, memcmp(other, RFC8448_SERVER_VERIFY, 32));
 }
@@ -1180,17 +1180,17 @@ void test_rfc8446_7_3_traffic_key_expansion(void)
     uint8_t iv[12];
 
     bind_early(&TLS13_KDF);
-    Tls13Ks.derive_args.work = g_hkdf_work;
-    Tls13Ks.derive_args.secret = RFC8448_S_HS;
-    Tls13Ks.derive_args.label = "key";
-    Tls13Ks.derive_args.out = key;
-    Tls13Ks.derive_args.out_len = sizeof(key);
+    Tls13KsV.derive_args.work = g_hkdf_work;
+    Tls13KsV.derive_args.secret = RFC8448_S_HS;
+    Tls13KsV.derive_args.label = "key";
+    Tls13KsV.derive_args.out = key;
+    Tls13KsV.derive_args.out_len = sizeof(key);
     Tls13Ks.expand_label(NULL);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(RFC8448_S_HS_KEY, key, sizeof(key));
 
-    Tls13Ks.derive_args.label = "iv";
-    Tls13Ks.derive_args.out = iv;
-    Tls13Ks.derive_args.out_len = sizeof(iv);
+    Tls13KsV.derive_args.label = "iv";
+    Tls13KsV.derive_args.out = iv;
+    Tls13KsV.derive_args.out_len = sizeof(iv);
     Tls13Ks.expand_label(NULL);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(RFC8448_S_HS_IV, iv, sizeof(iv));
 }
@@ -1204,20 +1204,20 @@ void test_derive_secret_matches_the_trace(void)
     transcript(SH_END, ch_sh);
 
     bind_early(&TLS13_KDF);
-    Tls13Ks.derive_args.work = g_hkdf_work;
-    Tls13Ks.derive_args.secret = RFC8448_HANDSHAKE;
-    Tls13Ks.derive_args.label = "c hs traffic";
-    Tls13Ks.derive_args.transcript_hash = ch_sh;
-    Tls13Ks.derive_args.out = out;
+    Tls13KsV.derive_args.work = g_hkdf_work;
+    Tls13KsV.derive_args.secret = RFC8448_HANDSHAKE;
+    Tls13KsV.derive_args.label = "c hs traffic";
+    Tls13KsV.derive_args.transcript_hash = ch_sh;
+    Tls13KsV.derive_args.out = out;
     Tls13Ks.derive_secret(NULL);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(RFC8448_C_HS, out, 32);
 
-    Tls13Ks.derive_args.label = "s hs traffic";
+    Tls13KsV.derive_args.label = "s hs traffic";
     Tls13Ks.derive_secret(NULL);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(RFC8448_S_HS, out, 32);
 
     // A label differing in one octet gives an unrelated secret: that is what the label is for.
-    Tls13Ks.derive_args.label = "s hs traffiC";
+    Tls13KsV.derive_args.label = "s hs traffiC";
     Tls13Ks.derive_secret(NULL);
     TEST_ASSERT_NOT_EQUAL(0, memcmp(out, RFC8448_S_HS, 32));
 }
@@ -1235,20 +1235,20 @@ void test_dtls_prefix_separates_the_schedules(void)
     TEST_ASSERT_EQUAL_STRING("dtls13", DTLS13_KDF.label_prefix);
 
     bind_early(&TLS13_KDF);
-    Tls13Ks.derive_args.work = g_hkdf_work;
-    Tls13Ks.derive_args.secret = RFC8448_HANDSHAKE;
-    Tls13Ks.derive_args.label = "s hs traffic";
-    Tls13Ks.derive_args.transcript_hash = ch_sh;
-    Tls13Ks.derive_args.out = tls_out;
+    Tls13KsV.derive_args.work = g_hkdf_work;
+    Tls13KsV.derive_args.secret = RFC8448_HANDSHAKE;
+    Tls13KsV.derive_args.label = "s hs traffic";
+    Tls13KsV.derive_args.transcript_hash = ch_sh;
+    Tls13KsV.derive_args.out = tls_out;
     Tls13Ks.derive_secret(NULL);
 
     memset(g_ks_bytes, 0, sizeof(g_ks_bytes));
     bind_early(&DTLS13_KDF);
-    Tls13Ks.derive_args.work = g_hkdf_work;
-    Tls13Ks.derive_args.secret = RFC8448_HANDSHAKE;
-    Tls13Ks.derive_args.label = "s hs traffic";
-    Tls13Ks.derive_args.transcript_hash = ch_sh;
-    Tls13Ks.derive_args.out = dtls_out;
+    Tls13KsV.derive_args.work = g_hkdf_work;
+    Tls13KsV.derive_args.secret = RFC8448_HANDSHAKE;
+    Tls13KsV.derive_args.label = "s hs traffic";
+    Tls13KsV.derive_args.transcript_hash = ch_sh;
+    Tls13KsV.derive_args.out = dtls_out;
     Tls13Ks.derive_secret(NULL);
 
     TEST_ASSERT_EQUAL_UINT8_ARRAY(RFC8448_S_HS, tls_out, 32);
@@ -1269,10 +1269,10 @@ void test_a_different_ecdhe_gives_a_different_handshake_secret(void)
     ecdhe[31] ^= 0x01;
 
     bind_early(&TLS13_KDF);
-    Tls13Ks.bind.ks = &g_ks;
-    Tls13Ks.step.ecdhe = ecdhe;
-    Tls13Ks.step.ecdhe_len = sizeof(ecdhe);
-    Tls13Ks.step.ch_sh_hash = ch_sh;
+    Tls13KsV.bind.ks = &g_ks;
+    Tls13KsV.step.ecdhe = ecdhe;
+    Tls13KsV.step.ecdhe_len = sizeof(ecdhe);
+    Tls13KsV.step.ch_sh_hash = ch_sh;
     Tls13Ks.handshake(NULL);
 
     TEST_ASSERT_NOT_EQUAL(0, memcmp(g_ks.s + TLS13_KS_HANDSHAKE, RFC8448_HANDSHAKE, 32));
@@ -1292,13 +1292,13 @@ void test_client_and_server_secrets_differ_at_every_level(void)
     transcript(SFIN_END, ch_sfin);
 
     bind_early(&TLS13_KDF);
-    Tls13Ks.bind.ks = &g_ks;
-    Tls13Ks.step.ecdhe = RFC8448_ECDHE;
-    Tls13Ks.step.ecdhe_len = sizeof(RFC8448_ECDHE);
-    Tls13Ks.step.ch_sh_hash = ch_sh;
+    Tls13KsV.bind.ks = &g_ks;
+    Tls13KsV.step.ecdhe = RFC8448_ECDHE;
+    Tls13KsV.step.ecdhe_len = sizeof(RFC8448_ECDHE);
+    Tls13KsV.step.ch_sh_hash = ch_sh;
     Tls13Ks.handshake(NULL);
-    Tls13Ks.bind.ks = &g_ks;
-    Tls13Ks.step.ch_sfin_hash = ch_sfin;
+    Tls13KsV.bind.ks = &g_ks;
+    Tls13KsV.step.ch_sfin_hash = ch_sfin;
     Tls13Ks.master(NULL);
 
     TEST_ASSERT_NOT_EQUAL(0, memcmp(g_ks.s + TLS13_KS_CLIENT_HS, g_ks.s + TLS13_KS_SERVER_HS, 32));
@@ -1311,28 +1311,28 @@ void test_client_and_server_secrets_differ_at_every_level(void)
 // are no-ops rather than writes through a null pointer.
 void test_a_null_borrow_is_refused(void)
 {
-    Tls13Ks.bind.kdf = &TLS13_KDF;
-    Tls13Ks.bind.ks = &g_ks;
-    Tls13Ks.bind.s = NULL;
+    Tls13KsV.bind.kdf = &TLS13_KDF;
+    Tls13KsV.bind.ks = &g_ks;
+    Tls13KsV.bind.s = NULL;
     Tls13Ks.early(NULL);
-    TEST_ASSERT_FALSE(Tls13Ks.ok);
+    TEST_ASSERT_FALSE(Tls13KsV.ok);
     TEST_ASSERT_NULL(g_ks.s);
 
     uint8_t ch_sh[32];
     transcript(SH_END, ch_sh);
-    Tls13Ks.bind.ks = &g_ks;
-    Tls13Ks.step.ecdhe = RFC8448_ECDHE;
-    Tls13Ks.step.ecdhe_len = sizeof(RFC8448_ECDHE);
-    Tls13Ks.step.ch_sh_hash = ch_sh;
+    Tls13KsV.bind.ks = &g_ks;
+    Tls13KsV.step.ecdhe = RFC8448_ECDHE;
+    Tls13KsV.step.ecdhe_len = sizeof(RFC8448_ECDHE);
+    Tls13KsV.step.ch_sh_hash = ch_sh;
     Tls13Ks.handshake(NULL);
-    Tls13Ks.step.ch_sfin_hash = ch_sh;
+    Tls13KsV.step.ch_sfin_hash = ch_sh;
     Tls13Ks.master(NULL);
 
     uint8_t out[32];
     memset(out, 0x5a, sizeof(out));
-    Tls13Ks.finished_args.base_secret = RFC8448_S_HS;
-    Tls13Ks.finished_args.transcript_hash = ch_sh;
-    Tls13Ks.finished_args.out = out;
+    Tls13KsV.finished_args.base_secret = RFC8448_S_HS;
+    Tls13KsV.finished_args.transcript_hash = ch_sh;
+    Tls13KsV.finished_args.out = out;
     Tls13Ks.finished_mac(NULL);
     for (size_t i = 0; i < sizeof(out); i++)
     {
@@ -1406,14 +1406,14 @@ void test_sha384_secret_chain(void)
     unhex384(v->ch_sfin, ch_sfin);
 
     bind_early384(&TLS13_KDF);
-    TEST_ASSERT_TRUE(Tls13Ks.ok);
-    TEST_ASSERT_EQUAL_UINT(48u, (unsigned)Tls13Ks.len);
+    TEST_ASSERT_TRUE(Tls13KsV.ok);
+    TEST_ASSERT_EQUAL_UINT(48u, (unsigned)Tls13KsV.len);
     expect_term(v->early, g_ks.s + TLS13_KS_EARLY, "early");
 
-    Tls13Ks.bind.ks = &g_ks;
-    Tls13Ks.step.ecdhe = ecdhe;
-    Tls13Ks.step.ecdhe_len = ecdhe_len;
-    Tls13Ks.step.ch_sh_hash = ch_sh;
+    Tls13KsV.bind.ks = &g_ks;
+    Tls13KsV.step.ecdhe = ecdhe;
+    Tls13KsV.step.ecdhe_len = ecdhe_len;
+    Tls13KsV.step.ch_sh_hash = ch_sh;
     Tls13Ks.handshake(NULL);
 
     expect_term(v->empty_hash, g_ks.s + TLS13_KS_EMPTY_HASH, "SHA-384(\"\")");
@@ -1422,8 +1422,8 @@ void test_sha384_secret_chain(void)
     expect_term(v->c_hs, g_ks.s + TLS13_KS_CLIENT_HS, "c hs traffic");
     expect_term(v->s_hs, g_ks.s + TLS13_KS_SERVER_HS, "s hs traffic");
 
-    Tls13Ks.bind.ks = &g_ks;
-    Tls13Ks.step.ch_sfin_hash = ch_sfin;
+    Tls13KsV.bind.ks = &g_ks;
+    Tls13KsV.step.ch_sfin_hash = ch_sfin;
     Tls13Ks.master(NULL);
 
     expect_term(v->derived_hs, g_ks.s + TLS13_KS_DERIVED, "Derive-Secret(handshake, \"derived\", \"\")");
@@ -1441,10 +1441,10 @@ void test_sha384_finished_mac(void)
     unhex384(v->ch_cv, ch_cv);
 
     bind_early384(&TLS13_KDF);
-    Tls13Ks.bind.ks = &g_ks;
-    Tls13Ks.finished_args.base_secret = s_hs;
-    Tls13Ks.finished_args.transcript_hash = ch_cv;
-    Tls13Ks.finished_args.out = verify;
+    Tls13KsV.bind.ks = &g_ks;
+    Tls13KsV.finished_args.base_secret = s_hs;
+    Tls13KsV.finished_args.transcript_hash = ch_cv;
+    Tls13KsV.finished_args.out = verify;
     Tls13Ks.finished_mac(NULL);
 
     expect_term(v->finished_key, g_ks.s + TLS13_KS_FINISHED_KEY, "finished_key");
@@ -1455,11 +1455,11 @@ void test_sha384_finished_mac(void)
 void test_the_bound_hash_sets_the_secret_length(void)
 {
     bind_early(&TLS13_KDF);
-    TEST_ASSERT_EQUAL_UINT(32u, (unsigned)Tls13Ks.len);
+    TEST_ASSERT_EQUAL_UINT(32u, (unsigned)Tls13KsV.len);
     TEST_ASSERT_EQUAL_UINT(32u, (unsigned)g_ks.len);
 
     bind_early384(&TLS13_KDF);
-    TEST_ASSERT_EQUAL_UINT(48u, (unsigned)Tls13Ks.len);
+    TEST_ASSERT_EQUAL_UINT(48u, (unsigned)Tls13KsV.len);
     TEST_ASSERT_EQUAL_UINT(48u, (unsigned)g_ks.len);
 
     // The layout does not move with the hash: a term is one TLS13_SECRET_MAX slot either way.

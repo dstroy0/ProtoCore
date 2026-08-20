@@ -199,10 +199,10 @@ static int dav_resolve_path(const HttpRoute *r, const char *reqpath, char *out, 
 // token, if any, comes from the request's If header (RFC 4918 §10.4 / §7).
 static proto_bool dav_write_blocked(uint8_t *restrict work, HttpReq *req, const char *path)
 {
-    HttpParser.get_header_args.req = req;
-    HttpParser.get_header_args.key = "If";
+    HttpParserV.get_header_args.req = req;
+    HttpParserV.get_header_args.key = "If";
     HttpParser.get_header(protocore_http_parser_span());
-    const char *if_hdr = HttpParser.text;
+    const char *if_hdr = HttpParserV.text;
     char tok[PROTOCORE_DAV_LOCK_TOKEN_MAX];
     const char *presented = NULL;
     if (if_hdr)
@@ -282,11 +282,11 @@ static proto_bool dav_stream_put_begin(HttpReq *req)
     }
     uint8_t slot = (uint8_t)(req - http_pool);
     HttpRoutes.count(protocore_http_route_span());
-    for (uint8_t i = 0; i < HttpRoutes.value; i++)
+    for (uint8_t i = 0; i < HttpRoutesV.value; i++)
     {
-        HttpRoutes.at_args.i = i;
+        HttpRoutesV.at_args.i = i;
         HttpRoutes.at(protocore_http_route_span());
-        HttpRoute *r = HttpRoutes.ptr;
+        HttpRoute *r = HttpRoutesV.ptr;
         // The !is_active half cannot fire: every entry below route_count was filled by
         // fill_route_base, which sets is_active, and nothing ever clears it again.
         if (!r->is_active || r->type != ROUTE_DAV)
@@ -384,7 +384,7 @@ void dav(const char *url_prefix, const protocore_mnt_backend *file_sys, const ch
     // than a parameter - the same way a callback reaches it.
     uint8_t *restrict work = protocore_webdav_handler_span();
     HttpRoutes.add(protocore_http_route_span());
-    HttpRoute *r = HttpRoutes.ptr;
+    HttpRoute *r = HttpRoutesV.ptr;
     if (r == NULL)
     {
         return;
@@ -428,9 +428,9 @@ void dav(const char *url_prefix, const protocore_mnt_backend *file_sys, const ch
 
 #if PROTOCORE_ENABLE_STREAM_BODY
     // Stream PUT bodies straight to the file (one global sink; see PROTOCORE_ENABLE_STREAM_BODY).
-    HttpParser.set_stream_hooks_args.begin = dav_stream_put_begin;
-    HttpParser.set_stream_hooks_args.data = dav_stream_put_data;
-    HttpParser.set_stream_hooks_args.abort = dav_put_abort_tramp;
+    HttpParserV.set_stream_hooks_args.begin = dav_stream_put_begin;
+    HttpParserV.set_stream_hooks_args.data = dav_stream_put_data;
+    HttpParserV.set_stream_hooks_args.abort = dav_put_abort_tramp;
     HttpParser.set_stream_hooks(protocore_http_parser_span());
 #endif
 }
@@ -443,7 +443,7 @@ static void dav_send_status(uint8_t slot_id, int code, const char *extra_headers
     ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok)
     {
-        HttpParser.reset_args.req = &http_pool[slot_id];
+        HttpParserV.reset_args.req = &http_pool[slot_id];
         HttpParser.reset(protocore_http_parser_span());
         return;
     }
@@ -497,11 +497,11 @@ static void webdav_handler_try_serve_dav(uint8_t *restrict work)
     HttpReq *req = Dav.try_serve_dav_args.req;
 
     HttpRoutes.count(protocore_http_route_span());
-    for (uint8_t i = 0; i < HttpRoutes.value; i++)
+    for (uint8_t i = 0; i < HttpRoutesV.value; i++)
     {
-        HttpRoutes.at_args.i = i;
+        HttpRoutesV.at_args.i = i;
         HttpRoutes.at(protocore_http_route_span());
-        HttpRoute *r = HttpRoutes.ptr;
+        HttpRoute *r = HttpRoutesV.ptr;
         // The !is_active half cannot fire: every entry below route_count was filled by
         // fill_route_base, which sets is_active, and nothing ever clears it again.
         if (!r->is_active || r->type != ROUTE_DAV)
@@ -717,10 +717,10 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
 
     case DAV_M_COPY:
     case DAV_M_MOVE: {
-        HttpParser.get_header_args.req = req;
-        HttpParser.get_header_args.key = "Destination";
+        HttpParserV.get_header_args.req = req;
+        HttpParserV.get_header_args.key = "Destination";
         HttpParser.get_header(protocore_http_parser_span());
-        const char *dest_hdr = HttpParser.text;
+        const char *dest_hdr = HttpParserV.text;
         char dest_url[256];
         proto_bool dest_ok = PROTO_FALSE;
         if (dest_hdr)
@@ -770,10 +770,10 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
             dest_fs[dpl - 1] = '\0';
         }
 
-        HttpParser.get_header_args.req = req;
-        HttpParser.get_header_args.key = "Overwrite";
+        HttpParserV.get_header_args.req = req;
+        HttpParserV.get_header_args.key = "Overwrite";
         HttpParser.get_header(protocore_http_parser_span());
-        const char *ow = HttpParser.text;
+        const char *ow = HttpParserV.text;
         proto_bool overwrite = !(ow && (ow[0] == 'F' || ow[0] == 'f'));
         Fs.path.root = dav_root(work);
         Fs.path.dir = dest_fs;
@@ -821,10 +821,10 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
             return;
         }
 
-        HttpParser.get_header_args.req = req;
-        HttpParser.get_header_args.key = "Depth";
+        HttpParserV.get_header_args.req = req;
+        HttpParserV.get_header_args.key = "Depth";
         HttpParser.get_header(protocore_http_parser_span());
-        const char *depth_h = HttpParser.text;
+        const char *depth_h = HttpParserV.text;
         proto_bool shallow = depth_h && depth_h[0] == '0'; // Depth: 0
 
         if (dest_exists)
@@ -864,10 +864,10 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
 
         // A LOCK carrying the token in its If header is a refresh (RFC 4918 §9.10.2): extend the held
         // lock's timeout rather than taking a new one.
-        HttpParser.get_header_args.req = req;
-        HttpParser.get_header_args.key = "If";
+        HttpParserV.get_header_args.req = req;
+        HttpParserV.get_header_args.key = "If";
         HttpParser.get_header(protocore_http_parser_span());
-        const char *if_hdr = HttpParser.text;
+        const char *if_hdr = HttpParserV.text;
         char iftok[PROTOCORE_DAV_LOCK_TOKEN_MAX];
         const DavLock *lk = NULL;
         proto_bool have_token = PROTO_FALSE;
@@ -906,10 +906,10 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
             // New lock: a lockinfo body naming <shared> is a shared lock (else exclusive); a LOCK defaults
             // to Depth: infinity when the header is absent (RFC 4918 §9.10.3).
             shared = req->body_len && dav_body_has(req, "shared");
-            HttpParser.get_header_args.req = req;
-            HttpParser.get_header_args.key = "Depth";
+            HttpParserV.get_header_args.req = req;
+            HttpParserV.get_header_args.key = "Depth";
             HttpParser.get_header(protocore_http_parser_span());
-            Webdav.depth_args.depth_hdr = HttpParser.text;
+            Webdav.depth_args.depth_hdr = HttpParserV.text;
             Webdav.depth_args.dflt = PROTOCORE_DAV_DEPTH_INFINITY;
             Webdav.depth(webdav_work);
             depth_inf = Webdav.i32 != 0;
@@ -973,10 +973,10 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
 
     case DAV_M_UNLOCK: {
         // Release the lock named by the Lock-Token header (a Coded-URL: "<opaquelocktoken:...>").
-        HttpParser.get_header_args.req = req;
-        HttpParser.get_header_args.key = "Lock-Token";
+        HttpParserV.get_header_args.req = req;
+        HttpParserV.get_header_args.key = "Lock-Token";
         HttpParser.get_header(protocore_http_parser_span());
-        const char *lt = HttpParser.text;
+        const char *lt = HttpParserV.text;
         char token[PROTOCORE_DAV_LOCK_TOKEN_MAX];
         proto_bool released = PROTO_FALSE;
         if (lt && dav_coded_url_token(lt, token, sizeof(token)))
@@ -1013,10 +1013,10 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
         uint32_t fsize = (uint32_t)fst.size;
         time_t mtime = (time_t)fst.mtime;
 
-        HttpParser.get_header_args.req = req;
-        HttpParser.get_header_args.key = "Depth";
+        HttpParserV.get_header_args.req = req;
+        HttpParserV.get_header_args.key = "Depth";
         HttpParser.get_header(protocore_http_parser_span());
-        Webdav.depth_args.depth_hdr = HttpParser.text;
+        Webdav.depth_args.depth_hdr = HttpParserV.text;
         Webdav.depth_args.dflt = 1;
         Webdav.depth(webdav_work);
         int depth = Webdav.i32;

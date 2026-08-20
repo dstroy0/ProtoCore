@@ -263,7 +263,7 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
     ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok)
     {
-        HttpConn.slot = slot_id;
+        HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
         return;
     }
@@ -327,7 +327,7 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok)
     {
-        HttpConn.slot = slot_id;
+        HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
         return;
     }
@@ -870,7 +870,7 @@ void protocore_resp_end(uint8_t slot_id, int code, int body_len, proto_bool keep
         ConnPool.begin_close(protocore_conn_pool_span()); // ACTIVE -> CONN_CLOSING; finalizes on ACK
     }
     note_response(slot_id, code, body_len);
-    HttpConn.slot = slot_id;
+    HttpConnV.slot = slot_id;
     HttpConn.reset(protocore_http_conn_span());
 }
 
@@ -880,9 +880,9 @@ const char *protocore_resp_conn_hdr(uint8_t slot_id, proto_bool *keep_out)
 {
     proto_bool keep = PROTO_FALSE;
 #if PROTOCORE_ENABLE_KEEPALIVE
-    HttpConn.slot = slot_id;
+    HttpConnV.slot = slot_id;
     HttpConn.keepalive_eval(protocore_http_conn_span());
-    keep = HttpConn.ok;
+    keep = HttpConnV.ok;
 #else
     (void)slot_id;
 #endif
@@ -1002,7 +1002,7 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
 #endif
     if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
     {
-        HttpConn.slot = slot_id;
+        HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
         return;
     }
@@ -1107,7 +1107,7 @@ void send_empty(uint8_t slot_id, int code)
 #endif
     if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
     {
-        HttpConn.slot = slot_id;
+        HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
         return;
     }
@@ -1142,7 +1142,7 @@ void redirect(uint8_t slot_id, int code, const char *location)
     TcpConn *conn = &conn_pool[slot_id];
     if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
     {
-        HttpConn.slot = slot_id;
+        HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
         return;
     }
