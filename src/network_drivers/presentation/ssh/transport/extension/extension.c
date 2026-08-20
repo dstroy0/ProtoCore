@@ -6,8 +6,12 @@
  * @brief RFC 8308 extension negotiation.
  */
 
-#include "network_drivers/presentation/ssh/transport/extension/extension.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_SSH
+
 #include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/transport/extension/extension.h"
 #include "network_drivers/presentation/ssh/transport/transport/transport.h" // ssh_kex_prefer_rsa()
 
 // sec 2.2: the indicator each role offers. A client sends the first, a server the second, and each
@@ -59,3 +63,5 @@ void protocore_extension_build(uint8_t *restrict work)
 ExtensionVars ExtensionV;
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SSH

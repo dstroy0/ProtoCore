@@ -90,6 +90,7 @@ LAYER_MEMBERS = {
         "Zigbee",
     },
     "Network (L3)": {
+        "DNS Wire Codec",
         "Dns Resolver",
         "Happy Eyeballs",
         "IPv6",
@@ -101,7 +102,6 @@ LAYER_MEMBERS = {
         "Accept Throttle",
         "IP Allowlist",
         "Keep-Alive",
-        "MTLS",
         "Per IP Throttle",
         "Socket Pool",
         "TLS",
@@ -116,6 +116,8 @@ LAYER_MEMBERS = {
         "Telnet",
     },
     "Presentation (L6)": {
+        "HTTP Route Table",
+        "Deflate RFC 1951 Tables",
         "Auth",
         "Auth Lockout",
         "CBOR",
@@ -156,6 +158,7 @@ CATEGORY_ORDER = [
 ]
 CATEGORY_MEMBERS = {
     "Web & HTTP": {
+        "Web Assets",
         "Chunked Responses",
         "CORS",
         "Dashboard",
@@ -191,7 +194,6 @@ CATEGORY_MEMBERS = {
         "LwM2M",
         "MQTT",
         "MQTT SN",
-        "MQTT TLS",
         "NATS",
         "Sparkplug",
         "Stomp",
@@ -265,13 +267,11 @@ CATEGORY_MEMBERS = {
     "Clients & Gateways": {
         "FTP client",
         "HTTP Client",
-        "HTTP Client TLS",
         "Relay (TCP forward / DNAT)",
         "SMB",
         "SMTP",
         "Webhook",
         "WS Client",
-        "WS Client TLS",
     },
     "Storage & Database": {
         "DBM Key-Value Store",

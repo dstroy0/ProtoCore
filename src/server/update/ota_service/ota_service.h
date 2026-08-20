@@ -18,7 +18,9 @@
 #ifndef PROTOCORE_OTA_SERVICE_H
 #define PROTOCORE_OTA_SERVICE_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_OTA && PROTOCORE_HAS_VENDOR_OTA
 
 PROTOCORE_BEGIN_DECLS
 
@@ -79,5 +81,7 @@ static const OtaServiceNs OtaService __attribute__((unused)) = {
 };
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_OTA && PROTOCORE_HAS_VENDOR_OTA
 
 #endif // PROTOCORE_OTA_SERVICE_H

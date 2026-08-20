@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <coverage version="1">
-  <file path="src/crypto/aead/aesccm.c">
+  <file path="src/crypto/aead/aesccm/aesccm.c">
     <lineToCover lineNumber="122" covered="true"/>
     <lineToCover lineNumber="124" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="126" covered="true"/>
@@ -102,13 +102,13 @@
     <lineToCover lineNumber="309" covered="true"/>
     <lineToCover lineNumber="310" covered="true"/>
   </file>
-  <file path="src/crypto/aead/aesgcm.c">
+  <file path="src/crypto/aead/aesgcm/aesgcm.c">
     <lineToCover lineNumber="28" covered="true"/>
     <lineToCover lineNumber="30" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="32" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="37" covered="true"/>
   </file>
-  <file path="src/crypto/aead/chachapoly.c">
+  <file path="src/crypto/aead/chachapoly/chachapoly.c">
     <lineToCover lineNumber="20" covered="true"/>
     <lineToCover lineNumber="22" covered="true"/>
     <lineToCover lineNumber="23" covered="true"/>
@@ -162,7 +162,7 @@
     <lineToCover lineNumber="105" covered="true"/>
     <lineToCover lineNumber="106" covered="true"/>
   </file>
-  <file path="src/crypto/asymmetric/bignum.c">
+  <file path="src/crypto/asymmetric/bignum/bignum.c">
     <lineToCover lineNumber="65" covered="true"/>
     <lineToCover lineNumber="67" covered="true" branchesToCover="2" coveredBranches="1"/>
     <lineToCover lineNumber="69" covered="true" branchesToCover="2" coveredBranches="1"/>
@@ -194,7 +194,7 @@
     <lineToCover lineNumber="145" covered="false"/>
     <lineToCover lineNumber="146" covered="false" branchesToCover="2" coveredBranches="0"/>
   </file>
-  <file path="src/crypto/asymmetric/curve25519.c">
+  <file path="src/crypto/asymmetric/curve25519/curve25519.c">
     <lineToCover lineNumber="41" covered="true"/>
     <lineToCover lineNumber="43" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="45" covered="true"/>
@@ -315,7 +315,7 @@
     <lineToCover lineNumber="498" covered="true"/>
     <lineToCover lineNumber="499" covered="true"/>
   </file>
-  <file path="src/crypto/asymmetric/ecdsa.c">
+  <file path="src/crypto/asymmetric/ecdsa/ecdsa.c">
     <lineToCover lineNumber="248" covered="true"/>
     <lineToCover lineNumber="250" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="252" covered="true"/>
@@ -684,7 +684,7 @@
     <lineToCover lineNumber="1014" covered="true"/>
     <lineToCover lineNumber="1018" covered="true"/>
   </file>
-  <file path="src/crypto/asymmetric/ed25519.c">
+  <file path="src/crypto/asymmetric/ed25519/ed25519.c">
     <lineToCover lineNumber="45" covered="true"/>
     <lineToCover lineNumber="47" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="53" covered="true"/>
@@ -870,7 +870,7 @@
     <lineToCover lineNumber="674" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="678" covered="true"/>
   </file>
-  <file path="src/crypto/asymmetric/rsa.c">
+  <file path="src/crypto/asymmetric/rsa/rsa.c">
     <lineToCover lineNumber="119" covered="true"/>
     <lineToCover lineNumber="122" covered="true" branchesToCover="2" coveredBranches="1"/>
     <lineToCover lineNumber="124" covered="false"/>
@@ -1003,7 +1003,7 @@
     <lineToCover lineNumber="393" covered="true"/>
     <lineToCover lineNumber="395" covered="true" branchesToCover="2" coveredBranches="2"/>
   </file>
-  <file path="src/crypto/cipher/aes256ctr.c">
+  <file path="src/crypto/cipher/aes256ctr/aes256ctr.c">
     <lineToCover lineNumber="80" covered="false"/>
     <lineToCover lineNumber="84" covered="false"/>
     <lineToCover lineNumber="85" covered="false"/>
@@ -1034,7 +1034,7 @@
     <lineToCover lineNumber="147" covered="false"/>
     <lineToCover lineNumber="148" covered="false"/>
   </file>
-  <file path="src/crypto/cipher/aes_block.h">
+  <file path="src/crypto/cipher/aes_block/aes_block.h">
     <lineToCover lineNumber="32" covered="true"/>
     <lineToCover lineNumber="38" covered="true"/>
     <lineToCover lineNumber="39" covered="true"/>
@@ -1107,7 +1107,7 @@
     <lineToCover lineNumber="162" covered="true"/>
     <lineToCover lineNumber="163" covered="false"/>
   </file>
-  <file path="src/crypto/cipher/chacha20.c">
+  <file path="src/crypto/cipher/chacha20/chacha20.c">
     <lineToCover lineNumber="29" covered="true"/>
     <lineToCover lineNumber="31" covered="true"/>
     <lineToCover lineNumber="33" covered="true"/>
@@ -1185,7 +1185,7 @@
     <lineToCover lineNumber="41" covered="true"/>
     <lineToCover lineNumber="43" covered="true"/>
   </file>
-  <file path="src/crypto/hash/md.c">
+  <file path="src/crypto/hash/md/md.c">
     <lineToCover lineNumber="29" covered="true"/>
     <lineToCover lineNumber="31" covered="true"/>
     <lineToCover lineNumber="32" covered="true" branchesToCover="2" coveredBranches="1"/>
@@ -1359,7 +1359,7 @@
     <lineToCover lineNumber="316" covered="true"/>
     <lineToCover lineNumber="317" covered="true"/>
   </file>
-  <file path="src/crypto/hash/sha1.c">
+  <file path="src/crypto/hash/sha1/sha1.c">
     <lineToCover lineNumber="36" covered="true"/>
     <lineToCover lineNumber="38" covered="true"/>
     <lineToCover lineNumber="42" covered="true"/>
@@ -1407,7 +1407,7 @@
     <lineToCover lineNumber="137" covered="true"/>
     <lineToCover lineNumber="139" covered="true"/>
   </file>
-  <file path="src/crypto/hash/sha256.c">
+  <file path="src/crypto/hash/sha256/sha256.c">
     <lineToCover lineNumber="98" covered="true"/>
     <lineToCover lineNumber="100" covered="true"/>
     <lineToCover lineNumber="104" covered="true"/>
@@ -1588,7 +1588,7 @@
     <lineToCover lineNumber="357" covered="true"/>
     <lineToCover lineNumber="358" covered="true"/>
   </file>
-  <file path="src/crypto/hash/sha3.c">
+  <file path="src/crypto/hash/sha3/sha3.c">
     <lineToCover lineNumber="23" covered="true"/>
     <lineToCover lineNumber="25" covered="true"/>
     <lineToCover lineNumber="28" covered="true"/>
@@ -1667,7 +1667,7 @@
     <lineToCover lineNumber="166" covered="true"/>
     <lineToCover lineNumber="167" covered="true"/>
   </file>
-  <file path="src/crypto/hash/sha512.c">
+  <file path="src/crypto/hash/sha512/sha512.c">
     <lineToCover lineNumber="107" covered="true"/>
     <lineToCover lineNumber="109" covered="true"/>
     <lineToCover lineNumber="113" covered="true"/>
@@ -1851,7 +1851,7 @@
     <lineToCover lineNumber="372" covered="true"/>
     <lineToCover lineNumber="373" covered="true"/>
   </file>
-  <file path="src/crypto/kdf/hkdf.c">
+  <file path="src/crypto/kdf/hkdf/hkdf.c">
     <lineToCover lineNumber="26" covered="true"/>
     <lineToCover lineNumber="31" covered="true"/>
     <lineToCover lineNumber="32" covered="true"/>
@@ -1898,7 +1898,7 @@
     <lineToCover lineNumber="110" covered="true"/>
     <lineToCover lineNumber="111" covered="true"/>
   </file>
-  <file path="src/crypto/kdf/kdf.c">
+  <file path="src/crypto/kdf/kdf/kdf.c">
     <lineToCover lineNumber="37" covered="true"/>
     <lineToCover lineNumber="40" covered="true" branchesToCover="4" coveredBranches="2"/>
     <lineToCover lineNumber="44" covered="true"/>
@@ -1919,7 +1919,7 @@
     <lineToCover lineNumber="70" covered="true"/>
     <lineToCover lineNumber="71" covered="true"/>
   </file>
-  <file path="src/crypto/mac/aes_cmac.c">
+  <file path="src/crypto/mac/aes_cmac/aes_cmac.c">
     <lineToCover lineNumber="53" covered="true"/>
     <lineToCover lineNumber="55" covered="true"/>
     <lineToCover lineNumber="56" covered="true"/>
@@ -1960,7 +1960,7 @@
     <lineToCover lineNumber="148" covered="true"/>
     <lineToCover lineNumber="151" covered="true"/>
   </file>
-  <file path="src/crypto/mac/ghash.h">
+  <file path="src/crypto/mac/ghash/ghash.h">
     <lineToCover lineNumber="41" covered="true"/>
     <lineToCover lineNumber="42" covered="true"/>
     <lineToCover lineNumber="43" covered="true"/>
@@ -2027,7 +2027,7 @@
     <lineToCover lineNumber="135" covered="true"/>
     <lineToCover lineNumber="138" covered="true"/>
   </file>
-  <file path="src/crypto/mac/hmac_sha256.c">
+  <file path="src/crypto/mac/hmac_sha256/hmac_sha256.c">
     <lineToCover lineNumber="55" covered="true"/>
     <lineToCover lineNumber="58" covered="true"/>
     <lineToCover lineNumber="59" covered="true" branchesToCover="2" coveredBranches="2"/>
@@ -2069,7 +2069,7 @@
     <lineToCover lineNumber="122" covered="true"/>
     <lineToCover lineNumber="123" covered="true"/>
   </file>
-  <file path="src/crypto/mac/hmac_sha512.c">
+  <file path="src/crypto/mac/hmac_sha512/hmac_sha512.c">
     <lineToCover lineNumber="38" covered="true"/>
     <lineToCover lineNumber="41" covered="true"/>
     <lineToCover lineNumber="42" covered="true" branchesToCover="2" coveredBranches="1"/>
@@ -2103,7 +2103,7 @@
     <lineToCover lineNumber="88" covered="true"/>
     <lineToCover lineNumber="89" covered="true"/>
   </file>
-  <file path="src/crypto/mac/poly1305.c">
+  <file path="src/crypto/mac/poly1305/poly1305.c">
     <lineToCover lineNumber="25" covered="true"/>
     <lineToCover lineNumber="27" covered="true"/>
     <lineToCover lineNumber="29" covered="true"/>
@@ -2241,7 +2241,7 @@
     <lineToCover lineNumber="212" covered="true"/>
     <lineToCover lineNumber="213" covered="true"/>
   </file>
-  <file path="src/crypto/pqc/mlkem.c">
+  <file path="src/crypto/pqc/mlkem/mlkem.c">
     <lineToCover lineNumber="33" covered="true"/>
     <lineToCover lineNumber="35" covered="true"/>
     <lineToCover lineNumber="36" covered="true"/>
@@ -2519,7 +2519,7 @@
     <lineToCover lineNumber="575" covered="true"/>
     <lineToCover lineNumber="577" covered="true"/>
   </file>
-  <file path="src/crypto/pqc/sntrup761.c">
+  <file path="src/crypto/pqc/sntrup761/sntrup761.c">
     <lineToCover lineNumber="57" covered="true"/>
     <lineToCover lineNumber="59" covered="true"/>
     <lineToCover lineNumber="62" covered="true"/>
@@ -2986,7 +2986,7 @@
     <lineToCover lineNumber="105" covered="false"/>
     <lineToCover lineNumber="106" covered="false"/>
   </file>
-  <file path="src/mmgr/arena.c">
+  <file path="src/mmgr/arena/arena.c">
     <lineToCover lineNumber="21" covered="false"/>
     <lineToCover lineNumber="23" covered="false"/>
     <lineToCover lineNumber="27" covered="true"/>
@@ -3136,7 +3136,7 @@
     <lineToCover lineNumber="324" covered="true"/>
     <lineToCover lineNumber="326" covered="true"/>
   </file>
-  <file path="src/mmgr/arena.h">
+  <file path="src/mmgr/arena/arena.h">
     <lineToCover lineNumber="62" covered="true"/>
     <lineToCover lineNumber="77" covered="true"/>
     <lineToCover lineNumber="143" covered="true" branchesToCover="6" coveredBranches="5"/>
@@ -3164,7 +3164,7 @@
     <lineToCover lineNumber="215" covered="true" branchesToCover="24" coveredBranches="12"/>
     <lineToCover lineNumber="229" covered="true"/>
   </file>
-  <file path="src/mmgr/bitio.c">
+  <file path="src/mmgr/bitio/bitio.c">
     <lineToCover lineNumber="18" covered="true"/>
     <lineToCover lineNumber="20" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="22" covered="true"/>
@@ -3190,7 +3190,7 @@
     <lineToCover lineNumber="55" covered="true"/>
     <lineToCover lineNumber="56" covered="true"/>
   </file>
-  <file path="src/mmgr/bytes.c">
+  <file path="src/mmgr/bytes/bytes.c">
     <lineToCover lineNumber="22" covered="true"/>
     <lineToCover lineNumber="24" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="26" covered="true"/>
@@ -3247,7 +3247,7 @@
     <lineToCover lineNumber="120" covered="true"/>
     <lineToCover lineNumber="121" covered="true"/>
   </file>
-  <file path="src/mmgr/dma.c">
+  <file path="src/mmgr/dma/dma.c">
     <lineToCover lineNumber="18" covered="false"/>
     <lineToCover lineNumber="21" covered="false"/>
     <lineToCover lineNumber="23" covered="false"/>
@@ -3272,7 +3272,7 @@
     <lineToCover lineNumber="66" covered="true"/>
     <lineToCover lineNumber="67" covered="true"/>
   </file>
-  <file path="src/mmgr/endian.c">
+  <file path="src/mmgr/endian/endian.c">
     <lineToCover lineNumber="19" covered="true"/>
     <lineToCover lineNumber="21" covered="true"/>
     <lineToCover lineNumber="22" covered="true"/>
@@ -3320,7 +3320,7 @@
     <lineToCover lineNumber="106" covered="true"/>
     <lineToCover lineNumber="108" covered="true"/>
   </file>
-  <file path="src/mmgr/float_bits.c">
+  <file path="src/mmgr/float_bits/float_bits.c">
     <lineToCover lineNumber="18" covered="true"/>
     <lineToCover lineNumber="20" covered="true"/>
     <lineToCover lineNumber="23" covered="true"/>
@@ -3335,7 +3335,7 @@
     <lineToCover lineNumber="44" covered="true"/>
     <lineToCover lineNumber="45" covered="true"/>
   </file>
-  <file path="src/mmgr/membuild.c">
+  <file path="src/mmgr/membuild/membuild.c">
     <lineToCover lineNumber="25" covered="true"/>
     <lineToCover lineNumber="27" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="29" covered="true"/>
@@ -3663,7 +3663,7 @@
     <lineToCover lineNumber="657" covered="true"/>
     <lineToCover lineNumber="658" covered="true"/>
   </file>
-  <file path="src/mmgr/plaintext.c">
+  <file path="src/mmgr/plaintext/plaintext.c">
     <lineToCover lineNumber="78" covered="true"/>
     <lineToCover lineNumber="80" covered="true"/>
     <lineToCover lineNumber="92" covered="true"/>
@@ -3737,7 +3737,7 @@
     <lineToCover lineNumber="251" covered="true"/>
     <lineToCover lineNumber="256" covered="true"/>
   </file>
-  <file path="src/mmgr/protoframe.c">
+  <file path="src/mmgr/protoframe/protoframe.c">
     <lineToCover lineNumber="25" covered="true"/>
     <lineToCover lineNumber="27" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="29" covered="true"/>
@@ -3808,7 +3808,7 @@
     <lineToCover lineNumber="138" covered="true"/>
     <lineToCover lineNumber="140" covered="true"/>
   </file>
-  <file path="src/mmgr/protomem.c">
+  <file path="src/mmgr/protomem/protomem.c">
     <lineToCover lineNumber="23" covered="true"/>
     <lineToCover lineNumber="25" covered="true" branchesToCover="2" coveredBranches="1"/>
     <lineToCover lineNumber="27" covered="false"/>
@@ -3901,7 +3901,7 @@
     <lineToCover lineNumber="226" covered="true"/>
     <lineToCover lineNumber="227" covered="true"/>
   </file>
-  <file path="src/mmgr/protostr.c">
+  <file path="src/mmgr/protostr/protostr.c">
     <lineToCover lineNumber="27" covered="true"/>
     <lineToCover lineNumber="35" covered="true"/>
     <lineToCover lineNumber="36" covered="true" branchesToCover="4" coveredBranches="4"/>
@@ -4427,7 +4427,7 @@
     <lineToCover lineNumber="1290" covered="true"/>
     <lineToCover lineNumber="1292" covered="true"/>
   </file>
-  <file path="src/mmgr/psram_pool.c">
+  <file path="src/mmgr/psram_pool/psram_pool.c">
     <lineToCover lineNumber="15" covered="true"/>
     <lineToCover lineNumber="17" covered="true" branchesToCover="4" coveredBranches="4"/>
     <lineToCover lineNumber="20" covered="true"/>
@@ -4462,7 +4462,7 @@
     <lineToCover lineNumber="85" covered="true"/>
     <lineToCover lineNumber="86" covered="true"/>
   </file>
-  <file path="src/mmgr/rawmemcpy.c">
+  <file path="src/mmgr/rawmemcpy/rawmemcpy.c">
     <lineToCover lineNumber="18" covered="true"/>
     <lineToCover lineNumber="20" covered="true"/>
     <lineToCover lineNumber="21" covered="true"/>
@@ -4492,7 +4492,7 @@
     <lineToCover lineNumber="81" covered="true"/>
     <lineToCover lineNumber="83" covered="true"/>
   </file>
-  <file path="src/mmgr/rawmemcpy.h">
+  <file path="src/mmgr/rawmemcpy/rawmemcpy.h">
     <lineToCover lineNumber="218" covered="true"/>
     <lineToCover lineNumber="220" covered="true"/>
     <lineToCover lineNumber="224" covered="true"/>
@@ -4650,7 +4650,7 @@
     <lineToCover lineNumber="351" covered="true"/>
     <lineToCover lineNumber="353" covered="true"/>
   </file>
-  <file path="src/mmgr/secure.c">
+  <file path="src/mmgr/secure/secure.c">
     <lineToCover lineNumber="53" covered="true"/>
     <lineToCover lineNumber="55" covered="true"/>
     <lineToCover lineNumber="65" covered="true"/>
@@ -4731,7 +4731,7 @@
     <lineToCover lineNumber="234" covered="true"/>
     <lineToCover lineNumber="237" covered="true"/>
   </file>
-  <file path="src/mmgr/secure.h">
+  <file path="src/mmgr/secure/secure.h">
     <lineToCover lineNumber="129" covered="true"/>
     <lineToCover lineNumber="135" covered="true"/>
     <lineToCover lineNumber="136" covered="true" branchesToCover="4" coveredBranches="3"/>
@@ -4747,7 +4747,7 @@
     <lineToCover lineNumber="151" covered="true"/>
     <lineToCover lineNumber="153" covered="true"/>
   </file>
-  <file path="src/mmgr/span.c">
+  <file path="src/mmgr/span/span.c">
     <lineToCover lineNumber="18" covered="true"/>
     <lineToCover lineNumber="21" covered="true" branchesToCover="4" coveredBranches="4"/>
     <lineToCover lineNumber="22" covered="true" branchesToCover="2" coveredBranches="2"/>
@@ -4791,7 +4791,7 @@
     <lineToCover lineNumber="100" covered="true"/>
     <lineToCover lineNumber="102" covered="true"/>
   </file>
-  <file path="src/mmgr/swar.c">
+  <file path="src/mmgr/swar/swar.c">
     <lineToCover lineNumber="18" covered="true"/>
     <lineToCover lineNumber="20" covered="true"/>
     <lineToCover lineNumber="24" covered="true"/>
@@ -5156,7 +5156,7 @@
     <lineToCover lineNumber="664" covered="false"/>
     <lineToCover lineNumber="668" covered="false"/>
   </file>
-  <file path="src/network_drivers/application/http_range.c">
+  <file path="src/network_drivers/application/http_range/http_range.c">
     <lineToCover lineNumber="15" covered="true"/>
     <lineToCover lineNumber="17" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="19" covered="true"/>
@@ -5995,7 +5995,7 @@
     <lineToCover lineNumber="453" covered="true"/>
     <lineToCover lineNumber="456" covered="true"/>
   </file>
-  <file path="src/network_drivers/application/scp/scp.c">
+  <file path="src/network_drivers/session/scp/scp/scp.c">
     <lineToCover lineNumber="18" covered="true"/>
     <lineToCover lineNumber="20" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="22" covered="true" branchesToCover="2" coveredBranches="2"/>
@@ -6075,7 +6075,7 @@
     <lineToCover lineNumber="158" covered="true"/>
     <lineToCover lineNumber="160" covered="true"/>
   </file>
-  <file path="src/network_drivers/application/sftp/sftp.c">
+  <file path="src/network_drivers/application/sftp/sftp/sftp.c">
     <lineToCover lineNumber="22" covered="true"/>
     <lineToCover lineNumber="24" covered="true"/>
     <lineToCover lineNumber="25" covered="true"/>
@@ -6276,7 +6276,7 @@
     <lineToCover lineNumber="370" covered="true"/>
     <lineToCover lineNumber="371" covered="true"/>
   </file>
-  <file path="src/network_drivers/application/smb/ntlm.c">
+  <file path="src/network_drivers/application/smb/ntlm/ntlm.c">
     <lineToCover lineNumber="17" covered="true"/>
     <lineToCover lineNumber="19" covered="true"/>
     <lineToCover lineNumber="20" covered="true"/>
@@ -6411,7 +6411,7 @@
     <lineToCover lineNumber="234" covered="true"/>
     <lineToCover lineNumber="235" covered="true"/>
   </file>
-  <file path="src/network_drivers/application/smb/ntlmssp.c">
+  <file path="src/network_drivers/application/smb/ntlmssp/ntlmssp.c">
     <lineToCover lineNumber="19" covered="true"/>
     <lineToCover lineNumber="21" covered="true"/>
     <lineToCover lineNumber="22" covered="true"/>
@@ -6501,7 +6501,7 @@
     <lineToCover lineNumber="158" covered="true"/>
     <lineToCover lineNumber="159" covered="true"/>
   </file>
-  <file path="src/network_drivers/application/smb/smb2.c">
+  <file path="src/network_drivers/application/smb/smb2/smb2.c">
     <lineToCover lineNumber="26" covered="true"/>
     <lineToCover lineNumber="28" covered="true" branchesToCover="8" coveredBranches="8"/>
     <lineToCover lineNumber="30" covered="true"/>
@@ -7058,7 +7058,7 @@
     <lineToCover lineNumber="1019" covered="false"/>
     <lineToCover lineNumber="1021" covered="true" branchesToCover="2" coveredBranches="2"/>
   </file>
-  <file path="src/network_drivers/application/smb/smb2.h">
+  <file path="src/network_drivers/application/smb/smb2/smb2.h">
     <lineToCover lineNumber="165" covered="true"/>
     <lineToCover lineNumber="167" covered="true" branchesToCover="3" coveredBranches="3"/>
     <lineToCover lineNumber="169" covered="true"/>
@@ -7076,7 +7076,7 @@
     <lineToCover lineNumber="193" covered="true"/>
     <lineToCover lineNumber="194" covered="true"/>
   </file>
-  <file path="src/network_drivers/application/smb/smb_client.c">
+  <file path="src/network_drivers/application/smb/smb_client/smb_client.c">
     <lineToCover lineNumber="40" covered="false"/>
     <lineToCover lineNumber="45" covered="false" branchesToCover="2" coveredBranches="0"/>
     <lineToCover lineNumber="47" covered="false"/>
@@ -7455,7 +7455,7 @@
     <lineToCover lineNumber="826" covered="false"/>
     <lineToCover lineNumber="827" covered="false"/>
   </file>
-  <file path="src/network_drivers/application/smb/spnego.c">
+  <file path="src/network_drivers/application/smb/spnego/spnego.c">
     <lineToCover lineNumber="20" covered="true"/>
     <lineToCover lineNumber="22" covered="true" branchesToCover="6" coveredBranches="5"/>
     <lineToCover lineNumber="24" covered="true"/>
@@ -7987,7 +7987,7 @@
     <lineToCover lineNumber="760" covered="true"/>
     <lineToCover lineNumber="761" covered="true"/>
   </file>
-  <file path="src/network_drivers/datalink/roaming.c">
+  <file path="src/network_drivers/datalink/roaming/roaming.c">
     <lineToCover lineNumber="45" covered="true"/>
     <lineToCover lineNumber="47" covered="true"/>
     <lineToCover lineNumber="51" covered="true"/>
@@ -8091,7 +8091,7 @@
     <lineToCover lineNumber="230" covered="true"/>
     <lineToCover lineNumber="231" covered="true"/>
   </file>
-  <file path="src/network_drivers/network/dns/dns_resolver.c">
+  <file path="src/network_drivers/network/dns/dns_resolver/dns_resolver.c">
     <lineToCover lineNumber="92" covered="true"/>
     <lineToCover lineNumber="94" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="96" covered="true"/>
@@ -8328,7 +8328,7 @@
     <lineToCover lineNumber="630" covered="true"/>
     <lineToCover lineNumber="631" covered="true"/>
   </file>
-  <file path="src/network_drivers/network/dns/dns_wire.c">
+  <file path="src/network_drivers/network/dns/dns_wire/dns_wire.c">
     <lineToCover lineNumber="39" covered="true"/>
     <lineToCover lineNumber="41" covered="true"/>
     <lineToCover lineNumber="42" covered="true"/>
@@ -8435,7 +8435,7 @@
     <lineToCover lineNumber="19" covered="false"/>
     <lineToCover lineNumber="22" covered="false"/>
   </file>
-  <file path="src/network_drivers/physical/physical.c">
+  <file path="src/network_drivers/physical/physical/physical.c">
     <lineToCover lineNumber="27" covered="true"/>
     <lineToCover lineNumber="29" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="31" covered="true"/>
@@ -8596,7 +8596,7 @@
     <lineToCover lineNumber="391" covered="true"/>
     <lineToCover lineNumber="393" covered="true"/>
   </file>
-  <file path="src/network_drivers/physical/radio_power.c">
+  <file path="src/network_drivers/physical/radio_power/radio_power.c">
     <lineToCover lineNumber="47" covered="true"/>
     <lineToCover lineNumber="49" covered="true" branchesToCover="3" coveredBranches="3"/>
     <lineToCover lineNumber="51" covered="true"/>
@@ -9023,7 +9023,7 @@
     <lineToCover lineNumber="389" covered="true"/>
     <lineToCover lineNumber="390" covered="true"/>
   </file>
-  <file path="src/network_drivers/presentation/codec/deflate/deflate.c">
+  <file path="src/network_drivers/presentation/codec/deflate/deflate/deflate.c">
     <lineToCover lineNumber="51" covered="true"/>
     <lineToCover lineNumber="53" covered="true"/>
     <lineToCover lineNumber="56" covered="true"/>
@@ -9092,11 +9092,11 @@
     <lineToCover lineNumber="178" covered="true"/>
     <lineToCover lineNumber="179" covered="true"/>
   </file>
-  <file path="src/network_drivers/presentation/codec/deflate/rfc1951.c">
+  <file path="src/network_drivers/presentation/codec/deflate/rfc1951/rfc1951.c">
     <lineToCover lineNumber="27" covered="true"/>
     <lineToCover lineNumber="29" covered="true"/>
   </file>
-  <file path="src/network_drivers/presentation/codec/deflate/rfc1951.h">
+  <file path="src/network_drivers/presentation/codec/deflate/rfc1951/rfc1951.h">
     <lineToCover lineNumber="50" covered="true"/>
     <lineToCover lineNumber="51" covered="true" branchesToCover="62" coveredBranches="62"/>
     <lineToCover lineNumber="53" covered="true"/>
@@ -10690,7 +10690,7 @@
     <lineToCover lineNumber="1046" covered="false" branchesToCover="2" coveredBranches="0"/>
     <lineToCover lineNumber="1048" covered="false"/>
   </file>
-  <file path="src/network_drivers/presentation/http/http2/h2_conn.c">
+  <file path="src/network_drivers/presentation/http/http2/h2_conn/h2_conn.c">
     <lineToCover lineNumber="17" covered="false"/>
     <lineToCover lineNumber="19" covered="false"/>
     <lineToCover lineNumber="22" covered="false"/>
@@ -11085,7 +11085,7 @@
     <lineToCover lineNumber="784" covered="false"/>
     <lineToCover lineNumber="785" covered="false"/>
   </file>
-  <file path="src/network_drivers/presentation/http/http2/h2_frame.c">
+  <file path="src/network_drivers/presentation/http/http2/h2_frame/h2_frame.c">
     <lineToCover lineNumber="14" covered="true"/>
     <lineToCover lineNumber="16" covered="true"/>
     <lineToCover lineNumber="17" covered="true"/>
@@ -11212,7 +11212,7 @@
     <lineToCover lineNumber="209" covered="true"/>
     <lineToCover lineNumber="211" covered="true"/>
   </file>
-  <file path="src/network_drivers/presentation/http/http2/hpack.c">
+  <file path="src/network_drivers/presentation/http/http2/hpack/hpack.c">
     <lineToCover lineNumber="91" covered="false"/>
     <lineToCover lineNumber="93" covered="false" branchesToCover="2" coveredBranches="0"/>
     <lineToCover lineNumber="95" covered="false"/>
@@ -11373,7 +11373,7 @@
     <lineToCover lineNumber="393" covered="false"/>
     <lineToCover lineNumber="395" covered="false"/>
   </file>
-  <file path="src/network_drivers/presentation/http/http3/h3_conn.c">
+  <file path="src/network_drivers/presentation/http/http3/h3_conn/h3_conn.c">
     <lineToCover lineNumber="41" covered="true"/>
     <lineToCover lineNumber="43" covered="true"/>
     <lineToCover lineNumber="44" covered="true" branchesToCover="2" coveredBranches="2"/>
@@ -11610,7 +11610,7 @@
     <lineToCover lineNumber="488" covered="true"/>
     <lineToCover lineNumber="489" covered="true"/>
   </file>
-  <file path="src/network_drivers/presentation/http/http3/h3_frame.c">
+  <file path="src/network_drivers/presentation/http/http3/h3_frame/h3_frame.c">
     <lineToCover lineNumber="16" covered="true"/>
     <lineToCover lineNumber="18" covered="true"/>
     <lineToCover lineNumber="19" covered="true"/>
@@ -11708,7 +11708,7 @@
     <lineToCover lineNumber="175" covered="true"/>
     <lineToCover lineNumber="177" covered="true"/>
   </file>
-  <file path="src/network_drivers/presentation/http/http3/qpack.c">
+  <file path="src/network_drivers/presentation/http/http3/qpack/qpack.c">
     <lineToCover lineNumber="123" covered="true"/>
     <lineToCover lineNumber="125" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="127" covered="true"/>
@@ -11823,7 +11823,7 @@
     <lineToCover lineNumber="327" covered="true"/>
     <lineToCover lineNumber="330" covered="true"/>
   </file>
-  <file path="src/network_drivers/presentation/http/http3/quic_conn.c">
+  <file path="src/network_drivers/presentation/http/http3/quic_conn/quic_conn.c">
     <lineToCover lineNumber="38" covered="false"/>
     <lineToCover lineNumber="40" covered="false" branchesToCover="2" coveredBranches="0"/>
     <lineToCover lineNumber="42" covered="false"/>
@@ -12303,7 +12303,7 @@
     <lineToCover lineNumber="995" covered="false"/>
     <lineToCover lineNumber="997" covered="false" branchesToCover="4" coveredBranches="0"/>
   </file>
-  <file path="src/network_drivers/presentation/http/http3/quic_crypto.c">
+  <file path="src/network_drivers/presentation/http/http3/quic_crypto/quic_crypto.c">
     <lineToCover lineNumber="29" covered="true"/>
     <lineToCover lineNumber="31" covered="true"/>
     <lineToCover lineNumber="32" covered="true" branchesToCover="2" coveredBranches="2"/>
@@ -12380,7 +12380,7 @@
     <lineToCover lineNumber="182" covered="true"/>
     <lineToCover lineNumber="183" covered="true"/>
   </file>
-  <file path="src/network_drivers/presentation/http/http3/quic_frame.c">
+  <file path="src/network_drivers/presentation/http/http3/quic_frame/quic_frame.c">
     <lineToCover lineNumber="17" covered="true"/>
     <lineToCover lineNumber="19" covered="true"/>
     <lineToCover lineNumber="20" covered="true" branchesToCover="2" coveredBranches="2"/>
@@ -12563,7 +12563,7 @@
     <lineToCover lineNumber="367" covered="true"/>
     <lineToCover lineNumber="369" covered="true"/>
   </file>
-  <file path="src/network_drivers/presentation/http/http3/quic_packet.c">
+  <file path="src/network_drivers/presentation/http/http3/quic_packet/quic_packet.c">
     <lineToCover lineNumber="14" covered="true"/>
     <lineToCover lineNumber="16" covered="true"/>
     <lineToCover lineNumber="18" covered="true"/>
@@ -12668,7 +12668,7 @@
     <lineToCover lineNumber="184" covered="true"/>
     <lineToCover lineNumber="186" covered="true"/>
   </file>
-  <file path="src/network_drivers/presentation/http/http3/quic_tls.c">
+  <file path="src/network_drivers/presentation/http/http3/quic_tls/quic_tls.c">
     <lineToCover lineNumber="48" covered="true"/>
     <lineToCover lineNumber="50" covered="true"/>
     <lineToCover lineNumber="51" covered="true"/>
@@ -12861,7 +12861,7 @@
     <lineToCover lineNumber="413" covered="true"/>
     <lineToCover lineNumber="415" covered="true" branchesToCover="2" coveredBranches="1"/>
   </file>
-  <file path="src/network_drivers/presentation/http/http3/quic_tp.c">
+  <file path="src/network_drivers/presentation/http/http3/quic_tp/quic_tp.c">
     <lineToCover lineNumber="16" covered="true"/>
     <lineToCover lineNumber="18" covered="true"/>
     <lineToCover lineNumber="19" covered="true"/>
@@ -13004,7 +13004,7 @@
     <lineToCover lineNumber="254" covered="true"/>
     <lineToCover lineNumber="257" covered="true"/>
   </file>
-  <file path="src/network_drivers/presentation/http/http3/quic_varint.c">
+  <file path="src/network_drivers/presentation/http/http3/quic_varint/quic_varint.c">
     <lineToCover lineNumber="13" covered="true"/>
     <lineToCover lineNumber="15" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="17" covered="true"/>
@@ -13036,7 +13036,7 @@
     <lineToCover lineNumber="68" covered="true"/>
     <lineToCover lineNumber="69" covered="true"/>
   </file>
-  <file path="src/network_drivers/presentation/http/http3/tls13_msg.c">
+  <file path="src/network_drivers/presentation/http/http3/tls13_msg/tls13_msg.c">
     <lineToCover lineNumber="42" covered="true"/>
     <lineToCover lineNumber="46" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="48" covered="true"/>
@@ -14630,7 +14630,7 @@
     <lineToCover lineNumber="408" covered="false"/>
     <lineToCover lineNumber="410" covered="false"/>
   </file>
-  <file path="src/network_drivers/presentation/security/dtls/dtls_conn.c">
+  <file path="src/network_drivers/presentation/security/dtls/dtls_conn/dtls_conn.c">
     <lineToCover lineNumber="39" covered="false"/>
     <lineToCover lineNumber="41" covered="false"/>
     <lineToCover lineNumber="47" covered="false"/>
@@ -15020,7 +15020,7 @@
     <lineToCover lineNumber="837" covered="false"/>
     <lineToCover lineNumber="838" covered="false" branchesToCover="4" coveredBranches="0"/>
   </file>
-  <file path="src/network_drivers/presentation/security/dtls/dtls_handshake.c">
+  <file path="src/network_drivers/presentation/security/dtls/dtls_handshake/dtls_handshake.c">
     <lineToCover lineNumber="17" covered="true"/>
     <lineToCover lineNumber="19" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="21" covered="true"/>
@@ -15213,7 +15213,7 @@
     <lineToCover lineNumber="364" covered="true"/>
     <lineToCover lineNumber="365" covered="true"/>
   </file>
-  <file path="src/network_drivers/presentation/security/dtls/dtls_record.c">
+  <file path="src/network_drivers/presentation/security/dtls/dtls_record/dtls_record.c">
     <lineToCover lineNumber="28" covered="true"/>
     <lineToCover lineNumber="30" covered="true"/>
     <lineToCover lineNumber="31" covered="true" branchesToCover="2" coveredBranches="2"/>
@@ -15407,7 +15407,7 @@
     <lineToCover lineNumber="385" covered="true" branchesToCover="2" coveredBranches="1"/>
     <lineToCover lineNumber="387" covered="true"/>
   </file>
-  <file path="src/network_drivers/presentation/ssh/app/server.c">
+  <file path="src/network_drivers/presentation/ssh/app/server/server.c">
     <lineToCover lineNumber="29" covered="false"/>
     <lineToCover lineNumber="31" covered="false"/>
     <lineToCover lineNumber="32" covered="false"/>
@@ -17426,7 +17426,7 @@
     <lineToCover lineNumber="23" covered="false"/>
     <lineToCover lineNumber="25" covered="false"/>
   </file>
-  <file path="src/network_drivers/presentation/ssh/transport/extension.c">
+  <file path="src/network_drivers/presentation/ssh/transport/extension/extension.c">
     <lineToCover lineNumber="17" covered="false"/>
     <lineToCover lineNumber="19" covered="false" branchesToCover="2" coveredBranches="0"/>
     <lineToCover lineNumber="22" covered="false"/>
@@ -17439,7 +17439,7 @@
     <lineToCover lineNumber="40" covered="false"/>
     <lineToCover lineNumber="41" covered="false"/>
   </file>
-  <file path="src/network_drivers/presentation/ssh/transport/phase_machine.c">
+  <file path="src/network_drivers/presentation/ssh/transport/phase_machine/phase_machine.c">
     <lineToCover lineNumber="12" covered="false"/>
     <lineToCover lineNumber="14" covered="false" branchesToCover="2" coveredBranches="0"/>
     <lineToCover lineNumber="17" covered="false"/>
@@ -17507,7 +17507,7 @@
     <lineToCover lineNumber="175" covered="false"/>
     <lineToCover lineNumber="177" covered="false"/>
   </file>
-  <file path="src/network_drivers/presentation/ssh/transport/ssh_kexhash.h">
+  <file path="src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.h">
     <lineToCover lineNumber="38" covered="false"/>
     <lineToCover lineNumber="40" covered="false"/>
     <lineToCover lineNumber="41" covered="false" branchesToCover="2" coveredBranches="0"/>
@@ -17528,7 +17528,7 @@
     <lineToCover lineNumber="76" covered="false"/>
     <lineToCover lineNumber="78" covered="false" branchesToCover="2" coveredBranches="0"/>
   </file>
-  <file path="src/network_drivers/presentation/ssh/transport/ssh_rsa.c">
+  <file path="src/network_drivers/presentation/ssh/transport/ssh_rsa/ssh_rsa.c">
     <lineToCover lineNumber="182" covered="false"/>
     <lineToCover lineNumber="184" covered="false"/>
     <lineToCover lineNumber="185" covered="false" branchesToCover="2" coveredBranches="0"/>
@@ -17652,7 +17652,7 @@
     <lineToCover lineNumber="409" covered="false"/>
     <lineToCover lineNumber="410" covered="false"/>
   </file>
-  <file path="src/network_drivers/presentation/ssh/transport/transport.c">
+  <file path="src/network_drivers/presentation/ssh/transport/transport/transport.c">
     <lineToCover lineNumber="168" covered="false"/>
     <lineToCover lineNumber="170" covered="false"/>
     <lineToCover lineNumber="171" covered="false"/>
@@ -19429,7 +19429,7 @@
     <lineToCover lineNumber="3941" covered="false"/>
     <lineToCover lineNumber="3942" covered="false"/>
   </file>
-  <file path="src/network_drivers/presentation/ssh/transport/transport.h">
+  <file path="src/network_drivers/presentation/ssh/transport/transport/transport.h">
     <lineToCover lineNumber="531" covered="false"/>
     <lineToCover lineNumber="533" covered="false" branchesToCover="4" coveredBranches="0"/>
     <lineToCover lineNumber="536" covered="false"/>
@@ -21664,7 +21664,7 @@
     <lineToCover lineNumber="242" covered="false"/>
     <lineToCover lineNumber="247" covered="false" branchesToCover="4" coveredBranches="0"/>
   </file>
-  <file path="src/server/core/exc_decoder.c">
+  <file path="src/server/core/exc_decoder/exc_decoder.c">
     <lineToCover lineNumber="15" covered="true"/>
     <lineToCover lineNumber="17" covered="true" branchesToCover="4" coveredBranches="4"/>
     <lineToCover lineNumber="19" covered="true"/>
@@ -21846,7 +21846,7 @@
     <lineToCover lineNumber="342" covered="true"/>
     <lineToCover lineNumber="343" covered="true"/>
   </file>
-  <file path="src/server/core/failsafe.c">
+  <file path="src/server/core/failsafe/failsafe.c">
     <lineToCover lineNumber="41" covered="true"/>
     <lineToCover lineNumber="44" covered="true"/>
     <lineToCover lineNumber="47" covered="true"/>
@@ -21945,7 +21945,7 @@
     <lineToCover lineNumber="200" covered="true" branchesToCover="2" coveredBranches="1"/>
     <lineToCover lineNumber="201" covered="true"/>
   </file>
-  <file path="src/server/core/failsafe.h">
+  <file path="src/server/core/failsafe/failsafe.h">
     <lineToCover lineNumber="52" covered="true"/>
     <lineToCover lineNumber="54" covered="true"/>
   </file>
@@ -21992,7 +21992,7 @@
     <lineToCover lineNumber="131" covered="true"/>
     <lineToCover lineNumber="133" covered="true"/>
   </file>
-  <file path="src/server/core/logbuf.c">
+  <file path="src/server/core/logbuf/logbuf.c">
     <lineToCover lineNumber="48" covered="true"/>
     <lineToCover lineNumber="50" covered="true" branchesToCover="4" coveredBranches="4"/>
     <lineToCover lineNumber="52" covered="true"/>
@@ -22055,7 +22055,7 @@
     <lineToCover lineNumber="148" covered="true"/>
     <lineToCover lineNumber="149" covered="true"/>
   </file>
-  <file path="src/server/core/power_mgmt.c">
+  <file path="src/server/core/power_mgmt/power_mgmt.c">
     <lineToCover lineNumber="45" covered="true"/>
     <lineToCover lineNumber="47" covered="true"/>
     <lineToCover lineNumber="48" covered="true" branchesToCover="2" coveredBranches="2"/>
@@ -22118,7 +22118,7 @@
     <lineToCover lineNumber="147" covered="true"/>
     <lineToCover lineNumber="149" covered="true"/>
   </file>
-  <file path="src/server/core/preempt_queue.c">
+  <file path="src/server/core/preempt_queue/preempt_queue.c">
     <lineToCover lineNumber="65" covered="true"/>
     <lineToCover lineNumber="67" covered="true" branchesToCover="4" coveredBranches="2"/>
     <lineToCover lineNumber="69" covered="true"/>
@@ -22228,7 +22228,7 @@
     <lineToCover lineNumber="263" covered="true"/>
     <lineToCover lineNumber="264" covered="true"/>
   </file>
-  <file path="src/server/core/preempt_queue.h">
+  <file path="src/server/core/preempt_queue/preempt_queue.h">
     <lineToCover lineNumber="149" covered="true"/>
     <lineToCover lineNumber="150" covered="true"/>
     <lineToCover lineNumber="151" covered="true"/>
@@ -22304,7 +22304,7 @@
     <lineToCover lineNumber="266" covered="true"/>
     <lineToCover lineNumber="268" covered="true"/>
   </file>
-  <file path="src/server/core/sleep_sched.c">
+  <file path="src/server/core/sleep_sched/sleep_sched.c">
     <lineToCover lineNumber="25" covered="true"/>
     <lineToCover lineNumber="27" covered="true"/>
     <lineToCover lineNumber="29" covered="true"/>
@@ -22330,7 +22330,7 @@
     <lineToCover lineNumber="67" covered="false"/>
     <lineToCover lineNumber="69" covered="true"/>
   </file>
-  <file path="src/server/core/worker.c">
+  <file path="src/server/core/worker/worker.c">
     <lineToCover lineNumber="75" covered="false"/>
     <lineToCover lineNumber="77" covered="false"/>
     <lineToCover lineNumber="78" covered="false"/>
@@ -23152,7 +23152,7 @@
     <lineToCover lineNumber="42" covered="true"/>
     <lineToCover lineNumber="44" covered="true"/>
   </file>
-  <file path="src/server/net/relay/relay.c">
+  <file path="src/server/net/relay/relay/relay.c">
     <lineToCover lineNumber="16" covered="true"/>
     <lineToCover lineNumber="19" covered="true"/>
     <lineToCover lineNumber="20" covered="true" branchesToCover="2" coveredBranches="2"/>
@@ -24182,7 +24182,7 @@
     <lineToCover lineNumber="126" covered="true"/>
     <lineToCover lineNumber="128" covered="true"/>
   </file>
-  <file path="src/server/peripherals/pmbus.c">
+  <file path="src/server/peripherals/pmbus/pmbus.c">
     <lineToCover lineNumber="27" covered="true"/>
     <lineToCover lineNumber="29" covered="true"/>
     <lineToCover lineNumber="32" covered="true"/>
@@ -24715,7 +24715,7 @@
     <lineToCover lineNumber="103" covered="false"/>
     <lineToCover lineNumber="105" covered="true"/>
   </file>
-  <file path="src/server/peripherals/smbus.c">
+  <file path="src/server/peripherals/smbus/smbus.c">
     <lineToCover lineNumber="37" covered="true"/>
     <lineToCover lineNumber="39" covered="true"/>
     <lineToCover lineNumber="43" covered="true"/>
@@ -25516,7 +25516,7 @@
     <lineToCover lineNumber="77" covered="true"/>
     <lineToCover lineNumber="78" covered="true"/>
   </file>
-  <file path="src/server/signaling/bus_capture.c">
+  <file path="src/server/signaling/bus_capture/bus_capture.c">
     <lineToCover lineNumber="17" covered="true"/>
     <lineToCover lineNumber="19" covered="true" branchesToCover="6" coveredBranches="6"/>
     <lineToCover lineNumber="21" covered="true"/>
@@ -25544,7 +25544,7 @@
     <lineToCover lineNumber="121" covered="true"/>
     <lineToCover lineNumber="124" covered="true"/>
   </file>
-  <file path="src/server/signaling/device_id.c">
+  <file path="src/server/signaling/device_id/device_id.c">
     <lineToCover lineNumber="34" covered="true"/>
     <lineToCover lineNumber="36" covered="true"/>
     <lineToCover lineNumber="37" covered="true"/>
@@ -25573,7 +25573,7 @@
     <lineToCover lineNumber="81" covered="true"/>
     <lineToCover lineNumber="82" covered="true"/>
   </file>
-  <file path="src/server/signaling/gpio_map.c">
+  <file path="src/server/signaling/gpio_map/gpio_map.c">
     <lineToCover lineNumber="36" covered="true"/>
     <lineToCover lineNumber="38" covered="true" branchesToCover="5" coveredBranches="5"/>
     <lineToCover lineNumber="40" covered="true"/>
@@ -25689,7 +25689,7 @@
     <lineToCover lineNumber="286" covered="false"/>
     <lineToCover lineNumber="289" covered="false"/>
   </file>
-  <file path="src/server/signaling/hw_health.c">
+  <file path="src/server/signaling/hw_health/hw_health.c">
     <lineToCover lineNumber="26" covered="true"/>
     <lineToCover lineNumber="28" covered="true"/>
     <lineToCover lineNumber="29" covered="true" branchesToCover="2" coveredBranches="2"/>
@@ -25795,7 +25795,7 @@
     <lineToCover lineNumber="198" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="200" covered="true"/>
   </file>
-  <file path="src/server/signaling/link_manager.c">
+  <file path="src/server/signaling/link_manager/link_manager.c">
     <lineToCover lineNumber="27" covered="true"/>
     <lineToCover lineNumber="29" covered="true" branchesToCover="4" coveredBranches="4"/>
     <lineToCover lineNumber="31" covered="true"/>
@@ -25835,7 +25835,7 @@
     <lineToCover lineNumber="87" covered="true"/>
     <lineToCover lineNumber="88" covered="true"/>
   </file>
-  <file path="src/server/signaling/signaling.c">
+  <file path="src/server/signaling/signaling/signaling.c">
     <lineToCover lineNumber="40" covered="true"/>
     <lineToCover lineNumber="42" covered="true"/>
     <lineToCover lineNumber="44" covered="true"/>
@@ -25863,7 +25863,7 @@
     <lineToCover lineNumber="91" covered="true"/>
     <lineToCover lineNumber="92" covered="true"/>
   </file>
-  <file path="src/server/signaling/trace_capture.c">
+  <file path="src/server/signaling/trace_capture/trace_capture.c">
     <lineToCover lineNumber="62" covered="true"/>
     <lineToCover lineNumber="64" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="66" covered="true"/>
@@ -26046,7 +26046,7 @@
     <lineToCover lineNumber="95" covered="true"/>
     <lineToCover lineNumber="97" covered="true"/>
   </file>
-  <file path="src/server/storage/filesystem.c">
+  <file path="src/server/storage/filesystem/filesystem.c">
     <lineToCover lineNumber="63" covered="false"/>
     <lineToCover lineNumber="65" covered="false"/>
     <lineToCover lineNumber="66" covered="false"/>
@@ -26461,7 +26461,7 @@
     <lineToCover lineNumber="769" covered="false"/>
     <lineToCover lineNumber="771" covered="false"/>
   </file>
-  <file path="src/server/storage/filesystem.h">
+  <file path="src/server/storage/filesystem/filesystem.h">
     <lineToCover lineNumber="103" covered="false" branchesToCover="2" coveredBranches="0"/>
     <lineToCover lineNumber="105" covered="false"/>
     <lineToCover lineNumber="107" covered="false"/>
@@ -26587,7 +26587,7 @@
     <lineToCover lineNumber="234" covered="false"/>
     <lineToCover lineNumber="236" covered="false"/>
   </file>
-  <file path="src/server/storage/mnt.c">
+  <file path="src/server/storage/mnt/mnt.c">
     <lineToCover lineNumber="60" covered="false"/>
     <lineToCover lineNumber="62" covered="false"/>
     <lineToCover lineNumber="63" covered="false"/>
@@ -26869,7 +26869,7 @@
     <lineToCover lineNumber="162" covered="true"/>
     <lineToCover lineNumber="166" covered="true"/>
   </file>
-  <file path="src/server/storage/wearlevel.c">
+  <file path="src/server/storage/wearlevel/wearlevel.c">
     <lineToCover lineNumber="25" covered="true"/>
     <lineToCover lineNumber="27" covered="true"/>
     <lineToCover lineNumber="28" covered="true"/>
@@ -26905,7 +26905,7 @@
     <lineToCover lineNumber="83" covered="true"/>
     <lineToCover lineNumber="86" covered="true"/>
   </file>
-  <file path="src/server/update/ota_rollback.c">
+  <file path="src/server/update/ota_rollback/ota_rollback.c">
     <lineToCover lineNumber="28" covered="true"/>
     <lineToCover lineNumber="30" covered="true"/>
     <lineToCover lineNumber="32" covered="true" branchesToCover="2" coveredBranches="2"/>
@@ -27050,7 +27050,7 @@
     <lineToCover lineNumber="283" covered="true"/>
     <lineToCover lineNumber="285" covered="true"/>
   </file>
-  <file path="src/server/web/edge_cache/edge_cache.c">
+  <file path="src/server/web/edge_cache/edge_cache/edge_cache.c">
     <lineToCover lineNumber="16" covered="true"/>
     <lineToCover lineNumber="18" covered="true" branchesToCover="4" coveredBranches="4"/>
     <lineToCover lineNumber="22" covered="true"/>
@@ -27516,7 +27516,7 @@
     <lineToCover lineNumber="915" covered="true"/>
     <lineToCover lineNumber="916" covered="true"/>
   </file>
-  <file path="src/server/web/edge_cache/edge_cache_sd.c">
+  <file path="src/server/web/edge_cache/edge_cache_sd/edge_cache_sd.c">
     <lineToCover lineNumber="16" covered="true"/>
     <lineToCover lineNumber="18" covered="true"/>
     <lineToCover lineNumber="19" covered="true"/>
@@ -27663,7 +27663,7 @@
     <lineToCover lineNumber="293" covered="true"/>
     <lineToCover lineNumber="298" covered="true"/>
   </file>
-  <file path="src/server/web/edge_cache/edge_fetch.c">
+  <file path="src/server/web/edge_cache/edge_fetch/edge_fetch.c">
     <lineToCover lineNumber="19" covered="true"/>
     <lineToCover lineNumber="21" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="23" covered="true" branchesToCover="8" coveredBranches="8"/>
@@ -27801,7 +27801,7 @@
     <lineToCover lineNumber="268" covered="true"/>
     <lineToCover lineNumber="270" covered="true"/>
   </file>
-  <file path="src/server/web/edge_cache/edge_mesh.c">
+  <file path="src/server/web/edge_cache/edge_mesh/edge_mesh.c">
     <lineToCover lineNumber="14" covered="true"/>
     <lineToCover lineNumber="16" covered="true"/>
     <lineToCover lineNumber="17" covered="true"/>
@@ -32023,7 +32023,7 @@
     <lineToCover lineNumber="106" covered="true"/>
     <lineToCover lineNumber="107" covered="true"/>
   </file>
-  <file path="src/services/fieldbus/modbus/modbus.c">
+  <file path="src/services/fieldbus/modbus/modbus/modbus.c">
     <lineToCover lineNumber="36" covered="true"/>
     <lineToCover lineNumber="38" covered="true"/>
     <lineToCover lineNumber="40" covered="true"/>
@@ -32281,7 +32281,7 @@
     <lineToCover lineNumber="597" covered="false"/>
     <lineToCover lineNumber="599" covered="false"/>
   </file>
-  <file path="src/services/fieldbus/modbus/modbus_master.c">
+  <file path="src/services/fieldbus/modbus/modbus_master/modbus_master.c">
     <lineToCover lineNumber="13" covered="true"/>
     <lineToCover lineNumber="16" covered="true" branchesToCover="4" coveredBranches="4"/>
     <lineToCover lineNumber="18" covered="true"/>
@@ -32558,7 +32558,7 @@
     <lineToCover lineNumber="481" covered="true"/>
     <lineToCover lineNumber="483" covered="true"/>
   </file>
-  <file path="src/services/fieldbus/opcua/opcua.c">
+  <file path="src/services/opcua/opcua.c">
     <lineToCover lineNumber="32" covered="true"/>
     <lineToCover lineNumber="34" covered="true" branchesToCover="4" coveredBranches="4"/>
     <lineToCover lineNumber="36" covered="true"/>
@@ -33270,7 +33270,7 @@
     <lineToCover lineNumber="1465" covered="false"/>
     <lineToCover lineNumber="1467" covered="false"/>
   </file>
-  <file path="src/services/fieldbus/opcua_client/opcua_client.c">
+  <file path="src/services/opcua/opcua_client/opcua_client.c">
     <lineToCover lineNumber="16" covered="true"/>
     <lineToCover lineNumber="18" covered="true"/>
     <lineToCover lineNumber="19" covered="true"/>
@@ -34368,7 +34368,7 @@
     <lineToCover lineNumber="66" covered="true"/>
     <lineToCover lineNumber="67" covered="true"/>
   </file>
-  <file path="src/services/file_transfer/ftp/ftp.c">
+  <file path="src/services/file_transfer/ftp/ftp/ftp.c">
     <lineToCover lineNumber="17" covered="true"/>
     <lineToCover lineNumber="22" covered="true" branchesToCover="6" coveredBranches="3"/>
     <lineToCover lineNumber="24" covered="false"/>
@@ -34526,7 +34526,7 @@
     <lineToCover lineNumber="310" covered="true"/>
     <lineToCover lineNumber="311" covered="true"/>
   </file>
-  <file path="src/services/file_transfer/ftp/ftp.h">
+  <file path="src/services/file_transfer/ftp/ftp/ftp.h">
     <lineToCover lineNumber="92" covered="true"/>
     <lineToCover lineNumber="94" covered="true" branchesToCover="4" coveredBranches="4"/>
     <lineToCover lineNumber="98" covered="true"/>
@@ -35542,7 +35542,7 @@
     <lineToCover lineNumber="155" covered="true"/>
     <lineToCover lineNumber="156" covered="true" branchesToCover="6" coveredBranches="6"/>
   </file>
-  <file path="src/services/iot/coap/coap.c">
+  <file path="src/services/iot/coap/coap/coap.c">
     <lineToCover lineNumber="140" covered="false"/>
     <lineToCover lineNumber="142" covered="false" branchesToCover="4" coveredBranches="0"/>
     <lineToCover lineNumber="144" covered="false"/>
@@ -36125,7 +36125,7 @@
     <lineToCover lineNumber="1234" covered="false"/>
     <lineToCover lineNumber="1235" covered="false"/>
   </file>
-  <file path="src/services/iot/coap/coaps.c">
+  <file path="src/services/iot/coap/coaps/coaps.c">
     <lineToCover lineNumber="39" covered="false"/>
     <lineToCover lineNumber="41" covered="false"/>
     <lineToCover lineNumber="42" covered="false"/>
@@ -36914,7 +36914,7 @@
     <lineToCover lineNumber="306" covered="true"/>
     <lineToCover lineNumber="307" covered="true"/>
   </file>
-  <file path="src/services/iot/mqtt/mqtt.c">
+  <file path="src/services/iot/mqtt/mqtt/mqtt.c">
     <lineToCover lineNumber="192" covered="true"/>
     <lineToCover lineNumber="194" covered="true"/>
     <lineToCover lineNumber="195" covered="true"/>
@@ -37225,7 +37225,7 @@
     <lineToCover lineNumber="1470" covered="false"/>
     <lineToCover lineNumber="1471" covered="false"/>
   </file>
-  <file path="src/services/iot/mqtt/mqtt_sn.c">
+  <file path="src/services/iot/mqtt/mqtt_sn/mqtt_sn.c">
     <lineToCover lineNumber="53" covered="true"/>
     <lineToCover lineNumber="55" covered="true"/>
     <lineToCover lineNumber="56" covered="true"/>
@@ -39838,7 +39838,7 @@
     <lineToCover lineNumber="135" covered="true"/>
     <lineToCover lineNumber="138" covered="true"/>
   </file>
-  <file path="src/services/machine_tool/dnc/dnc.c">
+  <file path="src/services/machine_tool/dnc/dnc/dnc.c">
     <lineToCover lineNumber="78" covered="true"/>
     <lineToCover lineNumber="80" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="82" covered="true" branchesToCover="2" coveredBranches="2"/>
@@ -39977,11 +39977,11 @@
     <lineToCover lineNumber="343" covered="true"/>
     <lineToCover lineNumber="344" covered="true"/>
   </file>
-  <file path="src/services/machine_tool/dnc/dnc.h">
+  <file path="src/services/machine_tool/dnc/dnc/dnc.h">
     <lineToCover lineNumber="109" covered="true"/>
     <lineToCover lineNumber="111" covered="true"/>
   </file>
-  <file path="src/services/machine_tool/dnc/dnc_stream.c">
+  <file path="src/services/machine_tool/dnc/dnc_stream/dnc_stream.c">
     <lineToCover lineNumber="16" covered="true"/>
     <lineToCover lineNumber="19" covered="true"/>
     <lineToCover lineNumber="20" covered="true" branchesToCover="2" coveredBranches="2"/>
@@ -40039,7 +40039,7 @@
     <lineToCover lineNumber="138" covered="true"/>
     <lineToCover lineNumber="141" covered="true"/>
   </file>
-  <file path="src/services/machine_tool/euromap77/euromap77.c">
+  <file path="src/services/opcua/models/euromap77/euromap77.c">
     <lineToCover lineNumber="74" covered="true"/>
     <lineToCover lineNumber="76" covered="true"/>
     <lineToCover lineNumber="77" covered="true" branchesToCover="2" coveredBranches="2"/>
@@ -41273,7 +41273,7 @@
     <lineToCover lineNumber="348" covered="true"/>
     <lineToCover lineNumber="349" covered="true"/>
   </file>
-  <file path="src/services/machine_tool/robotics/robotics.c">
+  <file path="src/services/opcua/models/robotics/robotics.c">
     <lineToCover lineNumber="88" covered="true"/>
     <lineToCover lineNumber="90" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="92" covered="true"/>
@@ -41562,7 +41562,7 @@
     <lineToCover lineNumber="137" covered="true"/>
     <lineToCover lineNumber="138" covered="true" branchesToCover="2" coveredBranches="2"/>
   </file>
-  <file path="src/services/machine_tool/umati/umati.c">
+  <file path="src/services/opcua/models/umati/umati.c">
     <lineToCover lineNumber="75" covered="true"/>
     <lineToCover lineNumber="77" covered="true"/>
     <lineToCover lineNumber="78" covered="true" branchesToCover="2" coveredBranches="2"/>
@@ -42146,7 +42146,7 @@
     <lineToCover lineNumber="791" covered="false"/>
     <lineToCover lineNumber="792" covered="false"/>
   </file>
-  <file path="src/services/net/snmp/snmp_agent.c">
+  <file path="src/services/net/snmp/snmp_agent/snmp_agent.c">
     <lineToCover lineNumber="125" covered="false"/>
     <lineToCover lineNumber="127" covered="false"/>
     <lineToCover lineNumber="128" covered="false" branchesToCover="2" coveredBranches="0"/>
@@ -42646,7 +42646,7 @@
     <lineToCover lineNumber="1007" covered="false"/>
     <lineToCover lineNumber="1009" covered="false"/>
   </file>
-  <file path="src/services/net/snmp/snmp_ber.c">
+  <file path="src/services/net/snmp/snmp_ber/snmp_ber.c">
     <lineToCover lineNumber="32" covered="true"/>
     <lineToCover lineNumber="34" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="36" covered="true"/>
@@ -42868,7 +42868,7 @@
     <lineToCover lineNumber="421" covered="true"/>
     <lineToCover lineNumber="422" covered="true"/>
   </file>
-  <file path="src/services/net/snmp/snmp_crypto.c">
+  <file path="src/services/net/snmp/snmp_crypto/snmp_crypto.c">
     <lineToCover lineNumber="46" covered="false"/>
     <lineToCover lineNumber="48" covered="false"/>
     <lineToCover lineNumber="49" covered="false"/>
@@ -42968,7 +42968,7 @@
     <lineToCover lineNumber="238" covered="false"/>
     <lineToCover lineNumber="239" covered="false"/>
   </file>
-  <file path="src/services/net/snmp/snmp_notify.c">
+  <file path="src/services/net/snmp/snmp_notify/snmp_notify.c">
     <lineToCover lineNumber="59" covered="true"/>
     <lineToCover lineNumber="61" covered="true"/>
     <lineToCover lineNumber="62" covered="true"/>
@@ -43108,7 +43108,7 @@
     <lineToCover lineNumber="279" covered="true"/>
     <lineToCover lineNumber="281" covered="true"/>
   </file>
-  <file path="src/services/net/snmp/snmp_v3.c">
+  <file path="src/services/net/snmp/snmp_v3/snmp_v3.c">
     <lineToCover lineNumber="138" covered="false"/>
     <lineToCover lineNumber="143" covered="false"/>
     <lineToCover lineNumber="147" covered="false"/>
@@ -45425,7 +45425,7 @@
     <lineToCover lineNumber="120" covered="true"/>
     <lineToCover lineNumber="121" covered="true"/>
   </file>
-  <file path="src/services/security/ikev2/ikev2.c">
+  <file path="src/services/security/ikev2/ikev2/ikev2.c">
     <lineToCover lineNumber="57" covered="true"/>
     <lineToCover lineNumber="59" covered="true"/>
     <lineToCover lineNumber="60" covered="true"/>
@@ -46831,7 +46831,7 @@
     <lineToCover lineNumber="2514" covered="false"/>
     <lineToCover lineNumber="2515" covered="false"/>
   </file>
-  <file path="src/services/security/ikev2/ikev2_natt.c">
+  <file path="src/services/security/ikev2/ikev2_natt/ikev2_natt.c">
     <lineToCover lineNumber="44" covered="true"/>
     <lineToCover lineNumber="47" covered="true" branchesToCover="10" coveredBranches="10"/>
     <lineToCover lineNumber="49" covered="true"/>
@@ -47563,7 +47563,7 @@
     <lineToCover lineNumber="219" covered="true"/>
     <lineToCover lineNumber="222" covered="true"/>
   </file>
-  <file path="src/services/southbound/sb_modbus.c">
+  <file path="src/services/southbound/sb_modbus/sb_modbus.c">
     <lineToCover lineNumber="19" covered="true"/>
     <lineToCover lineNumber="22" covered="true" branchesToCover="8" coveredBranches="7"/>
     <lineToCover lineNumber="24" covered="true"/>
@@ -47650,7 +47650,7 @@
     <lineToCover lineNumber="184" covered="true"/>
     <lineToCover lineNumber="185" covered="true"/>
   </file>
-  <file path="src/services/southbound/southbound.c">
+  <file path="src/services/southbound/southbound/southbound.c">
     <lineToCover lineNumber="26" covered="true"/>
     <lineToCover lineNumber="28" covered="true" branchesToCover="4" coveredBranches="4"/>
     <lineToCover lineNumber="30" covered="true"/>
@@ -48481,7 +48481,7 @@
     <lineToCover lineNumber="919" covered="true"/>
     <lineToCover lineNumber="922" covered="true"/>
   </file>
-  <file path="src/services/storage/wal/wal.c">
+  <file path="src/services/storage/wal/wal/wal.c">
     <lineToCover lineNumber="52" covered="true"/>
     <lineToCover lineNumber="54" covered="true" branchesToCover="2" coveredBranches="2"/>
     <lineToCover lineNumber="56" covered="true"/>
@@ -48527,7 +48527,7 @@
     <lineToCover lineNumber="127" covered="true"/>
     <lineToCover lineNumber="129" covered="true"/>
   </file>
-  <file path="src/services/storage/wal/wal_store.c">
+  <file path="src/services/storage/wal/wal_store/wal_store.c">
     <lineToCover lineNumber="20" covered="true"/>
     <lineToCover lineNumber="22" covered="true" branchesToCover="4" coveredBranches="4"/>
     <lineToCover lineNumber="24" covered="true"/>
@@ -48691,7 +48691,7 @@
     <lineToCover lineNumber="303" covered="true"/>
     <lineToCover lineNumber="305" covered="true"/>
   </file>
-  <file path="src/services/storage/wal/wal_store.h">
+  <file path="src/services/storage/wal/wal_store/wal_store.h">
     <lineToCover lineNumber="126" covered="true"/>
     <lineToCover lineNumber="128" covered="true"/>
     <lineToCover lineNumber="131" covered="true"/>
@@ -48833,7 +48833,7 @@
     <lineToCover lineNumber="217" covered="true"/>
     <lineToCover lineNumber="219" covered="true"/>
   </file>
-  <file path="src/services/system/esp/esp.c">
+  <file path="src/services/system/esp/esp/esp.c">
     <lineToCover lineNumber="17" covered="true"/>
     <lineToCover lineNumber="19" covered="true"/>
     <lineToCover lineNumber="20" covered="true"/>
@@ -48931,7 +48931,7 @@
     <lineToCover lineNumber="197" covered="true"/>
     <lineToCover lineNumber="198" covered="true"/>
   </file>
-  <file path="src/services/system/esp/ipsec_db.c">
+  <file path="src/services/system/esp/ipsec_db/ipsec_db.c">
     <lineToCover lineNumber="16" covered="true"/>
     <lineToCover lineNumber="18" covered="true" branchesToCover="4" coveredBranches="4"/>
     <lineToCover lineNumber="20" covered="true"/>
@@ -49054,7 +49054,7 @@
     <lineToCover lineNumber="244" covered="true"/>
     <lineToCover lineNumber="245" covered="true"/>
   </file>
-  <file path="src/services/timing_position/gnss/gnss_survey.c">
+  <file path="src/services/timing_position/gnss/gnss_survey/gnss_survey.c">
     <lineToCover lineNumber="28" covered="true"/>
     <lineToCover lineNumber="30" covered="true"/>
     <lineToCover lineNumber="31" covered="true"/>
@@ -49184,7 +49184,7 @@
     <lineToCover lineNumber="242" covered="true"/>
     <lineToCover lineNumber="243" covered="true"/>
   </file>
-  <file path="src/services/timing_position/gnss/ntrip_caster.c">
+  <file path="src/services/timing_position/gnss/ntrip_caster/ntrip_caster.c">
     <lineToCover lineNumber="16" covered="true"/>
     <lineToCover lineNumber="18" covered="true" branchesToCover="4" coveredBranches="4"/>
     <lineToCover lineNumber="22" covered="true"/>
@@ -49375,7 +49375,7 @@
     <lineToCover lineNumber="362" covered="true"/>
     <lineToCover lineNumber="363" covered="true"/>
   </file>
-  <file path="src/services/timing_position/gnss/rtcm3.c">
+  <file path="src/services/timing_position/gnss/rtcm3/rtcm3.c">
     <lineToCover lineNumber="18" covered="true"/>
     <lineToCover lineNumber="20" covered="true"/>
     <lineToCover lineNumber="21" covered="true" branchesToCover="2" coveredBranches="2"/>

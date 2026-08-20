@@ -23,6 +23,7 @@
 #define PROTOCORE_CIA402_H
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
+#include "shared/can/can.h"   // CanFrame: the type a parameter points at
 
 #if PROTOCORE_ENABLE_CIA402
 
@@ -139,8 +140,6 @@ typedef enum PROTO_ENUM_PACKED
     CIA402_COMMAND_DISABLE_OPERATION, ///< -> Switched on
     CIA402_COMMAND_FAULT_RESET,       ///< clear a fault (rising edge of bit 7)
 } Cia402Command;
-
-#include "shared/can/can.h" // CanFrame: the type a parameter points at
 
 /** @brief What state takes: statusword. */
 typedef struct

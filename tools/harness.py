@@ -692,6 +692,7 @@ SELFTESTS = {
     "funnel": "tools/dev_env/funnel_test.py",
     "shapeaudit": "tools/dev_env/shapeaudit_test.py",
     "readclean": "tools/dev_env/readclean_test.py",
+    "envmatrix": "test/harness_test.py",
 }
 
 # The dispatch groups, in the order `list` and `help` print them.

@@ -189,7 +189,7 @@ The technical reference documentation has been moved to a dedicated landing page
 
 <!-- prettier-ignore-start -->
 
-**256 features**, every one a compile-time `PROTOCORE_ENABLE_*` flag that is off unless you ask for it. Core HTTP/1.1 parsing, routing, middleware, JSON, templating and chunked responses are always on and are not flags.
+**260 features**, every one a compile-time `PROTOCORE_ENABLE_*` flag that is off unless you ask for it. Core HTTP/1.1 parsing, routing, middleware, JSON, templating and chunked responses are always on and are not flags.
 
 <a href="https://dstroy0.github.io/ProtoCore/features.html" title="Browse every feature">
   <img alt="Feature map: the OSI stack and the feature groups on each layer" src="docs/diagrams/features_map.svg" width="100%">
@@ -199,11 +199,11 @@ The technical reference documentation has been moved to a dedicated landing page
 | --- | --- | --- |
 | **Foundation** | 17 | Config IO, Config Store, Device ID, DMA Peripheral Ingest, … |
 | **Physical & Data Link (L1-L2)** | 31 | ADS1115, BLE GATT, Bus Capture, CC1101, … |
-| **Network (L3)** | 6 | Dns Resolver, Happy Eyeballs, IPv6, Link Manager, … |
-| **Transport (L4)** | 9 | Accept Throttle, IP Allowlist, Keep-Alive, MTLS, … |
+| **Network (L3)** | 7 | Dns Resolver, DNS Wire Codec, Happy Eyeballs, IPv6, … |
+| **Transport (L4)** | 8 | Accept Throttle, IP Allowlist, Keep-Alive, Per IP Throttle, … |
 | **Session (L5)** | 5 | SSH, SSH Compression, SSH SCP, SSH SFTP, … |
-| **Presentation (L6)** | 18 | Auth, Auth Lockout, CBOR, CloudEvents, … |
-| **Application (L7)** | 170 | AD9238, Adaptive mDNS, ADS (Beckhoff), AMQP, … |
+| **Presentation (L6)** | 21 | Auth, Auth Lockout, CBOR, CloudEvents, … |
+| **Application (L7)** | 171 | AD9238, Adaptive mDNS, ADS (Beckhoff), AMQP, … |
 
 **[Browse all of them →](https://dstroy0.github.io/ProtoCore/features.html)** - filterable, grouped by layer, one line each. Full descriptions live in [FEATURES.md](docs/FEATURES.md); both are generated from it, so they cannot drift.
 

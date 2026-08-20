@@ -6,8 +6,12 @@
  * @brief The handshake phase machine, RFC 4253 sec 4.2 through sec 10.
  */
 
-#include "network_drivers/presentation/ssh/transport/phase_machine/phase_machine.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_SSH
+
 #include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/transport/phase_machine/phase_machine.h"
 #include "network_drivers/presentation/ssh/transport/transport/transport.h"
 
 // The entries this file calls before reaching their definitions.
@@ -258,3 +262,5 @@ void protocore_phase_machine_is_open(uint8_t *restrict work)
 PhaseMachineVars PhaseMachineV;
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SSH

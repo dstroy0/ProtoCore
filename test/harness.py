@@ -394,11 +394,17 @@ def hal_arm(path):
     return m.group(1) if m else None
 
 
-def hwcap_orphaned(before, after):
+def hwcap_orphaned(before, after, inherited=()):
     """Lines naming every hal file the edit removes while adding no arm in its place.
 
     A swap - one arm out, another in - is the legitimate edit and reports nothing. A bare removal
     leaves the env with no arm at all, which is the one that goes green having stopped testing.
+
+    `inherited` is what the env's base already carries. An env that EXTENDS another gets the base's
+    sources through the ini, so dropping its own copy of an arm the base supplies loses nothing -
+    and keeping the copy is what check_test_matrix reports as redundant, because a source named in
+    both places means changing the base no longer changes the child. Without this the two guards
+    contradict each other: one refuses the edit the other requires.
     """
     was = {s for s in before.get("src", []) if hal_arm(s)}
     now = {s for s in after.get("src", []) if hal_arm(s)}
@@ -407,9 +413,24 @@ def hwcap_orphaned(before, after):
         return []
     # `platform` is the per-env host seam every env carries, not a capability's arm.
     gone = {g for g in gone if "_platform.c" not in g}
+    gone = {g for g in gone if g not in inherited}
     if not gone or (now - was):
         return []
     return sorted("dropped: %s" % g for g in gone)
+
+
+def inherited_src(envs, entry):
+    """Every source the env's base chain supplies, in the matrix's own `+<path>` spelling."""
+    out, seen = set(), set()
+    base = (entry or {}).get("base") or ""
+    while base:
+        name = base.split(":", 1)[1] if ":" in base else base
+        if name in seen or name not in envs:
+            break
+        seen.add(name)
+        out.update(envs[name].get("src", []))
+        base = envs[name].get("base") or ""
+    return out
 
 
 def src_filter(p):
@@ -506,7 +527,7 @@ def cmd_env_update(a):
         merge("src", a.src, a.drop_src, wrap=src_filter)
         merge("tests", a.tests, a.drop_tests)
         merge("extra_scripts", a.extra_scripts, a.drop_extra_scripts)
-        left = hwcap_orphaned(envs[a.name], entry)
+        left = hwcap_orphaned(envs[a.name], entry, inherited_src(envs, entry))
         if left:
             print(HWCAP_REFUSAL % (a.name, "\n  ".join(left)))
             return 1

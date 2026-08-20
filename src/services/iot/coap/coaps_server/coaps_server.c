@@ -9,6 +9,20 @@
 #include "services/iot/coap/coaps_server/coaps_server.h"
 #include "mmgr/secure/secure.h" // the persistent end this module's key material is taken from
 
+#if PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
+
+#include "mmgr/protomem/protomem.h" // mem.cpy / mem.set / mem.cmp: the spans a slot and the ring move
+#include "mmgr/protostr/protostr.h" // str.copy / str.eq: the peer address text
+#include "mmgr/ring.h"              // the atomics the single-producer ingest ring's cursors are
+#include "network_drivers/presentation/security/dtls/dtls_conn/dtls_conn.h"
+#include "server/clock/clock.h"            // Clock.millis: the reclaim clock
+#include "services/iot/coap/coaps/coaps.h" // Coaps.process: the handshake and the CoAP exchange
+
+#if PROTOCORE_HAS_NET_STACK
+#include "network_drivers/transport/udp/server/server.h" // UdpListener: the bound port
+#include "shared/ip/ip.h"                                // Ip.parse: a reply's destination
+#endif
+
 // --- the program's shared state, beside the namespace not on it -------------
 
 // The one owned instance, private to this TU: the pointer to the bytes this module took for
@@ -29,21 +43,7 @@ uint8_t *protocore_coaps_server_span(void)
     return s_own.span;
 }
 
-#if PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
-
-#include "mmgr/protomem/protomem.h" // mem.cpy / mem.set / mem.cmp: the spans a slot and the ring move
-#include "mmgr/protostr/protostr.h" // str.copy / str.eq: the peer address text
-#include "mmgr/ring.h"              // the atomics the single-producer ingest ring's cursors are
-#include "network_drivers/presentation/security/dtls/dtls_conn/dtls_conn.h"
-#include "server/clock/clock.h"            // Clock.millis: the reclaim clock
-#include "services/iot/coap/coaps/coaps.h" // Coaps.process: the handshake and the CoAP exchange
-
 PROTOCORE_BEGIN_DECLS
-
-#if PROTOCORE_HAS_NET_STACK
-#include "network_drivers/transport/udp/server/server.h" // UdpListener: the bound port
-#include "shared/ip/ip.h"                                // Ip.parse: a reply's destination
-#endif
 
 // The largest inbound datagram buffered: a ClientHello, a client Finished, or one CoAP application
 // record (a CoAP message fits one datagram, RFC 7252 sec 4.6). An outbound flight is larger but goes

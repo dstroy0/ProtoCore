@@ -15,6 +15,18 @@
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem/protomem.h"
 
+// Compiles only when a client transport is enabled (HTTP client / MQTT / WS client). A server-only
+// build leaves DNS_RESOLVER off, so the resolver symbols this unit calls would not be declared -
+// see PROTOCORE_ENABLE_TCP_CLIENT in protocore_config.h.
+#if PROTOCORE_ENABLE_TCP_CLIENT
+
+#include "../../diffserv/diffserv.h"  // DiffServ DSCP marking for outbound client connections (compiles out when off)
+#include "config/platform/platform.h" // the stack's TCP, under our names
+#include "mmgr/ring.h"                // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
+#include "network_drivers/network/dns/dns_resolver/dns_resolver.h" // shared host->IP resolve (one DNS owner)
+#include "network_drivers/transport/tcp/lower/lower.h"             // TcpLower: the TTL stamp on the outbound pcb
+#include "server/clock/clock.h"                                    // Clock.millis
+
 // --- the program's shared state, beside the namespace not on it -------------
 
 // The one owned instance, private to this TU: the pointer to the bytes this module took for
@@ -34,18 +46,6 @@ uint8_t *protocore_tcp_client_span(void)
     }
     return s_own.span;
 }
-
-// Compiles only when a client transport is enabled (HTTP client / MQTT / WS client). A server-only
-// build leaves DNS_RESOLVER off, so the resolver symbols this unit calls would not be declared -
-// see PROTOCORE_ENABLE_TCP_CLIENT in protocore_config.h.
-#if PROTOCORE_ENABLE_TCP_CLIENT
-
-#include "../../diffserv/diffserv.h"  // DiffServ DSCP marking for outbound client connections (compiles out when off)
-#include "config/platform/platform.h" // the stack's TCP, under our names
-#include "mmgr/ring.h"                // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
-#include "network_drivers/network/dns/dns_resolver/dns_resolver.h" // shared host->IP resolve (one DNS owner)
-#include "network_drivers/transport/tcp/lower/lower.h"             // TcpLower: the TTL stamp on the outbound pcb
-#include "server/clock/clock.h"                                    // Clock.millis
 
 PROTOCORE_BEGIN_DECLS
 

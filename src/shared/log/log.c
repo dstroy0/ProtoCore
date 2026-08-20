@@ -13,6 +13,10 @@
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
 #include "mmgr/protoframe/protoframe.h" // frame.build: the line is a spec, not a format string
+#include <stdarg.h>
+#if PROTOCORE_ENABLE_LOGBUF
+#include "server/core/logbuf/logbuf.h"
+#endif
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -35,12 +39,6 @@ uint8_t *protocore_log_span(void)
 }
 
 #if PROTOCORE_LOG_LEVEL < PROTOCORE_LOG_LEVEL_NONE
-
-#include <stdarg.h>
-
-#if PROTOCORE_ENABLE_LOGBUF
-#include "server/core/logbuf/logbuf.h"
-#endif
 
 /**
  * @brief The logger's compile-time storage: just the sink a formatted line is handed to.

@@ -46,7 +46,6 @@ CONFIG_H = os.path.join(ROOT, "src", "protocore_config.h")
 # wave once drifted out of the feature grid unnoticed).
 INTERNAL_FLAGS = {
     "PROTOCORE_ENABLE_STREAM_BODY",  # = OTA || UPLOAD || WEBDAV (shared parser machinery)
-    "PROTOCORE_ENABLE_CLIENT_TLS",  # = HTTP_CLIENT_TLS || MQTT_TLS || WS_CLIENT_TLS || EDGE_ORIGIN_TLS
 }
 
 COLUMNS = 5
