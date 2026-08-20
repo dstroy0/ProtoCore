@@ -11,12 +11,6 @@
 #include "mmgr/protostr/protostr.h" // str.len / str.copy
 #include "mmgr/secure/secure.h"     // the persistent end this module's key material is taken from
 
-static uint8_t snmp_crypto_work[16]; // the borrow an entry takes; SnmpCrypto never reads it
-
-static uint8_t snmp_ber_work[16]; // the borrow an entry takes; SnmpBer never reads it
-
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
-
 #if PROTOCORE_ENABLE_SNMP_V3
 
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"
@@ -201,13 +195,13 @@ void protocore_snmp_v3_set_user(uint8_t *restrict work)
     {
         SnmpCryptoV.key.password = auth_pass;
         SnmpCryptoV.key.out = SNMP_V3_CTX(work)->auth_key;
-        SnmpCrypto.localize_key(snmp_crypto_work);
+        SnmpCrypto.localize_key(work);
     }
     if (SNMP_V3_CTX(work)->priv_set)
     {
         SnmpCryptoV.key.password = priv_pass;
         SnmpCryptoV.key.out = SNMP_V3_CTX(work)->priv_key;
-        SnmpCrypto.localize_key(snmp_crypto_work);
+        SnmpCrypto.localize_key(work);
     }
     SnmpV3V.ok = SNMP_V3_CTX(work)->auth_set;
 }
@@ -248,20 +242,20 @@ static proto_bool parse_scoped(const uint8_t *buf, size_t len, const uint8_t **c
     SnmpBerV.dec = &d;
     SnmpBerV.buf.in = buf;
     SnmpBerV.buf.cap = len;
-    SnmpBer.dec_init(snmp_ber_work);
+    SnmpBer.dec_init(protocore_snmp_v3_span());
 
-    SnmpBer.read_header(snmp_ber_work);
+    SnmpBer.read_header(protocore_snmp_v3_span());
     if (!SnmpBerV.ok || SnmpBerV.tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
         return PROTO_FALSE;
     }
-    SnmpBer.read_header(snmp_ber_work); // contextEngineID
+    SnmpBer.read_header(protocore_snmp_v3_span()); // contextEngineID
     if (!SnmpBerV.ok || SnmpBerV.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return PROTO_FALSE;
     }
     d.pos += SnmpBerV.vlen;
-    SnmpBer.read_header(snmp_ber_work); // contextName
+    SnmpBer.read_header(protocore_snmp_v3_span()); // contextName
     if (!SnmpBerV.ok || SnmpBerV.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return PROTO_FALSE;
@@ -271,7 +265,7 @@ static proto_bool parse_scoped(const uint8_t *buf, size_t len, const uint8_t **c
     d.pos += SnmpBerV.vlen;
 
     const size_t pdu_start = d.pos;
-    SnmpBer.read_header(snmp_ber_work); // the PDU header, which stays part of the TLV
+    SnmpBer.read_header(protocore_snmp_v3_span()); // the PDU header, which stays part of the TLV
     if (!SnmpBerV.ok)
     {
         return PROTO_FALSE;
@@ -301,15 +295,15 @@ static long inner_request_id(const uint8_t *mdata, size_t mdata_len, proto_bool 
     SnmpBerV.dec = &d;
     SnmpBerV.buf.in = pdu;
     SnmpBerV.buf.cap = pdu_len;
-    SnmpBer.dec_init(snmp_ber_work);
+    SnmpBer.dec_init(protocore_snmp_v3_span());
     // parse_scoped read this exact header and sized pdu_len as its header octets plus its content,
     // so only the request-id INTEGER below can fail.
-    SnmpBer.read_header(snmp_ber_work);
+    SnmpBer.read_header(protocore_snmp_v3_span());
     if (!SnmpBerV.ok)
     {
         return 0;
     }
-    SnmpBer.read_integer(snmp_ber_work);
+    SnmpBer.read_integer(protocore_snmp_v3_span());
     return SnmpBerV.ok ? SnmpBerV.ival : 0;
 }
 
@@ -345,7 +339,7 @@ static size_t build_message(uint8_t *restrict work, long msg_id, proto_bool auth
         SnmpCryptoV.priv.out = SNMP_V3_CTX(work)->v3_d;
         SnmpCryptoV.priv.len = scoped_len;
         SnmpCryptoV.priv.encrypt = PROTO_TRUE;
-        SnmpCrypto.aes_cfb128(snmp_crypto_work);
+        SnmpCrypto.aes_cfb128(work);
         data_ptr = SNMP_V3_CTX(work)->v3_d;
     }
 
@@ -355,22 +349,22 @@ static size_t build_message(uint8_t *restrict work, long msg_id, proto_bool auth
     SnmpBerV.enc = &se;
     SnmpBerV.buf.out = SNMP_V3_CTX(work)->v3_sec;
     SnmpBerV.buf.cap = sizeof(SNMP_V3_CTX(work)->v3_sec);
-    SnmpBer.enc_init(snmp_ber_work);
+    SnmpBer.enc_init(work);
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
-    SnmpBer.seq_begin(snmp_ber_work);
+    SnmpBer.seq_begin(work);
     const size_t ss = SnmpBerV.tlv.token;
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
     SnmpBerV.tlv.bytes = SNMP_V3_CTX(work)->engine_id; // msgAuthoritativeEngineID
     SnmpBerV.tlv.len = SNMP_V3_CTX(work)->engine_id_len;
-    SnmpBer.put_octet_string(snmp_ber_work);
+    SnmpBer.put_octet_string(work);
     SnmpBerV.tlv.ival = (long)SNMP_V3_CTX(work)->boots; // msgAuthoritativeEngineBoots
-    SnmpBer.put_integer(snmp_ber_work);
+    SnmpBer.put_integer(work);
     SnmpBerV.tlv.ival = (long)now; // msgAuthoritativeEngineTime
-    SnmpBer.put_integer(snmp_ber_work);
+    SnmpBer.put_integer(work);
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
     SnmpBerV.tlv.bytes = (const uint8_t *)SNMP_V3_CTX(work)->user; // msgUserName
     SnmpBerV.tlv.len = str.len(SNMP_V3_CTX(work)->user, SNMP_V3_USER_MAX);
-    SnmpBer.put_octet_string(snmp_ber_work);
+    SnmpBer.put_octet_string(work);
 
     // msgAuthenticationParameters: the field is written as zero octets and the digest lands in it
     // after the message is finished (RFC 7860 sec 4.2.1). zeros stays in scope across the write.
@@ -389,14 +383,14 @@ static size_t build_message(uint8_t *restrict work, long msg_id, proto_bool auth
         SnmpBerV.tlv.len = 0;
     }
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
-    SnmpBer.put_octet_string(snmp_ber_work);
+    SnmpBer.put_octet_string(work);
 
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
     SnmpBerV.tlv.bytes = priv ? salt : NULL; // msgPrivacyParameters
     SnmpBerV.tlv.len = priv ? SNMP_V3_PRIV_PARAM_LEN : 0;
-    SnmpBer.put_octet_string(snmp_ber_work);
+    SnmpBer.put_octet_string(work);
     SnmpBerV.tlv.token = ss;
-    SnmpBer.seq_end(snmp_ber_work);
+    SnmpBer.seq_end(work);
     if (!se.ok)
     {
         return 0;
@@ -408,34 +402,34 @@ static size_t build_message(uint8_t *restrict work, long msg_id, proto_bool auth
     SnmpBerV.enc = &e;
     SnmpBerV.buf.out = resp;
     SnmpBerV.buf.cap = resp_cap;
-    SnmpBer.enc_init(snmp_ber_work);
+    SnmpBer.enc_init(work);
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
-    SnmpBer.seq_begin(snmp_ber_work);
+    SnmpBer.seq_begin(work);
     const size_t msg = SnmpBerV.tlv.token;
     SnmpBerV.tlv.ival = (int)SNMP_V3; // msgVersion
-    SnmpBer.put_integer(snmp_ber_work);
+    SnmpBer.put_integer(work);
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
-    SnmpBer.seq_begin(snmp_ber_work); // msgGlobalData
+    SnmpBer.seq_begin(work); // msgGlobalData
     const size_t hdr = SnmpBerV.tlv.token;
     SnmpBerV.tlv.ival = msg_id; // msgID
-    SnmpBer.put_integer(snmp_ber_work);
+    SnmpBer.put_integer(work);
     SnmpBerV.tlv.ival = 65507; // msgMaxSize
-    SnmpBer.put_integer(snmp_ber_work);
+    SnmpBer.put_integer(work);
     // msgFlags: authFlag and privFlag, reportableFlag clear on a response (RFC 3412 sec 6.4).
     uint8_t fl = (uint8_t)((auth ? 0x01 : 0) | (priv ? 0x02 : 0));
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
     SnmpBerV.tlv.bytes = &fl;
     SnmpBerV.tlv.len = 1;
-    SnmpBer.put_octet_string(snmp_ber_work);
+    SnmpBer.put_octet_string(work);
     SnmpBerV.tlv.ival = 3; // msgSecurityModel: USM (RFC 3414)
-    SnmpBer.put_integer(snmp_ber_work);
+    SnmpBer.put_integer(work);
     SnmpBerV.tlv.token = hdr;
-    SnmpBer.seq_end(snmp_ber_work);
+    SnmpBer.seq_end(work);
 
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
     SnmpBerV.tlv.bytes = SNMP_V3_CTX(work)->v3_sec;
     SnmpBerV.tlv.len = sec_len;
-    SnmpBer.put_octet_string(snmp_ber_work);
+    SnmpBer.put_octet_string(work);
     const size_t sec_value_pos = e.len - sec_len;
 
     // msgData: an encryptedPDU OCTET STRING, or the plaintext ScopedPDU as it stands.
@@ -444,14 +438,14 @@ static size_t build_message(uint8_t *restrict work, long msg_id, proto_bool auth
     if (priv)
     {
         SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
-        SnmpBer.put_octet_string(snmp_ber_work);
+        SnmpBer.put_octet_string(work);
     }
     else
     {
-        SnmpBer.put_raw(snmp_ber_work);
+        SnmpBer.put_raw(work);
     }
     SnmpBerV.tlv.token = msg;
-    SnmpBer.seq_end(snmp_ber_work);
+    SnmpBer.seq_end(work);
     if (!e.ok)
     {
         return 0;
@@ -489,34 +483,34 @@ static size_t build_report(uint8_t *restrict work, long msg_id, proto_bool auth,
     SnmpBerV.enc = &e;
     SnmpBerV.buf.out = SNMP_V3_CTX(work)->v3_b;
     SnmpBerV.buf.cap = sizeof(SNMP_V3_CTX(work)->v3_b);
-    SnmpBer.enc_init(snmp_ber_work);
+    SnmpBer.enc_init(work);
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_SNMP_PDU_REPORT;
-    SnmpBer.seq_begin(snmp_ber_work);
+    SnmpBer.seq_begin(work);
     const size_t pdu = SnmpBerV.tlv.token;
     SnmpBerV.tlv.ival = request_id;
-    SnmpBer.put_integer(snmp_ber_work);
+    SnmpBer.put_integer(work);
     SnmpBerV.tlv.ival = 0; // error-status
-    SnmpBer.put_integer(snmp_ber_work);
+    SnmpBer.put_integer(work);
     SnmpBerV.tlv.ival = 0; // error-index
-    SnmpBer.put_integer(snmp_ber_work);
+    SnmpBer.put_integer(work);
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
-    SnmpBer.seq_begin(snmp_ber_work);
+    SnmpBer.seq_begin(work);
     const size_t vbl = SnmpBerV.tlv.token;
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
-    SnmpBer.seq_begin(snmp_ber_work);
+    SnmpBer.seq_begin(work);
     const size_t vb = SnmpBerV.tlv.token;
     SnmpBerV.tlv.arcs = oid;
     SnmpBerV.tlv.arc_count = 11;
-    SnmpBer.put_oid(snmp_ber_work);
+    SnmpBer.put_oid(work);
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_SNMP_COUNTER32;
     SnmpBerV.tlv.uval = count;
-    SnmpBer.put_uint(snmp_ber_work);
+    SnmpBer.put_uint(work);
     SnmpBerV.tlv.token = vb;
-    SnmpBer.seq_end(snmp_ber_work);
+    SnmpBer.seq_end(work);
     SnmpBerV.tlv.token = vbl;
-    SnmpBer.seq_end(snmp_ber_work);
+    SnmpBer.seq_end(work);
     SnmpBerV.tlv.token = pdu;
-    SnmpBer.seq_end(snmp_ber_work);
+    SnmpBer.seq_end(work);
     if (!e.ok)
     {
         return 0;
@@ -528,22 +522,22 @@ static size_t build_report(uint8_t *restrict work, long msg_id, proto_bool auth,
     SnmpBerV.enc = &sc;
     SnmpBerV.buf.out = SNMP_V3_CTX(work)->v3_c;
     SnmpBerV.buf.cap = sizeof(SNMP_V3_CTX(work)->v3_c);
-    SnmpBer.enc_init(snmp_ber_work);
+    SnmpBer.enc_init(work);
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
-    SnmpBer.seq_begin(snmp_ber_work);
+    SnmpBer.seq_begin(work);
     const size_t s = SnmpBerV.tlv.token;
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
     SnmpBerV.tlv.bytes = SNMP_V3_CTX(work)->engine_id;
     SnmpBerV.tlv.len = SNMP_V3_CTX(work)->engine_id_len;
-    SnmpBer.put_octet_string(snmp_ber_work);
+    SnmpBer.put_octet_string(work);
     SnmpBerV.tlv.bytes = NULL;
     SnmpBerV.tlv.len = 0;
-    SnmpBer.put_octet_string(snmp_ber_work);
+    SnmpBer.put_octet_string(work);
     SnmpBerV.tlv.bytes = SNMP_V3_CTX(work)->v3_b;
     SnmpBerV.tlv.len = pdu_len;
-    SnmpBer.put_raw(snmp_ber_work);
+    SnmpBer.put_raw(work);
     SnmpBerV.tlv.token = s;
-    SnmpBer.seq_end(snmp_ber_work);
+    SnmpBer.seq_end(work);
     if (!sc.ok)
     {
         return 0;
@@ -569,43 +563,43 @@ void protocore_snmp_v3_process(uint8_t *restrict work)
     SnmpBerV.dec = &d;
     SnmpBerV.buf.in = req;
     SnmpBerV.buf.cap = req_len;
-    SnmpBer.dec_init(snmp_ber_work);
-    SnmpBer.read_header(snmp_ber_work);
+    SnmpBer.dec_init(work);
+    SnmpBer.read_header(work);
     if (!SnmpBerV.ok || SnmpBerV.tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
         return;
     }
-    SnmpBer.read_integer(snmp_ber_work); // msgVersion
+    SnmpBer.read_integer(work); // msgVersion
     if (!SnmpBerV.ok || SnmpBerV.ival != (int)SNMP_V3)
     {
         return;
     }
 
     // msgGlobalData (RFC 3412 sec 6).
-    SnmpBer.read_header(snmp_ber_work);
+    SnmpBer.read_header(work);
     if (!SnmpBerV.ok || SnmpBerV.tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
         return;
     }
-    SnmpBer.read_integer(snmp_ber_work); // msgID
+    SnmpBer.read_integer(work); // msgID
     if (!SnmpBerV.ok)
     {
         return;
     }
     const long msg_id = SnmpBerV.ival;
-    SnmpBer.read_integer(snmp_ber_work); // msgMaxSize, which this responder does not shrink to
+    SnmpBer.read_integer(work); // msgMaxSize, which this responder does not shrink to
     if (!SnmpBerV.ok)
     {
         return;
     }
-    SnmpBer.read_header(snmp_ber_work); // msgFlags
+    SnmpBer.read_header(work); // msgFlags
     if (!SnmpBerV.ok || SnmpBerV.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING || SnmpBerV.vlen < 1)
     {
         return;
     }
     const uint8_t flags = d.buf[d.pos];
     d.pos += SnmpBerV.vlen;
-    SnmpBer.read_integer(snmp_ber_work);    // msgSecurityModel
+    SnmpBer.read_integer(work);             // msgSecurityModel
     if (!SnmpBerV.ok || SnmpBerV.ival != 3) // USM only (RFC 3414)
     {
         return;
@@ -618,7 +612,7 @@ void protocore_snmp_v3_process(uint8_t *restrict work)
     }
 
     // msgSecurityParameters: an OCTET STRING wrapping the USM SEQUENCE (RFC 3414 sec 2.4).
-    SnmpBer.read_header(snmp_ber_work);
+    SnmpBer.read_header(work);
     if (!SnmpBerV.ok || SnmpBerV.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return;
@@ -631,13 +625,13 @@ void protocore_snmp_v3_process(uint8_t *restrict work)
     SnmpBerV.dec = &sd;
     SnmpBerV.buf.in = sec;
     SnmpBerV.buf.cap = sec_len;
-    SnmpBer.dec_init(snmp_ber_work);
-    SnmpBer.read_header(snmp_ber_work);
+    SnmpBer.dec_init(work);
+    SnmpBer.read_header(work);
     if (!SnmpBerV.ok || SnmpBerV.tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
         return;
     }
-    SnmpBer.read_header(snmp_ber_work); // msgAuthoritativeEngineID
+    SnmpBer.read_header(work); // msgAuthoritativeEngineID
     if (!SnmpBerV.ok || SnmpBerV.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return;
@@ -645,19 +639,19 @@ void protocore_snmp_v3_process(uint8_t *restrict work)
     const uint8_t *eid = sd.buf + sd.pos;
     const size_t eid_len = SnmpBerV.vlen;
     sd.pos += eid_len;
-    SnmpBer.read_integer(snmp_ber_work); // msgAuthoritativeEngineBoots
+    SnmpBer.read_integer(work); // msgAuthoritativeEngineBoots
     if (!SnmpBerV.ok)
     {
         return;
     }
     const long req_boots = SnmpBerV.ival;
-    SnmpBer.read_integer(snmp_ber_work); // msgAuthoritativeEngineTime
+    SnmpBer.read_integer(work); // msgAuthoritativeEngineTime
     if (!SnmpBerV.ok)
     {
         return;
     }
     const long req_time = SnmpBerV.ival;
-    SnmpBer.read_header(snmp_ber_work); // msgUserName
+    SnmpBer.read_header(work); // msgUserName
     if (!SnmpBerV.ok || SnmpBerV.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return;
@@ -665,7 +659,7 @@ void protocore_snmp_v3_process(uint8_t *restrict work)
     const uint8_t *uname = sd.buf + sd.pos;
     const size_t uname_len = SnmpBerV.vlen;
     sd.pos += uname_len;
-    SnmpBer.read_header(snmp_ber_work); // msgAuthenticationParameters
+    SnmpBer.read_header(work); // msgAuthenticationParameters
     if (!SnmpBerV.ok || SnmpBerV.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return;
@@ -674,7 +668,7 @@ void protocore_snmp_v3_process(uint8_t *restrict work)
     const size_t aparm_len = SnmpBerV.vlen;
     const size_t aparm_off = (size_t)(aparm - req); // its offset in the message the digest covers
     sd.pos += aparm_len;
-    SnmpBer.read_header(snmp_ber_work); // msgPrivacyParameters
+    SnmpBer.read_header(work); // msgPrivacyParameters
     if (!SnmpBerV.ok || SnmpBerV.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return;
@@ -778,8 +772,8 @@ void protocore_snmp_v3_process(uint8_t *restrict work)
         SnmpBerV.dec = &md;
         SnmpBerV.buf.in = mdata;
         SnmpBerV.buf.cap = mdata_len;
-        SnmpBer.dec_init(snmp_ber_work);
-        SnmpBer.read_header(snmp_ber_work);
+        SnmpBer.dec_init(work);
+        SnmpBer.read_header(work);
         if (!SnmpBerV.ok || SnmpBerV.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
         {
             return;
@@ -800,7 +794,7 @@ void protocore_snmp_v3_process(uint8_t *restrict work)
         SnmpCryptoV.priv.out = SNMP_V3_CTX(work)->v3_a;
         SnmpCryptoV.priv.len = ct_len;
         SnmpCryptoV.priv.encrypt = PROTO_FALSE;
-        SnmpCrypto.aes_cfb128(snmp_crypto_work);
+        SnmpCrypto.aes_cfb128(work);
         scoped = SNMP_V3_CTX(work)->v3_a;
         scoped_len = ct_len;
     }
@@ -838,22 +832,22 @@ void protocore_snmp_v3_process(uint8_t *restrict work)
     SnmpBerV.enc = &sc;
     SnmpBerV.buf.out = SNMP_V3_CTX(work)->v3_c;
     SnmpBerV.buf.cap = sizeof(SNMP_V3_CTX(work)->v3_c);
-    SnmpBer.enc_init(snmp_ber_work);
+    SnmpBer.enc_init(work);
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
-    SnmpBer.seq_begin(snmp_ber_work);
+    SnmpBer.seq_begin(work);
     const size_t s = SnmpBerV.tlv.token;
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
     SnmpBerV.tlv.bytes = SNMP_V3_CTX(work)->engine_id;
     SnmpBerV.tlv.len = SNMP_V3_CTX(work)->engine_id_len;
-    SnmpBer.put_octet_string(snmp_ber_work);
+    SnmpBer.put_octet_string(work);
     SnmpBerV.tlv.bytes = ctxname;
     SnmpBerV.tlv.len = ctxname_len;
-    SnmpBer.put_octet_string(snmp_ber_work);
+    SnmpBer.put_octet_string(work);
     SnmpBerV.tlv.bytes = SNMP_V3_CTX(work)->v3_b;
     SnmpBerV.tlv.len = rpdu;
-    SnmpBer.put_raw(snmp_ber_work);
+    SnmpBer.put_raw(work);
     SnmpBerV.tlv.token = s;
-    SnmpBer.seq_end(snmp_ber_work);
+    SnmpBer.seq_end(work);
     if (!sc.ok)
     {
         return;
@@ -882,7 +876,7 @@ static void send_notify(uint8_t *restrict work, uint8_t pdu_tag)
     SnmpBerV.enc = &e;
     SnmpBerV.buf.out = SNMP_V3_CTX(work)->v3_b;
     SnmpBerV.buf.cap = sizeof(SNMP_V3_CTX(work)->v3_b);
-    SnmpBer.enc_init(snmp_ber_work);
+    SnmpBer.enc_init(work);
     SnmpNotifyV.buf.enc = &e;
     SnmpNotifyV.pdu.pdu_tag = pdu_tag;
     SnmpNotifyV.pdu.request_id = SnmpV3V.notify.request_id;
@@ -903,22 +897,22 @@ static void send_notify(uint8_t *restrict work, uint8_t pdu_tag)
     SnmpBerV.enc = &sc;
     SnmpBerV.buf.out = SNMP_V3_CTX(work)->v3_c;
     SnmpBerV.buf.cap = sizeof(SNMP_V3_CTX(work)->v3_c);
-    SnmpBer.enc_init(snmp_ber_work);
+    SnmpBer.enc_init(work);
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
-    SnmpBer.seq_begin(snmp_ber_work);
+    SnmpBer.seq_begin(work);
     const size_t s = SnmpBerV.tlv.token;
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
     SnmpBerV.tlv.bytes = SNMP_V3_CTX(work)->engine_id;
     SnmpBerV.tlv.len = SNMP_V3_CTX(work)->engine_id_len;
-    SnmpBer.put_octet_string(snmp_ber_work);
+    SnmpBer.put_octet_string(work);
     SnmpBerV.tlv.bytes = NULL;
     SnmpBerV.tlv.len = 0;
-    SnmpBer.put_octet_string(snmp_ber_work);
+    SnmpBer.put_octet_string(work);
     SnmpBerV.tlv.bytes = SNMP_V3_CTX(work)->v3_b;
     SnmpBerV.tlv.len = pdu_len;
-    SnmpBer.put_raw(snmp_ber_work);
+    SnmpBer.put_raw(work);
     SnmpBerV.tlv.token = s;
-    SnmpBer.seq_end(snmp_ber_work);
+    SnmpBer.seq_end(work);
     if (!sc.ok)
     {
         return;
@@ -935,7 +929,7 @@ static void send_notify(uint8_t *restrict work, uint8_t pdu_tag)
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
     IpV.args.text = SnmpV3V.notify.dst_ip;
     IpV.args.out = &dst;
-    Ip.parse(ip_work);
+    Ip.parse(work);
     if (!IpV.ok)
     {
         return;

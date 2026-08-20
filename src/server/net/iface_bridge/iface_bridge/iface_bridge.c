@@ -3,8 +3,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
-
 #if PROTOCORE_ENABLE_IFACE_BRIDGE
 
 #include "mmgr/protomem/protomem.h"
@@ -125,7 +123,7 @@ void protocore_iface_bridge_map(uint8_t *restrict work)
     {
         IpV.args.text = ip;
         IpV.args.out = &r.listen_ip;
-        Ip.parse(ip_work);
+        Ip.parse(work);
         if (!IpV.ok)
         {
             IfaceBridgeV.ok = PROTO_FALSE;

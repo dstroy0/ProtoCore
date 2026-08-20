@@ -22,8 +22,6 @@
 
 PROTOCORE_BEGIN_DECLS
 
-static uint8_t time_compat_work[16]; // the borrow an entry takes; TimeCompat never reads it
-
 /** @brief One buffered observation (a value at a sequence number), stored in fixed fields. */
 typedef struct
 {
@@ -239,7 +237,7 @@ static void put_creation_time(uint8_t *restrict work)
     struct tm tmv;
     TimeCompatV.args.epoch = (time_t)(Clock.ms / 1000u);
     TimeCompatV.args.out = &tmv;
-    TimeCompat.gmtime(time_compat_work);
+    TimeCompat.gmtime(work);
     put(work, "\" creationTime=\"");
     if (TimeCompatV.tm_out == NULL)
     {

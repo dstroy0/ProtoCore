@@ -67,7 +67,7 @@ void protocore_df1_crc(uint8_t *restrict work)
     CrcV.args.params = &PROTOCORE_CRC16_ARC;
     CrcV.args.data = data;
     CrcV.args.len = len;
-    Crc.compute(crc_work);
+    Crc.compute(work);
     Df1V.u16 = (uint16_t)CrcV.value;
 }
 

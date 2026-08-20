@@ -131,26 +131,26 @@ void protocore_senml_json_build(uint8_t *restrict work)
     JsonV.init_args.w = &w;
     JsonV.init_args.buf = SenmlV.json.buf;
     JsonV.init_args.cap = SenmlV.json.cap;
-    Json.init(json_work);
+    Json.init(work);
     JsonV.begin_array_args.w = &w;
-    Json.begin_array(json_work);
+    Json.begin_array(work);
     for (size_t i = 0; i < count; i++)
     {
         const SenmlRecord *r = &records[i];
         JsonV.begin_object_args.w = &w;
-        Json.begin_object(json_work);
+        Json.begin_object(work);
         if (r->base_name)
         {
             JsonV.kv_str_args.w = &w;
             JsonV.kv_str_args.k = "bn";
             JsonV.kv_str_args.v = r->base_name;
-            Json.kv_str(json_work);
+            Json.kv_str(work);
         }
         if (r->has_base_time)
         {
             JsonV.key_args.w = &w;
             JsonV.key_args.k = "bt";
-            Json.key(json_work);
+            Json.key(work);
             json_number(&w, r->base_time);
         }
         if (r->name)
@@ -158,14 +158,14 @@ void protocore_senml_json_build(uint8_t *restrict work)
             JsonV.kv_str_args.w = &w;
             JsonV.kv_str_args.k = "n";
             JsonV.kv_str_args.v = r->name;
-            Json.kv_str(json_work);
+            Json.kv_str(work);
         }
         if (r->unit)
         {
             JsonV.kv_str_args.w = &w;
             JsonV.kv_str_args.k = "u";
             JsonV.kv_str_args.v = r->unit;
-            Json.kv_str(json_work);
+            Json.kv_str(work);
         }
         // Every SenmlValueKind enumerator has a case below, so the default edge the compiler emits
         // for the uint8_t-backed enum is unreachable for any value the API admits.
@@ -174,7 +174,7 @@ void protocore_senml_json_build(uint8_t *restrict work)
         case SENML_VALUE_NUMBER:
             JsonV.key_args.w = &w;
             JsonV.key_args.k = "v";
-            Json.key(json_work);
+            Json.key(work);
             json_number(&w, r->value);
             break;
         case SENML_VALUE_STRING:
@@ -183,14 +183,14 @@ void protocore_senml_json_build(uint8_t *restrict work)
                 JsonV.kv_str_args.w = &w;
                 JsonV.kv_str_args.k = "vs";
                 JsonV.kv_str_args.v = r->string_value;
-                Json.kv_str(json_work);
+                Json.kv_str(work);
             }
             break;
         case SENML_VALUE_BOOLEAN:
             JsonV.kv_bool_args.w = &w;
             JsonV.kv_bool_args.k = "vb";
             JsonV.kv_bool_args.v = r->boolean_value;
-            Json.kv_bool(json_work);
+            Json.kv_bool(work);
             break;
         case SENML_VALUE_NONE:
             break;
@@ -199,14 +199,14 @@ void protocore_senml_json_build(uint8_t *restrict work)
         {
             JsonV.key_args.w = &w;
             JsonV.key_args.k = "t";
-            Json.key(json_work);
+            Json.key(work);
             json_number(&w, r->time);
         }
         JsonV.end_object_args.w = &w;
-        Json.end_object(json_work);
+        Json.end_object(work);
     }
     JsonV.end_array_args.w = &w;
-    Json.end_array(json_work);
+    Json.end_array(work);
     if (!protocore_json_ok(&w))
     {
         return;

@@ -362,7 +362,7 @@ void protocore_oidc_token_kid(uint8_t *restrict work)
     Base64V.url_decode_args.src_len = seglen[OIDC_SEG_HEADER];
     Base64V.url_decode_args.dst = hdr;
     Base64V.url_decode_args.dst_cap = sizeof(hdr) - 1;
-    Base64.url_decode(base64_work);
+    Base64.url_decode(work);
     size_t hn = Base64V.n;
     if (hn == 0)
     {
@@ -488,7 +488,7 @@ void protocore_oidc_verify_with_key(uint8_t *restrict work)
     Base64V.url_decode_args.src_len = seglen[OIDC_SEG_HEADER];
     Base64V.url_decode_args.dst = hdr;
     Base64V.url_decode_args.dst_cap = PROTOCORE_OIDC_HDR_LEN - 1;
-    Base64.url_decode(base64_work);
+    Base64.url_decode(work);
     size_t hn = Base64V.n;
     if (hn == 0)
     {
@@ -511,7 +511,7 @@ void protocore_oidc_verify_with_key(uint8_t *restrict work)
     Base64V.url_decode_args.src_len = seglen[OIDC_SEG_SIGNATURE];
     Base64V.url_decode_args.dst = sig;
     Base64V.url_decode_args.dst_cap = PROTOCORE_OIDC_RSA_BYTES;
-    Base64.url_decode(base64_work);
+    Base64.url_decode(work);
     if (Base64V.n != PROTOCORE_OIDC_RSA_BYTES)
     {
         protocore_plaintext_release(scope);
@@ -554,7 +554,7 @@ void protocore_oidc_verify_with_key(uint8_t *restrict work)
     Base64V.url_decode_args.src_len = seglen[OIDC_SEG_PAYLOAD];
     Base64V.url_decode_args.dst = pl;
     Base64V.url_decode_args.dst_cap = PROTOCORE_OIDC_MAX_LEN - 1;
-    Base64.url_decode(base64_work);
+    Base64.url_decode(work);
     size_t pn = Base64V.n;
     if (pn == 0)
     {

@@ -14,8 +14,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
-
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
 
 #include "mmgr/secure/secure.h" // the persistent end the table is taken from
@@ -62,7 +60,7 @@ static proto_bool ip_same(const protocore_ip *a, const protocore_ip *b)
 {
     IpV.args.ip = a;
     IpV.args.b = b;
-    Ip.equal(ip_work);
+    Ip.equal(protocore_auth_lockout_span());
     return IpV.ok;
 }
 
@@ -70,7 +68,7 @@ static proto_bool ip_same(const protocore_ip *a, const protocore_ip *b)
 static proto_bool ip_none(const protocore_ip *ip)
 {
     IpV.args.ip = ip;
-    Ip.is_unspecified(ip_work);
+    Ip.is_unspecified(protocore_auth_lockout_span());
     return IpV.ok;
 }
 

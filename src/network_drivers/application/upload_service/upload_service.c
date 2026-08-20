@@ -15,8 +15,6 @@
 #include "mmgr/protostr/protostr.h"
 #include "upload_service.h"
 
-static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
-
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include "protocore.h"
 #include "server/storage/mnt/mnt.h" // the storage seam: protocore_mnt_active()
@@ -108,7 +106,7 @@ static proto_bool upload_stream_begin(HttpReq *req)
     UPLOAD_SERVICE_CTX(work)->handle = -1;
     // The seam fails closed when nothing is mounted, so a cold mount answers "upload failed"
     // rather than faulting.
-    Mnt.active(mnt_work);
+    Mnt.active(protocore_upload_service_span());
     const protocore_mnt_backend *mnt = MntV.backend;
     if (mnt && UPLOAD_SERVICE_CTX(work)->dest)
     {
@@ -140,7 +138,7 @@ static void upload_stream_data(HttpReq *req, const uint8_t *data, size_t len)
     (void)req; // a single upload streams at a time
     if (UPLOAD_SERVICE_CTX(work)->active && !UPLOAD_SERVICE_CTX(work)->error)
     {
-        Mnt.active(mnt_work);
+        Mnt.active(protocore_upload_service_span());
         const protocore_mnt_backend *mnt = MntV.backend;
         if (!mnt || mnt->write(UPLOAD_SERVICE_CTX(work)->handle, data, len) != (int)len)
         {
@@ -167,7 +165,7 @@ static void upload_handle(uint8_t slot_id, HttpReq *req)
     }
     if (UPLOAD_SERVICE_CTX(work)->active)
     {
-        Mnt.active(mnt_work);
+        Mnt.active(protocore_upload_service_span());
         const protocore_mnt_backend *mnt = MntV.backend;
         if (mnt)
         {

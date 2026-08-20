@@ -23,8 +23,6 @@ static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
 
 #include "network_drivers/presentation/codec/json/json.h"
 
-static uint8_t json_work[16]; // the borrow an entry takes; Json never reads it
-
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 #include "services/net/http_client/http_client.h"
 
@@ -187,7 +185,7 @@ void protocore_oauth2_parse_token_response(uint8_t *restrict work)
     JsonV.get_str_args.key = "access_token";
     JsonV.get_str_args.out = t->access_token;
     JsonV.get_str_args.out_cap = sizeof(t->access_token);
-    Json.get_str(json_work);
+    Json.get_str(work);
     if (!JsonV.ok)
     {
         return;
@@ -196,22 +194,22 @@ void protocore_oauth2_parse_token_response(uint8_t *restrict work)
     JsonV.get_str_args.key = "id_token";
     JsonV.get_str_args.out = t->id_token;
     JsonV.get_str_args.out_cap = sizeof(t->id_token);
-    Json.get_str(json_work);
+    Json.get_str(work);
     JsonV.get_str_args.json = json;
     JsonV.get_str_args.key = "refresh_token";
     JsonV.get_str_args.out = t->refresh_token;
     JsonV.get_str_args.out_cap = sizeof(t->refresh_token);
-    Json.get_str(json_work);
+    Json.get_str(work);
     JsonV.get_str_args.json = json;
     JsonV.get_str_args.key = "token_type";
     JsonV.get_str_args.out = t->token_type;
     JsonV.get_str_args.out_cap = sizeof(t->token_type);
-    Json.get_str(json_work);
+    Json.get_str(work);
     long e = 0;
     JsonV.get_int_args.json = json;
     JsonV.get_int_args.key = "expires_in";
     JsonV.get_int_args.out = &e;
-    Json.get_int(json_work);
+    Json.get_int(work);
     if (JsonV.ok)
     {
         t->expires_in = e;

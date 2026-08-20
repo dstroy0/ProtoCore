@@ -34,12 +34,6 @@
 #include <stdio.h>                                // snprintf, sscanf
 #include <time.h> // strftime (RFC 1123 / conditional-GET dates) (RFC 1123 / conditional-GET dates)
 
-static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
-
-static uint8_t time_compat_work[16]; // the borrow an entry takes; TimeCompat never reads it
-
-static uint8_t http_range_work[16]; // the borrow an entry takes; HttpRange never reads it
-
 // ---------------------------------------------------------------------------
 // File serving
 // ---------------------------------------------------------------------------
@@ -159,7 +153,7 @@ void protocore_file_serving_http_rfc1123(uint8_t *restrict work)
     struct tm tmv;
     TimeCompatV.args.epoch = epoch;
     TimeCompatV.args.out = &tmv;
-    TimeCompat.gmtime(time_compat_work); // reentrant: never the shared static buffer (worker-safe)
+    TimeCompat.gmtime(work); // reentrant: never the shared static buffer (worker-safe)
     if (!TimeCompatV.tm_out)
     {
         return;
@@ -203,7 +197,7 @@ static proto_bool http_not_modified_since(time_t mtime, const char *ims)
     struct tm tf;
     TimeCompatV.args.epoch = (uint32_t)mtime;
     TimeCompatV.args.out = &tf;
-    TimeCompat.gmtime(time_compat_work); // reentrant: never the shared static buffer (worker-safe)
+    TimeCompat.gmtime(protocore_file_serving_span()); // reentrant: never the shared static buffer (worker-safe)
     if (!TimeCompatV.tm_out)
     {
         return PROTO_FALSE;
@@ -454,7 +448,7 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
     HttpRangeV.http_parse_byte_range_args.size = file_size;
     HttpRangeV.http_parse_byte_range_args.out_start = &r_start;
     HttpRangeV.http_parse_byte_range_args.out_end = &r_end;
-    HttpRange.http_parse_byte_range(http_range_work);
+    HttpRange.http_parse_byte_range(work);
     int rr = HttpRangeV.n;
     if (rr < 0)
     {
@@ -720,7 +714,7 @@ void protocore_file_serving_serve_static(uint8_t *restrict work)
     r->method = HTTP_GET;
     MntV.args.backend = file_sys;
     MntV.args.root = fs_root;
-    Mnt.point_add(mnt_work); // null backend is legal: whatever is mounted
+    Mnt.point_add(work); // null backend is legal: whatever is mounted
     r->mnt_id = MntV.u8;
 }
 
@@ -753,7 +747,7 @@ void protocore_file_serving_serve_static_request(uint8_t *restrict work)
     }
 
     MntV.args.id = r->mnt_id;
-    Mnt.root_of(mnt_work);
+    Mnt.root_of(work);
     const char *root = MntV.text;
     size_t rlen = str.len(root, MAX_PATH_LEN);
     proto_bool root_slash = (rlen > 0 && root[rlen - 1] == '/');
@@ -814,7 +808,7 @@ void protocore_file_serving_serve_static_request(uint8_t *restrict work)
         if (gn > 0 && gn < (int)sizeof(gz) && Fs.ok)
         {
             MntV.args.id = r->mnt_id;
-            Mnt.point_of(mnt_work);
+            Mnt.point_of(work);
             FileServingV.serve_file_internal_args.slot_id = slot_id;
             FileServingV.serve_file_internal_args.head = head;
             FileServingV.serve_file_internal_args.file_sys = MntV.backend;
@@ -827,7 +821,7 @@ void protocore_file_serving_serve_static_request(uint8_t *restrict work)
     }
 
     MntV.args.id = r->mnt_id;
-    Mnt.point_of(mnt_work);
+    Mnt.point_of(work);
     FileServingV.serve_file_internal_args.slot_id = slot_id;
     FileServingV.serve_file_internal_args.head = head;
     FileServingV.serve_file_internal_args.file_sys = MntV.backend;

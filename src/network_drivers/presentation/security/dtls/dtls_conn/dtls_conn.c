@@ -25,8 +25,6 @@ static uint8_t dtls_record_work[16]; // the borrow an entry takes; DtlsRecord ne
 #include "network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.h" // the RFC 7250 RawPublicKey Certificate
 #include "server/clock/clock.h" // protocore_millis() stamps / checks the HelloRetryRequest cookie freshness
 
-static uint8_t tls13_rpk_work[16]; // the borrow an entry takes; Tls13Rpk never reads it
-
 static uint8_t tls13_msg_work[16]; // the borrow an entry takes; Tls13Msg never reads it
 
 PROTOCORE_BEGIN_DECLS
@@ -384,15 +382,15 @@ static void protocore_dtls_negotiate_conn_id(DtlsConn *c, const Tls13ClientHello
 // messages), installing handshake and application keys. Mirrors protocore_quic_tls process_client_hello. If the
 // client did not offer an X25519 key_share, this instead sends a HelloRetryRequest and returns to wait
 // for the client's second ClientHello (RFC 9147 §5.1).
-static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_t *msg, size_t msg_len, uint8_t *out, size_t out_cap,
-                               size_t *out_len)
+static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_t *msg, size_t msg_len, uint8_t *out,
+                               size_t out_cap, size_t *out_len)
 {
     Tls13ClientHello ch;
     Tls13MsgV.parse_client_hello_args.msg = msg;
     Tls13MsgV.parse_client_hello_args.len = msg_len;
     Tls13MsgV.parse_client_hello_args.out = &ch;
     Tls13MsgV.parse_client_hello_args.dtls = /*dtls=*/PROTO_TRUE;
-    Tls13Msg.parse_client_hello(tls13_msg_work);
+    Tls13Msg.parse_client_hello(work);
     if (!Tls13MsgV.ok)
     {
         return fail(c, ALERT_DECODE_ERROR);
@@ -427,7 +425,7 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
         DtlsHandshakeV.reasm_init_args.msg_seq = c->next_recv_msg_seq;
         DtlsHandshakeV.reasm_init_args.buf = c->reasm_buf + 4;
         DtlsHandshakeV.reasm_init_args.buf_cap = PROTOCORE_DTLS_CONN_REASM_CAP;
-        DtlsHandshake.reasm_init(dtls_handshake_work);
+        DtlsHandshake.reasm_init(work);
         return 0;
     }
 
@@ -477,7 +475,7 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
     Tls13MsgV.build_server_hello_args.dtls = /*dtls=*/PROTO_TRUE;
     Tls13MsgV.build_server_hello_args.conn_id = c->cid_negotiated ? c->local_cid : NULL;
     Tls13MsgV.build_server_hello_args.conn_id_len = c->cid_negotiated ? c->local_cid_len : 0;
-    Tls13Msg.build_server_hello(tls13_msg_work);
+    Tls13Msg.build_server_hello(work);
     size_t n = Tls13MsgV.n;
     if (!n)
     {
@@ -509,12 +507,12 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
     DtlsRecordV.keys_derive_args.cipher = DTLS_CIPHER_AES_128_GCM_SHA256;
     DtlsRecordV.keys_derive_args.epoch = 2;
     DtlsRecordV.keys_derive_args.secret = c->ks.s + TLS13_KS_SERVER_HS;
-    DtlsRecord.keys_derive(dtls_record_work);
+    DtlsRecord.keys_derive(work);
     DtlsRecordV.keys_derive_args.out = &c->ep2_cli;
     DtlsRecordV.keys_derive_args.cipher = DTLS_CIPHER_AES_128_GCM_SHA256;
     DtlsRecordV.keys_derive_args.epoch = 2;
     DtlsRecordV.keys_derive_args.secret = c->ks.s + TLS13_KS_CLIENT_HS;
-    DtlsRecord.keys_derive(dtls_record_work);
+    DtlsRecord.keys_derive(work);
     c->ep2_ready = PROTO_TRUE;
 
     // Raw Public Key negotiation (RFC 7250): if the client offered server_certificate_type = RawPublicKey,
@@ -537,7 +535,7 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
     Tls13MsgV.build_encrypted_extensions_empty_args.cap = sizeof(c->msgbuf);
     Tls13MsgV.build_encrypted_extensions_empty_args.rpk_server_cert = rpk;
     Tls13MsgV.build_encrypted_extensions_empty_args.alpn = NULL;
-    Tls13Msg.build_encrypted_extensions_empty(tls13_msg_work);
+    Tls13Msg.build_encrypted_extensions_empty(work);
     n = Tls13MsgV.n;
     transcript_add(c, c->transcript, c->msgbuf, n);
     if (!flight_add(c, 2, c->msgbuf, n))
@@ -556,7 +554,7 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
         Tls13RpkV.build_certificate_args.out = c->msgbuf;
         Tls13RpkV.build_certificate_args.cap = sizeof(c->msgbuf);
         Tls13RpkV.build_certificate_args.ed25519_pub = ed_pub;
-        Tls13Rpk.build_certificate(tls13_rpk_work);
+        Tls13Rpk.build_certificate(work);
         n = Tls13RpkV.n;
     }
     else
@@ -566,7 +564,7 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
         Tls13MsgV.build_certificate_args.cap = sizeof(c->msgbuf);
         Tls13MsgV.build_certificate_args.cert_der = c->cfg.cert_der;
         Tls13MsgV.build_certificate_args.cert_len = c->cfg.cert_len;
-        Tls13Msg.build_certificate(tls13_msg_work);
+        Tls13Msg.build_certificate(work);
         n = Tls13MsgV.n;
     }
     if (!n)
@@ -587,7 +585,7 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
     Tls13MsgV.build_cert_verify_args.transcript_hash = hash;
     Tls13MsgV.build_cert_verify_args.hash_len = c->ks.len;
     Tls13MsgV.build_cert_verify_args.seed = c->cfg.ed25519_seed;
-    Tls13Msg.build_cert_verify(tls13_msg_work);
+    Tls13Msg.build_cert_verify(work);
     n = Tls13MsgV.n;
     if (!n)
     {
@@ -611,7 +609,7 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
     Tls13MsgV.build_finished_args.cap = sizeof(c->msgbuf);
     Tls13MsgV.build_finished_args.verify_data = verify;
     Tls13MsgV.build_finished_args.verify_len = c->ks.len;
-    Tls13Msg.build_finished(tls13_msg_work);
+    Tls13Msg.build_finished(work);
     n = Tls13MsgV.n;
     transcript_add(c, c->transcript, c->msgbuf, n);
     if (!flight_add(c, 2, c->msgbuf, n))
@@ -629,12 +627,12 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
     DtlsRecordV.keys_derive_args.cipher = DTLS_CIPHER_AES_128_GCM_SHA256;
     DtlsRecordV.keys_derive_args.epoch = 3;
     DtlsRecordV.keys_derive_args.secret = c->ks.s + TLS13_KS_SERVER_AP;
-    DtlsRecord.keys_derive(dtls_record_work);
+    DtlsRecord.keys_derive(work);
     DtlsRecordV.keys_derive_args.out = &c->ep3_cli;
     DtlsRecordV.keys_derive_args.cipher = DTLS_CIPHER_AES_128_GCM_SHA256;
     DtlsRecordV.keys_derive_args.epoch = 3;
     DtlsRecordV.keys_derive_args.secret = c->ks.s + TLS13_KS_CLIENT_AP;
-    DtlsRecord.keys_derive(dtls_record_work);
+    DtlsRecord.keys_derive(work);
     c->ep3_ready = PROTO_TRUE;
 
     if (!flight_transmit(c, out, out_cap, out_len)) // protect the whole flight now that ep2 keys exist
@@ -648,7 +646,7 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
     DtlsHandshakeV.reasm_init_args.msg_seq = c->next_recv_msg_seq;
     DtlsHandshakeV.reasm_init_args.buf = c->reasm_buf + 4;
     DtlsHandshakeV.reasm_init_args.buf_cap = PROTOCORE_DTLS_CONN_REASM_CAP;
-    DtlsHandshake.reasm_init(dtls_handshake_work);
+    DtlsHandshake.reasm_init(work);
     return 0;
 }
 
@@ -677,12 +675,12 @@ static int handle_client_finished(uint8_t *restrict work, DtlsConn *c, const uin
     DtlsHandshakeV.reasm_init_args.msg_seq = c->next_recv_msg_seq;
     DtlsHandshakeV.reasm_init_args.buf = c->reasm_buf + 4;
     DtlsHandshakeV.reasm_init_args.buf_cap = PROTOCORE_DTLS_CONN_REASM_CAP;
-    DtlsHandshake.reasm_init(dtls_handshake_work);
+    DtlsHandshake.reasm_init(work);
     return 0;
 }
 
-static int dispatch_message(uint8_t *restrict work, DtlsConn *c, const uint8_t *tls_msg, size_t tls_len, uint8_t *out, size_t out_cap,
-                            size_t *out_len)
+static int dispatch_message(uint8_t *restrict work, DtlsConn *c, const uint8_t *tls_msg, size_t tls_len, uint8_t *out,
+                            size_t out_cap, size_t *out_len)
 {
     if (c->state == DTLS_CONN_STATE_START && tls_msg[0] == TLS_HS_CLIENT_HELLO)
     {
@@ -699,7 +697,7 @@ static int dispatch_message(uint8_t *restrict work, DtlsConn *c, const uint8_t *
         DtlsHandshakeV.reasm_init_args.msg_seq = c->next_recv_msg_seq;
         DtlsHandshakeV.reasm_init_args.buf = c->reasm_buf + 4;
         DtlsHandshakeV.reasm_init_args.buf_cap = PROTOCORE_DTLS_CONN_REASM_CAP;
-        DtlsHandshake.reasm_init(dtls_handshake_work); // accept the next one too
+        DtlsHandshake.reasm_init(work); // accept the next one too
         return 0;
     }
     return fail(c, ALERT_UNEXPECTED_MESSAGE);
@@ -707,8 +705,8 @@ static int dispatch_message(uint8_t *restrict work, DtlsConn *c, const uint8_t *
 
 // Parse and reassemble the DTLS handshake fragments carried in one record's payload, dispatching each
 // complete TLS message.
-static int drive_handshake(uint8_t *restrict work, DtlsConn *c, const uint8_t *payload, size_t plen, uint8_t *out, size_t out_cap,
-                           size_t *out_len)
+static int drive_handshake(uint8_t *restrict work, DtlsConn *c, const uint8_t *payload, size_t plen, uint8_t *out,
+                           size_t out_cap, size_t *out_len)
 {
     size_t p = 0;
     while (p < plen)
@@ -717,7 +715,7 @@ static int drive_handshake(uint8_t *restrict work, DtlsConn *c, const uint8_t *p
         DtlsHandshakeV.header_parse_args.p = payload + p;
         DtlsHandshakeV.header_parse_args.len = plen - p;
         DtlsHandshakeV.header_parse_args.out = &hh;
-        DtlsHandshake.header_parse(dtls_handshake_work);
+        DtlsHandshake.header_parse(work);
         size_t used = DtlsHandshakeV.n;
         if (!used)
         {
@@ -726,7 +724,7 @@ static int drive_handshake(uint8_t *restrict work, DtlsConn *c, const uint8_t *p
         p += used;
         DtlsHandshakeV.reasm_add_args.r = &c->reasm;
         DtlsHandshakeV.reasm_add_args.frag = &hh;
-        DtlsHandshake.reasm_add(dtls_handshake_work);
+        DtlsHandshake.reasm_add(work);
         int r = DtlsHandshakeV.n; // ignores fragments for other message_seqs
         if (r < 0)
         {
@@ -797,8 +795,8 @@ typedef enum PROTO_ENUM_PACKED
 } DtlsRecStep;
 
 // Process one ciphertext (epoch-2) record at dgram[*off], advancing *off past a well-formed record.
-static DtlsRecStep process_ciphertext_record(uint8_t *restrict work, DtlsConn *c, const uint8_t *dgram, size_t len, size_t *off, uint8_t *out,
-                                             size_t out_cap, size_t *out_len)
+static DtlsRecStep process_ciphertext_record(uint8_t *restrict work, DtlsConn *c, const uint8_t *dgram, size_t len,
+                                             size_t *off, uint8_t *out, size_t out_cap, size_t *out_len)
 {
     size_t rlen = ciphertext_record_len(dgram + *off, len - *off, c->cid_negotiated ? c->local_cid_len : 0);
     if (!rlen)
@@ -826,7 +824,7 @@ static DtlsRecStep process_ciphertext_record(uint8_t *restrict work, DtlsConn *c
     DtlsRecordV.unprotect_args.info = &info;
     DtlsRecordV.unprotect_args.expected_cid = c->cid_negotiated ? c->local_cid : NULL;
     DtlsRecordV.unprotect_args.expected_cid_len = c->cid_negotiated ? c->local_cid_len : 0;
-    DtlsRecord.unprotect(dtls_record_work);
+    DtlsRecord.unprotect(work);
     if (!DtlsRecordV.ok)
     {
         // The same sec 4.5.2 rule: a record that fails its AEAD is discarded and the association
@@ -837,14 +835,14 @@ static DtlsRecStep process_ciphertext_record(uint8_t *restrict work, DtlsConn *c
     *off += rlen;
     DtlsRecordV.replay_check_args.w = &c->replay_ep2;
     DtlsRecordV.replay_check_args.seq = info.seq;
-    DtlsRecord.replay_check(dtls_record_work);
+    DtlsRecord.replay_check(work);
     if (!DtlsRecordV.ok)
     {
         return DTLS_REC_STEP_NEXT; // replay: drop, but keep processing the datagram
     }
     DtlsRecordV.replay_mark_args.w = &c->replay_ep2;
     DtlsRecordV.replay_mark_args.seq = info.seq;
-    DtlsRecord.replay_mark(dtls_record_work);
+    DtlsRecord.replay_mark(work);
     proto_bool is_hs = (info.content_type == PROTOCORE_DTLS_CT_HANDSHAKE);
     if (is_hs)
     {
@@ -862,14 +860,14 @@ static DtlsRecStep process_ciphertext_record(uint8_t *restrict work, DtlsConn *c
 }
 
 // Process one plaintext (epoch-0) record at dgram[*off], advancing *off past a well-formed record.
-static DtlsRecStep process_plaintext_record(uint8_t *restrict work, DtlsConn *c, const uint8_t *dgram, size_t len, size_t *off, uint8_t *out,
-                                            size_t out_cap, size_t *out_len)
+static DtlsRecStep process_plaintext_record(uint8_t *restrict work, DtlsConn *c, const uint8_t *dgram, size_t len,
+                                            size_t *off, uint8_t *out, size_t out_cap, size_t *out_len)
 {
     DtlsPlaintext pt;
     DtlsRecordV.plaintext_parse_args.rec = dgram + *off;
     DtlsRecordV.plaintext_parse_args.rec_len = len - *off;
     DtlsRecordV.plaintext_parse_args.out = &pt;
-    DtlsRecord.plaintext_parse(dtls_record_work);
+    DtlsRecord.plaintext_parse(work);
     size_t rlen = DtlsRecordV.n;
     if (!rlen)
     {
@@ -905,7 +903,7 @@ static void maybe_send_completion_ack(uint8_t *restrict work, DtlsConn *c, uint8
     DtlsHandshakeV.ack_build_args.count = 1;
     DtlsHandshakeV.ack_build_args.out = ack_body;
     DtlsHandshakeV.ack_build_args.out_cap = sizeof(ack_body);
-    DtlsHandshake.ack_build(dtls_handshake_work);
+    DtlsHandshake.ack_build(work);
     size_t bl = DtlsHandshakeV.n;
     DtlsRecordV.protect_args.keys = &c->ep3_srv;
     DtlsRecordV.protect_args.seq = c->tx_seq_ep3++;
@@ -916,7 +914,7 @@ static void maybe_send_completion_ack(uint8_t *restrict work, DtlsConn *c, uint8
     DtlsRecordV.protect_args.out_cap = out_cap - *out_len;
     DtlsRecordV.protect_args.cid = c->cid_negotiated ? c->peer_cid : NULL;
     DtlsRecordV.protect_args.cid_len = c->cid_negotiated ? c->peer_cid_len : 0;
-    DtlsRecord.protect(dtls_record_work);
+    DtlsRecord.protect(work);
     size_t rec = DtlsRecordV.n;
     if (rec)
     {
@@ -960,15 +958,15 @@ void protocore_dtls_server_init(uint8_t *restrict work)
     c->transcript = c->hash_work;
     transcript_start(c, c->transcript);
     DtlsRecordV.replay_init_args.w = &c->replay_ep2;
-    DtlsRecord.replay_init(dtls_record_work);
+    DtlsRecord.replay_init(work);
     DtlsRecordV.replay_init_args.w = &c->replay_ep3;
-    DtlsRecord.replay_init(dtls_record_work);
+    DtlsRecord.replay_init(work);
     c->next_recv_msg_seq = 0;
     DtlsHandshakeV.reasm_init_args.r = &c->reasm;
     DtlsHandshakeV.reasm_init_args.msg_seq = 0;
     DtlsHandshakeV.reasm_init_args.buf = c->reasm_buf + 4;
     DtlsHandshakeV.reasm_init_args.buf_cap = PROTOCORE_DTLS_CONN_REASM_CAP;
-    DtlsHandshake.reasm_init(dtls_handshake_work);
+    DtlsHandshake.reasm_init(work);
 }
 
 void protocore_dtls_server_process(uint8_t *restrict work)
@@ -1133,7 +1131,7 @@ void protocore_dtls_server_open_app(uint8_t *restrict work)
     DtlsRecordV.unprotect_args.info = &info;
     DtlsRecordV.unprotect_args.expected_cid = c->cid_negotiated ? c->local_cid : NULL;
     DtlsRecordV.unprotect_args.expected_cid_len = c->cid_negotiated ? c->local_cid_len : 0;
-    DtlsRecord.unprotect(dtls_record_work);
+    DtlsRecord.unprotect(work);
     if (!DtlsRecordV.ok)
     {
         DtlsServerV.ok = PROTO_FALSE;
@@ -1141,7 +1139,7 @@ void protocore_dtls_server_open_app(uint8_t *restrict work)
     }
     DtlsRecordV.replay_check_args.w = &c->replay_ep3;
     DtlsRecordV.replay_check_args.seq = info.seq;
-    DtlsRecord.replay_check(dtls_record_work);
+    DtlsRecord.replay_check(work);
     if (!DtlsRecordV.ok)
     {
         DtlsServerV.ok = PROTO_FALSE; // replay or too old
@@ -1149,7 +1147,7 @@ void protocore_dtls_server_open_app(uint8_t *restrict work)
     }
     DtlsRecordV.replay_mark_args.w = &c->replay_ep3;
     DtlsRecordV.replay_mark_args.seq = info.seq;
-    DtlsRecord.replay_mark(dtls_record_work);
+    DtlsRecord.replay_mark(work);
     if (info.content_type != PROTOCORE_DTLS_CT_APPLICATION_DATA)
     {
         DtlsServerV.ok = PROTO_FALSE;
@@ -1184,7 +1182,7 @@ void protocore_dtls_server_seal_app(uint8_t *restrict work)
     DtlsRecordV.protect_args.out_cap = out_cap;
     DtlsRecordV.protect_args.cid = c->cid_negotiated ? c->peer_cid : NULL;
     DtlsRecordV.protect_args.cid_len = c->cid_negotiated ? c->peer_cid_len : 0;
-    DtlsRecord.protect(dtls_record_work);
+    DtlsRecord.protect(work);
     DtlsServerV.n = DtlsRecordV.n;
 }
 

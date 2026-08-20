@@ -18,8 +18,6 @@
 #include "network_drivers/transport/diffserv/diffserv.h" // DSCP marking; compiles out when off
 #include "network_drivers/transport/net_addr/net_addr.h" // NetAddr: the stack's address as a protocore_ip
 
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
-
 PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
@@ -100,7 +98,7 @@ static proto_bool addr_is_group(const protocore_ip *a)
         return PROTO_FALSE;
     }
     IpV.args.ip = a;
-    Ip.classify(ip_work);
+    Ip.classify(protocore_udp_listener_span());
     return IpV.scope == PROTOCORE_IP_SCOPE_MULTICAST;
 }
 
@@ -494,7 +492,7 @@ void protocore_udp_listener_listen_multicast(uint8_t *restrict work)
     UdpListenerV.ok = PROTO_FALSE;
     IpV.args.text = UdpListenerV.bind.group_ip;
     IpV.args.out = &group;
-    Ip.parse(ip_work);
+    Ip.parse(work);
     if (!IpV.ok)
     {
         return;
@@ -585,7 +583,7 @@ void protocore_udp_listener_peer_addr(uint8_t *restrict work)
     IpV.args.ip = &UdpListenerV.peer_args.peer->addr;
     IpV.args.buf = UdpListenerV.peer_args.ip_out;
     IpV.args.cap = UdpListenerV.peer_args.ip_cap;
-    Ip.format(ip_work);
+    Ip.format(work);
     if (IpV.n == 0)
     {
         return;
@@ -635,7 +633,7 @@ void protocore_udp_listener_joined_group(uint8_t *restrict work)
     IpV.args.ip = &UDP_LISTENER_CTX(work)->slot->group;
     IpV.args.buf = UDP_LISTENER_CTX(work)->group_text;
     IpV.args.cap = sizeof(UDP_LISTENER_CTX(work)->group_text);
-    Ip.format(ip_work);
+    Ip.format(work);
     if (IpV.n == 0)
     {
         return;

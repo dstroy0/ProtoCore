@@ -274,7 +274,7 @@ void protocore_jwt_verify_mac(uint8_t *restrict work)
     Base64V.url_encode_args.src = mac;
     Base64V.url_encode_args.src_len = sizeof(mac);
     Base64V.url_encode_args.dst = computed;
-    Base64.url_encode(base64_work);
+    Base64.url_encode(work);
     if (Base64V.n != JWT_SIG_B64_LEN)
     {
         return;

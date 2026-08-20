@@ -22,8 +22,6 @@
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "network_drivers/session/scp/ssh_scp/ssh_scp.h"
 
-static uint8_t scp_work[16]; // the borrow an entry takes; Scp never reads it
-
 #include "mmgr/protostr/protostr.h" // str: the bounded-run walks
 #include "network_drivers/presentation/ssh/connection/connection.h"
 #include "network_drivers/presentation/ssh/network/network.h"
@@ -151,7 +149,7 @@ static void protocore_scp_on_open(uint8_t slot, uint32_t channel, const char *cm
     ScpV.parse_cmd_args.cmd_len = cmd_len;
     ScpV.parse_cmd_args.path_out = c->dest;
     ScpV.parse_cmd_args.path_cap = sizeof(c->dest);
-    Scp.parse_cmd(scp_work);
+    Scp.parse_cmd(protocore_ssh_scp_span());
     ScpMode mode = ScpV.value;
     if (mode == SCP_MODE_SINK)
     {
@@ -224,7 +222,7 @@ static void protocore_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t 
             ScpV.parse_cline_args.size_out = &size;
             ScpV.parse_cline_args.name_out = SSH_SCP_CTX(work)->leaf;
             ScpV.parse_cline_args.name_cap = sizeof(SSH_SCP_CTX(work)->leaf);
-            Scp.parse_cline(scp_work);
+            Scp.parse_cline(protocore_ssh_scp_span());
             if (!ScpV.ok)
             {
                 // e.g. a D/E directory record (no -r support)

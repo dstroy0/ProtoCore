@@ -8,8 +8,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
-
 #if PROTOCORE_ENABLE_HAPPY_EYEBALLS
 
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
@@ -60,7 +58,7 @@ static proto_bool eff_is_v6(uint8_t *restrict work)
 static int scope_rank(uint8_t *restrict work)
 {
     IpV.args.ip = HAPPY_EYEBALLS_CTX(work)->ip;
-    Ip.classify(ip_work);
+    Ip.classify(work);
     switch (IpV.scope)
     {
     case PROTOCORE_IP_SCOPE_GLOBAL:

@@ -8,8 +8,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
-
 #if PROTOCORE_ENABLE_WISUN
 
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
@@ -246,7 +244,7 @@ void protocore_wisun_node_find(uint8_t *restrict work)
     {
         IpV.args.ip = &fan->nodes[i].addr;
         IpV.args.b = addr;
-        Ip.equal(ip_work);
+        Ip.equal(work);
         if (IpV.ok)
         {
             if (idx)
@@ -306,7 +304,7 @@ void protocore_wisun_nodes_json(uint8_t *restrict work)
         IpV.args.ip = &fan->nodes[i].addr;
         IpV.args.buf = astr;
         IpV.args.cap = sizeof(astr);
-        Ip.format(ip_work);
+        Ip.format(work);
         Sb.put(&b, "{\"addr\":\"");
         Sb.put(&b, astr);
         Sb.put(&b, "\",\"joined\":");

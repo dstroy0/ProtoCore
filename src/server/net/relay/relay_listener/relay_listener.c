@@ -28,8 +28,6 @@ PROTOCORE_BEGIN_DECLS
 #include "network_drivers/physical/radio_power/radio_power.h" // keep the radio awake during a relayed transfer
 #endif
 
-static uint8_t relay_work[16]; // the borrow an entry takes; Relay never reads it
-
 // One published front port -> origin.
 typedef struct
 {
@@ -208,7 +206,7 @@ static void service(uint8_t *restrict work, uint8_t slot)
     {
         uint32_t moved = br->relay.bytes_a2b + br->relay.bytes_b2a;
         RelayV.step_args.r = &br->relay;
-        Relay.step(relay_work);
+        Relay.step(work);
         protocore_relay_status st = RelayV.status;
         if (st == PROTOCORE_RELAY_ERROR || st == PROTOCORE_RELAY_DONE)
         {
@@ -277,7 +275,7 @@ static void relay_on_accept(uint8_t slot)
     RelayV.init_args.r = &br->relay;
     RelayV.init_args.client = &a;
     RelayV.init_args.origin = &b;
-    Relay.init(relay_work);
+    Relay.init(protocore_relay_listener_span());
 #if PROTOCORE_ENABLE_RADIO_POWER
     Radio.busy_hold(protocore_radio_power_span()); // hold the radio awake for the life of this bridge
 #endif

@@ -10,8 +10,6 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-static uint8_t quic_varint_work[16]; // the borrow an entry takes; QuicVarint never reads it
-
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/http/http3/h3_frame/h3_frame.h"
 #include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
@@ -41,7 +39,7 @@ void protocore_h3_frame_parse_header(uint8_t *restrict work)
     QuicVarintV.decode_args.len = len;
     QuicVarintV.decode_args.value = &type;
     QuicVarintV.decode_args.consumed = &c1;
-    QuicVarint.decode(quic_varint_work);
+    QuicVarint.decode(work);
     if (!QuicVarintV.ok)
     {
         H3FrameV.ok = PROTO_FALSE;
@@ -51,7 +49,7 @@ void protocore_h3_frame_parse_header(uint8_t *restrict work)
     QuicVarintV.decode_args.len = len - c1;
     QuicVarintV.decode_args.value = &length;
     QuicVarintV.decode_args.consumed = &c2;
-    QuicVarint.decode(quic_varint_work);
+    QuicVarint.decode(work);
     if (!QuicVarintV.ok)
     {
         H3FrameV.ok = PROTO_FALSE;
@@ -74,7 +72,7 @@ void protocore_h3_frame_write_header(uint8_t *restrict work)
     QuicVarintV.encode_args.out = out;
     QuicVarintV.encode_args.cap = cap;
     QuicVarintV.encode_args.value = type;
-    QuicVarint.encode(quic_varint_work);
+    QuicVarint.encode(work);
     size_t n = QuicVarintV.n;
     if (!n)
     {
@@ -84,7 +82,7 @@ void protocore_h3_frame_write_header(uint8_t *restrict work)
     QuicVarintV.encode_args.out = out + n;
     QuicVarintV.encode_args.cap = cap - n;
     QuicVarintV.encode_args.value = length;
-    QuicVarint.encode(quic_varint_work);
+    QuicVarint.encode(work);
     size_t m = QuicVarintV.n;
     if (!m)
     {
@@ -131,7 +129,7 @@ void protocore_h3_frame_parse_settings(uint8_t *restrict work)
         QuicVarintV.decode_args.len = len - off;
         QuicVarintV.decode_args.value = &id;
         QuicVarintV.decode_args.consumed = &c1;
-        QuicVarint.decode(quic_varint_work);
+        QuicVarint.decode(work);
         if (!QuicVarintV.ok)
         {
             H3FrameV.ok = PROTO_FALSE;
@@ -142,7 +140,7 @@ void protocore_h3_frame_parse_settings(uint8_t *restrict work)
         QuicVarintV.decode_args.len = len - off;
         QuicVarintV.decode_args.value = &val;
         QuicVarintV.decode_args.consumed = &c2;
-        QuicVarint.decode(quic_varint_work);
+        QuicVarint.decode(work);
         if (!QuicVarintV.ok)
         {
             H3FrameV.ok = PROTO_FALSE;
@@ -235,10 +233,10 @@ void protocore_h3_frame_build_settings(uint8_t *restrict work)
     for (size_t i = 0; i < n; i++)
     {
         QuicVarintV.len_args.value = ids[i];
-        QuicVarint.len(quic_varint_work);
+        QuicVarint.len(work);
         size_t idn = QuicVarintV.n;
         QuicVarintV.len_args.value = vals[i];
-        QuicVarint.len(quic_varint_work);
+        QuicVarint.len(work);
         plen += idn + QuicVarintV.n;
     }
     H3FrameV.write_header_args.out = out;
@@ -257,7 +255,7 @@ void protocore_h3_frame_build_settings(uint8_t *restrict work)
         QuicVarintV.encode_args.out = out + o;
         QuicVarintV.encode_args.cap = cap - o;
         QuicVarintV.encode_args.value = ids[i];
-        QuicVarint.encode(quic_varint_work);
+        QuicVarint.encode(work);
         size_t a = QuicVarintV.n;
         if (!a)
         {
@@ -268,7 +266,7 @@ void protocore_h3_frame_build_settings(uint8_t *restrict work)
         QuicVarintV.encode_args.out = out + o;
         QuicVarintV.encode_args.cap = cap - o;
         QuicVarintV.encode_args.value = vals[i];
-        QuicVarint.encode(quic_varint_work);
+        QuicVarint.encode(work);
         size_t b = QuicVarintV.n;
         if (!b)
         {
@@ -287,7 +285,7 @@ void protocore_h3_frame_build_goaway(uint8_t *restrict work)
     uint64_t stream_id = H3FrameV.build_goaway_args.stream_id;
 
     QuicVarintV.len_args.value = stream_id;
-    QuicVarint.len(quic_varint_work);
+    QuicVarint.len(work);
     size_t plen = QuicVarintV.n;
     H3FrameV.write_header_args.out = out;
     H3FrameV.write_header_args.cap = cap;
@@ -303,7 +301,7 @@ void protocore_h3_frame_build_goaway(uint8_t *restrict work)
     QuicVarintV.encode_args.out = out + o;
     QuicVarintV.encode_args.cap = cap - o;
     QuicVarintV.encode_args.value = stream_id;
-    QuicVarint.encode(quic_varint_work);
+    QuicVarint.encode(work);
     size_t a = QuicVarintV.n;
     if (!a)
     {

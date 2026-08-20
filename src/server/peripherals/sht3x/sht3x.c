@@ -8,8 +8,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
-
 #if PROTOCORE_ENABLE_SHT3X
 
 #if !PROTOCORE_HAS_BUS
@@ -64,7 +62,7 @@ void protocore_sht3x_crc8(uint8_t *restrict work)
     CrcV.args.params = &PROTOCORE_CRC8_NRSC5;
     CrcV.args.data = data;
     CrcV.args.len = len;
-    Crc.compute(crc_work);
+    Crc.compute(work);
     Sht3xV.crc = (uint8_t)CrcV.value;
 }
 

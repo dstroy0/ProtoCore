@@ -8,8 +8,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
-
 #if PROTOCORE_NEED_MODBUS
 
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
@@ -543,7 +541,7 @@ static uint16_t protocore_modbus_crc16(const uint8_t *data, size_t len)
     CrcV.args.params = &PROTOCORE_CRC16_MODBUS;
     CrcV.args.data = data;
     CrcV.args.len = len;
-    Crc.compute(crc_work);
+    Crc.compute(protocore_modbus_span());
     return (uint16_t)CrcV.value;
 }
 

@@ -12,8 +12,6 @@
 #include "mmgr/rawmemcpy/rawmemcpy.h" // raw.read: the exact mover, for a destination inside a buffer
 #include "protocore_config.h"
 
-static uint8_t dns_wire_work[16]; // the borrow an entry takes; DnsWire never reads it
-
 #if PROTOCORE_ENABLE_DNS_SERVER
 
 #include "network_drivers/network/dns/dns_wire/dns_wire.h" // the name codec both DNS halves read and write
@@ -67,7 +65,7 @@ static proto_bool parse_question(const uint8_t *q, size_t qlen, char *name, size
     DnsWireV.msg.out = name;
     DnsWireV.msg.out_cap = name_cap;
     DnsWireV.msg.allow_ptr = PROTO_FALSE;
-    DnsWire.decode(dns_wire_work);
+    DnsWire.decode(protocore_dns_server_span());
     if (!DnsWireV.ok)
     {
         return PROTO_FALSE;
@@ -95,7 +93,7 @@ static uint32_t table_find(uint8_t *restrict work, const char *name)
     {
         DnsWireV.cmp.a = DNS_SERVER_CTX(work)->names[i];
         DnsWireV.cmp.b = name;
-        DnsWire.eq(dns_wire_work);
+        DnsWire.eq(work);
         if (DnsWireV.ok)
         {
             return DNS_SERVER_CTX(work)->ips[i];

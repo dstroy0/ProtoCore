@@ -34,9 +34,6 @@
 #include "network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.h"
 #include "network_drivers/presentation/ssh/transport/ssh_rsa/ssh_rsa.h" // ssh_rsa_encode_pubkey/sign, ssh_host_pubkey, SSH_RSA_*
 #include "server/clock/clock.h"                                         // protocore_millis() (re-key timer)
-static uint8_t phase_machine_work[16]; // the borrow an entry takes; PhaseMachine never reads it
-
-static uint8_t extension_work[16]; // the borrow an entry takes; Extension never reads it
 
 #if PROTOCORE_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem/mlkem.h" // MlKem (PQ/T hybrid KEX responder)
@@ -244,7 +241,7 @@ static void build_kex_list(char *out, size_t cap, proto_bool as_client)
     char ext_info[SSH_EXT_INFO_INDICATOR_MAX];
     ext_info[0] = ',';
     ExtensionV.info_indicator_args.client_role = as_client;
-    Extension.info_indicator(extension_work);
+    Extension.info_indicator(protocore_ssh_transport_span());
     str.copy(ext_info + 1, ExtensionV.text, sizeof(ext_info) - 1);
     const char *c1 = KEX_C25519;
     const char *c2 = KEX_C25519_LIBSSH;
@@ -519,7 +516,7 @@ void ssh_transport_init(uint8_t i)
     s->ecdh_sk = base + SSH_OFF_ECDH_SK;
     s->ecdh_pk = base + SSH_OFF_ECDH_PK;
     PhaseMachineV.reset_args.i = i;
-    PhaseMachine.reset(phase_machine_work);
+    PhaseMachine.reset(protocore_ssh_transport_span());
     s->kex_active = PROTO_TRUE; // the first exchange is running from the moment the slot opens
 
     // Both key epochs, one stride apart; epoch_in / epoch_out select which one a site reads.
@@ -665,7 +662,7 @@ void protocore_ssh_transport_recv_ident(uint8_t *restrict work)
                 *theirs_len = n;
                 s->ident_len = 0;
                 PhaseMachineV.ident_done_args.i = i;
-                PhaseMachine.ident_done(phase_machine_work);
+                PhaseMachine.ident_done(work);
                 *consumed = k;
                 SshTransportV.i32 = 1;
                 return;
@@ -870,7 +867,7 @@ void protocore_ssh_transport_kexinit_parse(uint8_t *restrict work)
     // and NEWKEYS one is, and before the identification strings none can, so a KEXINIT arriving in
     // those phases is refused instead of discarding the state in flight.
     PhaseMachineV.admits_kexinit_args.i = i;
-    PhaseMachine.admits_kexinit(phase_machine_work);
+    PhaseMachine.admits_kexinit(work);
     if (!PhaseMachineV.ok)
     {
         SshTransportV.i32 = -1;
@@ -912,7 +909,7 @@ void protocore_ssh_transport_kexinit_parse(uint8_t *restrict work)
     // 'ext-info-s', it MAY send an SSH_MSG_EXT_INFO message." The indicator is the peer's role's,
     // which is the opposite of this end's.
     ExtensionV.info_indicator_args.client_role = !as_client;
-    Extension.info_indicator(extension_work);
+    Extension.info_indicator(work);
     s->ext_info_enabled = namelist_contains(list, nlen, ExtensionV.text);
     // sec 7.1: "The first algorithm in each name-list MUST be the preferred (guessed) algorithm."
     const uint8_t *peer_kex_first = list;
@@ -1068,7 +1065,7 @@ void protocore_ssh_transport_kexinit_parse(uint8_t *restrict work)
     (void)hostkey_idx;
 
     PhaseMachineV.kexinit_done_args.i = i;
-    PhaseMachine.kexinit_done(phase_machine_work);
+    PhaseMachine.kexinit_done(work);
     SshTransportV.i32 = 0;
     return;
 }
@@ -2049,7 +2046,7 @@ void protocore_ssh_transport_kexdh_reply(uint8_t *restrict work)
     protocore_secure_wipe(k_be, sizeof(k_be));
 
     PhaseMachineV.kex_done_args.i = i;
-    PhaseMachine.kex_done(phase_machine_work);
+    PhaseMachine.kex_done(work);
 #ifdef PROTOCORE_SSH_KEX_BENCH
     protocore_ssh_kex_bench.last_kexreply_us = (long long)(protocore_platform_micros() - kexreply_t0);
     protocore_ssh_kex_bench.kex_count++;
@@ -2091,7 +2088,7 @@ void protocore_ssh_transport_newkeys_complete(uint8_t *restrict work)
     // RFC 4253 sec 7.3: NEWKEYS ends a key exchange, so one arriving in any other phase ends nothing
     // and the connection goes down.
     PhaseMachineV.admits_newkeys_args.i = i;
-    PhaseMachine.admits_newkeys(phase_machine_work);
+    PhaseMachine.admits_newkeys(work);
     if (!PhaseMachineV.ok)
     {
         SshTransportV.i32 = -1;
@@ -2129,7 +2126,7 @@ void protocore_ssh_transport_newkeys_complete(uint8_t *restrict work)
     // On the first KEX advance to the service phase; on a re-key the connection
     // is already authenticated, so resume the open (channel) phase.
     PhaseMachineV.newkeys_done_args.i = i;
-    PhaseMachine.newkeys_done(phase_machine_work);
+    PhaseMachine.newkeys_done(work);
     // Reset the re-key timer: the volume/time budget is measured from this completed KEX.
     ssh_sess[i].last_kex_ms = Clock.ms;
     SshTransportV.i32 = 0;
@@ -2191,7 +2188,7 @@ void protocore_ssh_transport_begin_rekey(uint8_t *restrict work)
     }
     ssh_sess[i].kex_active = PROTO_TRUE; // an exchange is running from here to NEWKEYS
     PhaseMachineV.rekey_begin_args.i = i;
-    PhaseMachine.rekey_begin(phase_machine_work);
+    PhaseMachine.rekey_begin(work);
     SshTransportV.i32 = 0;
     return;
 }
@@ -3657,7 +3654,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         // the received SSH_MSG_KEXINIT already was a reply." Answering a reply would both break that
         // and rebuild I_S with a fresh cookie after the peer has hashed the old one.
         PhaseMachineV.kexinit_needs_reply_args.i = i;
-        PhaseMachine.kexinit_needs_reply(phase_machine_work);
+        PhaseMachine.kexinit_needs_reply(protocore_ssh_transport_span());
         if (!PhaseMachineV.ok)
         {
             SshTransportV.slot = i;
@@ -3696,7 +3693,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
 
     case SSH_MSG_KEXDH_INIT:
         PhaseMachineV.admits_kexdh_init_args.i = i;
-        PhaseMachine.admits_kexdh_init(phase_machine_work);
+        PhaseMachine.admits_kexdh_init(protocore_ssh_transport_span());
         if (!PhaseMachineV.ok)
         {
             protocore_plaintext_release(mark);
@@ -3764,7 +3761,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             ExtensionV.build_args.out = reply.buf;
             ExtensionV.build_args.len = &n;
             ExtensionV.build_args.cap = reply.cap;
-            Extension.build(extension_work);
+            Extension.build(protocore_ssh_transport_span());
             ext_info_built = (ExtensionV.n == 0);
         }
         if (ext_info_built)
@@ -3788,7 +3785,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         // phase stops a client from jumping from DH_INIT straight to userauth in cleartext, skipping the
         // whole key exchange + host-key verification. Found by the pentest's ssh_msgtype_abuse.
         PhaseMachineV.admits_service_request_args.i = i;
-        PhaseMachine.admits_service_request(phase_machine_work);
+        PhaseMachine.admits_service_request(protocore_ssh_transport_span());
         if (!PhaseMachineV.ok)
         {
             protocore_plaintext_release(mark);
@@ -3816,7 +3813,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         SshNetworkV.msg.len = n;
         SshNetwork.emit(protocore_ssh_network_span());
         PhaseMachineV.service_done_args.i = i;
-        PhaseMachine.service_done(phase_machine_work);
+        PhaseMachine.service_done(protocore_ssh_transport_span());
         protocore_plaintext_release(mark);
         return 0;
 
@@ -4229,7 +4226,7 @@ void ssh_transport_key_re_exchange(uint8_t i)
     }
     SshSession *s = &ssh_sess[i];
     PhaseMachineV.admits_rekey_args.i = i;
-    PhaseMachine.admits_rekey(phase_machine_work);
+    PhaseMachine.admits_rekey(protocore_ssh_transport_span());
     if (!PhaseMachineV.ok)
     {
         return;
@@ -4280,7 +4277,7 @@ int ssh_transport_version_exchange_recv(uint8_t i, const uint8_t *buf, size_t n,
         return -1;
     }
     PhaseMachineV.admits_ident_args.i = i;
-    PhaseMachine.admits_ident(phase_machine_work);
+    PhaseMachine.admits_ident(protocore_ssh_transport_span());
     if (!PhaseMachineV.ok)
     {
         return 1;

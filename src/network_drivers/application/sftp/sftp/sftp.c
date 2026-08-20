@@ -8,8 +8,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t time_compat_work[16]; // the borrow an entry takes; TimeCompat never reads it
-
 #if PROTOCORE_ENABLE_SSH_SFTP
 
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
@@ -595,7 +593,7 @@ void protocore_sftp_format_longname(uint8_t *restrict work)
     mem.set(&tmv, 0, sizeof(tmv));
     TimeCompatV.args.epoch = (time_t)mtime; // mtime==0 -> epoch, a harmless placeholder date
     TimeCompatV.args.out = &tmv;
-    TimeCompat.gmtime(time_compat_work);
+    TimeCompat.gmtime(work);
     // mtime is a uint32_t, so t is always inside the range every gmtime implementation accepts and the
     // conversion yields tm_mon in [0,11] by definition; tmv is zeroed above, so even a failed conversion
     // leaves month 0. The range test is purely a bounds guard on the kMonths[] index below.

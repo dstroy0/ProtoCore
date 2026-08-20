@@ -10,10 +10,6 @@
 #include "network_drivers/network/dns/dns_resolver/dns_resolver.h"
 #include "mmgr/protomem/protomem.h"
 
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
-
-static uint8_t dns_wire_work[16]; // the borrow an entry takes; DnsWire never reads it
-
 #if PROTOCORE_NEED_DNS_RESOLVER
 
 #include "mmgr/secure/secure.h"                            // protocore_secure_persist_span: this module's storage
@@ -186,7 +182,7 @@ static size_t question_build(uint8_t *out, size_t cap, uint16_t id, const char *
     DnsWireV.text.dotted = host;
     DnsWireV.text.out = out + n;
     DnsWireV.text.out_cap = cap - n;
-    DnsWire.encode(dns_wire_work);
+    DnsWire.encode(protocore_dns_resolver_span());
     size_t w = DnsWireV.n;
     if (w == 0)
     {
@@ -253,7 +249,7 @@ static proto_bool answer_read(uint8_t *restrict work, const uint8_t *pkt, size_t
         DnsWireV.msg.out = name;
         DnsWireV.msg.out_cap = DNS_RESOLVER_CTX(work)->name.cap;
         DnsWireV.msg.allow_ptr = PROTO_TRUE;
-        DnsWire.decode(dns_wire_work);
+        DnsWire.decode(work);
         if (!DnsWireV.ok)
         {
             return PROTO_FALSE;
@@ -276,7 +272,7 @@ static proto_bool answer_read(uint8_t *restrict work, const uint8_t *pkt, size_t
         DnsWireV.msg.out = name;
         DnsWireV.msg.out_cap = DNS_RESOLVER_CTX(work)->name.cap;
         DnsWireV.msg.allow_ptr = PROTO_TRUE;
-        DnsWire.decode(dns_wire_work);
+        DnsWire.decode(work);
         if (!DnsWireV.ok)
         {
             return PROTO_FALSE;
@@ -498,7 +494,7 @@ void protocore_resolver_set_server(uint8_t *restrict work)
     protocore_ip probe = {PROTOCORE_IP_NONE, {0}};
     IpV.args.text = ip;
     IpV.args.out = &probe;
-    Ip.parse(ip_work);
+    Ip.parse(work);
     if (!IpV.ok)
     {
         return;
@@ -526,7 +522,7 @@ void protocore_resolver_resolve(uint8_t *restrict work)
     protocore_ip literal = {PROTOCORE_IP_NONE, {0}};
     IpV.args.text = host;
     IpV.args.out = &literal;
-    Ip.parse(ip_work);
+    Ip.parse(work);
     if (IpV.ok) // a dotted quad answers itself, no query
     {
         ResolverV.u32 = ((uint32_t)literal.bytes[0] << 24) | ((uint32_t)literal.bytes[1] << 16) |
@@ -561,7 +557,7 @@ void protocore_resolver_resolve(uint8_t *restrict work)
     }
     IpV.args.text = (const char *)DNS_RESOLVER_CTX(work)->server.buf;
     IpV.args.out = &server;
-    Ip.parse(ip_work);
+    Ip.parse(work);
     if (!IpV.ok)
     {
         return;

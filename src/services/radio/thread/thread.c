@@ -12,8 +12,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
-
 #if PROTOCORE_ENABLE_THREAD
 
 #include "services/radio/thread/thread.h"
@@ -1024,7 +1022,7 @@ void protocore_thread_spinel_fcs(uint8_t *restrict work)
     CrcV.args.params = &PROTOCORE_CRC16_X25;
     CrcV.args.data = buf;
     CrcV.args.len = len;
-    Crc.compute(crc_work);
+    Crc.compute(work);
     ThreadV.value = (uint16_t)CrcV.value;
 }
 

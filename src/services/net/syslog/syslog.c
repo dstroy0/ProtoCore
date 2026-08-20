@@ -13,8 +13,6 @@
 #include "services/net/syslog/syslog.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
-
 #if PROTOCORE_ENABLE_SYSLOG
 
 #include "mmgr/protomem/protomem.h"                      // mem.cpy: the spans a line is assembled from
@@ -99,7 +97,7 @@ void protocore_syslog_init(uint8_t *restrict work)
 {
     IpV.args.text = SyslogV.collector.addr;
     IpV.args.out = &SYSLOG_CTX(work)->collector;
-    Ip.parse(ip_work);
+    Ip.parse(work);
     SYSLOG_CTX(work)->ready = IpV.ok;
     SYSLOG_CTX(work)->port = SyslogV.collector.port;
     copy_field(SYSLOG_CTX(work)->hostname, sizeof(SYSLOG_CTX(work)->hostname), SyslogV.header.hostname);

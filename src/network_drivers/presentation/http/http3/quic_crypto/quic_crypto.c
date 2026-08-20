@@ -10,8 +10,6 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-static uint8_t quic_packet_work[16]; // the borrow an entry takes; QuicPacket never reads it
-
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/http/http3/quic_crypto/quic_crypto.h"
 
@@ -221,7 +219,7 @@ void protocore_quic_crypto_packet_unprotect(uint8_t *restrict work)
     QuicPacketV.pn_decode_args.largest_pn = largest_pn;
     QuicPacketV.pn_decode_args.truncated_pn = truncated_pn;
     QuicPacketV.pn_decode_args.pn_nbits = (uint8_t)(pn_len * 8);
-    QuicPacket.pn_decode(quic_packet_work);
+    QuicPacket.pn_decode(work);
     uint64_t full_pn = QuicPacketV.u64;
     if (out_pn)
     {

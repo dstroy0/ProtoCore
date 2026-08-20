@@ -24,8 +24,6 @@
 #include "network_drivers/application/sftp/ssh_sftp/ssh_sftp.h"
 #include "network_drivers/session/session.h" // sftp_sess: the session the connection carries
 
-static uint8_t sftp_work[16]; // the borrow an entry takes; Sftp never reads it
-
 #include "mmgr/endian/endian.h"     // the u32 <-> big-endian bytes serializers
 #include "mmgr/protostr/protostr.h" // str: the bounded-run walks
 #include "network_drivers/application/sftp/sftp/sftp.h"
@@ -206,7 +204,7 @@ static void send_status(uint8_t *restrict work, SftpSession *s, uint32_t id, uin
     SftpV.build_status_args.msg = msg;
     SftpV.build_status_args.out = SSH_SFTP_CTX(work)->out;
     SftpV.build_status_args.cap = PROTOCORE_SFTP_RESP_CAP;
-    Sftp.build_status(sftp_work);
+    Sftp.build_status(work);
     send_resp(work, s, SftpV.n);
 }
 static void send_handle(uint8_t *restrict work, SftpSession *s, uint32_t id, int hi)
@@ -218,7 +216,7 @@ static void send_handle(uint8_t *restrict work, SftpSession *s, uint32_t id, int
     SftpV.build_handle_args.hlen = n;
     SftpV.build_handle_args.out = SSH_SFTP_CTX(work)->out;
     SftpV.build_handle_args.cap = PROTOCORE_SFTP_RESP_CAP;
-    Sftp.build_handle(sftp_work);
+    Sftp.build_handle(work);
     send_resp(work, s, SftpV.n);
 }
 // --- write streaming ------------------------------------------------------------------------------
@@ -264,24 +262,24 @@ static size_t build_entry(uint8_t *restrict work, const protocore_mnt_stat *st, 
     SftpV.format_longname_args.name = name;
     SftpV.format_longname_args.out = SSH_SFTP_CTX(work)->ln;
     SftpV.format_longname_args.cap = sizeof(SSH_SFTP_CTX(work)->ln);
-    Sftp.format_longname(sftp_work);
+    Sftp.format_longname(work);
     size_t ln_len = SftpV.n;
     SftpWriter w;
     SftpV.wr_init_args.w = &w;
     SftpV.wr_init_args.out = SSH_SFTP_CTX(work)->ent;
     SftpV.wr_init_args.cap = sizeof(SSH_SFTP_CTX(work)->ent);
-    Sftp.wr_init(sftp_work); // reserves a 4-byte length prefix we discard below
+    Sftp.wr_init(work); // reserves a 4-byte length prefix we discard below
     SftpV.wr_string_args.w = &w;
     SftpV.wr_string_args.s = name;
     SftpV.wr_string_args.n = (uint32_t)name_len;
-    Sftp.wr_string(sftp_work);
+    Sftp.wr_string(work);
     SftpV.wr_string_args.w = &w;
     SftpV.wr_string_args.s = SSH_SFTP_CTX(work)->ln;
     SftpV.wr_string_args.n = (uint32_t)ln_len;
-    Sftp.wr_string(sftp_work);
+    Sftp.wr_string(work);
     SftpV.wr_attrs_args.w = &w;
     SftpV.wr_attrs_args.a = &a;
-    Sftp.wr_attrs(sftp_work);
+    Sftp.wr_attrs(work);
     if (w.ovf)
     {
         return 0;
@@ -303,19 +301,19 @@ static void do_readdir(uint8_t *restrict work, SftpSession *s, uint32_t id, Sftp
     SftpV.wr_init_args.w = &w;
     SftpV.wr_init_args.out = SSH_SFTP_CTX(work)->out;
     SftpV.wr_init_args.cap = PROTOCORE_SFTP_RESP_CAP;
-    Sftp.wr_init(sftp_work);
+    Sftp.wr_init(work);
     SftpV.wr_u8_args.w = &w;
     SftpV.wr_u8_args.v = PROTOCORE_SSH_FXP_NAME;
-    Sftp.wr_u8(sftp_work);
+    Sftp.wr_u8(work);
     SftpV.wr_u32_args.w = &w;
     SftpV.wr_u32_args.v = id;
-    Sftp.wr_u32(sftp_work);
+    Sftp.wr_u32(work);
     SftpV.wr_pos_args.w = &w;
-    Sftp.wr_pos(sftp_work);
+    Sftp.wr_pos(work);
     size_t count_at = SftpV.n;
     SftpV.wr_u32_args.w = &w;
     SftpV.wr_u32_args.v = 0;
-    Sftp.wr_u32(sftp_work); // count placeholder
+    Sftp.wr_u32(work); // count placeholder
     uint32_t count = 0;
 
     if (H->has_pending) // an entry that did not fit last call
@@ -323,7 +321,7 @@ static void do_readdir(uint8_t *restrict work, SftpSession *s, uint32_t id, Sftp
         SftpV.wr_bytes_args.w = &w;
         SftpV.wr_bytes_args.b = H->pend;
         SftpV.wr_bytes_args.n = H->pend_len;
-        Sftp.wr_bytes(sftp_work);
+        Sftp.wr_bytes(work);
         H->has_pending = PROTO_FALSE;
         count++;
     }
@@ -347,7 +345,7 @@ static void do_readdir(uint8_t *restrict work, SftpSession *s, uint32_t id, Sftp
             continue; // entry could not be serialized (pathological name) - skip it
         }
         SftpV.wr_pos_args.w = &w;
-        Sftp.wr_pos(sftp_work);
+        Sftp.wr_pos(work);
         if (SftpV.n + el > PROTOCORE_SFTP_RESP_CAP - 8) // would not fit this NAME response
         {
             if (count == 0) // first entry too big for an empty response - emit it anyway (best effort)
@@ -355,7 +353,7 @@ static void do_readdir(uint8_t *restrict work, SftpSession *s, uint32_t id, Sftp
                 SftpV.wr_bytes_args.w = &w;
                 SftpV.wr_bytes_args.b = SSH_SFTP_CTX(work)->ent;
                 SftpV.wr_bytes_args.n = el;
-                Sftp.wr_bytes(sftp_work);
+                Sftp.wr_bytes(work);
                 count++;
             }
             else // stash it for the next READDIR
@@ -369,7 +367,7 @@ static void do_readdir(uint8_t *restrict work, SftpSession *s, uint32_t id, Sftp
         SftpV.wr_bytes_args.w = &w;
         SftpV.wr_bytes_args.b = SSH_SFTP_CTX(work)->ent;
         SftpV.wr_bytes_args.n = el;
-        Sftp.wr_bytes(sftp_work);
+        Sftp.wr_bytes(work);
         count++;
     }
 
@@ -381,9 +379,9 @@ static void do_readdir(uint8_t *restrict work, SftpSession *s, uint32_t id, Sftp
     SftpV.wr_patch_u32_args.w = &w;
     SftpV.wr_patch_u32_args.at = count_at;
     SftpV.wr_patch_u32_args.v = count;
-    Sftp.wr_patch_u32(sftp_work);
+    Sftp.wr_patch_u32(work);
     SftpV.wr_finish_args.w = &w;
-    Sftp.wr_finish(sftp_work);
+    Sftp.wr_finish(work);
     size_t n = SftpV.n;
     send_resp(work, s, n);
 }
@@ -408,22 +406,22 @@ static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t 
     SftpV.rd_init_args.r = &r;
     SftpV.rd_init_args.payload = buf + 4;
     SftpV.rd_init_args.len = total - 4;
-    Sftp.rd_init(sftp_work);
+    Sftp.rd_init(work);
     SftpV.rd_u8_args.r = &r;
-    Sftp.rd_u8(sftp_work);
+    Sftp.rd_u8(work);
     uint8_t type = SftpV.value;
 
     if (type == PROTOCORE_SSH_FXP_INIT)
     {
         SftpV.build_version_args.out = SSH_SFTP_CTX(work)->out;
         SftpV.build_version_args.cap = PROTOCORE_SFTP_RESP_CAP;
-        Sftp.build_version(sftp_work);
+        Sftp.build_version(work);
         send_resp(work, s, SftpV.n);
         return;
     }
 
     SftpV.rd_u32_args.r = &r;
-    Sftp.rd_u32(sftp_work);
+    Sftp.rd_u32(work);
     uint32_t id = SftpV.u32;
     if (!r.ok)
     {
@@ -438,19 +436,19 @@ static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t 
         SftpV.rd_string_args.r = &r;
         SftpV.rd_string_args.out = &p;
         SftpV.rd_string_args.out_len = &pl;
-        Sftp.rd_string(sftp_work);
+        Sftp.rd_string(work);
         if (!SftpV.ok)
         {
             send_status(work, s, id, PROTOCORE_SSH_FX_BAD_MESSAGE, "");
             return;
         }
         SftpV.rd_u32_args.r = &r;
-        Sftp.rd_u32(sftp_work);
+        Sftp.rd_u32(work);
         uint32_t pflags = SftpV.u32;
         SftpAttrs a = {0};
         SftpV.rd_attrs_args.r = &r;
         SftpV.rd_attrs_args.a = &a;
-        Sftp.rd_attrs(sftp_work);
+        Sftp.rd_attrs(work);
         (void)SftpV.ok; // read to advance the reader past the attrs; the open flags decide the mode
         const char *req = req_path(work, 0, p, pl);
         if (req == NULL)
@@ -506,7 +504,7 @@ static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t 
         SftpV.rd_string_args.r = &r;
         SftpV.rd_string_args.out = &h;
         SftpV.rd_string_args.out_len = &hl;
-        Sftp.rd_string(sftp_work);
+        Sftp.rd_string(work);
         if (!SftpV.ok)
         {
             send_status(work, s, id, PROTOCORE_SSH_FX_BAD_MESSAGE, "");
@@ -528,17 +526,17 @@ static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t 
         SftpV.rd_string_args.r = &r;
         SftpV.rd_string_args.out = &h;
         SftpV.rd_string_args.out_len = &hl;
-        Sftp.rd_string(sftp_work);
+        Sftp.rd_string(work);
         if (!SftpV.ok)
         {
             send_status(work, s, id, PROTOCORE_SSH_FX_BAD_MESSAGE, "");
             return;
         }
         SftpV.rd_u64_args.r = &r;
-        Sftp.rd_u64(sftp_work);
+        Sftp.rd_u64(work);
         uint64_t off = SftpV.u64;
         SftpV.rd_u32_args.r = &r;
-        Sftp.rd_u32(sftp_work);
+        Sftp.rd_u32(work);
         uint32_t rlen = SftpV.u32;
         int hi = handle_index(s, h, hl);
         if (!r.ok || hi < 0 || s->handles[hi].is_dir)
@@ -570,7 +568,7 @@ static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t 
         SftpV.build_data_args.dlen = (uint32_t)got;
         SftpV.build_data_args.out = SSH_SFTP_CTX(work)->out;
         SftpV.build_data_args.cap = PROTOCORE_SFTP_RESP_CAP;
-        Sftp.build_data(sftp_work);
+        Sftp.build_data(work);
         send_resp(work, s, SftpV.n);
         return;
     }
@@ -580,7 +578,7 @@ static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t 
         SftpV.rd_string_args.r = &r;
         SftpV.rd_string_args.out = &p;
         SftpV.rd_string_args.out_len = &pl;
-        Sftp.rd_string(sftp_work);
+        Sftp.rd_string(work);
         const char *req = r.ok ? req_path(work, 0, p, pl) : NULL;
         if (req == NULL)
         {
@@ -618,7 +616,7 @@ static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t 
         SftpV.rd_string_args.r = &r;
         SftpV.rd_string_args.out = &h;
         SftpV.rd_string_args.out_len = &hl;
-        Sftp.rd_string(sftp_work);
+        Sftp.rd_string(work);
         if (!SftpV.ok)
         {
             send_status(work, s, id, PROTOCORE_SSH_FX_BAD_MESSAGE, "");
@@ -640,7 +638,7 @@ static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t 
         SftpV.rd_string_args.r = &r;
         SftpV.rd_string_args.out = &p;
         SftpV.rd_string_args.out_len = &pl;
-        Sftp.rd_string(sftp_work);
+        Sftp.rd_string(work);
         const char *req = r.ok ? req_path(work, 0, p, pl) : NULL;
         if (req == NULL)
         {
@@ -664,7 +662,7 @@ static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t 
         SftpV.build_attrs_args.a = &a;
         SftpV.build_attrs_args.out = SSH_SFTP_CTX(work)->out;
         SftpV.build_attrs_args.cap = PROTOCORE_SFTP_RESP_CAP;
-        Sftp.build_attrs(sftp_work);
+        Sftp.build_attrs(work);
         send_resp(work, s, SftpV.n);
         return;
     }
@@ -674,7 +672,7 @@ static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t 
         SftpV.rd_string_args.r = &r;
         SftpV.rd_string_args.out = &h;
         SftpV.rd_string_args.out_len = &hl;
-        Sftp.rd_string(sftp_work);
+        Sftp.rd_string(work);
         if (!SftpV.ok)
         {
             send_status(work, s, id, PROTOCORE_SSH_FX_BAD_MESSAGE, "");
@@ -703,7 +701,7 @@ static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t 
         SftpV.build_attrs_args.a = &a;
         SftpV.build_attrs_args.out = SSH_SFTP_CTX(work)->out;
         SftpV.build_attrs_args.cap = PROTOCORE_SFTP_RESP_CAP;
-        Sftp.build_attrs(sftp_work);
+        Sftp.build_attrs(work);
         send_resp(work, s, SftpV.n);
         return;
     }
@@ -713,7 +711,7 @@ static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t 
         SftpV.rd_string_args.r = &r;
         SftpV.rd_string_args.out = &p;
         SftpV.rd_string_args.out_len = &pl;
-        Sftp.rd_string(sftp_work);
+        Sftp.rd_string(work);
         const char *req = r.ok ? req_path(work, 0, p, pl) : NULL;
         if (req == NULL)
         {
@@ -733,7 +731,7 @@ static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t 
         SftpV.rd_string_args.r = &r;
         SftpV.rd_string_args.out = &p;
         SftpV.rd_string_args.out_len = &pl;
-        Sftp.rd_string(sftp_work);
+        Sftp.rd_string(work);
         const char *req = r.ok ? req_path(work, 0, p, pl) : NULL;
         if (req == NULL)
         {
@@ -753,7 +751,7 @@ static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t 
         SftpV.rd_string_args.r = &r;
         SftpV.rd_string_args.out = &p;
         SftpV.rd_string_args.out_len = &pl;
-        Sftp.rd_string(sftp_work);
+        Sftp.rd_string(work);
         const char *req = r.ok ? req_path(work, 0, p, pl) : NULL;
         if (req == NULL)
         {
@@ -775,11 +773,11 @@ static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t 
         SftpV.rd_string_args.r = &r;
         SftpV.rd_string_args.out = &op;
         SftpV.rd_string_args.out_len = &ol;
-        Sftp.rd_string(sftp_work);
+        Sftp.rd_string(work);
         SftpV.rd_string_args.r = &r;
         SftpV.rd_string_args.out = &np;
         SftpV.rd_string_args.out_len = &nl;
-        Sftp.rd_string(sftp_work);
+        Sftp.rd_string(work);
         const char *from = r.ok ? req_path(work, 0, op, ol) : NULL;
         const char *to = (from != NULL) ? req_path(work, 1, np, nl) : NULL;
         if (to == NULL)
@@ -802,7 +800,7 @@ static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t 
         SftpV.rd_string_args.r = &r;
         SftpV.rd_string_args.out = &p;
         SftpV.rd_string_args.out_len = &pl;
-        Sftp.rd_string(sftp_work);
+        Sftp.rd_string(work);
         if (!r.ok)
         {
             send_status(work, s, id, PROTOCORE_SSH_FX_BAD_MESSAGE, "");
@@ -839,14 +837,14 @@ static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t 
         SftpV.format_longname_args.name = SSH_SFTP_CTX(work)->req[1];
         SftpV.format_longname_args.out = SSH_SFTP_CTX(work)->ln;
         SftpV.format_longname_args.cap = sizeof(SSH_SFTP_CTX(work)->ln);
-        Sftp.format_longname(sftp_work);
+        Sftp.format_longname(work);
         SftpV.build_name1_args.id = id;
         SftpV.build_name1_args.name = SSH_SFTP_CTX(work)->req[1];
         SftpV.build_name1_args.longname = SSH_SFTP_CTX(work)->ln;
         SftpV.build_name1_args.a = &a;
         SftpV.build_name1_args.out = SSH_SFTP_CTX(work)->out;
         SftpV.build_name1_args.cap = PROTOCORE_SFTP_RESP_CAP;
-        Sftp.build_name1(sftp_work);
+        Sftp.build_name1(work);
         send_resp(work, s, SftpV.n);
         return;
     }
@@ -887,27 +885,27 @@ static proto_bool process_acc(uint8_t *restrict work, SftpSession *s)
             SftpV.rd_init_args.r = &r;
             SftpV.rd_init_args.payload = s->acc + 4;
             SftpV.rd_init_args.len = s->acc_len - 4;
-            Sftp.rd_init(sftp_work);
+            Sftp.rd_init(work);
             SftpV.rd_u8_args.r = &r;
-            Sftp.rd_u8(sftp_work); // type
+            Sftp.rd_u8(work); // type
             SftpV.rd_u32_args.r = &r;
-            Sftp.rd_u32(sftp_work);
+            Sftp.rd_u32(work);
             uint32_t id = SftpV.u32;
             const uint8_t *h = NULL;
             uint32_t hl = 0;
             SftpV.rd_string_args.r = &r;
             SftpV.rd_string_args.out = &h;
             SftpV.rd_string_args.out_len = &hl;
-            Sftp.rd_string(sftp_work);
+            Sftp.rd_string(work);
             if (!SftpV.ok)
             {
                 return PROTO_TRUE; // the handle has not fully arrived - wait
             }
             SftpV.rd_u64_args.r = &r;
-            Sftp.rd_u64(sftp_work);
+            Sftp.rd_u64(work);
             uint64_t off = SftpV.u64;
             SftpV.rd_u32_args.r = &r;
-            Sftp.rd_u32(sftp_work);
+            Sftp.rd_u32(work);
             uint32_t datalen = SftpV.u32;
             if (!r.ok)
             {

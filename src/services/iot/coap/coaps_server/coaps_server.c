@@ -9,12 +9,6 @@
 #include "services/iot/coap/coaps_server/coaps_server.h"
 #include "mmgr/secure/secure.h" // the persistent end this module's key material is taken from
 
-static uint8_t dtls_server_work[16]; // the borrow an entry takes; DtlsServer never reads it
-
-static uint8_t coaps_work[16]; // the borrow an entry takes; Coaps never reads it
-
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
-
 // --- the program's shared state, beside the namespace not on it -------------
 
 // The one owned instance, private to this TU: the pointer to the bytes this module took for
@@ -255,7 +249,7 @@ static CoapsSlot *slot_by_cid(uint8_t *restrict work, const uint8_t *cid, size_t
         }
         DtlsServerV.local_cid_args.c = &s->conn;
         DtlsServerV.local_cid_args.out = sc;
-        DtlsServer.local_cid(dtls_server_work);
+        DtlsServer.local_cid(work);
         size_t sl = DtlsServerV.n;
         if (sl && sl <= avail && mem.cmp(cid, sc, sl) == 0)
         {
@@ -303,7 +297,7 @@ static CoapsSlot *open_conn(uint8_t *restrict work, const char *ip, uint16_t por
     DtlsServerV.init_args.cfg = &s->cfg;
     DtlsServerV.init_args.peer_addr = bound ? paddr : NULL;
     DtlsServerV.init_args.peer_addr_len = bound ? sizeof(paddr) : 0;
-    DtlsServer.init(dtls_server_work);
+    DtlsServer.init(work);
     (void)str.copy(s->peer_ip, ip, sizeof(s->peer_ip));
     s->peer_port = port;
     return s;
@@ -320,7 +314,7 @@ static void server_send(uint8_t *restrict work, const char *ip, uint16_t port, c
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
     IpV.args.text = ip;
     IpV.args.out = &dst;
-    Ip.parse(ip_work);
+    Ip.parse(work);
     if (!IpV.ok)
     {
         return;
@@ -373,7 +367,7 @@ static void route_datagram(uint8_t *restrict work, const CoapsIngest *ig, uint32
     CoapsV.dgram.len = ig->len;
     CoapsV.dgram.out = out;
     CoapsV.dgram.out_cap = out_cap;
-    Coaps.process(coaps_work);
+    Coaps.process(work);
     if (CoapsV.i32 > 0)
     {
         server_send(work, s->peer_ip, s->peer_port, out, (size_t)CoapsV.i32);
@@ -393,13 +387,13 @@ static void service_slot(uint8_t *restrict work, CoapsSlot *s, uint32_t now, uin
         return;
     }
     DtlsServerV.timeout_ms_args.c = &s->conn;
-    DtlsServer.timeout_ms(dtls_server_work);
+    DtlsServer.timeout_ms(work);
     if (DtlsServerV.n == 0) // 0 is due now, -1 is no timer, above 0 is still pending
     {
         DtlsServerV.on_timeout_args.c = &s->conn;
         DtlsServerV.on_timeout_args.out = out;
         DtlsServerV.on_timeout_args.out_cap = out_cap;
-        DtlsServer.on_timeout(dtls_server_work);
+        DtlsServer.on_timeout(work);
         int n = DtlsServerV.n;
         if (n > 0)
         {

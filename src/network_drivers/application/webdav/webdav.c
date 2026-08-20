@@ -9,8 +9,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
-
 #if PROTOCORE_ENABLE_WEBDAV
 
 #include "mmgr/protomem/protomem.h"
@@ -249,13 +247,13 @@ void protocore_webdav_dest_path(uint8_t *restrict work)
         if (c == '%')
         {
             HexV.args.ch = p[1];
-            Hex.val(hex_work);
+            Hex.val(work);
             const int hi = HexV.i8;
             int lo = -1;
             if (hi >= 0)
             {
                 HexV.args.ch = p[2];
-                Hex.val(hex_work);
+                Hex.val(work);
                 lo = HexV.i8;
             }
             if (hi < 0 || lo < 0)

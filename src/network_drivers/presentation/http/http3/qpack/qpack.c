@@ -12,8 +12,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t hpack_prim_work[16]; // the borrow an entry takes; HpackPrim never reads it
-
 #if PROTOCORE_ENABLE_HTTP3
 
 #include "mmgr/protomem/protomem.h"
@@ -181,7 +179,7 @@ void protocore_qpack_encode_header(uint8_t *restrict work)
         HpackPrimV.encode_int_args.prefix_bits = 6;
         HpackPrimV.encode_int_args.flags = 0xC0;
         HpackPrimV.encode_int_args.value = (uint32_t)full_idx;
-        HpackPrim.encode_int(hpack_prim_work);
+        HpackPrim.encode_int(work);
         QpackV.n = HpackPrimV.n;
         return;
     }
@@ -193,7 +191,7 @@ void protocore_qpack_encode_header(uint8_t *restrict work)
         HpackPrimV.encode_int_args.prefix_bits = 4;
         HpackPrimV.encode_int_args.flags = 0x50;
         HpackPrimV.encode_int_args.value = (uint32_t)name_idx;
-        HpackPrim.encode_int(hpack_prim_work);
+        HpackPrim.encode_int(work);
         size_t o = HpackPrimV.n;
         if (!o)
         {
@@ -204,7 +202,7 @@ void protocore_qpack_encode_header(uint8_t *restrict work)
         HpackPrimV.encode_str_args.cap = cap - o;
         HpackPrimV.encode_str_args.s = value;
         HpackPrimV.encode_str_args.n = value_len;
-        HpackPrim.encode_str(hpack_prim_work);
+        HpackPrim.encode_str(work);
         size_t vs = HpackPrimV.n;
         if (!vs)
         {
@@ -218,7 +216,7 @@ void protocore_qpack_encode_header(uint8_t *restrict work)
     // Literal Field Line with Literal Name: 001 N=0 H NameLen(3), name string, value string.
     HpackPrimV.huff_len_args.s = name;
     HpackPrimV.huff_len_args.n = name_len;
-    HpackPrim.huff_len(hpack_prim_work);
+    HpackPrim.huff_len(work);
     size_t hl = HpackPrimV.n;
     proto_bool huff = hl < name_len;
     size_t nbytes = huff ? hl : name_len;
@@ -227,7 +225,7 @@ void protocore_qpack_encode_header(uint8_t *restrict work)
     HpackPrimV.encode_int_args.prefix_bits = 3;
     HpackPrimV.encode_int_args.flags = (uint8_t)(0x20 | (huff ? 0x08 : 0x00));
     HpackPrimV.encode_int_args.value = (uint32_t)nbytes;
-    HpackPrim.encode_int(hpack_prim_work);
+    HpackPrim.encode_int(work);
     size_t o = HpackPrimV.n;
     if (!o)
     {
@@ -240,7 +238,7 @@ void protocore_qpack_encode_header(uint8_t *restrict work)
         HpackPrimV.huff_encode_args.cap = cap - o;
         HpackPrimV.huff_encode_args.s = name;
         HpackPrimV.huff_encode_args.n = name_len;
-        HpackPrim.huff_encode(hpack_prim_work);
+        HpackPrim.huff_encode(work);
         size_t body = HpackPrimV.n;
         if (body != hl)
         {
@@ -263,7 +261,7 @@ void protocore_qpack_encode_header(uint8_t *restrict work)
     HpackPrimV.encode_str_args.cap = cap - o;
     HpackPrimV.encode_str_args.s = value;
     HpackPrimV.encode_str_args.n = value_len;
-    HpackPrim.encode_str(hpack_prim_work);
+    HpackPrim.encode_str(work);
     size_t vs = HpackPrimV.n;
     if (!vs)
     {
@@ -292,7 +290,7 @@ void protocore_qpack_decode(uint8_t *restrict work)
     HpackPrimV.decode_int_args.prefix_bits = 8;
     HpackPrimV.decode_int_args.consumed = &c;
     HpackPrimV.decode_int_args.value = &ric;
-    HpackPrim.decode_int(hpack_prim_work);
+    HpackPrim.decode_int(work);
     if (!HpackPrimV.ok)
     {
         QpackV.ok = PROTO_FALSE;
@@ -310,7 +308,7 @@ void protocore_qpack_decode(uint8_t *restrict work)
     HpackPrimV.decode_int_args.prefix_bits = 7;
     HpackPrimV.decode_int_args.consumed = &c;
     HpackPrimV.decode_int_args.value = &base;
-    HpackPrim.decode_int(hpack_prim_work);
+    HpackPrim.decode_int(work);
     if (!HpackPrimV.ok) // S bit + Delta Base; ignored when RIC = 0
     {
         QpackV.ok = PROTO_FALSE;
@@ -334,7 +332,7 @@ void protocore_qpack_decode(uint8_t *restrict work)
             HpackPrimV.decode_int_args.prefix_bits = 6;
             HpackPrimV.decode_int_args.consumed = &c;
             HpackPrimV.decode_int_args.value = &idx;
-            HpackPrim.decode_int(hpack_prim_work);
+            HpackPrim.decode_int(work);
             if (!HpackPrimV.ok || idx >= 99)
             {
                 QpackV.ok = PROTO_FALSE;
@@ -358,7 +356,7 @@ void protocore_qpack_decode(uint8_t *restrict work)
             HpackPrimV.decode_int_args.prefix_bits = 4;
             HpackPrimV.decode_int_args.consumed = &c;
             HpackPrimV.decode_int_args.value = &idx;
-            HpackPrim.decode_int(hpack_prim_work);
+            HpackPrim.decode_int(work);
             if (!HpackPrimV.ok)
             {
                 QpackV.ok = PROTO_FALSE;
@@ -385,7 +383,7 @@ void protocore_qpack_decode(uint8_t *restrict work)
             HpackPrimV.decode_str_args.out = scratch + nlen;
             HpackPrimV.decode_str_args.cap = scratch_cap - nlen;
             HpackPrimV.decode_str_args.out_len = &vlen;
-            HpackPrim.decode_str(hpack_prim_work);
+            HpackPrim.decode_str(work);
             if (!HpackPrimV.ok)
             {
                 QpackV.ok = PROTO_FALSE;
@@ -406,7 +404,7 @@ void protocore_qpack_decode(uint8_t *restrict work)
             HpackPrimV.decode_int_args.prefix_bits = 3;
             HpackPrimV.decode_int_args.consumed = &c;
             HpackPrimV.decode_int_args.value = &nlen32;
-            HpackPrim.decode_int(hpack_prim_work);
+            HpackPrim.decode_int(work);
             if (!HpackPrimV.ok)
             {
                 QpackV.ok = PROTO_FALSE;
@@ -426,7 +424,7 @@ void protocore_qpack_decode(uint8_t *restrict work)
                 HpackPrimV.huff_decode_args.out = scratch;
                 HpackPrimV.huff_decode_args.cap = scratch_cap;
                 HpackPrimV.huff_decode_args.out_len = &nlen;
-                HpackPrim.huff_decode(hpack_prim_work);
+                HpackPrim.huff_decode(work);
                 if (!HpackPrimV.ok)
                 {
                     QpackV.ok = PROTO_FALSE;
@@ -451,7 +449,7 @@ void protocore_qpack_decode(uint8_t *restrict work)
             HpackPrimV.decode_str_args.out = scratch + nlen;
             HpackPrimV.decode_str_args.cap = scratch_cap - nlen;
             HpackPrimV.decode_str_args.out_len = &vlen;
-            HpackPrim.decode_str(hpack_prim_work);
+            HpackPrim.decode_str(work);
             if (!HpackPrimV.ok)
             {
                 QpackV.ok = PROTO_FALSE;

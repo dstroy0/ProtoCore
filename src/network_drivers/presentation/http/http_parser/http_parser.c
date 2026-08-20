@@ -20,8 +20,6 @@
 #include "mmgr/protostr/protostr.h"
 #include "shared/ip/ip.h" // validate a recovered proxy client IP (v4/v6)
 
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
-
 HttpReq http_pool[CONN_POOL_SLOTS];
 
 // Streaming-body hooks (OTA / file upload), owned by one instance (internal linkage): null
@@ -802,7 +800,7 @@ static proto_bool fwd_extract_client(const char *s, size_t n, char *out, size_t 
     protocore_ip ip;
     IpV.args.text = tok;
     IpV.args.out = &ip;
-    Ip.parse(ip_work); // rejects "unknown" / "_obf" / malformed
+    Ip.parse(protocore_http_parser_span()); // rejects "unknown" / "_obf" / malformed
     if (!IpV.ok)
     {
         return PROTO_FALSE;
@@ -810,7 +808,7 @@ static proto_bool fwd_extract_client(const char *s, size_t n, char *out, size_t 
     IpV.args.ip = &ip;
     IpV.args.buf = out;
     IpV.args.cap = cap;
-    Ip.format(ip_work);
+    Ip.format(protocore_http_parser_span());
     return IpV.n > 0; // false if out is too small for the canonical text
 }
 

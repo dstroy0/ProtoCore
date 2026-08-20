@@ -9,8 +9,6 @@
 #include "services/security/ikev2/ikev2_natt/ikev2_natt.h"
 #include "mmgr/protomem/protomem.h"
 
-static uint8_t ikev2_work[16]; // the borrow an entry takes; Ike never reads it
-
 #if PROTOCORE_ENABLE_IKEV2
 
 #include "crypto/hash/sha1/sha1.h"
@@ -92,7 +90,7 @@ static size_t natd_notify_build(uint8_t *restrict work, uint16_t notify_type, co
     IkeV.prop.spi = NULL;
     IkeV.prop.spi_size = 0;
     IkeV.notify.notify_type = notify_type;
-    Ike.notify_build(ikev2_work);
+    Ike.notify_build(work);
     return IkeV.n;
 }
 
