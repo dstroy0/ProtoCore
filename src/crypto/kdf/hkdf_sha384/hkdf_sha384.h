@@ -124,17 +124,38 @@ typedef struct
     HkdfSha384ExpandArgs expand_args;
     HkdfSha384ExpandLabelArgs expand_label_args;
     HkdfSha384ExpandLabelCtxArgs expand_label_ctx_args;
-
     proto_bool ok;
+} HkdfSha384Vars;
 
+/** @brief The operands and the outcome. */
+extern HkdfSha384Vars HkdfSha384V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const extract)(uint8_t *restrict work);
     void (*const expand)(uint8_t *restrict work);
     void (*const expand_label)(uint8_t *restrict work);
     void (*const expand_label_ctx)(uint8_t *restrict work);
 } HkdfSha384Ns;
 
-/** @brief The one symbol this module exports. */
-extern HkdfSha384Ns HkdfSha384;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HkdfSha384V or a region of the borrow at a fixed offset.
+void protocore_hkdf_sha384_extract(uint8_t *restrict work);
+void protocore_hkdf_sha384_expand(uint8_t *restrict work);
+void protocore_hkdf_sha384_expand_label(uint8_t *restrict work);
+void protocore_hkdf_sha384_expand_label_ctx(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `HkdfSha384.extract(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HkdfSha384Ns HkdfSha384 __attribute__((unused)) = {
+    .extract = protocore_hkdf_sha384_extract,
+    .expand = protocore_hkdf_sha384_expand,
+    .expand_label = protocore_hkdf_sha384_expand_label,
+    .expand_label_ctx = protocore_hkdf_sha384_expand_label_ctx,
+};
 
 PROTOCORE_END_DECLS
 

@@ -1177,10 +1177,10 @@ void protocore_tls13_msg_build_cert_verify(uint8_t *restrict work)
         return;
     }
     uint8_t sig[PROTOCORE_ED25519_SIG_LEN];
-    Ed25519.sign_args.seed = seed;
-    Ed25519.sign_args.msg = content;
-    Ed25519.sign_args.msg_len = clen;
-    Ed25519.sign_args.sig = sig;
+    Ed25519V.sign_args.seed = seed;
+    Ed25519V.sign_args.msg = content;
+    Ed25519V.sign_args.msg_len = clen;
+    Ed25519V.sign_args.sig = sig;
     Ed25519.sign(sign_work);
 
     Writer w = {out, cap, 0, PROTO_TRUE};

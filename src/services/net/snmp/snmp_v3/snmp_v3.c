@@ -461,11 +461,11 @@ static size_t build_message(uint8_t *restrict work, long msg_id, proto_bool auth
     if (auth)
     {
         uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
-        HmacSha256.mac_args.key = SNMP_V3_CTX(work)->auth_key;
-        HmacSha256.mac_args.key_len = SNMP_USM_KEY_LEN;
-        HmacSha256.mac_args.data = resp;
-        HmacSha256.mac_args.len = total;
-        HmacSha256.mac_args.out = mac;
+        HmacSha256V.mac_args.key = SNMP_V3_CTX(work)->auth_key;
+        HmacSha256V.mac_args.key_len = SNMP_USM_KEY_LEN;
+        HmacSha256V.mac_args.data = resp;
+        HmacSha256V.mac_args.len = total;
+        HmacSha256V.mac_args.out = mac;
         HmacSha256.mac(SNMP_V3_CTX(work)->mac_work);
         mem.cpy(resp + sec_value_pos + auth_off, mac, SNMP_V3_AUTH_PARAM_LEN);
     }
@@ -731,11 +731,11 @@ void protocore_snmp_v3_process(uint8_t *restrict work)
     mem.cpy(SNMP_V3_CTX(work)->v3_a, req, req_len);
     mem.set(SNMP_V3_CTX(work)->v3_a + aparm_off, 0, SNMP_V3_AUTH_PARAM_LEN);
     uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
-    HmacSha256.mac_args.key = SNMP_V3_CTX(work)->auth_key;
-    HmacSha256.mac_args.key_len = SNMP_USM_KEY_LEN;
-    HmacSha256.mac_args.data = SNMP_V3_CTX(work)->v3_a;
-    HmacSha256.mac_args.len = req_len;
-    HmacSha256.mac_args.out = mac;
+    HmacSha256V.mac_args.key = SNMP_V3_CTX(work)->auth_key;
+    HmacSha256V.mac_args.key_len = SNMP_USM_KEY_LEN;
+    HmacSha256V.mac_args.data = SNMP_V3_CTX(work)->v3_a;
+    HmacSha256V.mac_args.len = req_len;
+    HmacSha256V.mac_args.out = mac;
     HmacSha256.mac(SNMP_V3_CTX(work)->mac_work);
     if (!ct_eq(mac, aparm, SNMP_V3_AUTH_PARAM_LEN))
     {

@@ -68,8 +68,8 @@ void test_rfc8410_ed25519_spki(void)
 void test_rpk_certificate_round_trip(void)
 {
     uint8_t pub[PROTOCORE_ED25519_PUBKEY_LEN];
-    Ed25519.pubkey_args.pub = pub;
-    Ed25519.pubkey_args.seed = RFC8032_SEED;
+    Ed25519V.pubkey_args.pub = pub;
+    Ed25519V.pubkey_args.seed = RFC8032_SEED;
     Ed25519.pubkey(g_work);
 
     uint8_t msg[128];

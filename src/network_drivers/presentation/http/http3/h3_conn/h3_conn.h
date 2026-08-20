@@ -104,16 +104,32 @@ typedef struct
     H3ConnBind bind;
     H3ConnAppArgs app_args;
     H3ConnRespondArgs respond_args;
-
     proto_bool ok;
+} H3ConnVars;
 
+/** @brief The operands and the outcome. */
+extern H3ConnVars H3ConnV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const respond)(uint8_t *restrict work);
-
 } H3ConnNs;
 
-/** @brief The one symbol this module exports. */
-extern H3ConnNs H3Conn;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in H3ConnV or a region of the borrow at a fixed offset.
+void protocore_h3_conn_init(uint8_t *restrict work);
+void protocore_h3_conn_respond(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `H3Conn.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const H3ConnNs H3Conn __attribute__((unused)) = {
+    .init = protocore_h3_conn_init,
+    .respond = protocore_h3_conn_respond,
+};
 
 PROTOCORE_END_DECLS
 

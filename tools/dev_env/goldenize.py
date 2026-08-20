@@ -3087,6 +3087,15 @@ def main():
             # its entries are protocore_conn_pool_*; naming them protocore_protocol_* declared
             # symbols nothing defines and left every consumer unlinkable.
             mod = snake(obj)
+            # The table is not always defined in the header's sibling .c. tls.h declares
+            # TlsConnection and handshake.c defines it, so operating on tls.c alone left the old
+            # non-const definition standing against a header that now says static const.
+            tabledef = re.compile(r"^[ \t]*%s[ \t]+%s[ \t]*=[ \t]*\{" % (re.escape(ns), re.escape(obj)), re.M)
+            if not tabledef.search(io.open(cp, encoding="utf-8").read()):
+                for p in tree:
+                    if p.endswith(".c") and tabledef.search(cache.get(p, "")):
+                        cp = p
+                        break
             csrc = io.open(cp, encoding="utf-8").read()
             # `protocore_<mod>_<entry>` is not automatically free. net_addr already publishes
             # protocore_net_addr_to_ip(const protocore_net_ip *, protocore_ip *) as an ordinary

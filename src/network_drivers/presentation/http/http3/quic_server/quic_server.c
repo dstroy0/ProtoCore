@@ -322,20 +322,20 @@ static QuicSlot *open_conn(uint8_t *restrict work, const QuicLongHeader *lh, con
 
     QuicConnCallbacks cb;
     mem.set(&cb, 0, sizeof cb); // H3Conn.init installs the real callbacks
-    QuicConn.bind.b = s->qcb;
-    QuicConn.cb = cb;
-    QuicConn.init_args.cfg = &tc;
-    QuicConn.init_args.odcid = lh->dcid;
-    QuicConn.init_args.odcid_len = lh->dcid_len;
-    QuicConn.init_args.peer_scid = lh->scid;
-    QuicConn.init_args.peer_scid_len = lh->scid_len;
-    QuicConn.init_args.our_scid = our_scid;
-    QuicConn.init_args.our_scid_len = PROTOCORE_QUIC_SCID_LEN;
+    QuicConnV.bind.b = s->qcb;
+    QuicConnV.cb = cb;
+    QuicConnV.init_args.cfg = &tc;
+    QuicConnV.init_args.odcid = lh->dcid;
+    QuicConnV.init_args.odcid_len = lh->dcid_len;
+    QuicConnV.init_args.peer_scid = lh->scid;
+    QuicConnV.init_args.peer_scid_len = lh->scid_len;
+    QuicConnV.init_args.our_scid = our_scid;
+    QuicConnV.init_args.our_scid_len = PROTOCORE_QUIC_SCID_LEN;
     QuicConn.init(s->qc);
 
-    H3Conn.bind.qc = s->qc;
-    H3Conn.app_args.on_request = protocore_h3_on_request;
-    H3Conn.app_args.app = s;
+    H3ConnV.bind.qc = s->qc;
+    H3ConnV.app_args.on_request = protocore_h3_on_request;
+    H3ConnV.app_args.app = s;
     H3Conn.init(s->h3);
 
     copy_str(s->peer_ip, sizeof s->peer_ip, ip);
@@ -356,15 +356,15 @@ static QuicSlot *route(uint8_t *restrict work, const uint8_t *dg, size_t len, pr
     {
         return NULL;
     }
-    QuicPacket.is_long_header_args.first = dg[0];
+    QuicPacketV.is_long_header_args.first = dg[0];
     QuicPacket.is_long_header(quic_packet_work);
-    if (QuicPacket.ok)
+    if (QuicPacketV.ok)
     {
-        QuicPacket.parse_long_header_args.buf = dg;
-        QuicPacket.parse_long_header_args.len = len;
-        QuicPacket.parse_long_header_args.out = lh_out;
+        QuicPacketV.parse_long_header_args.buf = dg;
+        QuicPacketV.parse_long_header_args.len = len;
+        QuicPacketV.parse_long_header_args.out = lh_out;
         QuicPacket.parse_long_header(quic_packet_work);
-        if (!QuicPacket.ok)
+        if (!QuicPacketV.ok)
         {
             return NULL;
         }
@@ -375,10 +375,10 @@ static QuicSlot *route(uint8_t *restrict work, const uint8_t *dg, size_t len, pr
             {
                 continue;
             }
-            QuicConn.owns_args.dcid = lh_out->dcid;
-            QuicConn.owns_args.dcid_len = lh_out->dcid_len;
+            QuicConnV.owns_args.dcid = lh_out->dcid;
+            QuicConnV.owns_args.dcid_len = lh_out->dcid_len;
             QuicConn.owns(s->qc);
-            if (QuicConn.ok)
+            if (QuicConnV.ok)
             {
                 return s;
             }
@@ -402,10 +402,10 @@ static QuicSlot *route(uint8_t *restrict work, const uint8_t *dg, size_t len, pr
             continue;
         }
         // A short header carries no length, so the id is read at the one length this server chooses.
-        QuicConn.owns_args.dcid = dg + 1;
-        QuicConn.owns_args.dcid_len = PROTOCORE_QUIC_SCID_LEN;
+        QuicConnV.owns_args.dcid = dg + 1;
+        QuicConnV.owns_args.dcid_len = PROTOCORE_QUIC_SCID_LEN;
         QuicConn.owns(s->qc);
-        if (QuicConn.ok)
+        if (QuicConnV.ok)
         {
             return s;
         }
@@ -423,25 +423,25 @@ static void flush_and_reap(uint8_t *restrict work, uint32_t now_ms)
         {
             continue;
         }
-        QuicConn.bind.b = s->qcb;
-        QuicConn.timeout_args.now_ms = now_ms;
+        QuicConnV.bind.b = s->qcb;
+        QuicConnV.timeout_args.now_ms = now_ms;
         QuicConn.on_timeout(s->qc); // retransmit a lost handshake flight (PTO)
         // Drained: send is called until it reports nothing left, so the call is the condition.
         for (;;)
         {
-            QuicConn.send_args.out = out;
-            QuicConn.send_args.cap = sizeof out;
+            QuicConnV.send_args.out = out;
+            QuicConnV.send_args.cap = sizeof out;
             QuicConn.send(s->qc);
-            if (QuicConn.n == 0)
+            if (QuicConnV.n == 0)
             {
                 break;
             }
-            server_send(work, s->peer_ip, s->peer_port, out, QuicConn.n);
+            server_send(work, s->peer_ip, s->peer_port, out, QuicConnV.n);
         }
         // Reap a closed connection, or one idle past the timeout (wrap-safe delta) so a client that
         // never closes cannot leak the fixed pool.
         QuicConn.is_closed(s->qc);
-        if (QuicConn.closed || (uint32_t)(now_ms - s->last_ms) >= PROTOCORE_QUIC_IDLE_MS)
+        if (QuicConnV.closed || (uint32_t)(now_ms - s->last_ms) >= PROTOCORE_QUIC_IDLE_MS)
         {
             s->used = PROTO_FALSE;
         }
@@ -514,9 +514,9 @@ static void poll(uint8_t *restrict work)
             continue;
         }
         s->last_ms = now_ms; // liveness for idle reaping
-        QuicConn.bind.b = s->qcb;
-        QuicConn.recv_args.datagram = ig.data;
-        QuicConn.recv_args.len = ig.len;
+        QuicConnV.bind.b = s->qcb;
+        QuicConnV.recv_args.datagram = ig.data;
+        QuicConnV.recv_args.len = ig.len;
         QuicConn.recv(s->qc);
     }
     flush_and_reap(work, now_ms);
@@ -530,14 +530,14 @@ static void respond(uint8_t *restrict work)
         QuicServer.ok = PROTO_FALSE;
         return;
     }
-    H3Conn.bind.qc = s->qc;
-    H3Conn.respond_args.stream_id = QuicServer.stream.stream_id;
-    H3Conn.respond_args.status = QuicServer.resp.status;
-    H3Conn.respond_args.content_type = QuicServer.resp.content_type;
-    H3Conn.respond_args.body = QuicServer.resp.body;
-    H3Conn.respond_args.body_len = QuicServer.resp.body_len;
+    H3ConnV.bind.qc = s->qc;
+    H3ConnV.respond_args.stream_id = QuicServer.stream.stream_id;
+    H3ConnV.respond_args.status = QuicServer.resp.status;
+    H3ConnV.respond_args.content_type = QuicServer.resp.content_type;
+    H3ConnV.respond_args.body = QuicServer.resp.body;
+    H3ConnV.respond_args.body_len = QuicServer.resp.body_len;
     H3Conn.respond(s->h3);
-    QuicServer.ok = H3Conn.ok;
+    QuicServer.ok = H3ConnV.ok;
 }
 
 static void active_conns(uint8_t *restrict work)

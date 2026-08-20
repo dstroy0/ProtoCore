@@ -131,31 +131,31 @@ static const char *const QPACK_STATIC[99][2] = {
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void qpack_encode_prefix(uint8_t *restrict work)
+void protocore_qpack_encode_prefix(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *out = Qpack.encode_prefix_args.out;
-    size_t cap = Qpack.encode_prefix_args.cap;
+    uint8_t *out = QpackV.encode_prefix_args.out;
+    size_t cap = QpackV.encode_prefix_args.cap;
 
     if (cap < 2)
     {
-        Qpack.n = 0;
+        QpackV.n = 0;
         return;
     }
     out[0] = 0x00; // Required Insert Count = 0
     out[1] = 0x00; // S = 0, Delta Base = 0
-    Qpack.n = 2;
+    QpackV.n = 2;
 }
 
-static void qpack_encode_header(uint8_t *restrict work)
+void protocore_qpack_encode_header(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *out = Qpack.encode_header_args.out;
-    size_t cap = Qpack.encode_header_args.cap;
-    const char *name = Qpack.encode_header_args.name;
-    size_t name_len = Qpack.encode_header_args.name_len;
-    const char *value = Qpack.encode_header_args.value;
-    size_t value_len = Qpack.encode_header_args.value_len;
+    uint8_t *out = QpackV.encode_header_args.out;
+    size_t cap = QpackV.encode_header_args.cap;
+    const char *name = QpackV.encode_header_args.name;
+    size_t name_len = QpackV.encode_header_args.name_len;
+    const char *value = QpackV.encode_header_args.value;
+    size_t value_len = QpackV.encode_header_args.value_len;
 
     int name_idx = -1, full_idx = -1;
     for (int i = 0; i < 99; i++)
@@ -182,7 +182,7 @@ static void qpack_encode_header(uint8_t *restrict work)
         HpackPrimV.encode_int_args.flags = 0xC0;
         HpackPrimV.encode_int_args.value = (uint32_t)full_idx;
         HpackPrim.encode_int(hpack_prim_work);
-        Qpack.n = HpackPrimV.n;
+        QpackV.n = HpackPrimV.n;
         return;
     }
 
@@ -197,7 +197,7 @@ static void qpack_encode_header(uint8_t *restrict work)
         size_t o = HpackPrimV.n;
         if (!o)
         {
-            Qpack.n = 0;
+            QpackV.n = 0;
             return;
         }
         HpackPrimV.encode_str_args.out = out + o;
@@ -208,10 +208,10 @@ static void qpack_encode_header(uint8_t *restrict work)
         size_t vs = HpackPrimV.n;
         if (!vs)
         {
-            Qpack.n = 0;
+            QpackV.n = 0;
             return;
         }
-        Qpack.n = o + vs;
+        QpackV.n = o + vs;
         return;
     }
 
@@ -231,7 +231,7 @@ static void qpack_encode_header(uint8_t *restrict work)
     size_t o = HpackPrimV.n;
     if (!o)
     {
-        Qpack.n = 0;
+        QpackV.n = 0;
         return;
     }
     if (huff)
@@ -244,7 +244,7 @@ static void qpack_encode_header(uint8_t *restrict work)
         size_t body = HpackPrimV.n;
         if (body != hl)
         {
-            Qpack.n = 0;
+            QpackV.n = 0;
             return;
         }
         o += body;
@@ -253,7 +253,7 @@ static void qpack_encode_header(uint8_t *restrict work)
     {
         if (o + name_len > cap)
         {
-            Qpack.n = 0;
+            QpackV.n = 0;
             return;
         }
         mem.cpy(out + o, name, name_len);
@@ -267,21 +267,21 @@ static void qpack_encode_header(uint8_t *restrict work)
     size_t vs = HpackPrimV.n;
     if (!vs)
     {
-        Qpack.n = 0;
+        QpackV.n = 0;
         return;
     }
-    Qpack.n = o + vs;
+    QpackV.n = o + vs;
 }
 
-static void qpack_decode(uint8_t *restrict work)
+void protocore_qpack_decode(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *block = Qpack.decode_args.block;
-    size_t len = Qpack.decode_args.len;
-    char *scratch = Qpack.decode_args.scratch;
-    size_t scratch_cap = Qpack.decode_args.scratch_cap;
-    QpackEmitFn emit = Qpack.decode_args.emit;
-    void *ctx = Qpack.decode_args.ctx;
+    const uint8_t *block = QpackV.decode_args.block;
+    size_t len = QpackV.decode_args.len;
+    char *scratch = QpackV.decode_args.scratch;
+    size_t scratch_cap = QpackV.decode_args.scratch_cap;
+    QpackEmitFn emit = QpackV.decode_args.emit;
+    void *ctx = QpackV.decode_args.ctx;
 
     size_t pos = 0;
     // Encoded Field Section Prefix (RFC 9204 sec 4.5.1): Required Insert Count, then S + Delta Base.
@@ -295,13 +295,13 @@ static void qpack_decode(uint8_t *restrict work)
     HpackPrim.decode_int(hpack_prim_work);
     if (!HpackPrimV.ok)
     {
-        Qpack.ok = PROTO_FALSE;
+        QpackV.ok = PROTO_FALSE;
         return;
     }
     pos += c;
     if (ric != 0) // a non-zero Required Insert Count references the dynamic table (capacity 0)
     {
-        Qpack.ok = PROTO_FALSE;
+        QpackV.ok = PROTO_FALSE;
         return;
     }
     uint32_t base = 0;
@@ -313,7 +313,7 @@ static void qpack_decode(uint8_t *restrict work)
     HpackPrim.decode_int(hpack_prim_work);
     if (!HpackPrimV.ok) // S bit + Delta Base; ignored when RIC = 0
     {
-        Qpack.ok = PROTO_FALSE;
+        QpackV.ok = PROTO_FALSE;
         return;
     }
     pos += c;
@@ -325,7 +325,7 @@ static void qpack_decode(uint8_t *restrict work)
         {                    // Indexed Field Line (sec 4.5.2): 1 T i(6)
             if (!(b & 0x40)) // T = 0 -> dynamic table
             {
-                Qpack.ok = PROTO_FALSE;
+                QpackV.ok = PROTO_FALSE;
                 return;
             }
             uint32_t idx = 0;
@@ -337,7 +337,7 @@ static void qpack_decode(uint8_t *restrict work)
             HpackPrim.decode_int(hpack_prim_work);
             if (!HpackPrimV.ok || idx >= 99)
             {
-                Qpack.ok = PROTO_FALSE;
+                QpackV.ok = PROTO_FALSE;
                 return;
             }
             pos += c;
@@ -345,7 +345,7 @@ static void qpack_decode(uint8_t *restrict work)
             const char *vl = QPACK_STATIC[idx][1];
             if (!emit(ctx, nm, str.len(nm, scratch_cap + 1), vl, str.len(vl, scratch_cap + 1)))
             {
-                Qpack.ok = PROTO_FALSE;
+                QpackV.ok = PROTO_FALSE;
                 return;
             }
         }
@@ -361,20 +361,20 @@ static void qpack_decode(uint8_t *restrict work)
             HpackPrim.decode_int(hpack_prim_work);
             if (!HpackPrimV.ok)
             {
-                Qpack.ok = PROTO_FALSE;
+                QpackV.ok = PROTO_FALSE;
                 return;
             }
             pos += c;
             if (!is_static || idx >= 99) // dynamic name reference
             {
-                Qpack.ok = PROTO_FALSE;
+                QpackV.ok = PROTO_FALSE;
                 return;
             }
             const char *nm = QPACK_STATIC[idx][0];
             size_t nlen = str.len(nm, scratch_cap + 1);
             if (nlen > scratch_cap)
             {
-                Qpack.ok = PROTO_FALSE;
+                QpackV.ok = PROTO_FALSE;
                 return;
             }
             mem.cpy(scratch, nm, nlen);
@@ -388,12 +388,12 @@ static void qpack_decode(uint8_t *restrict work)
             HpackPrim.decode_str(hpack_prim_work);
             if (!HpackPrimV.ok)
             {
-                Qpack.ok = PROTO_FALSE;
+                QpackV.ok = PROTO_FALSE;
                 return;
             }
             if (!emit(ctx, scratch, nlen, scratch + nlen, vlen))
             {
-                Qpack.ok = PROTO_FALSE;
+                QpackV.ok = PROTO_FALSE;
                 return;
             }
         }
@@ -409,13 +409,13 @@ static void qpack_decode(uint8_t *restrict work)
             HpackPrim.decode_int(hpack_prim_work);
             if (!HpackPrimV.ok)
             {
-                Qpack.ok = PROTO_FALSE;
+                QpackV.ok = PROTO_FALSE;
                 return;
             }
             pos += c;
             if (pos + nlen32 > len)
             {
-                Qpack.ok = PROTO_FALSE;
+                QpackV.ok = PROTO_FALSE;
                 return;
             }
             size_t nlen = 0;
@@ -429,7 +429,7 @@ static void qpack_decode(uint8_t *restrict work)
                 HpackPrim.huff_decode(hpack_prim_work);
                 if (!HpackPrimV.ok)
                 {
-                    Qpack.ok = PROTO_FALSE;
+                    QpackV.ok = PROTO_FALSE;
                     return;
                 }
             }
@@ -437,7 +437,7 @@ static void qpack_decode(uint8_t *restrict work)
             {
                 if (nlen32 > scratch_cap)
                 {
-                    Qpack.ok = PROTO_FALSE;
+                    QpackV.ok = PROTO_FALSE;
                     return;
                 }
                 mem.cpy(scratch, block + pos, nlen32);
@@ -454,29 +454,26 @@ static void qpack_decode(uint8_t *restrict work)
             HpackPrim.decode_str(hpack_prim_work);
             if (!HpackPrimV.ok)
             {
-                Qpack.ok = PROTO_FALSE;
+                QpackV.ok = PROTO_FALSE;
                 return;
             }
             if (!emit(ctx, scratch, nlen, scratch + nlen, vlen))
             {
-                Qpack.ok = PROTO_FALSE;
+                QpackV.ok = PROTO_FALSE;
                 return;
             }
         }
         else
         { // 0001 xxxx Indexed Post-Base / 0000 xxxx Literal Post-Base Name Ref: both dynamic
-            Qpack.ok = PROTO_FALSE;
+            QpackV.ok = PROTO_FALSE;
             return;
         }
     }
-    Qpack.ok = PROTO_TRUE;
+    QpackV.ok = PROTO_TRUE;
 }
 
-QpackNs Qpack = {
-    .encode_prefix = qpack_encode_prefix,
-    .encode_header = qpack_encode_header,
-    .decode = qpack_decode,
-};
+/** @brief The operands and the outcome. */
+QpackVars QpackV;
 
 PROTOCORE_END_DECLS
 

@@ -43,15 +43,15 @@ void test_rfc9113_preface_octets(void)
 void test_rfc9113_frame_header_layout(void)
 {
     static const uint8_t WANT[9] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09};
-    TEST_ASSERT_EQUAL_UINT(9u, (H2Frame.write_args.buf = g_out, H2Frame.write_args.cap = sizeof(g_out),
-                                H2Frame.write_args.length = 0x010203u, H2Frame.write_args.type = 0x04,
-                                H2Frame.write_args.flags = 0x05, H2Frame.write_args.stream_id = 0x06070809u,
-                                H2Frame.write_header(NULL), H2Frame.n));
+    TEST_ASSERT_EQUAL_UINT(9u, (H2FrameV.write_args.buf = g_out, H2FrameV.write_args.cap = sizeof(g_out),
+                                H2FrameV.write_args.length = 0x010203u, H2FrameV.write_args.type = 0x04,
+                                H2FrameV.write_args.flags = 0x05, H2FrameV.write_args.stream_id = 0x06070809u,
+                                H2Frame.write_header(NULL), H2FrameV.n));
     TEST_ASSERT_EQUAL_MEMORY(WANT, g_out, 9);
 
     H2FrameHeader h;
-    TEST_ASSERT_TRUE((H2Frame.parse_args.buf = WANT, H2Frame.parse_args.len = sizeof(WANT), H2Frame.parse_header(NULL),
-                      *(&h) = H2Frame.header, H2Frame.ok));
+    TEST_ASSERT_TRUE((H2FrameV.parse_args.buf = WANT, H2FrameV.parse_args.len = sizeof(WANT),
+                      H2Frame.parse_header(NULL), *(&h) = H2FrameV.header, H2FrameV.ok));
     TEST_ASSERT_EQUAL_HEX32(0x010203u, h.length);
     TEST_ASSERT_EQUAL_HEX8(0x04, h.type);
     TEST_ASSERT_EQUAL_HEX8(0x05, h.flags);
@@ -64,14 +64,14 @@ void test_rfc9113_reserved_bit(void)
 {
     static const uint8_t WITH_R[9] = {0, 0, 0, H2_DATA, 0, 0x80, 0x00, 0x00, 0x01};
     H2FrameHeader h;
-    TEST_ASSERT_TRUE((H2Frame.parse_args.buf = WITH_R, H2Frame.parse_args.len = sizeof(WITH_R),
-                      H2Frame.parse_header(NULL), *(&h) = H2Frame.header, H2Frame.ok));
+    TEST_ASSERT_TRUE((H2FrameV.parse_args.buf = WITH_R, H2FrameV.parse_args.len = sizeof(WITH_R),
+                      H2Frame.parse_header(NULL), *(&h) = H2FrameV.header, H2FrameV.ok));
     TEST_ASSERT_EQUAL_HEX32(1u, h.stream_id);
 
-    TEST_ASSERT_EQUAL_UINT(9u, (H2Frame.write_args.buf = g_out, H2Frame.write_args.cap = sizeof(g_out),
-                                H2Frame.write_args.length = 0, H2Frame.write_args.type = H2_DATA,
-                                H2Frame.write_args.flags = 0, H2Frame.write_args.stream_id = 0x80000001u,
-                                H2Frame.write_header(NULL), H2Frame.n));
+    TEST_ASSERT_EQUAL_UINT(9u, (H2FrameV.write_args.buf = g_out, H2FrameV.write_args.cap = sizeof(g_out),
+                                H2FrameV.write_args.length = 0, H2FrameV.write_args.type = H2_DATA,
+                                H2FrameV.write_args.flags = 0, H2FrameV.write_args.stream_id = 0x80000001u,
+                                H2Frame.write_header(NULL), H2FrameV.n));
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[5]);
     TEST_ASSERT_EQUAL_HEX8(0x01, g_out[8]);
 }
@@ -80,25 +80,25 @@ void test_rfc9113_reserved_bit(void)
 // representation. A destination shorter than the fixed header holds none of it.
 void test_rfc9113_length_is_24_bits(void)
 {
-    TEST_ASSERT_EQUAL_UINT(9u, (H2Frame.write_args.buf = g_out, H2Frame.write_args.cap = sizeof(g_out),
-                                H2Frame.write_args.length = 0xFFFFFFu, H2Frame.write_args.type = H2_DATA,
-                                H2Frame.write_args.flags = 0, H2Frame.write_args.stream_id = 1,
-                                H2Frame.write_header(NULL), H2Frame.n));
+    TEST_ASSERT_EQUAL_UINT(9u, (H2FrameV.write_args.buf = g_out, H2FrameV.write_args.cap = sizeof(g_out),
+                                H2FrameV.write_args.length = 0xFFFFFFu, H2FrameV.write_args.type = H2_DATA,
+                                H2FrameV.write_args.flags = 0, H2FrameV.write_args.stream_id = 1,
+                                H2Frame.write_header(NULL), H2FrameV.n));
     TEST_ASSERT_EQUAL_HEX8(0xFF, g_out[0]);
     TEST_ASSERT_EQUAL_HEX8(0xFF, g_out[1]);
     TEST_ASSERT_EQUAL_HEX8(0xFF, g_out[2]);
-    TEST_ASSERT_EQUAL_UINT(0u, (H2Frame.write_args.buf = g_out, H2Frame.write_args.cap = sizeof(g_out),
-                                H2Frame.write_args.length = 0x1000000u, H2Frame.write_args.type = H2_DATA,
-                                H2Frame.write_args.flags = 0, H2Frame.write_args.stream_id = 1,
-                                H2Frame.write_header(NULL), H2Frame.n));
-    TEST_ASSERT_EQUAL_UINT(0u,
-                           (H2Frame.write_args.buf = g_out, H2Frame.write_args.cap = 8, H2Frame.write_args.length = 0,
-                            H2Frame.write_args.type = H2_DATA, H2Frame.write_args.flags = 0,
-                            H2Frame.write_args.stream_id = 1, H2Frame.write_header(NULL), H2Frame.n));
+    TEST_ASSERT_EQUAL_UINT(0u, (H2FrameV.write_args.buf = g_out, H2FrameV.write_args.cap = sizeof(g_out),
+                                H2FrameV.write_args.length = 0x1000000u, H2FrameV.write_args.type = H2_DATA,
+                                H2FrameV.write_args.flags = 0, H2FrameV.write_args.stream_id = 1,
+                                H2Frame.write_header(NULL), H2FrameV.n));
+    TEST_ASSERT_EQUAL_UINT(0u, (H2FrameV.write_args.buf = g_out, H2FrameV.write_args.cap = 8,
+                                H2FrameV.write_args.length = 0, H2FrameV.write_args.type = H2_DATA,
+                                H2FrameV.write_args.flags = 0, H2FrameV.write_args.stream_id = 1,
+                                H2Frame.write_header(NULL), H2FrameV.n));
 
     H2FrameHeader h;
-    TEST_ASSERT_FALSE((H2Frame.parse_args.buf = g_out, H2Frame.parse_args.len = 8, H2Frame.parse_header(NULL),
-                       *(&h) = H2Frame.header, H2Frame.ok));
+    TEST_ASSERT_FALSE((H2FrameV.parse_args.buf = g_out, H2FrameV.parse_args.len = 8, H2Frame.parse_header(NULL),
+                       *(&h) = H2FrameV.header, H2FrameV.ok));
 }
 
 // RFC 9113 sec 6.5.2 states each initial value in words: HEADER_TABLE_SIZE 4,096; ENABLE_PUSH 1;
@@ -107,7 +107,7 @@ void test_rfc9113_length_is_24_bits(void)
 void test_rfc9113_settings_initial_values(void)
 {
     H2Settings s;
-    (H2Frame.settings_args.s = &s, H2Frame.settings_defaults(NULL));
+    (H2FrameV.settings_args.s = &s, H2Frame.settings_defaults(NULL));
     TEST_ASSERT_EQUAL_UINT32(4096u, s.header_table_size);
     TEST_ASSERT_EQUAL_UINT32(1u, s.enable_push);
     TEST_ASSERT_EQUAL_HEX32(0xFFFFFFFFu, s.max_concurrent_streams);
@@ -121,21 +121,22 @@ void test_rfc9113_settings_initial_values(void)
 void test_rfc9113_settings_payload_shape(void)
 {
     H2Settings s;
-    (H2Frame.settings_args.s = &s, H2Frame.settings_defaults(NULL));
+    (H2FrameV.settings_args.s = &s, H2Frame.settings_defaults(NULL));
 
     static const uint8_t ODD[5] = {0, 1, 0, 0, 0};
-    TEST_ASSERT_FALSE((H2Frame.settings_args.payload = ODD, H2Frame.settings_args.len = sizeof(ODD),
-                       H2Frame.settings_args.s = &s, H2Frame.parse_settings(NULL), H2Frame.ok));
+    TEST_ASSERT_FALSE((H2FrameV.settings_args.payload = ODD, H2FrameV.settings_args.len = sizeof(ODD),
+                       H2FrameV.settings_args.s = &s, H2Frame.parse_settings(NULL), H2FrameV.ok));
 
     // id 0x1 = 8192, then an unknown id 0xabcd
     static const uint8_t PAY[12] = {0x00, 0x01, 0x00, 0x00, 0x20, 0x00, 0xab, 0xcd, 0xde, 0xad, 0xbe, 0xef};
-    TEST_ASSERT_TRUE((H2Frame.settings_args.payload = PAY, H2Frame.settings_args.len = sizeof(PAY),
-                      H2Frame.settings_args.s = &s, H2Frame.parse_settings(NULL), H2Frame.ok));
+    TEST_ASSERT_TRUE((H2FrameV.settings_args.payload = PAY, H2FrameV.settings_args.len = sizeof(PAY),
+                      H2FrameV.settings_args.s = &s, H2Frame.parse_settings(NULL), H2FrameV.ok));
     TEST_ASSERT_EQUAL_UINT32(8192u, s.header_table_size);
     TEST_ASSERT_EQUAL_UINT32(1u, s.enable_push); // untouched by the unknown entry
 
-    TEST_ASSERT_TRUE((H2Frame.settings_args.payload = PAY, H2Frame.settings_args.len = 0, H2Frame.settings_args.s = &s,
-                      H2Frame.parse_settings(NULL), H2Frame.ok)); // an empty SETTINGS is legal
+    TEST_ASSERT_TRUE((H2FrameV.settings_args.payload = PAY, H2FrameV.settings_args.len = 0,
+                      H2FrameV.settings_args.s = &s, H2Frame.parse_settings(NULL),
+                      H2FrameV.ok)); // an empty SETTINGS is legal
 }
 
 // sec 6.5.2 draws three bounds in words, and each is tested at the value on either side of it:
@@ -166,7 +167,7 @@ void test_rfc9113_settings_bounds(void)
     {
         uint8_t pay[6];
         H2Settings s;
-        (H2Frame.settings_args.s = &s, H2Frame.settings_defaults(NULL));
+        (H2FrameV.settings_args.s = &s, H2Frame.settings_defaults(NULL));
         pay[0] = (uint8_t)(CASES[i].id >> 8);
         pay[1] = (uint8_t)CASES[i].id;
         pay[2] = (uint8_t)(CASES[i].val >> 24);
@@ -174,8 +175,8 @@ void test_rfc9113_settings_bounds(void)
         pay[4] = (uint8_t)(CASES[i].val >> 8);
         pay[5] = (uint8_t)CASES[i].val;
         TEST_ASSERT_EQUAL_INT(CASES[i].want,
-                              (H2Frame.settings_args.payload = pay, H2Frame.settings_args.len = sizeof(pay),
-                               H2Frame.settings_args.s = &s, H2Frame.parse_settings(NULL), H2Frame.ok));
+                              (H2FrameV.settings_args.payload = pay, H2FrameV.settings_args.len = sizeof(pay),
+                               H2FrameV.settings_args.s = &s, H2Frame.parse_settings(NULL), H2FrameV.ok));
     }
 }
 
@@ -185,23 +186,23 @@ void test_rfc9113_settings_round_trip(void)
     static const uint16_t IDS[3] = {H2_SETTINGS_MAX_CONCURRENT_STREAMS, H2_SETTINGS_INITIAL_WINDOW_SIZE,
                                     H2_SETTINGS_MAX_FRAME_SIZE};
     static const uint32_t VALS[3] = {100u, 1048576u, 16384u};
-    size_t n = (H2Frame.build_settings_args.buf = g_out, H2Frame.build_settings_args.cap = sizeof(g_out),
-                H2Frame.build_settings_args.ids = IDS, H2Frame.build_settings_args.vals = VALS,
-                H2Frame.build_settings_args.n = 3, H2Frame.build_settings(NULL), H2Frame.n);
+    size_t n = (H2FrameV.build_settings_args.buf = g_out, H2FrameV.build_settings_args.cap = sizeof(g_out),
+                H2FrameV.build_settings_args.ids = IDS, H2FrameV.build_settings_args.vals = VALS,
+                H2FrameV.build_settings_args.n = 3, H2Frame.build_settings(NULL), H2FrameV.n);
     TEST_ASSERT_EQUAL_UINT(9u + 18u, n);
 
     H2FrameHeader h;
-    TEST_ASSERT_TRUE((H2Frame.parse_args.buf = g_out, H2Frame.parse_args.len = n, H2Frame.parse_header(NULL),
-                      *(&h) = H2Frame.header, H2Frame.ok));
+    TEST_ASSERT_TRUE((H2FrameV.parse_args.buf = g_out, H2FrameV.parse_args.len = n, H2Frame.parse_header(NULL),
+                      *(&h) = H2FrameV.header, H2FrameV.ok));
     TEST_ASSERT_EQUAL_HEX8(H2_SETTINGS, h.type);
     TEST_ASSERT_EQUAL_HEX8(0x00, h.flags);
     TEST_ASSERT_EQUAL_HEX32(0u, h.stream_id);
     TEST_ASSERT_EQUAL_UINT32(18u, h.length);
 
     H2Settings s;
-    (H2Frame.settings_args.s = &s, H2Frame.settings_defaults(NULL));
-    TEST_ASSERT_TRUE((H2Frame.settings_args.payload = g_out + 9, H2Frame.settings_args.len = h.length,
-                      H2Frame.settings_args.s = &s, H2Frame.parse_settings(NULL), H2Frame.ok));
+    (H2FrameV.settings_args.s = &s, H2Frame.settings_defaults(NULL));
+    TEST_ASSERT_TRUE((H2FrameV.settings_args.payload = g_out + 9, H2FrameV.settings_args.len = h.length,
+                      H2FrameV.settings_args.s = &s, H2Frame.parse_settings(NULL), H2FrameV.ok));
     TEST_ASSERT_EQUAL_UINT32(100u, s.max_concurrent_streams);
     TEST_ASSERT_EQUAL_UINT32(1048576u, s.initial_window_size);
     TEST_ASSERT_EQUAL_UINT32(16384u, s.max_frame_size);
@@ -211,8 +212,8 @@ void test_rfc9113_settings_round_trip(void)
 void test_rfc9113_settings_ack_bytes(void)
 {
     static const uint8_t WANT[9] = {0x00, 0x00, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00};
-    TEST_ASSERT_EQUAL_UINT(9u, (H2Frame.ack_args.buf = g_out, H2Frame.ack_args.cap = sizeof(g_out),
-                                H2Frame.build_settings_ack(NULL), H2Frame.n));
+    TEST_ASSERT_EQUAL_UINT(9u, (H2FrameV.ack_args.buf = g_out, H2FrameV.ack_args.cap = sizeof(g_out),
+                                H2Frame.build_settings_ack(NULL), H2FrameV.n));
     TEST_ASSERT_EQUAL_MEMORY(WANT, g_out, 9);
 }
 
@@ -221,9 +222,9 @@ void test_rfc9113_settings_ack_bytes(void)
 void test_rfc9113_window_update_bytes(void)
 {
     static const uint8_t WANT[13] = {0x00, 0x00, 0x04, 0x08, 0x00, 0x00, 0x00, 0x00, 0x01, 0x7F, 0xFF, 0xFF, 0xFF};
-    TEST_ASSERT_EQUAL_UINT(13u, (H2Frame.window_args.buf = g_out, H2Frame.window_args.cap = sizeof(g_out),
-                                 H2Frame.window_args.stream_id = 1u, H2Frame.window_args.increment = 0xFFFFFFFFu,
-                                 H2Frame.build_window_update(NULL), H2Frame.n));
+    TEST_ASSERT_EQUAL_UINT(13u, (H2FrameV.window_args.buf = g_out, H2FrameV.window_args.cap = sizeof(g_out),
+                                 H2FrameV.window_args.stream_id = 1u, H2FrameV.window_args.increment = 0xFFFFFFFFu,
+                                 H2Frame.build_window_update(NULL), H2FrameV.n));
     TEST_ASSERT_EQUAL_MEMORY(WANT, g_out, 13);
 }
 
@@ -232,9 +233,9 @@ void test_rfc9113_window_update_bytes(void)
 void test_rfc9113_rst_stream_bytes(void)
 {
     static const uint8_t WANT[13] = {0x00, 0x00, 0x04, 0x03, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x08};
-    TEST_ASSERT_EQUAL_UINT(13u, (H2Frame.rst_args.buf = g_out, H2Frame.rst_args.cap = sizeof(g_out),
-                                 H2Frame.rst_args.stream_id = 3u, H2Frame.rst_args.error = H2_CANCEL,
-                                 H2Frame.build_rst_stream(NULL), H2Frame.n));
+    TEST_ASSERT_EQUAL_UINT(13u, (H2FrameV.rst_args.buf = g_out, H2FrameV.rst_args.cap = sizeof(g_out),
+                                 H2FrameV.rst_args.stream_id = 3u, H2FrameV.rst_args.error = H2_CANCEL,
+                                 H2Frame.build_rst_stream(NULL), H2FrameV.n));
     TEST_ASSERT_EQUAL_MEMORY(WANT, g_out, 13);
     TEST_ASSERT_EQUAL_HEX32(0x08u, (uint32_t)H2_CANCEL);
 }
@@ -246,9 +247,9 @@ void test_rfc9113_goaway_bytes(void)
     static const uint8_t WANT[17] = {0x00, 0x00, 0x08, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00,
                                      0x00, 0x00, 0x00, 0x0F, 0x00, 0x00, 0x00, 0x0B};
     TEST_ASSERT_EQUAL_UINT(17u,
-                           (H2Frame.goaway_args.buf = g_out, H2Frame.goaway_args.cap = sizeof(g_out),
-                            H2Frame.goaway_args.last_stream_id = 0x8000000Fu,
-                            H2Frame.goaway_args.error = H2_ENHANCE_YOUR_CALM, H2Frame.build_goaway(NULL), H2Frame.n));
+                           (H2FrameV.goaway_args.buf = g_out, H2FrameV.goaway_args.cap = sizeof(g_out),
+                            H2FrameV.goaway_args.last_stream_id = 0x8000000Fu,
+                            H2FrameV.goaway_args.error = H2_ENHANCE_YOUR_CALM, H2Frame.build_goaway(NULL), H2FrameV.n));
     TEST_ASSERT_EQUAL_MEMORY(WANT, g_out, 17);
 }
 
@@ -258,8 +259,8 @@ void test_rfc9113_ping_ack_echoes_the_payload(void)
 {
     static const uint8_t OPAQUE[8] = {0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03, 0x04};
     static const uint8_t WANT[9] = {0x00, 0x00, 0x08, 0x06, 0x01, 0x00, 0x00, 0x00, 0x00};
-    TEST_ASSERT_EQUAL_UINT(17u, (H2Frame.ping_args.buf = g_out, H2Frame.ping_args.cap = sizeof(g_out),
-                                 H2Frame.ping_args.opaque = OPAQUE, H2Frame.build_ping_ack(NULL), H2Frame.n));
+    TEST_ASSERT_EQUAL_UINT(17u, (H2FrameV.ping_args.buf = g_out, H2FrameV.ping_args.cap = sizeof(g_out),
+                                 H2FrameV.ping_args.opaque = OPAQUE, H2Frame.build_ping_ack(NULL), H2FrameV.n));
     TEST_ASSERT_EQUAL_MEMORY(WANT, g_out, 9);
     TEST_ASSERT_EQUAL_MEMORY(OPAQUE, g_out + 9, 8);
 }
@@ -271,42 +272,42 @@ void test_rfc9113_headers_and_data(void)
     static const uint8_t BLOCK[3] = {0x88, 0x0F, 0x0D};
     H2FrameHeader h;
 
-    size_t n = (H2Frame.headers_args.buf = g_out, H2Frame.headers_args.cap = sizeof(g_out),
-                H2Frame.headers_args.stream_id = 5u, H2Frame.headers_args.block = BLOCK,
-                H2Frame.headers_args.block_len = sizeof(BLOCK), H2Frame.headers_args.end_stream = PROTO_FALSE,
-                H2Frame.build_headers(NULL), H2Frame.n);
+    size_t n = (H2FrameV.headers_args.buf = g_out, H2FrameV.headers_args.cap = sizeof(g_out),
+                H2FrameV.headers_args.stream_id = 5u, H2FrameV.headers_args.block = BLOCK,
+                H2FrameV.headers_args.block_len = sizeof(BLOCK), H2FrameV.headers_args.end_stream = PROTO_FALSE,
+                H2Frame.build_headers(NULL), H2FrameV.n);
     TEST_ASSERT_EQUAL_UINT(12u, n);
-    TEST_ASSERT_TRUE((H2Frame.parse_args.buf = g_out, H2Frame.parse_args.len = n, H2Frame.parse_header(NULL),
-                      *(&h) = H2Frame.header, H2Frame.ok));
+    TEST_ASSERT_TRUE((H2FrameV.parse_args.buf = g_out, H2FrameV.parse_args.len = n, H2Frame.parse_header(NULL),
+                      *(&h) = H2FrameV.header, H2FrameV.ok));
     TEST_ASSERT_EQUAL_HEX8(H2_HEADERS, h.type);
     TEST_ASSERT_EQUAL_HEX8(H2_FLAG_END_HEADERS, h.flags);
     TEST_ASSERT_EQUAL_HEX32(5u, h.stream_id);
     TEST_ASSERT_EQUAL_UINT32(3u, h.length);
     TEST_ASSERT_EQUAL_MEMORY(BLOCK, g_out + 9, 3);
 
-    n = (H2Frame.headers_args.buf = g_out, H2Frame.headers_args.cap = sizeof(g_out),
-         H2Frame.headers_args.stream_id = 5u, H2Frame.headers_args.block = BLOCK,
-         H2Frame.headers_args.block_len = sizeof(BLOCK), H2Frame.headers_args.end_stream = PROTO_TRUE,
-         H2Frame.build_headers(NULL), H2Frame.n);
-    TEST_ASSERT_TRUE((H2Frame.parse_args.buf = g_out, H2Frame.parse_args.len = n, H2Frame.parse_header(NULL),
-                      *(&h) = H2Frame.header, H2Frame.ok));
+    n = (H2FrameV.headers_args.buf = g_out, H2FrameV.headers_args.cap = sizeof(g_out),
+         H2FrameV.headers_args.stream_id = 5u, H2FrameV.headers_args.block = BLOCK,
+         H2FrameV.headers_args.block_len = sizeof(BLOCK), H2FrameV.headers_args.end_stream = PROTO_TRUE,
+         H2Frame.build_headers(NULL), H2FrameV.n);
+    TEST_ASSERT_TRUE((H2FrameV.parse_args.buf = g_out, H2FrameV.parse_args.len = n, H2Frame.parse_header(NULL),
+                      *(&h) = H2FrameV.header, H2FrameV.ok));
     TEST_ASSERT_EQUAL_HEX8(H2_FLAG_END_HEADERS | H2_FLAG_END_STREAM, h.flags);
 
-    n = (H2Frame.data_args.buf = g_out, H2Frame.data_args.cap = sizeof(g_out), H2Frame.data_args.stream_id = 7u,
-         H2Frame.data_args.data = (const uint8_t *)"hi", H2Frame.data_args.data_len = 2,
-         H2Frame.data_args.end_stream = PROTO_TRUE, H2Frame.build_data(NULL), H2Frame.n);
+    n = (H2FrameV.data_args.buf = g_out, H2FrameV.data_args.cap = sizeof(g_out), H2FrameV.data_args.stream_id = 7u,
+         H2FrameV.data_args.data = (const uint8_t *)"hi", H2FrameV.data_args.data_len = 2,
+         H2FrameV.data_args.end_stream = PROTO_TRUE, H2Frame.build_data(NULL), H2FrameV.n);
     TEST_ASSERT_EQUAL_UINT(11u, n);
-    TEST_ASSERT_TRUE((H2Frame.parse_args.buf = g_out, H2Frame.parse_args.len = n, H2Frame.parse_header(NULL),
-                      *(&h) = H2Frame.header, H2Frame.ok));
+    TEST_ASSERT_TRUE((H2FrameV.parse_args.buf = g_out, H2FrameV.parse_args.len = n, H2Frame.parse_header(NULL),
+                      *(&h) = H2FrameV.header, H2FrameV.ok));
     TEST_ASSERT_EQUAL_HEX8(H2_DATA, h.type);
     TEST_ASSERT_EQUAL_HEX8(H2_FLAG_END_STREAM, h.flags);
     TEST_ASSERT_EQUAL_UINT32(2u, h.length);
     TEST_ASSERT_EQUAL_MEMORY("hi", g_out + 9, 2);
 
     // an empty DATA frame is a header and nothing else
-    n = (H2Frame.data_args.buf = g_out, H2Frame.data_args.cap = sizeof(g_out), H2Frame.data_args.stream_id = 7u,
-         H2Frame.data_args.data = NULL, H2Frame.data_args.data_len = 0, H2Frame.data_args.end_stream = PROTO_TRUE,
-         H2Frame.build_data(NULL), H2Frame.n);
+    n = (H2FrameV.data_args.buf = g_out, H2FrameV.data_args.cap = sizeof(g_out), H2FrameV.data_args.stream_id = 7u,
+         H2FrameV.data_args.data = NULL, H2FrameV.data_args.data_len = 0, H2FrameV.data_args.end_stream = PROTO_TRUE,
+         H2Frame.build_data(NULL), H2FrameV.n);
     TEST_ASSERT_EQUAL_UINT(9u, n);
 }
 
@@ -317,29 +318,30 @@ void test_builders_refuse_a_short_destination(void)
     static const uint8_t OPAQUE[8] = {0};
     static const uint16_t ID = H2_SETTINGS_ENABLE_PUSH;
     static const uint32_t VAL = 0;
-    TEST_ASSERT_EQUAL_UINT(0u, (H2Frame.build_settings_args.buf = g_out, H2Frame.build_settings_args.cap = 14,
-                                H2Frame.build_settings_args.ids = &ID, H2Frame.build_settings_args.vals = &VAL,
-                                H2Frame.build_settings_args.n = 1, H2Frame.build_settings(NULL), H2Frame.n));
+    TEST_ASSERT_EQUAL_UINT(0u, (H2FrameV.build_settings_args.buf = g_out, H2FrameV.build_settings_args.cap = 14,
+                                H2FrameV.build_settings_args.ids = &ID, H2FrameV.build_settings_args.vals = &VAL,
+                                H2FrameV.build_settings_args.n = 1, H2Frame.build_settings(NULL), H2FrameV.n));
     TEST_ASSERT_EQUAL_UINT(
-        0u, (H2Frame.ack_args.buf = g_out, H2Frame.ack_args.cap = 8, H2Frame.build_settings_ack(NULL), H2Frame.n));
-    TEST_ASSERT_EQUAL_UINT(0u, (H2Frame.window_args.buf = g_out, H2Frame.window_args.cap = 12,
-                                H2Frame.window_args.stream_id = 1, H2Frame.window_args.increment = 1,
-                                H2Frame.build_window_update(NULL), H2Frame.n));
-    TEST_ASSERT_EQUAL_UINT(0u, (H2Frame.rst_args.buf = g_out, H2Frame.rst_args.cap = 12, H2Frame.rst_args.stream_id = 1,
-                                H2Frame.rst_args.error = H2_NO_ERROR, H2Frame.build_rst_stream(NULL), H2Frame.n));
-    TEST_ASSERT_EQUAL_UINT(0u, (H2Frame.goaway_args.buf = g_out, H2Frame.goaway_args.cap = 16,
-                                H2Frame.goaway_args.last_stream_id = 1, H2Frame.goaway_args.error = H2_NO_ERROR,
-                                H2Frame.build_goaway(NULL), H2Frame.n));
-    TEST_ASSERT_EQUAL_UINT(0u, (H2Frame.ping_args.buf = g_out, H2Frame.ping_args.cap = 16,
-                                H2Frame.ping_args.opaque = OPAQUE, H2Frame.build_ping_ack(NULL), H2Frame.n));
+        0u, (H2FrameV.ack_args.buf = g_out, H2FrameV.ack_args.cap = 8, H2Frame.build_settings_ack(NULL), H2FrameV.n));
+    TEST_ASSERT_EQUAL_UINT(0u, (H2FrameV.window_args.buf = g_out, H2FrameV.window_args.cap = 12,
+                                H2FrameV.window_args.stream_id = 1, H2FrameV.window_args.increment = 1,
+                                H2Frame.build_window_update(NULL), H2FrameV.n));
     TEST_ASSERT_EQUAL_UINT(0u,
-                           (H2Frame.data_args.buf = g_out, H2Frame.data_args.cap = 10, H2Frame.data_args.stream_id = 1,
-                            H2Frame.data_args.data = (const uint8_t *)"xx", H2Frame.data_args.data_len = 2,
-                            H2Frame.data_args.end_stream = PROTO_FALSE, H2Frame.build_data(NULL), H2Frame.n));
-    TEST_ASSERT_EQUAL_UINT(0u, (H2Frame.headers_args.buf = g_out, H2Frame.headers_args.cap = 10,
-                                H2Frame.headers_args.stream_id = 1, H2Frame.headers_args.block = (const uint8_t *)"xx",
-                                H2Frame.headers_args.block_len = 2, H2Frame.headers_args.end_stream = PROTO_FALSE,
-                                H2Frame.build_headers(NULL), H2Frame.n));
+                           (H2FrameV.rst_args.buf = g_out, H2FrameV.rst_args.cap = 12, H2FrameV.rst_args.stream_id = 1,
+                            H2FrameV.rst_args.error = H2_NO_ERROR, H2Frame.build_rst_stream(NULL), H2FrameV.n));
+    TEST_ASSERT_EQUAL_UINT(0u, (H2FrameV.goaway_args.buf = g_out, H2FrameV.goaway_args.cap = 16,
+                                H2FrameV.goaway_args.last_stream_id = 1, H2FrameV.goaway_args.error = H2_NO_ERROR,
+                                H2Frame.build_goaway(NULL), H2FrameV.n));
+    TEST_ASSERT_EQUAL_UINT(0u, (H2FrameV.ping_args.buf = g_out, H2FrameV.ping_args.cap = 16,
+                                H2FrameV.ping_args.opaque = OPAQUE, H2Frame.build_ping_ack(NULL), H2FrameV.n));
+    TEST_ASSERT_EQUAL_UINT(0u, (H2FrameV.data_args.buf = g_out, H2FrameV.data_args.cap = 10,
+                                H2FrameV.data_args.stream_id = 1, H2FrameV.data_args.data = (const uint8_t *)"xx",
+                                H2FrameV.data_args.data_len = 2, H2FrameV.data_args.end_stream = PROTO_FALSE,
+                                H2Frame.build_data(NULL), H2FrameV.n));
+    TEST_ASSERT_EQUAL_UINT(
+        0u, (H2FrameV.headers_args.buf = g_out, H2FrameV.headers_args.cap = 10, H2FrameV.headers_args.stream_id = 1,
+             H2FrameV.headers_args.block = (const uint8_t *)"xx", H2FrameV.headers_args.block_len = 2,
+             H2FrameV.headers_args.end_stream = PROTO_FALSE, H2Frame.build_headers(NULL), H2FrameV.n));
 }
 
 // RFC 9113 sec 6 assigns each frame type its octet and sec 7 each error condition its 32-bit code.

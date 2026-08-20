@@ -133,7 +133,7 @@ static void request(uint8_t *restrict work)
     ConnPool.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span()); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
 
-    Http.slot = slot;
+    HttpV.slot = slot;
     Http.match_and_execute(
         protocore_http_span()); // -> handler -> send_text() -> protocore_resp_sink -> protocore_quic_server_respond()
 

@@ -418,11 +418,17 @@ typedef struct
     Fe25519Pow2523Args pow2523_args;
     Fe25519ParityArgs parity_args;
     Fe25519NeqArgs neq_args;
-
     proto_bool ok;
     int parity;
     int neq;
+} Fe25519Vars;
 
+/** @brief The operands and the outcome. */
+extern Fe25519Vars Fe25519V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const hw_enable)(uint8_t *restrict work);
     void (*const hw_disable)(uint8_t *restrict work);
     void (*const mul)(uint8_t *restrict work);
@@ -442,8 +448,49 @@ typedef struct
     void (*const get_neq)(uint8_t *restrict work);
 } Fe25519Ns;
 
-/** @brief The one symbol this module exports. */
-extern Fe25519Ns Fe25519;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Fe25519V or a region of the borrow at a fixed offset.
+void protocore_fe25519_hw_enable(uint8_t *restrict work);
+void protocore_fe25519_hw_disable(uint8_t *restrict work);
+void protocore_fe25519_mul(uint8_t *restrict work);
+void protocore_fe25519_sq(uint8_t *restrict work);
+void protocore_fe25519_copy(uint8_t *restrict work);
+void protocore_fe25519_zero(uint8_t *restrict work);
+void protocore_fe25519_one(uint8_t *restrict work);
+void protocore_fe25519_reduce_once(uint8_t *restrict work);
+void protocore_fe25519_add(uint8_t *restrict work);
+void protocore_fe25519_sub(uint8_t *restrict work);
+void protocore_fe25519_cswap(uint8_t *restrict work);
+void protocore_fe25519_frombytes(uint8_t *restrict work);
+void protocore_fe25519_tobytes(uint8_t *restrict work);
+void protocore_fe25519_invert(uint8_t *restrict work);
+void protocore_fe25519_pow2523(uint8_t *restrict work);
+void protocore_fe25519_get_parity(uint8_t *restrict work);
+void protocore_fe25519_get_neq(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Fe25519.hw_enable(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Fe25519Ns Fe25519 __attribute__((unused)) = {
+    .hw_enable = protocore_fe25519_hw_enable,
+    .hw_disable = protocore_fe25519_hw_disable,
+    .mul = protocore_fe25519_mul,
+    .sq = protocore_fe25519_sq,
+    .copy = protocore_fe25519_copy,
+    .zero = protocore_fe25519_zero,
+    .one = protocore_fe25519_one,
+    .reduce_once = protocore_fe25519_reduce_once,
+    .add = protocore_fe25519_add,
+    .sub = protocore_fe25519_sub,
+    .cswap = protocore_fe25519_cswap,
+    .frombytes = protocore_fe25519_frombytes,
+    .tobytes = protocore_fe25519_tobytes,
+    .invert = protocore_fe25519_invert,
+    .pow2523 = protocore_fe25519_pow2523,
+    .get_parity = protocore_fe25519_get_parity,
+    .get_neq = protocore_fe25519_get_neq,
+};
 
 #endif // PROTOCORE_FE25519_MPI_HW
 

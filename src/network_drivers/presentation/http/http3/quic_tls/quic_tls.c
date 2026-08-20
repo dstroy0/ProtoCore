@@ -255,27 +255,28 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     if (use_hybrid)
     {
         uint8_t ml_ss[32];
-        if (!(MlKem.encaps_args.ek = ch.client_mlkem_ek, MlKem.encaps_args.m = qt->cfg.mlkem_m,
-              MlKem.encaps_args.ct = server_share, MlKem.encaps_args.ss = ml_ss, MlKem.encaps(qt->sign_work), MlKem.ok))
+        if (!(MlKemV.encaps_args.ek = ch.client_mlkem_ek, MlKemV.encaps_args.m = qt->cfg.mlkem_m,
+              MlKemV.encaps_args.ct = server_share, MlKemV.encaps_args.ss = ml_ss, MlKem.encaps(qt->sign_work),
+              MlKemV.ok))
         {
             fail(qt, TLS_ALERT_HANDSHAKE_FAILURE); // malformed ML-KEM key
             return PROTO_FALSE;
         }
         uint8_t x_ss[32];
         uint8_t server_pub[32];
-        Curve25519.x25519_args.scalar = qt->cfg.ephemeral_priv;
-        Curve25519.x25519_args.point = ch.client_x25519;
-        Curve25519.x25519_args.out = x_ss;
+        Curve25519V.x25519_args.scalar = qt->cfg.ephemeral_priv;
+        Curve25519V.x25519_args.point = ch.client_x25519;
+        Curve25519V.x25519_args.out = x_ss;
         Curve25519.x25519(qt->sign_work);
-        if (!Curve25519.ok)
+        if (!Curve25519V.ok)
         {
             // RFC 8446 sec 7.4.2: the shared secret came out all-zero, so the client's key share was
             // a point of small order and the secret is a constant it chose. Abort (RFC 7748 sec 6.1).
             fail(qt, TLS_ALERT_ILLEGAL_PARAMETER);
             return PROTO_FALSE;
         }
-        Curve25519.x25519_base_args.scalar = qt->cfg.ephemeral_priv;
-        Curve25519.x25519_base_args.out = server_pub;
+        Curve25519V.x25519_base_args.scalar = qt->cfg.ephemeral_priv;
+        Curve25519V.x25519_base_args.out = server_pub;
         Curve25519.x25519_base(qt->sign_work);
         mem.cpy(server_share + MLKEM768_CT_BYTES, server_pub, 32);
         mem.cpy(ecdhe, ml_ss, 32);
@@ -289,19 +290,19 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     uint8_t server_share[32];
 #endif
     {
-        Curve25519.x25519_args.scalar = qt->cfg.ephemeral_priv;
-        Curve25519.x25519_args.point = ch.client_x25519;
-        Curve25519.x25519_args.out = ecdhe;
+        Curve25519V.x25519_args.scalar = qt->cfg.ephemeral_priv;
+        Curve25519V.x25519_args.point = ch.client_x25519;
+        Curve25519V.x25519_args.out = ecdhe;
         Curve25519.x25519(qt->sign_work);
-        if (!Curve25519.ok)
+        if (!Curve25519V.ok)
         {
             // RFC 8446 sec 7.4.2: the shared secret came out all-zero, so the client's key share was
             // a point of small order and the secret is a constant it chose. Abort (RFC 7748 sec 6.1).
             fail(qt, TLS_ALERT_ILLEGAL_PARAMETER);
             return PROTO_FALSE;
         }
-        Curve25519.x25519_base_args.scalar = qt->cfg.ephemeral_priv;
-        Curve25519.x25519_base_args.out = server_share;
+        Curve25519V.x25519_base_args.scalar = qt->cfg.ephemeral_priv;
+        Curve25519V.x25519_base_args.out = server_share;
         Curve25519.x25519_base(qt->sign_work);
         ecdhe_len = 32;
         share_len = 32;
@@ -344,13 +345,13 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     Tls13KsV.step.ecdhe_len = ecdhe_len;
     Tls13KsV.step.ch_sh_hash = hash;
     Tls13Ks.handshake(NULL);
-    QuicCrypto.keys_from_secret_args.keys_work = qt->keys_work;
-    QuicCrypto.keys_from_secret_args.secret = qt->ks.s + TLS13_KS_CLIENT_HS;
-    QuicCrypto.keys_from_secret_args.out = &qt->hs_client;
+    QuicCryptoV.keys_from_secret_args.keys_work = qt->keys_work;
+    QuicCryptoV.keys_from_secret_args.secret = qt->ks.s + TLS13_KS_CLIENT_HS;
+    QuicCryptoV.keys_from_secret_args.out = &qt->hs_client;
     QuicCrypto.keys_from_secret(quic_crypto_work);
-    QuicCrypto.keys_from_secret_args.keys_work = qt->keys_work;
-    QuicCrypto.keys_from_secret_args.secret = qt->ks.s + TLS13_KS_SERVER_HS;
-    QuicCrypto.keys_from_secret_args.out = &qt->hs_server;
+    QuicCryptoV.keys_from_secret_args.keys_work = qt->keys_work;
+    QuicCryptoV.keys_from_secret_args.secret = qt->ks.s + TLS13_KS_SERVER_HS;
+    QuicCryptoV.keys_from_secret_args.out = &qt->hs_server;
     QuicCrypto.keys_from_secret(quic_crypto_work);
     qt->hs_keys_ready = PROTO_TRUE;
 
@@ -423,13 +424,13 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     ks_bind(qt);
     Tls13KsV.step.ch_sfin_hash = qt->hs_finished_hash;
     Tls13Ks.master(NULL);
-    QuicCrypto.keys_from_secret_args.keys_work = qt->keys_work;
-    QuicCrypto.keys_from_secret_args.secret = qt->ks.s + TLS13_KS_CLIENT_AP;
-    QuicCrypto.keys_from_secret_args.out = &qt->ap_client;
+    QuicCryptoV.keys_from_secret_args.keys_work = qt->keys_work;
+    QuicCryptoV.keys_from_secret_args.secret = qt->ks.s + TLS13_KS_CLIENT_AP;
+    QuicCryptoV.keys_from_secret_args.out = &qt->ap_client;
     QuicCrypto.keys_from_secret(quic_crypto_work);
-    QuicCrypto.keys_from_secret_args.keys_work = qt->keys_work;
-    QuicCrypto.keys_from_secret_args.secret = qt->ks.s + TLS13_KS_SERVER_AP;
-    QuicCrypto.keys_from_secret_args.out = &qt->ap_server;
+    QuicCryptoV.keys_from_secret_args.keys_work = qt->keys_work;
+    QuicCryptoV.keys_from_secret_args.secret = qt->ks.s + TLS13_KS_SERVER_AP;
+    QuicCryptoV.keys_from_secret_args.out = &qt->ap_server;
     QuicCrypto.keys_from_secret(quic_crypto_work);
     qt->ap_keys_ready = PROTO_TRUE;
 

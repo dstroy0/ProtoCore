@@ -1026,21 +1026,21 @@ static void mac_hmac_sha256(uint8_t *crypto_work, const uint8_t key[16], const u
                             uint8_t out16[16])
 {
     uint8_t mac[32];
-    HmacSha256.mac_args.key = key;
-    HmacSha256.mac_args.key_len = 16;
-    HmacSha256.mac_args.data = msg;
-    HmacSha256.mac_args.len = len;
-    HmacSha256.mac_args.out = mac;
+    HmacSha256V.mac_args.key = key;
+    HmacSha256V.mac_args.key_len = 16;
+    HmacSha256V.mac_args.data = msg;
+    HmacSha256V.mac_args.len = len;
+    HmacSha256V.mac_args.out = mac;
     HmacSha256.mac(crypto_work);
     mem.cpy(out16, mac, 16); // Signature = first 16 octets of the HMAC
 }
 
 static void mac_aes_cmac(uint8_t *crypto_work, const uint8_t key[16], const uint8_t *msg, size_t len, uint8_t out16[16])
 {
-    AesCmac.mac_args.key = key;
-    AesCmac.mac_args.msg = msg;
-    AesCmac.mac_args.msg_len = len;
-    AesCmac.mac_args.out = out16;
+    AesCmacV.mac_args.key = key;
+    AesCmacV.mac_args.msg = msg;
+    AesCmacV.mac_args.msg_len = len;
+    AesCmacV.mac_args.out = out16;
     AesCmac.mac(crypto_work); // the whole 16-octet CMAC tag
 }
 
@@ -1174,14 +1174,14 @@ static void derive_signing_key(uint8_t *restrict work)
     fixed[n++] = 0x80;
     size_t mark = protocore_secure_mark();
     uint8_t *w = protocore_secure_span(PROTOCORE_KDF_BORROW, 8).buf;
-    Kdf.ctr_args.ki = session_key;
-    Kdf.ctr_args.ki_len = 16;
-    Kdf.ctr_args.fixed = fixed;
-    Kdf.ctr_args.fixed_len = n;
-    Kdf.ctr_args.out = out_key;
-    Kdf.ctr_args.out_len = 16;
+    KdfV.ctr_args.ki = session_key;
+    KdfV.ctr_args.ki_len = 16;
+    KdfV.ctr_args.fixed = fixed;
+    KdfV.ctr_args.fixed_len = n;
+    KdfV.ctr_args.out = out_key;
+    KdfV.ctr_args.out_len = 16;
     Kdf.ctr_hmac_sha256(w);
-    const proto_bool derived = Kdf.ok;
+    const proto_bool derived = KdfV.ok;
     protocore_secure_release(mark);
     Smb2.ok = derived;
 }
@@ -1227,14 +1227,14 @@ static proto_bool smb3_derive_cipher_key(const uint8_t session_key[16], uint16_t
     fixed[n++] = (uint8_t)(l_bits & 0xff);
     size_t mark = protocore_secure_mark();
     uint8_t *w = protocore_secure_span(PROTOCORE_KDF_BORROW, 8).buf;
-    Kdf.ctr_args.ki = session_key;
-    Kdf.ctr_args.ki_len = 16;
-    Kdf.ctr_args.fixed = fixed;
-    Kdf.ctr_args.fixed_len = n;
-    Kdf.ctr_args.out = out_key;
-    Kdf.ctr_args.out_len = key_len;
+    KdfV.ctr_args.ki = session_key;
+    KdfV.ctr_args.ki_len = 16;
+    KdfV.ctr_args.fixed = fixed;
+    KdfV.ctr_args.fixed_len = n;
+    KdfV.ctr_args.out = out_key;
+    KdfV.ctr_args.out_len = key_len;
     Kdf.ctr_hmac_sha256(w);
-    const proto_bool derived = Kdf.ok;
+    const proto_bool derived = KdfV.ok;
     protocore_secure_release(mark);
     return derived;
 }

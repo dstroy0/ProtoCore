@@ -792,9 +792,9 @@ void test_webdav_status_text_table()
     };
     for (size_t i = 0; i < sizeof(expect) / sizeof(expect[0]); i++)
     {
-        Http.code = expect[i].code;
+        HttpV.code = expect[i].code;
         Http.status_text(protocore_http_span());
-        TEST_ASSERT_EQUAL_STRING(expect[i].phrase, Http.text);
+        TEST_ASSERT_EQUAL_STRING(expect[i].phrase, HttpV.text);
     }
 
     // A code the table has no phrase for reads "Unknown" rather than an empty string, so a response
@@ -802,9 +802,9 @@ void test_webdav_status_text_table()
     static const int unknown[3] = {299, 0, -1};
     for (size_t i = 0; i < 3u; i++)
     {
-        Http.code = unknown[i];
+        HttpV.code = unknown[i];
         Http.status_text(protocore_http_span());
-        TEST_ASSERT_EQUAL_STRING("Unknown", Http.text);
+        TEST_ASSERT_EQUAL_STRING("Unknown", HttpV.text);
     }
 }
 

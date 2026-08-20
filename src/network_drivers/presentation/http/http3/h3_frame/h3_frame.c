@@ -24,14 +24,14 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void h3_frame_write_header(uint8_t *restrict work);
+void protocore_h3_frame_write_header(uint8_t *restrict work);
 
-static void h3_frame_parse_header(uint8_t *restrict work)
+void protocore_h3_frame_parse_header(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = H3Frame.parse_header_args.buf;
-    size_t len = H3Frame.parse_header_args.len;
-    H3FrameHeader *out = H3Frame.parse_header_args.out;
+    const uint8_t *buf = H3FrameV.parse_header_args.buf;
+    size_t len = H3FrameV.parse_header_args.len;
+    H3FrameHeader *out = H3FrameV.parse_header_args.out;
 
     size_t c1 = 0;
     size_t c2 = 0;
@@ -44,7 +44,7 @@ static void h3_frame_parse_header(uint8_t *restrict work)
     QuicVarint.decode(quic_varint_work);
     if (!QuicVarintV.ok)
     {
-        H3Frame.ok = PROTO_FALSE;
+        H3FrameV.ok = PROTO_FALSE;
         return;
     }
     QuicVarintV.decode_args.in = buf + c1;
@@ -54,22 +54,22 @@ static void h3_frame_parse_header(uint8_t *restrict work)
     QuicVarint.decode(quic_varint_work);
     if (!QuicVarintV.ok)
     {
-        H3Frame.ok = PROTO_FALSE;
+        H3FrameV.ok = PROTO_FALSE;
         return;
     }
     out->type = type;
     out->length = length;
     out->header_len = c1 + c2;
-    H3Frame.ok = PROTO_TRUE;
+    H3FrameV.ok = PROTO_TRUE;
 }
 
-static void h3_frame_write_header(uint8_t *restrict work)
+void protocore_h3_frame_write_header(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *out = H3Frame.write_header_args.out;
-    size_t cap = H3Frame.write_header_args.cap;
-    uint64_t type = H3Frame.write_header_args.type;
-    uint64_t length = H3Frame.write_header_args.length;
+    uint8_t *out = H3FrameV.write_header_args.out;
+    size_t cap = H3FrameV.write_header_args.cap;
+    uint64_t type = H3FrameV.write_header_args.type;
+    uint64_t length = H3FrameV.write_header_args.length;
 
     QuicVarintV.encode_args.out = out;
     QuicVarintV.encode_args.cap = cap;
@@ -78,7 +78,7 @@ static void h3_frame_write_header(uint8_t *restrict work)
     size_t n = QuicVarintV.n;
     if (!n)
     {
-        H3Frame.n = 0;
+        H3FrameV.n = 0;
         return;
     }
     QuicVarintV.encode_args.out = out + n;
@@ -88,37 +88,37 @@ static void h3_frame_write_header(uint8_t *restrict work)
     size_t m = QuicVarintV.n;
     if (!m)
     {
-        H3Frame.n = 0;
+        H3FrameV.n = 0;
         return;
     }
-    H3Frame.n = n + m;
+    H3FrameV.n = n + m;
 }
 
-static void h3_frame_type_reserved(uint8_t *restrict work)
+void protocore_h3_frame_type_reserved(uint8_t *restrict work)
 {
     (void)work;
-    uint64_t type = H3Frame.type_reserved_args.type;
+    uint64_t type = H3FrameV.type_reserved_args.type;
 
     // The HTTP/2 frame types that have no HTTP/3 meaning (RFC 9114 sec 11.2.1).
-    H3Frame.ok = type == 0x02 || type == 0x06 || type == 0x08 || type == 0x09;
+    H3FrameV.ok = type == 0x02 || type == 0x06 || type == 0x08 || type == 0x09;
 }
 
-static void h3_frame_settings_defaults(uint8_t *restrict work)
+void protocore_h3_frame_settings_defaults(uint8_t *restrict work)
 {
     (void)work;
-    H3Settings *s = H3Frame.settings_defaults_args.s;
+    H3Settings *s = H3FrameV.settings_defaults_args.s;
 
     s->qpack_max_table_capacity = 0;
     s->max_field_section_size = 0xFFFFFFFFFFFFFFFFULL; // unlimited
     s->qpack_blocked_streams = 0;
 }
 
-static void h3_frame_parse_settings(uint8_t *restrict work)
+void protocore_h3_frame_parse_settings(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *payload = H3Frame.parse_settings_args.payload;
-    size_t len = H3Frame.parse_settings_args.len;
-    H3Settings *s = H3Frame.parse_settings_args.s;
+    const uint8_t *payload = H3FrameV.parse_settings_args.payload;
+    size_t len = H3FrameV.parse_settings_args.len;
+    H3Settings *s = H3FrameV.parse_settings_args.s;
 
     size_t off = 0;
     while (off < len)
@@ -134,7 +134,7 @@ static void h3_frame_parse_settings(uint8_t *restrict work)
         QuicVarint.decode(quic_varint_work);
         if (!QuicVarintV.ok)
         {
-            H3Frame.ok = PROTO_FALSE;
+            H3FrameV.ok = PROTO_FALSE;
             return;
         }
         off += c1;
@@ -145,7 +145,7 @@ static void h3_frame_parse_settings(uint8_t *restrict work)
         QuicVarint.decode(quic_varint_work);
         if (!QuicVarintV.ok)
         {
-            H3Frame.ok = PROTO_FALSE;
+            H3FrameV.ok = PROTO_FALSE;
             return;
         }
         off += c2;
@@ -164,72 +164,72 @@ static void h3_frame_parse_settings(uint8_t *restrict work)
         case 0x03:
         case 0x04:
         case 0x05:
-            H3Frame.ok = PROTO_FALSE; // reserved HTTP/2 settings identifiers (RFC 9114 sec 7.2.4.1)
+            H3FrameV.ok = PROTO_FALSE; // reserved HTTP/2 settings identifiers (RFC 9114 sec 7.2.4.1)
             return;
         default:
             break; // unknown / greased settings are ignored
         }
     }
-    H3Frame.ok = PROTO_TRUE;
+    H3FrameV.ok = PROTO_TRUE;
 }
 
-static void h3_frame_build_data(uint8_t *restrict work)
+void protocore_h3_frame_build_data(uint8_t *restrict work)
 {
-    uint8_t *out = H3Frame.build_data_args.out;
-    size_t cap = H3Frame.build_data_args.cap;
-    const uint8_t *data = H3Frame.build_data_args.data;
-    size_t len = H3Frame.build_data_args.len;
+    uint8_t *out = H3FrameV.build_data_args.out;
+    size_t cap = H3FrameV.build_data_args.cap;
+    const uint8_t *data = H3FrameV.build_data_args.data;
+    size_t len = H3FrameV.build_data_args.len;
 
-    H3Frame.write_header_args.out = out;
-    H3Frame.write_header_args.cap = cap;
-    H3Frame.write_header_args.type = H3_DATA;
-    H3Frame.write_header_args.length = len;
-    h3_frame_write_header(work);
-    size_t hn = H3Frame.n;
+    H3FrameV.write_header_args.out = out;
+    H3FrameV.write_header_args.cap = cap;
+    H3FrameV.write_header_args.type = H3_DATA;
+    H3FrameV.write_header_args.length = len;
+    protocore_h3_frame_write_header(work);
+    size_t hn = H3FrameV.n;
     if (!hn || hn + len > cap)
     {
-        H3Frame.n = 0;
+        H3FrameV.n = 0;
         return;
     }
     if (len)
     {
         mem.cpy(out + hn, data, len);
     }
-    H3Frame.n = hn + len;
+    H3FrameV.n = hn + len;
 }
 
-static void h3_frame_build_headers(uint8_t *restrict work)
+void protocore_h3_frame_build_headers(uint8_t *restrict work)
 {
-    uint8_t *out = H3Frame.build_headers_args.out;
-    size_t cap = H3Frame.build_headers_args.cap;
-    const uint8_t *block = H3Frame.build_headers_args.block;
-    size_t len = H3Frame.build_headers_args.len;
+    uint8_t *out = H3FrameV.build_headers_args.out;
+    size_t cap = H3FrameV.build_headers_args.cap;
+    const uint8_t *block = H3FrameV.build_headers_args.block;
+    size_t len = H3FrameV.build_headers_args.len;
 
-    H3Frame.write_header_args.out = out;
-    H3Frame.write_header_args.cap = cap;
-    H3Frame.write_header_args.type = H3_HEADERS;
-    H3Frame.write_header_args.length = len;
-    h3_frame_write_header(work);
-    size_t hn = H3Frame.n;
+    H3FrameV.write_header_args.out = out;
+    H3FrameV.write_header_args.cap = cap;
+    H3FrameV.write_header_args.type = H3_HEADERS;
+    H3FrameV.write_header_args.length = len;
+    protocore_h3_frame_write_header(work);
+    size_t hn = H3FrameV.n;
     if (!hn || hn + len > cap)
     {
-        H3Frame.n = 0;
+        H3FrameV.n = 0;
         return;
     }
     if (len)
     {
         mem.cpy(out + hn, block, len);
     }
-    H3Frame.n = hn + len;
+    H3FrameV.n = hn + len;
 }
 
-static void h3_frame_build_settings(uint8_t *restrict work)
+void protocore_h3_frame_build_settings(uint8_t *restrict work)
 {
-    uint8_t *out = H3Frame.build_settings_args.out;
-    size_t cap = H3Frame.build_settings_args.cap;
-    const uint64_t *ids = H3Frame.build_settings_args.ids;
-    const uint64_t *vals = H3Frame.build_settings_args.vals;
-    size_t n = H3Frame.build_settings_args.n;
+    uint8_t *out = H3FrameV.build_settings_args.out;
+    size_t cap = H3FrameV.build_settings_args.cap;
+    const uint64_t *ids = H3FrameV.build_settings_args.ids;
+    const uint64_t *vals = H3FrameV.build_settings_args.vals;
+    size_t n = H3FrameV.build_settings_args.n;
 
     size_t plen = 0;
     for (size_t i = 0; i < n; i++)
@@ -241,15 +241,15 @@ static void h3_frame_build_settings(uint8_t *restrict work)
         QuicVarint.len(quic_varint_work);
         plen += idn + QuicVarintV.n;
     }
-    H3Frame.write_header_args.out = out;
-    H3Frame.write_header_args.cap = cap;
-    H3Frame.write_header_args.type = H3_SETTINGS;
-    H3Frame.write_header_args.length = plen;
-    h3_frame_write_header(work);
-    size_t o = H3Frame.n;
+    H3FrameV.write_header_args.out = out;
+    H3FrameV.write_header_args.cap = cap;
+    H3FrameV.write_header_args.type = H3_SETTINGS;
+    H3FrameV.write_header_args.length = plen;
+    protocore_h3_frame_write_header(work);
+    size_t o = H3FrameV.n;
     if (!o)
     {
-        H3Frame.n = 0;
+        H3FrameV.n = 0;
         return;
     }
     for (size_t i = 0; i < n; i++)
@@ -261,7 +261,7 @@ static void h3_frame_build_settings(uint8_t *restrict work)
         size_t a = QuicVarintV.n;
         if (!a)
         {
-            H3Frame.n = 0;
+            H3FrameV.n = 0;
             return;
         }
         o += a;
@@ -272,32 +272,32 @@ static void h3_frame_build_settings(uint8_t *restrict work)
         size_t b = QuicVarintV.n;
         if (!b)
         {
-            H3Frame.n = 0;
+            H3FrameV.n = 0;
             return;
         }
         o += b;
     }
-    H3Frame.n = o;
+    H3FrameV.n = o;
 }
 
-static void h3_frame_build_goaway(uint8_t *restrict work)
+void protocore_h3_frame_build_goaway(uint8_t *restrict work)
 {
-    uint8_t *out = H3Frame.build_goaway_args.out;
-    size_t cap = H3Frame.build_goaway_args.cap;
-    uint64_t stream_id = H3Frame.build_goaway_args.stream_id;
+    uint8_t *out = H3FrameV.build_goaway_args.out;
+    size_t cap = H3FrameV.build_goaway_args.cap;
+    uint64_t stream_id = H3FrameV.build_goaway_args.stream_id;
 
     QuicVarintV.len_args.value = stream_id;
     QuicVarint.len(quic_varint_work);
     size_t plen = QuicVarintV.n;
-    H3Frame.write_header_args.out = out;
-    H3Frame.write_header_args.cap = cap;
-    H3Frame.write_header_args.type = H3_GOAWAY;
-    H3Frame.write_header_args.length = plen;
-    h3_frame_write_header(work);
-    size_t o = H3Frame.n;
+    H3FrameV.write_header_args.out = out;
+    H3FrameV.write_header_args.cap = cap;
+    H3FrameV.write_header_args.type = H3_GOAWAY;
+    H3FrameV.write_header_args.length = plen;
+    protocore_h3_frame_write_header(work);
+    size_t o = H3FrameV.n;
     if (!o)
     {
-        H3Frame.n = 0;
+        H3FrameV.n = 0;
         return;
     }
     QuicVarintV.encode_args.out = out + o;
@@ -307,23 +307,14 @@ static void h3_frame_build_goaway(uint8_t *restrict work)
     size_t a = QuicVarintV.n;
     if (!a)
     {
-        H3Frame.n = 0;
+        H3FrameV.n = 0;
         return;
     }
-    H3Frame.n = o + a;
+    H3FrameV.n = o + a;
 }
 
-H3FrameNs H3Frame = {
-    .parse_header = h3_frame_parse_header,
-    .write_header = h3_frame_write_header,
-    .type_reserved = h3_frame_type_reserved,
-    .settings_defaults = h3_frame_settings_defaults,
-    .parse_settings = h3_frame_parse_settings,
-    .build_data = h3_frame_build_data,
-    .build_headers = h3_frame_build_headers,
-    .build_settings = h3_frame_build_settings,
-    .build_goaway = h3_frame_build_goaway,
-};
+/** @brief The operands and the outcome. */
+H3FrameVars H3FrameV;
 
 PROTOCORE_END_DECLS
 

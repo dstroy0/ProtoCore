@@ -38,9 +38,8 @@
 #define PROTOCORE_TLS_RECORD_H
 
 #include "crypto/aead/aes128gcm/aes128gcm.h" // Aes128Gcm, the 0x1301 record AEAD
-#include "crypto/aead/aesgcm/aesgcm.h"    // AesGcm, the 0x1302 record AEAD
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
+#include "crypto/aead/aesgcm/aesgcm.h"       // AesGcm, the 0x1302 record AEAD
+#include "protocore_config.h"                // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_TLS_SOFTWARE
 
@@ -197,26 +196,49 @@ typedef struct
 typedef struct
 {
     uint8_t content_type;
-
     TlsKeyArgs key;
     TlsPlaintextArgs plain;
     TlsCiphertextArgs sealed;
     TlsRecordOut out_args;
-
     proto_bool ok;
     size_t n;
+} TlsRecordVars;
 
+/** @brief The operands and the outcome. */
+extern TlsRecordVars TlsRecordV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const keys_derive)(uint8_t *restrict work);
     void (*const plaintext_build)(uint8_t *restrict work);
     void (*const plaintext_parse)(uint8_t *restrict work);
     void (*const protect)(uint8_t *restrict work);
     void (*const unprotect)(uint8_t *restrict work);
     void (*const keys_wipe)(uint8_t *restrict work);
-
 } TlsRecordNs;
 
-/** @brief The one symbol this module exports. */
-extern TlsRecordNs TlsRecord;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in TlsRecordV or a region of the borrow at a fixed offset.
+void protocore_tls_record_keys_derive(uint8_t *restrict work);
+void protocore_tls_record_plaintext_build(uint8_t *restrict work);
+void protocore_tls_record_plaintext_parse(uint8_t *restrict work);
+void protocore_tls_record_protect(uint8_t *restrict work);
+void protocore_tls_record_unprotect(uint8_t *restrict work);
+void protocore_tls_record_keys_wipe(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `TlsRecord.keys_derive(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const TlsRecordNs TlsRecord __attribute__((unused)) = {
+    .keys_derive = protocore_tls_record_keys_derive,
+    .plaintext_build = protocore_tls_record_plaintext_build,
+    .plaintext_parse = protocore_tls_record_plaintext_parse,
+    .protect = protocore_tls_record_protect,
+    .unprotect = protocore_tls_record_unprotect,
+    .keys_wipe = protocore_tls_record_keys_wipe,
+};
 
 #endif // PROTOCORE_TLS_SOFTWARE
 

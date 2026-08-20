@@ -45,19 +45,19 @@ static void expand(const Tls13Kdf *kdf, proto_bool is384, uint8_t *work, const u
 {
     if (is384)
     {
-        HkdfSha384.expand_label_args.secret = secret;
-        HkdfSha384.expand_label_args.label = label;
-        HkdfSha384.expand_label_args.out = out;
-        HkdfSha384.expand_label_args.out_len = out_len;
-        HkdfSha384.expand_label_args.label_prefix = kdf->label_prefix;
+        HkdfSha384V.expand_label_args.secret = secret;
+        HkdfSha384V.expand_label_args.label = label;
+        HkdfSha384V.expand_label_args.out = out;
+        HkdfSha384V.expand_label_args.out_len = out_len;
+        HkdfSha384V.expand_label_args.label_prefix = kdf->label_prefix;
         HkdfSha384.expand_label(work);
         return;
     }
-    Hkdf.expand_label_args.secret = secret;
-    Hkdf.expand_label_args.label = label;
-    Hkdf.expand_label_args.out = out;
-    Hkdf.expand_label_args.out_len = out_len;
-    Hkdf.expand_label_args.label_prefix = kdf->label_prefix;
+    HkdfV.expand_label_args.secret = secret;
+    HkdfV.expand_label_args.label = label;
+    HkdfV.expand_label_args.out = out;
+    HkdfV.expand_label_args.out_len = out_len;
+    HkdfV.expand_label_args.label_prefix = kdf->label_prefix;
     Hkdf.expand_label(work);
 }
 
@@ -68,23 +68,23 @@ static void derive(const Tls13Kdf *kdf, proto_bool is384, uint8_t *work, const u
     const size_t len = hash_len(is384);
     if (is384)
     {
-        HkdfSha384.expand_label_ctx_args.secret = secret;
-        HkdfSha384.expand_label_ctx_args.label = label;
-        HkdfSha384.expand_label_ctx_args.context = transcript_hash;
-        HkdfSha384.expand_label_ctx_args.context_len = len;
-        HkdfSha384.expand_label_ctx_args.out = out;
-        HkdfSha384.expand_label_ctx_args.out_len = len;
-        HkdfSha384.expand_label_ctx_args.label_prefix = kdf->label_prefix;
+        HkdfSha384V.expand_label_ctx_args.secret = secret;
+        HkdfSha384V.expand_label_ctx_args.label = label;
+        HkdfSha384V.expand_label_ctx_args.context = transcript_hash;
+        HkdfSha384V.expand_label_ctx_args.context_len = len;
+        HkdfSha384V.expand_label_ctx_args.out = out;
+        HkdfSha384V.expand_label_ctx_args.out_len = len;
+        HkdfSha384V.expand_label_ctx_args.label_prefix = kdf->label_prefix;
         HkdfSha384.expand_label_ctx(work);
         return;
     }
-    Hkdf.expand_label_ctx_args.secret = secret;
-    Hkdf.expand_label_ctx_args.label = label;
-    Hkdf.expand_label_ctx_args.context = transcript_hash;
-    Hkdf.expand_label_ctx_args.context_len = len;
-    Hkdf.expand_label_ctx_args.out = out;
-    Hkdf.expand_label_ctx_args.out_len = len;
-    Hkdf.expand_label_ctx_args.label_prefix = kdf->label_prefix;
+    HkdfV.expand_label_ctx_args.secret = secret;
+    HkdfV.expand_label_ctx_args.label = label;
+    HkdfV.expand_label_ctx_args.context = transcript_hash;
+    HkdfV.expand_label_ctx_args.context_len = len;
+    HkdfV.expand_label_ctx_args.out = out;
+    HkdfV.expand_label_ctx_args.out_len = len;
+    HkdfV.expand_label_ctx_args.label_prefix = kdf->label_prefix;
     Hkdf.expand_label_ctx(work);
 }
 
@@ -94,19 +94,19 @@ static void extract(proto_bool is384, uint8_t *work, const uint8_t *salt, size_t
 {
     if (is384)
     {
-        HkdfSha384.extract_args.salt = salt;
-        HkdfSha384.extract_args.salt_len = salt_len;
-        HkdfSha384.extract_args.ikm = ikm;
-        HkdfSha384.extract_args.ikm_len = ikm_len;
-        HkdfSha384.extract_args.prk = prk;
+        HkdfSha384V.extract_args.salt = salt;
+        HkdfSha384V.extract_args.salt_len = salt_len;
+        HkdfSha384V.extract_args.ikm = ikm;
+        HkdfSha384V.extract_args.ikm_len = ikm_len;
+        HkdfSha384V.extract_args.prk = prk;
         HkdfSha384.extract(work);
         return;
     }
-    Hkdf.extract_args.salt = salt;
-    Hkdf.extract_args.salt_len = salt_len;
-    Hkdf.extract_args.ikm = ikm;
-    Hkdf.extract_args.ikm_len = ikm_len;
-    Hkdf.extract_args.prk = prk;
+    HkdfV.extract_args.salt = salt;
+    HkdfV.extract_args.salt_len = salt_len;
+    HkdfV.extract_args.ikm = ikm;
+    HkdfV.extract_args.ikm_len = ikm_len;
+    HkdfV.extract_args.prk = prk;
     Hkdf.extract(work);
 }
 
@@ -133,19 +133,19 @@ static void finished_hmac(proto_bool is384, uint8_t *work, const uint8_t *key, c
     const size_t len = hash_len(is384);
     if (is384)
     {
-        HmacSha384.mac_args.key = key;
-        HmacSha384.mac_args.key_len = len;
-        HmacSha384.mac_args.data = data;
-        HmacSha384.mac_args.len = len;
-        HmacSha384.mac_args.out = out;
+        HmacSha384V.mac_args.key = key;
+        HmacSha384V.mac_args.key_len = len;
+        HmacSha384V.mac_args.data = data;
+        HmacSha384V.mac_args.len = len;
+        HmacSha384V.mac_args.out = out;
         HmacSha384.mac(work);
         return;
     }
-    HmacSha256.mac_args.key = key;
-    HmacSha256.mac_args.key_len = len;
-    HmacSha256.mac_args.data = data;
-    HmacSha256.mac_args.len = len;
-    HmacSha256.mac_args.out = out;
+    HmacSha256V.mac_args.key = key;
+    HmacSha256V.mac_args.key_len = len;
+    HmacSha256V.mac_args.data = data;
+    HmacSha256V.mac_args.len = len;
+    HmacSha256V.mac_args.out = out;
     HmacSha256.mac(work);
 }
 

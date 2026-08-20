@@ -335,15 +335,15 @@ void test_cert_verify_signature_round_trip(void)
     Tls13Msg.cert_verify_content(tls13_msg_work);
     size_t clen = Tls13MsgV.n;
     uint8_t pub[PROTOCORE_ED25519_PUBKEY_LEN];
-    Ed25519.pubkey_args.pub = pub;
-    Ed25519.pubkey_args.seed = SEED;
+    Ed25519V.pubkey_args.pub = pub;
+    Ed25519V.pubkey_args.seed = SEED;
     Ed25519.pubkey(g_work);
-    Ed25519.verify_args.pub = pub;
-    Ed25519.verify_args.msg = content;
-    Ed25519.verify_args.msg_len = clen;
-    Ed25519.verify_args.sig = msg + 8;
+    Ed25519V.verify_args.pub = pub;
+    Ed25519V.verify_args.msg = content;
+    Ed25519V.verify_args.msg_len = clen;
+    Ed25519V.verify_args.sig = msg + 8;
     Ed25519.verify(g_work);
-    TEST_ASSERT_TRUE(Ed25519.ok);
+    TEST_ASSERT_TRUE(Ed25519V.ok);
 
     // The signature is over that content and nothing else: a different transcript hash does not
     // verify under the same signature.
@@ -357,12 +357,12 @@ void test_cert_verify_signature_round_trip(void)
     Tls13MsgV.cert_verify_content_args.is_server = PROTO_TRUE;
     Tls13Msg.cert_verify_content(tls13_msg_work);
     size_t olen = Tls13MsgV.n;
-    Ed25519.verify_args.pub = pub;
-    Ed25519.verify_args.msg = content;
-    Ed25519.verify_args.msg_len = olen;
-    Ed25519.verify_args.sig = msg + 8;
+    Ed25519V.verify_args.pub = pub;
+    Ed25519V.verify_args.msg = content;
+    Ed25519V.verify_args.msg_len = olen;
+    Ed25519V.verify_args.sig = msg + 8;
     Ed25519.verify(g_work);
-    TEST_ASSERT_FALSE(Ed25519.ok);
+    TEST_ASSERT_FALSE(Ed25519V.ok);
 }
 
 // RFC 8446 sec 4.4.2: "Certificate { opaque certificate_request_context<0..2^8-1>;
@@ -991,8 +991,8 @@ void test_cert_verify_round_trip(void)
     // What the parser handed back verifies over the sec 4.4.3 content, so it is the real signature
     // and not a view of the wrong bytes.
     uint8_t pub[PROTOCORE_ED25519_PUBKEY_LEN];
-    Ed25519.pubkey_args.pub = pub;
-    Ed25519.pubkey_args.seed = RFC8032_SEED;
+    Ed25519V.pubkey_args.pub = pub;
+    Ed25519V.pubkey_args.seed = RFC8032_SEED;
     Ed25519.pubkey(g_work);
     uint8_t content[160];
     Tls13MsgV.cert_verify_content_args.out = content;
@@ -1002,12 +1002,12 @@ void test_cert_verify_round_trip(void)
     Tls13MsgV.cert_verify_content_args.is_server = PROTO_TRUE;
     Tls13Msg.cert_verify_content(tls13_msg_work);
     size_t clen = Tls13MsgV.n;
-    Ed25519.verify_args.pub = pub;
-    Ed25519.verify_args.msg = content;
-    Ed25519.verify_args.msg_len = clen;
-    Ed25519.verify_args.sig = sig;
+    Ed25519V.verify_args.pub = pub;
+    Ed25519V.verify_args.msg = content;
+    Ed25519V.verify_args.msg_len = clen;
+    Ed25519V.verify_args.sig = sig;
     Ed25519.verify(g_work);
-    TEST_ASSERT_TRUE(Ed25519.ok);
+    TEST_ASSERT_TRUE(Ed25519V.ok);
 }
 
 void test_finished_round_trip(void)
@@ -1053,8 +1053,8 @@ void test_finished_round_trip(void)
 void test_flight_parsers_refuse_truncation(void)
 {
     uint8_t pub[PROTOCORE_ED25519_PUBKEY_LEN];
-    Ed25519.pubkey_args.pub = pub;
-    Ed25519.pubkey_args.seed = RFC8032_SEED;
+    Ed25519V.pubkey_args.pub = pub;
+    Ed25519V.pubkey_args.seed = RFC8032_SEED;
     Ed25519.pubkey(g_work);
 
     uint8_t cert_msg[128];

@@ -103,15 +103,32 @@ typedef struct
 {
     Curve25519X25519Args x25519_args;
     Curve25519X25519BaseArgs x25519_base_args;
-
     proto_bool ok;
+} Curve25519Vars;
 
+/** @brief The operands and the outcome. */
+extern Curve25519Vars Curve25519V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const x25519)(uint8_t *restrict work);
     void (*const x25519_base)(uint8_t *restrict work);
 } Curve25519Ns;
 
-/** @brief The one symbol this module exports. */
-extern Curve25519Ns Curve25519;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Curve25519V or a region of the borrow at a fixed offset.
+void protocore_curve25519_x25519(uint8_t *restrict work);
+void protocore_curve25519_x25519_base(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Curve25519.x25519(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Curve25519Ns Curve25519 __attribute__((unused)) = {
+    .x25519 = protocore_curve25519_x25519,
+    .x25519_base = protocore_curve25519_x25519_base,
+};
 
 PROTOCORE_END_DECLS
 

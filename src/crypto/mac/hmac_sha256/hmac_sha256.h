@@ -107,17 +107,38 @@ typedef struct
     HmacSha256UpdateArgs update_args;
     HmacSha256FinalArgs final_args;
     HmacSha256MacArgs mac_args;
-
     proto_bool ok;
+} HmacSha256Vars;
 
+/** @brief The operands and the outcome. */
+extern HmacSha256Vars HmacSha256V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const update)(uint8_t *restrict work);
     void (*const final)(uint8_t *restrict work);
     void (*const mac)(uint8_t *restrict work);
 } HmacSha256Ns;
 
-/** @brief The one symbol this module exports. */
-extern HmacSha256Ns HmacSha256;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HmacSha256V or a region of the borrow at a fixed offset.
+void protocore_hmac_sha256_init(uint8_t *restrict work);
+void protocore_hmac_sha256_update(uint8_t *restrict work);
+void protocore_hmac_sha256_final(uint8_t *restrict work);
+void protocore_hmac_sha256_mac(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `HmacSha256.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HmacSha256Ns HmacSha256 __attribute__((unused)) = {
+    .init = protocore_hmac_sha256_init,
+    .update = protocore_hmac_sha256_update,
+    .final = protocore_hmac_sha256_final,
+    .mac = protocore_hmac_sha256_mac,
+};
 
 PROTOCORE_END_DECLS
 

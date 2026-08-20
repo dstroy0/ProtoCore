@@ -65,19 +65,19 @@ static proto_bool hkdf_derive(uint8_t *restrict work, const uint8_t *prk, const 
     while (done < out_len)
     {
         counter++;
-        HmacSha256.key_args.key = prk;
-        HmacSha256.key_args.key_len = PROTOCORE_HKDF_HASH_LEN;
+        HmacSha256V.key_args.key = prk;
+        HmacSha256V.key_args.key_len = PROTOCORE_HKDF_HASH_LEN;
         HmacSha256.init(HKDF_HMAC(work));
-        HmacSha256.update_args.data = t;
-        HmacSha256.update_args.len = t_len;
+        HmacSha256V.update_args.data = t;
+        HmacSha256V.update_args.len = t_len;
         HmacSha256.update(HKDF_HMAC(work));
-        HmacSha256.update_args.data = info;
-        HmacSha256.update_args.len = info_len;
+        HmacSha256V.update_args.data = info;
+        HmacSha256V.update_args.len = info_len;
         HmacSha256.update(HKDF_HMAC(work));
-        HmacSha256.update_args.data = &counter;
-        HmacSha256.update_args.len = 1;
+        HmacSha256V.update_args.data = &counter;
+        HmacSha256V.update_args.len = 1;
         HmacSha256.update(HKDF_HMAC(work));
-        HmacSha256.final_args.out = t;
+        HmacSha256V.final_args.out = t;
         HmacSha256.final(HKDF_HMAC(work));
         t_len = PROTOCORE_HKDF_HASH_LEN;
 
@@ -131,64 +131,62 @@ static proto_bool hkdf_label_derive(uint8_t *restrict work, const uint8_t *secre
 
 // RFC 5869 sec 2.2: PRK = HMAC-Hash(salt, IKM). HmacSha256 pre-hashes keys > 64 bytes and zero-pads
 // shorter ones, which is exactly HMAC's own key handling, so the salt goes in as-is.
-static void hkdf_extract(uint8_t *restrict work)
+void protocore_hkdf_extract(uint8_t *restrict work)
 {
-    Hkdf.ok = PROTO_FALSE;
-    if (!Hkdf.extract_args.prk)
+    HkdfV.ok = PROTO_FALSE;
+    if (!HkdfV.extract_args.prk)
     {
         return;
     }
-    HmacSha256.mac_args.key = Hkdf.extract_args.salt;
-    HmacSha256.mac_args.key_len = Hkdf.extract_args.salt_len;
-    HmacSha256.mac_args.data = Hkdf.extract_args.ikm;
-    HmacSha256.mac_args.len = Hkdf.extract_args.ikm_len;
-    HmacSha256.mac_args.out = Hkdf.extract_args.prk;
+    HmacSha256V.mac_args.key = HkdfV.extract_args.salt;
+    HmacSha256V.mac_args.key_len = HkdfV.extract_args.salt_len;
+    HmacSha256V.mac_args.data = HkdfV.extract_args.ikm;
+    HmacSha256V.mac_args.len = HkdfV.extract_args.ikm_len;
+    HmacSha256V.mac_args.out = HkdfV.extract_args.prk;
     HmacSha256.mac(HKDF_HMAC(work));
-    Hkdf.ok = HmacSha256.ok;
+    HkdfV.ok = HmacSha256V.ok;
 }
 
-static void hkdf_expand(uint8_t *restrict work)
+void protocore_hkdf_expand(uint8_t *restrict work)
 {
-    Hkdf.ok = PROTO_FALSE;
-    if (!Hkdf.expand_args.prk || !Hkdf.expand_args.out)
+    HkdfV.ok = PROTO_FALSE;
+    if (!HkdfV.expand_args.prk || !HkdfV.expand_args.out)
     {
         return;
     }
-    Hkdf.ok = hkdf_derive(work, Hkdf.expand_args.prk, Hkdf.expand_args.info, Hkdf.expand_args.info_len,
-                          Hkdf.expand_args.out, Hkdf.expand_args.out_len);
+    HkdfV.ok = hkdf_derive(work, HkdfV.expand_args.prk, HkdfV.expand_args.info, HkdfV.expand_args.info_len,
+                           HkdfV.expand_args.out, HkdfV.expand_args.out_len);
 }
 
-static void hkdf_expand_label(uint8_t *restrict work)
+void protocore_hkdf_expand_label(uint8_t *restrict work)
 {
-    Hkdf.ok = PROTO_FALSE;
-    if (!Hkdf.expand_label_args.secret || !Hkdf.expand_label_args.label || !Hkdf.expand_label_args.label_prefix ||
-        !Hkdf.expand_label_args.out)
+    HkdfV.ok = PROTO_FALSE;
+    if (!HkdfV.expand_label_args.secret || !HkdfV.expand_label_args.label || !HkdfV.expand_label_args.label_prefix ||
+        !HkdfV.expand_label_args.out)
     {
         return;
     }
-    Hkdf.ok = hkdf_label_derive(work, Hkdf.expand_label_args.secret, Hkdf.expand_label_args.label, NULL, 0,
-                                Hkdf.expand_label_args.out, Hkdf.expand_label_args.out_len,
-                                Hkdf.expand_label_args.label_prefix);
+    HkdfV.ok = hkdf_label_derive(work, HkdfV.expand_label_args.secret, HkdfV.expand_label_args.label, NULL, 0,
+                                 HkdfV.expand_label_args.out, HkdfV.expand_label_args.out_len,
+                                 HkdfV.expand_label_args.label_prefix);
 }
 
-static void hkdf_expand_label_ctx(uint8_t *restrict work)
+void protocore_hkdf_expand_label_ctx(uint8_t *restrict work)
 {
-    Hkdf.ok = PROTO_FALSE;
-    if (!Hkdf.expand_label_ctx_args.secret || !Hkdf.expand_label_ctx_args.label ||
-        !Hkdf.expand_label_ctx_args.label_prefix || !Hkdf.expand_label_ctx_args.out)
+    HkdfV.ok = PROTO_FALSE;
+    if (!HkdfV.expand_label_ctx_args.secret || !HkdfV.expand_label_ctx_args.label ||
+        !HkdfV.expand_label_ctx_args.label_prefix || !HkdfV.expand_label_ctx_args.out)
     {
         return;
     }
-    Hkdf.ok = hkdf_label_derive(work, Hkdf.expand_label_ctx_args.secret, Hkdf.expand_label_ctx_args.label,
-                                Hkdf.expand_label_ctx_args.context, Hkdf.expand_label_ctx_args.context_len,
-                                Hkdf.expand_label_ctx_args.out, Hkdf.expand_label_ctx_args.out_len,
-                                Hkdf.expand_label_ctx_args.label_prefix);
+    HkdfV.ok = hkdf_label_derive(work, HkdfV.expand_label_ctx_args.secret, HkdfV.expand_label_ctx_args.label,
+                                 HkdfV.expand_label_ctx_args.context, HkdfV.expand_label_ctx_args.context_len,
+                                 HkdfV.expand_label_ctx_args.out, HkdfV.expand_label_ctx_args.out_len,
+                                 HkdfV.expand_label_ctx_args.label_prefix);
 }
 
-HkdfNs Hkdf = {.extract = hkdf_extract,
-               .expand = hkdf_expand,
-               .expand_label = hkdf_expand_label,
-               .expand_label_ctx = hkdf_expand_label_ctx};
+/** @brief The operands and the outcome. */
+HkdfVars HkdfV;
 
 PROTOCORE_END_DECLS
 

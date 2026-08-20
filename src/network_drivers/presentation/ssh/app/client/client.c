@@ -51,8 +51,8 @@ void protocore_ssh_app_client_pubkey(uint8_t *restrict work)
         mem.zero(pub, 32);
         return;
     }
-    Ed25519.pubkey_args.seed = seed;
-    Ed25519.pubkey_args.pub = pub;
+    Ed25519V.pubkey_args.seed = seed;
+    Ed25519V.pubkey_args.pub = pub;
     Ed25519.pubkey(crypto_work);
 }
 

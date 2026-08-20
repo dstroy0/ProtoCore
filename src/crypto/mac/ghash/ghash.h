@@ -94,16 +94,35 @@ typedef struct
     GhashKeyArgs key_args;
     GhashMulArgs mul_args;
     GhashUpdateArgs update_args;
-
     proto_bool ok;
+} GhashVars;
 
+/** @brief The operands and the outcome. */
+extern GhashVars GhashV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const key_init)(uint8_t *restrict work);
     void (*const mul)(uint8_t *restrict work);
     void (*const update)(uint8_t *restrict work);
 } GhashNs;
 
-/** @brief The one symbol this module exports. */
-extern GhashNs Ghash;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in GhashV or a region of the borrow at a fixed offset.
+void protocore_ghash_key_init(uint8_t *restrict work);
+void protocore_ghash_mul(uint8_t *restrict work);
+void protocore_ghash_update(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Ghash.key_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const GhashNs Ghash __attribute__((unused)) = {
+    .key_init = protocore_ghash_key_init,
+    .mul = protocore_ghash_mul,
+    .update = protocore_ghash_update,
+};
 
 PROTOCORE_END_DECLS
 

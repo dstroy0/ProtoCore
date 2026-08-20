@@ -386,19 +386,19 @@ void protocore_dtls_handshake_cookie_make(uint8_t *restrict work)
     }
     // MAC covers version || timestamp || client_addr || payload_len || payload: the address is
     // authenticated (so a cookie cannot be replayed from another peer) without being stored.
-    HmacSha256.key_args.key = protocore_hmac_key;
-    HmacSha256.key_args.key_len = 32;
+    HmacSha256V.key_args.key = protocore_hmac_key;
+    HmacSha256V.key_args.key_len = 32;
     HmacSha256.init(mac_work);
-    HmacSha256.update_args.data = out;
-    HmacSha256.update_args.len = 9;
+    HmacSha256V.update_args.data = out;
+    HmacSha256V.update_args.len = 9;
     HmacSha256.update(mac_work);
-    HmacSha256.update_args.data = client_addr;
-    HmacSha256.update_args.len = addr_len;
+    HmacSha256V.update_args.data = client_addr;
+    HmacSha256V.update_args.len = addr_len;
     HmacSha256.update(mac_work);
-    HmacSha256.update_args.data = out + 9;
-    HmacSha256.update_args.len = 2 + payload_len;
+    HmacSha256V.update_args.data = out + 9;
+    HmacSha256V.update_args.len = 2 + payload_len;
     HmacSha256.update(mac_work);
-    HmacSha256.final_args.out = out + body;
+    HmacSha256V.final_args.out = out + body;
     HmacSha256.final(mac_work);
     DtlsHandshakeV.n = total;
 }
@@ -436,19 +436,19 @@ void protocore_dtls_handshake_cookie_verify(uint8_t *restrict work)
         return;
     }
     uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
-    HmacSha256.key_args.key = protocore_hmac_key;
-    HmacSha256.key_args.key_len = 32;
+    HmacSha256V.key_args.key = protocore_hmac_key;
+    HmacSha256V.key_args.key_len = 32;
     HmacSha256.init(mac_work);
-    HmacSha256.update_args.data = cookie;
-    HmacSha256.update_args.len = 9;
+    HmacSha256V.update_args.data = cookie;
+    HmacSha256V.update_args.len = 9;
     HmacSha256.update(mac_work);
-    HmacSha256.update_args.data = client_addr;
-    HmacSha256.update_args.len = addr_len;
+    HmacSha256V.update_args.data = client_addr;
+    HmacSha256V.update_args.len = addr_len;
     HmacSha256.update(mac_work);
-    HmacSha256.update_args.data = cookie + 9;
-    HmacSha256.update_args.len = 2 + payload_len;
+    HmacSha256V.update_args.data = cookie + 9;
+    HmacSha256V.update_args.len = 2 + payload_len;
     HmacSha256.update(mac_work);
-    HmacSha256.final_args.out = mac;
+    HmacSha256V.final_args.out = mac;
     HmacSha256.final(mac_work);
     if (!protocore_ct_eq(mac, cookie + body, PROTOCORE_HMAC_SHA256_LEN))
     {

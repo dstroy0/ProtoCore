@@ -187,8 +187,8 @@ static void server_start(void)
     QuicTlsServer.server_init(quic_tls_work);
 
     memset(g_client_priv, 0x33, sizeof(g_client_priv));
-    Curve25519.x25519_base_args.out = g_client_pub;
-    Curve25519.x25519_base_args.scalar = g_client_priv;
+    Curve25519V.x25519_base_args.out = g_client_pub;
+    Curve25519V.x25519_base_args.scalar = g_client_priv;
     Curve25519.x25519_base(tw);
 }
 
@@ -306,8 +306,8 @@ void test_rfc8446_server_hello_fields(void)
 
     // the share is the public half of the configured ephemeral private key
     uint8_t want_pub[32];
-    Curve25519.x25519_base_args.out = want_pub;
-    Curve25519.x25519_base_args.scalar = g_cfg.ephemeral_priv;
+    Curve25519V.x25519_base_args.out = want_pub;
+    Curve25519V.x25519_base_args.scalar = g_cfg.ephemeral_priv;
     Curve25519.x25519_base(tw);
     TEST_ASSERT_EQUAL_MEMORY(want_pub, sh + SH_SHARE_OFFSET, 32);
 }
@@ -346,9 +346,9 @@ void test_handshake_interop_round_trip(void)
 
     // the client's (EC)DHE secret, from its own private key and the server's share
     uint8_t ecdhe[32];
-    Curve25519.x25519_args.out = ecdhe;
-    Curve25519.x25519_args.scalar = g_client_priv;
-    Curve25519.x25519_args.point = sh + SH_SHARE_OFFSET;
+    Curve25519V.x25519_args.out = ecdhe;
+    Curve25519V.x25519_args.scalar = g_client_priv;
+    Curve25519V.x25519_args.point = sh + SH_SHARE_OFFSET;
     Curve25519.x25519(tw);
 
     // Transcript-Hash(ClientHello .. ServerHello)
@@ -376,18 +376,18 @@ void test_handshake_interop_round_trip(void)
 
     // the Handshake-level packet keys both ends derive from those secrets must agree
     QuicPacketKeys mine;
-    QuicCrypto.keys_from_secret_args.keys_work = keys_work;
-    QuicCrypto.keys_from_secret_args.secret = ks.s + TLS13_KS_CLIENT_HS;
-    QuicCrypto.keys_from_secret_args.out = &mine;
+    QuicCryptoV.keys_from_secret_args.keys_work = keys_work;
+    QuicCryptoV.keys_from_secret_args.secret = ks.s + TLS13_KS_CLIENT_HS;
+    QuicCryptoV.keys_from_secret_args.out = &mine;
     QuicCrypto.keys_from_secret(quic_crypto_work);
     QuicTlsServerV.keys_args.qt = &g_qt;
     QuicTlsServerV.keys_args.level = QUIC_ENC_HANDSHAKE;
     QuicTlsServerV.keys_args.is_server = PROTO_FALSE;
     QuicTlsServer.keys(quic_tls_work);
     TEST_ASSERT_EQUAL_MEMORY(QuicTlsServerV.pkt_keys->iv, mine.iv, 12);
-    QuicCrypto.keys_from_secret_args.keys_work = keys_work;
-    QuicCrypto.keys_from_secret_args.secret = ks.s + TLS13_KS_SERVER_HS;
-    QuicCrypto.keys_from_secret_args.out = &mine;
+    QuicCryptoV.keys_from_secret_args.keys_work = keys_work;
+    QuicCryptoV.keys_from_secret_args.secret = ks.s + TLS13_KS_SERVER_HS;
+    QuicCryptoV.keys_from_secret_args.out = &mine;
     QuicCrypto.keys_from_secret(quic_crypto_work);
     QuicTlsServerV.keys_args.qt = &g_qt;
     QuicTlsServerV.keys_args.level = QUIC_ENC_HANDSHAKE;
@@ -428,18 +428,18 @@ void test_handshake_interop_round_trip(void)
     Tls13KsV.bind.s = ks_store;
     Tls13KsV.step.ch_sfin_hash = hash;
     Tls13Ks.master(NULL);
-    QuicCrypto.keys_from_secret_args.keys_work = keys_work;
-    QuicCrypto.keys_from_secret_args.secret = ks.s + TLS13_KS_CLIENT_AP;
-    QuicCrypto.keys_from_secret_args.out = &mine;
+    QuicCryptoV.keys_from_secret_args.keys_work = keys_work;
+    QuicCryptoV.keys_from_secret_args.secret = ks.s + TLS13_KS_CLIENT_AP;
+    QuicCryptoV.keys_from_secret_args.out = &mine;
     QuicCrypto.keys_from_secret(quic_crypto_work);
     QuicTlsServerV.keys_args.qt = &g_qt;
     QuicTlsServerV.keys_args.level = QUIC_ENC_APP;
     QuicTlsServerV.keys_args.is_server = PROTO_FALSE;
     QuicTlsServer.keys(quic_tls_work);
     TEST_ASSERT_EQUAL_MEMORY(QuicTlsServerV.pkt_keys->iv, mine.iv, 12);
-    QuicCrypto.keys_from_secret_args.keys_work = keys_work;
-    QuicCrypto.keys_from_secret_args.secret = ks.s + TLS13_KS_SERVER_AP;
-    QuicCrypto.keys_from_secret_args.out = &mine;
+    QuicCryptoV.keys_from_secret_args.keys_work = keys_work;
+    QuicCryptoV.keys_from_secret_args.secret = ks.s + TLS13_KS_SERVER_AP;
+    QuicCryptoV.keys_from_secret_args.out = &mine;
     QuicCrypto.keys_from_secret(quic_crypto_work);
     QuicTlsServerV.keys_args.qt = &g_qt;
     QuicTlsServerV.keys_args.level = QUIC_ENC_APP;

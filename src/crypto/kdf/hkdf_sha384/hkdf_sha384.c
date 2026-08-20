@@ -65,19 +65,19 @@ static proto_bool hkdf_sha384_derive(uint8_t *restrict work, const uint8_t *prk,
     while (done < out_len)
     {
         counter++;
-        HmacSha384.key_args.key = prk;
-        HmacSha384.key_args.key_len = PROTOCORE_HKDF_SHA384_HASH_LEN;
+        HmacSha384V.key_args.key = prk;
+        HmacSha384V.key_args.key_len = PROTOCORE_HKDF_SHA384_HASH_LEN;
         HmacSha384.init(HKDF_SHA384_HMAC(work));
-        HmacSha384.update_args.data = t;
-        HmacSha384.update_args.len = t_len;
+        HmacSha384V.update_args.data = t;
+        HmacSha384V.update_args.len = t_len;
         HmacSha384.update(HKDF_SHA384_HMAC(work));
-        HmacSha384.update_args.data = info;
-        HmacSha384.update_args.len = info_len;
+        HmacSha384V.update_args.data = info;
+        HmacSha384V.update_args.len = info_len;
         HmacSha384.update(HKDF_SHA384_HMAC(work));
-        HmacSha384.update_args.data = &counter;
-        HmacSha384.update_args.len = 1;
+        HmacSha384V.update_args.data = &counter;
+        HmacSha384V.update_args.len = 1;
         HmacSha384.update(HKDF_SHA384_HMAC(work));
-        HmacSha384.final_args.out = t;
+        HmacSha384V.final_args.out = t;
         HmacSha384.final(HKDF_SHA384_HMAC(work));
         t_len = PROTOCORE_HKDF_SHA384_HASH_LEN;
 
@@ -131,67 +131,65 @@ static proto_bool hkdf_sha384_label_derive(uint8_t *restrict work, const uint8_t
 
 // RFC 5869 sec 2.2: PRK = HMAC-Hash(salt, IKM). HmacSha384 pre-hashes keys > 128 bytes and zero-pads
 // shorter ones, which is exactly HMAC's own key handling, so the salt goes in as-is.
-static void hkdf_sha384_extract(uint8_t *restrict work)
+void protocore_hkdf_sha384_extract(uint8_t *restrict work)
 {
-    HkdfSha384.ok = PROTO_FALSE;
-    if (!HkdfSha384.extract_args.prk)
+    HkdfSha384V.ok = PROTO_FALSE;
+    if (!HkdfSha384V.extract_args.prk)
     {
         return;
     }
-    HmacSha384.mac_args.key = HkdfSha384.extract_args.salt;
-    HmacSha384.mac_args.key_len = HkdfSha384.extract_args.salt_len;
-    HmacSha384.mac_args.data = HkdfSha384.extract_args.ikm;
-    HmacSha384.mac_args.len = HkdfSha384.extract_args.ikm_len;
-    HmacSha384.mac_args.out = HkdfSha384.extract_args.prk;
+    HmacSha384V.mac_args.key = HkdfSha384V.extract_args.salt;
+    HmacSha384V.mac_args.key_len = HkdfSha384V.extract_args.salt_len;
+    HmacSha384V.mac_args.data = HkdfSha384V.extract_args.ikm;
+    HmacSha384V.mac_args.len = HkdfSha384V.extract_args.ikm_len;
+    HmacSha384V.mac_args.out = HkdfSha384V.extract_args.prk;
     HmacSha384.mac(HKDF_SHA384_HMAC(work));
-    HkdfSha384.ok = HmacSha384.ok;
+    HkdfSha384V.ok = HmacSha384V.ok;
 }
 
-static void hkdf_sha384_expand(uint8_t *restrict work)
+void protocore_hkdf_sha384_expand(uint8_t *restrict work)
 {
-    HkdfSha384.ok = PROTO_FALSE;
-    if (!HkdfSha384.expand_args.prk || !HkdfSha384.expand_args.out)
+    HkdfSha384V.ok = PROTO_FALSE;
+    if (!HkdfSha384V.expand_args.prk || !HkdfSha384V.expand_args.out)
     {
         return;
     }
-    HkdfSha384.ok =
-        hkdf_sha384_derive(work, HkdfSha384.expand_args.prk, HkdfSha384.expand_args.info,
-                           HkdfSha384.expand_args.info_len, HkdfSha384.expand_args.out, HkdfSha384.expand_args.out_len);
+    HkdfSha384V.ok = hkdf_sha384_derive(work, HkdfSha384V.expand_args.prk, HkdfSha384V.expand_args.info,
+                                        HkdfSha384V.expand_args.info_len, HkdfSha384V.expand_args.out,
+                                        HkdfSha384V.expand_args.out_len);
 }
 
-static void hkdf_sha384_expand_label(uint8_t *restrict work)
+void protocore_hkdf_sha384_expand_label(uint8_t *restrict work)
 {
-    HkdfSha384.ok = PROTO_FALSE;
-    if (!HkdfSha384.expand_label_args.secret || !HkdfSha384.expand_label_args.label ||
-        !HkdfSha384.expand_label_args.label_prefix || !HkdfSha384.expand_label_args.out)
+    HkdfSha384V.ok = PROTO_FALSE;
+    if (!HkdfSha384V.expand_label_args.secret || !HkdfSha384V.expand_label_args.label ||
+        !HkdfSha384V.expand_label_args.label_prefix || !HkdfSha384V.expand_label_args.out)
     {
         return;
     }
-    HkdfSha384.ok =
-        hkdf_sha384_label_derive(work, HkdfSha384.expand_label_args.secret, HkdfSha384.expand_label_args.label, NULL, 0,
-                                 HkdfSha384.expand_label_args.out, HkdfSha384.expand_label_args.out_len,
-                                 HkdfSha384.expand_label_args.label_prefix);
+    HkdfSha384V.ok =
+        hkdf_sha384_label_derive(work, HkdfSha384V.expand_label_args.secret, HkdfSha384V.expand_label_args.label, NULL,
+                                 0, HkdfSha384V.expand_label_args.out, HkdfSha384V.expand_label_args.out_len,
+                                 HkdfSha384V.expand_label_args.label_prefix);
 }
 
-static void hkdf_sha384_expand_label_ctx(uint8_t *restrict work)
+void protocore_hkdf_sha384_expand_label_ctx(uint8_t *restrict work)
 {
-    HkdfSha384.ok = PROTO_FALSE;
-    if (!HkdfSha384.expand_label_ctx_args.secret || !HkdfSha384.expand_label_ctx_args.label ||
-        !HkdfSha384.expand_label_ctx_args.label_prefix || !HkdfSha384.expand_label_ctx_args.out)
+    HkdfSha384V.ok = PROTO_FALSE;
+    if (!HkdfSha384V.expand_label_ctx_args.secret || !HkdfSha384V.expand_label_ctx_args.label ||
+        !HkdfSha384V.expand_label_ctx_args.label_prefix || !HkdfSha384V.expand_label_ctx_args.out)
     {
         return;
     }
-    HkdfSha384.ok =
-        hkdf_sha384_label_derive(work, HkdfSha384.expand_label_ctx_args.secret, HkdfSha384.expand_label_ctx_args.label,
-                                 HkdfSha384.expand_label_ctx_args.context, HkdfSha384.expand_label_ctx_args.context_len,
-                                 HkdfSha384.expand_label_ctx_args.out, HkdfSha384.expand_label_ctx_args.out_len,
-                                 HkdfSha384.expand_label_ctx_args.label_prefix);
+    HkdfSha384V.ok = hkdf_sha384_label_derive(
+        work, HkdfSha384V.expand_label_ctx_args.secret, HkdfSha384V.expand_label_ctx_args.label,
+        HkdfSha384V.expand_label_ctx_args.context, HkdfSha384V.expand_label_ctx_args.context_len,
+        HkdfSha384V.expand_label_ctx_args.out, HkdfSha384V.expand_label_ctx_args.out_len,
+        HkdfSha384V.expand_label_ctx_args.label_prefix);
 }
 
-HkdfSha384Ns HkdfSha384 = {.extract = hkdf_sha384_extract,
-                           .expand = hkdf_sha384_expand,
-                           .expand_label = hkdf_sha384_expand_label,
-                           .expand_label_ctx = hkdf_sha384_expand_label_ctx};
+/** @brief The operands and the outcome. */
+HkdfSha384Vars HkdfSha384V;
 
 PROTOCORE_END_DECLS
 

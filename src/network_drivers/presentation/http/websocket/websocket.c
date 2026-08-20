@@ -480,15 +480,15 @@ static void ws_finish_frame(uint8_t *restrict work, WsConn *ws)
             in[comp_len + 2] = 0xff;
             in[comp_len + 3] = 0xff;
             size_t dlen = 0;
-            Inflate.raw_args.src = in;
-            Inflate.raw_args.src_len = comp_len + 4;
-            Inflate.raw_args.dst = out;
-            Inflate.raw_args.dst_cap = WS_FRAME_SIZE;
-            Inflate.raw_args.out_len = &dlen;
-            Inflate.raw_args.scratch = tbl;
-            Inflate.raw_args.scratch_len = INFLATE_SCRATCH_SIZE;
+            InflateV.raw_args.src = in;
+            InflateV.raw_args.src_len = comp_len + 4;
+            InflateV.raw_args.dst = out;
+            InflateV.raw_args.dst_cap = WS_FRAME_SIZE;
+            InflateV.raw_args.out_len = &dlen;
+            InflateV.raw_args.scratch = tbl;
+            InflateV.raw_args.scratch_len = INFLATE_SCRATCH_SIZE;
             Inflate.raw(inflate_work);
-            InflateResult rc = Inflate.value;
+            InflateResult rc = InflateV.value;
             if (rc == INFLATE_ERR_OVERFLOW)
             {
                 protocore_plaintext_release(pt_mark);

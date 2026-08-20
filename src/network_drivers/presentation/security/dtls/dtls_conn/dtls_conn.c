@@ -446,18 +446,18 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     // X25519 shared secret and the server's key_share.
     uint8_t ecdhe[32];
     uint8_t server_share[32];
-    Curve25519.x25519_args.scalar = c->cfg.ephemeral_priv;
-    Curve25519.x25519_args.point = ch.client_x25519;
-    Curve25519.x25519_args.out = ecdhe;
+    Curve25519V.x25519_args.scalar = c->cfg.ephemeral_priv;
+    Curve25519V.x25519_args.point = ch.client_x25519;
+    Curve25519V.x25519_args.out = ecdhe;
     Curve25519.x25519(c->sign_work);
-    if (!Curve25519.ok)
+    if (!Curve25519V.ok)
     {
         // RFC 8446 sec 7.4.2: the shared secret came out all-zero, so the peer's key share was a
         // point of small order and the secret is a constant it chose. Abort (RFC 7748 sec 6.1).
         return fail(c, ALERT_ILLEGAL_PARAMETER);
     }
-    Curve25519.x25519_base_args.scalar = c->cfg.ephemeral_priv;
-    Curve25519.x25519_base_args.out = server_share;
+    Curve25519V.x25519_base_args.scalar = c->cfg.ephemeral_priv;
+    Curve25519V.x25519_base_args.out = server_share;
     Curve25519.x25519_base(c->sign_work);
 
     transcript_add(c, c->transcript, msg, msg_len); // transcript: ClientHello (CH2 when an HRR preceded it)
@@ -550,8 +550,8 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     if (rpk)
     {
         uint8_t ed_pub[PROTOCORE_ED25519_PUBKEY_LEN];
-        Ed25519.pubkey_args.seed = c->cfg.ed25519_seed;
-        Ed25519.pubkey_args.pub = ed_pub;
+        Ed25519V.pubkey_args.seed = c->cfg.ed25519_seed;
+        Ed25519V.pubkey_args.pub = ed_pub;
         Ed25519.pubkey(c->sign_work);
         Tls13RpkV.build_certificate_args.out = c->msgbuf;
         Tls13RpkV.build_certificate_args.cap = sizeof(c->msgbuf);

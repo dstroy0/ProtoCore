@@ -188,20 +188,20 @@ static void run_hmac(const KatMac *rows, size_t n, proto_bool is512)
         size_t wlen = unhex(v->tag, want);
         if (is512)
         {
-            HmacSha512.mac_args.key = key;
-            HmacSha512.mac_args.key_len = klen;
-            HmacSha512.mac_args.data = msg;
-            HmacSha512.mac_args.len = mlen;
-            HmacSha512.mac_args.out = got;
+            HmacSha512V.mac_args.key = key;
+            HmacSha512V.mac_args.key_len = klen;
+            HmacSha512V.mac_args.data = msg;
+            HmacSha512V.mac_args.len = mlen;
+            HmacSha512V.mac_args.out = got;
             HmacSha512.mac(g_work);
         }
         else
         {
-            HmacSha256.mac_args.key = key;
-            HmacSha256.mac_args.key_len = klen;
-            HmacSha256.mac_args.data = msg;
-            HmacSha256.mac_args.len = mlen;
-            HmacSha256.mac_args.out = got;
+            HmacSha256V.mac_args.key = key;
+            HmacSha256V.mac_args.key_len = klen;
+            HmacSha256V.mac_args.data = msg;
+            HmacSha256V.mac_args.len = mlen;
+            HmacSha256V.mac_args.out = got;
             HmacSha256.mac(g_work);
         }
         size_t cmp = (size_t)v->tag_bits / 8;
@@ -309,9 +309,9 @@ void test_x25519(void)
         unhex(v->pub, pub);
         unhex(v->priv, priv);
         TEST_ASSERT_EQUAL_UINT_MESSAGE(32u, (unsigned)unhex(v->shared, want), v->shared);
-        Curve25519.x25519_args.scalar = priv;
-        Curve25519.x25519_args.point = pub;
-        Curve25519.x25519_args.out = got;
+        Curve25519V.x25519_args.scalar = priv;
+        Curve25519V.x25519_args.point = pub;
+        Curve25519V.x25519_args.out = got;
         Curve25519.x25519(g_work);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 32, v->shared);
     }
@@ -330,12 +330,12 @@ void test_ed25519_verify(void)
         unhex(v->pub, pub);
         size_t mlen = unhex(v->msg, msg);
         size_t slen = unhex(v->sig, sig);
-        Ed25519.verify_args.pub = pub;
-        Ed25519.verify_args.msg = msg;
-        Ed25519.verify_args.msg_len = mlen;
-        Ed25519.verify_args.sig = sig;
+        Ed25519V.verify_args.pub = pub;
+        Ed25519V.verify_args.msg = msg;
+        Ed25519V.verify_args.msg_len = mlen;
+        Ed25519V.verify_args.sig = sig;
         Ed25519.verify(g_work);
-        proto_bool ok = (slen == PROTOCORE_ED25519_SIG_LEN) && Ed25519.ok;
+        proto_bool ok = (slen == PROTOCORE_ED25519_SIG_LEN) && Ed25519V.ok;
         TEST_ASSERT_EQUAL_MESSAGE(v->valid ? PROTO_TRUE : PROTO_FALSE, ok, v->sig);
     }
 }
@@ -352,14 +352,14 @@ void test_ed25519_sign(void)
         unhex(v->pub, want_pub);
         unhex(v->sig, want_sig);
         size_t mlen = unhex(v->msg, msg);
-        Ed25519.pubkey_args.seed = seed;
-        Ed25519.pubkey_args.pub = got_pub;
+        Ed25519V.pubkey_args.seed = seed;
+        Ed25519V.pubkey_args.pub = got_pub;
         Ed25519.pubkey(g_work);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want_pub, got_pub, 32, v->pub);
-        Ed25519.sign_args.seed = seed;
-        Ed25519.sign_args.msg = msg;
-        Ed25519.sign_args.msg_len = mlen;
-        Ed25519.sign_args.sig = got_sig;
+        Ed25519V.sign_args.seed = seed;
+        Ed25519V.sign_args.msg = msg;
+        Ed25519V.sign_args.msg_len = mlen;
+        Ed25519V.sign_args.sig = got_sig;
         Ed25519.sign(g_work);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want_sig, got_sig, 64, v->sig);
     }
@@ -376,11 +376,11 @@ void test_hkdf_extract(void)
         size_t slen = unhex(v->salt, salt);
         size_t ilen = unhex(v->ikm, ikm);
         unhex(v->prk, want);
-        Hkdf.extract_args.salt = slen ? salt : NULL;
-        Hkdf.extract_args.salt_len = slen;
-        Hkdf.extract_args.ikm = ikm;
-        Hkdf.extract_args.ikm_len = ilen;
-        Hkdf.extract_args.prk = got;
+        HkdfV.extract_args.salt = slen ? salt : NULL;
+        HkdfV.extract_args.salt_len = slen;
+        HkdfV.extract_args.ikm = ikm;
+        HkdfV.extract_args.ikm_len = ilen;
+        HkdfV.extract_args.prk = got;
         Hkdf.extract(g_work);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 32, v->prk);
     }
@@ -398,11 +398,11 @@ void test_hkdf_expand(void)
         size_t ilen = unhex(v->info, info);
         size_t wlen = unhex(v->okm, want);
         TEST_ASSERT_EQUAL_UINT32_MESSAGE(v->l, (uint32_t)wlen, v->okm);
-        Hkdf.expand_args.prk = prk;
-        Hkdf.expand_args.info = ilen ? info : NULL;
-        Hkdf.expand_args.info_len = ilen;
-        Hkdf.expand_args.out = got;
-        Hkdf.expand_args.out_len = wlen;
+        HkdfV.expand_args.prk = prk;
+        HkdfV.expand_args.info = ilen ? info : NULL;
+        HkdfV.expand_args.info_len = ilen;
+        HkdfV.expand_args.out = got;
+        HkdfV.expand_args.out_len = wlen;
         Hkdf.expand(g_work);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, wlen, v->okm);
     }
@@ -417,20 +417,20 @@ void test_hkdf_expand_length_bound(void)
     unhex(KAT_HKDF[0].prk, prk);
 
     memset(out, 0xAA, sizeof(out));
-    Hkdf.expand_args.prk = prk;
-    Hkdf.expand_args.info = NULL;
-    Hkdf.expand_args.info_len = 0;
-    Hkdf.expand_args.out = out;
-    Hkdf.expand_args.out_len = (size_t)255 * 32;
+    HkdfV.expand_args.prk = prk;
+    HkdfV.expand_args.info = NULL;
+    HkdfV.expand_args.info_len = 0;
+    HkdfV.expand_args.out = out;
+    HkdfV.expand_args.out_len = (size_t)255 * 32;
     Hkdf.expand(g_work);
     TEST_ASSERT_NOT_EQUAL(0xAA, out[0]);
 
     memset(out, 0xAA, sizeof(out));
-    Hkdf.expand_args.prk = prk;
-    Hkdf.expand_args.info = NULL;
-    Hkdf.expand_args.info_len = 0;
-    Hkdf.expand_args.out = out;
-    Hkdf.expand_args.out_len = (size_t)255 * 32 + 1;
+    HkdfV.expand_args.prk = prk;
+    HkdfV.expand_args.info = NULL;
+    HkdfV.expand_args.info_len = 0;
+    HkdfV.expand_args.out = out;
+    HkdfV.expand_args.out_len = (size_t)255 * 32 + 1;
     Hkdf.expand(g_work);
     for (size_t i = 0; i < (size_t)255 * 32 + 1; i++)
     {
@@ -466,10 +466,10 @@ void test_poly1305(void)
         unhex(v->key, key);
         size_t mlen = unhex(v->msg, msg);
         unhex(v->tag, want);
-        Poly1305.mac_args.key = key;
-        Poly1305.mac_args.msg = msg;
-        Poly1305.mac_args.len = mlen;
-        Poly1305.mac_args.out = got;
+        Poly1305V.mac_args.key = key;
+        Poly1305V.mac_args.msg = msg;
+        Poly1305V.mac_args.len = mlen;
+        Poly1305V.mac_args.out = got;
         Poly1305.mac(g_work);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 16, v->tag);
     }

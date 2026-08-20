@@ -64,15 +64,15 @@ static size_t round_trip(const uint8_t *src, size_t src_len)
     g_comp[clen + 3] = 0xff;
 
     size_t plen = 0;
-    Inflate.raw_args.src = g_comp;
-    Inflate.raw_args.src_len = clen + 4;
-    Inflate.raw_args.dst = g_plain;
-    Inflate.raw_args.dst_cap = sizeof(g_plain);
-    Inflate.raw_args.out_len = &plen;
-    Inflate.raw_args.scratch = g_iscratch;
-    Inflate.raw_args.scratch_len = sizeof(g_iscratch);
+    InflateV.raw_args.src = g_comp;
+    InflateV.raw_args.src_len = clen + 4;
+    InflateV.raw_args.dst = g_plain;
+    InflateV.raw_args.dst_cap = sizeof(g_plain);
+    InflateV.raw_args.out_len = &plen;
+    InflateV.raw_args.scratch = g_iscratch;
+    InflateV.raw_args.scratch_len = sizeof(g_iscratch);
     Inflate.raw(inflate_work);
-    TEST_ASSERT_EQUAL_INT(INFLATE_OK, Inflate.value);
+    TEST_ASSERT_EQUAL_INT(INFLATE_OK, InflateV.value);
     TEST_ASSERT_EQUAL_size_t(src_len, plen);
     if (src_len)
     {

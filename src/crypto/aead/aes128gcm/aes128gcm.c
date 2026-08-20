@@ -227,17 +227,17 @@ static void gcm_tag(uint8_t *restrict work, const uint8_t *aad, size_t aad_len, 
 {
     Aes128GcmWork *w = AES128GCM_GCM(work);
     mem.zero(w->acc, 16);
-    Ghash.update_args.acc = w->acc;
-    Ghash.update_args.data = aad;
-    Ghash.update_args.len = aad_len;
+    GhashV.update_args.acc = w->acc;
+    GhashV.update_args.data = aad;
+    GhashV.update_args.len = aad_len;
     Ghash.update(AES128GCM_GHASH(work));
-    Ghash.update_args.data = cipher;
-    Ghash.update_args.len = cipher_len;
+    GhashV.update_args.data = cipher;
+    GhashV.update_args.len = cipher_len;
     Ghash.update(AES128GCM_GHASH(work));
     put_be64(w->lb, (uint64_t)aad_len * 8);
     put_be64(w->lb + 8, (uint64_t)cipher_len * 8);
     xor16(w->acc, w->lb);
-    Ghash.mul_args.acc = w->acc;
+    GhashV.mul_args.acc = w->acc;
     Ghash.mul(AES128GCM_GHASH(work));
 
     aes128_ecb(w, w->j0, w->ej0);
@@ -253,7 +253,7 @@ static proto_bool aes128gcm_key_load(uint8_t *restrict work)
     blk_init(&w->blk, Aes128GcmV.key_args.key);
     mem.zero(w->h, 16);
     aes128_ecb(w, w->h, w->h); // H = E(K, 0^128)
-    Ghash.key_args.h = w->h;
+    GhashV.key_args.h = w->h;
     Ghash.key_init(AES128GCM_GHASH(work));
     return PROTO_TRUE;
 }

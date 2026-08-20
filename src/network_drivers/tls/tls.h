@@ -18,7 +18,6 @@
 #define PROTOCORE_TLS_H
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-
 #if PROTOCORE_TLS_SOFTWARE
 
 PROTOCORE_BEGIN_DECLS
@@ -184,16 +183,21 @@ typedef struct
 typedef struct
 {
     TlsConn *conn;
-
     TlsInitArgs init_args;
     TlsConnIoArgs io;
     TlsConnOut out_args;
-
     proto_bool ok;
     size_t n;
     int i32;
     uint8_t u8;
+} TlsConnectionVars;
 
+/** @brief The operands and the outcome. */
+extern TlsConnectionVars TlsConnectionV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const start)(uint8_t *restrict work);
     void (*const process)(uint8_t *restrict work);
@@ -201,11 +205,31 @@ typedef struct
     void (*const alert)(uint8_t *restrict work);
     void (*const seal_app)(uint8_t *restrict work);
     void (*const open_app)(uint8_t *restrict work);
-
 } TlsConnNs;
 
-/** @brief The one symbol this module exports. */
-extern TlsConnNs TlsConnection;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in TlsConnectionV or a region of the borrow at a fixed offset.
+void protocore_tls_connection_init(uint8_t *restrict work);
+void protocore_tls_connection_start(uint8_t *restrict work);
+void protocore_tls_connection_process(uint8_t *restrict work);
+void protocore_tls_connection_established(uint8_t *restrict work);
+void protocore_tls_connection_alert(uint8_t *restrict work);
+void protocore_tls_connection_seal_app(uint8_t *restrict work);
+void protocore_tls_connection_open_app(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `TlsConnection.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const TlsConnNs TlsConnection __attribute__((unused)) = {
+    .init = protocore_tls_connection_init,
+    .start = protocore_tls_connection_start,
+    .process = protocore_tls_connection_process,
+    .established = protocore_tls_connection_established,
+    .alert = protocore_tls_connection_alert,
+    .seal_app = protocore_tls_connection_seal_app,
+    .open_app = protocore_tls_connection_open_app,
+};
 
 /** @brief The connection standing on @p slot, or NULL when the index is out of range. */
 TlsConn *protocore_tls_conn_at(uint8_t slot);

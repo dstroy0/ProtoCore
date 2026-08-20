@@ -85,15 +85,15 @@ int main(void)
             200000,
             {
                 plen = 0;
-                Inflate.raw_args.src = comp;
-                Inflate.raw_args.src_len = clen + 4;
-                Inflate.raw_args.dst = plain;
-                Inflate.raw_args.dst_cap = sizeof(plain);
-                Inflate.raw_args.out_len = &plen;
-                Inflate.raw_args.scratch = iscratch;
-                Inflate.raw_args.scratch_len = INFLATE_SCRATCH_SIZE;
+                InflateV.raw_args.src = comp;
+                InflateV.raw_args.src_len = clen + 4;
+                InflateV.raw_args.dst = plain;
+                InflateV.raw_args.dst_cap = sizeof(plain);
+                InflateV.raw_args.out_len = &plen;
+                InflateV.raw_args.scratch = iscratch;
+                InflateV.raw_args.scratch_len = INFLATE_SCRATCH_SIZE;
                 Inflate.raw(inflate_work);
-                sink += (int)Inflate.value;
+                sink += (int)InflateV.value;
             },
             ns);
         hbench_row("ws-deflate", "inflate (json msg)", ns, (double)plen);

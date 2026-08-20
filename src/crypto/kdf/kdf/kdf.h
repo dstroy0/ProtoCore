@@ -71,14 +71,29 @@ typedef struct
 typedef struct
 {
     KdfCtrArgs ctr_args;
-
     proto_bool ok;
+} KdfVars;
 
+/** @brief The operands and the outcome. */
+extern KdfVars KdfV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const ctr_hmac_sha256)(uint8_t *restrict work);
 } KdfNs;
 
-/** @brief The one symbol this module exports. */
-extern KdfNs Kdf;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in KdfV or a region of the borrow at a fixed offset.
+void protocore_kdf_ctr_hmac_sha256(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Kdf.ctr_hmac_sha256(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const KdfNs Kdf __attribute__((unused)) = {
+    .ctr_hmac_sha256 = protocore_kdf_ctr_hmac_sha256,
+};
 
 PROTOCORE_END_DECLS
 

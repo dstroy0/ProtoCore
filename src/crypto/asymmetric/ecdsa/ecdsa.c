@@ -649,11 +649,11 @@ static void protocore_hmac_cat(uint8_t *restrict work, uint8_t out[32], const ui
         mem.cpy(buf + n, e, 32);
         n += 32;
     }
-    HmacSha256.mac_args.key = key;
-    HmacSha256.mac_args.key_len = 32;
-    HmacSha256.mac_args.data = buf;
-    HmacSha256.mac_args.len = n;
-    HmacSha256.mac_args.out = out;
+    HmacSha256V.mac_args.key = key;
+    HmacSha256V.mac_args.key_len = 32;
+    HmacSha256V.mac_args.data = buf;
+    HmacSha256V.mac_args.len = n;
+    HmacSha256V.mac_args.out = out;
     HmacSha256.mac(ECDSA_HMAC(work));
 }
 
@@ -742,11 +742,11 @@ static proto_bool ecdsa_sign_core(uint8_t *restrict work, uint8_t sig[64], const
         uint8_t buf[33]; // retry: K = HMAC_K(V || 0x00); V = HMAC_K(V)
         mem.cpy(buf, V, 32);
         buf[32] = 0x00;
-        HmacSha256.mac_args.key = K;
-        HmacSha256.mac_args.key_len = 32;
-        HmacSha256.mac_args.data = buf;
-        HmacSha256.mac_args.len = 33;
-        HmacSha256.mac_args.out = K;
+        HmacSha256V.mac_args.key = K;
+        HmacSha256V.mac_args.key_len = 32;
+        HmacSha256V.mac_args.data = buf;
+        HmacSha256V.mac_args.len = 33;
+        HmacSha256V.mac_args.out = K;
         HmacSha256.mac(ECDSA_HMAC(work));
         protocore_hmac_cat(work, V, K, V, 32, -1, NULL, NULL);
     }
@@ -755,15 +755,15 @@ static proto_bool ecdsa_sign_core(uint8_t *restrict work, uint8_t sig[64], const
 
 // --- the entries -----------------------------------------------------------
 
-static void ecdsa_pubkey(uint8_t *restrict work)
+void protocore_ecdsa_pubkey(uint8_t *restrict work)
 {
-    Ecdsa.ok = PROTO_FALSE;
-    if (!Ecdsa.pubkey_args.pub || !Ecdsa.pubkey_args.priv)
+    EcdsaV.ok = PROTO_FALSE;
+    if (!EcdsaV.pubkey_args.pub || !EcdsaV.pubkey_args.priv)
     {
         return;
     }
-    uint8_t *pub = Ecdsa.pubkey_args.pub;
-    const uint8_t *priv = Ecdsa.pubkey_args.priv;
+    uint8_t *pub = EcdsaV.pubkey_args.pub;
+    const uint8_t *priv = EcdsaV.pubkey_args.priv;
 
     uint32_t d[8];
     load_be(d, priv);
@@ -788,18 +788,18 @@ static void ecdsa_pubkey(uint8_t *restrict work)
         store_be(pub + 33, qy);
     }
     ecdsa_hw_off();
-    Ecdsa.ok = ok;
+    EcdsaV.ok = ok;
 }
 
-static void ecdsa_sign(uint8_t *restrict work)
+void protocore_ecdsa_sign(uint8_t *restrict work)
 {
-    Ecdsa.ok = PROTO_FALSE;
-    if (!Ecdsa.sign_args.sig || !Ecdsa.sign_args.priv)
+    EcdsaV.ok = PROTO_FALSE;
+    if (!EcdsaV.sign_args.sig || !EcdsaV.sign_args.priv)
     {
         return;
     }
-    uint8_t *sig = Ecdsa.sign_args.sig;
-    const uint8_t *priv = Ecdsa.sign_args.priv;
+    uint8_t *sig = EcdsaV.sign_args.sig;
+    const uint8_t *priv = EcdsaV.sign_args.priv;
 
     uint32_t d[8];
     load_be(d, priv);
@@ -808,23 +808,23 @@ static void ecdsa_sign(uint8_t *restrict work)
         return;
     }
     uint8_t h1[PROTOCORE_SHA256_DIGEST_LEN];
-    ecdsa_hash_msg(work, Ecdsa.sign_args.msg, Ecdsa.sign_args.mlen, h1);
+    ecdsa_hash_msg(work, EcdsaV.sign_args.msg, EcdsaV.sign_args.mlen, h1);
 
     ecdsa_hw_on();
     proto_bool ok = ecdsa_sign_core(work, sig, h1, d);
     ecdsa_hw_off();
-    Ecdsa.ok = ok;
+    EcdsaV.ok = ok;
 }
 
-static void ecdsa_verify(uint8_t *restrict work)
+void protocore_ecdsa_verify(uint8_t *restrict work)
 {
-    Ecdsa.ok = PROTO_FALSE;
-    if (!Ecdsa.verify_args.pub || !Ecdsa.verify_args.sig)
+    EcdsaV.ok = PROTO_FALSE;
+    if (!EcdsaV.verify_args.pub || !EcdsaV.verify_args.sig)
     {
         return;
     }
-    const uint8_t *pub = Ecdsa.verify_args.pub;
-    const uint8_t *sig = Ecdsa.verify_args.sig;
+    const uint8_t *pub = EcdsaV.verify_args.pub;
+    const uint8_t *sig = EcdsaV.verify_args.sig;
 
     if (pub[0] != 0x04)
     {
@@ -845,7 +845,7 @@ static void ecdsa_verify(uint8_t *restrict work)
     }
 
     uint8_t h1[PROTOCORE_SHA256_DIGEST_LEN];
-    ecdsa_hash_msg(work, Ecdsa.verify_args.msg, Ecdsa.verify_args.mlen, h1);
+    ecdsa_hash_msg(work, EcdsaV.verify_args.msg, EcdsaV.verify_args.mlen, h1);
     uint32_t e[8];
     uint32_t etmp[8];
     load_be(etmp, h1);
@@ -885,19 +885,19 @@ static void ecdsa_verify(uint8_t *restrict work)
         }
     }
     ecdsa_hw_off();
-    Ecdsa.ok = ok;
+    EcdsaV.ok = ok;
 }
 
-static void ecdsa_ecdh(uint8_t *restrict work)
+void protocore_ecdsa_ecdh(uint8_t *restrict work)
 {
-    Ecdsa.ok = PROTO_FALSE;
-    if (!Ecdsa.ecdh_args.shared_x || !Ecdsa.ecdh_args.peer_pub || !Ecdsa.ecdh_args.priv)
+    EcdsaV.ok = PROTO_FALSE;
+    if (!EcdsaV.ecdh_args.shared_x || !EcdsaV.ecdh_args.peer_pub || !EcdsaV.ecdh_args.priv)
     {
         return;
     }
-    uint8_t *shared_x = Ecdsa.ecdh_args.shared_x;
-    const uint8_t *peer_pub = Ecdsa.ecdh_args.peer_pub;
-    const uint8_t *priv = Ecdsa.ecdh_args.priv;
+    uint8_t *shared_x = EcdsaV.ecdh_args.shared_x;
+    const uint8_t *peer_pub = EcdsaV.ecdh_args.peer_pub;
+    const uint8_t *priv = EcdsaV.ecdh_args.priv;
 
     if (peer_pub[0] != 0x04)
     {
@@ -938,10 +938,11 @@ static void ecdsa_ecdh(uint8_t *restrict work)
         }
     }
     ecdsa_hw_off();
-    Ecdsa.ok = ok;
+    EcdsaV.ok = ok;
 }
 
-EcdsaNs Ecdsa = {.pubkey = ecdsa_pubkey, .sign = ecdsa_sign, .verify = ecdsa_verify, .ecdh = ecdsa_ecdh};
+/** @brief The operands and the outcome. */
+EcdsaVars EcdsaV;
 
 PROTOCORE_END_DECLS
 
