@@ -41,7 +41,7 @@ unprivileged port like 5140 with an ad-hoc UDP listener for testing.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_SYSLOG=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_SYSLOG=1 -DPROTOCORE_ENABLE_UDP=1" \
   --lib="." examples/L7-Application/Syslog/Syslog.ino
 ```
 

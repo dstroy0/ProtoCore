@@ -26,7 +26,7 @@ PROTOCORE_BEGIN_DECLS
 TcpNs Tcp = {
     .conn = &ConnPool,
     .listener = &TcpListener,
-#if PROTOCORE_NEED_CLIENT
+#if PROTOCORE_ENABLE_TCP_CLIENT
     .client = &TcpClient,
 #endif
 };

@@ -1863,7 +1863,10 @@
 #endif
 
 // The base surveys in from the receiver's GGA fixes, so the NTRIP caster needs the NMEA 0183 codec.
-#define PROTOCORE_NEED_NMEA0183 (PROTOCORE_ENABLE_NMEA0183 || PROTOCORE_ENABLE_NTRIP_CASTER)
+#define PROTOCORE_ENABLE_NTRIP_CASTER_NEEDS_NMEA0183 PROTOCORE_ENABLE_NMEA0183
+#if PROTOCORE_ENABLE_NTRIP_CASTER && !PROTOCORE_ENABLE_NTRIP_CASTER_NEEDS_NMEA0183
+#error "ProtoCore: PROTOCORE_ENABLE_NTRIP_CASTER needs PROTOCORE_ENABLE_NMEA0183"
+#endif
 
 /** @brief Max length (incl. NUL) of an NTRIP mountpoint name the caster serves. */
 #ifndef PROTOCORE_NTRIP_MOUNT_MAX
@@ -2352,40 +2355,139 @@
 #define PROTOCORE_WS_CLIENT_CT_BUF_SIZE 4096
 #endif
 
-// The outbound clients (protocore_client) resolve hostnames through the shared DNS
-// resolver (protocore_dns_resolver_resolve), so enabling any client implies the resolver - one
-// owner of the gethostbyname-marshal pattern instead of a private copy per client.
-// PROTOCORE_NEED_CLIENT marks when the client transport is actually used; the
-// protocore_client translation unit compiles its body only then (a server-only Arduino
-// build that does not enable a client must not reference the resolver symbols).
-// Every feature that drives the outbound client transport must pull it in: the direct callers
-// (http_client / mqtt / ws_client / relay / smtp / ssh port-forward) and the seam-based engines
-// whose shipped example binds the seam to protocore_client (smb / dnc). Miss one and its TcpClient.open
-// resolves to the !NEED stub that returns -1, so the feature silently never connects on device.
-#if PROTOCORE_ENABLE_HTTP_CLIENT || PROTOCORE_ENABLE_MQTT || PROTOCORE_ENABLE_WS_CLIENT || PROTOCORE_ENABLE_RELAY ||   \
-    PROTOCORE_ENABLE_SMTP || PROTOCORE_SSH_PORT_FORWARD || PROTOCORE_ENABLE_SMB || PROTOCORE_ENABLE_DNC ||             \
-    PROTOCORE_ENABLE_FTP_SESSION || PROTOCORE_ENABLE_SSH_CLIENT
-#define PROTOCORE_NEED_CLIENT 1
-#endif
-#ifndef PROTOCORE_NEED_CLIENT
-#define PROTOCORE_NEED_CLIENT 0
+// Everything that dials out goes through the one TCP client rather than carrying a private
+// copy of the connect-and-drain pattern, so each of these needs it compiled in. This was an
+// OR-list that set PROTOCORE_NEED_CLIENT, and a feature missing from the list got a stub
+// whose open() returns -1 - a build that compiled, linked, and never connected.
+
+#define PROTOCORE_ENABLE_HTTP_CLIENT_NEEDS_TCP_CLIENT PROTOCORE_ENABLE_TCP_CLIENT
+#if PROTOCORE_ENABLE_HTTP_CLIENT && !PROTOCORE_ENABLE_HTTP_CLIENT_NEEDS_TCP_CLIENT
+#error "ProtoCore: PROTOCORE_ENABLE_HTTP_CLIENT needs PROTOCORE_ENABLE_TCP_CLIENT"
 #endif
 
-// The client dials by name, so anything that needs the client needs the resolver.
-#define PROTOCORE_NEED_DNS_RESOLVER (PROTOCORE_ENABLE_DNS_RESOLVER || PROTOCORE_NEED_CLIENT)
-
-// PROTOCORE_NEED_UDP marks when the datagram transport is built. The listener and client hold rings that
-// only move when someone drains them, and Session.tick() is that someone, so the tick references the
-// Udp table only where a feature put it in the image. Every feature that binds a UDP port or sends a
-// datagram lists itself here. Miss one and its rings fill and stop, with nothing on the wire.
-#if PROTOCORE_ENABLE_COAP || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_STATSD || PROTOCORE_ENABLE_UDP_TELEMETRY ||     \
-    PROTOCORE_ENABLE_SNMP || PROTOCORE_ENABLE_SNMP_TRAP || PROTOCORE_ENABLE_SNMP_V3 || PROTOCORE_ENABLE_SYSLOG ||      \
-    PROTOCORE_ENABLE_FLOW_EXPORT || PROTOCORE_ENABLE_PROVISIONING || PROTOCORE_ENABLE_NTP_SERVER ||                    \
-    PROTOCORE_ENABLE_DNS_SERVER || PROTOCORE_ENABLE_HTTP3
-#define PROTOCORE_NEED_UDP 1
+#define PROTOCORE_ENABLE_MQTT_NEEDS_TCP_CLIENT PROTOCORE_ENABLE_TCP_CLIENT
+#if PROTOCORE_ENABLE_MQTT && !PROTOCORE_ENABLE_MQTT_NEEDS_TCP_CLIENT
+#error "ProtoCore: PROTOCORE_ENABLE_MQTT needs PROTOCORE_ENABLE_TCP_CLIENT"
 #endif
-#ifndef PROTOCORE_NEED_UDP
-#define PROTOCORE_NEED_UDP 0
+
+#define PROTOCORE_ENABLE_WS_CLIENT_NEEDS_TCP_CLIENT PROTOCORE_ENABLE_TCP_CLIENT
+#if PROTOCORE_ENABLE_WS_CLIENT && !PROTOCORE_ENABLE_WS_CLIENT_NEEDS_TCP_CLIENT
+#error "ProtoCore: PROTOCORE_ENABLE_WS_CLIENT needs PROTOCORE_ENABLE_TCP_CLIENT"
+#endif
+
+#define PROTOCORE_ENABLE_RELAY_NEEDS_TCP_CLIENT PROTOCORE_ENABLE_TCP_CLIENT
+#if PROTOCORE_ENABLE_RELAY && !PROTOCORE_ENABLE_RELAY_NEEDS_TCP_CLIENT
+#error "ProtoCore: PROTOCORE_ENABLE_RELAY needs PROTOCORE_ENABLE_TCP_CLIENT"
+#endif
+
+#define PROTOCORE_ENABLE_SMTP_NEEDS_TCP_CLIENT PROTOCORE_ENABLE_TCP_CLIENT
+#if PROTOCORE_ENABLE_SMTP && !PROTOCORE_ENABLE_SMTP_NEEDS_TCP_CLIENT
+#error "ProtoCore: PROTOCORE_ENABLE_SMTP needs PROTOCORE_ENABLE_TCP_CLIENT"
+#endif
+
+#define PROTOCORE_ENABLE_SMB_NEEDS_TCP_CLIENT PROTOCORE_ENABLE_TCP_CLIENT
+#if PROTOCORE_ENABLE_SMB && !PROTOCORE_ENABLE_SMB_NEEDS_TCP_CLIENT
+#error "ProtoCore: PROTOCORE_ENABLE_SMB needs PROTOCORE_ENABLE_TCP_CLIENT"
+#endif
+
+#define PROTOCORE_ENABLE_DNC_NEEDS_TCP_CLIENT PROTOCORE_ENABLE_TCP_CLIENT
+#if PROTOCORE_ENABLE_DNC && !PROTOCORE_ENABLE_DNC_NEEDS_TCP_CLIENT
+#error "ProtoCore: PROTOCORE_ENABLE_DNC needs PROTOCORE_ENABLE_TCP_CLIENT"
+#endif
+
+#define PROTOCORE_ENABLE_FTP_SESSION_NEEDS_TCP_CLIENT PROTOCORE_ENABLE_TCP_CLIENT
+#if PROTOCORE_ENABLE_FTP_SESSION && !PROTOCORE_ENABLE_FTP_SESSION_NEEDS_TCP_CLIENT
+#error "ProtoCore: PROTOCORE_ENABLE_FTP_SESSION needs PROTOCORE_ENABLE_TCP_CLIENT"
+#endif
+
+#define PROTOCORE_ENABLE_SSH_CLIENT_NEEDS_TCP_CLIENT PROTOCORE_ENABLE_TCP_CLIENT
+#if PROTOCORE_ENABLE_SSH_CLIENT && !PROTOCORE_ENABLE_SSH_CLIENT_NEEDS_TCP_CLIENT
+#error "ProtoCore: PROTOCORE_ENABLE_SSH_CLIENT needs PROTOCORE_ENABLE_TCP_CLIENT"
+#endif
+
+// The client dials by name, so it needs the resolver: one owner of the hostname marshal
+// instead of a private copy per client.
+
+// SSH port forwarding dials the forwarded destination, so it is on the same list. Spelled without
+// the ENABLE_ infix, which is why it is stated here rather than generated with the rest.
+#define PROTOCORE_SSH_PORT_FORWARD_NEEDS_TCP_CLIENT PROTOCORE_ENABLE_TCP_CLIENT
+#if PROTOCORE_SSH_PORT_FORWARD && !PROTOCORE_SSH_PORT_FORWARD_NEEDS_TCP_CLIENT
+#error "ProtoCore: PROTOCORE_SSH_PORT_FORWARD needs PROTOCORE_ENABLE_TCP_CLIENT"
+#endif
+
+#define PROTOCORE_ENABLE_TCP_CLIENT_NEEDS_DNS_RESOLVER PROTOCORE_ENABLE_DNS_RESOLVER
+#if PROTOCORE_ENABLE_TCP_CLIENT && !PROTOCORE_ENABLE_TCP_CLIENT_NEEDS_DNS_RESOLVER
+#error "ProtoCore: PROTOCORE_ENABLE_TCP_CLIENT needs PROTOCORE_ENABLE_DNS_RESOLVER"
+#endif
+
+// The datagram transport's rings only move when Session.tick() drains them, so a feature that
+// binds a UDP port or sends a datagram needs the transport in the image. This was an OR-list
+// that set PROTOCORE_NEED_UDP, and a feature missing from it filled its rings and stopped,
+// with nothing on the wire.
+
+#define PROTOCORE_ENABLE_COAP_NEEDS_UDP PROTOCORE_ENABLE_UDP
+#if PROTOCORE_ENABLE_COAP && !PROTOCORE_ENABLE_COAP_NEEDS_UDP
+#error "ProtoCore: PROTOCORE_ENABLE_COAP needs PROTOCORE_ENABLE_UDP"
+#endif
+
+#define PROTOCORE_ENABLE_DTLS_NEEDS_UDP PROTOCORE_ENABLE_UDP
+#if PROTOCORE_ENABLE_DTLS && !PROTOCORE_ENABLE_DTLS_NEEDS_UDP
+#error "ProtoCore: PROTOCORE_ENABLE_DTLS needs PROTOCORE_ENABLE_UDP"
+#endif
+
+#define PROTOCORE_ENABLE_STATSD_NEEDS_UDP PROTOCORE_ENABLE_UDP
+#if PROTOCORE_ENABLE_STATSD && !PROTOCORE_ENABLE_STATSD_NEEDS_UDP
+#error "ProtoCore: PROTOCORE_ENABLE_STATSD needs PROTOCORE_ENABLE_UDP"
+#endif
+
+#define PROTOCORE_ENABLE_UDP_TELEMETRY_NEEDS_UDP PROTOCORE_ENABLE_UDP
+#if PROTOCORE_ENABLE_UDP_TELEMETRY && !PROTOCORE_ENABLE_UDP_TELEMETRY_NEEDS_UDP
+#error "ProtoCore: PROTOCORE_ENABLE_UDP_TELEMETRY needs PROTOCORE_ENABLE_UDP"
+#endif
+
+#define PROTOCORE_ENABLE_SNMP_NEEDS_UDP PROTOCORE_ENABLE_UDP
+#if PROTOCORE_ENABLE_SNMP && !PROTOCORE_ENABLE_SNMP_NEEDS_UDP
+#error "ProtoCore: PROTOCORE_ENABLE_SNMP needs PROTOCORE_ENABLE_UDP"
+#endif
+
+#define PROTOCORE_ENABLE_SNMP_TRAP_NEEDS_UDP PROTOCORE_ENABLE_UDP
+#if PROTOCORE_ENABLE_SNMP_TRAP && !PROTOCORE_ENABLE_SNMP_TRAP_NEEDS_UDP
+#error "ProtoCore: PROTOCORE_ENABLE_SNMP_TRAP needs PROTOCORE_ENABLE_UDP"
+#endif
+
+#define PROTOCORE_ENABLE_SNMP_V3_NEEDS_UDP PROTOCORE_ENABLE_UDP
+#if PROTOCORE_ENABLE_SNMP_V3 && !PROTOCORE_ENABLE_SNMP_V3_NEEDS_UDP
+#error "ProtoCore: PROTOCORE_ENABLE_SNMP_V3 needs PROTOCORE_ENABLE_UDP"
+#endif
+
+#define PROTOCORE_ENABLE_SYSLOG_NEEDS_UDP PROTOCORE_ENABLE_UDP
+#if PROTOCORE_ENABLE_SYSLOG && !PROTOCORE_ENABLE_SYSLOG_NEEDS_UDP
+#error "ProtoCore: PROTOCORE_ENABLE_SYSLOG needs PROTOCORE_ENABLE_UDP"
+#endif
+
+#define PROTOCORE_ENABLE_FLOW_EXPORT_NEEDS_UDP PROTOCORE_ENABLE_UDP
+#if PROTOCORE_ENABLE_FLOW_EXPORT && !PROTOCORE_ENABLE_FLOW_EXPORT_NEEDS_UDP
+#error "ProtoCore: PROTOCORE_ENABLE_FLOW_EXPORT needs PROTOCORE_ENABLE_UDP"
+#endif
+
+#define PROTOCORE_ENABLE_PROVISIONING_NEEDS_UDP PROTOCORE_ENABLE_UDP
+#if PROTOCORE_ENABLE_PROVISIONING && !PROTOCORE_ENABLE_PROVISIONING_NEEDS_UDP
+#error "ProtoCore: PROTOCORE_ENABLE_PROVISIONING needs PROTOCORE_ENABLE_UDP"
+#endif
+
+#define PROTOCORE_ENABLE_NTP_SERVER_NEEDS_UDP PROTOCORE_ENABLE_UDP
+#if PROTOCORE_ENABLE_NTP_SERVER && !PROTOCORE_ENABLE_NTP_SERVER_NEEDS_UDP
+#error "ProtoCore: PROTOCORE_ENABLE_NTP_SERVER needs PROTOCORE_ENABLE_UDP"
+#endif
+
+#define PROTOCORE_ENABLE_DNS_SERVER_NEEDS_UDP PROTOCORE_ENABLE_UDP
+#if PROTOCORE_ENABLE_DNS_SERVER && !PROTOCORE_ENABLE_DNS_SERVER_NEEDS_UDP
+#error "ProtoCore: PROTOCORE_ENABLE_DNS_SERVER needs PROTOCORE_ENABLE_UDP"
+#endif
+
+#define PROTOCORE_ENABLE_HTTP3_NEEDS_UDP PROTOCORE_ENABLE_UDP
+#if PROTOCORE_ENABLE_HTTP3 && !PROTOCORE_ENABLE_HTTP3_NEEDS_UDP
+#error "ProtoCore: PROTOCORE_ENABLE_HTTP3 needs PROTOCORE_ENABLE_UDP"
 #endif
 
 // ---------------------------------------------------------------------------
@@ -3032,13 +3134,13 @@
 #define PROTOCORE_PLAINTEXT_WORK_SIMATIC 0
 #endif
 
-#if PROTOCORE_NEED_J1939
+#if PROTOCORE_ENABLE_J1939
 #define PROTOCORE_PLAINTEXT_WORK_J1939 PROTOCORE_J1939_BORROW
 #else
 #define PROTOCORE_PLAINTEXT_WORK_J1939 0
 #endif
 
-#if PROTOCORE_NEED_MODBUS
+#if PROTOCORE_ENABLE_MODBUS
 #define PROTOCORE_PLAINTEXT_WORK_MODBUS PROTOCORE_MODBUS_BORROW
 #else
 #define PROTOCORE_PLAINTEXT_WORK_MODBUS 0
@@ -3628,7 +3730,7 @@
 #define PROTOCORE_PROTOBUF_BORROW 512u
 #endif
 
-#if PROTOCORE_NEED_PROTOBUF
+#if PROTOCORE_ENABLE_PROTOBUF
 #define PROTOCORE_PLAINTEXT_WORK_PROTOBUF PROTOCORE_PROTOBUF_BORROW
 #else
 #define PROTOCORE_PLAINTEXT_WORK_PROTOBUF 0
@@ -4132,19 +4234,19 @@ typedef enum PROTO_ENUM_PACKED
 #endif
 #endif // PROTOCORE_ENABLE_GRAPHQL
 
-#if PROTOCORE_NEED_J1939
+#if PROTOCORE_ENABLE_J1939
 // -- J1939 (services/j1939; also built when NMEA 2000 is enabled) --
 #ifndef PROTOCORE_J1939_TP_MAX
 #define PROTOCORE_J1939_TP_MAX 256 ///< max reassembled TP message (spec allows up to 1785); sized down for RAM
 #endif
-#endif // PROTOCORE_NEED_J1939
+#endif // PROTOCORE_ENABLE_J1939
 
-#if PROTOCORE_NEED_NMEA0183
+#if PROTOCORE_ENABLE_NMEA0183
 // -- NMEA 0183 (services/timing_position/nmea0183) --
 #ifndef PROTOCORE_NMEA0183_MAX_FIELDS
 #define PROTOCORE_NMEA0183_MAX_FIELDS 26 ///< max comma-separated fields (incl. the address field)
 #endif
-#endif // PROTOCORE_NEED_NMEA0183
+#endif // PROTOCORE_ENABLE_NMEA0183
 
 #if PROTOCORE_ENABLE_UBX
 // -- UBX (services/timing_position/ubx) --

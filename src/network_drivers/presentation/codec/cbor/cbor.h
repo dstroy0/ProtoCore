@@ -28,7 +28,7 @@
 
 PROTOCORE_BEGIN_DECLS
 
-#if PROTOCORE_NEED_CBOR
+#if PROTOCORE_ENABLE_CBOR
 
 // The encoder writes into a protocore_span and the decoder reads from a protocore_cspan. There is no CBOR-specific
 // cursor type: this codec declared one field-identical to protocore_span, MessagePack declared another, and
@@ -43,7 +43,7 @@ PROTOCORE_BEGIN_DECLS
  */
 extern const protocore_codec Cbor;
 
-#endif // PROTOCORE_NEED_CBOR
+#endif // PROTOCORE_ENABLE_CBOR
 
 PROTOCORE_END_DECLS
 

@@ -21,13 +21,13 @@ PROTOCORE_BEGIN_DECLS
 // The two components RFC 1034 sec 2.4 defines as programs. Designated, so a member's position in
 // the struct does not decide what it binds to.
 DnsNs Dns = {
-#if PROTOCORE_NEED_DNS_RESOLVER
+#if PROTOCORE_ENABLE_DNS_RESOLVER
     .resolver = &Resolver,
 #endif
 #if PROTOCORE_ENABLE_DNS_SERVER
     .server = &DnsServer,
 #endif
-#if !PROTOCORE_NEED_DNS_RESOLVER && !PROTOCORE_ENABLE_DNS_SERVER
+#if !PROTOCORE_ENABLE_DNS_RESOLVER && !PROTOCORE_ENABLE_DNS_SERVER
     .present = PROTO_FALSE,
 #endif
 };

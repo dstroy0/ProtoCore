@@ -343,7 +343,7 @@ def module_types(header_text):
     out, mask = [], code_mask(header_text)
     taken = []  # conditional blocks kept whole, so their other arms are not emitted again
     guard = re.search(r"#ifndef (\w+)", header_text)
-    skip = (guard.group(1) if guard else "\0", "PROTOCORE_ENABLE_", "PROTOCORE_NEED_")
+    skip = (guard.group(1) if guard else "\0", "PROTOCORE_ENABLE_")
     # A tagged enum or struct at file scope is the module's vocabulary too, and is not a typedef:
     # ptp.h's `enum protocore_ptp_msg_type { PROTOCORE_PTP_SYNC = 0x0, ... };` was dropped, and the
     # .c that compares against those names stopped compiling.
@@ -527,7 +527,7 @@ def module_macros(header_text, guard):
     """
     runs, ends, prev_end = [], [], None
     taken = []  # conditional blocks already emitted whole, so their other arms are not re-emitted
-    skip = (guard, "PROTOCORE_ENABLE_", "PROTOCORE_NEED_")
+    skip = (guard, "PROTOCORE_ENABLE_")
     for m in MACRO.finditer(header_text):
         name = m.group(1)
         if name == guard or name.endswith("_BORROW"):
@@ -800,7 +800,7 @@ def ns_owns_state(csrc):
     return bool(re.search(r"(?:struct\s+\w+Storage\b|\}\s*\w+Storage\s*;)", csrc)) or bool(find_context(csrc))
 
 
-GATE_TOKEN = re.compile(r"PROTOCORE_(?:ENABLE|NEED|TLS|HAS)_\w+")
+GATE_TOKEN = re.compile(r"PROTOCORE_(?:ENABLE|TLS|HAS)_\w+")
 
 
 def find_gate(s):
@@ -815,7 +815,7 @@ def find_gate(s):
 
     A header with NO gate returns "". The gate is the FIRST conditional after the include guard AND
     it closes only at the end of the header - both, because http_route opens with
-    `#if PROTOCORE_ENABLE_WEBSOCKET` around one include and tcp with `#if PROTOCORE_NEED_CLIENT`
+    `#if PROTOCORE_ENABLE_WEBSOCKET` around one include and tcp with `#if PROTOCORE_ENABLE_TCP_CLIENT`
     around one declaration, and either read alone takes an inner arm for the module's gate.
     """
     m = re.search(r"^[ \t]*#[ \t]*(?:if\w*|endif)\b[^\n]*", s[guard_end(s) :], re.M)
@@ -838,7 +838,7 @@ def wraps_body(s, at):
     """Does the `#if` ending at @p at close only at the end of the header.
 
     A module with no gate at all opens with an inner capability arm - http_route's
-    `#if PROTOCORE_ENABLE_WEBSOCKET` around one include, tcp's `#if PROTOCORE_NEED_CLIENT` around
+    `#if PROTOCORE_ENABLE_WEBSOCKET` around one include, tcp's `#if PROTOCORE_ENABLE_TCP_CLIENT` around
     one declaration. Taking the first condition found regenerates the whole module under that arm
     and it vanishes from every build without it. The module's own gate is the one whose `#endif` is
     the last thing before the include guard's.
@@ -1393,7 +1393,11 @@ def scan_vtable(hpath):
 def scan(hpath):
     s = io.open(hpath, encoding="utf-8").read()
     mod = os.path.splitext(os.path.basename(hpath))[0]
-    # ENABLE_ is the usual spelling, NEED_ the one a module gated by "some caller wants it" uses.
+    # PROTOCORE_ENABLE_<X> is the spelling, and now the only one. There was a second family,
+    # PROTOCORE_NEED_<X>, for a module gated by "some caller wants it" - an OR over the callers.
+    # gen_modules.py matches PROTOCORE_ENABLE_\w+ when it reads a module's gate off its source, so a
+    # module gated the other way had no gate CMake could see and was compiled into every target.
+    # The family is gone; the dependency is declared per caller and enforced with an #error.
     gate = find_gate(s)
     entries = []
     for m in DECL.finditer(s):
@@ -1518,13 +1522,13 @@ def require_gate(spec):
     """Refuse a spec with no enable gate rather than writing `#if` with nothing after it.
 
     The gate is read off the header, so an empty one means the pattern did not match what this
-    module actually uses - j1939 is gated on PROTOCORE_NEED_J1939. Guessing produces a header that
-    cannot preprocess, which is a worse answer than stopping here.
+    module actually uses, or the module has no gate at all. Guessing produces a header that cannot
+    preprocess, which is a worse answer than stopping here.
     """
     if not spec.get("gate"):
         raise SystemExit(
-            "spec has no gate: the header's `#if PROTOCORE_..._<MOD>` was not recognized.\n"
-            '  State it in the spec as "gate": "PROTOCORE_ENABLE_<MOD>" (or NEED) and run gen again.'
+            "spec has no gate: the header's `#if PROTOCORE_ENABLE_<MOD>` was not recognized.\n"
+            '  State it in the spec as "gate": "PROTOCORE_ENABLE_<MOD>" and run gen again.'
         )
 
 
@@ -2383,7 +2387,7 @@ def restructure_source(spec):
     return notes
 
 
-GATE = re.compile(r"^#if\s+\(?PROTOCORE_(?:ENABLE|NEED|TLS|HAS)_\w+[^\n]*$", re.M)
+GATE = re.compile(r"^#if\s+\(?PROTOCORE_(?:ENABLE|TLS|HAS)_\w+[^\n]*$", re.M)
 # The golden's two files say different things about the same include, because it is there for
 # different reasons: the .c reads the enable gate out of it, the .h only needs the widths. Writing
 # the source's wording into a header is a citation that does not hold - the gate below a header's

@@ -13,7 +13,7 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-#if PROTOCORE_NEED_J1939
+#if PROTOCORE_ENABLE_J1939
 
 PROTOCORE_BEGIN_DECLS
 
@@ -733,4 +733,4 @@ J1939Vars J1939V;
 
 PROTOCORE_END_DECLS
 
-#endif // PROTOCORE_NEED_J1939
+#endif // PROTOCORE_ENABLE_J1939

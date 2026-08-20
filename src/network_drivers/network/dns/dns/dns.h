@@ -28,7 +28,7 @@
 
 #if PROTOCORE_ENABLE_DNS
 
-#if PROTOCORE_NEED_DNS_RESOLVER
+#if PROTOCORE_ENABLE_DNS_RESOLVER
 #include "network_drivers/network/dns/dns_resolver/dns_resolver.h" // ResolverNs: the RESOLVER (RFC 1034 sec 5)
 #endif
 #if PROTOCORE_ENABLE_DNS_SERVER
@@ -56,13 +56,13 @@ PROTOCORE_BEGIN_DECLS
  */
 typedef struct
 {
-#if PROTOCORE_NEED_DNS_RESOLVER
+#if PROTOCORE_ENABLE_DNS_RESOLVER
     ResolverNs *const resolver;
 #endif
 #if PROTOCORE_ENABLE_DNS_SERVER
     DnsServerNs *const server;
 #endif
-#if !PROTOCORE_NEED_DNS_RESOLVER && !PROTOCORE_ENABLE_DNS_SERVER
+#if !PROTOCORE_ENABLE_DNS_RESOLVER && !PROTOCORE_ENABLE_DNS_SERVER
     proto_bool present;
 #endif
 } DnsNs;

@@ -148,7 +148,7 @@ The cache lives inside the library, so the flags must reach the whole build:
 pio ci examples/L7-Application/EdgeCache \
   --board esp32dev \
   --lib "." \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_EDGE_CACHE=1 -DPROTOCORE_ENABLE_HTTP_CACHE=1 -DPROTOCORE_ENABLE_HTTP_CLIENT=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_EDGE_CACHE=1 -DPROTOCORE_ENABLE_HTTP_CACHE=1 -DPROTOCORE_ENABLE_HTTP_CLIENT=1 -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_DNS_RESOLVER=1"
 ```
 
 (The Arduino IDE reads the flags from `build_opt.h` beside the sketch automatically.)

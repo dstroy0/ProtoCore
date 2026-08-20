@@ -34,7 +34,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-#if PROTOCORE_NEED_MODBUS
+#if PROTOCORE_ENABLE_MODBUS
 
 PROTOCORE_BEGIN_DECLS
 
@@ -300,6 +300,6 @@ uint8_t *protocore_modbus_span(void);
 
 PROTOCORE_END_DECLS
 
-#endif // PROTOCORE_NEED_MODBUS
+#endif // PROTOCORE_ENABLE_MODBUS
 
 #endif // PROTOCORE_MODBUS_H

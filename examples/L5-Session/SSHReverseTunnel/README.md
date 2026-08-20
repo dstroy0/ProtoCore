@@ -63,7 +63,7 @@ awk '{print $2}' /etc/ssh/ssh_host_ed25519_key.pub | base64 -d | sha256sum
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_SSH=1 -DPROTOCORE_ENABLE_SSH_CLIENT=1 -DPROTOCORE_SSH_CLIENT_MAX_CHANNELS=2 -DPROTOCORE_CLIENT_RX_BUF=2048 -DMAX_CONNS=4" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_SSH=1 -DPROTOCORE_ENABLE_SSH_CLIENT=1 -DPROTOCORE_SSH_CLIENT_MAX_CHANNELS=2 -DPROTOCORE_CLIENT_RX_BUF=2048 -DMAX_CONNS=4 -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_DNS_RESOLVER=1" \
   --lib="." examples/L5-Session/SSHReverseTunnel/SSHReverseTunnel.ino
 ```
 

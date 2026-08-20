@@ -1170,6 +1170,8 @@ protocore_env(native_client
     "PROTOCORE_ENABLE_DNS=1"
     "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_UDP=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -3061,6 +3063,8 @@ protocore_env(native_dnc__test_dnc
     "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/dnc/test_dnc/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DNC=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -3083,6 +3087,8 @@ protocore_env(native_dnc__test_dnc_stream
     "${PROTOCORE_ROOT}/test/unit/protocols/machine_tool/test_dnc_stream/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DNC=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -3204,6 +3210,7 @@ protocore_env(native_dns_wire
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/network/dns/test_dns_wire/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DNS_SERVER=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -3315,6 +3322,7 @@ protocore_env(native_dtls
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/security/dtls/test_dtls_record/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DTLS=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -3362,6 +3370,7 @@ protocore_env(native_dtls_conn
   DEFINES
     "PROTOCORE_ENABLE_DTLS=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -3392,6 +3401,7 @@ protocore_env(native_dtls_hs
     "${PROTOCORE_ROOT}/test/unit/protocols/tls/test_dtls_handshake/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DTLS=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -3424,6 +3434,7 @@ protocore_env(native_dtls_tls13_rfc
   DEFINES
     "PROTOCORE_ENABLE_DTLS=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -3466,6 +3477,8 @@ protocore_env(native_edge_cache
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
     "PROTOCORE_ENABLE_EDGE_CACHE=1"
     "PROTOCORE_ENABLE_RANGE=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -3506,6 +3519,8 @@ protocore_env(native_edge_cache_core
     "PROTOCORE_ENABLE_EDGE_CACHE=1"
     "PROTOCORE_ENABLE_RANGE=1"
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -3616,6 +3631,8 @@ protocore_env(native_edge_cache_proxy
     "PROTOCORE_ENABLE_HTTP_CACHE=1"
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
     "PROTOCORE_ENABLE_UDP=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -3662,6 +3679,8 @@ protocore_env(native_edge_cache_sd
     "PROTOCORE_ENABLE_HTTP_CACHE=1"
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
     "PROTOCORE_ENABLE_EDGE_CACHE=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -3704,6 +3723,8 @@ protocore_env(native_edge_mesh
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
     "PROTOCORE_ENABLE_EDGE_CACHE=1"
     "PROTOCORE_ENABLE_EDGE_MESH=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -4107,6 +4128,7 @@ protocore_env(native_flow_export
     "${PROTOCORE_ROOT}/test/unit/src/services/net/flow_export/test_flow_export/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_FLOW_EXPORT=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -4392,6 +4414,8 @@ protocore_env(native_ftp_session
     "PROTOCORE_ENABLE_DNS=1"
     "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_UDP=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -4466,6 +4490,7 @@ protocore_env(native_gnss_ntrip_caster
     "${PROTOCORE_ROOT}/test/unit/file_conversion/services/timing_position/gnss/test_ntrip_caster/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_NTRIP_CASTER=1"
+    "PROTOCORE_ENABLE_NMEA0183=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -4487,6 +4512,7 @@ protocore_env(native_gnss_rtcm3
     "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/gnss/test_rtcm3/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_NTRIP_CASTER=1"
+    "PROTOCORE_ENABLE_NMEA0183=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -4535,6 +4561,7 @@ protocore_env(native_gnss_survey_in
     "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/nmea0183/test_gnss_survey/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_NTRIP_CASTER=1"
+    "PROTOCORE_ENABLE_NMEA0183=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -4831,6 +4858,7 @@ protocore_env(native_h3_conn
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -4885,6 +4913,7 @@ protocore_env(native_h3_e2e
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -4907,6 +4936,7 @@ protocore_env(native_h3_frame_rfc
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_h3_frame/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -5387,6 +5417,8 @@ protocore_env(native_http_client
     "${PROTOCORE_ROOT}/test/unit/src/services/net/http_client/test_http_client/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -6691,6 +6723,7 @@ protocore_env(native_marine_nmea2000
     "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/nmea2000/test_nmea2000/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_NMEA2000=1"
+    "PROTOCORE_ENABLE_J1939=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7410,6 +7443,8 @@ protocore_env(native_mqtt_codec
     "${PROTOCORE_ROOT}/test/unit/src/services/iot/mqtt/test_mqtt/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_MQTT=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7769,6 +7804,8 @@ protocore_env(native_ntlm_v2
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_ntlm/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7792,6 +7829,8 @@ protocore_env(native_ntlmssp
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_ntlmssp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7932,6 +7971,8 @@ protocore_env(native_oauth2_exchange
     "PROTOCORE_ENABLE_OAUTH2=1"
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
     "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -8014,6 +8055,8 @@ protocore_env(native_oauth2_transport
     "PROTOCORE_ENABLE_DNS=1"
     "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_UDP=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -8662,6 +8705,8 @@ protocore_env(native_pentest
     "PROTOCORE_ENABLE_MODBUS_RTU=1"
     "PROTOCORE_ENABLE_JSON=1"
     "PROTOCORE_ENABLE_UDP=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -9420,6 +9465,7 @@ protocore_env(native_qpack_rfc
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_qpack/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -9469,6 +9515,7 @@ protocore_env(native_quic_conn
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -9504,6 +9551,7 @@ protocore_env(native_quic_crypto_rfc
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_crypto/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -9526,6 +9574,7 @@ protocore_env(native_quic_frame_rfc
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_frame/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -9547,6 +9596,7 @@ protocore_env(native_quic_packet_rfc
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_packet/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -9664,6 +9714,7 @@ protocore_env(native_quic_tls_pqc
     "PROTOCORE_ENABLE_PQC_KEX=1"
     "PROTOCORE_WORKER_TASK_STACK=16384"
     "PROTOCORE_ENABLE_TLS_RPK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -9712,6 +9763,7 @@ protocore_env(native_quic_tls_rfc
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -9734,6 +9786,7 @@ protocore_env(native_quic_tp
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_tp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -9755,6 +9808,7 @@ protocore_env(native_quic_varint
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_varint/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -10228,6 +10282,8 @@ protocore_env(native_relay
     "${PROTOCORE_ROOT}/test/unit/protocols/net/test_relay/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_RELAY=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -10277,6 +10333,8 @@ protocore_env(native_relay_listener
   DEFINES
     "PROTOCORE_ENABLE_RELAY=1"
     "PROTOCORE_ENABLE_TCP=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -10955,6 +11013,7 @@ protocore_env(native_senml_pack
   DEFINES
     "PROTOCORE_ENABLE_SENML=1"
     "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_CBOR=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11448,6 +11507,8 @@ protocore_env(native_smb__test_smb2
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_smb2/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11492,6 +11553,8 @@ protocore_env(native_smb__test_smb_crypto
     "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_smb_crypto/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11536,6 +11599,8 @@ protocore_env(native_smb__test_ntlm
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_ntlm/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11580,6 +11645,8 @@ protocore_env(native_smb__test_ntlmssp
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_ntlmssp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11624,6 +11691,8 @@ protocore_env(native_smb__test_spnego
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_spnego/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11668,6 +11737,8 @@ protocore_env(native_smb__test_smb_client
     "${PROTOCORE_ROOT}/test/unit/integration/smb/test_smb_client/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11708,6 +11779,8 @@ protocore_env(native_smb2_wire
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_smb2/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11753,6 +11826,8 @@ protocore_env(native_smb_pentest
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_pentest/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11811,6 +11886,8 @@ protocore_env(native_smtp
     "${PROTOCORE_ROOT}/test/unit/protocols/net/test_smtp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMTP=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11910,6 +11987,7 @@ protocore_env(native_snmp_ber_x690
     "${PROTOCORE_ROOT}/test/unit/src/services/net/snmp/test_snmp_ber/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SNMP=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11938,6 +12016,7 @@ protocore_env(native_snmp_notify
   DEFINES
     "PROTOCORE_ENABLE_SNMP=1"
     "PROTOCORE_ENABLE_SNMP_TRAP=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11968,6 +12047,7 @@ protocore_env(native_snmp_trap
   DEFINES
     "PROTOCORE_ENABLE_SNMP=1"
     "PROTOCORE_ENABLE_SNMP_TRAP=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -12177,6 +12257,7 @@ protocore_env(native_sparkplug
     "${PROTOCORE_ROOT}/test/unit/src/services/iot/sparkplug/test_sparkplug/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SPARKPLUG=1"
+    "PROTOCORE_ENABLE_PROTOBUF=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -12198,6 +12279,8 @@ protocore_env(native_spnego
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_spnego/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -13446,6 +13529,8 @@ protocore_env(native_ssh_client
     "PROTOCORE_ENABLE_DNS=1"
     "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_UDP=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -13831,6 +13916,8 @@ protocore_env(native_ssh_forward
     "PROTOCORE_ENABLE_DNS=1"
     "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_UDP=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -14265,6 +14352,8 @@ protocore_env(native_tcp_client
     "PROTOCORE_ENABLE_DNS=1"
     "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_UDP=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -14658,6 +14747,7 @@ protocore_env(native_tls13_kdf
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/tls/key_schedule/test_tls13_kdf/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -14690,6 +14780,7 @@ protocore_env(native_tls13_msg__test_tls13_msg
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -14722,6 +14813,7 @@ protocore_env(native_tls13_msg__test_tls13_rpk
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -15083,6 +15175,7 @@ protocore_env(native_udp_telemetry
     "${PROTOCORE_ROOT}/test/unit/src/services/iot/udp_telemetry/test_udp_telemetry/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_UDP_TELEMETRY=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -15884,6 +15977,8 @@ protocore_env(native_ws_client_rfc6455
     "${PROTOCORE_ROOT}/test/unit/src/services/net/ws_client/test_ws_client/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_WS_CLIENT=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -15983,6 +16078,7 @@ protocore_env(native_wycheproof_kat
     "${PROTOCORE_ROOT}/test/unit/src/crypto/mac/test_crypto_kat/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -16028,6 +16124,7 @@ protocore_env(native_wycheproof_kat_hw__test_host_sha_hal
     "PROTOCORE_HAS_HW_SHA=1"
     "PROTOCORE_HAS_HW_AES=1"
     "PROTOCORE_HAS_HW_AESGCM=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -16073,6 +16170,7 @@ protocore_env(native_wycheproof_kat_hw__test_host_aes_hal
     "PROTOCORE_HAS_HW_SHA=1"
     "PROTOCORE_HAS_HW_AES=1"
     "PROTOCORE_HAS_HW_AESGCM=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -16118,6 +16216,7 @@ protocore_env(native_wycheproof_kat_hw__test_crypto_kat
     "PROTOCORE_HAS_HW_SHA=1"
     "PROTOCORE_HAS_HW_AES=1"
     "PROTOCORE_HAS_HW_AESGCM=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -16163,6 +16262,7 @@ protocore_env(native_wycheproof_kat_hw__test_host_hw_reg
     "PROTOCORE_HAS_HW_SHA=1"
     "PROTOCORE_HAS_HW_AES=1"
     "PROTOCORE_HAS_HW_AESGCM=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"

@@ -10,7 +10,7 @@
 #include "network_drivers/network/dns/dns_resolver/dns_resolver.h"
 #include "mmgr/protomem/protomem.h"
 
-#if PROTOCORE_NEED_DNS_RESOLVER
+#if PROTOCORE_ENABLE_DNS_RESOLVER
 
 #include "mmgr/secure/secure.h"                            // protocore_secure_persist_span: this module's storage
 #include "network_drivers/network/dns/dns_wire/dns_wire.h" // the name codec both DNS halves share
@@ -656,4 +656,4 @@ ResolverVars ResolverV;
 
 PROTOCORE_END_DECLS
 
-#endif // PROTOCORE_NEED_DNS_RESOLVER
+#endif // PROTOCORE_ENABLE_DNS_RESOLVER

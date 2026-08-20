@@ -58,7 +58,7 @@ so any conformant DTLS 1.3 client interoperates.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_COAP=1 -DPROTOCORE_ENABLE_DTLS=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_COAP=1 -DPROTOCORE_ENABLE_DTLS=1 -DPROTOCORE_ENABLE_UDP=1" \
   --lib="." examples/L7-Application/CoapSecure/CoapSecure.ino
 ```
 

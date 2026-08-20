@@ -319,9 +319,15 @@ check(
     S.module_gate('#include "protocore_config.h"\n#if PROTOCORE_ENABLE_P\nvoid f(void) {}\n#endif\n')
     == "PROTOCORE_ENABLE_P",
 )
-# NEED is a gate; HAS is a capability arm inside one, and a question about the board rather than
-# about the module. modbus is gated PROTOCORE_NEED_MODBUS and was read as having no gate at all.
-check("NEED gates a module too", S.module_gate(WRAPPED.replace("ENABLE_P", "NEED_P")) == "PROTOCORE_NEED_P")
+# ENABLE is the only family that gates a module, and HAS is a capability arm inside one - a
+# question about the board rather than about the module.
+#
+# NEED_ was a second gate family, an OR over the callers that wanted a module compiled, and it is
+# gone. gen_modules.py reads a module's gate off its own source and matches PROTOCORE_ENABLE_\w+
+# only, so a module gated on NEED_ had no gate CMake could see and was compiled into every target.
+# A NEED_ spelling now names an undefined macro, which evaluates to 0 and empties the file, so
+# taking one for a gate would read a mistake as a design.
+check("NEED does not gate a module", S.module_gate(WRAPPED.replace("ENABLE_P", "NEED_P")) == "")
 check(
     "HAS does not, even wrapping the body",
     S.module_gate(WRAPPED.replace("#if PROTOCORE_ENABLE_P", "#if PROTOCORE_HAS_BUS")) == "",

@@ -49,10 +49,16 @@
 #ifndef PROTOCORE_ENABLE_MODBUS_RTU
 #define PROTOCORE_ENABLE_MODBUS_RTU 0
 #endif
-// RTU is a framing over the same PDU codec, so it needs Modbus compiled in. The requirement is
-// derived rather than written back over PROTOCORE_ENABLE_MODBUS: a user's flag is an input and stays one,
-// so -DPROTOCORE_ENABLE_MODBUS=0 keeps meaning what it says. Code guards on PROTOCORE_NEED_MODBUS.
-#define PROTOCORE_NEED_MODBUS (PROTOCORE_ENABLE_MODBUS || PROTOCORE_ENABLE_MODBUS_RTU)
+// RTU is a framing over the same PDU codec, so it needs Modbus compiled in. Declared as a hard
+// dependency rather than OR-ed into a second flag the module then guards on: a derived flag is
+// invisible to the build. gen_modules.py reads a module's gate off its own source and matches
+// PROTOCORE_ENABLE_\w+ only, so a file wrapped in `#if PROTOCORE_NEED_MODBUS` had no gate as far as
+// CMake was concerned and was compiled into every target - the derived flag defeated the gating the
+// stated one is for. A build that wants RTU states Modbus too.
+#define PROTOCORE_ENABLE_MODBUS_RTU_NEEDS_MODBUS PROTOCORE_ENABLE_MODBUS
+#if PROTOCORE_ENABLE_MODBUS_RTU && !PROTOCORE_ENABLE_MODBUS_RTU_NEEDS_MODBUS
+#error "ProtoCore: PROTOCORE_ENABLE_MODBUS_RTU needs PROTOCORE_ENABLE_MODBUS"
+#endif
 
 /**
  * @brief NMEA 2000 codec (`services/nmea2000`).
@@ -69,7 +75,10 @@
 #define PROTOCORE_ENABLE_NMEA2000 0
 #endif
 // NMEA 2000 reuses the J1939 identifier codec, so it needs J1939 compiled in.
-#define PROTOCORE_NEED_J1939 (PROTOCORE_ENABLE_J1939 || PROTOCORE_ENABLE_NMEA2000)
+#define PROTOCORE_ENABLE_NMEA2000_NEEDS_J1939 PROTOCORE_ENABLE_J1939
+#if PROTOCORE_ENABLE_NMEA2000 && !PROTOCORE_ENABLE_NMEA2000_NEEDS_J1939
+#error "ProtoCore: PROTOCORE_ENABLE_NMEA2000 needs PROTOCORE_ENABLE_J1939"
+#endif
 
 /**
  * @brief SenML (RFC 8428) measurement-pack builder (`services/senml`).
@@ -85,7 +94,10 @@
 #define PROTOCORE_ENABLE_SENML 0
 #endif
 // SenML's binary form is CBOR, so it needs the CBOR codec compiled in.
-#define PROTOCORE_NEED_CBOR (PROTOCORE_ENABLE_CBOR || PROTOCORE_ENABLE_SENML)
+#define PROTOCORE_ENABLE_SENML_NEEDS_CBOR PROTOCORE_ENABLE_CBOR
+#if PROTOCORE_ENABLE_SENML && !PROTOCORE_ENABLE_SENML_NEEDS_CBOR
+#error "ProtoCore: PROTOCORE_ENABLE_SENML needs PROTOCORE_ENABLE_CBOR"
+#endif
 
 /**
  * @brief Sparkplug B payload + topic codec (`services/sparkplug`).
@@ -100,7 +112,10 @@
 #define PROTOCORE_ENABLE_SPARKPLUG 0
 #endif
 // Sparkplug B payloads are protobuf messages, so it needs the protobuf codec compiled in.
-#define PROTOCORE_NEED_PROTOBUF (PROTOCORE_ENABLE_PROTOBUF || PROTOCORE_ENABLE_SPARKPLUG)
+#define PROTOCORE_ENABLE_SPARKPLUG_NEEDS_PROTOBUF PROTOCORE_ENABLE_PROTOBUF
+#if PROTOCORE_ENABLE_SPARKPLUG && !PROTOCORE_ENABLE_SPARKPLUG_NEEDS_PROTOBUF
+#error "ProtoCore: PROTOCORE_ENABLE_SPARKPLUG needs PROTOCORE_ENABLE_PROTOBUF"
+#endif
 
 // The NTP server answers from protocore_time_now(), so with the registry off it holds no clock and drops
 // every request instead of serving a wrong one. That is a bind that never answers, so it fails here.

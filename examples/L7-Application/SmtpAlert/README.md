@@ -182,7 +182,7 @@ Still stuck? Watch the mail server's own log while the ESP32 tries:
 
 - **Encrypted mail (SMTPS), e.g. a real provider.** Set `cfg.tls = true` and
   `cfg.port = 465`, and build with TLS on: add `-DPROTOCORE_ENABLE_TLS=1` next to
-  `-DPROTOCORE_ENABLE_SMTP=1`. The whole conversation is then encrypted.
+  `-DPROTOCORE_ENABLE_SMTP=1 -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_DNS_RESOLVER=1`. The whole conversation is then encrypted.
 
 - **Send a text message (SMS).** Most phone carriers accept an "email-to-SMS gateway"
   address. Put that address in `MAIL_TO` (e.g. `5551234567@txt.att.net` for AT&T in the
@@ -199,7 +199,7 @@ SMTP lives inside the library, so the flag must reach the whole build:
 pio ci examples/L7-Application/SmtpAlert \
   --board esp32dev \
   --lib "." \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_SMTP=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_SMTP=1 -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_DNS_RESOLVER=1"
 ```
 
 (The Arduino IDE reads the flag from `build_opt.h` beside the sketch automatically.)

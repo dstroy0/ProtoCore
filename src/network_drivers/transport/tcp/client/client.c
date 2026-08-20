@@ -37,8 +37,8 @@ uint8_t *protocore_tcp_client_span(void)
 
 // Compiles only when a client transport is enabled (HTTP client / MQTT / WS client). A server-only
 // build leaves DNS_RESOLVER off, so the resolver symbols this unit calls would not be declared -
-// see PROTOCORE_NEED_CLIENT in protocore_config.h.
-#if PROTOCORE_NEED_CLIENT
+// see PROTOCORE_ENABLE_TCP_CLIENT in protocore_config.h.
+#if PROTOCORE_ENABLE_TCP_CLIENT
 
 #include "../../diffserv/diffserv.h"  // DiffServ DSCP marking for outbound client connections (compiles out when off)
 #include "config/platform/platform.h" // the stack's TCP, under our names
@@ -463,4 +463,4 @@ TcpClientVars TcpClientV;
 
 PROTOCORE_END_DECLS
 
-#endif // PROTOCORE_NEED_CLIENT
+#endif // PROTOCORE_ENABLE_TCP_CLIENT

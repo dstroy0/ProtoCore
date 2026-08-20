@@ -10,7 +10,7 @@
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
 
-#if PROTOCORE_NEED_CBOR
+#if PROTOCORE_ENABLE_CBOR
 
 #include "mmgr/bytes/bytes.h"
 
@@ -405,4 +405,4 @@ const protocore_codec Cbor = {
 
 PROTOCORE_END_DECLS
 
-#endif // PROTOCORE_NEED_CBOR
+#endif // PROTOCORE_ENABLE_CBOR

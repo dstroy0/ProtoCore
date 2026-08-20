@@ -37,7 +37,7 @@ detect reordering. Observe with `coap-client -m get -s 30 coap://<ip>/count` or
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_COAP=1 -DPROTOCORE_ENABLE_COAP_OBSERVE=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_COAP=1 -DPROTOCORE_ENABLE_COAP_OBSERVE=1 -DPROTOCORE_ENABLE_UDP=1" \
   --lib="." examples/L7-Application/CoapObserve/CoapObserve.ino
 ```
 

@@ -28,7 +28,7 @@
 
 #if PROTOCORE_ENABLE_TCP
 
-#if PROTOCORE_NEED_CLIENT
+#if PROTOCORE_ENABLE_TCP_CLIENT
 #include "network_drivers/transport/tcp/client/client.h" // TcpClientNs: dialing out
 #endif
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPoolNs: the accepted connections
@@ -49,7 +49,7 @@ typedef struct
 {
     ConnPoolNs *const conn;
     TcpListenerNs *const listener;
-#if PROTOCORE_NEED_CLIENT
+#if PROTOCORE_ENABLE_TCP_CLIENT
     TcpClientNs *const client;
 #endif
 } TcpNs;

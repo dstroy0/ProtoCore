@@ -19,7 +19,7 @@
 #if PROTOCORE_ENABLE_SSH
 #include "network_drivers/presentation/ssh/server/server.h"
 #endif
-#if PROTOCORE_NEED_MODBUS
+#if PROTOCORE_ENABLE_MODBUS
 #include "services/fieldbus/modbus/modbus/modbus.h"
 #endif
 #if PROTOCORE_ENABLE_OPCUA
@@ -53,7 +53,7 @@ void protocore_register_builtins(void)
     register_if(PROTO_SSH_RFWD, SshServerV.handler);
 #endif
 #endif
-#if PROTOCORE_NEED_MODBUS
+#if PROTOCORE_ENABLE_MODBUS
     Modbus.handler(protocore_modbus_span());
     register_if(PROTO_MODBUS, ModbusV.ptr);
 #endif

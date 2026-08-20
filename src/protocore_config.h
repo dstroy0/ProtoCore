@@ -140,6 +140,18 @@
 #define PROTOCORE_ENABLE_TCP 0
 #endif
 
+// Dialing out: the TCP client that http_client, mqtt, ws_client, relay, smtp, smb, dnc, the FTP
+// session and the reverse-SSH client all connect through. Stated rather than derived. It was
+// PROTOCORE_NEED_CLIENT, an OR over those nine features maintained by hand in buffer_sizing.h, and
+// gen_modules.py reads a module's gate off its own source and matches PROTOCORE_ENABLE_\w+ only -
+// so client.c had no gate as far as CMake was concerned and was compiled into EVERY target. Its
+// symbols were reachable from any translation unit whether or not the build asked for a client.
+// With the flag stated, CMake compiles it where it is on and a TU that reaches into it without
+// asking fails to link instead of quietly resolving.
+#ifndef PROTOCORE_ENABLE_TCP_CLIENT
+#define PROTOCORE_ENABLE_TCP_CLIENT 0
+#endif
+
 // The UDP surface: the shared socket state the client and the listener reach through.
 #ifndef PROTOCORE_ENABLE_UDP
 #define PROTOCORE_ENABLE_UDP 0

@@ -5,7 +5,7 @@
 # Regenerate with:  python tools/harness.py build modules
 
 
-if(PROTOCORE_ENABLE_DIFFSERV)
+if(PROTOCORE_ENABLE_TCP_CLIENT)
   protocore_module(pc_network_drivers_transport_tcp_client
     SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/client.c"
     PRIVATE

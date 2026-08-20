@@ -9,7 +9,7 @@
 #include "services/timing_position/nmea0183/nmea0183.h"
 #include "mmgr/protomem/protomem.h"
 
-#if PROTOCORE_NEED_NMEA0183
+#if PROTOCORE_ENABLE_NMEA0183
 
 #include "mmgr/protostr/protostr.h"
 
@@ -552,4 +552,4 @@ proto_bool protocore_nmea0183_parse_vlw(const Nmea0183 *m, protocore_nmea_vlw *o
 
 PROTOCORE_END_DECLS
 
-#endif // PROTOCORE_NEED_NMEA0183
+#endif // PROTOCORE_ENABLE_NMEA0183

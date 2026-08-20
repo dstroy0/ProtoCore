@@ -55,7 +55,7 @@
 
 PROTOCORE_BEGIN_DECLS
 
-#if PROTOCORE_NEED_PROTOBUF
+#if PROTOCORE_ENABLE_PROTOBUF
 
 // Wire type IDs, from the "Encoding" document's wire type table.
 #define PROTOCORE_PROTOBUF_WT_VARINT 0 ///< int32, int64, uint32, uint64, sint32, sint64, bool, enum
@@ -269,7 +269,7 @@ static const ProtobufNs Protobuf __attribute__((unused)) = {
  */
 uint8_t *protocore_protobuf_span(void);
 
-#endif // PROTOCORE_NEED_PROTOBUF
+#endif // PROTOCORE_ENABLE_PROTOBUF
 
 PROTOCORE_END_DECLS
 

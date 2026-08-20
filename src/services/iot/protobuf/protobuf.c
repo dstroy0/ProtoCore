@@ -14,7 +14,7 @@
 #include "services/iot/protobuf/protobuf.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
-#if PROTOCORE_NEED_PROTOBUF
+#if PROTOCORE_ENABLE_PROTOBUF
 
 #include "mmgr/protomem/protomem.h" // mem.cpy: the payload octets and the float bit patterns
 #include "mmgr/protostr/protostr.h" // str.len: the bounded length of a NUL-terminated LEN payload
@@ -494,4 +494,4 @@ ProtobufVars ProtobufV;
 
 PROTOCORE_END_DECLS
 
-#endif // PROTOCORE_NEED_PROTOBUF
+#endif // PROTOCORE_ENABLE_PROTOBUF
