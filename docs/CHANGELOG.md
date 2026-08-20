@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`430d5c7`](https://github.com/dstroy0/ProtoCore/commit/430d5c70c4e3fbe27e5b7a11d9ad0a0b6ed51d6d))
 - update CHANGELOG.md [skip ci] ([`3ee6f8e`](https://github.com/dstroy0/ProtoCore/commit/3ee6f8e6f84e3172c88b614a587c48fe0ec0a69b))
 - update CHANGELOG.md [skip ci] ([`8d62e65`](https://github.com/dstroy0/ProtoCore/commit/8d62e659eaa50ee5f9ce420fc7dac7c0f1a9f5c4))
 - update CHANGELOG.md [skip ci] ([`137a0af`](https://github.com/dstroy0/ProtoCore/commit/137a0af04b54fa5105148b317a923b7487c13faf))
@@ -391,6 +392,9 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- read a module blind before judging it ([`ce2dfa9`](https://github.com/dstroy0/ProtoCore/commit/ce2dfa9b94311ba6f9c3024572f809ae1dd2c8f5))
+- the protocol registry moves to the layer that owns the connection ([`9095d18`](https://github.com/dstroy0/ProtoCore/commit/9095d18c87103868b6d428c6fa69033b539bec5c))
+- a doc comment on an entry line hid six modules, and a header need not have a sibling .c ([`8a2e702`](https://github.com/dstroy0/ProtoCore/commit/8a2e70292602a4abb915b67296264f110c5582d1))
 - a call does not reserve a name ([`d2256ff`](https://github.com/dstroy0/ProtoCore/commit/d2256ffe3a62b41c20ed0645030934ea335dfdd9))
 - batch 12 of the handle reshape, 24 modules to 304 ([`0b81033`](https://github.com/dstroy0/ProtoCore/commit/0b810336f602d71090d780ca9d61535cf2e895ff))
 - batch 11 of the handle reshape, 29 modules to 280 of 308 ([`6c268ef`](https://github.com/dstroy0/ProtoCore/commit/6c268ef790bcfa77a0b1c79770c21e71cc909e60))
