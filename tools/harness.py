@@ -367,6 +367,20 @@ EDIT = {
 }
 
 VIEW = {
+    "read": T(
+        "tools/dev_env/readclean.py",
+        "read code|blind|claims PATH [PATH ...]   [--legend FILE] [--keep NAME,...]",
+        "READ EVERY MODULE THROUGH THIS BEFORE JUDGING IT. Three passes, none of which writes. "
+        "`blind` first: comments gone AND every name this project chose replaced, so the code is "
+        "read for what it does rather than for what it is called - a function named `verify` is "
+        "read as verifying, and that is the one claim nothing ever checks. The shape's own grammar "
+        "survives (an entry still takes `uint8_t *restrict work`, offsets still sit under a "
+        "static_assert), so conformity is still checkable while the module's identity is not "
+        "visible. Then `code` for the structure with names attached, and `claims` LAST, which pairs "
+        "every comment with the line it sits above so prose is met with its subject instead of "
+        "being read as if it were true. Assume nothing: a doc block states what the code is MEANT "
+        "to do, and reading it first is how a conformity pass ends up confirming the prose.",
+    ),
     "png": T(
         "tools/dev_env/src2png.py",
         "png <file> <out_stem> [lines_per_page] [pt] [start] [end]   |   png <dir> <dest> [kb_per_page] [pt]",
@@ -634,13 +648,14 @@ SELFTESTS = {
     "pimpl": "tools/dev_env/pimpl_test.py",
     "funnel": "tools/dev_env/funnel_test.py",
     "shapeaudit": "tools/dev_env/shapeaudit_test.py",
+    "readclean": "tools/dev_env/readclean_test.py",
 }
 
 # The dispatch groups, in the order `list` and `help` print them.
 GROUPS = [
     ("convert", CONVERT, "flat C module -> the sha256 golden shape, and the call sites with it"),
     ("edit", EDIT, "mechanical source edits that a pattern-driven conversion needs first"),
-    ("view", VIEW, "read-only readers; none of these writes into the tree"),
+    ("view", VIEW, "read-only readers; none of these writes into the tree. START WITH `view read blind` - assume nothing, evaluate everything, and meet the prose last"),
     ("measure", MEASURE, "what something costs, and the three standing probes"),
     ("crypto", CRYPTO, "test vectors and keys - test DATA, which is why it is not under ci_tooling"),
     ("assets", ASSETS, "renders images and packs web assets"),
