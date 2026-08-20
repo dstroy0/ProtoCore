@@ -8,14 +8,17 @@ add_subdirectory(handshake)
 add_subdirectory(key_schedule)
 add_subdirectory(record)
 
-protocore_module(pc_network_drivers_tls
-  SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tls.c"
-  PUBLIC
-    pc_network_drivers_presentation_http_http3_tls13_msg
-    pc_network_drivers_tls_key_schedule
-    pc_network_drivers_tls_record
-  PRIVATE
-    pc_crypto_rng
-    pc_mmgr_secure
-    pc_network_drivers_transport_tcp_protocol
-)
+
+if(PROTOCORE_ENABLE_TLS)
+  protocore_module(pc_network_drivers_tls
+    SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tls.c"
+    PUBLIC
+      pc_network_drivers_presentation_http_http3_tls13_msg
+      pc_network_drivers_tls_key_schedule
+      pc_network_drivers_tls_record
+    PRIVATE
+      pc_crypto_rng
+      pc_mmgr_secure
+      pc_network_drivers_transport_tcp_protocol
+  )
+endif()

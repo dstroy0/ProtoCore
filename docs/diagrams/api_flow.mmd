@@ -4,7 +4,7 @@ flowchart TB
   subgraph SETUP["First, set up your server (once, at boot)"]
     direction LR
     reg["1 Register routes<br/>on_http() / on_http_iface()<br/>+8 more"]
-    cfg["2 Set options<br/>tls_cert() / tls_require_client_cert()<br/>+7 more"]
+    cfg["2 Set options<br/>tls_cert() / set_ap_ip()<br/>+5 more"]
     run["3 Start it<br/>begin_http() / begin_tls()<br/>+4 more"]
   end
 

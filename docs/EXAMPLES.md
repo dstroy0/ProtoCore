@@ -1,6 +1,6 @@
 # Examples
 
-The library ships 152 runnable examples under `examples/`, grouped by
+The library ships 151 runnable examples under `examples/`, grouped by
 the OSI layer the feature lives at and numbered within each group. **Each example
 has its own README** with a detailed walkthrough, the build flags it needs, how
 to build and run it, and the full source reproduced with teaching comments - so
@@ -97,7 +97,7 @@ pio ci --board=esp32dev --project-option="framework=arduino" \
 </details>
 
 <details>
-<summary>L4 · Transport · 8 examples</summary>
+<summary>L4 · Transport · 7 examples</summary>
 
 <p class="pc-desc">Connections, encryption, and flood defense:</p>
 
@@ -106,7 +106,6 @@ pio ci --board=esp32dev --project-option="framework=arduino" \
 - @subpage md_examples_2L4-Transport_2HTTPS_2README "HTTPS"
 - @subpage md_examples_2L4-Transport_2IpAllowlist_2README "IpAllowlist"
 - @subpage md_examples_2L4-Transport_2KeepAlive_2README "KeepAlive"
-- @subpage md_examples_2L4-Transport_2mTLS_2README "mTLS"
 - @subpage md_examples_2L4-Transport_2PerIpThrottle_2README "PerIpThrottle"
 - @subpage md_examples_2L4-Transport_2TlsResumption_2README "TlsResumption"
 

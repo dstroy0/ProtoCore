@@ -28,7 +28,7 @@
  *   derived into, so nothing below the key derivation branches on the suite.
  *
  * Pure, zero heap, host-tested. This is the portable record layer; a build whose vendor ships a TLS
- * stack (PROTOCORE_HAS_VENDOR_TLS) compiles that instead and none of this.
+ * compiles with PROTOCORE_ENABLE_TLS.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -41,7 +41,7 @@
 #include "crypto/aead/aesgcm/aesgcm.h"       // AesGcm, the 0x1302 record AEAD
 #include "protocore_config.h"                // the entry point: the enable gate below, and the widths
 
-#if PROTOCORE_TLS_SOFTWARE
+#if PROTOCORE_ENABLE_TLS
 
 PROTOCORE_BEGIN_DECLS
 
@@ -240,7 +240,7 @@ static const TlsRecordNs TlsRecord __attribute__((unused)) = {
     .keys_wipe = protocore_tls_record_keys_wipe,
 };
 
-#endif // PROTOCORE_TLS_SOFTWARE
+#endif // PROTOCORE_ENABLE_TLS
 
 PROTOCORE_END_DECLS
 

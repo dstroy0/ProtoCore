@@ -13,7 +13,6 @@ if(PROTOCORE_ENABLE_MQTT)
       pc_mmgr_protostr
       pc_mmgr_secure
       pc_mmgr_span
-      pc_network_drivers_tls
       pc_network_drivers_transport_tcp_client
       pc_server_clock
       pc_shared_utf8

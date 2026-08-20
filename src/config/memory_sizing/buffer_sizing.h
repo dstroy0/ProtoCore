@@ -1082,19 +1082,6 @@
 #define MAX_TLS_CONNS 1
 #endif
 
-/**
- * @brief 1 when the portable TLS 1.3 compiles: TLS is on and the vendor has no stack of its own.
- *
- * DERIVED from PROTOCORE_ENABLE_TLS and PROTOCORE_HAS_VENDOR_TLS (protocore_platform.h),
- * never set by hand. It selects the record layer and connection driver in network_drivers/tls, and widens the guards on
- * the TLS 1.3 pieces the QUIC and DTLS handshakes already share.
- */
-#if PROTOCORE_ENABLE_TLS && !PROTOCORE_HAS_VENDOR_TLS
-#define PROTOCORE_TLS_SOFTWARE 1
-#else
-#define PROTOCORE_TLS_SOFTWARE 0
-#endif
-
 /** @brief Session-ticket lifetime / key-rotation period in seconds (see PROTOCORE_ENABLE_TLS_RESUMPTION). */
 #ifndef PROTOCORE_TLS_TICKET_LIFETIME_S
 #define PROTOCORE_TLS_TICKET_LIFETIME_S 86400
@@ -2243,20 +2230,6 @@
 /** @brief Receive buffer (and max response size) for the outbound HTTP client, bytes. */
 #ifndef PROTOCORE_HTTP_CLIENT_BUF_SIZE
 #define PROTOCORE_HTTP_CLIENT_BUF_SIZE 2048
-#endif
-
-/**
- * @brief Ciphertext receive-ring size for the https:// client, bytes.
- *
- * The lwIP recv callback feeds TLS wire bytes into this draining ring while the
- * TLS engine pulls and decrypts them, so it holds only the in-flight (not yet
- * decrypted) ciphertext: a multi-KB handshake flight fits without loss thanks to
- * the refuse-and-redeliver backpressure. Must exceed one TCP segment (TCP_MSS,
- * ~1460) or a full segment could never fit. Only used when
- * PROTOCORE_ENABLE_HTTP_CLIENT_TLS is set.
- */
-#ifndef PROTOCORE_HTTP_CLIENT_CT_BUF_SIZE
-#define PROTOCORE_HTTP_CLIENT_CT_BUF_SIZE 4096
 #endif
 
 /** @brief Outbound HTTP client connect/response timeout in milliseconds. */

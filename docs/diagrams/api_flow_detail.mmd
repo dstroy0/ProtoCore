@@ -4,7 +4,7 @@ flowchart TB
   subgraph SETUP["First, set up your server (once, at boot)"]
     direction LR
     reg["1 Register routes<br/>on_http() / on_http_iface() / on_regex()<br/>on_http_auth() / dav() / on_not_found()<br/>on_request_log() / use() / on_ws()<br/>on_sse()"]
-    cfg["2 Set options<br/>tls_cert() / tls_require_client_cert() / tls_client_subject()<br/>set_ap_ip() / enable_rate_limit() / set_cors()<br/>set_cache_control() / set_cache_control_swr() / set_cookie()"]
+    cfg["2 Set options<br/>tls_cert() / set_ap_ip() / enable_rate_limit()<br/>set_cors() / set_cache_control() / set_cache_control_swr()<br/>set_cookie()"]
     run["3 Start it<br/>begin_http() / begin_tls() / stop()<br/>handle() / service_once() / defer()"]
   end
 

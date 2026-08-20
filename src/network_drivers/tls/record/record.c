@@ -8,7 +8,7 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-#if PROTOCORE_TLS_SOFTWARE
+#if PROTOCORE_ENABLE_TLS
 
 #include "network_drivers/tls/record/record.h"
 
@@ -361,4 +361,4 @@ void protocore_tls_record_unprotect(uint8_t *restrict work)
 /** @brief The operands and the outcome. */
 TlsRecordVars TlsRecordV;
 
-#endif // PROTOCORE_TLS_SOFTWARE
+#endif // PROTOCORE_ENABLE_TLS

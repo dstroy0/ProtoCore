@@ -807,7 +807,7 @@ def find_gate(s):
     """The header's enable gate, as the whole `#if` condition.
 
     A compound condition is the gate as written: tls13_msg.h and key_schedule.h are
-    `#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)`. Matching only
+    `#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_TLS)`. Matching only
     a bare token after `#if` skipped that line and took the next `#if` in the file, which is an
     inner capability arm - tls13_msg would have been regenerated under PROTOCORE_ENABLE_PQC_KEX and
     would have vanished from every build without it. `#ifdef` / `#ifndef` do not match, so the

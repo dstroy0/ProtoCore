@@ -928,15 +928,6 @@
     ((size_t)PROTOCORE_BRIDGE_MAX_RULES * 16u + PROTOCORE_BRIDGE_STREAM_CHUNK + 64u)
 #endif
 
-// The edge cache's TLS half: the transport binding, the client cid of the in-flight https fetch, and
-// the two session flags. Secure rather than plaintext because these name the client-TLS session the
-// fetch runs over; the 18 KB of cached origin bytes beside them is the plaintext borrow
-// (PROTOCORE_EDGE_PROXY_BORROW). Proved against sizeof(EdgeProxyTlsCtx) by a static_assert in
-// edge_cache_proxy.c.
-#ifndef PROTOCORE_EDGE_PROXY_TLS_BORROW
-#define PROTOCORE_EDGE_PROXY_TLS_BORROW 128
-#endif
-
 // The WebDAV handler's state: the accessor root it resolves every path against, the 207 Multi-Status
 // build buffer (PROTOCORE_WEBDAV_BUF_SIZE), one directory entry's name for the Depth-1 listing
 // (PROTOCORE_FILESYSTEM_PATH_MAX), one streaming-PUT destination per connection slot, and the
@@ -1271,12 +1262,6 @@
 #define PROTOCORE_SECURE_WORK_IFACEBRIDGEHW 0
 #endif
 
-#if PROTOCORE_ENABLE_EDGE_CACHE && PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-#define PROTOCORE_SECURE_WORK_EDGEPROXYTLS PROTOCORE_EDGE_PROXY_TLS_BORROW
-#else
-#define PROTOCORE_SECURE_WORK_EDGEPROXYTLS 0
-#endif
-
 #if PROTOCORE_ENABLE_WEBDAV
 #define PROTOCORE_SECURE_WORK_WEBDAV PROTOCORE_WEBDAV_BORROW
 #else
@@ -1379,7 +1364,7 @@
 #define PROTOCORE_SECURE_WORK_BUSCAPTURE 0
 #endif
 
-#if PROTOCORE_TLS_SOFTWARE
+#if PROTOCORE_ENABLE_TLS
 #define PROTOCORE_SECURE_WORK_TLSCONN PROTOCORE_WORK_TLS_CONN
 #else
 #define PROTOCORE_SECURE_WORK_TLSCONN 0
@@ -1495,7 +1480,7 @@
 #define PROTOCORE_TLS_BORROW ((size_t)MAX_CONNS * 3584u + (size_t)PROTOCORE_TLS_SEAM_OUT_CAP + 128u)
 #endif
 
-#if PROTOCORE_TLS_SOFTWARE
+#if PROTOCORE_ENABLE_TLS
 #define PROTOCORE_SECURE_WORK_TLSSEAM PROTOCORE_TLS_BORROW
 #else
 #define PROTOCORE_SECURE_WORK_TLSSEAM 0
@@ -1512,7 +1497,7 @@
 // Either credential reaches it: PROTOCORE_ENABLE_X509 for the chain, and the portable TLS arm
 // for CertificateVerify, which it checks through X509Verify.message whether the peer presented a
 // certificate or an RFC 7250 raw public key.
-#if PROTOCORE_ENABLE_X509 || PROTOCORE_TLS_SOFTWARE
+#if PROTOCORE_ENABLE_X509 || PROTOCORE_ENABLE_TLS
 #define PROTOCORE_SECURE_WORK_X509VERIFY PROTOCORE_X509_VERIFY_BORROW
 #else
 #define PROTOCORE_SECURE_WORK_X509VERIFY 0
@@ -1535,14 +1520,14 @@
      PROTOCORE_SECURE_WORK_SHT3X + PROTOCORE_SECURE_WORK_INA219 + PROTOCORE_SECURE_WORK_PCA9685 +                      \
      PROTOCORE_SECURE_WORK_MPR121 + PROTOCORE_SECURE_WORK_FDC2214 + PROTOCORE_SECURE_WORK_LDC1614 +                    \
      PROTOCORE_SECURE_WORK_VL53L0X + PROTOCORE_SECURE_WORK_SMBUS + PROTOCORE_SECURE_WORK_HOTSWAP +                     \
-     PROTOCORE_SECURE_WORK_PROVISIONING + PROTOCORE_SECURE_WORK_WEBDAV + PROTOCORE_SECURE_WORK_EDGEPROXYTLS +          \
-     PROTOCORE_SECURE_WORK_DNSRESOLVER + PROTOCORE_SECURE_WORK_TLSSEAM + PROTOCORE_SECURE_WORK_X509VERIFY +            \
-     PROTOCORE_SECURE_WORK_COAPSSERVER + PROTOCORE_SECURE_WORK_MQTT + PROTOCORE_SECURE_WORK_SNMPNOTIFY +               \
-     PROTOCORE_SECURE_WORK_HTTPCLIENT + PROTOCORE_SECURE_WORK_SMTP + PROTOCORE_SECURE_WORK_WSCLIENT +                  \
-     PROTOCORE_SECURE_WORK_SNMPV3 + PROTOCORE_SECURE_WORK_SNMPAGENT + PROTOCORE_SECURE_WORK_OAUTH2 +                   \
-     PROTOCORE_SECURE_WORK_SSHCLIENT + PROTOCORE_SECURE_WORK_SSHTRANSPORT + PROTOCORE_SECURE_WORK_SSHAUTH +            \
-     PROTOCORE_SECURE_WORK_SSHCONNECTION + PROTOCORE_SECURE_WORK_SSHRSA + PROTOCORE_SECURE_WORK_SSHSLOTS +             \
-     PROTOCORE_SECURE_WORK_SMBCLIENT + 256) // + 256: alignment round-up across the individual borrows
+     PROTOCORE_SECURE_WORK_PROVISIONING + PROTOCORE_SECURE_WORK_WEBDAV + PROTOCORE_SECURE_WORK_DNSRESOLVER +           \
+     PROTOCORE_SECURE_WORK_TLSSEAM + PROTOCORE_SECURE_WORK_X509VERIFY + PROTOCORE_SECURE_WORK_COAPSSERVER +            \
+     PROTOCORE_SECURE_WORK_MQTT + PROTOCORE_SECURE_WORK_SNMPNOTIFY + PROTOCORE_SECURE_WORK_HTTPCLIENT +                \
+     PROTOCORE_SECURE_WORK_SMTP + PROTOCORE_SECURE_WORK_WSCLIENT + PROTOCORE_SECURE_WORK_SNMPV3 +                      \
+     PROTOCORE_SECURE_WORK_SNMPAGENT + PROTOCORE_SECURE_WORK_OAUTH2 + PROTOCORE_SECURE_WORK_SSHCLIENT +                \
+     PROTOCORE_SECURE_WORK_SSHTRANSPORT + PROTOCORE_SECURE_WORK_SSHAUTH + PROTOCORE_SECURE_WORK_SSHCONNECTION +        \
+     PROTOCORE_SECURE_WORK_SSHRSA + PROTOCORE_SECURE_WORK_SSHSLOTS + PROTOCORE_SECURE_WORK_SMBCLIENT +                 \
+     256) // + 256: alignment round-up across the individual borrows
 #endif
 
 // Both of these are struct members (TcpConn::proto, TcpConn::iface, Listener::proto, and a route's
@@ -1809,7 +1794,7 @@ static_assert(sizeof(protocore_if_kind) == 1, "protocore_if_kind must stay one b
 
 // The portable TLS arm authenticates by raw public key and asserts on PROTOCORE_ENABLE_TLS_RPK, so it is
 // the third thing that carries the extension, alongside DTLS and HTTP/3.
-#if PROTOCORE_ENABLE_TLS_RPK && !(PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_HTTP3 || PROTOCORE_TLS_SOFTWARE)
+#if PROTOCORE_ENABLE_TLS_RPK && !(PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_TLS)
 #error                                                                                                                 \
     "ProtoCore: PROTOCORE_ENABLE_TLS_RPK requires PROTOCORE_ENABLE_DTLS, PROTOCORE_ENABLE_HTTP3 or the portable TLS arm (PROTOCORE_ENABLE_TLS without a vendor stack)"
 #endif

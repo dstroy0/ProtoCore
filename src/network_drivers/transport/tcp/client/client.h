@@ -18,7 +18,7 @@
  *
  * The receive ring carries **wire bytes**: for a plaintext connection those are
  * the application bytes; for a TLS connection they are ciphertext and the caller
- * layers the shared client-TLS session (`protocore_tls_client_session_*`) on top, pointing its
+ * carries plaintext octets: there is no client-side TLS engine in the library, so nothing
  * BIO at protocore_client_send() / protocore_client_read().
  *
  * Nothing here blocks. open() takes a slot, starts the resolve and returns a cid straight away; the

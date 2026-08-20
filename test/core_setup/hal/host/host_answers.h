@@ -40,10 +40,6 @@
 #define PROTOCORE_HAS_VENDOR_MDNS 0 // a unit-test build has no vendor component to call
 #endif
 
-#ifndef PROTOCORE_HAS_VENDOR_TLS
-#define PROTOCORE_HAS_VENDOR_TLS PROTOCORE_PLATFORM_HAS_VENDOR_TLS
-#endif
-
 #ifndef PROTOCORE_HAS_VENDOR_DNS_RESOLVER
 #define PROTOCORE_HAS_VENDOR_DNS_RESOLVER 0 // a unit-test build has no stack resolver to marshal into
 #endif
@@ -115,15 +111,6 @@
 
 #ifndef PROTOCORE_HAS_VENDOR_CAN
 #define PROTOCORE_HAS_VENDOR_CAN PROTOCORE_PLATFORM_HAS_VENDOR_CAN
-#endif
-
-// The host arm of the vendor-TLS capability. An env states it to drive the vendor BIO path off
-// silicon, where there is no SDK to take the values from, so the host owns both ends of the
-// contract: the BIO returns these and the stand-in engine reads them. Negative, so they can never
-// be confused with a byte count, and distinct from each other.
-#if PROTOCORE_HAS_VENDOR_TLS
-#define PROTOCORE_PLATFORM_TLS_WANT_READ (-0x7101)
-#define PROTOCORE_PLATFORM_TLS_WANT_WRITE (-0x7102)
 #endif
 
 #endif // PROTOCORE_VENDOR_HOST_ANSWERS_H

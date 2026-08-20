@@ -45,7 +45,7 @@ KEEP = {
 }
 
 # Never yanked, whoever includes it. A header gates its own body on PROTOCORE_* - `#if
-# PROTOCORE_TLS_SOFTWARE` around everything it declares - and those macros come from the entry point.
+# PROTOCORE_ENABLE_TLS` around everything it declares - and those macros come from the entry point.
 # Take it out and the header's body vanishes before any consumer's forced include can matter, because
 # the consumer's include is read after the header's own guard has already decided.
 NEVER_YANK = {

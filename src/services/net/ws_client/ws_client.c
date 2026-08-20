@@ -30,9 +30,6 @@ PROTOCORE_BEGIN_DECLS
 #if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/tcp/client/client.h" // TcpClient: the outbound transport (L4)
 #endif
-#if PROTOCORE_HAS_VENDOR_TLS && PROTOCORE_ENABLE_WS_CLIENT_TLS
-#include "network_drivers/tls/tls.h"
-#endif
 #ifdef PROTOCORE_WS_CLIENT_DEBUG
 #include <stdio.h>
 #endif
@@ -500,80 +497,14 @@ static void ws_pump_plain(uint8_t *restrict work)
     }
 }
 
-#if PROTOCORE_ENABLE_WS_CLIENT_TLS
-// The TLS BIO over the transport slot: ciphertext out through the slot, ciphertext in by draining
-// it. The signature is the TLS module's, so these two reach the module instance directly.
-static int ws_tls_send(void *bio, const unsigned char *buf, size_t len)
-{
-    (void)bio;
-    const size_t cap = len > 0xFFFF ? 0xFFFF : len;
-    return ws_tx_plain(protocore_ws_client_span(), buf, cap) ? (int)cap : PROTOCORE_PLATFORM_TLS_WANT_WRITE;
-}
-
-static int ws_tls_recv(void *bio, unsigned char *buf, size_t len)
-{
-    (void)bio;
-    TcpClientV.cid = s_ws.store->cid;
-    TcpClientV.io.buf = buf;
-    TcpClientV.io.cap = len;
-    TcpClient.read(protocore_tcp_client_span());
-    const size_t n = TcpClientV.n;
-    if (n == 0)
-    {
-        TcpClientV.cid = s_ws.store->cid;
-        TcpClient.is_closed(protocore_tcp_client_span());
-        return TcpClientV.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
-    }
-    return (int)n;
-}
-
-// Drain plaintext out of the TLS session into the receive ring.
-static void ws_pump_tls(uint8_t *restrict work)
-{
-    uint8_t tmp[WSC_PUMP_CHUNK];
-    for (;;)
-    {
-        const size_t room = (WSC_RING_SIZE - 1) - ring_avail(work);
-        if (room == 0)
-        {
-            break;
-        }
-        const size_t want = room < sizeof(tmp) ? room : sizeof(tmp);
-        const int n = protocore_tls_client_session_read(tmp, want);
-        if (n <= 0)
-        {
-            if (n < 0)
-            {
-                WS_CLIENT_CTX(work)->closed = PROTO_TRUE;
-            }
-            break;
-        }
-        ring_write(work, tmp, (size_t)n);
-    }
-}
-#endif // PROTOCORE_ENABLE_WS_CLIENT_TLS
-
 static void ws_pump(uint8_t *restrict work)
 {
-#if PROTOCORE_ENABLE_WS_CLIENT_TLS
-    if (WS_CLIENT_CTX(work)->secure)
-    {
-        ws_pump_tls(work);
-        return;
-    }
-#endif
     ws_pump_plain(work);
 }
 
 // Send framed octets, through the TLS session when /secure/ is set.
 static proto_bool ws_tx(uint8_t *restrict work, const uint8_t *data, size_t len)
 {
-#if PROTOCORE_ENABLE_WS_CLIENT_TLS
-    if (WS_CLIENT_CTX(work)->secure)
-    {
-        return protocore_tls_client_session_write(data, len) == (int)len;
-    }
-#endif
     return ws_tx_plain(work, data, len);
 }
 
@@ -603,12 +534,6 @@ static proto_bool ws_emit_frame(uint8_t *restrict work, uint8_t opcode, const ui
 // RFC 6455 sec 7.1.1: close the WebSocket connection - end the TLS session, then the transport slot.
 static void ws_close_transport(uint8_t *restrict work)
 {
-#if PROTOCORE_ENABLE_WS_CLIENT_TLS
-    if (WS_CLIENT_CTX(work)->secure)
-    {
-        protocore_tls_client_session_end();
-    }
-#endif
     if (WS_CLIENT_CTX(work)->cid >= 0)
     {
         TcpClientV.cid = WS_CLIENT_CTX(work)->cid;
@@ -731,12 +656,10 @@ void protocore_ws_client_connect(uint8_t *restrict work)
     {
         return;
     }
-#if !PROTOCORE_ENABLE_WS_CLIENT_TLS
     if (secure)
     {
         return;
     }
-#endif
     WS_CLIENT_CTX(work)->rx_head = 0;
     WS_CLIENT_CTX(work)->rx_tail = 0;
     WS_CLIENT_CTX(work)->closed = PROTO_FALSE;
@@ -783,31 +706,6 @@ void protocore_ws_client_connect(uint8_t *restrict work)
         ws_close_transport(work);
         return;
     }
-
-#if PROTOCORE_ENABLE_WS_CLIENT_TLS
-    if (WS_CLIENT_CTX(work)->secure)
-    {
-        if (!protocore_tls_client_session_begin(host, ws_tls_send, ws_tls_recv))
-        {
-            WSC_DBG("[wsc] TLS session begin failed\n");
-            ws_close_transport(work);
-            return;
-        }
-        protocore_tls_state h = PROTOCORE_TLS_BUSY;
-        while ((h = protocore_tls_client_session_handshake()) == PROTOCORE_TLS_BUSY && !WS_CLIENT_CTX(work)->closed &&
-               (int32_t)(deadline - Clock.ms) > 0)
-        {
-            pcdelay(WSC_POLL_MS);
-        }
-        if (h != PROTOCORE_TLS_READY)
-        {
-            WSC_DBG("[wsc] TLS handshake h=%d closed=%d\n", (int)h, (int)WS_CLIENT_CTX(work)->closed);
-            ws_close_transport(work);
-            return;
-        }
-        WSC_DBG("[wsc] TLS handshake ok\n");
-    }
-#endif
 
     // |Sec-WebSocket-Key| is 16 fresh random octets, base64-encoded (RFC 6455 sec 4.1); the accept
     // it implies is computed now and compared against the field the server sends back.

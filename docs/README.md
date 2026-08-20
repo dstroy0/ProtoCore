@@ -2148,7 +2148,6 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_HTTP3` | `0` |  |
 | `PROTOCORE_ENABLE_HTTP_CACHE` | `0` |  |
 | `PROTOCORE_ENABLE_HTTP_CLIENT` | `0` |  |
-| `PROTOCORE_ENABLE_HTTP_CLIENT_TLS` | `0` |  |
 | `PROTOCORE_ENABLE_HTTP_DELIVERY` | `0` |  |
 | `PROTOCORE_ENABLE_HTTP_PARSER` | `1` |  |
 | `PROTOCORE_ENABLE_HTTP_ROUTE` | `0` |  |
@@ -2190,10 +2189,8 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_MPR121` | `0` |  |
 | `PROTOCORE_ENABLE_MQTT` | `0` |  |
 | `PROTOCORE_ENABLE_MQTT_SN` | `0` |  |
-| `PROTOCORE_ENABLE_MQTT_TLS` | `0` |  |
 | `PROTOCORE_ENABLE_MSGPACK` | `0` |  |
 | `PROTOCORE_ENABLE_MTCONNECT` | `0` |  |
-| `PROTOCORE_ENABLE_MTLS` | `0` |  |
 | `PROTOCORE_ENABLE_MULTIPART` | `0` |  |
 | `PROTOCORE_ENABLE_NATS` | `0` |  |
 | `PROTOCORE_ENABLE_NEMA_TS2` | `0` |  |
@@ -2263,7 +2260,6 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_SMB` | `0` |  |
 | `PROTOCORE_ENABLE_SMBUS` | `0` |  |
 | `PROTOCORE_ENABLE_SMTP` | `0` |  |
-| `PROTOCORE_ENABLE_SMTP_TLS` | `0` |  |
 | `PROTOCORE_ENABLE_SNMP` | `0` |  |
 | `PROTOCORE_ENABLE_SNMP_TRAP` | `0` |  |
 | `PROTOCORE_ENABLE_SNMP_V3` | `0` |  |
@@ -2318,7 +2314,6 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_WIFI_SNIFFER` | `0` |  |
 | `PROTOCORE_ENABLE_WISUN` | `0` |  |
 | `PROTOCORE_ENABLE_WS_CLIENT` | `0` |  |
-| `PROTOCORE_ENABLE_WS_CLIENT_TLS` | `0` |  |
 | `PROTOCORE_ENABLE_WS_DEFLATE` | `0` |  |
 | `PROTOCORE_ENABLE_X509` | `0` |  |
 | `PROTOCORE_ENABLE_XMPP` | `0` |  |

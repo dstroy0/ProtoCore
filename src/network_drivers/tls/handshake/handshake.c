@@ -8,7 +8,7 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-#if PROTOCORE_TLS_SOFTWARE
+#if PROTOCORE_ENABLE_TLS
 
 #include "network_drivers/tls/tls.h"
 
@@ -60,7 +60,7 @@ static_assert(PROTOCORE_TLS13_TRANSCRIPT_BORROW + sizeof(Tls13ClientHello) + PRO
 // The profile in handshake.h: the portable arm authenticates by RFC 7250 raw public key, so the
 // Certificate message it builds is the RPK one.
 static_assert(PROTOCORE_ENABLE_TLS_RPK,
-              "PROTOCORE_TLS_SOFTWARE authenticates by RFC 7250 raw public key: set PROTOCORE_ENABLE_TLS_RPK");
+              "PROTOCORE_ENABLE_TLS authenticates by RFC 7250 raw public key: set PROTOCORE_ENABLE_TLS_RPK");
 
 // RFC 8446 sec 6.2 alerts this driver raises.
 #define TLS_ALERT_UNEXPECTED_MESSAGE 10
@@ -1111,4 +1111,4 @@ void protocore_tls_connection_open_app(uint8_t *restrict work)
 /** @brief The operands and the outcome. */
 TlsConnectionVars TlsConnectionV;
 
-#endif // PROTOCORE_TLS_SOFTWARE
+#endif // PROTOCORE_ENABLE_TLS

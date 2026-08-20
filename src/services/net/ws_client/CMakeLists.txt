@@ -17,7 +17,6 @@ if(PROTOCORE_ENABLE_WS_CLIENT)
       pc_mmgr_secure
       pc_mmgr_span
       pc_network_drivers_presentation_codec_base64
-      pc_network_drivers_tls
       pc_network_drivers_transport_tcp_client
       pc_server_clock
   )

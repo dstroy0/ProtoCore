@@ -1,6 +1,6 @@
 # MqttClient - the device publishes/subscribes to an MQTT broker
 
-**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_MQTT` (optional `PROTOCORE_ENABLE_TLS` + `PROTOCORE_ENABLE_MQTT_TLS` for `mqtts://`)
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_MQTT`
 
 ## What this example teaches
 

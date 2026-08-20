@@ -16,7 +16,6 @@
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable it for the whole build, e.g.:
  *     build_flags = -DPROTOCORE_ENABLE_HTTP_CLIENT=1
- *     ; for https:// add: -DPROTOCORE_ENABLE_TLS=1 -DPROTOCORE_ENABLE_HTTP_CLIENT_TLS=1
  *     ; to trace where a request stalls, add: -DPROTOCORE_HTTP_CLIENT_DEBUG
  * (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  *
