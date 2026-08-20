@@ -138,18 +138,39 @@ typedef struct
     EdgeFetchPumpArgs pump_args;
     EdgeFetchEndArgs end_args;
     EdgeFetchEdgeRespCompleteArgs edge_resp_complete_args;
-
     proto_bool ok;
     EdgeFetchStatus status;
+} EdgeFetcherVars;
 
+/** @brief The operands and the outcome. */
+extern EdgeFetcherVars EdgeFetcherV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const begin)(uint8_t *restrict work);
     void (*const pump)(uint8_t *restrict work);
     void (*const end)(uint8_t *restrict work);
     void (*const edge_resp_complete)(uint8_t *restrict work);
 } EdgeFetchNs;
 
-/** @brief The one symbol this module exports. */
-extern EdgeFetchNs EdgeFetcher;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in EdgeFetcherV or a region of the borrow at a fixed offset.
+void protocore_edge_fetcher_begin(uint8_t *restrict work);
+void protocore_edge_fetcher_pump(uint8_t *restrict work);
+void protocore_edge_fetcher_end(uint8_t *restrict work);
+void protocore_edge_fetcher_edge_resp_complete(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `EdgeFetcher.begin(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const EdgeFetchNs EdgeFetcher __attribute__((unused)) = {
+    .begin = protocore_edge_fetcher_begin,
+    .pump = protocore_edge_fetcher_pump,
+    .end = protocore_edge_fetcher_end,
+    .edge_resp_complete = protocore_edge_fetcher_edge_resp_complete,
+};
 
 PROTOCORE_END_DECLS
 

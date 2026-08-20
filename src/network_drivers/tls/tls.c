@@ -100,19 +100,19 @@ const char *protocore_tls_alpn(uint8_t slot)
 // there. Reports the record's total length, or 0 when it is not yet complete.
 static size_t frame_one(uint8_t *restrict work, uint8_t slot, TlsConn *c)
 {
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.available(protocore_conn_pool_span());
-    size_t have = ConnPool.n;
+    size_t have = ConnPoolV.n;
     if (have < PROTOCORE_TLS_PLAINTEXT_HDR_LEN)
     {
         return 0; // not even a header yet
     }
 
     uint8_t hdr[PROTOCORE_TLS_PLAINTEXT_HDR_LEN];
-    ConnPool.slot = slot;
-    ConnPool.io.off = 0;
-    ConnPool.io.buf = hdr;
-    ConnPool.io.count = sizeof(hdr);
+    ConnPoolV.slot = slot;
+    ConnPoolV.io.off = 0;
+    ConnPoolV.io.buf = hdr;
+    ConnPoolV.io.count = sizeof(hdr);
     ConnPool.peek(protocore_conn_pool_span()); // peek: the ring keeps them until the whole record is in
 
     const size_t frag = ((size_t)hdr[3] << 8) | (size_t)hdr[4];
@@ -126,12 +126,12 @@ static size_t frame_one(uint8_t *restrict work, uint8_t slot, TlsConn *c)
         return 0; // the rest is still in flight
     }
 
-    ConnPool.slot = slot;
-    ConnPool.io.buf = c->rx;
-    ConnPool.io.cap = total;
+    ConnPoolV.slot = slot;
+    ConnPoolV.io.buf = c->rx;
+    ConnPoolV.io.cap = total;
     ConnPool.read(protocore_conn_pool_span());
     (void)work;
-    return ConnPool.n;
+    return ConnPoolV.n;
 }
 
 // Whatever the handshake owes, through the transport's context-safe raw write. The pump runs on a
@@ -147,11 +147,11 @@ static proto_bool emit(uint8_t *restrict work, uint8_t slot, size_t len)
     {
         return PROTO_FALSE;
     }
-    ConnPool.pcb = pcb;
-    ConnPool.io.data = TLS_CTX(work)->out;
-    ConnPool.io.len = (proto_u16)len;
+    ConnPoolV.pcb = pcb;
+    ConnPoolV.io.data = TLS_CTX(work)->out;
+    ConnPoolV.io.len = (proto_u16)len;
     ConnPool.raw_send(protocore_conn_pool_span());
-    return ConnPool.ok;
+    return ConnPoolV.ok;
 }
 
 // ---------------------------------------------------------------------------
@@ -204,9 +204,9 @@ proto_bool protocore_tls_conn_begin(uint8_t slot)
     cfg->random = TLS_CTX(work)->rnd[slot];
     cfg->hostname = NULL; // server: the SNI is the client's to offer
 
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.pcb_of(protocore_conn_pool_span());
-    TLS_CTX(work)->pcb[slot] = ConnPool.pcb;
+    TLS_CTX(work)->pcb[slot] = ConnPoolV.pcb;
 
     TlsConnectionV.conn = &TLS_CTX(work)->conn[slot];
     TlsConnectionV.init_args.role = TLS_ROLE_SERVER;

@@ -117,15 +117,15 @@ static int bridge_find_free(uint8_t *restrict work)
 static int a_recv(void *c, uint8_t *buf, size_t cap)
 {
     RelayBridge *br = (RelayBridge *)c;
-    ConnPool.slot = br->conn_slot;
+    ConnPoolV.slot = br->conn_slot;
     ConnPool.available(protocore_conn_pool_span());
-    if (ConnPool.n)
+    if (ConnPoolV.n)
     {
-        ConnPool.slot = br->conn_slot;
-        ConnPool.io.buf = buf;
-        ConnPool.io.cap = cap;
+        ConnPoolV.slot = br->conn_slot;
+        ConnPoolV.io.buf = buf;
+        ConnPoolV.io.cap = cap;
         ConnPool.read(protocore_conn_pool_span());
-        return (int)ConnPool.n;
+        return (int)ConnPoolV.n;
     }
     return 0;
 }
@@ -135,45 +135,45 @@ static int a_send(void *c, const uint8_t *buf, size_t len)
     // Send as much as the inbound TCP send window currently allows (partial), not all-or-nothing: a
     // whole PROTOCORE_RELAY_BUF chunk rarely fits tcp_sndbuf in one shot, and a failed all-or-nothing send
     // forwards zero bytes and stalls the transfer. room==0 is real backpressure - the pump retries.
-    ConnPool.slot = br->conn_slot;
+    ConnPoolV.slot = br->conn_slot;
     ConnPool.sndbuf(protocore_conn_pool_span());
-    proto_u16 room = ConnPool.u16;
+    proto_u16 room = ConnPoolV.u16;
     if (room == 0)
     {
         return 0;
     }
     proto_u16 n = (len < (size_t)room) ? (proto_u16)len : room;
-    ConnPool.slot = br->conn_slot;
-    ConnPool.io.data = buf;
-    ConnPool.io.len = n;
+    ConnPoolV.slot = br->conn_slot;
+    ConnPoolV.io.data = buf;
+    ConnPoolV.io.len = n;
     ConnPool.send(protocore_conn_pool_span());
-    return ConnPool.ok ? (int)n : 0;
+    return ConnPoolV.ok ? (int)n : 0;
 }
 // Origin (b) = the outbound protocore_client; it reports EOF through the recv seam.
 static int b_recv(void *c, uint8_t *buf, size_t cap)
 {
     RelayBridge *br = (RelayBridge *)c;
-    TcpClient.cid = br->origin_cid;
-    TcpClient.io.buf = buf;
-    TcpClient.io.cap = cap;
+    TcpClientV.cid = br->origin_cid;
+    TcpClientV.io.buf = buf;
+    TcpClientV.io.cap = cap;
     TcpClient.read(protocore_tcp_client_span());
-    size_t n = TcpClient.n;
+    size_t n = TcpClientV.n;
     if (n)
     {
         return (int)n;
     }
-    TcpClient.cid = br->origin_cid;
+    TcpClientV.cid = br->origin_cid;
     TcpClient.is_closed(protocore_tcp_client_span());
-    return TcpClient.ok ? -1 : 0;
+    return TcpClientV.ok ? -1 : 0;
 }
 static int b_send(void *c, const uint8_t *buf, size_t len)
 {
     RelayBridge *br = (RelayBridge *)c;
-    TcpClient.cid = br->origin_cid;
-    TcpClient.io.data = buf;
-    TcpClient.io.len = len;
+    TcpClientV.cid = br->origin_cid;
+    TcpClientV.io.data = buf;
+    TcpClientV.io.len = len;
     TcpClient.send(protocore_tcp_client_span());
-    return TcpClient.ok ? (int)len : 0;
+    return TcpClientV.ok ? (int)len : 0;
 }
 
 // Close the origin (and optionally the inbound) and free the bridge. active=false first so a
@@ -184,11 +184,11 @@ static void teardown(RelayBridge *br, proto_bool close_inbound)
 #if PROTOCORE_ENABLE_RADIO_POWER
     Radio.busy_release(protocore_radio_power_span()); // this bridge is done relaying
 #endif
-    TcpClient.cid = br->origin_cid;
+    TcpClientV.cid = br->origin_cid;
     TcpClient.close(protocore_tcp_client_span());
     if (close_inbound)
     {
-        ConnPool.slot = br->conn_slot;
+        ConnPoolV.slot = br->conn_slot;
         ConnPool.close(protocore_conn_pool_span());
     }
 }
@@ -221,12 +221,12 @@ static void service(uint8_t *restrict work, uint8_t slot)
         }
     }
     // origin closed and everything it sent has been forwarded -> nothing more to do
-    TcpClient.cid = br->origin_cid;
+    TcpClientV.cid = br->origin_cid;
     TcpClient.is_closed(protocore_tcp_client_span());
-    const proto_bool origin_closed = TcpClient.ok;
-    TcpClient.cid = br->origin_cid;
+    const proto_bool origin_closed = TcpClientV.ok;
+    TcpClientV.cid = br->origin_cid;
     TcpClient.available(protocore_tcp_client_span());
-    if (origin_closed && TcpClient.n == 0 && br->relay.b2a_off >= br->relay.b2a_len)
+    if (origin_closed && TcpClientV.n == 0 && br->relay.b2a_off >= br->relay.b2a_len)
     {
         teardown(br, PROTO_TRUE);
     }
@@ -238,33 +238,33 @@ static void relay_on_accept(uint8_t slot)
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_relay_listener_span();
 
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.listener_id(protocore_conn_pool_span());
-    RelayBind *bd = bind_by_listener(work, ConnPool.u8);
+    RelayBind *bd = bind_by_listener(work, ConnPoolV.u8);
     if (!bd)
     {
-        ConnPool.slot = slot;
+        ConnPoolV.slot = slot;
         ConnPool.close(protocore_conn_pool_span()); // no origin published for this listener
         return;
     }
     int idx = bridge_find_free(work);
     if (idx < 0)
     {
-        ConnPool.slot = slot;
+        ConnPoolV.slot = slot;
         ConnPool.close(protocore_conn_pool_span()); // bridge table full
         return;
     }
     // open() takes a slot and returns; the origin is not up yet. The bridge arms anyway: the pump
     // steps the connect through b_recv's is_closed, a send before it is up reads as backpressure and
     // retries, and the slot's own PROTOCORE_RELAY_CONNECT_MS is what ends an origin that never answers.
-    TcpClient.dial.host = bd->host;
-    TcpClient.dial.port = bd->port;
-    TcpClient.dial.timeout_ms = PROTOCORE_RELAY_CONNECT_MS;
+    TcpClientV.dial.host = bd->host;
+    TcpClientV.dial.port = bd->port;
+    TcpClientV.dial.timeout_ms = PROTOCORE_RELAY_CONNECT_MS;
     TcpClient.open(protocore_tcp_client_span());
-    int cid = TcpClient.i32;
+    int cid = TcpClientV.i32;
     if (cid < 0)
     {
-        ConnPool.slot = slot;
+        ConnPoolV.slot = slot;
         ConnPool.close(protocore_conn_pool_span()); // no free client slot
         return;
     }
@@ -298,9 +298,9 @@ static void relay_on_poll(uint8_t slot)
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_relay_listener_span();
 
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok)
+    if (!ConnPoolV.ok)
     {
         return;
     }

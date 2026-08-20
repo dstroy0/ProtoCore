@@ -941,9 +941,9 @@ static void inject(uint16_t port, const char *src_ip, uint16_t src_port, const u
 
 static void reset_udp(void)
 {
-    UdpListener.port = 161;
+    UdpListenerV.port = 161;
     UdpListener.close(protocore_udp_listener_span());
-    (void)UdpListener.ok;
+    (void)UdpListenerV.ok;
     protocore_net_host_udp_reset();
 }
 
@@ -1271,4 +1271,3 @@ void test_udp_handler_drops_unanswerable()
     TEST_ASSERT_EQUAL_size_t(0, protocore_net_host_udp_count());
     reset_udp();
 }
-

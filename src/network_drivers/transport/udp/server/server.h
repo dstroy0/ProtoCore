@@ -107,15 +107,20 @@ typedef struct
  */
 typedef struct
 {
-    uint16_t port; ///< the receive port every call names
-
+    uint16_t port;         ///< the receive port every call names
     UdpBindArgs bind;      ///< what creating a receive port takes (RFC 768 User Interface)
     UdpSendArgs send_args; ///< what sending a datagram takes
     UdpPeerArgs peer_args; ///< what a sender lookup reads and writes
-
     proto_bool ok;
     const char *text;
+} UdpListenerVars;
 
+/** @brief The operands and the outcome. */
+extern UdpListenerVars UdpListenerV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const listen)(uint8_t *restrict work);
     void (*const listen_multicast)(uint8_t *restrict work);
     void (*const leave_multicast)(uint8_t *restrict work);
@@ -127,8 +132,33 @@ typedef struct
     void (*const joined_group)(uint8_t *restrict work);
 } UdpListenerNs;
 
-/** @brief The one symbol this module exports. */
-extern UdpListenerNs UdpListener;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in UdpListenerV or a region of the borrow at a fixed offset.
+void protocore_udp_listener_listen(uint8_t *restrict work);
+void protocore_udp_listener_listen_multicast(uint8_t *restrict work);
+void protocore_udp_listener_leave_multicast(uint8_t *restrict work);
+void protocore_udp_listener_poll(uint8_t *restrict work);
+void protocore_udp_listener_reply(uint8_t *restrict work);
+void protocore_udp_listener_peer_addr(uint8_t *restrict work);
+void protocore_udp_listener_sendto(uint8_t *restrict work);
+void protocore_udp_listener_close(uint8_t *restrict work);
+void protocore_udp_listener_joined_group(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `UdpListener.listen(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const UdpListenerNs UdpListener __attribute__((unused)) = {
+    .listen = protocore_udp_listener_listen,
+    .listen_multicast = protocore_udp_listener_listen_multicast,
+    .leave_multicast = protocore_udp_listener_leave_multicast,
+    .poll = protocore_udp_listener_poll,
+    .reply = protocore_udp_listener_reply,
+    .peer_addr = protocore_udp_listener_peer_addr,
+    .sendto = protocore_udp_listener_sendto,
+    .close = protocore_udp_listener_close,
+    .joined_group = protocore_udp_listener_joined_group,
+};
 
 /**
  * @brief The PROTOCORE_UDP_LISTENER_BORROW bytes this module's state lives in.

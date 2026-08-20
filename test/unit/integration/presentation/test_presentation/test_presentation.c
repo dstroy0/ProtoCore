@@ -800,7 +800,7 @@ void race_aba_slot_reuse_fresh_timestamp()
     conn_pool[0].last_activity_ms = T_OLD;
 
     set_now_ms(T_DEAD);
-    ConnPool.life.worker_id = 0;
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 
@@ -808,7 +808,7 @@ void race_aba_slot_reuse_fresh_timestamp()
     conn_pool[0].last_activity_ms = T_NEW;
 
     set_now_ms(T_NEW);
-    ConnPool.life.worker_id = 0;
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
 }
@@ -817,9 +817,9 @@ void race_double_free_is_nop()
 {
     conn_pool[0].state = CONN_FREE;
     set_now_ms(CONN_TIMEOUT_MS * 10);
-    ConnPool.life.worker_id = 0;
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
-    ConnPool.life.worker_id = 0;
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 }

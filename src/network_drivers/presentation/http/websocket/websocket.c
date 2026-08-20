@@ -245,20 +245,20 @@ static proto_bool ws_emit_one(uint8_t slot, uint8_t b0, const uint8_t *payload, 
         header[3] = (uint8_t)len;
         hlen = 4;
     }
-    ConnPool.slot = slot;
-    ConnPool.io.data = header;
-    ConnPool.io.len = hlen;
+    ConnPoolV.slot = slot;
+    ConnPoolV.io.data = header;
+    ConnPoolV.io.len = hlen;
     ConnPool.send(protocore_conn_pool_span());
-    if (!ConnPool.ok)
+    if (!ConnPoolV.ok)
     {
         return PROTO_FALSE;
     }
     if (len > 0 && payload)
     {
-        ConnPool.io.data = payload;
-        ConnPool.io.len = len;
+        ConnPoolV.io.data = payload;
+        ConnPoolV.io.len = len;
         ConnPool.send(protocore_conn_pool_span());
-        if (!ConnPool.ok)
+        if (!ConnPoolV.ok)
         {
             return PROTO_FALSE;
         }
@@ -275,9 +275,9 @@ void protocore_ws_send_frame(uint8_t *restrict work)
     const uint8_t slot = ws->slot_id;
 
     WsV.ok = PROTO_FALSE;
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok)
+    if (!ConnPoolV.ok)
     {
         return;
     }
@@ -384,9 +384,9 @@ void protocore_ws_close(uint8_t *restrict work)
     WsV.frame.len = 2;
     protocore_ws_send_frame(work);
 
-    ConnPool.slot = ws->slot_id;
+    ConnPoolV.slot = ws->slot_id;
     ConnPool.active(protocore_conn_pool_span());
-    if (ConnPool.ok)
+    if (ConnPoolV.ok)
     {
         ConnPool.flush(protocore_conn_pool_span());
     }
@@ -423,9 +423,9 @@ static void ws_finish_frame(uint8_t *restrict work, WsConn *ws)
             WsV.frame.payload = ws->ctl_buf;
             WsV.frame.len = (uint16_t)ws->payload_idx;
             protocore_ws_send_frame(work);
-            ConnPool.slot = ws->slot_id;
+            ConnPoolV.slot = ws->slot_id;
             ConnPool.active(protocore_conn_pool_span());
-            if (ConnPool.ok)
+            if (ConnPoolV.ok)
             {
                 ConnPool.flush(protocore_conn_pool_span());
             }
@@ -551,18 +551,18 @@ void protocore_ws_feed_byte(uint8_t *restrict work);
 void protocore_ws_parse(uint8_t *restrict work)
 {
     WsConn *ws = WsV.conn;
-    ConnPool.slot = ws->slot_id;
+    ConnPoolV.slot = ws->slot_id;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok)
+    if (!ConnPoolV.ok)
     {
         return;
     }
 
-    ConnPool.io.buf = WS_CTX(work)->rx;
-    ConnPool.io.cap = sizeof(WS_CTX(work)->rx);
+    ConnPoolV.io.buf = WS_CTX(work)->rx;
+    ConnPoolV.io.cap = sizeof(WS_CTX(work)->rx);
     ConnPool.read(protocore_conn_pool_span());
 
-    for (size_t i = 0; i < ConnPool.n; i++)
+    for (size_t i = 0; i < ConnPoolV.n; i++)
     {
         if (ws->parse_state == WS_FRAME_READY || ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR)
         {

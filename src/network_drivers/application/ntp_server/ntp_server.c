@@ -162,9 +162,9 @@ static void protocore_ntp_server_udp_handler(const uint8_t *data, size_t len, co
     const size_t n = NtpServer.n;
     if (n)
     {
-        UdpListener.peer_args.peer = peer;
-        UdpListener.send_args.data = resp;
-        UdpListener.send_args.len = n;
+        UdpListenerV.peer_args.peer = peer;
+        UdpListenerV.send_args.data = resp;
+        UdpListenerV.send_args.len = n;
         UdpListener.reply(protocore_udp_listener_span());
     }
 }
@@ -176,12 +176,12 @@ static void ntp_server_begin(uint8_t *restrict work)
 
     NTP_SERVER_CTX(work)->stratum = stratum;
     NTP_SERVER_CTX(work)->refid = refid;
-    UdpListener.port = PROTOCORE_NTP_PORT;
-    UdpListener.bind.handler = protocore_ntp_server_udp_handler;
-    UdpListener.bind.handler_ctx = NULL;
-    UdpListener.bind.group_ip = NULL;
+    UdpListenerV.port = PROTOCORE_NTP_PORT;
+    UdpListenerV.bind.handler = protocore_ntp_server_udp_handler;
+    UdpListenerV.bind.handler_ctx = NULL;
+    UdpListenerV.bind.group_ip = NULL;
     UdpListener.listen(protocore_udp_listener_span());
-    NtpServer.ok = UdpListener.ok;
+    NtpServer.ok = UdpListenerV.ok;
 }
 
 NtpServerNs NtpServer = {

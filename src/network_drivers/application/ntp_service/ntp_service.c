@@ -187,12 +187,12 @@ void protocore_ntp_service_begin(uint8_t *restrict work)
     // Bind every time rather than remembering: the listener rebinds a port it already holds, and a
     // port closed underneath this client is exactly the case a remembered flag would send a datagram
     // from a slot that no longer exists.
-    UdpListener.port = PROTOCORE_NTP_CLIENT_PORT;
-    UdpListener.bind.handler = ntp_reply;
-    UdpListener.bind.handler_ctx = NULL;
-    UdpListener.bind.group_ip = NULL;
+    UdpListenerV.port = PROTOCORE_NTP_CLIENT_PORT;
+    UdpListenerV.bind.handler = ntp_reply;
+    UdpListenerV.bind.handler_ctx = NULL;
+    UdpListenerV.bind.group_ip = NULL;
     UdpListener.listen(protocore_udp_listener_span());
-    if (!UdpListener.ok)
+    if (!UdpListenerV.ok)
     {
         NtpServiceV.ok = PROTO_FALSE;
         return;
@@ -207,12 +207,12 @@ void protocore_ntp_service_begin(uint8_t *restrict work)
     }
     req[0] = PROTOCORE_NTP_LI_VN_MODE(PROTOCORE_NTP_LI_NONE, PROTOCORE_NTP_VERSION, PROTOCORE_NTP_MODE_CLIENT);
     endian.wr32be(req + PROTOCORE_NTP_OFF_TX_SEC, NTP_SERVICE_CTX(work)->cookie);
-    UdpListener.send_args.dst = &dst;
-    UdpListener.send_args.dst_port = PROTOCORE_NTP_PORT;
-    UdpListener.send_args.data = req;
-    UdpListener.send_args.len = PROTOCORE_NTP_PACKET_LEN;
+    UdpListenerV.send_args.dst = &dst;
+    UdpListenerV.send_args.dst_port = PROTOCORE_NTP_PORT;
+    UdpListenerV.send_args.data = req;
+    UdpListenerV.send_args.len = PROTOCORE_NTP_PACKET_LEN;
     UdpListener.sendto(protocore_udp_listener_span());
-    NtpServiceV.ok = UdpListener.ok;
+    NtpServiceV.ok = UdpListenerV.ok;
 }
 
 void protocore_ntp_service_synced(uint8_t *restrict work)

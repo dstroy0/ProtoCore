@@ -86,16 +86,16 @@ static proto_bool stream_live(uint8_t i)
 #if PROTOCORE_NEED_CLIENT
     if (SSH_NETWORK_CTX(protocore_ssh_network_span())->kind[i] == SSH_STREAM_DIALED)
     {
-        TcpClient.cid = (int)h;
+        TcpClientV.cid = (int)h;
         TcpClient.connected(protocore_tcp_client_span());
-        const proto_bool up = TcpClient.ok;
+        const proto_bool up = TcpClientV.ok;
         TcpClient.is_closed(protocore_tcp_client_span());
-        return up && !TcpClient.ok;
+        return up && !TcpClientV.ok;
     }
 #endif
-    ConnPool.slot = h;
+    ConnPoolV.slot = h;
     ConnPool.active(protocore_conn_pool_span());
-    return ConnPool.ok;
+    return ConnPoolV.ok;
 }
 
 /** @brief Put @p len bytes of framed packet on slot @p i's stream. */
@@ -109,16 +109,16 @@ static proto_bool stream_write(uint8_t i, const uint8_t *buf, size_t len)
 #if PROTOCORE_NEED_CLIENT
     if (SSH_NETWORK_CTX(protocore_ssh_network_span())->kind[i] == SSH_STREAM_DIALED)
     {
-        TcpClient.cid = (int)h;
-        TcpClient.io.data = buf;
-        TcpClient.io.len = len;
+        TcpClientV.cid = (int)h;
+        TcpClientV.io.data = buf;
+        TcpClientV.io.len = len;
         TcpClient.send(protocore_tcp_client_span());
-        return TcpClient.ok;
+        return TcpClientV.ok;
     }
 #endif
-    ConnPool.slot = h;
-    ConnPool.io.data = buf;
-    ConnPool.io.len = (proto_u16)len;
+    ConnPoolV.slot = h;
+    ConnPoolV.io.data = buf;
+    ConnPoolV.io.len = (proto_u16)len;
     ConnPool.send(protocore_conn_pool_span());
     ConnPool.flush(protocore_conn_pool_span());
     return PROTO_TRUE;
@@ -172,9 +172,9 @@ void protocore_ssh_network_emit(uint8_t *restrict work)
             return;
         }
 #endif
-        ConnPool.slot = SSH_NETWORK_CTX(protocore_ssh_network_span())->conn_for_ssh[i];
+        ConnPoolV.slot = SSH_NETWORK_CTX(protocore_ssh_network_span())->conn_for_ssh[i];
         ConnPool.owner(protocore_conn_pool_span());
-        Workers.worker_id = ConnPool.u8;
+        Workers.worker_id = ConnPoolV.u8;
         Workers.wake(protocore_worker_span());
     }
 }
@@ -187,14 +187,14 @@ void protocore_ssh_network_tx_drain(uint8_t *restrict work)
     const uint8_t conn_slot = SshNetworkV.conn_slot;
     const uint8_t j = SshNetworkV.ssh_slot;
     SshPacketState *pkt = &ssh_pkt[j];
-    ConnPool.slot = conn_slot;
+    ConnPoolV.slot = conn_slot;
     ConnPool.active(protocore_conn_pool_span());
-    if (!pkt->tx_ready || !ConnPool.ok)
+    if (!pkt->tx_ready || !ConnPoolV.ok)
     {
         return;
     }
     ConnPool.sndbuf(protocore_conn_pool_span());
-    size_t room = (size_t)ConnPool.u16;
+    size_t room = (size_t)ConnPoolV.u16;
     size_t n = pkt->tx_len - pkt->tx_off;
     if (n > room)
     {
@@ -202,10 +202,10 @@ void protocore_ssh_network_tx_drain(uint8_t *restrict work)
     }
     if (n > 0)
     {
-        ConnPool.io.data = pkt->tx_wire + pkt->tx_off;
-        ConnPool.io.len = (proto_u16)n;
+        ConnPoolV.io.data = pkt->tx_wire + pkt->tx_off;
+        ConnPoolV.io.len = (proto_u16)n;
         ConnPool.send(protocore_conn_pool_span());
-        if (ConnPool.ok)
+        if (ConnPoolV.ok)
         {
             ConnPool.flush(protocore_conn_pool_span());
             pkt->tx_off += n;
@@ -385,17 +385,17 @@ void ssh_net_version_exchange_send(uint8_t i, uint8_t conn_slot)
 
     uint8_t *ident = slot + SSH_OFF_WIRE;
     size_t ilen = 0;
-    ConnPool.slot = conn_slot;
+    ConnPoolV.slot = conn_slot;
     ConnPool.active(protocore_conn_pool_span());
     SshTransportV.slot = i;
     SshTransportV.out_args.out = ident;
     SshTransportV.out_args.cap = SSH_WIRE_CAP;
     SshTransport.send_ident(protocore_ssh_transport_span());
     ilen = SshTransportV.out_args.out_len;
-    if (SshTransportV.i32 == 0 && ConnPool.ok)
+    if (SshTransportV.i32 == 0 && ConnPoolV.ok)
     {
-        ConnPool.io.data = ident;
-        ConnPool.io.len = (proto_u16)ilen;
+        ConnPoolV.io.data = ident;
+        ConnPoolV.io.len = (proto_u16)ilen;
         ConnPool.send(protocore_conn_pool_span());
         ConnPool.flush(protocore_conn_pool_span());
     }
@@ -434,11 +434,11 @@ void protocore_ssh_network_chan_open(uint8_t *restrict work)
         SshNetworkV.i32 = -1;
         return;
     }
-    TcpClient.dial.host = host;
-    TcpClient.dial.port = port;
-    TcpClient.dial.timeout_ms = timeout_ms;
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = port;
+    TcpClientV.dial.timeout_ms = timeout_ms;
     TcpClient.open(protocore_tcp_client_span());
-    int cid = TcpClient.i32;
+    int cid = TcpClientV.i32;
     if (cid < 0)
     {
         SshNetworkV.i32 = -1;
@@ -512,9 +512,9 @@ void protocore_ssh_network_chan_write(uint8_t *restrict work)
         SshNetworkV.i32 = -1;
         return;
     }
-    TcpClient.cid = *slot;
-    TcpClient.io.data = data;
-    TcpClient.io.len = len;
+    TcpClientV.cid = *slot;
+    TcpClientV.io.data = data;
+    TcpClientV.io.len = len;
     TcpClient.send(protocore_tcp_client_span());
     SshNetworkV.i32 = (int)len;
 }
@@ -532,11 +532,11 @@ void protocore_ssh_network_chan_read(uint8_t *restrict work)
         SshNetworkV.n = 0;
         return;
     }
-    TcpClient.cid = *slot;
-    TcpClient.io.buf = out;
-    TcpClient.io.cap = cap;
+    TcpClientV.cid = *slot;
+    TcpClientV.io.buf = out;
+    TcpClientV.io.cap = cap;
     TcpClient.read(protocore_tcp_client_span());
-    SshNetworkV.n = TcpClient.n;
+    SshNetworkV.n = TcpClientV.n;
     return;
 }
 
@@ -552,11 +552,11 @@ void protocore_ssh_network_chan_drained(uint8_t *restrict work)
         SshNetworkV.ok = PROTO_TRUE;
         return;
     }
-    TcpClient.cid = *slot;
+    TcpClientV.cid = *slot;
     TcpClient.is_closed(protocore_tcp_client_span());
-    const proto_bool gone = TcpClient.ok;
+    const proto_bool gone = TcpClientV.ok;
     TcpClient.available(protocore_tcp_client_span());
-    SshNetworkV.ok = gone && TcpClient.n == 0;
+    SshNetworkV.ok = gone && TcpClientV.n == 0;
 }
 
 void protocore_ssh_network_chan_avail(uint8_t *restrict work)
@@ -570,9 +570,9 @@ void protocore_ssh_network_chan_avail(uint8_t *restrict work)
         SshNetworkV.n = 0;
         return;
     }
-    TcpClient.cid = *slot;
+    TcpClientV.cid = *slot;
     TcpClient.available(protocore_tcp_client_span());
-    SshNetworkV.n = TcpClient.n;
+    SshNetworkV.n = TcpClientV.n;
     return;
 }
 
@@ -586,7 +586,7 @@ void protocore_ssh_network_chan_close(uint8_t *restrict work)
     {
         return;
     }
-    TcpClient.cid = *slot;
+    TcpClientV.cid = *slot;
     TcpClient.close(protocore_tcp_client_span());
     *slot = -1;
 }

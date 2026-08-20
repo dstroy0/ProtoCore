@@ -112,29 +112,66 @@ typedef struct
     PowerPlanArgs plan_args;
     PowerOutArgs out_args;
     PowerCfg *cfg_out;
-
     PowerPlan plan;
     proto_bool ok;
     size_t n;
     int16_t temp_c;
     uint16_t mhz;
+#if PROTOCORE_HAS_VENDOR_PM
+#endif
+#if PROTOCORE_HAS_VENDOR_BT
+#endif
+} PowerVars;
 
+/** @brief The operands and the outcome. */
+extern PowerVars PowerV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const defaults)(uint8_t *restrict work);
     void (*const decide)(uint8_t *restrict work);
     void (*const json)(uint8_t *restrict work);
-#if PROTOCORE_HAS_VENDOR_PM
     void (*const brownout)(uint8_t *restrict work);
     void (*const die_temp)(uint8_t *restrict work);
     void (*const cpu_mhz)(uint8_t *restrict work);
     void (*const apply)(uint8_t *restrict work);
-#endif
-#if PROTOCORE_HAS_VENDOR_BT
     void (*const gate_bt)(uint8_t *restrict work);
-#endif
 } PowerMgmtNs;
 
-/** @brief The one symbol this module exports. */
-extern PowerMgmtNs Power;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in PowerV or a region of the borrow at a fixed offset.
+void protocore_power_defaults(uint8_t *restrict work);
+void protocore_power_decide(uint8_t *restrict work);
+void protocore_power_json(uint8_t *restrict work);
+#if PROTOCORE_HAS_VENDOR_PM
+void protocore_power_brownout(uint8_t *restrict work);
+void protocore_power_die_temp(uint8_t *restrict work);
+void protocore_power_cpu_mhz(uint8_t *restrict work);
+void protocore_power_apply(uint8_t *restrict work);
+#endif
+#if PROTOCORE_HAS_VENDOR_BT
+void protocore_power_gate_bt(uint8_t *restrict work);
+#endif
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Power.defaults(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const PowerMgmtNs Power __attribute__((unused)) = {
+    .defaults = protocore_power_defaults,
+    .decide = protocore_power_decide,
+    .json = protocore_power_json,
+#if PROTOCORE_HAS_VENDOR_PM
+    .brownout = protocore_power_brownout,
+    .die_temp = protocore_power_die_temp,
+    .cpu_mhz = protocore_power_cpu_mhz,
+    .apply = protocore_power_apply,
+#endif
+#if PROTOCORE_HAS_VENDOR_BT
+    .gate_bt = protocore_power_gate_bt,
+#endif
+};
 
 /**
  * @brief The PROTOCORE_POWER_MGMT_BORROW bytes this module's state lives in.

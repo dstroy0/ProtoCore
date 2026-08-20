@@ -9,7 +9,7 @@
 
 #include "services/net/snmp/snmp_notify/snmp_notify.h"
 #include "mmgr/protostr/protostr.h" // str.len: the community length, bounded
-#include "mmgr/secure/secure.h"   // the persistent end this module's key material is taken from
+#include "mmgr/secure/secure.h"     // the persistent end this module's key material is taken from
 
 static uint8_t snmp_ber_work[16]; // the borrow an entry takes; SnmpBer never reads it
 
@@ -264,12 +264,12 @@ static void send_built(uint8_t *restrict work)
         SnmpNotify.ok = PROTO_FALSE;
         return;
     }
-    UdpClient.dst = &dst;
-    UdpClient.dst_port = SnmpNotify.dst.port;
-    UdpClient.data = SNMP_NOTIFY_CTX(work)->tx;
-    UdpClient.len = n;
+    UdpClientV.dst = &dst;
+    UdpClientV.dst_port = SnmpNotify.dst.port;
+    UdpClientV.data = SNMP_NOTIFY_CTX(work)->tx;
+    UdpClientV.len = n;
     UdpClient.sendto(protocore_udp_client_span());
-    SnmpNotify.ok = UdpClient.ok;
+    SnmpNotify.ok = UdpClientV.ok;
 }
 #endif // PROTOCORE_HAS_NET_STACK
 

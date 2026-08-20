@@ -229,7 +229,7 @@ int32_t proto_begin(const WebServerConfig *cfg)
     // The connection's idle deadline is its lifetime, which this layer owns; the pool is told the
     // number rather than handed the config to read it out of.
     SessionV.conn_timeout_ms = (cfg != NULL) ? cfg->conn_timeout_ms : CONN_TIMEOUT_MS;
-    ConnPool.life.conn_timeout_ms = SessionV.conn_timeout_ms;
+    ConnPoolV.life.conn_timeout_ms = SessionV.conn_timeout_ms;
     ConnPool.init(protocore_conn_pool_span());
 #if PROTOCORE_ENABLE_AUTH
     // Fresh server keying secret per begin(). The secret it writes lives in the auth module's own
@@ -262,12 +262,12 @@ int32_t proto_begin(const WebServerConfig *cfg)
 #endif
     for (uint8_t i = 0; i < s_inst.listener_count; i++)
     {
-        TcpListener.idx = i;
-        TcpListener.bind.port = s_inst.listen_ports[i];
-        TcpListener.bind.proto = s_inst.listen_protos[i];
-        TcpListener.bind.tls = s_inst.listen_tls[i];
+        TcpListenerV.idx = i;
+        TcpListenerV.bind.port = s_inst.listen_ports[i];
+        TcpListenerV.bind.proto = s_inst.listen_protos[i];
+        TcpListenerV.bind.tls = s_inst.listen_tls[i];
         TcpListener.add(protocore_tcp_listener_span());
-        if (TcpListener.i32 < 0)
+        if (TcpListenerV.i32 < 0)
         {
             return (int32_t)PROTOCORE_ERR_LISTEN_FAILED;
         }
@@ -694,7 +694,7 @@ void service_once(int worker_id)
         // Ack-on-consume: reopen the TCP receive window by whatever any consumer
         // (HTTP/WS/TLS/service) drained from this slot's ring on the previous pass.
         // Transport owns the window math; we just nudge it once per slot per loop.
-        ConnPool.slot = i;
+        ConnPoolV.slot = i;
         ConnPool.ack_consumed(protocore_conn_pool_span());
 
         // Every protocol - HTTP included - is pumped through the one uniform ProtoHandler.on_poll

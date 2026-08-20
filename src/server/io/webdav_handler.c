@@ -301,9 +301,9 @@ static proto_bool dav_stream_put_begin(HttpReq *req)
         {
             continue;
         }
-        ConnPool.slot = slot;
+        ConnPoolV.slot = slot;
         ConnPool.iface(protocore_conn_pool_span());
-        if (r->iface_filter != PROTOCORE_IF_ANY && r->iface_filter != ConnPool.if_kind)
+        if (r->iface_filter != PROTOCORE_IF_ANY && r->iface_filter != ConnPoolV.if_kind)
         {
             continue;
         }
@@ -439,9 +439,9 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
 
 static void dav_send_status(uint8_t slot_id, int code, const char *extra_headers)
 {
-    ConnPool.slot = slot_id;
+    ConnPoolV.slot = slot_id;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok)
+    if (!ConnPoolV.ok)
     {
         HttpParserV.reset_args.req = &http_pool[slot_id];
         HttpParser.reset(protocore_http_parser_span());
@@ -464,9 +464,9 @@ static void dav_send_status(uint8_t slot_id, int code, const char *extra_headers
     Sb.put(&sb_header, cl);
     Sb.put(&sb_header, "\r\n");
     int hlen = (int)Sb.finish(&sb_header);
-    ConnPool.slot = slot_id;
-    ConnPool.io.data = header;
-    ConnPool.io.len = (proto_u16)hlen;
+    ConnPoolV.slot = slot_id;
+    ConnPoolV.io.data = header;
+    ConnPoolV.io.len = (proto_u16)hlen;
     ConnPool.send(protocore_conn_pool_span());
     protocore_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_FALSE);
 }
@@ -491,10 +491,10 @@ uint8_t *protocore_webdav_handler_span(void)
     return s_own.span;
 }
 
-static void webdav_handler_try_serve_dav(uint8_t *restrict work)
+void protocore_dav_try_serve_dav(uint8_t *restrict work)
 {
-    uint8_t slot_id = Dav.try_serve_dav_args.slot_id;
-    HttpReq *req = Dav.try_serve_dav_args.req;
+    uint8_t slot_id = DavV.try_serve_dav_args.slot_id;
+    HttpReq *req = DavV.try_serve_dav_args.req;
 
     HttpRoutes.count(protocore_http_route_span());
     for (uint8_t i = 0; i < HttpRoutesV.value; i++)
@@ -516,17 +516,17 @@ static void webdav_handler_try_serve_dav(uint8_t *restrict work)
         {
             continue;
         }
-        ConnPool.slot = slot_id;
+        ConnPoolV.slot = slot_id;
         ConnPool.iface(protocore_conn_pool_span());
-        if (r->iface_filter != PROTOCORE_IF_ANY && r->iface_filter != ConnPool.if_kind)
+        if (r->iface_filter != PROTOCORE_IF_ANY && r->iface_filter != ConnPoolV.if_kind)
         {
             continue;
         }
         serve_dav_request(work, slot_id, req, r);
-        Dav.ok = PROTO_TRUE;
+        DavV.ok = PROTO_TRUE;
         return;
     }
-    Dav.ok = PROTO_FALSE;
+    DavV.ok = PROTO_FALSE;
 }
 
 static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, const HttpRoute *r)
@@ -1188,7 +1188,8 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
         return;
     }
 }
-DavNs Dav = {.try_serve_dav = webdav_handler_try_serve_dav};
+/** @brief The operands and the outcome. */
+DavVars DavV;
 
 PROTOCORE_END_DECLS
 

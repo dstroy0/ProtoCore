@@ -42,7 +42,7 @@ void setUp(void)
 // Release the UDP/123 bind after every case, so a case that stops early leaves the port free.
 void tearDown(void)
 {
-    UdpListener.port = PROTOCORE_NTP_PORT;
+    UdpListenerV.port = PROTOCORE_NTP_PORT;
     UdpListener.close(protocore_udp_listener_span());
 }
 

@@ -110,9 +110,9 @@ static void find_conn(uint8_t *restrict work)
 
 static void command_send(uint8_t slot, const void *data, size_t n)
 {
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok ||
+    if (!ConnPoolV.ok ||
         // fixed nonzero literal length. (Marker must sit on this line: gcov attributes
         // the whole multi-line condition's branches to the "if" line, not the operand's
         // own line - a marker on the next line silently fails to exclude anything.)
@@ -120,8 +120,8 @@ static void command_send(uint8_t slot, const void *data, size_t n)
     {
         return;
     }
-    ConnPool.io.data = data;
-    ConnPool.io.len = (proto_u16)n;
+    ConnPoolV.io.data = data;
+    ConnPoolV.io.len = (proto_u16)n;
     ConnPool.send(protocore_conn_pool_span());
     ConnPool.flush(protocore_conn_pool_span());
 }
@@ -132,9 +132,9 @@ static void command_send(uint8_t slot, const void *data, size_t n)
 // (IAC WILL/DO/...) use command_send directly - they send IAC intentionally.
 static void data_send(uint8_t slot, const void *data, size_t n)
 {
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok || n == 0)
+    if (!ConnPoolV.ok || n == 0)
     {
         return;
     }
@@ -146,20 +146,20 @@ static void data_send(uint8_t slot, const void *data, size_t n)
         {
             if (i > start)
             {
-                ConnPool.io.data = b + start;
-                ConnPool.io.len = (proto_u16)(i - start);
+                ConnPoolV.io.data = b + start;
+                ConnPoolV.io.len = (proto_u16)(i - start);
                 ConnPool.send(protocore_conn_pool_span());
             }
-            ConnPool.io.data = "\xff\xff"; // doubled IAC
-            ConnPool.io.len = 2;
+            ConnPoolV.io.data = "\xff\xff"; // doubled IAC
+            ConnPoolV.io.len = 2;
             ConnPool.send(protocore_conn_pool_span());
             start = i + 1;
         }
     }
     if (n > start)
     {
-        ConnPool.io.data = b + start;
-        ConnPool.io.len = (proto_u16)(n - start);
+        ConnPoolV.io.data = b + start;
+        ConnPoolV.io.len = (proto_u16)(n - start);
         ConnPool.send(protocore_conn_pool_span());
     }
     ConnPool.flush(protocore_conn_pool_span());
@@ -183,7 +183,7 @@ static void accept_conn(uint8_t *restrict work)
     if (!t)
     {
         // No Telnet capacity: drop the connection (transport owns the teardown).
-        ConnPool.slot = Telnet.slot;
+        ConnPoolV.slot = Telnet.slot;
         ConnPool.close(protocore_conn_pool_span());
         return;
     }
@@ -278,12 +278,12 @@ static void rx(uint8_t *restrict work)
     const uint8_t slot = Telnet.slot;
     Nvt *t = TELNET_CTX(work)->conn;
 
-    ConnPool.slot = slot;
-    ConnPool.io.buf = TELNET_CTX(work)->rx;
-    ConnPool.io.cap = sizeof(TELNET_CTX(work)->rx);
+    ConnPoolV.slot = slot;
+    ConnPoolV.io.buf = TELNET_CTX(work)->rx;
+    ConnPoolV.io.cap = sizeof(TELNET_CTX(work)->rx);
     ConnPool.read(protocore_conn_pool_span());
 
-    for (size_t i = 0; i < ConnPool.n; i++)
+    for (size_t i = 0; i < ConnPoolV.n; i++)
     {
         const uint8_t b = TELNET_CTX(work)->rx[i];
         switch (t->st)

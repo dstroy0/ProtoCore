@@ -58,9 +58,9 @@ static void h_temp(const CoapRequest *req, CoapResponse *resp)
 void setUp()
 {
     Coap.reset(protocore_coap_span());
-    Coap.resource.path = "/temp";
-    Coap.resource.methods = COAP_ALLOW_GET;
-    Coap.resource.handler = h_temp;
+    CoapV.resource.path = "/temp";
+    CoapV.resource.methods = COAP_ALLOW_GET;
+    CoapV.resource.handler = h_temp;
     Coap.add_resource(protocore_coap_span());
 }
 void tearDown()
@@ -427,13 +427,13 @@ void test_coap_over_dtls(void)
     TEST_ASSERT_TRUE(ar > 0);
 
     uint8_t out[256];
-    Coaps.conn = &g_dtls;
-    Coaps.dgram.data = app_rec;
-    Coaps.dgram.len = ar;
-    Coaps.dgram.out = out;
-    Coaps.dgram.out_cap = sizeof(out);
+    CoapsV.conn = &g_dtls;
+    CoapsV.dgram.data = app_rec;
+    CoapsV.dgram.len = ar;
+    CoapsV.dgram.out = out;
+    CoapsV.dgram.out_cap = sizeof(out);
     Coaps.process(coaps_work);
-    int on = Coaps.i32;
+    int on = CoapsV.i32;
     TEST_ASSERT_TRUE(on > 0);
 
     uint8_t coap_resp[256];
@@ -479,20 +479,20 @@ void test_coap_over_dtls_replay_dropped(void)
     DtlsRecord.protect(dtls_record_work);
     size_t ar = DtlsRecordV.n;
     uint8_t out[256];
-    Coaps.conn = &g_dtls;
-    Coaps.dgram.data = app_rec;
-    Coaps.dgram.len = ar;
-    Coaps.dgram.out = out;
-    Coaps.dgram.out_cap = sizeof(out);
+    CoapsV.conn = &g_dtls;
+    CoapsV.dgram.data = app_rec;
+    CoapsV.dgram.len = ar;
+    CoapsV.dgram.out = out;
+    CoapsV.dgram.out_cap = sizeof(out);
     Coaps.process(coaps_work);
-    TEST_ASSERT_TRUE(Coaps.i32 > 0);
-    Coaps.conn = &g_dtls;
-    Coaps.dgram.data = app_rec;
-    Coaps.dgram.len = ar;
-    Coaps.dgram.out = out;
-    Coaps.dgram.out_cap = sizeof(out);
+    TEST_ASSERT_TRUE(CoapsV.i32 > 0);
+    CoapsV.conn = &g_dtls;
+    CoapsV.dgram.data = app_rec;
+    CoapsV.dgram.len = ar;
+    CoapsV.dgram.out = out;
+    CoapsV.dgram.out_cap = sizeof(out);
     Coaps.process(coaps_work);
-    TEST_ASSERT_EQUAL_INT(0, Coaps.i32);
+    TEST_ASSERT_EQUAL_INT(0, CoapsV.i32);
 }
 
 void test_coaps_no_coap_response(void)
@@ -516,13 +516,13 @@ void test_coaps_no_coap_response(void)
     TEST_ASSERT_TRUE(ar > 0);
 
     uint8_t out[256];
-    Coaps.conn = &g_dtls;
-    Coaps.dgram.data = app_rec;
-    Coaps.dgram.len = ar;
-    Coaps.dgram.out = out;
-    Coaps.dgram.out_cap = sizeof(out);
+    CoapsV.conn = &g_dtls;
+    CoapsV.dgram.data = app_rec;
+    CoapsV.dgram.len = ar;
+    CoapsV.dgram.out = out;
+    CoapsV.dgram.out_cap = sizeof(out);
     Coaps.process(coaps_work);
-    TEST_ASSERT_EQUAL_INT(0, Coaps.i32);
+    TEST_ASSERT_EQUAL_INT(0, CoapsV.i32);
 }
 
 void test_coaps_non_app_record(void)
@@ -532,20 +532,20 @@ void test_coaps_non_app_record(void)
 
     uint8_t out[256];
     uint8_t byte[1] = {0x16};
-    Coaps.conn = &g_dtls;
-    Coaps.dgram.data = byte;
-    Coaps.dgram.len = 0;
-    Coaps.dgram.out = out;
-    Coaps.dgram.out_cap = sizeof(out);
+    CoapsV.conn = &g_dtls;
+    CoapsV.dgram.data = byte;
+    CoapsV.dgram.len = 0;
+    CoapsV.dgram.out = out;
+    CoapsV.dgram.out_cap = sizeof(out);
     Coaps.process(coaps_work);
-    TEST_ASSERT_EQUAL_INT(0, Coaps.i32);
-    Coaps.conn = &g_dtls;
-    Coaps.dgram.data = byte;
-    Coaps.dgram.len = 1;
-    Coaps.dgram.out = out;
-    Coaps.dgram.out_cap = sizeof(out);
+    TEST_ASSERT_EQUAL_INT(0, CoapsV.i32);
+    CoapsV.conn = &g_dtls;
+    CoapsV.dgram.data = byte;
+    CoapsV.dgram.len = 1;
+    CoapsV.dgram.out = out;
+    CoapsV.dgram.out_cap = sizeof(out);
     Coaps.process(coaps_work);
-    TEST_ASSERT_EQUAL_INT(0, Coaps.i32);
+    TEST_ASSERT_EQUAL_INT(0, CoapsV.i32);
     DtlsServerV.established_args.c = &g_dtls;
     DtlsServer.established(dtls_server_work);
     TEST_ASSERT_TRUE(DtlsServerV.ok);
@@ -561,13 +561,13 @@ void test_coaps_wrong_epoch_record(void)
     rec[0] = 0x22;
 
     uint8_t out[64];
-    Coaps.conn = &g_dtls;
-    Coaps.dgram.data = rec;
-    Coaps.dgram.len = sizeof(rec);
-    Coaps.dgram.out = out;
-    Coaps.dgram.out_cap = sizeof(out);
+    CoapsV.conn = &g_dtls;
+    CoapsV.dgram.data = rec;
+    CoapsV.dgram.len = sizeof(rec);
+    CoapsV.dgram.out = out;
+    CoapsV.dgram.out_cap = sizeof(out);
     Coaps.process(coaps_work);
-    TEST_ASSERT_EQUAL_INT(0, Coaps.i32);
+    TEST_ASSERT_EQUAL_INT(0, CoapsV.i32);
 }
 
 void test_coaps_forwards_handshake(void)
@@ -623,13 +623,13 @@ void test_coaps_forwards_handshake(void)
     DtlsServer.established(dtls_server_work);
     TEST_ASSERT_FALSE(DtlsServerV.ok);
     uint8_t flight[2048];
-    Coaps.conn = &g_dtls;
-    Coaps.dgram.data = ch_rec;
-    Coaps.dgram.len = ch_rl;
-    Coaps.dgram.out = flight;
-    Coaps.dgram.out_cap = sizeof(flight);
+    CoapsV.conn = &g_dtls;
+    CoapsV.dgram.data = ch_rec;
+    CoapsV.dgram.len = ch_rl;
+    CoapsV.dgram.out = flight;
+    CoapsV.dgram.out_cap = sizeof(flight);
     Coaps.process(coaps_work);
-    int fl = Coaps.i32;
+    int fl = CoapsV.i32;
     TEST_ASSERT_TRUE(fl > 0);
 }
 

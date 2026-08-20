@@ -190,9 +190,9 @@ static void format(uint8_t *restrict work)
 static void write_event(uint8_t *restrict work)
 {
     Sse.ok = PROTO_FALSE;
-    ConnPool.slot = Sse.stream->slot_id;
+    ConnPoolV.slot = Sse.stream->slot_id;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok)
+    if (!ConnPoolV.ok)
     {
         return;
     }
@@ -205,8 +205,8 @@ static void write_event(uint8_t *restrict work)
         return;
     }
 
-    ConnPool.io.data = SSE_CTX(work)->buf;
-    ConnPool.io.len = (proto_u16)Sse.n;
+    ConnPoolV.io.data = SSE_CTX(work)->buf;
+    ConnPoolV.io.len = (proto_u16)Sse.n;
     ConnPool.send(protocore_conn_pool_span());
     Sse.ok = PROTO_TRUE;
 }

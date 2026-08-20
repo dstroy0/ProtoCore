@@ -38,33 +38,33 @@ static void logbuf_trap_noop(uint8_t level, const char *line)
 /** @brief Store `<level> msg` in the next ring slot. */
 static void log_put(uint8_t level, const char *msg)
 {
-    Logbuf.line.level = level;
-    Logbuf.line.msg = msg;
+    LogbufV.line.level = level;
+    LogbufV.line.msg = msg;
     Logbuf.put(protocore_logbuf_span());
 }
 
 /** @brief The line at oldest-first index @p i. */
 static const char *log_at(uint16_t i)
 {
-    Logbuf.read.i = i;
+    LogbufV.read.i = i;
     Logbuf.at(protocore_logbuf_span());
-    return Logbuf.text;
+    return LogbufV.text;
 }
 
 /** @brief Write every held line into @p out, oldest-first, newline-separated; the characters written. */
 static int log_dump(char *out, size_t cap)
 {
-    Logbuf.read.out = out;
-    Logbuf.read.cap = cap;
+    LogbufV.read.out = out;
+    LogbufV.read.cap = cap;
     Logbuf.dump(protocore_logbuf_span());
-    return Logbuf.n;
+    return LogbufV.n;
 }
 
 /** @brief Fire @p cb for a line logged at @p threshold or above; 0xFF disables. */
 static void log_set_trap(uint8_t threshold, protocore_log_trap_fn cb)
 {
-    Logbuf.trap.threshold = threshold;
-    Logbuf.trap.cb = cb;
+    LogbufV.trap.threshold = threshold;
+    LogbufV.trap.cb = cb;
     Logbuf.set_trap(protocore_logbuf_span());
 }
 

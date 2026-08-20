@@ -171,11 +171,11 @@ static void server_send(uint8_t *restrict work, const char *ip, uint16_t port, c
     Ip.parse(ip_work);
     if (Ip.ok)
     {
-        UdpListener.port = QSRV_CTX(work)->port;
-        UdpListener.send_args.dst = &dst;
-        UdpListener.send_args.dst_port = port;
-        UdpListener.send_args.data = data;
-        UdpListener.send_args.len = len;
+        UdpListenerV.port = QSRV_CTX(work)->port;
+        UdpListenerV.send_args.dst = &dst;
+        UdpListenerV.send_args.dst_port = port;
+        UdpListenerV.send_args.data = data;
+        UdpListenerV.send_args.len = len;
         UdpListener.sendto(protocore_udp_listener_span());
     }
 }
@@ -453,12 +453,12 @@ static void udp_ingest_cb(const uint8_t *data, size_t len, const struct protocor
     (void)ctx;
     char ip[16];
     uint16_t port = 0;
-    UdpListener.peer_args.peer = peer;
-    UdpListener.peer_args.ip_out = ip;
-    UdpListener.peer_args.ip_cap = sizeof ip;
-    UdpListener.peer_args.port_out = &port;
+    UdpListenerV.peer_args.peer = peer;
+    UdpListenerV.peer_args.ip_out = ip;
+    UdpListenerV.peer_args.ip_cap = sizeof ip;
+    UdpListenerV.peer_args.port_out = &port;
     UdpListener.peer_addr(protocore_udp_listener_span());
-    if (!UdpListener.ok)
+    if (!UdpListenerV.ok)
     {
         return;
     }
@@ -485,11 +485,11 @@ static void begin(uint8_t *restrict work)
     QSRV_CTX(work)->ring_tail = 0;
     QSRV_CTX(work)->next_id = 1;
     QSRV_CTX(work)->running = PROTO_TRUE;
-    UdpListener.port = QSRV_CTX(work)->port;
-    UdpListener.bind.handler = udp_ingest_cb;
-    UdpListener.bind.handler_ctx = NULL;
+    UdpListenerV.port = QSRV_CTX(work)->port;
+    UdpListenerV.bind.handler = udp_ingest_cb;
+    UdpListenerV.bind.handler_ctx = NULL;
     UdpListener.listen(protocore_udp_listener_span());
-    QuicServer.ok = UdpListener.ok;
+    QuicServer.ok = UdpListenerV.ok;
 }
 
 static void poll(uint8_t *restrict work)
@@ -555,7 +555,7 @@ static void active_conns(uint8_t *restrict work)
 
 static void stop(uint8_t *restrict work)
 {
-    UdpListener.port = QSRV_CTX(work)->port;
+    UdpListenerV.port = QSRV_CTX(work)->port;
     UdpListener.close(protocore_udp_listener_span()); // drop the bind first: nothing more reaches the ring
     QSRV_CTX(work)->running = PROTO_FALSE;
     for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)

@@ -28,12 +28,12 @@ static uint8_t ota_rollback_work[16]; // the borrow an entry takes; OtaRollback 
 static protocore_ota_action ota_decide(uint8_t img_state, proto_bool self_test_ok, uint32_t ms_since_boot,
                                        uint32_t window_ms)
 {
-    OtaRollback.decide_args.img_state = img_state;
-    OtaRollback.decide_args.self_test_ok = self_test_ok;
-    OtaRollback.decide_args.ms_since_boot = ms_since_boot;
-    OtaRollback.decide_args.window_ms = window_ms;
+    OtaRollbackV.decide_args.img_state = img_state;
+    OtaRollbackV.decide_args.self_test_ok = self_test_ok;
+    OtaRollbackV.decide_args.ms_since_boot = ms_since_boot;
+    OtaRollbackV.decide_args.window_ms = window_ms;
     OtaRollback.decide(ota_rollback_work);
-    return OtaRollback.action;
+    return OtaRollbackV.action;
 }
 
 void dbench_run(void)

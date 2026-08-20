@@ -149,14 +149,14 @@ void protocore_cia402_sdo_set_controlword(uint8_t *restrict work)
 
     uint8_t d[2];
     endian.wr16le(d, controlword);
-    Canopen.build_sdo_write_args.out = out;
-    Canopen.build_sdo_write_args.node_id = node;
-    Canopen.build_sdo_write_args.index = CIA402_OD_CONTROLWORD;
-    Canopen.build_sdo_write_args.sub = 0;
-    Canopen.build_sdo_write_args.data = d;
-    Canopen.build_sdo_write_args.len = 2;
+    CanopenV.build_sdo_write_args.out = out;
+    CanopenV.build_sdo_write_args.node_id = node;
+    CanopenV.build_sdo_write_args.index = CIA402_OD_CONTROLWORD;
+    CanopenV.build_sdo_write_args.sub = 0;
+    CanopenV.build_sdo_write_args.data = d;
+    CanopenV.build_sdo_write_args.len = 2;
     Canopen.build_sdo_write(canopen_work);
-    Cia402V.ok = Canopen.ok;
+    Cia402V.ok = CanopenV.ok;
 }
 
 void protocore_cia402_sdo_set_mode(uint8_t *restrict work)
@@ -167,14 +167,14 @@ void protocore_cia402_sdo_set_mode(uint8_t *restrict work)
     Cia402Mode mode = Cia402V.sdo_set_mode_args.mode;
 
     uint8_t d = (uint8_t)(int8_t)mode; // wire byte
-    Canopen.build_sdo_write_args.out = out;
-    Canopen.build_sdo_write_args.node_id = node;
-    Canopen.build_sdo_write_args.index = CIA402_OD_MODES_OF_OPERATION;
-    Canopen.build_sdo_write_args.sub = 0;
-    Canopen.build_sdo_write_args.data = &d;
-    Canopen.build_sdo_write_args.len = 1;
+    CanopenV.build_sdo_write_args.out = out;
+    CanopenV.build_sdo_write_args.node_id = node;
+    CanopenV.build_sdo_write_args.index = CIA402_OD_MODES_OF_OPERATION;
+    CanopenV.build_sdo_write_args.sub = 0;
+    CanopenV.build_sdo_write_args.data = &d;
+    CanopenV.build_sdo_write_args.len = 1;
     Canopen.build_sdo_write(canopen_work);
-    Cia402V.ok = Canopen.ok;
+    Cia402V.ok = CanopenV.ok;
 }
 
 void protocore_cia402_sdo_set_target_position(uint8_t *restrict work)
@@ -186,14 +186,14 @@ void protocore_cia402_sdo_set_target_position(uint8_t *restrict work)
 
     uint8_t d[4];
     endian.wr32le(d, (uint32_t)position);
-    Canopen.build_sdo_write_args.out = out;
-    Canopen.build_sdo_write_args.node_id = node;
-    Canopen.build_sdo_write_args.index = CIA402_OD_TARGET_POSITION;
-    Canopen.build_sdo_write_args.sub = 0;
-    Canopen.build_sdo_write_args.data = d;
-    Canopen.build_sdo_write_args.len = 4;
+    CanopenV.build_sdo_write_args.out = out;
+    CanopenV.build_sdo_write_args.node_id = node;
+    CanopenV.build_sdo_write_args.index = CIA402_OD_TARGET_POSITION;
+    CanopenV.build_sdo_write_args.sub = 0;
+    CanopenV.build_sdo_write_args.data = d;
+    CanopenV.build_sdo_write_args.len = 4;
     Canopen.build_sdo_write(canopen_work);
-    Cia402V.ok = Canopen.ok;
+    Cia402V.ok = CanopenV.ok;
 }
 
 void protocore_cia402_sdo_set_target_velocity(uint8_t *restrict work)
@@ -205,14 +205,14 @@ void protocore_cia402_sdo_set_target_velocity(uint8_t *restrict work)
 
     uint8_t d[4];
     endian.wr32le(d, (uint32_t)velocity);
-    Canopen.build_sdo_write_args.out = out;
-    Canopen.build_sdo_write_args.node_id = node;
-    Canopen.build_sdo_write_args.index = CIA402_OD_TARGET_VELOCITY;
-    Canopen.build_sdo_write_args.sub = 0;
-    Canopen.build_sdo_write_args.data = d;
-    Canopen.build_sdo_write_args.len = 4;
+    CanopenV.build_sdo_write_args.out = out;
+    CanopenV.build_sdo_write_args.node_id = node;
+    CanopenV.build_sdo_write_args.index = CIA402_OD_TARGET_VELOCITY;
+    CanopenV.build_sdo_write_args.sub = 0;
+    CanopenV.build_sdo_write_args.data = d;
+    CanopenV.build_sdo_write_args.len = 4;
     Canopen.build_sdo_write(canopen_work);
-    Cia402V.ok = Canopen.ok;
+    Cia402V.ok = CanopenV.ok;
 }
 
 void protocore_cia402_sdo_set_target_torque(uint8_t *restrict work)
@@ -224,14 +224,14 @@ void protocore_cia402_sdo_set_target_torque(uint8_t *restrict work)
 
     uint8_t d[2];
     endian.wr16le(d, (uint16_t)torque);
-    Canopen.build_sdo_write_args.out = out;
-    Canopen.build_sdo_write_args.node_id = node;
-    Canopen.build_sdo_write_args.index = CIA402_OD_TARGET_TORQUE;
-    Canopen.build_sdo_write_args.sub = 0;
-    Canopen.build_sdo_write_args.data = d;
-    Canopen.build_sdo_write_args.len = 2;
+    CanopenV.build_sdo_write_args.out = out;
+    CanopenV.build_sdo_write_args.node_id = node;
+    CanopenV.build_sdo_write_args.index = CIA402_OD_TARGET_TORQUE;
+    CanopenV.build_sdo_write_args.sub = 0;
+    CanopenV.build_sdo_write_args.data = d;
+    CanopenV.build_sdo_write_args.len = 2;
     Canopen.build_sdo_write(canopen_work);
-    Cia402V.ok = Canopen.ok;
+    Cia402V.ok = CanopenV.ok;
 }
 
 void protocore_cia402_sdo_read(uint8_t *restrict work)
@@ -242,12 +242,12 @@ void protocore_cia402_sdo_read(uint8_t *restrict work)
     uint16_t index = Cia402V.sdo_read_args.index;
     uint8_t sub = Cia402V.sdo_read_args.sub;
 
-    Canopen.build_sdo_read_args.out = out;
-    Canopen.build_sdo_read_args.node_id = node;
-    Canopen.build_sdo_read_args.index = index;
-    Canopen.build_sdo_read_args.sub = sub;
+    CanopenV.build_sdo_read_args.out = out;
+    CanopenV.build_sdo_read_args.node_id = node;
+    CanopenV.build_sdo_read_args.index = index;
+    CanopenV.build_sdo_read_args.sub = sub;
     Canopen.build_sdo_read(canopen_work);
-    Cia402V.ok = Canopen.ok;
+    Cia402V.ok = CanopenV.ok;
 }
 
 // Validate an expedited SDO upload response and copy its inline payload into @p out (>= need
@@ -255,10 +255,10 @@ void protocore_cia402_sdo_read(uint8_t *restrict work)
 static proto_bool sdo_upload_bytes(const CanFrame *f, uint16_t want_index, uint8_t need, uint8_t *out)
 {
     CanopenSdoResponse resp;
-    Canopen.parse_sdo_response_args.f = f;
-    Canopen.parse_sdo_response_args.out = &resp;
+    CanopenV.parse_sdo_response_args.f = f;
+    CanopenV.parse_sdo_response_args.out = &resp;
     Canopen.parse_sdo_response(canopen_work);
-    if (!Canopen.ok)
+    if (!CanopenV.ok)
     {
         return PROTO_FALSE;
     }

@@ -419,9 +419,15 @@ typedef struct
     CanopenParseSdoSegmentArgs parse_sdo_segment_args;
     CanopenSdoReasmInitArgs sdo_reasm_init_args;
     CanopenSdoReasmFeedArgs sdo_reasm_feed_args;
-
     proto_bool ok;
+} CanopenVars;
 
+/** @brief The operands and the outcome. */
+extern CanopenVars CanopenV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_nmt)(uint8_t *restrict work);
     void (*const build_sync)(uint8_t *restrict work);
     void (*const build_time)(uint8_t *restrict work);
@@ -445,8 +451,57 @@ typedef struct
     void (*const sdo_reasm_feed)(uint8_t *restrict work);
 } CanopenNs;
 
-/** @brief The one symbol this module exports. */
-extern CanopenNs Canopen;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in CanopenV or a region of the borrow at a fixed offset.
+void protocore_canopen_build_nmt(uint8_t *restrict work);
+void protocore_canopen_build_sync(uint8_t *restrict work);
+void protocore_canopen_build_time(uint8_t *restrict work);
+void protocore_canopen_build_heartbeat(uint8_t *restrict work);
+void protocore_canopen_build_emcy(uint8_t *restrict work);
+void protocore_canopen_build_tpdo(uint8_t *restrict work);
+void protocore_canopen_build_rpdo(uint8_t *restrict work);
+void protocore_canopen_build_sdo_read(uint8_t *restrict work);
+void protocore_canopen_build_sdo_write(uint8_t *restrict work);
+void protocore_canopen_build_sdo_abort(uint8_t *restrict work);
+void protocore_canopen_parse(uint8_t *restrict work);
+void protocore_canopen_parse_emcy(uint8_t *restrict work);
+void protocore_canopen_parse_heartbeat(uint8_t *restrict work);
+void protocore_canopen_parse_time(uint8_t *restrict work);
+void protocore_canopen_parse_sdo_response(uint8_t *restrict work);
+void protocore_canopen_build_sdo_download_init(uint8_t *restrict work);
+void protocore_canopen_build_sdo_download_segment(uint8_t *restrict work);
+void protocore_canopen_build_sdo_upload_segment_req(uint8_t *restrict work);
+void protocore_canopen_parse_sdo_segment(uint8_t *restrict work);
+void protocore_canopen_sdo_reasm_init(uint8_t *restrict work);
+void protocore_canopen_sdo_reasm_feed(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Canopen.build_nmt(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const CanopenNs Canopen __attribute__((unused)) = {
+    .build_nmt = protocore_canopen_build_nmt,
+    .build_sync = protocore_canopen_build_sync,
+    .build_time = protocore_canopen_build_time,
+    .build_heartbeat = protocore_canopen_build_heartbeat,
+    .build_emcy = protocore_canopen_build_emcy,
+    .build_tpdo = protocore_canopen_build_tpdo,
+    .build_rpdo = protocore_canopen_build_rpdo,
+    .build_sdo_read = protocore_canopen_build_sdo_read,
+    .build_sdo_write = protocore_canopen_build_sdo_write,
+    .build_sdo_abort = protocore_canopen_build_sdo_abort,
+    .parse = protocore_canopen_parse,
+    .parse_emcy = protocore_canopen_parse_emcy,
+    .parse_heartbeat = protocore_canopen_parse_heartbeat,
+    .parse_time = protocore_canopen_parse_time,
+    .parse_sdo_response = protocore_canopen_parse_sdo_response,
+    .build_sdo_download_init = protocore_canopen_build_sdo_download_init,
+    .build_sdo_download_segment = protocore_canopen_build_sdo_download_segment,
+    .build_sdo_upload_segment_req = protocore_canopen_build_sdo_upload_segment_req,
+    .parse_sdo_segment = protocore_canopen_parse_sdo_segment,
+    .sdo_reasm_init = protocore_canopen_sdo_reasm_init,
+    .sdo_reasm_feed = protocore_canopen_sdo_reasm_feed,
+};
 
 PROTOCORE_END_DECLS
 

@@ -71,9 +71,9 @@ static_assert(IFACE_BRIDGE_HW_OFF_CTX % _Alignof(BridgeGlueCtx) == 0,
 
 static const BridgeRule *rule_for_slot(uint8_t *restrict work, uint8_t slot)
 {
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.listener_id(protocore_conn_pool_span());
-    uint8_t lid = ConnPool.u8;
+    uint8_t lid = ConnPoolV.u8;
     for (int i = 0; i < PROTOCORE_BRIDGE_MAX_RULES; i++)
     {
         if (IFACE_BRIDGE_HW_CTX(work)->binds[i].active && IFACE_BRIDGE_HW_CTX(work)->binds[i].listener_id == lid)
@@ -174,11 +174,11 @@ static void stream_sock_to_uart(uint8_t *restrict work, uint8_t slot, const Brid
 {
     for (;;)
     {
-        ConnPool.slot = slot;
-        ConnPool.io.buf = IFACE_BRIDGE_HW_CTX(work)->stream;
-        ConnPool.io.cap = sizeof IFACE_BRIDGE_HW_CTX(work)->stream;
+        ConnPoolV.slot = slot;
+        ConnPoolV.io.buf = IFACE_BRIDGE_HW_CTX(work)->stream;
+        ConnPoolV.io.cap = sizeof IFACE_BRIDGE_HW_CTX(work)->stream;
         ConnPool.read(protocore_conn_pool_span());
-        const size_t n = ConnPool.n;
+        const size_t n = ConnPoolV.n;
         if (n == 0)
         {
             break;
@@ -200,13 +200,13 @@ static void stream_uart_to_sock(uint8_t *restrict work, uint8_t slot, const Brid
         {
             return;
         }
-        ConnPool.slot = slot;
+        ConnPoolV.slot = slot;
         ConnPool.active(protocore_conn_pool_span());
-        if (ConnPool.ok)
+        if (ConnPoolV.ok)
         {
-            ConnPool.slot = slot;
-            ConnPool.io.data = IFACE_BRIDGE_HW_CTX(work)->stream;
-            ConnPool.io.len = (proto_u16)n;
+            ConnPoolV.slot = slot;
+            ConnPoolV.io.data = IFACE_BRIDGE_HW_CTX(work)->stream;
+            ConnPoolV.io.len = (proto_u16)n;
             ConnPool.send(protocore_conn_pool_span());
         }
     }
@@ -249,24 +249,24 @@ static void service_txn(uint8_t slot, const BridgeTarget *t)
     uint8_t rbuf[PROTOCORE_BRIDGE_TXN_MAX];
     for (;;)
     {
-        ConnPool.slot = slot;
+        ConnPoolV.slot = slot;
         ConnPool.available(protocore_conn_pool_span());
-        const size_t avail = ConnPool.n;
+        const size_t avail = ConnPoolV.n;
         if (avail < PROTOCORE_BRIDGE_TXN_HDR)
         {
             return; // header not yet complete
         }
         uint8_t hdr[PROTOCORE_BRIDGE_TXN_HDR];
-        ConnPool.slot = slot;
-        ConnPool.io.off = 0;
-        ConnPool.io.buf = hdr;
-        ConnPool.io.count = PROTOCORE_BRIDGE_TXN_HDR;
+        ConnPoolV.slot = slot;
+        ConnPoolV.io.off = 0;
+        ConnPoolV.io.buf = hdr;
+        ConnPoolV.io.count = PROTOCORE_BRIDGE_TXN_HDR;
         ConnPool.peek(protocore_conn_pool_span());
         uint16_t wlen = (uint16_t)((hdr[0] << 8) | hdr[1]);
         uint16_t rlen = (uint16_t)((hdr[2] << 8) | hdr[3]);
         if (wlen > PROTOCORE_BRIDGE_TXN_MAX || rlen > PROTOCORE_BRIDGE_TXN_MAX)
         {
-            ConnPool.slot = slot;
+            ConnPoolV.slot = slot;
             ConnPool.close(protocore_conn_pool_span()); // frame exceeds the configured cap - protocol error
             return;
         }
@@ -275,10 +275,10 @@ static void service_txn(uint8_t slot, const BridgeTarget *t)
         {
             return; // write payload not fully buffered yet
         }
-        ConnPool.slot = slot;
-        ConnPool.io.off = 0;
-        ConnPool.io.buf = frame;
-        ConnPool.io.count = need;
+        ConnPoolV.slot = slot;
+        ConnPoolV.io.off = 0;
+        ConnPoolV.io.buf = frame;
+        ConnPoolV.io.count = need;
         ConnPool.peek(protocore_conn_pool_span());
         uint16_t pw = 0;
         uint16_t pr = 0;
@@ -291,26 +291,26 @@ static void service_txn(uint8_t slot, const BridgeTarget *t)
         IfaceBridge.txn_parse(protocore_iface_bridge_span());
         if (IfaceBridgeV.n != need)
         {
-            ConnPool.slot = slot;
+            ConnPoolV.slot = slot;
             ConnPool.close(protocore_conn_pool_span()); // codec disagreed with the header - drop the connection
             return;
         }
-        ConnPool.slot = slot;
-        ConnPool.io.count = need;
+        ConnPoolV.slot = slot;
+        ConnPoolV.io.count = need;
         ConnPool.consume(protocore_conn_pool_span());
         if (!bus_txn(t, wd, pw, rbuf, pr))
         {
-            ConnPool.slot = slot;
+            ConnPoolV.slot = slot;
             ConnPool.close(protocore_conn_pool_span()); // bus fault
             return;
         }
-        ConnPool.slot = slot;
+        ConnPoolV.slot = slot;
         ConnPool.active(protocore_conn_pool_span());
-        if (pr && ConnPool.ok)
+        if (pr && ConnPoolV.ok)
         {
-            ConnPool.slot = slot;
-            ConnPool.io.data = rbuf;
-            ConnPool.io.len = pr;
+            ConnPoolV.slot = slot;
+            ConnPoolV.io.data = rbuf;
+            ConnPoolV.io.len = pr;
             ConnPool.send(protocore_conn_pool_span());
         }
     }
@@ -328,7 +328,7 @@ static void bridge_on_accept(uint8_t slot)
 
     if (!rule_for_slot(work, slot))
     {
-        ConnPool.slot = slot;
+        ConnPoolV.slot = slot;
         ConnPool.close(protocore_conn_pool_span()); // no rule published for this listener
     }
 }
@@ -342,7 +342,7 @@ static void bridge_on_data(uint8_t slot)
     const BridgeRule *r = rule_for_slot(work, slot);
     if (!r)
     {
-        ConnPool.slot = slot;
+        ConnPoolV.slot = slot;
         ConnPool.close(protocore_conn_pool_span());
         return;
     }
@@ -362,9 +362,9 @@ static void bridge_on_poll(uint8_t slot)
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_iface_bridge_hw_span();
 
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok)
+    if (!ConnPoolV.ok)
     {
         return;
     }

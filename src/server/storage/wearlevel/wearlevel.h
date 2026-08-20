@@ -57,17 +57,36 @@ typedef struct
 typedef struct
 {
     WearArgs args;
-
     size_t n_out;
     uint32_t spread;
+} WearlevelVars;
 
+/** @brief The operands and the outcome. */
+extern WearlevelVars WearlevelV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const pick)(uint8_t *restrict work);
     void (*const mark)(uint8_t *restrict work);
     void (*const imbalance)(uint8_t *restrict work);
 } WearlevelNs;
 
-/** @brief The one symbol this module exports. */
-extern WearlevelNs Wearlevel;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in WearlevelV or a region of the borrow at a fixed offset.
+void protocore_wearlevel_pick(uint8_t *restrict work);
+void protocore_wearlevel_mark(uint8_t *restrict work);
+void protocore_wearlevel_imbalance(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Wearlevel.pick(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const WearlevelNs Wearlevel __attribute__((unused)) = {
+    .pick = protocore_wearlevel_pick,
+    .mark = protocore_wearlevel_mark,
+    .imbalance = protocore_wearlevel_imbalance,
+};
 
 PROTOCORE_END_DECLS
 

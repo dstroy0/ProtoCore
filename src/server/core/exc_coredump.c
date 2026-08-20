@@ -25,12 +25,12 @@ void protocore_exc_cd_present(uint8_t *restrict work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
-    ExcCoreDump *out = Exc.dump.img;
+    ExcCoreDump *out = ExcV.dump.img;
 
     // The seam reports what is stored only once it verifies, so a torn write from a crash mid-dump
     // is reported as absent rather than handed on as a valid image.
     uint32_t size = protocore_platform_crashdump_size();
-    Exc.ok = PROTO_FALSE;
+    ExcV.ok = PROTO_FALSE;
     if (size == 0)
     {
         return;
@@ -40,16 +40,16 @@ void protocore_exc_cd_present(uint8_t *restrict work)
         out->addr = 0; // the image's location is the platform's, and does not cross the seam
         out->size = size;
     }
-    Exc.ok = PROTO_TRUE;
+    ExcV.ok = PROTO_TRUE;
 }
 
 void protocore_exc_cd_summary(uint8_t *restrict work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
-    ExcInfo *out = Exc.parse_args.info;
+    ExcInfo *out = ExcV.parse_args.info;
 
-    Exc.ok = PROTO_FALSE;
+    ExcV.ok = PROTO_FALSE;
     if (!out)
     {
         return;
@@ -84,40 +84,40 @@ void protocore_exc_cd_summary(uint8_t *restrict work)
         out->frames[i].sp = 0; // not part of the summary
     }
     out->frame_count = depth;
-    Exc.ok = PROTO_TRUE;
+    ExcV.ok = PROTO_TRUE;
 }
 
 void protocore_exc_cd_read(uint8_t *restrict work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
-    void *buf = Exc.dump.buf;
-    const size_t len = Exc.dump.len;
+    void *buf = ExcV.dump.buf;
+    const size_t len = ExcV.dump.len;
 
-    Exc.ok = PROTO_FALSE;
+    ExcV.ok = PROTO_FALSE;
     if (!buf)
     {
         return;
     }
     if (len == 0)
     {
-        Exc.ok = PROTO_TRUE;
+        ExcV.ok = PROTO_TRUE;
         return;
     }
     // The seam refuses a range that runs past the image rather than returning whatever follows it.
-    Exc.ok = protocore_platform_crashdump_read((uint32_t)Exc.dump.offset, (uint8_t *)buf, (uint32_t)len)
-                      ? PROTO_TRUE
-                      : PROTO_FALSE;
+    ExcV.ok = protocore_platform_crashdump_read((uint32_t)ExcV.dump.offset, (uint8_t *)buf, (uint32_t)len)
+                  ? PROTO_TRUE
+                  : PROTO_FALSE;
 }
 
 void protocore_exc_cd_save(uint8_t *restrict work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
-    const protocore_mnt_backend *file_sys = Exc.dump.file_sys;
-    const char *path = Exc.dump.path;
+    const protocore_mnt_backend *file_sys = ExcV.dump.file_sys;
+    const char *path = ExcV.dump.path;
 
-    Exc.ok = PROTO_FALSE;
+    ExcV.ok = PROTO_FALSE;
     if (!file_sys || !path || path[0] == '\0')
     {
         return;
@@ -154,14 +154,14 @@ void protocore_exc_cd_save(uint8_t *restrict work)
     {
         (void)file_sys->remove(path); // never leave a half-written dump that looks complete
     }
-    Exc.ok = ok;
+    ExcV.ok = ok;
 }
 
 void protocore_exc_cd_erase(uint8_t *restrict work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
-    Exc.ok = protocore_platform_crashdump_erase() ? PROTO_TRUE : PROTO_FALSE;
+    ExcV.ok = protocore_platform_crashdump_erase() ? PROTO_TRUE : PROTO_FALSE;
 }
 
 #endif // PROTOCORE_ENABLE_EXC_DECODER && PROTOCORE_HAS_VENDOR_COREDUMP

@@ -326,9 +326,9 @@ void protocore_auth_challenge(uint8_t *restrict work)
         HttpConn.reset(protocore_http_conn_span());
         return;
     }
-    ConnPool.slot = slot_id;
+    ConnPoolV.slot = slot_id;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok)
+    if (!ConnPoolV.ok)
     {
         HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
@@ -393,19 +393,19 @@ void protocore_auth_challenge(uint8_t *restrict work)
     Http.req_is_head(protocore_http_span());
     if (!HttpV.ok)
     {
-        ConnPool.slot = slot_id;
-        ConnPool.io.data = header;
-        ConnPool.io.len = (proto_u16)hlen;
+        ConnPoolV.slot = slot_id;
+        ConnPoolV.io.data = header;
+        ConnPoolV.io.len = (proto_u16)hlen;
         ConnPool.send(protocore_conn_pool_span());
-        ConnPool.io.data = body;
-        ConnPool.io.len = (proto_u16)(sizeof(body) - 1);
+        ConnPoolV.io.data = body;
+        ConnPoolV.io.len = (proto_u16)(sizeof(body) - 1);
         ConnPool.send_flush(protocore_conn_pool_span());
     }
     else
     {
-        ConnPool.slot = slot_id;
-        ConnPool.io.data = header;
-        ConnPool.io.len = (proto_u16)hlen;
+        ConnPoolV.slot = slot_id;
+        ConnPoolV.io.data = header;
+        ConnPoolV.io.len = (proto_u16)hlen;
         ConnPool.send_flush(protocore_conn_pool_span());
     }
 

@@ -145,26 +145,57 @@ typedef struct
     EdgeCacheSdDelArgs del_args;
     EdgeCacheSdPurgePrefixArgs purge_prefix_args;
     EdgeCacheSdPurgeAllArgs purge_all_args;
-
     proto_bool ok;
     size_t n;
     uint32_t count;
-
-    void (*const serialize)(uint8_t *restrict work);
-    void (*const deserialize)(uint8_t *restrict work);
     // The store operations are the only part that needs a key/value database behind it, so they
     // are the only part the flag gates. The codec above is pure and is always here.
 #if PROTOCORE_ENABLE_DBM
+#endif
+} EdgeCacheSdVars;
+
+/** @brief The operands and the outcome. */
+extern EdgeCacheSdVars EdgeCacheSdV;
+
+/** @brief The entries. */
+typedef struct
+{
+    void (*const serialize)(uint8_t *restrict work);
+    void (*const deserialize)(uint8_t *restrict work);
     void (*const put)(uint8_t *restrict work);
     void (*const get)(uint8_t *restrict work);
     void (*const del)(uint8_t *restrict work);
     void (*const purge_prefix)(uint8_t *restrict work);
     void (*const purge_all)(uint8_t *restrict work);
-#endif
 } EdgeCacheSdNs;
 
-/** @brief The one symbol this module exports. */
-extern EdgeCacheSdNs EdgeCacheSd;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in EdgeCacheSdV or a region of the borrow at a fixed offset.
+void protocore_edge_cache_sd_serialize(uint8_t *restrict work);
+void protocore_edge_cache_sd_deserialize(uint8_t *restrict work);
+#if PROTOCORE_ENABLE_DBM
+void protocore_edge_cache_sd_put(uint8_t *restrict work);
+void protocore_edge_cache_sd_get(uint8_t *restrict work);
+void protocore_edge_cache_sd_del(uint8_t *restrict work);
+void protocore_edge_cache_sd_purge_prefix(uint8_t *restrict work);
+void protocore_edge_cache_sd_purge_all(uint8_t *restrict work);
+#endif
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `EdgeCacheSd.serialize(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const EdgeCacheSdNs EdgeCacheSd __attribute__((unused)) = {
+    .serialize = protocore_edge_cache_sd_serialize,
+    .deserialize = protocore_edge_cache_sd_deserialize,
+#if PROTOCORE_ENABLE_DBM
+    .put = protocore_edge_cache_sd_put,
+    .get = protocore_edge_cache_sd_get,
+    .del = protocore_edge_cache_sd_del,
+    .purge_prefix = protocore_edge_cache_sd_purge_prefix,
+    .purge_all = protocore_edge_cache_sd_purge_all,
+#endif
+};
 
 PROTOCORE_END_DECLS
 

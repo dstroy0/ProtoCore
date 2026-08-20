@@ -41,7 +41,7 @@ void tearDown(void)
         ResolverV.query.host = "release.example";
         Resolver.resolve(protocore_dns_resolver_span());
     }
-    UdpListener.port = PROTOCORE_DNS_CLIENT_PORT;
+    UdpListenerV.port = PROTOCORE_DNS_CLIENT_PORT;
     UdpListener.close(protocore_udp_listener_span());
 }
 
@@ -413,7 +413,7 @@ void test_the_answer_completes_the_resolve(void)
     const uint8_t addr[4] = {192, 0, 2, 42};
     n = put_rr(p, n, 1, 1, addr, 4);
     TEST_ASSERT_EQUAL_INT(1, protocore_net_host_udp_deliver(PROTOCORE_DNS_CLIENT_PORT, "9.9.9.9", 53, p, (uint16_t)n));
-    UdpListener.port = PROTOCORE_DNS_CLIENT_PORT;
+    UdpListenerV.port = PROTOCORE_DNS_CLIENT_PORT;
     UdpListener.poll(protocore_udp_listener_span());
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_READY, resolve("example.com"));
@@ -433,7 +433,7 @@ void test_a_foreign_response_does_not_end_the_query(void)
     const uint8_t addr[4] = {203, 0, 113, 9};
     n = put_rr(p, n, 1, 1, addr, 4);
     (void)protocore_net_host_udp_deliver(PROTOCORE_DNS_CLIENT_PORT, "203.0.113.9", 53, p, (uint16_t)n);
-    UdpListener.port = PROTOCORE_DNS_CLIENT_PORT;
+    UdpListenerV.port = PROTOCORE_DNS_CLIENT_PORT;
     UdpListener.poll(protocore_udp_listener_span());
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_BUSY, resolve("example.com"));

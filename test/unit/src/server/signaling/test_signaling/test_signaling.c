@@ -23,14 +23,16 @@ static uint8_t g_close_slot;
 
 // The double this env links in place of protocol.c: it builds the signaling half only, so the pool
 // is the one symbol it has to supply. Every entry takes the borrow, and this one never reads it.
-static void stub_close(uint8_t *restrict work)
+void protocore_conn_pool_close(uint8_t *restrict work)
 {
     (void)work;
     g_close_calls++;
-    g_close_slot = ConnPool.slot;
+    g_close_slot = ConnPoolV.slot;
 }
 
-ConnPoolNs ConnPool = {.close = stub_close};
+// The double supplies the ENTRY SYMBOL and the operands, not a table: the header owns the table
+// as static const, so a substitution is a symbol the linker resolves.
+ConnPoolVars ConnPoolV;
 
 // The pool owns state now, so it publishes the bytes that state lives in and signaling.c passes
 // them to every call. The double holds none, and the entry above never reads what it is handed.

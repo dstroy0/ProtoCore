@@ -17,8 +17,8 @@ static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 #if PROTOCORE_ENABLE_SYSLOG
 
-#include "mmgr/protomem/protomem.h"                               // mem.cpy: the spans a line is assembled from
-#include "mmgr/protostr/protostr.h"                               // str.copy / str.len: the bounded field moves
+#include "mmgr/protomem/protomem.h"                      // mem.cpy: the spans a line is assembled from
+#include "mmgr/protostr/protostr.h"                      // str.copy / str.len: the bounded field moves
 #include "network_drivers/transport/udp/client/client.h" // UdpClient.sendto: one message, one datagram
 #include "shared/ip/ip.h"                                // Ip.parse: the collector address, once
 
@@ -180,12 +180,12 @@ static void syslog_log(uint8_t *restrict work)
     }
     // The datagram payload is the message and nothing else (RFC 5426 sec 3.1). Nothing acknowledges
     // it (RFC 5426 sec 4.1), so ok reports only that the stack took the octets.
-    UdpClient.dst = &SYSLOG_CTX(work)->collector;
-    UdpClient.dst_port = SYSLOG_CTX(work)->port;
-    UdpClient.data = (const uint8_t *)SYSLOG_CTX(work)->buf;
-    UdpClient.len = Syslog.n;
+    UdpClientV.dst = &SYSLOG_CTX(work)->collector;
+    UdpClientV.dst_port = SYSLOG_CTX(work)->port;
+    UdpClientV.data = (const uint8_t *)SYSLOG_CTX(work)->buf;
+    UdpClientV.len = Syslog.n;
     UdpClient.sendto(protocore_udp_client_span());
-    Syslog.ok = UdpClient.ok;
+    Syslog.ok = UdpClientV.ok;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.

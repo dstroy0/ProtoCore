@@ -87,21 +87,45 @@ typedef struct
     proto_bool flush;
     protocore_net_err result;
     proto_bool ok;
-
     /// Run the op set above, in the one context where it is safe. The outcome lands in @c result.
-    void (*const marshal)(uint8_t *restrict work);
     /// Drop the control block's back-reference, so a late callback finds a null arg.
-    void (*const detach)(uint8_t *restrict work);
     /// Reset the control block (RFC 9293 sec 3.10.5): a hard close, no FIN.
-    void (*const abort)(uint8_t *restrict work);
     /// Install the TTL outbound segments carry; the candidate arrives in len, the verdict in @c ok.
-    void (*const set_ttl)(uint8_t *restrict work);
     /// Stamp the control block above with the configured TTL.
+} TcpLowerVars;
+
+/** @brief The operands and the outcome. */
+extern TcpLowerVars TcpLowerV;
+
+/** @brief The entries. */
+typedef struct
+{
+    void (*const marshal)(uint8_t *restrict work);
+    void (*const detach)(uint8_t *restrict work);
+    void (*const abort)(uint8_t *restrict work);
+    void (*const set_ttl)(uint8_t *restrict work);
     void (*const apply_ttl)(uint8_t *restrict work);
 } TcpLowerNs;
 
-/** @brief The one symbol this module exports. */
-extern TcpLowerNs TcpLower;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in TcpLowerV or a region of the borrow at a fixed offset.
+void protocore_tcp_lower_marshal(uint8_t *restrict work);
+void protocore_tcp_lower_detach(uint8_t *restrict work);
+void protocore_tcp_lower_abort(uint8_t *restrict work);
+void protocore_tcp_lower_set_ttl(uint8_t *restrict work);
+void protocore_tcp_lower_apply_ttl(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `TcpLower.marshal(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const TcpLowerNs TcpLower __attribute__((unused)) = {
+    .marshal = protocore_tcp_lower_marshal,
+    .detach = protocore_tcp_lower_detach,
+    .abort = protocore_tcp_lower_abort,
+    .set_ttl = protocore_tcp_lower_set_ttl,
+    .apply_ttl = protocore_tcp_lower_apply_ttl,
+};
 
 /**
  * @brief The PROTOCORE_TCP_LOWER_BORROW bytes this module's state lives in.

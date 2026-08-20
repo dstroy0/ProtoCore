@@ -55,12 +55,12 @@ void setUp(void)
     mock_abort_call_reset();
     mock_recved_reset();
     memset(&g_pcb, 0, sizeof(g_pcb));
-    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
+    ConnPoolV.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
-    TcpListener.idx = 0;
-    TcpListener.bind.port = 80;
-    TcpListener.bind.proto = PROTO_HTTP;
-    TcpListener.bind.tls = PROTO_FALSE;
+    TcpListenerV.idx = 0;
+    TcpListenerV.bind.port = 80;
+    TcpListenerV.bind.proto = PROTO_HTTP;
+    TcpListenerV.bind.tls = PROTO_FALSE;
     TcpListener.add(protocore_tcp_listener_span());
     for (size_t i = 0; i < sizeof(g_payload); i++)
     {
@@ -70,7 +70,7 @@ void setUp(void)
 
 void tearDown(void)
 {
-    TcpListener.idx = 0;
+    TcpListenerV.idx = 0;
     TcpListener.stop(protocore_tcp_listener_span());
 }
 
@@ -85,8 +85,8 @@ static void arm_slot(uint8_t slot)
     conn_pool[slot].rx_tail = 0;
     conn_pool[slot].rx_acked = 0;
     conn_pool[slot].last_activity_ms = 0;
-    ConnPool.slot = slot;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = slot;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
 }
 
@@ -123,9 +123,9 @@ void test_recv_does_not_reopen_the_window_on_copy(void)
 {
     arm_slot(0);
     TEST_ASSERT_EQUAL(PROTOCORE_NET_OK, deliver(0, 0, 64));
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.available(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT(64, ConnPool.n);
+    TEST_ASSERT_EQUAL_UINT(64, ConnPoolV.n);
     TEST_ASSERT_EQUAL_INT(0, mock_recved_call_count());
     TEST_ASSERT_EQUAL_UINT32(0, mock_recved_total());
 }
@@ -137,21 +137,21 @@ void test_window_reopens_by_exactly_the_bytes_consumed(void)
     deliver(0, 0, 200);
 
     uint8_t buf[80];
-    ConnPool.slot = 0;
-    ConnPool.io.buf = buf;
-    ConnPool.io.cap = sizeof(buf);
+    ConnPoolV.slot = 0;
+    ConnPoolV.io.buf = buf;
+    ConnPoolV.io.cap = sizeof(buf);
     ConnPool.read(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT(80, ConnPool.n);
-    ConnPool.slot = 0;
+    TEST_ASSERT_EQUAL_UINT(80, ConnPoolV.n);
+    ConnPoolV.slot = 0;
     ConnPool.ack_consumed(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT(1, mock_recved_call_count());
     TEST_ASSERT_EQUAL_UINT16(80, mock_recved_last());
     TEST_ASSERT_EQUAL_UINT32(80, mock_recved_total());
 
     // Bytes still unread stay charged against the window.
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.available(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT(120, ConnPool.n);
+    TEST_ASSERT_EQUAL_UINT(120, ConnPoolV.n);
 }
 
 // A second ack with nothing consumed in between issues no update: the right window edge does not
@@ -162,17 +162,17 @@ void test_ack_with_nothing_consumed_issues_no_window_update(void)
     deliver(0, 0, 32);
 
     uint8_t buf[32];
-    ConnPool.slot = 0;
-    ConnPool.io.buf = buf;
-    ConnPool.io.cap = sizeof(buf);
+    ConnPoolV.slot = 0;
+    ConnPoolV.io.buf = buf;
+    ConnPoolV.io.cap = sizeof(buf);
     ConnPool.read(protocore_conn_pool_span());
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.ack_consumed(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT(1, mock_recved_call_count());
 
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.ack_consumed(protocore_conn_pool_span());
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.ack_consumed(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT(1, mock_recved_call_count());
     TEST_ASSERT_EQUAL_UINT32(32, mock_recved_total());
@@ -195,19 +195,19 @@ void test_reopened_window_never_exceeds_bytes_consumed(void)
         {
             deliver(0, r * 32, arrive[r]);
         }
-        ConnPool.slot = 0;
-        ConnPool.io.buf = buf;
-        ConnPool.io.cap = take[r];
+        ConnPoolV.slot = 0;
+        ConnPoolV.io.buf = buf;
+        ConnPoolV.io.cap = take[r];
         ConnPool.read(protocore_conn_pool_span());
-        consumed_total += (uint32_t)ConnPool.n;
-        ConnPool.slot = 0;
+        consumed_total += (uint32_t)ConnPoolV.n;
+        ConnPoolV.slot = 0;
         ConnPool.ack_consumed(protocore_conn_pool_span());
 
         TEST_ASSERT_EQUAL_UINT32(consumed_total, mock_recved_total());
         // Unread bytes plus the space handed back never exceeds the buffer.
-        ConnPool.slot = 0;
+        ConnPoolV.slot = 0;
         ConnPool.available(protocore_conn_pool_span());
-        TEST_ASSERT_TRUE(ConnPool.n <= RING_USABLE);
+        TEST_ASSERT_TRUE(ConnPoolV.n <= RING_USABLE);
     }
 }
 
@@ -218,22 +218,22 @@ void test_ack_at_maximum_occupancy_reports_the_whole_ring(void)
 {
     arm_slot(0);
     TEST_ASSERT_EQUAL(PROTOCORE_NET_OK, deliver(0, 0, (uint16_t)RING_USABLE));
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.available(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT(RING_USABLE, ConnPool.n);
+    TEST_ASSERT_EQUAL_UINT(RING_USABLE, ConnPoolV.n);
 
     uint8_t buf[RX_BUF_SIZE];
-    ConnPool.slot = 0;
-    ConnPool.io.buf = buf;
-    ConnPool.io.cap = sizeof(buf);
+    ConnPoolV.slot = 0;
+    ConnPoolV.io.buf = buf;
+    ConnPoolV.io.cap = sizeof(buf);
     ConnPool.read(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT(RING_USABLE, ConnPool.n);
-    ConnPool.slot = 0;
+    TEST_ASSERT_EQUAL_UINT(RING_USABLE, ConnPoolV.n);
+    ConnPoolV.slot = 0;
     ConnPool.ack_consumed(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_UINT16((uint16_t)RING_USABLE, mock_recved_last());
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.available(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT(0, ConnPool.n);
+    TEST_ASSERT_EQUAL_UINT(0, ConnPoolV.n);
 }
 
 // The same accounting across the wrap: head and tail both past the end of the buffer.
@@ -244,24 +244,24 @@ void test_ack_is_correct_across_the_ring_wrap(void)
 
     // Push the cursors close to the wrap point and drain, so the next segment straddles it.
     deliver(0, 0, (uint16_t)(RX_BUF_SIZE - 16));
-    ConnPool.slot = 0;
-    ConnPool.io.buf = buf;
-    ConnPool.io.cap = RX_BUF_SIZE - 16;
+    ConnPoolV.slot = 0;
+    ConnPoolV.io.buf = buf;
+    ConnPoolV.io.cap = RX_BUF_SIZE - 16;
     ConnPool.read(protocore_conn_pool_span());
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.ack_consumed(protocore_conn_pool_span());
     mock_recved_reset();
 
     deliver(0, 0, 64); // 16 bytes to the end of the buffer, 48 after the wrap
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.available(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT(64, ConnPool.n);
-    ConnPool.slot = 0;
-    ConnPool.io.buf = buf;
-    ConnPool.io.cap = sizeof(buf);
+    TEST_ASSERT_EQUAL_UINT(64, ConnPoolV.n);
+    ConnPoolV.slot = 0;
+    ConnPoolV.io.buf = buf;
+    ConnPoolV.io.cap = sizeof(buf);
     ConnPool.read(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT(64, ConnPool.n);
-    ConnPool.slot = 0;
+    TEST_ASSERT_EQUAL_UINT(64, ConnPoolV.n);
+    ConnPoolV.slot = 0;
     ConnPool.ack_consumed(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_UINT16(64, mock_recved_last());
 
@@ -275,16 +275,16 @@ void test_oversized_segment_is_refused_whole_and_opens_no_window(void)
 {
     arm_slot(0);
     deliver(0, 0, (uint16_t)(RING_USABLE - 10)); // ring now has 10 bytes free
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.available(protocore_conn_pool_span());
-    size_t occupancy = ConnPool.n;
+    size_t occupancy = ConnPoolV.n;
     mock_recved_reset();
 
     TEST_ASSERT_EQUAL(PROTOCORE_NET_ERR_MEM, deliver(0, 0, 64));
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.available(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT(occupancy, ConnPool.n); // nothing was taken
-    TEST_ASSERT_EQUAL_INT(0, mock_recved_call_count());             // and no window opened
+    TEST_ASSERT_EQUAL_UINT(occupancy, ConnPoolV.n);     // nothing was taken
+    TEST_ASSERT_EQUAL_INT(0, mock_recved_call_count()); // and no window opened
 }
 
 // A refused segment is not progress. Refreshing the idle timer on refusal would keep a connection
@@ -323,32 +323,32 @@ void test_ack_consumed_is_inert_off_the_active_state(void)
     arm_slot(0);
     deliver(0, 0, 64);
     uint8_t buf[64];
-    ConnPool.slot = 0;
-    ConnPool.io.buf = buf;
-    ConnPool.io.cap = sizeof(buf);
+    ConnPoolV.slot = 0;
+    ConnPoolV.io.buf = buf;
+    ConnPoolV.io.cap = sizeof(buf);
     ConnPool.read(protocore_conn_pool_span());
 
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_CLOSING;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_CLOSING;
     ConnPool.set_state(protocore_conn_pool_span());
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.ack_consumed(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT(0, mock_recved_call_count());
 
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
     conn_pool[0].pcb = NULL;
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.ack_consumed(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT(0, mock_recved_call_count());
 }
 
 void test_ack_consumed_rejects_an_out_of_range_slot(void)
 {
-    ConnPool.slot = MAX_CONNS;
+    ConnPoolV.slot = MAX_CONNS;
     ConnPool.ack_consumed(protocore_conn_pool_span());
-    ConnPool.slot = (uint8_t)(MAX_CONNS + 40);
+    ConnPoolV.slot = (uint8_t)(MAX_CONNS + 40);
     ConnPool.ack_consumed(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT(0, mock_recved_call_count());
 }
@@ -365,7 +365,7 @@ void test_close_dwells_while_the_peer_still_owes_an_ack(void)
     arm_slot(0);
     g_pcb.snd_queuelen = 3; // response still unacknowledged
 
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.begin_close(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
     TEST_ASSERT_NOT_NULL(conn_pool[0].pcb); // the slot is still bound to its connection
@@ -382,7 +382,7 @@ void test_close_with_a_drained_queue_releases_immediately(void)
 {
     arm_slot(0);
     g_pcb.snd_queuelen = 0;
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.begin_close(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 }
@@ -393,7 +393,7 @@ void test_sent_callback_does_not_release_a_slot_that_is_still_draining(void)
 {
     arm_slot(0);
     g_pcb.snd_queuelen = 5;
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.begin_close(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
 
@@ -415,13 +415,13 @@ void test_dwell_expiry_aborts_the_connection(void)
     arm_slot(0);
     g_pcb.snd_queuelen = 2; // peer never acks
     advance_to(1000);
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.begin_close(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
 
     int aborts_before = mock_abort_call_count();
     advance_to(1000 + PROTOCORE_CLOSING_TIMEOUT_MS);
-    ConnPool.life.worker_id = 0;
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
 
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
@@ -436,11 +436,11 @@ void test_dwell_is_not_reaped_before_its_deadline(void)
     arm_slot(0);
     g_pcb.snd_queuelen = 2;
     advance_to(1000);
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.begin_close(protocore_conn_pool_span());
 
     advance_to(1000 + PROTOCORE_CLOSING_TIMEOUT_MS - 1);
-    ConnPool.life.worker_id = 0;
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
 }
@@ -450,16 +450,16 @@ void test_dwell_is_not_reaped_before_its_deadline(void)
 void test_begin_close_is_a_no_op_off_the_active_state(void)
 {
     arm_slot(0);
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_FREE;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_FREE;
     ConnPool.set_state(protocore_conn_pool_span());
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.begin_close(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 
-    ConnPool.slot = MAX_CONNS;
+    ConnPoolV.slot = MAX_CONNS;
     ConnPool.begin_close(protocore_conn_pool_span()); // out of range
-    ConnPool.slot = (uint8_t)(MAX_CONNS + 7);
+    ConnPoolV.slot = (uint8_t)(MAX_CONNS + 7);
     ConnPool.begin_close(protocore_conn_pool_span());
 }
 
@@ -480,7 +480,7 @@ void test_data_after_close_resets_the_connection(void)
 {
     arm_slot(0);
     g_pcb.snd_queuelen = 4; // hold the slot in the dwell
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.begin_close(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
 
@@ -491,9 +491,9 @@ void test_data_after_close_resets_the_connection(void)
 
     TEST_ASSERT_EQUAL_INT(aborts_before + 1, mock_abort_call_count()); // the RST SHLD-3 asks for
     TEST_ASSERT_EQUAL_INT(0, mock_recved_call_count());                // never acknowledged
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.available(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT(0, ConnPool.n);            // never ringed
+    TEST_ASSERT_EQUAL_UINT(0, ConnPoolV.n); // never ringed
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_NULL(conn_pool[0].pcb);
 }
@@ -503,7 +503,7 @@ void test_a_zero_length_segment_during_the_dwell_does_not_reset(void)
 {
     arm_slot(0);
     g_pcb.snd_queuelen = 4;
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.begin_close(protocore_conn_pool_span());
     int aborts_before = mock_abort_call_count();
 
@@ -518,7 +518,7 @@ void test_peer_fin_during_the_dwell_leaves_the_slot_closing(void)
 {
     arm_slot(0);
     g_pcb.snd_queuelen = 4;
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.begin_close(protocore_conn_pool_span());
     drain_events((TcpEvt[4]){0}, 4);
 
@@ -585,7 +585,7 @@ void test_error_during_the_dwell_posts_no_further_event(void)
 {
     arm_slot(0);
     g_pcb.snd_queuelen = 2;
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.begin_close(protocore_conn_pool_span());
     drain_events((TcpEvt[4]){0}, 4);
 
@@ -607,13 +607,13 @@ void test_callbacks_tolerate_a_null_slot_argument(void)
 void test_recv_on_a_free_slot_is_refused(void)
 {
     conn_pool[0].id = 0;
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_FREE;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_FREE;
     ConnPool.set_state(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(PROTOCORE_NET_ERR_VAL, deliver(0, 0, 16));
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.available(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT(0, ConnPool.n);
+    TEST_ASSERT_EQUAL_UINT(0, ConnPoolV.n);
 }
 
 // ---------------------------------------------------------------------------
@@ -634,8 +634,8 @@ void test_idle_timeout_aborts_the_connection_and_signals_an_error(void)
 
     int aborts_before = mock_abort_call_count();
     ConnPool.timeout_ms(protocore_conn_pool_span());
-    advance_to(1000 + ConnPool.u32);
-    ConnPool.life.worker_id = 0;
+    advance_to(1000 + ConnPoolV.u32);
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
 
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
@@ -653,8 +653,8 @@ void test_idle_timeout_does_not_fire_before_its_deadline(void)
     advance_to(1000);
     conn_pool[0].last_activity_ms = 1000;
     ConnPool.timeout_ms(protocore_conn_pool_span());
-    advance_to(1000 + ConnPool.u32 - 1);
-    ConnPool.life.worker_id = 0;
+    advance_to(1000 + ConnPoolV.u32 - 1);
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
 }
@@ -666,8 +666,8 @@ void test_idle_timeout_survives_the_millisecond_counter_wrap(void)
     arm_slot(0);
     conn_pool[0].last_activity_ms = 0xFFFFF000u;
     ConnPool.timeout_ms(protocore_conn_pool_span());
-    advance_to(0xFFFFF000u + ConnPool.u32); // wraps through zero
-    ConnPool.life.worker_id = 0;
+    advance_to(0xFFFFF000u + ConnPoolV.u32); // wraps through zero
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 }
@@ -679,8 +679,8 @@ void test_sweep_skips_slots_owned_by_another_worker(void)
     conn_pool[0].owner = 1;
     conn_pool[0].last_activity_ms = 0;
     ConnPool.timeout_ms(protocore_conn_pool_span());
-    advance_to(ConnPool.u32 + 1000);
-    ConnPool.life.worker_id = 0;
+    advance_to(ConnPoolV.u32 + 1000);
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
 }
@@ -692,12 +692,12 @@ void test_touch_active_defers_the_sweep_for_a_streaming_response(void)
     arm_slot(0);
     conn_pool[0].last_activity_ms = 0;
     ConnPool.timeout_ms(protocore_conn_pool_span());
-    advance_to(ConnPool.u32 - 1);
-    ConnPool.slot = 0;
+    advance_to(ConnPoolV.u32 - 1);
+    ConnPoolV.slot = 0;
     ConnPool.touch_active(protocore_conn_pool_span());
     ConnPool.timeout_ms(protocore_conn_pool_span());
-    advance_to(ConnPool.u32 + 10);
-    ConnPool.life.worker_id = 0;
+    advance_to(ConnPoolV.u32 + 10);
+    ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
 }
@@ -705,16 +705,16 @@ void test_touch_active_defers_the_sweep_for_a_streaming_response(void)
 void test_touch_active_is_bounded_and_state_guarded(void)
 {
     arm_slot(0);
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_CLOSING;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_CLOSING;
     ConnPool.set_state(protocore_conn_pool_span());
     conn_pool[0].last_activity_ms = 7;
     advance_to(9999);
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.touch_active(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_UINT32(7, conn_pool[0].last_activity_ms); // only CONN_ACTIVE is refreshed
 
-    ConnPool.slot = MAX_CONNS;
+    ConnPoolV.slot = MAX_CONNS;
     ConnPool.touch_active(protocore_conn_pool_span()); // out of range: no write, no crash
 }
 
@@ -728,17 +728,17 @@ void test_touch_active_is_bounded_and_state_guarded(void)
 void test_allocator_takes_the_lowest_free_slot(void)
 {
     ConnPool.alloc_free(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_INT32(0, ConnPool.i32);
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_ACTIVE;
+    TEST_ASSERT_EQUAL_INT32(0, ConnPoolV.i32);
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
     ConnPool.alloc_free(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_INT32(1, ConnPool.i32);
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_FREE;
+    TEST_ASSERT_EQUAL_INT32(1, ConnPoolV.i32);
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_FREE;
     ConnPool.set_state(protocore_conn_pool_span());
     ConnPool.alloc_free(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_INT32(0, ConnPool.i32);
+    TEST_ASSERT_EQUAL_INT32(0, ConnPoolV.i32);
 }
 
 void test_a_held_slot_is_not_allocatable_though_it_reads_free(void)
@@ -746,22 +746,22 @@ void test_a_held_slot_is_not_allocatable_though_it_reads_free(void)
     protocore_slot_mark(&protocore_conn_bits.held, 0);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state); // free...
     ConnPool.alloc_free(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_INT32(1, ConnPool.i32);          // ...but not handed out
+    TEST_ASSERT_EQUAL_INT32(1, ConnPoolV.i32); // ...but not handed out
     protocore_slot_clear(&protocore_conn_bits.held, 0);
     ConnPool.alloc_free(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_INT32(0, ConnPool.i32);
+    TEST_ASSERT_EQUAL_INT32(0, ConnPoolV.i32);
 }
 
 void test_allocator_reports_exhaustion_when_every_slot_is_taken(void)
 {
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
-        ConnPool.slot = i;
-        ConnPool.st = CONN_ACTIVE;
+        ConnPoolV.slot = i;
+        ConnPoolV.st = CONN_ACTIVE;
         ConnPool.set_state(protocore_conn_pool_span());
     }
     ConnPool.alloc_free(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_INT32(-1, ConnPool.i32);
+    TEST_ASSERT_EQUAL_INT32(-1, ConnPoolV.i32);
 }
 
 // The free bitmap is written only through set_state, so it can never disagree with the states.
@@ -770,8 +770,8 @@ void test_free_bitmap_tracks_every_state_write(void)
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
         ConnState st = (i % 3 == 0) ? CONN_ACTIVE : (i % 3 == 1) ? CONN_CLOSING : CONN_FREE;
-        ConnPool.slot = i;
-        ConnPool.st = st;
+        ConnPoolV.slot = i;
+        ConnPoolV.st = st;
         ConnPool.set_state(protocore_conn_pool_span());
     }
     for (uint8_t i = 0; i < MAX_CONNS; i++)
@@ -784,31 +784,31 @@ void test_free_bitmap_tracks_every_state_write(void)
 
 void test_set_state_ignores_a_slot_past_the_pool(void)
 {
-    ConnPool.slot = CONN_POOL_SLOTS;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = CONN_POOL_SLOTS;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
-    ConnPool.slot = (uint8_t)(CONN_POOL_SLOTS + 5);
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = (uint8_t)(CONN_POOL_SLOTS + 5);
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
     ConnPool.alloc_free(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_INT32(0, ConnPool.i32); // pool untouched
+    TEST_ASSERT_EQUAL_INT32(0, ConnPoolV.i32); // pool untouched
 }
 
 void test_active_count_counts_only_live_slots(void)
 {
     ConnPool.active_count(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT8(0, ConnPool.u8);
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_ACTIVE;
+    TEST_ASSERT_EQUAL_UINT8(0, ConnPoolV.u8);
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
-    ConnPool.slot = 1;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = 1;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
-    ConnPool.slot = 2;
-    ConnPool.st = CONN_CLOSING;
+    ConnPoolV.slot = 2;
+    ConnPoolV.st = CONN_CLOSING;
     ConnPool.set_state(protocore_conn_pool_span()); // draining is not active
     ConnPool.active_count(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT8(2, ConnPool.u8);
+    TEST_ASSERT_EQUAL_UINT8(2, ConnPoolV.u8);
 }
 
 // protocore_conn_active() is the one predicate every layer above uses to ask whether a slot can be
@@ -816,22 +816,22 @@ void test_active_count_counts_only_live_slots(void)
 void test_active_predicate_requires_both_the_state_and_a_control_block(void)
 {
     arm_slot(0);
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.active(protocore_conn_pool_span());
-    TEST_ASSERT_TRUE(ConnPool.ok);
+    TEST_ASSERT_TRUE(ConnPoolV.ok);
 
     conn_pool[0].pcb = NULL;
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.active(protocore_conn_pool_span());
-    TEST_ASSERT_FALSE(ConnPool.ok); // state alone is not enough
+    TEST_ASSERT_FALSE(ConnPoolV.ok); // state alone is not enough
 
     conn_pool[0].pcb = &g_pcb;
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_CLOSING;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_CLOSING;
     ConnPool.set_state(protocore_conn_pool_span());
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.active(protocore_conn_pool_span());
-    TEST_ASSERT_FALSE(ConnPool.ok); // a control block alone is not enough
+    TEST_ASSERT_FALSE(ConnPoolV.ok); // a control block alone is not enough
 }
 
 // ---------------------------------------------------------------------------
@@ -843,11 +843,11 @@ void test_init_leaves_every_slot_free_and_indexed(void)
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i].pcb = &g_pcb;
-        ConnPool.slot = i;
-        ConnPool.st = CONN_ACTIVE;
+        ConnPoolV.slot = i;
+        ConnPoolV.st = CONN_ACTIVE;
         ConnPool.set_state(protocore_conn_pool_span());
     }
-    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
+    ConnPoolV.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
 
     for (uint8_t i = 0; i < MAX_CONNS; i++)
@@ -855,9 +855,9 @@ void test_init_leaves_every_slot_free_and_indexed(void)
         TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[i].state);
         TEST_ASSERT_NULL(conn_pool[i].pcb);
         TEST_ASSERT_EQUAL_UINT8(i, conn_pool[i].id);
-        ConnPool.slot = i;
+        ConnPoolV.slot = i;
         ConnPool.available(protocore_conn_pool_span());
-        TEST_ASSERT_EQUAL_UINT(0, ConnPool.n);
+        TEST_ASSERT_EQUAL_UINT(0, ConnPoolV.n);
         TEST_ASSERT_EQUAL_UINT32(0, conn_pool[i].last_activity_ms);
     }
 }
@@ -866,15 +866,15 @@ void test_init_leaves_every_slot_free_and_indexed(void)
 // caller's WebServerConfig once and puts the one field the pool needs here.
 void test_init_takes_the_idle_bound_it_is_given(void)
 {
-    ConnPool.life.conn_timeout_ms = 12345;
+    ConnPoolV.life.conn_timeout_ms = 12345;
     ConnPool.init(protocore_conn_pool_span());
     ConnPool.timeout_ms(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT32(12345, ConnPool.u32);
+    TEST_ASSERT_EQUAL_UINT32(12345, ConnPoolV.u32);
 
-    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
+    ConnPoolV.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
     ConnPool.timeout_ms(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT32(CONN_TIMEOUT_MS, ConnPool.u32);
+    TEST_ASSERT_EQUAL_UINT32(CONN_TIMEOUT_MS, ConnPoolV.u32);
 }
 
 // stop() resets every connection: a shutdown is an abort, not a graceful close.
@@ -882,8 +882,8 @@ void test_stop_resets_live_slots_and_leaves_the_pool_free(void)
 {
     arm_slot(0);
     arm_slot(2);
-    ConnPool.slot = 2;
-    ConnPool.st = CONN_CLOSING;
+    ConnPoolV.slot = 2;
+    ConnPoolV.st = CONN_CLOSING;
     ConnPool.set_state(protocore_conn_pool_span());
     int aborts_before = mock_abort_call_count();
 
@@ -907,38 +907,38 @@ void test_send_on_a_torn_down_slot_is_refused(void)
 {
     arm_slot(0);
     conn_pool[0].pcb = NULL;
-    ConnPool.slot = 0;
-    ConnPool.io.data = "x";
-    ConnPool.io.len = 1;
+    ConnPoolV.slot = 0;
+    ConnPoolV.io.data = "x";
+    ConnPoolV.io.len = 1;
     ConnPool.send(protocore_conn_pool_span());
-    TEST_ASSERT_FALSE(ConnPool.ok);
-    ConnPool.slot = 0;
-    ConnPool.io.data = "x";
-    ConnPool.io.len = 1;
+    TEST_ASSERT_FALSE(ConnPoolV.ok);
+    ConnPoolV.slot = 0;
+    ConnPoolV.io.data = "x";
+    ConnPoolV.io.len = 1;
     ConnPool.send_flush(protocore_conn_pool_span());
-    TEST_ASSERT_FALSE(ConnPool.ok);
+    TEST_ASSERT_FALSE(ConnPoolV.ok);
 }
 
 void test_send_writes_through_to_the_wire(void)
 {
     arm_slot(0);
     size_t before = protocore_net_host_tx_len;
-    ConnPool.slot = 0;
-    ConnPool.io.data = "HELLO";
-    ConnPool.io.len = 5;
+    ConnPoolV.slot = 0;
+    ConnPoolV.io.data = "HELLO";
+    ConnPoolV.io.len = 5;
     ConnPool.send_flush(protocore_conn_pool_span());
-    TEST_ASSERT_TRUE(ConnPool.ok);
+    TEST_ASSERT_TRUE(ConnPoolV.ok);
     TEST_ASSERT_EQUAL_UINT(before + 5, protocore_net_host_tx_len);
     TEST_ASSERT_EQUAL_UINT8_ARRAY("HELLO", protocore_net_host_tx + before, 5);
 }
 
 void test_raw_send_rejects_a_null_control_block(void)
 {
-    ConnPool.pcb = NULL;
-    ConnPool.io.data = "x";
-    ConnPool.io.len = 1;
+    ConnPoolV.pcb = NULL;
+    ConnPoolV.io.data = "x";
+    ConnPoolV.io.len = 1;
     ConnPool.raw_send(protocore_conn_pool_span());
-    TEST_ASSERT_FALSE(ConnPool.ok);
+    TEST_ASSERT_FALSE(ConnPoolV.ok);
 }
 
 // The stack's room for the next write is reported straight through when there is a connection, and
@@ -947,13 +947,13 @@ void test_sndbuf_reports_zero_without_a_control_block(void)
 {
     arm_slot(0);
     mock_sndbuf_set(4096);
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.sndbuf(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT16(4096, ConnPool.u16);
+    TEST_ASSERT_EQUAL_UINT16(4096, ConnPoolV.u16);
     conn_pool[0].pcb = NULL;
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.sndbuf(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT16(0, ConnPool.u16);
+    TEST_ASSERT_EQUAL_UINT16(0, ConnPoolV.u16);
     mock_sndbuf_set(MOCK_SNDBUF_DEFAULT);
 }
 
@@ -962,7 +962,7 @@ void test_sndbuf_reports_zero_without_a_control_block(void)
 void test_close_frees_the_slot_before_handing_the_pcb_to_the_stack(void)
 {
     arm_slot(0);
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.close(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_NULL(conn_pool[0].pcb);
@@ -975,7 +975,7 @@ void test_close_falls_back_to_a_reset_when_the_fin_cannot_be_queued(void)
     arm_slot(0);
     int aborts_before = mock_abort_call_count();
     mock_close_fail_once();
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.close(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT(aborts_before + 1, mock_abort_call_count());
 }
@@ -983,13 +983,13 @@ void test_close_falls_back_to_a_reset_when_the_fin_cannot_be_queued(void)
 void test_close_and_abort_slot_ignore_out_of_range_and_empty_slots(void)
 {
     int aborts_before = mock_abort_call_count();
-    ConnPool.slot = MAX_CONNS;
+    ConnPoolV.slot = MAX_CONNS;
     ConnPool.close(protocore_conn_pool_span());
-    ConnPool.slot = MAX_CONNS;
+    ConnPoolV.slot = MAX_CONNS;
     ConnPool.abort_slot(protocore_conn_pool_span());
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.close(protocore_conn_pool_span()); // free slot, no control block
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.abort_slot(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT(aborts_before, mock_abort_call_count());
 }
@@ -998,7 +998,7 @@ void test_abort_slot_resets_the_connection_and_frees_the_slot(void)
 {
     arm_slot(0);
     int aborts_before = mock_abort_call_count();
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.abort_slot(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT(aborts_before + 1, mock_abort_call_count());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
@@ -1015,45 +1015,45 @@ void test_remote_address_is_reported_only_for_a_live_connection(void)
     protocore_net_ip4_set(&g_pcb.remote_ip, 192, 168, 1, 50);
 
     protocore_ip out;
-    ConnPool.slot = 0;
-    ConnPool.out = &out;
+    ConnPoolV.slot = 0;
+    ConnPoolV.out = &out;
     ConnPool.remote_addr(protocore_conn_pool_span());
-    TEST_ASSERT_TRUE(ConnPool.ok);
+    TEST_ASSERT_TRUE(ConnPoolV.ok);
     TEST_ASSERT_EQUAL(PROTOCORE_IP_V4, out.family);
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.remote_ip(protocore_conn_pool_span());
-    TEST_ASSERT_NOT_EQUAL(0, ConnPool.u32);
+    TEST_ASSERT_NOT_EQUAL(0, ConnPoolV.u32);
 
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_FREE;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_FREE;
     ConnPool.set_state(protocore_conn_pool_span());
     out.family = PROTOCORE_IP_V4;
-    ConnPool.slot = 0;
-    ConnPool.out = &out;
+    ConnPoolV.slot = 0;
+    ConnPoolV.out = &out;
     ConnPool.remote_addr(protocore_conn_pool_span());
-    TEST_ASSERT_FALSE(ConnPool.ok);
+    TEST_ASSERT_FALSE(ConnPoolV.ok);
     TEST_ASSERT_EQUAL(PROTOCORE_IP_NONE, out.family); // cleared even on the failure path
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.remote_ip(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT32(0, ConnPool.u32);
+    TEST_ASSERT_EQUAL_UINT32(0, ConnPoolV.u32);
 }
 
 void test_remote_address_rejects_a_null_output_and_a_bad_slot(void)
 {
     arm_slot(0);
     protocore_ip out;
-    ConnPool.slot = 0;
-    ConnPool.out = NULL;
+    ConnPoolV.slot = 0;
+    ConnPoolV.out = NULL;
     ConnPool.remote_addr(protocore_conn_pool_span());
-    TEST_ASSERT_FALSE(ConnPool.ok);
-    ConnPool.slot = MAX_CONNS;
-    ConnPool.out = &out;
+    TEST_ASSERT_FALSE(ConnPoolV.ok);
+    ConnPoolV.slot = MAX_CONNS;
+    ConnPoolV.out = &out;
     ConnPool.remote_addr(protocore_conn_pool_span());
-    TEST_ASSERT_FALSE(ConnPool.ok);
+    TEST_ASSERT_FALSE(ConnPoolV.ok);
     TEST_ASSERT_EQUAL(PROTOCORE_IP_NONE, out.family);
-    ConnPool.slot = MAX_CONNS;
+    ConnPoolV.slot = MAX_CONNS;
     ConnPool.remote_ip(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT32(0, ConnPool.u32);
+    TEST_ASSERT_EQUAL_UINT32(0, ConnPoolV.u32);
 }
 
 // ---------------------------------------------------------------------------
@@ -1066,37 +1066,37 @@ void test_peek_reads_without_consuming(void)
     deliver(0, 0, 32);
 
     uint8_t look[8];
-    ConnPool.slot = 0;
-    ConnPool.io.off = 4;
-    ConnPool.io.buf = look;
-    ConnPool.io.count = sizeof(look);
+    ConnPoolV.slot = 0;
+    ConnPoolV.io.off = 4;
+    ConnPoolV.io.buf = look;
+    ConnPoolV.io.count = sizeof(look);
     ConnPool.peek(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_UINT8_ARRAY(&g_payload[4], look, 8);
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.available(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT(32, ConnPool.n); // nothing taken
+    TEST_ASSERT_EQUAL_UINT(32, ConnPoolV.n); // nothing taken
 
-    ConnPool.slot = 0;
-    ConnPool.io.count = 4;
+    ConnPoolV.slot = 0;
+    ConnPoolV.io.count = 4;
     ConnPool.consume(protocore_conn_pool_span());
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.available(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT(28, ConnPool.n);
+    TEST_ASSERT_EQUAL_UINT(28, ConnPoolV.n);
 
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.read_byte(protocore_conn_pool_span());
-    TEST_ASSERT_TRUE(ConnPool.ok);
-    TEST_ASSERT_EQUAL_UINT8(g_payload[4], ConnPool.u8); // the byte is a result member now
+    TEST_ASSERT_TRUE(ConnPoolV.ok);
+    TEST_ASSERT_EQUAL_UINT8(g_payload[4], ConnPoolV.u8); // the byte is a result member now
 }
 
 void test_read_byte_reports_an_empty_ring(void)
 {
     arm_slot(0);
-    ConnPool.u8 = 0xAA;
-    ConnPool.slot = 0;
+    ConnPoolV.u8 = 0xAA;
+    ConnPoolV.slot = 0;
     ConnPool.read_byte(protocore_conn_pool_span());
-    TEST_ASSERT_FALSE(ConnPool.ok);
-    TEST_ASSERT_EQUAL_UINT8(0xAA, ConnPool.u8); // left untouched
+    TEST_ASSERT_FALSE(ConnPoolV.ok);
+    TEST_ASSERT_EQUAL_UINT8(0xAA, ConnPoolV.u8); // left untouched
 }
 
 // A segment arriving as a chain of buffers lands in the ring as one contiguous run.
@@ -1115,16 +1115,16 @@ void test_a_multi_buffer_segment_is_reassembled_in_order(void)
     tail.tot_len = 60;
 
     TEST_ASSERT_EQUAL(PROTOCORE_NET_OK, lowlevel_recv_cb(&conn_pool[0], &g_pcb, &head, PROTOCORE_NET_OK));
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     ConnPool.available(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT(100, ConnPool.n);
+    TEST_ASSERT_EQUAL_UINT(100, ConnPoolV.n);
 
     uint8_t got[100];
-    ConnPool.slot = 0;
-    ConnPool.io.buf = got;
-    ConnPool.io.cap = sizeof(got);
+    ConnPoolV.slot = 0;
+    ConnPoolV.io.buf = got;
+    ConnPoolV.io.cap = sizeof(got);
     ConnPool.read(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_UINT(100, ConnPool.n);
+    TEST_ASSERT_EQUAL_UINT(100, ConnPoolV.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(g_payload, got, 100);
 }
 

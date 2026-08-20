@@ -42,7 +42,7 @@ void setUp(void)
 
 void tearDown(void)
 {
-    UdpListener.port = MDNS_PORT;
+    UdpListenerV.port = MDNS_PORT;
     UdpListener.close(protocore_udp_listener_span());
 }
 
@@ -202,9 +202,9 @@ void test_begin_joins_the_rfc6762_group(void)
     TEST_ASSERT_TRUE(MdnsServiceV.ok);
     TEST_ASSERT_NOT_NULL(protocore_net_host_udp_pcb(MDNS_PORT));
 
-    UdpListener.port = MDNS_PORT;
+    UdpListenerV.port = MDNS_PORT;
     UdpListener.joined_group(protocore_udp_listener_span());
-    TEST_ASSERT_EQUAL_STRING("224.0.0.251", UdpListener.text);
+    TEST_ASSERT_EQUAL_STRING("224.0.0.251", UdpListenerV.text);
 }
 
 // RFC 6762 sec 18: ID zero (18.1), QR one (18.2), AA one (18.4), and no questions in the Question

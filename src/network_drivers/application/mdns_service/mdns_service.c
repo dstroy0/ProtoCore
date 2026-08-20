@@ -556,11 +556,11 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct proto
     Ip.parse(ip_work);
     if (Ip.ok)
     {
-        UdpListener.port = PROTOCORE_MDNS_PORT;
-        UdpListener.send_args.dst = &group;
-        UdpListener.send_args.dst_port = PROTOCORE_MDNS_PORT;
-        UdpListener.send_args.data = tx;
-        UdpListener.send_args.len = n;
+        UdpListenerV.port = PROTOCORE_MDNS_PORT;
+        UdpListenerV.send_args.dst = &group;
+        UdpListenerV.send_args.dst_port = PROTOCORE_MDNS_PORT;
+        UdpListenerV.send_args.data = tx;
+        UdpListenerV.send_args.len = n;
         UdpListener.sendto(protocore_udp_listener_span());
     }
 }
@@ -677,12 +677,12 @@ void protocore_mdns_service_begin(uint8_t *restrict work)
         MdnsServiceV.ok = PROTO_FALSE;
         return;
     }
-    UdpListener.port = PROTOCORE_MDNS_PORT;
-    UdpListener.bind.handler = mdns_udp_handler;
-    UdpListener.bind.handler_ctx = NULL;
-    UdpListener.bind.group_ip = PROTOCORE_MDNS_GROUP;
+    UdpListenerV.port = PROTOCORE_MDNS_PORT;
+    UdpListenerV.bind.handler = mdns_udp_handler;
+    UdpListenerV.bind.handler_ctx = NULL;
+    UdpListenerV.bind.group_ip = PROTOCORE_MDNS_GROUP;
     UdpListener.listen_multicast(protocore_udp_listener_span());
-    MDNS_SERVICE_CTX(work)->running = UdpListener.ok;
+    MDNS_SERVICE_CTX(work)->running = UdpListenerV.ok;
     MdnsServiceV.ok = MDNS_SERVICE_CTX(work)->running;
 }
 

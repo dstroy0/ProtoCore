@@ -761,11 +761,11 @@ static proto_bool mem_bind(uint8_t *restrict work)
 // Send plaintext octets to the Server.
 static proto_bool tx_plain(uint8_t *restrict work, const uint8_t *data, size_t len)
 {
-    TcpClient.cid = MQTT_CTX(work)->cid;
-    TcpClient.io.data = data;
-    TcpClient.io.len = len;
+    TcpClientV.cid = MQTT_CTX(work)->cid;
+    TcpClientV.io.data = data;
+    TcpClientV.io.len = len;
     TcpClient.send(protocore_tcp_client_span());
-    return TcpClient.ok;
+    return TcpClientV.ok;
 }
 
 // Append what the transport holds to the reassembly buffer. One read: the transport already knows
@@ -778,16 +778,16 @@ static void fill_plain(uint8_t *restrict work)
     {
         return;
     }
-    TcpClient.cid = MQTT_CTX(work)->cid;
-    TcpClient.io.buf = MQTT_CTX(work)->rx + MQTT_CTX(work)->rx_len;
-    TcpClient.io.cap = room;
+    TcpClientV.cid = MQTT_CTX(work)->cid;
+    TcpClientV.io.buf = MQTT_CTX(work)->rx + MQTT_CTX(work)->rx_len;
+    TcpClientV.io.cap = room;
     TcpClient.read(protocore_tcp_client_span());
-    size_t n = TcpClient.n;
+    size_t n = TcpClientV.n;
     if (n == 0)
     {
-        TcpClient.cid = MQTT_CTX(work)->cid;
+        TcpClientV.cid = MQTT_CTX(work)->cid;
         TcpClient.is_closed(protocore_tcp_client_span());
-        if (TcpClient.ok)
+        if (TcpClientV.ok)
         {
             MQTT_CTX(work)->closed = PROTO_TRUE;
         }
@@ -809,16 +809,16 @@ static int tls_send(void *bio, const unsigned char *buf, size_t len)
 static int tls_recv(void *bio, unsigned char *buf, size_t len)
 {
     (void)bio;
-    TcpClient.cid = s_mqtt.store->cid;
-    TcpClient.io.buf = buf;
-    TcpClient.io.cap = len;
+    TcpClientV.cid = s_mqtt.store->cid;
+    TcpClientV.io.buf = buf;
+    TcpClientV.io.cap = len;
     TcpClient.read(protocore_tcp_client_span());
-    size_t n = TcpClient.n;
+    size_t n = TcpClientV.n;
     if (n == 0)
     {
-        TcpClient.cid = s_mqtt.store->cid;
+        TcpClientV.cid = s_mqtt.store->cid;
         TcpClient.is_closed(protocore_tcp_client_span());
-        return TcpClient.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
+        return TcpClientV.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
     }
     return (int)n;
 }
@@ -901,7 +901,7 @@ static void link_close(uint8_t *restrict work)
 #endif
     if (MQTT_CTX(work)->cid >= 0)
     {
-        TcpClient.cid = MQTT_CTX(work)->cid;
+        TcpClientV.cid = MQTT_CTX(work)->cid;
         TcpClient.close(protocore_tcp_client_span());
     }
     MQTT_CTX(work)->cid = -1;
@@ -1145,9 +1145,9 @@ static void link_step(uint8_t *restrict work)
     switch (MQTT_CTX(work)->link)
     {
     case MQTT_LINK_TCP:
-        TcpClient.cid = MQTT_CTX(work)->cid;
+        TcpClientV.cid = MQTT_CTX(work)->cid;
         TcpClient.connected(protocore_tcp_client_span());
-        if (!TcpClient.ok)
+        if (!TcpClientV.ok)
         {
             return;
         }
@@ -1259,11 +1259,11 @@ static void mqtt_connect(uint8_t *restrict work)
     MQTT_CTX(work)->tx_len = Mqtt.n;
 
     MQTT_CTX(work)->link_budget_ms = PROTOCORE_MQTT_CONNECT_MS;
-    TcpClient.dial.host = Mqtt.server.host;
-    TcpClient.dial.port = Mqtt.server.port;
-    TcpClient.dial.timeout_ms = MQTT_CTX(work)->link_budget_ms;
+    TcpClientV.dial.host = Mqtt.server.host;
+    TcpClientV.dial.port = Mqtt.server.port;
+    TcpClientV.dial.timeout_ms = MQTT_CTX(work)->link_budget_ms;
     TcpClient.open(protocore_tcp_client_span());
-    MQTT_CTX(work)->cid = TcpClient.i32;
+    MQTT_CTX(work)->cid = TcpClientV.i32;
     if (MQTT_CTX(work)->cid < 0)
     {
         return;

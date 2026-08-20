@@ -44,7 +44,7 @@ void setUp(void)
     }
     for (int i = 0; i < PROTOCORE_CLIENT_CONNS; i++)
     {
-        TcpClient.cid = i;
+        TcpClientV.cid = i;
         TcpClient.close(protocore_tcp_client_span());
     }
     Oauth2V.client.client_id = NULL;
@@ -65,7 +65,7 @@ void tearDown(void)
     protocore_net_host_reply_reset();
     for (int i = 0; i < PROTOCORE_CLIENT_CONNS; i++)
     {
-        TcpClient.cid = i;
+        TcpClientV.cid = i;
         TcpClient.close(protocore_tcp_client_span());
     }
 }

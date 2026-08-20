@@ -316,7 +316,7 @@ void test_begin_binds_the_catch_all_dns_on_port_53(void)
 {
     Prov.begin_args.ap_ssid = "ProtoCore-Setup";
     Prov.begin(protocore_provisioning_service_span());
-    TEST_ASSERT_EQUAL_UINT16(53, UdpListener.port);
-    TEST_ASSERT_NOT_NULL(UdpListener.bind.handler);
-    TEST_ASSERT_NULL(UdpListener.bind.group_ip); // a catch-all, not a multicast join
+    TEST_ASSERT_EQUAL_UINT16(53, UdpListenerV.port);
+    TEST_ASSERT_NOT_NULL(UdpListenerV.bind.handler);
+    TEST_ASSERT_NULL(UdpListenerV.bind.group_ip); // a catch-all, not a multicast join
 }

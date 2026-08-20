@@ -127,22 +127,51 @@ typedef struct
     CoapsServerSinkArgs sink;    ///< where the replies go
     CoapsServerIngestArgs dgram; ///< what an injected datagram carries
 #endif
-
     proto_bool ok;
     uint8_t u8;
+#if !PROTOCORE_HAS_NET_STACK
+#endif
+} CoapsServerVars;
 
+/** @brief The operands and the outcome. */
+extern CoapsServerVars CoapsServerV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const begin)(uint8_t *restrict work);
     void (*const poll)(uint8_t *restrict work);
     void (*const active_conns)(uint8_t *restrict work);
     void (*const stop)(uint8_t *restrict work);
-#if !PROTOCORE_HAS_NET_STACK
     void (*const set_out_sink)(uint8_t *restrict work);
     void (*const ingest)(uint8_t *restrict work);
-#endif
 } CoapsServerNs;
 
-/** @brief The one symbol this module exports. */
-extern CoapsServerNs CoapsServer;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in CoapsServerV or a region of the borrow at a fixed offset.
+void protocore_coaps_server_begin(uint8_t *restrict work);
+void protocore_coaps_server_poll(uint8_t *restrict work);
+void protocore_coaps_server_active_conns(uint8_t *restrict work);
+void protocore_coaps_server_stop(uint8_t *restrict work);
+#if !PROTOCORE_HAS_NET_STACK
+void protocore_coaps_server_set_out_sink(uint8_t *restrict work);
+void protocore_coaps_server_ingest(uint8_t *restrict work);
+#endif
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `CoapsServer.begin(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const CoapsServerNs CoapsServer __attribute__((unused)) = {
+    .begin = protocore_coaps_server_begin,
+    .poll = protocore_coaps_server_poll,
+    .active_conns = protocore_coaps_server_active_conns,
+    .stop = protocore_coaps_server_stop,
+#if !PROTOCORE_HAS_NET_STACK
+    .set_out_sink = protocore_coaps_server_set_out_sink,
+    .ingest = protocore_coaps_server_ingest,
+#endif
+};
 
 /**
  * @brief The PROTOCORE_COAPS_SERVER_BORROW bytes this module's state lives in.

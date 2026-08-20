@@ -16,10 +16,10 @@
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 
-#include "mmgr/membuild/membuild.h"    // protocore_sb: the message builder
-#include "mmgr/protomem/protomem.h"    // mem.cpy / mem.move / mem.cmp / mem.chr
-#include "mmgr/protostr/protostr.h"    // str.len / diff / starts / digit / to_long
-#include "shared/mime/mime.h" // PROTOCORE_MIME_OCTET_STREAM: the Content-Type default (RFC 9110 sec 8.3)
+#include "mmgr/membuild/membuild.h" // protocore_sb: the message builder
+#include "mmgr/protomem/protomem.h" // mem.cpy / mem.move / mem.cmp / mem.chr
+#include "mmgr/protostr/protostr.h" // str.len / diff / starts / digit / to_long
+#include "shared/mime/mime.h"       // PROTOCORE_MIME_OCTET_STREAM: the Content-Type default (RFC 9110 sec 8.3)
 
 #if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/tcp/client/client.h" // ::TcpClient, the shared outbound transport
@@ -517,27 +517,27 @@ static void clear_verify(uint8_t *restrict work)
 static int tls_bio_send(void *bio, const unsigned char *buf, size_t len)
 {
     (void)bio;
-    TcpClient.cid = HTTP_CLIENT_CTX(protocore_http_client_span())->cid;
-    TcpClient.io.data = buf;
-    TcpClient.io.len = len > 0xFFFF ? 0xFFFF : len;
+    TcpClientV.cid = HTTP_CLIENT_CTX(protocore_http_client_span())->cid;
+    TcpClientV.io.data = buf;
+    TcpClientV.io.len = len > 0xFFFF ? 0xFFFF : len;
     TcpClient.send(protocore_tcp_client_span());
-    return TcpClient.ok ? (int)TcpClient.io.len : -1;
+    return TcpClientV.ok ? (int)TcpClientV.io.len : -1;
 }
 
 static int tls_bio_recv(void *bio, unsigned char *buf, size_t len)
 {
     (void)bio;
-    TcpClient.cid = HTTP_CLIENT_CTX(protocore_http_client_span())->cid;
-    TcpClient.io.buf = buf;
-    TcpClient.io.cap = len;
+    TcpClientV.cid = HTTP_CLIENT_CTX(protocore_http_client_span())->cid;
+    TcpClientV.io.buf = buf;
+    TcpClientV.io.cap = len;
     TcpClient.read(protocore_tcp_client_span());
-    if (TcpClient.n != 0)
+    if (TcpClientV.n != 0)
     {
-        return (int)TcpClient.n;
+        return (int)TcpClientV.n;
     }
-    TcpClient.cid = HTTP_CLIENT_CTX(protocore_http_client_span())->cid;
+    TcpClientV.cid = HTTP_CLIENT_CTX(protocore_http_client_span())->cid;
     TcpClient.is_closed(protocore_tcp_client_span());
-    return TcpClient.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
+    return TcpClientV.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
 }
 #endif // PROTOCORE_ENABLE_HTTP_CLIENT_TLS && PROTOCORE_HAS_VENDOR_TLS
 
@@ -553,15 +553,15 @@ static uint32_t now_ms(void)
 // item 8, the close-delimited body).
 static proto_bool peer_done(uint8_t *restrict work)
 {
-    TcpClient.cid = HTTP_CLIENT_CTX(work)->cid;
+    TcpClientV.cid = HTTP_CLIENT_CTX(work)->cid;
     TcpClient.is_closed(protocore_tcp_client_span());
-    if (!TcpClient.ok)
+    if (!TcpClientV.ok)
     {
         return PROTO_FALSE;
     }
-    TcpClient.cid = HTTP_CLIENT_CTX(work)->cid;
+    TcpClientV.cid = HTTP_CLIENT_CTX(work)->cid;
     TcpClient.available(protocore_tcp_client_span());
-    return TcpClient.n == 0;
+    return TcpClientV.n == 0;
 }
 
 // Tear the connection down and free the slot (RFC 9112 sec 9.6: the "close" connection option the
@@ -570,7 +570,7 @@ static void close_conn(uint8_t *restrict work)
 {
     if (HTTP_CLIENT_CTX(work)->cid >= 0)
     {
-        TcpClient.cid = HTTP_CLIENT_CTX(work)->cid;
+        TcpClientV.cid = HTTP_CLIENT_CTX(work)->cid;
         TcpClient.close(protocore_tcp_client_span());
         HTTP_CLIENT_CTX(work)->cid = -1;
     }
@@ -620,11 +620,11 @@ static void exchange(uint8_t *restrict work)
 
     // Active OPEN (RFC 9293 sec 3.9.1.1) through the shared transport; the host it dials lives in
     // this module's storage, so it outlives the resolve.
-    TcpClient.dial.host = HTTP_CLIENT_CTX(work)->host;
-    TcpClient.dial.port = ns->target.port;
-    TcpClient.dial.timeout_ms = PROTOCORE_HTTP_CLIENT_TIMEOUT_MS;
+    TcpClientV.dial.host = HTTP_CLIENT_CTX(work)->host;
+    TcpClientV.dial.port = ns->target.port;
+    TcpClientV.dial.timeout_ms = PROTOCORE_HTTP_CLIENT_TIMEOUT_MS;
     TcpClient.open(protocore_tcp_client_span());
-    HTTP_CLIENT_CTX(work)->cid = (int)TcpClient.i32;
+    HTTP_CLIENT_CTX(work)->cid = (int)TcpClientV.i32;
     CL_DBG("[hc] open cid=%d\n", HTTP_CLIENT_CTX(work)->cid);
     if (HTTP_CLIENT_CTX(work)->cid < 0)
     {
@@ -635,15 +635,15 @@ static void exchange(uint8_t *restrict work)
     // The open resolves and connects a step at a time; the request waits for it to come up.
     for (;;)
     {
-        TcpClient.cid = HTTP_CLIENT_CTX(work)->cid;
+        TcpClientV.cid = HTTP_CLIENT_CTX(work)->cid;
         TcpClient.connected(protocore_tcp_client_span());
-        if (TcpClient.ok)
+        if (TcpClientV.ok)
         {
             break;
         }
-        TcpClient.cid = HTTP_CLIENT_CTX(work)->cid;
+        TcpClientV.cid = HTTP_CLIENT_CTX(work)->cid;
         TcpClient.is_closed(protocore_tcp_client_span());
-        if (TcpClient.ok)
+        if (TcpClientV.ok)
         {
             close_conn(work);
             ns->status = (int32_t)HTTP_CLIENT_ERR_CONNECT;
@@ -719,11 +719,11 @@ static void exchange(uint8_t *restrict work)
     else
 #endif // PROTOCORE_ENABLE_HTTP_CLIENT_TLS && PROTOCORE_HAS_VENDOR_TLS
     {
-        TcpClient.cid = HTTP_CLIENT_CTX(work)->cid;
-        TcpClient.io.data = HTTP_CLIENT_CTX(work)->req;
-        TcpClient.io.len = reqlen;
+        TcpClientV.cid = HTTP_CLIENT_CTX(work)->cid;
+        TcpClientV.io.data = HTTP_CLIENT_CTX(work)->req;
+        TcpClientV.io.len = reqlen;
         TcpClient.send(protocore_tcp_client_span());
-        if (!TcpClient.ok)
+        if (!TcpClientV.ok)
         {
             close_conn(work);
             ns->status = (int32_t)HTTP_CLIENT_ERR_SEND;
@@ -731,11 +731,11 @@ static void exchange(uint8_t *restrict work)
         }
         while ((int32_t)(deadline - now_ms()) > 0)
         {
-            TcpClient.cid = HTTP_CLIENT_CTX(work)->cid;
-            TcpClient.io.buf = HTTP_CLIENT_CTX(work)->rx + msg_len;
-            TcpClient.io.cap = sizeof(HTTP_CLIENT_CTX(work)->rx) - msg_len;
+            TcpClientV.cid = HTTP_CLIENT_CTX(work)->cid;
+            TcpClientV.io.buf = HTTP_CLIENT_CTX(work)->rx + msg_len;
+            TcpClientV.io.cap = sizeof(HTTP_CLIENT_CTX(work)->rx) - msg_len;
             TcpClient.read(protocore_tcp_client_span());
-            const size_t got = TcpClient.n;
+            const size_t got = TcpClientV.n;
             msg_len += got;
             if (msg_len >= sizeof(HTTP_CLIENT_CTX(work)->rx))
             {

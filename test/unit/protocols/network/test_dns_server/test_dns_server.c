@@ -450,9 +450,9 @@ void test_dns_add_and_lookup_guards()
 
 void test_dns_begin_answers_a_query_over_the_wire()
 {
-    UdpListener.port = 53;
+    UdpListenerV.port = 53;
     UdpListener.close(protocore_udp_listener_span());
-    (void)UdpListener.ok;
+    (void)UdpListenerV.ok;
     protocore_net_host_udp_reset();
     DnsServer.clear(protocore_dns_server_span());
     DnsServerV.rec.name = "gw.lan";
@@ -491,7 +491,7 @@ void test_dns_begin_answers_a_query_over_the_wire()
     TEST_ASSERT_EQUAL_HEX8(0x03, protocore_net_host_udp_at(0)->data[3] & 0x0F);
     TEST_ASSERT_EQUAL_HEX8(0x00, protocore_net_host_udp_at(0)->data[7]);
 
-    UdpListener.port = 53;
+    UdpListenerV.port = 53;
     UdpListener.close(protocore_udp_listener_span());
-    (void)UdpListener.ok;
+    (void)UdpListenerV.ok;
 }

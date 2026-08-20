@@ -652,11 +652,11 @@ static void cli_send(uint8_t *restrict work)
         SshClient.ok = PROTO_FALSE;
         return;
     }
-    TcpClient.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
-    TcpClient.io.data = wire;
-    TcpClient.io.len = wlen;
+    TcpClientV.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
+    TcpClientV.io.data = wire;
+    TcpClientV.io.len = wlen;
     TcpClient.send(protocore_tcp_client_span());
-    SshClient.ok = TcpClient.ok;
+    SshClient.ok = TcpClientV.ok;
     return;
 }
 
@@ -1000,11 +1000,11 @@ static void protocore_ssh_client_begin(uint8_t *restrict work)
     protocore_worker_set_self(PROTOCORE_GHOST_WORKER_SLOT);
 
     uint16_t port = cfg->port ? cfg->port : 22;
-    TcpClient.dial.host = cfg->host;
-    TcpClient.dial.port = port;
-    TcpClient.dial.timeout_ms = 8000;
+    TcpClientV.dial.host = cfg->host;
+    TcpClientV.dial.port = port;
+    TcpClientV.dial.timeout_ms = 8000;
     TcpClient.open(protocore_tcp_client_span());
-    SSH_CLIENT_CTX(protocore_ssh_client_span())->cid = TcpClient.i32;
+    SSH_CLIENT_CTX(protocore_ssh_client_span())->cid = TcpClientV.i32;
     if (SSH_CLIENT_CTX(protocore_ssh_client_span())->cid < 0)
     {
         SSH_CLIENT_CTX(protocore_ssh_client_span())->state = PROTOCORE_SSH_CLIENT_FAILED;
@@ -1018,7 +1018,7 @@ static void protocore_ssh_client_begin(uint8_t *restrict work)
     SshNetwork.claim(protocore_ssh_network_span());
     if (SshNetworkV.i32 != 0)
     {
-        TcpClient.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
+        TcpClientV.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
         TcpClient.close(protocore_tcp_client_span());
         SSH_CLIENT_CTX(protocore_ssh_client_span())->cid = -1;
         SSH_CLIENT_CTX(protocore_ssh_client_span())->state = PROTOCORE_SSH_CLIENT_FAILED;
@@ -1038,11 +1038,11 @@ static void protocore_ssh_client_begin(uint8_t *restrict work)
         (SshTransportV.slot = SSH_CLI_SLOT, SshTransportV.out_args.out = banner,
          SshTransportV.out_args.cap = sizeof(banner), SshTransport.send_ident(protocore_ssh_transport_span()),
          n = SshTransportV.out_args.out_len, SshTransportV.i32);
-    TcpClient.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
-    TcpClient.io.data = banner;
-    TcpClient.io.len = n;
+    TcpClientV.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
+    TcpClientV.io.data = banner;
+    TcpClientV.io.len = n;
     TcpClient.send(protocore_tcp_client_span());
-    if (ident != 0 || !TcpClient.ok)
+    if (ident != 0 || !TcpClientV.ok)
     {
         cli_fail("banner send failed");
         SshClient.ok = PROTO_FALSE;
@@ -1064,12 +1064,12 @@ static void protocore_ssh_client_poll(uint8_t *restrict work)
         return;
     }
 
-    TcpClient.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
+    TcpClientV.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
     TcpClient.is_closed(protocore_tcp_client_span());
-    const proto_bool peer_closed = TcpClient.ok;
-    TcpClient.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
+    const proto_bool peer_closed = TcpClientV.ok;
+    TcpClientV.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
     TcpClient.available(protocore_tcp_client_span());
-    if (peer_closed && TcpClient.n == 0)
+    if (peer_closed && TcpClientV.n == 0)
     {
         cli_fail("relay closed the connection");
         return;
@@ -1082,11 +1082,11 @@ static void protocore_ssh_client_poll(uint8_t *restrict work)
     }
 
     uint8_t buf[1024];
-    TcpClient.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
-    TcpClient.io.buf = buf;
-    TcpClient.io.cap = sizeof(buf);
+    TcpClientV.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
+    TcpClientV.io.buf = buf;
+    TcpClientV.io.cap = sizeof(buf);
     TcpClient.read(protocore_tcp_client_span());
-    size_t got = TcpClient.n;
+    size_t got = TcpClientV.n;
     if (got)
     {
         size_t off = 0;
@@ -1131,7 +1131,7 @@ static void protocore_ssh_client_end(uint8_t *restrict work)
     SshNetwork.chan_close_all(protocore_ssh_network_span());
     if (SSH_CLIENT_CTX(protocore_ssh_client_span())->cid >= 0)
     {
-        TcpClient.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
+        TcpClientV.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
         TcpClient.close(protocore_tcp_client_span());
     }
     SshNetworkV.ssh_slot = SSH_CLI_SLOT;
@@ -1151,7 +1151,7 @@ static void cli_fail(const char *why)
     SshNetwork.chan_close_all(protocore_ssh_network_span());
     if (SSH_CLIENT_CTX(protocore_ssh_client_span())->cid >= 0)
     {
-        TcpClient.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
+        TcpClientV.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
         TcpClient.close(protocore_tcp_client_span());
     }
     SSH_CLIENT_CTX(protocore_ssh_client_span())->cid = -1;

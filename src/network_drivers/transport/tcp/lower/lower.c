@@ -78,7 +78,7 @@ static proto_bool on_stack_thread(const uint8_t *restrict work)
 // is what RAWSEND needs, since it carries no slot.
 static proto_bool pcb_bound(const uint8_t *restrict work)
 {
-    const protocore_pcb *pcb = TcpLower.pcb;
+    const protocore_pcb *pcb = TcpLowerV.pcb;
     if (pcb == NULL)
     {
         return PROTO_FALSE;
@@ -95,13 +95,13 @@ static proto_bool pcb_bound(const uint8_t *restrict work)
 
 static protocore_net_err protocore_tcp_do(uint8_t *restrict work)
 {
-    TcpLower.result = PROTOCORE_NET_OK;
+    TcpLowerV.result = PROTOCORE_NET_OK;
     if (TCP_LOWER_CTX(work)->tcpip_task ==
         NULL) // capture the stack task once; the dispatch only ever runs in that thread
     {
         TCP_LOWER_CTX(work)->tcpip_task = protocore_platform_task_self();
     }
-    switch (TcpLower.op)
+    switch (TcpLowerV.op)
     {
     case PROTOCORE_OP_RAWSEND:
         // RAWSEND (TLS BIO) carries only the pcb, not its slot, so liveness needs a pool lookup. This
@@ -109,13 +109,13 @@ static protocore_net_err protocore_tcp_do(uint8_t *restrict work)
         // small + compile-time so -O2 unrolls the scan (see docs/ROADMAP: unroll loops to bitmask).
         if (!pcb_bound(work)) // stale pcb (connection torn down between capture and now)
         {
-            TcpLower.result = PROTOCORE_NET_ERR_CLSD;
+            TcpLowerV.result = PROTOCORE_NET_ERR_CLSD;
             break;
         }
-        TcpLower.result = protocore_net_write(TcpLower.pcb, TcpLower.data, TcpLower.len, PROTOCORE_NET_WRITE_COPY);
-        if (TcpLower.result == PROTOCORE_NET_OK)
+        TcpLowerV.result = protocore_net_write(TcpLowerV.pcb, TcpLowerV.data, TcpLowerV.len, PROTOCORE_NET_WRITE_COPY);
+        if (TcpLowerV.result == PROTOCORE_NET_OK)
         {
-            protocore_net_output(TcpLower.pcb);
+            protocore_net_output(TcpLowerV.pcb);
         }
         break;
     case PROTOCORE_OP_SEND:
@@ -123,26 +123,26 @@ static protocore_net_err protocore_tcp_do(uint8_t *restrict work)
         // O(1), no scan - the send/flush pair runs on every HTTP response. The `TcpLower.pcb` null test is
         // essential: a torn-down slot has pcb == null, and comparing a captured-null against a live-null
         // (null == null) would otherwise pass the guard and protocore_net_write(null).
-        if (!TcpLower.pcb || TcpLower.pcb != conn_pool[TcpLower.slot].pcb)
+        if (!TcpLowerV.pcb || TcpLowerV.pcb != conn_pool[TcpLowerV.slot].pcb)
         {
-            TcpLower.result =
+            TcpLowerV.result =
                 PROTOCORE_NET_ERR_CLSD; // connection torn down between capture and now; skip, do not assert
             break;
         }
 #if PROTOCORE_ENABLE_TLS
-        if (conn_pool[TcpLower.slot].tls)
+        if (conn_pool[TcpLowerV.slot].tls)
         {
-            TcpLower.result = (protocore_tls_write(TcpLower.slot, TcpLower.data, TcpLower.len) >= 0)
-                                  ? PROTOCORE_NET_OK
-                                  : PROTOCORE_NET_ERR_MEM;
+            TcpLowerV.result = (protocore_tls_write(TcpLowerV.slot, TcpLowerV.data, TcpLowerV.len) >= 0)
+                                   ? PROTOCORE_NET_OK
+                                   : PROTOCORE_NET_ERR_MEM;
             break;
         }
 #endif
-        TcpLower.result = protocore_net_write(TcpLower.pcb, TcpLower.data, TcpLower.len, PROTOCORE_NET_WRITE_COPY);
-        if (TcpLower.flush && TcpLower.result == PROTOCORE_NET_OK)
+        TcpLowerV.result = protocore_net_write(TcpLowerV.pcb, TcpLowerV.data, TcpLowerV.len, PROTOCORE_NET_WRITE_COPY);
+        if (TcpLowerV.flush && TcpLowerV.result == PROTOCORE_NET_OK)
         {
             protocore_net_output(
-                TcpLower.pcb); // coalesced write+flush: one marshal for a terminal single-shot response
+                TcpLowerV.pcb); // coalesced write+flush: one marshal for a terminal single-shot response
         }
         break;
     case PROTOCORE_OP_OUTPUT:
@@ -152,36 +152,36 @@ static protocore_net_err protocore_tcp_do(uint8_t *restrict work)
         // conn_pool[slot].pcb, which is null for a torn-down slot, so a captured-null vs a live-null
         // (null == null) passed the guard and called protocore_net_output(null) -> panic. Coredump-confirmed:
         // slot 0, TcpLower.pcb == 0, conn_pool[0].pcb == 0, state CONN_FREE.
-        if (TcpLower.pcb && TcpLower.pcb == conn_pool[TcpLower.slot].pcb)
+        if (TcpLowerV.pcb && TcpLowerV.pcb == conn_pool[TcpLowerV.slot].pcb)
         {
-            protocore_net_output(TcpLower.pcb);
+            protocore_net_output(TcpLowerV.pcb);
         }
         else
         {
-            TcpLower.result = PROTOCORE_NET_ERR_CLSD;
+            TcpLowerV.result = PROTOCORE_NET_ERR_CLSD;
         }
         break;
     case PROTOCORE_OP_CLOSE:
 #if PROTOCORE_ENABLE_TLS
-        if (conn_pool[TcpLower.slot].tls)
+        if (conn_pool[TcpLowerV.slot].tls)
         {
-            protocore_tls_conn_end(TcpLower.slot); // close_notify + free the TLS context
+            protocore_tls_conn_end(TcpLowerV.slot); // close_notify + free the TLS context
         }
 #endif
-        if (protocore_net_close(TcpLower.pcb) != PROTOCORE_NET_OK)
+        if (protocore_net_close(TcpLowerV.pcb) != PROTOCORE_NET_OK)
         {
-            protocore_net_abort(TcpLower.pcb);
+            protocore_net_abort(TcpLowerV.pcb);
         }
         break;
     case PROTOCORE_OP_ABORT:
-        protocore_net_abort(TcpLower.pcb);
+        protocore_net_abort(TcpLowerV.pcb);
         break;
     case PROTOCORE_OP_DETACH:
-        protocore_net_arg(TcpLower.pcb, NULL);
+        protocore_net_arg(TcpLowerV.pcb, NULL);
         break;
     case PROTOCORE_OP_CLOSE_CHECK:
-        ConnPool.slot = TcpLower.slot;
-        ConnPool.pcb = TcpLower.pcb;
+        ConnPoolV.slot = TcpLowerV.slot;
+        ConnPoolV.pcb = TcpLowerV.pcb;
         ConnPool.closing_check(protocore_conn_pool_span()); // safe pcb access: we are in tcpip_thread
         break;
     case PROTOCORE_OP_RECVED:
@@ -191,21 +191,21 @@ static protocore_net_err protocore_tcp_do(uint8_t *restrict work)
         // (assert new_rcv_ann_wnd <= 0xffff) and a window-update protocore_net_output ("invalid pcb") - i.e. a
         // remotely-triggerable panic under connection churn. Skip if the slot no longer owns a live pcb
         // (the null test guards the captured-null vs live-null case, as in SEND/OUTPUT).
-        if (TcpLower.pcb && TcpLower.pcb == conn_pool[TcpLower.slot].pcb)
+        if (TcpLowerV.pcb && TcpLowerV.pcb == conn_pool[TcpLowerV.slot].pcb)
         {
-            protocore_net_recved(TcpLower.pcb, TcpLower.len); // reopen the receive window by the consumed bytes
+            protocore_net_recved(TcpLowerV.pcb, TcpLowerV.len); // reopen the receive window by the consumed bytes
         }
         else
         {
-            TcpLower.result = PROTOCORE_NET_ERR_CLSD;
+            TcpLowerV.result = PROTOCORE_NET_ERR_CLSD;
         }
         break;
     case PROTOCORE_OP_SET_TTL:
         // RFC 9293 sec 3.9.2 MUST-49. Stamped where the control block is created, before it carries
         // anything, so no segment of a connection goes out with a different TTL than its first.
-        if (TcpLower.pcb)
+        if (TcpLowerV.pcb)
         {
-            TcpLower.pcb->ttl = (uint8_t)TcpLower.len;
+            TcpLowerV.pcb->ttl = (uint8_t)TcpLowerV.len;
         }
         break;
     }
@@ -242,7 +242,7 @@ uint8_t *protocore_tcp_lower_span(void)
     return s_own.span;
 }
 
-static void marshal(uint8_t *restrict work)
+void protocore_tcp_lower_marshal(uint8_t *restrict work)
 {
     // In stack context already (a raw callback's teardown reaching a send or a close): run the op
     // inline. Re-marshaling would call into the mailbox from the very thread that services it and
@@ -252,48 +252,48 @@ static void marshal(uint8_t *restrict work)
         (void)protocore_tcp_do(work);
         return;
     }
-    protocore_tcp_call *k = &TCP_LOWER_CTX(work)->call[TcpLower.slot];
+    protocore_tcp_call *k = &TCP_LOWER_CTX(work)->call[TcpLowerV.slot];
     k->work = work;
     protocore_net_call_marshal(dispatch_trampoline, &k->base);
 }
 
 // Disassociate the slot from this control block's stack callbacks before the slot is freed, so any
 // late callback for it finds a null arg and does nothing.
-static void detach(uint8_t *restrict work)
+void protocore_tcp_lower_detach(uint8_t *restrict work)
 {
-    TcpLower.op = PROTOCORE_OP_DETACH;
-    marshal(work);
+    TcpLowerV.op = PROTOCORE_OP_DETACH;
+    protocore_tcp_lower_marshal(work);
 }
 
 // Hard reset (RST) for a fatal condition - no graceful FIN.
-static void conn_abort(uint8_t *restrict work)
+void protocore_tcp_lower_abort(uint8_t *restrict work)
 {
-    TcpLower.op = PROTOCORE_OP_ABORT;
-    marshal(work);
+    TcpLowerV.op = PROTOCORE_OP_ABORT;
+    protocore_tcp_lower_marshal(work);
 }
 
 // RFC 1122 sec 3.2.1.7: a datagram must leave with a non-zero TTL, so zero is refused rather than
 // stored and stamped onto every later connection. The candidate arrives in len.
-static void set_ttl(uint8_t *restrict work)
+void protocore_tcp_lower_set_ttl(uint8_t *restrict work)
 {
-    TcpLower.ok = PROTO_FALSE;
-    if (TcpLower.len == 0 || TcpLower.len > 0xFFu)
+    TcpLowerV.ok = PROTO_FALSE;
+    if (TcpLowerV.len == 0 || TcpLowerV.len > 0xFFu)
     {
         return;
     }
-    TCP_LOWER_CTX(work)->ttl = (uint8_t)TcpLower.len;
-    TcpLower.ok = PROTO_TRUE;
+    TCP_LOWER_CTX(work)->ttl = (uint8_t)TcpLowerV.len;
+    TcpLowerV.ok = PROTO_TRUE;
 }
 
 // Stamp the control block the handle carries with the configured TTL.
-static void apply_ttl(uint8_t *restrict work)
+void protocore_tcp_lower_apply_ttl(uint8_t *restrict work)
 {
-    TcpLower.op = PROTOCORE_OP_SET_TTL;
-    TcpLower.len = TCP_LOWER_CTX(work)->ttl;
-    marshal(work);
+    TcpLowerV.op = PROTOCORE_OP_SET_TTL;
+    TcpLowerV.len = TCP_LOWER_CTX(work)->ttl;
+    protocore_tcp_lower_marshal(work);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 
-TcpLowerNs TcpLower = {
-    .marshal = marshal, .detach = detach, .abort = conn_abort, .set_ttl = set_ttl, .apply_ttl = apply_ttl};
+/** @brief The operands and the outcome. */
+TcpLowerVars TcpLowerV;

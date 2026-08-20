@@ -91,11 +91,11 @@ void test_ams_header_octet_layout(void)
     AdsRequest r = route();
     uint8_t buf[64];
     memset(buf, 0xEE, sizeof(buf));
-    Ads.build_read_device_info_args.buf = buf;
-    Ads.build_read_device_info_args.cap = sizeof(buf);
-    Ads.build_read_device_info_args.r = &r;
+    AdsV.build_read_device_info_args.buf = buf;
+    AdsV.build_read_device_info_args.cap = sizeof(buf);
+    AdsV.build_read_device_info_args.r = &r;
     Ads.build_read_device_info(ads_work);
-    size_t n = Ads.n;
+    size_t n = AdsV.n;
     TEST_ASSERT_EQUAL_size_t((size_t)ADS_HDR_LEN, n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, ADS_HDR_LEN);
     TEST_ASSERT_EQUAL_HEX8(0xEEu, buf[ADS_HDR_LEN]); // nothing written past the frame
@@ -107,14 +107,14 @@ void test_read_request_length_and_payload(void)
 {
     AdsRequest r = route();
     uint8_t buf[64];
-    Ads.build_read_args.buf = buf;
-    Ads.build_read_args.cap = sizeof(buf);
-    Ads.build_read_args.r = &r;
-    Ads.build_read_args.index_group = ADS_IGRP_SYM_VAL_BY_HANDLE;
-    Ads.build_read_args.index_offset = 0x00010001u;
-    Ads.build_read_args.read_len = 4;
+    AdsV.build_read_args.buf = buf;
+    AdsV.build_read_args.cap = sizeof(buf);
+    AdsV.build_read_args.r = &r;
+    AdsV.build_read_args.index_group = ADS_IGRP_SYM_VAL_BY_HANDLE;
+    AdsV.build_read_args.index_offset = 0x00010001u;
+    AdsV.build_read_args.read_len = 4;
     Ads.build_read(ads_work);
-    size_t n = Ads.n;
+    size_t n = AdsV.n;
     TEST_ASSERT_EQUAL_size_t((size_t)ADS_HDR_LEN + 12u, n);
 
     static const uint8_t LEN_LE[4] = {0x2C, 0x00, 0x00, 0x00}; // 44
@@ -134,19 +134,19 @@ void test_header_round_trip(void)
 {
     AdsRequest r = route();
     uint8_t buf[64];
-    Ads.build_read_state_args.buf = buf;
-    Ads.build_read_state_args.cap = sizeof(buf);
-    Ads.build_read_state_args.r = &r;
+    AdsV.build_read_state_args.buf = buf;
+    AdsV.build_read_state_args.cap = sizeof(buf);
+    AdsV.build_read_state_args.r = &r;
     Ads.build_read_state(ads_work);
-    size_t n = Ads.n;
+    size_t n = AdsV.n;
     TEST_ASSERT_EQUAL_size_t((size_t)ADS_HDR_LEN, n);
 
     AdsAmsHeader h;
-    Ads.parse_ams_header_args.buf = buf;
-    Ads.parse_ams_header_args.len = n;
-    Ads.parse_ams_header_args.out = &h;
+    AdsV.parse_ams_header_args.buf = buf;
+    AdsV.parse_ams_header_args.len = n;
+    AdsV.parse_ams_header_args.out = &h;
     Ads.parse_ams_header(ads_work);
-    TEST_ASSERT_TRUE(Ads.ok);
+    TEST_ASSERT_TRUE(AdsV.ok);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(r.target.net_id, h.target.net_id, ADS_NET_ID_LEN);
     TEST_ASSERT_EQUAL_UINT16(851u, h.target.port);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(r.source.net_id, h.source.net_id, ADS_NET_ID_LEN);
@@ -165,23 +165,23 @@ void test_write_frames_the_data_after_the_length(void)
     AdsRequest r = route();
     static const uint8_t DATA[3] = {0xDE, 0xAD, 0xBE};
     uint8_t buf[64];
-    Ads.build_write_args.buf = buf;
-    Ads.build_write_args.cap = sizeof(buf);
-    Ads.build_write_args.r = &r;
-    Ads.build_write_args.index_group = ADS_IGRP_PLC_RW_M;
-    Ads.build_write_args.index_offset = 0x20u;
-    Ads.build_write_args.data = DATA;
-    Ads.build_write_args.len = sizeof(DATA);
+    AdsV.build_write_args.buf = buf;
+    AdsV.build_write_args.cap = sizeof(buf);
+    AdsV.build_write_args.r = &r;
+    AdsV.build_write_args.index_group = ADS_IGRP_PLC_RW_M;
+    AdsV.build_write_args.index_offset = 0x20u;
+    AdsV.build_write_args.data = DATA;
+    AdsV.build_write_args.len = sizeof(DATA);
     Ads.build_write(ads_work);
-    size_t n = Ads.n;
+    size_t n = AdsV.n;
     TEST_ASSERT_EQUAL_size_t((size_t)ADS_HDR_LEN + 12u + 3u, n);
 
     AdsAmsHeader h;
-    Ads.parse_ams_header_args.buf = buf;
-    Ads.parse_ams_header_args.len = n;
-    Ads.parse_ams_header_args.out = &h;
+    AdsV.parse_ams_header_args.buf = buf;
+    AdsV.parse_ams_header_args.len = n;
+    AdsV.parse_ams_header_args.out = &h;
     Ads.parse_ams_header(ads_work);
-    TEST_ASSERT_TRUE(Ads.ok);
+    TEST_ASSERT_TRUE(AdsV.ok);
     TEST_ASSERT_EQUAL_INT(ADS_COMMAND_WRITE, h.cmd);
     TEST_ASSERT_EQUAL_UINT32(15u, h.data_len); // 12 + 3
 
@@ -190,15 +190,15 @@ void test_write_frames_the_data_after_the_length(void)
                                         0x03, 0x00, 0x00, 0x00, 0xDE, 0xAD, 0xBE};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(PAYLOAD, h.data, 15);
 
-    Ads.build_write_args.buf = buf;
-    Ads.build_write_args.cap = sizeof(buf);
-    Ads.build_write_args.r = &r;
-    Ads.build_write_args.index_group = 0;
-    Ads.build_write_args.index_offset = 0;
-    Ads.build_write_args.data = NULL;
-    Ads.build_write_args.len = 4;
+    AdsV.build_write_args.buf = buf;
+    AdsV.build_write_args.cap = sizeof(buf);
+    AdsV.build_write_args.r = &r;
+    AdsV.build_write_args.index_group = 0;
+    AdsV.build_write_args.index_offset = 0;
+    AdsV.build_write_args.data = NULL;
+    AdsV.build_write_args.len = 4;
     Ads.build_write(ads_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Ads.n); // len without data
+    TEST_ASSERT_EQUAL_size_t(0u, AdsV.n); // len without data
 }
 
 // ReadWrite is the symbol-by-name workhorse: write the symbol name to index group 0xF003 and read
@@ -208,24 +208,24 @@ void test_read_write_symbol_by_name(void)
     AdsRequest r = route();
     static const uint8_t NAME[8] = {'M', 'A', 'I', 'N', '.', 'v', 'a', 'l'};
     uint8_t buf[80];
-    Ads.build_read_write_args.buf = buf;
-    Ads.build_read_write_args.cap = sizeof(buf);
-    Ads.build_read_write_args.r = &r;
-    Ads.build_read_write_args.index_group = ADS_IGRP_SYM_HND_BY_NAME;
-    Ads.build_read_write_args.index_offset = 0;
-    Ads.build_read_write_args.read_len = 4;
-    Ads.build_read_write_args.write_data = NAME;
-    Ads.build_read_write_args.write_len = sizeof(NAME);
+    AdsV.build_read_write_args.buf = buf;
+    AdsV.build_read_write_args.cap = sizeof(buf);
+    AdsV.build_read_write_args.r = &r;
+    AdsV.build_read_write_args.index_group = ADS_IGRP_SYM_HND_BY_NAME;
+    AdsV.build_read_write_args.index_offset = 0;
+    AdsV.build_read_write_args.read_len = 4;
+    AdsV.build_read_write_args.write_data = NAME;
+    AdsV.build_read_write_args.write_len = sizeof(NAME);
     Ads.build_read_write(ads_work);
-    size_t n = Ads.n;
+    size_t n = AdsV.n;
     TEST_ASSERT_EQUAL_size_t((size_t)ADS_HDR_LEN + 16u + 8u, n);
 
     AdsAmsHeader h;
-    Ads.parse_ams_header_args.buf = buf;
-    Ads.parse_ams_header_args.len = n;
-    Ads.parse_ams_header_args.out = &h;
+    AdsV.parse_ams_header_args.buf = buf;
+    AdsV.parse_ams_header_args.len = n;
+    AdsV.parse_ams_header_args.out = &h;
     Ads.parse_ams_header(ads_work);
-    TEST_ASSERT_TRUE(Ads.ok);
+    TEST_ASSERT_TRUE(AdsV.ok);
     TEST_ASSERT_EQUAL_INT(ADS_COMMAND_READ_WRITE, h.cmd);
     TEST_ASSERT_EQUAL_UINT32(24u, h.data_len);
 
@@ -239,23 +239,23 @@ void test_write_control_carries_the_state_pair(void)
 {
     AdsRequest r = route();
     uint8_t buf[64];
-    Ads.build_write_control_args.buf = buf;
-    Ads.build_write_control_args.cap = sizeof(buf);
-    Ads.build_write_control_args.r = &r;
-    Ads.build_write_control_args.protocore_ads_state = ADS_STATE_RUN;
-    Ads.build_write_control_args.device_state = 0;
-    Ads.build_write_control_args.data = NULL;
-    Ads.build_write_control_args.len = 0;
+    AdsV.build_write_control_args.buf = buf;
+    AdsV.build_write_control_args.cap = sizeof(buf);
+    AdsV.build_write_control_args.r = &r;
+    AdsV.build_write_control_args.protocore_ads_state = ADS_STATE_RUN;
+    AdsV.build_write_control_args.device_state = 0;
+    AdsV.build_write_control_args.data = NULL;
+    AdsV.build_write_control_args.len = 0;
     Ads.build_write_control(ads_work);
-    size_t n = Ads.n;
+    size_t n = AdsV.n;
     TEST_ASSERT_EQUAL_size_t((size_t)ADS_HDR_LEN + 8u, n);
 
     AdsAmsHeader h;
-    Ads.parse_ams_header_args.buf = buf;
-    Ads.parse_ams_header_args.len = n;
-    Ads.parse_ams_header_args.out = &h;
+    AdsV.parse_ams_header_args.buf = buf;
+    AdsV.parse_ams_header_args.len = n;
+    AdsV.parse_ams_header_args.out = &h;
     Ads.parse_ams_header(ads_work);
-    TEST_ASSERT_TRUE(Ads.ok);
+    TEST_ASSERT_TRUE(AdsV.ok);
     TEST_ASSERT_EQUAL_INT(ADS_COMMAND_WRITE_CONTROL, h.cmd);
     // AdsState 5 = Run, DeviceState 0, Length 0, all little-endian
     static const uint8_t PAYLOAD[8] = {0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -268,25 +268,25 @@ void test_add_notification_payload_is_forty_octets(void)
 {
     AdsRequest r = route();
     uint8_t buf[96];
-    Ads.build_add_notification_args.buf = buf;
-    Ads.build_add_notification_args.cap = sizeof(buf);
-    Ads.build_add_notification_args.r = &r;
-    Ads.build_add_notification_args.index_group = ADS_IGRP_SYM_VAL_BY_HANDLE;
-    Ads.build_add_notification_args.index_offset = 0x11u;
-    Ads.build_add_notification_args.length = 2;
-    Ads.build_add_notification_args.mode = ADS_TRANS_MODE_SERVER_ON_CHANGE;
-    Ads.build_add_notification_args.max_delay = 0;
-    Ads.build_add_notification_args.cycle_time = 1000000;
+    AdsV.build_add_notification_args.buf = buf;
+    AdsV.build_add_notification_args.cap = sizeof(buf);
+    AdsV.build_add_notification_args.r = &r;
+    AdsV.build_add_notification_args.index_group = ADS_IGRP_SYM_VAL_BY_HANDLE;
+    AdsV.build_add_notification_args.index_offset = 0x11u;
+    AdsV.build_add_notification_args.length = 2;
+    AdsV.build_add_notification_args.mode = ADS_TRANS_MODE_SERVER_ON_CHANGE;
+    AdsV.build_add_notification_args.max_delay = 0;
+    AdsV.build_add_notification_args.cycle_time = 1000000;
     Ads.build_add_notification(ads_work);
-    size_t n = Ads.n;
+    size_t n = AdsV.n;
     TEST_ASSERT_EQUAL_size_t((size_t)ADS_HDR_LEN + 40u, n);
 
     AdsAmsHeader h;
-    Ads.parse_ams_header_args.buf = buf;
-    Ads.parse_ams_header_args.len = n;
-    Ads.parse_ams_header_args.out = &h;
+    AdsV.parse_ams_header_args.buf = buf;
+    AdsV.parse_ams_header_args.len = n;
+    AdsV.parse_ams_header_args.out = &h;
     Ads.parse_ams_header(ads_work);
-    TEST_ASSERT_TRUE(Ads.ok);
+    TEST_ASSERT_TRUE(AdsV.ok);
     TEST_ASSERT_EQUAL_INT(ADS_COMMAND_ADD_NOTIFICATION, h.cmd);
     TEST_ASSERT_EQUAL_UINT32(40u, h.data_len);
 
@@ -300,18 +300,18 @@ void test_add_notification_payload_is_forty_octets(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(PAYLOAD, h.data, 40);
     TEST_ASSERT_EQUAL_INT(4, ADS_TRANS_MODE_SERVER_ON_CHANGE);
 
-    Ads.build_del_notification_args.buf = buf;
-    Ads.build_del_notification_args.cap = sizeof(buf);
-    Ads.build_del_notification_args.r = &r;
-    Ads.build_del_notification_args.notification_handle = 0x0000002Au;
+    AdsV.build_del_notification_args.buf = buf;
+    AdsV.build_del_notification_args.cap = sizeof(buf);
+    AdsV.build_del_notification_args.r = &r;
+    AdsV.build_del_notification_args.notification_handle = 0x0000002Au;
     Ads.build_del_notification(ads_work);
-    n = Ads.n;
+    n = AdsV.n;
     TEST_ASSERT_EQUAL_size_t((size_t)ADS_HDR_LEN + 4u, n);
-    Ads.parse_ams_header_args.buf = buf;
-    Ads.parse_ams_header_args.len = n;
-    Ads.parse_ams_header_args.out = &h;
+    AdsV.parse_ams_header_args.buf = buf;
+    AdsV.parse_ams_header_args.len = n;
+    AdsV.parse_ams_header_args.out = &h;
     Ads.parse_ams_header(ads_work);
-    TEST_ASSERT_TRUE(Ads.ok);
+    TEST_ASSERT_TRUE(AdsV.ok);
     TEST_ASSERT_EQUAL_INT(ADS_COMMAND_DEL_NOTIFICATION, h.cmd);
     static const uint8_t HANDLE[4] = {0x2A, 0x00, 0x00, 0x00};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(HANDLE, h.data, 4);
@@ -322,11 +322,11 @@ void test_parse_read_response(void)
 {
     static const uint8_t RESP[12] = {0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04};
     AdsReadResult res;
-    Ads.parse_read_args.data = RESP;
-    Ads.parse_read_args.data_len = sizeof(RESP);
-    Ads.parse_read_args.out = &res;
+    AdsV.parse_read_args.data = RESP;
+    AdsV.parse_read_args.data_len = sizeof(RESP);
+    AdsV.parse_read_args.out = &res;
     Ads.parse_read(ads_work);
-    TEST_ASSERT_TRUE(Ads.ok);
+    TEST_ASSERT_TRUE(AdsV.ok);
     TEST_ASSERT_EQUAL_UINT32(0u, res.result);
     TEST_ASSERT_EQUAL_UINT32(4u, res.len);
     TEST_ASSERT_EQUAL_PTR(RESP + 8, res.data);
@@ -334,26 +334,26 @@ void test_parse_read_response(void)
 
     // An error result: ADS error 0x00000706 (invalid index group / symbol not found).
     static const uint8_t ERR[8] = {0x06, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    Ads.parse_read_args.data = ERR;
-    Ads.parse_read_args.data_len = sizeof(ERR);
-    Ads.parse_read_args.out = &res;
+    AdsV.parse_read_args.data = ERR;
+    AdsV.parse_read_args.data_len = sizeof(ERR);
+    AdsV.parse_read_args.out = &res;
     Ads.parse_read(ads_work);
-    TEST_ASSERT_TRUE(Ads.ok);
+    TEST_ASSERT_TRUE(AdsV.ok);
     TEST_ASSERT_EQUAL_HEX32(0x00000706u, res.result);
     TEST_ASSERT_EQUAL_UINT32(0u, res.len);
 
     // A Length that runs past the buffer is refused rather than pointing at nothing.
     static const uint8_t LIES[10] = {0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0xAA, 0xBB};
-    Ads.parse_read_args.data = LIES;
-    Ads.parse_read_args.data_len = sizeof(LIES);
-    Ads.parse_read_args.out = &res;
+    AdsV.parse_read_args.data = LIES;
+    AdsV.parse_read_args.data_len = sizeof(LIES);
+    AdsV.parse_read_args.out = &res;
     Ads.parse_read(ads_work);
-    TEST_ASSERT_FALSE(Ads.ok);
-    Ads.parse_read_args.data = RESP;
-    Ads.parse_read_args.data_len = 7;
-    Ads.parse_read_args.out = &res;
+    TEST_ASSERT_FALSE(AdsV.ok);
+    AdsV.parse_read_args.data = RESP;
+    AdsV.parse_read_args.data_len = 7;
+    AdsV.parse_read_args.out = &res;
     Ads.parse_read(ads_work);
-    TEST_ASSERT_FALSE(Ads.ok); // shorter than Result + Length
+    TEST_ASSERT_FALSE(AdsV.ok); // shorter than Result + Length
 }
 
 // ReadState response: Result(4) + AdsState(2) + DeviceState(2).
@@ -361,32 +361,32 @@ void test_parse_read_state_response(void)
 {
     static const uint8_t RESP[8] = {0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x01, 0x00};
     AdsReadStateResult st;
-    Ads.parse_read_state_args.data = RESP;
-    Ads.parse_read_state_args.data_len = sizeof(RESP);
-    Ads.parse_read_state_args.out = &st;
+    AdsV.parse_read_state_args.data = RESP;
+    AdsV.parse_read_state_args.data_len = sizeof(RESP);
+    AdsV.parse_read_state_args.out = &st;
     Ads.parse_read_state(ads_work);
-    TEST_ASSERT_TRUE(Ads.ok);
+    TEST_ASSERT_TRUE(AdsV.ok);
     TEST_ASSERT_EQUAL_UINT32(0u, st.result);
     TEST_ASSERT_EQUAL_UINT16(ADS_STATE_RUN, st.protocore_ads_state);
     TEST_ASSERT_EQUAL_UINT16(1u, st.device_state);
-    Ads.parse_read_state_args.data = RESP;
-    Ads.parse_read_state_args.data_len = 7;
-    Ads.parse_read_state_args.out = &st;
+    AdsV.parse_read_state_args.data = RESP;
+    AdsV.parse_read_state_args.data_len = 7;
+    AdsV.parse_read_state_args.out = &st;
     Ads.parse_read_state(ads_work);
-    TEST_ASSERT_FALSE(Ads.ok);
+    TEST_ASSERT_FALSE(AdsV.ok);
 
     uint32_t result = 0xFFFFFFFFu;
-    Ads.parse_result_args.data = RESP;
-    Ads.parse_result_args.data_len = sizeof(RESP);
-    Ads.parse_result_args.result = &result;
+    AdsV.parse_result_args.data = RESP;
+    AdsV.parse_result_args.data_len = sizeof(RESP);
+    AdsV.parse_result_args.result = &result;
     Ads.parse_result(ads_work);
-    TEST_ASSERT_TRUE(Ads.ok);
+    TEST_ASSERT_TRUE(AdsV.ok);
     TEST_ASSERT_EQUAL_UINT32(0u, result);
-    Ads.parse_result_args.data = RESP;
-    Ads.parse_result_args.data_len = 3;
-    Ads.parse_result_args.result = &result;
+    AdsV.parse_result_args.data = RESP;
+    AdsV.parse_result_args.data_len = 3;
+    AdsV.parse_result_args.result = &result;
     Ads.parse_result(ads_work);
-    TEST_ASSERT_FALSE(Ads.ok);
+    TEST_ASSERT_FALSE(AdsV.ok);
 }
 
 // ReadDeviceInfo response: Result(4) + Major(1) + Minor(1) + Build(2) + Name(16). The name field is
@@ -400,11 +400,11 @@ void test_parse_device_info_terminates_a_full_name(void)
         'P',  'l',  'c',  'R',  'u', 'n', 't', 'm',
     };
     AdsDeviceInfo info;
-    Ads.parse_read_device_info_args.data = RESP;
-    Ads.parse_read_device_info_args.data_len = sizeof(RESP);
-    Ads.parse_read_device_info_args.out = &info;
+    AdsV.parse_read_device_info_args.data = RESP;
+    AdsV.parse_read_device_info_args.data_len = sizeof(RESP);
+    AdsV.parse_read_device_info_args.out = &info;
     Ads.parse_read_device_info(ads_work);
-    TEST_ASSERT_TRUE(Ads.ok);
+    TEST_ASSERT_TRUE(AdsV.ok);
     TEST_ASSERT_EQUAL_UINT32(0u, info.result);
     TEST_ASSERT_EQUAL_UINT8(3u, info.version_major);
     TEST_ASSERT_EQUAL_UINT8(1u, info.version_minor);
@@ -412,11 +412,11 @@ void test_parse_device_info_terminates_a_full_name(void)
     TEST_ASSERT_EQUAL_STRING("TwinCAT3PlcRuntm", info.device_name);
     TEST_ASSERT_EQUAL_size_t(16u, strlen(info.device_name));
 
-    Ads.parse_read_device_info_args.data = RESP;
-    Ads.parse_read_device_info_args.data_len = 23;
-    Ads.parse_read_device_info_args.out = &info;
+    AdsV.parse_read_device_info_args.data = RESP;
+    AdsV.parse_read_device_info_args.data_len = 23;
+    AdsV.parse_read_device_info_args.out = &info;
     Ads.parse_read_device_info(ads_work);
-    TEST_ASSERT_FALSE(Ads.ok);
+    TEST_ASSERT_FALSE(AdsV.ok);
 }
 
 // AddDeviceNotification response: Result(4) + NotificationHandle(4).
@@ -424,20 +424,20 @@ void test_parse_add_notification_response(void)
 {
     static const uint8_t RESP[8] = {0x00, 0x00, 0x00, 0x00, 0x21, 0x43, 0x65, 0x87};
     uint32_t result = 1, handle = 0;
-    Ads.parse_add_notification_args.data = RESP;
-    Ads.parse_add_notification_args.data_len = sizeof(RESP);
-    Ads.parse_add_notification_args.result = &result;
-    Ads.parse_add_notification_args.handle = &handle;
+    AdsV.parse_add_notification_args.data = RESP;
+    AdsV.parse_add_notification_args.data_len = sizeof(RESP);
+    AdsV.parse_add_notification_args.result = &result;
+    AdsV.parse_add_notification_args.handle = &handle;
     Ads.parse_add_notification(ads_work);
-    TEST_ASSERT_TRUE(Ads.ok);
+    TEST_ASSERT_TRUE(AdsV.ok);
     TEST_ASSERT_EQUAL_UINT32(0u, result);
     TEST_ASSERT_EQUAL_HEX32(0x87654321u, handle);
-    Ads.parse_add_notification_args.data = RESP;
-    Ads.parse_add_notification_args.data_len = 7;
-    Ads.parse_add_notification_args.result = &result;
-    Ads.parse_add_notification_args.handle = &handle;
+    AdsV.parse_add_notification_args.data = RESP;
+    AdsV.parse_add_notification_args.data_len = 7;
+    AdsV.parse_add_notification_args.result = &result;
+    AdsV.parse_add_notification_args.handle = &handle;
     Ads.parse_add_notification(ads_work);
-    TEST_ASSERT_FALSE(Ads.ok);
+    TEST_ASSERT_FALSE(AdsV.ok);
 }
 
 // One DeviceNotification stamp carrying two samples, walked to both callbacks.
@@ -481,12 +481,12 @@ void test_walks_a_notification_stamp(void)
     g_calls = 0;
     g_stamp = 0;
     g_first_sample = 0;
-    Ads.parse_notification_args.data = NOTE;
-    Ads.parse_notification_args.data_len = sizeof(NOTE);
-    Ads.parse_notification_args.on_sample = on_sample;
-    Ads.parse_notification_args.user = NULL;
+    AdsV.parse_notification_args.data = NOTE;
+    AdsV.parse_notification_args.data_len = sizeof(NOTE);
+    AdsV.parse_notification_args.on_sample = on_sample;
+    AdsV.parse_notification_args.user = NULL;
     Ads.parse_notification(ads_work);
-    TEST_ASSERT_TRUE(Ads.ok);
+    TEST_ASSERT_TRUE(AdsV.ok);
     TEST_ASSERT_EQUAL_UINT32(2u, g_calls);
     TEST_ASSERT_EQUAL_UINT32(10u, g_handles[0]);
     TEST_ASSERT_EQUAL_UINT32(11u, g_handles[1]);
@@ -500,19 +500,19 @@ void test_walks_a_notification_stamp(void)
         0x00, 0x0A, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x11, // size 64, only 1 octet present
     };
     g_calls = 0;
-    Ads.parse_notification_args.data = TRUNC;
-    Ads.parse_notification_args.data_len = sizeof(TRUNC);
-    Ads.parse_notification_args.on_sample = on_sample;
-    Ads.parse_notification_args.user = NULL;
+    AdsV.parse_notification_args.data = TRUNC;
+    AdsV.parse_notification_args.data_len = sizeof(TRUNC);
+    AdsV.parse_notification_args.on_sample = on_sample;
+    AdsV.parse_notification_args.user = NULL;
     Ads.parse_notification(ads_work);
-    TEST_ASSERT_FALSE(Ads.ok);
+    TEST_ASSERT_FALSE(AdsV.ok);
     TEST_ASSERT_EQUAL_UINT32(0u, g_calls);
-    Ads.parse_notification_args.data = NOTE;
-    Ads.parse_notification_args.data_len = 7;
-    Ads.parse_notification_args.on_sample = on_sample;
-    Ads.parse_notification_args.user = NULL;
+    AdsV.parse_notification_args.data = NOTE;
+    AdsV.parse_notification_args.data_len = 7;
+    AdsV.parse_notification_args.on_sample = on_sample;
+    AdsV.parse_notification_args.user = NULL;
     Ads.parse_notification(ads_work);
-    TEST_ASSERT_FALSE(Ads.ok);
+    TEST_ASSERT_FALSE(AdsV.ok);
 }
 
 // Framing that does not add up is refused: a nonzero AMS/TCP reserved field, a length shorter than
@@ -521,62 +521,62 @@ void test_malformed_framing_is_refused(void)
 {
     AdsRequest r = route();
     uint8_t buf[64];
-    Ads.build_read_state_args.buf = buf;
-    Ads.build_read_state_args.cap = sizeof(buf);
-    Ads.build_read_state_args.r = &r;
+    AdsV.build_read_state_args.buf = buf;
+    AdsV.build_read_state_args.cap = sizeof(buf);
+    AdsV.build_read_state_args.r = &r;
     Ads.build_read_state(ads_work);
-    size_t n = Ads.n;
+    size_t n = AdsV.n;
     AdsAmsHeader h;
 
     uint8_t bad[64];
     memcpy(bad, buf, n);
     bad[0] = 0x01; // reserved must be zero
-    Ads.parse_ams_header_args.buf = bad;
-    Ads.parse_ams_header_args.len = n;
-    Ads.parse_ams_header_args.out = &h;
+    AdsV.parse_ams_header_args.buf = bad;
+    AdsV.parse_ams_header_args.len = n;
+    AdsV.parse_ams_header_args.out = &h;
     Ads.parse_ams_header(ads_work);
-    TEST_ASSERT_FALSE(Ads.ok);
+    TEST_ASSERT_FALSE(AdsV.ok);
 
     memcpy(bad, buf, n);
     bad[2] = 0x1F; // length 31 < the 32-octet AMS header
-    Ads.parse_ams_header_args.buf = bad;
-    Ads.parse_ams_header_args.len = n;
-    Ads.parse_ams_header_args.out = &h;
+    AdsV.parse_ams_header_args.buf = bad;
+    AdsV.parse_ams_header_args.len = n;
+    AdsV.parse_ams_header_args.out = &h;
     Ads.parse_ams_header(ads_work);
-    TEST_ASSERT_FALSE(Ads.ok);
+    TEST_ASSERT_FALSE(AdsV.ok);
 
     memcpy(bad, buf, n);
     bad[2] = 0xFF; // length promises far more than arrived
     bad[3] = 0x00;
-    Ads.parse_ams_header_args.buf = bad;
-    Ads.parse_ams_header_args.len = n;
-    Ads.parse_ams_header_args.out = &h;
+    AdsV.parse_ams_header_args.buf = bad;
+    AdsV.parse_ams_header_args.len = n;
+    AdsV.parse_ams_header_args.out = &h;
     Ads.parse_ams_header(ads_work);
-    TEST_ASSERT_FALSE(Ads.ok);
+    TEST_ASSERT_FALSE(AdsV.ok);
 
     memcpy(bad, buf, n);
     bad[26] = 0x40; // cbData 64 with a frame that carries none
-    Ads.parse_ams_header_args.buf = bad;
-    Ads.parse_ams_header_args.len = n;
-    Ads.parse_ams_header_args.out = &h;
+    AdsV.parse_ams_header_args.buf = bad;
+    AdsV.parse_ams_header_args.len = n;
+    AdsV.parse_ams_header_args.out = &h;
     Ads.parse_ams_header(ads_work);
-    TEST_ASSERT_FALSE(Ads.ok);
+    TEST_ASSERT_FALSE(AdsV.ok);
 
-    Ads.parse_ams_header_args.buf = buf;
-    Ads.parse_ams_header_args.len = (size_t)ADS_HDR_LEN - 1;
-    Ads.parse_ams_header_args.out = &h;
+    AdsV.parse_ams_header_args.buf = buf;
+    AdsV.parse_ams_header_args.len = (size_t)ADS_HDR_LEN - 1;
+    AdsV.parse_ams_header_args.out = &h;
     Ads.parse_ams_header(ads_work);
-    TEST_ASSERT_FALSE(Ads.ok);
-    Ads.parse_ams_header_args.buf = NULL;
-    Ads.parse_ams_header_args.len = n;
-    Ads.parse_ams_header_args.out = &h;
+    TEST_ASSERT_FALSE(AdsV.ok);
+    AdsV.parse_ams_header_args.buf = NULL;
+    AdsV.parse_ams_header_args.len = n;
+    AdsV.parse_ams_header_args.out = &h;
     Ads.parse_ams_header(ads_work);
-    TEST_ASSERT_FALSE(Ads.ok);
-    Ads.parse_ams_header_args.buf = buf;
-    Ads.parse_ams_header_args.len = n;
-    Ads.parse_ams_header_args.out = NULL;
+    TEST_ASSERT_FALSE(AdsV.ok);
+    AdsV.parse_ams_header_args.buf = buf;
+    AdsV.parse_ams_header_args.len = n;
+    AdsV.parse_ams_header_args.out = NULL;
     Ads.parse_ams_header(ads_work);
-    TEST_ASSERT_FALSE(Ads.ok);
+    TEST_ASSERT_FALSE(AdsV.ok);
 }
 
 // A buffer that cannot hold the whole frame yields 0 rather than a truncated one.
@@ -584,27 +584,27 @@ void test_builders_refuse_a_short_buffer(void)
 {
     AdsRequest r = route();
     uint8_t buf[64];
-    Ads.build_read_device_info_args.buf = buf;
-    Ads.build_read_device_info_args.cap = (size_t)ADS_HDR_LEN - 1;
-    Ads.build_read_device_info_args.r = &r;
+    AdsV.build_read_device_info_args.buf = buf;
+    AdsV.build_read_device_info_args.cap = (size_t)ADS_HDR_LEN - 1;
+    AdsV.build_read_device_info_args.r = &r;
     Ads.build_read_device_info(ads_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Ads.n);
-    Ads.build_read_args.buf = buf;
-    Ads.build_read_args.cap = (size_t)ADS_HDR_LEN + 11u;
-    Ads.build_read_args.r = &r;
-    Ads.build_read_args.index_group = 0;
-    Ads.build_read_args.index_offset = 0;
-    Ads.build_read_args.read_len = 4;
+    TEST_ASSERT_EQUAL_size_t(0u, AdsV.n);
+    AdsV.build_read_args.buf = buf;
+    AdsV.build_read_args.cap = (size_t)ADS_HDR_LEN + 11u;
+    AdsV.build_read_args.r = &r;
+    AdsV.build_read_args.index_group = 0;
+    AdsV.build_read_args.index_offset = 0;
+    AdsV.build_read_args.read_len = 4;
     Ads.build_read(ads_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Ads.n);
-    Ads.build_read_device_info_args.buf = NULL;
-    Ads.build_read_device_info_args.cap = sizeof(buf);
-    Ads.build_read_device_info_args.r = &r;
+    TEST_ASSERT_EQUAL_size_t(0u, AdsV.n);
+    AdsV.build_read_device_info_args.buf = NULL;
+    AdsV.build_read_device_info_args.cap = sizeof(buf);
+    AdsV.build_read_device_info_args.r = &r;
     Ads.build_read_device_info(ads_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Ads.n);
-    Ads.build_read_device_info_args.buf = buf;
-    Ads.build_read_device_info_args.cap = sizeof(buf);
-    Ads.build_read_device_info_args.r = NULL;
+    TEST_ASSERT_EQUAL_size_t(0u, AdsV.n);
+    AdsV.build_read_device_info_args.buf = buf;
+    AdsV.build_read_device_info_args.cap = sizeof(buf);
+    AdsV.build_read_device_info_args.r = NULL;
     Ads.build_read_device_info(ads_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Ads.n);
+    TEST_ASSERT_EQUAL_size_t(0u, AdsV.n);
 }

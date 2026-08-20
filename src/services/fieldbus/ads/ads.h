@@ -389,10 +389,16 @@ typedef struct
     AdsParseReadDeviceInfoArgs parse_read_device_info_args;
     AdsParseAddNotificationArgs parse_add_notification_args;
     AdsParseNotificationArgs parse_notification_args;
-
     proto_bool ok;
     size_t n;
+} AdsVars;
 
+/** @brief The operands and the outcome. */
+extern AdsVars AdsV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_read_device_info)(uint8_t *restrict work);
     void (*const build_read_state)(uint8_t *restrict work);
     void (*const build_read)(uint8_t *restrict work);
@@ -410,8 +416,45 @@ typedef struct
     void (*const parse_notification)(uint8_t *restrict work);
 } AdsNs;
 
-/** @brief The one symbol this module exports. */
-extern AdsNs Ads;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in AdsV or a region of the borrow at a fixed offset.
+void protocore_ads_build_read_device_info(uint8_t *restrict work);
+void protocore_ads_build_read_state(uint8_t *restrict work);
+void protocore_ads_build_read(uint8_t *restrict work);
+void protocore_ads_build_write(uint8_t *restrict work);
+void protocore_ads_build_read_write(uint8_t *restrict work);
+void protocore_ads_build_write_control(uint8_t *restrict work);
+void protocore_ads_build_add_notification(uint8_t *restrict work);
+void protocore_ads_build_del_notification(uint8_t *restrict work);
+void protocore_ads_parse_ams_header(uint8_t *restrict work);
+void protocore_ads_parse_read(uint8_t *restrict work);
+void protocore_ads_parse_result(uint8_t *restrict work);
+void protocore_ads_parse_read_state(uint8_t *restrict work);
+void protocore_ads_parse_read_device_info(uint8_t *restrict work);
+void protocore_ads_parse_add_notification(uint8_t *restrict work);
+void protocore_ads_parse_notification(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Ads.build_read_device_info(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const AdsNs Ads __attribute__((unused)) = {
+    .build_read_device_info = protocore_ads_build_read_device_info,
+    .build_read_state = protocore_ads_build_read_state,
+    .build_read = protocore_ads_build_read,
+    .build_write = protocore_ads_build_write,
+    .build_read_write = protocore_ads_build_read_write,
+    .build_write_control = protocore_ads_build_write_control,
+    .build_add_notification = protocore_ads_build_add_notification,
+    .build_del_notification = protocore_ads_build_del_notification,
+    .parse_ams_header = protocore_ads_parse_ams_header,
+    .parse_read = protocore_ads_parse_read,
+    .parse_result = protocore_ads_parse_result,
+    .parse_read_state = protocore_ads_parse_read_state,
+    .parse_read_device_info = protocore_ads_parse_read_device_info,
+    .parse_add_notification = protocore_ads_parse_add_notification,
+    .parse_notification = protocore_ads_parse_notification,
+};
 
 PROTOCORE_END_DECLS
 

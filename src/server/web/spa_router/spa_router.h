@@ -168,11 +168,17 @@ typedef struct
     SpaRouterUiStreamBeginArgs ui_stream_begin_args;
     SpaRouterUiStreamNextArgs ui_stream_next_args;
     SpaRouterUiStreamDoneArgs ui_stream_done_args;
-
     proto_bool ok;
     protocore_spa_action action;
     size_t n;
+} SpaRouterVars;
 
+/** @brief The operands and the outcome. */
+extern SpaRouterVars SpaRouterV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const has_extension)(uint8_t *restrict work);
     void (*const route)(uint8_t *restrict work);
     void (*const route_ex)(uint8_t *restrict work);
@@ -181,8 +187,27 @@ typedef struct
     void (*const ui_stream_done)(uint8_t *restrict work);
 } SpaRouterNs;
 
-/** @brief The one symbol this module exports. */
-extern SpaRouterNs SpaRouter;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SpaRouterV or a region of the borrow at a fixed offset.
+void protocore_spa_router_has_extension(uint8_t *restrict work);
+void protocore_spa_router_route(uint8_t *restrict work);
+void protocore_spa_router_route_ex(uint8_t *restrict work);
+void protocore_spa_router_ui_stream_begin(uint8_t *restrict work);
+void protocore_spa_router_ui_stream_next(uint8_t *restrict work);
+void protocore_spa_router_ui_stream_done(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `SpaRouter.has_extension(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SpaRouterNs SpaRouter __attribute__((unused)) = {
+    .has_extension = protocore_spa_router_has_extension,
+    .route = protocore_spa_router_route,
+    .route_ex = protocore_spa_router_route_ex,
+    .ui_stream_begin = protocore_spa_router_ui_stream_begin,
+    .ui_stream_next = protocore_spa_router_ui_stream_next,
+    .ui_stream_done = protocore_spa_router_ui_stream_done,
+};
 
 PROTOCORE_END_DECLS
 

@@ -568,11 +568,11 @@ void protocore_resolver_resolve(uint8_t *restrict work)
     }
 
     // The handler is given these bytes back, so the drain reaches the query it is answering.
-    UdpListener.port = PROTOCORE_DNS_CLIENT_PORT;
-    UdpListener.bind.handler = dns_reply;
-    UdpListener.bind.handler_ctx = work;
+    UdpListenerV.port = PROTOCORE_DNS_CLIENT_PORT;
+    UdpListenerV.bind.handler = dns_reply;
+    UdpListenerV.bind.handler_ctx = work;
     UdpListener.listen(protocore_udp_listener_span());
-    if (!UdpListener.ok)
+    if (!UdpListenerV.ok)
     {
         return;
     }
@@ -588,13 +588,13 @@ void protocore_resolver_resolve(uint8_t *restrict work)
         return;
     }
 
-    UdpListener.port = PROTOCORE_DNS_CLIENT_PORT;
-    UdpListener.send_args.dst = &server;
-    UdpListener.send_args.dst_port = PROTOCORE_DNS_PORT;
-    UdpListener.send_args.data = DNS_RESOLVER_CTX(work)->tx.buf;
-    UdpListener.send_args.len = n;
+    UdpListenerV.port = PROTOCORE_DNS_CLIENT_PORT;
+    UdpListenerV.send_args.dst = &server;
+    UdpListenerV.send_args.dst_port = PROTOCORE_DNS_PORT;
+    UdpListenerV.send_args.data = DNS_RESOLVER_CTX(work)->tx.buf;
+    UdpListenerV.send_args.len = n;
     UdpListener.sendto(protocore_udp_listener_span());
-    if (!UdpListener.ok)
+    if (!UdpListenerV.ok)
     {
         return;
     }

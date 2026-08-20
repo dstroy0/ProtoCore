@@ -26,16 +26,16 @@ static uint8_t dtls_server_work[16]; // the borrow an entry takes; DtlsServer ne
 #define COAPS_EPOCH_APP 3u          ///< the epoch application data travels in
 
 // Turn one datagram for the connection in ns->conn.
-static void coaps_process(uint8_t *restrict work)
+void protocore_coaps_process(uint8_t *restrict work)
 {
     (void)work;
-    DtlsConn *c = Coaps.conn;
-    const uint8_t *dgram = Coaps.dgram.data;
-    const size_t len = Coaps.dgram.len;
-    uint8_t *out = Coaps.dgram.out;
-    const size_t out_cap = Coaps.dgram.out_cap;
+    DtlsConn *c = CoapsV.conn;
+    const uint8_t *dgram = CoapsV.dgram.data;
+    const size_t len = CoapsV.dgram.len;
+    uint8_t *out = CoapsV.dgram.out;
+    const size_t out_cap = CoapsV.dgram.out_cap;
 
-    Coaps.i32 = 0;
+    CoapsV.i32 = 0;
     if (!c || !dgram || !out)
     {
         return;
@@ -51,7 +51,7 @@ static void coaps_process(uint8_t *restrict work)
         DtlsServerV.process_args.out = out;
         DtlsServerV.process_args.out_cap = out_cap;
         DtlsServer.process(dtls_server_work);
-        Coaps.i32 = DtlsServerV.n; // still handshaking, or -1 fatal
+        CoapsV.i32 = DtlsServerV.n; // still handshaking, or -1 fatal
         return;
     }
 
@@ -74,22 +74,22 @@ static void coaps_process(uint8_t *restrict work)
             return; // replayed, truncated, or not application data
         }
         uint8_t resp[PROTOCORE_COAPS_MSG_CAP];
-        Coap.msg.req = req;
-        Coap.msg.req_len = req_len;
-        Coap.msg.resp = resp;
-        Coap.msg.resp_cap = sizeof(resp);
+        CoapV.msg.req = req;
+        CoapV.msg.req_len = req_len;
+        CoapV.msg.resp = resp;
+        CoapV.msg.resp_cap = sizeof(resp);
         Coap.process(protocore_coap_span());
-        if (Coap.n == 0)
+        if (CoapV.n == 0)
         {
             return; // nothing to send, as for a Non-confirmable message the server does not answer
         }
         DtlsServerV.seal_app_args.c = c;
         DtlsServerV.seal_app_args.data = resp;
-        DtlsServerV.seal_app_args.len = Coap.n;
+        DtlsServerV.seal_app_args.len = CoapV.n;
         DtlsServerV.seal_app_args.out = out;
         DtlsServerV.seal_app_args.out_cap = out_cap;
         DtlsServer.seal_app(dtls_server_work);
-        Coaps.i32 = (int32_t)DtlsServerV.n;
+        CoapsV.i32 = (int32_t)DtlsServerV.n;
         return;
     }
     DtlsServerV.process_args.c = c;
@@ -98,10 +98,11 @@ static void coaps_process(uint8_t *restrict work)
     DtlsServerV.process_args.out = out;
     DtlsServerV.process_args.out_cap = out_cap;
     DtlsServer.process(dtls_server_work);
-    Coaps.i32 = DtlsServerV.n;
+    CoapsV.i32 = DtlsServerV.n;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-CoapsNs Coaps = {.process = coaps_process};
+/** @brief The operands and the outcome. */
+CoapsVars CoapsV;
 
 #endif // PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
