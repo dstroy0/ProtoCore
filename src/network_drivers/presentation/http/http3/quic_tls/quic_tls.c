@@ -20,7 +20,6 @@ PROTOCORE_BEGIN_DECLS
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/http/http3/quic_tls/quic_tls.h"
 #include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
-static uint8_t tls13_msg_work[16]; // the borrow an entry takes; Tls13Msg never reads it
 
 // TLS alert codes we may raise (RFC 8446 sec 6).
 #define TLS_ALERT_UNEXPECTED_MESSAGE 10
@@ -127,7 +126,8 @@ static proto_bool emit(QuicTls *qt, uint8_t *flight, size_t cap, size_t *plen, s
 // key_share, and restart the transcript per §4.4.1: message_hash(Hash(ClientHello1)) || HRR, so the
 // eventual transcript is message_hash || HRR || ClientHello2 || ServerHello || ... QUIC does its own
 // return-routability (Retry tokens), so the HRR carries no cookie. @p msg is ClientHello1.
-static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_len, const Tls13ClientHello *ch)
+static proto_bool send_hello_retry(uint8_t *restrict work, QuicTls *qt, const uint8_t *msg, size_t msg_len,
+                                   const Tls13ClientHello *ch)
 {
     uint8_t ch1_hash[TLS13_SECRET_MAX];
     {
@@ -143,7 +143,7 @@ static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_l
     Tls13MsgV.build_message_hash_args.out = mh;
     Tls13MsgV.build_message_hash_args.cap = sizeof(mh);
     Tls13MsgV.build_message_hash_args.ch1_hash = ch1_hash;
-    Tls13Msg.build_message_hash(tls13_msg_work);
+    Tls13Msg.build_message_hash(work);
     size_t mhn = Tls13MsgV.n;
     if (!mhn)
     {
@@ -162,7 +162,7 @@ static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_l
     Tls13MsgV.build_hello_retry_request_args.cookie = NULL;
     Tls13MsgV.build_hello_retry_request_args.cookie_len = 0;
     Tls13MsgV.build_hello_retry_request_args.dtls = /*dtls=*/PROTO_FALSE;
-    Tls13Msg.build_hello_retry_request(tls13_msg_work);
+    Tls13Msg.build_hello_retry_request(work);
     size_t n = Tls13MsgV.n;
     if (!emit(qt, qt->flight_initial, sizeof(qt->flight_initial), &qt->flight_initial_len, n))
     {
@@ -206,7 +206,7 @@ static proto_bool process_client_hello(uint8_t *restrict work, QuicTls *qt, cons
     // the hybrid share rather than silently downgrading to X25519 (RFC 8446 §4.1.4).
     if (!use_hybrid && ch.offers_x25519mlkem768 && !ch.has_hybrid_share && !qt->hrr_sent)
     {
-        return send_hello_retry(qt, msg, msg_len, &ch);
+        return send_hello_retry(work, qt, msg, msg_len, &ch);
     }
     // A retry that still lacks the hybrid share is fatal - one HRR only, so a client cannot loop us.
     if (qt->hrr_sent && !use_hybrid)

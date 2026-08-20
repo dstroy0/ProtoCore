@@ -17,8 +17,6 @@
 #include "mmgr/secure/secure.h"     // the persistent end this module's key material is taken from
 #include "shared/hex/hex.h"         // Hex.digit: the two digits of a percent-encoded octet
 
-static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
-
 #if PROTOCORE_ENABLE_OAUTH2
 
 #include "network_drivers/presentation/codec/json/json.h"
@@ -82,7 +80,7 @@ static proto_bool unreserved(char c)
 
 // Append one form value: an unreserved octet passes, every other one becomes "%" HEXDIG HEXDIG in
 // the uppercase digits RFC 3986 sec 2.1 asks a producer for.
-static void put_form_value(protocore_sb *b, const char *s)
+static void put_form_value(uint8_t *restrict work, protocore_sb *b, const char *s)
 {
     for (; *s; s++)
     {
@@ -95,21 +93,21 @@ static void put_form_value(protocore_sb *b, const char *s)
         Sb.ch(b, '%');
         HexV.args.upper = PROTO_TRUE;
         HexV.args.nibble = (uint8_t)(c >> 4);
-        Hex.digit(hex_work);
+        Hex.digit(work);
         Sb.ch(b, HexV.ch);
         HexV.args.nibble = (uint8_t)(c & 0x0Fu);
-        Hex.digit(hex_work);
+        Hex.digit(work);
         Sb.ch(b, HexV.ch);
     }
 }
 
 // Append "&<name>=<encoded value>": one more parameter of the form body.
-static void put_param(protocore_sb *b, const char *name, const char *value)
+static void put_param(uint8_t *restrict work, protocore_sb *b, const char *name, const char *value)
 {
     Sb.ch(b, '&');
     Sb.put(b, name);
     Sb.ch(b, '=');
-    put_form_value(b, value);
+    put_form_value(work, b, value);
 }
 
 // RFC 6749 sec 4.1.3: grant_type=authorization_code, code, redirect_uri, client_id, the sec 2.3.1
@@ -126,16 +124,16 @@ void protocore_oauth2_build_code_request(uint8_t *restrict work)
     }
     protocore_sb b = {Oauth2V.request.out, Oauth2V.request.cap, 0, PROTO_TRUE};
     Sb.put(&b, "grant_type=authorization_code");
-    put_param(&b, "code", Oauth2V.code_grant.code);
-    put_param(&b, "redirect_uri", Oauth2V.code_grant.redirect_uri);
-    put_param(&b, "client_id", Oauth2V.client.client_id);
+    put_param(work, &b, "code", Oauth2V.code_grant.code);
+    put_param(work, &b, "redirect_uri", Oauth2V.code_grant.redirect_uri);
+    put_param(work, &b, "client_id", Oauth2V.client.client_id);
     if (Oauth2V.client.client_secret)
     {
-        put_param(&b, "client_secret", Oauth2V.client.client_secret);
+        put_param(work, &b, "client_secret", Oauth2V.client.client_secret);
     }
     if (Oauth2V.code_grant.code_verifier)
     {
-        put_param(&b, "code_verifier", Oauth2V.code_grant.code_verifier);
+        put_param(work, &b, "code_verifier", Oauth2V.code_grant.code_verifier);
     }
     Oauth2V.i32 = (int32_t)Sb.finish(&b);
 }
@@ -153,11 +151,11 @@ void protocore_oauth2_build_refresh_request(uint8_t *restrict work)
     }
     protocore_sb b = {Oauth2V.request.out, Oauth2V.request.cap, 0, PROTO_TRUE};
     Sb.put(&b, "grant_type=refresh_token");
-    put_param(&b, "refresh_token", Oauth2V.refresh_grant.refresh_token);
-    put_param(&b, "client_id", Oauth2V.client.client_id);
+    put_param(work, &b, "refresh_token", Oauth2V.refresh_grant.refresh_token);
+    put_param(work, &b, "client_id", Oauth2V.client.client_id);
     if (Oauth2V.client.client_secret)
     {
-        put_param(&b, "client_secret", Oauth2V.client.client_secret);
+        put_param(work, &b, "client_secret", Oauth2V.client.client_secret);
     }
     Oauth2V.i32 = (int32_t)Sb.finish(&b);
 }

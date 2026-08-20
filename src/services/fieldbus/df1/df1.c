@@ -8,8 +8,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
-
 #if PROTOCORE_ENABLE_DF1
 
 #include "services/fieldbus/df1/df1.h"
@@ -41,20 +39,20 @@ void protocore_df1_bcc(uint8_t *restrict work)
 
 // DF1's block check is the reflected CRC-16 (poly 0xA001 = reflect(0x8005), init 0, no final XOR), cataloged
 // as CRC-16/ARC. The data and the ETX are two runs, folded into one register.
-static uint16_t df1_crc_data_plus_etx(const uint8_t *data, size_t len, uint8_t etx)
+static uint16_t df1_crc_data_plus_etx(uint8_t *restrict work, const uint8_t *data, size_t len, uint8_t etx)
 {
     CrcV.args.params = &PROTOCORE_CRC16_ARC;
-    Crc.begin(crc_work);
+    Crc.begin(work);
     CrcV.args.crc = CrcV.value;
     CrcV.args.data = data;
     CrcV.args.len = len;
-    Crc.update(crc_work);
+    Crc.update(work);
     CrcV.args.crc = CrcV.value;
     CrcV.args.data = &etx;
     CrcV.args.len = 1;
-    Crc.update(crc_work);
+    Crc.update(work);
     CrcV.args.crc = CrcV.value;
-    Crc.final(crc_work);
+    Crc.final(work);
     return (uint16_t)CrcV.value;
 }
 
@@ -116,7 +114,7 @@ void protocore_df1_build_frame(uint8_t *restrict work)
 
     if (check == DF1_CHECK_CRC)
     {
-        uint16_t c = df1_crc_data_plus_etx(data, data_len, DF1_ETX);
+        uint16_t c = df1_crc_data_plus_etx(work, data, data_len, DF1_ETX);
         buf[p++] = (uint8_t)(c & 0xFF); // low byte first
         buf[p++] = (uint8_t)(c >> 8);
     }
@@ -209,7 +207,7 @@ void protocore_df1_parse_frame(uint8_t *restrict work)
             Df1V.ok = PROTO_FALSE;
             return;
         }
-        uint16_t c = df1_crc_data_plus_etx(out, o, DF1_ETX);
+        uint16_t c = df1_crc_data_plus_etx(work, out, o, DF1_ETX);
         uint16_t got = (uint16_t)(buf[i] | ((uint16_t)buf[i + 1] << 8)); // low byte first
         if (c != got)
         {

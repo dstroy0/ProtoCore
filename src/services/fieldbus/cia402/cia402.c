@@ -15,8 +15,6 @@
 #include "services/fieldbus/cia402/cia402.h"
 #include "shared/can/can.h"
 
-static uint8_t canopen_work[16]; // the borrow an entry takes; Canopen never reads it
-
 #include "mmgr/endian/endian.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -252,12 +250,13 @@ void protocore_cia402_sdo_read(uint8_t *restrict work)
 
 // Validate an expedited SDO upload response and copy its inline payload into @p out (>= need
 // octets). No shared state - the parsed response lives on this call's stack.
-static proto_bool sdo_upload_bytes(const CanFrame *f, uint16_t want_index, uint8_t need, uint8_t *out)
+static proto_bool sdo_upload_bytes(uint8_t *restrict work, const CanFrame *f, uint16_t want_index, uint8_t need,
+                                   uint8_t *out)
 {
     CanopenSdoResponse resp;
     CanopenV.parse_sdo_response_args.f = f;
     CanopenV.parse_sdo_response_args.out = &resp;
-    Canopen.parse_sdo_response(canopen_work);
+    Canopen.parse_sdo_response(work);
     if (!CanopenV.ok)
     {
         return PROTO_FALSE;
@@ -282,7 +281,7 @@ void protocore_cia402_sdo_get_u16(uint8_t *restrict work)
     uint16_t *value = Cia402V.sdo_get_u16_args.value;
 
     uint8_t d[2];
-    if (!value || !sdo_upload_bytes(f, want_index, 2, d))
+    if (!value || !sdo_upload_bytes(work, f, want_index, 2, d))
     {
         Cia402V.ok = PROTO_FALSE;
         return;
@@ -299,7 +298,7 @@ void protocore_cia402_sdo_get_i32(uint8_t *restrict work)
     int32_t *value = Cia402V.sdo_get_i32_args.value;
 
     uint8_t d[4];
-    if (!value || !sdo_upload_bytes(f, want_index, 4, d))
+    if (!value || !sdo_upload_bytes(work, f, want_index, 4, d))
     {
         Cia402V.ok = PROTO_FALSE;
         return;

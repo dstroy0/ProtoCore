@@ -17,7 +17,6 @@
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq, http_pool: the request being upgraded
 #include "network_drivers/transport/tcp/protocol/protocol.h"           // ConnPool: the slot a refusal is written on
 #include "network_drivers/transport/tcp/tcp.h"
-static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads it
 
 #if PROTOCORE_ENABLE_WEBSOCKET
 #include "crypto/hash/sha1/sha1.h"
@@ -53,7 +52,7 @@ static const char WS_MAGIC[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
  * the result, and base64-encodes the 20-byte digest into @p out.
  * @p out must be at least 29 bytes (28 base64 chars + null terminator).
  */
-static proto_bool ws_accept_key(const char *client_key, char *out)
+static proto_bool ws_accept_key(uint8_t *restrict work, const char *client_key, char *out)
 {
     size_t key_len = str.len(client_key, WS_MAX_KEY_LEN + 1);
     if (key_len > WS_MAX_KEY_LEN)
@@ -66,7 +65,7 @@ static proto_bool ws_accept_key(const char *client_key, char *out)
     Base64V.decode_args.src = client_key;
     Base64V.decode_args.dst = raw;
     Base64V.decode_args.dst_cap = sizeof(raw);
-    Base64.decode(base64_work);
+    Base64.decode(work);
     if (Base64V.n != 16)
     {
         out[0] = '\0';
@@ -94,7 +93,7 @@ static proto_bool ws_accept_key(const char *client_key, char *out)
     Base64V.encode_args.src = digest;
     Base64V.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
     Base64V.encode_args.dst = out;
-    Base64.encode(base64_work);
+    Base64.encode(work);
     return PROTO_TRUE;
 }
 
@@ -150,7 +149,7 @@ proto_bool ws_do_upgrade(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, 
     }
 
     char accept[32];
-    if (!ws_accept_key(client_key, accept))
+    if (!ws_accept_key(work, client_key, accept))
     {
         return PROTO_FALSE;
     }

@@ -239,8 +239,8 @@ static QuicStream *stream_get(QuicConnCtx *qc, uint64_t id, proto_bool create)
     return free_slot;
 }
 
-static void quic_conn_open(QuicConnCtx *qc, const QuicTlsConfig *cfg, const uint8_t *odcid, uint8_t odcid_len,
-                           const uint8_t *peer_scid, uint8_t peer_scid_len, const uint8_t *our_scid,
+static void quic_conn_open(uint8_t *restrict work, QuicConnCtx *qc, const QuicTlsConfig *cfg, const uint8_t *odcid,
+                           uint8_t odcid_len, const uint8_t *peer_scid, uint8_t peer_scid_len, const uint8_t *our_scid,
                            uint8_t our_scid_len, const QuicConnCallbacks *cb)
 {
     uint8_t *b = qc->b; // the plaintext span is the connection's, bound before this call
@@ -268,7 +268,7 @@ static void quic_conn_open(QuicConnCtx *qc, const QuicTlsConfig *cfg, const uint
     QuicCryptoV.derive_initial_secrets_args.dcid = odcid;
     QuicCryptoV.derive_initial_secrets_args.dcid_len = odcid_len;
     QuicCryptoV.derive_initial_secrets_args.out = &qc->initial;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(work);
 
     for (int i = 0; i < 3; i++)
     {
@@ -290,7 +290,7 @@ static void quic_conn_open(QuicConnCtx *qc, const QuicTlsConfig *cfg, const uint
     c.params.initial_scid_len = our_scid_len;
     QuicTlsServerV.server_init_args.qt = &qc->tls;
     QuicTlsServerV.server_init_args.cfg = &c;
-    QuicTlsServer.server_init(quic_tls_work);
+    QuicTlsServer.server_init(work);
 }
 
 // --- Frame handling --------------------------------------------------------------------------
@@ -670,7 +670,7 @@ static proto_bool quic_conn_take(QuicConnCtx *qc, const uint8_t *datagram, size_
 
 // --- Sending ---------------------------------------------------------------------------------
 // Append the owed ACK frame for space @p s (RFC 9000 sec 13.2); returns bytes written.
-static size_t build_ack_frame(QuicPnSpace *s, uint8_t *buf, size_t cap)
+static size_t build_ack_frame(uint8_t *restrict work, QuicPnSpace *s, uint8_t *buf, size_t cap)
 {
     if (!s->ack_eliciting_rx || !s->have_rx)
     {
@@ -681,7 +681,7 @@ static size_t build_ack_frame(QuicPnSpace *s, uint8_t *buf, size_t cap)
     QuicFrameV.build_ack_args.largest = s->largest_rx;
     QuicFrameV.build_ack_args.delay = 0;
     QuicFrameV.build_ack_args.first_range = s->largest_rx;
-    QuicFrame.build_ack(quic_frame_work);
+    QuicFrame.build_ack(work);
     size_t n = QuicFrameV.n;
     if (n)
     {
@@ -693,8 +693,8 @@ static size_t build_ack_frame(QuicPnSpace *s, uint8_t *buf, size_t cap)
 
 // Append the CRYPTO flight for INITIAL/HANDSHAKE (ServerHello / EE..Finished); returns bytes written,
 // sets *ae when it emits an ack-eliciting CRYPTO frame.
-static size_t build_crypto_frame(const QuicConnCtx *qc, int level, QuicPnSpace *s, uint8_t *buf, size_t cap,
-                                 proto_bool *ae)
+static size_t build_crypto_frame(uint8_t *restrict work, const QuicConnCtx *qc, int level, QuicPnSpace *s, uint8_t *buf,
+                                 size_t cap, proto_bool *ae)
 {
     if (level != QUIC_ENC_INITIAL && level != QUIC_ENC_HANDSHAKE)
     {
@@ -704,7 +704,7 @@ static size_t build_crypto_frame(const QuicConnCtx *qc, int level, QuicPnSpace *
     QuicTlsServerV.flight_args.qt = &qc->tls;
     QuicTlsServerV.flight_args.level = level;
     QuicTlsServerV.flight_args.len = &flen;
-    QuicTlsServer.flight(quic_tls_work);
+    QuicTlsServer.flight(work);
     const uint8_t *flight = QuicTlsServerV.bytes;
     if (!flight || s->crypto_tx_off >= flen)
     {
@@ -723,7 +723,7 @@ static size_t build_crypto_frame(const QuicConnCtx *qc, int level, QuicPnSpace *
     QuicFrameV.build_crypto_args.offset = s->crypto_tx_off;
     QuicFrameV.build_crypto_args.data = flight + s->crypto_tx_off;
     QuicFrameV.build_crypto_args.len = take;
-    QuicFrame.build_crypto(quic_frame_work);
+    QuicFrame.build_crypto(work);
     size_t n = QuicFrameV.n;
     if (n)
     {
@@ -734,7 +734,8 @@ static size_t build_crypto_frame(const QuicConnCtx *qc, int level, QuicPnSpace *
 }
 
 // Append 1-RTT extras (HANDSHAKE_DONE + stream data) at APP level; returns bytes written, sets *ae.
-static size_t build_app_frames(QuicConnCtx *qc, int level, uint8_t *buf, size_t cap, proto_bool *ae)
+static size_t build_app_frames(uint8_t *restrict work, QuicConnCtx *qc, int level, uint8_t *buf, size_t cap,
+                               proto_bool *ae)
 {
     if (level != QUIC_ENC_APP)
     {
@@ -745,7 +746,7 @@ static size_t build_app_frames(QuicConnCtx *qc, int level, uint8_t *buf, size_t 
     {
         QuicFrameV.build_handshake_done_args.out = buf + p;
         QuicFrameV.build_handshake_done_args.cap = cap - p;
-        QuicFrame.build_handshake_done(quic_frame_work);
+        QuicFrame.build_handshake_done(work);
         size_t n = QuicFrameV.n;
         if (n)
         { // ACK/CRYPTO, so the datagram-sized scratch always has room for it
@@ -780,7 +781,7 @@ static size_t build_app_frames(QuicConnCtx *qc, int level, uint8_t *buf, size_t 
         QuicFrameV.build_stream_args.data = st->tx + st->tx_sent;
         QuicFrameV.build_stream_args.len = take;
         QuicFrameV.build_stream_args.fin = fin;
-        QuicFrame.build_stream(quic_frame_work);
+        QuicFrame.build_stream(work);
         size_t n = QuicFrameV.n;
         if (n)
         {
@@ -797,7 +798,7 @@ static size_t build_app_frames(QuicConnCtx *qc, int level, uint8_t *buf, size_t 
 // Build the frame payload for one encryption level into buf; returns its length (0 = nothing to send).
 // @p ae is set true if the payload carries an ack-eliciting frame (CRYPTO / STREAM / HANDSHAKE_DONE),
 // which arms loss recovery for this space.
-static size_t build_frames(QuicConnCtx *qc, int level, uint8_t *buf, size_t cap, proto_bool *ae)
+static size_t build_frames(uint8_t *restrict work, QuicConnCtx *qc, int level, uint8_t *buf, size_t cap, proto_bool *ae)
 {
     QuicPnSpace *s = &qc->space[level];
     size_t p = 0;
@@ -815,13 +816,13 @@ static size_t build_frames(QuicConnCtx *qc, int level, uint8_t *buf, size_t cap,
         QuicFrameV.build_connection_close_args.frame_type = qc->close_frame_type;
         QuicFrameV.build_connection_close_args.reason = NULL;
         QuicFrameV.build_connection_close_args.reason_len = 0;
-        QuicFrame.build_connection_close(quic_frame_work);
+        QuicFrame.build_connection_close(work);
         return QuicFrameV.n;
     }
 
-    p += build_ack_frame(s, buf + p, cap - p); // ACK first, if we owe one
-    p += build_crypto_frame(qc, level, s, buf + p, cap - p, ae);
-    p += build_app_frames(qc, level, buf + p, cap - p, ae);
+    p += build_ack_frame(work, s, buf + p, cap - p); // ACK first, if we owe one
+    p += build_crypto_frame(work, qc, level, s, buf + p, cap - p, ae);
+    p += build_app_frames(work, qc, level, buf + p, cap - p, ae);
     return p;
 }
 
@@ -849,7 +850,7 @@ static size_t packet_overhead(const QuicConnCtx *qc, proto_bool is_long, uint8_t
 }
 
 // Build one protected packet for a level into out; returns its length (0 = nothing to send).
-static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
+static size_t build_packet(uint8_t *restrict work, QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
 {
     QuicPnSpace *s = &qc->space[level];
     if (s->discarded)
@@ -865,7 +866,7 @@ static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
     uint64_t pn = s->next_pn;
     QuicPacketV.pn_length_args.full_pn = pn;
     QuicPacketV.pn_length_args.largest_acked = s->largest_acked;
-    QuicPacket.pn_length(quic_packet_work);
+    QuicPacket.pn_length(work);
     uint8_t pn_len = QuicPacketV.u8;
     proto_bool is_long = (level != QUIC_ENC_APP);
 
@@ -899,7 +900,7 @@ static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
     }
     budget -= 4;
     proto_bool ae = PROTO_FALSE;
-    size_t frame_len = build_frames(qc, level, frames, budget, &ae);
+    size_t frame_len = build_frames(work, qc, level, frames, budget, &ae);
     if (frame_len == 0)
     {
         return 0;
@@ -928,7 +929,7 @@ static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
         QuicPacketV.build_long_header_args.scid = qc->scid;
         QuicPacketV.build_long_header_args.scid_len = qc->scid_len;
         QuicPacketV.build_long_header_args.pn_len = pn_len;
-        QuicPacket.build_long_header(quic_packet_work);
+        QuicPacket.build_long_header(work);
         size_t hn = QuicPacketV.n;
         if (!hn)
         {
@@ -940,7 +941,7 @@ static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
             QuicVarintV.encode_args.out = out + p;
             QuicVarintV.encode_args.cap = cap - p;
             QuicVarintV.encode_args.value = 0;
-            QuicVarint.encode(quic_varint_work);
+            QuicVarint.encode(work);
             size_t n = QuicVarintV.n; // empty token
             if (!n)
             {
@@ -952,7 +953,7 @@ static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
         QuicVarintV.encode_args.out = out + p;
         QuicVarintV.encode_args.cap = cap - p;
         QuicVarintV.encode_args.value = length;
-        QuicVarint.encode(quic_varint_work);
+        QuicVarint.encode(work);
         size_t n = QuicVarintV.n;
         if (!n)
         {
@@ -999,7 +1000,7 @@ static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
     QuicCryptoV.packet_protect_args.payload_len = frame_len;
     QuicCryptoV.packet_protect_args.keys = keys;
     QuicCryptoV.packet_protect_args.is_long = is_long;
-    QuicCrypto.packet_protect(quic_crypto_work);
+    QuicCrypto.packet_protect(work);
     size_t total = QuicCryptoV.n;
     if (!total)
     {
@@ -1027,7 +1028,7 @@ static int protocore_quic_highest_sealed_level(QuicConnCtx *qc)
     return QUIC_ENC_INITIAL;
 }
 
-static size_t quic_conn_build(QuicConnCtx *qc, uint8_t *out, size_t cap)
+static size_t quic_conn_build(uint8_t *restrict work, QuicConnCtx *qc, uint8_t *out, size_t cap)
 {
     if (qc->closed && !qc->draining)
     {
@@ -1058,7 +1059,7 @@ static size_t quic_conn_build(QuicConnCtx *qc, uint8_t *out, size_t cap)
         {
             level = protocore_quic_highest_sealed_level(qc);
         }
-        size_t n = build_packet(qc, level, out, cap);
+        size_t n = build_packet(work, qc, level, out, cap);
         if (n)
         {
             qc->close_sent = PROTO_TRUE;
@@ -1072,7 +1073,7 @@ static size_t quic_conn_build(QuicConnCtx *qc, uint8_t *out, size_t cap)
     // Coalesce Initial, then Handshake, then 1-RTT into one datagram.
     for (int level = QUIC_ENC_INITIAL; level <= QUIC_ENC_APP; level++)
     {
-        size_t n = build_packet(qc, level, out + dg, cap - dg);
+        size_t n = build_packet(work, qc, level, out + dg, cap - dg);
         dg += n;
     }
     if (dg == 0)
@@ -1234,7 +1235,7 @@ void protocore_quic_conn_init(uint8_t *restrict work)
         return;
     }
     qc->b = QuicConnV.bind.b; // survives the wipe inside quic_conn_open
-    quic_conn_open(qc, QuicConnV.init_args.cfg, QuicConnV.init_args.odcid, QuicConnV.init_args.odcid_len,
+    quic_conn_open(work, qc, QuicConnV.init_args.cfg, QuicConnV.init_args.odcid, QuicConnV.init_args.odcid_len,
                    QuicConnV.init_args.peer_scid, QuicConnV.init_args.peer_scid_len, QuicConnV.init_args.our_scid,
                    QuicConnV.init_args.our_scid_len, &QuicConnV.cb);
     QuicConnV.ok = !qc->closed;
@@ -1272,7 +1273,7 @@ void protocore_quic_conn_send(uint8_t *restrict work)
     {
         return;
     }
-    QuicConnV.n = quic_conn_build(qc, QuicConnV.send_args.out, QuicConnV.send_args.cap);
+    QuicConnV.n = quic_conn_build(work, qc, QuicConnV.send_args.out, QuicConnV.send_args.cap);
     QuicConnV.ok = PROTO_TRUE;
 }
 

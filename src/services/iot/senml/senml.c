@@ -22,8 +22,6 @@
 #include "mmgr/span/span.h"         // protocore_span: the region a binary build writes into
 #include "network_drivers/presentation/codec/json/json.h"
 
-static uint8_t json_work[16]; // the borrow an entry takes; Json never reads it
-
 // RFC 8428 sec 6 Table 4: the integer map keys the binary representation uses for the labels. Base
 // fields take negative labels, the rest non-negative.
 #define SENML_LABEL_BASE_NAME (-2)
@@ -49,7 +47,7 @@ static proto_bool is_integral(double d)
 
 // Render a Number into a JSON value position: an integer when integral, else a floating-point form
 // of SENML_JSON_NUMBER_DIGITS significant digits.
-static void json_number(protocore_json_writer *w, double d)
+static void json_number(uint8_t *restrict work, protocore_json_writer *w, double d)
 {
     char tmp[SENML_JSON_NUMBER_MAX];
     protocore_sb sb = {tmp, sizeof(tmp), 0, PROTO_TRUE};
@@ -67,7 +65,7 @@ static void json_number(protocore_json_writer *w, double d)
     }
     JsonV.put_raw_args.w = w;
     JsonV.put_raw_args.literal = tmp;
-    Json.put_raw(json_work);
+    Json.put_raw(work);
 }
 
 // Encode a Number through the codec: an integer when integral, else a floating-point item.
@@ -151,7 +149,7 @@ void protocore_senml_json_build(uint8_t *restrict work)
             JsonV.key_args.w = &w;
             JsonV.key_args.k = "bt";
             Json.key(work);
-            json_number(&w, r->base_time);
+            json_number(work, &w, r->base_time);
         }
         if (r->name)
         {
@@ -175,7 +173,7 @@ void protocore_senml_json_build(uint8_t *restrict work)
             JsonV.key_args.w = &w;
             JsonV.key_args.k = "v";
             Json.key(work);
-            json_number(&w, r->value);
+            json_number(work, &w, r->value);
             break;
         case SENML_VALUE_STRING:
             if (r->string_value)
@@ -200,7 +198,7 @@ void protocore_senml_json_build(uint8_t *restrict work)
             JsonV.key_args.w = &w;
             JsonV.key_args.k = "t";
             Json.key(work);
-            json_number(&w, r->time);
+            json_number(work, &w, r->time);
         }
         JsonV.end_object_args.w = &w;
         Json.end_object(work);

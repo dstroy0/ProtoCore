@@ -9,8 +9,6 @@
 #include "server/signaling/device_id/device_id.h"
 #include "shared/hex/hex.h"
 
-static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
-
 #if PROTOCORE_ENABLE_DEVICE_ID
 
 #include "crypto/hash/sha1/sha1.h"
@@ -22,11 +20,11 @@ static const uint8_t NS_DNS[16] = {0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd
                                    0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8};
 
 // The lowercase hex character for one nibble.
-static char hex_digit(uint8_t nibble)
+static char hex_digit(uint8_t *restrict work, uint8_t nibble)
 {
     HexV.args.nibble = nibble;
     HexV.args.upper = PROTO_FALSE;
-    Hex.digit(hex_work);
+    Hex.digit(work);
     return HexV.ch;
 }
 
@@ -44,8 +42,8 @@ void protocore_device_id_from_mac(uint8_t *restrict work)
     }
     for (int i = 0; i < 6; i++)
     {
-        input[16 + i * 2] = (uint8_t)hex_digit((uint8_t)(mac[i] >> 4));
-        input[16 + i * 2 + 1] = (uint8_t)hex_digit((uint8_t)(mac[i] & 0x0F));
+        input[16 + i * 2] = (uint8_t)hex_digit(work, (uint8_t)(mac[i] >> 4));
+        input[16 + i * 2 + 1] = (uint8_t)hex_digit(work, (uint8_t)(mac[i] & 0x0F));
     }
 
     uint8_t h[PROTOCORE_SHA1_DIGEST_LEN];
@@ -77,8 +75,8 @@ void protocore_device_id_from_mac(uint8_t *restrict work)
         }
         for (int b = 0; b < groups[g]; b++)
         {
-            out[oi++] = hex_digit((uint8_t)(h[hi] >> 4));
-            out[oi++] = hex_digit((uint8_t)(h[hi] & 0x0F));
+            out[oi++] = hex_digit(work, (uint8_t)(h[hi] >> 4));
+            out[oi++] = hex_digit(work, (uint8_t)(h[hi] & 0x0F));
             hi++;
         }
     }

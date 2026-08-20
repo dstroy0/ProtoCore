@@ -12,8 +12,6 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t hpack_prim_work[16]; // the borrow an entry takes; HpackPrim never reads it
-
 #if PROTOCORE_ENABLE_HTTP2
 
 #include "mmgr/protomem/protomem.h"
@@ -291,8 +289,9 @@ static proto_bool emit_indexed(HpackDynTable *t, uint32_t idx, char *scratch, si
 }
 
 // Decode a literal representation (name via index or inline, value inline; optional indexing).
-static proto_bool decode_literal(HpackDynTable *t, const uint8_t *block, size_t len, size_t *pos, uint8_t prefix_bits,
-                                 proto_bool do_index, char *scratch, size_t cap, HpackEmitFn emit, void *ctx)
+static proto_bool decode_literal(uint8_t *restrict work, HpackDynTable *t, const uint8_t *block, size_t len,
+                                 size_t *pos, uint8_t prefix_bits, proto_bool do_index, char *scratch, size_t cap,
+                                 HpackEmitFn emit, void *ctx)
 {
     size_t c = 0;
     uint32_t name_idx = 0;
@@ -301,7 +300,7 @@ static proto_bool decode_literal(HpackDynTable *t, const uint8_t *block, size_t 
     HpackPrimV.decode_int_args.prefix_bits = prefix_bits;
     HpackPrimV.decode_int_args.consumed = &c;
     HpackPrimV.decode_int_args.value = &name_idx;
-    HpackPrim.decode_int(hpack_prim_work);
+    HpackPrim.decode_int(work);
     if (!HpackPrimV.ok)
     {
         return PROTO_FALSE;
@@ -316,7 +315,7 @@ static proto_bool decode_literal(HpackDynTable *t, const uint8_t *block, size_t 
         HpackPrimV.decode_str_args.out = scratch;
         HpackPrimV.decode_str_args.cap = cap;
         HpackPrimV.decode_str_args.out_len = &name_len;
-        HpackPrim.decode_str(hpack_prim_work);
+        HpackPrim.decode_str(work);
         if (!HpackPrimV.ok)
         {
             return PROTO_FALSE;
@@ -333,7 +332,7 @@ static proto_bool decode_literal(HpackDynTable *t, const uint8_t *block, size_t 
     HpackPrimV.decode_str_args.out = scratch + name_len;
     HpackPrimV.decode_str_args.cap = cap - name_len;
     HpackPrimV.decode_str_args.out_len = &val_len;
-    HpackPrim.decode_str(hpack_prim_work);
+    HpackPrim.decode_str(work);
     if (!HpackPrimV.ok)
     {
         return PROTO_FALSE;
@@ -357,8 +356,8 @@ static void hpack_dyn_init_run(HpackDynTable *t, uint32_t max_bytes)
     }
 }
 
-static proto_bool hpack_decode_run(HpackDynTable *t, const uint8_t *block, size_t len, char *scratch,
-                                   size_t scratch_cap, HpackEmitFn emit, void *ctx)
+static proto_bool hpack_decode_run(uint8_t *restrict work, HpackDynTable *t, const uint8_t *block, size_t len,
+                                   char *scratch, size_t scratch_cap, HpackEmitFn emit, void *ctx)
 {
     size_t pos = 0;
     while (pos < len)
@@ -373,7 +372,7 @@ static proto_bool hpack_decode_run(HpackDynTable *t, const uint8_t *block, size_
             HpackPrimV.decode_int_args.prefix_bits = 7;
             HpackPrimV.decode_int_args.consumed = &c;
             HpackPrimV.decode_int_args.value = &idx;
-            HpackPrim.decode_int(hpack_prim_work);
+            HpackPrim.decode_int(work);
             if (!HpackPrimV.ok || idx == 0)
             {
                 return PROTO_FALSE;
@@ -386,7 +385,7 @@ static proto_bool hpack_decode_run(HpackDynTable *t, const uint8_t *block, size_
         }
         else if (b & 0x40)
         { // 6.2.1 Literal with incremental indexing (name prefix 6)
-            if (!decode_literal(t, block, len, &pos, 6, PROTO_TRUE, scratch, scratch_cap, emit, ctx))
+            if (!decode_literal(work, t, block, len, &pos, 6, PROTO_TRUE, scratch, scratch_cap, emit, ctx))
             {
                 return PROTO_FALSE;
             }
@@ -400,7 +399,7 @@ static proto_bool hpack_decode_run(HpackDynTable *t, const uint8_t *block, size_
             HpackPrimV.decode_int_args.prefix_bits = 5;
             HpackPrimV.decode_int_args.consumed = &c;
             HpackPrimV.decode_int_args.value = &nm;
-            HpackPrim.decode_int(hpack_prim_work);
+            HpackPrim.decode_int(work);
             if (!HpackPrimV.ok)
             {
                 return PROTO_FALSE;
@@ -418,7 +417,7 @@ static proto_bool hpack_decode_run(HpackDynTable *t, const uint8_t *block, size_
         }
         else
         { // 6.2.2 without / 6.2.3 never indexed (name prefix 4, no table insert)
-            if (!decode_literal(t, block, len, &pos, 4, PROTO_FALSE, scratch, scratch_cap, emit, ctx))
+            if (!decode_literal(work, t, block, len, &pos, 4, PROTO_FALSE, scratch, scratch_cap, emit, ctx))
             {
                 return PROTO_FALSE;
             }
@@ -427,8 +426,8 @@ static proto_bool hpack_decode_run(HpackDynTable *t, const uint8_t *block, size_
     return PROTO_TRUE;
 }
 
-static size_t hpack_encode_header_run(uint8_t *out, size_t cap, const char *name, size_t name_len, const char *value,
-                                      size_t value_len)
+static size_t hpack_encode_header_run(uint8_t *restrict work, uint8_t *out, size_t cap, const char *name,
+                                      size_t name_len, const char *value, size_t value_len)
 {
     int name_idx = 0;
     int full_idx = 0;
@@ -454,7 +453,7 @@ static size_t hpack_encode_header_run(uint8_t *out, size_t cap, const char *name
         HpackPrimV.encode_int_args.prefix_bits = 7;
         HpackPrimV.encode_int_args.flags = 0x80;
         HpackPrimV.encode_int_args.value = (uint32_t)full_idx;
-        HpackPrim.encode_int(hpack_prim_work);
+        HpackPrim.encode_int(work);
         return HpackPrimV.n;
     }
     // Literal without indexing (top nibble 0000), name prefix 4.
@@ -463,7 +462,7 @@ static size_t hpack_encode_header_run(uint8_t *out, size_t cap, const char *name
     HpackPrimV.encode_int_args.prefix_bits = 4;
     HpackPrimV.encode_int_args.flags = 0x00;
     HpackPrimV.encode_int_args.value = (uint32_t)name_idx;
-    HpackPrim.encode_int(hpack_prim_work);
+    HpackPrim.encode_int(work);
     size_t o = HpackPrimV.n;
     if (!o)
     {
@@ -475,7 +474,7 @@ static size_t hpack_encode_header_run(uint8_t *out, size_t cap, const char *name
         HpackPrimV.encode_str_args.cap = cap - o;
         HpackPrimV.encode_str_args.s = name;
         HpackPrimV.encode_str_args.n = name_len;
-        HpackPrim.encode_str(hpack_prim_work);
+        HpackPrim.encode_str(work);
         size_t ns = HpackPrimV.n;
         if (!ns)
         {
@@ -487,7 +486,7 @@ static size_t hpack_encode_header_run(uint8_t *out, size_t cap, const char *name
     HpackPrimV.encode_str_args.cap = cap - o;
     HpackPrimV.encode_str_args.s = value;
     HpackPrimV.encode_str_args.n = value_len;
-    HpackPrim.encode_str(hpack_prim_work);
+    HpackPrim.encode_str(work);
     size_t vs = HpackPrimV.n;
     if (!vs)
     {
@@ -505,16 +504,16 @@ void protocore_hpack_dyn_init(uint8_t *restrict work)
 
 void protocore_hpack_decode(uint8_t *restrict work)
 {
-    HpackV.ok =
-        hpack_decode_run(HPACK_CTX(work), HpackV.decode_args.block, HpackV.decode_args.len, HpackV.decode_args.scratch,
-                         HpackV.decode_args.scratch_cap, HpackV.decode_args.emit, HpackV.decode_args.ctx);
+    HpackV.ok = hpack_decode_run(work, HPACK_CTX(work), HpackV.decode_args.block, HpackV.decode_args.len,
+                                 HpackV.decode_args.scratch, HpackV.decode_args.scratch_cap, HpackV.decode_args.emit,
+                                 HpackV.decode_args.ctx);
 }
 
 void protocore_hpack_encode_header(uint8_t *restrict work)
 {
     (void)work;
     HpackV.n =
-        hpack_encode_header_run(HpackV.encode_args.out, HpackV.encode_args.cap, HpackV.encode_args.name,
+        hpack_encode_header_run(work, HpackV.encode_args.out, HpackV.encode_args.cap, HpackV.encode_args.name,
                                 HpackV.encode_args.name_len, HpackV.encode_args.value, HpackV.encode_args.value_len);
 }
 

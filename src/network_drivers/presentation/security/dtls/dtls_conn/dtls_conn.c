@@ -15,17 +15,11 @@
 #include "mmgr/secure/secure.h" // protocore_secure_wipe
 #include "network_drivers/presentation/security/dtls/dtls_conn/dtls_conn.h"
 
-static uint8_t dtls_handshake_work[16]; // the borrow an entry takes; DtlsHandshake never reads it
-
-static uint8_t dtls_record_work[16]; // the borrow an entry takes; DtlsRecord never reads it
-
 #include "crypto/asymmetric/curve25519/curve25519.h"
 #include "crypto/asymmetric/ed25519/ed25519.h" // protocore_ed25519_pubkey for the RFC 7250 RawPublicKey
 #include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
 #include "network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.h" // the RFC 7250 RawPublicKey Certificate
 #include "server/clock/clock.h" // protocore_millis() stamps / checks the HelloRetryRequest cookie freshness
-
-static uint8_t tls13_msg_work[16]; // the borrow an entry takes; Tls13Msg never reads it
 
 PROTOCORE_BEGIN_DECLS
 
@@ -131,7 +125,8 @@ static void flight_reset(DtlsConn *c)
 // shifts every later message up by one) and buffer the fragment for (re)transmission. @p epoch is 0
 // (DTLSPlaintext) or 2 (DTLSCiphertext). Records are not built here - that happens in flight_transmit,
 // so a retransmission can use fresh record sequence numbers.
-static proto_bool flight_add(DtlsConn *c, uint16_t epoch, const uint8_t *tls_msg, size_t tls_len)
+static proto_bool flight_add(uint8_t *restrict work, DtlsConn *c, uint16_t epoch, const uint8_t *tls_msg,
+                             size_t tls_len)
 {
     // tls_len < 4 is defensive and unreachable from any input the server accepts - every caller
     // passes a builder's output, and a TLS handshake message is never shorter than its own 4-byte
@@ -175,7 +170,7 @@ static proto_bool flight_add(DtlsConn *c, uint16_t epoch, const uint8_t *tls_msg
         DtlsHandshakeV.frag_build_args.frag_len = take;
         DtlsHandshakeV.frag_build_args.out = c->flight_buf + c->flight_len;
         DtlsHandshakeV.frag_build_args.out_cap = sizeof(c->flight_buf) - c->flight_len;
-        DtlsHandshake.frag_build(dtls_handshake_work);
+        DtlsHandshake.frag_build(work);
         const size_t flen = DtlsHandshakeV.n;
         if (!flen)
         {
@@ -195,7 +190,7 @@ static proto_bool flight_add(DtlsConn *c, uint16_t epoch, const uint8_t *tls_msg
 // retransmission MUST use new sequence numbers - reusing one would repeat an AEAD nonce and be dropped
 // by the peer's replay window). Records the record number of each message's transmission for ACK
 // matching. Used for both the initial send and every retransmission.
-static proto_bool flight_transmit(DtlsConn *c, uint8_t *out, size_t out_cap, size_t *out_len)
+static proto_bool flight_transmit(uint8_t *restrict work, DtlsConn *c, uint8_t *out, size_t out_cap, size_t *out_len)
 {
     for (uint8_t i = 0; i < c->flight_count; i++)
     {
@@ -214,7 +209,7 @@ static proto_bool flight_transmit(DtlsConn *c, uint8_t *out, size_t out_cap, siz
             DtlsRecordV.plaintext_build_args.frag_len = flen;
             DtlsRecordV.plaintext_build_args.out = out + *out_len;
             DtlsRecordV.plaintext_build_args.out_cap = out_cap - *out_len;
-            DtlsRecord.plaintext_build(dtls_record_work);
+            DtlsRecord.plaintext_build(work);
             rn = DtlsRecordV.n;
         }
         else
@@ -229,7 +224,7 @@ static proto_bool flight_transmit(DtlsConn *c, uint8_t *out, size_t out_cap, siz
             DtlsRecordV.protect_args.out_cap = out_cap - *out_len;
             DtlsRecordV.protect_args.cid = c->cid_negotiated ? c->peer_cid : NULL;
             DtlsRecordV.protect_args.cid_len = c->cid_negotiated ? c->peer_cid_len : 0;
-            DtlsRecord.protect(dtls_record_work);
+            DtlsRecord.protect(work);
             rn = DtlsRecordV.n;
         }
         if (!rn)
@@ -262,8 +257,8 @@ static void flight_disarm(DtlsConn *c)
 // X25519 key_share, binding a stateless return-routability cookie to the peer address. Per RFC 8446
 // §4.4.1 the transcript is restarted as the synthetic message_hash(ClientHello1) before the HRR is
 // folded in, so the eventual transcript is message_hash || HRR || ClientHello2 || ServerHello || ...
-static int send_hello_retry(DtlsConn *c, const Tls13ClientHello *ch, const uint8_t *ch1, size_t ch1_len, uint8_t *out,
-                            size_t out_cap, size_t *out_len)
+static int send_hello_retry(uint8_t *restrict work, DtlsConn *c, const Tls13ClientHello *ch, const uint8_t *ch1,
+                            size_t ch1_len, uint8_t *out, size_t out_cap, size_t *out_len)
 {
     uint8_t ch1_hash[TLS13_SECRET_MAX];
     uint8_t *h;
@@ -277,7 +272,7 @@ static int send_hello_retry(DtlsConn *c, const Tls13ClientHello *ch, const uint8
     Tls13MsgV.build_message_hash_args.out = c->msgbuf;
     Tls13MsgV.build_message_hash_args.cap = sizeof(c->msgbuf);
     Tls13MsgV.build_message_hash_args.ch1_hash = ch1_hash;
-    Tls13Msg.build_message_hash(tls13_msg_work);
+    Tls13Msg.build_message_hash(work);
     size_t n = Tls13MsgV.n;
     if (!n)
     {
@@ -297,7 +292,7 @@ static int send_hello_retry(DtlsConn *c, const Tls13ClientHello *ch, const uint8
     DtlsHandshakeV.cookie_make_args.addr_len = c->peer_addr_len;
     DtlsHandshakeV.cookie_make_args.out = cookie;
     DtlsHandshakeV.cookie_make_args.out_cap = sizeof(cookie);
-    DtlsHandshake.cookie_make(dtls_handshake_work);
+    DtlsHandshake.cookie_make(work);
     size_t clen = DtlsHandshakeV.n;
     if (!clen)
     {
@@ -313,7 +308,7 @@ static int send_hello_retry(DtlsConn *c, const Tls13ClientHello *ch, const uint8
     Tls13MsgV.build_hello_retry_request_args.cookie = cookie;
     Tls13MsgV.build_hello_retry_request_args.cookie_len = clen;
     Tls13MsgV.build_hello_retry_request_args.dtls = /*dtls=*/PROTO_TRUE;
-    Tls13Msg.build_hello_retry_request(tls13_msg_work);
+    Tls13Msg.build_hello_retry_request(work);
     n = Tls13MsgV.n;
     if (!n)
     {
@@ -321,7 +316,7 @@ static int send_hello_retry(DtlsConn *c, const Tls13ClientHello *ch, const uint8
     }
     transcript_add(c, c->transcript, c->msgbuf, n);
     flight_reset(c);
-    if (!flight_add(c, 0, c->msgbuf, n) || !flight_transmit(c, out, out_cap, out_len))
+    if (!flight_add(work, c, 0, c->msgbuf, n) || !flight_transmit(work, c, out, out_cap, out_len))
     {
         return fail(c, ALERT_INTERNAL_ERROR);
     }
@@ -332,7 +327,7 @@ static int send_hello_retry(DtlsConn *c, const Tls13ClientHello *ch, const uint8
 
 // After a HelloRetryRequest, the retry ClientHello must echo a valid cookie (proving the client's
 // address) before we spend the handshake's asymmetric crypto (RFC 9147 §5.1). No HRR -> nothing to check.
-static proto_bool protocore_dtls_hrr_cookie_ok(const DtlsConn *c, const Tls13ClientHello *ch)
+static proto_bool protocore_dtls_hrr_cookie_ok(uint8_t *restrict work, const DtlsConn *c, const Tls13ClientHello *ch)
 {
     if (!c->hrr_sent)
     {
@@ -355,7 +350,7 @@ static proto_bool protocore_dtls_hrr_cookie_ok(const DtlsConn *c, const Tls13Cli
     DtlsHandshakeV.cookie_verify_args.payload_out = payload;
     DtlsHandshakeV.cookie_verify_args.payload_cap = sizeof(payload);
     DtlsHandshakeV.cookie_verify_args.payload_len_out = &plen;
-    DtlsHandshake.cookie_verify(dtls_handshake_work);
+    DtlsHandshake.cookie_verify(work);
     return DtlsHandshakeV.ok;
 }
 
@@ -416,7 +411,7 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
         {
             return fail(c, ALERT_HANDSHAKE_FAILURE);
         }
-        if (send_hello_retry(c, &ch, msg, msg_len, out, out_cap, out_len) < 0)
+        if (send_hello_retry(work, c, &ch, msg, msg_len, out, out_cap, out_len) < 0)
         {
             return -1;
         }
@@ -431,7 +426,7 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
 
     // A key_share is present. If it followed our HelloRetryRequest, the client must echo the cookie,
     // authenticating its address before we spend the handshake's asymmetric crypto (§5.1).
-    if (!protocore_dtls_hrr_cookie_ok(c, &ch))
+    if (!protocore_dtls_hrr_cookie_ok(work, c, &ch))
     {
         // RFC 9147 sec 5.1: "If a server receives a ClientHello with an invalid cookie, it MUST
         // terminate the handshake with an illegal_parameter alert", which tells the client to
@@ -482,7 +477,7 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
         return fail(c, ALERT_INTERNAL_ERROR);
     }
     transcript_add(c, c->transcript, c->msgbuf, n);
-    if (!flight_add(c, 0, c->msgbuf, n))
+    if (!flight_add(work, c, 0, c->msgbuf, n))
     {
         return fail(c, ALERT_INTERNAL_ERROR);
     }
@@ -538,7 +533,7 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
     Tls13Msg.build_encrypted_extensions_empty(work);
     n = Tls13MsgV.n;
     transcript_add(c, c->transcript, c->msgbuf, n);
-    if (!flight_add(c, 2, c->msgbuf, n))
+    if (!flight_add(work, c, 2, c->msgbuf, n))
     {
         return fail(c, ALERT_INTERNAL_ERROR);
     }
@@ -572,7 +567,7 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
         return fail(c, ALERT_INTERNAL_ERROR);
     }
     transcript_add(c, c->transcript, c->msgbuf, n);
-    if (!flight_add(c, 2, c->msgbuf, n))
+    if (!flight_add(work, c, 2, c->msgbuf, n))
     {
         return fail(c, ALERT_INTERNAL_ERROR);
     }
@@ -592,7 +587,7 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
         return fail(c, ALERT_INTERNAL_ERROR);
     }
     transcript_add(c, c->transcript, c->msgbuf, n);
-    if (!flight_add(c, 2, c->msgbuf, n))
+    if (!flight_add(work, c, 2, c->msgbuf, n))
     {
         return fail(c, ALERT_INTERNAL_ERROR);
     }
@@ -612,7 +607,7 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
     Tls13Msg.build_finished(work);
     n = Tls13MsgV.n;
     transcript_add(c, c->transcript, c->msgbuf, n);
-    if (!flight_add(c, 2, c->msgbuf, n))
+    if (!flight_add(work, c, 2, c->msgbuf, n))
     {
         return fail(c, ALERT_INTERNAL_ERROR);
     }
@@ -635,7 +630,7 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
     DtlsRecord.keys_derive(work);
     c->ep3_ready = PROTO_TRUE;
 
-    if (!flight_transmit(c, out, out_cap, out_len)) // protect the whole flight now that ep2 keys exist
+    if (!flight_transmit(work, c, out, out_cap, out_len)) // protect the whole flight now that ep2 keys exist
     {
         return fail(c, ALERT_INTERNAL_ERROR);
     }
@@ -749,7 +744,7 @@ static int drive_handshake(uint8_t *restrict work, DtlsConn *c, const uint8_t *p
 // A client ACK (RFC 9147 §7) for the outstanding flight: if it acknowledges every message of the last
 // transmission, the peer has the whole flight, so stop retransmitting (§5.8.3). A partial ACK is
 // ignored here - the timer simply retransmits the whole flight, which is always correct.
-static void process_ack(DtlsConn *c, const uint8_t *body, size_t len)
+static void process_ack(uint8_t *restrict work, DtlsConn *c, const uint8_t *body, size_t len)
 {
     if (!c->awaiting_reply)
     {
@@ -762,7 +757,7 @@ static void process_ack(DtlsConn *c, const uint8_t *body, size_t len)
     DtlsHandshakeV.ack_parse_args.out = acked;
     DtlsHandshakeV.ack_parse_args.out_cap = 16;
     DtlsHandshakeV.ack_parse_args.out_count = &count;
-    DtlsHandshake.ack_parse(dtls_handshake_work);
+    DtlsHandshake.ack_parse(work);
     if (!DtlsHandshakeV.ok)
     {
         return;
@@ -850,7 +845,7 @@ static DtlsRecStep process_ciphertext_record(uint8_t *restrict work, DtlsConn *c
     }
     if (info.content_type == PROTOCORE_DTLS_CT_ACK)
     {
-        process_ack(c, inner, info.pt_len); // the client acknowledged our flight
+        process_ack(work, c, inner, info.pt_len); // the client acknowledged our flight
     }
     else if (is_hs && drive_handshake(work, c, inner, info.pt_len, out, out_cap, out_len) < 0)
     {
@@ -1045,7 +1040,7 @@ void protocore_dtls_server_on_timeout(uint8_t *restrict work)
         return;
     }
     size_t out_len = 0;
-    if (!flight_transmit(c, out, out_cap, &out_len))
+    if (!flight_transmit(work, c, out, out_cap, &out_len))
     {
         DtlsServerV.n = -1;
         return;
