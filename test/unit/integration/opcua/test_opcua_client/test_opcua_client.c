@@ -980,4 +980,3 @@ void test_on_browse_display_name_empty_mask()
     TEST_ASSERT_EQUAL_UINT16(2, refs[0].target_ns);
     TEST_ASSERT_EQUAL_UINT32(OPCUA_NODECLASS_OBJECT, refs[0].node_class);
 }
-

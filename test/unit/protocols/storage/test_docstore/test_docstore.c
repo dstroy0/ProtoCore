@@ -283,4 +283,3 @@ void test_find_skips_unreadable_document(void)
     TEST_ASSERT_EQUAL_UINT32(0, m);
     TEST_ASSERT_EQUAL_INT(0, c.n);
 }
-

@@ -610,4 +610,3 @@ void test_compact_carries_empty_values(void)
     TEST_ASSERT_EQUAL_INT(0, protocore_dbm_get(&g_db, "empty", 5, b, sizeof(b)));
     TEST_ASSERT_TRUE(protocore_dbm_contains(&g_db, "empty", 5));
 }
-

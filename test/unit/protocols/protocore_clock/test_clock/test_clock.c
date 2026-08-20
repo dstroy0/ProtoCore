@@ -153,4 +153,3 @@ void test_latency_budget_zero_disables()
     TEST_ASSERT_EQUAL_UINT32(1, s.count);
     TEST_ASSERT_EQUAL_UINT32(0, s.over_budget);
 }
-

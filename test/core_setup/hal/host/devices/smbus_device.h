@@ -39,7 +39,7 @@
 
 typedef struct
 {
-    uint16_t reg[256];                          /**< a word per command code; a byte access uses the low half */
+    uint16_t reg[256];                            /**< a word per command code; a byte access uses the low half */
     uint8_t block[PROTOCORE_SMBUS_DEV_BLOCK_MAX]; /**< the block last written, and what a block read returns */
     uint8_t block_len;
     uint8_t addr;      /**< the address it answers to, which the PEC covers */

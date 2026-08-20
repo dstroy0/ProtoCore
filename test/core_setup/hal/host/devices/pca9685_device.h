@@ -107,7 +107,8 @@ static inline uint32_t protocore_pca9685_dev_freq_hz(const protocore_pca9685_dev
 // what arrives are handled first.
 static inline void protocore_pca9685_dev_store(protocore_pca9685_dev *d, uint8_t v)
 {
-    if (d->ptr == PROTOCORE_PCA9685_DEV_PRE_SCALE && !(d->reg[PROTOCORE_PCA9685_DEV_MODE1] & PROTOCORE_PCA9685_DEV_SLEEP))
+    if (d->ptr == PROTOCORE_PCA9685_DEV_PRE_SCALE &&
+        !(d->reg[PROTOCORE_PCA9685_DEV_MODE1] & PROTOCORE_PCA9685_DEV_SLEEP))
     {
         return; // Table 4 note [1]: blocked while SLEEP is logic 0
     }

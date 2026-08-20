@@ -136,4 +136,3 @@ void test_replay_null_callback(void)
     size_t total = r0 + r1;
     TEST_ASSERT_EQUAL_size_t(total, protocore_wal_replay(log, total, NULL, NULL));
 }
-

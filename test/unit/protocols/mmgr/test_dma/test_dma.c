@@ -284,4 +284,3 @@ void test_channel_guard_subconditions()
     TEST_ASSERT_FALSE(protocore_dma_tx_submit(PROTOCORE_DMA_CHANNELS, b, sizeof(b)));
     TEST_ASSERT_EQUAL_UINT16(0, protocore_dma_host_capture(0, NULL, 4));
 }
-

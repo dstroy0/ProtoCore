@@ -276,4 +276,3 @@ void test_medium_error_refuses_a_write_and_leaves_the_store_usable()
     TEST_ASSERT_TRUE(lfsm_write_text("/after.txt", "still-here"));
     TEST_ASSERT_EQUAL_INT(10, b->size("/after.txt"));
 }
-

@@ -98,7 +98,7 @@ void tearDown(void)
 {
 }
 
- void test_sec6_packet_length_excludes_itself_and_the_mac(void)
+void test_sec6_packet_length_excludes_itself_and_the_mac(void)
 {
     const uint8_t payload[] = {SSH_MSG_IGNORE, 1, 2, 3};
     const size_t wlen = frame(payload, sizeof(payload));
@@ -107,7 +107,7 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_size_t((size_t)plen + 4u, wlen); // no MAC while unencrypted
 }
 
- void test_sec6_payload_length_is_packet_minus_padding_minus_one(void)
+void test_sec6_payload_length_is_packet_minus_padding_minus_one(void)
 {
     const uint8_t payload[] = {SSH_MSG_IGNORE, 9, 9, 9, 9, 9, 9};
     (void)frame(payload, sizeof(payload));
@@ -117,7 +117,7 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_UINT32((uint32_t)sizeof(payload), plen - pad - 1u);
 }
 
- void test_sec6_payload_is_carried_unchanged(void)
+void test_sec6_payload_is_carried_unchanged(void)
 {
     const uint8_t payload[] = {SSH_MSG_IGNORE, 0xAA, 0xBB, 0xCC};
     (void)frame(payload, sizeof(payload));
@@ -128,12 +128,12 @@ void tearDown(void)
     }
 }
 
- void test_sec6_payload_offset_matches_the_in_place_form(void)
+void test_sec6_payload_offset_matches_the_in_place_form(void)
 {
     TEST_ASSERT_EQUAL_size_t(5u, (size_t)SSH_WIRE_PAYLOAD_OFF); // uint32 length + byte padding_length
 }
 
- void test_sec6_at_least_four_bytes_of_padding(void)
+void test_sec6_at_least_four_bytes_of_padding(void)
 {
     // Every payload length across two blocks, so the tightest case is covered rather than assumed.
     for (size_t len = 1; len <= 32; len++)
@@ -149,7 +149,7 @@ void tearDown(void)
     }
 }
 
- void test_sec6_padding_never_exceeds_255(void)
+void test_sec6_padding_never_exceeds_255(void)
 {
     for (size_t len = 1; len <= 32; len++)
     {
@@ -164,7 +164,7 @@ void tearDown(void)
     }
 }
 
- void test_sec6_total_is_a_multiple_of_eight_unencrypted(void)
+void test_sec6_total_is_a_multiple_of_eight_unencrypted(void)
 {
     for (size_t len = 1; len <= 32; len++)
     {
@@ -179,14 +179,14 @@ void tearDown(void)
     }
 }
 
- void test_sec6_minimum_packet_is_sixteen_bytes(void)
+void test_sec6_minimum_packet_is_sixteen_bytes(void)
 {
     const uint8_t one[] = {SSH_MSG_IGNORE};
     const size_t wlen = frame(one, sizeof(one));
     TEST_ASSERT_GREATER_OR_EQUAL_UINT32(16u, (uint32_t)wlen);
 }
 
- void test_sec6_block_aligned_payload_still_pads(void)
+void test_sec6_block_aligned_payload_still_pads(void)
 {
     // 4 + 1 + 3 = 8, so a 3-byte payload would be aligned with no padding at all.
     const uint8_t payload[] = {SSH_MSG_IGNORE, 1, 2};
@@ -196,17 +196,17 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_size_t(16u, wlen);
 }
 
- void test_sec6_1_the_required_payload_size_is_carried(void)
+void test_sec6_1_the_required_payload_size_is_carried(void)
 {
     TEST_ASSERT_EQUAL_UINT32(32768u, (uint32_t)SSH_RFC_MAX_PAYLOAD);
 }
 
- void test_sec6_1_reassembly_holds_a_full_payload(void)
+void test_sec6_1_reassembly_holds_a_full_payload(void)
 {
     TEST_ASSERT_GREATER_OR_EQUAL_UINT32((uint32_t)SSH_RFC_MAX_PAYLOAD, (uint32_t)SSH_RX_ASM_CAP);
 }
 
- void test_sec6_1_oversized_payload_is_refused(void)
+void test_sec6_1_oversized_payload_is_refused(void)
 {
     SshDir dir = {PROTO_FALSE, 0};
     size_t wlen = 0;
@@ -214,7 +214,7 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_send(0, big, sizeof(big), s_wire, &wlen, sizeof(s_wire), &dir));
 }
 
- void test_sec6_undersized_wire_is_refused(void)
+void test_sec6_undersized_wire_is_refused(void)
 {
     const uint8_t payload[] = {SSH_MSG_IGNORE, 1, 2, 3};
     SshDir dir = {PROTO_FALSE, 0};
@@ -223,12 +223,12 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_send(0, payload, sizeof(payload), small, &wlen, sizeof(small), &dir));
 }
 
- void test_sec6_4_send_counter_starts_at_zero(void)
+void test_sec6_4_send_counter_starts_at_zero(void)
 {
     TEST_ASSERT_EQUAL_UINT32(0u, ssh_pkt[0].seq_no_send);
 }
 
- void test_sec6_4_send_counter_increments_per_packet(void)
+void test_sec6_4_send_counter_increments_per_packet(void)
 {
     const uint8_t payload[] = {SSH_MSG_IGNORE, 7};
     (void)frame(payload, sizeof(payload));
@@ -239,7 +239,7 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_UINT32(3u, ssh_pkt[0].seq_no_send);
 }
 
- void test_sec6_4_counters_are_per_slot(void)
+void test_sec6_4_counters_are_per_slot(void)
 {
     if (MAX_SSH_CONNS < 2)
     {
@@ -253,7 +253,7 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_UINT32(0u, ssh_pkt[1].seq_no_send);
 }
 
- void test_slot_past_the_pool_is_refused(void)
+void test_slot_past_the_pool_is_refused(void)
 {
     const uint8_t payload[] = {SSH_MSG_IGNORE};
     SshDir dir = {PROTO_FALSE, 0};
@@ -262,7 +262,7 @@ void tearDown(void)
                           ssh_pkt_send(MAX_SSH_CONNS, payload, sizeof(payload), s_wire, &wlen, sizeof(s_wire), &dir));
 }
 
- void test_sec7_2_initial_iv_client_to_server_is_A(void)
+void test_sec7_2_initial_iv_client_to_server_is_A(void)
 {
     SshKdfInputs in = first_exchange();
     uint8_t out[32];
@@ -270,7 +270,7 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(K7_2_A, out, sizeof(out));
 }
 
- void test_sec7_2_initial_iv_server_to_client_is_B(void)
+void test_sec7_2_initial_iv_server_to_client_is_B(void)
 {
     SshKdfInputs in = first_exchange();
     uint8_t out[32];
@@ -278,7 +278,7 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(K7_2_B, out, sizeof(out));
 }
 
- void test_sec7_2_encryption_key_client_to_server_is_C(void)
+void test_sec7_2_encryption_key_client_to_server_is_C(void)
 {
     SshKdfInputs in = first_exchange();
     uint8_t out[32];
@@ -286,7 +286,7 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(K7_2_C, out, sizeof(out));
 }
 
- void test_sec7_2_encryption_key_server_to_client_is_D(void)
+void test_sec7_2_encryption_key_server_to_client_is_D(void)
 {
     SshKdfInputs in = first_exchange();
     uint8_t out[32];
@@ -294,7 +294,7 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(K7_2_D, out, sizeof(out));
 }
 
- void test_sec7_2_integrity_key_client_to_server_is_E(void)
+void test_sec7_2_integrity_key_client_to_server_is_E(void)
 {
     SshKdfInputs in = first_exchange();
     uint8_t out[32];
@@ -302,7 +302,7 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(K7_2_E, out, sizeof(out));
 }
 
- void test_sec7_2_integrity_key_server_to_client_is_F(void)
+void test_sec7_2_integrity_key_server_to_client_is_F(void)
 {
     SshKdfInputs in = first_exchange();
     uint8_t out[32];
@@ -310,7 +310,7 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(K7_2_F, out, sizeof(out));
 }
 
- void test_sec7_2_the_six_labels_give_six_distinct_keys(void)
+void test_sec7_2_the_six_labels_give_six_distinct_keys(void)
 {
     SshKdfInputs in = first_exchange();
     uint8_t keys[6][32];
@@ -337,7 +337,7 @@ void tearDown(void)
     }
 }
 
- void test_sec7_2_extension_chains_k1_into_k2(void)
+void test_sec7_2_extension_chains_k1_into_k2(void)
 {
     SshKdfInputs in = first_exchange();
     uint8_t out[64];
@@ -345,7 +345,7 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(K7_2_C_64, out, sizeof(out));
 }
 
- void test_sec7_2_key_data_is_taken_from_the_beginning(void)
+void test_sec7_2_key_data_is_taken_from_the_beginning(void)
 {
     SshKdfInputs in = first_exchange();
     uint8_t k32[32], k64[64], k16[16];
@@ -356,7 +356,7 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(k16, k32, 16);
 }
 
- void test_rfc4251_sec5_mpint_padding_changes_the_key(void)
+void test_rfc4251_sec5_mpint_padding_changes_the_key(void)
 {
     for (size_t i = 0; i < sizeof(s_K); i++)
     {
@@ -372,7 +372,7 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(K7_2_A_NOPAD, out, sizeof(out));
 }
 
- void test_sec7_2_rekey_uses_the_new_h_with_the_first_session_id(void)
+void test_sec7_2_rekey_uses_the_new_h_with_the_first_session_id(void)
 {
     uint8_t h2[32];
     for (size_t i = 0; i < sizeof(h2); i++)
@@ -388,7 +388,7 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(K7_2_A_REKEY, out, sizeof(out));
 }
 
- void test_sec7_2_rekey_keys_differ_from_the_first_exchange(void)
+void test_sec7_2_rekey_keys_differ_from_the_first_exchange(void)
 {
     SshKdfInputs first = first_exchange();
     uint8_t k1[32];
@@ -416,12 +416,12 @@ void tearDown(void)
     TEST_ASSERT_FALSE(same);
 }
 
- void test_sec7_3_two_key_epochs_exist_per_slot(void)
+void test_sec7_3_two_key_epochs_exist_per_slot(void)
 {
     TEST_ASSERT_EQUAL_size_t(2u, sizeof(ssh_keys[0]) / sizeof(ssh_keys[0][0]));
 }
 
- void test_out_len_is_clamped_to_the_chain(void)
+void test_out_len_is_clamped_to_the_chain(void)
 {
     SshKdfInputs in = first_exchange();
     uint8_t out[SSH_KDF_MAX + 32];
@@ -436,7 +436,7 @@ void tearDown(void)
     }
 }
 
- void test_sec11_1_field_order(void)
+void test_sec11_1_field_order(void)
 {
     static const char desc[] = "service not available";
     uint8_t out[64];
@@ -452,7 +452,7 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_size_t(13u + sizeof(desc) - 1u, n);
 }
 
- void test_sec11_1_empty_description(void)
+void test_sec11_1_empty_description(void)
 {
     uint8_t out[32];
     size_t n = 0;
@@ -462,7 +462,7 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_UINT32(0u, rd_u32(out + 9));
 }
 
- void test_sec11_1_undersized_buffer_builds_nothing(void)
+void test_sec11_1_undersized_buffer_builds_nothing(void)
 {
     static const char desc[] = "too many authentication failures";
     uint8_t out[16];
@@ -471,7 +471,7 @@ void tearDown(void)
                                                        sizeof(desc) - 1, out, &n, sizeof(out)));
 }
 
- void test_rfc4250_reason_codes(void)
+void test_rfc4250_reason_codes(void)
 {
     TEST_ASSERT_EQUAL_UINT32(2u, (uint32_t)SSH_DISCONNECT_PROTOCOL_ERROR);
     TEST_ASSERT_EQUAL_UINT32(5u, (uint32_t)SSH_DISCONNECT_MAC_ERROR);
@@ -481,7 +481,7 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_UINT32(14u, (uint32_t)SSH_DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE);
 }
 
- void test_sec11_4_field_order(void)
+void test_sec11_4_field_order(void)
 {
     uint8_t out[SSH_UNIMPLEMENTED_LEN];
     size_t n = 0;
@@ -490,12 +490,12 @@ void tearDown(void)
     TEST_ASSERT_EQUAL(SSH_MSG_UNIMPLEMENTED, out[0]);
 }
 
- void test_rfc4250_unimplemented_is_message_3(void)
+void test_rfc4250_unimplemented_is_message_3(void)
 {
     TEST_ASSERT_EQUAL_UINT32(3u, (uint32_t)SSH_MSG_UNIMPLEMENTED);
 }
 
- void test_sec11_4_carries_the_rejected_sequence_number(void)
+void test_sec11_4_carries_the_rejected_sequence_number(void)
 {
     uint8_t out[SSH_UNIMPLEMENTED_LEN];
     size_t n = 0;
@@ -509,7 +509,7 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_UINT32(41u, rd_u32(out + 1));
 }
 
- void test_sec6_4_sequence_number_wraps(void)
+void test_sec6_4_sequence_number_wraps(void)
 {
     uint8_t out[SSH_UNIMPLEMENTED_LEN];
     size_t n = 0;
@@ -518,17 +518,16 @@ void tearDown(void)
     TEST_ASSERT_EQUAL_UINT32(0xFFFFFFFFu, rd_u32(out + 1));
 }
 
- void test_sec11_4_undersized_buffer_builds_nothing(void)
+void test_sec11_4_undersized_buffer_builds_nothing(void)
 {
     uint8_t out[4]; // one short of the five it needs
     size_t n = 0;
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_unimplemented(0, out, &n, sizeof(out)));
 }
 
- void test_sec11_4_slot_past_the_pool_is_refused(void)
+void test_sec11_4_slot_past_the_pool_is_refused(void)
 {
     uint8_t out[SSH_UNIMPLEMENTED_LEN];
     size_t n = 0;
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_unimplemented(MAX_SSH_CONNS, out, &n, sizeof(out)));
 }
-

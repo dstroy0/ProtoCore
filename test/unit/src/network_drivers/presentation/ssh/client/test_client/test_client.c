@@ -118,7 +118,8 @@ static void test_crypto_work_comes_from_the_slot(void)
 {
     uint8_t *work = (SshClient.crypto_work(protocore_ssh_client_span()), SshClient.work);
     TEST_ASSERT_NOT_NULL(work);
-    TEST_ASSERT_EQUAL_PTR(work, (SshClient.crypto_work(protocore_ssh_client_span()), SshClient.work)); // the same bytes each time
+    TEST_ASSERT_EQUAL_PTR(
+        work, (SshClient.crypto_work(protocore_ssh_client_span()), SshClient.work)); // the same bytes each time
 }
 
 int main(void)
