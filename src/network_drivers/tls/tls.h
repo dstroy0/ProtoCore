@@ -9,7 +9,7 @@
  * that act on it are beside it - handshake/ drives the handshake (RFC 8446 sec 4), record/ frames
  * for it (sec 5), key_schedule/ derives its secrets (sec 7.1).
  *
- * The portable TLS 1.3 arm (PROTOCORE_TLS_SOFTWARE) is the implementation; a caller reaches it
+ * The portable TLS 1.3 arm (PROTOCORE_ENABLE_TLS) is the implementation; a caller reaches it
  * through ::TlsConnection. The slot-indexed protocore_tls_* calls below are no-ops, so a call site
  * that predates the portable arm still compiles and needs no extra guards.
  */
@@ -18,7 +18,7 @@
 #define PROTOCORE_TLS_H
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-#if PROTOCORE_TLS_SOFTWARE
+#if PROTOCORE_ENABLE_TLS
 
 PROTOCORE_BEGIN_DECLS
 
@@ -241,7 +241,7 @@ TlsConn *protocore_tls_conn_at(uint8_t slot);
  */
 const char *protocore_tls_alpn(uint8_t slot);
 
-#endif // PROTOCORE_TLS_SOFTWARE
+#endif // PROTOCORE_ENABLE_TLS
 
 /** @brief Where a stepped TLS exchange stands. */
 typedef enum PROTO_ENUM_PACKED
@@ -255,9 +255,9 @@ typedef enum PROTO_ENUM_PACKED
  * @brief Install the credential this end presents, before any connection begins.
  *
  * The two arms take different credentials, because they are different engines:
- *   - software (PROTOCORE_TLS_SOFTWARE): RFC 7250 raw public keys. @p cert is the 32-byte Ed25519
+ *   - software (PROTOCORE_ENABLE_TLS): RFC 7250 raw public keys. @p cert is the 32-byte Ed25519
  *     public key and @p key the 32-byte signing seed that matches it.
- *   - a vendor engine (PROTOCORE_HAS_VENDOR_TLS): whatever that engine parses, an X.509 chain and
+ *   - an X.509 chain and
  *     its private key for the mbedTLS binding.
  *
  * @return true once a connection may begin.
@@ -305,73 +305,6 @@ void protocore_tls_conn_free(uint8_t slot);
 
 /** @brief The high-water mark of the pool this engine's connections are taken from. */
 size_t protocore_tls_arena_peak(void);
-
-#if PROTOCORE_ENABLE_MTLS
-static inline proto_bool protocore_tls_set_client_ca(const uint8_t *ca, size_t ca_len)
-{
-    (void)ca;
-    (void)ca_len;
-    return PROTO_FALSE;
-}
-static inline int protocore_tls_peer_subject(uint8_t slot, char *out, size_t out_len)
-{
-    (void)slot;
-    (void)out;
-    (void)out_len;
-    return -1;
-}
-#endif // PROTOCORE_ENABLE_MTLS
-
-#if PROTOCORE_ENABLE_CLIENT_TLS
-typedef int (*protocore_tls_bio_send_fn)(void *ctx, const unsigned char *buf, size_t len);
-typedef int (*protocore_tls_bio_recv_fn)(void *ctx, unsigned char *buf, size_t len);
-static inline void protocore_tls_client_set_ca(const uint8_t *ca, size_t ca_len)
-{
-    (void)ca;
-    (void)ca_len;
-}
-static inline void protocore_tls_client_set_pin(const uint8_t pin[32])
-{
-    (void)pin;
-}
-static inline void protocore_tls_client_clear_verify(void)
-{
-}
-static inline proto_bool protocore_tls_client_session_begin(const char *host, protocore_tls_bio_send_fn send_fn,
-                                                            protocore_tls_bio_recv_fn recv_fn)
-{
-    (void)host;
-    (void)send_fn;
-    (void)recv_fn;
-    return PROTO_FALSE;
-}
-static inline proto_bool protocore_tls_client_session_active(void)
-{
-    return PROTO_FALSE;
-}
-static inline protocore_tls_state protocore_tls_client_session_handshake(void)
-{
-    return PROTOCORE_TLS_FAILED;
-}
-static inline int protocore_tls_client_session_read(uint8_t *buf, size_t len)
-{
-    (void)buf;
-    (void)len;
-    return -1;
-}
-static inline int protocore_tls_client_session_write(const uint8_t *data, size_t len)
-{
-    (void)data;
-    (void)len;
-    return -1;
-}
-static inline void protocore_tls_client_session_end(void)
-{
-}
-static inline void protocore_tls_client_session_forget_session(void)
-{
-}
-#endif // PROTOCORE_ENABLE_CLIENT_TLS
 
 PROTOCORE_END_DECLS
 

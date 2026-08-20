@@ -40,10 +40,6 @@
 #define PROTOCORE_HAS_VENDOR_MDNS 1
 #endif
 
-#ifndef PROTOCORE_HAS_VENDOR_TLS
-#define PROTOCORE_HAS_VENDOR_TLS 1
-#endif
-
 #ifndef PROTOCORE_HAS_VENDOR_DNS_RESOLVER
 #define PROTOCORE_HAS_VENDOR_DNS_RESOLVER 1
 #endif
@@ -388,15 +384,6 @@ typedef ip_addr_t protocore_net_ip;
 
 #ifndef PROTOCORE_HAS_VENDOR_CAN
 #define PROTOCORE_HAS_VENDOR_CAN 1
-#endif
-
-// What a BIO returns to the record engine when no octet moved and the call is to be retried. Taken
-// from the engine that owns them rather than restated: a BIO that invents its own would be read as a
-// fatal error and drop the session.
-#if PROTOCORE_HAS_VENDOR_TLS
-#include <mbedtls/ssl.h> // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - only exists once the vendor arm resolved
-#define PROTOCORE_PLATFORM_TLS_WANT_READ MBEDTLS_ERR_SSL_WANT_READ
-#define PROTOCORE_PLATFORM_TLS_WANT_WRITE MBEDTLS_ERR_SSL_WANT_WRITE
 #endif
 
 #endif // PROTOCORE_VENDOR_ESP_ANSWERS_H

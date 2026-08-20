@@ -24,15 +24,10 @@ PROTOCORE_BEGIN_DECLS
 #include "network_drivers/transport/tcp/client/client.h" // ::TcpClient, the shared outbound transport
 #include "server/clock/clock.h"                          // ::Clock and pcdelay
 #endif
-#if PROTOCORE_ENABLE_HTTP_CLIENT_TLS
-#include "network_drivers/tls/tls.h" // the client TLS session (RFC 9112 sec 9.7)
-#endif
 #include "mmgr/membuild/membuild.h" // protocore_sb: the message builder
 #include "mmgr/protomem/protomem.h" // mem.cpy / mem.move / mem.cmp / mem.chr
 #include "mmgr/protostr/protostr.h" // str.len / diff / starts / digit / to_long
 #include "shared/mime/mime.h"       // PROTOCORE_MIME_OCTET_STREAM: the Content-Type default (RFC 9110 sec 8.3)
-#if PROTOCORE_ENABLE_HTTP_CLIENT_TLS && PROTOCORE_HAS_VENDOR_TLS
-#endif
 #ifdef PROTOCORE_HTTP_CLIENT_DEBUG
 #include <stdio.h>
 #endif
@@ -483,69 +478,9 @@ void protocore_http_client_parse_response(uint8_t *restrict work)
 // ---------------------------------------------------------------------------
 // https server authentication (RFC 9110 sec 4.2.2)
 // ---------------------------------------------------------------------------
-// Without a trust anchor or a pin the exchange is encrypted and the peer unauthenticated. Both are
-// no-ops on a build without client TLS.
-
-void protocore_http_client_set_ca(uint8_t *restrict work)
-{
-    (void)work;
-#if PROTOCORE_ENABLE_HTTP_CLIENT_TLS
-    protocore_tls_client_set_ca(HttpClientV.verify.ca, HttpClientV.verify.ca_len);
-#else
-#endif
-}
-
-void protocore_http_client_set_pin(uint8_t *restrict work)
-{
-    (void)work;
-#if PROTOCORE_ENABLE_HTTP_CLIENT_TLS
-    protocore_tls_client_set_pin(HttpClientV.verify.pin);
-#else
-#endif
-}
-
-void protocore_http_client_clear_verify(uint8_t *restrict work)
-{
-    (void)work;
-#if PROTOCORE_ENABLE_HTTP_CLIENT_TLS
-    protocore_tls_client_clear_verify();
-#endif
-}
-
-// ---------------------------------------------------------------------------
 // The exchange (RFC 9110 sec 3.9): active OPEN, request, response
 // ---------------------------------------------------------------------------
 #if PROTOCORE_HAS_NET_STACK
-
-#if PROTOCORE_ENABLE_HTTP_CLIENT_TLS && PROTOCORE_HAS_VENDOR_TLS
-// The record layer's octets over the shared transport: a send queues them, a recv drains the wire
-// ring. The engine passes no user pointer, so the slot is read off the one instance.
-static int tls_bio_send(void *bio, const unsigned char *buf, size_t len)
-{
-    (void)bio;
-    TcpClientV.cid = HTTP_CLIENT_CTX(protocore_http_client_span())->cid;
-    TcpClientV.io.data = buf;
-    TcpClientV.io.len = len > 0xFFFF ? 0xFFFF : len;
-    TcpClient.send(protocore_tcp_client_span());
-    return TcpClientV.ok ? (int)TcpClientV.io.len : -1;
-}
-
-static int tls_bio_recv(void *bio, unsigned char *buf, size_t len)
-{
-    (void)bio;
-    TcpClientV.cid = HTTP_CLIENT_CTX(protocore_http_client_span())->cid;
-    TcpClientV.io.buf = buf;
-    TcpClientV.io.cap = len;
-    TcpClient.read(protocore_tcp_client_span());
-    if (TcpClientV.n != 0)
-    {
-        return (int)TcpClientV.n;
-    }
-    TcpClientV.cid = HTTP_CLIENT_CTX(protocore_http_client_span())->cid;
-    TcpClient.is_closed(protocore_tcp_client_span());
-    return TcpClientV.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
-}
-#endif // PROTOCORE_ENABLE_HTTP_CLIENT_TLS && PROTOCORE_HAS_VENDOR_TLS
 
 // The library's monotonic millisecond count. Clock.ms is where the last reading landed, and every
 // loop below runs with no dispatch pass in it, so the reading is taken here.
@@ -604,13 +539,11 @@ static void exchange(uint8_t *restrict work)
     }
     CL_DBG("[hc] host=%s port=%u https=%d path=%s\n", HTTP_CLIENT_CTX(work)->host, (unsigned)ns->target.port,
            (int)ns->target.https, HTTP_CLIENT_CTX(work)->path);
-#if !(PROTOCORE_ENABLE_HTTP_CLIENT_TLS && PROTOCORE_HAS_VENDOR_TLS)
     if (ns->target.https)
     {
         ns->status = (int32_t)HTTP_CLIENT_ERR_TLS;
         return;
     }
-#endif
 
     ns->request.out = HTTP_CLIENT_CTX(work)->req;
     ns->request.cap = sizeof(HTTP_CLIENT_CTX(work)->req);
@@ -666,64 +599,6 @@ static void exchange(uint8_t *restrict work)
 
     size_t msg_len = 0;
 
-#if PROTOCORE_ENABLE_HTTP_CLIENT_TLS && PROTOCORE_HAS_VENDOR_TLS
-    if (ns->target.https)
-    {
-        // RFC 9112 sec 9.7: the user agent is also the TLS client, and the handshake finishes before
-        // the request message goes out. All HTTP octets then ride as TLS application data.
-        if (!protocore_tls_client_session_begin(HTTP_CLIENT_CTX(work)->host, tls_bio_send, tls_bio_recv))
-        {
-            close_conn(work);
-            ns->status = (int32_t)HTTP_CLIENT_ERR_TLS;
-            return;
-        }
-        protocore_tls_state hs = protocore_tls_client_session_handshake();
-        while (hs == PROTOCORE_TLS_BUSY && (int32_t)(deadline - now_ms()) > 0)
-        {
-            pcdelay(5);
-            hs = protocore_tls_client_session_handshake();
-        }
-        CL_DBG("[hc] tls handshake=%d\n", (int)hs);
-        if (hs != PROTOCORE_TLS_READY)
-        {
-            protocore_tls_client_session_end();
-            close_conn(work);
-            ns->status = (int32_t)HTTP_CLIENT_ERR_TLS;
-            return;
-        }
-        if (protocore_tls_client_session_write((const uint8_t *)HTTP_CLIENT_CTX(work)->req, reqlen) != (int)reqlen)
-        {
-            protocore_tls_client_session_end();
-            close_conn(work);
-            ns->status = (int32_t)HTTP_CLIENT_ERR_SEND;
-            return;
-        }
-        while ((int32_t)(deadline - now_ms()) > 0)
-        {
-            int got = protocore_tls_client_session_read(HTTP_CLIENT_CTX(work)->rx + msg_len,
-                                                        sizeof(HTTP_CLIENT_CTX(work)->rx) - msg_len);
-            if (got < 0)
-            {
-                break; // closure alert or fatal (RFC 9112 sec 9.8)
-            }
-            msg_len += (size_t)got;
-            if (msg_len >= sizeof(HTTP_CLIENT_CTX(work)->rx))
-            {
-                break;
-            }
-            if (got == 0)
-            {
-                if (peer_done(work))
-                {
-                    break;
-                }
-                pcdelay(5);
-            }
-        }
-        protocore_tls_client_session_end();
-    }
-    else
-#endif // PROTOCORE_ENABLE_HTTP_CLIENT_TLS && PROTOCORE_HAS_VENDOR_TLS
     {
         TcpClientV.cid = HTTP_CLIENT_CTX(work)->cid;
         TcpClientV.io.data = HTTP_CLIENT_CTX(work)->req;

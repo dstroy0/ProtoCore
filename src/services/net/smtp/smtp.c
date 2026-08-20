@@ -25,9 +25,6 @@ PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/tcp/client/client.h" // TcpClient: the outbound transport
-#if PROTOCORE_ENABLE_SMTP_TLS
-#include "network_drivers/tls/tls.h" // the client TLS session and its BIO seam
-#endif
 #endif
 
 // ---------------------------------------------------------------------------
@@ -47,13 +44,6 @@ PROTOCORE_BEGIN_DECLS
 
 // The Domain the EHLO argument carries when the caller names none (RFC 5321 sec 4.1.1.1).
 #define SMTP_DEFAULT_CLIENT_NAME "protocore"
-
-#if PROTOCORE_HAS_NET_STACK && PROTOCORE_ENABLE_SMTP_TLS
-#if !defined(PROTOCORE_PLATFORM_TLS_WANT_READ) || !defined(PROTOCORE_PLATFORM_TLS_WANT_WRITE)
-#error                                                                                                                 \
-    "ProtoCore: the platform must state PROTOCORE_PLATFORM_TLS_WANT_READ and PROTOCORE_PLATFORM_TLS_WANT_WRITE - the value a BIO returns to the TLS engine when no octet moved and the call should be retried."
-#endif
-#endif
 
 // ---------------------------------------------------------------------------
 // Types
@@ -653,97 +643,15 @@ static int plain_recv(void *ctx, uint8_t *buf, size_t cap)
     return -1; // the reply never completed inside its budget
 }
 
-#if PROTOCORE_ENABLE_SMTP_TLS
-
-// The ciphertext BIO the TLS engine handshakes and frames through. The engine passes its own ctx,
-// not ours, so the channel is read from the one owned storage.
-static int ciphertext_send(void *ctx, const unsigned char *buf, size_t len)
-{
-    TcpClientV.cid = s_store.chan.cid;
-    TcpClientV.io.data = buf;
-    TcpClientV.io.len = len;
-    TcpClient.send(protocore_tcp_client_span());
-    return TcpClientV.ok ? (int)len : PROTOCORE_PLATFORM_TLS_WANT_WRITE;
-}
-
-static int ciphertext_recv(void *ctx, unsigned char *buf, size_t len)
-{
-    TcpClientV.cid = s_store.chan.cid;
-    TcpClientV.io.buf = buf;
-    TcpClientV.io.cap = len;
-    TcpClient.read(protocore_tcp_client_span());
-    if (TcpClientV.n > 0)
-    {
-        return (int)TcpClientV.n;
-    }
-    TcpClientV.cid = s_store.chan.cid;
-    TcpClient.is_closed(protocore_tcp_client_span());
-    return TcpClientV.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
-}
-
-// Application write and read over the established session.
-static int secure_send(void *ctx, const uint8_t *data, size_t len)
-{
-    return protocore_tls_client_session_write(data, len) == (int)len ? (int)len : -1;
-}
-
-static int secure_recv(void *ctx, uint8_t *buf, size_t cap)
-{
-    SmtpChannel *chan = (SmtpChannel *)ctx;
-    chan->deadline = Clock.ms + PROTOCORE_SMTP_TIMEOUT_MS;
-    while ((int32_t)(chan->deadline - Clock.ms) > 0)
-    {
-        int n = protocore_tls_client_session_read(buf, cap);
-        if (n > 0)
-        {
-            return n;
-        }
-        if (n < 0 && n != PROTOCORE_PLATFORM_TLS_WANT_READ && n != PROTOCORE_PLATFORM_TLS_WANT_WRITE)
-        {
-            return -1;
-        }
-        pcdelay(5);
-    }
-    return -1; // the reply never completed inside its budget
-}
-
-// Step the handshake to its end on a budget of its own. A handshake that inherited whatever was
-// left of a read deadline could be abandoned before its first flight went out.
-static proto_bool tls_handshake(uint8_t *restrict work)
-{
-    SMTP_CTX(work)->chan.deadline = Clock.ms + PROTOCORE_SMTP_TIMEOUT_MS;
-    protocore_tls_state st = protocore_tls_client_session_handshake();
-    while (st == PROTOCORE_TLS_BUSY && (int32_t)(SMTP_CTX(work)->chan.deadline - Clock.ms) > 0)
-    {
-        pcdelay(5);
-        st = protocore_tls_client_session_handshake();
-    }
-    return st == PROTOCORE_TLS_READY;
-}
-
-#endif // PROTOCORE_ENABLE_SMTP_TLS
-
 // The seam the engine holds for the whole session. A STARTTLS upgrade flips what these reach, so
 // the engine never swaps transports mid-session and cannot keep writing cleartext after the switch.
 static int wire_send(void *ctx, const uint8_t *data, size_t len)
 {
-#if PROTOCORE_ENABLE_SMTP_TLS
-    if (((SmtpChannel *)ctx)->tls_active)
-    {
-        return secure_send(work, data, len);
-    }
-#endif
     return plain_send(work, data, len);
 }
 
 static int wire_recv(void *ctx, uint8_t *buf, size_t cap)
 {
-#if PROTOCORE_ENABLE_SMTP_TLS
-    if (((SmtpChannel *)ctx)->tls_active)
-    {
-        return secure_recv(work, buf, cap);
-    }
-#endif
     return plain_recv(work, buf, cap);
 }
 
@@ -751,22 +659,8 @@ static int wire_recv(void *ctx, uint8_t *buf, size_t cap)
 static proto_bool wire_starttls(void *ctx)
 {
     SmtpChannel *chan = (SmtpChannel *)ctx;
-#if PROTOCORE_ENABLE_SMTP_TLS
-    if (!protocore_tls_client_session_begin(chan->host, ciphertext_send, ciphertext_recv))
-    {
-        return PROTO_FALSE;
-    }
-    if (!tls_handshake(protocore_smtp_span()))
-    {
-        protocore_tls_client_session_end();
-        return PROTO_FALSE;
-    }
-    chan->tls_active = PROTO_TRUE; // every later wire_send / wire_recv rides the session
-    return PROTO_TRUE;
-#else
     (void)chan;
     return PROTO_FALSE; // STARTTLS asked for in a build without TLS
-#endif
 }
 
 // Dial the server, step the open to a connection, walk the session, close.
@@ -820,30 +714,10 @@ void protocore_smtp_send(uint8_t *restrict work)
 
     if (SmtpV.session.security == SMTP_TLS)
     {
-#if PROTOCORE_ENABLE_SMTP_TLS
-        // RFC 8314 sec 3.3: on the submissions service the TLS handshake begins immediately, so
-        // there is no cleartext leg and no STARTTLS to offer the engine.
-        if (!protocore_tls_client_session_begin(SmtpV.session.host, ciphertext_send, ciphertext_recv) ||
-            !tls_handshake(work))
-        {
-            protocore_tls_client_session_end();
-            TcpClientV.cid = chan->cid;
-            TcpClient.close(protocore_tcp_client_span());
-            finish(work, SMTP_ERR_TLS);
-            return;
-        }
-        chan->tls_active = PROTO_TRUE;
-        SmtpV.transport.send = secure_send;
-        SmtpV.transport.recv = secure_recv;
-        SmtpV.transport.starttls = NULL;
-        protocore_smtp_run(work);
-        protocore_tls_client_session_end();
-#else
         TcpClientV.cid = chan->cid;
         TcpClient.close(protocore_tcp_client_span());
         finish(work, SMTP_ERR_TLS); // implicit TLS asked for in a build without TLS
         return;
-#endif
     }
     else
     {
@@ -851,12 +725,6 @@ void protocore_smtp_send(uint8_t *restrict work)
         SmtpV.transport.recv = wire_recv;
         SmtpV.transport.starttls = wire_starttls;
         protocore_smtp_run(work);
-#if PROTOCORE_ENABLE_SMTP_TLS
-        if (chan->tls_active)
-        {
-            protocore_tls_client_session_end();
-        }
-#endif
     }
 
     TcpClientV.cid = chan->cid;

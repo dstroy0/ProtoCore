@@ -298,12 +298,6 @@ DTLS 1.3 (RFC 9147) datagram security for UDP transports - the secure datagram c
 
 Opt-in CDN edge-cache tier (requires HTTP Cache). Default off. server/web/edge_cache is the caching reverse-proxy edge that network_drivers/presentation/http/httpcache is the origin-side groundwork for: the device sits in front of a remote upstream origin, fetches a response once, and serves subsequent hits from a bounded local store - honoring `Cache-Control` / `Expires` / `ETag` / `Last-Modified`, revalidating stale entries with conditional requests (`If-None-Match` / `If-Modified-Since` -> 304), and serving `Range` / `206 Partial Content` straight from the cache with the existing constant-memory send-pump. A two-tier store: bounded RAM (L1, hot, LRU + TTL) plus an optional dbm/WAL-backed SD tier (L2, persistent across reboot, when DBM is enabled). A miss or a stale-entry revalidation fetches the origin asynchronously - the client request is suspended and resumed from the server poll loop, so the worker never stalls - and every failure path (miss, full cache, origin down, oversize) fails open to the origin. The deterministic cache key is method + host + path (+ optional query), with a SHA-256 digest for the L2 key and `Vary` handled as a secondary key; explicit purge (single + prefix/wildcard) and stats round it out. Registered as a middleware via `protocore_edge_cache_enable(server)` + `protocore_edge_cache_map(prefix, origin)`; zero heap, all buffers fixed. The freshness/validator/key/store logic is pure and host-tested (native_edge_cache); the async origin fetch + serve are HW-verified against a real origin; the L2 SD tier's entry serialization, spill/promote, reboot survival, and purge are host-tested over a RAM WalDev (native_edge_cache_sd) via `protocore_edge_cache_bind_sd`. When `PROTOCORE_ENABLE_RANGE` is set, a cached object also answers a single-range `Range` request with `206 Partial Content` + `Content-Range` (or `416`) and advertises `Accept-Ranges: bytes`, streaming just the window through the same shared parser (server/http_range) the file server uses.
 
-## Edge Cache Origin TLS
-
-`PROTOCORE_ENABLE_EDGE_ORIGIN_TLS`
-
-Opt-in TLS upstream origins for the edge cache (requires Edge Cache + TLS). Default off. When set, a mapped `https://` origin is fetched over the shared client-TLS session (`protocore_tls_csess`, the same one MQTTS / wss use) layered over `protocore_client` via mbedTLS BIO callbacks, selected per route by a scheme flag on the route map; without it an `https://` origin is rejected. The handshake blocks briefly in the transport's `open` (like `Tcp.client->open`'s connect and the MQTT/WS clients), and a `protocore_tls_client_session_active()` guard fails open rather than tearing down a live shared session, so one TLS origin fetch runs at a time. Verification is off by default (encrypt-only, no authentication); `protocore_edge_cache_set_origin_ca(pem, len)` enables full chain + hostname verification and `protocore_edge_cache_set_origin_pin(sha256)` pins the cert (both write the shared client-TLS trust store, so they also apply to MQTTS / wss / the HTTP client). HW-verified on an ESP32-S3 against a real https origin: encrypt-only fetch byte-exact, a correct CA verifies and a wrong CA is rejected (fail-open), Range/`206` works over the TLS-fetched body. Note: the TLS engine adds a ~48 KB arena (an S3 / PSRAM board is recommended), and on mbedtls v2 (espressif32 default) an IP-address origin needs a CN-matching cert (IP-address SANs are not matched; DNS origins work normally). Follow-ups: an async handshake so a cold https MISS never blocks the worker, and a multi-session pool for more than one concurrent TLS fetch.
-
 ## Edge Cache Mesh
 
 `PROTOCORE_ENABLE_EDGE_MESH`
@@ -506,13 +500,7 @@ The `Date` header, and which clock supplies its instant. Default off. When set, 
 
 `PROTOCORE_ENABLE_HTTP_CLIENT`
 
-Outbound HTTP(S) client (raw lwIP, optional client-side mbedTLS). Default off. When set, src/services/net/http_client/http_client.h can issue a blocking GET/POST to a remote server: it resolves the host (DNS), opens a raw lwIP TCP connection (https:// goes through client-side mbedTLS over the same static arena as the server TLS), sends the request, and returns the status + body in caller buffers. For webhooks, telemetry push, REST calls from the device. The request builder + response parser are host-testable; the transport is ESP32-only.
-
-## HTTP Client TLS
-
-`PROTOCORE_ENABLE_HTTP_CLIENT_TLS`
-
-HTTPS client support inside the HTTP client (needs TLS).
+Outbound HTTP client. Default off. When set, src/services/net/http_client/http_client.h can issue a blocking GET/POST to a remote server: it resolves the host (DNS), opens a TCP connection, sends the request, and returns the status + body in caller buffers. Plaintext `http://` only - an `https://` target URI is parsed and then REFUSED with `HTTP_CLIENT_ERR_TLS`, because the library ships no client-side TLS engine. For webhooks, telemetry push, REST calls from the device. The request builder + response parser are host-testable; the transport is ESP32-only.
 
 ## HTTP Delivery
 
@@ -778,23 +766,11 @@ MQTT 3.1.1 publish/subscribe client (raw lwIP, optional MQTTS over TLS). Default
 
 MQTT-SN v1.2 wire codec. Default off. services/iot/mqtt/mqtt_sn is a zero-heap codec for MQTT for Sensor Networks - the UDP / non-TCP MQTT variant for constrained, lossy links (numeric topic IDs instead of strings, gateway discovery, sleeping-client keep-alive). Builders for CONNECT / REGISTER / PUBLISH / SUBSCRIBE (by name or pre-defined id) / PINGREQ / DISCONNECT / SEARCHGW, plus `protocore_mqttsn_parse_header()` (the 1- and 3-octet Length forms, big-endian fields) and typed parsers for CONNACK / REGACK / PUBACK / SUBACK / PUBLISH / REGISTER, with a `protocore_mqttsn_make_flags()` helper (DUP / QoS / retain / will / clean / TopicIdType). Wire bytes verified against the spec and the Eclipse Paho reference; pure and host-tested. The datagram send (Udp.client->sendto), topic-ID registry, and sleep / retransmit state are the application's. See src/services/iot/mqtt/mqtt_sn.h.
 
-## MQTT TLS
-
-`PROTOCORE_ENABLE_MQTT_TLS`
-
-MQTTS: run the MQTT client over client-side TLS (needs TLS).
-
 ## MTConnect
 
 `PROTOCORE_ENABLE_MTCONNECT`
 
 Opt-in MTConnect agent response codec. When set, services/machine_tool/mtconnect builds the MTConnectStreams (current/sample) and MTConnectError XML response documents (ANSI/MTC1.4) into a caller buffer - header with instanceId + nextSequence, then per-DataItem Samples/Events/Condition observations - so the web server is an MTConnect agent over the existing HTTP stack. Pure text framing (values XML-escaped). Default off.
-
-## MTLS
-
-`PROTOCORE_ENABLE_MTLS`
-
-Mutual TLS - require and verify a client certificate (mTLS). Default off. When set (requires TLS), the server can be given a trust-anchor CA via PC::tls_require_client_cert(): the TLS handshake then demands a client certificate chaining to that CA (MBEDTLS_SSL_VERIFY_REQUIRED) and aborts the connection if the client presents none or an untrusted one. The verified peer's subject DN is available to handlers via PC::tls_client_subject(). Strong transport-level client authentication with no passwords.
 
 ## Multipart
 
@@ -1176,17 +1152,11 @@ SMB2 client wire codec (MS-SMB2). Default off. network_drivers/application/smb i
 
 SMBus 3.1 transaction shapes over the shared I2C bus. Default off. server/peripherals/smbus adds the named transaction forms SMBus defines on top of I2C: quick command, send and receive byte, write and read byte and word, block write and read, and the two process calls. A part that speaks SMBus (a battery gauge, a fan controller, a power sequencer) answers this fixed set rather than a register layout its datasheet invents, so a driver is written against the shapes instead of against the part. Each shape puts its own byte count on the wire, which is what distinguishes them: a send byte carries no command code, a write byte carries one, a write word carries a command and two data bytes low byte first, and a block write puts the payload count between the command and the payload. The Packet Error Code is a CRC-8 over every byte of the transaction, the address bytes and their R/W direction bits included; it comes from the shared CRC engine (`PROTOCORE_CRC8_SMBUS`) and stays off until `protocore_smbus_set_pec` turns it on, because a part that does not implement PEC NACKs the extra byte. `protocore_smbus_pec_write` covers the write address byte and the payload, and `protocore_smbus_pec_read` spans both halves of a read: the write address, the command, the repeated-START read address, then the data. The PEC computation is pure and host-tested (`native_smbus`), each vector checked against `protocore_crc(&PROTOCORE_CRC8_SMBUS)` directly rather than against a second implementation, with the byte count of every shape confirmed on the wire through the host bus harness; only the transfers touch I2C. See src/server/peripherals/smbus.h.
 
-## SMTP TLS
-
-`PROTOCORE_ENABLE_SMTP_TLS`
-
-Secure SMTP: run the mail client over client-side TLS (needs TLS). Covers both `SmtpSecurity::SMTP_TLS` (implicit, port 465) and `SmtpSecurity::SMTP_STARTTLS` (the RFC 3207 in-band upgrade on the submission port, 587). Separate from `PROTOCORE_ENABLE_SMTP` because the plain codec needs neither the TLS stack nor the client-session singleton, and it is what pulls SMTP into the `PROTOCORE_ENABLE_CLIENT_TLS` derivation - without that every `protocore_tls_client_session_*` call resolves to a stub that always fails. See src/services/net/smtp/smtp.h.
-
 ## SMTP
 
 `PROTOCORE_ENABLE_SMTP`
 
-Outbound SMTP client (RFC 5321) for device email alerts. Default off. services/net/smtp runs a blocking one-shot send over the shared outbound client transport (protocore_client): read the greeting, EHLO, optional AUTH LOGIN (username/password base64-encoded), then MAIL FROM / RCPT TO / DATA the message and QUIT. The body is dot-stuffed (RFC 5321 sec 4.5.2) and CRLF-normalized so it can never end early, and the whole exchange is zero-heap (fixed PROTOCORE_SMTP_* buffers). `SmtpConfig.security` selects how the connection is secured - a `SmtpSecurity` enum (PLAIN / TLS / STARTTLS) rather than a bool, so "implicit and explicit at once" is unrepresentable. Implicit TLS (SMTPS, port 465) encrypts from the first byte; **STARTTLS** (RFC 3207, the submission port 587) issues STARTTLS after the first EHLO, upgrades the transport in place, and reissues EHLO because RFC 3207 sec 4.2 requires discarding capabilities learned in the clear. STARTTLS **fails closed**: if it is configured and the server does not advertise it, the send aborts with `SMTP_ERR_NO_STARTTLS` _before_ AUTH, so an attacker stripping the capability line cannot downgrade the exchange into sending credentials in plaintext - and the capability is matched as a whole keyword, so "STARTTLSX" does not count. The upgrade is invisible to the dialogue engine: the transport owns one send/recv pair that flips to TLS underneath it, so no path can keep writing plaintext after the handshake. Both need `PROTOCORE_ENABLE_SMTP_TLS` (which is what pulls in the client-TLS session). The dialogue engine (smtp_run) is written against a send/recv seam, so the full protocol - reply codes, AUTH, dot-stuffing, the terminating dot - is host-tested with a scripted mock server (env:native_smtp). SMS fallback needs no extra code (an email-to-SMS carrier gateway address). **HW-verified on an ESP32-S3** against a live aiosmtpd submission server: the device connected in the clear to :587, saw STARTTLS advertised, upgraded, reissued EHLO encrypted, and the server logged `DELIVERED from=esp32@... bytes=183 tls=True` with the message body intact. Getting there fixed three latent bugs in a TLS path that had **never been compiled** - a missing `<mbedtls/ssl.h>` include, SMTP being absent from the `PROTOCORE_ENABLE_CLIENT_TLS` derivation (so the session API resolved to stubs), and BIO callbacks dereferencing a `ctx` the TLS layer never passes them. Example SmtpAlert ships a from-scratch beginner walkthrough (including standing up a Postfix server). See src/services/net/smtp/smtp.h.
+Outbound SMTP client (RFC 5321) for device email alerts. Default off. services/net/smtp runs a blocking one-shot send over the shared outbound client transport (protocore_client): read the greeting, EHLO, optional AUTH LOGIN (username/password base64-encoded), then MAIL FROM / RCPT TO / DATA the message and QUIT. The body is dot-stuffed (RFC 5321 sec 4.5.2) and CRLF-normalized so it can never end early, and the whole exchange is zero-heap (fixed PROTOCORE_SMTP_* buffers). **Plaintext only.** `SmtpConfig.security` still names the three RFC 8314 shapes - PLAIN, implicit TLS (submissions, port 465) and STARTTLS (RFC 3207, submission port 587) - and the two encrypted ones FAIL CLOSED with `SMTP_ERR_TLS` / `SMTP_ERR_NO_STARTTLS` rather than falling back to the clear, because the library ships no client-side TLS engine to carry them. A build that needs encrypted mail submission needs one supplied; the dialogue engine is written against a send/recv seam with an in-place upgrade hook, so that is where it would attach. The dialogue itself - reply codes, AUTH, dot-stuffing, the terminating dot, and the STARTTLS refusal - is host-tested against a scripted mock server (env:native_smtp). SMS fallback needs no extra code (an email-to-SMS carrier gateway address). Example SmtpAlert ships a from-scratch beginner walkthrough (including standing up a Postfix server). See src/services/net/smtp/smtp.h.
 
 ## SNMP
 
@@ -1520,13 +1490,7 @@ Opt-in write-ahead store for atomic buffer-to-flash storage, the substrate for o
 
 `PROTOCORE_ENABLE_WS_CLIENT`
 
-Outbound WebSocket client (RFC 6455 over raw lwIP, optional wss:// TLS). Default off. When set, src/services/net/ws_client/ws_client.h connects to a remote WebSocket endpoint (ws://, or wss:// over client-side mbedTLS), performs the RFC 6455 client handshake (Sec-WebSocket-Key/Accept), and sends masked text / binary frames + receives server frames via a callback - for streaming to cloud dashboards or bidirectional control. The frame/handshake codec is host-testable.
-
-## WS Client TLS
-
-`PROTOCORE_ENABLE_WS_CLIENT_TLS`
-
-wss://: run the WebSocket client over client-side TLS (needs TLS).
+Outbound WebSocket client (RFC 6455). Default off. When set, src/services/net/ws_client/ws_client.h connects to a remote `ws://` WebSocket endpoint - plaintext only, the library ships no client-side TLS engine - performs the RFC 6455 client handshake (Sec-WebSocket-Key/Accept), and sends masked text / binary frames + receives server frames via a callback - for streaming to cloud dashboards or bidirectional control. The frame/handshake codec is host-testable.
 
 ## WS Deflate
 

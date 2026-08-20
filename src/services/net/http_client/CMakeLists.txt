@@ -13,7 +13,6 @@ if(PROTOCORE_ENABLE_HTTP_CLIENT)
       pc_mmgr_protomem
       pc_mmgr_protostr
       pc_mmgr_secure
-      pc_network_drivers_tls
       pc_network_drivers_transport_tcp_client
       pc_server_clock
       pc_shared_mime

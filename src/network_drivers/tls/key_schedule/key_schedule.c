@@ -8,7 +8,7 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
+#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_TLS)
 
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 
@@ -285,4 +285,4 @@ Tls13KsVars Tls13KsV;
 
 PROTOCORE_END_DECLS
 
-#endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE
+#endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_TLS

@@ -89,11 +89,6 @@
     "ProtoCore: this vendor must state PROTOCORE_HAS_VENDOR_MDNS (1 = the SDK's own responder component, 0 = the portable responder over the UDP listener). Choosing the portable one is fine; defaulting into it is not."
 #endif
 
-#ifndef PROTOCORE_HAS_VENDOR_TLS
-#error                                                                                                                 \
-    "ProtoCore: this vendor must state PROTOCORE_HAS_VENDOR_TLS (1 = the SDK's own TLS stack with X.509, 0 = the portable TLS 1.3 over the TCP record layer, raw public key only). Choosing the portable one is fine; defaulting into it is not."
-#endif
-
 // SNTP has no vendor seam: network_drivers/application/ntp_service is the client on every target. It
 // asks a server over the UDP listener, keeps the epoch in its own state, and hands it out through
 // protocore_ntp_epoch(); nothing in libc moves.

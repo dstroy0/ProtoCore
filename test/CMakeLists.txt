@@ -4818,7 +4818,6 @@ protocore_env(native_h2server
   DEFINES
     "PROTOCORE_ENABLE_HTTP2=1"
     "PROTOCORE_ENABLE_TLS=1"
-    "PROTOCORE_HAS_VENDOR_TLS=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -14968,7 +14967,7 @@ protocore_env(native_tls_policy
     "${PROTOCORE_ROOT}/test/unit/src/server/security/tls_policy/test_tls_policy"
 )
 
-# TLS 1.3 stream record layer (network_drivers/tls/tls_record, RFC 8446 sec 5), the software arm
+# TLS 1.3 stream record layer (network_drivers/tls/record, RFC 8446 sec 5): the 5-byte TLSPlaintext header and its length-validating parse, TLSCiphertext protect/unprotect with the real content type sealed inside the record, the iv XOR seq nonce, the backward scan that recovers the type past the padding, and the record counter that never travels and does not advance on a forged record. The key + record KAT is byte-exact against an independent reconstruction (tools/crypto/gen_tls_record_kat.py): stdlib HKDF-Expand-Label under the "tls13 " prefix plus OpenSSL AES-128-GCM. Pure host tests.
 protocore_env(native_tls_record
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/tls/record/record.c"

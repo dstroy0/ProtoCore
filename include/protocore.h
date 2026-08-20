@@ -730,36 +730,6 @@ int32_t listen_tls(uint16_t port);
 int32_t begin_tls(uint16_t port, const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len,
                   const WebServerConfig *cfg);
 
-#if PROTOCORE_ENABLE_MTLS
-/**
- * @brief Require a verified client certificate (mTLS).
- *
- * Call after tls_cert() (or begin_tls()) and before connections arrive. Sets
- * @p ca as the trust anchor and switches the handshake to require a client
- * certificate chaining to it; a client that presents none, or an untrusted
- * one, is rejected during the handshake.
- *
- * @param ca     CA certificate (chain).
- * @param ca_len Length incl. trailing NUL for PEM.
- * @return true on success; false if the engine is not ready or the CA failed
- *         to parse.
- */
-proto_bool tls_require_client_cert(const uint8_t *ca, size_t ca_len);
-
-/**
- * @brief Copy the connecting client's verified certificate subject DN.
- *
- * Use inside a handler to identify the mTLS peer (e.g. for authorization or
- * logging). Valid only on a TLS connection whose handshake required and
- * verified a client cert.
- *
- * @param slot_id  Connection slot (the handler's id).
- * @param out      Destination buffer (always NUL-terminated on success).
- * @param out_len  Capacity of @p out.
- * @return subject length written, or <0 if there is no verified client cert.
- */
-int tls_client_subject(uint8_t slot_id, char *out, size_t out_len);
-#endif // PROTOCORE_ENABLE_MTLS
 #endif // PROTOCORE_ENABLE_TLS
 
 #if PROTOCORE_ENABLE_HTTP3

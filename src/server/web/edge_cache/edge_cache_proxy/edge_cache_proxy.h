@@ -38,23 +38,6 @@ typedef struct
     const char *origin_base_url;
 } EdgeProxyMapArgs;
 
-#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-/** @brief What set_origin_ca takes: ca_pem, len. */
-typedef struct
-{
-    const uint8_t *ca_pem;
-    size_t len;
-} EdgeProxySetOriginCaArgs;
-#endif
-
-#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-/** @brief What set_origin_pin takes: sha256. */
-typedef struct
-{
-    const uint8_t *sha256; ///< 32 bytes.
-} EdgeProxySetOriginPinArgs;
-#endif
-
 #if PROTOCORE_ENABLE_DBM
 /** @brief What bind_sd takes: dbm. */
 typedef struct
@@ -99,8 +82,6 @@ typedef struct
  *   EdgeProxy.enable(work);
  *
  * @var EdgeProxyNs::map_args  what map takes: path_prefix, origin_base_url
- * @var EdgeProxyNs::set_origin_ca_args  what set_origin_ca takes: ca_pem, len
- * @var EdgeProxyNs::set_origin_pin_args  what set_origin_pin takes: sha256
  * @var EdgeProxyNs::bind_sd_args  what bind_sd takes: dbm
  * @var EdgeProxyNs::add_peer_args  what add_peer takes: host, port
  * @var EdgeProxyNs::purge_args  what purge takes: canonical_key
@@ -110,8 +91,6 @@ typedef struct
  * @var EdgeProxyNs::n  the count a call reports
  * @var EdgeProxyNs::enable  enable the edge cache on server: register the cache middleware + ...
  * @var EdgeProxyNs::map  map a request path prefix to an upstream origin (e.g. "/cdn/" -> ...
- * @var EdgeProxyNs::set_origin_ca  set the CA used to verify a TLS (`https://`) origin (PEM incl. NUL, ...
- * @var EdgeProxyNs::set_origin_pin  pin the origin cert by the SHA-256 of its DER (32 bytes); nullptr ...
  * @var EdgeProxyNs::bind_sd  bind an L2 persistent tier: an opened dbm handle (on a mounted WAL ...
  * @var EdgeProxyNs::add_peer  add a sibling peer to query on a full local miss before hitting the ...
  * @var EdgeProxyNs::mesh_serve  serve sibling queries: register the PROTO_MESH handler so this node ...
@@ -127,12 +106,6 @@ typedef struct
 typedef struct
 {
     EdgeProxyMapArgs map_args;
-#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-    EdgeProxySetOriginCaArgs set_origin_ca_args;
-#endif
-#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-    EdgeProxySetOriginPinArgs set_origin_pin_args;
-#endif
 #if PROTOCORE_ENABLE_DBM
     EdgeProxyBindSdArgs bind_sd_args;
 #endif
@@ -144,10 +117,6 @@ typedef struct
     EdgeProxyStatsArgs stats_args;
     proto_bool ok;
     uint32_t n;
-#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-#endif
-#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-#endif
 #if PROTOCORE_ENABLE_DBM
 #endif
 #if PROTOCORE_ENABLE_EDGE_MESH
@@ -164,8 +133,6 @@ typedef struct
 {
     void (*const enable)(uint8_t *restrict work);
     void (*const map)(uint8_t *restrict work);
-    void (*const set_origin_ca)(uint8_t *restrict work);
-    void (*const set_origin_pin)(uint8_t *restrict work);
     void (*const bind_sd)(uint8_t *restrict work);
     void (*const add_peer)(uint8_t *restrict work);
     void (*const mesh_serve)(uint8_t *restrict work);
@@ -179,12 +146,6 @@ typedef struct
 // else an entry needs is an operand in EdgeProxyV or a region of the borrow at a fixed offset.
 void protocore_edge_proxy_enable(uint8_t *restrict work);
 void protocore_edge_proxy_map(uint8_t *restrict work);
-#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-void protocore_edge_proxy_set_origin_ca(uint8_t *restrict work);
-#endif
-#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-void protocore_edge_proxy_set_origin_pin(uint8_t *restrict work);
-#endif
 #if PROTOCORE_ENABLE_DBM
 void protocore_edge_proxy_bind_sd(uint8_t *restrict work);
 #endif
@@ -206,12 +167,6 @@ void protocore_edge_proxy_stats(uint8_t *restrict work);
 static const EdgeProxyNs EdgeProxy __attribute__((unused)) = {
     .enable = protocore_edge_proxy_enable,
     .map = protocore_edge_proxy_map,
-#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-    .set_origin_ca = protocore_edge_proxy_set_origin_ca,
-#endif
-#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-    .set_origin_pin = protocore_edge_proxy_set_origin_pin,
-#endif
 #if PROTOCORE_ENABLE_DBM
     .bind_sd = protocore_edge_proxy_bind_sd,
 #endif

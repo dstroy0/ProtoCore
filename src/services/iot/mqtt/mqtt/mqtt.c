@@ -27,9 +27,6 @@ PROTOCORE_BEGIN_DECLS
 #include "mmgr/span/span.h"                              // span.ok: the borrow landed
 #include "network_drivers/transport/tcp/client/client.h" // TcpClient: the outbound transport (L4)
 #include "server/clock/clock.h"                          // protocore_millis: the link timer and Keep Alive
-#if PROTOCORE_ENABLE_MQTT_TLS
-#include "network_drivers/tls/tls.h" // the persistent client TLS session
-#endif
 #endif
 
 #ifdef PROTOCORE_MQTT_DEBUG
@@ -78,13 +75,6 @@ PROTOCORE_BEGIN_DECLS
 #define MQ_DBG(...) printf(__VA_ARGS__)
 #else
 #define MQ_DBG(...) ((void)0)
-#endif
-
-#if PROTOCORE_HAS_NET_STACK && PROTOCORE_ENABLE_MQTT_TLS
-#if !defined(PROTOCORE_PLATFORM_TLS_WANT_READ) || !defined(PROTOCORE_PLATFORM_TLS_WANT_WRITE)
-#error                                                                                                                 \
-    "ProtoCore: the platform must state PROTOCORE_PLATFORM_TLS_WANT_READ and PROTOCORE_PLATFORM_TLS_WANT_WRITE - the value a BIO returns to the TLS engine when no octet moved and the call should be retried."
-#endif
 #endif
 
 // ---------------------------------------------------------------------------
@@ -796,54 +786,6 @@ static void fill_plain(uint8_t *restrict work)
     MQTT_CTX(work)->rx_len += n;
 }
 
-#if PROTOCORE_ENABLE_MQTT_TLS
-// The TLS BIO over the outbound transport: ciphertext out through the slot, ciphertext in by
-// draining what the slot buffered. The retry sentinels are the platform's.
-static int tls_send(void *bio, const unsigned char *buf, size_t len)
-{
-    (void)bio;
-    size_t cap = len > 0xFFFF ? 0xFFFF : len;
-    return tx_plain(&s_mqtt, buf, cap) ? (int)cap : PROTOCORE_PLATFORM_TLS_WANT_WRITE;
-}
-
-static int tls_recv(void *bio, unsigned char *buf, size_t len)
-{
-    (void)bio;
-    TcpClientV.cid = s_mqtt.store->cid;
-    TcpClientV.io.buf = buf;
-    TcpClientV.io.cap = len;
-    TcpClient.read(protocore_tcp_client_span());
-    size_t n = TcpClientV.n;
-    if (n == 0)
-    {
-        TcpClientV.cid = s_mqtt.store->cid;
-        TcpClient.is_closed(protocore_tcp_client_span());
-        return TcpClientV.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
-    }
-    return (int)n;
-}
-
-// Append what the session has decrypted to the reassembly buffer. Same shape as fill_plain.
-static void fill_tls(uint8_t *restrict work)
-{
-    size_t room = PROTOCORE_MQTT_BUF_SIZE - MQTT_CTX(work)->rx_len;
-    if (room == 0)
-    {
-        return;
-    }
-    int n = protocore_tls_client_session_read(MQTT_CTX(work)->rx + MQTT_CTX(work)->rx_len, room);
-    if (n <= 0)
-    {
-        if (n < 0)
-        {
-            MQTT_CTX(work)->closed = PROTO_TRUE;
-        }
-        return;
-    }
-    MQTT_CTX(work)->rx_len += (size_t)n;
-}
-#endif // PROTOCORE_ENABLE_MQTT_TLS
-
 // Raise the flag over the Control Packet the codec just framed into tx. A packet offered while one
 // is still going out is refused rather than overwriting it. This layer never reaches the wire.
 static proto_bool tx_arm(uint8_t *restrict work, size_t len)
@@ -868,18 +810,7 @@ static void tx_drain(uint8_t *restrict work)
         return;
     }
     size_t n = MQTT_CTX(work)->tx_len - MQTT_CTX(work)->tx_off;
-#if PROTOCORE_ENABLE_MQTT_TLS
-    if (MQTT_CTX(work)->use_tls)
-    {
-        int w = protocore_tls_client_session_write(MQTT_CTX(work)->tx + MQTT_CTX(work)->tx_off, n);
-        if (w > 0)
-        {
-            MQTT_CTX(work)->tx_off += (size_t)w;
-        }
-    }
-    else
-#endif
-        if (tx_plain(work, MQTT_CTX(work)->tx + MQTT_CTX(work)->tx_off, n))
+    if (tx_plain(work, MQTT_CTX(work)->tx + MQTT_CTX(work)->tx_off, n))
     {
         MQTT_CTX(work)->tx_off += n;
     }
@@ -893,12 +824,6 @@ static void tx_drain(uint8_t *restrict work)
 // Close the Network Connection (sec 4.2). A link still coming up is given up with the slot.
 static void link_close(uint8_t *restrict work)
 {
-#if PROTOCORE_ENABLE_MQTT_TLS
-    if (MQTT_CTX(work)->use_tls)
-    {
-        protocore_tls_client_session_end();
-    }
-#endif
     if (MQTT_CTX(work)->cid >= 0)
     {
         TcpClientV.cid = MQTT_CTX(work)->cid;
@@ -1091,14 +1016,7 @@ static void handle_packet(uint8_t *restrict work, const uint8_t *body, MqttType 
 // where it landed, so nothing is copied out to parse it.
 static void process_rx(uint8_t *restrict work)
 {
-#if PROTOCORE_ENABLE_MQTT_TLS
-    if (MQTT_CTX(work)->use_tls)
-    {
-        fill_tls(work);
-    }
-    else
-#endif
-        fill_plain(work);
+    fill_plain(work);
 
     size_t off = 0;
     for (;;)
@@ -1151,13 +1069,6 @@ static void link_step(uint8_t *restrict work)
         {
             return;
         }
-#if PROTOCORE_ENABLE_MQTT_TLS
-        if (MQTT_CTX(work)->use_tls)
-        {
-            MQTT_CTX(work)->link = MQTT_LINK_TLS;
-            return;
-        }
-#endif
         MQTT_CTX(work)->link = MQTT_LINK_CONNACK;
         if (!tx_arm(work, MQTT_CTX(work)->tx_len)) // CONNECT is already framed in tx; this flags it
         {
@@ -1166,26 +1077,6 @@ static void link_step(uint8_t *restrict work)
         return;
 
     case MQTT_LINK_TLS:
-#if PROTOCORE_ENABLE_MQTT_TLS
-    {
-        protocore_tls_state hs = protocore_tls_client_session_handshake();
-        if (hs == PROTOCORE_TLS_BUSY)
-        {
-            return; // another flight is owed; the next step carries it
-        }
-        if (hs != PROTOCORE_TLS_READY)
-        {
-            MQ_DBG("[mqtt] TLS handshake failed (%d)\n", (int)hs);
-            link_close(work);
-            return;
-        }
-        MQTT_CTX(work)->link = MQTT_LINK_CONNACK;
-        if (!tx_arm(work, MQTT_CTX(work)->tx_len)) // CONNECT is already framed in tx; this flags it
-        {
-            link_close(work);
-        }
-    }
-#endif
         return;
 
     case MQTT_LINK_CONNACK:
@@ -1223,12 +1114,10 @@ void protocore_mqtt_connect(uint8_t *restrict work)
     {
         return;
     }
-#if !PROTOCORE_ENABLE_MQTT_TLS
     if (MqttV.server.use_tls)
     {
         return; // built without mqtts:// support
     }
-#endif
     if (!mem_bind(work))
     {
         return; // no storage: fail closed rather than build into nothing
@@ -1268,16 +1157,6 @@ void protocore_mqtt_connect(uint8_t *restrict work)
     {
         return;
     }
-
-#if PROTOCORE_ENABLE_MQTT_TLS
-    // Bind the session here, while host is still in scope. Its BIO reads the transport slot, so
-    // nothing moves until the loop starts stepping the handshake.
-    if (MQTT_CTX(work)->use_tls && !protocore_tls_client_session_begin(MqttV.server.host, tls_send, tls_recv))
-    {
-        link_close(work);
-        return;
-    }
-#endif
 
     MQTT_CTX(work)->link = MQTT_LINK_TCP;
     MQTT_CTX(work)->timer = Clock.ms;

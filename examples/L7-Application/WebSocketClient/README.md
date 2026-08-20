@@ -1,6 +1,6 @@
 # WebSocketClient - the device connects to a WebSocket server
 
-**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_WS_CLIENT` (optional `PROTOCORE_ENABLE_TLS` + `PROTOCORE_ENABLE_WS_CLIENT_TLS` for `wss://`)
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_WS_CLIENT`
 
 ## What this example teaches
 
@@ -14,7 +14,7 @@ and close are handled by `ws_client_loop()`.
 
 ```cpp
 ws_client_on_message(on_message);
-if (ws_client_connect(HOST, PORT, USE_TLS, PATH))   // USE_TLS -> wss://
+if (ws_client_connect(HOST, PORT, PATH))
     Serial.println("WebSocket connected");
 ```
 
@@ -29,21 +29,18 @@ void loop() {
 }
 ```
 
-This demo uses a `wss://` echo so it needs the TLS flags; for a plain `ws://`
-endpoint, build with only `-DPROTOCORE_ENABLE_WS_CLIENT=1`, set `USE_TLS=false`, and
-`PORT=80`.
+This demo talks to a plain `ws://` echo endpoint on port 80.
 
 ## Build and run
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_WS_CLIENT=1 -DPROTOCORE_ENABLE_TLS=1 -DPROTOCORE_ENABLE_WS_CLIENT_TLS=1 -DPROTOCORE_WS_CLIENT_BUF_SIZE=768 -DMAX_CONNS=4 -DPROTOCORE_TLS_ARENA_SIZE=32768 -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_DNS_RESOLVER=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_WS_CLIENT=1 -DPROTOCORE_WS_CLIENT_BUF_SIZE=768 -DMAX_CONNS=4 -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_DNS_RESOLVER=1" \
   --lib="." examples/L7-Application/WebSocketClient/WebSocketClient.ino
 ```
 
-`PROTOCORE_WS_CLIENT_BUF_SIZE=768` trims the four outbound-WS buffers from the 1 KB default so the
-`wss://` stack (TLS arena + WS client) fits the classic ESP32's DRAM; 768 B is ample for this demo's
-small text messages. Boards with more DRAM (ESP32-S3) can keep the default.
+`PROTOCORE_WS_CLIENT_BUF_SIZE=768` trims the four outbound-WS buffers from the 1 KB default; 768 B
+is ample for this demo's small text messages. Boards with more DRAM can keep the default.
 
 Flash and watch Serial @ 115200: the echo server returns each message the device
 sends.
@@ -66,9 +63,8 @@ verbatim with added explanatory comments:
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-static const char *HOST = "ws.postman-echo.com"; // public WebSocket echo (wss)
-static const bool USE_TLS = true;
-static const uint16_t PORT = 443;
+static const char *HOST = "ws.postman-echo.com"; // public WebSocket echo
+static const uint16_t PORT = 80;
 static const char *PATH = "/raw";
 
 // Delivered for every inbound frame (opcode 1 = text, 2 = binary).
@@ -94,7 +90,7 @@ void setup()
 
     ws_client_on_message(on_message);
 
-    if (ws_client_connect(HOST, PORT, USE_TLS, PATH))
+    if (ws_client_connect(HOST, PORT, PATH))
         Serial.println("WebSocket connected");
     else
         Serial.println("WebSocket connect failed");

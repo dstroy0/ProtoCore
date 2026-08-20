@@ -35,7 +35,7 @@
 #define PROTOCORE_TLS_KEY_SCHEDULE_H
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
+#if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_TLS)
 
 PROTOCORE_BEGIN_DECLS
 
@@ -232,7 +232,7 @@ static const Tls13KsNs Tls13Ks __attribute__((unused)) = {
     .transcript_peek = protocore_tls13_ks_transcript_peek,
 };
 
-#endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE
+#endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_TLS
 
 PROTOCORE_END_DECLS
 

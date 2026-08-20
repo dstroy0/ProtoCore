@@ -17,7 +17,7 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-#if PROTOCORE_TLS_SOFTWARE
+#if PROTOCORE_ENABLE_TLS
 
 #include "network_drivers/tls/tls.h"
 
@@ -369,4 +369,4 @@ size_t protocore_tls_arena_peak(void)
 
 PROTOCORE_END_DECLS
 
-#endif // PROTOCORE_TLS_SOFTWARE
+#endif // PROTOCORE_ENABLE_TLS

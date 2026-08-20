@@ -19,7 +19,6 @@ if(PROTOCORE_ENABLE_EDGE_CACHE)
       pc_network_drivers_presentation_http_http_parser
       pc_network_drivers_presentation_http_httpcache
       pc_network_drivers_session
-      pc_network_drivers_tls
       pc_network_drivers_transport_tcp
       pc_network_drivers_transport_tcp_client
       pc_network_drivers_transport_tcp_protocol

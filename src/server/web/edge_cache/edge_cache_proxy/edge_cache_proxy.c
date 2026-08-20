@@ -37,9 +37,6 @@ PROTOCORE_BEGIN_DECLS
 #include "network_drivers/application/http_range/http_range.h" // http_parse_byte_range (Range/206 support)
 #include "services/net/http_client/http_client.h"              // HttpClient.parse_target_uri
 #include "shared/mime/mime.h"                                  // PROTOCORE_MIME_TEXT_PLAIN
-#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-#include "network_drivers/tls/tls.h" // protocore_tls_client_session_* (TLS upstream origin fetch)
-#endif
 #if PROTOCORE_ENABLE_EDGE_MESH
 #include "network_drivers/session/session.h"           // Protocols: the registry, owned by the session layer
 #include "server/core/proto_handler.h"                 // ProtoHandler / Session.proto->add(PROTO_MESH serving)
@@ -52,7 +49,7 @@ typedef struct
     char prefix[MAX_PATH_LEN];
     char origin_host[PROTOCORE_EDGE_ORIGIN_URL_MAX];
     uint16_t origin_port;
-    proto_bool https; ///< fetch this origin over TLS (PROTOCORE_ENABLE_EDGE_ORIGIN_TLS)
+    proto_bool https; ///< the mapped origin named https://, which this build cannot fetch
 } EdgeRouteMap;
 
 #if PROTOCORE_ENABLE_EDGE_MESH
@@ -121,39 +118,6 @@ typedef struct
     uint8_t outbuf[PROTOCORE_EDGE_MESH_RESP_MAX];
 } MeshConn;
 #endif
-
-#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-// The TLS half, apart from the rest: these name the client-TLS session an https origin fetch runs
-// over, so they take a SECURE borrow. Everything below is cached origin bytes, route maps and
-// per-connection scratch, and takes the plaintext borrow beside it - the split quic_server makes.
-typedef struct
-{
-    EdgeFetchTransport transport_tls; // TLS binding over protocore_tls_csess, used for https routes
-    int tls_cid;                      // underlying protocore_client cid of the in-flight TLS fetch (singleton session)
-    proto_bool tls_peer_closed;       // latched when the TLS session reports closed / errored
-    proto_bool tls_ready;             // the handshake completed, so the session carries application bytes
-} EdgeProxyTlsCtx;
-
-// The one owned instance of the pointer to those bytes, private to this TU.
-typedef struct
-{
-    uint8_t *span; ///< PROTOCORE_EDGE_PROXY_TLS_BORROW secure bytes
-} EdgeProxyTlsOwnCtx;
-static EdgeProxyTlsOwnCtx s_tls_own;
-
-// Not an entry: the TLS members are reached through this, the way an entry reaches its borrow.
-static EdgeProxyTlsCtx *edge_tls(void)
-{
-    if (s_tls_own.span == NULL)
-    {
-        s_tls_own.span = protocore_secure_persist_span(PROTOCORE_EDGE_PROXY_TLS_BORROW).buf;
-    }
-    return (EdgeProxyTlsCtx *)(void *)s_tls_own.span; // null while the pool was short
-}
-static_assert(sizeof(EdgeProxyTlsCtx) <= PROTOCORE_EDGE_PROXY_TLS_BORROW,
-              "PROTOCORE_EDGE_PROXY_TLS_BORROW is short of the TLS context - raise it in protocore_config.h,"
-              " which sums it into its arena");
-#endif // PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
 
 // The single owned file-static: all of this subsystem's mutable state.
 typedef struct
@@ -272,125 +236,6 @@ static void t_close(void *c, int cid)
     TcpClientV.cid = cid;
     TcpClient.close(protocore_tcp_client_span());
 }
-
-#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-// --- TLS transport seam (protocore_tls_csess layered over protocore_client) -----------------------------------
-// The client TLS session is a singleton, so the underlying cid + peer-closed latch live in the owned Ctx
-// (one TLS fetch at a time, enforced by protocore_tls_client_session_active() in start_fetch). The BIO callbacks move
-// ciphertext over protocore_client's wire ring for that cid - the same bridge the MQTT/WS clients use.
-static int edge_tls_bio_send(void *ctx, const unsigned char *buf, size_t len)
-{
-    (void)ctx;
-    size_t cap = len > 0xFFFF ? 0xFFFF : len;
-    TcpClientV.cid = edge_tls()->tls_cid;
-    TcpClientV.io.data = buf;
-    TcpClientV.io.len = cap;
-    TcpClient.send(protocore_tcp_client_span());
-    return TcpClientV.ok ? (int)cap : PROTOCORE_PLATFORM_TLS_WANT_WRITE;
-}
-static int edge_tls_bio_recv(void *ctx, unsigned char *buf, size_t len)
-{
-    (void)ctx;
-    TcpClientV.cid = edge_tls()->tls_cid;
-    TcpClientV.io.buf = buf;
-    TcpClientV.io.cap = len;
-    TcpClient.read(protocore_tcp_client_span());
-    size_t n = TcpClientV.n;
-    if (n == 0)
-    {
-        TcpClientV.cid = edge_tls()->tls_cid;
-        TcpClient.is_closed(protocore_tcp_client_span());
-        return TcpClientV.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
-    }
-    return (int)n;
-}
-
-static int t_tls_open(void *c, const char *host, uint16_t port, uint32_t timeout)
-{
-    (void)c;
-    TcpClientV.dial.host = host;
-    TcpClientV.dial.port = port;
-    TcpClientV.dial.timeout_ms = timeout;
-    TcpClient.open(protocore_tcp_client_span());
-    edge_tls()->tls_cid = TcpClientV.i32;
-    if (edge_tls()->tls_cid < 0)
-    {
-        return -1;
-    }
-    edge_tls()->tls_peer_closed = PROTO_FALSE;
-    edge_tls()->tls_ready = PROTO_FALSE;
-    if (!protocore_tls_client_session_begin(host, edge_tls_bio_send, edge_tls_bio_recv))
-    {
-        TcpClientV.cid = edge_tls()->tls_cid;
-        TcpClient.close(protocore_tcp_client_span());
-        edge_tls()->tls_cid = -1;
-        return -1;
-    }
-    return edge_tls()->tls_cid;
-}
-
-// Step the TCP open, then the handshake, one flight per call. The BIO reads the wire ring, so a
-// flight the peer has not sent yet leaves the handshake at 0 and the next call takes it further.
-// The fetch pump is what calls this, and its own timeout bounds the whole thing.
-static proto_bool t_tls_connected(void *c, int cid)
-{
-    (void)c;
-    TcpClientV.cid = cid;
-    TcpClient.connected(protocore_tcp_client_span());
-    if (!TcpClientV.ok)
-    {
-        return PROTO_FALSE;
-    }
-    if (edge_tls()->tls_ready)
-    {
-        return PROTO_TRUE;
-    }
-    int h = protocore_tls_client_session_handshake();
-    if (h == 1)
-    {
-        edge_tls()->tls_ready = PROTO_TRUE;
-        return PROTO_TRUE;
-    }
-    if (h < 0)
-    {
-        edge_tls()->tls_peer_closed = PROTO_TRUE;
-    }
-    return PROTO_FALSE;
-}
-static proto_bool t_tls_send(void *c, int cid, const void *d, size_t l)
-{
-    (void)c;
-    (void)cid;
-    return protocore_tls_client_session_write((const uint8_t *)d, l) == (int)l;
-}
-static size_t t_tls_read(void *c, int cid, uint8_t *b, size_t cap)
-{
-    (void)c;
-    (void)cid;
-    int n = protocore_tls_client_session_read(b, cap);
-    if (n < 0)
-    {
-        edge_tls()->tls_peer_closed = PROTO_TRUE; // close_notify / decrypt error -> report closed via t_tls_closed
-    }
-    return n > 0 ? (size_t)n : 0;
-}
-static proto_bool t_tls_closed(void *c, int cid)
-{
-    (void)c;
-    TcpClientV.cid = cid;
-    TcpClient.is_closed(protocore_tcp_client_span());
-    return edge_tls()->tls_peer_closed || TcpClientV.ok;
-}
-static void t_tls_close(void *c, int cid)
-{
-    (void)c;
-    protocore_tls_client_session_end();
-    TcpClientV.cid = cid;
-    TcpClient.close(protocore_tcp_client_span());
-    edge_tls()->tls_cid = -1;
-    edge_tls()->tls_ready = PROTO_FALSE;
-}
-#endif // PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
 
 // Request-header lookup used to (re)serialize the Vary secondary key; ctx is the client HttpReq.
 static const char *req_lookup(void *ctx, const char *name)
@@ -833,16 +678,6 @@ static proto_bool begin_origin_fetch(uint8_t *restrict work, EdgeFetchSlot *fs, 
 {
     EdgeRouteMap *m = fs->route;
     const EdgeFetchTransport *tport = &EDGE_CACHE_PROXY_CTX(work)->transport;
-#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-    if (m->https)
-    {
-        if (protocore_tls_client_session_active())
-        {
-            return PROTO_FALSE; // the shared client-TLS session is busy -> fail open (never tear down a live one)
-        }
-        tport = &edge_tls()->transport_tls;
-    }
-#endif
     char cond[192];
     cond[0] = '\0';
     if (fs->reval_entry)
@@ -1686,18 +1521,6 @@ void protocore_edge_proxy_enable(uint8_t *restrict work)
     EDGE_CACHE_PROXY_CTX(work)->transport.closed = t_closed;
     EDGE_CACHE_PROXY_CTX(work)->transport.close = t_close;
     EDGE_CACHE_PROXY_CTX(work)->transport.ctx = NULL;
-#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-    edge_tls()->transport_tls.open = t_tls_open;
-    edge_tls()->transport_tls.connected = t_tls_connected;
-    edge_tls()->transport_tls.send = t_tls_send;
-    edge_tls()->transport_tls.read = t_tls_read;
-    edge_tls()->transport_tls.closed = t_tls_closed;
-    edge_tls()->transport_tls.close = t_tls_close;
-    edge_tls()->transport_tls.ctx = NULL;
-    edge_tls()->tls_cid = -1;
-    edge_tls()->tls_peer_closed = PROTO_FALSE;
-    edge_tls()->tls_ready = PROTO_FALSE;
-#endif
 #if PROTOCORE_ENABLE_DBM
     EDGE_CACHE_PROXY_CTX(work)->store.on_evict =
         EDGE_CACHE_PROXY_CTX(work)->l2 ? edge_on_evict : NULL; // re-arm write-back after edge_store_init
@@ -1761,13 +1584,11 @@ void protocore_edge_proxy_map(uint8_t *restrict work)
     }
     const proto_bool https = HttpClientV.target.https;
     const uint16_t port = HttpClientV.target.port;
-#if !PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
     if (https)
     {
         EdgeProxyV.ok = PROTO_FALSE;
-        return; // plaintext origins only unless PROTOCORE_ENABLE_EDGE_ORIGIN_TLS is set
+        return; // plaintext origins only: the library ships no client-side TLS engine
     }
-#endif
     for (int i = 0; i < PROTOCORE_EDGE_MAP_MAX; i++)
     {
         if (EDGE_CACHE_PROXY_CTX(work)->maps[i].used)
@@ -1786,24 +1607,6 @@ void protocore_edge_proxy_map(uint8_t *restrict work)
     }
     EdgeProxyV.ok = PROTO_FALSE; // map table full
 }
-
-#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-void protocore_edge_proxy_set_origin_ca(uint8_t *restrict work)
-{
-    (void)work;
-    const uint8_t *ca_pem = EdgeProxyV.set_origin_ca_args.ca_pem;
-    size_t len = EdgeProxyV.set_origin_ca_args.len;
-
-    protocore_tls_client_set_ca(ca_pem, len); // shared client-TLS trust store (also used by MQTTS/wss/HTTP client)
-}
-void protocore_edge_proxy_set_origin_pin(uint8_t *restrict work)
-{
-    (void)work;
-    const uint8_t *sha256 = EdgeProxyV.set_origin_pin_args.sha256;
-
-    protocore_tls_client_set_pin(sha256);
-}
-#endif
 
 #if PROTOCORE_ENABLE_EDGE_MESH
 void protocore_edge_proxy_add_peer(uint8_t *restrict work)

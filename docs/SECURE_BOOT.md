@@ -103,7 +103,7 @@ DIS_PAD_JTAG` / soft-disable), and UART download mode or Secure Download Mode
    (`ENABLE_SECURITY_DOWNLOAD`) so the bootloader cannot be used to read memory.
 4. **Build-time:** ship a release build with **`PROTOCORE_ENABLE_DIAG` off** (it
    exposes the compile-time config), prefer **HTTPS/WSS** (`PROTOCORE_ENABLE_TLS`) and
-   **mTLS** (`PROTOCORE_ENABLE_MTLS`) for control planes, and gate state-changing
+   TLS (`PROTOCORE_ENABLE_TLS`) for control planes, and gate state-changing
    routes (auth + `PROTOCORE_ENABLE_CSRF`).
 
 ## Audit log under a physical attacker

@@ -16,7 +16,6 @@
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable it for the whole build, e.g.:
  *     build_flags = -DPROTOCORE_ENABLE_MQTT=1
- *     ; for mqtts:// add: -DPROTOCORE_ENABLE_TLS=1 -DPROTOCORE_ENABLE_MQTT_TLS=1
  * (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 

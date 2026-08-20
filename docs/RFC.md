@@ -134,10 +134,8 @@ authentication, AEAD AES-256-GCM). Server certificate/key are loaded via
 [`begin_tls()`](@ref begin_tls) / [`tls_cert()`](@ref tls_cert).
 `wss://` and TLS Server-Sent Events run over the same TLS record layer when TLS is
 enabled: the WebSocket upgrade and every subsequent frame/event are encrypted,
-transparent to handler code. Optional **mutual TLS**
-([`PROTOCORE_ENABLE_MTLS`](@ref PROTOCORE_ENABLE_MTLS)) requires and verifies a client
-certificate chaining to a configured CA (RFC 5246 §7.4.6 / RFC 8446 §4.4.2) and
-exposes the verified peer subject DN to handlers.
+transparent to handler code. The server authenticates itself by RFC 7250 raw public key; it
+does not request a client certificate, so there is no mutual-TLS mode.
 
 Optional **session resumption** ([`PROTOCORE_ENABLE_TLS_RESUMPTION`](@ref PROTOCORE_ENABLE_TLS_RESUMPTION))
 via session tickets (RFC 5077): the TLS 1.2 server issues an encrypted ticket and
@@ -366,9 +364,8 @@ publish/subscribe client. Conformance to the OASIS MQTT 3.1.1 specification:
   packet id). Outbound QoS 1/2 messages are held in a bounded in-flight pool.
 - **Keep-alive (§3.1.2.10):** a PINGREQ is sent when the link is idle; the
   connection is dropped if no PINGRESP returns within the keep-alive window.
-- `mqtts://` runs over a persistent client-side TLS session
-  ([`PROTOCORE_ENABLE_MQTT_TLS`](@ref PROTOCORE_ENABLE_MQTT_TLS)) with the same optional
-  CA / pin verification as the HTTP client. QoS 2 inbound flow uses method A
+- `mqtts://` is NOT available: the library ships no client-side TLS engine, so a connection
+  asking for it is refused rather than downgraded. QoS 2 inbound flow uses method A
   (deliver on PUBLISH, de-dup by id until PUBREL). The packet codec is
   transport-independent and host-tested (env:native_mqtt).
 
@@ -384,9 +381,8 @@ outbound client - the device as a WebSocket client to a remote endpoint:
   key (§5.3); server frames are read unmasked. Text/binary/ping/pong/close
   opcodes, 7/16/64-bit payload lengths, and continuation-frame reassembly into one
   delivered message. A Ping is answered with a Pong; a Close is echoed.
-- `wss://` runs over the shared persistent client TLS session
-  ([`PROTOCORE_ENABLE_WS_CLIENT_TLS`](@ref PROTOCORE_ENABLE_WS_CLIENT_TLS)) with the same
-  CA / pin verification. The handshake/frame codec is host-tested
+- `wss://` is NOT available: the library ships no client-side TLS engine, so the client
+  speaks `ws://` only. The handshake/frame codec is host-tested
   (env:native_ws_client), including the RFC 6455 §4.2.2 accept example.
 
 ## Outbound HTTP(S) client (RFC 7230)
@@ -395,11 +391,9 @@ Optional ([`PROTOCORE_ENABLE_HTTP_CLIENT`](@ref PROTOCORE_ENABLE_HTTP_CLIENT), d
 off). Builds RFC 7230 request messages ([`HttpClient.get()`](@ref HttpClientNs::get) /
 [`HttpClient.post()`](@ref HttpClientNs::post)) and parses responses framed by `Content-Length`
 or `Transfer-Encoding: chunked` (decoded in place) or by connection close.
-`https://` runs over client-side mbedTLS
-([`PROTOCORE_ENABLE_HTTP_CLIENT_TLS`](@ref PROTOCORE_ENABLE_HTTP_CLIENT_TLS)); encrypt-only
-by default, with optional server authentication via a CA trust anchor
-([`HttpClient.set_ca()`](@ref HttpClientNs::set_ca)) or a SHA-256 certificate pin
-([`HttpClient.set_pin()`](@ref HttpClientNs::set_pin)). See [SECURITY.md](SECURITY.md).
+An `https://` target URI is parsed and then REFUSED with `HTTP_CLIENT_ERR_TLS`: the library
+ships no client-side TLS engine, and a refusal is the only answer that does not silently send
+the request in the clear. See [SECURITY.md](SECURITY.md).
 
 ## Automatic error responses
 

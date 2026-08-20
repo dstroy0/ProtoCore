@@ -355,17 +355,6 @@ int32_t begin_tls(uint16_t port, const uint8_t *cert, size_t cert_len, const uin
     return proto_begin(cfg);
 }
 
-#if PROTOCORE_ENABLE_MTLS
-proto_bool tls_require_client_cert(const uint8_t *ca, size_t ca_len)
-{
-    return protocore_tls_set_client_ca(ca, ca_len);
-}
-
-int tls_client_subject(uint8_t slot_id, char *out, size_t out_len)
-{
-    return protocore_tls_peer_subject(slot_id, out, out_len);
-}
-#endif // PROTOCORE_ENABLE_MTLS
 #endif // PROTOCORE_ENABLE_TLS
 
 int32_t restart(const WebServerConfig *cfg)

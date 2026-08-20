@@ -13,12 +13,11 @@
  * Flash, open Serial @ 115200. Client frames are masked per RFC 6455;
  * ping/pong and close are handled by ws_client_loop().
  *
- * This demo uses a wss:// echo, so it needs the TLS flags. Optional services are
- * gated by a compile flag the *library* sources must also see; for PlatformIO
- * enable them for the whole build:
- *     build_flags = -DPROTOCORE_ENABLE_WS_CLIENT=1 -DPROTOCORE_ENABLE_TLS=1 -DPROTOCORE_ENABLE_WS_CLIENT_TLS=1
- * For a plain ws:// endpoint, just -DPROTOCORE_ENABLE_WS_CLIENT=1 and set USE_TLS=false
- * / PORT=80. (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.)
+ * The client speaks ws://. Optional services are gated by a compile flag the *library*
+ * sources must also see; for PlatformIO enable it for the whole build:
+ *     build_flags = -DPROTOCORE_ENABLE_WS_CLIENT=1
+ * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds
+ * as-is.)
  */
 
 #define PROTOCORE_ENABLE_WS_CLIENT 1
@@ -30,9 +29,8 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-static const char *HOST = "ws.postman-echo.com"; // public WebSocket echo (wss)
-static const bool USE_TLS = true;
-static const uint16_t PORT = 443;
+static const char *HOST = "ws.postman-echo.com"; // public WebSocket echo
+static const uint16_t PORT = 80;
 static const char *PATH = "/raw";
 
 void on_message(uint8_t opcode, const uint8_t *payload, size_t len)
@@ -57,7 +55,7 @@ void setup()
 
     ws_client_on_message(on_message);
 
-    if (ws_client_connect(HOST, PORT, USE_TLS, PATH))
+    if (ws_client_connect(HOST, PORT, PATH))
     {
         Serial.println("WebSocket connected");
     }

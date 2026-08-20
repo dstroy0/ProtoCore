@@ -1,6 +1,6 @@
 # HttpClient - the device makes outbound HTTP(S) requests
 
-**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_HTTP_CLIENT` (optional `PROTOCORE_ENABLE_TLS` + `PROTOCORE_ENABLE_HTTP_CLIENT_TLS` for `https://`)
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_HTTP_CLIENT`
 
 ## What this example teaches
 
@@ -38,7 +38,8 @@ pio ci --board=esp32dev --project-option="framework=arduino" \
   --lib="." examples/L7-Application/HttpClient/HttpClient.ino
 ```
 
-For `https://`, add `-DPROTOCORE_ENABLE_TLS=1 -DPROTOCORE_ENABLE_HTTP_CLIENT_TLS=1`. The
+`http://` only - an `https://` URL is refused with `HTTP_CLIENT_ERR_TLS`, because the
+library ships no client-side TLS engine. The
 sketch fetches `URL` once at boot and prints the result to Serial @ 115200.
 
 ## Annotated source

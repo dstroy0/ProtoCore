@@ -5,7 +5,7 @@
 # Regenerate with:  python tools/harness.py build modules
 
 
-if(PROTOCORE_ENABLE_X509)
+if(PROTOCORE_ENABLE_TLS)
   protocore_module(pc_network_drivers_tls_handshake
     SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/handshake.c"
     PRIVATE

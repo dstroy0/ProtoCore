@@ -91,19 +91,6 @@ typedef struct
 } HttpMessageArgs;
 
 /**
- * @brief RFC 9110 sec 4.2.2: what authenticates the origin server of an https target URI.
- *
- * Without either of these the exchange is encrypted but the peer is unauthenticated. Both are
- * installed once, before the first request.
- */
-typedef struct
-{
-    const uint8_t *ca;  ///< trust anchor, PEM including its NUL or DER; null clears
-    size_t ca_len;      ///< its octet count
-    const uint8_t *pin; ///< 32 octets: the SHA-256 of the peer certificate's DER; null clears
-} HttpVerifyArgs;
-
-/**
  * @brief The HTTP user agent (RFC 9110 sec 3.5).
  *
  * A caller sets the members a call takes, invokes it through ::HttpClient, and reads the outcome off
@@ -116,7 +103,6 @@ typedef struct
  * @var HttpClientNs::target   the target URI a call splits, dials, or names in a request-line
  * @var HttpClientNs::request  the method, the content, and where the request message is built
  * @var HttpClientNs::message  the received message a parse frames
- * @var HttpClientNs::verify   what authenticates an https origin server
  * @var HttpClientNs::ok       a call's true/false outcome
  * @var HttpClientNs::status   the status-code (RFC 9112 sec 4), or a negative ::HttpClientError
  * @var HttpClientNs::n        octets a build wrote; 0 when the message would not fit
@@ -128,16 +114,12 @@ typedef struct
  * @var HttpClientNs::parse_response    read the status-line and frame the message body
  * @var HttpClientNs::get               run one GET exchange (RFC 9110 sec 9.3.1)
  * @var HttpClientNs::post              run one POST exchange (RFC 9110 sec 9.3.3)
- * @var HttpClientNs::set_ca            install the trust anchor an https handshake verifies against
- * @var HttpClientNs::set_pin           install the certificate pin an https handshake verifies against
- * @var HttpClientNs::clear_verify      drop both, back to encrypt-only
  */
 typedef struct
 {
     HttpTargetArgs target;   ///< the target URI and its parts (RFC 9110 sec 7.1)
     HttpRequestArgs request; ///< what a request-line and its field lines carry (RFC 9112 sec 3)
     HttpMessageArgs message; ///< the received message a parse frames (RFC 9112 sec 2.1)
-    HttpVerifyArgs verify;   ///< what authenticates an https origin server (RFC 9110 sec 4.2.2)
     proto_bool ok;
     int32_t status;
     size_t n;
@@ -157,9 +139,6 @@ typedef struct
     void (*const parse_response)(uint8_t *restrict work);
     void (*const get)(uint8_t *restrict work);
     void (*const post)(uint8_t *restrict work);
-    void (*const set_ca)(uint8_t *restrict work);
-    void (*const set_pin)(uint8_t *restrict work);
-    void (*const clear_verify)(uint8_t *restrict work);
 } HttpClientNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -169,9 +148,6 @@ void protocore_http_client_build_request(uint8_t *restrict work);
 void protocore_http_client_parse_response(uint8_t *restrict work);
 void protocore_http_client_get(uint8_t *restrict work);
 void protocore_http_client_post(uint8_t *restrict work);
-void protocore_http_client_set_ca(uint8_t *restrict work);
-void protocore_http_client_set_pin(uint8_t *restrict work);
-void protocore_http_client_clear_verify(uint8_t *restrict work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -183,9 +159,6 @@ static const HttpClientNs HttpClient __attribute__((unused)) = {
     .parse_response = protocore_http_client_parse_response,
     .get = protocore_http_client_get,
     .post = protocore_http_client_post,
-    .set_ca = protocore_http_client_set_ca,
-    .set_pin = protocore_http_client_set_pin,
-    .clear_verify = protocore_http_client_clear_verify,
 };
 
 /**

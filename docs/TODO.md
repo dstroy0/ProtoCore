@@ -61,7 +61,7 @@ non-goal or needs hardware / proprietary docs) - **DONE** (`[x]`, the shipped re
   by the 2026-07-26 rig bench; see the PC polling-mode HW modexp item in ROADMAP.md for the perf follow-up.
 - **CDN caching tier** - the RAM-tier reverse-proxy edge cache + cache key / invalidation / purge, the
   **SD (L2) persistence tier** (`PROTOCORE_ENABLE_DBM`), **Range/`206`-from-cache** (`PROTOCORE_ENABLE_RANGE`),
-  **`https://` origins** (`PROTOCORE_ENABLE_EDGE_ORIGIN_TLS`), and **cross-device mesh distribution**
+  **`https://` origins** (`PROTOCORE_ENABLE_EDGE_ORIGIN_TLS` - since REMOVED, see below), and **cross-device mesh distribution**
   (`PROTOCORE_ENABLE_EDGE_MESH`: sibling-cache pull over `PROTO_MESH`, RFC 9111 age propagation, one-hop loop-free)
   are all shipped (`PROTOCORE_ENABLE_EDGE_CACHE`, server/web/edge_cache, examples EdgeCache + MeshCache). The roadmap tier is
   complete; remaining are lower-priority follow-ups: a TLS sibling link + UDP-broadcast peer discovery + push
@@ -620,9 +620,12 @@ and HW-verified on an ESP32 DevKit. Per-feature footprints are in the README.
       `protocore_conn_sndbuf`, context-safe `Tcp.conn->raw_send`), response header+body
       write coalescing, and a TLS-BIO unification that fixed a latent handshake
       cross-thread race.
-- [x] **Client TLS hardening** (extends [`PROTOCORE_ENABLE_HTTP_CLIENT_TLS`](@ref PROTOCORE_ENABLE_HTTP_CLIENT_TLS)).
-      Optional CA-chain + hostname verification and SHA-256 cert pinning for
-      outbound TLS; encrypt-only by default. `native_http_client`; HW-verified.
+- [x] **Client TLS hardening** - **REMOVED.** Optional CA-chain + hostname verification and
+      SHA-256 cert pinning for outbound TLS, encrypt-only by default. This was built and
+      HW-verified, but the client-side TLS engine it sat on was later replaced by stubs that
+      always fail, so every flag in this family (HTTP_CLIENT_TLS, WS_CLIENT_TLS, MQTT_TLS,
+      SMTP_TLS, EDGE_ORIGIN_TLS, MTLS) has been deleted along with the arms that called them.
+      Outbound TLS would have to be rebuilt on the portable TLS 1.3 stack the server uses.
 - [x] **MQTT 3.1.1 client** ([`PROTOCORE_ENABLE_MQTT`](@ref PROTOCORE_ENABLE_MQTT)) + MQTTS.
       Full QoS 0/1/2 (DUP retransmit + inbound QoS-2 duplicate suppression),
       Last-Will, keepalive.
