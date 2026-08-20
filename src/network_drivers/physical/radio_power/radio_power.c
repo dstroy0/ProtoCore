@@ -20,6 +20,8 @@
 #include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/physical/radio_power/radio_power.h"
 
+PROTOCORE_BEGIN_DECLS
+
 /**
  * @brief The module's compile-time storage: the keep-awake count.
  *
@@ -127,13 +129,14 @@ static void radio_tx_power_set(uint8_t *restrict work)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-RadioNs Radio = {
-    .power = radio_power,
-    .ps_name = radio_ps_name,
-    .busy_hold = radio_busy_hold,
-    .busy_release = radio_busy_release,
-    .ps_set = radio_ps_set,
-    .ps_mode = radio_ps_mode,
-    .tx_power_set = radio_tx_power_set};
+RadioNs Radio = {.power = radio_power,
+                 .ps_name = radio_ps_name,
+                 .busy_hold = radio_busy_hold,
+                 .busy_release = radio_busy_release,
+                 .ps_set = radio_ps_set,
+                 .ps_mode = radio_ps_mode,
+                 .tx_power_set = radio_tx_power_set};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_RADIO_POWER

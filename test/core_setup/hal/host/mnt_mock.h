@@ -8,8 +8,9 @@
 // a small registry of path/data/mtime entries the test points at its own string literals, so the
 // bytes are borrowed rather than copied and a test can assert on the exact buffer it supplied.
 //
-// It is NOT protocore_mnt_ram(): the RAM disk keeps no clock and documents mtime as always 0, and the
-// conditional-GET tests (Last-Modified / If-Modified-Since) need a real timestamp per file.
+// It is NOT the RAM disk (server/storage/mnt_ram): that one keeps no clock and documents mtime as
+// always 0, and the conditional-GET tests (Last-Modified / If-Modified-Since) need a real
+// timestamp per file.
 //
 // Two knobs model the failures a real store has and memory does not: a short-read cap, so the
 // paging loop is driven across several reads, and a path whose open is forced to fail.

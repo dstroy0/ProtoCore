@@ -15,6 +15,7 @@
 // path that returns without one.
 
 #include "network_drivers/session/scp/ssh_scp/ssh_scp.c"
+#include "server/storage/mnt_ram/mnt_ram.h"
 
 #include <string.h>
 
@@ -24,10 +25,10 @@ static uint8_t suite_mnt_work[16]; // the borrow an entry takes; Mnt never reads
 
 void setUp(void)
 {
-    Mnt.ram(suite_mnt_work);
-    MntV.args.backend = MntV.backend;
+    MntRam.backend(suite_mnt_work);
+    MntV.args.backend = MntRamV.backend;
     Mnt.mount(suite_mnt_work);
-    Mnt.ram_format(suite_mnt_work);
+    MntRam.format(suite_mnt_work);
 }
 void tearDown(void)
 {

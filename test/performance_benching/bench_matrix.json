@@ -2170,7 +2170,8 @@
         "src/server/clock/clock.c",
         "src/server/storage/filesystem/filesystem.c",
         "src/server/storage/mnt/mnt.c",
-        "src/shared/hex/hex.c"
+        "src/shared/hex/hex.c",
+        "src/server/storage/mnt_ram/mnt_ram.c"
       ]
     },
     "services_modbus": {

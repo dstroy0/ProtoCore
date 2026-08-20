@@ -3,8 +3,7 @@
 
 /**
  * @file mnt.h
- * @brief The mount: which store is behind the filesystem, and the vtable it answers through
- *        (PROTOCORE_ENABLE_MNT).
+ * @brief The mount: which store is behind the filesystem, and the vtable it answers through.
  *
  * This file answers one question - *what is mounted* - and nothing else. The operations a caller
  * performs live on the filesystem accessor (server/filesystem.h), which resolves a request path
@@ -12,11 +11,11 @@
  * implements storage and never touches path policy, and the `..` guard cannot be bypassed by
  * reaching a backend directly.
  *
- * Two backends ship:
+ * Two backends ship, each its own module, because a backend is a footprint and this is a seam:
  *
- *  - **RAM** (built-in, host-testable, zero-heap): a fixed pool of PROTOCORE_MNT_RAM_FILES files of up to
- *    PROTOCORE_MNT_RAM_FILE_SIZE bytes each, all in BSS - deterministic, bounded, and identical on host
- *    and target. It is what lets the SFTP/SCP/WebDAV servers run under a native test.
+ *  - **RAM** (server/storage/mnt_ram, PROTOCORE_ENABLE_MNT): a fixed pool of PROTOCORE_MNT_RAM_FILES
+ *    files of up to PROTOCORE_MNT_RAM_FILE_SIZE bytes each, all in BSS - deterministic, bounded, and
+ *    identical on host and target. It is what lets the SFTP/SCP/WebDAV servers run under a native test.
  *
  *  - **Board filesystem** (board layer): wraps the framework's own file object for persistent
  *    storage. It lives in test/core_setup/ because it speaks a vendor framework, which the core does
@@ -37,8 +36,6 @@
 #define PROTOCORE_MNT_H
 
 #include "protocore_config.h"
-
-#ifdef PROTOCORE_ENABLE_MNT
 
 PROTOCORE_BEGIN_DECLS
 
@@ -80,7 +77,8 @@ typedef struct
 /**
  * @brief A storage backend. Each open call returns a small handle (>= 0) or -1.
  *
- * Implement this to add a store; the built-in RAM disk is returned by protocore_mnt_ram().
+ * Implement this to add a store; the built-in RAM disk publishes one through
+ * @ref MntRamNs::backend (server/storage/mnt_ram).
  *
  * Every call here is one node. mnt is blind - it does not know what a path means, so it cannot know
  * what a subtree is, and nothing here takes one. A whole-tree operation is composed from these by
@@ -148,8 +146,6 @@ typedef struct
  * @var MntNs::reset       clear every registered point
  * @var MntNs::mount       make one filesystem the active one
  * @var MntNs::active      the active filesystem
- * @var MntNs::ram         the in-memory filesystem, always present
- * @var MntNs::ram_format  empty the in-memory filesystem
  */
 typedef struct
 {
@@ -157,10 +153,6 @@ typedef struct
     uint8_t u8;
     const protocore_mnt_backend *backend;
     const char *text;
-    // The RAM backend is the only part with a footprint (PROTOCORE_MNT_RAM_FILES x
-    // PROTOCORE_MNT_RAM_FILE_SIZE of BSS), so it is the only part the flag gates.
-#if PROTOCORE_ENABLE_MNT
-#endif
 } MntVars;
 
 /** @brief The operands and the outcome. */
@@ -175,8 +167,6 @@ typedef struct
     void (*const reset)(uint8_t *restrict work);
     void (*const mount)(uint8_t *restrict work);
     void (*const active)(uint8_t *restrict work);
-    void (*const ram)(uint8_t *restrict work);
-    void (*const ram_format)(uint8_t *restrict work);
 } MntNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -187,10 +177,6 @@ void protocore_mnt_root_of(uint8_t *restrict work);
 void protocore_mnt_reset(uint8_t *restrict work);
 void protocore_mnt_mount(uint8_t *restrict work);
 void protocore_mnt_active(uint8_t *restrict work);
-#if PROTOCORE_ENABLE_MNT
-void protocore_mnt_ram(uint8_t *restrict work);
-void protocore_mnt_ram_format(uint8_t *restrict work);
-#endif
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -203,14 +189,8 @@ static const MntNs Mnt __attribute__((unused)) = {
     .reset = protocore_mnt_reset,
     .mount = protocore_mnt_mount,
     .active = protocore_mnt_active,
-#if PROTOCORE_ENABLE_MNT
-    .ram = protocore_mnt_ram,
-    .ram_format = protocore_mnt_ram_format,
-#endif
 };
 
 PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_MNT
 
 #endif // PROTOCORE_MNT_H

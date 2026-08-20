@@ -1833,6 +1833,7 @@ protocore_env(native_codeql
     "${PROTOCORE_ROOT}/src/network_drivers/application/mdns_service/mdns_service.c"
     "${PROTOCORE_ROOT}/src/services/radio/promisc/promisc.c"
     "${PROTOCORE_ROOT}/src/network_drivers/network/dns/dns_wire/dns_wire.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/integration/fieldbus/test_dispatch/test_dispatch.c"
   DEFINES
     "BODY_BUF_SIZE=512"
@@ -4277,7 +4278,6 @@ protocore_env(native_forward
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/network/forward/forward.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/physical/radio_power/radio_power.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
@@ -6423,7 +6423,6 @@ protocore_env(native_keepalive
 protocore_env(native_l1_egress
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/physical/radio_power/radio_power.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -6566,6 +6565,7 @@ protocore_env(native_lfs_mock
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/protocols/storage/test_lfs_mock/test_lfs_mock.c"
     "${PROTOCORE_ROOT}/test/unit/protocols/storage/test_lfs_mock/unity_runner.c"
     "${PROTOCORE_ROOT}/.pio/libdeps/native_lfs_mock/littlefs/src/lfs.c"
@@ -6874,7 +6874,6 @@ protocore_env(native_mdns_adaptive
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/src/mmgr/secure/secure.c"
     "${PROTOCORE_ROOT}/src/network_drivers/network/dns/dns_wire/dns_wire.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/physical/radio_power/radio_power.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/net_addr/net_addr.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/client/client.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/server/server.c"
@@ -6888,7 +6887,6 @@ protocore_env(native_mdns_adaptive
     "PROTOCORE_ENABLE_MDNS=1"
     "PROTOCORE_ENABLE_PROMISC=1"
     "PROTOCORE_PHYSICAL_HAS_BACKEND=1"
-    "PROTOCORE_ENABLE_RADIO_POWER=1"
     "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
@@ -6909,7 +6907,6 @@ protocore_env(native_mdns_service
     "${PROTOCORE_ROOT}/src/mmgr/secure/secure.c"
     "${PROTOCORE_ROOT}/src/network_drivers/network/dns/dns_wire/dns_wire.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/physical/radio_power/radio_power.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/server/server.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/client/client.c"
@@ -7354,6 +7351,7 @@ protocore_env(native_mnt
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/protocols/storage/test_mnt/test_mnt.c"
     "${PROTOCORE_ROOT}/test/unit/protocols/storage/test_mnt/unity_runner.c"
   DEFINES
@@ -7746,7 +7744,6 @@ protocore_env(native_net_addr
 protocore_env(native_net_egress
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/physical/radio_power/radio_power.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
@@ -8805,7 +8802,6 @@ protocore_env(native_phy
 protocore_env(native_phy_iface
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/physical/radio_power/radio_power.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
@@ -9248,14 +9244,12 @@ protocore_env(native_promisc_dot11
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/physical/radio_power/radio_power.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/physical/physical_mock.c"
     "${PROTOCORE_ROOT}/test/unit/src/services/radio/promisc/test_promisc/test_promisc.c"
     "${PROTOCORE_ROOT}/test/unit/src/services/radio/promisc/test_promisc/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PROMISC=1"
     "PROTOCORE_PHYSICAL_HAS_BACKEND=1"
-    "PROTOCORE_ENABLE_RADIO_POWER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -9406,7 +9400,6 @@ protocore_env(native_prov
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/server/server.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_nvs.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/physical/physical_mock.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/physical/radio_power/radio_power.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/client/client.c"
     "${PROTOCORE_ROOT}/test/unit/src/server/core/provisioning_service/test_provisioning/test_provisioning.c"
     "${PROTOCORE_ROOT}/test/unit/src/server/core/provisioning_service/test_provisioning/unity_runner.c"
@@ -10786,6 +10779,7 @@ protocore_env(native_scp
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/session/scp/test_scp/test_scp.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/session/scp/test_scp/unity_runner.c"
   DEFINES
@@ -10874,6 +10868,7 @@ protocore_env(native_scp_server
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/session/scp/test_ssh_scp/test_ssh_scp.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/session/scp/test_ssh_scp/unity_runner.c"
   DEFINES
@@ -11250,6 +11245,7 @@ protocore_env(native_sftp_server
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/sftp/test_ssh_sftp/test_ssh_sftp.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/sftp/test_ssh_sftp/unity_runner.c"
   DEFINES
@@ -12455,6 +12451,7 @@ protocore_env(native_ssh__transport_test_extension
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_extension/test_extension.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_extension/unity_runner.c"
   DEFINES
@@ -12534,6 +12531,7 @@ protocore_env(native_ssh__transport_test_comp
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_comp/test_comp.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
@@ -12612,6 +12610,7 @@ protocore_env(native_ssh__transport_test_zlib
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_zlib/test_zlib.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
@@ -12690,6 +12689,7 @@ protocore_env(native_ssh__transport_test_inflate
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_inflate/test_inflate.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
@@ -12768,6 +12768,7 @@ protocore_env(native_ssh__transport_test_phase_machine
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_phase_machine/test_phase_machine.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_phase_machine/unity_runner.c"
   DEFINES
@@ -12847,6 +12848,7 @@ protocore_env(native_ssh__transport_test_transport
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_transport/test_transport.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_transport/unity_runner.c"
   DEFINES
@@ -12926,6 +12928,7 @@ protocore_env(native_ssh__ssh_test_ssh
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/test_ssh/test_ssh.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/test_ssh/unity_runner.c"
   DEFINES
@@ -13005,6 +13008,7 @@ protocore_env(native_ssh__client_test_client
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/client/test_client/test_client.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
@@ -13083,6 +13087,7 @@ protocore_env(native_ssh__app_test_client
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/app/test_client/test_client.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
@@ -13161,6 +13166,7 @@ protocore_env(native_ssh__server_test_server
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/server/test_server/test_server.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
@@ -13239,6 +13245,7 @@ protocore_env(native_ssh__network_test_network
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/network/test_network/test_network.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/network/test_network/unity_runner.c"
   DEFINES
@@ -13318,6 +13325,7 @@ protocore_env(native_ssh__auth_test_auth
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/auth/test_auth/test_auth.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
@@ -13396,6 +13404,7 @@ protocore_env(native_ssh__connection_test_connection
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/connection/test_connection/test_connection.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/connection/test_connection/unity_runner.c"
   DEFINES
@@ -13475,6 +13484,7 @@ protocore_env(native_ssh__app_test_server
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/app/test_server/test_server.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
@@ -14077,6 +14087,7 @@ protocore_env(native_ssh_sftp
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/sftp/test_ssh_sftp/test_ssh_sftp.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/sftp/test_ssh_sftp/unity_runner.c"
   DEFINES
@@ -15913,7 +15924,6 @@ protocore_env(native_wifi_sniffer_promisc
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/services/radio/promisc/promisc.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/physical/radio_power/radio_power.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/physical/physical_mock.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
@@ -15923,7 +15933,6 @@ protocore_env(native_wifi_sniffer_promisc
     "PROTOCORE_ENABLE_WIFI_SNIFFER=1"
     "PROTOCORE_ENABLE_PROMISC=1"
     "PROTOCORE_PHYSICAL_HAS_BACKEND=1"
-    "PROTOCORE_ENABLE_RADIO_POWER=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"

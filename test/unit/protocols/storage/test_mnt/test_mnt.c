@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "server/storage/filesystem/filesystem.h"
+#include "server/storage/mnt_ram/mnt_ram.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -13,10 +14,10 @@ static int s_root;
 
 void setUp()
 {
-    Mnt.ram(mnt_work);
-    MntV.args.backend = MntV.backend;
+    MntRam.backend(mnt_work);
+    MntV.args.backend = MntRamV.backend;
     Mnt.mount(mnt_work);
-    Mnt.ram_format(mnt_work);
+    MntRam.format(mnt_work);
     Fs.mount = "/";
     Fs.begin(protocore_filesystem_span());
     s_root = Fs.i32;
@@ -465,10 +466,10 @@ void test_unmounted_fails_closed()
 
 void test_ram_guard_subconditions()
 {
-    Mnt.ram(mnt_work);
-    MntV.args.backend = MntV.backend;
+    MntRam.backend(mnt_work);
+    MntV.args.backend = MntRamV.backend;
     Mnt.mount(mnt_work);
-    Mnt.ram_format(mnt_work);
+    MntRam.format(mnt_work);
     uint8_t b[8] = {0};
 
     Fs.path.root = s_root;
@@ -548,8 +549,8 @@ void test_unmounted_all_entry_points()
     Fs.io.n = sizeof(b);
     Fs.read_file(protocore_filesystem_span());
     TEST_ASSERT_TRUE(Fs.len < 0);
-    Mnt.ram(mnt_work);
-    MntV.args.backend = MntV.backend;
+    MntRam.backend(mnt_work);
+    MntV.args.backend = MntRamV.backend;
     Mnt.mount(mnt_work);
     Fs.path.root = s_root;
     Fs.path.dir = "/a";
@@ -887,8 +888,8 @@ void test_zero_progress_backend_terminates()
     Fs.io.n = 4;
     Fs.write_file(protocore_filesystem_span());
     TEST_ASSERT_FALSE(Fs.ok);
-    Mnt.ram(mnt_work);
-    MntV.args.backend = MntV.backend;
+    MntRam.backend(mnt_work);
+    MntV.args.backend = MntRamV.backend;
     Mnt.mount(mnt_work);
     Fs.path.root = s_root;
     Fs.path.dir = "/x";
@@ -1241,10 +1242,10 @@ void test_null_store_is_intentional_and_says_so()
     Fs.size(protocore_filesystem_span());
     TEST_ASSERT_EQUAL_INT32(-1, Fs.len);
 
-    Mnt.ram(mnt_work);
-    MntV.args.backend = MntV.backend;
+    MntRam.backend(mnt_work);
+    MntV.args.backend = MntRamV.backend;
     Mnt.mount(mnt_work);
-    Mnt.ram_format(mnt_work);
+    MntRam.format(mnt_work);
     Fs.present(protocore_filesystem_span());
     TEST_ASSERT_TRUE(Fs.ok);
     Fs.status(protocore_filesystem_span());

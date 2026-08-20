@@ -16,7 +16,7 @@
  */
 
 #include "network_drivers/physical/physical/physical.h"
-#include "mmgr/plaintext/plaintext.h"                         // the persistent end this module's state is taken from
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
 // ---------------------------------------------------------------------------
 // The seam this module implements itself
