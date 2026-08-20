@@ -142,12 +142,12 @@ static void ota_handle(uint8_t slot_id, HttpReq *req)
     protocore_platform_restart();
 }
 
-static void ota_service_begin(uint8_t *restrict work)
+void protocore_ota_service_begin(uint8_t *restrict work)
 {
     (void)work;
-    const char *path = OtaService.args.path;
-    const char *user = OtaService.args.user;
-    const char *pass = OtaService.args.pass;
+    const char *path = OtaServiceV.args.path;
+    const char *user = OtaServiceV.args.user;
+    const char *pass = OtaServiceV.args.pass;
 
     s_ota.path = path;
     str.copy(s_ota.user, user ? user : "", sizeof(s_ota.user));
@@ -162,15 +162,17 @@ static void ota_service_begin(uint8_t *restrict work)
     on_http(path, HTTP_POST, ota_handle);
 }
 
-OtaServiceNs OtaService = {.begin = ota_service_begin};
+/** @brief The operands and the outcome. */
+OtaServiceVars OtaServiceV;
 
 #else
 
-static void ota_service_begin(uint8_t *restrict work)
+void protocore_ota_service_begin(uint8_t *restrict work)
 {
     (void)work;
 }
 
-OtaServiceNs OtaService = {.begin = ota_service_begin};
+/** @brief The operands and the outcome. */
+OtaServiceVars OtaServiceV;
 
 #endif // PROTOCORE_ENABLE_OTA && PROTOCORE_HAS_VENDOR_OTA

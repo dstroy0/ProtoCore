@@ -129,8 +129,8 @@ static void request(uint8_t *restrict work)
     http_h3_conn_id[slot] = conn_id;
     http_h3_stream[slot] = stream_id;
     http_resp_sink[slot] = protocore_h3_resp_sink;
-    ConnPool.slot = slot;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = slot;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span()); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
 
     HttpV.slot = slot;
@@ -140,8 +140,8 @@ static void request(uint8_t *restrict work)
     // Release the dispatch slot for the next request (a no-response handler simply leaves the stream open).
     http_h3[slot] = 0;
     http_resp_sink[slot] = NULL;
-    ConnPool.slot = slot;
-    ConnPool.st = CONN_FREE;
+    ConnPoolV.slot = slot;
+    ConnPoolV.st = CONN_FREE;
     ConnPool.set_state(protocore_conn_pool_span()); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
     HttpParserV.reset_args.req = &http_pool[slot];
     HttpParser.reset(protocore_http_parser_span());

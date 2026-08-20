@@ -12,10 +12,10 @@
 #include "network_drivers/transport/udp/client/client.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
-#include "config/platform/platform.h" // the stack's UDP, under our names
-#include "mmgr/rawmemcpy/rawmemcpy.h"                               // raw.read: the caller's bytes into the pbuf
-#include "network_drivers/transport/diffserv/diffserv.h"  // DSCP marking; compiles out when off
-#include "network_drivers/transport/net_addr/net_addr.h"  // NetAddr: the stack's address as a protocore_ip
+#include "config/platform/platform.h"                    // the stack's UDP, under our names
+#include "mmgr/rawmemcpy/rawmemcpy.h"                    // raw.read: the caller's bytes into the pbuf
+#include "network_drivers/transport/diffserv/diffserv.h" // DSCP marking; compiles out when off
+#include "network_drivers/transport/net_addr/net_addr.h" // NetAddr: the stack's address as a protocore_ip
 
 PROTOCORE_BEGIN_DECLS
 
@@ -133,22 +133,24 @@ uint8_t *protocore_udp_client_span(void)
     return s_own.span;
 }
 
-static void send_to(uint8_t *restrict work)
+void protocore_udp_client_sendto(uint8_t *restrict work)
 {
     (void)work;
-    if (UdpClient.data == NULL || UdpClient.len == 0 || UdpClient.len > PROTOCORE_UDP_RX_BUF_SIZE ||
-        UdpClient.dst == NULL || UdpClient.dst->family == PROTOCORE_IP_NONE)
+    if (UdpClientV.data == NULL || UdpClientV.len == 0 || UdpClientV.len > PROTOCORE_UDP_RX_BUF_SIZE ||
+        UdpClientV.dst == NULL || UdpClientV.dst->family == PROTOCORE_IP_NONE)
     {
-        UdpClient.ok = PROTO_FALSE;
+        UdpClientV.ok = PROTO_FALSE;
         return;
     }
     // The marshal is synchronous, so this outlives the call and carries its answer back.
-    protocore_udp_send_call k = {{0}, UdpClient.dst, UdpClient.data, UdpClient.len, UdpClient.dst_port, PROTO_FALSE};
+    protocore_udp_send_call k = {{0},        UdpClientV.dst, UdpClientV.data, UdpClientV.len, UdpClientV.dst_port,
+                                 PROTO_FALSE};
     (void)protocore_net_call_marshal(send_do, &k.base);
-    UdpClient.ok = k.ok;
+    UdpClientV.ok = k.ok;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-UdpClientNs UdpClient = {.sendto = send_to};
+/** @brief The operands and the outcome. */
+UdpClientVars UdpClientV;
 
 PROTOCORE_END_DECLS

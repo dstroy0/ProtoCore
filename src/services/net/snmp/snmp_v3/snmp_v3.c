@@ -940,12 +940,12 @@ static void send_notify(uint8_t *restrict work, uint8_t pdu_tag)
     {
         return;
     }
-    UdpClient.dst = &dst;
-    UdpClient.dst_port = SnmpV3V.notify.port;
-    UdpClient.data = SNMP_V3_CTX(work)->v3_tx;
-    UdpClient.len = len;
+    UdpClientV.dst = &dst;
+    UdpClientV.dst_port = SnmpV3V.notify.port;
+    UdpClientV.data = SNMP_V3_CTX(work)->v3_tx;
+    UdpClientV.len = len;
     UdpClient.sendto(protocore_udp_client_span());
-    SnmpV3V.ok = UdpClient.ok;
+    SnmpV3V.ok = UdpClientV.ok;
 }
 
 // SNMPv2-Trap-PDU in a v3 message (RFC 3416 sec 4.2.6): unacknowledged, so the request-id is

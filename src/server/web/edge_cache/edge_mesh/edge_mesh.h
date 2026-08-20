@@ -235,12 +235,18 @@ typedef struct
     EdgeMeshFetchBeginArgs fetch_begin_args;
     EdgeMeshFetchPumpArgs fetch_pump_args;
     EdgeMeshFetchEndArgs fetch_end_args;
-
     proto_bool ok;
     size_t n;
     EdgeMeshParse parse;
     EdgeMeshStatus status;
+} EdgeMeshVars;
 
+/** @brief The operands and the outcome. */
+extern EdgeMeshVars EdgeMeshV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_request)(uint8_t *restrict work);
     void (*const parse_request)(uint8_t *restrict work);
     void (*const serialize_entry)(uint8_t *restrict work);
@@ -252,8 +258,33 @@ typedef struct
     void (*const fetch_end)(uint8_t *restrict work);
 } EdgeMeshNs;
 
-/** @brief The one symbol this module exports. */
-extern EdgeMeshNs EdgeMesh;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in EdgeMeshV or a region of the borrow at a fixed offset.
+void protocore_edge_mesh_build_request(uint8_t *restrict work);
+void protocore_edge_mesh_parse_request(uint8_t *restrict work);
+void protocore_edge_mesh_serialize_entry(uint8_t *restrict work);
+void protocore_edge_mesh_deserialize_entry(uint8_t *restrict work);
+void protocore_edge_mesh_build_response(uint8_t *restrict work);
+void protocore_edge_mesh_parse_response(uint8_t *restrict work);
+void protocore_edge_mesh_fetch_begin(uint8_t *restrict work);
+void protocore_edge_mesh_fetch_pump(uint8_t *restrict work);
+void protocore_edge_mesh_fetch_end(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `EdgeMesh.build_request(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const EdgeMeshNs EdgeMesh __attribute__((unused)) = {
+    .build_request = protocore_edge_mesh_build_request,
+    .parse_request = protocore_edge_mesh_parse_request,
+    .serialize_entry = protocore_edge_mesh_serialize_entry,
+    .deserialize_entry = protocore_edge_mesh_deserialize_entry,
+    .build_response = protocore_edge_mesh_build_response,
+    .parse_response = protocore_edge_mesh_parse_response,
+    .fetch_begin = protocore_edge_mesh_fetch_begin,
+    .fetch_pump = protocore_edge_mesh_fetch_pump,
+    .fetch_end = protocore_edge_mesh_fetch_end,
+};
 
 PROTOCORE_END_DECLS
 

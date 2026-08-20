@@ -495,22 +495,22 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
     Http.req_is_head(protocore_http_span());
     if (blen > 0 && !HttpV.ok)
     {
-        ConnPool.slot = slot_id;
-        ConnPool.io.data = header;
-        ConnPool.io.len = (proto_u16)hlen;
+        ConnPoolV.slot = slot_id;
+        ConnPoolV.io.data = header;
+        ConnPoolV.io.len = (proto_u16)hlen;
         ConnPool.send(protocore_conn_pool_span());
-        ConnPool.io.data = body;
-        ConnPool.io.len = (proto_u16)blen;
+        ConnPoolV.io.data = body;
+        ConnPoolV.io.len = (proto_u16)blen;
         ConnPool.send_flush(protocore_conn_pool_span());
     }
     else
     {
-        ConnPool.slot = slot_id;
-        ConnPool.io.data = header;
-        ConnPool.io.len = (proto_u16)hlen;
+        ConnPoolV.slot = slot_id;
+        ConnPoolV.io.data = header;
+        ConnPoolV.io.len = (proto_u16)hlen;
         ConnPool.send_flush(protocore_conn_pool_span());
     }
-    ConnPool.slot = slot_id;
+    ConnPoolV.slot = slot_id;
     ConnPool.begin_close(protocore_conn_pool_span()); // dwell in CONN_CLOSING until the response drains
     HttpConnV.slot = slot_id;
     HttpConn.reset(protocore_http_conn_span());
@@ -539,8 +539,8 @@ static protocore_ip lockout_client_ip(uint8_t slot_id)
 {
     protocore_ip ip;
     ip.family = PROTOCORE_IP_NONE;
-    ConnPool.slot = slot_id;
-    ConnPool.out = &ip;
+    ConnPoolV.slot = slot_id;
+    ConnPoolV.out = &ip;
     ConnPool.remote_addr(protocore_conn_pool_span());
     return ip;
 }
@@ -580,9 +580,9 @@ static proto_bool route_admits(const HttpRoute *r, uint8_t slot_id, HttpReq *req
     }
     // Per-route interface gate: a route bound to STA/AP is invisible on the
     // other interface (falls through to other routes / 404).
-    ConnPool.slot = slot_id;
+    ConnPoolV.slot = slot_id;
     ConnPool.iface(protocore_conn_pool_span());
-    if (r->iface_filter != PROTOCORE_IF_ANY && r->iface_filter != ConnPool.if_kind)
+    if (r->iface_filter != PROTOCORE_IF_ANY && r->iface_filter != ConnPoolV.if_kind)
     {
         return PROTO_FALSE;
     }
@@ -875,10 +875,10 @@ void protocore_http_match_and_execute(uint8_t *restrict work)
     // A WebDAV mount owns its whole subtree and every method on it (including
     // PROPFIND/MKCOL/etc., which Http.parse_method() does not recognize), so intercept
     // before the unknown-method 501 and the normal route loop.
-    Dav.try_serve_dav_args.slot_id = slot_id;
-    Dav.try_serve_dav_args.req = req;
+    DavV.try_serve_dav_args.slot_id = slot_id;
+    DavV.try_serve_dav_args.req = req;
     Dav.try_serve_dav(protocore_webdav_handler_span());
-    if (Dav.ok)
+    if (DavV.ok)
     {
         return;
     }
@@ -996,9 +996,9 @@ void protocore_http_poll_slot(uint8_t *restrict work)
     if (ws)
     {
 #if PROTOCORE_ENABLE_TLS
-        ConnPool.slot = i;
+        ConnPoolV.slot = i;
         ConnPool.tls(protocore_conn_pool_span());
-        if (ConnPool.ok)
+        if (ConnPoolV.ok)
         {
             // wss://: the bytes are ciphertext, so decrypt records here and
             // feed the frame parser, dispatching each completed frame as it
@@ -1033,7 +1033,7 @@ void protocore_http_poll_slot(uint8_t *restrict work)
                 ws_dispatch_close(ws);
                 WsV.slot = i;
                 Ws.free(protocore_ws_span());
-                ConnPool.slot = i;
+                ConnPoolV.slot = i;
                 ConnPool.abort_slot(protocore_conn_pool_span()); // transport owns TLS-free + detach + reset + RST
                 HttpConnV.slot = i;
                 HttpConn.reset(protocore_http_conn_span());
@@ -1060,7 +1060,7 @@ void protocore_http_poll_slot(uint8_t *restrict work)
             // handshake. begin_close moves the slot out of CONN_ACTIVE so the
             // post-close bytes are NOT re-parsed as a new HTTP request (the
             // close-frame the WS layer queued still flushes during the dwell).
-            ConnPool.slot = i;
+            ConnPoolV.slot = i;
             ConnPool.begin_close(protocore_conn_pool_span());
             HttpConnV.slot = i;
             HttpConn.reset(protocore_http_conn_span());
@@ -1084,12 +1084,12 @@ void protocore_http_poll_slot(uint8_t *restrict work)
     // (pipelined) request in its ring buffer with no new EVT_DATA to trigger a
     // parse. Drain it here each tick so it gets dispatched. TLS slots are
     // skipped - their ring holds ciphertext, decrypted in the session layer.
-    ConnPool.slot = i;
+    ConnPoolV.slot = i;
     ConnPool.active(protocore_conn_pool_span());
-    proto_bool live = ConnPool.ok;
+    proto_bool live = ConnPoolV.ok;
 #if PROTOCORE_ENABLE_TLS
     ConnPool.tls(protocore_conn_pool_span());
-    live = live && !ConnPool.ok;
+    live = live && !ConnPoolV.ok;
 #endif
     if (live && http_pool[i].parse_state != PARSE_COMPLETE)
     {
@@ -1108,9 +1108,9 @@ void protocore_http_poll_slot(uint8_t *restrict work)
     // enum) so it never reaps a legitimate slow body: a large streaming upload sits in PARSE_BODY for its whole
     // duration and is governed by the streaming handler + idle timer, not this deadline. WebSocket / SSE were
     // already returned above.
-    ConnPool.slot = i;
+    ConnPoolV.slot = i;
     ConnPool.active(protocore_conn_pool_span());
-    if (ConnPool.ok && http_req_start_ms[i] != 0 && http_pool[i].parse_state < PARSE_BODY &&
+    if (ConnPoolV.ok && http_req_start_ms[i] != 0 && http_pool[i].parse_state < PARSE_BODY &&
         (Clock.ms - http_req_start_ms[i]) >= PROTOCORE_REQUEST_TIMEOUT_MS)
     {
         http_req_start_ms[i] = 0;

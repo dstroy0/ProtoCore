@@ -87,17 +87,36 @@ typedef struct
     HappyEyeballsPrefArgs pref_args;
     HappyEyeballsOrderArgs order_args;
     HappyEyeballsAttemptDueArgs attempt_due_args;
-
     proto_bool ok;
     int n;
+} HappyEyeballsVars;
 
+/** @brief The operands and the outcome. */
+extern HappyEyeballsVars HappyEyeballsV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const pref)(uint8_t *restrict work);
     void (*const order)(uint8_t *restrict work);
     void (*const attempt_due)(uint8_t *restrict work);
 } HappyEyeballsNs;
 
-/** @brief The one symbol this module exports. */
-extern HappyEyeballsNs HappyEyeballs;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HappyEyeballsV or a region of the borrow at a fixed offset.
+void protocore_happy_eyeballs_pref(uint8_t *restrict work);
+void protocore_happy_eyeballs_order(uint8_t *restrict work);
+void protocore_happy_eyeballs_attempt_due(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `HappyEyeballs.pref(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HappyEyeballsNs HappyEyeballs __attribute__((unused)) = {
+    .pref = protocore_happy_eyeballs_pref,
+    .order = protocore_happy_eyeballs_order,
+    .attempt_due = protocore_happy_eyeballs_attempt_due,
+};
 
 /**
  * @brief The PROTOCORE_HAPPY_EYEBALLS_BORROW bytes this module's state lives in.

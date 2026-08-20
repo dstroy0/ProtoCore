@@ -39,13 +39,13 @@ static void h_info(const CoapRequest *req, CoapResponse *resp)
 int main(void)
 {
     Coap.reset(protocore_coap_span());
-    Coap.resource.path = "/info";
-    Coap.resource.methods = COAP_ALLOW_GET;
-    Coap.resource.handler = h_info;
+    CoapV.resource.path = "/info";
+    CoapV.resource.methods = COAP_ALLOW_GET;
+    CoapV.resource.handler = h_info;
     Coap.add_resource(protocore_coap_span());
-    Coap.resource.path = "/a/b/c";
-    Coap.resource.methods = COAP_ALLOW_GET;
-    Coap.resource.handler = h_info;
+    CoapV.resource.path = "/a/b/c";
+    CoapV.resource.methods = COAP_ALLOW_GET;
+    CoapV.resource.handler = h_info;
     Coap.add_resource(protocore_coap_span());
 
     // A CON GET /info: ver=1 type=CON tkl=4, code=0.01 GET, MID, 4-byte token, Uri-Path "info".
@@ -60,24 +60,24 @@ int main(void)
     {
         volatile size_t sink = 0;
         double ns = 0.0;
-        Coap.msg.req = get_info;
-        Coap.msg.req_len = sizeof(get_info);
-        Coap.msg.resp = resp;
-        Coap.msg.resp_cap = sizeof(resp);
+        CoapV.msg.req = get_info;
+        CoapV.msg.req_len = sizeof(get_info);
+        CoapV.msg.resp = resp;
+        CoapV.msg.resp_cap = sizeof(resp);
         Coap.process(protocore_coap_span());
-        HBENCH_NS(1000000, sink += Coap.n, ns);
+        HBENCH_NS(1000000, sink += CoapV.n, ns);
         hbench_row("coap", "process GET /info", ns, (double)sizeof(get_info));
         (void)sink;
     }
     {
         volatile size_t sink = 0;
         double ns = 0.0;
-        Coap.msg.req = get_abc;
-        Coap.msg.req_len = sizeof(get_abc);
-        Coap.msg.resp = resp;
-        Coap.msg.resp_cap = sizeof(resp);
+        CoapV.msg.req = get_abc;
+        CoapV.msg.req_len = sizeof(get_abc);
+        CoapV.msg.resp = resp;
+        CoapV.msg.resp_cap = sizeof(resp);
         Coap.process(protocore_coap_span());
-        HBENCH_NS(1000000, sink += Coap.n, ns);
+        HBENCH_NS(1000000, sink += CoapV.n, ns);
         hbench_row("coap", "process GET /a/b/c", ns, (double)sizeof(get_abc));
         (void)sink;
     }

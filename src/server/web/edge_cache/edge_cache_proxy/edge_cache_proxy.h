@@ -142,35 +142,90 @@ typedef struct
     EdgeProxyPurgeArgs purge_args;
     EdgeProxyPurgePrefixArgs purge_prefix_args;
     EdgeProxyStatsArgs stats_args;
-
     proto_bool ok;
     uint32_t n;
-
-    void (*const enable)(uint8_t *restrict work);
-    void (*const map)(uint8_t *restrict work);
 #if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-    void (*const set_origin_ca)(uint8_t *restrict work);
 #endif
 #if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-    void (*const set_origin_pin)(uint8_t *restrict work);
 #endif
 #if PROTOCORE_ENABLE_DBM
+#endif
+#if PROTOCORE_ENABLE_EDGE_MESH
+#endif
+#if PROTOCORE_ENABLE_EDGE_MESH
+#endif
+} EdgeProxyVars;
+
+/** @brief The operands and the outcome. */
+extern EdgeProxyVars EdgeProxyV;
+
+/** @brief The entries. */
+typedef struct
+{
+    void (*const enable)(uint8_t *restrict work);
+    void (*const map)(uint8_t *restrict work);
+    void (*const set_origin_ca)(uint8_t *restrict work);
+    void (*const set_origin_pin)(uint8_t *restrict work);
     void (*const bind_sd)(uint8_t *restrict work);
-#endif
-#if PROTOCORE_ENABLE_EDGE_MESH
     void (*const add_peer)(uint8_t *restrict work);
-#endif
-#if PROTOCORE_ENABLE_EDGE_MESH
     void (*const mesh_serve)(uint8_t *restrict work);
-#endif
     void (*const reset)(uint8_t *restrict work);
     void (*const purge)(uint8_t *restrict work);
     void (*const purge_prefix)(uint8_t *restrict work);
     void (*const stats)(uint8_t *restrict work);
 } EdgeProxyNs;
 
-/** @brief The one symbol this module exports. */
-extern EdgeProxyNs EdgeProxy;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in EdgeProxyV or a region of the borrow at a fixed offset.
+void protocore_edge_proxy_enable(uint8_t *restrict work);
+void protocore_edge_proxy_map(uint8_t *restrict work);
+#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
+void protocore_edge_proxy_set_origin_ca(uint8_t *restrict work);
+#endif
+#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
+void protocore_edge_proxy_set_origin_pin(uint8_t *restrict work);
+#endif
+#if PROTOCORE_ENABLE_DBM
+void protocore_edge_proxy_bind_sd(uint8_t *restrict work);
+#endif
+#if PROTOCORE_ENABLE_EDGE_MESH
+void protocore_edge_proxy_add_peer(uint8_t *restrict work);
+#endif
+#if PROTOCORE_ENABLE_EDGE_MESH
+void protocore_edge_proxy_mesh_serve(uint8_t *restrict work);
+#endif
+void protocore_edge_proxy_reset(uint8_t *restrict work);
+void protocore_edge_proxy_purge(uint8_t *restrict work);
+void protocore_edge_proxy_purge_prefix(uint8_t *restrict work);
+void protocore_edge_proxy_stats(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `EdgeProxy.enable(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const EdgeProxyNs EdgeProxy __attribute__((unused)) = {
+    .enable = protocore_edge_proxy_enable,
+    .map = protocore_edge_proxy_map,
+#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
+    .set_origin_ca = protocore_edge_proxy_set_origin_ca,
+#endif
+#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
+    .set_origin_pin = protocore_edge_proxy_set_origin_pin,
+#endif
+#if PROTOCORE_ENABLE_DBM
+    .bind_sd = protocore_edge_proxy_bind_sd,
+#endif
+#if PROTOCORE_ENABLE_EDGE_MESH
+    .add_peer = protocore_edge_proxy_add_peer,
+#endif
+#if PROTOCORE_ENABLE_EDGE_MESH
+    .mesh_serve = protocore_edge_proxy_mesh_serve,
+#endif
+    .reset = protocore_edge_proxy_reset,
+    .purge = protocore_edge_proxy_purge,
+    .purge_prefix = protocore_edge_proxy_purge_prefix,
+    .stats = protocore_edge_proxy_stats,
+};
 
 /**
  * @brief The PROTOCORE_EDGE_PROXY_BORROW bytes this module's state lives in.

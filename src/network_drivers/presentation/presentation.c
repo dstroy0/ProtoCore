@@ -159,9 +159,9 @@ void protocore_http_conn_parse(uint8_t *restrict work)
     // whatever followed the request was taken out of it and never fed to anything. Only the bytes
     // this call actually consumed are dropped from the tail, and the rest stay for the next one -
     // `rx` is one shared staging buffer, so the remainder cannot be held here.
-    ConnPool.slot = HttpConnV.slot;
+    ConnPoolV.slot = HttpConnV.slot;
     ConnPool.available(protocore_conn_pool_span());
-    size_t have = ConnPool.n;
+    size_t have = ConnPoolV.n;
     if (have > sizeof(HTTP_CONN_CTX(work)->rx))
     {
         have = sizeof(HTTP_CONN_CTX(work)->rx);
@@ -170,9 +170,9 @@ void protocore_http_conn_parse(uint8_t *restrict work)
     {
         return;
     }
-    ConnPool.io.buf = HTTP_CONN_CTX(work)->rx;
-    ConnPool.io.off = 0;
-    ConnPool.io.count = have;
+    ConnPoolV.io.buf = HTTP_CONN_CTX(work)->rx;
+    ConnPoolV.io.off = 0;
+    ConnPoolV.io.count = have;
     ConnPool.peek(protocore_conn_pool_span());
 
     size_t fed = 0;
@@ -195,8 +195,8 @@ void protocore_http_conn_parse(uint8_t *restrict work)
         break;
     }
 
-    ConnPool.slot = HttpConnV.slot;
-    ConnPool.io.count = fed;
+    ConnPoolV.slot = HttpConnV.slot;
+    ConnPoolV.io.count = fed;
     ConnPool.consume(protocore_conn_pool_span());
 }
 
@@ -217,7 +217,7 @@ void protocore_http_conn_parse(uint8_t *restrict work)
 // slot, then RST - so this never reaches into the raw control block.
 static void tls_abort(uint8_t slot)
 {
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.abort_slot(protocore_conn_pool_span());
     HttpConnV.slot = slot;
     protocore_http_conn_reset(protocore_http_conn_span());
@@ -317,9 +317,9 @@ static void http_evt_accept(uint8_t slot)
 static void http_evt_data(uint8_t slot)
 {
 #if PROTOCORE_ENABLE_TLS
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.tls(protocore_conn_pool_span());
-    if (ConnPool.ok)
+    if (ConnPoolV.ok)
     {
         tls_data(slot);
         return;
@@ -332,9 +332,9 @@ static void http_evt_data(uint8_t slot)
 static void http_evt_close(uint8_t slot)
 {
 #if PROTOCORE_ENABLE_TLS
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.tls(protocore_conn_pool_span());
-    if (ConnPool.ok)
+    if (ConnPoolV.ok)
     {
         protocore_tls_conn_free(slot); // also covers timeouts (EVT_ERROR)
     }

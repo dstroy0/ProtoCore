@@ -463,11 +463,11 @@ static void ring_write(uint8_t *restrict work, const uint8_t *src, size_t n)
 
 static proto_bool ws_tx_plain(uint8_t *restrict work, const uint8_t *data, size_t len)
 {
-    TcpClient.cid = WS_CLIENT_CTX(work)->cid;
-    TcpClient.io.data = data;
-    TcpClient.io.len = len;
+    TcpClientV.cid = WS_CLIENT_CTX(work)->cid;
+    TcpClientV.io.data = data;
+    TcpClientV.io.len = len;
     TcpClient.send(protocore_tcp_client_span());
-    return TcpClient.ok;
+    return TcpClientV.ok;
 }
 
 // Drain plaintext octets from the transport slot into the receive ring.
@@ -481,16 +481,16 @@ static void ws_pump_plain(uint8_t *restrict work)
         {
             break;
         }
-        TcpClient.cid = WS_CLIENT_CTX(work)->cid;
-        TcpClient.io.buf = tmp;
-        TcpClient.io.cap = room < sizeof(tmp) ? room : sizeof(tmp);
+        TcpClientV.cid = WS_CLIENT_CTX(work)->cid;
+        TcpClientV.io.buf = tmp;
+        TcpClientV.io.cap = room < sizeof(tmp) ? room : sizeof(tmp);
         TcpClient.read(protocore_tcp_client_span());
-        const size_t n = TcpClient.n;
+        const size_t n = TcpClientV.n;
         if (n == 0)
         {
-            TcpClient.cid = WS_CLIENT_CTX(work)->cid;
+            TcpClientV.cid = WS_CLIENT_CTX(work)->cid;
             TcpClient.is_closed(protocore_tcp_client_span());
-            if (TcpClient.ok)
+            if (TcpClientV.ok)
             {
                 WS_CLIENT_CTX(work)->closed = PROTO_TRUE;
             }
@@ -513,16 +513,16 @@ static int ws_tls_send(void *bio, const unsigned char *buf, size_t len)
 static int ws_tls_recv(void *bio, unsigned char *buf, size_t len)
 {
     (void)bio;
-    TcpClient.cid = s_ws.store->cid;
-    TcpClient.io.buf = buf;
-    TcpClient.io.cap = len;
+    TcpClientV.cid = s_ws.store->cid;
+    TcpClientV.io.buf = buf;
+    TcpClientV.io.cap = len;
     TcpClient.read(protocore_tcp_client_span());
-    const size_t n = TcpClient.n;
+    const size_t n = TcpClientV.n;
     if (n == 0)
     {
-        TcpClient.cid = s_ws.store->cid;
+        TcpClientV.cid = s_ws.store->cid;
         TcpClient.is_closed(protocore_tcp_client_span());
-        return TcpClient.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
+        return TcpClientV.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
     }
     return (int)n;
 }
@@ -611,7 +611,7 @@ static void ws_close_transport(uint8_t *restrict work)
 #endif
     if (WS_CLIENT_CTX(work)->cid >= 0)
     {
-        TcpClient.cid = WS_CLIENT_CTX(work)->cid;
+        TcpClientV.cid = WS_CLIENT_CTX(work)->cid;
         TcpClient.close(protocore_tcp_client_span());
     }
     WS_CLIENT_CTX(work)->cid = -1;
@@ -746,11 +746,11 @@ void protocore_ws_client_connect(uint8_t *restrict work)
 
     const uint32_t deadline = Clock.ms + WSC_CONNECT_TIMEOUT_MS;
 
-    TcpClient.dial.host = host;
-    TcpClient.dial.port = port;
-    TcpClient.dial.timeout_ms = WSC_CONNECT_TIMEOUT_MS;
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = port;
+    TcpClientV.dial.timeout_ms = WSC_CONNECT_TIMEOUT_MS;
     TcpClient.open(protocore_tcp_client_span());
-    WS_CLIENT_CTX(work)->cid = TcpClient.i32;
+    WS_CLIENT_CTX(work)->cid = TcpClientV.i32;
     if (WS_CLIENT_CTX(work)->cid < 0)
     {
         WSC_DBG("[wsc] open failed (%d)\n", WS_CLIENT_CTX(work)->cid);
@@ -762,16 +762,16 @@ void protocore_ws_client_connect(uint8_t *restrict work)
     proto_bool up = PROTO_FALSE;
     while ((int32_t)(deadline - Clock.ms) > 0)
     {
-        TcpClient.cid = WS_CLIENT_CTX(work)->cid;
+        TcpClientV.cid = WS_CLIENT_CTX(work)->cid;
         TcpClient.connected(protocore_tcp_client_span());
-        up = TcpClient.ok;
+        up = TcpClientV.ok;
         if (up)
         {
             break;
         }
-        TcpClient.cid = WS_CLIENT_CTX(work)->cid;
+        TcpClientV.cid = WS_CLIENT_CTX(work)->cid;
         TcpClient.is_closed(protocore_tcp_client_span());
-        if (TcpClient.ok)
+        if (TcpClientV.ok)
         {
             break;
         }

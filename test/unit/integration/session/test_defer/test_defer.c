@@ -17,7 +17,7 @@ static void inc(void *arg)
 
 void setUp()
 {
-    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
+    ConnPoolV.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
     g_ran = 0;
     Workers.pump = NULL;
@@ -63,4 +63,3 @@ void test_defer_null_fn_fails()
     TEST_ASSERT_FALSE(Workers.ok);
     TEST_ASSERT_EQUAL_INT(0, g_ran);
 }
-

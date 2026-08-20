@@ -406,14 +406,14 @@ void test_sdo_get_u16_checks_the_index(void)
 
     // An abort is not a value.
     CanFrame abort_frame;
-    Canopen.build_sdo_abort_args.out = &abort_frame;
-    Canopen.build_sdo_abort_args.node_id = 5;
-    Canopen.build_sdo_abort_args.index = CIA402_OD_STATUSWORD;
-    Canopen.build_sdo_abort_args.sub = 0;
-    Canopen.build_sdo_abort_args.abort_code = CANOPEN_ABORT_NO_OBJECT;
-    Canopen.build_sdo_abort_args.to_server = PROTO_FALSE;
+    CanopenV.build_sdo_abort_args.out = &abort_frame;
+    CanopenV.build_sdo_abort_args.node_id = 5;
+    CanopenV.build_sdo_abort_args.index = CIA402_OD_STATUSWORD;
+    CanopenV.build_sdo_abort_args.sub = 0;
+    CanopenV.build_sdo_abort_args.abort_code = CANOPEN_ABORT_NO_OBJECT;
+    CanopenV.build_sdo_abort_args.to_server = PROTO_FALSE;
     Canopen.build_sdo_abort(canopen_work);
-    TEST_ASSERT_TRUE(Canopen.ok);
+    TEST_ASSERT_TRUE(CanopenV.ok);
     Cia402V.sdo_get_u16_args.f = &abort_frame;
     Cia402V.sdo_get_u16_args.want_index = CIA402_OD_STATUSWORD;
     Cia402V.sdo_get_u16_args.value = &value;

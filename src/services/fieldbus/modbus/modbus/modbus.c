@@ -613,44 +613,44 @@ static void modbus_rtu_process_adu(uint8_t *restrict work)
 // this service never indexes rx_buffer or advances rx_tail itself.
 static size_t ring_avail(const TcpConn *c)
 {
-    ConnPool.slot = c->id;
+    ConnPoolV.slot = c->id;
     ConnPool.available(protocore_conn_pool_span());
-    return ConnPool.n;
+    return ConnPoolV.n;
 }
 static void ring_peek(const TcpConn *c, size_t off, uint8_t *dst, size_t n)
 {
-    ConnPool.slot = c->id;
-    ConnPool.io.off = off;
-    ConnPool.io.buf = dst;
-    ConnPool.io.count = n;
+    ConnPoolV.slot = c->id;
+    ConnPoolV.io.off = off;
+    ConnPoolV.io.buf = dst;
+    ConnPoolV.io.count = n;
     ConnPool.peek(protocore_conn_pool_span());
 }
 static void ring_consume(TcpConn *c, size_t n)
 {
-    ConnPool.slot = c->id;
-    ConnPool.io.count = n;
+    ConnPoolV.slot = c->id;
+    ConnPoolV.io.count = n;
     ConnPool.consume(protocore_conn_pool_span());
 }
 
 static void raw_send(uint8_t slot, const void *data, size_t n)
 {
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok || n == 0)
+    if (!ConnPoolV.ok || n == 0)
     {
         return;
     }
-    ConnPool.slot = slot;
-    ConnPool.io.data = data;
-    ConnPool.io.len = (proto_u16)n;
+    ConnPoolV.slot = slot;
+    ConnPoolV.io.data = data;
+    ConnPoolV.io.len = (proto_u16)n;
     ConnPool.send(protocore_conn_pool_span());
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.flush(protocore_conn_pool_span());
 }
 
 static void close_conn(uint8_t slot)
 {
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.close(protocore_conn_pool_span()); // transport owns detach + slot reset + close
 }
 

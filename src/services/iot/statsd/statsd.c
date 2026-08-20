@@ -20,8 +20,8 @@ static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 #if PROTOCORE_ENABLE_STATSD
 
-#include "mmgr/protomem/protomem.h"                               // mem.cpy: the spans a line is assembled from
-#include "mmgr/protostr/protostr.h"                               // str.copy / str.len: the bounded field moves
+#include "mmgr/protomem/protomem.h"                      // mem.cpy: the spans a line is assembled from
+#include "mmgr/protostr/protostr.h"                      // str.copy / str.len: the bounded field moves
 #include "network_drivers/transport/udp/client/client.h" // UdpClient.sendto: one metric, one datagram
 #include "shared/ip/ip.h"                                // Ip.parse: the daemon address, once
 
@@ -275,12 +275,12 @@ static void statsd_emit(uint8_t *restrict work)
         return;
     }
     // Nothing acknowledges a datagram, so ok reports only that the stack took the octets.
-    UdpClient.dst = &STATSD_CTX(work)->server;
-    UdpClient.dst_port = STATSD_CTX(work)->port;
-    UdpClient.data = (const uint8_t *)STATSD_CTX(work)->buf;
-    UdpClient.len = Statsd.n;
+    UdpClientV.dst = &STATSD_CTX(work)->server;
+    UdpClientV.dst_port = STATSD_CTX(work)->port;
+    UdpClientV.data = (const uint8_t *)STATSD_CTX(work)->buf;
+    UdpClientV.len = Statsd.n;
     UdpClient.sendto(protocore_udp_client_span());
-    Statsd.ok = UdpClient.ok;
+    Statsd.ok = UdpClientV.ok;
 }
 
 // Add value.i64 to the bucket, annotated with metric.rate.

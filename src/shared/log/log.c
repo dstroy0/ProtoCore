@@ -84,8 +84,8 @@ void protocore_log_emit(uint8_t *restrict work)
     (void)frame.build(line, sizeof(line), spec, LogV.frame.v, LogV.frame.nv);
 
 #if PROTOCORE_ENABLE_LOGBUF
-    Logbuf.line.level = level;
-    Logbuf.line.msg = line;
+    LogbufV.line.level = level;
+    LogbufV.line.msg = line;
     Logbuf.put(protocore_logbuf_span());
 #endif
     if (LOG_CTX(work)->sink)

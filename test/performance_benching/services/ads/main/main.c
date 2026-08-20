@@ -89,58 +89,55 @@ void dbench_run(void)
         volatile size_t sink = 0;
         volatile bool sinkb = false;
 
-        Ads.build_read_args.buf = buf;
-        Ads.build_read_args.cap = sizeof(buf);
-        Ads.build_read_args.r = &r;
-        Ads.build_read_args.index_group = ADS_IGRP_PLC_RW_M;
-        Ads.build_read_args.index_offset = 0;
-        Ads.build_read_args.read_len = 4;
-        DBENCH_OP("Ads.build_read", 100000,
-                  sink += (Ads.build_read(ads_work), Ads.n));
-        Ads.build_write_args.buf = buf;
-        Ads.build_write_args.cap = sizeof(buf);
-        Ads.build_write_args.r = &r;
-        Ads.build_write_args.index_group = ADS_IGRP_PLC_RW_M;
-        Ads.build_write_args.index_offset = 8;
-        Ads.build_write_args.data = val;
-        Ads.build_write_args.len = sizeof(val);
-        DBENCH_OP("Ads.build_write", 100000,
-                  sink += (Ads.build_write(ads_work), Ads.n));
-        Ads.build_read_write_args.buf = buf;
-        Ads.build_read_write_args.cap = sizeof(buf);
-        Ads.build_read_write_args.r = &r;
-        Ads.build_read_write_args.index_group = ADS_IGRP_SYM_HND_BY_NAME;
-        Ads.build_read_write_args.index_offset = 0;
-        Ads.build_read_write_args.read_len = 4;
-        Ads.build_read_write_args.write_data = (const uint8_t *)name;
-        Ads.build_read_write_args.write_len = (uint32_t)name_len;
-        DBENCH_OP("Ads.build_read_write", 50000,
-                  sink += (Ads.build_read_write(ads_work), Ads.n));
+        AdsV.build_read_args.buf = buf;
+        AdsV.build_read_args.cap = sizeof(buf);
+        AdsV.build_read_args.r = &r;
+        AdsV.build_read_args.index_group = ADS_IGRP_PLC_RW_M;
+        AdsV.build_read_args.index_offset = 0;
+        AdsV.build_read_args.read_len = 4;
+        DBENCH_OP("Ads.build_read", 100000, sink += (Ads.build_read(ads_work), AdsV.n));
+        AdsV.build_write_args.buf = buf;
+        AdsV.build_write_args.cap = sizeof(buf);
+        AdsV.build_write_args.r = &r;
+        AdsV.build_write_args.index_group = ADS_IGRP_PLC_RW_M;
+        AdsV.build_write_args.index_offset = 8;
+        AdsV.build_write_args.data = val;
+        AdsV.build_write_args.len = sizeof(val);
+        DBENCH_OP("Ads.build_write", 100000, sink += (Ads.build_write(ads_work), AdsV.n));
+        AdsV.build_read_write_args.buf = buf;
+        AdsV.build_read_write_args.cap = sizeof(buf);
+        AdsV.build_read_write_args.r = &r;
+        AdsV.build_read_write_args.index_group = ADS_IGRP_SYM_HND_BY_NAME;
+        AdsV.build_read_write_args.index_offset = 0;
+        AdsV.build_read_write_args.read_len = 4;
+        AdsV.build_read_write_args.write_data = (const uint8_t *)name;
+        AdsV.build_read_write_args.write_len = (uint32_t)name_len;
+        DBENCH_OP("Ads.build_read_write", 50000, sink += (Ads.build_read_write(ads_work), AdsV.n));
 
         AdsAmsHeader h;
-        Ads.parse_ams_header_args.buf = read_resp;
-        Ads.parse_ams_header_args.len = sizeof(read_resp);
-        Ads.parse_ams_header_args.out = &h;
+        AdsV.parse_ams_header_args.buf = read_resp;
+        AdsV.parse_ams_header_args.len = sizeof(read_resp);
+        AdsV.parse_ams_header_args.out = &h;
         DBENCH_BULK("Ads.parse_ams_header", 100000, sizeof(read_resp),
-                    sinkb = (Ads.parse_ams_header(ads_work), Ads.ok));
+                    sinkb = (Ads.parse_ams_header(ads_work), AdsV.ok));
 
-        Ads.parse_ams_header_args.buf = read_resp;
-        Ads.parse_ams_header_args.len = sizeof(read_resp);
-        Ads.parse_ams_header_args.out = &h;
+        AdsV.parse_ams_header_args.buf = read_resp;
+        AdsV.parse_ams_header_args.len = sizeof(read_resp);
+        AdsV.parse_ams_header_args.out = &h;
         Ads.parse_ams_header(ads_work);
-        (void)Ads.ok; // refresh h.data for the parse below
+        (void)AdsV.ok; // refresh h.data for the parse below
         AdsReadResult rr;
-        Ads.parse_read_args.data = h.data;
-        Ads.parse_read_args.data_len = h.data_len;
-        Ads.parse_read_args.out = &rr;
-        DBENCH_OP("Ads.parse_read", 100000, sinkb = (Ads.parse_read(ads_work), Ads.ok));
+        AdsV.parse_read_args.data = h.data;
+        AdsV.parse_read_args.data_len = h.data_len;
+        AdsV.parse_read_args.out = &rr;
+        DBENCH_OP("Ads.parse_read", 100000, sinkb = (Ads.parse_read(ads_work), AdsV.ok));
 
-        Ads.parse_notification_args.data = notif_payload;
-        Ads.parse_notification_args.data_len = sizeof(notif_payload);
-        Ads.parse_notification_args.on_sample = on_sample;
-        Ads.parse_notification_args.user = NULL;
+        AdsV.parse_notification_args.data = notif_payload;
+        AdsV.parse_notification_args.data_len = sizeof(notif_payload);
+        AdsV.parse_notification_args.on_sample = on_sample;
+        AdsV.parse_notification_args.user = NULL;
         DBENCH_BULK("Ads.parse_notification", 50000, sizeof(notif_payload),
-                    sinkb = (Ads.parse_notification(ads_work), Ads.ok));
+                    sinkb = (Ads.parse_notification(ads_work), AdsV.ok));
 
         (void)sink;
         (void)sinkb;

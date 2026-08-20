@@ -14,92 +14,92 @@
 #include "server/clock/clock.h" // protocore_millis()
 #endif
 
-static void ota_decide(uint8_t *restrict work)
+void protocore_ota_rollback_decide(uint8_t *restrict work)
 {
     (void)work;
-    const OtaDecideArgs *a = &OtaRollback.decide_args;
+    const OtaDecideArgs *a = &OtaRollbackV.decide_args;
 
     if (a->img_state != PROTOCORE_OTA_IMG_PENDING_VERIFY)
     {
-        OtaRollback.action = PROTOCORE_OTA_WAIT; // not a freshly-updated image: nothing to do
+        OtaRollbackV.action = PROTOCORE_OTA_WAIT; // not a freshly-updated image: nothing to do
         return;
     }
     if (a->self_test_ok)
     {
-        OtaRollback.action = PROTOCORE_OTA_COMMIT;
+        OtaRollbackV.action = PROTOCORE_OTA_COMMIT;
         return;
     }
     if (a->ms_since_boot >= a->window_ms)
     {
-        OtaRollback.action = PROTOCORE_OTA_ROLLBACK; // never confirmed in time -> self-heal
+        OtaRollbackV.action = PROTOCORE_OTA_ROLLBACK; // never confirmed in time -> self-heal
         return;
     }
-    OtaRollback.action = PROTOCORE_OTA_WAIT;
+    OtaRollbackV.action = PROTOCORE_OTA_WAIT;
 }
 
 #if PROTOCORE_HAS_VENDOR_OTA
 
-static void ota_state(uint8_t *restrict work)
+void protocore_ota_rollback_state(uint8_t *restrict work)
 {
     (void)work;
-    OtaRollback.img_state = protocore_platform_img_state();
+    OtaRollbackV.img_state = protocore_platform_img_state();
 }
 
-static void ota_commit(uint8_t *restrict work)
+void protocore_ota_rollback_commit(uint8_t *restrict work)
 {
     (void)work;
     protocore_platform_img_commit();
 }
 
-static void ota_rollback(uint8_t *restrict work)
+void protocore_ota_rollback_rollback(uint8_t *restrict work)
 {
     (void)work;
     protocore_platform_img_rollback(); // does not return on a device
 }
 
-static void ota_tick(uint8_t *restrict work)
+void protocore_ota_rollback_tick(uint8_t *restrict work)
 {
-    ota_state(work);
-    OtaRollback.decide_args.img_state = OtaRollback.img_state;
-    OtaRollback.decide_args.self_test_ok = OtaRollback.self_test_ok;
-    OtaRollback.decide_args.ms_since_boot = Clock.ms;
-    OtaRollback.decide_args.window_ms = PROTOCORE_OTA_CONFIRM_WINDOW_MS;
-    ota_decide(work);
-    if (OtaRollback.action == PROTOCORE_OTA_COMMIT)
+    protocore_ota_rollback_state(work);
+    OtaRollbackV.decide_args.img_state = OtaRollbackV.img_state;
+    OtaRollbackV.decide_args.self_test_ok = OtaRollbackV.self_test_ok;
+    OtaRollbackV.decide_args.ms_since_boot = Clock.ms;
+    OtaRollbackV.decide_args.window_ms = PROTOCORE_OTA_CONFIRM_WINDOW_MS;
+    protocore_ota_rollback_decide(work);
+    if (OtaRollbackV.action == PROTOCORE_OTA_COMMIT)
     {
-        ota_commit(work);
+        protocore_ota_rollback_commit(work);
     }
-    else if (OtaRollback.action == PROTOCORE_OTA_ROLLBACK)
+    else if (OtaRollbackV.action == PROTOCORE_OTA_ROLLBACK)
     {
-        ota_rollback(work);
+        protocore_ota_rollback_rollback(work);
     }
 }
 
 #else // no image partitions to read or mark
 
-static void ota_state(uint8_t *restrict work)
+void protocore_ota_rollback_state(uint8_t *restrict work)
 {
     (void)work;
-    OtaRollback.img_state = PROTOCORE_OTA_IMG_UNDEFINED;
+    OtaRollbackV.img_state = PROTOCORE_OTA_IMG_UNDEFINED;
 }
-static void ota_commit(uint8_t *restrict work)
-{
-    (void)work;
-}
-static void ota_rollback(uint8_t *restrict work)
+void protocore_ota_rollback_commit(uint8_t *restrict work)
 {
     (void)work;
 }
-static void ota_tick(uint8_t *restrict work)
+void protocore_ota_rollback_rollback(uint8_t *restrict work)
 {
     (void)work;
-    OtaRollback.action = PROTOCORE_OTA_WAIT;
+}
+void protocore_ota_rollback_tick(uint8_t *restrict work)
+{
+    (void)work;
+    OtaRollbackV.action = PROTOCORE_OTA_WAIT;
 }
 
 #endif // PROTOCORE_HAS_VENDOR_OTA
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-OtaRollbackNs OtaRollback = {
-    .decide = ota_decide, .state = ota_state, .commit = ota_commit, .rollback = ota_rollback, .tick = ota_tick};
+/** @brief The operands and the outcome. */
+OtaRollbackVars OtaRollbackV;
 
 #endif // PROTOCORE_ENABLE_OTA_ROLLBACK

@@ -212,27 +212,64 @@ typedef struct
     CoapObserveArgs observe;   ///< what the Observe option carries
     CoapExchangeArgs exchange; ///< what a deduplication entry is keyed by
     CoapBindArgs bind;         ///< what binding the receive port takes
-
     proto_bool ok;
     size_t n;
     const uint8_t *bytes;
+#if PROTOCORE_COAP_DEDUP_ENTRIES > 0
+#endif
+#if PROTOCORE_ENABLE_COAP_OBSERVE
+#endif
+} CoapVars;
 
+/** @brief The operands and the outcome. */
+extern CoapVars CoapV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const reset)(uint8_t *restrict work);
     void (*const add_resource)(uint8_t *restrict work);
     void (*const process)(uint8_t *restrict work);
     void (*const process_observe)(uint8_t *restrict work);
-#if PROTOCORE_COAP_DEDUP_ENTRIES > 0
     void (*const dedup_lookup)(uint8_t *restrict work);
     void (*const dedup_store)(uint8_t *restrict work);
-#endif
     void (*const begin)(uint8_t *restrict work);
-#if PROTOCORE_ENABLE_COAP_OBSERVE
     void (*const notify)(uint8_t *restrict work);
-#endif
 } CoapNs;
 
-/** @brief The one symbol this module exports. */
-extern CoapNs Coap;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in CoapV or a region of the borrow at a fixed offset.
+void protocore_coap_reset(uint8_t *restrict work);
+void protocore_coap_add_resource(uint8_t *restrict work);
+void protocore_coap_process(uint8_t *restrict work);
+void protocore_coap_process_observe(uint8_t *restrict work);
+#if PROTOCORE_COAP_DEDUP_ENTRIES > 0
+void protocore_coap_dedup_lookup(uint8_t *restrict work);
+void protocore_coap_dedup_store(uint8_t *restrict work);
+#endif
+void protocore_coap_begin(uint8_t *restrict work);
+#if PROTOCORE_ENABLE_COAP_OBSERVE
+void protocore_coap_notify(uint8_t *restrict work);
+#endif
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Coap.reset(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const CoapNs Coap __attribute__((unused)) = {
+    .reset = protocore_coap_reset,
+    .add_resource = protocore_coap_add_resource,
+    .process = protocore_coap_process,
+    .process_observe = protocore_coap_process_observe,
+#if PROTOCORE_COAP_DEDUP_ENTRIES > 0
+    .dedup_lookup = protocore_coap_dedup_lookup,
+    .dedup_store = protocore_coap_dedup_store,
+#endif
+    .begin = protocore_coap_begin,
+#if PROTOCORE_ENABLE_COAP_OBSERVE
+    .notify = protocore_coap_notify,
+#endif
+};
 
 /**
  * @brief The PROTOCORE_COAP_BORROW bytes this module's state lives in.

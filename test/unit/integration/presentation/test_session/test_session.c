@@ -35,12 +35,12 @@ void setUp()
 {
     set_now_ms(0);
     queue_stage_reset();
-    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
+    ConnPoolV.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
-    TcpListener.idx = 0;
-    TcpListener.bind.port = 80;
-    TcpListener.bind.proto = PROTO_HTTP;
-    TcpListener.bind.tls = PROTO_FALSE;
+    TcpListenerV.idx = 0;
+    TcpListenerV.bind.port = 80;
+    TcpListenerV.bind.proto = PROTO_HTTP;
+    TcpListenerV.bind.tls = PROTO_FALSE;
     TcpListener.add(protocore_tcp_listener_span());
     for (int i = 0; i < MAX_CONNS; i++)
     {
@@ -192,10 +192,10 @@ void test_evt_connect_calls_http_reset()
     http_pool[1].header_count = 3;
 
     TcpEvt evt = {EVT_CONNECT, 1, 0};
-    TcpListener.idx = 0;
-    TcpListener.q.evt = &evt;
+    TcpListenerV.idx = 0;
+    TcpListenerV.q.evt = &evt;
     TcpListener.enqueue(protocore_tcp_listener_span());
-    (void)TcpListener.ok;
+    (void)TcpListenerV.ok;
     SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
 
@@ -209,10 +209,10 @@ void test_evt_disconnect_calls_http_reset()
     http_pool[0].header_count = 2;
 
     TcpEvt evt = {EVT_DISCONNECT, 0, 0};
-    TcpListener.idx = 0;
-    TcpListener.q.evt = &evt;
+    TcpListenerV.idx = 0;
+    TcpListenerV.q.evt = &evt;
     TcpListener.enqueue(protocore_tcp_listener_span());
-    (void)TcpListener.ok;
+    (void)TcpListenerV.ok;
     SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
 
@@ -225,10 +225,10 @@ void test_evt_error_calls_http_reset()
     http_pool[2].parse_state = PARSE_ERROR;
 
     TcpEvt evt = {EVT_ERROR, 2, 0};
-    TcpListener.idx = 0;
-    TcpListener.q.evt = &evt;
+    TcpListenerV.idx = 0;
+    TcpListenerV.q.evt = &evt;
     TcpListener.enqueue(protocore_tcp_listener_span());
-    (void)TcpListener.ok;
+    (void)TcpListenerV.ok;
     SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
 
@@ -240,10 +240,10 @@ void test_evt_data_calls_http_parse()
     push_to_slot(0, "GET /evt HTTP/1.1\r\n\r\n");
 
     TcpEvt evt = {EVT_DATA, 0, 0};
-    TcpListener.idx = 0;
-    TcpListener.q.evt = &evt;
+    TcpListenerV.idx = 0;
+    TcpListenerV.q.evt = &evt;
     TcpListener.enqueue(protocore_tcp_listener_span());
-    (void)TcpListener.ok;
+    (void)TcpListenerV.ok;
     SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
 
@@ -257,24 +257,24 @@ void test_multiple_events_drained_in_one_tick()
 
     http_pool[0].parse_state = PARSE_COMPLETE;
     TcpEvt e0 = {EVT_CONNECT, 0, 0};
-    TcpListener.idx = 0;
-    TcpListener.q.evt = &e0;
+    TcpListenerV.idx = 0;
+    TcpListenerV.q.evt = &e0;
     TcpListener.enqueue(protocore_tcp_listener_span());
-    (void)TcpListener.ok;
+    (void)TcpListenerV.ok;
 
     push_to_slot(1, "GET / HTTP/1.1\r\n\r\n");
     TcpEvt e1 = {EVT_DATA, 1, 0};
-    TcpListener.idx = 0;
-    TcpListener.q.evt = &e1;
+    TcpListenerV.idx = 0;
+    TcpListenerV.q.evt = &e1;
     TcpListener.enqueue(protocore_tcp_listener_span());
-    (void)TcpListener.ok;
+    (void)TcpListenerV.ok;
 
     http_pool[2].parse_state = PARSE_HEADER_VAL;
     TcpEvt e2 = {EVT_DISCONNECT, 2, 0};
-    TcpListener.idx = 0;
-    TcpListener.q.evt = &e2;
+    TcpListenerV.idx = 0;
+    TcpListenerV.q.evt = &e2;
     TcpListener.enqueue(protocore_tcp_listener_span());
-    (void)TcpListener.ok;
+    (void)TcpListenerV.ok;
 
     SessionV.worker_id = 0;
 
@@ -343,10 +343,10 @@ void test_dispatch_drops_unregistered_protocol_event()
     http_pool[0].parse_state = PARSE_COMPLETE;
 
     TcpEvt evt = {EVT_CONNECT, 0, 0};
-    TcpListener.idx = 0;
-    TcpListener.q.evt = &evt;
+    TcpListenerV.idx = 0;
+    TcpListenerV.q.evt = &evt;
     TcpListener.enqueue(protocore_tcp_listener_span());
-    (void)TcpListener.ok;
+    (void)TcpListenerV.ok;
     SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
 
@@ -364,28 +364,28 @@ void test_dispatch_skips_null_callback_fields()
     http_pool[0].parse_state = PARSE_COMPLETE;
 
     TcpEvt e0 = {EVT_CONNECT, 0, 0};
-    TcpListener.idx = 0;
-    TcpListener.q.evt = &e0;
+    TcpListenerV.idx = 0;
+    TcpListenerV.q.evt = &e0;
     TcpListener.enqueue(protocore_tcp_listener_span());
-    (void)TcpListener.ok;
+    (void)TcpListenerV.ok;
     SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 
     TcpEvt e1 = {EVT_DATA, 0, 0};
-    TcpListener.idx = 0;
-    TcpListener.q.evt = &e1;
+    TcpListenerV.idx = 0;
+    TcpListenerV.q.evt = &e1;
     TcpListener.enqueue(protocore_tcp_listener_span());
-    (void)TcpListener.ok;
+    (void)TcpListenerV.ok;
     SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 
     TcpEvt e2 = {EVT_DISCONNECT, 0, 0};
-    TcpListener.idx = 0;
-    TcpListener.q.evt = &e2;
+    TcpListenerV.idx = 0;
+    TcpListenerV.q.evt = &e2;
     TcpListener.enqueue(protocore_tcp_listener_span());
-    (void)TcpListener.ok;
+    (void)TcpListenerV.ok;
     SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
@@ -398,10 +398,10 @@ void test_dispatch_ignores_unknown_evt_type()
     http_pool[0].parse_state = PARSE_COMPLETE;
 
     TcpEvt evt = {(EvtType)99, 0, 0};
-    TcpListener.idx = 0;
-    TcpListener.q.evt = &evt;
+    TcpListenerV.idx = 0;
+    TcpListenerV.q.evt = &evt;
     TcpListener.enqueue(protocore_tcp_listener_span());
-    (void)TcpListener.ok;
+    (void)TcpListenerV.ok;
     SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
 
@@ -491,8 +491,8 @@ void test_race_millis_wraparound_no_spurious_timeout()
 static void stage_data_evt(uint8_t slot)
 {
     TcpEvt evt = {EVT_DATA, slot, 0};
-    TcpListener.idx = 0;
-    TcpListener.q.evt = &evt;
+    TcpListenerV.idx = 0;
+    TcpListenerV.q.evt = &evt;
     TcpListener.enqueue(protocore_tcp_listener_span());
 }
 

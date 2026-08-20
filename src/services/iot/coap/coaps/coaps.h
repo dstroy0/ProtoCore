@@ -62,17 +62,31 @@ typedef struct
  */
 typedef struct
 {
-    DtlsConn *conn; ///< the connection every call names
-
+    DtlsConn *conn;        ///< the connection every call names
     CoapsBridgeArgs dgram; ///< what turning one datagram takes
-
     int32_t i32;
+} CoapsVars;
 
+/** @brief The operands and the outcome. */
+extern CoapsVars CoapsV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const process)(uint8_t *restrict work);
 } CoapsNs;
 
-/** @brief The one symbol this module exports. */
-extern CoapsNs Coaps;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in CoapsV or a region of the borrow at a fixed offset.
+void protocore_coaps_process(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Coaps.process(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const CoapsNs Coaps __attribute__((unused)) = {
+    .process = protocore_coaps_process,
+};
 
 PROTOCORE_END_DECLS
 

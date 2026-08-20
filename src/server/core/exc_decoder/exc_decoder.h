@@ -108,23 +108,54 @@ typedef struct
     ExcParseArgs parse_args;
     ExcDumpArgs dump;
     ExcOutArgs out_args;
-
     proto_bool ok;
     size_t n;
+#if PROTOCORE_HAS_VENDOR_COREDUMP
+#endif
+} ExcVars;
 
+/** @brief The operands and the outcome. */
+extern ExcVars ExcV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const parse)(uint8_t *restrict work);
     void (*const json)(uint8_t *restrict work);
-#if PROTOCORE_HAS_VENDOR_COREDUMP
     void (*const present)(uint8_t *restrict work);
     void (*const summary)(uint8_t *restrict work);
     void (*const read)(uint8_t *restrict work);
     void (*const save)(uint8_t *restrict work);
     void (*const erase)(uint8_t *restrict work);
-#endif
 } ExcDecoderNs;
 
-/** @brief The one symbol this module exports. */
-extern ExcDecoderNs Exc;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ExcV or a region of the borrow at a fixed offset.
+void protocore_exc_parse(uint8_t *restrict work);
+void protocore_exc_json(uint8_t *restrict work);
+#if PROTOCORE_HAS_VENDOR_COREDUMP
+void protocore_exc_present(uint8_t *restrict work);
+void protocore_exc_summary(uint8_t *restrict work);
+void protocore_exc_read(uint8_t *restrict work);
+void protocore_exc_save(uint8_t *restrict work);
+void protocore_exc_erase(uint8_t *restrict work);
+#endif
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Exc.parse(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ExcDecoderNs Exc __attribute__((unused)) = {
+    .parse = protocore_exc_parse,
+    .json = protocore_exc_json,
+#if PROTOCORE_HAS_VENDOR_COREDUMP
+    .present = protocore_exc_present,
+    .summary = protocore_exc_summary,
+    .read = protocore_exc_read,
+    .save = protocore_exc_save,
+    .erase = protocore_exc_erase,
+#endif
+};
 
 PROTOCORE_END_DECLS
 

@@ -282,12 +282,12 @@ static void udp_telemetry_send(uint8_t *restrict work)
     {
         return;
     }
-    UdpClient.dst = &UDP_TELEMETRY_CTX(work)->collector;
-    UdpClient.dst_port = UDP_TELEMETRY_CTX(work)->port;
-    UdpClient.data = (const uint8_t *)UdpTelemetry.payload.data;
-    UdpClient.len = UdpTelemetry.payload.len;
+    UdpClientV.dst = &UDP_TELEMETRY_CTX(work)->collector;
+    UdpClientV.dst_port = UDP_TELEMETRY_CTX(work)->port;
+    UdpClientV.data = (const uint8_t *)UdpTelemetry.payload.data;
+    UdpClientV.len = UdpTelemetry.payload.len;
     UdpClient.sendto(protocore_udp_client_span());
-    UdpTelemetry.ok = UdpClient.ok;
+    UdpTelemetry.ok = UdpClientV.ok;
 #endif
 }
 

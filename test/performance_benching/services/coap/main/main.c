@@ -77,14 +77,14 @@ void dbench_run(void)
 {
     Coap.reset(protocore_coap_span());
 
-    Coap.resource.path = "/temp";
-    Coap.resource.methods = COAP_ALLOW_GET | COAP_ALLOW_POST | COAP_ALLOW_PUT | COAP_ALLOW_DELETE;
-    Coap.resource.handler = h_temp;
+    CoapV.resource.path = "/temp";
+    CoapV.resource.methods = COAP_ALLOW_GET | COAP_ALLOW_POST | COAP_ALLOW_PUT | COAP_ALLOW_DELETE;
+    CoapV.resource.handler = h_temp;
     Coap.add_resource(protocore_coap_span());
 
-    Coap.resource.path = "/big";
-    Coap.resource.methods = COAP_ALLOW_GET | COAP_ALLOW_POST | COAP_ALLOW_PUT;
-    Coap.resource.handler = h_big;
+    CoapV.resource.path = "/big";
+    CoapV.resource.methods = COAP_ALLOW_GET | COAP_ALLOW_POST | COAP_ALLOW_PUT;
+    CoapV.resource.handler = h_big;
     Coap.add_resource(protocore_coap_span());
 
     // GET /temp, token AA BB CC DD, MID 0x1234 (test_get_content): hdr(Ver1,CON,TKL4) + code GET +
@@ -120,33 +120,33 @@ void dbench_run(void)
 
     static uint8_t resp[300];
 
-    Coap.msg.resp = resp;
-    Coap.msg.resp_cap = sizeof(resp);
+    CoapV.msg.resp = resp;
+    CoapV.msg.resp_cap = sizeof(resp);
 
     for (;;)
     {
         DBENCH_BANNER("coap");
         volatile size_t sink = 0;
 
-        Coap.msg.req = get_temp;
-        Coap.msg.req_len = sizeof(get_temp);
-        DBENCH_OP("Coap.process GET", 20000, Coap.process(protocore_coap_span()); sink += Coap.n);
+        CoapV.msg.req = get_temp;
+        CoapV.msg.req_len = sizeof(get_temp);
+        DBENCH_OP("Coap.process GET", 20000, Coap.process(protocore_coap_span()); sink += CoapV.n);
 
-        Coap.msg.req = put_temp;
-        Coap.msg.req_len = sizeof(put_temp);
-        DBENCH_OP("Coap.process PUT", 20000, Coap.process(protocore_coap_span()); sink += Coap.n);
+        CoapV.msg.req = put_temp;
+        CoapV.msg.req_len = sizeof(put_temp);
+        DBENCH_OP("Coap.process PUT", 20000, Coap.process(protocore_coap_span()); sink += CoapV.n);
 
-        Coap.msg.req = get_discovery;
-        Coap.msg.req_len = sizeof(get_discovery);
-        DBENCH_OP("Coap.process discovery", 20000, Coap.process(protocore_coap_span()); sink += Coap.n);
+        CoapV.msg.req = get_discovery;
+        CoapV.msg.req_len = sizeof(get_discovery);
+        DBENCH_OP("Coap.process discovery", 20000, Coap.process(protocore_coap_span()); sink += CoapV.n);
 
-        Coap.msg.req = get_block2;
-        Coap.msg.req_len = sizeof(get_block2);
-        DBENCH_BULK("Coap.process block2", 20000, 64, Coap.process(protocore_coap_span()); sink += Coap.n);
+        CoapV.msg.req = get_block2;
+        CoapV.msg.req_len = sizeof(get_block2);
+        DBENCH_BULK("Coap.process block2", 20000, 64, Coap.process(protocore_coap_span()); sink += CoapV.n);
 
-        Coap.msg.req = post_block1;
-        Coap.msg.req_len = sizeof(post_block1);
-        DBENCH_BULK("Coap.process block1", 20000, 64, Coap.process(protocore_coap_span()); sink += Coap.n);
+        CoapV.msg.req = post_block1;
+        CoapV.msg.req_len = sizeof(post_block1);
+        DBENCH_BULK("Coap.process block1", 20000, 64, Coap.process(protocore_coap_span()); sink += CoapV.n);
 
         (void)sink;
         DBENCH_DONE();

@@ -239,9 +239,9 @@ static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct protocor
     resp[n++] = ap_octet(work, 2);
     resp[n++] = ap_octet(work, 3);
 
-    UdpListener.peer_args.peer = peer;
-    UdpListener.send_args.data = resp;
-    UdpListener.send_args.len = n;
+    UdpListenerV.peer_args.peer = peer;
+    UdpListenerV.send_args.data = resp;
+    UdpListenerV.send_args.len = n;
     UdpListener.reply(protocore_udp_listener_span());
 }
 
@@ -334,10 +334,10 @@ static void provisioning_service_begin(uint8_t *restrict work)
     PROVISIONING_SERVICE_CTX(work)->ap_ip[3] = (uint8_t)((ip >> 24) & 0xFF);
 
     // Catch-all DNS on UDP/53 via the transport-layer UDP service (callback-driven).
-    UdpListener.port = 53;
-    UdpListener.bind.handler = prov_dns_recv;
-    UdpListener.bind.handler_ctx = NULL;
-    UdpListener.bind.group_ip = NULL;
+    UdpListenerV.port = 53;
+    UdpListenerV.bind.handler = prov_dns_recv;
+    UdpListenerV.bind.handler_ctx = NULL;
+    UdpListenerV.bind.group_ip = NULL;
     UdpListener.listen(protocore_udp_listener_span());
 
     on_http("/save", HTTP_POST, prov_save_handler);

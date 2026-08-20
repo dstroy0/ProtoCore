@@ -175,7 +175,7 @@ void setUp(void)
 {
     memset(g_mark, 0, sizeof(g_mark));
     set_millis(0);
-    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
+    ConnPoolV.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
     for (int i = 0; i < MAX_CONNS; i++)
     {

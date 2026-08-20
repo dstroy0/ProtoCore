@@ -76,23 +76,23 @@ void dbench_run(void)
         // Staged inside the argument: DBENCH_OP re-evaluates it, so the operands belong in the
         // timed expression rather than above it.
         DBENCH_OP("HappyEyeballs.pref v6", 200000,
-                  (HappyEyeballs.pref_args.ip = &g6, HappyEyeballs.pref(he), sinki += HappyEyeballs.n));
+                  (HappyEyeballsV.pref_args.ip = &g6, HappyEyeballs.pref(he), sinki += HappyEyeballsV.n));
         DBENCH_OP("HappyEyeballs.pref v4", 200000,
-                  (HappyEyeballs.pref_args.ip = &g4, HappyEyeballs.pref(he), sinki += HappyEyeballs.n));
+                  (HappyEyeballsV.pref_args.ip = &g4, HappyEyeballs.pref(he), sinki += HappyEyeballsV.n));
         // Full candidate ordering: stable insertion-sort by preference + RFC 8305 family interleave.
         // Restore the scrambled order first so every iteration times the real reorder, not the fast path.
         DBENCH_OP("HappyEyeballs.order x3 (sort+ilv)", 50000,
-                  (memcpy(work3, tmpl3, sizeof(tmpl3)), HappyEyeballs.order_args.list = work3,
-                   HappyEyeballs.order_args.n = 3, HappyEyeballs.order(he), sink8 += work3[1].bytes[0]));
+                  (memcpy(work3, tmpl3, sizeof(tmpl3)), HappyEyeballsV.order_args.list = work3,
+                   HappyEyeballsV.order_args.n = 3, HappyEyeballs.order(he), sink8 += work3[1].bytes[0]));
         DBENCH_OP("HappyEyeballs.order x5 (sort+ilv)", 50000,
-                  (memcpy(work5, tmpl5, sizeof(tmpl5)), HappyEyeballs.order_args.list = work5,
-                   HappyEyeballs.order_args.n = 5, HappyEyeballs.order(he), sink8 += work5[1].bytes[0]));
+                  (memcpy(work5, tmpl5, sizeof(tmpl5)), HappyEyeballsV.order_args.list = work5,
+                   HappyEyeballsV.order_args.n = 5, HappyEyeballs.order(he), sink8 += work5[1].bytes[0]));
         // Connection Attempt Delay gate (wrap-safe modular compare).
         DBENCH_OP("HappyEyeballs.attempt_due", 200000,
-                  (HappyEyeballs.attempt_due_args.last_start_ms = 1000,
-                   HappyEyeballs.attempt_due_args.now_ms = 1000 + 250,
-                   HappyEyeballs.attempt_due_args.attempt_delay_ms = PROTOCORE_HE_ATTEMPT_DELAY_MS,
-                   HappyEyeballs.attempt_due(he), sinkb ^= HappyEyeballs.ok));
+                  (HappyEyeballsV.attempt_due_args.last_start_ms = 1000,
+                   HappyEyeballsV.attempt_due_args.now_ms = 1000 + 250,
+                   HappyEyeballsV.attempt_due_args.attempt_delay_ms = PROTOCORE_HE_ATTEMPT_DELAY_MS,
+                   HappyEyeballs.attempt_due(he), sinkb ^= HappyEyeballsV.ok));
 
         (void)sinki;
         (void)sink8;

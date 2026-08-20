@@ -274,20 +274,20 @@ static void dns_udp_handler(const uint8_t *data, size_t len, const struct protoc
     {
         return;
     }
-    UdpListener.peer_args.peer = peer;
-    UdpListener.send_args.data = DNS_SERVER_CTX(work)->tx;
-    UdpListener.send_args.len = DnsServerV.n;
+    UdpListenerV.peer_args.peer = peer;
+    UdpListenerV.send_args.data = DNS_SERVER_CTX(work)->tx;
+    UdpListenerV.send_args.len = DnsServerV.n;
     UdpListener.reply(protocore_udp_listener_span());
 }
 
 // Bind UDP port 53, the port a DNS message is carried to (RFC 1035 sec 4.2.1).
 void protocore_dns_server_begin(uint8_t *restrict work)
 {
-    UdpListener.port = 53;
-    UdpListener.bind.handler = dns_udp_handler;
-    UdpListener.bind.handler_ctx = NULL;
+    UdpListenerV.port = 53;
+    UdpListenerV.bind.handler = dns_udp_handler;
+    UdpListenerV.bind.handler_ctx = NULL;
     UdpListener.listen(protocore_udp_listener_span());
-    DnsServerV.ok = UdpListener.ok;
+    DnsServerV.ok = UdpListenerV.ok;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.

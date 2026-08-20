@@ -305,9 +305,9 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
         return;
     }
 
-    ConnPool.slot = slot_id;
+    ConnPoolV.slot = slot_id;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok)
+    if (!ConnPoolV.ok)
     {
         Fs.io.handle = fh;
         Fs.close(protocore_filesystem_span());
@@ -414,9 +414,9 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
         Sb.put(&sb_h304, cl);
         Sb.put(&sb_h304, "\r\n");
         int n304 = (int)Sb.finish(&sb_h304);
-        ConnPool.slot = slot_id;
-        ConnPool.io.data = h304;
-        ConnPool.io.len = (proto_u16)n304;
+        ConnPoolV.slot = slot_id;
+        ConnPoolV.io.data = h304;
+        ConnPoolV.io.len = (proto_u16)n304;
         ConnPool.send_flush(protocore_conn_pool_span()); // header-only reply: write and flush in one marshal
         protocore_resp_end(slot_id, 304, 0, keep, /*pre_flushed=*/PROTO_TRUE);
         return;
@@ -470,9 +470,9 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
         Sb.put(&sb_h416, cl);
         Sb.put(&sb_h416, "\r\n");
         int n416 = (int)Sb.finish(&sb_h416);
-        ConnPool.slot = slot_id;
-        ConnPool.io.data = h416;
-        ConnPool.io.len = (proto_u16)n416;
+        ConnPoolV.slot = slot_id;
+        ConnPoolV.io.data = h416;
+        ConnPoolV.io.len = (proto_u16)n416;
         ConnPool.send_flush(protocore_conn_pool_span());
         protocore_resp_end(slot_id, 416, 0, keep, /*pre_flushed=*/PROTO_TRUE);
         return;
@@ -539,9 +539,9 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
         header[0] = '\0';
     }
 
-    ConnPool.slot = slot_id;
-    ConnPool.io.data = header;
-    ConnPool.io.len = (proto_u16)hlen;
+    ConnPoolV.slot = slot_id;
+    ConnPoolV.io.data = header;
+    ConnPoolV.io.len = (proto_u16)hlen;
     ConnPool.send(protocore_conn_pool_span());
 
     // HEAD or empty body: headers only, finish now.
@@ -584,9 +584,9 @@ void protocore_file_serving_file_send_pump(uint8_t *restrict work)
         return;
     }
 
-    ConnPool.slot = slot_id;
+    ConnPoolV.slot = slot_id;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok)
+    if (!ConnPoolV.ok)
     {
         // Connection went away mid-transfer: drop the source and the continuation.
         Fs.io.handle = s->fh;
@@ -597,18 +597,18 @@ void protocore_file_serving_file_send_pump(uint8_t *restrict work)
 
     // A file body still being paged out is active, not idle: keep the CONN_TIMEOUT_MS idle sweep
     // off it so a transient send stall on a large file cannot reap the slot mid-transfer.
-    ConnPool.slot = slot_id;
+    ConnPoolV.slot = slot_id;
     ConnPool.touch_active(protocore_conn_pool_span());
 
     uint8_t chunk[FILE_CHUNK_SIZE];
     while (s->remaining > 0)
     {
-        ConnPool.slot = slot_id;
+        ConnPoolV.slot = slot_id;
         ConnPool.sndbuf(protocore_conn_pool_span());
-        proto_u16 avail = ConnPool.u16;
+        proto_u16 avail = ConnPoolV.u16;
         if (avail == 0)
         {
-            ConnPool.slot = slot_id;
+            ConnPoolV.slot = slot_id;
             ConnPool.flush(protocore_conn_pool_span()); // push what is queued; resume on a later loop
             return;
         }
@@ -629,11 +629,11 @@ void protocore_file_serving_file_send_pump(uint8_t *restrict work)
             s->remaining = 0; // read error / short file: stop (response will be short)
             break;
         }
-        ConnPool.slot = slot_id;
-        ConnPool.io.data = chunk;
-        ConnPool.io.len = (proto_u16)n;
+        ConnPoolV.slot = slot_id;
+        ConnPoolV.io.data = chunk;
+        ConnPoolV.io.len = (proto_u16)n;
         ConnPool.send(protocore_conn_pool_span());
-        if (!ConnPool.ok)
+        if (!ConnPoolV.ok)
         {
             // Un-read the bytes that did not go out so the next loop resends them. A backend that
             // cannot rewind would resume at the wrong offset, so the transfer ends there instead.
@@ -647,7 +647,7 @@ void protocore_file_serving_file_send_pump(uint8_t *restrict work)
                 s->active = PROTO_FALSE;
                 s->remaining = 0;
             }
-            ConnPool.slot = slot_id;
+            ConnPoolV.slot = slot_id;
             ConnPool.flush(protocore_conn_pool_span());
             return;
         }
@@ -659,7 +659,7 @@ void protocore_file_serving_file_send_pump(uint8_t *restrict work)
     Fs.io.handle = s->fh;
     Fs.close(protocore_filesystem_span());
     s->active = PROTO_FALSE;
-    ConnPool.slot = slot_id;
+    ConnPoolV.slot = slot_id;
     ConnPool.flush(protocore_conn_pool_span());
     protocore_resp_end(slot_id, s->status, s->total, s->keep, /*pre_flushed=*/PROTO_FALSE);
 }

@@ -10,18 +10,18 @@
 
 #if PROTOCORE_ENABLE_SLEEP_SCHED
 
-static void sleep_next(uint8_t *restrict work)
+void protocore_sleep_sched_next(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_sleep_cfg *cfg = SleepSched.ask.cfg;
+    const protocore_sleep_cfg *cfg = SleepSchedV.ask.cfg;
 
-    SleepSched.ms = 0;
+    SleepSchedV.ms = 0;
     if (!cfg)
     {
         return;
     }
 
-    uint32_t idle = (uint32_t)(SleepSched.ask.now - SleepSched.ask.last_active_ms); // wrap-safe unsigned delta
+    uint32_t idle = (uint32_t)(SleepSchedV.ask.now - SleepSchedV.ask.last_active_ms); // wrap-safe unsigned delta
     if (idle < cfg->idle_ms)
     {
         return; // active recently: stay awake
@@ -30,7 +30,7 @@ static void sleep_next(uint8_t *restrict work)
     uint32_t ceil_ms = cfg->max_ms < cfg->min_ms ? cfg->min_ms : cfg->max_ms;
     if (cfg->ramp_ms == 0)
     {
-        SleepSched.ms = ceil_ms; // no ramp: go straight to the deepest window
+        SleepSchedV.ms = ceil_ms; // no ramp: go straight to the deepest window
         return;
     }
 
@@ -55,9 +55,10 @@ static void sleep_next(uint8_t *restrict work)
     {
         window = cfg->min_ms;
     }
-    SleepSched.ms = window;
+    SleepSchedV.ms = window;
 }
 
-SleepSchedNs SleepSched = {.next = sleep_next};
+/** @brief The operands and the outcome. */
+SleepSchedVars SleepSchedV;
 
 #endif // PROTOCORE_ENABLE_SLEEP_SCHED

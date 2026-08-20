@@ -104,7 +104,7 @@ void protocore_signal_kill(uint8_t *restrict work)
     // A plain forward: no liveness test, no result. Transport owns the slot's lifetime and its idle
     // sweep reaps a stale one regardless, so a check here would answer a question transport has
     // already answered, and the answer could be stale before the caller read it.
-    ConnPool.slot = SignalV.slot;
+    ConnPoolV.slot = SignalV.slot;
     ConnPool.close(protocore_conn_pool_span());
 }
 

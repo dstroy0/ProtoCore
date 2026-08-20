@@ -1014,9 +1014,9 @@ static void snmp_udp_handler(const uint8_t *data, size_t len, const struct proto
     {
         return;
     }
-    UdpListener.peer_args.peer = peer;
-    UdpListener.send_args.data = SNMP_AGENT_CTX(protocore_snmp_agent_span())->tx;
-    UdpListener.send_args.len = SnmpAgent.n;
+    UdpListenerV.peer_args.peer = peer;
+    UdpListenerV.send_args.data = SNMP_AGENT_CTX(protocore_snmp_agent_span())->tx;
+    UdpListenerV.send_args.len = SnmpAgent.n;
     UdpListener.reply(protocore_udp_listener_span());
 }
 #endif // PROTOCORE_HAS_NET_STACK
@@ -1025,11 +1025,11 @@ static void agent_listen(uint8_t *restrict work)
 {
     (void)work;
 #if PROTOCORE_HAS_NET_STACK
-    UdpListener.port = SnmpAgent.port;
-    UdpListener.bind.handler = snmp_udp_handler;
-    UdpListener.bind.handler_ctx = NULL;
+    UdpListenerV.port = SnmpAgent.port;
+    UdpListenerV.bind.handler = snmp_udp_handler;
+    UdpListenerV.bind.handler_ctx = NULL;
     UdpListener.listen(protocore_udp_listener_span());
-    SnmpAgent.ok = UdpListener.ok;
+    SnmpAgent.ok = UdpListenerV.ok;
 #else
     SnmpAgent.ok = PROTO_FALSE; // no transport in this build
 #endif

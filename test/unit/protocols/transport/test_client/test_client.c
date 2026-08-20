@@ -59,206 +59,206 @@ void test_the_dial_resolves_a_literal()
 
 void test_open_connects_and_reports_the_slot()
 {
-    TcpClient.dial.host = HOST;
-    TcpClient.dial.port = 80;
-    TcpClient.dial.timeout_ms = 1000;
+    TcpClientV.dial.host = HOST;
+    TcpClientV.dial.port = 80;
+    TcpClientV.dial.timeout_ms = 1000;
     TcpClient.open(protocore_tcp_client_span());
-    int cid = TcpClient.i32;
+    int cid = TcpClientV.i32;
     TEST_ASSERT_EQUAL_INT(0, cid);
-    TcpClient.cid = cid;
+    TcpClientV.cid = cid;
     TcpClient.connected(protocore_tcp_client_span());
-    TEST_ASSERT_TRUE(TcpClient.ok);
-    TcpClient.cid = cid;
+    TEST_ASSERT_TRUE(TcpClientV.ok);
+    TcpClientV.cid = cid;
     TcpClient.is_closed(protocore_tcp_client_span());
-    TEST_ASSERT_FALSE(TcpClient.ok);
+    TEST_ASSERT_FALSE(TcpClientV.ok);
 
     protocore_pcb *p = dialed(80);
     TEST_ASSERT_NOT_NULL(p);
     TEST_ASSERT_EQUAL_UINT16(80, p->remote_port);
 
-    TcpClient.cid = cid;
+    TcpClientV.cid = cid;
     TcpClient.close(protocore_tcp_client_span());
 }
 
 void test_open_refuses_a_bad_host_and_a_refused_connect()
 {
-    TcpClient.dial.host = NULL;
-    TcpClient.dial.port = 80;
-    TcpClient.dial.timeout_ms = 1000;
+    TcpClientV.dial.host = NULL;
+    TcpClientV.dial.port = 80;
+    TcpClientV.dial.timeout_ms = 1000;
     TcpClient.open(protocore_tcp_client_span());
-    TEST_ASSERT_TRUE(TcpClient.i32 < 0);
+    TEST_ASSERT_TRUE(TcpClientV.i32 < 0);
 
-    TcpClient.dial.host = "no.such.host";
-    TcpClient.dial.port = 80;
-    TcpClient.dial.timeout_ms = 10;
+    TcpClientV.dial.host = "no.such.host";
+    TcpClientV.dial.port = 80;
+    TcpClientV.dial.timeout_ms = 10;
     TcpClient.open(protocore_tcp_client_span());
-    int bad = TcpClient.i32;
+    int bad = TcpClientV.i32;
     TEST_ASSERT_TRUE(bad >= 0);
-    TcpClient.cid = bad;
+    TcpClientV.cid = bad;
     TcpClient.connected(protocore_tcp_client_span());
-    TEST_ASSERT_FALSE(TcpClient.ok);
+    TEST_ASSERT_FALSE(TcpClientV.ok);
     advance_ms(11);
-    TcpClient.cid = bad;
+    TcpClientV.cid = bad;
     TcpClient.is_closed(protocore_tcp_client_span());
-    TEST_ASSERT_TRUE(TcpClient.ok);
-    TcpClient.cid = bad;
+    TEST_ASSERT_TRUE(TcpClientV.ok);
+    TcpClientV.cid = bad;
     TcpClient.close(protocore_tcp_client_span());
 
     mock_connect_fail_once();
-    TcpClient.dial.host = HOST;
-    TcpClient.dial.port = 80;
-    TcpClient.dial.timeout_ms = 100;
+    TcpClientV.dial.host = HOST;
+    TcpClientV.dial.port = 80;
+    TcpClientV.dial.timeout_ms = 100;
     TcpClient.open(protocore_tcp_client_span());
-    int refused = TcpClient.i32;
+    int refused = TcpClientV.i32;
     TEST_ASSERT_TRUE(refused >= 0);
-    TcpClient.cid = refused;
+    TcpClientV.cid = refused;
     TcpClient.connected(protocore_tcp_client_span());
-    TEST_ASSERT_FALSE(TcpClient.ok);
-    TcpClient.cid = refused;
+    TEST_ASSERT_FALSE(TcpClientV.ok);
+    TcpClientV.cid = refused;
     TcpClient.is_closed(protocore_tcp_client_span());
-    TEST_ASSERT_TRUE(TcpClient.ok);
-    TcpClient.cid = refused;
+    TEST_ASSERT_TRUE(TcpClientV.ok);
+    TcpClientV.cid = refused;
     TcpClient.close(protocore_tcp_client_span());
 
-    TcpClient.dial.host = HOST;
-    TcpClient.dial.port = 80;
-    TcpClient.dial.timeout_ms = 1000;
+    TcpClientV.dial.host = HOST;
+    TcpClientV.dial.port = 80;
+    TcpClientV.dial.timeout_ms = 1000;
     TcpClient.open(protocore_tcp_client_span());
-    int cid = TcpClient.i32;
+    int cid = TcpClientV.i32;
     TEST_ASSERT_TRUE(cid >= 0);
-    TcpClient.cid = cid;
+    TcpClientV.cid = cid;
     TcpClient.connected(protocore_tcp_client_span());
-    TEST_ASSERT_TRUE(TcpClient.ok);
-    TcpClient.cid = cid;
+    TEST_ASSERT_TRUE(TcpClientV.ok);
+    TcpClientV.cid = cid;
     TcpClient.close(protocore_tcp_client_span());
 }
 
 void test_send_reaches_the_wire()
 {
-    TcpClient.dial.host = HOST;
-    TcpClient.dial.port = 80;
-    TcpClient.dial.timeout_ms = 1000;
+    TcpClientV.dial.host = HOST;
+    TcpClientV.dial.port = 80;
+    TcpClientV.dial.timeout_ms = 1000;
     TcpClient.open(protocore_tcp_client_span());
-    int cid = TcpClient.i32;
+    int cid = TcpClientV.i32;
     TEST_ASSERT_TRUE(cid >= 0);
 
-    TcpClient.cid = cid;
-    TcpClient.io.data = "GET / HTTP/1.1\r\n";
-    TcpClient.io.len = 16;
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = "GET / HTTP/1.1\r\n";
+    TcpClientV.io.len = 16;
     TcpClient.send(protocore_tcp_client_span());
-    TEST_ASSERT_TRUE(TcpClient.ok);
+    TEST_ASSERT_TRUE(TcpClientV.ok);
     size_t n = 0;
     const uint8_t *sent = protocore_net_host_sent(&n);
     TEST_ASSERT_EQUAL_size_t(16, n);
     TEST_ASSERT_EQUAL_INT(0, memcmp("GET / HTTP/1.1\r\n", sent, 16));
 
-    TcpClient.cid = -1;
-    TcpClient.io.data = "x";
-    TcpClient.io.len = 1;
+    TcpClientV.cid = -1;
+    TcpClientV.io.data = "x";
+    TcpClientV.io.len = 1;
     TcpClient.send(protocore_tcp_client_span());
-    TEST_ASSERT_FALSE(TcpClient.ok);
-    TcpClient.cid = cid;
-    TcpClient.io.data = NULL;
-    TcpClient.io.len = 4;
+    TEST_ASSERT_FALSE(TcpClientV.ok);
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = NULL;
+    TcpClientV.io.len = 4;
     TcpClient.send(protocore_tcp_client_span());
-    TEST_ASSERT_FALSE(TcpClient.ok);
+    TEST_ASSERT_FALSE(TcpClientV.ok);
     protocore_net_host_sent(&n);
     TEST_ASSERT_EQUAL_size_t(16, n);
 
-    TcpClient.cid = cid;
+    TcpClientV.cid = cid;
     TcpClient.close(protocore_tcp_client_span());
 }
 
 void test_received_bytes_buffer_and_drain()
 {
-    TcpClient.dial.host = HOST;
-    TcpClient.dial.port = 80;
-    TcpClient.dial.timeout_ms = 1000;
+    TcpClientV.dial.host = HOST;
+    TcpClientV.dial.port = 80;
+    TcpClientV.dial.timeout_ms = 1000;
     TcpClient.open(protocore_tcp_client_span());
-    int cid = TcpClient.i32;
+    int cid = TcpClientV.i32;
     TEST_ASSERT_TRUE(cid >= 0);
-    TcpClient.cid = cid;
+    TcpClientV.cid = cid;
     TcpClient.available(protocore_tcp_client_span());
-    TEST_ASSERT_EQUAL_size_t(0, TcpClient.n);
+    TEST_ASSERT_EQUAL_size_t(0, TcpClientV.n);
 
     protocore_pcb *p = dialed(80);
     TEST_ASSERT_NOT_NULL(p);
     char body[] = "HTTP/1.1 200 OK";
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, protocore_net_host_deliver(p, body, (uint16_t)(sizeof(body) - 1)));
-    TcpClient.cid = cid;
+    TcpClientV.cid = cid;
     TcpClient.available(protocore_tcp_client_span());
-    TEST_ASSERT_EQUAL_size_t(sizeof(body) - 1, TcpClient.n);
+    TEST_ASSERT_EQUAL_size_t(sizeof(body) - 1, TcpClientV.n);
 
     uint8_t buf[32];
-    TcpClient.cid = cid;
-    TcpClient.io.buf = buf;
-    TcpClient.io.cap = sizeof(buf);
+    TcpClientV.cid = cid;
+    TcpClientV.io.buf = buf;
+    TcpClientV.io.cap = sizeof(buf);
     TcpClient.read(protocore_tcp_client_span());
-    size_t got = TcpClient.n;
+    size_t got = TcpClientV.n;
     TEST_ASSERT_EQUAL_size_t(sizeof(body) - 1, got);
     TEST_ASSERT_EQUAL_INT(0, memcmp(body, buf, got));
-    TcpClient.cid = cid;
+    TcpClientV.cid = cid;
     TcpClient.available(protocore_tcp_client_span());
-    TEST_ASSERT_EQUAL_size_t(0, TcpClient.n);
+    TEST_ASSERT_EQUAL_size_t(0, TcpClientV.n);
 
-    TcpClient.cid = cid;
+    TcpClientV.cid = cid;
     TcpClient.close(protocore_tcp_client_span());
 }
 
 void test_a_peer_fin_closes_the_slot()
 {
-    TcpClient.dial.host = HOST;
-    TcpClient.dial.port = 80;
-    TcpClient.dial.timeout_ms = 1000;
+    TcpClientV.dial.host = HOST;
+    TcpClientV.dial.port = 80;
+    TcpClientV.dial.timeout_ms = 1000;
     TcpClient.open(protocore_tcp_client_span());
-    int cid = TcpClient.i32;
+    int cid = TcpClientV.i32;
     TEST_ASSERT_TRUE(cid >= 0);
-    TcpClient.cid = cid;
+    TcpClientV.cid = cid;
     TcpClient.is_closed(protocore_tcp_client_span());
-    TEST_ASSERT_FALSE(TcpClient.ok);
+    TEST_ASSERT_FALSE(TcpClientV.ok);
 
     protocore_pcb *p = dialed(80);
     TEST_ASSERT_NOT_NULL(p);
     protocore_net_host_close_peer(p);
-    TcpClient.cid = cid;
+    TcpClientV.cid = cid;
     TcpClient.is_closed(protocore_tcp_client_span());
-    TEST_ASSERT_TRUE(TcpClient.ok);
+    TEST_ASSERT_TRUE(TcpClientV.ok);
 
-    TcpClient.cid = cid;
+    TcpClientV.cid = cid;
     TcpClient.close(protocore_tcp_client_span());
 }
 
 void test_guards_reject_ids_outside_the_pool()
 {
-    TcpClient.cid = -1;
+    TcpClientV.cid = -1;
     TcpClient.connected(protocore_tcp_client_span());
-    TEST_ASSERT_FALSE(TcpClient.ok);
-    TcpClient.cid = PROTOCORE_CLIENT_CONNS;
+    TEST_ASSERT_FALSE(TcpClientV.ok);
+    TcpClientV.cid = PROTOCORE_CLIENT_CONNS;
     TcpClient.connected(protocore_tcp_client_span());
-    TEST_ASSERT_FALSE(TcpClient.ok);
-    TcpClient.cid = -1;
+    TEST_ASSERT_FALSE(TcpClientV.ok);
+    TcpClientV.cid = -1;
     TcpClient.is_closed(protocore_tcp_client_span());
-    TEST_ASSERT_TRUE(TcpClient.ok);
-    TcpClient.cid = PROTOCORE_CLIENT_CONNS;
+    TEST_ASSERT_TRUE(TcpClientV.ok);
+    TcpClientV.cid = PROTOCORE_CLIENT_CONNS;
     TcpClient.is_closed(protocore_tcp_client_span());
-    TEST_ASSERT_TRUE(TcpClient.ok);
-    TcpClient.cid = -1;
+    TEST_ASSERT_TRUE(TcpClientV.ok);
+    TcpClientV.cid = -1;
     TcpClient.available(protocore_tcp_client_span());
-    TEST_ASSERT_EQUAL_size_t(0, TcpClient.n);
+    TEST_ASSERT_EQUAL_size_t(0, TcpClientV.n);
     uint8_t buf[8];
-    TcpClient.cid = -1;
-    TcpClient.io.buf = buf;
-    TcpClient.io.cap = sizeof(buf);
+    TcpClientV.cid = -1;
+    TcpClientV.io.buf = buf;
+    TcpClientV.io.cap = sizeof(buf);
     TcpClient.read(protocore_tcp_client_span());
-    TEST_ASSERT_EQUAL_size_t(0, TcpClient.n);
-    TcpClient.cid = 0;
-    TcpClient.io.buf = NULL;
-    TcpClient.io.cap = 0;
+    TEST_ASSERT_EQUAL_size_t(0, TcpClientV.n);
+    TcpClientV.cid = 0;
+    TcpClientV.io.buf = NULL;
+    TcpClientV.io.cap = 0;
     TcpClient.read(protocore_tcp_client_span());
-    TEST_ASSERT_EQUAL_size_t(0, TcpClient.n);
-    TcpClient.cid = -1;
+    TEST_ASSERT_EQUAL_size_t(0, TcpClientV.n);
+    TcpClientV.cid = -1;
     TcpClient.close(protocore_tcp_client_span());
-    TcpClient.cid = PROTOCORE_CLIENT_CONNS;
+    TcpClientV.cid = PROTOCORE_CLIENT_CONNS;
     TcpClient.close(protocore_tcp_client_span());
 }
 
@@ -267,33 +267,33 @@ void test_pool_exhaustion_refuses_a_further_open()
     int open_ids[PROTOCORE_CLIENT_CONNS];
     for (int i = 0; i < PROTOCORE_CLIENT_CONNS; i++)
     {
-        TcpClient.dial.host = HOST;
-        TcpClient.dial.port = (uint16_t)(9000 + i);
-        TcpClient.dial.timeout_ms = 1000;
+        TcpClientV.dial.host = HOST;
+        TcpClientV.dial.port = (uint16_t)(9000 + i);
+        TcpClientV.dial.timeout_ms = 1000;
         TcpClient.open(protocore_tcp_client_span());
-        open_ids[i] = TcpClient.i32;
+        open_ids[i] = TcpClientV.i32;
         TEST_ASSERT_TRUE(open_ids[i] >= 0);
     }
-    TcpClient.dial.host = HOST;
-    TcpClient.dial.port = 9999;
-    TcpClient.dial.timeout_ms = 1000;
+    TcpClientV.dial.host = HOST;
+    TcpClientV.dial.port = 9999;
+    TcpClientV.dial.timeout_ms = 1000;
     TcpClient.open(protocore_tcp_client_span());
-    TEST_ASSERT_TRUE(TcpClient.i32 < 0);
+    TEST_ASSERT_TRUE(TcpClientV.i32 < 0);
 
-    TcpClient.cid = open_ids[0];
+    TcpClientV.cid = open_ids[0];
     TcpClient.close(protocore_tcp_client_span());
-    TcpClient.dial.host = HOST;
-    TcpClient.dial.port = 9999;
-    TcpClient.dial.timeout_ms = 1000;
+    TcpClientV.dial.host = HOST;
+    TcpClientV.dial.port = 9999;
+    TcpClientV.dial.timeout_ms = 1000;
     TcpClient.open(protocore_tcp_client_span());
-    int again = TcpClient.i32;
+    int again = TcpClientV.i32;
     TEST_ASSERT_TRUE(again >= 0);
 
-    TcpClient.cid = again;
+    TcpClientV.cid = again;
     TcpClient.close(protocore_tcp_client_span());
     for (int i = 1; i < PROTOCORE_CLIENT_CONNS; i++)
     {
-        TcpClient.cid = open_ids[i];
+        TcpClientV.cid = open_ids[i];
         TcpClient.close(protocore_tcp_client_span());
     }
 }

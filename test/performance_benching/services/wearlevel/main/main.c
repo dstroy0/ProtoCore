@@ -20,28 +20,28 @@ static uint8_t wearlevel_work[16]; // the borrow an entry takes; Wearlevel never
 /** @brief The least-worn slot of the @p n counts at @p counts. */
 static size_t wear_pick(const uint32_t *counts, size_t n)
 {
-    Wearlevel.args.counts = counts;
-    Wearlevel.args.n = n;
+    WearlevelV.args.counts = counts;
+    WearlevelV.args.n = n;
     Wearlevel.pick(wearlevel_work);
-    return Wearlevel.n_out;
+    return WearlevelV.n_out;
 }
 
 /** @brief Record a write to slot @p idx of the @p n counts at @p counts. */
 static void wear_mark(uint32_t *counts, size_t n, size_t idx)
 {
-    Wearlevel.args.counts_rw = counts;
-    Wearlevel.args.n = n;
-    Wearlevel.args.idx = idx;
+    WearlevelV.args.counts_rw = counts;
+    WearlevelV.args.n = n;
+    WearlevelV.args.idx = idx;
     Wearlevel.mark(wearlevel_work);
 }
 
 /** @brief Max count - min count across the @p n counts at @p counts. */
 static uint32_t wear_spread(const uint32_t *counts, size_t n)
 {
-    Wearlevel.args.counts = counts;
-    Wearlevel.args.n = n;
+    WearlevelV.args.counts = counts;
+    WearlevelV.args.n = n;
     Wearlevel.imbalance(wearlevel_work);
-    return Wearlevel.spread;
+    return WearlevelV.spread;
 }
 
 void dbench_run(void)

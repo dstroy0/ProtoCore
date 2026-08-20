@@ -109,73 +109,73 @@ void test_the_flat_readers_report_what_the_entries_wrote()
 
 void test_listen_set_dscp_override_and_sentinel()
 {
-    TcpListener.idx = 0;
-    TcpListener.bind.port = 8080;
-    TcpListener.bind.proto = PROTO_HTTP;
-    TcpListener.bind.tls = PROTO_FALSE;
+    TcpListenerV.idx = 0;
+    TcpListenerV.bind.port = 8080;
+    TcpListenerV.bind.proto = PROTO_HTTP;
+    TcpListenerV.bind.tls = PROTO_FALSE;
     TcpListener.add(protocore_tcp_listener_span());
-    TEST_ASSERT_EQUAL(1, TcpListener.i32);
+    TEST_ASSERT_EQUAL(1, TcpListenerV.i32);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DSCP_UNSET, listener_pool[0].dscp);
 
     // set_dscp names the port, not the row: it walks the pool for the active listener bound to
     // bind.port. idx is what add and stop take, and this call ignores it.
-    TcpListener.bind.port = 8080;
-    TcpListener.bind.dscp = PROTOCORE_DSCP_EF;
+    TcpListenerV.bind.port = 8080;
+    TcpListenerV.bind.dscp = PROTOCORE_DSCP_EF;
     TcpListener.set_dscp(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
     TEST_ASSERT_EQUAL_UINT8(46, listener_pool[0].dscp);
 
-    TcpListener.bind.dscp = 0x7E;
+    TcpListenerV.bind.dscp = 0x7E;
     TcpListener.set_dscp(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
     TEST_ASSERT_EQUAL_UINT8(62, listener_pool[0].dscp);
 
     // The sentinel is preserved rather than masked: it is not a code point.
-    TcpListener.bind.dscp = PROTOCORE_DSCP_UNSET;
+    TcpListenerV.bind.dscp = PROTOCORE_DSCP_UNSET;
     TcpListener.set_dscp(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DSCP_UNSET, listener_pool[0].dscp);
 
-    TcpListener.bind.port = 9999;
-    TcpListener.bind.dscp = PROTOCORE_DSCP_EF;
+    TcpListenerV.bind.port = 9999;
+    TcpListenerV.bind.dscp = PROTOCORE_DSCP_EF;
     TcpListener.set_dscp(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
-    TcpListener.idx = 0;
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
+    TcpListenerV.idx = 0;
     TcpListener.stop(protocore_tcp_listener_span());
 }
 
 void test_accept_cb_applies_per_listener_dscp_override()
 {
-    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
+    ConnPoolV.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
-    TcpListener.idx = 0;
-    TcpListener.bind.port = 8080;
-    TcpListener.bind.proto = PROTO_HTTP;
-    TcpListener.bind.tls = PROTO_FALSE;
+    TcpListenerV.idx = 0;
+    TcpListenerV.bind.port = 8080;
+    TcpListenerV.bind.proto = PROTO_HTTP;
+    TcpListenerV.bind.tls = PROTO_FALSE;
     TcpListener.add(protocore_tcp_listener_span());
-    TEST_ASSERT_EQUAL(1, TcpListener.i32);
-    TcpListener.bind.dscp = PROTOCORE_DSCP_EF;
+    TEST_ASSERT_EQUAL(1, TcpListenerV.i32);
+    TcpListenerV.bind.dscp = PROTOCORE_DSCP_EF;
     TcpListener.set_dscp(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
 
     protocore_pcb pcb;
     pcb.tos = 0;
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PROTOCORE_NET_OK));
     TEST_ASSERT_EQUAL_UINT8(0xB8, pcb.tos);
-    TcpListener.idx = 0;
+    TcpListenerV.idx = 0;
     TcpListener.stop(protocore_tcp_listener_span());
 }
 
 void test_accept_cb_falls_back_to_server_default_dscp()
 {
-    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
+    ConnPoolV.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
-    TcpListener.idx = 0;
-    TcpListener.bind.port = 8080;
-    TcpListener.bind.proto = PROTO_HTTP;
-    TcpListener.bind.tls = PROTO_FALSE;
+    TcpListenerV.idx = 0;
+    TcpListenerV.bind.port = 8080;
+    TcpListenerV.bind.proto = PROTO_HTTP;
+    TcpListenerV.bind.tls = PROTO_FALSE;
     TcpListener.add(protocore_tcp_listener_span());
-    TEST_ASSERT_EQUAL(1, TcpListener.i32);
+    TEST_ASSERT_EQUAL(1, TcpListenerV.i32);
     DiffServV.dscp = PROTOCORE_DSCP_AF41;
     DiffServ.set_default(g_ds);
 
@@ -183,26 +183,26 @@ void test_accept_cb_falls_back_to_server_default_dscp()
     pcb.tos = 0;
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PROTOCORE_NET_OK));
     TEST_ASSERT_EQUAL_UINT8(0x88, pcb.tos);
-    TcpListener.idx = 0;
+    TcpListenerV.idx = 0;
     TcpListener.stop(protocore_tcp_listener_span());
 }
 
 void test_accept_cb_skips_tos_write_at_best_effort()
 {
-    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
+    ConnPoolV.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
-    TcpListener.idx = 0;
-    TcpListener.bind.port = 8080;
-    TcpListener.bind.proto = PROTO_HTTP;
-    TcpListener.bind.tls = PROTO_FALSE;
+    TcpListenerV.idx = 0;
+    TcpListenerV.bind.port = 8080;
+    TcpListenerV.bind.proto = PROTO_HTTP;
+    TcpListenerV.bind.tls = PROTO_FALSE;
     TcpListener.add(protocore_tcp_listener_span());
-    TEST_ASSERT_EQUAL(1, TcpListener.i32);
+    TEST_ASSERT_EQUAL(1, TcpListenerV.i32);
 
     protocore_pcb pcb;
     pcb.tos = 0x77;
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PROTOCORE_NET_OK));
     TEST_ASSERT_EQUAL_UINT8(0x77, pcb.tos);
-    TcpListener.idx = 0;
+    TcpListenerV.idx = 0;
     TcpListener.stop(protocore_tcp_listener_span());
 }
 
@@ -210,13 +210,13 @@ void test_accept_cb_skips_tos_write_at_best_effort()
 // marks with whatever the server-wide default is at accept rather than a mark fixed at add time.
 void test_dynamic_listener_inherits_default_dscp()
 {
-    TcpListener.idx = 1;
-    TcpListener.bind.port = 2222;
-    TcpListener.bind.proto = PROTO_HTTP;
-    TcpListener.bind.tls = PROTO_FALSE;
+    TcpListenerV.idx = 1;
+    TcpListenerV.bind.port = 2222;
+    TcpListenerV.bind.proto = PROTO_HTTP;
+    TcpListenerV.bind.tls = PROTO_FALSE;
     TcpListener.add_dynamic(protocore_tcp_listener_span());
-    TEST_ASSERT_EQUAL_INT32(1, TcpListener.i32);
+    TEST_ASSERT_EQUAL_INT32(1, TcpListenerV.i32);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DSCP_UNSET, listener_pool[1].dscp);
-    TcpListener.idx = 1;
+    TcpListenerV.idx = 1;
     TcpListener.stop_dynamic(protocore_tcp_listener_span());
 }

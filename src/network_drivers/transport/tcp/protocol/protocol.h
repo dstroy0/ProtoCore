@@ -24,9 +24,9 @@
 #ifndef PROTOCORE_TCP_PROTOCOL_H
 #define PROTOCORE_TCP_PROTOCOL_H
 
-#include "../evt.h"                                       // ConnState, TcpEvt, and the observability hook
+#include "../evt.h"                   // ConnState, TcpEvt, and the observability hook
 #include "config/platform/platform.h" // protocore_pcb, protocore_net_err: the types a call names
-#include "shared/ip/ip.h" // protocore_ip: where a peer address is written
+#include "shared/ip/ip.h"             // protocore_ip: where a peer address is written
 
 #include "protocore_config.h"
 
@@ -151,13 +151,11 @@ typedef struct
     ConnState st;       ///< the state a write installs
     protocore_pcb *pcb; ///< the control block a raw call acts on, or the one pcb_of reports
     const TcpEvt *evt;  ///< the event an enqueue posts
-
-    ConnIoArgs io;     ///< the bytes a send or a receive moves (RFC 9293 sec 3.9.1)
-    ConnLifeArgs life; ///< what a pool lifecycle call reads
+    ConnIoArgs io;      ///< the bytes a send or a receive moves (RFC 9293 sec 3.9.1)
+    ConnLifeArgs life;  ///< what a pool lifecycle call reads
 #if PROTOCORE_ENABLE_OBSERVABILITY
     ConnObsArgs obs; ///< what an observability call records
 #endif
-
     proto_bool ok;
     proto_u16 u16;
     uint32_t u32;
@@ -167,7 +165,18 @@ typedef struct
     protocore_if_kind if_kind;
     ProtoConn proto;
     protocore_ip *out; ///< where a peer address is written
+#if PROTOCORE_ENABLE_OBSERVABILITY
+#endif
+    // The receive ring, and what a slot is. Transport owns the ring: a layer above drains it only
+    // through these, and never indexes the buffer or advances the tail itself.
+} ConnPoolVars;
 
+/** @brief The operands and the outcome. */
+extern ConnPoolVars ConnPoolV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const set_state)(uint8_t *restrict work);
     void (*const alloc_free)(uint8_t *restrict work);
     void (*const timeout_ms)(uint8_t *restrict work);
@@ -190,17 +199,12 @@ typedef struct
     void (*const remote_addr)(uint8_t *restrict work);
     void (*const touch_active)(uint8_t *restrict work);
     void (*const check_timeouts)(uint8_t *restrict work);
-#if PROTOCORE_ENABLE_OBSERVABILITY
     void (*const on_event)(uint8_t *restrict work);
     void (*const counters_get)(uint8_t *restrict work);
     void (*const counters_reset)(uint8_t *restrict work);
     void (*const obs_bump)(uint8_t *restrict work);
     void (*const obs_transition)(uint8_t *restrict work);
     void (*const obs_notice)(uint8_t *restrict work);
-#endif
-
-    // The receive ring, and what a slot is. Transport owns the ring: a layer above drains it only
-    // through these, and never indexes the buffer or advances the tail itself.
     void (*const available)(uint8_t *restrict work);
     void (*const read_byte)(uint8_t *restrict work);
     void (*const peek)(uint8_t *restrict work);
@@ -215,8 +219,99 @@ typedef struct
     void (*const pcb_of)(uint8_t *restrict work);
 } ConnPoolNs;
 
-/** @brief The one symbol this module exports. */
-extern ConnPoolNs ConnPool;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ConnPoolV or a region of the borrow at a fixed offset.
+void protocore_conn_pool_set_state(uint8_t *restrict work);
+void protocore_conn_pool_alloc_free(uint8_t *restrict work);
+void protocore_conn_pool_timeout_ms(uint8_t *restrict work);
+void protocore_conn_pool_send(uint8_t *restrict work);
+void protocore_conn_pool_send_flush(uint8_t *restrict work);
+void protocore_conn_pool_sndbuf(uint8_t *restrict work);
+void protocore_conn_pool_flush(uint8_t *restrict work);
+void protocore_conn_pool_ack_consumed(uint8_t *restrict work);
+void protocore_conn_pool_raw_send(uint8_t *restrict work);
+void protocore_conn_pool_close(uint8_t *restrict work);
+void protocore_conn_pool_abort_slot(uint8_t *restrict work);
+void protocore_conn_pool_closing_finalize(uint8_t *restrict work);
+void protocore_conn_pool_closing_check(uint8_t *restrict work);
+void protocore_conn_pool_begin_close(uint8_t *restrict work);
+void protocore_conn_pool_enqueue(uint8_t *restrict work);
+void protocore_conn_pool_init(uint8_t *restrict work);
+void protocore_conn_pool_stop(uint8_t *restrict work);
+void protocore_conn_pool_active_count(uint8_t *restrict work);
+void protocore_conn_pool_remote_ip(uint8_t *restrict work);
+void protocore_conn_pool_remote_addr(uint8_t *restrict work);
+void protocore_conn_pool_touch_active(uint8_t *restrict work);
+void protocore_conn_pool_check_timeouts(uint8_t *restrict work);
+#if PROTOCORE_ENABLE_OBSERVABILITY
+void protocore_conn_pool_on_event(uint8_t *restrict work);
+void protocore_conn_pool_counters_get(uint8_t *restrict work);
+void protocore_conn_pool_counters_reset(uint8_t *restrict work);
+void protocore_conn_pool_obs_bump(uint8_t *restrict work);
+void protocore_conn_pool_obs_transition(uint8_t *restrict work);
+void protocore_conn_pool_obs_notice(uint8_t *restrict work);
+#endif
+void protocore_conn_pool_available(uint8_t *restrict work);
+void protocore_conn_pool_read_byte(uint8_t *restrict work);
+void protocore_conn_pool_peek(uint8_t *restrict work);
+void protocore_conn_pool_consume(uint8_t *restrict work);
+void protocore_conn_pool_read(uint8_t *restrict work);
+void protocore_conn_pool_active(uint8_t *restrict work);
+void protocore_conn_pool_iface(uint8_t *restrict work);
+void protocore_conn_pool_listener_id(uint8_t *restrict work);
+void protocore_conn_pool_tls(uint8_t *restrict work);
+void protocore_conn_pool_owner(uint8_t *restrict work);
+void protocore_conn_pool_proto_of(uint8_t *restrict work);
+void protocore_conn_pool_pcb_of(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `ConnPool.set_state(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ConnPoolNs ConnPool __attribute__((unused)) = {
+    .set_state = protocore_conn_pool_set_state,
+    .alloc_free = protocore_conn_pool_alloc_free,
+    .timeout_ms = protocore_conn_pool_timeout_ms,
+    .send = protocore_conn_pool_send,
+    .send_flush = protocore_conn_pool_send_flush,
+    .sndbuf = protocore_conn_pool_sndbuf,
+    .flush = protocore_conn_pool_flush,
+    .ack_consumed = protocore_conn_pool_ack_consumed,
+    .raw_send = protocore_conn_pool_raw_send,
+    .close = protocore_conn_pool_close,
+    .abort_slot = protocore_conn_pool_abort_slot,
+    .closing_finalize = protocore_conn_pool_closing_finalize,
+    .closing_check = protocore_conn_pool_closing_check,
+    .begin_close = protocore_conn_pool_begin_close,
+    .enqueue = protocore_conn_pool_enqueue,
+    .init = protocore_conn_pool_init,
+    .stop = protocore_conn_pool_stop,
+    .active_count = protocore_conn_pool_active_count,
+    .remote_ip = protocore_conn_pool_remote_ip,
+    .remote_addr = protocore_conn_pool_remote_addr,
+    .touch_active = protocore_conn_pool_touch_active,
+    .check_timeouts = protocore_conn_pool_check_timeouts,
+#if PROTOCORE_ENABLE_OBSERVABILITY
+    .on_event = protocore_conn_pool_on_event,
+    .counters_get = protocore_conn_pool_counters_get,
+    .counters_reset = protocore_conn_pool_counters_reset,
+    .obs_bump = protocore_conn_pool_obs_bump,
+    .obs_transition = protocore_conn_pool_obs_transition,
+    .obs_notice = protocore_conn_pool_obs_notice,
+#endif
+    .available = protocore_conn_pool_available,
+    .read_byte = protocore_conn_pool_read_byte,
+    .peek = protocore_conn_pool_peek,
+    .consume = protocore_conn_pool_consume,
+    .read = protocore_conn_pool_read,
+    .active = protocore_conn_pool_active,
+    .iface = protocore_conn_pool_iface,
+    .listener_id = protocore_conn_pool_listener_id,
+    .tls = protocore_conn_pool_tls,
+    .owner = protocore_conn_pool_owner,
+    .proto_of = protocore_conn_pool_proto_of,
+    .pcb_of = protocore_conn_pool_pcb_of,
+};
 
 /**
  * @brief The PROTOCORE_CONN_POOL_BORROW bytes this module's state lives in.

@@ -197,9 +197,9 @@ static inline void dispatch_event(const TcpEvt *evt)
 
     // HttpRoute to the slot's protocol handler. PROTO_NONE and any unregistered
     // protocol have no handler, so the event is dropped.
-    ConnPool.slot = evt->slot_id;
+    ConnPoolV.slot = evt->slot_id;
     ConnPool.proto_of(protocore_conn_pool_span());
-    Protocols.proto = ConnPool.proto;
+    Protocols.proto = ConnPoolV.proto;
     proto_get(protocore_session_span());
     const ProtoHandler *h = Protocols.handler;
     if (!h)
@@ -261,8 +261,8 @@ void protocore_session_tick(uint8_t *restrict work)
      * http_reset() call for that event is then a clean no-op. Each worker
      * sweeps only the slots it owns.
      */
-    ConnPool.life.worker_id = SessionV.worker_id;
-    ConnPool.life.conn_timeout_ms = SessionV.conn_timeout_ms;
+    ConnPoolV.life.worker_id = SessionV.worker_id;
+    ConnPoolV.life.conn_timeout_ms = SessionV.conn_timeout_ms;
     ConnPool.check_timeouts(protocore_conn_pool_span());
 
 #if PROTOCORE_NEED_UDP
@@ -277,14 +277,14 @@ void protocore_session_tick(uint8_t *restrict work)
 
 #if PROTOCORE_WORKER_COUNT > 1
     // Drain only this worker's queue: it is the sole consumer of its slots.
-    TcpListener.q.worker_id = SessionV.worker_id;
+    TcpListenerV.q.worker_id = SessionV.worker_id;
     TcpListener.worker_queue(protocore_tcp_listener_span());
-    if (!TcpListener.queue)
+    if (!TcpListenerV.queue)
     {
         return;
     }
     TcpEvt evt;
-    while (protocore_platform_queue_recv(TcpListener.queue, &evt, 0) == PROTOCORE_PLATFORM_OK)
+    while (protocore_platform_queue_recv(TcpListenerV.queue, &evt, 0) == PROTOCORE_PLATFORM_OK)
     {
         dispatch_event(&evt);
     }
@@ -292,15 +292,15 @@ void protocore_session_tick(uint8_t *restrict work)
     // Single worker owns all slots; drain every listener queue.
     for (uint8_t li = 0; li < MAX_LISTENERS; li++)
     {
-        TcpListener.idx = li;
+        TcpListenerV.idx = li;
         TcpListener.listener_queue(protocore_tcp_listener_span());
-        if (!TcpListener.queue)
+        if (!TcpListenerV.queue)
         {
             continue;
         }
 
         TcpEvt evt;
-        while (protocore_platform_queue_recv(TcpListener.queue, &evt, 0) == PROTOCORE_PLATFORM_OK)
+        while (protocore_platform_queue_recv(TcpListenerV.queue, &evt, 0) == PROTOCORE_PLATFORM_OK)
         {
             dispatch_event(&evt);
         }

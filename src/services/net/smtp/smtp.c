@@ -608,11 +608,11 @@ static int plain_send(void *ctx, const uint8_t *data, size_t len)
         {
             chunk = 0xFFFF;
         }
-        TcpClient.cid = chan->cid;
-        TcpClient.io.data = data + sent;
-        TcpClient.io.len = chunk;
+        TcpClientV.cid = chan->cid;
+        TcpClientV.io.data = data + sent;
+        TcpClientV.io.len = chunk;
         TcpClient.send(protocore_tcp_client_span());
-        if (!TcpClient.ok)
+        if (!TcpClientV.ok)
         {
             return -1;
         }
@@ -629,21 +629,21 @@ static int plain_recv(void *ctx, uint8_t *buf, size_t cap)
     chan->deadline = Clock.ms + PROTOCORE_SMTP_TIMEOUT_MS;
     while ((int32_t)(chan->deadline - Clock.ms) > 0)
     {
-        TcpClient.cid = chan->cid;
-        TcpClient.io.buf = buf;
-        TcpClient.io.cap = cap;
+        TcpClientV.cid = chan->cid;
+        TcpClientV.io.buf = buf;
+        TcpClientV.io.cap = cap;
         TcpClient.read(protocore_tcp_client_span());
-        if (TcpClient.n > 0)
+        if (TcpClientV.n > 0)
         {
-            return (int)TcpClient.n;
+            return (int)TcpClientV.n;
         }
-        TcpClient.cid = chan->cid;
+        TcpClientV.cid = chan->cid;
         TcpClient.is_closed(protocore_tcp_client_span());
-        if (TcpClient.ok)
+        if (TcpClientV.ok)
         {
-            TcpClient.cid = chan->cid;
+            TcpClientV.cid = chan->cid;
             TcpClient.available(protocore_tcp_client_span());
-            if (TcpClient.n == 0)
+            if (TcpClientV.n == 0)
             {
                 return -1; // closed, and nothing left buffered to drain
             }
@@ -659,26 +659,26 @@ static int plain_recv(void *ctx, uint8_t *buf, size_t cap)
 // not ours, so the channel is read from the one owned storage.
 static int ciphertext_send(void *ctx, const unsigned char *buf, size_t len)
 {
-    TcpClient.cid = s_store.chan.cid;
-    TcpClient.io.data = buf;
-    TcpClient.io.len = len;
+    TcpClientV.cid = s_store.chan.cid;
+    TcpClientV.io.data = buf;
+    TcpClientV.io.len = len;
     TcpClient.send(protocore_tcp_client_span());
-    return TcpClient.ok ? (int)len : PROTOCORE_PLATFORM_TLS_WANT_WRITE;
+    return TcpClientV.ok ? (int)len : PROTOCORE_PLATFORM_TLS_WANT_WRITE;
 }
 
 static int ciphertext_recv(void *ctx, unsigned char *buf, size_t len)
 {
-    TcpClient.cid = s_store.chan.cid;
-    TcpClient.io.buf = buf;
-    TcpClient.io.cap = len;
+    TcpClientV.cid = s_store.chan.cid;
+    TcpClientV.io.buf = buf;
+    TcpClientV.io.cap = len;
     TcpClient.read(protocore_tcp_client_span());
-    if (TcpClient.n > 0)
+    if (TcpClientV.n > 0)
     {
-        return (int)TcpClient.n;
+        return (int)TcpClientV.n;
     }
-    TcpClient.cid = s_store.chan.cid;
+    TcpClientV.cid = s_store.chan.cid;
     TcpClient.is_closed(protocore_tcp_client_span());
-    return TcpClient.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
+    return TcpClientV.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
 }
 
 // Application write and read over the established session.
@@ -780,16 +780,16 @@ static void send_message(uint8_t *restrict work)
     }
 
     SmtpChannel *chan = &SMTP_CTX(work)->chan;
-    TcpClient.dial.host = Smtp.session.host;
-    TcpClient.dial.port = Smtp.session.port;
-    TcpClient.dial.timeout_ms = PROTOCORE_SMTP_TIMEOUT_MS;
+    TcpClientV.dial.host = Smtp.session.host;
+    TcpClientV.dial.port = Smtp.session.port;
+    TcpClientV.dial.timeout_ms = PROTOCORE_SMTP_TIMEOUT_MS;
     TcpClient.open(protocore_tcp_client_span());
-    if (TcpClient.i32 < 0)
+    if (TcpClientV.i32 < 0)
     {
         finish(work, SMTP_ERR_CONNECT);
         return;
     }
-    chan->cid = TcpClient.i32;
+    chan->cid = TcpClientV.i32;
     chan->host = Smtp.session.host;
     chan->tls_active = PROTO_FALSE;
     chan->deadline = Clock.ms + PROTOCORE_SMTP_TIMEOUT_MS;
@@ -798,17 +798,17 @@ static void send_message(uint8_t *restrict work)
     // says so, so the open is stepped here until it lands, closes, or runs out of budget.
     for (;;)
     {
-        TcpClient.cid = chan->cid;
+        TcpClientV.cid = chan->cid;
         TcpClient.connected(protocore_tcp_client_span());
-        if (TcpClient.ok)
+        if (TcpClientV.ok)
         {
             break;
         }
-        TcpClient.cid = chan->cid;
+        TcpClientV.cid = chan->cid;
         TcpClient.is_closed(protocore_tcp_client_span());
-        if (TcpClient.ok || (int32_t)(chan->deadline - Clock.ms) <= 0)
+        if (TcpClientV.ok || (int32_t)(chan->deadline - Clock.ms) <= 0)
         {
-            TcpClient.cid = chan->cid;
+            TcpClientV.cid = chan->cid;
             TcpClient.close(protocore_tcp_client_span());
             finish(work, SMTP_ERR_CONNECT);
             return;
@@ -827,7 +827,7 @@ static void send_message(uint8_t *restrict work)
             !tls_handshake(work))
         {
             protocore_tls_client_session_end();
-            TcpClient.cid = chan->cid;
+            TcpClientV.cid = chan->cid;
             TcpClient.close(protocore_tcp_client_span());
             finish(work, SMTP_ERR_TLS);
             return;
@@ -839,7 +839,7 @@ static void send_message(uint8_t *restrict work)
         run_session(work);
         protocore_tls_client_session_end();
 #else
-        TcpClient.cid = chan->cid;
+        TcpClientV.cid = chan->cid;
         TcpClient.close(protocore_tcp_client_span());
         finish(work, SMTP_ERR_TLS); // implicit TLS asked for in a build without TLS
         return;
@@ -859,7 +859,7 @@ static void send_message(uint8_t *restrict work)
 #endif
     }
 
-    TcpClient.cid = chan->cid;
+    TcpClientV.cid = chan->cid;
     TcpClient.close(protocore_tcp_client_span());
     chan->cid = -1;
 }

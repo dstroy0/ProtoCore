@@ -39,7 +39,7 @@ void setUp(void)
 
 void tearDown(void)
 {
-    UdpListener.port = PROTOCORE_NTP_CLIENT_PORT;
+    UdpListenerV.port = PROTOCORE_NTP_CLIENT_PORT;
     UdpListener.close(protocore_udp_listener_span());
 }
 

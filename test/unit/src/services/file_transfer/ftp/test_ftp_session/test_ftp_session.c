@@ -41,7 +41,7 @@ void setUp(void)
     }
     for (int i = 0; i < PROTOCORE_CLIENT_CONNS; i++)
     {
-        TcpClient.cid = i;
+        TcpClientV.cid = i;
         TcpClient.close(protocore_tcp_client_span());
     }
     uint8_t *work = protocore_ftp_session_span();

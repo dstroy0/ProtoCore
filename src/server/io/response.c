@@ -189,9 +189,9 @@ static void tmpl_take_placeholder(uint8_t slot, const char **p, TemplateVar reso
         *total += 2;
         if (emit)
         {
-            ConnPool.slot = slot;
-            ConnPool.io.data = "{{";
-            ConnPool.io.len = 2;
+            ConnPoolV.slot = slot;
+            ConnPoolV.io.data = "{{";
+            ConnPoolV.io.len = 2;
             ConnPool.send(protocore_conn_pool_span());
         }
         *p = at + 2;
@@ -211,9 +211,9 @@ static void tmpl_take_placeholder(uint8_t slot, const char **p, TemplateVar reso
     *total += vlen;
     if (emit && vlen)
     {
-        ConnPool.slot = slot;
-        ConnPool.io.data = val;
-        ConnPool.io.len = (proto_u16)vlen;
+        ConnPoolV.slot = slot;
+        ConnPoolV.io.data = val;
+        ConnPoolV.io.len = (proto_u16)vlen;
         ConnPool.send(protocore_conn_pool_span());
     }
     *p = end + 2;
@@ -244,9 +244,9 @@ static size_t tmpl_walk(uint8_t slot, const char *tmpl, TemplateVar resolver, pr
         // always >= 1. (The vlen test in tmpl_take_placeholder, which CAN be 0, is exercised.)
         if (emit && rlen)
         {
-            ConnPool.slot = slot;
-            ConnPool.io.data = run;
-            ConnPool.io.len = (proto_u16)rlen;
+            ConnPoolV.slot = slot;
+            ConnPoolV.io.data = run;
+            ConnPoolV.io.len = (proto_u16)rlen;
             ConnPool.send(protocore_conn_pool_span());
         }
     }
@@ -259,9 +259,9 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
     {
         return;
     }
-    ConnPool.slot = slot_id;
+    ConnPoolV.slot = slot_id;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok)
+    if (!ConnPoolV.ok)
     {
         HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
@@ -292,9 +292,9 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
     Http.req_is_head(protocore_http_span());
     proto_bool head = HttpV.ok;
 
-    ConnPool.slot = slot_id;
-    ConnPool.io.data = header;
-    ConnPool.io.len = (proto_u16)hlen;
+    ConnPoolV.slot = slot_id;
+    ConnPoolV.io.data = header;
+    ConnPoolV.io.len = (proto_u16)hlen;
     ConnPool.send(protocore_conn_pool_span());
     // Pass 2: stream the rendered body (HEAD carries headers only).
     if (!head && body_len > 0)
@@ -323,9 +323,9 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     {
         return;
     }
-    ConnPool.slot = slot_id;
+    ConnPoolV.slot = slot_id;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok)
+    if (!ConnPoolV.ok)
     {
         HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
@@ -362,9 +362,9 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     int hlen = (int)Sb.finish(&hb2);
     hlen = proto_append_resp_trailer(header, RESP_HDR_BUF_SIZE, hlen, slot_id, cl);
 
-    ConnPool.slot = slot_id;
-    ConnPool.io.data = header;
-    ConnPool.io.len = (proto_u16)hlen;
+    ConnPoolV.slot = slot_id;
+    ConnPoolV.io.data = header;
+    ConnPoolV.io.len = (proto_u16)hlen;
     ConnPool.send(protocore_conn_pool_span());
 
     // HEAD carries the headers but no body or terminator.
@@ -397,9 +397,9 @@ void chunk_send_pump(uint8_t slot_id)
         return;
     }
 
-    ConnPool.slot = slot_id;
+    ConnPoolV.slot = slot_id;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok)
+    if (!ConnPoolV.ok)
     {
         s->active = PROTO_FALSE; // connection gone mid-stream
         return;
@@ -407,7 +407,7 @@ void chunk_send_pump(uint8_t slot_id)
 
     // A body still being paged out is active, not idle: keep the CONN_TIMEOUT_MS idle sweep off
     // it so a transient send stall on a large stream cannot reap the slot mid-transfer.
-    ConnPool.slot = slot_id;
+    ConnPoolV.slot = slot_id;
     ConnPool.touch_active(protocore_conn_pool_span());
 
     // Frame each chunk in ONE buffer so it goes out in a single tcpip_thread round-trip (was three -
@@ -420,12 +420,12 @@ void chunk_send_pump(uint8_t slot_id)
     uint8_t framed[CHUNK_HDR_RESERVE + CHUNK_BUF_SIZE + 2];
     for (;;)
     {
-        ConnPool.slot = slot_id;
+        ConnPoolV.slot = slot_id;
         ConnPool.sndbuf(protocore_conn_pool_span());
-        proto_u16 avail = ConnPool.u16;
+        proto_u16 avail = ConnPoolV.u16;
         if (avail <= FRAME)
         {
-            ConnPool.slot = slot_id;
+            ConnPoolV.slot = slot_id;
             ConnPool.flush(protocore_conn_pool_span()); // no room for a useful chunk; resume next loop
             return;
         }
@@ -441,12 +441,12 @@ void chunk_send_pump(uint8_t slot_id)
         {
             if (!s->raw)
             {
-                ConnPool.slot = slot_id;
-                ConnPool.io.data = "0\r\n\r\n";
-                ConnPool.io.len = 5;
+                ConnPoolV.slot = slot_id;
+                ConnPoolV.io.data = "0\r\n\r\n";
+                ConnPoolV.io.len = 5;
                 ConnPool.send(protocore_conn_pool_span()); // terminating chunk (1.1 only)
             }
-            ConnPool.slot = slot_id;
+            ConnPoolV.slot = slot_id;
             ConnPool.flush(protocore_conn_pool_span());
             s->active = PROTO_FALSE;
             protocore_resp_end(slot_id, s->status, s->total, s->keep,
@@ -460,9 +460,9 @@ void chunk_send_pump(uint8_t slot_id)
 
         if (s->raw)
         {
-            ConnPool.slot = slot_id;
-            ConnPool.io.data = body;
-            ConnPool.io.len = (proto_u16)n;
+            ConnPoolV.slot = slot_id;
+            ConnPoolV.io.data = body;
+            ConnPoolV.io.len = (proto_u16)n;
             ConnPool.send(protocore_conn_pool_span()); // close-delimited: no chunk framing
         }
         else
@@ -483,9 +483,9 @@ void chunk_send_pump(uint8_t slot_id)
             start[nd + 1] = '\n';
             body[n] = '\r';
             body[n + 1] = '\n';
-            ConnPool.slot = slot_id;
-            ConnPool.io.data = start;
-            ConnPool.io.len = (proto_u16)(sn + n + 2);
+            ConnPoolV.slot = slot_id;
+            ConnPoolV.io.data = start;
+            ConnPoolV.io.len = (proto_u16)(sn + n + 2);
             ConnPool.send(protocore_conn_pool_span());
         }
         s->total += (int)n;
@@ -704,7 +704,7 @@ static const char *stats_var(const char *name)
 void stats(uint8_t slot_id)
 {
     ConnPool.active_count(protocore_conn_pool_span());
-    int active = ConnPool.i32;
+    int active = ConnPoolV.i32;
 
     unsigned long up = Clock.ms;
 #if PROTOCORE_HAS_VENDOR_HEAP_INFO
@@ -811,7 +811,7 @@ static const char *metrics_var(const char *name)
 void metrics(uint8_t slot_id)
 {
     ConnPool.active_count(protocore_conn_pool_span());
-    int active = ConnPool.i32;
+    int active = ConnPoolV.i32;
 
     unsigned long up = Clock.ms;
 #if PROTOCORE_HAS_VENDOR_HEAP_INFO
@@ -861,12 +861,12 @@ void protocore_resp_end(uint8_t slot_id, int code, int body_len, proto_bool keep
 {
     if (!pre_flushed)
     {
-        ConnPool.slot = slot_id;
+        ConnPoolV.slot = slot_id;
         ConnPool.flush(protocore_conn_pool_span()); // a pre_flushed caller already did tcp_output in its final send
     }
     if (!keep)
     {
-        ConnPool.slot = slot_id;
+        ConnPoolV.slot = slot_id;
         ConnPool.begin_close(protocore_conn_pool_span()); // ACTIVE -> CONN_CLOSING; finalizes on ACK
     }
     note_response(slot_id, code, body_len);
@@ -1031,9 +1031,9 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
         // block that filled the buffer). Truncating them would emit a header block with no
         // terminating CRLF and desync the connection, so a fixed reply that always fits goes out
         // instead and the connection closes.
-        ConnPool.slot = slot_id;
-        ConnPool.io.data = PROTOCORE_RESP_HDR_OVERFLOW;
-        ConnPool.io.len = (proto_u16)PROTOCORE_RESP_HDR_OVERFLOW_LEN;
+        ConnPoolV.slot = slot_id;
+        ConnPoolV.io.data = PROTOCORE_RESP_HDR_OVERFLOW;
+        ConnPoolV.io.len = (proto_u16)PROTOCORE_RESP_HDR_OVERFLOW_LEN;
         ConnPool.send_flush(protocore_conn_pool_span());
         protocore_resp_end(slot_id, 500, 0, PROTO_FALSE, /*pre_flushed=*/PROTO_FALSE);
         return;
@@ -1054,27 +1054,27 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
     if (!head && payload_len > 0 && (size_t)hlen + (size_t)payload_len <= sizeof(header))
     {
         raw.read(header + hlen, payload, (size_t)payload_len);
-        ConnPool.slot = slot_id;
-        ConnPool.io.data = header;
-        ConnPool.io.len = (proto_u16)(hlen + payload_len);
+        ConnPoolV.slot = slot_id;
+        ConnPoolV.io.data = header;
+        ConnPoolV.io.len = (proto_u16)(hlen + payload_len);
         ConnPool.send_flush(protocore_conn_pool_span());
     }
     else if (!head && payload_len > 0)
     {
-        ConnPool.slot = slot_id;
-        ConnPool.io.data = header;
-        ConnPool.io.len = (proto_u16)hlen;
+        ConnPoolV.slot = slot_id;
+        ConnPoolV.io.data = header;
+        ConnPoolV.io.len = (proto_u16)hlen;
         ConnPool.send(protocore_conn_pool_span());
-        ConnPool.slot = slot_id;
-        ConnPool.io.data = payload;
-        ConnPool.io.len = (proto_u16)payload_len;
+        ConnPoolV.slot = slot_id;
+        ConnPoolV.io.data = payload;
+        ConnPoolV.io.len = (proto_u16)payload_len;
         ConnPool.send_flush(protocore_conn_pool_span());
     }
     else
     {
-        ConnPool.slot = slot_id;
-        ConnPool.io.data = header;
-        ConnPool.io.len = (proto_u16)hlen;
+        ConnPoolV.slot = slot_id;
+        ConnPoolV.io.data = header;
+        ConnPoolV.io.len = (proto_u16)hlen;
         ConnPool.send_flush(protocore_conn_pool_span());
     }
 
@@ -1125,9 +1125,9 @@ void send_empty(uint8_t slot_id, int code)
     int hlen = (int)Sb.finish(&sb_header3);
     hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
 
-    ConnPool.slot = slot_id;
-    ConnPool.io.data = header;
-    ConnPool.io.len = (proto_u16)hlen;
+    ConnPoolV.slot = slot_id;
+    ConnPoolV.io.data = header;
+    ConnPoolV.io.len = (proto_u16)hlen;
     ConnPool.send_flush(protocore_conn_pool_span());
 
     protocore_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_TRUE);
@@ -1176,9 +1176,9 @@ void redirect(uint8_t slot_id, int code, const char *location)
     int hlen = (int)Sb.finish(&sb_header4);
     hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
 
-    ConnPool.slot = slot_id;
-    ConnPool.io.data = header;
-    ConnPool.io.len = (proto_u16)hlen;
+    ConnPoolV.slot = slot_id;
+    ConnPoolV.io.data = header;
+    ConnPoolV.io.len = (proto_u16)hlen;
     ConnPool.send_flush(protocore_conn_pool_span());
 
     protocore_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_TRUE);
