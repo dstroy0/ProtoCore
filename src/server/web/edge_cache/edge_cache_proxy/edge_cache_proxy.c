@@ -1851,8 +1851,8 @@ void protocore_edge_proxy_mesh_serve(uint8_t *restrict work)
 {
     if (!EDGE_CACHE_PROXY_CTX(work)->mesh_registered)
     {
-        SessionV.proto->proto = PROTO_MESH;
-        SessionV.proto->h = &s_mesh_handler;
+        ProtocolsV.proto = PROTO_MESH;
+        ProtocolsV.h = &s_mesh_handler;
         SessionV.proto->add(protocore_session_span());
         EDGE_CACHE_PROXY_CTX(work)->mesh_registered = PROTO_TRUE;
     }

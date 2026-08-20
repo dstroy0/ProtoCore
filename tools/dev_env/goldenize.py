@@ -2704,17 +2704,30 @@ def split_handle(hsrc):
     A const table cannot carry a writable member, so the two have to become two objects. Returns
     (ns, obj, data_lines, entry_names), or None when the header is not on the extern-table shape.
     """
-    m = HANDLE_EXTERN.search(hsrc)
+    # Classify on the COMMENT-STRIPPED text. Both patterns end at the semicolon and then demand
+    # end of line, and datalink.h writes
+    # `void (*const init)(uint8_t *restrict work); ///< link-layer bring-up (RFC 1122 sec 2)`.
+    # The trailing doc comment made that line read as DATA, the struct came out with no entries, and
+    # the module was dropped from the run - with no skip line, because a header that is "not on the
+    # extern-table shape" is not an error. Six modules sat unconverted behind a `///<`.
+    #
+    # The mask preserves length, so offsets into it index the raw text, and the data lines are
+    # sliced from the RAW header: the comments belong in the Vars struct they document.
+    mask = code_mask(hsrc)
+    masked = "".join(ch if (mask[i] or ch == "\n") else " " for i, ch in enumerate(hsrc))
+    m = HANDLE_EXTERN.search(masked)
     if not m:
         return None
     ns, obj = m.group("ns"), m.group("obj")
-    span = ns_struct_span(hsrc, ns)
+    span = ns_struct_span(masked, ns)
     if not span:
         return None
     _, bstart, bend, _ = span
     data, entries = [], []
-    for line in hsrc[bstart:bend].splitlines():
+    raw_lines = hsrc[bstart:bend].splitlines()
+    for i, line in enumerate(masked[bstart:bend].splitlines()):
         e = HANDLE_FN.match(line)
+        line = raw_lines[i]
         if e:
             entries.append(e.group("name"))
         elif line.strip():
@@ -3326,9 +3339,6 @@ def main():
                 print("... stopping at --batch=%d; resume with --skip=%d" % (batch, start + seen))
                 break
             hp = os.path.join(R, rel.replace("/", os.sep))
-            cp = hp[:-2] + ".c"
-            if not os.path.exists(cp):
-                continue
             hsrc = io.open(hp, encoding="utf-8").read()
             split = split_handle(hsrc)
             if not split:
@@ -3345,11 +3355,16 @@ def main():
             # TlsConnection and handshake.c defines it, so operating on tls.c alone left the old
             # non-const definition standing against a header that now says static const.
             tabledef = re.compile(r"^[ \t]*%s[ \t]+%s[ \t]*=[ \t]*\{" % (re.escape(ns), re.escape(obj)), re.M)
-            if not tabledef.search(io.open(cp, encoding="utf-8").read()):
-                for p in tree:
-                    if p.endswith(".c") and tabledef.search(cache.get(p, "")):
-                        cp = p
-                        break
+            cp = hp[:-2] + ".c"
+            # A module need not have a sibling .c AT ALL. proto_handler.h publishes Protocols and
+            # session.c defines it - there is no proto_handler.c - and the existence check used to
+            # run before this search, so the module was dropped before the thing that knows where
+            # its table lives ever got to look. If no file defines the table, there is nothing to
+            # convert and the module is passed over.
+            if not (os.path.exists(cp) and tabledef.search(io.open(cp, encoding="utf-8").read())):
+                cp = next((p for p in tree if p.endswith(".c") and tabledef.search(cache.get(p, ""))), None)
+                if not cp:
+                    continue
             csrc = io.open(cp, encoding="utf-8").read()
             # `protocore_<mod>_<entry>` is not automatically free. net_addr already publishes
             # protocore_net_addr_to_ip(const protocore_net_ip *, protocore_ip *) as an ordinary

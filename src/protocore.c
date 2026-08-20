@@ -701,9 +701,9 @@ void service_once(int worker_id)
         // seam, so there is no per-protocol branch here. HTTP reaches it via http_protocore_set_poll()
         // -> http_poll_slot(); the singleton pollers (SSH etc.) gate on CONN_ACTIVE
         // inside their own on_poll.
-        SessionV.proto->proto = conn_pool[i].proto;
+        ProtocolsV.proto = conn_pool[i].proto;
         SessionV.proto->get(protocore_session_span());
-        const ProtoHandler *ph = SessionV.proto->handler;
+        const ProtoHandler *ph = ProtocolsV.handler;
         if (ph && ph->on_poll)
         {
             ph->on_poll(i);

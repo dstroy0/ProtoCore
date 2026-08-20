@@ -30,8 +30,8 @@ static inline void register_if(ProtoConn proto, const ProtoHandler *h)
 {
     if (h != NULL)
     {
-        Protocols.proto = proto;
-        Protocols.h = h;
+        ProtocolsV.proto = proto;
+        ProtocolsV.h = h;
         Protocols.add(protocore_session_span());
     }
 }

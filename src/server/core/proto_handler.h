@@ -62,16 +62,35 @@ typedef struct
 {
     ProtoConn proto;
     const ProtoHandler *h;
-
     const ProtoHandler *handler;
+} ProtocolsVars;
 
+/** @brief The operands and the outcome. */
+extern ProtocolsVars ProtocolsV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const register_builtins)(uint8_t *restrict work);
     void (*const add)(uint8_t *restrict work);
     void (*const get)(uint8_t *restrict work);
 } ProtoRegistryNs;
 
-/** @brief The one symbol this module exports. ProtoHandler is the per-protocol record above. */
-extern ProtoRegistryNs Protocols;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ProtocolsV or a region of the borrow at a fixed offset.
+void protocore_protocols_register_builtins(uint8_t *restrict work);
+void protocore_protocols_add(uint8_t *restrict work);
+void protocore_protocols_get(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Protocols.register_builtins(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ProtoRegistryNs Protocols __attribute__((unused)) = {
+    .register_builtins = protocore_protocols_register_builtins,
+    .add = protocore_protocols_add,
+    .get = protocore_protocols_get,
+};
 
 PROTOCORE_END_DECLS
 

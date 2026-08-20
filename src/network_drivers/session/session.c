@@ -97,27 +97,27 @@ uint8_t *protocore_session_span(void)
     return s_own.span;
 }
 
-static void proto_builtins(uint8_t *restrict work)
+void protocore_protocols_register_builtins(uint8_t *restrict work)
 {
     (void)work;
     protocore_register_builtins();
 }
 
-static void proto_register(uint8_t *restrict work)
+void protocore_protocols_add(uint8_t *restrict work)
 {
-    if ((unsigned)Protocols.proto < PROTO_MAX_HANDLERS)
+    if ((unsigned)ProtocolsV.proto < PROTO_MAX_HANDLERS)
     {
-        SESSION_CTX(work)->proto_handlers[(unsigned)Protocols.proto] = Protocols.h;
+        SESSION_CTX(work)->proto_handlers[(unsigned)ProtocolsV.proto] = ProtocolsV.h;
     }
 }
 
-static void proto_get(uint8_t *restrict work)
+void protocore_protocols_get(uint8_t *restrict work)
 {
     // The protocol asked for, read before the bootstrap below can touch it. Registering the
     // built-ins runs back through THIS namespace - protocore_builtins.c sets Protocols.proto once
     // per entry - so a lookup that read Protocols.proto afterwards would answer for whichever
     // protocol happened to register last instead of the one the caller named.
-    const ProtoConn want = Protocols.proto;
+    const ProtoConn want = ProtocolsV.proto;
 
     // Install the built-ins on first lookup so dispatch works before begin() (the native test
     // harness drives server_tick() directly). The list itself lives in protocore_builtins.c -
@@ -126,11 +126,11 @@ static void proto_get(uint8_t *restrict work)
     if (!SESSION_CTX(work)->proto_handlers[(unsigned)PROTO_HTTP])
     {
         protocore_register_builtins();
-        Protocols.proto = want; // the handle names what the caller asked for, not the last built-in
+        ProtocolsV.proto = want; // the handle names what the caller asked for, not the last built-in
     }
     // No implicit fallback: a slot must carry an explicit, registered protocol.
     // PROTO_NONE and any unregistered protocol resolve to NULL (event dropped).
-    Protocols.handler =
+    ProtocolsV.handler =
         ((unsigned)want < PROTO_MAX_HANDLERS) ? SESSION_CTX(work)->proto_handlers[(unsigned)want] : NULL;
 }
 
@@ -199,9 +199,9 @@ static inline void dispatch_event(const TcpEvt *evt)
     // protocol have no handler, so the event is dropped.
     ConnPoolV.slot = evt->slot_id;
     ConnPool.proto_of(protocore_conn_pool_span());
-    Protocols.proto = ConnPoolV.proto;
-    proto_get(protocore_session_span());
-    const ProtoHandler *h = Protocols.handler;
+    ProtocolsV.proto = ConnPoolV.proto;
+    protocore_protocols_get(protocore_session_span());
+    const ProtoHandler *h = ProtocolsV.handler;
     if (!h)
     {
         return;
@@ -309,7 +309,8 @@ void protocore_session_tick(uint8_t *restrict work)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-ProtoRegistryNs Protocols = {.register_builtins = proto_builtins, .add = proto_register, .get = proto_get};
+/** @brief The operands and the outcome. */
+ProtocolsVars ProtocolsV;
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */

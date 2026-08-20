@@ -382,8 +382,8 @@ void protocore_relay_listener_publish(uint8_t *restrict work)
     RELAY_LISTENER_CTX(work)->binds[idx].port = origin_port;
     if (!RELAY_LISTENER_CTX(work)->registered)
     {
-        SessionV.proto->proto = PROTO_RELAY;
-        SessionV.proto->h = &s_relay_handler;
+        ProtocolsV.proto = PROTO_RELAY;
+        ProtocolsV.h = &s_relay_handler;
         SessionV.proto->add(protocore_session_span());
         RELAY_LISTENER_CTX(work)->registered = PROTO_TRUE;
     }
