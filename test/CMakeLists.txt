@@ -5268,6 +5268,31 @@ protocore_env(native_hmmd
     "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/hmmd/test_hmmd"
 )
 
+# The HMMD codec with PROTOCORE_HAS_BUS at 0: the same suite as native_hmmd against the no-bus arm of hmmd.c. Every host env states PROTOCORE_PLATFORM_HAS_BUS 1, so that arm had never been compiled by anything - it defined the pre-namespace flat API while the table bound entries nothing defined, and it did not build. The suite touches only the codec (framing, the resyncing reassembler, the command builders), which is identical in both arms; what this env proves is that the seam half still compiles and still answers.
+protocore_env(native_hmmd_nobus
+  SOURCES
+    "${PROTOCORE_ROOT}/src/server/peripherals/hmmd/hmmd.c"
+    "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
+    "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
+    "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
+    "${PROTOCORE_ROOT}/src/mmgr/secure/secure.c"
+    "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
+    "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
+    "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
+    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/hmmd/test_hmmd/test_hmmd.c"
+    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/hmmd/test_hmmd/unity_runner.c"
+  DEFINES
+    "PROTOCORE_ENABLE_HMMD=1"
+    "PROTOCORE_HAS_BUS=0"
+  INCLUDES
+    "${PROTOCORE_ROOT}/test/core_setup/hal/host"
+    "${PROTOCORE_ROOT}/test/support"
+    "${PROTOCORE_ROOT}/src"
+    "${PROTOCORE_ROOT}/include"
+    "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/hmmd/test_hmmd"
+)
+
 # Omron Host Link (C-mode) frame codec (services/fieldbus/hostlink): the FCS (XOR), the ASCII
 protocore_env(native_hostlink
   SOURCES
@@ -6399,6 +6424,31 @@ protocore_env(native_ld2410
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ld2410/littlefs/include"
+    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ld2410/test_ld2410"
+)
+
+# The LD2410 codec with PROTOCORE_HAS_BUS at 0: the same suite as native_ld2410 against the no-bus arm of ld2410.c. That arm had never been compiled - every host env states PROTOCORE_PLATFORM_HAS_BUS 1 - and it defined five pre-namespace flat functions while the table bound five entries nothing defined. The suite exercises the codec (framing, the resyncing reassembler, the command builders including cmd_restart, which builds a frame rather than sending one), identical in both arms.
+protocore_env(native_ld2410_nobus
+  SOURCES
+    "${PROTOCORE_ROOT}/src/server/peripherals/ld2410/ld2410.c"
+    "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
+    "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
+    "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
+    "${PROTOCORE_ROOT}/src/mmgr/secure/secure.c"
+    "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
+    "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
+    "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
+    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ld2410/test_ld2410/test_ld2410.c"
+    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ld2410/test_ld2410/unity_runner.c"
+  DEFINES
+    "PROTOCORE_ENABLE_LD2410=1"
+    "PROTOCORE_HAS_BUS=0"
+  INCLUDES
+    "${PROTOCORE_ROOT}/test/core_setup/hal/host"
+    "${PROTOCORE_ROOT}/test/support"
+    "${PROTOCORE_ROOT}/src"
+    "${PROTOCORE_ROOT}/include"
+    "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ld2410/test_ld2410"
 )
 

@@ -20,9 +20,53 @@
 
 PROTOCORE_BEGIN_DECLS
 
+// --- the borrow, carved above the capability gate ---------------------------
+//
+// Above it, because the borrow is the MODULE's and not the seam's: it is the same size, at the same
+// offset, with the same alignment, whether or not a UART exists behind it. The carving used to sit
+// inside `#if PROTOCORE_HAS_BUS` while protocore_hmmd_span() hands the bytes out unconditionally,
+// so with the capability off the module owned a borrow and had nothing to read it with.
+
+// Bytes taken from the UART per poll. A report frame is far shorter, so one poll carries at least
+// a whole frame and the read stays bounded (SRC_LAW rule 5).
+#define HMMD_RX_CHUNK 64
+
+// All HMMD state, owned by one instance (internal linkage): the frame reassembler, the last decoded
+// report, the have-report flag, and the receive chunk, grouped so it is one named owner unreachable
+// from any other translation unit. The chunk is a member rather than a local because it is filled
+// per poll on the request path - by the bus arm; with no bus it is carried and never written, which
+// costs the same bytes as making the record's size depend on a hardware answer would cost in
+// arithmetic in protocore_config.h.
+typedef struct
+{
+    HmmdStream stream;
+    HmmdReport last;
+    proto_bool have;
+    uint8_t rx[HMMD_RX_CHUNK];
+} HmmdCtx;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define HMMD_OFF_CTX 0u
+static_assert(HMMD_OFF_CTX + sizeof(HmmdCtx) <= PROTOCORE_HMMD_BORROW,
+              "PROTOCORE_HMMD_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(HMMD_OFF_CTX % _Alignof(HmmdCtx) == 0,
+              "HMMD_OFF_CTX is not a multiple of alignof(HmmdCtx) - HMMD_CTX() would return a misaligned "
+              "pointer; pad the region ahead of it");
+
+// The region, at its offset in the caller's borrow.
+#define HMMD_CTX(w) ((HmmdCtx *)(void *)((w) + HMMD_OFF_CTX))
+
 #if PROTOCORE_HAS_BUS
 #include "server/peripherals/uart.h" // the shared UART owner
 #endif
+
 static const uint8_t HDR[4] = {0xF4, 0xF3, 0xF2, 0xF1};
 static const uint8_t FTR[4] = {0xF8, 0xF7, 0xF6, 0xF5};
 static const uint8_t CMD_HDR[4] = {0xFD, 0xFC, 0xFB, 0xFA};
@@ -32,8 +76,6 @@ static uint16_t rd16(const uint8_t *p)
 {
     return (uint16_t)((uint16_t)p[0] | ((uint16_t)p[1] << 8));
 }
-
-// The entries this file calls before reaching their definitions.
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -55,6 +97,7 @@ uint8_t *protocore_hmmd_span(void)
     return s_own.span;
 }
 
+// The entries this file calls before reaching their definitions.
 static void hmmd_cmd_build(uint8_t *restrict work);
 static void hmmd_parse_report(uint8_t *restrict work);
 static void hmmd_stream_push(uint8_t *restrict work);
@@ -385,40 +428,6 @@ static void hmmd_ack_matches(uint8_t *restrict work)
 
 #if PROTOCORE_HAS_BUS
 
-// Bytes taken from the UART per poll. A report frame is far shorter, so one poll carries at least
-// a whole frame and the read stays bounded (SRC_LAW rule 5).
-#define HMMD_RX_CHUNK 64
-
-// All HMMD UART-binding state, owned by one instance (internal linkage): the frame reassembler, the
-// last decoded report, the have-report flag, and the receive chunk, grouped so it is one named
-// owner unreachable from any other translation unit. The chunk is a member rather than a local
-// because it is filled per poll on the request path.
-typedef struct
-{
-    HmmdStream stream;
-    HmmdReport last;
-    proto_bool have;
-    uint8_t rx[HMMD_RX_CHUNK];
-} HmmdCtx;
-// The caller's borrow, split: the context at its offset. One pointer arrives and every
-// region is that pointer plus a compile-time offset, so the assert below proves the span
-// covers them before anything runs.
-#define HMMD_OFF_CTX 0u
-static_assert(HMMD_OFF_CTX + sizeof(HmmdCtx) <= PROTOCORE_HMMD_BORROW,
-              "PROTOCORE_HMMD_BORROW is short of the module context - raise it in protocore_config.h, which"
-              " sums it into its arena");
-
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
-// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
-// assert above bounds the far end of the chain and says nothing about where a region begins.
-static_assert(HMMD_OFF_CTX % _Alignof(HmmdCtx) == 0,
-              "HMMD_OFF_CTX is not a multiple of alignof(HmmdCtx) - HMMD_CTX() would return a misaligned "
-              "pointer; pad the region ahead of it");
-
-// The region, at its offset in the caller's borrow.
-#define HMMD_CTX(w) ((HmmdCtx *)(void *)((w) + HMMD_OFF_CTX))
-
 static void hmmd_begin(uint8_t *restrict work)
 {
     int rx_pin = Hmmd.begin_args.rx_pin;
@@ -458,23 +467,40 @@ static void hmmd_last(uint8_t *restrict work)
     Hmmd.report = HMMD_CTX(work)->have ? &HMMD_CTX(work)->last : NULL;
 }
 
-#else // no bus seam
+#else // no bus seam: the codec half still builds, the three UART entries answer "nothing here"
 
-proto_bool protocore_hmmd_begin(int rx_pin, int tx_pin)
+// These are the SAME THREE ENTRIES the table binds, not a second API beside it. This arm used to
+// define protocore_hmmd_begin(int, int), protocore_hmmd_poll(void) and protocore_hmmd_last(void) -
+// the flat shape from before the namespace - so with PROTOCORE_HAS_BUS at 0 the table below still
+// named hmmd_begin, hmmd_poll and hmmd_last and nothing defined them. The arm did not compile at
+// all, and nothing noticed: every host env states PROTOCORE_PLATFORM_HAS_BUS 1, so this half has
+// never been built. The flat three were declared by no header and called by nothing.
+//
+// A stub, not an #error. The eleven I2C parts refuse outright because a part on the other end of a
+// bus has no software stand-in; this one is a codec with a UART seam bolted to it, and the codec -
+// the framing, the resyncing reassembler, the command builders - is exactly what a host can test.
+
+static void hmmd_begin(uint8_t *restrict work)
 {
-    (void)rx_pin;
-    (void)tx_pin;
-    return PROTO_FALSE;
+    // The stream still resets: the reassembler is pure, and a caller that pushes captured bytes at
+    // it after begin() gets the same answers here as it does with a radio wired up.
+    Hmmd.stream_reset_args.s = &HMMD_CTX(work)->stream;
+    hmmd_stream_reset(work);
+    HMMD_CTX(work)->have = PROTO_FALSE;
+    Hmmd.ok = PROTO_FALSE; // no UART was opened, and no caller should act as though one was
 }
 
-proto_bool protocore_hmmd_poll(void)
+static void hmmd_poll(uint8_t *restrict work)
 {
-    return PROTO_FALSE;
+    (void)work;
+    Hmmd.ok = PROTO_FALSE; // nothing to read from
 }
 
-const HmmdReport *protocore_hmmd_last(void)
+static void hmmd_last(uint8_t *restrict work)
 {
-    return NULL;
+    // Whatever the reassembler last accepted, exactly as the bus arm reports it. A report only ever
+    // arrives through stream_push, which does not need the seam.
+    Hmmd.report = HMMD_CTX(work)->have ? &HMMD_CTX(work)->last : NULL;
 }
 
 #endif // PROTOCORE_HAS_BUS
