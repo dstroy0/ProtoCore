@@ -17,12 +17,13 @@
 #ifndef PROTOCORE_FILE_SERVING_H
 #define PROTOCORE_FILE_SERVING_H
 
-#include "network_drivers/presentation/http/http_parser/http_parser.h" // the complete type a public struct below holds by value
-#include "network_drivers/presentation/http/route/http_route.h" // the complete type a public struct below holds by value
-#include "protocore_config.h"                                   // the entry point: protocore_types.h for the widths
-#include "server/storage/mnt/mnt.h" // the complete type a public struct below holds by value
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_FILE_SERVING
+
+#include "network_drivers/presentation/http/http_parser/http_parser.h" // the complete type a public struct below holds by value
+#include "network_drivers/presentation/http/route/http_route.h" // the complete type a public struct below holds by value
+#include "server/storage/mnt/mnt.h" // the complete type a public struct below holds by value
 
 PROTOCORE_BEGIN_DECLS
 

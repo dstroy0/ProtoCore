@@ -6,10 +6,12 @@
  * @brief Software watchdog / deadlock detection + safe-state (see failsafe.h).
  */
 
-#include "server/core/failsafe/failsafe.h"
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_FAILSAFE
+
+#include "server/core/failsafe/failsafe.h"
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
 /**
  * @brief The lifelines' compile-time storage: the table, and what a breach fires.

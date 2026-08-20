@@ -22,10 +22,11 @@
 #ifndef PROTOCORE_SMB_CLIENT_H
 #define PROTOCORE_SMB_CLIENT_H
 
-#include "network_drivers/application/smb/smb2/smb2.h" // the complete type a public struct below holds by value
-#include "protocore_config.h"                          // the entry point: protocore_types.h for the widths
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_SMB
+
+#include "network_drivers/application/smb/smb2/smb2.h" // the complete type a public struct below holds by value
 
 PROTOCORE_BEGIN_DECLS
 

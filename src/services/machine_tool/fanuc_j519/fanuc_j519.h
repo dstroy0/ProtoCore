@@ -60,7 +60,7 @@
 #ifndef PROTOCORE_FANUC_J519_H
 #define PROTOCORE_FANUC_J519_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_FANUC_J519
 

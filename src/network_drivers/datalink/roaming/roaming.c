@@ -6,10 +6,12 @@
  * @brief Layer 2 (Data Link) - the roam decision and the two IEEE 802.11 decodes it feeds on - see roaming.h.
  */
 
-#include "network_drivers/datalink/roaming/roaming.h"
-#include "mmgr/protomem/protomem.h" // mem.cmp / mem.cpy / mem.zero
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_ROAMING
+
+#include "network_drivers/datalink/roaming/roaming.h"
+#include "mmgr/protomem/protomem.h" // mem.cmp / mem.cpy / mem.zero
 
 /** @brief A BSSID is six octets, and every compare and copy below moves exactly that. */
 #define PROTOCORE_ROAM_BSSID_LEN 6u

@@ -6,10 +6,12 @@
  * @brief OpenADR 3.0 JSON codec (see openadr.h).
  */
 
-#include "services/energy/openadr/openadr.h"
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_OPENADR
+
+#include "services/energy/openadr/openadr.h"
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 
 static void put_u64(protocore_sb *b, uint64_t v)
 {

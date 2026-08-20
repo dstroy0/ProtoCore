@@ -6,10 +6,12 @@
  * @brief OCIT-Outstations message codec (see ocit.h).
  */
 
-#include "services/transportation/ocit/ocit.h"
-#include "mmgr/protomem/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_OCIT
+
+#include "services/transportation/ocit/ocit.h"
+#include "mmgr/protomem/protomem.h"
 
 size_t protocore_ocit_build(uint8_t msg_type, uint16_t object_type, uint16_t instance, uint8_t data_type,
                             const uint8_t *value, size_t value_len, uint8_t *out, size_t cap)

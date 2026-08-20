@@ -2382,7 +2382,12 @@ def restructure_source(spec):
 
 
 GATE = re.compile(r"^#if\s+\(?PROTOCORE_(?:ENABLE|NEED|TLS|HAS)_\w+[^\n]*$", re.M)
+# The golden's two files say different things about the same include, because it is there for
+# different reasons: the .c reads the enable gate out of it, the .h only needs the widths. Writing
+# the source's wording into a header is a citation that does not hold - the gate below a header's
+# config include is the same gate, but the header is not what reads it.
 CONFIG_INC = '#include "protocore_config.h" // the entry point: the enable gate below, and the widths\n'
+CONFIG_INC_H = '#include "protocore_config.h" // the entry point: protocore_types.h for the widths\n'
 
 
 ARM = re.compile(r"^#if\s+!?\w+\s*\n(?:[ \t]*#\s*include[^\n]*\n)*#endif[^\n]*\n", re.M)
@@ -2471,7 +2476,8 @@ def shape_text(s, p, gate=None):
 
     tail = order_includes(tail)
 
-    out = comment + "\n\n" + (guard + "\n" if guard else "") + CONFIG_INC + "\n" + gate_line + "\n" + decls
+    cfg_inc = CONFIG_INC_H if p.endswith(".h") else CONFIG_INC
+    out = comment + "\n\n" + (guard + "\n" if guard else "") + cfg_inc + "\n" + gate_line + "\n" + decls
     if moved:
         out += "\n" + moved + "\n"
     out += "\n" + tail

@@ -14,11 +14,13 @@
  * trigger ISR respectively).
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_TRACE_CAPTURE
+
 #include "server/signaling/trace_capture/trace_capture.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem/protomem.h"
-
-#if PROTOCORE_ENABLE_TRACE_CAPTURE
 
 #include "server/clock/clock.h" // protocore_cycles()
                                 // memset

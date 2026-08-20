@@ -21,10 +21,11 @@
 #ifndef PROTOCORE_NTP_SERVER_H
 #define PROTOCORE_NTP_SERVER_H
 
-#include "network_drivers/application/ntp/ntp.h" // the complete type a public struct below holds by value
-#include "protocore_config.h"                    // the entry point: protocore_types.h for the widths
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_NTP_SERVER
+
+#include "network_drivers/application/ntp/ntp.h" // the complete type a public struct below holds by value
 
 PROTOCORE_BEGIN_DECLS
 

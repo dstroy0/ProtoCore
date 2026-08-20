@@ -6,10 +6,12 @@
  * @brief RTCM 3.x framing + 1005/1006 codec - implementation. See rtcm3.h.
  */
 
-#include "services/timing_position/gnss/rtcm3/rtcm3.h"
-#include "mmgr/protomem/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
+
+#include "services/timing_position/gnss/rtcm3/rtcm3.h"
+#include "mmgr/protomem/protomem.h"
 
 // ---------------------------------------------------------------------------------------------
 // CRC-24Q (poly 0x1864CFB, init 0). Computed over the preamble + header + payload of a frame.

@@ -6,10 +6,12 @@
  * @brief Write-ahead journal record framing + crash-recovery replay (see wal.h).
  */
 
-#include "services/storage/wal/wal/wal.h"
-#include "mmgr/protomem/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_WAL
+
+#include "services/storage/wal/wal/wal.h"
+#include "mmgr/protomem/protomem.h"
 
 #include "mmgr/endian/endian.h"
 

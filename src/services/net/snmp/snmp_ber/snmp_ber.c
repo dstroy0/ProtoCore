@@ -6,9 +6,11 @@
  * @brief The SNMP serialization (RFC 3417 sec 8, over ITU-T X.690) - implementation. See snmp_ber.h.
  */
 
-#include "services/net/snmp/snmp_ber/snmp_ber.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_SNMP
+
+#include "services/net/snmp/snmp_ber/snmp_ber.h"
 
 // ---------------------------------------------------------------------------
 // Encoder primitives. Each runs over the caller's cursor and touches no module

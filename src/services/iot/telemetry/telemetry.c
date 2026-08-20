@@ -11,9 +11,11 @@
  * of the millisecond counts, which subtracts correctly across a rollover.
  */
 
-#include "services/iot/telemetry/telemetry.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_TELEMETRY
+
+#include "services/iot/telemetry/telemetry.h"
 
 #include <math.h> // sqrtf: the standard deviation
 

@@ -6,9 +6,11 @@
  * @brief CNC RS-232 DNC drip-feed codec implementation (see dnc.h).
  */
 
-#include "services/machine_tool/dnc/dnc/dnc.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_DNC
+
+#include "services/machine_tool/dnc/dnc/dnc.h"
 
 // EIA RS-244 punched-tape code. One source of truth for both translation directions.
 // Each EIA byte is the 8-track hole pattern (bit 0 = channel 1 .. bit 7 = channel 8) with

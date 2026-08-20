@@ -11,9 +11,11 @@
  * interval.
  */
 
-#include "services/machine_tool/safety_scl/safety_scl.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_SAFETY_SCL
+
+#include "services/machine_tool/safety_scl/safety_scl.h"
 
 // Latch the first fault: once fail-safe, later failures do not overwrite the diagnostically
 // interesting one that actually broke the connection.

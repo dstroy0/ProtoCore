@@ -6,10 +6,12 @@
  * @brief IEEE 2030.5 resource codec (see sep2.h).
  */
 
-#include "services/energy/sep2/sep2.h"
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_SEP2
+
+#include "services/energy/sep2/sep2.h"
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 
 static void put_i64(protocore_sb *b, int64_t v)
 {

@@ -11,9 +11,11 @@
  * one.
  */
 
-#include "services/iot/xmpp/xmpp.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_XMPP
+
+#include "services/iot/xmpp/xmpp.h"
 
 #include "mmgr/protomem/protomem.h" // mem.cpy: a literal and an entity move whole
 #include "mmgr/protostr/protostr.h" // str.len / str.starts: the bounded length and the attribute-name match

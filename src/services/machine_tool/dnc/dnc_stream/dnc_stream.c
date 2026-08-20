@@ -7,10 +7,12 @@
  *        against reverse-channel XON/XOFF over a send/recv seam.
  */
 
-#include "services/machine_tool/dnc/dnc_stream/dnc_stream.h"
-#include "mmgr/protomem/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_DNC
+
+#include "services/machine_tool/dnc/dnc_stream/dnc_stream.h"
+#include "mmgr/protomem/protomem.h"
 
 // Drain any reverse-channel bytes into the flow state (non-blocking); false on a recv error.
 static proto_bool flow_drain(DncFlow *flow, DncRecvFn recv, void *ctx)

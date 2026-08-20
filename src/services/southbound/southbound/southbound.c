@@ -6,11 +6,13 @@
  * @brief Southbound protocol-driver framework registry + dispatch (see southbound.h).
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_SOUTHBOUND
+
 #include "services/southbound/southbound/southbound.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protostr/protostr.h"   // str.eq: the driver registry name lookup
-
-#if PROTOCORE_ENABLE_SOUTHBOUND
 
 #ifndef PROTOCORE_SOUTHBOUND_MAX_DRIVERS
 #define PROTOCORE_SOUTHBOUND_MAX_DRIVERS 8 ///< bounded registry; no heap.

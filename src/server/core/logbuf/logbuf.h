@@ -19,7 +19,7 @@
 #ifndef PROTOCORE_LOGBUF_H
 #define PROTOCORE_LOGBUF_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_LOGBUF
 

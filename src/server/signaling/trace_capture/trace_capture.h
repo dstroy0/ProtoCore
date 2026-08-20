@@ -40,7 +40,7 @@
 #ifndef PROTOCORE_TRACE_CAPTURE_H
 #define PROTOCORE_TRACE_CAPTURE_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_TRACE_CAPTURE
 

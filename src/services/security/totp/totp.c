@@ -11,10 +11,12 @@
  * RFC 6238 sec 4.2 supplies the counter as T = (Current Unix time - T0) / X.
  */
 
-#include "services/security/totp/totp.h"
-#include "mmgr/protomem/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_TOTP
+
+#include "services/security/totp/totp.h"
+#include "mmgr/protomem/protomem.h"
 
 #include "crypto/hash/sha1/sha1.h"
 #include "mmgr/secure/secure.h" // the pool the digest borrow comes from

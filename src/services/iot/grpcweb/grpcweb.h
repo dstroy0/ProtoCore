@@ -47,7 +47,7 @@
 #ifndef PROTOCORE_GRPCWEB_H
 #define PROTOCORE_GRPCWEB_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_GRPC_WEB
 

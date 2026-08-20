@@ -6,12 +6,14 @@
  * @brief Panic / exception decoder (see exc_decoder.h).
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_EXC_DECODER
+
 #include "server/core/exc_decoder/exc_decoder.h"
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "mmgr/protostr/protostr.h" // str.find: each field's marker inside the panic dump
 #include "shared/hex/hex.h"         // PROTOCORE_HEX: the shared digit tables
-
-#if PROTOCORE_ENABLE_EXC_DECODER
 
 static proto_bool hexval(char c, uint8_t *v)
 {

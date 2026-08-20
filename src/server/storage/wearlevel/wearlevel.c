@@ -6,9 +6,11 @@
  * @brief Flash wear-leveling slot selector core (see wearlevel.h).
  */
 
-#include "server/storage/wearlevel/wearlevel.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_WEARLEVEL
+
+#include "server/storage/wearlevel/wearlevel.h"
 
 void protocore_wearlevel_pick(uint8_t *restrict work)
 {

@@ -6,10 +6,12 @@
  * @brief u-blox UBX binary protocol codec (pure, host-tested).
  */
 
-#include "services/timing_position/ubx/ubx.h"
-#include "mmgr/protomem/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_UBX
+
+#include "services/timing_position/ubx/ubx.h"
+#include "mmgr/protomem/protomem.h"
 
 void protocore_ubx_checksum(const uint8_t *body, size_t len, uint8_t *ck_a, uint8_t *ck_b)
 {

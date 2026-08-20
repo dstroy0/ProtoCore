@@ -22,7 +22,7 @@
 #ifndef PROTOCORE_J2735_H
 #define PROTOCORE_J2735_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_J2735
 

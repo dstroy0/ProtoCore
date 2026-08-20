@@ -6,9 +6,11 @@
  * @brief PackML / OMAC state model (ISA-TR88.00.02) - state engine + owned PackTags service. See packml.h.
  */
 
-#include "services/machine_tool/packml/packml.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_PACKML
+
+#include "services/machine_tool/packml/packml.h"
 
 #include "server/clock/clock.h" // Clock - the monotonic source
 

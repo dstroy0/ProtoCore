@@ -6,10 +6,12 @@
  * @brief Log-structured hash key-value store on the WAL (see dbm.h).
  */
 
-#include "services/storage/dbm/dbm.h"
-#include "mmgr/protomem/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_DBM
+
+#include "services/storage/dbm/dbm.h"
+#include "mmgr/protomem/protomem.h"
 
 // dbm record payload header: op u8 | key_len u16 | val_len u32.
 static const size_t DBM_HDR = 7;

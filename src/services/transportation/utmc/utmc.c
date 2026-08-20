@@ -6,11 +6,13 @@
  * @brief UTMC common-database codec (see utmc.h).
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_UTMC
+
 #include "services/transportation/utmc/utmc.h"
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem/protomem.h"
-
-#if PROTOCORE_ENABLE_UTMC
 
 static void put_u(protocore_sb *b, uint32_t v)
 {

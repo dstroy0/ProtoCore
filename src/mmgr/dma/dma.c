@@ -10,9 +10,11 @@
  * silicon is the arm the tests drive.
  */
 
-#include "mmgr/dma/dma.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_DMA
+
+#include "mmgr/dma/dma.h"
 
 // The driver stamps a completion, so the clock is its dependency rather than this front end's.
 __attribute__((weak)) proto_bool protocore_dma_hw_open(const protocore_dma_config *cfg)

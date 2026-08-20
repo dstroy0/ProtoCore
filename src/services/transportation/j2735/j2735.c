@@ -6,9 +6,11 @@
  * @brief SAE J2735 V2X UPER codec + BSMcore (see j2735.h).
  */
 
-#include "services/transportation/j2735/j2735.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_J2735
+
+#include "services/transportation/j2735/j2735.h"
 
 void protocore_uper_writer_init(UperWriter *w, uint8_t *buf, size_t cap)
 {

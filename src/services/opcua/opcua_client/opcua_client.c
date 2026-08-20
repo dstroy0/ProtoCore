@@ -8,11 +8,13 @@
  * Pure byte-buffer logic reusing the opcua.h codec; no transport, no heap, no stdlib.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_OPCUA_CLIENT
+
 #include "services/opcua/opcua_client/opcua_client.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
-
-#if PROTOCORE_ENABLE_OPCUA_CLIENT
 
 void protocore_opcua_client_init(OpcUaClient *c)
 {

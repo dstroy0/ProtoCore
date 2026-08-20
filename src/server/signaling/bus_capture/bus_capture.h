@@ -23,11 +23,11 @@
 #ifndef PROTOCORE_BUS_CAPTURE_H
 #define PROTOCORE_BUS_CAPTURE_H
 
-#include "shared/can/can.h" // the complete type a public struct below holds by value
-
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_BUS_CAPTURE
+
+#include "shared/can/can.h" // the complete type a public struct below holds by value
 
 PROTOCORE_BEGIN_DECLS
 

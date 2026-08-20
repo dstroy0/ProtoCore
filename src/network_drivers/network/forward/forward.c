@@ -12,11 +12,13 @@
  * one-second rate window (sec 5.3.6) before layer 1's send takes the bytes. Static tables, no heap.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_FORWARD
+
 #include "network_drivers/network/forward/forward.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem/protomem.h"
-
-#if PROTOCORE_ENABLE_FORWARD
 
 #include "server/clock/clock.h" // Clock.millis: the one time source the rate cap reads
 

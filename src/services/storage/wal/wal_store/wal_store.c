@@ -6,10 +6,12 @@
  * @brief A/B superblock + checkpoint + mount/recover over a block-device seam (see protocore_wal_store.h).
  */
 
-#include "services/storage/wal/wal_store/wal_store.h"
-#include "mmgr/protomem/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_WAL
+
+#include "services/storage/wal/wal_store/wal_store.h"
+#include "mmgr/protomem/protomem.h"
 
 #include "mmgr/endian/endian.h"
 

@@ -6,11 +6,13 @@
  * @brief NTRIP caster protocol codec - request parse + response / source-table build. See protocore_ntrip_caster.h.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_NTRIP_CASTER
+
 #include "services/timing_position/gnss/ntrip_caster/ntrip_caster.h"
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem/protomem.h"
-
-#if PROTOCORE_ENABLE_NTRIP_CASTER
 
 static char lower(char c)
 {

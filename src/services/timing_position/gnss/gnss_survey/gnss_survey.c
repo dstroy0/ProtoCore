@@ -6,18 +6,18 @@
  * @brief GNSS survey-in: WGS84 geodetic <-> ECEF + fixed-position averaging. See protocore_gnss_survey.h.
  */
 
-#include "services/timing_position/gnss/gnss_survey/gnss_survey.h"
-#include "mmgr/protomem/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
-#include <math.h>
+#include "services/timing_position/gnss/gnss_survey/gnss_survey.h"
+#include "mmgr/protomem/protomem.h"
 
 #if PROTOCORE_NEED_NMEA0183
 #include "mmgr/protostr/protostr.h"
 #include "services/timing_position/nmea0183/nmea0183.h"
 #endif
-
+#include <math.h>
 // WGS84 ellipsoid.
 static const double WGS84_A = 6378137.0;                  // semi-major axis (m)
 static const double WGS84_F = 1.0 / 298.257223563;        // flattening

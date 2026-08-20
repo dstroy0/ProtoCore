@@ -6,11 +6,13 @@
  * @brief GPIB-over-LAN (Prologix-style) `++` command codec (pure, host-tested).
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_GPIB
+
 #include "services/instrumentation/gpib/gpib.h"
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem/protomem.h"
-
-#if PROTOCORE_ENABLE_GPIB
 
 size_t protocore_gpib_command(char *buf, size_t cap, const char *cmd)
 {

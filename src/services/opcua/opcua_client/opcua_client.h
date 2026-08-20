@@ -29,7 +29,7 @@
 #ifndef PROTOCORE_OPCUA_CLIENT_H
 #define PROTOCORE_OPCUA_CLIENT_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_OPCUA_CLIENT
 

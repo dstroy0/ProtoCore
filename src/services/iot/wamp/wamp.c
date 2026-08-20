@@ -10,9 +10,11 @@
  * received list element by element and slices, converts, or copies the one at the named position.
  */
 
-#include "services/iot/wamp/wamp.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_WAMP
+
+#include "services/iot/wamp/wamp.h"
 
 #include "network_drivers/presentation/codec/json/json.h" // Json: the bounded writer a build emits through
 

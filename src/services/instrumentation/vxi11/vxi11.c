@@ -6,11 +6,13 @@
  * @brief VXI-11 codec over ONC RPC / XDR (pure, host-tested).
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_VXI11
+
 #include "services/instrumentation/vxi11/vxi11.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
-
-#if PROTOCORE_ENABLE_VXI11
 
 #include "mmgr/endian/endian.h"
 

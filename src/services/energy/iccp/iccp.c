@@ -6,10 +6,12 @@
  * @brief ICCP / TASE.2 data-value codec (see iccp.h).
  */
 
-#include "services/energy/iccp/iccp.h"
-#include "mmgr/protomem/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_ICCP
+
+#include "services/energy/iccp/iccp.h"
+#include "mmgr/protomem/protomem.h"
 
 // Append a short-form TLV (value length < 128). Returns bytes written at out, or 0 on overflow.
 static size_t tlv(uint8_t tag, const uint8_t *val, size_t val_len, uint8_t *out, size_t cap)

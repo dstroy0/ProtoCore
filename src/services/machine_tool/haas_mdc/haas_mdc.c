@@ -6,9 +6,11 @@
  * @brief Haas Machine Data Collection (MDC) Q-command codec (pure, host-tested).
  */
 
-#include "services/machine_tool/haas_mdc/haas_mdc.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_HAAS_MDC
+
+#include "services/machine_tool/haas_mdc/haas_mdc.h"
 
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 

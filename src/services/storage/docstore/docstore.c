@@ -6,9 +6,11 @@
  * @brief Local JSON document store on the WAL: dbm + top-level JSON field queries (see docstore.h).
  */
 
-#include "services/storage/docstore/docstore.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_DOCSTORE
+
+#include "services/storage/docstore/docstore.h"
 
 #include "mmgr/protostr/protostr.h" // str.eq: the string-field find compare
 #include "network_drivers/presentation/codec/json/json.h"
