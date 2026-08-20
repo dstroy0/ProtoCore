@@ -468,6 +468,41 @@ ng = dict(gh, gate_present=False)
 ngc = dict(gc, gate_present=False)
 check("no gate at all is n/a, not no", ask("includes placed", ng, ngc) is None)
 check("and `guarded` still says no", ask("guarded", ng, ngc) is False)
+
+# ... but only where a gate is a thing the module could HAVE. `guarded` counted 57 modules, 52 of
+# which are the substrate every build links - arena, span, physical, the mount registry - and the
+# config declares no PROTOCORE_ENABLE_* to gate them with. Asking those is asking about something
+# that does not exist, and burying the five real findings under them made the number unactionable.
+no_flag = dict(gid, own_flag="")
+check("ungated with no flag of its own is n/a", ask("guarded", ng, ngc, no_flag) is None)
+check(
+    "ungated WITH a flag is still a finding",
+    ask("guarded", ng, ngc, dict(gid, own_flag="PROTOCORE_ENABLE_SHA256")) is False,
+)
+check(
+    "a gated module with a flag still passes",
+    ask("guarded", gh, gc, dict(gid, own_flag="PROTOCORE_ENABLE_SHA256")) is True,
+)
+# The exemption needs both halves. A module gated on a flag it is NOT named after - mnt_ram behind
+# PROTOCORE_ENABLE_MNT, tls_record behind PROTOCORE_ENABLE_TLS - has no own_flag and a gate, and
+# handing it an n/a would take a yes away from a module that answers the question correctly.
+check("gated on someone else's flag is a yes, not n/a", ask("guarded", gh, gc, no_flag) is True)
+check("gated in one file only is still a finding", ask("guarded", gh, ngc, no_flag) is False)
+# The other checks do not take the exemption: a module with no flag still answers for its shape.
+check("no flag does not excuse the rest", ask("namespace", gh, gc, no_flag) is True)
+check("nor does it turn a real divergence n/a", ask("includes placed", gh, gc, no_flag) is True)
+
+# The flag lookup itself: read off the config rather than assumed, and loose by choice.
+check("the config's own flags are found", "PROTOCORE_ENABLE_SHA256" in S.enable_flags())
+check(
+    "a module named by its file matches",
+    S.own_flag_of(os.path.join(S.R, "src", "x", "sha256.h")) == "PROTOCORE_ENABLE_SHA256",
+)
+check(
+    "a module named by its directory matches",
+    S.own_flag_of(os.path.join(S.R, "src", "sha256", "impl.h")) == "PROTOCORE_ENABLE_SHA256",
+)
+check("substrate with no flag reports none", S.own_flag_of(os.path.join(S.R, "src", "mmgr", "arena", "arena.h")) == "")
 print()
 
 print("FAILURES: %d" % FAIL)
