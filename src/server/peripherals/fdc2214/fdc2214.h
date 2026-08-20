@@ -146,13 +146,19 @@ typedef struct
     Fdc2214BuildConfigArgs build_config_args;
     Fdc2214BeginArgs begin_args;
     Fdc2214ReadCh0Args read_ch0_args;
-
     proto_bool ok;
     uint32_t value;
     uint8_t flags;
     uint64_t hz;
     size_t n;
+} Fdc2214Vars;
 
+/** @brief The operands and the outcome. */
+extern Fdc2214Vars Fdc2214V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const data)(uint8_t *restrict work);
     void (*const error)(uint8_t *restrict work);
     void (*const sensor_freq_hz)(uint8_t *restrict work);
@@ -161,8 +167,27 @@ typedef struct
     void (*const read_ch0)(uint8_t *restrict work);
 } Fdc2214Ns;
 
-/** @brief The one symbol this module exports. */
-extern Fdc2214Ns Fdc2214;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Fdc2214V or a region of the borrow at a fixed offset.
+void protocore_fdc2214_data(uint8_t *restrict work);
+void protocore_fdc2214_error(uint8_t *restrict work);
+void protocore_fdc2214_sensor_freq_hz(uint8_t *restrict work);
+void protocore_fdc2214_build_config(uint8_t *restrict work);
+void protocore_fdc2214_begin(uint8_t *restrict work);
+void protocore_fdc2214_read_ch0(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Fdc2214.data(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Fdc2214Ns Fdc2214 __attribute__((unused)) = {
+    .data = protocore_fdc2214_data,
+    .error = protocore_fdc2214_error,
+    .sensor_freq_hz = protocore_fdc2214_sensor_freq_hz,
+    .build_config = protocore_fdc2214_build_config,
+    .begin = protocore_fdc2214_begin,
+    .read_ch0 = protocore_fdc2214_read_ch0,
+};
 
 /**
  * @brief The PROTOCORE_I2C_DEVICE_BORROW bytes this module's state lives in.

@@ -68,18 +68,39 @@ typedef struct
 typedef struct
 {
     AuthLockoutArgs args;
-
     proto_bool ok;
     uint32_t ms;
+} AuthLockoutVars;
 
+/** @brief The operands and the outcome. */
+extern AuthLockoutVars AuthLockoutV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const remaining)(uint8_t *restrict work);
     void (*const fail)(uint8_t *restrict work);
     void (*const succeed)(uint8_t *restrict work);
     void (*const reset)(uint8_t *restrict work);
 } AuthLockoutNs;
 
-/** @brief The one symbol this module exports. */
-extern AuthLockoutNs AuthLockout;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in AuthLockoutV or a region of the borrow at a fixed offset.
+void protocore_auth_lockout_remaining(uint8_t *restrict work);
+void protocore_auth_lockout_fail(uint8_t *restrict work);
+void protocore_auth_lockout_succeed(uint8_t *restrict work);
+void protocore_auth_lockout_reset(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `AuthLockout.remaining(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const AuthLockoutNs AuthLockout __attribute__((unused)) = {
+    .remaining = protocore_auth_lockout_remaining,
+    .fail = protocore_auth_lockout_fail,
+    .succeed = protocore_auth_lockout_succeed,
+    .reset = protocore_auth_lockout_reset,
+};
 
 /**
  * @brief The PROTOCORE_AUTH_LOCKOUT_BORROW bytes the program's table lives in.

@@ -345,21 +345,21 @@ uint8_t *protocore_relay_listener_span(void)
     return s_own.span;
 }
 
-static void relay_listener_publish(uint8_t *restrict work)
+void protocore_relay_listener_publish(uint8_t *restrict work)
 {
-    uint8_t listener_id = RelayListener.publish_args.listener_id;
-    const char *origin_host = RelayListener.publish_args.origin_host;
-    uint16_t origin_port = RelayListener.publish_args.origin_port;
+    uint8_t listener_id = RelayListenerV.publish_args.listener_id;
+    const char *origin_host = RelayListenerV.publish_args.origin_host;
+    uint16_t origin_port = RelayListenerV.publish_args.origin_port;
 
     if (!origin_host)
     {
-        RelayListener.ok = PROTO_FALSE;
+        RelayListenerV.ok = PROTO_FALSE;
         return;
     }
     size_t hl = str.len(origin_host, PROTOCORE_RELAY_HOST_MAX + 1);
     if (hl == 0 || hl >= PROTOCORE_RELAY_HOST_MAX)
     {
-        RelayListener.ok = PROTO_FALSE;
+        RelayListenerV.ok = PROTO_FALSE;
         return;
     }
     int idx = -1;
@@ -373,7 +373,7 @@ static void relay_listener_publish(uint8_t *restrict work)
     }
     if (idx < 0)
     {
-        RelayListener.ok = PROTO_FALSE;
+        RelayListenerV.ok = PROTO_FALSE;
         return;
     }
     RELAY_LISTENER_CTX(work)->binds[idx].active = PROTO_TRUE;
@@ -387,10 +387,10 @@ static void relay_listener_publish(uint8_t *restrict work)
         SessionV.proto->add(protocore_session_span());
         RELAY_LISTENER_CTX(work)->registered = PROTO_TRUE;
     }
-    RelayListener.ok = PROTO_TRUE;
+    RelayListenerV.ok = PROTO_TRUE;
 }
 
-static void relay_listener_reset(uint8_t *restrict work)
+void protocore_relay_listener_reset(uint8_t *restrict work)
 {
     for (int i = 0; i < PROTOCORE_RELAY_MAX_PUBLISH; i++)
     {
@@ -408,7 +408,8 @@ static void relay_listener_reset(uint8_t *restrict work)
     }
 }
 
-RelayListenerNs RelayListener = {.publish = relay_listener_publish, .reset = relay_listener_reset};
+/** @brief The operands and the outcome. */
+RelayListenerVars RelayListenerV;
 
 PROTOCORE_END_DECLS
 

@@ -597,10 +597,10 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
     if (method == HTTP_GET && str.eq(req->path, "/csrf", sizeof("/csrf"), PROTO_FALSE))
     {
         char tok[CSRF_TOKEN_BUF];
-        Csrf.issue_args.out = tok;
-        Csrf.issue_args.cap = sizeof(tok);
+        CsrfV.issue_args.out = tok;
+        CsrfV.issue_args.cap = sizeof(tok);
         Csrf.issue(protocore_csrf_span());
-        if (Csrf.n > 0)
+        if (CsrfV.n > 0)
         {
             set_cookie(slot_id, "csrf", tok, "Path=/; SameSite=Strict");
             char body[CSRF_TOKEN_BUF + 16];
@@ -629,9 +629,9 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
         HttpParserV.get_header_args.key = "X-CSRF-Token";
         HttpParser.get_header(protocore_http_parser_span());
         const char *tok = HttpParserV.text;
-        Csrf.verify_args.token = tok;
+        CsrfV.verify_args.token = tok;
         Csrf.verify(protocore_csrf_span());
-        if (!tok || !Csrf.valid)
+        if (!tok || !CsrfV.valid)
         {
             send_text(slot_id, 403, PROTOCORE_MIME_TEXT_PLAIN, "CSRF token missing or invalid");
             return PROTO_TRUE;
@@ -716,10 +716,10 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     }
 #endif
     uint32_t now = (uint32_t)Clock.ms;
-    AuthLockout.args.ip = &cip;
-    AuthLockout.args.now_ms = now;
+    AuthLockoutV.args.ip = &cip;
+    AuthLockoutV.args.now_ms = now;
     AuthLockout.remaining(protocore_auth_lockout_span());
-    uint32_t remain = AuthLockout.ms;
+    uint32_t remain = AuthLockoutV.ms;
     if (remain > 0)
     {
         // Address is locked out: 429 + Retry-After, no credential check.
@@ -747,13 +747,13 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     // attempt: don't count it toward the lockout (nor reset the counter).
     if (ok)
     {
-        AuthLockout.args.ip = &cip;
+        AuthLockoutV.args.ip = &cip;
         AuthLockout.succeed(protocore_auth_lockout_span());
     }
     else if (!stale)
     {
-        AuthLockout.args.ip = &cip;
-        AuthLockout.args.now_ms = now;
+        AuthLockoutV.args.ip = &cip;
+        AuthLockoutV.args.now_ms = now;
         AuthLockout.fail(protocore_auth_lockout_span());
     }
 #endif

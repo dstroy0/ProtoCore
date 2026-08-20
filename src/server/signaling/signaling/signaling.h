@@ -119,7 +119,14 @@ typedef struct
     SignalPutArgs put;
     uint8_t slot;
     protocore_signal_snapshot *out;
+} SignalVars;
 
+/** @brief The operands and the outcome. */
+extern SignalVars SignalV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const know)(uint8_t *restrict work);
     void (*const reset)(uint8_t *restrict work);
     void (*const put_response)(uint8_t *restrict work);
@@ -127,8 +134,25 @@ typedef struct
     void (*const kill)(uint8_t *restrict work);
 } SignalingNs;
 
-/** @brief The one symbol this module exports. */
-extern SignalingNs Signal;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SignalV or a region of the borrow at a fixed offset.
+void protocore_signal_know(uint8_t *restrict work);
+void protocore_signal_reset(uint8_t *restrict work);
+void protocore_signal_put_response(uint8_t *restrict work);
+void protocore_signal_put_tick(uint8_t *restrict work);
+void protocore_signal_kill(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Signal.know(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SignalingNs Signal __attribute__((unused)) = {
+    .know = protocore_signal_know,
+    .reset = protocore_signal_reset,
+    .put_response = protocore_signal_put_response,
+    .put_tick = protocore_signal_put_tick,
+    .kill = protocore_signal_kill,
+};
 
 /**
  * @brief The PROTOCORE_SIGNALING_BORROW bytes this module's state lives in.

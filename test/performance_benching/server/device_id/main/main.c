@@ -32,14 +32,14 @@ void dbench_run(void)
     static const uint8_t mac_b[6] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55};
     static char out[PROTOCORE_UUID_STR_LEN];
 
-    DeviceId.args.out = out;
+    DeviceIdV.args.out = out;
 
     for (;;)
     {
         DBENCH_BANNER("device_id");
-        DeviceId.args.mac = mac_a;
+        DeviceIdV.args.mac = mac_a;
         DBENCH_OP("DeviceId.from_mac (aabbccddeeff)", 20000, DeviceId.from_mac(device_id_work));
-        DeviceId.args.mac = mac_b;
+        DeviceIdV.args.mac = mac_b;
         DBENCH_OP("DeviceId.from_mac (001122334455)", 20000, DeviceId.from_mac(device_id_work));
         DBENCH_DONE();
     }

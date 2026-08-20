@@ -105,11 +105,17 @@ typedef struct
     ConfigStoreSetBlobArgs set_blob_args;
     ConfigStoreGetBlobArgs get_blob_args;
     ConfigStoreEraseArgs erase_args;
-
     proto_bool ok;
     int n;
     uint32_t ms;
+} ConfigStoreVars;
 
+/** @brief The operands and the outcome. */
+extern ConfigStoreVars ConfigStoreV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const begin)(uint8_t *restrict work);
     void (*const set_str)(uint8_t *restrict work);
     void (*const get_str)(uint8_t *restrict work);
@@ -121,8 +127,33 @@ typedef struct
     void (*const clear)(uint8_t *restrict work);
 } ConfigStoreNs;
 
-/** @brief The one symbol this module exports. */
-extern ConfigStoreNs ConfigStore;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ConfigStoreV or a region of the borrow at a fixed offset.
+void protocore_config_store_begin(uint8_t *restrict work);
+void protocore_config_store_set_str(uint8_t *restrict work);
+void protocore_config_store_get_str(uint8_t *restrict work);
+void protocore_config_store_set_u32(uint8_t *restrict work);
+void protocore_config_store_get_u32(uint8_t *restrict work);
+void protocore_config_store_set_blob(uint8_t *restrict work);
+void protocore_config_store_get_blob(uint8_t *restrict work);
+void protocore_config_store_erase(uint8_t *restrict work);
+void protocore_config_store_clear(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `ConfigStore.begin(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ConfigStoreNs ConfigStore __attribute__((unused)) = {
+    .begin = protocore_config_store_begin,
+    .set_str = protocore_config_store_set_str,
+    .get_str = protocore_config_store_get_str,
+    .set_u32 = protocore_config_store_set_u32,
+    .get_u32 = protocore_config_store_get_u32,
+    .set_blob = protocore_config_store_set_blob,
+    .get_blob = protocore_config_store_get_blob,
+    .erase = protocore_config_store_erase,
+    .clear = protocore_config_store_clear,
+};
 
 /**
  * @brief The PROTOCORE_CONFIG_STORE_BORROW bytes this module's state lives in.

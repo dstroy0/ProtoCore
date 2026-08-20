@@ -716,7 +716,7 @@ void stats(uint8_t slot_id)
     // One read of the bucket, not four reads of four owners: a report that gathered field by field
     // could straddle two server states while it was still formatting the first.
     protocore_signal_snapshot sig;
-    Signal.out = &sig;
+    SignalV.out = &sig;
     Signal.know(protocore_signaling_span());
 
     // millis() is a 32-bit tick counter, so the uptime field wraps with it.
@@ -827,7 +827,7 @@ void metrics(uint8_t slot_id)
 #endif
 
     protocore_signal_snapshot sig;
-    Signal.out = &sig;
+    SignalV.out = &sig;
     Signal.know(protocore_signaling_span());
 
     num_field(s_metrics.uptime, sizeof(s_metrics.uptime), (uint32_t)(up / 1000UL));

@@ -44,8 +44,8 @@ void setUp()
 
     static const uint8_t protocore_csrf_key[16] = {0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x4b, 0x65,
                                                    0x79, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36};
-    Csrf.secret_args.secret = protocore_csrf_key;
-    Csrf.secret_args.len = sizeof(protocore_csrf_key);
+    CsrfV.secret_args.secret = protocore_csrf_key;
+    CsrfV.secret_args.len = sizeof(protocore_csrf_key);
     Csrf.set_secret(protocore_csrf_span());
 #endif
 }
@@ -68,8 +68,8 @@ static void feed_unsafe(uint8_t slot, const char *method, const char *path)
     char reqbuf[256];
 #if PROTOCORE_ENABLE_CSRF
     char tok[CSRF_TOKEN_BUF];
-    Csrf.issue_args.out = tok;
-    Csrf.issue_args.cap = sizeof(tok);
+    CsrfV.issue_args.out = tok;
+    CsrfV.issue_args.cap = sizeof(tok);
     Csrf.issue(protocore_csrf_span());
     snprintf(reqbuf, sizeof(reqbuf), "%s %s HTTP/1.1\r\nX-CSRF-Token: %s\r\n\r\n", method, path, tok);
 #else

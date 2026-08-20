@@ -55,15 +55,15 @@ static int32_t hex_decode_nonce(const char *text, uint8_t *out)
 
 void dbench_run(void)
 {
-    Csrf.secret_args.secret = SECRET;
-    Csrf.secret_args.len = sizeof(SECRET);
+    CsrfV.secret_args.secret = SECRET;
+    CsrfV.secret_args.len = sizeof(SECRET);
     Csrf.set_secret(protocore_csrf_span());
 
     static char token[CSRF_TOKEN_BUF];
-    Csrf.issue_args.out = token;
-    Csrf.issue_args.cap = sizeof(token);
+    CsrfV.issue_args.out = token;
+    CsrfV.issue_args.cap = sizeof(token);
     Csrf.issue(protocore_csrf_span()); // seed a valid token for the verify bench
-    int tlen = Csrf.n;
+    int tlen = CsrfV.n;
     (void)tlen;
 
     static const uint8_t raw6[CSRF_NONCE_BYTES] = {0xde, 0xad, 0xbe, 0xef, 0x01, 0x02};
@@ -77,16 +77,16 @@ void dbench_run(void)
         volatile int sinki = 0;
         volatile bool sinkb = false;
 
-        Csrf.issue_args.out = token;
-        Csrf.issue_args.cap = sizeof(token);
+        CsrfV.issue_args.out = token;
+        CsrfV.issue_args.cap = sizeof(token);
         DBENCH_OP("Csrf.issue", 20000, {
             Csrf.issue(protocore_csrf_span());
-            sinki += Csrf.n;
+            sinki += CsrfV.n;
         });
-        Csrf.verify_args.token = token;
+        CsrfV.verify_args.token = token;
         DBENCH_OP("Csrf.verify", 20000, {
             Csrf.verify(protocore_csrf_span());
-            sinkb = Csrf.valid;
+            sinkb = CsrfV.valid;
         });
         DBENCH_OP("Hex.encode (6B nonce)", 50000, hex_encode_nonce(raw6, hex_out));
         DBENCH_OP("Hex.decode (6B nonce)", 50000, sinki += hex_decode_nonce(hex_out, bin_out));

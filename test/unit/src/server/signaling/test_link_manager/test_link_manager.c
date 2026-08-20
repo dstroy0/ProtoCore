@@ -21,33 +21,33 @@ static LinkManager g_m;
 
 static void bind(LinkManager *m, LinkIface *ifaces, size_t n)
 {
-    Link.args.m = m;
-    Link.args.ifaces = ifaces;
-    Link.args.n = n;
+    LinkV.args.m = m;
+    LinkV.args.ifaces = ifaces;
+    LinkV.args.n = n;
     Link.init(link_manager_work);
 }
 
 static int active(const LinkManager *m)
 {
-    Link.args.m_ro = m;
+    LinkV.args.m_ro = m;
     Link.active(link_manager_work);
-    return Link.i32;
+    return LinkV.i32;
 }
 
 static int select_best(const LinkManager *m)
 {
-    Link.args.m_ro = m;
+    LinkV.args.m_ro = m;
     Link.select(link_manager_work);
-    return Link.i32;
+    return LinkV.i32;
 }
 
 static proto_bool set_up(LinkManager *m, size_t idx, proto_bool up)
 {
-    Link.args.m = m;
-    Link.args.idx = idx;
-    Link.args.up = up;
+    LinkV.args.m = m;
+    LinkV.args.idx = idx;
+    LinkV.args.up = up;
     Link.set(link_manager_work);
-    return Link.changed;
+    return LinkV.changed;
 }
 
 void setUp(void)
@@ -101,26 +101,26 @@ void test_selection_is_total_order_over_priority_then_index(void)
 void test_escalation_and_failover_walk_the_priority_order(void)
 {
     TEST_ASSERT_TRUE(set_up(&g_m, 1, PROTO_TRUE)); // WiFi STA first: nothing was up
-    TEST_ASSERT_EQUAL_INT(-1, Link.from);
-    TEST_ASSERT_EQUAL_INT(1, Link.to);
+    TEST_ASSERT_EQUAL_INT(-1, LinkV.from);
+    TEST_ASSERT_EQUAL_INT(1, LinkV.to);
 
     TEST_ASSERT_TRUE(set_up(&g_m, 0, PROTO_TRUE)); // Ethernet beats it
-    TEST_ASSERT_EQUAL_INT(1, Link.from);
-    TEST_ASSERT_EQUAL_INT(0, Link.to);
+    TEST_ASSERT_EQUAL_INT(1, LinkV.from);
+    TEST_ASSERT_EQUAL_INT(0, LinkV.to);
 
     TEST_ASSERT_FALSE(set_up(&g_m, 2, PROTO_TRUE)); // softAP loses to both
-    TEST_ASSERT_EQUAL_INT(0, Link.from);
-    TEST_ASSERT_EQUAL_INT(0, Link.to);
+    TEST_ASSERT_EQUAL_INT(0, LinkV.from);
+    TEST_ASSERT_EQUAL_INT(0, LinkV.to);
 
     TEST_ASSERT_TRUE(set_up(&g_m, 0, PROTO_FALSE)); // Ethernet drops: next best is WiFi STA
-    TEST_ASSERT_EQUAL_INT(0, Link.from);
-    TEST_ASSERT_EQUAL_INT(1, Link.to);
+    TEST_ASSERT_EQUAL_INT(0, LinkV.from);
+    TEST_ASSERT_EQUAL_INT(1, LinkV.to);
 
     TEST_ASSERT_TRUE(set_up(&g_m, 1, PROTO_FALSE)); // and then the softAP
-    TEST_ASSERT_EQUAL_INT(2, Link.to);
+    TEST_ASSERT_EQUAL_INT(2, LinkV.to);
 
     TEST_ASSERT_TRUE(set_up(&g_m, 2, PROTO_FALSE)); // nothing left
-    TEST_ASSERT_EQUAL_INT(-1, Link.to);
+    TEST_ASSERT_EQUAL_INT(-1, LinkV.to);
     TEST_ASSERT_EQUAL_INT(-1, active(&g_m));
 }
 
@@ -156,8 +156,8 @@ void test_an_index_past_the_table_changes_nothing(void)
     (void)set_up(&g_m, 1, PROTO_TRUE);
 
     TEST_ASSERT_FALSE(set_up(&g_m, 3, PROTO_TRUE));
-    TEST_ASSERT_EQUAL_INT(1, Link.from);
-    TEST_ASSERT_EQUAL_INT(1, Link.to);
+    TEST_ASSERT_EQUAL_INT(1, LinkV.from);
+    TEST_ASSERT_EQUAL_INT(1, LinkV.to);
     TEST_ASSERT_EQUAL_INT(1, active(&g_m));
 
     TEST_ASSERT_FALSE(set_up(&g_m, (size_t)-1, PROTO_TRUE));
@@ -175,8 +175,8 @@ void test_a_manager_with_no_table_carries_nothing(void)
     TEST_ASSERT_EQUAL_INT(-1, active(&m));
 
     TEST_ASSERT_FALSE(set_up(&m, 0, PROTO_TRUE));
-    TEST_ASSERT_EQUAL_INT(-1, Link.from);
-    TEST_ASSERT_EQUAL_INT(-1, Link.to);
+    TEST_ASSERT_EQUAL_INT(-1, LinkV.from);
+    TEST_ASSERT_EQUAL_INT(-1, LinkV.to);
 }
 
 // Every call tolerates a missing manager and reports the no-egress answer.
@@ -187,6 +187,6 @@ void test_a_missing_manager_is_refused(void)
     TEST_ASSERT_EQUAL_INT(-1, select_best(NULL));
 
     TEST_ASSERT_FALSE(set_up(NULL, 0, PROTO_TRUE));
-    TEST_ASSERT_EQUAL_INT(-1, Link.from);
-    TEST_ASSERT_EQUAL_INT(-1, Link.to);
+    TEST_ASSERT_EQUAL_INT(-1, LinkV.from);
+    TEST_ASSERT_EQUAL_INT(-1, LinkV.to);
 }

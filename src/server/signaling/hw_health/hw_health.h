@@ -148,13 +148,19 @@ typedef struct
     HwSpiArgs spi;
     HwProbeArgs probe;
     HwOutArgs out_args;
-
     HwRailVerdict rail_verdict;
     HwGpioVerdict gpio_verdict;
     HwCapVerdict cap_verdict;
     uint32_t hz;
     size_t n;
+} HwHealthVars;
 
+/** @brief The operands and the outcome. */
+extern HwHealthVars HwHealthV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const rail_init)(uint8_t *restrict work);
     void (*const rail_sample)(uint8_t *restrict work);
     void (*const rail_json)(uint8_t *restrict work);
@@ -164,8 +170,29 @@ typedef struct
     void (*const cap_leak)(uint8_t *restrict work);
 } HwHealthNs;
 
-/** @brief The one symbol this module exports. */
-extern HwHealthNs HwHealth;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HwHealthV or a region of the borrow at a fixed offset.
+void protocore_hw_health_rail_init(uint8_t *restrict work);
+void protocore_hw_health_rail_sample(uint8_t *restrict work);
+void protocore_hw_health_rail_json(uint8_t *restrict work);
+void protocore_hw_health_spi_init(uint8_t *restrict work);
+void protocore_hw_health_spi_result(uint8_t *restrict work);
+void protocore_hw_health_gpio_short(uint8_t *restrict work);
+void protocore_hw_health_cap_leak(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `HwHealth.rail_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HwHealthNs HwHealth __attribute__((unused)) = {
+    .rail_init = protocore_hw_health_rail_init,
+    .rail_sample = protocore_hw_health_rail_sample,
+    .rail_json = protocore_hw_health_rail_json,
+    .spi_init = protocore_hw_health_spi_init,
+    .spi_result = protocore_hw_health_spi_result,
+    .gpio_short = protocore_hw_health_gpio_short,
+    .cap_leak = protocore_hw_health_cap_leak,
+};
 
 PROTOCORE_END_DECLS
 

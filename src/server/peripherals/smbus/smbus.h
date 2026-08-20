@@ -233,10 +233,16 @@ typedef struct
     SmbusReadBlockArgs read_block_args;
     SmbusProcessCallArgs process_call_args;
     SmbusBlockProcessCallArgs block_process_call_args;
-
     proto_bool ok;
     uint8_t value;
+} SmbusVars;
 
+/** @brief The operands and the outcome. */
+extern SmbusVars SmbusV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const addr_byte)(uint8_t *restrict work);
     void (*const pec_write)(uint8_t *restrict work);
     void (*const pec_read)(uint8_t *restrict work);
@@ -256,8 +262,49 @@ typedef struct
     void (*const block_process_call)(uint8_t *restrict work);
 } SmbusNs;
 
-/** @brief The one symbol this module exports. */
-extern SmbusNs Smbus;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SmbusV or a region of the borrow at a fixed offset.
+void protocore_smbus_addr_byte(uint8_t *restrict work);
+void protocore_smbus_pec_write(uint8_t *restrict work);
+void protocore_smbus_pec_read(uint8_t *restrict work);
+void protocore_smbus_set_pec(uint8_t *restrict work);
+void protocore_smbus_pec_enabled(uint8_t *restrict work);
+void protocore_smbus_begin(uint8_t *restrict work);
+void protocore_smbus_quick(uint8_t *restrict work);
+void protocore_smbus_send_byte(uint8_t *restrict work);
+void protocore_smbus_receive_byte(uint8_t *restrict work);
+void protocore_smbus_write_byte(uint8_t *restrict work);
+void protocore_smbus_read_byte(uint8_t *restrict work);
+void protocore_smbus_write_word(uint8_t *restrict work);
+void protocore_smbus_read_word(uint8_t *restrict work);
+void protocore_smbus_write_block(uint8_t *restrict work);
+void protocore_smbus_read_block(uint8_t *restrict work);
+void protocore_smbus_process_call(uint8_t *restrict work);
+void protocore_smbus_block_process_call(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Smbus.addr_byte(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SmbusNs Smbus __attribute__((unused)) = {
+    .addr_byte = protocore_smbus_addr_byte,
+    .pec_write = protocore_smbus_pec_write,
+    .pec_read = protocore_smbus_pec_read,
+    .set_pec = protocore_smbus_set_pec,
+    .pec_enabled = protocore_smbus_pec_enabled,
+    .begin = protocore_smbus_begin,
+    .quick = protocore_smbus_quick,
+    .send_byte = protocore_smbus_send_byte,
+    .receive_byte = protocore_smbus_receive_byte,
+    .write_byte = protocore_smbus_write_byte,
+    .read_byte = protocore_smbus_read_byte,
+    .write_word = protocore_smbus_write_word,
+    .read_word = protocore_smbus_read_word,
+    .write_block = protocore_smbus_write_block,
+    .read_block = protocore_smbus_read_block,
+    .process_call = protocore_smbus_process_call,
+    .block_process_call = protocore_smbus_block_process_call,
+};
 
 /**
  * @brief The PROTOCORE_SMBUS_BORROW bytes this module's state lives in.

@@ -121,11 +121,17 @@ typedef struct
     Vl53l0xRangeValidArgs range_valid_args;
     Vl53l0xBeginArgs begin_args;
     Vl53l0xReadMmArgs read_mm_args;
-
     proto_bool ok;
     uint16_t mm;
     uint8_t status;
+} Vl53l0xVars;
 
+/** @brief The operands and the outcome. */
+extern Vl53l0xVars Vl53l0xV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const range_mm)(uint8_t *restrict work);
     void (*const data_ready)(uint8_t *restrict work);
     void (*const range_status)(uint8_t *restrict work);
@@ -134,8 +140,27 @@ typedef struct
     void (*const read_mm)(uint8_t *restrict work);
 } Vl53l0xNs;
 
-/** @brief The one symbol this module exports. */
-extern Vl53l0xNs Vl53l0x;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Vl53l0xV or a region of the borrow at a fixed offset.
+void protocore_vl53l0x_range_mm(uint8_t *restrict work);
+void protocore_vl53l0x_data_ready(uint8_t *restrict work);
+void protocore_vl53l0x_range_status(uint8_t *restrict work);
+void protocore_vl53l0x_range_valid(uint8_t *restrict work);
+void protocore_vl53l0x_begin(uint8_t *restrict work);
+void protocore_vl53l0x_read_mm(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Vl53l0x.range_mm(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Vl53l0xNs Vl53l0x __attribute__((unused)) = {
+    .range_mm = protocore_vl53l0x_range_mm,
+    .data_ready = protocore_vl53l0x_data_ready,
+    .range_status = protocore_vl53l0x_range_status,
+    .range_valid = protocore_vl53l0x_range_valid,
+    .begin = protocore_vl53l0x_begin,
+    .read_mm = protocore_vl53l0x_read_mm,
+};
 
 /**
  * @brief The PROTOCORE_I2C_DEVICE_BORROW bytes this module's state lives in.

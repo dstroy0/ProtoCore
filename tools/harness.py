@@ -193,6 +193,40 @@ CONVERT = {
         "without summing it is the defect five converted modules carried.",
         ["gen"],
     ),
+    "handle": T(
+        GOLDENIZE,
+        "handle [module.h ...] [--batch=N] [--skip=N] [--dry]",
+        "extern <X>Ns <X>; becomes a `static const` table with the operands in <X>V. An extern "
+        "table's definition is in another translation unit, so a call through it is INDIRECT and "
+        "the compiler cannot read the pointer: measured on sha256 against the RFC 6234 vectors, the "
+        "extern form keeps one indirect call and one live symbol PER ENTRY at every optimisation "
+        "level, -O2 -flto included, and the static const form emits neither, 316 bytes smaller. "
+        "X.entry(work) does not change; only X.foo_args becomes XV.foo_args. "
+        "USE --batch. A sweep of all 302 is ONE verdict: it either builds or it does not, and four "
+        "thousand errors say nothing about which module caused them. Seven whole-tree attempts ran "
+        "4257, 15507, 943, 406, 98, 563, 3771 - it reached one file and then regressed twice. In "
+        "batches of 20-30 with a build AND THE SUITE between, the failure names its own module. "
+        "RUN THE SUITE, not just the build. The two worst defects both compiled and linked clean: a "
+        "table that initialises DATA members in the same brace as its entries (rfc1951 binds "
+        ".len_base there) lost them to zero-initialisation and segfaulted in ten suites, and a "
+        "CONDITIONAL initializer (network.c guards .dns with #if PROTOCORE_ENABLE_DNS) lost the "
+        "guarded members and left them null. A build-only gate ships both. "
+        "WHAT THE TREE DOES THAT SHA256 DOES NOT: the object is not named after the file "
+        "(protocol.h publishes ConnPool, so the entries are protocore_conn_pool_*); an entry is "
+        "bound to a BARE name (.reset = reset), so a guessed <mod>_<entry> renames nothing and the "
+        "header declares functions no .c defines; a whole table can sit on ONE line; operands are "
+        "written from a macro in the module's own header, from a local alias (HttpClientNs *ns = "
+        "&HttpClient), and through a pointer another module holds (SessionV.workers->pump); a "
+        "module defines its table once per #if arm. "
+        "A NAME IS NOT AUTOMATICALLY FREE: net_addr already publishes protocore_net_addr_to_ip with "
+        "another signature, so that module is REPORTED and skipped rather than renamed behind a "
+        "caller's back. Read the SKIPPED lines. "
+        "TWO CONSEQUENCES THAT ARE NOT BUGS. A test can no longer substitute a module by defining "
+        "its namespace object - the header owns that now - so it defines the ENTRY SYMBOLS AND the "
+        "Vars instead; forgetting the Vars is an undefined reference to <X>V. And &Namespace is a "
+        "different address in every translation unit, so a cross-TU pointer COMPARISON fails where "
+        "calling through the pointer still works.",
+    ),
     "unnull": T(
         GOLDENIZE,
         "unnull [file.c ...] [--dry]",

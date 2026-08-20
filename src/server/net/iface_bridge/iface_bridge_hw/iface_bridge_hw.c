@@ -283,13 +283,13 @@ static void service_txn(uint8_t slot, const BridgeTarget *t)
         uint16_t pw = 0;
         uint16_t pr = 0;
         const uint8_t *wd = NULL;
-        IfaceBridge.txn_parse_args.buf = frame;
-        IfaceBridge.txn_parse_args.len = need;
-        IfaceBridge.txn_parse_args.write_len = &pw;
-        IfaceBridge.txn_parse_args.read_len = &pr;
-        IfaceBridge.txn_parse_args.write_data = &wd;
+        IfaceBridgeV.txn_parse_args.buf = frame;
+        IfaceBridgeV.txn_parse_args.len = need;
+        IfaceBridgeV.txn_parse_args.write_len = &pw;
+        IfaceBridgeV.txn_parse_args.read_len = &pr;
+        IfaceBridgeV.txn_parse_args.write_data = &wd;
         IfaceBridge.txn_parse(protocore_iface_bridge_span());
-        if (IfaceBridge.n != need)
+        if (IfaceBridgeV.n != need)
         {
             ConnPool.slot = slot;
             ConnPool.close(protocore_conn_pool_span()); // codec disagreed with the header - drop the connection
@@ -408,35 +408,35 @@ uint8_t *protocore_iface_bridge_hw_span(void)
     return s_own.span;
 }
 
-static void iface_bridge_hw_publish(uint8_t *restrict work)
+void protocore_iface_bridge_hw_publish(uint8_t *restrict work)
 {
-    uint8_t listener_id = IfaceBridgeHw.publish_args.listener_id;
-    uint16_t port = IfaceBridgeHw.publish_args.port;
-    BridgeProto proto = IfaceBridgeHw.publish_args.proto;
-    const BridgeTarget *target = IfaceBridgeHw.publish_args.target;
+    uint8_t listener_id = IfaceBridgeHwV.publish_args.listener_id;
+    uint16_t port = IfaceBridgeHwV.publish_args.port;
+    BridgeProto proto = IfaceBridgeHwV.publish_args.proto;
+    const BridgeTarget *target = IfaceBridgeHwV.publish_args.target;
 
     if (!target)
     {
-        IfaceBridgeHw.ok = PROTO_FALSE;
+        IfaceBridgeHwV.ok = PROTO_FALSE;
         return;
     }
-    IfaceBridge.map_args.ip = NULL;
-    IfaceBridge.map_args.port = port;
-    IfaceBridge.map_args.proto = proto;
-    IfaceBridge.map_args.target = target;
+    IfaceBridgeV.map_args.ip = NULL;
+    IfaceBridgeV.map_args.port = port;
+    IfaceBridgeV.map_args.proto = proto;
+    IfaceBridgeV.map_args.target = target;
     IfaceBridge.map(protocore_iface_bridge_span());
-    if (!IfaceBridge.ok) // store + validate + dedupe in the pure table
+    if (!IfaceBridgeV.ok) // store + validate + dedupe in the pure table
     {
-        IfaceBridgeHw.ok = PROTO_FALSE;
+        IfaceBridgeHwV.ok = PROTO_FALSE;
         return;
     }
-    IfaceBridge.find_args.port = port;
-    IfaceBridge.find_args.proto = proto;
+    IfaceBridgeV.find_args.port = port;
+    IfaceBridgeV.find_args.proto = proto;
     IfaceBridge.find(protocore_iface_bridge_span());
-    const BridgeRule *rule = IfaceBridge.rule;
+    const BridgeRule *rule = IfaceBridgeV.rule;
     if (!rule)
     {
-        IfaceBridgeHw.ok = PROTO_FALSE;
+        IfaceBridgeHwV.ok = PROTO_FALSE;
         return;
     }
     int idx = -1;
@@ -450,7 +450,7 @@ static void iface_bridge_hw_publish(uint8_t *restrict work)
     }
     if (idx < 0)
     {
-        IfaceBridgeHw.ok = PROTO_FALSE;
+        IfaceBridgeHwV.ok = PROTO_FALSE;
         return;
     }
     IFACE_BRIDGE_HW_CTX(work)->binds[idx].active = PROTO_TRUE;
@@ -464,10 +464,10 @@ static void iface_bridge_hw_publish(uint8_t *restrict work)
         SessionV.proto->add(protocore_session_span());
         IFACE_BRIDGE_HW_CTX(work)->registered = PROTO_TRUE;
     }
-    IfaceBridgeHw.ok = PROTO_TRUE;
+    IfaceBridgeHwV.ok = PROTO_TRUE;
 }
 
-static void iface_bridge_hw_reset(uint8_t *restrict work)
+void protocore_iface_bridge_hw_reset(uint8_t *restrict work)
 {
     for (int i = 0; i < PROTOCORE_BRIDGE_MAX_RULES; i++)
     {
@@ -476,7 +476,8 @@ static void iface_bridge_hw_reset(uint8_t *restrict work)
     IfaceBridge.clear(protocore_iface_bridge_span());
 }
 
-IfaceBridgeHwNs IfaceBridgeHw = {.publish = iface_bridge_hw_publish, .reset = iface_bridge_hw_reset};
+/** @brief The operands and the outcome. */
+IfaceBridgeHwVars IfaceBridgeHwV;
 
 PROTOCORE_END_DECLS
 

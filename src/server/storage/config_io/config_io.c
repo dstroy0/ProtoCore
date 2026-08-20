@@ -67,26 +67,26 @@ static proto_bool append_kv(char *out, size_t cap, size_t *pos, const char *key,
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void config_io_export(uint8_t *restrict work)
+void protocore_config_io_export(uint8_t *restrict work)
 {
     (void)work;
-    const char *ns = ConfigIo.export_args.ns;
-    const protocore_cfg_field *fields = ConfigIo.export_args.fields;
-    size_t n = ConfigIo.export_args.n;
-    char *out = ConfigIo.export_args.out;
-    size_t cap = ConfigIo.export_args.cap;
+    const char *ns = ConfigIoV.export_args.ns;
+    const protocore_cfg_field *fields = ConfigIoV.export_args.fields;
+    size_t n = ConfigIoV.export_args.n;
+    char *out = ConfigIoV.export_args.out;
+    size_t cap = ConfigIoV.export_args.cap;
 
     if (!out || cap == 0)
     {
-        ConfigIo.n = 0;
+        ConfigIoV.n = 0;
         return;
     }
     out[0] = '\0';
-    ConfigStore.begin_args.ns = ns;
+    ConfigStoreV.begin_args.ns = ns;
     ConfigStore.begin(protocore_config_store_span());
-    if (!fields || !ConfigStore.ok)
+    if (!fields || !ConfigStoreV.ok)
     {
-        ConfigIo.n = 0;
+        ConfigIoV.n = 0;
         return; // host config_store backend's protocore_config_begin always returns true
     }
 
@@ -96,30 +96,30 @@ static void config_io_export(uint8_t *restrict work)
         char val[PROTOCORE_VAL_MAX];
         if (fields[i].type == PROTOCORE_CFG_U32)
         {
-            ConfigStore.get_u32_args.key = fields[i].key;
-            ConfigStore.get_u32_args.def = 0;
+            ConfigStoreV.get_u32_args.key = fields[i].key;
+            ConfigStoreV.get_u32_args.def = 0;
             ConfigStore.get_u32(protocore_config_store_span());
             // Fails closed to an empty string on its own, so there is no failure arm to write here.
-            frame.build(val, sizeof(val), CFG_U32, (const protocore_fval[]){PROTOCORE_VU32((uint32_t)ConfigStore.ms)},
+            frame.build(val, sizeof(val), CFG_U32, (const protocore_fval[]){PROTOCORE_VU32((uint32_t)ConfigStoreV.ms)},
                         1);
         }
         else
         {
-            ConfigStore.get_str_args.key = fields[i].key;
-            ConfigStore.get_str_args.out = val;
-            ConfigStore.get_str_args.out_cap = sizeof(val);
-            ConfigStore.get_str_args.def = "";
+            ConfigStoreV.get_str_args.key = fields[i].key;
+            ConfigStoreV.get_str_args.out = val;
+            ConfigStoreV.get_str_args.out_cap = sizeof(val);
+            ConfigStoreV.get_str_args.def = "";
             ConfigStore.get_str(protocore_config_store_span());
         }
 
         if (!append_kv(out, cap, &pos, fields[i].key, val))
         {
             out[0] = '\0';
-            ConfigIo.n = 0;
+            ConfigIoV.n = 0;
             return; // fail closed on overflow
         }
     }
-    ConfigIo.n = (int)pos;
+    ConfigIoV.n = (int)pos;
 }
 
 // Set one key=val pair against the field table; returns true iff a matching field was found and its
@@ -133,35 +133,35 @@ static proto_bool config_apply_field(const protocore_cfg_field *fields, size_t n
     }
     if (t == PROTOCORE_CFG_U32)
     {
-        ConfigStore.set_u32_args.key = key;
-        ConfigStore.set_u32_args.val = (uint32_t)str.to_ulong(val, NULL);
+        ConfigStoreV.set_u32_args.key = key;
+        ConfigStoreV.set_u32_args.val = (uint32_t)str.to_ulong(val, NULL);
         ConfigStore.set_u32(protocore_config_store_span());
-        return ConfigStore.ok;
+        return ConfigStoreV.ok;
     }
     if (t == PROTOCORE_CFG_STR)
     {
-        ConfigStore.set_str_args.key = key;
-        ConfigStore.set_str_args.val = val;
+        ConfigStoreV.set_str_args.key = key;
+        ConfigStoreV.set_str_args.val = val;
         ConfigStore.set_str(protocore_config_store_span());
-        return ConfigStore.ok;
+        return ConfigStoreV.ok;
     }
     return PROTO_FALSE;
 }
 
-static void config_io_import(uint8_t *restrict work)
+void protocore_config_io_import(uint8_t *restrict work)
 {
     (void)work;
-    const char *ns = ConfigIo.import_args.ns;
-    const protocore_cfg_field *fields = ConfigIo.import_args.fields;
-    size_t n = ConfigIo.import_args.n;
-    const char *text = ConfigIo.import_args.text;
-    size_t len = ConfigIo.import_args.len;
+    const char *ns = ConfigIoV.import_args.ns;
+    const protocore_cfg_field *fields = ConfigIoV.import_args.fields;
+    size_t n = ConfigIoV.import_args.n;
+    const char *text = ConfigIoV.import_args.text;
+    size_t len = ConfigIoV.import_args.len;
 
-    ConfigStore.begin_args.ns = ns;
+    ConfigStoreV.begin_args.ns = ns;
     ConfigStore.begin(protocore_config_store_span());
-    if (!text || !fields || !ConfigStore.ok)
+    if (!text || !fields || !ConfigStoreV.ok)
     {
-        ConfigIo.n = 0;
+        ConfigIoV.n = 0;
         return; // the host config_store backend's protocore_config_begin always returns true
     }
 
@@ -205,10 +205,11 @@ static void config_io_import(uint8_t *restrict work)
         }
         i = eol + 1; // skip the newline
     }
-    ConfigIo.n = count;
+    ConfigIoV.n = count;
 }
 
-ConfigIoNs ConfigIo = {.export = config_io_export, .import = config_io_import};
+/** @brief The operands and the outcome. */
+ConfigIoVars ConfigIoV;
 
 PROTOCORE_END_DECLS
 

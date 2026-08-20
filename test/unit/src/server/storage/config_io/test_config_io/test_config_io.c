@@ -29,7 +29,7 @@ static const size_t N = sizeof(SCHEMA) / sizeof(SCHEMA[0]);
 
 void setUp(void)
 {
-    ConfigStore.begin_args.ns = "t";
+    ConfigStoreV.begin_args.ns = "t";
     ConfigStore.begin(protocore_config_store_span());
     ConfigStore.clear(protocore_config_store_span());
 }
@@ -40,10 +40,10 @@ void tearDown(void)
 static const char *get_str(const char *key)
 {
     static char buf[64];
-    ConfigStore.get_str_args.key = key;
-    ConfigStore.get_str_args.out = buf;
-    ConfigStore.get_str_args.out_cap = sizeof(buf);
-    ConfigStore.get_str_args.def = "";
+    ConfigStoreV.get_str_args.key = key;
+    ConfigStoreV.get_str_args.out = buf;
+    ConfigStoreV.get_str_args.out_cap = sizeof(buf);
+    ConfigStoreV.get_str_args.def = "";
     ConfigStore.get_str(protocore_config_store_span());
     return buf;
 }
@@ -52,24 +52,24 @@ static const char *get_str(const char *key)
 // schema order. The return is the character count, so it agrees with the text's own length.
 void test_export_writes_one_key_value_line_per_field(void)
 {
-    ConfigStore.set_str_args.key = "ssid";
-    ConfigStore.set_str_args.val = "myssid";
+    ConfigStoreV.set_str_args.key = "ssid";
+    ConfigStoreV.set_str_args.val = "myssid";
     ConfigStore.set_str(protocore_config_store_span());
-    ConfigStore.set_u32_args.key = "port";
-    ConfigStore.set_u32_args.val = 8080;
+    ConfigStoreV.set_u32_args.key = "port";
+    ConfigStoreV.set_u32_args.val = 8080;
     ConfigStore.set_u32(protocore_config_store_span());
-    ConfigStore.set_str_args.key = "name";
-    ConfigStore.set_str_args.val = "node1";
+    ConfigStoreV.set_str_args.key = "name";
+    ConfigStoreV.set_str_args.val = "node1";
     ConfigStore.set_str(protocore_config_store_span());
 
     char buf[256];
-    ConfigIo.export_args.ns = "t";
-    ConfigIo.export_args.fields = SCHEMA;
-    ConfigIo.export_args.n = N;
-    ConfigIo.export_args.out = buf;
-    ConfigIo.export_args.cap = sizeof(buf);
+    ConfigIoV.export_args.ns = "t";
+    ConfigIoV.export_args.fields = SCHEMA;
+    ConfigIoV.export_args.n = N;
+    ConfigIoV.export_args.out = buf;
+    ConfigIoV.export_args.cap = sizeof(buf);
     ConfigIo.export(config_io_work);
-    int n = ConfigIo.n;
+    int n = ConfigIoV.n;
     TEST_ASSERT_EQUAL_STRING("ssid=myssid\nport=8080\nname=node1\n", buf);
     TEST_ASSERT_EQUAL_INT((int)strlen(buf), n);
 }
@@ -79,13 +79,13 @@ void test_export_writes_one_key_value_line_per_field(void)
 void test_export_carries_every_field_even_when_unset(void)
 {
     char buf[256];
-    ConfigIo.export_args.ns = "t";
-    ConfigIo.export_args.fields = SCHEMA;
-    ConfigIo.export_args.n = N;
-    ConfigIo.export_args.out = buf;
-    ConfigIo.export_args.cap = sizeof(buf);
+    ConfigIoV.export_args.ns = "t";
+    ConfigIoV.export_args.fields = SCHEMA;
+    ConfigIoV.export_args.n = N;
+    ConfigIoV.export_args.out = buf;
+    ConfigIoV.export_args.cap = sizeof(buf);
     ConfigIo.export(config_io_work);
-    int n = ConfigIo.n;
+    int n = ConfigIoV.n;
     TEST_ASSERT_EQUAL_STRING("ssid=\nport=0\nname=\n", buf);
     TEST_ASSERT_EQUAL_INT((int)strlen(buf), n);
 }
@@ -95,45 +95,45 @@ void test_export_carries_every_field_even_when_unset(void)
 // 32-bit maximum, and a string holding the '=' the format splits on.
 void test_export_import_round_trip(void)
 {
-    ConfigStore.set_str_args.key = "ssid";
-    ConfigStore.set_str_args.val = "abc";
+    ConfigStoreV.set_str_args.key = "ssid";
+    ConfigStoreV.set_str_args.val = "abc";
     ConfigStore.set_str(protocore_config_store_span());
-    ConfigStore.set_u32_args.key = "port";
-    ConfigStore.set_u32_args.val = 4294967295u;
+    ConfigStoreV.set_u32_args.key = "port";
+    ConfigStoreV.set_u32_args.val = 4294967295u;
     ConfigStore.set_u32(protocore_config_store_span());
-    ConfigStore.set_str_args.key = "name";
-    ConfigStore.set_str_args.val = "a=b";
+    ConfigStoreV.set_str_args.key = "name";
+    ConfigStoreV.set_str_args.val = "a=b";
     ConfigStore.set_str(protocore_config_store_span());
 
     char blob[256];
-    ConfigIo.export_args.ns = "t";
-    ConfigIo.export_args.fields = SCHEMA;
-    ConfigIo.export_args.n = N;
-    ConfigIo.export_args.out = blob;
-    ConfigIo.export_args.cap = sizeof(blob);
+    ConfigIoV.export_args.ns = "t";
+    ConfigIoV.export_args.fields = SCHEMA;
+    ConfigIoV.export_args.n = N;
+    ConfigIoV.export_args.out = blob;
+    ConfigIoV.export_args.cap = sizeof(blob);
     ConfigIo.export(config_io_work);
-    int n = ConfigIo.n;
+    int n = ConfigIoV.n;
     TEST_ASSERT_TRUE(n > 0);
 
     ConfigStore.clear(protocore_config_store_span());
-    ConfigStore.get_u32_args.key = "port";
-    ConfigStore.get_u32_args.def = 0;
+    ConfigStoreV.get_u32_args.key = "port";
+    ConfigStoreV.get_u32_args.def = 0;
     ConfigStore.get_u32(protocore_config_store_span());
-    TEST_ASSERT_EQUAL_UINT32(0u, ConfigStore.ms);
+    TEST_ASSERT_EQUAL_UINT32(0u, ConfigStoreV.ms);
     TEST_ASSERT_EQUAL_STRING("", get_str("ssid"));
 
-    ConfigIo.import_args.ns = "t";
-    ConfigIo.import_args.fields = SCHEMA;
-    ConfigIo.import_args.n = N;
-    ConfigIo.import_args.text = blob;
-    ConfigIo.import_args.len = strlen(blob);
+    ConfigIoV.import_args.ns = "t";
+    ConfigIoV.import_args.fields = SCHEMA;
+    ConfigIoV.import_args.n = N;
+    ConfigIoV.import_args.text = blob;
+    ConfigIoV.import_args.len = strlen(blob);
     ConfigIo.import(config_io_work);
-    TEST_ASSERT_EQUAL_INT(3, ConfigIo.n);
+    TEST_ASSERT_EQUAL_INT(3, ConfigIoV.n);
     TEST_ASSERT_EQUAL_STRING("abc", get_str("ssid"));
-    ConfigStore.get_u32_args.key = "port";
-    ConfigStore.get_u32_args.def = 0;
+    ConfigStoreV.get_u32_args.key = "port";
+    ConfigStoreV.get_u32_args.def = 0;
     ConfigStore.get_u32(protocore_config_store_span());
-    TEST_ASSERT_EQUAL_UINT32(4294967295u, ConfigStore.ms);
+    TEST_ASSERT_EQUAL_UINT32(4294967295u, ConfigStoreV.ms);
     TEST_ASSERT_EQUAL_STRING("a=b", get_str("name"));
 }
 
@@ -141,48 +141,48 @@ void test_export_import_round_trip(void)
 // second export is byte-identical to the first.
 void test_import_is_idempotent(void)
 {
-    ConfigStore.set_str_args.key = "ssid";
-    ConfigStore.set_str_args.val = "abc";
+    ConfigStoreV.set_str_args.key = "ssid";
+    ConfigStoreV.set_str_args.val = "abc";
     ConfigStore.set_str(protocore_config_store_span());
-    ConfigStore.set_u32_args.key = "port";
-    ConfigStore.set_u32_args.val = 1234;
+    ConfigStoreV.set_u32_args.key = "port";
+    ConfigStoreV.set_u32_args.val = 1234;
     ConfigStore.set_u32(protocore_config_store_span());
-    ConfigStore.set_str_args.key = "name";
-    ConfigStore.set_str_args.val = "x";
+    ConfigStoreV.set_str_args.key = "name";
+    ConfigStoreV.set_str_args.val = "x";
     ConfigStore.set_str(protocore_config_store_span());
 
     char first[256];
-    ConfigIo.export_args.ns = "t";
-    ConfigIo.export_args.fields = SCHEMA;
-    ConfigIo.export_args.n = N;
-    ConfigIo.export_args.out = first;
-    ConfigIo.export_args.cap = sizeof(first);
+    ConfigIoV.export_args.ns = "t";
+    ConfigIoV.export_args.fields = SCHEMA;
+    ConfigIoV.export_args.n = N;
+    ConfigIoV.export_args.out = first;
+    ConfigIoV.export_args.cap = sizeof(first);
     ConfigIo.export(config_io_work);
-    (void)ConfigIo.n;
+    (void)ConfigIoV.n;
 
-    ConfigIo.import_args.ns = "t";
-    ConfigIo.import_args.fields = SCHEMA;
-    ConfigIo.import_args.n = N;
-    ConfigIo.import_args.text = first;
-    ConfigIo.import_args.len = strlen(first);
+    ConfigIoV.import_args.ns = "t";
+    ConfigIoV.import_args.fields = SCHEMA;
+    ConfigIoV.import_args.n = N;
+    ConfigIoV.import_args.text = first;
+    ConfigIoV.import_args.len = strlen(first);
     ConfigIo.import(config_io_work);
-    TEST_ASSERT_EQUAL_INT(3, ConfigIo.n);
-    ConfigIo.import_args.ns = "t";
-    ConfigIo.import_args.fields = SCHEMA;
-    ConfigIo.import_args.n = N;
-    ConfigIo.import_args.text = first;
-    ConfigIo.import_args.len = strlen(first);
+    TEST_ASSERT_EQUAL_INT(3, ConfigIoV.n);
+    ConfigIoV.import_args.ns = "t";
+    ConfigIoV.import_args.fields = SCHEMA;
+    ConfigIoV.import_args.n = N;
+    ConfigIoV.import_args.text = first;
+    ConfigIoV.import_args.len = strlen(first);
     ConfigIo.import(config_io_work);
-    TEST_ASSERT_EQUAL_INT(3, ConfigIo.n);
+    TEST_ASSERT_EQUAL_INT(3, ConfigIoV.n);
 
     char second[256];
-    ConfigIo.export_args.ns = "t";
-    ConfigIo.export_args.fields = SCHEMA;
-    ConfigIo.export_args.n = N;
-    ConfigIo.export_args.out = second;
-    ConfigIo.export_args.cap = sizeof(second);
+    ConfigIoV.export_args.ns = "t";
+    ConfigIoV.export_args.fields = SCHEMA;
+    ConfigIoV.export_args.n = N;
+    ConfigIoV.export_args.out = second;
+    ConfigIoV.export_args.cap = sizeof(second);
     ConfigIo.export(config_io_work);
-    (void)ConfigIo.n;
+    (void)ConfigIoV.n;
     TEST_ASSERT_EQUAL_STRING(first, second);
 }
 
@@ -192,22 +192,22 @@ void test_import_is_idempotent(void)
 void test_import_writes_only_keys_the_schema_declares(void)
 {
     const char *text = "port=42\nbogus=99\nssid=here\n";
-    ConfigIo.import_args.ns = "t";
-    ConfigIo.import_args.fields = SCHEMA;
-    ConfigIo.import_args.n = N;
-    ConfigIo.import_args.text = text;
-    ConfigIo.import_args.len = strlen(text);
+    ConfigIoV.import_args.ns = "t";
+    ConfigIoV.import_args.fields = SCHEMA;
+    ConfigIoV.import_args.n = N;
+    ConfigIoV.import_args.text = text;
+    ConfigIoV.import_args.len = strlen(text);
     ConfigIo.import(config_io_work);
-    TEST_ASSERT_EQUAL_INT(2, ConfigIo.n);
-    ConfigStore.get_u32_args.key = "port";
-    ConfigStore.get_u32_args.def = 0;
+    TEST_ASSERT_EQUAL_INT(2, ConfigIoV.n);
+    ConfigStoreV.get_u32_args.key = "port";
+    ConfigStoreV.get_u32_args.def = 0;
     ConfigStore.get_u32(protocore_config_store_span());
-    TEST_ASSERT_EQUAL_UINT32(42u, ConfigStore.ms);
+    TEST_ASSERT_EQUAL_UINT32(42u, ConfigStoreV.ms);
     TEST_ASSERT_EQUAL_STRING("here", get_str("ssid"));
-    ConfigStore.get_u32_args.key = "bogus";
-    ConfigStore.get_u32_args.def = 7;
+    ConfigStoreV.get_u32_args.key = "bogus";
+    ConfigStoreV.get_u32_args.def = 7;
     ConfigStore.get_u32(protocore_config_store_span());
-    TEST_ASSERT_EQUAL_UINT32(7u, ConfigStore.ms);
+    TEST_ASSERT_EQUAL_UINT32(7u, ConfigStoreV.ms);
 }
 
 // A schema entry with no key is skipped rather than dereferenced, so the entries after it are still
@@ -219,17 +219,17 @@ void test_import_steps_over_a_keyless_schema_entry(void)
         {"zz", PROTOCORE_CFG_U32},
     };
     const char *text = "zz=7\n";
-    ConfigIo.import_args.ns = "t";
-    ConfigIo.import_args.fields = gapped;
-    ConfigIo.import_args.n = 2;
-    ConfigIo.import_args.text = text;
-    ConfigIo.import_args.len = strlen(text);
+    ConfigIoV.import_args.ns = "t";
+    ConfigIoV.import_args.fields = gapped;
+    ConfigIoV.import_args.n = 2;
+    ConfigIoV.import_args.text = text;
+    ConfigIoV.import_args.len = strlen(text);
     ConfigIo.import(config_io_work);
-    TEST_ASSERT_EQUAL_INT(1, ConfigIo.n);
-    ConfigStore.get_u32_args.key = "zz";
-    ConfigStore.get_u32_args.def = 0;
+    TEST_ASSERT_EQUAL_INT(1, ConfigIoV.n);
+    ConfigStoreV.get_u32_args.key = "zz";
+    ConfigStoreV.get_u32_args.def = 0;
     ConfigStore.get_u32(protocore_config_store_span());
-    TEST_ASSERT_EQUAL_UINT32(7u, ConfigStore.ms);
+    TEST_ASSERT_EQUAL_UINT32(7u, ConfigStoreV.ms);
 }
 
 // A field typed as neither a string nor a u32 has no setter to reach, so it is rejected rather than
@@ -240,13 +240,13 @@ void test_import_rejects_a_field_of_an_unknown_type(void)
         {"weird", (protocore_cfg_type)9},
     };
     const char *text = "weird=5\n";
-    ConfigIo.import_args.ns = "t";
-    ConfigIo.import_args.fields = bad;
-    ConfigIo.import_args.n = 1;
-    ConfigIo.import_args.text = text;
-    ConfigIo.import_args.len = strlen(text);
+    ConfigIoV.import_args.ns = "t";
+    ConfigIoV.import_args.fields = bad;
+    ConfigIoV.import_args.n = 1;
+    ConfigIoV.import_args.text = text;
+    ConfigIoV.import_args.len = strlen(text);
     ConfigIo.import(config_io_work);
-    TEST_ASSERT_EQUAL_INT(0, ConfigIo.n);
+    TEST_ASSERT_EQUAL_INT(0, ConfigIoV.n);
 }
 
 // A line with no '=' carries no value, so it is skipped and the lines around it are still read. The
@@ -254,30 +254,30 @@ void test_import_rejects_a_field_of_an_unknown_type(void)
 void test_import_skips_a_line_with_no_separator(void)
 {
     const char *text = "bogus\n\nport=42";
-    ConfigIo.import_args.ns = "t";
-    ConfigIo.import_args.fields = SCHEMA;
-    ConfigIo.import_args.n = N;
-    ConfigIo.import_args.text = text;
-    ConfigIo.import_args.len = strlen(text);
+    ConfigIoV.import_args.ns = "t";
+    ConfigIoV.import_args.fields = SCHEMA;
+    ConfigIoV.import_args.n = N;
+    ConfigIoV.import_args.text = text;
+    ConfigIoV.import_args.len = strlen(text);
     ConfigIo.import(config_io_work);
-    TEST_ASSERT_EQUAL_INT(1, ConfigIo.n);
-    ConfigStore.get_u32_args.key = "port";
-    ConfigStore.get_u32_args.def = 0;
+    TEST_ASSERT_EQUAL_INT(1, ConfigIoV.n);
+    ConfigStoreV.get_u32_args.key = "port";
+    ConfigStoreV.get_u32_args.def = 0;
     ConfigStore.get_u32(protocore_config_store_span());
-    TEST_ASSERT_EQUAL_UINT32(42u, ConfigStore.ms);
+    TEST_ASSERT_EQUAL_UINT32(42u, ConfigStoreV.ms);
 }
 
 // The line splits on the FIRST '=', so everything after it is the value, separators and all.
 void test_import_splits_on_the_first_separator(void)
 {
     const char *text = "name=a=b=c\n";
-    ConfigIo.import_args.ns = "t";
-    ConfigIo.import_args.fields = SCHEMA;
-    ConfigIo.import_args.n = N;
-    ConfigIo.import_args.text = text;
-    ConfigIo.import_args.len = strlen(text);
+    ConfigIoV.import_args.ns = "t";
+    ConfigIoV.import_args.fields = SCHEMA;
+    ConfigIoV.import_args.n = N;
+    ConfigIoV.import_args.text = text;
+    ConfigIoV.import_args.len = strlen(text);
     ConfigIo.import(config_io_work);
-    TEST_ASSERT_EQUAL_INT(1, ConfigIo.n);
+    TEST_ASSERT_EQUAL_INT(1, ConfigIoV.n);
     TEST_ASSERT_EQUAL_STRING("a=b=c", get_str("name"));
 }
 
@@ -306,13 +306,13 @@ void test_import_drops_a_line_past_the_store_limits(void)
     text[pos++] = '\n';
     text[pos] = '\0';
 
-    ConfigIo.import_args.ns = "t";
-    ConfigIo.import_args.fields = SCHEMA;
-    ConfigIo.import_args.n = N;
-    ConfigIo.import_args.text = text;
-    ConfigIo.import_args.len = pos;
+    ConfigIoV.import_args.ns = "t";
+    ConfigIoV.import_args.fields = SCHEMA;
+    ConfigIoV.import_args.n = N;
+    ConfigIoV.import_args.text = text;
+    ConfigIoV.import_args.len = pos;
     ConfigIo.import(config_io_work);
-    TEST_ASSERT_EQUAL_INT(0, ConfigIo.n);
+    TEST_ASSERT_EQUAL_INT(0, ConfigIoV.n);
     TEST_ASSERT_EQUAL_STRING("", get_str("ssid"));
 }
 
@@ -320,46 +320,46 @@ void test_import_drops_a_line_past_the_store_limits(void)
 // carrying some fields: a partial export restored elsewhere would silently drop the rest.
 void test_export_fails_closed_on_a_short_buffer(void)
 {
-    ConfigStore.set_str_args.key = "ssid";
-    ConfigStore.set_str_args.val = "value";
+    ConfigStoreV.set_str_args.key = "ssid";
+    ConfigStoreV.set_str_args.val = "value";
     ConfigStore.set_str(protocore_config_store_span());
 
     char buf[4];
-    ConfigIo.export_args.ns = "t";
-    ConfigIo.export_args.fields = SCHEMA;
-    ConfigIo.export_args.n = N;
-    ConfigIo.export_args.out = buf;
-    ConfigIo.export_args.cap = sizeof(buf);
+    ConfigIoV.export_args.ns = "t";
+    ConfigIoV.export_args.fields = SCHEMA;
+    ConfigIoV.export_args.n = N;
+    ConfigIoV.export_args.out = buf;
+    ConfigIoV.export_args.cap = sizeof(buf);
     ConfigIo.export(config_io_work);
-    TEST_ASSERT_EQUAL_INT(0, ConfigIo.n);
+    TEST_ASSERT_EQUAL_INT(0, ConfigIoV.n);
     TEST_ASSERT_EQUAL_STRING("", buf);
 
     // One byte short of the whole blob is still a refusal, not a truncation.
     char whole[64];
-    ConfigIo.export_args.ns = "t";
-    ConfigIo.export_args.fields = SCHEMA;
-    ConfigIo.export_args.n = N;
-    ConfigIo.export_args.out = whole;
-    ConfigIo.export_args.cap = sizeof(whole);
+    ConfigIoV.export_args.ns = "t";
+    ConfigIoV.export_args.fields = SCHEMA;
+    ConfigIoV.export_args.n = N;
+    ConfigIoV.export_args.out = whole;
+    ConfigIoV.export_args.cap = sizeof(whole);
     ConfigIo.export(config_io_work);
-    int n = ConfigIo.n;
+    int n = ConfigIoV.n;
     TEST_ASSERT_TRUE(n > 0);
     char tight[64];
-    ConfigIo.export_args.ns = "t";
-    ConfigIo.export_args.fields = SCHEMA;
-    ConfigIo.export_args.n = N;
-    ConfigIo.export_args.out = tight;
-    ConfigIo.export_args.cap = (size_t)n;
+    ConfigIoV.export_args.ns = "t";
+    ConfigIoV.export_args.fields = SCHEMA;
+    ConfigIoV.export_args.n = N;
+    ConfigIoV.export_args.out = tight;
+    ConfigIoV.export_args.cap = (size_t)n;
     ConfigIo.export(config_io_work);
-    TEST_ASSERT_EQUAL_INT(0, ConfigIo.n);
+    TEST_ASSERT_EQUAL_INT(0, ConfigIoV.n);
     TEST_ASSERT_EQUAL_STRING("", tight);
-    ConfigIo.export_args.ns = "t";
-    ConfigIo.export_args.fields = SCHEMA;
-    ConfigIo.export_args.n = N;
-    ConfigIo.export_args.out = tight;
-    ConfigIo.export_args.cap = (size_t)n + 1;
+    ConfigIoV.export_args.ns = "t";
+    ConfigIoV.export_args.fields = SCHEMA;
+    ConfigIoV.export_args.n = N;
+    ConfigIoV.export_args.out = tight;
+    ConfigIoV.export_args.cap = (size_t)n + 1;
     ConfigIo.export(config_io_work);
-    TEST_ASSERT_EQUAL_INT(n, ConfigIo.n);
+    TEST_ASSERT_EQUAL_INT(n, ConfigIoV.n);
 }
 
 // A call with no destination, no schema, or no text writes nothing and reports nothing written. A
@@ -369,42 +369,42 @@ void test_missing_arguments_are_refused(void)
     char out[128];
     static const protocore_cfg_field one[] = {{"ssid", PROTOCORE_CFG_STR}};
 
-    ConfigIo.export_args.ns = "t";
-    ConfigIo.export_args.fields = one;
-    ConfigIo.export_args.n = 1;
-    ConfigIo.export_args.out = NULL;
-    ConfigIo.export_args.cap = sizeof(out);
+    ConfigIoV.export_args.ns = "t";
+    ConfigIoV.export_args.fields = one;
+    ConfigIoV.export_args.n = 1;
+    ConfigIoV.export_args.out = NULL;
+    ConfigIoV.export_args.cap = sizeof(out);
     ConfigIo.export(config_io_work);
-    TEST_ASSERT_EQUAL_INT(0, ConfigIo.n);
-    ConfigIo.export_args.ns = "t";
-    ConfigIo.export_args.fields = NULL;
-    ConfigIo.export_args.n = 1;
-    ConfigIo.export_args.out = out;
-    ConfigIo.export_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_INT(0, ConfigIoV.n);
+    ConfigIoV.export_args.ns = "t";
+    ConfigIoV.export_args.fields = NULL;
+    ConfigIoV.export_args.n = 1;
+    ConfigIoV.export_args.out = out;
+    ConfigIoV.export_args.cap = sizeof(out);
     ConfigIo.export(config_io_work);
-    TEST_ASSERT_EQUAL_INT(0, ConfigIo.n);
-    ConfigIo.import_args.ns = "t";
-    ConfigIo.import_args.fields = NULL;
-    ConfigIo.import_args.n = 1;
-    ConfigIo.import_args.text = "ssid=x";
-    ConfigIo.import_args.len = 6;
+    TEST_ASSERT_EQUAL_INT(0, ConfigIoV.n);
+    ConfigIoV.import_args.ns = "t";
+    ConfigIoV.import_args.fields = NULL;
+    ConfigIoV.import_args.n = 1;
+    ConfigIoV.import_args.text = "ssid=x";
+    ConfigIoV.import_args.len = 6;
     ConfigIo.import(config_io_work);
-    TEST_ASSERT_EQUAL_INT(0, ConfigIo.n);
-    ConfigIo.import_args.ns = "t";
-    ConfigIo.import_args.fields = one;
-    ConfigIo.import_args.n = 1;
-    ConfigIo.import_args.text = NULL;
-    ConfigIo.import_args.len = 0;
+    TEST_ASSERT_EQUAL_INT(0, ConfigIoV.n);
+    ConfigIoV.import_args.ns = "t";
+    ConfigIoV.import_args.fields = one;
+    ConfigIoV.import_args.n = 1;
+    ConfigIoV.import_args.text = NULL;
+    ConfigIoV.import_args.len = 0;
     ConfigIo.import(config_io_work);
-    TEST_ASSERT_EQUAL_INT(0, ConfigIo.n);
+    TEST_ASSERT_EQUAL_INT(0, ConfigIoV.n);
 
     char sentinel[8] = {'z', '\0'};
-    ConfigIo.export_args.ns = "t";
-    ConfigIo.export_args.fields = one;
-    ConfigIo.export_args.n = 1;
-    ConfigIo.export_args.out = sentinel;
-    ConfigIo.export_args.cap = 0;
+    ConfigIoV.export_args.ns = "t";
+    ConfigIoV.export_args.fields = one;
+    ConfigIoV.export_args.n = 1;
+    ConfigIoV.export_args.out = sentinel;
+    ConfigIoV.export_args.cap = 0;
     ConfigIo.export(config_io_work);
-    TEST_ASSERT_EQUAL_INT(0, ConfigIo.n);
+    TEST_ASSERT_EQUAL_INT(0, ConfigIoV.n);
     TEST_ASSERT_EQUAL_CHAR('z', sentinel[0]);
 }

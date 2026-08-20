@@ -252,13 +252,19 @@ typedef struct
     DmxRdmBuildDiscResponseArgs rdm_build_disc_response_args;
     DmxRdmBuildDeviceInfoArgs rdm_build_device_info_args;
     DmxRdmParseDeviceInfoArgs rdm_parse_device_info_args;
-
     proto_bool ok;
     size_t n;
     uint8_t u8;
     uint64_t uid;
     uint16_t checksum;
+} DmxVars;
 
+/** @brief The operands and the outcome. */
+extern DmxVars DmxV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build)(uint8_t *restrict work);
     void (*const get_channel)(uint8_t *restrict work);
     void (*const rdm_uid)(uint8_t *restrict work);
@@ -271,8 +277,35 @@ typedef struct
     void (*const rdm_parse_device_info)(uint8_t *restrict work);
 } DmxNs;
 
-/** @brief The one symbol this module exports. */
-extern DmxNs Dmx;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in DmxV or a region of the borrow at a fixed offset.
+void protocore_dmx_build(uint8_t *restrict work);
+void protocore_dmx_get_channel(uint8_t *restrict work);
+void protocore_dmx_rdm_uid(uint8_t *restrict work);
+void protocore_dmx_rdm_checksum(uint8_t *restrict work);
+void protocore_dmx_rdm_build(uint8_t *restrict work);
+void protocore_dmx_rdm_parse(uint8_t *restrict work);
+void protocore_dmx_rdm_decode_disc_response(uint8_t *restrict work);
+void protocore_dmx_rdm_build_disc_response(uint8_t *restrict work);
+void protocore_dmx_rdm_build_device_info(uint8_t *restrict work);
+void protocore_dmx_rdm_parse_device_info(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Dmx.build(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const DmxNs Dmx __attribute__((unused)) = {
+    .build = protocore_dmx_build,
+    .get_channel = protocore_dmx_get_channel,
+    .rdm_uid = protocore_dmx_rdm_uid,
+    .rdm_checksum = protocore_dmx_rdm_checksum,
+    .rdm_build = protocore_dmx_rdm_build,
+    .rdm_parse = protocore_dmx_rdm_parse,
+    .rdm_decode_disc_response = protocore_dmx_rdm_decode_disc_response,
+    .rdm_build_disc_response = protocore_dmx_rdm_build_disc_response,
+    .rdm_build_device_info = protocore_dmx_rdm_build_device_info,
+    .rdm_parse_device_info = protocore_dmx_rdm_parse_device_info,
+};
 
 PROTOCORE_END_DECLS
 

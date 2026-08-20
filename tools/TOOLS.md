@@ -49,6 +49,7 @@ found by any of those, so the column is a floor, not a ceiling.
 | see which modules are not the golden yet        | `tools/harness.py convert audit families`                         |
 | know which checks ONE module fails, and why     | `tools/harness.py convert audit check <module.h>`                 |
 | prove a shape check against the golden itself   | `tools/harness.py convert audit selfcheck`                        |
+| make a module's table fold to a direct call     | `tools/harness.py convert handle --batch=25` (then build AND test) |
 | assert a cast region's offset is aligned        | `tools/harness.py convert align --dry` (no paths = all of src/)   |
 | delete a dead `if (!work)` borrow null-check    | `tools/harness.py convert unnull --dry`                           |
 | convert a flat module to the golden             | `tools/harness.py convert scan`, then `convert gen --dry`         |

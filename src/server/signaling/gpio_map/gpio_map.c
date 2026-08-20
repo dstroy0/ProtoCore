@@ -39,10 +39,10 @@ static const char *dir_name_of(protocore_gpio_dir dir)
     }
 }
 
-static void gpio_dir_name(uint8_t *restrict work)
+void protocore_gpio_map_dir_name(uint8_t *restrict work)
 {
     (void)work;
-    GpioMap.text = dir_name_of(GpioMap.args.dir);
+    GpioMapV.text = dir_name_of(GpioMapV.args.dir);
 }
 
 // The document is three frames: the object that opens the array, one object per pin, and the
@@ -66,28 +66,28 @@ static const protocore_field GPIO_PIN[] = {
 };
 static const protocore_field GPIO_CLOSE[] = {{PROTOCORE_FK_LIT, 0, 2, "]}"}, PROTOCORE_END};
 
-static void gpio_json(uint8_t *restrict work)
+void protocore_gpio_map_json(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_gpio_pin *pins = GpioMap.args.pins;
-    const uint8_t count = GpioMap.args.count;
-    char *out = GpioMap.out_args.out;
-    const uint32_t cap = GpioMap.out_args.cap;
+    const protocore_gpio_pin *pins = GpioMapV.args.pins;
+    const uint8_t count = GpioMapV.args.count;
+    char *out = GpioMapV.out_args.out;
+    const uint32_t cap = GpioMapV.out_args.cap;
 
     if (!out || cap == 0)
     {
-        GpioMap.n = -1;
+        GpioMapV.n = -1;
         return;
     }
     out[0] = '\0';
     if (!pins)
     {
-        GpioMap.n = -1;
+        GpioMapV.n = -1;
         return;
     }
     if (frame.append(out, cap, GPIO_OPEN, NULL, 0) == 0)
     {
-        GpioMap.n = -1;
+        GpioMapV.n = -1;
         return;
     }
     for (uint8_t i = 0; i < count; i++)
@@ -100,13 +100,13 @@ static void gpio_json(uint8_t *restrict work)
                                                   PROTOCORE_VU32((uint32_t)(!!p->level))},
                          5) == 0)
         {
-            GpioMap.n = -1;
+            GpioMapV.n = -1;
             return;
         }
     }
     // A document always carries its two braces, so nothing written is the close not fitting.
     const int32_t written = (int32_t)frame.append(out, cap, GPIO_CLOSE, NULL, 0);
-    GpioMap.n = (written == 0) ? -1 : written;
+    GpioMapV.n = (written == 0) ? -1 : written;
 }
 
 // Read the decimal integer that follows "name=" in a form-encoded body. Returns
@@ -144,68 +144,68 @@ static proto_bool form_field_uint(const char *body, size_t len, const char *name
     return PROTO_FALSE;
 }
 
-static void gpio_parse_set(uint8_t *restrict work)
+void protocore_gpio_map_parse_set(uint8_t *restrict work)
 {
     (void)work;
-    const char *body = GpioMap.parse_args.body;
-    const size_t len = GpioMap.parse_args.len;
-    uint8_t *pin = GpioMap.parse_args.pin_out;
-    uint8_t *level = GpioMap.parse_args.level_out;
+    const char *body = GpioMapV.parse_args.body;
+    const size_t len = GpioMapV.parse_args.len;
+    uint8_t *pin = GpioMapV.parse_args.pin_out;
+    uint8_t *level = GpioMapV.parse_args.level_out;
 
     if (!body || !pin || !level)
     {
-        GpioMap.ok = PROTO_FALSE;
+        GpioMapV.ok = PROTO_FALSE;
         return;
     }
     unsigned p;
     unsigned l;
     if (!form_field_uint(body, len, "pin", &p) || !form_field_uint(body, len, "level", &l))
     {
-        GpioMap.ok = PROTO_FALSE;
+        GpioMapV.ok = PROTO_FALSE;
         return;
     }
     // The field is a uint8_t, so a larger value has no pin to name. Narrowing it would deliver a
     // different pin, one the table may well declare an output.
     if (p > 0xFFu)
     {
-        GpioMap.ok = PROTO_FALSE;
+        GpioMapV.ok = PROTO_FALSE;
         return;
     }
     *pin = (uint8_t)p;
     *level = l ? 1 : 0;
-    GpioMap.ok = PROTO_TRUE;
+    GpioMapV.ok = PROTO_TRUE;
 }
 
-static void gpio_is_output(uint8_t *restrict work)
+void protocore_gpio_map_is_output(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_gpio_pin *pins = GpioMap.args.pins;
-    const uint8_t count = GpioMap.args.count;
-    const uint8_t pin = GpioMap.args.pin;
+    const protocore_gpio_pin *pins = GpioMapV.args.pins;
+    const uint8_t count = GpioMapV.args.count;
+    const uint8_t pin = GpioMapV.args.pin;
 
     if (!pins)
     {
-        GpioMap.ok = PROTO_FALSE;
+        GpioMapV.ok = PROTO_FALSE;
         return;
     }
     for (uint8_t i = 0; i < count; i++)
     {
         if (pins[i].pin == pin && pins[i].dir == PROTOCORE_GPIO_DIR_OUT)
         {
-            GpioMap.ok = PROTO_TRUE;
+            GpioMapV.ok = PROTO_TRUE;
             return;
         }
     }
-    GpioMap.ok = PROTO_FALSE;
+    GpioMapV.ok = PROTO_FALSE;
 }
 
 #if PROTOCORE_HAS_GPIO
 
-static void gpio_begin_pins(uint8_t *restrict work)
+void protocore_gpio_map_begin_pins(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_gpio_pin *pins = GpioMap.args.pins;
-    const uint8_t count = GpioMap.args.count;
+    const protocore_gpio_pin *pins = GpioMapV.args.pins;
+    const uint8_t count = GpioMapV.args.count;
 
     if (!pins)
     {
@@ -232,11 +232,11 @@ static void gpio_begin_pins(uint8_t *restrict work)
     }
 }
 
-static void gpio_sample(uint8_t *restrict work)
+void protocore_gpio_map_sample(uint8_t *restrict work)
 {
     (void)work;
-    protocore_gpio_pin *pins = GpioMap.args.pins_rw;
-    const uint8_t count = GpioMap.args.count;
+    protocore_gpio_pin *pins = GpioMapV.args.pins_rw;
+    const uint8_t count = GpioMapV.args.count;
 
     if (!pins)
     {
@@ -251,42 +251,42 @@ static void gpio_sample(uint8_t *restrict work)
 // level indexes this; !!level is 0 or 1, so the selection is a load rather than a branch.
 static const uint8_t PROTOCORE_GPIO_LEVEL[2] = {PROTOCORE_GPIO_LOW, PROTOCORE_GPIO_HIGH};
 
-static void gpio_write(uint8_t *restrict work)
+void protocore_gpio_map_write(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t pin = GpioMap.args.pin;
-    const uint8_t level = GpioMap.args.level;
+    const uint8_t pin = GpioMapV.args.pin;
+    const uint8_t level = GpioMapV.args.level;
 
     protocore_platform_gpio_write((uint8_t)(pin), PROTOCORE_GPIO_LEVEL[!!level]);
 }
 
 #else // no pin seam
 
-static void gpio_begin_pins(uint8_t *restrict work)
+void protocore_gpio_map_begin_pins(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_gpio_pin *pins = GpioMap.args.pins;
-    const uint8_t count = GpioMap.args.count;
+    const protocore_gpio_pin *pins = GpioMapV.args.pins;
+    const uint8_t count = GpioMapV.args.count;
 
     (void)pins;
     (void)count;
 }
 
-static void gpio_sample(uint8_t *restrict work)
+void protocore_gpio_map_sample(uint8_t *restrict work)
 {
     (void)work;
-    protocore_gpio_pin *pins = GpioMap.args.pins_rw;
-    const uint8_t count = GpioMap.args.count;
+    protocore_gpio_pin *pins = GpioMapV.args.pins_rw;
+    const uint8_t count = GpioMapV.args.count;
 
     (void)pins;
     (void)count;
 }
 
-static void gpio_write(uint8_t *restrict work)
+void protocore_gpio_map_write(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t pin = GpioMap.args.pin;
-    const uint8_t level = GpioMap.args.level;
+    const uint8_t pin = GpioMapV.args.pin;
+    const uint8_t level = GpioMapV.args.level;
 
     (void)pin;
     (void)level;
@@ -298,18 +298,12 @@ static void gpio_write(uint8_t *restrict work)
 // it is bound here so the whole surface is one initializer rather than a runtime install. Weak, so
 // the pin core links on its own - the serializer and the parser are host-tested without the server,
 // and gpio_map_routes.c overrides this the moment it is in the build.
-__attribute__((weak)) void protocore_gpio_route_begin(uint8_t *restrict work)
+__attribute__((weak)) void protocore_gpio_map_begin(uint8_t *restrict work)
 {
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-GpioMapNs GpioMap = {.begin = protocore_gpio_route_begin,
-                     .dir_name = gpio_dir_name,
-                     .json = gpio_json,
-                     .parse_set = gpio_parse_set,
-                     .is_output = gpio_is_output,
-                     .begin_pins = gpio_begin_pins,
-                     .sample = gpio_sample,
-                     .write = gpio_write};
+/** @brief The operands and the outcome. */
+GpioMapVars GpioMapV;
 
 #endif // PROTOCORE_ENABLE_GPIO_MAP

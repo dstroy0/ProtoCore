@@ -89,11 +89,11 @@ static void ring_push(uint8_t *restrict work, uint16_t sample)
     }
 }
 
-static void tc_begin(uint8_t *restrict work)
+void protocore_trace_capture_begin(uint8_t *restrict work)
 {
-    const protocore_tc_config *cfg = TraceCapture.cfg;
+    const protocore_tc_config *cfg = TraceCaptureV.cfg;
 
-    TraceCapture.ok = PROTO_FALSE;
+    TraceCaptureV.ok = PROTO_FALSE;
     if (!cfg || !cfg->sink)
     {
         return;
@@ -114,18 +114,18 @@ static void tc_begin(uint8_t *restrict work)
     TRACE_CAPTURE_CTX(work)->pretrigger_samples = cfg->pretrigger_samples;
     TRACE_CAPTURE_CTX(work)->posttrigger_samples = cfg->posttrigger_samples;
     TRACE_CAPTURE_CTX(work)->configured = PROTO_TRUE;
-    TraceCapture.ok = PROTO_TRUE;
+    TraceCaptureV.ok = PROTO_TRUE;
 }
 
-static void tc_feed(uint8_t *restrict work)
+void protocore_trace_capture_feed_in(uint8_t *restrict work)
 {
-    const uint16_t *samples = TraceCapture.feed.samples;
-    const uint16_t n = TraceCapture.feed.n;
+    const uint16_t *samples = TraceCaptureV.feed.samples;
+    const uint16_t n = TraceCaptureV.feed.n;
 
     if (!TRACE_CAPTURE_CTX(work)->configured || !samples)
     {
         TRACE_CAPTURE_CTX(work)->stats.samples_dropped += n;
-        TraceCapture.accepted = 0;
+        TraceCaptureV.accepted = 0;
         return;
     }
     for (uint16_t i = 0; i < n; i++)
@@ -154,12 +154,12 @@ static void tc_feed(uint8_t *restrict work)
             }
         }
     }
-    TraceCapture.accepted = n;
+    TraceCaptureV.accepted = n;
 }
 
-static void tc_trigger(uint8_t *restrict work)
+void protocore_trace_capture_trigger(uint8_t *restrict work)
 {
-    TraceCapture.ok = PROTO_FALSE;
+    TraceCaptureV.ok = PROTO_FALSE;
     if (!TRACE_CAPTURE_CTX(work)->configured)
     {
         return;
@@ -179,34 +179,30 @@ static void tc_trigger(uint8_t *restrict work)
     TRACE_CAPTURE_CTX(work)->capturing = PROTO_TRUE;
     Clock.cycles(Clock.internal);
     TRACE_CAPTURE_CTX(work)->trigger_cycles = Clock.cyc;
-    TraceCapture.ok = PROTO_TRUE;
+    TraceCaptureV.ok = PROTO_TRUE;
 }
 
-static void tc_get_stats(uint8_t *restrict work)
+void protocore_trace_capture_get_stats(uint8_t *restrict work)
 {
-    if (TraceCapture.feed.stats)
+    if (TraceCaptureV.feed.stats)
     {
-        *TraceCapture.feed.stats = TRACE_CAPTURE_CTX(work)->stats;
+        *TraceCaptureV.feed.stats = TRACE_CAPTURE_CTX(work)->stats;
     }
 }
 
-static void tc_capturing(uint8_t *restrict work)
+void protocore_trace_capture_capturing(uint8_t *restrict work)
 {
-    TraceCapture.ok = TRACE_CAPTURE_CTX(work)->configured && TRACE_CAPTURE_CTX(work)->capturing;
+    TraceCaptureV.ok = TRACE_CAPTURE_CTX(work)->configured && TRACE_CAPTURE_CTX(work)->capturing;
 }
 
-static void tc_end(uint8_t *restrict work)
+void protocore_trace_capture_end(uint8_t *restrict work)
 {
     TRACE_CAPTURE_CTX(work)->configured = PROTO_FALSE;
     TRACE_CAPTURE_CTX(work)->capturing = PROTO_FALSE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-TraceCaptureNs TraceCapture = {.begin = tc_begin,
-                               .feed_in = tc_feed,
-                               .trigger = tc_trigger,
-                               .get_stats = tc_get_stats,
-                               .capturing = tc_capturing,
-                               .end = tc_end};
+/** @brief The operands and the outcome. */
+TraceCaptureVars TraceCaptureV;
 
 #endif // PROTOCORE_ENABLE_TRACE_CAPTURE
