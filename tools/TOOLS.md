@@ -230,6 +230,7 @@ Every one takes `--check` to assert the tracked file already matches, which is h
 | Script                | W | Flags                                                                                                                    | Shells out to   |
 | --------------------- | - | ------------------------------------------------------------------------------------------------------------------------ | --------------- |
 | `build_envs.sh`       |   |                                                                                                                          | pio             |
+| `capsweep.py`         |   | `--quiet`                                                                                                                |                 |
 | `codemask.py`         |   |                                                                                                                          |                 |
 | `commit.py`           |   | `--amend --dry --no-signoff`                                                                                             | git             |
 | `funnel.py`           |   |                                                                                                                          |                 |

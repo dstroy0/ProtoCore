@@ -429,6 +429,20 @@ MEASURE = {
         "A static count of the sites that reach it, plus a runtime probe. Does not build the "
         "library.",
     ),
+    "cap-sweep": T(
+        "tools/dev_env/capsweep.py",
+        "cap-sweep [PROTOCORE_HAS_...] [--quiet]",
+        "Compiles every capability-gated module with the capability OFF, which nothing else does: "
+        "test/core_setup/hal/host answers every hardware question one way, so the other arm of each "
+        "is text no target includes and a green matrix says nothing about it. Two answers are "
+        "correct and it does not rank them - `refuses` (an #error, because the module IS the "
+        "hardware) and `compiles` (a stand-in exists and builds). `BROKEN` is the defect: an arm "
+        "meant to stand in that does not build. It compiles with the capability ON first as a "
+        "control, so a missing dependency reads as n/a rather than as a rotted arm, and it takes "
+        "each file's flags from test_matrix.json rather than guessing them. A module answering "
+        "`compiles` wants an env building it that way, or the arm goes back to being uncompiled "
+        "text - see native_hmmd_nobus.",
+    ),
     "pimpl-sweep": T(
         "tools/dev_env/pimpl_bench/sweep.sh",
         "pimpl-sweep",
