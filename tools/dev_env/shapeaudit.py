@@ -103,6 +103,51 @@ def module_gate(text):
     return ""
 
 
+CONFIG_HEADERS = (
+    "src/protocore_config.h",
+    "src/config/memory_sizing/buffer_sizing.h",
+    "src/config/features/feature_dependency_en.h",
+    "src/config/features/feature_en_error.h",
+)
+_ENABLE_FLAGS = None
+
+
+def enable_flags():
+    """Every PROTOCORE_ENABLE_* the config declares, read once."""
+    global _ENABLE_FLAGS
+    if _ENABLE_FLAGS is None:
+        text = ""
+        for rel in CONFIG_HEADERS:
+            p = os.path.join(R, rel.replace("/", os.sep))
+            if os.path.exists(p):
+                text += io.open(p, encoding="utf-8", errors="replace").read()
+        _ENABLE_FLAGS = set(re.findall(r"PROTOCORE_ENABLE_\w+", text))
+    return _ENABLE_FLAGS
+
+
+def own_flag_of(hpath):
+    """The PROTOCORE_ENABLE_* named after this module, or "" when the config declares none.
+
+    Whether a module CAN be gated is not a property of the module - it is whether the build has a
+    flag to gate it with. arena, span, physical and the mount registry have none, because they are
+    the substrate every build links; `guarded` asking them about an enable gate is asking about
+    something that does not exist, which is what the n/a answer is for.
+
+    Both spellings are tried, because a module is named either by its file or by the directory that
+    holds it. This over-reports rather than under-reports: ssh/auth matches HTTP's
+    PROTOCORE_ENABLE_AUTH by basename alone, so it is asked a question it has no flag for - and a
+    check that fires wrongly is a finding to dismiss, while one that goes n/a wrongly is a defect
+    that never surfaces.
+    """
+    flags = enable_flags()
+    base = os.path.basename(hpath)[:-2]
+    parent = os.path.basename(os.path.dirname(hpath))
+    for name in ("PROTOCORE_ENABLE_" + base.upper(), "PROTOCORE_ENABLE_" + parent.upper()):
+        if name in flags:
+            return name
+    return ""
+
+
 def identity(htext, ctext, hpath):
     """The names this module calls itself by, read off the pair.
 
@@ -110,7 +155,7 @@ def identity(htext, ctext, hpath):
     whole file of false divergence rather than as a subtle one.
     """
     mod = os.path.basename(hpath)[:-2]
-    ident = {"module": mod}
+    ident = {"module": mod, "own_flag": own_flag_of(hpath)}
     m = re.search(r"^\s*#\s*ifndef\s+(\w+)", htext, re.M)
     ident["guard"] = m.group(1) if m else ""
     ident["gate"] = module_gate(htext)
@@ -1265,6 +1310,26 @@ BORROW_CHECKS = ("borrow carved", "offsets chain", "assert covers last", "no loc
 #                  for the file that has one - the predicate skips only the ungated half.
 GATE_CHECKS = ("includes placed",)
 
+#   no flag      - `guarded` asks whether the file is wrapped in its enable gate. A module the
+#                  config declares no PROTOCORE_ENABLE_* for has no gate to be wrapped in, and
+#                  never will: arena, span, physical, the mount registry and fifty others are the
+#                  substrate every build links, and ungated is what they ARE rather than a state
+#                  they are in. Counting them made `guarded` a number that could not reach zero,
+#                  which is the same as a number nobody acts on - the five modules that DO have a
+#                  flag and ignore it were buried under fifty-two that never could.
+#
+#                  This is the same n/a as BORROW_CHECKS and for the same reason: a question with
+#                  no subject is not a question the module failed. See own_flag_of() for why the
+#                  match is deliberately loose.
+#
+#                  The exemption needs BOTH halves: no flag of its own name AND no gate in fact. A
+#                  module often gates on a flag it is not named after - mnt_ram is behind
+#                  PROTOCORE_ENABLE_MNT, tls_record behind PROTOCORE_ENABLE_TLS - and excusing
+#                  those would hand an n/a to modules that answer the question with a yes. Only a
+#                  module that has no flag and no gate is being asked about something that does
+#                  not exist.
+FLAG_CHECKS = ("guarded",)
+
 
 def answers(h, c, gh, gc, ident=None):
     """Every check's answer for one module, in order: True yes, False no, None not applicable."""
@@ -1273,6 +1338,13 @@ def answers(h, c, gh, gc, ident=None):
         if (
             c is None
             or (name in BORROW_CHECKS and ident is not None and not ident.get("borrow"))
+            or (
+                name in FLAG_CHECKS
+                and ident is not None
+                and not ident.get("own_flag")
+                and not h.get("gate_present")
+                and not c.get("gate_present")
+            )
             or (name in GATE_CHECKS and not h.get("gate_present") and not c.get("gate_present"))
         ):
             out.append((name, None, verb))
