@@ -536,12 +536,7 @@ static size_t build_get(uint8_t *out, size_t cap, proto_bool auth, proto_bool pr
     if (auth)
     {
         uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
-        HmacSha256V.mac_args.key = authkey;
-        HmacSha256V.mac_args.key_len = SNMP_USM_KEY_LEN;
-        HmacSha256V.mac_args.data = out;
-        HmacSha256V.mac_args.len = e.len;
-        HmacSha256V.mac_args.out = mac;
-        HmacSha256.mac(tw);
+        HmacSha256.mac(tw, authkey, SNMP_USM_KEY_LEN, out, e.len, mac);
         memcpy(out + sec_value_pos + auth_off, mac, SNMP_V3_AUTH_PARAM_LEN);
     }
     return e.ok ? e.len : 0;
@@ -1054,12 +1049,7 @@ static size_t build_v3_raw_scoped(uint8_t *out, size_t cap, proto_bool auth, con
     if (digest)
     {
         uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
-        HmacSha256V.mac_args.key = authkey;
-        HmacSha256V.mac_args.key_len = SNMP_USM_KEY_LEN;
-        HmacSha256V.mac_args.data = out;
-        HmacSha256V.mac_args.len = e.len;
-        HmacSha256V.mac_args.out = mac;
-        HmacSha256.mac(tw);
+        HmacSha256.mac(tw, authkey, SNMP_USM_KEY_LEN, out, e.len, mac);
         memcpy(out + sec_value_pos + auth_off, mac, SNMP_V3_AUTH_PARAM_LEN);
     }
     return e.len;

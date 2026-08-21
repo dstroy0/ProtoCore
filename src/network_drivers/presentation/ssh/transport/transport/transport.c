@@ -2253,17 +2253,10 @@ static void compute_mac_mode(uint8_t mac_mode, uint8_t *work, const uint8_t *mac
     }
     else
     {
-        HmacSha256V.key_args.key = mac_key;
-        HmacSha256V.key_args.key_len = 32;
-        HmacSha256.init(work);
-        HmacSha256V.update_args.data = seq_be;
-        HmacSha256V.update_args.len = 4;
-        HmacSha256.update(work);
-        HmacSha256V.update_args.data = buf;
-        HmacSha256V.update_args.len = buf_len;
-        HmacSha256.update(work);
-        HmacSha256V.final_args.out = mac_out;
-        HmacSha256.final(work);
+        HmacSha256.init(work, mac_key, 32);
+        HmacSha256.update(work, seq_be, 4);
+        HmacSha256.update(work, buf, buf_len);
+        HmacSha256.final(work, mac_out);
     }
 }
 

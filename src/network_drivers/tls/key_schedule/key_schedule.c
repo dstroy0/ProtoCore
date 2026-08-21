@@ -120,12 +120,7 @@ static void finished_hmac(proto_bool is384, uint8_t *work, const uint8_t *key, c
         HmacSha384.mac(work);
         return;
     }
-    HmacSha256V.mac_args.key = key;
-    HmacSha256V.mac_args.key_len = len;
-    HmacSha256V.mac_args.data = data;
-    HmacSha256V.mac_args.len = len;
-    HmacSha256V.mac_args.out = out;
-    HmacSha256.mac(work);
+    HmacSha256.mac(work, key, len, data, len, out);
 }
 
 void protocore_tls13_ks_expand_label(uint8_t *restrict work)

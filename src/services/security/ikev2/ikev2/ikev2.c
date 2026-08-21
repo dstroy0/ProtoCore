@@ -1309,23 +1309,14 @@ static proto_bool ike_prf_plus(uint8_t *work, const uint8_t *key, size_t key_len
     while (produced < out_len)
     {
         counter++;
-        HmacSha256V.key_args.key = key;
-        HmacSha256V.key_args.key_len = key_len;
-        HmacSha256.init(work);
+        HmacSha256.init(work, key, key_len);
         if (t_len)
         {
-            HmacSha256V.update_args.data = t;
-            HmacSha256V.update_args.len = t_len;
-            HmacSha256.update(work);
+            HmacSha256.update(work, t, t_len);
         }
-        HmacSha256V.update_args.data = seed;
-        HmacSha256V.update_args.len = seed_len;
-        HmacSha256.update(work);
-        HmacSha256V.update_args.data = &counter;
-        HmacSha256V.update_args.len = 1;
-        HmacSha256.update(work);
-        HmacSha256V.final_args.out = t;
-        HmacSha256.final(work);
+        HmacSha256.update(work, seed, seed_len);
+        HmacSha256.update(work, &counter, 1);
+        HmacSha256.final(work, t);
         t_len = PROTOCORE_HMAC_SHA256_LEN;
 
         size_t take = out_len - produced;
@@ -1418,12 +1409,7 @@ static proto_bool ike_derive_keys(uint8_t *work, const uint8_t *dh_secret, size_
         return PROTO_FALSE;
     }
     uint8_t skeyseed[PROTOCORE_IKE_PRF_LEN];
-    HmacSha256V.mac_args.key = s;
-    HmacSha256V.mac_args.key_len = ni_len + nr_len;
-    HmacSha256V.mac_args.data = dh_secret;
-    HmacSha256V.mac_args.len = dh_len;
-    HmacSha256V.mac_args.out = skeyseed;
-    HmacSha256.mac(work);
+    HmacSha256.mac(work, s, ni_len + nr_len, dh_secret, dh_len, skeyseed);
     return sk_split_from_skeyseed(work, skeyseed, s, s_len, lens, out);
 }
 
@@ -1466,12 +1452,7 @@ void protocore_ike_rekey_derive_keys(uint8_t *restrict work)
     mem.cpy(seed + sl, nr, nr_len);
     sl += nr_len;
     uint8_t skeyseed[PROTOCORE_IKE_PRF_LEN];
-    HmacSha256V.mac_args.key = sk_d_old;
-    HmacSha256V.mac_args.key_len = IkeV.keymat.sk_d_len;
-    HmacSha256V.mac_args.data = seed;
-    HmacSha256V.mac_args.len = sl;
-    HmacSha256V.mac_args.out = skeyseed;
-    HmacSha256.mac(IkeV.work);
+    HmacSha256.mac(IkeV.work, sk_d_old, IkeV.keymat.sk_d_len, seed, sl, skeyseed);
 
     uint8_t s[2 * PROTOCORE_IKE_NONCE_MAX + 2 * PROTOCORE_IKE_SPI_LEN];
     size_t s_len = build_ni_nr_spi(s, ni, ni_len, nr, nr_len, IkeV.keymat.spi_i, IkeV.keymat.spi_r);
@@ -1760,37 +1741,18 @@ static proto_bool ike_auth_psk(uint8_t *work, const uint8_t *psk, size_t psk_len
     }
 
     uint8_t macid[PROTOCORE_IKE_AUTH_LEN];
-    HmacSha256V.mac_args.key = sk_p;
-    HmacSha256V.mac_args.key_len = sk_p_len;
-    HmacSha256V.mac_args.data = id_body;
-    HmacSha256V.mac_args.len = id_body_len;
-    HmacSha256V.mac_args.out = macid;
-    HmacSha256.mac(work);
+    HmacSha256.mac(work, sk_p, sk_p_len, id_body, id_body_len, macid);
 
     uint8_t keypad[PROTOCORE_IKE_AUTH_LEN];
     static const char pad[] = PROTOCORE_IKE_PSK_PAD; // 17 characters, the NUL is not sent
-    HmacSha256V.mac_args.key = psk;
-    HmacSha256V.mac_args.key_len = psk_len;
-    HmacSha256V.mac_args.data = (const uint8_t *)pad;
-    HmacSha256V.mac_args.len = sizeof(pad) - 1;
-    HmacSha256V.mac_args.out = keypad;
-    HmacSha256.mac(work);
+    HmacSha256.mac(work, psk, psk_len, (const uint8_t *)pad, sizeof(pad) - 1, keypad);
 
     // Streamed, so RealMessage is never copied again.
-    HmacSha256V.key_args.key = keypad;
-    HmacSha256V.key_args.key_len = sizeof(keypad);
-    HmacSha256.init(work);
-    HmacSha256V.update_args.data = real_msg;
-    HmacSha256V.update_args.len = real_len;
-    HmacSha256.update(work);
-    HmacSha256V.update_args.data = peer_nonce;
-    HmacSha256V.update_args.len = nonce_len;
-    HmacSha256.update(work);
-    HmacSha256V.update_args.data = macid;
-    HmacSha256V.update_args.len = sizeof(macid);
-    HmacSha256.update(work);
-    HmacSha256V.final_args.out = out;
-    HmacSha256.final(work);
+    HmacSha256.init(work, keypad, sizeof(keypad));
+    HmacSha256.update(work, real_msg, real_len);
+    HmacSha256.update(work, peer_nonce, nonce_len);
+    HmacSha256.update(work, macid, sizeof(macid));
+    HmacSha256.final(work, out);
     return PROTO_TRUE;
 }
 
@@ -1819,12 +1781,7 @@ static size_t ike_signed_octets(uint8_t *work, uint8_t *scratch, size_t cap, con
     }
     mem.cpy(scratch, real, real_len);
     mem.cpy(scratch + real_len, nonce, nonce_len);
-    HmacSha256V.mac_args.key = sk_p;
-    HmacSha256V.mac_args.key_len = sk_p_len;
-    HmacSha256V.mac_args.data = id_body;
-    HmacSha256V.mac_args.len = id_body_len;
-    HmacSha256V.mac_args.out = scratch + real_len + nonce_len;
-    HmacSha256.mac(work);
+    HmacSha256.mac(work, sk_p, sk_p_len, id_body, id_body_len, scratch + real_len + nonce_len);
     return total;
 }
 

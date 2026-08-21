@@ -636,12 +636,7 @@ static void protocore_hmac_cat(uint8_t *restrict work, uint8_t out[32], const ui
         mem.cpy(buf + n, e, 32);
         n += 32;
     }
-    HmacSha256V.mac_args.key = key;
-    HmacSha256V.mac_args.key_len = 32;
-    HmacSha256V.mac_args.data = buf;
-    HmacSha256V.mac_args.len = n;
-    HmacSha256V.mac_args.out = out;
-    HmacSha256.mac(ECDSA_HMAC(work));
+    HmacSha256.mac(ECDSA_HMAC(work), key, 32, buf, n, out);
 }
 
 // One RFC 6979 candidate k: if it yields a valid r and s, write the 64-byte signature and return true.
@@ -729,12 +724,7 @@ static proto_bool ecdsa_sign_core(uint8_t *restrict work, uint8_t sig[64], const
         uint8_t buf[33]; // retry: K = HMAC_K(V || 0x00); V = HMAC_K(V)
         mem.cpy(buf, V, 32);
         buf[32] = 0x00;
-        HmacSha256V.mac_args.key = K;
-        HmacSha256V.mac_args.key_len = 32;
-        HmacSha256V.mac_args.data = buf;
-        HmacSha256V.mac_args.len = 33;
-        HmacSha256V.mac_args.out = K;
-        HmacSha256.mac(ECDSA_HMAC(work));
+        HmacSha256.mac(ECDSA_HMAC(work), K, 32, buf, 33, K);
         protocore_hmac_cat(work, V, K, V, 32, -1, NULL, NULL);
     }
     return PROTO_FALSE;

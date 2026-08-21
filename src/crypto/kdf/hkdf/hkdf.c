@@ -59,20 +59,11 @@ static proto_bool hkdf_derive(uint8_t *restrict work, const uint8_t *prk, const 
     while (done < out_len)
     {
         counter++;
-        HmacSha256V.key_args.key = prk;
-        HmacSha256V.key_args.key_len = PROTOCORE_HKDF_HASH_LEN;
-        HmacSha256.init(HKDF_HMAC(work));
-        HmacSha256V.update_args.data = t;
-        HmacSha256V.update_args.len = t_len;
-        HmacSha256.update(HKDF_HMAC(work));
-        HmacSha256V.update_args.data = info;
-        HmacSha256V.update_args.len = info_len;
-        HmacSha256.update(HKDF_HMAC(work));
-        HmacSha256V.update_args.data = &counter;
-        HmacSha256V.update_args.len = 1;
-        HmacSha256.update(HKDF_HMAC(work));
-        HmacSha256V.final_args.out = t;
-        HmacSha256.final(HKDF_HMAC(work));
+        HmacSha256.init(HKDF_HMAC(work), prk, PROTOCORE_HKDF_HASH_LEN);
+        HmacSha256.update(HKDF_HMAC(work), t, t_len);
+        HmacSha256.update(HKDF_HMAC(work), info, info_len);
+        HmacSha256.update(HKDF_HMAC(work), &counter, 1);
+        HmacSha256.final(HKDF_HMAC(work), t);
         t_len = PROTOCORE_HKDF_HASH_LEN;
 
         size_t take = out_len - done;
@@ -132,13 +123,8 @@ proto_bool protocore_hkdf_extract(uint8_t *restrict work, const uint8_t *salt, s
     {
         return PROTO_FALSE;
     }
-    HmacSha256V.mac_args.key = salt;
-    HmacSha256V.mac_args.key_len = salt_len;
-    HmacSha256V.mac_args.data = ikm;
-    HmacSha256V.mac_args.len = ikm_len;
-    HmacSha256V.mac_args.out = prk;
-    HmacSha256.mac(HKDF_HMAC(work));
-    return HmacSha256V.ok;
+    proto_bool hmac_sha256_ok = HmacSha256.mac(HKDF_HMAC(work), salt, salt_len, ikm, ikm_len, prk);
+    return hmac_sha256_ok;
 }
 
 proto_bool protocore_hkdf_expand(uint8_t *restrict work, const uint8_t *prk, const uint8_t *info, size_t info_len,

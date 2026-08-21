@@ -3989,7 +3989,7 @@ def remaining_vars_reads(spec, texts=None, roots=("src", "test", "examples", "ve
     return n
 
 
-def unwork_source(spec):
+def unwork_source(spec, write=True, text=None):
     """Give each entry in the .c its real signature back, and turn the operands into parameters.
 
     `Sha256V.update_args.data` is the parameter `data`; `Sha256V.ok = PROTO_TRUE;` is
@@ -4000,7 +4000,10 @@ def unwork_source(spec):
     p = os.path.join(R, spec["source"].replace("/", os.sep))
     if not os.path.exists(p):
         return ["no source file"]
-    s = io.open(p, encoding="utf-8").read()
+    # The caller can hand in the text to work from. In the real run the call sites have already
+    # been rewritten in this very file, so planning against what is on disk plans against a
+    # different file than the one that will be rewritten.
+    s = text if text is not None else io.open(p, encoding="utf-8").read()
     objv, notes = spec.get("objv", ""), []
 
     # A standalone prototype of an entry inside the .c. robotics.c forward-declares
@@ -4031,7 +4034,14 @@ def unwork_source(spec):
 
         # Operands become parameters.
         if objv:
-            body = re.sub(r"\b%s\.%s_args\.(\w+)" % (re.escape(objv), re.escape(e["entry"])), r"\1", body)
+            # By the entry OPERAND GROUP, the same one the scanner read the parameter list out of.
+            # Substituting by entry NAME left hmac_sha256_init reading HmacSha256V.key_args.key in
+            # a body whose header no longer declares HmacSha256V.
+            body = re.sub(
+                r"\b%s\.%s_args\.(\w+)" % (re.escape(objv), re.escape(e.get("group", e["entry"]))),
+                r"\1",
+                body,
+            )
             # An entry that aliased its operands to locals of the same name - `const uint8_t *msg =
             # AesCmacV.mac_args.msg;` - now says `const uint8_t *msg = msg;`, which redeclares the
             # parameter. The alias WAS the parameter; the line has nothing left to do. An alias
@@ -4141,8 +4151,14 @@ def unwork_source(spec):
             '#include "protocore_config.h" // the entry point: the widths',
         )
 
-    emit(p, s)
-    return notes
+    # The text is handed back whether or not it is written, so the pass can be asked what the .c
+    # would look like BEFORE committing to it. remaining_vars_reads skips the module's own source
+    # - it is the file this function rewrites - and that made a read this function could not place
+    # invisible to every check: hmac_sha256 planned to zero reads left and its own .c still said
+    # HmacSha256V on line 88.
+    if write:
+        emit(p, s)
+    return notes, s
 
 
 def main():
@@ -4246,6 +4262,21 @@ def main():
                 "there is nothing for this pass to read a parameter list out of. Left alone." % spec["module"]
             )
             return 1
+        # What the .c would become. Planned, not written, so the read this pass cannot place is
+        # found here rather than by the compiler - remaining_vars_reads skips this one file because
+        # it is the one unwork_source rewrites, which made those reads invisible to every check.
+        _notes, csrc_after = unwork_source(
+            spec, write=False, text=texts.get(os.path.join(R, spec["source"].replace("/", os.sep)))
+        )
+        stray = [
+            csrc_after[: mm.start()].count(chr(10)) + 1
+            for mm in re.finditer(re.escape(spec.get("objv", "") or "@@") + chr(92) + chr(46), csrc_after)
+        ]
+        if stray and not FORCE:
+            print("   %d read(s) of %s left in its own .c - NOT CONVERTING" % (len(stray), spec["objv"]))
+            for ln in stray[:6]:
+                print("   LEFT %s:%d" % (spec["source"], ln))
+            return 1
         gone = dropped_declarations(original, header, spec)
         if gone and not FORCE:
             print("   would DELETE published declarations: %s - NOT CONVERTING" % ", ".join(gone))
@@ -4261,7 +4292,7 @@ def main():
         print("header:", spec["header"])
         emit(hp, header)
         print("source:", spec["source"])
-        for n in dict.fromkeys(unwork_source(spec)):
+        for n in dict.fromkeys(unwork_source(spec)[0]):
             print("   NOTE", n)
         # Every remaining read of <X>V is a compile error once the header stops declaring it, so
         # count them here rather than letting the build be the first to say so.

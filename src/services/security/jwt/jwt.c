@@ -262,12 +262,7 @@ void protocore_jwt_verify_mac(uint8_t *restrict work)
         protocore_secure_release(mark);
         return;
     }
-    HmacSha256V.mac_args.key = JwtV.key.secret;
-    HmacSha256V.mac_args.key_len = JwtV.key.secret_len;
-    HmacSha256V.mac_args.data = (const uint8_t *)jws;
-    HmacSha256V.mac_args.len = parts.signing_len;
-    HmacSha256V.mac_args.out = mac;
-    HmacSha256.mac(ws.buf);
+    HmacSha256.mac(ws.buf, JwtV.key.secret, JwtV.key.secret_len, (const uint8_t *)jws, parts.signing_len, mac);
     protocore_secure_release(mark);
 
     char computed[JWT_SIG_B64_CAP];

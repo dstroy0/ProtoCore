@@ -13,16 +13,12 @@
  * this file splits them by offset: the PRF's own bytes, then the counter and the block it writes.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_KDF
+#include "protocore_config.h" // the entry point: the widths
 
 #include "crypto/kdf/kdf/kdf.h"
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"
 #include "mmgr/endian/endian.h"
 #include "mmgr/protomem/protomem.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // The one definition, private to this TU. Only what is not derivable: the counter and the block K(i)
 // lands in. K(i) is derived from Ki, so it is key material and never lands on the stack.
@@ -54,19 +50,13 @@ static_assert(KDF_OFF_CTX % _Alignof(KdfCtx) == 0,
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_kdf_ctr_hmac_sha256(uint8_t *restrict work)
+proto_bool protocore_kdf_ctr_hmac_sha256(uint8_t *restrict work, const uint8_t *ki, size_t ki_len, const uint8_t *fixed,
+                                         size_t fixed_len, uint8_t *out, size_t out_len)
 {
-    KdfV.ok = PROTO_FALSE;
-    if (!KdfV.ctr_args.ki || !KdfV.ctr_args.fixed || !KdfV.ctr_args.out || KdfV.ctr_args.out_len == 0)
+    if (!ki || !fixed || !out || out_len == 0)
     {
-        return;
+        return PROTO_FALSE;
     }
-    const uint8_t *ki = KdfV.ctr_args.ki;
-    const size_t ki_len = KdfV.ctr_args.ki_len;
-    const uint8_t *fixed = KdfV.ctr_args.fixed;
-    const size_t fixed_len = KdfV.ctr_args.fixed_len;
-    uint8_t *out = KdfV.ctr_args.out;
-    const size_t out_len = KdfV.ctr_args.out_len;
     KdfCtx *c = KDF_CTX(work);
     uint8_t *hw = KDF_MAC(work);
 
@@ -74,17 +64,10 @@ void protocore_kdf_ctr_hmac_sha256(uint8_t *restrict work)
     for (uint32_t counter = 1; done < out_len; counter++)
     {
         protocore_wr32be(c->ctr, counter);
-        HmacSha256V.key_args.key = ki;
-        HmacSha256V.key_args.key_len = ki_len;
-        HmacSha256.init(hw);
-        HmacSha256V.update_args.data = c->ctr;
-        HmacSha256V.update_args.len = sizeof(c->ctr);
-        HmacSha256.update(hw);
-        HmacSha256V.update_args.data = fixed;
-        HmacSha256V.update_args.len = fixed_len;
-        HmacSha256.update(hw);
-        HmacSha256V.final_args.out = c->block;
-        HmacSha256.final(hw);
+        HmacSha256.init(hw, ki, ki_len);
+        HmacSha256.update(hw, c->ctr, sizeof(c->ctr));
+        HmacSha256.update(hw, fixed, fixed_len);
+        HmacSha256.final(hw, c->block);
         size_t take = PROTOCORE_HMAC_SHA256_LEN;
         if (out_len - done < PROTOCORE_HMAC_SHA256_LEN)
         {
@@ -93,12 +76,5 @@ void protocore_kdf_ctr_hmac_sha256(uint8_t *restrict work)
         mem.cpy(out + done, c->block, take);
         done += take;
     }
-    KdfV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
-
-/** @brief The operands and the outcome. */
-KdfVars KdfV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_KDF

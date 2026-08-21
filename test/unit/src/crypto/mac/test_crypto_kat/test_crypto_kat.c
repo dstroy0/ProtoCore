@@ -197,12 +197,7 @@ static void run_hmac(const KatMac *rows, size_t n, proto_bool is512)
         }
         else
         {
-            HmacSha256V.mac_args.key = key;
-            HmacSha256V.mac_args.key_len = klen;
-            HmacSha256V.mac_args.data = msg;
-            HmacSha256V.mac_args.len = mlen;
-            HmacSha256V.mac_args.out = got;
-            HmacSha256.mac(g_work);
+            HmacSha256.mac(g_work, key, klen, msg, mlen, got);
         }
         size_t cmp = (size_t)v->tag_bits / 8;
         proto_bool match = (wlen == cmp) && memcmp(got, want, cmp) == 0;
