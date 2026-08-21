@@ -333,52 +333,52 @@ extern JsonVars JsonV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const init)(uint8_t *restrict work);
-    void (*const begin_object)(uint8_t *restrict work);
-    void (*const end_object)(uint8_t *restrict work);
-    void (*const begin_array)(uint8_t *restrict work);
-    void (*const end_array)(uint8_t *restrict work);
-    void (*const key)(uint8_t *restrict work);
-    void (*const put_str)(uint8_t *restrict work);
-    void (*const put_int)(uint8_t *restrict work);
-    void (*const put_uint)(uint8_t *restrict work);
-    void (*const put_bool)(uint8_t *restrict work);
-    void (*const put_null)(uint8_t *restrict work);
-    void (*const put_raw)(uint8_t *restrict work);
-    void (*const kv_str)(uint8_t *restrict work);
-    void (*const kv_int)(uint8_t *restrict work);
-    void (*const kv_uint)(uint8_t *restrict work);
-    void (*const kv_bool)(uint8_t *restrict work);
-    void (*const kv_null)(uint8_t *restrict work);
-    void (*const kv_raw)(uint8_t *restrict work);
-    void (*const get_str)(uint8_t *restrict work);
-    void (*const get_int)(uint8_t *restrict work);
-    void (*const get_bool)(uint8_t *restrict work);
+    void (*const init)(uint8_t *work);
+    void (*const begin_object)(uint8_t *work);
+    void (*const end_object)(uint8_t *work);
+    void (*const begin_array)(uint8_t *work);
+    void (*const end_array)(uint8_t *work);
+    void (*const key)(uint8_t *work);
+    void (*const put_str)(uint8_t *work);
+    void (*const put_int)(uint8_t *work);
+    void (*const put_uint)(uint8_t *work);
+    void (*const put_bool)(uint8_t *work);
+    void (*const put_null)(uint8_t *work);
+    void (*const put_raw)(uint8_t *work);
+    void (*const kv_str)(uint8_t *work);
+    void (*const kv_int)(uint8_t *work);
+    void (*const kv_uint)(uint8_t *work);
+    void (*const kv_bool)(uint8_t *work);
+    void (*const kv_null)(uint8_t *work);
+    void (*const kv_raw)(uint8_t *work);
+    void (*const get_str)(uint8_t *work);
+    void (*const get_int)(uint8_t *work);
+    void (*const get_bool)(uint8_t *work);
 } JsonNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in JsonV or a region of the borrow at a fixed offset.
-void protocore_json_init(uint8_t *restrict work);
-void protocore_json_begin_object(uint8_t *restrict work);
-void protocore_json_end_object(uint8_t *restrict work);
-void protocore_json_begin_array(uint8_t *restrict work);
-void protocore_json_end_array(uint8_t *restrict work);
-void protocore_json_key(uint8_t *restrict work);
-void protocore_json_put_str(uint8_t *restrict work);
-void protocore_json_put_int(uint8_t *restrict work);
-void protocore_json_put_uint(uint8_t *restrict work);
-void protocore_json_put_bool(uint8_t *restrict work);
-void protocore_json_put_null(uint8_t *restrict work);
-void protocore_json_put_raw(uint8_t *restrict work);
-void protocore_json_kv_str(uint8_t *restrict work);
-void protocore_json_kv_int(uint8_t *restrict work);
-void protocore_json_kv_uint(uint8_t *restrict work);
-void protocore_json_kv_bool(uint8_t *restrict work);
-void protocore_json_kv_null(uint8_t *restrict work);
-void protocore_json_kv_raw(uint8_t *restrict work);
-void protocore_json_get_str(uint8_t *restrict work);
-void protocore_json_get_int(uint8_t *restrict work);
-void protocore_json_get_bool(uint8_t *restrict work);
+void protocore_json_init(uint8_t *work);
+void protocore_json_begin_object(uint8_t *work);
+void protocore_json_end_object(uint8_t *work);
+void protocore_json_begin_array(uint8_t *work);
+void protocore_json_end_array(uint8_t *work);
+void protocore_json_key(uint8_t *work);
+void protocore_json_put_str(uint8_t *work);
+void protocore_json_put_int(uint8_t *work);
+void protocore_json_put_uint(uint8_t *work);
+void protocore_json_put_bool(uint8_t *work);
+void protocore_json_put_null(uint8_t *work);
+void protocore_json_put_raw(uint8_t *work);
+void protocore_json_kv_str(uint8_t *work);
+void protocore_json_kv_int(uint8_t *work);
+void protocore_json_kv_uint(uint8_t *work);
+void protocore_json_kv_bool(uint8_t *work);
+void protocore_json_kv_null(uint8_t *work);
+void protocore_json_kv_raw(uint8_t *work);
+void protocore_json_get_str(uint8_t *work);
+void protocore_json_get_int(uint8_t *work);
+void protocore_json_get_bool(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

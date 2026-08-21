@@ -16,7 +16,7 @@
 
 #include "network.h"
 
-void protocore_network_init(uint8_t *restrict work)
+void protocore_network_init(uint8_t *work)
 {
     (void)work; // no work: the platform stack holds the route table and selects the path
 }

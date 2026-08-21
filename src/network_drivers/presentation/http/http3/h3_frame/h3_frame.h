@@ -87,15 +87,15 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*parse_header)(uint8_t *restrict, const uint8_t *, size_t, H3FrameHeader *);
-    size_t (*write_header)(uint8_t *restrict, uint8_t *, size_t, uint64_t, uint64_t);
-    proto_bool (*type_reserved)(uint8_t *restrict, uint64_t);
-    void (*settings_defaults)(uint8_t *restrict, H3Settings *);
-    proto_bool (*parse_settings)(uint8_t *restrict, const uint8_t *, size_t, H3Settings *);
-    size_t (*build_data)(uint8_t *restrict, uint8_t *, size_t, const uint8_t *, size_t);
-    size_t (*build_headers)(uint8_t *restrict, uint8_t *, size_t, const uint8_t *, size_t);
-    size_t (*build_settings)(uint8_t *restrict, uint8_t *, size_t, const uint64_t *, const uint64_t *, size_t);
-    size_t (*build_goaway)(uint8_t *restrict, uint8_t *, size_t, uint64_t);
+    proto_bool (*parse_header)(uint8_t *, const uint8_t *, size_t, H3FrameHeader *);
+    size_t (*write_header)(uint8_t *, uint8_t *, size_t, uint64_t, uint64_t);
+    proto_bool (*type_reserved)(uint8_t *, uint64_t);
+    void (*settings_defaults)(uint8_t *, H3Settings *);
+    proto_bool (*parse_settings)(uint8_t *, const uint8_t *, size_t, H3Settings *);
+    size_t (*build_data)(uint8_t *, uint8_t *, size_t, const uint8_t *, size_t);
+    size_t (*build_headers)(uint8_t *, uint8_t *, size_t, const uint8_t *, size_t);
+    size_t (*build_settings)(uint8_t *, uint8_t *, size_t, const uint64_t *, const uint64_t *, size_t);
+    size_t (*build_goaway)(uint8_t *, uint8_t *, size_t, uint64_t);
 } H3FrameNs;
 PROTOCORE_NS_LAYOUT(H3FrameNs, parse_header, write_header, type_reserved, settings_defaults, parse_settings, build_data,
                     build_headers, build_settings, build_goaway);
@@ -108,7 +108,7 @@ PROTOCORE_NS_LAYOUT(H3FrameNs, parse_header, write_header, type_reserved, settin
  * @param out Out
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_h3_frame_parse_header(uint8_t *restrict work, const uint8_t *buf, size_t len, H3FrameHeader *out);
+proto_bool protocore_h3_frame_parse_header(uint8_t *work, const uint8_t *buf, size_t len, H3FrameHeader *out);
 /**
  * @brief Write a frame header (type + length varints). bytes written, or 0 .
  * @param work PROTOCORE_H3_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -118,21 +118,20 @@ proto_bool protocore_h3_frame_parse_header(uint8_t *restrict work, const uint8_t
  * @param length Length
  * @return The size_t.
  */
-size_t protocore_h3_frame_write_header(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t type,
-                                       uint64_t length);
+size_t protocore_h3_frame_write_header(uint8_t *work, uint8_t *out, size_t cap, uint64_t type, uint64_t length);
 /**
  * @brief True if type is a reserved HTTP/2 frame type (0x02/0x06/0x08/0x09) .
  * @param work PROTOCORE_H3_FRAME_BORROW bytes the caller took. Not held past the call.
  * @param type Type
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_h3_frame_type_reserved(uint8_t *restrict work, uint64_t type);
+proto_bool protocore_h3_frame_type_reserved(uint8_t *work, uint64_t type);
 /**
  * @brief Fill s with the RFC default settings.
  * @param work PROTOCORE_H3_FRAME_BORROW bytes the caller took. Not held past the call.
  * @param s S
  */
-void protocore_h3_frame_settings_defaults(uint8_t *restrict work, H3Settings *s);
+void protocore_h3_frame_settings_defaults(uint8_t *work, H3Settings *s);
 /**
  * @brief Apply a SETTINGS payload (id, value varint pairs) to s. false if .
  * @param work PROTOCORE_H3_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -141,7 +140,7 @@ void protocore_h3_frame_settings_defaults(uint8_t *restrict work, H3Settings *s)
  * @param s S
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_h3_frame_parse_settings(uint8_t *restrict work, const uint8_t *payload, size_t len, H3Settings *s);
+proto_bool protocore_h3_frame_parse_settings(uint8_t *work, const uint8_t *payload, size_t len, H3Settings *s);
 /**
  * @brief DATA frame wrapping data.
  * @param work PROTOCORE_H3_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -151,7 +150,7 @@ proto_bool protocore_h3_frame_parse_settings(uint8_t *restrict work, const uint8
  * @param len Len
  * @return The size_t.
  */
-size_t protocore_h3_frame_build_data(uint8_t *restrict work, uint8_t *out, size_t cap, const uint8_t *data, size_t len);
+size_t protocore_h3_frame_build_data(uint8_t *work, uint8_t *out, size_t cap, const uint8_t *data, size_t len);
 /**
  * @brief HEADERS frame wrapping a QPACK-encoded field section block.
  * @param work PROTOCORE_H3_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -161,8 +160,7 @@ size_t protocore_h3_frame_build_data(uint8_t *restrict work, uint8_t *out, size_
  * @param len Len
  * @return The size_t.
  */
-size_t protocore_h3_frame_build_headers(uint8_t *restrict work, uint8_t *out, size_t cap, const uint8_t *block,
-                                        size_t len);
+size_t protocore_h3_frame_build_headers(uint8_t *work, uint8_t *out, size_t cap, const uint8_t *block, size_t len);
 /**
  * @brief SETTINGS frame from n (id, value) pairs.
  * @param work PROTOCORE_H3_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -173,7 +171,7 @@ size_t protocore_h3_frame_build_headers(uint8_t *restrict work, uint8_t *out, si
  * @param n N
  * @return The size_t.
  */
-size_t protocore_h3_frame_build_settings(uint8_t *restrict work, uint8_t *out, size_t cap, const uint64_t *ids,
+size_t protocore_h3_frame_build_settings(uint8_t *work, uint8_t *out, size_t cap, const uint64_t *ids,
                                          const uint64_t *vals, size_t n);
 /**
  * @brief GOAWAY frame carrying stream_id (RFC 9114 sec 7.2.6).
@@ -183,7 +181,7 @@ size_t protocore_h3_frame_build_settings(uint8_t *restrict work, uint8_t *out, s
  * @param stream_id Stream id
  * @return The size_t.
  */
-size_t protocore_h3_frame_build_goaway(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t stream_id);
+size_t protocore_h3_frame_build_goaway(uint8_t *work, uint8_t *out, size_t cap, uint64_t stream_id);
 
 /** @brief Module namespace. */
 PROTOCORE_NS H3FrameNs H3Frame PROTOCORE_UNUSED = {.parse_header = protocore_h3_frame_parse_header,

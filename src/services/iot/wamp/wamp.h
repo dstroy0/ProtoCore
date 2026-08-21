@@ -157,36 +157,36 @@ extern WampVars WampV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_hello)(uint8_t *restrict work);
-    void (*const build_goodbye)(uint8_t *restrict work);
-    void (*const build_subscribe)(uint8_t *restrict work);
-    void (*const build_unsubscribe)(uint8_t *restrict work);
-    void (*const build_publish)(uint8_t *restrict work);
-    void (*const build_call)(uint8_t *restrict work);
-    void (*const build_register)(uint8_t *restrict work);
-    void (*const build_unregister)(uint8_t *restrict work);
-    void (*const build_yield)(uint8_t *restrict work);
-    void (*const element)(uint8_t *restrict work);
-    void (*const get_type)(uint8_t *restrict work);
-    void (*const get_id)(uint8_t *restrict work);
-    void (*const get_uri)(uint8_t *restrict work);
+    void (*const build_hello)(uint8_t *work);
+    void (*const build_goodbye)(uint8_t *work);
+    void (*const build_subscribe)(uint8_t *work);
+    void (*const build_unsubscribe)(uint8_t *work);
+    void (*const build_publish)(uint8_t *work);
+    void (*const build_call)(uint8_t *work);
+    void (*const build_register)(uint8_t *work);
+    void (*const build_unregister)(uint8_t *work);
+    void (*const build_yield)(uint8_t *work);
+    void (*const element)(uint8_t *work);
+    void (*const get_type)(uint8_t *work);
+    void (*const get_id)(uint8_t *work);
+    void (*const get_uri)(uint8_t *work);
 } WampNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in WampV or a region of the borrow at a fixed offset.
-void protocore_wamp_build_hello(uint8_t *restrict work);
-void protocore_wamp_build_goodbye(uint8_t *restrict work);
-void protocore_wamp_build_subscribe(uint8_t *restrict work);
-void protocore_wamp_build_unsubscribe(uint8_t *restrict work);
-void protocore_wamp_build_publish(uint8_t *restrict work);
-void protocore_wamp_build_call(uint8_t *restrict work);
-void protocore_wamp_build_register(uint8_t *restrict work);
-void protocore_wamp_build_unregister(uint8_t *restrict work);
-void protocore_wamp_build_yield(uint8_t *restrict work);
-void protocore_wamp_element(uint8_t *restrict work);
-void protocore_wamp_get_type(uint8_t *restrict work);
-void protocore_wamp_get_id(uint8_t *restrict work);
-void protocore_wamp_get_uri(uint8_t *restrict work);
+void protocore_wamp_build_hello(uint8_t *work);
+void protocore_wamp_build_goodbye(uint8_t *work);
+void protocore_wamp_build_subscribe(uint8_t *work);
+void protocore_wamp_build_unsubscribe(uint8_t *work);
+void protocore_wamp_build_publish(uint8_t *work);
+void protocore_wamp_build_call(uint8_t *work);
+void protocore_wamp_build_register(uint8_t *work);
+void protocore_wamp_build_unregister(uint8_t *work);
+void protocore_wamp_build_yield(uint8_t *work);
+void protocore_wamp_element(uint8_t *work);
+void protocore_wamp_get_type(uint8_t *work);
+void protocore_wamp_get_id(uint8_t *work);
+void protocore_wamp_get_uri(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

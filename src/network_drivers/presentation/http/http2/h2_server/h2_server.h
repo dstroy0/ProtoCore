@@ -64,10 +64,10 @@ typedef struct
 
     proto_bool ok;
 
-    void (*const open)(uint8_t *restrict work);
-    void (*const data)(uint8_t *restrict work);
-    void (*const respond)(uint8_t *restrict work);
-    void (*const close)(uint8_t *restrict work);
+    void (*const open)(uint8_t *work);
+    void (*const data)(uint8_t *work);
+    void (*const respond)(uint8_t *work);
+    void (*const close)(uint8_t *work);
 
 } H2ServerNs;
 

@@ -243,7 +243,7 @@ static void tag_encrypt(CcmWork *w, const uint8_t *nonce, size_t nonce_len, uint
     }
 }
 
-static proto_bool aesccm_seal_record(uint8_t *restrict work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
+static proto_bool aesccm_seal_record(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
                                      size_t nonce_len, const uint8_t *aad, size_t aad_len, const uint8_t *pt,
                                      size_t pt_len, uint8_t *ct_out, uint8_t *tag_out)
 {
@@ -260,7 +260,7 @@ static proto_bool aesccm_seal_record(uint8_t *restrict work, const uint8_t *key,
     return PROTO_TRUE;
 }
 
-static proto_bool aesccm_open_record(uint8_t *restrict work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
+static proto_bool aesccm_open_record(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
                                      size_t nonce_len, const uint8_t *aad, size_t aad_len, const uint8_t *ct,
                                      size_t ct_len, const uint8_t *tag, uint8_t *out)
 {
@@ -285,7 +285,7 @@ static proto_bool aesccm_open_record(uint8_t *restrict work, const uint8_t *key,
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_aes_ccm_seal(uint8_t *restrict work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
+proto_bool protocore_aes_ccm_seal(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
                                   size_t nonce_len, const uint8_t *aad, size_t aad_len, const uint8_t *pt,
                                   size_t pt_len, uint8_t *ct_out, uint8_t *tag_out)
 {
@@ -296,7 +296,7 @@ proto_bool protocore_aes_ccm_seal(uint8_t *restrict work, const uint8_t *key, si
     return aesccm_seal_record(work, key, key_len, nonce, nonce_len, aad, aad_len, pt, pt_len, ct_out, tag_out);
 }
 
-proto_bool protocore_aes_ccm_open(uint8_t *restrict work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
+proto_bool protocore_aes_ccm_open(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
                                   size_t nonce_len, const uint8_t *aad, size_t aad_len, const uint8_t *ct,
                                   size_t ct_len, const uint8_t *tag, uint8_t *out)
 {

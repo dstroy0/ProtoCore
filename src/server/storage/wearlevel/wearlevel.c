@@ -14,7 +14,7 @@
 
 PROTOCORE_BEGIN_DECLS
 
-void protocore_wearlevel_pick(uint8_t *restrict work)
+void protocore_wearlevel_pick(uint8_t *work)
 {
     (void)work;
     const uint32_t *counts = WearlevelV.args.counts;
@@ -38,7 +38,7 @@ void protocore_wearlevel_pick(uint8_t *restrict work)
     WearlevelV.n_out = best;
 }
 
-void protocore_wearlevel_mark(uint8_t *restrict work)
+void protocore_wearlevel_mark(uint8_t *work)
 {
     (void)work;
     uint32_t *counts = WearlevelV.args.counts_rw;
@@ -54,7 +54,7 @@ void protocore_wearlevel_mark(uint8_t *restrict work)
     }
 }
 
-void protocore_wearlevel_imbalance(uint8_t *restrict work)
+void protocore_wearlevel_imbalance(uint8_t *work)
 {
     (void)work;
     const uint32_t *counts = WearlevelV.args.counts;

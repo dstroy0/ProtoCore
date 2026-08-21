@@ -120,7 +120,7 @@ static uint8_t lane_priority(protocore_pq_lane lane)
     }
 }
 
-static void note_depth(uint8_t *restrict work, protocore_pq_lane lane, size_t waiting)
+static void note_depth(uint8_t *work, protocore_pq_lane lane, size_t waiting)
 {
     if (waiting > PREEMPT_QUEUE_CTX(work)->pq.high_water[(size_t)lane])
     {
@@ -154,7 +154,7 @@ static void pq_task(void *arg)
     }
 }
 
-void protocore_preempt_queue_start(uint8_t *restrict work)
+void protocore_preempt_queue_start(uint8_t *work)
 {
     const protocore_pq_lane lane = PreemptQueueV.lane;
     const protocore_pq_config *cfg = PreemptQueueV.cfg;
@@ -190,7 +190,7 @@ void protocore_preempt_queue_start(uint8_t *restrict work)
     PreemptQueueV.ok = PROTO_TRUE;
 }
 
-void protocore_preempt_queue_post(uint8_t *restrict work)
+void protocore_preempt_queue_post(uint8_t *work)
 {
     const protocore_pq_lane lane = PreemptQueueV.lane;
 
@@ -209,7 +209,7 @@ void protocore_preempt_queue_post(uint8_t *restrict work)
     PreemptQueueV.ok = PROTO_TRUE;
 }
 
-void protocore_preempt_queue_post_urgent(uint8_t *restrict work)
+void protocore_preempt_queue_post_urgent(uint8_t *work)
 {
     const protocore_pq_lane lane = PreemptQueueV.lane;
 
@@ -228,7 +228,7 @@ void protocore_preempt_queue_post_urgent(uint8_t *restrict work)
     PreemptQueueV.ok = PROTO_TRUE;
 }
 
-void protocore_preempt_queue_post_from_isr(uint8_t *restrict work)
+void protocore_preempt_queue_post_from_isr(uint8_t *work)
 {
     const protocore_pq_lane lane = PreemptQueueV.lane;
 
@@ -248,14 +248,14 @@ void protocore_preempt_queue_post_from_isr(uint8_t *restrict work)
     PreemptQueueV.ok = PROTO_TRUE;
 }
 
-void protocore_preempt_queue_drain(uint8_t *restrict work)
+void protocore_preempt_queue_drain(uint8_t *work)
 {
     (void)work;
     // The lane's task drains it; a build whose task backend does not run the entry function
     // drains nothing, so a caller that relies on this must pump the lane itself.
 }
 
-void protocore_preempt_queue_stop(uint8_t *restrict work)
+void protocore_preempt_queue_stop(uint8_t *work)
 {
     const protocore_pq_lane lane = PreemptQueueV.lane;
 
@@ -271,18 +271,18 @@ void protocore_preempt_queue_stop(uint8_t *restrict work)
     }
 }
 
-void protocore_preempt_queue_running(uint8_t *restrict work)
+void protocore_preempt_queue_running(uint8_t *work)
 {
     PreemptQueueV.ok = lane_ok(PreemptQueueV.lane) && PREEMPT_QUEUE_CTX(work)->qq.run[(size_t)PreemptQueueV.lane];
 }
 
-void protocore_preempt_queue_high_water(uint8_t *restrict work)
+void protocore_preempt_queue_high_water(uint8_t *work)
 {
     PreemptQueueV.n =
         lane_ok(PreemptQueueV.lane) ? PREEMPT_QUEUE_CTX(work)->pq.high_water[(size_t)PreemptQueueV.lane] : 0;
 }
 
-void protocore_preempt_queue_priority(uint8_t *restrict work)
+void protocore_preempt_queue_priority(uint8_t *work)
 {
     (void)work;
     PreemptQueueV.u8 = lane_priority(PreemptQueueV.lane);

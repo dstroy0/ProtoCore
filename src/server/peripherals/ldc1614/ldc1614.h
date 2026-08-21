@@ -133,9 +133,8 @@ typedef struct
  * @var Ldc1614Ns::begin  verify the device id and apply the CH0 config at addr. true if ...
  * @var Ldc1614Ns::read_ch0  read channel 0's 28-bit conversion result into out. false on I2C ...
  *
- * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -158,22 +157,22 @@ extern Ldc1614Vars Ldc1614V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const data)(uint8_t *restrict work);
-    void (*const error)(uint8_t *restrict work);
-    void (*const sensor_freq_hz)(uint8_t *restrict work);
-    void (*const build_config)(uint8_t *restrict work);
-    void (*const begin)(uint8_t *restrict work);
-    void (*const read_ch0)(uint8_t *restrict work);
+    void (*const data)(uint8_t *work);
+    void (*const error)(uint8_t *work);
+    void (*const sensor_freq_hz)(uint8_t *work);
+    void (*const build_config)(uint8_t *work);
+    void (*const begin)(uint8_t *work);
+    void (*const read_ch0)(uint8_t *work);
 } Ldc1614Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Ldc1614V or a region of the borrow at a fixed offset.
-void protocore_ldc1614_data(uint8_t *restrict work);
-void protocore_ldc1614_error(uint8_t *restrict work);
-void protocore_ldc1614_sensor_freq_hz(uint8_t *restrict work);
-void protocore_ldc1614_build_config(uint8_t *restrict work);
-void protocore_ldc1614_begin(uint8_t *restrict work);
-void protocore_ldc1614_read_ch0(uint8_t *restrict work);
+void protocore_ldc1614_data(uint8_t *work);
+void protocore_ldc1614_error(uint8_t *work);
+void protocore_ldc1614_sensor_freq_hz(uint8_t *work);
+void protocore_ldc1614_build_config(uint8_t *work);
+void protocore_ldc1614_begin(uint8_t *work);
+void protocore_ldc1614_read_ch0(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

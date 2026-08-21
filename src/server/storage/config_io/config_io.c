@@ -67,7 +67,7 @@ static proto_bool append_kv(char *out, size_t cap, size_t *pos, const char *key,
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_config_io_export(uint8_t *restrict work)
+void protocore_config_io_export(uint8_t *work)
 {
     (void)work;
     const char *ns = ConfigIoV.export_args.ns;
@@ -148,7 +148,7 @@ static proto_bool config_apply_field(const protocore_cfg_field *fields, size_t n
     return PROTO_FALSE;
 }
 
-void protocore_config_io_import(uint8_t *restrict work)
+void protocore_config_io_import(uint8_t *work)
 {
     (void)work;
     const char *ns = ConfigIoV.import_args.ns;

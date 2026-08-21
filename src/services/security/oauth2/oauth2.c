@@ -82,7 +82,7 @@ static proto_bool unreserved(char c)
 
 // Append one form value: an unreserved octet passes, every other one becomes "%" HEXDIG HEXDIG in
 // the uppercase digits RFC 3986 sec 2.1 asks a producer for.
-static void put_form_value(uint8_t *restrict work, protocore_sb *b, const char *s)
+static void put_form_value(uint8_t *work, protocore_sb *b, const char *s)
 {
     for (; *s; s++)
     {
@@ -104,7 +104,7 @@ static void put_form_value(uint8_t *restrict work, protocore_sb *b, const char *
 }
 
 // Append "&<name>=<encoded value>": one more parameter of the form body.
-static void put_param(uint8_t *restrict work, protocore_sb *b, const char *name, const char *value)
+static void put_param(uint8_t *work, protocore_sb *b, const char *name, const char *value)
 {
     Sb.ch(b, '&');
     Sb.put(b, name);
@@ -115,7 +115,7 @@ static void put_param(uint8_t *restrict work, protocore_sb *b, const char *name,
 // RFC 6749 sec 4.1.3: grant_type=authorization_code, code, redirect_uri, client_id, the sec 2.3.1
 // client password where the client authenticates, and the RFC 7636 sec 4.5 code_verifier where it
 // does not. i32 takes the encoded length, or 0 when the body did not fit.
-void protocore_oauth2_build_code_request(uint8_t *restrict work)
+void protocore_oauth2_build_code_request(uint8_t *work)
 {
     (void)work;
     Oauth2V.i32 = 0;
@@ -142,7 +142,7 @@ void protocore_oauth2_build_code_request(uint8_t *restrict work)
 
 // RFC 6749 sec 6: grant_type=refresh_token, refresh_token, client_id, and the sec 2.3.1 client
 // password where the client authenticates. i32 takes the encoded length, or 0 when it did not fit.
-void protocore_oauth2_build_refresh_request(uint8_t *restrict work)
+void protocore_oauth2_build_refresh_request(uint8_t *work)
 {
     (void)work;
     Oauth2V.i32 = 0;
@@ -165,7 +165,7 @@ void protocore_oauth2_build_refresh_request(uint8_t *restrict work)
 // RFC 6749 sec 5.1: read access_token, token_type, expires_in and refresh_token out of the reply,
 // plus the OpenID Connect id_token where the provider sends one. ok stays false when access_token is
 // absent, which is the shape of the sec 5.2 error object.
-void protocore_oauth2_parse_token_response(uint8_t *restrict work)
+void protocore_oauth2_parse_token_response(uint8_t *work)
 {
     (void)work;
     Oauth2V.ok = PROTO_FALSE;
@@ -223,7 +223,7 @@ void protocore_oauth2_parse_token_response(uint8_t *restrict work)
 // reply in, and parse it. i32 takes the HTTP status on a sec 5.1 response, the provider's 4xx on a
 // sec 5.2 error object, and a negative Oauth2Result where the exchange never got that far. Without a
 // net stack HttpClient.post reports HTTP_CLIENT_ERR_CONNECT, which lands on ERR_TRANSPORT.
-static void post_and_parse(uint8_t *restrict work, int body_len)
+static void post_and_parse(uint8_t *work, int body_len)
 {
     if (body_len <= 0)
     {
@@ -260,7 +260,7 @@ static void post_and_parse(uint8_t *restrict work, int body_len)
 
 // RFC 6749 sec 4.1.3 request, sec 4.1.4 response: the body is built into the store's own buffer, so
 // the caller sets only the endpoint, the grant members and response.tokens.
-void protocore_oauth2_exchange_code(uint8_t *restrict work)
+void protocore_oauth2_exchange_code(uint8_t *work)
 {
     Oauth2V.request.out = OAUTH2_CTX(work)->body;
     Oauth2V.request.cap = sizeof(OAUTH2_CTX(work)->body);
@@ -269,7 +269,7 @@ void protocore_oauth2_exchange_code(uint8_t *restrict work)
 }
 
 // RFC 6749 sec 6: the same exchange presenting refresh_grant.refresh_token.
-void protocore_oauth2_refresh(uint8_t *restrict work)
+void protocore_oauth2_refresh(uint8_t *work)
 {
     Oauth2V.request.out = OAUTH2_CTX(work)->body;
     Oauth2V.request.cap = sizeof(OAUTH2_CTX(work)->body);

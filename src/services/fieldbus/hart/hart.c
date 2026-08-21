@@ -21,9 +21,9 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_hart_checksum(uint8_t *restrict work);
+void protocore_hart_checksum(uint8_t *work);
 
-void protocore_hart_checksum(uint8_t *restrict work)
+void protocore_hart_checksum(uint8_t *work)
 {
     (void)work;
     const uint8_t *bytes = HartV.checksum_args.bytes;
@@ -37,7 +37,7 @@ void protocore_hart_checksum(uint8_t *restrict work)
     HartV.value = x;
 }
 
-void protocore_hart_build(uint8_t *restrict work)
+void protocore_hart_build(uint8_t *work)
 {
     uint8_t delimiter = HartV.build_args.delimiter;
     const uint8_t *addr = HartV.build_args.addr;
@@ -85,7 +85,7 @@ void protocore_hart_build(uint8_t *restrict work)
     HartV.n = i;
 }
 
-void protocore_hart_parse(uint8_t *restrict work)
+void protocore_hart_parse(uint8_t *work)
 {
     const uint8_t *frame = HartV.parse_args.frame;
     size_t len = HartV.parse_args.len;
@@ -134,7 +134,7 @@ void protocore_hart_parse(uint8_t *restrict work)
     HartV.ok = PROTO_TRUE;
 }
 
-void protocore_hart_ip_build_header(uint8_t *restrict work)
+void protocore_hart_ip_build_header(uint8_t *work)
 {
     (void)work;
     uint8_t msg_type = HartV.ip_build_header_args.msg_type;
@@ -161,7 +161,7 @@ void protocore_hart_ip_build_header(uint8_t *restrict work)
     HartV.n = HARTIP_HEADER_LEN;
 }
 
-void protocore_hart_ip_parse_header(uint8_t *restrict work)
+void protocore_hart_ip_parse_header(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = HartV.ip_parse_header_args.buf;

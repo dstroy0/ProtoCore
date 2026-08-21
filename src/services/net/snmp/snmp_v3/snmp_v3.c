@@ -163,7 +163,7 @@ static uint32_t v3_uptime_s(void)
 #endif
 }
 
-void protocore_snmp_v3_init(uint8_t *restrict work)
+void protocore_snmp_v3_init(uint8_t *work)
 {
     const uint8_t *engine_id = SnmpV3V.engine.engine_id;
     const size_t engine_id_len = SnmpV3V.engine.engine_id_len;
@@ -180,7 +180,7 @@ void protocore_snmp_v3_init(uint8_t *restrict work)
 
 // The localized keys depend on the snmpEngineID, so they are derived here, once, rather than per
 // message (RFC 3414 sec 2.6, derivation per RFC 7860 sec 9.3).
-void protocore_snmp_v3_set_user(uint8_t *restrict work)
+void protocore_snmp_v3_set_user(uint8_t *work)
 {
     const char *user = SnmpV3V.user.user;
     const char *auth_pass = SnmpV3V.user.auth_pass;
@@ -208,13 +208,13 @@ void protocore_snmp_v3_set_user(uint8_t *restrict work)
     SnmpV3V.ok = SNMP_V3_CTX(work)->auth_set;
 }
 
-void protocore_snmp_v3_set_boots(uint8_t *restrict work)
+void protocore_snmp_v3_set_boots(uint8_t *work)
 {
     SNMP_V3_CTX(work)->boots = SnmpV3V.engine.boots;
     SnmpV3V.ok = PROTO_TRUE;
 }
 
-void protocore_snmp_v3_get_boots(uint8_t *restrict work)
+void protocore_snmp_v3_get_boots(uint8_t *work)
 {
     SnmpV3V.u32 = SNMP_V3_CTX(work)->boots;
     SnmpV3V.ok = PROTO_TRUE;
@@ -313,8 +313,8 @@ static long inner_request_id(const uint8_t *mdata, size_t mdata_len, proto_bool 
 // ScopedPDU is encrypted first under the RFC 3826 sec 3.1.2.1 IV and carried as an OCTET STRING;
 // with authentication the digest is computed over the finished message with
 // msgAuthenticationParameters zeroed, then written back into that field (RFC 7860 sec 4.2.1).
-static size_t build_message(uint8_t *restrict work, long msg_id, proto_bool auth, proto_bool priv,
-                            const uint8_t *scoped, size_t scoped_len, uint8_t *resp, size_t resp_cap)
+static size_t build_message(uint8_t *work, long msg_id, proto_bool auth, proto_bool priv, const uint8_t *scoped,
+                            size_t scoped_len, uint8_t *resp, size_t resp_cap)
 {
     const uint32_t now = v3_uptime_s();
     const uint8_t *data_ptr = scoped;
@@ -465,8 +465,8 @@ static size_t build_message(uint8_t *restrict work, long msg_id, proto_bool auth
 
 // A Report PDU carrying usmStats<stat>.0 = Counter32, wrapped in a v3 message. RFC 3414 sec 4 uses
 // it for discovery and RFC 3414 sec 5 names the counters.
-static size_t build_report(uint8_t *restrict work, long msg_id, proto_bool auth, uint32_t stat, uint32_t count,
-                           long request_id, uint8_t *resp, size_t resp_cap)
+static size_t build_report(uint8_t *work, long msg_id, proto_bool auth, uint32_t stat, uint32_t count, long request_id,
+                           uint8_t *resp, size_t resp_cap)
 {
     uint32_t oid[11];
     for (int i = 0; i < 9; i++)
@@ -547,7 +547,7 @@ static size_t build_report(uint8_t *restrict work, long msg_id, proto_bool auth,
 // Message processing
 // ---------------------------------------------------------------------------
 
-void protocore_snmp_v3_process(uint8_t *restrict work)
+void protocore_snmp_v3_process(uint8_t *work)
 {
     const uint8_t *req = SnmpV3V.msg.req;
     const size_t req_len = SnmpV3V.msg.req_len;
@@ -855,7 +855,7 @@ void protocore_snmp_v3_process(uint8_t *restrict work)
 // A v3 notification: authenticated always, encrypted when a privacy password is configured. The
 // PDU is the notify module's, the ScopedPDU and the message are this one's. pdu_tag selects the
 // SNMPv2-Trap-PDU or the InformRequest-PDU.
-static void send_notify(uint8_t *restrict work, uint8_t pdu_tag)
+static void send_notify(uint8_t *work, uint8_t pdu_tag)
 {
     SnmpV3V.ok = PROTO_FALSE;
     SnmpV3V.n = 0;
@@ -937,14 +937,14 @@ static void send_notify(uint8_t *restrict work, uint8_t pdu_tag)
 
 // SNMPv2-Trap-PDU in a v3 message (RFC 3416 sec 4.2.6): unacknowledged, so the request-id is
 // informational and the caller may leave it at whatever it last set.
-void protocore_snmp_v3_trap(uint8_t *restrict work)
+void protocore_snmp_v3_trap(uint8_t *work)
 {
     send_notify(work, (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2);
 }
 
 // InformRequest-PDU in a v3 message (RFC 3416 sec 4.2.7): confirmed, so the caller owns the
 // request-id the receiver's Response-PDU echoes and retransmits until that Response arrives.
-void protocore_snmp_v3_inform(uint8_t *restrict work)
+void protocore_snmp_v3_inform(uint8_t *work)
 {
     send_notify(work, (uint8_t)SNMP_TAG_SNMP_PDU_INFORM);
 }

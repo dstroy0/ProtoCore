@@ -48,12 +48,12 @@ uint8_t *protocore_espnow_span(void)
     return s_own.span;
 }
 
-void protocore_espnow_encode(uint8_t *restrict work);
-void protocore_espnow_peer_add(uint8_t *restrict work);
-void protocore_espnow_peers_reset(uint8_t *restrict work);
-void protocore_espnow_send(uint8_t *restrict work);
+void protocore_espnow_encode(uint8_t *work);
+void protocore_espnow_peer_add(uint8_t *work);
+void protocore_espnow_peers_reset(uint8_t *work);
+void protocore_espnow_send(uint8_t *work);
 
-void protocore_espnow_encode(uint8_t *restrict work)
+void protocore_espnow_encode(uint8_t *work)
 {
     (void)work;
     uint8_t type = EspnowV.encode_args.type;
@@ -77,7 +77,7 @@ void protocore_espnow_encode(uint8_t *restrict work)
     EspnowV.n = len + PROTOCORE_ESPNOW_HDR;
 }
 
-void protocore_espnow_decode(uint8_t *restrict work)
+void protocore_espnow_decode(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = EspnowV.decode_args.buf;
@@ -163,7 +163,7 @@ static int peer_find(const EspnowCtx *c, const uint8_t mac[6])
     return -1;
 }
 
-void protocore_espnow_peers_reset(uint8_t *restrict work)
+void protocore_espnow_peers_reset(uint8_t *work)
 {
     for (int i = 0; i < PROTOCORE_ESPNOW_MAX_PEERS; i++)
     {
@@ -171,7 +171,7 @@ void protocore_espnow_peers_reset(uint8_t *restrict work)
     }
 }
 
-void protocore_espnow_peer_add(uint8_t *restrict work)
+void protocore_espnow_peer_add(uint8_t *work)
 {
     const uint8_t *mac = EspnowV.peer_add_args.mac;
 
@@ -198,14 +198,14 @@ void protocore_espnow_peer_add(uint8_t *restrict work)
     EspnowV.ok = PROTO_FALSE; // table full
 }
 
-void protocore_espnow_peer_has(uint8_t *restrict work)
+void protocore_espnow_peer_has(uint8_t *work)
 {
     const uint8_t *mac = EspnowV.peer_has_args.mac;
 
     EspnowV.ok = mac && peer_find(ESPNOW_CTX(work), mac) >= 0;
 }
 
-void protocore_espnow_peer_remove(uint8_t *restrict work)
+void protocore_espnow_peer_remove(uint8_t *work)
 {
     const uint8_t *mac = EspnowV.peer_remove_args.mac;
 
@@ -219,7 +219,7 @@ void protocore_espnow_peer_remove(uint8_t *restrict work)
     EspnowV.ok = PROTO_TRUE;
 }
 
-void protocore_espnow_peer_count(uint8_t *restrict work)
+void protocore_espnow_peer_count(uint8_t *work)
 {
     int n = 0;
     for (int i = 0; i < PROTOCORE_ESPNOW_MAX_PEERS; i++)
@@ -249,7 +249,7 @@ static void on_recv(const uint8_t *mac, const uint8_t *data, int len)
 #endif
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_espnow_span();
+    uint8_t *work = protocore_espnow_span();
 
     if (!ESPNOW_CTX(work)->recv || len < 0 || !mac)
     {
@@ -284,7 +284,7 @@ static proto_bool radio_add_peer(const uint8_t mac[6], uint8_t channel)
     return esp_now_add_peer(&p) == ESP_OK;
 }
 
-void protocore_espnow_begin(uint8_t *restrict work)
+void protocore_espnow_begin(uint8_t *work)
 {
     nel = EspnowV.begin_args.channel;
     protocore_espnow_recv_fn cb = EspnowV.begin_args.cb;
@@ -301,7 +301,7 @@ void protocore_espnow_begin(uint8_t *restrict work)
     EspnowV.ok = radio_add_peer(PROTOCORE_ESPNOW_BROADCAST, channel); // broadcast is always a peer
 }
 
-void protocore_espnow_add_peer(uint8_t *restrict work)
+void protocore_espnow_add_peer(uint8_t *work)
 {
     const uint8_t *mac = EspnowV.add_peer_args.mac;
 
@@ -315,7 +315,7 @@ void protocore_espnow_add_peer(uint8_t *restrict work)
     EspnowV.ok = radio_add_peer(mac, ESPNOW_CTX(work)->channel);
 }
 
-void protocore_espnow_send(uint8_t *restrict work)
+void protocore_espnow_send(uint8_t *work)
 {
     const uint8_t *mac = EspnowV.send_args.mac;
     uint8_t type = EspnowV.send_args.type;
@@ -338,7 +338,7 @@ void protocore_espnow_send(uint8_t *restrict work)
     EspnowV.ok = esp_now_send(mac, frame, n) == ESP_OK;
 }
 
-void protocore_espnow_broadcast(uint8_t *restrict work)
+void protocore_espnow_broadcast(uint8_t *work)
 {
     uint8_t type = EspnowV.broadcast_args.type;
     const uint8_t *payload = EspnowV.broadcast_args.payload;
@@ -353,7 +353,7 @@ void protocore_espnow_broadcast(uint8_t *restrict work)
 
 #else // host build - no radio
 
-void protocore_espnow_begin(uint8_t *restrict work)
+void protocore_espnow_begin(uint8_t *work)
 {
     (void)work;
     uint8_t channel = EspnowV.begin_args.channel;
@@ -363,14 +363,14 @@ void protocore_espnow_begin(uint8_t *restrict work)
     (void)cb;
     EspnowV.ok = PROTO_FALSE;
 }
-void protocore_espnow_add_peer(uint8_t *restrict work)
+void protocore_espnow_add_peer(uint8_t *work)
 {
     const uint8_t *mac = EspnowV.add_peer_args.mac;
 
     EspnowV.peer_add_args.mac = mac;
     protocore_espnow_peer_add(work);
 }
-void protocore_espnow_send(uint8_t *restrict work)
+void protocore_espnow_send(uint8_t *work)
 {
     (void)work;
     const uint8_t *mac = EspnowV.send_args.mac;
@@ -384,7 +384,7 @@ void protocore_espnow_send(uint8_t *restrict work)
     (void)len;
     EspnowV.ok = PROTO_FALSE;
 }
-void protocore_espnow_broadcast(uint8_t *restrict work)
+void protocore_espnow_broadcast(uint8_t *work)
 {
     (void)work;
     uint8_t type = EspnowV.broadcast_args.type;

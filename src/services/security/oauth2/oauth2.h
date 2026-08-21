@@ -149,20 +149,20 @@ extern Oauth2Vars Oauth2V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_code_request)(uint8_t *restrict work);
-    void (*const build_refresh_request)(uint8_t *restrict work);
-    void (*const parse_token_response)(uint8_t *restrict work);
-    void (*const exchange_code)(uint8_t *restrict work);
-    void (*const refresh)(uint8_t *restrict work);
+    void (*const build_code_request)(uint8_t *work);
+    void (*const build_refresh_request)(uint8_t *work);
+    void (*const parse_token_response)(uint8_t *work);
+    void (*const exchange_code)(uint8_t *work);
+    void (*const refresh)(uint8_t *work);
 } Oauth2Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Oauth2V or a region of the borrow at a fixed offset.
-void protocore_oauth2_build_code_request(uint8_t *restrict work);
-void protocore_oauth2_build_refresh_request(uint8_t *restrict work);
-void protocore_oauth2_parse_token_response(uint8_t *restrict work);
-void protocore_oauth2_exchange_code(uint8_t *restrict work);
-void protocore_oauth2_refresh(uint8_t *restrict work);
+void protocore_oauth2_build_code_request(uint8_t *work);
+void protocore_oauth2_build_refresh_request(uint8_t *work);
+void protocore_oauth2_parse_token_response(uint8_t *work);
+void protocore_oauth2_exchange_code(uint8_t *work);
+void protocore_oauth2_refresh(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

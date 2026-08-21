@@ -95,7 +95,7 @@ uint8_t *protocore_syslog_span(void)
 }
 
 // Parse the collector address and store the HEADER fields every later line carries.
-void protocore_syslog_init(uint8_t *restrict work)
+void protocore_syslog_init(uint8_t *work)
 {
     IpV.args.text = SyslogV.collector.addr;
     IpV.args.out = &SYSLOG_CTX(work)->collector;
@@ -109,7 +109,7 @@ void protocore_syslog_init(uint8_t *restrict work)
 }
 
 // Build one SYSLOG-MSG (RFC 5424 sec 6) into ns->line, and report its length in ns->n.
-void protocore_syslog_format(uint8_t *restrict work)
+void protocore_syslog_format(uint8_t *work)
 {
     (void)work;
     char *out = SyslogV.line.out;
@@ -160,7 +160,7 @@ void protocore_syslog_format(uint8_t *restrict work)
 }
 
 // Format one record with the stored HEADER fields and send it as one datagram (RFC 5426 sec 3.1).
-void protocore_syslog_log(uint8_t *restrict work)
+void protocore_syslog_log(uint8_t *work)
 {
     SyslogV.ok = PROTO_FALSE;
     SyslogV.n = 0;

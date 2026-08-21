@@ -15,7 +15,7 @@
 // matching open callback when it does; @p off points at the request-specific arg and may be advanced. Flips
 // *accept true for an accepted SFTP subsystem (exec is already in the base accept set).
 
-void protocore_ssh_app_server_classify(uint8_t *restrict work)
+void protocore_ssh_app_server_classify(uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshAppServerV.slot;
@@ -74,7 +74,7 @@ void protocore_ssh_app_server_classify(uint8_t *restrict work)
 
 #else
 
-void protocore_ssh_app_server_classify(uint8_t *restrict work)
+void protocore_ssh_app_server_classify(uint8_t *work)
 {
     (void)work;
 }

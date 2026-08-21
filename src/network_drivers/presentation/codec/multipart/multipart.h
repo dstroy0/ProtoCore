@@ -72,8 +72,8 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*parse)(uint8_t *restrict, HttpReq *, MultipartBody *);
-    const char *(*get_field)(uint8_t *restrict, const MultipartBody *, const char *);
+    proto_bool (*parse)(uint8_t *, HttpReq *, MultipartBody *);
+    const char *(*get_field)(uint8_t *, const MultipartBody *, const char *);
 } MultipartNs;
 PROTOCORE_NS_LAYOUT(MultipartNs, parse, get_field);
 
@@ -84,7 +84,7 @@ PROTOCORE_NS_LAYOUT(MultipartNs, parse, get_field);
  * @param mp Mp
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_multipart_parse(uint8_t *restrict work, HttpReq *req, MultipartBody *mp);
+proto_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody *mp);
 /**
  * @brief The data pointer of the first part whose name matches field, or.
  * @param work PROTOCORE_MULTIPART_BORROW bytes the caller took. Not held past the call.
@@ -92,7 +92,7 @@ proto_bool protocore_multipart_parse(uint8_t *restrict work, HttpReq *req, Multi
  * @param field Field
  * @return The const char *.
  */
-const char *protocore_multipart_get_field(uint8_t *restrict work, const MultipartBody *mp, const char *field);
+const char *protocore_multipart_get_field(uint8_t *work, const MultipartBody *mp, const char *field);
 
 /** @brief Module namespace. */
 PROTOCORE_NS MultipartNs Multipart PROTOCORE_UNUSED = {.parse = protocore_multipart_parse,

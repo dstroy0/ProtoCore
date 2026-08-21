@@ -39,9 +39,9 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    size_t (*wrap_negotiate)(uint8_t *restrict, const uint8_t *, size_t, uint8_t *, size_t);
-    proto_bool (*parse_response)(uint8_t *restrict, const uint8_t *, size_t, const uint8_t **, size_t *);
-    size_t (*wrap_authenticate)(uint8_t *restrict, const uint8_t *, size_t, uint8_t *, size_t);
+    size_t (*wrap_negotiate)(uint8_t *, const uint8_t *, size_t, uint8_t *, size_t);
+    proto_bool (*parse_response)(uint8_t *, const uint8_t *, size_t, const uint8_t **, size_t *);
+    size_t (*wrap_authenticate)(uint8_t *, const uint8_t *, size_t, uint8_t *, size_t);
 } SpnegoNs;
 PROTOCORE_NS_LAYOUT(SpnegoNs, wrap_negotiate, parse_response, wrap_authenticate);
 
@@ -54,8 +54,8 @@ PROTOCORE_NS_LAYOUT(SpnegoNs, wrap_negotiate, parse_response, wrap_authenticate)
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_spnego_wrap_negotiate(uint8_t *restrict work, const uint8_t *ntlm, size_t protocore_ntlm_len,
-                                       uint8_t *out, size_t cap);
+size_t protocore_spnego_wrap_negotiate(uint8_t *work, const uint8_t *ntlm, size_t protocore_ntlm_len, uint8_t *out,
+                                       size_t cap);
 /**
  * @brief Extract the responseToken (the NTLMSSP CHALLENGE) from a server .
  * @param work PROTOCORE_SPNEGO_BORROW bytes the caller took. Not held past the call.
@@ -65,7 +65,7 @@ size_t protocore_spnego_wrap_negotiate(uint8_t *restrict work, const uint8_t *nt
  * @param protocore_resp_len Protocore resp len
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_spnego_parse_response(uint8_t *restrict work, const uint8_t *blob, size_t len,
+proto_bool protocore_spnego_parse_response(uint8_t *work, const uint8_t *blob, size_t len,
                                            const uint8_t **protocore_resp_token, size_t *protocore_resp_len);
 /**
  * @brief Wrap an NTLMSSP AUTHENTICATE token in a SPNEGO NegTokenResp (the .
@@ -76,8 +76,8 @@ proto_bool protocore_spnego_parse_response(uint8_t *restrict work, const uint8_t
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_spnego_wrap_authenticate(uint8_t *restrict work, const uint8_t *ntlm, size_t protocore_ntlm_len,
-                                          uint8_t *out, size_t cap);
+size_t protocore_spnego_wrap_authenticate(uint8_t *work, const uint8_t *ntlm, size_t protocore_ntlm_len, uint8_t *out,
+                                          size_t cap);
 
 /** @brief Module namespace. */
 PROTOCORE_NS SpnegoNs Spnego PROTOCORE_UNUSED = {.wrap_negotiate = protocore_spnego_wrap_negotiate,

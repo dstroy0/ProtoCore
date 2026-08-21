@@ -399,40 +399,40 @@ extern AdsVars AdsV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_read_device_info)(uint8_t *restrict work);
-    void (*const build_read_state)(uint8_t *restrict work);
-    void (*const build_read)(uint8_t *restrict work);
-    void (*const build_write)(uint8_t *restrict work);
-    void (*const build_read_write)(uint8_t *restrict work);
-    void (*const build_write_control)(uint8_t *restrict work);
-    void (*const build_add_notification)(uint8_t *restrict work);
-    void (*const build_del_notification)(uint8_t *restrict work);
-    void (*const parse_ams_header)(uint8_t *restrict work);
-    void (*const parse_read)(uint8_t *restrict work);
-    void (*const parse_result)(uint8_t *restrict work);
-    void (*const parse_read_state)(uint8_t *restrict work);
-    void (*const parse_read_device_info)(uint8_t *restrict work);
-    void (*const parse_add_notification)(uint8_t *restrict work);
-    void (*const parse_notification)(uint8_t *restrict work);
+    void (*const build_read_device_info)(uint8_t *work);
+    void (*const build_read_state)(uint8_t *work);
+    void (*const build_read)(uint8_t *work);
+    void (*const build_write)(uint8_t *work);
+    void (*const build_read_write)(uint8_t *work);
+    void (*const build_write_control)(uint8_t *work);
+    void (*const build_add_notification)(uint8_t *work);
+    void (*const build_del_notification)(uint8_t *work);
+    void (*const parse_ams_header)(uint8_t *work);
+    void (*const parse_read)(uint8_t *work);
+    void (*const parse_result)(uint8_t *work);
+    void (*const parse_read_state)(uint8_t *work);
+    void (*const parse_read_device_info)(uint8_t *work);
+    void (*const parse_add_notification)(uint8_t *work);
+    void (*const parse_notification)(uint8_t *work);
 } AdsNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in AdsV or a region of the borrow at a fixed offset.
-void protocore_ads_build_read_device_info(uint8_t *restrict work);
-void protocore_ads_build_read_state(uint8_t *restrict work);
-void protocore_ads_build_read(uint8_t *restrict work);
-void protocore_ads_build_write(uint8_t *restrict work);
-void protocore_ads_build_read_write(uint8_t *restrict work);
-void protocore_ads_build_write_control(uint8_t *restrict work);
-void protocore_ads_build_add_notification(uint8_t *restrict work);
-void protocore_ads_build_del_notification(uint8_t *restrict work);
-void protocore_ads_parse_ams_header(uint8_t *restrict work);
-void protocore_ads_parse_read(uint8_t *restrict work);
-void protocore_ads_parse_result(uint8_t *restrict work);
-void protocore_ads_parse_read_state(uint8_t *restrict work);
-void protocore_ads_parse_read_device_info(uint8_t *restrict work);
-void protocore_ads_parse_add_notification(uint8_t *restrict work);
-void protocore_ads_parse_notification(uint8_t *restrict work);
+void protocore_ads_build_read_device_info(uint8_t *work);
+void protocore_ads_build_read_state(uint8_t *work);
+void protocore_ads_build_read(uint8_t *work);
+void protocore_ads_build_write(uint8_t *work);
+void protocore_ads_build_read_write(uint8_t *work);
+void protocore_ads_build_write_control(uint8_t *work);
+void protocore_ads_build_add_notification(uint8_t *work);
+void protocore_ads_build_del_notification(uint8_t *work);
+void protocore_ads_parse_ams_header(uint8_t *work);
+void protocore_ads_parse_read(uint8_t *work);
+void protocore_ads_parse_result(uint8_t *work);
+void protocore_ads_parse_read_state(uint8_t *work);
+void protocore_ads_parse_read_device_info(uint8_t *work);
+void protocore_ads_parse_add_notification(uint8_t *work);
+void protocore_ads_parse_notification(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

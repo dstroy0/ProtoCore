@@ -52,10 +52,10 @@ PROTOCORE_BEGIN_DECLS
  * K = the X coordinate of d * Q_peer. @ref EcdsaNs::ecdh writes the raw 32-byte X;
  * the transport encodes it as an mpint in the exchange hash and the key derivation.
  *
- * @c work is PROTOCORE_ECDSA_BORROW secure bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and
- * the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. That is
- * what keeps the message hash and the RFC 6979 nonce chain from outliving the caller.
+ * @c work is PROTOCORE_ECDSA_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes it,
+ * holds it, releases it, nor wipes it. That is what keeps the message hash and the RFC 6979 nonce chain from outliving
+ * the caller.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -76,10 +76,10 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*pubkey)(uint8_t *restrict, const uint8_t *, uint8_t *);
-    proto_bool (*sign)(uint8_t *restrict, const uint8_t *, size_t, const uint8_t *, uint8_t *);
-    proto_bool (*verify)(uint8_t *restrict, const uint8_t *, const uint8_t *, size_t, const uint8_t *);
-    proto_bool (*ecdh)(uint8_t *restrict, const uint8_t *, const uint8_t *, uint8_t *);
+    proto_bool (*pubkey)(uint8_t *, const uint8_t *, uint8_t *);
+    proto_bool (*sign)(uint8_t *, const uint8_t *, size_t, const uint8_t *, uint8_t *);
+    proto_bool (*verify)(uint8_t *, const uint8_t *, const uint8_t *, size_t, const uint8_t *);
+    proto_bool (*ecdh)(uint8_t *, const uint8_t *, const uint8_t *, uint8_t *);
 } EcdsaNs;
 PROTOCORE_NS_LAYOUT(EcdsaNs, pubkey, sign, verify, ecdh);
 
@@ -90,7 +90,7 @@ PROTOCORE_NS_LAYOUT(EcdsaNs, pubkey, sign, verify, ecdh);
  * @param pub PROTOCORE_ECDSA_P256_PUB_LEN bytes: 0x04 || X || Y
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_ecdsa_pubkey(uint8_t *restrict work, const uint8_t *priv, uint8_t *pub);
+proto_bool protocore_ecdsa_pubkey(uint8_t *work, const uint8_t *priv, uint8_t *pub);
 /**
  * @brief Hash the message with SHA-256 and write the raw r || s.
  * @param work PROTOCORE_ECDSA_BORROW bytes the caller took. Not held past the call.
@@ -100,8 +100,7 @@ proto_bool protocore_ecdsa_pubkey(uint8_t *restrict work, const uint8_t *priv, u
  * @param sig PROTOCORE_ECDSA_P256_SIG_LEN bytes: r || s, 32 + 32 big-endian
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_ecdsa_sign(uint8_t *restrict work, const uint8_t *msg, size_t mlen, const uint8_t *priv,
-                                uint8_t *sig);
+proto_bool protocore_ecdsa_sign(uint8_t *work, const uint8_t *msg, size_t mlen, const uint8_t *priv, uint8_t *sig);
 /**
  * @brief Hash the message with SHA-256 and check r || s against the point.
  * @param work PROTOCORE_ECDSA_BORROW bytes the caller took. Not held past the call.
@@ -111,7 +110,7 @@ proto_bool protocore_ecdsa_sign(uint8_t *restrict work, const uint8_t *msg, size
  * @param sig PROTOCORE_ECDSA_P256_SIG_LEN bytes: r || s, 32 + 32 big-endian
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_ecdsa_verify(uint8_t *restrict work, const uint8_t *pub, const uint8_t *msg, size_t mlen,
+proto_bool protocore_ecdsa_verify(uint8_t *work, const uint8_t *pub, const uint8_t *msg, size_t mlen,
                                   const uint8_t *sig);
 /**
  * @brief Write the X coordinate of d * Q_peer.
@@ -121,8 +120,7 @@ proto_bool protocore_ecdsa_verify(uint8_t *restrict work, const uint8_t *pub, co
  * @param shared_x PROTOCORE_ECDSA_P256_COORD_LEN big-endian X coordinate of d * Q_peer
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_ecdsa_ecdh(uint8_t *restrict work, const uint8_t *peer_pub, const uint8_t *priv,
-                                uint8_t *shared_x);
+proto_bool protocore_ecdsa_ecdh(uint8_t *work, const uint8_t *peer_pub, const uint8_t *priv, uint8_t *shared_x);
 
 /** @brief Module namespace. */
 PROTOCORE_NS EcdsaNs Ecdsa PROTOCORE_UNUSED = {.pubkey = protocore_ecdsa_pubkey,

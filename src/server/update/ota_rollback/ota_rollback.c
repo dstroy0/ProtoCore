@@ -17,7 +17,7 @@ PROTOCORE_BEGIN_DECLS
 #if PROTOCORE_HAS_VENDOR_OTA
 #include "server/clock/clock.h" // protocore_millis()
 #endif
-void protocore_ota_rollback_decide(uint8_t *restrict work)
+void protocore_ota_rollback_decide(uint8_t *work)
 {
     (void)work;
     const OtaDecideArgs *a = &OtaRollbackV.decide_args;
@@ -42,25 +42,25 @@ void protocore_ota_rollback_decide(uint8_t *restrict work)
 
 #if PROTOCORE_HAS_VENDOR_OTA
 
-void protocore_ota_rollback_state(uint8_t *restrict work)
+void protocore_ota_rollback_state(uint8_t *work)
 {
     (void)work;
     OtaRollbackV.img_state = protocore_platform_img_state();
 }
 
-void protocore_ota_rollback_commit(uint8_t *restrict work)
+void protocore_ota_rollback_commit(uint8_t *work)
 {
     (void)work;
     protocore_platform_img_commit();
 }
 
-void protocore_ota_rollback_rollback(uint8_t *restrict work)
+void protocore_ota_rollback_rollback(uint8_t *work)
 {
     (void)work;
     protocore_platform_img_rollback(); // does not return on a device
 }
 
-void protocore_ota_rollback_tick(uint8_t *restrict work)
+void protocore_ota_rollback_tick(uint8_t *work)
 {
     protocore_ota_rollback_state(work);
     OtaRollbackV.decide_args.img_state = OtaRollbackV.img_state;
@@ -80,20 +80,20 @@ void protocore_ota_rollback_tick(uint8_t *restrict work)
 
 #else // no image partitions to read or mark
 
-void protocore_ota_rollback_state(uint8_t *restrict work)
+void protocore_ota_rollback_state(uint8_t *work)
 {
     (void)work;
     OtaRollbackV.img_state = PROTOCORE_OTA_IMG_UNDEFINED;
 }
-void protocore_ota_rollback_commit(uint8_t *restrict work)
+void protocore_ota_rollback_commit(uint8_t *work)
 {
     (void)work;
 }
-void protocore_ota_rollback_rollback(uint8_t *restrict work)
+void protocore_ota_rollback_rollback(uint8_t *work)
 {
     (void)work;
 }
-void protocore_ota_rollback_tick(uint8_t *restrict work)
+void protocore_ota_rollback_tick(uint8_t *work)
 {
     (void)work;
     OtaRollbackV.action = PROTOCORE_OTA_WAIT;

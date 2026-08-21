@@ -133,7 +133,7 @@ uint8_t *protocore_udp_client_span(void)
     return s_own.span;
 }
 
-void protocore_udp_client_sendto(uint8_t *restrict work)
+void protocore_udp_client_sendto(uint8_t *work)
 {
     (void)work;
     if (UdpClientV.data == NULL || UdpClientV.len == 0 || UdpClientV.len > PROTOCORE_UDP_RX_BUF_SIZE ||

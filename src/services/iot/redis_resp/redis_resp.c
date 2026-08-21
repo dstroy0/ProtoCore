@@ -242,7 +242,7 @@ static proto_bool parse_double(const uint8_t *buf, size_t from, size_t end, doub
 
 // The length-prefixed bodies: Bulk strings ($), Bulk errors (!), Verbatim strings (=). Checks the
 // declared length and its trailing CRLF against the buffered octets; `$-1` is the Null bulk string.
-static proto_bool parse_bulk_body(uint8_t *restrict work, uint8_t first_byte, size_t header_from, size_t header_to,
+static proto_bool parse_bulk_body(uint8_t *work, uint8_t first_byte, size_t header_from, size_t header_to,
                                   size_t after_header)
 {
     const uint8_t *buf = RespV.wire.buf;
@@ -294,7 +294,7 @@ static proto_bool parse_bulk_body(uint8_t *restrict work, uint8_t first_byte, si
 
 // The aggregate headers whose children follow: Arrays (*), Sets (~), Pushes (>). Only the count is
 // read here, and the caller parses each element next; `*-1` is the Null array.
-static proto_bool parse_aggregate(uint8_t *restrict work, uint8_t first_byte, size_t header_from, size_t header_to,
+static proto_bool parse_aggregate(uint8_t *work, uint8_t first_byte, size_t header_from, size_t header_to,
                                   size_t after_header)
 {
     const uint8_t *buf = RespV.wire.buf;
@@ -334,7 +334,7 @@ static proto_bool parse_aggregate(uint8_t *restrict work, uint8_t first_byte, si
 
 // Build the array of bulk strings a client sends ("Sending commands to a Redis server") from
 // ns->command into ns->out, NUL-terminate it, and report its length in ns->n.
-void protocore_resp_encode_command(uint8_t *restrict work)
+void protocore_resp_encode_command(uint8_t *work)
 {
     (void)work;
     char *buf = RespV.out.buf;
@@ -381,7 +381,7 @@ void protocore_resp_encode_command(uint8_t *restrict work)
 
 // Decode the value at the head of ns->wire into ns->reply, and report the octets it occupied in
 // ns->n. An aggregate header reports the header alone and its child count.
-void protocore_resp_parse_reply(uint8_t *restrict work)
+void protocore_resp_parse_reply(uint8_t *work)
 {
     const uint8_t *buf = RespV.wire.buf;
     const size_t len = RespV.wire.len;

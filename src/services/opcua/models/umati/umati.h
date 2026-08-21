@@ -42,9 +42,8 @@ PROTOCORE_BEGIN_DECLS
  * the MachineTool URI (which needs array-Variant support in the base server) are a documented follow-on
  * - a generic OPC UA client still browses the structure and reads every value by BrowseName today.
  *
- * @c work is PROTOCORE_UMATI_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_UMATI_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
+ * nothing here aliases it. How those bytes are carved is this module's and is never named here.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date     2026
@@ -137,8 +136,8 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*bind)(uint8_t *restrict, const UmatiMachineTool *);
-    void (*install)(uint8_t *restrict, const UmatiMachineTool *);
+    void (*bind)(uint8_t *, const UmatiMachineTool *);
+    void (*install)(uint8_t *, const UmatiMachineTool *);
 } UmatiNs;
 PROTOCORE_NS_LAYOUT(UmatiNs, bind, install);
 
@@ -147,13 +146,13 @@ PROTOCORE_NS_LAYOUT(UmatiNs, bind, install);
  * @param work PROTOCORE_UMATI_BORROW bytes the caller took. Not held past the call.
  * @param mt Mt
  */
-void protocore_umati_bind(uint8_t *restrict work, const UmatiMachineTool *mt);
+void protocore_umati_bind(uint8_t *work, const UmatiMachineTool *mt);
 /**
  * @brief Convenience: bind mt and register both resolvers on the OPC UA .
  * @param work PROTOCORE_UMATI_BORROW bytes the caller took. Not held past the call.
  * @param mt Mt
  */
-void protocore_umati_install(uint8_t *restrict work, const UmatiMachineTool *mt);
+void protocore_umati_install(uint8_t *work, const UmatiMachineTool *mt);
 
 /**
  * @brief The PROTOCORE_UMATI_BORROW bytes this module's state lives in.

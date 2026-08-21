@@ -83,7 +83,7 @@ static void gpio_post_handler(uint8_t slot_id, HttpReq *req)
     send_text(slot_id, 200, PROTOCORE_MIME_JSON, buf);
 }
 
-void protocore_gpio_route_begin(uint8_t *restrict work)
+void protocore_gpio_route_begin(uint8_t *work)
 {
     (void)work;
     protocore_gpio_pin *pins = GpioMapV.args.pins_rw;

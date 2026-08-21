@@ -146,9 +146,8 @@ typedef struct
  * @var Ina219Ns::read_current_ua  read the current into microamps (needs the calibration set by ...
  * @var Ina219Ns::read_power_uw  read the power into microwatts (needs the calibration set by ...
  *
- * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -173,30 +172,30 @@ extern Ina219Vars Ina219V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const bus_mv)(uint8_t *restrict work);
-    void (*const shunt_uv)(uint8_t *restrict work);
-    void (*const calibration)(uint8_t *restrict work);
-    void (*const current_ua)(uint8_t *restrict work);
-    void (*const power_uw)(uint8_t *restrict work);
-    void (*const begin)(uint8_t *restrict work);
-    void (*const read_bus_mv)(uint8_t *restrict work);
-    void (*const read_shunt_uv)(uint8_t *restrict work);
-    void (*const read_current_ua)(uint8_t *restrict work);
-    void (*const read_power_uw)(uint8_t *restrict work);
+    void (*const bus_mv)(uint8_t *work);
+    void (*const shunt_uv)(uint8_t *work);
+    void (*const calibration)(uint8_t *work);
+    void (*const current_ua)(uint8_t *work);
+    void (*const power_uw)(uint8_t *work);
+    void (*const begin)(uint8_t *work);
+    void (*const read_bus_mv)(uint8_t *work);
+    void (*const read_shunt_uv)(uint8_t *work);
+    void (*const read_current_ua)(uint8_t *work);
+    void (*const read_power_uw)(uint8_t *work);
 } Ina219Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Ina219V or a region of the borrow at a fixed offset.
-void protocore_ina219_bus_mv(uint8_t *restrict work);
-void protocore_ina219_shunt_uv(uint8_t *restrict work);
-void protocore_ina219_calibration(uint8_t *restrict work);
-void protocore_ina219_current_ua(uint8_t *restrict work);
-void protocore_ina219_power_uw(uint8_t *restrict work);
-void protocore_ina219_begin(uint8_t *restrict work);
-void protocore_ina219_read_bus_mv(uint8_t *restrict work);
-void protocore_ina219_read_shunt_uv(uint8_t *restrict work);
-void protocore_ina219_read_current_ua(uint8_t *restrict work);
-void protocore_ina219_read_power_uw(uint8_t *restrict work);
+void protocore_ina219_bus_mv(uint8_t *work);
+void protocore_ina219_shunt_uv(uint8_t *work);
+void protocore_ina219_calibration(uint8_t *work);
+void protocore_ina219_current_ua(uint8_t *work);
+void protocore_ina219_power_uw(uint8_t *work);
+void protocore_ina219_begin(uint8_t *work);
+void protocore_ina219_read_bus_mv(uint8_t *work);
+void protocore_ina219_read_shunt_uv(uint8_t *work);
+void protocore_ina219_read_current_ua(uint8_t *work);
+void protocore_ina219_read_power_uw(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

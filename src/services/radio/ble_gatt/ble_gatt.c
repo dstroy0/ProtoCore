@@ -18,7 +18,7 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_ble_gatt_att_read_req(uint8_t *restrict work, uint16_t handle, uint8_t *out, size_t cap)
+size_t protocore_ble_gatt_att_read_req(uint8_t *work, uint16_t handle, uint8_t *out, size_t cap)
 {
     (void)work;
 
@@ -32,8 +32,7 @@ size_t protocore_ble_gatt_att_read_req(uint8_t *restrict work, uint16_t handle, 
     return 3;
 }
 
-size_t protocore_ble_gatt_att_read_rsp(uint8_t *restrict work, const uint8_t *val, size_t vlen, uint8_t *out,
-                                       size_t cap)
+size_t protocore_ble_gatt_att_read_rsp(uint8_t *work, const uint8_t *val, size_t vlen, uint8_t *out, size_t cap)
 {
     (void)work;
 
@@ -65,24 +64,24 @@ static size_t att_handle_value(uint8_t op, uint16_t handle, const uint8_t *val, 
     return 3 + vlen;
 }
 
-size_t protocore_ble_gatt_att_write_req(uint8_t *restrict work, uint16_t handle, const uint8_t *val, size_t vlen,
-                                        uint8_t *out, size_t cap)
+size_t protocore_ble_gatt_att_write_req(uint8_t *work, uint16_t handle, const uint8_t *val, size_t vlen, uint8_t *out,
+                                        size_t cap)
 {
     (void)work;
 
     return att_handle_value(ATT_OP_WRITE_REQ, handle, val, vlen, out, cap);
 }
 
-size_t protocore_ble_gatt_att_notify(uint8_t *restrict work, uint16_t handle, const uint8_t *val, size_t vlen,
-                                     uint8_t *out, size_t cap)
+size_t protocore_ble_gatt_att_notify(uint8_t *work, uint16_t handle, const uint8_t *val, size_t vlen, uint8_t *out,
+                                     size_t cap)
 {
     (void)work;
 
     return att_handle_value(ATT_OP_HANDLE_VALUE_NTF, handle, val, vlen, out, cap);
 }
 
-size_t protocore_ble_gatt_att_error_rsp(uint8_t *restrict work, uint8_t req_op, uint16_t handle, uint8_t error,
-                                        uint8_t *out, size_t cap)
+size_t protocore_ble_gatt_att_error_rsp(uint8_t *work, uint8_t req_op, uint16_t handle, uint8_t error, uint8_t *out,
+                                        size_t cap)
 {
     (void)work;
 
@@ -98,7 +97,7 @@ size_t protocore_ble_gatt_att_error_rsp(uint8_t *restrict work, uint8_t req_op, 
     return 5;
 }
 
-proto_bool protocore_ble_gatt_att_parse(uint8_t *restrict work, const uint8_t *pdu, size_t len, AttPdu *out)
+proto_bool protocore_ble_gatt_att_parse(uint8_t *work, const uint8_t *pdu, size_t len, AttPdu *out)
 {
     proto_bool ok = PROTO_FALSE;
     (void)work;
@@ -171,7 +170,7 @@ static void put_hex16(protocore_sb *b, uint16_t v)
     Sb.put(b, t);
 }
 
-size_t protocore_ble_gatt_char_json(uint8_t *restrict work, const GattChar *chars, size_t n, char *out, size_t cap)
+size_t protocore_ble_gatt_char_json(uint8_t *work, const GattChar *chars, size_t n, char *out, size_t cap)
 {
     (void)work;
 

@@ -113,7 +113,7 @@ static void put_varbind(BerEnc *e, const SnmpVarbind *vb)
 // The notification PDU: request-id, error-status 0, error-index 0, then the VarBindList with
 // sysUpTime.0 and snmpTrapOID.0 first (RFC 3416 sec 4.2.6). Reads the PDU members off the handle,
 // so it takes ctx, plus the encoder it appends to.
-static void append_pdu(uint8_t *restrict work, BerEnc *e)
+static void append_pdu(uint8_t *work, BerEnc *e)
 {
     SnmpBerV.enc = e;
     SnmpBerV.tlv.tag = SnmpNotifyV.pdu.pdu_tag;
@@ -190,7 +190,7 @@ uint8_t *protocore_snmp_notify_span(void)
     return s_own.span;
 }
 
-void protocore_snmp_notify_build_pdu(uint8_t *restrict work)
+void protocore_snmp_notify_build_pdu(uint8_t *work)
 {
     if (SnmpNotifyV.buf.enc == NULL || SnmpNotifyV.pdu.trap_oid == NULL)
     {
@@ -204,7 +204,7 @@ void protocore_snmp_notify_build_pdu(uint8_t *restrict work)
 
 // SEQUENCE { version 1, community, notification PDU }: the RFC 1157 sec 4 message wrapper carrying
 // an SNMPv2c version field.
-void protocore_snmp_notify_build_v2c(uint8_t *restrict work)
+void protocore_snmp_notify_build_v2c(uint8_t *work)
 {
     SnmpNotifyV.n = 0;
     SnmpNotifyV.ok = PROTO_FALSE;
@@ -242,7 +242,7 @@ void protocore_snmp_notify_build_v2c(uint8_t *restrict work)
 
 #if PROTOCORE_HAS_NET_STACK
 // Build the message into the send stage and hand it to the datagram service.
-static void send_built(uint8_t *restrict work)
+static void send_built(uint8_t *work)
 {
     SnmpNotifyV.buf.out = SNMP_NOTIFY_CTX(work)->tx;
     SnmpNotifyV.buf.cap = sizeof(SNMP_NOTIFY_CTX(work)->tx);
@@ -273,7 +273,7 @@ static void send_built(uint8_t *restrict work)
 
 // SNMPv2-Trap-PDU (RFC 3416 sec 4.2.6): unacknowledged, so the request-id comes from the module's
 // counter and sysUpTime.0 from the clock.
-void protocore_snmp_notify_trap_v2c(uint8_t *restrict work)
+void protocore_snmp_notify_trap_v2c(uint8_t *work)
 {
     SnmpNotifyV.pdu.pdu_tag = (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2;
 #if PROTOCORE_HAS_NET_STACK
@@ -288,7 +288,7 @@ void protocore_snmp_notify_trap_v2c(uint8_t *restrict work)
 
 // InformRequest-PDU (RFC 3416 sec 4.2.7): confirmed, so the caller owns the request-id its
 // Response-PDU echoes and retransmits until that Response arrives.
-void protocore_snmp_notify_inform_v2c(uint8_t *restrict work)
+void protocore_snmp_notify_inform_v2c(uint8_t *work)
 {
     SnmpNotifyV.pdu.pdu_tag = (uint8_t)SNMP_TAG_SNMP_PDU_INFORM;
 #if PROTOCORE_HAS_NET_STACK

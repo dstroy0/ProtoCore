@@ -15,7 +15,7 @@
 #include "network_drivers/datalink/datalink/datalink.h"
 
 // Reports the layer up. The driver below performs every RFC 1122 sec 2.3.3 encapsulation step.
-proto_bool protocore_datalink_init(uint8_t *restrict work)
+proto_bool protocore_datalink_init(uint8_t *work)
 {
     (void)work;
     return PROTO_TRUE;

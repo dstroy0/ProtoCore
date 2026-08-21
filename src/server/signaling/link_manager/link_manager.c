@@ -37,13 +37,13 @@ static int select_best(const LinkManager *m)
     return best;
 }
 
-void protocore_link_select(uint8_t *restrict work)
+void protocore_link_select(uint8_t *work)
 {
     (void)work;
     LinkV.i32 = select_best(LinkV.args.m_ro);
 }
 
-void protocore_link_init(uint8_t *restrict work)
+void protocore_link_init(uint8_t *work)
 {
     (void)work;
     LinkManager *m = LinkV.args.m;
@@ -56,14 +56,14 @@ void protocore_link_init(uint8_t *restrict work)
     m->active = select_best(m);
 }
 
-void protocore_link_active(uint8_t *restrict work)
+void protocore_link_active(uint8_t *work)
 {
     (void)work;
     const LinkManager *m = LinkV.args.m_ro;
     LinkV.i32 = m ? m->active : -1;
 }
 
-void protocore_link_set(uint8_t *restrict work)
+void protocore_link_set(uint8_t *work)
 {
     (void)work;
     LinkManager *m = LinkV.args.m;

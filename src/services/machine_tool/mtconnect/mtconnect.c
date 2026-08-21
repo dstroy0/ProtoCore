@@ -95,7 +95,7 @@ uint8_t *protocore_mtconnect_span(void)
 // --- the text the document is made of --------------------------------------
 
 // Append @p text at the end of the document.
-static void put(uint8_t *restrict work, const char *text)
+static void put(uint8_t *work, const char *text)
 {
     MtConnectCtx *c = MTC_CTX(work);
     if (!c->ok || !text)
@@ -113,7 +113,7 @@ static void put(uint8_t *restrict work, const char *text)
 }
 
 // Append @p text with the five XML metacharacters replaced by their entities (XML 1.0 sec 2.4).
-static void put_escaped(uint8_t *restrict work, const char *text)
+static void put_escaped(uint8_t *work, const char *text)
 {
     MtConnectCtx *c = MTC_CTX(work);
     if (!c->ok || !text)
@@ -155,7 +155,7 @@ static void put_escaped(uint8_t *restrict work, const char *text)
 }
 
 // A minimal unsigned -> decimal directly into the document.
-static void put_u64(uint8_t *restrict work, uint64_t v)
+static void put_u64(uint8_t *work, uint64_t v)
 {
     char tmp[20];
     int n = 0;
@@ -175,7 +175,7 @@ static void put_u64(uint8_t *restrict work, uint64_t v)
 
 // Open a run of @p n bytes at @p at, moving what follows out of the way. The runs after it slide by
 // the same amount, which is what keeps the three stamps pointing at their own ends.
-static char *open_gap(uint8_t *restrict work, size_t at, size_t n)
+static char *open_gap(uint8_t *work, size_t at, size_t n)
 {
     MtConnectCtx *c = MTC_CTX(work);
     if (!c->ok)
@@ -193,7 +193,7 @@ static char *open_gap(uint8_t *restrict work, size_t at, size_t n)
 }
 
 // Put the literal @p text at @p at rather than at the end.
-static void put_at(uint8_t *restrict work, size_t at, const char *text)
+static void put_at(uint8_t *work, size_t at, const char *text)
 {
     size_t n = str.len(text, MTC_CTX(work)->cap + 1);
     char *gap = open_gap(work, at, n);
@@ -231,7 +231,7 @@ static const char *mtc_cat_str(protocore_mtc_category cat)
 
 // creationTime as xs:dateTime. The system clock is always running, so the instant is always there;
 // it counts from the epoch until a wall clock is set, which is what an agent with no time source has.
-static void put_creation_time(uint8_t *restrict work)
+static void put_creation_time(uint8_t *work)
 {
     Clock.millis(Clock.internal);
     struct tm tmv;
@@ -267,7 +267,7 @@ static void put_creation_time(uint8_t *restrict work)
 
 // version, instanceId, creationTime and sender are required of every 1.4 Header, so they are written
 // from one place and a document cannot be short of one.
-static void put_header_common(uint8_t *restrict work)
+static void put_header_common(uint8_t *work)
 {
     put(work, "<Header instanceId=\"");
     put_u64(work, MtConnectV.doc.instance_id);
@@ -278,7 +278,7 @@ static void put_header_common(uint8_t *restrict work)
 }
 
 // The retained observation window the stream and error Headers carry.
-static void put_window(uint8_t *restrict work, uint64_t first, uint64_t last, uint32_t size)
+static void put_window(uint8_t *work, uint64_t first, uint64_t last, uint32_t size)
 {
     put(work, "\" bufferSize=\"");
     put_u64(work, (uint64_t)size);
@@ -289,7 +289,7 @@ static void put_window(uint8_t *restrict work, uint64_t first, uint64_t last, ui
 }
 
 // Seat the caller's buffer and open the XML declaration and root element.
-static void doc_open(uint8_t *restrict work, const char *root)
+static void doc_open(uint8_t *work, const char *root)
 {
     MtConnectCtx *c = MTC_CTX(work);
     c->out = MtConnectV.doc.out;
@@ -306,7 +306,7 @@ static void doc_open(uint8_t *restrict work, const char *root)
 }
 
 // Close the root element, terminate, and report the length.
-static void doc_close(uint8_t *restrict work, const char *tail)
+static void doc_close(uint8_t *work, const char *tail)
 {
     MtConnectCtx *c = MTC_CTX(work);
     put(work, tail);
@@ -324,7 +324,7 @@ static void doc_close(uint8_t *restrict work, const char *tail)
 
 // Close the open component: the three runs sit end to end already, so the container tags go round
 // the non-empty ones, back to front so the stamps in front of each insertion stay put.
-static void close_component(uint8_t *restrict work)
+static void close_component(uint8_t *work)
 {
     MtConnectCtx *c = MTC_CTX(work);
     if (!c->in_comp)
@@ -347,7 +347,7 @@ static void close_component(uint8_t *restrict work)
     put(work, "</ComponentStream>");
 }
 
-void protocore_mt_connect_streams_begin(uint8_t *restrict work)
+void protocore_mt_connect_streams_begin(uint8_t *work)
 {
     doc_open(work, "MTConnectStreams");
     put_header_common(work);
@@ -366,7 +366,7 @@ void protocore_mt_connect_streams_begin(uint8_t *restrict work)
     MtConnectV.ok = MTC_CTX(work)->ok;
 }
 
-void protocore_mt_connect_streams_add(uint8_t *restrict work)
+void protocore_mt_connect_streams_add(uint8_t *work)
 {
     MtConnectCtx *c = MTC_CTX(work);
     if (!c->ok)
@@ -445,7 +445,7 @@ void protocore_mt_connect_streams_add(uint8_t *restrict work)
     MtConnectV.ok = c->ok;
 }
 
-void protocore_mt_connect_streams_end(uint8_t *restrict work)
+void protocore_mt_connect_streams_end(uint8_t *work)
 {
     close_component(work);
     doc_close(work, "</DeviceStream></Streams></MTConnectStreams>");
@@ -453,7 +453,7 @@ void protocore_mt_connect_streams_end(uint8_t *restrict work)
 
 // --- error -----------------------------------------------------------------
 
-void protocore_mt_connect_error(uint8_t *restrict work)
+void protocore_mt_connect_error(uint8_t *work)
 {
     doc_open(work, "MTConnectError");
     put_header_common(work);
@@ -468,7 +468,7 @@ void protocore_mt_connect_error(uint8_t *restrict work)
 
 // --- probe (MTConnectDevices) ----------------------------------------------
 
-void protocore_mt_connect_devices_begin(uint8_t *restrict work)
+void protocore_mt_connect_devices_begin(uint8_t *work)
 {
     doc_open(work, "MTConnectDevices");
     put_header_common(work);
@@ -490,7 +490,7 @@ void protocore_mt_connect_devices_begin(uint8_t *restrict work)
     MtConnectV.ok = MTC_CTX(work)->ok;
 }
 
-void protocore_mt_connect_devices_add(uint8_t *restrict work)
+void protocore_mt_connect_devices_add(uint8_t *work)
 {
     put(work, "<DataItem category=\"");
     put(work, mtc_cat_str(MtConnectV.item.cat));
@@ -515,14 +515,14 @@ void protocore_mt_connect_devices_add(uint8_t *restrict work)
     MtConnectV.ok = MTC_CTX(work)->ok;
 }
 
-void protocore_mt_connect_devices_end(uint8_t *restrict work)
+void protocore_mt_connect_devices_end(uint8_t *work)
 {
     doc_close(work, "</DataItems></Device></Devices></MTConnectDevices>");
 }
 
 // --- asset (MTConnectAssets) -----------------------------------------------
 
-void protocore_mt_connect_assets_begin(uint8_t *restrict work)
+void protocore_mt_connect_assets_begin(uint8_t *work)
 {
     doc_open(work, "MTConnectAssets");
     put_header_common(work);
@@ -536,7 +536,7 @@ void protocore_mt_connect_assets_begin(uint8_t *restrict work)
 }
 
 // One optional attribute, written only when the caller supplied it.
-static void put_opt_attr(uint8_t *restrict work, const char *name, const char *value)
+static void put_opt_attr(uint8_t *work, const char *name, const char *value)
 {
     if (!value || !value[0])
     {
@@ -549,7 +549,7 @@ static void put_opt_attr(uint8_t *restrict work, const char *name, const char *v
     put(work, "\"");
 }
 
-void protocore_mt_connect_tool_begin(uint8_t *restrict work)
+void protocore_mt_connect_tool_begin(uint8_t *work)
 {
     put(work, "<CuttingTool assetId=\"");
     put_escaped(work, MtConnectV.tool.asset_id);
@@ -566,7 +566,7 @@ void protocore_mt_connect_tool_begin(uint8_t *restrict work)
     MtConnectV.ok = MTC_CTX(work)->ok;
 }
 
-void protocore_mt_connect_tool_life(uint8_t *restrict work)
+void protocore_mt_connect_tool_life(uint8_t *work)
 {
     // LifeType marks type, countDirection, initial and limit required: without initial and limit the
     // count says neither where the life started nor where it ends.
@@ -584,13 +584,13 @@ void protocore_mt_connect_tool_life(uint8_t *restrict work)
     MtConnectV.ok = MTC_CTX(work)->ok;
 }
 
-void protocore_mt_connect_tool_end(uint8_t *restrict work)
+void protocore_mt_connect_tool_end(uint8_t *work)
 {
     put(work, "</CuttingToolLifeCycle></CuttingTool>");
     MtConnectV.ok = MTC_CTX(work)->ok;
 }
 
-void protocore_mt_connect_assets_end(uint8_t *restrict work)
+void protocore_mt_connect_assets_end(uint8_t *work)
 {
     doc_close(work, "</Assets></MTConnectAssets>");
 }
@@ -612,7 +612,7 @@ static void copy_str(char *dst, size_t cap, const char *src)
     dst[i] = '\0';
 }
 
-void protocore_mt_connect_ring_init(uint8_t *restrict work)
+void protocore_mt_connect_ring_init(uint8_t *work)
 {
     MtConnectCtx *c = MTC_CTX(work);
     c->count = 0;
@@ -622,7 +622,7 @@ void protocore_mt_connect_ring_init(uint8_t *restrict work)
     MtConnectV.ok = PROTO_TRUE;
 }
 
-void protocore_mt_connect_ring_add(uint8_t *restrict work)
+void protocore_mt_connect_ring_add(uint8_t *work)
 {
     MtConnectCtx *c = MTC_CTX(work);
     MtConnectObs *o = &MTC_RING(work)[c->head];
@@ -645,7 +645,7 @@ void protocore_mt_connect_ring_add(uint8_t *restrict work)
     MtConnectV.ok = PROTO_TRUE;
 }
 
-void protocore_mt_connect_ring_query(uint8_t *restrict work)
+void protocore_mt_connect_ring_query(uint8_t *work)
 {
     MtConnectCtx *c = MTC_CTX(work);
     const uint64_t first = c->first_seq;

@@ -320,43 +320,42 @@ static inline size_t protocore_smb2_cipher_nonce_len(uint16_t cipher)
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    size_t (*transport_frame)(uint8_t *restrict, uint8_t *, size_t, const uint8_t *, size_t);
-    uint32_t (*transport_len)(uint8_t *restrict, const uint8_t *, size_t);
-    size_t (*build_header)(uint8_t *restrict, uint8_t *, size_t, Smb2Command, uint16_t, uint64_t, uint32_t, uint64_t);
-    proto_bool (*parse_header)(uint8_t *restrict, const uint8_t *, size_t, Smb2Header *);
-    size_t (*build_negotiate)(uint8_t *restrict, uint8_t *, size_t, const uint8_t *, uint16_t);
-    proto_bool (*parse_negotiate_response)(uint8_t *restrict, const uint8_t *, size_t, Smb2NegotiateResp *);
-    size_t (*build_negotiate_311)(uint8_t *restrict, uint8_t *, size_t, const uint8_t *, uint16_t, const uint8_t *,
-                                  size_t, const uint16_t *, size_t);
-    proto_bool (*parse_negotiate_contexts)(uint8_t *restrict, const uint8_t *, size_t, Smb2NegotiateContexts *);
-    void (*preauth_init)(uint8_t *restrict, SmbPreauth *);
-    void (*preauth_update)(uint8_t *restrict, uint8_t *, SmbPreauth *, const uint8_t *, size_t);
-    size_t (*build_session_setup)(uint8_t *restrict, uint8_t *, size_t, uint64_t, uint64_t, uint8_t, const uint8_t *,
-                                  size_t);
-    proto_bool (*parse_session_setup_response)(uint8_t *restrict, const uint8_t *, size_t, Smb2SessionSetupResp *);
-    size_t (*build_tree_connect)(uint8_t *restrict, uint8_t *, size_t, uint64_t, uint64_t, const uint8_t *, size_t);
-    proto_bool (*parse_tree_connect_response)(uint8_t *restrict, const uint8_t *, size_t, Smb2TreeConnectResp *);
-    size_t (*build_create)(uint8_t *restrict, uint8_t *, size_t, uint64_t, uint64_t, uint32_t, uint32_t, uint32_t,
-                           uint32_t, uint32_t, const uint8_t *, size_t);
-    proto_bool (*parse_create_response)(uint8_t *restrict, const uint8_t *, size_t, Smb2CreateResp *);
-    size_t (*build_close)(uint8_t *restrict, uint8_t *, size_t, uint64_t, uint64_t, uint32_t, const uint8_t *);
-    proto_bool (*parse_close_response)(uint8_t *restrict, const uint8_t *, size_t, Smb2CloseResp *);
-    size_t (*build_read)(uint8_t *restrict, uint8_t *, size_t, uint64_t, uint64_t, uint32_t, const uint8_t *, uint32_t,
+    size_t (*transport_frame)(uint8_t *, uint8_t *, size_t, const uint8_t *, size_t);
+    uint32_t (*transport_len)(uint8_t *, const uint8_t *, size_t);
+    size_t (*build_header)(uint8_t *, uint8_t *, size_t, Smb2Command, uint16_t, uint64_t, uint32_t, uint64_t);
+    proto_bool (*parse_header)(uint8_t *, const uint8_t *, size_t, Smb2Header *);
+    size_t (*build_negotiate)(uint8_t *, uint8_t *, size_t, const uint8_t *, uint16_t);
+    proto_bool (*parse_negotiate_response)(uint8_t *, const uint8_t *, size_t, Smb2NegotiateResp *);
+    size_t (*build_negotiate_311)(uint8_t *, uint8_t *, size_t, const uint8_t *, uint16_t, const uint8_t *, size_t,
+                                  const uint16_t *, size_t);
+    proto_bool (*parse_negotiate_contexts)(uint8_t *, const uint8_t *, size_t, Smb2NegotiateContexts *);
+    void (*preauth_init)(uint8_t *, SmbPreauth *);
+    void (*preauth_update)(uint8_t *, uint8_t *, SmbPreauth *, const uint8_t *, size_t);
+    size_t (*build_session_setup)(uint8_t *, uint8_t *, size_t, uint64_t, uint64_t, uint8_t, const uint8_t *, size_t);
+    proto_bool (*parse_session_setup_response)(uint8_t *, const uint8_t *, size_t, Smb2SessionSetupResp *);
+    size_t (*build_tree_connect)(uint8_t *, uint8_t *, size_t, uint64_t, uint64_t, const uint8_t *, size_t);
+    proto_bool (*parse_tree_connect_response)(uint8_t *, const uint8_t *, size_t, Smb2TreeConnectResp *);
+    size_t (*build_create)(uint8_t *, uint8_t *, size_t, uint64_t, uint64_t, uint32_t, uint32_t, uint32_t, uint32_t,
+                           uint32_t, const uint8_t *, size_t);
+    proto_bool (*parse_create_response)(uint8_t *, const uint8_t *, size_t, Smb2CreateResp *);
+    size_t (*build_close)(uint8_t *, uint8_t *, size_t, uint64_t, uint64_t, uint32_t, const uint8_t *);
+    proto_bool (*parse_close_response)(uint8_t *, const uint8_t *, size_t, Smb2CloseResp *);
+    size_t (*build_read)(uint8_t *, uint8_t *, size_t, uint64_t, uint64_t, uint32_t, const uint8_t *, uint32_t,
                          uint64_t);
-    proto_bool (*parse_read_response)(uint8_t *restrict, const uint8_t *, size_t, Smb2ReadResp *);
-    size_t (*build_write)(uint8_t *restrict, uint8_t *, size_t, uint64_t, uint64_t, uint32_t, const uint8_t *,
-                          const uint8_t *, size_t, uint64_t);
-    proto_bool (*parse_write_response)(uint8_t *restrict, const uint8_t *, size_t, Smb2WriteResp *);
-    void (*sign)(uint8_t *restrict, uint8_t *, const uint8_t *, uint8_t *, size_t);
-    proto_bool (*verify)(uint8_t *restrict, uint8_t *, const uint8_t *, uint8_t *, size_t);
-    void (*sign_cmac)(uint8_t *restrict, uint8_t *, const uint8_t *, uint8_t *, size_t);
-    proto_bool (*verify_cmac)(uint8_t *restrict, uint8_t *, const uint8_t *, uint8_t *, size_t);
-    proto_bool (*derive_signing_key)(uint8_t *restrict, const uint8_t *, uint16_t, const uint8_t *, uint8_t *);
-    proto_bool (*derive_encryption_keys)(uint8_t *restrict, const uint8_t *, uint16_t, const uint8_t *, size_t,
-                                         uint8_t *, uint8_t *);
-    size_t (*encrypt)(uint8_t *restrict, uint16_t, const uint8_t *, const uint8_t *, uint64_t, const uint8_t *, size_t,
+    proto_bool (*parse_read_response)(uint8_t *, const uint8_t *, size_t, Smb2ReadResp *);
+    size_t (*build_write)(uint8_t *, uint8_t *, size_t, uint64_t, uint64_t, uint32_t, const uint8_t *, const uint8_t *,
+                          size_t, uint64_t);
+    proto_bool (*parse_write_response)(uint8_t *, const uint8_t *, size_t, Smb2WriteResp *);
+    void (*sign)(uint8_t *, uint8_t *, const uint8_t *, uint8_t *, size_t);
+    proto_bool (*verify)(uint8_t *, uint8_t *, const uint8_t *, uint8_t *, size_t);
+    void (*sign_cmac)(uint8_t *, uint8_t *, const uint8_t *, uint8_t *, size_t);
+    proto_bool (*verify_cmac)(uint8_t *, uint8_t *, const uint8_t *, uint8_t *, size_t);
+    proto_bool (*derive_signing_key)(uint8_t *, const uint8_t *, uint16_t, const uint8_t *, uint8_t *);
+    proto_bool (*derive_encryption_keys)(uint8_t *, const uint8_t *, uint16_t, const uint8_t *, size_t, uint8_t *,
+                                         uint8_t *);
+    size_t (*encrypt)(uint8_t *, uint16_t, const uint8_t *, const uint8_t *, uint64_t, const uint8_t *, size_t,
                       uint8_t *, size_t);
-    size_t (*decrypt)(uint8_t *restrict, uint16_t, const uint8_t *, const uint8_t *, size_t, uint8_t *, size_t);
+    size_t (*decrypt)(uint8_t *, uint16_t, const uint8_t *, const uint8_t *, size_t, uint8_t *, size_t);
 } Smb2Ns;
 PROTOCORE_NS_LAYOUT(Smb2Ns, transport_frame, transport_len, build_header, parse_header, build_negotiate,
                     parse_negotiate_response, build_negotiate_311, parse_negotiate_contexts, preauth_init,
@@ -374,8 +373,7 @@ PROTOCORE_NS_LAYOUT(Smb2Ns, transport_frame, transport_len, build_header, parse_
  * @param msg_len Msg len
  * @return The size_t.
  */
-size_t protocore_smb2_transport_frame(uint8_t *restrict work, uint8_t *out, size_t cap, const uint8_t *msg,
-                                      size_t msg_len);
+size_t protocore_smb2_transport_frame(uint8_t *work, uint8_t *out, size_t cap, const uint8_t *msg, size_t msg_len);
 /**
  * @brief Read the Direct-TCP transport length prefix.
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
@@ -383,7 +381,7 @@ size_t protocore_smb2_transport_frame(uint8_t *restrict work, uint8_t *out, size
  * @param len Len
  * @return The uint32_t.
  */
-uint32_t protocore_smb2_transport_len(uint8_t *restrict work, const uint8_t *buf, size_t len);
+uint32_t protocore_smb2_transport_len(uint8_t *work, const uint8_t *buf, size_t len);
 /**
  * @brief Build a 64-byte SMB2 sync header into buf.
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
@@ -396,7 +394,7 @@ uint32_t protocore_smb2_transport_len(uint8_t *restrict work, const uint8_t *buf
  * @param session_id Session id
  * @return The size_t.
  */
-size_t protocore_smb2_build_header(uint8_t *restrict work, uint8_t *buf, size_t cap, Smb2Command command,
+size_t protocore_smb2_build_header(uint8_t *work, uint8_t *buf, size_t cap, Smb2Command command,
                                    uint16_t credit_request, uint64_t message_id, uint32_t tree_id, uint64_t session_id);
 /**
  * @brief Parse a 64-byte SMB2 sync header (validates ProtocolId + .
@@ -406,7 +404,7 @@ size_t protocore_smb2_build_header(uint8_t *restrict work, uint8_t *buf, size_t 
  * @param out Out
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_smb2_parse_header(uint8_t *restrict work, const uint8_t *buf, size_t len, Smb2Header *out);
+proto_bool protocore_smb2_parse_header(uint8_t *work, const uint8_t *buf, size_t len, Smb2Header *out);
 /**
  * @brief Build a NEGOTIATE request (header + body) offering SMB 2.0.2 / 2.1 .
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
@@ -416,7 +414,7 @@ proto_bool protocore_smb2_parse_header(uint8_t *restrict work, const uint8_t *bu
  * @param security_mode SMB2_NEGOTIATE_SIGNING_ENABLED and/or _REQUIRED
  * @return The size_t.
  */
-size_t protocore_smb2_build_negotiate(uint8_t *restrict work, uint8_t *buf, size_t cap, const uint8_t *client_guid,
+size_t protocore_smb2_build_negotiate(uint8_t *work, uint8_t *buf, size_t cap, const uint8_t *client_guid,
                                       uint16_t security_mode);
 /**
  * @brief Parse a NEGOTIATE response message (the SMB2 header + §2.2.4 body).
@@ -426,7 +424,7 @@ size_t protocore_smb2_build_negotiate(uint8_t *restrict work, uint8_t *buf, size
  * @param out Out
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_smb2_parse_negotiate_response(uint8_t *restrict work, const uint8_t *msg, size_t len,
+proto_bool protocore_smb2_parse_negotiate_response(uint8_t *work, const uint8_t *msg, size_t len,
                                                    Smb2NegotiateResp *out);
 /**
  * @brief Build an SMB 3.1.1 NEGOTIATE request: the dialect list SMB 2.0.2 .. .
@@ -441,7 +439,7 @@ proto_bool protocore_smb2_parse_negotiate_response(uint8_t *restrict work, const
  * @param cipher_count number of entries in ciphers (0 .. PROTOCORE_SMB2_MAX_OFFER_CIPHERS)
  * @return The size_t.
  */
-size_t protocore_smb2_build_negotiate_311(uint8_t *restrict work, uint8_t *buf, size_t cap, const uint8_t *client_guid,
+size_t protocore_smb2_build_negotiate_311(uint8_t *work, uint8_t *buf, size_t cap, const uint8_t *client_guid,
                                           uint16_t security_mode, const uint8_t *salt, size_t salt_len,
                                           const uint16_t *ciphers, size_t cipher_count);
 /**
@@ -452,14 +450,14 @@ size_t protocore_smb2_build_negotiate_311(uint8_t *restrict work, uint8_t *buf, 
  * @param out Out
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_smb2_parse_negotiate_contexts(uint8_t *restrict work, const uint8_t *msg, size_t len,
+proto_bool protocore_smb2_parse_negotiate_contexts(uint8_t *work, const uint8_t *msg, size_t len,
                                                    Smb2NegotiateContexts *out);
 /**
  * @brief Seed the preauth-integrity hash with 64 zero bytes (the initial .
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param p P
  */
-void protocore_smb2_preauth_init(uint8_t *restrict work, SmbPreauth *p);
+void protocore_smb2_preauth_init(uint8_t *work, SmbPreauth *p);
 /**
  * @brief Fold one handshake message into the preauth-integrity hash: hash = .
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
@@ -468,8 +466,7 @@ void protocore_smb2_preauth_init(uint8_t *restrict work, SmbPreauth *p);
  * @param msg Msg
  * @param len Len
  */
-void protocore_smb2_preauth_update(uint8_t *restrict work, uint8_t *crypto_work, SmbPreauth *p, const uint8_t *msg,
-                                   size_t len);
+void protocore_smb2_preauth_update(uint8_t *work, uint8_t *crypto_work, SmbPreauth *p, const uint8_t *msg, size_t len);
 /**
  * @brief Build a SESSION_SETUP request (header + §2.2.5 body) carrying a .
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
@@ -482,7 +479,7 @@ void protocore_smb2_preauth_update(uint8_t *restrict work, uint8_t *crypto_work,
  * @param sec_len Sec len
  * @return The size_t.
  */
-size_t protocore_smb2_build_session_setup(uint8_t *restrict work, uint8_t *buf, size_t cap, uint64_t message_id,
+size_t protocore_smb2_build_session_setup(uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id,
                                           uint64_t session_id, uint8_t security_mode, const uint8_t *sec_buf,
                                           size_t sec_len);
 /**
@@ -493,7 +490,7 @@ size_t protocore_smb2_build_session_setup(uint8_t *restrict work, uint8_t *buf, 
  * @param out Out
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_smb2_parse_session_setup_response(uint8_t *restrict work, const uint8_t *msg, size_t len,
+proto_bool protocore_smb2_parse_session_setup_response(uint8_t *work, const uint8_t *msg, size_t len,
                                                        Smb2SessionSetupResp *out);
 /**
  * @brief Build a TREE_CONNECT request (header + §2.2.9 body) for a share path.
@@ -506,7 +503,7 @@ proto_bool protocore_smb2_parse_session_setup_response(uint8_t *restrict work, c
  * @param path_len Path len
  * @return The size_t.
  */
-size_t protocore_smb2_build_tree_connect(uint8_t *restrict work, uint8_t *buf, size_t cap, uint64_t message_id,
+size_t protocore_smb2_build_tree_connect(uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id,
                                          uint64_t session_id, const uint8_t *path_utf16, size_t path_len);
 /**
  * @brief Parse a TREE_CONNECT response message (validates command + .
@@ -516,7 +513,7 @@ size_t protocore_smb2_build_tree_connect(uint8_t *restrict work, uint8_t *buf, s
  * @param out Out
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_smb2_parse_tree_connect_response(uint8_t *restrict work, const uint8_t *msg, size_t len,
+proto_bool protocore_smb2_parse_tree_connect_response(uint8_t *work, const uint8_t *msg, size_t len,
                                                       Smb2TreeConnectResp *out);
 /**
  * @brief Build a CREATE request (header + §2.2.13 body) to open/create a .
@@ -534,10 +531,10 @@ proto_bool protocore_smb2_parse_tree_connect_response(uint8_t *restrict work, co
  * @param name_len Name len
  * @return The size_t.
  */
-size_t protocore_smb2_build_create(uint8_t *restrict work, uint8_t *buf, size_t cap, uint64_t message_id,
-                                   uint64_t session_id, uint32_t tree_id, uint32_t desired_access,
-                                   uint32_t share_access, uint32_t create_disposition, uint32_t create_options,
-                                   const uint8_t *name_utf16, size_t name_len);
+size_t protocore_smb2_build_create(uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id, uint64_t session_id,
+                                   uint32_t tree_id, uint32_t desired_access, uint32_t share_access,
+                                   uint32_t create_disposition, uint32_t create_options, const uint8_t *name_utf16,
+                                   size_t name_len);
 /**
  * @brief Parse a CREATE response message (validates command + StructureSize .
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
@@ -546,8 +543,7 @@ size_t protocore_smb2_build_create(uint8_t *restrict work, uint8_t *buf, size_t 
  * @param out Out
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_smb2_parse_create_response(uint8_t *restrict work, const uint8_t *msg, size_t len,
-                                                Smb2CreateResp *out);
+proto_bool protocore_smb2_parse_create_response(uint8_t *work, const uint8_t *msg, size_t len, Smb2CreateResp *out);
 /**
  * @brief Build a CLOSE request (header + §2.2.15 body) for an open FileId.
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
@@ -559,8 +555,8 @@ proto_bool protocore_smb2_parse_create_response(uint8_t *restrict work, const ui
  * @param file_id 16 bytes
  * @return The size_t.
  */
-size_t protocore_smb2_build_close(uint8_t *restrict work, uint8_t *buf, size_t cap, uint64_t message_id,
-                                  uint64_t session_id, uint32_t tree_id, const uint8_t *file_id);
+size_t protocore_smb2_build_close(uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id, uint64_t session_id,
+                                  uint32_t tree_id, const uint8_t *file_id);
 /**
  * @brief Parse a CLOSE response message (validates command + StructureSize .
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
@@ -569,8 +565,7 @@ size_t protocore_smb2_build_close(uint8_t *restrict work, uint8_t *buf, size_t c
  * @param out Out
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_smb2_parse_close_response(uint8_t *restrict work, const uint8_t *msg, size_t len,
-                                               Smb2CloseResp *out);
+proto_bool protocore_smb2_parse_close_response(uint8_t *work, const uint8_t *msg, size_t len, Smb2CloseResp *out);
 /**
  * @brief Build a READ request (header + §2.2.19 body) for length bytes at .
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
@@ -584,9 +579,8 @@ proto_bool protocore_smb2_parse_close_response(uint8_t *restrict work, const uin
  * @param offset Offset
  * @return The size_t.
  */
-size_t protocore_smb2_build_read(uint8_t *restrict work, uint8_t *buf, size_t cap, uint64_t message_id,
-                                 uint64_t session_id, uint32_t tree_id, const uint8_t *file_id, uint32_t length,
-                                 uint64_t offset);
+size_t protocore_smb2_build_read(uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id, uint64_t session_id,
+                                 uint32_t tree_id, const uint8_t *file_id, uint32_t length, uint64_t offset);
 /**
  * @brief Parse a READ response message (validates command + StructureSize .
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
@@ -595,8 +589,7 @@ size_t protocore_smb2_build_read(uint8_t *restrict work, uint8_t *buf, size_t ca
  * @param out Out
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_smb2_parse_read_response(uint8_t *restrict work, const uint8_t *msg, size_t len,
-                                              Smb2ReadResp *out);
+proto_bool protocore_smb2_parse_read_response(uint8_t *work, const uint8_t *msg, size_t len, Smb2ReadResp *out);
 /**
  * @brief Build a WRITE request (header + §2.2.21 body) writing data at .
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
@@ -611,9 +604,9 @@ proto_bool protocore_smb2_parse_read_response(uint8_t *restrict work, const uint
  * @param offset Offset
  * @return The size_t.
  */
-size_t protocore_smb2_build_write(uint8_t *restrict work, uint8_t *buf, size_t cap, uint64_t message_id,
-                                  uint64_t session_id, uint32_t tree_id, const uint8_t *file_id, const uint8_t *data,
-                                  size_t data_len, uint64_t offset);
+size_t protocore_smb2_build_write(uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id, uint64_t session_id,
+                                  uint32_t tree_id, const uint8_t *file_id, const uint8_t *data, size_t data_len,
+                                  uint64_t offset);
 /**
  * @brief Parse a WRITE response message (validates command + StructureSize .
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
@@ -622,8 +615,7 @@ size_t protocore_smb2_build_write(uint8_t *restrict work, uint8_t *buf, size_t c
  * @param out Out
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_smb2_parse_write_response(uint8_t *restrict work, const uint8_t *msg, size_t len,
-                                               Smb2WriteResp *out);
+proto_bool protocore_smb2_parse_write_response(uint8_t *work, const uint8_t *msg, size_t len, Smb2WriteResp *out);
 /**
  * @brief Sign an SMB2 message in place (MS-SMB2 §3.1.4.1, SMB 2.x). Sets .
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
@@ -632,8 +624,7 @@ proto_bool protocore_smb2_parse_write_response(uint8_t *restrict work, const uin
  * @param msg the full message (header + body), modified in place; must be at least a 64-byte header
  * @param msg_len total message length. A message shorter than the header is left untouched
  */
-void protocore_smb2_sign(uint8_t *restrict work, uint8_t *crypto_work, const uint8_t *key, uint8_t *msg,
-                         size_t msg_len);
+void protocore_smb2_sign(uint8_t *work, uint8_t *crypto_work, const uint8_t *key, uint8_t *msg, size_t msg_len);
 /**
  * @brief Verify an SMB2 message's signature (MS-SMB2 §3.1.5.1). Recomputes .
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
@@ -643,8 +634,7 @@ void protocore_smb2_sign(uint8_t *restrict work, uint8_t *crypto_work, const uin
  * @param msg_len Msg len
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_smb2_verify(uint8_t *restrict work, uint8_t *crypto_work, const uint8_t *key, uint8_t *msg,
-                                 size_t msg_len);
+proto_bool protocore_smb2_verify(uint8_t *work, uint8_t *crypto_work, const uint8_t *key, uint8_t *msg, size_t msg_len);
 /**
  * @brief Sign an SMB2 message in place with AES-128-CMAC (MS-SMB2 §3.1.4.1, .
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
@@ -653,8 +643,7 @@ proto_bool protocore_smb2_verify(uint8_t *restrict work, uint8_t *crypto_work, c
  * @param msg Msg
  * @param msg_len Msg len
  */
-void protocore_smb2_sign_cmac(uint8_t *restrict work, uint8_t *crypto_work, const uint8_t *key, uint8_t *msg,
-                              size_t msg_len);
+void protocore_smb2_sign_cmac(uint8_t *work, uint8_t *crypto_work, const uint8_t *key, uint8_t *msg, size_t msg_len);
 /**
  * @brief Verify an AES-128-CMAC-signed SMB2 message (MS-SMB2 §3.1.5.1, SMB .
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
@@ -664,7 +653,7 @@ void protocore_smb2_sign_cmac(uint8_t *restrict work, uint8_t *crypto_work, cons
  * @param msg_len Msg len
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_smb2_verify_cmac(uint8_t *restrict work, uint8_t *crypto_work, const uint8_t *key, uint8_t *msg,
+proto_bool protocore_smb2_verify_cmac(uint8_t *work, uint8_t *crypto_work, const uint8_t *key, uint8_t *msg,
                                       size_t msg_len);
 /**
  * @brief Derive the 16-byte SMB 3.x signing key from the NTLM session key .
@@ -675,7 +664,7 @@ proto_bool protocore_smb2_verify_cmac(uint8_t *restrict work, uint8_t *crypto_wo
  * @param out_key receives the 16-byte signing key 16 bytes
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_smb2_derive_signing_key(uint8_t *restrict work, const uint8_t *session_key, uint16_t dialect,
+proto_bool protocore_smb2_derive_signing_key(uint8_t *work, const uint8_t *session_key, uint16_t dialect,
                                              const uint8_t *preauth, uint8_t *out_key);
 /**
  * @brief Derive the two SMB 3.x cipher keys from the NTLM session key .
@@ -688,7 +677,7 @@ proto_bool protocore_smb2_derive_signing_key(uint8_t *restrict work, const uint8
  * @param out_s2c Out s2c
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_smb2_derive_encryption_keys(uint8_t *restrict work, const uint8_t *session_key, uint16_t dialect,
+proto_bool protocore_smb2_derive_encryption_keys(uint8_t *work, const uint8_t *session_key, uint16_t dialect,
                                                  const uint8_t *preauth, size_t key_len, uint8_t *out_c2s,
                                                  uint8_t *out_s2c);
 /**
@@ -704,7 +693,7 @@ proto_bool protocore_smb2_derive_encryption_keys(uint8_t *restrict work, const u
  * @param out_cap Out cap
  * @return The size_t.
  */
-size_t protocore_smb2_encrypt(uint8_t *restrict work, uint16_t cipher, const uint8_t *key, const uint8_t *nonce,
+size_t protocore_smb2_encrypt(uint8_t *work, uint16_t cipher, const uint8_t *key, const uint8_t *nonce,
                               uint64_t session_id, const uint8_t *msg, size_t msg_len, uint8_t *out, size_t out_cap);
 /**
  * @brief Decrypt a TRANSFORM_HEADER-wrapped SMB2 message (MS-SMB2 §3.1.4.4): .
@@ -717,8 +706,8 @@ size_t protocore_smb2_encrypt(uint8_t *restrict work, uint16_t cipher, const uin
  * @param out_cap Out cap
  * @return The size_t.
  */
-size_t protocore_smb2_decrypt(uint8_t *restrict work, uint16_t cipher, const uint8_t *key, const uint8_t *in,
-                              size_t in_len, uint8_t *out, size_t out_cap);
+size_t protocore_smb2_decrypt(uint8_t *work, uint16_t cipher, const uint8_t *key, const uint8_t *in, size_t in_len,
+                              uint8_t *out, size_t out_cap);
 
 /** @brief Module namespace. */
 PROTOCORE_NS Smb2Ns Smb2 PROTOCORE_UNUSED = {.transport_frame = protocore_smb2_transport_frame,

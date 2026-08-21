@@ -103,28 +103,28 @@ extern TelnetVars TelnetV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const on_command)(uint8_t *restrict work);
-    void (*const print)(uint8_t *restrict work);
-    void (*const println)(uint8_t *restrict work);
-    void (*const frame)(uint8_t *restrict work);
-    void (*const client_count)(uint8_t *restrict work);
-    void (*const accept)(uint8_t *restrict work);
-    void (*const rx)(uint8_t *restrict work);
-    void (*const close)(uint8_t *restrict work);
-    void (*const proto_handler)(uint8_t *restrict work);
+    void (*const on_command)(uint8_t *work);
+    void (*const print)(uint8_t *work);
+    void (*const println)(uint8_t *work);
+    void (*const frame)(uint8_t *work);
+    void (*const client_count)(uint8_t *work);
+    void (*const accept)(uint8_t *work);
+    void (*const rx)(uint8_t *work);
+    void (*const close)(uint8_t *work);
+    void (*const proto_handler)(uint8_t *work);
 } TelnetNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in TelnetV or a region of the borrow at a fixed offset.
-void protocore_telnet_on_command(uint8_t *restrict work);
-void protocore_telnet_print(uint8_t *restrict work);
-void protocore_telnet_println(uint8_t *restrict work);
-void protocore_telnet_frame(uint8_t *restrict work);
-void protocore_telnet_client_count(uint8_t *restrict work);
-void protocore_telnet_accept(uint8_t *restrict work);
-void protocore_telnet_rx(uint8_t *restrict work);
-void protocore_telnet_close(uint8_t *restrict work);
-void protocore_telnet_proto_handler(uint8_t *restrict work);
+void protocore_telnet_on_command(uint8_t *work);
+void protocore_telnet_print(uint8_t *work);
+void protocore_telnet_println(uint8_t *work);
+void protocore_telnet_frame(uint8_t *work);
+void protocore_telnet_client_count(uint8_t *work);
+void protocore_telnet_accept(uint8_t *work);
+void protocore_telnet_rx(uint8_t *work);
+void protocore_telnet_close(uint8_t *work);
+void protocore_telnet_proto_handler(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

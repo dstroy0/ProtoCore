@@ -27,10 +27,10 @@ PROTOCORE_BEGIN_DECLS
  * The member is spelled `xor_` because `xor` is an alternative token in C++, and this header reaches
  * the C++ translation units.
  *
- * @c work is PROTOCORE_CHACHA20_BORROW secure bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and
- * the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. The
- * borrow IS the working state, so two keystreams in flight are two borrows and never collide.
+ * @c work is PROTOCORE_CHACHA20_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the
+ * call, so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes
+ * it, holds it, releases it, nor wipes it. The borrow IS the working state, so two keystreams in flight are two borrows
+ * and never collide.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -45,9 +45,8 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*xor_)(uint8_t *restrict, const uint8_t *, const uint8_t *, uint64_t, const uint8_t *, uint8_t *,
-                       size_t);
-    proto_bool (*block_ietf)(uint8_t *restrict, const uint8_t *, uint32_t, const uint8_t *, uint8_t *);
+    proto_bool (*xor_)(uint8_t *, const uint8_t *, const uint8_t *, uint64_t, const uint8_t *, uint8_t *, size_t);
+    proto_bool (*block_ietf)(uint8_t *, const uint8_t *, uint32_t, const uint8_t *, uint8_t *);
 } Chacha20Ns;
 PROTOCORE_NS_LAYOUT(Chacha20Ns, xor_, block_ietf);
 
@@ -62,7 +61,7 @@ PROTOCORE_NS_LAYOUT(Chacha20Ns, xor_, block_ietf);
  * @param len how many
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_chacha20_xor_(uint8_t *restrict work, const uint8_t *key, const uint8_t *iv, uint64_t counter,
+proto_bool protocore_chacha20_xor_(uint8_t *work, const uint8_t *key, const uint8_t *iv, uint64_t counter,
                                    const uint8_t *in, uint8_t *out, size_t len);
 /**
  * @brief One 64-byte keystream block in the RFC 8439 layout.
@@ -73,8 +72,8 @@ proto_bool protocore_chacha20_xor_(uint8_t *restrict work, const uint8_t *key, c
  * @param out PROTOCORE_CHACHA20_BLOCK_LEN bytes
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_chacha20_block_ietf(uint8_t *restrict work, const uint8_t *key, uint32_t counter,
-                                         const uint8_t *nonce, uint8_t *out);
+proto_bool protocore_chacha20_block_ietf(uint8_t *work, const uint8_t *key, uint32_t counter, const uint8_t *nonce,
+                                         uint8_t *out);
 
 /** @brief Module namespace. */
 PROTOCORE_NS Chacha20Ns Chacha20 PROTOCORE_UNUSED = {.xor_ = protocore_chacha20_xor_,

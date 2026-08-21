@@ -43,7 +43,7 @@ static const char *dir_name_of(protocore_gpio_dir dir)
     }
 }
 
-void protocore_gpio_map_dir_name(uint8_t *restrict work)
+void protocore_gpio_map_dir_name(uint8_t *work)
 {
     (void)work;
     GpioMapV.text = dir_name_of(GpioMapV.args.dir);
@@ -70,7 +70,7 @@ static const protocore_field GPIO_PIN[] = {
 };
 static const protocore_field GPIO_CLOSE[] = {{PROTOCORE_FK_LIT, 0, 2, "]}"}, PROTOCORE_END};
 
-void protocore_gpio_map_json(uint8_t *restrict work)
+void protocore_gpio_map_json(uint8_t *work)
 {
     (void)work;
     const protocore_gpio_pin *pins = GpioMapV.args.pins;
@@ -148,7 +148,7 @@ static proto_bool form_field_uint(const char *body, size_t len, const char *name
     return PROTO_FALSE;
 }
 
-void protocore_gpio_map_parse_set(uint8_t *restrict work)
+void protocore_gpio_map_parse_set(uint8_t *work)
 {
     (void)work;
     const char *body = GpioMapV.parse_args.body;
@@ -180,7 +180,7 @@ void protocore_gpio_map_parse_set(uint8_t *restrict work)
     GpioMapV.ok = PROTO_TRUE;
 }
 
-void protocore_gpio_map_is_output(uint8_t *restrict work)
+void protocore_gpio_map_is_output(uint8_t *work)
 {
     (void)work;
     const protocore_gpio_pin *pins = GpioMapV.args.pins;
@@ -205,7 +205,7 @@ void protocore_gpio_map_is_output(uint8_t *restrict work)
 
 #if PROTOCORE_HAS_GPIO
 
-void protocore_gpio_map_begin_pins(uint8_t *restrict work)
+void protocore_gpio_map_begin_pins(uint8_t *work)
 {
     (void)work;
     const protocore_gpio_pin *pins = GpioMapV.args.pins;
@@ -236,7 +236,7 @@ void protocore_gpio_map_begin_pins(uint8_t *restrict work)
     }
 }
 
-void protocore_gpio_map_sample(uint8_t *restrict work)
+void protocore_gpio_map_sample(uint8_t *work)
 {
     (void)work;
     protocore_gpio_pin *pins = GpioMapV.args.pins_rw;
@@ -255,7 +255,7 @@ void protocore_gpio_map_sample(uint8_t *restrict work)
 // level indexes this; !!level is 0 or 1, so the selection is a load rather than a branch.
 static const uint8_t PROTOCORE_GPIO_LEVEL[2] = {PROTOCORE_GPIO_LOW, PROTOCORE_GPIO_HIGH};
 
-void protocore_gpio_map_write(uint8_t *restrict work)
+void protocore_gpio_map_write(uint8_t *work)
 {
     (void)work;
     const uint8_t pin = GpioMapV.args.pin;
@@ -266,7 +266,7 @@ void protocore_gpio_map_write(uint8_t *restrict work)
 
 #else // no pin seam
 
-void protocore_gpio_map_begin_pins(uint8_t *restrict work)
+void protocore_gpio_map_begin_pins(uint8_t *work)
 {
     (void)work;
     const protocore_gpio_pin *pins = GpioMapV.args.pins;
@@ -276,7 +276,7 @@ void protocore_gpio_map_begin_pins(uint8_t *restrict work)
     (void)count;
 }
 
-void protocore_gpio_map_sample(uint8_t *restrict work)
+void protocore_gpio_map_sample(uint8_t *work)
 {
     (void)work;
     protocore_gpio_pin *pins = GpioMapV.args.pins_rw;
@@ -286,7 +286,7 @@ void protocore_gpio_map_sample(uint8_t *restrict work)
     (void)count;
 }
 
-void protocore_gpio_map_write(uint8_t *restrict work)
+void protocore_gpio_map_write(uint8_t *work)
 {
     (void)work;
     const uint8_t pin = GpioMapV.args.pin;
@@ -302,7 +302,7 @@ void protocore_gpio_map_write(uint8_t *restrict work)
 // it is bound here so the whole surface is one initializer rather than a runtime install. Weak, so
 // the pin core links on its own - the serializer and the parser are host-tested without the server,
 // and gpio_map_routes.c overrides this the moment it is in the build.
-__attribute__((weak)) void protocore_gpio_map_begin(uint8_t *restrict work)
+__attribute__((weak)) void protocore_gpio_map_begin(uint8_t *work)
 {
 }
 

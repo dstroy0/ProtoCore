@@ -70,9 +70,8 @@ typedef struct
  * @var IfaceBridgeHwNs::publish  bind a PROTO_BRIDGE listener to a hardware target and install the ...
  * @var IfaceBridgeHwNs::reset  clear all listener bindings and rules (start from empty)
  *
- * @c work is PROTOCORE_IFACE_BRIDGE_HW_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_IFACE_BRIDGE_HW_BORROW bytes the CALLER took, at an address it knows. It is not held past the
+ * call, so nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -86,14 +85,14 @@ extern IfaceBridgeHwVars IfaceBridgeHwV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const publish)(uint8_t *restrict work);
-    void (*const reset)(uint8_t *restrict work);
+    void (*const publish)(uint8_t *work);
+    void (*const reset)(uint8_t *work);
 } IfaceBridgeHwNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in IfaceBridgeHwV or a region of the borrow at a fixed offset.
-void protocore_iface_bridge_hw_publish(uint8_t *restrict work);
-void protocore_iface_bridge_hw_reset(uint8_t *restrict work);
+void protocore_iface_bridge_hw_publish(uint8_t *work);
+void protocore_iface_bridge_hw_reset(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

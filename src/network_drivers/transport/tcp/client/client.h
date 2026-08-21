@@ -90,24 +90,24 @@ extern TcpClientVars TcpClientV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const open)(uint8_t *restrict work);
-    void (*const connected)(uint8_t *restrict work);
-    void (*const is_closed)(uint8_t *restrict work);
-    void (*const send)(uint8_t *restrict work);
-    void (*const available)(uint8_t *restrict work);
-    void (*const read)(uint8_t *restrict work);
-    void (*const close)(uint8_t *restrict work);
+    void (*const open)(uint8_t *work);
+    void (*const connected)(uint8_t *work);
+    void (*const is_closed)(uint8_t *work);
+    void (*const send)(uint8_t *work);
+    void (*const available)(uint8_t *work);
+    void (*const read)(uint8_t *work);
+    void (*const close)(uint8_t *work);
 } TcpClientNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in TcpClientV or a region of the borrow at a fixed offset.
-void protocore_tcp_client_open(uint8_t *restrict work);
-void protocore_tcp_client_connected(uint8_t *restrict work);
-void protocore_tcp_client_is_closed(uint8_t *restrict work);
-void protocore_tcp_client_send(uint8_t *restrict work);
-void protocore_tcp_client_available(uint8_t *restrict work);
-void protocore_tcp_client_read(uint8_t *restrict work);
-void protocore_tcp_client_close(uint8_t *restrict work);
+void protocore_tcp_client_open(uint8_t *work);
+void protocore_tcp_client_connected(uint8_t *work);
+void protocore_tcp_client_is_closed(uint8_t *work);
+void protocore_tcp_client_send(uint8_t *work);
+void protocore_tcp_client_available(uint8_t *work);
+void protocore_tcp_client_read(uint8_t *work);
+void protocore_tcp_client_close(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

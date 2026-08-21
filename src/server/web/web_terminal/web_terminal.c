@@ -72,7 +72,7 @@ static void term_ws_connect(uint8_t ws_id)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
-    uint8_t *restrict work = protocore_web_terminal_span();
+    uint8_t *work = protocore_web_terminal_span();
     // ws_id always addresses a real pool slot: the WebSocket layer numbers ws_pool[i].ws_id = i for
     // i < MAX_WS_CONNS and dispatches every route callback as cb(ws->ws_id), so the bound check
     // cannot fail. Same reasoning for the ws_id checks in term_ws_message / term_ws_close below.
@@ -88,7 +88,7 @@ static void term_ws_message(uint8_t ws_id)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
-    uint8_t *restrict work = protocore_web_terminal_span();
+    uint8_t *work = protocore_web_terminal_span();
     // Branch-excluded for the ws_id bound only (see term_ws_connect); the cb arms are both
     // exercised by the suite (with and without a registered command callback).
     if (WEB_TERMINAL_CTX(work)->cb && ws_id < MAX_WS_CONNS)
@@ -103,7 +103,7 @@ static void term_ws_close(uint8_t ws_id)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
-    uint8_t *restrict work = protocore_web_terminal_span();
+    uint8_t *work = protocore_web_terminal_span();
     if (ws_id < MAX_WS_CONNS)
     {
         WEB_TERMINAL_CTX(work)->is_client[ws_id] = PROTO_FALSE;
@@ -132,7 +132,7 @@ uint8_t *protocore_web_terminal_span(void)
     return s_own.span;
 }
 
-void protocore_web_terminal_begin(uint8_t *restrict work)
+void protocore_web_terminal_begin(uint8_t *work)
 {
     (void)work;
     const char *path = WebTerminalV.begin_args.path;
@@ -158,7 +158,7 @@ void protocore_web_terminal_begin(uint8_t *restrict work)
     on_ws(WEB_TERMINAL_CTX(work)->ws_path, term_ws_connect, term_ws_message, term_ws_close);
 }
 
-void protocore_web_terminal_on_command(uint8_t *restrict work)
+void protocore_web_terminal_on_command(uint8_t *work)
 {
     (void)work;
     TermCommandCb cb = WebTerminalV.on_command_args.cb;
@@ -166,7 +166,7 @@ void protocore_web_terminal_on_command(uint8_t *restrict work)
     WEB_TERMINAL_CTX(work)->cb = cb;
 }
 
-void protocore_web_terminal_print(uint8_t *restrict work)
+void protocore_web_terminal_print(uint8_t *work)
 {
     (void)work;
     const char *s = WebTerminalV.print_args.s;
@@ -189,7 +189,7 @@ void protocore_web_terminal_print(uint8_t *restrict work)
     }
 }
 
-void protocore_web_terminal_println(uint8_t *restrict work)
+void protocore_web_terminal_println(uint8_t *work)
 {
     (void)work;
     const char *s = WebTerminalV.println_args.s;
@@ -206,7 +206,7 @@ void protocore_web_terminal_println(uint8_t *restrict work)
     }
 }
 
-void protocore_web_terminal_client_count(uint8_t *restrict work)
+void protocore_web_terminal_client_count(uint8_t *work)
 {
     (void)work;
     WebTerminalV.value = 0;

@@ -247,9 +247,8 @@ typedef struct
  * @var HmmdNs::poll  pump the UART through the stream. true if a fresh report was decoded
  * @var HmmdNs::last  the most recently decoded report, or NULL before the first one ...
  *
- * @c work is PROTOCORE_HMMD_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_HMMD_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
+ * nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -274,23 +273,23 @@ typedef struct
     size_t n;
     const HmmdReport *report;
 
-    void (*const parse_report)(uint8_t *restrict work);
-    void (*const stream_reset)(uint8_t *restrict work);
-    void (*const stream_push)(uint8_t *restrict work);
-    void (*const present)(uint8_t *restrict work);
-    void (*const distance_cm)(uint8_t *restrict work);
-    void (*const cmd_build)(uint8_t *restrict work);
-    void (*const cmd_open)(uint8_t *restrict work);
-    void (*const cmd_close)(uint8_t *restrict work);
-    void (*const cmd_read_firmware)(uint8_t *restrict work);
-    void (*const cmd_read_serial)(uint8_t *restrict work);
-    void (*const cmd_read_config)(uint8_t *restrict work);
-    void (*const cmd_read_register)(uint8_t *restrict work);
-    void (*const parse_ack)(uint8_t *restrict work);
-    void (*const ack_matches)(uint8_t *restrict work);
-    void (*const begin)(uint8_t *restrict work);
-    void (*const poll)(uint8_t *restrict work);
-    void (*const last)(uint8_t *restrict work);
+    void (*const parse_report)(uint8_t *work);
+    void (*const stream_reset)(uint8_t *work);
+    void (*const stream_push)(uint8_t *work);
+    void (*const present)(uint8_t *work);
+    void (*const distance_cm)(uint8_t *work);
+    void (*const cmd_build)(uint8_t *work);
+    void (*const cmd_open)(uint8_t *work);
+    void (*const cmd_close)(uint8_t *work);
+    void (*const cmd_read_firmware)(uint8_t *work);
+    void (*const cmd_read_serial)(uint8_t *work);
+    void (*const cmd_read_config)(uint8_t *work);
+    void (*const cmd_read_register)(uint8_t *work);
+    void (*const parse_ack)(uint8_t *work);
+    void (*const ack_matches)(uint8_t *work);
+    void (*const begin)(uint8_t *work);
+    void (*const poll)(uint8_t *work);
+    void (*const last)(uint8_t *work);
 } HmmdNs;
 
 /** @brief The one symbol this module exports. */

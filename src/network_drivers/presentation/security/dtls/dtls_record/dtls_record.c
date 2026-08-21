@@ -58,8 +58,8 @@ static uint64_t seq_decode(uint64_t expected, uint64_t truncated, unsigned bits)
 }
 
 // HKDF-Expand-Label of a traffic secret under the "dtls13" prefix (RFC 9147 §5.9), into out.
-static void expand_label(uint8_t *restrict work, uint8_t *scratch, const uint8_t *secret, const char *label,
-                         uint8_t *out, size_t out_len)
+static void expand_label(uint8_t *work, uint8_t *scratch, const uint8_t *secret, const char *label, uint8_t *out,
+                         size_t out_len)
 {
     Tls13KsV.bind.kdf = &DTLS13_KDF;
     Tls13KsV.bind.is384 = PROTO_FALSE; // the record keys of a TLS_AES_128_GCM_SHA256 connection
@@ -76,7 +76,7 @@ static void expand_label(uint8_t *restrict work, uint8_t *scratch, const uint8_t
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_dtls_record_keys_derive(uint8_t *restrict work, DtlsRecordKeys *out, DtlsCipher cipher, uint16_t epoch,
+void protocore_dtls_record_keys_derive(uint8_t *work, DtlsRecordKeys *out, DtlsCipher cipher, uint16_t epoch,
                                        const uint8_t *secret)
 {
     out->cipher = cipher;
@@ -109,7 +109,7 @@ void protocore_dtls_record_keys_derive(uint8_t *restrict work, DtlsRecordKeys *o
 // DTLSPlaintext
 // ---------------------------------------------------------------------------
 
-size_t protocore_dtls_record_plaintext_build(uint8_t *restrict work, uint8_t content_type, uint16_t epoch, uint64_t seq,
+size_t protocore_dtls_record_plaintext_build(uint8_t *work, uint8_t content_type, uint16_t epoch, uint64_t seq,
                                              const uint8_t *fragment, size_t frag_len, uint8_t *out, size_t out_cap)
 {
     (void)work;
@@ -139,8 +139,7 @@ size_t protocore_dtls_record_plaintext_build(uint8_t *restrict work, uint8_t con
     return total;
 }
 
-size_t protocore_dtls_record_plaintext_parse(uint8_t *restrict work, const uint8_t *rec, size_t rec_len,
-                                             DtlsPlaintext *out)
+size_t protocore_dtls_record_plaintext_parse(uint8_t *work, const uint8_t *rec, size_t rec_len, DtlsPlaintext *out)
 {
     (void)work;
 
@@ -169,7 +168,7 @@ size_t protocore_dtls_record_plaintext_parse(uint8_t *restrict work, const uint8
 // DTLSCiphertext
 // ---------------------------------------------------------------------------
 
-size_t protocore_dtls_record_protect(uint8_t *restrict work, DtlsRecordKeys *keys, uint64_t seq, uint8_t content_type,
+size_t protocore_dtls_record_protect(uint8_t *work, DtlsRecordKeys *keys, uint64_t seq, uint8_t content_type,
                                      const uint8_t *plaintext, size_t pt_len, uint8_t *out, size_t out_cap,
                                      const uint8_t *cid, size_t cid_len)
 {
@@ -240,9 +239,9 @@ size_t protocore_dtls_record_protect(uint8_t *restrict work, DtlsRecordKeys *key
     return total;
 }
 
-proto_bool protocore_dtls_record_unprotect(uint8_t *restrict work, DtlsRecordKeys *keys, uint64_t next_seq,
-                                           const uint8_t *rec, size_t rec_len, uint8_t *out, size_t out_cap,
-                                           DtlsCiphertext *info, const uint8_t *expected_cid, size_t expected_cid_len)
+proto_bool protocore_dtls_record_unprotect(uint8_t *work, DtlsRecordKeys *keys, uint64_t next_seq, const uint8_t *rec,
+                                           size_t rec_len, uint8_t *out, size_t out_cap, DtlsCiphertext *info,
+                                           const uint8_t *expected_cid, size_t expected_cid_len)
 {
     proto_bool ok = PROTO_FALSE;
     (void)work;
@@ -387,7 +386,7 @@ proto_bool protocore_dtls_record_unprotect(uint8_t *restrict work, DtlsRecordKey
 // Anti-replay sliding window (RFC 9147 §4.5.1)
 // ---------------------------------------------------------------------------
 
-void protocore_dtls_record_replay_init(uint8_t *restrict work, DtlsReplayWindow *w)
+void protocore_dtls_record_replay_init(uint8_t *work, DtlsReplayWindow *w)
 {
     (void)work;
 
@@ -396,7 +395,7 @@ void protocore_dtls_record_replay_init(uint8_t *restrict work, DtlsReplayWindow 
     w->seeded = PROTO_FALSE;
 }
 
-proto_bool protocore_dtls_record_replay_check(uint8_t *restrict work, const DtlsReplayWindow *w, uint64_t seq)
+proto_bool protocore_dtls_record_replay_check(uint8_t *work, const DtlsReplayWindow *w, uint64_t seq)
 {
     proto_bool ok = PROTO_FALSE;
     (void)work;
@@ -416,7 +415,7 @@ proto_bool protocore_dtls_record_replay_check(uint8_t *restrict work, const Dtls
     return ok;
 }
 
-void protocore_dtls_record_replay_mark(uint8_t *restrict work, DtlsReplayWindow *w, uint64_t seq)
+void protocore_dtls_record_replay_mark(uint8_t *work, DtlsReplayWindow *w, uint64_t seq)
 {
     (void)work;
 

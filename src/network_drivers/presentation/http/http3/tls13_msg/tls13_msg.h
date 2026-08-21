@@ -375,40 +375,40 @@ extern Tls13MsgVars Tls13MsgV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const parse_client_hello)(uint8_t *restrict work);
-    void (*const parse_server_hello)(uint8_t *restrict work);
-    void (*const build_client_hello)(uint8_t *restrict work);
-    void (*const parse_certificate)(uint8_t *restrict work);
-    void (*const parse_cert_verify)(uint8_t *restrict work);
-    void (*const parse_finished)(uint8_t *restrict work);
-    void (*const build_server_hello)(uint8_t *restrict work);
-    void (*const build_encrypted_extensions)(uint8_t *restrict work);
-    void (*const build_certificate)(uint8_t *restrict work);
-    void (*const build_cert_verify)(uint8_t *restrict work);
-    void (*const build_finished)(uint8_t *restrict work);
-    void (*const cert_verify_content)(uint8_t *restrict work);
-    void (*const build_hello_retry_request)(uint8_t *restrict work);
-    void (*const build_encrypted_extensions_empty)(uint8_t *restrict work);
-    void (*const build_message_hash)(uint8_t *restrict work);
+    void (*const parse_client_hello)(uint8_t *work);
+    void (*const parse_server_hello)(uint8_t *work);
+    void (*const build_client_hello)(uint8_t *work);
+    void (*const parse_certificate)(uint8_t *work);
+    void (*const parse_cert_verify)(uint8_t *work);
+    void (*const parse_finished)(uint8_t *work);
+    void (*const build_server_hello)(uint8_t *work);
+    void (*const build_encrypted_extensions)(uint8_t *work);
+    void (*const build_certificate)(uint8_t *work);
+    void (*const build_cert_verify)(uint8_t *work);
+    void (*const build_finished)(uint8_t *work);
+    void (*const cert_verify_content)(uint8_t *work);
+    void (*const build_hello_retry_request)(uint8_t *work);
+    void (*const build_encrypted_extensions_empty)(uint8_t *work);
+    void (*const build_message_hash)(uint8_t *work);
 } Tls13MsgNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Tls13MsgV or a region of the borrow at a fixed offset.
-void protocore_tls13_msg_parse_client_hello(uint8_t *restrict work);
-void protocore_tls13_msg_parse_server_hello(uint8_t *restrict work);
-void protocore_tls13_msg_build_client_hello(uint8_t *restrict work);
-void protocore_tls13_msg_parse_certificate(uint8_t *restrict work);
-void protocore_tls13_msg_parse_cert_verify(uint8_t *restrict work);
-void protocore_tls13_msg_parse_finished(uint8_t *restrict work);
-void protocore_tls13_msg_build_server_hello(uint8_t *restrict work);
-void protocore_tls13_msg_build_encrypted_extensions(uint8_t *restrict work);
-void protocore_tls13_msg_build_certificate(uint8_t *restrict work);
-void protocore_tls13_msg_build_cert_verify(uint8_t *restrict work);
-void protocore_tls13_msg_build_finished(uint8_t *restrict work);
-void protocore_tls13_msg_cert_verify_content(uint8_t *restrict work);
-void protocore_tls13_msg_build_hello_retry_request(uint8_t *restrict work);
-void protocore_tls13_msg_build_encrypted_extensions_empty(uint8_t *restrict work);
-void protocore_tls13_msg_build_message_hash(uint8_t *restrict work);
+void protocore_tls13_msg_parse_client_hello(uint8_t *work);
+void protocore_tls13_msg_parse_server_hello(uint8_t *work);
+void protocore_tls13_msg_build_client_hello(uint8_t *work);
+void protocore_tls13_msg_parse_certificate(uint8_t *work);
+void protocore_tls13_msg_parse_cert_verify(uint8_t *work);
+void protocore_tls13_msg_parse_finished(uint8_t *work);
+void protocore_tls13_msg_build_server_hello(uint8_t *work);
+void protocore_tls13_msg_build_encrypted_extensions(uint8_t *work);
+void protocore_tls13_msg_build_certificate(uint8_t *work);
+void protocore_tls13_msg_build_cert_verify(uint8_t *work);
+void protocore_tls13_msg_build_finished(uint8_t *work);
+void protocore_tls13_msg_cert_verify_content(uint8_t *work);
+void protocore_tls13_msg_build_hello_retry_request(uint8_t *work);
+void protocore_tls13_msg_build_encrypted_extensions_empty(uint8_t *work);
+void protocore_tls13_msg_build_message_hash(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

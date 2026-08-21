@@ -56,11 +56,11 @@ uint8_t *protocore_ads1115_span(void)
     return s_own.span;
 }
 
-void protocore_ads1115_config_single(uint8_t *restrict work);
-void protocore_ads1115_raw_to_uv(uint8_t *restrict work);
-void protocore_ads1115_read_raw(uint8_t *restrict work);
+void protocore_ads1115_config_single(uint8_t *work);
+void protocore_ads1115_raw_to_uv(uint8_t *work);
+void protocore_ads1115_read_raw(uint8_t *work);
 
-void protocore_ads1115_config_single(uint8_t *restrict work)
+void protocore_ads1115_config_single(uint8_t *work)
 {
     (void)work;
     uint8_t channel = Ads1115V.config_single_args.channel;
@@ -92,7 +92,7 @@ void protocore_ads1115_config_single(uint8_t *restrict work)
     Ads1115V.word = cfg;
 }
 
-void protocore_ads1115_raw_to_uv(uint8_t *restrict work)
+void protocore_ads1115_raw_to_uv(uint8_t *work)
 {
     (void)work;
     int16_t raw = Ads1115V.raw_to_uv_args.raw;
@@ -140,19 +140,19 @@ static_assert(ADS1115_OFF_CTX % _Alignof(Ads1115Ctx) == 0,
 // Zero is "no address set yet", which is the default address - stated here rather than on the
 // declaration so the context carries no initializer and can live in a borrow that arrives zeroed.
 // begin() applies the same default to the address it is handed.
-static uint8_t dev_addr(uint8_t *restrict work)
+static uint8_t dev_addr(uint8_t *work)
 {
     return ADS1115_CTX(work)->addr ? ADS1115_CTX(work)->addr : (uint8_t)PROTOCORE_ADS1115_I2C_ADDR;
 }
 
-static proto_bool wr16(uint8_t *restrict work, uint8_t reg, uint16_t v)
+static proto_bool wr16(uint8_t *work, uint8_t reg, uint16_t v)
 {
     ADS1115_CTX(work)->frame[0] = reg;
     (void)endian.wr16be(&ADS1115_CTX(work)->frame[1], v);
     return protocore_i2c_write(dev_addr(work), ADS1115_CTX(work)->frame, sizeof(ADS1115_CTX(work)->frame));
 }
 
-static proto_bool rd16(uint8_t *restrict work, uint8_t reg, uint16_t *v)
+static proto_bool rd16(uint8_t *work, uint8_t reg, uint16_t *v)
 {
     if (!protocore_i2c_write_read(dev_addr(work), &reg, 1, ADS1115_CTX(work)->frame, 2))
     {
@@ -162,7 +162,7 @@ static proto_bool rd16(uint8_t *restrict work, uint8_t reg, uint16_t *v)
     return PROTO_TRUE;
 }
 
-void protocore_ads1115_begin(uint8_t *restrict work)
+void protocore_ads1115_begin(uint8_t *work)
 {
     uint8_t addr = Ads1115V.begin_args.addr;
 
@@ -171,7 +171,7 @@ void protocore_ads1115_begin(uint8_t *restrict work)
     Ads1115V.ok = PROTO_TRUE;
 }
 
-void protocore_ads1115_read_raw(uint8_t *restrict work)
+void protocore_ads1115_read_raw(uint8_t *work)
 {
     (void)work;
     uint8_t channel = Ads1115V.read_raw_args.channel;
@@ -210,7 +210,7 @@ void protocore_ads1115_read_raw(uint8_t *restrict work)
     Ads1115V.ok = PROTO_TRUE;
 }
 
-void protocore_ads1115_read_uv(uint8_t *restrict work)
+void protocore_ads1115_read_uv(uint8_t *work)
 {
     (void)work;
     uint8_t channel = Ads1115V.read_uv_args.channel;

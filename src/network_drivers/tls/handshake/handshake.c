@@ -123,7 +123,7 @@ static size_t hs_body_len(const uint8_t *msg)
 }
 
 // Derive one direction's record keys from a traffic secret.
-static void keys_derive(uint8_t *restrict work, TlsRecordKeys *keys, const uint8_t *secret)
+static void keys_derive(uint8_t *work, TlsRecordKeys *keys, const uint8_t *secret)
 {
     TlsRecordV.key.keys = keys;
     TlsRecordV.key.cipher = TlsConnectionV.conn->cfg->cipher;
@@ -132,8 +132,8 @@ static void keys_derive(uint8_t *restrict work, TlsRecordKeys *keys, const uint8
 }
 
 // Seal one record under keys; bytes written to out, or 0.
-static size_t record_seal(uint8_t *restrict work, TlsRecordKeys *keys, uint8_t content_type, const uint8_t *pt,
-                          size_t pt_len, uint8_t *out, size_t out_cap)
+static size_t record_seal(uint8_t *work, TlsRecordKeys *keys, uint8_t content_type, const uint8_t *pt, size_t pt_len,
+                          uint8_t *out, size_t out_cap)
 {
     TlsRecordV.key.keys = keys;
     TlsRecordV.content_type = content_type;
@@ -146,8 +146,8 @@ static size_t record_seal(uint8_t *restrict work, TlsRecordKeys *keys, uint8_t c
 }
 
 // Open one received record under keys into out; false on an AEAD failure.
-static proto_bool record_open(uint8_t *restrict work, TlsRecordKeys *keys, const uint8_t *rec, size_t rec_len,
-                              uint8_t *out, size_t out_cap, TlsCiphertext *info)
+static proto_bool record_open(uint8_t *work, TlsRecordKeys *keys, const uint8_t *rec, size_t rec_len, uint8_t *out,
+                              size_t out_cap, TlsCiphertext *info)
 {
     TlsRecordV.key.keys = keys;
     TlsRecordV.sealed.rec = rec;
@@ -160,7 +160,7 @@ static proto_bool record_open(uint8_t *restrict work, TlsRecordKeys *keys, const
 }
 
 // The Finished verify_data over base_secret and the transcript hash at off, into terms[TLS_TERM_MAC].
-static void finished_mac(uint8_t *restrict work, const uint8_t *base_secret, size_t off)
+static void finished_mac(uint8_t *work, const uint8_t *base_secret, size_t off)
 {
     Tls13KsV.bind.ks = &TlsConnectionV.conn->ks;
     Tls13KsV.finished_args.base_secret = base_secret;
@@ -171,7 +171,7 @@ static void finished_mac(uint8_t *restrict work, const uint8_t *base_secret, siz
 
 // Fold the message standing in TX into the transcript and seal it under the handshake write keys.
 // Bytes written to out, or 0.
-static size_t emit_encrypted(uint8_t *restrict work, size_t msg_len, uint8_t *out, size_t out_cap)
+static size_t emit_encrypted(uint8_t *work, size_t msg_len, uint8_t *out, size_t out_cap)
 {
     if (msg_len == 0)
     {
@@ -188,7 +188,7 @@ static size_t emit_encrypted(uint8_t *restrict work, size_t msg_len, uint8_t *ou
 
 // The whole server answer to a ClientHello: ServerHello in the clear, then the encrypted flight.
 // Bytes written to out, or a negative alert-bearing failure, in ns->i32.
-static void server_flight(uint8_t *restrict work)
+static void server_flight(uint8_t *work)
 {
     TlsConn *c = TlsConnectionV.conn;
     uint8_t *out = TlsConnectionV.out_args.out;
@@ -379,7 +379,7 @@ static const char *alpn_select(const TlsConnConfig *cfg, const uint8_t *list, si
 // proceed, so the answer is a HelloRetryRequest naming the group whose share is wanted. sec 4.4.1:
 // ClientHello1 leaves the transcript as a synthetic message_hash, so the running hash restarts over
 // that stand-in before the HelloRetryRequest is folded in.
-static void server_hello_retry(uint8_t *restrict work, const uint8_t *msg, size_t len)
+static void server_hello_retry(uint8_t *work, const uint8_t *msg, size_t len)
 {
     TlsConn *c = TlsConnectionV.conn;
 
@@ -435,7 +435,7 @@ static void server_hello_retry(uint8_t *restrict work, const uint8_t *msg, size_
 }
 
 // A ClientHello arrived whole. Check it against the profile and answer it.
-static void server_on_client_hello(uint8_t *restrict work, const uint8_t *msg, size_t len)
+static void server_on_client_hello(uint8_t *work, const uint8_t *msg, size_t len)
 {
     TlsConn *c = TlsConnectionV.conn;
     Tls13MsgV.parse_client_hello_args.msg = msg;
@@ -484,7 +484,7 @@ static void server_on_client_hello(uint8_t *restrict work, const uint8_t *msg, s
 }
 
 // The client Finished closes the handshake: its MAC covers the transcript through server Finished.
-static void server_on_finished(uint8_t *restrict work, const uint8_t *msg, size_t len)
+static void server_on_finished(uint8_t *work, const uint8_t *msg, size_t len)
 {
     TlsConn *c = TlsConnectionV.conn;
     // sec 4.4.4: verify_data is Hash.length octets, so its width is the suite's, not a constant.
@@ -511,7 +511,7 @@ static void server_on_finished(uint8_t *restrict work, const uint8_t *msg, size_
 // The connection's persistent storage, split by offset. One borrow from the secure pool's
 // persistent end on first use, kept for the connection's life, so a connection that is initialised
 // again reuses the bytes it already holds.
-static proto_bool slot_storage(uint8_t *restrict work)
+static proto_bool slot_storage(uint8_t *work)
 {
     TlsConn *c = TlsConnectionV.conn;
     if (c->tx != NULL)
@@ -533,7 +533,7 @@ static proto_bool slot_storage(uint8_t *restrict work)
     return PROTO_TRUE;
 }
 
-void protocore_tls_connection_init(uint8_t *restrict work)
+void protocore_tls_connection_init(uint8_t *work)
 {
     TlsConn *c = TlsConnectionV.conn;
     if (!slot_storage(work))
@@ -576,7 +576,7 @@ void protocore_tls_connection_init(uint8_t *restrict work)
 // The ServerHello answers the offer: it fixes the group, so the ECDHE secret and the handshake
 // traffic keys both fall out here. This end writes with the client secret and reads with the
 // server's - the mirror of what server_flight derives.
-static void client_on_server_hello(uint8_t *restrict work, const uint8_t *msg, size_t len)
+static void client_on_server_hello(uint8_t *work, const uint8_t *msg, size_t len)
 {
     TlsConn *c = TlsConnectionV.conn;
     Tls13ServerHello sh;
@@ -651,7 +651,7 @@ static proto_bool peer_key_keep(protocore_x509_key_alg alg, const uint8_t *key, 
 // The peer's Certificate, by whichever credential this connection was configured to accept: an
 // X.509 chain to cfg->ca_der (RFC 5280 sec 6.1) plus the RFC 6125 name match, or the RFC 7250 raw
 // public key. Either way the key it carries is kept, because CertificateVerify is checked under it.
-static void client_on_certificate(uint8_t *restrict work, const uint8_t *msg, size_t len)
+static void client_on_certificate(uint8_t *work, const uint8_t *msg, size_t len)
 {
     TlsConn *c = TlsConnectionV.conn;
     const uint8_t *entry = NULL;
@@ -779,7 +779,7 @@ static protocore_x509_sig_alg sig_alg_of(uint16_t scheme)
 
 // CertificateVerify signs the transcript through the Certificate, so the hash is taken before this
 // message joins it (sec 4.4.3).
-static void client_on_cert_verify(uint8_t *restrict work, const uint8_t *msg, size_t len)
+static void client_on_cert_verify(uint8_t *work, const uint8_t *msg, size_t len)
 {
     TlsConn *c = TlsConnectionV.conn;
     uint16_t scheme = 0;
@@ -841,7 +841,7 @@ static void client_on_cert_verify(uint8_t *restrict work, const uint8_t *msg, si
 
 // The server Finished closes its flight. Checking it fixes the transcript the application keys are
 // taken over, and this end answers with its own Finished under the handshake write keys.
-static void client_on_server_finished(uint8_t *restrict work, const uint8_t *msg, size_t len)
+static void client_on_server_finished(uint8_t *work, const uint8_t *msg, size_t len)
 {
     TlsConn *c = TlsConnectionV.conn;
     const uint8_t *vd = NULL;
@@ -893,7 +893,7 @@ static void client_on_server_finished(uint8_t *restrict work, const uint8_t *msg
 
 // One message of the server's encrypted flight. The order is EncryptedExtensions, Certificate,
 // CertificateVerify, Finished (sec 4); anything else here is out of order.
-static void client_on_flight(uint8_t *restrict work, const uint8_t *msg, size_t len)
+static void client_on_flight(uint8_t *work, const uint8_t *msg, size_t len)
 {
     switch (msg[0])
     {
@@ -918,7 +918,7 @@ static void client_on_flight(uint8_t *restrict work, const uint8_t *msg, size_t 
 
 // The ClientHello opens the handshake: this end's key_share, the one suite and group it offers, and
 // the SNI and first ALPN name its configuration names. It travels as TLSPlaintext.
-void protocore_tls_connection_start(uint8_t *restrict work)
+void protocore_tls_connection_start(uint8_t *work)
 {
     TlsConn *c = TlsConnectionV.conn;
     TlsConnectionV.n = 0;
@@ -975,7 +975,7 @@ void protocore_tls_connection_start(uint8_t *restrict work)
 // The worker filled RX with one record and says how much. A ClientHello is in the clear, so it is
 // read where it lies; everything after it opens into TX, which builds nothing while a received
 // message stands in it.
-void protocore_tls_connection_process(uint8_t *restrict work)
+void protocore_tls_connection_process(uint8_t *work)
 {
     TlsConn *c = TlsConnectionV.conn;
     const size_t rx_len = TlsConnectionV.io.rx_len;
@@ -1059,17 +1059,17 @@ void protocore_tls_connection_process(uint8_t *restrict work)
     fail(TLS_ALERT_UNEXPECTED_MESSAGE);
 }
 
-void protocore_tls_connection_established(uint8_t *restrict work)
+void protocore_tls_connection_established(uint8_t *work)
 {
     TlsConnectionV.ok = (TlsConnectionV.conn->state == TLS_CONN_DONE);
 }
 
-void protocore_tls_connection_alert(uint8_t *restrict work)
+void protocore_tls_connection_alert(uint8_t *work)
 {
     TlsConnectionV.u8 = TlsConnectionV.conn->alert;
 }
 
-void protocore_tls_connection_seal_app(uint8_t *restrict work)
+void protocore_tls_connection_seal_app(uint8_t *work)
 {
     TlsConnectionV.n = 0;
     if (!TlsConnectionV.conn->ap_keys_ready)
@@ -1081,7 +1081,7 @@ void protocore_tls_connection_seal_app(uint8_t *restrict work)
                     TlsConnectionV.io.len, TlsConnectionV.out_args.out, TlsConnectionV.out_args.out_cap);
 }
 
-void protocore_tls_connection_open_app(uint8_t *restrict work)
+void protocore_tls_connection_open_app(uint8_t *work)
 {
     TlsConnectionV.ok = PROTO_FALSE;
     if (!TlsConnectionV.conn->ap_keys_ready)

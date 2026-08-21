@@ -40,7 +40,7 @@ uint8_t *protocore_bus_capture_span(void)
     return s_own.span;
 }
 
-void protocore_bus_capture_can_to_socketcan(uint8_t *restrict work)
+void protocore_bus_capture_can_to_socketcan(uint8_t *work)
 {
     (void)work;
     const CanFrame *f = BusCaptureV.can_to_socketcan_args.f;
@@ -118,7 +118,7 @@ static_assert(
 // All bus-capture bind state, owned by one instance (internal linkage): the frame sink and
 // the running flag, grouped so it is one named owner, unreachable from any other TU.
 
-void protocore_bus_capture_begin(uint8_t *restrict work)
+void protocore_bus_capture_begin(uint8_t *work)
 {
     int tx_pin = BusCaptureV.begin_args.tx_pin;
     int rx_pin = BusCaptureV.begin_args.rx_pin;
@@ -135,7 +135,7 @@ void protocore_bus_capture_begin(uint8_t *restrict work)
     BusCaptureV.ok = PROTO_TRUE;
 }
 
-void protocore_bus_capture_poll(uint8_t *restrict work)
+void protocore_bus_capture_poll(uint8_t *work)
 {
 
     if (!BUS_CAPTURE_CTX(work)->running || !BUS_CAPTURE_CTX(work)->sink)
@@ -158,7 +158,7 @@ void protocore_bus_capture_poll(uint8_t *restrict work)
     }
 }
 
-void protocore_bus_capture_end(uint8_t *restrict work)
+void protocore_bus_capture_end(uint8_t *work)
 {
 
     if (!BUS_CAPTURE_CTX(work)->running)
@@ -179,7 +179,7 @@ void protocore_bus_capture_end(uint8_t *restrict work)
 // failed on `conflicting types` before reaching anything else. Nothing reported it, because no env
 // states PROTOCORE_HAS_VENDOR_CAN=0 and this half has never been compiled.
 
-void protocore_bus_capture_begin(uint8_t *restrict work)
+void protocore_bus_capture_begin(uint8_t *work)
 {
     // The context is still cleared, so a later poll or end reads a stopped capture rather than
     // whatever the borrow held before.
@@ -188,12 +188,12 @@ void protocore_bus_capture_begin(uint8_t *restrict work)
     BusCaptureV.ok = PROTO_FALSE; // no controller was opened
 }
 
-void protocore_bus_capture_poll(uint8_t *restrict work)
+void protocore_bus_capture_poll(uint8_t *work)
 {
     (void)work; // no controller, so nothing to drain
 }
 
-void protocore_bus_capture_end(uint8_t *restrict work)
+void protocore_bus_capture_end(uint8_t *work)
 {
     (void)work; // no controller, so nothing to stop
 }

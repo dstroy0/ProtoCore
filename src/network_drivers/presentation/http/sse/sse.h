@@ -153,28 +153,28 @@ extern SseVars SseV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const route_add)(uint8_t *restrict work);
-    void (*const route_reset)(uint8_t *restrict work);
-    void (*const route_connect)(uint8_t *restrict work);
-    void (*const init)(uint8_t *restrict work);
-    void (*const alloc)(uint8_t *restrict work);
-    void (*const find)(uint8_t *restrict work);
-    void (*const free)(uint8_t *restrict work);
-    void (*const format)(uint8_t *restrict work);
-    void (*const write)(uint8_t *restrict work);
+    void (*const route_add)(uint8_t *work);
+    void (*const route_reset)(uint8_t *work);
+    void (*const route_connect)(uint8_t *work);
+    void (*const init)(uint8_t *work);
+    void (*const alloc)(uint8_t *work);
+    void (*const find)(uint8_t *work);
+    void (*const free)(uint8_t *work);
+    void (*const format)(uint8_t *work);
+    void (*const write)(uint8_t *work);
 } SseNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SseV or a region of the borrow at a fixed offset.
-void protocore_sse_route_add(uint8_t *restrict work);
-void protocore_sse_route_reset(uint8_t *restrict work);
-void protocore_sse_route_connect(uint8_t *restrict work);
-void protocore_sse_init(uint8_t *restrict work);
-void protocore_sse_alloc(uint8_t *restrict work);
-void protocore_sse_find(uint8_t *restrict work);
-void protocore_sse_free(uint8_t *restrict work);
-void protocore_sse_format(uint8_t *restrict work);
-void protocore_sse_write(uint8_t *restrict work);
+void protocore_sse_route_add(uint8_t *work);
+void protocore_sse_route_reset(uint8_t *work);
+void protocore_sse_route_connect(uint8_t *work);
+void protocore_sse_init(uint8_t *work);
+void protocore_sse_alloc(uint8_t *work);
+void protocore_sse_find(uint8_t *work);
+void protocore_sse_free(uint8_t *work);
+void protocore_sse_format(uint8_t *work);
+void protocore_sse_write(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

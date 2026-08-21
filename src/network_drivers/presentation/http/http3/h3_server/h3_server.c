@@ -23,7 +23,7 @@ PROTOCORE_BEGIN_DECLS
 
 // Randomness for the QUIC ephemeral X25519 key, the ServerHello random, and our connection IDs:
 // four bytes per platform draw, the last draw truncated to what is left.
-static void rng(uint8_t *restrict work)
+static void rng(uint8_t *work)
 {
     (void)work;
     uint8_t *out = H3Server.rng_args.out;
@@ -51,7 +51,7 @@ static proto_bool protocore_h3_resp_sink(uint8_t slot, int code, const char *con
                                          (const uint8_t *)body, len);
 }
 
-static void request(uint8_t *restrict work)
+static void request(uint8_t *work)
 {
     (void)work;
     const uint32_t conn_id = H3Server.stream.conn_id;

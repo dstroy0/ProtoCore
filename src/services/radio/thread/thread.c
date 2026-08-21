@@ -49,7 +49,7 @@ static proto_bool put_stuffed(uint8_t *out, uint16_t *p, uint16_t cap, uint8_t b
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-uint8_t protocore_thread_spinel_pack_uint(uint8_t *restrict work, uint32_t value, uint8_t *out, uint8_t cap)
+uint8_t protocore_thread_spinel_pack_uint(uint8_t *work, uint32_t value, uint8_t *out, uint8_t cap)
 {
     (void)work;
 
@@ -75,7 +75,7 @@ uint8_t protocore_thread_spinel_pack_uint(uint8_t *restrict work, uint32_t value
     return n;
 }
 
-int protocore_thread_spinel_unpack_uint(uint8_t *restrict work, const uint8_t *raw, uint8_t len, uint32_t *value)
+int protocore_thread_spinel_unpack_uint(uint8_t *work, const uint8_t *raw, uint8_t len, uint32_t *value)
 {
     int n_result = 0;
     (void)work;
@@ -109,7 +109,7 @@ int protocore_thread_spinel_unpack_uint(uint8_t *restrict work, const uint8_t *r
     return n_result;
 }
 
-uint16_t protocore_thread_spinel_command_build(uint8_t *restrict work, uint8_t header, uint32_t cmd, uint32_t prop,
+uint16_t protocore_thread_spinel_command_build(uint8_t *work, uint8_t header, uint32_t cmd, uint32_t prop,
                                                const uint8_t *value, uint16_t value_len, uint8_t *out, uint16_t cap)
 {
     if (!out || cap < 1 || (value == NULL && value_len > 0))
@@ -143,7 +143,7 @@ uint16_t protocore_thread_spinel_command_build(uint8_t *restrict work, uint8_t h
     return (uint16_t)(p + value_len);
 }
 
-int protocore_thread_spinel_command_parse(uint8_t *restrict work, const uint8_t *payload, uint16_t len, uint8_t *header,
+int protocore_thread_spinel_command_parse(uint8_t *work, const uint8_t *payload, uint16_t len, uint8_t *header,
                                           uint32_t *cmd, uint32_t *prop, const uint8_t **value, uint16_t *value_len)
 {
     if (!payload || len < 1)
@@ -193,7 +193,7 @@ int protocore_thread_spinel_command_parse(uint8_t *restrict work, const uint8_t 
 
 // --- Spinel value semantics -------------------------------------------------------------
 
-void protocore_thread_spinel_reader_init(uint8_t *restrict work, SpinelReader *r, const uint8_t *value, uint16_t len)
+void protocore_thread_spinel_reader_init(uint8_t *work, SpinelReader *r, const uint8_t *value, uint16_t len)
 {
     (void)work;
 
@@ -223,7 +223,7 @@ static const uint8_t *take(SpinelReader *r, uint16_t n)
     return at;
 }
 
-proto_bool protocore_thread_spinel_get_bool(uint8_t *restrict work, SpinelReader *r, proto_bool *out)
+proto_bool protocore_thread_spinel_get_bool(uint8_t *work, SpinelReader *r, proto_bool *out)
 {
     (void)work;
 
@@ -239,7 +239,7 @@ proto_bool protocore_thread_spinel_get_bool(uint8_t *restrict work, SpinelReader
     return PROTO_TRUE;
 }
 
-proto_bool protocore_thread_spinel_get_u8(uint8_t *restrict work, SpinelReader *r, uint8_t *out)
+proto_bool protocore_thread_spinel_get_u8(uint8_t *work, SpinelReader *r, uint8_t *out)
 {
     (void)work;
 
@@ -255,7 +255,7 @@ proto_bool protocore_thread_spinel_get_u8(uint8_t *restrict work, SpinelReader *
     return PROTO_TRUE;
 }
 
-proto_bool protocore_thread_spinel_get_i8(uint8_t *restrict work, SpinelReader *r, int8_t *out)
+proto_bool protocore_thread_spinel_get_i8(uint8_t *work, SpinelReader *r, int8_t *out)
 {
     (void)work;
 
@@ -271,7 +271,7 @@ proto_bool protocore_thread_spinel_get_i8(uint8_t *restrict work, SpinelReader *
     return PROTO_TRUE;
 }
 
-proto_bool protocore_thread_spinel_get_u16(uint8_t *restrict work, SpinelReader *r, uint16_t *out)
+proto_bool protocore_thread_spinel_get_u16(uint8_t *work, SpinelReader *r, uint16_t *out)
 {
     (void)work;
 
@@ -287,7 +287,7 @@ proto_bool protocore_thread_spinel_get_u16(uint8_t *restrict work, SpinelReader 
     return PROTO_TRUE;
 }
 
-proto_bool protocore_thread_spinel_get_i16(uint8_t *restrict work, SpinelReader *r, int16_t *out)
+proto_bool protocore_thread_spinel_get_i16(uint8_t *work, SpinelReader *r, int16_t *out)
 {
     uint16_t v = 0;
     proto_bool thread_ok = Thread.spinel_get_u16(work, r, &v);
@@ -302,7 +302,7 @@ proto_bool protocore_thread_spinel_get_i16(uint8_t *restrict work, SpinelReader 
     return PROTO_TRUE;
 }
 
-proto_bool protocore_thread_spinel_get_u32(uint8_t *restrict work, SpinelReader *r, uint32_t *out)
+proto_bool protocore_thread_spinel_get_u32(uint8_t *work, SpinelReader *r, uint32_t *out)
 {
     (void)work;
 
@@ -318,7 +318,7 @@ proto_bool protocore_thread_spinel_get_u32(uint8_t *restrict work, SpinelReader 
     return PROTO_TRUE;
 }
 
-proto_bool protocore_thread_spinel_get_i32(uint8_t *restrict work, SpinelReader *r, int32_t *out)
+proto_bool protocore_thread_spinel_get_i32(uint8_t *work, SpinelReader *r, int32_t *out)
 {
     uint32_t v = 0;
     proto_bool thread_ok = Thread.spinel_get_u32(work, r, &v);
@@ -333,7 +333,7 @@ proto_bool protocore_thread_spinel_get_i32(uint8_t *restrict work, SpinelReader 
     return PROTO_TRUE;
 }
 
-proto_bool protocore_thread_spinel_get_uint(uint8_t *restrict work, SpinelReader *r, uint32_t *out)
+proto_bool protocore_thread_spinel_get_uint(uint8_t *work, SpinelReader *r, uint32_t *out)
 {
     if (!r || r->err)
     {
@@ -356,7 +356,7 @@ proto_bool protocore_thread_spinel_get_uint(uint8_t *restrict work, SpinelReader
     return PROTO_TRUE;
 }
 
-proto_bool protocore_thread_spinel_get_eui64(uint8_t *restrict work, SpinelReader *r, const uint8_t **out8)
+proto_bool protocore_thread_spinel_get_eui64(uint8_t *work, SpinelReader *r, const uint8_t **out8)
 {
     (void)work;
 
@@ -372,7 +372,7 @@ proto_bool protocore_thread_spinel_get_eui64(uint8_t *restrict work, SpinelReade
     return PROTO_TRUE;
 }
 
-proto_bool protocore_thread_spinel_get_ipv6(uint8_t *restrict work, SpinelReader *r, const uint8_t **out16)
+proto_bool protocore_thread_spinel_get_ipv6(uint8_t *work, SpinelReader *r, const uint8_t **out16)
 {
     (void)work;
 
@@ -388,8 +388,7 @@ proto_bool protocore_thread_spinel_get_ipv6(uint8_t *restrict work, SpinelReader
     return PROTO_TRUE;
 }
 
-proto_bool protocore_thread_spinel_get_utf8(uint8_t *restrict work, SpinelReader *r, const char **out,
-                                            uint16_t *out_len)
+proto_bool protocore_thread_spinel_get_utf8(uint8_t *work, SpinelReader *r, const char **out, uint16_t *out_len)
 {
     (void)work;
 
@@ -419,8 +418,7 @@ proto_bool protocore_thread_spinel_get_utf8(uint8_t *restrict work, SpinelReader
     return PROTO_TRUE;
 }
 
-proto_bool protocore_thread_spinel_get_data(uint8_t *restrict work, SpinelReader *r, const uint8_t **out,
-                                            uint16_t *out_len)
+proto_bool protocore_thread_spinel_get_data(uint8_t *work, SpinelReader *r, const uint8_t **out, uint16_t *out_len)
 {
     (void)work;
 
@@ -440,8 +438,7 @@ proto_bool protocore_thread_spinel_get_data(uint8_t *restrict work, SpinelReader
     return PROTO_TRUE;
 }
 
-proto_bool protocore_thread_spinel_get_data_wlen(uint8_t *restrict work, SpinelReader *r, const uint8_t **out,
-                                                 uint16_t *out_len)
+proto_bool protocore_thread_spinel_get_data_wlen(uint8_t *work, SpinelReader *r, const uint8_t **out, uint16_t *out_len)
 {
     uint16_t n = 0;
     proto_bool thread_ok = Thread.spinel_get_u16(work, r, &n);
@@ -465,14 +462,14 @@ proto_bool protocore_thread_spinel_get_data_wlen(uint8_t *restrict work, SpinelR
     return PROTO_TRUE;
 }
 
-proto_bool protocore_thread_spinel_reader_ok(uint8_t *restrict work, const SpinelReader *r)
+proto_bool protocore_thread_spinel_reader_ok(uint8_t *work, const SpinelReader *r)
 {
     (void)work;
 
     return r && !r->err;
 }
 
-void protocore_thread_spinel_writer_init(uint8_t *restrict work, SpinelWriter *w, uint8_t *out, uint16_t cap)
+void protocore_thread_spinel_writer_init(uint8_t *work, SpinelWriter *w, uint8_t *out, uint16_t cap)
 {
     (void)work;
 
@@ -502,7 +499,7 @@ static uint8_t *room(SpinelWriter *w, uint16_t n)
     return at;
 }
 
-proto_bool protocore_thread_spinel_put_bool(uint8_t *restrict work, SpinelWriter *w, proto_bool v)
+proto_bool protocore_thread_spinel_put_bool(uint8_t *work, SpinelWriter *w, proto_bool v)
 {
     (void)work;
 
@@ -515,7 +512,7 @@ proto_bool protocore_thread_spinel_put_bool(uint8_t *restrict work, SpinelWriter
     return PROTO_TRUE;
 }
 
-proto_bool protocore_thread_spinel_put_u8(uint8_t *restrict work, SpinelWriter *w, uint8_t v)
+proto_bool protocore_thread_spinel_put_u8(uint8_t *work, SpinelWriter *w, uint8_t v)
 {
     (void)work;
 
@@ -528,13 +525,13 @@ proto_bool protocore_thread_spinel_put_u8(uint8_t *restrict work, SpinelWriter *
     return PROTO_TRUE;
 }
 
-void protocore_thread_spinel_put_i8(uint8_t *restrict work, SpinelWriter *w, int8_t v)
+void protocore_thread_spinel_put_i8(uint8_t *work, SpinelWriter *w, int8_t v)
 {
 
     Thread.spinel_put_u8(work, w, (uint8_t)v);
 }
 
-proto_bool protocore_thread_spinel_put_u16(uint8_t *restrict work, SpinelWriter *w, uint16_t v)
+proto_bool protocore_thread_spinel_put_u16(uint8_t *work, SpinelWriter *w, uint16_t v)
 {
     (void)work;
 
@@ -548,13 +545,13 @@ proto_bool protocore_thread_spinel_put_u16(uint8_t *restrict work, SpinelWriter 
     return PROTO_TRUE;
 }
 
-void protocore_thread_spinel_put_i16(uint8_t *restrict work, SpinelWriter *w, int16_t v)
+void protocore_thread_spinel_put_i16(uint8_t *work, SpinelWriter *w, int16_t v)
 {
 
     Thread.spinel_put_u16(work, w, (uint16_t)v);
 }
 
-proto_bool protocore_thread_spinel_put_u32(uint8_t *restrict work, SpinelWriter *w, uint32_t v)
+proto_bool protocore_thread_spinel_put_u32(uint8_t *work, SpinelWriter *w, uint32_t v)
 {
     (void)work;
 
@@ -570,13 +567,13 @@ proto_bool protocore_thread_spinel_put_u32(uint8_t *restrict work, SpinelWriter 
     return PROTO_TRUE;
 }
 
-void protocore_thread_spinel_put_i32(uint8_t *restrict work, SpinelWriter *w, int32_t v)
+void protocore_thread_spinel_put_i32(uint8_t *work, SpinelWriter *w, int32_t v)
 {
 
     Thread.spinel_put_u32(work, w, (uint32_t)v);
 }
 
-proto_bool protocore_thread_spinel_put_uint(uint8_t *restrict work, SpinelWriter *w, uint32_t v)
+proto_bool protocore_thread_spinel_put_uint(uint8_t *work, SpinelWriter *w, uint32_t v)
 {
     if (!w || w->err)
     {
@@ -602,7 +599,7 @@ proto_bool protocore_thread_spinel_put_uint(uint8_t *restrict work, SpinelWriter
     return PROTO_TRUE;
 }
 
-proto_bool protocore_thread_spinel_put_eui64(uint8_t *restrict work, SpinelWriter *w, const uint8_t *v8)
+proto_bool protocore_thread_spinel_put_eui64(uint8_t *work, SpinelWriter *w, const uint8_t *v8)
 {
     (void)work;
 
@@ -626,7 +623,7 @@ proto_bool protocore_thread_spinel_put_eui64(uint8_t *restrict work, SpinelWrite
     return PROTO_TRUE;
 }
 
-proto_bool protocore_thread_spinel_put_ipv6(uint8_t *restrict work, SpinelWriter *w, const uint8_t *v16)
+proto_bool protocore_thread_spinel_put_ipv6(uint8_t *work, SpinelWriter *w, const uint8_t *v16)
 {
     (void)work;
 
@@ -650,7 +647,7 @@ proto_bool protocore_thread_spinel_put_ipv6(uint8_t *restrict work, SpinelWriter
     return PROTO_TRUE;
 }
 
-proto_bool protocore_thread_spinel_put_utf8(uint8_t *restrict work, SpinelWriter *w, const char *s)
+proto_bool protocore_thread_spinel_put_utf8(uint8_t *work, SpinelWriter *w, const char *s)
 {
     (void)work;
 
@@ -679,7 +676,7 @@ proto_bool protocore_thread_spinel_put_utf8(uint8_t *restrict work, SpinelWriter
     return PROTO_TRUE;
 }
 
-proto_bool protocore_thread_spinel_put_data(uint8_t *restrict work, SpinelWriter *w, const uint8_t *d, uint16_t n)
+proto_bool protocore_thread_spinel_put_data(uint8_t *work, SpinelWriter *w, const uint8_t *d, uint16_t n)
 {
     (void)work;
 
@@ -703,7 +700,7 @@ proto_bool protocore_thread_spinel_put_data(uint8_t *restrict work, SpinelWriter
     return PROTO_TRUE;
 }
 
-proto_bool protocore_thread_spinel_put_data_wlen(uint8_t *restrict work, SpinelWriter *w, const uint8_t *d, uint16_t n)
+proto_bool protocore_thread_spinel_put_data_wlen(uint8_t *work, SpinelWriter *w, const uint8_t *d, uint16_t n)
 {
     proto_bool thread_ok = Thread.spinel_put_u16(work, w, n);
     if (!thread_ok)
@@ -714,7 +711,7 @@ proto_bool protocore_thread_spinel_put_data_wlen(uint8_t *restrict work, SpinelW
     return PROTO_FALSE;
 }
 
-uint16_t protocore_thread_spinel_writer_len(uint8_t *restrict work, const SpinelWriter *w)
+uint16_t protocore_thread_spinel_writer_len(uint8_t *work, const SpinelWriter *w)
 {
     (void)work;
 
@@ -787,7 +784,7 @@ static const StatusName k_status[] = {
     {SPINEL_STATUS_EMPTY, "EMPTY"},
 };
 
-const SpinelPropInfo *protocore_thread_spinel_prop_lookup(uint8_t *restrict work, uint32_t id)
+const SpinelPropInfo *protocore_thread_spinel_prop_lookup(uint8_t *work, uint32_t id)
 {
     (void)work;
 
@@ -801,7 +798,7 @@ const SpinelPropInfo *protocore_thread_spinel_prop_lookup(uint8_t *restrict work
     return NULL;
 }
 
-const char *protocore_thread_spinel_prop_name(uint8_t *restrict work, uint32_t id)
+const char *protocore_thread_spinel_prop_name(uint8_t *work, uint32_t id)
 {
 
     const SpinelPropInfo *thread_ptr = Thread.spinel_prop_lookup(work, id);
@@ -809,7 +806,7 @@ const char *protocore_thread_spinel_prop_name(uint8_t *restrict work, uint32_t i
     return e ? e->name : "UNKNOWN";
 }
 
-const char *protocore_thread_spinel_status_name(uint8_t *restrict work, uint32_t status)
+const char *protocore_thread_spinel_status_name(uint8_t *work, uint32_t status)
 {
     (void)work;
 
@@ -827,7 +824,7 @@ const char *protocore_thread_spinel_status_name(uint8_t *restrict work, uint32_t
     return "UNKNOWN";
 }
 
-uint16_t protocore_thread_spinel_fcs(uint8_t *restrict work, const uint8_t *buf, uint16_t len)
+uint16_t protocore_thread_spinel_fcs(uint8_t *work, const uint8_t *buf, uint16_t len)
 {
     // The HDLC-lite FCS is CRC-16/X-25 (reflected poly 0x8408, init 0xFFFF, xorout 0xFFFF).
     CrcV.args.params = &PROTOCORE_CRC16_X25;
@@ -837,8 +834,8 @@ uint16_t protocore_thread_spinel_fcs(uint8_t *restrict work, const uint8_t *buf,
     return (uint16_t)CrcV.value;
 }
 
-uint16_t protocore_thread_spinel_frame_encode(uint8_t *restrict work, const uint8_t *payload, uint16_t len,
-                                              uint8_t *out, uint16_t cap)
+uint16_t protocore_thread_spinel_frame_encode(uint8_t *work, const uint8_t *payload, uint16_t len, uint8_t *out,
+                                              uint16_t cap)
 {
     if (!out || len > PROTOCORE_THREAD_MAX_DATA || (payload == NULL && len > 0))
     {
@@ -867,7 +864,7 @@ uint16_t protocore_thread_spinel_frame_encode(uint8_t *restrict work, const uint
     return p;
 }
 
-int protocore_thread_spinel_frame_decode(uint8_t *restrict work, const uint8_t *raw, uint16_t len, uint8_t *payload,
+int protocore_thread_spinel_frame_decode(uint8_t *work, const uint8_t *raw, uint16_t len, uint8_t *payload,
                                          uint16_t pay_cap, uint16_t *pay_len)
 {
     int n_result = 0;

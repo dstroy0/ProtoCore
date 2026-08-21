@@ -89,8 +89,8 @@ static const uint16_t DEC_SYM[257] = {
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_hpack_prim_encode_int(uint8_t *restrict work, uint8_t *out, size_t cap, uint8_t prefix_bits,
-                                       uint8_t flags, uint32_t value)
+size_t protocore_hpack_prim_encode_int(uint8_t *work, uint8_t *out, size_t cap, uint8_t prefix_bits, uint8_t flags,
+                                       uint32_t value)
 {
     (void)work;
 
@@ -124,7 +124,7 @@ size_t protocore_hpack_prim_encode_int(uint8_t *restrict work, uint8_t *out, siz
     return i;
 }
 
-proto_bool protocore_hpack_prim_decode_int(uint8_t *restrict work, const uint8_t *in, size_t len, uint8_t prefix_bits,
+proto_bool protocore_hpack_prim_decode_int(uint8_t *work, const uint8_t *in, size_t len, uint8_t prefix_bits,
                                            size_t *consumed, uint32_t *value)
 {
     (void)work;
@@ -172,7 +172,7 @@ proto_bool protocore_hpack_prim_decode_int(uint8_t *restrict work, const uint8_t
     return PROTO_TRUE;
 }
 
-size_t protocore_hpack_prim_huff_len(uint8_t *restrict work, const char *s, size_t n)
+size_t protocore_hpack_prim_huff_len(uint8_t *work, const char *s, size_t n)
 {
     (void)work;
 
@@ -184,7 +184,7 @@ size_t protocore_hpack_prim_huff_len(uint8_t *restrict work, const char *s, size
     return (bits + 7) / 8;
 }
 
-size_t protocore_hpack_prim_huff_encode(uint8_t *restrict work, uint8_t *out, size_t cap, const char *s, size_t n)
+size_t protocore_hpack_prim_huff_encode(uint8_t *work, uint8_t *out, size_t cap, const char *s, size_t n)
 {
     (void)work;
 
@@ -218,7 +218,7 @@ size_t protocore_hpack_prim_huff_encode(uint8_t *restrict work, uint8_t *out, si
     return o;
 }
 
-proto_bool protocore_hpack_prim_huff_decode(uint8_t *restrict work, const uint8_t *in, size_t n, char *out, size_t cap,
+proto_bool protocore_hpack_prim_huff_decode(uint8_t *work, const uint8_t *in, size_t n, char *out, size_t cap,
                                             size_t *out_len)
 {
     (void)work;
@@ -284,8 +284,8 @@ proto_bool protocore_hpack_prim_huff_decode(uint8_t *restrict work, const uint8_
 
 // --- string literal (RFC 7541 sec 5.2; RFC 9204 reuses it verbatim) -------------------------------
 
-proto_bool protocore_hpack_prim_decode_str(uint8_t *restrict work, const uint8_t *block, size_t len, size_t *pos,
-                                           char *out, size_t cap, size_t *out_len)
+proto_bool protocore_hpack_prim_decode_str(uint8_t *work, const uint8_t *block, size_t len, size_t *pos, char *out,
+                                           size_t cap, size_t *out_len)
 {
     if (*pos >= len)
     {
@@ -325,7 +325,7 @@ proto_bool protocore_hpack_prim_decode_str(uint8_t *restrict work, const uint8_t
     return PROTO_TRUE;
 }
 
-size_t protocore_hpack_prim_encode_str(uint8_t *restrict work, uint8_t *out, size_t cap, const char *s, size_t n)
+size_t protocore_hpack_prim_encode_str(uint8_t *work, uint8_t *out, size_t cap, const char *s, size_t n)
 {
     size_t hpack_prim_n = HpackPrim.huff_len(work, s, n);
     size_t hl = hpack_prim_n;

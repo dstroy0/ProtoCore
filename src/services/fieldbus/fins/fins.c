@@ -50,9 +50,9 @@ static void read_header(const uint8_t *buf, FinsHeader *h)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_fins_build_command(uint8_t *restrict work);
+void protocore_fins_build_command(uint8_t *work);
 
-void protocore_fins_build_command(uint8_t *restrict work)
+void protocore_fins_build_command(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = FinsV.build_command_args.buf;
@@ -85,7 +85,7 @@ void protocore_fins_build_command(uint8_t *restrict work)
     FinsV.n = p;
 }
 
-void protocore_fins_build_memory_area_read(uint8_t *restrict work)
+void protocore_fins_build_memory_area_read(uint8_t *work)
 {
     uint8_t *buf = FinsV.build_memory_area_read_args.buf;
     size_t cap = FinsV.build_memory_area_read_args.cap;
@@ -112,7 +112,7 @@ void protocore_fins_build_memory_area_read(uint8_t *restrict work)
     protocore_fins_build_command(work);
 }
 
-void protocore_fins_build_memory_area_write(uint8_t *restrict work)
+void protocore_fins_build_memory_area_write(uint8_t *work)
 {
     uint8_t *buf = FinsV.build_memory_area_write_args.buf;
     size_t cap = FinsV.build_memory_area_write_args.cap;
@@ -163,7 +163,7 @@ void protocore_fins_build_memory_area_write(uint8_t *restrict work)
     FinsV.n = n + data_len;
 }
 
-void protocore_fins_build_run(uint8_t *restrict work)
+void protocore_fins_build_run(uint8_t *work)
 {
     uint8_t *buf = FinsV.build_run_args.buf;
     size_t cap = FinsV.build_run_args.cap;
@@ -184,7 +184,7 @@ void protocore_fins_build_run(uint8_t *restrict work)
     protocore_fins_build_command(work);
 }
 
-void protocore_fins_build_stop(uint8_t *restrict work)
+void protocore_fins_build_stop(uint8_t *work)
 {
     uint8_t *buf = FinsV.build_stop_args.buf;
     size_t cap = FinsV.build_stop_args.cap;
@@ -200,7 +200,7 @@ void protocore_fins_build_stop(uint8_t *restrict work)
     protocore_fins_build_command(work);
 }
 
-void protocore_fins_parse_command(uint8_t *restrict work)
+void protocore_fins_parse_command(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = FinsV.parse_command_args.buf;
@@ -220,7 +220,7 @@ void protocore_fins_parse_command(uint8_t *restrict work)
     FinsV.ok = PROTO_TRUE;
 }
 
-void protocore_fins_parse_response(uint8_t *restrict work)
+void protocore_fins_parse_response(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = FinsV.parse_response_args.buf;

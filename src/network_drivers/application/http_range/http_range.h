@@ -31,7 +31,7 @@ edge cache (PROTOCORE_ENABLE_RANGE).
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    int (*http_parse_byte_range)(uint8_t *restrict, const char *, size_t, size_t *, size_t *);
+    int (*http_parse_byte_range)(uint8_t *, const char *, size_t, size_t *, size_t *);
 } HttpRangeNs;
 PROTOCORE_NS_LAYOUT(HttpRangeNs, http_parse_byte_range);
 
@@ -44,7 +44,7 @@ PROTOCORE_NS_LAYOUT(HttpRangeNs, http_parse_byte_range);
  * @param out_end Out end
  * @return The int.
  */
-int protocore_http_range_http_parse_byte_range(uint8_t *restrict work, const char *hdr, size_t size, size_t *out_start,
+int protocore_http_range_http_parse_byte_range(uint8_t *work, const char *hdr, size_t size, size_t *out_start,
                                                size_t *out_end);
 
 /** @brief Module namespace. */

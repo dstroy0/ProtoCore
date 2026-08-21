@@ -77,7 +77,7 @@ static_assert(WS_OFF_CTX % _Alignof(WsCtx) == 0,
 // The region, at its offset in the caller's borrow.
 #define WS_CTX(w) ((WsCtx *)(void *)((w) + WS_OFF_CTX))
 
-void protocore_ws_init(uint8_t *restrict work)
+void protocore_ws_init(uint8_t *work)
 {
     (void)work;
     for (int i = 0; i < MAX_WS_CONNS; i++)
@@ -87,19 +87,19 @@ void protocore_ws_init(uint8_t *restrict work)
     }
 }
 
-void protocore_ws_active(uint8_t *restrict work)
+void protocore_ws_active(uint8_t *work)
 {
     (void)work;
     WsV.ok = WsV.ws_id < MAX_WS_CONNS && ws_pool[WsV.ws_id].active;
 }
 
-void protocore_ws_payload_of(uint8_t *restrict work)
+void protocore_ws_payload_of(uint8_t *work)
 {
     (void)work;
     WsV.text = (WsV.ws_id < MAX_WS_CONNS && ws_pool[WsV.ws_id].active) ? (const char *)ws_pool[WsV.ws_id].buf : NULL;
 }
 
-void protocore_ws_alloc(uint8_t *restrict work)
+void protocore_ws_alloc(uint8_t *work)
 {
     (void)work;
     WsV.found = NULL;
@@ -122,7 +122,7 @@ void protocore_ws_alloc(uint8_t *restrict work)
     }
 }
 
-void protocore_ws_find(uint8_t *restrict work)
+void protocore_ws_find(uint8_t *work)
 {
     (void)work;
     WsV.found = NULL;
@@ -136,7 +136,7 @@ void protocore_ws_find(uint8_t *restrict work)
     }
 }
 
-void protocore_ws_free(uint8_t *restrict work)
+void protocore_ws_free(uint8_t *work)
 {
     (void)work;
     for (int i = 0; i < MAX_WS_CONNS; i++)
@@ -180,7 +180,7 @@ void ws_reset_frame(WsConn *ws)
 // Frame send helpers
 // ---------------------------------------------------------------------------
 
-void protocore_ws_route_add(uint8_t *restrict work)
+void protocore_ws_route_add(uint8_t *work)
 {
     if (WS_CTX(work)->route_count >= MAX_ROUTES)
     {
@@ -197,27 +197,27 @@ void protocore_ws_route_add(uint8_t *restrict work)
 // Empty the handler table. A route holds the id an add returned, so this belongs with whatever
 // empties the routes - otherwise every re-registration appends a set nothing can reach any more,
 // and the table, which is bounded, fills and starts refusing.
-void protocore_ws_route_reset(uint8_t *restrict work)
+void protocore_ws_route_reset(uint8_t *work)
 {
     WS_CTX(work)->route_count = 0;
 }
 
-void protocore_ws_route_connect(uint8_t *restrict work)
+void protocore_ws_route_connect(uint8_t *work)
 {
     WsV.connect_handler = (WsV.id >= WS_CTX(work)->route_count) ? NULL : WS_CTX(work)->route[WsV.id].on_connect;
 }
 
-void protocore_ws_route_message(uint8_t *restrict work)
+void protocore_ws_route_message(uint8_t *work)
 {
     WsV.message_handler = (WsV.id >= WS_CTX(work)->route_count) ? NULL : WS_CTX(work)->route[WsV.id].on_message;
 }
 
-void protocore_ws_route_close(uint8_t *restrict work)
+void protocore_ws_route_close(uint8_t *work)
 {
     WsV.close_handler = (WsV.id >= WS_CTX(work)->route_count) ? NULL : WS_CTX(work)->route[WsV.id].on_close;
 }
 
-void protocore_ws_set_frag_size(uint8_t *restrict work)
+void protocore_ws_set_frag_size(uint8_t *work)
 {
     WS_CTX(work)->frag_size = WsV.frag_size;
 }
@@ -262,7 +262,7 @@ static proto_bool ws_emit_one(uint8_t slot, uint8_t b0, const uint8_t *payload, 
     return PROTO_TRUE;
 }
 
-void protocore_ws_send_frame(uint8_t *restrict work)
+void protocore_ws_send_frame(uint8_t *work)
 {
     WsConn *ws = WsV.conn;
     WsOpcode opcode = WsV.frame.opcode;
@@ -362,7 +362,7 @@ void protocore_ws_send_frame(uint8_t *restrict work)
     WsV.ok = PROTO_TRUE;
 }
 
-void protocore_ws_close(uint8_t *restrict work)
+void protocore_ws_close(uint8_t *work)
 {
     (void)work;
     WsConn *ws = WsV.conn;
@@ -397,7 +397,7 @@ static inline proto_bool ws_is_control(WsOpcode op)
 // payload_len, also true immediately for zero-length frames once the masking
 // key is consumed).  Control frames are handled in place; data frames are
 // reassembled and delivered as WS_FRAME_READY only when the FIN frame arrives.
-static void ws_finish_frame(uint8_t *restrict work, WsConn *ws)
+static void ws_finish_frame(uint8_t *work, WsConn *ws)
 {
     // ---- Control frames (ping/pong/close): use the separate ctl_buf ----
     if (ws_is_control(ws->opcode))
@@ -533,11 +533,11 @@ static void ws_finish_frame(uint8_t *restrict work, WsConn *ws)
 }
 
 // Called by parse above its definition.
-void protocore_ws_feed_byte(uint8_t *restrict work);
+void protocore_ws_feed_byte(uint8_t *work);
 
 // The worker fills this slot's scratch once, then the frame state machine walks it. Stop on a
 // terminal state and leave the rest where it is.
-void protocore_ws_parse(uint8_t *restrict work)
+void protocore_ws_parse(uint8_t *work)
 {
     WsConn *ws = WsV.conn;
     ConnPoolV.slot = ws->slot_id;
@@ -562,7 +562,7 @@ void protocore_ws_parse(uint8_t *restrict work)
     }
 }
 
-void protocore_ws_feed_byte(uint8_t *restrict work)
+void protocore_ws_feed_byte(uint8_t *work)
 {
     (void)work;
     WsConn *ws = WsV.conn;
@@ -814,7 +814,7 @@ void protocore_ws_feed_byte(uint8_t *restrict work)
     }
 }
 
-void protocore_ws_reset_frame(uint8_t *restrict work)
+void protocore_ws_reset_frame(uint8_t *work)
 {
     (void)work;
     ws_reset_frame(WsV.conn);

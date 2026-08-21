@@ -169,7 +169,7 @@ static void edge_on_evict(void *ctx, const EdgeEntry *victim)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_edge_cache_proxy_span();
+    uint8_t *work = protocore_edge_cache_proxy_span();
 
     (void)ctx;
     EdgeCacheSdV.put_args.db = EDGE_CACHE_PROXY_CTX(work)->l2;
@@ -240,7 +240,7 @@ static const char *req_lookup(void *ctx, const char *name)
     return http_parser_text;
 }
 
-static EdgeRouteMap *map_match(uint8_t *restrict work, const char *path)
+static EdgeRouteMap *map_match(uint8_t *work, const char *path)
 {
     for (int i = 0; i < PROTOCORE_EDGE_MAP_MAX; i++)
     {
@@ -257,7 +257,7 @@ static EdgeRouteMap *map_match(uint8_t *restrict work, const char *path)
     return NULL;
 }
 
-static int alloc_fetch(uint8_t *restrict work)
+static int alloc_fetch(uint8_t *work)
 {
     for (int i = 0; i < PROTOCORE_EDGE_FETCH_SLOTS; i++)
     {
@@ -275,7 +275,7 @@ static size_t edge_chunk_source(uint8_t *buf, size_t cap, void *ctx)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_edge_cache_proxy_span();
+    uint8_t *work = protocore_edge_cache_proxy_span();
 
     EdgeServeCursor *c = (EdgeServeCursor *)ctx;
     if (!c->active || !c->entry)
@@ -303,7 +303,7 @@ static size_t edge_chunk_source(uint8_t *buf, size_t cap, void *ctx)
 
 // Serve a cache entry, replaying its validators + Age, tagged with @p xcache. A client `Range` request
 // (PROTOCORE_ENABLE_RANGE) is answered with a 206 window (or 416 if unsatisfiable); otherwise a full 200.
-static void serve_hit(uint8_t *restrict work, uint8_t slot, EdgeEntry *e, uint32_t now, const char *xcache)
+static void serve_hit(uint8_t *work, uint8_t slot, EdgeEntry *e, uint32_t now, const char *xcache)
 {
     EdgeServeCursor *c = &EDGE_CACHE_PROXY_CTX(work)->serve[slot];
     c->active = PROTO_TRUE;
@@ -396,7 +396,7 @@ static void serve_hit(uint8_t *restrict work, uint8_t slot, EdgeEntry *e, uint32
 
 // Serve a non-cacheable / non-200 origin response through a transient unindexed store slot, so the
 // serve source outlives the fetch (which the caller frees) and no-store content is never re-served.
-static void serve_passthrough(uint8_t *restrict work, uint8_t slot, EdgeFetch *f)
+static void serve_passthrough(uint8_t *work, uint8_t slot, EdgeFetch *f)
 {
     EdgeCacheV.store_alloc_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
     EdgeCacheV.store_alloc_args.canon = "";
@@ -449,7 +449,7 @@ static void serve_passthrough(uint8_t *restrict work, uint8_t slot, EdgeFetch *f
 }
 
 // Store a cacheable 200 response into a fresh entry and serve it.
-static void store_response(uint8_t *restrict work, uint8_t slot, EdgeFetchSlot *fs, HttpReq *req,
+static void store_response(uint8_t *work, uint8_t slot, EdgeFetchSlot *fs, HttpReq *req,
                            const protocore_cache_control *cc, const char *vary_hdr, uint32_t now)
 {
     EdgeFetch *f = &fs->f;
@@ -587,7 +587,7 @@ static void store_response(uint8_t *restrict work, uint8_t slot, EdgeFetchSlot *
 }
 
 // A completed origin fetch: revalidation 304 / store 200 / pass through anything else.
-static void on_fetch_done(uint8_t *restrict work, uint8_t slot, EdgeFetchSlot *fs, uint32_t now)
+static void on_fetch_done(uint8_t *work, uint8_t slot, EdgeFetchSlot *fs, uint32_t now)
 {
     EdgeFetch *f = &fs->f;
     const char *head = (const char *)f->buf;
@@ -664,7 +664,7 @@ static proto_bool edge_cache_poll(uint8_t slot);
 // Build + begin the origin fetch for @p fs from its captured route/path/query (so it can begin either
 // immediately at mw time or later, after the mesh phase exhausts its peers). Picks the plaintext or TLS
 // transport; a revalidation adds the conditional headers. @return false if no fetch could start (fail open).
-static proto_bool begin_origin_fetch(uint8_t *restrict work, EdgeFetchSlot *fs, uint32_t now)
+static proto_bool begin_origin_fetch(uint8_t *work, EdgeFetchSlot *fs, uint32_t now)
 {
     EdgeRouteMap *m = fs->route;
     const EdgeFetchTransport *tport = &EDGE_CACHE_PROXY_CTX(work)->transport;
@@ -705,7 +705,7 @@ static proto_bool begin_origin_fetch(uint8_t *restrict work, EdgeFetchSlot *fs, 
 }
 
 #if PROTOCORE_ENABLE_EDGE_MESH
-static int mesh_peer_count(uint8_t *restrict work)
+static int mesh_peer_count(uint8_t *work)
 {
     int n = 0;
     for (int i = 0; i < PROTOCORE_MESH_MAX_PEERS; i++)
@@ -719,7 +719,7 @@ static int mesh_peer_count(uint8_t *restrict work)
 }
 
 // The @p n-th used peer in slot order, or nullptr.
-static MeshPeer *mesh_peer_nth(uint8_t *restrict work, int n)
+static MeshPeer *mesh_peer_nth(uint8_t *work, int n)
 {
     for (int i = 0; i < PROTOCORE_MESH_MAX_PEERS; i++)
     {
@@ -764,7 +764,7 @@ static void mesh_snapshot_headers(const HttpReq *req, char *out, size_t cap)
 #endif
 
 // Begin the mesh query against the peer at fs->peer_idx. @return false if there is no such peer.
-static proto_bool mesh_begin_peer(uint8_t *restrict work, EdgeFetchSlot *fs, uint32_t now)
+static proto_bool mesh_begin_peer(uint8_t *work, EdgeFetchSlot *fs, uint32_t now)
 {
     MeshPeer *p = mesh_peer_nth(work, fs->peer_idx);
     if (!p)
@@ -786,7 +786,7 @@ static proto_bool mesh_begin_peer(uint8_t *restrict work, EdgeFetchSlot *fs, uin
 
 // A peer HIT: rehydrate the entry into a fresh L1 slot, verify it matches the request, and serve it as fresh
 // (age propagated). @return true if it was served; false (freeing the slot) if corrupt / wrong / already stale.
-static proto_bool mesh_store_and_serve(uint8_t *restrict work, uint8_t slot, EdgeFetchSlot *fs, uint32_t now)
+static proto_bool mesh_store_and_serve(uint8_t *work, uint8_t slot, EdgeFetchSlot *fs, uint32_t now)
 {
     EdgeCacheV.store_alloc_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
     EdgeCacheV.store_alloc_args.canon = fs->canon;
@@ -820,7 +820,7 @@ static proto_bool mesh_store_and_serve(uint8_t *restrict work, uint8_t slot, Edg
 
 // The current peer query ended without a served hit: try the next sibling, else begin the origin fetch.
 // @return true if the slot still owns work (mesh continues or origin began); false = give up.
-static proto_bool mesh_advance_or_origin(uint8_t *restrict work, EdgeFetchSlot *fs, uint32_t now)
+static proto_bool mesh_advance_or_origin(uint8_t *work, EdgeFetchSlot *fs, uint32_t now)
 {
     fs->peer_idx++;
     if (mesh_begin_peer(work, fs, now))
@@ -837,7 +837,7 @@ static proto_bool mesh_advance_or_origin(uint8_t *restrict work, EdgeFetchSlot *
 }
 #endif // PROTOCORE_ENABLE_EDGE_MESH
 
-static proto_bool start_fetch(uint8_t *restrict work, uint8_t slot, HttpReq *req, EdgeRouteMap *m, const char *canon,
+static proto_bool start_fetch(uint8_t *work, uint8_t slot, HttpReq *req, EdgeRouteMap *m, const char *canon,
                               EdgeEntry *reval, uint32_t now)
 {
     int fi = alloc_fetch(work);
@@ -898,7 +898,7 @@ static proto_bool start_fetch(uint8_t *restrict work, uint8_t slot, HttpReq *req
 #if PROTOCORE_ENABLE_DBM
 // Promote a reboot-surviving entry from L2 into a fresh L1 slot, forced stale so the caller revalidates it
 // (the monotonic insert time is meaningless across a reboot). @return the promoted entry, or nullptr.
-static EdgeEntry *try_promote_l2(uint8_t *restrict work, const char *canon, uint32_t now)
+static EdgeEntry *try_promote_l2(uint8_t *work, const char *canon, uint32_t now)
 {
     uint8_t digest[32];
     EdgeCacheV.key_digest_args.digest_work = EDGE_CACHE_PROXY_CTX(work)->store.digest_work;
@@ -946,7 +946,7 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_edge_cache_proxy_span();
+    uint8_t *work = protocore_edge_cache_proxy_span();
 
     // `registered` is the whole test now: it was always the real question, and the stored server
     // pointer it was AND-ed with was set by the same call that set it.
@@ -1041,7 +1041,7 @@ static proto_bool edge_cache_poll(uint8_t slot)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_edge_cache_proxy_span();
+    uint8_t *work = protocore_edge_cache_proxy_span();
 
     if (slot >= MAX_CONNS || !EDGE_CACHE_PROXY_CTX(work)->pending[slot].active)
     {
@@ -1170,7 +1170,7 @@ static const char *mesh_hdr_lookup(void *ctx, const char *name)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_edge_cache_proxy_span();
+    uint8_t *work = protocore_edge_cache_proxy_span();
 
     MeshLookupCtx *lc = (MeshLookupCtx *)ctx;
     size_t nl = str.len(name, MAX_KEY_LEN);
@@ -1205,7 +1205,7 @@ static const char *mesh_hdr_lookup(void *ctx, const char *name)
     return NULL;
 }
 
-static MeshConn *mesh_conn_by_slot(uint8_t *restrict work, uint8_t slot)
+static MeshConn *mesh_conn_by_slot(uint8_t *work, uint8_t slot)
 {
     for (int i = 0; i < PROTOCORE_MESH_MAX_CONNS; i++)
     {
@@ -1219,7 +1219,7 @@ static MeshConn *mesh_conn_by_slot(uint8_t *restrict work, uint8_t slot)
 }
 
 // Build the response for a parsed request into mc->outbuf: a HIT carrying a fresh local variant, else a MISS.
-static void mesh_answer(uint8_t *restrict work, MeshConn *mc, const uint8_t digest[32], const char *canon, uint32_t now)
+static void mesh_answer(uint8_t *work, MeshConn *mc, const uint8_t digest[32], const char *canon, uint32_t now)
 {
     proto_bool hit = PROTO_FALSE;
     uint8_t verify[32];
@@ -1295,7 +1295,7 @@ static void mesh_serve_end(MeshConn *mc)
 }
 
 // Drive one serve connection: accumulate the request, answer it, then page the response out with backpressure.
-static void mesh_serve_pump(uint8_t *restrict work, MeshConn *mc)
+static void mesh_serve_pump(uint8_t *work, MeshConn *mc)
 {
     uint8_t slot = mc->conn_slot;
     if (!mc->responded)
@@ -1372,7 +1372,7 @@ static void mesh_on_accept(uint8_t slot)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_edge_cache_proxy_span();
+    uint8_t *work = protocore_edge_cache_proxy_span();
 
     for (int i = 0; i < PROTOCORE_MESH_MAX_CONNS; i++)
     {
@@ -1396,7 +1396,7 @@ static void mesh_on_data(uint8_t slot)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_edge_cache_proxy_span();
+    uint8_t *work = protocore_edge_cache_proxy_span();
 
     MeshConn *mc = mesh_conn_by_slot(work, slot);
     if (mc)
@@ -1409,7 +1409,7 @@ static void mesh_on_poll(uint8_t slot)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_edge_cache_proxy_span();
+    uint8_t *work = protocore_edge_cache_proxy_span();
 
     ConnPoolV.slot = slot;
     ConnPool.active(protocore_conn_pool_span());
@@ -1428,7 +1428,7 @@ static void mesh_on_close(uint8_t slot)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_edge_cache_proxy_span();
+    uint8_t *work = protocore_edge_cache_proxy_span();
 
     MeshConn *mc = mesh_conn_by_slot(work, slot);
     if (mc)
@@ -1465,7 +1465,7 @@ uint8_t *protocore_edge_cache_proxy_span(void)
     return s_own.span;
 }
 
-void protocore_edge_proxy_enable(uint8_t *restrict work)
+void protocore_edge_proxy_enable(uint8_t *work)
 {
     EdgeCacheV.store_init_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
     EdgeCache.store_init(work);
@@ -1511,7 +1511,7 @@ void protocore_edge_proxy_enable(uint8_t *restrict work)
 }
 
 #if PROTOCORE_ENABLE_DBM
-void protocore_edge_proxy_bind_sd(uint8_t *restrict work, struct protocore_dbm *dbm)
+void protocore_edge_proxy_bind_sd(uint8_t *work, struct protocore_dbm *dbm)
 {
 
     EDGE_CACHE_PROXY_CTX(work)->l2 = dbm;
@@ -1520,7 +1520,7 @@ void protocore_edge_proxy_bind_sd(uint8_t *restrict work, struct protocore_dbm *
 }
 #endif
 
-proto_bool protocore_edge_proxy_map(uint8_t *restrict work, const char *path_prefix, const char *origin_base_url)
+proto_bool protocore_edge_proxy_map(uint8_t *work, const char *path_prefix, const char *origin_base_url)
 {
     proto_bool ok = PROTO_FALSE;
     if (!path_prefix || !origin_base_url)
@@ -1571,7 +1571,7 @@ proto_bool protocore_edge_proxy_map(uint8_t *restrict work, const char *path_pre
 }
 
 #if PROTOCORE_ENABLE_EDGE_MESH
-proto_bool protocore_edge_proxy_add_peer(uint8_t *restrict work, const char *host, uint16_t port)
+proto_bool protocore_edge_proxy_add_peer(uint8_t *work, const char *host, uint16_t port)
 {
     proto_bool ok = PROTO_FALSE;
     if (!host)
@@ -1597,7 +1597,7 @@ proto_bool protocore_edge_proxy_add_peer(uint8_t *restrict work, const char *hos
     return ok;
 }
 
-void protocore_edge_proxy_mesh_serve(uint8_t *restrict work)
+void protocore_edge_proxy_mesh_serve(uint8_t *work)
 {
     if (!EDGE_CACHE_PROXY_CTX(work)->mesh_registered)
     {
@@ -1609,7 +1609,7 @@ void protocore_edge_proxy_mesh_serve(uint8_t *restrict work)
 }
 #endif // PROTOCORE_ENABLE_EDGE_MESH
 
-void protocore_edge_proxy_reset(uint8_t *restrict work)
+void protocore_edge_proxy_reset(uint8_t *work)
 {
     EdgeCacheV.store_init_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
     EdgeCache.store_init(work);
@@ -1634,7 +1634,7 @@ void protocore_edge_proxy_reset(uint8_t *restrict work)
 #endif
 }
 
-proto_bool protocore_edge_proxy_purge(uint8_t *restrict work, const char *canonical_key)
+proto_bool protocore_edge_proxy_purge(uint8_t *work, const char *canonical_key)
 {
     if (!canonical_key)
     {
@@ -1665,7 +1665,7 @@ proto_bool protocore_edge_proxy_purge(uint8_t *restrict work, const char *canoni
     return purged;
 }
 
-uint32_t protocore_edge_proxy_purge_prefix(uint8_t *restrict work, const char *path_prefix)
+uint32_t protocore_edge_proxy_purge_prefix(uint8_t *work, const char *path_prefix)
 {
     if (!path_prefix)
     {
@@ -1689,7 +1689,7 @@ uint32_t protocore_edge_proxy_purge_prefix(uint8_t *restrict work, const char *p
     return n;
 }
 
-void protocore_edge_proxy_stats(uint8_t *restrict work, struct EdgeCacheStats *out)
+void protocore_edge_proxy_stats(uint8_t *work, struct EdgeCacheStats *out)
 {
 
     if (out)

@@ -215,7 +215,7 @@ uint8_t *protocore_umati_span(void)
     return s_own.span;
 }
 
-void protocore_umati_bind(uint8_t *restrict work, const UmatiMachineTool *mt)
+void protocore_umati_bind(uint8_t *work, const UmatiMachineTool *mt)
 {
 
     UMATI_CTX(work)->mt = mt;
@@ -230,7 +230,7 @@ static proto_bool umati_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUa
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
-    uint8_t *restrict work = protocore_umati_span();
+    uint8_t *work = protocore_umati_span();
     const UmatiMachineTool *mt = UMATI_CTX(work)->mt;
     if (!mt || ns != UMATI_CTX(work)->ns || attribute != OPCUA_ATTR_VALUE)
     {
@@ -323,7 +323,7 @@ static int32_t umati_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint3
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
-    uint8_t *restrict work = protocore_umati_span();
+    uint8_t *work = protocore_umati_span();
     const UmatiCtx *c = UMATI_CTX(work);
     const UmatiMachineTool *mt = c->mt;
     if (!mt)
@@ -409,7 +409,7 @@ static int32_t umati_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint3
     }
 }
 
-void protocore_umati_install(uint8_t *restrict work, const UmatiMachineTool *mt)
+void protocore_umati_install(uint8_t *work, const UmatiMachineTool *mt)
 {
 
     Umati.bind(work, mt);

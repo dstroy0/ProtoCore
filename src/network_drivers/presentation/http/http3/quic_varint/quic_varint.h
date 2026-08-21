@@ -37,9 +37,9 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    size_t (*len)(uint8_t *restrict, uint64_t);
-    size_t (*encode)(uint8_t *restrict, uint8_t *, size_t, uint64_t);
-    proto_bool (*decode)(uint8_t *restrict, const uint8_t *, size_t, uint64_t *, size_t *);
+    size_t (*len)(uint8_t *, uint64_t);
+    size_t (*encode)(uint8_t *, uint8_t *, size_t, uint64_t);
+    proto_bool (*decode)(uint8_t *, const uint8_t *, size_t, uint64_t *, size_t *);
 } QuicVarintNs;
 PROTOCORE_NS_LAYOUT(QuicVarintNs, len, encode, decode);
 
@@ -49,7 +49,7 @@ PROTOCORE_NS_LAYOUT(QuicVarintNs, len, encode, decode);
  * @param value Value
  * @return The size_t.
  */
-size_t protocore_quic_varint_len(uint8_t *restrict work, uint64_t value);
+size_t protocore_quic_varint_len(uint8_t *work, uint64_t value);
 /**
  * @brief Encode value in its shortest form. bytes written, or 0 on overflow .
  * @param work PROTOCORE_QUIC_VARINT_BORROW bytes the caller took. Not held past the call.
@@ -58,7 +58,7 @@ size_t protocore_quic_varint_len(uint8_t *restrict work, uint64_t value);
  * @param value Value
  * @return The size_t.
  */
-size_t protocore_quic_varint_encode(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t value);
+size_t protocore_quic_varint_encode(uint8_t *work, uint8_t *out, size_t cap, uint64_t value);
 /**
  * @brief Decode a varint at in. Sets value and consumed (1/2/4/8). false if .
  * @param work PROTOCORE_QUIC_VARINT_BORROW bytes the caller took. Not held past the call.
@@ -68,7 +68,7 @@ size_t protocore_quic_varint_encode(uint8_t *restrict work, uint8_t *out, size_t
  * @param consumed Consumed
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_quic_varint_decode(uint8_t *restrict work, const uint8_t *in, size_t len, uint64_t *value,
+proto_bool protocore_quic_varint_decode(uint8_t *work, const uint8_t *in, size_t len, uint64_t *value,
                                         size_t *consumed);
 
 /** @brief Module namespace. */

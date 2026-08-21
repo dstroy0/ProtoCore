@@ -23,7 +23,7 @@ static uint8_t g_close_slot;
 
 // The double this env links in place of protocol.c: it builds the signaling half only, so the pool
 // is the one symbol it has to supply. Every entry takes the borrow, and this one never reads it.
-void protocore_conn_pool_close(uint8_t *restrict work)
+void protocore_conn_pool_close(uint8_t *work)
 {
     (void)work;
     g_close_calls++;

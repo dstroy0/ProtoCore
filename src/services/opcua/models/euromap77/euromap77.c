@@ -215,9 +215,9 @@ uint8_t *protocore_euromap77_span(void)
     return s_own.span;
 }
 
-void protocore_euromap77_bind(uint8_t *restrict work);
+void protocore_euromap77_bind(uint8_t *work);
 
-void protocore_euromap77_bind(uint8_t *restrict work)
+void protocore_euromap77_bind(uint8_t *work)
 {
     const EmImm *imm = Euromap77V.bind_args.imm;
 
@@ -237,7 +237,7 @@ static proto_bool em77_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaV
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_euromap77_span();
+    uint8_t *work = protocore_euromap77_span();
 
     const EuroMap77Ctx *c = EUROMAP77_CTX(work);
     const EmImm *imm = c->imm;
@@ -340,7 +340,7 @@ static int32_t em77_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_euromap77_span();
+    uint8_t *work = protocore_euromap77_span();
 
     const EuroMap77Ctx *c = EUROMAP77_CTX(work);
     const EmImm *imm = c->imm;
@@ -412,7 +412,7 @@ static int32_t em77_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32
     }
 }
 
-void protocore_euromap77_install(uint8_t *restrict work)
+void protocore_euromap77_install(uint8_t *work)
 {
     const EmImm *imm = Euromap77V.install_args.imm;
 

@@ -59,7 +59,7 @@ static void sw_manifest_handler(uint8_t slot_id, HttpReq *req)
     send_text(slot_id, 200, PROTOCORE_MIME_JSON, buf);
 }
 
-void http_delivery_serve_sw(uint8_t *restrict work)
+void http_delivery_serve_sw(uint8_t *work)
 {
     (void)work;
     const char *const *paths = HttpDeliveryV.serve_sw_args.paths;

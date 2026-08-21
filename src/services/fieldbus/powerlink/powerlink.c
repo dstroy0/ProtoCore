@@ -21,9 +21,9 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_powerlink_build(uint8_t *restrict work);
+void protocore_powerlink_build(uint8_t *work);
 
-void protocore_powerlink_build(uint8_t *restrict work)
+void protocore_powerlink_build(uint8_t *work)
 {
     (void)work;
     uint8_t msg_type = PowerlinkV.build_args.msg_type;
@@ -55,7 +55,7 @@ void protocore_powerlink_build(uint8_t *restrict work)
     PowerlinkV.n = n;
 }
 
-void protocore_powerlink_soc(uint8_t *restrict work)
+void protocore_powerlink_soc(uint8_t *work)
 {
     uint8_t source = PowerlinkV.soc_args.source;
     uint8_t *out = PowerlinkV.soc_args.out;
@@ -71,7 +71,7 @@ void protocore_powerlink_soc(uint8_t *restrict work)
     protocore_powerlink_build(work);
 }
 
-void protocore_powerlink_preq(uint8_t *restrict work)
+void protocore_powerlink_preq(uint8_t *work)
 {
     uint8_t dest_cn = PowerlinkV.preq_args.dest_cn;
     uint8_t source = PowerlinkV.preq_args.source;
@@ -90,7 +90,7 @@ void protocore_powerlink_preq(uint8_t *restrict work)
     protocore_powerlink_build(work);
 }
 
-void protocore_powerlink_pres(uint8_t *restrict work)
+void protocore_powerlink_pres(uint8_t *work)
 {
     uint8_t source_cn = PowerlinkV.pres_args.source_cn;
     const uint8_t *pdo = PowerlinkV.pres_args.pdo;
@@ -108,7 +108,7 @@ void protocore_powerlink_pres(uint8_t *restrict work)
     protocore_powerlink_build(work);
 }
 
-void protocore_powerlink_soa(uint8_t *restrict work)
+void protocore_powerlink_soa(uint8_t *work)
 {
     uint8_t source = PowerlinkV.soa_args.source;
     const uint8_t *payload = PowerlinkV.soa_args.payload;
@@ -126,7 +126,7 @@ void protocore_powerlink_soa(uint8_t *restrict work)
     protocore_powerlink_build(work);
 }
 
-void protocore_powerlink_asnd(uint8_t *restrict work)
+void protocore_powerlink_asnd(uint8_t *work)
 {
     uint8_t dest = PowerlinkV.asnd_args.dest;
     uint8_t source = PowerlinkV.asnd_args.source;
@@ -145,7 +145,7 @@ void protocore_powerlink_asnd(uint8_t *restrict work)
     protocore_powerlink_build(work);
 }
 
-void protocore_powerlink_parse(uint8_t *restrict work)
+void protocore_powerlink_parse(uint8_t *work)
 {
     (void)work;
     const uint8_t *frame = PowerlinkV.parse_args.frame;

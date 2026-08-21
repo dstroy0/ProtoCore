@@ -67,7 +67,7 @@ static_assert(UDP_TELEMETRY_OFF_CTX + sizeof(struct UdpTelemetryStorage) <= PROT
 
 // Append s while the line still leaves room for a trailing NUL, latching overflow the first time it
 // does not, so every later append is a no-op.
-static void line_append(uint8_t *restrict work, const char *s)
+static void line_append(uint8_t *work, const char *s)
 {
     struct UdpTelemetryStorage *store = UDP_TELEMETRY_CTX(work);
     if (store->overflow)
@@ -87,7 +87,7 @@ static void line_append(uint8_t *restrict work, const char *s)
 
 // Append s with the tag set escaping ("Special characters"): comma, equals and space each take a
 // leading backslash. A NULL s appends nothing.
-static void line_append_escaped(uint8_t *restrict work, const char *s)
+static void line_append_escaped(uint8_t *work, const char *s)
 {
     if (!s)
     {
@@ -109,7 +109,7 @@ static void line_append_escaped(uint8_t *restrict work, const char *s)
 }
 
 // The separator before a field set entry: a space before the first, a comma before the rest.
-static void line_sep(uint8_t *restrict work)
+static void line_sep(uint8_t *work)
 {
     line_append(work, UDP_TELEMETRY_CTX(work)->have_field ? "," : " ");
     UDP_TELEMETRY_CTX(work)->have_field = PROTO_TRUE;
@@ -117,7 +117,7 @@ static void line_sep(uint8_t *restrict work)
 
 // Publish the line's state on the handle: its octet count, its overflow latch, and whether it is a
 // complete point - nothing overflowed and the field set holds at least one entry.
-static void line_result(uint8_t *restrict work)
+static void line_result(uint8_t *work)
 {
     UdpTelemetryV.n = UDP_TELEMETRY_CTX(work)->pos;
     UdpTelemetryV.overflow = UDP_TELEMETRY_CTX(work)->overflow;
@@ -155,7 +155,7 @@ uint8_t *protocore_udp_telemetry_span(void)
 
 // Parse the collector address and store it with its port. Without a network stack nothing parses and
 // every send refuses.
-void protocore_udp_telemetry_begin(uint8_t *restrict work)
+void protocore_udp_telemetry_begin(uint8_t *work)
 {
 #if PROTOCORE_HAS_NET_STACK
     IpV.args.text = UdpTelemetryV.collector.addr;
@@ -170,7 +170,7 @@ void protocore_udp_telemetry_begin(uint8_t *restrict work)
 }
 
 // Bind the caller's buffer and open the line with the measurement (line protocol element 1).
-void protocore_udp_telemetry_measurement(uint8_t *restrict work)
+void protocore_udp_telemetry_measurement(uint8_t *work)
 {
     struct UdpTelemetryStorage *store = UDP_TELEMETRY_CTX(work);
     store->buf = UdpTelemetryV.line.buf;
@@ -187,7 +187,7 @@ void protocore_udp_telemetry_measurement(uint8_t *restrict work)
 }
 
 // Append `,tag_key=tag_value` (line protocol element 2).
-void protocore_udp_telemetry_tag(uint8_t *restrict work)
+void protocore_udp_telemetry_tag(uint8_t *work)
 {
     // The tag set is comma separated and sits between the measurement and the space that opens the
     // field set, so an entry appended after a field would read as a field. The line latches
@@ -207,7 +207,7 @@ void protocore_udp_telemetry_tag(uint8_t *restrict work)
 }
 
 // Append `field_key=<i64>i`, the signed integer field value (line protocol element 3).
-void protocore_udp_telemetry_field_int(uint8_t *restrict work)
+void protocore_udp_telemetry_field_int(uint8_t *work)
 {
     char num[24];
     protocore_sb b = {num, sizeof(num), 0, PROTO_TRUE};
@@ -222,7 +222,7 @@ void protocore_udp_telemetry_field_int(uint8_t *restrict work)
 }
 
 // Append `field_key=<u64>u`, the unsigned integer field value.
-void protocore_udp_telemetry_field_uint(uint8_t *restrict work)
+void protocore_udp_telemetry_field_uint(uint8_t *work)
 {
     char num[24];
     protocore_sb b = {num, sizeof(num), 0, PROTO_TRUE};
@@ -237,7 +237,7 @@ void protocore_udp_telemetry_field_uint(uint8_t *restrict work)
 }
 
 // Append `field_key=<f32>` to decimals places, the unsuffixed float field value.
-void protocore_udp_telemetry_field_float(uint8_t *restrict work)
+void protocore_udp_telemetry_field_float(uint8_t *work)
 {
     char num[32];
     protocore_sb b = {num, sizeof(num), 0, PROTO_TRUE};
@@ -251,7 +251,7 @@ void protocore_udp_telemetry_field_float(uint8_t *restrict work)
 }
 
 // Append ` <timestamp>` (line protocol element 4), Unix nanoseconds.
-void protocore_udp_telemetry_timestamp(uint8_t *restrict work)
+void protocore_udp_telemetry_timestamp(uint8_t *work)
 {
     // The timestamp trails the field set, one space between them, so a line with no field has no
     // point to stamp. The line latches overflow instead.
@@ -274,7 +274,7 @@ void protocore_udp_telemetry_timestamp(uint8_t *restrict work)
 // Send the payload to the collector as one datagram (RFC 768 "User Interface": the data, and the
 // destination port and address). Nothing is acknowledged (RFC 768 "Introduction": delivery and
 // duplicate protection are not guaranteed), so ok reports only that the stack took the octets.
-void protocore_udp_telemetry_send(uint8_t *restrict work)
+void protocore_udp_telemetry_send(uint8_t *work)
 {
     UdpTelemetryV.ok = PROTO_FALSE;
 #if PROTOCORE_HAS_NET_STACK
@@ -293,7 +293,7 @@ void protocore_udp_telemetry_send(uint8_t *restrict work)
 
 // Send the built line as one datagram. A line that overflowed, or whose field set is empty, is not a
 // point, and nothing leaves.
-void protocore_udp_telemetry_write(uint8_t *restrict work)
+void protocore_udp_telemetry_write(uint8_t *work)
 {
     if (UDP_TELEMETRY_CTX(work)->overflow || !UDP_TELEMETRY_CTX(work)->have_field)
     {

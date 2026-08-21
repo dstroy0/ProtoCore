@@ -139,23 +139,23 @@ extern CoapsServerVars CoapsServerV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const begin)(uint8_t *restrict work);
-    void (*const poll)(uint8_t *restrict work);
-    void (*const active_conns)(uint8_t *restrict work);
-    void (*const stop)(uint8_t *restrict work);
-    void (*const set_out_sink)(uint8_t *restrict work);
-    void (*const ingest)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *work);
+    void (*const poll)(uint8_t *work);
+    void (*const active_conns)(uint8_t *work);
+    void (*const stop)(uint8_t *work);
+    void (*const set_out_sink)(uint8_t *work);
+    void (*const ingest)(uint8_t *work);
 } CoapsServerNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in CoapsServerV or a region of the borrow at a fixed offset.
-void protocore_coaps_server_begin(uint8_t *restrict work);
-void protocore_coaps_server_poll(uint8_t *restrict work);
-void protocore_coaps_server_active_conns(uint8_t *restrict work);
-void protocore_coaps_server_stop(uint8_t *restrict work);
+void protocore_coaps_server_begin(uint8_t *work);
+void protocore_coaps_server_poll(uint8_t *work);
+void protocore_coaps_server_active_conns(uint8_t *work);
+void protocore_coaps_server_stop(uint8_t *work);
 #if !PROTOCORE_HAS_NET_STACK
-void protocore_coaps_server_set_out_sink(uint8_t *restrict work);
-void protocore_coaps_server_ingest(uint8_t *restrict work);
+void protocore_coaps_server_set_out_sink(uint8_t *work);
+void protocore_coaps_server_ingest(uint8_t *work);
 #endif
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

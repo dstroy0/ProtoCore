@@ -22,7 +22,7 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_melsec_build_read(uint8_t *restrict work)
+void protocore_melsec_build_read(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = MelsecV.build_read_args.buf;
@@ -58,7 +58,7 @@ void protocore_melsec_build_read(uint8_t *restrict work)
     MelsecV.n = p; // == MELSEC_3E_READ_REQ_LEN
 }
 
-void protocore_melsec_build_write(uint8_t *restrict work)
+void protocore_melsec_build_write(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = MelsecV.build_write_args.buf;
@@ -110,7 +110,7 @@ void protocore_melsec_build_write(uint8_t *restrict work)
     MelsecV.n = p; // == MELSEC_3E_READ_REQ_LEN + data_len
 }
 
-void protocore_melsec_parse_response(uint8_t *restrict work)
+void protocore_melsec_parse_response(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = MelsecV.parse_response_args.buf;

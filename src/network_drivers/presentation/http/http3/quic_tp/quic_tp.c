@@ -19,7 +19,7 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_quic_tp_defaults(uint8_t *restrict work, QuicTransportParams *tp)
+void protocore_quic_tp_defaults(uint8_t *work, QuicTransportParams *tp)
 {
     (void)work;
 
@@ -31,8 +31,8 @@ void protocore_quic_tp_defaults(uint8_t *restrict work, QuicTransportParams *tp)
 }
 
 // Append one parameter: ID (varint) || Length (varint) || raw value bytes.
-static proto_bool put_param(uint8_t *restrict work, uint8_t *out, size_t cap, size_t *p, uint64_t id,
-                            const uint8_t *val, size_t val_len)
+static proto_bool put_param(uint8_t *work, uint8_t *out, size_t cap, size_t *p, uint64_t id, const uint8_t *val,
+                            size_t val_len)
 {
     size_t quic_varint_n = QuicVarint.encode(work, out + *p, cap - *p, id);
     size_t n = quic_varint_n;
@@ -63,8 +63,7 @@ static proto_bool put_param(uint8_t *restrict work, uint8_t *out, size_t cap, si
 }
 
 // Append a varint-valued parameter (Value is itself a varint).
-static proto_bool put_varint_param(uint8_t *restrict work, uint8_t *out, size_t cap, size_t *p, uint64_t id,
-                                   uint64_t value)
+static proto_bool put_varint_param(uint8_t *work, uint8_t *out, size_t cap, size_t *p, uint64_t id, uint64_t value)
 {
     uint8_t v[8];
     size_t quic_varint_n = QuicVarint.encode(work, v, sizeof(v), value);
@@ -76,7 +75,7 @@ static proto_bool put_varint_param(uint8_t *restrict work, uint8_t *out, size_t 
     return put_param(work, out, cap, p, id, v, vlen);
 }
 
-size_t protocore_quic_tp_encode(uint8_t *restrict work, const QuicTransportParams *tp, uint8_t *out, size_t cap)
+size_t protocore_quic_tp_encode(uint8_t *work, const QuicTransportParams *tp, uint8_t *out, size_t cap)
 {
     size_t p = 0;
     proto_bool ok = PROTO_TRUE;
@@ -113,7 +112,7 @@ size_t protocore_quic_tp_encode(uint8_t *restrict work, const QuicTransportParam
 }
 
 // Decode the varint that IS the whole value of a varint-valued parameter (must consume exactly len).
-static proto_bool value_varint(uint8_t *restrict work, const uint8_t *val, size_t len, uint64_t *out)
+static proto_bool value_varint(uint8_t *work, const uint8_t *val, size_t len, uint64_t *out)
 {
     size_t consumed = 0;
     proto_bool quic_varint_ok = QuicVarint.decode(work, val, len, out, &consumed);
@@ -158,7 +157,7 @@ static proto_bool quic_tp_apply_cid(uint64_t id, const uint8_t *val, size_t vlen
 }
 
 // Apply a varint-valued transport parameter with its RFC 9000 range checks. *handled is set as above.
-static proto_bool quic_tp_apply_varint(uint8_t *restrict work, uint64_t id, const uint8_t *val, size_t vlen,
+static proto_bool quic_tp_apply_varint(uint8_t *work, uint64_t id, const uint8_t *val, size_t vlen,
                                        QuicTransportParams *tp, proto_bool *handled)
 {
     *handled = PROTO_TRUE;
@@ -197,8 +196,7 @@ static proto_bool quic_tp_apply_varint(uint8_t *restrict work, uint64_t id, cons
 
 // Dispatch one parsed transport parameter to tp; false on a malformed / out-of-range value. Unknown
 // (GREASE) IDs are silently ignored, matching RFC 9000 §7.4.1.
-static proto_bool quic_tp_apply(uint8_t *restrict work, uint64_t id, const uint8_t *val, size_t vlen,
-                                QuicTransportParams *tp)
+static proto_bool quic_tp_apply(uint8_t *work, uint64_t id, const uint8_t *val, size_t vlen, QuicTransportParams *tp)
 {
     proto_bool handled = PROTO_FALSE;
     if (!quic_tp_apply_cid(id, val, vlen, tp, &handled))
@@ -228,7 +226,7 @@ static proto_bool quic_tp_apply(uint8_t *restrict work, uint64_t id, const uint8
     return PROTO_TRUE; // unknown / GREASE: skip
 }
 
-proto_bool protocore_quic_tp_parse(uint8_t *restrict work, const uint8_t *buf, size_t len, QuicTransportParams *tp)
+proto_bool protocore_quic_tp_parse(uint8_t *work, const uint8_t *buf, size_t len, QuicTransportParams *tp)
 {
     proto_bool ok = PROTO_FALSE;
     QuicTp.defaults(work, tp);

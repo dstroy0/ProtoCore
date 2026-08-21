@@ -253,34 +253,34 @@ extern H2FrameVars H2FrameV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const parse_header)(uint8_t *restrict work);
-    void (*const write_header)(uint8_t *restrict work);
-    void (*const settings_defaults)(uint8_t *restrict work);
-    void (*const parse_settings)(uint8_t *restrict work);
-    void (*const build_settings)(uint8_t *restrict work);
-    void (*const build_settings_ack)(uint8_t *restrict work);
-    void (*const build_window_update)(uint8_t *restrict work);
-    void (*const build_rst_stream)(uint8_t *restrict work);
-    void (*const build_goaway)(uint8_t *restrict work);
-    void (*const build_ping_ack)(uint8_t *restrict work);
-    void (*const build_headers)(uint8_t *restrict work);
-    void (*const build_data)(uint8_t *restrict work);
+    void (*const parse_header)(uint8_t *work);
+    void (*const write_header)(uint8_t *work);
+    void (*const settings_defaults)(uint8_t *work);
+    void (*const parse_settings)(uint8_t *work);
+    void (*const build_settings)(uint8_t *work);
+    void (*const build_settings_ack)(uint8_t *work);
+    void (*const build_window_update)(uint8_t *work);
+    void (*const build_rst_stream)(uint8_t *work);
+    void (*const build_goaway)(uint8_t *work);
+    void (*const build_ping_ack)(uint8_t *work);
+    void (*const build_headers)(uint8_t *work);
+    void (*const build_data)(uint8_t *work);
 } H2FrameNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in H2FrameV or a region of the borrow at a fixed offset.
-void protocore_h2_frame_parse_header(uint8_t *restrict work);
-void protocore_h2_frame_write_header(uint8_t *restrict work);
-void protocore_h2_frame_settings_defaults(uint8_t *restrict work);
-void protocore_h2_frame_parse_settings(uint8_t *restrict work);
-void protocore_h2_frame_build_settings(uint8_t *restrict work);
-void protocore_h2_frame_build_settings_ack(uint8_t *restrict work);
-void protocore_h2_frame_build_window_update(uint8_t *restrict work);
-void protocore_h2_frame_build_rst_stream(uint8_t *restrict work);
-void protocore_h2_frame_build_goaway(uint8_t *restrict work);
-void protocore_h2_frame_build_ping_ack(uint8_t *restrict work);
-void protocore_h2_frame_build_headers(uint8_t *restrict work);
-void protocore_h2_frame_build_data(uint8_t *restrict work);
+void protocore_h2_frame_parse_header(uint8_t *work);
+void protocore_h2_frame_write_header(uint8_t *work);
+void protocore_h2_frame_settings_defaults(uint8_t *work);
+void protocore_h2_frame_parse_settings(uint8_t *work);
+void protocore_h2_frame_build_settings(uint8_t *work);
+void protocore_h2_frame_build_settings_ack(uint8_t *work);
+void protocore_h2_frame_build_window_update(uint8_t *work);
+void protocore_h2_frame_build_rst_stream(uint8_t *work);
+void protocore_h2_frame_build_goaway(uint8_t *work);
+void protocore_h2_frame_build_ping_ack(uint8_t *work);
+void protocore_h2_frame_build_headers(uint8_t *work);
+void protocore_h2_frame_build_data(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

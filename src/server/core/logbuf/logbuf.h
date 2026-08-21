@@ -94,22 +94,22 @@ extern LogbufVars LogbufV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const reset)(uint8_t *restrict work);
-    void (*const put)(uint8_t *restrict work);
-    void (*const held)(uint8_t *restrict work);
-    void (*const at)(uint8_t *restrict work);
-    void (*const dump)(uint8_t *restrict work);
-    void (*const set_trap)(uint8_t *restrict work);
+    void (*const reset)(uint8_t *work);
+    void (*const put)(uint8_t *work);
+    void (*const held)(uint8_t *work);
+    void (*const at)(uint8_t *work);
+    void (*const dump)(uint8_t *work);
+    void (*const set_trap)(uint8_t *work);
 } LogbufNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in LogbufV or a region of the borrow at a fixed offset.
-void protocore_logbuf_reset(uint8_t *restrict work);
-void protocore_logbuf_put(uint8_t *restrict work);
-void protocore_logbuf_held(uint8_t *restrict work);
-void protocore_logbuf_at(uint8_t *restrict work);
-void protocore_logbuf_dump(uint8_t *restrict work);
-void protocore_logbuf_set_trap(uint8_t *restrict work);
+void protocore_logbuf_reset(uint8_t *work);
+void protocore_logbuf_put(uint8_t *work);
+void protocore_logbuf_held(uint8_t *work);
+void protocore_logbuf_at(uint8_t *work);
+void protocore_logbuf_dump(uint8_t *work);
+void protocore_logbuf_set_trap(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

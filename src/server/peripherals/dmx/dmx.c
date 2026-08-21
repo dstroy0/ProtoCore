@@ -21,9 +21,9 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_dmx_rdm_checksum(uint8_t *restrict work);
+void protocore_dmx_rdm_checksum(uint8_t *work);
 
-void protocore_dmx_build(uint8_t *restrict work)
+void protocore_dmx_build(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = DmxV.build_args.buf;
@@ -51,7 +51,7 @@ void protocore_dmx_build(uint8_t *restrict work)
     DmxV.n = total;
 }
 
-void protocore_dmx_get_channel(uint8_t *restrict work)
+void protocore_dmx_get_channel(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = DmxV.get_channel_args.buf;
@@ -66,7 +66,7 @@ void protocore_dmx_get_channel(uint8_t *restrict work)
     DmxV.u8 = buf[ch];
 }
 
-void protocore_dmx_rdm_uid(uint8_t *restrict work)
+void protocore_dmx_rdm_uid(uint8_t *work)
 {
     (void)work;
     uint16_t manufacturer = DmxV.rdm_uid_args.manufacturer;
@@ -75,7 +75,7 @@ void protocore_dmx_rdm_uid(uint8_t *restrict work)
     DmxV.uid = ((uint64_t)manufacturer << 32) | device;
 }
 
-void protocore_dmx_rdm_checksum(uint8_t *restrict work)
+void protocore_dmx_rdm_checksum(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = DmxV.rdm_checksum_args.buf;
@@ -106,7 +106,7 @@ static uint64_t get_uid(const uint8_t *p)
            ((uint64_t)p[4] << 8) | (uint64_t)p[5];
 }
 
-void protocore_dmx_rdm_build(uint8_t *restrict work)
+void protocore_dmx_rdm_build(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = DmxV.rdm_build_args.buf;
@@ -154,7 +154,7 @@ void protocore_dmx_rdm_build(uint8_t *restrict work)
     DmxV.n = total;
 }
 
-void protocore_dmx_rdm_parse(uint8_t *restrict work)
+void protocore_dmx_rdm_parse(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = DmxV.rdm_parse_args.buf;
@@ -217,7 +217,7 @@ void protocore_dmx_rdm_parse(uint8_t *restrict work)
     DmxV.ok = PROTO_TRUE;
 }
 
-void protocore_dmx_rdm_decode_disc_response(uint8_t *restrict work)
+void protocore_dmx_rdm_decode_disc_response(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = DmxV.rdm_decode_disc_response_args.buf;
@@ -270,7 +270,7 @@ void protocore_dmx_rdm_decode_disc_response(uint8_t *restrict work)
     DmxV.ok = PROTO_TRUE;
 }
 
-void protocore_dmx_rdm_build_disc_response(uint8_t *restrict work)
+void protocore_dmx_rdm_build_disc_response(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = DmxV.rdm_build_disc_response_args.buf;
@@ -315,7 +315,7 @@ void protocore_dmx_rdm_build_disc_response(uint8_t *restrict work)
     DmxV.n = p;
 }
 
-void protocore_dmx_rdm_build_device_info(uint8_t *restrict work)
+void protocore_dmx_rdm_build_device_info(uint8_t *work)
 {
     (void)work;
     uint8_t *pdata = DmxV.rdm_build_device_info_args.pdata;
@@ -349,7 +349,7 @@ void protocore_dmx_rdm_build_device_info(uint8_t *restrict work)
     DmxV.n = PROTOCORE_RDM_DEVICE_INFO_PDL;
 }
 
-void protocore_dmx_rdm_parse_device_info(uint8_t *restrict work)
+void protocore_dmx_rdm_parse_device_info(uint8_t *work)
 {
     (void)work;
     const uint8_t *pdata = DmxV.rdm_parse_device_info_args.pdata;

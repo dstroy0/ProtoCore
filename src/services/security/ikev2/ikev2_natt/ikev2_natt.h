@@ -139,26 +139,26 @@ extern IkeNattVars IkeNattV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const hash)(uint8_t *restrict work);
-    void (*const source_build)(uint8_t *restrict work);
-    void (*const dest_build)(uint8_t *restrict work);
-    void (*const match)(uint8_t *restrict work);
-    void (*const peer_behind_nat)(uint8_t *restrict work);
-    void (*const self_behind_nat)(uint8_t *restrict work);
-    void (*const is_keepalive)(uint8_t *restrict work);
-    void (*const is_ike)(uint8_t *restrict work);
+    void (*const hash)(uint8_t *work);
+    void (*const source_build)(uint8_t *work);
+    void (*const dest_build)(uint8_t *work);
+    void (*const match)(uint8_t *work);
+    void (*const peer_behind_nat)(uint8_t *work);
+    void (*const self_behind_nat)(uint8_t *work);
+    void (*const is_keepalive)(uint8_t *work);
+    void (*const is_ike)(uint8_t *work);
 } IkeNattNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in IkeNattV or a region of the borrow at a fixed offset.
-void protocore_ike_natt_hash(uint8_t *restrict work);
-void protocore_ike_natt_source_build(uint8_t *restrict work);
-void protocore_ike_natt_dest_build(uint8_t *restrict work);
-void protocore_ike_natt_match(uint8_t *restrict work);
-void protocore_ike_natt_peer_behind_nat(uint8_t *restrict work);
-void protocore_ike_natt_self_behind_nat(uint8_t *restrict work);
-void protocore_ike_natt_is_keepalive(uint8_t *restrict work);
-void protocore_ike_natt_is_ike(uint8_t *restrict work);
+void protocore_ike_natt_hash(uint8_t *work);
+void protocore_ike_natt_source_build(uint8_t *work);
+void protocore_ike_natt_dest_build(uint8_t *work);
+void protocore_ike_natt_match(uint8_t *work);
+void protocore_ike_natt_peer_behind_nat(uint8_t *work);
+void protocore_ike_natt_self_behind_nat(uint8_t *work);
+void protocore_ike_natt_is_keepalive(uint8_t *work);
+void protocore_ike_natt_is_ike(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

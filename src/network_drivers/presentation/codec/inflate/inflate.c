@@ -380,7 +380,7 @@ static InflateResult dynamic(State *s, Huffman *lencode, Huffman *distcode, shor
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_inflate_raw(uint8_t *restrict work)
+void protocore_inflate_raw(uint8_t *work)
 {
     (void)work;
     const uint8_t *src = InflateV.raw_args.src;

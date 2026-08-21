@@ -53,7 +53,7 @@ uint8_t *protocore_rcwl0516_span(void)
     return s_own.span;
 }
 
-void protocore_rcwl0516_presence_init(uint8_t *restrict work, PresenceCore *c, uint32_t debounce_ms, uint32_t hold_ms,
+void protocore_rcwl0516_presence_init(uint8_t *work, PresenceCore *c, uint32_t debounce_ms, uint32_t hold_ms,
                                       uint32_t now)
 {
     (void)work;
@@ -72,8 +72,7 @@ void protocore_rcwl0516_presence_init(uint8_t *restrict work, PresenceCore *c, u
     c->changed = 0;
 }
 
-proto_bool protocore_rcwl0516_presence_update(uint8_t *restrict work, PresenceCore *c, proto_bool pin_high,
-                                              uint32_t now)
+proto_bool protocore_rcwl0516_presence_update(uint8_t *work, PresenceCore *c, proto_bool pin_high, uint32_t now)
 {
     (void)work;
 
@@ -115,14 +114,14 @@ proto_bool protocore_rcwl0516_presence_update(uint8_t *restrict work, PresenceCo
     return c->present != 0;
 }
 
-proto_bool protocore_rcwl0516_presence_get(uint8_t *restrict work, const PresenceCore *c)
+proto_bool protocore_rcwl0516_presence_get(uint8_t *work, const PresenceCore *c)
 {
     (void)work;
 
     return c && c->present != 0;
 }
 
-proto_bool protocore_rcwl0516_presence_take_event(uint8_t *restrict work, PresenceCore *c)
+proto_bool protocore_rcwl0516_presence_take_event(uint8_t *work, PresenceCore *c)
 {
     (void)work;
 
@@ -134,7 +133,7 @@ proto_bool protocore_rcwl0516_presence_take_event(uint8_t *restrict work, Presen
     return PROTO_TRUE;
 }
 
-void protocore_rcwl0516_core_init(uint8_t *restrict work, PresenceCore *c, uint32_t now)
+void protocore_rcwl0516_core_init(uint8_t *work, PresenceCore *c, uint32_t now)
 {
 
     Rcwl0516.presence_init(work, c, PROTOCORE_RCWL0516_DEBOUNCE_MS, PROTOCORE_RCWL0516_HOLD_MS, now);
@@ -176,12 +175,12 @@ static_assert(RCWL0516_OFF_CTX % _Alignof(Rcwl0516Ctx) == 0,
 // context carries none and can live in a borrow that arrives zeroed. It takes a flag rather than a
 // sentinel value because pin 0 is a real pin, so zero cannot mean "unset". A caller that hands
 // begin() a negative pin still lands on -1 here, and the poll below still refuses.
-static int dev_pin(uint8_t *restrict work)
+static int dev_pin(uint8_t *work)
 {
     return RCWL0516_CTX(work)->begun ? RCWL0516_CTX(work)->pin : -1;
 }
 
-proto_bool protocore_rcwl0516_begin(uint8_t *restrict work, int out_pin)
+proto_bool protocore_rcwl0516_begin(uint8_t *work, int out_pin)
 {
 
     RCWL0516_CTX(work)->pin = out_pin;
@@ -192,7 +191,7 @@ proto_bool protocore_rcwl0516_begin(uint8_t *restrict work, int out_pin)
     return PROTO_TRUE;
 }
 
-proto_bool protocore_rcwl0516_poll(uint8_t *restrict work)
+proto_bool protocore_rcwl0516_poll(uint8_t *work)
 {
     const int pin = dev_pin(work);
     if (pin < 0)
@@ -205,7 +204,7 @@ proto_bool protocore_rcwl0516_poll(uint8_t *restrict work)
     return PROTO_FALSE;
 }
 
-void protocore_rcwl0516_present(uint8_t *restrict work)
+void protocore_rcwl0516_present(uint8_t *work)
 {
     Rcwl0516.presence_get(work, &RCWL0516_CTX(work)->core);
 }

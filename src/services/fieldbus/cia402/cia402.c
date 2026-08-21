@@ -25,9 +25,9 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_cia402_controlword(uint8_t *restrict work);
+void protocore_cia402_controlword(uint8_t *work);
 
-void protocore_cia402_state(uint8_t *restrict work)
+void protocore_cia402_state(uint8_t *work)
 {
     (void)work;
     uint16_t sw = Cia402V.state_args.statusword;
@@ -76,7 +76,7 @@ void protocore_cia402_state(uint8_t *restrict work)
     Cia402V.value = CIA402_STATE_UNKNOWN;
 }
 
-void protocore_cia402_controlword(uint8_t *restrict work)
+void protocore_cia402_controlword(uint8_t *work)
 {
     (void)work;
     Cia402Command cmd = Cia402V.controlword_args.cmd;
@@ -106,7 +106,7 @@ void protocore_cia402_controlword(uint8_t *restrict work)
     Cia402V.u16 = 0x0000;
 }
 
-void protocore_cia402_enable_sequence(uint8_t *restrict work)
+void protocore_cia402_enable_sequence(uint8_t *work)
 {
     Cia402State state = Cia402V.enable_sequence_args.state;
 
@@ -138,7 +138,7 @@ void protocore_cia402_enable_sequence(uint8_t *restrict work)
     }
 }
 
-void protocore_cia402_sdo_set_controlword(uint8_t *restrict work)
+void protocore_cia402_sdo_set_controlword(uint8_t *work)
 {
     (void)work;
     CanFrame *out = Cia402V.sdo_set_controlword_args.out;
@@ -157,7 +157,7 @@ void protocore_cia402_sdo_set_controlword(uint8_t *restrict work)
     Cia402V.ok = CanopenV.ok;
 }
 
-void protocore_cia402_sdo_set_mode(uint8_t *restrict work)
+void protocore_cia402_sdo_set_mode(uint8_t *work)
 {
     (void)work;
     CanFrame *out = Cia402V.sdo_set_mode_args.out;
@@ -175,7 +175,7 @@ void protocore_cia402_sdo_set_mode(uint8_t *restrict work)
     Cia402V.ok = CanopenV.ok;
 }
 
-void protocore_cia402_sdo_set_target_position(uint8_t *restrict work)
+void protocore_cia402_sdo_set_target_position(uint8_t *work)
 {
     (void)work;
     CanFrame *out = Cia402V.sdo_set_target_position_args.out;
@@ -194,7 +194,7 @@ void protocore_cia402_sdo_set_target_position(uint8_t *restrict work)
     Cia402V.ok = CanopenV.ok;
 }
 
-void protocore_cia402_sdo_set_target_velocity(uint8_t *restrict work)
+void protocore_cia402_sdo_set_target_velocity(uint8_t *work)
 {
     (void)work;
     CanFrame *out = Cia402V.sdo_set_target_velocity_args.out;
@@ -213,7 +213,7 @@ void protocore_cia402_sdo_set_target_velocity(uint8_t *restrict work)
     Cia402V.ok = CanopenV.ok;
 }
 
-void protocore_cia402_sdo_set_target_torque(uint8_t *restrict work)
+void protocore_cia402_sdo_set_target_torque(uint8_t *work)
 {
     (void)work;
     CanFrame *out = Cia402V.sdo_set_target_torque_args.out;
@@ -232,7 +232,7 @@ void protocore_cia402_sdo_set_target_torque(uint8_t *restrict work)
     Cia402V.ok = CanopenV.ok;
 }
 
-void protocore_cia402_sdo_read(uint8_t *restrict work)
+void protocore_cia402_sdo_read(uint8_t *work)
 {
     (void)work;
     CanFrame *out = Cia402V.sdo_read_args.out;
@@ -250,8 +250,7 @@ void protocore_cia402_sdo_read(uint8_t *restrict work)
 
 // Validate an expedited SDO upload response and copy its inline payload into @p out (>= need
 // octets). No shared state - the parsed response lives on this call's stack.
-static proto_bool sdo_upload_bytes(uint8_t *restrict work, const CanFrame *f, uint16_t want_index, uint8_t need,
-                                   uint8_t *out)
+static proto_bool sdo_upload_bytes(uint8_t *work, const CanFrame *f, uint16_t want_index, uint8_t need, uint8_t *out)
 {
     CanopenSdoResponse resp;
     CanopenV.parse_sdo_response_args.f = f;
@@ -273,7 +272,7 @@ static proto_bool sdo_upload_bytes(uint8_t *restrict work, const CanFrame *f, ui
     return PROTO_TRUE;
 }
 
-void protocore_cia402_sdo_get_u16(uint8_t *restrict work)
+void protocore_cia402_sdo_get_u16(uint8_t *work)
 {
     (void)work;
     const CanFrame *f = Cia402V.sdo_get_u16_args.f;
@@ -290,7 +289,7 @@ void protocore_cia402_sdo_get_u16(uint8_t *restrict work)
     Cia402V.ok = PROTO_TRUE;
 }
 
-void protocore_cia402_sdo_get_i32(uint8_t *restrict work)
+void protocore_cia402_sdo_get_i32(uint8_t *work)
 {
     (void)work;
     const CanFrame *f = Cia402V.sdo_get_i32_args.f;
@@ -307,7 +306,7 @@ void protocore_cia402_sdo_get_i32(uint8_t *restrict work)
     Cia402V.ok = PROTO_TRUE;
 }
 
-void protocore_cia402_pack_command(uint8_t *restrict work)
+void protocore_cia402_pack_command(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Cia402V.pack_command_args.buf;
@@ -325,7 +324,7 @@ void protocore_cia402_pack_command(uint8_t *restrict work)
     Cia402V.n = p; // 6
 }
 
-void protocore_cia402_unpack_status(uint8_t *restrict work)
+void protocore_cia402_unpack_status(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = Cia402V.unpack_status_args.buf;

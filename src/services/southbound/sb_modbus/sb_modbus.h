@@ -102,14 +102,14 @@ extern SbModbusVars SbModbusV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const init)(uint8_t *restrict work);
-    void (*const driver)(uint8_t *restrict work);
+    void (*const init)(uint8_t *work);
+    void (*const driver)(uint8_t *work);
 } SbModbusNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SbModbusV or a region of the borrow at a fixed offset.
-void protocore_sb_modbus_init(uint8_t *restrict work);
-void protocore_sb_modbus_driver(uint8_t *restrict work);
+void protocore_sb_modbus_init(uint8_t *work);
+void protocore_sb_modbus_driver(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

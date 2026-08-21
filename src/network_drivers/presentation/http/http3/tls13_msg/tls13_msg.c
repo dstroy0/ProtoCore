@@ -403,9 +403,9 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_tls13_msg_cert_verify_content(uint8_t *restrict work);
+void protocore_tls13_msg_cert_verify_content(uint8_t *work);
 
-void protocore_tls13_msg_parse_client_hello(uint8_t *restrict work)
+void protocore_tls13_msg_parse_client_hello(uint8_t *work)
 {
     (void)work;
     const uint8_t *msg = Tls13MsgV.parse_client_hello_args.msg;
@@ -531,7 +531,7 @@ void protocore_tls13_msg_parse_client_hello(uint8_t *restrict work)
 // ---------------------------------------------------------------------------
 // Builders
 // ---------------------------------------------------------------------------
-void protocore_tls13_msg_build_server_hello(uint8_t *restrict work)
+void protocore_tls13_msg_build_server_hello(uint8_t *work)
 {
     (void)work;
     uint8_t *out = Tls13MsgV.build_server_hello_args.out;
@@ -586,7 +586,7 @@ void protocore_tls13_msg_build_server_hello(uint8_t *restrict work)
     Tls13MsgV.n = w.ok ? w.pos : 0;
 }
 
-void protocore_tls13_msg_build_client_hello(uint8_t *restrict work)
+void protocore_tls13_msg_build_client_hello(uint8_t *work)
 {
     (void)work;
     uint8_t *out = Tls13MsgV.build_client_hello_args.out;
@@ -710,7 +710,7 @@ static proto_bool hs_body(const uint8_t *msg, size_t len, uint8_t want, Reader *
     return PROTO_TRUE;
 }
 
-void protocore_tls13_msg_parse_certificate(uint8_t *restrict work)
+void protocore_tls13_msg_parse_certificate(uint8_t *work)
 {
     (void)work;
     const uint8_t *msg = Tls13MsgV.parse_certificate_args.msg;
@@ -755,7 +755,7 @@ void protocore_tls13_msg_parse_certificate(uint8_t *restrict work)
     Tls13MsgV.ok = PROTO_TRUE;
 }
 
-void protocore_tls13_msg_parse_cert_verify(uint8_t *restrict work)
+void protocore_tls13_msg_parse_cert_verify(uint8_t *work)
 {
     (void)work;
     const uint8_t *msg = Tls13MsgV.parse_cert_verify_args.msg;
@@ -780,7 +780,7 @@ void protocore_tls13_msg_parse_cert_verify(uint8_t *restrict work)
     Tls13MsgV.ok = PROTO_TRUE;
 }
 
-void protocore_tls13_msg_parse_finished(uint8_t *restrict work)
+void protocore_tls13_msg_parse_finished(uint8_t *work)
 {
     (void)work;
     const uint8_t *msg = Tls13MsgV.parse_finished_args.msg;
@@ -798,7 +798,7 @@ void protocore_tls13_msg_parse_finished(uint8_t *restrict work)
     Tls13MsgV.ok = r_take(&r, verify_len, vd) && r.pos == r.len;
 }
 
-void protocore_tls13_msg_parse_server_hello(uint8_t *restrict work)
+void protocore_tls13_msg_parse_server_hello(uint8_t *work)
 {
     (void)work;
     const uint8_t *msg = Tls13MsgV.parse_server_hello_args.msg;
@@ -944,7 +944,7 @@ const uint8_t protocore_tls13_hrr_random[32] = {0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x
                                                 0x02, 0x1E, 0x65, 0xB8, 0x91, 0xC2, 0xA2, 0x11, 0x16, 0x7A, 0xBB,
                                                 0x8C, 0x5E, 0x07, 0x9E, 0x09, 0xE2, 0xC8, 0xA8, 0x33, 0x9C};
 
-void protocore_tls13_msg_build_hello_retry_request(uint8_t *restrict work)
+void protocore_tls13_msg_build_hello_retry_request(uint8_t *work)
 {
     (void)work;
     uint8_t *out = Tls13MsgV.build_hello_retry_request_args.out;
@@ -1009,7 +1009,7 @@ static void w_server_cert_type_rpk(Writer *w)
 }
 #endif
 
-void protocore_tls13_msg_build_encrypted_extensions_empty(uint8_t *restrict work)
+void protocore_tls13_msg_build_encrypted_extensions_empty(uint8_t *work)
 {
     (void)work;
     uint8_t *out = Tls13MsgV.build_encrypted_extensions_empty_args.out;
@@ -1046,7 +1046,7 @@ void protocore_tls13_msg_build_encrypted_extensions_empty(uint8_t *restrict work
     Tls13MsgV.n = w.ok ? w.pos : 0;
 }
 
-void protocore_tls13_msg_build_message_hash(uint8_t *restrict work)
+void protocore_tls13_msg_build_message_hash(uint8_t *work)
 {
     (void)work;
     uint8_t *out = Tls13MsgV.build_message_hash_args.out;
@@ -1060,7 +1060,7 @@ void protocore_tls13_msg_build_message_hash(uint8_t *restrict work)
     Tls13MsgV.n = w.ok ? w.pos : 0;
 }
 
-void protocore_tls13_msg_build_encrypted_extensions(uint8_t *restrict work)
+void protocore_tls13_msg_build_encrypted_extensions(uint8_t *work)
 {
     (void)work;
     uint8_t *out = Tls13MsgV.build_encrypted_extensions_args.out;
@@ -1099,7 +1099,7 @@ void protocore_tls13_msg_build_encrypted_extensions(uint8_t *restrict work)
     Tls13MsgV.n = w.ok ? w.pos : 0;
 }
 
-void protocore_tls13_msg_build_certificate(uint8_t *restrict work)
+void protocore_tls13_msg_build_certificate(uint8_t *work)
 {
     (void)work;
     uint8_t *out = Tls13MsgV.build_certificate_args.out;
@@ -1122,7 +1122,7 @@ void protocore_tls13_msg_build_certificate(uint8_t *restrict work)
     Tls13MsgV.n = w.ok ? w.pos : 0;
 }
 
-void protocore_tls13_msg_cert_verify_content(uint8_t *restrict work)
+void protocore_tls13_msg_cert_verify_content(uint8_t *work)
 {
     (void)work;
     uint8_t *out = Tls13MsgV.cert_verify_content_args.out;
@@ -1154,7 +1154,7 @@ void protocore_tls13_msg_cert_verify_content(uint8_t *restrict work)
     Tls13MsgV.n = total;
 }
 
-void protocore_tls13_msg_build_cert_verify(uint8_t *restrict work)
+void protocore_tls13_msg_build_cert_verify(uint8_t *work)
 {
     uint8_t *sign_work = Tls13MsgV.build_cert_verify_args.sign_work;
     uint8_t *out = Tls13MsgV.build_cert_verify_args.out;
@@ -1189,7 +1189,7 @@ void protocore_tls13_msg_build_cert_verify(uint8_t *restrict work)
     Tls13MsgV.n = w.ok ? w.pos : 0;
 }
 
-void protocore_tls13_msg_build_finished(uint8_t *restrict work)
+void protocore_tls13_msg_build_finished(uint8_t *work)
 {
     (void)work;
     uint8_t *out = Tls13MsgV.build_finished_args.out;

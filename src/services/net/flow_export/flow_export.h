@@ -175,28 +175,28 @@ extern FlowExportVars FlowExportV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const v5_header)(uint8_t *restrict work);
-    void (*const v5_record)(uint8_t *restrict work);
-    void (*const ipfix_begin)(uint8_t *restrict work);
-    void (*const v9_begin)(uint8_t *restrict work);
-    void (*const template_set)(uint8_t *restrict work);
-    void (*const data_set_begin)(uint8_t *restrict work);
-    void (*const data_record)(uint8_t *restrict work);
-    void (*const data_set_end)(uint8_t *restrict work);
-    void (*const message_finish)(uint8_t *restrict work);
+    void (*const v5_header)(uint8_t *work);
+    void (*const v5_record)(uint8_t *work);
+    void (*const ipfix_begin)(uint8_t *work);
+    void (*const v9_begin)(uint8_t *work);
+    void (*const template_set)(uint8_t *work);
+    void (*const data_set_begin)(uint8_t *work);
+    void (*const data_record)(uint8_t *work);
+    void (*const data_set_end)(uint8_t *work);
+    void (*const message_finish)(uint8_t *work);
 } FlowExportNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in FlowExportV or a region of the borrow at a fixed offset.
-void protocore_flow_export_v5_header(uint8_t *restrict work);
-void protocore_flow_export_v5_record(uint8_t *restrict work);
-void protocore_flow_export_ipfix_begin(uint8_t *restrict work);
-void protocore_flow_export_v9_begin(uint8_t *restrict work);
-void protocore_flow_export_template_set(uint8_t *restrict work);
-void protocore_flow_export_data_set_begin(uint8_t *restrict work);
-void protocore_flow_export_data_record(uint8_t *restrict work);
-void protocore_flow_export_data_set_end(uint8_t *restrict work);
-void protocore_flow_export_message_finish(uint8_t *restrict work);
+void protocore_flow_export_v5_header(uint8_t *work);
+void protocore_flow_export_v5_record(uint8_t *work);
+void protocore_flow_export_ipfix_begin(uint8_t *work);
+void protocore_flow_export_v9_begin(uint8_t *work);
+void protocore_flow_export_template_set(uint8_t *work);
+void protocore_flow_export_data_set_begin(uint8_t *work);
+void protocore_flow_export_data_record(uint8_t *work);
+void protocore_flow_export_data_set_end(uint8_t *work);
+void protocore_flow_export_message_finish(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

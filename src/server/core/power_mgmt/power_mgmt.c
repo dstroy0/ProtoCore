@@ -61,7 +61,7 @@ uint8_t *protocore_power_mgmt_span(void)
     return s_own.span;
 }
 
-void protocore_power_defaults(uint8_t *restrict work)
+void protocore_power_defaults(uint8_t *work)
 {
     (void)work;
     PowerCfg *cfg = PowerV.cfg_out;
@@ -77,7 +77,7 @@ void protocore_power_defaults(uint8_t *restrict work)
     cfg->recover_ms = PROTOCORE_POWER_RECOVER_MS;
 }
 
-void protocore_power_decide(uint8_t *restrict work)
+void protocore_power_decide(uint8_t *work)
 {
     (void)work;
     const PowerCfg *cfg = PowerV.plan_args.cfg;
@@ -128,7 +128,7 @@ void protocore_power_decide(uint8_t *restrict work)
     PowerV.plan = p;
 }
 
-void protocore_power_json(uint8_t *restrict work)
+void protocore_power_json(uint8_t *work)
 {
     const PowerPlan *plan = PowerV.out_args.plan;
     const int16_t temp_c = PowerV.out_args.temp_c;
@@ -176,7 +176,7 @@ void protocore_power_json(uint8_t *restrict work)
 
 #if PROTOCORE_HAS_VENDOR_PM
 
-void protocore_power_brownout(uint8_t *restrict work)
+void protocore_power_brownout(uint8_t *work)
 {
     // Read once and latch: the reset reason describes this boot, so it must not change under a
     // caller polling it every tick through the recovery window.
@@ -188,19 +188,19 @@ void protocore_power_brownout(uint8_t *restrict work)
     PowerV.ok = POWER_MGMT_CTX(work)->brownout_latched;
 }
 
-void protocore_power_die_temp(uint8_t *restrict work)
+void protocore_power_die_temp(uint8_t *work)
 {
     (void)work;
     PowerV.temp_c = protocore_platform_die_temp_c();
 }
 
-void protocore_power_cpu_mhz(uint8_t *restrict work)
+void protocore_power_cpu_mhz(uint8_t *work)
 {
     (void)work;
     PowerV.mhz = protocore_platform_cpu_mhz();
 }
 
-void protocore_power_apply(uint8_t *restrict work)
+void protocore_power_apply(uint8_t *work)
 {
     (void)work;
     const PowerPlan *plan = PowerV.out_args.plan;
@@ -220,7 +220,7 @@ void protocore_power_apply(uint8_t *restrict work)
 #endif // PROTOCORE_HAS_VENDOR_PM
 
 #if PROTOCORE_HAS_VENDOR_BT
-void protocore_power_gate_bt(uint8_t *restrict work)
+void protocore_power_gate_bt(uint8_t *work)
 {
     PowerV.ok = PROTO_FALSE;
     if (POWER_MGMT_CTX(work)->bt_released)

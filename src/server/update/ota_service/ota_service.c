@@ -142,7 +142,7 @@ static void ota_handle(uint8_t slot_id, HttpReq *req)
     protocore_platform_restart();
 }
 
-void protocore_ota_service_begin(uint8_t *restrict work)
+void protocore_ota_service_begin(uint8_t *work)
 {
     (void)work;
     const char *path = OtaServiceV.args.path;
@@ -164,7 +164,7 @@ OtaServiceVars OtaServiceV;
 
 #else
 
-void protocore_ota_service_begin(uint8_t *restrict work)
+void protocore_ota_service_begin(uint8_t *work)
 {
     (void)work;
 }

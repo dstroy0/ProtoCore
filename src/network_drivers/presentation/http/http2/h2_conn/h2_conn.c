@@ -104,7 +104,7 @@ static uint32_t rd32(const uint8_t *p)
     return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | p[3];
 }
 
-static void wr(uint8_t *restrict work, const uint8_t *data, size_t len)
+static void wr(uint8_t *work, const uint8_t *data, size_t len)
 {
     if (H2_CONN_CTX(work)->cb.write)
     {
@@ -114,7 +114,7 @@ static void wr(uint8_t *restrict work, const uint8_t *data, size_t len)
 
 // Offsets into the one borrow. Each region is a power of two, so each offset is a multiple of one.
 
-static H2Stream *find_stream(uint8_t *restrict work, uint32_t id)
+static H2Stream *find_stream(uint8_t *work, uint32_t id)
 {
     for (int i = 0; i < PROTOCORE_H2_MAX_STREAMS; i++)
     {
@@ -126,7 +126,7 @@ static H2Stream *find_stream(uint8_t *restrict work, uint32_t id)
     return NULL;
 }
 
-static H2Stream *alloc_stream(uint8_t *restrict work, uint32_t id)
+static H2Stream *alloc_stream(uint8_t *work, uint32_t id)
 {
     for (int i = 0; i < PROTOCORE_H2_MAX_STREAMS; i++)
     {
@@ -142,7 +142,7 @@ static H2Stream *alloc_stream(uint8_t *restrict work, uint32_t id)
     return NULL; // at MAX_CONCURRENT_STREAMS
 }
 
-static void send_our_settings(uint8_t *restrict work)
+static void send_our_settings(uint8_t *work)
 {
     static const uint16_t ids[4] = {H2_SETTINGS_ENABLE_PUSH, H2_SETTINGS_MAX_CONCURRENT_STREAMS,
                                     H2_SETTINGS_INITIAL_WINDOW_SIZE, H2_SETTINGS_MAX_FRAME_SIZE};
@@ -161,14 +161,14 @@ static void send_our_settings(uint8_t *restrict work)
 // are passed to send_control BY ADDRESS. Threading a borrow into them without widening that type
 // left the pointer mismatched: it compiles with a warning and then reads its arguments from the
 // wrong places, which showed up as two unrelated-looking assertion failures in the h2_conn suite.
-static size_t build_rst_refuse(uint8_t *restrict work, uint8_t *b, size_t cap)
+static size_t build_rst_refuse(uint8_t *work, uint8_t *b, size_t cap)
 {
     return (H2FrameV.rst_args.buf = b, H2FrameV.rst_args.cap = cap, H2FrameV.rst_args.stream_id = 0,
             H2FrameV.rst_args.error = 0, H2Frame.build_rst_stream(work), H2FrameV.n);
 }
 
 // send_control takes a plain builder, so the entry is reached through one.
-static size_t build_settings_ack(uint8_t *restrict work, uint8_t *out, size_t cap)
+static size_t build_settings_ack(uint8_t *work, uint8_t *out, size_t cap)
 {
     H2FrameV.ack_args.buf = out;
     H2FrameV.ack_args.cap = cap;
@@ -176,7 +176,7 @@ static size_t build_settings_ack(uint8_t *restrict work, uint8_t *out, size_t ca
     return H2FrameV.n;
 }
 
-static void send_control(uint8_t *restrict work, size_t (*build)(uint8_t *restrict, uint8_t *, size_t))
+static void send_control(uint8_t *work, size_t (*build)(uint8_t *, uint8_t *, size_t))
 {
     uint8_t buf[H2_FRAME_HEADER_LEN + 16];
     size_t n = build(work, buf, sizeof buf);
@@ -193,7 +193,7 @@ static void send_control(uint8_t *restrict work, size_t (*build)(uint8_t *restri
 
 // Reset one stream (RFC 9113 sec 5.4.2: a stream error kills the stream, not the connection). The
 // frame is built in the dispatcher's borrow, which is where every outbound control frame is staged.
-static void send_rst(uint8_t *restrict work, uint32_t stream_id, uint32_t err)
+static void send_rst(uint8_t *work, uint32_t stream_id, uint32_t err)
 {
     size_t n = (H2FrameV.rst_args.buf = H2_CONN_CTL(work), H2FrameV.rst_args.cap = H2_CTL_FRAME_MAX,
                 H2FrameV.rst_args.stream_id = stream_id, H2FrameV.rst_args.error = err, H2Frame.build_rst_stream(work),
@@ -205,7 +205,7 @@ static void send_rst(uint8_t *restrict work, uint32_t stream_id, uint32_t err)
 // have been a number to begin with. A body past the declared length settles the moment it goes
 // over; a short one settles when the stream ends. Either way the request is malformed, which is a
 // stream error. @return false when the stream has been reset.
-static proto_bool content_length_holds(uint8_t *restrict work, H2Stream *s, proto_bool end_stream)
+static proto_bool content_length_holds(uint8_t *work, H2Stream *s, proto_bool end_stream)
 {
     if (!s->has_content_length)
     {
@@ -234,7 +234,7 @@ static proto_bool content_length_holds(uint8_t *restrict work, H2Stream *s, prot
 // sec 8.1 trailer section rather than the request, and whether a pseudo-header appeared in one.
 typedef struct
 {
-    uint8_t *restrict work; ///< the connection's borrow this block is being read into
+    uint8_t *work; ///< the connection's borrow this block is being read into
     uint32_t stream_id;
     proto_bool end_stream;
     proto_bool trailers;
@@ -246,7 +246,7 @@ typedef struct
 // Records a request's declared content-length on its stream. sec 8.1.1 measures it against the
 // DATA that follows, so the value is kept here and settled when the stream ends. A value that is
 // not a plain decimal number, or does not fit 32 bits, is itself malformed.
-static void note_content_length(uint8_t *restrict work, uint32_t stream_id, const char *val, size_t vl)
+static void note_content_length(uint8_t *work, uint32_t stream_id, const char *val, size_t vl)
 {
     H2Stream *s = find_stream(work, stream_id);
     if (!s)
@@ -303,7 +303,7 @@ static proto_bool emit_header(void *ctx, const char *name, size_t nl, const char
 // Decode a complete request header block and deliver it to the application.
 static proto_bool decode_block(H2Block *b, const uint8_t *block, size_t len)
 {
-    uint8_t *restrict work = b->work;
+    uint8_t *work = b->work;
     if (!(HpackV.decode_args.block = block, HpackV.decode_args.len = len,
           HpackV.decode_args.scratch = H2_CONN_HSCRATCH(work), HpackV.decode_args.scratch_cap = PROTOCORE_H2_HDR_BLOCK,
           HpackV.decode_args.emit = emit_header, HpackV.decode_args.ctx = b, Hpack.decode(H2_CONN_CTX(work)->hdec),
@@ -345,7 +345,7 @@ static proto_bool decode_block(H2Block *b, const uint8_t *block, size_t len)
     return PROTO_TRUE;
 }
 
-static proto_bool handle_headers(uint8_t *restrict work, const H2FrameHeader *h, const uint8_t *payload)
+static proto_bool handle_headers(uint8_t *work, const H2FrameHeader *h, const uint8_t *payload)
 {
     if (h->stream_id == 0 || (h->stream_id & 1) == 0)
     {
@@ -428,7 +428,7 @@ static proto_bool handle_headers(uint8_t *restrict work, const H2FrameHeader *h,
     return PROTO_TRUE;
 }
 
-static proto_bool handle_continuation(uint8_t *restrict work, const H2FrameHeader *h, const uint8_t *payload)
+static proto_bool handle_continuation(uint8_t *work, const H2FrameHeader *h, const uint8_t *payload)
 {
     if (!H2_CONN_CTX(work)->in_header_block || h->stream_id != H2_CONN_CTX(work)->hblock_stream)
     {
@@ -455,7 +455,7 @@ static proto_bool handle_continuation(uint8_t *restrict work, const H2FrameHeade
     return PROTO_TRUE;
 }
 
-static proto_bool handle_data(uint8_t *restrict work, const H2FrameHeader *h, const uint8_t *payload)
+static proto_bool handle_data(uint8_t *work, const H2FrameHeader *h, const uint8_t *payload)
 {
     if (h->stream_id == 0)
     {
@@ -528,7 +528,7 @@ static proto_bool handle_data(uint8_t *restrict work, const H2FrameHeader *h, co
 }
 
 // the dispatcher below takes for this frame.
-static proto_bool dispatch_frame(uint8_t *restrict work, H2FrameHeader h, const uint8_t *payload)
+static proto_bool dispatch_frame(uint8_t *work, H2FrameHeader h, const uint8_t *payload)
 {
     switch (h.type)
     {
@@ -659,7 +659,7 @@ static proto_bool dispatch_frame(uint8_t *restrict work, H2FrameHeader h, const 
     }
 }
 
-static proto_bool process_frame(uint8_t *restrict work)
+static proto_bool process_frame(uint8_t *work)
 {
     H2FrameHeader h;
     (H2FrameV.parse_args.buf = H2_CONN_FHDR(work), H2FrameV.parse_args.len = H2_FRAME_HEADER_LEN,
@@ -678,7 +678,7 @@ static proto_bool process_frame(uint8_t *restrict work)
     return ok;
 }
 
-void protocore_h2_conn_init(uint8_t *restrict work)
+void protocore_h2_conn_init(uint8_t *work)
 {
     mem.set(H2_CONN_CTX(work), 0, sizeof(H2ConnCtx));
     H2_CONN_CTX(work)->cb = *H2ConnV.init_args.cb;
@@ -689,7 +689,7 @@ void protocore_h2_conn_init(uint8_t *restrict work)
     send_our_settings(work);
 }
 
-static proto_bool h2_recv_run(uint8_t *restrict work, const uint8_t *data, size_t len)
+static proto_bool h2_recv_run(uint8_t *work, const uint8_t *data, size_t len)
 {
     size_t off = 0;
     if (H2_CONN_CTX(work)->phase == 0)
@@ -759,7 +759,7 @@ static proto_bool h2_recv_run(uint8_t *restrict work, const uint8_t *data, size_
     return PROTO_TRUE;
 }
 
-static proto_bool h2_respond_run(uint8_t *restrict work, uint32_t stream_id, int status, const char *content_type,
+static proto_bool h2_respond_run(uint8_t *work, uint32_t stream_id, int status, const char *content_type,
                                  const char *body, size_t body_len)
 {
     H2Stream *s = find_stream(work, stream_id);
@@ -854,7 +854,7 @@ static proto_bool h2_respond_run(uint8_t *restrict work, uint32_t stream_id, int
     return PROTO_TRUE;
 }
 
-static void h2_goaway_run(uint8_t *restrict work, uint32_t error)
+static void h2_goaway_run(uint8_t *work, uint32_t error)
 {
     uint8_t buf[H2_FRAME_HEADER_LEN + 8];
     size_t n = (H2FrameV.goaway_args.buf = buf, H2FrameV.goaway_args.cap = sizeof buf,
@@ -866,19 +866,19 @@ static void h2_goaway_run(uint8_t *restrict work, uint32_t error)
 
 // --- the entries ---
 
-void protocore_h2_conn_recv(uint8_t *restrict work)
+void protocore_h2_conn_recv(uint8_t *work)
 {
     H2ConnV.ok = h2_recv_run(work, H2ConnV.recv_args.data, H2ConnV.recv_args.len);
 }
 
-void protocore_h2_conn_respond(uint8_t *restrict work)
+void protocore_h2_conn_respond(uint8_t *work)
 {
     H2ConnV.ok =
         h2_respond_run(work, H2ConnV.respond_args.stream_id, H2ConnV.respond_args.status,
                        H2ConnV.respond_args.content_type, H2ConnV.respond_args.body, H2ConnV.respond_args.body_len);
 }
 
-void protocore_h2_conn_goaway(uint8_t *restrict work)
+void protocore_h2_conn_goaway(uint8_t *work)
 {
     h2_goaway_run(work, H2ConnV.goaway_args.error);
     H2ConnV.ok = PROTO_TRUE;

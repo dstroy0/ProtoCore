@@ -20,7 +20,7 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_bacnet_bvlc_build(uint8_t *restrict work)
+void protocore_bacnet_bvlc_build(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = BacnetV.bvlc_build_args.buf;
@@ -51,7 +51,7 @@ void protocore_bacnet_bvlc_build(uint8_t *restrict work)
     BacnetV.n = total;
 }
 
-void protocore_bacnet_bvlc_parse(uint8_t *restrict work)
+void protocore_bacnet_bvlc_parse(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = BacnetV.bvlc_parse_args.buf;
@@ -86,7 +86,7 @@ void protocore_bacnet_bvlc_parse(uint8_t *restrict work)
     BacnetV.ok = PROTO_TRUE;
 }
 
-void protocore_bacnet_npdu_build(uint8_t *restrict work)
+void protocore_bacnet_npdu_build(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = BacnetV.npdu_build_args.buf;
@@ -149,7 +149,7 @@ void protocore_bacnet_npdu_build(uint8_t *restrict work)
     BacnetV.n = p;
 }
 
-void protocore_bacnet_npdu_parse(uint8_t *restrict work)
+void protocore_bacnet_npdu_parse(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = BacnetV.npdu_parse_args.buf;
@@ -250,7 +250,7 @@ static size_t bacnet_put_tagged_uint(uint8_t *buf, uint8_t tag_number, uint32_t 
     return p;
 }
 
-void protocore_bacnet_apdu_build_who_is(uint8_t *restrict work)
+void protocore_bacnet_apdu_build_who_is(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = BacnetV.apdu_build_who_is_args.buf;
@@ -287,7 +287,7 @@ void protocore_bacnet_apdu_build_who_is(uint8_t *restrict work)
     BacnetV.n = p;
 }
 
-void protocore_bacnet_apdu_build_i_am(uint8_t *restrict work)
+void protocore_bacnet_apdu_build_i_am(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = BacnetV.apdu_build_i_am_args.buf;
@@ -326,7 +326,7 @@ void protocore_bacnet_apdu_build_i_am(uint8_t *restrict work)
     BacnetV.n = p;
 }
 
-void protocore_bacnet_apdu_build_read_property(uint8_t *restrict work)
+void protocore_bacnet_apdu_build_read_property(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = BacnetV.apdu_build_read_property_args.buf;
@@ -422,7 +422,7 @@ static proto_bool apdu_parse_complex_ack(const uint8_t *apdu, size_t len, Bacnet
     return PROTO_TRUE;
 }
 
-void protocore_bacnet_apdu_parse(uint8_t *restrict work)
+void protocore_bacnet_apdu_parse(uint8_t *work)
 {
     (void)work;
     const uint8_t *apdu = BacnetV.apdu_parse_args.apdu;

@@ -28,9 +28,8 @@ PROTOCORE_BEGIN_DECLS
  * Capture is strictly passive (no injection) and fail-closed: the sink is expected to drop, not
  * block, when its downstream is full, so the live data path is never stalled.
  *
- * @c work is PROTOCORE_PROMISC_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_PROMISC_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
+ * nothing here aliases it. How those bytes are carved is this module's and is never named here.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -73,10 +72,10 @@ typedef void (*protocore_promisc_sink_fn)(const uint8_t *frame, uint16_t len, in
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*wifi_frame_parse)(uint8_t *restrict, const uint8_t *, uint16_t, WifiFrameInfo *);
-    proto_bool (*begin)(uint8_t *restrict, uint8_t, protocore_promisc_sink_fn);
-    void (*set_channel)(uint8_t *restrict, uint8_t);
-    void (*end)(uint8_t *restrict);
+    proto_bool (*wifi_frame_parse)(uint8_t *, const uint8_t *, uint16_t, WifiFrameInfo *);
+    proto_bool (*begin)(uint8_t *, uint8_t, protocore_promisc_sink_fn);
+    void (*set_channel)(uint8_t *, uint8_t);
+    void (*end)(uint8_t *);
 } PromiscNs;
 PROTOCORE_NS_LAYOUT(PromiscNs, wifi_frame_parse, begin, set_channel, end);
 
@@ -88,8 +87,7 @@ PROTOCORE_NS_LAYOUT(PromiscNs, wifi_frame_parse, begin, set_channel, end);
  * @param out Out
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_promisc_wifi_frame_parse(uint8_t *restrict work, const uint8_t *frame, uint16_t len,
-                                              WifiFrameInfo *out);
+proto_bool protocore_promisc_wifi_frame_parse(uint8_t *work, const uint8_t *frame, uint16_t len, WifiFrameInfo *out);
 /**
  * @brief Start promiscuous capture on channel; every frame is delivered to .
  * @param work PROTOCORE_PROMISC_BORROW bytes the caller took. Not held past the call.
@@ -97,18 +95,18 @@ proto_bool protocore_promisc_wifi_frame_parse(uint8_t *restrict work, const uint
  * @param sink Sink
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_promisc_begin(uint8_t *restrict work, uint8_t channel, protocore_promisc_sink_fn sink);
+proto_bool protocore_promisc_begin(uint8_t *work, uint8_t channel, protocore_promisc_sink_fn sink);
 /**
  * @brief Retune the capture to a different channel (1..14).
  * @param work PROTOCORE_PROMISC_BORROW bytes the caller took. Not held past the call.
  * @param channel Channel
  */
-void protocore_promisc_set_channel(uint8_t *restrict work, uint8_t channel);
+void protocore_promisc_set_channel(uint8_t *work, uint8_t channel);
 /**
  * @brief Stop promiscuous capture.
  * @param work PROTOCORE_PROMISC_BORROW bytes the caller took. Not held past the call.
  */
-void protocore_promisc_end(uint8_t *restrict work);
+void protocore_promisc_end(uint8_t *work);
 
 /**
  * @brief Sink for one captured frame: the raw 802.11 bytes plus radio metadata.

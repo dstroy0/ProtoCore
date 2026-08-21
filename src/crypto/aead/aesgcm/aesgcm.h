@@ -117,12 +117,11 @@ typedef struct
  * @ref AesGcmNs::open produces no plaintext on a tag mismatch: it authenticates the received ciphertext
  * first and leaves @c out untouched when @ref AesGcmNs::ok comes back false.
  *
- * @c work is PROTOCORE_AESGCM_BORROW secure bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and
- * the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. The
- * borrow IS the keyed context, so two connections are two borrows and never collide, and the key
- * material dies with the release. @ref AesGcmNs::iv_increment works on the caller's nonce and
- * reads nothing out of the borrow.
+ * @c work is PROTOCORE_AESGCM_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the
+ * call, so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes
+ * it, holds it, releases it, nor wipes it. The borrow IS the keyed context, so two connections are two borrows and
+ * never collide, and the key material dies with the release. @ref AesGcmNs::iv_increment works on the caller's nonce
+ * and reads nothing out of the borrow.
  *
  * No storage member and no context: a caller sets operands and reads @ref AesGcmNs::ok, and that is
  * all the surface there is.
@@ -142,20 +141,20 @@ extern AesGcmVars AesGcmV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const key_init)(uint8_t *restrict work);
-    void (*const key_wipe)(uint8_t *restrict work);
-    void (*const seal)(uint8_t *restrict work);
-    void (*const open)(uint8_t *restrict work);
-    void (*const iv_increment)(uint8_t *restrict work);
+    void (*const key_init)(uint8_t *work);
+    void (*const key_wipe)(uint8_t *work);
+    void (*const seal)(uint8_t *work);
+    void (*const open)(uint8_t *work);
+    void (*const iv_increment)(uint8_t *work);
 } AesGcmNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in AesGcmV or a region of the borrow at a fixed offset.
-void protocore_aes_gcm_key_init(uint8_t *restrict work);
-void protocore_aes_gcm_key_wipe(uint8_t *restrict work);
-void protocore_aes_gcm_seal(uint8_t *restrict work);
-void protocore_aes_gcm_open(uint8_t *restrict work);
-void protocore_aes_gcm_iv_increment(uint8_t *restrict work);
+void protocore_aes_gcm_key_init(uint8_t *work);
+void protocore_aes_gcm_key_wipe(uint8_t *work);
+void protocore_aes_gcm_seal(uint8_t *work);
+void protocore_aes_gcm_open(uint8_t *work);
+void protocore_aes_gcm_iv_increment(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

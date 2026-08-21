@@ -124,26 +124,26 @@ extern GpioMapVars GpioMapV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const dir_name)(uint8_t *restrict work);
-    void (*const json)(uint8_t *restrict work);
-    void (*const parse_set)(uint8_t *restrict work);
-    void (*const is_output)(uint8_t *restrict work);
-    void (*const begin_pins)(uint8_t *restrict work);
-    void (*const sample)(uint8_t *restrict work);
-    void (*const write)(uint8_t *restrict work);
-    void (*const begin)(uint8_t *restrict work);
+    void (*const dir_name)(uint8_t *work);
+    void (*const json)(uint8_t *work);
+    void (*const parse_set)(uint8_t *work);
+    void (*const is_output)(uint8_t *work);
+    void (*const begin_pins)(uint8_t *work);
+    void (*const sample)(uint8_t *work);
+    void (*const write)(uint8_t *work);
+    void (*const begin)(uint8_t *work);
 } GpioMapNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in GpioMapV or a region of the borrow at a fixed offset.
-void protocore_gpio_map_dir_name(uint8_t *restrict work);
-void protocore_gpio_map_json(uint8_t *restrict work);
-void protocore_gpio_map_parse_set(uint8_t *restrict work);
-void protocore_gpio_map_is_output(uint8_t *restrict work);
-void protocore_gpio_map_begin_pins(uint8_t *restrict work);
-void protocore_gpio_map_sample(uint8_t *restrict work);
-void protocore_gpio_map_write(uint8_t *restrict work);
-void protocore_gpio_map_begin(uint8_t *restrict work);
+void protocore_gpio_map_dir_name(uint8_t *work);
+void protocore_gpio_map_json(uint8_t *work);
+void protocore_gpio_map_parse_set(uint8_t *work);
+void protocore_gpio_map_is_output(uint8_t *work);
+void protocore_gpio_map_begin_pins(uint8_t *work);
+void protocore_gpio_map_sample(uint8_t *work);
+void protocore_gpio_map_write(uint8_t *work);
+void protocore_gpio_map_begin(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

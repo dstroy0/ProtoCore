@@ -172,7 +172,7 @@ static inline void inc32(uint8_t ctr[16])
 }
 
 // Derive the key-dependent state: H and the GHASH table. Done once per key, not once per record.
-static void gcm_key_setup(uint8_t *restrict work)
+static void gcm_key_setup(uint8_t *work)
 {
     GcmWork *w = AESGCM_CTX(work);
     mem.zero(w->ks, 16);        // zero input for H (reuses the keystream slot; overwritten by gctr later)
@@ -213,8 +213,8 @@ static void gctr(GcmWork *w, const uint8_t *in, size_t len, uint8_t *out)
 }
 
 // GHASH over aad || cipher, fold in the lengths, and produce the 16-byte tag (acc XOR E(K, J0)).
-static void gcm_tag(uint8_t *restrict work, const uint8_t *aad, size_t aad_len, const uint8_t *cipher,
-                    size_t cipher_len, uint8_t tag_out[16])
+static void gcm_tag(uint8_t *work, const uint8_t *aad, size_t aad_len, const uint8_t *cipher, size_t cipher_len,
+                    uint8_t tag_out[16])
 {
     GcmWork *w = AESGCM_CTX(work);
     mem.zero(w->acc, 16);
@@ -237,7 +237,7 @@ static void gcm_tag(uint8_t *restrict work, const uint8_t *aad, size_t aad_len, 
     }
 }
 
-static proto_bool aesgcm_key_load(uint8_t *restrict work, const uint8_t *key)
+static proto_bool aesgcm_key_load(uint8_t *work, const uint8_t *key)
 {
     GcmWork *w = AESGCM_CTX(work);
     aes256_load_key(w, key);
@@ -245,13 +245,13 @@ static proto_bool aesgcm_key_load(uint8_t *restrict work, const uint8_t *key)
     return PROTO_TRUE;
 }
 
-static void aesgcm_key_release(uint8_t *restrict work)
+static void aesgcm_key_release(uint8_t *work)
 {
     GcmWork *w = AESGCM_CTX(work);
     aes256_free_key(w);
 }
 
-static proto_bool aesgcm_seal_record(uint8_t *restrict work, const uint8_t *nonce, const uint8_t *aad, size_t aad_len,
+static proto_bool aesgcm_seal_record(uint8_t *work, const uint8_t *nonce, const uint8_t *aad, size_t aad_len,
                                      const uint8_t *pt, size_t pt_len, uint8_t *ct_out, uint8_t *tag_out)
 {
     GcmWork *w = AESGCM_CTX(work);
@@ -264,7 +264,7 @@ static proto_bool aesgcm_seal_record(uint8_t *restrict work, const uint8_t *nonc
     return PROTO_TRUE;
 }
 
-static proto_bool aesgcm_open_record(uint8_t *restrict work, const uint8_t *nonce, const uint8_t *aad, size_t aad_len,
+static proto_bool aesgcm_open_record(uint8_t *work, const uint8_t *nonce, const uint8_t *aad, size_t aad_len,
                                      const uint8_t *ct, size_t ct_len, const uint8_t *tag, uint8_t *out)
 {
     GcmWork *w = AESGCM_CTX(work);
@@ -283,7 +283,7 @@ static proto_bool aesgcm_open_record(uint8_t *restrict work, const uint8_t *nonc
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_aes_gcm_key_init(uint8_t *restrict work)
+void protocore_aes_gcm_key_init(uint8_t *work)
 {
     AesGcmV.ok = PROTO_FALSE;
     if (!AesGcmV.key_args.key)
@@ -295,14 +295,14 @@ void protocore_aes_gcm_key_init(uint8_t *restrict work)
 
 // Release what the context attached. The bytes themselves are the caller's: it releases the borrow and
 // the pool wipes it.
-void protocore_aes_gcm_key_wipe(uint8_t *restrict work)
+void protocore_aes_gcm_key_wipe(uint8_t *work)
 {
     AesGcmV.ok = PROTO_FALSE;
     aesgcm_key_release(work);
     AesGcmV.ok = PROTO_TRUE;
 }
 
-void protocore_aes_gcm_seal(uint8_t *restrict work)
+void protocore_aes_gcm_seal(uint8_t *work)
 {
     AesGcmV.ok = PROTO_FALSE;
     if (!AesGcmV.seal_args.nonce || !AesGcmV.seal_args.ct_out || !AesGcmV.seal_args.tag_out)
@@ -314,7 +314,7 @@ void protocore_aes_gcm_seal(uint8_t *restrict work)
                                     AesGcmV.seal_args.tag_out);
 }
 
-void protocore_aes_gcm_open(uint8_t *restrict work)
+void protocore_aes_gcm_open(uint8_t *work)
 {
     AesGcmV.ok = PROTO_FALSE;
     if (!AesGcmV.open_args.nonce || !AesGcmV.open_args.tag || !AesGcmV.open_args.out)
@@ -328,7 +328,7 @@ void protocore_aes_gcm_open(uint8_t *restrict work)
 
 // Advance the RFC 5647 invocation counter: the low 8 bytes of the 12-byte nonce, big-endian; the 4-byte
 // fixed field never changes. The nonce is the caller's own, so the borrow goes unread.
-void protocore_aes_gcm_iv_increment(uint8_t *restrict work)
+void protocore_aes_gcm_iv_increment(uint8_t *work)
 {
     (void)work;
     AesGcmV.ok = PROTO_FALSE;

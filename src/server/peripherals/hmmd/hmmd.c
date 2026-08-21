@@ -98,12 +98,12 @@ uint8_t *protocore_hmmd_span(void)
 }
 
 // The entries this file calls before reaching their definitions.
-static void hmmd_cmd_build(uint8_t *restrict work);
-static void hmmd_parse_report(uint8_t *restrict work);
-static void hmmd_stream_push(uint8_t *restrict work);
-static void hmmd_stream_reset(uint8_t *restrict work);
+static void hmmd_cmd_build(uint8_t *work);
+static void hmmd_parse_report(uint8_t *work);
+static void hmmd_stream_push(uint8_t *work);
+static void hmmd_stream_reset(uint8_t *work);
 
-static void hmmd_parse_report(uint8_t *restrict work)
+static void hmmd_parse_report(uint8_t *work)
 {
     (void)work;
     const uint8_t *f = Hmmd.parse_report_args.frame;
@@ -144,7 +144,7 @@ static void hmmd_parse_report(uint8_t *restrict work)
     Hmmd.ok = PROTO_TRUE;
 }
 
-static void hmmd_stream_reset(uint8_t *restrict work)
+static void hmmd_stream_reset(uint8_t *work)
 {
     (void)work;
     HmmdStream *s = Hmmd.stream_reset_args.s;
@@ -159,7 +159,7 @@ static void hmmd_stream_reset(uint8_t *restrict work)
     s->phase = 0;
 }
 
-static void hmmd_stream_push(uint8_t *restrict work)
+static void hmmd_stream_push(uint8_t *work)
 {
     (void)work;
     HmmdStream *s = Hmmd.stream_push_args.s;
@@ -230,7 +230,7 @@ static void hmmd_stream_push(uint8_t *restrict work)
     }
 }
 
-static void hmmd_present(uint8_t *restrict work)
+static void hmmd_present(uint8_t *work)
 {
     (void)work;
     const HmmdReport *r = Hmmd.present_args.r;
@@ -238,7 +238,7 @@ static void hmmd_present(uint8_t *restrict work)
     Hmmd.ok = r && r->detected != 0;
 }
 
-static void hmmd_distance_cm(uint8_t *restrict work)
+static void hmmd_distance_cm(uint8_t *work)
 {
     (void)work;
     const HmmdReport *r = Hmmd.distance_cm_args.r;
@@ -248,7 +248,7 @@ static void hmmd_distance_cm(uint8_t *restrict work)
 
 // --- command encoders ------------------------------------------------------
 
-static void hmmd_cmd_build(uint8_t *restrict work)
+static void hmmd_cmd_build(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Hmmd.cmd_build_args.buf;
@@ -289,7 +289,7 @@ static void hmmd_cmd_build(uint8_t *restrict work)
     Hmmd.n = i;
 }
 
-static void hmmd_cmd_open(uint8_t *restrict work)
+static void hmmd_cmd_open(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Hmmd.cmd_open_args.buf;
@@ -304,7 +304,7 @@ static void hmmd_cmd_open(uint8_t *restrict work)
     hmmd_cmd_build(work);
 }
 
-static void hmmd_cmd_close(uint8_t *restrict work)
+static void hmmd_cmd_close(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Hmmd.cmd_close_args.buf;
@@ -318,7 +318,7 @@ static void hmmd_cmd_close(uint8_t *restrict work)
     hmmd_cmd_build(work);
 }
 
-static void hmmd_cmd_read_firmware(uint8_t *restrict work)
+static void hmmd_cmd_read_firmware(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Hmmd.cmd_read_firmware_args.buf;
@@ -332,7 +332,7 @@ static void hmmd_cmd_read_firmware(uint8_t *restrict work)
     hmmd_cmd_build(work);
 }
 
-static void hmmd_cmd_read_serial(uint8_t *restrict work)
+static void hmmd_cmd_read_serial(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Hmmd.cmd_read_serial_args.buf;
@@ -346,7 +346,7 @@ static void hmmd_cmd_read_serial(uint8_t *restrict work)
     hmmd_cmd_build(work);
 }
 
-static void hmmd_cmd_read_config(uint8_t *restrict work)
+static void hmmd_cmd_read_config(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Hmmd.cmd_read_config_args.buf;
@@ -360,7 +360,7 @@ static void hmmd_cmd_read_config(uint8_t *restrict work)
     hmmd_cmd_build(work);
 }
 
-static void hmmd_cmd_read_register(uint8_t *restrict work)
+static void hmmd_cmd_read_register(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Hmmd.cmd_read_register_args.buf;
@@ -378,7 +378,7 @@ static void hmmd_cmd_read_register(uint8_t *restrict work)
 
 // --- command-ACK decoding --------------------------------------------------
 
-static void hmmd_parse_ack(uint8_t *restrict work)
+static void hmmd_parse_ack(uint8_t *work)
 {
     (void)work;
     const uint8_t *f = Hmmd.parse_ack_args.frame;
@@ -413,7 +413,7 @@ static void hmmd_parse_ack(uint8_t *restrict work)
     Hmmd.ok = PROTO_TRUE;
 }
 
-static void hmmd_ack_matches(uint8_t *restrict work)
+static void hmmd_ack_matches(uint8_t *work)
 {
     (void)work;
     const HmmdAck *ack = Hmmd.ack_matches_args.ack;
@@ -428,7 +428,7 @@ static void hmmd_ack_matches(uint8_t *restrict work)
 
 #if PROTOCORE_HAS_BUS
 
-static void hmmd_begin(uint8_t *restrict work)
+static void hmmd_begin(uint8_t *work)
 {
     int rx_pin = Hmmd.begin_args.rx_pin;
     int tx_pin = Hmmd.begin_args.tx_pin;
@@ -439,7 +439,7 @@ static void hmmd_begin(uint8_t *restrict work)
     Hmmd.ok = protocore_uart_begin((uint8_t)PROTOCORE_HMMD_UART, PROTOCORE_HMMD_BAUD, rx_pin, tx_pin);
 }
 
-static void hmmd_poll(uint8_t *restrict work)
+static void hmmd_poll(uint8_t *work)
 {
 
     proto_bool fresh = PROTO_FALSE;
@@ -461,7 +461,7 @@ static void hmmd_poll(uint8_t *restrict work)
     Hmmd.ok = fresh;
 }
 
-static void hmmd_last(uint8_t *restrict work)
+static void hmmd_last(uint8_t *work)
 {
 
     Hmmd.report = HMMD_CTX(work)->have ? &HMMD_CTX(work)->last : NULL;
@@ -480,7 +480,7 @@ static void hmmd_last(uint8_t *restrict work)
 // bus has no software stand-in; this one is a codec with a UART seam bolted to it, and the codec -
 // the framing, the resyncing reassembler, the command builders - is exactly what a host can test.
 
-static void hmmd_begin(uint8_t *restrict work)
+static void hmmd_begin(uint8_t *work)
 {
     // The stream still resets: the reassembler is pure, and a caller that pushes captured bytes at
     // it after begin() gets the same answers here as it does with a radio wired up.
@@ -490,13 +490,13 @@ static void hmmd_begin(uint8_t *restrict work)
     Hmmd.ok = PROTO_FALSE; // no UART was opened, and no caller should act as though one was
 }
 
-static void hmmd_poll(uint8_t *restrict work)
+static void hmmd_poll(uint8_t *work)
 {
     (void)work;
     Hmmd.ok = PROTO_FALSE; // nothing to read from
 }
 
-static void hmmd_last(uint8_t *restrict work)
+static void hmmd_last(uint8_t *work)
 {
     // Whatever the reassembler last accepted, exactly as the bus arm reports it. A report only ever
     // arrives through stream_push, which does not need the seam.

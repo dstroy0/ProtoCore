@@ -125,7 +125,7 @@ static const char *const QPACK_STATIC[99][2] = {
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_qpack_encode_prefix(uint8_t *restrict work, uint8_t *out, size_t cap)
+size_t protocore_qpack_encode_prefix(uint8_t *work, uint8_t *out, size_t cap)
 {
     (void)work;
 
@@ -138,8 +138,8 @@ size_t protocore_qpack_encode_prefix(uint8_t *restrict work, uint8_t *out, size_
     return 2;
 }
 
-size_t protocore_qpack_encode_header(uint8_t *restrict work, uint8_t *out, size_t cap, const char *name,
-                                     size_t name_len, const char *value, size_t value_len)
+size_t protocore_qpack_encode_header(uint8_t *work, uint8_t *out, size_t cap, const char *name, size_t name_len,
+                                     const char *value, size_t value_len)
 {
     size_t n = 0;
 
@@ -223,8 +223,8 @@ size_t protocore_qpack_encode_header(uint8_t *restrict work, uint8_t *out, size_
     return o + vs;
 }
 
-proto_bool protocore_qpack_decode(uint8_t *restrict work, const uint8_t *block, size_t len, char *scratch,
-                                  size_t scratch_cap, QpackEmitFn emit, void *ctx)
+proto_bool protocore_qpack_decode(uint8_t *work, const uint8_t *block, size_t len, char *scratch, size_t scratch_cap,
+                                  QpackEmitFn emit, void *ctx)
 {
     size_t pos = 0;
     // Encoded Field Section Prefix (RFC 9204 sec 4.5.1): Required Insert Count, then S + Delta Base.

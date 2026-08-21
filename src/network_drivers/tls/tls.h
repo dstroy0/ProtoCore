@@ -198,24 +198,24 @@ extern TlsConnectionVars TlsConnectionV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const init)(uint8_t *restrict work);
-    void (*const start)(uint8_t *restrict work);
-    void (*const process)(uint8_t *restrict work);
-    void (*const established)(uint8_t *restrict work);
-    void (*const alert)(uint8_t *restrict work);
-    void (*const seal_app)(uint8_t *restrict work);
-    void (*const open_app)(uint8_t *restrict work);
+    void (*const init)(uint8_t *work);
+    void (*const start)(uint8_t *work);
+    void (*const process)(uint8_t *work);
+    void (*const established)(uint8_t *work);
+    void (*const alert)(uint8_t *work);
+    void (*const seal_app)(uint8_t *work);
+    void (*const open_app)(uint8_t *work);
 } TlsConnNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in TlsConnectionV or a region of the borrow at a fixed offset.
-void protocore_tls_connection_init(uint8_t *restrict work);
-void protocore_tls_connection_start(uint8_t *restrict work);
-void protocore_tls_connection_process(uint8_t *restrict work);
-void protocore_tls_connection_established(uint8_t *restrict work);
-void protocore_tls_connection_alert(uint8_t *restrict work);
-void protocore_tls_connection_seal_app(uint8_t *restrict work);
-void protocore_tls_connection_open_app(uint8_t *restrict work);
+void protocore_tls_connection_init(uint8_t *work);
+void protocore_tls_connection_start(uint8_t *work);
+void protocore_tls_connection_process(uint8_t *work);
+void protocore_tls_connection_established(uint8_t *work);
+void protocore_tls_connection_alert(uint8_t *work);
+void protocore_tls_connection_seal_app(uint8_t *work);
+void protocore_tls_connection_open_app(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

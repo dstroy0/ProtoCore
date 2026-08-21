@@ -57,7 +57,7 @@ uint8_t *protocore_http_route_span(void)
 
 // The table is the borrow: every entry reads it through ROUTE_CTX.
 
-HttpRoute *protocore_http_routes_add(uint8_t *restrict work)
+HttpRoute *protocore_http_routes_add(uint8_t *work)
 {
     struct HttpRouteCtx *t = ROUTE_CTX(work);
     if (t->count >= MAX_ROUTES)
@@ -75,12 +75,12 @@ HttpRoute *protocore_http_routes_add(uint8_t *restrict work)
     return r;
 }
 
-uint8_t protocore_http_routes_count(uint8_t *restrict work)
+uint8_t protocore_http_routes_count(uint8_t *work)
 {
     return ROUTE_CTX(work)->count;
 }
 
-HttpRoute *protocore_http_routes_at(uint8_t *restrict work, uint8_t i)
+HttpRoute *protocore_http_routes_at(uint8_t *work, uint8_t i)
 {
     if (i >= ROUTE_CTX(work)->count)
     {
@@ -89,7 +89,7 @@ HttpRoute *protocore_http_routes_at(uint8_t *restrict work, uint8_t i)
     return &ROUTE_CTX(work)->entry[i];
 }
 
-void protocore_http_routes_reset(uint8_t *restrict work)
+void protocore_http_routes_reset(uint8_t *work)
 {
     // The count is the table: add() zeroes an entry on hand-out, so nothing below the count can carry
     // a previous tenant's fields and there is nothing to wipe here.

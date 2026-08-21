@@ -79,11 +79,10 @@ typedef struct
  * @var MdNs::md4          the same for MD4, the NT-hash primitive
  * @var MdNs::hmac_md5     HMAC-MD5 (RFC 2104), the NTLMv2 MAC primitive
  *
- * @c work is PROTOCORE_MD_BORROW secure bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and
- * the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. That
- * is what keeps the NTLM password and session-key material in it from outliving the caller. The borrow
- * IS the digest, so two running digests are two borrows and never collide.
+ * @c work is PROTOCORE_MD_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the call, so
+ * nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes it, holds
+ * it, releases it, nor wipes it. That is what keeps the NTLM password and session-key material in it from outliving the
+ * caller. The borrow IS the digest, so two running digests are two borrows and never collide.
  *
  * No storage member and no context: a caller sets operands and reads @ref MdNs::ok, and that is all
  * the surface there is.
@@ -102,24 +101,24 @@ extern MdVars MdV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const md5_init)(uint8_t *restrict work);
-    void (*const md4_init)(uint8_t *restrict work);
-    void (*const update)(uint8_t *restrict work);
-    void (*const final)(uint8_t *restrict work);
-    void (*const md5)(uint8_t *restrict work);
-    void (*const md4)(uint8_t *restrict work);
-    void (*const hmac_md5)(uint8_t *restrict work);
+    void (*const md5_init)(uint8_t *work);
+    void (*const md4_init)(uint8_t *work);
+    void (*const update)(uint8_t *work);
+    void (*const final)(uint8_t *work);
+    void (*const md5)(uint8_t *work);
+    void (*const md4)(uint8_t *work);
+    void (*const hmac_md5)(uint8_t *work);
 } MdNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in MdV or a region of the borrow at a fixed offset.
-void protocore_md_md5_init(uint8_t *restrict work);
-void protocore_md_md4_init(uint8_t *restrict work);
-void protocore_md_update(uint8_t *restrict work);
-void protocore_md_final(uint8_t *restrict work);
-void protocore_md_md5(uint8_t *restrict work);
-void protocore_md_md4(uint8_t *restrict work);
-void protocore_md_hmac_md5(uint8_t *restrict work);
+void protocore_md_md5_init(uint8_t *work);
+void protocore_md_md4_init(uint8_t *work);
+void protocore_md_update(uint8_t *work);
+void protocore_md_final(uint8_t *work);
+void protocore_md_md5(uint8_t *work);
+void protocore_md_md4(uint8_t *work);
+void protocore_md_hmac_md5(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

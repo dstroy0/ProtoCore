@@ -144,24 +144,24 @@ extern StatsdVars StatsdV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const init)(uint8_t *restrict work);
-    void (*const format)(uint8_t *restrict work);
-    void (*const count)(uint8_t *restrict work);
-    void (*const gauge)(uint8_t *restrict work);
-    void (*const gauge_delta)(uint8_t *restrict work);
-    void (*const timing)(uint8_t *restrict work);
-    void (*const set)(uint8_t *restrict work);
+    void (*const init)(uint8_t *work);
+    void (*const format)(uint8_t *work);
+    void (*const count)(uint8_t *work);
+    void (*const gauge)(uint8_t *work);
+    void (*const gauge_delta)(uint8_t *work);
+    void (*const timing)(uint8_t *work);
+    void (*const set)(uint8_t *work);
 } StatsdNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in StatsdV or a region of the borrow at a fixed offset.
-void protocore_statsd_init(uint8_t *restrict work);
-void protocore_statsd_format(uint8_t *restrict work);
-void protocore_statsd_count(uint8_t *restrict work);
-void protocore_statsd_gauge(uint8_t *restrict work);
-void protocore_statsd_gauge_delta(uint8_t *restrict work);
-void protocore_statsd_timing(uint8_t *restrict work);
-void protocore_statsd_set(uint8_t *restrict work);
+void protocore_statsd_init(uint8_t *work);
+void protocore_statsd_format(uint8_t *work);
+void protocore_statsd_count(uint8_t *work);
+void protocore_statsd_gauge(uint8_t *work);
+void protocore_statsd_gauge_delta(uint8_t *work);
+void protocore_statsd_timing(uint8_t *work);
+void protocore_statsd_set(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

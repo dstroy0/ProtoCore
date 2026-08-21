@@ -265,30 +265,30 @@ extern DmxVars DmxV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build)(uint8_t *restrict work);
-    void (*const get_channel)(uint8_t *restrict work);
-    void (*const rdm_uid)(uint8_t *restrict work);
-    void (*const rdm_checksum)(uint8_t *restrict work);
-    void (*const rdm_build)(uint8_t *restrict work);
-    void (*const rdm_parse)(uint8_t *restrict work);
-    void (*const rdm_decode_disc_response)(uint8_t *restrict work);
-    void (*const rdm_build_disc_response)(uint8_t *restrict work);
-    void (*const rdm_build_device_info)(uint8_t *restrict work);
-    void (*const rdm_parse_device_info)(uint8_t *restrict work);
+    void (*const build)(uint8_t *work);
+    void (*const get_channel)(uint8_t *work);
+    void (*const rdm_uid)(uint8_t *work);
+    void (*const rdm_checksum)(uint8_t *work);
+    void (*const rdm_build)(uint8_t *work);
+    void (*const rdm_parse)(uint8_t *work);
+    void (*const rdm_decode_disc_response)(uint8_t *work);
+    void (*const rdm_build_disc_response)(uint8_t *work);
+    void (*const rdm_build_device_info)(uint8_t *work);
+    void (*const rdm_parse_device_info)(uint8_t *work);
 } DmxNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in DmxV or a region of the borrow at a fixed offset.
-void protocore_dmx_build(uint8_t *restrict work);
-void protocore_dmx_get_channel(uint8_t *restrict work);
-void protocore_dmx_rdm_uid(uint8_t *restrict work);
-void protocore_dmx_rdm_checksum(uint8_t *restrict work);
-void protocore_dmx_rdm_build(uint8_t *restrict work);
-void protocore_dmx_rdm_parse(uint8_t *restrict work);
-void protocore_dmx_rdm_decode_disc_response(uint8_t *restrict work);
-void protocore_dmx_rdm_build_disc_response(uint8_t *restrict work);
-void protocore_dmx_rdm_build_device_info(uint8_t *restrict work);
-void protocore_dmx_rdm_parse_device_info(uint8_t *restrict work);
+void protocore_dmx_build(uint8_t *work);
+void protocore_dmx_get_channel(uint8_t *work);
+void protocore_dmx_rdm_uid(uint8_t *work);
+void protocore_dmx_rdm_checksum(uint8_t *work);
+void protocore_dmx_rdm_build(uint8_t *work);
+void protocore_dmx_rdm_parse(uint8_t *work);
+void protocore_dmx_rdm_decode_disc_response(uint8_t *work);
+void protocore_dmx_rdm_build_disc_response(uint8_t *work);
+void protocore_dmx_rdm_build_device_info(uint8_t *work);
+void protocore_dmx_rdm_parse_device_info(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

@@ -83,9 +83,9 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*defaults)(uint8_t *restrict, QuicTransportParams *);
-    size_t (*encode)(uint8_t *restrict, const QuicTransportParams *, uint8_t *, size_t);
-    proto_bool (*parse)(uint8_t *restrict, const uint8_t *, size_t, QuicTransportParams *);
+    void (*defaults)(uint8_t *, QuicTransportParams *);
+    size_t (*encode)(uint8_t *, const QuicTransportParams *, uint8_t *, size_t);
+    proto_bool (*parse)(uint8_t *, const uint8_t *, size_t, QuicTransportParams *);
 } QuicTpNs;
 PROTOCORE_NS_LAYOUT(QuicTpNs, defaults, encode, parse);
 
@@ -94,7 +94,7 @@ PROTOCORE_NS_LAYOUT(QuicTpNs, defaults, encode, parse);
  * @param work PROTOCORE_QUIC_TP_BORROW bytes the caller took. Not held past the call.
  * @param tp Tp
  */
-void protocore_quic_tp_defaults(uint8_t *restrict work, QuicTransportParams *tp);
+void protocore_quic_tp_defaults(uint8_t *work, QuicTransportParams *tp);
 /**
  * @brief Encode the server's transport parameters into out. Emits, in .
  * @param work PROTOCORE_QUIC_TP_BORROW bytes the caller took. Not held past the call.
@@ -103,7 +103,7 @@ void protocore_quic_tp_defaults(uint8_t *restrict work, QuicTransportParams *tp)
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_quic_tp_encode(uint8_t *restrict work, const QuicTransportParams *tp, uint8_t *out, size_t cap);
+size_t protocore_quic_tp_encode(uint8_t *work, const QuicTransportParams *tp, uint8_t *out, size_t cap);
 /**
  * @brief Parse a peer's transport parameters (starting from the spec .
  * @param work PROTOCORE_QUIC_TP_BORROW bytes the caller took. Not held past the call.
@@ -112,7 +112,7 @@ size_t protocore_quic_tp_encode(uint8_t *restrict work, const QuicTransportParam
  * @param tp Tp
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_quic_tp_parse(uint8_t *restrict work, const uint8_t *buf, size_t len, QuicTransportParams *tp);
+proto_bool protocore_quic_tp_parse(uint8_t *work, const uint8_t *buf, size_t len, QuicTransportParams *tp);
 
 /** @brief Module namespace. */
 PROTOCORE_NS QuicTpNs QuicTp PROTOCORE_UNUSED = {

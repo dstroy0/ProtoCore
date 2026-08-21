@@ -71,8 +71,8 @@ static inline void protocore_fe_hw_disable(void)
 
 // z = x*y mod p (8 words / 256-bit) on the RSA MODMULT. Requires protocore_fe_hw_enable() first. Canonical (< p),
 // safe if z aliases x/y. Delegates to the HAL modmul with this domain's constants; the crypto TUs that pull
-// this in build at -O2 (the OPT the module states in its CMakeLists), where the always_inline HAL folds FE_MOD_P / the mostly-zero
-// FE_MOD_R2 into immediate stores - the hand-tuned ~1,380-cyc path.
+// this in build at -O2 (the OPT the module states in its CMakeLists), where the always_inline HAL folds FE_MOD_P / the
+// mostly-zero FE_MOD_R2 into immediate stores - the hand-tuned ~1,380-cyc path.
 static inline void fe_mul(fe z, const fe x, const fe y)
 {
     protocore_rsa_modmul(z, x, y, FE_MOD_P, FE_MOD_MPRIME, FE_MOD_R2, 8);
@@ -429,44 +429,44 @@ extern Fe25519Vars Fe25519V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const hw_enable)(uint8_t *restrict work);
-    void (*const hw_disable)(uint8_t *restrict work);
-    void (*const mul)(uint8_t *restrict work);
-    void (*const sq)(uint8_t *restrict work);
-    void (*const copy)(uint8_t *restrict work);
-    void (*const zero)(uint8_t *restrict work);
-    void (*const one)(uint8_t *restrict work);
-    void (*const reduce_once)(uint8_t *restrict work);
-    void (*const add)(uint8_t *restrict work);
-    void (*const sub)(uint8_t *restrict work);
-    void (*const cswap)(uint8_t *restrict work);
-    void (*const frombytes)(uint8_t *restrict work);
-    void (*const tobytes)(uint8_t *restrict work);
-    void (*const invert)(uint8_t *restrict work);
-    void (*const pow2523)(uint8_t *restrict work);
-    void (*const get_parity)(uint8_t *restrict work);
-    void (*const get_neq)(uint8_t *restrict work);
+    void (*const hw_enable)(uint8_t *work);
+    void (*const hw_disable)(uint8_t *work);
+    void (*const mul)(uint8_t *work);
+    void (*const sq)(uint8_t *work);
+    void (*const copy)(uint8_t *work);
+    void (*const zero)(uint8_t *work);
+    void (*const one)(uint8_t *work);
+    void (*const reduce_once)(uint8_t *work);
+    void (*const add)(uint8_t *work);
+    void (*const sub)(uint8_t *work);
+    void (*const cswap)(uint8_t *work);
+    void (*const frombytes)(uint8_t *work);
+    void (*const tobytes)(uint8_t *work);
+    void (*const invert)(uint8_t *work);
+    void (*const pow2523)(uint8_t *work);
+    void (*const get_parity)(uint8_t *work);
+    void (*const get_neq)(uint8_t *work);
 } Fe25519Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Fe25519V or a region of the borrow at a fixed offset.
-void protocore_fe25519_hw_enable(uint8_t *restrict work);
-void protocore_fe25519_hw_disable(uint8_t *restrict work);
-void protocore_fe25519_mul(uint8_t *restrict work);
-void protocore_fe25519_sq(uint8_t *restrict work);
-void protocore_fe25519_copy(uint8_t *restrict work);
-void protocore_fe25519_zero(uint8_t *restrict work);
-void protocore_fe25519_one(uint8_t *restrict work);
-void protocore_fe25519_reduce_once(uint8_t *restrict work);
-void protocore_fe25519_add(uint8_t *restrict work);
-void protocore_fe25519_sub(uint8_t *restrict work);
-void protocore_fe25519_cswap(uint8_t *restrict work);
-void protocore_fe25519_frombytes(uint8_t *restrict work);
-void protocore_fe25519_tobytes(uint8_t *restrict work);
-void protocore_fe25519_invert(uint8_t *restrict work);
-void protocore_fe25519_pow2523(uint8_t *restrict work);
-void protocore_fe25519_get_parity(uint8_t *restrict work);
-void protocore_fe25519_get_neq(uint8_t *restrict work);
+void protocore_fe25519_hw_enable(uint8_t *work);
+void protocore_fe25519_hw_disable(uint8_t *work);
+void protocore_fe25519_mul(uint8_t *work);
+void protocore_fe25519_sq(uint8_t *work);
+void protocore_fe25519_copy(uint8_t *work);
+void protocore_fe25519_zero(uint8_t *work);
+void protocore_fe25519_one(uint8_t *work);
+void protocore_fe25519_reduce_once(uint8_t *work);
+void protocore_fe25519_add(uint8_t *work);
+void protocore_fe25519_sub(uint8_t *work);
+void protocore_fe25519_cswap(uint8_t *work);
+void protocore_fe25519_frombytes(uint8_t *work);
+void protocore_fe25519_tobytes(uint8_t *work);
+void protocore_fe25519_invert(uint8_t *work);
+void protocore_fe25519_pow2523(uint8_t *work);
+void protocore_fe25519_get_parity(uint8_t *work);
+void protocore_fe25519_get_neq(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

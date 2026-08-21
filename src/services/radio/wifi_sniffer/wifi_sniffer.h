@@ -232,9 +232,8 @@ typedef struct
  * @var WifiSnifferNs::survey  the per-channel survey (never null)
  * @var WifiSnifferNs::scan  the live scan schedule (never null) - current channel, sweeps ...
  *
- * @c work is PROTOCORE_WIFI_SNIFFER_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_WIFI_SNIFFER_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -264,44 +263,44 @@ extern WifiSnifferVars WifiSnifferV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const parse)(uint8_t *restrict work);
-    void (*const stats_reset)(uint8_t *restrict work);
-    void (*const stats_add)(uint8_t *restrict work);
-    void (*const should_roam)(uint8_t *restrict work);
-    void (*const scan_init)(uint8_t *restrict work);
-    void (*const scan_due)(uint8_t *restrict work);
-    void (*const scan_next)(uint8_t *restrict work);
-    void (*const survey_reset)(uint8_t *restrict work);
-    void (*const survey_add)(uint8_t *restrict work);
-    void (*const survey_get)(uint8_t *restrict work);
-    void (*const survey_best)(uint8_t *restrict work);
-    void (*const begin)(uint8_t *restrict work);
-    void (*const tick)(uint8_t *restrict work);
-    void (*const end)(uint8_t *restrict work);
-    void (*const stats)(uint8_t *restrict work);
-    void (*const survey)(uint8_t *restrict work);
-    void (*const scan)(uint8_t *restrict work);
+    void (*const parse)(uint8_t *work);
+    void (*const stats_reset)(uint8_t *work);
+    void (*const stats_add)(uint8_t *work);
+    void (*const should_roam)(uint8_t *work);
+    void (*const scan_init)(uint8_t *work);
+    void (*const scan_due)(uint8_t *work);
+    void (*const scan_next)(uint8_t *work);
+    void (*const survey_reset)(uint8_t *work);
+    void (*const survey_add)(uint8_t *work);
+    void (*const survey_get)(uint8_t *work);
+    void (*const survey_best)(uint8_t *work);
+    void (*const begin)(uint8_t *work);
+    void (*const tick)(uint8_t *work);
+    void (*const end)(uint8_t *work);
+    void (*const stats)(uint8_t *work);
+    void (*const survey)(uint8_t *work);
+    void (*const scan)(uint8_t *work);
 } WifiSnifferNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in WifiSnifferV or a region of the borrow at a fixed offset.
-void protocore_wifi_sniffer_parse(uint8_t *restrict work);
-void protocore_wifi_sniffer_stats_reset(uint8_t *restrict work);
-void protocore_wifi_sniffer_stats_add(uint8_t *restrict work);
-void protocore_wifi_sniffer_should_roam(uint8_t *restrict work);
-void protocore_wifi_sniffer_scan_init(uint8_t *restrict work);
-void protocore_wifi_sniffer_scan_due(uint8_t *restrict work);
-void protocore_wifi_sniffer_scan_next(uint8_t *restrict work);
-void protocore_wifi_sniffer_survey_reset(uint8_t *restrict work);
-void protocore_wifi_sniffer_survey_add(uint8_t *restrict work);
-void protocore_wifi_sniffer_survey_get(uint8_t *restrict work);
-void protocore_wifi_sniffer_survey_best(uint8_t *restrict work);
-void protocore_wifi_sniffer_begin(uint8_t *restrict work);
-void protocore_wifi_sniffer_tick(uint8_t *restrict work);
-void protocore_wifi_sniffer_end(uint8_t *restrict work);
-void protocore_wifi_sniffer_stats(uint8_t *restrict work);
-void protocore_wifi_sniffer_survey(uint8_t *restrict work);
-void protocore_wifi_sniffer_scan(uint8_t *restrict work);
+void protocore_wifi_sniffer_parse(uint8_t *work);
+void protocore_wifi_sniffer_stats_reset(uint8_t *work);
+void protocore_wifi_sniffer_stats_add(uint8_t *work);
+void protocore_wifi_sniffer_should_roam(uint8_t *work);
+void protocore_wifi_sniffer_scan_init(uint8_t *work);
+void protocore_wifi_sniffer_scan_due(uint8_t *work);
+void protocore_wifi_sniffer_scan_next(uint8_t *work);
+void protocore_wifi_sniffer_survey_reset(uint8_t *work);
+void protocore_wifi_sniffer_survey_add(uint8_t *work);
+void protocore_wifi_sniffer_survey_get(uint8_t *work);
+void protocore_wifi_sniffer_survey_best(uint8_t *work);
+void protocore_wifi_sniffer_begin(uint8_t *work);
+void protocore_wifi_sniffer_tick(uint8_t *work);
+void protocore_wifi_sniffer_end(uint8_t *work);
+void protocore_wifi_sniffer_stats(uint8_t *work);
+void protocore_wifi_sniffer_survey(uint8_t *work);
+void protocore_wifi_sniffer_scan(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

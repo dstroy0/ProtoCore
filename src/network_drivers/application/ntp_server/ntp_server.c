@@ -23,7 +23,7 @@ PROTOCORE_BEGIN_DECLS
 #include "server/clock/clock.h"                               // Clock.millis: the sub-second fraction
 #include "services/timing_position/time_source/time_source.h" // protocore_time_now: the seconds we serve
 
-void protocore_ntp_server_build_response(uint8_t *restrict work)
+void protocore_ntp_server_build_response(uint8_t *work)
 {
     (void)work;
     const uint8_t *req = NtpServerV.build_response_args.req;
@@ -137,7 +137,7 @@ static void protocore_ntp_server_udp_handler(const uint8_t *data, size_t len, co
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_ntp_server_span();
+    uint8_t *work = protocore_ntp_server_span();
 
     (void)ctx;
     uint32_t unix_secs = protocore_time_now();
@@ -169,7 +169,7 @@ static void protocore_ntp_server_udp_handler(const uint8_t *data, size_t len, co
     }
 }
 
-void protocore_ntp_server_begin(uint8_t *restrict work)
+void protocore_ntp_server_begin(uint8_t *work)
 {
     uint8_t stratum = NtpServerV.begin_args.stratum;
     uint32_t refid = NtpServerV.begin_args.refid;

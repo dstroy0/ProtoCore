@@ -23,9 +23,8 @@ PROTOCORE_BEGIN_DECLS
  * protocore_millis()) and feeds it in; only that read reaches the pin seam. The OUT polarity and hold window come
  * from ServerConfig (PROTOCORE_SEN0192_ACTIVE_HIGH / PROTOCORE_SEN0192_HOLD_MS / PROTOCORE_SEN0192_PIN).
  *
- * @c work is PROTOCORE_SEN0192_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_SEN0192_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
+ * nothing here aliases it. How those bytes are carved is this module's and is never named here.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -50,16 +49,16 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*motion_init)(uint8_t *restrict, Sen0192Motion *, uint32_t, proto_bool);
-    proto_bool (*motion_update)(uint8_t *restrict, Sen0192Motion *, proto_bool, uint32_t);
-    proto_bool (*motion_tick)(uint8_t *restrict, Sen0192Motion *, uint32_t);
-    proto_bool (*motion_present)(uint8_t *restrict, const Sen0192Motion *);
-    uint32_t (*motion_events)(uint8_t *restrict, const Sen0192Motion *);
-    uint32_t (*motion_active_age_ms)(uint8_t *restrict, const Sen0192Motion *, uint32_t);
-    proto_bool (*begin)(uint8_t *restrict);
-    proto_bool (*poll)(uint8_t *restrict);
-    void (*present)(uint8_t *restrict);
-    void (*motion_count)(uint8_t *restrict);
+    void (*motion_init)(uint8_t *, Sen0192Motion *, uint32_t, proto_bool);
+    proto_bool (*motion_update)(uint8_t *, Sen0192Motion *, proto_bool, uint32_t);
+    proto_bool (*motion_tick)(uint8_t *, Sen0192Motion *, uint32_t);
+    proto_bool (*motion_present)(uint8_t *, const Sen0192Motion *);
+    uint32_t (*motion_events)(uint8_t *, const Sen0192Motion *);
+    uint32_t (*motion_active_age_ms)(uint8_t *, const Sen0192Motion *, uint32_t);
+    proto_bool (*begin)(uint8_t *);
+    proto_bool (*poll)(uint8_t *);
+    void (*present)(uint8_t *);
+    void (*motion_count)(uint8_t *);
 } Sen0192Ns;
 PROTOCORE_NS_LAYOUT(Sen0192Ns, motion_init, motion_update, motion_tick, motion_present, motion_events,
                     motion_active_age_ms, begin, poll, present, motion_count);
@@ -71,7 +70,7 @@ PROTOCORE_NS_LAYOUT(Sen0192Ns, motion_init, motion_update, motion_tick, motion_p
  * @param hold_ms Hold ms
  * @param active_high Active high
  */
-void protocore_sen0192_motion_init(uint8_t *restrict work, Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high);
+void protocore_sen0192_motion_init(uint8_t *work, Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high);
 /**
  * @brief Feed one sampled line level at now_ms.
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
@@ -80,8 +79,7 @@ void protocore_sen0192_motion_init(uint8_t *restrict work, Sen0192Motion *m, uin
  * @param now_ms Now ms
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_sen0192_motion_update(uint8_t *restrict work, Sen0192Motion *m, proto_bool level_high,
-                                           uint32_t now_ms);
+proto_bool protocore_sen0192_motion_update(uint8_t *work, Sen0192Motion *m, proto_bool level_high, uint32_t now_ms);
 /**
  * @brief Re-evaluate presence against the hold window at now_ms without a .
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
@@ -89,21 +87,21 @@ proto_bool protocore_sen0192_motion_update(uint8_t *restrict work, Sen0192Motion
  * @param now_ms Now ms
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_sen0192_motion_tick(uint8_t *restrict work, Sen0192Motion *m, uint32_t now_ms);
+proto_bool protocore_sen0192_motion_tick(uint8_t *work, Sen0192Motion *m, uint32_t now_ms);
 /**
  * @brief Current presence (respecting the hold window).
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
  * @param m M
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_sen0192_motion_present(uint8_t *restrict work, const Sen0192Motion *m);
+proto_bool protocore_sen0192_motion_present(uint8_t *work, const Sen0192Motion *m);
 /**
  * @brief Number of clear -> present transitions since init.
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
  * @param m M
  * @return The uint32_t.
  */
-uint32_t protocore_sen0192_motion_events(uint8_t *restrict work, const Sen0192Motion *m);
+uint32_t protocore_sen0192_motion_events(uint8_t *work, const Sen0192Motion *m);
 /**
  * @brief Milliseconds since the last active-level sample (0 if none yet).
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
@@ -111,29 +109,29 @@ uint32_t protocore_sen0192_motion_events(uint8_t *restrict work, const Sen0192Mo
  * @param now_ms Now ms
  * @return The uint32_t.
  */
-uint32_t protocore_sen0192_motion_active_age_ms(uint8_t *restrict work, const Sen0192Motion *m, uint32_t now_ms);
+uint32_t protocore_sen0192_motion_active_age_ms(uint8_t *work, const Sen0192Motion *m, uint32_t now_ms);
 /**
  * @brief Configure PROTOCORE_SEN0192_PIN as an input and start tracking .
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_sen0192_begin(uint8_t *restrict work);
+proto_bool protocore_sen0192_begin(uint8_t *work);
 /**
  * @brief Sample the pin now (via protocore_millis()). true iff a new .
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_sen0192_poll(uint8_t *restrict work);
+proto_bool protocore_sen0192_poll(uint8_t *work);
 /**
  * @brief Current presence.
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
  */
-void protocore_sen0192_present(uint8_t *restrict work);
+void protocore_sen0192_present(uint8_t *work);
 /**
  * @brief Count of motion events (clear -> present transitions) since .
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
  */
-void protocore_sen0192_motion_count(uint8_t *restrict work);
+void protocore_sen0192_motion_count(uint8_t *work);
 
 /**
  * @brief The PROTOCORE_SEN0192_BORROW bytes this module's state lives in.

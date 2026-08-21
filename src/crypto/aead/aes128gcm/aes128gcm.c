@@ -220,8 +220,8 @@ static inline void set_j0(Aes128GcmWork *w, const uint8_t nonce[12])
 
 // GHASH(aad || cipher) and the 16-byte tag, against the table already built for this key. Requires
 // set_j0 first; leaves w->ctr alone so the caller controls the GCTR pass order.
-static void gcm_tag(uint8_t *restrict work, const uint8_t *aad, size_t aad_len, const uint8_t *cipher,
-                    size_t cipher_len, uint8_t tag_out[16])
+static void gcm_tag(uint8_t *work, const uint8_t *aad, size_t aad_len, const uint8_t *cipher, size_t cipher_len,
+                    uint8_t tag_out[16])
 {
     Aes128GcmWork *w = AES128GCM_GCM(work);
     mem.zero(w->acc, 16);
@@ -245,7 +245,7 @@ static void gcm_tag(uint8_t *restrict work, const uint8_t *aad, size_t aad_len, 
     }
 }
 
-static proto_bool aes128gcm_key_load(uint8_t *restrict work)
+static proto_bool aes128gcm_key_load(uint8_t *work)
 {
     Aes128GcmWork *w = AES128GCM_GCM(work);
     blk_init(&w->blk, Aes128GcmV.key_args.key);
@@ -256,7 +256,7 @@ static proto_bool aes128gcm_key_load(uint8_t *restrict work)
     return PROTO_TRUE;
 }
 
-static void aes128gcm_key_release(uint8_t *restrict work)
+static void aes128gcm_key_release(uint8_t *work)
 {
     Aes128GcmWork *w = AES128GCM_GCM(work);
     blk_free(&w->blk);
@@ -266,7 +266,7 @@ static void aes128gcm_key_release(uint8_t *restrict work)
     protocore_secure_wipe(w->ej0, sizeof(w->ej0));
 }
 
-static proto_bool aes128gcm_seal_record(uint8_t *restrict work)
+static proto_bool aes128gcm_seal_record(uint8_t *work)
 {
     Aes128GcmWork *w = AES128GCM_GCM(work);
     set_j0(w, Aes128GcmV.seal_args.nonce);
@@ -279,7 +279,7 @@ static proto_bool aes128gcm_seal_record(uint8_t *restrict work)
     return PROTO_TRUE;
 }
 
-static proto_bool aes128gcm_open_record(uint8_t *restrict work)
+static proto_bool aes128gcm_open_record(uint8_t *work)
 {
     Aes128GcmWork *w = AES128GCM_GCM(work);
     set_j0(w, Aes128GcmV.open_args.nonce);
@@ -296,24 +296,24 @@ static proto_bool aes128gcm_open_record(uint8_t *restrict work)
     return PROTO_TRUE;
 }
 
-static void aes128gcm_blk_load(uint8_t *restrict work)
+static void aes128gcm_blk_load(uint8_t *work)
 {
     blk_init(AES128GCM_BLK(work), Aes128GcmV.block_key_args.key);
 }
 
-static void aes128gcm_blk_run(uint8_t *restrict work)
+static void aes128gcm_blk_run(uint8_t *work)
 {
     blk_enc(AES128GCM_BLK(work), Aes128GcmV.block_args.in, Aes128GcmV.block_args.out);
 }
 
-static void aes128gcm_blk_release(uint8_t *restrict work)
+static void aes128gcm_blk_release(uint8_t *work)
 {
     blk_free(AES128GCM_BLK(work));
 }
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_aes128_gcm_key_init(uint8_t *restrict work)
+void protocore_aes128_gcm_key_init(uint8_t *work)
 {
     Aes128GcmV.ok = PROTO_FALSE;
     if (!Aes128GcmV.key_args.key)
@@ -325,14 +325,14 @@ void protocore_aes128_gcm_key_init(uint8_t *restrict work)
 
 // Release what the context attached. The bytes themselves are the caller's: it releases the borrow and
 // the pool wipes it.
-void protocore_aes128_gcm_key_wipe(uint8_t *restrict work)
+void protocore_aes128_gcm_key_wipe(uint8_t *work)
 {
     Aes128GcmV.ok = PROTO_FALSE;
     aes128gcm_key_release(work);
     Aes128GcmV.ok = PROTO_TRUE;
 }
 
-void protocore_aes128_gcm_seal(uint8_t *restrict work)
+void protocore_aes128_gcm_seal(uint8_t *work)
 {
     Aes128GcmV.ok = PROTO_FALSE;
     if (!Aes128GcmV.seal_args.nonce || !Aes128GcmV.seal_args.ct_out || !Aes128GcmV.seal_args.tag_out)
@@ -342,7 +342,7 @@ void protocore_aes128_gcm_seal(uint8_t *restrict work)
     Aes128GcmV.ok = aes128gcm_seal_record(work);
 }
 
-void protocore_aes128_gcm_open(uint8_t *restrict work)
+void protocore_aes128_gcm_open(uint8_t *work)
 {
     Aes128GcmV.ok = PROTO_FALSE;
     if (!Aes128GcmV.open_args.nonce || !Aes128GcmV.open_args.tag || !Aes128GcmV.open_args.out)
@@ -352,7 +352,7 @@ void protocore_aes128_gcm_open(uint8_t *restrict work)
     Aes128GcmV.ok = aes128gcm_open_record(work);
 }
 
-void protocore_aes128_gcm_block_init(uint8_t *restrict work)
+void protocore_aes128_gcm_block_init(uint8_t *work)
 {
     Aes128GcmV.ok = PROTO_FALSE;
     if (!Aes128GcmV.block_key_args.key)
@@ -363,7 +363,7 @@ void protocore_aes128_gcm_block_init(uint8_t *restrict work)
     Aes128GcmV.ok = PROTO_TRUE;
 }
 
-void protocore_aes128_gcm_block_encrypt(uint8_t *restrict work)
+void protocore_aes128_gcm_block_encrypt(uint8_t *work)
 {
     Aes128GcmV.ok = PROTO_FALSE;
     if (!Aes128GcmV.block_args.in || !Aes128GcmV.block_args.out)
@@ -374,7 +374,7 @@ void protocore_aes128_gcm_block_encrypt(uint8_t *restrict work)
     Aes128GcmV.ok = PROTO_TRUE;
 }
 
-void protocore_aes128_gcm_block_wipe(uint8_t *restrict work)
+void protocore_aes128_gcm_block_wipe(uint8_t *work)
 {
     Aes128GcmV.ok = PROTO_FALSE;
     aes128gcm_blk_release(work);

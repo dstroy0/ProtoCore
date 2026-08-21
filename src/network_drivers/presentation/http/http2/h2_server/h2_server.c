@@ -230,7 +230,7 @@ static void cb_header(void *app, uint32_t stream_id, const char *n, size_t nl, c
     (void)stream_id;
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
-    uint8_t *restrict work = protocore_h2_server_span();
+    uint8_t *work = protocore_h2_server_span();
     const uint8_t slot = (uint8_t)(uintptr_t)app;
     uint8_t *mask = &H2_SERVER_CTX(work)->slot[slot].hmask;
     HttpReq *r = &http_pool[slot];
@@ -325,7 +325,7 @@ static proto_bool cb_headers_end(void *app, uint32_t sid, proto_bool end_stream)
     (void)end_stream;
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
-    uint8_t *restrict work = protocore_h2_server_span();
+    uint8_t *work = protocore_h2_server_span();
     const uint8_t slot = (uint8_t)(uintptr_t)app;
     const uint8_t mask = H2_SERVER_CTX(work)->slot[slot].hmask;
     H2_SERVER_CTX(work)->slot[slot].hmask = 0; // the block is judged here; the next one starts clean
@@ -355,7 +355,7 @@ static void cb_data(void *app, uint32_t stream_id, const uint8_t *data, size_t l
     r->body_bytes_read += len;
 }
 
-static void open_conn(uint8_t *restrict work)
+static void open_conn(uint8_t *work)
 {
     (void)work;
     const uint8_t slot = H2Server.slot;
@@ -373,7 +373,7 @@ static void open_conn(uint8_t *restrict work)
     HttpParser.reset(protocore_http_parser_span(), &http_pool[slot]);
 }
 
-static void data(uint8_t *restrict work)
+static void data(uint8_t *work)
 {
     (void)work;
     const uint8_t slot = H2Server.slot;
@@ -393,7 +393,7 @@ static void data(uint8_t *restrict work)
     }
 }
 
-static void respond(uint8_t *restrict work)
+static void respond(uint8_t *work)
 {
     const uint8_t slot = H2Server.slot;
     H2ConnV.respond_args.stream_id = http_h2_stream[slot];
@@ -407,7 +407,7 @@ static void respond(uint8_t *restrict work)
                      &http_pool[slot]); // ready for the next stream; keep the connection open
 }
 
-static void close_conn(uint8_t *restrict work)
+static void close_conn(uint8_t *work)
 {
     (void)work;
     const uint8_t slot = H2Server.slot;

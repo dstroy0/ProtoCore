@@ -21,16 +21,15 @@ PROTOCORE_BEGIN_DECLS
  * sink can be installed, so PROTOCORE_ENABLE_UPLOAD and PROTOCORE_ENABLE_OTA share the
  * parser hook - register whichever you need (not both on the same build).
  *
- * @c work is PROTOCORE_UPLOAD_SERVICE_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_UPLOAD_SERVICE_BORROW bytes the CALLER took, at an address it knows. It is not held past the
+ * call, so nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*begin)(uint8_t *restrict, const char *, const char *);
-    size_t (*last_size)(uint8_t *restrict);
+    void (*begin)(uint8_t *, const char *, const char *);
+    size_t (*last_size)(uint8_t *);
 } UploadServiceNs;
 PROTOCORE_NS_LAYOUT(UploadServiceNs, begin, last_size);
 
@@ -40,13 +39,13 @@ PROTOCORE_NS_LAYOUT(UploadServiceNs, begin, last_size);
  * @param path the upload URL (e.g. "/upload")
  * @param dest_path destination file path (e.g. "/uploads/data.bin")
  */
-void protocore_upload_service_begin(uint8_t *restrict work, const char *path, const char *dest_path);
+void protocore_upload_service_begin(uint8_t *work, const char *path, const char *dest_path);
 /**
  * @brief Bytes written by the most recent upload (for handlers / tests).
  * @param work PROTOCORE_UPLOAD_SERVICE_BORROW bytes the caller took. Not held past the call.
  * @return The size_t.
  */
-size_t protocore_upload_service_last_size(uint8_t *restrict work);
+size_t protocore_upload_service_last_size(uint8_t *work);
 
 /**
  * @brief The PROTOCORE_UPLOAD_SERVICE_BORROW bytes this module's state lives in.

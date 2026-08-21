@@ -32,8 +32,8 @@ northbound bridge.
  * Per-port uplink rate cap (fail-closed), a routing-key helper (protocore_gateway_topic() formats
  * `<prefix>/<port>/<addr>`), and static tables (zero heap): PROTOCORE_GW_MAX_PORTS ports.
  *
- * @c work is PROTOCORE_GATEWAY_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * @c work is PROTOCORE_GATEWAY_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
+nothing here aliases it. How those bytes are
  * carved is this module's and is never named here.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -110,14 +110,14 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*reset)(uint8_t *restrict);
-    proto_bool (*add_port)(uint8_t *restrict, const protocore_gateway_port_config *);
-    void (*set_uplink_cb)(uint8_t *restrict, protocore_gateway_uplink_fn, void *);
-    void (*set_topic_prefix)(uint8_t *restrict, const char *);
-    proto_bool (*uplink)(uint8_t *restrict, uint8_t, uint16_t, const uint8_t *, uint16_t, int16_t);
-    proto_bool (*downlink)(uint8_t *restrict, uint8_t, uint16_t, const uint8_t *, uint16_t);
-    uint16_t (*topic)(uint8_t *restrict, const protocore_gateway_msg *, char *, uint16_t);
-    void (*get_stats)(uint8_t *restrict, protocore_gateway_stats *);
+    void (*reset)(uint8_t *);
+    proto_bool (*add_port)(uint8_t *, const protocore_gateway_port_config *);
+    void (*set_uplink_cb)(uint8_t *, protocore_gateway_uplink_fn, void *);
+    void (*set_topic_prefix)(uint8_t *, const char *);
+    proto_bool (*uplink)(uint8_t *, uint8_t, uint16_t, const uint8_t *, uint16_t, int16_t);
+    proto_bool (*downlink)(uint8_t *, uint8_t, uint16_t, const uint8_t *, uint16_t);
+    uint16_t (*topic)(uint8_t *, const protocore_gateway_msg *, char *, uint16_t);
+    void (*get_stats)(uint8_t *, protocore_gateway_stats *);
 } GatewayNs;
 PROTOCORE_NS_LAYOUT(GatewayNs, reset, add_port, set_uplink_cb, set_topic_prefix, uplink, downlink, topic, get_stats);
 
@@ -125,27 +125,27 @@ PROTOCORE_NS_LAYOUT(GatewayNs, reset, add_port, set_uplink_cb, set_topic_prefix,
  * @brief Clear all ports, the uplink sink, the topic prefix, and stats.
  * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
  */
-void protocore_gateway_reset(uint8_t *restrict work);
+void protocore_gateway_reset(uint8_t *work);
 /**
  * @brief Register a southbound port.
  * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
  * @param cfg Cfg
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_gateway_add_port(uint8_t *restrict work, const protocore_gateway_port_config *cfg);
+proto_bool protocore_gateway_add_port(uint8_t *work, const protocore_gateway_port_config *cfg);
 /**
  * @brief Install the northbound publish callback (required to publish .
  * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
  * @param fn Fn
  * @param ctx Ctx
  */
-void protocore_gateway_set_uplink_cb(uint8_t *restrict work, protocore_gateway_uplink_fn fn, void *ctx);
+void protocore_gateway_set_uplink_cb(uint8_t *work, protocore_gateway_uplink_fn fn, void *ctx);
 /**
  * @brief Set the topic prefix used by protocore_gateway_topic() .
  * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
  * @param prefix Prefix
  */
-void protocore_gateway_set_topic_prefix(uint8_t *restrict work, const char *prefix);
+void protocore_gateway_set_topic_prefix(uint8_t *work, const char *prefix);
 /**
  * @brief Bridge a received southbound frame northbound: envelope it and .
  * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
@@ -156,7 +156,7 @@ void protocore_gateway_set_topic_prefix(uint8_t *restrict work, const char *pref
  * @param rssi Rssi
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_gateway_uplink(uint8_t *restrict work, uint8_t port_id, uint16_t src_addr, const uint8_t *payload,
+proto_bool protocore_gateway_uplink(uint8_t *work, uint8_t port_id, uint16_t src_addr, const uint8_t *payload,
                                     uint16_t len, int16_t rssi);
 /**
  * @brief Bridge a northbound command southbound: transmit it on port_id's .
@@ -167,8 +167,8 @@ proto_bool protocore_gateway_uplink(uint8_t *restrict work, uint8_t port_id, uin
  * @param len Len
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_gateway_downlink(uint8_t *restrict work, uint8_t port_id, uint16_t dst_addr,
-                                      const uint8_t *payload, uint16_t len);
+proto_bool protocore_gateway_downlink(uint8_t *work, uint8_t port_id, uint16_t dst_addr, const uint8_t *payload,
+                                      uint16_t len);
 /**
  * @brief Format a northbound routing key `<prefix>/<port>/<addr>` for msg .
  * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
@@ -177,13 +177,13 @@ proto_bool protocore_gateway_downlink(uint8_t *restrict work, uint8_t port_id, u
  * @param buflen Buflen
  * @return The uint16_t.
  */
-uint16_t protocore_gateway_topic(uint8_t *restrict work, const protocore_gateway_msg *msg, char *buf, uint16_t buflen);
+uint16_t protocore_gateway_topic(uint8_t *work, const protocore_gateway_msg *msg, char *buf, uint16_t buflen);
 /**
  * @brief Copy the current gateway counters into out. The uplink rate window .
  * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
  * @param out Out
  */
-void protocore_gateway_get_stats(uint8_t *restrict work, protocore_gateway_stats *out);
+void protocore_gateway_get_stats(uint8_t *work, protocore_gateway_stats *out);
 
 /**
  * @brief Northbound publish: emit @p msg to MQTT / HTTP / WebSocket / UDP.

@@ -141,11 +141,11 @@ uint8_t *protocore_ssh_client_span(void)
 }
 
 // The client engine is one translation unit; these are defined below in dependency order.
-static void cli_send(uint8_t *restrict work);
-static void cli_crypto_work(uint8_t *restrict work);
-static void protocore_ssh_client_begin(uint8_t *restrict work);
-static void protocore_ssh_client_poll(uint8_t *restrict work);
-static void protocore_ssh_client_end(uint8_t *restrict work);
+static void cli_send(uint8_t *work);
+static void cli_crypto_work(uint8_t *work);
+static void protocore_ssh_client_begin(uint8_t *work);
+static void protocore_ssh_client_poll(uint8_t *work);
+static void protocore_ssh_client_end(uint8_t *work);
 static void cli_fail(const char *why);
 static proto_bool build_kexinit(void);
 static proto_bool build_kex_public(void);
@@ -600,7 +600,7 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
 
 // The client is one connection on one slot, so its handshake crypto works out of that slot's bytes -
 // the same borrow the wire and the packet MAC come from. Null when the pool cannot cover the slot.
-static void cli_crypto_work(uint8_t *restrict work)
+static void cli_crypto_work(uint8_t *work)
 {
     (void)work;
     if (!ssh_pkt_slot_storage(&ssh_pkt[SSH_CLI_SLOT]))
@@ -622,7 +622,7 @@ static void cli_crypto_work(uint8_t *restrict work)
 static const char NAME_ED25519[] = "ssh-ed25519";
 
 // Frame @p payload as a binary packet (encrypted once NEWKEYS is active) and write it to the relay.
-static void cli_send(uint8_t *restrict work)
+static void cli_send(uint8_t *work)
 {
     (void)work;
     const uint8_t *payload = SshClient.msg.payload;
@@ -649,7 +649,7 @@ static void cli_send(uint8_t *restrict work)
     return;
 }
 
-static void cli_state(uint8_t *restrict work)
+static void cli_state(uint8_t *work)
 {
     (void)work;
     SshClient.state_of = SSH_CLIENT_CTX(protocore_ssh_client_span())->state;
@@ -961,7 +961,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
 // Public API
 // ---------------------------------------------------------------------------
 
-static void protocore_ssh_client_begin(uint8_t *restrict work)
+static void protocore_ssh_client_begin(uint8_t *work)
 {
     (void)work;
     const protocore_ssh_client_cfg *cfg = SshClient.cfg;
@@ -1037,7 +1037,7 @@ static void protocore_ssh_client_begin(uint8_t *restrict work)
     return;
 }
 
-static void protocore_ssh_client_poll(uint8_t *restrict work)
+static void protocore_ssh_client_poll(uint8_t *work)
 {
     (void)work;
     if (SSH_CLIENT_CTX(protocore_ssh_client_span())->cid < 0 ||
@@ -1107,7 +1107,7 @@ static void protocore_ssh_client_poll(uint8_t *restrict work)
 #endif
 }
 
-static void protocore_ssh_client_end(uint8_t *restrict work)
+static void protocore_ssh_client_end(uint8_t *work)
 {
     (void)work;
     SshNetworkV.ssh_slot = SSH_CLI_SLOT;

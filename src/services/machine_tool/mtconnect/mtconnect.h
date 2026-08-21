@@ -203,7 +203,7 @@ typedef struct
  * caller adds observations in whatever order it has them.
  *
  * @c work is PROTOCORE_MTCONNECT_BORROW plaintext bytes the CALLER took, at an address it knows. It
- * arrives @c restrict and is not held past the call. The borrow IS the document and the ring, so two
+ * is not held past the call. The borrow IS the document and the ring, so two
  * agents are two borrows and never collide.
  */
 typedef struct
@@ -230,40 +230,40 @@ extern MtConnectVars MtConnectV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const streams_begin)(uint8_t *restrict work);
-    void (*const streams_add)(uint8_t *restrict work);
-    void (*const streams_end)(uint8_t *restrict work);
-    void (*const error)(uint8_t *restrict work);
-    void (*const devices_begin)(uint8_t *restrict work);
-    void (*const devices_add)(uint8_t *restrict work);
-    void (*const devices_end)(uint8_t *restrict work);
-    void (*const assets_begin)(uint8_t *restrict work);
-    void (*const tool_begin)(uint8_t *restrict work);
-    void (*const tool_life)(uint8_t *restrict work);
-    void (*const tool_end)(uint8_t *restrict work);
-    void (*const assets_end)(uint8_t *restrict work);
-    void (*const ring_init)(uint8_t *restrict work);
-    void (*const ring_add)(uint8_t *restrict work);
-    void (*const ring_query)(uint8_t *restrict work);
+    void (*const streams_begin)(uint8_t *work);
+    void (*const streams_add)(uint8_t *work);
+    void (*const streams_end)(uint8_t *work);
+    void (*const error)(uint8_t *work);
+    void (*const devices_begin)(uint8_t *work);
+    void (*const devices_add)(uint8_t *work);
+    void (*const devices_end)(uint8_t *work);
+    void (*const assets_begin)(uint8_t *work);
+    void (*const tool_begin)(uint8_t *work);
+    void (*const tool_life)(uint8_t *work);
+    void (*const tool_end)(uint8_t *work);
+    void (*const assets_end)(uint8_t *work);
+    void (*const ring_init)(uint8_t *work);
+    void (*const ring_add)(uint8_t *work);
+    void (*const ring_query)(uint8_t *work);
 } MtConnectNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in MtConnectV or a region of the borrow at a fixed offset.
-void protocore_mt_connect_streams_begin(uint8_t *restrict work);
-void protocore_mt_connect_streams_add(uint8_t *restrict work);
-void protocore_mt_connect_streams_end(uint8_t *restrict work);
-void protocore_mt_connect_error(uint8_t *restrict work);
-void protocore_mt_connect_devices_begin(uint8_t *restrict work);
-void protocore_mt_connect_devices_add(uint8_t *restrict work);
-void protocore_mt_connect_devices_end(uint8_t *restrict work);
-void protocore_mt_connect_assets_begin(uint8_t *restrict work);
-void protocore_mt_connect_tool_begin(uint8_t *restrict work);
-void protocore_mt_connect_tool_life(uint8_t *restrict work);
-void protocore_mt_connect_tool_end(uint8_t *restrict work);
-void protocore_mt_connect_assets_end(uint8_t *restrict work);
-void protocore_mt_connect_ring_init(uint8_t *restrict work);
-void protocore_mt_connect_ring_add(uint8_t *restrict work);
-void protocore_mt_connect_ring_query(uint8_t *restrict work);
+void protocore_mt_connect_streams_begin(uint8_t *work);
+void protocore_mt_connect_streams_add(uint8_t *work);
+void protocore_mt_connect_streams_end(uint8_t *work);
+void protocore_mt_connect_error(uint8_t *work);
+void protocore_mt_connect_devices_begin(uint8_t *work);
+void protocore_mt_connect_devices_add(uint8_t *work);
+void protocore_mt_connect_devices_end(uint8_t *work);
+void protocore_mt_connect_assets_begin(uint8_t *work);
+void protocore_mt_connect_tool_begin(uint8_t *work);
+void protocore_mt_connect_tool_life(uint8_t *work);
+void protocore_mt_connect_tool_end(uint8_t *work);
+void protocore_mt_connect_assets_end(uint8_t *work);
+void protocore_mt_connect_ring_init(uint8_t *work);
+void protocore_mt_connect_ring_add(uint8_t *work);
+void protocore_mt_connect_ring_query(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

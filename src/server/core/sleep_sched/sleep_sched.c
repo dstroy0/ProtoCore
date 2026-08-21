@@ -14,7 +14,7 @@
 
 PROTOCORE_BEGIN_DECLS
 
-void protocore_sleep_sched_next(uint8_t *restrict work)
+void protocore_sleep_sched_next(uint8_t *work)
 {
     (void)work;
     const protocore_sleep_cfg *cfg = SleepSchedV.ask.cfg;

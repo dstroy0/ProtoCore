@@ -20,10 +20,10 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_phase_machine_get(uint8_t *restrict work);
-void protocore_phase_machine_is(uint8_t *restrict work);
+void protocore_phase_machine_get(uint8_t *work);
+void protocore_phase_machine_is(uint8_t *work);
 
-void protocore_phase_machine_get(uint8_t *restrict work)
+void protocore_phase_machine_get(uint8_t *work)
 {
     (void)work;
     uint8_t i = PhaseMachineV.get_args.i;
@@ -31,7 +31,7 @@ void protocore_phase_machine_get(uint8_t *restrict work)
     PhaseMachineV.value = (i < MAX_SSH_CONNS) ? ssh_sess[i].phase : SSH_PHASE_IDENT;
 }
 
-void protocore_phase_machine_is(uint8_t *restrict work)
+void protocore_phase_machine_is(uint8_t *work)
 {
     (void)work;
     uint8_t i = PhaseMachineV.is_args.i;
@@ -69,7 +69,7 @@ static void remember_phase(uint8_t i)
     }
 }
 
-void protocore_phase_machine_reset(uint8_t *restrict work)
+void protocore_phase_machine_reset(uint8_t *work)
 {
     (void)work;
     uint8_t i = PhaseMachineV.reset_args.i;
@@ -82,7 +82,7 @@ void protocore_phase_machine_reset(uint8_t *restrict work)
     phase_set(i, SSH_PHASE_IDENT);
 }
 
-void protocore_phase_machine_ident_done(uint8_t *restrict work)
+void protocore_phase_machine_ident_done(uint8_t *work)
 {
     (void)work;
     uint8_t i = PhaseMachineV.ident_done_args.i;
@@ -92,7 +92,7 @@ void protocore_phase_machine_ident_done(uint8_t *restrict work)
 
 // Reached from an established connection when the peer opens the re-exchange, so this is the other
 // place a phase worth resuming can still be current.
-void protocore_phase_machine_kexinit_done(uint8_t *restrict work)
+void protocore_phase_machine_kexinit_done(uint8_t *work)
 {
     (void)work;
     uint8_t i = PhaseMachineV.kexinit_done_args.i;
@@ -101,7 +101,7 @@ void protocore_phase_machine_kexinit_done(uint8_t *restrict work)
     phase_set(i, SSH_PHASE_DH_INIT);
 }
 
-void protocore_phase_machine_kex_done(uint8_t *restrict work)
+void protocore_phase_machine_kex_done(uint8_t *work)
 {
     (void)work;
     uint8_t i = PhaseMachineV.kex_done_args.i;
@@ -113,7 +113,7 @@ void protocore_phase_machine_kex_done(uint8_t *restrict work)
 // connection resumes exactly where the exchange interrupted it - which for the first exchange is
 // the sec 10 service request, and for a re-exchange is whatever was running, including an RFC 4252
 // authentication still in flight.
-void protocore_phase_machine_newkeys_done(uint8_t *restrict work)
+void protocore_phase_machine_newkeys_done(uint8_t *work)
 {
     (void)work;
     uint8_t i = PhaseMachineV.newkeys_done_args.i;
@@ -125,7 +125,7 @@ void protocore_phase_machine_newkeys_done(uint8_t *restrict work)
     phase_set(i, ssh_sess[i].phase_before_kex);
 }
 
-void protocore_phase_machine_service_done(uint8_t *restrict work)
+void protocore_phase_machine_service_done(uint8_t *work)
 {
     (void)work;
     uint8_t i = PhaseMachineV.service_done_args.i;
@@ -135,7 +135,7 @@ void protocore_phase_machine_service_done(uint8_t *restrict work)
 
 // Authentication succeeding is one event: the connection is authenticated and the channel protocol
 // may start, so both are recorded here rather than at each call site.
-void protocore_phase_machine_auth_done(uint8_t *restrict work)
+void protocore_phase_machine_auth_done(uint8_t *work)
 {
     (void)work;
     uint8_t i = PhaseMachineV.auth_done_args.i;
@@ -149,7 +149,7 @@ void protocore_phase_machine_auth_done(uint8_t *restrict work)
 }
 
 // This end opens the re-exchange, so the phase it interrupts is still current here.
-void protocore_phase_machine_rekey_begin(uint8_t *restrict work)
+void protocore_phase_machine_rekey_begin(uint8_t *work)
 {
     (void)work;
     uint8_t i = PhaseMachineV.rekey_begin_args.i;
@@ -162,7 +162,7 @@ void protocore_phase_machine_rekey_begin(uint8_t *restrict work)
 // Admissibility
 // ---------------------------------------------------------------------------
 
-void protocore_phase_machine_admits_ident(uint8_t *restrict work)
+void protocore_phase_machine_admits_ident(uint8_t *work)
 {
     uint8_t i = PhaseMachineV.admits_ident_args.i;
 
@@ -177,7 +177,7 @@ void protocore_phase_machine_admits_ident(uint8_t *restrict work)
 // RFC 4253 sec 7.1: "a party MUST respond with its own SSH_MSG_KEXINIT message, except when the
 // received SSH_MSG_KEXINIT already was a reply." Whether it is a reply is exactly whether this end
 // has already sent its own, which kexinit_sent records; the phase alone cannot tell the two apart.
-void protocore_phase_machine_admits_kexinit(uint8_t *restrict work)
+void protocore_phase_machine_admits_kexinit(uint8_t *work)
 {
     uint8_t i = PhaseMachineV.admits_kexinit_args.i;
 
@@ -187,7 +187,7 @@ void protocore_phase_machine_admits_kexinit(uint8_t *restrict work)
     PhaseMachineV.ok = p != SSH_PHASE_IDENT && p != SSH_PHASE_DH_INIT && p != SSH_PHASE_NEWKEYS;
 }
 
-void protocore_phase_machine_kexinit_needs_reply(uint8_t *restrict work)
+void protocore_phase_machine_kexinit_needs_reply(uint8_t *work)
 {
     (void)work;
     uint8_t i = PhaseMachineV.kexinit_needs_reply_args.i;
@@ -195,7 +195,7 @@ void protocore_phase_machine_kexinit_needs_reply(uint8_t *restrict work)
     PhaseMachineV.ok = i < MAX_SSH_CONNS && !ssh_sess[i].kexinit_sent;
 }
 
-void protocore_phase_machine_admits_kexdh_init(uint8_t *restrict work)
+void protocore_phase_machine_admits_kexdh_init(uint8_t *work)
 {
     uint8_t i = PhaseMachineV.admits_kexdh_init_args.i;
 
@@ -204,7 +204,7 @@ void protocore_phase_machine_admits_kexdh_init(uint8_t *restrict work)
     protocore_phase_machine_is(work);
 }
 
-void protocore_phase_machine_admits_newkeys(uint8_t *restrict work)
+void protocore_phase_machine_admits_newkeys(uint8_t *work)
 {
     uint8_t i = PhaseMachineV.admits_newkeys_args.i;
 
@@ -213,7 +213,7 @@ void protocore_phase_machine_admits_newkeys(uint8_t *restrict work)
     protocore_phase_machine_is(work);
 }
 
-void protocore_phase_machine_admits_service_request(uint8_t *restrict work)
+void protocore_phase_machine_admits_service_request(uint8_t *work)
 {
     uint8_t i = PhaseMachineV.admits_service_request_args.i;
 
@@ -222,7 +222,7 @@ void protocore_phase_machine_admits_service_request(uint8_t *restrict work)
     protocore_phase_machine_is(work);
 }
 
-void protocore_phase_machine_admits_userauth(uint8_t *restrict work)
+void protocore_phase_machine_admits_userauth(uint8_t *work)
 {
     uint8_t i = PhaseMachineV.admits_userauth_args.i;
 
@@ -234,7 +234,7 @@ void protocore_phase_machine_admits_userauth(uint8_t *restrict work)
 // RFC 4252 sec 5.1 asks whether SUCCESS has been sent, which is what authed records. The phase does
 // not answer it: a re-exchange walks an authenticated connection back through KEXINIT and NEWKEYS
 // (RFC 4253 sec 9) while it stays authenticated the whole way.
-void protocore_phase_machine_auth_complete(uint8_t *restrict work)
+void protocore_phase_machine_auth_complete(uint8_t *work)
 {
     (void)work;
     uint8_t i = PhaseMachineV.auth_complete_args.i;
@@ -242,7 +242,7 @@ void protocore_phase_machine_auth_complete(uint8_t *restrict work)
     PhaseMachineV.ok = i < MAX_SSH_CONNS && ssh_sess[i].authed;
 }
 
-void protocore_phase_machine_admits_rekey(uint8_t *restrict work)
+void protocore_phase_machine_admits_rekey(uint8_t *work)
 {
     (void)work;
     uint8_t i = PhaseMachineV.admits_rekey_args.i;
@@ -250,7 +250,7 @@ void protocore_phase_machine_admits_rekey(uint8_t *restrict work)
     PhaseMachineV.ok = i < MAX_SSH_CONNS && ssh_sess[i].phase == SSH_PHASE_OPEN && !ssh_sess[i].kex_active;
 }
 
-void protocore_phase_machine_is_open(uint8_t *restrict work)
+void protocore_phase_machine_is_open(uint8_t *work)
 {
     uint8_t i = PhaseMachineV.is_open_args.i;
 

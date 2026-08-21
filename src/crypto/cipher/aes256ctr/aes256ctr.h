@@ -90,7 +90,7 @@ typedef struct
  * consuming counter state.
  *
  * @c work is PROTOCORE_AES256CTR_BORROW secure bytes the CALLER took, at an address it knows. It
- * arrives @c restrict and is not held past the call, so nothing here aliases it. The caller releases
+ * is not held past the call, so nothing here aliases it. The caller releases
  * it, and the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes
  * it. The expanded key schedule lives in those bytes and nowhere else, so it never reaches BSS or the
  * stack. Two ciphers running at once are two borrows and never collide.
@@ -112,14 +112,14 @@ extern Aes256CtrVars Aes256CtrV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const crypt)(uint8_t *restrict work);
-    void (*const get_length)(uint8_t *restrict work);
+    void (*const crypt)(uint8_t *work);
+    void (*const get_length)(uint8_t *work);
 } Aes256CtrNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Aes256CtrV or a region of the borrow at a fixed offset.
-void protocore_aes256_ctr_crypt(uint8_t *restrict work);
-void protocore_aes256_ctr_get_length(uint8_t *restrict work);
+void protocore_aes256_ctr_crypt(uint8_t *work);
+void protocore_aes256_ctr_get_length(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

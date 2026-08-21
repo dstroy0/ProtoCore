@@ -120,7 +120,7 @@ static size_t line_len(const char *buf, size_t start, size_t nl)
 }
 
 // Write one frame (sec 9) into ns->buf.out and report its octet count in ns->n.
-void protocore_stomp_build(uint8_t *restrict work)
+void protocore_stomp_build(uint8_t *work)
 {
     (void)work;
     char *out = StompV.buf.out;
@@ -201,7 +201,7 @@ void protocore_stomp_build(uint8_t *restrict work)
 
 // Take one frame from the head of ns->buf.in into *ns->frame (sec 9), reporting the octets it
 // occupied in ns->consumed.
-void protocore_stomp_parse(uint8_t *restrict work)
+void protocore_stomp_parse(uint8_t *work)
 {
     (void)work;
     const char *buf = StompV.buf.in;
@@ -340,7 +340,7 @@ void protocore_stomp_parse(uint8_t *restrict work)
 
 // Find ns->lookup.name among the frame's header entries and report its raw header-value. The walk
 // runs in wire order and stops at the first match (sec 4.4).
-void protocore_stomp_header(uint8_t *restrict work)
+void protocore_stomp_header(uint8_t *work)
 {
     (void)work;
     const StompFrame *f = StompV.frame;
@@ -368,7 +368,7 @@ void protocore_stomp_header(uint8_t *restrict work)
 
 // Decode the sec 4.1 escapes in ns->buf.in into ns->buf.out and report the decoded octet count in
 // ns->n.
-void protocore_stomp_unescape(uint8_t *restrict work)
+void protocore_stomp_unescape(uint8_t *work)
 {
     (void)work;
     char *dst = StompV.buf.out;

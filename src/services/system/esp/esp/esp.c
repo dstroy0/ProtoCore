@@ -38,9 +38,9 @@ static void esp_nonce(uint8_t nonce[PROTOCORE_AESGCM_IV_LEN], const uint8_t *sal
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_esp_gcm_encapsulate(uint8_t *restrict work, uint32_t spi, uint32_t seq, const uint8_t *key,
-                                     const uint8_t *salt, const uint8_t *iv, uint8_t next_header,
-                                     const uint8_t *payload, size_t payload_len, uint8_t *out, size_t out_cap)
+size_t protocore_esp_gcm_encapsulate(uint8_t *work, uint32_t spi, uint32_t seq, const uint8_t *key, const uint8_t *salt,
+                                     const uint8_t *iv, uint8_t next_header, const uint8_t *payload, size_t payload_len,
+                                     uint8_t *out, size_t out_cap)
 {
     (void)work;
 
@@ -100,9 +100,9 @@ size_t protocore_esp_gcm_encapsulate(uint8_t *restrict work, uint32_t spi, uint3
     return total;
 }
 
-proto_bool protocore_esp_gcm_decapsulate(uint8_t *restrict work, const uint8_t *key, const uint8_t *salt,
-                                         uint8_t *packet, size_t len, uint32_t *spi_out, uint32_t *seq_out,
-                                         uint8_t *next_header_out, const uint8_t **payload_out, size_t *payload_len_out)
+proto_bool protocore_esp_gcm_decapsulate(uint8_t *work, const uint8_t *key, const uint8_t *salt, uint8_t *packet,
+                                         size_t len, uint32_t *spi_out, uint32_t *seq_out, uint8_t *next_header_out,
+                                         const uint8_t **payload_out, size_t *payload_len_out)
 {
     (void)work;
 
@@ -176,7 +176,7 @@ proto_bool protocore_esp_gcm_decapsulate(uint8_t *restrict work, const uint8_t *
 
 // ── ESP anti-replay window (RFC 4303 §3.4.3) ───────────────────────────────────────────────────
 
-void protocore_esp_replay_init(uint8_t *restrict work, EspReplay *r)
+void protocore_esp_replay_init(uint8_t *work, EspReplay *r)
 {
     (void)work;
 
@@ -189,7 +189,7 @@ void protocore_esp_replay_init(uint8_t *restrict work, EspReplay *r)
     r->seen_any = PROTO_FALSE;
 }
 
-proto_bool protocore_esp_replay_check(uint8_t *restrict work, EspReplay *r, uint32_t seq)
+proto_bool protocore_esp_replay_check(uint8_t *work, EspReplay *r, uint32_t seq)
 {
     (void)work;
 

@@ -38,7 +38,7 @@ typedef struct
 } MntPointCtx;
 static MntPointCtx s_point;
 
-void protocore_mnt_point_add(uint8_t *restrict work)
+void protocore_mnt_point_add(uint8_t *work)
 {
     (void)work;
     const protocore_mnt_backend *backend = MntV.args.backend;
@@ -55,7 +55,7 @@ void protocore_mnt_point_add(uint8_t *restrict work)
     MntV.u8 = s_point.count++;
 }
 
-void protocore_mnt_point_of(uint8_t *restrict work)
+void protocore_mnt_point_of(uint8_t *work)
 {
     (void)work;
     const uint8_t id = MntV.args.id;
@@ -68,7 +68,7 @@ void protocore_mnt_point_of(uint8_t *restrict work)
     MntV.backend = s_point.point[id].backend;
 }
 
-void protocore_mnt_root_of(uint8_t *restrict work)
+void protocore_mnt_root_of(uint8_t *work)
 {
     (void)work;
     const uint8_t id = MntV.args.id;
@@ -83,7 +83,7 @@ void protocore_mnt_root_of(uint8_t *restrict work)
     MntV.text = s_point.point[id].root;
 }
 
-void protocore_mnt_reset(uint8_t *restrict work)
+void protocore_mnt_reset(uint8_t *work)
 {
     (void)work;
 
@@ -92,7 +92,7 @@ void protocore_mnt_reset(uint8_t *restrict work)
     s_point.count = 0;
 }
 
-void protocore_mnt_mount(uint8_t *restrict work)
+void protocore_mnt_mount(uint8_t *work)
 {
     (void)work;
     const protocore_mnt_backend *backend = MntV.args.backend;
@@ -100,7 +100,7 @@ void protocore_mnt_mount(uint8_t *restrict work)
     s_hal.backend = backend;
 }
 
-void protocore_mnt_active(uint8_t *restrict work)
+void protocore_mnt_active(uint8_t *work)
 {
     (void)work;
     MntV.backend = s_hal.backend;

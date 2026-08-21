@@ -109,8 +109,8 @@ static_assert(
 // ---------------------------------------------------------------------------
 
 // XOR the CTR keystream over @p len bytes, advancing @p counter in place.
-static void aes256ctr_stream(uint8_t *restrict work, const uint8_t *key, uint8_t *counter, const uint8_t *in,
-                             uint8_t *out, size_t len)
+static void aes256ctr_stream(uint8_t *work, const uint8_t *key, uint8_t *counter, const uint8_t *in, uint8_t *out,
+                             size_t len)
 {
     AesBlk *blk = &AES256CTR_CTX(work)->blk;
     uint8_t *ks = AES256CTR_KS(work);
@@ -136,7 +136,7 @@ static void aes256ctr_stream(uint8_t *restrict work, const uint8_t *key, uint8_t
 }
 
 // One keystream block AES(@p counter) into the borrow's ks region; @p counter is read, not advanced.
-static void aes256ctr_keystream(uint8_t *restrict work, const uint8_t *key, const uint8_t *counter)
+static void aes256ctr_keystream(uint8_t *work, const uint8_t *key, const uint8_t *counter)
 {
     AesBlk *blk = &AES256CTR_CTX(work)->blk;
     uint8_t *ks = AES256CTR_KS(work);
@@ -147,7 +147,7 @@ static void aes256ctr_keystream(uint8_t *restrict work, const uint8_t *key, cons
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_aes256_ctr_crypt(uint8_t *restrict work)
+void protocore_aes256_ctr_crypt(uint8_t *work)
 {
     Aes256CtrV.ok = PROTO_FALSE;
     if (!Aes256CtrV.crypt_args.key || !Aes256CtrV.crypt_args.counter || !Aes256CtrV.crypt_args.in ||
@@ -161,7 +161,7 @@ void protocore_aes256_ctr_crypt(uint8_t *restrict work)
 }
 
 // The keystream block for the current counter, XOR'd over the 4 length bytes; the counter stands still.
-void protocore_aes256_ctr_get_length(uint8_t *restrict work)
+void protocore_aes256_ctr_get_length(uint8_t *work)
 {
     Aes256CtrV.ok = PROTO_FALSE;
     Aes256CtrV.length = 0;

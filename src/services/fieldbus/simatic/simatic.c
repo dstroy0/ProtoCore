@@ -57,10 +57,10 @@ uint8_t *protocore_simatic_span(void)
     return s_own.span;
 }
 
-void protocore_simatic_bcc_3964r(uint8_t *restrict work);
-void protocore_simatic_build_block_3964r(uint8_t *restrict work);
+void protocore_simatic_bcc_3964r(uint8_t *work);
+void protocore_simatic_build_block_3964r(uint8_t *work);
 
-void protocore_simatic_bcc_3964r(uint8_t *restrict work)
+void protocore_simatic_bcc_3964r(uint8_t *work)
 {
     (void)work;
     const uint8_t *data = SimaticV.bcc_3964r_args.data;
@@ -74,7 +74,7 @@ void protocore_simatic_bcc_3964r(uint8_t *restrict work)
     SimaticV.value = x;
 }
 
-void protocore_simatic_build_block_3964r(uint8_t *restrict work)
+void protocore_simatic_build_block_3964r(uint8_t *work)
 {
     uint8_t *buf = SimaticV.build_block_3964r_args.buf;
     size_t cap = SimaticV.build_block_3964r_args.cap;
@@ -172,7 +172,7 @@ static_assert(SIMATIC_OFF_CTX % _Alignof(SimaticCtx) == 0,
 
 // DLE ETX consumed at the walk position: the trailing BCC must be present and match the XOR over
 // the stuffed data + DLE ETX.
-static proto_bool bcc_ok(uint8_t *restrict work)
+static proto_bool bcc_ok(uint8_t *work)
 {
     if (!SIMATIC_CTX(work)->with_bcc)
     {
@@ -188,7 +188,7 @@ static proto_bool bcc_ok(uint8_t *restrict work)
     return SimaticV.value == SIMATIC_CTX(work)->buf[SIMATIC_CTX(work)->i];
 }
 
-void protocore_simatic_parse_block_3964r(uint8_t *restrict work)
+void protocore_simatic_parse_block_3964r(uint8_t *work)
 {
     const uint8_t *buf = SimaticV.parse_block_3964r_args.buf;
     size_t len = SimaticV.parse_block_3964r_args.len;
@@ -294,7 +294,7 @@ static void begin_receive(Simatic3964Ctx *ctx, uint32_t now_ms)
     ctx->deadline_ms = now_ms + PROTOCORE_SIMATIC_ZVZ_MS;
 }
 
-void protocore_simatic_init_3964r(uint8_t *restrict work)
+void protocore_simatic_init_3964r(uint8_t *work)
 {
     (void)work;
     Simatic3964Ctx *ctx = SimaticV.init_3964r_args.ctx;
@@ -313,7 +313,7 @@ void protocore_simatic_init_3964r(uint8_t *restrict work)
     ctx->user = user;
 }
 
-void protocore_simatic_send_3964r(uint8_t *restrict work)
+void protocore_simatic_send_3964r(uint8_t *work)
 {
     Simatic3964Ctx *ctx = SimaticV.send_3964r_args.ctx;
     const uint8_t *data = SimaticV.send_3964r_args.data;
@@ -344,7 +344,7 @@ void protocore_simatic_send_3964r(uint8_t *restrict work)
     SimaticV.ok = PROTO_TRUE;
 }
 
-static void deliver_or_nak(uint8_t *restrict work)
+static void deliver_or_nak(uint8_t *work)
 {
     Simatic3964Ctx *ctx = SIMATIC_CTX(work)->link;
     uint8_t out[PROTOCORE_SIMATIC_BLOCK_MAX];
@@ -374,7 +374,7 @@ static void deliver_or_nak(uint8_t *restrict work)
     }
 }
 
-static void rx_collect_byte(uint8_t *restrict work)
+static void rx_collect_byte(uint8_t *work)
 {
     Simatic3964Ctx *ctx = SIMATIC_CTX(work)->link;
     uint8_t b = SIMATIC_CTX(work)->b;
@@ -425,7 +425,7 @@ static void rx_collect_byte(uint8_t *restrict work)
     }
 }
 
-void protocore_simatic_rx_byte_3964r(uint8_t *restrict work)
+void protocore_simatic_rx_byte_3964r(uint8_t *work)
 {
     Simatic3964Ctx *ctx = SimaticV.rx_byte_3964r_args.ctx;
     uint8_t b = SimaticV.rx_byte_3964r_args.b;
@@ -490,7 +490,7 @@ void protocore_simatic_rx_byte_3964r(uint8_t *restrict work)
     }
 }
 
-void protocore_simatic_tick_3964r(uint8_t *restrict work)
+void protocore_simatic_tick_3964r(uint8_t *work)
 {
     (void)work;
     Simatic3964Ctx *ctx = SimaticV.tick_3964r_args.ctx;
@@ -535,7 +535,7 @@ void protocore_simatic_tick_3964r(uint8_t *restrict work)
     }
 }
 
-void protocore_simatic_idle_3964r(uint8_t *restrict work)
+void protocore_simatic_idle_3964r(uint8_t *work)
 {
     (void)work;
     const Simatic3964Ctx *ctx = SimaticV.idle_3964r_args.ctx;
@@ -551,7 +551,7 @@ void protocore_simatic_idle_3964r(uint8_t *restrict work)
 // Request header: [cmd, coord=0, area, dbnr, addr_hi, addr_lo, count_hi, count_lo]  (8 bytes)
 #define RK512_HDR_LEN 8
 
-void protocore_simatic_build_send_rk512(uint8_t *restrict work)
+void protocore_simatic_build_send_rk512(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = SimaticV.build_send_rk512_args.buf;
@@ -586,7 +586,7 @@ void protocore_simatic_build_send_rk512(uint8_t *restrict work)
     SimaticV.n = need;
 }
 
-void protocore_simatic_build_fetch_rk512(uint8_t *restrict work)
+void protocore_simatic_build_fetch_rk512(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = SimaticV.build_fetch_rk512_args.buf;
@@ -611,7 +611,7 @@ void protocore_simatic_build_fetch_rk512(uint8_t *restrict work)
 }
 
 // Reaction: [cmd=REACTION, status_hi, status_lo]  (+ FETCH-response data words appended by the caller)
-void protocore_simatic_build_reaction_rk512(uint8_t *restrict work)
+void protocore_simatic_build_reaction_rk512(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = SimaticV.build_reaction_rk512_args.buf;
@@ -633,7 +633,7 @@ static proto_bool area_valid(uint8_t a)
     return a >= (uint8_t)RK512_AREA_DB && a <= (uint8_t)RK512_AREA_TB;
 }
 
-void protocore_simatic_parse_header_rk512(uint8_t *restrict work)
+void protocore_simatic_parse_header_rk512(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = SimaticV.parse_header_rk512_args.buf;
@@ -664,7 +664,7 @@ void protocore_simatic_parse_header_rk512(uint8_t *restrict work)
     SimaticV.ok = PROTO_TRUE;
 }
 
-void protocore_simatic_parse_reaction_rk512(uint8_t *restrict work)
+void protocore_simatic_parse_reaction_rk512(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = SimaticV.parse_reaction_rk512_args.buf;

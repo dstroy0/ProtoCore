@@ -91,7 +91,7 @@ typedef struct
  * conditionally rather than branching on a scalar bit.
  *
  * @c work is PROTOCORE_CURVE25519_BORROW secure bytes the CALLER took, at an address it knows. It
- * arrives @c restrict and is not held past the call, so nothing here aliases it. The caller releases it,
+ * is not held past the call, so nothing here aliases it. The caller releases it,
  * and the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. The
  * clamped private scalar and every ladder intermediate live in those bytes and nowhere else, so none of
  * them reaches BSS or the stack. Two key exchanges running at once are two borrows and never collide.
@@ -112,14 +112,14 @@ extern Curve25519Vars Curve25519V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const x25519)(uint8_t *restrict work);
-    void (*const x25519_base)(uint8_t *restrict work);
+    void (*const x25519)(uint8_t *work);
+    void (*const x25519_base)(uint8_t *work);
 } Curve25519Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Curve25519V or a region of the borrow at a fixed offset.
-void protocore_curve25519_x25519(uint8_t *restrict work);
-void protocore_curve25519_x25519_base(uint8_t *restrict work);
+void protocore_curve25519_x25519(uint8_t *work);
+void protocore_curve25519_x25519_base(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

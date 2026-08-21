@@ -76,18 +76,18 @@ extern DiffServVars DiffServV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const set_default)(uint8_t *restrict work);
-    void (*const default_dscp)(uint8_t *restrict work);
-    void (*const set_udp)(uint8_t *restrict work);
-    void (*const udp_dscp)(uint8_t *restrict work);
+    void (*const set_default)(uint8_t *work);
+    void (*const default_dscp)(uint8_t *work);
+    void (*const set_udp)(uint8_t *work);
+    void (*const udp_dscp)(uint8_t *work);
 } DiffServNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in DiffServV or a region of the borrow at a fixed offset.
-void protocore_diff_serv_set_default(uint8_t *restrict work);
-void protocore_diff_serv_default_dscp(uint8_t *restrict work);
-void protocore_diff_serv_set_udp(uint8_t *restrict work);
-void protocore_diff_serv_udp_dscp(uint8_t *restrict work);
+void protocore_diff_serv_set_default(uint8_t *work);
+void protocore_diff_serv_default_dscp(uint8_t *work);
+void protocore_diff_serv_set_udp(uint8_t *work);
+void protocore_diff_serv_udp_dscp(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

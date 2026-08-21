@@ -39,9 +39,9 @@ static const char B64_TABLE[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_base64_encode(uint8_t *restrict work);
+void protocore_base64_encode(uint8_t *work);
 
-void protocore_base64_encode(uint8_t *restrict work)
+void protocore_base64_encode(uint8_t *work)
 {
     (void)work;
     const uint8_t *src = Base64V.encode_args.src;
@@ -159,7 +159,7 @@ static inline uint32_t swar_quad(uint32_t a, uint32_t *ok)
     return val;
 }
 
-void protocore_base64_decode(uint8_t *restrict work)
+void protocore_base64_decode(uint8_t *work)
 {
     (void)work;
     const char *src = Base64V.decode_args.src;
@@ -233,7 +233,7 @@ void protocore_base64_decode(uint8_t *restrict work)
     Base64V.n = out;
 }
 #else
-void protocore_base64_decode(uint8_t *restrict work)
+void protocore_base64_decode(uint8_t *work)
 {
     (void)work;
     const char *src = Base64V.decode_args.src;
@@ -332,7 +332,7 @@ void protocore_base64_decode(uint8_t *restrict work)
 // buffer or re-padding.
 // ---------------------------------------------------------------------------
 
-void protocore_base64_url_encode(uint8_t *restrict work)
+void protocore_base64_url_encode(uint8_t *work)
 {
     const uint8_t *src = Base64V.url_encode_args.src;
     size_t src_len = Base64V.url_encode_args.src_len;
@@ -368,7 +368,7 @@ void protocore_base64_url_encode(uint8_t *restrict work)
 // secret path, so it shares the branchless classifier above (the standard '+'/'/' are rejected here). The
 // only difference from protocore_base64_decode is framing: base64url carries no padding, and the final group may
 // be 2 or 3 characters (an unbounded streaming decode rather than whole quads).
-void protocore_base64_url_decode(uint8_t *restrict work)
+void protocore_base64_url_decode(uint8_t *work)
 {
     (void)work;
     const char *src = Base64V.url_decode_args.src;

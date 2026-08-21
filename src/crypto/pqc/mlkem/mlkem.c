@@ -42,7 +42,7 @@ static_assert(MLKEM_OFF_SHA3 + PROTOCORE_SHA3_BORROW <= PROTOCORE_MLKEM_BORROW,
 #define MLKEM_SHA3(w) ((w) + MLKEM_OFF_SHA3)
 
 // H: one SHA3-256 through the Sha3 namespace.
-static void mk_sha3_256(uint8_t *restrict work, uint8_t *out, const uint8_t *in, size_t inlen)
+static void mk_sha3_256(uint8_t *work, uint8_t *out, const uint8_t *in, size_t inlen)
 {
     Sha3V.digest_args.out = out;
     Sha3V.digest_args.in = in;
@@ -51,7 +51,7 @@ static void mk_sha3_256(uint8_t *restrict work, uint8_t *out, const uint8_t *in,
 }
 
 // G: one SHA3-512 through the Sha3 namespace.
-static void mk_sha3_512(uint8_t *restrict work, uint8_t *out, const uint8_t *in, size_t inlen)
+static void mk_sha3_512(uint8_t *work, uint8_t *out, const uint8_t *in, size_t inlen)
 {
     Sha3V.digest_args.out = out;
     Sha3V.digest_args.in = in;
@@ -60,7 +60,7 @@ static void mk_sha3_512(uint8_t *restrict work, uint8_t *out, const uint8_t *in,
 }
 
 // PRF / J: one SHAKE256 run through the Sha3 namespace.
-static void mk_shake256(uint8_t *restrict work, uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen)
+static void mk_shake256(uint8_t *work, uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen)
 {
     Sha3V.xof_args.out = out;
     Sha3V.xof_args.outlen = outlen;
@@ -70,7 +70,7 @@ static void mk_shake256(uint8_t *restrict work, uint8_t *out, size_t outlen, con
 }
 
 // The matrix XOF: absorb the seed once, then squeeze repeatedly out of the same region.
-static void mk_shake128_absorb(uint8_t *restrict work, const uint8_t *in, size_t inlen)
+static void mk_shake128_absorb(uint8_t *work, const uint8_t *in, size_t inlen)
 {
     Sha3V.shake128_absorb_args.in = in;
     Sha3V.shake128_absorb_args.inlen = inlen;
@@ -78,7 +78,7 @@ static void mk_shake128_absorb(uint8_t *restrict work, const uint8_t *in, size_t
 }
 
 // One pull from the running XOF, permuting between blocks.
-static void mk_squeeze(uint8_t *restrict work, uint8_t *out, size_t outlen)
+static void mk_squeeze(uint8_t *work, uint8_t *out, size_t outlen)
 {
     Sha3V.squeeze_args.out = out;
     Sha3V.squeeze_args.outlen = outlen;
@@ -246,7 +246,7 @@ static void cbd2(int16_t r[MK_N], const uint8_t buf[128])
 }
 
 // PRF_eta(seed, nonce) = SHAKE256(seed || nonce), then sample CBD_eta (eta = 2).
-static void poly_getnoise(uint8_t *restrict work, int16_t r[MK_N], const uint8_t seed[32], uint8_t nonce)
+static void poly_getnoise(uint8_t *work, int16_t r[MK_N], const uint8_t seed[32], uint8_t nonce)
 {
     uint8_t extseed[33];
     mem.cpy(extseed, seed, 32);
@@ -257,7 +257,7 @@ static void poly_getnoise(uint8_t *restrict work, int16_t r[MK_N], const uint8_t
 }
 
 // One transposed matrix entry: A^T[i][j] = SampleNTT(XOF(rho || i || j)) (FIPS 203 gen with (i,j)).
-static void gen_matrix_entry(uint8_t *restrict work, int16_t out[MK_N], const uint8_t rho[32], uint8_t i, uint8_t j)
+static void gen_matrix_entry(uint8_t *work, int16_t out[MK_N], const uint8_t rho[32], uint8_t i, uint8_t j)
 {
     uint8_t seed[34];
     mem.cpy(seed, rho, 32);
@@ -346,7 +346,7 @@ static proto_bool check_ek(const uint8_t ek[MLKEM768_EK_BYTES])
 }
 
 // K-PKE.Encrypt(ek, m, r) -> ct. u is streamed and compressed one row at a time to bound stack.
-static void k_pke_encrypt(uint8_t *restrict work, uint8_t ct[MLKEM768_CT_BYTES], const uint8_t ek[MLKEM768_EK_BYTES],
+static void k_pke_encrypt(uint8_t *work, uint8_t ct[MLKEM768_CT_BYTES], const uint8_t ek[MLKEM768_EK_BYTES],
                           const uint8_t m[32], const uint8_t coins[32])
 {
     int16_t that[MK_K][MK_N];
@@ -493,7 +493,7 @@ static uint8_t ct_diff_mask(const uint8_t *a, const uint8_t *b, size_t n)
 // K-PKE.KeyGen(d) -> ek_PKE (ByteEncode_12(t) || rho) and dk_PKE (ByteEncode_12(s)), both in the NTT
 // domain. t[i] = sum_j A[i][j] o s[j]. K-PKE.Encrypt multiplies by the SAME matrix transposed - its
 // u[i] = sum_j XOF(rho, i, j) o y[j] - so for the KEM to invert, KeyGen's A[i][j] = XOF(rho, j, i).
-static void k_pke_keygen(uint8_t *restrict work, uint8_t ek[MLKEM768_EK_BYTES], uint8_t dk_pke[MK_K * MK_POLYBYTES],
+static void k_pke_keygen(uint8_t *work, uint8_t ek[MLKEM768_EK_BYTES], uint8_t dk_pke[MK_K * MK_POLYBYTES],
                          const uint8_t d[32])
 {
     // (rho, sigma) = G(d || k). The trailing k byte is the FIPS 203 domain separation on module rank.
@@ -581,7 +581,7 @@ static void k_pke_decrypt(uint8_t m[32], const uint8_t dk_pke[MK_K * MK_POLYBYTE
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_ml_kem_keygen(uint8_t *restrict work, const uint8_t *d, const uint8_t *z, uint8_t *ek, uint8_t *dk)
+proto_bool protocore_ml_kem_keygen(uint8_t *work, const uint8_t *d, const uint8_t *z, uint8_t *ek, uint8_t *dk)
 {
     if (!d || !z || !ek || !dk)
     {
@@ -596,8 +596,7 @@ proto_bool protocore_ml_kem_keygen(uint8_t *restrict work, const uint8_t *d, con
     return PROTO_TRUE;
 }
 
-proto_bool protocore_ml_kem_encaps(uint8_t *restrict work, const uint8_t *ek, const uint8_t *m, uint8_t *ct,
-                                   uint8_t *ss)
+proto_bool protocore_ml_kem_encaps(uint8_t *work, const uint8_t *ek, const uint8_t *m, uint8_t *ct, uint8_t *ss)
 {
     if (!ek || !m || !ct || !ss)
     {
@@ -620,7 +619,7 @@ proto_bool protocore_ml_kem_encaps(uint8_t *restrict work, const uint8_t *ek, co
     return PROTO_TRUE;
 }
 
-proto_bool protocore_ml_kem_decaps(uint8_t *restrict work, const uint8_t *dk, const uint8_t *ct, uint8_t *ss)
+proto_bool protocore_ml_kem_decaps(uint8_t *work, const uint8_t *dk, const uint8_t *ct, uint8_t *ss)
 {
     if (!dk || !ct || !ss)
     {

@@ -184,7 +184,7 @@ static proto_bool serialize_peer(const char *ip, uint16_t port, uint8_t out[PROT
 
 // Take a copy of one datagram and its peer. False when it does not fit or the ring is full, and a
 // dropped datagram is what the DTLS retransmission timer already recovers from.
-static proto_bool ring_push(uint8_t *restrict work, const uint8_t *dg, size_t len, const char *ip, uint16_t port)
+static proto_bool ring_push(uint8_t *work, const uint8_t *dg, size_t len, const char *ip, uint16_t port)
 {
     if (!dg || !ip || len == 0 || len > PROTOCORE_COAPS_MAX_DATAGRAM)
     {
@@ -206,7 +206,7 @@ static proto_bool ring_push(uint8_t *restrict work, const uint8_t *dg, size_t le
 }
 
 // Take the oldest queued datagram. False when the ring holds none.
-static proto_bool ring_pop(uint8_t *restrict work, CoapsIngest *out)
+static proto_bool ring_pop(uint8_t *work, CoapsIngest *out)
 {
     size_t tail = COAPS_SERVER_CTX(work)->ring_tail;
     if (tail == (size_t)COAPS_SERVER_CTX(work)->ring_head)
@@ -223,7 +223,7 @@ static proto_bool ring_pop(uint8_t *restrict work, CoapsIngest *out)
 // ---------------------------------------------------------------------------
 
 // The slot whose peer is ip:port, or NULL.
-static CoapsSlot *slot_by_peer(uint8_t *restrict work, const char *ip, uint16_t port)
+static CoapsSlot *slot_by_peer(uint8_t *work, const char *ip, uint16_t port)
 {
     for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
     {
@@ -239,7 +239,7 @@ static CoapsSlot *slot_by_peer(uint8_t *restrict work, const char *ip, uint16_t 
 // The slot whose Connection ID (RFC 9146, RFC 9147 sec 9) the record carries, so a peer that moved to
 // a new address still reaches its connection. @p cid points just past the unified header's first
 // byte and @p avail is what is readable there.
-static CoapsSlot *slot_by_cid(uint8_t *restrict work, const uint8_t *cid, size_t avail)
+static CoapsSlot *slot_by_cid(uint8_t *work, const uint8_t *cid, size_t avail)
 {
     uint8_t sc[PROTOCORE_DTLS_CID_MAX];
     for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
@@ -262,7 +262,7 @@ static CoapsSlot *slot_by_cid(uint8_t *restrict work, const uint8_t *cid, size_t
 }
 
 // The first free slot, cleared and claimed, or NULL when the pool is full.
-static CoapsSlot *alloc_slot(uint8_t *restrict work)
+static CoapsSlot *alloc_slot(uint8_t *work)
 {
     for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
     {
@@ -278,7 +278,7 @@ static CoapsSlot *alloc_slot(uint8_t *restrict work)
 }
 
 // Open a connection for a peer that has no slot, drawing this handshake's ephemeral and random.
-static CoapsSlot *open_conn(uint8_t *restrict work, const char *ip, uint16_t port)
+static CoapsSlot *open_conn(uint8_t *work, const char *ip, uint16_t port)
 {
     CoapsSlot *s = alloc_slot(work);
     if (!s)
@@ -310,7 +310,7 @@ static CoapsSlot *open_conn(uint8_t *restrict work, const char *ip, uint16_t por
 // ---------------------------------------------------------------------------
 
 // Put len octets on the wire to ip:port, from the bound port where there is one.
-static void server_send(uint8_t *restrict work, const char *ip, uint16_t port, const uint8_t *data, size_t len)
+static void server_send(uint8_t *work, const char *ip, uint16_t port, const uint8_t *data, size_t len)
 {
 #if PROTOCORE_HAS_NET_STACK
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
@@ -337,7 +337,7 @@ static void server_send(uint8_t *restrict work, const char *ip, uint16_t port, c
 
 // Route one queued datagram to its connection, opening one for a new peer's ClientHello, and drive
 // the handshake or the CoAP exchange through the bridge.
-static void route_datagram(uint8_t *restrict work, const CoapsIngest *ig, uint32_t now, uint8_t *out, size_t out_cap)
+static void route_datagram(uint8_t *work, const CoapsIngest *ig, uint32_t now, uint8_t *out, size_t out_cap)
 {
     // A record carrying a Connection ID (RFC 9147 sec 4 Figure 3, the C bit) routes by that id, so a
     // peer that moved to a new address still reaches its connection (RFC 9146, RFC 9147 sec 9).
@@ -382,7 +382,7 @@ static void route_datagram(uint8_t *restrict work, const CoapsIngest *ig, uint32
 
 // Fire the retransmission timer for a slot's outstanding flight (RFC 9147 sec 5.8), then reclaim the
 // slot if the handshake gave up or the connection has gone quiet.
-static void service_slot(uint8_t *restrict work, CoapsSlot *s, uint32_t now, uint8_t *out, size_t out_cap)
+static void service_slot(uint8_t *work, CoapsSlot *s, uint32_t now, uint8_t *out, size_t out_cap)
 {
     if (!s->used)
     {
@@ -437,7 +437,7 @@ static void udp_ingest_cb(const uint8_t *data, size_t len, const struct protocor
 // ---------------------------------------------------------------------------
 
 // Install ns->identity, bind ns->bind.port, and route its datagrams into the pool.
-void protocore_coaps_server_begin(uint8_t *restrict work)
+void protocore_coaps_server_begin(uint8_t *work)
 {
     CoapsServerV.ok = PROTO_FALSE;
     if (!CoapsServerV.identity.rng || !CoapsServerV.identity.cert_der || CoapsServerV.identity.cert_len == 0)
@@ -471,7 +471,7 @@ void protocore_coaps_server_begin(uint8_t *restrict work)
 }
 
 // Drain the queued datagrams, then service every slot.
-void protocore_coaps_server_poll(uint8_t *restrict work)
+void protocore_coaps_server_poll(uint8_t *work)
 {
     CoapsServerV.ok = PROTO_FALSE;
     if (!COAPS_SERVER_CTX(work)->running)
@@ -495,7 +495,7 @@ void protocore_coaps_server_poll(uint8_t *restrict work)
 }
 
 // The pool slots in use.
-void protocore_coaps_server_active_conns(uint8_t *restrict work)
+void protocore_coaps_server_active_conns(uint8_t *work)
 {
     uint8_t n = 0;
     for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
@@ -510,7 +510,7 @@ void protocore_coaps_server_active_conns(uint8_t *restrict work)
 }
 
 // Stop polling, release every slot, and empty the ingest ring. The port stays bound.
-void protocore_coaps_server_stop(uint8_t *restrict work)
+void protocore_coaps_server_stop(uint8_t *work)
 {
     COAPS_SERVER_CTX(work)->running = PROTO_FALSE;
     for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
@@ -524,7 +524,7 @@ void protocore_coaps_server_stop(uint8_t *restrict work)
 
 #if !PROTOCORE_HAS_NET_STACK
 // Install ns->sink as where every outbound datagram goes.
-void protocore_coaps_server_set_out_sink(uint8_t *restrict work)
+void protocore_coaps_server_set_out_sink(uint8_t *work)
 {
     COAPS_SERVER_CTX(work)->out_sink = CoapsServerV.sink.fn;
     COAPS_SERVER_CTX(work)->out_ctx = CoapsServerV.sink.ctx;
@@ -532,7 +532,7 @@ void protocore_coaps_server_set_out_sink(uint8_t *restrict work)
 }
 
 // Queue ns->dgram as though it had been received, for the next poll to route.
-void protocore_coaps_server_ingest(uint8_t *restrict work)
+void protocore_coaps_server_ingest(uint8_t *work)
 {
     CoapsServerV.ok = ring_push(work, CoapsServerV.dgram.data, CoapsServerV.dgram.len, CoapsServerV.dgram.ip,
                                 CoapsServerV.dgram.port);

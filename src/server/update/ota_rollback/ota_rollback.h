@@ -87,20 +87,20 @@ extern OtaRollbackVars OtaRollbackV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const decide)(uint8_t *restrict work);
-    void (*const state)(uint8_t *restrict work);
-    void (*const commit)(uint8_t *restrict work);
-    void (*const rollback)(uint8_t *restrict work);
-    void (*const tick)(uint8_t *restrict work);
+    void (*const decide)(uint8_t *work);
+    void (*const state)(uint8_t *work);
+    void (*const commit)(uint8_t *work);
+    void (*const rollback)(uint8_t *work);
+    void (*const tick)(uint8_t *work);
 } OtaRollbackNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in OtaRollbackV or a region of the borrow at a fixed offset.
-void protocore_ota_rollback_decide(uint8_t *restrict work);
-void protocore_ota_rollback_state(uint8_t *restrict work);
-void protocore_ota_rollback_commit(uint8_t *restrict work);
-void protocore_ota_rollback_rollback(uint8_t *restrict work);
-void protocore_ota_rollback_tick(uint8_t *restrict work);
+void protocore_ota_rollback_decide(uint8_t *work);
+void protocore_ota_rollback_state(uint8_t *work);
+void protocore_ota_rollback_commit(uint8_t *work);
+void protocore_ota_rollback_rollback(uint8_t *work);
+void protocore_ota_rollback_tick(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

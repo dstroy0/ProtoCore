@@ -53,7 +53,7 @@ uint8_t *protocore_http_clock_span(void)
     return s_own.span;
 }
 
-void protocore_http_clock_date(uint8_t *restrict work)
+void protocore_http_clock_date(uint8_t *work)
 {
     // Zero is what both arms below produce before a sync, and it is what HttpDate.format renders as
     // an empty string - so a clock-less boot emits no Date rather than a wrong one.

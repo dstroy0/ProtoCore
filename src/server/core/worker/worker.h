@@ -112,22 +112,22 @@ extern WorkersVars WorkersV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const run_deferred)(uint8_t *restrict work);
-    void (*const running)(uint8_t *restrict work);
-    void (*const start)(uint8_t *restrict work);
-    void (*const stop)(uint8_t *restrict work);
-    void (*const wake)(uint8_t *restrict work);
-    void (*const defer)(uint8_t *restrict work);
+    void (*const run_deferred)(uint8_t *work);
+    void (*const running)(uint8_t *work);
+    void (*const start)(uint8_t *work);
+    void (*const stop)(uint8_t *work);
+    void (*const wake)(uint8_t *work);
+    void (*const defer)(uint8_t *work);
 } WorkerNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in WorkersV or a region of the borrow at a fixed offset.
-void protocore_workers_run_deferred(uint8_t *restrict work);
-void protocore_workers_running(uint8_t *restrict work);
-void protocore_workers_start(uint8_t *restrict work);
-void protocore_workers_stop(uint8_t *restrict work);
-void protocore_workers_wake(uint8_t *restrict work);
-void protocore_workers_defer(uint8_t *restrict work);
+void protocore_workers_run_deferred(uint8_t *work);
+void protocore_workers_running(uint8_t *work);
+void protocore_workers_start(uint8_t *work);
+void protocore_workers_stop(uint8_t *work);
+void protocore_workers_wake(uint8_t *work);
+void protocore_workers_defer(uint8_t *work);
 #if PROTOCORE_ENABLE_PREEMPT_QUEUE
 #endif
 

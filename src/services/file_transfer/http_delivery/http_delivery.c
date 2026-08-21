@@ -20,7 +20,7 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_http_delivery_swr(uint8_t *restrict work)
+void protocore_http_delivery_swr(uint8_t *work)
 {
     (void)work;
     uint32_t age_s = HttpDeliveryV.swr_args.age_s;
@@ -41,7 +41,7 @@ void protocore_http_delivery_swr(uint8_t *restrict work)
     HttpDeliveryV.value = DELIVERY_EXPIRED;
 }
 
-void protocore_http_delivery_cache_control(uint8_t *restrict work)
+void protocore_http_delivery_cache_control(uint8_t *work)
 {
     (void)work;
     uint32_t max_age_s = HttpDeliveryV.cache_control_args.max_age_s;
@@ -71,7 +71,7 @@ void protocore_http_delivery_cache_control(uint8_t *restrict work)
     HttpDeliveryV.n = b.len;
 }
 
-void protocore_http_delivery_sw_manifest(uint8_t *restrict work)
+void protocore_http_delivery_sw_manifest(uint8_t *work)
 {
     (void)work;
     const char *const *paths = HttpDeliveryV.sw_manifest_args.paths;
@@ -112,7 +112,7 @@ void protocore_http_delivery_sw_manifest(uint8_t *restrict work)
 // so the three pure cores link on their own - the freshness verdict, the Cache-Control builder and
 // the manifest serializer are host-tested without the server - and http_delivery_routes.c overrides
 // this the moment it is in the build. Nothing is registered without it, which is what ok reports.
-__attribute__((weak)) void protocore_http_delivery_serve_sw(uint8_t *restrict work)
+__attribute__((weak)) void protocore_http_delivery_serve_sw(uint8_t *work)
 {
     (void)work;
     HttpDeliveryV.ok = PROTO_FALSE;

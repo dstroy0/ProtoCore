@@ -26,7 +26,7 @@ PROTOCORE_BEGIN_DECLS
 #define COAPS_EPOCH_APP 3u          ///< the epoch application data travels in
 
 // Turn one datagram for the connection in ns->conn.
-void protocore_coaps_process(uint8_t *restrict work)
+void protocore_coaps_process(uint8_t *work)
 {
     (void)work;
     DtlsConn *c = CoapsV.conn;

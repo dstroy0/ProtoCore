@@ -98,10 +98,10 @@ typedef struct HttpRouteCtx HttpRouteCtx;
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    HttpRoute *(*add)(uint8_t *restrict);
-    uint8_t (*count)(uint8_t *restrict);
-    HttpRoute *(*at)(uint8_t *restrict, uint8_t);
-    void (*reset)(uint8_t *restrict);
+    HttpRoute *(*add)(uint8_t *);
+    uint8_t (*count)(uint8_t *);
+    HttpRoute *(*at)(uint8_t *, uint8_t);
+    void (*reset)(uint8_t *);
 } HttpRouteNs;
 PROTOCORE_NS_LAYOUT(HttpRouteNs, add, count, at, reset);
 
@@ -110,25 +110,25 @@ PROTOCORE_NS_LAYOUT(HttpRouteNs, add, count, at, reset);
  * @param work PROTOCORE_HTTP_ROUTES_BORROW bytes the caller took. Not held past the call.
  * @return The HttpRoute *.
  */
-HttpRoute *protocore_http_routes_add(uint8_t *restrict work);
+HttpRoute *protocore_http_routes_add(uint8_t *work);
 /**
  * @brief Entries currently registered.
  * @param work PROTOCORE_HTTP_ROUTES_BORROW bytes the caller took. Not held past the call.
  * @return The uint8_t.
  */
-uint8_t protocore_http_routes_count(uint8_t *restrict work);
+uint8_t protocore_http_routes_count(uint8_t *work);
 /**
  * @brief Entry i, or NULL if i is past the end.
  * @param work PROTOCORE_HTTP_ROUTES_BORROW bytes the caller took. Not held past the call.
  * @param i I
  * @return The HttpRoute *.
  */
-HttpRoute *protocore_http_routes_at(uint8_t *restrict work, uint8_t i);
+HttpRoute *protocore_http_routes_at(uint8_t *work, uint8_t i);
 /**
  * @brief Empty the table. For tests: a case that does not reset matches .
  * @param work PROTOCORE_HTTP_ROUTES_BORROW bytes the caller took. Not held past the call.
  */
-void protocore_http_routes_reset(uint8_t *restrict work);
+void protocore_http_routes_reset(uint8_t *work);
 
 /**
  * @brief The bytes every entry here runs out of: the one route table.

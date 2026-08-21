@@ -18,7 +18,7 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-int protocore_http_range_http_parse_byte_range(uint8_t *restrict work, const char *hdr, size_t size, size_t *out_start,
+int protocore_http_range_http_parse_byte_range(uint8_t *work, const char *hdr, size_t size, size_t *out_start,
                                                size_t *out_end)
 {
     int n = 0;

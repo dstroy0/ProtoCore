@@ -20,10 +20,9 @@ PROTOCORE_BEGIN_DECLS
  * K(i) = HMAC-SHA256(Ki, [i]_32be || fixed); the blocks are concatenated for i = 1, 2, ... and the
  * result truncated to @ref KdfCtrArgs::out_len bytes.
  *
- * @c work is PROTOCORE_KDF_BORROW secure bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and
- * the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. That
- * is what keeps K(i), which is derived from Ki, from outliving the caller.
+ * @c work is PROTOCORE_KDF_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes it,
+ * holds it, releases it, nor wipes it. That is what keeps K(i), which is derived from Ki, from outliving the caller.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -32,8 +31,7 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*ctr_hmac_sha256)(uint8_t *restrict, const uint8_t *, size_t, const uint8_t *, size_t, uint8_t *,
-                                  size_t);
+    proto_bool (*ctr_hmac_sha256)(uint8_t *, const uint8_t *, size_t, const uint8_t *, size_t, uint8_t *, size_t);
 } KdfNs;
 PROTOCORE_NS_LAYOUT(KdfNs, ctr_hmac_sha256);
 
@@ -48,7 +46,7 @@ PROTOCORE_NS_LAYOUT(KdfNs, ctr_hmac_sha256);
  * @param out_len number of output bytes, >= 1; the caller encodes L = out_len * 8 into fixed
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_kdf_ctr_hmac_sha256(uint8_t *restrict work, const uint8_t *ki, size_t ki_len, const uint8_t *fixed,
+proto_bool protocore_kdf_ctr_hmac_sha256(uint8_t *work, const uint8_t *ki, size_t ki_len, const uint8_t *fixed,
                                          size_t fixed_len, uint8_t *out, size_t out_len);
 
 /** @brief Module namespace. */

@@ -218,13 +218,13 @@ static size_t h2_build_data_run(uint8_t *out, size_t cap, uint32_t stream_id, co
 
 // --- the entries ---
 
-void protocore_h2_frame_parse_header(uint8_t *restrict work)
+void protocore_h2_frame_parse_header(uint8_t *work)
 {
     (void)work;
     H2FrameV.ok = h2_parse_header_run(H2FrameV.parse_args.buf, H2FrameV.parse_args.len, &H2FrameV.header);
 }
 
-void protocore_h2_frame_write_header(uint8_t *restrict work)
+void protocore_h2_frame_write_header(uint8_t *work)
 {
     (void)work;
     H2FrameV.n =
@@ -232,20 +232,20 @@ void protocore_h2_frame_write_header(uint8_t *restrict work)
                             H2FrameV.write_args.type, H2FrameV.write_args.flags, H2FrameV.write_args.stream_id);
 }
 
-void protocore_h2_frame_settings_defaults(uint8_t *restrict work)
+void protocore_h2_frame_settings_defaults(uint8_t *work)
 {
     (void)work;
     h2_settings_defaults_run(H2FrameV.settings_args.s);
 }
 
-void protocore_h2_frame_parse_settings(uint8_t *restrict work)
+void protocore_h2_frame_parse_settings(uint8_t *work)
 {
     (void)work;
     H2FrameV.ok =
         h2_parse_settings_run(H2FrameV.settings_args.payload, H2FrameV.settings_args.len, H2FrameV.settings_args.s);
 }
 
-void protocore_h2_frame_build_settings(uint8_t *restrict work)
+void protocore_h2_frame_build_settings(uint8_t *work)
 {
     (void)work;
     H2FrameV.n = h2_build_settings_run(H2FrameV.build_settings_args.buf, H2FrameV.build_settings_args.cap,
@@ -253,40 +253,40 @@ void protocore_h2_frame_build_settings(uint8_t *restrict work)
                                        H2FrameV.build_settings_args.n);
 }
 
-void protocore_h2_frame_build_settings_ack(uint8_t *restrict work)
+void protocore_h2_frame_build_settings_ack(uint8_t *work)
 {
     (void)work;
     H2FrameV.n = h2_build_settings_ack_run(H2FrameV.ack_args.buf, H2FrameV.ack_args.cap);
 }
 
-void protocore_h2_frame_build_window_update(uint8_t *restrict work)
+void protocore_h2_frame_build_window_update(uint8_t *work)
 {
     (void)work;
     H2FrameV.n = h2_build_window_update_run(H2FrameV.window_args.buf, H2FrameV.window_args.cap,
                                             H2FrameV.window_args.stream_id, H2FrameV.window_args.increment);
 }
 
-void protocore_h2_frame_build_rst_stream(uint8_t *restrict work)
+void protocore_h2_frame_build_rst_stream(uint8_t *work)
 {
     (void)work;
     H2FrameV.n = h2_build_rst_stream_run(H2FrameV.rst_args.buf, H2FrameV.rst_args.cap, H2FrameV.rst_args.stream_id,
                                          H2FrameV.rst_args.error);
 }
 
-void protocore_h2_frame_build_goaway(uint8_t *restrict work)
+void protocore_h2_frame_build_goaway(uint8_t *work)
 {
     (void)work;
     H2FrameV.n = h2_build_goaway_run(H2FrameV.goaway_args.buf, H2FrameV.goaway_args.cap,
                                      H2FrameV.goaway_args.last_stream_id, H2FrameV.goaway_args.error);
 }
 
-void protocore_h2_frame_build_ping_ack(uint8_t *restrict work)
+void protocore_h2_frame_build_ping_ack(uint8_t *work)
 {
     (void)work;
     H2FrameV.n = h2_build_ping_ack_run(H2FrameV.ping_args.buf, H2FrameV.ping_args.cap, H2FrameV.ping_args.opaque);
 }
 
-void protocore_h2_frame_build_headers(uint8_t *restrict work)
+void protocore_h2_frame_build_headers(uint8_t *work)
 {
     (void)work;
     H2FrameV.n = h2_build_headers_run(H2FrameV.headers_args.buf, H2FrameV.headers_args.cap,
@@ -294,7 +294,7 @@ void protocore_h2_frame_build_headers(uint8_t *restrict work)
                                       H2FrameV.headers_args.block_len, H2FrameV.headers_args.end_stream);
 }
 
-void protocore_h2_frame_build_data(uint8_t *restrict work)
+void protocore_h2_frame_build_data(uint8_t *work)
 {
     (void)work;
     H2FrameV.n = h2_build_data_run(H2FrameV.data_args.buf, H2FrameV.data_args.cap, H2FrameV.data_args.stream_id,

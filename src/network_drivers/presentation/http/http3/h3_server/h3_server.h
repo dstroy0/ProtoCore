@@ -75,8 +75,8 @@ typedef struct
     H3ReqArgs req;      ///< the request that stream carried
     H3RngArgs rng_args; ///< where random bytes are drawn
 
-    void (*const request)(uint8_t *restrict work);
-    void (*const rng)(uint8_t *restrict work);
+    void (*const request)(uint8_t *work);
+    void (*const rng)(uint8_t *work);
 } H3ServerNs;
 
 /** @brief The one symbol this module exports. */

@@ -284,9 +284,8 @@ typedef struct
  * @var SimaticNs::parse_header_rk512  parse an RK512 header off a telegram. true on a complete, valid ...
  * @var SimaticNs::parse_reaction_rk512  parse a reaction telegram: the status word, and (for a FETCH ...
  *
- * @c work is PROTOCORE_SIMATIC_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_SIMATIC_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
+ * nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -314,36 +313,36 @@ extern SimaticVars SimaticV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const bcc_3964r)(uint8_t *restrict work);
-    void (*const build_block_3964r)(uint8_t *restrict work);
-    void (*const parse_block_3964r)(uint8_t *restrict work);
-    void (*const init_3964r)(uint8_t *restrict work);
-    void (*const send_3964r)(uint8_t *restrict work);
-    void (*const rx_byte_3964r)(uint8_t *restrict work);
-    void (*const tick_3964r)(uint8_t *restrict work);
-    void (*const idle_3964r)(uint8_t *restrict work);
-    void (*const build_send_rk512)(uint8_t *restrict work);
-    void (*const build_fetch_rk512)(uint8_t *restrict work);
-    void (*const build_reaction_rk512)(uint8_t *restrict work);
-    void (*const parse_header_rk512)(uint8_t *restrict work);
-    void (*const parse_reaction_rk512)(uint8_t *restrict work);
+    void (*const bcc_3964r)(uint8_t *work);
+    void (*const build_block_3964r)(uint8_t *work);
+    void (*const parse_block_3964r)(uint8_t *work);
+    void (*const init_3964r)(uint8_t *work);
+    void (*const send_3964r)(uint8_t *work);
+    void (*const rx_byte_3964r)(uint8_t *work);
+    void (*const tick_3964r)(uint8_t *work);
+    void (*const idle_3964r)(uint8_t *work);
+    void (*const build_send_rk512)(uint8_t *work);
+    void (*const build_fetch_rk512)(uint8_t *work);
+    void (*const build_reaction_rk512)(uint8_t *work);
+    void (*const parse_header_rk512)(uint8_t *work);
+    void (*const parse_reaction_rk512)(uint8_t *work);
 } SimaticNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SimaticV or a region of the borrow at a fixed offset.
-void protocore_simatic_bcc_3964r(uint8_t *restrict work);
-void protocore_simatic_build_block_3964r(uint8_t *restrict work);
-void protocore_simatic_parse_block_3964r(uint8_t *restrict work);
-void protocore_simatic_init_3964r(uint8_t *restrict work);
-void protocore_simatic_send_3964r(uint8_t *restrict work);
-void protocore_simatic_rx_byte_3964r(uint8_t *restrict work);
-void protocore_simatic_tick_3964r(uint8_t *restrict work);
-void protocore_simatic_idle_3964r(uint8_t *restrict work);
-void protocore_simatic_build_send_rk512(uint8_t *restrict work);
-void protocore_simatic_build_fetch_rk512(uint8_t *restrict work);
-void protocore_simatic_build_reaction_rk512(uint8_t *restrict work);
-void protocore_simatic_parse_header_rk512(uint8_t *restrict work);
-void protocore_simatic_parse_reaction_rk512(uint8_t *restrict work);
+void protocore_simatic_bcc_3964r(uint8_t *work);
+void protocore_simatic_build_block_3964r(uint8_t *work);
+void protocore_simatic_parse_block_3964r(uint8_t *work);
+void protocore_simatic_init_3964r(uint8_t *work);
+void protocore_simatic_send_3964r(uint8_t *work);
+void protocore_simatic_rx_byte_3964r(uint8_t *work);
+void protocore_simatic_tick_3964r(uint8_t *work);
+void protocore_simatic_idle_3964r(uint8_t *work);
+void protocore_simatic_build_send_rk512(uint8_t *work);
+void protocore_simatic_build_fetch_rk512(uint8_t *work);
+void protocore_simatic_build_reaction_rk512(uint8_t *work);
+void protocore_simatic_parse_header_rk512(uint8_t *work);
+void protocore_simatic_parse_reaction_rk512(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

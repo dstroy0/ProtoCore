@@ -116,28 +116,28 @@ extern ConfigStoreVars ConfigStoreV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const begin)(uint8_t *restrict work);
-    void (*const set_str)(uint8_t *restrict work);
-    void (*const get_str)(uint8_t *restrict work);
-    void (*const set_u32)(uint8_t *restrict work);
-    void (*const get_u32)(uint8_t *restrict work);
-    void (*const set_blob)(uint8_t *restrict work);
-    void (*const get_blob)(uint8_t *restrict work);
-    void (*const erase)(uint8_t *restrict work);
-    void (*const clear)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *work);
+    void (*const set_str)(uint8_t *work);
+    void (*const get_str)(uint8_t *work);
+    void (*const set_u32)(uint8_t *work);
+    void (*const get_u32)(uint8_t *work);
+    void (*const set_blob)(uint8_t *work);
+    void (*const get_blob)(uint8_t *work);
+    void (*const erase)(uint8_t *work);
+    void (*const clear)(uint8_t *work);
 } ConfigStoreNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in ConfigStoreV or a region of the borrow at a fixed offset.
-void protocore_config_store_begin(uint8_t *restrict work);
-void protocore_config_store_set_str(uint8_t *restrict work);
-void protocore_config_store_get_str(uint8_t *restrict work);
-void protocore_config_store_set_u32(uint8_t *restrict work);
-void protocore_config_store_get_u32(uint8_t *restrict work);
-void protocore_config_store_set_blob(uint8_t *restrict work);
-void protocore_config_store_get_blob(uint8_t *restrict work);
-void protocore_config_store_erase(uint8_t *restrict work);
-void protocore_config_store_clear(uint8_t *restrict work);
+void protocore_config_store_begin(uint8_t *work);
+void protocore_config_store_set_str(uint8_t *work);
+void protocore_config_store_get_str(uint8_t *work);
+void protocore_config_store_set_u32(uint8_t *work);
+void protocore_config_store_get_u32(uint8_t *work);
+void protocore_config_store_set_blob(uint8_t *work);
+void protocore_config_store_get_blob(uint8_t *work);
+void protocore_config_store_erase(uint8_t *work);
+void protocore_config_store_clear(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

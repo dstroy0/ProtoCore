@@ -150,22 +150,22 @@ extern SockpoolVars SockpoolV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const init)(uint8_t *restrict work);
-    void (*const acquire)(uint8_t *restrict work);
-    void (*const touch)(uint8_t *restrict work);
-    void (*const release)(uint8_t *restrict work);
-    void (*const find)(uint8_t *restrict work);
-    void (*const in_use)(uint8_t *restrict work);
+    void (*const init)(uint8_t *work);
+    void (*const acquire)(uint8_t *work);
+    void (*const touch)(uint8_t *work);
+    void (*const release)(uint8_t *work);
+    void (*const find)(uint8_t *work);
+    void (*const in_use)(uint8_t *work);
 } SockpoolNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SockpoolV or a region of the borrow at a fixed offset.
-void protocore_sockpool_init(uint8_t *restrict work);
-void protocore_sockpool_acquire(uint8_t *restrict work);
-void protocore_sockpool_touch(uint8_t *restrict work);
-void protocore_sockpool_release(uint8_t *restrict work);
-void protocore_sockpool_find(uint8_t *restrict work);
-void protocore_sockpool_in_use(uint8_t *restrict work);
+void protocore_sockpool_init(uint8_t *work);
+void protocore_sockpool_acquire(uint8_t *work);
+void protocore_sockpool_touch(uint8_t *work);
+void protocore_sockpool_release(uint8_t *work);
+void protocore_sockpool_find(uint8_t *work);
+void protocore_sockpool_in_use(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

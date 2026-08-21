@@ -121,7 +121,7 @@ static int16_t fwd_iface_at(uint8_t i)
 }
 
 // Hand the held frame to layer 1 for interface @p id.
-static proto_bool fwd_iface_send(uint8_t *restrict work, uint8_t id)
+static proto_bool fwd_iface_send(uint8_t *work, uint8_t id)
 {
     PhysicalV.iface.id = id;
     PhysicalV.iface.data = ForwardV.frame.data;
@@ -140,7 +140,7 @@ typedef enum PROTO_ENUM_PACKED
 
 // Resolve the control on forwarding for (src_if -> dst): a DENY wins; otherwise the first matching
 // ALLOW governs and its index lands in @p allow_idx; otherwise nothing matched.
-static resolve_result fwd_resolve(uint8_t *restrict work, uint8_t dst, int *allow_idx)
+static resolve_result fwd_resolve(uint8_t *work, uint8_t dst, int *allow_idx)
 {
     const uint8_t src = ForwardV.src_if;
     int allow = -1;
@@ -236,7 +236,7 @@ static proto_bool acl_match(const acl_entry *a, uint8_t src, const uint8_t *data
 
 // The access list: the first matching entry's action decides, otherwise the fallback.
 // RFC 1812 sec 5.3.9.
-static proto_bool fwd_acl_permits(uint8_t *restrict work)
+static proto_bool fwd_acl_permits(uint8_t *work)
 {
     for (uint8_t i = 0; i < PROTOCORE_FWD_MAX_ACL; i++)
     {
@@ -296,7 +296,7 @@ uint8_t *protocore_forward_span(void)
     return s_own.span;
 }
 
-void protocore_forward_reset(uint8_t *restrict work)
+void protocore_forward_reset(uint8_t *work)
 {
     // The interfaces are layer 1's; emptying this plane leaves them registered.
     mem.set(FORWARD_CTX(work)->rules, 0, sizeof(FORWARD_CTX(work)->rules));
@@ -310,12 +310,12 @@ void protocore_forward_reset(uint8_t *restrict work)
     mem.set(&FORWARD_CTX(work)->stats, 0, sizeof(FORWARD_CTX(work)->stats));
 }
 
-void protocore_forward_acl_set_default(uint8_t *restrict work)
+void protocore_forward_acl_set_default(uint8_t *work)
 {
     FORWARD_CTX(work)->acl_default = ForwardV.acl.fallback;
 }
 
-void protocore_forward_acl_add(uint8_t *restrict work)
+void protocore_forward_acl_add(uint8_t *work)
 {
     ForwardV.ok = PROTO_FALSE;
     if (!pat_args_valid(&ForwardV.match))
@@ -341,7 +341,7 @@ void protocore_forward_acl_add(uint8_t *restrict work)
     // table full
 }
 
-void protocore_forward_route_add(uint8_t *restrict work)
+void protocore_forward_route_add(uint8_t *work)
 {
     ForwardV.ok = PROTO_FALSE;
     if (!pat_args_valid(&ForwardV.match))
@@ -370,7 +370,7 @@ void protocore_forward_route_add(uint8_t *restrict work)
     // table full
 }
 
-void protocore_forward_add_rule(uint8_t *restrict work)
+void protocore_forward_add_rule(uint8_t *work)
 {
     ForwardV.ok = PROTO_FALSE;
     for (uint8_t i = 0; i < PROTOCORE_FWD_MAX_RULES; i++)
@@ -396,7 +396,7 @@ void protocore_forward_add_rule(uint8_t *restrict work)
 // The first matching policy route decides the frame: it leaves on that one next hop, or it is
 // dropped. Returns true when a route matched, and writes the next hops reached to ns->n.
 // RFC 1812 sec 5.2.4.3.
-static proto_bool fwd_policy_route(uint8_t *restrict work)
+static proto_bool fwd_policy_route(uint8_t *work)
 {
     for (uint8_t i = 0; i < PROTOCORE_FWD_MAX_ROUTES; i++)
     {
@@ -436,7 +436,7 @@ static proto_bool fwd_policy_route(uint8_t *restrict work)
     return PROTO_FALSE;
 }
 
-void protocore_forward_ingress(uint8_t *restrict work)
+void protocore_forward_ingress(uint8_t *work)
 {
     ForwardV.n = 0;
     FORWARD_CTX(work)->stats.frames_in++;
@@ -498,13 +498,13 @@ void protocore_forward_ingress(uint8_t *restrict work)
     ForwardV.n = n;
 }
 
-void protocore_forward_get_stats(uint8_t *restrict work)
+void protocore_forward_get_stats(uint8_t *work)
 {
     ForwardV.stats = FORWARD_CTX(work)->stats;
 }
 
 #if PROTOCORE_FWD_INSPECT
-void protocore_forward_set_inspector(uint8_t *restrict work)
+void protocore_forward_set_inspector(uint8_t *work)
 {
     FORWARD_CTX(work)->inspector = ForwardV.inspect.fn;
     FORWARD_CTX(work)->inspect_ctx = ForwardV.inspect.ctx;

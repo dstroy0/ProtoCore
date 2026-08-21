@@ -86,14 +86,14 @@ uint8_t *protocore_flow_export_span(void)
 
 // Closes the Set that template_set, data_set_begin and message_finish find open, above its
 // definition.
-void protocore_flow_export_data_set_end(uint8_t *restrict work);
+void protocore_flow_export_data_set_end(uint8_t *work);
 
 // ---------------------------------------------------------------------------
 // Cursor primitives. Each latches the sticky error on overflow and writes nothing after it.
 // ---------------------------------------------------------------------------
 
 // Append @p v as two octets, most significant first.
-static void put_u16(uint8_t *restrict work, uint16_t v)
+static void put_u16(uint8_t *work, uint16_t v)
 {
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (m->error)
@@ -109,7 +109,7 @@ static void put_u16(uint8_t *restrict work, uint16_t v)
 }
 
 // Append @p v as four octets, most significant first.
-static void put_u32(uint8_t *restrict work, uint32_t v)
+static void put_u32(uint8_t *work, uint32_t v)
 {
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (m->error)
@@ -125,7 +125,7 @@ static void put_u32(uint8_t *restrict work, uint32_t v)
 }
 
 // Append @p n octets from @p p.
-static void put_span(uint8_t *restrict work, const uint8_t *p, size_t n)
+static void put_span(uint8_t *work, const uint8_t *p, size_t n)
 {
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (m->error)
@@ -142,7 +142,7 @@ static void put_span(uint8_t *restrict work, const uint8_t *p, size_t n)
 }
 
 // Append @p n zero octets. RFC 7011 sec 3.3.1: padding octets MUST be zero.
-static void put_zero(uint8_t *restrict work, size_t n)
+static void put_zero(uint8_t *work, size_t n)
 {
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (m->error)
@@ -159,7 +159,7 @@ static void put_zero(uint8_t *restrict work, size_t n)
 }
 
 // Overwrite the two octets at @p off with @p v. Only reached with off + 2 <= pos.
-static void patch_u16(uint8_t *restrict work, size_t off, uint16_t v)
+static void patch_u16(uint8_t *work, size_t off, uint16_t v)
 {
     endian.wr16be(FLOW_EXPORT_CTX(work)->buf + off, v);
 }
@@ -169,7 +169,7 @@ static void patch_u16(uint8_t *restrict work, size_t off, uint16_t v)
 // specification covers this format; RFC 3954 specifies Version 9 only.
 // ---------------------------------------------------------------------------
 
-void protocore_flow_export_v5_header(uint8_t *restrict work)
+void protocore_flow_export_v5_header(uint8_t *work)
 {
     (void)work;
     FlowExportV.ok = PROTO_FALSE;
@@ -194,7 +194,7 @@ void protocore_flow_export_v5_header(uint8_t *restrict work)
     FlowExportV.ok = PROTO_TRUE;
 }
 
-void protocore_flow_export_v5_record(uint8_t *restrict work)
+void protocore_flow_export_v5_record(uint8_t *work)
 {
     (void)work;
     FlowExportV.ok = PROTO_FALSE;
@@ -237,7 +237,7 @@ void protocore_flow_export_v5_record(uint8_t *restrict work)
 
 // RFC 7011 sec 3.1: Version 0x000a, Length, Export Time, Sequence Number, Observation Domain ID.
 // Length stays zero until message_finish.
-void protocore_flow_export_ipfix_begin(uint8_t *restrict work)
+void protocore_flow_export_ipfix_begin(uint8_t *work)
 {
     FlowExportV.ok = PROTO_FALSE;
     FlowExportV.n = 0;
@@ -263,7 +263,7 @@ void protocore_flow_export_ipfix_begin(uint8_t *restrict work)
 
 // RFC 3954 sec 5.1: Version 9, Count, sysUpTime, UNIX Secs, Sequence Number, Source ID.
 // Count stays zero until message_finish.
-void protocore_flow_export_v9_begin(uint8_t *restrict work)
+void protocore_flow_export_v9_begin(uint8_t *work)
 {
     FlowExportV.ok = PROTO_FALSE;
     FlowExportV.n = 0;
@@ -290,7 +290,7 @@ void protocore_flow_export_v9_begin(uint8_t *restrict work)
 
 // RFC 7011 sec 3.4.1 / RFC 3954 sec 5.2: Set ID, Set Length, Template ID, Field Count, then one
 // Field Specifier per field. RFC 3954 sec 5.1 counts a Template Record toward Count.
-void protocore_flow_export_template_set(uint8_t *restrict work)
+void protocore_flow_export_template_set(uint8_t *work)
 {
     FlowExportV.ok = PROTO_FALSE;
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
@@ -324,7 +324,7 @@ void protocore_flow_export_template_set(uint8_t *restrict work)
 
 // RFC 7011 sec 3.3.2: a Data Set's Set ID is the Template ID its records match, 256 or above.
 // RFC 3954 sec 5.2 reserves FlowSet IDs 0 through 255.
-void protocore_flow_export_data_set_begin(uint8_t *restrict work)
+void protocore_flow_export_data_set_begin(uint8_t *work)
 {
     FlowExportV.ok = PROTO_FALSE;
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
@@ -344,7 +344,7 @@ void protocore_flow_export_data_set_begin(uint8_t *restrict work)
 
 // RFC 7011 sec 3.4.3: "It consists only of one or more Field Values." The caller encodes them in
 // Template order; this copies them in and counts the record.
-void protocore_flow_export_data_record(uint8_t *restrict work)
+void protocore_flow_export_data_record(uint8_t *work)
 {
     FlowExportV.ok = PROTO_FALSE;
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
@@ -363,7 +363,7 @@ void protocore_flow_export_data_record(uint8_t *restrict work)
 // RFC 3954 sec 5.3: "The Exporter SHOULD insert some padding bytes so that the subsequent FlowSet
 // starts at a 4-byte aligned boundary", and the Length covers those octets. RFC 7011 sec 3.3.2:
 // the Length is the Set Header plus all records plus the optional padding.
-void protocore_flow_export_data_set_end(uint8_t *restrict work)
+void protocore_flow_export_data_set_end(uint8_t *work)
 {
     FlowExportV.ok = PROTO_FALSE;
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
@@ -388,7 +388,7 @@ void protocore_flow_export_data_set_end(uint8_t *restrict work)
 // FlowSet records". RFC 7011 sec 3.1 Length: "Total length of the IPFIX Message, measured in
 // octets, including Message Header and Set(s)", a 16-bit field, so a longer message fails closed
 // rather than reporting a truncated length.
-void protocore_flow_export_message_finish(uint8_t *restrict work)
+void protocore_flow_export_message_finish(uint8_t *work)
 {
     FlowExportV.ok = PROTO_FALSE;
     FlowExportV.n = 0;

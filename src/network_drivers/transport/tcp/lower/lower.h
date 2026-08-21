@@ -100,20 +100,20 @@ extern TcpLowerVars TcpLowerV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const marshal)(uint8_t *restrict work);
-    void (*const detach)(uint8_t *restrict work);
-    void (*const abort)(uint8_t *restrict work);
-    void (*const set_ttl)(uint8_t *restrict work);
-    void (*const apply_ttl)(uint8_t *restrict work);
+    void (*const marshal)(uint8_t *work);
+    void (*const detach)(uint8_t *work);
+    void (*const abort)(uint8_t *work);
+    void (*const set_ttl)(uint8_t *work);
+    void (*const apply_ttl)(uint8_t *work);
 } TcpLowerNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in TcpLowerV or a region of the borrow at a fixed offset.
-void protocore_tcp_lower_marshal(uint8_t *restrict work);
-void protocore_tcp_lower_detach(uint8_t *restrict work);
-void protocore_tcp_lower_abort(uint8_t *restrict work);
-void protocore_tcp_lower_set_ttl(uint8_t *restrict work);
-void protocore_tcp_lower_apply_ttl(uint8_t *restrict work);
+void protocore_tcp_lower_marshal(uint8_t *work);
+void protocore_tcp_lower_detach(uint8_t *work);
+void protocore_tcp_lower_abort(uint8_t *work);
+void protocore_tcp_lower_set_ttl(uint8_t *work);
+void protocore_tcp_lower_apply_ttl(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

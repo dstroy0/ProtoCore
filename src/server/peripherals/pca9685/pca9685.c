@@ -52,11 +52,11 @@ uint8_t *protocore_pca9685_span(void)
     return s_own.span;
 }
 
-void protocore_pca9685_channel_reg(uint8_t *restrict work);
-void protocore_pca9685_prescale(uint8_t *restrict work);
-void protocore_pca9685_set_pwm_bytes(uint8_t *restrict work);
+void protocore_pca9685_channel_reg(uint8_t *work);
+void protocore_pca9685_prescale(uint8_t *work);
+void protocore_pca9685_set_pwm_bytes(uint8_t *work);
 
-void protocore_pca9685_prescale(uint8_t *restrict work)
+void protocore_pca9685_prescale(uint8_t *work)
 {
     (void)work;
     uint32_t freq_hz = Pca9685V.prescale_args.freq_hz;
@@ -80,7 +80,7 @@ void protocore_pca9685_prescale(uint8_t *restrict work)
     Pca9685V.value = (uint8_t)pre;
 }
 
-void protocore_pca9685_channel_reg(uint8_t *restrict work)
+void protocore_pca9685_channel_reg(uint8_t *work)
 {
     (void)work;
     uint8_t channel = Pca9685V.channel_reg_args.channel;
@@ -93,7 +93,7 @@ void protocore_pca9685_channel_reg(uint8_t *restrict work)
     Pca9685V.value = (uint8_t)(PCA9685_REG_LED0_ON_L + 4 * channel);
 }
 
-void protocore_pca9685_us_to_count(uint8_t *restrict work)
+void protocore_pca9685_us_to_count(uint8_t *work)
 {
     (void)work;
     uint32_t microseconds = Pca9685V.us_to_count_args.microseconds;
@@ -105,7 +105,7 @@ void protocore_pca9685_us_to_count(uint8_t *restrict work)
     Pca9685V.count = count > PCA9685_COUNT_MAX ? (uint16_t)PCA9685_COUNT_MAX : (uint16_t)count;
 }
 
-void protocore_pca9685_set_pwm_bytes(uint8_t *restrict work)
+void protocore_pca9685_set_pwm_bytes(uint8_t *work)
 {
     uint8_t *buf = Pca9685V.set_pwm_bytes_args.buf;
     size_t cap = Pca9685V.set_pwm_bytes_args.cap;
@@ -165,26 +165,26 @@ static_assert(PCA9685_OFF_CTX % _Alignof(Pca9685Ctx) == 0,
 // Zero is "not set yet", which is the configured default - stated here rather than on the
 // declaration so the context carries no initializer and can live in a borrow that arrives zeroed.
 // begin() applies the same defaults to what it is handed.
-static uint8_t dev_addr(uint8_t *restrict work)
+static uint8_t dev_addr(uint8_t *work)
 {
     return PCA9685_CTX(work)->addr ? PCA9685_CTX(work)->addr : (uint8_t)PROTOCORE_PCA9685_I2C_ADDR;
 }
 
 // The PWM frequency the prescale was computed from, which a pulse width in microseconds is
 // counted against.
-static uint32_t dev_freq(uint8_t *restrict work)
+static uint32_t dev_freq(uint8_t *work)
 {
     return PCA9685_CTX(work)->freq ? PCA9685_CTX(work)->freq : (uint32_t)PROTOCORE_PCA9685_FREQ;
 }
 
-static proto_bool wr(uint8_t *restrict work, uint8_t reg, uint8_t val)
+static proto_bool wr(uint8_t *work, uint8_t reg, uint8_t val)
 {
     PCA9685_CTX(work)->frame[0] = reg;
     PCA9685_CTX(work)->frame[1] = val;
     return protocore_i2c_write(dev_addr(work), PCA9685_CTX(work)->frame, 2);
 }
 
-void protocore_pca9685_begin(uint8_t *restrict work)
+void protocore_pca9685_begin(uint8_t *work)
 {
     uint8_t addr = Pca9685V.begin_args.addr;
     uint32_t freq_hz = Pca9685V.begin_args.freq_hz;
@@ -204,7 +204,7 @@ void protocore_pca9685_begin(uint8_t *restrict work)
     Pca9685V.ok = ok;
 }
 
-void protocore_pca9685_set_pwm(uint8_t *restrict work)
+void protocore_pca9685_set_pwm(uint8_t *work)
 {
     uint8_t channel = Pca9685V.set_pwm_args.channel;
     uint16_t on = Pca9685V.set_pwm_args.on;
@@ -224,7 +224,7 @@ void protocore_pca9685_set_pwm(uint8_t *restrict work)
     Pca9685V.ok = protocore_i2c_write(dev_addr(work), PCA9685_CTX(work)->frame, 5);
 }
 
-void protocore_pca9685_set_servo_us(uint8_t *restrict work)
+void protocore_pca9685_set_servo_us(uint8_t *work)
 {
     uint8_t channel = Pca9685V.set_servo_us_args.channel;
     uint32_t microseconds = Pca9685V.set_servo_us_args.microseconds;

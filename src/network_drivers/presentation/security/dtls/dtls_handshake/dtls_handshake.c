@@ -89,7 +89,7 @@ static int reasm_merge(DtlsHsReasm *r, uint32_t lo, uint32_t hi)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_dtls_handshake_header_parse(uint8_t *restrict work, const uint8_t *p, size_t len, DtlsHsHeader *out)
+size_t protocore_dtls_handshake_header_parse(uint8_t *work, const uint8_t *p, size_t len, DtlsHsHeader *out)
 {
     size_t n = 0;
     (void)work;
@@ -117,9 +117,9 @@ size_t protocore_dtls_handshake_header_parse(uint8_t *restrict work, const uint8
     return PROTOCORE_DTLS_HS_HDR_LEN + out->frag_length;
 }
 
-size_t protocore_dtls_handshake_frag_build(uint8_t *restrict work, uint8_t msg_type, uint16_t msg_seq,
-                                           uint32_t full_len, uint32_t frag_offset, const uint8_t *frag,
-                                           uint32_t frag_len, uint8_t *out, size_t out_cap)
+size_t protocore_dtls_handshake_frag_build(uint8_t *work, uint8_t msg_type, uint16_t msg_seq, uint32_t full_len,
+                                           uint32_t frag_offset, const uint8_t *frag, uint32_t frag_len, uint8_t *out,
+                                           size_t out_cap)
 {
     size_t n = 0;
     (void)work;
@@ -161,8 +161,7 @@ size_t protocore_dtls_handshake_frag_build(uint8_t *restrict work, uint8_t msg_t
 // Message reassembly (RFC 9147 §5.4)
 // ---------------------------------------------------------------------------
 
-void protocore_dtls_handshake_reasm_init(uint8_t *restrict work, DtlsHsReasm *r, uint16_t msg_seq, uint8_t *buf,
-                                         size_t buf_cap)
+void protocore_dtls_handshake_reasm_init(uint8_t *work, DtlsHsReasm *r, uint16_t msg_seq, uint8_t *buf, size_t buf_cap)
 {
     (void)work;
 
@@ -176,7 +175,7 @@ void protocore_dtls_handshake_reasm_init(uint8_t *restrict work, DtlsHsReasm *r,
     r->range_count = 0;
 }
 
-size_t protocore_dtls_handshake_reasm_add(uint8_t *restrict work, DtlsHsReasm *r, const DtlsHsHeader *frag)
+size_t protocore_dtls_handshake_reasm_add(uint8_t *work, DtlsHsReasm *r, const DtlsHsHeader *frag)
 {
     size_t n = 0;
     (void)work;
@@ -256,8 +255,8 @@ size_t protocore_dtls_handshake_reasm_add(uint8_t *restrict work, DtlsHsReasm *r
 // ACK message (RFC 9147 §7)
 // ---------------------------------------------------------------------------
 
-size_t protocore_dtls_handshake_ack_build(uint8_t *restrict work, const DtlsRecordNumber *nums, size_t count,
-                                          uint8_t *out, size_t out_cap)
+size_t protocore_dtls_handshake_ack_build(uint8_t *work, const DtlsRecordNumber *nums, size_t count, uint8_t *out,
+                                          size_t out_cap)
 {
     (void)work;
 
@@ -283,8 +282,8 @@ size_t protocore_dtls_handshake_ack_build(uint8_t *restrict work, const DtlsReco
     return total;
 }
 
-proto_bool protocore_dtls_handshake_ack_parse(uint8_t *restrict work, const uint8_t *body, size_t len,
-                                              DtlsRecordNumber *out, size_t out_cap, size_t *out_count)
+proto_bool protocore_dtls_handshake_ack_parse(uint8_t *work, const uint8_t *body, size_t len, DtlsRecordNumber *out,
+                                              size_t out_cap, size_t *out_count)
 {
     (void)work;
 
@@ -317,10 +316,9 @@ proto_bool protocore_dtls_handshake_ack_parse(uint8_t *restrict work, const uint
 // HelloRetryRequest cookie (RFC 9147 §5.1)
 // ---------------------------------------------------------------------------
 
-size_t protocore_dtls_handshake_cookie_make(uint8_t *restrict work, uint8_t *mac_work,
-                                            const uint8_t *protocore_hmac_key, uint64_t timestamp,
-                                            const uint8_t *payload, size_t payload_len, const uint8_t *client_addr,
-                                            size_t addr_len, uint8_t *out, size_t out_cap)
+size_t protocore_dtls_handshake_cookie_make(uint8_t *work, uint8_t *mac_work, const uint8_t *protocore_hmac_key,
+                                            uint64_t timestamp, const uint8_t *payload, size_t payload_len,
+                                            const uint8_t *client_addr, size_t addr_len, uint8_t *out, size_t out_cap)
 {
     (void)work;
 
@@ -352,11 +350,10 @@ size_t protocore_dtls_handshake_cookie_make(uint8_t *restrict work, uint8_t *mac
     return total;
 }
 
-proto_bool protocore_dtls_handshake_cookie_verify(uint8_t *restrict work, uint8_t *mac_work,
-                                                  const uint8_t *protocore_hmac_key, uint64_t now, uint64_t max_age,
-                                                  const uint8_t *client_addr, size_t addr_len, const uint8_t *cookie,
-                                                  size_t cookie_len, uint8_t *payload_out, size_t payload_cap,
-                                                  size_t *payload_len_out)
+proto_bool protocore_dtls_handshake_cookie_verify(uint8_t *work, uint8_t *mac_work, const uint8_t *protocore_hmac_key,
+                                                  uint64_t now, uint64_t max_age, const uint8_t *client_addr,
+                                                  size_t addr_len, const uint8_t *cookie, size_t cookie_len,
+                                                  uint8_t *payload_out, size_t payload_cap, size_t *payload_len_out)
 {
     proto_bool ok = PROTO_FALSE;
     (void)work;

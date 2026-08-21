@@ -45,7 +45,7 @@ uint8_t *protocore_sen0192_span(void)
     return s_own.span;
 }
 
-void protocore_sen0192_motion_init(uint8_t *restrict work, Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high)
+void protocore_sen0192_motion_init(uint8_t *work, Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high)
 {
     (void)work;
 
@@ -57,8 +57,7 @@ void protocore_sen0192_motion_init(uint8_t *restrict work, Sen0192Motion *m, uin
     m->motion_events = 0;
 }
 
-proto_bool protocore_sen0192_motion_update(uint8_t *restrict work, Sen0192Motion *m, proto_bool level_high,
-                                           uint32_t now_ms)
+proto_bool protocore_sen0192_motion_update(uint8_t *work, Sen0192Motion *m, proto_bool level_high, uint32_t now_ms)
 {
     proto_bool ok = PROTO_FALSE;
     proto_bool active = (level_high == m->active_high);
@@ -80,7 +79,7 @@ proto_bool protocore_sen0192_motion_update(uint8_t *restrict work, Sen0192Motion
     return ok;
 }
 
-proto_bool protocore_sen0192_motion_tick(uint8_t *restrict work, Sen0192Motion *m, uint32_t now_ms)
+proto_bool protocore_sen0192_motion_tick(uint8_t *work, Sen0192Motion *m, uint32_t now_ms)
 {
     (void)work;
 
@@ -91,21 +90,21 @@ proto_bool protocore_sen0192_motion_tick(uint8_t *restrict work, Sen0192Motion *
     return m->present;
 }
 
-proto_bool protocore_sen0192_motion_present(uint8_t *restrict work, const Sen0192Motion *m)
+proto_bool protocore_sen0192_motion_present(uint8_t *work, const Sen0192Motion *m)
 {
     (void)work;
 
     return m->present;
 }
 
-uint32_t protocore_sen0192_motion_events(uint8_t *restrict work, const Sen0192Motion *m)
+uint32_t protocore_sen0192_motion_events(uint8_t *work, const Sen0192Motion *m)
 {
     (void)work;
 
     return m->motion_events;
 }
 
-uint32_t protocore_sen0192_motion_active_age_ms(uint8_t *restrict work, const Sen0192Motion *m, uint32_t now_ms)
+uint32_t protocore_sen0192_motion_active_age_ms(uint8_t *work, const Sen0192Motion *m, uint32_t now_ms)
 {
     (void)work;
 
@@ -146,12 +145,12 @@ static_assert(SEN0192_OFF_CTX % _Alignof(Sen0192Ctx) == 0,
 // main() reports failure. Stated here rather than as an initializer on the declaration so the
 // context carries none and can live in a borrow that arrives zeroed. It takes a flag rather than a
 // sentinel value because pin 0 is a real pin, so zero cannot mean "unset".
-static int dev_pin(uint8_t *restrict work)
+static int dev_pin(uint8_t *work)
 {
     return SEN0192_CTX(work)->begun ? SEN0192_CTX(work)->pin : -1;
 }
 
-proto_bool protocore_sen0192_begin(uint8_t *restrict work)
+proto_bool protocore_sen0192_begin(uint8_t *work)
 {
     SEN0192_CTX(work)->pin = PROTOCORE_SEN0192_PIN;
     SEN0192_CTX(work)->begun = PROTO_TRUE;
@@ -161,7 +160,7 @@ proto_bool protocore_sen0192_begin(uint8_t *restrict work)
     return PROTO_TRUE;
 }
 
-proto_bool protocore_sen0192_poll(uint8_t *restrict work)
+proto_bool protocore_sen0192_poll(uint8_t *work)
 {
     const int pin = dev_pin(work);
     if (pin < 0)
@@ -173,13 +172,13 @@ proto_bool protocore_sen0192_poll(uint8_t *restrict work)
     return PROTO_FALSE;
 }
 
-void protocore_sen0192_present(uint8_t *restrict work)
+void protocore_sen0192_present(uint8_t *work)
 {
     Sen0192.motion_tick(work, &SEN0192_CTX(work)->motion, Clock.ms); // age presence out even between poll()s
     Sen0192.motion_present(work, &SEN0192_CTX(work)->motion);
 }
 
-void protocore_sen0192_motion_count(uint8_t *restrict work)
+void protocore_sen0192_motion_count(uint8_t *work)
 {
     Sen0192.motion_events(work, &SEN0192_CTX(work)->motion);
 }

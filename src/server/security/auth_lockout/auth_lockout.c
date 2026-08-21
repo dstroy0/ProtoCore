@@ -111,7 +111,7 @@ uint8_t *protocore_auth_lockout_span(void)
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_auth_lockout_remaining(uint8_t *restrict work)
+void protocore_auth_lockout_remaining(uint8_t *work)
 {
     AuthLockoutV.ok = PROTO_FALSE;
     AuthLockoutV.ms = 0;
@@ -135,7 +135,7 @@ void protocore_auth_lockout_remaining(uint8_t *restrict work)
     AuthLockoutV.ms = b->lock_ms - elapsed;
 }
 
-void protocore_auth_lockout_fail(uint8_t *restrict work)
+void protocore_auth_lockout_fail(uint8_t *work)
 {
     AuthLockoutV.ok = PROTO_FALSE;
     const protocore_ip *ip = AuthLockoutV.args.ip;
@@ -216,7 +216,7 @@ void protocore_auth_lockout_fail(uint8_t *restrict work)
     }
 }
 
-void protocore_auth_lockout_succeed(uint8_t *restrict work)
+void protocore_auth_lockout_succeed(uint8_t *work)
 {
     AuthLockoutV.ok = PROTO_FALSE;
     const protocore_ip *ip = AuthLockoutV.args.ip;
@@ -237,7 +237,7 @@ void protocore_auth_lockout_succeed(uint8_t *restrict work)
     }
 }
 
-void protocore_auth_lockout_reset(uint8_t *restrict work)
+void protocore_auth_lockout_reset(uint8_t *work)
 {
     AuthLockoutV.ok = PROTO_FALSE;
     LockoutCtx *s_lock = LOCKOUT_CTX(work);

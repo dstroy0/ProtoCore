@@ -157,8 +157,8 @@ static void hdr_write(uint8_t *out, uint8_t content_type, size_t body_len)
 }
 
 // HKDF-Expand-Label of the traffic secret under the "tls13 " prefix, into out.
-static void expand_label(uint8_t *restrict work, TlsCipher cipher, uint8_t *scratch, const uint8_t *secret,
-                         const char *label, uint8_t *out, size_t out_len)
+static void expand_label(uint8_t *work, TlsCipher cipher, uint8_t *scratch, const uint8_t *secret, const char *label,
+                         uint8_t *out, size_t out_len)
 {
     Tls13KsV.bind.kdf = &TLS13_KDF;
     Tls13KsV.bind.is384 = protocore_tls_cipher_is384(cipher);
@@ -170,7 +170,7 @@ static void expand_label(uint8_t *restrict work, TlsCipher cipher, uint8_t *scra
     Tls13Ks.expand_label(work);
 }
 
-void protocore_tls_record_keys_derive(uint8_t *restrict work)
+void protocore_tls_record_keys_derive(uint8_t *work)
 {
     TlsRecordKeys *out = TlsRecordV.key.keys;
     out->cipher = TlsRecordV.key.cipher;
@@ -199,7 +199,7 @@ void protocore_tls_record_keys_derive(uint8_t *restrict work)
     protocore_secure_release(mark);
 }
 
-void protocore_tls_record_keys_wipe(uint8_t *restrict work)
+void protocore_tls_record_keys_wipe(uint8_t *work)
 {
     TlsRecordKeys *keys = TlsRecordV.key.keys;
     aead_key_wipe(keys->cipher, keys->gcm);
@@ -213,7 +213,7 @@ void protocore_tls_record_keys_wipe(uint8_t *restrict work)
 // TLSPlaintext (RFC 8446 sec 5.1): unencrypted record
 // ---------------------------------------------------------------------------
 
-void protocore_tls_record_plaintext_build(uint8_t *restrict work)
+void protocore_tls_record_plaintext_build(uint8_t *work)
 {
     const size_t frag_len = TlsRecordV.plain.frag_len;
     uint8_t *out = TlsRecordV.out_args.out;
@@ -231,7 +231,7 @@ void protocore_tls_record_plaintext_build(uint8_t *restrict work)
     TlsRecordV.n = total;
 }
 
-void protocore_tls_record_plaintext_parse(uint8_t *restrict work)
+void protocore_tls_record_plaintext_parse(uint8_t *work)
 {
     const uint8_t *rec = TlsRecordV.sealed.rec;
     const size_t rec_len = TlsRecordV.sealed.rec_len;
@@ -257,7 +257,7 @@ void protocore_tls_record_plaintext_parse(uint8_t *restrict work)
 // TLSCiphertext (RFC 8446 sec 5.2): AEAD-protected record
 // ---------------------------------------------------------------------------
 
-void protocore_tls_record_protect(uint8_t *restrict work)
+void protocore_tls_record_protect(uint8_t *work)
 {
     TlsRecordKeys *keys = TlsRecordV.key.keys;
     const uint8_t content_type = TlsRecordV.content_type;
@@ -303,7 +303,7 @@ void protocore_tls_record_protect(uint8_t *restrict work)
     TlsRecordV.n = total;
 }
 
-void protocore_tls_record_unprotect(uint8_t *restrict work)
+void protocore_tls_record_unprotect(uint8_t *work)
 {
     TlsRecordKeys *keys = TlsRecordV.key.keys;
     const uint8_t *rec = TlsRecordV.sealed.rec;

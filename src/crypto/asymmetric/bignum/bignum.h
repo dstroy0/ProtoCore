@@ -156,11 +156,10 @@ typedef struct
  * @var BignumNs::expmod_group14   out = base^exp mod group14_p, on the linked backend
  * @var BignumNs::dh_validate      RFC 4253 §8: @ref BignumNs::ok is true when 1 < v < p-1
  *
- * @c work is PROTOCORE_BIGNUM_BORROW secure bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and
- * the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. The DH
- * exponent and the shared secret pass through those bytes, so they die with the release rather than on
- * the stack. Two callers are two borrows and never collide.
+ * @c work is PROTOCORE_BIGNUM_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the
+ * call, so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes
+ * it, holds it, releases it, nor wipes it. The DH exponent and the shared secret pass through those bytes, so they die
+ * with the release rather than on the stack. Two callers are two borrows and never collide.
  *
  * No storage member and no context: a caller sets operands and reads @ref BignumNs::ok, and that is
  * all the surface there is.
@@ -185,24 +184,24 @@ extern BignumVars BignumV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const from_bytes)(uint8_t *restrict work);
-    void (*const to_bytes)(uint8_t *restrict work);
-    void (*const cmp)(uint8_t *restrict work);
-    void (*const cmp_raw)(uint8_t *restrict work);
-    void (*const is_zero)(uint8_t *restrict work);
-    void (*const expmod_group14)(uint8_t *restrict work);
-    void (*const dh_validate)(uint8_t *restrict work);
+    void (*const from_bytes)(uint8_t *work);
+    void (*const to_bytes)(uint8_t *work);
+    void (*const cmp)(uint8_t *work);
+    void (*const cmp_raw)(uint8_t *work);
+    void (*const is_zero)(uint8_t *work);
+    void (*const expmod_group14)(uint8_t *work);
+    void (*const dh_validate)(uint8_t *work);
 } BignumNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in BignumV or a region of the borrow at a fixed offset.
-void protocore_bignum_from_bytes(uint8_t *restrict work);
-void protocore_bignum_to_bytes(uint8_t *restrict work);
-void protocore_bignum_cmp(uint8_t *restrict work);
-void protocore_bignum_cmp_raw(uint8_t *restrict work);
-void protocore_bignum_is_zero(uint8_t *restrict work);
-void protocore_bignum_expmod_group14(uint8_t *restrict work);
-void protocore_bignum_dh_validate(uint8_t *restrict work);
+void protocore_bignum_from_bytes(uint8_t *work);
+void protocore_bignum_to_bytes(uint8_t *work);
+void protocore_bignum_cmp(uint8_t *work);
+void protocore_bignum_cmp_raw(uint8_t *work);
+void protocore_bignum_is_zero(uint8_t *work);
+void protocore_bignum_expmod_group14(uint8_t *work);
+void protocore_bignum_dh_validate(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

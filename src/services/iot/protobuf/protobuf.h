@@ -183,52 +183,52 @@ extern ProtobufVars ProtobufV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const writer_open)(uint8_t *restrict work);
-    void (*const write_varint)(uint8_t *restrict work);
-    void (*const write_tag)(uint8_t *restrict work);
-    void (*const write_uint64)(uint8_t *restrict work);
-    void (*const write_int64)(uint8_t *restrict work);
-    void (*const write_sint64)(uint8_t *restrict work);
-    void (*const write_bool)(uint8_t *restrict work);
-    void (*const write_fixed32)(uint8_t *restrict work);
-    void (*const write_fixed64)(uint8_t *restrict work);
-    void (*const write_float)(uint8_t *restrict work);
-    void (*const write_double)(uint8_t *restrict work);
-    void (*const write_bytes)(uint8_t *restrict work);
-    void (*const write_string)(uint8_t *restrict work);
-    void (*const writer_finish)(uint8_t *restrict work);
-    void (*const reader_open)(uint8_t *restrict work);
-    void (*const read_varint)(uint8_t *restrict work);
-    void (*const read_record)(uint8_t *restrict work);
-    void (*const zigzag64)(uint8_t *restrict work);
-    void (*const zigzag32)(uint8_t *restrict work);
-    void (*const float_bits)(uint8_t *restrict work);
-    void (*const double_bits)(uint8_t *restrict work);
+    void (*const writer_open)(uint8_t *work);
+    void (*const write_varint)(uint8_t *work);
+    void (*const write_tag)(uint8_t *work);
+    void (*const write_uint64)(uint8_t *work);
+    void (*const write_int64)(uint8_t *work);
+    void (*const write_sint64)(uint8_t *work);
+    void (*const write_bool)(uint8_t *work);
+    void (*const write_fixed32)(uint8_t *work);
+    void (*const write_fixed64)(uint8_t *work);
+    void (*const write_float)(uint8_t *work);
+    void (*const write_double)(uint8_t *work);
+    void (*const write_bytes)(uint8_t *work);
+    void (*const write_string)(uint8_t *work);
+    void (*const writer_finish)(uint8_t *work);
+    void (*const reader_open)(uint8_t *work);
+    void (*const read_varint)(uint8_t *work);
+    void (*const read_record)(uint8_t *work);
+    void (*const zigzag64)(uint8_t *work);
+    void (*const zigzag32)(uint8_t *work);
+    void (*const float_bits)(uint8_t *work);
+    void (*const double_bits)(uint8_t *work);
 } ProtobufNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in ProtobufV or a region of the borrow at a fixed offset.
-void protocore_protobuf_writer_open(uint8_t *restrict work);
-void protocore_protobuf_write_varint(uint8_t *restrict work);
-void protocore_protobuf_write_tag(uint8_t *restrict work);
-void protocore_protobuf_write_uint64(uint8_t *restrict work);
-void protocore_protobuf_write_int64(uint8_t *restrict work);
-void protocore_protobuf_write_sint64(uint8_t *restrict work);
-void protocore_protobuf_write_bool(uint8_t *restrict work);
-void protocore_protobuf_write_fixed32(uint8_t *restrict work);
-void protocore_protobuf_write_fixed64(uint8_t *restrict work);
-void protocore_protobuf_write_float(uint8_t *restrict work);
-void protocore_protobuf_write_double(uint8_t *restrict work);
-void protocore_protobuf_write_bytes(uint8_t *restrict work);
-void protocore_protobuf_write_string(uint8_t *restrict work);
-void protocore_protobuf_writer_finish(uint8_t *restrict work);
-void protocore_protobuf_reader_open(uint8_t *restrict work);
-void protocore_protobuf_read_varint(uint8_t *restrict work);
-void protocore_protobuf_read_record(uint8_t *restrict work);
-void protocore_protobuf_zigzag64(uint8_t *restrict work);
-void protocore_protobuf_zigzag32(uint8_t *restrict work);
-void protocore_protobuf_float_bits(uint8_t *restrict work);
-void protocore_protobuf_double_bits(uint8_t *restrict work);
+void protocore_protobuf_writer_open(uint8_t *work);
+void protocore_protobuf_write_varint(uint8_t *work);
+void protocore_protobuf_write_tag(uint8_t *work);
+void protocore_protobuf_write_uint64(uint8_t *work);
+void protocore_protobuf_write_int64(uint8_t *work);
+void protocore_protobuf_write_sint64(uint8_t *work);
+void protocore_protobuf_write_bool(uint8_t *work);
+void protocore_protobuf_write_fixed32(uint8_t *work);
+void protocore_protobuf_write_fixed64(uint8_t *work);
+void protocore_protobuf_write_float(uint8_t *work);
+void protocore_protobuf_write_double(uint8_t *work);
+void protocore_protobuf_write_bytes(uint8_t *work);
+void protocore_protobuf_write_string(uint8_t *work);
+void protocore_protobuf_writer_finish(uint8_t *work);
+void protocore_protobuf_reader_open(uint8_t *work);
+void protocore_protobuf_read_varint(uint8_t *work);
+void protocore_protobuf_read_record(uint8_t *work);
+void protocore_protobuf_zigzag64(uint8_t *work);
+void protocore_protobuf_zigzag32(uint8_t *work);
+void protocore_protobuf_float_bits(uint8_t *work);
+void protocore_protobuf_double_bits(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

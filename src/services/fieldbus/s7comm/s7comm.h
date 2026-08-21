@@ -226,20 +226,20 @@ extern S7commVars S7commV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_setup)(uint8_t *restrict work);
-    void (*const build_read_request)(uint8_t *restrict work);
-    void (*const build_write_request)(uint8_t *restrict work);
-    void (*const parse_header)(uint8_t *restrict work);
-    void (*const read_next_item)(uint8_t *restrict work);
+    void (*const build_setup)(uint8_t *work);
+    void (*const build_read_request)(uint8_t *work);
+    void (*const build_write_request)(uint8_t *work);
+    void (*const parse_header)(uint8_t *work);
+    void (*const read_next_item)(uint8_t *work);
 } S7commNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in S7commV or a region of the borrow at a fixed offset.
-void protocore_s7comm_build_setup(uint8_t *restrict work);
-void protocore_s7comm_build_read_request(uint8_t *restrict work);
-void protocore_s7comm_build_write_request(uint8_t *restrict work);
-void protocore_s7comm_parse_header(uint8_t *restrict work);
-void protocore_s7comm_read_next_item(uint8_t *restrict work);
+void protocore_s7comm_build_setup(uint8_t *work);
+void protocore_s7comm_build_read_request(uint8_t *work);
+void protocore_s7comm_build_write_request(uint8_t *work);
+void protocore_s7comm_parse_header(uint8_t *work);
+void protocore_s7comm_read_next_item(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

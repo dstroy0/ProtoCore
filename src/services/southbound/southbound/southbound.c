@@ -90,7 +90,7 @@ static const SouthboundDriver *lookup(const struct SouthboundStorage *store, con
 }
 
 // Append a borrowed driver to the table.
-void protocore_southbound_add(uint8_t *restrict work)
+void protocore_southbound_add(uint8_t *work)
 {
     const SouthboundDriver *drv = SouthboundV.drv;
     if (!drv || !drv->name)
@@ -113,7 +113,7 @@ void protocore_southbound_add(uint8_t *restrict work)
 }
 
 // Empty the table and its count together.
-void protocore_southbound_clear(uint8_t *restrict work)
+void protocore_southbound_clear(uint8_t *work)
 {
     for (size_t i = 0; i < PROTOCORE_SOUTHBOUND_MAX_DRIVERS; i++)
     {
@@ -122,18 +122,18 @@ void protocore_southbound_clear(uint8_t *restrict work)
     SOUTHBOUND_CTX(work)->count = 0;
 }
 
-void protocore_southbound_count(uint8_t *restrict work)
+void protocore_southbound_count(uint8_t *work)
 {
     SouthboundV.n = SOUTHBOUND_CTX(work)->count;
 }
 
-void protocore_southbound_find(uint8_t *restrict work)
+void protocore_southbound_find(uint8_t *work)
 {
     SouthboundV.driver = lookup(SOUTHBOUND_CTX(work), SouthboundV.name);
 }
 
 // Read one point through the named driver's read callback.
-void protocore_southbound_read(uint8_t *restrict work)
+void protocore_southbound_read(uint8_t *work)
 {
     if (!SouthboundV.point.value_out)
     {
@@ -155,7 +155,7 @@ void protocore_southbound_read(uint8_t *restrict work)
 }
 
 // Write one point through the named driver's write callback.
-void protocore_southbound_write(uint8_t *restrict work)
+void protocore_southbound_write(uint8_t *work)
 {
     const SouthboundDriver *d = lookup(SOUTHBOUND_CTX(work), SouthboundV.name);
     if (!d)
@@ -172,7 +172,7 @@ void protocore_southbound_write(uint8_t *restrict work)
 }
 
 // Read a contiguous span of points in one driver call.
-void protocore_southbound_read_block(uint8_t *restrict work)
+void protocore_southbound_read_block(uint8_t *work)
 {
     if (!SouthboundV.block.out || SouthboundV.block.n == 0)
     {
@@ -194,7 +194,7 @@ void protocore_southbound_read_block(uint8_t *restrict work)
 }
 
 // Write a contiguous span of points in one driver call.
-void protocore_southbound_write_block(uint8_t *restrict work)
+void protocore_southbound_write_block(uint8_t *work)
 {
     if (!SouthboundV.block.in || SouthboundV.block.n == 0)
     {

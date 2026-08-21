@@ -73,7 +73,7 @@ static size_t u32_dec(uint32_t v, char *out)
     return n;
 }
 
-void protocore_failsafe_reset(uint8_t *restrict work)
+void protocore_failsafe_reset(uint8_t *work)
 {
     const protocore_lifeline blank = {0};
     for (int i = 0; i < PROTOCORE_FAILSAFE_MAX_LIFELINES; i++)
@@ -84,7 +84,7 @@ void protocore_failsafe_reset(uint8_t *restrict work)
     FAILSAFE_CTX(work)->cb_arg = NULL;
 }
 
-void protocore_failsafe_add(uint8_t *restrict work)
+void protocore_failsafe_add(uint8_t *work)
 {
     const char *name = FailsafeV.args.name;
     const uint32_t deadline_ms = FailsafeV.args.deadline_ms;
@@ -106,7 +106,7 @@ void protocore_failsafe_add(uint8_t *restrict work)
     FailsafeV.i32 = -1;
 }
 
-void protocore_failsafe_feed(uint8_t *restrict work)
+void protocore_failsafe_feed(uint8_t *work)
 {
     const int id = FailsafeV.args.id;
     const uint32_t now = FailsafeV.args.now;
@@ -122,13 +122,13 @@ void protocore_failsafe_feed(uint8_t *restrict work)
     FailsafeV.ok = PROTO_TRUE;
 }
 
-void protocore_failsafe_on_breach(uint8_t *restrict work)
+void protocore_failsafe_on_breach(uint8_t *work)
 {
     FAILSAFE_CTX(work)->cb = FailsafeV.out_args.cb;
     FAILSAFE_CTX(work)->cb_arg = FailsafeV.out_args.arg;
 }
 
-void protocore_failsafe_check(uint8_t *restrict work)
+void protocore_failsafe_check(uint8_t *work)
 {
     const uint32_t now = FailsafeV.args.now;
 
@@ -177,7 +177,7 @@ static void fs_put_u32(char *out, size_t cap, size_t *n, uint32_t v)
     }
 }
 
-void protocore_failsafe_json(uint8_t *restrict work)
+void protocore_failsafe_json(uint8_t *work)
 {
     const uint32_t now = FailsafeV.args.now;
     char *out = FailsafeV.out_args.out;

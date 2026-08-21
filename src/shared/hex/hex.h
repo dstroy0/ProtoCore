@@ -97,20 +97,20 @@ extern HexVars HexV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const digit)(uint8_t *restrict work);
-    void (*const val)(uint8_t *restrict work);
-    void (*const u32)(uint8_t *restrict work);
-    void (*const encode)(uint8_t *restrict work);
-    void (*const decode)(uint8_t *restrict work);
+    void (*const digit)(uint8_t *work);
+    void (*const val)(uint8_t *work);
+    void (*const u32)(uint8_t *work);
+    void (*const encode)(uint8_t *work);
+    void (*const decode)(uint8_t *work);
 } HexNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HexV or a region of the borrow at a fixed offset.
-void protocore_hex_digit(uint8_t *restrict work);
-void protocore_hex_val(uint8_t *restrict work);
-void protocore_hex_u32(uint8_t *restrict work);
-void protocore_hex_encode(uint8_t *restrict work);
-void protocore_hex_decode(uint8_t *restrict work);
+void protocore_hex_digit(uint8_t *work);
+void protocore_hex_val(uint8_t *work);
+void protocore_hex_u32(uint8_t *work);
+void protocore_hex_encode(uint8_t *work);
+void protocore_hex_decode(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

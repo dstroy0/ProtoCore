@@ -22,7 +22,7 @@ PROTOCORE_BEGIN_DECLS
 
 // Walks the labels at msg.off, writing each one into msg.out with a dot between, and follows a
 // pointer's OFFSET when msg.allow_ptr is set.
-void protocore_dns_wire_decode(uint8_t *restrict work)
+void protocore_dns_wire_decode(uint8_t *work)
 {
     (void)work;
     DnsWireV.ok = PROTO_FALSE;
@@ -107,7 +107,7 @@ void protocore_dns_wire_decode(uint8_t *restrict work)
 
 // Splits text.dotted at each dot and writes every run as a length octet followed by its octets,
 // then the null label of the root.
-void protocore_dns_wire_encode(uint8_t *restrict work)
+void protocore_dns_wire_encode(uint8_t *work)
 {
     (void)work;
     DnsWireV.n = 0;
@@ -166,7 +166,7 @@ void protocore_dns_wire_encode(uint8_t *restrict work)
 }
 
 // Folds each A-Z to lower case and compares octet by octet, ends included.
-void protocore_dns_wire_eq(uint8_t *restrict work)
+void protocore_dns_wire_eq(uint8_t *work)
 {
     (void)work;
     DnsWireV.ok = PROTO_FALSE;

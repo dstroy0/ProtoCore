@@ -20,7 +20,7 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-WebDavMethod protocore_webdav_method(uint8_t *restrict work, const char *m)
+WebDavMethod protocore_webdav_method(uint8_t *work, const char *m)
 {
     (void)work;
 
@@ -79,7 +79,7 @@ WebDavMethod protocore_webdav_method(uint8_t *restrict work, const char *m)
     return DAV_M_UNSUPPORTED;
 }
 
-int protocore_webdav_depth(uint8_t *restrict work, const char *depth_hdr, int dflt)
+int protocore_webdav_depth(uint8_t *work, const char *depth_hdr, int dflt)
 {
     (void)work;
 
@@ -117,7 +117,7 @@ static proto_bool app(char *buf, size_t cap, size_t *len, const char *s)
     return PROTO_TRUE;
 }
 
-size_t protocore_webdav_xml_escape(uint8_t *restrict work, char *dst, size_t cap, const char *src)
+size_t protocore_webdav_xml_escape(uint8_t *work, char *dst, size_t cap, const char *src)
 {
     (void)work;
 
@@ -172,7 +172,7 @@ size_t protocore_webdav_xml_escape(uint8_t *restrict work, char *dst, size_t cap
     return o;
 }
 
-proto_bool protocore_webdav_dest_path(uint8_t *restrict work, const char *destination, char *out, size_t cap)
+proto_bool protocore_webdav_dest_path(uint8_t *work, const char *destination, char *out, size_t cap)
 {
     proto_bool ok = PROTO_FALSE;
 
@@ -242,7 +242,7 @@ proto_bool protocore_webdav_dest_path(uint8_t *restrict work, const char *destin
     return PROTO_TRUE;
 }
 
-size_t protocore_webdav_ms_begin(uint8_t *restrict work, char *buf, size_t cap, size_t len)
+size_t protocore_webdav_ms_begin(uint8_t *work, char *buf, size_t cap, size_t len)
 {
     (void)work;
 
@@ -250,7 +250,7 @@ size_t protocore_webdav_ms_begin(uint8_t *restrict work, char *buf, size_t cap, 
     return len;
 }
 
-size_t protocore_webdav_ms_entry(uint8_t *restrict work, char *buf, size_t cap, size_t len, const char *href,
+size_t protocore_webdav_ms_entry(uint8_t *work, char *buf, size_t cap, size_t len, const char *href,
                                  proto_bool is_collection, uint32_t size, const char *rfc1123_mtime,
                                  const char *content_type)
 {
@@ -340,7 +340,7 @@ size_t protocore_webdav_ms_entry(uint8_t *restrict work, char *buf, size_t cap, 
     return len;
 }
 
-size_t protocore_webdav_ms_end(uint8_t *restrict work, char *buf, size_t cap, size_t len)
+size_t protocore_webdav_ms_end(uint8_t *work, char *buf, size_t cap, size_t len)
 {
     (void)work;
 
@@ -357,7 +357,7 @@ static proto_bool name_end_char(char c)
     return c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '/' || c == '>';
 }
 
-size_t protocore_webdav_proppatch_ms(uint8_t *restrict work, char *buf, size_t cap, const char *href, const char *body,
+size_t protocore_webdav_proppatch_ms(uint8_t *work, char *buf, size_t cap, const char *href, const char *body,
                                      size_t body_len)
 {
     size_t len = 0;
@@ -587,7 +587,7 @@ static proto_bool dav_lock_covers(const DavLock *l, const char *np)
     return l->depth_infinity && dav_lock_same_or_under(l->path, np);
 }
 
-void protocore_webdav_lock_init(uint8_t *restrict work, DavLockTable *t)
+void protocore_webdav_lock_init(uint8_t *work, DavLockTable *t)
 {
     (void)work;
 
@@ -601,9 +601,8 @@ void protocore_webdav_lock_init(uint8_t *restrict work, DavLockTable *t)
     }
 }
 
-const DavLock *protocore_webdav_lock_acquire(uint8_t *restrict work, DavLockTable *t, const char *path,
-                                             const char *token, proto_bool exclusive, proto_bool depth_infinity,
-                                             uint32_t expiry_s)
+const DavLock *protocore_webdav_lock_acquire(uint8_t *work, DavLockTable *t, const char *path, const char *token,
+                                             proto_bool exclusive, proto_bool depth_infinity, uint32_t expiry_s)
 {
     const DavLock *ptr = 0;
     (void)work;
@@ -653,7 +652,7 @@ const DavLock *protocore_webdav_lock_acquire(uint8_t *restrict work, DavLockTabl
     return ptr;
 }
 
-size_t protocore_webdav_lock_sweep(uint8_t *restrict work, DavLockTable *t, uint32_t now_s)
+size_t protocore_webdav_lock_sweep(uint8_t *work, DavLockTable *t, uint32_t now_s)
 {
     (void)work;
 
@@ -674,8 +673,7 @@ size_t protocore_webdav_lock_sweep(uint8_t *restrict work, DavLockTable *t, uint
     return dropped;
 }
 
-const DavLock *protocore_webdav_lock_refresh(uint8_t *restrict work, DavLockTable *t, const char *token,
-                                             uint32_t new_expiry_s)
+const DavLock *protocore_webdav_lock_refresh(uint8_t *work, DavLockTable *t, const char *token, uint32_t new_expiry_s)
 {
     (void)work;
 
@@ -695,7 +693,7 @@ const DavLock *protocore_webdav_lock_refresh(uint8_t *restrict work, DavLockTabl
     return NULL;
 }
 
-const DavLock *protocore_webdav_lock_find(uint8_t *restrict work, const DavLockTable *t, const char *path)
+const DavLock *protocore_webdav_lock_find(uint8_t *work, const DavLockTable *t, const char *path)
 {
     (void)work;
 
@@ -718,7 +716,7 @@ const DavLock *protocore_webdav_lock_find(uint8_t *restrict work, const DavLockT
     return NULL;
 }
 
-proto_bool protocore_webdav_lock_release(uint8_t *restrict work, DavLockTable *t, const char *token)
+proto_bool protocore_webdav_lock_release(uint8_t *work, DavLockTable *t, const char *token)
 {
     (void)work;
 
@@ -737,7 +735,7 @@ proto_bool protocore_webdav_lock_release(uint8_t *restrict work, DavLockTable *t
     return PROTO_FALSE;
 }
 
-proto_bool protocore_webdav_lock_can_write(uint8_t *restrict work, const DavLockTable *t, const char *path,
+proto_bool protocore_webdav_lock_can_write(uint8_t *work, const DavLockTable *t, const char *path,
                                            const char *presented_token)
 {
     proto_bool ok = PROTO_FALSE;
@@ -777,7 +775,7 @@ proto_bool protocore_webdav_lock_can_write(uint8_t *restrict work, const DavLock
     return ok;
 }
 
-proto_bool protocore_webdav_if_token(uint8_t *restrict work, const char *if_header, char *out, size_t cap)
+proto_bool protocore_webdav_if_token(uint8_t *work, const char *if_header, char *out, size_t cap)
 {
     (void)work;
 

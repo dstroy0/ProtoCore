@@ -625,7 +625,7 @@ static proto_bool ed_verify_recompute(uint8_t out[32], const uint8_t S[32], cons
 // --- helpers over the borrow -----------------------------------------------
 
 // d = SHA-512(seed), clamped: d[0..31] the secret scalar a, d[32..63] the nonce prefix.
-static void ed_expand_seed(uint8_t *restrict work, const uint8_t *seed)
+static void ed_expand_seed(uint8_t *work, const uint8_t *seed)
 {
     Ed25519Ctx *ctx = ED25519_CTX(work);
     Sha512.hash(ED25519_SHA(work), seed, PROTOCORE_ED25519_SEED_LEN, ctx->d);
@@ -635,8 +635,7 @@ static void ed_expand_seed(uint8_t *restrict work, const uint8_t *seed)
 }
 
 // ctx->h = SHA-512(R || A || M) mod L, taken through the Sha512 namespace in this borrow's region.
-static void ed_challenge(uint8_t *restrict work, const uint8_t *sig_r, const uint8_t *pub, const uint8_t *msg,
-                         size_t msg_len)
+static void ed_challenge(uint8_t *work, const uint8_t *sig_r, const uint8_t *pub, const uint8_t *msg, size_t msg_len)
 {
     Ed25519Ctx *ctx = ED25519_CTX(work);
     uint8_t *sha = ED25519_SHA(work);
@@ -650,7 +649,7 @@ static void ed_challenge(uint8_t *restrict work, const uint8_t *sig_r, const uin
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_ed25519_pubkey(uint8_t *restrict work, const uint8_t *seed, uint8_t *pub)
+proto_bool protocore_ed25519_pubkey(uint8_t *work, const uint8_t *seed, uint8_t *pub)
 {
     if (!seed || !pub)
     {
@@ -661,8 +660,7 @@ proto_bool protocore_ed25519_pubkey(uint8_t *restrict work, const uint8_t *seed,
     return PROTO_TRUE;
 }
 
-proto_bool protocore_ed25519_sign(uint8_t *restrict work, const uint8_t *seed, const uint8_t *msg, size_t msg_len,
-                                  uint8_t *sig)
+proto_bool protocore_ed25519_sign(uint8_t *work, const uint8_t *seed, const uint8_t *msg, size_t msg_len, uint8_t *sig)
 {
     if (!seed || !sig)
     {
@@ -709,7 +707,7 @@ proto_bool protocore_ed25519_sign(uint8_t *restrict work, const uint8_t *seed, c
     return PROTO_TRUE;
 }
 
-proto_bool protocore_ed25519_verify(uint8_t *restrict work, const uint8_t *pub, const uint8_t *msg, size_t msg_len,
+proto_bool protocore_ed25519_verify(uint8_t *work, const uint8_t *pub, const uint8_t *msg, size_t msg_len,
                                     const uint8_t *sig)
 {
     proto_bool ok = PROTO_FALSE;

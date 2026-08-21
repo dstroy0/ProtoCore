@@ -83,12 +83,12 @@ typedef struct
     uint8_t *work;                       ///< the crypto scratch a lookup reports
     protocore_ssh_client_state state_of; ///< the phase a lookup reports
 
-    void (*const send)(uint8_t *restrict work);
-    void (*const crypto_work)(uint8_t *restrict work);
-    void (*const state)(uint8_t *restrict work);
-    void (*const begin)(uint8_t *restrict work);
-    void (*const poll)(uint8_t *restrict work);
-    void (*const end)(uint8_t *restrict work);
+    void (*const send)(uint8_t *work);
+    void (*const crypto_work)(uint8_t *work);
+    void (*const state)(uint8_t *work);
+    void (*const begin)(uint8_t *work);
+    void (*const poll)(uint8_t *work);
+    void (*const end)(uint8_t *work);
 } SshClientNs;
 
 /** @brief The one instance, defined in client.c. */

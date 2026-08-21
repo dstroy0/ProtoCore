@@ -85,13 +85,12 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    uint8_t (*esp3_crc8)(uint8_t *restrict, const uint8_t *, uint16_t);
-    int (*esp3_parse)(uint8_t *restrict, const uint8_t *, uint16_t, protocore_esp3_packet *);
-    uint16_t (*esp3_build)(uint8_t *restrict, protocore_esp3_type, const uint8_t *, uint16_t, const uint8_t *, uint8_t,
+    uint8_t (*esp3_crc8)(uint8_t *, const uint8_t *, uint16_t);
+    int (*esp3_parse)(uint8_t *, const uint8_t *, uint16_t, protocore_esp3_packet *);
+    uint16_t (*esp3_build)(uint8_t *, protocore_esp3_type, const uint8_t *, uint16_t, const uint8_t *, uint8_t,
                            uint8_t *, uint16_t);
-    proto_bool (*erp1_parse)(uint8_t *restrict, const uint8_t *, uint16_t, protocore_erp1 *);
-    uint16_t (*erp1_build)(uint8_t *restrict, uint8_t *, uint16_t, uint8_t, const uint8_t *, uint8_t, uint32_t,
-                           uint8_t);
+    proto_bool (*erp1_parse)(uint8_t *, const uint8_t *, uint16_t, protocore_erp1 *);
+    uint16_t (*erp1_build)(uint8_t *, uint8_t *, uint16_t, uint8_t, const uint8_t *, uint8_t, uint32_t, uint8_t);
 } EnoceanNs;
 PROTOCORE_NS_LAYOUT(EnoceanNs, esp3_crc8, esp3_parse, esp3_build, erp1_parse, erp1_build);
 
@@ -102,7 +101,7 @@ PROTOCORE_NS_LAYOUT(EnoceanNs, esp3_crc8, esp3_parse, esp3_build, erp1_parse, er
  * @param len Len
  * @return The uint8_t.
  */
-uint8_t protocore_enocean_esp3_crc8(uint8_t *restrict work, const uint8_t *buf, uint16_t len);
+uint8_t protocore_enocean_esp3_crc8(uint8_t *work, const uint8_t *buf, uint16_t len);
 /**
  * @brief Frame one ESP3 telegram from the front of raw.
  * @param work PROTOCORE_ENOCEAN_BORROW bytes the caller took. Not held past the call.
@@ -111,7 +110,7 @@ uint8_t protocore_enocean_esp3_crc8(uint8_t *restrict work, const uint8_t *buf, 
  * @param out Out
  * @return The int.
  */
-int protocore_enocean_esp3_parse(uint8_t *restrict work, const uint8_t *raw, uint16_t len, protocore_esp3_packet *out);
+int protocore_enocean_esp3_parse(uint8_t *work, const uint8_t *raw, uint16_t len, protocore_esp3_packet *out);
 /**
  * @brief Assemble an ESP3 telegram into out.
  * @param work PROTOCORE_ENOCEAN_BORROW bytes the caller took. Not held past the call.
@@ -124,9 +123,8 @@ int protocore_enocean_esp3_parse(uint8_t *restrict work, const uint8_t *raw, uin
  * @param cap Cap
  * @return The uint16_t.
  */
-uint16_t protocore_enocean_esp3_build(uint8_t *restrict work, protocore_esp3_type type, const uint8_t *data,
-                                      uint16_t data_len, const uint8_t *opt, uint8_t opt_len, uint8_t *out,
-                                      uint16_t cap);
+uint16_t protocore_enocean_esp3_build(uint8_t *work, protocore_esp3_type type, const uint8_t *data, uint16_t data_len,
+                                      const uint8_t *opt, uint8_t opt_len, uint8_t *out, uint16_t cap);
 /**
  * @brief Decode an ERP1 radio telegram: RORG + payload + 4-octet sender id + .
  * @param work PROTOCORE_ENOCEAN_BORROW bytes the caller took. Not held past the call.
@@ -135,7 +133,7 @@ uint16_t protocore_enocean_esp3_build(uint8_t *restrict work, protocore_esp3_typ
  * @param out Out
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_enocean_erp1_parse(uint8_t *restrict work, const uint8_t *data, uint16_t len, protocore_erp1 *out);
+proto_bool protocore_enocean_erp1_parse(uint8_t *work, const uint8_t *data, uint16_t len, protocore_erp1 *out);
 /**
  * @brief Assemble an ERP1 radio telegram (the inverse of .
  * @param work PROTOCORE_ENOCEAN_BORROW bytes the caller took. Not held past the call.
@@ -148,8 +146,8 @@ proto_bool protocore_enocean_erp1_parse(uint8_t *restrict work, const uint8_t *d
  * @param status Status
  * @return The uint16_t.
  */
-uint16_t protocore_enocean_erp1_build(uint8_t *restrict work, uint8_t *out, uint16_t cap, uint8_t rorg,
-                                      const uint8_t *payload, uint8_t payload_len, uint32_t sender_id, uint8_t status);
+uint16_t protocore_enocean_erp1_build(uint8_t *work, uint8_t *out, uint16_t cap, uint8_t rorg, const uint8_t *payload,
+                                      uint8_t payload_len, uint32_t sender_id, uint8_t status);
 
 /** @brief Module namespace. */
 PROTOCORE_NS EnoceanNs Enocean PROTOCORE_UNUSED = {.esp3_crc8 = protocore_enocean_esp3_crc8,

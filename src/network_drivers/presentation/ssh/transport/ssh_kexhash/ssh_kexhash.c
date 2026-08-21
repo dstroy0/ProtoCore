@@ -56,7 +56,7 @@ static_assert(KEXHASH_OFF_CTX % _Alignof(SshKexHashCtx) == 0,
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_ssh_kex_hash_init(uint8_t *restrict work)
+void protocore_ssh_kex_hash_init(uint8_t *work)
 {
     SshKexHashV.ok = PROTO_FALSE;
     SshKexHashV.len = 0;
@@ -75,7 +75,7 @@ void protocore_ssh_kex_hash_init(uint8_t *restrict work)
     SshKexHashV.ok = PROTO_TRUE;
 }
 
-void protocore_ssh_kex_hash_update(uint8_t *restrict work)
+void protocore_ssh_kex_hash_update(uint8_t *work)
 {
     SshKexHashV.ok = PROTO_FALSE;
     SshKexHashCtx *ctx = KEXHASH_CTX(work);
@@ -90,7 +90,7 @@ void protocore_ssh_kex_hash_update(uint8_t *restrict work)
     SshKexHashV.ok = PROTO_TRUE;
 }
 
-void protocore_ssh_kex_hash_final(uint8_t *restrict work)
+void protocore_ssh_kex_hash_final(uint8_t *work)
 {
     SshKexHashV.ok = PROTO_FALSE;
     if (!SshKexHashV.final_args.out)

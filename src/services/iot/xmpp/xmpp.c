@@ -72,7 +72,7 @@ static const char *entity_of(char c)
 }
 
 // Open a run at the head of the caller's buffer. A missing buffer or no room fails it here.
-static void start(uint8_t *restrict work)
+static void start(uint8_t *work)
 {
     (void)work;
     XmppV.n = 0;
@@ -84,7 +84,7 @@ static void start(uint8_t *restrict work)
 }
 
 // Terminate the run, or report nothing written.
-static void finish(uint8_t *restrict work)
+static void finish(uint8_t *work)
 {
     (void)work;
     if (!XmppV.ok)
@@ -96,7 +96,7 @@ static void finish(uint8_t *restrict work)
 }
 
 // Append one octet, keeping room for the terminator.
-static void put_char(uint8_t *restrict work, char c)
+static void put_char(uint8_t *work, char c)
 {
     if (!XmppV.ok)
     {
@@ -112,7 +112,7 @@ static void put_char(uint8_t *restrict work, char c)
 }
 
 // Append a NUL-terminated run, keeping room for the terminator.
-static void put(uint8_t *restrict work, const char *s)
+static void put(uint8_t *work, const char *s)
 {
     if (!XmppV.ok)
     {
@@ -130,7 +130,7 @@ static void put(uint8_t *restrict work, const char *s)
 }
 
 // Append len octets of s, each character carrying an entity written as that entity instead.
-static void put_escaped(uint8_t *restrict work, const char *s, size_t len)
+static void put_escaped(uint8_t *work, const char *s, size_t len)
 {
     if (!XmppV.ok || s == NULL)
     {
@@ -152,7 +152,7 @@ static void put_escaped(uint8_t *restrict work, const char *s, size_t len)
 
 // Append one attribute specification, `S Name Eq AttValue` (XML 1.0 sec 3.1 production [41]), with
 // the value escaped and double quotes as its delimiter. A NULL value leaves the attribute out.
-static void put_attr(uint8_t *restrict work, const char *name, const char *value)
+static void put_attr(uint8_t *work, const char *name, const char *value)
 {
     if (value == NULL)
     {
@@ -167,7 +167,7 @@ static void put_attr(uint8_t *restrict work, const char *name, const char *value
 }
 
 // Write text.in into out with the XML 1.0 sec 4.6 entities substituted.
-void protocore_xmpp_escape(uint8_t *restrict work)
+void protocore_xmpp_escape(uint8_t *work)
 {
     start(work);
     if (XmppV.text.in == NULL)
@@ -181,7 +181,7 @@ void protocore_xmpp_escape(uint8_t *restrict work)
 // Build the initial stream header (RFC 6120 sec 4.2), preceded by the XML declaration RFC 6120
 // sec 11.5 asks for, with 'jabber:client' as the content namespace (sec 4.8.3) and version '1.0'
 // (sec 4.7.5).
-void protocore_xmpp_stream_open(uint8_t *restrict work)
+void protocore_xmpp_stream_open(uint8_t *work)
 {
     start(work);
     put(work, "<?xml version='1.0'?><stream:stream");
@@ -192,7 +192,7 @@ void protocore_xmpp_stream_open(uint8_t *restrict work)
 }
 
 // Build a `<message/>` (RFC 6120 sec 8.2.1) carrying the `<body/>` of RFC 6121 sec 5.2.3.
-void protocore_xmpp_message(uint8_t *restrict work)
+void protocore_xmpp_message(uint8_t *work)
 {
     start(work);
     put(work, "<message");
@@ -212,7 +212,7 @@ void protocore_xmpp_message(uint8_t *restrict work)
 
 // Build a `<presence/>` (RFC 6120 sec 8.2.2) as an empty-element tag. A NULL type signals available
 // (RFC 6121 sec 4.7.1).
-void protocore_xmpp_presence(uint8_t *restrict work)
+void protocore_xmpp_presence(uint8_t *work)
 {
     start(work);
     put(work, "<presence");
@@ -223,7 +223,7 @@ void protocore_xmpp_presence(uint8_t *restrict work)
 
 // Build an `<iq/>` (RFC 6120 sec 8.2.3) around the extension element of sec 8.4, which is already
 // XML and goes in as it stands.
-void protocore_xmpp_iq(uint8_t *restrict work)
+void protocore_xmpp_iq(uint8_t *work)
 {
     start(work);
     put(work, "<iq");
@@ -239,7 +239,7 @@ void protocore_xmpp_iq(uint8_t *restrict work)
 }
 
 // Read the Name of the first start-tag in stanza.xml, the element's type (XML 1.0 sec 3.1).
-void protocore_xmpp_stanza_name(uint8_t *restrict work)
+void protocore_xmpp_stanza_name(uint8_t *work)
 {
     start(work);
     const char *xml = XmppV.stanza.xml;
@@ -289,7 +289,7 @@ void protocore_xmpp_stanza_name(uint8_t *restrict work)
 
 // Read the attribute value stanza.attr names out of the start-tag of stanza.xml, as the raw octets
 // between the delimiters (XML 1.0 sec 3.1).
-void protocore_xmpp_attr(uint8_t *restrict work)
+void protocore_xmpp_attr(uint8_t *work)
 {
     start(work);
     const char *xml = XmppV.stanza.xml;

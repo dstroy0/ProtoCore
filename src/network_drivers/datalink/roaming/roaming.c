@@ -69,7 +69,7 @@ static int find_bssid(const uint8_t *target, const protocore_roam_neighbor *nb, 
 }
 
 // Write candidate idx into the decision with the reason that chose it.
-static void pick(uint8_t *restrict work, int idx, protocore_roam_reason reason)
+static void pick(uint8_t *work, int idx, protocore_roam_reason reason)
 {
     (void)work;
     const protocore_roam_neighbor *nb = RoamV.cand.list;
@@ -80,7 +80,7 @@ static void pick(uint8_t *restrict work, int idx, protocore_roam_reason reason)
     RoamV.decision.reason = reason;
 }
 
-void protocore_roam_decide(uint8_t *restrict work)
+void protocore_roam_decide(uint8_t *work)
 {
     const uint8_t *serving = RoamV.link.bssid;
     const int8_t serving_rssi = RoamV.link.rssi_dbm;
@@ -147,7 +147,7 @@ void protocore_roam_decide(uint8_t *restrict work)
     // 4. Otherwise stay put.
 }
 
-void protocore_roam_parse_neighbor_report(uint8_t *restrict work)
+void protocore_roam_parse_neighbor_report(uint8_t *work)
 {
     const uint8_t *elems = RoamV.nr.elems;
     const size_t len = RoamV.nr.len;
@@ -182,7 +182,7 @@ void protocore_roam_parse_neighbor_report(uint8_t *restrict work)
     RoamV.n = count;
 }
 
-void protocore_roam_parse_btm_request(uint8_t *restrict work)
+void protocore_roam_parse_btm_request(uint8_t *work)
 {
     const uint8_t *frame = RoamV.btm.frame;
     const size_t len = RoamV.btm.len;

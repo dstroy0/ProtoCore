@@ -24,10 +24,10 @@ PROTOCORE_BEGIN_DECLS
  * @ref HkdfNs::expand caps out_len at 255*PROTOCORE_HKDF_HASH_LEN, the point past which the single-octet
  * block counter has no encoding: out is zeroed and @ref HkdfNs::ok comes back false.
  *
- * @c work is PROTOCORE_HKDF_BORROW secure bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and the
- * pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. The borrow
- * carries the PRK and the T(i) block, so two derivations in flight are two borrows and never collide.
+ * @c work is PROTOCORE_HKDF_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes it,
+ * holds it, releases it, nor wipes it. The borrow carries the PRK and the T(i) block, so two derivations in flight are
+ * two borrows and never collide.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -43,11 +43,11 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*extract)(uint8_t *restrict, const uint8_t *, size_t, const uint8_t *, size_t, uint8_t *);
-    proto_bool (*expand)(uint8_t *restrict, const uint8_t *, const uint8_t *, size_t, uint8_t *, size_t);
-    proto_bool (*expand_label)(uint8_t *restrict, const uint8_t *, const char *, uint8_t *, size_t, const char *);
-    proto_bool (*expand_label_ctx)(uint8_t *restrict, const uint8_t *, const char *, const uint8_t *, size_t, uint8_t *,
-                                   size_t, const char *);
+    proto_bool (*extract)(uint8_t *, const uint8_t *, size_t, const uint8_t *, size_t, uint8_t *);
+    proto_bool (*expand)(uint8_t *, const uint8_t *, const uint8_t *, size_t, uint8_t *, size_t);
+    proto_bool (*expand_label)(uint8_t *, const uint8_t *, const char *, uint8_t *, size_t, const char *);
+    proto_bool (*expand_label_ctx)(uint8_t *, const uint8_t *, const char *, const uint8_t *, size_t, uint8_t *, size_t,
+                                   const char *);
 } HkdfNs;
 PROTOCORE_NS_LAYOUT(HkdfNs, extract, expand, expand_label, expand_label_ctx);
 
@@ -61,7 +61,7 @@ PROTOCORE_NS_LAYOUT(HkdfNs, extract, expand, expand_label, expand_label_ctx);
  * @param prk PROTOCORE_HKDF_HASH_LEN bytes
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_hkdf_extract(uint8_t *restrict work, const uint8_t *salt, size_t salt_len, const uint8_t *ikm,
+proto_bool protocore_hkdf_extract(uint8_t *work, const uint8_t *salt, size_t salt_len, const uint8_t *ikm,
                                   size_t ikm_len, uint8_t *prk);
 /**
  * @brief OKM = T(1) | T(2) | ..., info taken verbatim (RFC 5869 sec 2.3).
@@ -73,8 +73,8 @@ proto_bool protocore_hkdf_extract(uint8_t *restrict work, const uint8_t *salt, s
  * @param out_len bytes requested; past 255*PROTOCORE_HKDF_HASH_LEN out is zeroed instead
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_hkdf_expand(uint8_t *restrict work, const uint8_t *prk, const uint8_t *info, size_t info_len,
-                                 uint8_t *out, size_t out_len);
+proto_bool protocore_hkdf_expand(uint8_t *work, const uint8_t *prk, const uint8_t *info, size_t info_len, uint8_t *out,
+                                 size_t out_len);
 /**
  * @brief Expand under an HkdfLabel with an empty context.
  * @param work PROTOCORE_HKDF_BORROW bytes the caller took. Not held past the call.
@@ -85,7 +85,7 @@ proto_bool protocore_hkdf_expand(uint8_t *restrict work, const uint8_t *prk, con
  * @param label_prefix PROTOCORE_HKDF_LABEL_PREFIX, or "dtls13" for DTLS 1.3
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_hkdf_expand_label(uint8_t *restrict work, const uint8_t *secret, const char *label, uint8_t *out,
+proto_bool protocore_hkdf_expand_label(uint8_t *work, const uint8_t *secret, const char *label, uint8_t *out,
                                        size_t out_len, const char *label_prefix);
 /**
  * @brief Expand under an HkdfLabel carrying a context, the Derive-Secret form.
@@ -99,7 +99,7 @@ proto_bool protocore_hkdf_expand_label(uint8_t *restrict work, const uint8_t *se
  * @param label_prefix PROTOCORE_HKDF_LABEL_PREFIX, or "dtls13" for DTLS 1.3
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_hkdf_expand_label_ctx(uint8_t *restrict work, const uint8_t *secret, const char *label,
+proto_bool protocore_hkdf_expand_label_ctx(uint8_t *work, const uint8_t *secret, const char *label,
                                            const uint8_t *context, size_t context_len, uint8_t *out, size_t out_len,
                                            const char *label_prefix);
 

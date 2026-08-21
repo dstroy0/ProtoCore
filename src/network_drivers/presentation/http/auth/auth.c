@@ -181,7 +181,7 @@ static const AuthCred *cred_at(uint8_t *work, uint8_t id)
 
 // Record one credential set and return the id that names it, or PROTOCORE_AUTH_NONE when the table is
 // full. Registration runs at setup, so there is no release path and none is offered.
-void protocore_auth_add(uint8_t *restrict work)
+void protocore_auth_add(uint8_t *work)
 {
     struct AuthStorage *a = AUTH_TABLE(work);
     if (a->count >= MAX_ROUTES)
@@ -197,7 +197,7 @@ void protocore_auth_add(uint8_t *restrict work)
     AuthV.u8 = a->count++;
 }
 
-void protocore_auth_rekey(uint8_t *restrict work)
+void protocore_auth_rekey(uint8_t *work)
 {
     struct AuthStorage *a = AUTH_TABLE(work);
     // Seed a 128-bit keying secret from the hardware CSPRNG (protocore_platform_rand_u32() on
@@ -242,7 +242,7 @@ static uint32_t digest_nonce_mac(uint8_t *work, const uint8_t *secret, uint32_t 
     return issue;
 }
 
-void protocore_auth_mint_nonce(uint8_t *restrict work)
+void protocore_auth_mint_nonce(uint8_t *work)
 {
     char *out = AuthV.nonce_args.out;
     const size_t cap = AuthV.nonce_args.cap;
@@ -265,7 +265,7 @@ void protocore_auth_mint_nonce(uint8_t *restrict work)
     }
 }
 
-void protocore_auth_verify_nonce(uint8_t *restrict work)
+void protocore_auth_verify_nonce(uint8_t *work)
 {
     const char *nonce = AuthV.nonce_args.nonce;
     AuthV.expired = PROTO_FALSE;
@@ -304,7 +304,7 @@ void protocore_auth_verify_nonce(uint8_t *restrict work)
     AuthV.ok = PROTO_TRUE;
 }
 
-void protocore_auth_challenge(uint8_t *restrict work)
+void protocore_auth_challenge(uint8_t *work)
 {
     const uint8_t slot_id = AuthV.slot;
     const proto_bool stale = AuthV.nonce_args.stale;
@@ -579,7 +579,7 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
 
 // The scheme belongs to the credential, so the caller states which credential set applies and
 // nothing above this file has to know whether that set is Basic or Digest.
-void protocore_auth_check(uint8_t *restrict work)
+void protocore_auth_check(uint8_t *work)
 {
     const AuthCred *c = cred_at(work, AuthV.id);
     if (c == NULL)
@@ -598,7 +598,7 @@ void protocore_auth_check(uint8_t *restrict work)
 // The count is the table, and a row is wiped on hand-out, so nothing below the count can carry a
 // previous tenant's credential and there is nothing to wipe here. The keying secret survives: it is
 // the server's, not a route's, and rekey() is what replaces it.
-void protocore_auth_reset(uint8_t *restrict work)
+void protocore_auth_reset(uint8_t *work)
 {
     AUTH_TABLE(work)->count = 0;
 }

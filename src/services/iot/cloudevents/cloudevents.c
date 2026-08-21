@@ -52,7 +52,7 @@ static proto_bool ce_present(const char *s)
 
 // Build the one JSON object of Structured Content Mode into ns->envelope, and report its octet
 // count in ns->n.
-void protocore_cloud_events_build_structured(uint8_t *restrict work)
+void protocore_cloud_events_build_structured(uint8_t *work)
 {
     (void)work;
     CloudEventsV.ok = PROTO_FALSE;
@@ -158,7 +158,7 @@ void protocore_cloud_events_build_structured(uint8_t *restrict work)
 // Take the context attributes off the message's headers, and report whether the three REQUIRED ones
 // arrived. The payload is the HTTP body in this mode (HTTP Protocol Binding 1.0.2 sec 3.1.2), so the
 // data members are cleared rather than filled.
-void protocore_cloud_events_read_binary(uint8_t *restrict work)
+void protocore_cloud_events_read_binary(uint8_t *work)
 {
     (void)work;
     CloudEventsV.ok = PROTO_FALSE;

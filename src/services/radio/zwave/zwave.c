@@ -29,8 +29,8 @@ static uint8_t checksum(const uint8_t *from_len, uint16_t n)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-uint16_t protocore_zwave_build_frame(uint8_t *restrict work, protocore_zwave_type type, uint8_t cmd,
-                                     const uint8_t *data, uint8_t data_len, uint8_t *out, uint16_t cap)
+uint16_t protocore_zwave_build_frame(uint8_t *work, protocore_zwave_type type, uint8_t cmd, const uint8_t *data,
+                                     uint8_t data_len, uint8_t *out, uint16_t cap)
 {
     (void)work;
 
@@ -57,7 +57,7 @@ uint16_t protocore_zwave_build_frame(uint8_t *restrict work, protocore_zwave_typ
     return total;
 }
 
-int protocore_zwave_parse_frame(uint8_t *restrict work, const uint8_t *raw, uint16_t len, uint8_t *type, uint8_t *cmd,
+int protocore_zwave_parse_frame(uint8_t *work, const uint8_t *raw, uint16_t len, uint8_t *type, uint8_t *cmd,
                                 const uint8_t **pdata, uint8_t *pdata_len)
 {
     int n = 0;
@@ -112,26 +112,26 @@ int protocore_zwave_parse_frame(uint8_t *restrict work, const uint8_t *raw, uint
     return (int)total;
 }
 
-proto_bool protocore_zwave_is_ack(uint8_t *restrict work, uint8_t b)
+proto_bool protocore_zwave_is_ack(uint8_t *work, uint8_t b)
 {
     (void)work;
 
     return b == ZWAVE_ACK;
 }
-proto_bool protocore_zwave_is_nak(uint8_t *restrict work, uint8_t b)
+proto_bool protocore_zwave_is_nak(uint8_t *work, uint8_t b)
 {
     (void)work;
 
     return b == ZWAVE_NAK;
 }
-proto_bool protocore_zwave_is_can(uint8_t *restrict work, uint8_t b)
+proto_bool protocore_zwave_is_can(uint8_t *work, uint8_t b)
 {
     (void)work;
 
     return b == ZWAVE_CAN;
 }
 
-uint16_t protocore_zwave_build_ack(uint8_t *restrict work, uint8_t *out, uint16_t cap)
+uint16_t protocore_zwave_build_ack(uint8_t *work, uint8_t *out, uint16_t cap)
 {
     (void)work;
 

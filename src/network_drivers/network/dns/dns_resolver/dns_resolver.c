@@ -208,7 +208,7 @@ static size_t question_build(uint8_t *out, size_t cap, uint16_t id, const char *
 
 // Take the name borrow on first use. False when the pool cannot cover it, and every caller fails
 // closed.
-static proto_bool name_bind(uint8_t *restrict work)
+static proto_bool name_bind(uint8_t *work)
 {
     if (span.has_storage(DNS_RESOLVER_CTX(work)->name))
     {
@@ -220,7 +220,7 @@ static proto_bool name_bind(uint8_t *restrict work)
 
 // Read the first A record out of @p pkt into @p out_ip, host order. Accepts the message only when
 // its ID is @p id, QR is set, and RCODE is 0 (RFC 1035 sec 4.1.1, RFC 5452 sec 9.1).
-static proto_bool answer_read(uint8_t *restrict work, const uint8_t *pkt, size_t len, uint16_t id, uint32_t *out_ip)
+static proto_bool answer_read(uint8_t *work, const uint8_t *pkt, size_t len, uint16_t id, uint32_t *out_ip)
 {
     if (pkt == NULL || out_ip == NULL || len < PROTOCORE_DNS_HDR_LEN || !name_bind(work))
     {
@@ -367,7 +367,7 @@ static protocore_net_err dns_ask(protocore_net_call *c)
     return PROTOCORE_NET_OK;
 }
 
-void protocore_resolver_resolve(uint8_t *restrict work)
+void protocore_resolver_resolve(uint8_t *work)
 {
     ResolverV.u32 = 0;
     ResolverV.state = PROTOCORE_DNS_FAILED;
@@ -433,7 +433,7 @@ void protocore_resolver_resolve(uint8_t *restrict work)
 }
 
 // Reports false and changes nothing. The nameserver list is the stack's, learned from DHCP.
-void protocore_resolver_set_server(uint8_t *restrict work)
+void protocore_resolver_set_server(uint8_t *work)
 {
     (void)work;
     ResolverV.ok = PROTO_FALSE;
@@ -442,7 +442,7 @@ void protocore_resolver_set_server(uint8_t *restrict work)
 #else // the portable resolver
 
 // Take the query and nameserver borrows on first use, and seat the configured default in the latter.
-static proto_bool client_bind(uint8_t *restrict work)
+static proto_bool client_bind(uint8_t *work)
 {
     if (span.has_storage(DNS_RESOLVER_CTX(work)->tx))
     {
@@ -485,7 +485,7 @@ static void dns_reply(const uint8_t *data, size_t len, const struct protocore_ud
     }
 }
 
-void protocore_resolver_set_server(uint8_t *restrict work)
+void protocore_resolver_set_server(uint8_t *work)
 {
     ResolverV.ok = PROTO_FALSE;
     const char *ip = ResolverV.server.ip;
@@ -511,7 +511,7 @@ void protocore_resolver_set_server(uint8_t *restrict work)
     ResolverV.ok = PROTO_TRUE;
 }
 
-void protocore_resolver_resolve(uint8_t *restrict work)
+void protocore_resolver_resolve(uint8_t *work)
 {
     ResolverV.u32 = 0;
     ResolverV.state = PROTOCORE_DNS_FAILED;
@@ -607,31 +607,31 @@ void protocore_resolver_resolve(uint8_t *restrict work)
 // The bodies behind the table
 // ---------------------------------------------------------------------------
 
-void protocore_resolver_classify(uint8_t *restrict work)
+void protocore_resolver_classify(uint8_t *work)
 {
     (void)work;
     ResolverV.cls = ip_class(ResolverV.addr.ip);
 }
 
-void protocore_resolver_verify(uint8_t *restrict work)
+void protocore_resolver_verify(uint8_t *work)
 {
     (void)work;
     ResolverV.ok = ip_plausible(ResolverV.addr.ip);
 }
 
-void protocore_resolver_query_build(uint8_t *restrict work)
+void protocore_resolver_query_build(uint8_t *work)
 {
     (void)work;
     ResolverV.n = question_build(ResolverV.query.out, ResolverV.query.cap, ResolverV.query.id, ResolverV.query.host);
 }
 
-void protocore_resolver_answer_parse(uint8_t *restrict work)
+void protocore_resolver_answer_parse(uint8_t *work)
 {
     ResolverV.u32 = 0;
     ResolverV.ok = answer_read(work, ResolverV.answer.pkt, ResolverV.answer.len, ResolverV.query.id, &ResolverV.u32);
 }
 
-void protocore_resolver_resolve_verified(uint8_t *restrict work)
+void protocore_resolver_resolve_verified(uint8_t *work)
 {
     protocore_resolver_resolve(work);
     if (ResolverV.state != PROTOCORE_DNS_READY)
@@ -645,7 +645,7 @@ void protocore_resolver_resolve_verified(uint8_t *restrict work)
     }
 }
 
-void protocore_resolver_busy(uint8_t *restrict work)
+void protocore_resolver_busy(uint8_t *work)
 {
     ResolverV.ok = DNS_RESOLVER_CTX(work)->busy;
 }

@@ -64,7 +64,7 @@ typedef enum PROTO_ENUM_PACKED
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    DeflateResult (*raw)(uint8_t *restrict, const uint8_t *, size_t, uint8_t *, size_t, size_t *, void *, size_t);
+    DeflateResult (*raw)(uint8_t *, const uint8_t *, size_t, uint8_t *, size_t, size_t *, void *, size_t);
 } DeflateNs;
 PROTOCORE_NS_LAYOUT(DeflateNs, raw);
 
@@ -80,8 +80,8 @@ PROTOCORE_NS_LAYOUT(DeflateNs, raw);
  * @param scratch_len Scratch len
  * @return The DeflateResult.
  */
-DeflateResult protocore_deflate_raw(uint8_t *restrict work, const uint8_t *src, size_t src_len, uint8_t *dst,
-                                    size_t dst_cap, size_t *out_len, void *scratch, size_t scratch_len);
+DeflateResult protocore_deflate_raw(uint8_t *work, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap,
+                                    size_t *out_len, void *scratch, size_t scratch_len);
 
 /** @brief Module namespace. */
 PROTOCORE_NS DeflateNs Deflate PROTOCORE_UNUSED = {.raw = protocore_deflate_raw};

@@ -139,7 +139,7 @@ uint8_t *protocore_ws_client_span(void)
 
 // accept = base64(SHA-1(key || GUID)), the value the server's |Sec-WebSocket-Accept| must carry
 // (RFC 6455 sec 1.3, sec 4.2.2 step 5).
-void protocore_ws_client_accept_for_key(uint8_t *restrict work)
+void protocore_ws_client_accept_for_key(uint8_t *work)
 {
     (void)work;
     char *accept = WsClientV.handshake.accept;
@@ -182,7 +182,7 @@ void protocore_ws_client_accept_for_key(uint8_t *restrict work)
 // The client's opening handshake: a GET request-line (RFC 9112 sec 3) and the field lines RFC 6455
 // sec 4.1 requires. A |Sec-WebSocket-Protocol| offer is emitted only when a subprotocol is named,
 // and the server echoes the one it selected; null or empty omits the field line.
-void protocore_ws_client_build_opening_handshake(uint8_t *restrict work)
+void protocore_ws_client_build_opening_handshake(uint8_t *work)
 {
     (void)work;
     uint8_t *out = WsClientV.buf.out;
@@ -257,7 +257,7 @@ static const char *field_value(const uint8_t *buf, size_t len, const char *name,
 // The server's opening handshake: a 101 Switching Protocols status-line (RFC 9110 sec 15.2.2)
 // carrying a |Sec-WebSocket-Accept| equal to the value the accept computation produced
 // (RFC 6455 sec 4.1).
-void protocore_ws_client_check_server_handshake(uint8_t *restrict work)
+void protocore_ws_client_check_server_handshake(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = WsClientV.buf.in;
@@ -301,7 +301,7 @@ void protocore_ws_client_check_server_handshake(uint8_t *restrict work)
 
 // One FIN frame: FIN and the 4-bit opcode, the Payload len in its short, 16-bit or 64-bit form, the
 // 4-octet Masking-key, then Payload data XORed with octet i modulo 4 of that key (sec 5.2, sec 5.3).
-void protocore_ws_client_build_frame(uint8_t *restrict work)
+void protocore_ws_client_build_frame(uint8_t *work)
 {
     (void)work;
     uint8_t *out = WsClientV.buf.out;
@@ -360,7 +360,7 @@ void protocore_ws_client_build_frame(uint8_t *restrict work)
 
 // One inbound frame's header, read back into the frame members. False while fewer octets than the
 // whole frame are present (RFC 6455 sec 5.2).
-void protocore_ws_client_parse_frame(uint8_t *restrict work)
+void protocore_ws_client_parse_frame(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = WsClientV.buf.in;
@@ -423,22 +423,22 @@ void protocore_ws_client_parse_frame(uint8_t *restrict work)
 // ---------------------------------------------------------------------------
 #if PROTOCORE_HAS_NET_STACK
 
-static size_t ring_avail(uint8_t *restrict work)
+static size_t ring_avail(uint8_t *work)
 {
     return (WS_CLIENT_CTX(work)->rx_head + WSC_RING_SIZE - WS_CLIENT_CTX(work)->rx_tail) & WSC_RING_MASK;
 }
 
-static uint8_t ring_peek(uint8_t *restrict work, size_t i)
+static uint8_t ring_peek(uint8_t *work, size_t i)
 {
     return WS_CLIENT_CTX(work)->rx[(WS_CLIENT_CTX(work)->rx_tail + i) & WSC_RING_MASK];
 }
 
-static void ring_advance(uint8_t *restrict work, size_t n)
+static void ring_advance(uint8_t *work, size_t n)
 {
     WS_CLIENT_CTX(work)->rx_tail = (WS_CLIENT_CTX(work)->rx_tail + n) & WSC_RING_MASK;
 }
 
-static void ring_copy(uint8_t *restrict work, uint8_t *dst, size_t n)
+static void ring_copy(uint8_t *work, uint8_t *dst, size_t n)
 {
     for (size_t i = 0; i < n; i++)
     {
@@ -446,7 +446,7 @@ static void ring_copy(uint8_t *restrict work, uint8_t *dst, size_t n)
     }
 }
 
-static void ring_write(uint8_t *restrict work, const uint8_t *src, size_t n)
+static void ring_write(uint8_t *work, const uint8_t *src, size_t n)
 {
     for (size_t i = 0; i < n; i++)
     {
@@ -455,7 +455,7 @@ static void ring_write(uint8_t *restrict work, const uint8_t *src, size_t n)
     }
 }
 
-static proto_bool ws_tx_plain(uint8_t *restrict work, const uint8_t *data, size_t len)
+static proto_bool ws_tx_plain(uint8_t *work, const uint8_t *data, size_t len)
 {
     TcpClientV.cid = WS_CLIENT_CTX(work)->cid;
     TcpClientV.io.data = data;
@@ -465,7 +465,7 @@ static proto_bool ws_tx_plain(uint8_t *restrict work, const uint8_t *data, size_
 }
 
 // Drain plaintext octets from the transport slot into the receive ring.
-static void ws_pump_plain(uint8_t *restrict work)
+static void ws_pump_plain(uint8_t *work)
 {
     uint8_t tmp[WSC_PUMP_CHUNK];
     for (;;)
@@ -494,20 +494,20 @@ static void ws_pump_plain(uint8_t *restrict work)
     }
 }
 
-static void ws_pump(uint8_t *restrict work)
+static void ws_pump(uint8_t *work)
 {
     ws_pump_plain(work);
 }
 
 // Send framed octets, through the TLS session when /secure/ is set.
-static proto_bool ws_tx(uint8_t *restrict work, const uint8_t *data, size_t len)
+static proto_bool ws_tx(uint8_t *work, const uint8_t *data, size_t len)
 {
     return ws_tx_plain(work, data, len);
 }
 
 // Frame and send with a Masking-key drawn fresh per frame from the CSPRNG (RFC 6455 sec 5.3,
 // sec 10.3).
-static proto_bool ws_emit_frame(uint8_t *restrict work, uint8_t opcode, const uint8_t *payload, size_t len)
+static proto_bool ws_emit_frame(uint8_t *work, uint8_t opcode, const uint8_t *payload, size_t len)
 {
     if (!WS_CLIENT_CTX(work)->established)
     {
@@ -529,7 +529,7 @@ static proto_bool ws_emit_frame(uint8_t *restrict work, uint8_t opcode, const ui
 }
 
 // RFC 6455 sec 7.1.1: close the WebSocket connection - end the TLS session, then the transport slot.
-static void ws_close_transport(uint8_t *restrict work)
+static void ws_close_transport(uint8_t *work)
 {
     if (WS_CLIENT_CTX(work)->cid >= 0)
     {
@@ -540,7 +540,7 @@ static void ws_close_transport(uint8_t *restrict work)
     WS_CLIENT_CTX(work)->established = PROTO_FALSE;
 }
 
-static void ws_deliver(uint8_t *restrict work, uint8_t opcode, const uint8_t *payload, size_t len)
+static void ws_deliver(uint8_t *work, uint8_t opcode, const uint8_t *payload, size_t len)
 {
     if (WS_CLIENT_CTX(work)->on_message && (opcode == (uint8_t)WSC_OP_TEXT || opcode == (uint8_t)WSC_OP_BINARY))
     {
@@ -550,7 +550,7 @@ static void ws_deliver(uint8_t *restrict work, uint8_t opcode, const uint8_t *pa
 
 // One parsed frame: join fragments (sec 5.4), answer Ping with Pong carrying the same Application
 // data (sec 5.5.2, sec 5.5.3), and echo a Close (sec 5.5.1).
-static void ws_handle_frame(uint8_t *restrict work, uint8_t opcode, proto_bool fin, const uint8_t *payload, size_t len)
+static void ws_handle_frame(uint8_t *work, uint8_t opcode, proto_bool fin, const uint8_t *payload, size_t len)
 {
     switch ((WsClientOpcode)opcode)
     {
@@ -594,7 +594,7 @@ static void ws_handle_frame(uint8_t *restrict work, uint8_t opcode, proto_bool f
 }
 
 // RFC 6455 sec 6.2: read what arrived and process each complete frame in it.
-static void ws_process_rx(uint8_t *restrict work)
+static void ws_process_rx(uint8_t *work)
 {
     ws_pump(work);
     for (;;)
@@ -635,14 +635,14 @@ static void ws_process_rx(uint8_t *restrict work)
     }
 }
 
-void protocore_ws_client_on_message(uint8_t *restrict work)
+void protocore_ws_client_on_message(uint8_t *work)
 {
     WS_CLIENT_CTX(work)->on_message = WsClientV.msg.on_message;
 }
 
 // RFC 6455 sec 4.1: dial /host/ and /port/, raise TLS when /secure/ is set, send the client's
 // opening handshake and verify the server's. The connection is established when that verifies.
-void protocore_ws_client_connect(uint8_t *restrict work)
+void protocore_ws_client_connect(uint8_t *work)
 {
     const char *host = WsClientV.handshake.host;
     const char *resource_name = WsClientV.handshake.resource_name;
@@ -773,19 +773,19 @@ void protocore_ws_client_connect(uint8_t *restrict work)
     WsClientV.ok = PROTO_TRUE;
 }
 
-void protocore_ws_client_send_text(uint8_t *restrict work)
+void protocore_ws_client_send_text(uint8_t *work)
 {
     const char *text = WsClientV.msg.text;
     const size_t len = text ? str.len(text, PROTOCORE_WS_CLIENT_BUF_SIZE) : 0;
     WsClientV.ok = ws_emit_frame(work, (uint8_t)WSC_OP_TEXT, (const uint8_t *)text, len);
 }
 
-void protocore_ws_client_send_binary(uint8_t *restrict work)
+void protocore_ws_client_send_binary(uint8_t *work)
 {
     WsClientV.ok = ws_emit_frame(work, (uint8_t)WSC_OP_BINARY, WsClientV.msg.data, WsClientV.msg.len);
 }
 
-void protocore_ws_client_loop(uint8_t *restrict work)
+void protocore_ws_client_loop(uint8_t *work)
 {
     WsClientV.ok = PROTO_FALSE;
     if (!WS_CLIENT_CTX(work)->established)
@@ -801,13 +801,13 @@ void protocore_ws_client_loop(uint8_t *restrict work)
     WsClientV.ok = PROTO_TRUE;
 }
 
-void protocore_ws_client_connected(uint8_t *restrict work)
+void protocore_ws_client_connected(uint8_t *work)
 {
     WsClientV.ok = WS_CLIENT_CTX(work)->established;
 }
 
 // RFC 6455 sec 5.5.1 then sec 7.1.1: send a Close frame, then close the WebSocket connection.
-void protocore_ws_client_close(uint8_t *restrict work)
+void protocore_ws_client_close(uint8_t *work)
 {
     if (WS_CLIENT_CTX(work)->established)
     {
@@ -818,42 +818,42 @@ void protocore_ws_client_close(uint8_t *restrict work)
 
 #else // no network stack: the codec stands alone and the connection calls answer no
 
-void protocore_ws_client_on_message(uint8_t *restrict work)
+void protocore_ws_client_on_message(uint8_t *work)
 {
     (void)work;
 }
 
-void protocore_ws_client_connect(uint8_t *restrict work)
-{
-    (void)work;
-    WsClientV.ok = PROTO_FALSE;
-}
-
-void protocore_ws_client_send_text(uint8_t *restrict work)
+void protocore_ws_client_connect(uint8_t *work)
 {
     (void)work;
     WsClientV.ok = PROTO_FALSE;
 }
 
-void protocore_ws_client_send_binary(uint8_t *restrict work)
+void protocore_ws_client_send_text(uint8_t *work)
 {
     (void)work;
     WsClientV.ok = PROTO_FALSE;
 }
 
-void protocore_ws_client_loop(uint8_t *restrict work)
+void protocore_ws_client_send_binary(uint8_t *work)
 {
     (void)work;
     WsClientV.ok = PROTO_FALSE;
 }
 
-void protocore_ws_client_connected(uint8_t *restrict work)
+void protocore_ws_client_loop(uint8_t *work)
 {
     (void)work;
     WsClientV.ok = PROTO_FALSE;
 }
 
-void protocore_ws_client_close(uint8_t *restrict work)
+void protocore_ws_client_connected(uint8_t *work)
+{
+    (void)work;
+    WsClientV.ok = PROTO_FALSE;
+}
+
+void protocore_ws_client_close(uint8_t *work)
 {
     (void)work;
 }

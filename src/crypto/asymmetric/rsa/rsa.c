@@ -116,7 +116,7 @@ const uint8_t protocore_pkcs1_sha512_digestinfo[PROTOCORE_PKCS1_SHA512_DIGESTINF
 // functions of the modulus alone, so a ladder derives them once and every multiply under it reuses
 // them. Newton doubles the correct low bits each round, and an odd seed starts with three, so five
 // rounds reach ninety-six - past the thirty-two the word holds.
-static void rsa_mont(uint8_t *restrict work)
+static void rsa_mont(uint8_t *work)
 {
     RsaCtx *ctx = RSA_CTX(work);
     const uint32_t n0 = ctx->n.d[0];
@@ -155,19 +155,19 @@ static void rsa_mont(uint8_t *restrict work)
     }
 }
 
-static void rsa_modmul_begin(uint8_t *restrict work)
+static void rsa_modmul_begin(uint8_t *work)
 {
     protocore_rsa_hw_acquire();
     rsa_mont(work);
 }
 
-static void rsa_modmul(uint8_t *restrict work)
+static void rsa_modmul(uint8_t *work)
 {
     RsaCtx *ctx = RSA_CTX(work);
     protocore_rsa_modmul(ctx->z, ctx->x, ctx->y, ctx->n.d, ctx->mprime, ctx->rr.d, PROTOCORE_BN_LIMBS);
 }
 
-static void rsa_modmul_end(uint8_t *restrict work)
+static void rsa_modmul_end(uint8_t *work)
 {
     (void)work;
     protocore_rsa_hw_release();
@@ -249,19 +249,19 @@ static void bn_reduce_full(const uint32_t *p, const uint32_t *m, uint32_t *out)
     }
 }
 
-static void rsa_modmul_begin(uint8_t *restrict work)
+static void rsa_modmul_begin(uint8_t *work)
 {
     (void)work;
 }
 
-static void rsa_modmul(uint8_t *restrict work)
+static void rsa_modmul(uint8_t *work)
 {
     RsaCtx *ctx = RSA_CTX(work);
     bn_mul_full(ctx->x, ctx->y, ctx->prod);
     bn_reduce_full(ctx->prod, ctx->n.d, ctx->z);
 }
 
-static void rsa_modmul_end(uint8_t *restrict work)
+static void rsa_modmul_end(uint8_t *work)
 {
     (void)work;
 }
@@ -271,7 +271,7 @@ static void rsa_modmul_end(uint8_t *restrict work)
 
 // acc = base^exp mod n, square-and-multiply from the exponent's top set bit. Both operands are the
 // context's and so is the accumulator, so a round stages three pointers and nothing moves.
-static void rsa_modexp(uint8_t *restrict work)
+static void rsa_modexp(uint8_t *work)
 {
     RsaCtx *ctx = RSA_CTX(work);
 
@@ -319,7 +319,7 @@ static void rsa_modexp(uint8_t *restrict work)
 
 // Digest the staged message and lay it out as the PKCS#1 v1.5 block em (RFC 8017 sec 9.2):
 //   0x00 0x01 [0xFF x pad] 0x00 [DigestInfo] [digest]
-static void rsa_encode(uint8_t *restrict work)
+static void rsa_encode(uint8_t *work)
 {
     RsaCtx *ctx = RSA_CTX(work);
     const uint8_t *di;
@@ -352,7 +352,7 @@ static void rsa_encode(uint8_t *restrict work)
 
 // RFC 8017 sec B.2.1: the mask generation function PSS masks its data block with. Hash(seed ||
 // counter) blocks, concatenated, truncated to mask_len.
-static void mgf1_sha256(uint8_t *restrict work, const uint8_t *seed, size_t seed_len, uint8_t *mask, size_t mask_len)
+static void mgf1_sha256(uint8_t *work, const uint8_t *seed, size_t seed_len, uint8_t *mask, size_t mask_len)
 {
     uint8_t buf[PROTOCORE_SHA256_DIGEST_LEN + 4u];
     uint8_t block[PROTOCORE_SHA256_DIGEST_LEN];
@@ -375,7 +375,7 @@ static void mgf1_sha256(uint8_t *restrict work, const uint8_t *seed, size_t seed
 // RFC 8017 sec 9.1.2 EMSA-PSS-VERIFY, with SHA-256, MGF1-SHA-256 and a salt as long as the digest -
 // which is what rsa_pss_rsae_sha256 names (RFC 8446 sec 4.2.3). emBits is modBits - 1 = 2047, so
 // emLen is the modulus length and exactly one leading bit must be zero.
-static proto_bool rsa_pss_consistent(uint8_t *restrict work)
+static proto_bool rsa_pss_consistent(uint8_t *work)
 {
     RsaCtx *ctx = RSA_CTX(work);
     const size_t hlen = PROTOCORE_SHA256_DIGEST_LEN;
@@ -436,7 +436,7 @@ static proto_bool rsa_pss_consistent(uint8_t *restrict work)
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_rsa_verify(uint8_t *restrict work)
+void protocore_rsa_verify(uint8_t *work)
 {
     RsaV.ok = PROTO_FALSE;
     if (!RsaV.verify_args.n || !RsaV.verify_args.e || !RsaV.verify_args.sig ||
@@ -495,7 +495,7 @@ void protocore_rsa_verify(uint8_t *restrict work)
     }
 }
 
-void protocore_rsa_sign(uint8_t *restrict work)
+void protocore_rsa_sign(uint8_t *work)
 {
     RsaV.ok = PROTO_FALSE;
     if (!RsaV.sign_args.n || !RsaV.sign_args.d || !RsaV.sign_args.sig)

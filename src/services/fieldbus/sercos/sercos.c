@@ -20,7 +20,7 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_sercos_idn(uint8_t *restrict work)
+void protocore_sercos_idn(uint8_t *work)
 {
     (void)work;
     proto_bool is_product = SercosV.idn_args.is_product;
@@ -31,7 +31,7 @@ void protocore_sercos_idn(uint8_t *restrict work)
         (uint16_t)(((is_product ? 1u : 0u) << 15) | ((uint32_t)(param_set & 0x7) << 12) | (data_block & 0x0FFF));
 }
 
-void protocore_sercos_idn_parse(uint8_t *restrict work)
+void protocore_sercos_idn_parse(uint8_t *work)
 {
     (void)work;
     uint16_t idn = SercosV.idn_parse_args.idn;
@@ -53,7 +53,7 @@ void protocore_sercos_idn_parse(uint8_t *restrict work)
     }
 }
 
-void protocore_sercos_build(uint8_t *restrict work)
+void protocore_sercos_build(uint8_t *work)
 {
     (void)work;
     uint8_t type = SercosV.build_args.type;
@@ -86,7 +86,7 @@ void protocore_sercos_build(uint8_t *restrict work)
     SercosV.n = n;
 }
 
-void protocore_sercos_parse(uint8_t *restrict work)
+void protocore_sercos_parse(uint8_t *work)
 {
     (void)work;
     const uint8_t *frame = SercosV.parse_args.frame;

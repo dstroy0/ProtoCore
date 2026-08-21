@@ -109,9 +109,8 @@ typedef struct
  * @var Vl53l0xNs::begin  verify the model id and start continuous back-to-back ranging at ...
  * @var Vl53l0xNs::read_mm  if a measurement is ready, read the distance into mm and clear the ...
  *
- * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -132,22 +131,22 @@ extern Vl53l0xVars Vl53l0xV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const range_mm)(uint8_t *restrict work);
-    void (*const data_ready)(uint8_t *restrict work);
-    void (*const range_status)(uint8_t *restrict work);
-    void (*const range_valid)(uint8_t *restrict work);
-    void (*const begin)(uint8_t *restrict work);
-    void (*const read_mm)(uint8_t *restrict work);
+    void (*const range_mm)(uint8_t *work);
+    void (*const data_ready)(uint8_t *work);
+    void (*const range_status)(uint8_t *work);
+    void (*const range_valid)(uint8_t *work);
+    void (*const begin)(uint8_t *work);
+    void (*const read_mm)(uint8_t *work);
 } Vl53l0xNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Vl53l0xV or a region of the borrow at a fixed offset.
-void protocore_vl53l0x_range_mm(uint8_t *restrict work);
-void protocore_vl53l0x_data_ready(uint8_t *restrict work);
-void protocore_vl53l0x_range_status(uint8_t *restrict work);
-void protocore_vl53l0x_range_valid(uint8_t *restrict work);
-void protocore_vl53l0x_begin(uint8_t *restrict work);
-void protocore_vl53l0x_read_mm(uint8_t *restrict work);
+void protocore_vl53l0x_range_mm(uint8_t *work);
+void protocore_vl53l0x_data_ready(uint8_t *work);
+void protocore_vl53l0x_range_status(uint8_t *work);
+void protocore_vl53l0x_range_valid(uint8_t *work);
+void protocore_vl53l0x_begin(uint8_t *work);
+void protocore_vl53l0x_read_mm(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

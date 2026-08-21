@@ -331,7 +331,7 @@ static int32_t find_resource_index(const uint8_t *work, const char *path)
 // ---------------------------------------------------------------------------
 
 // Empty the table and every cache.
-void protocore_coap_reset(uint8_t *restrict work)
+void protocore_coap_reset(uint8_t *work)
 {
     COAP_CTX(work)->res_count = 0;
     mem.set(COAP_CTX(work)->res, 0, sizeof(COAP_CTX(work)->res));
@@ -349,7 +349,7 @@ void protocore_coap_reset(uint8_t *restrict work)
 }
 
 // Take one more row of the table for ns->resource.
-void protocore_coap_add_resource(uint8_t *restrict work)
+void protocore_coap_add_resource(uint8_t *work)
 {
     if (COAP_CTX(work)->res_count >= PROTOCORE_COAP_MAX_RESOURCES || !CoapV.resource.path || !CoapV.resource.handler)
     {
@@ -369,7 +369,7 @@ void protocore_coap_add_resource(uint8_t *restrict work)
 
 // Answer ns->msg.req into ns->msg.resp, reporting the response length in ns->n. A 2.xx response
 // carries the Observe option when ns->observe.seq is at or above 0 (RFC 7641 sec 4.2).
-void protocore_coap_process_observe(uint8_t *restrict work)
+void protocore_coap_process_observe(uint8_t *work)
 {
     const uint8_t *req = CoapV.msg.req;
     const size_t req_len = CoapV.msg.req_len;
@@ -822,7 +822,7 @@ void protocore_coap_process_observe(uint8_t *restrict work)
 }
 
 // Answer ns->msg.req with no Observe option in the response.
-void protocore_coap_process(uint8_t *restrict work)
+void protocore_coap_process(uint8_t *work)
 {
     CoapV.observe.seq = -1;
     protocore_coap_process_observe(work);
@@ -834,7 +834,7 @@ void protocore_coap_process(uint8_t *restrict work)
 // ---------------------------------------------------------------------------
 
 // The response already sent for ns->exchange, when its row is still fresh.
-void protocore_coap_dedup_lookup(uint8_t *restrict work)
+void protocore_coap_dedup_lookup(uint8_t *work)
 {
     CoapV.ok = PROTO_FALSE;
     CoapV.bytes = NULL;
@@ -860,7 +860,7 @@ void protocore_coap_dedup_lookup(uint8_t *restrict work)
 }
 
 // Keep the response sent for ns->exchange so its repeat is answered without the handler.
-void protocore_coap_dedup_store(uint8_t *restrict work)
+void protocore_coap_dedup_store(uint8_t *work)
 {
     CoapV.ok = PROTO_FALSE;
     if (!CoapV.exchange.src_ip || !CoapV.exchange.resp || CoapV.exchange.resp_len == 0 ||
@@ -966,7 +966,7 @@ static proto_bool same_endpoint(const uint8_t *work, const CoapObserver *o)
 // Add the request in flight to the list of observers of resource @p res_idx, or refresh the entry
 // already there (sec 4.1: a matching endpoint/token pair updates rather than adds). Returns the slot,
 // or -1 when the list is full, which leaves the GET answered without an Observe option.
-static int32_t obs_register(uint8_t *restrict work, int32_t res_idx)
+static int32_t obs_register(uint8_t *work, int32_t res_idx)
 {
     for (int32_t i = 0; i < PROTOCORE_COAP_MAX_OBSERVERS; i++)
     {
@@ -998,7 +998,7 @@ static int32_t obs_register(uint8_t *restrict work, int32_t res_idx)
 }
 
 // Remove the endpoint's entry carrying the request's Token (sec 4.1, a deregister GET).
-static void obs_drop_token(uint8_t *restrict work)
+static void obs_drop_token(uint8_t *work)
 {
     for (int32_t i = 0; i < PROTOCORE_COAP_MAX_OBSERVERS; i++)
     {
@@ -1011,7 +1011,7 @@ static void obs_drop_token(uint8_t *restrict work)
 }
 
 // Remove every entry of an endpoint (sec 4.5: a Reset rejecting a notification ends the observation).
-static void obs_drop_endpoint(uint8_t *restrict work)
+static void obs_drop_endpoint(uint8_t *work)
 {
     for (int32_t i = 0; i < PROTOCORE_COAP_MAX_OBSERVERS; i++)
     {
@@ -1024,7 +1024,7 @@ static void obs_drop_endpoint(uint8_t *restrict work)
 }
 
 // Send the current representation of ns->observe.path to every observer of it (RFC 7641 sec 4.2).
-void protocore_coap_notify(uint8_t *restrict work)
+void protocore_coap_notify(uint8_t *work)
 {
     CoapV.ok = PROTO_FALSE;
     int32_t ridx = find_resource_index(work, CoapV.observe.path);
@@ -1180,7 +1180,7 @@ static void coap_udp_handler(const uint8_t *data, size_t len, const struct proto
 }
 
 // Bind ns->bind.port and route its datagrams into the server, emptying the list of observers first.
-void protocore_coap_begin(uint8_t *restrict work)
+void protocore_coap_begin(uint8_t *work)
 {
     COAP_CTX(work)->port = CoapV.bind.port;
     for (int32_t i = 0; i < PROTOCORE_COAP_MAX_OBSERVERS; i++)
@@ -1240,7 +1240,7 @@ static void coap_udp_handler(const uint8_t *data, size_t len, const struct proto
 }
 
 // Bind ns->bind.port and route its datagrams into the server.
-void protocore_coap_begin(uint8_t *restrict work)
+void protocore_coap_begin(uint8_t *work)
 {
     (void)work;
     UdpListenerV.port = CoapV.bind.port;

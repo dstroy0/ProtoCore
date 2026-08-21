@@ -14,7 +14,7 @@
 #include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
 
 // Decode a varint at buf[*pos], advancing *pos. Returns false on truncation.
-static proto_bool rd(uint8_t *restrict work, const uint8_t *buf, size_t len, size_t *pos, uint64_t *v)
+static proto_bool rd(uint8_t *work, const uint8_t *buf, size_t len, size_t *pos, uint64_t *v)
 {
     size_t c = 0;
     proto_bool quic_varint_ok = QuicVarint.decode(work, buf + *pos, len - *pos, v, &c);
@@ -31,7 +31,7 @@ static proto_bool rd(uint8_t *restrict work, const uint8_t *buf, size_t len, siz
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_quic_frame_parse(uint8_t *restrict work, const uint8_t *buf, size_t len, QuicFrameHeader *out)
+size_t protocore_quic_frame_parse(uint8_t *work, const uint8_t *buf, size_t len, QuicFrameHeader *out)
 {
     size_t n = 0;
 
@@ -235,7 +235,7 @@ size_t protocore_quic_frame_parse(uint8_t *restrict work, const uint8_t *buf, si
     return n;
 }
 
-size_t protocore_quic_frame_build_padding(uint8_t *restrict work, uint8_t *out, size_t cap, size_t n)
+size_t protocore_quic_frame_build_padding(uint8_t *work, uint8_t *out, size_t cap, size_t n)
 {
     (void)work;
 
@@ -247,7 +247,7 @@ size_t protocore_quic_frame_build_padding(uint8_t *restrict work, uint8_t *out, 
     return n;
 }
 
-size_t protocore_quic_frame_build_ping(uint8_t *restrict work, uint8_t *out, size_t cap)
+size_t protocore_quic_frame_build_ping(uint8_t *work, uint8_t *out, size_t cap)
 {
     (void)work;
 
@@ -259,7 +259,7 @@ size_t protocore_quic_frame_build_ping(uint8_t *restrict work, uint8_t *out, siz
     return 1;
 }
 
-size_t protocore_quic_frame_build_handshake_done(uint8_t *restrict work, uint8_t *out, size_t cap)
+size_t protocore_quic_frame_build_handshake_done(uint8_t *work, uint8_t *out, size_t cap)
 {
     (void)work;
 
@@ -272,7 +272,7 @@ size_t protocore_quic_frame_build_handshake_done(uint8_t *restrict work, uint8_t
 }
 
 // Append a varint; returns false on overflow.
-static proto_bool wr(uint8_t *restrict work, uint8_t *out, size_t cap, size_t *pos, uint64_t v)
+static proto_bool wr(uint8_t *work, uint8_t *out, size_t cap, size_t *pos, uint64_t v)
 {
     size_t quic_varint_n = QuicVarint.encode(work, out + *pos, cap - *pos, v);
     size_t c = quic_varint_n;
@@ -284,8 +284,8 @@ static proto_bool wr(uint8_t *restrict work, uint8_t *out, size_t cap, size_t *p
     return PROTO_TRUE;
 }
 
-size_t protocore_quic_frame_build_ack(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t largest,
-                                      uint64_t delay, uint64_t first_range)
+size_t protocore_quic_frame_build_ack(uint8_t *work, uint8_t *out, size_t cap, uint64_t largest, uint64_t delay,
+                                      uint64_t first_range)
 {
     size_t pos = 0;
     if (!wr(work, out, cap, &pos, QUIC_FT_ACK) || !wr(work, out, cap, &pos, largest) ||
@@ -297,8 +297,8 @@ size_t protocore_quic_frame_build_ack(uint8_t *restrict work, uint8_t *out, size
     return pos;
 }
 
-size_t protocore_quic_frame_build_crypto(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t offset,
-                                         const uint8_t *data, size_t len)
+size_t protocore_quic_frame_build_crypto(uint8_t *work, uint8_t *out, size_t cap, uint64_t offset, const uint8_t *data,
+                                         size_t len)
 {
     size_t pos = 0;
     if (!wr(work, out, cap, &pos, QUIC_FT_CRYPTO) || !wr(work, out, cap, &pos, offset) ||
@@ -317,7 +317,7 @@ size_t protocore_quic_frame_build_crypto(uint8_t *restrict work, uint8_t *out, s
     return pos + len;
 }
 
-size_t protocore_quic_frame_build_stream(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t id, uint64_t offset,
+size_t protocore_quic_frame_build_stream(uint8_t *work, uint8_t *out, size_t cap, uint64_t id, uint64_t offset,
                                          const uint8_t *data, size_t len, proto_bool fin)
 {
     uint64_t type = QUIC_FT_STREAM | QUIC_STREAM_LEN | (offset ? QUIC_STREAM_OFF : 0) | (fin ? QUIC_STREAM_FIN : 0);
@@ -345,7 +345,7 @@ size_t protocore_quic_frame_build_stream(uint8_t *restrict work, uint8_t *out, s
     return pos + len;
 }
 
-size_t protocore_quic_frame_build_max_data(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t max)
+size_t protocore_quic_frame_build_max_data(uint8_t *work, uint8_t *out, size_t cap, uint64_t max)
 {
     size_t pos = 0;
     if (!wr(work, out, cap, &pos, QUIC_FT_MAX_DATA) || !wr(work, out, cap, &pos, max))
@@ -355,7 +355,7 @@ size_t protocore_quic_frame_build_max_data(uint8_t *restrict work, uint8_t *out,
     return pos;
 }
 
-size_t protocore_quic_frame_build_connection_close(uint8_t *restrict work, uint8_t *out, size_t cap, proto_bool app,
+size_t protocore_quic_frame_build_connection_close(uint8_t *work, uint8_t *out, size_t cap, proto_bool app,
                                                    uint64_t error_code, uint64_t frame_type, const char *reason,
                                                    size_t reason_len)
 {

@@ -67,7 +67,7 @@ static void ks_bind(QuicTls *qt)
 }
 
 // verify_data over @p transcript_hash under @p base_secret (RFC 8446 sec 4.4.4).
-static void ks_finished(uint8_t *restrict work, QuicTls *qt, const uint8_t *base_secret, const uint8_t *transcript_hash,
+static void ks_finished(uint8_t *work, QuicTls *qt, const uint8_t *base_secret, const uint8_t *transcript_hash,
                         uint8_t *out)
 {
     ks_bind(qt);
@@ -126,7 +126,7 @@ static proto_bool emit(QuicTls *qt, uint8_t *flight, size_t cap, size_t *plen, s
 // key_share, and restart the transcript per §4.4.1: message_hash(Hash(ClientHello1)) || HRR, so the
 // eventual transcript is message_hash || HRR || ClientHello2 || ServerHello || ... QUIC does its own
 // return-routability (Retry tokens), so the HRR carries no cookie. @p msg is ClientHello1.
-static proto_bool send_hello_retry(uint8_t *restrict work, QuicTls *qt, const uint8_t *msg, size_t msg_len,
+static proto_bool send_hello_retry(uint8_t *work, QuicTls *qt, const uint8_t *msg, size_t msg_len,
                                    const Tls13ClientHello *ch)
 {
     uint8_t ch1_hash[TLS13_SECRET_MAX];
@@ -173,7 +173,7 @@ static proto_bool send_hello_retry(uint8_t *restrict work, QuicTls *qt, const ui
 }
 #endif
 
-static proto_bool process_client_hello(uint8_t *restrict work, QuicTls *qt, const uint8_t *msg, size_t msg_len)
+static proto_bool process_client_hello(uint8_t *work, QuicTls *qt, const uint8_t *msg, size_t msg_len)
 {
     Tls13ClientHello ch;
     Tls13MsgV.parse_client_hello_args.msg = msg;
@@ -415,7 +415,7 @@ static proto_bool process_client_hello(uint8_t *restrict work, QuicTls *qt, cons
     return PROTO_TRUE;
 }
 
-static proto_bool process_client_finished(uint8_t *restrict work, QuicTls *qt, const uint8_t *msg, size_t msg_len)
+static proto_bool process_client_finished(uint8_t *work, QuicTls *qt, const uint8_t *msg, size_t msg_len)
 {
     if (msg[0] != TLS_HS_FINISHED || msg_len != 4 + 32)
     { // Finished here, so the type arm cannot be taken
@@ -434,7 +434,7 @@ static proto_bool process_client_finished(uint8_t *restrict work, QuicTls *qt, c
     return PROTO_TRUE;
 }
 
-static proto_bool process_message(uint8_t *restrict work, QuicTls *qt, int level, const uint8_t *msg, size_t msg_len)
+static proto_bool process_message(uint8_t *work, QuicTls *qt, int level, const uint8_t *msg, size_t msg_len)
 {
     if (level == QUIC_ENC_INITIAL && qt->state == QTLS_START && msg[0] == TLS_HS_CLIENT_HELLO)
     {
@@ -453,7 +453,7 @@ static proto_bool process_message(uint8_t *restrict work, QuicTls *qt, int level
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_quic_tls_server_server_init(uint8_t *restrict work)
+void protocore_quic_tls_server_server_init(uint8_t *work)
 {
     (void)work;
     QuicTls *qt = QuicTlsServerV.server_init_args.qt;
@@ -466,7 +466,7 @@ void protocore_quic_tls_server_server_init(uint8_t *restrict work)
     qt->state = QTLS_START;
 }
 
-void protocore_quic_tls_server_recv_crypto(uint8_t *restrict work)
+void protocore_quic_tls_server_recv_crypto(uint8_t *work)
 {
     (void)work;
     QuicTls *qt = QuicTlsServerV.recv_crypto_args.qt;
@@ -502,7 +502,7 @@ void protocore_quic_tls_server_recv_crypto(uint8_t *restrict work)
     QuicTlsServerV.n = off;
 }
 
-void protocore_quic_tls_server_flight(uint8_t *restrict work)
+void protocore_quic_tls_server_flight(uint8_t *work)
 {
     (void)work;
     const QuicTls *qt = QuicTlsServerV.flight_args.qt;
@@ -525,7 +525,7 @@ void protocore_quic_tls_server_flight(uint8_t *restrict work)
     QuicTlsServerV.bytes = NULL;
 }
 
-void protocore_quic_tls_server_keys(uint8_t *restrict work)
+void protocore_quic_tls_server_keys(uint8_t *work)
 {
     (void)work;
     QuicTls *qt = QuicTlsServerV.keys_args.qt;
@@ -545,7 +545,7 @@ void protocore_quic_tls_server_keys(uint8_t *restrict work)
     QuicTlsServerV.pkt_keys = NULL;
 }
 
-void protocore_quic_tls_server_peer_params(uint8_t *restrict work)
+void protocore_quic_tls_server_peer_params(uint8_t *work)
 {
     (void)work;
     const QuicTls *qt = QuicTlsServerV.peer_params_args.qt;

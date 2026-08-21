@@ -57,7 +57,7 @@ uint8_t *protocore_rng_span(void)
     return g_rng_span;
 }
 
-void protocore_rng_fill(uint8_t *restrict work)
+void protocore_rng_fill(uint8_t *work)
 {
     (void)work;
     uint8_t *b = RngV.fill_args.out;
@@ -83,7 +83,7 @@ void protocore_rng_fill(uint8_t *restrict work)
     }
 }
 
-void protocore_rng_reseed(uint8_t *restrict work)
+void protocore_rng_reseed(uint8_t *work)
 {
     (void)work;
     s_rng = 0xA5A5F00Du;

@@ -70,7 +70,7 @@ static_assert(RELAY_LISTENER_OFF_CTX % _Alignof(RelayListenerCtx) == 0,
 // The region, at its offset in the caller's borrow.
 #define RELAY_LISTENER_CTX(w) ((RelayListenerCtx *)(void *)((w) + RELAY_LISTENER_OFF_CTX))
 
-static RelayBind *bind_by_listener(uint8_t *restrict work, uint8_t lid)
+static RelayBind *bind_by_listener(uint8_t *work, uint8_t lid)
 {
     for (int i = 0; i < PROTOCORE_RELAY_MAX_PUBLISH; i++)
     {
@@ -82,7 +82,7 @@ static RelayBind *bind_by_listener(uint8_t *restrict work, uint8_t lid)
     return NULL;
 }
 
-static RelayBridge *bridge_by_conn(uint8_t *restrict work, uint8_t slot)
+static RelayBridge *bridge_by_conn(uint8_t *work, uint8_t slot)
 {
     for (int i = 0; i < PROTOCORE_RELAY_MAX_CONNS; i++)
     {
@@ -94,7 +94,7 @@ static RelayBridge *bridge_by_conn(uint8_t *restrict work, uint8_t slot)
     return NULL;
 }
 
-static int bridge_find_free(uint8_t *restrict work)
+static int bridge_find_free(uint8_t *work)
 {
     for (int i = 0; i < PROTOCORE_RELAY_MAX_CONNS; i++)
     {
@@ -188,7 +188,7 @@ static void teardown(RelayBridge *br, proto_bool close_inbound)
 }
 
 // Pump the bridge one pass and tear it down if the origin ended or the pump errored.
-static void service(uint8_t *restrict work, uint8_t slot)
+static void service(uint8_t *work, uint8_t slot)
 {
     RelayBridge *br = bridge_by_conn(work, slot);
     if (!br)
@@ -230,7 +230,7 @@ static void relay_on_accept(uint8_t slot)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_relay_listener_span();
+    uint8_t *work = protocore_relay_listener_span();
 
     ConnPoolV.slot = slot;
     ConnPool.listener_id(protocore_conn_pool_span());
@@ -281,7 +281,7 @@ static void relay_on_data(uint8_t slot)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_relay_listener_span();
+    uint8_t *work = protocore_relay_listener_span();
 
     service(work, slot);
 }
@@ -290,7 +290,7 @@ static void relay_on_poll(uint8_t slot)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_relay_listener_span();
+    uint8_t *work = protocore_relay_listener_span();
 
     ConnPoolV.slot = slot;
     ConnPool.active(protocore_conn_pool_span());
@@ -305,7 +305,7 @@ static void relay_on_close(uint8_t slot)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_relay_listener_span();
+    uint8_t *work = protocore_relay_listener_span();
 
     RelayBridge *br = bridge_by_conn(work, slot);
     if (br)
@@ -339,7 +339,7 @@ uint8_t *protocore_relay_listener_span(void)
     return s_own.span;
 }
 
-proto_bool protocore_relay_listener_publish(uint8_t *restrict work, uint8_t listener_id, const char *origin_host,
+proto_bool protocore_relay_listener_publish(uint8_t *work, uint8_t listener_id, const char *origin_host,
                                             uint16_t origin_port)
 {
     if (!origin_host)
@@ -378,7 +378,7 @@ proto_bool protocore_relay_listener_publish(uint8_t *restrict work, uint8_t list
     return PROTO_TRUE;
 }
 
-void protocore_relay_listener_reset(uint8_t *restrict work)
+void protocore_relay_listener_reset(uint8_t *work)
 {
     for (int i = 0; i < PROTOCORE_RELAY_MAX_PUBLISH; i++)
     {

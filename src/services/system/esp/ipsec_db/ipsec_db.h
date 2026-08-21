@@ -262,30 +262,30 @@ extern IpsecDbVars IpsecDbV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const protocore_ipsec_spd_init)(uint8_t *restrict work);
-    void (*const protocore_ipsec_spd_add)(uint8_t *restrict work);
-    void (*const protocore_ipsec_spd_lookup)(uint8_t *restrict work);
-    void (*const protocore_ipsec_selector_match)(uint8_t *restrict work);
-    void (*const protocore_ipsec_selector_from_ts)(uint8_t *restrict work);
-    void (*const protocore_ipsec_sad_init)(uint8_t *restrict work);
-    void (*const protocore_ipsec_sad_add)(uint8_t *restrict work);
-    void (*const protocore_ipsec_sad_find)(uint8_t *restrict work);
-    void (*const protocore_ipsec_sad_remove)(uint8_t *restrict work);
-    void (*const protocore_ipsec_sad_next_seq)(uint8_t *restrict work);
+    void (*const protocore_ipsec_spd_init)(uint8_t *work);
+    void (*const protocore_ipsec_spd_add)(uint8_t *work);
+    void (*const protocore_ipsec_spd_lookup)(uint8_t *work);
+    void (*const protocore_ipsec_selector_match)(uint8_t *work);
+    void (*const protocore_ipsec_selector_from_ts)(uint8_t *work);
+    void (*const protocore_ipsec_sad_init)(uint8_t *work);
+    void (*const protocore_ipsec_sad_add)(uint8_t *work);
+    void (*const protocore_ipsec_sad_find)(uint8_t *work);
+    void (*const protocore_ipsec_sad_remove)(uint8_t *work);
+    void (*const protocore_ipsec_sad_next_seq)(uint8_t *work);
 } IpsecDbNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in IpsecDbV or a region of the borrow at a fixed offset.
-void protocore_ipsec_db_protocore_ipsec_spd_init(uint8_t *restrict work);
-void protocore_ipsec_db_protocore_ipsec_spd_add(uint8_t *restrict work);
-void protocore_ipsec_db_protocore_ipsec_spd_lookup(uint8_t *restrict work);
-void protocore_ipsec_db_protocore_ipsec_selector_match(uint8_t *restrict work);
-void protocore_ipsec_db_protocore_ipsec_selector_from_ts(uint8_t *restrict work);
-void protocore_ipsec_db_protocore_ipsec_sad_init(uint8_t *restrict work);
-void protocore_ipsec_db_protocore_ipsec_sad_add(uint8_t *restrict work);
-void protocore_ipsec_db_protocore_ipsec_sad_find(uint8_t *restrict work);
-void protocore_ipsec_db_protocore_ipsec_sad_remove(uint8_t *restrict work);
-void protocore_ipsec_db_protocore_ipsec_sad_next_seq(uint8_t *restrict work);
+void protocore_ipsec_db_protocore_ipsec_spd_init(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_spd_add(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_spd_lookup(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_selector_match(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_selector_from_ts(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_sad_init(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_sad_add(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_sad_find(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_sad_remove(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_sad_next_seq(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

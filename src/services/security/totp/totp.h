@@ -110,18 +110,18 @@ extern TotpVars TotpV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const hotp)(uint8_t *restrict work);
-    void (*const totp)(uint8_t *restrict work);
-    void (*const verify)(uint8_t *restrict work);
-    void (*const base32_decode)(uint8_t *restrict work);
+    void (*const hotp)(uint8_t *work);
+    void (*const totp)(uint8_t *work);
+    void (*const verify)(uint8_t *work);
+    void (*const base32_decode)(uint8_t *work);
 } TotpNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in TotpV or a region of the borrow at a fixed offset.
-void protocore_totp_hotp(uint8_t *restrict work);
-void protocore_totp_totp(uint8_t *restrict work);
-void protocore_totp_verify(uint8_t *restrict work);
-void protocore_totp_base32_decode(uint8_t *restrict work);
+void protocore_totp_hotp(uint8_t *work);
+void protocore_totp_totp(uint8_t *work);
+void protocore_totp_verify(uint8_t *work);
+void protocore_totp_base32_decode(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

@@ -197,32 +197,32 @@ extern QuicConnVars QuicConnV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const init)(uint8_t *restrict work);
-    void (*const callbacks)(uint8_t *restrict work);
-    void (*const recv)(uint8_t *restrict work);
-    void (*const send)(uint8_t *restrict work);
-    void (*const on_timeout)(uint8_t *restrict work);
-    void (*const stream_send)(uint8_t *restrict work);
-    void (*const owns)(uint8_t *restrict work);
-    void (*const close)(uint8_t *restrict work);
-    void (*const close_app)(uint8_t *restrict work);
-    void (*const is_established)(uint8_t *restrict work);
-    void (*const is_closed)(uint8_t *restrict work);
+    void (*const init)(uint8_t *work);
+    void (*const callbacks)(uint8_t *work);
+    void (*const recv)(uint8_t *work);
+    void (*const send)(uint8_t *work);
+    void (*const on_timeout)(uint8_t *work);
+    void (*const stream_send)(uint8_t *work);
+    void (*const owns)(uint8_t *work);
+    void (*const close)(uint8_t *work);
+    void (*const close_app)(uint8_t *work);
+    void (*const is_established)(uint8_t *work);
+    void (*const is_closed)(uint8_t *work);
 } QuicConnNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in QuicConnV or a region of the borrow at a fixed offset.
-void protocore_quic_conn_init(uint8_t *restrict work);
-void protocore_quic_conn_callbacks(uint8_t *restrict work);
-void protocore_quic_conn_recv(uint8_t *restrict work);
-void protocore_quic_conn_send(uint8_t *restrict work);
-void protocore_quic_conn_on_timeout(uint8_t *restrict work);
-void protocore_quic_conn_stream_send(uint8_t *restrict work);
-void protocore_quic_conn_owns(uint8_t *restrict work);
-void protocore_quic_conn_close(uint8_t *restrict work);
-void protocore_quic_conn_close_app(uint8_t *restrict work);
-void protocore_quic_conn_is_established(uint8_t *restrict work);
-void protocore_quic_conn_is_closed(uint8_t *restrict work);
+void protocore_quic_conn_init(uint8_t *work);
+void protocore_quic_conn_callbacks(uint8_t *work);
+void protocore_quic_conn_recv(uint8_t *work);
+void protocore_quic_conn_send(uint8_t *work);
+void protocore_quic_conn_on_timeout(uint8_t *work);
+void protocore_quic_conn_stream_send(uint8_t *work);
+void protocore_quic_conn_owns(uint8_t *work);
+void protocore_quic_conn_close(uint8_t *work);
+void protocore_quic_conn_close_app(uint8_t *work);
+void protocore_quic_conn_is_established(uint8_t *work);
+void protocore_quic_conn_is_closed(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

@@ -160,25 +160,25 @@ extern EdgeCacheSdVars EdgeCacheSdV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const serialize)(uint8_t *restrict work);
-    void (*const deserialize)(uint8_t *restrict work);
-    void (*const put)(uint8_t *restrict work);
-    void (*const get)(uint8_t *restrict work);
-    void (*const del)(uint8_t *restrict work);
-    void (*const purge_prefix)(uint8_t *restrict work);
-    void (*const purge_all)(uint8_t *restrict work);
+    void (*const serialize)(uint8_t *work);
+    void (*const deserialize)(uint8_t *work);
+    void (*const put)(uint8_t *work);
+    void (*const get)(uint8_t *work);
+    void (*const del)(uint8_t *work);
+    void (*const purge_prefix)(uint8_t *work);
+    void (*const purge_all)(uint8_t *work);
 } EdgeCacheSdNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in EdgeCacheSdV or a region of the borrow at a fixed offset.
-void protocore_edge_cache_sd_serialize(uint8_t *restrict work);
-void protocore_edge_cache_sd_deserialize(uint8_t *restrict work);
+void protocore_edge_cache_sd_serialize(uint8_t *work);
+void protocore_edge_cache_sd_deserialize(uint8_t *work);
 #if PROTOCORE_ENABLE_DBM
-void protocore_edge_cache_sd_put(uint8_t *restrict work);
-void protocore_edge_cache_sd_get(uint8_t *restrict work);
-void protocore_edge_cache_sd_del(uint8_t *restrict work);
-void protocore_edge_cache_sd_purge_prefix(uint8_t *restrict work);
-void protocore_edge_cache_sd_purge_all(uint8_t *restrict work);
+void protocore_edge_cache_sd_put(uint8_t *work);
+void protocore_edge_cache_sd_get(uint8_t *work);
+void protocore_edge_cache_sd_del(uint8_t *work);
+void protocore_edge_cache_sd_purge_prefix(uint8_t *work);
+void protocore_edge_cache_sd_purge_all(uint8_t *work);
 #endif
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

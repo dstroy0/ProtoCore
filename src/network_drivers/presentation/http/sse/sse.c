@@ -52,7 +52,7 @@ static_assert(SSE_OFF_CTX % _Alignof(SseCtx) == 0,
 // The region, at its offset in the caller's borrow.
 #define SSE_CTX(w) ((SseCtx *)(void *)((w) + SSE_OFF_CTX))
 
-void protocore_sse_route_add(uint8_t *restrict work)
+void protocore_sse_route_add(uint8_t *work)
 {
     if (SSE_CTX(work)->count >= MAX_ROUTES)
     {
@@ -66,17 +66,17 @@ void protocore_sse_route_add(uint8_t *restrict work)
 // Empty the handler table. A route holds the id an add returned, so this belongs with whatever
 // empties the routes - otherwise every re-registration appends a handler nothing can reach any
 // more, and the table, which is bounded, fills and starts refusing.
-void protocore_sse_route_reset(uint8_t *restrict work)
+void protocore_sse_route_reset(uint8_t *work)
 {
     SSE_CTX(work)->count = 0;
 }
 
-void protocore_sse_route_connect(uint8_t *restrict work)
+void protocore_sse_route_connect(uint8_t *work)
 {
     SseV.handler = (SseV.id >= SSE_CTX(work)->count) ? NULL : SSE_CTX(work)->on_connect[SseV.id];
 }
 
-void protocore_sse_init(uint8_t *restrict work)
+void protocore_sse_init(uint8_t *work)
 {
     (void)work;
     for (int i = 0; i < MAX_SSE_CONNS; i++)
@@ -86,7 +86,7 @@ void protocore_sse_init(uint8_t *restrict work)
     }
 }
 
-void protocore_sse_alloc(uint8_t *restrict work)
+void protocore_sse_alloc(uint8_t *work)
 {
     (void)work;
     SseV.conn = NULL;
@@ -106,7 +106,7 @@ void protocore_sse_alloc(uint8_t *restrict work)
     }
 }
 
-void protocore_sse_find(uint8_t *restrict work)
+void protocore_sse_find(uint8_t *work)
 {
     (void)work;
     SseV.conn = NULL;
@@ -120,7 +120,7 @@ void protocore_sse_find(uint8_t *restrict work)
     }
 }
 
-void protocore_sse_free(uint8_t *restrict work)
+void protocore_sse_free(uint8_t *work)
 {
     (void)work;
     for (int i = 0; i < MAX_SSE_CONNS; i++)
@@ -148,7 +148,7 @@ static inline proto_bool sse_append(char *buf, size_t n, size_t *pos, const char
     return PROTO_TRUE;
 }
 
-void protocore_sse_format(uint8_t *restrict work)
+void protocore_sse_format(uint8_t *work)
 {
     (void)work;
     SseV.n = 0;
@@ -189,7 +189,7 @@ void protocore_sse_format(uint8_t *restrict work)
     SseV.n = (int)pos;
 }
 
-void protocore_sse_write(uint8_t *restrict work)
+void protocore_sse_write(uint8_t *work)
 {
     SseV.ok = PROTO_FALSE;
     ConnPoolV.slot = SseV.stream->slot_id;

@@ -22,7 +22,7 @@
 // ---------------------------------------------------------------------------
 
 // Called by defer above its definition.
-void protocore_workers_wake(uint8_t *restrict work);
+void protocore_workers_wake(uint8_t *work);
 
 // Per-worker deferred-callback queues: app code on any task hands a {fn, arg} to
 // the owning worker, which runs it in its own context (race-free push path).
@@ -103,7 +103,7 @@ static void worker_task(void *arg)
     protocore_platform_task_stop(NULL);
 }
 
-void protocore_workers_start(uint8_t *restrict work)
+void protocore_workers_start(uint8_t *work)
 {
     if (PROTO_ATOMIC_LOAD(&WORKER_CTX(work)->run))
     {
@@ -128,7 +128,7 @@ void protocore_workers_start(uint8_t *restrict work)
     }
 }
 
-void protocore_workers_defer(uint8_t *restrict work)
+void protocore_workers_defer(uint8_t *work)
 {
     WorkersV.ok = PROTO_FALSE;
     if (!WorkersV.defer_args.fn)
@@ -149,7 +149,7 @@ void protocore_workers_defer(uint8_t *restrict work)
     WorkersV.ok = PROTO_TRUE;
 }
 
-void protocore_workers_wake(uint8_t *restrict work)
+void protocore_workers_wake(uint8_t *work)
 {
     if (WorkersV.worker_id < 0 || WorkersV.worker_id >= PROTOCORE_WORKER_COUNT)
     {
@@ -162,7 +162,7 @@ void protocore_workers_wake(uint8_t *restrict work)
     }
 }
 
-void protocore_workers_run_deferred(uint8_t *restrict work)
+void protocore_workers_run_deferred(uint8_t *work)
 {
     if (WorkersV.worker_id < 0 || WorkersV.worker_id >= PROTOCORE_WORKER_COUNT ||
         !WORKER_CTX(work)->dq[WorkersV.worker_id])
@@ -179,7 +179,7 @@ void protocore_workers_run_deferred(uint8_t *restrict work)
     }
 }
 
-void protocore_workers_stop(uint8_t *restrict work)
+void protocore_workers_stop(uint8_t *work)
 {
     if (!PROTO_ATOMIC_LOAD(&WORKER_CTX(work)->run))
     {
@@ -191,7 +191,7 @@ void protocore_workers_stop(uint8_t *restrict work)
     protocore_platform_task_delay(3);
 }
 
-void protocore_workers_running(uint8_t *restrict work)
+void protocore_workers_running(uint8_t *work)
 {
     WorkersV.ok = PROTO_ATOMIC_LOAD(&WORKER_CTX(work)->run);
 }

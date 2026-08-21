@@ -135,7 +135,7 @@ static proto_bool has_chunked(const char *s)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-proto_bool protocore_edge_fetcher_edge_resp_complete(uint8_t *restrict work, const uint8_t *buf, size_t len,
+proto_bool protocore_edge_fetcher_edge_resp_complete(uint8_t *work, const uint8_t *buf, size_t len,
                                                      proto_bool conn_closed, size_t *head_len)
 {
     size_t h = head_end(buf, len);
@@ -179,7 +179,7 @@ proto_bool protocore_edge_fetcher_edge_resp_complete(uint8_t *restrict work, con
     return conn_closed; // close-delimited body
 }
 
-void protocore_edge_fetcher_begin(uint8_t *restrict work, EdgeFetch *f, const EdgeFetchTransport *t, const char *host,
+void protocore_edge_fetcher_begin(uint8_t *work, EdgeFetch *f, const EdgeFetchTransport *t, const char *host,
                                   uint16_t port, const void *request, size_t req_len, uint32_t now_ms)
 {
     (void)work;
@@ -205,8 +205,7 @@ void protocore_edge_fetcher_begin(uint8_t *restrict work, EdgeFetch *f, const Ed
     f->req_len = (uint32_t)req_len;
 }
 
-EdgeFetchStatus protocore_edge_fetcher_pump(uint8_t *restrict work, EdgeFetch *f, const EdgeFetchTransport *t,
-                                            uint32_t now_ms)
+EdgeFetchStatus protocore_edge_fetcher_pump(uint8_t *work, EdgeFetch *f, const EdgeFetchTransport *t, uint32_t now_ms)
 {
     if (f->st != EDGE_FETCH_STATUS_PENDING)
     {
@@ -287,7 +286,7 @@ EdgeFetchStatus protocore_edge_fetcher_pump(uint8_t *restrict work, EdgeFetch *f
     return EDGE_FETCH_STATUS_PENDING;
 }
 
-void protocore_edge_fetcher_end(uint8_t *restrict work, EdgeFetch *f, const EdgeFetchTransport *t)
+void protocore_edge_fetcher_end(uint8_t *work, EdgeFetch *f, const EdgeFetchTransport *t)
 {
     (void)work;
 

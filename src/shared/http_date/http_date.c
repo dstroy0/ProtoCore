@@ -28,7 +28,7 @@ static const char PROTOCORE_HTTP_DATE_MON[12][3] = {{'J', 'a', 'n'}, {'F', 'e', 
 #define PROTOCORE_HTTP_DATE_YEAR_BASE 1900 // tm_year counts from here
 #define PROTOCORE_HTTP_DATE_YEAR_MAX 9999  // the widest year 4DIGIT holds
 
-void protocore_http_date_format(uint8_t *restrict work)
+void protocore_http_date_format(uint8_t *work)
 {
     (void)work;
     char *out = HttpDateV.args.out;

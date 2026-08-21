@@ -121,28 +121,28 @@ extern UdpListenerVars UdpListenerV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const listen)(uint8_t *restrict work);
-    void (*const listen_multicast)(uint8_t *restrict work);
-    void (*const leave_multicast)(uint8_t *restrict work);
-    void (*const poll)(uint8_t *restrict work);
-    void (*const reply)(uint8_t *restrict work);
-    void (*const peer_addr)(uint8_t *restrict work);
-    void (*const sendto)(uint8_t *restrict work);
-    void (*const close)(uint8_t *restrict work);
-    void (*const joined_group)(uint8_t *restrict work);
+    void (*const listen)(uint8_t *work);
+    void (*const listen_multicast)(uint8_t *work);
+    void (*const leave_multicast)(uint8_t *work);
+    void (*const poll)(uint8_t *work);
+    void (*const reply)(uint8_t *work);
+    void (*const peer_addr)(uint8_t *work);
+    void (*const sendto)(uint8_t *work);
+    void (*const close)(uint8_t *work);
+    void (*const joined_group)(uint8_t *work);
 } UdpListenerNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in UdpListenerV or a region of the borrow at a fixed offset.
-void protocore_udp_listener_listen(uint8_t *restrict work);
-void protocore_udp_listener_listen_multicast(uint8_t *restrict work);
-void protocore_udp_listener_leave_multicast(uint8_t *restrict work);
-void protocore_udp_listener_poll(uint8_t *restrict work);
-void protocore_udp_listener_reply(uint8_t *restrict work);
-void protocore_udp_listener_peer_addr(uint8_t *restrict work);
-void protocore_udp_listener_sendto(uint8_t *restrict work);
-void protocore_udp_listener_close(uint8_t *restrict work);
-void protocore_udp_listener_joined_group(uint8_t *restrict work);
+void protocore_udp_listener_listen(uint8_t *work);
+void protocore_udp_listener_listen_multicast(uint8_t *work);
+void protocore_udp_listener_leave_multicast(uint8_t *work);
+void protocore_udp_listener_poll(uint8_t *work);
+void protocore_udp_listener_reply(uint8_t *work);
+void protocore_udp_listener_peer_addr(uint8_t *work);
+void protocore_udp_listener_sendto(uint8_t *work);
+void protocore_udp_listener_close(uint8_t *work);
+void protocore_udp_listener_joined_group(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

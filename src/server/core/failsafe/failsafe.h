@@ -114,22 +114,22 @@ extern FailsafeVars FailsafeV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const reset)(uint8_t *restrict work);
-    void (*const add)(uint8_t *restrict work);
-    void (*const feed)(uint8_t *restrict work);
-    void (*const on_breach)(uint8_t *restrict work);
-    void (*const check)(uint8_t *restrict work);
-    void (*const json)(uint8_t *restrict work);
+    void (*const reset)(uint8_t *work);
+    void (*const add)(uint8_t *work);
+    void (*const feed)(uint8_t *work);
+    void (*const on_breach)(uint8_t *work);
+    void (*const check)(uint8_t *work);
+    void (*const json)(uint8_t *work);
 } FailsafeNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in FailsafeV or a region of the borrow at a fixed offset.
-void protocore_failsafe_reset(uint8_t *restrict work);
-void protocore_failsafe_add(uint8_t *restrict work);
-void protocore_failsafe_feed(uint8_t *restrict work);
-void protocore_failsafe_on_breach(uint8_t *restrict work);
-void protocore_failsafe_check(uint8_t *restrict work);
-void protocore_failsafe_json(uint8_t *restrict work);
+void protocore_failsafe_reset(uint8_t *work);
+void protocore_failsafe_add(uint8_t *work);
+void protocore_failsafe_feed(uint8_t *work);
+void protocore_failsafe_on_breach(uint8_t *work);
+void protocore_failsafe_check(uint8_t *work);
+void protocore_failsafe_json(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

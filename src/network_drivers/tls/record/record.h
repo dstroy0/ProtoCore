@@ -210,22 +210,22 @@ extern TlsRecordVars TlsRecordV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const keys_derive)(uint8_t *restrict work);
-    void (*const plaintext_build)(uint8_t *restrict work);
-    void (*const plaintext_parse)(uint8_t *restrict work);
-    void (*const protect)(uint8_t *restrict work);
-    void (*const unprotect)(uint8_t *restrict work);
-    void (*const keys_wipe)(uint8_t *restrict work);
+    void (*const keys_derive)(uint8_t *work);
+    void (*const plaintext_build)(uint8_t *work);
+    void (*const plaintext_parse)(uint8_t *work);
+    void (*const protect)(uint8_t *work);
+    void (*const unprotect)(uint8_t *work);
+    void (*const keys_wipe)(uint8_t *work);
 } TlsRecordNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in TlsRecordV or a region of the borrow at a fixed offset.
-void protocore_tls_record_keys_derive(uint8_t *restrict work);
-void protocore_tls_record_plaintext_build(uint8_t *restrict work);
-void protocore_tls_record_plaintext_parse(uint8_t *restrict work);
-void protocore_tls_record_protect(uint8_t *restrict work);
-void protocore_tls_record_unprotect(uint8_t *restrict work);
-void protocore_tls_record_keys_wipe(uint8_t *restrict work);
+void protocore_tls_record_keys_derive(uint8_t *work);
+void protocore_tls_record_plaintext_build(uint8_t *work);
+void protocore_tls_record_plaintext_parse(uint8_t *work);
+void protocore_tls_record_protect(uint8_t *work);
+void protocore_tls_record_unprotect(uint8_t *work);
+void protocore_tls_record_keys_wipe(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

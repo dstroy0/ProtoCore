@@ -150,9 +150,8 @@ typedef struct
  * @var DashboardNs::begin  serve the dashboard at path (page, layout JSON, and SSE value ...
  * @var DashboardNs::publish  broadcast the current values to all SSE subscribers (after ...
  *
- * @c work is PROTOCORE_DASHBOARD_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_DASHBOARD_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
+ * nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -174,28 +173,28 @@ extern DashboardVars DashboardV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const configure)(uint8_t *restrict work);
-    void (*const set)(uint8_t *restrict work);
-    void (*const layout_json)(uint8_t *restrict work);
-    void (*const values_json)(uint8_t *restrict work);
-    void (*const on_control)(uint8_t *restrict work);
-    void (*const parse_control)(uint8_t *restrict work);
-    void (*const dispatch_control)(uint8_t *restrict work);
-    void (*const begin)(uint8_t *restrict work);
-    void (*const publish)(uint8_t *restrict work);
+    void (*const configure)(uint8_t *work);
+    void (*const set)(uint8_t *work);
+    void (*const layout_json)(uint8_t *work);
+    void (*const values_json)(uint8_t *work);
+    void (*const on_control)(uint8_t *work);
+    void (*const parse_control)(uint8_t *work);
+    void (*const dispatch_control)(uint8_t *work);
+    void (*const begin)(uint8_t *work);
+    void (*const publish)(uint8_t *work);
 } DashboardNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in DashboardV or a region of the borrow at a fixed offset.
-void protocore_dashboard_configure(uint8_t *restrict work);
-void protocore_dashboard_set(uint8_t *restrict work);
-void protocore_dashboard_layout_json(uint8_t *restrict work);
-void protocore_dashboard_values_json(uint8_t *restrict work);
-void protocore_dashboard_on_control(uint8_t *restrict work);
-void protocore_dashboard_parse_control(uint8_t *restrict work);
-void protocore_dashboard_dispatch_control(uint8_t *restrict work);
-void protocore_dashboard_begin(uint8_t *restrict work);
-void protocore_dashboard_publish(uint8_t *restrict work);
+void protocore_dashboard_configure(uint8_t *work);
+void protocore_dashboard_set(uint8_t *work);
+void protocore_dashboard_layout_json(uint8_t *work);
+void protocore_dashboard_values_json(uint8_t *work);
+void protocore_dashboard_on_control(uint8_t *work);
+void protocore_dashboard_parse_control(uint8_t *work);
+void protocore_dashboard_dispatch_control(uint8_t *work);
+void protocore_dashboard_begin(uint8_t *work);
+void protocore_dashboard_publish(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

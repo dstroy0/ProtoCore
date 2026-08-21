@@ -104,20 +104,20 @@ extern DnsServerVars DnsServerV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_response)(uint8_t *restrict work);
-    void (*const add)(uint8_t *restrict work);
-    void (*const clear)(uint8_t *restrict work);
-    void (*const begin)(uint8_t *restrict work);
-    void (*const lookup)(uint8_t *restrict work);
+    void (*const build_response)(uint8_t *work);
+    void (*const add)(uint8_t *work);
+    void (*const clear)(uint8_t *work);
+    void (*const begin)(uint8_t *work);
+    void (*const lookup)(uint8_t *work);
 } DnsServerNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in DnsServerV or a region of the borrow at a fixed offset.
-void protocore_dns_server_build_response(uint8_t *restrict work);
-void protocore_dns_server_add(uint8_t *restrict work);
-void protocore_dns_server_clear(uint8_t *restrict work);
-void protocore_dns_server_begin(uint8_t *restrict work);
-void protocore_dns_server_lookup(uint8_t *restrict work);
+void protocore_dns_server_build_response(uint8_t *work);
+void protocore_dns_server_add(uint8_t *work);
+void protocore_dns_server_clear(uint8_t *work);
+void protocore_dns_server_begin(uint8_t *work);
+void protocore_dns_server_lookup(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

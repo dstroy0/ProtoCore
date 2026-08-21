@@ -111,11 +111,11 @@ uint8_t *protocore_dashboard_span(void)
     return s_own.span;
 }
 
-void protocore_dashboard_configure(uint8_t *restrict work);
-void protocore_dashboard_parse_control(uint8_t *restrict work);
-void protocore_dashboard_values_json(uint8_t *restrict work);
+void protocore_dashboard_configure(uint8_t *work);
+void protocore_dashboard_parse_control(uint8_t *work);
+void protocore_dashboard_values_json(uint8_t *work);
 
-void protocore_dashboard_configure(uint8_t *restrict work)
+void protocore_dashboard_configure(uint8_t *work)
 {
     const protocore_widget *widgets = DashboardV.configure_args.widgets;
     uint8_t count = DashboardV.configure_args.count;
@@ -128,7 +128,7 @@ void protocore_dashboard_configure(uint8_t *restrict work)
     }
 }
 
-void protocore_dashboard_set(uint8_t *restrict work)
+void protocore_dashboard_set(uint8_t *work)
 {
     const char *key = DashboardV.set_args.key;
     float value = DashboardV.set_args.value;
@@ -187,7 +187,7 @@ static const protocore_field DASH_VALUE[] = {
     PROTOCORE_END,
 };
 
-void protocore_dashboard_layout_json(uint8_t *restrict work)
+void protocore_dashboard_layout_json(uint8_t *work)
 {
     char *out = DashboardV.layout_json_args.out;
     uint32_t cap = DashboardV.layout_json_args.cap;
@@ -234,7 +234,7 @@ void protocore_dashboard_layout_json(uint8_t *restrict work)
     DashboardV.value = (int32_t)n;
 }
 
-void protocore_dashboard_values_json(uint8_t *restrict work)
+void protocore_dashboard_values_json(uint8_t *work)
 {
     char *out = DashboardV.values_json_args.out;
     uint32_t cap = DashboardV.values_json_args.cap;
@@ -281,7 +281,7 @@ void protocore_dashboard_values_json(uint8_t *restrict work)
 // Controls (inbound WebSocket messages)
 // ---------------------------------------------------------------------------
 
-void protocore_dashboard_on_control(uint8_t *restrict work)
+void protocore_dashboard_on_control(uint8_t *work)
 {
     protocore_control_cb cb = DashboardV.on_control_args.cb;
 
@@ -318,7 +318,7 @@ static const char *control_value_ptr(const char *s, const char *key)
     return p;
 }
 
-void protocore_dashboard_parse_control(uint8_t *restrict work)
+void protocore_dashboard_parse_control(uint8_t *work)
 {
     (void)work;
     const char *msg = DashboardV.parse_control_args.msg;
@@ -363,7 +363,7 @@ void protocore_dashboard_parse_control(uint8_t *restrict work)
     DashboardV.ok = PROTO_TRUE;
 }
 
-void protocore_dashboard_dispatch_control(uint8_t *restrict work)
+void protocore_dashboard_dispatch_control(uint8_t *work)
 {
     const char *msg = DashboardV.dispatch_control_args.msg;
 
@@ -403,7 +403,7 @@ void dash_ws_message(uint8_t ws_id);
 void dash_ws_close(uint8_t ws_id);
 #endif
 
-void protocore_dashboard_begin(uint8_t *restrict work)
+void protocore_dashboard_begin(uint8_t *work)
 {
     const char *path = DashboardV.begin_args.path;
     const protocore_widget *widgets = DashboardV.begin_args.widgets;
@@ -451,7 +451,7 @@ void protocore_dashboard_begin(uint8_t *restrict work)
     DASHBOARD_CTX(work)->started = PROTO_TRUE; // last: publish() is only meaningful once the stream route exists
 }
 
-void protocore_dashboard_publish(uint8_t *restrict work)
+void protocore_dashboard_publish(uint8_t *work)
 {
 
     if (!DASHBOARD_CTX(work)->started)

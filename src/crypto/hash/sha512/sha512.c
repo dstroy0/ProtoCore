@@ -293,7 +293,7 @@ static void sha512_block(uint64_t h[8], const uint8_t blk[PROTOCORE_SHA512_BLOCK
 // --- framing (one arm, both compressions) ----------------------------------
 
 // Seed the state.
-static void sha512_state_init(uint8_t *restrict work)
+static void sha512_state_init(uint8_t *work)
 {
     Sha512Ctx *ctx = SHA512_CTX(work);
     for (int i = 0; i < 8; i++)
@@ -304,7 +304,7 @@ static void sha512_state_init(uint8_t *restrict work)
     ctx->rxlen = 0;
 }
 
-static void sha512_absorb(uint8_t *restrict work, const uint8_t *data, size_t len)
+static void sha512_absorb(uint8_t *work, const uint8_t *data, size_t len)
 {
     Sha512Ctx *ctx = SHA512_CTX(work);
     uint8_t *rx = SHA512_RX(work);
@@ -330,7 +330,7 @@ static void sha512_absorb(uint8_t *restrict work, const uint8_t *data, size_t le
     }
 }
 
-static void sha512_finish(uint8_t *restrict work, uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN])
+static void sha512_finish(uint8_t *work, uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN])
 {
     Sha512Ctx *ctx = SHA512_CTX(work);
     uint8_t *rx = SHA512_RX(work);
@@ -376,19 +376,19 @@ static void sha512_finish(uint8_t *restrict work, uint8_t digest[PROTOCORE_SHA51
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_sha512_init(uint8_t *restrict work)
+proto_bool protocore_sha512_init(uint8_t *work)
 {
     sha512_state_init(work);
     return PROTO_TRUE;
 }
 
-proto_bool protocore_sha512_update(uint8_t *restrict work, const uint8_t *data, size_t len)
+proto_bool protocore_sha512_update(uint8_t *work, const uint8_t *data, size_t len)
 {
     sha512_absorb(work, data, len);
     return PROTO_TRUE;
 }
 
-proto_bool protocore_sha512_final(uint8_t *restrict work, uint8_t *out)
+proto_bool protocore_sha512_final(uint8_t *work, uint8_t *out)
 {
     if (!out)
     {
@@ -399,7 +399,7 @@ proto_bool protocore_sha512_final(uint8_t *restrict work, uint8_t *out)
 }
 
 // One-shot over the members already set: init, absorb, finish.
-proto_bool protocore_sha512_hash(uint8_t *restrict work, const uint8_t *data, size_t len, uint8_t *out)
+proto_bool protocore_sha512_hash(uint8_t *work, const uint8_t *data, size_t len, uint8_t *out)
 {
     if (!out)
     {

@@ -22,10 +22,10 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_spa_router_has_extension(uint8_t *restrict work);
-void protocore_spa_router_route(uint8_t *restrict work);
+void protocore_spa_router_has_extension(uint8_t *work);
+void protocore_spa_router_route(uint8_t *work);
 
-void protocore_spa_router_has_extension(uint8_t *restrict work)
+void protocore_spa_router_has_extension(uint8_t *work)
 {
     (void)work;
     const char *path = SpaRouterV.has_extension_args.path;
@@ -64,7 +64,7 @@ void protocore_spa_router_has_extension(uint8_t *restrict work)
     SpaRouterV.ok = dot && dot != seg && dot[1] != '\0';
 }
 
-void protocore_spa_router_route(uint8_t *restrict work)
+void protocore_spa_router_route(uint8_t *work)
 {
     (void)work;
     const char *path = SpaRouterV.route_args.path;
@@ -91,7 +91,7 @@ void protocore_spa_router_route(uint8_t *restrict work)
     SpaRouterV.action = SpaRouterV.ok ? PROTOCORE_SPA_SERVE_FILE : PROTOCORE_SPA_SERVE_SHELL;
 }
 
-void protocore_spa_router_route_ex(uint8_t *restrict work)
+void protocore_spa_router_route_ex(uint8_t *work)
 {
     (void)work;
     const char *path = SpaRouterV.route_ex_args.path;
@@ -129,7 +129,7 @@ void protocore_spa_router_route_ex(uint8_t *restrict work)
 // Conditional UI streaming
 // ---------------------------------------------------------------------------
 
-void protocore_spa_router_ui_stream_begin(uint8_t *restrict work)
+void protocore_spa_router_ui_stream_begin(uint8_t *work)
 {
     (void)work;
     protocore_ui_stream *s = SpaRouterV.ui_stream_begin_args.s;
@@ -149,7 +149,7 @@ void protocore_spa_router_ui_stream_begin(uint8_t *restrict work)
     s->done = (s->count == 0);
 }
 
-void protocore_spa_router_ui_stream_next(uint8_t *restrict work)
+void protocore_spa_router_ui_stream_next(uint8_t *work)
 {
     (void)work;
     protocore_ui_stream *s = SpaRouterV.ui_stream_next_args.s;
@@ -197,7 +197,7 @@ void protocore_spa_router_ui_stream_next(uint8_t *restrict work)
     SpaRouterV.n = written;
 }
 
-void protocore_spa_router_ui_stream_done(uint8_t *restrict work)
+void protocore_spa_router_ui_stream_done(uint8_t *work)
 {
     (void)work;
     const protocore_ui_stream *s = SpaRouterV.ui_stream_done_args.s;

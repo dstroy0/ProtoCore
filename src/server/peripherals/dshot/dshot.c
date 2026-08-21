@@ -30,7 +30,7 @@ static uint8_t dshot_crc(uint16_t v12, proto_bool bidirectional)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_dshot_encode(uint8_t *restrict work)
+void protocore_dshot_encode(uint8_t *work)
 {
     (void)work;
     uint16_t value11 = DshotV.encode_args.value11;
@@ -43,7 +43,7 @@ void protocore_dshot_encode(uint8_t *restrict work)
     DshotV.frame = (uint16_t)((v12 << 4) | crc);
 }
 
-void protocore_dshot_decode(uint8_t *restrict work)
+void protocore_dshot_decode(uint8_t *work)
 {
     (void)work;
     uint16_t frame = DshotV.decode_args.frame;
@@ -69,7 +69,7 @@ void protocore_dshot_decode(uint8_t *restrict work)
     DshotV.ok = PROTO_TRUE;
 }
 
-void protocore_dshot_bit_ns(uint8_t *restrict work)
+void protocore_dshot_bit_ns(uint8_t *work)
 {
     (void)work;
     uint16_t rate_kbit = DshotV.bit_ns_args.rate_kbit;
@@ -98,7 +98,7 @@ void protocore_dshot_bit_ns(uint8_t *restrict work)
     DshotV.ns = bit ? (period_ns * 3 / 4) : (period_ns * 3 / 8);
 }
 
-void protocore_dshot_esc_pwm_ns(uint8_t *restrict work)
+void protocore_dshot_esc_pwm_ns(uint8_t *work)
 {
     (void)work;
     uint16_t throttle_1000 = DshotV.esc_pwm_ns_args.throttle_1000;

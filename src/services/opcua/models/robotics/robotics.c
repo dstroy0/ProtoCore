@@ -253,7 +253,7 @@ uint8_t *protocore_robotics_span(void)
     return s_own.span;
 }
 
-void protocore_robotics_bind(uint8_t *restrict work, const RoboticsMotionDeviceSystem *mds)
+void protocore_robotics_bind(uint8_t *work, const RoboticsMotionDeviceSystem *mds)
 {
 
     ROBOTICS_CTX(work)->mds = mds;
@@ -269,7 +269,7 @@ static proto_bool robotics_read(uint16_t ns, uint32_t id, uint32_t attribute, Op
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
-    uint8_t *restrict work = protocore_robotics_span();
+    uint8_t *work = protocore_robotics_span();
     const RoboticsMotionDeviceSystem *mds = ROBOTICS_CTX(work)->mds;
     if (!mds || ns != ROBOTICS_CTX(work)->ns || attribute != OPCUA_ATTR_VALUE)
     {
@@ -374,7 +374,7 @@ static int32_t robotics_browse(uint16_t ns, uint32_t id, OpcUaReference *out, ui
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
-    uint8_t *restrict work = protocore_robotics_span();
+    uint8_t *work = protocore_robotics_span();
     const RoboticsCtx *c = ROBOTICS_CTX(work);
     const RoboticsMotionDeviceSystem *mds = c->mds;
     if (!mds)
@@ -465,7 +465,7 @@ static int32_t robotics_browse(uint16_t ns, uint32_t id, OpcUaReference *out, ui
     }
 }
 
-void protocore_robotics_install(uint8_t *restrict work, const RoboticsMotionDeviceSystem *mds)
+void protocore_robotics_install(uint8_t *work, const RoboticsMotionDeviceSystem *mds)
 {
 
     Robotics.bind(work, mds);

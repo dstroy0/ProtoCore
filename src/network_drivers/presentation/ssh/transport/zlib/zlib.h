@@ -62,9 +62,9 @@ static inline size_t ssh_deflate_bound(size_t src_len)
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*init)(uint8_t *restrict, SshDeflate *, uint8_t *, uint16_t *, uint16_t *, uint16_t *, uint8_t *, uint16_t *,
+    void (*init)(uint8_t *, SshDeflate *, uint8_t *, uint16_t *, uint16_t *, uint16_t *, uint8_t *, uint16_t *,
                  uint8_t *);
-    int (*packet)(uint8_t *restrict, SshDeflate *, const uint8_t *, size_t, uint8_t *, size_t, size_t *);
+    int (*packet)(uint8_t *, SshDeflate *, const uint8_t *, size_t, uint8_t *, size_t, size_t *);
 } ZlibNs;
 PROTOCORE_NS_LAYOUT(ZlibNs, init, packet);
 
@@ -80,8 +80,8 @@ PROTOCORE_NS_LAYOUT(ZlibNs, init, packet);
  * @param d_code D code
  * @param d_len D len
  */
-void protocore_zlib_init(uint8_t *restrict work, SshDeflate *z, uint8_t *win, uint16_t *head, uint16_t *prev,
-                         uint16_t *ll_code, uint8_t *ll_len, uint16_t *d_code, uint8_t *d_len);
+void protocore_zlib_init(uint8_t *work, SshDeflate *z, uint8_t *win, uint16_t *head, uint16_t *prev, uint16_t *ll_code,
+                         uint8_t *ll_len, uint16_t *d_code, uint8_t *d_len);
 /**
  * @brief Compress one packet payload, continuing the session's zlib stream. .
  * @param work PROTOCORE_ZLIB_BORROW bytes the caller took. Not held past the call.
@@ -93,7 +93,7 @@ void protocore_zlib_init(uint8_t *restrict work, SshDeflate *z, uint8_t *win, ui
  * @param out_len set to the compressed length on success
  * @return The int.
  */
-int protocore_zlib_packet(uint8_t *restrict work, SshDeflate *z, const uint8_t *src, size_t src_len, uint8_t *dst,
+int protocore_zlib_packet(uint8_t *work, SshDeflate *z, const uint8_t *src, size_t src_len, uint8_t *dst,
                           size_t dst_cap, size_t *out_len);
 
 /** @brief Module namespace. */

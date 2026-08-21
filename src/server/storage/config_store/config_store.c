@@ -69,7 +69,7 @@ uint8_t *protocore_config_store_span(void)
     return s_own.span;
 }
 
-void protocore_config_store_begin(uint8_t *restrict work)
+void protocore_config_store_begin(uint8_t *work)
 {
     (void)work;
     const char *ns = ConfigStoreV.begin_args.ns;
@@ -86,7 +86,7 @@ void protocore_config_store_begin(uint8_t *restrict work)
     return;
 }
 
-void protocore_config_store_set_str(uint8_t *restrict work)
+void protocore_config_store_set_str(uint8_t *work)
 {
     (void)work;
     const char *key = ConfigStoreV.set_str_args.key;
@@ -96,7 +96,7 @@ void protocore_config_store_set_str(uint8_t *restrict work)
     return;
 }
 
-void protocore_config_store_get_str(uint8_t *restrict work)
+void protocore_config_store_get_str(uint8_t *work)
 {
     (void)work;
     ConfigStoreV.n = 0;
@@ -131,7 +131,7 @@ void protocore_config_store_get_str(uint8_t *restrict work)
     return;
 }
 
-void protocore_config_store_set_u32(uint8_t *restrict work)
+void protocore_config_store_set_u32(uint8_t *work)
 {
     (void)work;
     const char *key = ConfigStoreV.set_u32_args.key;
@@ -141,7 +141,7 @@ void protocore_config_store_set_u32(uint8_t *restrict work)
     return;
 }
 
-void protocore_config_store_get_u32(uint8_t *restrict work)
+void protocore_config_store_get_u32(uint8_t *work)
 {
     (void)work;
     ConfigStoreV.ms = 0;
@@ -152,7 +152,7 @@ void protocore_config_store_get_u32(uint8_t *restrict work)
     return;
 }
 
-void protocore_config_store_set_blob(uint8_t *restrict work)
+void protocore_config_store_set_blob(uint8_t *work)
 {
     (void)work;
     const char *key = ConfigStoreV.set_blob_args.key;
@@ -163,7 +163,7 @@ void protocore_config_store_set_blob(uint8_t *restrict work)
     return;
 }
 
-void protocore_config_store_get_blob(uint8_t *restrict work)
+void protocore_config_store_get_blob(uint8_t *work)
 {
     (void)work;
     ConfigStoreV.n = 0;
@@ -175,7 +175,7 @@ void protocore_config_store_get_blob(uint8_t *restrict work)
     return;
 }
 
-void protocore_config_store_erase(uint8_t *restrict work)
+void protocore_config_store_erase(uint8_t *work)
 {
     (void)work;
     const char *key = ConfigStoreV.erase_args.key;
@@ -184,7 +184,7 @@ void protocore_config_store_erase(uint8_t *restrict work)
     return;
 }
 
-void protocore_config_store_clear(uint8_t *restrict work)
+void protocore_config_store_clear(uint8_t *work)
 {
     (void)work;
 

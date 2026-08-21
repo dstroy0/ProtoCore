@@ -111,7 +111,7 @@ static const protocore_field LOG_CTRL_CONNECT_FAILED[] = {{PROTOCORE_FK_LIT, 0, 
 // ---------------------------------------------------------------------------
 
 /** @brief Send one command line on the control connection and arm its reply deadline. */
-static proto_bool ftp_send(uint8_t *restrict work, const char *verb, const char *arg)
+static proto_bool ftp_send(uint8_t *work, const char *verb, const char *arg)
 {
     FtpV.build_command_args.buf = FTP_SESSION_CTX(work)->cmd;
     FtpV.build_command_args.cap = sizeof(FTP_SESSION_CTX(work)->cmd);
@@ -140,7 +140,7 @@ static proto_bool ftp_send(uint8_t *restrict work, const char *verb, const char 
  * protocore_ftp_parse_pasv / _epsv; it is shifted out at the start of the next call, which keeps any
  * bytes the server pipelined behind it.
  */
-static protocore_ftp_state ftp_await(uint8_t *restrict work, int *code, size_t *rlen)
+static protocore_ftp_state ftp_await(uint8_t *work, int *code, size_t *rlen)
 {
     if (FTP_SESSION_CTX(work)->rx_consumed > 0)
     {
@@ -215,7 +215,7 @@ static protocore_ftp_state ftp_await(uint8_t *restrict work, int *code, size_t *
 }
 
 /** @brief Connect the data connection the server named. */
-static proto_bool ftp_data_connect(uint8_t *restrict work, const char *host, uint16_t port)
+static proto_bool ftp_data_connect(uint8_t *work, const char *host, uint16_t port)
 {
     if (port == 0)
     {
@@ -256,7 +256,7 @@ static void ftp_pasv_host(const uint8_t ip[4], char *host, size_t cap)
 // ---------------------------------------------------------------------------
 
 /** @brief Drop both connections and reset the accumulator for the next transfer. */
-static void ftp_teardown(uint8_t *restrict work)
+static void ftp_teardown(uint8_t *work)
 {
     if (FTP_SESSION_CTX(work)->data >= 0)
     {
@@ -303,7 +303,7 @@ uint8_t *protocore_ftp_session_span(void)
     return s_own.span;
 }
 
-void protocore_ftp_session_store(uint8_t *restrict work)
+void protocore_ftp_session_store(uint8_t *work)
 {
     const FtpTarget *target = FtpSessionV.store_args.target;
     const char *remote_path = FtpSessionV.store_args.remote_path;

@@ -22,7 +22,7 @@ PROTOCORE_BEGIN_DECLS
  * it, a part without runs the FIPS 197 rounds.
  *
  * @c work is PROTOCORE_AES_CMAC_BORROW secure bytes the CALLER took, at an address it knows. It
- * arrives @c restrict and is not held past the call, so nothing here aliases it. The caller releases
+ * is not held past the call, so nothing here aliases it. The caller releases
  * it, and the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes
  * it. The borrow carries the round-key schedule and both subkeys, so two MACs are two borrows and
  * never collide.
@@ -37,7 +37,7 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*mac)(uint8_t *restrict, const uint8_t *, const uint8_t *, size_t, uint8_t *);
+    proto_bool (*mac)(uint8_t *, const uint8_t *, const uint8_t *, size_t, uint8_t *);
 } AesCmacNs;
 PROTOCORE_NS_LAYOUT(AesCmacNs, mac);
 
@@ -50,8 +50,7 @@ PROTOCORE_NS_LAYOUT(AesCmacNs, mac);
  * @param out PROTOCORE_AES_CMAC_LEN bytes
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_aes_cmac_mac(uint8_t *restrict work, const uint8_t *key, const uint8_t *msg, size_t msg_len,
-                                  uint8_t *out);
+proto_bool protocore_aes_cmac_mac(uint8_t *work, const uint8_t *key, const uint8_t *msg, size_t msg_len, uint8_t *out);
 
 /** @brief Module namespace. */
 PROTOCORE_NS AesCmacNs AesCmac PROTOCORE_UNUSED = {.mac = protocore_aes_cmac_mac};

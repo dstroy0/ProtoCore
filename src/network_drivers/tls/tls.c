@@ -98,7 +98,7 @@ const char *protocore_tls_alpn(uint8_t slot)
 // carries the fragment length (RFC 8446 sec 5.1), so a record that has not fully arrived is left
 // where it is and read again on the next pump - the ring is not consumed until the whole record is
 // there. Reports the record's total length, or 0 when it is not yet complete.
-static size_t frame_one(uint8_t *restrict work, uint8_t slot, TlsConn *c)
+static size_t frame_one(uint8_t *work, uint8_t slot, TlsConn *c)
 {
     ConnPoolV.slot = slot;
     ConnPool.available(protocore_conn_pool_span());
@@ -136,7 +136,7 @@ static size_t frame_one(uint8_t *restrict work, uint8_t slot, TlsConn *c)
 
 // Whatever the handshake owes, through the transport's context-safe raw write. The pump runs on a
 // worker, not in the stack's thread, so this is the one write it may make.
-static proto_bool emit(uint8_t *restrict work, uint8_t slot, size_t len)
+static proto_bool emit(uint8_t *work, uint8_t slot, size_t len)
 {
     if (len == 0)
     {

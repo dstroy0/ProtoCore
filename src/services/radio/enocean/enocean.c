@@ -22,7 +22,7 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-uint8_t protocore_enocean_esp3_crc8(uint8_t *restrict work, const uint8_t *buf, uint16_t len)
+uint8_t protocore_enocean_esp3_crc8(uint8_t *work, const uint8_t *buf, uint16_t len)
 {
     // The ESP3 CRC-8 (the u8CRC8Table generator) is the cataloge's CRC-8/SMBUS: poly 0x07, MSB-first, init 0,
     // no final XOR.
@@ -33,7 +33,7 @@ uint8_t protocore_enocean_esp3_crc8(uint8_t *restrict work, const uint8_t *buf, 
     return (uint8_t)CrcV.value;
 }
 
-int protocore_enocean_esp3_parse(uint8_t *restrict work, const uint8_t *raw, uint16_t len, protocore_esp3_packet *out)
+int protocore_enocean_esp3_parse(uint8_t *work, const uint8_t *raw, uint16_t len, protocore_esp3_packet *out)
 {
     int n = 0;
     if (!raw || len < 1)
@@ -87,9 +87,8 @@ int protocore_enocean_esp3_parse(uint8_t *restrict work, const uint8_t *raw, uin
     return (int)total;
 }
 
-uint16_t protocore_enocean_esp3_build(uint8_t *restrict work, protocore_esp3_type type, const uint8_t *data,
-                                      uint16_t data_len, const uint8_t *opt, uint8_t opt_len, uint8_t *out,
-                                      uint16_t cap)
+uint16_t protocore_enocean_esp3_build(uint8_t *work, protocore_esp3_type type, const uint8_t *data, uint16_t data_len,
+                                      const uint8_t *opt, uint8_t opt_len, uint8_t *out, uint16_t cap)
 {
     if (!out || data_len > PROTOCORE_ENOCEAN_MAX_DATA)
     {
@@ -120,7 +119,7 @@ uint16_t protocore_enocean_esp3_build(uint8_t *restrict work, protocore_esp3_typ
     return (uint16_t)total;
 }
 
-proto_bool protocore_enocean_erp1_parse(uint8_t *restrict work, const uint8_t *data, uint16_t len, protocore_erp1 *out)
+proto_bool protocore_enocean_erp1_parse(uint8_t *work, const uint8_t *data, uint16_t len, protocore_erp1 *out)
 {
     (void)work;
 
@@ -138,8 +137,8 @@ proto_bool protocore_enocean_erp1_parse(uint8_t *restrict work, const uint8_t *d
     return PROTO_TRUE;
 }
 
-uint16_t protocore_enocean_erp1_build(uint8_t *restrict work, uint8_t *out, uint16_t cap, uint8_t rorg,
-                                      const uint8_t *payload, uint8_t payload_len, uint32_t sender_id, uint8_t status)
+uint16_t protocore_enocean_erp1_build(uint8_t *work, uint8_t *out, uint16_t cap, uint8_t rorg, const uint8_t *payload,
+                                      uint8_t payload_len, uint32_t sender_id, uint8_t status)
 {
     (void)work;
 

@@ -176,7 +176,7 @@ static proto_bool ehlo_has_keyword(const char *buf, size_t len, const char *keyw
 // ---------------------------------------------------------------------------
 
 // Publish one session's outcome on the handle.
-static void finish(uint8_t *restrict work, SmtpResult r)
+static void finish(uint8_t *work, SmtpResult r)
 {
     SmtpV.result = r;
     SmtpV.ok = (r == SMTP_OK);
@@ -184,7 +184,7 @@ static void finish(uint8_t *restrict work, SmtpResult r)
 }
 
 // Write a whole command line; true only when every octet went out.
-static proto_bool send_line(uint8_t *restrict work, const char *line)
+static proto_bool send_line(uint8_t *work, const char *line)
 {
     size_t n = str.len(line, PROTOCORE_SMTP_LINE_MAX + 1);
     return n == 0 || SmtpV.transport.send(SmtpV.transport.ctx, (const uint8_t *)line, n) == (int)n;
@@ -192,7 +192,7 @@ static proto_bool send_line(uint8_t *restrict work, const char *line)
 
 // Read one reply, continuation lines included, into store->reply and record its code. With
 // @p keyword given, store->keyword_seen reports whether that ehlo-keyword appeared.
-static SmtpResult read_reply(uint8_t *restrict work, const char *keyword)
+static SmtpResult read_reply(uint8_t *work, const char *keyword)
 {
     size_t len = 0;
     for (;;)
@@ -221,7 +221,7 @@ static SmtpResult read_reply(uint8_t *restrict work, const char *keyword)
 
 // Send one CRLF-terminated command and read its reply. RFC 5321 sec 4.2: every command generates
 // exactly one reply. The code lands in store->code.
-static SmtpResult command(uint8_t *restrict work, const char *line)
+static SmtpResult command(uint8_t *work, const char *line)
 {
     if (!send_line(work, line))
     {
@@ -231,7 +231,7 @@ static SmtpResult command(uint8_t *restrict work, const char *line)
 }
 
 // Send @p line and require reply code @p want; report @p bad for any other code.
-static SmtpResult command_expect(uint8_t *restrict work, const char *line, int want, SmtpResult bad)
+static SmtpResult command_expect(uint8_t *work, const char *line, int want, SmtpResult bad)
 {
     SmtpResult r = command(work, line);
     if (r != SMTP_OK)
@@ -244,7 +244,7 @@ static SmtpResult command_expect(uint8_t *restrict work, const char *line, int w
 // The 220 Greeting, then EHLO. RFC 5321 sec 3.1 and sec 3.2: the server opens with a greeting and
 // the client answers with EHLO, which requests the list of extensions the server supports. The
 // command stays in store->line, which the STARTTLS path reissues verbatim.
-static SmtpResult initiate_session(uint8_t *restrict work)
+static SmtpResult initiate_session(uint8_t *work)
 {
     SmtpResult r = read_reply(work, NULL);
     if (r != SMTP_OK)
@@ -278,7 +278,7 @@ static SmtpResult initiate_session(uint8_t *restrict work)
 }
 
 // STARTTLS (RFC 3207 sec 4): the 220, the handshake, then the session starts over.
-static SmtpResult upgrade_starttls(uint8_t *restrict work)
+static SmtpResult upgrade_starttls(uint8_t *work)
 {
     // RFC 3207 sec 3: the keyword is how a server states it can negotiate TLS. Absent it, the
     // exchange stops here rather than carrying AUTH credentials over a cleartext channel.
@@ -307,7 +307,7 @@ static SmtpResult upgrade_starttls(uint8_t *restrict work)
 
 // One client response of the AUTH exchange: base64 of @p secret on a line of its own
 // (RFC 4954 sec 4; RFC 4648 sec 4 is the encoding). The reply code lands in store->code.
-static SmtpResult auth_response(uint8_t *restrict work, const char *secret)
+static SmtpResult auth_response(uint8_t *work, const char *secret)
 {
     size_t slen = str.len(secret, sizeof(SMTP_CTX(work)->b64));
     size_t elen = ((slen + 2) / 3) * 4; // base64 encodes three octets into four characters
@@ -327,7 +327,7 @@ static SmtpResult auth_response(uint8_t *restrict work, const char *secret)
 
 // AUTH LOGIN: the username, then the password, each answering a 334 challenge, and 235 on success
 // (RFC 4954 sec 4 and sec 6). LOGIN itself is not RFC-defined; see the SmtpAuthArgs doc.
-static SmtpResult authenticate(uint8_t *restrict work)
+static SmtpResult authenticate(uint8_t *work)
 {
     SmtpResult r = command_expect(work, "AUTH LOGIN\r\n", SMTP_REPLY_AUTH_CONTINUE, SMTP_ERR_AUTH);
     if (r != SMTP_OK)
@@ -356,7 +356,7 @@ static SmtpResult authenticate(uint8_t *restrict work)
 // "<CRLF>.<CRLF>" end of mail data indication (RFC 5321 sec 4.1.1.4). RFC 5321 sec 4.5.2: before
 // sending a line of mail text the client checks its first character, and a leading period gets one
 // more period inserted ahead of it. Returns the length, or a negative ::SmtpResult.
-static int build_content(uint8_t *restrict work)
+static int build_content(uint8_t *work)
 {
     char *out = SMTP_CTX(work)->content;
     const size_t cap = sizeof(SMTP_CTX(work)->content);
@@ -436,7 +436,7 @@ static int build_content(uint8_t *restrict work)
 // MAIL then RCPT, both built into store->line. RFC 5321 sec 4.1.1.2 gives MAIL the reverse-path and
 // sec 4.1.1.3 gives RCPT the forward-path; sec 4.2.3 lists 251 as "User not local; will forward to
 // <forward-path>", which accepts the recipient as surely as 250 does.
-static SmtpResult mail_transaction(uint8_t *restrict work)
+static SmtpResult mail_transaction(uint8_t *work)
 {
     protocore_sb sb_mail = {SMTP_CTX(work)->line, sizeof(SMTP_CTX(work)->line), 0, PROTO_TRUE};
     Sb.put(&sb_mail, "MAIL FROM:<");
@@ -477,7 +477,7 @@ static SmtpResult mail_transaction(uint8_t *restrict work)
 // DATA, the assembled content, then the reply that accepts or refuses the message. RFC 5321
 // sec 4.1.1.4: the receiver normally sends 354 to DATA and then treats the lines that follow as
 // mail data; on the end of mail data indication it MUST send an OK reply or a failure reply.
-static SmtpResult data_transfer(uint8_t *restrict work)
+static SmtpResult data_transfer(uint8_t *work)
 {
     SmtpResult r = command_expect(work, "DATA\r\n", SMTP_REPLY_START_INPUT, SMTP_ERR_PROTOCOL);
     if (r != SMTP_OK)
@@ -520,7 +520,7 @@ uint8_t *protocore_smtp_span(void)
     return s_own.span;
 }
 
-void protocore_smtp_run(uint8_t *restrict work)
+void protocore_smtp_run(uint8_t *work)
 {
     SMTP_CTX(work)->code = 0;
     SMTP_CTX(work)->keyword_seen = PROTO_FALSE;
@@ -664,7 +664,7 @@ static proto_bool wire_starttls(void *ctx)
 }
 
 // Dial the server, step the open to a connection, walk the session, close.
-void protocore_smtp_send(uint8_t *restrict work)
+void protocore_smtp_send(uint8_t *work)
 {
     SMTP_CTX(work)->code = 0;
     if (!SmtpV.session.host)
@@ -734,7 +734,7 @@ void protocore_smtp_send(uint8_t *restrict work)
 
 #else // no outbound transport is built: run() over a caller's seam still works, send() cannot dial.
 
-void protocore_smtp_send(uint8_t *restrict work)
+void protocore_smtp_send(uint8_t *work)
 {
     finish(work, SMTP_ERR_CONNECT);
 }

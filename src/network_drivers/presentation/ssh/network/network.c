@@ -145,7 +145,7 @@ static void ensure_init(void)
 // Outbound: frame + (encrypt/MAC) one SSH message and write it to the socket.
 // ---------------------------------------------------------------------------
 
-void protocore_ssh_network_emit(uint8_t *restrict work)
+void protocore_ssh_network_emit(uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshNetworkV.ssh_slot;
@@ -181,7 +181,7 @@ void protocore_ssh_network_emit(uint8_t *restrict work)
 
 // Put the packet the codec left flagged on the wire: as many bytes as the send window takes now,
 // the rest on a later pass, and the release - which wipes the packet - once the last byte is out.
-void protocore_ssh_network_tx_drain(uint8_t *restrict work)
+void protocore_ssh_network_tx_drain(uint8_t *work)
 {
     (void)work;
     const uint8_t conn_slot = SshNetworkV.conn_slot;
@@ -219,7 +219,7 @@ void protocore_ssh_network_tx_drain(uint8_t *restrict work)
 
 // Frame one built SSH message into its own binary packet and put it on the slot's socket
 // (RFC 4253 sec 6: one SSH message per packet). The wire is the slot's own span at SSH_OFF_WIRE.
-void protocore_ssh_network_write_msg(uint8_t *restrict work)
+void protocore_ssh_network_write_msg(uint8_t *work)
 {
     (void)work;
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
@@ -250,7 +250,7 @@ void protocore_ssh_network_write_msg(uint8_t *restrict work)
 
 // The span a message may be built in so the framer wraps it without moving it. Null when the slot
 // has no stream or no storage; @p cap takes what is left of the wire after the framing header.
-void protocore_ssh_network_payload_region(uint8_t *restrict work)
+void protocore_ssh_network_payload_region(uint8_t *work)
 {
     (void)work;
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
@@ -273,7 +273,7 @@ void protocore_ssh_network_payload_region(uint8_t *restrict work)
 }
 
 // Frame the @p plen bytes already sitting in the region above and write them, no copy.
-void protocore_ssh_network_write_msg_at(uint8_t *restrict work)
+void protocore_ssh_network_write_msg_at(uint8_t *work)
 {
     (void)work;
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
@@ -301,7 +301,7 @@ void protocore_ssh_network_write_msg_at(uint8_t *restrict work)
     SshNetworkV.i32 = stream_write(ssh_slot, wire, wlen) ? 0 : -1;
 }
 
-void protocore_ssh_network_claim(uint8_t *restrict work)
+void protocore_ssh_network_claim(uint8_t *work)
 {
     (void)work;
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
@@ -321,7 +321,7 @@ void protocore_ssh_network_claim(uint8_t *restrict work)
     return;
 }
 
-void protocore_ssh_network_release(uint8_t *restrict work)
+void protocore_ssh_network_release(uint8_t *work)
 {
     (void)work;
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
@@ -335,7 +335,7 @@ void protocore_ssh_network_release(uint8_t *restrict work)
 }
 
 // The lowest SSH slot no socket owns, or 0xFF when every one is taken.
-void protocore_ssh_network_slot_free(uint8_t *restrict work)
+void protocore_ssh_network_slot_free(uint8_t *work)
 {
     (void)work;
     ensure_init();
@@ -353,7 +353,7 @@ void protocore_ssh_network_slot_free(uint8_t *restrict work)
 
 // True when the pair is still the one claim() recorded: a slot whose socket has been recycled under
 // it is not this connection's, and the caller must leave it alone.
-void protocore_ssh_network_owns(uint8_t *restrict work)
+void protocore_ssh_network_owns(uint8_t *work)
 {
     (void)work;
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
@@ -415,7 +415,7 @@ static int *chan_cid_of(uint8_t ssh_slot, uint32_t channel)
     return &SSH_NETWORK_CTX(protocore_ssh_network_span())->chan_cid[ssh_slot][channel];
 }
 
-void protocore_ssh_network_chan_open(uint8_t *restrict work)
+void protocore_ssh_network_chan_open(uint8_t *work)
 {
     (void)work;
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
@@ -446,7 +446,7 @@ void protocore_ssh_network_chan_open(uint8_t *restrict work)
 
 // Record a socket the listener already accepted. The dial half is chan_open; this is its peer for
 // the connections that arrive rather than being asked for.
-void protocore_ssh_network_chan_adopt(uint8_t *restrict work)
+void protocore_ssh_network_chan_adopt(uint8_t *work)
 {
     (void)work;
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
@@ -466,7 +466,7 @@ void protocore_ssh_network_chan_adopt(uint8_t *restrict work)
 
 // The channel a socket is bridged to. The transport's callbacks arrive keyed by socket, and this is
 // the one place that mapping lives.
-void protocore_ssh_network_chan_by_cid(uint8_t *restrict work)
+void protocore_ssh_network_chan_by_cid(uint8_t *work)
 {
     (void)work;
     const int cid = SshNetworkV.dial.cid;
@@ -495,7 +495,7 @@ void protocore_ssh_network_chan_by_cid(uint8_t *restrict work)
     return;
 }
 
-void protocore_ssh_network_chan_write(uint8_t *restrict work)
+void protocore_ssh_network_chan_write(uint8_t *work)
 {
     (void)work;
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
@@ -515,7 +515,7 @@ void protocore_ssh_network_chan_write(uint8_t *restrict work)
     SshNetworkV.i32 = (int)len;
 }
 
-void protocore_ssh_network_chan_read(uint8_t *restrict work)
+void protocore_ssh_network_chan_read(uint8_t *work)
 {
     (void)work;
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
@@ -537,7 +537,7 @@ void protocore_ssh_network_chan_read(uint8_t *restrict work)
 }
 
 // True once the bridged socket has closed and every byte it held has been read.
-void protocore_ssh_network_chan_drained(uint8_t *restrict work)
+void protocore_ssh_network_chan_drained(uint8_t *work)
 {
     (void)work;
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
@@ -555,7 +555,7 @@ void protocore_ssh_network_chan_drained(uint8_t *restrict work)
     SshNetworkV.ok = gone && TcpClientV.n == 0;
 }
 
-void protocore_ssh_network_chan_avail(uint8_t *restrict work)
+void protocore_ssh_network_chan_avail(uint8_t *work)
 {
     (void)work;
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
@@ -572,7 +572,7 @@ void protocore_ssh_network_chan_avail(uint8_t *restrict work)
     return;
 }
 
-void protocore_ssh_network_chan_close(uint8_t *restrict work)
+void protocore_ssh_network_chan_close(uint8_t *work)
 {
     (void)work;
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
@@ -587,7 +587,7 @@ void protocore_ssh_network_chan_close(uint8_t *restrict work)
     *slot = -1;
 }
 
-void protocore_ssh_network_chan_close_all(uint8_t *restrict work)
+void protocore_ssh_network_chan_close_all(uint8_t *work)
 {
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
     if (ssh_slot >= MAX_SSH_CONNS)

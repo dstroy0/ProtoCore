@@ -107,7 +107,7 @@ static const uint32_t SIGMA3 = 0x6b206574;
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_chacha20_xor_(uint8_t *restrict work, const uint8_t *key, const uint8_t *iv, uint64_t counter,
+proto_bool protocore_chacha20_xor_(uint8_t *work, const uint8_t *key, const uint8_t *iv, uint64_t counter,
                                    const uint8_t *in, uint8_t *out, size_t len)
 {
     if (!key || !iv || !out)
@@ -144,8 +144,8 @@ proto_bool protocore_chacha20_xor_(uint8_t *restrict work, const uint8_t *key, c
     return PROTO_TRUE;
 }
 
-proto_bool protocore_chacha20_block_ietf(uint8_t *restrict work, const uint8_t *key, uint32_t counter,
-                                         const uint8_t *nonce, uint8_t *out)
+proto_bool protocore_chacha20_block_ietf(uint8_t *work, const uint8_t *key, uint32_t counter, const uint8_t *nonce,
+                                         uint8_t *out)
 {
     if (!key || !nonce || !out)
     {
