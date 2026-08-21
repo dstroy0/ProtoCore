@@ -3,10 +3,10 @@
 
 protocore_add_module(crypto/aead/chachapoly
   GATE PROTOCORE_ENABLE_CHACHAPOLY
+  OPT 2
   SOURCES chachapoly.c
   PRIVATE_DEPS
     crypto/cipher/chacha20
-    crypto/crypto_opt
     crypto/ct_eq
     crypto/mac/poly1305
 )

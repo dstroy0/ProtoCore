@@ -25,11 +25,9 @@
 #include "crypto/cipher/aes_block/aes_block.h" // native software AES-128/256 key schedule and single-block encrypt
 #endif
 #include "crypto/aead/aesccm/aesccm.h"
-#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq
 #include "mmgr/protomem/protomem.h"
 
-PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------

@@ -3,10 +3,10 @@
 
 protocore_add_module(crypto/cipher/aes_block
   GATE PROTOCORE_ENABLE_AES_BLOCK
+  OPT 2
   SOURCES aes_block.c
   DEPS
     crypto/cipher/aes_sbox
     mmgr/protomem
   PRIVATE_DEPS
-    crypto/crypto_opt
 )

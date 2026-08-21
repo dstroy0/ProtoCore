@@ -20,11 +20,9 @@
 #if !PROTOCORE_HAS_HW_AES
 #include "crypto/cipher/aes_block/aes_block.h" // native software AES-128 block
 #endif
-#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/mac/aes_cmac/aes_cmac.h"
 #include "mmgr/protomem/protomem.h"
 
-PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------

@@ -10,13 +10,11 @@
 
 #if PROTOCORE_ENABLE_MD
 
-#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/hash/md/md.h"
 #include "mmgr/endian/endian.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/secure/secure.h" // the secure pool: digest state, wiped on release
 
-PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
 // The one definition of MdCtx - private to this TU. It sits at MD_OFF_CTX in the caller's borrow, so

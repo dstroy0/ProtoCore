@@ -3,9 +3,9 @@
 
 protocore_add_module(crypto/asymmetric/ecdsa
   GATE PROTOCORE_ENABLE_ECDSA
+  OPT 2
   SOURCES ecdsa.c
   PRIVATE_DEPS
-    crypto/crypto_opt
     crypto/hash/sha256
     crypto/mac/hmac_sha256
     mmgr/protomem

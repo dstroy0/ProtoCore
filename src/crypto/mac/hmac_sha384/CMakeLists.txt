@@ -3,9 +3,9 @@
 
 protocore_add_module(crypto/mac/hmac_sha384
   GATE PROTOCORE_ENABLE_HMAC_SHA384
+  OPT 2
   SOURCES hmac_sha384.c
   PRIVATE_DEPS
-    crypto/crypto_opt
     crypto/hash/sha384
     mmgr/protomem
 )

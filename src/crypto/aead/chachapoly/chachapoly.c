@@ -15,11 +15,9 @@
 
 #include "crypto/aead/chachapoly/chachapoly.h"
 #include "crypto/cipher/chacha20/chacha20.h"
-#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq
 #include "crypto/mac/poly1305/poly1305.h"
 
-PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
 // The one definition, private to this TU. It sits at CHACHAPOLY_OFF_CTX in the caller's borrow, so its size

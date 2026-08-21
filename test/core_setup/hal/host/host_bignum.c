@@ -19,7 +19,6 @@
 
 #include "config/platform/platform.h" // PROTOCORE_HAS_HW_BIGNUM, PROTOCORE_HOST
 #include "crypto/asymmetric/bignum/bignum.h"
-#include "crypto/crypto_opt/crypto_opt.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/secure/secure.h"
 
@@ -30,7 +29,6 @@
     "ProtoCore: a host build that states PROTOCORE_HAS_HW_BIGNUM 1 reaches the modexp through the RSA/MPI accelerator, so it must also state PROTOCORE_RSA_MODMUL_HW 1 and link test/core_setup/hal/host/host_crypto_hal.c. Set PROTOCORE_HAS_HW_BIGNUM 0 for the portable software Montgomery backend."
 #endif
 
-PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
 // The Montgomery constants the accelerator's MODMULT takes, for the one modulus this backend runs

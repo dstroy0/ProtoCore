@@ -3,9 +3,9 @@
 
 protocore_add_module(crypto/asymmetric/curve25519
   GATE PROTOCORE_ENABLE_CURVE25519
+  OPT 2
   SOURCES curve25519.c
   PRIVATE_DEPS
     crypto/asymmetric/fe25519
-    crypto/crypto_opt
     mmgr/protomem
 )

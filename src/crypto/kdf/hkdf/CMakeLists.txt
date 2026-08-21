@@ -3,9 +3,9 @@
 
 protocore_add_module(crypto/kdf/hkdf
   GATE PROTOCORE_ENABLE_HKDF
+  OPT 2
   SOURCES hkdf.c
   PRIVATE_DEPS
-    crypto/crypto_opt
     crypto/mac/hmac_sha256
     mmgr/protomem
     mmgr/protostr

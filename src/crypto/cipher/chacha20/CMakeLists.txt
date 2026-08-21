@@ -3,7 +3,7 @@
 
 protocore_add_module(crypto/cipher/chacha20
   GATE PROTOCORE_ENABLE_CHACHA20
+  OPT 2
   SOURCES chacha20.c
   PRIVATE_DEPS
-    crypto/crypto_opt
 )

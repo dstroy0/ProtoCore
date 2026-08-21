@@ -3,9 +3,9 @@
 
 protocore_add_module(crypto/mac/hmac_sha512
   GATE PROTOCORE_ENABLE_HMAC_SHA512
+  OPT 2
   SOURCES hmac_sha512.c
   PRIVATE_DEPS
-    crypto/crypto_opt
     crypto/hash/sha512
     mmgr/protomem
 )

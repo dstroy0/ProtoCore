@@ -48,6 +48,7 @@ ENTRY = {
     "config/platform/platform_prototypes.h",
     "config/platform/platform_error.h",
     "config/platform/compiler_directives.h",
+    "config/platform/ns_contract.h",
     "config/hardware_capabilities/hw_caps_en.h",
     "config/hardware_capabilities/hw_caps_en_error.h",
     "config/hardware_capabilities/hw_caps_prototypes.h",

@@ -3,8 +3,8 @@
 
 protocore_add_module(crypto/mac/poly1305
   GATE PROTOCORE_ENABLE_POLY1305
+  OPT 2
   SOURCES poly1305.c
   PRIVATE_DEPS
-    crypto/crypto_opt
     mmgr/protomem
 )

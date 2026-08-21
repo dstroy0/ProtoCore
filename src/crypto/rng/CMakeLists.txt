@@ -3,10 +3,10 @@
 
 protocore_add_module(crypto/rng
   GATE PROTOCORE_ENABLE_RNG
+  OPT 2
   SOURCES rng.c
   PRIVATE_DEPS
     crypto/cipher/chacha20
-    crypto/crypto_opt
     mmgr/protomem
     mmgr/secure
 )

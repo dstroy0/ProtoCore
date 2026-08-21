@@ -19,9 +19,7 @@
 #if PROTOCORE_ENABLE_FE25519
 
 #include "crypto/asymmetric/fe25519/fe25519.h"
-#include "crypto/crypto_opt/crypto_opt.h"
 
-PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_FE25519_MPI_HW

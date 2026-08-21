@@ -17,10 +17,8 @@
 #if PROTOCORE_ENABLE_BIGNUM
 
 #include "crypto/asymmetric/bignum/bignum.h"
-#include "crypto/crypto_opt/crypto_opt.h"
 #include "mmgr/protomem/protomem.h"
 
-PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
 // The one definition of BignumCtx - private to this TU. It sits at BIGNUM_OFF_CTX in the caller's

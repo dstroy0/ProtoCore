@@ -3,12 +3,12 @@
 
 protocore_add_module(crypto/asymmetric/ed25519
   GATE PROTOCORE_ENABLE_ED25519
+  OPT 2
   SOURCES ed25519.c
   PRIVATE_DEPS
     crypto/asymmetric/curve25519
     crypto/asymmetric/ed25519_comb_table
     crypto/asymmetric/fe25519
-    crypto/crypto_opt
     crypto/ct_eq
     crypto/hash/sha512
 )

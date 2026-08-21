@@ -27,13 +27,11 @@
 #include "crypto/cipher/aes_block/aes_block.h" // software AES-256 key schedule and single-block encrypt
 #endif
 #include "crypto/aead/aesgcm/aesgcm.h"
-#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/ct_eq/ct_eq.h"     // protocore_ct_eq
 #include "crypto/mac/ghash/ghash.h" // the 4-bit-table GF(2^128) hash
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/rawmemcpy/rawmemcpy.h" // proto_raw_u32 - the aliasing-permitted word load
 
-PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
 // --- the AES-256 block context - one member, two platform shapes -----------

@@ -3,9 +3,9 @@
 
 protocore_add_module(crypto/pqc/mlkem
   GATE PROTOCORE_ENABLE_MLKEM
+  OPT 2
   SOURCES mlkem.c
   PRIVATE_DEPS
-    crypto/crypto_opt
     crypto/hash/sha3
     mmgr/protomem
 )

@@ -3,9 +3,9 @@
 
 protocore_add_module(crypto/kdf/kdf
   GATE PROTOCORE_ENABLE_KDF
+  OPT 2
   SOURCES kdf.c
   PRIVATE_DEPS
-    crypto/crypto_opt
     crypto/mac/hmac_sha256
     mmgr/endian
     mmgr/protomem

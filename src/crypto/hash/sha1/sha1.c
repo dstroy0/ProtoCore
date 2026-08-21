@@ -16,12 +16,10 @@
 
 #if PROTOCORE_HAS_HW_SHA
 #endif
-#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/hash/sha1/sha1.h"
 #include "mmgr/endian/endian.h" // the big-endian serializers the framing and the rounds step with
 #include "mmgr/protomem/protomem.h"
 
-PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
 // The one definition of Sha1Ctx - private to this TU. It sits at SHA1_OFF_CTX in the caller's borrow,
