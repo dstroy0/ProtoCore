@@ -53,7 +53,7 @@ uint8_t *protocore_guardrails_span(void)
     return s_own.span;
 }
 
-void protocore_guardrails_eval(uint8_t *restrict work)
+void protocore_guardrails_eval(uint8_t *work)
 {
     (void)work;
     const protocore_health *h = GuardrailsV.health;
@@ -82,7 +82,7 @@ void protocore_guardrails_eval(uint8_t *restrict work)
     GuardrailsV.breaches = b;
 }
 
-void protocore_guardrails_json(uint8_t *restrict work)
+void protocore_guardrails_json(uint8_t *work)
 {
     (void)work;
     const protocore_health *h = GuardrailsV.health;
@@ -120,7 +120,7 @@ void protocore_guardrails_json(uint8_t *restrict work)
     GuardrailsV.n = w;
 }
 
-void protocore_guardrails_sample(uint8_t *restrict work)
+void protocore_guardrails_sample(uint8_t *work)
 {
     (void)work;
     protocore_health *h = GuardrailsV.health;
@@ -139,12 +139,12 @@ void protocore_guardrails_sample(uint8_t *restrict work)
 #endif
 }
 
-void protocore_guardrails_begin(uint8_t *restrict work)
+void protocore_guardrails_begin(uint8_t *work)
 {
     GUARDRAILS_CTX(work)->cb = GuardrailsV.cb;
 }
 
-void protocore_guardrails_check(uint8_t *restrict work)
+void protocore_guardrails_check(uint8_t *work)
 {
     protocore_health h;
     GuardrailsV.health = &h;

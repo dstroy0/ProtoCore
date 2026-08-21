@@ -22,9 +22,9 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_mbplus_crc(uint8_t *restrict work);
+void protocore_mbplus_crc(uint8_t *work);
 
-void protocore_mbplus_crc(uint8_t *restrict work)
+void protocore_mbplus_crc(uint8_t *work)
 {
     (void)work;
     const uint8_t *bytes = MbplusV.crc_args.bytes;
@@ -38,7 +38,7 @@ void protocore_mbplus_crc(uint8_t *restrict work)
     MbplusV.value = (uint16_t)CrcV.value;
 }
 
-void protocore_mbplus_build(uint8_t *restrict work)
+void protocore_mbplus_build(uint8_t *work)
 {
     uint8_t address = MbplusV.build_args.address;
     uint8_t control = MbplusV.build_args.control;
@@ -78,7 +78,7 @@ void protocore_mbplus_build(uint8_t *restrict work)
     MbplusV.n = i;
 }
 
-void protocore_mbplus_parse(uint8_t *restrict work)
+void protocore_mbplus_parse(uint8_t *work)
 {
     const uint8_t *frame = MbplusV.parse_args.frame;
     size_t len = MbplusV.parse_args.len;
@@ -116,7 +116,7 @@ void protocore_mbplus_parse(uint8_t *restrict work)
     MbplusV.ok = PROTO_TRUE;
 }
 
-void protocore_mbplus_next_token(uint8_t *restrict work)
+void protocore_mbplus_next_token(uint8_t *work)
 {
     (void)work;
     uint8_t current = MbplusV.next_token_args.current;

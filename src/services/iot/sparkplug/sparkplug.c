@@ -181,7 +181,7 @@ uint8_t *protocore_sparkplug_span(void)
 
 // Join `spBv1.0/group_id/message_type/edge_node_id[/device_id]` (Sparkplug 3.0.0 sec 4.1) into
 // ns->topic_out, and report its length in ns->n. A topic that does not fit writes nothing.
-void protocore_sparkplug_build_topic(uint8_t *restrict work)
+void protocore_sparkplug_build_topic(uint8_t *work)
 {
     (void)work;
     SparkplugV.n = 0;
@@ -232,7 +232,7 @@ void protocore_sparkplug_build_topic(uint8_t *restrict work)
 }
 
 // Serialize ns->metrics.list[0] as one Metric message into ns->out, reporting its length in ns->n.
-void protocore_sparkplug_build_metric(uint8_t *restrict work)
+void protocore_sparkplug_build_metric(uint8_t *work)
 {
     (void)work;
     SparkplugV.n = 0;
@@ -248,7 +248,7 @@ void protocore_sparkplug_build_metric(uint8_t *restrict work)
 // Serialize a Payload (Sparkplug 3.0.0 sec 6.4.5): timestamp(1), then metrics(2) once per Metric,
 // then seq(3). Each Metric goes into the codec's scratch first; one that overflows it fails the
 // whole build closed.
-void protocore_sparkplug_build_payload(uint8_t *restrict work)
+void protocore_sparkplug_build_payload(uint8_t *work)
 {
     SparkplugV.n = 0;
     SparkplugV.ok = PROTO_FALSE;
@@ -281,7 +281,7 @@ void protocore_sparkplug_build_payload(uint8_t *restrict work)
 
 // Read a Payload's timestamp(1) and seq(3) from ns->source into ns->header. metrics(2), uuid(4) and
 // body(5) are stepped over.
-void protocore_sparkplug_parse_payload(uint8_t *restrict work)
+void protocore_sparkplug_parse_payload(uint8_t *work)
 {
     (void)work;
     SparkplugV.ok = PROTO_FALSE;
@@ -324,7 +324,7 @@ void protocore_sparkplug_parse_payload(uint8_t *restrict work)
 
 // Report the next metrics(2) sub-message of a Payload in ns->metric_bytes / ns->metric_len and
 // advance ns->source.cursor past it. False at the end of the Payload or on a malformed field.
-void protocore_sparkplug_next_metric(uint8_t *restrict work)
+void protocore_sparkplug_next_metric(uint8_t *work)
 {
     (void)work;
     SparkplugV.ok = PROTO_FALSE;
@@ -461,7 +461,7 @@ static void spb_apply_value_field(SpbMetricDecoded *out, const ProtobufRecord *f
 }
 
 // Decode the Metric in ns->source into ns->metric: the metadata fields and the value oneof member.
-void protocore_sparkplug_parse_metric(uint8_t *restrict work)
+void protocore_sparkplug_parse_metric(uint8_t *work)
 {
     (void)work;
     SparkplugV.ok = PROTO_FALSE;

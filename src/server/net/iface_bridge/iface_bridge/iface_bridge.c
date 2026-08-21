@@ -39,7 +39,7 @@ static_assert(
 #define IFACE_BRIDGE_CTX(w) ((BridgeCtx *)(void *)((w) + IFACE_BRIDGE_OFF_CTX))
 
 // The entries this file calls before reaching their definitions.
-void protocore_iface_bridge_find(uint8_t *restrict work);
+void protocore_iface_bridge_find(uint8_t *work);
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -61,7 +61,7 @@ uint8_t *protocore_iface_bridge_span(void)
     return s_own.span;
 }
 
-void protocore_iface_bridge_clear(uint8_t *restrict work)
+void protocore_iface_bridge_clear(uint8_t *work)
 {
 
     for (uint8_t i = 0; i < PROTOCORE_BRIDGE_MAX_RULES; i++)
@@ -71,7 +71,7 @@ void protocore_iface_bridge_clear(uint8_t *restrict work)
     IFACE_BRIDGE_CTX(work)->count = 0;
 }
 
-void protocore_iface_bridge_add(uint8_t *restrict work)
+void protocore_iface_bridge_add(uint8_t *work)
 {
     const BridgeRule *rule = IfaceBridgeV.add_args.rule;
 
@@ -103,7 +103,7 @@ void protocore_iface_bridge_add(uint8_t *restrict work)
     return; // table full
 }
 
-void protocore_iface_bridge_map(uint8_t *restrict work)
+void protocore_iface_bridge_map(uint8_t *work)
 {
     (void)work;
     const char *ip = IfaceBridgeV.map_args.ip;
@@ -137,7 +137,7 @@ void protocore_iface_bridge_map(uint8_t *restrict work)
     protocore_iface_bridge_add(work);
 }
 
-void protocore_iface_bridge_find(uint8_t *restrict work)
+void protocore_iface_bridge_find(uint8_t *work)
 {
     uint16_t port = IfaceBridgeV.find_args.port;
     BridgeProto proto = IfaceBridgeV.find_args.proto;
@@ -154,13 +154,13 @@ void protocore_iface_bridge_find(uint8_t *restrict work)
     IfaceBridgeV.rule = NULL;
 }
 
-void protocore_iface_bridge_count(uint8_t *restrict work)
+void protocore_iface_bridge_count(uint8_t *work)
 {
 
     IfaceBridgeV.u8 = IFACE_BRIDGE_CTX(work)->count;
 }
 
-void protocore_iface_bridge_txn_parse(uint8_t *restrict work)
+void protocore_iface_bridge_txn_parse(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = IfaceBridgeV.txn_parse_args.buf;
@@ -196,7 +196,7 @@ void protocore_iface_bridge_txn_parse(uint8_t *restrict work)
     IfaceBridgeV.n = (size_t)PROTOCORE_BRIDGE_TXN_HDR + wl;
 }
 
-void protocore_iface_bridge_txn_build(uint8_t *restrict work)
+void protocore_iface_bridge_txn_build(uint8_t *work)
 {
     (void)work;
     uint8_t *out = IfaceBridgeV.txn_build_args.out;

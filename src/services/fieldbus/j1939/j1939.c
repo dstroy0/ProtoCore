@@ -39,11 +39,11 @@ uint8_t *protocore_j1939_span(void)
     return s_own.span;
 }
 
-void protocore_j1939_decode_id(uint8_t *restrict work);
-void protocore_j1939_tp_num_packets(uint8_t *restrict work);
-void protocore_j1939_tp_reset(uint8_t *restrict work);
+void protocore_j1939_decode_id(uint8_t *work);
+void protocore_j1939_tp_num_packets(uint8_t *work);
+void protocore_j1939_tp_reset(uint8_t *work);
 
-void protocore_j1939_encode_id(uint8_t *restrict work)
+void protocore_j1939_encode_id(uint8_t *work)
 {
     (void)work;
     uint32_t *id = J1939V.encode_id_args.id;
@@ -68,7 +68,7 @@ void protocore_j1939_encode_id(uint8_t *restrict work)
     J1939V.ok = PROTO_TRUE;
 }
 
-void protocore_j1939_decode_id(uint8_t *restrict work)
+void protocore_j1939_decode_id(uint8_t *work)
 {
     (void)work;
     uint32_t id = J1939V.decode_id_args.id;
@@ -130,7 +130,7 @@ static_assert(J1939_OFF_CTX % _Alignof(J1939Ctx) == 0,
 #define J1939_CTX(w) ((J1939Ctx *)(void *)((w) + J1939_OFF_CTX))
 
 // Fill a CanFrame as a 29-bit extended frame, from the operands on the context.
-static proto_bool ext_frame(uint8_t *restrict work)
+static proto_bool ext_frame(uint8_t *work)
 {
     uint32_t id;
     J1939V.encode_id_args.id = &id;
@@ -152,7 +152,7 @@ static proto_bool ext_frame(uint8_t *restrict work)
     return PROTO_TRUE;
 }
 
-void protocore_j1939_build_message(uint8_t *restrict work)
+void protocore_j1939_build_message(uint8_t *work)
 {
     CanFrame *out = J1939V.build_message_args.out;
     uint8_t priority = J1939V.build_message_args.priority;
@@ -185,7 +185,7 @@ void protocore_j1939_build_message(uint8_t *restrict work)
     J1939V.ok = PROTO_TRUE;
 }
 
-void protocore_j1939_build_request(uint8_t *restrict work)
+void protocore_j1939_build_request(uint8_t *work)
 {
     CanFrame *out = J1939V.build_request_args.out;
     uint8_t sa = J1939V.build_request_args.sa;
@@ -217,7 +217,7 @@ void protocore_j1939_build_request(uint8_t *restrict work)
     J1939V.ok = PROTO_TRUE;
 }
 
-void protocore_j1939_build_name(uint8_t *restrict work)
+void protocore_j1939_build_name(uint8_t *work)
 {
     (void)work;
     proto_bool arbitrary_address_capable = J1939V.build_name_args.arbitrary_address_capable;
@@ -247,7 +247,7 @@ void protocore_j1939_build_name(uint8_t *restrict work)
     J1939V.value = n;
 }
 
-void protocore_j1939_build_address_claim(uint8_t *restrict work)
+void protocore_j1939_build_address_claim(uint8_t *work)
 {
     CanFrame *out = J1939V.build_address_claim_args.out;
     uint8_t sa = J1939V.build_address_claim_args.sa;
@@ -275,7 +275,7 @@ void protocore_j1939_build_address_claim(uint8_t *restrict work)
     J1939V.ok = PROTO_TRUE;
 }
 
-void protocore_j1939_tp_num_packets(uint8_t *restrict work)
+void protocore_j1939_tp_num_packets(uint8_t *work)
 {
     (void)work;
     uint16_t total_size = J1939V.tp_num_packets_args.total_size;
@@ -283,7 +283,7 @@ void protocore_j1939_tp_num_packets(uint8_t *restrict work)
     J1939V.u8 = (uint8_t)((total_size + (J1939_TP_DT_LEN - 1)) / J1939_TP_DT_LEN);
 }
 
-void protocore_j1939_build_bam_cm(uint8_t *restrict work)
+void protocore_j1939_build_bam_cm(uint8_t *work)
 {
     CanFrame *out = J1939V.build_bam_cm_args.out;
     uint8_t sa = J1939V.build_bam_cm_args.sa;
@@ -322,7 +322,7 @@ void protocore_j1939_build_bam_cm(uint8_t *restrict work)
     J1939V.ok = PROTO_TRUE;
 }
 
-void protocore_j1939_build_tp_dt(uint8_t *restrict work)
+void protocore_j1939_build_tp_dt(uint8_t *work)
 {
     CanFrame *out = J1939V.build_tp_dt_args.out;
     uint8_t sa = J1939V.build_tp_dt_args.sa;
@@ -354,7 +354,7 @@ void protocore_j1939_build_tp_dt(uint8_t *restrict work)
     J1939V.ok = PROTO_TRUE;
 }
 
-void protocore_j1939_tp_reset(uint8_t *restrict work)
+void protocore_j1939_tp_reset(uint8_t *work)
 {
     (void)work;
     J1939TpRx *rx = J1939V.tp_reset_args.rx;
@@ -365,7 +365,7 @@ void protocore_j1939_tp_reset(uint8_t *restrict work)
     }
 }
 
-void protocore_j1939_tp_feed(uint8_t *restrict work)
+void protocore_j1939_tp_feed(uint8_t *work)
 {
     J1939TpRx *rx = J1939V.tp_feed_args.rx;
     const CanFrame *f = J1939V.tp_feed_args.f;
@@ -458,7 +458,7 @@ void protocore_j1939_tp_feed(uint8_t *restrict work)
 
 // --- typed decoders (SAE J1939-71) ---
 
-void protocore_j1939_decode_eec1(uint8_t *restrict work)
+void protocore_j1939_decode_eec1(uint8_t *work)
 {
     const CanFrame *f = J1939V.decode_eec1_args.f;
     J1939Eec1 *out = J1939V.decode_eec1_args.out;
@@ -487,7 +487,7 @@ void protocore_j1939_decode_eec1(uint8_t *restrict work)
     J1939V.ok = PROTO_TRUE;
 }
 
-void protocore_j1939_decode_et1(uint8_t *restrict work)
+void protocore_j1939_decode_et1(uint8_t *work)
 {
     const CanFrame *f = J1939V.decode_et1_args.f;
     J1939Et1 *out = J1939V.decode_et1_args.out;
@@ -516,7 +516,7 @@ void protocore_j1939_decode_et1(uint8_t *restrict work)
     J1939V.ok = PROTO_TRUE;
 }
 
-void protocore_j1939_decode_lfe(uint8_t *restrict work)
+void protocore_j1939_decode_lfe(uint8_t *work)
 {
     const CanFrame *f = J1939V.decode_lfe_args.f;
     J1939Lfe *out = J1939V.decode_lfe_args.out;
@@ -549,7 +549,7 @@ void protocore_j1939_decode_lfe(uint8_t *restrict work)
     J1939V.ok = PROTO_TRUE;
 }
 
-void protocore_j1939_decode_amb(uint8_t *restrict work)
+void protocore_j1939_decode_amb(uint8_t *work)
 {
     const CanFrame *f = J1939V.decode_amb_args.f;
     J1939Amb *out = J1939V.decode_amb_args.out;
@@ -584,7 +584,7 @@ void protocore_j1939_decode_amb(uint8_t *restrict work)
     J1939V.ok = PROTO_TRUE;
 }
 
-void protocore_j1939_decode_ic1(uint8_t *restrict work)
+void protocore_j1939_decode_ic1(uint8_t *work)
 {
     const CanFrame *f = J1939V.decode_ic1_args.f;
     J1939Ic1 *out = J1939V.decode_ic1_args.out;
@@ -621,7 +621,7 @@ void protocore_j1939_decode_ic1(uint8_t *restrict work)
     J1939V.ok = PROTO_TRUE;
 }
 
-void protocore_j1939_decode_vd(uint8_t *restrict work)
+void protocore_j1939_decode_vd(uint8_t *work)
 {
     const CanFrame *f = J1939V.decode_vd_args.f;
     J1939Vd *out = J1939V.decode_vd_args.out;
@@ -652,7 +652,7 @@ void protocore_j1939_decode_vd(uint8_t *restrict work)
     J1939V.ok = PROTO_TRUE;
 }
 
-void protocore_j1939_decode_ccvs(uint8_t *restrict work)
+void protocore_j1939_decode_ccvs(uint8_t *work)
 {
     const CanFrame *f = J1939V.decode_ccvs_args.f;
     J1939Ccvs *out = J1939V.decode_ccvs_args.out;
@@ -680,7 +680,7 @@ void protocore_j1939_decode_ccvs(uint8_t *restrict work)
     J1939V.ok = PROTO_TRUE;
 }
 
-void protocore_j1939_decode_dm1(uint8_t *restrict work)
+void protocore_j1939_decode_dm1(uint8_t *work)
 {
     (void)work;
     const uint8_t *body = J1939V.decode_dm1_args.body;

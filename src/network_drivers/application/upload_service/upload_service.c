@@ -79,7 +79,7 @@ static proto_bool upload_stream_begin(HttpReq *req)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_upload_service_span();
+    uint8_t *work = protocore_upload_service_span();
 
     if (!str.eq(req->method, "POST", sizeof("POST"), PROTO_FALSE))
     {
@@ -129,7 +129,7 @@ static void upload_stream_data(HttpReq *req, const uint8_t *data, size_t len)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_upload_service_span();
+    uint8_t *work = protocore_upload_service_span();
 
     (void)req; // a single upload streams at a time
     if (UPLOAD_SERVICE_CTX(work)->active && !UPLOAD_SERVICE_CTX(work)->error)
@@ -152,7 +152,7 @@ static void upload_handle(uint8_t slot_id, HttpReq *req)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_upload_service_span();
+    uint8_t *work = protocore_upload_service_span();
 
     if (!req->body_streaming)
     {
@@ -180,12 +180,12 @@ static void upload_handle(uint8_t slot_id, HttpReq *req)
     send_text(slot_id, 200, PROTOCORE_MIME_TEXT_PLAIN, msg);
 }
 
-size_t protocore_upload_service_last_size(uint8_t *restrict work)
+size_t protocore_upload_service_last_size(uint8_t *work)
 {
     return UPLOAD_SERVICE_CTX(work)->written;
 }
 
-void protocore_upload_service_begin(uint8_t *restrict work, const char *path, const char *dest_path)
+void protocore_upload_service_begin(uint8_t *work, const char *path, const char *dest_path)
 {
 
     UPLOAD_SERVICE_CTX(work)->path = path;

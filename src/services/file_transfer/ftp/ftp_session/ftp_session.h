@@ -92,9 +92,8 @@ typedef struct
  * @var FtpSessionNs::value  ::PROTOCORE_FTP_READY only if the server confirmed the completed ...
  * @var FtpSessionNs::store  upload total bytes pulled from src to remote_path (RFC 959 STOR). ...
  *
- * @c work is PROTOCORE_FTP_SESSION_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_FTP_SESSION_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -109,12 +108,12 @@ extern FtpSessionVars FtpSessionV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const store)(uint8_t *restrict work);
+    void (*const store)(uint8_t *work);
 } FtpSessionNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in FtpSessionV or a region of the borrow at a fixed offset.
-void protocore_ftp_session_store(uint8_t *restrict work);
+void protocore_ftp_session_store(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

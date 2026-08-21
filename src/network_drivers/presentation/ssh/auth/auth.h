@@ -274,42 +274,42 @@ extern SshAuthVars SshAuthV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const set_password_cb)(uint8_t *restrict work);
-    void (*const set_password_change_cb)(uint8_t *restrict work);
-    void (*const set_pubkey_cb)(uint8_t *restrict work);
-    void (*const pw_change_report)(uint8_t *restrict work);
-    void (*const pw_change_clear)(uint8_t *restrict work);
-    void (*const passwd_change_reply)(uint8_t *restrict work);
-    void (*const write_publickey_request)(uint8_t *restrict work);
-    void (*const timed_out)(uint8_t *restrict work);
-    void (*const reset)(uint8_t *restrict work);
-    void (*const parse_request)(uint8_t *restrict work);
-    void (*const build_failure)(uint8_t *restrict work);
-    void (*const build_success)(uint8_t *restrict work);
-    void (*const handle_request)(uint8_t *restrict work);
-    void (*const handle_info_response)(uint8_t *restrict work);
-    void (*const dispatch)(uint8_t *restrict work);
+    void (*const set_password_cb)(uint8_t *work);
+    void (*const set_password_change_cb)(uint8_t *work);
+    void (*const set_pubkey_cb)(uint8_t *work);
+    void (*const pw_change_report)(uint8_t *work);
+    void (*const pw_change_clear)(uint8_t *work);
+    void (*const passwd_change_reply)(uint8_t *work);
+    void (*const write_publickey_request)(uint8_t *work);
+    void (*const timed_out)(uint8_t *work);
+    void (*const reset)(uint8_t *work);
+    void (*const parse_request)(uint8_t *work);
+    void (*const build_failure)(uint8_t *work);
+    void (*const build_success)(uint8_t *work);
+    void (*const handle_request)(uint8_t *work);
+    void (*const handle_info_response)(uint8_t *work);
+    void (*const dispatch)(uint8_t *work);
 } SshAuthNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SshAuthV or a region of the borrow at a fixed offset.
-void protocore_ssh_auth_set_password_cb(uint8_t *restrict work);
-void protocore_ssh_auth_set_password_change_cb(uint8_t *restrict work);
-void protocore_ssh_auth_set_pubkey_cb(uint8_t *restrict work);
-void protocore_ssh_auth_pw_change_report(uint8_t *restrict work);
-void protocore_ssh_auth_pw_change_clear(uint8_t *restrict work);
-void protocore_ssh_auth_passwd_change_reply(uint8_t *restrict work);
-void protocore_ssh_auth_write_publickey_request(uint8_t *restrict work);
-void protocore_ssh_auth_timed_out(uint8_t *restrict work);
-void protocore_ssh_auth_reset(uint8_t *restrict work);
-void protocore_ssh_auth_parse_request(uint8_t *restrict work);
-void protocore_ssh_auth_build_failure(uint8_t *restrict work);
-void protocore_ssh_auth_build_success(uint8_t *restrict work);
-void protocore_ssh_auth_handle_request(uint8_t *restrict work);
+void protocore_ssh_auth_set_password_cb(uint8_t *work);
+void protocore_ssh_auth_set_password_change_cb(uint8_t *work);
+void protocore_ssh_auth_set_pubkey_cb(uint8_t *work);
+void protocore_ssh_auth_pw_change_report(uint8_t *work);
+void protocore_ssh_auth_pw_change_clear(uint8_t *work);
+void protocore_ssh_auth_passwd_change_reply(uint8_t *work);
+void protocore_ssh_auth_write_publickey_request(uint8_t *work);
+void protocore_ssh_auth_timed_out(uint8_t *work);
+void protocore_ssh_auth_reset(uint8_t *work);
+void protocore_ssh_auth_parse_request(uint8_t *work);
+void protocore_ssh_auth_build_failure(uint8_t *work);
+void protocore_ssh_auth_build_success(uint8_t *work);
+void protocore_ssh_auth_handle_request(uint8_t *work);
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
-void protocore_ssh_auth_handle_info_response(uint8_t *restrict work);
+void protocore_ssh_auth_handle_info_response(uint8_t *work);
 #endif
-void protocore_ssh_auth_dispatch(uint8_t *restrict work);
+void protocore_ssh_auth_dispatch(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

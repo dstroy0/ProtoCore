@@ -28,11 +28,10 @@ PROTOCORE_BEGIN_DECLS
  * @ref AesCcmNs::open fails closed: on a tag mismatch it zeroes @c out and @ref AesCcmNs::ok comes back
  * false, so no unauthenticated plaintext reaches the caller.
  *
- * @c work is PROTOCORE_AESCCM_BORROW secure bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and the
- * pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. The borrow IS
- * the record context, so two records are two borrows and never collide, and the expanded key schedule dies
- * with the release.
+ * @c work is PROTOCORE_AESCCM_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the
+ * call, so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes
+ * it, holds it, releases it, nor wipes it. The borrow IS the record context, so two records are two borrows and never
+ * collide, and the expanded key schedule dies with the release.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -44,9 +43,9 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*seal)(uint8_t *restrict, const uint8_t *, size_t, const uint8_t *, size_t, const uint8_t *, size_t,
+    proto_bool (*seal)(uint8_t *, const uint8_t *, size_t, const uint8_t *, size_t, const uint8_t *, size_t,
                        const uint8_t *, size_t, uint8_t *, uint8_t *);
-    proto_bool (*open)(uint8_t *restrict, const uint8_t *, size_t, const uint8_t *, size_t, const uint8_t *, size_t,
+    proto_bool (*open)(uint8_t *, const uint8_t *, size_t, const uint8_t *, size_t, const uint8_t *, size_t,
                        const uint8_t *, size_t, const uint8_t *, uint8_t *);
 } AesCcmNs;
 PROTOCORE_NS_LAYOUT(AesCcmNs, seal, open);
@@ -66,7 +65,7 @@ PROTOCORE_NS_LAYOUT(AesCcmNs, seal, open);
  * @param tag_out PROTOCORE_AESCCM_TAG_LEN bytes
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_aes_ccm_seal(uint8_t *restrict work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
+proto_bool protocore_aes_ccm_seal(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
                                   size_t nonce_len, const uint8_t *aad, size_t aad_len, const uint8_t *pt,
                                   size_t pt_len, uint8_t *ct_out, uint8_t *tag_out);
 /**
@@ -84,7 +83,7 @@ proto_bool protocore_aes_ccm_seal(uint8_t *restrict work, const uint8_t *key, si
  * @param out ct_len plaintext bytes; may alias ct
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_aes_ccm_open(uint8_t *restrict work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
+proto_bool protocore_aes_ccm_open(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
                                   size_t nonce_len, const uint8_t *aad, size_t aad_len, const uint8_t *ct,
                                   size_t ct_len, const uint8_t *tag, uint8_t *out);
 

@@ -431,9 +431,8 @@ typedef struct
  * @var J1939Ns::decode_ccvs  decode a CCVS (PGN 65265) single frame into out
  * @var J1939Ns::decode_dm1  decode a DM1 (PGN 65226) body: the lamp-status octet, the ...
  *
- * @c work is PROTOCORE_J1939_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_J1939_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
+ * nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -468,48 +467,48 @@ extern J1939Vars J1939V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const encode_id)(uint8_t *restrict work);
-    void (*const decode_id)(uint8_t *restrict work);
-    void (*const build_message)(uint8_t *restrict work);
-    void (*const build_request)(uint8_t *restrict work);
-    void (*const build_address_claim)(uint8_t *restrict work);
-    void (*const build_name)(uint8_t *restrict work);
-    void (*const tp_num_packets)(uint8_t *restrict work);
-    void (*const build_bam_cm)(uint8_t *restrict work);
-    void (*const build_tp_dt)(uint8_t *restrict work);
-    void (*const tp_reset)(uint8_t *restrict work);
-    void (*const tp_feed)(uint8_t *restrict work);
-    void (*const decode_eec1)(uint8_t *restrict work);
-    void (*const decode_et1)(uint8_t *restrict work);
-    void (*const decode_lfe)(uint8_t *restrict work);
-    void (*const decode_amb)(uint8_t *restrict work);
-    void (*const decode_ic1)(uint8_t *restrict work);
-    void (*const decode_vd)(uint8_t *restrict work);
-    void (*const decode_ccvs)(uint8_t *restrict work);
-    void (*const decode_dm1)(uint8_t *restrict work);
+    void (*const encode_id)(uint8_t *work);
+    void (*const decode_id)(uint8_t *work);
+    void (*const build_message)(uint8_t *work);
+    void (*const build_request)(uint8_t *work);
+    void (*const build_address_claim)(uint8_t *work);
+    void (*const build_name)(uint8_t *work);
+    void (*const tp_num_packets)(uint8_t *work);
+    void (*const build_bam_cm)(uint8_t *work);
+    void (*const build_tp_dt)(uint8_t *work);
+    void (*const tp_reset)(uint8_t *work);
+    void (*const tp_feed)(uint8_t *work);
+    void (*const decode_eec1)(uint8_t *work);
+    void (*const decode_et1)(uint8_t *work);
+    void (*const decode_lfe)(uint8_t *work);
+    void (*const decode_amb)(uint8_t *work);
+    void (*const decode_ic1)(uint8_t *work);
+    void (*const decode_vd)(uint8_t *work);
+    void (*const decode_ccvs)(uint8_t *work);
+    void (*const decode_dm1)(uint8_t *work);
 } J1939Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in J1939V or a region of the borrow at a fixed offset.
-void protocore_j1939_encode_id(uint8_t *restrict work);
-void protocore_j1939_decode_id(uint8_t *restrict work);
-void protocore_j1939_build_message(uint8_t *restrict work);
-void protocore_j1939_build_request(uint8_t *restrict work);
-void protocore_j1939_build_address_claim(uint8_t *restrict work);
-void protocore_j1939_build_name(uint8_t *restrict work);
-void protocore_j1939_tp_num_packets(uint8_t *restrict work);
-void protocore_j1939_build_bam_cm(uint8_t *restrict work);
-void protocore_j1939_build_tp_dt(uint8_t *restrict work);
-void protocore_j1939_tp_reset(uint8_t *restrict work);
-void protocore_j1939_tp_feed(uint8_t *restrict work);
-void protocore_j1939_decode_eec1(uint8_t *restrict work);
-void protocore_j1939_decode_et1(uint8_t *restrict work);
-void protocore_j1939_decode_lfe(uint8_t *restrict work);
-void protocore_j1939_decode_amb(uint8_t *restrict work);
-void protocore_j1939_decode_ic1(uint8_t *restrict work);
-void protocore_j1939_decode_vd(uint8_t *restrict work);
-void protocore_j1939_decode_ccvs(uint8_t *restrict work);
-void protocore_j1939_decode_dm1(uint8_t *restrict work);
+void protocore_j1939_encode_id(uint8_t *work);
+void protocore_j1939_decode_id(uint8_t *work);
+void protocore_j1939_build_message(uint8_t *work);
+void protocore_j1939_build_request(uint8_t *work);
+void protocore_j1939_build_address_claim(uint8_t *work);
+void protocore_j1939_build_name(uint8_t *work);
+void protocore_j1939_tp_num_packets(uint8_t *work);
+void protocore_j1939_build_bam_cm(uint8_t *work);
+void protocore_j1939_build_tp_dt(uint8_t *work);
+void protocore_j1939_tp_reset(uint8_t *work);
+void protocore_j1939_tp_feed(uint8_t *work);
+void protocore_j1939_decode_eec1(uint8_t *work);
+void protocore_j1939_decode_et1(uint8_t *work);
+void protocore_j1939_decode_lfe(uint8_t *work);
+void protocore_j1939_decode_amb(uint8_t *work);
+void protocore_j1939_decode_ic1(uint8_t *work);
+void protocore_j1939_decode_vd(uint8_t *work);
+void protocore_j1939_decode_ccvs(uint8_t *work);
+void protocore_j1939_decode_dm1(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

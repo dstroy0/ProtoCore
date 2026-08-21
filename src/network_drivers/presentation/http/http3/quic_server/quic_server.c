@@ -159,7 +159,7 @@ static proto_bool cid_eq(const uint8_t *a, uint8_t alen, const uint8_t *b, uint8
     return alen == blen && mem.cmp(a, b, alen) == 0;
 }
 
-static void server_send(uint8_t *restrict work, const char *ip, uint16_t port, const uint8_t *data, size_t len)
+static void server_send(uint8_t *work, const char *ip, uint16_t port, const uint8_t *data, size_t len)
 {
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
     IpV.args.text = ip;
@@ -177,7 +177,7 @@ static void server_send(uint8_t *restrict work, const char *ip, uint16_t port, c
 }
 
 // --- ingest ring (SPSC: one producer fills, protocore_quic_server_poll consumes) ------------------------
-static proto_bool ring_push(uint8_t *restrict work, const uint8_t *dg, size_t len, const char *ip, uint16_t port)
+static proto_bool ring_push(uint8_t *work, const uint8_t *dg, size_t len, const char *ip, uint16_t port)
 {
     if (len == 0 || len > PROTOCORE_QUIC_MAX_DATAGRAM)
     {
@@ -198,7 +198,7 @@ static proto_bool ring_push(uint8_t *restrict work, const uint8_t *dg, size_t le
     return PROTO_TRUE;
 }
 
-static proto_bool ring_pop(uint8_t *restrict work, QuicIngest *out)
+static proto_bool ring_pop(uint8_t *work, QuicIngest *out)
 {
     size_t tail = QSRV_CTX(work)->ring_tail;
     if (tail == (size_t)QSRV_CTX(work)->ring_head)
@@ -211,7 +211,7 @@ static proto_bool ring_pop(uint8_t *restrict work, QuicIngest *out)
 }
 
 // --- slot pool --------------------------------------------------------------------------------
-static QuicSlot *slot_by_id(uint8_t *restrict work, uint32_t id)
+static QuicSlot *slot_by_id(uint8_t *work, uint32_t id)
 {
     for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
@@ -223,7 +223,7 @@ static QuicSlot *slot_by_id(uint8_t *restrict work, uint32_t id)
     return NULL;
 }
 
-static QuicSlot *alloc_slot(uint8_t *restrict work)
+static QuicSlot *alloc_slot(uint8_t *work)
 {
     for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
@@ -259,7 +259,7 @@ static QuicSlot *alloc_slot(uint8_t *restrict work)
 static void protocore_h3_on_request(void *app, uint8_t * /*h3*/, uint64_t stream_id, const char *method,
                                     const char *path, const char *authority, const uint8_t *body, size_t body_len)
 {
-    uint8_t *restrict work = protocore_quic_server_span();
+    uint8_t *work = protocore_quic_server_span();
     QuicSlot *s = (QuicSlot *)app;
     if (QSRV_CTX(work)->on_request)
     {
@@ -268,7 +268,7 @@ static void protocore_h3_on_request(void *app, uint8_t * /*h3*/, uint64_t stream
 }
 
 // Open a connection for a client's first Initial packet.
-static QuicSlot *open_conn(uint8_t *restrict work, const QuicLongHeader *lh, const char *ip, uint16_t port)
+static QuicSlot *open_conn(uint8_t *work, const QuicLongHeader *lh, const char *ip, uint16_t port)
 {
     QuicSlot *s = alloc_slot(work);
     if (!s)
@@ -340,8 +340,7 @@ static QuicSlot *open_conn(uint8_t *restrict work, const QuicLongHeader *lh, con
 
 // HttpRoute a datagram to its connection by Destination Connection ID. Sets *is_initial when it is an
 // unmatched Initial (the caller opens a new connection) and copies the parsed long header out.
-static QuicSlot *route(uint8_t *restrict work, const uint8_t *dg, size_t len, proto_bool *is_initial,
-                       QuicLongHeader *lh_out)
+static QuicSlot *route(uint8_t *work, const uint8_t *dg, size_t len, proto_bool *is_initial, QuicLongHeader *lh_out)
 {
     *is_initial = PROTO_FALSE;
     if (len < 1)
@@ -404,7 +403,7 @@ static QuicSlot *route(uint8_t *restrict work, const uint8_t *dg, size_t len, pr
     return NULL;
 }
 
-static void flush_and_reap(uint8_t *restrict work, uint32_t now_ms)
+static void flush_and_reap(uint8_t *work, uint32_t now_ms)
 {
     uint8_t out[PROTOCORE_QUIC_MAX_DATAGRAM];
     for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
@@ -456,7 +455,7 @@ static void udp_ingest_cb(const uint8_t *data, size_t len, const struct protocor
     (void)ring_push(protocore_quic_server_span(), data, len, ip, port);
 }
 
-static void begin(uint8_t *restrict work)
+static void begin(uint8_t *work)
 {
     const QuicServerConfig *cfg = QuicServer.begin_args.cfg;
     QuicServer.ok = PROTO_FALSE;
@@ -483,7 +482,7 @@ static void begin(uint8_t *restrict work)
     QuicServer.ok = UdpListenerV.ok;
 }
 
-static void poll(uint8_t *restrict work)
+static void poll(uint8_t *work)
 {
     const uint32_t now_ms = QuicServer.now_ms;
     if (!QSRV_CTX(work)->running)
@@ -513,7 +512,7 @@ static void poll(uint8_t *restrict work)
     flush_and_reap(work, now_ms);
 }
 
-static void respond(uint8_t *restrict work)
+static void respond(uint8_t *work)
 {
     QuicSlot *s = slot_by_id(work, QuicServer.stream.conn_id);
     if (!s)
@@ -531,7 +530,7 @@ static void respond(uint8_t *restrict work)
     QuicServer.ok = H3ConnV.ok;
 }
 
-static void active_conns(uint8_t *restrict work)
+static void active_conns(uint8_t *work)
 {
     uint8_t n = 0;
     for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
@@ -544,7 +543,7 @@ static void active_conns(uint8_t *restrict work)
     QuicServer.u8 = n;
 }
 
-static void stop(uint8_t *restrict work)
+static void stop(uint8_t *work)
 {
     UdpListenerV.port = QSRV_CTX(work)->port;
     UdpListener.close(protocore_udp_listener_span()); // drop the bind first: nothing more reaches the ring

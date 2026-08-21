@@ -333,36 +333,36 @@ extern MbusVars MbusV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_ack)(uint8_t *restrict work);
-    void (*const build_short)(uint8_t *restrict work);
-    void (*const build_long)(uint8_t *restrict work);
-    void (*const build_snd_nke)(uint8_t *restrict work);
-    void (*const build_req_ud2)(uint8_t *restrict work);
-    void (*const build_req_ud1)(uint8_t *restrict work);
-    void (*const parse)(uint8_t *restrict work);
-    void (*const dif_data_len)(uint8_t *restrict work);
-    void (*const record_next)(uint8_t *restrict work);
-    void (*const record_value_int)(uint8_t *restrict work);
-    void (*const record_value_real)(uint8_t *restrict work);
-    void (*const vif_decode)(uint8_t *restrict work);
-    void (*const parse_var_header)(uint8_t *restrict work);
+    void (*const build_ack)(uint8_t *work);
+    void (*const build_short)(uint8_t *work);
+    void (*const build_long)(uint8_t *work);
+    void (*const build_snd_nke)(uint8_t *work);
+    void (*const build_req_ud2)(uint8_t *work);
+    void (*const build_req_ud1)(uint8_t *work);
+    void (*const parse)(uint8_t *work);
+    void (*const dif_data_len)(uint8_t *work);
+    void (*const record_next)(uint8_t *work);
+    void (*const record_value_int)(uint8_t *work);
+    void (*const record_value_real)(uint8_t *work);
+    void (*const vif_decode)(uint8_t *work);
+    void (*const parse_var_header)(uint8_t *work);
 } MbusNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in MbusV or a region of the borrow at a fixed offset.
-void protocore_mbus_build_ack(uint8_t *restrict work);
-void protocore_mbus_build_short(uint8_t *restrict work);
-void protocore_mbus_build_long(uint8_t *restrict work);
-void protocore_mbus_build_snd_nke(uint8_t *restrict work);
-void protocore_mbus_build_req_ud2(uint8_t *restrict work);
-void protocore_mbus_build_req_ud1(uint8_t *restrict work);
-void protocore_mbus_parse(uint8_t *restrict work);
-void protocore_mbus_dif_data_len(uint8_t *restrict work);
-void protocore_mbus_record_next(uint8_t *restrict work);
-void protocore_mbus_record_value_int(uint8_t *restrict work);
-void protocore_mbus_record_value_real(uint8_t *restrict work);
-void protocore_mbus_vif_decode(uint8_t *restrict work);
-void protocore_mbus_parse_var_header(uint8_t *restrict work);
+void protocore_mbus_build_ack(uint8_t *work);
+void protocore_mbus_build_short(uint8_t *work);
+void protocore_mbus_build_long(uint8_t *work);
+void protocore_mbus_build_snd_nke(uint8_t *work);
+void protocore_mbus_build_req_ud2(uint8_t *work);
+void protocore_mbus_build_req_ud1(uint8_t *work);
+void protocore_mbus_parse(uint8_t *work);
+void protocore_mbus_dif_data_len(uint8_t *work);
+void protocore_mbus_record_next(uint8_t *work);
+void protocore_mbus_record_value_int(uint8_t *work);
+void protocore_mbus_record_value_real(uint8_t *work);
+void protocore_mbus_vif_decode(uint8_t *work);
+void protocore_mbus_parse_var_header(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

@@ -46,9 +46,8 @@ PROTOCORE_BEGIN_DECLS
  * the base server) are a documented follow-on - a generic OPC UA client still browses the structure and
  * reads every value by BrowseName today.
  *
- * @c work is PROTOCORE_ROBOTICS_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_ROBOTICS_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
+ * nothing here aliases it. How those bytes are carved is this module's and is never named here.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date     2026
@@ -158,8 +157,8 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*bind)(uint8_t *restrict, const RoboticsMotionDeviceSystem *);
-    void (*install)(uint8_t *restrict, const RoboticsMotionDeviceSystem *);
+    void (*bind)(uint8_t *, const RoboticsMotionDeviceSystem *);
+    void (*install)(uint8_t *, const RoboticsMotionDeviceSystem *);
 } RoboticsNs;
 PROTOCORE_NS_LAYOUT(RoboticsNs, bind, install);
 
@@ -168,13 +167,13 @@ PROTOCORE_NS_LAYOUT(RoboticsNs, bind, install);
  * @param work PROTOCORE_ROBOTICS_BORROW bytes the caller took. Not held past the call.
  * @param mds Mds
  */
-void protocore_robotics_bind(uint8_t *restrict work, const RoboticsMotionDeviceSystem *mds);
+void protocore_robotics_bind(uint8_t *work, const RoboticsMotionDeviceSystem *mds);
 /**
  * @brief Convenience: bind mds and register both resolvers on the OPC UA .
  * @param work PROTOCORE_ROBOTICS_BORROW bytes the caller took. Not held past the call.
  * @param mds Mds
  */
-void protocore_robotics_install(uint8_t *restrict work, const RoboticsMotionDeviceSystem *mds);
+void protocore_robotics_install(uint8_t *work, const RoboticsMotionDeviceSystem *mds);
 
 /**
  * @brief The PROTOCORE_ROBOTICS_BORROW bytes this module's state lives in.

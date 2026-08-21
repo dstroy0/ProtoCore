@@ -43,8 +43,8 @@ PROTOCORE_BEGIN_DECLS
  * presence is only ever reported after it has actually been observed and believed. Claiming
  * presence you have not yet measured is the failure mode worth avoiding.
  *
- * @c work is PROTOCORE_RCWL0516_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * @c work is PROTOCORE_RCWL0516_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
+nothing here aliases it. How those bytes are
  * carved is this module's and is never named here.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -82,14 +82,14 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*presence_init)(uint8_t *restrict, PresenceCore *, uint32_t, uint32_t, uint32_t);
-    proto_bool (*presence_update)(uint8_t *restrict, PresenceCore *, proto_bool, uint32_t);
-    proto_bool (*presence_get)(uint8_t *restrict, const PresenceCore *);
-    proto_bool (*presence_take_event)(uint8_t *restrict, PresenceCore *);
-    void (*core_init)(uint8_t *restrict, PresenceCore *, uint32_t);
-    proto_bool (*begin)(uint8_t *restrict, int);
-    proto_bool (*poll)(uint8_t *restrict);
-    void (*present)(uint8_t *restrict);
+    void (*presence_init)(uint8_t *, PresenceCore *, uint32_t, uint32_t, uint32_t);
+    proto_bool (*presence_update)(uint8_t *, PresenceCore *, proto_bool, uint32_t);
+    proto_bool (*presence_get)(uint8_t *, const PresenceCore *);
+    proto_bool (*presence_take_event)(uint8_t *, PresenceCore *);
+    void (*core_init)(uint8_t *, PresenceCore *, uint32_t);
+    proto_bool (*begin)(uint8_t *, int);
+    proto_bool (*poll)(uint8_t *);
+    void (*present)(uint8_t *);
 } Rcwl0516Ns;
 PROTOCORE_NS_LAYOUT(Rcwl0516Ns, presence_init, presence_update, presence_get, presence_take_event, core_init, begin,
                     poll, present);
@@ -102,7 +102,7 @@ PROTOCORE_NS_LAYOUT(Rcwl0516Ns, presence_init, presence_update, presence_get, pr
  * @param hold_ms 0 disables the hold (presence follows the debounced level exactly)
  * @param now Now
  */
-void protocore_rcwl0516_presence_init(uint8_t *restrict work, PresenceCore *c, uint32_t debounce_ms, uint32_t hold_ms,
+void protocore_rcwl0516_presence_init(uint8_t *work, PresenceCore *c, uint32_t debounce_ms, uint32_t hold_ms,
                                       uint32_t now);
 /**
  * @brief Feed one sample of the presence pin. Call it as often as .
@@ -112,47 +112,46 @@ void protocore_rcwl0516_presence_init(uint8_t *restrict work, PresenceCore *c, u
  * @param now Now
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_rcwl0516_presence_update(uint8_t *restrict work, PresenceCore *c, proto_bool pin_high,
-                                              uint32_t now);
+proto_bool protocore_rcwl0516_presence_update(uint8_t *work, PresenceCore *c, proto_bool pin_high, uint32_t now);
 /**
  * @brief Current presence, without sampling.
  * @param work PROTOCORE_RCWL0516_BORROW bytes the caller took. Not held past the call.
  * @param c C
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_rcwl0516_presence_get(uint8_t *restrict work, const PresenceCore *c);
+proto_bool protocore_rcwl0516_presence_get(uint8_t *work, const PresenceCore *c);
 /**
  * @brief Consume the presence-changed event.
  * @param work PROTOCORE_RCWL0516_BORROW bytes the caller took. Not held past the call.
  * @param c C
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_rcwl0516_presence_take_event(uint8_t *restrict work, PresenceCore *c);
+proto_bool protocore_rcwl0516_presence_take_event(uint8_t *work, PresenceCore *c);
 /**
  * @brief Initialize c with the RCWL-0516 defaults .
  * @param work PROTOCORE_RCWL0516_BORROW bytes the caller took. Not held past the call.
  * @param c C
  * @param now Now
  */
-void protocore_rcwl0516_core_init(uint8_t *restrict work, PresenceCore *c, uint32_t now);
+void protocore_rcwl0516_core_init(uint8_t *work, PresenceCore *c, uint32_t now);
 /**
  * @brief Configure out_pin as an input and start the core. true where the .
  * @param work PROTOCORE_RCWL0516_BORROW bytes the caller took. Not held past the call.
  * @param out_pin Out pin
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_rcwl0516_begin(uint8_t *restrict work, int out_pin);
+proto_bool protocore_rcwl0516_begin(uint8_t *work, int out_pin);
 /**
  * @brief Sample the pin at the current time. true if presence changed on .
  * @param work PROTOCORE_RCWL0516_BORROW bytes the caller took. Not held past the call.
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_rcwl0516_poll(uint8_t *restrict work);
+proto_bool protocore_rcwl0516_poll(uint8_t *work);
 /**
  * @brief Latest debounced, hold-extended presence.
  * @param work PROTOCORE_RCWL0516_BORROW bytes the caller took. Not held past the call.
  */
-void protocore_rcwl0516_present(uint8_t *restrict work);
+void protocore_rcwl0516_present(uint8_t *work);
 
 /**
  * @brief The PROTOCORE_RCWL0516_BORROW bytes this module's state lives in.

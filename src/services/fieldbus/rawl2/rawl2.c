@@ -21,7 +21,7 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_rawl2_build(uint8_t *restrict work)
+void protocore_rawl2_build(uint8_t *work)
 {
     (void)work;
     const uint8_t *dst = Rawl2V.build_args.dst;
@@ -54,7 +54,7 @@ void protocore_rawl2_build(uint8_t *restrict work)
     Rawl2V.n = n;
 }
 
-void protocore_rawl2_build_vlan(uint8_t *restrict work)
+void protocore_rawl2_build_vlan(uint8_t *work)
 {
     (void)work;
     const uint8_t *dst = Rawl2V.build_vlan_args.dst;
@@ -95,7 +95,7 @@ void protocore_rawl2_build_vlan(uint8_t *restrict work)
     Rawl2V.n = n;
 }
 
-void protocore_rawl2_parse(uint8_t *restrict work)
+void protocore_rawl2_parse(uint8_t *work)
 {
     (void)work;
     const uint8_t *frame = Rawl2V.parse_args.frame;
@@ -137,7 +137,7 @@ void protocore_rawl2_parse(uint8_t *restrict work)
     Rawl2V.ok = PROTO_TRUE;
 }
 
-void protocore_rawl2_fcs(uint8_t *restrict work)
+void protocore_rawl2_fcs(uint8_t *work)
 {
     (void)work;
     const uint8_t *bytes = Rawl2V.fcs_args.bytes;

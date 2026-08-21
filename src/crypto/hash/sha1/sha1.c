@@ -124,7 +124,7 @@ static void sha1_block(uint32_t h[5], const uint8_t block[64])
 
 // --- framing (one arm, both compressions) ----------------------------------
 
-static void sha1_run(uint8_t *restrict work, const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN])
+static void sha1_run(uint8_t *work, const uint8_t *data, size_t len, uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN])
 {
     // State and padded blocks at their offsets in the caller's borrow.
     uint32_t *h = ((struct Sha1Ctx *)(void *)(work + SHA1_OFF_CTX))->h;
@@ -169,7 +169,7 @@ static void sha1_run(uint8_t *restrict work, const uint8_t *data, size_t len, ui
     }
 }
 
-proto_bool protocore_sha1_hash(uint8_t *restrict work, const uint8_t *data, size_t len, uint8_t *out)
+proto_bool protocore_sha1_hash(uint8_t *work, const uint8_t *data, size_t len, uint8_t *out)
 {
     if (!out)
     {

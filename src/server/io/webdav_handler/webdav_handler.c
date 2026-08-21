@@ -123,7 +123,7 @@ static_assert(
 // context carries none and can live in a borrow that arrives zeroed. It takes a flag rather than a
 // sentinel value because root 0 is a valid root, so zero cannot mean unset - a zeroed field would
 // otherwise resolve every path against somebody else's storage before dav() ever ran.
-static int dav_root(uint8_t *restrict work)
+static int dav_root(uint8_t *work)
 {
     return WEBDAV_HANDLER_CTX(work)->bound ? WEBDAV_HANDLER_CTX(work)->root : -1;
 }
@@ -193,7 +193,7 @@ static int dav_resolve_path(const HttpRoute *r, const char *reqpath, char *out, 
 
 // True if a write to the URL @p path is blocked by a lock the request does not present a token for. The
 // token, if any, comes from the request's If header (RFC 4918 §10.4 / §7).
-static proto_bool dav_write_blocked(uint8_t *restrict work, HttpReq *req, const char *path)
+static proto_bool dav_write_blocked(uint8_t *work, HttpReq *req, const char *path)
 {
     const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "If");
     const char *if_hdr = http_parser_text;
@@ -242,7 +242,7 @@ static void dav_put_abort_tramp(HttpReq *req)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_webdav_handler_span();
+    uint8_t *work = protocore_webdav_handler_span();
 
     // The PUT was torn down before the handler ran: close the half-written file so
     // the handle is not leaked (a leak eventually exhausts the filesystem's open slots).
@@ -262,7 +262,7 @@ static proto_bool dav_stream_put_begin(HttpReq *req)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_webdav_handler_span();
+    uint8_t *work = protocore_webdav_handler_span();
 
     if (!str.eq(req->method, "PUT", sizeof("PUT"), PROTO_FALSE))
     {
@@ -339,7 +339,7 @@ static void dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_webdav_handler_span();
+    uint8_t *work = protocore_webdav_handler_span();
 
     uint8_t slot = (uint8_t)(req - http_pool);
     if (slot >= MAX_CONNS)
@@ -369,7 +369,7 @@ void dav(const char *url_prefix, const protocore_mnt_backend *file_sys, const ch
 {
     // Public API with a signature protocore.h fixes, so the borrow comes from the accessor rather
     // than a parameter - the same way a callback reaches it.
-    uint8_t *restrict work = protocore_webdav_handler_span();
+    uint8_t *work = protocore_webdav_handler_span();
     HttpRoute *http_routes_ptr = HttpRoutes.add(protocore_http_route_span());
     HttpRoute *r = http_routes_ptr;
     if (r == NULL)
@@ -420,7 +420,7 @@ void dav(const char *url_prefix, const protocore_mnt_backend *file_sys, const ch
 #endif
 }
 
-static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, const HttpRoute *r);
+static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, const HttpRoute *r);
 
 static void dav_send_status(uint8_t slot_id, int code, const char *extra_headers)
 {
@@ -475,7 +475,7 @@ uint8_t *protocore_webdav_handler_span(void)
     return s_own.span;
 }
 
-void protocore_dav_try_serve_dav(uint8_t *restrict work)
+void protocore_dav_try_serve_dav(uint8_t *work)
 {
     uint8_t slot_id = DavV.try_serve_dav_args.slot_id;
     HttpReq *req = DavV.try_serve_dav_args.req;
@@ -512,7 +512,7 @@ void protocore_dav_try_serve_dav(uint8_t *restrict work)
     DavV.ok = PROTO_FALSE;
 }
 
-static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, const HttpRoute *r)
+static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, const HttpRoute *r)
 {
     char fs_path[256];
     int rc = dav_resolve_path(r, req->path, fs_path, sizeof(fs_path));

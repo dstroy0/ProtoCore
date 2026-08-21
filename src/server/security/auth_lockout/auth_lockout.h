@@ -57,7 +57,7 @@ typedef struct
  * @var AuthLockoutNs::reset      empty the whole table
  *
  * @c work is PROTOCORE_AUTH_LOCKOUT_BORROW secure bytes the CALLER took, at an address it knows. It
- * arrives @c restrict and is not held past the call, so nothing here aliases it. The table is in
+ * is not held past the call, so nothing here aliases it. The table is in
  * those bytes rather than in this module, so a caller takes them once for the life of the program
  * and every call runs out of the same span. The caller releases it, and the pool wipes on release;
  * this module neither takes it, holds it, nor releases it.
@@ -78,18 +78,18 @@ extern AuthLockoutVars AuthLockoutV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const remaining)(uint8_t *restrict work);
-    void (*const fail)(uint8_t *restrict work);
-    void (*const succeed)(uint8_t *restrict work);
-    void (*const reset)(uint8_t *restrict work);
+    void (*const remaining)(uint8_t *work);
+    void (*const fail)(uint8_t *work);
+    void (*const succeed)(uint8_t *work);
+    void (*const reset)(uint8_t *work);
 } AuthLockoutNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in AuthLockoutV or a region of the borrow at a fixed offset.
-void protocore_auth_lockout_remaining(uint8_t *restrict work);
-void protocore_auth_lockout_fail(uint8_t *restrict work);
-void protocore_auth_lockout_succeed(uint8_t *restrict work);
-void protocore_auth_lockout_reset(uint8_t *restrict work);
+void protocore_auth_lockout_remaining(uint8_t *work);
+void protocore_auth_lockout_fail(uint8_t *work);
+void protocore_auth_lockout_succeed(uint8_t *work);
+void protocore_auth_lockout_reset(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

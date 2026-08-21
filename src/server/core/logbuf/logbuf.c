@@ -80,13 +80,13 @@ static char level_letter(uint8_t level)
     }
 }
 
-void protocore_logbuf_reset(uint8_t *restrict work)
+void protocore_logbuf_reset(uint8_t *work)
 {
     LOGBUF_CTX(work)->head = 0;
     LOGBUF_CTX(work)->count = 0;
 }
 
-void protocore_logbuf_put(uint8_t *restrict work)
+void protocore_logbuf_put(uint8_t *work)
 {
     const uint8_t level = LogbufV.line.level;
     uint16_t slot;
@@ -112,12 +112,12 @@ void protocore_logbuf_put(uint8_t *restrict work)
     }
 }
 
-void protocore_logbuf_held(uint8_t *restrict work)
+void protocore_logbuf_held(uint8_t *work)
 {
     LogbufV.count = LOGBUF_CTX(work)->count;
 }
 
-void protocore_logbuf_at(uint8_t *restrict work)
+void protocore_logbuf_at(uint8_t *work)
 {
     const uint16_t i = LogbufV.read.i;
 
@@ -129,7 +129,7 @@ void protocore_logbuf_at(uint8_t *restrict work)
     LogbufV.text = LOGBUF_CTX(work)->lines[(LOGBUF_CTX(work)->head + i) % PROTOCORE_LOG_LINES];
 }
 
-void protocore_logbuf_dump(uint8_t *restrict work)
+void protocore_logbuf_dump(uint8_t *work)
 {
     char *out = LogbufV.read.out;
     const size_t cap = LogbufV.read.cap;
@@ -162,7 +162,7 @@ void protocore_logbuf_dump(uint8_t *restrict work)
     LogbufV.n = (int)pos;
 }
 
-void protocore_logbuf_set_trap(uint8_t *restrict work)
+void protocore_logbuf_set_trap(uint8_t *work)
 {
     LOGBUF_CTX(work)->trap_threshold = LogbufV.trap.threshold;
     LOGBUF_CTX(work)->trap = LogbufV.trap.cb;

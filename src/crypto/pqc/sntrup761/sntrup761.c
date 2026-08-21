@@ -418,7 +418,7 @@ static void Short_random(small_t *out)
 }
 
 // out = SHA512(b || in)[0:32], through the Sha512 namespace in this borrow's hash region.
-static void Hash_prefix(uint8_t *restrict work, uint8_t *out, int b, const uint8_t *in, size_t inlen)
+static void Hash_prefix(uint8_t *work, uint8_t *out, int b, const uint8_t *in, size_t inlen)
 {
     uint8_t h[PROTOCORE_SHA512_DIGEST_LEN];
     uint8_t bb = (uint8_t)b;
@@ -472,7 +472,7 @@ static void Rounded_encode(uint8_t *s, const Fq *r, uint16_t *scr)
     sntrup761_encode(s, Rr, M, PROTOCORE_SNTRUP_P, scr);
 }
 
-static void HashConfirm(uint8_t *restrict work, uint8_t *h, const uint8_t *r_enc, const uint8_t *cache)
+static void HashConfirm(uint8_t *work, uint8_t *h, const uint8_t *r_enc, const uint8_t *cache)
 {
     uint8_t x[PROTOCORE_HASH_BYTES * 2];
     Hash_prefix(work, x, 3, r_enc, PROTOCORE_SMALL_BYTES);
@@ -480,7 +480,7 @@ static void HashConfirm(uint8_t *restrict work, uint8_t *h, const uint8_t *r_enc
     Hash_prefix(work, h, 2, x, sizeof x);
 }
 
-static void HashSession(uint8_t *restrict work, uint8_t *k, int b, const uint8_t *r_enc, const uint8_t *c)
+static void HashSession(uint8_t *work, uint8_t *k, int b, const uint8_t *r_enc, const uint8_t *c)
 {
     uint8_t x[PROTOCORE_HASH_BYTES + PROTOCORE_CT_BYTES];
     Hash_prefix(work, x, 3, r_enc, PROTOCORE_SMALL_BYTES);
@@ -489,8 +489,8 @@ static void HashSession(uint8_t *restrict work, uint8_t *k, int b, const uint8_t
 }
 
 // Encapsulation reused for the Decapsulation FO re-encrypt check.
-static void Hide(uint8_t *restrict work, uint8_t *c, uint8_t *r_enc, const small_t *r, const uint8_t *pk,
-                 const uint8_t *cache, uint16_t *scr, uint32_t *scr32)
+static void Hide(uint8_t *work, uint8_t *c, uint8_t *r_enc, const small_t *r, const uint8_t *pk, const uint8_t *cache,
+                 uint16_t *scr, uint32_t *scr32)
 {
     Small_encode(r_enc, r);
     Fq h[PROTOCORE_SNTRUP_P], cp[PROTOCORE_SNTRUP_P];
@@ -827,7 +827,7 @@ static int Ciphertexts_diff_mask(const uint8_t *c, const uint8_t *c2)
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_sntrup761_enc(uint8_t *restrict work, const uint8_t *pk, uint8_t *ct, uint8_t *ss)
+proto_bool protocore_sntrup761_enc(uint8_t *work, const uint8_t *pk, uint8_t *ct, uint8_t *ss)
 {
     if (!pk || !ct || !ss)
     {
@@ -847,7 +847,7 @@ proto_bool protocore_sntrup761_enc(uint8_t *restrict work, const uint8_t *pk, ui
     return PROTO_TRUE;
 }
 
-proto_bool protocore_sntrup761_keypair(uint8_t *restrict work, uint8_t *pk, uint8_t *sk)
+proto_bool protocore_sntrup761_keypair(uint8_t *work, uint8_t *pk, uint8_t *sk)
 {
     if (!pk || !sk)
     {
@@ -873,7 +873,7 @@ proto_bool protocore_sntrup761_keypair(uint8_t *restrict work, uint8_t *pk, uint
     return PROTO_TRUE;
 }
 
-proto_bool protocore_sntrup761_dec(uint8_t *restrict work, const uint8_t *sk, const uint8_t *ct, uint8_t *ss)
+proto_bool protocore_sntrup761_dec(uint8_t *work, const uint8_t *sk, const uint8_t *ct, uint8_t *ss)
 {
     if (!sk || !ct || !ss)
     {

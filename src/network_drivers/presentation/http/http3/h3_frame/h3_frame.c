@@ -18,7 +18,7 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-proto_bool protocore_h3_frame_parse_header(uint8_t *restrict work, const uint8_t *buf, size_t len, H3FrameHeader *out)
+proto_bool protocore_h3_frame_parse_header(uint8_t *work, const uint8_t *buf, size_t len, H3FrameHeader *out)
 {
     size_t c1 = 0;
     size_t c2 = 0;
@@ -40,7 +40,7 @@ proto_bool protocore_h3_frame_parse_header(uint8_t *restrict work, const uint8_t
     return PROTO_TRUE;
 }
 
-size_t protocore_h3_frame_write_header(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t type, uint64_t length)
+size_t protocore_h3_frame_write_header(uint8_t *work, uint8_t *out, size_t cap, uint64_t type, uint64_t length)
 {
     size_t quic_varint_n = QuicVarint.encode(work, out, cap, type);
     size_t n = quic_varint_n;
@@ -57,7 +57,7 @@ size_t protocore_h3_frame_write_header(uint8_t *restrict work, uint8_t *out, siz
     return n + m;
 }
 
-proto_bool protocore_h3_frame_type_reserved(uint8_t *restrict work, uint64_t type)
+proto_bool protocore_h3_frame_type_reserved(uint8_t *work, uint64_t type)
 {
     (void)work;
 
@@ -65,7 +65,7 @@ proto_bool protocore_h3_frame_type_reserved(uint8_t *restrict work, uint64_t typ
     return type == 0x02 || type == 0x06 || type == 0x08 || type == 0x09;
 }
 
-void protocore_h3_frame_settings_defaults(uint8_t *restrict work, H3Settings *s)
+void protocore_h3_frame_settings_defaults(uint8_t *work, H3Settings *s)
 {
     (void)work;
 
@@ -74,7 +74,7 @@ void protocore_h3_frame_settings_defaults(uint8_t *restrict work, H3Settings *s)
     s->qpack_blocked_streams = 0;
 }
 
-proto_bool protocore_h3_frame_parse_settings(uint8_t *restrict work, const uint8_t *payload, size_t len, H3Settings *s)
+proto_bool protocore_h3_frame_parse_settings(uint8_t *work, const uint8_t *payload, size_t len, H3Settings *s)
 {
     proto_bool ok = PROTO_FALSE;
 
@@ -121,7 +121,7 @@ proto_bool protocore_h3_frame_parse_settings(uint8_t *restrict work, const uint8
     return PROTO_TRUE;
 }
 
-size_t protocore_h3_frame_build_data(uint8_t *restrict work, uint8_t *out, size_t cap, const uint8_t *data, size_t len)
+size_t protocore_h3_frame_build_data(uint8_t *work, uint8_t *out, size_t cap, const uint8_t *data, size_t len)
 {
     size_t h3_frame_n = H3Frame.write_header(work, out, cap, H3_DATA, len);
     size_t hn = h3_frame_n;
@@ -136,8 +136,7 @@ size_t protocore_h3_frame_build_data(uint8_t *restrict work, uint8_t *out, size_
     return hn + len;
 }
 
-size_t protocore_h3_frame_build_headers(uint8_t *restrict work, uint8_t *out, size_t cap, const uint8_t *block,
-                                        size_t len)
+size_t protocore_h3_frame_build_headers(uint8_t *work, uint8_t *out, size_t cap, const uint8_t *block, size_t len)
 {
     size_t h3_frame_n = H3Frame.write_header(work, out, cap, H3_HEADERS, len);
     size_t hn = h3_frame_n;
@@ -152,7 +151,7 @@ size_t protocore_h3_frame_build_headers(uint8_t *restrict work, uint8_t *out, si
     return hn + len;
 }
 
-size_t protocore_h3_frame_build_settings(uint8_t *restrict work, uint8_t *out, size_t cap, const uint64_t *ids,
+size_t protocore_h3_frame_build_settings(uint8_t *work, uint8_t *out, size_t cap, const uint64_t *ids,
                                          const uint64_t *vals, size_t n)
 {
     size_t plen = 0;
@@ -189,7 +188,7 @@ size_t protocore_h3_frame_build_settings(uint8_t *restrict work, uint8_t *out, s
     return o;
 }
 
-size_t protocore_h3_frame_build_goaway(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t stream_id)
+size_t protocore_h3_frame_build_goaway(uint8_t *work, uint8_t *out, size_t cap, uint64_t stream_id)
 {
     size_t quic_varint_n = QuicVarint.len(work, stream_id);
     size_t plen = quic_varint_n;

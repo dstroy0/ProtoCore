@@ -52,7 +52,7 @@ static const char WS_MAGIC[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
  * the result, and base64-encodes the 20-byte digest into @p out.
  * @p out must be at least 29 bytes (28 base64 chars + null terminator).
  */
-static proto_bool ws_accept_key(uint8_t *restrict work, const char *client_key, char *out)
+static proto_bool ws_accept_key(uint8_t *work, const char *client_key, char *out)
 {
     size_t key_len = str.len(client_key, WS_MAX_KEY_LEN + 1);
     if (key_len > WS_MAX_KEY_LEN)
@@ -132,7 +132,7 @@ void ws_send_version_required(uint8_t slot_id)
  * Does NOT close the TCP connection: the slot moves from HTTP parse ownership to WS frame parse
  * ownership.
  */
-proto_bool ws_do_upgrade(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, uint8_t route_id)
+proto_bool ws_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t route_id)
 {
     const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Sec-WebSocket-Key");
     const char *client_key = http_parser_text;
@@ -222,7 +222,7 @@ proto_bool ws_do_upgrade(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, 
 /**
  * @brief Send the HTTP 200 + SSE headers and promote the slot to SSE mode.
  */
-proto_bool protocore_sse_do_upgrade(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, uint8_t route_id)
+proto_bool protocore_sse_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t route_id)
 {
     ConnPoolV.slot = slot_id;
     ConnPool.active(protocore_conn_pool_span());

@@ -69,7 +69,7 @@ static_assert(IFACE_BRIDGE_HW_OFF_CTX % _Alignof(BridgeGlueCtx) == 0,
 // The region, at its offset in the caller's borrow.
 #define IFACE_BRIDGE_HW_CTX(w) ((BridgeGlueCtx *)(void *)((w) + IFACE_BRIDGE_HW_OFF_CTX))
 
-static const BridgeRule *rule_for_slot(uint8_t *restrict work, uint8_t slot)
+static const BridgeRule *rule_for_slot(uint8_t *work, uint8_t slot)
 {
     ConnPoolV.slot = slot;
     ConnPool.listener_id(protocore_conn_pool_span());
@@ -93,7 +93,7 @@ static const BridgeRule *rule_for_slot(uint8_t *restrict work, uint8_t slot)
 
 // Bring the target's bus up once at publish. UART opens at its baud on the unit's default pins;
 // SPI parks the CS gpio high and starts the shared bus once; I2C uses the shared bus owner.
-static void bus_begin(uint8_t *restrict work, const BridgeTarget *t)
+static void bus_begin(uint8_t *work, const BridgeTarget *t)
 {
     switch (t->bus)
     {
@@ -170,7 +170,7 @@ static proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t w
 }
 
 // STREAM: pipe socket RX -> UART (called from on_data).
-static void stream_sock_to_uart(uint8_t *restrict work, uint8_t slot, const BridgeTarget *t)
+static void stream_sock_to_uart(uint8_t *work, uint8_t slot, const BridgeTarget *t)
 {
     for (;;)
     {
@@ -188,7 +188,7 @@ static void stream_sock_to_uart(uint8_t *restrict work, uint8_t slot, const Brid
 }
 
 // STREAM: pipe UART RX -> socket (called from on_poll).
-static void stream_uart_to_sock(uint8_t *restrict work, uint8_t slot, const BridgeTarget *t)
+static void stream_uart_to_sock(uint8_t *work, uint8_t slot, const BridgeTarget *t)
 {
     // The driver ISR refills the UART ring independently of this loop, so the chunk count is what ends
     // the poll slice: at sustained line rate the available count never falls to zero on its own.
@@ -220,7 +220,7 @@ static void stream_uart_to_sock(uint8_t *restrict work, uint8_t slot, const Brid
 // compiles. Every host env states PROTOCORE_PLATFORM_HAS_BUS 1, so this half has never been built
 // and the damage sat here unreported.
 
-static void bus_begin(uint8_t *restrict work, const BridgeTarget *t)
+static void bus_begin(uint8_t *work, const BridgeTarget *t)
 {
     (void)work;
     (void)t;
@@ -234,13 +234,13 @@ static proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t w
     (void)rlen;
     return PROTO_FALSE;
 }
-static void stream_sock_to_uart(uint8_t *restrict work, uint8_t slot, const BridgeTarget *t)
+static void stream_sock_to_uart(uint8_t *work, uint8_t slot, const BridgeTarget *t)
 {
     (void)work;
     (void)slot;
     (void)t;
 }
-static void stream_uart_to_sock(uint8_t *restrict work, uint8_t slot, const BridgeTarget *t)
+static void stream_uart_to_sock(uint8_t *work, uint8_t slot, const BridgeTarget *t)
 {
     (void)work;
     (void)slot;
@@ -333,7 +333,7 @@ static void bridge_on_accept(uint8_t slot)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_iface_bridge_hw_span();
+    uint8_t *work = protocore_iface_bridge_hw_span();
 
     if (!rule_for_slot(work, slot))
     {
@@ -346,7 +346,7 @@ static void bridge_on_data(uint8_t slot)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_iface_bridge_hw_span();
+    uint8_t *work = protocore_iface_bridge_hw_span();
 
     const BridgeRule *r = rule_for_slot(work, slot);
     if (!r)
@@ -369,7 +369,7 @@ static void bridge_on_poll(uint8_t slot)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_iface_bridge_hw_span();
+    uint8_t *work = protocore_iface_bridge_hw_span();
 
     ConnPoolV.slot = slot;
     ConnPool.active(protocore_conn_pool_span());
@@ -417,7 +417,7 @@ uint8_t *protocore_iface_bridge_hw_span(void)
     return s_own.span;
 }
 
-void protocore_iface_bridge_hw_publish(uint8_t *restrict work)
+void protocore_iface_bridge_hw_publish(uint8_t *work)
 {
     uint8_t listener_id = IfaceBridgeHwV.publish_args.listener_id;
     uint16_t port = IfaceBridgeHwV.publish_args.port;
@@ -476,7 +476,7 @@ void protocore_iface_bridge_hw_publish(uint8_t *restrict work)
     IfaceBridgeHwV.ok = PROTO_TRUE;
 }
 
-void protocore_iface_bridge_hw_reset(uint8_t *restrict work)
+void protocore_iface_bridge_hw_reset(uint8_t *work)
 {
     for (int i = 0; i < PROTOCORE_BRIDGE_MAX_RULES; i++)
     {

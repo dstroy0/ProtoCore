@@ -160,14 +160,14 @@ extern SmtpVars SmtpV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const run)(uint8_t *restrict work);
-    void (*const send)(uint8_t *restrict work);
+    void (*const run)(uint8_t *work);
+    void (*const send)(uint8_t *work);
 } SmtpNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SmtpV or a region of the borrow at a fixed offset.
-void protocore_smtp_run(uint8_t *restrict work);
-void protocore_smtp_send(uint8_t *restrict work);
+void protocore_smtp_run(uint8_t *work);
+void protocore_smtp_send(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

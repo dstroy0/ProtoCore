@@ -58,8 +58,8 @@ static inline int hash3(const uint8_t *p)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-DeflateResult protocore_deflate_raw(uint8_t *restrict work, const uint8_t *src, size_t src_len, uint8_t *dst,
-                                    size_t dst_cap, size_t *out_len, void *scratch, size_t scratch_len)
+DeflateResult protocore_deflate_raw(uint8_t *work, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap,
+                                    size_t *out_len, void *scratch, size_t scratch_len)
 {
     if (scratch_len < DEFLATE_SCRATCH_SIZE)
     {

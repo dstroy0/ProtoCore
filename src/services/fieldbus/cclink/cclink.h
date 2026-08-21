@@ -148,22 +148,22 @@ extern CclinkVars CclinkV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const sum)(uint8_t *restrict work);
-    void (*const build)(uint8_t *restrict work);
-    void (*const parse)(uint8_t *restrict work);
-    void (*const get_bit)(uint8_t *restrict work);
-    void (*const set_bit)(uint8_t *restrict work);
-    void (*const get_word)(uint8_t *restrict work);
+    void (*const sum)(uint8_t *work);
+    void (*const build)(uint8_t *work);
+    void (*const parse)(uint8_t *work);
+    void (*const get_bit)(uint8_t *work);
+    void (*const set_bit)(uint8_t *work);
+    void (*const get_word)(uint8_t *work);
 } CclinkNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in CclinkV or a region of the borrow at a fixed offset.
-void protocore_cclink_sum(uint8_t *restrict work);
-void protocore_cclink_build(uint8_t *restrict work);
-void protocore_cclink_parse(uint8_t *restrict work);
-void protocore_cclink_get_bit(uint8_t *restrict work);
-void protocore_cclink_set_bit(uint8_t *restrict work);
-void protocore_cclink_get_word(uint8_t *restrict work);
+void protocore_cclink_sum(uint8_t *work);
+void protocore_cclink_build(uint8_t *work);
+void protocore_cclink_parse(uint8_t *work);
+void protocore_cclink_get_bit(uint8_t *work);
+void protocore_cclink_set_bit(uint8_t *work);
+void protocore_cclink_get_word(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

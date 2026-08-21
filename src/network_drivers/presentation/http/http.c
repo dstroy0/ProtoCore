@@ -76,14 +76,14 @@ uint8_t *protocore_http_span(void)
     return s_own.span;
 }
 
-void protocore_http_set_not_found(uint8_t *restrict work)
+void protocore_http_set_not_found(uint8_t *work)
 {
     HTTP_CTX(work)->not_found = HttpV.cb;
 }
 
 // Every other owner protocore_server_reset() calls exposes this; without it a handler registered here
 // outlives the reset and answers requests the route table no longer knows about.
-void protocore_http_reset(uint8_t *restrict work)
+void protocore_http_reset(uint8_t *work)
 {
     static const struct HttpStorage blank = {0};
     *HTTP_CTX(work) = blank;
@@ -92,7 +92,7 @@ void protocore_http_reset(uint8_t *restrict work)
 #if PROTOCORE_ENABLE_EDGE_CACHE
 // Edge-cache async-fetch pump seam (see server/web/edge_cache/edge_cache_proxy): a cache miss
 // suspends the client request and drives the non-blocking origin fetch from this slot's poll.
-void protocore_http_set_edge_poll(uint8_t *restrict work)
+void protocore_http_set_edge_poll(uint8_t *work)
 {
     HTTP_CTX(work)->edge_poll = HttpV.edge_poll;
 }
@@ -107,7 +107,7 @@ void protocore_http_set_edge_poll(uint8_t *restrict work)
  * @param code HTTP status integer.
  * @return Pointer to a string-literal reason phrase; never null.
  */
-void protocore_http_status_text(uint8_t *restrict work)
+void protocore_http_status_text(uint8_t *work)
 {
     (void)work;
     const int code = HttpV.code;
@@ -217,7 +217,7 @@ void protocore_http_status_text(uint8_t *restrict work)
  * @param m Null-terminated method string, e.g. "POST".
  * @return Matching HttpMethod enum value, or HTTP_METHOD_UNKNOWN.
  */
-void protocore_http_parse_method(uint8_t *restrict work)
+void protocore_http_parse_method(uint8_t *work)
 {
     (void)work;
     const char *m = HttpV.method_args.token;
@@ -267,7 +267,7 @@ void protocore_http_parse_method(uint8_t *restrict work)
 /**
  * @brief Canonical method token for an HttpMethod (for the Allow header).
  */
-void protocore_http_method_name(uint8_t *restrict work)
+void protocore_http_method_name(uint8_t *work)
 {
     (void)work;
     const HttpMethod m = HttpV.method_args.method;
@@ -311,7 +311,7 @@ void protocore_http_method_name(uint8_t *restrict work)
  * @param req_path    Incoming request path from the parsed HTTP request line.
  * @return True if the route matches the request path.
  */
-void protocore_http_path_matches(uint8_t *restrict work)
+void protocore_http_path_matches(uint8_t *work)
 {
     (void)work;
     const char *route = HttpV.route_args.route;
@@ -363,7 +363,7 @@ static void capture_path_param(HttpReq *req, const char *key, size_t klen, const
  *
  * @return True on a full match (params captured); false otherwise.
  */
-void protocore_http_match_path_params(uint8_t *restrict work)
+void protocore_http_match_path_params(uint8_t *work)
 {
     (void)work;
     const char *route = HttpV.route_args.route;
@@ -413,14 +413,14 @@ void protocore_http_match_path_params(uint8_t *restrict work)
 // True when the request on this slot used the HEAD method, whose response must
 // carry the same headers as GET but no message body (RFC 7231 §4.3.2). External
 // linkage (declared in protocore.h): the split handler TUs call it.
-void protocore_http_req_is_head(uint8_t *restrict work)
+void protocore_http_req_is_head(uint8_t *work)
 {
     (void)work;
     HttpV.ok = str.eq(http_pool[HttpV.slot].method, "HEAD", sizeof("HEAD"), PROTO_FALSE);
 }
 
 // Append a method token to a comma-separated Allow list, de-duplicating.
-void protocore_http_allow_append(uint8_t *restrict work)
+void protocore_http_allow_append(uint8_t *work)
 {
     (void)work;
     char *buf = HttpV.allow.buf;
@@ -640,8 +640,7 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
 #endif // PROTOCORE_ENABLE_CSRF
 
 #if PROTOCORE_ENABLE_WEBSOCKET
-static void handle_ws_route(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, HttpMethod method,
-                            const HttpRoute *r)
+static void handle_ws_route(uint8_t *work, uint8_t slot_id, HttpReq *req, HttpMethod method, const HttpRoute *r)
 {
     const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Upgrade");
     const char *upgrade_hdr = http_parser_text;
@@ -759,8 +758,8 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
 }
 #endif // PROTOCORE_ENABLE_AUTH
 
-static proto_bool dispatch_matched_route(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, HttpMethod method,
-                                         HttpRoute *r, proto_bool *path_matched, char *allow_buf, size_t allow_cap)
+static proto_bool dispatch_matched_route(uint8_t *work, uint8_t slot_id, HttpReq *req, HttpMethod method, HttpRoute *r,
+                                         proto_bool *path_matched, char *allow_buf, size_t allow_cap)
 {
 #if PROTOCORE_ENABLE_WEBSOCKET
     if (r->type == ROUTE_WS)
@@ -837,7 +836,7 @@ static proto_bool dispatch_matched_route(uint8_t *restrict work, uint8_t slot_id
     return PROTO_TRUE;
 }
 
-void protocore_http_match_and_execute(uint8_t *restrict work)
+void protocore_http_match_and_execute(uint8_t *work)
 {
     const uint8_t slot_id = HttpV.slot;
     HttpReq *req = &http_pool[slot_id];
@@ -945,7 +944,7 @@ void protocore_http_match_and_execute(uint8_t *restrict work)
 // HTTP through the same uniform seam as every other protocol, with no HTTP special case in the
 // loop. Runs the file/chunk send pumps, the WebSocket and SSE drains, the keep-alive re-parse, and
 // dispatches a completed request into the route table.
-void protocore_http_poll_slot(uint8_t *restrict work)
+void protocore_http_poll_slot(uint8_t *work)
 {
     const uint8_t i = HttpV.slot;
 #if PROTOCORE_ENABLE_EDGE_CACHE

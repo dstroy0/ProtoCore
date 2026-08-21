@@ -82,7 +82,7 @@ uint8_t *protocore_http_conn_span(void)
     return s_own.span;
 }
 
-void protocore_http_conn_reset(uint8_t *restrict work)
+void protocore_http_conn_reset(uint8_t *work)
 {
     (void)work;
     if (HttpConnV.slot >= MAX_CONNS)
@@ -114,7 +114,7 @@ static inline void http_release_upgrade_bindings(uint8_t slot_id)
 #endif
 }
 
-void protocore_http_conn_conn_open(uint8_t *restrict work)
+void protocore_http_conn_conn_open(uint8_t *work)
 {
     if (HttpConnV.slot >= MAX_CONNS)
     {
@@ -130,7 +130,7 @@ void protocore_http_conn_conn_open(uint8_t *restrict work)
 // The worker fills this slot's scratch once, then the parser walks it. Check the terminal state
 // before taking anything so a pipelined next request is left where it is; the window is reopened by
 // the worker's ack_consumed.
-void protocore_http_conn_parse(uint8_t *restrict work)
+void protocore_http_conn_parse(uint8_t *work)
 {
     if (HttpConnV.slot >= MAX_CONNS)
     {
@@ -350,7 +350,7 @@ static void http_evt_poll(uint8_t slot)
     }
 }
 
-void protocore_http_conn_set_poll(uint8_t *restrict work)
+void protocore_http_conn_set_poll(uint8_t *work)
 {
     HTTP_CONN_CTX(work)->poll = HttpConnV.poll;
 }
@@ -360,7 +360,7 @@ void protocore_http_conn_set_poll(uint8_t *restrict work)
 static const ProtoHandler s_http_handler = {
     .on_accept = http_evt_accept, .on_data = http_evt_data, .on_close = http_evt_close, .on_poll = http_evt_poll};
 
-void protocore_http_conn_proto_handler(uint8_t *restrict work)
+void protocore_http_conn_proto_handler(uint8_t *work)
 {
     (void)work;
     HttpConnV.handler = &s_http_handler;
@@ -370,7 +370,7 @@ void protocore_http_conn_proto_handler(uint8_t *restrict work)
 // Case-insensitive search for @p token as a comma/space-delimited element of a
 // Connection header value (e.g. "keep-alive" in "Keep-Alive, Upgrade"). Shared by
 // keep-alive evaluation and the WebSocket Upgrade-token check.
-void protocore_http_conn_has_token(uint8_t *restrict work)
+void protocore_http_conn_has_token(uint8_t *work)
 {
     (void)work;
     HttpConnV.ok = PROTO_FALSE;
@@ -414,7 +414,7 @@ void protocore_http_conn_has_token(uint8_t *restrict work)
 #endif // PROTOCORE_ENABLE_KEEPALIVE || PROTOCORE_ENABLE_WEBSOCKET
 
 #if PROTOCORE_ENABLE_KEEPALIVE
-void protocore_http_conn_keepalive_eval(uint8_t *restrict work)
+void protocore_http_conn_keepalive_eval(uint8_t *work)
 {
     HttpConnV.ok = PROTO_FALSE;
     HttpReq *req = &http_pool[HttpConnV.slot];

@@ -47,10 +47,10 @@ static size_t write_segment(uint8_t *p, size_t cap, uint8_t logical_type, uint16
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_cip_build_epath(uint8_t *restrict work);
-void protocore_cip_build_request(uint8_t *restrict work);
+void protocore_cip_build_epath(uint8_t *work);
+void protocore_cip_build_request(uint8_t *work);
 
-void protocore_cip_build_epath(uint8_t *restrict work)
+void protocore_cip_build_epath(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = CipV.build_epath_args.buf;
@@ -93,7 +93,7 @@ void protocore_cip_build_epath(uint8_t *restrict work)
     CipV.n = p;
 }
 
-void protocore_cip_build_request(uint8_t *restrict work)
+void protocore_cip_build_request(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = CipV.build_request_args.buf;
@@ -129,7 +129,7 @@ void protocore_cip_build_request(uint8_t *restrict work)
     CipV.n = p;
 }
 
-void protocore_cip_build_get_attr_single(uint8_t *restrict work)
+void protocore_cip_build_get_attr_single(uint8_t *work)
 {
     uint8_t *buf = CipV.build_get_attr_single_args.buf;
     size_t cap = CipV.build_get_attr_single_args.cap;
@@ -161,7 +161,7 @@ void protocore_cip_build_get_attr_single(uint8_t *restrict work)
     protocore_cip_build_request(work);
 }
 
-void protocore_cip_build_get_attr_all(uint8_t *restrict work)
+void protocore_cip_build_get_attr_all(uint8_t *work)
 {
     uint8_t *buf = CipV.build_get_attr_all_args.buf;
     size_t cap = CipV.build_get_attr_all_args.cap;
@@ -192,7 +192,7 @@ void protocore_cip_build_get_attr_all(uint8_t *restrict work)
     protocore_cip_build_request(work);
 }
 
-void protocore_cip_build_set_attr_single(uint8_t *restrict work)
+void protocore_cip_build_set_attr_single(uint8_t *work)
 {
     uint8_t *buf = CipV.build_set_attr_single_args.buf;
     size_t cap = CipV.build_set_attr_single_args.cap;
@@ -226,7 +226,7 @@ void protocore_cip_build_set_attr_single(uint8_t *restrict work)
     protocore_cip_build_request(work);
 }
 
-void protocore_cip_parse_response(uint8_t *restrict work)
+void protocore_cip_parse_response(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = CipV.parse_response_args.buf;

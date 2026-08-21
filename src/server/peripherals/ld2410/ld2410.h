@@ -261,9 +261,8 @@ typedef struct
  * @var Ld2410Ns::set_engineering  enable/disable engineering mode (brackets the command with ...
  * @var Ld2410Ns::restart  restart the module (brackets the command with enable/end)
  *
- * @c work is PROTOCORE_LD2410_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_LD2410_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
+ * nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -290,26 +289,26 @@ typedef struct
     size_t n;
     const Ld2410Report *report;
 
-    void (*const parse_report)(uint8_t *restrict work);
-    void (*const stream_reset)(uint8_t *restrict work);
-    void (*const stream_push)(uint8_t *restrict work);
-    void (*const present)(uint8_t *restrict work);
-    void (*const distance_cm)(uint8_t *restrict work);
-    void (*const cmd_config_enable)(uint8_t *restrict work);
-    void (*const cmd_config_end)(uint8_t *restrict work);
-    void (*const cmd_engineering)(uint8_t *restrict work);
-    void (*const cmd_restart)(uint8_t *restrict work);
-    void (*const cmd_bluetooth)(uint8_t *restrict work);
-    void (*const cmd_get_mac)(uint8_t *restrict work);
-    void (*const cmd_set_bt_password)(uint8_t *restrict work);
-    void (*const parse_ack)(uint8_t *restrict work);
-    void (*const ack_ok)(uint8_t *restrict work);
-    void (*const ack_mac)(uint8_t *restrict work);
-    void (*const begin)(uint8_t *restrict work);
-    void (*const poll)(uint8_t *restrict work);
-    void (*const last)(uint8_t *restrict work);
-    void (*const set_engineering)(uint8_t *restrict work);
-    void (*const restart)(uint8_t *restrict work);
+    void (*const parse_report)(uint8_t *work);
+    void (*const stream_reset)(uint8_t *work);
+    void (*const stream_push)(uint8_t *work);
+    void (*const present)(uint8_t *work);
+    void (*const distance_cm)(uint8_t *work);
+    void (*const cmd_config_enable)(uint8_t *work);
+    void (*const cmd_config_end)(uint8_t *work);
+    void (*const cmd_engineering)(uint8_t *work);
+    void (*const cmd_restart)(uint8_t *work);
+    void (*const cmd_bluetooth)(uint8_t *work);
+    void (*const cmd_get_mac)(uint8_t *work);
+    void (*const cmd_set_bt_password)(uint8_t *work);
+    void (*const parse_ack)(uint8_t *work);
+    void (*const ack_ok)(uint8_t *work);
+    void (*const ack_mac)(uint8_t *work);
+    void (*const begin)(uint8_t *work);
+    void (*const poll)(uint8_t *work);
+    void (*const last)(uint8_t *work);
+    void (*const set_engineering)(uint8_t *work);
+    void (*const restart)(uint8_t *work);
 } Ld2410Ns;
 
 /** @brief The one symbol this module exports. */

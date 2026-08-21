@@ -120,46 +120,46 @@ extern SshNetworkVars SshNetworkV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const claim)(uint8_t *restrict work);
-    void (*const release)(uint8_t *restrict work);
-    void (*const slot_free)(uint8_t *restrict work);
-    void (*const owns)(uint8_t *restrict work);
-    void (*const tx_drain)(uint8_t *restrict work);
-    void (*const emit)(uint8_t *restrict work);
-    void (*const write_msg)(uint8_t *restrict work);
-    void (*const payload_region)(uint8_t *restrict work);
-    void (*const write_msg_at)(uint8_t *restrict work);
-    void (*const chan_open)(uint8_t *restrict work);
-    void (*const chan_adopt)(uint8_t *restrict work);
-    void (*const chan_by_cid)(uint8_t *restrict work);
-    void (*const chan_write)(uint8_t *restrict work);
-    void (*const chan_read)(uint8_t *restrict work);
-    void (*const chan_avail)(uint8_t *restrict work);
-    void (*const chan_drained)(uint8_t *restrict work);
-    void (*const chan_close)(uint8_t *restrict work);
-    void (*const chan_close_all)(uint8_t *restrict work);
+    void (*const claim)(uint8_t *work);
+    void (*const release)(uint8_t *work);
+    void (*const slot_free)(uint8_t *work);
+    void (*const owns)(uint8_t *work);
+    void (*const tx_drain)(uint8_t *work);
+    void (*const emit)(uint8_t *work);
+    void (*const write_msg)(uint8_t *work);
+    void (*const payload_region)(uint8_t *work);
+    void (*const write_msg_at)(uint8_t *work);
+    void (*const chan_open)(uint8_t *work);
+    void (*const chan_adopt)(uint8_t *work);
+    void (*const chan_by_cid)(uint8_t *work);
+    void (*const chan_write)(uint8_t *work);
+    void (*const chan_read)(uint8_t *work);
+    void (*const chan_avail)(uint8_t *work);
+    void (*const chan_drained)(uint8_t *work);
+    void (*const chan_close)(uint8_t *work);
+    void (*const chan_close_all)(uint8_t *work);
 } SshNetworkNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SshNetworkV or a region of the borrow at a fixed offset.
-void protocore_ssh_network_claim(uint8_t *restrict work);
-void protocore_ssh_network_release(uint8_t *restrict work);
-void protocore_ssh_network_slot_free(uint8_t *restrict work);
-void protocore_ssh_network_owns(uint8_t *restrict work);
-void protocore_ssh_network_tx_drain(uint8_t *restrict work);
-void protocore_ssh_network_emit(uint8_t *restrict work);
-void protocore_ssh_network_write_msg(uint8_t *restrict work);
-void protocore_ssh_network_payload_region(uint8_t *restrict work);
-void protocore_ssh_network_write_msg_at(uint8_t *restrict work);
-void protocore_ssh_network_chan_open(uint8_t *restrict work);
-void protocore_ssh_network_chan_adopt(uint8_t *restrict work);
-void protocore_ssh_network_chan_by_cid(uint8_t *restrict work);
-void protocore_ssh_network_chan_write(uint8_t *restrict work);
-void protocore_ssh_network_chan_read(uint8_t *restrict work);
-void protocore_ssh_network_chan_avail(uint8_t *restrict work);
-void protocore_ssh_network_chan_drained(uint8_t *restrict work);
-void protocore_ssh_network_chan_close(uint8_t *restrict work);
-void protocore_ssh_network_chan_close_all(uint8_t *restrict work);
+void protocore_ssh_network_claim(uint8_t *work);
+void protocore_ssh_network_release(uint8_t *work);
+void protocore_ssh_network_slot_free(uint8_t *work);
+void protocore_ssh_network_owns(uint8_t *work);
+void protocore_ssh_network_tx_drain(uint8_t *work);
+void protocore_ssh_network_emit(uint8_t *work);
+void protocore_ssh_network_write_msg(uint8_t *work);
+void protocore_ssh_network_payload_region(uint8_t *work);
+void protocore_ssh_network_write_msg_at(uint8_t *work);
+void protocore_ssh_network_chan_open(uint8_t *work);
+void protocore_ssh_network_chan_adopt(uint8_t *work);
+void protocore_ssh_network_chan_by_cid(uint8_t *work);
+void protocore_ssh_network_chan_write(uint8_t *work);
+void protocore_ssh_network_chan_read(uint8_t *work);
+void protocore_ssh_network_chan_avail(uint8_t *work);
+void protocore_ssh_network_chan_drained(uint8_t *work);
+void protocore_ssh_network_chan_close(uint8_t *work);
+void protocore_ssh_network_chan_close_all(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

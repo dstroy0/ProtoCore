@@ -50,9 +50,9 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    uint16_t (*ash_crc16)(uint8_t *restrict, const uint8_t *, uint16_t);
-    uint16_t (*ash_frame_encode)(uint8_t *restrict, uint8_t, const uint8_t *, uint16_t, uint8_t *, uint16_t);
-    int (*ash_frame_decode)(uint8_t *restrict, const uint8_t *, uint16_t, uint8_t *, uint8_t *, uint16_t, uint16_t *);
+    uint16_t (*ash_crc16)(uint8_t *, const uint8_t *, uint16_t);
+    uint16_t (*ash_frame_encode)(uint8_t *, uint8_t, const uint8_t *, uint16_t, uint8_t *, uint16_t);
+    int (*ash_frame_decode)(uint8_t *, const uint8_t *, uint16_t, uint8_t *, uint8_t *, uint16_t, uint16_t *);
 } ZigbeeNs;
 PROTOCORE_NS_LAYOUT(ZigbeeNs, ash_crc16, ash_frame_encode, ash_frame_decode);
 
@@ -63,7 +63,7 @@ PROTOCORE_NS_LAYOUT(ZigbeeNs, ash_crc16, ash_frame_encode, ash_frame_decode);
  * @param len Len
  * @return The uint16_t.
  */
-uint16_t protocore_zigbee_ash_crc16(uint8_t *restrict work, const uint8_t *buf, uint16_t len);
+uint16_t protocore_zigbee_ash_crc16(uint8_t *work, const uint8_t *buf, uint16_t len);
 /**
  * @brief Encode an ASH frame: [control | payload] + CRC-16, byte-stuffed, .
  * @param work PROTOCORE_ZIGBEE_BORROW bytes the caller took. Not held past the call.
@@ -74,8 +74,8 @@ uint16_t protocore_zigbee_ash_crc16(uint8_t *restrict work, const uint8_t *buf, 
  * @param cap Cap
  * @return The uint16_t.
  */
-uint16_t protocore_zigbee_ash_frame_encode(uint8_t *restrict work, uint8_t control, const uint8_t *payload,
-                                           uint16_t len, uint8_t *out, uint16_t cap);
+uint16_t protocore_zigbee_ash_frame_encode(uint8_t *work, uint8_t control, const uint8_t *payload, uint16_t len,
+                                           uint8_t *out, uint16_t cap);
 /**
  * @brief Decode one ASH frame from the front of raw: find the flag, remove .
  * @param work PROTOCORE_ZIGBEE_BORROW bytes the caller took. Not held past the call.
@@ -87,7 +87,7 @@ uint16_t protocore_zigbee_ash_frame_encode(uint8_t *restrict work, uint8_t contr
  * @param pay_len Pay len
  * @return The int.
  */
-int protocore_zigbee_ash_frame_decode(uint8_t *restrict work, const uint8_t *raw, uint16_t len, uint8_t *control,
+int protocore_zigbee_ash_frame_decode(uint8_t *work, const uint8_t *raw, uint16_t len, uint8_t *control,
                                       uint8_t *payload, uint16_t pay_cap, uint16_t *pay_len);
 
 /** @brief Module namespace. */

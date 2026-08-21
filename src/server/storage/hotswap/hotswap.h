@@ -191,9 +191,8 @@ typedef struct
  * @var HotswapNs::state_name  short name for s ("absent" / "ready" / "faulted"), for logs and JSON
  * @var HotswapNs::json  serialize as `{"storage":"ready","mounts":N,"faults":N}` for a ...
  *
- * @c work is PROTOCORE_HOTSWAP_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_HOTSWAP_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
+ * nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -219,36 +218,36 @@ extern HotswapVars HotswapV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const core_init)(uint8_t *restrict work);
-    void (*const core_io)(uint8_t *restrict work);
-    void (*const core_due)(uint8_t *restrict work);
-    void (*const core_probe)(uint8_t *restrict work);
-    void (*const begin)(uint8_t *restrict work);
-    void (*const set_event_cb)(uint8_t *restrict work);
-    void (*const poll)(uint8_t *restrict work);
-    void (*const poll_at)(uint8_t *restrict work);
-    void (*const ready)(uint8_t *restrict work);
-    void (*const io)(uint8_t *restrict work);
-    void (*const state)(uint8_t *restrict work);
-    void (*const state_name)(uint8_t *restrict work);
-    void (*const json)(uint8_t *restrict work);
+    void (*const core_init)(uint8_t *work);
+    void (*const core_io)(uint8_t *work);
+    void (*const core_due)(uint8_t *work);
+    void (*const core_probe)(uint8_t *work);
+    void (*const begin)(uint8_t *work);
+    void (*const set_event_cb)(uint8_t *work);
+    void (*const poll)(uint8_t *work);
+    void (*const poll_at)(uint8_t *work);
+    void (*const ready)(uint8_t *work);
+    void (*const io)(uint8_t *work);
+    void (*const state)(uint8_t *work);
+    void (*const state_name)(uint8_t *work);
+    void (*const json)(uint8_t *work);
 } HotswapNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HotswapV or a region of the borrow at a fixed offset.
-void protocore_hotswap_core_init(uint8_t *restrict work);
-void protocore_hotswap_core_io(uint8_t *restrict work);
-void protocore_hotswap_core_due(uint8_t *restrict work);
-void protocore_hotswap_core_probe(uint8_t *restrict work);
-void protocore_hotswap_begin(uint8_t *restrict work);
-void protocore_hotswap_set_event_cb(uint8_t *restrict work);
-void protocore_hotswap_poll(uint8_t *restrict work);
-void protocore_hotswap_poll_at(uint8_t *restrict work);
-void protocore_hotswap_ready(uint8_t *restrict work);
-void protocore_hotswap_io(uint8_t *restrict work);
-void protocore_hotswap_state(uint8_t *restrict work);
-void protocore_hotswap_state_name(uint8_t *restrict work);
-void protocore_hotswap_json(uint8_t *restrict work);
+void protocore_hotswap_core_init(uint8_t *work);
+void protocore_hotswap_core_io(uint8_t *work);
+void protocore_hotswap_core_due(uint8_t *work);
+void protocore_hotswap_core_probe(uint8_t *work);
+void protocore_hotswap_begin(uint8_t *work);
+void protocore_hotswap_set_event_cb(uint8_t *work);
+void protocore_hotswap_poll(uint8_t *work);
+void protocore_hotswap_poll_at(uint8_t *work);
+void protocore_hotswap_ready(uint8_t *work);
+void protocore_hotswap_io(uint8_t *work);
+void protocore_hotswap_state(uint8_t *work);
+void protocore_hotswap_state_name(uint8_t *work);
+void protocore_hotswap_json(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

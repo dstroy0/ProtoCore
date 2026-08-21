@@ -200,7 +200,7 @@ static proto_bool rsa_key_parse(const uint8_t *der, size_t len, uint8_t *d)
            der_int(der, end, &off, d, PROTOCORE_RSA_KEY_BYTES);
 }
 
-void protocore_ssh_rsa_load_pubkey(uint8_t *restrict work)
+void protocore_ssh_rsa_load_pubkey(uint8_t *work)
 {
     if (!span.has_storage(SSH_RSA_CTX(work)->d))
     {
@@ -239,7 +239,7 @@ void protocore_ssh_rsa_load_pubkey(uint8_t *restrict work)
     SshRsaV.n = 0;
 }
 
-void protocore_ssh_rsa_sign(uint8_t *restrict work)
+void protocore_ssh_rsa_sign(uint8_t *work)
 {
     uint8_t *crypto_work = SshRsaV.sign_args.crypto_work;
     const uint8_t *msg = SshRsaV.sign_args.msg;
@@ -309,7 +309,7 @@ static uint8_t *put_mpint(uint8_t *p, const uint8_t *data, size_t data_len)
     return p + src_len;
 }
 
-void protocore_ssh_rsa_encode_pubkey(uint8_t *restrict work)
+void protocore_ssh_rsa_encode_pubkey(uint8_t *work)
 {
     (void)work;
     uint8_t *out = SshRsaV.encode_pubkey_args.out;

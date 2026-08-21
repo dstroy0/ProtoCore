@@ -239,7 +239,7 @@ static QuicStream *stream_get(QuicConnCtx *qc, uint64_t id, proto_bool create)
     return free_slot;
 }
 
-static void quic_conn_open(uint8_t *restrict work, QuicConnCtx *qc, const QuicTlsConfig *cfg, const uint8_t *odcid,
+static void quic_conn_open(uint8_t *work, QuicConnCtx *qc, const QuicTlsConfig *cfg, const uint8_t *odcid,
                            uint8_t odcid_len, const uint8_t *peer_scid, uint8_t peer_scid_len, const uint8_t *our_scid,
                            uint8_t our_scid_len, const QuicConnCallbacks *cb)
 {
@@ -644,7 +644,7 @@ static proto_bool quic_conn_take(QuicConnCtx *qc, const uint8_t *datagram, size_
 
 // --- Sending ---------------------------------------------------------------------------------
 // Append the owed ACK frame for space @p s (RFC 9000 sec 13.2); returns bytes written.
-static size_t build_ack_frame(uint8_t *restrict work, QuicPnSpace *s, uint8_t *buf, size_t cap)
+static size_t build_ack_frame(uint8_t *work, QuicPnSpace *s, uint8_t *buf, size_t cap)
 {
     if (!s->ack_eliciting_rx || !s->have_rx)
     {
@@ -662,7 +662,7 @@ static size_t build_ack_frame(uint8_t *restrict work, QuicPnSpace *s, uint8_t *b
 
 // Append the CRYPTO flight for INITIAL/HANDSHAKE (ServerHello / EE..Finished); returns bytes written,
 // sets *ae when it emits an ack-eliciting CRYPTO frame.
-static size_t build_crypto_frame(uint8_t *restrict work, const QuicConnCtx *qc, int level, QuicPnSpace *s, uint8_t *buf,
+static size_t build_crypto_frame(uint8_t *work, const QuicConnCtx *qc, int level, QuicPnSpace *s, uint8_t *buf,
                                  size_t cap, proto_bool *ae)
 {
     if (level != QUIC_ENC_INITIAL && level != QUIC_ENC_HANDSHAKE)
@@ -698,8 +698,7 @@ static size_t build_crypto_frame(uint8_t *restrict work, const QuicConnCtx *qc, 
 }
 
 // Append 1-RTT extras (HANDSHAKE_DONE + stream data) at APP level; returns bytes written, sets *ae.
-static size_t build_app_frames(uint8_t *restrict work, QuicConnCtx *qc, int level, uint8_t *buf, size_t cap,
-                               proto_bool *ae)
+static size_t build_app_frames(uint8_t *work, QuicConnCtx *qc, int level, uint8_t *buf, size_t cap, proto_bool *ae)
 {
     if (level != QUIC_ENC_APP)
     {
@@ -754,7 +753,7 @@ static size_t build_app_frames(uint8_t *restrict work, QuicConnCtx *qc, int leve
 // Build the frame payload for one encryption level into buf; returns its length (0 = nothing to send).
 // @p ae is set true if the payload carries an ack-eliciting frame (CRYPTO / STREAM / HANDSHAKE_DONE),
 // which arms loss recovery for this space.
-static size_t build_frames(uint8_t *restrict work, QuicConnCtx *qc, int level, uint8_t *buf, size_t cap, proto_bool *ae)
+static size_t build_frames(uint8_t *work, QuicConnCtx *qc, int level, uint8_t *buf, size_t cap, proto_bool *ae)
 {
     QuicPnSpace *s = &qc->space[level];
     size_t p = 0;
@@ -800,7 +799,7 @@ static size_t packet_overhead(const QuicConnCtx *qc, proto_bool is_long, uint8_t
 }
 
 // Build one protected packet for a level into out; returns its length (0 = nothing to send).
-static size_t build_packet(uint8_t *restrict work, QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
+static size_t build_packet(uint8_t *work, QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
 {
     QuicPnSpace *s = &qc->space[level];
     if (s->discarded)
@@ -954,7 +953,7 @@ static int protocore_quic_highest_sealed_level(QuicConnCtx *qc)
     return QUIC_ENC_INITIAL;
 }
 
-static size_t quic_conn_build(uint8_t *restrict work, QuicConnCtx *qc, uint8_t *out, size_t cap)
+static size_t quic_conn_build(uint8_t *work, QuicConnCtx *qc, uint8_t *out, size_t cap)
 {
     if (qc->closed && !qc->draining)
     {
@@ -1147,12 +1146,12 @@ static proto_bool quic_conn_gone(const QuicConnCtx *qc)
 
 // The bound context span, as this file's connection. Every entry starts here, so no entry reads the
 // bind twice and none of them carries the span as a parameter.
-static QuicConnCtx *qc_bound(uint8_t *restrict work)
+static QuicConnCtx *qc_bound(uint8_t *work)
 {
     return work ? QUIC_CTX(work) : NULL;
 }
 
-void protocore_quic_conn_init(uint8_t *restrict work)
+void protocore_quic_conn_init(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
     QuicConnV.ok = PROTO_FALSE;
@@ -1167,7 +1166,7 @@ void protocore_quic_conn_init(uint8_t *restrict work)
     QuicConnV.ok = !qc->closed;
 }
 
-void protocore_quic_conn_callbacks(uint8_t *restrict work)
+void protocore_quic_conn_callbacks(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
     QuicConnV.ok = PROTO_FALSE;
@@ -1179,7 +1178,7 @@ void protocore_quic_conn_callbacks(uint8_t *restrict work)
     QuicConnV.ok = PROTO_TRUE;
 }
 
-void protocore_quic_conn_recv(uint8_t *restrict work)
+void protocore_quic_conn_recv(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
     QuicConnV.ok = PROTO_FALSE;
@@ -1190,7 +1189,7 @@ void protocore_quic_conn_recv(uint8_t *restrict work)
     QuicConnV.ok = quic_conn_take(qc, QuicConnV.recv_args.datagram, QuicConnV.recv_args.len);
 }
 
-void protocore_quic_conn_send(uint8_t *restrict work)
+void protocore_quic_conn_send(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
     QuicConnV.ok = PROTO_FALSE;
@@ -1203,7 +1202,7 @@ void protocore_quic_conn_send(uint8_t *restrict work)
     QuicConnV.ok = PROTO_TRUE;
 }
 
-void protocore_quic_conn_on_timeout(uint8_t *restrict work)
+void protocore_quic_conn_on_timeout(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
     QuicConnV.ok = PROTO_FALSE;
@@ -1215,7 +1214,7 @@ void protocore_quic_conn_on_timeout(uint8_t *restrict work)
     QuicConnV.ok = PROTO_TRUE;
 }
 
-void protocore_quic_conn_stream_send(uint8_t *restrict work)
+void protocore_quic_conn_stream_send(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
     QuicConnV.ok = PROTO_FALSE;
@@ -1232,7 +1231,7 @@ void protocore_quic_conn_stream_send(uint8_t *restrict work)
 // A datagram names its connection by DCID: a long header carries the id we chose (scid) or the one
 // the client first used (odcid); a short header carries the former alone. The ids are the context's,
 // so the match is asked here rather than read off it.
-void protocore_quic_conn_owns(uint8_t *restrict work)
+void protocore_quic_conn_owns(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
     QuicConnV.ok = PROTO_FALSE;
@@ -1253,7 +1252,7 @@ void protocore_quic_conn_owns(uint8_t *restrict work)
     }
 }
 
-void protocore_quic_conn_close(uint8_t *restrict work)
+void protocore_quic_conn_close(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
     QuicConnV.ok = PROTO_FALSE;
@@ -1265,7 +1264,7 @@ void protocore_quic_conn_close(uint8_t *restrict work)
     QuicConnV.ok = PROTO_TRUE;
 }
 
-void protocore_quic_conn_close_app(uint8_t *restrict work)
+void protocore_quic_conn_close_app(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
     QuicConnV.ok = PROTO_FALSE;
@@ -1277,7 +1276,7 @@ void protocore_quic_conn_close_app(uint8_t *restrict work)
     QuicConnV.ok = PROTO_TRUE;
 }
 
-void protocore_quic_conn_is_established(uint8_t *restrict work)
+void protocore_quic_conn_is_established(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
     QuicConnV.established = PROTO_FALSE;
@@ -1288,7 +1287,7 @@ void protocore_quic_conn_is_established(uint8_t *restrict work)
     }
 }
 
-void protocore_quic_conn_is_closed(uint8_t *restrict work)
+void protocore_quic_conn_is_closed(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
     QuicConnV.closed = PROTO_TRUE; // an unbound connection answers nothing, which is closed

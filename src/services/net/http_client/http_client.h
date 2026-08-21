@@ -134,20 +134,20 @@ extern HttpClientVars HttpClientV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const parse_target_uri)(uint8_t *restrict work);
-    void (*const build_request)(uint8_t *restrict work);
-    void (*const parse_response)(uint8_t *restrict work);
-    void (*const get)(uint8_t *restrict work);
-    void (*const post)(uint8_t *restrict work);
+    void (*const parse_target_uri)(uint8_t *work);
+    void (*const build_request)(uint8_t *work);
+    void (*const parse_response)(uint8_t *work);
+    void (*const get)(uint8_t *work);
+    void (*const post)(uint8_t *work);
 } HttpClientNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HttpClientV or a region of the borrow at a fixed offset.
-void protocore_http_client_parse_target_uri(uint8_t *restrict work);
-void protocore_http_client_build_request(uint8_t *restrict work);
-void protocore_http_client_parse_response(uint8_t *restrict work);
-void protocore_http_client_get(uint8_t *restrict work);
-void protocore_http_client_post(uint8_t *restrict work);
+void protocore_http_client_parse_target_uri(uint8_t *work);
+void protocore_http_client_build_request(uint8_t *work);
+void protocore_http_client_parse_response(uint8_t *work);
+void protocore_http_client_get(uint8_t *work);
+void protocore_http_client_post(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

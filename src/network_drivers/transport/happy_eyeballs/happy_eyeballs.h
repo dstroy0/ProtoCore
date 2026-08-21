@@ -78,9 +78,8 @@ typedef struct
  * @var HappyEyeballsNs::order  order a candidate list for Happy Eyeballs: stable-sort by ...
  * @var HappyEyeballsNs::attempt_due  connection Attempt Delay gate (RFC 8305 sec 5): may the next ...
  *
- * @c work is PROTOCORE_HAPPY_EYEBALLS_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_HAPPY_EYEBALLS_BORROW bytes the CALLER took, at an address it knows. It is not held past the
+ * call, so nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -97,16 +96,16 @@ extern HappyEyeballsVars HappyEyeballsV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const pref)(uint8_t *restrict work);
-    void (*const order)(uint8_t *restrict work);
-    void (*const attempt_due)(uint8_t *restrict work);
+    void (*const pref)(uint8_t *work);
+    void (*const order)(uint8_t *work);
+    void (*const attempt_due)(uint8_t *work);
 } HappyEyeballsNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HappyEyeballsV or a region of the borrow at a fixed offset.
-void protocore_happy_eyeballs_pref(uint8_t *restrict work);
-void protocore_happy_eyeballs_order(uint8_t *restrict work);
-void protocore_happy_eyeballs_attempt_due(uint8_t *restrict work);
+void protocore_happy_eyeballs_pref(uint8_t *work);
+void protocore_happy_eyeballs_order(uint8_t *work);
+void protocore_happy_eyeballs_attempt_due(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

@@ -227,29 +227,29 @@ extern CoapVars CoapV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const reset)(uint8_t *restrict work);
-    void (*const add_resource)(uint8_t *restrict work);
-    void (*const process)(uint8_t *restrict work);
-    void (*const process_observe)(uint8_t *restrict work);
-    void (*const dedup_lookup)(uint8_t *restrict work);
-    void (*const dedup_store)(uint8_t *restrict work);
-    void (*const begin)(uint8_t *restrict work);
-    void (*const notify)(uint8_t *restrict work);
+    void (*const reset)(uint8_t *work);
+    void (*const add_resource)(uint8_t *work);
+    void (*const process)(uint8_t *work);
+    void (*const process_observe)(uint8_t *work);
+    void (*const dedup_lookup)(uint8_t *work);
+    void (*const dedup_store)(uint8_t *work);
+    void (*const begin)(uint8_t *work);
+    void (*const notify)(uint8_t *work);
 } CoapNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in CoapV or a region of the borrow at a fixed offset.
-void protocore_coap_reset(uint8_t *restrict work);
-void protocore_coap_add_resource(uint8_t *restrict work);
-void protocore_coap_process(uint8_t *restrict work);
-void protocore_coap_process_observe(uint8_t *restrict work);
+void protocore_coap_reset(uint8_t *work);
+void protocore_coap_add_resource(uint8_t *work);
+void protocore_coap_process(uint8_t *work);
+void protocore_coap_process_observe(uint8_t *work);
 #if PROTOCORE_COAP_DEDUP_ENTRIES > 0
-void protocore_coap_dedup_lookup(uint8_t *restrict work);
-void protocore_coap_dedup_store(uint8_t *restrict work);
+void protocore_coap_dedup_lookup(uint8_t *work);
+void protocore_coap_dedup_store(uint8_t *work);
 #endif
-void protocore_coap_begin(uint8_t *restrict work);
+void protocore_coap_begin(uint8_t *work);
 #if PROTOCORE_ENABLE_COAP_OBSERVE
-void protocore_coap_notify(uint8_t *restrict work);
+void protocore_coap_notify(uint8_t *work);
 #endif
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

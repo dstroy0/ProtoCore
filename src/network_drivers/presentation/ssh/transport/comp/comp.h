@@ -32,15 +32,15 @@ typedef enum PROTO_ENUM_PACKED
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*reset)(uint8_t *restrict, uint8_t);
-    void (*set_s2c)(uint8_t *restrict, uint8_t, SshCompAlg);
-    void (*on_newkeys)(uint8_t *restrict, uint8_t);
-    void (*on_auth_success)(uint8_t *restrict, uint8_t);
-    proto_bool (*s2c_active)(uint8_t *restrict, uint8_t);
-    int (*s2c)(uint8_t *restrict, uint8_t, const uint8_t *, size_t, uint8_t *, size_t, size_t *);
-    void (*set_c2s)(uint8_t *restrict, uint8_t, SshCompAlg);
-    proto_bool (*c2s_active)(uint8_t *restrict, uint8_t);
-    int (*c2s)(uint8_t *restrict, uint8_t, const uint8_t *, size_t, uint8_t *, size_t, size_t *);
+    void (*reset)(uint8_t *, uint8_t);
+    void (*set_s2c)(uint8_t *, uint8_t, SshCompAlg);
+    void (*on_newkeys)(uint8_t *, uint8_t);
+    void (*on_auth_success)(uint8_t *, uint8_t);
+    proto_bool (*s2c_active)(uint8_t *, uint8_t);
+    int (*s2c)(uint8_t *, uint8_t, const uint8_t *, size_t, uint8_t *, size_t, size_t *);
+    void (*set_c2s)(uint8_t *, uint8_t, SshCompAlg);
+    proto_bool (*c2s_active)(uint8_t *, uint8_t);
+    int (*c2s)(uint8_t *, uint8_t, const uint8_t *, size_t, uint8_t *, size_t, size_t *);
 } CompNs;
 PROTOCORE_NS_LAYOUT(CompNs, reset, set_s2c, on_newkeys, on_auth_success, s2c_active, s2c, set_c2s, c2s_active, c2s);
 
@@ -49,33 +49,33 @@ PROTOCORE_NS_LAYOUT(CompNs, reset, set_s2c, on_newkeys, on_auth_success, s2c_act
  * @param work PROTOCORE_COMP_BORROW bytes the caller took. Not held past the call.
  * @param i I
  */
-void protocore_comp_reset(uint8_t *restrict work, uint8_t i);
+void protocore_comp_reset(uint8_t *work, uint8_t i);
 /**
  * @brief Record the s2c algorithm negotiated in KEXINIT (::SshCompAlg).
  * @param work PROTOCORE_COMP_BORROW bytes the caller took. Not held past the call.
  * @param i I
  * @param alg Alg
  */
-void protocore_comp_set_s2c(uint8_t *restrict work, uint8_t i, SshCompAlg alg);
+void protocore_comp_set_s2c(uint8_t *work, uint8_t i, SshCompAlg alg);
 /**
  * @brief NEWKEYS completed: start the stream now if `zlib` was negotiated .
  * @param work PROTOCORE_COMP_BORROW bytes the caller took. Not held past the call.
  * @param i I
  */
-void protocore_comp_on_newkeys(uint8_t *restrict work, uint8_t i);
+void protocore_comp_on_newkeys(uint8_t *work, uint8_t i);
 /**
  * @brief SSH_MSG_USERAUTH_SUCCESS sent: start the stream if .
  * @param work PROTOCORE_COMP_BORROW bytes the caller took. Not held past the call.
  * @param i I
  */
-void protocore_comp_on_auth_success(uint8_t *restrict work, uint8_t i);
+void protocore_comp_on_auth_success(uint8_t *work, uint8_t i);
 /**
  * @brief True once the s2c stream is active and outbound payloads must be .
  * @param work PROTOCORE_COMP_BORROW bytes the caller took. Not held past the call.
  * @param i I
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_comp_s2c_active(uint8_t *restrict work, uint8_t i);
+proto_bool protocore_comp_s2c_active(uint8_t *work, uint8_t i);
 /**
  * @brief Compress one outbound payload, continuing the session's zlib stream.
  * @param work PROTOCORE_COMP_BORROW bytes the caller took. Not held past the call.
@@ -87,22 +87,22 @@ proto_bool protocore_comp_s2c_active(uint8_t *restrict work, uint8_t i);
  * @param out_len Out len
  * @return The int.
  */
-int protocore_comp_s2c(uint8_t *restrict work, uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst,
-                       size_t dst_cap, size_t *out_len);
+int protocore_comp_s2c(uint8_t *work, uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap,
+                       size_t *out_len);
 /**
  * @brief Record the client-to-server algorithm negotiated in KEXINIT .
  * @param work PROTOCORE_COMP_BORROW bytes the caller took. Not held past the call.
  * @param i I
  * @param alg Alg
  */
-void protocore_comp_set_c2s(uint8_t *restrict work, uint8_t i, SshCompAlg alg);
+void protocore_comp_set_c2s(uint8_t *work, uint8_t i, SshCompAlg alg);
 /**
  * @brief True once the c2s stream is active and inbound payloads must be .
  * @param work PROTOCORE_COMP_BORROW bytes the caller took. Not held past the call.
  * @param i I
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_comp_c2s_active(uint8_t *restrict work, uint8_t i);
+proto_bool protocore_comp_c2s_active(uint8_t *work, uint8_t i);
 /**
  * @brief Decompress one inbound payload, continuing the session's .
  * @param work PROTOCORE_COMP_BORROW bytes the caller took. Not held past the call.
@@ -114,8 +114,8 @@ proto_bool protocore_comp_c2s_active(uint8_t *restrict work, uint8_t i);
  * @param out_len Out len
  * @return The int.
  */
-int protocore_comp_c2s(uint8_t *restrict work, uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst,
-                       size_t dst_cap, size_t *out_len);
+int protocore_comp_c2s(uint8_t *work, uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap,
+                       size_t *out_len);
 
 /**
  * @brief The bytes every entry here runs out of: one compressor per SSH connection.

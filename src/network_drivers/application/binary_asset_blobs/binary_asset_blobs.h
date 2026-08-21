@@ -35,7 +35,7 @@ extern const size_t PROTOCORE_THEME_BLOB_COUNT;
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*css)(uint8_t *restrict, const char *);
+    void (*css)(uint8_t *, const char *);
 } BinaryAssetBlobsNs;
 PROTOCORE_NS_LAYOUT(BinaryAssetBlobsNs, css);
 
@@ -44,7 +44,7 @@ PROTOCORE_NS_LAYOUT(BinaryAssetBlobsNs, css);
  * @param work PROTOCORE_BINARY_ASSET_BLOBS_BORROW bytes the caller took. Not held past the call.
  * @param name Name
  */
-void protocore_binary_asset_blobs_css(uint8_t *restrict work, const char *name);
+void protocore_binary_asset_blobs_css(uint8_t *work, const char *name);
 
 /** @brief Module namespace. */
 PROTOCORE_NS BinaryAssetBlobsNs BinaryAssetBlobs PROTOCORE_UNUSED = {.css = protocore_binary_asset_blobs_css};

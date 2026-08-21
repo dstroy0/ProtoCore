@@ -34,8 +34,7 @@ static void apply_scp_flags(const char *tok, size_t tlen, ScpMode *mode)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-ScpMode protocore_scp_parse_cmd(uint8_t *restrict work, const char *cmd, size_t cmd_len, char *path_out,
-                                size_t path_cap)
+ScpMode protocore_scp_parse_cmd(uint8_t *work, const char *cmd, size_t cmd_len, char *path_out, size_t path_cap)
 {
     (void)work;
 
@@ -86,7 +85,7 @@ ScpMode protocore_scp_parse_cmd(uint8_t *restrict work, const char *cmd, size_t 
     return mode;
 }
 
-proto_bool protocore_scp_parse_cline(uint8_t *restrict work, const char *line, size_t len, uint32_t *mode_out,
+proto_bool protocore_scp_parse_cline(uint8_t *work, const char *line, size_t len, uint32_t *mode_out,
                                      uint64_t *size_out, char *name_out, size_t name_cap)
 {
     (void)work;
@@ -147,8 +146,7 @@ proto_bool protocore_scp_parse_cline(uint8_t *restrict work, const char *line, s
     return PROTO_TRUE;
 }
 
-size_t protocore_scp_build_cline(uint8_t *restrict work, uint32_t mode, uint64_t size, const char *name, char *out,
-                                 size_t cap)
+size_t protocore_scp_build_cline(uint8_t *work, uint32_t mode, uint64_t size, const char *name, char *out, size_t cap)
 {
     (void)work;
 

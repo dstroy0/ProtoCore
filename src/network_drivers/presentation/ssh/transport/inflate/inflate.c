@@ -436,7 +436,7 @@ static int do_block(BitIn *b, OutCtx *o, Tables *t)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_inflate_init(uint8_t *restrict work)
+void protocore_inflate_init(uint8_t *work)
 {
     (void)work;
     SshInflate *z = InflateV.init_args.z;
@@ -450,7 +450,7 @@ void protocore_inflate_init(uint8_t *restrict work)
     z->header_seen = PROTO_FALSE;
 }
 
-void protocore_inflate_packet(uint8_t *restrict work)
+void protocore_inflate_packet(uint8_t *work)
 {
     (void)work;
     SshInflate *z = InflateV.packet_args.z;

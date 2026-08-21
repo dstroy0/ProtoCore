@@ -73,7 +73,7 @@ typedef struct
  * @var SshKexHashNs::final        write @ref SshKexHashNs::len octets of digest
  *
  * @c work is PROTOCORE_SSH_KEXHASH_BORROW secure bytes the CALLER took, at an address it knows. It
- * arrives @c restrict and is not held past the call, so nothing here aliases it. The caller releases
+ * is not held past the call, so nothing here aliases it. The caller releases
  * it, and the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes
  * it. The exchange hash and every key the sec 7.2 chain derives pass through those bytes, so they die
  * with the release rather than on the stack. Two digests are two borrows and never collide.
@@ -96,16 +96,16 @@ extern SshKexHashVars SshKexHashV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const init)(uint8_t *restrict work);
-    void (*const update)(uint8_t *restrict work);
-    void (*const final)(uint8_t *restrict work);
+    void (*const init)(uint8_t *work);
+    void (*const update)(uint8_t *work);
+    void (*const final)(uint8_t *work);
 } SshKexHashNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SshKexHashV or a region of the borrow at a fixed offset.
-void protocore_ssh_kex_hash_init(uint8_t *restrict work);
-void protocore_ssh_kex_hash_update(uint8_t *restrict work);
-void protocore_ssh_kex_hash_final(uint8_t *restrict work);
+void protocore_ssh_kex_hash_init(uint8_t *work);
+void protocore_ssh_kex_hash_update(uint8_t *work);
+void protocore_ssh_kex_hash_final(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

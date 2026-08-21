@@ -108,7 +108,7 @@ uint8_t *protocore_file_serving_span(void)
 // Bound on first use because file serving has no begin(): a route can be registered before or after
 // the mount is set up, and serve_file() is reachable without any serve_static() at all. Re-binding a
 // name already bound hands back the same handle, so this settles after the first call.
-static int file_root(uint8_t *restrict work)
+static int file_root(uint8_t *work)
 {
     if (FILE_SERVING_CTX(work)->root < 0)
     {
@@ -120,11 +120,11 @@ static int file_root(uint8_t *restrict work)
 }
 
 // The entries this file calls before reaching their definitions.
-void protocore_file_serving_file_send_pump(uint8_t *restrict work);
-void protocore_file_serving_http_rfc1123(uint8_t *restrict work);
-void protocore_file_serving_serve_file_internal(uint8_t *restrict work);
+void protocore_file_serving_file_send_pump(uint8_t *work);
+void protocore_file_serving_http_rfc1123(uint8_t *work);
+void protocore_file_serving_serve_file_internal(uint8_t *work);
 
-void protocore_file_serving_holds_slot(uint8_t *restrict work)
+void protocore_file_serving_holds_slot(uint8_t *work)
 {
     (void)work;
     uint8_t slot = FileServingV.holds_slot_args.slot;
@@ -136,7 +136,7 @@ void protocore_file_serving_holds_slot(uint8_t *restrict work)
 // WebDAV's getlastmodified / creationdate). WEBDAV requires FILE_SERVING, so this is
 // the single home for both. Format a time_t as an RFC 1123 GMT date; leaves @p out
 // empty when the timestamp is zero/unavailable.
-void protocore_file_serving_http_rfc1123(uint8_t *restrict work)
+void protocore_file_serving_http_rfc1123(uint8_t *work)
 {
     (void)work;
     int64_t epoch = FileServingV.http_rfc1123_args.epoch;
@@ -278,7 +278,7 @@ static proto_bool inm_matches(const char *inm, const char *etag)
     return PROTO_FALSE;
 }
 
-void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
+void protocore_file_serving_serve_file_internal(uint8_t *work)
 {
     uint8_t slot_id = FileServingV.serve_file_internal_args.slot_id;
     proto_bool head = FileServingV.serve_file_internal_args.head;
@@ -558,7 +558,7 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
 // bytes now and return; the next loop resumes (woken by the sent callback) until the
 // whole body has been queued, then finish the response. Bounded per loop, never
 // truncates, never blocks the worker.
-void protocore_file_serving_file_send_pump(uint8_t *restrict work)
+void protocore_file_serving_file_send_pump(uint8_t *work)
 {
     (void)work;
     uint8_t slot_id = FileServingV.file_send_pump_args.slot_id;
@@ -649,7 +649,7 @@ void protocore_file_serving_file_send_pump(uint8_t *restrict work)
     protocore_resp_end(slot_id, s->status, s->total, s->keep, /*pre_flushed=*/PROTO_FALSE);
 }
 
-void protocore_file_serving_serve_file(uint8_t *restrict work)
+void protocore_file_serving_serve_file(uint8_t *work)
 {
     uint8_t slot_id = FileServingV.serve_file_args.slot_id;
     const protocore_mnt_backend *file_sys = FileServingV.serve_file_args.file_sys;
@@ -667,7 +667,7 @@ void protocore_file_serving_serve_file(uint8_t *restrict work)
     protocore_file_serving_serve_file_internal(work);
 }
 
-void protocore_file_serving_serve_static(uint8_t *restrict work)
+void protocore_file_serving_serve_static(uint8_t *work)
 {
     (void)work;
     const char *url_prefix = FileServingV.serve_static_args.url_prefix;
@@ -709,7 +709,7 @@ void protocore_file_serving_serve_static(uint8_t *restrict work)
     r->mnt_id = MntV.u8;
 }
 
-void protocore_file_serving_serve_static_request(uint8_t *restrict work)
+void protocore_file_serving_serve_static_request(uint8_t *work)
 {
     uint8_t slot_id = FileServingV.serve_static_request_args.slot_id;
     HttpReq *req = FileServingV.serve_static_request_args.req;

@@ -136,28 +136,28 @@ extern AuditLogVars AuditLogV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const reset)(uint8_t *restrict work);
-    void (*const set_sink)(uint8_t *restrict work);
-    void (*const append)(uint8_t *restrict work);
-    void (*const count)(uint8_t *restrict work);
-    void (*const at)(uint8_t *restrict work);
-    void (*const verify)(uint8_t *restrict work);
-    void (*const cat_name)(uint8_t *restrict work);
-    void (*const format)(uint8_t *restrict work);
-    void (*const dump_json)(uint8_t *restrict work);
+    void (*const reset)(uint8_t *work);
+    void (*const set_sink)(uint8_t *work);
+    void (*const append)(uint8_t *work);
+    void (*const count)(uint8_t *work);
+    void (*const at)(uint8_t *work);
+    void (*const verify)(uint8_t *work);
+    void (*const cat_name)(uint8_t *work);
+    void (*const format)(uint8_t *work);
+    void (*const dump_json)(uint8_t *work);
 } AuditLogNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in AuditLogV or a region of the borrow at a fixed offset.
-void protocore_audit_log_reset(uint8_t *restrict work);
-void protocore_audit_log_set_sink(uint8_t *restrict work);
-void protocore_audit_log_append(uint8_t *restrict work);
-void protocore_audit_log_count(uint8_t *restrict work);
-void protocore_audit_log_at(uint8_t *restrict work);
-void protocore_audit_log_verify(uint8_t *restrict work);
-void protocore_audit_log_cat_name(uint8_t *restrict work);
-void protocore_audit_log_format(uint8_t *restrict work);
-void protocore_audit_log_dump_json(uint8_t *restrict work);
+void protocore_audit_log_reset(uint8_t *work);
+void protocore_audit_log_set_sink(uint8_t *work);
+void protocore_audit_log_append(uint8_t *work);
+void protocore_audit_log_count(uint8_t *work);
+void protocore_audit_log_at(uint8_t *work);
+void protocore_audit_log_verify(uint8_t *work);
+void protocore_audit_log_cat_name(uint8_t *work);
+void protocore_audit_log_format(uint8_t *work);
+void protocore_audit_log_dump_json(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

@@ -105,9 +105,9 @@ typedef struct
  * @var Sha3Ns::shake256              SHAKE256 one-shot
  * @var Sha3Ns::shake128_absorb       begin an incremental SHAKE128 XOF
  *
- * @c work is PROTOCORE_SHA3_BORROW secure bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and
- * the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it.
+ * @c work is PROTOCORE_SHA3_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes it,
+ * holds it, releases it, nor wipes it.
  *
  * The borrow IS the sponge, and everything carried call to call lives in it. A digest taken in its own
  * borrow therefore leaves an incremental XOF running in another exactly where it was.
@@ -131,24 +131,24 @@ extern Sha3Vars Sha3V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const absorb)(uint8_t *restrict work);
-    void (*const squeeze)(uint8_t *restrict work);
-    void (*const sha3_256)(uint8_t *restrict work);
-    void (*const sha3_512)(uint8_t *restrict work);
-    void (*const shake128)(uint8_t *restrict work);
-    void (*const shake256)(uint8_t *restrict work);
-    void (*const shake128_absorb)(uint8_t *restrict work);
+    void (*const absorb)(uint8_t *work);
+    void (*const squeeze)(uint8_t *work);
+    void (*const sha3_256)(uint8_t *work);
+    void (*const sha3_512)(uint8_t *work);
+    void (*const shake128)(uint8_t *work);
+    void (*const shake256)(uint8_t *work);
+    void (*const shake128_absorb)(uint8_t *work);
 } Sha3Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Sha3V or a region of the borrow at a fixed offset.
-void protocore_sha3_absorb(uint8_t *restrict work);
-void protocore_sha3_squeeze(uint8_t *restrict work);
-void protocore_sha3_sha3_256(uint8_t *restrict work);
-void protocore_sha3_sha3_512(uint8_t *restrict work);
-void protocore_sha3_shake128(uint8_t *restrict work);
-void protocore_sha3_shake256(uint8_t *restrict work);
-void protocore_sha3_shake128_absorb(uint8_t *restrict work);
+void protocore_sha3_absorb(uint8_t *work);
+void protocore_sha3_squeeze(uint8_t *work);
+void protocore_sha3_sha3_256(uint8_t *work);
+void protocore_sha3_sha3_512(uint8_t *work);
+void protocore_sha3_shake128(uint8_t *work);
+void protocore_sha3_shake256(uint8_t *work);
+void protocore_sha3_shake128_absorb(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

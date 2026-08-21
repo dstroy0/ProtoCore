@@ -57,7 +57,7 @@ uint8_t *protocore_ssh_span(void)
     return s_own.span;
 }
 
-uint8_t *protocore_ssh_conn_slot(uint8_t *restrict work, uint8_t i)
+uint8_t *protocore_ssh_conn_slot(uint8_t *work, uint8_t i)
 {
     if (i >= MAX_SSH_CONNS)
     {

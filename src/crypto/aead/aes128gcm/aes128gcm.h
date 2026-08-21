@@ -132,11 +132,10 @@ typedef struct
  * @ref Aes128GcmNs::block_init bind different parts of the borrow, so a record and its header mask run
  * under the two keys the protocol derived without either call disturbing the other.
  *
- * @c work is PROTOCORE_AES128GCM_BORROW secure bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and the
- * pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. The borrow
- * IS the keyed context, so two directions are two borrows and never collide, and both block contexts die
- * with the release.
+ * @c work is PROTOCORE_AES128GCM_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the
+ * call, so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes
+ * it, holds it, releases it, nor wipes it. The borrow IS the keyed context, so two directions are two borrows and never
+ * collide, and both block contexts die with the release.
  *
  * No storage member and no context: a caller sets operands and reads @ref Aes128GcmNs::ok, and that is
  * all the surface there is.
@@ -157,24 +156,24 @@ extern Aes128GcmVars Aes128GcmV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const key_init)(uint8_t *restrict work);
-    void (*const key_wipe)(uint8_t *restrict work);
-    void (*const seal)(uint8_t *restrict work);
-    void (*const open)(uint8_t *restrict work);
-    void (*const block_init)(uint8_t *restrict work);
-    void (*const block_encrypt)(uint8_t *restrict work);
-    void (*const block_wipe)(uint8_t *restrict work);
+    void (*const key_init)(uint8_t *work);
+    void (*const key_wipe)(uint8_t *work);
+    void (*const seal)(uint8_t *work);
+    void (*const open)(uint8_t *work);
+    void (*const block_init)(uint8_t *work);
+    void (*const block_encrypt)(uint8_t *work);
+    void (*const block_wipe)(uint8_t *work);
 } Aes128GcmNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Aes128GcmV or a region of the borrow at a fixed offset.
-void protocore_aes128_gcm_key_init(uint8_t *restrict work);
-void protocore_aes128_gcm_key_wipe(uint8_t *restrict work);
-void protocore_aes128_gcm_seal(uint8_t *restrict work);
-void protocore_aes128_gcm_open(uint8_t *restrict work);
-void protocore_aes128_gcm_block_init(uint8_t *restrict work);
-void protocore_aes128_gcm_block_encrypt(uint8_t *restrict work);
-void protocore_aes128_gcm_block_wipe(uint8_t *restrict work);
+void protocore_aes128_gcm_key_init(uint8_t *work);
+void protocore_aes128_gcm_key_wipe(uint8_t *work);
+void protocore_aes128_gcm_seal(uint8_t *work);
+void protocore_aes128_gcm_open(uint8_t *work);
+void protocore_aes128_gcm_block_init(uint8_t *work);
+void protocore_aes128_gcm_block_encrypt(uint8_t *work);
+void protocore_aes128_gcm_block_wipe(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

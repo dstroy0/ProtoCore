@@ -113,7 +113,7 @@ static void poly_block(uint32_t h[5], const uint32_t r[5], const uint32_t sr[5],
 // --- framing ---------------------------------------------------------------
 
 // Split the key into r and s: clamp r into its limbs, derive its *5 form, zero the accumulator.
-static void poly1305_state_init(uint8_t *restrict work, const uint8_t *key)
+static void poly1305_state_init(uint8_t *work, const uint8_t *key)
 {
     Poly1305Ctx *ctx = POLY1305_CTX(work);
     uint32_t *r = ctx->r;
@@ -140,7 +140,7 @@ static void poly1305_state_init(uint8_t *restrict work, const uint8_t *key)
 
 // Run the whole message through the accumulator: full blocks as they stand, then the short tail
 // composed in the borrow's block buffer.
-static void poly1305_absorb(uint8_t *restrict work, const uint8_t *msg, size_t len)
+static void poly1305_absorb(uint8_t *work, const uint8_t *msg, size_t len)
 {
     Poly1305Ctx *ctx = POLY1305_CTX(work);
     uint8_t *buf = POLY1305_BUF(work);
@@ -164,7 +164,7 @@ static void poly1305_absorb(uint8_t *restrict work, const uint8_t *msg, size_t l
 }
 
 // Carry h out, reduce it modulo 2^130 - 5 in constant time, and write (h + s) mod 2^128.
-static void poly1305_finish(uint8_t *restrict work, const uint8_t *key, uint8_t tag[PROTOCORE_POLY1305_TAG_LEN])
+static void poly1305_finish(uint8_t *work, const uint8_t *key, uint8_t tag[PROTOCORE_POLY1305_TAG_LEN])
 {
     Poly1305Ctx *ctx = POLY1305_CTX(work);
     uint32_t *h = ctx->h;
@@ -241,8 +241,7 @@ static void poly1305_finish(uint8_t *restrict work, const uint8_t *key, uint8_t 
 // --- the entries -----------------------------------------------------------
 
 // One-shot over the members already set: split the key, absorb the message, reduce and add s.
-proto_bool protocore_poly1305_mac(uint8_t *restrict work, const uint8_t *key, const uint8_t *msg, size_t len,
-                                  uint8_t *out)
+proto_bool protocore_poly1305_mac(uint8_t *work, const uint8_t *key, const uint8_t *msg, size_t len, uint8_t *out)
 {
     if (!key || !out)
     {

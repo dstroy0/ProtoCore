@@ -127,9 +127,8 @@ typedef struct
  * @var Mpr121Ns::read_touched  read the current 12-electrode touch bitmask (0 if the device is ...
  * @var Mpr121Ns::read_filtered  read electrode e's 10-bit filtered capacitance value
  *
- * @c work is PROTOCORE_MPR121_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_MPR121_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
+ * nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -152,28 +151,28 @@ extern Mpr121Vars Mpr121V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const touched)(uint8_t *restrict work);
-    void (*const is_touched)(uint8_t *restrict work);
-    void (*const proximity)(uint8_t *restrict work);
-    void (*const overcurrent)(uint8_t *restrict work);
-    void (*const word10)(uint8_t *restrict work);
-    void (*const build_init)(uint8_t *restrict work);
-    void (*const begin)(uint8_t *restrict work);
-    void (*const read_touched)(uint8_t *restrict work);
-    void (*const read_filtered)(uint8_t *restrict work);
+    void (*const touched)(uint8_t *work);
+    void (*const is_touched)(uint8_t *work);
+    void (*const proximity)(uint8_t *work);
+    void (*const overcurrent)(uint8_t *work);
+    void (*const word10)(uint8_t *work);
+    void (*const build_init)(uint8_t *work);
+    void (*const begin)(uint8_t *work);
+    void (*const read_touched)(uint8_t *work);
+    void (*const read_filtered)(uint8_t *work);
 } Mpr121Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Mpr121V or a region of the borrow at a fixed offset.
-void protocore_mpr121_touched(uint8_t *restrict work);
-void protocore_mpr121_is_touched(uint8_t *restrict work);
-void protocore_mpr121_proximity(uint8_t *restrict work);
-void protocore_mpr121_overcurrent(uint8_t *restrict work);
-void protocore_mpr121_word10(uint8_t *restrict work);
-void protocore_mpr121_build_init(uint8_t *restrict work);
-void protocore_mpr121_begin(uint8_t *restrict work);
-void protocore_mpr121_read_touched(uint8_t *restrict work);
-void protocore_mpr121_read_filtered(uint8_t *restrict work);
+void protocore_mpr121_touched(uint8_t *work);
+void protocore_mpr121_is_touched(uint8_t *work);
+void protocore_mpr121_proximity(uint8_t *work);
+void protocore_mpr121_overcurrent(uint8_t *work);
+void protocore_mpr121_word10(uint8_t *work);
+void protocore_mpr121_build_init(uint8_t *work);
+void protocore_mpr121_begin(uint8_t *work);
+void protocore_mpr121_read_touched(uint8_t *work);
+void protocore_mpr121_read_filtered(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

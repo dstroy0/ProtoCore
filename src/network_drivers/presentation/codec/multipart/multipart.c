@@ -63,7 +63,7 @@ static char *extract_quoted_param(char *src, const char *key)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-proto_bool protocore_multipart_parse(uint8_t *restrict work, HttpReq *req, MultipartBody *mp)
+proto_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody *mp)
 {
     (void)work;
 
@@ -217,7 +217,7 @@ proto_bool protocore_multipart_parse(uint8_t *restrict work, HttpReq *req, Multi
     return mp->part_count > 0;
 }
 
-const char *protocore_multipart_get_field(uint8_t *restrict work, const MultipartBody *mp, const char *field)
+const char *protocore_multipart_get_field(uint8_t *work, const MultipartBody *mp, const char *field)
 {
     (void)work;
 

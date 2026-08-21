@@ -19,7 +19,7 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_ad9238_build_instruction(uint8_t *restrict work)
+void protocore_ad9238_build_instruction(uint8_t *work)
 {
     (void)work;
     proto_bool read = Ad9238V.build_instruction_args.read;
@@ -39,7 +39,7 @@ void protocore_ad9238_build_instruction(uint8_t *restrict work)
     Ad9238V.ok = PROTO_TRUE;
 }
 
-void protocore_ad9238_build_write(uint8_t *restrict work)
+void protocore_ad9238_build_write(uint8_t *work)
 {
     (void)work;
     uint16_t reg_addr = Ad9238V.build_write_args.reg_addr;
@@ -69,7 +69,7 @@ void protocore_ad9238_build_write(uint8_t *restrict work)
     Ad9238V.n = 3;
 }
 
-void protocore_ad9238_build_read(uint8_t *restrict work)
+void protocore_ad9238_build_read(uint8_t *work)
 {
     (void)work;
     uint16_t reg_addr = Ad9238V.build_read_args.reg_addr;
@@ -97,7 +97,7 @@ void protocore_ad9238_build_read(uint8_t *restrict work)
     Ad9238V.n = 2;
 }
 
-void protocore_ad9238_build_transfer(uint8_t *restrict work)
+void protocore_ad9238_build_transfer(uint8_t *work)
 {
     (void)work;
     uint8_t *out = Ad9238V.build_transfer_args.out;

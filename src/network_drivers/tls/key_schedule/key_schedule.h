@@ -193,28 +193,28 @@ extern Tls13KsVars Tls13KsV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const expand_label)(uint8_t *restrict work);
-    void (*const derive_secret)(uint8_t *restrict work);
-    void (*const early)(uint8_t *restrict work);
-    void (*const handshake)(uint8_t *restrict work);
-    void (*const master)(uint8_t *restrict work);
-    void (*const finished_mac)(uint8_t *restrict work);
-    void (*const transcript_init)(uint8_t *restrict work);
-    void (*const transcript_update)(uint8_t *restrict work);
-    void (*const transcript_peek)(uint8_t *restrict work);
+    void (*const expand_label)(uint8_t *work);
+    void (*const derive_secret)(uint8_t *work);
+    void (*const early)(uint8_t *work);
+    void (*const handshake)(uint8_t *work);
+    void (*const master)(uint8_t *work);
+    void (*const finished_mac)(uint8_t *work);
+    void (*const transcript_init)(uint8_t *work);
+    void (*const transcript_update)(uint8_t *work);
+    void (*const transcript_peek)(uint8_t *work);
 } Tls13KsNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Tls13KsV or a region of the borrow at a fixed offset.
-void protocore_tls13_ks_expand_label(uint8_t *restrict work);
-void protocore_tls13_ks_derive_secret(uint8_t *restrict work);
-void protocore_tls13_ks_early(uint8_t *restrict work);
-void protocore_tls13_ks_handshake(uint8_t *restrict work);
-void protocore_tls13_ks_master(uint8_t *restrict work);
-void protocore_tls13_ks_finished_mac(uint8_t *restrict work);
-void protocore_tls13_ks_transcript_init(uint8_t *restrict work);
-void protocore_tls13_ks_transcript_update(uint8_t *restrict work);
-void protocore_tls13_ks_transcript_peek(uint8_t *restrict work);
+void protocore_tls13_ks_expand_label(uint8_t *work);
+void protocore_tls13_ks_derive_secret(uint8_t *work);
+void protocore_tls13_ks_early(uint8_t *work);
+void protocore_tls13_ks_handshake(uint8_t *work);
+void protocore_tls13_ks_master(uint8_t *work);
+void protocore_tls13_ks_finished_mac(uint8_t *work);
+void protocore_tls13_ks_transcript_init(uint8_t *work);
+void protocore_tls13_ks_transcript_update(uint8_t *work);
+void protocore_tls13_ks_transcript_peek(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

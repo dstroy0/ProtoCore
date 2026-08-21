@@ -44,8 +44,8 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    const protocore_mnt_backend *(*backend)(uint8_t *restrict);
-    void (*format)(uint8_t *restrict);
+    const protocore_mnt_backend *(*backend)(uint8_t *);
+    void (*format)(uint8_t *);
 } MntRamNs;
 PROTOCORE_NS_LAYOUT(MntRamNs, backend, format);
 
@@ -54,12 +54,12 @@ PROTOCORE_NS_LAYOUT(MntRamNs, backend, format);
  * @param work PROTOCORE_MNT_RAM_BORROW bytes the caller took. Not held past the call.
  * @return The const protocore_mnt_backend *.
  */
-const protocore_mnt_backend *protocore_mnt_ram_backend(uint8_t *restrict work);
+const protocore_mnt_backend *protocore_mnt_ram_backend(uint8_t *work);
 /**
  * @brief Empty the pool and close every handle.
  * @param work PROTOCORE_MNT_RAM_BORROW bytes the caller took. Not held past the call.
  */
-void protocore_mnt_ram_format(uint8_t *restrict work);
+void protocore_mnt_ram_format(uint8_t *work);
 
 /** @brief Module namespace. */
 PROTOCORE_NS MntRamNs MntRam PROTOCORE_UNUSED = {.backend = protocore_mnt_ram_backend,

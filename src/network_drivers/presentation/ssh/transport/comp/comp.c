@@ -99,7 +99,7 @@ static void start_c2s(SshCompState *c)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_comp_reset(uint8_t *restrict work, uint8_t i)
+void protocore_comp_reset(uint8_t *work, uint8_t i)
 {
 
     if (i >= MAX_SSH_CONNS)
@@ -116,7 +116,7 @@ void protocore_comp_reset(uint8_t *restrict work, uint8_t i)
     protocore_secure_wipe(c->inf_window, sizeof(c->inf_window));
 }
 
-void protocore_comp_set_s2c(uint8_t *restrict work, uint8_t i, SshCompAlg alg)
+void protocore_comp_set_s2c(uint8_t *work, uint8_t i, SshCompAlg alg)
 {
 
     if (i >= MAX_SSH_CONNS)
@@ -126,7 +126,7 @@ void protocore_comp_set_s2c(uint8_t *restrict work, uint8_t i, SshCompAlg alg)
     COMP_CTX(work)->comp[i].s2c_alg = alg;
 }
 
-void protocore_comp_set_c2s(uint8_t *restrict work, uint8_t i, SshCompAlg alg)
+void protocore_comp_set_c2s(uint8_t *work, uint8_t i, SshCompAlg alg)
 {
 
     if (i >= MAX_SSH_CONNS)
@@ -137,7 +137,7 @@ void protocore_comp_set_c2s(uint8_t *restrict work, uint8_t i, SshCompAlg alg)
 }
 
 // "zlib" (non-delayed) starts both directions at NEWKEYS; "zlib@openssh.com" waits for auth success.
-void protocore_comp_on_newkeys(uint8_t *restrict work, uint8_t i)
+void protocore_comp_on_newkeys(uint8_t *work, uint8_t i)
 {
 
     if (i >= MAX_SSH_CONNS)
@@ -157,7 +157,7 @@ void protocore_comp_on_newkeys(uint8_t *restrict work, uint8_t i)
     }
 }
 
-void protocore_comp_on_auth_success(uint8_t *restrict work, uint8_t i)
+void protocore_comp_on_auth_success(uint8_t *work, uint8_t i)
 {
 
     if (i >= MAX_SSH_CONNS)
@@ -175,14 +175,14 @@ void protocore_comp_on_auth_success(uint8_t *restrict work, uint8_t i)
     }
 }
 
-proto_bool protocore_comp_s2c_active(uint8_t *restrict work, uint8_t i)
+proto_bool protocore_comp_s2c_active(uint8_t *work, uint8_t i)
 {
 
     return i < MAX_SSH_CONNS && COMP_CTX(work)->comp[i].s2c_active;
 }
 
-int protocore_comp_s2c(uint8_t *restrict work, uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst,
-                       size_t dst_cap, size_t *out_len)
+int protocore_comp_s2c(uint8_t *work, uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap,
+                       size_t *out_len)
 {
     if (i >= MAX_SSH_CONNS || !COMP_CTX(work)->comp[i].s2c_active)
     {
@@ -192,14 +192,14 @@ int protocore_comp_s2c(uint8_t *restrict work, uint8_t i, const uint8_t *src, si
     return zlib_n;
 }
 
-proto_bool protocore_comp_c2s_active(uint8_t *restrict work, uint8_t i)
+proto_bool protocore_comp_c2s_active(uint8_t *work, uint8_t i)
 {
 
     return i < MAX_SSH_CONNS && COMP_CTX(work)->comp[i].c2s_active;
 }
 
-int protocore_comp_c2s(uint8_t *restrict work, uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst,
-                       size_t dst_cap, size_t *out_len)
+int protocore_comp_c2s(uint8_t *work, uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap,
+                       size_t *out_len)
 {
     if (i >= MAX_SSH_CONNS || !COMP_CTX(work)->comp[i].c2s_active)
     {

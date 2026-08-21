@@ -72,7 +72,7 @@ uint8_t *protocore_http_parser_span(void)
 
 // The entries this file calls before reaching their definitions.
 
-void protocore_http_parser_set_stream_hooks(uint8_t *restrict work, HttpStreamBeginCb begin, HttpStreamDataCb data,
+void protocore_http_parser_set_stream_hooks(uint8_t *work, HttpStreamBeginCb begin, HttpStreamDataCb data,
                                             HttpStreamAbortCb abort)
 {
 
@@ -197,7 +197,7 @@ static void parse_query_params(HttpReq *req)
     }
 }
 
-void protocore_http_parser_reset(uint8_t *restrict work, HttpReq *req)
+void protocore_http_parser_reset(uint8_t *work, HttpReq *req)
 {
 
     uint8_t id = req->slot_id;
@@ -218,7 +218,7 @@ void protocore_http_parser_reset(uint8_t *restrict work, HttpReq *req)
     req->_version_hash = PROTOCORE_FNV_OFFSET; // seed the FNV-1a accumulator
 }
 
-void protocore_http_parser_feed(uint8_t *restrict work, HttpReq *req, uint8_t byte)
+void protocore_http_parser_feed(uint8_t *work, HttpReq *req, uint8_t byte)
 {
     HttpReq *p = req;
 
@@ -608,7 +608,7 @@ void protocore_http_parser_feed(uint8_t *restrict work, HttpReq *req, uint8_t by
     }
 }
 
-const char *protocore_http_parser_get_header(uint8_t *restrict work, const HttpReq *req, const char *key)
+const char *protocore_http_parser_get_header(uint8_t *work, const HttpReq *req, const char *key)
 {
     (void)work;
 
@@ -622,7 +622,7 @@ const char *protocore_http_parser_get_header(uint8_t *restrict work, const HttpR
     return NULL;
 }
 
-proto_bool protocore_http_parser_get_cookie(uint8_t *restrict work, const HttpReq *req, const char *name, char *out,
+proto_bool protocore_http_parser_get_cookie(uint8_t *work, const HttpReq *req, const char *name, char *out,
                                             size_t out_size)
 {
     if (out == NULL || out_size == 0)
@@ -871,8 +871,8 @@ static proto_bool fwd_value_is(const char *v, size_t n, const char *lit, size_t 
     return n == litlen && str.diff(v, lit, litlen, PROTO_TRUE) == litlen;
 }
 
-proto_bool protocore_http_parser_forwarded_client(uint8_t *restrict work, const HttpReq *req, char *ip_out,
-                                                  size_t ip_cap, proto_bool *is_https)
+proto_bool protocore_http_parser_forwarded_client(uint8_t *work, const HttpReq *req, char *ip_out, size_t ip_cap,
+                                                  proto_bool *is_https)
 {
     if (is_https)
     {
@@ -935,7 +935,7 @@ proto_bool protocore_http_parser_forwarded_client(uint8_t *restrict work, const 
     return PROTO_FALSE;
 }
 
-const char *protocore_http_parser_get_query(uint8_t *restrict work, const HttpReq *req, const char *key)
+const char *protocore_http_parser_get_query(uint8_t *work, const HttpReq *req, const char *key)
 {
     (void)work;
 
@@ -949,7 +949,7 @@ const char *protocore_http_parser_get_query(uint8_t *restrict work, const HttpRe
     return NULL;
 }
 
-proto_bool protocore_http_parser_get_form(uint8_t *restrict work, const HttpReq *req, const char *key, char *out,
+proto_bool protocore_http_parser_get_form(uint8_t *work, const HttpReq *req, const char *key, char *out,
                                           size_t out_size)
 {
     if (out == NULL || out_size == 0)
@@ -1021,7 +1021,7 @@ proto_bool protocore_http_parser_get_form(uint8_t *restrict work, const HttpReq 
     return PROTO_FALSE;
 }
 
-const char *protocore_http_parser_get_param(uint8_t *restrict work, const HttpReq *req, const char *key)
+const char *protocore_http_parser_get_param(uint8_t *work, const HttpReq *req, const char *key)
 {
     (void)work;
 

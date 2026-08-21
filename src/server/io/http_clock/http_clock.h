@@ -62,10 +62,10 @@ typedef struct
 {
     uint8_t n;
     const char *imf;
-    void (*const date)(uint8_t *restrict work);
+    void (*const date)(uint8_t *work);
 } HttpClockNs;
 
-void protocore_http_clock_date(uint8_t *restrict work);
+void protocore_http_clock_date(uint8_t *work);
 
 /**
  * @brief The bytes this module runs out of, for a caller that holds no borrow of its own.

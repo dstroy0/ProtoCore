@@ -19,7 +19,7 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_netadapt_window(uint8_t *restrict work)
+void protocore_netadapt_window(uint8_t *work)
 {
     (void)work;
     uint32_t free_heap = NetadaptV.window_args.free_heap;
@@ -47,7 +47,7 @@ void protocore_netadapt_window(uint8_t *restrict work)
     NetadaptV.u32 = win;
 }
 
-void protocore_netadapt_dhcp_fallback(uint8_t *restrict work)
+void protocore_netadapt_dhcp_fallback(uint8_t *work)
 {
     (void)work;
     uint32_t elapsed_ms = NetadaptV.dhcp_fallback_args.elapsed_ms;

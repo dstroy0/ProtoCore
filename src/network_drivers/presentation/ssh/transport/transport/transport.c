@@ -543,7 +543,7 @@ void ssh_transport_init(uint8_t i)
 // Identification string exchange (RFC 4253 §4.2)
 // ---------------------------------------------------------------------------
 
-void protocore_ssh_transport_send_ident(uint8_t *restrict work)
+void protocore_ssh_transport_send_ident(uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshTransportV.slot;
@@ -604,7 +604,7 @@ static proto_bool ident_protoversion_ok(const uint8_t *line, uint16_t n)
     return (vlen == 3 && mem.cmp(line + 4, "2.0", 3) == 0) || (vlen == 4 && mem.cmp(line + 4, "1.99", 4) == 0);
 }
 
-void protocore_ssh_transport_recv_ident(uint8_t *restrict work)
+void protocore_ssh_transport_recv_ident(uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshTransportV.slot;
@@ -691,7 +691,7 @@ void protocore_ssh_transport_recv_ident(uint8_t *restrict work)
 // KEXINIT (RFC 4253 §7.1)
 // ---------------------------------------------------------------------------
 
-void protocore_ssh_transport_kexinit_build(uint8_t *restrict work)
+void protocore_ssh_transport_kexinit_build(uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshTransportV.slot;
@@ -840,7 +840,7 @@ static int negotiate_hostkey(const uint8_t *list, uint32_t nlen, SshHostkeyAlg *
     return idx;
 }
 
-void protocore_ssh_transport_kexinit_parse(uint8_t *restrict work)
+void protocore_ssh_transport_kexinit_parse(uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshTransportV.slot;
@@ -1135,7 +1135,7 @@ proto_bool ssh_kex_is_sha512(SshKexAlg a)
 // canonical minimal encoding.
 // @p out holds SSH_KEXHASH_MAX_LEN; the exchange-hash length (32 or 64) is written to @p out_len and
 // selected by @p is512 (the negotiated KEX's hash). Returns 0, or -1 on a bad slot.
-void protocore_ssh_transport_exchange_hash(uint8_t *restrict work)
+void protocore_ssh_transport_exchange_hash(uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshTransportV.slot;
@@ -1591,7 +1591,7 @@ static int build_kex_reply(uint8_t i, const uint8_t *ks, size_t ks_len, const ui
     return 0;
 }
 
-void protocore_ssh_transport_kex_generate(uint8_t *restrict work)
+void protocore_ssh_transport_kex_generate(uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshTransportV.slot;
@@ -1769,7 +1769,7 @@ static int hybrid_sntrup761_x25519(uint8_t *work, uint8_t i, const uint8_t *payl
 }
 #endif // PROTOCORE_ENABLE_SSH_SNTRUP761
 
-void protocore_ssh_transport_kexdh_reply(uint8_t *restrict work)
+void protocore_ssh_transport_kexdh_reply(uint8_t *work)
 {
     const uint8_t i = SshTransportV.slot;
     const uint8_t *payload = SshTransportV.pkt.payload;
@@ -2013,7 +2013,7 @@ void protocore_ssh_transport_kexdh_reply(uint8_t *restrict work)
     return;
 }
 
-void protocore_ssh_transport_newkeys_sent(uint8_t *restrict work)
+void protocore_ssh_transport_newkeys_sent(uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshTransportV.slot;
@@ -2033,7 +2033,7 @@ void protocore_ssh_transport_newkeys_sent(uint8_t *restrict work)
 #endif
 }
 
-void protocore_ssh_transport_newkeys_complete(uint8_t *restrict work)
+void protocore_ssh_transport_newkeys_complete(uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshTransportV.slot;
@@ -2090,7 +2090,7 @@ void protocore_ssh_transport_newkeys_complete(uint8_t *restrict work)
     return;
 }
 
-void protocore_ssh_transport_rekey_due(uint8_t *restrict work)
+void protocore_ssh_transport_rekey_due(uint8_t *work)
 {
     (void)work;
     const uint32_t seq_send = SshTransportV.rekey.seq_send;
@@ -2112,7 +2112,7 @@ void protocore_ssh_transport_rekey_due(uint8_t *restrict work)
     return;
 }
 
-void protocore_ssh_transport_begin_rekey(uint8_t *restrict work)
+void protocore_ssh_transport_begin_rekey(uint8_t *work)
 {
     const uint8_t i = SshTransportV.slot;
     uint8_t *out = SshTransportV.out_args.out;

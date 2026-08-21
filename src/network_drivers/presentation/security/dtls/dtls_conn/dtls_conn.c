@@ -125,8 +125,7 @@ static void flight_reset(DtlsConn *c)
 // shifts every later message up by one) and buffer the fragment for (re)transmission. @p epoch is 0
 // (DTLSPlaintext) or 2 (DTLSCiphertext). Records are not built here - that happens in flight_transmit,
 // so a retransmission can use fresh record sequence numbers.
-static proto_bool flight_add(uint8_t *restrict work, DtlsConn *c, uint16_t epoch, const uint8_t *tls_msg,
-                             size_t tls_len)
+static proto_bool flight_add(uint8_t *work, DtlsConn *c, uint16_t epoch, const uint8_t *tls_msg, size_t tls_len)
 {
     // tls_len < 4 is defensive and unreachable from any input the server accepts - every caller
     // passes a builder's output, and a TLS handshake message is never shorter than its own 4-byte
@@ -184,7 +183,7 @@ static proto_bool flight_add(uint8_t *restrict work, DtlsConn *c, uint16_t epoch
 // retransmission MUST use new sequence numbers - reusing one would repeat an AEAD nonce and be dropped
 // by the peer's replay window). Records the record number of each message's transmission for ACK
 // matching. Used for both the initial send and every retransmission.
-static proto_bool flight_transmit(uint8_t *restrict work, DtlsConn *c, uint8_t *out, size_t out_cap, size_t *out_len)
+static proto_bool flight_transmit(uint8_t *work, DtlsConn *c, uint8_t *out, size_t out_cap, size_t *out_len)
 {
     for (uint8_t i = 0; i < c->flight_count; i++)
     {
@@ -238,8 +237,8 @@ static void flight_disarm(DtlsConn *c)
 // X25519 key_share, binding a stateless return-routability cookie to the peer address. Per RFC 8446
 // §4.4.1 the transcript is restarted as the synthetic message_hash(ClientHello1) before the HRR is
 // folded in, so the eventual transcript is message_hash || HRR || ClientHello2 || ServerHello || ...
-static int send_hello_retry(uint8_t *restrict work, DtlsConn *c, const Tls13ClientHello *ch, const uint8_t *ch1,
-                            size_t ch1_len, uint8_t *out, size_t out_cap, size_t *out_len)
+static int send_hello_retry(uint8_t *work, DtlsConn *c, const Tls13ClientHello *ch, const uint8_t *ch1, size_t ch1_len,
+                            uint8_t *out, size_t out_cap, size_t *out_len)
 {
     uint8_t ch1_hash[TLS13_SECRET_MAX];
     uint8_t *h;
@@ -300,7 +299,7 @@ static int send_hello_retry(uint8_t *restrict work, DtlsConn *c, const Tls13Clie
 
 // After a HelloRetryRequest, the retry ClientHello must echo a valid cookie (proving the client's
 // address) before we spend the handshake's asymmetric crypto (RFC 9147 §5.1). No HRR -> nothing to check.
-static proto_bool protocore_dtls_hrr_cookie_ok(uint8_t *restrict work, const DtlsConn *c, const Tls13ClientHello *ch)
+static proto_bool protocore_dtls_hrr_cookie_ok(uint8_t *work, const DtlsConn *c, const Tls13ClientHello *ch)
 {
     if (!c->hrr_sent)
     {
@@ -341,7 +340,7 @@ static void protocore_dtls_negotiate_conn_id(DtlsConn *c, const Tls13ClientHello
 // messages), installing handshake and application keys. Mirrors protocore_quic_tls process_client_hello. If the
 // client did not offer an X25519 key_share, this instead sends a HelloRetryRequest and returns to wait
 // for the client's second ClientHello (RFC 9147 §5.1).
-static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_t *msg, size_t msg_len, uint8_t *out,
+static int handle_client_hello(uint8_t *work, DtlsConn *c, const uint8_t *msg, size_t msg_len, uint8_t *out,
                                size_t out_cap, size_t *out_len)
 {
     Tls13ClientHello ch;
@@ -582,7 +581,7 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
 }
 
 // Verify the client's Finished and complete the handshake.
-static int handle_client_finished(uint8_t *restrict work, DtlsConn *c, const uint8_t *msg, size_t msg_len)
+static int handle_client_finished(uint8_t *work, DtlsConn *c, const uint8_t *msg, size_t msg_len)
 {
     if (msg[0] != TLS_HS_FINISHED || msg_len != 4 + c->ks.len)
     {
@@ -606,7 +605,7 @@ static int handle_client_finished(uint8_t *restrict work, DtlsConn *c, const uin
     return 0;
 }
 
-static int dispatch_message(uint8_t *restrict work, DtlsConn *c, const uint8_t *tls_msg, size_t tls_len, uint8_t *out,
+static int dispatch_message(uint8_t *work, DtlsConn *c, const uint8_t *tls_msg, size_t tls_len, uint8_t *out,
                             size_t out_cap, size_t *out_len)
 {
     if (c->state == DTLS_CONN_STATE_START && tls_msg[0] == TLS_HS_CLIENT_HELLO)
@@ -629,7 +628,7 @@ static int dispatch_message(uint8_t *restrict work, DtlsConn *c, const uint8_t *
 
 // Parse and reassemble the DTLS handshake fragments carried in one record's payload, dispatching each
 // complete TLS message.
-static int drive_handshake(uint8_t *restrict work, DtlsConn *c, const uint8_t *payload, size_t plen, uint8_t *out,
+static int drive_handshake(uint8_t *work, DtlsConn *c, const uint8_t *payload, size_t plen, uint8_t *out,
                            size_t out_cap, size_t *out_len)
 {
     size_t p = 0;
@@ -668,7 +667,7 @@ static int drive_handshake(uint8_t *restrict work, DtlsConn *c, const uint8_t *p
 // A client ACK (RFC 9147 §7) for the outstanding flight: if it acknowledges every message of the last
 // transmission, the peer has the whole flight, so stop retransmitting (§5.8.3). A partial ACK is
 // ignored here - the timer simply retransmits the whole flight, which is always correct.
-static void process_ack(uint8_t *restrict work, DtlsConn *c, const uint8_t *body, size_t len)
+static void process_ack(uint8_t *work, DtlsConn *c, const uint8_t *body, size_t len)
 {
     if (!c->awaiting_reply)
     {
@@ -709,8 +708,8 @@ typedef enum PROTO_ENUM_PACKED
 } DtlsRecStep;
 
 // Process one ciphertext (epoch-2) record at dgram[*off], advancing *off past a well-formed record.
-static DtlsRecStep process_ciphertext_record(uint8_t *restrict work, DtlsConn *c, const uint8_t *dgram, size_t len,
-                                             size_t *off, uint8_t *out, size_t out_cap, size_t *out_len)
+static DtlsRecStep process_ciphertext_record(uint8_t *work, DtlsConn *c, const uint8_t *dgram, size_t len, size_t *off,
+                                             uint8_t *out, size_t out_cap, size_t *out_len)
 {
     size_t rlen = ciphertext_record_len(dgram + *off, len - *off, c->cid_negotiated ? c->local_cid_len : 0);
     if (!rlen)
@@ -763,8 +762,8 @@ static DtlsRecStep process_ciphertext_record(uint8_t *restrict work, DtlsConn *c
 }
 
 // Process one plaintext (epoch-0) record at dgram[*off], advancing *off past a well-formed record.
-static DtlsRecStep process_plaintext_record(uint8_t *restrict work, DtlsConn *c, const uint8_t *dgram, size_t len,
-                                            size_t *off, uint8_t *out, size_t out_cap, size_t *out_len)
+static DtlsRecStep process_plaintext_record(uint8_t *work, DtlsConn *c, const uint8_t *dgram, size_t len, size_t *off,
+                                            uint8_t *out, size_t out_cap, size_t *out_len)
 {
     DtlsPlaintext pt;
     size_t dtls_record_n = DtlsRecord.plaintext_parse(work, dgram + *off, len - *off, &pt);
@@ -783,13 +782,12 @@ static DtlsRecStep process_plaintext_record(uint8_t *restrict work, DtlsConn *c,
 }
 
 // Called above its definition; the ACK helper below reads the handshake state through it.
-void protocore_dtls_server_established(uint8_t *restrict work);
+void protocore_dtls_server_established(uint8_t *work);
 
 // Once the client Finished completes the handshake, acknowledge it so the client stops retransmitting
 // its final flight (RFC 9147 §5.8.3). The ACK is a content-type-26 record in the highest available epoch
 // (3, application), covering the epoch-2 Finished record (§7). Sent at most once.
-static void maybe_send_completion_ack(uint8_t *restrict work, DtlsConn *c, uint8_t *out, size_t out_cap,
-                                      size_t *out_len)
+static void maybe_send_completion_ack(uint8_t *work, DtlsConn *c, uint8_t *out, size_t out_cap, size_t *out_len)
 {
     DtlsServerV.established_args.c = c;
     protocore_dtls_server_established(work);
@@ -817,7 +815,7 @@ static void maybe_send_completion_ack(uint8_t *restrict work, DtlsConn *c, uint8
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_dtls_server_init(uint8_t *restrict work)
+void protocore_dtls_server_init(uint8_t *work)
 {
     (void)work;
     DtlsConn *c = DtlsServerV.init_args.c;
@@ -852,7 +850,7 @@ void protocore_dtls_server_init(uint8_t *restrict work)
     DtlsHandshake.reasm_init(work, &c->reasm, 0, c->reasm_buf + 4, PROTOCORE_DTLS_CONN_REASM_CAP);
 }
 
-void protocore_dtls_server_process(uint8_t *restrict work)
+void protocore_dtls_server_process(uint8_t *work)
 {
     DtlsConn *c = DtlsServerV.process_args.c;
     const uint8_t *dgram = DtlsServerV.process_args.dgram;
@@ -887,7 +885,7 @@ void protocore_dtls_server_process(uint8_t *restrict work)
     DtlsServerV.n = (int)out_len;
 }
 
-void protocore_dtls_server_timeout_ms(uint8_t *restrict work)
+void protocore_dtls_server_timeout_ms(uint8_t *work)
 {
     (void)work;
     const DtlsConn *c = DtlsServerV.timeout_ms_args.c;
@@ -902,7 +900,7 @@ void protocore_dtls_server_timeout_ms(uint8_t *restrict work)
     DtlsServerV.n = remaining > 0 ? remaining : 0;
 }
 
-void protocore_dtls_server_on_timeout(uint8_t *restrict work)
+void protocore_dtls_server_on_timeout(uint8_t *work)
 {
     (void)work;
     DtlsConn *c = DtlsServerV.on_timeout_args.c;
@@ -940,7 +938,7 @@ void protocore_dtls_server_on_timeout(uint8_t *restrict work)
     DtlsServerV.n = (int)out_len;
 }
 
-void protocore_dtls_server_established(uint8_t *restrict work)
+void protocore_dtls_server_established(uint8_t *work)
 {
     (void)work;
     const DtlsConn *c = DtlsServerV.established_args.c;
@@ -948,7 +946,7 @@ void protocore_dtls_server_established(uint8_t *restrict work)
     DtlsServerV.ok = c->state == DTLS_CONN_STATE_DONE && c->ep3_ready;
 }
 
-void protocore_dtls_server_alert(uint8_t *restrict work)
+void protocore_dtls_server_alert(uint8_t *work)
 {
     (void)work;
     const DtlsConn *c = DtlsServerV.alert_args.c;
@@ -956,7 +954,7 @@ void protocore_dtls_server_alert(uint8_t *restrict work)
     DtlsServerV.value = c->alert;
 }
 
-void protocore_dtls_server_app_write_keys(uint8_t *restrict work)
+void protocore_dtls_server_app_write_keys(uint8_t *work)
 {
     (void)work;
     DtlsConn *c = DtlsServerV.app_write_keys_args.c;
@@ -964,7 +962,7 @@ void protocore_dtls_server_app_write_keys(uint8_t *restrict work)
     DtlsServerV.ptr = c->ep3_ready ? &c->ep3_srv : NULL;
 }
 
-void protocore_dtls_server_app_read_keys(uint8_t *restrict work)
+void protocore_dtls_server_app_read_keys(uint8_t *work)
 {
     (void)work;
     DtlsConn *c = DtlsServerV.app_read_keys_args.c;
@@ -972,7 +970,7 @@ void protocore_dtls_server_app_read_keys(uint8_t *restrict work)
     DtlsServerV.ptr = c->ep3_ready ? &c->ep3_cli : NULL;
 }
 
-void protocore_dtls_server_local_cid(uint8_t *restrict work)
+void protocore_dtls_server_local_cid(uint8_t *work)
 {
     (void)work;
     const DtlsConn *c = DtlsServerV.local_cid_args.c;
@@ -987,7 +985,7 @@ void protocore_dtls_server_local_cid(uint8_t *restrict work)
     DtlsServerV.n = c->local_cid_len;
 }
 
-void protocore_dtls_server_open_app(uint8_t *restrict work)
+void protocore_dtls_server_open_app(uint8_t *work)
 {
     DtlsConn *c = DtlsServerV.open_app_args.c;
     const uint8_t *rec = DtlsServerV.open_app_args.rec;
@@ -1029,7 +1027,7 @@ void protocore_dtls_server_open_app(uint8_t *restrict work)
     DtlsServerV.ok = PROTO_TRUE;
 }
 
-void protocore_dtls_server_seal_app(uint8_t *restrict work)
+void protocore_dtls_server_seal_app(uint8_t *work)
 {
     DtlsConn *c = DtlsServerV.seal_app_args.c;
     const uint8_t *data = DtlsServerV.seal_app_args.data;

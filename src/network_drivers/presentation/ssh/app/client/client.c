@@ -24,14 +24,14 @@
 // Public API
 // ---------------------------------------------------------------------------
 
-void protocore_ssh_app_client_state_get(uint8_t *restrict work)
+void protocore_ssh_app_client_state_get(uint8_t *work)
 {
     (void)work;
     SshClient.state(protocore_ssh_client_span());
     SshAppClientV.state = SshClient.state_of;
 }
 
-void protocore_ssh_app_client_up(uint8_t *restrict work)
+void protocore_ssh_app_client_up(uint8_t *work)
 {
     (void)work;
     SshClient.state(protocore_ssh_client_span());
@@ -39,7 +39,7 @@ void protocore_ssh_app_client_up(uint8_t *restrict work)
 }
 
 // Key derivation for provisioning: the seed's public half, without a connection.
-void protocore_ssh_app_client_pubkey(uint8_t *restrict work)
+void protocore_ssh_app_client_pubkey(uint8_t *work)
 {
     (void)work;
     const uint8_t *seed = SshAppClientV.seed;
@@ -56,19 +56,19 @@ void protocore_ssh_app_client_pubkey(uint8_t *restrict work)
 
 #else
 
-void protocore_ssh_app_client_state_get(uint8_t *restrict work)
+void protocore_ssh_app_client_state_get(uint8_t *work)
 {
     (void)work;
     SshAppClientV.state = PROTOCORE_SSH_CLIENT_IDLE;
 }
 
-void protocore_ssh_app_client_up(uint8_t *restrict work)
+void protocore_ssh_app_client_up(uint8_t *work)
 {
     (void)work;
     SshAppClientV.ok = PROTO_FALSE;
 }
 
-void protocore_ssh_app_client_pubkey(uint8_t *restrict work)
+void protocore_ssh_app_client_pubkey(uint8_t *work)
 {
     (void)work;
     mem.zero(SshAppClientV.pub, 32);

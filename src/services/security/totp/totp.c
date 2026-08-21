@@ -109,14 +109,14 @@ static uint32_t hotp_value(const uint8_t *key, size_t keylen, uint64_t counter, 
 }
 
 // Digit, with 0 taking the RFC 4226 sec 5.3 minimum.
-static uint8_t otp_digit(uint8_t *restrict work)
+static uint8_t otp_digit(uint8_t *work)
 {
     return TotpV.digit ? TotpV.digit : (uint8_t)PROTOCORE_TOTP_DIGIT_MIN;
 }
 
 // RFC 6238 sec 4.2 T = (Current Unix time - T0) / X, floored. X of 0 takes the default; a clock
 // behind T0 gives step 0.
-static uint64_t time_step(uint8_t *restrict work)
+static uint64_t time_step(uint8_t *work)
 {
     uint32_t x = TotpV.step.x;
     if (x == 0)
@@ -131,20 +131,20 @@ static uint64_t time_step(uint8_t *restrict work)
 }
 
 // HOTP(K,C) for the counter the caller set (RFC 4226 sec 5.3).
-void protocore_totp_hotp(uint8_t *restrict work)
+void protocore_totp_hotp(uint8_t *work)
 {
     TotpV.u32 = hotp_value(TotpV.k, TotpV.keylen, TotpV.step.counter, otp_digit(work));
 }
 
 // RFC 6238 sec 4.2 TOTP = HOTP(K, T).
-void protocore_totp_totp(uint8_t *restrict work)
+void protocore_totp_totp(uint8_t *work)
 {
     TotpV.u32 = hotp_value(TotpV.k, TotpV.keylen, time_step(work), otp_digit(work));
 }
 
 // RFC 6238 sec 6: match the submitted OTP against T and every step within the drift limit forward
 // and backward of it. Steps below the epoch are skipped; a negative drift matches nothing.
-void protocore_totp_verify(uint8_t *restrict work)
+void protocore_totp_verify(uint8_t *work)
 {
     TotpV.ok = PROTO_FALSE;
     const int32_t drift = TotpV.check.drift;
@@ -173,7 +173,7 @@ void protocore_totp_verify(uint8_t *restrict work)
 // and 2-7 carry 26..31; lowercase carries the same values as uppercase, and '=', ' ' and '-' are
 // skipped rather than rejected under RFC 4648 sec 3.3. Any other character, or a byte past cap,
 // ends the decode at -1.
-void protocore_totp_base32_decode(uint8_t *restrict work)
+void protocore_totp_base32_decode(uint8_t *work)
 {
     (void)work;
     const char *b32 = TotpV.secret.b32;

@@ -149,9 +149,8 @@ typedef struct
  * @var IfaceBridgeNs::txn_parse  parse a transaction request from a socket buffer. On a complete ...
  * @var IfaceBridgeNs::txn_build  build a transaction request frame (header + write payload) into out
  *
- * @c work is PROTOCORE_IFACE_BRIDGE_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_IFACE_BRIDGE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -172,24 +171,24 @@ extern IfaceBridgeVars IfaceBridgeV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const clear)(uint8_t *restrict work);
-    void (*const add)(uint8_t *restrict work);
-    void (*const map)(uint8_t *restrict work);
-    void (*const find)(uint8_t *restrict work);
-    void (*const count)(uint8_t *restrict work);
-    void (*const txn_parse)(uint8_t *restrict work);
-    void (*const txn_build)(uint8_t *restrict work);
+    void (*const clear)(uint8_t *work);
+    void (*const add)(uint8_t *work);
+    void (*const map)(uint8_t *work);
+    void (*const find)(uint8_t *work);
+    void (*const count)(uint8_t *work);
+    void (*const txn_parse)(uint8_t *work);
+    void (*const txn_build)(uint8_t *work);
 } IfaceBridgeNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in IfaceBridgeV or a region of the borrow at a fixed offset.
-void protocore_iface_bridge_clear(uint8_t *restrict work);
-void protocore_iface_bridge_add(uint8_t *restrict work);
-void protocore_iface_bridge_map(uint8_t *restrict work);
-void protocore_iface_bridge_find(uint8_t *restrict work);
-void protocore_iface_bridge_count(uint8_t *restrict work);
-void protocore_iface_bridge_txn_parse(uint8_t *restrict work);
-void protocore_iface_bridge_txn_build(uint8_t *restrict work);
+void protocore_iface_bridge_clear(uint8_t *work);
+void protocore_iface_bridge_add(uint8_t *work);
+void protocore_iface_bridge_map(uint8_t *work);
+void protocore_iface_bridge_find(uint8_t *work);
+void protocore_iface_bridge_count(uint8_t *work);
+void protocore_iface_bridge_txn_parse(uint8_t *work);
+void protocore_iface_bridge_txn_build(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

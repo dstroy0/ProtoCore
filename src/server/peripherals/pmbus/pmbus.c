@@ -42,13 +42,13 @@ PROTOCORE_BEGIN_DECLS
 // never read.
 
 // The entries this file calls before reaching their definitions.
-static void pmbus_l11_exponent(uint8_t *restrict work);
-static void pmbus_l11_mantissa(uint8_t *restrict work);
-static void pmbus_linear11_micro(uint8_t *restrict work);
-static void pmbus_linear16_encode(uint8_t *restrict work);
-static void pmbus_linear16_micro(uint8_t *restrict work);
+static void pmbus_l11_exponent(uint8_t *work);
+static void pmbus_l11_mantissa(uint8_t *work);
+static void pmbus_linear11_micro(uint8_t *work);
+static void pmbus_linear16_encode(uint8_t *work);
+static void pmbus_linear16_micro(uint8_t *work);
 
-static void pmbus_vout_mode_kind(uint8_t *restrict work)
+static void pmbus_vout_mode_kind(uint8_t *work)
 {
     (void)work;
     uint8_t vout_mode = Pmbus.vout_mode_kind_args.vout_mode;
@@ -56,7 +56,7 @@ static void pmbus_vout_mode_kind(uint8_t *restrict work)
     Pmbus.kind = (uint8_t)((vout_mode >> 5) & 0x07u);
 }
 
-static void pmbus_vout_exponent(uint8_t *restrict work)
+static void pmbus_vout_exponent(uint8_t *work)
 {
     (void)work;
     uint8_t vout_mode = Pmbus.vout_exponent_args.vout_mode;
@@ -66,7 +66,7 @@ static void pmbus_vout_exponent(uint8_t *restrict work)
     Pmbus.exp = (int8_t)((e & 0x10u) != 0 ? (int8_t)(e | 0xE0u) : (int8_t)e);
 }
 
-static void pmbus_l11_mantissa(uint8_t *restrict work)
+static void pmbus_l11_mantissa(uint8_t *work)
 {
     (void)work;
     uint16_t word = Pmbus.l11_mantissa_args.word;
@@ -76,7 +76,7 @@ static void pmbus_l11_mantissa(uint8_t *restrict work)
     Pmbus.mantissa = (int16_t)((y & 0x0400u) != 0 ? (int16_t)(y | 0xF800u) : (int16_t)y);
 }
 
-static void pmbus_l11_exponent(uint8_t *restrict work)
+static void pmbus_l11_exponent(uint8_t *work)
 {
     (void)work;
     uint16_t word = Pmbus.l11_exponent_args.word;
@@ -119,7 +119,7 @@ static int32_t scale_micro(int64_t mantissa, int8_t exponent)
     return (int32_t)v;
 }
 
-static void pmbus_linear11_micro(uint8_t *restrict work)
+static void pmbus_linear11_micro(uint8_t *work)
 {
     (void)work;
     uint16_t word = Pmbus.linear11_micro_args.word;
@@ -146,7 +146,7 @@ static int64_t l11_mantissa_at(int32_t micro, int32_t n)
     return ((int64_t)micro << (-n)) / PROTOCORE_PMBUS_MICRO;
 }
 
-static void pmbus_linear11_encode(uint8_t *restrict work)
+static void pmbus_linear11_encode(uint8_t *work)
 {
     (void)work;
     int32_t micro = Pmbus.linear11_encode_args.micro;
@@ -180,7 +180,7 @@ static void pmbus_linear11_encode(uint8_t *restrict work)
     Pmbus.word = (uint16_t)((((uint16_t)((uint8_t)n & 0x1Fu)) << 11) | ((uint16_t)y & 0x07FFu));
 }
 
-static void pmbus_linear16_micro(uint8_t *restrict work)
+static void pmbus_linear16_micro(uint8_t *work)
 {
     (void)work;
     uint16_t word = Pmbus.linear16_micro_args.word;
@@ -189,7 +189,7 @@ static void pmbus_linear16_micro(uint8_t *restrict work)
     Pmbus.micro = scale_micro((int64_t)word, exponent);
 }
 
-static void pmbus_linear16_encode(uint8_t *restrict work)
+static void pmbus_linear16_encode(uint8_t *work)
 {
     (void)work;
     int32_t micro = Pmbus.linear16_encode_args.micro;
@@ -220,7 +220,7 @@ static void pmbus_linear16_encode(uint8_t *restrict work)
     Pmbus.word = y > 0xFFFF ? 0xFFFFu : (uint16_t)y;
 }
 
-static void pmbus_direct_micro(uint8_t *restrict work)
+static void pmbus_direct_micro(uint8_t *work)
 {
     (void)work;
     uint16_t word = Pmbus.direct_micro_args.word;
@@ -258,7 +258,7 @@ static void pmbus_direct_micro(uint8_t *restrict work)
 
 #if PROTOCORE_HAS_BUS
 
-static void pmbus_begin(uint8_t *restrict work)
+static void pmbus_begin(uint8_t *work)
 {
     (void)work;
 
@@ -266,7 +266,7 @@ static void pmbus_begin(uint8_t *restrict work)
     Pmbus.ok = smbus_ok;
 }
 
-static void pmbus_set_page(uint8_t *restrict work)
+static void pmbus_set_page(uint8_t *work)
 {
     (void)work;
     uint8_t addr = Pmbus.set_page_args.addr;
@@ -276,7 +276,7 @@ static void pmbus_set_page(uint8_t *restrict work)
     Pmbus.ok = smbus_ok;
 }
 
-static void pmbus_read_vout_mode(uint8_t *restrict work)
+static void pmbus_read_vout_mode(uint8_t *work)
 {
     (void)work;
     uint8_t addr = Pmbus.read_vout_mode_args.addr;
@@ -286,7 +286,7 @@ static void pmbus_read_vout_mode(uint8_t *restrict work)
     Pmbus.ok = smbus_ok;
 }
 
-static void pmbus_read_linear11(uint8_t *restrict work)
+static void pmbus_read_linear11(uint8_t *work)
 {
     (void)work;
     uint8_t addr = Pmbus.read_linear11_args.addr;
@@ -311,7 +311,7 @@ static void pmbus_read_linear11(uint8_t *restrict work)
     Pmbus.ok = *micro != PROTOCORE_PMBUS_INVALID;
 }
 
-static void pmbus_read_linear16(uint8_t *restrict work)
+static void pmbus_read_linear16(uint8_t *work)
 {
     (void)work;
     uint8_t addr = Pmbus.read_linear16_args.addr;
@@ -338,7 +338,7 @@ static void pmbus_read_linear16(uint8_t *restrict work)
     Pmbus.ok = *micro != PROTOCORE_PMBUS_INVALID;
 }
 
-static void pmbus_write_linear16(uint8_t *restrict work)
+static void pmbus_write_linear16(uint8_t *work)
 {
     (void)work;
     uint8_t addr = Pmbus.write_linear16_args.addr;
@@ -353,7 +353,7 @@ static void pmbus_write_linear16(uint8_t *restrict work)
     Pmbus.ok = smbus_ok;
 }
 
-static void pmbus_status_byte(uint8_t *restrict work)
+static void pmbus_status_byte(uint8_t *work)
 {
     (void)work;
     uint8_t addr = Pmbus.status_byte_args.addr;
@@ -363,7 +363,7 @@ static void pmbus_status_byte(uint8_t *restrict work)
     Pmbus.ok = smbus_ok;
 }
 
-static void pmbus_status_word(uint8_t *restrict work)
+static void pmbus_status_word(uint8_t *work)
 {
     (void)work;
     uint8_t addr = Pmbus.status_word_args.addr;
@@ -373,7 +373,7 @@ static void pmbus_status_word(uint8_t *restrict work)
     Pmbus.ok = smbus_ok;
 }
 
-static void pmbus_clear_faults(uint8_t *restrict work)
+static void pmbus_clear_faults(uint8_t *work)
 {
     (void)work;
     uint8_t addr = Pmbus.clear_faults_args.addr;
@@ -382,7 +382,7 @@ static void pmbus_clear_faults(uint8_t *restrict work)
     Pmbus.ok = smbus_ok;
 }
 
-static void pmbus_read_mfr_string(uint8_t *restrict work)
+static void pmbus_read_mfr_string(uint8_t *work)
 {
     (void)work;
     uint8_t addr = Pmbus.read_mfr_string_args.addr;

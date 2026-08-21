@@ -30,7 +30,7 @@ PROTOCORE_BEGIN_DECLS
  * for any well-formed call.
  *
  * @c work is PROTOCORE_SNTRUP761_BORROW secure bytes the CALLER took, at an address it knows. It
- * arrives @c restrict and is not held past the call, so nothing here aliases it. The caller releases
+ * is not held past the call, so nothing here aliases it. The caller releases
  * it, and the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes
  * it. That is what keeps the hashed key material in it from outliving the caller.
  *
@@ -48,9 +48,9 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*keypair)(uint8_t *restrict, uint8_t *, uint8_t *);
-    proto_bool (*enc)(uint8_t *restrict, const uint8_t *, uint8_t *, uint8_t *);
-    proto_bool (*dec)(uint8_t *restrict, const uint8_t *, const uint8_t *, uint8_t *);
+    proto_bool (*keypair)(uint8_t *, uint8_t *, uint8_t *);
+    proto_bool (*enc)(uint8_t *, const uint8_t *, uint8_t *, uint8_t *);
+    proto_bool (*dec)(uint8_t *, const uint8_t *, const uint8_t *, uint8_t *);
 } Sntrup761Ns;
 PROTOCORE_NS_LAYOUT(Sntrup761Ns, keypair, enc, dec);
 
@@ -61,7 +61,7 @@ PROTOCORE_NS_LAYOUT(Sntrup761Ns, keypair, enc, dec);
  * @param sk PROTOCORE_SNTRUP761_SK_BYTES bytes
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_sntrup761_keypair(uint8_t *restrict work, uint8_t *pk, uint8_t *sk);
+proto_bool protocore_sntrup761_keypair(uint8_t *work, uint8_t *pk, uint8_t *sk);
 /**
  * @brief Draw a short polynomial, encrypt it under pk, derive the session key.
  * @param work PROTOCORE_SNTRUP761_BORROW bytes the caller took. Not held past the call.
@@ -70,7 +70,7 @@ proto_bool protocore_sntrup761_keypair(uint8_t *restrict work, uint8_t *pk, uint
  * @param ss PROTOCORE_SNTRUP761_SS_BYTES bytes
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_sntrup761_enc(uint8_t *restrict work, const uint8_t *pk, uint8_t *ct, uint8_t *ss);
+proto_bool protocore_sntrup761_enc(uint8_t *work, const uint8_t *pk, uint8_t *ct, uint8_t *ss);
 /**
  * @brief Recover the session key from the peer's ciphertext under sk.
  * @param work PROTOCORE_SNTRUP761_BORROW bytes the caller took. Not held past the call.
@@ -79,7 +79,7 @@ proto_bool protocore_sntrup761_enc(uint8_t *restrict work, const uint8_t *pk, ui
  * @param ss PROTOCORE_SNTRUP761_SS_BYTES bytes
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_sntrup761_dec(uint8_t *restrict work, const uint8_t *sk, const uint8_t *ct, uint8_t *ss);
+proto_bool protocore_sntrup761_dec(uint8_t *work, const uint8_t *sk, const uint8_t *ct, uint8_t *ss);
 
 /** @brief Module namespace. */
 PROTOCORE_NS Sntrup761Ns Sntrup761 PROTOCORE_UNUSED = {

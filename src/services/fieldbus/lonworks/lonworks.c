@@ -20,7 +20,7 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_lonworks_build_nv(uint8_t *restrict work)
+void protocore_lonworks_build_nv(uint8_t *work)
 {
     (void)work;
     uint8_t msg_code = LonworksV.build_nv_args.msg_code;
@@ -52,7 +52,7 @@ void protocore_lonworks_build_nv(uint8_t *restrict work)
     LonworksV.n = n;
 }
 
-void protocore_lonworks_parse_nv(uint8_t *restrict work)
+void protocore_lonworks_parse_nv(uint8_t *work)
 {
     (void)work;
     const uint8_t *pdu = LonworksV.parse_nv_args.pdu;
@@ -71,7 +71,7 @@ void protocore_lonworks_parse_nv(uint8_t *restrict work)
     LonworksV.ok = PROTO_TRUE;
 }
 
-void protocore_lonworks_snvt_temp_encode(uint8_t *restrict work)
+void protocore_lonworks_snvt_temp_encode(uint8_t *work)
 {
     (void)work;
     double celsius = LonworksV.snvt_temp_encode_args.celsius;
@@ -93,7 +93,7 @@ void protocore_lonworks_snvt_temp_encode(uint8_t *restrict work)
     out[1] = (uint8_t)u;
 }
 
-void protocore_lonworks_snvt_temp_decode(uint8_t *restrict work)
+void protocore_lonworks_snvt_temp_decode(uint8_t *work)
 {
     (void)work;
     const uint8_t *in = LonworksV.snvt_temp_decode_args.in;
@@ -102,7 +102,7 @@ void protocore_lonworks_snvt_temp_decode(uint8_t *restrict work)
     LonworksV.value = ((double)v - 2740.0) / 10.0;
 }
 
-void protocore_lonworks_snvt_switch_encode(uint8_t *restrict work)
+void protocore_lonworks_snvt_switch_encode(uint8_t *work)
 {
     (void)work;
     double percent = LonworksV.snvt_switch_encode_args.percent;
@@ -123,7 +123,7 @@ void protocore_lonworks_snvt_switch_encode(uint8_t *restrict work)
     out[1] = state;
 }
 
-void protocore_lonworks_snvt_switch_decode(uint8_t *restrict work)
+void protocore_lonworks_snvt_switch_decode(uint8_t *work)
 {
     (void)work;
     const uint8_t *in = LonworksV.snvt_switch_decode_args.in;

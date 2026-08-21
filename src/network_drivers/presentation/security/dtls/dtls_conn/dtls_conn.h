@@ -340,32 +340,32 @@ extern DtlsServerVars DtlsServerV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const init)(uint8_t *restrict work);
-    void (*const process)(uint8_t *restrict work);
-    void (*const timeout_ms)(uint8_t *restrict work);
-    void (*const on_timeout)(uint8_t *restrict work);
-    void (*const established)(uint8_t *restrict work);
-    void (*const alert)(uint8_t *restrict work);
-    void (*const app_write_keys)(uint8_t *restrict work);
-    void (*const app_read_keys)(uint8_t *restrict work);
-    void (*const local_cid)(uint8_t *restrict work);
-    void (*const open_app)(uint8_t *restrict work);
-    void (*const seal_app)(uint8_t *restrict work);
+    void (*const init)(uint8_t *work);
+    void (*const process)(uint8_t *work);
+    void (*const timeout_ms)(uint8_t *work);
+    void (*const on_timeout)(uint8_t *work);
+    void (*const established)(uint8_t *work);
+    void (*const alert)(uint8_t *work);
+    void (*const app_write_keys)(uint8_t *work);
+    void (*const app_read_keys)(uint8_t *work);
+    void (*const local_cid)(uint8_t *work);
+    void (*const open_app)(uint8_t *work);
+    void (*const seal_app)(uint8_t *work);
 } DtlsConnNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in DtlsServerV or a region of the borrow at a fixed offset.
-void protocore_dtls_server_init(uint8_t *restrict work);
-void protocore_dtls_server_process(uint8_t *restrict work);
-void protocore_dtls_server_timeout_ms(uint8_t *restrict work);
-void protocore_dtls_server_on_timeout(uint8_t *restrict work);
-void protocore_dtls_server_established(uint8_t *restrict work);
-void protocore_dtls_server_alert(uint8_t *restrict work);
-void protocore_dtls_server_app_write_keys(uint8_t *restrict work);
-void protocore_dtls_server_app_read_keys(uint8_t *restrict work);
-void protocore_dtls_server_local_cid(uint8_t *restrict work);
-void protocore_dtls_server_open_app(uint8_t *restrict work);
-void protocore_dtls_server_seal_app(uint8_t *restrict work);
+void protocore_dtls_server_init(uint8_t *work);
+void protocore_dtls_server_process(uint8_t *work);
+void protocore_dtls_server_timeout_ms(uint8_t *work);
+void protocore_dtls_server_on_timeout(uint8_t *work);
+void protocore_dtls_server_established(uint8_t *work);
+void protocore_dtls_server_alert(uint8_t *work);
+void protocore_dtls_server_app_write_keys(uint8_t *work);
+void protocore_dtls_server_app_read_keys(uint8_t *work);
+void protocore_dtls_server_local_cid(uint8_t *work);
+void protocore_dtls_server_open_app(uint8_t *work);
+void protocore_dtls_server_seal_app(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

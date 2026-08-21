@@ -101,109 +101,109 @@ uint8_t *protocore_physical_span(void)
     return s_own.span;
 }
 
-void protocore_physical_wifi_init(uint8_t *restrict work)
+void protocore_physical_wifi_init(uint8_t *work)
 {
     (void)work;
     PhysicalV.ok = init_wifi_physical(PhysicalV.wifi.ssid, PhysicalV.wifi.password);
 }
 
-void protocore_physical_wifi_ready(uint8_t *restrict work)
+void protocore_physical_wifi_ready(uint8_t *work)
 {
     (void)work;
     PhysicalV.ok = wifi_ready();
 }
 
-void protocore_physical_wifi_radio_init(uint8_t *restrict work)
+void protocore_physical_wifi_radio_init(uint8_t *work)
 {
     (void)work;
     PhysicalV.ok = init_wifi_radio_physical(PhysicalV.wifi.channel);
 }
 
-void protocore_physical_wifi_ap_init(uint8_t *restrict work)
+void protocore_physical_wifi_ap_init(uint8_t *work)
 {
     (void)work;
     PhysicalV.ok = init_wifi_ap_physical(PhysicalV.wifi.ssid, PhysicalV.wifi.password);
 }
 
-void protocore_physical_wifi_ssid(uint8_t *restrict work)
+void protocore_physical_wifi_ssid(uint8_t *work)
 {
     (void)work;
     PhysicalV.n = protocore_net_ssid(PhysicalV.read.text, PhysicalV.read.cap);
 }
 
-void protocore_physical_wifi_channel(uint8_t *restrict work)
+void protocore_physical_wifi_channel(uint8_t *work)
 {
     (void)work;
     PhysicalV.u8 = protocore_net_channel();
 }
 
-void protocore_physical_wifi_rssi(uint8_t *restrict work)
+void protocore_physical_wifi_rssi(uint8_t *work)
 {
     (void)work;
     PhysicalV.i8 = protocore_net_rssi();
 }
 
-void protocore_physical_wifi_ap_ip(uint8_t *restrict work)
+void protocore_physical_wifi_ap_ip(uint8_t *work)
 {
     (void)work;
     PhysicalV.u32 = protocore_net_ap_ip();
 }
 
-void protocore_physical_wifi_mac(uint8_t *restrict work)
+void protocore_physical_wifi_mac(uint8_t *work)
 {
     (void)work;
     PhysicalV.ok = protocore_net_mac(PhysicalV.read.mac);
 }
 
-void protocore_physical_eth_init(uint8_t *restrict work)
+void protocore_physical_eth_init(uint8_t *work)
 {
     (void)work;
     PhysicalV.ok = init_eth_physical();
 }
 
-void protocore_physical_eth_ready(uint8_t *restrict work)
+void protocore_physical_eth_ready(uint8_t *work)
 {
     (void)work;
     PhysicalV.ok = eth_ready();
 }
 
-void protocore_physical_ip6_init(uint8_t *restrict work)
+void protocore_physical_ip6_init(uint8_t *work)
 {
     (void)work;
     PhysicalV.ok = init_ipv6_physical();
 }
 
-void protocore_physical_ip6_global(uint8_t *restrict work)
+void protocore_physical_ip6_global(uint8_t *work)
 {
     (void)work;
     PhysicalV.ok = net_global_ipv6(PhysicalV.read.ip6);
 }
 
-void protocore_physical_ip6_ready(uint8_t *restrict work)
+void protocore_physical_ip6_ready(uint8_t *work)
 {
     (void)work;
     PhysicalV.ok = protocore_ipv6_ready();
 }
 
-void protocore_physical_egress(uint8_t *restrict work)
+void protocore_physical_egress(uint8_t *work)
 {
     (void)work;
     PhysicalV.if_kind = protocore_net_egress();
 }
 
-void protocore_physical_egress_ip(uint8_t *restrict work)
+void protocore_physical_egress_ip(uint8_t *work)
 {
     (void)work;
     PhysicalV.u32 = protocore_net_egress_ip();
 }
 
-void protocore_physical_egress_mac(uint8_t *restrict work)
+void protocore_physical_egress_mac(uint8_t *work)
 {
     (void)work;
     PhysicalV.ok = protocore_net_egress_mac(PhysicalV.read.mac);
 }
 
-void protocore_physical_classify_ip(uint8_t *restrict work)
+void protocore_physical_classify_ip(uint8_t *work)
 {
     (void)work;
     PhysicalV.if_kind =
@@ -215,7 +215,7 @@ void protocore_physical_classify_ip(uint8_t *restrict work)
 // ---------------------------------------------------------------------------
 
 // The row holding the named id, or NULL.
-static IfaceRow *row_of(uint8_t *restrict work)
+static IfaceRow *row_of(uint8_t *work)
 {
     for (uint8_t i = 0; i < PROTOCORE_PHY_MAX_IFACES; i++)
     {
@@ -227,7 +227,7 @@ static IfaceRow *row_of(uint8_t *restrict work)
     return NULL;
 }
 
-void protocore_physical_iface_add(uint8_t *restrict work)
+void protocore_physical_iface_add(uint8_t *work)
 {
     PhysicalV.ok = PROTO_FALSE;
     if (PhysicalV.iface.send == NULL || row_of(work) != NULL)
@@ -250,7 +250,7 @@ void protocore_physical_iface_add(uint8_t *restrict work)
     }
 }
 
-void protocore_physical_iface_reset(uint8_t *restrict work)
+void protocore_physical_iface_reset(uint8_t *work)
 {
     // The used flag is the row: add writes every other field before setting it.
     for (uint8_t i = 0; i < PROTOCORE_PHY_MAX_IFACES; i++)
@@ -259,19 +259,19 @@ void protocore_physical_iface_reset(uint8_t *restrict work)
     }
 }
 
-void protocore_physical_iface_present(uint8_t *restrict work)
+void protocore_physical_iface_present(uint8_t *work)
 {
     PhysicalV.ok = row_of(work) != NULL;
 }
 
-void protocore_physical_iface_kind(uint8_t *restrict work)
+void protocore_physical_iface_kind(uint8_t *work)
 {
     const IfaceRow *r = row_of(work);
 
     PhysicalV.if_kind = (r == NULL) ? PROTOCORE_IF_ANY : r->kind;
 }
 
-void protocore_physical_iface_at(uint8_t *restrict work)
+void protocore_physical_iface_at(uint8_t *work)
 {
     const uint8_t i = PhysicalV.iface.i;
 
@@ -283,7 +283,7 @@ void protocore_physical_iface_at(uint8_t *restrict work)
     PhysicalV.i16 = (int16_t)PHYSICAL_CTX(work)->row[i].id;
 }
 
-void protocore_physical_iface_count(uint8_t *restrict work)
+void protocore_physical_iface_count(uint8_t *work)
 {
     uint8_t n = 0;
 
@@ -297,7 +297,7 @@ void protocore_physical_iface_count(uint8_t *restrict work)
     PhysicalV.u8 = n;
 }
 
-void protocore_physical_iface_send(uint8_t *restrict work)
+void protocore_physical_iface_send(uint8_t *work)
 {
     IfaceRow *r = row_of(work);
 

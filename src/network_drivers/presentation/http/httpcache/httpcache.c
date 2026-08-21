@@ -24,9 +24,9 @@ static const size_t CC_SENT = (size_t)-1; // overflow sentinel threaded through 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_httpcache_control_init(uint8_t *restrict work);
+void protocore_httpcache_control_init(uint8_t *work);
 
-void protocore_httpcache_control_init(uint8_t *restrict work)
+void protocore_httpcache_control_init(uint8_t *work)
 {
     (void)work;
     protocore_cache_control *cc = HttpcacheV.control_init_args.cc;
@@ -113,7 +113,7 @@ static size_t cc_kv(char *buf, size_t cap, size_t n, proto_bool *first, const ch
     return cc_emit_uint(buf, cap, n, (unsigned)v);
 }
 
-void protocore_httpcache_control_build(uint8_t *restrict work)
+void protocore_httpcache_control_build(uint8_t *work)
 {
     (void)work;
     char *buf = HttpcacheV.control_build_args.buf;
@@ -376,7 +376,7 @@ static proto_bool cache_parse_one_directive(const char *s, size_t len, size_t *i
     return nlen && cc_match(cc, s + start, nlen, val, vlen);
 }
 
-void protocore_httpcache_control_parse(uint8_t *restrict work)
+void protocore_httpcache_control_parse(uint8_t *work)
 {
     const char *s = HttpcacheV.control_parse_args.s;
     size_t len = HttpcacheV.control_parse_args.len;
@@ -403,7 +403,7 @@ void protocore_httpcache_control_parse(uint8_t *restrict work)
 
 // --- presets + freshness ---------------------------------------------------
 
-void protocore_httpcache_immutable_asset(uint8_t *restrict work)
+void protocore_httpcache_immutable_asset(uint8_t *work)
 {
     protocore_cache_control *cc = HttpcacheV.immutable_asset_args.cc;
     uint32_t max_age = HttpcacheV.immutable_asset_args.max_age;
@@ -415,7 +415,7 @@ void protocore_httpcache_immutable_asset(uint8_t *restrict work)
     cc->cc_immutable = PROTO_TRUE;
 }
 
-void protocore_httpcache_revalidatable(uint8_t *restrict work)
+void protocore_httpcache_revalidatable(uint8_t *work)
 {
     protocore_cache_control *cc = HttpcacheV.revalidatable_args.cc;
     uint32_t max_age = HttpcacheV.revalidatable_args.max_age;
@@ -431,7 +431,7 @@ void protocore_httpcache_revalidatable(uint8_t *restrict work)
     }
 }
 
-void protocore_httpcache_no_store(uint8_t *restrict work)
+void protocore_httpcache_no_store(uint8_t *work)
 {
     protocore_cache_control *cc = HttpcacheV.no_store_args.cc;
 
@@ -440,7 +440,7 @@ void protocore_httpcache_no_store(uint8_t *restrict work)
     cc->no_store = PROTO_TRUE;
 }
 
-void protocore_httpcache_shared(uint8_t *restrict work)
+void protocore_httpcache_shared(uint8_t *work)
 {
     protocore_cache_control *cc = HttpcacheV.shared_args.cc;
     uint32_t max_age = HttpcacheV.shared_args.max_age;
@@ -453,7 +453,7 @@ void protocore_httpcache_shared(uint8_t *restrict work)
     cc->s_maxage = (int32_t)(s_maxage > 2147483647u ? 2147483647u : s_maxage);
 }
 
-void protocore_httpcache_freshness_lifetime(uint8_t *restrict work)
+void protocore_httpcache_freshness_lifetime(uint8_t *work)
 {
     (void)work;
     const protocore_cache_control *cc = HttpcacheV.freshness_lifetime_args.cc;

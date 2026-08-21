@@ -85,7 +85,7 @@ static proto_bool parse_question(const uint8_t *q, size_t qlen, char *name, size
 // The ADDRESS recorded for @p name, host order, 0 when absent. Names compare ignoring ASCII case
 // (RFC 1035 sec 2.3.3) through DnsWire.eq. Reads the table and sets no member of DnsServer, so it
 // serves both the lookup call and the resolver callback a response is being framed around.
-static uint32_t table_find(uint8_t *restrict work, const char *name)
+static uint32_t table_find(uint8_t *work, const char *name)
 {
     if (!name)
     {
@@ -127,7 +127,7 @@ uint8_t *protocore_dns_server_span(void)
     return s_own.span;
 }
 
-void protocore_dns_server_build_response(uint8_t *restrict work)
+void protocore_dns_server_build_response(uint8_t *work)
 {
     const uint8_t *query = DnsServerV.msg.query;
     const size_t qlen = DnsServerV.msg.qlen;
@@ -215,7 +215,7 @@ void protocore_dns_server_build_response(uint8_t *restrict work)
 
 // Record rec.name with the ADDRESS rec.a.rec.b.rec.c.rec.d; ok is false for an empty, absent, or
 // over-long name, or a full table.
-void protocore_dns_server_add(uint8_t *restrict work)
+void protocore_dns_server_add(uint8_t *work)
 {
     const char *name = DnsServerV.rec.name;
 
@@ -241,12 +241,12 @@ void protocore_dns_server_add(uint8_t *restrict work)
     DnsServerV.ok = PROTO_TRUE;
 }
 
-void protocore_dns_server_lookup(uint8_t *restrict work)
+void protocore_dns_server_lookup(uint8_t *work)
 {
     DnsServerV.ip = table_find(work, DnsServerV.rec.name);
 }
 
-void protocore_dns_server_clear(uint8_t *restrict work)
+void protocore_dns_server_clear(uint8_t *work)
 {
     DNS_SERVER_CTX(work)->count = 0;
 }
@@ -281,7 +281,7 @@ static void dns_udp_handler(const uint8_t *data, size_t len, const struct protoc
 }
 
 // Bind UDP port 53, the port a DNS message is carried to (RFC 1035 sec 4.2.1).
-void protocore_dns_server_begin(uint8_t *restrict work)
+void protocore_dns_server_begin(uint8_t *work)
 {
     UdpListenerV.port = 53;
     UdpListenerV.bind.handler = dns_udp_handler;

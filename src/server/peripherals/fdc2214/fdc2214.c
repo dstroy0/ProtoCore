@@ -45,10 +45,10 @@ uint8_t *protocore_fdc2214_span(void)
     return s_own.span;
 }
 
-void protocore_fdc2214_build_config(uint8_t *restrict work);
-void protocore_fdc2214_data(uint8_t *restrict work);
+void protocore_fdc2214_build_config(uint8_t *work);
+void protocore_fdc2214_data(uint8_t *work);
 
-void protocore_fdc2214_data(uint8_t *restrict work)
+void protocore_fdc2214_data(uint8_t *work)
 {
     (void)work;
     uint16_t msb_reg = Fdc2214V.data_args.msb_reg;
@@ -57,7 +57,7 @@ void protocore_fdc2214_data(uint8_t *restrict work)
     Fdc2214V.value = ((uint32_t)(msb_reg & 0x0FFF) << 16) | lsb_reg;
 }
 
-void protocore_fdc2214_error(uint8_t *restrict work)
+void protocore_fdc2214_error(uint8_t *work)
 {
     (void)work;
     uint16_t msb_reg = Fdc2214V.error_args.msb_reg;
@@ -65,7 +65,7 @@ void protocore_fdc2214_error(uint8_t *restrict work)
     Fdc2214V.flags = (uint8_t)((msb_reg >> 12) & 0x0F);
 }
 
-void protocore_fdc2214_sensor_freq_hz(uint8_t *restrict work)
+void protocore_fdc2214_sensor_freq_hz(uint8_t *work)
 {
     (void)work;
     uint32_t data28 = Fdc2214V.sensor_freq_hz_args.data28;
@@ -74,7 +74,7 @@ void protocore_fdc2214_sensor_freq_hz(uint8_t *restrict work)
     Fdc2214V.hz = ((uint64_t)data28 * fref_hz) >> 28;
 }
 
-void protocore_fdc2214_build_config(uint8_t *restrict work)
+void protocore_fdc2214_build_config(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Fdc2214V.build_config_args.buf;
@@ -140,12 +140,12 @@ static_assert(FDC2214_OFF_CTX % _Alignof(Fdc2214Ctx) == 0,
 // Zero is "no address set yet", which is the address the ADDR pin selects when it is low - stated
 // here rather than on the declaration so the context carries no initializer and can live in a
 // borrow that arrives zeroed. begin() applies the same default to the address it is handed.
-static uint8_t dev_addr(uint8_t *restrict work)
+static uint8_t dev_addr(uint8_t *work)
 {
     return FDC2214_CTX(work)->addr ? FDC2214_CTX(work)->addr : (uint8_t)PROTOCORE_FDC2214_I2C_ADDR;
 }
 
-static proto_bool read16(uint8_t *restrict work, uint8_t reg, uint16_t *out)
+static proto_bool read16(uint8_t *work, uint8_t reg, uint16_t *out)
 {
     if (!protocore_i2c_write_read(dev_addr(work), &reg, 1, FDC2214_CTX(work)->frame, 2))
     {
@@ -155,14 +155,14 @@ static proto_bool read16(uint8_t *restrict work, uint8_t reg, uint16_t *out)
     return PROTO_TRUE;
 }
 
-static proto_bool write16(uint8_t *restrict work, uint8_t reg, uint16_t val)
+static proto_bool write16(uint8_t *work, uint8_t reg, uint16_t val)
 {
     FDC2214_CTX(work)->frame[0] = reg;
     (void)endian.wr16be(&FDC2214_CTX(work)->frame[1], val);
     return protocore_i2c_write(dev_addr(work), FDC2214_CTX(work)->frame, sizeof(FDC2214_CTX(work)->frame));
 }
 
-void protocore_fdc2214_begin(uint8_t *restrict work)
+void protocore_fdc2214_begin(uint8_t *work)
 {
     uint8_t addr = Fdc2214V.begin_args.addr;
     uint16_t rcount = Fdc2214V.begin_args.rcount;
@@ -198,7 +198,7 @@ void protocore_fdc2214_begin(uint8_t *restrict work)
     Fdc2214V.ok = PROTO_TRUE;
 }
 
-void protocore_fdc2214_read_ch0(uint8_t *restrict work)
+void protocore_fdc2214_read_ch0(uint8_t *work)
 {
     uint32_t *out = Fdc2214V.read_ch0_args.out;
 

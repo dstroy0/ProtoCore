@@ -89,7 +89,7 @@ uint8_t *protocore_filesystem_span(void)
 
 // The mounted store, or NULL. A filesystem with no store behind it is a legitimate configuration,
 // so the absence is recorded in the status mask rather than returned as a bare false.
-static const protocore_mnt_backend *store(uint8_t *restrict work)
+static const protocore_mnt_backend *store(uint8_t *work)
 {
     Mnt.active(work);
     const protocore_mnt_backend *b = MntV.backend;
@@ -140,7 +140,7 @@ static size_t walk_pop(char *path, size_t len)
 // Resolve a request against @p root into buffer @p slot. Returns NULL on a bad root, traversal,
 // or overflow, which is what makes every operation below a single null test instead of an
 // error-code ladder.
-static const char *resolve_into(uint8_t *restrict work, int slot, int root, const char *dir, const char *name)
+static const char *resolve_into(uint8_t *work, int slot, int root, const char *dir, const char *name)
 {
     if (root < 0 || root >= (int)FILESYSTEM_CTX(work)->count || dir == NULL || name == NULL)
     {
@@ -159,17 +159,17 @@ static const char *resolve_into(uint8_t *restrict work, int slot, int root, cons
     return FILESYSTEM_CTX(work)->path[slot];
 }
 
-static void fs_status(uint8_t *restrict work)
+static void fs_status(uint8_t *work)
 {
     Fs.bits = FILESYSTEM_CTX(work)->status;
 }
 
-static void fs_clear(uint8_t *restrict work)
+static void fs_clear(uint8_t *work)
 {
     FILESYSTEM_CTX(work)->status = PROTOCORE_FS_OK;
 }
 
-static void fs_present(uint8_t *restrict work)
+static void fs_present(uint8_t *work)
 {
     (void)work;
 
@@ -179,7 +179,7 @@ static void fs_present(uint8_t *restrict work)
     Fs.ok = MntV.backend != NULL;
 }
 
-static void fs_begin(uint8_t *restrict work)
+static void fs_begin(uint8_t *work)
 {
     const char *name = Fs.mount;
 
@@ -229,7 +229,7 @@ static void fs_begin(uint8_t *restrict work)
     Fs.i32 = id;
 }
 
-static void fs_resolve(uint8_t *restrict work)
+static void fs_resolve(uint8_t *work)
 {
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
@@ -238,7 +238,7 @@ static void fs_resolve(uint8_t *restrict work)
     Fs.text = resolve_into(work, 0, root, dir, name);
 }
 
-static void fs_open(uint8_t *restrict work)
+static void fs_open(uint8_t *work)
 {
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
@@ -256,7 +256,7 @@ static void fs_open(uint8_t *restrict work)
     return; // cross the int backend ABI
 }
 
-static void fs_read(uint8_t *restrict work)
+static void fs_read(uint8_t *work)
 {
     const int handle = Fs.io.handle;
     void *buf = Fs.io.buf;
@@ -266,7 +266,7 @@ static void fs_read(uint8_t *restrict work)
     Fs.i32 = (b == NULL) ? -1 : b->read(handle, buf, n);
 }
 
-static void fs_write(uint8_t *restrict work)
+static void fs_write(uint8_t *work)
 {
     const int handle = Fs.io.handle;
     const void *buf = Fs.io.wbuf;
@@ -276,7 +276,7 @@ static void fs_write(uint8_t *restrict work)
     Fs.i32 = (b == NULL) ? -1 : b->write(handle, buf, n);
 }
 
-static void fs_close(uint8_t *restrict work)
+static void fs_close(uint8_t *work)
 {
     const int handle = Fs.io.handle;
 
@@ -287,7 +287,7 @@ static void fs_close(uint8_t *restrict work)
     }
 }
 
-static void fs_seek(uint8_t *restrict work)
+static void fs_seek(uint8_t *work)
 {
     const int handle = Fs.io.handle;
     const uint64_t off = Fs.io.off;
@@ -296,7 +296,7 @@ static void fs_seek(uint8_t *restrict work)
     Fs.ok = (b == NULL) ? PROTO_FALSE : b->seek(handle, off);
 }
 
-static void fs_size(uint8_t *restrict work)
+static void fs_size(uint8_t *work)
 {
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
@@ -312,7 +312,7 @@ static void fs_size(uint8_t *restrict work)
     Fs.len = b->size(p);
 }
 
-static void fs_exists(uint8_t *restrict work)
+static void fs_exists(uint8_t *work)
 {
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
@@ -328,7 +328,7 @@ static void fs_exists(uint8_t *restrict work)
     Fs.ok = b->exists(p);
 }
 
-static void fs_stat(uint8_t *restrict work)
+static void fs_stat(uint8_t *work)
 {
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
@@ -345,7 +345,7 @@ static void fs_stat(uint8_t *restrict work)
     Fs.ok = b->stat(p, out);
 }
 
-static void fs_remove(uint8_t *restrict work)
+static void fs_remove(uint8_t *work)
 {
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
@@ -471,7 +471,7 @@ static void fs_remove(uint8_t *restrict work)
     }
 }
 
-static void fs_rename(uint8_t *restrict work)
+static void fs_rename(uint8_t *work)
 {
     const int root = Fs.path.root;
     const char *from_dir = Fs.path.dir;
@@ -492,7 +492,7 @@ static void fs_rename(uint8_t *restrict work)
 
 // Copy one file's bytes through the chunk buffer. The only place in this file that holds two handles
 // at once, and the only reader of FILESYSTEM_CTX(work)->block.
-static proto_bool copy_one(uint8_t *restrict work, const protocore_mnt_backend *b, const char *src, const char *dst)
+static proto_bool copy_one(uint8_t *work, const protocore_mnt_backend *b, const char *src, const char *dst)
 {
     int in = b->open(src, (int)(PROTOCORE_MNT_READ));
     if (in < 0)
@@ -524,7 +524,7 @@ static proto_bool copy_one(uint8_t *restrict work, const protocore_mnt_backend *
     return ok;
 }
 
-static void fs_copy(uint8_t *restrict work)
+static void fs_copy(uint8_t *work)
 {
     const int root = Fs.path.root;
     const char *from_dir = Fs.path.dir;
@@ -658,7 +658,7 @@ static void fs_copy(uint8_t *restrict work)
     }
 }
 
-static void fs_mkdir(uint8_t *restrict work)
+static void fs_mkdir(uint8_t *work)
 {
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
@@ -674,7 +674,7 @@ static void fs_mkdir(uint8_t *restrict work)
     Fs.ok = b->mkdir(p);
 }
 
-static void fs_rmdir(uint8_t *restrict work)
+static void fs_rmdir(uint8_t *work)
 {
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
@@ -690,7 +690,7 @@ static void fs_rmdir(uint8_t *restrict work)
     Fs.ok = b->rmdir(p);
 }
 
-static void fs_opendir(uint8_t *restrict work)
+static void fs_opendir(uint8_t *work)
 {
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
@@ -706,7 +706,7 @@ static void fs_opendir(uint8_t *restrict work)
     Fs.i32 = b->opendir(p);
 }
 
-static void fs_readdir(uint8_t *restrict work)
+static void fs_readdir(uint8_t *work)
 {
     const int handle = Fs.io.handle;
     protocore_mnt_stat *out = Fs.io.stat;
@@ -717,7 +717,7 @@ static void fs_readdir(uint8_t *restrict work)
     Fs.ok = (b == NULL) ? PROTO_FALSE : b->readdir(handle, out, name, name_cap);
 }
 
-static void fs_read_file(uint8_t *restrict work)
+static void fs_read_file(uint8_t *work)
 {
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
@@ -759,7 +759,7 @@ static void fs_read_file(uint8_t *restrict work)
     Fs.len = (long)(total);
 }
 
-static void fs_write_file(uint8_t *restrict work)
+static void fs_write_file(uint8_t *work)
 {
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;

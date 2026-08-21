@@ -50,8 +50,7 @@ static proto_bool contains(const char *hay, uint16_t len, const char *needle)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-uint16_t protocore_sigfox_build_uplink(uint8_t *restrict work, const uint8_t *payload, uint8_t len, char *out,
-                                       uint16_t cap)
+uint16_t protocore_sigfox_build_uplink(uint8_t *work, const uint8_t *payload, uint8_t len, char *out, uint16_t cap)
 {
     (void)work;
 
@@ -82,7 +81,7 @@ uint16_t protocore_sigfox_build_uplink(uint8_t *restrict work, const uint8_t *pa
     return p;
 }
 
-protocore_sigfox_result protocore_sigfox_parse_response(uint8_t *restrict work, const char *buf, uint16_t len)
+protocore_sigfox_result protocore_sigfox_parse_response(uint8_t *work, const char *buf, uint16_t len)
 {
     (void)work;
 

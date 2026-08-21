@@ -20,7 +20,7 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_profinet_dcp_header(uint8_t *restrict work)
+void protocore_profinet_dcp_header(uint8_t *work)
 {
     (void)work;
     uint16_t frame_id = ProfinetV.dcp_header_args.frame_id;
@@ -52,7 +52,7 @@ void protocore_profinet_dcp_header(uint8_t *restrict work)
     ProfinetV.n = PN_DCP_HDR_LEN;
 }
 
-void protocore_profinet_dcp_block(uint8_t *restrict work)
+void protocore_profinet_dcp_block(uint8_t *work)
 {
     (void)work;
     uint8_t option = ProfinetV.dcp_block_args.option;
@@ -89,7 +89,7 @@ void protocore_profinet_dcp_block(uint8_t *restrict work)
     ProfinetV.n = n;
 }
 
-void protocore_profinet_dcp_parse_header(uint8_t *restrict work)
+void protocore_profinet_dcp_parse_header(uint8_t *work)
 {
     (void)work;
     const uint8_t *frame = ProfinetV.dcp_parse_header_args.frame;
@@ -110,7 +110,7 @@ void protocore_profinet_dcp_parse_header(uint8_t *restrict work)
     ProfinetV.ok = PROTO_TRUE;
 }
 
-void protocore_profinet_dcp_walk(uint8_t *restrict work)
+void protocore_profinet_dcp_walk(uint8_t *work)
 {
     (void)work;
     const uint8_t *blocks = ProfinetV.dcp_walk_args.blocks;

@@ -145,18 +145,18 @@ extern DshotVars DshotV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const encode)(uint8_t *restrict work);
-    void (*const decode)(uint8_t *restrict work);
-    void (*const bit_ns)(uint8_t *restrict work);
-    void (*const esc_pwm_ns)(uint8_t *restrict work);
+    void (*const encode)(uint8_t *work);
+    void (*const decode)(uint8_t *work);
+    void (*const bit_ns)(uint8_t *work);
+    void (*const esc_pwm_ns)(uint8_t *work);
 } DshotNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in DshotV or a region of the borrow at a fixed offset.
-void protocore_dshot_encode(uint8_t *restrict work);
-void protocore_dshot_decode(uint8_t *restrict work);
-void protocore_dshot_bit_ns(uint8_t *restrict work);
-void protocore_dshot_esc_pwm_ns(uint8_t *restrict work);
+void protocore_dshot_encode(uint8_t *work);
+void protocore_dshot_decode(uint8_t *work);
+void protocore_dshot_bit_ns(uint8_t *work);
+void protocore_dshot_esc_pwm_ns(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

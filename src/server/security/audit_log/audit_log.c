@@ -193,7 +193,7 @@ uint8_t *protocore_audit_log_span(void)
     return s_own.span;
 }
 
-void protocore_audit_log_reset(uint8_t *restrict work)
+void protocore_audit_log_reset(uint8_t *work)
 {
     (void)work;
 
@@ -203,7 +203,7 @@ void protocore_audit_log_reset(uint8_t *restrict work)
     mem.set(AUDIT_LOG_CTX(work)->anchor, 0, sizeof(AUDIT_LOG_CTX(work)->anchor)); // genesis
 }
 
-void protocore_audit_log_set_sink(uint8_t *restrict work)
+void protocore_audit_log_set_sink(uint8_t *work)
 {
     (void)work;
     protocore_audit_sink_fn sink = AuditLogV.set_sink_args.sink;
@@ -211,7 +211,7 @@ void protocore_audit_log_set_sink(uint8_t *restrict work)
     AUDIT_LOG_CTX(work)->sink = sink;
 }
 
-void protocore_audit_log_append(uint8_t *restrict work)
+void protocore_audit_log_append(uint8_t *work)
 {
     (void)work;
     AuditLogV.ms = 0;
@@ -276,7 +276,7 @@ void protocore_audit_log_append(uint8_t *restrict work)
     return;
 }
 
-void protocore_audit_log_count(uint8_t *restrict work)
+void protocore_audit_log_count(uint8_t *work)
 {
     (void)work;
     AuditLogV.value = 0;
@@ -285,7 +285,7 @@ void protocore_audit_log_count(uint8_t *restrict work)
     return;
 }
 
-void protocore_audit_log_at(uint8_t *restrict work)
+void protocore_audit_log_at(uint8_t *work)
 {
     (void)work;
     AuditLogV.ptr = 0;
@@ -300,7 +300,7 @@ void protocore_audit_log_at(uint8_t *restrict work)
     return;
 }
 
-void protocore_audit_log_verify(uint8_t *restrict work)
+void protocore_audit_log_verify(uint8_t *work)
 {
     (void)work;
     uint32_t *first_broken_seq = AuditLogV.verify_args.first_broken_seq;
@@ -338,7 +338,7 @@ void protocore_audit_log_verify(uint8_t *restrict work)
     return;
 }
 
-void protocore_audit_log_cat_name(uint8_t *restrict work)
+void protocore_audit_log_cat_name(uint8_t *work)
 {
     (void)work;
     AuditLogV.text = 0;
@@ -367,7 +367,7 @@ void protocore_audit_log_cat_name(uint8_t *restrict work)
     }
 }
 
-void protocore_audit_log_format(uint8_t *restrict work)
+void protocore_audit_log_format(uint8_t *work)
 {
     (void)work;
     AuditLogV.n = 0;
@@ -442,7 +442,7 @@ void protocore_audit_log_format(uint8_t *restrict work)
     return;
 }
 
-void protocore_audit_log_dump_json(uint8_t *restrict work)
+void protocore_audit_log_dump_json(uint8_t *work)
 {
     (void)work;
     AuditLogV.n = 0;

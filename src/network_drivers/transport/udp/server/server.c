@@ -103,13 +103,13 @@ static proto_bool addr_is_group(const protocore_ip *a)
 }
 
 /** @brief The slot index UDP_LISTENER_CTX(work)->slot sits at. */
-static size_t bind_idx(uint8_t *restrict work)
+static size_t bind_idx(uint8_t *work)
 {
     return (size_t)(UDP_LISTENER_CTX(work)->slot - UDP_LISTENER_CTX(work)->bind);
 }
 
 /** @brief True when slot @p idx is bound. */
-static proto_bool bind_used(uint8_t *restrict work, size_t idx)
+static proto_bool bind_used(uint8_t *work, size_t idx)
 {
     return (PROTO_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & protocore_slot_bit(idx)) != 0u;
 }
@@ -135,7 +135,7 @@ uint8_t *protocore_udp_listener_span(void)
 }
 
 /** @brief Point UDP_LISTENER_CTX(work)->slot at the bound slot for ns->port, or NULL. */
-static void find_bind(uint8_t *restrict work)
+static void find_bind(uint8_t *work)
 {
     uint32_t m = PROTO_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & protocore_slot_all(PROTOCORE_MAX_UDP_LISTENERS);
     while (m != 0u)
@@ -152,7 +152,7 @@ static void find_bind(uint8_t *restrict work)
 }
 
 /** @brief Point UDP_LISTENER_CTX(work)->slot at the first free slot, or NULL when the pool is full. */
-static void free_bind(uint8_t *restrict work)
+static void free_bind(uint8_t *work)
 {
     uint32_t free_slots =
         ~PROTO_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & protocore_slot_all(PROTOCORE_MAX_UDP_LISTENERS);
@@ -161,7 +161,7 @@ static void free_bind(uint8_t *restrict work)
 }
 
 /** @brief Reset UDP_LISTENER_CTX(work)->slot's ring and handler state, leaving it free. */
-static void bind_clear(uint8_t *restrict work)
+static void bind_clear(uint8_t *work)
 {
     protocore_ip empty = {PROTOCORE_IP_NONE, {0}};
     UDP_LISTENER_CTX(work)->slot->port = 0;
@@ -381,7 +381,7 @@ static protocore_net_err udp_do(protocore_net_call *c)
 }
 
 // Run one marshaled op on UDP_LISTENER_CTX(work)->slot and report what it set.
-static proto_bool marshal_op(uint8_t *restrict work, protocore_udp_op op, uint16_t port, const protocore_ip *group)
+static proto_bool marshal_op(uint8_t *work, protocore_udp_op op, uint16_t port, const protocore_ip *group)
 {
     protocore_udp_call k = {{0}, UDP_OP_BIND, NULL, 0, {PROTOCORE_IP_NONE, {0}}, PROTO_FALSE};
     k.op = op;
@@ -396,7 +396,7 @@ static proto_bool marshal_op(uint8_t *restrict work, protocore_udp_op op, uint16
 }
 
 // Drop the stack's control block for UDP_LISTENER_CTX(work)->slot, leaving its group first when it joined one.
-static void unbind_port(uint8_t *restrict work)
+static void unbind_port(uint8_t *work)
 {
     if (UDP_LISTENER_CTX(work)->slot->mcast)
     {
@@ -434,7 +434,7 @@ static protocore_net_err send_do(protocore_net_call *c)
 }
 
 // Send one datagram out of UDP_LISTENER_CTX(work)->slot to @p a, from where the caller's bytes already are.
-static proto_bool send_now(uint8_t *restrict work, const protocore_ip *a, uint16_t port)
+static proto_bool send_now(uint8_t *work, const protocore_ip *a, uint16_t port)
 {
     if (UDP_LISTENER_CTX(work)->slot == NULL || a == NULL || UdpListenerV.send_args.data == NULL ||
         UdpListenerV.send_args.len == 0 || UdpListenerV.send_args.len > PROTOCORE_UDP_RX_BUF_SIZE)
@@ -453,7 +453,7 @@ static proto_bool send_now(uint8_t *restrict work, const protocore_ip *a, uint16
 // The bodies behind the table
 // ---------------------------------------------------------------------------
 
-void protocore_udp_listener_listen(uint8_t *restrict work)
+void protocore_udp_listener_listen(uint8_t *work)
 {
     // A port already bound rebinds its own slot: a second slot on one port is one find_bind() can
     // never reach, and it spends a slot the pool has two of.
@@ -486,7 +486,7 @@ void protocore_udp_listener_listen(uint8_t *restrict work)
     UdpListenerV.ok = PROTO_TRUE;
 }
 
-void protocore_udp_listener_listen_multicast(uint8_t *restrict work)
+void protocore_udp_listener_listen_multicast(uint8_t *work)
 {
     protocore_ip group = {PROTOCORE_IP_NONE, {0}};
     UdpListenerV.ok = PROTO_FALSE;
@@ -519,7 +519,7 @@ void protocore_udp_listener_listen_multicast(uint8_t *restrict work)
     UdpListenerV.ok = PROTO_TRUE;
 }
 
-void protocore_udp_listener_leave_multicast(uint8_t *restrict work)
+void protocore_udp_listener_leave_multicast(uint8_t *work)
 {
     find_bind(work);
     if (UDP_LISTENER_CTX(work)->slot == NULL || !UDP_LISTENER_CTX(work)->slot->mcast)
@@ -532,7 +532,7 @@ void protocore_udp_listener_leave_multicast(uint8_t *restrict work)
     UdpListenerV.ok = PROTO_TRUE;
 }
 
-void protocore_udp_listener_poll(uint8_t *restrict work)
+void protocore_udp_listener_poll(uint8_t *work)
 {
     if (UDP_LISTENER_CTX(work)->polling)
     {
@@ -560,7 +560,7 @@ void protocore_udp_listener_poll(uint8_t *restrict work)
     UDP_LISTENER_CTX(work)->polling = PROTO_FALSE;
 }
 
-void protocore_udp_listener_reply(uint8_t *restrict work)
+void protocore_udp_listener_reply(uint8_t *work)
 {
     if (UdpListenerV.peer_args.peer == NULL)
     {
@@ -571,7 +571,7 @@ void protocore_udp_listener_reply(uint8_t *restrict work)
     UdpListenerV.ok = send_now(work, &UdpListenerV.peer_args.peer->addr, UdpListenerV.peer_args.peer->port);
 }
 
-void protocore_udp_listener_peer_addr(uint8_t *restrict work)
+void protocore_udp_listener_peer_addr(uint8_t *work)
 {
     (void)work;
     UdpListenerV.ok = PROTO_FALSE;
@@ -595,7 +595,7 @@ void protocore_udp_listener_peer_addr(uint8_t *restrict work)
     UdpListenerV.ok = PROTO_TRUE;
 }
 
-void protocore_udp_listener_sendto(uint8_t *restrict work)
+void protocore_udp_listener_sendto(uint8_t *work)
 {
     find_bind(work);
     if (UDP_LISTENER_CTX(work)->slot == NULL || UdpListenerV.send_args.dst == NULL ||
@@ -608,7 +608,7 @@ void protocore_udp_listener_sendto(uint8_t *restrict work)
 }
 
 // Close ns->port: leave its group when it joined one, drop the control block, free the slot.
-void protocore_udp_listener_close(uint8_t *restrict work)
+void protocore_udp_listener_close(uint8_t *work)
 {
     find_bind(work);
     if (UDP_LISTENER_CTX(work)->slot == NULL)
@@ -622,7 +622,7 @@ void protocore_udp_listener_close(uint8_t *restrict work)
 }
 
 // The group ns->port joined, formatted, or NULL when the port is unbound or joined none.
-void protocore_udp_listener_joined_group(uint8_t *restrict work)
+void protocore_udp_listener_joined_group(uint8_t *work)
 {
     UdpListenerV.text = NULL;
     find_bind(work);

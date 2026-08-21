@@ -47,12 +47,12 @@ uint8_t *protocore_sht3x_span(void)
     return s_own.span;
 }
 
-void protocore_sht3x_crc8(uint8_t *restrict work);
-void protocore_sht3x_parse(uint8_t *restrict work);
-void protocore_sht3x_rh_mpct(uint8_t *restrict work);
-void protocore_sht3x_temp_mc(uint8_t *restrict work);
+void protocore_sht3x_crc8(uint8_t *work);
+void protocore_sht3x_parse(uint8_t *work);
+void protocore_sht3x_rh_mpct(uint8_t *work);
+void protocore_sht3x_temp_mc(uint8_t *work);
 
-void protocore_sht3x_crc8(uint8_t *restrict work)
+void protocore_sht3x_crc8(uint8_t *work)
 {
     (void)work;
     const uint8_t *data = Sht3xV.crc8_args.data;
@@ -66,7 +66,7 @@ void protocore_sht3x_crc8(uint8_t *restrict work)
     Sht3xV.crc = (uint8_t)CrcV.value;
 }
 
-void protocore_sht3x_temp_mc(uint8_t *restrict work)
+void protocore_sht3x_temp_mc(uint8_t *work)
 {
     (void)work;
     uint16_t raw = Sht3xV.temp_mc_args.raw;
@@ -75,7 +75,7 @@ void protocore_sht3x_temp_mc(uint8_t *restrict work)
     Sht3xV.milli = (int32_t)(-45000 + (int64_t)175000 * raw / 65535);
 }
 
-void protocore_sht3x_rh_mpct(uint8_t *restrict work)
+void protocore_sht3x_rh_mpct(uint8_t *work)
 {
     (void)work;
     uint16_t raw = Sht3xV.rh_mpct_args.raw;
@@ -84,7 +84,7 @@ void protocore_sht3x_rh_mpct(uint8_t *restrict work)
     Sht3xV.milli = v > 100000 ? 100000 : v;
 }
 
-void protocore_sht3x_parse(uint8_t *restrict work)
+void protocore_sht3x_parse(uint8_t *work)
 {
     (void)work;
     const uint8_t *resp = Sht3xV.parse_args.resp;
@@ -163,19 +163,19 @@ static_assert(SHT3X_OFF_CTX % _Alignof(Sht3xCtx) == 0,
 // Zero is "no address set yet", which is the default address - stated here rather than on the
 // declaration so the context carries no initializer and can live in a borrow that arrives zeroed.
 // begin() applies the same default to the address it is handed.
-static uint8_t dev_addr(uint8_t *restrict work)
+static uint8_t dev_addr(uint8_t *work)
 {
     return SHT3X_CTX(work)->addr ? SHT3X_CTX(work)->addr : (uint8_t)PROTOCORE_SHT3X_I2C_ADDR;
 }
 
 // A command is a bare 16-bit word, big-endian, with no register byte in front of it.
-static proto_bool send_cmd(uint8_t *restrict work, uint16_t cmd)
+static proto_bool send_cmd(uint8_t *work, uint16_t cmd)
 {
     (void)endian.wr16be(SHT3X_CTX(work)->frame, cmd);
     return protocore_i2c_write(dev_addr(work), SHT3X_CTX(work)->frame, 2);
 }
 
-void protocore_sht3x_begin(uint8_t *restrict work)
+void protocore_sht3x_begin(uint8_t *work)
 {
     uint8_t addr = Sht3xV.begin_args.addr;
 
@@ -186,7 +186,7 @@ void protocore_sht3x_begin(uint8_t *restrict work)
     Sht3xV.ok = ok;
 }
 
-void protocore_sht3x_read(uint8_t *restrict work)
+void protocore_sht3x_read(uint8_t *work)
 {
     int32_t *temp_mc = Sht3xV.read_args.temp_mc;
     int32_t *rh_mpct = Sht3xV.read_args.rh_mpct;

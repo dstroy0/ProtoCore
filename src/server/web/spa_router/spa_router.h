@@ -179,22 +179,22 @@ extern SpaRouterVars SpaRouterV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const has_extension)(uint8_t *restrict work);
-    void (*const route)(uint8_t *restrict work);
-    void (*const route_ex)(uint8_t *restrict work);
-    void (*const ui_stream_begin)(uint8_t *restrict work);
-    void (*const ui_stream_next)(uint8_t *restrict work);
-    void (*const ui_stream_done)(uint8_t *restrict work);
+    void (*const has_extension)(uint8_t *work);
+    void (*const route)(uint8_t *work);
+    void (*const route_ex)(uint8_t *work);
+    void (*const ui_stream_begin)(uint8_t *work);
+    void (*const ui_stream_next)(uint8_t *work);
+    void (*const ui_stream_done)(uint8_t *work);
 } SpaRouterNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SpaRouterV or a region of the borrow at a fixed offset.
-void protocore_spa_router_has_extension(uint8_t *restrict work);
-void protocore_spa_router_route(uint8_t *restrict work);
-void protocore_spa_router_route_ex(uint8_t *restrict work);
-void protocore_spa_router_ui_stream_begin(uint8_t *restrict work);
-void protocore_spa_router_ui_stream_next(uint8_t *restrict work);
-void protocore_spa_router_ui_stream_done(uint8_t *restrict work);
+void protocore_spa_router_has_extension(uint8_t *work);
+void protocore_spa_router_route(uint8_t *work);
+void protocore_spa_router_route_ex(uint8_t *work);
+void protocore_spa_router_ui_stream_begin(uint8_t *work);
+void protocore_spa_router_ui_stream_next(uint8_t *work);
+void protocore_spa_router_ui_stream_done(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

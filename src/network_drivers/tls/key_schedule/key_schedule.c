@@ -118,19 +118,19 @@ static void finished_hmac(proto_bool is384, uint8_t *work, const uint8_t *key, c
     HmacSha256.mac(work, key, len, data, len, out);
 }
 
-void protocore_tls13_ks_expand_label(uint8_t *restrict work)
+void protocore_tls13_ks_expand_label(uint8_t *work)
 {
     expand(Tls13KsV.bind.kdf, Tls13KsV.bind.is384, Tls13KsV.derive_args.work, Tls13KsV.derive_args.secret,
            Tls13KsV.derive_args.label, Tls13KsV.derive_args.out, Tls13KsV.derive_args.out_len);
 }
 
-void protocore_tls13_ks_derive_secret(uint8_t *restrict work)
+void protocore_tls13_ks_derive_secret(uint8_t *work)
 {
     derive(Tls13KsV.bind.kdf, Tls13KsV.bind.is384, Tls13KsV.derive_args.work, Tls13KsV.derive_args.secret,
            Tls13KsV.derive_args.label, Tls13KsV.derive_args.transcript_hash, Tls13KsV.derive_args.out);
 }
 
-void protocore_tls13_ks_early(uint8_t *restrict work)
+void protocore_tls13_ks_early(uint8_t *work)
 {
     Tls13KeySchedule *ks = Tls13KsV.bind.ks;
     ks->kdf = Tls13KsV.bind.kdf;
@@ -150,7 +150,7 @@ void protocore_tls13_ks_early(uint8_t *restrict work)
     Tls13KsV.ok = PROTO_TRUE;
 }
 
-void protocore_tls13_ks_handshake(uint8_t *restrict work)
+void protocore_tls13_ks_handshake(uint8_t *work)
 {
     Tls13KeySchedule *ks = Tls13KsV.bind.ks;
     if (ks->s == NULL)
@@ -171,7 +171,7 @@ void protocore_tls13_ks_handshake(uint8_t *restrict work)
            ks->s + TLS13_KS_SERVER_HS);
 }
 
-void protocore_tls13_ks_master(uint8_t *restrict work)
+void protocore_tls13_ks_master(uint8_t *work)
 {
     Tls13KeySchedule *ks = Tls13KsV.bind.ks;
     if (ks->s == NULL)
@@ -192,7 +192,7 @@ void protocore_tls13_ks_master(uint8_t *restrict work)
            ks->s + TLS13_KS_SERVER_AP);
 }
 
-void protocore_tls13_ks_finished_mac(uint8_t *restrict work)
+void protocore_tls13_ks_finished_mac(uint8_t *work)
 {
     Tls13KeySchedule *ks = Tls13KsV.bind.ks;
     if (ks->s == NULL)
@@ -209,7 +209,7 @@ void protocore_tls13_ks_finished_mac(uint8_t *restrict work)
 // RFC 8446 sec 4.4.1: the Transcript-Hash runs under the same suite hash as the schedule, so it
 // dispatches on the bound flag rather than on a hash the caller names.
 
-void protocore_tls13_ks_transcript_init(uint8_t *restrict work)
+void protocore_tls13_ks_transcript_init(uint8_t *work)
 {
     if (Tls13KsV.bind.ks->is384)
     {
@@ -219,7 +219,7 @@ void protocore_tls13_ks_transcript_init(uint8_t *restrict work)
     Sha256.init(work);
 }
 
-void protocore_tls13_ks_transcript_update(uint8_t *restrict work)
+void protocore_tls13_ks_transcript_update(uint8_t *work)
 {
     if (Tls13KsV.bind.ks->is384)
     {
@@ -231,7 +231,7 @@ void protocore_tls13_ks_transcript_update(uint8_t *restrict work)
 
 // Finalizing compresses the padded blocks into a copy of the state, so the running context is
 // untouched and keeps taking messages.
-void protocore_tls13_ks_transcript_peek(uint8_t *restrict work)
+void protocore_tls13_ks_transcript_peek(uint8_t *work)
 {
     if (Tls13KsV.bind.ks->is384)
     {

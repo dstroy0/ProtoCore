@@ -180,28 +180,28 @@ extern SnmpAgentVars SnmpAgentV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const init)(uint8_t *restrict work);
-    void (*const set_rw_community)(uint8_t *restrict work);
-    void (*const set_system)(uint8_t *restrict work);
-    void (*const add_string)(uint8_t *restrict work);
-    void (*const add_integer)(uint8_t *restrict work);
-    void (*const add_dynamic)(uint8_t *restrict work);
-    void (*const dispatch_pdu)(uint8_t *restrict work);
-    void (*const process)(uint8_t *restrict work);
-    void (*const listen)(uint8_t *restrict work);
+    void (*const init)(uint8_t *work);
+    void (*const set_rw_community)(uint8_t *work);
+    void (*const set_system)(uint8_t *work);
+    void (*const add_string)(uint8_t *work);
+    void (*const add_integer)(uint8_t *work);
+    void (*const add_dynamic)(uint8_t *work);
+    void (*const dispatch_pdu)(uint8_t *work);
+    void (*const process)(uint8_t *work);
+    void (*const listen)(uint8_t *work);
 } SnmpAgentNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SnmpAgentV or a region of the borrow at a fixed offset.
-void protocore_snmp_agent_init(uint8_t *restrict work);
-void protocore_snmp_agent_set_rw_community(uint8_t *restrict work);
-void protocore_snmp_agent_set_system(uint8_t *restrict work);
-void protocore_snmp_agent_add_string(uint8_t *restrict work);
-void protocore_snmp_agent_add_integer(uint8_t *restrict work);
-void protocore_snmp_agent_add_dynamic(uint8_t *restrict work);
-void protocore_snmp_agent_dispatch_pdu(uint8_t *restrict work);
-void protocore_snmp_agent_process(uint8_t *restrict work);
-void protocore_snmp_agent_listen(uint8_t *restrict work);
+void protocore_snmp_agent_init(uint8_t *work);
+void protocore_snmp_agent_set_rw_community(uint8_t *work);
+void protocore_snmp_agent_set_system(uint8_t *work);
+void protocore_snmp_agent_add_string(uint8_t *work);
+void protocore_snmp_agent_add_integer(uint8_t *work);
+void protocore_snmp_agent_add_dynamic(uint8_t *work);
+void protocore_snmp_agent_dispatch_pdu(uint8_t *work);
+void protocore_snmp_agent_process(uint8_t *work);
+void protocore_snmp_agent_listen(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

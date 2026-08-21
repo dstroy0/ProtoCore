@@ -106,7 +106,7 @@ static void oid_emit_arc(uint8_t *tmp, size_t cap, size_t *t, uint32_t v, BerEnc
 // Encoder calls
 // ---------------------------------------------------------------------------
 
-void protocore_snmp_ber_enc_init(uint8_t *restrict work)
+void protocore_snmp_ber_enc_init(uint8_t *work)
 {
     (void)work;
     BerEnc *e = SnmpBerV.enc;
@@ -119,7 +119,7 @@ void protocore_snmp_ber_enc_init(uint8_t *restrict work)
 
 // INTEGER in two's complement, minimal: drop leading 0x00 and 0xFF octets that the next octet's
 // sign bit already carries.
-void protocore_snmp_ber_put_integer(uint8_t *restrict work)
+void protocore_snmp_ber_put_integer(uint8_t *work)
 {
     (void)work;
     BerEnc *e = SnmpBerV.enc;
@@ -143,7 +143,7 @@ void protocore_snmp_ber_put_integer(uint8_t *restrict work)
 
 // A non-negative application-type value (RFC 2578 sec 7.1.6 through 7.1.8): big-endian, minimal,
 // with a leading 0x00 when the top bit would otherwise read as a sign.
-void protocore_snmp_ber_put_uint(uint8_t *restrict work)
+void protocore_snmp_ber_put_uint(uint8_t *work)
 {
     (void)work;
     BerEnc *e = SnmpBerV.enc;
@@ -172,14 +172,14 @@ void protocore_snmp_ber_put_uint(uint8_t *restrict work)
 
 // One primitive TLV from tlv.tag and tlv.bytes. An OCTET STRING, an IpAddress, an Opaque and a
 // bare exception marker are all this same encoding, so both calls bind here.
-void protocore_snmp_ber_put_octet_string(uint8_t *restrict work)
+void protocore_snmp_ber_put_octet_string(uint8_t *work)
 {
     (void)work;
     enc_tlv(SnmpBerV.enc, SnmpBerV.tlv.tag, SnmpBerV.tlv.bytes, SnmpBerV.tlv.len);
     SnmpBerV.ok = SnmpBerV.enc->ok;
 }
 
-void protocore_snmp_ber_put_null(uint8_t *restrict work)
+void protocore_snmp_ber_put_null(uint8_t *work)
 {
     (void)work;
     BerEnc *e = SnmpBerV.enc;
@@ -190,7 +190,7 @@ void protocore_snmp_ber_put_null(uint8_t *restrict work)
 
 // OBJECT IDENTIFIER: the first two subidentifiers combine as 40 * arc0 + arc1, the rest follow
 // one base-128 group each.
-void protocore_snmp_ber_put_oid(uint8_t *restrict work)
+void protocore_snmp_ber_put_oid(uint8_t *work)
 {
     (void)work;
     BerEnc *e = SnmpBerV.enc;
@@ -213,7 +213,7 @@ void protocore_snmp_ber_put_oid(uint8_t *restrict work)
     SnmpBerV.ok = e->ok;
 }
 
-void protocore_snmp_ber_put_raw(uint8_t *restrict work)
+void protocore_snmp_ber_put_raw(uint8_t *work)
 {
     (void)work;
     enc_bytes(SnmpBerV.enc, SnmpBerV.tlv.bytes, SnmpBerV.tlv.len);
@@ -223,7 +223,7 @@ void protocore_snmp_ber_put_raw(uint8_t *restrict work)
 // Open a constructed type: identifier octet, then a definite-long length of two octets reserved at
 // tlv.token. RFC 3417 sec 8 item 1 permits more length octets than the minimum, so the reservation
 // is a valid encoding whatever the content turns out to measure.
-void protocore_snmp_ber_seq_begin(uint8_t *restrict work)
+void protocore_snmp_ber_seq_begin(uint8_t *work)
 {
     (void)work;
     BerEnc *e = SnmpBerV.enc;
@@ -235,7 +235,7 @@ void protocore_snmp_ber_seq_begin(uint8_t *restrict work)
     SnmpBerV.ok = e->ok;
 }
 
-void protocore_snmp_ber_seq_end(uint8_t *restrict work)
+void protocore_snmp_ber_seq_end(uint8_t *work)
 {
     (void)work;
     BerEnc *e = SnmpBerV.enc;
@@ -262,7 +262,7 @@ void protocore_snmp_ber_seq_end(uint8_t *restrict work)
 // Decoder
 // ---------------------------------------------------------------------------
 
-void protocore_snmp_ber_dec_init(uint8_t *restrict work)
+void protocore_snmp_ber_dec_init(uint8_t *work)
 {
     (void)work;
     BerDec *d = SnmpBerV.dec;
@@ -321,7 +321,7 @@ static proto_bool dec_header(BerDec *d, uint8_t *tag, size_t *length)
     return PROTO_TRUE;
 }
 
-void protocore_snmp_ber_read_header(uint8_t *restrict work)
+void protocore_snmp_ber_read_header(uint8_t *work)
 {
     (void)work;
     uint8_t tag = 0;
@@ -333,7 +333,7 @@ void protocore_snmp_ber_read_header(uint8_t *restrict work)
 
 // INTEGER, sign-extended from the first octet. The accumulator is unsigned because shifting a
 // negative signed value left is undefined; the final cast yields the two's-complement value.
-void protocore_snmp_ber_read_integer(uint8_t *restrict work)
+void protocore_snmp_ber_read_integer(uint8_t *work)
 {
     (void)work;
     BerDec *d = SnmpBerV.dec;
@@ -358,7 +358,7 @@ void protocore_snmp_ber_read_integer(uint8_t *restrict work)
 // OBJECT IDENTIFIER: each subidentifier is base 128 with the high bit as a continuation flag. The
 // first subidentifier is itself multi-octet capable and encodes 40 * arc0 + arc1, where arc0 is
 // 0 through 2 and the remainder is arc1, which may exceed 39.
-void protocore_snmp_ber_read_oid(uint8_t *restrict work)
+void protocore_snmp_ber_read_oid(uint8_t *work)
 {
     (void)work;
     BerDec *d = SnmpBerV.dec;
@@ -411,7 +411,7 @@ void protocore_snmp_ber_read_oid(uint8_t *restrict work)
     SnmpBerV.ok = PROTO_TRUE;
 }
 
-void protocore_snmp_ber_skip(uint8_t *restrict work)
+void protocore_snmp_ber_skip(uint8_t *work)
 {
     (void)work;
     BerDec *d = SnmpBerV.dec;

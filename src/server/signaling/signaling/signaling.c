@@ -53,7 +53,7 @@ uint8_t *protocore_signaling_span(void)
     return s_own.span;
 }
 
-void protocore_signal_put_response(uint8_t *restrict work)
+void protocore_signal_put_response(uint8_t *work)
 {
     const int code = SignalV.put.code;
 
@@ -72,14 +72,14 @@ void protocore_signal_put_response(uint8_t *restrict work)
     }
 }
 
-void protocore_signal_put_tick(uint8_t *restrict work)
+void protocore_signal_put_tick(uint8_t *work)
 {
     SIGNALING_CTX(work)->state.uptime_ms = SignalV.put.uptime_ms;
     SIGNALING_CTX(work)->state.conns_active = SignalV.put.conns_active;
     SIGNALING_CTX(work)->state.listeners_up = SignalV.put.listeners_up;
 }
 
-void protocore_signal_know(uint8_t *restrict work)
+void protocore_signal_know(uint8_t *work)
 {
     if (SignalV.out == NULL)
     {
@@ -90,7 +90,7 @@ void protocore_signal_know(uint8_t *restrict work)
     *SignalV.out = SIGNALING_CTX(work)->state;
 }
 
-void protocore_signal_reset(uint8_t *restrict work)
+void protocore_signal_reset(uint8_t *work)
 {
     // The tallies are per-run: a server that has started over has answered no requests. Zero is the
     // bucket's initial state, so the reset is the same store the static initialization performs.
@@ -98,7 +98,7 @@ void protocore_signal_reset(uint8_t *restrict work)
     *SIGNALING_CTX(work) = blank;
 }
 
-void protocore_signal_kill(uint8_t *restrict work)
+void protocore_signal_kill(uint8_t *work)
 {
     (void)work;
     // A plain forward: no liveness test, no result. Transport owns the slot's lifetime and its idle

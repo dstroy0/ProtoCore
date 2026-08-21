@@ -18,7 +18,7 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-uint32_t protocore_radio_sniff_i2f32(uint8_t *restrict work, int32_t dbm)
+uint32_t protocore_radio_sniff_i2f32(uint8_t *work, int32_t dbm)
 {
     (void)work;
 
@@ -47,7 +47,7 @@ uint32_t protocore_radio_sniff_i2f32(uint8_t *restrict work, int32_t dbm)
     return sign | (exp << 23) | mant;
 }
 
-size_t protocore_radio_sniff_global_header(uint8_t *restrict work, uint8_t *out, size_t cap)
+size_t protocore_radio_sniff_global_header(uint8_t *work, uint8_t *out, size_t cap)
 {
     PcapV.args.out = out;
     PcapV.args.cap = cap;
@@ -56,9 +56,8 @@ size_t protocore_radio_sniff_global_header(uint8_t *restrict work, uint8_t *out,
     return PcapV.n;
 }
 
-size_t protocore_radio_sniff_tap_record(uint8_t *restrict work, uint8_t *out, size_t cap, const uint8_t *frame,
-                                        size_t flen, int32_t rssi_dbm, uint16_t channel, uint32_t ts_sec,
-                                        uint32_t ts_usec)
+size_t protocore_radio_sniff_tap_record(uint8_t *work, uint8_t *out, size_t cap, const uint8_t *frame, size_t flen,
+                                        int32_t rssi_dbm, uint16_t channel, uint32_t ts_sec, uint32_t ts_usec)
 {
     if (!out || !frame || flen == 0)
     {

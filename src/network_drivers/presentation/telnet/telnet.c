@@ -99,7 +99,7 @@ uint8_t *protocore_telnet_span(void)
 }
 
 // Point TELNET_CTX(work)->conn at the row bound to ns->slot, or NULL.
-static void find_conn(uint8_t *restrict work)
+static void find_conn(uint8_t *work)
 {
     TELNET_CTX(work)->conn = NULL;
     for (int i = 0; i < MAX_TELNET_CONNS; i++)
@@ -173,7 +173,7 @@ static void data_send(uint8_t slot, const void *data, size_t n)
 // Connection lifecycle (called from the session layer)
 // ---------------------------------------------------------------------------
 
-void protocore_telnet_accept(uint8_t *restrict work)
+void protocore_telnet_accept(uint8_t *work)
 {
     Nvt *t = NULL;
     for (int i = 0; i < MAX_TELNET_CONNS; i++)
@@ -204,7 +204,7 @@ void protocore_telnet_accept(uint8_t *restrict work)
     command_send(TelnetV.slot, greet, sizeof(greet) - 1);
 }
 
-void protocore_telnet_close(uint8_t *restrict work)
+void protocore_telnet_close(uint8_t *work)
 {
     find_conn(work);
     if (TELNET_CTX(work)->conn)
@@ -272,7 +272,7 @@ static void nvt_data(uint8_t slot, Nvt *t, uint8_t b)
 }
 
 // The worker fills this slot's scratch once, then the IAC state machine walks it.
-void protocore_telnet_rx(uint8_t *restrict work)
+void protocore_telnet_rx(uint8_t *work)
 {
     find_conn(work);
     if (!TELNET_CTX(work)->conn)
@@ -368,13 +368,13 @@ void protocore_telnet_rx(uint8_t *restrict work)
 // Application API
 // ---------------------------------------------------------------------------
 
-void protocore_telnet_on_command(uint8_t *restrict work)
+void protocore_telnet_on_command(uint8_t *work)
 {
     TELNET_CTX(work)->cmd_cb = TelnetV.cb;
 }
 
 // RFC 854: application output travels the NVT data stream, so a literal IAC is doubled on the way.
-static void broadcast(uint8_t *restrict work, const char *s, size_t n)
+static void broadcast(uint8_t *work, const char *s, size_t n)
 {
     for (int i = 0; i < MAX_TELNET_CONNS; i++)
     {
@@ -385,7 +385,7 @@ static void broadcast(uint8_t *restrict work, const char *s, size_t n)
     }
 }
 
-void protocore_telnet_print(uint8_t *restrict work)
+void protocore_telnet_print(uint8_t *work)
 {
     if (TelnetV.out.text)
     {
@@ -393,7 +393,7 @@ void protocore_telnet_print(uint8_t *restrict work)
     }
 }
 
-void protocore_telnet_println(uint8_t *restrict work)
+void protocore_telnet_println(uint8_t *work)
 {
     if (TelnetV.out.text)
     {
@@ -402,7 +402,7 @@ void protocore_telnet_println(uint8_t *restrict work)
     broadcast(work, "\r\n", 2);
 }
 
-void protocore_telnet_frame(uint8_t *restrict work)
+void protocore_telnet_frame(uint8_t *work)
 {
     char buf[TELNET_BUF_SIZE];
     size_t n = frame.build(buf, sizeof(buf), TelnetV.out.spec, TelnetV.out.val, TelnetV.out.nv);
@@ -412,7 +412,7 @@ void protocore_telnet_frame(uint8_t *restrict work)
     }
 }
 
-void protocore_telnet_client_count(uint8_t *restrict work)
+void protocore_telnet_client_count(uint8_t *work)
 {
     uint8_t c = 0;
     for (int i = 0; i < MAX_TELNET_CONNS; i++)
@@ -449,7 +449,7 @@ static void evt_close(uint8_t slot)
 // on_poll are unset: a null on_abort falls back to on_close, and this protocol is not polled.
 static const ProtoHandler s_telnet_handler = {.on_accept = evt_accept, .on_data = evt_rx, .on_close = evt_close};
 
-void protocore_telnet_proto_handler(uint8_t *restrict work)
+void protocore_telnet_proto_handler(uint8_t *work)
 {
     (void)work;
     TelnetV.handler = &s_telnet_handler;

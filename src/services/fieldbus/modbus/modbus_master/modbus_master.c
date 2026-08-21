@@ -15,8 +15,8 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_modbus_master_build_read(uint8_t *restrict work, uint8_t fc, uint16_t txid, uint8_t unit,
-                                          uint16_t start, uint16_t count, uint8_t *out, size_t cap)
+size_t protocore_modbus_master_build_read(uint8_t *work, uint8_t fc, uint16_t txid, uint8_t unit, uint16_t start,
+                                          uint16_t count, uint8_t *out, size_t cap)
 {
     (void)work;
 
@@ -50,7 +50,7 @@ size_t protocore_modbus_master_build_read(uint8_t *restrict work, uint8_t fc, ui
     return 12;
 }
 
-int protocore_modbus_master_parse_response(uint8_t *restrict work, const uint8_t *adu, size_t len, uint16_t *regs_out,
+int protocore_modbus_master_parse_response(uint8_t *work, const uint8_t *adu, size_t len, uint16_t *regs_out,
                                            size_t max_regs, uint8_t *exception_out)
 {
     (void)work;
@@ -101,8 +101,8 @@ int protocore_modbus_master_parse_response(uint8_t *restrict work, const uint8_t
     return copied;
 }
 
-size_t protocore_modbus_master_build_read_bits(uint8_t *restrict work, uint8_t fc, uint16_t txid, uint8_t unit,
-                                               uint16_t start, uint16_t count, uint8_t *out, size_t cap)
+size_t protocore_modbus_master_build_read_bits(uint8_t *work, uint8_t fc, uint16_t txid, uint8_t unit, uint16_t start,
+                                               uint16_t count, uint8_t *out, size_t cap)
 {
     (void)work;
 
@@ -135,9 +135,8 @@ size_t protocore_modbus_master_build_read_bits(uint8_t *restrict work, uint8_t f
     return 12;
 }
 
-int protocore_modbus_master_parse_read_bits_response(uint8_t *restrict work, const uint8_t *adu, size_t len,
-                                                     uint16_t count, uint8_t *bits_out, size_t max_bits,
-                                                     uint8_t *exception_out)
+int protocore_modbus_master_parse_read_bits_response(uint8_t *work, const uint8_t *adu, size_t len, uint16_t count,
+                                                     uint8_t *bits_out, size_t max_bits, uint8_t *exception_out)
 {
     (void)work;
 
@@ -192,8 +191,8 @@ int protocore_modbus_master_parse_read_bits_response(uint8_t *restrict work, con
     return copied;
 }
 
-size_t protocore_modbus_master_build_write_single_coil(uint8_t *restrict work, uint16_t txid, uint8_t unit,
-                                                       uint16_t addr, proto_bool on, uint8_t *out, size_t cap)
+size_t protocore_modbus_master_build_write_single_coil(uint8_t *work, uint16_t txid, uint8_t unit, uint16_t addr,
+                                                       proto_bool on, uint8_t *out, size_t cap)
 {
     (void)work;
 
@@ -218,9 +217,8 @@ size_t protocore_modbus_master_build_write_single_coil(uint8_t *restrict work, u
     return 12;
 }
 
-size_t protocore_modbus_master_build_write_multiple_coils(uint8_t *restrict work, uint16_t txid, uint8_t unit,
-                                                          uint16_t start, const uint8_t *bits, uint16_t count,
-                                                          uint8_t *out, size_t cap)
+size_t protocore_modbus_master_build_write_multiple_coils(uint8_t *work, uint16_t txid, uint8_t unit, uint16_t start,
+                                                          const uint8_t *bits, uint16_t count, uint8_t *out, size_t cap)
 {
     (void)work;
 
@@ -270,7 +268,7 @@ size_t protocore_modbus_master_build_write_multiple_coils(uint8_t *restrict work
     return total;
 }
 
-size_t protocore_modbus_master_build_write_single(uint8_t *restrict work, uint16_t txid, uint8_t unit, uint16_t addr,
+size_t protocore_modbus_master_build_write_single(uint8_t *work, uint16_t txid, uint8_t unit, uint16_t addr,
                                                   uint16_t value, uint8_t *out, size_t cap)
 {
     (void)work;
@@ -297,7 +295,7 @@ size_t protocore_modbus_master_build_write_single(uint8_t *restrict work, uint16
     return 12;
 }
 
-size_t protocore_modbus_master_build_write_multiple(uint8_t *restrict work, uint16_t txid, uint8_t unit, uint16_t start,
+size_t protocore_modbus_master_build_write_multiple(uint8_t *work, uint16_t txid, uint8_t unit, uint16_t start,
                                                     const uint16_t *values, uint16_t count, uint8_t *out, size_t cap)
 {
     (void)work;
@@ -343,8 +341,8 @@ size_t protocore_modbus_master_build_write_multiple(uint8_t *restrict work, uint
     return total;
 }
 
-int protocore_modbus_master_parse_write_response(uint8_t *restrict work, const uint8_t *adu, size_t len,
-                                                 uint16_t *addr_out, uint8_t *exception_out)
+int protocore_modbus_master_parse_write_response(uint8_t *work, const uint8_t *adu, size_t len, uint16_t *addr_out,
+                                                 uint8_t *exception_out)
 {
     (void)work;
 
@@ -392,7 +390,7 @@ int protocore_modbus_master_parse_write_response(uint8_t *restrict work, const u
     return single ? 1 : (int)tail;
 }
 
-size_t protocore_modbus_master_build_mask_write(uint8_t *restrict work, uint16_t txid, uint8_t unit, uint16_t addr,
+size_t protocore_modbus_master_build_mask_write(uint8_t *work, uint16_t txid, uint8_t unit, uint16_t addr,
                                                 uint16_t and_mask, uint16_t or_mask, uint8_t *out, size_t cap)
 {
     (void)work;
@@ -420,7 +418,7 @@ size_t protocore_modbus_master_build_mask_write(uint8_t *restrict work, uint16_t
     return 14;
 }
 
-size_t protocore_modbus_master_build_read_write_multiple(uint8_t *restrict work, uint16_t txid, uint8_t unit,
+size_t protocore_modbus_master_build_read_write_multiple(uint8_t *work, uint16_t txid, uint8_t unit,
                                                          uint16_t read_start, uint16_t read_count, uint16_t write_start,
                                                          const uint16_t *values, uint16_t write_count, uint8_t *out,
                                                          size_t cap)
@@ -471,9 +469,8 @@ size_t protocore_modbus_master_build_read_write_multiple(uint8_t *restrict work,
     return total;
 }
 
-int protocore_modbus_master_parse_mask_write_response(uint8_t *restrict work, const uint8_t *adu, size_t len,
-                                                      uint16_t *addr_out, uint16_t *and_out, uint16_t *or_out,
-                                                      uint8_t *exception_out)
+int protocore_modbus_master_parse_mask_write_response(uint8_t *work, const uint8_t *adu, size_t len, uint16_t *addr_out,
+                                                      uint16_t *and_out, uint16_t *or_out, uint8_t *exception_out)
 {
     (void)work;
 

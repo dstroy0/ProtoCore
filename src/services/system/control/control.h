@@ -344,30 +344,30 @@ extern ControlVars ControlV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const pid_init)(uint8_t *restrict work);
-    void (*const pid_set_output_limits)(uint8_t *restrict work);
-    void (*const pid_set_integral_limits)(uint8_t *restrict work);
-    void (*const pid_set_derivative_filter)(uint8_t *restrict work);
-    void (*const pid_set_feedforward)(uint8_t *restrict work);
-    void (*const pid_set_rate)(uint8_t *restrict work);
-    void (*const pid_reset)(uint8_t *restrict work);
-    void (*const pid_update_n)(uint8_t *restrict work);
-    void (*const pid_log_header)(uint8_t *restrict work);
-    void (*const pid_log_record)(uint8_t *restrict work);
+    void (*const pid_init)(uint8_t *work);
+    void (*const pid_set_output_limits)(uint8_t *work);
+    void (*const pid_set_integral_limits)(uint8_t *work);
+    void (*const pid_set_derivative_filter)(uint8_t *work);
+    void (*const pid_set_feedforward)(uint8_t *work);
+    void (*const pid_set_rate)(uint8_t *work);
+    void (*const pid_reset)(uint8_t *work);
+    void (*const pid_update_n)(uint8_t *work);
+    void (*const pid_log_header)(uint8_t *work);
+    void (*const pid_log_record)(uint8_t *work);
 } ControlNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in ControlV or a region of the borrow at a fixed offset.
-void protocore_control_pid_init(uint8_t *restrict work);
-void protocore_control_pid_set_output_limits(uint8_t *restrict work);
-void protocore_control_pid_set_integral_limits(uint8_t *restrict work);
-void protocore_control_pid_set_derivative_filter(uint8_t *restrict work);
-void protocore_control_pid_set_feedforward(uint8_t *restrict work);
-void protocore_control_pid_set_rate(uint8_t *restrict work);
-void protocore_control_pid_reset(uint8_t *restrict work);
-void protocore_control_pid_update_n(uint8_t *restrict work);
-void protocore_control_pid_log_header(uint8_t *restrict work);
-void protocore_control_pid_log_record(uint8_t *restrict work);
+void protocore_control_pid_init(uint8_t *work);
+void protocore_control_pid_set_output_limits(uint8_t *work);
+void protocore_control_pid_set_integral_limits(uint8_t *work);
+void protocore_control_pid_set_derivative_filter(uint8_t *work);
+void protocore_control_pid_set_feedforward(uint8_t *work);
+void protocore_control_pid_set_rate(uint8_t *work);
+void protocore_control_pid_reset(uint8_t *work);
+void protocore_control_pid_update_n(uint8_t *work);
+void protocore_control_pid_log_header(uint8_t *work);
+void protocore_control_pid_log_record(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

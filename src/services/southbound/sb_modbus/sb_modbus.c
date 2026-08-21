@@ -159,7 +159,7 @@ static int sb_modbus_write_block(void *vctx, uint32_t first, const int32_t *in, 
 }
 
 // Fill a caller-owned instance from the transport seam and the slave it addresses.
-void protocore_sb_modbus_init(uint8_t *restrict work)
+void protocore_sb_modbus_init(uint8_t *work)
 {
     (void)work;
     protocore_sb_modbus_ctx *c = SbModbusV.ctx;
@@ -183,7 +183,7 @@ void protocore_sb_modbus_init(uint8_t *restrict work)
 }
 
 // Bind the vtable the southbound registry dispatches through to one instance.
-void protocore_sb_modbus_driver(uint8_t *restrict work)
+void protocore_sb_modbus_driver(uint8_t *work)
 {
     (void)work;
     protocore_sb_modbus_ctx *c = SbModbusV.ctx;

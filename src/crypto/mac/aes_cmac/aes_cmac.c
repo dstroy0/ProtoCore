@@ -118,7 +118,7 @@ static uint8_t shl1(const uint8_t in[16], uint8_t out[16])
 }
 
 // RFC 4493 subkey generation: L = AES(key, 0^128); K1 = L<<1 (^Rb if MSB(L)); K2 = K1<<1 (^Rb if MSB(K1)).
-static void subkeys(uint8_t *restrict work)
+static void subkeys(uint8_t *work)
 {
     static const uint8_t RB = 0x87; // the 128-bit-block CMAC constant
     struct AesCmacCtx *ctx = AES_CMAC_CTX(work);
@@ -137,8 +137,7 @@ static void subkeys(uint8_t *restrict work)
 // --- the entry -------------------------------------------------------------
 
 // One-shot over the members already set: expand the key, derive the subkeys, CBC-MAC the message.
-proto_bool protocore_aes_cmac_mac(uint8_t *restrict work, const uint8_t *key, const uint8_t *msg, size_t msg_len,
-                                  uint8_t *out)
+proto_bool protocore_aes_cmac_mac(uint8_t *work, const uint8_t *key, const uint8_t *msg, size_t msg_len, uint8_t *out)
 {
     if (!key || !out)
     {

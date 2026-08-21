@@ -35,9 +35,9 @@ static void put_hex(uint8_t *p, uint32_t value, int digits)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_directnet_lrc(uint8_t *restrict work);
+void protocore_directnet_lrc(uint8_t *work);
 
-void protocore_directnet_lrc(uint8_t *restrict work)
+void protocore_directnet_lrc(uint8_t *work)
 {
     (void)work;
     const uint8_t *bytes = DirectnetV.lrc_args.bytes;
@@ -51,7 +51,7 @@ void protocore_directnet_lrc(uint8_t *restrict work)
     DirectnetV.value = lrc;
 }
 
-void protocore_directnet_header(uint8_t *restrict work)
+void protocore_directnet_header(uint8_t *work)
 {
     uint8_t slave = DirectnetV.header_args.slave;
     uint8_t type = DirectnetV.header_args.type;
@@ -86,7 +86,7 @@ void protocore_directnet_header(uint8_t *restrict work)
     DirectnetV.n = i;
 }
 
-void protocore_directnet_data(uint8_t *restrict work)
+void protocore_directnet_data(uint8_t *work)
 {
     const uint8_t *data = DirectnetV.data_args.data;
     size_t data_len = DirectnetV.data_args.data_len;
@@ -121,7 +121,7 @@ void protocore_directnet_data(uint8_t *restrict work)
     DirectnetV.n = i;
 }
 
-void protocore_directnet_data_parse(uint8_t *restrict work)
+void protocore_directnet_data_parse(uint8_t *work)
 {
     const uint8_t *frame = DirectnetV.data_parse_args.frame;
     size_t len = DirectnetV.data_parse_args.len;

@@ -130,7 +130,7 @@ static void put_uint(Buf *b, uint64_t v)
 
 // Report the octets the cursor wrote, NUL-terminating when one byte is left over. A stopped cursor
 // reports 0 octets and a false outcome.
-static void finish(uint8_t *restrict work, Buf *b)
+static void finish(uint8_t *work, Buf *b)
 {
     if (!b->ok)
     {
@@ -147,7 +147,7 @@ static void finish(uint8_t *restrict work, Buf *b)
 }
 
 // CONNECT {"option_name":option_value,...}
-void protocore_nats_connect(uint8_t *restrict work)
+void protocore_nats_connect(uint8_t *work)
 {
     NatsV.n = 0;
     NatsV.ok = PROTO_FALSE;
@@ -163,7 +163,7 @@ void protocore_nats_connect(uint8_t *restrict work)
 }
 
 // PUB <subject> [reply-to] <#bytes>CRLF[payload]CRLF
-void protocore_nats_pub(uint8_t *restrict work)
+void protocore_nats_pub(uint8_t *work)
 {
     NatsV.n = 0;
     NatsV.ok = PROTO_FALSE;
@@ -189,7 +189,7 @@ void protocore_nats_pub(uint8_t *restrict work)
 
 // HPUB <subject> [reply-to] <#header bytes> <#total bytes>CRLF[headers][payload]CRLF, where the
 // header section carries its own terminating CR LF CR LF and #total bytes counts it plus the payload.
-void protocore_nats_hpub(uint8_t *restrict work)
+void protocore_nats_hpub(uint8_t *work)
 {
     NatsV.n = 0;
     NatsV.ok = PROTO_FALSE;
@@ -218,7 +218,7 @@ void protocore_nats_hpub(uint8_t *restrict work)
 }
 
 // SUB <subject> [queue group] <sid>
-void protocore_nats_sub(uint8_t *restrict work)
+void protocore_nats_sub(uint8_t *work)
 {
     NatsV.n = 0;
     NatsV.ok = PROTO_FALSE;
@@ -241,7 +241,7 @@ void protocore_nats_sub(uint8_t *restrict work)
 }
 
 // UNSUB <sid> [max_msgs]
-void protocore_nats_unsub(uint8_t *restrict work)
+void protocore_nats_unsub(uint8_t *work)
 {
     NatsV.n = 0;
     NatsV.ok = PROTO_FALSE;
@@ -262,7 +262,7 @@ void protocore_nats_unsub(uint8_t *restrict work)
 }
 
 // PING
-void protocore_nats_ping(uint8_t *restrict work)
+void protocore_nats_ping(uint8_t *work)
 {
     NatsV.n = 0;
     NatsV.ok = PROTO_FALSE;
@@ -276,7 +276,7 @@ void protocore_nats_ping(uint8_t *restrict work)
 }
 
 // PONG
-void protocore_nats_pong(uint8_t *restrict work)
+void protocore_nats_pong(uint8_t *work)
 {
     NatsV.n = 0;
     NatsV.ok = PROTO_FALSE;
@@ -367,7 +367,7 @@ static size_t split_fields(const char *buf, size_t line_len, size_t from, const 
 }
 
 // Decode the operation at the head of in.buf into msg, and report the octets it occupies.
-void protocore_nats_parse(uint8_t *restrict work)
+void protocore_nats_parse(uint8_t *work)
 {
     (void)work;
     NatsV.ok = PROTO_FALSE;

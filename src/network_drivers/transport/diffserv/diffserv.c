@@ -64,22 +64,22 @@ uint8_t *protocore_diffserv_span(void)
 }
 
 // Masked to six bits on write, so a caller cannot spill into the two currently-unused bits.
-void protocore_diff_serv_set_default(uint8_t *restrict work)
+void protocore_diff_serv_set_default(uint8_t *work)
 {
     DIFFSERV_CTX(work)->tcp_dscp = (uint8_t)(DiffServV.dscp & 0x3F);
 }
 
-void protocore_diff_serv_default_dscp(uint8_t *restrict work)
+void protocore_diff_serv_default_dscp(uint8_t *work)
 {
     DiffServV.u8 = DIFFSERV_CTX(work)->tcp_dscp;
 }
 
-void protocore_diff_serv_set_udp(uint8_t *restrict work)
+void protocore_diff_serv_set_udp(uint8_t *work)
 {
     DIFFSERV_CTX(work)->udp_dscp = (uint8_t)(DiffServV.dscp & 0x3F);
 }
 
-void protocore_diff_serv_udp_dscp(uint8_t *restrict work)
+void protocore_diff_serv_udp_dscp(uint8_t *work)
 {
     DiffServV.u8 = DIFFSERV_CTX(work)->udp_dscp;
 }

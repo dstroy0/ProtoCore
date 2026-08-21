@@ -346,25 +346,25 @@ typedef struct
     int32_t micro;
     uint16_t word;
 
-    void (*const vout_mode_kind)(uint8_t *restrict work);
-    void (*const vout_exponent)(uint8_t *restrict work);
-    void (*const l11_mantissa)(uint8_t *restrict work);
-    void (*const l11_exponent)(uint8_t *restrict work);
-    void (*const linear11_micro)(uint8_t *restrict work);
-    void (*const linear11_encode)(uint8_t *restrict work);
-    void (*const linear16_micro)(uint8_t *restrict work);
-    void (*const linear16_encode)(uint8_t *restrict work);
-    void (*const direct_micro)(uint8_t *restrict work);
-    void (*const begin)(uint8_t *restrict work);
-    void (*const set_page)(uint8_t *restrict work);
-    void (*const read_vout_mode)(uint8_t *restrict work);
-    void (*const read_linear11)(uint8_t *restrict work);
-    void (*const read_linear16)(uint8_t *restrict work);
-    void (*const write_linear16)(uint8_t *restrict work);
-    void (*const status_byte)(uint8_t *restrict work);
-    void (*const status_word)(uint8_t *restrict work);
-    void (*const clear_faults)(uint8_t *restrict work);
-    void (*const read_mfr_string)(uint8_t *restrict work);
+    void (*const vout_mode_kind)(uint8_t *work);
+    void (*const vout_exponent)(uint8_t *work);
+    void (*const l11_mantissa)(uint8_t *work);
+    void (*const l11_exponent)(uint8_t *work);
+    void (*const linear11_micro)(uint8_t *work);
+    void (*const linear11_encode)(uint8_t *work);
+    void (*const linear16_micro)(uint8_t *work);
+    void (*const linear16_encode)(uint8_t *work);
+    void (*const direct_micro)(uint8_t *work);
+    void (*const begin)(uint8_t *work);
+    void (*const set_page)(uint8_t *work);
+    void (*const read_vout_mode)(uint8_t *work);
+    void (*const read_linear11)(uint8_t *work);
+    void (*const read_linear16)(uint8_t *work);
+    void (*const write_linear16)(uint8_t *work);
+    void (*const status_byte)(uint8_t *work);
+    void (*const status_word)(uint8_t *work);
+    void (*const clear_faults)(uint8_t *work);
+    void (*const read_mfr_string)(uint8_t *work);
 } PmbusNs;
 
 /** @brief The one symbol this module exports. */

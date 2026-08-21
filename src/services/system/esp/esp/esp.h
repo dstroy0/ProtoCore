@@ -66,12 +66,12 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    size_t (*gcm_encapsulate)(uint8_t *restrict, uint32_t, uint32_t, const uint8_t *, const uint8_t *, const uint8_t *,
-                              uint8_t, const uint8_t *, size_t, uint8_t *, size_t);
-    proto_bool (*gcm_decapsulate)(uint8_t *restrict, const uint8_t *, const uint8_t *, uint8_t *, size_t, uint32_t *,
+    size_t (*gcm_encapsulate)(uint8_t *, uint32_t, uint32_t, const uint8_t *, const uint8_t *, const uint8_t *, uint8_t,
+                              const uint8_t *, size_t, uint8_t *, size_t);
+    proto_bool (*gcm_decapsulate)(uint8_t *, const uint8_t *, const uint8_t *, uint8_t *, size_t, uint32_t *,
                                   uint32_t *, uint8_t *, const uint8_t **, size_t *);
-    void (*replay_init)(uint8_t *restrict, EspReplay *);
-    proto_bool (*replay_check)(uint8_t *restrict, EspReplay *, uint32_t);
+    void (*replay_init)(uint8_t *, EspReplay *);
+    proto_bool (*replay_check)(uint8_t *, EspReplay *, uint32_t);
 } EspNs;
 PROTOCORE_NS_LAYOUT(EspNs, gcm_encapsulate, gcm_decapsulate, replay_init, replay_check);
 
@@ -90,9 +90,9 @@ PROTOCORE_NS_LAYOUT(EspNs, gcm_encapsulate, gcm_decapsulate, replay_init, replay
  * @param out_cap Out cap
  * @return The size_t.
  */
-size_t protocore_esp_gcm_encapsulate(uint8_t *restrict work, uint32_t spi, uint32_t seq, const uint8_t *key,
-                                     const uint8_t *salt, const uint8_t *iv, uint8_t next_header,
-                                     const uint8_t *payload, size_t payload_len, uint8_t *out, size_t out_cap);
+size_t protocore_esp_gcm_encapsulate(uint8_t *work, uint32_t spi, uint32_t seq, const uint8_t *key, const uint8_t *salt,
+                                     const uint8_t *iv, uint8_t next_header, const uint8_t *payload, size_t payload_len,
+                                     uint8_t *out, size_t out_cap);
 /**
  * @brief Verify + decapsulate an ESP packet in place (the ciphertext is .
  * @param work PROTOCORE_ESP_BORROW bytes the caller took. Not held past the call.
@@ -107,16 +107,15 @@ size_t protocore_esp_gcm_encapsulate(uint8_t *restrict work, uint32_t spi, uint3
  * @param payload_len_out Payload len out
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_esp_gcm_decapsulate(uint8_t *restrict work, const uint8_t *key, const uint8_t *salt,
-                                         uint8_t *packet, size_t len, uint32_t *spi_out, uint32_t *seq_out,
-                                         uint8_t *next_header_out, const uint8_t **payload_out,
-                                         size_t *payload_len_out);
+proto_bool protocore_esp_gcm_decapsulate(uint8_t *work, const uint8_t *key, const uint8_t *salt, uint8_t *packet,
+                                         size_t len, uint32_t *spi_out, uint32_t *seq_out, uint8_t *next_header_out,
+                                         const uint8_t **payload_out, size_t *payload_len_out);
 /**
  * @brief Reset an anti-replay window (no packets seen yet).
  * @param work PROTOCORE_ESP_BORROW bytes the caller took. Not held past the call.
  * @param r R
  */
-void protocore_esp_replay_init(uint8_t *restrict work, EspReplay *r);
+void protocore_esp_replay_init(uint8_t *work, EspReplay *r);
 /**
  * @brief Anti-replay check + record for a received sequence number seq (RFC .
  * @param work PROTOCORE_ESP_BORROW bytes the caller took. Not held past the call.
@@ -124,7 +123,7 @@ void protocore_esp_replay_init(uint8_t *restrict work, EspReplay *r);
  * @param seq Seq
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_esp_replay_check(uint8_t *restrict work, EspReplay *r, uint32_t seq);
+proto_bool protocore_esp_replay_check(uint8_t *work, EspReplay *r, uint32_t seq);
 
 /** @brief Module namespace. */
 PROTOCORE_NS EspNs Esp PROTOCORE_UNUSED = {.gcm_encapsulate = protocore_esp_gcm_encapsulate,

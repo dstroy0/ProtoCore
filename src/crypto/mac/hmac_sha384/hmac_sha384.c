@@ -83,7 +83,7 @@ static void build_key_block(const uint8_t *key, size_t key_len, uint8_t block[PR
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_hmac_sha384_init(uint8_t *restrict work, const uint8_t *key, size_t key_len)
+proto_bool protocore_hmac_sha384_init(uint8_t *work, const uint8_t *key, size_t key_len)
 {
     Hmac384Work *w = HMAC384_WORK(work);
     // ipad -> scratch (opad slot holds the padded key), opad -> the slot final reads it back from
@@ -95,13 +95,13 @@ proto_bool protocore_hmac_sha384_init(uint8_t *restrict work, const uint8_t *key
     return PROTO_TRUE;
 }
 
-proto_bool protocore_hmac_sha384_update(uint8_t *restrict work, const uint8_t *data, size_t len)
+proto_bool protocore_hmac_sha384_update(uint8_t *work, const uint8_t *data, size_t len)
 {
     Sha384.update(HMAC384_INNER(work), data, len);
     return PROTO_TRUE;
 }
 
-proto_bool protocore_hmac_sha384_final(uint8_t *restrict work, uint8_t *out)
+proto_bool protocore_hmac_sha384_final(uint8_t *work, uint8_t *out)
 {
     if (!out)
     {
@@ -118,8 +118,8 @@ proto_bool protocore_hmac_sha384_final(uint8_t *restrict work, uint8_t *out)
     return PROTO_TRUE;
 }
 
-proto_bool protocore_hmac_sha384_mac(uint8_t *restrict work, const uint8_t *key, size_t key_len, const uint8_t *data,
-                                     size_t len, uint8_t *out)
+proto_bool protocore_hmac_sha384_mac(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *data, size_t len,
+                                     uint8_t *out)
 {
     if (!out)
     {

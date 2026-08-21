@@ -80,10 +80,10 @@ static proto_bool get_str(const uint8_t *buf, size_t len, size_t *pos, char *out
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_edge_cache_sd_deserialize(uint8_t *restrict work);
-void protocore_edge_cache_sd_serialize(uint8_t *restrict work);
+void protocore_edge_cache_sd_deserialize(uint8_t *work);
+void protocore_edge_cache_sd_serialize(uint8_t *work);
 
-void protocore_edge_cache_sd_serialize(uint8_t *restrict work)
+void protocore_edge_cache_sd_serialize(uint8_t *work)
 {
     (void)work;
     const EdgeEntry *e = EdgeCacheSdV.serialize_args.e;
@@ -119,7 +119,7 @@ void protocore_edge_cache_sd_serialize(uint8_t *restrict work)
     EdgeCacheSdV.n = pos;
 }
 
-void protocore_edge_cache_sd_deserialize(uint8_t *restrict work)
+void protocore_edge_cache_sd_deserialize(uint8_t *work)
 {
     (void)work;
     uint8_t *entry_buf = EdgeCacheSdV.deserialize_args.entry_buf;
@@ -281,7 +281,7 @@ static uint32_t purge_matching(struct protocore_dbm *db, const char *prefix, uin
     return total;
 }
 
-void protocore_edge_cache_sd_put(uint8_t *restrict work)
+void protocore_edge_cache_sd_put(uint8_t *work)
 {
     (void)work;
     struct protocore_dbm *db = EdgeCacheSdV.put_args.db;
@@ -314,7 +314,7 @@ void protocore_edge_cache_sd_put(uint8_t *restrict work)
     EdgeCacheSdV.ok = protocore_dbm_put(db, (const char *)e->digest, 32, scratch, (uint32_t)n);
 }
 
-void protocore_edge_cache_sd_get(uint8_t *restrict work)
+void protocore_edge_cache_sd_get(uint8_t *work)
 {
     (void)work;
     uint8_t *entry_buf = EdgeCacheSdV.get_args.entry_buf;
@@ -342,7 +342,7 @@ void protocore_edge_cache_sd_get(uint8_t *restrict work)
     protocore_edge_cache_sd_deserialize(work);
 }
 
-void protocore_edge_cache_sd_del(uint8_t *restrict work)
+void protocore_edge_cache_sd_del(uint8_t *work)
 {
     (void)work;
     struct protocore_dbm *db = EdgeCacheSdV.del_args.db;
@@ -351,7 +351,7 @@ void protocore_edge_cache_sd_del(uint8_t *restrict work)
     EdgeCacheSdV.ok = db && digest && protocore_dbm_del(db, (const char *)digest, 32);
 }
 
-void protocore_edge_cache_sd_purge_prefix(uint8_t *restrict work)
+void protocore_edge_cache_sd_purge_prefix(uint8_t *work)
 {
     (void)work;
     struct protocore_dbm *db = EdgeCacheSdV.purge_prefix_args.db;
@@ -367,7 +367,7 @@ void protocore_edge_cache_sd_purge_prefix(uint8_t *restrict work)
     EdgeCacheSdV.count = purge_matching(db, path_prefix, scratch, scratch_cap);
 }
 
-void protocore_edge_cache_sd_purge_all(uint8_t *restrict work)
+void protocore_edge_cache_sd_purge_all(uint8_t *work)
 {
     (void)work;
     struct protocore_dbm *db = EdgeCacheSdV.purge_all_args.db;

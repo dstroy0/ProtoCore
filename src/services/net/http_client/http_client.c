@@ -117,7 +117,7 @@ uint8_t *protocore_http_client_span(void)
 // Split the target URI into the authority to dial and the origin-form request target to send.
 // Scheme defaults are RFC 9110 sec 4.2.1 (http, port 80) and sec 4.2.2 (https, port 443); an empty
 // path component sends "/" (RFC 9112 sec 3.2.1).
-void protocore_http_client_parse_target_uri(uint8_t *restrict work)
+void protocore_http_client_parse_target_uri(uint8_t *work)
 {
     (void)work;
     HttpClientVars *ns = &HttpClientV;
@@ -207,7 +207,7 @@ void protocore_http_client_parse_target_uri(uint8_t *restrict work)
 
 // Write "method SP request-target SP HTTP/1.1" and the field lines, then the content. Host carries
 // the port only when it is not the scheme's default (RFC 9110 sec 7.2, sec 4.2.1 / 4.2.2).
-void protocore_http_client_build_request(uint8_t *restrict work)
+void protocore_http_client_build_request(uint8_t *work)
 {
     (void)work;
     HttpClientVars *ns = &HttpClientV;
@@ -396,7 +396,7 @@ static size_t decode_chunked(uint8_t *buf, size_t len, size_t off)
 
 // Read the status-line and frame the message body: chunked when it is the final coding, else
 // Content-Length, else the octets received before the close (RFC 9112 sec 6.3 items 4, 6 and 8).
-void protocore_http_client_parse_response(uint8_t *restrict work)
+void protocore_http_client_parse_response(uint8_t *work)
 {
     (void)work;
     HttpClientVars *ns = &HttpClientV;
@@ -492,7 +492,7 @@ static uint32_t now_ms(void)
 
 // The peer closed and its wire ring is drained: no further octet can arrive (RFC 9112 sec 6.3
 // item 8, the close-delimited body).
-static proto_bool peer_done(uint8_t *restrict work)
+static proto_bool peer_done(uint8_t *work)
 {
     TcpClientV.cid = HTTP_CLIENT_CTX(work)->cid;
     TcpClient.is_closed(protocore_tcp_client_span());
@@ -507,7 +507,7 @@ static proto_bool peer_done(uint8_t *restrict work)
 
 // Tear the connection down and free the slot (RFC 9112 sec 9.6: the "close" connection option the
 // request carried).
-static void close_conn(uint8_t *restrict work)
+static void close_conn(uint8_t *work)
 {
     if (HTTP_CLIENT_CTX(work)->cid >= 0)
     {
@@ -519,7 +519,7 @@ static void close_conn(uint8_t *restrict work)
 
 // One exchange: split the target URI, build the request message, open the connection, send, and
 // read until the body is framed or the deadline passes. Fills status, body and body_len.
-static void exchange(uint8_t *restrict work)
+static void exchange(uint8_t *work)
 {
     HttpClientVars *ns = &HttpClientV;
     ns->status = 0;
@@ -654,7 +654,7 @@ static void exchange(uint8_t *restrict work)
 
 // RFC 9110 sec 9.3.1: GET requests a transfer of the target resource's selected representation, so
 // the request encloses no content.
-void protocore_http_client_get(uint8_t *restrict work)
+void protocore_http_client_get(uint8_t *work)
 {
     HttpClientV.request.method = "GET";
     HttpClientV.request.content_type = NULL;
@@ -664,7 +664,7 @@ void protocore_http_client_get(uint8_t *restrict work)
 }
 
 // RFC 9110 sec 9.3.3: POST asks the target resource to process the enclosed representation.
-void protocore_http_client_post(uint8_t *restrict work)
+void protocore_http_client_post(uint8_t *work)
 {
     HttpClientV.request.method = "POST";
     exchange(work);
@@ -672,7 +672,7 @@ void protocore_http_client_post(uint8_t *restrict work)
 
 #else // no network stack: the exchange refuses and the pure calls stand alone
 
-void protocore_http_client_get(uint8_t *restrict work)
+void protocore_http_client_get(uint8_t *work)
 {
     (void)work;
     HttpClientV.status = (int32_t)HTTP_CLIENT_ERR_CONNECT;
@@ -680,7 +680,7 @@ void protocore_http_client_get(uint8_t *restrict work)
     HttpClientV.body_len = 0;
 }
 
-void protocore_http_client_post(uint8_t *restrict work)
+void protocore_http_client_post(uint8_t *work)
 {
     (void)work;
     HttpClientV.status = (int32_t)HTTP_CLIENT_ERR_CONNECT;

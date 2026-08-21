@@ -68,13 +68,13 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    size_t (*att_read_req)(uint8_t *restrict, uint16_t, uint8_t *, size_t);
-    size_t (*att_read_rsp)(uint8_t *restrict, const uint8_t *, size_t, uint8_t *, size_t);
-    size_t (*att_write_req)(uint8_t *restrict, uint16_t, const uint8_t *, size_t, uint8_t *, size_t);
-    size_t (*att_notify)(uint8_t *restrict, uint16_t, const uint8_t *, size_t, uint8_t *, size_t);
-    size_t (*att_error_rsp)(uint8_t *restrict, uint8_t, uint16_t, uint8_t, uint8_t *, size_t);
-    proto_bool (*att_parse)(uint8_t *restrict, const uint8_t *, size_t, AttPdu *);
-    size_t (*char_json)(uint8_t *restrict, const GattChar *, size_t, char *, size_t);
+    size_t (*att_read_req)(uint8_t *, uint16_t, uint8_t *, size_t);
+    size_t (*att_read_rsp)(uint8_t *, const uint8_t *, size_t, uint8_t *, size_t);
+    size_t (*att_write_req)(uint8_t *, uint16_t, const uint8_t *, size_t, uint8_t *, size_t);
+    size_t (*att_notify)(uint8_t *, uint16_t, const uint8_t *, size_t, uint8_t *, size_t);
+    size_t (*att_error_rsp)(uint8_t *, uint8_t, uint16_t, uint8_t, uint8_t *, size_t);
+    proto_bool (*att_parse)(uint8_t *, const uint8_t *, size_t, AttPdu *);
+    size_t (*char_json)(uint8_t *, const GattChar *, size_t, char *, size_t);
 } BleGattNs;
 PROTOCORE_NS_LAYOUT(BleGattNs, att_read_req, att_read_rsp, att_write_req, att_notify, att_error_rsp, att_parse,
                     char_json);
@@ -87,7 +87,7 @@ PROTOCORE_NS_LAYOUT(BleGattNs, att_read_req, att_read_rsp, att_write_req, att_no
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_ble_gatt_att_read_req(uint8_t *restrict work, uint16_t handle, uint8_t *out, size_t cap);
+size_t protocore_ble_gatt_att_read_req(uint8_t *work, uint16_t handle, uint8_t *out, size_t cap);
 /**
  * @brief Build a Read Response: [0x0B][value...]. 1+vlen, or 0 on overflow.
  * @param work PROTOCORE_BLE_GATT_BORROW bytes the caller took. Not held past the call.
@@ -97,8 +97,7 @@ size_t protocore_ble_gatt_att_read_req(uint8_t *restrict work, uint16_t handle, 
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_ble_gatt_att_read_rsp(uint8_t *restrict work, const uint8_t *val, size_t vlen, uint8_t *out,
-                                       size_t cap);
+size_t protocore_ble_gatt_att_read_rsp(uint8_t *work, const uint8_t *val, size_t vlen, uint8_t *out, size_t cap);
 /**
  * @brief Build a Write Request: [0x12][handle:2 LE][value...]. 3+vlen, or 0 .
  * @param work PROTOCORE_BLE_GATT_BORROW bytes the caller took. Not held past the call.
@@ -109,8 +108,8 @@ size_t protocore_ble_gatt_att_read_rsp(uint8_t *restrict work, const uint8_t *va
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_ble_gatt_att_write_req(uint8_t *restrict work, uint16_t handle, const uint8_t *val, size_t vlen,
-                                        uint8_t *out, size_t cap);
+size_t protocore_ble_gatt_att_write_req(uint8_t *work, uint16_t handle, const uint8_t *val, size_t vlen, uint8_t *out,
+                                        size_t cap);
 /**
  * @brief Build a Handle Value Notification: [0x1B][handle:2 LE][value...]. .
  * @param work PROTOCORE_BLE_GATT_BORROW bytes the caller took. Not held past the call.
@@ -121,8 +120,8 @@ size_t protocore_ble_gatt_att_write_req(uint8_t *restrict work, uint16_t handle,
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_ble_gatt_att_notify(uint8_t *restrict work, uint16_t handle, const uint8_t *val, size_t vlen,
-                                     uint8_t *out, size_t cap);
+size_t protocore_ble_gatt_att_notify(uint8_t *work, uint16_t handle, const uint8_t *val, size_t vlen, uint8_t *out,
+                                     size_t cap);
 /**
  * @brief Build an Error Response: [0x01][req-op][handle:2 LE][error]. 5, or .
  * @param work PROTOCORE_BLE_GATT_BORROW bytes the caller took. Not held past the call.
@@ -133,8 +132,8 @@ size_t protocore_ble_gatt_att_notify(uint8_t *restrict work, uint16_t handle, co
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_ble_gatt_att_error_rsp(uint8_t *restrict work, uint8_t req_op, uint16_t handle, uint8_t error,
-                                        uint8_t *out, size_t cap);
+size_t protocore_ble_gatt_att_error_rsp(uint8_t *work, uint8_t req_op, uint16_t handle, uint8_t error, uint8_t *out,
+                                        size_t cap);
 /**
  * @brief Parse an ATT PDU into out. true if len >= 1 and the fixed fields fit.
  * @param work PROTOCORE_BLE_GATT_BORROW bytes the caller took. Not held past the call.
@@ -143,7 +142,7 @@ size_t protocore_ble_gatt_att_error_rsp(uint8_t *restrict work, uint8_t req_op, 
  * @param out Out
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_ble_gatt_att_parse(uint8_t *restrict work, const uint8_t *pdu, size_t len, AttPdu *out);
+proto_bool protocore_ble_gatt_att_parse(uint8_t *work, const uint8_t *pdu, size_t len, AttPdu *out);
 /**
  * @brief Serialize a characteristic table as .
  * @param work PROTOCORE_BLE_GATT_BORROW bytes the caller took. Not held past the call.
@@ -153,7 +152,7 @@ proto_bool protocore_ble_gatt_att_parse(uint8_t *restrict work, const uint8_t *p
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_ble_gatt_char_json(uint8_t *restrict work, const GattChar *chars, size_t n, char *out, size_t cap);
+size_t protocore_ble_gatt_char_json(uint8_t *work, const GattChar *chars, size_t n, char *out, size_t cap);
 
 /** @brief Module namespace. */
 PROTOCORE_NS BleGattNs BleGatt PROTOCORE_UNUSED = {.att_read_req = protocore_ble_gatt_att_read_req,

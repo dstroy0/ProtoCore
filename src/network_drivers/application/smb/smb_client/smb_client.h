@@ -23,8 +23,8 @@ codecs through a real session to open a file on a Windows share.
  * Direct-TCP framing (the 4-byte length prefix) is handled here: each request is framed before
  * `send`, each response is de-framed after `recv` (accumulating until a full message arrives).
  *
- * @c work is PROTOCORE_SMB_CLIENT_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * @c work is PROTOCORE_SMB_CLIENT_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
+so nothing here aliases it. How those bytes are
  * carved is this module's and is never named here.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -91,12 +91,11 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    SmbResult (*smb_open)(uint8_t *restrict, const SmbConfig *, SmbHandle *, SmbSendFn, SmbRecvFn, void *);
-    SmbResult (*smb_close)(uint8_t *restrict, SmbHandle *, SmbSendFn, SmbRecvFn, void *);
-    SmbResult (*smb_read)(uint8_t *restrict, SmbHandle *, uint64_t, uint8_t *, size_t, size_t *, SmbSendFn, SmbRecvFn,
-                          void *);
-    SmbResult (*smb_write)(uint8_t *restrict, SmbHandle *, uint64_t, const uint8_t *, size_t, size_t *, SmbSendFn,
-                           SmbRecvFn, void *);
+    SmbResult (*smb_open)(uint8_t *, const SmbConfig *, SmbHandle *, SmbSendFn, SmbRecvFn, void *);
+    SmbResult (*smb_close)(uint8_t *, SmbHandle *, SmbSendFn, SmbRecvFn, void *);
+    SmbResult (*smb_read)(uint8_t *, SmbHandle *, uint64_t, uint8_t *, size_t, size_t *, SmbSendFn, SmbRecvFn, void *);
+    SmbResult (*smb_write)(uint8_t *, SmbHandle *, uint64_t, const uint8_t *, size_t, size_t *, SmbSendFn, SmbRecvFn,
+                           void *);
 } SmbClientNs;
 PROTOCORE_NS_LAYOUT(SmbClientNs, smb_open, smb_close, smb_read, smb_write);
 
@@ -110,7 +109,7 @@ PROTOCORE_NS_LAYOUT(SmbClientNs, smb_open, smb_close, smb_read, smb_write);
  * @param ctx Ctx
  * @return The SmbResult.
  */
-SmbResult protocore_smb_client_smb_open(uint8_t *restrict work, const SmbConfig *cfg, SmbHandle *h, SmbSendFn send,
+SmbResult protocore_smb_client_smb_open(uint8_t *work, const SmbConfig *cfg, SmbHandle *h, SmbSendFn send,
                                         SmbRecvFn recv, void *ctx);
 /**
  * @brief CLOSE the open handle (releases the server-side FileId).
@@ -121,8 +120,7 @@ SmbResult protocore_smb_client_smb_open(uint8_t *restrict work, const SmbConfig 
  * @param ctx Ctx
  * @return The SmbResult.
  */
-SmbResult protocore_smb_client_smb_close(uint8_t *restrict work, SmbHandle *h, SmbSendFn send, SmbRecvFn recv,
-                                         void *ctx);
+SmbResult protocore_smb_client_smb_close(uint8_t *work, SmbHandle *h, SmbSendFn send, SmbRecvFn recv, void *ctx);
 /**
  * @brief Read up to cap bytes from offset of the open handle, looping READ .
  * @param work PROTOCORE_SMB_CLIENT_BORROW bytes the caller took. Not held past the call.
@@ -136,7 +134,7 @@ SmbResult protocore_smb_client_smb_close(uint8_t *restrict work, SmbHandle *h, S
  * @param ctx Ctx
  * @return The SmbResult.
  */
-SmbResult protocore_smb_client_smb_read(uint8_t *restrict work, SmbHandle *h, uint64_t offset, uint8_t *out, size_t cap,
+SmbResult protocore_smb_client_smb_read(uint8_t *work, SmbHandle *h, uint64_t offset, uint8_t *out, size_t cap,
                                         size_t *out_len, SmbSendFn send, SmbRecvFn recv, void *ctx);
 /**
  * @brief Write len bytes at offset of the open handle, looping WRITE .
@@ -151,8 +149,8 @@ SmbResult protocore_smb_client_smb_read(uint8_t *restrict work, SmbHandle *h, ui
  * @param ctx Ctx
  * @return The SmbResult.
  */
-SmbResult protocore_smb_client_smb_write(uint8_t *restrict work, SmbHandle *h, uint64_t offset, const uint8_t *data,
-                                         size_t len, size_t *written, SmbSendFn send, SmbRecvFn recv, void *ctx);
+SmbResult protocore_smb_client_smb_write(uint8_t *work, SmbHandle *h, uint64_t offset, const uint8_t *data, size_t len,
+                                         size_t *written, SmbSendFn send, SmbRecvFn recv, void *ctx);
 
 /**
  * @brief Transport seam: the engine moves raw bytes only through these, so it runs against a real

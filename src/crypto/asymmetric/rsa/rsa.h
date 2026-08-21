@@ -111,11 +111,11 @@ typedef struct
  * @var RsaNs::sign         hash the message, PKCS#1 v1.5 encode it, raise it to d mod n; NOT
  *                          constant-time - see SECURITY.md, timing
  *
- * @c work is PROTOCORE_RSA_BORROW secure bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and
- * the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. That is
- * what keeps the private exponent and the encoded block a sign works in from outliving the caller. The
- * digest each entry takes runs out of those bytes too, so a verify costs one borrow and no wipe.
+ * @c work is PROTOCORE_RSA_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes it,
+ * holds it, releases it, nor wipes it. That is what keeps the private exponent and the encoded block a sign works in
+ * from outliving the caller. The digest each entry takes runs out of those bytes too, so a verify costs one borrow and
+ * no wipe.
  *
  * No storage member and no context: a caller sets operands and reads @ref RsaNs::ok, and that is all
  * the surface there is.
@@ -133,14 +133,14 @@ extern RsaVars RsaV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const verify)(uint8_t *restrict work);
-    void (*const sign)(uint8_t *restrict work);
+    void (*const verify)(uint8_t *work);
+    void (*const sign)(uint8_t *work);
 } RsaNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in RsaV or a region of the borrow at a fixed offset.
-void protocore_rsa_verify(uint8_t *restrict work);
-void protocore_rsa_sign(uint8_t *restrict work);
+void protocore_rsa_verify(uint8_t *work);
+void protocore_rsa_sign(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

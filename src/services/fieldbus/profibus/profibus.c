@@ -21,9 +21,9 @@ PROTOCORE_BEGIN_DECLS
 // never read.
 
 // The entries this file calls before reaching their definitions.
-void protocore_profibus_fcs(uint8_t *restrict work);
+void protocore_profibus_fcs(uint8_t *work);
 
-void protocore_profibus_fcs(uint8_t *restrict work)
+void protocore_profibus_fcs(uint8_t *work)
 {
     (void)work;
     const uint8_t *bytes = ProfibusV.fcs_args.bytes;
@@ -37,7 +37,7 @@ void protocore_profibus_fcs(uint8_t *restrict work)
     ProfibusV.value = sum;
 }
 
-void protocore_profibus_build_sd1(uint8_t *restrict work)
+void protocore_profibus_build_sd1(uint8_t *work)
 {
     uint8_t da = ProfibusV.build_sd1_args.da;
     uint8_t sa = ProfibusV.build_sd1_args.sa;
@@ -63,7 +63,7 @@ void protocore_profibus_build_sd1(uint8_t *restrict work)
     ProfibusV.n = 6;
 }
 
-void protocore_profibus_build_sd2(uint8_t *restrict work)
+void protocore_profibus_build_sd2(uint8_t *work)
 {
     uint8_t da = ProfibusV.build_sd2_args.da;
     uint8_t sa = ProfibusV.build_sd2_args.sa;
@@ -110,7 +110,7 @@ void protocore_profibus_build_sd2(uint8_t *restrict work)
     ProfibusV.n = i;
 }
 
-void protocore_profibus_build_sd3(uint8_t *restrict work)
+void protocore_profibus_build_sd3(uint8_t *work)
 {
     uint8_t da = ProfibusV.build_sd3_args.da;
     uint8_t sa = ProfibusV.build_sd3_args.sa;
@@ -138,7 +138,7 @@ void protocore_profibus_build_sd3(uint8_t *restrict work)
 }
 
 // SD3 fixed-length telegram: SD3 DA SA FC data[8] FCS ED (14 octets).
-static void pb_parse_sd3(uint8_t *restrict work)
+static void pb_parse_sd3(uint8_t *work)
 {
     const uint8_t *frame = ProfibusV.parse_args.frame;
     size_t len = ProfibusV.parse_args.len;
@@ -167,7 +167,7 @@ static void pb_parse_sd3(uint8_t *restrict work)
 }
 
 // SD1 no-data telegram: SD1 DA SA FC FCS ED (6 octets).
-static void pb_parse_sd1(uint8_t *restrict work)
+static void pb_parse_sd1(uint8_t *work)
 {
     const uint8_t *frame = ProfibusV.parse_args.frame;
     PbTelegram *out = ProfibusV.parse_args.out;
@@ -191,7 +191,7 @@ static void pb_parse_sd1(uint8_t *restrict work)
 }
 
 // SD2 variable-length telegram: SD2 LE LEr SD2 DA SA FC [data] FCS ED.
-static void pb_parse_sd2(uint8_t *restrict work)
+static void pb_parse_sd2(uint8_t *work)
 {
     const uint8_t *frame = ProfibusV.parse_args.frame;
     size_t len = ProfibusV.parse_args.len;
@@ -237,7 +237,7 @@ static void pb_parse_sd2(uint8_t *restrict work)
     ProfibusV.ok = PROTO_TRUE;
 }
 
-void protocore_profibus_parse(uint8_t *restrict work)
+void protocore_profibus_parse(uint8_t *work)
 {
     const uint8_t *frame = ProfibusV.parse_args.frame;
     size_t len = ProfibusV.parse_args.len;

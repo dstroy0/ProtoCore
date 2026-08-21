@@ -67,7 +67,7 @@ static uint8_t status_byte(const protocore_cc1101_bus *b)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-int16_t protocore_cc1101_rssi_dbm(uint8_t *restrict work, uint8_t raw)
+int16_t protocore_cc1101_rssi_dbm(uint8_t *work, uint8_t raw)
 {
     (void)work;
 
@@ -76,8 +76,7 @@ int16_t protocore_cc1101_rssi_dbm(uint8_t *restrict work, uint8_t raw)
     return (int16_t)(r / 2 - 74);
 }
 
-proto_bool protocore_cc1101_init(uint8_t *restrict work, const protocore_cc1101_bus *bus,
-                                 const protocore_cc1101_config *cfg)
+proto_bool protocore_cc1101_init(uint8_t *work, const protocore_cc1101_bus *bus, const protocore_cc1101_config *cfg)
 {
     proto_bool ok = PROTO_FALSE;
     (void)work;
@@ -97,8 +96,7 @@ proto_bool protocore_cc1101_init(uint8_t *restrict work, const protocore_cc1101_
     return ok;
 }
 
-proto_bool protocore_cc1101_send(uint8_t *restrict work, const protocore_cc1101_bus *bus, const uint8_t *data,
-                                 uint8_t len)
+proto_bool protocore_cc1101_send(uint8_t *work, const protocore_cc1101_bus *bus, const uint8_t *data, uint8_t len)
 {
     (void)work;
 
@@ -122,7 +120,7 @@ proto_bool protocore_cc1101_send(uint8_t *restrict work, const protocore_cc1101_
     return PROTO_TRUE;
 }
 
-proto_bool protocore_cc1101_tx_done(uint8_t *restrict work, const protocore_cc1101_bus *bus)
+proto_bool protocore_cc1101_tx_done(uint8_t *work, const protocore_cc1101_bus *bus)
 {
     (void)work;
 
@@ -134,7 +132,7 @@ proto_bool protocore_cc1101_tx_done(uint8_t *restrict work, const protocore_cc11
     return st == STATE_IDLE;
 }
 
-void protocore_cc1101_set_rx(uint8_t *restrict work, const protocore_cc1101_bus *bus)
+void protocore_cc1101_set_rx(uint8_t *work, const protocore_cc1101_bus *bus)
 {
     (void)work;
 
@@ -147,8 +145,7 @@ void protocore_cc1101_set_rx(uint8_t *restrict work, const protocore_cc1101_bus 
     strobe(bus, STROBE_SRX);
 }
 
-int protocore_cc1101_recv(uint8_t *restrict work, const protocore_cc1101_bus *bus, uint8_t *buf, uint8_t cap,
-                          int16_t *rssi_dbm)
+int protocore_cc1101_recv(uint8_t *work, const protocore_cc1101_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rssi_dbm)
 {
     if (!bus || !bus->spi || !buf)
     {

@@ -45,7 +45,7 @@ static size_t write_job_header(uint8_t *buf, uint16_t pdu_ref, uint16_t param_le
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_s7comm_build_setup(uint8_t *restrict work)
+void protocore_s7comm_build_setup(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = S7commV.build_setup_args.buf;
@@ -76,7 +76,7 @@ void protocore_s7comm_build_setup(uint8_t *restrict work)
     S7commV.n = p;
 }
 
-void protocore_s7comm_build_read_request(uint8_t *restrict work)
+void protocore_s7comm_build_read_request(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = S7commV.build_read_request_args.buf;
@@ -129,7 +129,7 @@ static uint16_t s7_data_wire_len(uint8_t data_transport_size, uint16_t data_len)
     return data_len;
 }
 
-void protocore_s7comm_build_write_request(uint8_t *restrict work)
+void protocore_s7comm_build_write_request(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = S7commV.build_write_request_args.buf;
@@ -209,7 +209,7 @@ void protocore_s7comm_build_write_request(uint8_t *restrict work)
     S7commV.n = p;
 }
 
-void protocore_s7comm_parse_header(uint8_t *restrict work)
+void protocore_s7comm_parse_header(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = S7commV.parse_header_args.buf;
@@ -254,7 +254,7 @@ void protocore_s7comm_parse_header(uint8_t *restrict work)
     S7commV.ok = PROTO_TRUE;
 }
 
-void protocore_s7comm_read_next_item(uint8_t *restrict work)
+void protocore_s7comm_read_next_item(uint8_t *work)
 {
     (void)work;
     const uint8_t *data = S7commV.read_next_item_args.data;

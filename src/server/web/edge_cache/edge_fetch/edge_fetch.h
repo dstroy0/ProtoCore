@@ -70,11 +70,11 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*begin)(uint8_t *restrict, EdgeFetch *, const EdgeFetchTransport *, const char *, uint16_t, const void *,
-                  size_t, uint32_t);
-    EdgeFetchStatus (*pump)(uint8_t *restrict, EdgeFetch *, const EdgeFetchTransport *, uint32_t);
-    void (*end)(uint8_t *restrict, EdgeFetch *, const EdgeFetchTransport *);
-    proto_bool (*edge_resp_complete)(uint8_t *restrict, const uint8_t *, size_t, proto_bool, size_t *);
+    void (*begin)(uint8_t *, EdgeFetch *, const EdgeFetchTransport *, const char *, uint16_t, const void *, size_t,
+                  uint32_t);
+    EdgeFetchStatus (*pump)(uint8_t *, EdgeFetch *, const EdgeFetchTransport *, uint32_t);
+    void (*end)(uint8_t *, EdgeFetch *, const EdgeFetchTransport *);
+    proto_bool (*edge_resp_complete)(uint8_t *, const uint8_t *, size_t, proto_bool, size_t *);
 } EdgeFetchNs;
 PROTOCORE_NS_LAYOUT(EdgeFetchNs, begin, pump, end, edge_resp_complete);
 
@@ -89,7 +89,7 @@ PROTOCORE_NS_LAYOUT(EdgeFetchNs, begin, pump, end, edge_resp_complete);
  * @param req_len Req len
  * @param now_ms Now ms
  */
-void protocore_edge_fetcher_begin(uint8_t *restrict work, EdgeFetch *f, const EdgeFetchTransport *t, const char *host,
+void protocore_edge_fetcher_begin(uint8_t *work, EdgeFetch *f, const EdgeFetchTransport *t, const char *host,
                                   uint16_t port, const void *request, size_t req_len, uint32_t now_ms);
 /**
  * @brief Drain available bytes and advance. On DONE the response is parsed .
@@ -99,15 +99,14 @@ void protocore_edge_fetcher_begin(uint8_t *restrict work, EdgeFetch *f, const Ed
  * @param now_ms Now ms
  * @return The EdgeFetchStatus.
  */
-EdgeFetchStatus protocore_edge_fetcher_pump(uint8_t *restrict work, EdgeFetch *f, const EdgeFetchTransport *t,
-                                            uint32_t now_ms);
+EdgeFetchStatus protocore_edge_fetcher_pump(uint8_t *work, EdgeFetch *f, const EdgeFetchTransport *t, uint32_t now_ms);
 /**
  * @brief Release the transport connection (idempotent).
  * @param work PROTOCORE_EDGE_FETCHER_BORROW bytes the caller took. Not held past the call.
  * @param f F
  * @param t T
  */
-void protocore_edge_fetcher_end(uint8_t *restrict work, EdgeFetch *f, const EdgeFetchTransport *t);
+void protocore_edge_fetcher_end(uint8_t *work, EdgeFetch *f, const EdgeFetchTransport *t);
 /**
  * @brief Is the accumulated response complete? (headers terminated + body .
  * @param work PROTOCORE_EDGE_FETCHER_BORROW bytes the caller took. Not held past the call.
@@ -117,7 +116,7 @@ void protocore_edge_fetcher_end(uint8_t *restrict work, EdgeFetch *f, const Edge
  * @param head_len Head len
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_edge_fetcher_edge_resp_complete(uint8_t *restrict work, const uint8_t *buf, size_t len,
+proto_bool protocore_edge_fetcher_edge_resp_complete(uint8_t *work, const uint8_t *buf, size_t len,
                                                      proto_bool conn_closed, size_t *head_len);
 
 /** @brief Module namespace. */

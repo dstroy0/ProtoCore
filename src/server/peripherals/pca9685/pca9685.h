@@ -131,9 +131,8 @@ typedef struct
  * @var Pca9685Ns::set_pwm  set channel's raw 12-bit ON / OFF counts. false on I2C error / bad ...
  * @var Pca9685Ns::set_servo_us  drive a servo on channel to a microseconds pulse (uses the ...
  *
- * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -156,24 +155,24 @@ extern Pca9685Vars Pca9685V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const prescale)(uint8_t *restrict work);
-    void (*const channel_reg)(uint8_t *restrict work);
-    void (*const us_to_count)(uint8_t *restrict work);
-    void (*const set_pwm_bytes)(uint8_t *restrict work);
-    void (*const begin)(uint8_t *restrict work);
-    void (*const set_pwm)(uint8_t *restrict work);
-    void (*const set_servo_us)(uint8_t *restrict work);
+    void (*const prescale)(uint8_t *work);
+    void (*const channel_reg)(uint8_t *work);
+    void (*const us_to_count)(uint8_t *work);
+    void (*const set_pwm_bytes)(uint8_t *work);
+    void (*const begin)(uint8_t *work);
+    void (*const set_pwm)(uint8_t *work);
+    void (*const set_servo_us)(uint8_t *work);
 } Pca9685Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Pca9685V or a region of the borrow at a fixed offset.
-void protocore_pca9685_prescale(uint8_t *restrict work);
-void protocore_pca9685_channel_reg(uint8_t *restrict work);
-void protocore_pca9685_us_to_count(uint8_t *restrict work);
-void protocore_pca9685_set_pwm_bytes(uint8_t *restrict work);
-void protocore_pca9685_begin(uint8_t *restrict work);
-void protocore_pca9685_set_pwm(uint8_t *restrict work);
-void protocore_pca9685_set_servo_us(uint8_t *restrict work);
+void protocore_pca9685_prescale(uint8_t *work);
+void protocore_pca9685_channel_reg(uint8_t *work);
+void protocore_pca9685_us_to_count(uint8_t *work);
+void protocore_pca9685_set_pwm_bytes(uint8_t *work);
+void protocore_pca9685_begin(uint8_t *work);
+void protocore_pca9685_set_pwm(uint8_t *work);
+void protocore_pca9685_set_servo_us(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

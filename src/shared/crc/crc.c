@@ -122,25 +122,25 @@ static uint32_t crc_finish(const protocore_crc_params *p, uint32_t crc)
     return (crc ^ p->xorout) & m;
 }
 
-void protocore_crc_begin(uint8_t *restrict work)
+void protocore_crc_begin(uint8_t *work)
 {
     (void)work;
     CrcV.value = crc_start(CrcV.args.params);
 }
 
-void protocore_crc_update(uint8_t *restrict work)
+void protocore_crc_update(uint8_t *work)
 {
     (void)work;
     CrcV.value = crc_fold(CrcV.args.params, CrcV.args.crc, CrcV.args.data, CrcV.args.len);
 }
 
-void protocore_crc_final(uint8_t *restrict work)
+void protocore_crc_final(uint8_t *work)
 {
     (void)work;
     CrcV.value = crc_finish(CrcV.args.params, CrcV.args.crc);
 }
 
-void protocore_crc_compute(uint8_t *restrict work)
+void protocore_crc_compute(uint8_t *work)
 {
     (void)work;
     const protocore_crc_params *p = CrcV.args.params;

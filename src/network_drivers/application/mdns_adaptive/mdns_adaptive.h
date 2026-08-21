@@ -169,9 +169,8 @@ typedef struct
  * @var MdnsAdaptiveNs::contention  frames counted in the most recently closed window - the live ...
  * @var MdnsAdaptiveNs::announces  total announces sent since begin()
  *
- * @c work is PROTOCORE_MDNS_ADAPTIVE_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_MDNS_ADAPTIVE_BORROW bytes the CALLER took, at an address it knows. It is not held past the
+ * call, so nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -194,36 +193,36 @@ extern MdnsAdaptiveVars MdnsAdaptiveV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const refresh_interval)(uint8_t *restrict work);
-    void (*const beacon_init)(uint8_t *restrict work);
-    void (*const beacon_adapt)(uint8_t *restrict work);
-    void (*const beacon_due)(uint8_t *restrict work);
-    void (*const beacon_presleep_due)(uint8_t *restrict work);
-    void (*const contention_init)(uint8_t *restrict work);
-    void (*const contention_sample)(uint8_t *restrict work);
-    void (*const begin)(uint8_t *restrict work);
-    void (*const tick)(uint8_t *restrict work);
-    void (*const end)(uint8_t *restrict work);
-    void (*const interval_ms)(uint8_t *restrict work);
-    void (*const contention)(uint8_t *restrict work);
-    void (*const announces)(uint8_t *restrict work);
+    void (*const refresh_interval)(uint8_t *work);
+    void (*const beacon_init)(uint8_t *work);
+    void (*const beacon_adapt)(uint8_t *work);
+    void (*const beacon_due)(uint8_t *work);
+    void (*const beacon_presleep_due)(uint8_t *work);
+    void (*const contention_init)(uint8_t *work);
+    void (*const contention_sample)(uint8_t *work);
+    void (*const begin)(uint8_t *work);
+    void (*const tick)(uint8_t *work);
+    void (*const end)(uint8_t *work);
+    void (*const interval_ms)(uint8_t *work);
+    void (*const contention)(uint8_t *work);
+    void (*const announces)(uint8_t *work);
 } MdnsAdaptiveNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in MdnsAdaptiveV or a region of the borrow at a fixed offset.
-void protocore_mdns_adaptive_refresh_interval(uint8_t *restrict work);
-void protocore_mdns_adaptive_beacon_init(uint8_t *restrict work);
-void protocore_mdns_adaptive_beacon_adapt(uint8_t *restrict work);
-void protocore_mdns_adaptive_beacon_due(uint8_t *restrict work);
-void protocore_mdns_adaptive_beacon_presleep_due(uint8_t *restrict work);
-void protocore_mdns_adaptive_contention_init(uint8_t *restrict work);
-void protocore_mdns_adaptive_contention_sample(uint8_t *restrict work);
-void protocore_mdns_adaptive_begin(uint8_t *restrict work);
-void protocore_mdns_adaptive_tick(uint8_t *restrict work);
-void protocore_mdns_adaptive_end(uint8_t *restrict work);
-void protocore_mdns_adaptive_interval_ms(uint8_t *restrict work);
-void protocore_mdns_adaptive_contention(uint8_t *restrict work);
-void protocore_mdns_adaptive_announces(uint8_t *restrict work);
+void protocore_mdns_adaptive_refresh_interval(uint8_t *work);
+void protocore_mdns_adaptive_beacon_init(uint8_t *work);
+void protocore_mdns_adaptive_beacon_adapt(uint8_t *work);
+void protocore_mdns_adaptive_beacon_due(uint8_t *work);
+void protocore_mdns_adaptive_beacon_presleep_due(uint8_t *work);
+void protocore_mdns_adaptive_contention_init(uint8_t *work);
+void protocore_mdns_adaptive_contention_sample(uint8_t *work);
+void protocore_mdns_adaptive_begin(uint8_t *work);
+void protocore_mdns_adaptive_tick(uint8_t *work);
+void protocore_mdns_adaptive_end(uint8_t *work);
+void protocore_mdns_adaptive_interval_ms(uint8_t *work);
+void protocore_mdns_adaptive_contention(uint8_t *work);
+void protocore_mdns_adaptive_announces(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

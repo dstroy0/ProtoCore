@@ -49,7 +49,7 @@ static proto_bool is_integral(double d)
 
 // Render a Number into a JSON value position: an integer when integral, else a floating-point form
 // of SENML_JSON_NUMBER_DIGITS significant digits.
-static void json_number(uint8_t *restrict work, protocore_json_writer *w, double d)
+static void json_number(uint8_t *work, protocore_json_writer *w, double d)
 {
     char tmp[SENML_JSON_NUMBER_MAX];
     protocore_sb sb = {tmp, sizeof(tmp), 0, PROTO_TRUE};
@@ -116,7 +116,7 @@ static size_t record_fields(const SenmlRecord *r)
 
 // Build the JSON representation of ns->pack into ns->json (RFC 8428 sec 5): an array with one
 // object per Record, the labels as member names. Reports the length in ns->n.
-void protocore_senml_json_build(uint8_t *restrict work)
+void protocore_senml_json_build(uint8_t *work)
 {
     (void)work;
     SenmlV.ok = PROTO_FALSE;
@@ -217,7 +217,7 @@ void protocore_senml_json_build(uint8_t *restrict work)
 
 // Build ns->pack into ns->binary through its codec: an array of Records, each a map whose keys the
 // codec writes as the RFC 8428 sec 6 Table 4 integers. Reports the length in ns->n.
-void protocore_senml_binary_build(uint8_t *restrict work)
+void protocore_senml_binary_build(uint8_t *work)
 {
     (void)work;
     SenmlV.ok = PROTO_FALSE;
@@ -295,7 +295,7 @@ void protocore_senml_binary_build(uint8_t *restrict work)
 // for the Record carrying it and every Record after it, until a later one overrides it: each output
 // Name is the active Base Name concatenated with the Name, and each output Time is the active Base
 // Time added to the Time. Reports the Record count in ns->n.
-void protocore_senml_resolve(uint8_t *restrict work)
+void protocore_senml_resolve(uint8_t *work)
 {
     (void)work;
     SenmlV.ok = PROTO_FALSE;

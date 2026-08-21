@@ -29,15 +29,14 @@ static void wr_be32(uint8_t *p, uint32_t v)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-proto_bool protocore_quic_packet_is_long_header(uint8_t *restrict work, uint8_t first)
+proto_bool protocore_quic_packet_is_long_header(uint8_t *work, uint8_t first)
 {
     (void)work;
 
     return (first & 0x80) != 0;
 }
 
-proto_bool protocore_quic_packet_parse_long_header(uint8_t *restrict work, const uint8_t *buf, size_t len,
-                                                   QuicLongHeader *out)
+proto_bool protocore_quic_packet_parse_long_header(uint8_t *work, const uint8_t *buf, size_t len, QuicLongHeader *out)
 {
     (void)work;
 
@@ -76,9 +75,9 @@ proto_bool protocore_quic_packet_parse_long_header(uint8_t *restrict work, const
     return PROTO_TRUE;
 }
 
-size_t protocore_quic_packet_build_long_header(uint8_t *restrict work, uint8_t *out, size_t cap, uint8_t type,
-                                               uint32_t version, const uint8_t *dcid, uint8_t dcid_len,
-                                               const uint8_t *scid, uint8_t scid_len, uint8_t pn_len)
+size_t protocore_quic_packet_build_long_header(uint8_t *work, uint8_t *out, size_t cap, uint8_t type, uint32_t version,
+                                               const uint8_t *dcid, uint8_t dcid_len, const uint8_t *scid,
+                                               uint8_t scid_len, uint8_t pn_len)
 {
     (void)work;
 
@@ -104,8 +103,8 @@ size_t protocore_quic_packet_build_long_header(uint8_t *restrict work, uint8_t *
     return pos;
 }
 
-proto_bool protocore_quic_packet_parse_short_header(uint8_t *restrict work, const uint8_t *buf, size_t len,
-                                                    uint8_t dcid_len, QuicShortHeader *out)
+proto_bool protocore_quic_packet_parse_short_header(uint8_t *work, const uint8_t *buf, size_t len, uint8_t dcid_len,
+                                                    QuicShortHeader *out)
 {
     (void)work;
 
@@ -125,9 +124,9 @@ proto_bool protocore_quic_packet_parse_short_header(uint8_t *restrict work, cons
     return PROTO_TRUE;
 }
 
-size_t protocore_quic_packet_build_version_negotiation(uint8_t *restrict work, uint8_t *out, size_t cap,
-                                                       const uint8_t *dcid, uint8_t dcid_len, const uint8_t *scid,
-                                                       uint8_t scid_len, const uint32_t *versions, size_t nversions)
+size_t protocore_quic_packet_build_version_negotiation(uint8_t *work, uint8_t *out, size_t cap, const uint8_t *dcid,
+                                                       uint8_t dcid_len, const uint8_t *scid, uint8_t scid_len,
+                                                       const uint32_t *versions, size_t nversions)
 {
     (void)work;
 
@@ -157,7 +156,7 @@ size_t protocore_quic_packet_build_version_negotiation(uint8_t *restrict work, u
     return pos;
 }
 
-uint8_t protocore_quic_packet_pn_length(uint8_t *restrict work, uint64_t full_pn, int64_t largest_acked)
+uint8_t protocore_quic_packet_pn_length(uint8_t *work, uint64_t full_pn, int64_t largest_acked)
 {
     (void)work;
 
@@ -174,8 +173,7 @@ uint8_t protocore_quic_packet_pn_length(uint8_t *restrict work, uint64_t full_pn
     return 4;
 }
 
-size_t protocore_quic_packet_pn_encode(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t full_pn,
-                                       int64_t largest_acked)
+size_t protocore_quic_packet_pn_encode(uint8_t *work, uint8_t *out, size_t cap, uint64_t full_pn, int64_t largest_acked)
 {
     uint8_t quic_packet_u8 = QuicPacket.pn_length(work, full_pn, largest_acked);
     uint8_t n = quic_packet_u8;
@@ -190,8 +188,7 @@ size_t protocore_quic_packet_pn_encode(uint8_t *restrict work, uint8_t *out, siz
     return n;
 }
 
-uint64_t protocore_quic_packet_pn_decode(uint8_t *restrict work, uint64_t largest_pn, uint64_t truncated_pn,
-                                         uint8_t pn_nbits)
+uint64_t protocore_quic_packet_pn_decode(uint8_t *work, uint64_t largest_pn, uint64_t truncated_pn, uint8_t pn_nbits)
 {
     (void)work;
 

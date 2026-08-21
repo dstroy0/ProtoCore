@@ -33,10 +33,10 @@ static uint16_t get_u16(const uint8_t *p)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_nts_ef(uint8_t *restrict work);
-void protocore_nts_ke_record(uint8_t *restrict work);
+void protocore_nts_ef(uint8_t *work);
+void protocore_nts_ke_record(uint8_t *work);
 
-void protocore_nts_ke_record(uint8_t *restrict work)
+void protocore_nts_ke_record(uint8_t *work)
 {
     (void)work;
     proto_bool critical = NtsV.ke_record_args.critical;
@@ -66,7 +66,7 @@ void protocore_nts_ke_record(uint8_t *restrict work)
     NtsV.n = n;
 }
 
-void protocore_nts_ke_request(uint8_t *restrict work)
+void protocore_nts_ke_request(uint8_t *work)
 {
     uint8_t *out = NtsV.ke_request_args.out;
     size_t cap = NtsV.ke_request_args.cap;
@@ -123,7 +123,7 @@ void protocore_nts_ke_request(uint8_t *restrict work)
     NtsV.n = n;
 }
 
-void protocore_nts_ke_parse(uint8_t *restrict work)
+void protocore_nts_ke_parse(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = NtsV.ke_parse_args.buf;
@@ -158,7 +158,7 @@ void protocore_nts_ke_parse(uint8_t *restrict work)
     NtsV.ok = PROTO_FALSE; // no End-of-Message record
 }
 
-void protocore_nts_ef(uint8_t *restrict work)
+void protocore_nts_ef(uint8_t *work)
 {
     (void)work;
     uint16_t field_type = NtsV.ef_args.field_type;
@@ -193,7 +193,7 @@ void protocore_nts_ef(uint8_t *restrict work)
     NtsV.n = padded;
 }
 
-void protocore_nts_ef_unique_id(uint8_t *restrict work)
+void protocore_nts_ef_unique_id(uint8_t *work)
 {
     const uint8_t *nonce = NtsV.ef_unique_id_args.nonce;
     size_t nonce_len = NtsV.ef_unique_id_args.nonce_len;
@@ -208,7 +208,7 @@ void protocore_nts_ef_unique_id(uint8_t *restrict work)
     protocore_nts_ef(work);
 }
 
-void protocore_nts_ef_cookie(uint8_t *restrict work)
+void protocore_nts_ef_cookie(uint8_t *work)
 {
     const uint8_t *cookie = NtsV.ef_cookie_args.cookie;
     size_t cookie_len = NtsV.ef_cookie_args.cookie_len;

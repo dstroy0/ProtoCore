@@ -72,8 +72,8 @@ typedef struct
 
     proto_bool ok;
 
-    void (*const to_ip)(uint8_t *restrict work);
-    void (*const from_ip)(uint8_t *restrict work);
+    void (*const to_ip)(uint8_t *work);
+    void (*const from_ip)(uint8_t *work);
 } NetAddrNs;
 
 /** @brief The one symbol this module exports. */

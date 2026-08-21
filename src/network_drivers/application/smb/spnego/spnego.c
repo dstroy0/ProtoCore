@@ -92,8 +92,8 @@ static proto_bool der_read(const uint8_t *buf, size_t len, size_t *pos, uint8_t 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_spnego_wrap_negotiate(uint8_t *restrict work, const uint8_t *ntlm, size_t protocore_ntlm_len,
-                                       uint8_t *out, size_t cap)
+size_t protocore_spnego_wrap_negotiate(uint8_t *work, const uint8_t *ntlm, size_t protocore_ntlm_len, uint8_t *out,
+                                       size_t cap)
 {
     (void)work;
 
@@ -131,8 +131,8 @@ size_t protocore_spnego_wrap_negotiate(uint8_t *restrict work, const uint8_t *nt
     return p;
 }
 
-size_t protocore_spnego_wrap_authenticate(uint8_t *restrict work, const uint8_t *ntlm, size_t protocore_ntlm_len,
-                                          uint8_t *out, size_t cap)
+size_t protocore_spnego_wrap_authenticate(uint8_t *work, const uint8_t *ntlm, size_t protocore_ntlm_len, uint8_t *out,
+                                          size_t cap)
 {
     (void)work;
 
@@ -159,7 +159,7 @@ size_t protocore_spnego_wrap_authenticate(uint8_t *restrict work, const uint8_t 
     return p;
 }
 
-proto_bool protocore_spnego_parse_response(uint8_t *restrict work, const uint8_t *blob, size_t len,
+proto_bool protocore_spnego_parse_response(uint8_t *work, const uint8_t *blob, size_t len,
                                            const uint8_t **protocore_resp_token, size_t *protocore_resp_len)
 {
     (void)work;

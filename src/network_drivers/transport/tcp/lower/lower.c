@@ -66,7 +66,7 @@ static_assert(TCP_LOWER_OFF_CTX + sizeof(struct TcpLowerStorage) <= PROTOCORE_TC
 
 // True when the caller may run a raw stack op directly instead of marshaling. The stack has two
 // threading models and the answer differs, so branch on which one the framework built:
-static proto_bool on_stack_thread(const uint8_t *restrict work)
+static proto_bool on_stack_thread(const uint8_t *work)
 {
     return TCP_LOWER_CTX(work)->tcpip_task != NULL && protocore_platform_task_self() == TCP_LOWER_CTX(work)->tcpip_task;
 }
@@ -76,7 +76,7 @@ static proto_bool on_stack_thread(const uint8_t *restrict work)
 // been torn down, and writing through a freed block trips the stack's invalid-pcb assert. Re-check
 // here, in the context where teardown also runs. Looking the block up rather than reading the slot
 // is what RAWSEND needs, since it carries no slot.
-static proto_bool pcb_bound(const uint8_t *restrict work)
+static proto_bool pcb_bound(const uint8_t *work)
 {
     const protocore_pcb *pcb = TcpLowerV.pcb;
     if (pcb == NULL)
@@ -93,7 +93,7 @@ static proto_bool pcb_bound(const uint8_t *restrict work)
     return PROTO_FALSE;
 }
 
-static protocore_net_err protocore_tcp_do(uint8_t *restrict work)
+static protocore_net_err protocore_tcp_do(uint8_t *work)
 {
     TcpLowerV.result = PROTOCORE_NET_OK;
     if (TCP_LOWER_CTX(work)->tcpip_task ==
@@ -242,7 +242,7 @@ uint8_t *protocore_tcp_lower_span(void)
     return s_own.span;
 }
 
-void protocore_tcp_lower_marshal(uint8_t *restrict work)
+void protocore_tcp_lower_marshal(uint8_t *work)
 {
     // In stack context already (a raw callback's teardown reaching a send or a close): run the op
     // inline. Re-marshaling would call into the mailbox from the very thread that services it and
@@ -259,14 +259,14 @@ void protocore_tcp_lower_marshal(uint8_t *restrict work)
 
 // Disassociate the slot from this control block's stack callbacks before the slot is freed, so any
 // late callback for it finds a null arg and does nothing.
-void protocore_tcp_lower_detach(uint8_t *restrict work)
+void protocore_tcp_lower_detach(uint8_t *work)
 {
     TcpLowerV.op = PROTOCORE_OP_DETACH;
     protocore_tcp_lower_marshal(work);
 }
 
 // Hard reset (RST) for a fatal condition - no graceful FIN.
-void protocore_tcp_lower_abort(uint8_t *restrict work)
+void protocore_tcp_lower_abort(uint8_t *work)
 {
     TcpLowerV.op = PROTOCORE_OP_ABORT;
     protocore_tcp_lower_marshal(work);
@@ -274,7 +274,7 @@ void protocore_tcp_lower_abort(uint8_t *restrict work)
 
 // RFC 1122 sec 3.2.1.7: a datagram must leave with a non-zero TTL, so zero is refused rather than
 // stored and stamped onto every later connection. The candidate arrives in len.
-void protocore_tcp_lower_set_ttl(uint8_t *restrict work)
+void protocore_tcp_lower_set_ttl(uint8_t *work)
 {
     TcpLowerV.ok = PROTO_FALSE;
     if (TcpLowerV.len == 0 || TcpLowerV.len > 0xFFu)
@@ -286,7 +286,7 @@ void protocore_tcp_lower_set_ttl(uint8_t *restrict work)
 }
 
 // Stamp the control block the handle carries with the configured TTL.
-void protocore_tcp_lower_apply_ttl(uint8_t *restrict work)
+void protocore_tcp_lower_apply_ttl(uint8_t *work)
 {
     TcpLowerV.op = PROTOCORE_OP_SET_TTL;
     TcpLowerV.len = TCP_LOWER_CTX(work)->ttl;

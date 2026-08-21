@@ -118,26 +118,26 @@ extern SouthboundVars SouthboundV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const add)(uint8_t *restrict work);
-    void (*const clear)(uint8_t *restrict work);
-    void (*const count)(uint8_t *restrict work);
-    void (*const find)(uint8_t *restrict work);
-    void (*const read)(uint8_t *restrict work);
-    void (*const write)(uint8_t *restrict work);
-    void (*const read_block)(uint8_t *restrict work);
-    void (*const write_block)(uint8_t *restrict work);
+    void (*const add)(uint8_t *work);
+    void (*const clear)(uint8_t *work);
+    void (*const count)(uint8_t *work);
+    void (*const find)(uint8_t *work);
+    void (*const read)(uint8_t *work);
+    void (*const write)(uint8_t *work);
+    void (*const read_block)(uint8_t *work);
+    void (*const write_block)(uint8_t *work);
 } SouthboundNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SouthboundV or a region of the borrow at a fixed offset.
-void protocore_southbound_add(uint8_t *restrict work);
-void protocore_southbound_clear(uint8_t *restrict work);
-void protocore_southbound_count(uint8_t *restrict work);
-void protocore_southbound_find(uint8_t *restrict work);
-void protocore_southbound_read(uint8_t *restrict work);
-void protocore_southbound_write(uint8_t *restrict work);
-void protocore_southbound_read_block(uint8_t *restrict work);
-void protocore_southbound_write_block(uint8_t *restrict work);
+void protocore_southbound_add(uint8_t *work);
+void protocore_southbound_clear(uint8_t *work);
+void protocore_southbound_count(uint8_t *work);
+void protocore_southbound_find(uint8_t *work);
+void protocore_southbound_read(uint8_t *work);
+void protocore_southbound_write(uint8_t *work);
+void protocore_southbound_read_block(uint8_t *work);
+void protocore_southbound_write_block(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

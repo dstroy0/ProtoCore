@@ -57,7 +57,7 @@ static const uint16_t LAST4[16] = {0x0000, 0x1c20, 0x3840, 0x2460, 0x7080, 0x6ca
                                    0xe100, 0xfd20, 0xd940, 0xc560, 0x9180, 0x8da0, 0xa9c0, 0xb5e0};
 
 // Build the 4-bit multiplication table in the borrow from the subkey the args name.
-static void gf_key_init(uint8_t *restrict work)
+static void gf_key_init(uint8_t *work)
 {
     GhashCtx *t = GHASH_CTX(work);
     const uint8_t *h = GhashV.key_args.h;
@@ -101,7 +101,7 @@ static void gf_key_init(uint8_t *restrict work)
 
 // acc = acc * H in GF(2^128) with the GCM reduction, under the table in the borrow. The accumulator is
 // the caller's own buffer, so it is the one operand that stays a parameter.
-static void gf_mul(uint8_t *restrict work, uint8_t *acc)
+static void gf_mul(uint8_t *work, uint8_t *acc)
 {
     const GhashCtx *t = GHASH_CTX(work);
     uint8_t idx = acc[15] & 0x0f;
@@ -143,7 +143,7 @@ static void gf_mul(uint8_t *restrict work, uint8_t *acc)
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_ghash_key_init(uint8_t *restrict work)
+void protocore_ghash_key_init(uint8_t *work)
 {
     GhashV.ok = PROTO_FALSE;
     if (!GhashV.key_args.h)
@@ -154,7 +154,7 @@ void protocore_ghash_key_init(uint8_t *restrict work)
     GhashV.ok = PROTO_TRUE;
 }
 
-void protocore_ghash_mul(uint8_t *restrict work)
+void protocore_ghash_mul(uint8_t *work)
 {
     GhashV.ok = PROTO_FALSE;
     if (!GhashV.mul_args.acc)
@@ -166,7 +166,7 @@ void protocore_ghash_mul(uint8_t *restrict work)
 }
 
 // acc = (acc XOR block) * H per 16 bytes, a final short block MSB-zero-padded.
-void protocore_ghash_update(uint8_t *restrict work)
+void protocore_ghash_update(uint8_t *work)
 {
     GhashV.ok = PROTO_FALSE;
     if (!GhashV.update_args.acc)

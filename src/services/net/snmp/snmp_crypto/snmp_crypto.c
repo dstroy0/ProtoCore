@@ -33,7 +33,7 @@ PROTOCORE_BEGIN_DECLS
 
 // Ku = H( password repeated to 1,048,576 octets ), then Kul = H( Ku || snmpEngineID || Ku ), with
 // H = SHA-256. An empty password yields an all-zero key and reports false.
-void protocore_snmp_crypto_localize_key(uint8_t *restrict work)
+void protocore_snmp_crypto_localize_key(uint8_t *work)
 {
     (void)work;
     const char *password = SnmpCryptoV.key.password;
@@ -174,7 +174,7 @@ static void aes128_encrypt_block(const uint8_t rk[176], const uint8_t in[16], ui
 // CFB128: each block of input is XORed with the cipher applied to the feedback register, and the
 // ciphertext block becomes the next feedback. A trailing partial block takes as many keystream
 // octets as it has and ends the walk.
-void protocore_snmp_crypto_aes_cfb128(uint8_t *restrict work)
+void protocore_snmp_crypto_aes_cfb128(uint8_t *work)
 {
     (void)work;
     const uint8_t *in = SnmpCryptoV.priv.in;

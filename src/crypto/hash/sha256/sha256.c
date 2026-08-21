@@ -290,7 +290,7 @@ static void sha256_block(uint32_t h[8], const uint8_t blk[PROTOCORE_SHA256_BLOCK
 // --- framing (one arm, both compressions) ----------------------------------
 
 // Seed the state.
-static void sha256_state_init(uint8_t *restrict work)
+static void sha256_state_init(uint8_t *work)
 {
     Sha256Ctx *ctx = SHA256_CTX(work);
     mem.cpy(ctx->s, H0, sizeof(H0));
@@ -298,7 +298,7 @@ static void sha256_state_init(uint8_t *restrict work)
     ctx->rxlen = 0;
 }
 
-static void sha256_absorb(uint8_t *restrict work, const uint8_t *data, size_t len)
+static void sha256_absorb(uint8_t *work, const uint8_t *data, size_t len)
 {
     Sha256Ctx *ctx = SHA256_CTX(work);
     uint8_t *rx = SHA256_RX(work);
@@ -324,7 +324,7 @@ static void sha256_absorb(uint8_t *restrict work, const uint8_t *data, size_t le
     }
 }
 
-static void sha256_finish(uint8_t *restrict work, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN])
+static void sha256_finish(uint8_t *work, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN])
 {
     Sha256Ctx *ctx = SHA256_CTX(work);
     uint8_t *rx = SHA256_RX(work);
@@ -364,19 +364,19 @@ static void sha256_finish(uint8_t *restrict work, uint8_t digest[PROTOCORE_SHA25
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_sha256_init(uint8_t *restrict work)
+proto_bool protocore_sha256_init(uint8_t *work)
 {
     sha256_state_init(work);
     return PROTO_TRUE;
 }
 
-proto_bool protocore_sha256_update(uint8_t *restrict work, const uint8_t *data, size_t len)
+proto_bool protocore_sha256_update(uint8_t *work, const uint8_t *data, size_t len)
 {
     sha256_absorb(work, data, len);
     return PROTO_TRUE;
 }
 
-proto_bool protocore_sha256_final(uint8_t *restrict work, uint8_t *out)
+proto_bool protocore_sha256_final(uint8_t *work, uint8_t *out)
 {
     if (!out)
     {
@@ -387,7 +387,7 @@ proto_bool protocore_sha256_final(uint8_t *restrict work, uint8_t *out)
 }
 
 // One-shot over the members already set: init, absorb, finish.
-proto_bool protocore_sha256_hash(uint8_t *restrict work, const uint8_t *data, size_t len, uint8_t *out)
+proto_bool protocore_sha256_hash(uint8_t *work, const uint8_t *data, size_t len, uint8_t *out)
 {
     if (!out)
     {

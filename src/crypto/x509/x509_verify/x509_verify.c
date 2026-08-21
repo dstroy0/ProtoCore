@@ -188,7 +188,7 @@ static proto_bool ecdsa_sig_split(const uint8_t *der, size_t len, uint8_t out[PR
 // under its issuer's key and a TLS CertificateVerify under a leaf's key are the same operation, so
 // the algorithm dispatch is written once and both entries below reach it.
 static void verify_under(const X509Cert *signer, protocore_x509_sig_alg alg, const uint8_t *msg, size_t msg_len,
-                         const uint8_t *sig, size_t sig_len, uint8_t *restrict work)
+                         const uint8_t *sig, size_t sig_len, uint8_t *work)
 {
     switch (alg)
     {
@@ -262,7 +262,7 @@ static void verify_under(const X509Cert *signer, protocore_x509_sig_alg alg, con
     }
 }
 
-void protocore_x509_verify_signature(uint8_t *restrict work)
+void protocore_x509_verify_signature(uint8_t *work)
 {
     const X509Cert *cert = X509VerifyV.link_args.cert;
     const X509Cert *issuer = X509VerifyV.link_args.issuer;
@@ -274,7 +274,7 @@ void protocore_x509_verify_signature(uint8_t *restrict work)
     verify_under(issuer, cert->sig_alg, cert->tbs.p, cert->tbs.len, cert->sig.p, cert->sig.len, work);
 }
 
-void protocore_x509_verify_message(uint8_t *restrict work)
+void protocore_x509_verify_message(uint8_t *work)
 {
     const X509Cert *signer = X509VerifyV.message_args.signer;
     const uint8_t *msg = X509VerifyV.message_args.msg;
@@ -288,7 +288,7 @@ void protocore_x509_verify_message(uint8_t *restrict work)
                  X509VerifyV.message_args.sig_len, work);
 }
 
-void protocore_x509_verify_validity(uint8_t *restrict work)
+void protocore_x509_verify_validity(uint8_t *work)
 {
     (void)work;
     const X509Cert *cert = X509VerifyV.time_args.cert;
@@ -313,7 +313,7 @@ void protocore_x509_verify_validity(uint8_t *restrict work)
     verdict(PROTOCORE_X509_OK);
 }
 
-void protocore_x509_verify_may_sign(uint8_t *restrict work)
+void protocore_x509_verify_may_sign(uint8_t *work)
 {
     (void)work;
     const X509Cert *issuer = X509VerifyV.issuer_args.issuer;
@@ -346,7 +346,7 @@ void protocore_x509_verify_may_sign(uint8_t *restrict work)
     verdict(PROTOCORE_X509_OK);
 }
 
-void protocore_x509_verify_link(uint8_t *restrict work)
+void protocore_x509_verify_link(uint8_t *work)
 {
     const X509Cert *cert = X509VerifyV.link_args.cert;
     const X509Cert *issuer = X509VerifyV.link_args.issuer;

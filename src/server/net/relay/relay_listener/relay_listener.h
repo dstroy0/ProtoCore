@@ -27,8 +27,8 @@ PROTOCORE_BEGIN_DECLS
  * Security: this is an open forward to whatever origin you publish - only publish trusted internal
  * targets, and do not expose the front port to an untrusted network without an upstream ACL.
  *
- * @c work is PROTOCORE_RELAY_LISTENER_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * @c work is PROTOCORE_RELAY_LISTENER_BORROW bytes the CALLER took, at an address it knows. It is not held past the
+call, so nothing here aliases it. How those bytes are
  * carved is this module's and is never named here.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -38,8 +38,8 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*publish)(uint8_t *restrict, uint8_t, const char *, uint16_t);
-    void (*reset)(uint8_t *restrict);
+    proto_bool (*publish)(uint8_t *, uint8_t, const char *, uint16_t);
+    void (*reset)(uint8_t *);
 } RelayListenerNs;
 PROTOCORE_NS_LAYOUT(RelayListenerNs, publish, reset);
 
@@ -51,13 +51,13 @@ PROTOCORE_NS_LAYOUT(RelayListenerNs, publish, reset);
  * @param origin_port the internal port
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_relay_listener_publish(uint8_t *restrict work, uint8_t listener_id, const char *origin_host,
+proto_bool protocore_relay_listener_publish(uint8_t *work, uint8_t listener_id, const char *origin_host,
                                             uint16_t origin_port);
 /**
  * @brief Clear all published binds and active bridges (start from empty).
  * @param work PROTOCORE_RELAY_LISTENER_BORROW bytes the caller took. Not held past the call.
  */
-void protocore_relay_listener_reset(uint8_t *restrict work);
+void protocore_relay_listener_reset(uint8_t *work);
 
 /**
  * @brief The PROTOCORE_RELAY_LISTENER_BORROW bytes this module's state lives in.

@@ -157,7 +157,7 @@ uint8_t *protocore_gateway_span(void)
     return s_own.span;
 }
 
-void protocore_gateway_reset(uint8_t *restrict work)
+void protocore_gateway_reset(uint8_t *work)
 {
 
     mem.set(GATEWAY_CTX(work)->ports, 0, sizeof(GATEWAY_CTX(work)->ports));
@@ -168,7 +168,7 @@ void protocore_gateway_reset(uint8_t *restrict work)
     mem.set(&GATEWAY_CTX(work)->stats, 0, sizeof(GATEWAY_CTX(work)->stats));
 }
 
-proto_bool protocore_gateway_add_port(uint8_t *restrict work, const protocore_gateway_port_config *cfg)
+proto_bool protocore_gateway_add_port(uint8_t *work, const protocore_gateway_port_config *cfg)
 {
     if (!cfg || find_port(GATEWAY_CTX(work), cfg->port_id))
     {
@@ -193,20 +193,20 @@ proto_bool protocore_gateway_add_port(uint8_t *restrict work, const protocore_ga
     return PROTO_FALSE; // table full
 }
 
-void protocore_gateway_set_uplink_cb(uint8_t *restrict work, protocore_gateway_uplink_fn fn, void *ctx)
+void protocore_gateway_set_uplink_cb(uint8_t *work, protocore_gateway_uplink_fn fn, void *ctx)
 {
 
     GATEWAY_CTX(work)->uplink = fn;
     GATEWAY_CTX(work)->uplink_ctx = ctx;
 }
 
-void protocore_gateway_set_topic_prefix(uint8_t *restrict work, const char *prefix)
+void protocore_gateway_set_topic_prefix(uint8_t *work, const char *prefix)
 {
 
     GATEWAY_CTX(work)->prefix = prefix ? prefix : PROTOCORE_GW_DEFAULT_PREFIX;
 }
 
-proto_bool protocore_gateway_uplink(uint8_t *restrict work, uint8_t port_id, uint16_t src_addr, const uint8_t *payload,
+proto_bool protocore_gateway_uplink(uint8_t *work, uint8_t port_id, uint16_t src_addr, const uint8_t *payload,
                                     uint16_t len, int16_t rssi)
 {
     GATEWAY_CTX(work)->stats.up_in++;
@@ -233,8 +233,8 @@ proto_bool protocore_gateway_uplink(uint8_t *restrict work, uint8_t port_id, uin
     return PROTO_FALSE;
 }
 
-proto_bool protocore_gateway_downlink(uint8_t *restrict work, uint8_t port_id, uint16_t dst_addr,
-                                      const uint8_t *payload, uint16_t len)
+proto_bool protocore_gateway_downlink(uint8_t *work, uint8_t port_id, uint16_t dst_addr, const uint8_t *payload,
+                                      uint16_t len)
 {
     GATEWAY_CTX(work)->stats.down_in++;
     port *p = find_port(GATEWAY_CTX(work), port_id);
@@ -247,7 +247,7 @@ proto_bool protocore_gateway_downlink(uint8_t *restrict work, uint8_t port_id, u
     return PROTO_TRUE;
 }
 
-uint16_t protocore_gateway_topic(uint8_t *restrict work, const protocore_gateway_msg *msg, char *buf, uint16_t buflen)
+uint16_t protocore_gateway_topic(uint8_t *work, const protocore_gateway_msg *msg, char *buf, uint16_t buflen)
 {
     if (!msg || !buf || buflen == 0)
     {
@@ -287,7 +287,7 @@ uint16_t protocore_gateway_topic(uint8_t *restrict work, const protocore_gateway
     return pos;
 }
 
-void protocore_gateway_get_stats(uint8_t *restrict work, protocore_gateway_stats *out)
+void protocore_gateway_get_stats(uint8_t *work, protocore_gateway_stats *out)
 {
 
     if (out)

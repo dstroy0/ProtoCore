@@ -104,14 +104,14 @@ int bn_cmp_raw(const uint32_t *a, const uint32_t *b, int n)
 // --- the helpers, over the staged operands ---------------------------------
 
 // Order the staged magnitudes, leaving the sign of a - b in the context.
-static void bignum_order(uint8_t *restrict work)
+static void bignum_order(uint8_t *work)
 {
     struct BignumCtx *ctx = BIGNUM_CTX(work);
     ctx->sign = bn_cmp_raw(ctx->a, ctx->b, ctx->n);
 }
 
 // Hand the staged operands to the backend the vendor linked.
-static void bignum_expmod(uint8_t *restrict work)
+static void bignum_expmod(uint8_t *work)
 {
     struct BignumCtx *ctx = BIGNUM_CTX(work);
     bn_expmod_group14(ctx->out, ctx->base, ctx->exp);
@@ -119,7 +119,7 @@ static void bignum_expmod(uint8_t *restrict work)
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_bignum_from_bytes(uint8_t *restrict work)
+void protocore_bignum_from_bytes(uint8_t *work)
 {
     BignumV.ok = PROTO_FALSE;
     if (!BignumV.from_bytes_args.out || !BignumV.from_bytes_args.bytes)
@@ -141,7 +141,7 @@ void protocore_bignum_from_bytes(uint8_t *restrict work)
     BignumV.ok = PROTO_TRUE;
 }
 
-void protocore_bignum_to_bytes(uint8_t *restrict work)
+void protocore_bignum_to_bytes(uint8_t *work)
 {
     BignumV.ok = PROTO_FALSE;
     if (!BignumV.to_bytes_args.bytes || !BignumV.to_bytes_args.in)
@@ -162,7 +162,7 @@ void protocore_bignum_to_bytes(uint8_t *restrict work)
     BignumV.ok = PROTO_TRUE;
 }
 
-void protocore_bignum_cmp(uint8_t *restrict work)
+void protocore_bignum_cmp(uint8_t *work)
 {
     BignumV.ok = PROTO_FALSE;
     if (!BignumV.cmp_args.a || !BignumV.cmp_args.b)
@@ -178,7 +178,7 @@ void protocore_bignum_cmp(uint8_t *restrict work)
     BignumV.ok = PROTO_TRUE;
 }
 
-void protocore_bignum_cmp_raw(uint8_t *restrict work)
+void protocore_bignum_cmp_raw(uint8_t *work)
 {
     BignumV.ok = PROTO_FALSE;
     if (!BignumV.cmp_raw_args.a || !BignumV.cmp_raw_args.b)
@@ -194,7 +194,7 @@ void protocore_bignum_cmp_raw(uint8_t *restrict work)
     BignumV.ok = PROTO_TRUE;
 }
 
-void protocore_bignum_is_zero(uint8_t *restrict work)
+void protocore_bignum_is_zero(uint8_t *work)
 {
     BignumV.ok = PROTO_FALSE;
     BignumV.zero = PROTO_FALSE;
@@ -216,7 +216,7 @@ void protocore_bignum_is_zero(uint8_t *restrict work)
     BignumV.ok = PROTO_TRUE;
 }
 
-void protocore_bignum_expmod_group14(uint8_t *restrict work)
+void protocore_bignum_expmod_group14(uint8_t *work)
 {
     BignumV.ok = PROTO_FALSE;
     if (!BignumV.expmod_args.out || !BignumV.expmod_args.base || !BignumV.expmod_args.exp)
@@ -232,7 +232,7 @@ void protocore_bignum_expmod_group14(uint8_t *restrict work)
 }
 
 // RFC 4253 §8: the received value e (or f) must satisfy 1 < e < p-1.
-void protocore_bignum_dh_validate(uint8_t *restrict work)
+void protocore_bignum_dh_validate(uint8_t *work)
 {
     BignumV.ok = PROTO_FALSE;
     if (!BignumV.validate_args.v)

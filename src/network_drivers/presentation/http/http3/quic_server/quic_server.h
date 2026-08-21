@@ -120,11 +120,11 @@ typedef struct
     proto_bool ok;
     uint8_t u8;
 
-    void (*const begin)(uint8_t *restrict work);
-    void (*const poll)(uint8_t *restrict work);
-    void (*const respond)(uint8_t *restrict work);
-    void (*const active_conns)(uint8_t *restrict work);
-    void (*const stop)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *work);
+    void (*const poll)(uint8_t *work);
+    void (*const respond)(uint8_t *work);
+    void (*const active_conns)(uint8_t *work);
+    void (*const stop)(uint8_t *work);
 
 } QuicServerNs;
 

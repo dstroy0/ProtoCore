@@ -44,13 +44,13 @@ uint8_t *protocore_hotswap_span(void)
     return s_own.span;
 }
 
-void protocore_hotswap_core_init(uint8_t *restrict work);
-void protocore_hotswap_core_io(uint8_t *restrict work);
-void protocore_hotswap_core_probe(uint8_t *restrict work);
-void protocore_hotswap_poll_at(uint8_t *restrict work);
-void protocore_hotswap_state_name(uint8_t *restrict work);
+void protocore_hotswap_core_init(uint8_t *work);
+void protocore_hotswap_core_io(uint8_t *work);
+void protocore_hotswap_core_probe(uint8_t *work);
+void protocore_hotswap_poll_at(uint8_t *work);
+void protocore_hotswap_state_name(uint8_t *work);
 
-void protocore_hotswap_core_init(uint8_t *restrict work)
+void protocore_hotswap_core_init(uint8_t *work)
 {
     (void)work;
     HotswapCore *c = HotswapV.core_init_args.c;
@@ -73,7 +73,7 @@ void protocore_hotswap_core_init(uint8_t *restrict work)
     c->faults = 0;
 }
 
-void protocore_hotswap_core_io(uint8_t *restrict work)
+void protocore_hotswap_core_io(uint8_t *work)
 {
     (void)work;
     HotswapCore *c = HotswapV.core_io_args.c;
@@ -108,7 +108,7 @@ void protocore_hotswap_core_io(uint8_t *restrict work)
     HotswapV.ok = PROTO_TRUE;
 }
 
-void protocore_hotswap_core_due(uint8_t *restrict work)
+void protocore_hotswap_core_due(uint8_t *work)
 {
     (void)work;
     const HotswapCore *c = HotswapV.core_due_args.c;
@@ -123,7 +123,7 @@ void protocore_hotswap_core_due(uint8_t *restrict work)
     HotswapV.ok = (now - c->last_probe_ms) >= c->probe_interval_ms;
 }
 
-void protocore_hotswap_core_probe(uint8_t *restrict work)
+void protocore_hotswap_core_probe(uint8_t *work)
 {
     (void)work;
     HotswapCore *c = HotswapV.core_probe_args.c;
@@ -190,7 +190,7 @@ static_assert(HOTSWAP_OFF_CTX % _Alignof(HotswapCtx) == 0,
 // The region, at its offset in the caller's borrow.
 #define HOTSWAP_CTX(w) ((HotswapCtx *)(void *)((w) + HOTSWAP_OFF_CTX))
 
-static void hs_notify(uint8_t *restrict work, StorageState from, StorageState to)
+static void hs_notify(uint8_t *work, StorageState from, StorageState to)
 {
     // `from != to` has no false branch to reach: both call sites (poll_at, io) only invoke hs_notify
     // after protocore_hotswap_core_probe / protocore_hotswap_core_io reported an actual state change.
@@ -200,7 +200,7 @@ static void hs_notify(uint8_t *restrict work, StorageState from, StorageState to
     }
 }
 
-void protocore_hotswap_begin(uint8_t *restrict work)
+void protocore_hotswap_begin(uint8_t *work)
 {
     protocore_hotswap_mount mount = HotswapV.begin_args.mount;
     protocore_hotswap_unmount unmount = HotswapV.begin_args.unmount;
@@ -219,14 +219,14 @@ void protocore_hotswap_begin(uint8_t *restrict work)
     protocore_hotswap_core_init(work);
 }
 
-void protocore_hotswap_set_event_cb(uint8_t *restrict work)
+void protocore_hotswap_set_event_cb(uint8_t *work)
 {
     protocore_hotswap_event cb = HotswapV.set_event_cb_args.cb;
 
     HOTSWAP_CTX(work)->event = cb;
 }
 
-void protocore_hotswap_poll_at(uint8_t *restrict work)
+void protocore_hotswap_poll_at(uint8_t *work)
 {
     uint32_t now = HotswapV.poll_at_args.now;
 
@@ -270,20 +270,20 @@ void protocore_hotswap_poll_at(uint8_t *restrict work)
     }
 }
 
-void protocore_hotswap_poll(uint8_t *restrict work)
+void protocore_hotswap_poll(uint8_t *work)
 {
 
     HotswapV.poll_at_args.now = Clock.ms;
     protocore_hotswap_poll_at(work);
 }
 
-void protocore_hotswap_ready(uint8_t *restrict work)
+void protocore_hotswap_ready(uint8_t *work)
 {
 
     HotswapV.ok = HOTSWAP_CTX(work)->core.state == STORAGE_STATE_READY;
 }
 
-void protocore_hotswap_io(uint8_t *restrict work)
+void protocore_hotswap_io(uint8_t *work)
 {
     proto_bool ok = HotswapV.io_args.ok;
 
@@ -304,13 +304,13 @@ void protocore_hotswap_io(uint8_t *restrict work)
     hs_notify(work, was, HOTSWAP_CTX(work)->core.state);
 }
 
-void protocore_hotswap_state(uint8_t *restrict work)
+void protocore_hotswap_state(uint8_t *work)
 {
 
     HotswapV.value = HOTSWAP_CTX(work)->core.state;
 }
 
-void protocore_hotswap_state_name(uint8_t *restrict work)
+void protocore_hotswap_state_name(uint8_t *work)
 {
     (void)work;
     StorageState s = HotswapV.state_name_args.s;
@@ -330,7 +330,7 @@ void protocore_hotswap_state_name(uint8_t *restrict work)
     }
 }
 
-void protocore_hotswap_json(uint8_t *restrict work)
+void protocore_hotswap_json(uint8_t *work)
 {
     char *out = HotswapV.json_args.out;
     size_t cap = HotswapV.json_args.cap;

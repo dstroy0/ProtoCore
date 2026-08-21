@@ -74,7 +74,7 @@ static void hex_of(const uint8_t *in, uint32_t n, char *out)
 }
 
 // Hex of the truncated HMAC-SHA256(secret, nonce) into sig_hex (2*CSRF_SIG_BYTES + 1).
-static void sign_nonce(uint8_t *restrict work, const uint8_t *nonce, size_t nlen, char *sig_hex)
+static void sign_nonce(uint8_t *work, const uint8_t *nonce, size_t nlen, char *sig_hex)
 {
     const CsrfCtx *c = CSRF_CTX(work);
     uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
@@ -106,7 +106,7 @@ uint8_t *protocore_csrf_span(void)
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_csrf_set_secret(uint8_t *restrict work)
+void protocore_csrf_set_secret(uint8_t *work)
 {
     CsrfV.ok = PROTO_FALSE;
     CsrfCtx *c = CSRF_CTX(work);
@@ -123,7 +123,7 @@ void protocore_csrf_set_secret(uint8_t *restrict work)
     CsrfV.ok = PROTO_TRUE;
 }
 
-void protocore_csrf_issue(uint8_t *restrict work)
+void protocore_csrf_issue(uint8_t *work)
 {
     CsrfV.ok = PROTO_FALSE;
     CsrfV.n = 0;
@@ -155,7 +155,7 @@ void protocore_csrf_issue(uint8_t *restrict work)
     CsrfV.ok = (CsrfV.n > 0);
 }
 
-void protocore_csrf_verify(uint8_t *restrict work)
+void protocore_csrf_verify(uint8_t *work)
 {
     CsrfV.ok = PROTO_FALSE;
     CsrfV.valid = PROTO_FALSE;
@@ -205,7 +205,7 @@ void protocore_csrf_verify(uint8_t *restrict work)
     CsrfV.ok = PROTO_TRUE;
 }
 
-void protocore_csrf_reset(uint8_t *restrict work)
+void protocore_csrf_reset(uint8_t *work)
 {
     CsrfV.ok = PROTO_FALSE;
     CsrfCtx *c = CSRF_CTX(work);

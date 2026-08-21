@@ -12,7 +12,7 @@
 
 #include "shared/time_compat/time_compat.h"
 
-void protocore_time_compat_gmtime(uint8_t *restrict work)
+void protocore_time_compat_gmtime(uint8_t *work)
 {
     (void)work;
     const time_t epoch = TimeCompatV.args.epoch;

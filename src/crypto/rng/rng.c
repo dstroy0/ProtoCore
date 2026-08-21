@@ -81,14 +81,14 @@ typedef struct
 static RngOwnCtx s_rng;
 
 // One keystream run through the Chacha20 namespace.
-static void rng_chacha(uint8_t *restrict work, const uint8_t *key, const uint8_t *iv, uint64_t counter,
-                       const uint8_t *in, uint8_t *out, size_t len)
+static void rng_chacha(uint8_t *work, const uint8_t *key, const uint8_t *iv, uint64_t counter, const uint8_t *in,
+                       uint8_t *out, size_t len)
 {
     Chacha20.xor_(RNG_CHACHA(work), key, iv, counter, in, out, len);
 }
 
 // Redraw the seed and its nonce from the platform, and start the budget over.
-static void rng_platform_seed(uint8_t *restrict work)
+static void rng_platform_seed(uint8_t *work)
 {
     RngCtx *ctx = RNG_CTX(work);
     protocore_platform_rand_fill(RNG_KEY(work), RNG_SEEDED_LEN);
@@ -117,7 +117,7 @@ uint8_t *protocore_rng_span(void)
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_rng_fill(uint8_t *restrict work)
+void protocore_rng_fill(uint8_t *work)
 {
     RngV.ok = PROTO_FALSE;
     if (!RngV.fill_args.out || RngV.fill_args.len == 0)
@@ -141,7 +141,7 @@ void protocore_rng_fill(uint8_t *restrict work)
     RngV.ok = PROTO_TRUE;
 }
 
-void protocore_rng_reseed(uint8_t *restrict work)
+void protocore_rng_reseed(uint8_t *work)
 {
     RngV.ok = PROTO_FALSE;
     rng_platform_seed(work);

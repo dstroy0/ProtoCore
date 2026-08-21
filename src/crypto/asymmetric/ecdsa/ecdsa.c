@@ -78,8 +78,7 @@ static_assert(ECDSA_OFF_HMAC + PROTOCORE_HMAC_SHA256_BORROW <= PROTOCORE_ECDSA_B
 #define ECDSA_HMAC(w) ((w) + ECDSA_OFF_HMAC)
 
 // SHA-256 of one message through the Sha256 namespace, into the region at ECDSA_OFF_HASH.
-static void ecdsa_hash_msg(uint8_t *restrict work, const uint8_t *msg, size_t mlen,
-                           uint8_t out[PROTOCORE_SHA256_DIGEST_LEN])
+static void ecdsa_hash_msg(uint8_t *work, const uint8_t *msg, size_t mlen, uint8_t out[PROTOCORE_SHA256_DIGEST_LEN])
 {
     Sha256.hash(ECDSA_HASH(work), msg, mlen, out);
 }
@@ -617,8 +616,8 @@ static proto_bool on_curve(const uint32_t x[8], const uint32_t y[8])
 
 // out = HMAC-SHA256(key, V || (tag>=0 ? tag||x||e : nothing)), the MAC driven through the HmacSha256
 // namespace out of the caller's bytes at ECDSA_OFF_HMAC.
-static void protocore_hmac_cat(uint8_t *restrict work, uint8_t out[32], const uint8_t key[32], const uint8_t *v,
-                               size_t vlen, const int tag, const uint8_t *x, const uint8_t *e)
+static void protocore_hmac_cat(uint8_t *work, uint8_t out[32], const uint8_t key[32], const uint8_t *v, size_t vlen,
+                               const int tag, const uint8_t *x, const uint8_t *e)
 {
     uint8_t buf[97]; // 32 (V) + 1 (tag) + 32 (x) + 32 (e)
     size_t n = 0;
@@ -685,7 +684,7 @@ static proto_bool ecdsa_try_sign(const uint32_t k[8], const uint32_t d[8], const
 }
 
 // ECDSA core: sign hash h1 (32) with scalar d, deterministic k per RFC 6979. Requires ecdsa_hw_on().
-static proto_bool ecdsa_sign_core(uint8_t *restrict work, uint8_t sig[64], const uint8_t h1[32], const uint32_t d[8])
+static proto_bool ecdsa_sign_core(uint8_t *work, uint8_t sig[64], const uint8_t h1[32], const uint32_t d[8])
 {
     uint32_t e[8];
     uint32_t etmp[8];
@@ -728,7 +727,7 @@ static proto_bool ecdsa_sign_core(uint8_t *restrict work, uint8_t sig[64], const
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_ecdsa_pubkey(uint8_t *restrict work, const uint8_t *priv, uint8_t *pub)
+proto_bool protocore_ecdsa_pubkey(uint8_t *work, const uint8_t *priv, uint8_t *pub)
 {
     if (!pub || !priv)
     {
@@ -761,8 +760,7 @@ proto_bool protocore_ecdsa_pubkey(uint8_t *restrict work, const uint8_t *priv, u
     return ok;
 }
 
-proto_bool protocore_ecdsa_sign(uint8_t *restrict work, const uint8_t *msg, size_t mlen, const uint8_t *priv,
-                                uint8_t *sig)
+proto_bool protocore_ecdsa_sign(uint8_t *work, const uint8_t *msg, size_t mlen, const uint8_t *priv, uint8_t *sig)
 {
     if (!sig || !priv)
     {
@@ -784,7 +782,7 @@ proto_bool protocore_ecdsa_sign(uint8_t *restrict work, const uint8_t *msg, size
     return ok;
 }
 
-proto_bool protocore_ecdsa_verify(uint8_t *restrict work, const uint8_t *pub, const uint8_t *msg, size_t mlen,
+proto_bool protocore_ecdsa_verify(uint8_t *work, const uint8_t *pub, const uint8_t *msg, size_t mlen,
                                   const uint8_t *sig)
 {
     if (!pub || !sig)
@@ -854,7 +852,7 @@ proto_bool protocore_ecdsa_verify(uint8_t *restrict work, const uint8_t *pub, co
     return ok;
 }
 
-proto_bool protocore_ecdsa_ecdh(uint8_t *restrict work, const uint8_t *peer_pub, const uint8_t *priv, uint8_t *shared_x)
+proto_bool protocore_ecdsa_ecdh(uint8_t *work, const uint8_t *peer_pub, const uint8_t *priv, uint8_t *shared_x)
 {
     if (!shared_x || !peer_pub || !priv)
     {

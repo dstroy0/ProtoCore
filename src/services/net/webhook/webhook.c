@@ -81,7 +81,7 @@ static proto_bool json_append_escaped(char *out, size_t cap, size_t *pos, const 
 
 // Build "https://maker.ifttt.com/trigger/<event>/with/key/<key>" into the build region: an https
 // URI (RFC 9110 sec 4.2.2) whose last two segments are the event and the key.
-void protocore_webhook_ifttt_url(uint8_t *restrict work)
+void protocore_webhook_ifttt_url(uint8_t *work)
 {
     (void)work;
     char *out = WebhookV.build.out;
@@ -117,7 +117,7 @@ void protocore_webhook_ifttt_url(uint8_t *restrict work)
 // Build the object {"value1":..,"value2":..,"value3":..} into the build region: begin-object,
 // members separated by a value-separator, end-object (RFC 8259 sec 4). A NULL value omits its
 // member, so three NULLs yield {}.
-void protocore_webhook_ifttt_payload(uint8_t *restrict work)
+void protocore_webhook_ifttt_payload(uint8_t *work)
 {
     (void)work;
     char *out = WebhookV.build.out;
@@ -167,7 +167,7 @@ void protocore_webhook_ifttt_payload(uint8_t *restrict work)
 // POST the content to the target URI (RFC 9110 sec 9.3.3), typed application/json
 // (RFC 9110 sec 8.3), its length measured for the Content-Length the client sends
 // (RFC 9110 sec 8.6). Reports the status code (RFC 9110 sec 15.1) or a negative transport error.
-void protocore_webhook_post(uint8_t *restrict work)
+void protocore_webhook_post(uint8_t *work)
 {
     (void)work;
     const char *target_uri = WebhookV.request.target_uri;
@@ -185,7 +185,7 @@ void protocore_webhook_post(uint8_t *restrict work)
 #else // no outbound HTTP client in this build
 
 // Nothing can be sent, so every POST reports -1 and no request is formed.
-void protocore_webhook_post(uint8_t *restrict work)
+void protocore_webhook_post(uint8_t *work)
 {
     (void)work;
     WebhookV.i32 = -1;
@@ -196,7 +196,7 @@ void protocore_webhook_post(uint8_t *restrict work)
 // Build the target URI and the object into this call's own frames, then POST them. A build that
 // does not fit reports -1 and sends nothing. The frames die at return, so the handle stops naming
 // them before the call ends.
-void protocore_webhook_ifttt_trigger(uint8_t *restrict work)
+void protocore_webhook_ifttt_trigger(uint8_t *work)
 {
     char uri[PROTOCORE_WEBHOOK_URI_CAP];
     char content[PROTOCORE_WEBHOOK_CONTENT_CAP];

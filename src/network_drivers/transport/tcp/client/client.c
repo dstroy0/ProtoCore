@@ -82,7 +82,7 @@ struct TcpClientStorage
 };
 
 // The private step every public call runs first, named here so the binding below can reach it.
-static void cc_pump(uint8_t *restrict work);
+static void cc_pump(uint8_t *work);
 
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
 // region is that pointer plus a compile-time offset, so the assert below proves the span
@@ -280,7 +280,7 @@ static uint32_t cc_now(void)
     return Clock.ms;
 }
 
-static void cc_pump(uint8_t *restrict work)
+static void cc_pump(uint8_t *work)
 {
     ClientConn *c = TCP_CLIENT_CTX(work)->conn;
     if (!c->in_use || c->connected || c->closed)
@@ -325,7 +325,7 @@ static void cc_pump(uint8_t *restrict work)
     }
 }
 
-void protocore_tcp_client_open(uint8_t *restrict work)
+void protocore_tcp_client_open(uint8_t *work)
 {
     if (TcpClientV.dial.host == NULL)
     {
@@ -362,7 +362,7 @@ void protocore_tcp_client_open(uint8_t *restrict work)
     cc_pump(work); // a name that needs no query connects here, in the opening call
 }
 
-void protocore_tcp_client_connected(uint8_t *restrict work)
+void protocore_tcp_client_connected(uint8_t *work)
 {
     if (TcpClientV.cid < 0 || TcpClientV.cid >= PROTOCORE_CLIENT_CONNS ||
         !TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use)
@@ -375,7 +375,7 @@ void protocore_tcp_client_connected(uint8_t *restrict work)
     TcpClientV.ok = TCP_CLIENT_CTX(work)->conn->connected && !TCP_CLIENT_CTX(work)->conn->closed;
 }
 
-void protocore_tcp_client_is_closed(uint8_t *restrict work)
+void protocore_tcp_client_is_closed(uint8_t *work)
 {
     if (TcpClientV.cid < 0 || TcpClientV.cid >= PROTOCORE_CLIENT_CONNS)
     {
@@ -387,7 +387,7 @@ void protocore_tcp_client_is_closed(uint8_t *restrict work)
     TcpClientV.ok = TCP_CLIENT_CTX(work)->conn->closed;
 }
 
-void protocore_tcp_client_send(uint8_t *restrict work)
+void protocore_tcp_client_send(uint8_t *work)
 {
     if (TcpClientV.cid < 0 || TcpClientV.cid >= PROTOCORE_CLIENT_CONNS ||
         !TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use)
@@ -404,7 +404,7 @@ void protocore_tcp_client_send(uint8_t *restrict work)
     TcpClientV.ok = k.result == PROTOCORE_NET_OK;
 }
 
-void protocore_tcp_client_available(uint8_t *restrict work)
+void protocore_tcp_client_available(uint8_t *work)
 {
     if (TcpClientV.cid < 0 || TcpClientV.cid >= PROTOCORE_CLIENT_CONNS)
     {
@@ -420,7 +420,7 @@ void protocore_tcp_client_available(uint8_t *restrict work)
                                             PROTOCORE_CLIENT_RX_BUF);
 }
 
-void protocore_tcp_client_read(uint8_t *restrict work)
+void protocore_tcp_client_read(uint8_t *work)
 {
     if (TcpClientV.cid < 0 || TcpClientV.cid >= PROTOCORE_CLIENT_CONNS)
     {
@@ -443,7 +443,7 @@ void protocore_tcp_client_read(uint8_t *restrict work)
     }
 }
 
-void protocore_tcp_client_close(uint8_t *restrict work)
+void protocore_tcp_client_close(uint8_t *work)
 {
     if (TcpClientV.cid < 0 || TcpClientV.cid >= PROTOCORE_CLIENT_CONNS ||
         !TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use)

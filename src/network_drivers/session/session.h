@@ -61,16 +61,16 @@ extern ProtocolsVars ProtocolsV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const register_builtins)(uint8_t *restrict work);
-    void (*const add)(uint8_t *restrict work);
-    void (*const get)(uint8_t *restrict work);
+    void (*const register_builtins)(uint8_t *work);
+    void (*const add)(uint8_t *work);
+    void (*const get)(uint8_t *work);
 } ProtoRegistryNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in ProtocolsV or a region of the borrow at a fixed offset.
-void protocore_protocols_register_builtins(uint8_t *restrict work);
-void protocore_protocols_add(uint8_t *restrict work);
-void protocore_protocols_get(uint8_t *restrict work);
+void protocore_protocols_register_builtins(uint8_t *work);
+void protocore_protocols_add(uint8_t *work);
+void protocore_protocols_get(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -254,12 +254,12 @@ extern SessionVars SessionV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const tick)(uint8_t *restrict work);
+    void (*const tick)(uint8_t *work);
 } SessionNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SessionV or a region of the borrow at a fixed offset.
-void protocore_session_tick(uint8_t *restrict work);
+void protocore_session_tick(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

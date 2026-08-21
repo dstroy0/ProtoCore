@@ -84,11 +84,10 @@ typedef struct
  * @var CsrfNs::verify       recompute the HMAC over the embedded nonce and compare in constant time
  * @var CsrfNs::reset        clear the secret and the nonce counter
  *
- * @c work is PROTOCORE_CSRF_BORROW secure bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. The secret is in those
- * bytes rather than in this module, so a caller takes them once for the life of the program and
- * every call runs out of the same span. The caller releases it, and the pool wipes on release; this
- * module neither takes it, holds it, nor releases it.
+ * @c work is PROTOCORE_CSRF_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. The secret is in those bytes rather than in this module, so a caller takes them once for
+ * the life of the program and every call runs out of the same span. The caller releases it, and the pool wipes on
+ * release; this module neither takes it, holds it, nor releases it.
  *
  * No storage member and no context: a caller sets operands and reads @ref CsrfNs::ok, and that is
  * all the surface there is.
@@ -109,18 +108,18 @@ extern CsrfVars CsrfV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const set_secret)(uint8_t *restrict work);
-    void (*const issue)(uint8_t *restrict work);
-    void (*const verify)(uint8_t *restrict work);
-    void (*const reset)(uint8_t *restrict work);
+    void (*const set_secret)(uint8_t *work);
+    void (*const issue)(uint8_t *work);
+    void (*const verify)(uint8_t *work);
+    void (*const reset)(uint8_t *work);
 } CsrfNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in CsrfV or a region of the borrow at a fixed offset.
-void protocore_csrf_set_secret(uint8_t *restrict work);
-void protocore_csrf_issue(uint8_t *restrict work);
-void protocore_csrf_verify(uint8_t *restrict work);
-void protocore_csrf_reset(uint8_t *restrict work);
+void protocore_csrf_set_secret(uint8_t *work);
+void protocore_csrf_issue(uint8_t *work);
+void protocore_csrf_verify(uint8_t *work);
+void protocore_csrf_reset(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

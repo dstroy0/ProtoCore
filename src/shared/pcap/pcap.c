@@ -11,7 +11,7 @@
 
 #include "shared/pcap/pcap.h"
 
-void protocore_pcap_global_header(uint8_t *restrict work)
+void protocore_pcap_global_header(uint8_t *work)
 {
     (void)work;
     uint8_t *out = PcapV.args.out;
@@ -31,7 +31,7 @@ void protocore_pcap_global_header(uint8_t *restrict work)
     PcapV.n = PROTOCORE_PCAP_GLOBAL_HDR_LEN;
 }
 
-void protocore_pcap_record_header(uint8_t *restrict work)
+void protocore_pcap_record_header(uint8_t *work)
 {
     (void)work;
     uint8_t *out = PcapV.args.out;

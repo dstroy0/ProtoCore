@@ -133,15 +133,15 @@ uint8_t *protocore_ld2410_span(void)
 }
 
 // The entries this file calls before reaching their definitions.
-static void ld2410_cmd_config_enable(uint8_t *restrict work);
-static void ld2410_cmd_config_end(uint8_t *restrict work);
-static void ld2410_cmd_engineering(uint8_t *restrict work);
-static void ld2410_cmd_restart(uint8_t *restrict work);
-static void ld2410_parse_report(uint8_t *restrict work);
-static void ld2410_stream_push(uint8_t *restrict work);
-static void ld2410_stream_reset(uint8_t *restrict work);
+static void ld2410_cmd_config_enable(uint8_t *work);
+static void ld2410_cmd_config_end(uint8_t *work);
+static void ld2410_cmd_engineering(uint8_t *work);
+static void ld2410_cmd_restart(uint8_t *work);
+static void ld2410_parse_report(uint8_t *work);
+static void ld2410_stream_push(uint8_t *work);
+static void ld2410_stream_reset(uint8_t *work);
 
-static void ld2410_parse_report(uint8_t *restrict work)
+static void ld2410_parse_report(uint8_t *work)
 {
     (void)work;
     const uint8_t *f = Ld2410.parse_report_args.frame;
@@ -238,7 +238,7 @@ static void ld2410_parse_report(uint8_t *restrict work)
     Ld2410.ok = PROTO_TRUE;
 }
 
-static void ld2410_stream_reset(uint8_t *restrict work)
+static void ld2410_stream_reset(uint8_t *work)
 {
     (void)work;
     Ld2410Stream *s = Ld2410.stream_reset_args.s;
@@ -249,7 +249,7 @@ static void ld2410_stream_reset(uint8_t *restrict work)
     s->phase = 0;
 }
 
-static void ld2410_stream_push(uint8_t *restrict work)
+static void ld2410_stream_push(uint8_t *work)
 {
     (void)work;
     Ld2410Stream *s = Ld2410.stream_push_args.s;
@@ -315,7 +315,7 @@ static void ld2410_stream_push(uint8_t *restrict work)
     }
 }
 
-static void ld2410_present(uint8_t *restrict work)
+static void ld2410_present(uint8_t *work)
 {
     (void)work;
     const Ld2410Report *r = Ld2410.present_args.r;
@@ -323,7 +323,7 @@ static void ld2410_present(uint8_t *restrict work)
     Ld2410.ok = r && r->state != LD2410_STATE_NONE;
 }
 
-static void ld2410_distance_cm(uint8_t *restrict work)
+static void ld2410_distance_cm(uint8_t *work)
 {
     (void)work;
     const Ld2410Report *r = Ld2410.distance_cm_args.r;
@@ -346,7 +346,7 @@ static void ld2410_distance_cm(uint8_t *restrict work)
     Ld2410.cm = 0;
 }
 
-static void ld2410_cmd_config_enable(uint8_t *restrict work)
+static void ld2410_cmd_config_enable(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Ld2410.cmd_config_enable_args.buf;
@@ -355,7 +355,7 @@ static void ld2410_cmd_config_enable(uint8_t *restrict work)
     static const uint8_t v[2] = {0x01, 0x00}; // value 0x0001
     Ld2410.n = cmd_frame(buf, cap, 0x00FF, v, 2);
 }
-static void ld2410_cmd_config_end(uint8_t *restrict work)
+static void ld2410_cmd_config_end(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Ld2410.cmd_config_end_args.buf;
@@ -363,7 +363,7 @@ static void ld2410_cmd_config_end(uint8_t *restrict work)
 
     Ld2410.n = cmd_frame(buf, cap, 0x00FE, NULL, 0);
 }
-static void ld2410_cmd_engineering(uint8_t *restrict work)
+static void ld2410_cmd_engineering(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Ld2410.cmd_engineering_args.buf;
@@ -372,7 +372,7 @@ static void ld2410_cmd_engineering(uint8_t *restrict work)
 
     Ld2410.n = cmd_frame(buf, cap, on ? 0x0062 : 0x0063, NULL, 0);
 }
-static void ld2410_cmd_restart(uint8_t *restrict work)
+static void ld2410_cmd_restart(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Ld2410.cmd_restart_args.buf;
@@ -382,7 +382,7 @@ static void ld2410_cmd_restart(uint8_t *restrict work)
 }
 
 // --- LD2410B-only ----------------------------------------------------------
-static void ld2410_cmd_bluetooth(uint8_t *restrict work)
+static void ld2410_cmd_bluetooth(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Ld2410.cmd_bluetooth_args.buf;
@@ -393,7 +393,7 @@ static void ld2410_cmd_bluetooth(uint8_t *restrict work)
     Ld2410.n = cmd_frame(buf, cap, 0x00A4, v, 2);
 }
 
-static void ld2410_cmd_get_mac(uint8_t *restrict work)
+static void ld2410_cmd_get_mac(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Ld2410.cmd_get_mac_args.buf;
@@ -403,7 +403,7 @@ static void ld2410_cmd_get_mac(uint8_t *restrict work)
     Ld2410.n = cmd_frame(buf, cap, 0x00A5, v, 2);
 }
 
-static void ld2410_cmd_set_bt_password(uint8_t *restrict work)
+static void ld2410_cmd_set_bt_password(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Ld2410.cmd_set_bt_password_args.buf;
@@ -422,7 +422,7 @@ static void ld2410_cmd_set_bt_password(uint8_t *restrict work)
 }
 
 // --- command-ACK decoding --------------------------------------------------
-static void ld2410_parse_ack(uint8_t *restrict work)
+static void ld2410_parse_ack(uint8_t *work)
 {
     (void)work;
     const uint8_t *f = Ld2410.parse_ack_args.frame;
@@ -465,7 +465,7 @@ static void ld2410_parse_ack(uint8_t *restrict work)
     Ld2410.ok = PROTO_TRUE;
 }
 
-static void ld2410_ack_ok(uint8_t *restrict work)
+static void ld2410_ack_ok(uint8_t *work)
 {
     (void)work;
     const Ld2410Ack *ack = Ld2410.ack_ok_args.ack;
@@ -473,7 +473,7 @@ static void ld2410_ack_ok(uint8_t *restrict work)
     Ld2410.ok = ack && ack->status == 0;
 }
 
-static void ld2410_ack_mac(uint8_t *restrict work)
+static void ld2410_ack_mac(uint8_t *work)
 {
     (void)work;
     const Ld2410Ack *ack = Ld2410.ack_mac_args.ack;
@@ -497,7 +497,7 @@ static void ld2410_ack_mac(uint8_t *restrict work)
 
 #if PROTOCORE_HAS_BUS
 
-static void ld2410_begin(uint8_t *restrict work)
+static void ld2410_begin(uint8_t *work)
 {
     int rx_pin = Ld2410.begin_args.rx_pin;
     int tx_pin = Ld2410.begin_args.tx_pin;
@@ -508,7 +508,7 @@ static void ld2410_begin(uint8_t *restrict work)
     Ld2410.ok = protocore_uart_begin((uint8_t)PROTOCORE_LD2410_UART, PROTOCORE_LD2410_BAUD, rx_pin, tx_pin);
 }
 
-static void ld2410_poll(uint8_t *restrict work)
+static void ld2410_poll(uint8_t *work)
 {
 
     proto_bool fresh = PROTO_FALSE;
@@ -531,7 +531,7 @@ static void ld2410_poll(uint8_t *restrict work)
     Ld2410.ok = fresh;
 }
 
-static void ld2410_last(uint8_t *restrict work)
+static void ld2410_last(uint8_t *work)
 {
 
     Ld2410.report = LD2410_CTX(work)->have ? &LD2410_CTX(work)->last : NULL;
@@ -539,12 +539,12 @@ static void ld2410_last(uint8_t *restrict work)
 
 // A configuration change is three frames: open the config window, carry the change, close it.
 // Each is built into the owned command buffer and put on the wire before the next is built.
-static proto_bool send_cmd(uint8_t *restrict work, size_t n)
+static proto_bool send_cmd(uint8_t *work, size_t n)
 {
     return n > 0 && protocore_uart_write((uint8_t)PROTOCORE_LD2410_UART, LD2410_CTX(work)->cmd, n);
 }
 
-static void ld2410_set_engineering(uint8_t *restrict work)
+static void ld2410_set_engineering(uint8_t *work)
 {
     proto_bool on = Ld2410.set_engineering_args.on;
 
@@ -564,7 +564,7 @@ static void ld2410_set_engineering(uint8_t *restrict work)
     Ld2410.ok = ok;
 }
 
-static void ld2410_restart(uint8_t *restrict work)
+static void ld2410_restart(uint8_t *work)
 {
 
     Ld2410.cmd_config_enable_args.buf = LD2410_CTX(work)->cmd;
@@ -590,7 +590,7 @@ static void ld2410_restart(uint8_t *restrict work)
 // did not compile at all. Nothing noticed, because every host env states
 // PROTOCORE_PLATFORM_HAS_BUS 1. The flat five were declared by no header and called by nothing.
 
-static void ld2410_begin(uint8_t *restrict work)
+static void ld2410_begin(uint8_t *work)
 {
     // The stream still resets: the reassembler is pure, so a caller that pushes captured bytes at
     // it after begin() gets the same answers here as it does with a radio wired up.
@@ -600,26 +600,26 @@ static void ld2410_begin(uint8_t *restrict work)
     Ld2410.ok = PROTO_FALSE; // no UART was opened, and no caller should act as though one was
 }
 
-static void ld2410_poll(uint8_t *restrict work)
+static void ld2410_poll(uint8_t *work)
 {
     (void)work;
     Ld2410.ok = PROTO_FALSE; // nothing to read from
 }
 
-static void ld2410_last(uint8_t *restrict work)
+static void ld2410_last(uint8_t *work)
 {
     // Whatever the reassembler last accepted, exactly as the bus arm reports it: a report only ever
     // arrives through stream_push, which does not need the seam.
     Ld2410.report = LD2410_CTX(work)->have ? &LD2410_CTX(work)->last : NULL;
 }
 
-static void ld2410_set_engineering(uint8_t *restrict work)
+static void ld2410_set_engineering(uint8_t *work)
 {
     (void)work;
     Ld2410.ok = PROTO_FALSE; // the three config frames build fine; there is nowhere to send them
 }
 
-static void ld2410_restart(uint8_t *restrict work)
+static void ld2410_restart(uint8_t *work)
 {
     (void)work;
     Ld2410.ok = PROTO_FALSE;

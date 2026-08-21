@@ -142,30 +142,30 @@ extern Lwm2mTlvVars Lwm2mTlvV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const open)(uint8_t *restrict work);
-    void (*const write)(uint8_t *restrict work);
-    void (*const write_integer)(uint8_t *restrict work);
-    void (*const write_boolean)(uint8_t *restrict work);
-    void (*const write_string)(uint8_t *restrict work);
-    void (*const write_float)(uint8_t *restrict work);
-    void (*const finish)(uint8_t *restrict work);
-    void (*const parse)(uint8_t *restrict work);
-    void (*const next)(uint8_t *restrict work);
-    void (*const value_integer)(uint8_t *restrict work);
+    void (*const open)(uint8_t *work);
+    void (*const write)(uint8_t *work);
+    void (*const write_integer)(uint8_t *work);
+    void (*const write_boolean)(uint8_t *work);
+    void (*const write_string)(uint8_t *work);
+    void (*const write_float)(uint8_t *work);
+    void (*const finish)(uint8_t *work);
+    void (*const parse)(uint8_t *work);
+    void (*const next)(uint8_t *work);
+    void (*const value_integer)(uint8_t *work);
 } Lwm2mTlvNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Lwm2mTlvV or a region of the borrow at a fixed offset.
-void protocore_lwm2m_tlv_open(uint8_t *restrict work);
-void protocore_lwm2m_tlv_write(uint8_t *restrict work);
-void protocore_lwm2m_tlv_write_integer(uint8_t *restrict work);
-void protocore_lwm2m_tlv_write_boolean(uint8_t *restrict work);
-void protocore_lwm2m_tlv_write_string(uint8_t *restrict work);
-void protocore_lwm2m_tlv_write_float(uint8_t *restrict work);
-void protocore_lwm2m_tlv_finish(uint8_t *restrict work);
-void protocore_lwm2m_tlv_parse(uint8_t *restrict work);
-void protocore_lwm2m_tlv_next(uint8_t *restrict work);
-void protocore_lwm2m_tlv_value_integer(uint8_t *restrict work);
+void protocore_lwm2m_tlv_open(uint8_t *work);
+void protocore_lwm2m_tlv_write(uint8_t *work);
+void protocore_lwm2m_tlv_write_integer(uint8_t *work);
+void protocore_lwm2m_tlv_write_boolean(uint8_t *work);
+void protocore_lwm2m_tlv_write_string(uint8_t *work);
+void protocore_lwm2m_tlv_write_float(uint8_t *work);
+void protocore_lwm2m_tlv_finish(uint8_t *work);
+void protocore_lwm2m_tlv_parse(uint8_t *work);
+void protocore_lwm2m_tlv_next(uint8_t *work);
+void protocore_lwm2m_tlv_value_integer(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

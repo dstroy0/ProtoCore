@@ -21,10 +21,10 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_hostlink_build(uint8_t *restrict work);
-void protocore_hostlink_fcs(uint8_t *restrict work);
+void protocore_hostlink_build(uint8_t *work);
+void protocore_hostlink_fcs(uint8_t *work);
 
-void protocore_hostlink_fcs(uint8_t *restrict work)
+void protocore_hostlink_fcs(uint8_t *work)
 {
     (void)work;
     const char *data = HostlinkV.fcs_args.data;
@@ -61,7 +61,7 @@ static int hex_val(char c)
     return -1;
 }
 
-void protocore_hostlink_build(uint8_t *restrict work)
+void protocore_hostlink_build(uint8_t *work)
 {
     char *buf = HostlinkV.build_args.buf;
     size_t cap = HostlinkV.build_args.cap;
@@ -110,7 +110,7 @@ void protocore_hostlink_build(uint8_t *restrict work)
     HostlinkV.n = p;
 }
 
-void protocore_hostlink_parse(uint8_t *restrict work)
+void protocore_hostlink_parse(uint8_t *work)
 {
     const char *buf = HostlinkV.parse_args.buf;
     size_t len = HostlinkV.parse_args.len;
@@ -160,7 +160,7 @@ void protocore_hostlink_parse(uint8_t *restrict work)
     HostlinkV.ok = PROTO_TRUE;
 }
 
-void protocore_hostlink_end_code(uint8_t *restrict work)
+void protocore_hostlink_end_code(uint8_t *work)
 {
     (void)work;
     const HostlinkFrame *f = HostlinkV.end_code_args.f;
@@ -185,7 +185,7 @@ void protocore_hostlink_end_code(uint8_t *restrict work)
     HostlinkV.ok = PROTO_TRUE;
 }
 
-void protocore_hostlink_build_read(uint8_t *restrict work)
+void protocore_hostlink_build_read(uint8_t *work)
 {
     char *buf = HostlinkV.build_read_args.buf;
     size_t cap = HostlinkV.build_read_args.cap;
@@ -216,7 +216,7 @@ void protocore_hostlink_build_read(uint8_t *restrict work)
     protocore_hostlink_build(work);
 }
 
-void protocore_hostlink_read_word(uint8_t *restrict work)
+void protocore_hostlink_read_word(uint8_t *work)
 {
     (void)work;
     const HostlinkFrame *f = HostlinkV.read_word_args.f;
@@ -246,7 +246,7 @@ void protocore_hostlink_read_word(uint8_t *restrict work)
     HostlinkV.ok = PROTO_TRUE;
 }
 
-void protocore_hostlink_build_write(uint8_t *restrict work)
+void protocore_hostlink_build_write(uint8_t *work)
 {
     char *buf = HostlinkV.build_write_args.buf;
     size_t cap = HostlinkV.build_write_args.cap;

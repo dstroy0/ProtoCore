@@ -173,7 +173,7 @@ uint8_t *protocore_statsd_span(void)
 }
 
 // Parse the daemon address and store the port and the tag list every later line carries.
-void protocore_statsd_init(uint8_t *restrict work)
+void protocore_statsd_init(uint8_t *work)
 {
     STATSD_CTX(work)->ready = PROTO_FALSE;
     StatsdV.ok = PROTO_FALSE;
@@ -198,7 +198,7 @@ void protocore_statsd_init(uint8_t *restrict work)
 }
 
 // Build one metric line into ns->line, and report its length in ns->n.
-void protocore_statsd_format(uint8_t *restrict work)
+void protocore_statsd_format(uint8_t *work)
 {
     (void)work;
     char *out = StatsdV.line.out;
@@ -258,7 +258,7 @@ void protocore_statsd_format(uint8_t *restrict work)
 }
 
 // Stamp the stored tag list, format into the client's line storage, and send it as one datagram.
-static void statsd_emit(uint8_t *restrict work)
+static void statsd_emit(uint8_t *work)
 {
     StatsdV.ok = PROTO_FALSE;
     StatsdV.n = 0;
@@ -284,7 +284,7 @@ static void statsd_emit(uint8_t *restrict work)
 }
 
 // Add value.i64 to the bucket, annotated with metric.rate.
-void protocore_statsd_count(uint8_t *restrict work)
+void protocore_statsd_count(uint8_t *work)
 {
     STATSD_CTX(work)->val[i64_str(STATSD_CTX(work)->val, StatsdV.value.i64)] = '\0';
     StatsdV.value.text = STATSD_CTX(work)->val;
@@ -293,7 +293,7 @@ void protocore_statsd_count(uint8_t *restrict work)
 }
 
 // Assign value.i64 to the bucket.
-void protocore_statsd_gauge(uint8_t *restrict work)
+void protocore_statsd_gauge(uint8_t *work)
 {
     STATSD_CTX(work)->val[i64_str(STATSD_CTX(work)->val, StatsdV.value.i64)] = '\0';
     StatsdV.value.text = STATSD_CTX(work)->val;
@@ -303,7 +303,7 @@ void protocore_statsd_gauge(uint8_t *restrict work)
 }
 
 // Adjust the bucket by value.i64, the sign written so the daemon adds rather than assigns.
-void protocore_statsd_gauge_delta(uint8_t *restrict work)
+void protocore_statsd_gauge_delta(uint8_t *work)
 {
     STATSD_CTX(work)->val[i64_delta_str(STATSD_CTX(work)->val, StatsdV.value.i64)] = '\0';
     StatsdV.value.text = STATSD_CTX(work)->val;
@@ -313,7 +313,7 @@ void protocore_statsd_gauge_delta(uint8_t *restrict work)
 }
 
 // Record value.ms milliseconds.
-void protocore_statsd_timing(uint8_t *restrict work)
+void protocore_statsd_timing(uint8_t *work)
 {
     STATSD_CTX(work)->val[u64_str(STATSD_CTX(work)->val, StatsdV.value.ms)] = '\0';
     StatsdV.value.text = STATSD_CTX(work)->val;
@@ -323,7 +323,7 @@ void protocore_statsd_timing(uint8_t *restrict work)
 }
 
 // Count value.member as one unique occurrence. The member is sent where it lies, not copied.
-void protocore_statsd_set(uint8_t *restrict work)
+void protocore_statsd_set(uint8_t *work)
 {
     StatsdV.value.text = StatsdV.value.member ? StatsdV.value.member : "";
     StatsdV.metric.type = STATSD_SET;

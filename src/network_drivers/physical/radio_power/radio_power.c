@@ -65,7 +65,7 @@ uint8_t *protocore_radio_power_span(void)
     return s_own.span;
 }
 
-static void radio_ps_name(uint8_t *restrict work)
+static void radio_ps_name(uint8_t *work)
 {
     switch (Radio.ps.mode)
     {
@@ -82,7 +82,7 @@ static void radio_ps_name(uint8_t *restrict work)
     }
 }
 
-static void radio_power(uint8_t *restrict work)
+static void radio_power(uint8_t *work)
 {
     protocore_phy_ps_set((protocore_phy_ps)PROTOCORE_RADIO_WIFI_PS);
 #if PROTOCORE_RADIO_MAX_TX_DBM > 0
@@ -90,7 +90,7 @@ static void radio_power(uint8_t *restrict work)
 #endif
 }
 
-static void radio_busy_hold(uint8_t *restrict work)
+static void radio_busy_hold(uint8_t *work)
 {
     if (RADIO_POWER_CTX(work)->held == 0)
     {
@@ -99,7 +99,7 @@ static void radio_busy_hold(uint8_t *restrict work)
     RADIO_POWER_CTX(work)->held++;
 }
 
-static void radio_busy_release(uint8_t *restrict work)
+static void radio_busy_release(uint8_t *work)
 {
     if (RADIO_POWER_CTX(work)->held > 0)
     {
@@ -112,18 +112,18 @@ static void radio_busy_release(uint8_t *restrict work)
 }
 
 // 802.11-2020 6.3.2.2 MLME-POWERMGT.request: select active mode or PS mode.
-static void radio_ps_set(uint8_t *restrict work)
+static void radio_ps_set(uint8_t *work)
 {
     Radio.ok = protocore_phy_ps_set(Radio.ps.mode);
 }
 
-static void radio_ps_mode(uint8_t *restrict work)
+static void radio_ps_mode(uint8_t *work)
 {
     Radio.mode = protocore_phy_ps_get();
 }
 
 // 802.11-2020 11.7.6 transmit power selection, bounded by 11.7.5.
-static void radio_tx_power_set(uint8_t *restrict work)
+static void radio_tx_power_set(uint8_t *work)
 {
     Radio.ok = protocore_phy_tx_power_set(Radio.tx.dbm);
 }

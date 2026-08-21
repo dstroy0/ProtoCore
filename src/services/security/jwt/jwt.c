@@ -90,7 +90,7 @@ static proto_bool jws_split(const char *jws, size_t jws_len, JwsParts *parts)
 // RFC 7515 sec 4.1.1: `alg` names the algorithm that secures the JWS, and RFC 8725 sec 3.1 requires
 // the operation performed to be the one it names. Decode the header segment and demand HS256
 // (RFC 7518 sec 3.1), which settles `none`, RS256 and every other substitution before the MAC runs.
-static proto_bool alg_is_hs256(uint8_t *restrict work, const char *header, size_t header_len)
+static proto_bool alg_is_hs256(uint8_t *work, const char *header, size_t header_len)
 {
     uint8_t buf[JWT_JOSE_HDR_CAP];
     Base64V.url_decode_args.src = header;
@@ -153,7 +153,7 @@ static const char *bearer_token(const char *credentials)
 // Decode the JWS Payload into @p buf and return the first character of claim @p name's value, or
 // NULL when the token is malformed or the claim is absent (RFC 7519 sec 4: the claims are the
 // members of the JSON object the payload carries).
-static const char *claim_value(uint8_t *restrict work, const char *jws, size_t jws_len, const char *name, uint8_t *buf,
+static const char *claim_value(uint8_t *work, const char *jws, size_t jws_len, const char *name, uint8_t *buf,
                                size_t buf_cap)
 {
     if (!jws || !name)
@@ -202,7 +202,7 @@ static const char *claim_value(uint8_t *restrict work, const char *jws, size_t j
 
 // The integer claim @p name, or false when the claim is absent or its value is not a number. Both
 // claim reads and the time-claim check go through this one scan.
-static proto_bool claim_num(uint8_t *restrict work, const char *jws, size_t jws_len, const char *name, long *out)
+static proto_bool claim_num(uint8_t *work, const char *jws, size_t jws_len, const char *name, long *out)
 {
     uint8_t buf[PROTOCORE_JWT_MAX_LEN];
     const char *v = claim_value(work, jws, jws_len, name, buf, sizeof(buf));
@@ -223,7 +223,7 @@ static proto_bool claim_num(uint8_t *restrict work, const char *jws, size_t jws_
 // RFC 7515 sec 5.2: the JWS Signature is validated against the JWS Signing Input under the
 // algorithm `alg` names. RFC 7518 sec 3.2: that MAC is HMAC-SHA-256 of the signing input under the
 // shared key, and the comparison against the signature is constant time.
-void protocore_jwt_verify_mac(uint8_t *restrict work)
+void protocore_jwt_verify_mac(uint8_t *work)
 {
     (void)work;
     const char *jws = JwtV.token.jws;
@@ -279,7 +279,7 @@ void protocore_jwt_verify_mac(uint8_t *restrict work)
 }
 
 // The same validation on the b64token inside the Authorization field value (RFC 6750 sec 2.1).
-void protocore_jwt_verify_bearer(uint8_t *restrict work)
+void protocore_jwt_verify_bearer(uint8_t *work)
 {
     const char *tok = bearer_token(JwtV.token.credentials);
     if (!tok)
@@ -298,7 +298,7 @@ void protocore_jwt_verify_bearer(uint8_t *restrict work)
 // keeps a far-future NumericDate inside `long`, and each claim is tested for a positive NumericDate
 // first, which keeps the subtraction's other operand inside it too: a date at or before the epoch
 // is expired for `exp` and no constraint for `nbf`.
-void protocore_jwt_time_claims_valid(uint8_t *restrict work)
+void protocore_jwt_time_claims_valid(uint8_t *work)
 {
     (void)work;
     const char *jws = JwtV.token.jws;
@@ -326,7 +326,7 @@ void protocore_jwt_time_claims_valid(uint8_t *restrict work)
 }
 
 // The MAC first, then the time claims: a token that fails either is not accepted.
-void protocore_jwt_verify_mac_at(uint8_t *restrict work)
+void protocore_jwt_verify_mac_at(uint8_t *work)
 {
     protocore_jwt_verify_mac(work);
     if (!JwtV.ok)
@@ -336,7 +336,7 @@ void protocore_jwt_verify_mac_at(uint8_t *restrict work)
     protocore_jwt_time_claims_valid(work);
 }
 
-void protocore_jwt_verify_bearer_at(uint8_t *restrict work)
+void protocore_jwt_verify_bearer_at(uint8_t *work)
 {
     protocore_jwt_verify_bearer(work);
     if (!JwtV.ok)
@@ -346,7 +346,7 @@ void protocore_jwt_verify_bearer_at(uint8_t *restrict work)
     protocore_jwt_time_claims_valid(work);
 }
 
-void protocore_jwt_claim_int(uint8_t *restrict work)
+void protocore_jwt_claim_int(uint8_t *work)
 {
     (void)work;
     long v = 0;
@@ -359,7 +359,7 @@ void protocore_jwt_claim_int(uint8_t *restrict work)
 
 // The claim's value copied out as text: a backslash is dropped and the character after it taken
 // literally.
-void protocore_jwt_claim_str(uint8_t *restrict work)
+void protocore_jwt_claim_str(uint8_t *work)
 {
     (void)work;
     char *out = JwtV.claim.out;
@@ -399,7 +399,7 @@ void protocore_jwt_claim_str(uint8_t *restrict work)
 // RFC 6749 sec 3.3: a scope is a list of space-delimited, case-sensitive strings, which is the
 // syntax RFC 8693 sec 4.2 gives the `scope` claim. The match is on a whole token, so a prefix of one
 // never passes.
-void protocore_jwt_scope_allows(uint8_t *restrict work)
+void protocore_jwt_scope_allows(uint8_t *work)
 {
     (void)work;
     const char *claim = JwtV.scope.claim;

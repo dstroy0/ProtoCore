@@ -49,13 +49,13 @@ static_assert(HAPPY_EYEBALLS_OFF_CTX % _Alignof(HappyEyeballsCtx) == 0,
 #define HAPPY_EYEBALLS_CTX(w) ((HappyEyeballsCtx *)(void *)((w) + HAPPY_EYEBALLS_OFF_CTX))
 
 // Effective family for interleave: an IPv4-mapped IPv6 address is treated as IPv4.
-static proto_bool eff_is_v6(uint8_t *restrict work)
+static proto_bool eff_is_v6(uint8_t *work)
 {
     return HAPPY_EYEBALLS_CTX(work)->ip->family == PROTOCORE_IP_V6 &&
            !protocore_ip_is_v4_mapped(HAPPY_EYEBALLS_CTX(work)->ip);
 }
 
-static int scope_rank(uint8_t *restrict work)
+static int scope_rank(uint8_t *work)
 {
     IpV.args.ip = HAPPY_EYEBALLS_CTX(work)->ip;
     Ip.classify(work);
@@ -78,7 +78,7 @@ static int scope_rank(uint8_t *restrict work)
 
 // The score of the address staged on the context. Scope dominates; within a scope a native IPv6
 // outranks IPv4 (RFC 6724 default policy).
-static int pref_of(uint8_t *restrict work)
+static int pref_of(uint8_t *work)
 {
     if (!HAPPY_EYEBALLS_CTX(work)->ip || HAPPY_EYEBALLS_CTX(work)->ip->family == PROTOCORE_IP_NONE)
     {
@@ -107,7 +107,7 @@ uint8_t *protocore_happy_eyeballs_span(void)
     return s_own.span;
 }
 
-void protocore_happy_eyeballs_pref(uint8_t *restrict work)
+void protocore_happy_eyeballs_pref(uint8_t *work)
 {
     const protocore_ip *ip = HappyEyeballsV.pref_args.ip;
 
@@ -115,7 +115,7 @@ void protocore_happy_eyeballs_pref(uint8_t *restrict work)
     HappyEyeballsV.n = pref_of(work);
 }
 
-void protocore_happy_eyeballs_order(uint8_t *restrict work)
+void protocore_happy_eyeballs_order(uint8_t *work)
 {
     protocore_ip *list = HappyEyeballsV.order_args.list;
     size_t n = HappyEyeballsV.order_args.n;
@@ -202,7 +202,7 @@ void protocore_happy_eyeballs_order(uint8_t *restrict work)
     }
 }
 
-void protocore_happy_eyeballs_attempt_due(uint8_t *restrict work)
+void protocore_happy_eyeballs_attempt_due(uint8_t *work)
 {
     (void)work;
     uint32_t last_start_ms = HappyEyeballsV.attempt_due_args.last_start_ms;

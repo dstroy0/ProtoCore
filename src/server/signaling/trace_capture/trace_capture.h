@@ -118,22 +118,22 @@ extern TraceCaptureVars TraceCaptureV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const begin)(uint8_t *restrict work);
-    void (*const feed_in)(uint8_t *restrict work);
-    void (*const trigger)(uint8_t *restrict work);
-    void (*const get_stats)(uint8_t *restrict work);
-    void (*const capturing)(uint8_t *restrict work);
-    void (*const end)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *work);
+    void (*const feed_in)(uint8_t *work);
+    void (*const trigger)(uint8_t *work);
+    void (*const get_stats)(uint8_t *work);
+    void (*const capturing)(uint8_t *work);
+    void (*const end)(uint8_t *work);
 } TraceCaptureNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in TraceCaptureV or a region of the borrow at a fixed offset.
-void protocore_trace_capture_begin(uint8_t *restrict work);
-void protocore_trace_capture_feed_in(uint8_t *restrict work);
-void protocore_trace_capture_trigger(uint8_t *restrict work);
-void protocore_trace_capture_get_stats(uint8_t *restrict work);
-void protocore_trace_capture_capturing(uint8_t *restrict work);
-void protocore_trace_capture_end(uint8_t *restrict work);
+void protocore_trace_capture_begin(uint8_t *work);
+void protocore_trace_capture_feed_in(uint8_t *work);
+void protocore_trace_capture_trigger(uint8_t *work);
+void protocore_trace_capture_get_stats(uint8_t *work);
+void protocore_trace_capture_capturing(uint8_t *work);
+void protocore_trace_capture_end(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

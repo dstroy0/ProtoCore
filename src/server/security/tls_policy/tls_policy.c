@@ -20,7 +20,7 @@ PROTOCORE_BEGIN_DECLS
 // --- the entries -----------------------------------------------------------
 
 // The highest version this server supports that the client can also reach; the borrow goes unread.
-void protocore_tls_policy_negotiate(uint8_t *restrict work)
+void protocore_tls_policy_negotiate(uint8_t *work)
 {
     (void)work;
     TlsPolicyV.ok = PROTO_FALSE;
@@ -40,7 +40,7 @@ void protocore_tls_policy_negotiate(uint8_t *restrict work)
     TlsPolicyV.ok = PROTO_TRUE;
 }
 
-void protocore_tls_policy_name(uint8_t *restrict work)
+void protocore_tls_policy_name(uint8_t *work)
 {
     (void)work;
     switch (TlsPolicyV.name_args.version)
@@ -59,7 +59,7 @@ void protocore_tls_policy_name(uint8_t *restrict work)
 }
 
 // Server preference: walk the pinned list in order, take the first the client also offered.
-void protocore_tls_policy_select(uint8_t *restrict work)
+void protocore_tls_policy_select(uint8_t *work)
 {
     (void)work;
     TlsPolicyV.ok = PROTO_FALSE;
@@ -84,7 +84,7 @@ void protocore_tls_policy_select(uint8_t *restrict work)
     }
 }
 
-void protocore_tls_policy_is_aead(uint8_t *restrict work)
+void protocore_tls_policy_is_aead(uint8_t *work)
 {
     (void)work;
     switch (TlsPolicyV.aead_args.suite)

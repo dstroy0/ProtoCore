@@ -146,22 +146,22 @@ extern IpVars IpV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const parse)(uint8_t *restrict work);
-    void (*const format)(uint8_t *restrict work);
-    void (*const classify)(uint8_t *restrict work);
-    void (*const equal)(uint8_t *restrict work);
-    void (*const is_unspecified)(uint8_t *restrict work);
-    void (*const prefix_match)(uint8_t *restrict work);
+    void (*const parse)(uint8_t *work);
+    void (*const format)(uint8_t *work);
+    void (*const classify)(uint8_t *work);
+    void (*const equal)(uint8_t *work);
+    void (*const is_unspecified)(uint8_t *work);
+    void (*const prefix_match)(uint8_t *work);
 } IpNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in IpV or a region of the borrow at a fixed offset.
-void protocore_ip_parse(uint8_t *restrict work);
-void protocore_ip_format(uint8_t *restrict work);
-void protocore_ip_classify(uint8_t *restrict work);
-void protocore_ip_equal(uint8_t *restrict work);
-void protocore_ip_is_unspecified(uint8_t *restrict work);
-void protocore_ip_prefix_match(uint8_t *restrict work);
+void protocore_ip_parse(uint8_t *work);
+void protocore_ip_format(uint8_t *work);
+void protocore_ip_classify(uint8_t *work);
+void protocore_ip_equal(uint8_t *work);
+void protocore_ip_is_unspecified(uint8_t *work);
+void protocore_ip_prefix_match(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

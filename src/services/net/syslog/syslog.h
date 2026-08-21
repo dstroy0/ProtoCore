@@ -139,16 +139,16 @@ extern SyslogVars SyslogV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const init)(uint8_t *restrict work);
-    void (*const format)(uint8_t *restrict work);
-    void (*const log)(uint8_t *restrict work);
+    void (*const init)(uint8_t *work);
+    void (*const format)(uint8_t *work);
+    void (*const log)(uint8_t *work);
 } SyslogNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SyslogV or a region of the borrow at a fixed offset.
-void protocore_syslog_init(uint8_t *restrict work);
-void protocore_syslog_format(uint8_t *restrict work);
-void protocore_syslog_log(uint8_t *restrict work);
+void protocore_syslog_init(uint8_t *work);
+void protocore_syslog_format(uint8_t *work);
+void protocore_syslog_log(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

@@ -26,7 +26,7 @@ PROTOCORE_BEGIN_DECLS
  * (uint32_be(seq_num) || plaintext_packet):
  *
  * @c work is PROTOCORE_HMAC_SHA512_BORROW secure bytes the CALLER took, at an address it knows. It
- * arrives @c restrict and is not held past the call, so nothing here aliases it. The caller releases
+ * is not held past the call, so nothing here aliases it. The caller releases
  * it, and the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes
  * it. A connection takes those bytes once for its slot and passes them on every packet.
  *
@@ -40,10 +40,10 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*init)(uint8_t *restrict, const uint8_t *, size_t);
-    proto_bool (*update)(uint8_t *restrict, const uint8_t *, size_t);
-    proto_bool (*final)(uint8_t *restrict, uint8_t *);
-    proto_bool (*mac)(uint8_t *restrict, const uint8_t *, size_t, const uint8_t *, size_t, uint8_t *);
+    proto_bool (*init)(uint8_t *, const uint8_t *, size_t);
+    proto_bool (*update)(uint8_t *, const uint8_t *, size_t);
+    proto_bool (*final)(uint8_t *, uint8_t *);
+    proto_bool (*mac)(uint8_t *, const uint8_t *, size_t, const uint8_t *, size_t, uint8_t *);
 } HmacSha512Ns;
 PROTOCORE_NS_LAYOUT(HmacSha512Ns, init, update, final, mac);
 
@@ -54,7 +54,7 @@ PROTOCORE_NS_LAYOUT(HmacSha512Ns, init, update, final, mac);
  * @param key_len key length; > 128 is pre-hashed (RFC 2104), shorter is zero-padded to the block
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_hmac_sha512_init(uint8_t *restrict work, const uint8_t *key, size_t key_len);
+proto_bool protocore_hmac_sha512_init(uint8_t *work, const uint8_t *key, size_t key_len);
 /**
  * @brief Feed the running MAC a chunk.
  * @param work PROTOCORE_HMAC_SHA512_BORROW bytes the caller took. Not held past the call.
@@ -62,14 +62,14 @@ proto_bool protocore_hmac_sha512_init(uint8_t *restrict work, const uint8_t *key
  * @param len how many
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_hmac_sha512_update(uint8_t *restrict work, const uint8_t *data, size_t len);
+proto_bool protocore_hmac_sha512_update(uint8_t *work, const uint8_t *data, size_t len);
 /**
  * @brief Finish, writing the 64 bytes out.
  * @param work PROTOCORE_HMAC_SHA512_BORROW bytes the caller took. Not held past the call.
  * @param out PROTOCORE_HMAC_SHA512_LEN bytes
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_hmac_sha512_final(uint8_t *restrict work, uint8_t *out);
+proto_bool protocore_hmac_sha512_final(uint8_t *work, uint8_t *out);
 /**
  * @brief Init, update and final in one call, for a message already whole.
  * @param work PROTOCORE_HMAC_SHA512_BORROW bytes the caller took. Not held past the call.
@@ -80,8 +80,8 @@ proto_bool protocore_hmac_sha512_final(uint8_t *restrict work, uint8_t *out);
  * @param out PROTOCORE_HMAC_SHA512_LEN bytes
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_hmac_sha512_mac(uint8_t *restrict work, const uint8_t *key, size_t key_len, const uint8_t *data,
-                                     size_t len, uint8_t *out);
+proto_bool protocore_hmac_sha512_mac(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *data, size_t len,
+                                     uint8_t *out);
 
 /** @brief Module namespace. */
 PROTOCORE_NS HmacSha512Ns HmacSha512 PROTOCORE_UNUSED = {.init = protocore_hmac_sha512_init,

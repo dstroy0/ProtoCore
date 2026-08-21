@@ -31,8 +31,8 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    const char *(*info_indicator)(uint8_t *restrict, proto_bool);
-    int (*build)(uint8_t *restrict, uint8_t *, size_t *, size_t);
+    const char *(*info_indicator)(uint8_t *, proto_bool);
+    int (*build)(uint8_t *, uint8_t *, size_t *, size_t);
 } ExtensionNs;
 PROTOCORE_NS_LAYOUT(ExtensionNs, info_indicator, build);
 
@@ -42,7 +42,7 @@ PROTOCORE_NS_LAYOUT(ExtensionNs, info_indicator, build);
  * @param client_role True for the client's indicator, false for the server's
  * @return The const char *.
  */
-const char *protocore_extension_info_indicator(uint8_t *restrict work, proto_bool client_role);
+const char *protocore_extension_info_indicator(uint8_t *work, proto_bool client_role);
 /**
  * @brief Build SSH_MSG_EXT_INFO advertising server-sig-algs (RFC 8308). .
  * @param work PROTOCORE_EXTENSION_BORROW bytes the caller took. Not held past the call.
@@ -51,7 +51,7 @@ const char *protocore_extension_info_indicator(uint8_t *restrict work, proto_boo
  * @param cap Cap
  * @return The int.
  */
-int protocore_extension_build(uint8_t *restrict work, uint8_t *out, size_t *len, size_t cap);
+int protocore_extension_build(uint8_t *work, uint8_t *out, size_t *len, size_t cap);
 
 /** @brief Module namespace. */
 PROTOCORE_NS ExtensionNs Extension PROTOCORE_UNUSED = {.info_indicator = protocore_extension_info_indicator,

@@ -692,7 +692,7 @@ def sentence(text, fallback):
 
 # An entry on the Ns shape: `void (*name)(struct XInternal *ctx);` inside the namespace struct.
 # An entry already on the golden shape, used to tell "Ns" from "already done".
-GOLDEN_ENTRY = re.compile(r"\(\*const \w+\)\(uint8_t \*restrict work\)")
+GOLDEN_ENTRY = re.compile(r"\(\*const \w+\)\(uint8_t \*(?:restrict )?work\)")
 
 NS_ENTRY = re.compile(r"^[ \t]*void[ \t]*\(\*(?:const[ \t]+)?(\w+)\)\([^)]*\w*Internal[ \t]*\*[^)]*\)[ \t]*;", re.M)
 NS_HANDLE = re.compile(r"^[ \t]*struct[ \t]+\w+Internal[ \t]*\*[ \t]*internal[ \t]*;[^\n]*\n", re.M)
@@ -951,7 +951,7 @@ def void_work(s):
     """
     mask = code_mask(s)
     out, at = [], 0
-    for m in re.finditer(r"^(?:static )?void \w+\(uint8_t \*restrict work\)[ \t]*\r?\n\{", s, re.M):
+    for m in re.finditer(r"^(?:static )?void \w+\(uint8_t \*(?:restrict )?work\)[ \t]*\r?\n\{", s, re.M):
         if not mask[m.start()]:
             continue
         brace = m.end() - 1
@@ -990,7 +990,7 @@ def gen_ns(spec):
             return notes
 
     # the entry members take the borrow, and take it const: the table is fixed at build time
-    h2 = NS_ENTRY.sub(lambda m: "    void (*const %s)(uint8_t *restrict work);" % m.group(1), h)
+    h2 = NS_ENTRY.sub(lambda m: "    void (*const %s)(uint8_t *work);" % m.group(1), h)
     # the opaque handle is what the borrow replaces
     h2 = NS_HANDLE.sub("", h2)
     # and the forward declaration of it, with the doc comment that described it, if nothing else
@@ -1034,7 +1034,7 @@ def gen_ns(spec):
     # The handle type IS the borrow now, wherever it is spelled: an entry's lone parameter, a
     # private helper that takes it alongside its operands, or a local a fixed-signature callback
     # binds because it has no parameter to take one.
-    c2 = re.sub(r"struct\s+\w+Internal\s*\*restrict\s+(\w+)", r"uint8_t *restrict \1", c)
+    c2 = re.sub(r"struct\s+\w+Internal\s*\*(?:restrict\s+)?(\w+)", r"uint8_t *\1", c)
     c2 = re.sub(r"struct\s+\w+Internal\s*\*\s*(\w+)", r"uint8_t *\1", c2)
     # A callback with nowhere to take a borrow from reaches for the accessor, the same as any
     # other caller outside the module's entries.
@@ -1219,9 +1219,9 @@ def gen_ns(spec):
         if carve:
             c2 = c2[: carve.end()] + acc + c2[carve.end() :]
         else:
-            first = re.search(r"^static void %s_\w+\(uint8_t \*restrict work\)" % spec["module"], c2, re.M)
+            first = re.search(r"^static void %s_\w+\(uint8_t \*(?:restrict )?work\)" % spec["module"], c2, re.M)
             if not first:
-                first = re.search(r"^static void \w+\(uint8_t \*restrict work\)", c2, re.M)
+                first = re.search(r"^static void \w+\(uint8_t \*(?:restrict )?work\)", c2, re.M)
             if first:
                 at = outside_conditionals(c2, comment_start(c2, first.start()), spec.get("gate"))
                 c2 = c2[:at] + acc + c2[at:]
@@ -1509,7 +1509,7 @@ def ns_doc(spec, args_types, results):
     out.append(" *")
     if spec.get("owns_state", True):
         out.append(" * @c work is %s bytes the CALLER took, at an address it knows. It arrives" % spec["borrow"])
-        out.append(" * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are")
+        out.append(" * is not held past the call, so nothing here aliases it. How those bytes are")
         out.append(" * carved is this module's and is never named here.")
     else:
         out.append(" * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing")
@@ -1679,7 +1679,7 @@ def gen_header(spec, original):
             body.append("    %s %s;" % (t, r))
     body.append("")
     for e in spec["entries"]:
-        body.append("    void (*const %s)(uint8_t *restrict work);" % e["entry"])
+        body.append("    void (*const %s)(uint8_t *work);" % e["entry"])
     body.append("} %s;" % ns)
     body.append("")
     body.append("/** @brief The one symbol this module exports. */")
@@ -2007,7 +2007,7 @@ def drop_flat_protos(s, flats):
     """Forward declarations of the flat names this conversion renamed, and the comment over them.
 
     A file that calls an entry above its definition carries `static <ret> <flat>(<params>);` near
-    the top. The definition below it becomes `static void <mod>_<entry>(uint8_t *restrict work)`,
+    the top. The definition below it becomes `static void <mod>_<entry>(uint8_t *work)`,
     so what is left declares a function that no longer exists and describes a rule that no longer
     applies. A block is dropped whole only when every declaration in it is one of these.
     """
@@ -2198,7 +2198,7 @@ def restructure_source(spec):
             # No pre-init of the result member: every `return` the original had is preserved above, so
             # the member is written exactly where the value was produced. A zero written first is a
             # store the original never made, and on an enum result zero is a named outcome.
-            head = "static void %s_%s(uint8_t *restrict work)\n{\n    (void)work;\n" % (spec["module"], e["entry"])
+            head = "static void %s_%s(uint8_t *work)\n{\n    (void)work;\n" % (spec["module"], e["entry"])
             head += "\n".join(reads) + ("\n" if reads else "")
             s = s[: m.start()] + head + body + "}" + s[i:]
             mask = code_mask(s)
@@ -2263,8 +2263,7 @@ def restructure_source(spec):
         if not enclosing_has_work(s, m.start()):
             notes.append(
                 "%s self-call at line %d is inside a helper with no `work` parameter; give the helper "
-                "`uint8_t *restrict work` and read its operands off the Ns args"
-                % (e["flat"], s[: m.start()].count(chr(10)) + 1)
+                "`uint8_t *work` and read its operands off the Ns args" % (e["flat"], s[: m.start()].count(chr(10)) + 1)
             )
             at = m.end()
             continue
@@ -2290,10 +2289,10 @@ def restructure_source(spec):
     # the call is an implicit declaration with external linkage, and the `static` definition below
     # then conflicts with it.
     if selfcalls:
-        first = re.search(r"^static void %s_\w+\(uint8_t \*restrict work\)" % spec["module"], s, re.M)
+        first = re.search(r"^static void %s_\w+\(uint8_t \*(?:restrict )?work\)" % spec["module"], s, re.M)
         if first:
             protos = "// The entries this file calls before reaching their definitions.\n" + "".join(
-                "static void %s_%s(uint8_t *restrict work);\n" % (spec["module"], n) for n in sorted(selfcalls)
+                "static void %s_%s(uint8_t *work);\n" % (spec["module"], n) for n in sorted(selfcalls)
             )
             s = s[: first.start()] + protos + "\n" + s[first.start() :]
 
@@ -2301,7 +2300,7 @@ def restructure_source(spec):
     if not spec.get("owns_state", True):
         # No file-static context: the module holds nothing, so there is no span to take and no
         # borrow to carve. tls_policy.c is the shape - the note says so where the context would be.
-        first = re.search(r"^static void %s_\w+\(uint8_t \*restrict work\)" % spec["module"], s, re.M)
+        first = re.search(r"^static void %s_\w+\(uint8_t \*(?:restrict )?work\)" % spec["module"], s, re.M)
         if first:
             s = (
                 s[: first.start()]
@@ -2346,7 +2345,7 @@ def restructure_source(spec):
     # declared further down and gcc read it as an implicit function.
     if pending_accessor:
         ctx_macro = re.search(r"^#define %s_CTX\(w\)[^\n]*\n" % spec["module"].upper(), s, re.M)
-        anchor = re.search(r"^static void %s_\w+\(uint8_t \*restrict work\)" % spec["module"], s, re.M)
+        anchor = re.search(r"^static void %s_\w+\(uint8_t \*(?:restrict )?work\)" % spec["module"], s, re.M)
         at = ctx_macro.end() if ctx_macro else (above_capability_split(s, anchor.start()) if anchor else None)
         if at is not None:
             s = s[:at] + pending_accessor + s[at:]
@@ -2721,7 +2720,7 @@ def split_handle(hsrc):
     """
     # Classify on the COMMENT-STRIPPED text. Both patterns end at the semicolon and then demand
     # end of line, and datalink.h writes
-    # `void (*const init)(uint8_t *restrict work); ///< link-layer bring-up (RFC 1122 sec 2)`.
+    # `void (*const init)(uint8_t *work); ///< link-layer bring-up (RFC 1122 sec 2)`.
     # The trailing doc comment made that line read as DATA, the struct came out with no entries, and
     # the module was dropped from the run - with no skip line, because a header that is "not on the
     # extern-table shape" is not an error. Six modules sat unconverted behind a `///<`.
@@ -2869,7 +2868,7 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
     block = ["typedef struct", "{"] + data + ["} %s;" % vars_t, ""]
     block += ["/** @brief The operands and the outcome. */", "extern %s %s;" % (vars_t, objv), ""]
     block += ["/** @brief The entries. */", "typedef struct", "{"]
-    block += ["    void (*const %s)(uint8_t *restrict work);" % e for e in entries]
+    block += ["    void (*const %s)(uint8_t *work);" % e for e in entries]
     block += ["} %s;" % ns, ""]
     block += [
         "// What the table binds, defined once in the .c and taking one parameter each: everything",
@@ -2897,9 +2896,9 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
             if name in emitted:
                 continue
             emitted.add(name)
-            block.append("void %s(uint8_t *restrict work);" % name)
+            block.append("void %s(uint8_t *work);" % name)
     else:
-        block += ["void %s(uint8_t *restrict work);" % f for f in impl]
+        block += ["void %s(uint8_t *work);" % f for f in impl]
     block += [
         "",
         "// `static const`, initialised HERE rather than `extern` against a definition in the .c: a",
@@ -3160,7 +3159,7 @@ def insert_align_asserts(src, regions):
 # What MMgr settled on, read off include/MMgr/src rather than described:
 #
 #   - an entry carries its REAL signature and its REAL return value. There is no args struct, no
-#     operands global, and no `uint8_t *restrict work` standing in for both.
+#     operands global, and no `uint8_t *work` standing in for both.
 #   - the dispatch table is `PROTOCORE_NS` - static const - and lives in the HEADER, so every
 #     translation unit gets its own copy and gcc devirtualises the call through it.
 #   - `PROTOCORE_NS_LAYOUT` pins every member to its dispatch slot at compile time.
@@ -3224,7 +3223,7 @@ def result_members(s, vars_type):
 
 
 def body_of(csrc, flat):
-    """(start, open_brace, end) of `void <flat>(uint8_t *restrict work) { ... }`, or None."""
+    """(start, open_brace, end) of `void <flat>(uint8_t *work) { ... }`, or None."""
     m = re.search(r"^[A-Za-z_][\w \*]*\b%s\s*\([^)]*\)\s*\n?\s*\{" % re.escape(flat), csrc, re.M)
     if not m:
         return None
@@ -3365,7 +3364,7 @@ def sig_params(spec, e, names=True):
     # The borrow is the first parameter of EVERY entry. It is not state a module reaches for
     # itself: its size and its offset are each a static_assert, and that pair is what makes an
     # improper feature combination fail to compile and a legal one fit.
-    out = ["uint8_t *restrict work" if names else "uint8_t *restrict"]
+    out = ["uint8_t *work" if names else "uint8_t *"]
     for p in e["params"]:
         t = p["type"]
         if p["arr"]:
@@ -3515,7 +3514,16 @@ def gen_header_ns(spec, original):
     lines.append("typedef struct")
     lines.append("{")
     for e in spec["entries"]:
-        lines.append("    %s (*%s)(%s);" % (e["ret"], e["entry"], sig_params(spec, e, names=False)))
+        # WITH PARAMETER NAMES. The table is the module's surface - it is what a reader looks at to
+        # find out what an entry takes - and MMgr's spatium writes it that way:
+        #
+        #     mmgr_spat (*from)(uint8_t *p, size_t cap);
+        #     mmgr_fspat (*read)(mmgr_spat s, size_t len);
+        #
+        # against the bare `proto_bool (*update)(uint8_t *, const uint8_t *, size_t);` this
+        # used to emit, where the reader has to go and find the prototype to learn what the two
+        # pointers are.
+        lines.append("    %s (*%s)(%s);" % (e["ret"], e["entry"], sig_params(spec, e, names=True)))
     lines.append("} %s;" % ns)
     lines.append("PROTOCORE_NS_LAYOUT(%s, %s);" % (ns, ", ".join(e["entry"] for e in spec["entries"])))
     lines.append("")
@@ -4627,11 +4635,11 @@ def main():
                 if not is_declaration(s, m.start(), m.end()):
                     continue
                 # Record the SHAPE, not just the name. A declaration that is already
-                # `void f(uint8_t *restrict work)` is an entry - very often this module's own
+                # `void f(uint8_t *work)` is an entry - very often this module's own
                 # implementation, already carrying the name the reshape would give it - so treating
                 # it as a clash skipped modules that had nothing wrong with them.
                 args = " ".join(m.group(2).split())
-                entryish = args == "uint8_t *restrict work"
+                entryish = args == "uint8_t *work"
                 declared.setdefault(m.group(1), (p, entryish))
 
         # REPAIR PASS over modules already converted. A batch only touches the modules it converts,
@@ -4899,10 +4907,10 @@ def main():
                 '  Set "object" in the spec to a name the module does not already define.' % spec["object"]
             )
             return 1
-        # An entry is defined as `static void <module>_<entry>(uint8_t *restrict work)`. A private
+        # An entry is defined as `static void <module>_<entry>(uint8_t *work)`. A private
         # helper already carrying that name becomes a second definition at a different signature:
         # json.c had `static void json_put_raw(protocore_json_writer *, const char *)` and the
-        # conversion wrote `static void json_put_raw(uint8_t *restrict)` beside it.
+        # conversion wrote `static void json_put_raw(uint8_t *)` beside it.
         csrc = io.open(os.path.join(R, spec["source"].replace("/", os.sep)), encoding="utf-8").read()
         taken = []
         for e in spec["entries"]:
@@ -4918,7 +4926,7 @@ def main():
                 % (spec["source"], ", ".join(taken))
             )
             return 1
-        # Every entry takes `uint8_t *restrict work`, so a parameter already called that would be
+        # Every entry takes `uint8_t *work`, so a parameter already called that would be
         # redeclared inside the entry that reads it off the args member.
         clash = sorted({p["name"] for e in spec["entries"] for p in e["params"] if p["name"] == "work"})
         if clash:

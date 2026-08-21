@@ -23,7 +23,7 @@
 
 PROTOCORE_BEGIN_DECLS
 
-void protocore_exc_cd_present(uint8_t *restrict work)
+void protocore_exc_cd_present(uint8_t *work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
@@ -45,7 +45,7 @@ void protocore_exc_cd_present(uint8_t *restrict work)
     ExcV.ok = PROTO_TRUE;
 }
 
-void protocore_exc_cd_summary(uint8_t *restrict work)
+void protocore_exc_cd_summary(uint8_t *work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
@@ -89,7 +89,7 @@ void protocore_exc_cd_summary(uint8_t *restrict work)
     ExcV.ok = PROTO_TRUE;
 }
 
-void protocore_exc_cd_read(uint8_t *restrict work)
+void protocore_exc_cd_read(uint8_t *work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
@@ -112,7 +112,7 @@ void protocore_exc_cd_read(uint8_t *restrict work)
                   : PROTO_FALSE;
 }
 
-void protocore_exc_cd_save(uint8_t *restrict work)
+void protocore_exc_cd_save(uint8_t *work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
@@ -159,7 +159,7 @@ void protocore_exc_cd_save(uint8_t *restrict work)
     ExcV.ok = ok;
 }
 
-void protocore_exc_cd_erase(uint8_t *restrict work)
+void protocore_exc_cd_erase(uint8_t *work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else

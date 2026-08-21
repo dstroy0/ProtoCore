@@ -401,13 +401,13 @@ static const protocore_mnt_backend s_ram_backend = {ram_open,  ram_read,   ram_w
                                                     ram_size,  ram_exists, ram_remove,  ram_rename,  ram_mkdir,
                                                     ram_rmdir, ram_stat,   ram_opendir, ram_readdir, NULL};
 
-const protocore_mnt_backend *protocore_mnt_ram_backend(uint8_t *restrict work)
+const protocore_mnt_backend *protocore_mnt_ram_backend(uint8_t *work)
 {
     (void)work;
     return &s_ram_backend;
 }
 
-void protocore_mnt_ram_format(uint8_t *restrict work)
+void protocore_mnt_ram_format(uint8_t *work)
 {
     (void)work;
 

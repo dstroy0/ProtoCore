@@ -21,7 +21,7 @@
 // --- the entries -----------------------------------------------------------
 
 // Expand the key into 4 * (nk + 7) round-key words in the caller's rk.
-proto_bool protocore_aes_block_key_expand(uint8_t *restrict work, const uint8_t *key, int nk, uint32_t *rk)
+proto_bool protocore_aes_block_key_expand(uint8_t *work, const uint8_t *key, int nk, uint32_t *rk)
 {
     proto_bool ok = PROTO_FALSE;
     (void)work;
@@ -35,8 +35,7 @@ proto_bool protocore_aes_block_key_expand(uint8_t *restrict work, const uint8_t 
 }
 
 // Encrypt one 16-byte block under the caller's schedule, nr rounds.
-proto_bool protocore_aes_block_encrypt_block(uint8_t *restrict work, const uint32_t *rk, int nr, const uint8_t *in,
-                                             uint8_t *out)
+proto_bool protocore_aes_block_encrypt_block(uint8_t *work, const uint32_t *rk, int nr, const uint8_t *in, uint8_t *out)
 {
     proto_bool ok = PROTO_FALSE;
     (void)work;

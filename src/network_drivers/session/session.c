@@ -97,13 +97,13 @@ uint8_t *protocore_session_span(void)
     return s_own.span;
 }
 
-void protocore_protocols_register_builtins(uint8_t *restrict work)
+void protocore_protocols_register_builtins(uint8_t *work)
 {
     (void)work;
     protocore_register_builtins();
 }
 
-void protocore_protocols_add(uint8_t *restrict work)
+void protocore_protocols_add(uint8_t *work)
 {
     if ((unsigned)ProtocolsV.proto < PROTO_MAX_HANDLERS)
     {
@@ -111,7 +111,7 @@ void protocore_protocols_add(uint8_t *restrict work)
     }
 }
 
-void protocore_protocols_get(uint8_t *restrict work)
+void protocore_protocols_get(uint8_t *work)
 {
     // The protocol asked for, read before the bootstrap below can touch it. Registering the
     // built-ins runs back through THIS namespace - protocore_builtins.c sets Protocols.proto once
@@ -251,7 +251,7 @@ static inline void dispatch_event(const TcpEvt *evt)
     }
 }
 
-void protocore_session_tick(uint8_t *restrict work)
+void protocore_session_tick(uint8_t *work)
 {
     (void)work;
     /*

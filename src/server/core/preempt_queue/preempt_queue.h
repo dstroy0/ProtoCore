@@ -126,28 +126,28 @@ extern PreemptQueueVars PreemptQueueV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const post_from_isr)(uint8_t *restrict work);
-    void (*const post_urgent)(uint8_t *restrict work);
-    void (*const high_water)(uint8_t *restrict work);
-    void (*const priority)(uint8_t *restrict work);
-    void (*const running)(uint8_t *restrict work);
-    void (*const start)(uint8_t *restrict work);
-    void (*const post)(uint8_t *restrict work);
-    void (*const drain)(uint8_t *restrict work);
-    void (*const stop)(uint8_t *restrict work);
+    void (*const post_from_isr)(uint8_t *work);
+    void (*const post_urgent)(uint8_t *work);
+    void (*const high_water)(uint8_t *work);
+    void (*const priority)(uint8_t *work);
+    void (*const running)(uint8_t *work);
+    void (*const start)(uint8_t *work);
+    void (*const post)(uint8_t *work);
+    void (*const drain)(uint8_t *work);
+    void (*const stop)(uint8_t *work);
 } PreemptQueueNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in PreemptQueueV or a region of the borrow at a fixed offset.
-void protocore_preempt_queue_post_from_isr(uint8_t *restrict work);
-void protocore_preempt_queue_post_urgent(uint8_t *restrict work);
-void protocore_preempt_queue_high_water(uint8_t *restrict work);
-void protocore_preempt_queue_priority(uint8_t *restrict work);
-void protocore_preempt_queue_running(uint8_t *restrict work);
-void protocore_preempt_queue_start(uint8_t *restrict work);
-void protocore_preempt_queue_post(uint8_t *restrict work);
-void protocore_preempt_queue_drain(uint8_t *restrict work);
-void protocore_preempt_queue_stop(uint8_t *restrict work);
+void protocore_preempt_queue_post_from_isr(uint8_t *work);
+void protocore_preempt_queue_post_urgent(uint8_t *work);
+void protocore_preempt_queue_high_water(uint8_t *work);
+void protocore_preempt_queue_priority(uint8_t *work);
+void protocore_preempt_queue_running(uint8_t *work);
+void protocore_preempt_queue_start(uint8_t *work);
+void protocore_preempt_queue_post(uint8_t *work);
+void protocore_preempt_queue_drain(uint8_t *work);
+void protocore_preempt_queue_stop(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

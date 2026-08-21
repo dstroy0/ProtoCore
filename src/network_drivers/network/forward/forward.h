@@ -190,28 +190,28 @@ extern ForwardVars ForwardV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const reset)(uint8_t *restrict work);
-    void (*const add_rule)(uint8_t *restrict work);
-    void (*const acl_set_default)(uint8_t *restrict work);
-    void (*const acl_add)(uint8_t *restrict work);
-    void (*const route_add)(uint8_t *restrict work);
-    void (*const set_inspector)(uint8_t *restrict work);
-    void (*const ingress)(uint8_t *restrict work);
-    void (*const get_stats)(uint8_t *restrict work);
+    void (*const reset)(uint8_t *work);
+    void (*const add_rule)(uint8_t *work);
+    void (*const acl_set_default)(uint8_t *work);
+    void (*const acl_add)(uint8_t *work);
+    void (*const route_add)(uint8_t *work);
+    void (*const set_inspector)(uint8_t *work);
+    void (*const ingress)(uint8_t *work);
+    void (*const get_stats)(uint8_t *work);
 } ForwardNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in ForwardV or a region of the borrow at a fixed offset.
-void protocore_forward_reset(uint8_t *restrict work);
-void protocore_forward_add_rule(uint8_t *restrict work);
-void protocore_forward_acl_set_default(uint8_t *restrict work);
-void protocore_forward_acl_add(uint8_t *restrict work);
-void protocore_forward_route_add(uint8_t *restrict work);
+void protocore_forward_reset(uint8_t *work);
+void protocore_forward_add_rule(uint8_t *work);
+void protocore_forward_acl_set_default(uint8_t *work);
+void protocore_forward_acl_add(uint8_t *work);
+void protocore_forward_route_add(uint8_t *work);
 #if PROTOCORE_FWD_INSPECT
-void protocore_forward_set_inspector(uint8_t *restrict work);
+void protocore_forward_set_inspector(uint8_t *work);
 #endif
-void protocore_forward_ingress(uint8_t *restrict work);
-void protocore_forward_get_stats(uint8_t *restrict work);
+void protocore_forward_ingress(uint8_t *work);
+void protocore_forward_get_stats(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

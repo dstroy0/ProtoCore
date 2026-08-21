@@ -51,7 +51,7 @@ uint8_t *protocore_provisioning_service_span(void)
     return s_own.span;
 }
 
-proto_bool protocore_prov_form_field(uint8_t *restrict work, const char *body, const char *key, char *out, size_t cap)
+proto_bool protocore_prov_form_field(uint8_t *work, const char *body, const char *key, char *out, size_t cap)
 {
     if (out && cap)
     {
@@ -156,7 +156,7 @@ static_assert(PROVISIONING_SERVICE_OFF_CTX % _Alignof(ProvCtx) == 0,
 // One octet of the softAP address the catch-all DNS answers with. All-zero is "begin() has not
 // stamped one yet", which reads as the 192.168.4.1 a softAP comes up on - stated here rather than as
 // an initializer so the context carries none and can live in a borrow that arrives zeroed.
-static uint8_t ap_octet(uint8_t *restrict work, uint32_t i)
+static uint8_t ap_octet(uint8_t *work, uint32_t i)
 {
     static const uint8_t softap_default[4] = {192, 168, 4, 1};
     const uint8_t *ip = PROVISIONING_SERVICE_CTX(work)->ap_ip;
@@ -172,7 +172,7 @@ static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct protocor
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_provisioning_service_span();
+    uint8_t *work = protocore_provisioning_service_span();
 
     (void)ctx;
     if (qlen < 12)
@@ -229,7 +229,7 @@ static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct protocor
     UdpListener.reply(protocore_udp_listener_span());
 }
 
-proto_bool protocore_prov_load(uint8_t *restrict work, char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
+proto_bool protocore_prov_load(uint8_t *work, char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
 {
     (void)work;
 
@@ -254,7 +254,7 @@ proto_bool protocore_prov_load(uint8_t *restrict work, char *ssid, size_t ssid_c
     return PROTO_TRUE;
 }
 
-void protocore_prov_clear(uint8_t *restrict work)
+void protocore_prov_clear(uint8_t *work)
 {
     (void)work;
 
@@ -271,7 +271,7 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_provisioning_service_span();
+    uint8_t *work = protocore_provisioning_service_span();
 
     char ssid[33];
     char psk[64];
@@ -290,7 +290,7 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
     protocore_platform_restart();
 }
 
-void protocore_prov_begin(uint8_t *restrict work, const char *ap_ssid)
+void protocore_prov_begin(uint8_t *work, const char *ap_ssid)
 {
 
     PhysicalV.wifi.ssid = ap_ssid;

@@ -66,8 +66,8 @@ static inline void wr(const protocore_lora_bus *b, uint8_t reg, uint8_t val)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-proto_bool protocore_lora_frame_parse(uint8_t *restrict work, const uint8_t *raw, uint16_t len,
-                                      protocore_lora_header *hdr, const uint8_t **payload, uint16_t *payload_len)
+proto_bool protocore_lora_frame_parse(uint8_t *work, const uint8_t *raw, uint16_t len, protocore_lora_header *hdr,
+                                      const uint8_t **payload, uint16_t *payload_len)
 {
     (void)work;
 
@@ -90,7 +90,7 @@ proto_bool protocore_lora_frame_parse(uint8_t *restrict work, const uint8_t *raw
     return PROTO_TRUE;
 }
 
-uint16_t protocore_lora_frame_build(uint8_t *restrict work, const protocore_lora_header *hdr, const uint8_t *payload,
+uint16_t protocore_lora_frame_build(uint8_t *work, const protocore_lora_header *hdr, const uint8_t *payload,
                                     uint16_t len, uint8_t *out, uint16_t cap)
 {
     (void)work;
@@ -110,7 +110,7 @@ uint16_t protocore_lora_frame_build(uint8_t *restrict work, const protocore_lora
     return (uint16_t)(len + 4);
 }
 
-proto_bool protocore_lora_init(uint8_t *restrict work, const protocore_lora_bus *bus, const protocore_lora_config *cfg)
+proto_bool protocore_lora_init(uint8_t *work, const protocore_lora_bus *bus, const protocore_lora_config *cfg)
 {
     proto_bool ok = PROTO_FALSE;
     (void)work;
@@ -153,7 +153,7 @@ proto_bool protocore_lora_init(uint8_t *restrict work, const protocore_lora_bus 
     return PROTO_TRUE;
 }
 
-proto_bool protocore_lora_send(uint8_t *restrict work, const protocore_lora_bus *bus, const uint8_t *frame, uint8_t len)
+proto_bool protocore_lora_send(uint8_t *work, const protocore_lora_bus *bus, const uint8_t *frame, uint8_t len)
 {
     (void)work;
 
@@ -172,7 +172,7 @@ proto_bool protocore_lora_send(uint8_t *restrict work, const protocore_lora_bus 
     return PROTO_TRUE;
 }
 
-proto_bool protocore_lora_tx_done(uint8_t *restrict work, const protocore_lora_bus *bus)
+proto_bool protocore_lora_tx_done(uint8_t *work, const protocore_lora_bus *bus)
 {
     (void)work;
 
@@ -188,7 +188,7 @@ proto_bool protocore_lora_tx_done(uint8_t *restrict work, const protocore_lora_b
     return PROTO_FALSE;
 }
 
-void protocore_lora_set_rx(uint8_t *restrict work, const protocore_lora_bus *bus)
+void protocore_lora_set_rx(uint8_t *work, const protocore_lora_bus *bus)
 {
     (void)work;
 
@@ -200,7 +200,7 @@ void protocore_lora_set_rx(uint8_t *restrict work, const protocore_lora_bus *bus
     wr(bus, REG_OP_MODE, MODE_LORA | MODE_RX_CONT);
 }
 
-int protocore_lora_recv(uint8_t *restrict work, const protocore_lora_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rssi)
+int protocore_lora_recv(uint8_t *work, const protocore_lora_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rssi)
 {
     int n_result = 0;
     (void)work;

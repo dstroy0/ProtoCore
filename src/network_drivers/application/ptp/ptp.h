@@ -407,54 +407,54 @@ extern PtpVars PtpV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const ts_write)(uint8_t *restrict work);
-    void (*const ts_read)(uint8_t *restrict work);
-    void (*const ts_to_ns)(uint8_t *restrict work);
-    void (*const ts_from_ns)(uint8_t *restrict work);
-    void (*const build_header)(uint8_t *restrict work);
-    void (*const parse_header)(uint8_t *restrict work);
-    void (*const build_sync)(uint8_t *restrict work);
-    void (*const build_delay_req)(uint8_t *restrict work);
-    void (*const build_follow_up)(uint8_t *restrict work);
-    void (*const build_delay_resp)(uint8_t *restrict work);
-    void (*const build_announce)(uint8_t *restrict work);
-    void (*const build_pdelay_req)(uint8_t *restrict work);
-    void (*const build_pdelay_resp)(uint8_t *restrict work);
-    void (*const build_pdelay_resp_follow_up)(uint8_t *restrict work);
-    void (*const parse_timestamp_msg)(uint8_t *restrict work);
-    void (*const parse_delay_resp)(uint8_t *restrict work);
-    void (*const parse_announce)(uint8_t *restrict work);
-    void (*const parse_pdelay_req)(uint8_t *restrict work);
-    void (*const parse_pdelay_resp)(uint8_t *restrict work);
-    void (*const parse_pdelay_resp_follow_up)(uint8_t *restrict work);
-    void (*const compute)(uint8_t *restrict work);
-    void (*const compute_link_delay)(uint8_t *restrict work);
+    void (*const ts_write)(uint8_t *work);
+    void (*const ts_read)(uint8_t *work);
+    void (*const ts_to_ns)(uint8_t *work);
+    void (*const ts_from_ns)(uint8_t *work);
+    void (*const build_header)(uint8_t *work);
+    void (*const parse_header)(uint8_t *work);
+    void (*const build_sync)(uint8_t *work);
+    void (*const build_delay_req)(uint8_t *work);
+    void (*const build_follow_up)(uint8_t *work);
+    void (*const build_delay_resp)(uint8_t *work);
+    void (*const build_announce)(uint8_t *work);
+    void (*const build_pdelay_req)(uint8_t *work);
+    void (*const build_pdelay_resp)(uint8_t *work);
+    void (*const build_pdelay_resp_follow_up)(uint8_t *work);
+    void (*const parse_timestamp_msg)(uint8_t *work);
+    void (*const parse_delay_resp)(uint8_t *work);
+    void (*const parse_announce)(uint8_t *work);
+    void (*const parse_pdelay_req)(uint8_t *work);
+    void (*const parse_pdelay_resp)(uint8_t *work);
+    void (*const parse_pdelay_resp_follow_up)(uint8_t *work);
+    void (*const compute)(uint8_t *work);
+    void (*const compute_link_delay)(uint8_t *work);
 } PtpNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in PtpV or a region of the borrow at a fixed offset.
-void protocore_ptp_ts_write(uint8_t *restrict work);
-void protocore_ptp_ts_read(uint8_t *restrict work);
-void protocore_ptp_ts_to_ns(uint8_t *restrict work);
-void protocore_ptp_ts_from_ns(uint8_t *restrict work);
-void protocore_ptp_build_header(uint8_t *restrict work);
-void protocore_ptp_parse_header(uint8_t *restrict work);
-void protocore_ptp_build_sync(uint8_t *restrict work);
-void protocore_ptp_build_delay_req(uint8_t *restrict work);
-void protocore_ptp_build_follow_up(uint8_t *restrict work);
-void protocore_ptp_build_delay_resp(uint8_t *restrict work);
-void protocore_ptp_build_announce(uint8_t *restrict work);
-void protocore_ptp_build_pdelay_req(uint8_t *restrict work);
-void protocore_ptp_build_pdelay_resp(uint8_t *restrict work);
-void protocore_ptp_build_pdelay_resp_follow_up(uint8_t *restrict work);
-void protocore_ptp_parse_timestamp_msg(uint8_t *restrict work);
-void protocore_ptp_parse_delay_resp(uint8_t *restrict work);
-void protocore_ptp_parse_announce(uint8_t *restrict work);
-void protocore_ptp_parse_pdelay_req(uint8_t *restrict work);
-void protocore_ptp_parse_pdelay_resp(uint8_t *restrict work);
-void protocore_ptp_parse_pdelay_resp_follow_up(uint8_t *restrict work);
-void protocore_ptp_compute(uint8_t *restrict work);
-void protocore_ptp_compute_link_delay(uint8_t *restrict work);
+void protocore_ptp_ts_write(uint8_t *work);
+void protocore_ptp_ts_read(uint8_t *work);
+void protocore_ptp_ts_to_ns(uint8_t *work);
+void protocore_ptp_ts_from_ns(uint8_t *work);
+void protocore_ptp_build_header(uint8_t *work);
+void protocore_ptp_parse_header(uint8_t *work);
+void protocore_ptp_build_sync(uint8_t *work);
+void protocore_ptp_build_delay_req(uint8_t *work);
+void protocore_ptp_build_follow_up(uint8_t *work);
+void protocore_ptp_build_delay_resp(uint8_t *work);
+void protocore_ptp_build_announce(uint8_t *work);
+void protocore_ptp_build_pdelay_req(uint8_t *work);
+void protocore_ptp_build_pdelay_resp(uint8_t *work);
+void protocore_ptp_build_pdelay_resp_follow_up(uint8_t *work);
+void protocore_ptp_parse_timestamp_msg(uint8_t *work);
+void protocore_ptp_parse_delay_resp(uint8_t *work);
+void protocore_ptp_parse_announce(uint8_t *work);
+void protocore_ptp_parse_pdelay_req(uint8_t *work);
+void protocore_ptp_parse_pdelay_resp(uint8_t *work);
+void protocore_ptp_parse_pdelay_resp_follow_up(uint8_t *work);
+void protocore_ptp_compute(uint8_t *work);
+void protocore_ptp_compute_link_delay(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

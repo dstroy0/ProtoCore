@@ -23,9 +23,9 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_snp_bcc(uint8_t *restrict work);
+void protocore_snp_bcc(uint8_t *work);
 
-void protocore_snp_bcc(uint8_t *restrict work)
+void protocore_snp_bcc(uint8_t *work)
 {
     (void)work;
     const uint8_t *bytes = SnpV.bcc_args.bytes;
@@ -40,7 +40,7 @@ void protocore_snp_bcc(uint8_t *restrict work)
     SnpV.value = bcc;
 }
 
-void protocore_snp_build(uint8_t *restrict work)
+void protocore_snp_build(uint8_t *work)
 {
     uint8_t control = SnpV.build_args.control;
     const uint8_t *data = SnpV.build_args.data;
@@ -72,7 +72,7 @@ void protocore_snp_build(uint8_t *restrict work)
     SnpV.n = n;
 }
 
-void protocore_snp_parse(uint8_t *restrict work)
+void protocore_snp_parse(uint8_t *work)
 {
     const uint8_t *frame = SnpV.parse_args.frame;
     size_t len = SnpV.parse_args.len;

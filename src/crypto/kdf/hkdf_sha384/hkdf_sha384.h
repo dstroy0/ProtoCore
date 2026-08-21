@@ -110,10 +110,10 @@ typedef struct
  * @ref HkdfSha384Ns::expand caps out_len at 255*PROTOCORE_HKDF_SHA384_HASH_LEN, the point past which the single-octet
  * block counter has no encoding: out is zeroed and @ref HkdfSha384Ns::ok comes back false.
  *
- * @c work is PROTOCORE_HKDF_SHA384_BORROW secure bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and the
- * pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. The borrow
- * carries the PRK and the T(i) block, so two derivations in flight are two borrows and never collide.
+ * @c work is PROTOCORE_HKDF_SHA384_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the
+ * call, so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes
+ * it, holds it, releases it, nor wipes it. The borrow carries the PRK and the T(i) block, so two derivations in flight
+ * are two borrows and never collide.
  *
  * No storage member and no context: a caller sets operands and reads @ref HkdfSha384Ns::ok, and that is all
  * the surface there is.
@@ -133,18 +133,18 @@ extern HkdfSha384Vars HkdfSha384V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const extract)(uint8_t *restrict work);
-    void (*const expand)(uint8_t *restrict work);
-    void (*const expand_label)(uint8_t *restrict work);
-    void (*const expand_label_ctx)(uint8_t *restrict work);
+    void (*const extract)(uint8_t *work);
+    void (*const expand)(uint8_t *work);
+    void (*const expand_label)(uint8_t *work);
+    void (*const expand_label_ctx)(uint8_t *work);
 } HkdfSha384Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HkdfSha384V or a region of the borrow at a fixed offset.
-void protocore_hkdf_sha384_extract(uint8_t *restrict work);
-void protocore_hkdf_sha384_expand(uint8_t *restrict work);
-void protocore_hkdf_sha384_expand_label(uint8_t *restrict work);
-void protocore_hkdf_sha384_expand_label_ctx(uint8_t *restrict work);
+void protocore_hkdf_sha384_extract(uint8_t *work);
+void protocore_hkdf_sha384_expand(uint8_t *work);
+void protocore_hkdf_sha384_expand_label(uint8_t *work);
+void protocore_hkdf_sha384_expand_label_ctx(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

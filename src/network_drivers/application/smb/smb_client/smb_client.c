@@ -213,7 +213,7 @@ typedef struct
 } SmbCrypt;
 
 // Sign / verify a message with the session's negotiated algorithm.
-static void smb_apply_sign(uint8_t *restrict work, const SmbSign *s, uint8_t *msg, size_t len)
+static void smb_apply_sign(uint8_t *work, const SmbSign *s, uint8_t *msg, size_t len)
 {
     if (s->algo == SMB2_SIGN_ALGO_AES_CMAC)
     {
@@ -224,7 +224,7 @@ static void smb_apply_sign(uint8_t *restrict work, const SmbSign *s, uint8_t *ms
         Smb2.sign(work, SMB_CLIENT_CTX(work)->crypto_work, s->key, msg, len);
     }
 }
-static proto_bool smb_check_sign(uint8_t *restrict work, const SmbSign *s, uint8_t *msg, size_t len)
+static proto_bool smb_check_sign(uint8_t *work, const SmbSign *s, uint8_t *msg, size_t len)
 {
     if (s->algo == SMB2_SIGN_ALGO_AES_CMAC)
     {
@@ -239,8 +239,8 @@ static proto_bool smb_check_sign(uint8_t *restrict work, const SmbSign *s, uint8
 // SMB_CLIENT_CTX(work)->rx. When @p sign is active the request is signed before sending and the response signature is
 // verified (a missing or wrong signature fails closed as SMB_ERR_PROTOCOL). Returns the reply length (>=0), or -1 with
 // *res set to the mapped IO / overflow / protocol error.
-static int smb_round_trip(uint8_t *restrict work, SmbSendFn send, SmbRecvFn recv, void *ctx, size_t mlen,
-                          const SmbSign *sign, SmbCrypt *crypt, SmbResult *res)
+static int smb_round_trip(uint8_t *work, SmbSendFn send, SmbRecvFn recv, void *ctx, size_t mlen, const SmbSign *sign,
+                          SmbCrypt *crypt, SmbResult *res)
 {
     // Encrypted path (SMB 3.x): wrap the plaintext request (tx+4) in a TRANSFORM_HEADER into rx+4, send it,
     // receive the wrapped reply into rx, and decrypt it in place. Encryption supersedes signing (the AEAD tag
@@ -315,7 +315,7 @@ static int smb_round_trip(uint8_t *restrict work, SmbSendFn send, SmbRecvFn recv
 // AES-CMAC signing), and seeds + folds the NEGOTIATE request/response into the 3.1.1 preauth-integrity
 // hash chain (MS-SMB2 §3.1.5.2). The salt is a fresh random blob; it lives only in the request bytes
 // that feed the hash, so it needs no separate storage.
-static SmbResult smb_negotiate(uint8_t *restrict work, SmbSendFn send, SmbRecvFn recv, void *ctx, uint16_t *sec_mode,
+static SmbResult smb_negotiate(uint8_t *work, SmbSendFn send, SmbRecvFn recv, void *ctx, uint16_t *sec_mode,
                                uint16_t *dialect, uint16_t *cipher, SmbPreauth *preauth, const uint16_t *offer_ciphers,
                                size_t offer_count)
 {
@@ -381,10 +381,9 @@ static SmbResult smb_negotiate(uint8_t *restrict work, SmbSendFn send, SmbRecvFn
 // the server required signing (@p want_signing) and the session is not GUEST/NULL - fills *sign with the
 // per-dialect signer: HMAC-SHA256 over the NTLMv2 session key for SMB 2.x, or AES-CMAC over the
 // SP800-108-derived signing key (from the final preauth hash) for SMB 3.x, so every later request signs.
-static SmbResult smb_session_setup(uint8_t *restrict work, const SmbConfig *cfg, const char *domain,
-                                   proto_bool want_signing, uint16_t dialect, uint16_t cipher, SmbPreauth *preauth,
-                                   SmbSendFn send, SmbRecvFn recv, void *ctx, uint64_t *session_id, SmbSign *sign,
-                                   SmbCrypt *crypt)
+static SmbResult smb_session_setup(uint8_t *work, const SmbConfig *cfg, const char *domain, proto_bool want_signing,
+                                   uint16_t dialect, uint16_t cipher, SmbPreauth *preauth, SmbSendFn send,
+                                   SmbRecvFn recv, void *ctx, uint64_t *session_id, SmbSign *sign, SmbCrypt *crypt)
 {
     // 2. SESSION_SETUP round 1: NTLMSSP NEGOTIATE wrapped in SPNEGO
     uint8_t ntneg[64];
@@ -585,9 +584,8 @@ static SmbResult smb_session_setup(uint8_t *restrict work, const SmbConfig *cfg,
 }
 
 // Step 5 - TREE_CONNECT to \\server\share. Fills *tree_id.
-static SmbResult smb_tree_connect(uint8_t *restrict work, const SmbConfig *cfg, uint64_t session_id,
-                                  const SmbSign *sign, SmbSendFn send, SmbRecvFn recv, void *ctx, uint32_t *tree_id,
-                                  SmbCrypt *crypt)
+static SmbResult smb_tree_connect(uint8_t *work, const SmbConfig *cfg, uint64_t session_id, const SmbSign *sign,
+                                  SmbSendFn send, SmbRecvFn recv, void *ctx, uint32_t *tree_id, SmbCrypt *crypt)
 {
     size_t utf16_n = utf16le(cfg->share, SMB_CLIENT_CTX(work)->utf16, sizeof(SMB_CLIENT_CTX(work)->utf16));
     if (!utf16_n)
@@ -630,9 +628,8 @@ static SmbResult smb_tree_connect(uint8_t *restrict work, const SmbConfig *cfg, 
 }
 
 // Step 6 - CREATE (open) the file; fills the handle h on success.
-static SmbResult smb_create(uint8_t *restrict work, const SmbConfig *cfg, SmbHandle *h, uint64_t session_id,
-                            uint32_t tree_id, const SmbSign *sign, SmbCrypt *crypt, SmbSendFn send, SmbRecvFn recv,
-                            void *ctx)
+static SmbResult smb_create(uint8_t *work, const SmbConfig *cfg, SmbHandle *h, uint64_t session_id, uint32_t tree_id,
+                            const SmbSign *sign, SmbCrypt *crypt, SmbSendFn send, SmbRecvFn recv, void *ctx)
 {
     size_t utf16_n = utf16le(cfg->path, SMB_CLIENT_CTX(work)->utf16, sizeof(SMB_CLIENT_CTX(work)->utf16));
     if (!utf16_n)
@@ -684,7 +681,7 @@ static SmbResult smb_create(uint8_t *restrict work, const SmbConfig *cfg, SmbHan
     return SMB_OK;
 }
 
-SmbResult protocore_smb_client_smb_open(uint8_t *restrict work, const SmbConfig *cfg, SmbHandle *h, SmbSendFn send,
+SmbResult protocore_smb_client_smb_open(uint8_t *work, const SmbConfig *cfg, SmbHandle *h, SmbSendFn send,
                                         SmbRecvFn recv, void *ctx)
 {
     if (!cfg || !h || !send || !recv || !cfg->user || !cfg->pass || !cfg->share || !cfg->path)
@@ -748,8 +745,7 @@ SmbResult protocore_smb_client_smb_open(uint8_t *restrict work, const SmbConfig 
     return smb_create(work, cfg, h, session_id, tree_id, &sign, &crypt, send, recv, ctx);
 }
 
-SmbResult protocore_smb_client_smb_close(uint8_t *restrict work, SmbHandle *h, SmbSendFn send, SmbRecvFn recv,
-                                         void *ctx)
+SmbResult protocore_smb_client_smb_close(uint8_t *work, SmbHandle *h, SmbSendFn send, SmbRecvFn recv, void *ctx)
 {
     if (!h || !send || !recv)
     {
@@ -790,7 +786,7 @@ SmbResult protocore_smb_client_smb_close(uint8_t *restrict work, SmbHandle *h, S
     return SMB_OK;
 }
 
-SmbResult protocore_smb_client_smb_read(uint8_t *restrict work, SmbHandle *h, uint64_t offset, uint8_t *out, size_t cap,
+SmbResult protocore_smb_client_smb_read(uint8_t *work, SmbHandle *h, uint64_t offset, uint8_t *out, size_t cap,
                                         size_t *out_len, SmbSendFn send, SmbRecvFn recv, void *ctx)
 {
     if (!h || !out || !out_len || !send || !recv)
@@ -863,8 +859,8 @@ SmbResult protocore_smb_client_smb_read(uint8_t *restrict work, SmbHandle *h, ui
     return SMB_OK;
 }
 
-SmbResult protocore_smb_client_smb_write(uint8_t *restrict work, SmbHandle *h, uint64_t offset, const uint8_t *data,
-                                         size_t len, size_t *written, SmbSendFn send, SmbRecvFn recv, void *ctx)
+SmbResult protocore_smb_client_smb_write(uint8_t *work, SmbHandle *h, uint64_t offset, const uint8_t *data, size_t len,
+                                         size_t *written, SmbSendFn send, SmbRecvFn recv, void *ctx)
 {
     SmbResult value = 0;
     if (!h || !data || !written || !send || !recv)

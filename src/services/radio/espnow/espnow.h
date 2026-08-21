@@ -153,9 +153,8 @@ typedef struct
  * @var EspnowNs::send  encode and transmit a message to mac. true if queued to the radio
  * @var EspnowNs::broadcast  send to the broadcast address (all peers in range)
  *
- * @c work is PROTOCORE_ESPNOW_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_ESPNOW_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
+ * nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -178,32 +177,32 @@ extern EspnowVars EspnowV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const encode)(uint8_t *restrict work);
-    void (*const decode)(uint8_t *restrict work);
-    void (*const peers_reset)(uint8_t *restrict work);
-    void (*const peer_add)(uint8_t *restrict work);
-    void (*const peer_has)(uint8_t *restrict work);
-    void (*const peer_remove)(uint8_t *restrict work);
-    void (*const peer_count)(uint8_t *restrict work);
-    void (*const begin)(uint8_t *restrict work);
-    void (*const add_peer)(uint8_t *restrict work);
-    void (*const send)(uint8_t *restrict work);
-    void (*const broadcast)(uint8_t *restrict work);
+    void (*const encode)(uint8_t *work);
+    void (*const decode)(uint8_t *work);
+    void (*const peers_reset)(uint8_t *work);
+    void (*const peer_add)(uint8_t *work);
+    void (*const peer_has)(uint8_t *work);
+    void (*const peer_remove)(uint8_t *work);
+    void (*const peer_count)(uint8_t *work);
+    void (*const begin)(uint8_t *work);
+    void (*const add_peer)(uint8_t *work);
+    void (*const send)(uint8_t *work);
+    void (*const broadcast)(uint8_t *work);
 } EspnowNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in EspnowV or a region of the borrow at a fixed offset.
-void protocore_espnow_encode(uint8_t *restrict work);
-void protocore_espnow_decode(uint8_t *restrict work);
-void protocore_espnow_peers_reset(uint8_t *restrict work);
-void protocore_espnow_peer_add(uint8_t *restrict work);
-void protocore_espnow_peer_has(uint8_t *restrict work);
-void protocore_espnow_peer_remove(uint8_t *restrict work);
-void protocore_espnow_peer_count(uint8_t *restrict work);
-void protocore_espnow_begin(uint8_t *restrict work);
-void protocore_espnow_add_peer(uint8_t *restrict work);
-void protocore_espnow_send(uint8_t *restrict work);
-void protocore_espnow_broadcast(uint8_t *restrict work);
+void protocore_espnow_encode(uint8_t *work);
+void protocore_espnow_decode(uint8_t *work);
+void protocore_espnow_peers_reset(uint8_t *work);
+void protocore_espnow_peer_add(uint8_t *work);
+void protocore_espnow_peer_has(uint8_t *work);
+void protocore_espnow_peer_remove(uint8_t *work);
+void protocore_espnow_peer_count(uint8_t *work);
+void protocore_espnow_begin(uint8_t *work);
+void protocore_espnow_add_peer(uint8_t *work);
+void protocore_espnow_send(uint8_t *work);
+void protocore_espnow_broadcast(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

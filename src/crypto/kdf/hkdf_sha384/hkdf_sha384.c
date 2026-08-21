@@ -45,7 +45,7 @@ static_assert(HKDF_SHA384_OFF_INFO + HKDF_SHA384_INFO_CAP <= PROTOCORE_HKDF_SHA3
 // RFC 5869 sec 2.3 HKDF-Expand. The TLS 1.3 secrets are one hash block each, but the general N-block
 // loop is written out so a caller asking for more than 48 bytes stays correct.
 // T(i) = HMAC(PRK, T(i-1) || info || i), i counts from 1.
-static proto_bool hkdf_sha384_derive(uint8_t *restrict work, const uint8_t *prk, const uint8_t *info, size_t info_len,
+static proto_bool hkdf_sha384_derive(uint8_t *work, const uint8_t *prk, const uint8_t *info, size_t info_len,
                                      uint8_t *out, size_t out_len)
 {
     // RFC 5869 sec 2.3 bounds L at 255*HashLen because the block counter is a single octet. Past
@@ -82,7 +82,7 @@ static proto_bool hkdf_sha384_derive(uint8_t *restrict work, const uint8_t *prk,
 }
 
 // Compose the HkdfLabel in the borrow's info region and expand under it.
-static proto_bool hkdf_sha384_label_derive(uint8_t *restrict work, const uint8_t *secret, const char *label,
+static proto_bool hkdf_sha384_label_derive(uint8_t *work, const uint8_t *secret, const char *label,
                                            const uint8_t *context, size_t context_len, uint8_t *out, size_t out_len,
                                            const char *label_prefix)
 {
@@ -120,7 +120,7 @@ static proto_bool hkdf_sha384_label_derive(uint8_t *restrict work, const uint8_t
 
 // RFC 5869 sec 2.2: PRK = HMAC-Hash(salt, IKM). HmacSha384 pre-hashes keys > 128 bytes and zero-pads
 // shorter ones, which is exactly HMAC's own key handling, so the salt goes in as-is.
-void protocore_hkdf_sha384_extract(uint8_t *restrict work)
+void protocore_hkdf_sha384_extract(uint8_t *work)
 {
     HkdfSha384V.ok = PROTO_FALSE;
     if (!HkdfSha384V.extract_args.prk)
@@ -133,7 +133,7 @@ void protocore_hkdf_sha384_extract(uint8_t *restrict work)
     HkdfSha384V.ok = hmac_sha384_ok;
 }
 
-void protocore_hkdf_sha384_expand(uint8_t *restrict work)
+void protocore_hkdf_sha384_expand(uint8_t *work)
 {
     HkdfSha384V.ok = PROTO_FALSE;
     if (!HkdfSha384V.expand_args.prk || !HkdfSha384V.expand_args.out)
@@ -145,7 +145,7 @@ void protocore_hkdf_sha384_expand(uint8_t *restrict work)
                                         HkdfSha384V.expand_args.out_len);
 }
 
-void protocore_hkdf_sha384_expand_label(uint8_t *restrict work)
+void protocore_hkdf_sha384_expand_label(uint8_t *work)
 {
     HkdfSha384V.ok = PROTO_FALSE;
     if (!HkdfSha384V.expand_label_args.secret || !HkdfSha384V.expand_label_args.label ||
@@ -159,7 +159,7 @@ void protocore_hkdf_sha384_expand_label(uint8_t *restrict work)
                                  HkdfSha384V.expand_label_args.label_prefix);
 }
 
-void protocore_hkdf_sha384_expand_label_ctx(uint8_t *restrict work)
+void protocore_hkdf_sha384_expand_label_ctx(uint8_t *work)
 {
     HkdfSha384V.ok = PROTO_FALSE;
     if (!HkdfSha384V.expand_label_ctx_args.secret || !HkdfSha384V.expand_label_ctx_args.label ||

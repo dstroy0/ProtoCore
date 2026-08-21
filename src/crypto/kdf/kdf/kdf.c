@@ -50,7 +50,7 @@ static_assert(KDF_OFF_CTX % _Alignof(KdfCtx) == 0,
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_kdf_ctr_hmac_sha256(uint8_t *restrict work, const uint8_t *ki, size_t ki_len, const uint8_t *fixed,
+proto_bool protocore_kdf_ctr_hmac_sha256(uint8_t *work, const uint8_t *ki, size_t ki_len, const uint8_t *fixed,
                                          size_t fixed_len, uint8_t *out, size_t out_len)
 {
     if (!ki || !fixed || !out || out_len == 0)

@@ -235,26 +235,26 @@ extern DevicenetVars DevicenetV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const encode_id)(uint8_t *restrict work);
-    void (*const decode_id)(uint8_t *restrict work);
-    void (*const msg_header)(uint8_t *restrict work);
-    void (*const frag_octet)(uint8_t *restrict work);
-    void (*const build_explicit)(uint8_t *restrict work);
-    void (*const build_fragment)(uint8_t *restrict work);
-    void (*const frag_reset)(uint8_t *restrict work);
-    void (*const frag_feed)(uint8_t *restrict work);
+    void (*const encode_id)(uint8_t *work);
+    void (*const decode_id)(uint8_t *work);
+    void (*const msg_header)(uint8_t *work);
+    void (*const frag_octet)(uint8_t *work);
+    void (*const build_explicit)(uint8_t *work);
+    void (*const build_fragment)(uint8_t *work);
+    void (*const frag_reset)(uint8_t *work);
+    void (*const frag_feed)(uint8_t *work);
 } DevicenetNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in DevicenetV or a region of the borrow at a fixed offset.
-void protocore_devicenet_encode_id(uint8_t *restrict work);
-void protocore_devicenet_decode_id(uint8_t *restrict work);
-void protocore_devicenet_msg_header(uint8_t *restrict work);
-void protocore_devicenet_frag_octet(uint8_t *restrict work);
-void protocore_devicenet_build_explicit(uint8_t *restrict work);
-void protocore_devicenet_build_fragment(uint8_t *restrict work);
-void protocore_devicenet_frag_reset(uint8_t *restrict work);
-void protocore_devicenet_frag_feed(uint8_t *restrict work);
+void protocore_devicenet_encode_id(uint8_t *work);
+void protocore_devicenet_decode_id(uint8_t *work);
+void protocore_devicenet_msg_header(uint8_t *work);
+void protocore_devicenet_frag_octet(uint8_t *work);
+void protocore_devicenet_build_explicit(uint8_t *work);
+void protocore_devicenet_build_fragment(uint8_t *work);
+void protocore_devicenet_frag_reset(uint8_t *work);
+void protocore_devicenet_frag_feed(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

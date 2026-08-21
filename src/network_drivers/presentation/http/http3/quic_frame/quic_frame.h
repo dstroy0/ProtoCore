@@ -138,16 +138,15 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    size_t (*parse)(uint8_t *restrict, const uint8_t *, size_t, QuicFrameHeader *);
-    size_t (*build_padding)(uint8_t *restrict, uint8_t *, size_t, size_t);
-    size_t (*build_ping)(uint8_t *restrict, uint8_t *, size_t);
-    size_t (*build_handshake_done)(uint8_t *restrict, uint8_t *, size_t);
-    size_t (*build_ack)(uint8_t *restrict, uint8_t *, size_t, uint64_t, uint64_t, uint64_t);
-    size_t (*build_crypto)(uint8_t *restrict, uint8_t *, size_t, uint64_t, const uint8_t *, size_t);
-    size_t (*build_stream)(uint8_t *restrict, uint8_t *, size_t, uint64_t, uint64_t, const uint8_t *, size_t,
-                           proto_bool);
-    size_t (*build_max_data)(uint8_t *restrict, uint8_t *, size_t, uint64_t);
-    size_t (*build_connection_close)(uint8_t *restrict, uint8_t *, size_t, proto_bool, uint64_t, uint64_t, const char *,
+    size_t (*parse)(uint8_t *, const uint8_t *, size_t, QuicFrameHeader *);
+    size_t (*build_padding)(uint8_t *, uint8_t *, size_t, size_t);
+    size_t (*build_ping)(uint8_t *, uint8_t *, size_t);
+    size_t (*build_handshake_done)(uint8_t *, uint8_t *, size_t);
+    size_t (*build_ack)(uint8_t *, uint8_t *, size_t, uint64_t, uint64_t, uint64_t);
+    size_t (*build_crypto)(uint8_t *, uint8_t *, size_t, uint64_t, const uint8_t *, size_t);
+    size_t (*build_stream)(uint8_t *, uint8_t *, size_t, uint64_t, uint64_t, const uint8_t *, size_t, proto_bool);
+    size_t (*build_max_data)(uint8_t *, uint8_t *, size_t, uint64_t);
+    size_t (*build_connection_close)(uint8_t *, uint8_t *, size_t, proto_bool, uint64_t, uint64_t, const char *,
                                      size_t);
 } QuicFrameNs;
 PROTOCORE_NS_LAYOUT(QuicFrameNs, parse, build_padding, build_ping, build_handshake_done, build_ack, build_crypto,
@@ -161,7 +160,7 @@ PROTOCORE_NS_LAYOUT(QuicFrameNs, parse, build_padding, build_ping, build_handsha
  * @param out Out
  * @return The size_t.
  */
-size_t protocore_quic_frame_parse(uint8_t *restrict work, const uint8_t *buf, size_t len, QuicFrameHeader *out);
+size_t protocore_quic_frame_parse(uint8_t *work, const uint8_t *buf, size_t len, QuicFrameHeader *out);
 /**
  * @brief N PADDING frames (n zero bytes). n, or 0 if it does not fit.
  * @param work PROTOCORE_QUIC_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -170,7 +169,7 @@ size_t protocore_quic_frame_parse(uint8_t *restrict work, const uint8_t *buf, si
  * @param n N
  * @return The size_t.
  */
-size_t protocore_quic_frame_build_padding(uint8_t *restrict work, uint8_t *out, size_t cap, size_t n);
+size_t protocore_quic_frame_build_padding(uint8_t *work, uint8_t *out, size_t cap, size_t n);
 /**
  * @brief A PING frame.
  * @param work PROTOCORE_QUIC_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -178,7 +177,7 @@ size_t protocore_quic_frame_build_padding(uint8_t *restrict work, uint8_t *out, 
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_quic_frame_build_ping(uint8_t *restrict work, uint8_t *out, size_t cap);
+size_t protocore_quic_frame_build_ping(uint8_t *work, uint8_t *out, size_t cap);
 /**
  * @brief A HANDSHAKE_DONE frame.
  * @param work PROTOCORE_QUIC_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -186,7 +185,7 @@ size_t protocore_quic_frame_build_ping(uint8_t *restrict work, uint8_t *out, siz
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_quic_frame_build_handshake_done(uint8_t *restrict work, uint8_t *out, size_t cap);
+size_t protocore_quic_frame_build_handshake_done(uint8_t *work, uint8_t *out, size_t cap);
 /**
  * @brief A single-range ACK frame (ACK Range Count 0): Largest, ACK Delay, .
  * @param work PROTOCORE_QUIC_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -197,8 +196,8 @@ size_t protocore_quic_frame_build_handshake_done(uint8_t *restrict work, uint8_t
  * @param first_range First range
  * @return The size_t.
  */
-size_t protocore_quic_frame_build_ack(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t largest,
-                                      uint64_t delay, uint64_t first_range);
+size_t protocore_quic_frame_build_ack(uint8_t *work, uint8_t *out, size_t cap, uint64_t largest, uint64_t delay,
+                                      uint64_t first_range);
 /**
  * @brief A CRYPTO frame carrying len bytes at stream offset.
  * @param work PROTOCORE_QUIC_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -209,8 +208,8 @@ size_t protocore_quic_frame_build_ack(uint8_t *restrict work, uint8_t *out, size
  * @param len Len
  * @return The size_t.
  */
-size_t protocore_quic_frame_build_crypto(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t offset,
-                                         const uint8_t *data, size_t len);
+size_t protocore_quic_frame_build_crypto(uint8_t *work, uint8_t *out, size_t cap, uint64_t offset, const uint8_t *data,
+                                         size_t len);
 /**
  * @brief A STREAM frame (LEN always set; OFF set when offset > 0; FIN per .
  * @param work PROTOCORE_QUIC_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -223,7 +222,7 @@ size_t protocore_quic_frame_build_crypto(uint8_t *restrict work, uint8_t *out, s
  * @param fin Fin
  * @return The size_t.
  */
-size_t protocore_quic_frame_build_stream(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t id, uint64_t offset,
+size_t protocore_quic_frame_build_stream(uint8_t *work, uint8_t *out, size_t cap, uint64_t id, uint64_t offset,
                                          const uint8_t *data, size_t len, proto_bool fin);
 /**
  * @brief A MAX_DATA frame.
@@ -233,7 +232,7 @@ size_t protocore_quic_frame_build_stream(uint8_t *restrict work, uint8_t *out, s
  * @param max Max
  * @return The size_t.
  */
-size_t protocore_quic_frame_build_max_data(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t max);
+size_t protocore_quic_frame_build_max_data(uint8_t *work, uint8_t *out, size_t cap, uint64_t max);
 /**
  * @brief A CONNECTION_CLOSE with a reason phrase. app selects the .
  * @param work PROTOCORE_QUIC_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -246,7 +245,7 @@ size_t protocore_quic_frame_build_max_data(uint8_t *restrict work, uint8_t *out,
  * @param reason_len Reason len
  * @return The size_t.
  */
-size_t protocore_quic_frame_build_connection_close(uint8_t *restrict work, uint8_t *out, size_t cap, proto_bool app,
+size_t protocore_quic_frame_build_connection_close(uint8_t *work, uint8_t *out, size_t cap, proto_bool app,
                                                    uint64_t error_code, uint64_t frame_type, const char *reason,
                                                    size_t reason_len);
 

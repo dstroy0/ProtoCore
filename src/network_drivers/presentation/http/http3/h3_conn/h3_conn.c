@@ -462,7 +462,7 @@ static void on_handshake_done(void *app, uint8_t *qc)
     h3->next_uni_id = 15;
 }
 
-static void h3_conn_open(uint8_t *restrict work, H3ConnCtx *h3, uint8_t *qc, H3RequestFn on_request, void *app)
+static void h3_conn_open(uint8_t *work, H3ConnCtx *h3, uint8_t *qc, H3RequestFn on_request, void *app)
 {
     uint8_t *base = h3->b; // the span is the connection's, bound before this call
     mem.set(h3, 0, sizeof(*h3));
@@ -489,8 +489,8 @@ static void h3_conn_open(uint8_t *restrict work, H3ConnCtx *h3, uint8_t *qc, H3R
     QuicConn.callbacks(qc);
 }
 
-static proto_bool h3_conn_reply(uint8_t *restrict work, H3ConnCtx *h3, uint64_t stream_id, int status,
-                                const char *content_type, const uint8_t *body, size_t body_len)
+static proto_bool h3_conn_reply(uint8_t *work, H3ConnCtx *h3, uint64_t stream_id, int status, const char *content_type,
+                                const uint8_t *body, size_t body_len)
 {
     H3Stream *st = protocore_h3_stream_get(h3, stream_id, PROTO_FALSE);
     if (st)
@@ -572,12 +572,12 @@ static proto_bool h3_conn_reply(uint8_t *restrict work, H3ConnCtx *h3, uint64_t 
 // --- the entries -----------------------------------------------------------
 
 // The bound span, as this file's connection. Every entry starts here.
-static H3ConnCtx *h3_bound(uint8_t *restrict work)
+static H3ConnCtx *h3_bound(uint8_t *work)
 {
     return work ? H3_CTX(work) : NULL;
 }
 
-void protocore_h3_conn_init(uint8_t *restrict work)
+void protocore_h3_conn_init(uint8_t *work)
 {
     H3ConnCtx *h3 = h3_bound(work);
     H3ConnV.ok = PROTO_FALSE;
@@ -590,7 +590,7 @@ void protocore_h3_conn_init(uint8_t *restrict work)
     H3ConnV.ok = (h3->b != NULL);
 }
 
-void protocore_h3_conn_respond(uint8_t *restrict work)
+void protocore_h3_conn_respond(uint8_t *work)
 {
     H3ConnCtx *h3 = h3_bound(work);
     H3ConnV.ok = PROTO_FALSE;

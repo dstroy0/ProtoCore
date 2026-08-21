@@ -137,49 +137,49 @@ extern TcpListenerVars TcpListenerV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const stop)(uint8_t *restrict work);
-    void (*const stop_all)(uint8_t *restrict work);
-    void (*const stop_dynamic)(uint8_t *restrict work);
-    void (*const add)(uint8_t *restrict work);
-    void (*const add_dynamic)(uint8_t *restrict work);
-    void (*const enqueue)(uint8_t *restrict work);
-    void (*const set_dscp)(uint8_t *restrict work);
-    void (*const worker_queues_init)(uint8_t *restrict work);
-    void (*const worker_queue)(uint8_t *restrict work);
-    void (*const listener_queue)(uint8_t *restrict work);
-    void (*const accept_allowed)(uint8_t *restrict work);
-    void (*const accept_throttle_reset)(uint8_t *restrict work);
-    void (*const accept_allowed_ip)(uint8_t *restrict work);
-    void (*const per_ip_throttle_reset)(uint8_t *restrict work);
-    void (*const ip_allow_add)(uint8_t *restrict work);
-    void (*const ip_allow_add_cidr)(uint8_t *restrict work);
-    void (*const ip_allowed)(uint8_t *restrict work);
-    void (*const ip_allowlist_reset)(uint8_t *restrict work);
+    void (*const stop)(uint8_t *work);
+    void (*const stop_all)(uint8_t *work);
+    void (*const stop_dynamic)(uint8_t *work);
+    void (*const add)(uint8_t *work);
+    void (*const add_dynamic)(uint8_t *work);
+    void (*const enqueue)(uint8_t *work);
+    void (*const set_dscp)(uint8_t *work);
+    void (*const worker_queues_init)(uint8_t *work);
+    void (*const worker_queue)(uint8_t *work);
+    void (*const listener_queue)(uint8_t *work);
+    void (*const accept_allowed)(uint8_t *work);
+    void (*const accept_throttle_reset)(uint8_t *work);
+    void (*const accept_allowed_ip)(uint8_t *work);
+    void (*const per_ip_throttle_reset)(uint8_t *work);
+    void (*const ip_allow_add)(uint8_t *work);
+    void (*const ip_allow_add_cidr)(uint8_t *work);
+    void (*const ip_allowed)(uint8_t *work);
+    void (*const ip_allowlist_reset)(uint8_t *work);
 } TcpListenerNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in TcpListenerV or a region of the borrow at a fixed offset.
-void protocore_tcp_listener_stop(uint8_t *restrict work);
-void protocore_tcp_listener_stop_all(uint8_t *restrict work);
-void protocore_tcp_listener_stop_dynamic(uint8_t *restrict work);
-void protocore_tcp_listener_add(uint8_t *restrict work);
-void protocore_tcp_listener_add_dynamic(uint8_t *restrict work);
-void protocore_tcp_listener_enqueue(uint8_t *restrict work);
-void protocore_tcp_listener_set_dscp(uint8_t *restrict work);
+void protocore_tcp_listener_stop(uint8_t *work);
+void protocore_tcp_listener_stop_all(uint8_t *work);
+void protocore_tcp_listener_stop_dynamic(uint8_t *work);
+void protocore_tcp_listener_add(uint8_t *work);
+void protocore_tcp_listener_add_dynamic(uint8_t *work);
+void protocore_tcp_listener_enqueue(uint8_t *work);
+void protocore_tcp_listener_set_dscp(uint8_t *work);
 #if PROTOCORE_WORKER_COUNT > 1
-void protocore_tcp_listener_worker_queues_init(uint8_t *restrict work);
-void protocore_tcp_listener_worker_queue(uint8_t *restrict work);
+void protocore_tcp_listener_worker_queues_init(uint8_t *work);
+void protocore_tcp_listener_worker_queue(uint8_t *work);
 #else
-void protocore_tcp_listener_listener_queue(uint8_t *restrict work);
+void protocore_tcp_listener_listener_queue(uint8_t *work);
 #endif
-void protocore_tcp_listener_accept_allowed(uint8_t *restrict work);
-void protocore_tcp_listener_accept_throttle_reset(uint8_t *restrict work);
-void protocore_tcp_listener_accept_allowed_ip(uint8_t *restrict work);
-void protocore_tcp_listener_per_ip_throttle_reset(uint8_t *restrict work);
-void protocore_tcp_listener_ip_allow_add(uint8_t *restrict work);
-void protocore_tcp_listener_ip_allow_add_cidr(uint8_t *restrict work);
-void protocore_tcp_listener_ip_allowed(uint8_t *restrict work);
-void protocore_tcp_listener_ip_allowlist_reset(uint8_t *restrict work);
+void protocore_tcp_listener_accept_allowed(uint8_t *work);
+void protocore_tcp_listener_accept_throttle_reset(uint8_t *work);
+void protocore_tcp_listener_accept_allowed_ip(uint8_t *work);
+void protocore_tcp_listener_per_ip_throttle_reset(uint8_t *work);
+void protocore_tcp_listener_ip_allow_add(uint8_t *work);
+void protocore_tcp_listener_ip_allow_add_cidr(uint8_t *work);
+void protocore_tcp_listener_ip_allowed(uint8_t *work);
+void protocore_tcp_listener_ip_allowlist_reset(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

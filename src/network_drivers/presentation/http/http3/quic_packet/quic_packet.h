@@ -70,16 +70,16 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*is_long_header)(uint8_t *restrict, uint8_t);
-    proto_bool (*parse_long_header)(uint8_t *restrict, const uint8_t *, size_t, QuicLongHeader *);
-    size_t (*build_long_header)(uint8_t *restrict, uint8_t *, size_t, uint8_t, uint32_t, const uint8_t *, uint8_t,
+    proto_bool (*is_long_header)(uint8_t *, uint8_t);
+    proto_bool (*parse_long_header)(uint8_t *, const uint8_t *, size_t, QuicLongHeader *);
+    size_t (*build_long_header)(uint8_t *, uint8_t *, size_t, uint8_t, uint32_t, const uint8_t *, uint8_t,
                                 const uint8_t *, uint8_t, uint8_t);
-    proto_bool (*parse_short_header)(uint8_t *restrict, const uint8_t *, size_t, uint8_t, QuicShortHeader *);
-    size_t (*build_version_negotiation)(uint8_t *restrict, uint8_t *, size_t, const uint8_t *, uint8_t, const uint8_t *,
+    proto_bool (*parse_short_header)(uint8_t *, const uint8_t *, size_t, uint8_t, QuicShortHeader *);
+    size_t (*build_version_negotiation)(uint8_t *, uint8_t *, size_t, const uint8_t *, uint8_t, const uint8_t *,
                                         uint8_t, const uint32_t *, size_t);
-    uint8_t (*pn_length)(uint8_t *restrict, uint64_t, int64_t);
-    size_t (*pn_encode)(uint8_t *restrict, uint8_t *, size_t, uint64_t, int64_t);
-    uint64_t (*pn_decode)(uint8_t *restrict, uint64_t, uint64_t, uint8_t);
+    uint8_t (*pn_length)(uint8_t *, uint64_t, int64_t);
+    size_t (*pn_encode)(uint8_t *, uint8_t *, size_t, uint64_t, int64_t);
+    uint64_t (*pn_decode)(uint8_t *, uint64_t, uint64_t, uint8_t);
 } QuicPacketNs;
 PROTOCORE_NS_LAYOUT(QuicPacketNs, is_long_header, parse_long_header, build_long_header, parse_short_header,
                     build_version_negotiation, pn_length, pn_encode, pn_decode);
@@ -90,7 +90,7 @@ PROTOCORE_NS_LAYOUT(QuicPacketNs, is_long_header, parse_long_header, build_long_
  * @param first First
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_quic_packet_is_long_header(uint8_t *restrict work, uint8_t first);
+proto_bool protocore_quic_packet_is_long_header(uint8_t *work, uint8_t first);
 /**
  * @brief Parse a long header. false if truncated or a connection ID exceeds .
  * @param work PROTOCORE_QUIC_PACKET_BORROW bytes the caller took. Not held past the call.
@@ -99,8 +99,7 @@ proto_bool protocore_quic_packet_is_long_header(uint8_t *restrict work, uint8_t 
  * @param out Out
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_quic_packet_parse_long_header(uint8_t *restrict work, const uint8_t *buf, size_t len,
-                                                   QuicLongHeader *out);
+proto_bool protocore_quic_packet_parse_long_header(uint8_t *work, const uint8_t *buf, size_t len, QuicLongHeader *out);
 /**
  * @brief Build a long header's invariant fields (first byte .. Source .
  * @param work PROTOCORE_QUIC_PACKET_BORROW bytes the caller took. Not held past the call.
@@ -115,9 +114,9 @@ proto_bool protocore_quic_packet_parse_long_header(uint8_t *restrict work, const
  * @param pn_len Pn len
  * @return The size_t.
  */
-size_t protocore_quic_packet_build_long_header(uint8_t *restrict work, uint8_t *out, size_t cap, uint8_t type,
-                                               uint32_t version, const uint8_t *dcid, uint8_t dcid_len,
-                                               const uint8_t *scid, uint8_t scid_len, uint8_t pn_len);
+size_t protocore_quic_packet_build_long_header(uint8_t *work, uint8_t *out, size_t cap, uint8_t type, uint32_t version,
+                                               const uint8_t *dcid, uint8_t dcid_len, const uint8_t *scid,
+                                               uint8_t scid_len, uint8_t pn_len);
 /**
  * @brief Parse a short (1-RTT) header given the locally chosen dcid_len. .
  * @param work PROTOCORE_QUIC_PACKET_BORROW bytes the caller took. Not held past the call.
@@ -127,8 +126,8 @@ size_t protocore_quic_packet_build_long_header(uint8_t *restrict work, uint8_t *
  * @param out Out
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_quic_packet_parse_short_header(uint8_t *restrict work, const uint8_t *buf, size_t len,
-                                                    uint8_t dcid_len, QuicShortHeader *out);
+proto_bool protocore_quic_packet_parse_short_header(uint8_t *work, const uint8_t *buf, size_t len, uint8_t dcid_len,
+                                                    QuicShortHeader *out);
 /**
  * @brief Build a Version Negotiation packet (RFC 9000 sec 17.2.1): Version 0 .
  * @param work PROTOCORE_QUIC_PACKET_BORROW bytes the caller took. Not held past the call.
@@ -142,9 +141,9 @@ proto_bool protocore_quic_packet_parse_short_header(uint8_t *restrict work, cons
  * @param nversions Nversions
  * @return The size_t.
  */
-size_t protocore_quic_packet_build_version_negotiation(uint8_t *restrict work, uint8_t *out, size_t cap,
-                                                       const uint8_t *dcid, uint8_t dcid_len, const uint8_t *scid,
-                                                       uint8_t scid_len, const uint32_t *versions, size_t nversions);
+size_t protocore_quic_packet_build_version_negotiation(uint8_t *work, uint8_t *out, size_t cap, const uint8_t *dcid,
+                                                       uint8_t dcid_len, const uint8_t *scid, uint8_t scid_len,
+                                                       const uint32_t *versions, size_t nversions);
 /**
  * @brief Packet-number length in bytes (1..4) for full_pn; largest_acked < 0 .
  * @param work PROTOCORE_QUIC_PACKET_BORROW bytes the caller took. Not held past the call.
@@ -152,7 +151,7 @@ size_t protocore_quic_packet_build_version_negotiation(uint8_t *restrict work, u
  * @param largest_acked Largest acked
  * @return The uint8_t.
  */
-uint8_t protocore_quic_packet_pn_length(uint8_t *restrict work, uint64_t full_pn, int64_t largest_acked);
+uint8_t protocore_quic_packet_pn_length(uint8_t *work, uint64_t full_pn, int64_t largest_acked);
 /**
  * @brief Encode full_pn truncated to ::QuicPacketNs::pn_length bytes, .
  * @param work PROTOCORE_QUIC_PACKET_BORROW bytes the caller took. Not held past the call.
@@ -162,7 +161,7 @@ uint8_t protocore_quic_packet_pn_length(uint8_t *restrict work, uint64_t full_pn
  * @param largest_acked Largest acked
  * @return The size_t.
  */
-size_t protocore_quic_packet_pn_encode(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t full_pn,
+size_t protocore_quic_packet_pn_encode(uint8_t *work, uint8_t *out, size_t cap, uint64_t full_pn,
                                        int64_t largest_acked);
 /**
  * @brief Recover the full packet number from a truncated_pn of pn_nbits bits .
@@ -172,8 +171,7 @@ size_t protocore_quic_packet_pn_encode(uint8_t *restrict work, uint8_t *out, siz
  * @param pn_nbits Pn nbits
  * @return The uint64_t.
  */
-uint64_t protocore_quic_packet_pn_decode(uint8_t *restrict work, uint64_t largest_pn, uint64_t truncated_pn,
-                                         uint8_t pn_nbits);
+uint64_t protocore_quic_packet_pn_decode(uint8_t *work, uint64_t largest_pn, uint64_t truncated_pn, uint8_t pn_nbits);
 
 /** @brief Module namespace. */
 PROTOCORE_NS QuicPacketNs QuicPacket PROTOCORE_UNUSED = {.is_long_header = protocore_quic_packet_is_long_header,

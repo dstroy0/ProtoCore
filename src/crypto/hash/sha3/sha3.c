@@ -174,7 +174,7 @@ static void protocore_keccak_squeeze(KeccakCtx *c, uint8_t *out, size_t outlen)
     }
 }
 
-void protocore_sha3_absorb(uint8_t *restrict work)
+void protocore_sha3_absorb(uint8_t *work)
 {
     protocore_keccak_absorb(SHA3_SPONGE(work), Sha3V.absorb_args.rate, Sha3V.absorb_args.in, Sha3V.absorb_args.inlen,
                             Sha3V.absorb_args.domain);
@@ -182,7 +182,7 @@ void protocore_sha3_absorb(uint8_t *restrict work)
     Sha3V.ok = PROTO_TRUE;
 }
 
-void protocore_sha3_squeeze(uint8_t *restrict work)
+void protocore_sha3_squeeze(uint8_t *work)
 {
     if (!SHA3_SPONGE(work)->absorbed || !Sha3V.squeeze_args.out)
     {
@@ -194,7 +194,7 @@ void protocore_sha3_squeeze(uint8_t *restrict work)
 }
 
 // One-shot digest: absorb the message at @p rate with the SHA3 domain byte, squeeze @p outlen octets.
-static void sha3_digest(uint8_t *restrict work, uint32_t rate, size_t outlen)
+static void sha3_digest(uint8_t *work, uint32_t rate, size_t outlen)
 {
     if (!Sha3V.digest_args.out)
     {
@@ -208,18 +208,18 @@ static void sha3_digest(uint8_t *restrict work, uint32_t rate, size_t outlen)
     Sha3V.ok = PROTO_TRUE;
 }
 
-void protocore_sha3_sha3_256(uint8_t *restrict work)
+void protocore_sha3_sha3_256(uint8_t *work)
 {
     sha3_digest(work, KECCAK_RATE_SHA3_256, 32);
 }
 
-void protocore_sha3_sha3_512(uint8_t *restrict work)
+void protocore_sha3_sha3_512(uint8_t *work)
 {
     sha3_digest(work, KECCAK_RATE_SHA3_512, 64);
 }
 
 // One-shot XOF: absorb the message at @p rate with the SHAKE domain byte, squeeze the requested run.
-static void sha3_xof(uint8_t *restrict work, uint32_t rate)
+static void sha3_xof(uint8_t *work, uint32_t rate)
 {
     if (!Sha3V.xof_args.out)
     {
@@ -233,17 +233,17 @@ static void sha3_xof(uint8_t *restrict work, uint32_t rate)
     Sha3V.ok = PROTO_TRUE;
 }
 
-void protocore_sha3_shake128(uint8_t *restrict work)
+void protocore_sha3_shake128(uint8_t *work)
 {
     sha3_xof(work, KECCAK_RATE_SHAKE128);
 }
 
-void protocore_sha3_shake256(uint8_t *restrict work)
+void protocore_sha3_shake256(uint8_t *work)
 {
     sha3_xof(work, KECCAK_RATE_SHAKE256);
 }
 
-void protocore_sha3_shake128_absorb(uint8_t *restrict work)
+void protocore_sha3_shake128_absorb(uint8_t *work)
 {
     protocore_keccak_absorb(SHA3_SPONGE(work), KECCAK_RATE_SHAKE128, Sha3V.shake128_absorb_args.in,
                             Sha3V.shake128_absorb_args.inlen, 0x1F);

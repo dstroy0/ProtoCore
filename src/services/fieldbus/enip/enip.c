@@ -48,9 +48,9 @@ static uint32_t get32(const uint8_t *p)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_enip_build(uint8_t *restrict work);
+void protocore_enip_build(uint8_t *work);
 
-void protocore_enip_build(uint8_t *restrict work)
+void protocore_enip_build(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = EnipV.build_args.buf;
@@ -86,7 +86,7 @@ void protocore_enip_build(uint8_t *restrict work)
     EnipV.n = p;
 }
 
-void protocore_enip_parse(uint8_t *restrict work)
+void protocore_enip_parse(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = EnipV.parse_args.buf;
@@ -122,7 +122,7 @@ void protocore_enip_parse(uint8_t *restrict work)
     EnipV.ok = PROTO_TRUE;
 }
 
-void protocore_enip_build_register_session(uint8_t *restrict work)
+void protocore_enip_build_register_session(uint8_t *work)
 {
     uint8_t *buf = EnipV.build_register_session_args.buf;
     size_t cap = EnipV.build_register_session_args.cap;
@@ -146,7 +146,7 @@ void protocore_enip_build_register_session(uint8_t *restrict work)
     protocore_enip_build(work);
 }
 
-void protocore_enip_build_unregister_session(uint8_t *restrict work)
+void protocore_enip_build_unregister_session(uint8_t *work)
 {
     uint8_t *buf = EnipV.build_unregister_session_args.buf;
     size_t cap = EnipV.build_unregister_session_args.cap;
@@ -169,7 +169,7 @@ void protocore_enip_build_unregister_session(uint8_t *restrict work)
     protocore_enip_build(work); // no command-specific data
 }
 
-void protocore_enip_build_send_rr_data(uint8_t *restrict work)
+void protocore_enip_build_send_rr_data(uint8_t *work)
 {
     uint8_t *buf = EnipV.build_send_rr_data_args.buf;
     size_t cap = EnipV.build_send_rr_data_args.cap;
@@ -233,7 +233,7 @@ void protocore_enip_build_send_rr_data(uint8_t *restrict work)
     EnipV.n = p;
 }
 
-void protocore_enip_build_list_identity(uint8_t *restrict work)
+void protocore_enip_build_list_identity(uint8_t *work)
 {
     uint8_t *buf = EnipV.build_list_identity_args.buf;
     size_t cap = EnipV.build_list_identity_args.cap;
@@ -254,7 +254,7 @@ void protocore_enip_build_list_identity(uint8_t *restrict work)
     protocore_enip_build(work); // no command-specific data
 }
 
-void protocore_enip_parse_list_identity(uint8_t *restrict work)
+void protocore_enip_parse_list_identity(uint8_t *work)
 {
     (void)work;
     const uint8_t *data = EnipV.parse_list_identity_args.data;
@@ -318,7 +318,7 @@ void protocore_enip_parse_list_identity(uint8_t *restrict work)
     EnipV.ok = PROTO_FALSE; // no List Identity item
 }
 
-void protocore_enip_parse_send_rr_data(uint8_t *restrict work)
+void protocore_enip_parse_send_rr_data(uint8_t *work)
 {
     (void)work;
     const uint8_t *data = EnipV.parse_send_rr_data_args.data;

@@ -165,7 +165,7 @@ static proto_bool is_name_continue(char c)
 }
 
 // Raise a request error (spec sec 7.1.2), keeping any more specific error already raised.
-static void flag_request_error(uint8_t *restrict work)
+static void flag_request_error(uint8_t *work)
 {
     if (GRAPHQL_CTX(work)->doc.err == PROTOCORE_GQL_OK)
     {
@@ -174,7 +174,7 @@ static void flag_request_error(uint8_t *restrict work)
 }
 
 // Claim the next field slot, cleared; -1 when the pool is full.
-static int new_field(uint8_t *restrict work)
+static int new_field(uint8_t *work)
 {
     GqlDocument *doc = &GRAPHQL_CTX(work)->doc;
     if (doc->n_fields >= PROTOCORE_GQL_MAX_NODES)
@@ -199,7 +199,7 @@ static int new_field(uint8_t *restrict work)
 // argument position - an EnumValue (sec 2.9.6) such as `{ f(a: LONGENUMVALUE) }`, straight from
 // untrusted document text - write past the end of it. Names still cannot exceed
 // PROTOCORE_GQL_NAME_MAX; whichever limit is tighter wins.
-static proto_bool parse_name(uint8_t *restrict work, GqlLexer *lx, char *out, size_t cap)
+static proto_bool parse_name(uint8_t *work, GqlLexer *lx, char *out, size_t cap)
 {
     skip_ignored(lx);
     if (lx->p >= lx->e || !is_name_start(*lx->p))
@@ -225,7 +225,7 @@ static proto_bool parse_name(uint8_t *restrict work, GqlLexer *lx, char *out, si
 }
 
 // Copy a decoded String (spec sec 2.9.4) into the document's string pool; NULL when it is full.
-static const char *intern(uint8_t *restrict work, const char *s, int len)
+static const char *intern(uint8_t *work, const char *s, int len)
 {
     GqlDocument *doc = &GRAPHQL_CTX(work)->doc;
     if (doc->str_len + len + 1 > PROTOCORE_GQL_STRBUF)
@@ -241,7 +241,7 @@ static const char *intern(uint8_t *restrict work, const char *s, int len)
 }
 
 // Read one Value (spec sec 2.9): StringValue, IntValue, FloatValue, BooleanValue or NullValue.
-static proto_bool parse_value(uint8_t *restrict work, GqlLexer *lx, protocore_gql_value *v)
+static proto_bool parse_value(uint8_t *work, GqlLexer *lx, protocore_gql_value *v)
 {
     char c = peek(lx);
     if (c == '"')
@@ -417,7 +417,7 @@ static proto_bool parse_value(uint8_t *restrict work, GqlLexer *lx, protocore_gq
 static int parse_selection_set(uint8_t *work, GqlLexer *lx, int depth);
 
 // Read one Field (spec sec 2.5): `Name Arguments? SelectionSet?`.
-static int parse_field(uint8_t *restrict work, GqlLexer *lx, int depth)
+static int parse_field(uint8_t *work, GqlLexer *lx, int depth)
 {
     GqlDocument *doc = &GRAPHQL_CTX(work)->doc;
     int idx = new_field(work);
@@ -480,7 +480,7 @@ static int parse_field(uint8_t *restrict work, GqlLexer *lx, int depth)
 
 // Read one SelectionSet (spec sec 2.4): `{ Selection list }`. Returns the first field, the rest
 // chained through next_sib in document order.
-static int parse_selection_set(uint8_t *restrict work, GqlLexer *lx, int depth)
+static int parse_selection_set(uint8_t *work, GqlLexer *lx, int depth)
 {
     GqlDocument *doc = &GRAPHQL_CTX(work)->doc;
     if (depth > PROTOCORE_GQL_MAX_DEPTH)
@@ -524,7 +524,7 @@ static int parse_selection_set(uint8_t *restrict work, GqlLexer *lx, int depth)
 
 // Read the Document (spec sec 2.2): one OperationDefinition, either the sec 2.3 query shorthand
 // `{...}` or `query Name? {...}`. A mutation or subscription keyword raises a request error.
-static proto_bool parse_document(uint8_t *restrict work, GqlLexer *lx)
+static proto_bool parse_document(uint8_t *work, GqlLexer *lx)
 {
     GqlDocument *doc = &GRAPHQL_CTX(work)->doc;
     char c = peek(lx);
@@ -675,7 +675,7 @@ static void execute_selection_set(uint8_t *work, GqlWriter *w, int first, int pa
 // ExecuteField (spec sec 6.4): write the field's response key, then complete its value (sec 6.4.3)
 // by executing its sub-selection set or by resolving the leaf (sec 6.4.2). The dotted path and the
 // arguments in scope are extended for the duration of the field and unwound on the way out.
-static void execute_field(uint8_t *restrict work, GqlWriter *w, int idx, int path_len)
+static void execute_field(uint8_t *work, GqlWriter *w, int idx, int path_len)
 {
     GqlExecution *ex = &GRAPHQL_CTX(work)->exec;
     GqlField *field = &GRAPHQL_CTX(work)->doc.fields[idx];
@@ -744,7 +744,7 @@ static void execute_field(uint8_t *restrict work, GqlWriter *w, int idx, int pat
 
 // ExecuteSelectionSet (spec sec 6.3): every field of the set becomes one entry of a response map,
 // in the order the document lists them.
-static void execute_selection_set(uint8_t *restrict work, GqlWriter *w, int first, int path_len)
+static void execute_selection_set(uint8_t *work, GqlWriter *w, int first, int path_len)
 {
     w_raw(w, "{", 1);
     proto_bool leading = PROTO_TRUE;
@@ -764,7 +764,7 @@ static void execute_selection_set(uint8_t *restrict work, GqlWriter *w, int firs
 
 // The argument named ns->argument.name among the values in scope, or NULL. Names are compared
 // case-sensitively (spec sec 2.1.9).
-static const GqlArgument *arg_lookup(uint8_t *restrict work)
+static const GqlArgument *arg_lookup(uint8_t *work)
 {
     const protocore_gql_args *view = GraphQLV.argument.values;
     if (!view || !GraphQLV.argument.name)
@@ -803,7 +803,7 @@ uint8_t *protocore_graphql_span(void)
 }
 
 // Read the named argument as an Int (spec sec 3.5.1).
-void protocore_graph_ql_arg_int(uint8_t *restrict work)
+void protocore_graph_ql_arg_int(uint8_t *work)
 {
     const GqlArgument *a = arg_lookup(work);
     GraphQLV.i64 = 0;
@@ -816,7 +816,7 @@ void protocore_graph_ql_arg_int(uint8_t *restrict work)
 }
 
 // Read the named argument as a String (spec sec 3.5.3).
-void protocore_graph_ql_arg_str(uint8_t *restrict work)
+void protocore_graph_ql_arg_str(uint8_t *work)
 {
     const GqlArgument *a = arg_lookup(work);
     GraphQLV.text = NULL;
@@ -829,7 +829,7 @@ void protocore_graph_ql_arg_str(uint8_t *restrict work)
 }
 
 // Read the named argument as a Boolean (spec sec 3.5.4).
-void protocore_graph_ql_arg_bool(uint8_t *restrict work)
+void protocore_graph_ql_arg_bool(uint8_t *work)
 {
     const GqlArgument *a = arg_lookup(work);
     GraphQLV.b = PROTO_FALSE;
@@ -843,7 +843,7 @@ void protocore_graph_ql_arg_bool(uint8_t *restrict work)
 
 // ExecuteRequest (spec sec 6.1): parse the document, execute its query operation (sec 6.2.1), and
 // serialize the response map (sec 7.1) into ns->response.
-void protocore_graph_ql_execute(uint8_t *restrict work)
+void protocore_graph_ql_execute(uint8_t *work)
 {
     GqlDocument *doc = &GRAPHQL_CTX(work)->doc;
     GqlExecution *ex = &GRAPHQL_CTX(work)->exec;

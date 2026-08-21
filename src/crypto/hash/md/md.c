@@ -267,13 +267,13 @@ static void md_finish(struct MdCtx *c, uint8_t out[16], md_compress_fn compress)
 
 // Which compression the state was seeded for. It rides in the borrow with the state, so a running
 // digest carries it and nothing survives the call here.
-static md_compress_fn md_bound(const uint8_t *restrict work)
+static md_compress_fn md_bound(const uint8_t *work)
 {
     return MD_STATE(work)->md4 ? protocore_md4_compress : protocore_md5_compress;
 }
 
 // Seed the state. Shared by both inits, which differ only in the IV and the compression.
-static void md_begin(uint8_t *restrict work, md_compress_fn compress)
+static void md_begin(uint8_t *work, md_compress_fn compress)
 {
     if (compress == protocore_md5_compress)
     {
@@ -288,22 +288,22 @@ static void md_begin(uint8_t *restrict work, md_compress_fn compress)
     MdV.ok = PROTO_TRUE;
 }
 
-void protocore_md_md5_init(uint8_t *restrict work)
+void protocore_md_md5_init(uint8_t *work)
 {
     md_begin(work, protocore_md5_compress);
 }
 
-void protocore_md_md4_init(uint8_t *restrict work)
+void protocore_md_md4_init(uint8_t *work)
 {
     md_begin(work, protocore_md4_compress);
 }
 
-void protocore_md_update(uint8_t *restrict work)
+void protocore_md_update(uint8_t *work)
 {
     md_absorb(MD_STATE(work), MdV.update_args.data, MdV.update_args.len, md_bound(work));
 }
 
-void protocore_md_final(uint8_t *restrict work)
+void protocore_md_final(uint8_t *work)
 {
     if (!MdV.final_args.out)
     {
@@ -315,7 +315,7 @@ void protocore_md_final(uint8_t *restrict work)
 }
 
 // One-shot over the members already set: init, absorb, finish.
-static void md_one(uint8_t *restrict work, md_compress_fn compress)
+static void md_one(uint8_t *work, md_compress_fn compress)
 {
     if (!MdV.final_args.out)
     {
@@ -327,19 +327,19 @@ static void md_one(uint8_t *restrict work, md_compress_fn compress)
     md_finish(MD_STATE(work), MdV.final_args.out, compress);
 }
 
-void protocore_md_md5(uint8_t *restrict work)
+void protocore_md_md5(uint8_t *work)
 {
     md_one(work, protocore_md5_compress);
 }
 
-void protocore_md_md4(uint8_t *restrict work)
+void protocore_md_md4(uint8_t *work)
 {
     md_one(work, protocore_md4_compress);
 }
 
 // --- HMAC-MD5 (RFC 2104) ---------------------------------------------------
 
-void protocore_md_hmac_md5(uint8_t *restrict work)
+void protocore_md_hmac_md5(uint8_t *work)
 {
     MdV.ok = PROTO_FALSE;
     if (!MdV.hmac_args.out)

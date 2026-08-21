@@ -21,9 +21,9 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_df1_bcc(uint8_t *restrict work);
+void protocore_df1_bcc(uint8_t *work);
 
-void protocore_df1_bcc(uint8_t *restrict work)
+void protocore_df1_bcc(uint8_t *work)
 {
     (void)work;
     const uint8_t *data = Df1V.bcc_args.data;
@@ -39,7 +39,7 @@ void protocore_df1_bcc(uint8_t *restrict work)
 
 // DF1's block check is the reflected CRC-16 (poly 0xA001 = reflect(0x8005), init 0, no final XOR), cataloged
 // as CRC-16/ARC. The data and the ETX are two runs, folded into one register.
-static uint16_t df1_crc_data_plus_etx(uint8_t *restrict work, const uint8_t *data, size_t len, uint8_t etx)
+static uint16_t df1_crc_data_plus_etx(uint8_t *work, const uint8_t *data, size_t len, uint8_t etx)
 {
     CrcV.args.params = &PROTOCORE_CRC16_ARC;
     Crc.begin(work);
@@ -56,7 +56,7 @@ static uint16_t df1_crc_data_plus_etx(uint8_t *restrict work, const uint8_t *dat
     return (uint16_t)CrcV.value;
 }
 
-void protocore_df1_crc(uint8_t *restrict work)
+void protocore_df1_crc(uint8_t *work)
 {
     (void)work;
     const uint8_t *data = Df1V.crc_args.data;
@@ -69,7 +69,7 @@ void protocore_df1_crc(uint8_t *restrict work)
     Df1V.u16 = (uint16_t)CrcV.value;
 }
 
-void protocore_df1_build_frame(uint8_t *restrict work)
+void protocore_df1_build_frame(uint8_t *work)
 {
     uint8_t *buf = Df1V.build_frame_args.buf;
     size_t cap = Df1V.build_frame_args.cap;
@@ -128,7 +128,7 @@ void protocore_df1_build_frame(uint8_t *restrict work)
     Df1V.n = p;
 }
 
-void protocore_df1_parse_frame(uint8_t *restrict work)
+void protocore_df1_parse_frame(uint8_t *work)
 {
     const uint8_t *buf = Df1V.parse_frame_args.buf;
     size_t len = Df1V.parse_frame_args.len;

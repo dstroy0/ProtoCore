@@ -20,9 +20,9 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_iolink_checksum6(uint8_t *restrict work);
+void protocore_iolink_checksum6(uint8_t *work);
 
-void protocore_iolink_mc(uint8_t *restrict work)
+void protocore_iolink_mc(uint8_t *work)
 {
     (void)work;
     proto_bool read = IolinkV.mc_args.read;
@@ -32,7 +32,7 @@ void protocore_iolink_mc(uint8_t *restrict work)
     IolinkV.value = (uint8_t)((read ? IOL_MC_READ : 0u) | ((channel & 0x03u) << 5) | (address & 0x1Fu));
 }
 
-void protocore_iolink_mc_is_read(uint8_t *restrict work)
+void protocore_iolink_mc_is_read(uint8_t *work)
 {
     (void)work;
     uint8_t mc = IolinkV.mc_is_read_args.mc;
@@ -40,7 +40,7 @@ void protocore_iolink_mc_is_read(uint8_t *restrict work)
     IolinkV.ok = (mc & IOL_MC_READ) != 0;
 }
 
-void protocore_iolink_mc_channel(uint8_t *restrict work)
+void protocore_iolink_mc_channel(uint8_t *work)
 {
     (void)work;
     uint8_t mc = IolinkV.mc_channel_args.mc;
@@ -48,7 +48,7 @@ void protocore_iolink_mc_channel(uint8_t *restrict work)
     IolinkV.value = (uint8_t)((mc >> 5) & 0x03u);
 }
 
-void protocore_iolink_mc_address(uint8_t *restrict work)
+void protocore_iolink_mc_address(uint8_t *work)
 {
     (void)work;
     uint8_t mc = IolinkV.mc_address_args.mc;
@@ -56,7 +56,7 @@ void protocore_iolink_mc_address(uint8_t *restrict work)
     IolinkV.value = (uint8_t)(mc & 0x1Fu);
 }
 
-void protocore_iolink_ckt(uint8_t *restrict work)
+void protocore_iolink_ckt(uint8_t *work)
 {
     (void)work;
     uint8_t mseq_type = IolinkV.ckt_args.mseq_type;
@@ -65,7 +65,7 @@ void protocore_iolink_ckt(uint8_t *restrict work)
     IolinkV.value = (uint8_t)(((mseq_type & 0x03u) << 6) | (checksum6 & IOL_CHECK_SUM_MASK));
 }
 
-void protocore_iolink_cks(uint8_t *restrict work)
+void protocore_iolink_cks(uint8_t *work)
 {
     (void)work;
     proto_bool event = IolinkV.cks_args.event;
@@ -90,7 +90,7 @@ static uint8_t compress6(uint8_t b)
     return (uint8_t)((d5 << 5) | (d4 << 4) | (d3 << 3) | (d2 << 2) | (d1 << 1) | d0);
 }
 
-void protocore_iolink_checksum6(uint8_t *restrict work)
+void protocore_iolink_checksum6(uint8_t *work)
 {
     (void)work;
     const uint8_t *msg = IolinkV.checksum6_args.msg;
@@ -104,7 +104,7 @@ void protocore_iolink_checksum6(uint8_t *restrict work)
     IolinkV.value = compress6(x);
 }
 
-void protocore_iolink_finalize(uint8_t *restrict work)
+void protocore_iolink_finalize(uint8_t *work)
 {
     uint8_t *msg = IolinkV.finalize_args.msg;
     size_t len = IolinkV.finalize_args.len;
@@ -124,7 +124,7 @@ void protocore_iolink_finalize(uint8_t *restrict work)
     IolinkV.value = msg[check_idx];
 }
 
-void protocore_iolink_verify(uint8_t *restrict work)
+void protocore_iolink_verify(uint8_t *work)
 {
     (void)work;
     const uint8_t *msg = IolinkV.verify_args.msg;

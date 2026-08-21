@@ -22,12 +22,12 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_devicenet_encode_id(uint8_t *restrict work);
-void protocore_devicenet_frag_octet(uint8_t *restrict work);
-void protocore_devicenet_frag_reset(uint8_t *restrict work);
-void protocore_devicenet_msg_header(uint8_t *restrict work);
+void protocore_devicenet_encode_id(uint8_t *work);
+void protocore_devicenet_frag_octet(uint8_t *work);
+void protocore_devicenet_frag_reset(uint8_t *work);
+void protocore_devicenet_msg_header(uint8_t *work);
 
-void protocore_devicenet_encode_id(uint8_t *restrict work)
+void protocore_devicenet_encode_id(uint8_t *work)
 {
     (void)work;
     uint32_t *id = DevicenetV.encode_id_args.id;
@@ -84,7 +84,7 @@ void protocore_devicenet_encode_id(uint8_t *restrict work)
     }
 }
 
-void protocore_devicenet_decode_id(uint8_t *restrict work)
+void protocore_devicenet_decode_id(uint8_t *work)
 {
     (void)work;
     uint32_t can_id = DevicenetV.decode_id_args.can_id;
@@ -131,7 +131,7 @@ void protocore_devicenet_decode_id(uint8_t *restrict work)
     DevicenetV.ok = PROTO_FALSE; // 0x7F0..0x7FF are invalid identifiers
 }
 
-void protocore_devicenet_msg_header(uint8_t *restrict work)
+void protocore_devicenet_msg_header(uint8_t *work)
 {
     (void)work;
     proto_bool frag = DevicenetV.msg_header_args.frag;
@@ -142,7 +142,7 @@ void protocore_devicenet_msg_header(uint8_t *restrict work)
         (uint8_t)((frag ? DEVICENET_HDR_FRAG : 0u) | (xid ? DEVICENET_HDR_XID : 0u) | (mac_id & DEVICENET_MAC_MASK));
 }
 
-void protocore_devicenet_frag_octet(uint8_t *restrict work)
+void protocore_devicenet_frag_octet(uint8_t *work)
 {
     (void)work;
     uint8_t type = DevicenetV.frag_octet_args.type;
@@ -151,7 +151,7 @@ void protocore_devicenet_frag_octet(uint8_t *restrict work)
     DevicenetV.value = (uint8_t)((type & DEVICENET_FRAG_TYPE_MASK) | (count & DEVICENET_FRAG_COUNT_MASK));
 }
 
-void protocore_devicenet_build_explicit(uint8_t *restrict work)
+void protocore_devicenet_build_explicit(uint8_t *work)
 {
     CanFrame *out = DevicenetV.build_explicit_args.out;
     DeviceNetGroup group = DevicenetV.build_explicit_args.group;
@@ -193,7 +193,7 @@ void protocore_devicenet_build_explicit(uint8_t *restrict work)
     DevicenetV.ok = PROTO_TRUE;
 }
 
-void protocore_devicenet_build_fragment(uint8_t *restrict work)
+void protocore_devicenet_build_fragment(uint8_t *work)
 {
     CanFrame *out = DevicenetV.build_fragment_args.out;
     DeviceNetGroup group = DevicenetV.build_fragment_args.group;
@@ -244,7 +244,7 @@ void protocore_devicenet_build_fragment(uint8_t *restrict work)
     DevicenetV.ok = PROTO_TRUE;
 }
 
-void protocore_devicenet_frag_reset(uint8_t *restrict work)
+void protocore_devicenet_frag_reset(uint8_t *work)
 {
     (void)work;
     DeviceNetFragRx *rx = DevicenetV.frag_reset_args.rx;
@@ -276,7 +276,7 @@ static proto_bool frag_append(DeviceNetFragRx *rx, const uint8_t *p, uint8_t n)
     return PROTO_TRUE;
 }
 
-void protocore_devicenet_frag_feed(uint8_t *restrict work)
+void protocore_devicenet_frag_feed(uint8_t *work)
 {
     DeviceNetFragRx *rx = DevicenetV.frag_feed_args.rx;
     const uint8_t *body = DevicenetV.frag_feed_args.body;

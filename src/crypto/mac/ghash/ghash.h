@@ -80,11 +80,10 @@ typedef struct
  * The accumulator is the CALLER's 16 bytes: both folding entries work in place on the buffer their args
  * name and hold it no longer than the call.
  *
- * @c work is PROTOCORE_GHASH_BORROW secure bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and
- * the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. The
- * borrow IS the table, so two subkeys are two borrows and never collide, and the table dies with the
- * release.
+ * @c work is PROTOCORE_GHASH_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes it,
+ * holds it, releases it, nor wipes it. The borrow IS the table, so two subkeys are two borrows and never collide, and
+ * the table dies with the release.
  *
  * No storage member and no context: a caller sets operands and reads @ref GhashNs::ok, and that is all
  * the surface there is.
@@ -103,16 +102,16 @@ extern GhashVars GhashV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const key_init)(uint8_t *restrict work);
-    void (*const mul)(uint8_t *restrict work);
-    void (*const update)(uint8_t *restrict work);
+    void (*const key_init)(uint8_t *work);
+    void (*const mul)(uint8_t *work);
+    void (*const update)(uint8_t *work);
 } GhashNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in GhashV or a region of the borrow at a fixed offset.
-void protocore_ghash_key_init(uint8_t *restrict work);
-void protocore_ghash_mul(uint8_t *restrict work);
-void protocore_ghash_update(uint8_t *restrict work);
+void protocore_ghash_key_init(uint8_t *work);
+void protocore_ghash_mul(uint8_t *work);
+void protocore_ghash_update(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

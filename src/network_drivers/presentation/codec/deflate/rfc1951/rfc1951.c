@@ -34,7 +34,7 @@ static const short dist_extra[30] = {0, 0, 0, 0, 1, 1, 2, 2,  3,  3,  4,  4,  5,
 // never read.
 
 // r = the low len bits of code, in the opposite order (a Huffman code goes on the wire MSB-first).
-void protocore_rfc1951_reverse_bits(uint8_t *restrict work)
+void protocore_rfc1951_reverse_bits(uint8_t *work)
 {
     (void)work;
     uint16_t code = Rfc1951V.reverse_bits_args.code;
@@ -51,7 +51,7 @@ void protocore_rfc1951_reverse_bits(uint8_t *restrict work)
 
 // The fixed Huffman code/length tables (RFC 1951 sec 3.2.6), each code bit-reversed. ll_code /
 // ll_len hold 288 entries, d_code / d_len hold 30.
-void protocore_rfc1951_build_fixed(uint8_t *restrict work)
+void protocore_rfc1951_build_fixed(uint8_t *work)
 {
     uint16_t *ll_code = Rfc1951V.build_fixed_args.ll_code;
     uint8_t *ll_len = Rfc1951V.build_fixed_args.ll_len;
@@ -116,7 +116,7 @@ void protocore_rfc1951_build_fixed(uint8_t *restrict work)
 }
 
 // One literal byte through the fixed lit/length code.
-void protocore_rfc1951_emit_literal(uint8_t *restrict work)
+void protocore_rfc1951_emit_literal(uint8_t *work)
 {
     (void)work;
     protocore_bit_writer *w = Rfc1951V.emit_literal_args.w;
@@ -128,7 +128,7 @@ void protocore_rfc1951_emit_literal(uint8_t *restrict work)
 }
 
 // A (len, dist) back-reference through the fixed code tables (RFC 1951 sec 3.2.5).
-void protocore_rfc1951_emit_match(uint8_t *restrict work)
+void protocore_rfc1951_emit_match(uint8_t *work)
 {
     (void)work;
     protocore_bit_writer *w = Rfc1951V.emit_match_args.w;

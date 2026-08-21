@@ -20,7 +20,7 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_ntlm_nt_hash(uint8_t *restrict work, const char *password, uint8_t *nt_hash)
+void protocore_ntlm_nt_hash(uint8_t *work, const char *password, uint8_t *nt_hash)
 {
     (void)work;
 
@@ -44,7 +44,7 @@ void protocore_ntlm_nt_hash(uint8_t *restrict work, const char *password, uint8_
     protocore_secure_release(mark);
 }
 
-proto_bool protocore_ntlm_ntowfv2(uint8_t *restrict work, const uint8_t *nt_hash, const char *user, const char *domain,
+proto_bool protocore_ntlm_ntowfv2(uint8_t *work, const uint8_t *nt_hash, const char *user, const char *domain,
                                   uint8_t *owf)
 {
     (void)work;
@@ -139,7 +139,7 @@ static void protocore_hmac_md5_2(const uint8_t key[16], const uint8_t *m1, size_
     protocore_secure_release(mark);
 }
 
-size_t protocore_ntlm_v2_response(uint8_t *restrict work, const uint8_t *owf, const uint8_t *server_challenge,
+size_t protocore_ntlm_v2_response(uint8_t *work, const uint8_t *owf, const uint8_t *server_challenge,
                                   const uint8_t *client_challenge, const uint8_t *timestamp, const uint8_t *target_info,
                                   size_t ti_len, uint8_t *out, size_t out_cap, uint8_t *session_key)
 {
@@ -190,7 +190,7 @@ size_t protocore_ntlm_v2_response(uint8_t *restrict work, const uint8_t *owf, co
     return protocore_resp_len;
 }
 
-size_t protocore_ntlm_set_mic_flag(uint8_t *restrict work, const uint8_t *target_info, size_t ti_len, uint8_t *out,
+size_t protocore_ntlm_set_mic_flag(uint8_t *work, const uint8_t *target_info, size_t ti_len, uint8_t *out,
                                    size_t out_cap)
 {
     (void)work;
@@ -257,7 +257,7 @@ size_t protocore_ntlm_set_mic_flag(uint8_t *restrict work, const uint8_t *target
     return ti_len + 8;
 }
 
-void protocore_ntlm_mic(uint8_t *restrict work, const uint8_t *session_key, const uint8_t *neg, size_t neg_len,
+void protocore_ntlm_mic(uint8_t *work, const uint8_t *session_key, const uint8_t *neg, size_t neg_len,
                         const uint8_t *chal, size_t chal_len, const uint8_t *auth, size_t auth_len, uint8_t *out)
 {
     (void)work;

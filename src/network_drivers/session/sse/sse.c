@@ -18,7 +18,7 @@ PROTOCORE_BEGIN_DECLS
 // Take a stream for the connection the caller named, then run the route's connect. RFC 4254
 // sec 5.1: a side that opens "allocates a local number for the channel"; a table with no free
 // number answers the open with a failure rather than a stream.
-void protocore_session_sse_open(uint8_t *restrict work)
+void protocore_session_sse_open(uint8_t *work)
 {
     (void)work;
     Sse.alloc(protocore_sse_span());
@@ -37,7 +37,7 @@ void protocore_session_sse_open(uint8_t *restrict work)
 
 // Release the stream bound to the connection the caller named. RFC 4254 sec 5.3: the number is
 // reusable once the stream is closed.
-void protocore_session_sse_close(uint8_t *restrict work)
+void protocore_session_sse_close(uint8_t *work)
 {
     (void)work;
     Sse.find(protocore_sse_span());

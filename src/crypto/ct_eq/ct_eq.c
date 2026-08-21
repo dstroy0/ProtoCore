@@ -24,7 +24,7 @@ PROTOCORE_BEGIN_DECLS
 // --- the entries -----------------------------------------------------------
 
 // XOR-accumulate over the caller's two buffers; the borrow goes unread.
-void protocore_ct_eq_eq(uint8_t *restrict work)
+void protocore_ct_eq_eq(uint8_t *work)
 {
     (void)work;
     CtEqV.ok = PROTO_FALSE;

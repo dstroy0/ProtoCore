@@ -21,9 +21,8 @@ PROTOCORE_BEGIN_DECLS
  * The BCD <-> Unix-epoch conversion (12/24-hour, leap years, range validation) is pure and
  * host-tested; only the register read/write touches hardware, over the shared I2C bus owner.
  *
- * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. How those bytes are carved is this module's and is never named here.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -34,12 +33,12 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*regs_to_epoch)(uint8_t *restrict, const uint8_t *, uint32_t *);
-    void (*epoch_to_regs)(uint8_t *restrict, uint32_t, uint8_t *);
-    proto_bool (*begin)(uint8_t *restrict);
-    uint32_t (*read_epoch)(uint8_t *restrict);
-    proto_bool (*set_epoch)(uint8_t *restrict, uint32_t);
-    void (*time_source)(uint8_t *restrict);
+    proto_bool (*regs_to_epoch)(uint8_t *, const uint8_t *, uint32_t *);
+    void (*epoch_to_regs)(uint8_t *, uint32_t, uint8_t *);
+    proto_bool (*begin)(uint8_t *);
+    uint32_t (*read_epoch)(uint8_t *);
+    proto_bool (*set_epoch)(uint8_t *, uint32_t);
+    void (*time_source)(uint8_t *);
 } RtcNs;
 PROTOCORE_NS_LAYOUT(RtcNs, regs_to_epoch, epoch_to_regs, begin, read_epoch, set_epoch, time_source);
 
@@ -50,38 +49,38 @@ PROTOCORE_NS_LAYOUT(RtcNs, regs_to_epoch, epoch_to_regs, begin, read_epoch, set_
  * @param epoch out: seconds since 1970-01-01 UTC
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_rtc_regs_to_epoch(uint8_t *restrict work, const uint8_t *regs, uint32_t *epoch);
+proto_bool protocore_rtc_regs_to_epoch(uint8_t *work, const uint8_t *regs, uint32_t *epoch);
 /**
  * @brief Convert a Unix timestamp to the 7 RTC time registers (BCD, .
  * @param work PROTOCORE_RTC_BORROW bytes the caller took. Not held past the call.
  * @param epoch Epoch
  * @param regs RTC_REG_COUNT bytes
  */
-void protocore_rtc_epoch_to_regs(uint8_t *restrict work, uint32_t epoch, uint8_t *regs);
+void protocore_rtc_epoch_to_regs(uint8_t *work, uint32_t epoch, uint8_t *regs);
 /**
  * @brief Initialize the I2C bus for the RTC. true; with no bus seam it is a .
  * @param work PROTOCORE_RTC_BORROW bytes the caller took. Not held past the call.
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_rtc_begin(uint8_t *restrict work);
+proto_bool protocore_rtc_begin(uint8_t *work);
 /**
  * @brief Read the current time from the RTC over I2C.
  * @param work PROTOCORE_RTC_BORROW bytes the caller took. Not held past the call.
  * @return The uint32_t.
  */
-uint32_t protocore_rtc_read_epoch(uint8_t *restrict work);
+uint32_t protocore_rtc_read_epoch(uint8_t *work);
 /**
  * @brief Set the RTC to epoch over I2C. true if the write succeeded.
  * @param work PROTOCORE_RTC_BORROW bytes the caller took. Not held past the call.
  * @param epoch Epoch
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_rtc_set_epoch(uint8_t *restrict work, uint32_t epoch);
+proto_bool protocore_rtc_set_epoch(uint8_t *work, uint32_t epoch);
 /**
  * @brief A ::TimeSourceFn wrapper (returns protocore_rtc_read_epoch()) to .
  * @param work PROTOCORE_RTC_BORROW bytes the caller took. Not held past the call.
  */
-void protocore_rtc_time_source(uint8_t *restrict work);
+void protocore_rtc_time_source(uint8_t *work);
 
 /**
  * @brief The PROTOCORE_I2C_DEVICE_BORROW bytes this module's state lives in.

@@ -24,9 +24,8 @@ PROTOCORE_BEGIN_DECLS
  *
  * Streamed writes, fixed buffers, no heap. Call protocore_ssh_scp_begin() once after protocore_ssh_conn_setup().
  *
- * @c work is PROTOCORE_SSH_SCP_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_SSH_SCP_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
+ * nothing here aliases it. How those bytes are carved is this module's and is never named here.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -35,7 +34,7 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*begin)(uint8_t *restrict);
+    void (*begin)(uint8_t *);
 } SshScpNs;
 PROTOCORE_NS_LAYOUT(SshScpNs, begin);
 
@@ -43,7 +42,7 @@ PROTOCORE_NS_LAYOUT(SshScpNs, begin);
  * @brief Serve SCP uploads onto the mounted filesystem. Installs the channel .
  * @param work PROTOCORE_SSH_SCP_BORROW bytes the caller took. Not held past the call.
  */
-void protocore_ssh_scp_begin(uint8_t *restrict work);
+void protocore_ssh_scp_begin(uint8_t *work);
 
 /**
  * @brief The PROTOCORE_SSH_SCP_BORROW bytes this module's state lives in.

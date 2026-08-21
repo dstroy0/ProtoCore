@@ -40,14 +40,14 @@ static struct ClockStorage s_store = {NULL, 1u, NULL, 1u};
 
 static struct ClockInternal s_clock = {.store = &s_store, .ns = &Clock};
 
-static void clock_set_ms(struct ClockInternal *restrict ctx)
+static void clock_set_ms(struct ClockInternal *ctx)
 {
     const uint32_t rate = ctx->ns->src.ticks_per_second;
     ctx->store->ms_fn = ctx->ns->src.fn;
     ctx->store->ms_div = (rate >= 1000u) ? (rate / 1000u) : 1u;
 }
 
-static void clock_millis(struct ClockInternal *restrict ctx)
+static void clock_millis(struct ClockInternal *ctx)
 {
     if (ctx->store->ms_fn)
     {
@@ -57,14 +57,14 @@ static void clock_millis(struct ClockInternal *restrict ctx)
     ctx->ns->ms = protocore_platform_millis();
 }
 
-static void clock_set_us(struct ClockInternal *restrict ctx)
+static void clock_set_us(struct ClockInternal *ctx)
 {
     const uint32_t rate = ctx->ns->src.ticks_per_second;
     ctx->store->us_fn = ctx->ns->src.fn;
     ctx->store->us_div = (rate >= 1000000u) ? (rate / 1000000u) : 1u;
 }
 
-static void clock_micros(struct ClockInternal *restrict ctx)
+static void clock_micros(struct ClockInternal *ctx)
 {
     if (ctx->store->us_fn)
     {
@@ -74,7 +74,7 @@ static void clock_micros(struct ClockInternal *restrict ctx)
     ctx->ns->us = protocore_platform_micros();
 }
 
-static void clock_cycles(struct ClockInternal *restrict ctx)
+static void clock_cycles(struct ClockInternal *ctx)
 {
     ctx->ns->cyc = protocore_platform_cycles();
 }

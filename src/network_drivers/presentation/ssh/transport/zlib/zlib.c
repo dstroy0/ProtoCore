@@ -77,8 +77,8 @@ static void zlib_chain_match(const SshDeflate *z, const uint8_t *buf, size_t i, 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_zlib_init(uint8_t *restrict work, SshDeflate *z, uint8_t *win, uint16_t *head, uint16_t *prev,
-                         uint16_t *ll_code, uint8_t *ll_len, uint16_t *d_code, uint8_t *d_len)
+void protocore_zlib_init(uint8_t *work, SshDeflate *z, uint8_t *win, uint16_t *head, uint16_t *prev, uint16_t *ll_code,
+                         uint8_t *ll_len, uint16_t *d_code, uint8_t *d_len)
 {
 
     z->work = win;
@@ -97,7 +97,7 @@ void protocore_zlib_init(uint8_t *restrict work, SshDeflate *z, uint8_t *win, ui
     Rfc1951.build_fixed(work);
 }
 
-int protocore_zlib_packet(uint8_t *restrict work, SshDeflate *z, const uint8_t *src, size_t src_len, uint8_t *dst,
+int protocore_zlib_packet(uint8_t *work, SshDeflate *z, const uint8_t *src, size_t src_len, uint8_t *dst,
                           size_t dst_cap, size_t *out_len)
 {
     int n = 0;

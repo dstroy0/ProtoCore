@@ -76,9 +76,8 @@ typedef struct
  * @var NtpServiceNs::time_source  NTP as a time source for the multi-source registry ...
  * @var NtpServiceNs::set_test_epoch  seed the clock without asking a server: the accessors above report ...
  *
- * @c work is PROTOCORE_NTP_SERVICE_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_NTP_SERVICE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -95,20 +94,20 @@ extern NtpServiceVars NtpServiceV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const begin)(uint8_t *restrict work);
-    void (*const synced)(uint8_t *restrict work);
-    void (*const epoch)(uint8_t *restrict work);
-    void (*const time_source)(uint8_t *restrict work);
-    void (*const set_test_epoch)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *work);
+    void (*const synced)(uint8_t *work);
+    void (*const epoch)(uint8_t *work);
+    void (*const time_source)(uint8_t *work);
+    void (*const set_test_epoch)(uint8_t *work);
 } NtpServiceNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in NtpServiceV or a region of the borrow at a fixed offset.
-void protocore_ntp_service_begin(uint8_t *restrict work);
-void protocore_ntp_service_synced(uint8_t *restrict work);
-void protocore_ntp_service_epoch(uint8_t *restrict work);
-void protocore_ntp_service_time_source(uint8_t *restrict work);
-void protocore_ntp_service_set_test_epoch(uint8_t *restrict work);
+void protocore_ntp_service_begin(uint8_t *work);
+void protocore_ntp_service_synced(uint8_t *work);
+void protocore_ntp_service_epoch(uint8_t *work);
+void protocore_ntp_service_time_source(uint8_t *work);
+void protocore_ntp_service_set_test_epoch(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

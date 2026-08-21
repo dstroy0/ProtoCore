@@ -419,7 +419,7 @@ static const uint32_t FE_A24[8] = {121665u, 0, 0, 0, 0, 0, 0, 0}; // X25519 a24 
 
 // out = scalar * point. Every field element is a named member of the borrow's context, bound here so the
 // ladder below reads as the RFC does.
-static void x25519_mult(uint8_t *restrict work, uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32])
+static void x25519_mult(uint8_t *work, uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32])
 {
     Curve25519Ctx *ctx = CURVE25519_CTX(work);
     uint8_t *e = ctx->e;
@@ -497,7 +497,7 @@ static void x25519_mult(uint8_t *restrict work, uint8_t out[32], const uint8_t s
 #if !PROTOCORE_FE25519_MPI_HW
 // out = scalar * point. Every field element is a named member of the borrow's context, bound here so the
 // ladder below reads as the RFC does.
-static void x25519_mult(uint8_t *restrict work, uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32])
+static void x25519_mult(uint8_t *work, uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32])
 {
     Curve25519Ctx *ctx = CURVE25519_CTX(work);
     uint8_t *z = ctx->z;
@@ -560,7 +560,7 @@ static void x25519_mult(uint8_t *restrict work, uint8_t out[32], const uint8_t s
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_curve25519_x25519(uint8_t *restrict work)
+void protocore_curve25519_x25519(uint8_t *work)
 {
     Curve25519V.ok = PROTO_FALSE;
     if (!Curve25519V.x25519_args.out || !Curve25519V.x25519_args.scalar || !Curve25519V.x25519_args.point)
@@ -584,7 +584,7 @@ void protocore_curve25519_x25519(uint8_t *restrict work)
 
 // The standard base point is written into the borrow and multiplied by the same body: u = 9, the rest
 // zero (RFC 7748 §5).
-void protocore_curve25519_x25519_base(uint8_t *restrict work)
+void protocore_curve25519_x25519_base(uint8_t *work)
 {
     Curve25519V.ok = PROTO_FALSE;
     if (!Curve25519V.x25519_base_args.out || !Curve25519V.x25519_base_args.scalar)

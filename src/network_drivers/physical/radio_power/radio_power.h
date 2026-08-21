@@ -85,13 +85,13 @@ typedef struct RadioNs
     protocore_phy_ps mode;
     const char *text;
 
-    void (*const power)(uint8_t *restrict work);
-    void (*const ps_name)(uint8_t *restrict work);
-    void (*const busy_hold)(uint8_t *restrict work);
-    void (*const busy_release)(uint8_t *restrict work);
-    void (*const ps_set)(uint8_t *restrict work);
-    void (*const ps_mode)(uint8_t *restrict work);
-    void (*const tx_power_set)(uint8_t *restrict work);
+    void (*const power)(uint8_t *work);
+    void (*const ps_name)(uint8_t *work);
+    void (*const busy_hold)(uint8_t *work);
+    void (*const busy_release)(uint8_t *work);
+    void (*const ps_set)(uint8_t *work);
+    void (*const ps_mode)(uint8_t *work);
+    void (*const tx_power_set)(uint8_t *work);
 
 } RadioNs;
 

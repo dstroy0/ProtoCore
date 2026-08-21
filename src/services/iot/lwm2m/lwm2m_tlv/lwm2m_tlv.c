@@ -112,7 +112,7 @@ uint8_t *protocore_lwm2m_tlv_span(void)
 
 // Bind the sink buffer and clear the cursor. A sink with no buffer starts poisoned, so every later
 // write and the finish fail closed.
-void protocore_lwm2m_tlv_open(uint8_t *restrict work)
+void protocore_lwm2m_tlv_open(uint8_t *work)
 {
     LWM2M_TLV_CTX(work)->w.buf = Lwm2mTlvV.sink.buf;
     LWM2M_TLV_CTX(work)->w.cap = Lwm2mTlvV.sink.cap;
@@ -123,7 +123,7 @@ void protocore_lwm2m_tlv_open(uint8_t *restrict work)
 
 // Emit one entry: the Type byte, the Identifier field, the Length field the Value's size calls for,
 // and the Value (LwM2M Core sec 7.4.5 Table 7.4.5.-1).
-void protocore_lwm2m_tlv_write(uint8_t *restrict work)
+void protocore_lwm2m_tlv_write(uint8_t *work)
 {
     Lwm2mTlvWriteCursor *w = &LWM2M_TLV_CTX(work)->w;
     const uint8_t *value = Lwm2mTlvV.val.opaque;
@@ -191,7 +191,7 @@ void protocore_lwm2m_tlv_write(uint8_t *restrict work)
 }
 
 // Stage the Integer in its shortest width and emit it.
-void protocore_lwm2m_tlv_write_integer(uint8_t *restrict work)
+void protocore_lwm2m_tlv_write_integer(uint8_t *work)
 {
     const size_t n = integer_octets(Lwm2mTlvV.val.integer_value);
     store_be(LWM2M_TLV_CTX(work)->w.scalar, (uint64_t)Lwm2mTlvV.val.integer_value, n);
@@ -201,7 +201,7 @@ void protocore_lwm2m_tlv_write_integer(uint8_t *restrict work)
 }
 
 // Stage the Boolean as one octet and emit it: the Length of a Boolean is always 1.
-void protocore_lwm2m_tlv_write_boolean(uint8_t *restrict work)
+void protocore_lwm2m_tlv_write_boolean(uint8_t *work)
 {
     LWM2M_TLV_CTX(work)->w.scalar[0] = Lwm2mTlvV.val.boolean_value ? 1 : 0;
     Lwm2mTlvV.val.opaque = LWM2M_TLV_CTX(work)->w.scalar;
@@ -211,7 +211,7 @@ void protocore_lwm2m_tlv_write_boolean(uint8_t *restrict work)
 
 // Measure the String to its NUL within the sink's capacity and emit its octets. A string that long
 // cannot fit beside a Type byte and an Identifier, so the write poisons the cursor.
-void protocore_lwm2m_tlv_write_string(uint8_t *restrict work)
+void protocore_lwm2m_tlv_write_string(uint8_t *work)
 {
     if (!Lwm2mTlvV.val.string_value)
     {
@@ -224,7 +224,7 @@ void protocore_lwm2m_tlv_write_string(uint8_t *restrict work)
 }
 
 // Stage the Float as binary64 in network byte order and emit it.
-void protocore_lwm2m_tlv_write_float(uint8_t *restrict work)
+void protocore_lwm2m_tlv_write_float(uint8_t *work)
 {
     uint64_t bits;
     double v = Lwm2mTlvV.val.float_value;
@@ -236,14 +236,14 @@ void protocore_lwm2m_tlv_write_float(uint8_t *restrict work)
 }
 
 // Count the octets emitted. A poisoned cursor reports 0, so a truncated payload never leaves.
-void protocore_lwm2m_tlv_finish(uint8_t *restrict work)
+void protocore_lwm2m_tlv_finish(uint8_t *work)
 {
     Lwm2mTlvV.ok = !LWM2M_TLV_CTX(work)->w.overflow;
     Lwm2mTlvV.n = LWM2M_TLV_CTX(work)->w.overflow ? 0 : LWM2M_TLV_CTX(work)->w.pos;
 }
 
 // Bind the source buffer and put the reader cursor at its first entry.
-void protocore_lwm2m_tlv_parse(uint8_t *restrict work)
+void protocore_lwm2m_tlv_parse(uint8_t *work)
 {
     LWM2M_TLV_CTX(work)->r.buf = Lwm2mTlvV.source.buf;
     LWM2M_TLV_CTX(work)->r.len = Lwm2mTlvV.source.len;
@@ -253,7 +253,7 @@ void protocore_lwm2m_tlv_parse(uint8_t *restrict work)
 
 // Decode the entry at the cursor into hdr and val, and step the cursor past its Value. False at the
 // end of the source or on an entry the source cuts short.
-void protocore_lwm2m_tlv_next(uint8_t *restrict work)
+void protocore_lwm2m_tlv_next(uint8_t *work)
 {
     const Lwm2mTlvReadCursor *r = &LWM2M_TLV_CTX(work)->r;
     const uint8_t *buf = r->buf;
@@ -309,7 +309,7 @@ void protocore_lwm2m_tlv_next(uint8_t *restrict work)
 }
 
 // Read a Value as an Integer: 1, 2, 4 or 8 octets, network byte order, two's complement.
-void protocore_lwm2m_tlv_value_integer(uint8_t *restrict work)
+void protocore_lwm2m_tlv_value_integer(uint8_t *work)
 {
     (void)work;
     const uint8_t *value = Lwm2mTlvV.val.opaque;

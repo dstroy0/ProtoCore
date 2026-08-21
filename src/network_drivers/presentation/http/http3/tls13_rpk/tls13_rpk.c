@@ -17,7 +17,7 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_tls13_rpk_ed25519_spki(uint8_t *restrict work, uint8_t *out, size_t cap, const uint8_t *pub)
+size_t protocore_tls13_rpk_ed25519_spki(uint8_t *work, uint8_t *out, size_t cap, const uint8_t *pub)
 {
     (void)work;
 
@@ -33,8 +33,7 @@ size_t protocore_tls13_rpk_ed25519_spki(uint8_t *restrict work, uint8_t *out, si
     return PROTOCORE_TLS13_ED25519_SPKI_LEN;
 }
 
-proto_bool protocore_tls13_rpk_ed25519_from_spki(uint8_t *restrict work, const uint8_t *spki, size_t len,
-                                                 const uint8_t **pub)
+proto_bool protocore_tls13_rpk_ed25519_from_spki(uint8_t *work, const uint8_t *spki, size_t len, const uint8_t **pub)
 {
     (void)work;
 
@@ -47,8 +46,7 @@ proto_bool protocore_tls13_rpk_ed25519_from_spki(uint8_t *restrict work, const u
     return PROTO_TRUE;
 }
 
-size_t protocore_tls13_rpk_build_certificate(uint8_t *restrict work, uint8_t *out, size_t cap,
-                                             const uint8_t *ed25519_pub)
+size_t protocore_tls13_rpk_build_certificate(uint8_t *work, uint8_t *out, size_t cap, const uint8_t *ed25519_pub)
 {
 
     uint8_t spki[PROTOCORE_TLS13_ED25519_SPKI_LEN];

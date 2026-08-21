@@ -146,7 +146,7 @@ static int handle_index(SftpSession *s, const uint8_t *h, uint32_t hl)
 // --- helpers --------------------------------------------------------------------------------------
 // Take a wire path (length-prefixed, not NUL-terminated) into request slot @p slot as a C string. "" and "."
 // both name the mount root. Nothing is resolved here; the string that comes back is the client's own bytes.
-static const char *req_path(uint8_t *restrict work, int slot, const uint8_t *p, uint32_t plen)
+static const char *req_path(uint8_t *work, int slot, const uint8_t *p, uint32_t plen)
 {
     if (p == NULL || plen >= PROTOCORE_FILESYSTEM_PATH_MAX)
     {
@@ -174,7 +174,7 @@ static void attrs_from_stat(const protocore_mnt_stat *st, SftpAttrs *a)
 
 // A refused send is a peer that is gone, and a gone peer sends nothing back: end the session
 // rather than writing further responses into a channel nobody reads.
-static void send_resp(uint8_t *restrict work, SftpSession *s, size_t n)
+static void send_resp(uint8_t *work, SftpSession *s, size_t n)
 {
     if (n == 0)
     {
@@ -193,7 +193,7 @@ static void send_resp(uint8_t *restrict work, SftpSession *s, size_t n)
         s->active = PROTO_FALSE;
     }
 }
-static void send_status(uint8_t *restrict work, SftpSession *s, uint32_t id, uint32_t code, const char *msg)
+static void send_status(uint8_t *work, SftpSession *s, uint32_t id, uint32_t code, const char *msg)
 {
     SftpV.build_status_args.id = id;
     SftpV.build_status_args.code = code;
@@ -203,7 +203,7 @@ static void send_status(uint8_t *restrict work, SftpSession *s, uint32_t id, uin
     Sftp.build_status(work);
     send_resp(work, s, SftpV.n);
 }
-static void send_handle(uint8_t *restrict work, SftpSession *s, uint32_t id, int hi)
+static void send_handle(uint8_t *work, SftpSession *s, uint32_t id, int hi)
 {
     // The serializer returns the width it wrote, which is the length the HANDLE string carries.
     size_t n = endian.wr32be(SSH_SFTP_CTX(work)->hb, (uint32_t)hi);
@@ -236,7 +236,7 @@ static void write_stream_bytes(SftpSession *s, const uint8_t *data, size_t n)
     s->wr_off += n;
     s->wr_remaining -= (uint32_t)n;
 }
-static void finish_write(uint8_t *restrict work, SftpSession *s)
+static void finish_write(uint8_t *work, SftpSession *s)
 {
     send_status(work, s, s->wr_id, s->wr_err ? PROTOCORE_SSH_FX_FAILURE : PROTOCORE_SSH_FX_OK,
                 s->wr_err ? "write failed" : "");
@@ -245,7 +245,7 @@ static void finish_write(uint8_t *restrict work, SftpSession *s)
 
 // --- READDIR --------------------------------------------------------------------------------------
 // Serialize one directory entry (filename + longname + attrs) into the entry buffer; @return its length.
-static size_t build_entry(uint8_t *restrict work, const protocore_mnt_stat *st, const char *name, size_t name_len)
+static size_t build_entry(uint8_t *work, const protocore_mnt_stat *st, const char *name, size_t name_len)
 {
     SftpAttrs a = {0};
     attrs_from_stat(st, &a);
@@ -286,7 +286,7 @@ static size_t build_entry(uint8_t *restrict work, const protocore_mnt_stat *st, 
     return el;
 }
 
-static void do_readdir(uint8_t *restrict work, SftpSession *s, uint32_t id, SftpHandle *H)
+static void do_readdir(uint8_t *work, SftpSession *s, uint32_t id, SftpHandle *H)
 {
     if (H->readdir_done && !H->has_pending)
     {
@@ -396,7 +396,7 @@ static void keep_req(SftpHandle *H, const char *req)
 }
 
 // --- one complete non-WRITE request ---------------------------------------------------------------
-static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t *buf, size_t total)
+static void handle_packet(uint8_t *work, SftpSession *s, const uint8_t *buf, size_t total)
 {
     SftpReader r;
     SftpV.rd_init_args.r = &r;
@@ -859,7 +859,7 @@ static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t 
 // --- framing loop ---------------------------------------------------------------------------------
 // Consume complete packets from the accumulator. A WRITE switches to streaming mode. @return false to tear the
 // channel down (malformed / oversized non-WRITE packet).
-static proto_bool process_acc(uint8_t *restrict work, SftpSession *s)
+static proto_bool process_acc(uint8_t *work, SftpSession *s)
 {
     for (;;)
     {
@@ -977,7 +977,7 @@ static void protocore_sftp_on_data(uint8_t slot, uint32_t channel, const uint8_t
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_ssh_sftp_span();
+    uint8_t *work = protocore_ssh_sftp_span();
 
     if (slot >= MAX_SSH_CONNS)
     {
@@ -1028,7 +1028,7 @@ static void protocore_sftp_on_data(uint8_t slot, uint32_t channel, const uint8_t
 }
 
 // --- public API -----------------------------------------------------------------------------------
-void protocore_ssh_sftp_begin(uint8_t *restrict work)
+void protocore_ssh_sftp_begin(uint8_t *work)
 {
     // Bind the root this server answers from. The name is what the accessor maps; two servers naming
     // the same one share it and cost one entry, and naming different ones is how they end up over

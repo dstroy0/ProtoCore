@@ -83,7 +83,7 @@ static size_t protocore_ftp_finish(char *buf, size_t cap, size_t n)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_ftp_build_command(uint8_t *restrict work)
+void protocore_ftp_build_command(uint8_t *work)
 {
     (void)work;
     char *buf = FtpV.build_command_args.buf;
@@ -107,7 +107,7 @@ void protocore_ftp_build_command(uint8_t *restrict work)
     FtpV.n = protocore_ftp_finish(buf, cap, n);
 }
 
-void protocore_ftp_build_port(uint8_t *restrict work)
+void protocore_ftp_build_port(uint8_t *work)
 {
     (void)work;
     char *buf = FtpV.build_port_args.buf;
@@ -134,7 +134,7 @@ void protocore_ftp_build_port(uint8_t *restrict work)
     FtpV.n = protocore_ftp_finish(buf, cap, n);
 }
 
-void protocore_ftp_build_eprt(uint8_t *restrict work)
+void protocore_ftp_build_eprt(uint8_t *work)
 {
     (void)work;
     char *buf = FtpV.build_eprt_args.buf;
@@ -182,7 +182,7 @@ static size_t protocore_ftp_line_end(const char *buf, size_t len, size_t start)
     return 0;
 }
 
-void protocore_ftp_parse_reply(uint8_t *restrict work)
+void protocore_ftp_parse_reply(uint8_t *work)
 {
     (void)work;
     const char *buf = FtpV.parse_reply_args.buf;
@@ -251,7 +251,7 @@ void protocore_ftp_parse_reply(uint8_t *restrict work)
     FtpV.ok = PROTO_FALSE; // no terminator yet
 }
 
-void protocore_ftp_parse_pasv(uint8_t *restrict work)
+void protocore_ftp_parse_pasv(uint8_t *work)
 {
     (void)work;
     const char *buf = FtpV.parse_pasv_args.buf;
@@ -314,7 +314,7 @@ void protocore_ftp_parse_pasv(uint8_t *restrict work)
     FtpV.ok = PROTO_TRUE;
 }
 
-void protocore_ftp_parse_epsv(uint8_t *restrict work)
+void protocore_ftp_parse_epsv(uint8_t *work)
 {
     (void)work;
     const char *buf = FtpV.parse_epsv_args.buf;

@@ -72,7 +72,7 @@ static proto_bool tlv_at(const uint8_t *buf, size_t len, size_t pos, uint8_t *ta
     return PROTO_TRUE;
 }
 
-void protocore_der_read(uint8_t *restrict work)
+void protocore_der_read(uint8_t *work)
 {
     (void)work;
     size_t content = 0;
@@ -89,7 +89,7 @@ void protocore_der_read(uint8_t *restrict work)
     DerV.tlv.next = content + clen;
 }
 
-void protocore_der_enter(uint8_t *restrict work)
+void protocore_der_enter(uint8_t *work)
 {
     protocore_der_read(work);
     if (!DerV.ok)
@@ -112,7 +112,7 @@ void protocore_der_enter(uint8_t *restrict work)
     protocore_der_read(work);
 }
 
-void protocore_der_uint(uint8_t *restrict work)
+void protocore_der_uint(uint8_t *work)
 {
     protocore_der_read(work);
     if (!DerV.ok)
@@ -161,7 +161,7 @@ void protocore_der_uint(uint8_t *restrict work)
     DerV.u64 = out;
 }
 
-void protocore_der_bitstring(uint8_t *restrict work)
+void protocore_der_bitstring(uint8_t *work)
 {
     protocore_der_read(work);
     if (!DerV.ok)
@@ -184,7 +184,7 @@ void protocore_der_bitstring(uint8_t *restrict work)
     DerV.tlv.len--;
 }
 
-void protocore_der_oid_eq(uint8_t *restrict work)
+void protocore_der_oid_eq(uint8_t *work)
 {
     protocore_der_read(work);
     if (!DerV.ok)
@@ -233,7 +233,7 @@ static uint64_t epoch_of(int32_t y, int32_t mon, int32_t day, int32_t hh, int32_
     return (uint64_t)(((days * 24 + hh) * 60 + mm) * 60 + ss);
 }
 
-void protocore_der_time(uint8_t *restrict work)
+void protocore_der_time(uint8_t *work)
 {
     protocore_der_read(work);
     if (!DerV.ok)

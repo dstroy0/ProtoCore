@@ -26,8 +26,8 @@ PROTOCORE_BEGIN_DECLS
  * Call protocore_ssh_sftp_begin() once after protocore_ssh_conn_setup(); it installs the channel subsystem + data
  * callbacks.
  *
- * @c work is PROTOCORE_SSH_SFTP_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * @c work is PROTOCORE_SSH_SFTP_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
+nothing here aliases it. How those bytes are
  * carved is this module's and is never named here.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -37,7 +37,7 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*begin)(uint8_t *restrict);
+    void (*begin)(uint8_t *);
 } SshSftpNs;
 PROTOCORE_NS_LAYOUT(SshSftpNs, begin);
 
@@ -45,7 +45,7 @@ PROTOCORE_NS_LAYOUT(SshSftpNs, begin);
  * @brief Serve the SFTP subsystem from the mounted filesystem. Installs the .
  * @param work PROTOCORE_SSH_SFTP_BORROW bytes the caller took. Not held past the call.
  */
-void protocore_ssh_sftp_begin(uint8_t *restrict work);
+void protocore_ssh_sftp_begin(uint8_t *work);
 
 /**
  * @brief The PROTOCORE_SSH_SFTP_BORROW bytes this module's state lives in.

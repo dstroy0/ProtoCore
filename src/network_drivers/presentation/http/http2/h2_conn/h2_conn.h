@@ -124,18 +124,18 @@ extern H2ConnVars H2ConnV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const init)(uint8_t *restrict work);
-    void (*const recv)(uint8_t *restrict work);
-    void (*const respond)(uint8_t *restrict work);
-    void (*const goaway)(uint8_t *restrict work);
+    void (*const init)(uint8_t *work);
+    void (*const recv)(uint8_t *work);
+    void (*const respond)(uint8_t *work);
+    void (*const goaway)(uint8_t *work);
 } H2ConnNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in H2ConnV or a region of the borrow at a fixed offset.
-void protocore_h2_conn_init(uint8_t *restrict work);
-void protocore_h2_conn_recv(uint8_t *restrict work);
-void protocore_h2_conn_respond(uint8_t *restrict work);
-void protocore_h2_conn_goaway(uint8_t *restrict work);
+void protocore_h2_conn_init(uint8_t *work);
+void protocore_h2_conn_recv(uint8_t *work);
+void protocore_h2_conn_respond(uint8_t *work);
+void protocore_h2_conn_goaway(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

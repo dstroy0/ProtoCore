@@ -41,8 +41,8 @@ static_assert(HKDF_OFF_INFO + HKDF_INFO_CAP <= PROTOCORE_HKDF_BORROW,
 // RFC 5869 sec 2.3 HKDF-Expand for the QUIC case: the info block is small and fixed and the
 // requested length never exceeds one hash block, but the general N-block loop is written out so a
 // future >32-byte caller stays correct. T(i) = HMAC(PRK, T(i-1) || info || i), i counts from 1.
-static proto_bool hkdf_derive(uint8_t *restrict work, const uint8_t *prk, const uint8_t *info, size_t info_len,
-                              uint8_t *out, size_t out_len)
+static proto_bool hkdf_derive(uint8_t *work, const uint8_t *prk, const uint8_t *info, size_t info_len, uint8_t *out,
+                              size_t out_len)
 {
     // RFC 5869 sec 2.3 bounds L at 255*HashLen because the block counter is a single octet. Past
     // that the counter wraps and T(256) repeats T(1), so the output would silently reuse earlier
@@ -78,9 +78,8 @@ static proto_bool hkdf_derive(uint8_t *restrict work, const uint8_t *prk, const 
 }
 
 // Compose the HkdfLabel in the borrow's info region and expand under it.
-static proto_bool hkdf_label_derive(uint8_t *restrict work, const uint8_t *secret, const char *label,
-                                    const uint8_t *context, size_t context_len, uint8_t *out, size_t out_len,
-                                    const char *label_prefix)
+static proto_bool hkdf_label_derive(uint8_t *work, const uint8_t *secret, const char *label, const uint8_t *context,
+                                    size_t context_len, uint8_t *out, size_t out_len, const char *label_prefix)
 {
     // HkdfLabel (RFC 8446 sec 7.1): uint16 length | opaque label<..> = label_prefix + label | opaque context.
     // The prefix is "tls13 " for TLS/QUIC (RFC 8446) or "dtls13" for DTLS 1.3 (RFC 9147 sec 5.9); the
@@ -116,7 +115,7 @@ static proto_bool hkdf_label_derive(uint8_t *restrict work, const uint8_t *secre
 
 // RFC 5869 sec 2.2: PRK = HMAC-Hash(salt, IKM). HmacSha256 pre-hashes keys > 64 bytes and zero-pads
 // shorter ones, which is exactly HMAC's own key handling, so the salt goes in as-is.
-proto_bool protocore_hkdf_extract(uint8_t *restrict work, const uint8_t *salt, size_t salt_len, const uint8_t *ikm,
+proto_bool protocore_hkdf_extract(uint8_t *work, const uint8_t *salt, size_t salt_len, const uint8_t *ikm,
                                   size_t ikm_len, uint8_t *prk)
 {
     if (!prk)
@@ -127,8 +126,8 @@ proto_bool protocore_hkdf_extract(uint8_t *restrict work, const uint8_t *salt, s
     return hmac_sha256_ok;
 }
 
-proto_bool protocore_hkdf_expand(uint8_t *restrict work, const uint8_t *prk, const uint8_t *info, size_t info_len,
-                                 uint8_t *out, size_t out_len)
+proto_bool protocore_hkdf_expand(uint8_t *work, const uint8_t *prk, const uint8_t *info, size_t info_len, uint8_t *out,
+                                 size_t out_len)
 {
     if (!prk || !out)
     {
@@ -137,7 +136,7 @@ proto_bool protocore_hkdf_expand(uint8_t *restrict work, const uint8_t *prk, con
     return hkdf_derive(work, prk, info, info_len, out, out_len);
 }
 
-proto_bool protocore_hkdf_expand_label(uint8_t *restrict work, const uint8_t *secret, const char *label, uint8_t *out,
+proto_bool protocore_hkdf_expand_label(uint8_t *work, const uint8_t *secret, const char *label, uint8_t *out,
                                        size_t out_len, const char *label_prefix)
 {
     if (!secret || !label || !label_prefix || !out)
@@ -147,7 +146,7 @@ proto_bool protocore_hkdf_expand_label(uint8_t *restrict work, const uint8_t *se
     return hkdf_label_derive(work, secret, label, NULL, 0, out, out_len, label_prefix);
 }
 
-proto_bool protocore_hkdf_expand_label_ctx(uint8_t *restrict work, const uint8_t *secret, const char *label,
+proto_bool protocore_hkdf_expand_label_ctx(uint8_t *work, const uint8_t *secret, const char *label,
                                            const uint8_t *context, size_t context_len, uint8_t *out, size_t out_len,
                                            const char *label_prefix)
 {

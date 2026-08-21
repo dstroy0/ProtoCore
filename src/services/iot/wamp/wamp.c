@@ -21,7 +21,7 @@
 PROTOCORE_BEGIN_DECLS
 
 // Emit a uint64 as a JSON number: digits generated low end first, then reversed into the writer.
-static void emit_uint(uint8_t *restrict work, protocore_json_writer *w, uint64_t v)
+static void emit_uint(uint8_t *work, protocore_json_writer *w, uint64_t v)
 {
     char rev[20];
     size_t r = 0;
@@ -50,7 +50,7 @@ static void emit_uint(uint8_t *restrict work, protocore_json_writer *w, uint64_t
 }
 
 // Bind the writer to ns->out and open the list with its message type code (WAMP sec 3.3).
-static void begin_msg(uint8_t *restrict work, protocore_json_writer *w, int code)
+static void begin_msg(uint8_t *work, protocore_json_writer *w, int code)
 {
     JsonV.init_args.w = w;
     JsonV.init_args.buf = WampV.out.buf;
@@ -64,7 +64,7 @@ static void begin_msg(uint8_t *restrict work, protocore_json_writer *w, int code
 }
 
 // Close out a build: the byte count in ns->n, 0 unless the writer stayed inside the buffer.
-static void finish(uint8_t *restrict work, protocore_json_writer *w)
+static void finish(uint8_t *work, protocore_json_writer *w)
 {
     JsonV.end_array_args.w = w;
     Json.end_array(work);
@@ -74,7 +74,7 @@ static void finish(uint8_t *restrict work, protocore_json_writer *w)
 
 // Append the trailing Arguments|list and ArgumentsKw|dict, both left off when neither is set.
 // ArgumentsKw sits one position past Arguments, so a keyword-only payload emits `[]` to hold it.
-static void emit_args(uint8_t *restrict work, protocore_json_writer *w)
+static void emit_args(uint8_t *work, protocore_json_writer *w)
 {
     const char *args = WampV.payload.arguments;
     const char *kwargs = WampV.payload.arguments_kw;
@@ -96,7 +96,7 @@ static void emit_args(uint8_t *restrict work, protocore_json_writer *w)
 // ---- builders ----
 
 // [HELLO, Realm|uri, Details|dict] (WAMP sec 3.4.1.1).
-void protocore_wamp_build_hello(uint8_t *restrict work)
+void protocore_wamp_build_hello(uint8_t *work)
 {
     WampV.ok = PROTO_FALSE;
     WampV.n = 0;
@@ -116,7 +116,7 @@ void protocore_wamp_build_hello(uint8_t *restrict work)
 }
 
 // [GOODBYE, Details|dict, Reason|uri] (WAMP sec 3.4.1.4).
-void protocore_wamp_build_goodbye(uint8_t *restrict work)
+void protocore_wamp_build_goodbye(uint8_t *work)
 {
     WampV.ok = PROTO_FALSE;
     WampV.n = 0;
@@ -136,7 +136,7 @@ void protocore_wamp_build_goodbye(uint8_t *restrict work)
 }
 
 // [SUBSCRIBE, Request|id, Options|dict, Topic|uri] (WAMP sec 3.4.2.3).
-void protocore_wamp_build_subscribe(uint8_t *restrict work)
+void protocore_wamp_build_subscribe(uint8_t *work)
 {
     WampV.ok = PROTO_FALSE;
     WampV.n = 0;
@@ -157,7 +157,7 @@ void protocore_wamp_build_subscribe(uint8_t *restrict work)
 }
 
 // [UNSUBSCRIBE, Request|id, SUBSCRIBED.Subscription|id] (WAMP sec 3.4.2.5).
-void protocore_wamp_build_unsubscribe(uint8_t *restrict work)
+void protocore_wamp_build_unsubscribe(uint8_t *work)
 {
     WampV.ok = PROTO_FALSE;
     WampV.n = 0;
@@ -173,7 +173,7 @@ void protocore_wamp_build_unsubscribe(uint8_t *restrict work)
 }
 
 // [PUBLISH, Request|id, Options|dict, Topic|uri] and its payload tail (WAMP sec 3.4.2.1).
-void protocore_wamp_build_publish(uint8_t *restrict work)
+void protocore_wamp_build_publish(uint8_t *work)
 {
     WampV.ok = PROTO_FALSE;
     WampV.n = 0;
@@ -195,7 +195,7 @@ void protocore_wamp_build_publish(uint8_t *restrict work)
 }
 
 // [CALL, Request|id, Options|dict, Procedure|uri] and its payload tail (WAMP sec 3.4.3.1).
-void protocore_wamp_build_call(uint8_t *restrict work)
+void protocore_wamp_build_call(uint8_t *work)
 {
     WampV.ok = PROTO_FALSE;
     WampV.n = 0;
@@ -217,7 +217,7 @@ void protocore_wamp_build_call(uint8_t *restrict work)
 }
 
 // [REGISTER, Request|id, Options|dict, Procedure|uri] (WAMP sec 3.4.3.3).
-void protocore_wamp_build_register(uint8_t *restrict work)
+void protocore_wamp_build_register(uint8_t *work)
 {
     WampV.ok = PROTO_FALSE;
     WampV.n = 0;
@@ -238,7 +238,7 @@ void protocore_wamp_build_register(uint8_t *restrict work)
 }
 
 // [UNREGISTER, Request|id, REGISTERED.Registration|id] (WAMP sec 3.4.3.5).
-void protocore_wamp_build_unregister(uint8_t *restrict work)
+void protocore_wamp_build_unregister(uint8_t *work)
 {
     WampV.ok = PROTO_FALSE;
     WampV.n = 0;
@@ -254,7 +254,7 @@ void protocore_wamp_build_unregister(uint8_t *restrict work)
 }
 
 // [YIELD, INVOCATION.Request|id, Options|dict] and its payload tail (WAMP sec 3.4.3.8).
-void protocore_wamp_build_yield(uint8_t *restrict work)
+void protocore_wamp_build_yield(uint8_t *work)
 {
     WampV.ok = PROTO_FALSE;
     WampV.n = 0;
@@ -358,7 +358,7 @@ static size_t scan_value(const char *s, size_t i)
 
 // Slice the raw element at ns->parse.index out of the received list (WAMP sec 3.3) into ns->text
 // and ns->n.
-void protocore_wamp_element(uint8_t *restrict work)
+void protocore_wamp_element(uint8_t *work)
 {
     (void)work;
     WampV.ok = PROTO_FALSE;
@@ -405,7 +405,7 @@ void protocore_wamp_element(uint8_t *restrict work)
 }
 
 // Read the element at ns->parse.index as an id, decimal digits only (WAMP sec 2.1.2), into ns->u64.
-void protocore_wamp_get_id(uint8_t *restrict work)
+void protocore_wamp_get_id(uint8_t *work)
 {
     WampV.u64 = 0;
     protocore_wamp_element(work);
@@ -431,7 +431,7 @@ void protocore_wamp_get_id(uint8_t *restrict work)
 }
 
 // Read the message type code, element 0 of the list (WAMP sec 3.5), into ns->i32.
-void protocore_wamp_get_type(uint8_t *restrict work)
+void protocore_wamp_get_type(uint8_t *work)
 {
     WampV.i32 = 0;
     WampV.parse.index = 0;
@@ -444,7 +444,7 @@ void protocore_wamp_get_type(uint8_t *restrict work)
 
 // Copy the URI element at ns->parse.index into ns->parse.uri_out, the quotes stripped. WAMP sec
 // 2.1.1 bars whitespace and `#` from URI components, so the copy carries no escape to undo.
-void protocore_wamp_get_uri(uint8_t *restrict work)
+void protocore_wamp_get_uri(uint8_t *work)
 {
     char *out = WampV.parse.uri_out;
     const size_t cap = WampV.parse.uri_cap;

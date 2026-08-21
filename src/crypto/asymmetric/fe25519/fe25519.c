@@ -27,21 +27,21 @@ PROTOCORE_BEGIN_DECLS
 // --- the entries -----------------------------------------------------------
 
 // The lock and the power are the HAL's, so these two touch neither operands nor the borrow.
-void protocore_fe25519_hw_enable(uint8_t *restrict work)
+void protocore_fe25519_hw_enable(uint8_t *work)
 {
     (void)work;
     protocore_fe_hw_enable();
     Fe25519V.ok = PROTO_TRUE;
 }
 
-void protocore_fe25519_hw_disable(uint8_t *restrict work)
+void protocore_fe25519_hw_disable(uint8_t *work)
 {
     (void)work;
     protocore_fe_hw_disable();
     Fe25519V.ok = PROTO_TRUE;
 }
 
-void protocore_fe25519_mul(uint8_t *restrict work)
+void protocore_fe25519_mul(uint8_t *work)
 {
     (void)work;
     Fe25519V.ok = PROTO_FALSE;
@@ -53,7 +53,7 @@ void protocore_fe25519_mul(uint8_t *restrict work)
     Fe25519V.ok = PROTO_TRUE;
 }
 
-void protocore_fe25519_sq(uint8_t *restrict work)
+void protocore_fe25519_sq(uint8_t *work)
 {
     (void)work;
     Fe25519V.ok = PROTO_FALSE;
@@ -65,7 +65,7 @@ void protocore_fe25519_sq(uint8_t *restrict work)
     Fe25519V.ok = PROTO_TRUE;
 }
 
-void protocore_fe25519_copy(uint8_t *restrict work)
+void protocore_fe25519_copy(uint8_t *work)
 {
     (void)work;
     Fe25519V.ok = PROTO_FALSE;
@@ -77,7 +77,7 @@ void protocore_fe25519_copy(uint8_t *restrict work)
     Fe25519V.ok = PROTO_TRUE;
 }
 
-void protocore_fe25519_zero(uint8_t *restrict work)
+void protocore_fe25519_zero(uint8_t *work)
 {
     (void)work;
     Fe25519V.ok = PROTO_FALSE;
@@ -89,7 +89,7 @@ void protocore_fe25519_zero(uint8_t *restrict work)
     Fe25519V.ok = PROTO_TRUE;
 }
 
-void protocore_fe25519_one(uint8_t *restrict work)
+void protocore_fe25519_one(uint8_t *work)
 {
     (void)work;
     Fe25519V.ok = PROTO_FALSE;
@@ -101,7 +101,7 @@ void protocore_fe25519_one(uint8_t *restrict work)
     Fe25519V.ok = PROTO_TRUE;
 }
 
-void protocore_fe25519_reduce_once(uint8_t *restrict work)
+void protocore_fe25519_reduce_once(uint8_t *work)
 {
     (void)work;
     Fe25519V.ok = PROTO_FALSE;
@@ -113,7 +113,7 @@ void protocore_fe25519_reduce_once(uint8_t *restrict work)
     Fe25519V.ok = PROTO_TRUE;
 }
 
-void protocore_fe25519_add(uint8_t *restrict work)
+void protocore_fe25519_add(uint8_t *work)
 {
     (void)work;
     Fe25519V.ok = PROTO_FALSE;
@@ -125,7 +125,7 @@ void protocore_fe25519_add(uint8_t *restrict work)
     Fe25519V.ok = PROTO_TRUE;
 }
 
-void protocore_fe25519_sub(uint8_t *restrict work)
+void protocore_fe25519_sub(uint8_t *work)
 {
     (void)work;
     Fe25519V.ok = PROTO_FALSE;
@@ -137,7 +137,7 @@ void protocore_fe25519_sub(uint8_t *restrict work)
     Fe25519V.ok = PROTO_TRUE;
 }
 
-void protocore_fe25519_cswap(uint8_t *restrict work)
+void protocore_fe25519_cswap(uint8_t *work)
 {
     (void)work;
     Fe25519V.ok = PROTO_FALSE;
@@ -149,7 +149,7 @@ void protocore_fe25519_cswap(uint8_t *restrict work)
     Fe25519V.ok = PROTO_TRUE;
 }
 
-void protocore_fe25519_frombytes(uint8_t *restrict work)
+void protocore_fe25519_frombytes(uint8_t *work)
 {
     (void)work;
     Fe25519V.ok = PROTO_FALSE;
@@ -161,7 +161,7 @@ void protocore_fe25519_frombytes(uint8_t *restrict work)
     Fe25519V.ok = PROTO_TRUE;
 }
 
-void protocore_fe25519_tobytes(uint8_t *restrict work)
+void protocore_fe25519_tobytes(uint8_t *work)
 {
     (void)work;
     Fe25519V.ok = PROTO_FALSE;
@@ -173,7 +173,7 @@ void protocore_fe25519_tobytes(uint8_t *restrict work)
     Fe25519V.ok = PROTO_TRUE;
 }
 
-void protocore_fe25519_invert(uint8_t *restrict work)
+void protocore_fe25519_invert(uint8_t *work)
 {
     (void)work;
     Fe25519V.ok = PROTO_FALSE;
@@ -185,7 +185,7 @@ void protocore_fe25519_invert(uint8_t *restrict work)
     Fe25519V.ok = PROTO_TRUE;
 }
 
-void protocore_fe25519_pow2523(uint8_t *restrict work)
+void protocore_fe25519_pow2523(uint8_t *work)
 {
     (void)work;
     Fe25519V.ok = PROTO_FALSE;
@@ -198,7 +198,7 @@ void protocore_fe25519_pow2523(uint8_t *restrict work)
 }
 
 // The low bit of the canonical encoding, onto the handle beside ok.
-void protocore_fe25519_get_parity(uint8_t *restrict work)
+void protocore_fe25519_get_parity(uint8_t *work)
 {
     (void)work;
     Fe25519V.ok = PROTO_FALSE;
@@ -212,7 +212,7 @@ void protocore_fe25519_get_parity(uint8_t *restrict work)
 }
 
 // 0 when the two encode the same element, -1 otherwise, onto the handle beside ok.
-void protocore_fe25519_get_neq(uint8_t *restrict work)
+void protocore_fe25519_get_neq(uint8_t *work)
 {
     (void)work;
     Fe25519V.ok = PROTO_FALSE;

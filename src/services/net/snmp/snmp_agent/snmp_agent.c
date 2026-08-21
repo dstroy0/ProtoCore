@@ -168,7 +168,7 @@ static int oid_cmp(const uint32_t *a, size_t an, const uint32_t *b, size_t bn)
 }
 
 // The entry whose name is exactly (oid, n), or NULL. Reads the MIB, so it takes ctx.
-static const SnmpMibEntry *mib_find_exact(uint8_t *restrict work, const uint32_t *oid, size_t n)
+static const SnmpMibEntry *mib_find_exact(uint8_t *work, const uint32_t *oid, size_t n)
 {
     for (size_t i = 0; i < SNMP_AGENT_CTX(work)->mib_count; i++)
     {
@@ -181,7 +181,7 @@ static const SnmpMibEntry *mib_find_exact(uint8_t *restrict work, const uint32_t
 }
 
 // The smallest registered name strictly greater than (oid, n), or NULL at the end of the MIB view.
-static const SnmpMibEntry *mib_find_next(uint8_t *restrict work, const uint32_t *oid, size_t n)
+static const SnmpMibEntry *mib_find_next(uint8_t *work, const uint32_t *oid, size_t n)
 {
     const SnmpMibEntry *best = NULL;
     for (size_t i = 0; i < SNMP_AGENT_CTX(work)->mib_count; i++)
@@ -202,7 +202,7 @@ static const SnmpMibEntry *mib_find_next(uint8_t *restrict work, const uint32_t 
 // only the instance is absent, noSuchObject when no such object exists. Every entry is a full
 // instance name, so its object name is that minus the trailing instance subidentifier, and the
 // request names a known object exactly when that prefix is a prefix of the request.
-static proto_bool mib_object_exists(uint8_t *restrict work, const uint32_t *oid, size_t n)
+static proto_bool mib_object_exists(uint8_t *work, const uint32_t *oid, size_t n)
 {
     for (size_t i = 0; i < SNMP_AGENT_CTX(work)->mib_count; i++)
     {
@@ -231,7 +231,7 @@ static proto_bool fetch_value(const SnmpMibEntry *en, SnmpValue *out)
 
 // Claim the next table row for the name ns->object names, or NULL when the table is full or the
 // name is unusable.
-static SnmpMibEntry *mib_alloc(uint8_t *restrict work)
+static SnmpMibEntry *mib_alloc(uint8_t *work)
 {
     const uint32_t *oid = SnmpAgentV.object.oid;
     const size_t n = SnmpAgentV.object.oid_len;
@@ -249,7 +249,7 @@ static SnmpMibEntry *mib_alloc(uint8_t *restrict work)
     return e;
 }
 
-void protocore_snmp_agent_init(uint8_t *restrict work)
+void protocore_snmp_agent_init(uint8_t *work)
 {
     SNMP_AGENT_CTX(work)->mib_count = 0;
     SNMP_AGENT_CTX(work)->rw_set = PROTO_FALSE;
@@ -263,7 +263,7 @@ void protocore_snmp_agent_init(uint8_t *restrict work)
     SnmpAgentV.ok = PROTO_TRUE;
 }
 
-void protocore_snmp_agent_set_rw_community(uint8_t *restrict work)
+void protocore_snmp_agent_set_rw_community(uint8_t *work)
 {
     const char *rw = SnmpAgentV.community.rw;
     if (!rw || !rw[0])
@@ -278,7 +278,7 @@ void protocore_snmp_agent_set_rw_community(uint8_t *restrict work)
     SnmpAgentV.ok = PROTO_TRUE;
 }
 
-void protocore_snmp_agent_add_string(uint8_t *restrict work)
+void protocore_snmp_agent_add_string(uint8_t *work)
 {
     SnmpMibEntry *e = mib_alloc(work);
     if (!e)
@@ -294,7 +294,7 @@ void protocore_snmp_agent_add_string(uint8_t *restrict work)
     SnmpAgentV.ok = PROTO_TRUE;
 }
 
-void protocore_snmp_agent_add_integer(uint8_t *restrict work)
+void protocore_snmp_agent_add_integer(uint8_t *work)
 {
     SnmpMibEntry *e = mib_alloc(work);
     if (!e)
@@ -308,7 +308,7 @@ void protocore_snmp_agent_add_integer(uint8_t *restrict work)
     SnmpAgentV.ok = PROTO_TRUE;
 }
 
-void protocore_snmp_agent_add_dynamic(uint8_t *restrict work)
+void protocore_snmp_agent_add_dynamic(uint8_t *work)
 {
     SnmpMibEntry *e = mib_alloc(work);
     if (!e)
@@ -342,7 +342,7 @@ static proto_bool sys_uptime_get(SnmpValue *out)
 // The system group, 1.3.6.1.2.1.1 (RFC 3418 sec 2): sysDescr.0 through sysServices.0. sysUpTime.0
 // is dynamic; sysObjectID.0 is written straight into its row because no registration call carries
 // an OBJECT IDENTIFIER value.
-void protocore_snmp_agent_set_system(uint8_t *restrict work)
+void protocore_snmp_agent_set_system(uint8_t *work)
 {
     static const uint32_t o_descr[] = {1, 3, 6, 1, 2, 1, 1, 1, 0};
     static const uint32_t o_oid[] = {1, 3, 6, 1, 2, 1, 1, 2, 0};
@@ -524,7 +524,7 @@ static proto_bool dec_value(BerDec *d, SnmpValue *v, uint32_t *oidbuf)
 // Apply each binding of a SetRequest-PDU in order, stopping at the first failure and reporting it
 // as error-status with the 1-based error-index (RFC 3416 sec 4.2.5). Both outputs are left alone
 // when every binding succeeds.
-static void apply_set_all(uint8_t *restrict work, size_t nvb, proto_bool v2c, long *err_status, long *err_index)
+static void apply_set_all(uint8_t *work, size_t nvb, proto_bool v2c, long *err_status, long *err_index)
 {
     for (size_t i = 0; i < nvb; i++)
     {
@@ -562,7 +562,7 @@ static proto_bool community_match(const char *stored, const char *p, size_t len)
 
 // Response-PDU (RFC 3416 sec 4.2.4): request-id, error-status, error-index, then the first nout
 // bindings of the output scratch. Reads that scratch, so it takes ctx.
-static size_t encode_response(uint8_t *restrict work, long request_id, long err_status, long err_index, size_t nout,
+static size_t encode_response(uint8_t *work, long request_id, long err_status, long err_index, size_t nout,
                               uint8_t *buf, size_t cap)
 {
     BerEnc e;
@@ -606,7 +606,7 @@ static size_t encode_response(uint8_t *restrict work, long request_id, long err_
 
 // Decode the VarBindList of the request into the input scratch. Reports the binding count, or
 // SNMP_MAX_VARBINDS + 1 when the list is malformed or longer than the scratch holds.
-static size_t decode_varbinds(uint8_t *restrict work, BerDec *d, size_t vbl_end)
+static size_t decode_varbinds(uint8_t *work, BerDec *d, size_t vbl_end)
 {
     size_t nvb = 0;
     // Every read inside the loop that could clear d->ok is answered by its own guard first, so the
@@ -642,7 +642,7 @@ static size_t decode_varbinds(uint8_t *restrict work, BerDec *d, size_t vbl_end)
 
 // Copy the request bindings into the response unchanged, which is what a v1 error report and every
 // SetRequest-PDU response carry (RFC 1157 sec 4.1.1, RFC 3416 sec 4.2.5).
-static void echo_varbinds(uint8_t *restrict work, size_t nvb)
+static void echo_varbinds(uint8_t *work, size_t nvb)
 {
     for (size_t k = 0; k < nvb; k++)
     {
@@ -654,8 +654,7 @@ static void echo_varbinds(uint8_t *restrict work, size_t nvb)
 
 // GetRequest-PDU (RFC 3416 sec 4.2.1) and GetNextRequest-PDU (sec 4.2.2). Reports the binding
 // count written; a v1 name failure stops the walk and reports through err_status/err_index.
-static size_t run_get(uint8_t *restrict work, uint8_t pdu_tag, size_t nvb, proto_bool v2c, long *err_status,
-                      long *err_index)
+static size_t run_get(uint8_t *work, uint8_t pdu_tag, size_t nvb, proto_bool v2c, long *err_status, long *err_index)
 {
     const proto_bool is_next = (pdu_tag == (uint8_t)SNMP_TAG_SNMP_PDU_GETNEXT);
     size_t nout = 0;
@@ -708,7 +707,7 @@ static size_t run_get(uint8_t *restrict work, uint8_t pdu_tag, size_t nvb, proto
 // GetBulkRequest-PDU (RFC 3416 sec 4.2.3): the first non-repeaters bindings get one successor
 // each, and each remaining binding is walked for up to max-repetitions successors. Reports the
 // binding count written.
-static size_t run_bulk(uint8_t *restrict work, size_t nvb, long non_repeaters, long max_repetitions)
+static size_t run_bulk(uint8_t *work, size_t nvb, long non_repeaters, long max_repetitions)
 {
     long non_rep = non_repeaters < 0 ? 0 : non_repeaters;
     long max_rep = max_repetitions < 0 ? 0 : max_repetitions;
@@ -785,7 +784,7 @@ static size_t run_bulk(uint8_t *restrict work, size_t nvb, long non_repeaters, l
 
 // One request PDU against the MIB, answered by one Response-PDU (RFC 3416 sec 4.2). The v1 and
 // v2c community framing and the v3 USM layer both arrive here.
-void protocore_snmp_agent_dispatch_pdu(uint8_t *restrict work)
+void protocore_snmp_agent_dispatch_pdu(uint8_t *work)
 {
     const uint8_t *pdu = SnmpAgentV.pdu.req;
     const size_t pdu_len = SnmpAgentV.pdu.req_len;
@@ -894,7 +893,7 @@ void protocore_snmp_agent_dispatch_pdu(uint8_t *restrict work)
 // is the USM layer's.
 // ---------------------------------------------------------------------------
 
-void protocore_snmp_agent_process(uint8_t *restrict work)
+void protocore_snmp_agent_process(uint8_t *work)
 {
     const uint8_t *req = SnmpAgentV.msg.req;
     const size_t req_len = SnmpAgentV.msg.req_len;
@@ -1021,7 +1020,7 @@ static void snmp_udp_handler(const uint8_t *data, size_t len, const struct proto
 }
 #endif // PROTOCORE_HAS_NET_STACK
 
-void protocore_snmp_agent_listen(uint8_t *restrict work)
+void protocore_snmp_agent_listen(uint8_t *work)
 {
     (void)work;
 #if PROTOCORE_HAS_NET_STACK

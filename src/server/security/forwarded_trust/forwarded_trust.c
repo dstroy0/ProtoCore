@@ -93,14 +93,14 @@ uint8_t *protocore_forwarded_trust_span(void)
     return s_own.span;
 }
 
-void protocore_forwarded_trust_reset(uint8_t *restrict work)
+void protocore_forwarded_trust_reset(uint8_t *work)
 {
     (void)work;
 
     FORWARDED_TRUST_CTX(work)->count = 0;
 }
 
-void protocore_forwarded_trust_add(uint8_t *restrict work)
+void protocore_forwarded_trust_add(uint8_t *work)
 {
     (void)work;
     const protocore_ip *network = ForwardedTrustV.add_args.network;
@@ -137,7 +137,7 @@ void protocore_forwarded_trust_add(uint8_t *restrict work)
     return;
 }
 
-void protocore_forwarded_trust_add_cidr(uint8_t *restrict work)
+void protocore_forwarded_trust_add_cidr(uint8_t *work)
 {
     (void)work;
     const char *cidr = ForwardedTrustV.add_cidr_args.cidr;
@@ -212,7 +212,7 @@ void protocore_forwarded_trust_add_cidr(uint8_t *restrict work)
     return;
 }
 
-void protocore_forwarded_trust_contains(uint8_t *restrict work)
+void protocore_forwarded_trust_contains(uint8_t *work)
 {
     (void)work;
     const protocore_ip *peer = ForwardedTrustV.contains_args.peer;
@@ -235,7 +235,7 @@ void protocore_forwarded_trust_contains(uint8_t *restrict work)
     return;
 }
 
-void protocore_forwarded_trust_protocore_forwarded_effective_ip(uint8_t *restrict work)
+void protocore_forwarded_trust_protocore_forwarded_effective_ip(uint8_t *work)
 {
     (void)work;
     const protocore_ip *peer = ForwardedTrustV.protocore_forwarded_effective_ip_args.peer;

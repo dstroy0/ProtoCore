@@ -291,9 +291,9 @@ static proto_bool emit_indexed(HpackDynTable *t, uint32_t idx, char *scratch, si
 }
 
 // Decode a literal representation (name via index or inline, value inline; optional indexing).
-static proto_bool decode_literal(uint8_t *restrict work, HpackDynTable *t, const uint8_t *block, size_t len,
-                                 size_t *pos, uint8_t prefix_bits, proto_bool do_index, char *scratch, size_t cap,
-                                 HpackEmitFn emit, void *ctx)
+static proto_bool decode_literal(uint8_t *work, HpackDynTable *t, const uint8_t *block, size_t len, size_t *pos,
+                                 uint8_t prefix_bits, proto_bool do_index, char *scratch, size_t cap, HpackEmitFn emit,
+                                 void *ctx)
 {
     size_t c = 0;
     uint32_t name_idx = 0;
@@ -342,8 +342,8 @@ static void hpack_dyn_init_run(HpackDynTable *t, uint32_t max_bytes)
     }
 }
 
-static proto_bool hpack_decode_run(uint8_t *restrict work, HpackDynTable *t, const uint8_t *block, size_t len,
-                                   char *scratch, size_t scratch_cap, HpackEmitFn emit, void *ctx)
+static proto_bool hpack_decode_run(uint8_t *work, HpackDynTable *t, const uint8_t *block, size_t len, char *scratch,
+                                   size_t scratch_cap, HpackEmitFn emit, void *ctx)
 {
     size_t pos = 0;
     while (pos < len)
@@ -402,8 +402,8 @@ static proto_bool hpack_decode_run(uint8_t *restrict work, HpackDynTable *t, con
     return PROTO_TRUE;
 }
 
-static size_t hpack_encode_header_run(uint8_t *restrict work, uint8_t *out, size_t cap, const char *name,
-                                      size_t name_len, const char *value, size_t value_len)
+static size_t hpack_encode_header_run(uint8_t *work, uint8_t *out, size_t cap, const char *name, size_t name_len,
+                                      const char *value, size_t value_len)
 {
     int name_idx = 0;
     int full_idx = 0;
@@ -455,19 +455,19 @@ static size_t hpack_encode_header_run(uint8_t *restrict work, uint8_t *out, size
 
 // --- the entries ---
 
-void protocore_hpack_dyn_init(uint8_t *restrict work)
+void protocore_hpack_dyn_init(uint8_t *work)
 {
     hpack_dyn_init_run(HPACK_CTX(work), HpackV.init_args.max_bytes);
 }
 
-void protocore_hpack_decode(uint8_t *restrict work)
+void protocore_hpack_decode(uint8_t *work)
 {
     HpackV.ok = hpack_decode_run(work, HPACK_CTX(work), HpackV.decode_args.block, HpackV.decode_args.len,
                                  HpackV.decode_args.scratch, HpackV.decode_args.scratch_cap, HpackV.decode_args.emit,
                                  HpackV.decode_args.ctx);
 }
 
-void protocore_hpack_encode_header(uint8_t *restrict work)
+void protocore_hpack_encode_header(uint8_t *work)
 {
     (void)work;
     HpackV.n =

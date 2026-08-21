@@ -12,15 +12,14 @@ PROTOCORE_BEGIN_DECLS
  * @file ssh.h
  * @brief Every byte the connections use, one span per slot.
  *
- * @c work is PROTOCORE_SSH_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_SSH_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
+ * nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    uint8_t *(*conn_slot)(uint8_t *restrict, uint8_t);
+    uint8_t *(*conn_slot)(uint8_t *, uint8_t);
 } SshNs;
 PROTOCORE_NS_LAYOUT(SshNs, conn_slot);
 
@@ -30,7 +29,7 @@ PROTOCORE_NS_LAYOUT(SshNs, conn_slot);
  * @param i I
  * @return The uint8_t *.
  */
-uint8_t *protocore_ssh_conn_slot(uint8_t *restrict work, uint8_t i);
+uint8_t *protocore_ssh_conn_slot(uint8_t *work, uint8_t i);
 
 /**
  * @brief The PROTOCORE_SSH_BORROW bytes this module's state lives in.

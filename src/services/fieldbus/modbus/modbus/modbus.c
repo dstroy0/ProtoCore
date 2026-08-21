@@ -97,9 +97,9 @@ uint8_t *protocore_modbus_span(void)
     return s_own.span;
 }
 
-void protocore_modbus_process_adu(uint8_t *restrict work);
+void protocore_modbus_process_adu(uint8_t *work);
 
-void protocore_modbus_server_init(uint8_t *restrict work)
+void protocore_modbus_server_init(uint8_t *work)
 {
 
     mem.set(MODBUS_CTX(work)->coils, 0, sizeof(MODBUS_CTX(work)->coils));
@@ -109,20 +109,20 @@ void protocore_modbus_server_init(uint8_t *restrict work)
     MODBUS_CTX(work)->write_cb = NULL;
 }
 
-void protocore_modbus_on_write(uint8_t *restrict work)
+void protocore_modbus_on_write(uint8_t *work)
 {
     ModbusWriteCb cb = ModbusV.on_write_args.cb;
 
     MODBUS_CTX(work)->write_cb = cb;
 }
 
-void protocore_modbus_get_coil(uint8_t *restrict work)
+void protocore_modbus_get_coil(uint8_t *work)
 {
     uint16_t addr = ModbusV.get_coil_args.addr;
 
     ModbusV.ok = (addr < PROTOCORE_MODBUS_COILS) ? bit_get(MODBUS_CTX(work)->coils, addr) : PROTO_FALSE;
 }
-void protocore_modbus_set_coil(uint8_t *restrict work)
+void protocore_modbus_set_coil(uint8_t *work)
 {
     uint16_t addr = ModbusV.set_coil_args.addr;
     proto_bool on = ModbusV.set_coil_args.on;
@@ -132,13 +132,13 @@ void protocore_modbus_set_coil(uint8_t *restrict work)
         bit_set(MODBUS_CTX(work)->coils, addr, on);
     }
 }
-void protocore_modbus_get_discrete_input(uint8_t *restrict work)
+void protocore_modbus_get_discrete_input(uint8_t *work)
 {
     uint16_t addr = ModbusV.get_discrete_input_args.addr;
 
     ModbusV.ok = (addr < PROTOCORE_MODBUS_DISCRETE_INPUTS) ? bit_get(MODBUS_CTX(work)->discrete, addr) : PROTO_FALSE;
 }
-void protocore_modbus_set_discrete_input(uint8_t *restrict work)
+void protocore_modbus_set_discrete_input(uint8_t *work)
 {
     uint16_t addr = ModbusV.set_discrete_input_args.addr;
     proto_bool on = ModbusV.set_discrete_input_args.on;
@@ -148,13 +148,13 @@ void protocore_modbus_set_discrete_input(uint8_t *restrict work)
         bit_set(MODBUS_CTX(work)->discrete, addr, on);
     }
 }
-void protocore_modbus_get_holding_reg(uint8_t *restrict work)
+void protocore_modbus_get_holding_reg(uint8_t *work)
 {
     uint16_t addr = ModbusV.get_holding_reg_args.addr;
 
     ModbusV.value = (addr < PROTOCORE_MODBUS_HOLDING_REGS) ? MODBUS_CTX(work)->holding[addr] : 0;
 }
-void protocore_modbus_set_holding_reg(uint8_t *restrict work)
+void protocore_modbus_set_holding_reg(uint8_t *work)
 {
     uint16_t addr = ModbusV.set_holding_reg_args.addr;
     uint16_t value = ModbusV.set_holding_reg_args.value;
@@ -164,13 +164,13 @@ void protocore_modbus_set_holding_reg(uint8_t *restrict work)
         MODBUS_CTX(work)->holding[addr] = value;
     }
 }
-void protocore_modbus_get_input_reg(uint8_t *restrict work)
+void protocore_modbus_get_input_reg(uint8_t *work)
 {
     uint16_t addr = ModbusV.get_input_reg_args.addr;
 
     ModbusV.value = (addr < PROTOCORE_MODBUS_INPUT_REGS) ? MODBUS_CTX(work)->input[addr] : 0;
 }
-void protocore_modbus_set_input_reg(uint8_t *restrict work)
+void protocore_modbus_set_input_reg(uint8_t *work)
 {
     uint16_t addr = ModbusV.set_input_reg_args.addr;
     uint16_t value = ModbusV.set_input_reg_args.value;
@@ -205,7 +205,7 @@ static size_t pdu_exception(ModbusFunction fc, ModbusException code, uint8_t *ou
 
 // Process one PDU (function code + data) against the data model. Returns the
 // response PDU length, or 0 if it cannot fit (caller treats 0 as "send nothing").
-static size_t protocore_modbus_process_pdu(uint8_t *restrict work, const uint8_t *pdu, size_t pdu_len, uint8_t *out,
+static size_t protocore_modbus_process_pdu(uint8_t *work, const uint8_t *pdu, size_t pdu_len, uint8_t *out,
                                            size_t out_cap)
 {
     // Both callers already guarantee at least one PDU byte, so this guard cannot fire: the TCP path
@@ -488,7 +488,7 @@ static size_t protocore_modbus_process_pdu(uint8_t *restrict work, const uint8_t
     }
 }
 
-void protocore_modbus_process_adu(uint8_t *restrict work)
+void protocore_modbus_process_adu(uint8_t *work)
 {
     const uint8_t *req = ModbusV.process_adu_args.req;
     size_t req_len = ModbusV.process_adu_args.req_len;
@@ -545,7 +545,7 @@ static uint16_t protocore_modbus_crc16(const uint8_t *data, size_t len)
     return (uint16_t)CrcV.value;
 }
 
-void protocore_modbus_rtu_process_adu(uint8_t *restrict work)
+void protocore_modbus_rtu_process_adu(uint8_t *work)
 {
     const uint8_t *req = ModbusV.rtu_process_adu_args.req;
     size_t req_len = ModbusV.rtu_process_adu_args.req_len;
@@ -652,7 +652,7 @@ static void close_conn(uint8_t slot)
     ConnPool.close(protocore_conn_pool_span()); // transport owns detach + slot reset + close
 }
 
-void protocore_modbus_rx(uint8_t *restrict work)
+void protocore_modbus_rx(uint8_t *work)
 {
     uint8_t slot = ModbusV.rx_args.slot;
 
@@ -716,7 +716,7 @@ static void modbus_on_data(uint8_t slot)
 
 static const ProtoHandler s_modbus_handler = {.on_data = modbus_on_data};
 
-void protocore_modbus_handler(uint8_t *restrict work)
+void protocore_modbus_handler(uint8_t *work)
 {
     (void)work;
 

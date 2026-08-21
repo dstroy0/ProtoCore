@@ -48,7 +48,7 @@ static const uint8_t OID_BASIC_CONSTRAINTS[] = {0x55, 0x1D, 0x13}; // { id-ce 19
 // ---------------------------------------------------------------------------
 
 // One value at @p pos in @p der. The reader is stateless, so every step names its own bytes.
-static proto_bool at(uint8_t *restrict work, const uint8_t *der, size_t len, size_t pos)
+static proto_bool at(uint8_t *work, const uint8_t *der, size_t len, size_t pos)
 {
     DerV.read_args.buf = der;
     DerV.read_args.len = len;
@@ -58,8 +58,7 @@ static proto_bool at(uint8_t *restrict work, const uint8_t *der, size_t len, siz
 }
 
 // Whether the OID value at @p pos is @p oid.
-static proto_bool oid_is(uint8_t *restrict work, const uint8_t *der, size_t len, size_t pos, const uint8_t *oid,
-                         size_t oid_len)
+static proto_bool oid_is(uint8_t *work, const uint8_t *der, size_t len, size_t pos, const uint8_t *oid, size_t oid_len)
 {
     DerV.read_args.buf = der;
     DerV.read_args.len = len;
@@ -73,7 +72,7 @@ static proto_bool oid_is(uint8_t *restrict work, const uint8_t *der, size_t len,
 // The AlgorithmIdentifier at @p pos as one of the signature algorithms this profile verifies
 // (RFC 5280 sec 4.1.1.2). An algorithm this build cannot check reads as UNKNOWN rather than as
 // something close to it, so a caller refuses rather than verifying under the wrong scheme.
-static protocore_x509_sig_alg sig_alg_at(uint8_t *restrict work, const uint8_t *der, size_t len, size_t pos)
+static protocore_x509_sig_alg sig_alg_at(uint8_t *work, const uint8_t *der, size_t len, size_t pos)
 {
     DerV.read_args.buf = der;
     DerV.read_args.len = len;
@@ -118,7 +117,7 @@ static protocore_x509_sig_alg sig_alg_at(uint8_t *restrict work, const uint8_t *
 }
 
 // SubjectPublicKeyInfo (sec 4.1.2.7): the algorithm, and the key octets under it.
-static proto_bool spki_read(uint8_t *restrict work, const uint8_t *der, size_t len, size_t pos, X509Cert *out)
+static proto_bool spki_read(uint8_t *work, const uint8_t *der, size_t len, size_t pos, X509Cert *out)
 {
     if (!at(work, der, len, pos))
     {
@@ -179,7 +178,7 @@ static proto_bool spki_read(uint8_t *restrict work, const uint8_t *der, size_t l
 }
 
 // One Extension (sec 4.2): { extnID OID, critical BOOLEAN DEFAULT FALSE, extnValue OCTET STRING }.
-static proto_bool extension_read(uint8_t *restrict work, const uint8_t *der, size_t len, size_t pos, X509Cert *out)
+static proto_bool extension_read(uint8_t *work, const uint8_t *der, size_t len, size_t pos, X509Cert *out)
 {
     if (!at(work, der, len, pos))
     {
@@ -279,7 +278,7 @@ static proto_bool extension_read(uint8_t *restrict work, const uint8_t *der, siz
     return PROTO_TRUE;
 }
 
-void protocore_x509_parse(uint8_t *restrict work)
+void protocore_x509_parse(uint8_t *work)
 {
     (void)work;
     X509V.ok = PROTO_FALSE;
@@ -616,7 +615,7 @@ static proto_bool dns_match(const uint8_t *pres, size_t pn, const char *ref, siz
     return PROTO_TRUE;
 }
 
-void protocore_x509_name_match(uint8_t *restrict work)
+void protocore_x509_name_match(uint8_t *work)
 {
     (void)work;
     X509V.ok = PROTO_FALSE;

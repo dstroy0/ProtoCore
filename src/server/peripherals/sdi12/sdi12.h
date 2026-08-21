@@ -292,46 +292,46 @@ extern Sdi12Vars Sdi12V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build)(uint8_t *restrict work);
-    void (*const build_ack)(uint8_t *restrict work);
-    void (*const build_identify)(uint8_t *restrict work);
-    void (*const build_measure)(uint8_t *restrict work);
-    void (*const build_concurrent)(uint8_t *restrict work);
-    void (*const build_measure_additional)(uint8_t *restrict work);
-    void (*const build_concurrent_additional)(uint8_t *restrict work);
-    void (*const build_continuous)(uint8_t *restrict work);
-    void (*const build_verify)(uint8_t *restrict work);
-    void (*const build_data)(uint8_t *restrict work);
-    void (*const build_change_address)(uint8_t *restrict work);
-    void (*const build_query_address)(uint8_t *restrict work);
-    void (*const parse_measure)(uint8_t *restrict work);
-    void (*const parse_values)(uint8_t *restrict work);
-    void (*const parse_identify)(uint8_t *restrict work);
-    void (*const crc16)(uint8_t *restrict work);
-    void (*const crc_encode)(uint8_t *restrict work);
-    void (*const check_crc)(uint8_t *restrict work);
+    void (*const build)(uint8_t *work);
+    void (*const build_ack)(uint8_t *work);
+    void (*const build_identify)(uint8_t *work);
+    void (*const build_measure)(uint8_t *work);
+    void (*const build_concurrent)(uint8_t *work);
+    void (*const build_measure_additional)(uint8_t *work);
+    void (*const build_concurrent_additional)(uint8_t *work);
+    void (*const build_continuous)(uint8_t *work);
+    void (*const build_verify)(uint8_t *work);
+    void (*const build_data)(uint8_t *work);
+    void (*const build_change_address)(uint8_t *work);
+    void (*const build_query_address)(uint8_t *work);
+    void (*const parse_measure)(uint8_t *work);
+    void (*const parse_values)(uint8_t *work);
+    void (*const parse_identify)(uint8_t *work);
+    void (*const crc16)(uint8_t *work);
+    void (*const crc_encode)(uint8_t *work);
+    void (*const check_crc)(uint8_t *work);
 } Sdi12Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Sdi12V or a region of the borrow at a fixed offset.
-void protocore_sdi12_build(uint8_t *restrict work);
-void protocore_sdi12_build_ack(uint8_t *restrict work);
-void protocore_sdi12_build_identify(uint8_t *restrict work);
-void protocore_sdi12_build_measure(uint8_t *restrict work);
-void protocore_sdi12_build_concurrent(uint8_t *restrict work);
-void protocore_sdi12_build_measure_additional(uint8_t *restrict work);
-void protocore_sdi12_build_concurrent_additional(uint8_t *restrict work);
-void protocore_sdi12_build_continuous(uint8_t *restrict work);
-void protocore_sdi12_build_verify(uint8_t *restrict work);
-void protocore_sdi12_build_data(uint8_t *restrict work);
-void protocore_sdi12_build_change_address(uint8_t *restrict work);
-void protocore_sdi12_build_query_address(uint8_t *restrict work);
-void protocore_sdi12_parse_measure(uint8_t *restrict work);
-void protocore_sdi12_parse_values(uint8_t *restrict work);
-void protocore_sdi12_parse_identify(uint8_t *restrict work);
-void protocore_sdi12_crc16(uint8_t *restrict work);
-void protocore_sdi12_crc_encode(uint8_t *restrict work);
-void protocore_sdi12_check_crc(uint8_t *restrict work);
+void protocore_sdi12_build(uint8_t *work);
+void protocore_sdi12_build_ack(uint8_t *work);
+void protocore_sdi12_build_identify(uint8_t *work);
+void protocore_sdi12_build_measure(uint8_t *work);
+void protocore_sdi12_build_concurrent(uint8_t *work);
+void protocore_sdi12_build_measure_additional(uint8_t *work);
+void protocore_sdi12_build_concurrent_additional(uint8_t *work);
+void protocore_sdi12_build_continuous(uint8_t *work);
+void protocore_sdi12_build_verify(uint8_t *work);
+void protocore_sdi12_build_data(uint8_t *work);
+void protocore_sdi12_build_change_address(uint8_t *work);
+void protocore_sdi12_build_query_address(uint8_t *work);
+void protocore_sdi12_parse_measure(uint8_t *work);
+void protocore_sdi12_parse_values(uint8_t *work);
+void protocore_sdi12_parse_identify(uint8_t *work);
+void protocore_sdi12_crc16(uint8_t *work);
+void protocore_sdi12_crc_encode(uint8_t *work);
+void protocore_sdi12_check_crc(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

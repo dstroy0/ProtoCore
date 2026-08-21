@@ -18,7 +18,7 @@ PROTOCORE_BEGIN_DECLS
 // Take a channel for the connection the caller named, then run the route's connect. RFC 4254
 // sec 5.1: a side that opens "allocates a local number for the channel"; a table with no free
 // number answers the open with a failure rather than a channel.
-void protocore_session_ws_open(uint8_t *restrict work)
+void protocore_session_ws_open(uint8_t *work)
 {
     (void)work;
     Ws.alloc(protocore_ws_span());
@@ -39,7 +39,7 @@ void protocore_session_ws_open(uint8_t *restrict work)
 // informed that the connection closed, so the order is inform then release - a number freed first
 // can be handed to the next connection while the handler still names it. RFC 4254 sec 5.3: the
 // number is reusable once the channel is closed.
-void protocore_session_ws_close(uint8_t *restrict work)
+void protocore_session_ws_close(uint8_t *work)
 {
     (void)work;
     Ws.find(protocore_ws_span());

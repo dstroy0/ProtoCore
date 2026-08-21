@@ -88,7 +88,7 @@ uint8_t *protocore_ntp_service_span(void)
 // Take the request borrow on first use and hold it for the life of the program. The cookie it
 // carries is what authenticates the reply, so the bytes come from the secure pool, whose release
 // wipes. False when the pool cannot cover it, and begin() fails closed on that.
-static proto_bool ntp_mem_bind(uint8_t *restrict work)
+static proto_bool ntp_mem_bind(uint8_t *work)
 {
     if (span.has_storage(NTP_SERVICE_CTX(work)->req))
     {
@@ -118,7 +118,7 @@ static void ntp_reply(const uint8_t *data, size_t len, const struct protocore_ud
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *restrict work = protocore_ntp_service_span();
+    uint8_t *work = protocore_ntp_service_span();
 
     (void)peer;
     (void)ctx;
@@ -153,9 +153,9 @@ static void ntp_reply(const uint8_t *data, size_t len, const struct protocore_ud
 }
 
 // The entries this file calls before reaching their definitions.
-void protocore_ntp_service_epoch(uint8_t *restrict work);
+void protocore_ntp_service_epoch(uint8_t *work);
 
-void protocore_ntp_service_begin(uint8_t *restrict work)
+void protocore_ntp_service_begin(uint8_t *work)
 {
     const char *tz = NtpServiceV.begin_args.tz;
     const char *server1 = NtpServiceV.begin_args.server1;
@@ -213,12 +213,12 @@ void protocore_ntp_service_begin(uint8_t *restrict work)
     NtpServiceV.ok = UdpListenerV.ok;
 }
 
-void protocore_ntp_service_synced(uint8_t *restrict work)
+void protocore_ntp_service_synced(uint8_t *work)
 {
     NtpServiceV.ok = NTP_SERVICE_CTX(work)->epoch != 0;
 }
 
-void protocore_ntp_service_epoch(uint8_t *restrict work)
+void protocore_ntp_service_epoch(uint8_t *work)
 {
     if (NTP_SERVICE_CTX(work)->epoch == 0)
     {
@@ -230,7 +230,7 @@ void protocore_ntp_service_epoch(uint8_t *restrict work)
     NtpServiceV.value = NTP_SERVICE_CTX(work)->epoch + (time_t)(elapsed / 1000u);
 }
 
-void protocore_ntp_service_set_test_epoch(uint8_t *restrict work)
+void protocore_ntp_service_set_test_epoch(uint8_t *work)
 {
     time_t epoch = NtpServiceV.set_test_epoch_args.epoch;
 
@@ -244,7 +244,7 @@ void protocore_ntp_service_set_test_epoch(uint8_t *restrict work)
 // NTP as a registry time source (protocore_ntp_epoch is 0 until a reply lands). Register it with
 // protocore_time_source_add() so the aggregated protocore_time_now() - and the HTTP Date header - can be fed by
 // NTP alongside an RTC / GPS.
-void protocore_ntp_service_time_source(uint8_t *restrict work)
+void protocore_ntp_service_time_source(uint8_t *work)
 {
     protocore_ntp_service_epoch(work);
     NtpServiceV.ms = (uint32_t)NtpServiceV.value;

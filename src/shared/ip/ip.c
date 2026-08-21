@@ -431,7 +431,7 @@ static protocore_ip_scope classify_v6(const uint8_t *b)
 // Public API
 // -------------------------------------------------------------------------------------------
 
-void protocore_ip_parse(uint8_t *restrict work)
+void protocore_ip_parse(uint8_t *work)
 {
     (void)work;
     const char *s = IpV.args.text;
@@ -494,7 +494,7 @@ void protocore_ip_parse(uint8_t *restrict work)
     IpV.ok = PROTO_FALSE;
 }
 
-void protocore_ip_format(uint8_t *restrict work)
+void protocore_ip_format(uint8_t *work)
 {
     (void)work;
     const protocore_ip *ip = IpV.args.ip;
@@ -602,13 +602,13 @@ static protocore_ip_scope classify_of(const protocore_ip *ip)
     return PROTOCORE_IP_SCOPE_UNSPECIFIED;
 }
 
-void protocore_ip_classify(uint8_t *restrict work)
+void protocore_ip_classify(uint8_t *work)
 {
     (void)work;
     IpV.scope = classify_of(IpV.args.ip);
 }
 
-void protocore_ip_equal(uint8_t *restrict work)
+void protocore_ip_equal(uint8_t *work)
 {
     (void)work;
     const protocore_ip *a = IpV.args.ip;
@@ -674,7 +674,7 @@ uint32_t protocore_ip_to_v4_be(const protocore_ip *ip)
     return 0;
 }
 
-void protocore_ip_is_unspecified(uint8_t *restrict work)
+void protocore_ip_is_unspecified(uint8_t *work)
 {
     (void)work;
     const protocore_ip *ip = IpV.args.ip;
@@ -696,7 +696,7 @@ void protocore_ip_is_unspecified(uint8_t *restrict work)
     IpV.ok = PROTO_TRUE;
 }
 
-void protocore_ip_prefix_match(uint8_t *restrict work)
+void protocore_ip_prefix_match(uint8_t *work)
 {
     (void)work;
     const protocore_ip *addr = IpV.args.ip;

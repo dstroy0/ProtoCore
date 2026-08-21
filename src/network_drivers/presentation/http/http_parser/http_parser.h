@@ -12,9 +12,8 @@ PROTOCORE_BEGIN_DECLS
  * @file http_parser.h
  * @brief HttpParser..
  *
- * @c work is PROTOCORE_HTTP_PARSER_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_HTTP_PARSER_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 
 typedef enum PROTO_ENUM_PACKED
@@ -115,15 +114,15 @@ extern HttpReq http_pool[CONN_POOL_SLOTS];
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*set_stream_hooks)(uint8_t *restrict, HttpStreamBeginCb, HttpStreamDataCb, HttpStreamAbortCb);
-    void (*reset)(uint8_t *restrict, HttpReq *);
-    void (*feed)(uint8_t *restrict, HttpReq *, uint8_t);
-    const char *(*get_header)(uint8_t *restrict, const HttpReq *, const char *);
-    proto_bool (*get_cookie)(uint8_t *restrict, const HttpReq *, const char *, char *, size_t);
-    proto_bool (*forwarded_client)(uint8_t *restrict, const HttpReq *, char *, size_t, proto_bool *);
-    const char *(*get_query)(uint8_t *restrict, const HttpReq *, const char *);
-    proto_bool (*get_form)(uint8_t *restrict, const HttpReq *, const char *, char *, size_t);
-    const char *(*get_param)(uint8_t *restrict, const HttpReq *, const char *);
+    void (*set_stream_hooks)(uint8_t *, HttpStreamBeginCb, HttpStreamDataCb, HttpStreamAbortCb);
+    void (*reset)(uint8_t *, HttpReq *);
+    void (*feed)(uint8_t *, HttpReq *, uint8_t);
+    const char *(*get_header)(uint8_t *, const HttpReq *, const char *);
+    proto_bool (*get_cookie)(uint8_t *, const HttpReq *, const char *, char *, size_t);
+    proto_bool (*forwarded_client)(uint8_t *, const HttpReq *, char *, size_t, proto_bool *);
+    const char *(*get_query)(uint8_t *, const HttpReq *, const char *);
+    proto_bool (*get_form)(uint8_t *, const HttpReq *, const char *, char *, size_t);
+    const char *(*get_param)(uint8_t *, const HttpReq *, const char *);
 } HttpParserNs;
 PROTOCORE_NS_LAYOUT(HttpParserNs, set_stream_hooks, reset, feed, get_header, get_cookie, forwarded_client, get_query,
                     get_form, get_param);
@@ -135,21 +134,21 @@ PROTOCORE_NS_LAYOUT(HttpParserNs, set_stream_hooks, reset, feed, get_header, get
  * @param data Data
  * @param abort Abort
  */
-void protocore_http_parser_set_stream_hooks(uint8_t *restrict work, HttpStreamBeginCb begin, HttpStreamDataCb data,
+void protocore_http_parser_set_stream_hooks(uint8_t *work, HttpStreamBeginCb begin, HttpStreamDataCb data,
                                             HttpStreamAbortCb abort);
 /**
  * @brief Reset.
  * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.
  * @param req Req
  */
-void protocore_http_parser_reset(uint8_t *restrict work, HttpReq *req);
+void protocore_http_parser_reset(uint8_t *work, HttpReq *req);
 /**
  * @brief Feed.
  * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.
  * @param req Req
  * @param byte Byte
  */
-void protocore_http_parser_feed(uint8_t *restrict work, HttpReq *req, uint8_t byte);
+void protocore_http_parser_feed(uint8_t *work, HttpReq *req, uint8_t byte);
 /**
  * @brief Get_header.
  * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.
@@ -157,7 +156,7 @@ void protocore_http_parser_feed(uint8_t *restrict work, HttpReq *req, uint8_t by
  * @param key Key
  * @return The const char *.
  */
-const char *protocore_http_parser_get_header(uint8_t *restrict work, const HttpReq *req, const char *key);
+const char *protocore_http_parser_get_header(uint8_t *work, const HttpReq *req, const char *key);
 /**
  * @brief Get_cookie.
  * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.
@@ -167,7 +166,7 @@ const char *protocore_http_parser_get_header(uint8_t *restrict work, const HttpR
  * @param out_size Out size
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_http_parser_get_cookie(uint8_t *restrict work, const HttpReq *req, const char *name, char *out,
+proto_bool protocore_http_parser_get_cookie(uint8_t *work, const HttpReq *req, const char *name, char *out,
                                             size_t out_size);
 /**
  * @brief Forwarded_client.
@@ -178,8 +177,8 @@ proto_bool protocore_http_parser_get_cookie(uint8_t *restrict work, const HttpRe
  * @param is_https Is https
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_http_parser_forwarded_client(uint8_t *restrict work, const HttpReq *req, char *ip_out,
-                                                  size_t ip_cap, proto_bool *is_https);
+proto_bool protocore_http_parser_forwarded_client(uint8_t *work, const HttpReq *req, char *ip_out, size_t ip_cap,
+                                                  proto_bool *is_https);
 /**
  * @brief Get_query.
  * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.
@@ -187,7 +186,7 @@ proto_bool protocore_http_parser_forwarded_client(uint8_t *restrict work, const 
  * @param key Key
  * @return The const char *.
  */
-const char *protocore_http_parser_get_query(uint8_t *restrict work, const HttpReq *req, const char *key);
+const char *protocore_http_parser_get_query(uint8_t *work, const HttpReq *req, const char *key);
 /**
  * @brief Get_form.
  * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.
@@ -197,7 +196,7 @@ const char *protocore_http_parser_get_query(uint8_t *restrict work, const HttpRe
  * @param out_size Out size
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_http_parser_get_form(uint8_t *restrict work, const HttpReq *req, const char *key, char *out,
+proto_bool protocore_http_parser_get_form(uint8_t *work, const HttpReq *req, const char *key, char *out,
                                           size_t out_size);
 /**
  * @brief Get_param.
@@ -206,7 +205,7 @@ proto_bool protocore_http_parser_get_form(uint8_t *restrict work, const HttpReq 
  * @param key Key
  * @return The const char *.
  */
-const char *protocore_http_parser_get_param(uint8_t *restrict work, const HttpReq *req, const char *key);
+const char *protocore_http_parser_get_param(uint8_t *work, const HttpReq *req, const char *key);
 
 typedef proto_bool (*HttpStreamBeginCb)(HttpReq *req);
 typedef void (*HttpStreamDataCb)(HttpReq *req, const uint8_t *data, size_t len);

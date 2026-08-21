@@ -32,10 +32,10 @@ static uint8_t checksum(const uint8_t *p, size_t n)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_mbus_build_short(uint8_t *restrict work);
-void protocore_mbus_dif_data_len(uint8_t *restrict work);
+void protocore_mbus_build_short(uint8_t *work);
+void protocore_mbus_dif_data_len(uint8_t *work);
 
-void protocore_mbus_build_ack(uint8_t *restrict work)
+void protocore_mbus_build_ack(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = MbusV.build_ack_args.buf;
@@ -50,7 +50,7 @@ void protocore_mbus_build_ack(uint8_t *restrict work)
     MbusV.n = 1;
 }
 
-void protocore_mbus_build_short(uint8_t *restrict work)
+void protocore_mbus_build_short(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = MbusV.build_short_args.buf;
@@ -71,7 +71,7 @@ void protocore_mbus_build_short(uint8_t *restrict work)
     MbusV.n = 5;
 }
 
-void protocore_mbus_build_long(uint8_t *restrict work)
+void protocore_mbus_build_long(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = MbusV.build_long_args.buf;
@@ -110,7 +110,7 @@ void protocore_mbus_build_long(uint8_t *restrict work)
     MbusV.n = total;
 }
 
-void protocore_mbus_build_snd_nke(uint8_t *restrict work)
+void protocore_mbus_build_snd_nke(uint8_t *work)
 {
     uint8_t *buf = MbusV.build_snd_nke_args.buf;
     size_t cap = MbusV.build_snd_nke_args.cap;
@@ -123,7 +123,7 @@ void protocore_mbus_build_snd_nke(uint8_t *restrict work)
     protocore_mbus_build_short(work);
 }
 
-void protocore_mbus_build_req_ud2(uint8_t *restrict work)
+void protocore_mbus_build_req_ud2(uint8_t *work)
 {
     uint8_t *buf = MbusV.build_req_ud2_args.buf;
     size_t cap = MbusV.build_req_ud2_args.cap;
@@ -137,7 +137,7 @@ void protocore_mbus_build_req_ud2(uint8_t *restrict work)
     protocore_mbus_build_short(work);
 }
 
-void protocore_mbus_build_req_ud1(uint8_t *restrict work)
+void protocore_mbus_build_req_ud1(uint8_t *work)
 {
     uint8_t *buf = MbusV.build_req_ud1_args.buf;
     size_t cap = MbusV.build_req_ud1_args.cap;
@@ -151,7 +151,7 @@ void protocore_mbus_build_req_ud1(uint8_t *restrict work)
     protocore_mbus_build_short(work);
 }
 
-void protocore_mbus_parse(uint8_t *restrict work)
+void protocore_mbus_parse(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = MbusV.parse_args.buf;
@@ -241,7 +241,7 @@ void protocore_mbus_parse(uint8_t *restrict work)
     MbusV.ok = PROTO_FALSE;
 }
 
-void protocore_mbus_dif_data_len(uint8_t *restrict work)
+void protocore_mbus_dif_data_len(uint8_t *work)
 {
     (void)work;
     uint8_t coding = MbusV.dif_data_len_args.coding;
@@ -299,7 +299,7 @@ void protocore_mbus_dif_data_len(uint8_t *restrict work)
     }
 }
 
-void protocore_mbus_record_next(uint8_t *restrict work)
+void protocore_mbus_record_next(uint8_t *work)
 {
     const uint8_t *body = MbusV.record_next_args.body;
     size_t len = MbusV.record_next_args.len;
@@ -443,7 +443,7 @@ static proto_bool mbus_decode_bcd(const uint8_t *d, uint8_t n, int64_t *out)
     return PROTO_TRUE;
 }
 
-void protocore_mbus_record_value_int(uint8_t *restrict work)
+void protocore_mbus_record_value_int(uint8_t *work)
 {
     (void)work;
     const MbusRecord *r = MbusV.record_value_int_args.r;
@@ -479,7 +479,7 @@ void protocore_mbus_record_value_int(uint8_t *restrict work)
     }
 }
 
-void protocore_mbus_record_value_real(uint8_t *restrict work)
+void protocore_mbus_record_value_real(uint8_t *work)
 {
     (void)work;
     const MbusRecord *r = MbusV.record_value_real_args.r;
@@ -496,7 +496,7 @@ void protocore_mbus_record_value_real(uint8_t *restrict work)
     MbusV.ok = PROTO_TRUE;
 }
 
-void protocore_mbus_vif_decode(uint8_t *restrict work)
+void protocore_mbus_vif_decode(uint8_t *work)
 {
     (void)work;
     uint8_t vif = MbusV.vif_decode_args.vif;
@@ -569,7 +569,7 @@ void protocore_mbus_vif_decode(uint8_t *restrict work)
     MbusV.ok = u != MBUS_UNIT_UNKNOWN;
 }
 
-void protocore_mbus_parse_var_header(uint8_t *restrict work)
+void protocore_mbus_parse_var_header(uint8_t *work)
 {
     (void)work;
     const uint8_t *body = MbusV.parse_var_header_args.body;

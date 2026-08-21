@@ -50,7 +50,7 @@ static size_t write_header(uint8_t *buf, size_t cap, const AdsRequest *r, AdsCom
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_ads_build_read_device_info(uint8_t *restrict work)
+void protocore_ads_build_read_device_info(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = AdsV.build_read_device_info_args.buf;
@@ -60,7 +60,7 @@ void protocore_ads_build_read_device_info(uint8_t *restrict work)
     AdsV.n = write_header(buf, cap, r, ADS_COMMAND_READ_DEVICE_INFO, 0);
 }
 
-void protocore_ads_build_read_state(uint8_t *restrict work)
+void protocore_ads_build_read_state(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = AdsV.build_read_state_args.buf;
@@ -70,7 +70,7 @@ void protocore_ads_build_read_state(uint8_t *restrict work)
     AdsV.n = write_header(buf, cap, r, ADS_COMMAND_READ_STATE, 0);
 }
 
-void protocore_ads_build_read(uint8_t *restrict work)
+void protocore_ads_build_read(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = AdsV.build_read_args.buf;
@@ -92,7 +92,7 @@ void protocore_ads_build_read(uint8_t *restrict work)
     AdsV.n = p;
 }
 
-void protocore_ads_build_write(uint8_t *restrict work)
+void protocore_ads_build_write(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = AdsV.build_write_args.buf;
@@ -125,7 +125,7 @@ void protocore_ads_build_write(uint8_t *restrict work)
     AdsV.n = p;
 }
 
-void protocore_ads_build_read_write(uint8_t *restrict work)
+void protocore_ads_build_read_write(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = AdsV.build_read_write_args.buf;
@@ -160,7 +160,7 @@ void protocore_ads_build_read_write(uint8_t *restrict work)
     AdsV.n = p;
 }
 
-void protocore_ads_build_write_control(uint8_t *restrict work)
+void protocore_ads_build_write_control(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = AdsV.build_write_control_args.buf;
@@ -193,7 +193,7 @@ void protocore_ads_build_write_control(uint8_t *restrict work)
     AdsV.n = p;
 }
 
-void protocore_ads_build_add_notification(uint8_t *restrict work)
+void protocore_ads_build_add_notification(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = AdsV.build_add_notification_args.buf;
@@ -224,7 +224,7 @@ void protocore_ads_build_add_notification(uint8_t *restrict work)
     AdsV.n = p;
 }
 
-void protocore_ads_build_del_notification(uint8_t *restrict work)
+void protocore_ads_build_del_notification(uint8_t *work)
 {
     (void)work;
     uint8_t *buf = AdsV.build_del_notification_args.buf;
@@ -242,7 +242,7 @@ void protocore_ads_build_del_notification(uint8_t *restrict work)
     AdsV.n = p;
 }
 
-void protocore_ads_parse_ams_header(uint8_t *restrict work)
+void protocore_ads_parse_ams_header(uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = AdsV.parse_ams_header_args.buf;
@@ -290,7 +290,7 @@ void protocore_ads_parse_ams_header(uint8_t *restrict work)
     AdsV.ok = PROTO_TRUE;
 }
 
-void protocore_ads_parse_read(uint8_t *restrict work)
+void protocore_ads_parse_read(uint8_t *work)
 {
     (void)work;
     const uint8_t *data = AdsV.parse_read_args.data;
@@ -313,7 +313,7 @@ void protocore_ads_parse_read(uint8_t *restrict work)
     AdsV.ok = PROTO_TRUE;
 }
 
-void protocore_ads_parse_result(uint8_t *restrict work)
+void protocore_ads_parse_result(uint8_t *work)
 {
     (void)work;
     const uint8_t *data = AdsV.parse_result_args.data;
@@ -329,7 +329,7 @@ void protocore_ads_parse_result(uint8_t *restrict work)
     AdsV.ok = PROTO_TRUE;
 }
 
-void protocore_ads_parse_read_state(uint8_t *restrict work)
+void protocore_ads_parse_read_state(uint8_t *work)
 {
     (void)work;
     const uint8_t *data = AdsV.parse_read_state_args.data;
@@ -347,7 +347,7 @@ void protocore_ads_parse_read_state(uint8_t *restrict work)
     AdsV.ok = PROTO_TRUE;
 }
 
-void protocore_ads_parse_read_device_info(uint8_t *restrict work)
+void protocore_ads_parse_read_device_info(uint8_t *work)
 {
     (void)work;
     const uint8_t *data = AdsV.parse_read_device_info_args.data;
@@ -368,7 +368,7 @@ void protocore_ads_parse_read_device_info(uint8_t *restrict work)
     AdsV.ok = PROTO_TRUE;
 }
 
-void protocore_ads_parse_add_notification(uint8_t *restrict work)
+void protocore_ads_parse_add_notification(uint8_t *work)
 {
     (void)work;
     const uint8_t *data = AdsV.parse_add_notification_args.data;
@@ -386,7 +386,7 @@ void protocore_ads_parse_add_notification(uint8_t *restrict work)
     AdsV.ok = PROTO_TRUE;
 }
 
-void protocore_ads_parse_notification(uint8_t *restrict work)
+void protocore_ads_parse_notification(uint8_t *work)
 {
     (void)work;
     const uint8_t *data = AdsV.parse_notification_args.data;

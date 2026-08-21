@@ -22,7 +22,7 @@ static const uint8_t NS_DNS[16] = {0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd
                                    0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8};
 
 // The lowercase hex character for one nibble.
-static char hex_digit(uint8_t *restrict work, uint8_t nibble)
+static char hex_digit(uint8_t *work, uint8_t nibble)
 {
     HexV.args.nibble = nibble;
     HexV.args.upper = PROTO_FALSE;
@@ -30,7 +30,7 @@ static char hex_digit(uint8_t *restrict work, uint8_t nibble)
     return HexV.ch;
 }
 
-void protocore_device_id_from_mac(uint8_t *restrict work)
+void protocore_device_id_from_mac(uint8_t *work)
 {
     (void)work;
     const uint8_t *mac = DeviceIdV.args.mac;
@@ -83,7 +83,7 @@ void protocore_device_id_from_mac(uint8_t *restrict work)
 }
 
 #if PROTOCORE_HAS_VENDOR_MAC
-void protocore_device_id_uuid(uint8_t *restrict work)
+void protocore_device_id_uuid(uint8_t *work)
 {
     uint8_t mac[6] = {0};
     (void)protocore_platform_mac_read(mac); // the stable factory address; leaves zeros when it has none

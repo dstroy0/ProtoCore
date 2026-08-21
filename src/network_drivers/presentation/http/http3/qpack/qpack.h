@@ -41,9 +41,9 @@ typedef proto_bool (*QpackEmitFn)(void *ctx, const char *name, size_t name_len, 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    size_t (*encode_prefix)(uint8_t *restrict, uint8_t *, size_t);
-    size_t (*encode_header)(uint8_t *restrict, uint8_t *, size_t, const char *, size_t, const char *, size_t);
-    proto_bool (*decode)(uint8_t *restrict, const uint8_t *, size_t, char *, size_t, QpackEmitFn, void *);
+    size_t (*encode_prefix)(uint8_t *, uint8_t *, size_t);
+    size_t (*encode_header)(uint8_t *, uint8_t *, size_t, const char *, size_t, const char *, size_t);
+    proto_bool (*decode)(uint8_t *, const uint8_t *, size_t, char *, size_t, QpackEmitFn, void *);
 } QpackNs;
 PROTOCORE_NS_LAYOUT(QpackNs, encode_prefix, encode_header, decode);
 
@@ -54,7 +54,7 @@ PROTOCORE_NS_LAYOUT(QpackNs, encode_prefix, encode_header, decode);
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_qpack_encode_prefix(uint8_t *restrict work, uint8_t *out, size_t cap);
+size_t protocore_qpack_encode_prefix(uint8_t *work, uint8_t *out, size_t cap);
 /**
  * @brief Encode one header field (server side): a full static match -> .
  * @param work PROTOCORE_QPACK_BORROW bytes the caller took. Not held past the call.
@@ -66,8 +66,8 @@ size_t protocore_qpack_encode_prefix(uint8_t *restrict work, uint8_t *out, size_
  * @param value_len Value len
  * @return The size_t.
  */
-size_t protocore_qpack_encode_header(uint8_t *restrict work, uint8_t *out, size_t cap, const char *name,
-                                     size_t name_len, const char *value, size_t value_len);
+size_t protocore_qpack_encode_header(uint8_t *work, uint8_t *out, size_t cap, const char *name, size_t name_len,
+                                     const char *value, size_t value_len);
 /**
  * @brief Decode a whole QPACK field section (prefix + representations), .
  * @param work PROTOCORE_QPACK_BORROW bytes the caller took. Not held past the call.
@@ -79,8 +79,8 @@ size_t protocore_qpack_encode_header(uint8_t *restrict work, uint8_t *out, size_
  * @param ctx Ctx
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_qpack_decode(uint8_t *restrict work, const uint8_t *block, size_t len, char *scratch,
-                                  size_t scratch_cap, QpackEmitFn emit, void *ctx);
+proto_bool protocore_qpack_decode(uint8_t *work, const uint8_t *block, size_t len, char *scratch, size_t scratch_cap,
+                                  QpackEmitFn emit, void *ctx);
 
 /** @brief Callback invoked for each decoded header; return false to abort the decode. */
 typedef proto_bool (*QpackEmitFn)(void *ctx, const char *name, size_t name_len, const char *value, size_t value_len);

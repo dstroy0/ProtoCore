@@ -117,9 +117,8 @@ typedef struct
  * @var Sht3xNs::begin  soft-reset the SHT3x at addr over I2C. true if it acknowledged
  * @var Sht3xNs::read  trigger a single-shot high-repeatability measurement, read + verify ...
  *
- * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. How those bytes are carved is this module's and is never named here.
  */
 typedef struct
 {
@@ -140,22 +139,22 @@ extern Sht3xVars Sht3xV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const crc8)(uint8_t *restrict work);
-    void (*const temp_mc)(uint8_t *restrict work);
-    void (*const rh_mpct)(uint8_t *restrict work);
-    void (*const parse)(uint8_t *restrict work);
-    void (*const begin)(uint8_t *restrict work);
-    void (*const read)(uint8_t *restrict work);
+    void (*const crc8)(uint8_t *work);
+    void (*const temp_mc)(uint8_t *work);
+    void (*const rh_mpct)(uint8_t *work);
+    void (*const parse)(uint8_t *work);
+    void (*const begin)(uint8_t *work);
+    void (*const read)(uint8_t *work);
 } Sht3xNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Sht3xV or a region of the borrow at a fixed offset.
-void protocore_sht3x_crc8(uint8_t *restrict work);
-void protocore_sht3x_temp_mc(uint8_t *restrict work);
-void protocore_sht3x_rh_mpct(uint8_t *restrict work);
-void protocore_sht3x_parse(uint8_t *restrict work);
-void protocore_sht3x_begin(uint8_t *restrict work);
-void protocore_sht3x_read(uint8_t *restrict work);
+void protocore_sht3x_crc8(uint8_t *work);
+void protocore_sht3x_temp_mc(uint8_t *work);
+void protocore_sht3x_rh_mpct(uint8_t *work);
+void protocore_sht3x_parse(uint8_t *work);
+void protocore_sht3x_begin(uint8_t *work);
+void protocore_sht3x_read(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

@@ -25,7 +25,7 @@ PROTOCORE_BEGIN_DECLS
  * expansion and the same block through the namespace.
  *
  * The round-key schedule and the block are the CALLER's: both entries write into the buffers its args
- * name and hold neither past the call. @c work arrives @c restrict and goes unread: nothing is carried
+ * name and hold neither past the call. @c work arrives goes unread: nothing is carried
  * from one call to the next, so this module states no borrow and neither takes those bytes, holds
  * them, releases them, nor wipes them.
  *
@@ -175,8 +175,8 @@ PROTOCORE_INLINE void protocore_aes_encrypt_block(const uint32_t *rk, int nr, co
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*key_expand)(uint8_t *restrict, const uint8_t *, int, uint32_t *);
-    proto_bool (*encrypt_block)(uint8_t *restrict, const uint32_t *, int, const uint8_t *, uint8_t *);
+    proto_bool (*key_expand)(uint8_t *, const uint8_t *, int, uint32_t *);
+    proto_bool (*encrypt_block)(uint8_t *, const uint32_t *, int, const uint8_t *, uint8_t *);
 } AesBlockNs;
 PROTOCORE_NS_LAYOUT(AesBlockNs, key_expand, encrypt_block);
 
@@ -188,7 +188,7 @@ PROTOCORE_NS_LAYOUT(AesBlockNs, key_expand, encrypt_block);
  * @param rk 4 * (nk + 7) round-key words
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_aes_block_key_expand(uint8_t *restrict work, const uint8_t *key, int nk, uint32_t *rk);
+proto_bool protocore_aes_block_key_expand(uint8_t *work, const uint8_t *key, int nk, uint32_t *rk);
 /**
  * @brief Encrypt one 16-byte block under that schedule.
  * @param work PROTOCORE_AES_BLOCK_BORROW bytes the caller took. Not held past the call.
@@ -198,7 +198,7 @@ proto_bool protocore_aes_block_key_expand(uint8_t *restrict work, const uint8_t 
  * @param out 16 output bytes; may alias in
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_aes_block_encrypt_block(uint8_t *restrict work, const uint32_t *rk, int nr, const uint8_t *in,
+proto_bool protocore_aes_block_encrypt_block(uint8_t *work, const uint32_t *rk, int nr, const uint8_t *in,
                                              uint8_t *out);
 
 /** @brief Module namespace. */

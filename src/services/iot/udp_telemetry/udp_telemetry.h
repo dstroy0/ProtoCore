@@ -139,28 +139,28 @@ extern UdpTelemetryVars UdpTelemetryV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const begin)(uint8_t *restrict work);
-    void (*const measurement)(uint8_t *restrict work);
-    void (*const tag)(uint8_t *restrict work);
-    void (*const field_int)(uint8_t *restrict work);
-    void (*const field_uint)(uint8_t *restrict work);
-    void (*const field_float)(uint8_t *restrict work);
-    void (*const timestamp)(uint8_t *restrict work);
-    void (*const send)(uint8_t *restrict work);
-    void (*const write)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *work);
+    void (*const measurement)(uint8_t *work);
+    void (*const tag)(uint8_t *work);
+    void (*const field_int)(uint8_t *work);
+    void (*const field_uint)(uint8_t *work);
+    void (*const field_float)(uint8_t *work);
+    void (*const timestamp)(uint8_t *work);
+    void (*const send)(uint8_t *work);
+    void (*const write)(uint8_t *work);
 } UdpTelemetryNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in UdpTelemetryV or a region of the borrow at a fixed offset.
-void protocore_udp_telemetry_begin(uint8_t *restrict work);
-void protocore_udp_telemetry_measurement(uint8_t *restrict work);
-void protocore_udp_telemetry_tag(uint8_t *restrict work);
-void protocore_udp_telemetry_field_int(uint8_t *restrict work);
-void protocore_udp_telemetry_field_uint(uint8_t *restrict work);
-void protocore_udp_telemetry_field_float(uint8_t *restrict work);
-void protocore_udp_telemetry_timestamp(uint8_t *restrict work);
-void protocore_udp_telemetry_send(uint8_t *restrict work);
-void protocore_udp_telemetry_write(uint8_t *restrict work);
+void protocore_udp_telemetry_begin(uint8_t *work);
+void protocore_udp_telemetry_measurement(uint8_t *work);
+void protocore_udp_telemetry_tag(uint8_t *work);
+void protocore_udp_telemetry_field_int(uint8_t *work);
+void protocore_udp_telemetry_field_uint(uint8_t *work);
+void protocore_udp_telemetry_field_float(uint8_t *work);
+void protocore_udp_telemetry_timestamp(uint8_t *work);
+void protocore_udp_telemetry_send(uint8_t *work);
+void protocore_udp_telemetry_write(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

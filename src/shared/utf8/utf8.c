@@ -10,7 +10,7 @@
 
 #include "shared/utf8/utf8.h"
 
-void protocore_utf8_valid(uint8_t *restrict work)
+void protocore_utf8_valid(uint8_t *work)
 {
     (void)work;
     const uint8_t *s = Utf8V.args.s;

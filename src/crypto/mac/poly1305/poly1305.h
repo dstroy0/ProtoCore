@@ -18,7 +18,7 @@ PROTOCORE_BEGIN_DECLS
  * layout). Pure, no heap; the caller must use each key exactly once.
  *
  * @c work is PROTOCORE_POLY1305_BORROW secure bytes the CALLER took, at an address it knows. It
- * arrives @c restrict and is not held past the call, so nothing here aliases it. The caller releases
+ * is not held past the call, so nothing here aliases it. The caller releases
  * it, and the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes
  * it. The borrow IS the accumulator, so a tag taken under a caller whose own borrow is still live is
  * a second borrow and the two never collide.
@@ -36,7 +36,7 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*mac)(uint8_t *restrict, const uint8_t *, const uint8_t *, size_t, uint8_t *);
+    proto_bool (*mac)(uint8_t *, const uint8_t *, const uint8_t *, size_t, uint8_t *);
 } Poly1305Ns;
 PROTOCORE_NS_LAYOUT(Poly1305Ns, mac);
 
@@ -49,8 +49,7 @@ PROTOCORE_NS_LAYOUT(Poly1305Ns, mac);
  * @param out PROTOCORE_POLY1305_TAG_LEN bytes
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_poly1305_mac(uint8_t *restrict work, const uint8_t *key, const uint8_t *msg, size_t len,
-                                  uint8_t *out);
+proto_bool protocore_poly1305_mac(uint8_t *work, const uint8_t *key, const uint8_t *msg, size_t len, uint8_t *out);
 
 /** @brief Module namespace. */
 PROTOCORE_NS Poly1305Ns Poly1305 PROTOCORE_UNUSED = {.mac = protocore_poly1305_mac};

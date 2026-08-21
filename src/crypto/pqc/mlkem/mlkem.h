@@ -40,10 +40,10 @@ PROTOCORE_BEGIN_DECLS
  * @ref MlKemNs::decaps has no failure of its own: a malformed or tampered ciphertext selects
  * J(z || ct) in constant time and the call still reports true.
  *
- * @c work is PROTOCORE_MLKEM_BORROW secure bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and
- * the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. That
- * is what keeps the seeds, the noise and the decrypted message from outliving the caller.
+ * @c work is PROTOCORE_MLKEM_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes it,
+ * holds it, releases it, nor wipes it. That is what keeps the seeds, the noise and the decrypted message from outliving
+ * the caller.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -60,9 +60,9 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*keygen)(uint8_t *restrict, const uint8_t *, const uint8_t *, uint8_t *, uint8_t *);
-    proto_bool (*encaps)(uint8_t *restrict, const uint8_t *, const uint8_t *, uint8_t *, uint8_t *);
-    proto_bool (*decaps)(uint8_t *restrict, const uint8_t *, const uint8_t *, uint8_t *);
+    proto_bool (*keygen)(uint8_t *, const uint8_t *, const uint8_t *, uint8_t *, uint8_t *);
+    proto_bool (*encaps)(uint8_t *, const uint8_t *, const uint8_t *, uint8_t *, uint8_t *);
+    proto_bool (*decaps)(uint8_t *, const uint8_t *, const uint8_t *, uint8_t *);
 } MlKemNs;
 PROTOCORE_NS_LAYOUT(MlKemNs, keygen, encaps, decaps);
 
@@ -75,8 +75,7 @@ PROTOCORE_NS_LAYOUT(MlKemNs, keygen, encaps, decaps);
  * @param dk MLKEM768_DK_BYTES decapsulation key, embedding ek, H(ek) and z
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_ml_kem_keygen(uint8_t *restrict work, const uint8_t *d, const uint8_t *z, uint8_t *ek,
-                                   uint8_t *dk);
+proto_bool protocore_ml_kem_keygen(uint8_t *work, const uint8_t *d, const uint8_t *z, uint8_t *ek, uint8_t *dk);
 /**
  * @brief (ct, ss) from a peer key and a message.
  * @param work PROTOCORE_ML_KEM_BORROW bytes the caller took. Not held past the call.
@@ -86,8 +85,7 @@ proto_bool protocore_ml_kem_keygen(uint8_t *restrict work, const uint8_t *d, con
  * @param ss MLKEM768_SS_BYTES shared secret
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_ml_kem_encaps(uint8_t *restrict work, const uint8_t *ek, const uint8_t *m, uint8_t *ct,
-                                   uint8_t *ss);
+proto_bool protocore_ml_kem_encaps(uint8_t *work, const uint8_t *ek, const uint8_t *m, uint8_t *ct, uint8_t *ss);
 /**
  * @brief The shared secret from a ciphertext, through the FO transform.
  * @param work PROTOCORE_ML_KEM_BORROW bytes the caller took. Not held past the call.
@@ -96,7 +94,7 @@ proto_bool protocore_ml_kem_encaps(uint8_t *restrict work, const uint8_t *ek, co
  * @param ss MLKEM768_SS_BYTES shared secret
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_ml_kem_decaps(uint8_t *restrict work, const uint8_t *dk, const uint8_t *ct, uint8_t *ss);
+proto_bool protocore_ml_kem_decaps(uint8_t *work, const uint8_t *dk, const uint8_t *ct, uint8_t *ss);
 
 /** @brief Module namespace. */
 PROTOCORE_NS MlKemNs MlKem PROTOCORE_UNUSED = {

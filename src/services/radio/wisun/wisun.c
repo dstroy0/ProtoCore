@@ -88,9 +88,9 @@ static proto_bool emit_option(uint8_t *out, size_t *o, size_t cap, uint16_t delt
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_wisun_build_coap(uint8_t *restrict work, uint8_t type, uint8_t code, uint16_t msg_id,
-                                  const uint8_t *token, uint8_t tkl, const char *uri_path, const uint8_t *payload,
-                                  size_t plen, uint8_t *out, size_t cap)
+size_t protocore_wisun_build_coap(uint8_t *work, uint8_t type, uint8_t code, uint16_t msg_id, const uint8_t *token,
+                                  uint8_t tkl, const char *uri_path, const uint8_t *payload, size_t plen, uint8_t *out,
+                                  size_t cap)
 {
     (void)work;
 
@@ -151,7 +151,7 @@ size_t protocore_wisun_build_coap(uint8_t *restrict work, uint8_t type, uint8_t 
     return o;
 }
 
-void protocore_wisun_init(uint8_t *restrict work, WisunFan *fan, const protocore_ip *border_router, WisunNode *storage,
+void protocore_wisun_init(uint8_t *work, WisunFan *fan, const protocore_ip *border_router, WisunNode *storage,
                           size_t cap)
 {
     (void)work;
@@ -173,7 +173,7 @@ void protocore_wisun_init(uint8_t *restrict work, WisunFan *fan, const protocore
     fan->count = 0;
 }
 
-int protocore_wisun_node_register(uint8_t *restrict work, WisunFan *fan, const protocore_ip *addr, uint32_t now)
+int protocore_wisun_node_register(uint8_t *work, WisunFan *fan, const protocore_ip *addr, uint32_t now)
 {
     if (!fan || !fan->nodes || !addr)
     {
@@ -197,7 +197,7 @@ int protocore_wisun_node_register(uint8_t *restrict work, WisunFan *fan, const p
     return (int)fan->count++;
 }
 
-proto_bool protocore_wisun_node_find(uint8_t *restrict work, const WisunFan *fan, const protocore_ip *addr, size_t *idx)
+proto_bool protocore_wisun_node_find(uint8_t *work, const WisunFan *fan, const protocore_ip *addr, size_t *idx)
 {
     if (!fan || !fan->nodes || !addr)
     {
@@ -220,7 +220,7 @@ proto_bool protocore_wisun_node_find(uint8_t *restrict work, const WisunFan *fan
     return PROTO_FALSE;
 }
 
-size_t protocore_wisun_joined_count(uint8_t *restrict work, const WisunFan *fan)
+size_t protocore_wisun_joined_count(uint8_t *work, const WisunFan *fan)
 {
     (void)work;
 
@@ -239,7 +239,7 @@ size_t protocore_wisun_joined_count(uint8_t *restrict work, const WisunFan *fan)
     return c;
 }
 
-size_t protocore_wisun_nodes_json(uint8_t *restrict work, const WisunFan *fan, char *out, size_t cap)
+size_t protocore_wisun_nodes_json(uint8_t *work, const WisunFan *fan, char *out, size_t cap)
 {
     if (!fan || !out || cap == 0)
     {

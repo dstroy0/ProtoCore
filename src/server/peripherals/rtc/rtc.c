@@ -80,7 +80,7 @@ uint8_t *protocore_rtc_span(void)
     return s_own.span;
 }
 
-proto_bool protocore_rtc_regs_to_epoch(uint8_t *restrict work, const uint8_t *regs, uint32_t *epoch)
+proto_bool protocore_rtc_regs_to_epoch(uint8_t *work, const uint8_t *regs, uint32_t *epoch)
 {
     (void)work;
     const uint8_t *r = regs;
@@ -125,7 +125,7 @@ proto_bool protocore_rtc_regs_to_epoch(uint8_t *restrict work, const uint8_t *re
     return PROTO_TRUE;
 }
 
-void protocore_rtc_epoch_to_regs(uint8_t *restrict work, uint32_t epoch, uint8_t *regs)
+void protocore_rtc_epoch_to_regs(uint8_t *work, uint32_t epoch, uint8_t *regs)
 {
     (void)work;
     uint8_t *r = regs;
@@ -175,7 +175,7 @@ static_assert(RTC_OFF_CTX % _Alignof(RtcCtx) == 0,
 // The region, at its offset in the caller's borrow.
 #define RTC_CTX(w) ((RtcCtx *)(void *)((w) + RTC_OFF_CTX))
 
-proto_bool protocore_rtc_begin(uint8_t *restrict work)
+proto_bool protocore_rtc_begin(uint8_t *work)
 {
     (void)work;
 
@@ -183,7 +183,7 @@ proto_bool protocore_rtc_begin(uint8_t *restrict work)
     return PROTO_TRUE;
 }
 
-uint32_t protocore_rtc_read_epoch(uint8_t *restrict work)
+uint32_t protocore_rtc_read_epoch(uint8_t *work)
 {
     uint8_t reg = 0x00; // register 0: seconds
     if (!protocore_i2c_write_read(PROTOCORE_RTC_I2C_ADDR, &reg, 1, RTC_CTX(work)->frame, RTC_REG_COUNT))
@@ -195,7 +195,7 @@ uint32_t protocore_rtc_read_epoch(uint8_t *restrict work)
     return rtc_ok ? e : 0;
 }
 
-proto_bool protocore_rtc_set_epoch(uint8_t *restrict work, uint32_t epoch)
+proto_bool protocore_rtc_set_epoch(uint8_t *work, uint32_t epoch)
 {
 
     RTC_CTX(work)->frame[0] = 0x00; // point at register 0, then the seven registers follow it
@@ -203,7 +203,7 @@ proto_bool protocore_rtc_set_epoch(uint8_t *restrict work, uint32_t epoch)
     return protocore_i2c_write(PROTOCORE_RTC_I2C_ADDR, RTC_CTX(work)->frame, sizeof(RTC_CTX(work)->frame));
 }
 
-void protocore_rtc_time_source(uint8_t *restrict work)
+void protocore_rtc_time_source(uint8_t *work)
 {
     Rtc.read_epoch(work);
 }

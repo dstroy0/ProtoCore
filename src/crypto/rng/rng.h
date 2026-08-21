@@ -83,11 +83,10 @@ typedef struct
  * once @ref PROTOCORE_RAND_RESEED_BYTES is spent. @ref RngNs::reseed forces that redraw at a moment
  * the caller picks.
  *
- * @c work is PROTOCORE_RNG_BORROW secure bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. The seed is in those bytes
- * rather than in this module, so a caller takes them once for the life of the program and every draw
- * runs out of the same span. The caller releases it, and the pool wipes on release; this module
- * neither takes it, holds it, nor releases it, and the only bytes of it this module erases are the
+ * @c work is PROTOCORE_RNG_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. The seed is in those bytes rather than in this module, so a caller takes them once for
+ * the life of the program and every draw runs out of the same span. The caller releases it, and the pool wipes on
+ * release; this module neither takes it, holds it, nor releases it, and the only bytes of it this module erases are the
  * ratchet's replacement copy, after every draw. The borrow IS the generator, so two workers are two
  * borrows and never collide.
  *
@@ -106,14 +105,14 @@ extern RngVars RngV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const fill)(uint8_t *restrict work);
-    void (*const reseed)(uint8_t *restrict work);
+    void (*const fill)(uint8_t *work);
+    void (*const reseed)(uint8_t *work);
 } RngNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in RngV or a region of the borrow at a fixed offset.
-void protocore_rng_fill(uint8_t *restrict work);
-void protocore_rng_reseed(uint8_t *restrict work);
+void protocore_rng_fill(uint8_t *work);
+void protocore_rng_reseed(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

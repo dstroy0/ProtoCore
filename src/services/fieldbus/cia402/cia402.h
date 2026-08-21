@@ -314,36 +314,36 @@ extern Cia402Vars Cia402V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const state)(uint8_t *restrict work);
-    void (*const controlword)(uint8_t *restrict work);
-    void (*const enable_sequence)(uint8_t *restrict work);
-    void (*const sdo_set_controlword)(uint8_t *restrict work);
-    void (*const sdo_set_mode)(uint8_t *restrict work);
-    void (*const sdo_set_target_position)(uint8_t *restrict work);
-    void (*const sdo_set_target_velocity)(uint8_t *restrict work);
-    void (*const sdo_set_target_torque)(uint8_t *restrict work);
-    void (*const sdo_read)(uint8_t *restrict work);
-    void (*const sdo_get_u16)(uint8_t *restrict work);
-    void (*const sdo_get_i32)(uint8_t *restrict work);
-    void (*const pack_command)(uint8_t *restrict work);
-    void (*const unpack_status)(uint8_t *restrict work);
+    void (*const state)(uint8_t *work);
+    void (*const controlword)(uint8_t *work);
+    void (*const enable_sequence)(uint8_t *work);
+    void (*const sdo_set_controlword)(uint8_t *work);
+    void (*const sdo_set_mode)(uint8_t *work);
+    void (*const sdo_set_target_position)(uint8_t *work);
+    void (*const sdo_set_target_velocity)(uint8_t *work);
+    void (*const sdo_set_target_torque)(uint8_t *work);
+    void (*const sdo_read)(uint8_t *work);
+    void (*const sdo_get_u16)(uint8_t *work);
+    void (*const sdo_get_i32)(uint8_t *work);
+    void (*const pack_command)(uint8_t *work);
+    void (*const unpack_status)(uint8_t *work);
 } Cia402Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Cia402V or a region of the borrow at a fixed offset.
-void protocore_cia402_state(uint8_t *restrict work);
-void protocore_cia402_controlword(uint8_t *restrict work);
-void protocore_cia402_enable_sequence(uint8_t *restrict work);
-void protocore_cia402_sdo_set_controlword(uint8_t *restrict work);
-void protocore_cia402_sdo_set_mode(uint8_t *restrict work);
-void protocore_cia402_sdo_set_target_position(uint8_t *restrict work);
-void protocore_cia402_sdo_set_target_velocity(uint8_t *restrict work);
-void protocore_cia402_sdo_set_target_torque(uint8_t *restrict work);
-void protocore_cia402_sdo_read(uint8_t *restrict work);
-void protocore_cia402_sdo_get_u16(uint8_t *restrict work);
-void protocore_cia402_sdo_get_i32(uint8_t *restrict work);
-void protocore_cia402_pack_command(uint8_t *restrict work);
-void protocore_cia402_unpack_status(uint8_t *restrict work);
+void protocore_cia402_state(uint8_t *work);
+void protocore_cia402_controlword(uint8_t *work);
+void protocore_cia402_enable_sequence(uint8_t *work);
+void protocore_cia402_sdo_set_controlword(uint8_t *work);
+void protocore_cia402_sdo_set_mode(uint8_t *work);
+void protocore_cia402_sdo_set_target_position(uint8_t *work);
+void protocore_cia402_sdo_set_target_velocity(uint8_t *work);
+void protocore_cia402_sdo_set_target_torque(uint8_t *work);
+void protocore_cia402_sdo_read(uint8_t *work);
+void protocore_cia402_sdo_get_u16(uint8_t *work);
+void protocore_cia402_sdo_get_i32(uint8_t *work);
+void protocore_cia402_pack_command(uint8_t *work);
+void protocore_cia402_unpack_status(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

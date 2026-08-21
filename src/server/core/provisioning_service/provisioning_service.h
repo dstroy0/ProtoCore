@@ -22,9 +22,8 @@ PROTOCORE_BEGIN_DECLS
  * The form-field parser (Prov.form_field) is the pure half of this module and is the
  * only non-trivial logic, so it is unit-tested off-target.
  *
- * @c work is PROTOCORE_PROVISIONING_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @c work is PROTOCORE_PROVISIONING_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
+ * so nothing here aliases it. How those bytes are carved is this module's and is never named here.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -33,10 +32,10 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*form_field)(uint8_t *restrict, const char *, const char *, char *, size_t);
-    proto_bool (*load)(uint8_t *restrict, char *, size_t, char *, size_t);
-    void (*begin)(uint8_t *restrict, const char *);
-    void (*clear)(uint8_t *restrict);
+    proto_bool (*form_field)(uint8_t *, const char *, const char *, char *, size_t);
+    proto_bool (*load)(uint8_t *, char *, size_t, char *, size_t);
+    void (*begin)(uint8_t *, const char *);
+    void (*clear)(uint8_t *);
 } ProvNs;
 PROTOCORE_NS_LAYOUT(ProvNs, form_field, load, begin, clear);
 
@@ -49,7 +48,7 @@ PROTOCORE_NS_LAYOUT(ProvNs, form_field, load, begin, clear);
  * @param cap Capacity of out (>= 1)
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_prov_form_field(uint8_t *restrict work, const char *body, const char *key, char *out, size_t cap);
+proto_bool protocore_prov_form_field(uint8_t *work, const char *body, const char *key, char *out, size_t cap);
 /**
  * @brief Load stored WiFi credentials from NVS.
  * @param work PROTOCORE_PROV_BORROW bytes the caller took. Not held past the call.
@@ -59,18 +58,18 @@ proto_bool protocore_prov_form_field(uint8_t *restrict work, const char *body, c
  * @param psk_cap Capacity of psk
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_prov_load(uint8_t *restrict work, char *ssid, size_t ssid_cap, char *psk, size_t psk_cap);
+proto_bool protocore_prov_load(uint8_t *work, char *ssid, size_t ssid_cap, char *psk, size_t psk_cap);
 /**
  * @brief Start the captive portal: softAP ap_ssid + catch-all DNS + form .
  * @param work PROTOCORE_PROV_BORROW bytes the caller took. Not held past the call.
  * @param ap_ssid Ap ssid
  */
-void protocore_prov_begin(uint8_t *restrict work, const char *ap_ssid);
+void protocore_prov_begin(uint8_t *work, const char *ap_ssid);
 /**
  * @brief Erase stored credentials (forces re-provisioning on next boot).
  * @param work PROTOCORE_PROV_BORROW bytes the caller took. Not held past the call.
  */
-void protocore_prov_clear(uint8_t *restrict work);
+void protocore_prov_clear(uint8_t *work);
 
 /**
  * @brief The PROTOCORE_PROVISIONING_BORROW bytes this module's state lives in.

@@ -21,10 +21,10 @@ PROTOCORE_BEGIN_DECLS
  * of the state, so the hash keeps taking data afterwards. That is what lets TLS 1.3 read
  * Transcript-Hash at every stage the key schedule asks for without snapshotting anything.
  *
- * @c work is PROTOCORE_SHA256_BORROW secure bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. The caller releases it, and
- * the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes it. The
- * borrow IS the digest, so two running hashes are two borrows and never collide.
+ * @c work is PROTOCORE_SHA256_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the
+ * call, so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes
+ * it, holds it, releases it, nor wipes it. The borrow IS the digest, so two running hashes are two borrows and never
+ * collide.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -39,10 +39,10 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*init)(uint8_t *restrict);
-    proto_bool (*update)(uint8_t *restrict, const uint8_t *, size_t);
-    proto_bool (*final)(uint8_t *restrict, uint8_t *);
-    proto_bool (*hash)(uint8_t *restrict, const uint8_t *, size_t, uint8_t *);
+    proto_bool (*init)(uint8_t *);
+    proto_bool (*update)(uint8_t *, const uint8_t *, size_t);
+    proto_bool (*final)(uint8_t *, uint8_t *);
+    proto_bool (*hash)(uint8_t *, const uint8_t *, size_t, uint8_t *);
 } Sha256Ns;
 PROTOCORE_NS_LAYOUT(Sha256Ns, init, update, final, hash);
 
@@ -51,7 +51,7 @@ PROTOCORE_NS_LAYOUT(Sha256Ns, init, update, final, hash);
  * @param work PROTOCORE_SHA256_BORROW bytes the caller took. Not held past the call.
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_sha256_init(uint8_t *restrict work);
+proto_bool protocore_sha256_init(uint8_t *work);
 /**
  * @brief Feed the running digest a chunk.
  * @param work PROTOCORE_SHA256_BORROW bytes the caller took. Not held past the call.
@@ -59,14 +59,14 @@ proto_bool protocore_sha256_init(uint8_t *restrict work);
  * @param len how many
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_sha256_update(uint8_t *restrict work, const uint8_t *data, size_t len);
+proto_bool protocore_sha256_update(uint8_t *work, const uint8_t *data, size_t len);
 /**
  * @brief Pad, compress the last block, write the 32 bytes out.
  * @param work PROTOCORE_SHA256_BORROW bytes the caller took. Not held past the call.
  * @param out PROTOCORE_SHA256_DIGEST_LEN bytes
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_sha256_final(uint8_t *restrict work, uint8_t *out);
+proto_bool protocore_sha256_final(uint8_t *work, uint8_t *out);
 /**
  * @brief Init, update and final in one call, for a message already whole.
  * @param work PROTOCORE_SHA256_BORROW bytes the caller took. Not held past the call.
@@ -75,7 +75,7 @@ proto_bool protocore_sha256_final(uint8_t *restrict work, uint8_t *out);
  * @param out PROTOCORE_SHA256_DIGEST_LEN bytes
  * @return PROTO_TRUE on success.
  */
-proto_bool protocore_sha256_hash(uint8_t *restrict work, const uint8_t *data, size_t len, uint8_t *out);
+proto_bool protocore_sha256_hash(uint8_t *work, const uint8_t *data, size_t len, uint8_t *out);
 
 /** @brief Module namespace. */
 PROTOCORE_NS Sha256Ns Sha256 PROTOCORE_UNUSED = {.init = protocore_sha256_init,
