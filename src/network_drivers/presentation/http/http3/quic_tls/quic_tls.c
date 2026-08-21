@@ -249,9 +249,7 @@ static proto_bool process_client_hello(uint8_t *restrict work, QuicTls *qt, cons
     if (use_hybrid)
     {
         uint8_t ml_ss[32];
-        if (!(MlKemV.encaps_args.ek = ch.client_mlkem_ek, MlKemV.encaps_args.m = qt->cfg.mlkem_m,
-              MlKemV.encaps_args.ct = server_share, MlKemV.encaps_args.ss = ml_ss, MlKem.encaps(qt->sign_work),
-              MlKemV.ok))
+        if (!MlKem.encaps(qt->sign_work, ch.client_mlkem_ek, qt->cfg.mlkem_m, server_share, ml_ss))
         {
             fail(qt, TLS_ALERT_HANDSHAKE_FAILURE); // malformed ML-KEM key
             return PROTO_FALSE;

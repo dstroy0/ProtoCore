@@ -448,12 +448,8 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
             size_t clen = Tls13MsgV.n;
             TEST_ASSERT_TRUE(clen > 0);
             const uint8_t *sig = msg + 4 + 2 + 2;
-            Ed25519V.verify_args.pub = cert_pub;
-            Ed25519V.verify_args.msg = content;
-            Ed25519V.verify_args.msg_len = clen;
-            Ed25519V.verify_args.sig = sig;
-            Ed25519.verify(tw);
-            TEST_ASSERT_TRUE(Ed25519V.ok);
+            proto_bool ed25519_ok = Ed25519.verify(tw, cert_pub, content, clen, sig);
+            TEST_ASSERT_TRUE(ed25519_ok);
         }
         if (msg[0] == 20)
         {
@@ -612,9 +608,7 @@ void test_full_handshake(void)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
 
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
@@ -661,9 +655,7 @@ void test_full_handshake_rpk(void)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
 
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
@@ -711,9 +703,7 @@ void test_cid_handshake(void)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
 
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
@@ -769,9 +759,7 @@ void test_hrr_group_renegotiation(void)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
 
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
@@ -874,9 +862,7 @@ void test_hrr_retry_without_cookie_rejected(void)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
 
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
@@ -937,9 +923,7 @@ void test_reject_no_tls13(void)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsServerV.init_args.c = &g_dtls;
@@ -1015,9 +999,7 @@ static int drive_server_flight(DtlsConn *conn, DtlsServerConfig *cfg, uint8_t **
 void test_pto_retransmit_and_recovery(void)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t *tr;
@@ -1073,9 +1055,7 @@ void test_pto_retransmit_and_recovery(void)
 void test_pto_backoff_and_giveup(void)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t *tr;
@@ -1123,9 +1103,7 @@ void test_pto_ack_cancels_retransmit(void)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t *tr;
@@ -1435,9 +1413,7 @@ static int feed_epoch2_ack(DtlsConn *conn, ClientSession *st, uint64_t seq, cons
 void test_ciphertext_truncated_header_stops_walk(void)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t out[64];
@@ -1480,9 +1456,7 @@ void test_ciphertext_truncated_header_stops_walk(void)
 void test_ciphertext_before_keys_is_discarded(void)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t out[64];
@@ -1529,9 +1503,7 @@ void test_plaintext_non_handshake_record_ignored(void)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsServerV.init_args.c = &g_dtls;
@@ -1575,9 +1547,7 @@ void test_plaintext_non_handshake_record_ignored(void)
 void test_truncated_handshake_fragment_ignored(void)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsServerV.init_args.c = &g_dtls;
@@ -1612,9 +1582,7 @@ void test_fragment_for_other_msg_seq_ignored(void)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsServerV.init_args.c = &g_dtls;
@@ -1654,9 +1622,7 @@ void test_fragment_for_other_msg_seq_ignored(void)
 void test_oversize_handshake_message_rejected(void)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsServerV.init_args.c = &g_dtls;
@@ -1693,9 +1659,7 @@ void test_oversize_handshake_message_rejected(void)
 void test_unexpected_message_in_start_rejected(void)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsServerV.init_args.c = &g_dtls;
@@ -1733,9 +1697,7 @@ void test_client_hello_missing_algorithms_rejected(void)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t rec[320];
@@ -1791,9 +1753,7 @@ void test_oversize_certificate_is_internal_error(void)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     static uint8_t big_cert[PROTOCORE_DTLS_CONN_MSG_CAP + 200];
     memset(big_cert, 0xAB, sizeof(big_cert));
 
@@ -1832,9 +1792,7 @@ void test_flight_out_cap_too_small_is_internal_error(void)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t rec[320];
@@ -1885,9 +1843,7 @@ void test_flight_out_cap_too_small_is_internal_error(void)
 void test_retransmit_out_cap_too_small(void)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t *tr;
@@ -1910,9 +1866,7 @@ void test_timer_idle_when_done_or_failed(void)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t out[256];
@@ -1967,9 +1921,7 @@ void test_timer_idle_when_done_or_failed(void)
 void test_client_finished_error_paths(void)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t out[256];
@@ -2017,9 +1969,7 @@ void test_client_finished_error_paths(void)
 void test_ack_malformed_and_partial_keep_timer(void)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     ClientSession st;
@@ -2052,9 +2002,7 @@ void test_ack_malformed_and_partial_keep_timer(void)
 void test_ack_replay_and_late_ack_ignored(void)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     ClientSession st;
@@ -2110,9 +2058,7 @@ void test_ack_replay_and_late_ack_ignored(void)
 void test_completion_ack_deferred_when_out_full(void)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     ClientSession st;
@@ -2144,9 +2090,7 @@ void test_completion_ack_deferred_when_out_full(void)
 void test_forged_record_does_not_end_the_association(void)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
 
@@ -2201,9 +2145,7 @@ void test_forged_record_does_not_end_the_association(void)
 void test_app_records_before_and_after_established(void)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     const uint8_t payload[5] = {'h', 'e', 'l', 'l', 'o'};
@@ -2333,9 +2275,7 @@ void test_conn_id_edge_cases(void)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     uint8_t rec[320];
@@ -2409,9 +2349,7 @@ static proto_bool hrr_roundtrip_accepted(const uint8_t *addr, size_t addr_len)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsServerV.init_args.c = &g_dtls;
@@ -2478,9 +2416,7 @@ static proto_bool hrr_roundtrip_accepted(const uint8_t *addr, size_t addr_len)
 void test_flight_fragments_to_the_pmtu(void)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     cfg.pmtu = 96;
@@ -2514,9 +2450,7 @@ void test_cookie_is_worthless_to_another_peer(void)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
 
@@ -2613,9 +2547,7 @@ void test_hrr_retry_without_keyshare_rejected(void)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsServerV.init_args.c = &g_dtls;
@@ -2660,9 +2592,7 @@ void test_hrr_retry_with_corrupt_cookie_rejected(void)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     DtlsServerV.init_args.c = &g_dtls;
@@ -2720,9 +2650,7 @@ void test_hrr_retry_with_corrupt_cookie_rejected(void)
 void test_non_finished_message_after_done_rejected(void)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     ClientSession st;
@@ -2748,9 +2676,7 @@ void test_non_finished_message_after_done_rejected(void)
 void test_epoch2_other_content_type_ignored(void)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     ClientSession st;
@@ -2789,9 +2715,7 @@ void test_epoch2_other_content_type_ignored(void)
 void test_timer_stopped_by_done_state(void)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     ClientSession st;
@@ -2820,9 +2744,7 @@ void test_timer_stopped_by_done_state(void)
 void test_established_requires_app_keys(void)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
     ClientSession st;
@@ -2863,9 +2785,7 @@ void test_local_cid_requires_nonempty_id(void)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);
 
@@ -2909,9 +2829,7 @@ void test_local_cid_requires_nonempty_id(void)
 static void low_order_share_is_refused(const uint8_t client_pub[32], const char *what)
 {
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
 
     DtlsServerConfig cfg;
     server_cfg(&cfg, server_ed_pub);

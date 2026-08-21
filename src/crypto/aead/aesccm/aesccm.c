@@ -15,9 +15,7 @@
  * and none of them touches the stack or BSS.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_AESCCM
+#include "protocore_config.h" // the entry point: the widths
 
 #if PROTOCORE_HAS_HW_AES
 #endif
@@ -27,8 +25,6 @@
 #include "crypto/aead/aesccm/aesccm.h"
 #include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq
 #include "mmgr/protomem/protomem.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // AES single-block encrypt seam - one small wrapper, two platform bodies
@@ -289,37 +285,24 @@ static proto_bool aesccm_open_record(uint8_t *restrict work, const uint8_t *key,
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_aes_ccm_seal(uint8_t *restrict work)
+proto_bool protocore_aes_ccm_seal(uint8_t *restrict work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
+                                  size_t nonce_len, const uint8_t *aad, size_t aad_len, const uint8_t *pt,
+                                  size_t pt_len, uint8_t *ct_out, uint8_t *tag_out)
 {
-    AesCcmV.ok = PROTO_FALSE;
-    if (!AesCcmV.seal_args.key || !AesCcmV.seal_args.nonce || !AesCcmV.seal_args.ct_out || !AesCcmV.seal_args.tag_out ||
-        (AesCcmV.seal_args.key_len != 16 && AesCcmV.seal_args.key_len != 32))
+    if (!key || !nonce || !ct_out || !tag_out || (key_len != 16 && key_len != 32))
     {
-        return;
+        return PROTO_FALSE;
     }
-    AesCcmV.ok = aesccm_seal_record(work, AesCcmV.seal_args.key, AesCcmV.seal_args.key_len, AesCcmV.seal_args.nonce,
-                                    AesCcmV.seal_args.nonce_len, AesCcmV.seal_args.aad, AesCcmV.seal_args.aad_len,
-                                    AesCcmV.seal_args.pt, AesCcmV.seal_args.pt_len, AesCcmV.seal_args.ct_out,
-                                    AesCcmV.seal_args.tag_out);
+    return aesccm_seal_record(work, key, key_len, nonce, nonce_len, aad, aad_len, pt, pt_len, ct_out, tag_out);
 }
 
-void protocore_aes_ccm_open(uint8_t *restrict work)
+proto_bool protocore_aes_ccm_open(uint8_t *restrict work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
+                                  size_t nonce_len, const uint8_t *aad, size_t aad_len, const uint8_t *ct,
+                                  size_t ct_len, const uint8_t *tag, uint8_t *out)
 {
-    AesCcmV.ok = PROTO_FALSE;
-    if (!AesCcmV.open_args.key || !AesCcmV.open_args.nonce || !AesCcmV.open_args.ct || !AesCcmV.open_args.out ||
-        !AesCcmV.open_args.tag || (AesCcmV.open_args.key_len != 16 && AesCcmV.open_args.key_len != 32))
+    if (!key || !nonce || !ct || !out || !tag || (key_len != 16 && key_len != 32))
     {
-        return;
+        return PROTO_FALSE;
     }
-    AesCcmV.ok = aesccm_open_record(work, AesCcmV.open_args.key, AesCcmV.open_args.key_len, AesCcmV.open_args.nonce,
-                                    AesCcmV.open_args.nonce_len, AesCcmV.open_args.aad, AesCcmV.open_args.aad_len,
-                                    AesCcmV.open_args.ct, AesCcmV.open_args.ct_len, AesCcmV.open_args.tag,
-                                    AesCcmV.open_args.out);
+    return aesccm_open_record(work, key, key_len, nonce, nonce_len, aad, aad_len, ct, ct_len, tag, out);
 }
-
-/** @brief The operands and the outcome. */
-AesCcmVars AesCcmV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_AESCCM

@@ -108,11 +108,7 @@ int main(void)
         HBENCH_NS(
             2000,
             {
-                Ed25519V.sign_args.sig = sig;
-                Ed25519V.sign_args.msg = hash;
-                Ed25519V.sign_args.msg_len = sizeof(hash);
-                Ed25519V.sign_args.seed = seed;
-                Ed25519.sign(tw);
+                Ed25519.sign(tw, seed, hash, sizeof(hash), sig);
                 sink += sig[0];
             },
             ns);

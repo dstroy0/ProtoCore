@@ -6,9 +6,7 @@
  * @brief Streaming file upload: POST body -> Arduino FS file (PROTOCORE_ENABLE_UPLOAD).
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_UPLOAD
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/plaintext/plaintext.h"   // the persistent end this module's state is taken from
 #include "mmgr/protoframe/protoframe.h" // the one frame engine
@@ -19,8 +17,6 @@
 #include "protocore.h"
 #include "server/storage/mnt/mnt.h" // the storage seam: protocore_mnt_active()
 #include "shared/mime/mime.h"
-
-PROTOCORE_BEGIN_DECLS
 
 static const protocore_field UPLOAD_OK[] = {
     {PROTOCORE_FK_LIT, 0, 3, "OK "}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 6, " bytes"}, PROTOCORE_END};
@@ -184,15 +180,13 @@ static void upload_handle(uint8_t slot_id, HttpReq *req)
     send_text(slot_id, 200, PROTOCORE_MIME_TEXT_PLAIN, msg);
 }
 
-void protocore_upload_service_last_size(uint8_t *restrict work)
+size_t protocore_upload_service_last_size(uint8_t *restrict work)
 {
-    UploadServiceV.n = UPLOAD_SERVICE_CTX(work)->written;
+    return UPLOAD_SERVICE_CTX(work)->written;
 }
 
-void protocore_upload_service_begin(uint8_t *restrict work)
+void protocore_upload_service_begin(uint8_t *restrict work, const char *path, const char *dest_path)
 {
-    const char *path = UploadServiceV.begin_args.path;
-    const char *dest_path = UploadServiceV.begin_args.dest_path;
 
     UPLOAD_SERVICE_CTX(work)->path = path;
     UPLOAD_SERVICE_CTX(work)->dest = dest_path;
@@ -204,10 +198,3 @@ void protocore_upload_service_begin(uint8_t *restrict work)
     HttpParser.set_stream_hooks(protocore_http_parser_span());
     on_http(path, HTTP_POST, upload_handle);
 }
-
-/** @brief The operands and the outcome. */
-UploadServiceVars UploadServiceV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_UPLOAD

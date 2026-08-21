@@ -24,9 +24,7 @@
  * for the SHA-512 every entry drives.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_ED25519
+#include "protocore_config.h" // the entry point: the widths
 
 #include "crypto/asymmetric/curve25519/curve25519.h" // protocore_gf + field ops (native / non-S3 path)
 #include "crypto/asymmetric/ed25519/ed25519.h"
@@ -36,8 +34,6 @@
 #if PROTOCORE_FE25519_MPI_HW
 #include "crypto/asymmetric/ed25519_comb_table/ed25519_comb_table.h" // fixed-base comb ED_COMB[i][j] = (j+1)*256^i*B; drives the MODMULT sign
 #endif
-
-PROTOCORE_BEGIN_DECLS
 
 // The one definition, both arms, private to this TU. It sits at ED25519_OFF_CTX in the caller's
 // borrow, so its size never leaves this file and no consumer can name it.
@@ -654,32 +650,28 @@ static void ed_challenge(uint8_t *restrict work, const uint8_t *sig_r, const uin
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_ed25519_pubkey(uint8_t *restrict work)
+proto_bool protocore_ed25519_pubkey(uint8_t *restrict work, const uint8_t *seed, uint8_t *pub)
 {
-    Ed25519V.ok = PROTO_FALSE;
-    if (!Ed25519V.pubkey_args.seed || !Ed25519V.pubkey_args.pub)
+    if (!seed || !pub)
     {
-        return;
+        return PROTO_FALSE;
     }
-    ed_expand_seed(work, Ed25519V.pubkey_args.seed);
-    ed_scalarbase_bytes(Ed25519V.pubkey_args.pub, ED25519_CTX(work)->d);
-    Ed25519V.ok = PROTO_TRUE;
+    ed_expand_seed(work, seed);
+    ed_scalarbase_bytes(pub, ED25519_CTX(work)->d);
+    return PROTO_TRUE;
 }
 
-void protocore_ed25519_sign(uint8_t *restrict work)
+proto_bool protocore_ed25519_sign(uint8_t *restrict work, const uint8_t *seed, const uint8_t *msg, size_t msg_len,
+                                  uint8_t *sig)
 {
-    Ed25519V.ok = PROTO_FALSE;
-    if (!Ed25519V.sign_args.seed || !Ed25519V.sign_args.sig)
+    if (!seed || !sig)
     {
-        return;
+        return PROTO_FALSE;
     }
     Ed25519Ctx *ctx = ED25519_CTX(work);
     uint8_t *sha = ED25519_SHA(work);
-    const uint8_t *msg = Ed25519V.sign_args.msg;
-    const size_t msg_len = Ed25519V.sign_args.msg_len;
-    uint8_t *sig = Ed25519V.sign_args.sig;
 
-    ed_expand_seed(work, Ed25519V.sign_args.seed);
+    ed_expand_seed(work, seed);
 
     // A = a * B
     ed_scalarbase_bytes(ctx->pub, ctx->d);
@@ -714,40 +706,33 @@ void protocore_ed25519_sign(uint8_t *restrict work)
         }
     }
     ed_modL(sig + 32, ctx->x); // sig[32..63] = S
-    Ed25519V.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_ed25519_verify(uint8_t *restrict work)
+proto_bool protocore_ed25519_verify(uint8_t *restrict work, const uint8_t *pub, const uint8_t *msg, size_t msg_len,
+                                    const uint8_t *sig)
 {
-    Ed25519V.ok = PROTO_FALSE;
-    if (!Ed25519V.verify_args.pub || !Ed25519V.verify_args.sig)
+    proto_bool ok = PROTO_FALSE;
+    if (!pub || !sig)
     {
-        return;
+        return ok;
     }
-    const uint8_t *sig = Ed25519V.verify_args.sig;
-    const uint8_t *pub = Ed25519V.verify_args.pub;
     if (!ed_scalar_canonical(sig + 32))
     {
-        return; // non-canonical S (RFC 8032 §5.1.7): reject to prevent malleability
+        return ok; // non-canonical S (RFC 8032 §5.1.7): reject to prevent malleability
     }
     Ed25519Ctx *ctx = ED25519_CTX(work);
 
     // h = SHA-512(R || A || M) mod L
-    ed_challenge(work, sig, pub, Ed25519V.verify_args.msg, Ed25519V.verify_args.msg_len);
+    ed_challenge(work, sig, pub, msg, msg_len);
 
     if (!ed_verify_recompute(ctx->t, sig + 32, ctx->h, pub))
     {
-        return; // invalid A
+        return ok; // invalid A
     }
     if (ct_verify32(sig, ctx->t) == 0) // R == S*B - h*A ?
     {
-        Ed25519V.ok = PROTO_TRUE;
+        ok = PROTO_TRUE;
     }
+    return ok;
 }
-
-/** @brief The operands and the outcome. */
-Ed25519Vars Ed25519V;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_ED25519

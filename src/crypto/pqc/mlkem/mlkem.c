@@ -13,15 +13,11 @@
  * from one call to the next, so there is no context.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_MLKEM
+#include "protocore_config.h" // the entry point: the widths
 
 #include "crypto/hash/sha3/sha3.h"
 #include "crypto/pqc/mlkem/mlkem.h"
 #include "mmgr/protomem/protomem.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // ML-KEM-768 parameters (FIPS 203).
 #define MK_N 256
@@ -585,36 +581,31 @@ static void k_pke_decrypt(uint8_t m[32], const uint8_t dk_pke[MK_K * MK_POLYBYTE
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_ml_kem_keygen(uint8_t *restrict work)
+proto_bool protocore_ml_kem_keygen(uint8_t *restrict work, const uint8_t *d, const uint8_t *z, uint8_t *ek, uint8_t *dk)
 {
-    MlKemV.ok = PROTO_FALSE;
-    if (!MlKemV.keygen_args.d || !MlKemV.keygen_args.z || !MlKemV.keygen_args.ek || !MlKemV.keygen_args.dk)
+    if (!d || !z || !ek || !dk)
     {
-        return;
+        return PROTO_FALSE;
     }
-    uint8_t *ek = MlKemV.keygen_args.ek;
-    uint8_t *dk = MlKemV.keygen_args.dk;
 
     // dk = dk_PKE || ek || H(ek) || z  (FIPS 203 Algorithm 16).
-    k_pke_keygen(work, ek, dk, MlKemV.keygen_args.d);
+    k_pke_keygen(work, ek, dk, d);
     mem.cpy(dk + MK_K * MK_POLYBYTES, ek, MLKEM768_EK_BYTES);
     mk_sha3_256(work, dk + MK_K * MK_POLYBYTES + MLKEM768_EK_BYTES, ek, MLKEM768_EK_BYTES);
-    mem.cpy(dk + MK_K * MK_POLYBYTES + MLKEM768_EK_BYTES + 32, MlKemV.keygen_args.z, 32);
-    MlKemV.ok = PROTO_TRUE;
+    mem.cpy(dk + MK_K * MK_POLYBYTES + MLKEM768_EK_BYTES + 32, z, 32);
+    return PROTO_TRUE;
 }
 
-void protocore_ml_kem_encaps(uint8_t *restrict work)
+proto_bool protocore_ml_kem_encaps(uint8_t *restrict work, const uint8_t *ek, const uint8_t *m, uint8_t *ct,
+                                   uint8_t *ss)
 {
-    MlKemV.ok = PROTO_FALSE;
-    if (!MlKemV.encaps_args.ek || !MlKemV.encaps_args.m || !MlKemV.encaps_args.ct || !MlKemV.encaps_args.ss)
+    if (!ek || !m || !ct || !ss)
     {
-        return;
+        return PROTO_FALSE;
     }
-    const uint8_t *ek = MlKemV.encaps_args.ek;
-    const uint8_t *m = MlKemV.encaps_args.m;
     if (!check_ek(ek))
     {
-        return;
+        return PROTO_FALSE;
     }
 
     // (K, r) = G(m || H(ek)); ss = K.
@@ -623,22 +614,18 @@ void protocore_ml_kem_encaps(uint8_t *restrict work)
     mk_sha3_256(work, g_in + 32, ek, MLKEM768_EK_BYTES); // H(ek)
     uint8_t g_out[64];
     mk_sha3_512(work, g_out, g_in, sizeof(g_in));
-    mem.cpy(MlKemV.encaps_args.ss, g_out, 32);
+    mem.cpy(ss, g_out, 32);
 
-    k_pke_encrypt(work, MlKemV.encaps_args.ct, ek, m, g_out + 32);
-    MlKemV.ok = PROTO_TRUE;
+    k_pke_encrypt(work, ct, ek, m, g_out + 32);
+    return PROTO_TRUE;
 }
 
-void protocore_ml_kem_decaps(uint8_t *restrict work)
+proto_bool protocore_ml_kem_decaps(uint8_t *restrict work, const uint8_t *dk, const uint8_t *ct, uint8_t *ss)
 {
-    MlKemV.ok = PROTO_FALSE;
-    if (!MlKemV.decaps_args.dk || !MlKemV.decaps_args.ct || !MlKemV.decaps_args.ss)
+    if (!dk || !ct || !ss)
     {
-        return;
+        return PROTO_FALSE;
     }
-    const uint8_t *dk = MlKemV.decaps_args.dk;
-    const uint8_t *ct = MlKemV.decaps_args.ct;
-    uint8_t *ss = MlKemV.decaps_args.ss;
 
     const uint8_t *dk_pke = dk;
     const uint8_t *ek_pke = dk + MK_K * MK_POLYBYTES;
@@ -669,12 +656,5 @@ void protocore_ml_kem_decaps(uint8_t *restrict work)
     {
         ss[i] = (uint8_t)((g_out[i] & (uint8_t)~diff) | (kbar[i] & diff)); // K' if match, K_bar if not
     }
-    MlKemV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
-
-/** @brief The operands and the outcome. */
-MlKemVars MlKemV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_MLKEM

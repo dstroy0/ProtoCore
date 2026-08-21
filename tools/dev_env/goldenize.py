@@ -3754,6 +3754,105 @@ def gated_dependencies(spec):
     return out
 
 
+def fold_comma_calls(s, spec, byname, pat, mask):
+    """Fold a call staged inside a COMMA EXPRESSION, and return the new text and how many.
+
+    The tree stages a call two ways. One is statements above it. The other is a parenthesised comma
+    expression, used where a statement cannot go - inside a && chain, where hoisting the staging
+    above the enclosing statement would evaluate it unconditionally:
+
+        ok = parse_ed25519_pubkey(...) && raw_len == 64 &&
+             (Ed25519V.verify_args.pub = pub.buf, Ed25519V.verify_args.msg = h,
+              Ed25519V.verify_args.msg_len = h_len, Ed25519V.verify_args.sig = raw,
+              Ed25519.verify(work), Ed25519V.ok);
+
+    This form is easier to convert than the statement one and gives a better result: the whole
+    parenthesised expression IS the call plus its result, so it becomes the call, with no local and
+    nothing hoisted.
+
+        ok = parse_ed25519_pubkey(...) && raw_len == 64 &&
+             Ed25519.verify(work, pub.buf, h, h_len, raw);
+
+    It is also the shape that blocks the most modules - 702 of the leftover reads measured across
+    sixty of them, against 361 for every other shape put together.
+
+    A group is folded only when every one of its comma-separated parts is accounted for: a staged
+    operand for this entry, the call itself, or a read of the result. Anything else and it is left
+    alone, because a part this does not understand is a side effect it would be deleting.
+    """
+    objv = spec.get("objv", "")
+    stage = re.compile(r"^%s\.(\w+)_args\.(\w+)\s*=\s*(.+)$" % re.escape(objv), re.S)
+    n, at = 0, 0
+    while True:
+        m = pat.search(s, at)
+        if not m:
+            break
+        if not mask[m.start()]:
+            at = m.end()
+            continue
+        e = byname[m.group("e") or m.group("f")]
+        call_end = N.close_paren(s, m.end())
+
+        # Inside a comma expression? The call is followed by a comma at this paren depth.
+        tail = s[call_end:]
+        if not re.match(r"\s*,", tail):
+            at = m.end()
+            continue
+
+        # The enclosing parenthesis: scan back counting depth, stopping at the one that is open.
+        depth, i, ob = 0, m.start() - 1, None
+        while i >= 0:
+            if mask[i]:
+                if s[i] == ")":
+                    depth += 1
+                elif s[i] == "(":
+                    if depth == 0:
+                        ob = i
+                        break
+                    depth -= 1
+            i -= 1
+        if ob is None:
+            at = m.end()
+            continue
+        ce = N.close_paren(s, ob + 1)
+
+        parts = N.split_args(s[ob + 1 : ce - 1])
+        vals, seen_call, ok = {}, False, True
+        for p_ in parts:
+            t = p_.strip()
+            if not t:
+                ok = False
+                break
+            if t.startswith("%s.%s" % (spec["object"], e["entry"])) or t.startswith(e["flat"]):
+                seen_call = True
+                continue
+            sm = stage.match(t)
+            if sm and sm.group(1) == e.get("group", e["entry"]):
+                vals[sm.group(2)] = " ".join(sm.group(3).split())
+                continue
+            if e.get("result") and t == "%s.%s" % (objv, e["result"]):
+                continue
+            ok = False
+            break
+
+        want = [q["name"] for q in e["params"]]
+        if not (ok and seen_call) or any(w not in vals for w in want):
+            at = m.end()
+            continue
+
+        borrow = [a.strip() for a in N.split_args(s[m.end() : call_end - 1]) if a.strip()]
+        new = "%s.%s(%s)" % (
+            spec["object"],
+            e["entry"],
+            ", ".join(borrow + [vals[w] for w in want]),
+        )
+        s = s[:ob] + new + s[ce:]
+        mask = code_mask(s)
+        n += 1
+        at = 0
+    return s, n, mask
+
+
 def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include")):
     """Fold each call site's staged operands into the call, and give its result a local.
 
@@ -3824,6 +3923,11 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
                     continue
                 n, at, declared = 0, 0, {}
                 mask = code_mask(s)
+                # The comma-expression form first: it is self-contained, so folding it removes the
+                # staging the statement walk below would otherwise fail to reach.
+                s, folded, mask = fold_comma_calls(s, spec, byname, pat, mask)
+                n += folded
+                total += folded
                 while True:
                     m = pat.search(s, at)
                     if not m:

@@ -201,9 +201,7 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
 
     DtlsServerConfig cfg;
     memset(&cfg, 0, sizeof(cfg));
@@ -481,9 +479,7 @@ void test_coaps_forwards_handshake(void)
     Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519V.pubkey_args.pub = server_ed_pub;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, server_ed_pub);
 
     DtlsServerConfig cfg;
     memset(&cfg, 0, sizeof(cfg));

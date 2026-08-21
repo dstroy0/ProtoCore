@@ -31,13 +31,7 @@ void dbench_run(void)
             sink += digest[0];
         });
         DBENCH_BULK("Chacha20.xor_ (1 KiB)", 1000, 1024, {
-            Chacha20V.xor_args.key = key;
-            Chacha20V.xor_args.iv = iv;
-            Chacha20V.xor_args.counter = 1;
-            Chacha20V.xor_args.in = buf;
-            Chacha20V.xor_args.out = buf;
-            Chacha20V.xor_args.len = 1024;
-            Chacha20.xor_(tw);
+            Chacha20.xor_(tw, key, iv, 1, buf, buf, 1024);
             sink += buf[0];
         });
         (void)sink;

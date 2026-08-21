@@ -366,9 +366,7 @@ void test_full_handshake_on_rfc8448_key_material(void)
     Curve25519V.x25519_base_args.scalar = SERVER_X25519_PRIV;
     Curve25519.x25519_base(g_sign_work);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(SERVER_X25519_PUB, scratch, 32);
-    Ed25519V.pubkey_args.pub = scratch;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(g_sign_work);
+    Ed25519.pubkey(g_sign_work, SERVER_ED_SEED, scratch);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(SERVER_ED_PUB, scratch, 32);
 
     init_server();
@@ -547,12 +545,8 @@ void test_full_handshake_on_rfc8448_key_material(void)
     Tls13Msg.cert_verify_content(tls13_msg_work);
     size_t clen = Tls13MsgV.n;
     TEST_ASSERT_EQUAL_UINT(130u, clen);
-    Ed25519V.verify_args.pub = peer_pub;
-    Ed25519V.verify_args.msg = content;
-    Ed25519V.verify_args.msg_len = clen;
-    Ed25519V.verify_args.sig = cv_sig;
-    Ed25519.verify(g_sign_work);
-    TEST_ASSERT_TRUE_MESSAGE(Ed25519V.ok, "the server's CertificateVerify did not verify under the key it presented");
+    proto_bool ed25519_ok = Ed25519.verify(g_sign_work, peer_pub, content, clen, cv_sig);
+    TEST_ASSERT_TRUE_MESSAGE(ed25519_ok, "the server's CertificateVerify did not verify under the key it presented");
 
     uint8_t ch_sfin_hash[32];
     Sha256.final(g_cli_transcript, ch_sfin_hash);

@@ -200,9 +200,8 @@ void protocore_ssh_hostkey_ed25519_set(const uint8_t seed[32])
         return;
     }
     mem.cpy(SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ed_seed, seed, 32);
-    Ed25519V.pubkey_args.seed = SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ed_seed;
-    Ed25519V.pubkey_args.pub = SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ed_pub;
-    Ed25519.pubkey(ssh_pkt[0].crypto_work);
+    Ed25519.pubkey(ssh_pkt[0].crypto_work, SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ed_seed,
+                   SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ed_pub);
     SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ed_have = PROTO_TRUE;
 }
 proto_bool protocore_ssh_hostkey_ed25519_available(void)
@@ -212,10 +211,9 @@ proto_bool protocore_ssh_hostkey_ed25519_available(void)
 void protocore_ssh_hostkey_ecdsa_set(const uint8_t priv[PROTOCORE_ECDSA_P256_PRIV_LEN])
 {
     // Derive and cache the public point; reject an invalid scalar (leaves ecdsa_have false).
-    EcdsaV.pubkey_args.priv = priv;
-    EcdsaV.pubkey_args.pub = SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ecdsa_pub;
-    Ecdsa.pubkey(ssh_pkt[0].crypto_work);
-    if (!EcdsaV.ok)
+    proto_bool ecdsa_ok =
+        Ecdsa.pubkey(ssh_pkt[0].crypto_work, priv, SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ecdsa_pub);
+    if (!ecdsa_ok)
     {
         return;
     }
@@ -1351,13 +1349,11 @@ proto_bool ssh_hostkey_verify(uint8_t i, const uint8_t *ks, size_t ks_len, const
     {
     case SSH_HOSTKEY_ED25519:
         ok = parse_ed25519_pubkey(ks, (uint32_t)ks_len, pub.buf) && raw_len == 64 &&
-             (Ed25519V.verify_args.pub = pub.buf, Ed25519V.verify_args.msg = h, Ed25519V.verify_args.msg_len = h_len,
-              Ed25519V.verify_args.sig = raw, Ed25519.verify(work), Ed25519V.ok);
+             Ed25519.verify(work, pub.buf, h, h_len, raw);
         break;
     case SSH_HOSTKEY_ECDSA_NISTP256:
         ok = parse_ecdsa_pubkey(ks, (uint32_t)ks_len, pub.buf) && parse_ecdsa_sig(raw, raw_len, ec_sig.buf) &&
-             (EcdsaV.verify_args.pub = pub.buf, EcdsaV.verify_args.msg = h, EcdsaV.verify_args.mlen = h_len,
-              EcdsaV.verify_args.sig = ec_sig.buf, Ecdsa.verify(work), EcdsaV.ok);
+             Ecdsa.verify(work, pub.buf, h, h_len, ec_sig.buf);
         break;
     case SSH_HOSTKEY_RSA_SHA256:
     case SSH_HOSTKEY_RSA_SHA512: {
@@ -1499,11 +1495,7 @@ static int sign_hash(uint8_t i, const uint8_t *H, size_t h_len, uint8_t *sig, si
         {
             return -1;
         }
-        Ed25519V.sign_args.seed = SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ed_seed;
-        Ed25519V.sign_args.msg = H;
-        Ed25519V.sign_args.msg_len = h_len;
-        Ed25519V.sign_args.sig = sig;
-        Ed25519.sign(ssh_pkt[i].crypto_work);
+        Ed25519.sign(ssh_pkt[i].crypto_work, SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ed_seed, H, h_len, sig);
         *sig_len = 64;
         *sig_name = HOSTKEY_ED; // "ssh-ed25519"
         return 0;
@@ -1515,12 +1507,9 @@ static int sign_hash(uint8_t i, const uint8_t *H, size_t h_len, uint8_t *sig, si
         {
             return -1;
         }
-        EcdsaV.sign_args.msg = H;
-        EcdsaV.sign_args.mlen = h_len;
-        EcdsaV.sign_args.priv = SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ecdsa_priv;
-        EcdsaV.sign_args.sig = raw;
-        Ecdsa.sign(ssh_pkt[i].crypto_work);
-        if (!EcdsaV.ok)
+        proto_bool ecdsa_ok = Ecdsa.sign(ssh_pkt[i].crypto_work, H, h_len,
+                                         SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ecdsa_priv, raw);
+        if (!ecdsa_ok)
         {
             return -1;
         }
@@ -1646,10 +1635,8 @@ void protocore_ssh_transport_kex_generate(uint8_t *restrict work)
             RngV.fill_args.out = ssh_sess[i].ecdh_sk;
             RngV.fill_args.len = 32;
             Rng.fill(protocore_rng_span());
-            EcdsaV.pubkey_args.priv = ssh_sess[i].ecdh_sk;
-            EcdsaV.pubkey_args.pub = qtmp;
-            Ecdsa.pubkey(ssh_pkt[i].crypto_work);
-            if (EcdsaV.ok)
+            proto_bool ecdsa_ok = Ecdsa.pubkey(ssh_pkt[i].crypto_work, ssh_sess[i].ecdh_sk, qtmp);
+            if (ecdsa_ok)
             {
                 SshTransportV.i32 = 0;
                 return; // valid scalar with overwhelming probability
@@ -1687,12 +1674,8 @@ static int hybrid_mlkem_x25519(uint8_t i, const uint8_t *payload, size_t len, ui
     RngV.fill_args.len = sizeof(m);
     Rng.fill(protocore_rng_span());
     uint8_t k_pq[32];
-    MlKemV.encaps_args.ek = ek;
-    MlKemV.encaps_args.m = m;
-    MlKemV.encaps_args.ct = s_reply; // ciphertext -> s_reply[0..1087]
-    MlKemV.encaps_args.ss = k_pq;
-    MlKem.encaps(ssh_pkt[i].crypto_work);
-    proto_bool ok = MlKemV.ok;
+    proto_bool ml_kem_ok = MlKem.encaps(ssh_pkt[i].crypto_work, ek, m, s_reply, k_pq); // ciphertext -> s_reply[0..1087]
+    proto_bool ok = ml_kem_ok;
     protocore_secure_wipe(m, sizeof(m));
     if (!ok)
     {
@@ -1910,15 +1893,10 @@ void protocore_ssh_transport_kexdh_reply(uint8_t *restrict work)
         // Re-derive our ephemeral public Q_S, then the shared secret. Ecdsa.ecdh validates Q_C is
         // on-curve and the product is not the identity (RFC 5656 §4 point checks).
         uint8_t *ecw = ssh_pkt[i].crypto_work;
-        EcdsaV.pubkey_args.priv = s->ecdh_sk;
-        EcdsaV.pubkey_args.pub = qs;
-        Ecdsa.pubkey(ecw);
-        proto_bool ec_ok = EcdsaV.ok;
-        EcdsaV.ecdh_args.peer_pub = qc;
-        EcdsaV.ecdh_args.priv = s->ecdh_sk;
-        EcdsaV.ecdh_args.shared_x = kk;
-        Ecdsa.ecdh(ecw);
-        if (!ec_ok || !EcdsaV.ok)
+        proto_bool ecdsa_ok = Ecdsa.pubkey(ecw, s->ecdh_sk, qs);
+        proto_bool ec_ok = ecdsa_ok;
+        ecdsa_ok = Ecdsa.ecdh(ecw, qc, s->ecdh_sk, kk);
+        if (!ec_ok || !ecdsa_ok)
         {
             SshTransportV.i32 = -1;
             return;
@@ -2239,17 +2217,10 @@ static void compute_mac_mode(uint8_t mac_mode, uint8_t *work, const uint8_t *mac
     write_u32_be(seq_be, seq_no);
     if (mac_mode == SSH_MAC_HMAC_SHA512 || mac_mode == SSH_MAC_HMAC_SHA512_ETM)
     {
-        HmacSha512V.key_args.key = mac_key;
-        HmacSha512V.key_args.key_len = 64;
-        HmacSha512.init(work);
-        HmacSha512V.update_args.data = seq_be;
-        HmacSha512V.update_args.len = 4;
-        HmacSha512.update(work);
-        HmacSha512V.update_args.data = buf;
-        HmacSha512V.update_args.len = buf_len;
-        HmacSha512.update(work);
-        HmacSha512V.final_args.out = mac_out;
-        HmacSha512.final(work);
+        HmacSha512.init(work, mac_key, 64);
+        HmacSha512.update(work, seq_be, 4);
+        HmacSha512.update(work, buf, buf_len);
+        HmacSha512.final(work, mac_out);
     }
     else
     {
@@ -3875,11 +3846,8 @@ proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
             return PROTO_FALSE;
         }
         uint8_t k32[PROTOCORE_ECDSA_P256_COORD_LEN];
-        EcdsaV.ecdh_args.peer_pub = peer_pub;
-        EcdsaV.ecdh_args.priv = e->priv;
-        EcdsaV.ecdh_args.shared_x = k32;
-        Ecdsa.ecdh(e->work);
-        if (!EcdsaV.ok)
+        proto_bool ecdsa_ok = Ecdsa.ecdh(e->work, peer_pub, e->priv, k32);
+        if (!ecdsa_ok)
         {
             return PROTO_FALSE;
         }
@@ -3923,10 +3891,7 @@ proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
             return PROTO_FALSE;
         }
         uint8_t k_pq[32], k_cl[32];
-        MlKemV.decaps_args.dk = e->hybrid_sk;
-        MlKemV.decaps_args.ct = peer_pub;
-        MlKemV.decaps_args.ss = k_pq;
-        MlKem.decaps(e->work);
+        MlKem.decaps(e->work, e->hybrid_sk, peer_pub, k_pq);
         Curve25519V.x25519_args.scalar = e->priv;
         Curve25519V.x25519_args.point = peer_pub + MLKEM768_CT_BYTES;
         Curve25519V.x25519_args.out = k_cl;
@@ -4122,20 +4087,14 @@ proto_bool ssh_pubkey_verify(uint8_t i, const char *pk_algo, const uint8_t *blob
     proto_bool sig_ok = PROTO_FALSE;
     if (is_ed)
     {
-        Ed25519V.verify_args.pub = ed_pub.buf;
-        Ed25519V.verify_args.msg = signed_data;
-        Ed25519V.verify_args.msg_len = signed_len;
-        Ed25519V.verify_args.sig = sig;
-        Ed25519.verify(work);
-        sig_ok = sig_len == 64 && Ed25519V.ok;
+        proto_bool ed25519_ok = Ed25519.verify(work, ed_pub.buf, signed_data, signed_len, sig);
+        sig_ok = sig_len == 64 && ed25519_ok;
     }
     else if (is_ecdsa)
     {
         protocore_span ec_sig = protocore_plaintext_span(PROTOCORE_ECDSA_P256_SIG_LEN, 4);
-        sig_ok =
-            span.ok(ec_sig) && parse_ecdsa_sig(sig, sig_len, ec_sig.buf) &&
-            (EcdsaV.verify_args.pub = ec_pub.buf, EcdsaV.verify_args.msg = signed_data,
-             EcdsaV.verify_args.mlen = signed_len, EcdsaV.verify_args.sig = ec_sig.buf, Ecdsa.verify(work), EcdsaV.ok);
+        sig_ok = span.ok(ec_sig) && parse_ecdsa_sig(sig, sig_len, ec_sig.buf) &&
+                 Ecdsa.verify(work, ec_pub.buf, signed_data, signed_len, ec_sig.buf);
     }
     else
     {
