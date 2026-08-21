@@ -11,6 +11,12 @@
 #
 # GENERATED ONCE from the config headers' own defaults, then maintained here.
 
+# Hardware capabilities a module's gate can name. OFF by default: the host has none of
+# them, and a part that does states it. Declared so a compound gate resolves from a real
+# option rather than from a variable that happens to be undefined.
+option(PROTOCORE_HAS_VENDOR_COREDUMP "" OFF)
+option(PROTOCORE_HAS_VENDOR_OTA "" OFF)
+
 option(PROTOCORE_ENABLE_ACCEPT_THROTTLE "" OFF)
 option(PROTOCORE_ENABLE_AD9238 "" OFF)
 option(PROTOCORE_ENABLE_ADS "" OFF)

@@ -35,12 +35,15 @@ function(protocore_module_target path out)
 endfunction()
 
 function(protocore_add_module path)
-  cmake_parse_arguments(ARG "HEADER_ONLY" "GATE;OPT" "SOURCES;DEPS;PRIVATE_DEPS" ${ARGN})
+  cmake_parse_arguments(ARG "HEADER_ONLY" "OPT" "GATE;SOURCES;DEPS;PRIVATE_DEPS" ${ARGN})
 
   # A gate that is off is the module not existing. Declared here so the module's own directory is
   # the one place that says whether the build has it.
+  # A GATE may be a whole expression, not one flag: six modules are gated on a feature AND a
+  # hardware capability. Parsed as a list and evaluated in parentheses so AND / OR bind as
+  # written.
   if(ARG_GATE)
-    if(NOT ${ARG_GATE})
+    if(NOT (${ARG_GATE}))
       return()
     endif()
   endif()

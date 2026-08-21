@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(services/southbound/sb_modbus
+  GATE PROTOCORE_ENABLE_SOUTHBOUND AND PROTOCORE_ENABLE_MODBUS_MASTER
   SOURCES sb_modbus.c
   DEPS
     services/fieldbus/modbus/modbus

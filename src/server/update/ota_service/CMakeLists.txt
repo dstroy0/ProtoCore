@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(server/update/ota_service
+  GATE PROTOCORE_ENABLE_OTA AND PROTOCORE_HAS_VENDOR_OTA
   SOURCES ota_service.c
   PRIVATE_DEPS
     mmgr/protomem
