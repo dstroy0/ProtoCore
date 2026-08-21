@@ -48,18 +48,12 @@ void test_rfc8410_ed25519_spki(void)
                                              0xBA, 0xC1, 0x67, 0xDC, 0x3B, 0x96, 0xC8, 0x50, 0x86, 0xAA, 0x30,
                                              0xB6, 0xB6, 0xCB, 0x0C, 0x5C, 0x38, 0xAD, 0x70, 0x31, 0x66, 0xE1};
     TEST_ASSERT_EQUAL_UINT(44u, (unsigned)PROTOCORE_TLS13_ED25519_SPKI_LEN);
-    Tls13RpkV.ed25519_spki_args.out = g_out;
-    Tls13RpkV.ed25519_spki_args.cap = sizeof(g_out);
-    Tls13RpkV.ed25519_spki_args.pub = RFC8410_SPKI + 12;
-    Tls13Rpk.ed25519_spki(tls13_rpk_work);
-    TEST_ASSERT_EQUAL_UINT(44u, Tls13RpkV.n);
+    size_t tls13_rpk_n = Tls13Rpk.ed25519_spki(tls13_rpk_work, g_out, sizeof(g_out), RFC8410_SPKI + 12);
+    TEST_ASSERT_EQUAL_UINT(44u, tls13_rpk_n);
     TEST_ASSERT_EQUAL_MEMORY(RFC8410_SPKI, g_out, 44);
 
-    Tls13RpkV.ed25519_spki_args.out = g_out;
-    Tls13RpkV.ed25519_spki_args.cap = 43;
-    Tls13RpkV.ed25519_spki_args.pub = RFC8410_SPKI + 12;
-    Tls13Rpk.ed25519_spki(tls13_rpk_work);
-    TEST_ASSERT_EQUAL_UINT(0u, Tls13RpkV.n);
+    tls13_rpk_n = Tls13Rpk.ed25519_spki(tls13_rpk_work, g_out, 43, RFC8410_SPKI + 12);
+    TEST_ASSERT_EQUAL_UINT(0u, tls13_rpk_n);
 }
 
 // RFC 7250 Figure 1: for certificate_type RawPublicKey the Certificate payload carries the
@@ -73,11 +67,8 @@ void test_rpk_certificate_round_trip(void)
     Ed25519.pubkey(g_work);
 
     uint8_t msg[128];
-    Tls13RpkV.build_certificate_args.out = msg;
-    Tls13RpkV.build_certificate_args.cap = sizeof(msg);
-    Tls13RpkV.build_certificate_args.ed25519_pub = pub;
-    Tls13Rpk.build_certificate(tls13_rpk_work);
-    size_t n = Tls13RpkV.n;
+    size_t tls13_rpk_n = Tls13Rpk.build_certificate(tls13_rpk_work, msg, sizeof(msg), pub);
+    size_t n = tls13_rpk_n;
     TEST_ASSERT_NOT_EQUAL(0u, n);
 
     const uint8_t *cert = NULL;
@@ -91,11 +82,8 @@ void test_rpk_certificate_round_trip(void)
     TEST_ASSERT_EQUAL_UINT(PROTOCORE_TLS13_ED25519_SPKI_LEN, cert_len);
 
     const uint8_t *got = NULL;
-    Tls13RpkV.ed25519_from_spki_args.spki = cert;
-    Tls13RpkV.ed25519_from_spki_args.len = cert_len;
-    Tls13RpkV.ed25519_from_spki_args.pub = &got;
-    Tls13Rpk.ed25519_from_spki(tls13_rpk_work);
-    TEST_ASSERT_TRUE(Tls13RpkV.ok);
+    proto_bool tls13_rpk_ok = Tls13Rpk.ed25519_from_spki(tls13_rpk_work, cert, cert_len, &got);
+    TEST_ASSERT_TRUE(tls13_rpk_ok);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pub, got, 32);
 }
 
@@ -125,11 +113,8 @@ void test_x509_certificate_is_not_read_as_a_raw_public_key(void)
     TEST_ASSERT_EQUAL_UINT8_ARRAY(DER, cert, sizeof(DER));
 
     const uint8_t *got = NULL;
-    Tls13RpkV.ed25519_from_spki_args.spki = cert;
-    Tls13RpkV.ed25519_from_spki_args.len = cert_len;
-    Tls13RpkV.ed25519_from_spki_args.pub = &got;
-    Tls13Rpk.ed25519_from_spki(tls13_rpk_work);
-    TEST_ASSERT_FALSE(Tls13RpkV.ok);
+    proto_bool tls13_rpk_ok = Tls13Rpk.ed25519_from_spki(tls13_rpk_work, cert, cert_len, &got);
+    TEST_ASSERT_FALSE(tls13_rpk_ok);
 }
 
 // A SubjectPublicKeyInfo whose prefix is not id-Ed25519 is refused rather than read past.
@@ -138,30 +123,18 @@ void test_spki_reader_refuses_a_wrong_prefix(void)
     uint8_t spki[PROTOCORE_TLS13_ED25519_SPKI_LEN];
     uint8_t pub[32];
     memset(pub, 0x5a, sizeof(pub));
-    Tls13RpkV.ed25519_spki_args.out = spki;
-    Tls13RpkV.ed25519_spki_args.cap = sizeof(spki);
-    Tls13RpkV.ed25519_spki_args.pub = pub;
-    Tls13Rpk.ed25519_spki(tls13_rpk_work);
-    TEST_ASSERT_NOT_EQUAL(0u, Tls13RpkV.n);
+    size_t tls13_rpk_n = Tls13Rpk.ed25519_spki(tls13_rpk_work, spki, sizeof(spki), pub);
+    TEST_ASSERT_NOT_EQUAL(0u, tls13_rpk_n);
 
     const uint8_t *got = NULL;
-    Tls13RpkV.ed25519_from_spki_args.spki = spki;
-    Tls13RpkV.ed25519_from_spki_args.len = sizeof(spki);
-    Tls13RpkV.ed25519_from_spki_args.pub = &got;
-    Tls13Rpk.ed25519_from_spki(tls13_rpk_work);
-    TEST_ASSERT_TRUE(Tls13RpkV.ok);
+    proto_bool tls13_rpk_ok = Tls13Rpk.ed25519_from_spki(tls13_rpk_work, spki, sizeof(spki), &got);
+    TEST_ASSERT_TRUE(tls13_rpk_ok);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pub, got, 32);
 
     spki[6] ^= 0x01; // the OID body
-    Tls13RpkV.ed25519_from_spki_args.spki = spki;
-    Tls13RpkV.ed25519_from_spki_args.len = sizeof(spki);
-    Tls13RpkV.ed25519_from_spki_args.pub = &got;
-    Tls13Rpk.ed25519_from_spki(tls13_rpk_work);
-    TEST_ASSERT_FALSE(Tls13RpkV.ok);
+    tls13_rpk_ok = Tls13Rpk.ed25519_from_spki(tls13_rpk_work, spki, sizeof(spki), &got);
+    TEST_ASSERT_FALSE(tls13_rpk_ok);
     spki[6] ^= 0x01;
-    Tls13RpkV.ed25519_from_spki_args.spki = spki;
-    Tls13RpkV.ed25519_from_spki_args.len = sizeof(spki) - 1;
-    Tls13RpkV.ed25519_from_spki_args.pub = &got;
-    Tls13Rpk.ed25519_from_spki(tls13_rpk_work);
-    TEST_ASSERT_FALSE(Tls13RpkV.ok);
+    tls13_rpk_ok = Tls13Rpk.ed25519_from_spki(tls13_rpk_work, spki, sizeof(spki) - 1, &got);
+    TEST_ASSERT_FALSE(tls13_rpk_ok);
 }

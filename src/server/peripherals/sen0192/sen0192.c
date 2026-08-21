@@ -6,14 +6,10 @@
  * @brief SEN0192 microwave motion sensor - debounced presence tracker + GPIO binding. See sen0192.h.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_SEN0192
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "server/peripherals/sen0192/sen0192.h"
-
-PROTOCORE_BEGIN_DECLS
 
 #if !PROTOCORE_HAS_GPIO
 #error                                                                                                                 \
@@ -49,18 +45,9 @@ uint8_t *protocore_sen0192_span(void)
     return s_own.span;
 }
 
-void protocore_sen0192_motion_events(uint8_t *restrict work);
-void protocore_sen0192_motion_init(uint8_t *restrict work);
-void protocore_sen0192_motion_present(uint8_t *restrict work);
-void protocore_sen0192_motion_tick(uint8_t *restrict work);
-void protocore_sen0192_motion_update(uint8_t *restrict work);
-
-void protocore_sen0192_motion_init(uint8_t *restrict work)
+void protocore_sen0192_motion_init(uint8_t *restrict work, Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high)
 {
     (void)work;
-    Sen0192Motion *m = Sen0192V.motion_init_args.m;
-    uint32_t hold_ms = Sen0192V.motion_init_args.hold_ms;
-    proto_bool active_high = Sen0192V.motion_init_args.active_high;
 
     m->present = PROTO_FALSE;
     m->seeded = PROTO_FALSE;
@@ -70,12 +57,10 @@ void protocore_sen0192_motion_init(uint8_t *restrict work)
     m->motion_events = 0;
 }
 
-void protocore_sen0192_motion_update(uint8_t *restrict work)
+proto_bool protocore_sen0192_motion_update(uint8_t *restrict work, Sen0192Motion *m, proto_bool level_high,
+                                           uint32_t now_ms)
 {
-    Sen0192Motion *m = Sen0192V.motion_update_args.m;
-    proto_bool level_high = Sen0192V.motion_update_args.level_high;
-    uint32_t now_ms = Sen0192V.motion_update_args.now_ms;
-
+    proto_bool ok = PROTO_FALSE;
     proto_bool active = (level_high == m->active_high);
     if (active)
     {
@@ -85,54 +70,46 @@ void protocore_sen0192_motion_update(uint8_t *restrict work)
         {
             m->present = PROTO_TRUE;
             m->motion_events++;
-            Sen0192V.ok = PROTO_TRUE; // clear -> present edge
-            return;
+            ok = PROTO_TRUE; // clear -> present edge
+            return ok;
         }
-        Sen0192V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
-    Sen0192V.motion_tick_args.m = m;
-    Sen0192V.motion_tick_args.now_ms = now_ms;
-    protocore_sen0192_motion_tick(work); // inactive sample: presence may age out
-    Sen0192V.ok = PROTO_FALSE;
+    proto_bool sen0192_ok = Sen0192.motion_tick(work, m, now_ms); // inactive sample: presence may age out
+    sen0192_ok = PROTO_FALSE;
+    return ok;
 }
 
-void protocore_sen0192_motion_tick(uint8_t *restrict work)
+proto_bool protocore_sen0192_motion_tick(uint8_t *restrict work, Sen0192Motion *m, uint32_t now_ms)
 {
     (void)work;
-    Sen0192Motion *m = Sen0192V.motion_tick_args.m;
-    uint32_t now_ms = Sen0192V.motion_tick_args.now_ms;
 
     if (m->present && m->seeded && (uint32_t)(now_ms - m->last_active_ms) > m->hold_ms)
     {
         m->present = PROTO_FALSE;
     }
-    Sen0192V.ok = m->present;
+    return m->present;
 }
 
-void protocore_sen0192_motion_present(uint8_t *restrict work)
+proto_bool protocore_sen0192_motion_present(uint8_t *restrict work, const Sen0192Motion *m)
 {
     (void)work;
-    const Sen0192Motion *m = Sen0192V.motion_present_args.m;
 
-    Sen0192V.ok = m->present;
+    return m->present;
 }
 
-void protocore_sen0192_motion_events(uint8_t *restrict work)
+uint32_t protocore_sen0192_motion_events(uint8_t *restrict work, const Sen0192Motion *m)
 {
     (void)work;
-    const Sen0192Motion *m = Sen0192V.motion_events_args.m;
 
-    Sen0192V.n = m->motion_events;
+    return m->motion_events;
 }
 
-void protocore_sen0192_motion_active_age_ms(uint8_t *restrict work)
+uint32_t protocore_sen0192_motion_active_age_ms(uint8_t *restrict work, const Sen0192Motion *m, uint32_t now_ms)
 {
     (void)work;
-    const Sen0192Motion *m = Sen0192V.motion_active_age_ms_args.m;
-    uint32_t now_ms = Sen0192V.motion_active_age_ms_args.now_ms;
 
-    Sen0192V.ms = m->seeded ? (uint32_t)(now_ms - m->last_active_ms) : 0;
+    return m->seeded ? (uint32_t)(now_ms - m->last_active_ms) : 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -174,51 +151,35 @@ static int dev_pin(uint8_t *restrict work)
     return SEN0192_CTX(work)->begun ? SEN0192_CTX(work)->pin : -1;
 }
 
-void protocore_sen0192_begin(uint8_t *restrict work)
+proto_bool protocore_sen0192_begin(uint8_t *restrict work)
 {
     SEN0192_CTX(work)->pin = PROTOCORE_SEN0192_PIN;
     SEN0192_CTX(work)->begun = PROTO_TRUE;
     protocore_platform_gpio_mode((uint8_t)(SEN0192_CTX(work)->pin), PROTOCORE_GPIO_IN);
-    Sen0192V.motion_init_args.m = &SEN0192_CTX(work)->motion;
-    Sen0192V.motion_init_args.hold_ms = PROTOCORE_SEN0192_HOLD_MS;
-    Sen0192V.motion_init_args.active_high = PROTOCORE_SEN0192_ACTIVE_HIGH != 0;
-    protocore_sen0192_motion_init(work);
-    Sen0192V.ok = PROTO_TRUE;
+    Sen0192.motion_init(work, &SEN0192_CTX(work)->motion, PROTOCORE_SEN0192_HOLD_MS,
+                        PROTOCORE_SEN0192_ACTIVE_HIGH != 0);
+    return PROTO_TRUE;
 }
 
-void protocore_sen0192_poll(uint8_t *restrict work)
+proto_bool protocore_sen0192_poll(uint8_t *restrict work)
 {
     const int pin = dev_pin(work);
     if (pin < 0)
     {
-        Sen0192V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     proto_bool level = protocore_platform_gpio_read((uint8_t)(pin)) != 0;
-    Sen0192V.motion_update_args.m = &SEN0192_CTX(work)->motion;
-    Sen0192V.motion_update_args.level_high = level;
-    Sen0192V.motion_update_args.now_ms = Clock.ms;
-    protocore_sen0192_motion_update(work);
+    Sen0192.motion_update(work, &SEN0192_CTX(work)->motion, level, Clock.ms);
+    return PROTO_FALSE;
 }
 
 void protocore_sen0192_present(uint8_t *restrict work)
 {
-    Sen0192V.motion_tick_args.m = &SEN0192_CTX(work)->motion;
-    Sen0192V.motion_tick_args.now_ms = Clock.ms;
-    protocore_sen0192_motion_tick(work); // age presence out even between poll()s
-    Sen0192V.motion_present_args.m = &SEN0192_CTX(work)->motion;
-    protocore_sen0192_motion_present(work);
+    Sen0192.motion_tick(work, &SEN0192_CTX(work)->motion, Clock.ms); // age presence out even between poll()s
+    Sen0192.motion_present(work, &SEN0192_CTX(work)->motion);
 }
 
 void protocore_sen0192_motion_count(uint8_t *restrict work)
 {
-    Sen0192V.motion_events_args.m = &SEN0192_CTX(work)->motion;
-    protocore_sen0192_motion_events(work);
+    Sen0192.motion_events(work, &SEN0192_CTX(work)->motion);
 }
-
-/** @brief The operands and the outcome. */
-Sen0192Vars Sen0192V;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_SEN0192

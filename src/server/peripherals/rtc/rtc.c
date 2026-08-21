@@ -9,9 +9,7 @@
  * for any date and needs no lookup tables or stdlib time functions.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_RTC
+#include "protocore_config.h" // the entry point: the widths
 
 #if !PROTOCORE_HAS_BUS
 #error                                                                                                                 \
@@ -22,8 +20,6 @@
 #include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
 #include "server/peripherals/i2c/i2c.h"
 #include "server/peripherals/rtc/rtc.h"
-
-PROTOCORE_BEGIN_DECLS
 
 static int bcd2int(uint8_t b)
 {
@@ -84,20 +80,14 @@ uint8_t *protocore_rtc_span(void)
     return s_own.span;
 }
 
-void protocore_rtc_epoch_to_regs(uint8_t *restrict work);
-void protocore_rtc_read_epoch(uint8_t *restrict work);
-void protocore_rtc_regs_to_epoch(uint8_t *restrict work);
-
-void protocore_rtc_regs_to_epoch(uint8_t *restrict work)
+proto_bool protocore_rtc_regs_to_epoch(uint8_t *restrict work, const uint8_t *regs, uint32_t *epoch)
 {
     (void)work;
-    const uint8_t *r = RtcV.regs_to_epoch_args.regs;
-    uint32_t *epoch = RtcV.regs_to_epoch_args.epoch;
+    const uint8_t *r = regs;
 
     if (!r || !epoch)
     {
-        RtcV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     int sec = bcd2int(r[0] & 0x7F); // mask the DS1307 clock-halt bit
     int min = bcd2int(r[1] & 0x7F);
@@ -107,8 +97,7 @@ void protocore_rtc_regs_to_epoch(uint8_t *restrict work)
         int h12 = bcd2int(r[2] & 0x1F);
         if (h12 < 1 || h12 > 12)
         {
-            RtcV.ok = PROTO_FALSE;
-            return;
+            return PROTO_FALSE;
         }
         proto_bool pm = (r[2] & 0x20) != 0;
         hour = (h12 % 12) + (pm ? 12 : 0);
@@ -122,8 +111,7 @@ void protocore_rtc_regs_to_epoch(uint8_t *restrict work)
     int year = 2000 + bcd2int(r[6]);
     if (sec > 59 || min > 59 || hour > 23 || date < 1 || date > 31 || month < 1 || month > 12)
     {
-        RtcV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     // int64: days*86400 exceeds a 32-bit long (Windows host and ESP32 both) past ~2038.
     int64_t t = (int64_t)days_from_civil(year, month, date) * 86400 + hour * 3600 + min * 60 + sec;
@@ -131,18 +119,16 @@ void protocore_rtc_regs_to_epoch(uint8_t *restrict work)
     // is always >= 2000, so days_from_civil (and t) is always positive;
     // t > 0xFFFFFFFF (year rollover past 2106) is real and tested below
     {
-        RtcV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     *epoch = (uint32_t)t;
-    RtcV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_rtc_epoch_to_regs(uint8_t *restrict work)
+void protocore_rtc_epoch_to_regs(uint8_t *restrict work, uint32_t epoch, uint8_t *regs)
 {
     (void)work;
-    uint32_t epoch = RtcV.epoch_to_regs_args.epoch;
-    uint8_t *r = RtcV.epoch_to_regs_args.regs;
+    uint8_t *r = regs;
 
     long days = (long)(epoch / 86400u);
     int rem = (int)(epoch % 86400u);
@@ -189,51 +175,35 @@ static_assert(RTC_OFF_CTX % _Alignof(RtcCtx) == 0,
 // The region, at its offset in the caller's borrow.
 #define RTC_CTX(w) ((RtcCtx *)(void *)((w) + RTC_OFF_CTX))
 
-void protocore_rtc_begin(uint8_t *restrict work)
+proto_bool protocore_rtc_begin(uint8_t *restrict work)
 {
     (void)work;
 
     protocore_i2c_begin();
-    RtcV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_rtc_read_epoch(uint8_t *restrict work)
+uint32_t protocore_rtc_read_epoch(uint8_t *restrict work)
 {
-
     uint8_t reg = 0x00; // register 0: seconds
     if (!protocore_i2c_write_read(PROTOCORE_RTC_I2C_ADDR, &reg, 1, RTC_CTX(work)->frame, RTC_REG_COUNT))
     {
-        RtcV.epoch = 0;
-        return;
+        return 0;
     }
     uint32_t e = 0;
-    RtcV.regs_to_epoch_args.regs = RTC_CTX(work)->frame;
-    RtcV.regs_to_epoch_args.epoch = &e;
-    protocore_rtc_regs_to_epoch(work);
-    RtcV.epoch = RtcV.ok ? e : 0;
+    proto_bool rtc_ok = Rtc.regs_to_epoch(work, RTC_CTX(work)->frame, &e);
+    return rtc_ok ? e : 0;
 }
 
-void protocore_rtc_set_epoch(uint8_t *restrict work)
+proto_bool protocore_rtc_set_epoch(uint8_t *restrict work, uint32_t epoch)
 {
-    uint32_t epoch = RtcV.set_epoch_args.epoch;
 
     RTC_CTX(work)->frame[0] = 0x00; // point at register 0, then the seven registers follow it
-    RtcV.epoch_to_regs_args.epoch = epoch;
-    RtcV.epoch_to_regs_args.regs = &RTC_CTX(work)->frame[1];
-    protocore_rtc_epoch_to_regs(work);
-    RtcV.ok = protocore_i2c_write(PROTOCORE_RTC_I2C_ADDR, RTC_CTX(work)->frame, sizeof(RTC_CTX(work)->frame));
+    Rtc.epoch_to_regs(work, epoch, &RTC_CTX(work)->frame[1]);
+    return protocore_i2c_write(PROTOCORE_RTC_I2C_ADDR, RTC_CTX(work)->frame, sizeof(RTC_CTX(work)->frame));
 }
 
 void protocore_rtc_time_source(uint8_t *restrict work)
 {
-    (void)work;
-
-    protocore_rtc_read_epoch(work);
+    Rtc.read_epoch(work);
 }
-
-/** @brief The operands and the outcome. */
-RtcVars RtcV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_RTC

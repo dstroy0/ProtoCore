@@ -3623,7 +3623,7 @@ def dropped_declarations(original, converted, spec):
     return sorted(n for n in was - now if n not in keep)
 
 
-def undecodable_operands(spec):
+def undecodable_operands(spec, texts=None):
     """Reads of <X>V in the module's own .c that unwork_source cannot turn into a parameter.
 
     It rewrites `<X>V.<entry>_args.<member>` to `<member>` and a write of a result member to a
@@ -3634,7 +3634,13 @@ def undecodable_operands(spec):
     p = os.path.join(R, spec["source"].replace("/", os.sep))
     if not objv or not os.path.exists(p):
         return []
-    text = io.open(p, encoding="utf-8", errors="replace").read()
+    # The text AFTER the call-site rewrite, where there is one. Read from disk instead, this
+    # guard sees staging the rewriter is about to fold: json_kv_str stages key_args and put_str_args
+    # and calls both entries, which is a call site, not an undecodable operand. 28 of 31 refusals
+    # were that.
+    text = (texts or {}).get(p)
+    if text is None:
+        text = io.open(p, encoding="utf-8", errors="replace").read()
     mask = code_mask(text)
     results = {e.get("result") for e in spec["entries"] if e.get("result")}
     entries = {e["entry"] for e in spec["entries"]}
@@ -4160,7 +4166,7 @@ def main():
             return 1
         original = io.open(hp, encoding="utf-8").read()
         header = gen_header_ns(spec, original)
-        stuck = undecodable_operands(spec)
+        stuck = undecodable_operands(spec, texts)
         if stuck and not FORCE:
             names = sorted({n for _ln, n in stuck})
             print(

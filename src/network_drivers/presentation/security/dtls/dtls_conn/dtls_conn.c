@@ -499,11 +499,8 @@ static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_
         Ed25519V.pubkey_args.seed = c->cfg.ed25519_seed;
         Ed25519V.pubkey_args.pub = ed_pub;
         Ed25519.pubkey(c->sign_work);
-        Tls13RpkV.build_certificate_args.out = c->msgbuf;
-        Tls13RpkV.build_certificate_args.cap = sizeof(c->msgbuf);
-        Tls13RpkV.build_certificate_args.ed25519_pub = ed_pub;
-        Tls13Rpk.build_certificate(work);
-        n = Tls13RpkV.n;
+        size_t tls13_rpk_n = Tls13Rpk.build_certificate(work, c->msgbuf, sizeof(c->msgbuf), ed_pub);
+        n = tls13_rpk_n;
     }
     else
 #endif

@@ -6,16 +6,12 @@
  * @brief QUIC transport parameters codec (see protocore_quic_tp.h).
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_HTTP3
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/http/http3/quic_tp/quic_tp.h"
 
 #include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 // --- the entries -----------------------------------------------------------
@@ -23,12 +19,9 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_quic_tp_defaults(uint8_t *restrict work);
-
-void protocore_quic_tp_defaults(uint8_t *restrict work)
+void protocore_quic_tp_defaults(uint8_t *restrict work, QuicTransportParams *tp)
 {
     (void)work;
-    QuicTransportParams *tp = QuicTpV.defaults_args.tp;
 
     mem.set(tp, 0, sizeof(*tp));
     tp->max_udp_payload_size = 65527;
@@ -92,13 +85,8 @@ static proto_bool put_varint_param(uint8_t *restrict work, uint8_t *out, size_t 
     return put_param(work, out, cap, p, id, v, vlen);
 }
 
-void protocore_quic_tp_encode(uint8_t *restrict work)
+size_t protocore_quic_tp_encode(uint8_t *restrict work, const QuicTransportParams *tp, uint8_t *out, size_t cap)
 {
-    (void)work;
-    const QuicTransportParams *tp = QuicTpV.encode_args.tp;
-    uint8_t *out = QuicTpV.encode_args.out;
-    size_t cap = QuicTpV.encode_args.cap;
-
     size_t p = 0;
     proto_bool ok = PROTO_TRUE;
     if (tp->has_original_dcid)
@@ -130,7 +118,7 @@ void protocore_quic_tp_encode(uint8_t *restrict work)
         ok = ok && put_param(work, out, cap, &p, QUIC_TP_DISABLE_ACTIVE_MIGRATION, NULL, 0);
     }
 
-    QuicTpV.n = ok ? p : 0;
+    return ok ? p : 0;
 }
 
 // Decode the varint that IS the whole value of a varint-valued parameter (must consume exactly len).
@@ -253,14 +241,10 @@ static proto_bool quic_tp_apply(uint8_t *restrict work, uint64_t id, const uint8
     return PROTO_TRUE; // unknown / GREASE: skip
 }
 
-void protocore_quic_tp_parse(uint8_t *restrict work)
+proto_bool protocore_quic_tp_parse(uint8_t *restrict work, const uint8_t *buf, size_t len, QuicTransportParams *tp)
 {
-    const uint8_t *buf = QuicTpV.parse_args.buf;
-    size_t len = QuicTpV.parse_args.len;
-    QuicTransportParams *tp = QuicTpV.parse_args.tp;
-
-    QuicTpV.defaults_args.tp = tp;
-    protocore_quic_tp_defaults(work);
+    proto_bool ok = PROTO_FALSE;
+    QuicTp.defaults(work, tp);
     uint32_t seen = 0; // dup-guard bitmask over the known IDs (all < 32)
 
     size_t off = 0;
@@ -276,8 +260,7 @@ void protocore_quic_tp_parse(uint8_t *restrict work)
         QuicVarint.decode(work);
         if (!QuicVarintV.ok)
         {
-            QuicTpV.ok = PROTO_FALSE;
-            return;
+            return PROTO_FALSE;
         }
         off += c;
         QuicVarintV.decode_args.in = buf + off;
@@ -287,14 +270,12 @@ void protocore_quic_tp_parse(uint8_t *restrict work)
         QuicVarint.decode(work);
         if (!QuicVarintV.ok)
         {
-            QuicTpV.ok = PROTO_FALSE;
-            return;
+            return PROTO_FALSE;
         }
         off += c;
         if (off + vlen > len)
         {
-            QuicTpV.ok = PROTO_FALSE;
-            return;
+            return PROTO_FALSE;
         }
         const uint8_t *val = buf + off;
         off += vlen;
@@ -304,24 +285,16 @@ void protocore_quic_tp_parse(uint8_t *restrict work)
             uint32_t bit = 1u << id;
             if (seen & bit)
             {
-                QuicTpV.ok = PROTO_FALSE; // a known parameter must not appear twice
-                return;
+                ok = PROTO_FALSE; // a known parameter must not appear twice
+                return ok;
             }
             seen |= bit;
         }
 
         if (!quic_tp_apply(work, id, val, vlen, tp))
         {
-            QuicTpV.ok = PROTO_FALSE;
-            return;
+            return PROTO_FALSE;
         }
     }
-    QuicTpV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
-
-/** @brief The operands and the outcome. */
-QuicTpVars QuicTpV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_HTTP3

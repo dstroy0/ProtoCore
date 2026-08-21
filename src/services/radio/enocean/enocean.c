@@ -9,16 +9,12 @@
  * CRC-8 is polynomial 0x07, MSB-first, init 0x00 (the ESP3 u8CRC8Table generator).
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_ENOCEAN
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/protomem/protomem.h"
 #include "services/radio/enocean/enocean.h"
 
 #include "shared/crc/crc.h" // PROTOCORE_CRC8_SMBUS
-
-PROTOCORE_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 // --- the entries -----------------------------------------------------------
@@ -26,73 +22,59 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_enocean_esp3_crc8(uint8_t *restrict work);
-
-void protocore_enocean_esp3_crc8(uint8_t *restrict work)
+uint8_t protocore_enocean_esp3_crc8(uint8_t *restrict work, const uint8_t *buf, uint16_t len)
 {
-    (void)work;
-    const uint8_t *buf = EnoceanV.esp3_crc8_args.buf;
-    uint16_t len = EnoceanV.esp3_crc8_args.len;
-
     // The ESP3 CRC-8 (the u8CRC8Table generator) is the cataloge's CRC-8/SMBUS: poly 0x07, MSB-first, init 0,
     // no final XOR.
     CrcV.args.params = &PROTOCORE_CRC8_SMBUS;
     CrcV.args.data = buf;
     CrcV.args.len = len;
     Crc.compute(work);
-    EnoceanV.value = (uint8_t)CrcV.value;
+    return (uint8_t)CrcV.value;
 }
 
-void protocore_enocean_esp3_parse(uint8_t *restrict work)
+int protocore_enocean_esp3_parse(uint8_t *restrict work, const uint8_t *raw, uint16_t len, protocore_esp3_packet *out)
 {
-    const uint8_t *raw = EnoceanV.esp3_parse_args.raw;
-    uint16_t len = EnoceanV.esp3_parse_args.len;
-    protocore_esp3_packet *out = EnoceanV.esp3_parse_args.out;
-
+    int n = 0;
     if (!raw || len < 1)
     {
-        EnoceanV.n = 0;
-        return;
+        return 0;
     }
     if (raw[0] != ESP3_SYNC)
     {
-        EnoceanV.n = -1; // not a telegram start
-        return;
+        n = -1; // not a telegram start
+        return n;
     }
     if (len < 6)
     {
-        EnoceanV.n = 0; // need sync + 4-byte header + CRC8H
-        return;
+        n = 0; // need sync + 4-byte header + CRC8H
+        return n;
     }
     uint16_t data_len = (uint16_t)((raw[1] << 8) | raw[2]);
     uint8_t opt_len = raw[3];
     uint8_t type = raw[4];
     if (data_len > PROTOCORE_ENOCEAN_MAX_DATA)
     {
-        EnoceanV.n = -1; // implausible length -> resynchronize
-        return;
+        n = -1; // implausible length -> resynchronize
+        return n;
     }
-    EnoceanV.esp3_crc8_args.buf = &raw[1];
-    EnoceanV.esp3_crc8_args.len = 4;
-    protocore_enocean_esp3_crc8(work);
-    if (EnoceanV.value != raw[5])
+    uint8_t enocean_value = Enocean.esp3_crc8(work, &raw[1], 4);
+    if (enocean_value != raw[5])
     {
-        EnoceanV.n = -1; // header CRC mismatch
-        return;
+        n = -1; // header CRC mismatch
+        return n;
     }
     uint32_t total = 6u + data_len + opt_len + 1u;
     if (len < total)
     {
-        EnoceanV.n = 0; // wait for the rest of the telegram
-        return;
+        n = 0; // wait for the rest of the telegram
+        return n;
     }
-    EnoceanV.esp3_crc8_args.buf = &raw[6];
-    EnoceanV.esp3_crc8_args.len = (uint16_t)(data_len + opt_len);
-    protocore_enocean_esp3_crc8(work);
-    if (EnoceanV.value != raw[6 + data_len + opt_len])
+    enocean_value = Enocean.esp3_crc8(work, &raw[6], (uint16_t)(data_len + opt_len));
+    if (enocean_value != raw[6 + data_len + opt_len])
     {
-        EnoceanV.n = -1; // data CRC mismatch
-        return;
+        n = -1; // data CRC mismatch
+        return n;
     }
     if (out)
     {
@@ -102,39 +84,29 @@ void protocore_enocean_esp3_parse(uint8_t *restrict work)
         out->opt = &raw[6 + data_len];
         out->opt_len = opt_len;
     }
-    EnoceanV.n = (int)total;
+    return (int)total;
 }
 
-void protocore_enocean_esp3_build(uint8_t *restrict work)
+uint16_t protocore_enocean_esp3_build(uint8_t *restrict work, protocore_esp3_type type, const uint8_t *data,
+                                      uint16_t data_len, const uint8_t *opt, uint8_t opt_len, uint8_t *out,
+                                      uint16_t cap)
 {
-    protocore_esp3_type type = EnoceanV.esp3_build_args.type;
-    const uint8_t *data = EnoceanV.esp3_build_args.data;
-    uint16_t data_len = EnoceanV.esp3_build_args.data_len;
-    const uint8_t *opt = EnoceanV.esp3_build_args.opt;
-    uint8_t opt_len = EnoceanV.esp3_build_args.opt_len;
-    uint8_t *out = EnoceanV.esp3_build_args.out;
-    uint16_t cap = EnoceanV.esp3_build_args.cap;
-
     if (!out || data_len > PROTOCORE_ENOCEAN_MAX_DATA)
     {
-        EnoceanV.u16 = 0;
-        return;
+        return 0;
     }
     uint32_t total = 6u + data_len + opt_len + 1u;
     if (total > cap)
     {
-        EnoceanV.u16 = 0;
-        return;
+        return 0;
     }
     out[0] = ESP3_SYNC;
     out[1] = (uint8_t)(data_len >> 8);
     out[2] = (uint8_t)(data_len & 0xFF);
     out[3] = opt_len;
     out[4] = (uint8_t)type;
-    EnoceanV.esp3_crc8_args.buf = &out[1];
-    EnoceanV.esp3_crc8_args.len = 4;
-    protocore_enocean_esp3_crc8(work);
-    out[5] = EnoceanV.value;
+    uint8_t enocean_value = Enocean.esp3_crc8(work, &out[1], 4);
+    out[5] = enocean_value;
     for (uint16_t i = 0; i < data_len; i++)
     {
         out[6 + i] = data[i];
@@ -143,24 +115,18 @@ void protocore_enocean_esp3_build(uint8_t *restrict work)
     {
         out[6 + data_len + i] = opt[i];
     }
-    EnoceanV.esp3_crc8_args.buf = &out[6];
-    EnoceanV.esp3_crc8_args.len = (uint16_t)(data_len + opt_len);
-    protocore_enocean_esp3_crc8(work);
-    out[6 + data_len + opt_len] = EnoceanV.value;
-    EnoceanV.u16 = (uint16_t)total;
+    enocean_value = Enocean.esp3_crc8(work, &out[6], (uint16_t)(data_len + opt_len));
+    out[6 + data_len + opt_len] = enocean_value;
+    return (uint16_t)total;
 }
 
-void protocore_enocean_erp1_parse(uint8_t *restrict work)
+proto_bool protocore_enocean_erp1_parse(uint8_t *restrict work, const uint8_t *data, uint16_t len, protocore_erp1 *out)
 {
     (void)work;
-    const uint8_t *data = EnoceanV.erp1_parse_args.data;
-    uint16_t len = EnoceanV.erp1_parse_args.len;
-    protocore_erp1 *out = EnoceanV.erp1_parse_args.out;
 
     if (!data || !out || len < 6) // RORG(1) + sender id(4) + status(1)
     {
-        EnoceanV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     out->rorg = data[0];
     out->payload = (len > 6) ? data + 1 : NULL;
@@ -169,30 +135,22 @@ void protocore_enocean_erp1_parse(uint8_t *restrict work)
     out->sender_id =
         ((uint32_t)id[0] << 24) | ((uint32_t)id[1] << 16) | ((uint32_t)id[2] << 8) | (uint32_t)id[3]; // big-endian
     out->status = data[len - 1];
-    EnoceanV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_enocean_erp1_build(uint8_t *restrict work)
+uint16_t protocore_enocean_erp1_build(uint8_t *restrict work, uint8_t *out, uint16_t cap, uint8_t rorg,
+                                      const uint8_t *payload, uint8_t payload_len, uint32_t sender_id, uint8_t status)
 {
     (void)work;
-    uint8_t *out = EnoceanV.erp1_build_args.out;
-    uint16_t cap = EnoceanV.erp1_build_args.cap;
-    uint8_t rorg = EnoceanV.erp1_build_args.rorg;
-    const uint8_t *payload = EnoceanV.erp1_build_args.payload;
-    uint8_t payload_len = EnoceanV.erp1_build_args.payload_len;
-    uint32_t sender_id = EnoceanV.erp1_build_args.sender_id;
-    uint8_t status = EnoceanV.erp1_build_args.status;
 
     if (!out || (payload_len && !payload))
     {
-        EnoceanV.u16 = 0;
-        return;
+        return 0;
     }
     uint16_t total = (uint16_t)(1 + payload_len + 4 + 1); // RORG + payload + sender id + status
     if (total > cap)
     {
-        EnoceanV.u16 = 0;
-        return;
+        return 0;
     }
     uint16_t p = 0;
     out[p++] = rorg;
@@ -206,12 +164,5 @@ void protocore_enocean_erp1_build(uint8_t *restrict work)
     out[p++] = (uint8_t)(sender_id >> 8);
     out[p++] = (uint8_t)sender_id;
     out[p++] = status;
-    EnoceanV.u16 = p;
+    return p;
 }
-
-/** @brief The operands and the outcome. */
-EnoceanVars EnoceanV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_ENOCEAN

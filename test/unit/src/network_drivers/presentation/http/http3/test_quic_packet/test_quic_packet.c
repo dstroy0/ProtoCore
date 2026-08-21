@@ -54,14 +54,10 @@ void test_rfc9001_published_headers(void)
 
     // A.2 client Initial: 0xc3 = long form, Fixed Bit, type 0x00, and 0b11 in the packet-number
     // length bits, which sec 17.2 defines as length - 1, so 4 octets - the RFC says as much.
-    QuicPacketV.is_long_header_args.first = A2_CLIENT_INITIAL[0];
-    QuicPacket.is_long_header(quic_packet_work);
-    TEST_ASSERT_TRUE(QuicPacketV.ok);
-    QuicPacketV.parse_long_header_args.buf = A2_CLIENT_INITIAL;
-    QuicPacketV.parse_long_header_args.len = sizeof(A2_CLIENT_INITIAL);
-    QuicPacketV.parse_long_header_args.out = &h;
-    QuicPacket.parse_long_header(quic_packet_work);
-    TEST_ASSERT_TRUE(QuicPacketV.ok);
+    proto_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, A2_CLIENT_INITIAL[0]);
+    TEST_ASSERT_TRUE(quic_packet_ok);
+    quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, A2_CLIENT_INITIAL, sizeof(A2_CLIENT_INITIAL), &h);
+    TEST_ASSERT_TRUE(quic_packet_ok);
     TEST_ASSERT_EQUAL_HEX8(0xc3, h.first);
     TEST_ASSERT_EQUAL_HEX8(QUIC_LP_INITIAL, h.type);
     TEST_ASSERT_EQUAL_HEX32(QUIC_VERSION_1, h.version);
@@ -72,11 +68,8 @@ void test_rfc9001_published_headers(void)
     TEST_ASSERT_EQUAL_UINT8(4, (h.first & 0x03) + 1);
 
     // A.3 server Initial: no DCID, an 8-octet SCID, and 0b01 giving a 2-octet packet number
-    QuicPacketV.parse_long_header_args.buf = A3_SERVER_INITIAL;
-    QuicPacketV.parse_long_header_args.len = sizeof(A3_SERVER_INITIAL);
-    QuicPacketV.parse_long_header_args.out = &h;
-    QuicPacket.parse_long_header(quic_packet_work);
-    TEST_ASSERT_TRUE(QuicPacketV.ok);
+    quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, A3_SERVER_INITIAL, sizeof(A3_SERVER_INITIAL), &h);
+    TEST_ASSERT_TRUE(quic_packet_ok);
     TEST_ASSERT_EQUAL_HEX8(0xc1, h.first);
     TEST_ASSERT_EQUAL_HEX8(QUIC_LP_INITIAL, h.type);
     TEST_ASSERT_EQUAL_UINT8(0, h.dcid_len);
@@ -86,11 +79,8 @@ void test_rfc9001_published_headers(void)
     TEST_ASSERT_EQUAL_UINT8(2, (h.first & 0x03) + 1);
 
     // A.4 Retry: 0xff carries long packet type 0b11, which Table 5 assigns to Retry
-    QuicPacketV.parse_long_header_args.buf = A4_RETRY;
-    QuicPacketV.parse_long_header_args.len = sizeof(A4_RETRY);
-    QuicPacketV.parse_long_header_args.out = &h;
-    QuicPacket.parse_long_header(quic_packet_work);
-    TEST_ASSERT_TRUE(QuicPacketV.ok);
+    quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, A4_RETRY, sizeof(A4_RETRY), &h);
+    TEST_ASSERT_TRUE(quic_packet_ok);
     TEST_ASSERT_EQUAL_HEX8(QUIC_LP_RETRY, h.type);
     TEST_ASSERT_EQUAL_HEX32(QUIC_VERSION_1, h.version);
     TEST_ASSERT_EQUAL_UINT8(0, h.dcid_len);
@@ -104,30 +94,14 @@ void test_build_reproduces_the_published_headers(void)
     static const uint8_t A2_DCID[8] = {0x83, 0x94, 0xc8, 0xf0, 0x3e, 0x51, 0x57, 0x08};
     static const uint8_t A3_SCID[8] = {0xf0, 0x67, 0xa5, 0x50, 0x2a, 0x42, 0x62, 0xb5};
 
-    QuicPacketV.build_long_header_args.out = g_out;
-    QuicPacketV.build_long_header_args.cap = sizeof(g_out);
-    QuicPacketV.build_long_header_args.type = QUIC_LP_INITIAL;
-    QuicPacketV.build_long_header_args.version = QUIC_VERSION_1;
-    QuicPacketV.build_long_header_args.dcid = A2_DCID;
-    QuicPacketV.build_long_header_args.dcid_len = 8;
-    QuicPacketV.build_long_header_args.scid = NONE;
-    QuicPacketV.build_long_header_args.scid_len = 0;
-    QuicPacketV.build_long_header_args.pn_len = 4;
-    QuicPacket.build_long_header(quic_packet_work);
-    TEST_ASSERT_EQUAL_UINT(15u, QuicPacketV.n);
+    size_t quic_packet_n = QuicPacket.build_long_header(quic_packet_work, g_out, sizeof(g_out), QUIC_LP_INITIAL,
+                                                        QUIC_VERSION_1, A2_DCID, 8, NONE, 0, 4);
+    TEST_ASSERT_EQUAL_UINT(15u, quic_packet_n);
     TEST_ASSERT_EQUAL_MEMORY(A2_CLIENT_INITIAL, g_out, 15);
 
-    QuicPacketV.build_long_header_args.out = g_out;
-    QuicPacketV.build_long_header_args.cap = sizeof(g_out);
-    QuicPacketV.build_long_header_args.type = QUIC_LP_INITIAL;
-    QuicPacketV.build_long_header_args.version = QUIC_VERSION_1;
-    QuicPacketV.build_long_header_args.dcid = NONE;
-    QuicPacketV.build_long_header_args.dcid_len = 0;
-    QuicPacketV.build_long_header_args.scid = A3_SCID;
-    QuicPacketV.build_long_header_args.scid_len = 8;
-    QuicPacketV.build_long_header_args.pn_len = 2;
-    QuicPacket.build_long_header(quic_packet_work);
-    TEST_ASSERT_EQUAL_UINT(15u, QuicPacketV.n);
+    quic_packet_n = QuicPacket.build_long_header(quic_packet_work, g_out, sizeof(g_out), QUIC_LP_INITIAL,
+                                                 QUIC_VERSION_1, NONE, 0, A3_SCID, 8, 2);
+    TEST_ASSERT_EQUAL_UINT(15u, quic_packet_n);
     TEST_ASSERT_EQUAL_MEMORY(A3_SERVER_INITIAL, g_out, 15);
 }
 
@@ -145,24 +119,13 @@ void test_rfc9000_long_packet_types(void)
     for (size_t i = 0; i < 4; i++)
     {
         QuicLongHeader h;
-        QuicPacketV.build_long_header_args.out = g_out;
-        QuicPacketV.build_long_header_args.cap = sizeof(g_out);
-        QuicPacketV.build_long_header_args.type = TYPES[i];
-        QuicPacketV.build_long_header_args.version = QUIC_VERSION_1;
-        QuicPacketV.build_long_header_args.dcid = NONE;
-        QuicPacketV.build_long_header_args.dcid_len = 0;
-        QuicPacketV.build_long_header_args.scid = NONE;
-        QuicPacketV.build_long_header_args.scid_len = 0;
-        QuicPacketV.build_long_header_args.pn_len = 1;
-        QuicPacket.build_long_header(quic_packet_work);
-        size_t n = QuicPacketV.n;
+        size_t quic_packet_n = QuicPacket.build_long_header(quic_packet_work, g_out, sizeof(g_out), TYPES[i],
+                                                            QUIC_VERSION_1, NONE, 0, NONE, 0, 1);
+        size_t n = quic_packet_n;
         TEST_ASSERT_EQUAL_UINT(7u, n);
         TEST_ASSERT_EQUAL_HEX8((uint8_t)(0xC0 | (TYPES[i] << 4)), g_out[0]);
-        QuicPacketV.parse_long_header_args.buf = g_out;
-        QuicPacketV.parse_long_header_args.len = n;
-        QuicPacketV.parse_long_header_args.out = &h;
-        QuicPacket.parse_long_header(quic_packet_work);
-        TEST_ASSERT_TRUE(QuicPacketV.ok);
+        proto_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, g_out, n, &h);
+        TEST_ASSERT_TRUE(quic_packet_ok);
         TEST_ASSERT_EQUAL_HEX8(TYPES[i], h.type);
     }
 }
@@ -176,34 +139,19 @@ void test_rfc9000_fixed_bit_is_required(void)
     uint8_t buf[sizeof(A2_CLIENT_INITIAL)];
     memcpy(buf, A2_CLIENT_INITIAL, sizeof(buf));
     buf[0] &= (uint8_t)~0x40;
-    QuicPacketV.parse_long_header_args.buf = buf;
-    QuicPacketV.parse_long_header_args.len = sizeof(buf);
-    QuicPacketV.parse_long_header_args.out = &h;
-    QuicPacket.parse_long_header(quic_packet_work);
-    TEST_ASSERT_FALSE(QuicPacketV.ok);
+    proto_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, buf, sizeof(buf), &h);
+    TEST_ASSERT_FALSE(quic_packet_ok);
 
     QuicShortHeader s;
     uint8_t sh[2] = {0x42, 0x00};
-    QuicPacketV.parse_short_header_args.buf = sh;
-    QuicPacketV.parse_short_header_args.len = sizeof(sh);
-    QuicPacketV.parse_short_header_args.dcid_len = 0;
-    QuicPacketV.parse_short_header_args.out = &s;
-    QuicPacket.parse_short_header(quic_packet_work);
-    TEST_ASSERT_TRUE(QuicPacketV.ok);
+    quic_packet_ok = QuicPacket.parse_short_header(quic_packet_work, sh, sizeof(sh), 0, &s);
+    TEST_ASSERT_TRUE(quic_packet_ok);
     sh[0] = 0x02; // Fixed Bit clear
-    QuicPacketV.parse_short_header_args.buf = sh;
-    QuicPacketV.parse_short_header_args.len = sizeof(sh);
-    QuicPacketV.parse_short_header_args.dcid_len = 0;
-    QuicPacketV.parse_short_header_args.out = &s;
-    QuicPacket.parse_short_header(quic_packet_work);
-    TEST_ASSERT_FALSE(QuicPacketV.ok);
+    quic_packet_ok = QuicPacket.parse_short_header(quic_packet_work, sh, sizeof(sh), 0, &s);
+    TEST_ASSERT_FALSE(quic_packet_ok);
     sh[0] = 0xC2; // long form, so not a short header at all
-    QuicPacketV.parse_short_header_args.buf = sh;
-    QuicPacketV.parse_short_header_args.len = sizeof(sh);
-    QuicPacketV.parse_short_header_args.dcid_len = 0;
-    QuicPacketV.parse_short_header_args.out = &s;
-    QuicPacket.parse_short_header(quic_packet_work);
-    TEST_ASSERT_FALSE(QuicPacketV.ok);
+    quic_packet_ok = QuicPacket.parse_short_header(quic_packet_work, sh, sizeof(sh), 0, &s);
+    TEST_ASSERT_FALSE(quic_packet_ok);
 }
 
 // RFC 9001 A.5: "unprotected header = 4200bff4" for a short-header packet with an empty Destination
@@ -214,15 +162,10 @@ void test_rfc9001_short_header(void)
 {
     static const uint8_t A5[4] = {0x42, 0x00, 0xbf, 0xf4};
     QuicShortHeader s;
-    QuicPacketV.is_long_header_args.first = A5[0];
-    QuicPacket.is_long_header(quic_packet_work);
-    TEST_ASSERT_FALSE(QuicPacketV.ok);
-    QuicPacketV.parse_short_header_args.buf = A5;
-    QuicPacketV.parse_short_header_args.len = sizeof(A5);
-    QuicPacketV.parse_short_header_args.dcid_len = 0;
-    QuicPacketV.parse_short_header_args.out = &s;
-    QuicPacket.parse_short_header(quic_packet_work);
-    TEST_ASSERT_TRUE(QuicPacketV.ok);
+    proto_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, A5[0]);
+    TEST_ASSERT_FALSE(quic_packet_ok);
+    quic_packet_ok = QuicPacket.parse_short_header(quic_packet_work, A5, sizeof(A5), 0, &s);
+    TEST_ASSERT_TRUE(quic_packet_ok);
     TEST_ASSERT_EQUAL_HEX8(0x42, s.first);
     TEST_ASSERT_EQUAL_UINT8(0, s.spin);
     TEST_ASSERT_EQUAL_UINT8(0, s.key_phase);
@@ -232,12 +175,8 @@ void test_rfc9001_short_header(void)
 
     // the spin and key-phase bits, each read off its own mask (0x20 and 0x04)
     static const uint8_t SPUN[6] = {0x64, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE};
-    QuicPacketV.parse_short_header_args.buf = SPUN;
-    QuicPacketV.parse_short_header_args.len = sizeof(SPUN);
-    QuicPacketV.parse_short_header_args.dcid_len = 4;
-    QuicPacketV.parse_short_header_args.out = &s;
-    QuicPacket.parse_short_header(quic_packet_work);
-    TEST_ASSERT_TRUE(QuicPacketV.ok);
+    quic_packet_ok = QuicPacket.parse_short_header(quic_packet_work, SPUN, sizeof(SPUN), 4, &s);
+    TEST_ASSERT_TRUE(quic_packet_ok);
     TEST_ASSERT_EQUAL_UINT8(1, s.spin);
     TEST_ASSERT_EQUAL_UINT8(1, s.key_phase);
     TEST_ASSERT_EQUAL_UINT8(1, s.pn_len);
@@ -256,37 +195,24 @@ void test_rfc9000_version_negotiation(void)
     static const uint32_t VERSIONS[2] = {QUIC_VERSION_1, 0x1a2a3a4au};
     static const uint8_t WANT[19] = {0xc0, 0x00, 0x00, 0x00, 0x00, 0x02, 0xf0, 0x67, 0x02, 0x83,
                                      0x94, 0x00, 0x00, 0x00, 0x01, 0x1a, 0x2a, 0x3a, 0x4a};
-    QuicPacketV.build_version_negotiation_args.out = g_out;
-    QuicPacketV.build_version_negotiation_args.cap = sizeof(g_out);
-    QuicPacketV.build_version_negotiation_args.dcid = DCID;
-    QuicPacketV.build_version_negotiation_args.dcid_len = 2;
-    QuicPacketV.build_version_negotiation_args.scid = SCID;
-    QuicPacketV.build_version_negotiation_args.scid_len = 2;
-    QuicPacketV.build_version_negotiation_args.versions = VERSIONS;
-    QuicPacketV.build_version_negotiation_args.nversions = 2;
-    QuicPacket.build_version_negotiation(quic_packet_work);
-    size_t n = QuicPacketV.n;
+    size_t quic_packet_n =
+        QuicPacket.build_version_negotiation(quic_packet_work, g_out, sizeof(g_out), DCID, 2, SCID, 2, VERSIONS, 2);
+    size_t n = quic_packet_n;
     TEST_ASSERT_EQUAL_UINT(19u, n);
     TEST_ASSERT_EQUAL_MEMORY(WANT, g_out, 19);
 
     // Version 0 is what marks it, and it is the one long header exempt from the Fixed Bit rule
     QuicLongHeader h;
-    QuicPacketV.parse_long_header_args.buf = g_out;
-    QuicPacketV.parse_long_header_args.len = n;
-    QuicPacketV.parse_long_header_args.out = &h;
-    QuicPacket.parse_long_header(quic_packet_work);
-    TEST_ASSERT_TRUE(QuicPacketV.ok);
+    proto_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, g_out, n, &h);
+    TEST_ASSERT_TRUE(quic_packet_ok);
     TEST_ASSERT_EQUAL_HEX32(0u, h.version);
     TEST_ASSERT_EQUAL_UINT8(2, h.dcid_len);
     TEST_ASSERT_EQUAL_UINT8(2, h.scid_len);
     TEST_ASSERT_EQUAL_UINT(11u, h.hdr_len);
 
     g_out[0] &= (uint8_t)~0x40;
-    QuicPacketV.parse_long_header_args.buf = g_out;
-    QuicPacketV.parse_long_header_args.len = n;
-    QuicPacketV.parse_long_header_args.out = &h;
-    QuicPacket.parse_long_header(quic_packet_work);
-    TEST_ASSERT_TRUE(QuicPacketV.ok);
+    quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, g_out, n, &h);
+    TEST_ASSERT_TRUE(quic_packet_ok);
 }
 
 // RFC 9000 Appendix A.2 worked example: "if an endpoint has received an acknowledgment for packet
@@ -295,58 +221,34 @@ void test_rfc9000_version_negotiation(void)
 // bits are required." and "sending a packet with a number of 0xace8fe uses the 24-bit encoding".
 void test_rfc9000_a2_packet_number_length(void)
 {
-    QuicPacketV.pn_length_args.full_pn = 0xac5c02u;
-    QuicPacketV.pn_length_args.largest_acked = (int64_t)0xabe8b3;
-    QuicPacket.pn_length(quic_packet_work);
-    TEST_ASSERT_EQUAL_UINT8(2, QuicPacketV.u8);
-    QuicPacketV.pn_length_args.full_pn = 0xace8feu;
-    QuicPacketV.pn_length_args.largest_acked = (int64_t)0xabe8b3;
-    QuicPacket.pn_length(quic_packet_work);
-    TEST_ASSERT_EQUAL_UINT8(3, QuicPacketV.u8);
+    uint8_t quic_packet_u8 = QuicPacket.pn_length(quic_packet_work, 0xac5c02u, (int64_t)0xabe8b3);
+    TEST_ASSERT_EQUAL_UINT8(2, quic_packet_u8);
+    quic_packet_u8 = QuicPacket.pn_length(quic_packet_work, 0xace8feu, (int64_t)0xabe8b3);
+    TEST_ASSERT_EQUAL_UINT8(3, quic_packet_u8);
 
     // A.2's encode step is "truncate to the num_bytes least significant bytes", big-endian
-    QuicPacketV.pn_encode_args.out = g_out;
-    QuicPacketV.pn_encode_args.cap = sizeof(g_out);
-    QuicPacketV.pn_encode_args.full_pn = 0xac5c02u;
-    QuicPacketV.pn_encode_args.largest_acked = (int64_t)0xabe8b3;
-    QuicPacket.pn_encode(quic_packet_work);
-    TEST_ASSERT_EQUAL_UINT(2u, QuicPacketV.n);
+    size_t quic_packet_n = QuicPacket.pn_encode(quic_packet_work, g_out, sizeof(g_out), 0xac5c02u, (int64_t)0xabe8b3);
+    TEST_ASSERT_EQUAL_UINT(2u, quic_packet_n);
     TEST_ASSERT_EQUAL_HEX8(0x5c, g_out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x02, g_out[1]);
-    QuicPacketV.pn_encode_args.out = g_out;
-    QuicPacketV.pn_encode_args.cap = sizeof(g_out);
-    QuicPacketV.pn_encode_args.full_pn = 0xace8feu;
-    QuicPacketV.pn_encode_args.largest_acked = (int64_t)0xabe8b3;
-    QuicPacket.pn_encode(quic_packet_work);
-    TEST_ASSERT_EQUAL_UINT(3u, QuicPacketV.n);
+    quic_packet_n = QuicPacket.pn_encode(quic_packet_work, g_out, sizeof(g_out), 0xace8feu, (int64_t)0xabe8b3);
+    TEST_ASSERT_EQUAL_UINT(3u, quic_packet_n);
     TEST_ASSERT_EQUAL_HEX8(0xac, g_out[0]);
     TEST_ASSERT_EQUAL_HEX8(0xe8, g_out[1]);
     TEST_ASSERT_EQUAL_HEX8(0xfe, g_out[2]);
 
     // "if largest_acked is None: num_unacked = full_pn + 1" - packet 0 with nothing acked needs one
     // octet, and the width grows with the count of unacknowledged numbers, not with the value
-    QuicPacketV.pn_length_args.full_pn = 0u;
-    QuicPacketV.pn_length_args.largest_acked = -1;
-    QuicPacket.pn_length(quic_packet_work);
-    TEST_ASSERT_EQUAL_UINT8(1, QuicPacketV.u8);
-    QuicPacketV.pn_length_args.full_pn = 126u;
-    QuicPacketV.pn_length_args.largest_acked = -1;
-    QuicPacket.pn_length(quic_packet_work);
-    TEST_ASSERT_EQUAL_UINT8(1, QuicPacketV.u8); // 2 * 127 = 254 fits in 8 bits
-    QuicPacketV.pn_length_args.full_pn = 128u;
-    QuicPacketV.pn_length_args.largest_acked = -1;
-    QuicPacket.pn_length(quic_packet_work);
-    TEST_ASSERT_EQUAL_UINT8(2, QuicPacketV.u8); // 2 * 129 = 258 does not
-    QuicPacketV.pn_length_args.full_pn = 1u << 24;
-    QuicPacketV.pn_length_args.largest_acked = -1;
-    QuicPacket.pn_length(quic_packet_work);
-    TEST_ASSERT_EQUAL_UINT8(4, QuicPacketV.u8);
-    QuicPacketV.pn_encode_args.out = g_out;
-    QuicPacketV.pn_encode_args.cap = 1;
-    QuicPacketV.pn_encode_args.full_pn = 0xac5c02u;
-    QuicPacketV.pn_encode_args.largest_acked = (int64_t)0xabe8b3;
-    QuicPacket.pn_encode(quic_packet_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicPacketV.n);
+    quic_packet_u8 = QuicPacket.pn_length(quic_packet_work, 0u, -1);
+    TEST_ASSERT_EQUAL_UINT8(1, quic_packet_u8);
+    quic_packet_u8 = QuicPacket.pn_length(quic_packet_work, 126u, -1);
+    TEST_ASSERT_EQUAL_UINT8(1, quic_packet_u8); // 2 * 127 = 254 fits in 8 bits
+    quic_packet_u8 = QuicPacket.pn_length(quic_packet_work, 128u, -1);
+    TEST_ASSERT_EQUAL_UINT8(2, quic_packet_u8); // 2 * 129 = 258 does not
+    quic_packet_u8 = QuicPacket.pn_length(quic_packet_work, 1u << 24, -1);
+    TEST_ASSERT_EQUAL_UINT8(4, quic_packet_u8);
+    quic_packet_n = QuicPacket.pn_encode(quic_packet_work, g_out, 1, 0xac5c02u, (int64_t)0xabe8b3);
+    TEST_ASSERT_EQUAL_UINT(0u, quic_packet_n);
 }
 
 // RFC 9000 Appendix A.3 worked example: "if the highest successfully authenticated packet had a
@@ -354,35 +256,23 @@ void test_rfc9000_a2_packet_number_length(void)
 // 0xa82f9b32."
 void test_rfc9000_a3_packet_number_decode(void)
 {
-    QuicPacketV.pn_decode_args.largest_pn = 0xa82f30eaULL;
-    QuicPacketV.pn_decode_args.truncated_pn = 0x9b32ULL;
-    QuicPacketV.pn_decode_args.pn_nbits = 16;
-    QuicPacket.pn_decode(quic_packet_work);
-    TEST_ASSERT_EQUAL_HEX64(0xa82f9b32ULL, QuicPacketV.u64);
+    uint64_t quic_packet_u64 = QuicPacket.pn_decode(quic_packet_work, 0xa82f30eaULL, 0x9b32ULL, 16);
+    TEST_ASSERT_EQUAL_HEX64(0xa82f9b32ULL, quic_packet_u64);
 
     // RFC 9001 A.5 states a packet number of 654360564 (0x2700bff4) encoded on 3 octets as 0x00bff4,
     // so decoding that field against the packet before it recovers the same full number
-    QuicPacketV.pn_decode_args.largest_pn = 0x2700bff3ULL;
-    QuicPacketV.pn_decode_args.truncated_pn = 0x00bff4ULL;
-    QuicPacketV.pn_decode_args.pn_nbits = 24;
-    QuicPacket.pn_decode(quic_packet_work);
-    TEST_ASSERT_EQUAL_HEX64(0x2700bff4ULL, QuicPacketV.u64);
+    quic_packet_u64 = QuicPacket.pn_decode(quic_packet_work, 0x2700bff3ULL, 0x00bff4ULL, 24);
+    TEST_ASSERT_EQUAL_HEX64(0x2700bff4ULL, quic_packet_u64);
 
     // A.3's window is (expected - pn_hwin, expected + pn_hwin]. With an 8-bit field and a largest of
     // 0x27f, expected is 0x280 and the window is (0x200, 0x300]: a truncated 0x00 names 0x300, since
     // the nearer candidate 0x200 sits on the excluded edge and gets one window added.
-    QuicPacketV.pn_decode_args.largest_pn = 0x27fULL;
-    QuicPacketV.pn_decode_args.truncated_pn = 0x00ULL;
-    QuicPacketV.pn_decode_args.pn_nbits = 8;
-    QuicPacket.pn_decode(quic_packet_work);
-    TEST_ASSERT_EQUAL_HEX64(0x300ULL, QuicPacketV.u64);
+    quic_packet_u64 = QuicPacket.pn_decode(quic_packet_work, 0x27fULL, 0x00ULL, 8);
+    TEST_ASSERT_EQUAL_HEX64(0x300ULL, quic_packet_u64);
     // and the other direction, with a largest of 0x300: expected 0x301, window (0x281, 0x381], so a
     // truncated 0xff names the late 0x2ff rather than the candidate 0x3ff above the window
-    QuicPacketV.pn_decode_args.largest_pn = 0x300ULL;
-    QuicPacketV.pn_decode_args.truncated_pn = 0xffULL;
-    QuicPacketV.pn_decode_args.pn_nbits = 8;
-    QuicPacket.pn_decode(quic_packet_work);
-    TEST_ASSERT_EQUAL_HEX64(0x2ffULL, QuicPacketV.u64);
+    quic_packet_u64 = QuicPacket.pn_decode(quic_packet_work, 0x300ULL, 0xffULL, 8);
+    TEST_ASSERT_EQUAL_HEX64(0x2ffULL, quic_packet_u64);
 }
 
 // RFC 9000 sec 17.2: a connection ID is at most 20 octets in this version, so a longer one has no
@@ -393,90 +283,33 @@ void test_connection_id_bounds(void)
     uint8_t big[32];
     memset(big, 0xAA, sizeof(big));
     TEST_ASSERT_EQUAL_UINT(20u, (unsigned)QUIC_MAX_CID_LEN);
-    QuicPacketV.build_long_header_args.out = g_out;
-    QuicPacketV.build_long_header_args.cap = sizeof(g_out);
-    QuicPacketV.build_long_header_args.type = QUIC_LP_INITIAL;
-    QuicPacketV.build_long_header_args.version = QUIC_VERSION_1;
-    QuicPacketV.build_long_header_args.dcid = big;
-    QuicPacketV.build_long_header_args.dcid_len = 21;
-    QuicPacketV.build_long_header_args.scid = NONE;
-    QuicPacketV.build_long_header_args.scid_len = 0;
-    QuicPacketV.build_long_header_args.pn_len = 1;
-    QuicPacket.build_long_header(quic_packet_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicPacketV.n);
-    QuicPacketV.build_long_header_args.out = g_out;
-    QuicPacketV.build_long_header_args.cap = sizeof(g_out);
-    QuicPacketV.build_long_header_args.type = QUIC_LP_INITIAL;
-    QuicPacketV.build_long_header_args.version = QUIC_VERSION_1;
-    QuicPacketV.build_long_header_args.dcid = NONE;
-    QuicPacketV.build_long_header_args.dcid_len = 0;
-    QuicPacketV.build_long_header_args.scid = big;
-    QuicPacketV.build_long_header_args.scid_len = 21;
-    QuicPacketV.build_long_header_args.pn_len = 1;
-    QuicPacket.build_long_header(quic_packet_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicPacketV.n);
+    size_t quic_packet_n = QuicPacket.build_long_header(quic_packet_work, g_out, sizeof(g_out), QUIC_LP_INITIAL,
+                                                        QUIC_VERSION_1, big, 21, NONE, 0, 1);
+    TEST_ASSERT_EQUAL_UINT(0u, quic_packet_n);
+    quic_packet_n = QuicPacket.build_long_header(quic_packet_work, g_out, sizeof(g_out), QUIC_LP_INITIAL,
+                                                 QUIC_VERSION_1, NONE, 0, big, 21, 1);
+    TEST_ASSERT_EQUAL_UINT(0u, quic_packet_n);
     // pn_len is 1..4 (sec 17.2: the field holds length - 1 in two bits)
-    QuicPacketV.build_long_header_args.out = g_out;
-    QuicPacketV.build_long_header_args.cap = sizeof(g_out);
-    QuicPacketV.build_long_header_args.type = QUIC_LP_INITIAL;
-    QuicPacketV.build_long_header_args.version = QUIC_VERSION_1;
-    QuicPacketV.build_long_header_args.dcid = NONE;
-    QuicPacketV.build_long_header_args.dcid_len = 0;
-    QuicPacketV.build_long_header_args.scid = NONE;
-    QuicPacketV.build_long_header_args.scid_len = 0;
-    QuicPacketV.build_long_header_args.pn_len = 0;
-    QuicPacket.build_long_header(quic_packet_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicPacketV.n);
-    QuicPacketV.build_long_header_args.out = g_out;
-    QuicPacketV.build_long_header_args.cap = sizeof(g_out);
-    QuicPacketV.build_long_header_args.type = QUIC_LP_INITIAL;
-    QuicPacketV.build_long_header_args.version = QUIC_VERSION_1;
-    QuicPacketV.build_long_header_args.dcid = NONE;
-    QuicPacketV.build_long_header_args.dcid_len = 0;
-    QuicPacketV.build_long_header_args.scid = NONE;
-    QuicPacketV.build_long_header_args.scid_len = 0;
-    QuicPacketV.build_long_header_args.pn_len = 5;
-    QuicPacket.build_long_header(quic_packet_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicPacketV.n);
-    QuicPacketV.build_long_header_args.out = g_out;
-    QuicPacketV.build_long_header_args.cap = 6;
-    QuicPacketV.build_long_header_args.type = QUIC_LP_INITIAL;
-    QuicPacketV.build_long_header_args.version = QUIC_VERSION_1;
-    QuicPacketV.build_long_header_args.dcid = NONE;
-    QuicPacketV.build_long_header_args.dcid_len = 0;
-    QuicPacketV.build_long_header_args.scid = NONE;
-    QuicPacketV.build_long_header_args.scid_len = 0;
-    QuicPacketV.build_long_header_args.pn_len = 1;
-    QuicPacket.build_long_header(quic_packet_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicPacketV.n);
+    quic_packet_n = QuicPacket.build_long_header(quic_packet_work, g_out, sizeof(g_out), QUIC_LP_INITIAL,
+                                                 QUIC_VERSION_1, NONE, 0, NONE, 0, 0);
+    TEST_ASSERT_EQUAL_UINT(0u, quic_packet_n);
+    quic_packet_n = QuicPacket.build_long_header(quic_packet_work, g_out, sizeof(g_out), QUIC_LP_INITIAL,
+                                                 QUIC_VERSION_1, NONE, 0, NONE, 0, 5);
+    TEST_ASSERT_EQUAL_UINT(0u, quic_packet_n);
+    quic_packet_n =
+        QuicPacket.build_long_header(quic_packet_work, g_out, 6, QUIC_LP_INITIAL, QUIC_VERSION_1, NONE, 0, NONE, 0, 1);
+    TEST_ASSERT_EQUAL_UINT(0u, quic_packet_n);
 
     static const uint8_t OVERLONG_DCID[7] = {0xC0, 0x00, 0x00, 0x00, 0x01, 21, 0x00};
-    QuicPacketV.parse_long_header_args.buf = OVERLONG_DCID;
-    QuicPacketV.parse_long_header_args.len = sizeof(OVERLONG_DCID);
-    QuicPacketV.parse_long_header_args.out = &h;
-    QuicPacket.parse_long_header(quic_packet_work);
-    TEST_ASSERT_FALSE(QuicPacketV.ok);
+    proto_bool quic_packet_ok =
+        QuicPacket.parse_long_header(quic_packet_work, OVERLONG_DCID, sizeof(OVERLONG_DCID), &h);
+    TEST_ASSERT_FALSE(quic_packet_ok);
 
-    QuicPacketV.build_version_negotiation_args.out = g_out;
-    QuicPacketV.build_version_negotiation_args.cap = sizeof(g_out);
-    QuicPacketV.build_version_negotiation_args.dcid = big;
-    QuicPacketV.build_version_negotiation_args.dcid_len = 21;
-    QuicPacketV.build_version_negotiation_args.scid = NONE;
-    QuicPacketV.build_version_negotiation_args.scid_len = 0;
-    QuicPacketV.build_version_negotiation_args.versions = NULL;
-    QuicPacketV.build_version_negotiation_args.nversions = 0;
-    QuicPacket.build_version_negotiation(quic_packet_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicPacketV.n);
-    QuicPacketV.build_version_negotiation_args.out = g_out;
-    QuicPacketV.build_version_negotiation_args.cap = 6;
-    QuicPacketV.build_version_negotiation_args.dcid = NONE;
-    QuicPacketV.build_version_negotiation_args.dcid_len = 0;
-    QuicPacketV.build_version_negotiation_args.scid = NONE;
-    QuicPacketV.build_version_negotiation_args.scid_len = 0;
-    QuicPacketV.build_version_negotiation_args.versions = NULL;
-    QuicPacketV.build_version_negotiation_args.nversions = 0;
-    QuicPacket.build_version_negotiation(quic_packet_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicPacketV.n);
+    quic_packet_n =
+        QuicPacket.build_version_negotiation(quic_packet_work, g_out, sizeof(g_out), big, 21, NONE, 0, NULL, 0);
+    TEST_ASSERT_EQUAL_UINT(0u, quic_packet_n);
+    quic_packet_n = QuicPacket.build_version_negotiation(quic_packet_work, g_out, 6, NONE, 0, NONE, 0, NULL, 0);
+    TEST_ASSERT_EQUAL_UINT(0u, quic_packet_n);
 }
 
 // A header cut short of a field it declares is refused rather than read past the datagram.
@@ -484,33 +317,16 @@ void test_truncated_headers_are_refused(void)
 {
     QuicLongHeader h;
     QuicShortHeader s;
-    QuicPacketV.parse_long_header_args.buf = A2_CLIENT_INITIAL;
-    QuicPacketV.parse_long_header_args.len = 6;
-    QuicPacketV.parse_long_header_args.out = &h;
-    QuicPacket.parse_long_header(quic_packet_work);
-    TEST_ASSERT_FALSE(QuicPacketV.ok); // shorter than the fixed part
-    QuicPacketV.parse_long_header_args.buf = A2_CLIENT_INITIAL;
-    QuicPacketV.parse_long_header_args.len = 10;
-    QuicPacketV.parse_long_header_args.out = &h;
-    QuicPacket.parse_long_header(quic_packet_work);
-    TEST_ASSERT_FALSE(QuicPacketV.ok); // DCID runs past the end
-    QuicPacketV.parse_long_header_args.buf = A2_CLIENT_INITIAL;
-    QuicPacketV.parse_long_header_args.len = 14;
-    QuicPacketV.parse_long_header_args.out = &h;
-    QuicPacket.parse_long_header(quic_packet_work);
-    TEST_ASSERT_FALSE(QuicPacketV.ok); // no room for the SCID length
+    proto_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, A2_CLIENT_INITIAL, 6, &h);
+    TEST_ASSERT_FALSE(quic_packet_ok); // shorter than the fixed part
+    quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, A2_CLIENT_INITIAL, 10, &h);
+    TEST_ASSERT_FALSE(quic_packet_ok); // DCID runs past the end
+    quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, A2_CLIENT_INITIAL, 14, &h);
+    TEST_ASSERT_FALSE(quic_packet_ok); // no room for the SCID length
 
     static const uint8_t SHORT_ONE[3] = {0x42, 0x11, 0x22};
-    QuicPacketV.parse_short_header_args.buf = SHORT_ONE;
-    QuicPacketV.parse_short_header_args.len = sizeof(SHORT_ONE);
-    QuicPacketV.parse_short_header_args.dcid_len = 4;
-    QuicPacketV.parse_short_header_args.out = &s;
-    QuicPacket.parse_short_header(quic_packet_work);
-    TEST_ASSERT_FALSE(QuicPacketV.ok);
-    QuicPacketV.parse_short_header_args.buf = SHORT_ONE;
-    QuicPacketV.parse_short_header_args.len = sizeof(SHORT_ONE);
-    QuicPacketV.parse_short_header_args.dcid_len = 21;
-    QuicPacketV.parse_short_header_args.out = &s;
-    QuicPacket.parse_short_header(quic_packet_work);
-    TEST_ASSERT_FALSE(QuicPacketV.ok);
+    quic_packet_ok = QuicPacket.parse_short_header(quic_packet_work, SHORT_ONE, sizeof(SHORT_ONE), 4, &s);
+    TEST_ASSERT_FALSE(quic_packet_ok);
+    quic_packet_ok = QuicPacket.parse_short_header(quic_packet_work, SHORT_ONE, sizeof(SHORT_ONE), 21, &s);
+    TEST_ASSERT_FALSE(quic_packet_ok);
 }

@@ -6,15 +6,11 @@
  * @brief Wi-SUN FAN border-router connector (see wisun.h).
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_WISUN
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem/protomem.h"
 #include "services/radio/wisun/wisun.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // Emit one CoAP option (RFC 7252 sec 3.1): the (delta,length) nibble header + extended bytes + value.
 static proto_bool emit_option(uint8_t *out, size_t *o, size_t cap, uint16_t delta, const uint8_t *val, uint16_t vlen)
@@ -92,32 +88,20 @@ static proto_bool emit_option(uint8_t *out, size_t *o, size_t cap, uint16_t delt
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_wisun_node_find(uint8_t *restrict work);
-
-void protocore_wisun_build_coap(uint8_t *restrict work)
+size_t protocore_wisun_build_coap(uint8_t *restrict work, uint8_t type, uint8_t code, uint16_t msg_id,
+                                  const uint8_t *token, uint8_t tkl, const char *uri_path, const uint8_t *payload,
+                                  size_t plen, uint8_t *out, size_t cap)
 {
     (void)work;
-    uint8_t type = WisunV.build_coap_args.type;
-    uint8_t code = WisunV.build_coap_args.code;
-    uint16_t msg_id = WisunV.build_coap_args.msg_id;
-    const uint8_t *token = WisunV.build_coap_args.token;
-    uint8_t tkl = WisunV.build_coap_args.tkl;
-    const char *uri_path = WisunV.build_coap_args.uri_path;
-    const uint8_t *payload = WisunV.build_coap_args.payload;
-    size_t plen = WisunV.build_coap_args.plen;
-    uint8_t *out = WisunV.build_coap_args.out;
-    size_t cap = WisunV.build_coap_args.cap;
 
     if (!out || tkl > 8 || (tkl && !token) || (plen && !payload))
     {
-        WisunV.n = 0;
-        return;
+        return 0;
     }
     size_t o = 0;
     if (cap < (size_t)(4 + tkl))
     {
-        WisunV.n = 0;
-        return;
+        return 0;
     }
     out[o++] = (uint8_t)(0x40 | ((type & 0x03) << 4) | (tkl & 0x0F)); // version 1
     out[o++] = code;
@@ -147,8 +131,7 @@ void protocore_wisun_build_coap(uint8_t *restrict work)
         uint16_t delta = (uint16_t)(11 - last);
         if (!emit_option(out, &o, cap, delta, (const uint8_t *)seg, seglen))
         {
-            WisunV.n = 0;
-            return;
+            return 0;
         }
         last = 11;
     }
@@ -157,8 +140,7 @@ void protocore_wisun_build_coap(uint8_t *restrict work)
     {
         if (o + 1 + plen > cap)
         {
-            WisunV.n = 0;
-            return;
+            return 0;
         }
         out[o++] = 0xFF; // payload marker
         for (size_t i = 0; i < plen; i++)
@@ -166,16 +148,13 @@ void protocore_wisun_build_coap(uint8_t *restrict work)
             out[o++] = payload[i];
         }
     }
-    WisunV.n = o;
+    return o;
 }
 
-void protocore_wisun_init(uint8_t *restrict work)
+void protocore_wisun_init(uint8_t *restrict work, WisunFan *fan, const protocore_ip *border_router, WisunNode *storage,
+                          size_t cap)
 {
     (void)work;
-    WisunFan *fan = WisunV.init_args.fan;
-    const protocore_ip *border_router = WisunV.init_args.border_router;
-    WisunNode *storage = WisunV.init_args.storage;
-    size_t cap = WisunV.init_args.cap;
 
     if (!fan)
     {
@@ -194,51 +173,35 @@ void protocore_wisun_init(uint8_t *restrict work)
     fan->count = 0;
 }
 
-void protocore_wisun_node_register(uint8_t *restrict work)
+int protocore_wisun_node_register(uint8_t *restrict work, WisunFan *fan, const protocore_ip *addr, uint32_t now)
 {
-    WisunFan *fan = WisunV.node_register_args.fan;
-    const protocore_ip *addr = WisunV.node_register_args.addr;
-    uint32_t now = WisunV.node_register_args.now;
-
     if (!fan || !fan->nodes || !addr)
     {
-        WisunV.i32 = -1;
-        return;
+        return -1;
     }
     size_t idx = 0;
-    WisunV.node_find_args.fan = fan;
-    WisunV.node_find_args.addr = addr;
-    WisunV.node_find_args.idx = &idx;
-    protocore_wisun_node_find(work);
-    if (WisunV.ok)
+    proto_bool wisun_ok = Wisun.node_find(work, fan, addr, &idx);
+    if (wisun_ok)
     {
         fan->nodes[idx].joined = PROTO_TRUE;
         fan->nodes[idx].last_seen = now;
-        WisunV.i32 = (int)idx;
-        return;
+        return (int)idx;
     }
     if (fan->count >= fan->cap)
     {
-        WisunV.i32 = -1;
-        return;
+        return -1;
     }
     fan->nodes[fan->count].addr = *addr;
     fan->nodes[fan->count].joined = PROTO_TRUE;
     fan->nodes[fan->count].last_seen = now;
-    WisunV.i32 = (int)fan->count++;
+    return (int)fan->count++;
 }
 
-void protocore_wisun_node_find(uint8_t *restrict work)
+proto_bool protocore_wisun_node_find(uint8_t *restrict work, const WisunFan *fan, const protocore_ip *addr, size_t *idx)
 {
-    (void)work;
-    const WisunFan *fan = WisunV.node_find_args.fan;
-    const protocore_ip *addr = WisunV.node_find_args.addr;
-    size_t *idx = WisunV.node_find_args.idx;
-
     if (!fan || !fan->nodes || !addr)
     {
-        WisunV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     for (size_t i = 0; i < fan->count; i++)
     {
@@ -251,22 +214,19 @@ void protocore_wisun_node_find(uint8_t *restrict work)
             {
                 *idx = i;
             }
-            WisunV.ok = PROTO_TRUE;
-            return;
+            return PROTO_TRUE;
         }
     }
-    WisunV.ok = PROTO_FALSE;
+    return PROTO_FALSE;
 }
 
-void protocore_wisun_joined_count(uint8_t *restrict work)
+size_t protocore_wisun_joined_count(uint8_t *restrict work, const WisunFan *fan)
 {
     (void)work;
-    const WisunFan *fan = WisunV.joined_count_args.fan;
 
     if (!fan || !fan->nodes)
     {
-        WisunV.n = 0;
-        return;
+        return 0;
     }
     size_t c = 0;
     for (size_t i = 0; i < fan->count; i++)
@@ -276,20 +236,14 @@ void protocore_wisun_joined_count(uint8_t *restrict work)
             c++;
         }
     }
-    WisunV.n = c;
+    return c;
 }
 
-void protocore_wisun_nodes_json(uint8_t *restrict work)
+size_t protocore_wisun_nodes_json(uint8_t *restrict work, const WisunFan *fan, char *out, size_t cap)
 {
-    (void)work;
-    const WisunFan *fan = WisunV.nodes_json_args.fan;
-    char *out = WisunV.nodes_json_args.out;
-    size_t cap = WisunV.nodes_json_args.cap;
-
     if (!fan || !out || cap == 0)
     {
-        WisunV.n = 0;
-        return;
+        return 0;
     }
     protocore_sb b = {out, cap, 0, PROTO_TRUE};
     Sb.put(&b, "[");
@@ -314,16 +268,8 @@ void protocore_wisun_nodes_json(uint8_t *restrict work)
     Sb.put(&b, "]");
     if (!b.ok)
     {
-        WisunV.n = 0;
-        return;
+        return 0;
     }
     out[b.len] = '\0';
-    WisunV.n = b.len;
+    return b.len;
 }
-
-/** @brief The operands and the outcome. */
-WisunVars WisunV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_WISUN

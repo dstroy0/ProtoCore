@@ -1058,11 +1058,8 @@ void test_flight_parsers_refuse_truncation(void)
     Ed25519.pubkey(g_work);
 
     uint8_t cert_msg[128];
-    Tls13RpkV.build_certificate_args.out = cert_msg;
-    Tls13RpkV.build_certificate_args.cap = sizeof(cert_msg);
-    Tls13RpkV.build_certificate_args.ed25519_pub = pub;
-    Tls13Rpk.build_certificate(tls13_rpk_work);
-    size_t cn = Tls13RpkV.n;
+    size_t tls13_rpk_n = Tls13Rpk.build_certificate(tls13_rpk_work, cert_msg, sizeof(cert_msg), pub);
+    size_t cn = tls13_rpk_n;
     static const uint8_t HASH[32] = {0};
     uint8_t cv_msg[128];
     Tls13MsgV.build_cert_verify_args.sign_work = g_work;

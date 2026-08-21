@@ -281,8 +281,7 @@ static QuicSlot *open_conn(uint8_t *restrict work, const QuicLongHeader *lh, con
     tc.cert_der = QSRV_CTX(work)->cfg.cert_der;
     tc.cert_len = QSRV_CTX(work)->cfg.cert_len;
     mem.cpy(tc.ed25519_seed, QSRV_CTX(work)->cfg.ed25519_seed, sizeof tc.ed25519_seed);
-    QuicTpV.defaults_args.tp = &tc.params;
-    QuicTp.defaults(work);
+    QuicTp.defaults(work, &tc.params);
     // A real HTTP/3 endpoint must advertise flow-control room, or every request stream (and the
     // client's control / QPACK streams) is blocked - the RFC 9000 sec 18.2 defaults are all zero.
     tc.params.initial_max_data = 1048576;
@@ -352,15 +351,11 @@ static QuicSlot *route(uint8_t *restrict work, const uint8_t *dg, size_t len, pr
     {
         return NULL;
     }
-    QuicPacketV.is_long_header_args.first = dg[0];
-    QuicPacket.is_long_header(work);
-    if (QuicPacketV.ok)
+    proto_bool quic_packet_ok = QuicPacket.is_long_header(work, dg[0]);
+    if (quic_packet_ok)
     {
-        QuicPacketV.parse_long_header_args.buf = dg;
-        QuicPacketV.parse_long_header_args.len = len;
-        QuicPacketV.parse_long_header_args.out = lh_out;
-        QuicPacket.parse_long_header(work);
-        if (!QuicPacketV.ok)
+        proto_bool quic_packet_ok = QuicPacket.parse_long_header(work, dg, len, lh_out);
+        if (!quic_packet_ok)
         {
             return NULL;
         }

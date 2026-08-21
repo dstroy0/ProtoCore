@@ -230,11 +230,8 @@ static proto_bool process_client_hello(uint8_t *restrict work, QuicTls *qt, cons
         fail(qt, TLS_ALERT_MISSING_EXTENSION);
         return PROTO_FALSE;
     }
-    QuicTpV.parse_args.buf = ch.quic_tp;
-    QuicTpV.parse_args.len = ch.quic_tp_len;
-    QuicTpV.parse_args.tp = &qt->peer;
-    QuicTp.parse(work);
-    if (!QuicTpV.ok)
+    proto_bool quic_tp_ok = QuicTp.parse(work, ch.quic_tp, ch.quic_tp_len, &qt->peer);
+    if (!quic_tp_ok)
     {
         fail(qt, TLS_ALERT_ILLEGAL_PARAMETER);
         return PROTO_FALSE;
@@ -342,24 +339,15 @@ static proto_bool process_client_hello(uint8_t *restrict work, QuicTls *qt, cons
     Tls13KsV.step.ecdhe_len = ecdhe_len;
     Tls13KsV.step.ch_sh_hash = hash;
     Tls13Ks.handshake(work);
-    QuicCryptoV.keys_from_secret_args.keys_work = qt->keys_work;
-    QuicCryptoV.keys_from_secret_args.secret = qt->ks.s + TLS13_KS_CLIENT_HS;
-    QuicCryptoV.keys_from_secret_args.out = &qt->hs_client;
-    QuicCrypto.keys_from_secret(work);
-    QuicCryptoV.keys_from_secret_args.keys_work = qt->keys_work;
-    QuicCryptoV.keys_from_secret_args.secret = qt->ks.s + TLS13_KS_SERVER_HS;
-    QuicCryptoV.keys_from_secret_args.out = &qt->hs_server;
-    QuicCrypto.keys_from_secret(work);
+    QuicCrypto.keys_from_secret(work, qt->keys_work, qt->ks.s + TLS13_KS_CLIENT_HS, &qt->hs_client);
+    QuicCrypto.keys_from_secret(work, qt->keys_work, qt->ks.s + TLS13_KS_SERVER_HS, &qt->hs_server);
     qt->hs_keys_ready = PROTO_TRUE;
 
     // Handshake-level flight: EncryptedExtensions, Certificate, CertificateVerify, Finished.
     qt->flight_hs_len = 0;
     uint8_t tp_enc[PROTOCORE_QUIC_TLS_TP_ENC_CAP];
-    QuicTpV.encode_args.tp = &qt->cfg.params;
-    QuicTpV.encode_args.out = tp_enc;
-    QuicTpV.encode_args.cap = sizeof(tp_enc);
-    QuicTp.encode(work);
-    size_t tp_len = QuicTpV.n;
+    size_t quic_tp_n = QuicTp.encode(work, &qt->cfg.params, tp_enc, sizeof(tp_enc));
+    size_t tp_len = quic_tp_n;
 
     Tls13MsgV.build_encrypted_extensions_args.out = qt->flight_hs + qt->flight_hs_len;
     Tls13MsgV.build_encrypted_extensions_args.cap = sizeof(qt->flight_hs) - qt->flight_hs_len;
@@ -421,14 +409,8 @@ static proto_bool process_client_hello(uint8_t *restrict work, QuicTls *qt, cons
     ks_bind(qt);
     Tls13KsV.step.ch_sfin_hash = qt->hs_finished_hash;
     Tls13Ks.master(work);
-    QuicCryptoV.keys_from_secret_args.keys_work = qt->keys_work;
-    QuicCryptoV.keys_from_secret_args.secret = qt->ks.s + TLS13_KS_CLIENT_AP;
-    QuicCryptoV.keys_from_secret_args.out = &qt->ap_client;
-    QuicCrypto.keys_from_secret(work);
-    QuicCryptoV.keys_from_secret_args.keys_work = qt->keys_work;
-    QuicCryptoV.keys_from_secret_args.secret = qt->ks.s + TLS13_KS_SERVER_AP;
-    QuicCryptoV.keys_from_secret_args.out = &qt->ap_server;
-    QuicCrypto.keys_from_secret(work);
+    QuicCrypto.keys_from_secret(work, qt->keys_work, qt->ks.s + TLS13_KS_CLIENT_AP, &qt->ap_client);
+    QuicCrypto.keys_from_secret(work, qt->keys_work, qt->ks.s + TLS13_KS_SERVER_AP, &qt->ap_server);
     qt->ap_keys_ready = PROTO_TRUE;
 
     qt->state = QTLS_WAIT_FINISHED;

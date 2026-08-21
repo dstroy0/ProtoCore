@@ -6,9 +6,7 @@
  * @brief QUIC packet protection and Initial secrets (see quic_crypto.h).
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_HTTP3
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/http/http3/quic_crypto/quic_crypto.h"
@@ -17,8 +15,6 @@
 #include "crypto/kdf/hkdf/hkdf.h"
 #include "mmgr/secure/secure.h" // the secure pool: header-protection key schedule
 #include "network_drivers/presentation/http/http3/quic_packet/quic_packet.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // RFC 9001 sec 5.2: the version-1 Initial salt.
 static const uint8_t INITIAL_SALT[20] = {0x38, 0x76, 0x2c, 0xf7, 0xf5, 0x59, 0x34, 0xb3, 0x4d, 0x17,
@@ -45,14 +41,10 @@ static void build_nonce(const uint8_t iv[12], uint64_t full_pn, uint8_t nonce[12
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_quic_crypto_keys_from_secret(uint8_t *restrict work);
-
-void protocore_quic_crypto_keys_from_secret(uint8_t *restrict work)
+void protocore_quic_crypto_keys_from_secret(uint8_t *restrict work, uint8_t *keys_work, const uint8_t *secret,
+                                            QuicPacketKeys *out)
 {
     (void)work;
-    uint8_t *keys_work = QuicCryptoV.keys_from_secret_args.keys_work;
-    const uint8_t *secret = QuicCryptoV.keys_from_secret_args.secret;
-    QuicPacketKeys *out = QuicCryptoV.keys_from_secret_args.out;
 
     // RFC 9001 sec 5.1: every encryption level's packet keys are these three Expand-Labels of the
     // level's traffic secret (the Initial secrets below, or the TLS handshake / application secrets).
@@ -69,12 +61,9 @@ void protocore_quic_crypto_keys_from_secret(uint8_t *restrict work)
     protocore_secure_wipe(k, 2 * PROTOCORE_AES128GCM_KEY_LEN);
 }
 
-void protocore_quic_crypto_derive_initial_secrets(uint8_t *restrict work)
+void protocore_quic_crypto_derive_initial_secrets(uint8_t *restrict work, uint8_t *keys_work, const uint8_t *dcid,
+                                                  size_t dcid_len, QuicInitialSecrets *out)
 {
-    uint8_t *keys_work = QuicCryptoV.derive_initial_secrets_args.keys_work;
-    const uint8_t *dcid = QuicCryptoV.derive_initial_secrets_args.dcid;
-    size_t dcid_len = QuicCryptoV.derive_initial_secrets_args.dcid_len;
-    QuicInitialSecrets *out = QuicCryptoV.derive_initial_secrets_args.out;
 
     uint8_t initial_secret[PROTOCORE_HKDF_HASH_LEN];
     Hkdf.extract(keys_work, INITIAL_SALT, sizeof(INITIAL_SALT), dcid, dcid_len, initial_secret);
@@ -86,39 +75,25 @@ void protocore_quic_crypto_derive_initial_secrets(uint8_t *restrict work)
     Hkdf.expand_label(keys_work, initial_secret, "server in", server_secret, sizeof(server_secret),
                       PROTOCORE_HKDF_LABEL_PREFIX);
 
-    QuicCryptoV.keys_from_secret_args.keys_work = keys_work;
-    QuicCryptoV.keys_from_secret_args.secret = client_secret;
-    QuicCryptoV.keys_from_secret_args.out = &out->client;
-    protocore_quic_crypto_keys_from_secret(work);
-    QuicCryptoV.keys_from_secret_args.keys_work = keys_work;
-    QuicCryptoV.keys_from_secret_args.secret = server_secret;
-    QuicCryptoV.keys_from_secret_args.out = &out->server;
-    protocore_quic_crypto_keys_from_secret(work);
+    QuicCrypto.keys_from_secret(work, keys_work, client_secret, &out->client);
+    QuicCrypto.keys_from_secret(work, keys_work, server_secret, &out->server);
 }
 
-void protocore_quic_crypto_packet_protect(uint8_t *restrict work)
+size_t protocore_quic_crypto_packet_protect(uint8_t *restrict work, uint8_t *pkt, size_t cap, size_t pn_offset,
+                                            uint8_t pn_len, uint64_t full_pn, size_t payload_len, QuicPacketKeys *keys,
+                                            proto_bool is_long)
 {
     (void)work;
-    uint8_t *pkt = QuicCryptoV.packet_protect_args.pkt;
-    size_t cap = QuicCryptoV.packet_protect_args.cap;
-    size_t pn_offset = QuicCryptoV.packet_protect_args.pn_offset;
-    uint8_t pn_len = QuicCryptoV.packet_protect_args.pn_len;
-    uint64_t full_pn = QuicCryptoV.packet_protect_args.full_pn;
-    size_t payload_len = QuicCryptoV.packet_protect_args.payload_len;
-    QuicPacketKeys *keys = QuicCryptoV.packet_protect_args.keys;
-    proto_bool is_long = QuicCryptoV.packet_protect_args.is_long;
 
     if (pn_len < 1 || pn_len > 4)
     {
-        QuicCryptoV.n = 0;
-        return;
+        return 0;
     }
     size_t hdr_len = pn_offset + pn_len;
     size_t total = hdr_len + payload_len + PROTOCORE_AES128GCM_TAG_LEN;
     if (total > cap)
     {
-        QuicCryptoV.n = 0;
-        return;
+        return 0;
     }
 
     // AEAD-seal the payload in place; associated data is the unprotected header.
@@ -149,27 +124,18 @@ void protocore_quic_crypto_packet_protect(uint8_t *restrict work)
         pkt[pn_offset + i] ^= mask[1 + i];
     }
 
-    QuicCryptoV.n = total;
+    return total;
 }
 
-void protocore_quic_crypto_packet_unprotect(uint8_t *restrict work)
+size_t protocore_quic_crypto_packet_unprotect(uint8_t *restrict work, uint8_t *pkt, size_t pn_offset, size_t length,
+                                              uint64_t largest_pn, QuicPacketKeys *keys, proto_bool is_long,
+                                              uint8_t *out, uint64_t *out_pn)
 {
-    (void)work;
-    uint8_t *pkt = QuicCryptoV.packet_unprotect_args.pkt;
-    size_t pn_offset = QuicCryptoV.packet_unprotect_args.pn_offset;
-    size_t length = QuicCryptoV.packet_unprotect_args.length;
-    uint64_t largest_pn = QuicCryptoV.packet_unprotect_args.largest_pn;
-    QuicPacketKeys *keys = QuicCryptoV.packet_unprotect_args.keys;
-    proto_bool is_long = QuicCryptoV.packet_unprotect_args.is_long;
-    uint8_t *out = QuicCryptoV.packet_unprotect_args.out;
-    uint64_t *out_pn = QuicCryptoV.packet_unprotect_args.out_pn;
-
     // Header protection needs a full 16-byte sample starting at pn_offset + 4, and the AEAD region
     // must carry at least the 16-byte tag once the (<=4-byte) packet number is removed.
     if (length < 4 + PROTOCORE_AES128GCM_TAG_LEN)
     {
-        QuicCryptoV.n = (size_t)-1;
-        return;
+        return (size_t)-1;
     }
 
     // The header-protection context is already keyed and lives in the key material; building one here
@@ -188,11 +154,8 @@ void protocore_quic_crypto_packet_unprotect(uint8_t *restrict work)
         pkt[pn_offset + i] ^= mask[1 + i];
         truncated_pn = (truncated_pn << 8) | pkt[pn_offset + i];
     }
-    QuicPacketV.pn_decode_args.largest_pn = largest_pn;
-    QuicPacketV.pn_decode_args.truncated_pn = truncated_pn;
-    QuicPacketV.pn_decode_args.pn_nbits = (uint8_t)(pn_len * 8);
-    QuicPacket.pn_decode(work);
-    uint64_t full_pn = QuicPacketV.u64;
+    uint64_t quic_packet_u64 = QuicPacket.pn_decode(work, largest_pn, truncated_pn, (uint8_t)(pn_len * 8));
+    uint64_t full_pn = quic_packet_u64;
     if (out_pn)
     {
         *out_pn = full_pn;
@@ -206,8 +169,7 @@ void protocore_quic_crypto_packet_unprotect(uint8_t *restrict work)
     // huge size_t rather than fail. This guard used to live inside the AEAD open itself.
     if (ct_len < PROTOCORE_AES128GCM_TAG_LEN)
     {
-        QuicCryptoV.n = (size_t)-1;
-        return;
+        return (size_t)-1;
     }
     uint8_t nonce[12];
     build_nonce(keys->iv, full_pn, nonce);
@@ -222,24 +184,19 @@ void protocore_quic_crypto_packet_unprotect(uint8_t *restrict work)
     Aes128Gcm.open(keys->gcm);
     if (!Aes128GcmV.ok)
     {
-        QuicCryptoV.n = (size_t)-1;
-        return;
+        return (size_t)-1;
     }
 
     // On success pkt[0] holds the unprotected first byte, which is where the caller reads the
     // RFC 9000 sec 17.2 / 17.3.1 Reserved Bits: this is the only point at which both protections
     // are off, and only the connection can answer a violation with a CONNECTION_CLOSE.
-    QuicCryptoV.n = ct_len - PROTOCORE_AES128GCM_TAG_LEN;
+    return ct_len - PROTOCORE_AES128GCM_TAG_LEN;
 }
 
-void protocore_quic_crypto_retry_integrity_tag(uint8_t *restrict work)
+void protocore_quic_crypto_retry_integrity_tag(uint8_t *restrict work, const uint8_t *odcid, size_t odcid_len,
+                                               const uint8_t *retry, size_t retry_len, uint8_t *tag)
 {
     (void)work;
-    const uint8_t *odcid = QuicCryptoV.retry_integrity_tag_args.odcid;
-    size_t odcid_len = QuicCryptoV.retry_integrity_tag_args.odcid_len;
-    const uint8_t *retry = QuicCryptoV.retry_integrity_tag_args.retry;
-    size_t retry_len = QuicCryptoV.retry_integrity_tag_args.retry_len;
-    uint8_t *tag = QuicCryptoV.retry_integrity_tag_args.tag;
 
     // AAD = Retry Pseudo-Packet: ODCID Length (1 byte) || ODCID || Retry packet (sans tag).
     // Assemble it into a scratch buffer; a Retry is small (short token), so a fixed cap suffices.
@@ -274,10 +231,3 @@ void protocore_quic_crypto_retry_integrity_tag(uint8_t *restrict work)
         protocore_secure_release(mark);
     }
 }
-
-/** @brief The operands and the outcome. */
-QuicCryptoVars QuicCryptoV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_HTTP3
