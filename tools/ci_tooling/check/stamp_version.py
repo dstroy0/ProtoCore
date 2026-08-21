@@ -104,13 +104,30 @@ def classify(path):
     return "unowned", -1, text
 
 
+def submodule_dirs():
+    """Absolute path of every submodule, from .gitmodules.
+
+    A submodule carries its own project name, version and copyright. Stamping one from here would
+    rewrite another repository's files with this repository's identity, and could never become a
+    commit there - it only shows up as a dirty submodule in this one.
+    """
+    gm = os.path.join(ROOT, ".gitmodules")
+    if not os.path.exists(gm):
+        return set()
+    text = open(gm, encoding="utf-8").read()
+    return {os.path.normpath(os.path.join(ROOT, p)) for p in re.findall(r"^\s*path\s*=\s*(.+)$", text, re.M)}
+
+
 def walk():
+    skip = submodule_dirs()
     for top in SCOPE_DIRS:
         base = os.path.join(ROOT, top)
         if not os.path.isdir(base):
             continue
         for dirpath, dirnames, filenames in os.walk(base):
-            dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+            dirnames[:] = [
+                d for d in dirnames if d not in SKIP_DIRS and os.path.normpath(os.path.join(dirpath, d)) not in skip
+            ]
             for fn in filenames:
                 if os.path.splitext(fn)[1].lower() in SKIP_EXTS:
                     continue
