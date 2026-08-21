@@ -4044,7 +4044,13 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
                         # Every read of the result between here and the next call to this object -
                         # that window is what the local has to cover.
                         stop = pat.search(s, stmt_end)
-                        stop = stop.start() if stop else (blk[1] if blk else len(s))
+                        # WHICHEVER COMES FIRST, not whichever exists. Written as "the next call, or
+                        # the block end if there is no next call", the window ran past the block
+                        # whenever another call appeared later in the file - and test_ptp reads
+                        # PtpV.n AFTER an if/else whose three arms each make a different call, so
+                        # the read outside was rewritten to a local declared inside the `else`.
+                        end_of_block = blk[1] if blk else len(s)
+                        stop = min(stop.start(), end_of_block) if stop else end_of_block
                         rd = re.compile(r"\b%s\.%s\b" % (re.escape(objv), re.escape(res)))
                         window = s[stmt_end:stop]
                         if rd.search(window):
