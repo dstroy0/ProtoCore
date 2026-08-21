@@ -3704,6 +3704,30 @@ def carried_declarations(spec, original):
     return out
 
 
+def gated_dependencies(spec):
+    """Headers this one includes that still carry a whole-file enable gate.
+
+    THE CONVERTED HEADER HAS NO GATE - CMake decides membership, and the only gate left in a header
+    is hardware. That is only safe while everything the header depends on is in the same position.
+    smb_client.h and smb2.h were both wrapped in , so they compiled
+    together or not at all; take the gate off smb_client alone and its body is compiled in every
+    env, including the ones where smb2.h has compiled itself away and Smb2SignAlgo does not exist.
+
+    So the sweep has an order: a module converts after the modules whose headers it uses. Reported
+    rather than discovered as  in whichever env happens to build it.
+    """
+    out = []
+    for inc in list(spec.get("held_includes", [])) + list(spec.get("moved_includes", [])):
+        rel = inc.strip().strip('"<>')
+        p_ = os.path.join(R, "src", rel.replace("/", os.sep))
+        if not os.path.isfile(p_):
+            continue
+        g = find_gate(io.open(p_, encoding="utf-8", errors="replace").read())
+        if g:
+            out.append((rel, g))
+    return out
+
+
 def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include")):
     """Fold each call site's staged operands into the call, and give its result a local.
 
@@ -4166,6 +4190,19 @@ def main():
             return 1
         original = io.open(hp, encoding="utf-8").read()
         header = gen_header_ns(spec, original)
+        blocked = gated_dependencies(spec)
+        if blocked and not FORCE:
+            print("   depends on a header that still carries its enable gate - NOT CONVERTING")
+            for rel, g in blocked:
+                print("   GATED %s  (#if %s)" % (rel, g))
+            print(
+                (
+                    chr(10) + "%s cannot lose its own gate while these have theirs: its body would"
+                    " compile in envs where their contents do not exist. Convert them first."
+                )
+                % spec["module"]
+            )
+            return 1
         stuck = undecodable_operands(spec, texts)
         if stuck and not FORCE:
             names = sorted({n for _ln, n in stuck})
