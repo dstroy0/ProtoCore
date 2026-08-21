@@ -18,7 +18,11 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-#if PROTOCORE_ENABLE_AES_SBOX
+// No enable gate. A translation unit gets this table by INCLUDING this header, and it only includes
+// it if it uses it, so the gate decided nothing the include had not already decided - while making
+// the header unusable from a module that has no gate of its own. aes_block is on MMgr's shape and
+// has none, so its body compiles everywhere, and a build with AES_BLOCK on and AES_SBOX off asked
+// what PROTOCORE_AES_SBOX was.
 
 PROTOCORE_BEGIN_DECLS
 
@@ -41,7 +45,5 @@ static const uint8_t PROTOCORE_AES_SBOX[256] = {
 };
 
 PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_AES_SBOX
 
 #endif // PROTOCORE_AES_SBOX_H
