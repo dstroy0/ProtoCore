@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(protocore
-  GATE PROTOCORE_ENABLE_HTTP2
+  GATE PROTOCORE_ENABLE_HTTP_ROUTE
   SOURCES protocore.c
   PRIVATE_DEPS
     crypto/rng

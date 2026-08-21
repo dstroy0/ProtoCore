@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(services/iot/coap/coaps_server
+  GATE PROTOCORE_ENABLE_DTLS AND PROTOCORE_ENABLE_COAP
   SOURCES coaps_server.c
   PRIVATE_DEPS
     mmgr/protomem

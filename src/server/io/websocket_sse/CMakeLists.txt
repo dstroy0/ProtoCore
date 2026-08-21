@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(server/io/websocket_sse
-  GATE PROTOCORE_ENABLE_WEBSOCKET
+  GATE PROTOCORE_ENABLE_WEBSOCKET OR PROTOCORE_ENABLE_SSE
   SOURCES websocket_sse.c
   PRIVATE_DEPS
     crypto/hash/sha1

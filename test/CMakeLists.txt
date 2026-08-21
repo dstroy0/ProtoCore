@@ -21,6 +21,16 @@ set(PROTOCORE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
 enable_testing()
 
+# The library's own build description. Until this was here nothing evaluated it: the 401 module
+# targets under src/**/CMakeLists.txt were declared and never read, and every env below listed raw
+# source paths instead. Declaring a module and never entering its directory means its GATE decides
+# nothing, which is the whole point of stating one.
+list(APPEND CMAKE_MODULE_PATH "${PROTOCORE_ROOT}/cmake")
+include(ProtoCoreModule)
+add_subdirectory("${PROTOCORE_ROOT}/src" "${CMAKE_CURRENT_BINARY_DIR}/pc_src")
+add_subdirectory("${PROTOCORE_ROOT}/vendor" "${CMAKE_CURRENT_BINARY_DIR}/pc_vendor")
+add_subdirectory("${PROTOCORE_ROOT}/include" "${CMAKE_CURRENT_BINARY_DIR}/pc_include")
+
 # Unity is a package the envs link; pio installs it per env, so any copy in the tree will do.
 if(NOT PROTOCORE_UNITY_DIR)
   file(GLOB _unity_candidates "${PROTOCORE_ROOT}/.pio/libdeps/*/Unity/src")

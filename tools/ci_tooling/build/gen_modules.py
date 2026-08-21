@@ -37,7 +37,15 @@ SRC = os.path.join(ROOT, "src")
 OUT = os.path.join(SRC, "CMakeLists.txt")
 
 INC = re.compile(r'^\s*#\s*include\s+"([^"]+)"')
-GATE = re.compile(r"^\s*#\s*if\s+(PROTOCORE_ENABLE_\w+)\s*$")
+# The WHOLE condition, not a bare flag. Six modules open with a compound one -
+# `#if PROTOCORE_ENABLE_OTA && PROTOCORE_HAS_VENDOR_OTA` - and matching only a lone token
+# skipped them, so each got no GATE and was built in every configuration.
+GATE = re.compile(r"^\s*#\s*if\s+(PROTOCORE_(?:ENABLE|HAS)_\w+(?:\s*(?:&&|\|\|)\s*\(?\s*PROTOCORE_(?:ENABLE|HAS)_\w+\)?)*)\s*$")
+
+
+def cmake_gate(cond):
+    """A C preprocessor condition as a CMake one: && is AND, || is OR."""
+    return re.sub(r"\|\|", "OR", re.sub(r"&&", "AND", cond)).strip()
 
 # Reached by everything and owned by no module: the assembly chain and the primitive types.
 ENTRY = {
@@ -142,10 +150,47 @@ def scan(mods):
                 if mi:
                     m.setdefault(key, set()).add(mi.group(1))
                     m["includes"].add(mi.group(1))
-                if m["gate"] is None:
-                    g = GATE.match(line)
-                    if g and p == m["c"]:
-                        m["gate"] = g.group(1)
+            if m["gate"] is None and p == m["c"]:
+                m["gate"] = file_gate(text)
+
+
+def file_gate(text):
+    """The condition wrapping the whole translation unit, in CMake spelling, or None.
+
+    A gate opens before any code and closes at the end of the file. Both tests are needed:
+
+      - not simply the first `#if`, because a file often opens with a conditional include that
+        closes two lines later;
+      - not simply the one that closes at EOF either, because websocket_sse.c has seven top-level
+        conditionals and the last happens to run to the end. That file has no gate - it serves
+        WEBSOCKET and SSE in alternating sections - and saying it gates on SSE would drop every
+        WEBSOCKET section from any build without SSE.
+    """
+    lines = text.split("\n")
+    # Where the first C code is. Everything above it is licence, comments, includes and defines.
+    first_code = len(lines)
+    for i, line in enumerate(lines):
+        t = line.strip()
+        if not t or t.startswith(("#", "//", "/*", "*", "*/")):
+            continue
+        first_code = i
+        break
+
+    depth, opened = 0, []
+    for i, line in enumerate(lines):
+        t = line.strip()
+        if re.match(r"#\s*if", t):
+            depth += 1
+            if depth == 1:
+                opened.append((i, GATE.match(line)))
+        elif re.match(r"#\s*endif", t):
+            if depth == 1 and opened:
+                start, m = opened.pop()
+                tail = re.sub(r"/\*.*?\*/", "", re.sub(r"//[^\n]*", "", "\n".join(lines[i + 1:])), flags=re.S)
+                if m and start < first_code and not tail.strip():
+                    return cmake_gate(m.group(1))
+            depth = max(0, depth - 1)
+    return None
 
 
 def resolve(mods, owner):
@@ -408,7 +453,8 @@ def declared():
         text = read(os.path.join(dirpath, "CMakeLists.txt"))
         for m in DECL.finditer(text):
             body = m.group("body")
-            g = re.search(r"GATE\s+(\S+)", body)
+            # Several tokens: a compound gate is `GATE A AND B`, and stops at the next keyword.
+            g = re.search(r"GATE\s+((?:(?!\b(?:%s)\b)\S+\s*)+)" % "|".join(DECL_KEYWORDS), body)
             deps = []
             for key in ("DEPS", "PRIVATE_DEPS"):
                 d = re.search(r"\b%s\b((?:\s+\w[\w/]*)+)" % key, body)

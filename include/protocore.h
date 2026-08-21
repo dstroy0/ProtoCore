@@ -1341,8 +1341,14 @@ extern const char PROTOCORE_RESP_HDR_OVERFLOW[];
 /** @brief Length of PROTOCORE_RESP_HDR_OVERFLOW, taken with sizeof where the array bound is still visible. */
 extern const size_t PROTOCORE_RESP_HDR_OVERFLOW_LEN;
 
+// HttpRoute is http_route's, and that module is gated. Declared unguarded, this line broke every
+// build without PROTOCORE_ENABLE_HTTP_ROUTE - which is the default - for anything that includes the
+// umbrella. It went unnoticed while the only translation units reaching it were the seven envs that
+// set the flag.
+#if PROTOCORE_ENABLE_HTTP_ROUTE
 /** @brief Initialize the common fields (path, flags) of a route-table entry from its pattern. */
 void fill_route_base(HttpRoute *r, const char *path);
+#endif
 
 /** @brief Format @p t as an RFC 1123 GMT date into @p out (cap bytes); @p out is emptied for t <= 0. */
 // http_rfc1123: file_serving.h

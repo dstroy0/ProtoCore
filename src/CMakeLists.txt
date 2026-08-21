@@ -26,6 +26,11 @@ target_include_directories(pc_config INTERFACE
   "${PROTOCORE_ROOT}/include"
   "${PROTOCORE_ROOT}")
 
+# Every feature flag, and the -D that carries each one to the compiler. Read here, before the module
+# directories below: protocore_add_module() returns early when its GATE is off, so the options have
+# to be settled before the first module asks. Needs pc_config, which is why it is not higher up.
+include(ProtoCoreOptions)
+
 # One module. DEPS are other modules; each is PUBLIC, so a consumer that links this one also gets
 # their headers and their own dependencies without naming them.
 function(protocore_module name)
