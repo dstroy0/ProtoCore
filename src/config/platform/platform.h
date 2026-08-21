@@ -33,6 +33,10 @@
 // Per-variant default sizing (chip / PSRAM / flash profiles). Reached before the widths so a board
 // profile can state PROTOCORE_HW_WORD_BITS; a -D override still wins (every default is #ifndef).
 #include "config/platform/compiler_directives.h" // PROTOCORE_INLINE, settled before any body is parsed
+// What a namespace is: PROTOCORE_NS, PROTOCORE_NS_LAYOUT, PROTOCORE_CALL. Beside the linkage and
+// for the same reason - every module's dispatch table is written with these, so they are settled
+// before any of them is parsed.
+#include "config/platform/ns_contract.h"
 #include "vendor/board_profiles/board_profile.h"
 
 // ---------------------------------------------------------------------------

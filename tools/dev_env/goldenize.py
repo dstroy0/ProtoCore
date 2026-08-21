@@ -3152,6 +3152,483 @@ def insert_align_asserts(src, regions):
     return src[:anchor] + note + "\n".join(body) + src[anchor:]
 
 
+# ===========================================================================
+# The MMgr shape
+# ===========================================================================
+#
+# What MMgr settled on, read off include/MMgr/src rather than described:
+#
+#   - an entry carries its REAL signature and its REAL return value. There is no args struct, no
+#     operands global, and no `uint8_t *restrict work` standing in for both.
+#   - the dispatch table is `PROTOCORE_NS` - static const - and lives in the HEADER, so every
+#     translation unit gets its own copy and gcc devirtualises the call through it.
+#   - `PROTOCORE_NS_LAYOUT` pins every member to its dispatch slot at compile time.
+#   - the @file block sits AFTER PROTOCORE_BEGIN_DECLS, and the .c has no BEGIN_DECLS at all.
+#
+# The work-taking shape this tree is in was a lossy encoding of exactly that signature: the args
+# struct IS the parameter list and the Vars result member IS the return type. So the conversion is
+# a decoding, and everything it needs is already on disk.
+
+WORK_MEMBER = re.compile(r"^[ \t]*void\s*\(\*const\s+(?P<name>\w+)\)\s*\(\s*uint8_t\s*\*restrict\s+work\s*\)\s*;", re.M)
+
+# `const uint8_t *data; ///< the bytes` - one field of an args struct.
+ARGS_FIELD = re.compile(r"^[ \t]*(?P<type>[A-Za-z_][\w\s\*]*?[\s\*])(?P<name>\w+)\s*(?P<arr>\[[^\]]*\])?\s*;"
+                        r"(?:[ \t]*///<[ \t]*(?P<doc>[^\n]*))?", re.M)
+
+
+def struct_body(s, typename):
+    """The text between the braces of `typedef struct { ... } <typename>;`, or ''."""
+    for mm in re.finditer(r"typedef\s+struct\s*\{", s):
+        # brace_end is the index JUST PAST the `}`, so the body stops one short of it and the name
+        # that follows starts there.
+        end = brace_end(s, mm.end() - 1)
+        if end >= len(s):
+            continue
+        t = re.match(r"\s*(\w+)\s*;", s[end:end + 200])
+        if t and t.group(1) == typename:
+            return s[mm.end():end - 1]
+    return ""
+
+
+def args_params(s, args_type):
+    """The parameter list an args struct encodes, in order."""
+    body = struct_body(s, args_type)
+    out = []
+    for m in ARGS_FIELD.finditer(body):
+        t = re.sub(r"\s+", " ", m.group("type")).strip()
+        out.append({
+            "type": t,
+            "name": m.group("name"),
+            "arr": m.group("arr") or "",
+            "doc": (m.group("doc") or "").strip(),
+        })
+    return out
+
+
+def result_members(s, vars_type):
+    """The Vars members that are NOT args - name -> type. These are the return values."""
+    body = struct_body(s, vars_type)
+    out = {}
+    for m in ARGS_FIELD.finditer(body):
+        t = re.sub(r"\s+", " ", m.group("type")).strip()
+        if t.endswith("Args"):
+            continue
+        out[m.group("name")] = t
+    return out
+
+
+def body_of(csrc, flat):
+    """(start, open_brace, end) of `void <flat>(uint8_t *restrict work) { ... }`, or None."""
+    m = re.search(r"^[A-Za-z_][\w \*]*\b%s\s*\([^)]*\)\s*\n?\s*\{" % re.escape(flat), csrc, re.M)
+    if not m:
+        return None
+    ob = csrc.rindex("{", m.start(), m.end())
+    # brace_end is one past the `}`; the caller wants the index OF it, so the body it slices out
+    # does not carry its own closing brace.
+    end = brace_end(csrc, ob) - 1
+    return (m.start(), ob, end) if end > ob else None
+
+
+def scan_worked(hpath):
+    """Decode a work-taking module back into real signatures.
+
+    The args struct is the parameter list; the Vars member an entry assigns is its return type. Both
+    are read off the files rather than guessed, so a module that never adopted a convention comes
+    back with what it actually has.
+    """
+    s = io.open(hpath, encoding="utf-8").read()
+    mod = os.path.splitext(os.path.basename(hpath))[0]
+    cpath = hpath[:-1] + "c"
+    csrc = io.open(cpath, encoding="utf-8").read() if os.path.exists(cpath) else ""
+
+    nsm = re.search(r"\}\s*(\w+Ns)\s*;", s)
+    varm = re.search(r"\}\s*(\w+Vars)\s*;", s)
+    if not nsm:
+        return None
+    ns = nsm.group(1)
+    vars_t = varm.group(1) if varm else ""
+    objm = re.search(r"^\s*extern\s+%s\s+(\w+)\s*;" % re.escape(ns), s, re.M)
+    obj = objm.group(1) if objm else camel(mod)
+    objv = ""
+    if vars_t:
+        vm = re.search(r"^\s*extern\s+%s\s+(\w+)\s*;" % re.escape(vars_t), s, re.M)
+        objv = vm.group(1) if vm else obj + "V"
+
+    results = result_members(s, vars_t) if vars_t else {}
+
+    # What the .c binds each member to.
+    bind = {}
+    init = re.search(r"\b%s\s+%s\b[^=;]*=\s*\{(.*?)\};" % (re.escape(ns), re.escape(obj)), csrc, re.S) \
+        or re.search(r"\b%s\s+%s\b[^=;]*=\s*\{(.*?)\};" % (re.escape(ns), re.escape(obj)), s, re.S)
+    if init:
+        for m in VTABLE_BIND.finditer(init.group(1)):
+            bind[m.group("entry")] = m.group("impl")
+
+    var_doc = {}
+    for m in re.finditer(r"@var\s+%s::(\w+)\s+([^\n]*)" % re.escape(ns), s):
+        var_doc[m.group(1)] = one_line(re.sub(r"\s+", " ", m.group(2)).strip(), 110)
+
+    entries = []
+    for m in WORK_MEMBER.finditer(s):
+        name = m.group("name")
+        flat = bind.get(name, "protocore_%s_%s" % (mod, name))
+        params = args_params(s, "%s%sArgs" % (obj, camel(name)))
+
+        # The return type: whichever result member this entry's body assigns.
+        ret, result = "void", None
+        span = body_of(csrc, flat)
+        if span and results:
+            body = csrc[span[1]:span[2]]
+            hits = [r for r in results if re.search(r"\b%s\.%s\s*=" % (re.escape(objv), re.escape(r)), body)]
+            if hits:
+                # `ok` is the default outcome every entry carries; a narrower one wins.
+                result = next((h for h in hits if h != "ok"), hits[0])
+                ret = results[result]
+        entries.append({
+            "entry": name,
+            "flat": flat,
+            "impl": flat,
+            "call": "%s.%s" % (obj, name),
+            "ret": ret,
+            "result": result,
+            "result_type": ret,
+            "brief": var_doc.get(name, ""),
+            "returns": "",
+            "params": params,
+        })
+
+    moved, held = classify_includes(s)
+    return {
+        "from": "worked",
+        "macros": module_macros(s, re.search(r"#ifndef (\w+)", s).group(1) if re.search(r"#ifndef (\w+)", s) else ""),
+        "types": [t for t in module_types(s) if not re.search(r"\}\s*\w+(Args|Vars|Ns)\s*;\s*$", t)],
+        "inlines": module_inlines(s),
+        "externs": [x for x in module_externs(s, ns) if vars_t not in x],
+        "moved_includes": moved,
+        "held_includes": held,
+        "module": mod,
+        "ns": ns,
+        "object": obj,
+        "objv": objv,
+        "vars": vars_t,
+        "gate": find_gate(s),
+        "header": os.path.relpath(hpath, R).replace("\\", "/"),
+        "source": os.path.relpath(hpath, R).replace("\\", "/")[:-1] + "c",
+        "borrow": "PROTOCORE_%s_BORROW" % snake(obj).upper(),
+        "pool": "secure",
+        "suites": find_suites(hpath, mod),
+        "owns_state": bool(find_context(csrc)),
+        "brief": first_sentence(doc_tags(doc_above(s, s.find("#ifndef")))[0]),
+        "entries": entries,
+    }
+
+
+def sig_params(spec, e, names=True):
+    """The parameter list an entry declares, borrow first where the caller supplies one."""
+    # The borrow is the first parameter of EVERY entry. It is not state a module reaches for
+    # itself: its size and its offset are each a static_assert, and that pair is what makes an
+    # improper feature combination fail to compile and a legal one fit.
+    out = ["uint8_t *restrict work" if names else "uint8_t *restrict"]
+    for p in e["params"]:
+        t = p["type"]
+        if p["arr"]:
+            t = t if t.endswith("*") else t + " *"
+        t = t if t.endswith("*") else t + " "
+        out.append("%s%s" % (t, p["name"]) if names else t.strip())
+    return ", ".join(out) if out else "void"
+
+
+def entry_doc(spec, e):
+    """An entry's doxygen: its brief, a @param per operand, and @return where it returns one."""
+    out = ["/**"]
+    b = e["brief"] or e["entry"].replace("_", " ")
+    out.append(" * @brief %s" % sentence(b[0].upper() + b[1:] if b else b, "%s." % e["entry"]))
+    out.append(" * @param work %s bytes the caller took. Not held past the call." % spec["borrow"])
+    for p in e["params"]:
+        d = p.get("doc") or "%s." % p["name"].replace("_", " ").capitalize()
+        out.append(" * @param %s %s" % (p["name"], one_line(d, 100)))
+    if e["ret"] != "void":
+        # What the module already published wins. RESULT_DOC's texts describe a member of the
+        # operands object - "a call's true/false outcome" - and there is no such member now.
+        r = one_line(e.get("returns") or "", 100)
+        if not r:
+            r = "PROTO_TRUE on success." if e["ret"] == "proto_bool" else "The %s." % e["ret"]
+        out.append(" * @return %s" % (r[0].upper() + r[1:] if r else r))
+    out.append(" */")
+    return out
+
+
+# Paragraphs of the old namespace block that describe the operands shape, and so stop being true the
+# moment an entry carries its own signature.
+STALE_DOC = ("@var ", "_args", "sets the members", "reads the outcome", "off the same handle",
+             "and that is\n", "operands and reads")
+
+
+def module_prose(original, ns):
+    """The namespace block's surviving paragraphs, for the @file block to carry.
+
+    Found by what it contains - `@var <ns>::` - rather than by what follows it: the block documents
+    the namespace's members but is written above the OPERANDS struct, so anchoring on the type after
+    it matched nothing.
+
+    A converted module keeps the prose it published. What goes is the part that documented the
+    mechanism rather than the module: the @var list, the worked example of setting operands, and any
+    paragraph phrased in terms of a handle a caller writes to.
+    """
+    block = None
+    for m in re.finditer(r"/\*\*((?:[^*]|\*(?!/))*)\*/", original, re.S):
+        if "@var %s::" % ns in m.group(1):
+            block = m.group(1)
+            break
+    if block is None:
+        return []
+    body = "\n".join(l.lstrip().lstrip("*").rstrip() for l in block.splitlines())
+    keep = []
+    for i, p in enumerate(x.strip("\n") for x in re.split(r"\n\s*\n", body)):
+        t = p.strip()
+        if not t:
+            continue
+        if i == 0 and t.startswith("@brief"):
+            continue  # the @file block states the brief itself
+        if any(x.strip() in t for x in STALE_DOC):
+            continue
+        if re.match(r"^\s*\w+\.\w+\(", t):
+            continue  # the worked example of setting operands
+        keep.append(re.sub(r"^@brief\s*", "", t))
+    return keep
+
+
+# A gate that names real hardware. MMgr gates confinium_externum on PSRAM and dma on DMA and gates
+# nothing else; ProtoCore's equivalent family is PROTOCORE_HAS_*. A PROTOCORE_ENABLE_* flag is a
+# feature, and whether a feature is in the build is answered by CMake - the module target simply is
+# not declared - so it wraps nothing.
+HARDWARE_GATE = re.compile(r"\bPROTOCORE_(?:HAS|HW)_\w+")
+
+
+def hardware_gate(gate):
+    """The gate to wrap a module in, or '' where CMake alone decides it is in the build."""
+    return gate if gate and HARDWARE_GATE.search(gate) else ""
+
+
+def split_head(original):
+    """(license lines, @brief, prose paragraphs, trailing tag lines) from the head of a header.
+
+    The head is everything above the include guard: a license comment, then the module's @file
+    block. MMgr keeps only the license there, so the block is taken apart here and rebuilt below
+    BEGIN_DECLS.
+    """
+    i = original.find("#ifndef")
+    head = original[:i] if i != -1 else original
+    lic = [l for l in head.splitlines() if l.startswith("//")]
+    m = re.search(r"/\*\*((?:[^*]|\*(?!/))*)\*/", head, re.S)
+    if not m:
+        return lic, "", [], []
+    body = "\n".join(l.lstrip().lstrip("*").strip() for l in m.group(1).splitlines())
+    brief, prose, tags = "", [], []
+    for para in (p.strip() for p in re.split(r"\n\s*\n", body)):
+        if not para:
+            continue
+        if para.startswith("@file"):
+            para = re.sub(r"^@file[^\n]*\n?", "", para).strip()
+            if not para:
+                continue
+        if para.startswith("@brief"):
+            brief = re.sub(r"^@brief\s*", "", para).strip()
+            continue
+        if re.match(r"^@(author|date|copyright|version)\b", para):
+            tags += [l for l in para.splitlines() if l.strip()]
+            continue
+        prose.append(para)
+    return lic, brief, prose, tags
+
+
+def gen_header_ns(spec, original):
+    """The header in MMgr's shape: pinned table, real prototypes, the namespace object beside them."""
+    obj, ns = spec["object"], spec["ns"]
+    prose = module_prose(original, ns)
+    lic, brief, own_prose, tags = split_head(original)
+    lines = []
+
+    for mdef in spec.get("macros", []):
+        lines += [mdef, ""]
+    for t in spec.get("types", []):
+        lines += [t, ""]
+    for t in spec.get("inlines", []):
+        lines += [t, ""]
+    for t in spec.get("externs", []):
+        lines += [t, ""]
+    for t in foreign_types(spec):
+        where = defining_header(t)
+        if where:
+            lines.append('#include "%s" // %s: the type a parameter points at' % (where, t))
+        else:
+            lines.append("/** @brief %s, as the caller already knows it. */" % t)
+            lines.append("struct %s;" % t)
+        lines.append("")
+
+    # The table. Every member carries the signature its entry really has.
+    lines.append("/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */")
+    lines.append("typedef struct")
+    lines.append("{")
+    for e in spec["entries"]:
+        lines.append("    %s (*%s)(%s);" % (e["ret"], e["entry"], sig_params(spec, e, names=False)))
+    lines.append("} %s;" % ns)
+    lines.append("PROTOCORE_NS_LAYOUT(%s, %s);" % (ns, ", ".join(e["entry"] for e in spec["entries"])))
+    lines.append("")
+
+    for e in spec["entries"]:
+        lines += entry_doc(spec, e)
+        lines.append("%s %s(%s);" % (e["ret"], e["flat"], sig_params(spec, e)))
+    lines.append("")
+
+    lines.append("/** @brief Module namespace. */")
+    inits = ", ".join(".%s = %s" % (e["entry"], e["flat"]) for e in spec["entries"])
+    lines.append("PROTOCORE_NS %s %s PROTOCORE_UNUSED = {%s};" % (ns, obj, inits))
+
+    # Where the prose the module already published explains its borrow, saying it again in a
+    # comment underneath is noise.
+    if any("borrow" in p.lower() or spec["borrow"] in p for p in prose):
+        note = ""
+    else:
+        note = (
+            "// %s - the bytes this module runs out of - is stated in protocore_config.h, which sums\n"
+            "// it into its arena. Its size and its offset are each a static_assert, so a feature\n"
+            "// combination that does not fit fails to compile rather than overrunning at run time.\n"
+            % spec["borrow"]
+        )
+
+    head = "\n".join(lic) + "\n\n"
+    g = re.search(r"#ifndef (\w+)\n#define \1", original)
+    guard = g.group(1) if g else "PROTOCORE_%s_H" % spec["module"].upper()
+    # The @file block sits inside BEGIN_DECLS, which is where MMgr puts it.
+    doc = ["/**", " * @file %s" % os.path.basename(spec["header"]),
+           " * @brief %s" % sentence((brief or spec.get("brief", "")).rstrip("."), "%s." % obj)]
+    for para in own_prose + prose:
+        doc.append(" *")
+        doc += [(" * " + l.strip()).rstrip() for l in para.splitlines()]
+    if tags:
+        doc.append(" *")
+        doc += [(" * " + l.strip()).rstrip() for l in tags]
+    doc.append(" */")
+    filedoc = "\n".join(doc) + "\n\n"
+    gate = hardware_gate(spec["gate"])
+    return (
+        head
+        + "#ifndef %s\n#define %s\n\n" % (guard, guard)
+        + '#include "protocore_config.h" // the entry point: protocore_types.h for the widths\n'
+        + "".join("#include %s // the complete type a public struct below holds by value\n" % h
+                  for h in spec.get("held_includes", []))
+        + "\n"
+        + ("#if %s\n\n" % gate if gate else "")
+        + "PROTOCORE_BEGIN_DECLS\n\n"
+        + filedoc
+        + note
+        + "\n"
+        + "\n".join(lines)
+        + "\n\nPROTOCORE_END_DECLS\n\n"
+        + ("#endif // %s\n\n" % gate if gate else "")
+        + "#endif // %s\n" % guard
+    )
+
+
+def unwork_source(spec):
+    """Give each entry in the .c its real signature back, and turn the operands into parameters.
+
+    `Sha256V.update_args.data` is the parameter `data`; `Sha256V.ok = PROTO_TRUE;` is
+    `return PROTO_TRUE;`. Where the outcome is written more than once - a default set at the top and
+    settled later - a local carries it, because folding the first write into a return would leave
+    the function early.
+    """
+    p = os.path.join(R, spec["source"].replace("/", os.sep))
+    if not os.path.exists(p):
+        return ["no source file"]
+    s = io.open(p, encoding="utf-8").read()
+    objv, notes = spec.get("objv", ""), []
+
+    for e in spec["entries"]:
+        span = body_of(s, e["flat"])
+        if not span:
+            notes.append("%s: no definition found, left alone" % e["flat"])
+            continue
+        start, ob, end = span
+        body = s[ob + 1:end]
+
+        # Operands become parameters.
+        if objv:
+            body = re.sub(r"\b%s\.%s_args\.(\w+)" % (re.escape(objv), re.escape(e["entry"])), r"\1", body)
+
+        res = e.get("result")
+        if res and objv:
+            assigns = list(re.finditer(r"[ \t]*%s\.%s\s*=\s*([^;]+);[ \t]*\n?" % (re.escape(objv), re.escape(res)), body))
+            tail_only = len(assigns) == 1 and not body[assigns[0].end():].strip()
+            if tail_only:
+                body = body[:assigns[0].start()] + "    return %s;\n" % assigns[0].group(1).strip()
+            elif assigns:
+                # A local named for the outcome, so a bare `return;` still reports it.
+                body = re.sub(r"\b%s\.%s\b" % (re.escape(objv), re.escape(res)), res, body)
+                body = re.sub(r"\breturn\s*;", "return %s;" % res, body)
+                decl = "    %s %s = %s;\n" % (e["ret"], res,
+                                              "PROTO_FALSE" if e["ret"] == "proto_bool" else "0")
+                # The first write is the initialiser, so it does not need to be a statement too.
+                first = re.search(r"[ \t]*%s\s*=\s*([^;]+);[ \t]*\n" % re.escape(res), body)
+                if first and not body[:first.start()].strip():
+                    decl = "    %s %s = %s;\n" % (e["ret"], res, first.group(1).strip())
+                    body = body[:first.start()] + body[first.end():]
+                if not re.search(r"\breturn\b", body.rstrip().rsplit("\n", 1)[-1] if "\n" in body else body):
+                    body = body.rstrip() + "\n    return %s;\n" % res
+                body = "\n" + decl + body.lstrip("\n")
+                # `ok = X; return ok;` is `return X;`.
+                body = re.sub(r"[ \t]*%s\s*=\s*([^;]+);\s*\n([ \t]*)return %s;"
+                              % (re.escape(res), re.escape(res)), r"\2return \1;", body)
+                # If that left nothing assigning to the local, every `return <local>;` returns the
+                # initialiser and the declaration is dead. No flow analysis in that - there is no
+                # assignment left to reason about.
+                rest = body.replace(decl, "", 1)
+                if not re.search(r"\b%s\s*=[^=]" % re.escape(res), rest):
+                    init_val = decl.split("=", 1)[1].strip().rstrip(";").strip()
+                    body = re.sub(r"\breturn %s;" % re.escape(res), "return %s;" % init_val, rest)
+
+        # `(void)work;` was there because an entry that read only operands never touched the
+        # borrow. Entries take real parameters now, and the ones that use the borrow use it by name.
+        if re.search(r"\bwork\b", re.sub(r"^\s*\(void\)work;[ \t]*\n", "", body, flags=re.M)):
+            body = re.sub(r"^\s*\(void\)work;[ \t]*\n", "", body, flags=re.M)
+
+        sig = "%s %s(%s)\n{" % (e["ret"], e["flat"], sig_params(spec, e))
+        s = s[:start] + sig + body + s[end:]
+
+    # The operands object is gone with the args it carried.
+    if objv:
+        # The doc comment above it goes too, or it is left introducing nothing.
+        s = re.sub(r"(?:^[ \t]*/\*\*(?:[^*]|\*(?!/))*\*/[ \t]*\n)?^[ \t]*%s\s+%s\s*;[ \t]*\n"
+                   % (re.escape(spec.get("vars", "")), re.escape(objv)), "", s, flags=re.M)
+
+    # The table, rebuilt so it binds the same names in the same order - and it now lives in the
+    # header, so the .c no longer defines it.
+    s = re.sub(r"^static\s+const\s+%s\s+%s\s*=\s*\{.*?\};\s*\n" % (re.escape(spec["ns"]), re.escape(spec["object"])),
+               "", s, flags=re.S | re.M)
+    s = re.sub(r"^%s\s+%s\s*=\s*\{.*?\};\s*\n" % (re.escape(spec["ns"]), re.escape(spec["object"])),
+               "", s, flags=re.S | re.M)
+
+    # MMgr's .c files carry no BEGIN_DECLS: the header already gave the declarations linkage.
+    s = re.sub(r"^PROTOCORE_BEGIN_DECLS[ \t]*\n+", "", s, flags=re.M)
+    s = re.sub(r"\n*^PROTOCORE_END_DECLS[ \t]*\n", "\n", s, flags=re.M)
+
+    # The enable gate around the whole translation unit goes, unless it names hardware. CMake
+    # already decides whether this file is compiled; gating it as well compiles it to nothing
+    # instead, which is what let an env carry sources that contributed no symbols.
+    if not hardware_gate(spec["gate"]):
+        g = re.escape(spec["gate"])
+        s = re.sub(r"^#if %s[ \t]*\n\n?" % g, "", s, count=1, flags=re.M)
+        s = re.sub(r"\n*^#endif[ \t]*//[ \t]*%s[ \t]*\n?" % g, "\n", s, flags=re.M)
+        # The config include's comment named the gate it was there to define.
+        s = s.replace(
+            '#include "protocore_config.h" // the entry point: the enable gate below, and the widths',
+            '#include "protocore_config.h" // the entry point: the widths')
+
+    emit(p, s)
+    return notes
+
+
 def main():
     global DRY
     # A header carries the section signs and dashes its RFC citations are written with, and the
@@ -3171,6 +3648,33 @@ def main():
     cmd, arg = argv[1], (argv[2] if len(argv) > 2 else "")
     if DRY:
         print("--- DRY RUN: the diff below is what would be written, and nothing was ---")
+    if cmd == "ns":
+        # The MMgr shape. Reads the work-taking module back into real signatures, writes the header
+        # with a pinned table and the namespace object beside it, and gives the .c its signatures
+        # back. `--dry` prints the diff and writes nothing.
+        hp = os.path.join(R, arg.replace("/", os.sep))
+        if not os.path.exists(hp):
+            print("no such header: %s" % arg)
+            return 2
+        spec = scan_worked(hp)
+        if not spec:
+            print("%s has no <X>Ns table - nothing to convert" % arg)
+            return 2
+        print("module %s | ns %s | object %s | gate %s" % (spec["module"], spec["ns"], spec["object"], spec["gate"]))
+        print("owns state: %s (%s)" % (
+            spec["owns_state"],
+            "reaches its own span, entries take no borrow" if spec["owns_state"]
+            else "the borrow is a real operand"))
+        print("entries:")
+        for e in spec["entries"]:
+            print("   %-28s %s %s(%s)" % (e["entry"], e["ret"], e["flat"], sig_params(spec, e)))
+        original = io.open(hp, encoding="utf-8").read()
+        print("header:", spec["header"])
+        emit(hp, gen_header_ns(spec, original))
+        print("source:", spec["source"])
+        for n in dict.fromkeys(unwork_source(spec)):
+            print("   NOTE", n)
+        return 0
     if cmd == "shape":
         # The golden's file shape. sha256.c states one thing above the enable gate - the config
         # include that defines the gate - and everything else below it, so nothing outside the

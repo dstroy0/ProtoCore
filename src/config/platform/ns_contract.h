@@ -19,9 +19,23 @@
  * @date    2026
  */
 
-#include "config/platform/compiler_directives.h" // PROTOCORE_STATIC_ASSERT and the attribute probes
-
+#include <assert.h> // static_assert, which every pin below is written with
 #include <stddef.h> // offsetof
+
+/**
+ * @brief Suppress the unused warning. Every module ends in a namespace most callers only partly use.
+ *
+ * The table is `static const` in the header, so a translation unit that includes the module and
+ * calls two of its twelve entries still declares all twelve, and a plain -Wunused build would
+ * report the ones it did not reach.
+ */
+#ifndef PROTOCORE_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define PROTOCORE_UNUSED __attribute__((unused))
+#else
+#define PROTOCORE_UNUSED
+#endif
+#endif
 
 /** @brief Paste two tokens after expanding both. */
 #define PROTOCORE_CAT_(a, b) a##b
