@@ -3253,7 +3253,10 @@ def scan_worked(hpath):
         return None
     ns = nsm.group(1)
     vars_t = varm.group(1) if varm else ""
-    objm = re.search(r"^\s*extern\s+%s\s+(\w+)\s*;" % re.escape(ns), s, re.M)
+    # The table object, however it is declared. It used to be an extern against a definition in the
+    # .c; the handle pass made it a static const initialised in the header, so a pattern that only
+    # matched extern stopped finding it and every caller of this fell back to camel(module_name).
+    objm = re.search(r"^\s*(?:extern|static\s+const)\s+%s\s+(\w+)" % re.escape(ns), s, re.M)
     obj = objm.group(1) if objm else camel(mod)
     objv = ""
     if vars_t:
@@ -3279,7 +3282,26 @@ def scan_worked(hpath):
     for m in WORK_MEMBER.finditer(s):
         name = m.group("name")
         flat = bind.get(name, "protocore_%s_%s" % (mod, name))
-        params = args_params(s, "%s%sArgs" % (obj, camel(name)))
+        # WHICH OPERAND GROUP THIS ENTRY READS, asked of its body rather than guessed from its name.
+        # The convention is <Obj><Entry>Args, and it is not universal: aes128gcm's key_init reads
+        # Aes128GcmV.key_args, whose type is Aes128GcmKeyArgs, not Aes128GcmKeyInitArgs. Guessing
+        # found no struct, so every entry read as taking no operands at all.
+        #
+        # The prefix guess is still the fallback, and it uses the TABLE TYPE'S name rather than the
+        # module name through camel() - aes128gcm.h declares Aes128GcmKeyArgs and camel("aes128gcm")
+        # gives "Aes128gcm", one letter apart.
+        params, group = [], name
+        span = body_of(csrc, flat)
+        if span and objv:
+            groups = dict.fromkeys(re.findall(r"\b%s\.(\w+)_args\b" % re.escape(objv), csrc[span[1] : span[2]]))
+            if len(groups) == 1:
+                group = next(iter(groups))
+                member = group + "_args"
+                tm = re.search(r"\b(\w+)\s+%s\s*;" % re.escape(member), s)
+                if tm:
+                    params = args_params(s, tm.group(1))
+        if not params:
+            params = args_params(s, "%s%sArgs" % (ns[:-2] if ns.endswith("Ns") else obj, camel(name)))
 
         # The return type: whichever result member this entry's body assigns.
         ret, result = "void", None
@@ -3294,6 +3316,9 @@ def scan_worked(hpath):
         entries.append(
             {
                 "entry": name,
+                # The operand group this entry stages into, which is not always its own name:
+                # aes128gcm has block_init and block_encrypt both staging into block_args.
+                "group": group,
                 "flat": flat,
                 "impl": flat,
                 "call": "%s.%s" % (obj, name),
@@ -3648,11 +3673,13 @@ def undecodable_operands(spec, texts=None):
     # it belongs to, so `Smb2V.sign_args.msg` read from a static helper - or from a DIFFERENT
     # entry - is not decoded by anything, and the module compiles with those names undeclared.
     # smb2 is the worked example: five operands read outside their own entry's body.
+    # Keyed by the operand GROUP, and a group can belong to more than one entry, so a read is
+    # decodable if it sits in the body of any entry that stages through it.
     spans = {}
     for e in spec["entries"]:
         span = body_of(text, e["flat"])
         if span:
-            spans[e["entry"]] = (span[1], span[2])
+            spans.setdefault(e.get("group", e["entry"]), []).append((span[1], span[2]))
 
     out = []
     for m in re.finditer(r"\b%s\.(\w+)" % re.escape(objv), text):
@@ -3661,8 +3688,7 @@ def undecodable_operands(spec, texts=None):
         member = m.group(1)
         if member.endswith("_args"):
             owner = member[: -len("_args")]
-            here = spans.get(owner)
-            if owner in entries and here and here[0] <= m.start() <= here[1]:
+            if any(a <= m.start() <= b for a, b in spans.get(owner, ())):
                 continue
         if member in results:
             continue
@@ -3844,7 +3870,10 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
                         sm = stage_any.match(line)
                         if not sm:
                             break
-                        if sm.group(1) == e["entry"]:
+                        # Matched on the entry's operand GROUP, not on its name. aes128gcm stages
+                        # block_init through block_key_args and block_encrypt through block_args,
+                        # and matching the name left every one of those sites unfolded.
+                        if sm.group(1) == e.get("group", e["entry"]):
                             vals.setdefault(sm.group(2), sm.group(3).strip())
                             # A comment on a staged line says why that operand is what it is, and
                             # the line it sits on is about to go. Carry it to the call.
