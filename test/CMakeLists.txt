@@ -27,6 +27,7 @@ enable_testing()
 # nothing, which is the whole point of stating one.
 list(APPEND CMAKE_MODULE_PATH "${PROTOCORE_ROOT}/cmake")
 include(ProtoCoreModule)
+include(ProtoCoreSuite)
 add_subdirectory("${PROTOCORE_ROOT}/src" "${CMAKE_CURRENT_BINARY_DIR}/pc_src")
 add_subdirectory("${PROTOCORE_ROOT}/vendor" "${CMAKE_CURRENT_BINARY_DIR}/pc_vendor")
 add_subdirectory("${PROTOCORE_ROOT}/include" "${CMAKE_CURRENT_BINARY_DIR}/pc_include")
@@ -37,6 +38,13 @@ add_subdirectory("${PROTOCORE_ROOT}/include" "${CMAKE_CURRENT_BINARY_DIR}/pc_inc
 # and the options have to exist before a module declares itself against them.
 add_subdirectory(core_setup)
 add_subdirectory(support)
+
+# The suites. Each directory under these two declares what it is made of; an env below names the
+# one it runs rather than repeating that suite's files and its include path. A suite carries its
+# sources as INTERFACE_SOURCES, so they are compiled AS the env that links them, with that env's
+# defines - which is what lets 59 suites be run by more than one env, and test_connection by five.
+add_subdirectory(unit)
+add_subdirectory(env)
 
 # Unity is a package the envs link; pio installs it per env, so any copy in the tree will do.
 if(NOT PROTOCORE_UNITY_DIR)
@@ -64,11 +72,15 @@ target_link_libraries(protocore_env_base INTERFACE m)
 # Unity's configuration are env defines, and a shared library compiles them out of every env that
 # asked for them. The direct compile in test/harness.py puts unity.c in the same TU list.
 function(protocore_env name)
-  cmake_parse_arguments(E "" "" "SOURCES;DEFINES;INCLUDES" ${ARGN})
+  cmake_parse_arguments(E "" "SUITE" "SOURCES;DEFINES;INCLUDES" ${ARGN})
   add_executable(${name} ${E_SOURCES} "${PROTOCORE_UNITY_DIR}/unity.c")
   target_include_directories(${name} PRIVATE ${E_INCLUDES})
   target_compile_definitions(${name} PRIVATE ${E_DEFINES})
   target_link_libraries(${name} PRIVATE protocore_env_base)
+  # The suite's own files and its include path arrive through its target, and are compiled here,
+  # under this env's defines - see cmake/ProtoCoreSuite.cmake for why that is an INTERFACE library.
+  protocore_suite_target("${E_SUITE}" _suite)
+  target_link_libraries(${name} PRIVATE ${_suite})
   set_target_properties(${name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/env")
   add_test(NAME ${name} COMMAND ${name})
   set_tests_properties(${name} PROPERTIES
@@ -78,6 +90,7 @@ endfunction()
 
 # Accept-time connection gates with their flags ON (PROTOCORE_ENABLE_ACCEPT_THROTTLE
 protocore_env(native_accept_gate
+  SUITE env/transport/test_accept_gate
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -112,8 +125,6 @@ protocore_env(native_accept_gate
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/shared/utf8/utf8.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_accept_gate/test_accept_gate.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_accept_gate/unity_runner.c"
   DEFINES
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
     "PROTOCORE_ENABLE_ACCEPT_THROTTLE=1"
@@ -135,18 +146,16 @@ protocore_env(native_accept_gate
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_accept_gate/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/transport/test_accept_gate"
 )
 
 # AD9238 SPI configuration-port codec (server/peripherals/ad9238): the 16-bit instruction word
 protocore_env(native_ad9238
+  SUITE unit/src/server/peripherals/ad9238/test_ad9238
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/ad9238/ad9238.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ad9238/test_ad9238/test_ad9238.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ad9238/test_ad9238/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_AD9238=1"
   INCLUDES
@@ -156,19 +165,17 @@ protocore_env(native_ad9238
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ad9238/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ad9238/test_ad9238"
 )
 
 # Beckhoff ADS / AMS codec (services/fieldbus/ads): the AMS/TCP + AMS-header request builders
 protocore_env(native_ads
+  SUITE unit/src/services/fieldbus/ads/test_ads
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/ads/ads.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/ads/test_ads/test_ads.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/ads/test_ads/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_ADS=1"
   INCLUDES
@@ -178,11 +185,11 @@ protocore_env(native_ads
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ads/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/ads/test_ads"
 )
 
 # ADS1115 16-bit ADC codec and its I2C binding (server/peripherals/ads1115): building the 16-bit config word for a single-shot single-ended reading (channel MUX, gain, data rate, start/mode/comparator bits, with out-of-range fallbacks), converting a signed 16-bit sample to microvolts across the gain's full-scale range, and reading a part end to end - the suite puts a voltage on a pin of the SBAS444E device model in test/core_setup/hal/host/devices/ and the driver's own transfers bring back the code the part computes for it.
 protocore_env(native_ads1115
+  SUITE unit/src/server/peripherals/ads1115/test_ads1115
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/ads1115/ads1115.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -194,8 +201,6 @@ protocore_env(native_ads1115
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ads1115/test_ads1115/test_ads1115.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ads1115/test_ads1115/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_ADS1115=1"
   INCLUDES
@@ -205,11 +210,11 @@ protocore_env(native_ads1115
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ads1115/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ads1115/test_ads1115"
 )
 
 # The software AES block every software AES mode in the library sits on.
 protocore_env(native_aes_block
+  SUITE unit/src/crypto/cipher/test_aes_block
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -217,8 +222,6 @@ protocore_env(native_aes_block
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/crypto/cipher/aes_block/aes_block.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/cipher/test_aes_block/test_aes_block.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/cipher/test_aes_block/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -226,11 +229,11 @@ protocore_env(native_aes_block
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_aes_block/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/cipher/test_aes_block"
 )
 
 # AES-256-GCM (crypto/aead/aesgcm.h) against the NIST CAVP AES-256-GCM known-answer vectors from the SP 800-38D validation set (Keylen 256 / IVlen 96 / Taglen 128): empty message, AAD-only GMAC, one whole block, and a partial final block. Adds tamper refusal on tag, ciphertext, AAD and nonce, the RFC 5647 sec 7.1 invocation-counter advance, the NIST SP 800-38D sec 6.5 GCTR counter byte carry, and in-place sealing.
 protocore_env(native_aesgcm_kat
+  SUITE unit/src/crypto/aead/test_ssh_aesgcm
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/aead/aesgcm/aesgcm.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
@@ -244,8 +247,6 @@ protocore_env(native_aesgcm_kat
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/aead/test_ssh_aesgcm/test_ssh_aesgcm.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/aead/test_ssh_aesgcm/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -253,11 +254,11 @@ protocore_env(native_aesgcm_kat
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_aesgcm_kat/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/aead/test_ssh_aesgcm"
 )
 
 # The AES-256-GCM CAVP vectors a second time with the accelerator arm selected, answered by the host AES HAL so both arms run natively.
 protocore_env(native_aesgcm_kat_hw
+  SUITE unit/src/crypto/aead/test_ssh_aesgcm
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/aead/aesgcm/aesgcm.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
@@ -272,8 +273,6 @@ protocore_env(native_aesgcm_kat_hw
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_aes_hal.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/aead/test_ssh_aesgcm/test_ssh_aesgcm.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/aead/test_ssh_aesgcm/unity_runner.c"
   DEFINES
     "PROTOCORE_HAS_HW_AESGCM=1"
     "PROTOCORE_HAS_HW_AES=1"
@@ -284,19 +283,17 @@ protocore_env(native_aesgcm_kat_hw
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_aesgcm_kat_hw/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/aead/test_ssh_aesgcm"
 )
 
 # AMQP 0-9-1 frame codec (services/iot/amqp): the protocol header, the frame + method
 protocore_env(native_amqp
+  SUITE unit/src/services/iot/amqp/test_amqp
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/amqp/amqp.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/amqp/test_amqp/test_amqp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/amqp/test_amqp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_AMQP=1"
   INCLUDES
@@ -306,11 +303,11 @@ protocore_env(native_amqp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_amqp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/amqp/test_amqp"
 )
 
 # test_application against the native_stack_http stack.
 protocore_env(native_application
+  SUITE env/misc/test_application
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -380,7 +377,6 @@ protocore_env(native_application
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
-    "${PROTOCORE_ROOT}/test/env/misc/test_application/test_application.c"
     "${PROTOCORE_ROOT}/.pio/libdeps/native_application/littlefs/src/lfs.c"
     "${PROTOCORE_ROOT}/.pio/libdeps/native_application/littlefs/src/lfs_util.c"
   DEFINES
@@ -408,19 +404,17 @@ protocore_env(native_application
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_application/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/misc/test_application"
 )
 
 # Unified double-ended server arena (server/core/protocore_arena): first-fit
 protocore_env(native_arena
+  SUITE unit/src/mmgr/test_arena
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_arena/test_arena.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_arena/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -428,11 +422,11 @@ protocore_env(native_arena
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_arena/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_arena"
 )
 
 # ATC field-I/O interop snapshot (services/machine_tool/atc): serialize this device's field-I/O map
 protocore_env(native_atc
+  SUITE unit/src/services/machine_tool/atc/test_atc
   SOURCES
     "${PROTOCORE_ROOT}/src/services/machine_tool/atc/atc.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -442,8 +436,6 @@ protocore_env(native_atc
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/atc/test_atc/test_atc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/atc/test_atc/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_ATC=1"
   INCLUDES
@@ -453,11 +445,11 @@ protocore_env(native_atc
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_atc/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/atc/test_atc"
 )
 
 # Tamper-evident hash-chained audit log (server/security/audit_log). Pure - the chain is
 protocore_env(native_audit_log
+  SUITE unit/src/server/security/audit_log/test_audit_log
   SOURCES
     "${PROTOCORE_ROOT}/src/server/security/audit_log/audit_log.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
@@ -474,8 +466,6 @@ protocore_env(native_audit_log
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/security/audit_log/test_audit_log/test_audit_log.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/security/audit_log/test_audit_log/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_AUDIT_LOG=1"
   INCLUDES
@@ -485,11 +475,11 @@ protocore_env(native_audit_log
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_audit_log/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/security/audit_log/test_audit_log"
 )
 
 # test_auth against the native_stack_http stack.
 protocore_env(native_auth
+  SUITE env/http/test_auth
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -559,7 +549,6 @@ protocore_env(native_auth
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
-    "${PROTOCORE_ROOT}/test/env/http/test_auth/test_auth.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -585,11 +574,11 @@ protocore_env(native_auth
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_auth/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/http/test_auth"
 )
 
 # Per-IP brute-force auth lockout (server/security/auth_lockout): exponential-backoff
 protocore_env(native_auth_lockout
+  SUITE unit/src/server/security/auth_lockout/test_auth_lockout
   SOURCES
     "${PROTOCORE_ROOT}/src/server/security/auth_lockout/auth_lockout.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
@@ -601,8 +590,6 @@ protocore_env(native_auth_lockout
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/security/auth_lockout/test_auth_lockout/test_auth_lockout.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/security/auth_lockout/test_auth_lockout/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_AUTH=1"
     "PROTOCORE_ENABLE_AUTH_LOCKOUT=1"
@@ -615,18 +602,16 @@ protocore_env(native_auth_lockout
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_auth_lockout/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/security/auth_lockout/test_auth_lockout"
 )
 
 # BACnet/IP BVLC + NPDU codec (services/fieldbus/bacnet): the BVLC envelope (type 0x81,
 protocore_env(native_bacnet
+  SUITE unit/src/services/fieldbus/bacnet/test_bacnet
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/bacnet/bacnet.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/bacnet/test_bacnet/test_bacnet.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/bacnet/test_bacnet/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_BACNET=1"
   INCLUDES
@@ -636,11 +621,11 @@ protocore_env(native_bacnet
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_bacnet/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/bacnet/test_bacnet"
 )
 
 # test_base64 against the native_stack_l46 stack.
 protocore_env(native_base64
+  SUITE unit/src/network_drivers/presentation/codec/base64/test_base64
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -675,8 +660,6 @@ protocore_env(native_base64
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/shared/utf8/utf8.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/base64/test_base64/test_base64.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/base64/test_base64/unity_runner.c"
   DEFINES
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
     "PROTOCORE_ENABLE_MULTIPART=1"
@@ -688,11 +671,11 @@ protocore_env(native_base64
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_base64/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/base64/test_base64"
 )
 
 # The 2048-bit big-integer layer (crypto/asymmetric/bignum.h) on the portable software Montgomery backend. group14_p and group14_g are held to RFC 3526 section 3 as printed; the big-endian conversions, the ordering entries, is_zero and the RFC 4253 section 8 DH range check are held to their boundaries; and the group-14 modexp is driven onto nine residues CPython's pow() produced over the same transcribed prime - a small power, Fermat over a prime modulus, a zero exponent, two full-width exponents, and the two halves of an exchange that must land on the same secret.
 protocore_env(native_bignum_group14
+  SUITE unit/src/crypto/asymmetric/test_bignum_group14
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/asymmetric/bignum/bignum.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
@@ -705,8 +688,6 @@ protocore_env(native_bignum_group14
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_bignum_group14/test_bignum_group14.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_bignum_group14/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -714,11 +695,11 @@ protocore_env(native_bignum_group14
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_bignum_group14/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_bignum_group14"
 )
 
 # The same big-integer layer with the accelerated bignum backend selected (PROTOCORE_HAS_HW_BIGNUM), answered by the host arm of the RSA/MPI HAL so both backends of bn_expmod_group14 run natively against the same residues.
 protocore_env(native_bignum_group14_hw
+  SUITE unit/src/crypto/asymmetric/test_bignum_group14
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/asymmetric/bignum/bignum.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
@@ -732,8 +713,6 @@ protocore_env(native_bignum_group14_hw
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_bignum.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_crypto_hal.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_bignum_group14/test_bignum_group14.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_bignum_group14/unity_runner.c"
   DEFINES
     "PROTOCORE_HAS_HW_BIGNUM=1"
     "PROTOCORE_RSA_MODMUL_HW=1"
@@ -744,18 +723,16 @@ protocore_env(native_bignum_group14_hw
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_bignum_group14_hw/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_bignum_group14"
 )
 
 # The LSB-first bit writer (mmgr/bitio.h) the DEFLATE encoder and the SSH
 protocore_env(native_bitio
+  SUITE unit/src/mmgr/test_bitio
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/bitio/bitio.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_bitio/test_bitio.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_bitio/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -763,11 +740,11 @@ protocore_env(native_bitio
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_bitio/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_bitio"
 )
 
 # Bluetooth ATT codec and GATT characteristic bridge (services/radio/ble_gatt/ble_gatt.c): the Core Specification Vol 3 Part F section 3.4 PDU layouts and their section 3.4.8 opcodes with little-endian attribute handles, the section 3.4.1.1 Error Response, the Vol 3 Part G section 3.3.1.1 characteristic property bits, and the northbound RFC 8259 JSON view of a characteristic table. Pure host tests.
 protocore_env(native_ble_gatt_att
+  SUITE unit/src/services/radio/ble_gatt/test_ble_gatt
   SOURCES
     "${PROTOCORE_ROOT}/src/services/radio/ble_gatt/ble_gatt.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -777,8 +754,6 @@ protocore_env(native_ble_gatt_att
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/ble_gatt/test_ble_gatt/test_ble_gatt.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/ble_gatt/test_ble_gatt/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_BLE_GATT=1"
   INCLUDES
@@ -788,15 +763,13 @@ protocore_env(native_ble_gatt_att
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ble_gatt_att/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/ble_gatt/test_ble_gatt"
 )
 
 # The reset handler's loops (test/core_setup/boot): the .data copy, the .bss zero and the stack paint that protocore_platform_stack_free() reads back. Host-run, so the same loops the silicon runs are exercised against caller-supplied regions carrying guard words on both ends.
 protocore_env(native_boot
+  SUITE unit/core_setup/boot/test_boot
   SOURCES
     "${PROTOCORE_ROOT}/test/core_setup/boot/protocore_boot.c"
-    "${PROTOCORE_ROOT}/test/unit/core_setup/boot/test_boot/test_boot.c"
-    "${PROTOCORE_ROOT}/test/unit/core_setup/boot/test_boot/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -804,11 +777,11 @@ protocore_env(native_boot
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_boot/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/core_setup/boot/test_boot"
 )
 
 # CAN listen-only capture framing (server/signaling/bus_capture): can_to_socketcan() building the
 protocore_env(native_bus_capture
+  SUITE unit/src/server/signaling/test_bus_capture
   SOURCES
     "${PROTOCORE_ROOT}/src/server/signaling/bus_capture/bus_capture.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -821,8 +794,6 @@ protocore_env(native_bus_capture
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/test_bus_capture/test_bus_capture.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/test_bus_capture/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_BUS_CAPTURE=1"
     "PROTOCORE_HAS_VENDOR_CAN=1"
@@ -833,11 +804,11 @@ protocore_env(native_bus_capture
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_bus_capture/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/test_bus_capture"
 )
 
 # End to end from the host harness through the library: a real peripheral driver is called, it
 protocore_env(native_bus_wire
+  SUITE env/peripherals/test_bus_wire
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/sht3x/sht3x.c"
     "${PROTOCORE_ROOT}/src/server/peripherals/pca9685/pca9685.c"
@@ -854,8 +825,6 @@ protocore_env(native_bus_wire
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/env/peripherals/test_bus_wire/test_bus_wire.c"
-    "${PROTOCORE_ROOT}/test/env/peripherals/test_bus_wire/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SHT3X=1"
     "PROTOCORE_ENABLE_PCA9685=1"
@@ -869,11 +838,11 @@ protocore_env(native_bus_wire
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_bus_wire/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/peripherals/test_bus_wire"
 )
 
 # The byte verbs (mmgr/bytes.h): append into a protocore_span, take out of a protocore_cspan, and the
 protocore_env(native_bytes
+  SUITE unit/src/mmgr/test_bytes
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
@@ -881,8 +850,6 @@ protocore_env(native_bytes
     "${PROTOCORE_ROOT}/src/mmgr/bytes/bytes.c"
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_bytes/test_bytes.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_bytes/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -890,11 +857,11 @@ protocore_env(native_bytes
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_bytes/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_bytes"
 )
 
 # IEEE C37.118.2 synchrophasor frame codec (services/energy/c37118): CRC-CCITT, the frame
 protocore_env(native_c37118
+  SUITE unit/src/services/energy/c37118/test_c37118
   SOURCES
     "${PROTOCORE_ROOT}/src/services/energy/c37118/c37118.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -902,8 +869,6 @@ protocore_env(native_c37118
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/crc/crc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/c37118/test_c37118/test_c37118.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/c37118/test_c37118/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_C37118=1"
   INCLUDES
@@ -913,18 +878,16 @@ protocore_env(native_c37118
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_c37118/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/c37118/test_c37118"
 )
 
 # CANopen (CiA 301) message codec (services/fieldbus/canopen): NMT, SYNC, heartbeat, EMCY,
 protocore_env(native_canopen
+  SUITE unit/src/services/fieldbus/canopen/test_canopen
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/canopen/canopen.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/canopen/test_canopen/test_canopen.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/canopen/test_canopen/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_CANOPEN=1"
   INCLUDES
@@ -934,18 +897,16 @@ protocore_env(native_canopen
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_canopen/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/canopen/test_canopen"
 )
 
 # CC1101 sub-GHz radio driver (services/radio/cc1101): the TI SPI header protocol (config
 protocore_env(native_cc1101
+  SUITE unit/src/services/radio/cc1101/test_cc1101
   SOURCES
     "${PROTOCORE_ROOT}/src/services/radio/cc1101/cc1101.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/cc1101/test_cc1101/test_cc1101.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/cc1101/test_cc1101/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_CC1101=1"
   INCLUDES
@@ -955,18 +916,16 @@ protocore_env(native_cc1101
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_cc1101/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/cc1101/test_cc1101"
 )
 
 # CC-Link cyclic fieldbus frame codec (services/fieldbus/cclink): the frame ([station][command][bit
 protocore_env(native_cclink
+  SUITE unit/src/services/fieldbus/cclink/test_cclink
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/cclink/cclink.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/cclink/test_cclink/test_cclink.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/cclink/test_cclink/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_CCLINK=1"
   INCLUDES
@@ -976,11 +935,11 @@ protocore_env(native_cclink
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_cclink/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/cclink/test_cclink"
 )
 
 # chacha20-poly1305@openssh.com (crypto/aead/chachapoly.h). OpenSSH publishes no vectors for the construction, so the keystream halves are driven onto RFC 8439 Appendix A.1 Test Vectors 1, 2 and 3: an all-zero 64-octet key and sequence number 0 make both ChaCha keys and both nonces all-zero, so the encrypted length field and the encrypted payload must equal the RFC's published counter-0 and counter-1 blocks XORed with the plaintext. A second case gives the two halves different keys so a swapped split cannot pass. The Poly1305 tag is held to properties: verification, tamper refusal on every covered field, and the wrong sequence number.
 protocore_env(native_chachapoly_kat
+  SUITE unit/src/crypto/cipher/test_ssh_chachapoly
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/poly1305/poly1305.c"
@@ -994,8 +953,6 @@ protocore_env(native_chachapoly_kat
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/cipher/test_ssh_chachapoly/test_ssh_chachapoly.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/cipher/test_ssh_chachapoly/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -1003,11 +960,11 @@ protocore_env(native_chachapoly_kat
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_chachapoly_kat/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/cipher/test_ssh_chachapoly"
 )
 
 # test_chunked against the native_stack_http stack.
 protocore_env(native_chunked
+  SUITE env/shared/test_chunked
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -1077,8 +1034,6 @@ protocore_env(native_chunked
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
-    "${PROTOCORE_ROOT}/test/env/shared/test_chunked/test_chunked.c"
-    "${PROTOCORE_ROOT}/test/env/shared/test_chunked/unity_runner.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -1103,11 +1058,11 @@ protocore_env(native_chunked
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_chunked/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/shared/test_chunked"
 )
 
 # CiA 402 / IEC 61800-7-201 drive profile (services/fieldbus/cia402): the Statusword power-state
 protocore_env(native_cia402
+  SUITE unit/src/services/fieldbus/cia402/test_cia402
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/cia402/cia402.c"
     "${PROTOCORE_ROOT}/src/services/fieldbus/canopen/canopen.c"
@@ -1115,8 +1070,6 @@ protocore_env(native_cia402
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/cia402/test_cia402/test_cia402.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/cia402/test_cia402/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_CIA402=1"
     "PROTOCORE_ENABLE_CANOPEN=1"
@@ -1127,18 +1080,16 @@ protocore_env(native_cia402
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_cia402/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/cia402/test_cia402"
 )
 
 # CIP message codec (services/fieldbus/cip): the EPATH logical-segment builder, the request
 protocore_env(native_cip
+  SUITE unit/src/services/fieldbus/cip/test_cip
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/cip/cip.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/cip/test_cip/test_cip.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/cip/test_cip/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_CIP=1"
   INCLUDES
@@ -1148,11 +1099,11 @@ protocore_env(native_cip
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_cip/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/cip/test_cip"
 )
 
 # Outbound TCP client transport (network_drivers/transport/tcp/tcp_client.c), the pooled
 protocore_env(native_client
+  SUITE env/transport/test_client
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/tcp.c"
     "${PROTOCORE_ROOT}/src/mmgr/secure/secure.c"
@@ -1182,8 +1133,6 @@ protocore_env(native_client
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_client/test_client.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_client/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -1199,18 +1148,16 @@ protocore_env(native_client
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_client/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/transport/test_client"
 )
 
 # Pluggable monotonic clock (server/clock): default millis(), custom clock
 protocore_env(native_clock
+  SUITE unit/src/server/clock/test_clock
   SOURCES
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/clock/test_clock/test_clock.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/clock/test_clock/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -1218,11 +1165,11 @@ protocore_env(native_clock
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_clock/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/clock/test_clock"
 )
 
 # CloudEvents v1.0 envelope (services/iot/cloudevents): the structured-JSON builder
 protocore_env(native_cloudevents
+  SUITE unit/src/services/iot/cloudevents/test_cloudevents
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/services/iot/cloudevents/cloudevents.c"
@@ -1239,8 +1186,6 @@ protocore_env(native_cloudevents
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/cloudevents/test_cloudevents/test_cloudevents.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/cloudevents/test_cloudevents/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_CLOUDEVENTS=1"
     "PROTOCORE_ENABLE_JSON=1"
@@ -1251,11 +1196,11 @@ protocore_env(native_cloudevents
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_cloudevents/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/cloudevents/test_cloudevents"
 )
 
 # CoAP server (RFC 7252) message codec + resource dispatch. Pure core - no
 protocore_env(native_coap
+  SUITE unit/src/services/iot/coap/coap/test_coap
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/coap/coap/coap.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
@@ -1275,7 +1220,6 @@ protocore_env(native_coap
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/coap/coap/test_coap/test_coap.c"
   DEFINES
     "PROTOCORE_ENABLE_COAP=1"
     "PROTOCORE_ENABLE_COAP_BLOCK=1"
@@ -1290,11 +1234,11 @@ protocore_env(native_coap
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_coap/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/coap/coap/test_coap"
 )
 
 # CoAP with resource observation (RFC 7641) enabled. Compiles + runs test_coap
 protocore_env(native_coap_observe
+  SUITE unit/src/services/iot/coap/coap/test_coap
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/coap/coap/coap.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
@@ -1314,7 +1258,6 @@ protocore_env(native_coap_observe
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/coap/coap/test_coap/test_coap.c"
   DEFINES
     "PROTOCORE_ENABLE_COAP=1"
     "PROTOCORE_ENABLE_COAP_BLOCK=1"
@@ -1330,11 +1273,11 @@ protocore_env(native_coap_observe
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_coap_observe/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/coap/coap/test_coap"
 )
 
 # CoAP over DTLS (services/iot/coap/coaps, RFC 7252 sec 9): the bridge that drives a DtlsConn
 protocore_env(native_coaps
+  SUITE unit/src/services/iot/coap/coaps/test_coaps
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/coap/coaps/coaps.c"
     "${PROTOCORE_ROOT}/src/services/iot/coap/coap/coap.c"
@@ -1374,8 +1317,6 @@ protocore_env(native_coaps
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/coap/coaps/test_coaps/test_coaps.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/coap/coaps/test_coaps/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DTLS=1"
     "PROTOCORE_ENABLE_COAP=1"
@@ -1389,11 +1330,11 @@ protocore_env(native_coaps
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_coaps/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/coap/coaps/test_coaps"
 )
 
 # CoAP-over-DTLS server front-end (services/iot/coap/coaps_server), the PROTOCORE_HAS_NET_STACK arm: the
 protocore_env(native_coaps_server
+  SUITE unit/src/services/iot/coap/coaps_server/test_coaps_server
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/coap/coaps_server/coaps_server.c"
     "${PROTOCORE_ROOT}/src/services/iot/coap/coaps/coaps.c"
@@ -1434,7 +1375,6 @@ protocore_env(native_coaps_server
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/coap/coaps_server/test_coaps_server/test_coaps_server.c"
   DEFINES
     "PROTOCORE_ENABLE_DTLS=1"
     "PROTOCORE_ENABLE_COAP=1"
@@ -1448,11 +1388,11 @@ protocore_env(native_coaps_server
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_coaps_server/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/coap/coaps_server/test_coaps_server"
 )
 
 # CoAP-over-DTLS server front-end (services/iot/coap/coaps_server), the arm with no network stack: the
 protocore_env(native_coaps_server_nostack
+  SUITE unit/src/services/iot/coap/coaps_server/test_coaps_server
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/coap/coaps_server/coaps_server.c"
     "${PROTOCORE_ROOT}/src/services/iot/coap/coaps/coaps.c"
@@ -1493,7 +1433,6 @@ protocore_env(native_coaps_server_nostack
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/coap/coaps_server/test_coaps_server/test_coaps_server.c"
   DEFINES
     "PROTOCORE_ENABLE_DTLS=1"
     "PROTOCORE_ENABLE_COAP=1"
@@ -1506,11 +1445,11 @@ protocore_env(native_coaps_server_nostack
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_coaps_server_nostack/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/coap/coaps_server/test_coaps_server"
 )
 
 # The base64 codec (network_drivers/presentation/codec/base64) against RFC 4648: the seven sec 10 BASE64() vectors verbatim in both directions, the sec 4 Table 1 and sec 5 Table 2 spellings of alphabet values 62 and 63 (plus and slash against minus and underline), and the sec 3.3 requirement that encoded data holding characters outside the alphabet in use MUST be rejected, which each alphabet is checked against with the other's two characters as well as with a short quad, a pad before the tail and padding mid-stream. Also the destination-capacity guard on each of the three octets a quad writes, the unpadded final groups of sec 3.2 that base64url decodes, and a round-trip identity over every tail length in both alphabets, which checks the table-driven encoder against the branchless constant-time decoder rather than either against itself. This is the default SWAR decode path; native_codec_base64_scalar runs the same suite with PROTOCORE_BASE64_SWAR=0.
 protocore_env(native_codec_base64
+  SUITE unit/src/network_drivers/presentation/codec/base64/test_base64
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/base64/base64.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -1521,8 +1460,6 @@ protocore_env(native_codec_base64
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/base64/test_base64/test_base64.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/base64/test_base64/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -1530,11 +1467,11 @@ protocore_env(native_codec_base64
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_codec_base64/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/base64/test_base64"
 )
 
 # The base64 scalar constant-time decode fallback (PROTOCORE_BASE64_SWAR=0): classify one character at a time instead of the default four-per-word SWAR path. Runs the same RFC 4648 suite as native_codec_base64, which proves the two decoders answer identically on the sec 10 vectors, on both sec 4 and sec 5 alphabets, on the sec 3.3 refusals, on the capacity guard and over the round-trip corpus.
 protocore_env(native_codec_base64_scalar
+  SUITE unit/src/network_drivers/presentation/codec/base64/test_base64
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/base64/base64.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -1545,8 +1482,6 @@ protocore_env(native_codec_base64_scalar
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/base64/test_base64/test_base64.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/base64/test_base64/unity_runner.c"
   DEFINES
     "PROTOCORE_BASE64_SWAR=0"
   INCLUDES
@@ -1556,11 +1491,11 @@ protocore_env(native_codec_base64_scalar
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_codec_base64_scalar/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/base64/test_base64"
 )
 
 # The CBOR codec (network_drivers/presentation/codec/cbor) against RFC 8949. The load-bearing case transcribes Appendix A Table 6, which prints a diagnostic value beside its encoding in hex: each of the five head forms of sec 3 (immediate then 1, 2, 4 and 8 argument octets), both integer majors, byte and text strings including the multi-octet UTF-8 rows, nested arrays, maps, and the three simple values, all as the table's own octets rather than as whatever the encoder emits. Around it: the sec 3.3 float forms that this codec carries (0xfa single on the way out, single or double on the way in), the RFC 8428 Table 4 SenML label number the CBOR representation writes where JSON writes a string, head-form round trips at every argument width, overflow accounting that reports the capacity a payload needed, and the refusals: reserved and indefinite-length additional information (sec 3.2), tags (major 6), a declared string length past the end of the region, a truncated item, a type mismatch, and the sticky read error that stops a decoder resynchronizing by accident.
 protocore_env(native_codec_cbor
+  SUITE unit/src/network_drivers/presentation/codec/cbor/test_cbor
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/cbor/cbor.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
@@ -1570,8 +1505,6 @@ protocore_env(native_codec_cbor
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/cbor/test_cbor/test_cbor.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/cbor/test_cbor/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_CBOR=1"
   INCLUDES
@@ -1581,11 +1514,11 @@ protocore_env(native_codec_cbor
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_codec_cbor/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/cbor/test_cbor"
 )
 
 # The RFC 1951 DEFLATE compressor (network_drivers/presentation/codec/deflate), the WebSocket permessage-deflate sender. The load-bearing case derives the exact output octets for three inputs from RFC 1951 alone - sec 3.2.3's block header, sec 3.2.6's fixed code table, sec 3.2.5's length and distance codes, sec 3.1.1's bit order and RFC 7692 sec 7.2.1's stripped 00 00 ff ff tail - with the bit-by-bit derivation written beside the bytes, so a compressor that agreed with its own decompressor while emitting a non-conforming stream fails here rather than passing. The rest is round-trip identity through INFLATE over text, the empty input, a single octet, every octet value, highly repetitive input that must actually shrink, a chain walk driven past its budget, a candidate match past the window that must be discarded, and random and low-entropy corpora; plus the fail-closed paths for an output buffer and a scratch buffer that are too small.
 protocore_env(native_codec_deflate
+  SUITE unit/src/network_drivers/presentation/codec/deflate/test_deflate
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/deflate/deflate/deflate.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/deflate/rfc1951/rfc1951.c"
@@ -1594,8 +1527,6 @@ protocore_env(native_codec_deflate
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/deflate/test_deflate/test_deflate.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/deflate/test_deflate/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_WS_DEFLATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
@@ -1607,18 +1538,16 @@ protocore_env(native_codec_deflate
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_codec_deflate/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/deflate/test_deflate"
 )
 
 # The field-coding primitives HPACK and QPACK share (network_drivers/presentation/codec/hpack_prim) against RFC 7541, which RFC 9204 sec 5 hands QPACK verbatim. The load-bearing case transcribes Appendix B, the code and bit length published for all 256 octets, and drives every symbol through both directions against the RFC's own bits so the encoder and the decoder are each checked against the standard rather than against each other. Around it: Appendix C.1's three worked prefix-integer examples, prefix flags surviving a round trip, every prefix width at and either side of 2^N-1, the sec 5.1 requirement that an integer past the implementation's limit MUST be a decoding error, the Huffman-coded string literals printed in Appendix C.4 and C.6, the sec 5.2 refusals of a decoded EOS symbol and of padding that is too long or not the EOS prefix, both spellings of a string literal read back through the cursor, and the encoder taking whichever of the two forms is shorter.
 protocore_env(native_codec_hpack_prim
+  SUITE unit/src/network_drivers/presentation/codec/hpack_prim/test_hpack
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/hpack_prim/hpack_prim.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/hpack_prim/test_hpack/test_hpack.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/hpack_prim/test_hpack/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP2=1"
   INCLUDES
@@ -1628,11 +1557,11 @@ protocore_env(native_codec_hpack_prim
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_codec_hpack_prim/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/hpack_prim/test_hpack"
 )
 
 # The RFC 1951 INFLATE core (network_drivers/presentation/codec/inflate), the WebSocket permessage-deflate receiver. The load-bearing case assembles its streams bit by bit from the RFC itself - sec 3.2.3's block header, sec 3.2.4's stored block with its ones-complement NLEN, sec 3.2.6's fixed code table, sec 3.2.5's length and distance codes and sec 3.1.1's bit order - with the derivation written beside each octet, so nothing there was produced by a compressor and copied back. One dynamic-Huffman block (sec 3.2.7) carries its own code lengths and cannot be hand packed, so its octets come from a reference encoder while the expected value stays the plaintext that went in. The refusals are the RFC's own statements: BTYPE 11 is reserved, NLEN must be the complement of LEN, literal/length 286-287 and distance 30-31 never occur, a distance may not reach before the start of the output, and a stream that ends mid-block is incomplete. Also the permessage-deflate payload with RFC 7692 sec 7.2.2's marker appended, two blocks concatenating, and the output and scratch bounds.
 protocore_env(native_codec_inflate
+  SUITE unit/src/network_drivers/presentation/codec/inflate/test_inflate
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/inflate/inflate.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -1640,8 +1569,6 @@ protocore_env(native_codec_inflate
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/deflate/rfc1951/rfc1951.c"
     "${PROTOCORE_ROOT}/src/mmgr/bitio/bitio.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/inflate/test_inflate/test_inflate.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/inflate/test_inflate/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_WS_DEFLATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
@@ -1653,19 +1580,17 @@ protocore_env(native_codec_inflate
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_codec_inflate/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/inflate/test_inflate"
 )
 
 # The RFC 1951 code tables (network_drivers/presentation/codec/deflate/rfc1951): the sec 3.2.5 length and distance tables transcribed from the RFC's own printed rows rather than from the implementation, checked entry by entry and then checked to tile their ranges without a gap all the way to the largest distance of 32768. The sec 3.2.6 fixed-Huffman construction is checked against the four code length runs and against every boundary code that section prints in full, stored bit-reversed because sec 3.1.1 puts a code on the wire most significant bit first while the bit writer packs LSB-first. The two emitters are then driven through a real bit writer and their octets derived by hand: one literal, a shortest back-reference, the single length code for 258, a length whose offset lands in the extra bits, and a writer with no room latching overflow instead of writing past it.
 protocore_env(native_codec_rfc1951
+  SUITE unit/src/network_drivers/presentation/codec/deflate/test_rfc1951
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/deflate/rfc1951/rfc1951.c"
     "${PROTOCORE_ROOT}/src/mmgr/bitio/bitio.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/deflate/test_rfc1951/test_rfc1951.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/deflate/test_rfc1951/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DEFLATE_RFC1951=1"
   INCLUDES
@@ -1675,11 +1600,11 @@ protocore_env(native_codec_rfc1951
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_codec_rfc1951/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/deflate/test_rfc1951"
 )
 
 # CodeQL coverage env: the full app compiled with every new feature flag ON so
 protocore_env(native_codeql
+  SUITE env/fieldbus/test_dispatch
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -1851,7 +1776,6 @@ protocore_env(native_codeql
     "${PROTOCORE_ROOT}/src/services/radio/promisc/promisc.c"
     "${PROTOCORE_ROOT}/src/network_drivers/network/dns/dns_wire/dns_wire.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/env/fieldbus/test_dispatch/test_dispatch.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -1963,11 +1887,11 @@ protocore_env(native_codeql
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_codeql/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/fieldbus/test_dispatch"
 )
 
 # RFC-compliance suite: builds with all enforcement at production defaults
 protocore_env(native_compliance
+  SUITE env/http/test_compliance
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
@@ -1980,8 +1904,6 @@ protocore_env(native_compliance
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/env/http/test_compliance/test_compliance.c"
-    "${PROTOCORE_ROOT}/test/env/http/test_compliance/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -1989,17 +1911,15 @@ protocore_env(native_compliance
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_compliance/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/http/test_compliance"
 )
 
 # Concurrency proof for the cross-thread slot fields (protocore_atomic state / rx_head /
 protocore_env(native_concurrency
+  SUITE env/transport/test_concurrency
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_concurrency/test_concurrency.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_concurrency/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -2007,11 +1927,11 @@ protocore_env(native_concurrency
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_concurrency/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/transport/test_concurrency"
 )
 
 # Schema-driven config export/restore (server/storage/config_io) over the config store;
 protocore_env(native_config_io
+  SUITE unit/src/server/storage/config_io/test_config_io
   SOURCES
     "${PROTOCORE_ROOT}/src/server/storage/config_store/config_store.c"
     "${PROTOCORE_ROOT}/src/server/storage/config_io/config_io.c"
@@ -2028,8 +1948,6 @@ protocore_env(native_config_io
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/config_io/test_config_io/test_config_io.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/config_io/test_config_io/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_CONFIG_STORE=1"
     "PROTOCORE_ENABLE_CONFIG_IO=1"
@@ -2040,11 +1958,11 @@ protocore_env(native_config_io
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_config_io/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/config_io/test_config_io"
 )
 
 # Typed NVS config store (server/storage/config_store): string/u32/blob round-trips,
 protocore_env(native_config_store
+  SUITE unit/src/server/storage/config_store/test_config_store
   SOURCES
     "${PROTOCORE_ROOT}/src/server/storage/config_store/config_store.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_nvs.c"
@@ -2056,8 +1974,6 @@ protocore_env(native_config_store
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/config_store/test_config_store/test_config_store.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/config_store/test_config_store/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_CONFIG_STORE=1"
   INCLUDES
@@ -2067,18 +1983,16 @@ protocore_env(native_config_store
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_config_store/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/config_store/test_config_store"
 )
 
 # TPKT (RFC 1006) + COTP X.224 class-0 frame codec (services/fieldbus/cotp): the TPKT
 protocore_env(native_cotp
+  SUITE unit/src/services/fieldbus/cotp/test_cotp
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/cotp/cotp.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/cotp/test_cotp/test_cotp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/cotp/test_cotp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_COTP=1"
   INCLUDES
@@ -2088,15 +2002,13 @@ protocore_env(native_cotp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_cotp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/cotp/test_cotp"
 )
 
 # The parameterized Rocksoft/Williams CRC engine (shared/crc). Every one of the thirteen presets is asserted against its published catalogue check value (the CRC of "123456789"), so a wrong polynomial, a swapped init or a flipped reflect flag fails here rather than corrupting a codec. The engine is then diffed against the hand-rolled CRC loops the in-tree services used to carry - X-25, CCITT-FALSE, ARC, MODBUS, DNP, CRC-32, ESP3 CRC-8 and the Sensirion CRC-8 - across every length 0..64, plus the begin/update/final split against the one-shot, width masking, the 8..32 width clamp, and single-bit-flip detection. Pure host tests.
 protocore_env(native_crc
+  SUITE unit/src/shared/crc/test_crc
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/crc/crc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/crc/test_crc/test_crc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/crc/test_crc/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -2104,11 +2016,11 @@ protocore_env(native_crc
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_crc/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/crc/test_crc"
 )
 
 # Stateless HMAC-signed CSRF token (server/security/csrf): issue/verify with a fixed
 protocore_env(native_csrf
+  SUITE unit/src/server/security/csrf/test_csrf
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protoframe/protoframe.c"
     "${PROTOCORE_ROOT}/src/server/security/csrf/csrf.c"
@@ -2128,8 +2040,6 @@ protocore_env(native_csrf
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/security/csrf/test_csrf/test_csrf.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/security/csrf/test_csrf/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_CSRF=1"
   INCLUDES
@@ -2139,18 +2049,16 @@ protocore_env(native_csrf
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_csrf/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/security/csrf/test_csrf"
 )
 
 # protocore_ct_eq (crypto/ct_eq.h): the one comparator every AEAD tag, MAC, digest and
 protocore_env(native_ct_eq
+  SUITE unit/src/crypto/test_ct_eq
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/crypto/ct_eq/ct_eq.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/test_ct_eq/test_ct_eq.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/test_ct_eq/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -2158,18 +2066,16 @@ protocore_env(native_ct_eq
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ct_eq/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/test_ct_eq"
 )
 
 # The library's one secret-dependent comparator (crypto/ct_eq.h). No standard publishes a vector for a compare and the timing claim needs a cycle counter on the die, so every case is a property: the differing octet swept across every position at every length, single-bit differences, the walk stopping exactly at n, OR-accumulated differences that must not cancel, symmetry, and the high bit surviving the accumulate.
 protocore_env(native_ct_eq_unit
+  SUITE unit/src/crypto/test_ct_eq
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/crypto/ct_eq/ct_eq.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/test_ct_eq/test_ct_eq.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/test_ct_eq/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -2177,11 +2083,11 @@ protocore_env(native_ct_eq_unit
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ct_eq_unit/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/test_ct_eq"
 )
 
 # Curve25519 and Ed25519 (crypto/asymmetric/curve25519.h, ed25519.h): the RFC 7748 sec 5.2 X25519 vectors plus the iterated results after 1 and 1,000 rounds, the RFC 7748 sec 6.1 Diffie-Hellman vector, the sec 5 high-bit mask on a received u-coordinate, and small-order inputs collapsing to zero. Ed25519 is pinned to all four RFC 8032 sec 7.1 vectors (public key and signature), the sec 5.1.7 non-canonical S refusal, and the GF(2^255-19) field identities curve25519.h exports.
 protocore_env(native_curve25519_kat
+  SUITE unit/src/crypto/asymmetric/test_ssh_ed25519
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha512/sha512.c"
     "${PROTOCORE_ROOT}/src/crypto/asymmetric/curve25519/curve25519.c"
@@ -2194,8 +2100,6 @@ protocore_env(native_curve25519_kat
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_ssh_ed25519/test_ssh_ed25519.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_ssh_ed25519/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -2203,11 +2107,11 @@ protocore_env(native_curve25519_kat
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_curve25519_kat/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_ssh_ed25519"
 )
 
 # RFC 7748 and RFC 8032 a second time with the MPI accelerator field layer selected (PROTOCORE_FE25519_MPI_HW), answered by the host RSA/MPI HAL so both field arms run natively.
 protocore_env(native_curve25519_kat_hw
+  SUITE unit/src/crypto/asymmetric/test_ssh_ed25519
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha512/sha512.c"
     "${PROTOCORE_ROOT}/src/crypto/asymmetric/curve25519/curve25519.c"
@@ -2222,8 +2126,6 @@ protocore_env(native_curve25519_kat_hw
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_crypto_hal.c"
     "${PROTOCORE_ROOT}/src/crypto/asymmetric/fe25519/fe25519.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_ssh_ed25519/test_ssh_ed25519.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_ssh_ed25519/unity_runner.c"
   DEFINES
     "PROTOCORE_RSA_MODMUL_HW=1"
   INCLUDES
@@ -2233,11 +2135,11 @@ protocore_env(native_curve25519_kat_hw
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_curve25519_kat_hw/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_ssh_ed25519"
 )
 
 # Dashboard widget-table JSON serializers (server/web/dashboard core). Pure logic;
 protocore_env(native_dashboard
+  SUITE unit/src/server/web/dashboard/test_dashboard
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -2309,8 +2211,6 @@ protocore_env(native_dashboard
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
     "${PROTOCORE_ROOT}/src/server/web/dashboard/dashboard.c"
     "${PROTOCORE_ROOT}/src/server/web/dashboard/dashboard_routes/dashboard_routes.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/dashboard/test_dashboard/test_dashboard.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/dashboard/test_dashboard/unity_runner.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -2335,11 +2235,11 @@ protocore_env(native_dashboard
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_dashboard/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/dashboard/test_dashboard"
 )
 
 # Log-structured hash key-value store on the WAL (services/storage/dbm): put/get/delete with an
 protocore_env(native_dbm
+  SUITE unit/src/services/storage/dbm/test_dbm
   SOURCES
     "${PROTOCORE_ROOT}/src/services/storage/wal/wal/wal.c"
     "${PROTOCORE_ROOT}/src/services/storage/wal/wal_store/wal_store.c"
@@ -2348,8 +2248,6 @@ protocore_env(native_dbm
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/storage/dbm/test_dbm/test_dbm.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/storage/dbm/test_dbm/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_WAL=1"
     "PROTOCORE_ENABLE_DBM=1"
@@ -2360,18 +2258,16 @@ protocore_env(native_dbm
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_dbm/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/storage/dbm/test_dbm"
 )
 
 # DDSI-RTPS Message framing codec (services/iot/dds), OMG DDSI-RTPS 2.5 formal/2022-04-01: the sec 9.4.4 20-octet Header (PROTOCOL_RTPS magic, ProtocolVersion, VendorId, GuidPrefix), the sec 9.4.5.1 SubmessageHeader with octetsToNextHeader in the byte order the EndiannessFlag names, the sec 9.4.5.1.1 SubmessageKind octets, the sec 9.4.5.1 octetsToNextHeader==0 rule and its PAD / INFO_TS exception, and the sec 8.3.6.3 / sec 8.3.4.1 Header and Submessage validity refusals. Pure host tests.
 protocore_env(native_dds_rtps
+  SUITE unit/src/services/iot/dds/test_dds
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/dds/dds.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/dds/test_dds/test_dds.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/dds/test_dds/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DDS=1"
   INCLUDES
@@ -2381,11 +2277,11 @@ protocore_env(native_dds_rtps
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_dds_rtps/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/dds/test_dds"
 )
 
 # test_defer against the native_stack_http stack.
 protocore_env(native_defer
+  SUITE env/session/test_defer
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -2455,8 +2351,6 @@ protocore_env(native_defer
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
-    "${PROTOCORE_ROOT}/test/env/session/test_defer/test_defer.c"
-    "${PROTOCORE_ROOT}/test/env/session/test_defer/unity_runner.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -2479,18 +2373,16 @@ protocore_env(native_defer
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_defer/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/session/test_defer"
 )
 
 # ASN.1 DER reader (shared/der): the X.690 canonical subset X.509 is parsed with. The accepting cases are RFC 5280 sec 4.1's Certificate SEQUENCE and the sec 4.1.2.5 times; the refusing ones are each a BER spelling DER forbids - indefinite length (sec 8.1.3.6), a long form that fits the short one or carries a leading zero (sec 10.1), a redundant leading zero on an INTEGER (sec 8.3.2), a negative INTEGER read as unsigned (sec 8.3.3), a BIT STRING with unused bits (sec 8.6.2.2), and a multi-octet tag (sec 8.1.2.4). Accepting a second encoding of a certificate is accepting one the signature does not cover.
 protocore_env(native_der
+  SUITE unit/src/shared/der/test_der
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/der/der.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/der/test_der/test_der.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/der/test_der/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -2498,11 +2390,11 @@ protocore_env(native_der
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_der/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/der/test_der"
 )
 
 # MAC-derived device UUID (server/signaling/device_id): RFC 4122 v5 from a MAC via SHA-1.
 protocore_env(native_device_id
+  SUITE unit/src/server/signaling/test_device_id
   SOURCES
     "${PROTOCORE_ROOT}/src/server/signaling/device_id/device_id.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/sha1/sha1.c"
@@ -2516,8 +2408,6 @@ protocore_env(native_device_id
     "${PROTOCORE_ROOT}/src/mmgr/secure/secure.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/test_device_id/test_device_id.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/test_device_id/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DEVICE_ID=1"
     "PROTOCORE_HAS_VENDOR_MAC=1"
@@ -2528,18 +2418,16 @@ protocore_env(native_device_id
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_device_id/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/test_device_id"
 )
 
 # DeviceNet link-adaptation codec (services/fieldbus/devicenet): the 4-group 11-bit CAN id,
 protocore_env(native_devicenet
+  SUITE unit/src/services/fieldbus/devicenet/test_devicenet
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/devicenet/devicenet.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/devicenet/test_devicenet/test_devicenet.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/devicenet/test_devicenet/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DEVICENET=1"
   INCLUDES
@@ -2549,19 +2437,17 @@ protocore_env(native_devicenet
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_devicenet/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/devicenet/test_devicenet"
 )
 
 # Allen-Bradley DF1 full-duplex frame codec (services/fieldbus/df1): BCC + CRC-16/ARC, the
 protocore_env(native_df1
+  SUITE unit/src/services/fieldbus/df1/test_df1
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/df1/df1.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/crc/crc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/df1/test_df1/test_df1.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/df1/test_df1/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DF1=1"
   INCLUDES
@@ -2571,11 +2457,11 @@ protocore_env(native_df1
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_df1/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/df1/test_df1"
 )
 
 # Build-flag reporter (diag() / PROTOCORE_ENABLE_DIAG). The gated diag() entry point
 protocore_env(native_diag
+  SUITE env/transport/test_diag
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -2645,8 +2531,6 @@ protocore_env(native_diag
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_diag/test_diag.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_diag/unity_runner.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -2672,11 +2556,11 @@ protocore_env(native_diag
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_diag/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/transport/test_diag"
 )
 
 # DiffServ QoS marking (PROTOCORE_ENABLE_DIFFSERV): the DSCP->TOS encode (DSCP << 2, ECN 0), the
 protocore_env(native_diffserv
+  SUITE unit/src/network_drivers/transport/diffserv/test_diffserv
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/tcp.c"
@@ -2696,8 +2580,6 @@ protocore_env(native_diffserv
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/diffserv/test_diffserv/test_diffserv.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/diffserv/test_diffserv/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DIFFSERV=1"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -2709,11 +2591,11 @@ protocore_env(native_diffserv
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_diffserv/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/diffserv/test_diffserv"
 )
 
 # test_digest_auth against the native_stack_http stack.
 protocore_env(native_digest_auth
+  SUITE env/http/test_digest_auth
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -2783,8 +2665,6 @@ protocore_env(native_digest_auth
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
-    "${PROTOCORE_ROOT}/test/env/http/test_digest_auth/test_digest_auth.c"
-    "${PROTOCORE_ROOT}/test/env/http/test_digest_auth/unity_runner.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -2810,11 +2690,11 @@ protocore_env(native_digest_auth
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_digest_auth/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/http/test_digest_auth"
 )
 
 # test_digest_vectors against the native_stack_http stack.
 protocore_env(native_digest_vectors
+  SUITE unit/src/crypto/hash/test_digest_vectors
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -2884,8 +2764,6 @@ protocore_env(native_digest_vectors
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_digest_vectors/test_digest_vectors.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_digest_vectors/unity_runner.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -2909,18 +2787,16 @@ protocore_env(native_digest_vectors
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_digest_vectors/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_digest_vectors"
 )
 
 # AutomationDirect DirectNET serial frame codec (services/fieldbus/directnet): the header (SOH +
 protocore_env(native_directnet
+  SUITE unit/src/services/fieldbus/directnet/test_directnet
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/directnet/directnet.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/directnet/test_directnet/test_directnet.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/directnet/test_directnet/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DIRECTNET=1"
   INCLUDES
@@ -2930,11 +2806,11 @@ protocore_env(native_directnet
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_directnet/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/directnet/test_directnet"
 )
 
 # test_dispatch against the native_stack_http stack.
 protocore_env(native_dispatch
+  SUITE env/fieldbus/test_dispatch
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -3004,7 +2880,6 @@ protocore_env(native_dispatch
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
-    "${PROTOCORE_ROOT}/test/env/fieldbus/test_dispatch/test_dispatch.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -3029,11 +2904,11 @@ protocore_env(native_dispatch
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_dispatch/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/fieldbus/test_dispatch"
 )
 
 # DMA peripheral ingest / egress simulator (mmgr/dma), v5 hardware ingest: an
 protocore_env(native_dma
+  SUITE unit/src/mmgr/dma/test_dma
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/dma/dma.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -3042,8 +2917,6 @@ protocore_env(native_dma
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/dma/test_dma/test_dma.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/dma/test_dma/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DMA=1"
     "PROTOCORE_DMA_BUF_SIZE=8"
@@ -3055,18 +2928,16 @@ protocore_env(native_dma
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_dma/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/dma/test_dma"
 )
 
 # DMX512 + RDM lighting codec (server/peripherals/dmx): the DMX512 slot packet (build/get) and the
 protocore_env(native_dmx
+  SUITE unit/src/server/peripherals/dmx/test_dmx
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/dmx/dmx.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/dmx/test_dmx/test_dmx.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/dmx/test_dmx/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DMX=1"
   INCLUDES
@@ -3076,19 +2947,17 @@ protocore_env(native_dmx
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_dmx/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/dmx/test_dmx"
 )
 
 # CNC DNC drip-feed (services/machine_tool/dnc): the EIA RS-244 <-> ISO/ASCII tape-code translation
 protocore_env(native_dnc__test_dnc
+  SUITE unit/src/services/machine_tool/dnc/test_dnc
   SOURCES
     "${PROTOCORE_ROOT}/src/services/machine_tool/dnc/dnc/dnc.c"
     "${PROTOCORE_ROOT}/src/services/machine_tool/dnc/dnc_stream/dnc_stream.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/dnc/test_dnc/test_dnc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/dnc/test_dnc/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DNC=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
@@ -3100,19 +2969,17 @@ protocore_env(native_dnc__test_dnc
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_dnc/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/dnc/test_dnc"
 )
 
 # CNC DNC drip-feed (services/machine_tool/dnc): the EIA RS-244 <-> ISO/ASCII tape-code translation
 protocore_env(native_dnc__test_dnc_stream
+  SUITE unit/src/services/machine_tool/dnc/dnc_stream/test_dnc_stream
   SOURCES
     "${PROTOCORE_ROOT}/src/services/machine_tool/dnc/dnc/dnc.c"
     "${PROTOCORE_ROOT}/src/services/machine_tool/dnc/dnc_stream/dnc_stream.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/dnc/dnc_stream/test_dnc_stream/test_dnc_stream.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/dnc/dnc_stream/test_dnc_stream/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DNC=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
@@ -3124,11 +2991,11 @@ protocore_env(native_dnc__test_dnc_stream
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_dnc/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/dnc/dnc_stream/test_dnc_stream"
 )
 
 # DNP3 (IEEE 1815) data-link frame codec (services/energy/dnp3): CRC-16/DNP, the frame
 protocore_env(native_dnp3
+  SUITE unit/src/services/energy/dnp3/test_dnp3
   SOURCES
     "${PROTOCORE_ROOT}/src/services/energy/dnp3/dnp3.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -3136,8 +3003,6 @@ protocore_env(native_dnp3
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/crc/crc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/dnp3/test_dnp3/test_dnp3.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/dnp3/test_dnp3/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DNP3=1"
   INCLUDES
@@ -3147,11 +3012,11 @@ protocore_env(native_dnp3
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_dnp3/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/dnp3/test_dnp3"
 )
 
 # The portable DNS resolver (network_drivers/network/dns/dns_resolver, RFC 1035) on the build
 protocore_env(native_dns_resolver
+  SUITE unit/src/network_drivers/transport/udp/test_dns_resolver
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/network/dns/dns_resolver/dns_resolver.c"
     "${PROTOCORE_ROOT}/src/network_drivers/network/dns/dns_wire/dns_wire.c"
@@ -3174,8 +3039,6 @@ protocore_env(native_dns_resolver
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/udp/test_dns_resolver/test_dns_resolver.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/udp/test_dns_resolver/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DNS_RESOLVER=1"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -3187,11 +3050,11 @@ protocore_env(native_dns_resolver
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_dns_resolver/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/udp/test_dns_resolver"
 )
 
 # Authoritative DNS server (network_drivers/network/dns/dns_server): the A-record response builder
 protocore_env(native_dns_server
+  SUITE unit/src/network_drivers/network/dns/dns_server/test_dns_server
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/network/dns/dns_server/dns_server.c"
     "${PROTOCORE_ROOT}/src/network_drivers/network/dns/dns_wire/dns_wire.c"
@@ -3211,8 +3074,6 @@ protocore_env(native_dns_server
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/network/dns/dns_server/test_dns_server/test_dns_server.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/network/dns/dns_server/test_dns_server/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DNS_SERVER=1"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -3224,18 +3085,16 @@ protocore_env(native_dns_server
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_dns_server/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/network/dns/dns_server/test_dns_server"
 )
 
 # The DNS name on the wire (network_drivers/network/dns/dns_wire, RFC 1035 sec 3.1 / 4.1.4):
 protocore_env(native_dns_wire
+  SUITE unit/src/network_drivers/network/dns/test_dns_wire
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/network/dns/dns_wire/dns_wire.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/network/dns/test_dns_wire/test_dns_wire.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/network/dns/test_dns_wire/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DNS_SERVER=1"
     "PROTOCORE_ENABLE_UDP=1"
@@ -3246,18 +3105,16 @@ protocore_env(native_dns_wire
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_dns_wire/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/network/dns/test_dns_wire"
 )
 
 # DNS name codec (network_drivers/network/dns/dns_wire, RFC 1035). Rebuilds the worked message of sec 4.1.4 octet for octet at the offsets that figure names (F.ISI.ARPA at 20, FOO.F.ISI.ARPA at 40 ending in a pointer, ARPA at 64 as a bare pointer into the middle of the first name, the root at 92), and covers the sec 3.1 label encoding, the sec 2.3.4 63-octet label limit, the sec 4.1.4 reserved 10 and 01 label types, pointer-loop termination, output-buffer refusals, and the sec 2.3.3 case-insensitive comparison.
 protocore_env(native_dns_wire_codec
+  SUITE unit/src/network_drivers/network/dns/test_dns_wire
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/network/dns/dns_wire/dns_wire.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/network/dns/test_dns_wire/test_dns_wire.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/network/dns/test_dns_wire/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -3265,11 +3122,11 @@ protocore_env(native_dns_wire_codec
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_dns_wire_codec/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/network/dns/test_dns_wire"
 )
 
 # Local JSON document store on the WAL (services/storage/docstore): JSON documents addressed by id,
 protocore_env(native_docstore
+  SUITE unit/src/services/storage/docstore/test_docstore
   SOURCES
     "${PROTOCORE_ROOT}/src/services/storage/wal/wal/wal.c"
     "${PROTOCORE_ROOT}/src/services/storage/wal/wal_store/wal_store.c"
@@ -3284,8 +3141,6 @@ protocore_env(native_docstore
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/storage/docstore/test_docstore/test_docstore.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/storage/docstore/test_docstore/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_WAL=1"
     "PROTOCORE_ENABLE_DBM=1"
@@ -3298,18 +3153,16 @@ protocore_env(native_docstore
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_docstore/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/storage/docstore/test_docstore"
 )
 
 # DShot ESC throttle codec (server/peripherals/dshot): the 16-bit frame (11-bit value + telemetry +
 protocore_env(native_dshot
+  SUITE unit/src/server/peripherals/dshot/test_dshot
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/dshot/dshot.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/dshot/test_dshot/test_dshot.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/dshot/test_dshot/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DSHOT=1"
   INCLUDES
@@ -3319,11 +3172,11 @@ protocore_env(native_dshot
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_dshot/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/dshot/test_dshot"
 )
 
 # DTLS 1.3 record layer (network_drivers/presentation/security/dtls/dtls_record, RFC 9147 sec 4):
 protocore_env(native_dtls
+  SUITE unit/src/network_drivers/presentation/security/dtls/test_dtls_record
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/security/dtls/dtls_record/dtls_record.c"
     "${PROTOCORE_ROOT}/src/network_drivers/tls/key_schedule/key_schedule.c"
@@ -3346,8 +3199,6 @@ protocore_env(native_dtls
     "${PROTOCORE_ROOT}/src/crypto/hash/sha384/sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/security/dtls/test_dtls_record/test_dtls_record.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/security/dtls/test_dtls_record/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DTLS=1"
     "PROTOCORE_ENABLE_UDP=1"
@@ -3358,11 +3209,11 @@ protocore_env(native_dtls
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_dtls/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/security/dtls/test_dtls_record"
 )
 
 # DTLS 1.3 server handshake state machine (network_drivers/presentation/security/dtls/dtls_conn,
 protocore_env(native_dtls_conn
+  SUITE unit/src/network_drivers/presentation/security/dtls/dtls_conn/test_dtls_conn
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/security/dtls/dtls_conn/dtls_conn.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/security/dtls/dtls_record/dtls_record.c"
@@ -3393,8 +3244,6 @@ protocore_env(native_dtls_conn
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/security/dtls/dtls_conn/test_dtls_conn/test_dtls_conn.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/security/dtls/dtls_conn/test_dtls_conn/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DTLS=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
@@ -3406,11 +3255,11 @@ protocore_env(native_dtls_conn
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_dtls_conn/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/security/dtls/dtls_conn/test_dtls_conn"
 )
 
 # DTLS 1.3 handshake framing + reliability (network_drivers/presentation/security/dtls/dtls_handshake,
 protocore_env(native_dtls_hs
+  SUITE unit/src/network_drivers/presentation/security/dtls/dtls_handshake/test_dtls_handshake
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/security/dtls/dtls_handshake/dtls_handshake.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
@@ -3425,8 +3274,6 @@ protocore_env(native_dtls_hs
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/security/dtls/dtls_handshake/test_dtls_handshake/test_dtls_handshake.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/security/dtls/dtls_handshake/test_dtls_handshake/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DTLS=1"
     "PROTOCORE_ENABLE_UDP=1"
@@ -3437,11 +3284,11 @@ protocore_env(native_dtls_hs
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_dtls_hs/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/security/dtls/dtls_handshake/test_dtls_handshake"
 )
 
 # The TLS 1.3 messages the DTLS 1.3 handshake adds to tls13_msg, compiled for the DTLS path: the RFC 8446 sec 4.1.3 HelloRetryRequest random published as 32 hex octets, the sec 4.1.4 HelloRetryRequest built byte-exact for both the DTLS 1.3 (RFC 9147 sec 5.3) and TLS 1.3 version codepoints, the sec 4.4.1 message_hash transcript wrapper, the empty sec 4.3.1 EncryptedExtensions, the RFC 7250 negotiated server_certificate_type, the RFC 8410 sec 10.1 published Ed25519 SubjectPublicKeyInfo, the RFC 7250 RawPublicKey Certificate message, and the DTLS ClientHello parse of the cookie, server_certificate_type and RFC 9146 connection_id extensions plus the sec 5.3 empty-legacy_cookie rule.
 protocore_env(native_dtls_tls13_rfc
+  SUITE unit/src/network_drivers/presentation/http/http3/test_dtls_tls13
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_msg/tls13_msg.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/sha512/sha512.c"
@@ -3457,8 +3304,6 @@ protocore_env(native_dtls_tls13_rfc
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_dtls_tls13/test_dtls_tls13.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_dtls_tls13/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DTLS=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
@@ -3470,11 +3315,11 @@ protocore_env(native_dtls_tls13_rfc
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_dtls_tls13_rfc/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_dtls_tls13"
 )
 
 # CDN edge-cache engine (server/web/edge_cache): the pure freshness/validator core (response
 protocore_env(native_edge_cache
+  SUITE unit/src/server/web/edge_cache/edge_fetch/test_edge_fetch
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/httpcache/httpcache.c"
     "${PROTOCORE_ROOT}/src/services/net/http_client/http_client.c"
@@ -3498,8 +3343,6 @@ protocore_env(native_edge_cache
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/edge_cache/edge_fetch/test_edge_fetch/test_edge_fetch.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/edge_cache/edge_fetch/test_edge_fetch/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP_CACHE=1"
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
@@ -3514,11 +3357,11 @@ protocore_env(native_edge_cache
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_edge_cache/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/edge_cache/edge_fetch/test_edge_fetch"
 )
 
 # CDN edge-cache pure engine (server/web/edge_cache/edge_cache) plus the shared single-range
 protocore_env(native_edge_cache_core
+  SUITE unit/src/server/web/edge_cache/edge_cache/test_edge_cache
   SOURCES
     "${PROTOCORE_ROOT}/src/server/web/edge_cache/edge_cache/edge_cache.c"
     "${PROTOCORE_ROOT}/src/network_drivers/application/http_range/http_range.c"
@@ -3540,8 +3383,6 @@ protocore_env(native_edge_cache_core
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/edge_cache/edge_cache/test_edge_cache/test_edge_cache.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/edge_cache/edge_cache/test_edge_cache/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP_CACHE=1"
     "PROTOCORE_ENABLE_EDGE_CACHE=1"
@@ -3556,10 +3397,10 @@ protocore_env(native_edge_cache_core
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_edge_cache_core/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/edge_cache/edge_cache/test_edge_cache"
 )
 
 protocore_env(native_edge_cache_proxy
+  SUITE unit/src/server/web/edge_cache/test_edge_cache_proxy
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -3639,8 +3480,6 @@ protocore_env(native_edge_cache_proxy
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/server/server.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/client/client.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/edge_cache/test_edge_cache_proxy/test_edge_cache_proxy.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/edge_cache/test_edge_cache_proxy/unity_runner.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -3669,11 +3508,11 @@ protocore_env(native_edge_cache_proxy
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_edge_cache_proxy/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/edge_cache/test_edge_cache_proxy"
 )
 
 # CDN edge-cache L2 SD-persistence tier (server/web/edge_cache/edge_cache_sd): the entry <->
 protocore_env(native_edge_cache_sd
+  SUITE unit/src/server/web/edge_cache/edge_cache_sd/test_edge_cache_sd
   SOURCES
     "${PROTOCORE_ROOT}/src/services/storage/wal/wal/wal.c"
     "${PROTOCORE_ROOT}/src/services/storage/wal/wal_store/wal_store.c"
@@ -3699,8 +3538,6 @@ protocore_env(native_edge_cache_sd
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/edge_cache/edge_cache_sd/test_edge_cache_sd/test_edge_cache_sd.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/edge_cache/edge_cache_sd/test_edge_cache_sd/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_WAL=1"
     "PROTOCORE_ENABLE_DBM=1"
@@ -3717,11 +3554,11 @@ protocore_env(native_edge_cache_sd
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_edge_cache_sd/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/edge_cache/edge_cache_sd/test_edge_cache_sd"
 )
 
 # CDN edge-cache mesh sibling-cache codec (server/web/edge_cache/edge_mesh): the request/response
 protocore_env(native_edge_mesh
+  SUITE unit/src/server/web/edge_cache/edge_mesh/test_edge_mesh
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/httpcache/httpcache.c"
     "${PROTOCORE_ROOT}/src/services/net/http_client/http_client.c"
@@ -3745,8 +3582,6 @@ protocore_env(native_edge_mesh
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/edge_cache/edge_mesh/test_edge_mesh/test_edge_mesh.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/edge_cache/edge_mesh/test_edge_mesh/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP_CACHE=1"
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
@@ -3761,18 +3596,16 @@ protocore_env(native_edge_mesh
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_edge_mesh/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/edge_cache/edge_mesh/test_edge_mesh"
 )
 
 # The fixed-width serializers (mmgr/endian.h): a width moved between an integer and
 protocore_env(native_endian
+  SUITE unit/src/mmgr/test_endian
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_endian/test_endian.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_endian/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -3780,18 +3613,16 @@ protocore_env(native_endian
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_endian/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_endian"
 )
 
 # EtherNet/IP encapsulation codec (services/fieldbus/enip): the 24-octet header, RegisterSession
 protocore_env(native_enip
+  SUITE unit/src/services/fieldbus/enip/test_enip
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/enip/enip.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/enip/test_enip/test_enip.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/enip/test_enip/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_ENIP=1"
   INCLUDES
@@ -3801,19 +3632,17 @@ protocore_env(native_enip
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_enip/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/enip/test_enip"
 )
 
 # EnOcean ESP3 serial codec (services/radio/enocean), v5 radio plugin: the CRC-8 (poly 0x07)
 protocore_env(native_enocean
+  SUITE unit/src/services/radio/enocean/test_enocean
   SOURCES
     "${PROTOCORE_ROOT}/src/services/radio/enocean/enocean.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/crc/crc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/enocean/test_enocean/test_enocean.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/enocean/test_enocean/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_ENOCEAN=1"
     "PROTOCORE_ENOCEAN_MAX_DATA=16"
@@ -3824,19 +3653,17 @@ protocore_env(native_enocean
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_enocean/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/enocean/test_enocean"
 )
 
 # EnOcean ESP3 serial codec (services/radio/enocean/enocean.c): the CRC-8 the ESP3 specification section 3.3 defines (generator x^8+x^2+x^1+x^0, the catalogue's CRC-8/SMBUS) checked against the table that specification prints and against the catalogue check value, the section 1.7 telegram field layout with CRC8H over the header and CRC8D over the data and optional data, resynchronization on a bad sync or CRC, and the ERP1 radio telegram layout of RORG, payload, big-endian sender id and status. Pure host tests.
 protocore_env(native_enocean_esp3
+  SUITE unit/src/services/radio/enocean/test_enocean
   SOURCES
     "${PROTOCORE_ROOT}/src/services/radio/enocean/enocean.c"
     "${PROTOCORE_ROOT}/src/shared/crc/crc.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/enocean/test_enocean/test_enocean.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/enocean/test_enocean/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_ENOCEAN=1"
   INCLUDES
@@ -3846,11 +3673,11 @@ protocore_env(native_enocean_esp3
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_enocean_esp3/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/enocean/test_enocean"
 )
 
 # ESP-NOW typed envelope and peer registry (services/radio/espnow/espnow.c): the magic/type/length header, exact-length and magic validation on decode, the payload cap derived from Espressif's published 250-octet ESP-NOW v1 data limit less the header, and the bounded no-heap peer registry. The envelope is not a standardized format, so the expectations are properties. Pure host tests.
 protocore_env(native_espnow_envelope
+  SUITE unit/src/services/radio/espnow/test_espnow
   SOURCES
     "${PROTOCORE_ROOT}/src/services/radio/espnow/espnow.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -3860,8 +3687,6 @@ protocore_env(native_espnow_envelope
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/espnow/test_espnow/test_espnow.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/espnow/test_espnow/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_ESPNOW=1"
   INCLUDES
@@ -3871,11 +3696,11 @@ protocore_env(native_espnow_envelope
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_espnow_envelope/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/espnow/test_espnow"
 )
 
 # EUROMAP 77 (OPC 40077) IMM_MES_Interface model (services/machine_tool/euromap77) - OPC UA for injection
 protocore_env(native_euromap77
+  SUITE unit/src/services/opcua/models/euromap77/test_euromap77
   SOURCES
     "${PROTOCORE_ROOT}/src/services/opcua/opcua.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -3886,8 +3711,6 @@ protocore_env(native_euromap77
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/opcua/models/euromap77/test_euromap77/test_euromap77.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/opcua/models/euromap77/test_euromap77/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_OPCUA=1"
     "PROTOCORE_ENABLE_EUROMAP77=1"
@@ -3898,11 +3721,11 @@ protocore_env(native_euromap77
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_euromap77/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/opcua/models/euromap77/test_euromap77"
 )
 
 # ESP32 panic / exception decoder (server/exc_decoder): parse a captured Guru Meditation
 protocore_env(native_exc_decoder
+  SUITE unit/src/server/core/test_exc_decoder
   SOURCES
     "${PROTOCORE_ROOT}/src/server/core/exc_decoder/exc_decoder.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -3914,8 +3737,6 @@ protocore_env(native_exc_decoder
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/server/core/exc_coredump/exc_coredump.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/test_exc_decoder/test_exc_decoder.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/test_exc_decoder/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_EXC_DECODER=1"
   INCLUDES
@@ -3925,11 +3746,11 @@ protocore_env(native_exc_decoder
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_exc_decoder/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/test_exc_decoder"
 )
 
 # Software watchdog / deadlock detection + safe-state (server/failsafe): the wrap-safe
 protocore_env(native_failsafe
+  SUITE unit/src/server/core/test_failsafe
   SOURCES
     "${PROTOCORE_ROOT}/src/server/core/failsafe/failsafe.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -3940,8 +3761,6 @@ protocore_env(native_failsafe
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/test_failsafe/test_failsafe.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/test_failsafe/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_FAILSAFE=1"
   INCLUDES
@@ -3951,19 +3770,17 @@ protocore_env(native_failsafe
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_failsafe/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/test_failsafe"
 )
 
 # FANUC Stream Motion / option J519 UDP codec (services/machine_tool/fanuc_j519): the robot
 protocore_env(native_fanuc_j519
+  SUITE unit/src/services/machine_tool/fanuc_j519/test_fanuc_j519
   SOURCES
     "${PROTOCORE_ROOT}/src/services/machine_tool/fanuc_j519/fanuc_j519.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/fanuc_j519/test_fanuc_j519/test_fanuc_j519.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/fanuc_j519/test_fanuc_j519/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_FANUC_J519=1"
   INCLUDES
@@ -3973,11 +3790,11 @@ protocore_env(native_fanuc_j519
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_fanuc_j519/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/fanuc_j519/test_fanuc_j519"
 )
 
 # FDC2114/2214 capacitance-to-digital field sensor (server/peripherals/fdc2214): the 28-bit data
 protocore_env(native_fdc2214
+  SUITE unit/src/server/peripherals/fdc2214/test_fdc2214
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/fdc2214/fdc2214.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -3988,8 +3805,6 @@ protocore_env(native_fdc2214
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/fdc2214/test_fdc2214/test_fdc2214.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/fdc2214/test_fdc2214/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_FDC2214=1"
   INCLUDES
@@ -3999,11 +3814,11 @@ protocore_env(native_fdc2214
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_fdc2214/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/fdc2214/test_fdc2214"
 )
 
 # test_file_serving against the native_stack_http stack.
 protocore_env(native_file_serving
+  SUITE unit/src/network_drivers/application/file_serving/test_file_serving
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -4073,7 +3888,6 @@ protocore_env(native_file_serving
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/file_serving/test_file_serving/test_file_serving.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -4099,18 +3913,16 @@ protocore_env(native_file_serving
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_file_serving/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/file_serving/test_file_serving"
 )
 
 # Omron FINS frame codec (services/fieldbus/fins): the command builder + Memory Area Read
 protocore_env(native_fins
+  SUITE unit/src/services/fieldbus/fins/test_fins
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/fins/fins.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/fins/test_fins/test_fins.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/fins/test_fins/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_FINS=1"
   INCLUDES
@@ -4120,18 +3932,16 @@ protocore_env(native_fins
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_fins/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/fins/test_fins"
 )
 
 # A double read as the three fields it is (mmgr/float_bits.h): sign at bit 63,
 protocore_env(native_float_bits
+  SUITE unit/src/mmgr/test_float_bits
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_float_bits/test_float_bits.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_float_bits/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -4139,11 +3949,11 @@ protocore_env(native_float_bits
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_float_bits/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_float_bits"
 )
 
 # Flow-record export codec (services/net/flow_export): NetFlow v5 fixed header/record
 protocore_env(native_flow_export
+  SUITE unit/src/services/net/flow_export/test_flow_export
   SOURCES
     "${PROTOCORE_ROOT}/src/services/net/flow_export/flow_export.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -4154,8 +3964,6 @@ protocore_env(native_flow_export
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/flow_export/test_flow_export/test_flow_export.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/flow_export/test_flow_export/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_FLOW_EXPORT=1"
     "PROTOCORE_ENABLE_UDP=1"
@@ -4166,18 +3974,16 @@ protocore_env(native_flow_export
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_flow_export/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/flow_export/test_flow_export"
 )
 
 # FANUC FOCAS Ethernet codec (services/machine_tool/focas): the big-endian frame envelope
 protocore_env(native_focas
+  SUITE unit/src/services/machine_tool/focas/test_focas
   SOURCES
     "${PROTOCORE_ROOT}/src/services/machine_tool/focas/focas.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/focas/test_focas/test_focas.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/focas/test_focas/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_FOCAS=1"
   INCLUDES
@@ -4187,11 +3993,11 @@ protocore_env(native_focas
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_focas/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/focas/test_focas"
 )
 
 # test_form_params against the native_stack_http stack.
 protocore_env(native_form_params
+  SUITE env/transport/test_form_params
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -4261,8 +4067,6 @@ protocore_env(native_form_params
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_form_params/test_form_params.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_form_params/unity_runner.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -4287,11 +4091,11 @@ protocore_env(native_form_params
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_form_params/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/transport/test_form_params"
 )
 
 # Interface forwarding plane (network_drivers/network/forward), v5 bridge / router: default-deny,
 protocore_env(native_forward
+  SUITE unit/src/network_drivers/network/forward/test_forward
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/network/forward/forward.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
@@ -4306,7 +4110,6 @@ protocore_env(native_forward
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/network/forward/test_forward/test_forward.c"
   DEFINES
     "PROTOCORE_ENABLE_FORWARD=1"
     "PROTOCORE_PHY_MAX_IFACES=4"
@@ -4321,11 +4124,11 @@ protocore_env(native_forward
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_forward/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/network/forward/test_forward"
 )
 
 # Trusted-reverse-proxy forwarded-client resolver (server/security/forwarded_trust): a
 protocore_env(native_forwarded_trust
+  SUITE unit/src/server/security/forwarded_trust/test_forwarded_trust
   SOURCES
     "${PROTOCORE_ROOT}/src/server/security/forwarded_trust/forwarded_trust.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
@@ -4337,8 +4140,6 @@ protocore_env(native_forwarded_trust
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/security/forwarded_trust/test_forwarded_trust/test_forwarded_trust.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/security/forwarded_trust/test_forwarded_trust/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_AUTH=1"
     "PROTOCORE_ENABLE_AUTH_LOCKOUT=1"
@@ -4350,11 +4151,11 @@ protocore_env(native_forwarded_trust
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_forwarded_trust/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/security/forwarded_trust/test_forwarded_trust"
 )
 
 # The declarative frame builder (mmgr/protoframe.h + protoframe.c): the single engine that
 protocore_env(native_frame
+  SUITE unit/src/mmgr/test_frame
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protoframe/protoframe.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -4364,8 +4165,6 @@ protocore_env(native_frame
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_frame/test_frame.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_frame/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -4373,19 +4172,17 @@ protocore_env(native_frame
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_frame/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_frame"
 )
 
 # FTP client wire codec (services/file_transfer/ftp, RFC 959 + RFC 2428): the control-command
 protocore_env(native_ftp
+  SUITE unit/src/services/file_transfer/ftp/test_ftp
   SOURCES
     "${PROTOCORE_ROOT}/src/services/file_transfer/ftp/ftp/ftp.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/file_transfer/ftp/test_ftp/test_ftp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/file_transfer/ftp/test_ftp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_FTP=1"
   INCLUDES
@@ -4395,11 +4192,11 @@ protocore_env(native_ftp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ftp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/file_transfer/ftp/test_ftp"
 )
 
 # The FTP client session (services/file_transfer/ftp/ftp_session.c): the stepped store over a real TCP client. RFC 959 sec 5.4's minimum command sequence for a STOR, with the RFC 2428 sec 3 EPSV reply and the RFC 959 sec 4.1.2 PASV fallback under it. Nothing in the matrix compiled this file before.
 protocore_env(native_ftp_session
+  SUITE unit/src/services/file_transfer/ftp/test_ftp_session
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/tcp.c"
@@ -4434,8 +4231,6 @@ protocore_env(native_ftp_session
     "${PROTOCORE_ROOT}/src/mmgr/protoframe/protoframe.c"
     "${PROTOCORE_ROOT}/src/mmgr/membuild/membuild.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/file_transfer/ftp/test_ftp_session/test_ftp_session.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/file_transfer/ftp/test_ftp_session/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -4453,11 +4248,11 @@ protocore_env(native_ftp_session
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ftp_session/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/file_transfer/ftp/test_ftp_session"
 )
 
 # Radio / wireless gateway bridge (server/net/gateway), v5 southbound-to-northbound: an
 protocore_env(native_gateway
+  SUITE unit/src/server/net/gateway/test_gateway
   SOURCES
     "${PROTOCORE_ROOT}/src/server/net/gateway/gateway.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -4468,8 +4263,6 @@ protocore_env(native_gateway
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/gateway/test_gateway/test_gateway.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/gateway/test_gateway/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_GATEWAY=1"
     "PROTOCORE_GW_MAX_PORTS=4"
@@ -4480,19 +4273,17 @@ protocore_env(native_gateway
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_gateway/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/gateway/test_gateway"
 )
 
 # NMEA 0183 sentence codec (services/timing_position/nmea0183): the eight complete worked sentences the gpsd NMEA reference publishes, each accepted and each rejected under every single-character edit, the XOR checksum folded by hand for two of them, sentence framing and the AIS delimiter, field splitting with empty fields counted, and the typed decoders for GGA/RMC/GSV/ZDA/VTG/GSA/GLL/DPT plus MWV/HDG/VHW/VLW round trips, including ddmm.mmmm to signed decimal degrees and the E/W sign folding.
 protocore_env(native_gnss_nmea0183
+  SUITE unit/src/services/timing_position/nmea0183/test_nmea0183
   SOURCES
     "${PROTOCORE_ROOT}/src/services/timing_position/nmea0183/nmea0183.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/nmea0183/test_nmea0183/test_nmea0183.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/nmea0183/test_nmea0183/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_NMEA0183=1"
   INCLUDES
@@ -4502,11 +4293,11 @@ protocore_env(native_gnss_nmea0183
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_gnss_nmea0183/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/nmea0183/test_nmea0183"
 )
 
 # NTRIP caster protocol codec (services/timing_position/gnss/ntrip_caster): the RFC 9112 sec 2.1 request line and empty-line-terminated header block with every prefix reported incomplete, RFC 9110 sec 5.1 case-insensitive field names, the RFC 7617 sec 2 Basic credential reproduced from its published Aladdin example, NTRIP 1.0 versus 2.0 response forms, the 404 and 401 refusals with a WWW-Authenticate challenge, and the source table's STR record field positions plus a Content-Length that matches the body it declares.
 protocore_env(native_gnss_ntrip_caster
+  SUITE unit/src/services/timing_position/gnss/ntrip_caster/test_ntrip_caster
   SOURCES
     "${PROTOCORE_ROOT}/src/services/timing_position/gnss/ntrip_caster/ntrip_caster.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -4516,8 +4307,6 @@ protocore_env(native_gnss_ntrip_caster
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/gnss/ntrip_caster/test_ntrip_caster/test_ntrip_caster.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/gnss/ntrip_caster/test_ntrip_caster/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_NTRIP_CASTER=1"
     "PROTOCORE_ENABLE_NMEA0183=1"
@@ -4528,18 +4317,16 @@ protocore_env(native_gnss_ntrip_caster
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_gnss_ntrip_caster/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/gnss/ntrip_caster/test_ntrip_caster"
 )
 
 # RTCM 3 framing + station-reference codec (services/timing_position/gnss/rtcm3): the CRC-24Q residue-is-zero identity that pins polynomial, seed, bit order and final XOR at once, the CRC's GF(2) linearity, the 0xD3 / six reserved bits / 10-bit length frame header, parse round trip with need-more and bad-CRC reporting, preamble sync, MSB-first bit I/O with two's-complement signed fields, and the published 1005 (152-bit) and 1006 (168-bit) DF field offsets with the 38-bit ECEF range.
 protocore_env(native_gnss_rtcm3
+  SUITE unit/src/services/timing_position/gnss/test_rtcm3
   SOURCES
     "${PROTOCORE_ROOT}/src/services/timing_position/gnss/rtcm3/rtcm3.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/gnss/test_rtcm3/test_rtcm3.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/gnss/test_rtcm3/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_NTRIP_CASTER=1"
     "PROTOCORE_ENABLE_NMEA0183=1"
@@ -4550,11 +4337,11 @@ protocore_env(native_gnss_rtcm3
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_gnss_rtcm3/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/gnss/test_rtcm3"
 )
 
 # GNSS survey-in core (services/timing_position/gnss/gnss_survey): the exact WGS84 geodetic<->ECEF
 protocore_env(native_gnss_survey
+  SUITE unit/src/services/timing_position/nmea0183/test_gnss_survey
   SOURCES
     "${PROTOCORE_ROOT}/src/services/timing_position/gnss/gnss_survey/gnss_survey.c"
     "${PROTOCORE_ROOT}/src/services/timing_position/nmea0183/nmea0183.c"
@@ -4562,8 +4349,6 @@ protocore_env(native_gnss_survey
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/nmea0183/test_gnss_survey/test_gnss_survey.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/nmea0183/test_gnss_survey/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_NTRIP_CASTER=1"
     "PROTOCORE_ENABLE_NMEA0183=1"
@@ -4575,11 +4360,11 @@ protocore_env(native_gnss_survey
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_gnss_survey/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/nmea0183/test_gnss_survey"
 )
 
 # GNSS survey-in core (services/timing_position/gnss/gnss_survey, suite beside the NMEA sentence codec it folds fixes from): the geodetic-to-ECEF transform reduced at the equator and the pole to WGS84's published semi-major axis 6378137.0 and semi-minor axis 6356752.3142, height along the ellipsoid normal, rotational and hemispheric symmetry, the iterative inverse round-tripped to sub-millimetre, RTCM 0.1 mm rounding half away from zero, the shifted-origin mean and population spread at ECEF magnitude, the observation/accuracy completion gate, and the GGA fold with the geoid separation added to MSL altitude.
 protocore_env(native_gnss_survey_in
+  SUITE unit/src/services/timing_position/nmea0183/test_gnss_survey
   SOURCES
     "${PROTOCORE_ROOT}/src/services/timing_position/nmea0183/nmea0183.c"
     "${PROTOCORE_ROOT}/src/services/timing_position/gnss/gnss_survey/gnss_survey.c"
@@ -4587,8 +4372,6 @@ protocore_env(native_gnss_survey_in
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/nmea0183/test_gnss_survey/test_gnss_survey.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/nmea0183/test_gnss_survey/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_NTRIP_CASTER=1"
     "PROTOCORE_ENABLE_NMEA0183=1"
@@ -4599,19 +4382,17 @@ protocore_env(native_gnss_survey_in
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_gnss_survey_in/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/nmea0183/test_gnss_survey"
 )
 
 # IEC 61850 GOOSE publisher codec (services/energy/goose): the BER IECGoosePdu (gocbRef..allData,
 protocore_env(native_goose
+  SUITE unit/src/services/energy/goose/test_goose
   SOURCES
     "${PROTOCORE_ROOT}/src/services/energy/goose/goose.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/goose/test_goose/test_goose.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/goose/test_goose/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_GOOSE=1"
   INCLUDES
@@ -4621,11 +4402,11 @@ protocore_env(native_goose
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_goose/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/goose/test_goose"
 )
 
 # GPIB-over-LAN (Prologix-style) controller command codec (services/instrumentation/gpib): the ++ command
 protocore_env(native_gpib
+  SUITE unit/src/services/instrumentation/gpib/test_gpib
   SOURCES
     "${PROTOCORE_ROOT}/src/services/instrumentation/gpib/gpib.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -4635,8 +4416,6 @@ protocore_env(native_gpib
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/instrumentation/gpib/test_gpib/test_gpib.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/instrumentation/gpib/test_gpib/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_GPIB=1"
   INCLUDES
@@ -4646,11 +4425,11 @@ protocore_env(native_gpib
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_gpib/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/instrumentation/gpib/test_gpib"
 )
 
 # GPIO pin-mapper / browser diag core (server/signaling/gpio_map): direction names, JSON
 protocore_env(native_gpio_map
+  SUITE unit/src/server/signaling/gpio_map/test_gpio_map
   SOURCES
     "${PROTOCORE_ROOT}/src/server/signaling/gpio_map/gpio_map.c"
     "${PROTOCORE_ROOT}/src/mmgr/protoframe/protoframe.c"
@@ -4662,8 +4441,6 @@ protocore_env(native_gpio_map
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/gpio_map/test_gpio_map/test_gpio_map.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/gpio_map/test_gpio_map/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_GPIO_MAP=1"
   INCLUDES
@@ -4673,11 +4450,11 @@ protocore_env(native_gpio_map
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_gpio_map/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/gpio_map/test_gpio_map"
 )
 
 # GraphQL executor (services/iot/graphql), GraphQL spec October 2021 release: the sec 1 Example No. 3 / No. 4 query and result pair, the sec 2.3 query shorthand, sec 2.4 selection-set order, sec 2.5 nesting, sec 2.6 arguments (in scope down the path, unordered, read by name and scalar kind), the sec 7.1.1 data entry and sec 7.2.1 JSON forms of the sec 3.5 scalars, and the sec 7.1.2 request errors for malformed and out-of-scope grammar (mutations, fragments, variables, directives, aliases, list and input-object values) plus the compile-time bounds. Pure host tests.
 protocore_env(native_graphql_exec
+  SUITE unit/src/services/iot/graphql/test_graphql
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/graphql/graphql.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -4691,8 +4468,6 @@ protocore_env(native_graphql_exec
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/graphql/test_graphql/test_graphql.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/graphql/test_graphql/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_GRAPHQL=1"
   INCLUDES
@@ -4702,19 +4477,17 @@ protocore_env(native_graphql_exec
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_graphql_exec/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/graphql/test_graphql"
 )
 
 # gRPC-Web framing codec (services/iot/grpcweb), grpc/grpc doc/PROTOCOL-HTTP2.md and doc/PROTOCOL-WEB.md: the Length-Prefixed-Message (Compressed-Flag, 4-byte big-endian Message-Length, Message), the 8th (MSB) trailers bit with the published 10000000b / 10000001b spellings, the trailer-section as RFC 9112 sec 7.1.2 field-lines with lower-case grpc-status / grpc-message names, the 1*DIGIT Status round trip over the gRPC status codes, the Percent-Encoded Status-Message slice, the partial-frame wait and the fail-closed short-buffer refusals. Pure host tests.
 protocore_env(native_grpcweb_frame
+  SUITE unit/src/services/iot/grpcweb/test_grpcweb
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/grpcweb/grpcweb.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/grpcweb/test_grpcweb/test_grpcweb.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/grpcweb/test_grpcweb/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_GRPC_WEB=1"
   INCLUDES
@@ -4724,11 +4497,11 @@ protocore_env(native_grpcweb_frame
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_grpcweb_frame/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/grpcweb/test_grpcweb"
 )
 
 # Heap/stack guardrails (server/core/guardrails): threshold evaluator + JSON,
 protocore_env(native_guardrails
+  SUITE unit/src/server/core/guardrails/test_guardrails
   SOURCES
     "${PROTOCORE_ROOT}/src/server/core/guardrails/guardrails.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -4743,8 +4516,6 @@ protocore_env(native_guardrails
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/guardrails/test_guardrails/test_guardrails.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/guardrails/test_guardrails/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_GUARDRAILS=1"
   INCLUDES
@@ -4754,18 +4525,16 @@ protocore_env(native_guardrails
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_guardrails/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/guardrails/test_guardrails"
 )
 
 # HTTP/2 binary framing (network_drivers/presentation/http/http2/h2_frame, RFC 9113): the 24-octet client connection preface printed in hex by sec 3.4, the sec 4.1 nine-octet frame header field layout and its reserved bit, the 24-bit Length bound, the sec 6.5.2 SETTINGS initial values and the three ranges that section states in words (ENABLE_PUSH, INITIAL_WINDOW_SIZE, MAX_FRAME_SIZE), the SETTINGS payload round trip, and the exact octets of the SETTINGS-ACK / WINDOW_UPDATE / RST_STREAM / GOAWAY / PING-ACK / HEADERS / DATA builders against the sec 6 figures, plus the sec 6 type codes and sec 7 error codes.
 protocore_env(native_h2_frame_rfc
+  SUITE unit/src/network_drivers/presentation/http/http2/test_h2_frame
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http2/h2_frame/h2_frame.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http2/test_h2_frame/test_h2_frame.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http2/test_h2_frame/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP2=1"
   INCLUDES
@@ -4775,11 +4544,11 @@ protocore_env(native_h2_frame_rfc
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_h2_frame_rfc/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http2/test_h2_frame"
 )
 
 # HTTP/2 connection engine (network_drivers/presentation/http/http2/h2_conn, RFC 9113):
 protocore_env(native_h2conn
+  SUITE unit/src/network_drivers/presentation/http/http2/h2_conn/test_h2_conn
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http2/h2_frame/h2_frame.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/hpack_prim/hpack_prim.c"
@@ -4794,8 +4563,6 @@ protocore_env(native_h2conn
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http2/h2_conn/test_h2_conn/test_h2_conn.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http2/h2_conn/test_h2_conn/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP2=1"
   INCLUDES
@@ -4805,11 +4572,11 @@ protocore_env(native_h2conn
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_h2conn/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http2/h2_conn/test_h2_conn"
 )
 
 # HTTP/2 -> request-pipeline bridge (network_drivers/presentation/http/http2/h2_server): the
 protocore_env(native_h2server
+  SUITE unit/src/network_drivers/presentation/http/http2/h2_server/test_h2_server
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http2/h2_server/h2_server.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http2/h2_conn/h2_conn.c"
@@ -4830,8 +4597,6 @@ protocore_env(native_h2server
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http2/h2_server/test_h2_server/test_h2_server.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http2/h2_server/test_h2_server/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP2=1"
     "PROTOCORE_ENABLE_TLS=1"
@@ -4842,11 +4607,11 @@ protocore_env(native_h2server
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_h2server/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http2/h2_server/test_h2_server"
 )
 
 # HTTP/3 application engine (network_drivers/presentation/http/http3/h3_conn, RFC 9114): drives
 protocore_env(native_h3_conn
+  SUITE unit/src/network_drivers/presentation/http/http3/h3_conn/test_h3_conn
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/h3_frame/h3_frame.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/qpack/qpack.c"
@@ -4882,8 +4647,6 @@ protocore_env(native_h3_conn
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/h3_conn/test_h3_conn/test_h3_conn.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/h3_conn/test_h3_conn/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
@@ -4895,11 +4658,11 @@ protocore_env(native_h3_conn
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_h3_conn/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/h3_conn/test_h3_conn"
 )
 
 # End-to-end HTTP/3 capstone (network_drivers/presentation/http/http3): a QUIC client in the
 protocore_env(native_h3_e2e
+  SUITE env/http/test_h3_e2e
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/h3_conn/h3_conn.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/h3_frame/h3_frame.c"
@@ -4937,8 +4700,6 @@ protocore_env(native_h3_e2e
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
-    "${PROTOCORE_ROOT}/test/env/http/test_h3_e2e/test_h3_e2e.c"
-    "${PROTOCORE_ROOT}/test/env/http/test_h3_e2e/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
@@ -4950,19 +4711,17 @@ protocore_env(native_h3_e2e
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_h3_e2e/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/http/test_h3_e2e"
 )
 
 # HTTP/3 framing (network_drivers/presentation/http/http3/h3_frame, RFC 9114 sec 7): the type+length varint header driven through all four sample varint sequences RFC 9000 Appendix A.1 publishes, the long-form spelling that decodes but is never emitted, the sec 11.2.1 frame type registry and its reserved HTTP/2 codes, the sec 7.2.4.1 and RFC 9204 sec 5 settings defaults, the sec 11.2.2 reserved settings identifiers, a SETTINGS round trip with a greased identifier, the DATA / HEADERS / GOAWAY builders, and the truncation and short-destination refusals.
 protocore_env(native_h3_frame_rfc
+  SUITE unit/src/network_drivers/presentation/http/http3/test_h3_frame
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/h3_frame/h3_frame.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/quic_varint/quic_varint.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_h3_frame/test_h3_frame.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_h3_frame/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_UDP=1"
@@ -4973,11 +4732,11 @@ protocore_env(native_h3_frame_rfc
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_h3_frame_rfc/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_h3_frame"
 )
 
 # HTTP/3 dispatch bridge end-to-end through PC (the full Layer-7 app built with
 protocore_env(native_h3_server
+  SUITE unit/src/network_drivers/presentation/http/http3/h3_server/test_h3_server
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -5076,8 +4835,6 @@ protocore_env(native_h3_server
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/h3_server/test_h3_server/test_h3_server.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/h3_server/test_h3_server/unity_runner.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -5104,11 +4861,11 @@ protocore_env(native_h3_server
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_h3_server/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/h3_server/test_h3_server"
 )
 
 # Haas Machine Data Collection (MDC) Q-command codec (services/machine_tool/haas_mdc): the ?Q query
 protocore_env(native_haas_mdc
+  SUITE unit/src/services/machine_tool/haas_mdc/test_haas_mdc
   SOURCES
     "${PROTOCORE_ROOT}/src/services/machine_tool/haas_mdc/haas_mdc.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -5118,8 +4875,6 @@ protocore_env(native_haas_mdc
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/haas_mdc/test_haas_mdc/test_haas_mdc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/haas_mdc/test_haas_mdc/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HAAS_MDC=1"
   INCLUDES
@@ -5129,11 +4884,11 @@ protocore_env(native_haas_mdc
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_haas_mdc/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/haas_mdc/test_haas_mdc"
 )
 
 # Dual-stack Happy Eyeballs selection (network_drivers/transport/happy_eyeballs): RFC 6724 destination
 protocore_env(native_happy_eyeballs
+  SUITE unit/src/network_drivers/transport/happy_eyeballs/test_happy_eyeballs
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/transport/happy_eyeballs/happy_eyeballs.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
@@ -5145,8 +4900,6 @@ protocore_env(native_happy_eyeballs
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/happy_eyeballs/test_happy_eyeballs/test_happy_eyeballs.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/happy_eyeballs/test_happy_eyeballs/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HAPPY_EYEBALLS=1"
   INCLUDES
@@ -5156,18 +4909,16 @@ protocore_env(native_happy_eyeballs
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_happy_eyeballs/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/happy_eyeballs/test_happy_eyeballs"
 )
 
 # HART / HART-IP codec (services/fieldbus/hart): the HART command frame (longitudinal XOR checksum,
 protocore_env(native_hart
+  SUITE unit/src/services/fieldbus/hart/test_hart
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/hart/hart.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/hart/test_hart/test_hart.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/hart/test_hart/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HART=1"
   INCLUDES
@@ -5177,18 +4928,16 @@ protocore_env(native_hart
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_hart/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/hart/test_hart"
 )
 
 # Base-16 conversion (shared/hex): the shared digit tables asserted against the ASCII code
 protocore_env(native_hex
+  SUITE unit/src/shared/hex/test_hex
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/hex/test_hex/test_hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/hex/test_hex/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -5196,11 +4945,11 @@ protocore_env(native_hex
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_hex/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/hex/test_hex"
 )
 
 # HiSLIP (High-Speed LAN Instrument Protocol, IVI-6.1) message codec (services/instrumentation/hislip):
 protocore_env(native_hislip
+  SUITE unit/src/services/instrumentation/hislip/test_hislip
   SOURCES
     "${PROTOCORE_ROOT}/src/services/instrumentation/hislip/hislip.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -5208,8 +4957,6 @@ protocore_env(native_hislip
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/instrumentation/hislip/test_hislip/test_hislip.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/instrumentation/hislip/test_hislip/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HISLIP=1"
   INCLUDES
@@ -5219,11 +4966,11 @@ protocore_env(native_hislip
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_hislip/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/instrumentation/hislip/test_hislip"
 )
 
 # HKDF-SHA384 and TLS 1.3 HKDF-Expand-Label (crypto/kdf/hkdf_sha384.h) against openssl. RFC 5869 tabulates HKDF only for SHA-256 and SHA-1 and RFC 8448's worked trace is SHA-256 throughout, so there is no published SHA-384 answer to read: the inputs are the RFC 5869 Appendix A triples re-run at SHA-384 and the answers come from openssl, whose invocation the generator calibrates against RFC 5869 A.1 and the RFC 8448 sec 3 'derived' secret before it writes a row. Covers extract, the T(i) chain at A.2's 82 octets, and the eight TLS 1.3 labels in both the empty-context and explicit-context forms, plus the 255*48 expand cap.
 protocore_env(native_hkdf_sha384_kat
+  SUITE unit/src/crypto/kdf/test_hkdf_sha384
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
@@ -5233,8 +4980,6 @@ protocore_env(native_hkdf_sha384_kat
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/kdf/test_hkdf_sha384/test_hkdf_sha384.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/kdf/test_hkdf_sha384/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SHA384=1"
     "PROTOCORE_ENABLE_HMAC_SHA384=1"
@@ -5246,11 +4991,11 @@ protocore_env(native_hkdf_sha384_kat
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_hkdf_sha384_kat/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/kdf/test_hkdf_sha384"
 )
 
 # HMAC-SHA-384 (crypto/mac/hmac_sha384.h) against all seven HMAC-SHA-384 rows of RFC 4231 sec 4.2 through 4.8, which that RFC states were cross-verified by three independent implementations. They cover a key shorter than the digest, keys shorter than the block, and a 131-octet key over the 128-octet block that has to be pre-hashed, plus a message longer than the block. The block is SHA-512's 128 octets and not the 48-octet digest, so the suite also pins that width and builds hmac_sha512.c to assert the two MACs are not a prefix of one another.
 protocore_env(native_hmac_sha384_kat
+  SUITE unit/src/crypto/mac/test_hmac_sha384
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha512/hmac_sha512.c"
@@ -5260,8 +5005,6 @@ protocore_env(native_hmac_sha384_kat
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/mac/test_hmac_sha384/test_hmac_sha384.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/mac/test_hmac_sha384/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SHA384=1"
     "PROTOCORE_ENABLE_HMAC_SHA384=1"
@@ -5272,11 +5015,11 @@ protocore_env(native_hmac_sha384_kat
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_hmac_sha384_kat/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/mac/test_hmac_sha384"
 )
 
 # The same RFC 4231 HMAC-SHA-384 vectors with the inner and outer digests compressing on the accelerator: PROTOCORE_HAS_HW_SHA=1 routes sha384.c's block through protocore_sha_hw_block, which the host SHA HAL answers. The MAC construction itself has one arm; this proves the pads, the pre-hash and the two hashes are the same over either compression.
 protocore_env(native_hmac_sha384_kat_hw
+  SUITE unit/src/crypto/mac/test_hmac_sha384
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha512/hmac_sha512.c"
@@ -5287,8 +5030,6 @@ protocore_env(native_hmac_sha384_kat_hw
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_sha_hal.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/mac/test_hmac_sha384/test_hmac_sha384.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/mac/test_hmac_sha384/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SHA384=1"
     "PROTOCORE_ENABLE_HMAC_SHA384=1"
@@ -5300,11 +5041,11 @@ protocore_env(native_hmac_sha384_kat_hw
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_hmac_sha384_kat_hw/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/mac/test_hmac_sha384"
 )
 
 # Waveshare HMMD 24GHz mmWave micro-motion radar codec (server/peripherals/hmmd): the LD2410-family
 protocore_env(native_hmmd
+  SUITE unit/src/server/peripherals/hmmd/test_hmmd
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/hmmd/hmmd.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -5314,8 +5055,6 @@ protocore_env(native_hmmd
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/hmmd/test_hmmd/test_hmmd.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/hmmd/test_hmmd/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HMMD=1"
   INCLUDES
@@ -5325,11 +5064,11 @@ protocore_env(native_hmmd
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_hmmd/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/hmmd/test_hmmd"
 )
 
 # The HMMD codec with PROTOCORE_HAS_BUS at 0: the same suite as native_hmmd against the no-bus arm of hmmd.c. Every host env states PROTOCORE_PLATFORM_HAS_BUS 1, so that arm had never been compiled by anything - it defined the pre-namespace flat API while the table bound entries nothing defined, and it did not build. The suite touches only the codec (framing, the resyncing reassembler, the command builders), which is identical in both arms; what this env proves is that the seam half still compiles and still answers.
 protocore_env(native_hmmd_nobus
+  SUITE unit/src/server/peripherals/hmmd/test_hmmd
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/hmmd/hmmd.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -5339,8 +5078,6 @@ protocore_env(native_hmmd_nobus
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/hmmd/test_hmmd/test_hmmd.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/hmmd/test_hmmd/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HMMD=1"
     "PROTOCORE_HAS_BUS=0"
@@ -5350,18 +5087,16 @@ protocore_env(native_hmmd_nobus
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/hmmd/test_hmmd"
 )
 
 # Omron Host Link (C-mode) frame codec (services/fieldbus/hostlink): the FCS (XOR), the ASCII
 protocore_env(native_hostlink
+  SUITE unit/src/services/fieldbus/hostlink/test_hostlink
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/hostlink/hostlink.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/hostlink/test_hostlink/test_hostlink.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/hostlink/test_hostlink/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HOSTLINK=1"
   INCLUDES
@@ -5371,11 +5106,11 @@ protocore_env(native_hostlink
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_hostlink/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/hostlink/test_hostlink"
 )
 
 # Removable-storage hot-swap safeties (server/storage/hotswap): the ABSENT/READY/FAULTED state
 protocore_env(native_hotswap
+  SUITE unit/src/server/storage/hotswap/test_hotswap
   SOURCES
     "${PROTOCORE_ROOT}/src/server/storage/hotswap/hotswap.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -5390,8 +5125,6 @@ protocore_env(native_hotswap
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/hotswap/test_hotswap/test_hotswap.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/hotswap/test_hotswap/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HOTSWAP=1"
   INCLUDES
@@ -5401,11 +5134,11 @@ protocore_env(native_hotswap
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_hotswap/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/hotswap/test_hotswap"
 )
 
 # HPACK header compression for HTTP/2 (RFC 7541): prefix-integer coding (App C.1), the
 protocore_env(native_hpack
+  SUITE unit/src/network_drivers/presentation/codec/hpack_prim/test_hpack
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/hpack_prim/hpack_prim.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http2/hpack/hpack.c"
@@ -5413,8 +5146,6 @@ protocore_env(native_hpack
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/hpack_prim/test_hpack/test_hpack.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/hpack_prim/test_hpack/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP2=1"
   INCLUDES
@@ -5424,11 +5155,11 @@ protocore_env(native_hpack
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_hpack/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/hpack_prim/test_hpack"
 )
 
 # Outbound HTTP client: URL parser + request builder + response parser. Pure
 protocore_env(native_http_client
+  SUITE unit/src/services/net/http_client/test_http_client
   SOURCES
     "${PROTOCORE_ROOT}/src/services/net/http_client/http_client.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -5443,8 +5174,6 @@ protocore_env(native_http_client
     "${PROTOCORE_ROOT}/src/mmgr/secure/secure.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/http_client/test_http_client/test_http_client.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/http_client/test_http_client/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
@@ -5456,11 +5185,11 @@ protocore_env(native_http_client
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_http_client/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/http_client/test_http_client"
 )
 
 # The HTTP Date header's clock (server/io/http_clock): which source supplies the instant, and the IMF-fixdate rendered from it. RFC 9110 sec 5.6.7's own example reproduced octet for octet from a registered source, and the two ways a build has no trustworthy time - a source that has not synced, and no source at all - each yielding no header rather than a wrong one. These cases were in test_time_source and test_ntp_service while the joining lived in an escape hatch inside each of those modules.
 protocore_env(native_http_clock
+  SUITE unit/src/server/io/http_clock/test_http_clock
   SOURCES
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
     "${PROTOCORE_ROOT}/src/services/timing_position/time_source/time_source.c"
@@ -5477,8 +5206,6 @@ protocore_env(native_http_clock
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/io/http_clock/test_http_clock/test_http_clock.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/io/http_clock/test_http_clock/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP_CLOCK=1"
     "PROTOCORE_ENABLE_TIME_SOURCE=1"
@@ -5488,11 +5215,11 @@ protocore_env(native_http_clock
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
-    "${PROTOCORE_ROOT}/test/unit/src/server/io/http_clock/test_http_clock"
 )
 
 # IMF-fixdate formatter (shared/http_date): the RFC 9110 sec 5.6.7 preferred format,
 protocore_env(native_http_date
+  SUITE unit/src/shared/http_date/test_http_date
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/http_date/http_date.c"
     "${PROTOCORE_ROOT}/src/shared/time_compat/time_compat.c"
@@ -5503,8 +5230,6 @@ protocore_env(native_http_date
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/http_date/test_http_date/test_http_date.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/http_date/test_http_date/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -5512,11 +5237,11 @@ protocore_env(native_http_date
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_http_date/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/http_date/test_http_date"
 )
 
 # HTTP delivery optimizations (services/file_transfer/http_delivery): the RFC 5861 stale-while-revalidate
 protocore_env(native_http_delivery
+  SUITE unit/src/services/file_transfer/http_delivery/test_http_delivery
   SOURCES
     "${PROTOCORE_ROOT}/src/services/file_transfer/http_delivery/http_delivery.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -5526,8 +5251,6 @@ protocore_env(native_http_delivery
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/file_transfer/http_delivery/test_http_delivery/test_http_delivery.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/file_transfer/http_delivery/test_http_delivery/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP_DELIVERY=1"
   INCLUDES
@@ -5537,11 +5260,11 @@ protocore_env(native_http_delivery
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_http_delivery/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/file_transfer/http_delivery/test_http_delivery"
 )
 
 # test_http_parser against the native_stack_l46 stack.
 protocore_env(native_http_parser
+  SUITE unit/src/network_drivers/presentation/http/http_parser/test_http_parser
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -5576,8 +5299,6 @@ protocore_env(native_http_parser
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/shared/utf8/utf8.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http_parser/test_http_parser/test_http_parser.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http_parser/test_http_parser/unity_runner.c"
   DEFINES
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
     "PROTOCORE_ENABLE_MULTIPART=1"
@@ -5589,11 +5310,11 @@ protocore_env(native_http_parser
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_http_parser/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http_parser/test_http_parser"
 )
 
 # HTTP Cache-Control helpers (network_drivers/presentation/http/httpcache, RFC 9111 + 8246 + 5861): the
 protocore_env(native_httpcache
+  SUITE unit/src/network_drivers/presentation/http/httpcache/test_httpcache
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/httpcache/httpcache.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -5604,8 +5325,6 @@ protocore_env(native_httpcache
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/httpcache/test_httpcache/test_httpcache.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/httpcache/test_httpcache/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP_CACHE=1"
   INCLUDES
@@ -5615,11 +5334,11 @@ protocore_env(native_httpcache
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_httpcache/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/httpcache/test_httpcache"
 )
 
 # Hardware-health diagnostics (server/signaling/hw_health): power-rail voltage-drop logger (worst
 protocore_env(native_hw_health
+  SUITE unit/src/server/signaling/test_hw_health
   SOURCES
     "${PROTOCORE_ROOT}/src/server/signaling/hw_health/hw_health.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -5629,8 +5348,6 @@ protocore_env(native_hw_health
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/test_hw_health/test_hw_health.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/test_hw_health/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HW_HEALTH=1"
   INCLUDES
@@ -5640,18 +5357,16 @@ protocore_env(native_hw_health
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_hw_health/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/test_hw_health"
 )
 
 # ICCP / TASE.2 (IEC 60870-6) Data_Value codec (services/energy/iccp): the StateQ (state + quality)
 protocore_env(native_iccp
+  SUITE unit/src/services/energy/iccp/test_iccp
   SOURCES
     "${PROTOCORE_ROOT}/src/services/energy/iccp/iccp.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/iccp/test_iccp/test_iccp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/iccp/test_iccp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_ICCP=1"
   INCLUDES
@@ -5661,18 +5376,16 @@ protocore_env(native_iccp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_iccp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/iccp/test_iccp"
 )
 
 # IEC 60870-5-101/-104 codec (services/energy/iec60870): the -104 APCI (I/S/U), the ASDU
 protocore_env(native_iec60870
+  SUITE unit/src/services/energy/iec60870/test_iec60870
   SOURCES
     "${PROTOCORE_ROOT}/src/services/energy/iec60870/iec60870.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/iec60870/test_iec60870/test_iec60870.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/iec60870/test_iec60870/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_IEC60870=1"
   INCLUDES
@@ -5682,11 +5395,11 @@ protocore_env(native_iec60870
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_iec60870/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/iec60870/test_iec60870"
 )
 
 # test_iface against the native_stack_http stack.
 protocore_env(native_iface
+  SUITE env/transport/test_iface
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -5756,8 +5469,6 @@ protocore_env(native_iface
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_iface/test_iface.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_iface/unity_runner.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -5782,11 +5493,11 @@ protocore_env(native_iface
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_iface/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/transport/test_iface"
 )
 
 # Interface bridge pure core (server/net/iface_bridge): the user-defined address:port -> bus
 protocore_env(native_iface_bridge
+  SUITE unit/src/server/net/iface_bridge/iface_bridge/test_iface_bridge
   SOURCES
     "${PROTOCORE_ROOT}/src/server/net/iface_bridge/iface_bridge/iface_bridge.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
@@ -5798,8 +5509,6 @@ protocore_env(native_iface_bridge
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/iface_bridge/iface_bridge/test_iface_bridge/test_iface_bridge.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/iface_bridge/iface_bridge/test_iface_bridge/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_IFACE_BRIDGE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
@@ -5811,11 +5520,11 @@ protocore_env(native_iface_bridge
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_iface_bridge/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/iface_bridge/iface_bridge/test_iface_bridge"
 )
 
 # Interface-bridge glue bind table (server/net/iface_bridge/iface_bridge_hw): publish walking the pure rule table into a listener bind, the null-target and duplicate-port refusals, the table bound, and reset. The suite includes iface_bridge_hw.c so its file-static bind lookup is reachable, which is why the env does not build that .c itself.
 protocore_env(native_iface_bridge_hw
+  SUITE unit/src/server/net/iface_bridge/test_iface_bridge_hw
   SOURCES
     "${PROTOCORE_ROOT}/src/server/net/iface_bridge/iface_bridge/iface_bridge.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
@@ -5852,8 +5561,6 @@ protocore_env(native_iface_bridge_hw
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/websocket/websocket.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/sse/sse.c"
     "${PROTOCORE_ROOT}/src/shared/utf8/utf8.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/iface_bridge/test_iface_bridge_hw/test_iface_bridge_hw.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/iface_bridge/test_iface_bridge_hw/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_IFACE_BRIDGE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
@@ -5866,11 +5573,11 @@ protocore_env(native_iface_bridge_hw
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_iface_bridge_hw/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/iface_bridge/test_iface_bridge_hw"
 )
 
 # IKEv2 (RFC 7296) message + payload codec (services/security/ikev2): the 28-octet IKE header, the generic
 protocore_env(native_ikev2__test_ikev2
+  SUITE unit/src/services/security/ikev2/test_ikev2
   SOURCES
     "${PROTOCORE_ROOT}/src/services/security/ikev2/ikev2/ikev2.c"
     "${PROTOCORE_ROOT}/src/services/security/ikev2/ikev2_natt/ikev2_natt.c"
@@ -5901,8 +5608,6 @@ protocore_env(native_ikev2__test_ikev2
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/crypto/rng/rng.c"
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/ikev2/test_ikev2/test_ikev2.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/ikev2/test_ikev2/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_IKEV2=1"
   INCLUDES
@@ -5912,11 +5617,11 @@ protocore_env(native_ikev2__test_ikev2
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ikev2/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/ikev2/test_ikev2"
 )
 
 # IKEv2 (RFC 7296) message + payload codec (services/security/ikev2): the 28-octet IKE header, the generic
 protocore_env(native_ikev2__test_ikev2_natt
+  SUITE unit/src/services/security/ikev2/test_ikev2_natt
   SOURCES
     "${PROTOCORE_ROOT}/src/services/security/ikev2/ikev2/ikev2.c"
     "${PROTOCORE_ROOT}/src/services/security/ikev2/ikev2_natt/ikev2_natt.c"
@@ -5947,8 +5652,6 @@ protocore_env(native_ikev2__test_ikev2_natt
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/crypto/rng/rng.c"
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/ikev2/test_ikev2_natt/test_ikev2_natt.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/ikev2/test_ikev2_natt/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_IKEV2=1"
   INCLUDES
@@ -5958,11 +5661,11 @@ protocore_env(native_ikev2__test_ikev2_natt
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ikev2/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/ikev2/test_ikev2_natt"
 )
 
 # IKEv2 NAT traversal (services/security/ikev2/ikev2_natt.c). The NAT_DETECTION_SOURCE_IP and
 protocore_env(native_ikev2_natt_rfc3948
+  SUITE unit/src/services/security/ikev2/test_ikev2_natt
   SOURCES
     "${PROTOCORE_ROOT}/src/services/security/ikev2/ikev2/ikev2.c"
     "${PROTOCORE_ROOT}/src/services/security/ikev2/ikev2_natt/ikev2_natt.c"
@@ -5993,8 +5696,6 @@ protocore_env(native_ikev2_natt_rfc3948
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/crypto/rng/rng.c"
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/ikev2/test_ikev2_natt/test_ikev2_natt.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/ikev2/test_ikev2_natt/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_IKEV2=1"
   INCLUDES
@@ -6004,11 +5705,11 @@ protocore_env(native_ikev2_natt_rfc3948
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ikev2_natt_rfc3948/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/ikev2/test_ikev2_natt"
 )
 
 # IKEv2 message and payload codec (services/security/ikev2/ikev2.c). Every expected octet is read
 protocore_env(native_ikev2_rfc7296
+  SUITE unit/src/services/security/ikev2/test_ikev2
   SOURCES
     "${PROTOCORE_ROOT}/src/services/security/ikev2/ikev2/ikev2.c"
     "${PROTOCORE_ROOT}/src/services/security/ikev2/ikev2_natt/ikev2_natt.c"
@@ -6039,8 +5740,6 @@ protocore_env(native_ikev2_rfc7296
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/crypto/rng/rng.c"
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/ikev2/test_ikev2/test_ikev2.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/ikev2/test_ikev2/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_IKEV2=1"
   INCLUDES
@@ -6050,11 +5749,11 @@ protocore_env(native_ikev2_rfc7296
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ikev2_rfc7296/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/ikev2/test_ikev2"
 )
 
 # INA219 current / power monitor (server/peripherals/ina219): decoding the bus-voltage register (bits 15:3, LSB 4 mV) and the signed shunt register (LSB 10 uV), computing the calibration register from the current LSB and shunt resistance, scaling the raw current / power registers by that LSB, and reading a part end to end - the suite applies a shunt drop and a bus voltage to the SBOS448G device model in test/core_setup/hal/host/devices/ and the part computes current and power from them by Eq 4 and Eq 5.
 protocore_env(native_ina219
+  SUITE unit/src/server/peripherals/ina219/test_ina219
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/ina219/ina219.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -6066,8 +5765,6 @@ protocore_env(native_ina219
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ina219/test_ina219/test_ina219.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ina219/test_ina219/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_INA219=1"
   INCLUDES
@@ -6077,19 +5774,17 @@ protocore_env(native_ina219
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ina219/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ina219/test_ina219"
 )
 
 # INTERBUS summation-frame codec (services/fieldbus/interbus): the summation frame (loopback +
 protocore_env(native_interbus
+  SUITE unit/src/services/fieldbus/interbus/test_interbus
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/interbus/interbus.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/crc/crc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/interbus/test_interbus/test_interbus.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/interbus/test_interbus/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_INTERBUS=1"
   INCLUDES
@@ -6099,18 +5794,16 @@ protocore_env(native_interbus
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_interbus/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/interbus/test_interbus"
 )
 
 # IO-Link (SDCI) data-link message codec (services/fieldbus/iolink): the MC / CKT / CKS control
 protocore_env(native_iolink
+  SUITE unit/src/services/fieldbus/iolink/test_iolink
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/iolink/iolink.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/iolink/test_iolink/test_iolink.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/iolink/test_iolink/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_IOLINK=1"
   INCLUDES
@@ -6120,19 +5813,17 @@ protocore_env(native_iolink
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_iolink/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/iolink/test_iolink"
 )
 
 # IP address core (network_drivers/network/protocore_ip): RFC 4291 IPv4/IPv6 text parsing,
 protocore_env(native_ip
+  SUITE unit/src/shared/ip/test_ip
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/ip/test_ip/test_ip.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/ip/test_ip/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -6140,11 +5831,11 @@ protocore_env(native_ip
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ip/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/ip/test_ip"
 )
 
 # SAE J1939 codec (services/fieldbus/j1939): 29-bit id encode/decode (PDU1 + PDU2), single-frame
 protocore_env(native_j1939
+  SUITE unit/src/services/fieldbus/j1939/test_j1939
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/j1939/j1939.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -6154,8 +5845,6 @@ protocore_env(native_j1939
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/j1939/test_j1939/test_j1939.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/j1939/test_j1939/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_J1939=1"
     "UNITY_INCLUDE_DOUBLE"
@@ -6166,18 +5855,16 @@ protocore_env(native_j1939
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_j1939/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/j1939/test_j1939"
 )
 
 # SAE J2735 V2X codec (services/transportation/j2735): the ASN.1 UPER primitive layer against ITU-T X.691 clause 13 (a constrained whole number is the offset from the lower bound in ceil(log2(range)) bits, MSB-first, no inter-field padding) and the BSMcore / SPaT MovementState / MAP intersection encode and decode. The load-bearing case is the 162-bit / 21-octet BSMcore layout asserted against a hand-written bit string. Pure host tests.
 protocore_env(native_j2735_uper
+  SUITE unit/src/services/transportation/j2735/test_j2735
   SOURCES
     "${PROTOCORE_ROOT}/src/services/transportation/j2735/j2735.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/transportation/j2735/test_j2735/test_j2735.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/transportation/j2735/test_j2735/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_J2735=1"
   INCLUDES
@@ -6187,11 +5874,11 @@ protocore_env(native_j2735_uper
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_j2735_uper/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/transportation/j2735/test_j2735"
 )
 
 # test_json against the native_stack_http stack.
 protocore_env(native_json
+  SUITE unit/src/network_drivers/presentation/codec/json/test_json
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -6261,8 +5948,6 @@ protocore_env(native_json
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/json/test_json/test_json.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/json/test_json/unity_runner.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -6285,11 +5970,11 @@ protocore_env(native_json
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_json/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/json/test_json"
 )
 
 # Zero-heap JSON writer and top-level reader (network_drivers/presentation/codec/json, RFC 8259): the sec 13 example object built byte for byte, the sec 7 mandatory escape set, the sec 7 "\uD834\uDD1E" G clef surrogate pair decoded to its RFC 3629 UTF-8 form, the sec 8.2 unpaired surrogate mapped to U+FFFD, the sec 3 literal names, top-level-only member matching, write/read round trip, and the overflow / depth / null-storage refusals.
 protocore_env(native_json_codec
+  SUITE unit/src/network_drivers/presentation/codec/json/test_json
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/json/json.c"
     "${PROTOCORE_ROOT}/src/mmgr/membuild/membuild.c"
@@ -6299,8 +5984,6 @@ protocore_env(native_json_codec
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/json/test_json/test_json.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/json/test_json/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_JSON=1"
   INCLUDES
@@ -6310,11 +5993,11 @@ protocore_env(native_json_codec
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_json_codec/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/json/test_json"
 )
 
 # HS256 JWT verifier (services/security/jwt). Anchored on RFC 7515 Appendix A.1's complete example:
 protocore_env(native_jwt_rfc7515
+  SUITE unit/src/services/security/jwt/test_jwt
   SOURCES
     "${PROTOCORE_ROOT}/src/services/security/jwt/jwt.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/base64/base64.c"
@@ -6334,8 +6017,6 @@ protocore_env(native_jwt_rfc7515
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/jwt/test_jwt/test_jwt.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/jwt/test_jwt/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_JWT=1"
   INCLUDES
@@ -6345,11 +6026,11 @@ protocore_env(native_jwt_rfc7515
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_jwt_rfc7515/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/jwt/test_jwt"
 )
 
 # HTTP/1.1 keep-alive (persistent connections): full server built with
 protocore_env(native_keepalive
+  SUITE env/server/test_keepalive
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -6412,8 +6093,6 @@ protocore_env(native_keepalive
     "${PROTOCORE_ROOT}/src/crypto/rng/rng.c"
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
-    "${PROTOCORE_ROOT}/test/env/server/test_keepalive/test_keepalive.c"
-    "${PROTOCORE_ROOT}/test/env/server/test_keepalive/unity_runner.c"
   DEFINES
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
     "PROTOCORE_ENABLE_KEEPALIVE=1"
@@ -6432,11 +6111,11 @@ protocore_env(native_keepalive
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_keepalive/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/server/test_keepalive"
 )
 
 # Egress-interface reporting with no L1 backend (network_drivers/physical). RFC 1122 sec 3.3.1.2 makes the default route the interface outbound traffic leaves by, so the classifier that maps a live default-route IPv4 against the station and softAP addresses is the one call whose answer varies with its input: each arm returns a different protocore_if_kind, an interface that is down carries address 0 and never claims the route, and the station is compared before the softAP. The addresses are RFC 5737 TEST-NET-1 in the network byte order of RFC 791 appendix B. The rest pins the PROTOCORE_PHYSICAL_HAS_BACKEND == 0 build: bring-up with nothing to do reports success while the link never comes ready, every readout answers its not-available value, and the two RFC 826 six-octet hardware address readouts refuse without writing into the caller's buffer.
 protocore_env(native_l1_egress
+  SUITE unit/src/network_drivers/physical/test_net_egress
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
@@ -6449,8 +6128,6 @@ protocore_env(native_l1_egress
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/physical/test_net_egress/test_net_egress.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/physical/test_net_egress/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_IPV6=1"
     "PROTOCORE_ENABLE_ETHERNET=1"
@@ -6461,11 +6138,11 @@ protocore_env(native_l1_egress
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_l1_egress/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/physical/test_net_egress"
 )
 
 # Layer 1 driven through a real backend: the env declares PROTOCORE_PHYSICAL_HAS_BACKEND=1, so test/core_setup/hal/host/physical stands in for silicon instead of the no-op stubs in physical.c, and the link can actually come up. That is what makes the readouts checkable at all, since a stub answers every one of them with an empty value and a caller that mishandles a live link then reads exactly like one that works. The station associates and reports its SSID, its channel and a negative dBm RSSI; the softAP takes its own address without stealing the route; Ethernet then takes the default route from the station the way a stack picks one when both are up. It is also the only way to separate the same-signature calls a stub build cannot: eth_init from eth_ready, ip6_init from ip6_ready, and wifi_mac from egress_mac, which answer with DIFFERENT addresses once a wired link carries traffic. Addresses are RFC 5737 TEST-NET-1 and RFC 3849 2001:db8::/32, the hardware addresses are checked for the RFC 7042 sec 2.1 U/L and I/G bits, the SSID cap is IEEE 802.11-2020 9.4.2.2's 32 octets, and a global unicast IPv6 address (RFC 4291 sec 2.5.4) is checked not to be an RFC 4291 sec 2.5.6 link-local. PROTOCORE_RADIO_WIFI_PS is set to max modem so the keep-awake refcount is provable: the first hold forces doze off and the balancing release restores the configured mode, which at the default of 0 would be indistinguishable from the held state. This is the only env that compiles radio_power.c's backend arm at all.
 protocore_env(native_l1_link
+  SUITE unit/src/network_drivers/physical/test_phy
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/radio_power/radio_power.c"
@@ -6479,8 +6156,6 @@ protocore_env(native_l1_link
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/physical/test_phy/test_phy.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/physical/test_phy/unity_runner.c"
   DEFINES
     "PROTOCORE_PHYSICAL_HAS_BACKEND=1"
     "PROTOCORE_ENABLE_ETHERNET=1"
@@ -6494,11 +6169,11 @@ protocore_env(native_l1_link
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_l1_link/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/physical/test_phy"
 )
 
 # LD2410 mmWave radar codec (server/peripherals/ld2410): decoding a basic and an engineering-mode
 protocore_env(native_ld2410
+  SUITE unit/src/server/peripherals/ld2410/test_ld2410
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/ld2410/ld2410.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -6508,8 +6183,6 @@ protocore_env(native_ld2410
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ld2410/test_ld2410/test_ld2410.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ld2410/test_ld2410/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_LD2410=1"
   INCLUDES
@@ -6519,11 +6192,11 @@ protocore_env(native_ld2410
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ld2410/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ld2410/test_ld2410"
 )
 
 # The LD2410 codec with PROTOCORE_HAS_BUS at 0: the same suite as native_ld2410 against the no-bus arm of ld2410.c. That arm had never been compiled - every host env states PROTOCORE_PLATFORM_HAS_BUS 1 - and it defined five pre-namespace flat functions while the table bound five entries nothing defined. The suite exercises the codec (framing, the resyncing reassembler, the command builders including cmd_restart, which builds a frame rather than sending one), identical in both arms.
 protocore_env(native_ld2410_nobus
+  SUITE unit/src/server/peripherals/ld2410/test_ld2410
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/ld2410/ld2410.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -6533,8 +6206,6 @@ protocore_env(native_ld2410_nobus
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ld2410/test_ld2410/test_ld2410.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ld2410/test_ld2410/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_LD2410=1"
     "PROTOCORE_HAS_BUS=0"
@@ -6544,11 +6215,11 @@ protocore_env(native_ld2410_nobus
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ld2410/test_ld2410"
 )
 
 # LDC1614 inductance-to-digital field sensor (server/peripherals/ldc1614): the 28-bit data combine +
 protocore_env(native_ldc1614
+  SUITE unit/src/server/peripherals/ldc1614/test_ldc1614
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/ldc1614/ldc1614.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -6559,8 +6230,6 @@ protocore_env(native_ldc1614
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ldc1614/test_ldc1614/test_ldc1614.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ldc1614/test_ldc1614/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_LDC1614=1"
   INCLUDES
@@ -6570,11 +6239,11 @@ protocore_env(native_ldc1614
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ldc1614/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/ldc1614/test_ldc1614"
 )
 
 # The littlefs-backed protocore_mnt_backend used by the host tests that need a real tree
 protocore_env(native_lfs_mock
+  SUITE env/storage/test_lfs_mock
   SOURCES
     "${PROTOCORE_ROOT}/src/server/storage/mnt/mnt.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -6582,8 +6251,6 @@ protocore_env(native_lfs_mock
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/env/storage/test_lfs_mock/test_lfs_mock.c"
-    "${PROTOCORE_ROOT}/test/env/storage/test_lfs_mock/unity_runner.c"
     "${PROTOCORE_ROOT}/.pio/libdeps/native_lfs_mock/littlefs/src/lfs.c"
     "${PROTOCORE_ROOT}/.pio/libdeps/native_lfs_mock/littlefs/src/lfs_util.c"
   DEFINES
@@ -6595,18 +6262,16 @@ protocore_env(native_lfs_mock
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_lfs_mock/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/storage/test_lfs_mock"
 )
 
 # Multi-interface egress selection (server/signaling/link_manager): a table of interfaces (kind +
 protocore_env(native_link_manager
+  SUITE unit/src/server/signaling/test_link_manager
   SOURCES
     "${PROTOCORE_ROOT}/src/server/signaling/link_manager/link_manager.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/test_link_manager/test_link_manager.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/test_link_manager/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_LINK_MANAGER=1"
   INCLUDES
@@ -6616,11 +6281,11 @@ protocore_env(native_link_manager
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_link_manager/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/test_link_manager"
 )
 
 # Abstract logging macros (shared/log) whose disabled levels are discarded by the preprocessor: built at PROTOCORE_LOG_LEVEL_INFO so DEBUG is below the floor. Asserts that a discarded call reaches neither the sink nor the ring AND never evaluates its arguments (the whole point of a preprocessor filter over a runtime level check), that INFO/WARN/ERROR emit at their own severity, that the emitted line is the frame the spec builds, that the PROTOCORE_LOG_LEVEL_* and logbuf severity scales agree, and that a mismatched or over-long frame emits an empty line rather than a truncated one. Pure host tests.
 protocore_env(native_log_frames
+  SUITE unit/src/shared/log/test_log
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/log/log.c"
     "${PROTOCORE_ROOT}/src/server/core/logbuf/logbuf.c"
@@ -6636,8 +6301,6 @@ protocore_env(native_log_frames
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/log/test_log/test_log.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/log/test_log/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_LOGBUF=1"
     "PROTOCORE_LOG_LEVEL=PROTOCORE_LOG_LEVEL_INFO"
@@ -6648,11 +6311,11 @@ protocore_env(native_log_frames
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_log_frames/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/log/test_log"
 )
 
 # Rotating log ring + severity trap (server/logbuf): pure, fully host-tested.
 protocore_env(native_logbuf
+  SUITE unit/src/server/core/test_logbuf
   SOURCES
     "${PROTOCORE_ROOT}/src/server/core/logbuf/logbuf.c"
     "${PROTOCORE_ROOT}/src/mmgr/protoframe/protoframe.c"
@@ -6667,8 +6330,6 @@ protocore_env(native_logbuf
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/test_logbuf/test_logbuf.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/test_logbuf/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_LOGBUF=1"
   INCLUDES
@@ -6678,18 +6339,16 @@ protocore_env(native_logbuf
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_logbuf/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/test_logbuf"
 )
 
 # LonWorks / LON-IP network-variable codec (services/fieldbus/lonworks): the LonTalk NV PDU
 protocore_env(native_lonworks
+  SUITE unit/src/services/fieldbus/lonworks/test_lonworks
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/lonworks/lonworks.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/lonworks/test_lonworks/test_lonworks.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/lonworks/test_lonworks/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_LONWORKS=1"
     "UNITY_INCLUDE_DOUBLE"
@@ -6700,18 +6359,16 @@ protocore_env(native_lonworks
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_lonworks/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/lonworks/test_lonworks"
 )
 
 # LoRa codec + SX127x driver (services/radio/lora), v5 radio plugin: the RadioHead 4-byte
 protocore_env(native_lora
+  SUITE unit/src/services/radio/lora/test_lora
   SOURCES
     "${PROTOCORE_ROOT}/src/services/radio/lora/lora.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/lora/test_lora/test_lora.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/lora/test_lora/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_LORA=1"
   INCLUDES
@@ -6721,18 +6378,16 @@ protocore_env(native_lora
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_lora/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/lora/test_lora"
 )
 
 # Heidenhain LSV/2 telegram codec (services/machine_tool/lsv2): the framer (4-byte big-endian payload-length
 protocore_env(native_lsv2
+  SUITE unit/src/services/machine_tool/lsv2/test_lsv2
   SOURCES
     "${PROTOCORE_ROOT}/src/services/machine_tool/lsv2/lsv2.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/lsv2/test_lsv2/test_lsv2.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/lsv2/test_lsv2/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_LSV2=1"
   INCLUDES
@@ -6742,11 +6397,11 @@ protocore_env(native_lsv2
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_lsv2/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/lsv2/test_lsv2"
 )
 
 # OMA LwM2M TLV codec (services/iot/lwm2m), OMA-TS-LightweightM2M_Core-V1_2-20201110-A sec 7.4.5: the Table 7.4.5.-1 Type byte (Identifier type in bits 7-6, 8/16-bit Identifier in bit 5, Length-field width in bits 4-3, inline Length in bits 2-0), entries of the sec 7.4.5.1 Read /3/0 Device Object payload reproduced octet for octet, the whole 38-octet sec 7.4.5.2 B) Read /2 Access Control payload parsed three levels deep including its 16-bit Identifier, and the Appendix C Table C.-2 Value forms (shortest signed Integer width, one-octet Boolean, binary64 Float, two's complement sign extension). Pure host tests.
 protocore_env(native_lwm2m_tlv_codec
+  SUITE unit/src/services/iot/lwm2m/test_lwm2m_tlv
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/lwm2m/lwm2m_tlv/lwm2m_tlv.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -6757,8 +6412,6 @@ protocore_env(native_lwm2m_tlv_codec
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/lwm2m/test_lwm2m_tlv/test_lwm2m_tlv.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/lwm2m/test_lwm2m_tlv/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_LWM2M=1"
   INCLUDES
@@ -6768,11 +6421,11 @@ protocore_env(native_lwm2m_tlv_codec
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_lwm2m_tlv_codec/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/lwm2m/test_lwm2m_tlv"
 )
 
 # NMEA 2000 codec (services/timing_position/nmea2000): the Fast Packet transport (frame count from the 6 + 7n split, the sequence and frame counters packed in the control octet, split and byte-for-byte reassembly up to 223 octets, out-of-order and foreign-sequence rejection, bounds), single-frame build over the J1939 29-bit identifier, and the typed PGN decoders with their documented scalings and not-available sentinels (position, COG/SOG, engine rapid and dynamic, wind, depth, heading, attitude, temperature Kelvin-to-Celsius, battery). NMEA 2000 is not a public document, so expectations are properties plus the scalings the header states.
 protocore_env(native_marine_nmea2000
+  SUITE unit/src/services/timing_position/nmea2000/test_nmea2000
   SOURCES
     "${PROTOCORE_ROOT}/src/services/timing_position/nmea2000/nmea2000.c"
     "${PROTOCORE_ROOT}/src/services/fieldbus/j1939/j1939.c"
@@ -6783,8 +6436,6 @@ protocore_env(native_marine_nmea2000
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/nmea2000/test_nmea2000/test_nmea2000.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/nmea2000/test_nmea2000/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_NMEA2000=1"
     "PROTOCORE_ENABLE_J1939=1"
@@ -6795,19 +6446,17 @@ protocore_env(native_marine_nmea2000
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_marine_nmea2000/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/nmea2000/test_nmea2000"
 )
 
 # Modbus Plus HDLC token-bus codec (services/fieldbus/mbplus): the HDLC frame (7E addr ctrl payload
 protocore_env(native_mbplus
+  SUITE unit/src/services/fieldbus/mbplus/test_mbplus
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/mbplus/mbplus.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/crc/crc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/mbplus/test_mbplus/test_mbplus.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/mbplus/test_mbplus/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_MBPLUS=1"
   INCLUDES
@@ -6817,18 +6466,16 @@ protocore_env(native_mbplus
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mbplus/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/mbplus/test_mbplus"
 )
 
 # Wired M-Bus (EN 13757-2/-3) frame + data-record codec (services/fieldbus/mbus): the single-character / short / long frame builders and the checksum-validating parser, the DIF/VIF record walk with its DIFE+VIFE extension chains, integer / BCD / REAL32 value decoding, the VIF unit + exponent table, and the 12-octet variable-data fixed header. Anchored on the complete RSP_UD telegram worked in M-Bus Usergroup doc rev 4.8 ch. 6.3.3, plus the field, telegram-format and VIF tables of ch. 5.2, 5.3, 6.3 and 8.4. Pure host tests.
 protocore_env(native_mbus
+  SUITE unit/src/services/fieldbus/mbus/test_mbus
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/mbus/mbus.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/mbus/test_mbus/test_mbus.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/mbus/test_mbus/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_MBUS=1"
   INCLUDES
@@ -6838,11 +6485,11 @@ protocore_env(native_mbus
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mbus/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/mbus/test_mbus"
 )
 
 # MD4, MD5 and HMAC-MD5 (crypto/hash/md.h), the legacy digests NTLM needs. Runs the published test suites whole: RFC 1321 Appendix A.5 for MD5, RFC 1320 Appendix A.5 for MD4, and all seven RFC 2202 section 2 HMAC-MD5 cases including the two with an 80-octet key that RFC 2104 requires be hashed down first. Adds streaming / one-shot agreement at every split, context reuse across the two algorithms, and the 55/56 and 63/64 padding boundaries.
 protocore_env(native_md_kat
+  SUITE unit/src/crypto/hash/test_smb_crypto
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/md/md.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
@@ -6855,8 +6502,6 @@ protocore_env(native_md_kat
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_smb_crypto/test_smb_crypto.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_smb_crypto/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -6864,11 +6509,11 @@ protocore_env(native_md_kat
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_md_kat/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_smb_crypto"
 )
 
 # Adaptive mDNS beacon scheduling (network_drivers/application/mdns_adaptive): RF-contention backoff/recovery
 protocore_env(native_mdns_adaptive
+  SUITE unit/src/network_drivers/application/mdns_adaptive/test_mdns_adaptive
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/mdns_adaptive/mdns_adaptive.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -6896,8 +6541,6 @@ protocore_env(native_mdns_adaptive
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
     "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/physical/physical_mock.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/mdns_adaptive/test_mdns_adaptive/test_mdns_adaptive.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/mdns_adaptive/test_mdns_adaptive/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_MDNS_ADAPTIVE=1"
     "PROTOCORE_ENABLE_MDNS=1"
@@ -6911,11 +6554,11 @@ protocore_env(native_mdns_adaptive
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mdns_adaptive/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/mdns_adaptive/test_mdns_adaptive"
 )
 
 # The portable mDNS / DNS-SD responder (network_drivers/application/mdns_service, RFC 6762 /
 protocore_env(native_mdns_service
+  SUITE unit/src/network_drivers/application/mdns_service/test_mdns_service
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/mdns_service/mdns_service.c"
     "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
@@ -6939,8 +6582,6 @@ protocore_env(native_mdns_service
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/physical/physical_mock.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/mdns_service/test_mdns_service/test_mdns_service.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/mdns_service/test_mdns_service/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_MDNS=1"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -6952,19 +6593,17 @@ protocore_env(native_mdns_service
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mdns_service/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/mdns_service/test_mdns_service"
 )
 
 # Mitsubishi MELSEC MC protocol binary 3E codec (services/fieldbus/melsec): the batch read / batch write request builders (little-endian routing, request data length, command + subcommand, 3-octet head device, device code, point count) and the response parser (subheader, length field, end code, read data). Anchored on the worked binary 3E request and response of the MELSEC Communication Protocol Reference Manual SH(NA)-080008 appendix 7, its ch. 8.1 device code list and its ch. 5.3 field definitions. Pure host tests.
 protocore_env(native_melsec
+  SUITE unit/src/services/fieldbus/melsec/test_melsec
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/melsec/melsec.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/melsec/test_melsec/test_melsec.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/melsec/test_melsec/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_MELSEC=1"
   INCLUDES
@@ -6974,11 +6613,11 @@ protocore_env(native_melsec
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_melsec/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/melsec/test_melsec"
 )
 
 # The bounded no-heap builder (mmgr/membuild.h): bump-append into a caller-owned
 protocore_env(native_membuild
+  SUITE unit/src/mmgr/test_membuild
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -6987,8 +6626,6 @@ protocore_env(native_membuild
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/mmgr/membuild/membuild.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_membuild/test_membuild.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_membuild/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -6996,11 +6633,11 @@ protocore_env(native_membuild
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_membuild/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_membuild"
 )
 
 # test_middleware against the native_stack_http stack.
 protocore_env(native_middleware
+  SUITE unit/src/server/io/middleware/test_middleware
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -7070,8 +6707,6 @@ protocore_env(native_middleware
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/io/middleware/test_middleware/test_middleware.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/io/middleware/test_middleware/unity_runner.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -7096,11 +6731,11 @@ protocore_env(native_middleware
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_middleware/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/io/middleware/test_middleware"
 )
 
 # ML-KEM-768 (crypto/pqc/mlkem.h) against the NIST ACVP FIPS 203 known-answer vectors for KeyGen, Encaps and Decaps, transcribed into mlkem_acvp_kat.h from NIST's published gen-val JSON. Adds the FIPS 203 Table 2 encoding sizes, the ek and z embedded in dk, KEM correctness across several messages, the sec 6.3 implicit-reject behaviour on a tampered ciphertext, and the sec 7.2 modulus check on a malformed encapsulation key.
 protocore_env(native_mlkem_kat
+  SUITE unit/src/crypto/hash/test_pqc_mlkem
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha3/sha3.c"
     "${PROTOCORE_ROOT}/src/crypto/pqc/mlkem/mlkem.c"
@@ -7108,8 +6743,6 @@ protocore_env(native_mlkem_kat
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_pqc_mlkem/test_pqc_mlkem.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_pqc_mlkem/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PQC_KEX=1"
   INCLUDES
@@ -7119,18 +6752,16 @@ protocore_env(native_mlkem_kat
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mlkem_kat/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_pqc_mlkem"
 )
 
 # LSB-first bit writer (mmgr/bitio.h) against RFC 1951: the sec 3.1.1 packing order, the sec 3.2.3 block header, the sec 3.2.6 fixed-Huffman end-of-block code (the empty final block is the octets 03 00), and the sec 3.2.4 stored-block LEN/NLEN pair. Plus the capacity edge: an exact fill is not an overflow, a spill past cap latches and stores nothing, an align with no room latches, and the flag never clears.
 protocore_env(native_mmgr_bitio
+  SUITE unit/src/mmgr/test_bitio
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/bitio/bitio.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_bitio/test_bitio.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_bitio/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7138,11 +6769,11 @@ protocore_env(native_mmgr_bitio
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mmgr_bitio/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_bitio"
 )
 
 # Byte verbs (mmgr/bytes.h) against RFC 4251 sec 5: the worked uint32 (0x29b7f4aa -> 29 b7 f4 aa), the worked string ("testing" -> 00 00 00 07 ...), and the mpint table, whose leading-zero rule mpint_fixed undoes. Plus the region contracts: a write past cap stores nothing and the cursor reports the capacity needed, a refused read leaves the cursor and the destination alone, and a peer-chosen full-range u32 length is refused on the space that remains rather than admitted by a sum that wrapped.
 protocore_env(native_mmgr_bytes
+  SUITE unit/src/mmgr/test_bytes
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/bytes/bytes.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
@@ -7151,8 +6782,6 @@ protocore_env(native_mmgr_bytes
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_bytes/test_bytes.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_bytes/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7160,18 +6789,16 @@ protocore_env(native_mmgr_bytes
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mmgr_bytes/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_bytes"
 )
 
 # Fixed-width serializers (mmgr/endian.h) against RFC 1071 sec 3, whose numerical example prints one octet string and states each of its 16- and 32-bit fields in Normal (network) and Swapped order - the big- and little-endian readings published as numbers. RFC 4251 sec 5 supplies the writer side (699921578 stored as 29 b7 f4 aa) and the uint64 rule. Plus: writers return their width, touch only their width, round-trip at every offset in a word, and the two orders are byte reversals of each other.
 protocore_env(native_mmgr_endian
+  SUITE unit/src/mmgr/test_endian
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_endian/test_endian.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_endian/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7179,18 +6806,16 @@ protocore_env(native_mmgr_endian
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mmgr_endian/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_endian"
 )
 
 # binary64 field reads (mmgr/float_bits.h) against IEEE 754 sec 3.4: the 1/11/52 interchange layout and bias 1023, with every expected word derived from that definition in the comment beside it (1.0 is 2^0, so its exponent field is 0 + 1023 -> 0x3FF0000000000000). Covers the two zeros, infinity and NaN sharing the all-ones exponent, the subnormal boundary, the largest finite value, per-field masking in the merge, and exhaustive round trips over all 64 bit positions and the whole exponent range.
 protocore_env(native_mmgr_float_bits
+  SUITE unit/src/mmgr/test_float_bits
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_float_bits/test_float_bits.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_float_bits/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7198,11 +6823,11 @@ protocore_env(native_mmgr_float_bits
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mmgr_float_bits/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_float_bits"
 )
 
 # Declarative frame builder (mmgr/protoframe.h): every field kind rendered as the ISO C11 sec 7.21.6.1 conversion it names, widths that pad but never truncate, and the argument check that compares each value's kind and the arity against the spec. The load-bearing case is the fail-closed contract: a frame that does not fit returns 0 and writes an empty string, and the append form rewinds the whole frame, so a caller that ignores the return sends nothing rather than half a header line.
 protocore_env(native_mmgr_frame
+  SUITE unit/src/mmgr/test_frame
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protoframe/protoframe.c"
     "${PROTOCORE_ROOT}/src/mmgr/membuild/membuild.c"
@@ -7212,8 +6837,6 @@ protocore_env(native_mmgr_frame
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_frame/test_frame.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_frame/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7221,11 +6844,11 @@ protocore_env(native_mmgr_frame
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mmgr_frame/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_frame"
 )
 
 # Bounded builder (mmgr/membuild.h): the zero-padded integer conversions of ISO C11 sec 7.21.6.1 at bases 8, 10 and 16, the XML 1.0 sec 4.6 predefined entities, the RFC 8259 sec 7 JSON string escapes, and the IEEE 754 sec 3.4 sign/inf/NaN predicates. The load-bearing case is the latch: one append that would not fit makes every later append a no-op and makes finish report zero, which is what lets a caller test one flag at the end instead of a return value per call.
 protocore_env(native_mmgr_membuild
+  SUITE unit/src/mmgr/test_membuild
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/membuild/membuild.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -7234,8 +6857,6 @@ protocore_env(native_mmgr_membuild
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_membuild/test_membuild.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_membuild/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7243,11 +6864,11 @@ protocore_env(native_mmgr_membuild
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mmgr_membuild/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_membuild"
 )
 
 # Plaintext pool accessor (mmgr/plaintext.h): bump borrow, alignment, the O(1) reset that reuses the base, fail-closed exhaustion, LIFO mark/release, the span form binding the length to the borrow, and the persistent end the per-dispatch reset does not reach. No standard governs a scratch pool, so every expectation is a property. The load-bearing one is a security property: the plaintext and secret pools are disjoint address ranges, so a borrow from one is never claimed by the other.
 protocore_env(native_mmgr_plaintext
+  SUITE unit/src/mmgr/test_plaintext
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/src/mmgr/secure/secure.c"
@@ -7257,8 +6878,6 @@ protocore_env(native_mmgr_plaintext
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_plaintext/test_plaintext.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_plaintext/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7266,11 +6885,11 @@ protocore_env(native_mmgr_plaintext
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mmgr_plaintext/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_plaintext"
 )
 
 # No-stdlib floating-point renderers (mmgr/membuild.h Sb.g and Sb.fixed) against ISO C11 sec 7.21.6.1. Every expected string is derived from that clause in the comment beside it rather than captured from a libc run: the g style rule (style f while P greater than X and X at least -4, style e otherwise, then trailing zeros stripped), the two-digit exponent, and the f rounding of the STORED binary value, which is why 2.675 renders 2.67 and 0.05 renders 0.1. Also the documented fallback to the significant-digit form at or above 2^64.
 protocore_env(native_mmgr_primitives
+  SUITE unit/src/mmgr/test_primitives
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/membuild/membuild.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -7279,8 +6898,6 @@ protocore_env(native_mmgr_primitives
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_primitives/test_primitives.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_primitives/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7288,17 +6905,15 @@ protocore_env(native_mmgr_primitives
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mmgr_primitives/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_primitives"
 )
 
 # Byte-span operations (mmgr/protomem.h) against ISO C11 sec 7.24: memcmp's unsigned-char ordering (sec 7.24.1 p1, so 0x80 orders above 0x7F), memcpy moving exactly n bytes at every source/destination offset pair through the funnel, memmove correct under overlap in both directions, memchr spanning the whole bound rather than stopping at a NUL, and memset/zero touching only their span. Guard bytes either side of every write.
 protocore_env(native_mmgr_protomem
+  SUITE unit/src/mmgr/test_protomem
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_protomem/test_protomem.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_protomem/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7306,18 +6921,16 @@ protocore_env(native_mmgr_protomem
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mmgr_protomem/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_protomem"
 )
 
 # Bounded-run operations (mmgr/protostr.h): POSIX.1-2008 strnlen for the bounded length, ISO C11 sec 7.24.4/7.24.5 for the comparison and search semantics, sec 7.4.1.5/7.4.1.10 for the digit and white-space sets, and sec 7.22.1.3/7.22.1.4 for the strtod/strtol endptr contract. The load-bearing case is that the case-insensitive fold applies to ASCII letters alone: bit 5 also separates the underscore from the question mark and the open bracket from the open brace, and folding it everywhere would match a header name or a token against something it is not.
 protocore_env(native_mmgr_protostr
+  SUITE unit/src/mmgr/test_protostr
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_protostr/test_protostr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_protostr/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7325,19 +6938,17 @@ protocore_env(native_mmgr_protostr
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mmgr_protostr/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_protostr"
 )
 
 # IEC 61850 MMS PDU codec (services/energy/mms): the BER confirmed-request/response Read PDUs
 protocore_env(native_mms
+  SUITE unit/src/services/energy/mms/test_mms
   SOURCES
     "${PROTOCORE_ROOT}/src/services/energy/mms/mms.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/mms/test_mms/test_mms.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/mms/test_mms/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_MMS=1"
   INCLUDES
@@ -7347,11 +6958,11 @@ protocore_env(native_mms
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mms/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/mms/test_mms"
 )
 
 # Mounted storage (server/storage/mnt) - the backend vtable and its built-in RAM backend,
 protocore_env(native_mnt
+  SUITE unit/src/server/storage/mnt/test_mnt
   SOURCES
     "${PROTOCORE_ROOT}/src/server/storage/mnt/mnt.c"
     "${PROTOCORE_ROOT}/src/server/storage/filesystem/filesystem.c"
@@ -7368,8 +6979,6 @@ protocore_env(native_mnt
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/mnt/test_mnt/test_mnt.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/mnt/test_mnt/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_MNT=1"
   INCLUDES
@@ -7379,11 +6988,11 @@ protocore_env(native_mnt
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mnt/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/mnt/test_mnt"
 )
 
 # Modbus TCP slave core + RTU framing (services/fieldbus/modbus): the four-table data model, the MBAP header validation and echo, and the PDU dispatch for function codes 01 02 03 04 05 06 0F 10 16 17 with their exception responses. Every request/response pair is the worked example printed in Modbus Application Protocol V1.1b3 sec. 6.1-6.12, 6.16, 6.17 and sec. 7; the MBAP rules are Modbus Messaging on TCP/IP V1.0b sec. 3.1.3. The RTU arm covers CRC-16 validation, unit addressing and the silent broadcast. Data model widened to 256 entries so the spec's own addresses are in range. Pure host tests.
 protocore_env(native_modbus
+  SUITE unit/src/services/fieldbus/modbus/test_modbus
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/modbus/modbus/modbus.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -7402,8 +7011,6 @@ protocore_env(native_modbus
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/net_addr/net_addr.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/modbus/test_modbus/test_modbus.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/modbus/test_modbus/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_MODBUS=1"
     "PROTOCORE_ENABLE_MODBUS_RTU=1"
@@ -7419,11 +7026,11 @@ protocore_env(native_modbus
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_modbus/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/modbus/test_modbus"
 )
 
 # Modbus master codec + scanner (services/fieldbus/modbus/modbus_master): build read
 protocore_env(native_modbus_master
+  SUITE unit/src/services/fieldbus/modbus/modbus_master/test_modbus_master
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/modbus/modbus/modbus.c"
     "${PROTOCORE_ROOT}/src/services/fieldbus/modbus/modbus_master/modbus_master.c"
@@ -7443,8 +7050,6 @@ protocore_env(native_modbus_master
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/net_addr/net_addr.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/modbus/modbus_master/test_modbus_master/test_modbus_master.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/modbus/modbus_master/test_modbus_master/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_MODBUS=1"
     "PROTOCORE_ENABLE_MODBUS_MASTER=1"
@@ -7457,11 +7062,11 @@ protocore_env(native_modbus_master
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_modbus_master/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/modbus/modbus_master/test_modbus_master"
 )
 
 # MPR121 12-channel capacitive touch (server/peripherals/mpr121): decoding the two touch-status registers (ELEPROX at D4 and OVCF at D7 sit above the twelve electrodes), the 10-bit filtered-data pair, the AN3944 bring-up sequence builder, and programming a part end to end - the suite reads the registers back off the device model in test/core_setup/hal/host/devices/, where section 5.1 discards any configuration write made outside Stop Mode.
 protocore_env(native_mpr121
+  SUITE unit/src/server/peripherals/mpr121/test_mpr121
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/mpr121/mpr121.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -7472,8 +7077,6 @@ protocore_env(native_mpr121
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/mpr121/test_mpr121/test_mpr121.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/mpr121/test_mpr121/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_MPR121=1"
   INCLUDES
@@ -7483,11 +7086,11 @@ protocore_env(native_mpr121
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mpr121/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/mpr121/test_mpr121"
 )
 
 # MQTT Control Packet codec (services/iot/mqtt), OASIS MQTT 3.1.1: the sec 2.2.3 Table 2.4 Remaining Length boundaries with the octets the table prints, the sec 3.1.2 Figure 3.2 / 3.3 / 3.6 CONNECT Protocol Name, Level, Connect Flags and Keep Alive with the MQTT-3.1.3-1 payload order, the sec 3.3.2.3 Figure 3.11 PUBLISH variable header, the sec 3.8.3.1 Figure 3.23 SUBSCRIBE payload, the Table 2.1 type values and Table 2.2 reserved flag bits, the Table 3.1 Connect Return codes and sec 3.9.3 SUBACK codes, and the MQTT-3.3.2-2 wildcard / MQTT-3.3.1-4 QoS / MQTT-1.5.3 UTF-8 refusals. Pure host tests.
 protocore_env(native_mqtt_codec
+  SUITE unit/src/services/iot/mqtt/test_mqtt
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/mqtt/mqtt/mqtt.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -7502,8 +7105,6 @@ protocore_env(native_mqtt_codec
     "${PROTOCORE_ROOT}/src/shared/utf8/utf8.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/mqtt/test_mqtt/test_mqtt.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/mqtt/test_mqtt/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_MQTT=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
@@ -7515,19 +7116,17 @@ protocore_env(native_mqtt_codec
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mqtt_codec/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/mqtt/test_mqtt"
 )
 
 # MQTT-SN v1.2 wire codec (services/iot/mqtt/mqtt_sn.c), MQTT-SN Protocol Specification Version 1.2 (Stanford-Clark and Truong, IBM, 2013): the sec 5.2.1 Length field and its 1-octet / 3-octet boundary at 255, the sec 5.2.2 Table 3 MsgType octets, the sec 5.3.4 Table 4 Flags bit positions and TopicIdType, the sec 5.3.10 Table 5 ReturnCodes, and the sec 5.4 Message Variable Parts of CONNECT / CONNACK / REGISTER / REGACK / PUBLISH / PUBACK / SUBSCRIBE / SUBACK / PINGREQ / DISCONNECT / SEARCHGW with their optional fields and their fail-closed refusals. Pure host tests.
 protocore_env(native_mqtt_sn_codec
+  SUITE unit/src/services/iot/mqtt/test_mqtt_sn
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/mqtt/mqtt_sn/mqtt_sn.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/mqtt/test_mqtt_sn/test_mqtt_sn.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/mqtt/test_mqtt_sn/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_MQTT_SN=1"
   INCLUDES
@@ -7537,11 +7136,11 @@ protocore_env(native_mqtt_sn_codec
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mqtt_sn_codec/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/mqtt/test_mqtt_sn"
 )
 
 # MessagePack codec (network_drivers/presentation/codec/msgpack): every family's first byte taken from the specification's own format overview table (positive/negative fixint, uint/int 8-64, fixstr and str 8/16/32, bin 8/16, fixarray/array 16, fixmap/map 16, nil, false, true, float 32) at each range boundary the table states, the IEEE 754 single and double bit patterns behind 0xca / 0xcb, peek's first-byte-to-type mapping including the never-used 0xc1 and the ext family, decode of every integer width, str/bin views that alias the input, map and array round trips, truncation and sticky-error refusals, and the overflow counter that reports the capacity a buffer should have had.
 protocore_env(native_msgpack_wire
+  SUITE unit/src/network_drivers/presentation/codec/msgpack/test_msgpack
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/msgpack/msgpack.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
@@ -7551,8 +7150,6 @@ protocore_env(native_msgpack_wire
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/msgpack/test_msgpack/test_msgpack.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/msgpack/test_msgpack/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_MSGPACK=1"
   INCLUDES
@@ -7562,11 +7159,11 @@ protocore_env(native_msgpack_wire
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_msgpack_wire/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/msgpack/test_msgpack"
 )
 
 # MTConnect agent response codec (services/machine_tool/mtconnect, ANSI/MTC1.4): the incremental
 protocore_env(native_mtconnect
+  SUITE unit/src/services/machine_tool/mtconnect/test_mtconnect
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
@@ -7578,8 +7175,6 @@ protocore_env(native_mtconnect
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/mtconnect/test_mtconnect/test_mtconnect.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/mtconnect/test_mtconnect/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_MTCONNECT=1"
   INCLUDES
@@ -7589,11 +7184,11 @@ protocore_env(native_mtconnect
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_mtconnect/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/mtconnect/test_mtconnect"
 )
 
 # test_multipart against the native_stack_http stack.
 protocore_env(native_multipart
+  SUITE unit/src/network_drivers/presentation/codec/multipart/test_multipart
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -7663,7 +7258,6 @@ protocore_env(native_multipart
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/multipart/test_multipart/test_multipart.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -7686,19 +7280,17 @@ protocore_env(native_multipart
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_multipart/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/multipart/test_multipart"
 )
 
 # NATS client protocol codec (services/iot/nats), NATS Protocol client reference (docs.nats.io): the published PUB / HPUB / SUB / UNSUB / PING / PONG / CONNECT builder examples reproduced character for character with their #bytes and #header bytes / #total bytes counts, the MSG / HMSG / INFO / -ERR / +OK parser over the same published examples, the Protocol conventions field delimiter (space or tab, repeated whitespace as one), the wait-for-the-whole-operation framing and the fail-closed builder refusals. Pure host tests.
 protocore_env(native_nats_proto
+  SUITE unit/src/services/iot/nats/test_nats
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/nats/nats.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/nats/test_nats/test_nats.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/nats/test_nats/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_NATS=1"
   INCLUDES
@@ -7708,19 +7300,17 @@ protocore_env(native_nats_proto
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_nats_proto/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/nats/test_nats"
 )
 
 # NEMA TS 2 traffic-cabinet SDLC frame codec (services/transportation/nema_ts2): the [address][control][frame-type][data][FCS-16] build and validate. The FCS is CRC-16/X-25, so a frame spelling the catalogue check input '123456789' must carry 6E 90 (check value 0x906E, low octet first), and RFC 1662 sec C.2's good-FCS residue over the frame including its own FCS pins both the parameters and the transmission order. Plus single-bit error detection over every bit. Pure host tests.
 protocore_env(native_nema_ts2_sdlc
+  SUITE unit/src/services/transportation/nema_ts2/test_nema_ts2
   SOURCES
     "${PROTOCORE_ROOT}/src/services/transportation/nema_ts2/nema_ts2.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/crc/crc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/transportation/nema_ts2/test_nema_ts2/test_nema_ts2.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/transportation/nema_ts2/test_nema_ts2/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_NEMA_TS2=1"
   INCLUDES
@@ -7730,11 +7320,11 @@ protocore_env(native_nema_ts2_sdlc
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_nema_ts2_sdlc/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/transportation/nema_ts2/test_nema_ts2"
 )
 
 # net_addr: the stack address <-> protocore_ip mapping. Both directions for both families, the refusals (null source, null destination, untagged family, empty address), the byte order each direction lands in, and the NetAddr entries, which no call site in src/ reaches.
 protocore_env(native_net_addr
+  SUITE unit/src/network_drivers/transport/net_addr/test_net_addr
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/transport/net_addr/net_addr.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
@@ -7742,8 +7332,6 @@ protocore_env(native_net_addr
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/net_addr/test_net_addr/test_net_addr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/net_addr/test_net_addr/unity_runner.c"
   DEFINES
     "PROTOCORE_HAS_NET_STACK=1"
   INCLUDES
@@ -7753,11 +7341,11 @@ protocore_env(native_net_addr
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_net_addr/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/net_addr/test_net_addr"
 )
 
 # Egress-interface reporting (network_drivers/physical). The esp_netif default-
 protocore_env(native_net_egress
+  SUITE unit/src/network_drivers/physical/test_net_egress
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -7770,8 +7358,6 @@ protocore_env(native_net_egress
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/physical/test_net_egress/test_net_egress.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/physical/test_net_egress/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_IPV6=1"
     "PROTOCORE_ENABLE_ETHERNET=1"
@@ -7782,18 +7368,16 @@ protocore_env(native_net_egress
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_net_egress/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/physical/test_net_egress"
 )
 
 # Network adaptation decisions (server/net/netadapt): TCP receive-window sizing from the free
 protocore_env(native_netadapt
+  SUITE unit/src/server/net/netadapt/test_netadapt
   SOURCES
     "${PROTOCORE_ROOT}/src/server/net/netadapt/netadapt.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/netadapt/test_netadapt/test_netadapt.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/netadapt/test_netadapt/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_NETADAPT=1"
   INCLUDES
@@ -7803,18 +7387,16 @@ protocore_env(native_netadapt
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_netadapt/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/netadapt/test_netadapt"
 )
 
 # nRF24L01+ driver (services/radio/nrf24), v5 radio plugin: the Nordic SPI command protocol
 protocore_env(native_nrf24
+  SUITE unit/src/services/radio/nrf24/test_nrf24
   SOURCES
     "${PROTOCORE_ROOT}/src/services/radio/nrf24/nrf24.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/nrf24/test_nrf24/test_nrf24.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/nrf24/test_nrf24/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_NRF24=1"
     "PROTOCORE_NRF24_PAYLOAD=8"
@@ -7825,18 +7407,16 @@ protocore_env(native_nrf24
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_nrf24/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/nrf24/test_nrf24"
 )
 
 # NTCIP transportation-device object OIDs (services/transportation/ntcip): every object root is asserted to sit under 1.3.6.1.4.1.1206.4.2, which is RFC 2578 sec 4's enterprises arc plus the IANA Private Enterprise Number 1206 (NEMA), and the 1202 signal-controller and 1203 DMS subtrees are asserted distinct. Plus the OID builder (root + instance index), its buffer guard and its null guards. Pure host tests.
 protocore_env(native_ntcip_oid
+  SUITE unit/src/services/transportation/ntcip/test_ntcip
   SOURCES
     "${PROTOCORE_ROOT}/src/services/transportation/ntcip/ntcip.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/transportation/ntcip/test_ntcip/test_ntcip.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/transportation/ntcip/test_ntcip/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_NTCIP=1"
   INCLUDES
@@ -7846,11 +7426,11 @@ protocore_env(native_ntcip_oid
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ntcip_oid/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/transportation/ntcip/test_ntcip"
 )
 
 # NTLMv2 response computation (network_drivers/application/smb/ntlm, MS-NLMP). Every expected value comes from MS-NLMP section 4.2 Cryptographic Values for Validation: 4.2.2.1.2 NTOWFv1 (the NT hash of the password), 4.2.4.1.1 NTOWFv2, 4.2.4.1.2 SessionBaseKey, 4.2.4.2.2 the 84-octet NtChallengeResponse and 4.2.4.3's AUTHENTICATE_MESSAGE which carries it. The MsvAvFlags MIC bit follows MS-NLMP 2.2.2.10, and the AUTHENTICATE MIC of 3.1.5.1.2 is checked against the published RFC 2202 HMAC-MD5 test vectors, which also proves the streamed concatenation.
 protocore_env(native_ntlm_v2
+  SUITE unit/src/network_drivers/application/smb/test_ntlm
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/smb/ntlm/ntlm.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/md/md.c"
@@ -7863,8 +7443,6 @@ protocore_env(native_ntlm_v2
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_ntlm/test_ntlm.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_ntlm/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
@@ -7876,11 +7454,11 @@ protocore_env(native_ntlm_v2
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ntlm_v2/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_ntlm"
 )
 
 # NTLMSSP message codec (network_drivers/application/smb/ntlmssp, MS-NLMP 2.2.1). The CHALLENGE_MESSAGE of MS-NLMP 4.2.4.3 is transcribed from its published hex dump and parsed: the 2.2.1.2 field offsets, the server challenge, and the AV_PAIR blob the NTLMv2 response is computed over. The NEGOTIATE (2.2.1.1) and AUTHENTICATE (2.2.1.3) builders are checked against 4.2.1's identity values in UTF-16LE, with each Len / MaxLen / BufferOffset triplet required to locate its own payload, plus the Version and MIC fields a MIC-carrying AUTHENTICATE reserves (3.1.5.1.2) and the 2.2.2.5 NegotiateFlags bit values.
 protocore_env(native_ntlmssp
+  SUITE unit/src/network_drivers/application/smb/test_ntlmssp
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/smb/ntlmssp/ntlmssp.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -7888,8 +7466,6 @@ protocore_env(native_ntlmssp
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_ntlmssp/test_ntlmssp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_ntlmssp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
@@ -7901,11 +7477,11 @@ protocore_env(native_ntlmssp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ntlmssp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_ntlmssp"
 )
 
 # NTP/SNTP server (RFC 5905 server mode): the response codec (ntp_server_build_response) -
 protocore_env(native_ntp_server
+  SUITE unit/src/network_drivers/application/ntp_server/test_ntp_server
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/ntp_server/ntp_server.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
@@ -7930,8 +7506,6 @@ protocore_env(native_ntp_server
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/ntp_server/test_ntp_server/test_ntp_server.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/ntp_server/test_ntp_server/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_NTP_SERVER=1"
     "PROTOCORE_ENABLE_TIME_SOURCE=1"
@@ -7944,11 +7518,11 @@ protocore_env(native_ntp_server
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ntp_server/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/ntp_server/test_ntp_server"
 )
 
 # The SNTP client (network_drivers/application/ntp_service, RFC 4330), which is the client on
 protocore_env(native_ntp_service
+  SUITE unit/src/network_drivers/application/ntp_service/test_ntp_service
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/ntp_service/ntp_service.c"
     "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
@@ -7974,8 +7548,6 @@ protocore_env(native_ntp_service
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/ntp_service/test_ntp_service/test_ntp_service.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/ntp_service/test_ntp_service/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_NTP=1"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -7987,18 +7559,16 @@ protocore_env(native_ntp_service
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ntp_service/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/ntp_service/test_ntp_service"
 )
 
 # Network Time Security wire codec (network_drivers/application/nts, RFC 8915). Covers the NTS-KE record format of sec 4 Figure 2 (the 15-bit Record Type under the Critical Bit, and a Body Length that counts the body alone), the standard client request of secs 4.1.1 / 4.1.2 / 4.1.5 (Next Protocol 0 = NTPv4, AEAD 15 = AES-SIV-CMAC-256, End of Message), the End-of-Message rule that makes a message self-delimiting, and the RFC 7822 sec 3 NTP extension-field framing whose Length counts the entire field including padding to a four-octet word. Record type numbers and the TLS exporter label are checked against RFC 8915 sec 7.
 protocore_env(native_nts_ke
+  SUITE unit/src/network_drivers/application/nts/test_nts
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/nts/nts.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/nts/test_nts/test_nts.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/nts/test_nts/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_NTS=1"
   INCLUDES
@@ -8008,11 +7578,11 @@ protocore_env(native_nts_ke
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_nts_ke/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/nts/test_nts"
 )
 
 # The oauth2 transport calls: the borrow they carve their request body and reply into, and what they report when the exchange never reached an endpoint. PROTOCORE_ENABLE_HTTP_CLIENT is what compiles them at all, and without a net stack HttpClient.post reports HTTP_CLIENT_ERR_CONNECT.
 protocore_env(native_oauth2_exchange
+  SUITE unit/src/services/security/oauth2/test_oauth2_exchange
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/json/json.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -8028,8 +7598,6 @@ protocore_env(native_oauth2_exchange
     "${PROTOCORE_ROOT}/src/mmgr/secure/secure.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/oauth2/test_oauth2_exchange/test_oauth2_exchange.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/oauth2/test_oauth2_exchange/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_OAUTH2=1"
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
@@ -8043,11 +7611,11 @@ protocore_env(native_oauth2_exchange
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_oauth2_exchange/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/oauth2/test_oauth2_exchange"
 )
 
 # OAuth 2.0 token-endpoint client (services/security/oauth2). Anchored on RFC 6749: sec 4.1.3's
 protocore_env(native_oauth2_rfc6749
+  SUITE unit/src/services/security/oauth2/test_oauth2
   SOURCES
     "${PROTOCORE_ROOT}/src/services/security/oauth2/oauth2.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/json/json.c"
@@ -8058,8 +7626,6 @@ protocore_env(native_oauth2_rfc6749
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/oauth2/test_oauth2/test_oauth2.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/oauth2/test_oauth2/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_OAUTH2=1"
     "PROTOCORE_ENABLE_JSON=1"
@@ -8070,11 +7636,11 @@ protocore_env(native_oauth2_rfc6749
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_oauth2_rfc6749/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/oauth2/test_oauth2"
 )
 
 # The oauth2 token exchange over a real transport: the RFC 6749 sec 4.1.3 body goes out through http_client, the host peer answers it, and the sec 5.1 parameters come back out of the module's own reply buffer. The exchange env compiles the same two calls with no net stack, where nothing can answer.
 protocore_env(native_oauth2_transport
+  SUITE unit/src/services/security/oauth2/test_oauth2_transport
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/tcp.c"
@@ -8108,8 +7674,6 @@ protocore_env(native_oauth2_transport
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/json/json.c"
     "${PROTOCORE_ROOT}/src/mmgr/membuild/membuild.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/oauth2/test_oauth2_transport/test_oauth2_transport.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/oauth2/test_oauth2_transport/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -8127,11 +7691,11 @@ protocore_env(native_oauth2_transport
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_oauth2_transport/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/oauth2/test_oauth2_transport"
 )
 
 # Transport observability (PROTOCORE_ENABLE_OBSERVABILITY): the protocore_conn_on_event
 protocore_env(native_observability
+  SUITE env/transport/test_observability
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/tcp.c"
@@ -8150,8 +7714,6 @@ protocore_env(native_observability
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_observability/test_observability.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_observability/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_OBSERVABILITY=1"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -8163,18 +7725,16 @@ protocore_env(native_observability
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_observability/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/transport/test_observability"
 )
 
 # OCIT-Outstations message codec (services/transportation/ocit): the object message [message-type][object-type:2][instance:2][data-type][value] build and parse, with the two 16-bit address fields asserted big-endian on values a swapped pair would read as a different valid object, the typed uint16 accessor and its type/length gate, the octet-string remainder, and the buffer guards. The OCIT-O specification is not obtainable, so these are properties of the documented layout. Pure host tests.
 protocore_env(native_ocit_msg
+  SUITE unit/src/services/transportation/ocit/test_ocit
   SOURCES
     "${PROTOCORE_ROOT}/src/services/transportation/ocit/ocit.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/transportation/ocit/test_ocit/test_ocit.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/transportation/ocit/test_ocit/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_OCIT=1"
   INCLUDES
@@ -8184,11 +7744,11 @@ protocore_env(native_ocit_msg
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ocit_msg/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/transportation/ocit/test_ocit"
 )
 
 # OpenID Connect RS256 ID Token verifier (services/security/oidc). Anchored on RFC 7515 Appendix
 protocore_env(native_oidc_rfc7515
+  SUITE unit/src/services/security/oidc/test_oidc
   SOURCES
     "${PROTOCORE_ROOT}/src/services/security/oidc/oidc.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/base64/base64.c"
@@ -8216,8 +7776,6 @@ protocore_env(native_oidc_rfc7515
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/crypto/rng/rng.c"
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/oidc/test_oidc/test_oidc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/oidc/test_oidc/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_OIDC=1"
   INCLUDES
@@ -8227,19 +7785,17 @@ protocore_env(native_oidc_rfc7515
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_oidc_rfc7515/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/oidc/test_oidc"
 )
 
 # OPC UA Binary server core (services/fieldbus/opcua): the little-endian built-in type codec, NodeId encoding forms, the UACP header + Hello/Acknowledge/Error handshake, the OpenSecureChannel exchange, the MSG envelope and the CreateSession / ActivateSession / GetEndpoints / Read / Write / Browse / CloseSession / ServiceFault responses, plus Variant and DataValue. Anchored on OPC UA Part 6 sec. 5.2.2 (published byte encodings, the NodeId table) and sec. 7.1.2 (UACP), Part 4 sec. 5.5 / 5.6 / 5.8 / 5.10, and the OPC Foundation NodeIds.csv + StatusCode.csv registry values. Pure host tests.
 protocore_env(native_opcua
+  SUITE unit/src/services/opcua/test_opcua
   SOURCES
     "${PROTOCORE_ROOT}/src/services/opcua/opcua.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/opcua/test_opcua/test_opcua.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/opcua/test_opcua/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_OPCUA=1"
   INCLUDES
@@ -8249,10 +7805,10 @@ protocore_env(native_opcua
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_opcua/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/opcua/test_opcua"
 )
 
 protocore_env(native_opcua_client
+  SUITE unit/src/services/opcua/opcua_client/test_opcua_client
   SOURCES
     "${PROTOCORE_ROOT}/src/services/opcua/opcua.c"
     "${PROTOCORE_ROOT}/src/services/opcua/opcua_client/opcua_client.c"
@@ -8260,8 +7816,6 @@ protocore_env(native_opcua_client
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/opcua/opcua_client/test_opcua_client/test_opcua_client.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/opcua/opcua_client/test_opcua_client/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_OPCUA=1"
     "PROTOCORE_ENABLE_OPCUA_CLIENT=1"
@@ -8272,11 +7826,11 @@ protocore_env(native_opcua_client
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_opcua_client/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/opcua/opcua_client/test_opcua_client"
 )
 
 # OpenADR 3.0 JSON codec (services/energy/openadr): the event (programID + eventName + interval
 protocore_env(native_openadr
+  SUITE unit/src/services/energy/openadr/test_openadr
   SOURCES
     "${PROTOCORE_ROOT}/src/services/energy/openadr/openadr.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -8286,8 +7840,6 @@ protocore_env(native_openadr
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/openadr/test_openadr/test_openadr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/openadr/test_openadr/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_OPENADR=1"
   INCLUDES
@@ -8297,11 +7849,11 @@ protocore_env(native_openadr
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_openadr/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/openadr/test_openadr"
 )
 
 # Parser streaming-body hook (OTA) - exercises http_parser with PROTOCORE_ENABLE_OTA=1
 protocore_env(native_ota
+  SUITE env/http/test_http_ota
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
@@ -8314,8 +7866,6 @@ protocore_env(native_ota
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/env/http/test_http_ota/test_http_ota.c"
-    "${PROTOCORE_ROOT}/test/env/http/test_http_ota/unity_runner.c"
   DEFINES
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
     "PROTOCORE_ENABLE_OTA=1"
@@ -8326,11 +7876,11 @@ protocore_env(native_ota
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ota/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/http/test_http_ota"
 )
 
 # OTA rollback decision (server/update/ota_rollback): pure decision matrix host-tested;
 protocore_env(native_ota_rollback
+  SUITE unit/src/server/update/test_ota_rollback
   SOURCES
     "${PROTOCORE_ROOT}/src/server/update/ota_rollback/ota_rollback.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -8338,8 +7888,6 @@ protocore_env(native_ota_rollback
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/update/test_ota_rollback/test_ota_rollback.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/update/test_ota_rollback/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_OTA_ROLLBACK=1"
     "PROTOCORE_HAS_VENDOR_OTA=1"
@@ -8350,19 +7898,17 @@ protocore_env(native_ota_rollback
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ota_rollback/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/update/test_ota_rollback"
 )
 
 # PackML / OMAC packaging-machine state model (services/machine_tool/packml), ISA-TR88.00.02: the pure
 protocore_env(native_packml
+  SUITE unit/src/services/machine_tool/packml/test_packml
   SOURCES
     "${PROTOCORE_ROOT}/src/services/machine_tool/packml/packml.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/packml/test_packml/test_packml.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/packml/test_packml/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PACKML=1"
   INCLUDES
@@ -8372,11 +7918,11 @@ protocore_env(native_packml
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_packml/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/packml/test_packml"
 )
 
 # Flash partition-map monitor (server/storage/partition_monitor core): the kind
 protocore_env(native_partition
+  SUITE unit/src/server/storage/partition_monitor/test_partition_monitor
   SOURCES
     "${PROTOCORE_ROOT}/src/server/storage/partition_monitor/partition_monitor.c"
     "${PROTOCORE_ROOT}/src/mmgr/protoframe/protoframe.c"
@@ -8418,8 +7964,6 @@ protocore_env(native_partition
     "${PROTOCORE_ROOT}/src/server/io/middleware/middleware.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/server/regex/regex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/partition_monitor/test_partition_monitor/test_partition_monitor.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/partition_monitor/test_partition_monitor/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PARTITION_MONITOR=1"
     "PROTOCORE_ENABLE_HTTP_ROUTE=1"
@@ -8431,11 +7975,11 @@ protocore_env(native_partition
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_partition/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/partition_monitor/test_partition_monitor"
 )
 
 # The partition monitor's capability arm: the same suite as native_partition, built with PROTOCORE_HAS_VENDOR_OTA=1 so collect compiles the arm that walks the table through protocore_platform_partition_walk. native_partition drives the other arm, which reports no partitions. Both arms ship, so both are run.
 protocore_env(native_partition_ota
+  SUITE unit/src/server/storage/partition_monitor/test_partition_monitor
   SOURCES
     "${PROTOCORE_ROOT}/src/server/storage/partition_monitor/partition_monitor.c"
     "${PROTOCORE_ROOT}/src/mmgr/protoframe/protoframe.c"
@@ -8477,8 +8021,6 @@ protocore_env(native_partition_ota
     "${PROTOCORE_ROOT}/src/server/io/middleware/middleware.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/server/regex/regex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/partition_monitor/test_partition_monitor/test_partition_monitor.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/partition_monitor/test_partition_monitor/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PARTITION_MONITOR=1"
     "PROTOCORE_HAS_VENDOR_OTA=1"
@@ -8491,11 +8033,11 @@ protocore_env(native_partition_ota
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_partition_ota/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/partition_monitor/test_partition_monitor"
 )
 
 # test_path_params against the native_stack_http stack.
 protocore_env(native_path_params
+  SUITE env/transport/test_path_params
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -8565,8 +8107,6 @@ protocore_env(native_path_params
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_path_params/test_path_params.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_path_params/unity_runner.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -8591,11 +8131,11 @@ protocore_env(native_path_params
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_path_params/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/transport/test_path_params"
 )
 
 # PCA9685 16-channel 12-bit PWM / servo driver (server/peripherals/pca9685): the PRE_SCALE value for a PWM frequency (Eq 1, hardware minimum 3), the per-channel register base, a servo pulse width as a 12-bit count, the five-byte channel write, and programming a part end to end - the suite reads the registers back off the Rev. 4 device model in test/core_setup/hal/host/devices/, where a PRE_SCALE write is blocked unless begin() slept the oscillator first.
 protocore_env(native_pca9685
+  SUITE unit/src/server/peripherals/pca9685/test_pca9685
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/pca9685/pca9685.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -8606,8 +8146,6 @@ protocore_env(native_pca9685
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/pca9685/test_pca9685/test_pca9685.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/pca9685/test_pca9685/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PCA9685=1"
   INCLUDES
@@ -8617,19 +8155,17 @@ protocore_env(native_pca9685
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_pca9685/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/pca9685/test_pca9685"
 )
 
 # libpcap savefile headers (shared/pcap): the 24-octet global header - magic 0xa1b2c3d4 in
 protocore_env(native_pcap
+  SUITE unit/src/shared/pcap/test_pcap
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/pcap/pcap.c"
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/pcap/test_pcap/test_pcap.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/pcap/test_pcap/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -8637,11 +8173,11 @@ protocore_env(native_pcap
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_pcap/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/pcap/test_pcap"
 )
 
 # Adversarial / pentest harness - run SEPARATELY (`python test/harness.py run native_pentest`), NOT part of the default run. Fuzzes the untrusted-input parsers (HTTP, multipart,
 protocore_env(native_pentest
+  SUITE unit/src/network_drivers/application/smb/test_pentest
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/hpack_prim/hpack_prim.c"
@@ -8723,8 +8259,6 @@ protocore_env(native_pentest
     "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/protocol/protocol.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/server/server.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/lower/lower.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_pentest/test_pentest.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_pentest/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_MODBUS=1"
     "PROTOCORE_ENABLE_MODBUS_MASTER=1"
@@ -8778,11 +8312,11 @@ protocore_env(native_pentest
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_pentest/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_pentest"
 )
 
 # Layer 1 driven through a REAL backend: the env declares PROTOCORE_PHYSICAL_HAS_BACKEND=1,
 protocore_env(native_phy
+  SUITE unit/src/network_drivers/physical/test_phy
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/radio_power/radio_power.c"
@@ -8796,8 +8330,6 @@ protocore_env(native_phy
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/physical/test_phy/test_phy.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/physical/test_phy/unity_runner.c"
   DEFINES
     "PROTOCORE_PHYSICAL_HAS_BACKEND=1"
     "PROTOCORE_ENABLE_ETHERNET=1"
@@ -8811,11 +8343,11 @@ protocore_env(native_phy
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_phy/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/physical/test_phy"
 )
 
 # The layer 1 interface registry (network_drivers/physical, Physical.iface): an interface is
 protocore_env(native_phy_iface
+  SUITE unit/src/network_drivers/physical/test_iface
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -8828,8 +8360,6 @@ protocore_env(native_phy_iface
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/physical/test_iface/test_iface.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/physical/test_iface/unity_runner.c"
   DEFINES
     "PROTOCORE_PHY_MAX_IFACES=4"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
@@ -8841,11 +8371,11 @@ protocore_env(native_phy_iface
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_phy_iface/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/physical/test_iface"
 )
 
 # The plaintext pool accessor (mmgr/plaintext): bump-allocate + reset semantics,
 protocore_env(native_plaintext
+  SUITE unit/src/mmgr/test_plaintext
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
@@ -8856,8 +8386,6 @@ protocore_env(native_plaintext
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_plaintext/test_plaintext.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_plaintext/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -8865,11 +8393,11 @@ protocore_env(native_plaintext
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_plaintext/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_plaintext"
 )
 
 # PMBus 1.3 numeric encodings (server/peripherals/pmbus): the VOUT_MODE format selector and its
 protocore_env(native_pmbus
+  SUITE unit/src/server/peripherals/test_pmbus
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/pmbus/pmbus.c"
     "${PROTOCORE_ROOT}/src/server/peripherals/smbus/smbus.c"
@@ -8881,8 +8409,6 @@ protocore_env(native_pmbus
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/test_pmbus/test_pmbus.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/test_pmbus/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMBUS=1"
     "PROTOCORE_ENABLE_PMBUS=1"
@@ -8893,18 +8419,16 @@ protocore_env(native_pmbus
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_pmbus/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/test_pmbus"
 )
 
 # PN532 NFC frame codec (server/peripherals/pn532), v5 radio plugin: the normal-information-frame
 protocore_env(native_pn532
+  SUITE unit/src/server/peripherals/pn532/test_pn532
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/pn532/pn532.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/pn532/test_pn532/test_pn532.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/pn532/test_pn532/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PN532=1"
     "PROTOCORE_PN532_MAX_DATA=8"
@@ -8915,11 +8439,11 @@ protocore_env(native_pn532
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_pn532/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/pn532/test_pn532"
 )
 
 # Both pool accessors at PROTOCORE_WORKER_COUNT=2. Slot resolution is unobservable in a single-worker
 protocore_env(native_pool_workers__test_plaintext
+  SUITE unit/src/mmgr/test_plaintext
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
@@ -8930,8 +8454,6 @@ protocore_env(native_pool_workers__test_plaintext
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_plaintext/test_plaintext.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_plaintext/unity_runner.c"
   DEFINES
     "PROTOCORE_WORKER_COUNT=2"
   INCLUDES
@@ -8941,11 +8463,11 @@ protocore_env(native_pool_workers__test_plaintext
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_pool_workers/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_plaintext"
 )
 
 # Both pool accessors at PROTOCORE_WORKER_COUNT=2. Slot resolution is unobservable in a single-worker
 protocore_env(native_pool_workers__test_secure_pool
+  SUITE unit/src/mmgr/test_secure_pool
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
@@ -8956,8 +8478,6 @@ protocore_env(native_pool_workers__test_secure_pool
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_secure_pool/test_secure_pool.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_secure_pool/unity_runner.c"
   DEFINES
     "PROTOCORE_WORKER_COUNT=2"
   INCLUDES
@@ -8967,11 +8487,11 @@ protocore_env(native_pool_workers__test_secure_pool
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_pool_workers/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_secure_pool"
 )
 
 # SoC power governor (server/power_mgmt): the pure clock decision from load, die
 protocore_env(native_power_mgmt
+  SUITE unit/src/server/core/power_mgmt/test_power_mgmt
   SOURCES
     "${PROTOCORE_ROOT}/src/server/core/power_mgmt/power_mgmt.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -8986,8 +8506,6 @@ protocore_env(native_power_mgmt
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/power_mgmt/test_power_mgmt/test_power_mgmt.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/power_mgmt/test_power_mgmt/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_POWER_MGMT=1"
     "PROTOCORE_HAS_VENDOR_PM=1"
@@ -8999,18 +8517,16 @@ protocore_env(native_power_mgmt
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_power_mgmt/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/power_mgmt/test_power_mgmt"
 )
 
 # Ethernet POWERLINK basic frame codec (services/fieldbus/powerlink): the SoC / PReq / PRes / SoA / ASnd builders over the [messageType][dest][source][payload] frame, the parser, and the node addressing. Anchored on EPSG DS 301 V1.5.1 App. 3.1 (normative message type ids), sec. 4.5 (node id assignment) and sec. 4.6.1.1 (basic frame structure). Pure host tests.
 protocore_env(native_powerlink
+  SUITE unit/src/services/fieldbus/powerlink/test_powerlink
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/powerlink/powerlink.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/powerlink/test_powerlink/test_powerlink.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/powerlink/test_powerlink/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_POWERLINK=1"
   INCLUDES
@@ -9020,11 +8536,11 @@ protocore_env(native_powerlink
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_powerlink/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/powerlink/test_powerlink"
 )
 
 # Post-quantum hybrid KEX primitives (network_drivers/presentation/pqc): the
 protocore_env(native_pqc__test_pqc_sha3
+  SUITE unit/src/crypto/hash/test_pqc_sha3
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha3/sha3.c"
     "${PROTOCORE_ROOT}/src/crypto/pqc/mlkem/mlkem.c"
@@ -9033,8 +8549,6 @@ protocore_env(native_pqc__test_pqc_sha3
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_pqc_sha3/test_pqc_sha3.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_pqc_sha3/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PQC_KEX=1"
   INCLUDES
@@ -9044,11 +8558,11 @@ protocore_env(native_pqc__test_pqc_sha3
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_pqc/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_pqc_sha3"
 )
 
 # Post-quantum hybrid KEX primitives (network_drivers/presentation/pqc): the
 protocore_env(native_pqc__test_pqc_mlkem
+  SUITE unit/src/crypto/hash/test_pqc_mlkem
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha3/sha3.c"
     "${PROTOCORE_ROOT}/src/crypto/pqc/mlkem/mlkem.c"
@@ -9057,8 +8571,6 @@ protocore_env(native_pqc__test_pqc_mlkem
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_pqc_mlkem/test_pqc_mlkem.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_pqc_mlkem/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PQC_KEX=1"
   INCLUDES
@@ -9068,11 +8580,11 @@ protocore_env(native_pqc__test_pqc_mlkem
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_pqc/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_pqc_mlkem"
 )
 
 # Preempting work queue (server/core/preempt_queue), v5 real-time ingest: FIFO order,
 protocore_env(native_preempt_queue
+  SUITE unit/src/server/core/test_preempt_queue
   SOURCES
     "${PROTOCORE_ROOT}/src/server/core/preempt_queue/preempt_queue.c"
     "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
@@ -9086,8 +8598,6 @@ protocore_env(native_preempt_queue
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/test_preempt_queue/test_preempt_queue.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/test_preempt_queue/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PREEMPT_QUEUE=1"
     "PROTOCORE_PQ_DEPTH=4"
@@ -9102,11 +8612,11 @@ protocore_env(native_preempt_queue
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_preempt_queue/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/test_preempt_queue"
 )
 
 # test_presentation against the native_stack_l46 stack.
 protocore_env(native_presentation
+  SUITE unit/src/network_drivers/presentation/test_presentation
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -9141,7 +8651,6 @@ protocore_env(native_presentation
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/shared/utf8/utf8.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/test_presentation/test_presentation.c"
   DEFINES
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
     "PROTOCORE_ENABLE_MULTIPART=1"
@@ -9153,11 +8662,11 @@ protocore_env(native_presentation
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_presentation/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/test_presentation"
 )
 
 # Shared no-stdlib primitives (shared): the base-10 protocore_strtol/strtoul/strtof
 protocore_env(native_primitives__test_primitives
+  SUITE unit/src/mmgr/test_primitives
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -9167,8 +8676,6 @@ protocore_env(native_primitives__test_primitives
     "${PROTOCORE_ROOT}/src/mmgr/membuild/membuild.c"
     "${PROTOCORE_ROOT}/src/shared/crc/crc.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_primitives/test_primitives.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_primitives/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -9176,11 +8683,11 @@ protocore_env(native_primitives__test_primitives
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_primitives/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_primitives"
 )
 
 # Shared no-stdlib primitives (shared): the base-10 protocore_strtol/strtoul/strtof
 protocore_env(native_primitives__test_crc
+  SUITE unit/src/shared/crc/test_crc
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -9190,8 +8697,6 @@ protocore_env(native_primitives__test_crc
     "${PROTOCORE_ROOT}/src/mmgr/membuild/membuild.c"
     "${PROTOCORE_ROOT}/src/shared/crc/crc.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/crc/test_crc/test_crc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/crc/test_crc/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -9199,18 +8704,16 @@ protocore_env(native_primitives__test_crc
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_primitives/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/crc/test_crc"
 )
 
 # PROFIBUS-DP FDL telegram codec (services/fieldbus/profibus): the FT 1.2 SD1 / SD2 / SD3 builders and the validating parser, the FCS (the arithmetic sum of DA + SA + FC + data unit, carries discarded), the doubled LE length field, and the start / end delimiters. Anchored on the EN 50170 FT 1.2 telegram format tables as reproduced in the PROFIBUS Manual; the FC function-code table could not be obtained, so only the published FC bits (b7 reserved, b6 = request) are asserted. Pure host tests.
 protocore_env(native_profibus
+  SUITE unit/src/services/fieldbus/profibus/test_profibus
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/profibus/profibus.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/profibus/test_profibus/test_profibus.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/profibus/test_profibus/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PROFIBUS=1"
   INCLUDES
@@ -9220,18 +8723,16 @@ protocore_env(native_profibus
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_profibus/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/profibus/test_profibus"
 )
 
 # PROFINET DCP frame codec (services/fieldbus/profinet): the 12-octet FrameID + DCP header build/parse (ServiceID, ServiceType, Xid, ResponseDelayFactor, DCPDataLength - all big-endian), the option/suboption blocks with their even-length padding, and the block walk. Anchored on the Wireshark PROFINET dissector (plugins/profinet/packet-pn-dcp.c) and the rt-labs p-net pf_dcp_header_t layout, both implementations of IEC 61158-6-10. Pure host tests.
 protocore_env(native_profinet
+  SUITE unit/src/services/fieldbus/profinet/test_profinet
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/profinet/profinet.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/profinet/test_profinet/test_profinet.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/profinet/test_profinet/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PROFINET=1"
   INCLUDES
@@ -9241,11 +8742,11 @@ protocore_env(native_profinet
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_profinet/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/profinet/test_profinet"
 )
 
 # Wi-Fi promiscuous capture helpers (services/radio/promisc/promisc.c): the IEEE 802.11 MAC header parser against clause 9.2.4.1 Frame Control, the clause 9.3.2 address-field table for all four To DS / From DS combinations, clause 9.2.4.4 sequence control, and the QoS Control and HT Control header extensions; plus the libpcap savefile global and record headers with LINKTYPE_IEEE802_11 105. Pure host tests.
 protocore_env(native_promisc_dot11
+  SUITE unit/src/services/radio/promisc/test_promisc
   SOURCES
     "${PROTOCORE_ROOT}/src/services/radio/promisc/promisc.c"
     "${PROTOCORE_ROOT}/src/shared/pcap/pcap.c"
@@ -9261,8 +8762,6 @@ protocore_env(native_promisc_dot11
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/physical/physical_mock.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/promisc/test_promisc/test_promisc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/promisc/test_promisc/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PROMISC=1"
     "PROTOCORE_PHYSICAL_HAS_BACKEND=1"
@@ -9273,11 +8772,11 @@ protocore_env(native_promisc_dot11
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_promisc_dot11/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/promisc/test_promisc"
 )
 
 # Protocol Buffers wire codec (services/iot/protobuf), Google's Encoding document: the published Test1 (08 96 01), Test2 (12 07 testing) and Test3 (1a 03 08 96 01) worked examples, the Base 128 varint over its width boundaries, the (field_number << 3) | wire_type tag formula with the wire type ID table, the published ZigZag table for sint32 and sint64 against two's complement int64, the little-endian I32 / I64 payloads and IEEE 754 float / double bit patterns, packed repeated fields, and the refusal of deprecated group and unassigned wire types plus every truncated record. Pure host tests.
 protocore_env(native_protobuf_wire
+  SUITE unit/src/services/iot/protobuf/test_protobuf
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/protobuf/protobuf.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -9288,8 +8787,6 @@ protocore_env(native_protobuf_wire
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/protobuf/test_protobuf/test_protobuf.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/protobuf/test_protobuf/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PROTOBUF=1"
   INCLUDES
@@ -9299,17 +8796,15 @@ protocore_env(native_protobuf_wire
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_protobuf_wire/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/protobuf/test_protobuf"
 )
 
 # The byte-span walks (mmgr/protomem): copy, move, compare, find, fill, zero, one
 protocore_env(native_protomem
+  SUITE unit/src/mmgr/test_protomem
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_protomem/test_protomem.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_protomem/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -9317,18 +8812,16 @@ protocore_env(native_protomem
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_protomem/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_protomem"
 )
 
 # The bounded-run walks (mmgr/protostr): len, diff, eq, starts, find, has, copy, the
 protocore_env(native_protostr
+  SUITE unit/src/mmgr/test_protostr
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_protostr/test_protostr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_protostr/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -9336,11 +8829,11 @@ protocore_env(native_protostr
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_protostr/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_protostr"
 )
 
 # First-boot WiFi provisioning / captive portal (server/core/provisioning_service): the x-www-form-urlencoded field parser (whole-name matching, + and %XX decoding, bounded output), and the portal itself - the catch-all DNS answer, the credential load / save / clear through hal/nvs.h, and the softAP address begin() stamps. Extends native_stack_http because the portal registers HTTP routes and binds a UDP port.
 protocore_env(native_prov
+  SUITE unit/src/server/core/provisioning_service/test_provisioning
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -9417,8 +8910,6 @@ protocore_env(native_prov
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_nvs.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/physical/physical_mock.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/client/client.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/provisioning_service/test_provisioning/test_provisioning.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/provisioning_service/test_provisioning/unity_runner.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -9443,11 +8934,11 @@ protocore_env(native_prov
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_prov/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/provisioning_service/test_provisioning"
 )
 
 # HAProxy PROXY protocol codec (network_drivers/transport/proxy_protocol): the v1 (text) + v2 (binary)
 protocore_env(native_proxy_protocol
+  SUITE unit/src/network_drivers/transport/proxy_protocol/test_proxy_protocol
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/transport/proxy_protocol/proxy_protocol.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -9457,8 +8948,6 @@ protocore_env(native_proxy_protocol
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/proxy_protocol/test_proxy_protocol/test_proxy_protocol.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/proxy_protocol/test_proxy_protocol/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PROXY_PROTOCOL=1"
   INCLUDES
@@ -9468,18 +8957,16 @@ protocore_env(native_proxy_protocol
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_proxy_protocol/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/proxy_protocol/test_proxy_protocol"
 )
 
 # Buffer placement policy + DMA ping-pong (services/storage/psram_pool): protocore_psram_place picks
 protocore_env(native_psram_pool
+  SUITE unit/src/mmgr/test_psram_pool
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/psram_pool/psram_pool.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_psram_pool/test_psram_pool.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_psram_pool/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PSRAM_POOL=1"
   INCLUDES
@@ -9489,18 +8976,16 @@ protocore_env(native_psram_pool
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_psram_pool/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_psram_pool"
 )
 
 # PTPv2 message codec and slave clock math (network_drivers/application/ptp). IEEE 1588-2008 is paywalled, so the field layout is anchored on the IEEE 802.1 working group's published IEEE P802.1AS-Rev/D8.0 text, which carries the PTP common header verbatim: clause 10.6.2 Table 10-7 (octet counts and offsets, 34-octet header), 10.6.2.2.5 (messageLength), 11.4.2.5 (correctionField in nanoseconds scaled by 2^16, with its worked 2.5 ns = 0x0000000000028000 example), Table 10-11 (Announce body), and Tables 11-5 / 11-12 / 11-13 / 11-14 (messageType numbers and the peer-delay message bodies). The 10-octet timestamp is anchored on RFC 8877 sec 4.3, the UDP ports on the IANA port registry, and the offset / mean-path-delay / meanLinkDelay arithmetic is derived from the mechanisms' definitions with the algebra written into the suite.
 protocore_env(native_ptp_wire
+  SUITE unit/src/network_drivers/application/ptp/test_ptp
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/ptp/ptp.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/ptp/test_ptp/test_ptp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/ptp/test_ptp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PTP=1"
   INCLUDES
@@ -9510,11 +8995,11 @@ protocore_env(native_ptp_wire
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ptp_wire/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/ptp/test_ptp"
 )
 
 # QPACK field-section compression (network_drivers/presentation/http/http3/qpack, RFC 9204): the Appendix B.1 worked example decoded octet for octet, the sec 4.5.1 field-section prefix, the sec 4.5.2 / 4.5.4 / 4.5.6 representations and the Appendix A static-table entries they name, a whole field section round trip, refusal of every dynamic-table reference (T=0, post-base, non-zero Required Insert Count), an out-of-range static index, truncation, the scratch bound, an emit refusal, and short-destination refusals.
 protocore_env(native_qpack_rfc
+  SUITE unit/src/network_drivers/presentation/http/http3/test_qpack
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/qpack/qpack.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/hpack_prim/hpack_prim.c"
@@ -9522,8 +9007,6 @@ protocore_env(native_qpack_rfc
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_qpack/test_qpack.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_qpack/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_UDP=1"
@@ -9534,11 +9017,11 @@ protocore_env(native_qpack_rfc
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_qpack_rfc/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_qpack"
 )
 
 # QUIC v1 server connection engine (network_drivers/presentation/http/http3/quic_conn, RFC 9000
 protocore_env(native_quic_conn
+  SUITE unit/src/network_drivers/presentation/http/http3/quic_conn/test_quic_conn
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/quic_tls/quic_tls.c"
     "${PROTOCORE_ROOT}/src/network_drivers/tls/key_schedule/key_schedule.c"
@@ -9571,8 +9054,6 @@ protocore_env(native_quic_conn
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/quic_conn/test_quic_conn/test_quic_conn.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/quic_conn/test_quic_conn/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
@@ -9584,11 +9065,11 @@ protocore_env(native_quic_conn
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_quic_conn/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/quic_conn/test_quic_conn"
 )
 
 # QUIC packet protection (network_drivers/presentation/http/http3/quic_crypto, RFC 9001 sec 5): the FIPS 197 Appendix C.1 AES-128 block, GCM Test Case 4, the sec 5.2 Initial salt and every secret RFC 9001 Appendix A.1 publishes, the A.3 server Initial protected and unprotected octet for octet, the A.2 client Initial protected header and header-protection sample, the A.4 Retry integrity tag, tamper rejection over header / ciphertext / tag, the parameter bounds, and a 1-RTT short-header round trip whose first-octet mask is five bits rather than four.
 protocore_env(native_quic_crypto_rfc
+  SUITE unit/src/network_drivers/presentation/http/http3/test_quic_crypto
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf/hkdf.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/quic_crypto/quic_crypto.c"
@@ -9608,8 +9089,6 @@ protocore_env(native_quic_crypto_rfc
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aes128gcm/aes128gcm.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_crypto/test_quic_crypto.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_crypto/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_UDP=1"
@@ -9620,19 +9099,17 @@ protocore_env(native_quic_crypto_rfc
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_quic_crypto_rfc/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_crypto"
 )
 
 # QUIC frame coding (network_drivers/presentation/http/http3/quic_frame, RFC 9000 sec 19): the Table 3 type assignments, the single-octet PADDING / PING / HANDSHAKE_DONE frames, the sec 19.3 ACK field order with its ranges and ECN counts, the sec 19.6 CRYPTO frame whose data aliases the packet buffer, the sec 19.8 STREAM type bits OFF/LEN/FIN including the absent-Length case that runs to the end of the packet, MAX_DATA, both CONNECTION_CLOSE variants and the Frame Type field only the transport one carries, the sec 20.1 error codes, the unhandled frames walked past by their wire shape per sec 12.4, and the truncation and short-destination refusals.
 protocore_env(native_quic_frame_rfc
+  SUITE unit/src/network_drivers/presentation/http/http3/test_quic_frame
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/quic_frame/quic_frame.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/quic_varint/quic_varint.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_frame/test_quic_frame.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_frame/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_UDP=1"
@@ -9643,18 +9120,16 @@ protocore_env(native_quic_frame_rfc
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_quic_frame_rfc/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_frame"
 )
 
 # QUIC packet headers and packet-number coding (network_drivers/presentation/http/http3/quic_packet, RFC 9000 sec 17): the client Initial, server Initial, Retry and short headers RFC 9001 Appendix A prints as hex, parsed field by field and two of them rebuilt; the Table 5 long packet types; the Fixed Bit requirement; the sec 17.2.1 Version Negotiation packet; the connection-ID and packet-number-length bounds; and the packet-number encode/decode worked examples of RFC 9000 Appendix A.2 and A.3.
 protocore_env(native_quic_packet_rfc
+  SUITE unit/src/network_drivers/presentation/http/http3/test_quic_packet
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/quic_packet/quic_packet.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_packet/test_quic_packet.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_packet/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_UDP=1"
@@ -9665,11 +9140,11 @@ protocore_env(native_quic_packet_rfc
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_quic_packet_rfc/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_packet"
 )
 
 # HTTP/3 server glue (network_drivers/presentation/http/http3/quic_server): the UDP-facing pool
 protocore_env(native_quic_server
+  SUITE unit/src/network_drivers/presentation/http/http3/quic_server/test_quic_server
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/quic_server/quic_server.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
@@ -9716,8 +9191,6 @@ protocore_env(native_quic_server
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/quic_server/test_quic_server/test_quic_server.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/quic_server/test_quic_server/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -9730,11 +9203,11 @@ protocore_env(native_quic_server
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_quic_server/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/quic_server/test_quic_server"
 )
 
 # TLS 1.3 QUIC handshake with the X25519MLKEM768 post-quantum hybrid group (IANA 0x11ec,
 protocore_env(native_quic_tls_pqc
+  SUITE unit/src/network_drivers/presentation/http/http3/test_quic_tls
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/quic_tls/quic_tls.c"
     "${PROTOCORE_ROOT}/src/network_drivers/tls/key_schedule/key_schedule.c"
@@ -9768,8 +9241,6 @@ protocore_env(native_quic_tls_pqc
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_tls/test_quic_tls.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_tls/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_PQC_KEX=1"
@@ -9783,11 +9254,11 @@ protocore_env(native_quic_tls_pqc
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_quic_tls_pqc/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_tls"
 )
 
 # The TLS 1.3 server handshake state machine QUIC runs (network_drivers/presentation/http/http3/quic_tls, RFC 9001 / RFC 8446): a full interop round trip in which the test runs the client half - its own X25519, transcript hash and RFC 8446 sec 7.1 key schedule - and requires the Handshake and 1-RTT packet keys to equal the server's, verifies the server Finished, and makes the server accept a client Finished the test computed; the sec 4.4 server flight ordering and the sec 4.1.3 ServerHello fields; the RFC 9001 sec 8.2 transport-parameter extension; and the negotiation refusals with the sec 6.2 alert each one carries.
 protocore_env(native_quic_tls_rfc
+  SUITE unit/src/network_drivers/presentation/http/http3/test_quic_tls
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/quic_tls/quic_tls.c"
     "${PROTOCORE_ROOT}/src/network_drivers/tls/key_schedule/key_schedule.c"
@@ -9819,8 +9290,6 @@ protocore_env(native_quic_tls_rfc
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_tls/test_quic_tls.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_tls/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
@@ -9832,19 +9301,17 @@ protocore_env(native_quic_tls_rfc
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_quic_tls_rfc/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_tls"
 )
 
 # QUIC transport parameters codec (network_drivers/presentation/http/http3/quic_tp, RFC 9000
 protocore_env(native_quic_tp
+  SUITE unit/src/network_drivers/presentation/http/http3/test_quic_tp
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/quic_tp/quic_tp.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/quic_varint/quic_varint.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_tp/test_quic_tp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_tp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_UDP=1"
@@ -9855,18 +9322,16 @@ protocore_env(native_quic_tp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_quic_tp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_tp"
 )
 
 # QUIC variable-length integer codec (network_drivers/presentation/http/http3/quic_varint,
 protocore_env(native_quic_varint
+  SUITE unit/src/network_drivers/presentation/http/http3/test_quic_varint
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/quic_varint/quic_varint.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_varint/test_quic_varint.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_varint/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_UDP=1"
@@ -9877,11 +9342,11 @@ protocore_env(native_quic_varint
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_quic_varint/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_varint"
 )
 
 # WiFi radio power controls (network_drivers/physical/radio_power): modem-sleep mode names
 protocore_env(native_radio_power
+  SUITE unit/src/network_drivers/physical/test_radio_power
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/physical/radio_power/radio_power.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
@@ -9895,8 +9360,6 @@ protocore_env(native_radio_power
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/physical/test_radio_power/test_radio_power.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/physical/test_radio_power/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_RADIO_POWER=1"
   INCLUDES
@@ -9906,11 +9369,11 @@ protocore_env(native_radio_power
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_radio_power/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/physical/test_radio_power"
 )
 
 # Receive-only radio sniffer pcap framing (services/radio/radio_sniff/radio_sniff.c): the IEEE-754 binary32 encoding of an integer dBm RSSI derived from the format definition, and the IEEE 802.15.4 TAP pseudo-header of that specification's sections 2.2.1, 2.2.2, 3.2 and 3.4 wrapped in a libpcap record with LINKTYPE_IEEE802_15_4_TAP 283. Pure host tests.
 protocore_env(native_radio_sniff_tap
+  SUITE unit/src/services/radio/radio_sniff/test_radio_sniff
   SOURCES
     "${PROTOCORE_ROOT}/src/services/radio/radio_sniff/radio_sniff.c"
     "${PROTOCORE_ROOT}/src/shared/pcap/pcap.c"
@@ -9918,8 +9381,6 @@ protocore_env(native_radio_sniff_tap
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/radio_sniff/test_radio_sniff/test_radio_sniff.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/radio_sniff/test_radio_sniff/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_RADIO_SNIFF=1"
   INCLUDES
@@ -9929,19 +9390,17 @@ protocore_env(native_radio_sniff_tap
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_radio_sniff_tap/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/radio_sniff/test_radio_sniff"
 )
 
 # Thread spinel / HDLC-lite framing codec (services/radio/thread). The FCS is pinned twice: to the
 protocore_env(native_radio_thread
+  SUITE unit/src/services/radio/thread/test_thread
   SOURCES
     "${PROTOCORE_ROOT}/src/services/radio/thread/thread.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/crc/crc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/thread/test_thread/test_thread.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/thread/test_thread/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_THREAD=1"
     "PROTOCORE_THREAD_MAX_DATA=64"
@@ -9952,11 +9411,11 @@ protocore_env(native_radio_thread
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_radio_thread/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/thread/test_thread"
 )
 
 # 802.11 sniffer core (services/radio/wifi_sniffer). The MAC header decode is anchored on IEEE Std
 protocore_env(native_radio_wifi_sniffer
+  SUITE unit/src/services/radio/wifi_sniffer/test_wifi_sniffer
   SOURCES
     "${PROTOCORE_ROOT}/src/services/radio/wifi_sniffer/wifi_sniffer.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -9969,8 +9428,6 @@ protocore_env(native_radio_wifi_sniffer
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/wifi_sniffer/test_wifi_sniffer/test_wifi_sniffer.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/wifi_sniffer/test_wifi_sniffer/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_WIFI_SNIFFER=1"
   INCLUDES
@@ -9980,11 +9437,11 @@ protocore_env(native_radio_wifi_sniffer
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_radio_wifi_sniffer/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/wifi_sniffer/test_wifi_sniffer"
 )
 
 # Wi-SUN FAN border-router connector (services/radio/wisun). The CoAP client request builder is
 protocore_env(native_radio_wisun
+  SUITE unit/src/services/radio/wisun/test_wisun
   SOURCES
     "${PROTOCORE_ROOT}/src/services/radio/wisun/wisun.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
@@ -9995,8 +9452,6 @@ protocore_env(native_radio_wisun
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/wisun/test_wisun/test_wisun.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/wisun/test_wisun/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_WISUN=1"
   INCLUDES
@@ -10006,19 +9461,17 @@ protocore_env(native_radio_wisun
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_radio_wisun/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/wisun/test_wisun"
 )
 
 # Zigbee EZSP / ASH data-link framing codec (services/radio/zigbee). The CRC is pinned to the
 protocore_env(native_radio_zigbee
+  SUITE unit/src/services/radio/zigbee/test_zigbee
   SOURCES
     "${PROTOCORE_ROOT}/src/services/radio/zigbee/zigbee.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/crc/crc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/zigbee/test_zigbee/test_zigbee.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/zigbee/test_zigbee/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_ZIGBEE=1"
     "PROTOCORE_ZIGBEE_MAX_DATA=32"
@@ -10029,18 +9482,16 @@ protocore_env(native_radio_zigbee
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_radio_zigbee/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/zigbee/test_zigbee"
 )
 
 # Z-Wave Serial API frame codec (services/radio/zwave). Anchored on the Silicon Labs Serial API
 protocore_env(native_radio_zwave
+  SUITE unit/src/services/radio/zwave/test_zwave
   SOURCES
     "${PROTOCORE_ROOT}/src/services/radio/zwave/zwave.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/zwave/test_zwave/test_zwave.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/zwave/test_zwave/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_ZWAVE=1"
     "PROTOCORE_ZWAVE_MAX_DATA=16"
@@ -10051,11 +9502,11 @@ protocore_env(native_radio_zwave
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_radio_zwave/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/zwave/test_zwave"
 )
 
 # HTTP Range requests / 206 Partial Content (RFC 7233): full server built with
 protocore_env(native_range
+  SUITE env/server/test_range
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -10119,8 +9570,6 @@ protocore_env(native_range
     "${PROTOCORE_ROOT}/src/crypto/rng/rng.c"
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
-    "${PROTOCORE_ROOT}/test/env/server/test_range/test_range.c"
-    "${PROTOCORE_ROOT}/test/env/server/test_range/unity_runner.c"
     "${PROTOCORE_ROOT}/.pio/libdeps/native_range/littlefs/src/lfs.c"
     "${PROTOCORE_ROOT}/.pio/libdeps/native_range/littlefs/src/lfs_util.c"
   DEFINES
@@ -10142,19 +9591,17 @@ protocore_env(native_range
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_range/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/server/test_range"
 )
 
 # Raw Layer-2 Ethernet frame codec (services/fieldbus/rawl2): the Ethernet II and 802.1Q VLAN-tagged builders, the parser that separates the two framings, the TCI field widths, and the IEEE 802.3 frame check sequence. Ethertypes checked against the IEEE Registration Authority public EtherType listing; the FCS against the published CRC-32/ISO-HDLC check value 0xCBF43926. Pure host tests.
 protocore_env(native_rawl2
+  SUITE unit/src/services/fieldbus/rawl2/test_rawl2
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/rawl2/rawl2.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/crc/crc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/rawl2/test_rawl2/test_rawl2.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/rawl2/test_rawl2/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_RAWL2=1"
   INCLUDES
@@ -10164,17 +9611,15 @@ protocore_env(native_rawl2
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_rawl2/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/rawl2/test_rawl2"
 )
 
 # The raw load (mmgr/rawmemcpy.h): bytes at a pointer read as a wider type in the
 protocore_env(native_rawmemcpy
+  SUITE unit/src/mmgr/test_rawmemcpy
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_rawmemcpy/test_rawmemcpy.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_rawmemcpy/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -10182,11 +9627,11 @@ protocore_env(native_rawmemcpy
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_rawmemcpy/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_rawmemcpy"
 )
 
 # RCWL-0516 Doppler presence sensor + the shared one-GPIO presence facade
 protocore_env(native_rcwl0516
+  SUITE unit/src/server/peripherals/rcwl0516/test_rcwl0516
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/rcwl0516/rcwl0516.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -10197,8 +9642,6 @@ protocore_env(native_rcwl0516
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/rcwl0516/test_rcwl0516/test_rcwl0516.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/rcwl0516/test_rcwl0516/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_RCWL0516=1"
   INCLUDES
@@ -10208,19 +9651,17 @@ protocore_env(native_rcwl0516
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_rcwl0516/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/rcwl0516/test_rcwl0516"
 )
 
 # RESP codec (services/iot/redis_resp), Redis serialization protocol specification: the published LLEN mylist command encoding, and one parse per printed example of Simple strings, Simple errors, Integers, Bulk strings (empty, null and binary-safe), Arrays (empty, nested, null and with null elements), Nulls, Booleans, Doubles (including inf/-inf/nan and exponents), Big numbers, Bulk errors, Verbatim strings, Maps (2 children per entry), Sets and Pushes, plus the refusal of the Attributes type and of any other first byte, the wait-for-the-whole-value framing and the fail-closed encoder. Pure host tests.
 protocore_env(native_redis_resp
+  SUITE unit/src/services/iot/redis_resp/test_redis_resp
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/redis_resp/redis_resp.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/redis_resp/test_redis_resp/test_redis_resp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/redis_resp/test_redis_resp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_REDIS=1"
   INCLUDES
@@ -10230,11 +9671,11 @@ protocore_env(native_redis_resp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_redis_resp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/redis_resp/test_redis_resp"
 )
 
 # test_regex against the native_stack_http stack.
 protocore_env(native_regex
+  SUITE unit/src/server/regex/test_regex
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -10304,8 +9745,6 @@ protocore_env(native_regex
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/regex/test_regex/test_regex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/regex/test_regex/unity_runner.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -10330,18 +9769,16 @@ protocore_env(native_regex
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_regex/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/regex/test_regex"
 )
 
 # TCP relay / DNAT byte pump (server/net/relay): the bidirectional relay engine that
 protocore_env(native_relay
+  SUITE unit/src/server/net/relay/relay/test_relay
   SOURCES
     "${PROTOCORE_ROOT}/src/server/net/relay/relay/relay.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/relay/relay/test_relay/test_relay.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/relay/relay/test_relay/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_RELAY=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
@@ -10353,11 +9790,11 @@ protocore_env(native_relay
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_relay/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/relay/relay/test_relay"
 )
 
 # Relay / DNAT listener bind table (server/net/relay/relay_listener): the published front-port binds, the bridge allocator, and the host-length and table-full refusals. The suite includes relay_listener.c so its file-static bind lookup and bridge allocator are reachable, which is why the env does not build that .c itself.
 protocore_env(native_relay_listener
+  SUITE unit/src/server/net/relay/test_relay_listener
   SOURCES
     "${PROTOCORE_ROOT}/src/server/net/relay/relay/relay.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -10390,8 +9827,6 @@ protocore_env(native_relay_listener
     "${PROTOCORE_ROOT}/src/mmgr/bitio/bitio.c"
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/bytes/bytes.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/relay/test_relay_listener/test_relay_listener.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/relay/test_relay_listener/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_RELAY=1"
     "PROTOCORE_ENABLE_TCP=1"
@@ -10404,11 +9839,11 @@ protocore_env(native_relay_listener
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_relay_listener/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/relay/test_relay_listener"
 )
 
 # test_response_headers against the native_stack_http stack. Carries PROTOCORE_ENABLE_NTP because the
 protocore_env(native_response_headers
+  SUITE env/application/test_response_headers
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -10481,8 +9916,6 @@ protocore_env(native_response_headers
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/server/server.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/client/client.c"
-    "${PROTOCORE_ROOT}/test/env/application/test_response_headers/test_response_headers.c"
-    "${PROTOCORE_ROOT}/test/env/application/test_response_headers/unity_runner.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -10510,19 +9943,17 @@ protocore_env(native_response_headers
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_response_headers/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/application/test_response_headers"
 )
 
 # The RFC 1951 sec 3.2.5 length and distance tables and the sec 3.2.6 fixed-Huffman construction over them, defined once in codec/deflate/rfc1951.c and read by both DEFLATE codecs and both SSH zlib codecs. Every expected value is transcribed from RFC 1951, so the tables are checked against the standard rather than against themselves.
 protocore_env(native_rfc1951
+  SUITE unit/src/network_drivers/presentation/codec/deflate/test_rfc1951
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/deflate/rfc1951/rfc1951.c"
     "${PROTOCORE_ROOT}/src/mmgr/bitio/bitio.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/deflate/test_rfc1951/test_rfc1951.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/deflate/test_rfc1951/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_DEFLATE_RFC1951=1"
   INCLUDES
@@ -10532,18 +9963,16 @@ protocore_env(native_rfc1951
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_rfc1951/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/deflate/test_rfc1951"
 )
 
 # The shared ring primitive (mmgr/ring.h) and its three views: bytes by head/tail, whole
 protocore_env(native_ring
+  SUITE unit/src/mmgr/test_ring
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_ring/test_ring.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_ring/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -10551,11 +9980,11 @@ protocore_env(native_ring
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ring/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_ring"
 )
 
 # Wi-Fi roaming decision layer (network_drivers/network/roaming): the pure policy that fuses the current RSSI, a
 protocore_env(native_roaming
+  SUITE unit/src/mmgr/test_roaming
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/datalink/roaming/roaming.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -10565,8 +9994,6 @@ protocore_env(native_roaming
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_roaming/test_roaming.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_roaming/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_ROAMING=1"
   INCLUDES
@@ -10576,11 +10003,11 @@ protocore_env(native_roaming
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_roaming/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_roaming"
 )
 
 # OPC UA for Robotics (OPC 40010-1) MotionDeviceSystem model (services/machine_tool/robotics) - the Browse
 protocore_env(native_robotics
+  SUITE unit/src/services/opcua/models/robotics/test_robotics
   SOURCES
     "${PROTOCORE_ROOT}/src/services/opcua/opcua.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -10592,8 +10019,6 @@ protocore_env(native_robotics
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/secure/secure.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/opcua/models/robotics/test_robotics/test_robotics.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/opcua/models/robotics/test_robotics/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_OPCUA=1"
     "PROTOCORE_ENABLE_ROBOTICS=1"
@@ -10604,11 +10029,11 @@ protocore_env(native_robotics
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_robotics/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/opcua/models/robotics/test_robotics"
 )
 
 # RSASSA-PKCS1-v1.5 over RSA-2048 (crypto/asymmetric/rsa.h) on the software modular multiply. Verify is driven onto Project Wycheproof's rsa_signature_2048_sha256 and _sha512 files at a pinned commit - 97 rows of which 78 are the encoding attacks a lax PKCS#1 parser accepts: BER-encoded padding, altered ASN.1 in the DigestInfo, a missing NULL parameter, short padding, a representative raised past the modulus. Sign is held to signatures openssl produced over a throwaway key whose primes test/vectors/openssl_rsa_2048_sign.json publishes, octet for octet, plus the sign/verify round trip.
 protocore_env(native_rsa_kat
+  SUITE unit/src/crypto/asymmetric/test_rsa_kat
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/asymmetric/rsa/rsa.c"
     "${PROTOCORE_ROOT}/src/crypto/asymmetric/bignum/bignum.c"
@@ -10624,8 +10049,6 @@ protocore_env(native_rsa_kat
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_bignum.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_rsa_kat/test_rsa_kat.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_rsa_kat/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -10633,11 +10056,11 @@ protocore_env(native_rsa_kat
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_rsa_kat/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_rsa_kat"
 )
 
 # RSASSA-PKCS1-v1.5 over RSA-2048 a second time with the accelerated modular multiply selected (PROTOCORE_RSA_MODMUL_HW), answered by the host RSA/MPI HAL so both arms of the multiply run natively against the same vectors.
 protocore_env(native_rsa_kat_hw
+  SUITE unit/src/crypto/asymmetric/test_rsa_kat
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/asymmetric/rsa/rsa.c"
     "${PROTOCORE_ROOT}/src/crypto/asymmetric/bignum/bignum.c"
@@ -10654,8 +10077,6 @@ protocore_env(native_rsa_kat_hw
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_bignum.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_crypto_hal.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_rsa_kat/test_rsa_kat.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_rsa_kat/unity_runner.c"
   DEFINES
     "PROTOCORE_RSA_MODMUL_HW=1"
   INCLUDES
@@ -10665,11 +10086,11 @@ protocore_env(native_rsa_kat_hw
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_rsa_kat_hw/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_rsa_kat"
 )
 
 # DS1307/DS3231 RTC conversions (server/peripherals/rtc): BCD time registers <-> Unix epoch in
 protocore_env(native_rtc
+  SUITE unit/src/server/peripherals/rtc/test_rtc
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/rtc/rtc.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -10679,8 +10100,6 @@ protocore_env(native_rtc
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/rtc/test_rtc/test_rtc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/rtc/test_rtc/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_RTC=1"
   INCLUDES
@@ -10690,18 +10109,16 @@ protocore_env(native_rtc
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_rtc/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/rtc/test_rtc"
 )
 
 # Siemens S7comm PDU codec (services/fieldbus/s7comm): the Setup Communication / Read Var / Write Var job builders with their 12-octet S7-ANY item specs, the header parser (protocol id, ROSCTR, the 10- vs 12-octet header, the declared lengths), and the response data-item walk with the bit/byte length rule and the even-item padding. Constants and both length rules taken from the Wireshark dissector epan/dissectors/packet-s7comm.c, the reference the module itself cites. Pure host tests.
 protocore_env(native_s7comm
+  SUITE unit/src/services/fieldbus/s7comm/test_s7comm
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/s7comm/s7comm.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/s7comm/test_s7comm/test_s7comm.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/s7comm/test_s7comm/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_S7COMM=1"
   INCLUDES
@@ -10711,18 +10128,16 @@ protocore_env(native_s7comm
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_s7comm/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/s7comm/test_s7comm"
 )
 
 # IEC 61784-3 black-channel Safety Communication Layer primitives (services/machine_tool/safety_scl):
 protocore_env(native_safety_scl
+  SUITE unit/src/services/machine_tool/safety_scl/test_safety_scl
   SOURCES
     "${PROTOCORE_ROOT}/src/services/machine_tool/safety_scl/safety_scl.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/safety_scl/test_safety_scl/test_safety_scl.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/safety_scl/test_safety_scl/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SAFETY_SCL=1"
   INCLUDES
@@ -10732,11 +10147,11 @@ protocore_env(native_safety_scl
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_safety_scl/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/machine_tool/safety_scl/test_safety_scl"
 )
 
 # Modbus-master southbound driver adapter (services/southbound/sb_modbus): binds the
 protocore_env(native_sb_modbus
+  SUITE unit/src/services/southbound/sb_modbus/test_sb_modbus
   SOURCES
     "${PROTOCORE_ROOT}/src/services/southbound/southbound/southbound.c"
     "${PROTOCORE_ROOT}/src/services/southbound/sb_modbus/sb_modbus.c"
@@ -10759,8 +10174,6 @@ protocore_env(native_sb_modbus
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/net_addr/net_addr.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/southbound/sb_modbus/test_sb_modbus/test_sb_modbus.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/southbound/sb_modbus/test_sb_modbus/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SOUTHBOUND=1"
     "PROTOCORE_ENABLE_MODBUS=1"
@@ -10774,11 +10187,11 @@ protocore_env(native_sb_modbus
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sb_modbus/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/southbound/sb_modbus/test_sb_modbus"
 )
 
 # SCP (RCP) protocol wire codec (network_drivers/session/scp): parse an `scp -t/-f <path>` exec command into its
 protocore_env(native_scp
+  SUITE unit/src/network_drivers/session/scp/test_scp
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/session/scp/scp/scp.c"
     "${PROTOCORE_ROOT}/src/server/storage/filesystem/filesystem.c"
@@ -10796,8 +10209,6 @@ protocore_env(native_scp
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/session/scp/test_scp/test_scp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/session/scp/test_scp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SSH=1"
     "PROTOCORE_ENABLE_SSH_SCP=1"
@@ -10809,11 +10220,11 @@ protocore_env(native_scp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_scp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/session/scp/test_scp"
 )
 
 # The SCP server (session/scp/ssh_scp.c): the rcp SINK state machine over an exec "scp -t <path>" channel - ready ack, C<mode> <size> <name> control line, streamed data, end-of-record byte, final ack. The rcp protocol has no specification; the oracle is OpenSSH's observed control flow, stated as such in the suite. Nothing else in the matrix compiles this file.
 protocore_env(native_scp_server
+  SUITE unit/src/network_drivers/session/scp/test_ssh_scp
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -10885,8 +10296,6 @@ protocore_env(native_scp_server
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/session/scp/test_ssh_scp/test_ssh_scp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/session/scp/test_ssh_scp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SSH=1"
     "PROTOCORE_SSH_MAX_CHANNELS=3"
@@ -10901,11 +10310,11 @@ protocore_env(native_scp_server
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_scp_server/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/session/scp/test_ssh_scp"
 )
 
 # SCP (rcp) wire codec (network_drivers/session/scp): the exec-command role parse (-t sink, -f source, bundled flags, the target path) and the C<mode> <size> <name> control line, built and parsed. The rcp line protocol has no published specification, so except for the mode field the suite states its expectations as properties (round-trip identity, refusals, boundaries) rather than as conformance. The mode field is a POSIX.1 permission word in octal, and those bit values are derived by hand in the suite.
 protocore_env(native_scp_wire
+  SUITE unit/src/network_drivers/session/scp/test_scp
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/session/scp/scp/scp.c"
     "${PROTOCORE_ROOT}/src/mmgr/membuild/membuild.c"
@@ -10915,8 +10324,6 @@ protocore_env(native_scp_wire
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/session/scp/test_scp/test_scp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/session/scp/test_scp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SSH=1"
     "PROTOCORE_ENABLE_SSH_SCP=1"
@@ -10927,11 +10334,11 @@ protocore_env(native_scp_wire
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_scp_wire/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/session/scp/test_scp"
 )
 
 # SCPI / IEEE 488.2 instrument-control codec (services/instrumentation/scpi): the command builder
 protocore_env(native_scpi
+  SUITE unit/src/services/instrumentation/scpi/test_scpi
   SOURCES
     "${PROTOCORE_ROOT}/src/services/instrumentation/scpi/scpi.c"
     "${PROTOCORE_ROOT}/src/mmgr/protoframe/protoframe.c"
@@ -10942,8 +10349,6 @@ protocore_env(native_scpi
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/instrumentation/scpi/test_scpi/test_scpi.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/instrumentation/scpi/test_scpi/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SCPI=1"
     "UNITY_INCLUDE_DOUBLE"
@@ -10954,11 +10359,11 @@ protocore_env(native_scpi
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_scpi/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/instrumentation/scpi/test_scpi"
 )
 
 # SDI-12 sensor-bus codec (server/peripherals/sdi12): the command builders, the measurement
 protocore_env(native_sdi12
+  SUITE unit/src/server/peripherals/sdi12/test_sdi12
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/sdi12/sdi12.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -10966,8 +10371,6 @@ protocore_env(native_sdi12
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/crc/crc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/sdi12/test_sdi12/test_sdi12.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/sdi12/test_sdi12/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SDI12=1"
   INCLUDES
@@ -10977,11 +10380,11 @@ protocore_env(native_sdi12
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sdi12/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/sdi12/test_sdi12"
 )
 
 # The secure pool accessor (mmgr/secure): the SAME pool mechanism as the plaintext side
 protocore_env(native_secure_pool
+  SUITE unit/src/mmgr/test_secure_pool
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
@@ -10992,8 +10395,6 @@ protocore_env(native_secure_pool
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_secure_pool/test_secure_pool.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_secure_pool/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11001,11 +10402,11 @@ protocore_env(native_secure_pool
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_secure_pool/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_secure_pool"
 )
 
 # One-time passwords (services/security/totp): HOTP over HMAC-SHA-1 against the RFC 4226 Appendix D test values (counts 0-9, the 6-digit HOTP column and the published truncated decimals reduced to 8 digits), TOTP against the RFC 6238 Appendix B SHA1 rows cross-checked at the published value of T, the sec 4.2 time-step floor with T0/X, the sec 6 drift window, and the RFC 4648 sec 10 base32 vectors for the provisioning secret.
 protocore_env(native_security_totp
+  SUITE unit/src/services/security/totp/test_totp
   SOURCES
     "${PROTOCORE_ROOT}/src/services/security/totp/totp.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/sha1/sha1.c"
@@ -11017,8 +10418,6 @@ protocore_env(native_security_totp
     "${PROTOCORE_ROOT}/src/mmgr/secure/secure.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/totp/test_totp/test_totp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/totp/test_totp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_TOTP=1"
   INCLUDES
@@ -11028,11 +10427,11 @@ protocore_env(native_security_totp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_security_totp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/security/totp/test_totp"
 )
 
 # SEN0192 microwave motion sensor presence state machine (server/peripherals/sen0192): presence
 protocore_env(native_sen0192
+  SUITE unit/src/server/peripherals/sen0192/test_sen0192
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/sen0192/sen0192.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -11043,8 +10442,6 @@ protocore_env(native_sen0192
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/sen0192/test_sen0192/test_sen0192.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/sen0192/test_sen0192/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SEN0192=1"
   INCLUDES
@@ -11054,11 +10451,11 @@ protocore_env(native_sen0192
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sen0192/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/sen0192/test_sen0192"
 )
 
 # SenML Pack builders and Record resolver (services/iot/senml), RFC 8428: the sec 5.1.1 and sec 5.1.2 JSON Packs reproduced character for character, the sec 4.2 value fields in their sec 5 JSON types, the sec 6 Table 4 CBOR integer map keys as RFC 8949 encodes them (-2 as 0x21, -3 as 0x22, the rest as themselves) with an integral Number as an integer and a non-integral one as a binary32 float, and the sec 4.6 resolve folding Base Name and Base Time forward, plus the zero-byte reports on a short buffer. Pure host tests.
 protocore_env(native_senml_pack
+  SUITE unit/src/services/iot/senml/test_senml
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/senml/senml.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/json/json.c"
@@ -11073,8 +10470,6 @@ protocore_env(native_senml_pack
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/senml/test_senml/test_senml.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/senml/test_senml/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SENML=1"
     "PROTOCORE_ENABLE_JSON=1"
@@ -11086,11 +10481,11 @@ protocore_env(native_senml_pack
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_senml_pack/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/senml/test_senml"
 )
 
 # IEEE 2030.5 (SEP 2.0) resource codec (services/energy/sep2): the DeviceCapability, EndDevice,
 protocore_env(native_sep2
+  SUITE unit/src/services/energy/sep2/test_sep2
   SOURCES
     "${PROTOCORE_ROOT}/src/services/energy/sep2/sep2.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -11100,8 +10495,6 @@ protocore_env(native_sep2
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/sep2/test_sep2/test_sep2.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/sep2/test_sep2/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SEP2=1"
   INCLUDES
@@ -11111,18 +10504,16 @@ protocore_env(native_sep2
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sep2/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/sep2/test_sep2"
 )
 
 # SERCOS III telegram + IDN codec (services/fieldbus/sercos): the IDN encode/decode over its published 16-bit layout (bit 15 S/P, bits 14..12 parameter set, bits 11..0 data block number) exhaustively round-tripped, and the MDT/AT telegram build/parse. The IDN structure is the Sercos / IEC 61800-7-204 addressing scheme; the reduced telegram header layout could not be sourced, so those cases assert properties only. Pure host tests.
 protocore_env(native_sercos
+  SUITE unit/src/services/fieldbus/sercos/test_sercos
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/sercos/sercos.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/sercos/test_sercos/test_sercos.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/sercos/test_sercos/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SERCOS=1"
   INCLUDES
@@ -11132,11 +10523,11 @@ protocore_env(native_sercos
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sercos/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/sercos/test_sercos"
 )
 
 # test_session against the native_stack_l46 stack.
 protocore_env(native_session
+  SUITE unit/src/network_drivers/session/test_session
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -11171,8 +10562,6 @@ protocore_env(native_session
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/shared/utf8/utf8.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/session/test_session/test_session.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/session/test_session/unity_runner.c"
   DEFINES
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
     "PROTOCORE_ENABLE_MULTIPART=1"
@@ -11184,11 +10573,11 @@ protocore_env(native_session
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_session/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/session/test_session"
 )
 
 # The SFTP v3 server subsystem (application/sftp/ssh_sftp.c) driven over a real SSH session channel: a subsystem "sftp" CHANNEL_REQUEST tags the channel, SSH_FXP_* requests arrive as CHANNEL_DATA, and responses are read back off the wire. Storage is the RAM mount backend. Expected values are transcribed from draft-ietf-secsh-filexfer-02, the authoritative text for SFTP v3. Nothing else in the matrix compiles this file.
 protocore_env(native_sftp_server
+  SUITE unit/src/network_drivers/application/sftp/test_ssh_sftp
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -11262,8 +10651,6 @@ protocore_env(native_sftp_server
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/sftp/test_ssh_sftp/test_ssh_sftp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/sftp/test_ssh_sftp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SSH=1"
     "PROTOCORE_SSH_MAX_CHANNELS=3"
@@ -11278,11 +10665,11 @@ protocore_env(native_sftp_server
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sftp_server/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/sftp/test_ssh_sftp"
 )
 
 # SFTP version 3 wire codec (network_drivers/application/sftp, draft-ietf-secsh-filexfer-02): the sec 3 packet framing whose length field counts the data area and excludes itself, the sec 3 packet type numbers, the sec 5 ATTRS flag bits and field order (including skipping the extended fields), the sec 6.3 SSH_FXP_OPEN pflags, the sec 7 status codes and the STATUS / HANDLE / DATA / NAME / ATTRS response layouts octet by octet, the bounds-checked reader (a string longer than its payload is refused), the length-prefix backfill, and the ls -l longname whose permission column is derived from POSIX.1 permission bits.
 protocore_env(native_sftp_wire
+  SUITE unit/src/network_drivers/application/sftp/test_ssh_sftp
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/sftp/sftp/sftp.c"
     "${PROTOCORE_ROOT}/src/mmgr/membuild/membuild.c"
@@ -11293,8 +10680,6 @@ protocore_env(native_sftp_wire
     "${PROTOCORE_ROOT}/src/shared/time_compat/time_compat.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/sftp/test_ssh_sftp/test_ssh_sftp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/sftp/test_ssh_sftp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SSH=1"
     "PROTOCORE_ENABLE_SSH_SFTP=1"
@@ -11305,19 +10690,17 @@ protocore_env(native_sftp_wire
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sftp_wire/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/sftp/test_ssh_sftp"
 )
 
 # SHA-256 (crypto/hash/sha256.h) against the RFC 6234 sec 8.5 SHA256 known-answer vectors: 'abc', the 56-octet message whose padding overflows into a second block, one million 'a' fed as a stream, and a 640-octet message that is an exact multiple of the 512-bit block. The empty-message digest is the Transcript-Hash('') RFC 8448 sec 3 prints for the TLS 1.3 'tls13 derived' step. Adds chunk-split invariance, the header's contract that final() leaves the context running, and the one-shot / streaming equivalence.
 protocore_env(native_sha256_kat
+  SUITE unit/src/crypto/hash/test_digest_vectors
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_digest_vectors/test_digest_vectors.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_digest_vectors/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11325,11 +10708,11 @@ protocore_env(native_sha256_kat
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sha256_kat/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_digest_vectors"
 )
 
 # The RFC 6234 SHA-256 vectors a second time with the accelerator arm selected, answered by the host SHA HAL so both arms run natively.
 protocore_env(native_sha256_kat_hw
+  SUITE unit/src/crypto/hash/test_digest_vectors
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -11337,8 +10720,6 @@ protocore_env(native_sha256_kat_hw
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_sha_hal.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_digest_vectors/test_digest_vectors.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_digest_vectors/unity_runner.c"
   DEFINES
     "PROTOCORE_HAS_HW_SHA=1"
   INCLUDES
@@ -11348,11 +10729,11 @@ protocore_env(native_sha256_kat_hw
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sha256_kat_hw/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_digest_vectors"
 )
 
 # SHA-384 (crypto/hash/sha384.h) against the RFC 6234 sec 8.5 SHA384 known-answer vectors: the whole-octet rows 1, 2, 3, 4, 6, 8 and 10 - 'abc', the 112-octet message whose padding overflows into a second block, one million 'a' fed as a stream, a 640-octet message that is an exact multiple of the 1024-bit block, a single octet, 16 octets and 195. SHA-384 differs from SHA-512 only in its seed and in cutting the digest to six state words (RFC 6234 sec 6.3 and 6.4), so the suite also builds sha512.c and asserts the two digests are not a prefix of one another. Software compression arm.
 protocore_env(native_sha384_kat
+  SUITE unit/src/crypto/hash/test_sha384
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha384/sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/sha512/sha512.c"
@@ -11360,8 +10741,6 @@ protocore_env(native_sha384_kat
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_sha384/test_sha384.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_sha384/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SHA384=1"
   INCLUDES
@@ -11371,11 +10750,11 @@ protocore_env(native_sha384_kat
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sha384_kat/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_sha384"
 )
 
 # The same SHA-384 vectors over the accelerator arm: PROTOCORE_HAS_HW_SHA=1 routes the block compression through protocore_sha_hw_block, which the host SHA HAL answers. SHA-384's rounds are SHA-512's, so the accelerator runs in its 512 mode over the SHA-384 seed; the seed, the padding and the six-word digest stay this module's either way.
 protocore_env(native_sha384_kat_hw
+  SUITE unit/src/crypto/hash/test_sha384
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha384/sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/sha512/sha512.c"
@@ -11384,8 +10763,6 @@ protocore_env(native_sha384_kat_hw
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_sha_hal.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_sha384/test_sha384.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_sha384/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SHA384=1"
     "PROTOCORE_HAS_HW_SHA=1"
@@ -11396,19 +10773,17 @@ protocore_env(native_sha384_kat_hw
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sha384_kat_hw/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_sha384"
 )
 
 # Keccak-f[1600] (crypto/hash/sha3.h) against the NIST CAVP FIPS 202 byte-oriented known-answer vectors: SHA3-256, SHA3-512, SHAKE128 and SHAKE256 each at the empty message, a short message, rate-1 octets (where the domain byte and the 0x80 pad merge on one state octet) and exactly one rate, plus a three-block SHA3-256 LongMsg row. Adds the published FIPS 202 rates, SHA-3 / SHAKE domain separation, incremental-squeeze continuity across the rate boundary, and the prefix-stream property.
 protocore_env(native_sha3_kat
+  SUITE unit/src/crypto/hash/test_pqc_sha3
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha3/sha3.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_pqc_sha3/test_pqc_sha3.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_pqc_sha3/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PQC_KEX=1"
   INCLUDES
@@ -11418,11 +10793,11 @@ protocore_env(native_sha3_kat
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sha3_kat/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_pqc_sha3"
 )
 
 # Sensirion SHT3x temperature/humidity codec (server/peripherals/sht3x): the CRC-8 against the
 protocore_env(native_sht3x
+  SUITE unit/src/server/peripherals/sht3x/test_sht3x
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/sht3x/sht3x.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -11435,8 +10810,6 @@ protocore_env(native_sht3x
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/sht3x/test_sht3x/test_sht3x.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/sht3x/test_sht3x/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SHT3X=1"
   INCLUDES
@@ -11446,18 +10819,16 @@ protocore_env(native_sht3x
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sht3x/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/sht3x/test_sht3x"
 )
 
 # Sigfox modem AT-command codec (services/radio/sigfox/sigfox.c): the AT$SF uplink command checked against the published AT$SF=496F54456173746572456767 example, uppercase most-significant-nibble-first hex, the 12-octet Sigfox uplink payload cap, output bounds, and the OK / ERROR / pending classification of a modem reply. Pure host tests.
 protocore_env(native_sigfox_at
+  SUITE unit/src/services/radio/sigfox/test_sigfox
   SOURCES
     "${PROTOCORE_ROOT}/src/services/radio/sigfox/sigfox.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/sigfox/test_sigfox/test_sigfox.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/sigfox/test_sigfox/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SIGFOX=1"
   INCLUDES
@@ -11467,11 +10838,11 @@ protocore_env(native_sigfox_at
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sigfox_at/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/sigfox/test_sigfox"
 )
 
 # Application-layer signaling (server/signaling): the state bucket. Deposits go in from the loop
 protocore_env(native_signaling
+  SUITE unit/src/server/signaling/test_signaling
   SOURCES
     "${PROTOCORE_ROOT}/src/server/signaling/signaling/signaling.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -11481,8 +10852,6 @@ protocore_env(native_signaling
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/test_signaling/test_signaling.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/test_signaling/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11490,11 +10859,11 @@ protocore_env(native_signaling
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_signaling/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/test_signaling"
 )
 
 # Siemens SIMATIC serial (services/fieldbus/simatic): 3964R block framing (DLE-double + XOR BCC)
 protocore_env(native_simatic
+  SUITE unit/src/services/fieldbus/simatic/test_simatic
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/simatic/simatic.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -11504,8 +10873,6 @@ protocore_env(native_simatic
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/simatic/test_simatic/test_simatic.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/simatic/test_simatic/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SIMATIC=1"
   INCLUDES
@@ -11515,18 +10882,16 @@ protocore_env(native_simatic
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_simatic/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/simatic/test_simatic"
 )
 
 # Dynamic sleep-cycle scheduler (server/sleep_sched): the wrap-safe idle->sleep-window
 protocore_env(native_sleep_sched
+  SUITE unit/src/server/core/sleep_sched/test_sleep_sched
   SOURCES
     "${PROTOCORE_ROOT}/src/server/core/sleep_sched/sleep_sched.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/sleep_sched/test_sleep_sched/test_sleep_sched.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/sleep_sched/test_sleep_sched/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SLEEP_SCHED=1"
   INCLUDES
@@ -11536,11 +10901,11 @@ protocore_env(native_sleep_sched
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sleep_sched/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/core/sleep_sched/test_sleep_sched"
 )
 
 # SMB2 client (network_drivers/application/smb, MS-SMB2 / MS-NLMP): the SMB2 wire codec (transport frame,
 protocore_env(native_smb__test_smb2
+  SUITE unit/src/network_drivers/application/smb/test_smb2
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/smb/smb2/smb2.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aesgcm/aesgcm.c"
@@ -11569,8 +10934,6 @@ protocore_env(native_smb__test_smb2
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aes128gcm/aes128gcm.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_smb2/test_smb2.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_smb2/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
@@ -11582,11 +10945,11 @@ protocore_env(native_smb__test_smb2
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_smb/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_smb2"
 )
 
 # SMB2 client (network_drivers/application/smb, MS-SMB2 / MS-NLMP): the SMB2 wire codec (transport frame,
 protocore_env(native_smb__test_smb_crypto
+  SUITE unit/src/crypto/hash/test_smb_crypto
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/smb/smb2/smb2.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aesgcm/aesgcm.c"
@@ -11615,8 +10978,6 @@ protocore_env(native_smb__test_smb_crypto
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aes128gcm/aes128gcm.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_smb_crypto/test_smb_crypto.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_smb_crypto/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
@@ -11628,11 +10989,11 @@ protocore_env(native_smb__test_smb_crypto
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_smb/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_smb_crypto"
 )
 
 # SMB2 client (network_drivers/application/smb, MS-SMB2 / MS-NLMP): the SMB2 wire codec (transport frame,
 protocore_env(native_smb__test_ntlm
+  SUITE unit/src/network_drivers/application/smb/test_ntlm
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/smb/smb2/smb2.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aesgcm/aesgcm.c"
@@ -11661,8 +11022,6 @@ protocore_env(native_smb__test_ntlm
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aes128gcm/aes128gcm.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_ntlm/test_ntlm.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_ntlm/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
@@ -11674,11 +11033,11 @@ protocore_env(native_smb__test_ntlm
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_smb/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_ntlm"
 )
 
 # SMB2 client (network_drivers/application/smb, MS-SMB2 / MS-NLMP): the SMB2 wire codec (transport frame,
 protocore_env(native_smb__test_ntlmssp
+  SUITE unit/src/network_drivers/application/smb/test_ntlmssp
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/smb/smb2/smb2.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aesgcm/aesgcm.c"
@@ -11707,8 +11066,6 @@ protocore_env(native_smb__test_ntlmssp
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aes128gcm/aes128gcm.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_ntlmssp/test_ntlmssp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_ntlmssp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
@@ -11720,11 +11077,11 @@ protocore_env(native_smb__test_ntlmssp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_smb/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_ntlmssp"
 )
 
 # SMB2 client (network_drivers/application/smb, MS-SMB2 / MS-NLMP): the SMB2 wire codec (transport frame,
 protocore_env(native_smb__test_spnego
+  SUITE unit/src/network_drivers/application/smb/test_spnego
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/smb/smb2/smb2.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aesgcm/aesgcm.c"
@@ -11753,8 +11110,6 @@ protocore_env(native_smb__test_spnego
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aes128gcm/aes128gcm.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_spnego/test_spnego.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_spnego/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
@@ -11766,11 +11121,11 @@ protocore_env(native_smb__test_spnego
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_smb/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_spnego"
 )
 
 # SMB2 client (network_drivers/application/smb, MS-SMB2 / MS-NLMP): the SMB2 wire codec (transport frame,
 protocore_env(native_smb__test_smb_client
+  SUITE unit/src/network_drivers/application/smb/smb_client/test_smb_client
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/smb/smb2/smb2.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aesgcm/aesgcm.c"
@@ -11799,8 +11154,6 @@ protocore_env(native_smb__test_smb_client
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aes128gcm/aes128gcm.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/smb_client/test_smb_client/test_smb_client.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/smb_client/test_smb_client/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
@@ -11812,11 +11165,11 @@ protocore_env(native_smb__test_smb_client
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_smb/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/smb_client/test_smb_client"
 )
 
 # SMB2 client wire codec (network_drivers/application/smb/smb2, MS-SMB2). Checks the sec 2.2.1.2 SYNC header offset by offset (ProtocolId 0x424D53FE, StructureSize 64, and every field through the 16-octet Signature), its ProtocolId / StructureSize validation, the sec 2.1 Direct TCP 4-octet transport prefix, the sec 2.2.3 NEGOTIATE request body and sec 2.2.4 response parse with a bounds-checked security buffer, the sec 3.1.4.1 / 3.1.5.1 HMAC-SHA256 and AES-CMAC signing round trip with tamper detection, the sec 2.2.41 TRANSFORM_HEADER and sec 3.1.4.3 nonce lengths, an encrypt/decrypt round trip for all four SMB 3.1.1 ciphers with AAD and tag tampering, and the sec 3.1.4.2 key-derivation label separation.
 protocore_env(native_smb2_wire
+  SUITE unit/src/network_drivers/application/smb/test_smb2
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/smb/smb2/smb2.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aesgcm/aesgcm.c"
@@ -11841,8 +11194,6 @@ protocore_env(native_smb2_wire
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aes128gcm/aes128gcm.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_smb2/test_smb2.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_smb2/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
@@ -11854,11 +11205,11 @@ protocore_env(native_smb2_wire
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_smb2_wire/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_smb2"
 )
 
 # Adversarial harness for the SMB-family parsers that consume untrusted bytes (network_drivers/application/smb: smb2, ntlmssp, spnego) and the bounded string core under them (mmgr/protostr). No standard states what a parser must do with garbage, so the expectations here are stated as properties: fail-closed refusal, a fixed footprint checked with canaries past every destination, and termination whatever the length fields claim. Inputs are deterministic - a fixed-seed xorshift PRNG plus structure-aware mutation of valid messages - so a failure reproduces exactly. Covers length/offset fields walked across their whole range, single-octet mutation of a valid CHALLENGE, truncation at every length, hostile nested DER, builder capacity sweeps, signature verification against every single-bit mutation, and AEAD blobs that must never yield plaintext.
 protocore_env(native_smb_pentest
+  SUITE unit/src/network_drivers/application/smb/test_pentest
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/smb/smb2/smb2.c"
     "${PROTOCORE_ROOT}/src/network_drivers/application/smb/ntlmssp/ntlmssp.c"
@@ -11888,8 +11239,6 @@ protocore_env(native_smb_pentest
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aes128gcm/aes128gcm.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_pentest/test_pentest.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_pentest/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
@@ -11901,11 +11250,11 @@ protocore_env(native_smb_pentest
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_smb_pentest/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_pentest"
 )
 
 # SMBus 3.1 Packet Error Code (server/peripherals/smbus): the address byte with its direction
 protocore_env(native_smbus
+  SUITE unit/src/server/peripherals/test_smbus
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/smbus/smbus.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -11916,8 +11265,6 @@ protocore_env(native_smbus
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/test_smbus/test_smbus.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/test_smbus/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMBUS=1"
   INCLUDES
@@ -11927,11 +11274,11 @@ protocore_env(native_smbus
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_smbus/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/test_smbus"
 )
 
 # SMTP client (RFC 5321) dialogue engine (services/net/smtp/smtp_run): greeting/EHLO/AUTH
 protocore_env(native_smtp
+  SUITE unit/src/services/net/smtp/test_smtp
   SOURCES
     "${PROTOCORE_ROOT}/src/services/net/smtp/smtp.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/base64/base64.c"
@@ -11948,8 +11295,6 @@ protocore_env(native_smtp
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/smtp/test_smtp/test_smtp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/smtp/test_smtp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMTP=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
@@ -11961,11 +11306,11 @@ protocore_env(native_smtp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_smtp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/smtp/test_smtp"
 )
 
 # SNMP ASN.1 BER codec (the version-agnostic base for the SNMP agent). Pure
 protocore_env(native_snmp__test_snmp_ber
+  SUITE unit/src/services/net/snmp/test_snmp_ber
   SOURCES
     "${PROTOCORE_ROOT}/src/services/net/snmp/snmp_ber/snmp_ber.c"
     "${PROTOCORE_ROOT}/src/services/net/snmp/snmp_agent/snmp_agent.c"
@@ -11987,8 +11332,6 @@ protocore_env(native_snmp__test_snmp_ber
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/mmgr/secure/secure.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/snmp/test_snmp_ber/test_snmp_ber.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/snmp/test_snmp_ber/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SNMP=1"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -12000,11 +11343,11 @@ protocore_env(native_snmp__test_snmp_ber
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_snmp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/snmp/test_snmp_ber"
 )
 
 # SNMP ASN.1 BER codec (the version-agnostic base for the SNMP agent). Pure
 protocore_env(native_snmp__test_snmp_agent
+  SUITE unit/src/services/net/snmp/snmp_agent/test_snmp_agent
   SOURCES
     "${PROTOCORE_ROOT}/src/services/net/snmp/snmp_ber/snmp_ber.c"
     "${PROTOCORE_ROOT}/src/services/net/snmp/snmp_agent/snmp_agent.c"
@@ -12026,8 +11369,6 @@ protocore_env(native_snmp__test_snmp_agent
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/mmgr/secure/secure.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/snmp/snmp_agent/test_snmp_agent/test_snmp_agent.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/snmp/snmp_agent/test_snmp_agent/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SNMP=1"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -12039,18 +11380,16 @@ protocore_env(native_snmp__test_snmp_agent
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_snmp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/snmp/snmp_agent/test_snmp_agent"
 )
 
 # SNMP ASN.1 BER codec (services/net/snmp/snmp_ber.c) against ITU-T X.690 clause 8.1 identifier and length octets, 8.3 INTEGER minimal two's complement, 8.7 OCTET STRING, 8.8 NULL and 8.19 OBJECT IDENTIFIER base-128 subidentifiers, plus RFC 3417 section 8 item 1 (definite form only, indefinite prohibited, an over-long definite length permitted) and the RFC 2578 section 7.1.5 through 7.1.8 application-wide type tags. Pure codec over caller buffers, no transport.
 protocore_env(native_snmp_ber_x690
+  SUITE unit/src/services/net/snmp/test_snmp_ber
   SOURCES
     "${PROTOCORE_ROOT}/src/services/net/snmp/snmp_ber/snmp_ber.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/snmp/test_snmp_ber/test_snmp_ber.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/snmp/test_snmp_ber/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SNMP=1"
     "PROTOCORE_ENABLE_UDP=1"
@@ -12061,11 +11400,11 @@ protocore_env(native_snmp_ber_x690
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_snmp_ber_x690/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/snmp/test_snmp_ber"
 )
 
 # SNMP notification originator (services/net/snmp/snmp_notify.c): the SNMPv2-Trap-PDU and InformRequest-PDU of RFC 3416 section 4.2.6 and 4.2.7 with their two mandatory first variable bindings sysUpTime.0 and snmpTrapOID.0 (RFC 3418 section 2), the context-specific PDU tags of RFC 3416 section 3, the RFC 1901 section 3 SNMPv2c message wrapper, and the RFC 2578 section 7.1 value tags each binding type carries. Build calls only - this build has no UDP transport.
 protocore_env(native_snmp_notify
+  SUITE unit/src/services/net/snmp/test_snmp_trap
   SOURCES
     "${PROTOCORE_ROOT}/src/services/net/snmp/snmp_notify/snmp_notify.c"
     "${PROTOCORE_ROOT}/src/services/net/snmp/snmp_ber/snmp_ber.c"
@@ -12077,8 +11416,6 @@ protocore_env(native_snmp_notify
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/snmp/test_snmp_trap/test_snmp_trap.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/snmp/test_snmp_trap/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SNMP=1"
     "PROTOCORE_ENABLE_SNMP_TRAP=1"
@@ -12090,10 +11427,10 @@ protocore_env(native_snmp_notify
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_snmp_notify/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/snmp/test_snmp_trap"
 )
 
 protocore_env(native_snmp_trap
+  SUITE unit/src/services/net/snmp/test_snmp_trap
   SOURCES
     "${PROTOCORE_ROOT}/src/services/net/snmp/snmp_notify/snmp_notify.c"
     "${PROTOCORE_ROOT}/src/services/net/snmp/snmp_ber/snmp_ber.c"
@@ -12108,8 +11445,6 @@ protocore_env(native_snmp_trap
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/snmp/test_snmp_trap/test_snmp_trap.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/snmp/test_snmp_trap/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SNMP=1"
     "PROTOCORE_ENABLE_SNMP_TRAP=1"
@@ -12121,11 +11456,11 @@ protocore_env(native_snmp_trap
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_snmp_trap/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/snmp/test_snmp_trap"
 )
 
 # SNMPv3 USM layer: auth (HMAC-SHA-256), privacy (AES-128-CFB), engine discovery,
 protocore_env(native_snmp_v3
+  SUITE unit/src/services/net/snmp/snmp_v3/test_snmp_v3
   SOURCES
     "${PROTOCORE_ROOT}/src/services/net/snmp/snmp_ber/snmp_ber.c"
     "${PROTOCORE_ROOT}/src/services/net/snmp/snmp_agent/snmp_agent.c"
@@ -12153,8 +11488,6 @@ protocore_env(native_snmp_v3
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/snmp/snmp_v3/test_snmp_v3/test_snmp_v3.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/snmp/snmp_v3/test_snmp_v3/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SNMP=1"
     "PROTOCORE_ENABLE_SNMP_V3=1"
@@ -12168,18 +11501,16 @@ protocore_env(native_snmp_v3
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_snmp_v3/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/snmp/snmp_v3/test_snmp_v3"
 )
 
 # GE Fanuc SNP serial frame codec (services/fieldbus/snp): the Series Ninety Protocol frame
 protocore_env(native_snp
+  SUITE unit/src/services/fieldbus/snp/test_snp
   SOURCES
     "${PROTOCORE_ROOT}/src/services/fieldbus/snp/snp.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/snp/test_snp/test_snp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/snp/test_snp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SNP=1"
   INCLUDES
@@ -12189,11 +11520,11 @@ protocore_env(native_snp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_snp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/fieldbus/snp/test_snp"
 )
 
 # Streamlined NTRU Prime sntrup761 (crypto/pqc/sntrup761.h). sntrup761 is not standardized, so the one conformance value is an interop vector captured from OpenSSH's embedded reference and it pins Decaps; the rest are properties: KEM round trip over many keypairs, randomized Encaps, the public key embedded in sk at the header's offset, implicit rejection on a tampered rounded polynomial and on a tampered Confirm hash, and the KeyGen retry when g is not invertible mod 3.
 protocore_env(native_sntrup761_kat
+  SUITE unit/src/crypto/pqc/test_pqc_sntrup761
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/pqc/sntrup761/sntrup761.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/sha512/sha512.c"
@@ -12201,8 +11532,6 @@ protocore_env(native_sntrup761_kat
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/pqc/test_pqc_sntrup761/test_pqc_sntrup761.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/pqc/test_pqc_sntrup761/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PQC_KEX=1"
   INCLUDES
@@ -12212,18 +11541,16 @@ protocore_env(native_sntrup761_kat
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sntrup761_kat/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/pqc/test_pqc_sntrup761"
 )
 
 # Dynamic socket recycling (server/net/sockpool): a fixed LRU connection-slot pool - acquire
 protocore_env(native_sockpool
+  SUITE unit/src/server/net/sockpool/test_sockpool
   SOURCES
     "${PROTOCORE_ROOT}/src/server/net/sockpool/sockpool.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/sockpool/test_sockpool/test_sockpool.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/sockpool/test_sockpool/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SOCKPOOL=1"
   INCLUDES
@@ -12233,11 +11560,11 @@ protocore_env(native_sockpool
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sockpool/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/net/sockpool/test_sockpool"
 )
 
 # Southbound protocol-driver framework (services/southbound): the bounded driver registry
 protocore_env(native_southbound
+  SUITE unit/src/services/southbound/southbound/test_southbound
   SOURCES
     "${PROTOCORE_ROOT}/src/services/southbound/southbound/southbound.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -12248,8 +11575,6 @@ protocore_env(native_southbound
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/southbound/southbound/test_southbound/test_southbound.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/southbound/southbound/test_southbound/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SOUTHBOUND=1"
   INCLUDES
@@ -12259,19 +11584,17 @@ protocore_env(native_southbound
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_southbound/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/southbound/southbound/test_southbound"
 )
 
 # Single-page-app micro-routing (server/web/spa_router): the serve-file / serve-shell /
 protocore_env(native_spa_router
+  SUITE unit/src/server/web/spa_router/test_spa_router
   SOURCES
     "${PROTOCORE_ROOT}/src/server/web/spa_router/spa_router.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/spa_router/test_spa_router/test_spa_router.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/spa_router/test_spa_router/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SPA_ROUTER=1"
   INCLUDES
@@ -12281,11 +11604,11 @@ protocore_env(native_spa_router
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_spa_router/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/spa_router/test_spa_router"
 )
 
 # The bounded byte region (mmgr/span.h): a pointer and the capacity that belongs to
 protocore_env(native_span
+  SUITE unit/src/mmgr/test_span
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
@@ -12294,8 +11617,6 @@ protocore_env(native_span
     "${PROTOCORE_ROOT}/src/mmgr/bytes/bytes.c"
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_span/test_span.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_span/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -12303,11 +11624,11 @@ protocore_env(native_span
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_span/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_span"
 )
 
 # Sparkplug B codec (services/iot/sparkplug): the topic builder + the Metric / Payload
 protocore_env(native_sparkplug
+  SUITE unit/src/services/iot/sparkplug/test_sparkplug
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/sparkplug/sparkplug.c"
     "${PROTOCORE_ROOT}/src/services/iot/protobuf/protobuf.c"
@@ -12319,8 +11640,6 @@ protocore_env(native_sparkplug
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/sparkplug/test_sparkplug/test_sparkplug.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/sparkplug/test_sparkplug/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SPARKPLUG=1"
     "PROTOCORE_ENABLE_PROTOBUF=1"
@@ -12331,18 +11650,16 @@ protocore_env(native_sparkplug
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sparkplug/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/sparkplug/test_sparkplug"
 )
 
 # SPNEGO DER wrapping of the NTLMSSP tokens (network_drivers/application/smb/spnego). Checks the RFC 2743 sec 3.1 InitialContextToken framing and the RFC 4178 sec 4.2.1 NegTokenInit of the first SESSION_SETUP buffer octet for octet, the bare RFC 4178 sec 4.2.2 NegTokenResp of the second, the responseToken walk past negState and supportedMech, the X.690 clause 8.1.3 short and long definite length forms at each nesting level, and fail-closed refusal of indefinite lengths, wrong tags and lengths that run past the buffer. Both OIDs are derived by hand from X.690 clause 8.19.
 protocore_env(native_spnego
+  SUITE unit/src/network_drivers/application/smb/test_spnego
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/smb/spnego/spnego.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_spnego/test_spnego.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_spnego/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SMB=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
@@ -12354,11 +11671,11 @@ protocore_env(native_spnego
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_spnego/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/smb/test_spnego"
 )
 
 # test_sse against the native_stack_l46 stack.
 protocore_env(native_sse
+  SUITE env/http/test_sse
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -12393,7 +11710,6 @@ protocore_env(native_sse
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/shared/utf8/utf8.c"
-    "${PROTOCORE_ROOT}/test/env/http/test_sse/test_sse.c"
   DEFINES
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
     "PROTOCORE_ENABLE_MULTIPART=1"
@@ -12407,11 +11723,11 @@ protocore_env(native_sse
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sse/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/http/test_sse"
 )
 
 # SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PROTOCORE_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - the file-transfer servers reach storage through the mount, not through FILE_SERVING)
 protocore_env(native_ssh__transport_test_extension
+  SUITE unit/src/network_drivers/presentation/ssh/transport/test_extension
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
@@ -12468,8 +11784,6 @@ protocore_env(native_ssh__transport_test_extension
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_extension/test_extension.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_extension/unity_runner.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
     "PROTOCORE_ENABLE_SSH=1"
@@ -12487,11 +11801,11 @@ protocore_env(native_ssh__transport_test_extension
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_extension"
 )
 
 # SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PROTOCORE_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - the file-transfer servers reach storage through the mount, not through FILE_SERVING)
 protocore_env(native_ssh__transport_test_comp
+  SUITE unit/src/network_drivers/presentation/ssh/transport/test_comp
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
@@ -12548,7 +11862,6 @@ protocore_env(native_ssh__transport_test_comp
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_comp/test_comp.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
     "PROTOCORE_ENABLE_SSH=1"
@@ -12566,11 +11879,11 @@ protocore_env(native_ssh__transport_test_comp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_comp"
 )
 
 # SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PROTOCORE_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - the file-transfer servers reach storage through the mount, not through FILE_SERVING)
 protocore_env(native_ssh__transport_test_zlib
+  SUITE unit/src/network_drivers/presentation/ssh/transport/test_zlib
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
@@ -12627,7 +11940,6 @@ protocore_env(native_ssh__transport_test_zlib
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_zlib/test_zlib.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
     "PROTOCORE_ENABLE_SSH=1"
@@ -12645,11 +11957,11 @@ protocore_env(native_ssh__transport_test_zlib
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_zlib"
 )
 
 # SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PROTOCORE_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - the file-transfer servers reach storage through the mount, not through FILE_SERVING)
 protocore_env(native_ssh__transport_test_inflate
+  SUITE unit/src/network_drivers/presentation/ssh/transport/test_inflate
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
@@ -12706,7 +12018,6 @@ protocore_env(native_ssh__transport_test_inflate
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_inflate/test_inflate.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
     "PROTOCORE_ENABLE_SSH=1"
@@ -12724,11 +12035,11 @@ protocore_env(native_ssh__transport_test_inflate
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_inflate"
 )
 
 # SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PROTOCORE_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - the file-transfer servers reach storage through the mount, not through FILE_SERVING)
 protocore_env(native_ssh__transport_test_phase_machine
+  SUITE unit/src/network_drivers/presentation/ssh/transport/test_phase_machine
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
@@ -12785,8 +12096,6 @@ protocore_env(native_ssh__transport_test_phase_machine
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_phase_machine/test_phase_machine.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_phase_machine/unity_runner.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
     "PROTOCORE_ENABLE_SSH=1"
@@ -12804,11 +12113,11 @@ protocore_env(native_ssh__transport_test_phase_machine
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_phase_machine"
 )
 
 # SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PROTOCORE_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - the file-transfer servers reach storage through the mount, not through FILE_SERVING)
 protocore_env(native_ssh__transport_test_transport
+  SUITE unit/src/network_drivers/presentation/ssh/transport/test_transport
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
@@ -12865,8 +12174,6 @@ protocore_env(native_ssh__transport_test_transport
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_transport/test_transport.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_transport/unity_runner.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
     "PROTOCORE_ENABLE_SSH=1"
@@ -12884,11 +12191,11 @@ protocore_env(native_ssh__transport_test_transport
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/test_transport"
 )
 
 # SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PROTOCORE_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - the file-transfer servers reach storage through the mount, not through FILE_SERVING)
 protocore_env(native_ssh__ssh_test_ssh
+  SUITE unit/src/network_drivers/presentation/ssh/test_ssh
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
@@ -12945,8 +12252,6 @@ protocore_env(native_ssh__ssh_test_ssh
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/test_ssh/test_ssh.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/test_ssh/unity_runner.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
     "PROTOCORE_ENABLE_SSH=1"
@@ -12964,11 +12269,11 @@ protocore_env(native_ssh__ssh_test_ssh
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/test_ssh"
 )
 
 # SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PROTOCORE_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - the file-transfer servers reach storage through the mount, not through FILE_SERVING)
 protocore_env(native_ssh__client_test_client
+  SUITE unit/src/network_drivers/presentation/ssh/client/test_client
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
@@ -13025,7 +12330,6 @@ protocore_env(native_ssh__client_test_client
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/client/test_client/test_client.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
     "PROTOCORE_ENABLE_SSH=1"
@@ -13043,11 +12347,11 @@ protocore_env(native_ssh__client_test_client
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/client/test_client"
 )
 
 # SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PROTOCORE_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - the file-transfer servers reach storage through the mount, not through FILE_SERVING)
 protocore_env(native_ssh__app_test_client
+  SUITE unit/src/network_drivers/presentation/ssh/app/test_client
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
@@ -13104,7 +12408,6 @@ protocore_env(native_ssh__app_test_client
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/app/test_client/test_client.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
     "PROTOCORE_ENABLE_SSH=1"
@@ -13122,11 +12425,11 @@ protocore_env(native_ssh__app_test_client
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/app/test_client"
 )
 
 # SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PROTOCORE_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - the file-transfer servers reach storage through the mount, not through FILE_SERVING)
 protocore_env(native_ssh__server_test_server
+  SUITE unit/src/network_drivers/presentation/ssh/server/test_server
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
@@ -13183,7 +12486,6 @@ protocore_env(native_ssh__server_test_server
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/server/test_server/test_server.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
     "PROTOCORE_ENABLE_SSH=1"
@@ -13201,11 +12503,11 @@ protocore_env(native_ssh__server_test_server
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/server/test_server"
 )
 
 # SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PROTOCORE_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - the file-transfer servers reach storage through the mount, not through FILE_SERVING)
 protocore_env(native_ssh__network_test_network
+  SUITE unit/src/network_drivers/presentation/ssh/network/test_network
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
@@ -13262,8 +12564,6 @@ protocore_env(native_ssh__network_test_network
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/network/test_network/test_network.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/network/test_network/unity_runner.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
     "PROTOCORE_ENABLE_SSH=1"
@@ -13281,11 +12581,11 @@ protocore_env(native_ssh__network_test_network
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/network/test_network"
 )
 
 # SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PROTOCORE_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - the file-transfer servers reach storage through the mount, not through FILE_SERVING)
 protocore_env(native_ssh__auth_test_auth
+  SUITE unit/src/network_drivers/presentation/ssh/auth/test_auth
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
@@ -13342,7 +12642,6 @@ protocore_env(native_ssh__auth_test_auth
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/auth/test_auth/test_auth.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
     "PROTOCORE_ENABLE_SSH=1"
@@ -13360,11 +12659,11 @@ protocore_env(native_ssh__auth_test_auth
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/auth/test_auth"
 )
 
 # SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PROTOCORE_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - the file-transfer servers reach storage through the mount, not through FILE_SERVING)
 protocore_env(native_ssh__connection_test_connection
+  SUITE unit/src/network_drivers/presentation/ssh/connection/test_connection
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
@@ -13421,8 +12720,6 @@ protocore_env(native_ssh__connection_test_connection
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/connection/test_connection/test_connection.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/connection/test_connection/unity_runner.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
     "PROTOCORE_ENABLE_SSH=1"
@@ -13440,11 +12737,11 @@ protocore_env(native_ssh__connection_test_connection
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/connection/test_connection"
 )
 
 # SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PROTOCORE_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - the file-transfer servers reach storage through the mount, not through FILE_SERVING)
 protocore_env(native_ssh__app_test_server
+  SUITE unit/src/network_drivers/presentation/ssh/app/test_server
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
@@ -13501,7 +12798,6 @@ protocore_env(native_ssh__app_test_server
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/app/test_server/test_server.c"
   DEFINES
     "PROTOCORE_SSH_MAX_CHANNELS=3"
     "PROTOCORE_ENABLE_SSH=1"
@@ -13519,11 +12815,11 @@ protocore_env(native_ssh__app_test_server
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/app/test_server"
 )
 
 # SSH client role (ssh/client/client.c) built per file: nothing else in the matrix compiles it. Covers the tunnel state API, the cfg guard, and the provisioning key derivation, which runs through the connection's compile-time storage.
 protocore_env(native_ssh_client
+  SUITE unit/src/network_drivers/presentation/ssh/client/test_client
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -13600,7 +12896,6 @@ protocore_env(native_ssh_client
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/client/test_client/test_client.c"
   DEFINES
     "PROTOCORE_ENABLE_SSH=1"
     "PROTOCORE_ENABLE_SSH_CLIENT=1"
@@ -13618,11 +12913,11 @@ protocore_env(native_ssh_client
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh_client/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/client/test_client"
 )
 
 # SSH wired through the real transport/session layers (PROTO_SSH byte-pump)
 protocore_env(native_ssh_conn
+  SUITE unit/src/network_drivers/presentation/ssh/connection/test_connection
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -13690,8 +12985,6 @@ protocore_env(native_ssh_conn
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/connection/test_connection/test_connection.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/connection/test_connection/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SSH=1"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -13704,11 +12997,11 @@ protocore_env(native_ssh_conn
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh_conn/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/connection/test_connection"
 )
 
 # ECDSA P-256 for ecdsa-sha2-nistp256 (RFC 5656) host-tested on the software path: pubkey,
 protocore_env(native_ssh_ecdsa
+  SUITE unit/src/crypto/asymmetric/test_ssh_ecdsa
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/asymmetric/ecdsa/ecdsa.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
@@ -13725,8 +13018,6 @@ protocore_env(native_ssh_ecdsa
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/crypto/rng/rng.c"
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_ssh_ecdsa/test_ssh_ecdsa.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_ssh_ecdsa/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -13734,11 +13025,11 @@ protocore_env(native_ssh_ecdsa
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh_ecdsa/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_ssh_ecdsa"
 )
 
 # RFC 6979 and RFC 5903 a second time with the accelerated curve backend selected (PROTOCORE_HAS_HW_ECC + the MODMULT field layer), answered by the host RSA/MPI HAL so both arms run natively.
 protocore_env(native_ssh_ecdsa_hw
+  SUITE unit/src/crypto/asymmetric/test_ssh_ecdsa
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/asymmetric/ecdsa/ecdsa.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
@@ -13756,8 +13047,6 @@ protocore_env(native_ssh_ecdsa_hw
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_crypto_hal.c"
     "${PROTOCORE_ROOT}/src/crypto/rng/rng.c"
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_ssh_ecdsa/test_ssh_ecdsa.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_ssh_ecdsa/unity_runner.c"
   DEFINES
     "PROTOCORE_HAS_HW_ECC=1"
     "PROTOCORE_RSA_MODMUL_HW=1"
@@ -13768,11 +13057,11 @@ protocore_env(native_ssh_ecdsa_hw
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh_ecdsa_hw/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_ssh_ecdsa"
 )
 
 # The RFC 4254 sec 5.2 channel window (ssh/connection/connection.c): the send cap is the smaller of the peer's window and its maximum packet size, a send decrements the window, an adjust increments it, and the window stops at 2^32-1 because sec 5.2 says it MUST NOT be increased above that. Expected values are transcribed from RFC 4254.
 protocore_env(native_ssh_flow
+  SUITE unit/src/network_drivers/presentation/ssh/connection/test_connection
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
@@ -13824,8 +13113,6 @@ protocore_env(native_ssh_flow
     "${PROTOCORE_ROOT}/src/crypto/mac/poly1305/poly1305.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_crypto_hal.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_bignum.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/connection/test_connection/test_connection.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/connection/test_connection/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SSH=1"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -13838,11 +13125,11 @@ protocore_env(native_ssh_flow
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh_flow/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/connection/test_connection"
 )
 
 # native_ssh_flow's suite against the software bignum: the same RFC 4254 sec 5.2 channel window, with PROTOCORE_HAS_HW_BIGNUM off so portable_bignum.c provides bn_expmod_group14 instead of the host HW arm. Both arms are driven; neither env drops one.
 protocore_env(native_ssh_flow_sw
+  SUITE unit/src/network_drivers/presentation/ssh/connection/test_connection
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
@@ -13893,8 +13180,6 @@ protocore_env(native_ssh_flow_sw
     "${PROTOCORE_ROOT}/src/crypto/asymmetric/rsa/rsa.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/poly1305/poly1305.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_bignum.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/connection/test_connection/test_connection.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/connection/test_connection/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SSH=1"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -13906,11 +13191,11 @@ protocore_env(native_ssh_flow_sw
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh_flow_sw/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/connection/test_connection"
 )
 
 # The RFC 4254 sec 7 remote-forward owner (ssh/connection/connection.c, ssh -R). Sec 7.1: tcpip-forward binds a real listener, cancel-tcpip-forward stops it, port 0 is refused rather than allocated, and an SSH connection closing takes its listeners with it; replies follow sec 4 (SUCCESS/FAILURE only when want_reply, bare success, request order). Sec 7.2: a connection arriving on a forwarded port is dispatched through Session.tick and opens a forwarded-tcpip channel whose eight fields are checked against the RFC, then sec 5.1 CHANNEL_OPEN_CONFIRMATION starts the byte bridge and CHANNEL_OPEN_FAILURE drops the socket. Nothing else in the matrix compiles this file.
 protocore_env(native_ssh_forward
+  SUITE unit/src/network_drivers/presentation/ssh/connection/test_connection
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -13985,8 +13270,6 @@ protocore_env(native_ssh_forward
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/connection/test_connection/test_connection.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/connection/test_connection/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SSH=1"
     "PROTOCORE_SSH_PORT_FORWARD=1"
@@ -14005,11 +13288,11 @@ protocore_env(native_ssh_forward
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh_forward/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/connection/test_connection"
 )
 
 # SSH keyboard-interactive auth (RFC 4256) built with PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE=1: the server sends one non-echoed Password prompt (INFO_REQUEST) and verifies the INFO_RESPONSE via the password callback. Also re-runs test_ssh_auth to confirm the password/publickey methods are unaffected with keyboard-interactive advertised.
 protocore_env(native_ssh_kbdint
+  SUITE unit/src/network_drivers/presentation/ssh/auth/test_auth
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
@@ -14065,7 +13348,6 @@ protocore_env(native_ssh_kbdint
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/auth/test_auth/test_auth.c"
   DEFINES
     "PROTOCORE_ENABLE_SSH=1"
     "PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE=1"
@@ -14081,11 +13363,11 @@ protocore_env(native_ssh_kbdint
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh_kbdint/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/auth/test_auth"
 )
 
 # SFTP protocol v3 wire codec (network_drivers/application/sftp): the SSH_FXP_* request reader + response builders
 protocore_env(native_ssh_sftp
+  SUITE unit/src/network_drivers/application/sftp/test_ssh_sftp
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/sftp/sftp/sftp.c"
     "${PROTOCORE_ROOT}/src/mmgr/protoframe/protoframe.c"
@@ -14104,8 +13386,6 @@ protocore_env(native_ssh_sftp
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/server/storage/mnt_ram/mnt_ram.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/sftp/test_ssh_sftp/test_ssh_sftp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/sftp/test_ssh_sftp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SSH=1"
     "PROTOCORE_ENABLE_SSH_SFTP=1"
@@ -14117,11 +13397,11 @@ protocore_env(native_ssh_sftp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh_sftp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/sftp/test_ssh_sftp"
 )
 
 # StatsD metrics client (services/iot/statsd): the pure line formatter (name:value|type,
 protocore_env(native_statsd
+  SUITE unit/src/services/iot/statsd/test_statsd
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/statsd/statsd.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
@@ -14140,8 +13420,6 @@ protocore_env(native_statsd
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/statsd/test_statsd/test_statsd.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/statsd/test_statsd/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_STATSD=1"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -14153,19 +13431,17 @@ protocore_env(native_statsd
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_statsd/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/statsd/test_statsd"
 )
 
 # STOMP 1.2 frame codec (services/iot/stomp): the zero-heap frame builder (command +
 protocore_env(native_stomp
+  SUITE unit/src/services/iot/stomp/test_stomp
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/stomp/stomp.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/stomp/test_stomp/test_stomp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/stomp/test_stomp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_STOMP=1"
   INCLUDES
@@ -14175,19 +13451,17 @@ protocore_env(native_stomp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_stomp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/stomp/test_stomp"
 )
 
 # SQLite3 on-disk file-format reader/writer (services/storage/sqlite): the sec 1.3 database-header offset table, the sec 1.3.2 page-size encoding, the sec 2.1 varint and its 1-9 byte length boundaries, the record serial-type chart, the sec 1.6 b-tree page header and cell pointer array, the sqlite_schema row, sign-extended integer and big-endian IEEE-754 column decoding, whole-table cursor walks and overflow-chain reassembly over real sqlite3-written fixtures, and the bounded writer round-tripped through the reader.
 protocore_env(native_storage_sqlite
+  SUITE unit/src/services/storage/sqlite/test_sqlite
   SOURCES
     "${PROTOCORE_ROOT}/src/services/storage/sqlite/sqlite_format/sqlite_format.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/storage/sqlite/test_sqlite/test_sqlite.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/storage/sqlite/test_sqlite/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SQLITE=1"
   INCLUDES
@@ -14197,19 +13471,17 @@ protocore_env(native_storage_sqlite
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_storage_sqlite/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/storage/sqlite/test_sqlite"
 )
 
 # SunSpec Modbus model codec (services/energy/sunspec): the map writer (marker / model
 protocore_env(native_sunspec
+  SUITE unit/src/services/energy/sunspec/test_sunspec
   SOURCES
     "${PROTOCORE_ROOT}/src/services/energy/sunspec/sunspec.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/sunspec/test_sunspec/test_sunspec.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/sunspec/test_sunspec/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SUNSPEC=1"
   INCLUDES
@@ -14219,17 +13491,15 @@ protocore_env(native_sunspec
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_sunspec/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/energy/sunspec/test_sunspec"
 )
 
 # Lane math (mmgr/swar.h): one 32-bit word as four byte lanes. has-zero across
 protocore_env(native_swar
+  SUITE unit/src/mmgr/test_swar
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_swar/test_swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_swar/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -14237,11 +13507,11 @@ protocore_env(native_swar
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_swar/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/mmgr/test_swar"
 )
 
 # Syslog client (RFC 5424) line formatter. Pure formatter - no lwIP/UDP - so it
 protocore_env(native_syslog
+  SUITE unit/src/services/net/syslog/test_syslog
   SOURCES
     "${PROTOCORE_ROOT}/src/services/net/syslog/syslog.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
@@ -14260,8 +13530,6 @@ protocore_env(native_syslog
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/syslog/test_syslog/test_syslog.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/syslog/test_syslog/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SYSLOG=1"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -14273,18 +13541,16 @@ protocore_env(native_syslog
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_syslog/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/syslog/test_syslog"
 )
 
 # PID control law (services/system/control): each term of the parallel form derived by hand from the difference equations control.h states (P, I accumulation, derivative-on-measurement with its low-pass, feed-forward), output clamping, anti-windup by conditional integration freezing and releasing the accumulator, the hard integral clamp, the fixed-rate entry point against the variable-rate one, the batched multi-axis pass, the inline clamp/deadband/slew/low-pass primitives, and the dense-binary PID log header and record layouts. No standard publishes PID vectors; expectations are properties plus documented arithmetic.
 protocore_env(native_system_control
+  SUITE unit/src/services/system/control/test_control
   SOURCES
     "${PROTOCORE_ROOT}/src/services/system/control/control.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/system/control/test_control/test_control.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/system/control/test_control/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_CONTROL=1"
   INCLUDES
@@ -14294,11 +13560,11 @@ protocore_env(native_system_control
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_system_control/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/system/control/test_control"
 )
 
 # ESP packet transform with AES-256-GCM (services/system/esp): the RFC 4303 sec 2 wire layout read field by field off the packet (SPI and Sequence Number in network byte order, the RFC 4106 explicit IV in the clear, the ICV on a 4-byte boundary), the sec 2.4 right-alignment rule and the monotonic 1,2,3 padding it prescribes, SPI/Seq/Next-Header round trips, single-bit authentication of every octet, wrong-key and wrong-salt rejection, header-as-AAD, and the sec 3.4.3 anti-replay window (sequence 0 refused, duplicates, reordering inside the window, the 64-packet width, clean advance).
 protocore_env(native_system_esp
+  SUITE unit/src/services/system/esp/test_esp
   SOURCES
     "${PROTOCORE_ROOT}/src/services/system/esp/esp/esp.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aesgcm/aesgcm.c"
@@ -14313,8 +13579,6 @@ protocore_env(native_system_esp
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/system/esp/test_esp/test_esp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/system/esp/test_esp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_IKEV2=1"
   INCLUDES
@@ -14324,11 +13588,11 @@ protocore_env(native_system_esp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_system_esp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/system/esp/test_esp"
 )
 
 # IPsec SPD + SAD (services/system/esp/ipsec_db): RFC 4301 sec 4.4.1 ordered first-match policy lookup over overlapping selectors, inclusive address and port ranges compared as whole addresses across IPv4 and IPv6, family mismatch refusal, sec 4.4.4.1 default-deny on no match, bounded policy storage, sec 4.4.1.2 SPD selector built from an IKEv2 TSi/TSr pair, sec 4.4.2 SPI-keyed SAD add/find/remove with duplicate-SPI refusal, per-SA anti-replay windows, and RFC 4303 sec 3.3.3 outbound sequence numbering from 1 with the cycle refused.
 protocore_env(native_system_ipsec_db
+  SUITE unit/src/services/system/esp/test_ipsec_db
   SOURCES
     "${PROTOCORE_ROOT}/src/services/system/esp/ipsec_db/ipsec_db.c"
     "${PROTOCORE_ROOT}/src/services/system/esp/esp/esp.c"
@@ -14344,8 +13608,6 @@ protocore_env(native_system_ipsec_db
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/system/esp/test_ipsec_db/test_ipsec_db.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/system/esp/test_ipsec_db/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_IKEV2=1"
   INCLUDES
@@ -14355,11 +13617,11 @@ protocore_env(native_system_ipsec_db
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_system_ipsec_db/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/system/esp/test_ipsec_db"
 )
 
 # The TCP path a stack drives, run on the host against the pcb driver in test/core_setup/hal/host. This is the only env that compiles the marshaled
 protocore_env(native_tcp
+  SUITE env/transport/test_tcp_callbacks
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/tcp.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/protocol/protocol.c"
@@ -14379,8 +13641,6 @@ protocore_env(native_tcp
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_tcp_callbacks/test_tcp.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_tcp_callbacks/unity_runner.c"
   DEFINES
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_TCP=1"
@@ -14391,11 +13651,11 @@ protocore_env(native_tcp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_tcp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/transport/test_tcp_callbacks"
 )
 
 # tcp_client.h: the outbound client pool - slot claim, the non-blocking resolve/connect
 protocore_env(native_tcp_client
+  SUITE unit/src/network_drivers/transport/tcp/client/test_tcp_client
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/tcp.c"
@@ -14425,8 +13685,6 @@ protocore_env(native_tcp_client
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/tcp/client/test_tcp_client/test_tcp_client.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/tcp/client/test_tcp_client/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -14442,11 +13700,11 @@ protocore_env(native_tcp_client
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_tcp_client/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/tcp/client/test_tcp_client"
 )
 
 # tcp_conn.h: the connection pool, its RX ring and the stack callback seam, against
 protocore_env(native_tcp_conn
+  SUITE unit/src/network_drivers/transport/tcp/protocol/test_tcp_conn
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/tcp.c"
@@ -14465,8 +13723,6 @@ protocore_env(native_tcp_conn
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/tcp/protocol/test_tcp_conn/test_tcp_conn.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/tcp/protocol/test_tcp_conn/unity_runner.c"
   DEFINES
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_TCP=1"
@@ -14477,11 +13733,11 @@ protocore_env(native_tcp_conn
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_tcp_conn/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/tcp/protocol/test_tcp_conn"
 )
 
 # tcp_evt.h: the event type and record every layer above the transport reads - the packed
 protocore_env(native_tcp_evt
+  SUITE unit/src/network_drivers/transport/tcp/test_tcp_evt
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/tcp.c"
@@ -14500,8 +13756,6 @@ protocore_env(native_tcp_evt
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/tcp/test_tcp_evt/test_tcp_evt.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/tcp/test_tcp_evt/unity_runner.c"
   DEFINES
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_TCP=1"
@@ -14512,11 +13766,11 @@ protocore_env(native_tcp_evt
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_tcp_evt/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/tcp/test_tcp_evt"
 )
 
 # tcp_listener.h: the accept callback, listener lifecycle, per-listener event queues,
 protocore_env(native_tcp_listener
+  SUITE unit/src/network_drivers/transport/tcp/protocol/test_tcp_listener
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/tcp.c"
@@ -14536,8 +13790,6 @@ protocore_env(native_tcp_listener
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/tcp/protocol/test_tcp_listener/test_tcp_listener.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/tcp/protocol/test_tcp_listener/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_ACCEPT_THROTTLE=1"
     "PROTOCORE_ENABLE_PER_IP_THROTTLE=1"
@@ -14558,11 +13810,11 @@ protocore_env(native_tcp_listener
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_tcp_listener/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/tcp/protocol/test_tcp_listener"
 )
 
 # tcp.h: the one exported table joining the three halves, and that every member of each
 protocore_env(native_tcp_ns
+  SUITE unit/src/network_drivers/transport/tcp/test_tcp
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/tcp.c"
@@ -14581,8 +13833,6 @@ protocore_env(native_tcp_ns
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/tcp/test_tcp/test_tcp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/tcp/test_tcp/unity_runner.c"
   DEFINES
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_TCP=1"
@@ -14593,18 +13843,16 @@ protocore_env(native_tcp_ns
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_tcp_ns/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/tcp/test_tcp"
 )
 
 # Telemetry math (services/iot/telemetry): moving-window stats, rate-of-change, and
 protocore_env(native_telemetry
+  SUITE unit/src/services/iot/telemetry/test_telemetry
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/telemetry/telemetry.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/telemetry/test_telemetry/test_telemetry.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/telemetry/test_telemetry/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_TELEMETRY=1"
   INCLUDES
@@ -14614,11 +13862,11 @@ protocore_env(native_telemetry
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_telemetry/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/telemetry/test_telemetry"
 )
 
 # Telnet server (RFC 854 IAC negotiation + line editing) wired through the real
 protocore_env(native_telnet
+  SUITE unit/src/network_drivers/presentation/telnet/test_telnet
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/tcp.c"
@@ -14642,8 +13890,6 @@ protocore_env(native_telnet
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/telnet/test_telnet/test_telnet.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/telnet/test_telnet/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_TELNET=1"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -14655,11 +13901,11 @@ protocore_env(native_telnet
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_telnet/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/telnet/test_telnet"
 )
 
 # test_template against the native_stack_http stack.
 protocore_env(native_template
+  SUITE env/transport/test_template
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -14729,8 +13975,6 @@ protocore_env(native_template
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_template/test_template.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_template/unity_runner.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -14755,18 +13999,16 @@ protocore_env(native_template
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_template/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/transport/test_template"
 )
 
 # Reentrant broken-down UTC (shared/time_compat): the seam over gmtime_r / gmtime_s, that it
 protocore_env(native_time_compat
+  SUITE unit/src/shared/time_compat/test_time_compat
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/time_compat/time_compat.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/time_compat/test_time_compat/test_time_compat.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/time_compat/test_time_compat/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -14774,11 +14016,11 @@ protocore_env(native_time_compat
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_time_compat/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/time_compat/test_time_compat"
 )
 
 # Multi-source time fallback matrix (services/timing_position/time_source): ascending-priority query of the registered time sources, first-nonzero-wins fallback, that nothing below the source that answered is invoked, the bounded BSS table, and reset. The Date seam is anchored on the RFC 9110 sec 5.6.7 IMF-fixdate example (epoch 784111777 -> 'Sun, 06 Nov 1994 08:49:37 GMT'), so the registry and the shared formatter are proven joined. Pure host tests with mock sources.
 protocore_env(native_time_fallback
+  SUITE unit/src/services/timing_position/time_source/test_time_source
   SOURCES
     "${PROTOCORE_ROOT}/src/services/timing_position/time_source/time_source.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -14790,8 +14032,6 @@ protocore_env(native_time_fallback
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/time_source/test_time_source/test_time_source.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/time_source/test_time_source/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_TIME_SOURCE=1"
   INCLUDES
@@ -14801,11 +14041,11 @@ protocore_env(native_time_fallback
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_time_fallback/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/time_source/test_time_source"
 )
 
 # TLS 1.3 key schedule for the QUIC handshake (network_drivers/tls/tls13_kdf,
 protocore_env(native_tls13_kdf
+  SUITE unit/src/network_drivers/tls/key_schedule/test_tls13_kdf
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/tls/key_schedule/key_schedule.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf/hkdf.c"
@@ -14825,8 +14065,6 @@ protocore_env(native_tls13_kdf
     "${PROTOCORE_ROOT}/src/crypto/hash/sha384/sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/tls/key_schedule/test_tls13_kdf/test_tls13_kdf.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/tls/key_schedule/test_tls13_kdf/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_UDP=1"
@@ -14837,11 +14075,11 @@ protocore_env(native_tls13_kdf
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_tls13_kdf/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/tls/key_schedule/test_tls13_kdf"
 )
 
 # TLS 1.3 handshake messages for the QUIC handshake (network_drivers/presentation/http/http3/
 protocore_env(native_tls13_msg__test_tls13_msg
+  SUITE unit/src/network_drivers/presentation/http/http3/test_tls13_msg
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_msg/tls13_msg.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/sha512/sha512.c"
@@ -14857,8 +14095,6 @@ protocore_env(native_tls13_msg__test_tls13_msg
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_tls13_msg/test_tls13_msg.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_tls13_msg/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
@@ -14870,11 +14106,11 @@ protocore_env(native_tls13_msg__test_tls13_msg
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_tls13_msg/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_tls13_msg"
 )
 
 # TLS 1.3 handshake messages for the QUIC handshake (network_drivers/presentation/http/http3/
 protocore_env(native_tls13_msg__test_tls13_rpk
+  SUITE unit/src/network_drivers/presentation/http/http3/test_tls13_rpk
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_msg/tls13_msg.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/sha512/sha512.c"
@@ -14890,8 +14126,6 @@ protocore_env(native_tls13_msg__test_tls13_rpk
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_tls13_rpk/test_tls13_rpk.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_tls13_rpk/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
@@ -14903,11 +14137,11 @@ protocore_env(native_tls13_msg__test_tls13_rpk
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_tls13_msg/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_tls13_rpk"
 )
 
 # TLS 1.3 handshake driver over the stream record layer (network_drivers/tls/tls_conn,
 protocore_env(native_tls_conn
+  SUITE unit/src/network_drivers/tls/handshake/test_tls_conn
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/tls/handshake/handshake.c"
     "${PROTOCORE_ROOT}/src/network_drivers/tls/record/record.c"
@@ -14945,8 +14179,6 @@ protocore_env(native_tls_conn
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aesgcm/aesgcm.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/tls/handshake/test_tls_conn/test_tls_conn.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/tls/handshake/test_tls_conn/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_TLS=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
@@ -14960,18 +14192,16 @@ protocore_env(native_tls_conn
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_tls_conn/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/tls/handshake/test_tls_conn"
 )
 
 # TLS version negotiation + pinned cipher policy (server/security/tls_policy): the server-style
 protocore_env(native_tls_policy
+  SUITE unit/src/server/security/tls_policy/test_tls_policy
   SOURCES
     "${PROTOCORE_ROOT}/src/server/security/tls_policy/tls_policy.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/security/tls_policy/test_tls_policy/test_tls_policy.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/security/tls_policy/test_tls_policy/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_TLS_POLICY=1"
   INCLUDES
@@ -14981,11 +14211,11 @@ protocore_env(native_tls_policy
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_tls_policy/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/security/tls_policy/test_tls_policy"
 )
 
 # TLS 1.3 stream record layer (network_drivers/tls/record, RFC 8446 sec 5): the 5-byte TLSPlaintext header and its length-validating parse, TLSCiphertext protect/unprotect with the real content type sealed inside the record, the iv XOR seq nonce, the backward scan that recovers the type past the padding, and the record counter that never travels and does not advance on a forged record. The key + record KAT is byte-exact against an independent reconstruction (tools/crypto/gen_tls_record_kat.py): stdlib HKDF-Expand-Label under the "tls13 " prefix plus OpenSSL AES-128-GCM. Pure host tests.
 protocore_env(native_tls_record
+  SUITE unit/src/network_drivers/tls/record/test_tls_record
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/tls/record/record.c"
     "${PROTOCORE_ROOT}/src/network_drivers/tls/key_schedule/key_schedule.c"
@@ -15009,8 +14239,6 @@ protocore_env(native_tls_record
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aesgcm/aesgcm.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/tls/record/test_tls_record/test_tls_record.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/tls/record/test_tls_record/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_TLS=1"
   INCLUDES
@@ -15020,11 +14248,11 @@ protocore_env(native_tls_record
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_tls_record/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/tls/record/test_tls_record"
 )
 
 # The slot-indexed TLS surface (network_drivers/tls/tls.c): the RFC 7250 raw-public-key credential, standing a connection up on a slot, the RFC 8446 sec 5.1 record framing out of the slot's receive ring (partial, short-of-header and over-long fragments all consume nothing), a malformed record failing the connection with an alert, a write before the application keys are installed reaching no wire, and a free that wipes every key generation. This surface was eleven ungated stubs returning -1 until 2026-08-18, so it had no coverage at all.
 protocore_env(native_tls_seam
+  SUITE unit/src/network_drivers/tls/test_tls_seam
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/tls/tls.c"
     "${PROTOCORE_ROOT}/src/network_drivers/tls/handshake/handshake.c"
@@ -15072,8 +14300,6 @@ protocore_env(native_tls_seam
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aesgcm/aesgcm.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/tls/test_tls_seam/test_tls_seam.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/tls/test_tls_seam/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_TLS=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
@@ -15086,11 +14312,11 @@ protocore_env(native_tls_seam
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_tls_seam/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/tls/test_tls_seam"
 )
 
 # Pre/post-trigger sample-window assembler (server/signaling/trace_capture), v5 high-rate
 protocore_env(native_trace_capture
+  SUITE unit/src/server/signaling/test_trace_capture
   SOURCES
     "${PROTOCORE_ROOT}/src/server/signaling/trace_capture/trace_capture.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -15101,8 +14327,6 @@ protocore_env(native_trace_capture
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/test_trace_capture/test_trace_capture.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/test_trace_capture/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_TRACE_CAPTURE=1"
     "PROTOCORE_TC_MAX_WINDOW_SAMPLES=32"
@@ -15113,11 +14337,11 @@ protocore_env(native_trace_capture
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_trace_capture/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/signaling/test_trace_capture"
 )
 
 # test_transport against the native_stack_l46 stack.
 protocore_env(native_transport
+  SUITE unit/src/network_drivers/presentation/ssh/transport/transport/test_transport
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -15152,7 +14376,6 @@ protocore_env(native_transport
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/shared/utf8/utf8.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/transport/test_transport/test_transport.c"
   DEFINES
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
     "PROTOCORE_ENABLE_MULTIPART=1"
@@ -15164,17 +14387,15 @@ protocore_env(native_transport
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_transport/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/transport/transport/test_transport"
 )
 
 # Same harness under ThreadSanitizer: proves ZERO data races on the slot fields
 protocore_env(native_tsan
+  SUITE env/transport/test_concurrency
   SOURCES
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_concurrency/test_concurrency.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_concurrency/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -15182,18 +14403,16 @@ protocore_env(native_tsan
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_tsan/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/transport/test_concurrency"
 )
 
 # u-blox UBX binary protocol codec (services/timing_position/ubx): B5 62 framing, the 8-bit Fletcher checksum over the class..payload span, build / poll / parse, the CFG-MSG and CFG-RATE commands, the NAV-PVT / NAV-TIMEUTC / NAV-SAT decoders against the published u-blox field offsets, and the streaming NMEA+UBX demultiplexer. KATs are the published poll frames UBX-MON-VER (B5 62 0A 04 00 00 0E 34) and UBX-CFG-PRT (B5 62 06 00 00 00 06 18) plus the published 1 Hz CFG-RATE and NAV-PVT CFG-MSG commands, each checksum re-derived from the Fletcher definition. Pure host tests.
 protocore_env(native_ubx_codec
+  SUITE unit/src/services/timing_position/ubx/test_ubx
   SOURCES
     "${PROTOCORE_ROOT}/src/services/timing_position/ubx/ubx.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/ubx/test_ubx/test_ubx.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/ubx/test_ubx/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_UBX=1"
   INCLUDES
@@ -15203,11 +14422,11 @@ protocore_env(native_ubx_codec
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ubx_codec/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/timing_position/ubx/test_ubx"
 )
 
 # The UDP path a stack drives, run on the host against the pcb driver in test/core_setup/hal/host. Covers udp_listener + udp_client against the
 protocore_env(native_udp
+  SUITE unit/src/network_drivers/transport/udp/test_udp
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/server/server.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/net_addr/net_addr.c"
@@ -15225,8 +14444,6 @@ protocore_env(native_udp
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/udp/test_udp/test_udp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/udp/test_udp/unity_runner.c"
   DEFINES
     "PROTOCORE_HAS_NET_STACK=1"
   INCLUDES
@@ -15236,11 +14453,11 @@ protocore_env(native_udp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_udp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/udp/test_udp"
 )
 
 # UDP telemetry line builder (services/iot/udp_telemetry): InfluxDB line-protocol
 protocore_env(native_udp_telemetry
+  SUITE unit/src/services/iot/udp_telemetry/test_udp_telemetry
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/udp_telemetry/udp_telemetry.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -15255,8 +14472,6 @@ protocore_env(native_udp_telemetry
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/udp_telemetry/test_udp_telemetry/test_udp_telemetry.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/udp_telemetry/test_udp_telemetry/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_UDP_TELEMETRY=1"
     "PROTOCORE_ENABLE_UDP=1"
@@ -15267,11 +14482,11 @@ protocore_env(native_udp_telemetry
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_udp_telemetry/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/udp_telemetry/test_udp_telemetry"
 )
 
 # UDP transport multicast receive (network_drivers/transport/udp.c): joining an IPv4
 protocore_env(native_udp_transport
+  SUITE env/transport/test_udp_transport
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/server/server.c"
@@ -15289,8 +14504,6 @@ protocore_env(native_udp_transport
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_udp_transport/test_udp_transport.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_udp_transport/unity_runner.c"
   DEFINES
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_UDP=1"
@@ -15301,11 +14514,11 @@ protocore_env(native_udp_transport
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_udp_transport/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/transport/test_udp_transport"
 )
 
 # umati / OPC UA for Machine Tools (OPC 40501-1) MachineTool model (services/machine_tool/umati) - the
 protocore_env(native_umati
+  SUITE unit/src/services/opcua/models/umati/test_umati
   SOURCES
     "${PROTOCORE_ROOT}/src/services/opcua/opcua.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -15317,8 +14530,6 @@ protocore_env(native_umati
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/src/mmgr/secure/secure.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/opcua/models/umati/test_umati/test_umati.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/opcua/models/umati/test_umati/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_OPCUA=1"
     "PROTOCORE_ENABLE_UMATI=1"
@@ -15329,11 +14540,11 @@ protocore_env(native_umati
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_umati/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/opcua/models/umati/test_umati"
 )
 
 # Streaming file upload: POST body -> FS file via the parser streaming hook.
 protocore_env(native_upload
+  SUITE env/server/test_upload
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -15397,8 +14608,6 @@ protocore_env(native_upload
     "${PROTOCORE_ROOT}/src/crypto/rng/rng.c"
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
-    "${PROTOCORE_ROOT}/test/env/server/test_upload/test_upload.c"
-    "${PROTOCORE_ROOT}/test/env/server/test_upload/unity_runner.c"
   DEFINES
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
     "PROTOCORE_ENABLE_UPLOAD=1"
@@ -15417,18 +14626,16 @@ protocore_env(native_upload
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_upload/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/server/test_upload"
 )
 
 # UTF-8 well-formedness (shared/utf8): the RFC 3629 sec 3 shortest-form boundaries, and the
 protocore_env(native_utf8
+  SUITE unit/src/shared/utf8/test_utf8
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/utf8/utf8.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/utf8/test_utf8/test_utf8.c"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/utf8/test_utf8/unity_runner.c"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -15436,11 +14643,11 @@ protocore_env(native_utf8
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_utf8/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/shared/utf8/test_utf8"
 )
 
 # UTMC common-database codec (services/transportation/utmc): the UTMCRequest and UTMCResponse documents, the quality flag, and the request-id parse. The escaping is anchored on XML 1.0 sec 4.6 (the five predefined entities) and sec 2.4 (& and < always, " inside a double-quoted attribute, ' need not be), so a detector id carrying an ampersand cannot produce a document no parser will accept. Plus the overflow-is-refused-whole boundary. Pure host tests.
 protocore_env(native_utmc_xml
+  SUITE unit/src/services/transportation/utmc/test_utmc
   SOURCES
     "${PROTOCORE_ROOT}/src/services/transportation/utmc/utmc.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
@@ -15450,8 +14657,6 @@ protocore_env(native_utmc_xml
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/transportation/utmc/test_utmc/test_utmc.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/transportation/utmc/test_utmc/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_UTMC=1"
   INCLUDES
@@ -15461,11 +14666,11 @@ protocore_env(native_utmc_xml
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_utmc_xml/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/transportation/utmc/test_utmc"
 )
 
 # VL53L0X time-of-flight ranging (server/peripherals/vl53l0x): the 16-bit distance from RESULT_RANGE_STATUS + 10 high octet first, the data-ready bits of RESULT_INTERRUPT_STATUS, the DeviceRangeStatus field in bits 6:3 where only 11 (RANGECOMPLETE) is a good ranging, and driving a part end to end - the suite puts a distance in front of the device model in test/core_setup/hal/host/devices/, which serves one measurement per interrupt so a driver that never clears it is caught.
 protocore_env(native_vl53l0x
+  SUITE unit/src/server/peripherals/vl53l0x/test_vl53l0x
   SOURCES
     "${PROTOCORE_ROOT}/src/server/peripherals/vl53l0x/vl53l0x.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -15475,8 +14680,6 @@ protocore_env(native_vl53l0x
     "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/vl53l0x/test_vl53l0x/test_vl53l0x.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/vl53l0x/test_vl53l0x/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_VL53L0X=1"
   INCLUDES
@@ -15486,11 +14689,11 @@ protocore_env(native_vl53l0x
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_vl53l0x/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/peripherals/vl53l0x/test_vl53l0x"
 )
 
 # VXI-11 (TCP/IP Instrument Protocol) codec over ONC RPC / XDR (services/instrumentation/vxi11): the XDR
 protocore_env(native_vxi11
+  SUITE unit/src/services/instrumentation/vxi11/test_vxi11
   SOURCES
     "${PROTOCORE_ROOT}/src/services/instrumentation/vxi11/vxi11.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -15498,8 +14701,6 @@ protocore_env(native_vxi11
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/instrumentation/vxi11/test_vxi11/test_vxi11.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/instrumentation/vxi11/test_vxi11/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_VXI11=1"
   INCLUDES
@@ -15509,11 +14710,11 @@ protocore_env(native_vxi11
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_vxi11/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/instrumentation/vxi11/test_vxi11"
 )
 
 # Write-ahead store for atomic buffer-to-flash storage (services/storage/wal): CRC32 record
 protocore_env(native_wal__test_wal
+  SUITE unit/src/services/storage/wal/wal/test_wal
   SOURCES
     "${PROTOCORE_ROOT}/src/services/storage/wal/wal/wal.c"
     "${PROTOCORE_ROOT}/src/services/storage/wal/wal_store/wal_store.c"
@@ -15521,8 +14722,6 @@ protocore_env(native_wal__test_wal
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/storage/wal/wal/test_wal/test_wal.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/storage/wal/wal/test_wal/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_WAL=1"
   INCLUDES
@@ -15532,11 +14731,11 @@ protocore_env(native_wal__test_wal
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_wal/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/storage/wal/wal/test_wal"
 )
 
 # Write-ahead store for atomic buffer-to-flash storage (services/storage/wal): CRC32 record
 protocore_env(native_wal__test_wal_store
+  SUITE unit/src/services/storage/wal/wal_store/test_wal_store
   SOURCES
     "${PROTOCORE_ROOT}/src/services/storage/wal/wal/wal.c"
     "${PROTOCORE_ROOT}/src/services/storage/wal/wal_store/wal_store.c"
@@ -15544,8 +14743,6 @@ protocore_env(native_wal__test_wal_store
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/storage/wal/wal_store/test_wal_store/test_wal_store.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/storage/wal/wal_store/test_wal_store/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_WAL=1"
   INCLUDES
@@ -15555,11 +14752,11 @@ protocore_env(native_wal__test_wal_store
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_wal/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/storage/wal/wal_store/test_wal_store"
 )
 
 # WAMP messaging codec (services/iot/wamp): the JSON-array message builders (HELLO /
 protocore_env(native_wamp
+  SUITE unit/src/services/iot/wamp/test_wamp
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/wamp/wamp.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/json/json.c"
@@ -15570,8 +14767,6 @@ protocore_env(native_wamp
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/wamp/test_wamp/test_wamp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/wamp/test_wamp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_WAMP=1"
     "PROTOCORE_ENABLE_JSON=1"
@@ -15582,18 +14777,16 @@ protocore_env(native_wamp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_wamp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/wamp/test_wamp"
 )
 
 # IEEE 1609 WAVE codec (services/transportation/wave): the PSID P-encoding at both ends of all four length classes, the 1609.3 WSMP header build and parse, and the 1609.2 secured-message envelope. IEEE 1609 is not obtainable, so the vectors are derived from the documented P-encoding rule with the derivation written beside them; the load-bearing case is the round-trip property that every PSID the encoder accepts must decode back to itself. Pure host tests.
 protocore_env(native_wave_wsmp
+  SUITE unit/src/services/transportation/wave/test_wave
   SOURCES
     "${PROTOCORE_ROOT}/src/services/transportation/wave/wave.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/transportation/wave/test_wave/test_wave.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/transportation/wave/test_wave/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_WAVE=1"
   INCLUDES
@@ -15603,18 +14796,16 @@ protocore_env(native_wave_wsmp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_wave_wsmp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/transportation/wave/test_wave"
 )
 
 # Flash wear-leveling slot selector (server/storage/wearlevel): least-worn pick (ties -> lowest
 protocore_env(native_wearlevel
+  SUITE unit/src/server/storage/test_wearlevel
   SOURCES
     "${PROTOCORE_ROOT}/src/server/storage/wearlevel/wearlevel.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/test_wearlevel/test_wearlevel.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/test_wearlevel/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_WEARLEVEL=1"
   INCLUDES
@@ -15624,11 +14815,11 @@ protocore_env(native_wearlevel
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_wearlevel/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/storage/test_wearlevel"
 )
 
 # test_web_terminal against the native_stack_http stack.
 protocore_env(native_web_terminal
+  SUITE unit/src/server/web/web_terminal/test_web_terminal
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -15698,7 +14889,6 @@ protocore_env(native_web_terminal
     "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/web_terminal/test_web_terminal/test_web_terminal.c"
   DEFINES
     "BODY_BUF_SIZE=512"
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
@@ -15723,11 +14913,11 @@ protocore_env(native_web_terminal
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_web_terminal/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/web/web_terminal/test_web_terminal"
 )
 
 # WebDAV request handler over a directory-capable FS mock (recursive COPY/MOVE/DELETE)
 protocore_env(native_webdav_handler
+  SUITE unit/src/server/io/webdav_handler/test_webdav_handler
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -15795,8 +14985,6 @@ protocore_env(native_webdav_handler
     "${PROTOCORE_ROOT}/src/shared/utf8/utf8.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/protocore_dma_host.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/io/webdav_handler/test_webdav_handler/test_webdav_handler.c"
-    "${PROTOCORE_ROOT}/test/unit/src/server/io/webdav_handler/test_webdav_handler/unity_runner.c"
     "${PROTOCORE_ROOT}/.pio/libdeps/native_webdav_handler/littlefs/src/lfs.c"
     "${PROTOCORE_ROOT}/.pio/libdeps/native_webdav_handler/littlefs/src/lfs_util.c"
   DEFINES
@@ -15821,11 +15009,11 @@ protocore_env(native_webdav_handler
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_webdav_handler/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/server/io/webdav_handler/test_webdav_handler"
 )
 
 # WebDAV wire core (network_drivers/application/webdav, RFC 4918). Walks every cell of the sec 9.10.5 Lock Compatibility Table, the sec 9.10.3 Depth-infinity lock scope and its path-segment boundary, the sec 6.6 timeout sweep and sec 9.10.2 refresh, the sec 7 write gate keyed on the If-header token, the sec 10.4.2 If ABNF with the worked examples of secs 10.4.6 and 10.4.7, the sec 10.2 Depth ABNF, the sec 9 method set, the sec 14.16 Multi-Status document and the sec 9.2 PROPPATCH 403 reflection, plus the five XML 1.0 sec 4.6 predefined entities and the RFC 3986 sec 2.1 percent-decoding of the Destination header.
 protocore_env(native_webdav_wire
+  SUITE unit/src/network_drivers/application/webdav/test_webdav
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/application/webdav/webdav.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -15833,8 +15021,6 @@ protocore_env(native_webdav_wire
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/webdav/test_webdav/test_webdav.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/webdav/test_webdav/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_WEBDAV=1"
     "PROTOCORE_ENABLE_FILE_SERVING=1"
@@ -15845,11 +15031,11 @@ protocore_env(native_webdav_wire
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_webdav_wire/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/webdav/test_webdav"
 )
 
 # Outbound webhook builders (services/net/webhook/webhook.c): the RFC 8259 section 4 object grammar and the section 7 escaping of the quotation mark and reverse solidus in the value1/value2/value3 content, the RFC 3986 section 3.3 path segment order of the IFTTT Maker target URI, and the fail-closed behavior of both builders. The POST reports a transport error on a build with no HTTP client under it.
 protocore_env(native_webhook_json
+  SUITE unit/src/services/net/webhook/test_webhook
   SOURCES
     "${PROTOCORE_ROOT}/src/services/net/webhook/webhook.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
@@ -15859,8 +15045,6 @@ protocore_env(native_webhook_json
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/webhook/test_webhook/test_webhook.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/webhook/test_webhook/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_WEBHOOK=1"
   INCLUDES
@@ -15870,11 +15054,11 @@ protocore_env(native_webhook_json
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_webhook_json/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/webhook/test_webhook"
 )
 
 # test_websocket against the native_stack_l46 stack.
 protocore_env(native_websocket
+  SUITE unit/src/network_drivers/presentation/http/websocket/test_websocket
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -15909,7 +15093,6 @@ protocore_env(native_websocket
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/shared/utf8/utf8.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/websocket/test_websocket/test_websocket.c"
   DEFINES
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
     "PROTOCORE_ENABLE_MULTIPART=1"
@@ -15923,11 +15106,11 @@ protocore_env(native_websocket
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_websocket/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/websocket/test_websocket"
 )
 
 # The wifi_sniffer's live binding, the arm PROTOCORE_ENABLE_PROMISC compiles: begin drives services/radio/promisc into monitor mode and the channel-hop dwell moves it. The codec env builds the other arm, where there is no capture source and the sniff does not start.
 protocore_env(native_wifi_sniffer_promisc
+  SUITE unit/src/services/radio/wifi_sniffer/test_wifi_sniffer
   SOURCES
     "${PROTOCORE_ROOT}/src/services/radio/wifi_sniffer/wifi_sniffer.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -15945,8 +15128,6 @@ protocore_env(native_wifi_sniffer_promisc
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/physical/physical_mock.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/wifi_sniffer/test_wifi_sniffer/test_wifi_sniffer.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/wifi_sniffer/test_wifi_sniffer/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_WIFI_SNIFFER=1"
     "PROTOCORE_ENABLE_PROMISC=1"
@@ -15958,11 +15139,11 @@ protocore_env(native_wifi_sniffer_promisc
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_wifi_sniffer_promisc/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/radio/wifi_sniffer/test_wifi_sniffer"
 )
 
 # Core-partitioning invariant at N=2 (PROTOCORE_WORKER_COUNT=2): each worker reaps
 protocore_env(native_workers
+  SUITE env/transport/test_workers
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/tcp.c"
@@ -15981,8 +15162,6 @@ protocore_env(native_workers
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_workers/test_workers.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_workers/unity_runner.c"
   DEFINES
     "PROTOCORE_WORKER_COUNT=2"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -15994,11 +15173,11 @@ protocore_env(native_workers
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_workers/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/transport/test_workers"
 )
 
 # PROTOCORE_WORKER_COUNT=2 over the stack path, which nothing else compiles: native_tcp is
 protocore_env(native_workers_stack
+  SUITE env/transport/test_workers
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/tcp.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/protocol/protocol.c"
@@ -16018,8 +15197,6 @@ protocore_env(native_workers_stack
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_workers/test_workers.c"
-    "${PROTOCORE_ROOT}/test/env/transport/test_workers/unity_runner.c"
   DEFINES
     "PROTOCORE_WORKER_COUNT=2"
     "PROTOCORE_HAS_NET_STACK=1"
@@ -16031,11 +15208,11 @@ protocore_env(native_workers_stack
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_workers_stack/littlefs/include"
-    "${PROTOCORE_ROOT}/test/env/transport/test_workers"
 )
 
 # WebSocket client codec (services/net/ws_client/ws_client.c) against RFC 6455: the section 1.3 and 4.2.2 |Sec-WebSocket-Accept| worked example, the section 4.1 opening handshake field lines and the 101 response check, and the section 5.2 base framing protocol with the section 5.3 masking transformation - checked against the frames section 5.7 prints, including the 256-octet and 64 KiB extended payload lengths. Codec only - this build has no transport.
 protocore_env(native_ws_client_rfc6455
+  SUITE unit/src/services/net/ws_client/test_ws_client
   SOURCES
     "${PROTOCORE_ROOT}/src/services/net/ws_client/ws_client.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/sha1/sha1.c"
@@ -16056,8 +15233,6 @@ protocore_env(native_ws_client_rfc6455
     "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/ws_client/test_ws_client/test_ws_client.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/ws_client/test_ws_client/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_WS_CLIENT=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
@@ -16069,11 +15244,11 @@ protocore_env(native_ws_client_rfc6455
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ws_client_rfc6455/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/net/ws_client/test_ws_client"
 )
 
 # WebSocket permessage-deflate (RFC 7692) inbound path wired through the real WS
 protocore_env(native_ws_deflate
+  SUITE unit/src/network_drivers/presentation/http/websocket/test_websocket
   SOURCES
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
@@ -16112,7 +15287,6 @@ protocore_env(native_ws_deflate
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/shared/utf8/utf8.c"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/websocket/test_websocket/test_websocket.c"
   DEFINES
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
     "PROTOCORE_ENABLE_WS_DEFLATE=1"
@@ -16129,11 +15303,11 @@ protocore_env(native_ws_deflate
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_ws_deflate/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/websocket/test_websocket"
 )
 
 # Data-driven external known-answer tests for the shared crypto primitives: HMAC-SHA256/512, AEAD_AES_128_GCM (crypto/aead/aes128gcm.h), X25519, Ed25519 verify and sign, HKDF-SHA256 Extract and Expand, the ChaCha20 block and Poly1305. Vectors come from kat_data.inc - Project Wycheproof at a pinned commit plus RFC 5869 Appendix A and RFC 8439 sections 2.4.2 and 2.5.2 - so the adversarial rows (flipped tag bit, truncated tag, low-order point, malleable S) are exercised as well as the well-formed ones. Adds the RFC 5869 sec 2.3 length cap and the GCTR counter carry past 256 blocks.
 protocore_env(native_wycheproof_kat
+  SUITE unit/src/crypto/mac/test_crypto_kat
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/sha512/sha512.c"
@@ -16157,8 +15331,6 @@ protocore_env(native_wycheproof_kat
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aes128gcm/aes128gcm.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/mac/test_crypto_kat/test_crypto_kat.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/mac/test_crypto_kat/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_ENABLE_UDP=1"
@@ -16169,11 +15341,11 @@ protocore_env(native_wycheproof_kat
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_wycheproof_kat/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/mac/test_crypto_kat"
 )
 
 # The crypto KATs a second time with the accelerator arms selected, answered by the host HALs so both arms run natively.
 protocore_env(native_wycheproof_kat_hw__test_host_sha_hal
+  SUITE unit/core_setup/hal/host/test_host_sha_hal
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/sha512/sha512.c"
@@ -16200,8 +15372,6 @@ protocore_env(native_wycheproof_kat_hw__test_host_sha_hal
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_sha_hal.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_aes_hal.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_hw_reg.c"
-    "${PROTOCORE_ROOT}/test/unit/core_setup/hal/host/test_host_sha_hal/test_host_sha_hal.c"
-    "${PROTOCORE_ROOT}/test/unit/core_setup/hal/host/test_host_sha_hal/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_HAS_HW_SHA=1"
@@ -16215,11 +15385,11 @@ protocore_env(native_wycheproof_kat_hw__test_host_sha_hal
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_wycheproof_kat_hw/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/core_setup/hal/host/test_host_sha_hal"
 )
 
 # The crypto KATs a second time with the accelerator arms selected, answered by the host HALs so both arms run natively.
 protocore_env(native_wycheproof_kat_hw__test_host_aes_hal
+  SUITE unit/core_setup/hal/host/test_host_aes_hal
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/sha512/sha512.c"
@@ -16246,8 +15416,6 @@ protocore_env(native_wycheproof_kat_hw__test_host_aes_hal
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_sha_hal.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_aes_hal.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_hw_reg.c"
-    "${PROTOCORE_ROOT}/test/unit/core_setup/hal/host/test_host_aes_hal/test_host_aes_hal.c"
-    "${PROTOCORE_ROOT}/test/unit/core_setup/hal/host/test_host_aes_hal/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_HAS_HW_SHA=1"
@@ -16261,11 +15429,11 @@ protocore_env(native_wycheproof_kat_hw__test_host_aes_hal
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_wycheproof_kat_hw/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/core_setup/hal/host/test_host_aes_hal"
 )
 
 # The crypto KATs a second time with the accelerator arms selected, answered by the host HALs so both arms run natively.
 protocore_env(native_wycheproof_kat_hw__test_crypto_kat
+  SUITE unit/src/crypto/mac/test_crypto_kat
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/sha512/sha512.c"
@@ -16292,8 +15460,6 @@ protocore_env(native_wycheproof_kat_hw__test_crypto_kat
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_sha_hal.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_aes_hal.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_hw_reg.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/mac/test_crypto_kat/test_crypto_kat.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/mac/test_crypto_kat/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_HAS_HW_SHA=1"
@@ -16307,11 +15473,11 @@ protocore_env(native_wycheproof_kat_hw__test_crypto_kat
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_wycheproof_kat_hw/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/mac/test_crypto_kat"
 )
 
 # The crypto KATs a second time with the accelerator arms selected, answered by the host HALs so both arms run natively.
 protocore_env(native_wycheproof_kat_hw__test_host_hw_reg
+  SUITE unit/core_setup/hal/host/test_host_hw_reg
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/sha512/sha512.c"
@@ -16338,8 +15504,6 @@ protocore_env(native_wycheproof_kat_hw__test_host_hw_reg
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_sha_hal.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_aes_hal.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_hw_reg.c"
-    "${PROTOCORE_ROOT}/test/unit/core_setup/hal/host/test_host_hw_reg/test_host_hw_reg.c"
-    "${PROTOCORE_ROOT}/test/unit/core_setup/hal/host/test_host_hw_reg/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_HAS_HW_SHA=1"
@@ -16353,19 +15517,17 @@ protocore_env(native_wycheproof_kat_hw__test_host_hw_reg
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_wycheproof_kat_hw/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/core_setup/hal/host/test_host_hw_reg"
 )
 
 # RFC 5280 certificate parsing and RFC 6125 name matching (crypto/x509). Checked against real certificates OpenSSL made - an Ed25519 CA with basicConstraints/keyUsage, and Ed25519, P-256 and RSA leaves under it - and against the values OpenSSL reports for them, so a field read wrong is a disagreement with an independent encoder rather than with the author. The name-matching cases are sec 6.4.3's three wildcard rules and each way a wildcard can be stretched past them: spanning a dot, matching the bare domain, and a certificate with no SAN matching nothing at all (sec 6.4.4 forbids the common-name fallback).
 protocore_env(native_x509
+  SUITE unit/src/crypto/x509/test_x509
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/x509/x509/x509.c"
     "${PROTOCORE_ROOT}/src/shared/der/der.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/x509/test_x509/test_x509.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/x509/test_x509/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_X509=1"
   INCLUDES
@@ -16375,11 +15537,11 @@ protocore_env(native_x509
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_x509/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/x509/test_x509"
 )
 
 # RFC 5280 sec 6.1 path validation (crypto/x509_verify): one link checked four ways - the signature over the TBS under the issuer's key, the validity window, whether the issuer may sign at that depth, and the issuer-name match. Driven with the same OpenSSL-made certificates test_x509 parses, one CA per algorithm so the Ed25519, P-256 and RSA verification paths are each reached by a certificate an independent implementation signed.
 protocore_env(native_x509_verify
+  SUITE unit/src/crypto/x509/test_x509_verify
   SOURCES
     "${PROTOCORE_ROOT}/src/crypto/x509/x509_verify/x509_verify.c"
     "${PROTOCORE_ROOT}/src/crypto/x509/x509/x509.c"
@@ -16403,8 +15565,6 @@ protocore_env(native_x509_verify
     "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/x509/test_x509_verify/test_x509_verify.c"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/x509/test_x509_verify/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_X509=1"
   INCLUDES
@@ -16415,19 +15575,17 @@ protocore_env(native_x509_verify
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_x509_verify/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/crypto/x509/test_x509_verify"
 )
 
 # XMPP stanza codec (services/iot/xmpp, RFC 6120): XML-escaped stream/message/presence/iq
 protocore_env(native_xmpp
+  SUITE unit/src/services/iot/xmpp/test_xmpp
   SOURCES
     "${PROTOCORE_ROOT}/src/services/iot/xmpp/xmpp.c"
     "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/xmpp/test_xmpp/test_xmpp.c"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/xmpp/test_xmpp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_XMPP=1"
   INCLUDES
@@ -16437,6 +15595,5 @@ protocore_env(native_xmpp
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_xmpp/littlefs/include"
-    "${PROTOCORE_ROOT}/test/unit/src/services/iot/xmpp/test_xmpp"
 )
 
