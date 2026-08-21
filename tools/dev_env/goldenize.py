@@ -3921,7 +3921,7 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
                 # staged for one of them survived into a file whose header no longer declares it.
                 if obj + "." not in s and not any(f in s for f in flat):
                     continue
-                n, at, declared = 0, 0, {}
+                n, at, declared, carried = 0, 0, {}, {}
                 mask = code_mask(s)
                 # The comma-expression form first: it is self-contained, so folding it removes the
                 # staging the statement walk below would otherwise fail to reach.
@@ -3985,6 +3985,43 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
                                 notes.insert(0, sm.group(4).strip())
                             cut = prev
                         ln = prev
+
+                    # AN OPERAND THAT WAS NOT RESTAGED IS STILL THE ONE THE LAST STAGING SET.
+                    # <X>V is a plain global, so a sequence of calls often stages the whole set once
+                    # and then only what changes:
+                    #
+                    #     GhashV.update_args.acc = w->acc;   GhashV.update_args.data = cipher;
+                    #     GhashV.update_args.data = aad;     GhashV.update_args.len = cipher_len;
+                    #     GhashV.update_args.len = aad_len;  Ghash.update(...);   <- acc still w->acc
+                    #     Ghash.update(...);
+                    #
+                    # For anything still missing, keep walking back to the NEAREST assignment - which
+                    # is by definition the value in effect at this call - but only within the SAME
+                    # BLOCK. An assignment outside the block the call is in may not run on the same
+                    # path or the same iteration, and this pass has no way to know.
+                    if any(w not in vals for w in want):
+                        blk = enclosing_block(s, m.start(), mask)
+                        stop_at = blk[0] if blk else 0
+                        back = ln
+                        while back > stop_at:
+                            prev = N.line_start(s, back - 1)
+                            if prev < stop_at:
+                                break
+                            sm = stage_any.match(s[prev : back - 1])
+                            if sm and sm.group(1) == e.get("group", e["entry"]):
+                                vals.setdefault(sm.group(2), sm.group(3).strip())
+                            back = prev
+
+                    # And what an earlier fold in this block already consumed. Folding a call
+                    # DELETES its staging, so a later call relying on an operand the earlier
+                    # one staged has nothing left to walk back to - which is why the walk above
+                    # did not rescue ghash. The value in effect is remembered instead.
+                    grp = e.get("group", e["entry"])
+                    blk_here = enclosing_block(s, m.start(), mask)
+                    blk_key = blk_here[0] if blk_here else -1
+                    for w in want:
+                        if w not in vals and (blk_key, grp, w) in carried:
+                            vals[w] = carried[(blk_key, grp, w)]
                     missing = [w for w in want if w not in vals]
                     if missing:
                         skipped.append(
@@ -4037,6 +4074,9 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
 
                     if notes:
                         out += " " + " ".join(notes)
+
+                    for w in want:
+                        carried[(blk_key, grp, w)] = vals[w]
 
                     s = s[:cut] + out + s[stmt_end:]
                     mask = code_mask(s)
