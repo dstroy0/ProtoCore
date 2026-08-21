@@ -514,10 +514,8 @@ void protocore_edge_cache_key_digest(uint8_t *restrict work)
     size_t len = EdgeCacheV.key_digest_args.len;
     uint8_t *digest = EdgeCacheV.key_digest_args.digest;
 
-    Sha256V.hash_args.data = (const uint8_t *)canon;
-    Sha256V.hash_args.len = len;
-    Sha256V.hash_args.out = digest;
-    Sha256.hash(digest_work); // the caller's SHA-256 borrow, PROTOCORE_SHA256_BORROW bytes
+    Sha256.hash(digest_work, (const uint8_t *)canon, len,
+                digest); // the caller's SHA-256 borrow, PROTOCORE_SHA256_BORROW bytes
 }
 
 // Parse one Vary field-name token at *pp (advancing past it) and, when non-empty, emit its

@@ -871,28 +871,19 @@ static size_t ike_cookie_compute(uint8_t *work, uint8_t version, const uint8_t *
     Sha256.init(work);
     if (ni_len)
     {
-        Sha256V.update_args.data = ni;
-        Sha256V.update_args.len = ni_len;
-        Sha256.update(work);
+        Sha256.update(work, ni, ni_len);
     }
     if (ipi_len)
     {
-        Sha256V.update_args.data = ipi;
-        Sha256V.update_args.len = ipi_len;
-        Sha256.update(work);
+        Sha256.update(work, ipi, ipi_len);
     }
-    Sha256V.update_args.data = spii;
-    Sha256V.update_args.len = PROTOCORE_IKE_SPI_LEN;
-    Sha256.update(work);
+    Sha256.update(work, spii, PROTOCORE_IKE_SPI_LEN);
     if (secret_len)
     {
-        Sha256V.update_args.data = secret;
-        Sha256V.update_args.len = secret_len;
-        Sha256.update(work);
+        Sha256.update(work, secret, secret_len);
     }
     out[0] = version;
-    Sha256V.final_args.out = out + 1;
-    Sha256.final(work);
+    Sha256.final(work, out + 1);
     return PROTOCORE_IKE_COOKIE_LEN;
 }
 

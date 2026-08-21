@@ -487,15 +487,10 @@ void test_full_handshake_and_stream()
     uint8_t ch_sh[32], ch_sf[32];
     t = tw_t;
     Sha256.init(t);
-    Sha256V.update_args.data = ch;
-    Sha256V.update_args.len = ch_len;
-    Sha256.update(t);
-    Sha256V.update_args.data = sh;
-    Sha256V.update_args.len = sh_len;
-    Sha256.update(t);
+    Sha256.update(t, ch, ch_len);
+    Sha256.update(t, sh, sh_len);
     {
-        Sha256V.final_args.out = ch_sh;
-        Sha256.final(t);
+        Sha256.final(t, ch_sh);
     }
     Tls13KeySchedule cks;
     static uint8_t ks_store_340[PROTOCORE_TLS13_KS_BORROW];
@@ -525,11 +520,8 @@ void test_full_handshake_and_stream()
     size_t hsflen = extract_crypto(plain, hpt, hsflight);
     TEST_ASSERT_EQUAL_UINT8(TLS_HS_ENCRYPTED_EXTENSIONS, hsflight[0]);
 
-    Sha256V.update_args.data = hsflight;
-    Sha256V.update_args.len = hsflen;
-    Sha256.update(t);
-    Sha256V.final_args.out = ch_sf;
-    Sha256.final(t);
+    Sha256.update(t, hsflight, hsflen);
+    Sha256.final(t, ch_sf);
     Tls13KsV.bind.ks = &cks;
     Tls13KsV.step.ch_sfin_hash = ch_sf;
     Tls13Ks.master(NULL);
@@ -997,14 +989,9 @@ void test_connection_close_on_malformed_frame()
     uint8_t ch_sh[32];
     tctx = tw_tctx;
     Sha256.init(tctx);
-    Sha256V.update_args.data = ch;
-    Sha256V.update_args.len = ch_len;
-    Sha256.update(tctx);
-    Sha256V.update_args.data = sh;
-    Sha256V.update_args.len = sh_len;
-    Sha256.update(tctx);
-    Sha256V.final_args.out = ch_sh;
-    Sha256.final(tctx);
+    Sha256.update(tctx, ch, ch_len);
+    Sha256.update(tctx, sh, sh_len);
+    Sha256.final(tctx, ch_sh);
     Tls13KeySchedule cks;
     static uint8_t ks_store_652[PROTOCORE_TLS13_KS_BORROW];
     Tls13KsV.bind.kdf = &TLS13_KDF;
@@ -1853,15 +1840,10 @@ static void complete_handshake(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicIniti
     uint8_t ch_sh[32], ch_sf[32];
     t = tw_t;
     Sha256.init(t);
-    Sha256V.update_args.data = ch;
-    Sha256V.update_args.len = ch_len;
-    Sha256.update(t);
-    Sha256V.update_args.data = sh;
-    Sha256V.update_args.len = sh_len;
-    Sha256.update(t);
+    Sha256.update(t, ch, ch_len);
+    Sha256.update(t, sh, sh_len);
     {
-        Sha256V.final_args.out = ch_sh;
-        Sha256.final(t);
+        Sha256.final(t, ch_sh);
     }
     Tls13KeySchedule cks;
     static uint8_t ks_store_1181[PROTOCORE_TLS13_KS_BORROW];
@@ -1887,11 +1869,8 @@ static void complete_handshake(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicIniti
     uint8_t hstype = 0;
     size_t hpt = open_long(sdg + wire, sl - wire, &hs_server_keys, plain, &hswire, &hstype);
     size_t hsflen = extract_crypto(plain, hpt, hsflight);
-    Sha256V.update_args.data = hsflight;
-    Sha256V.update_args.len = hsflen;
-    Sha256.update(t);
-    Sha256V.final_args.out = ch_sf;
-    Sha256.final(t);
+    Sha256.update(t, hsflight, hsflen);
+    Sha256.final(t, ch_sf);
     Tls13KsV.bind.ks = &cks;
     Tls13KsV.step.ch_sfin_hash = ch_sf;
     Tls13Ks.master(NULL);

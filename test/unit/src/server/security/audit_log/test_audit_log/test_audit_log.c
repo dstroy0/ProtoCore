@@ -58,30 +58,17 @@ static void chain_hash(const uint8_t prev[PROTOCORE_AUDIT_HASH_LEN], const proto
     uint8_t le[4];
     c = (uint8_t *)g_work;
     Sha256.init(c);
-    Sha256V.update_args.data = prev;
-    Sha256V.update_args.len = PROTOCORE_AUDIT_HASH_LEN;
-    Sha256.update(c);
+    Sha256.update(c, prev, PROTOCORE_AUDIT_HASH_LEN);
     put_le32(le, e->seq);
-    Sha256V.update_args.data = le;
-    Sha256V.update_args.len = 4;
-    Sha256.update(c);
+    Sha256.update(c, le, 4);
     put_le32(le, e->ts);
-    Sha256V.update_args.data = le;
-    Sha256V.update_args.len = 4;
-    Sha256.update(c);
+    Sha256.update(c, le, 4);
     const uint8_t cat = (uint8_t)e->category;
-    Sha256V.update_args.data = &cat;
-    Sha256V.update_args.len = 1;
-    Sha256.update(c);
+    Sha256.update(c, &cat, 1);
     const uint8_t mlen = (uint8_t)strlen(e->msg);
-    Sha256V.update_args.data = &mlen;
-    Sha256V.update_args.len = 1;
-    Sha256.update(c);
-    Sha256V.update_args.data = (const uint8_t *)e->msg;
-    Sha256V.update_args.len = mlen;
-    Sha256.update(c);
-    Sha256V.final_args.out = out;
-    Sha256.final(c);
+    Sha256.update(c, &mlen, 1);
+    Sha256.update(c, (const uint8_t *)e->msg, mlen);
+    Sha256.final(c, out);
 }
 
 // The chain starts from a genesis anchor of 32 zero octets, and the first record's stored hash is

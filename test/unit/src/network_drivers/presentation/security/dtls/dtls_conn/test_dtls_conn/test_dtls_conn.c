@@ -384,9 +384,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
     uint8_t sh[512];
     size_t sh_len = frag_to_tls(pt.fragment, pt.frag_len, sh);
     TEST_ASSERT_TRUE(sh_len > 0);
-    Sha256V.update_args.data = sh;
-    Sha256V.update_args.len = sh_len;
-    Sha256.update(tr);
+    Sha256.update(tr, sh, sh_len);
 
     uint8_t server_pub[32];
     TEST_ASSERT_TRUE(sh_keyshare(sh, sh_len, server_pub));
@@ -405,8 +403,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
     Curve25519.x25519(tw);
     Tls13KeySchedule cks;
     uint8_t h[32];
-    Sha256V.final_args.out = h;
-    Sha256.final(tr);
+    Sha256.final(tr, h);
     static uint8_t ks_store_392[PROTOCORE_TLS13_KS_BORROW];
     Tls13KsV.bind.kdf = &DTLS13_KDF;
     Tls13KsV.bind.ks = &cks;
@@ -458,8 +455,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
         {
             TEST_ASSERT_TRUE(have_cert);
             uint8_t h_ch_cert[32];
-            Sha256V.final_args.out = h_ch_cert;
-            Sha256.final(tr);
+            Sha256.final(tr, h_ch_cert);
             uint8_t content[160];
             Tls13MsgV.cert_verify_content_args.out = content;
             Tls13MsgV.cert_verify_content_args.cap = sizeof(content);
@@ -480,8 +476,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
         if (msg[0] == 20)
         {
             uint8_t hcv[32];
-            Sha256V.final_args.out = hcv;
-            Sha256.final(tr);
+            Sha256.final(tr, hcv);
             uint8_t expect[32];
             Tls13KsV.bind.ks = &cks;
             Tls13KsV.finished_args.base_secret = cks.s + TLS13_KS_SERVER_HS;
@@ -497,9 +492,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
             TEST_ASSERT_EQUAL(expect_rpk, ee_has_rpk(msg, mlen));
         }
 
-        Sha256V.update_args.data = msg;
-        Sha256V.update_args.len = mlen;
-        Sha256.update(tr);
+        Sha256.update(tr, msg, mlen);
 
         if (msg[0] == 11)
         {
@@ -522,8 +515,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
     TEST_ASSERT_TRUE(seen_fin);
 
     uint8_t h_sfin[32];
-    Sha256V.final_args.out = h_sfin;
-    Sha256.final(tr);
+    Sha256.final(tr, h_sfin);
     Tls13KsV.bind.ks = &cks;
     Tls13KsV.step.ch_sfin_hash = h_sfin;
     Tls13Ks.master(NULL);
@@ -704,9 +696,7 @@ void test_full_handshake(void)
     uint8_t *tr;
     tr = tw_tr;
     Sha256.init(tr);
-    Sha256V.update_args.data = ch;
-    Sha256V.update_args.len = ch_len;
-    Sha256.update(tr);
+    Sha256.update(tr, ch, ch_len);
 
     uint8_t ch_frag[300];
     DtlsHandshakeV.frag_build_args.msg_type = ch[0];
@@ -769,9 +759,7 @@ void test_full_handshake_rpk(void)
     uint8_t *tr;
     tr = tw_tr;
     Sha256.init(tr);
-    Sha256V.update_args.data = ch;
-    Sha256V.update_args.len = ch_len;
-    Sha256.update(tr);
+    Sha256.update(tr, ch, ch_len);
 
     uint8_t ch_frag[300];
     DtlsHandshakeV.frag_build_args.msg_type = ch[0];
@@ -834,9 +822,7 @@ void test_cid_handshake(void)
     uint8_t *tr;
     tr = tw_tr;
     Sha256.init(tr);
-    Sha256V.update_args.data = ch;
-    Sha256V.update_args.len = ch_len;
-    Sha256.update(tr);
+    Sha256.update(tr, ch, ch_len);
 
     uint8_t ch_frag[300];
     DtlsHandshakeV.frag_build_args.msg_type = ch[0];
@@ -962,11 +948,8 @@ void test_hrr_group_renegotiation(void)
     uint8_t *h1;
     h1 = tw_h1;
     Sha256.init(h1);
-    Sha256V.update_args.data = ch1;
-    Sha256V.update_args.len = ch1_len;
-    Sha256.update(h1);
-    Sha256V.final_args.out = ch1_hash;
-    Sha256.final(h1);
+    Sha256.update(h1, ch1, ch1_len);
+    Sha256.final(h1, ch1_hash);
 
     uint8_t *tr;
     tr = tw_tr;
@@ -978,19 +961,13 @@ void test_hrr_group_renegotiation(void)
     Tls13Msg.build_message_hash(tls13_msg_work);
     size_t mhl = Tls13MsgV.n;
     TEST_ASSERT_TRUE(mhl > 0);
-    Sha256V.update_args.data = mh;
-    Sha256V.update_args.len = mhl;
-    Sha256.update(tr);
-    Sha256V.update_args.data = hrr;
-    Sha256V.update_args.len = hrr_len;
-    Sha256.update(tr);
+    Sha256.update(tr, mh, mhl);
+    Sha256.update(tr, hrr, hrr_len);
 
     uint8_t ch2[320];
     size_t ch2_len = build_client_hello_ex(ch2, client_pub, PROTO_TRUE, cookie, cookie_len, NULL, 0, PROTO_FALSE,
                                            TLS_GROUP_X25519, TLS_SIG_ED25519);
-    Sha256V.update_args.data = ch2;
-    Sha256V.update_args.len = ch2_len;
-    Sha256.update(tr);
+    Sha256.update(tr, ch2, ch2_len);
 
     uint8_t f2[380];
     DtlsHandshakeV.frag_build_args.msg_type = ch2[0];
@@ -1193,9 +1170,7 @@ static int drive_server_flight(DtlsConn *conn, DtlsServerConfig *cfg, uint8_t **
     *tr = tw_tr; // NOT tw: that is the shared work borrow every other call here is handed, and
                  // the next one to take it would overwrite the running transcript
     Sha256.init(*tr);
-    Sha256V.update_args.data = ch;
-    Sha256V.update_args.len = ch_len;
-    Sha256.update(*tr);
+    Sha256.update(*tr, ch, ch_len);
     uint8_t ch_frag[300];
     DtlsHandshakeV.frag_build_args.msg_type = ch[0];
     DtlsHandshakeV.frag_build_args.msg_seq = 0;
@@ -1369,15 +1344,10 @@ void test_pto_ack_cancels_retransmit(void)
     uint8_t *t;
     t = tw_t;
     Sha256.init(t);
-    Sha256V.update_args.data = ch;
-    Sha256V.update_args.len = ch_len;
-    Sha256.update(t);
-    Sha256V.update_args.data = sh;
-    Sha256V.update_args.len = sh_len;
-    Sha256.update(t);
+    Sha256.update(t, ch, ch_len);
+    Sha256.update(t, sh, sh_len);
     uint8_t h[32];
-    Sha256V.final_args.out = h;
-    Sha256.final(t);
+    Sha256.final(t, h);
     uint8_t ecdhe[32];
     Curve25519V.x25519_args.out = ecdhe;
     Curve25519V.x25519_args.scalar = CLIENT_X25519_PRIV;
@@ -1493,9 +1463,7 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     uint8_t *tr;
     tr = tw_tr;
     Sha256.init(tr);
-    Sha256V.update_args.data = ch;
-    Sha256V.update_args.len = ch_len;
-    Sha256.update(tr);
+    Sha256.update(tr, ch, ch_len);
 
     uint8_t rec[320];
     size_t rl = plain_hs_record(rec, sizeof(rec), ch, ch_len, 0, 0);
@@ -1532,9 +1500,7 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     {
         return PROTO_FALSE;
     }
-    Sha256V.update_args.data = sh;
-    Sha256V.update_args.len = sh_len;
-    Sha256.update(tr);
+    Sha256.update(tr, sh, sh_len);
     uint8_t server_pub[32];
     if (!sh_keyshare(sh, sh_len, server_pub))
     {
@@ -1547,8 +1513,7 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     Curve25519V.x25519_args.point = server_pub;
     Curve25519.x25519(tw);
     uint8_t h[32];
-    Sha256V.final_args.out = h;
-    Sha256.final(tr);
+    Sha256.final(tr, h);
     static uint8_t ks_store_1033[PROTOCORE_TLS13_KS_BORROW];
     Tls13KsV.bind.kdf = &DTLS13_KDF;
     Tls13KsV.bind.ks = &st->cks;
@@ -1602,14 +1567,11 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
         {
             return PROTO_FALSE;
         }
-        Sha256V.update_args.data = msg;
-        Sha256V.update_args.len = mlen;
-        Sha256.update(tr);
+        Sha256.update(tr, msg, mlen);
     }
 
     uint8_t h_sfin[32];
-    Sha256V.final_args.out = h_sfin;
-    Sha256.final(tr);
+    Sha256.final(tr, h_sfin);
     Tls13KsV.bind.ks = &st->cks;
     Tls13KsV.step.ch_sfin_hash = h_sfin;
     Tls13Ks.master(NULL);

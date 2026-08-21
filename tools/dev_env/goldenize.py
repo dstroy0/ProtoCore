@@ -3172,8 +3172,11 @@ def insert_align_asserts(src, regions):
 WORK_MEMBER = re.compile(r"^[ \t]*void\s*\(\*const\s+(?P<name>\w+)\)\s*\(\s*uint8_t\s*\*restrict\s+work\s*\)\s*;", re.M)
 
 # `const uint8_t *data; ///< the bytes` - one field of an args struct.
-ARGS_FIELD = re.compile(r"^[ \t]*(?P<type>[A-Za-z_][\w\s\*]*?[\s\*])(?P<name>\w+)\s*(?P<arr>\[[^\]]*\])?\s*;"
-                        r"(?:[ \t]*///<[ \t]*(?P<doc>[^\n]*))?", re.M)
+ARGS_FIELD = re.compile(
+    r"^[ \t]*(?P<type>[A-Za-z_][\w\s\*]*?[\s\*])(?P<name>\w+)\s*(?P<arr>\[[^\]]*\])?\s*;"
+    r"(?:[ \t]*///<[ \t]*(?P<doc>[^\n]*))?",
+    re.M,
+)
 
 
 def struct_body(s, typename):
@@ -3184,9 +3187,9 @@ def struct_body(s, typename):
         end = brace_end(s, mm.end() - 1)
         if end >= len(s):
             continue
-        t = re.match(r"\s*(\w+)\s*;", s[end:end + 200])
+        t = re.match(r"\s*(\w+)\s*;", s[end : end + 200])
         if t and t.group(1) == typename:
-            return s[mm.end():end - 1]
+            return s[mm.end() : end - 1]
     return ""
 
 
@@ -3196,12 +3199,14 @@ def args_params(s, args_type):
     out = []
     for m in ARGS_FIELD.finditer(body):
         t = re.sub(r"\s+", " ", m.group("type")).strip()
-        out.append({
-            "type": t,
-            "name": m.group("name"),
-            "arr": m.group("arr") or "",
-            "doc": (m.group("doc") or "").strip(),
-        })
+        out.append(
+            {
+                "type": t,
+                "name": m.group("name"),
+                "arr": m.group("arr") or "",
+                "doc": (m.group("doc") or "").strip(),
+            }
+        )
     return out
 
 
@@ -3258,8 +3263,9 @@ def scan_worked(hpath):
 
     # What the .c binds each member to.
     bind = {}
-    init = re.search(r"\b%s\s+%s\b[^=;]*=\s*\{(.*?)\};" % (re.escape(ns), re.escape(obj)), csrc, re.S) \
-        or re.search(r"\b%s\s+%s\b[^=;]*=\s*\{(.*?)\};" % (re.escape(ns), re.escape(obj)), s, re.S)
+    init = re.search(r"\b%s\s+%s\b[^=;]*=\s*\{(.*?)\};" % (re.escape(ns), re.escape(obj)), csrc, re.S) or re.search(
+        r"\b%s\s+%s\b[^=;]*=\s*\{(.*?)\};" % (re.escape(ns), re.escape(obj)), s, re.S
+    )
     if init:
         for m in VTABLE_BIND.finditer(init.group(1)):
             bind[m.group("entry")] = m.group("impl")
@@ -3278,24 +3284,26 @@ def scan_worked(hpath):
         ret, result = "void", None
         span = body_of(csrc, flat)
         if span and results:
-            body = csrc[span[1]:span[2]]
+            body = csrc[span[1] : span[2]]
             hits = [r for r in results if re.search(r"\b%s\.%s\s*=" % (re.escape(objv), re.escape(r)), body)]
             if hits:
                 # `ok` is the default outcome every entry carries; a narrower one wins.
                 result = next((h for h in hits if h != "ok"), hits[0])
                 ret = results[result]
-        entries.append({
-            "entry": name,
-            "flat": flat,
-            "impl": flat,
-            "call": "%s.%s" % (obj, name),
-            "ret": ret,
-            "result": result,
-            "result_type": ret,
-            "brief": var_doc.get(name, ""),
-            "returns": "",
-            "params": params,
-        })
+        entries.append(
+            {
+                "entry": name,
+                "flat": flat,
+                "impl": flat,
+                "call": "%s.%s" % (obj, name),
+                "ret": ret,
+                "result": result,
+                "result_type": ret,
+                "brief": var_doc.get(name, ""),
+                "returns": "",
+                "params": params,
+            }
+        )
 
     moved, held = classify_includes(s)
     return {
@@ -3360,8 +3368,15 @@ def entry_doc(spec, e):
 
 # Paragraphs of the old namespace block that describe the operands shape, and so stop being true the
 # moment an entry carries its own signature.
-STALE_DOC = ("@var ", "_args", "sets the members", "reads the outcome", "off the same handle",
-             "and that is\n", "operands and reads")
+STALE_DOC = (
+    "@var ",
+    "_args",
+    "sets the members",
+    "reads the outcome",
+    "off the same handle",
+    "and that is\n",
+    "operands and reads",
+)
 
 
 def module_prose(original, ns):
@@ -3493,16 +3508,18 @@ def gen_header_ns(spec, original):
         note = (
             "// %s - the bytes this module runs out of - is stated in protocore_config.h, which sums\n"
             "// it into its arena. Its size and its offset are each a static_assert, so a feature\n"
-            "// combination that does not fit fails to compile rather than overrunning at run time.\n"
-            % spec["borrow"]
+            "// combination that does not fit fails to compile rather than overrunning at run time.\n" % spec["borrow"]
         )
 
     head = "\n".join(lic) + "\n\n"
     g = re.search(r"#ifndef (\w+)\n#define \1", original)
     guard = g.group(1) if g else "PROTOCORE_%s_H" % spec["module"].upper()
     # The @file block sits inside BEGIN_DECLS, which is where MMgr puts it.
-    doc = ["/**", " * @file %s" % os.path.basename(spec["header"]),
-           " * @brief %s" % sentence((brief or spec.get("brief", "")).rstrip("."), "%s." % obj)]
+    doc = [
+        "/**",
+        " * @file %s" % os.path.basename(spec["header"]),
+        " * @brief %s" % sentence((brief or spec.get("brief", "")).rstrip("."), "%s." % obj),
+    ]
     for para in own_prose + prose:
         doc.append(" *")
         doc += [(" * " + l.strip()).rstrip() for l in para.splitlines()]
@@ -3516,8 +3533,10 @@ def gen_header_ns(spec, original):
         head
         + "#ifndef %s\n#define %s\n\n" % (guard, guard)
         + '#include "protocore_config.h" // the entry point: protocore_types.h for the widths\n'
-        + "".join("#include %s // the complete type a public struct below holds by value\n" % h
-                  for h in spec.get("held_includes", []))
+        + "".join(
+            "#include %s // the complete type a public struct below holds by value\n" % h
+            for h in spec.get("held_includes", [])
+        )
         + "\n"
         + ("#if %s\n\n" % gate if gate else "")
         + "PROTOCORE_BEGIN_DECLS\n\n"
@@ -3529,6 +3548,262 @@ def gen_header_ns(spec, original):
         + ("#endif // %s\n\n" % gate if gate else "")
         + "#endif // %s\n" % guard
     )
+
+
+def enclosing_function(s, pos, mask):
+    """(open_brace, close_brace) of the function body @p pos sits in, or None at file scope.
+
+    The OUTERMOST enclosing brace pair, not the innermost: a result local is declared where the call
+    is, and the question this answers is whether some earlier call in the SAME FUNCTION already
+    declared that name - an inner block is still the same function.
+    """
+    depth, outer, i = 0, None, pos - 1
+    while i >= 0:
+        c = s[i]
+        if mask[i]:
+            if c == "}":
+                depth += 1
+            elif c == "{":
+                if depth == 0:
+                    outer = i
+                else:
+                    depth -= 1
+        i -= 1
+    if outer is None:
+        return None
+    return outer, _brace_end(s, outer, mask)
+
+
+def _brace_end(s, ob, mask):
+    """The index of the `}` matching the `{` at @p ob."""
+    depth, i = 1, ob + 1
+    while i < len(s) and depth:
+        if mask[i]:
+            if s[i] == "{":
+                depth += 1
+            elif s[i] == "}":
+                depth -= 1
+                if not depth:
+                    return i
+        i += 1
+    return len(s) - 1
+
+
+def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include")):
+    """Fold each call site's staged operands into the call, and give its result a local.
+
+        Sha256V.hash_args.data = msg;
+        Sha256V.hash_args.len = mlen;
+        Sha256V.hash_args.out = out;          ->   proto_bool sha256_ok =
+        Sha256.hash(ECDSA_HASH(work));                 Sha256.hash(ECDSA_HASH(work), msg, mlen, out);
+        if (!Sha256V.ok) { ... }                   if (!sha256_ok) { ... }
+
+    THE RESULT ALWAYS BECOMES A LOCAL, even where the next statement is the only reader and the call
+    could have been folded straight into it. One rule for fifteen thousand sites: measured, 837 read
+    it on the very next statement, 2875 read it further down, 2177 copy it and 2075 never read it,
+    and three rules for those four shapes is three chances to be subtly wrong in a place nothing
+    checks. A local is the same transformation every time, and the compiler catches the one thing it
+    can get wrong - a read that is out of the local's scope.
+
+    WHAT IT REFUSES. An operand that is not staged in the block directly above the call: set in a
+    loop, set once for several calls, set inside a branch the call is outside of. Each is reported
+    with its file and line and left alone. Guessing at those is how a conversion changes behaviour
+    in a way the suite does not notice.
+    """
+    obj, objv = spec["object"], spec.get("objv", "")
+    byname = {e["entry"]: e for e in spec["entries"]}
+    # path -> the text this pass produced, so a --dry run can be asked what it would leave
+    # behind rather than reporting the count that is still on disk.
+    texts = {}
+    if not byname or not objv:
+        return 0, [], texts
+    pat = re.compile(r"\b%s\.(%s)\s*\(" % (re.escape(obj), "|".join(re.escape(k) for k in byname)))
+    # A staged operand, with the trailing comment some of them carry. Without that last group the
+    # line does not match, the walk stops there, the operand reads as unstaged and the site is
+    # skipped - which left transport.c with one converted call and one not, in a #if arm no native
+    # env compiles, so the build said nothing.
+    stage_any = re.compile(r"^[ \t]*%s\.(\w+)_args\.(\w+)\s*=\s*(.+?);[ \t]*(//[^\n]*)?$" % re.escape(objv))
+    total, skipped = 0, []
+
+    for root in roots:
+        base = os.path.join(R, root)
+        if not os.path.isdir(base):
+            continue
+        for dp, _dn, fns in os.walk(base):
+            if ".pio" in dp or os.sep + "MMgr" + os.sep in dp:
+                continue
+            for fn in sorted(fns):
+                if not fn.endswith((".c", ".h")):
+                    continue
+                p = os.path.join(dp, fn)
+                rel = os.path.relpath(p, R).replace("\\", "/")
+                if rel == spec["header"]:
+                    continue
+                s = io.open(p, encoding="utf-8", errors="replace").read()
+                if obj + "." not in s:
+                    continue
+                n, at, declared = 0, 0, {}
+                mask = code_mask(s)
+                while True:
+                    m = pat.search(s, at)
+                    if not m:
+                        break
+                    if not mask[m.start()]:
+                        at = m.end()
+                        continue
+                    e = byname[m.group(1)]
+                    end = N.close_paren(s, m.end())
+                    if re.match(r"\s*\{", s[end:]):
+                        at = m.end()  # a definition, not a call
+                        continue
+                    args = [a.strip() for a in N.split_args(s[m.end() : end - 1]) if a.strip()]
+                    want = [q["name"] for q in e["params"]]
+                    if len(args) > 1:
+                        at = m.end()  # already carries its operands
+                        continue
+
+                    st = N.statement_start(s, m.start(), mask)
+                    # Only a bare `Obj.entry(...);` statement is folded. A call nested in a
+                    # condition or an argument list has nowhere to put a declaration.
+                    stmt_end = N.statement_end(s, end, mask)
+                    if s[st : m.start()].strip() or s[end:stmt_end].strip().rstrip(";"):
+                        if want:
+                            skipped.append(
+                                (
+                                    rel,
+                                    s[: m.start()].count("\n") + 1,
+                                    "call is not a statement of its own - convert by hand",
+                                )
+                            )
+                        at = m.end()
+                        continue
+
+                    # Walk back over the staging block directly above. The cut starts at the
+                    # beginning of the LINE, not at the statement: the emitted text carries its own
+                    # indent, and cutting at the statement leaves the leading whitespace in front
+                    # of it - which is how a call with no staging above it came out double-indented.
+                    ln = N.line_start(s, st)
+                    vals, cut, notes = {}, ln, []
+                    while ln > 0:
+                        prev = N.line_start(s, ln - 1)
+                        line = s[prev : ln - 1]
+                        sm = stage_any.match(line)
+                        if not sm:
+                            break
+                        if sm.group(1) == e["entry"]:
+                            vals.setdefault(sm.group(2), sm.group(3).strip())
+                            # A comment on a staged line says why that operand is what it is, and
+                            # the line it sits on is about to go. Carry it to the call.
+                            if sm.group(4):
+                                notes.insert(0, sm.group(4).strip())
+                            cut = prev
+                        ln = prev
+                    missing = [w for w in want if w not in vals]
+                    if missing:
+                        skipped.append(
+                            (
+                                rel,
+                                s[: m.start()].count("\n") + 1,
+                                "operand%s %s not staged above the call"
+                                % ("" if len(missing) == 1 else "s", ", ".join(missing)),
+                            )
+                        )
+                        at = m.end()
+                        continue
+
+                    call = "%s.%s(%s)" % (obj, e["entry"], ", ".join(args + [vals[w] for w in want]))
+                    indent = s[N.line_start(s, st) : st]
+                    res, out = e.get("result"), ""
+                    if res:
+                        local = "%s_%s" % (snake(obj), res)
+                        fn_span = enclosing_function(s, m.start(), mask)
+                        # Every read of the result between here and the next call to this object -
+                        # that window is what the local has to cover.
+                        stop = pat.search(s, stmt_end)
+                        stop = stop.start() if stop else (fn_span[1] if fn_span else len(s))
+                        rd = re.compile(r"\b%s\.%s\b" % (re.escape(objv), re.escape(res)))
+                        window = s[stmt_end:stop]
+                        if rd.search(window):
+                            key = (fn_span[0] if fn_span else -1, local)
+                            if key in declared:
+                                out = "%s%s = %s;" % (indent, local, call)
+                            else:
+                                declared[key] = True
+                                out = "%s%s %s = %s;" % (indent, e["ret"], local, call)
+                            s = s[:stmt_end] + rd.sub(local, window) + s[stop:]
+                        else:
+                            # Nothing reads it. The rule is that a result becomes a local; where
+                            # there is no result to carry, a local is a variable the compiler warns
+                            # about and a reader has to work out is unused.
+                            out = "%s%s;" % (indent, call)
+                    else:
+                        out = "%s%s;" % (indent, call)
+
+                    # A rewrite that produces what is already there is not a rewrite. An entry with
+                    # no operands whose result nothing reads converts `X.init(work);` to
+                    # `X.init(work);` - and since a successful rewrite restarts the scan, that site
+                    # is met again, converted again, and the pass never terminates. It ran to the
+                    # 2000 cap on hmac_sha256.c before this test existed.
+                    if out == s[cut:stmt_end]:
+                        at = m.end()
+                        continue
+
+                    if notes:
+                        out += " " + " ".join(notes)
+
+                    s = s[:cut] + out + s[stmt_end:]
+                    mask = code_mask(s)
+                    total += 1
+                    n += 1
+                    at = 0
+                    if n > REWRITE_CAP:
+                        raise SystemExit(
+                            "rewrite_calls_ns: %s took %d rewrites, past the %d cap - the file was"
+                            " NOT written." % (rel, n, REWRITE_CAP)
+                        )
+                if n:
+                    texts[p] = s
+                    if DRY:
+                        print("   %s: %d call site(s)" % (rel, n))
+                    else:
+                        io.open(p, "w", encoding="utf-8", newline="").write(s)
+    return total, skipped, texts
+
+
+def remaining_vars_reads(spec, texts=None, roots=("src", "test", "examples", "vendor", "include")):
+    """How many reads of <X>V are still out there after the rewrite.
+
+    The converted header does not declare <X>V at all, so every one of these is a compile error
+    waiting for the next build. Counted here so the number is known before the build says it, and
+    so a conversion that leaves any can be backed out as one change rather than chased.
+    """
+    objv = spec.get("objv", "")
+    if not objv:
+        return 0
+    pat = re.compile(r"\b%s\." % re.escape(objv))
+    n = 0
+    for root in roots:
+        base = os.path.join(R, root)
+        if not os.path.isdir(base):
+            continue
+        for dp, _dn, fns in os.walk(base):
+            if ".pio" in dp or os.sep + "MMgr" + os.sep in dp:
+                continue
+            for fn in sorted(fns):
+                if not fn.endswith((".c", ".h")):
+                    continue
+                rel = os.path.relpath(os.path.join(dp, fn), R).replace("\\", "/")
+                if rel in (spec["header"], spec["source"]):
+                    continue
+                full = os.path.join(dp, fn)
+                text = (texts or {}).get(full)
+                if text is None:
+                    text = io.open(full, encoding="utf-8", errors="replace").read()
+                if objv not in text:
+                    continue
+                mask = code_mask(text)
+                n += sum(1 for m in pat.finditer(text) if mask[m.start()])
+    return n
 
 
 def unwork_source(spec):
@@ -3551,7 +3826,7 @@ def unwork_source(spec):
             notes.append("%s: no definition found, left alone" % e["flat"])
             continue
         start, ob, end = span
-        body = s[ob + 1:end]
+        body = s[ob + 1 : end]
 
         # Operands become parameters.
         if objv:
@@ -3559,27 +3834,31 @@ def unwork_source(spec):
 
         res = e.get("result")
         if res and objv:
-            assigns = list(re.finditer(r"[ \t]*%s\.%s\s*=\s*([^;]+);[ \t]*\n?" % (re.escape(objv), re.escape(res)), body))
-            tail_only = len(assigns) == 1 and not body[assigns[0].end():].strip()
+            assigns = list(
+                re.finditer(r"[ \t]*%s\.%s\s*=\s*([^;]+);[ \t]*\n?" % (re.escape(objv), re.escape(res)), body)
+            )
+            tail_only = len(assigns) == 1 and not body[assigns[0].end() :].strip()
             if tail_only:
-                body = body[:assigns[0].start()] + "    return %s;\n" % assigns[0].group(1).strip()
+                body = body[: assigns[0].start()] + "    return %s;\n" % assigns[0].group(1).strip()
             elif assigns:
                 # A local named for the outcome, so a bare `return;` still reports it.
                 body = re.sub(r"\b%s\.%s\b" % (re.escape(objv), re.escape(res)), res, body)
                 body = re.sub(r"\breturn\s*;", "return %s;" % res, body)
-                decl = "    %s %s = %s;\n" % (e["ret"], res,
-                                              "PROTO_FALSE" if e["ret"] == "proto_bool" else "0")
+                decl = "    %s %s = %s;\n" % (e["ret"], res, "PROTO_FALSE" if e["ret"] == "proto_bool" else "0")
                 # The first write is the initialiser, so it does not need to be a statement too.
                 first = re.search(r"[ \t]*%s\s*=\s*([^;]+);[ \t]*\n" % re.escape(res), body)
-                if first and not body[:first.start()].strip():
+                if first and not body[: first.start()].strip():
                     decl = "    %s %s = %s;\n" % (e["ret"], res, first.group(1).strip())
-                    body = body[:first.start()] + body[first.end():]
+                    body = body[: first.start()] + body[first.end() :]
                 if not re.search(r"\breturn\b", body.rstrip().rsplit("\n", 1)[-1] if "\n" in body else body):
                     body = body.rstrip() + "\n    return %s;\n" % res
                 body = "\n" + decl + body.lstrip("\n")
                 # `ok = X; return ok;` is `return X;`.
-                body = re.sub(r"[ \t]*%s\s*=\s*([^;]+);\s*\n([ \t]*)return %s;"
-                              % (re.escape(res), re.escape(res)), r"\2return \1;", body)
+                body = re.sub(
+                    r"[ \t]*%s\s*=\s*([^;]+);\s*\n([ \t]*)return %s;" % (re.escape(res), re.escape(res)),
+                    r"\2return \1;",
+                    body,
+                )
                 # If that left nothing assigning to the local, every `return <local>;` returns the
                 # initialiser and the declaration is dead. No flow analysis in that - there is no
                 # assignment left to reason about.
@@ -3599,15 +3878,25 @@ def unwork_source(spec):
     # The operands object is gone with the args it carried.
     if objv:
         # The doc comment above it goes too, or it is left introducing nothing.
-        s = re.sub(r"(?:^[ \t]*/\*\*(?:[^*]|\*(?!/))*\*/[ \t]*\n)?^[ \t]*%s\s+%s\s*;[ \t]*\n"
-                   % (re.escape(spec.get("vars", "")), re.escape(objv)), "", s, flags=re.M)
+        s = re.sub(
+            r"(?:^[ \t]*/\*\*(?:[^*]|\*(?!/))*\*/[ \t]*\n)?^[ \t]*%s\s+%s\s*;[ \t]*\n"
+            % (re.escape(spec.get("vars", "")), re.escape(objv)),
+            "",
+            s,
+            flags=re.M,
+        )
 
     # The table, rebuilt so it binds the same names in the same order - and it now lives in the
     # header, so the .c no longer defines it.
-    s = re.sub(r"^static\s+const\s+%s\s+%s\s*=\s*\{.*?\};\s*\n" % (re.escape(spec["ns"]), re.escape(spec["object"])),
-               "", s, flags=re.S | re.M)
-    s = re.sub(r"^%s\s+%s\s*=\s*\{.*?\};\s*\n" % (re.escape(spec["ns"]), re.escape(spec["object"])),
-               "", s, flags=re.S | re.M)
+    s = re.sub(
+        r"^static\s+const\s+%s\s+%s\s*=\s*\{.*?\};\s*\n" % (re.escape(spec["ns"]), re.escape(spec["object"])),
+        "",
+        s,
+        flags=re.S | re.M,
+    )
+    s = re.sub(
+        r"^%s\s+%s\s*=\s*\{.*?\};\s*\n" % (re.escape(spec["ns"]), re.escape(spec["object"])), "", s, flags=re.S | re.M
+    )
 
     # MMgr's .c files carry no BEGIN_DECLS: the header already gave the declarations linkage.
     s = re.sub(r"^PROTOCORE_BEGIN_DECLS[ \t]*\n+", "", s, flags=re.M)
@@ -3623,7 +3912,8 @@ def unwork_source(spec):
         # The config include's comment named the gate it was there to define.
         s = s.replace(
             '#include "protocore_config.h" // the entry point: the enable gate below, and the widths',
-            '#include "protocore_config.h" // the entry point: the widths')
+            '#include "protocore_config.h" // the entry point: the widths',
+        )
 
     emit(p, s)
     return notes
@@ -3661,10 +3951,17 @@ def main():
             print("%s has no <X>Ns table - nothing to convert" % arg)
             return 2
         print("module %s | ns %s | object %s | gate %s" % (spec["module"], spec["ns"], spec["object"], spec["gate"]))
-        print("owns state: %s (%s)" % (
-            spec["owns_state"],
-            "reaches its own span, entries take no borrow" if spec["owns_state"]
-            else "the borrow is a real operand"))
+        print(
+            "owns state: %s (%s)"
+            % (
+                spec["owns_state"],
+                (
+                    "reaches its own span, entries take no borrow"
+                    if spec["owns_state"]
+                    else "the borrow is a real operand"
+                ),
+            )
+        )
         print("entries:")
         for e in spec["entries"]:
             print("   %-28s %s %s(%s)" % (e["entry"], e["ret"], e["flat"], sig_params(spec, e)))
@@ -3674,6 +3971,15 @@ def main():
         print("source:", spec["source"])
         for n in dict.fromkeys(unwork_source(spec)):
             print("   NOTE", n)
+        print("call sites:")
+        total, skipped, texts = rewrite_calls_ns(spec)
+        print("   rewritten:", total)
+        # Every remaining read of <X>V is a compile error once the header stops declaring it, so
+        # count them here rather than letting the build be the first to say so.
+        left = remaining_vars_reads(spec, texts)
+        print("   %sV reads left: %d" % (spec["object"], left))
+        for rel, ln, why in sorted(set(skipped)):
+            print("   SKIPPED %s:%d  %s" % (rel, ln, why))
         return 0
     if cmd == "shape":
         # The golden's file shape. sha256.c states one thing above the enable gate - the config

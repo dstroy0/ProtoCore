@@ -338,10 +338,7 @@ static void rsa_encode(uint8_t *restrict work)
     }
     else
     {
-        Sha256V.hash_args.data = ctx->msg;
-        Sha256V.hash_args.len = ctx->msg_len;
-        Sha256V.hash_args.out = ctx->digest;
-        Sha256.hash(RSA_SHA256(work));
+        Sha256.hash(RSA_SHA256(work), ctx->msg, ctx->msg_len, ctx->digest);
         digest_len = PROTOCORE_SHA256_DIGEST_LEN;
         di = protocore_pkcs1_sha256_digestinfo;
         di_len = PROTOCORE_PKCS1_DIGESTINFO_LEN;
@@ -370,10 +367,7 @@ static void mgf1_sha256(uint8_t *restrict work, const uint8_t *seed, size_t seed
         buf[seed_len + 1u] = (uint8_t)(counter >> 16);
         buf[seed_len + 2u] = (uint8_t)(counter >> 8);
         buf[seed_len + 3u] = (uint8_t)counter;
-        Sha256V.hash_args.data = buf;
-        Sha256V.hash_args.len = seed_len + 4u;
-        Sha256V.hash_args.out = block;
-        Sha256.hash(RSA_SHA256(work));
+        Sha256.hash(RSA_SHA256(work), buf, seed_len + 4u, block);
         const size_t left = mask_len - off;
         const size_t n = left < PROTOCORE_SHA256_DIGEST_LEN ? left : (size_t)PROTOCORE_SHA256_DIGEST_LEN;
         mem.cpy(mask + off, block, n);
@@ -393,10 +387,7 @@ static proto_bool rsa_pss_consistent(uint8_t *restrict work)
     const uint8_t *em = ctx->recovered;
 
     // step 2
-    Sha256V.hash_args.data = ctx->msg;
-    Sha256V.hash_args.len = ctx->msg_len;
-    Sha256V.hash_args.out = ctx->digest;
-    Sha256.hash(RSA_SHA256(work));
+    Sha256.hash(RSA_SHA256(work), ctx->msg, ctx->msg_len, ctx->digest);
 
     // steps 3 and 4
     if (emlen < hlen + slen + 2u || em[emlen - 1u] != 0xBCu)
@@ -440,10 +431,7 @@ static proto_bool rsa_pss_consistent(uint8_t *restrict work)
     mem.set(mprime, 0, 8u);
     mem.cpy(mprime + 8u, ctx->digest, hlen);
     mem.cpy(mprime + 8u + hlen, db + ps + 1u, slen);
-    Sha256V.hash_args.data = mprime;
-    Sha256V.hash_args.len = sizeof(mprime);
-    Sha256V.hash_args.out = hprime;
-    Sha256.hash(RSA_SHA256(work));
+    Sha256.hash(RSA_SHA256(work), mprime, sizeof(mprime), hprime);
 
     // step 14
     return protocore_ct_eq(h, hprime, hlen);

@@ -62,28 +62,18 @@ void protocore_snmp_crypto_localize_key(uint8_t *restrict work)
             block[i] = (uint8_t)password[pw_index];
             pw_index = (pw_index + 1) % pwlen;
         }
-        Sha256V.update_args.data = block;
-        Sha256V.update_args.len = 64;
-        Sha256.update(sha);
+        Sha256.update(sha, block, 64);
         count += 64;
     }
     uint8_t ku[SNMP_USM_KEY_LEN];
-    Sha256V.final_args.out = ku;
-    Sha256.final(sha);
+    Sha256.final(sha, ku);
 
     sha = SnmpCryptoV.work;
     Sha256.init(sha);
-    Sha256V.update_args.data = ku;
-    Sha256V.update_args.len = SNMP_USM_KEY_LEN;
-    Sha256.update(sha);
-    Sha256V.update_args.data = SnmpCryptoV.key.engine_id;
-    Sha256V.update_args.len = SnmpCryptoV.key.engine_id_len;
-    Sha256.update(sha);
-    Sha256V.update_args.data = ku;
-    Sha256V.update_args.len = SNMP_USM_KEY_LEN;
-    Sha256.update(sha);
-    Sha256V.final_args.out = key_out;
-    Sha256.final(sha);
+    Sha256.update(sha, ku, SNMP_USM_KEY_LEN);
+    Sha256.update(sha, SnmpCryptoV.key.engine_id, SnmpCryptoV.key.engine_id_len);
+    Sha256.update(sha, ku, SNMP_USM_KEY_LEN);
+    Sha256.final(sha, key_out);
 
     protocore_secure_wipe(ku, sizeof(ku));
     protocore_secure_wipe(block, sizeof(block));

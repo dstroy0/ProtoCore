@@ -87,9 +87,7 @@ void protocore_ssh_kex_hash_update(uint8_t *restrict work)
     }
     else
     {
-        Sha256V.update_args.data = SshKexHashV.update_args.data;
-        Sha256V.update_args.len = SshKexHashV.update_args.len;
-        Sha256.update(KEXHASH_HASH(work));
+        Sha256.update(KEXHASH_HASH(work), SshKexHashV.update_args.data, SshKexHashV.update_args.len);
     }
     SshKexHashV.ok = PROTO_TRUE;
 }
@@ -110,8 +108,7 @@ void protocore_ssh_kex_hash_final(uint8_t *restrict work)
     }
     else
     {
-        Sha256V.final_args.out = SshKexHashV.final_args.out;
-        Sha256.final(KEXHASH_HASH(work));
+        Sha256.final(KEXHASH_HASH(work), SshKexHashV.final_args.out);
         SshKexHashV.len = PROTOCORE_SHA256_DIGEST_LEN;
     }
     SshKexHashV.ok = PROTO_TRUE;

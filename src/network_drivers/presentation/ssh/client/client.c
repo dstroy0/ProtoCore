@@ -225,10 +225,7 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
         return PROTO_FALSE;
     }
     uint8_t fp[32];
-    Sha256V.hash_args.data = ks;
-    Sha256V.hash_args.len = ks_len;
-    Sha256V.hash_args.out = fp;
-    Sha256.hash(fwork);
+    Sha256.hash(fwork, ks, ks_len, fp);
     if (mem.cmp(fp, SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.host_pin, 32) != 0)
     {
         cli_fail("relay host key does not match the pin");

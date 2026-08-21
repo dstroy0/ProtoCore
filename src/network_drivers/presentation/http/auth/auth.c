@@ -143,10 +143,7 @@ static_assert(AUTH_OFF_SHA + PROTOCORE_SHA256_BORROW <= PROTOCORE_HTTP_AUTH_BORR
 static void sha256_hex(uint8_t *work, const uint8_t *data, size_t len, char out[65])
 {
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
-    Sha256V.hash_args.data = data;
-    Sha256V.hash_args.len = len;
-    Sha256V.hash_args.out = d;
-    Sha256.hash(AUTH_SHA(work));
+    Sha256.hash(AUTH_SHA(work), data, len, d);
     HexV.io.in = d;
     HexV.io.n = PROTOCORE_SHA256_DIGEST_LEN;
     HexV.io.out = out;
@@ -221,10 +218,7 @@ void protocore_auth_rekey(uint8_t *restrict work)
     raw.put_u32(seed + 16, c);
     raw.put_u32(seed + 20, t);
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
-    Sha256V.hash_args.data = seed;
-    Sha256V.hash_args.len = sizeof(seed);
-    Sha256V.hash_args.out = d;
-    Sha256.hash(AUTH_SHA(work));
+    Sha256.hash(AUTH_SHA(work), seed, sizeof(seed), d);
     raw.read(a->digest_secret, d, sizeof(a->digest_secret)); // first 128 bits
 }
 
@@ -239,10 +233,7 @@ static uint32_t digest_nonce_mac(uint8_t *work, const uint8_t *secret, uint32_t 
     raw.read(material, secret, 16);
     raw.put_u32(material + 16, issue); // endian-symmetric: minted and verified the same way
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
-    Sha256V.hash_args.data = material;
-    Sha256V.hash_args.len = sizeof(material);
-    Sha256V.hash_args.out = d;
-    Sha256.hash(AUTH_SHA(work));
+    Sha256.hash(AUTH_SHA(work), material, sizeof(material), d);
     HexV.io.in = d;
     HexV.io.n = 16;
     HexV.io.out = mac_hex;

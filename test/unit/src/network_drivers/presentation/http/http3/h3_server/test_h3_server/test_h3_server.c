@@ -513,15 +513,10 @@ void test_h3_request_served_by_route()
     uint8_t chsh[32], chsf[32];
     t = tw_t;
     Sha256.init(t);
-    Sha256V.update_args.data = ch;
-    Sha256V.update_args.len = chl;
-    Sha256.update(t);
-    Sha256V.update_args.data = sh;
-    Sha256V.update_args.len = shl;
-    Sha256.update(t);
+    Sha256.update(t, ch, chl);
+    Sha256.update(t, sh, shl);
     {
-        Sha256V.final_args.out = chsh;
-        Sha256.final(t);
+        Sha256.final(t, chsh);
     }
     Tls13KeySchedule cks;
     static uint8_t ks_store_408[PROTOCORE_TLS13_KS_BORROW];
@@ -547,11 +542,8 @@ void test_h3_request_served_by_route()
     uint8_t hty = 0;
     size_t hpt = open_long(g_out[0] + wire, g_out_len[0] - wire, &hs_s, plain, &hw, &hty);
     size_t hsfl = extract_crypto(plain, hpt, hsf);
-    Sha256V.update_args.data = hsf;
-    Sha256V.update_args.len = hsfl;
-    Sha256.update(t);
-    Sha256V.final_args.out = chsf;
-    Sha256.final(t);
+    Sha256.update(t, hsf, hsfl);
+    Sha256.final(t, chsf);
     Tls13KsV.bind.ks = &cks;
     Tls13KsV.step.ch_sfin_hash = chsf;
     Tls13Ks.master(NULL);
