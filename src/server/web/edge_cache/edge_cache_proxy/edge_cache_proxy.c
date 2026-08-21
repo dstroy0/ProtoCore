@@ -240,10 +240,8 @@ static void t_close(void *c, int cid)
 // Request-header lookup used to (re)serialize the Vary secondary key; ctx is the client HttpReq.
 static const char *req_lookup(void *ctx, const char *name)
 {
-    HttpParserV.get_header_args.req = (const HttpReq *)ctx;
-    HttpParserV.get_header_args.key = name;
-    HttpParser.get_header(protocore_http_parser_span());
-    return HttpParserV.text;
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), (const HttpReq *)ctx, name);
+    return http_parser_text;
 }
 
 static EdgeRouteMap *map_match(uint8_t *restrict work, const char *path)
@@ -974,10 +972,8 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
     {
         return MW_NEXT; // only cache safe methods
     }
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Authorization";
-    HttpParser.get_header(protocore_http_parser_span());
-    if (HttpParserV.text)
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Authorization");
+    if (http_parser_text)
     {
         return MW_NEXT; // never cache authorized/private requests
     }
@@ -987,10 +983,8 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
         return MW_NEXT; // not a mapped origin
     }
 
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Host";
-    HttpParser.get_header(protocore_http_parser_span());
-    const char *host = HttpParserV.text;
+    const char *http_parser_text2 = HttpParser.get_header(protocore_http_parser_span(), req, "Host");
+    const char *host = http_parser_text2;
     if (!host)
     {
         host = "";
@@ -1012,10 +1006,8 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
 #if PROTOCORE_ENABLE_RANGE
     // Capture the Range header now, while http_pool[slot] is the client request: a miss serves from the
     // poll after the async fetch has reused that buffer, so serve_hit resolves the window against this copy.
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Range";
-    HttpParser.get_header(protocore_http_parser_span());
-    const char *rh = HttpParserV.text;
+    const char *http_parser_text3 = HttpParser.get_header(protocore_http_parser_span(), req, "Range");
+    const char *rh = http_parser_text3;
     str.copy(EDGE_CACHE_PROXY_CTX(work)->range_hdr[slot], rh ? rh : "",
              sizeof(EDGE_CACHE_PROXY_CTX(work)->range_hdr[slot]));
 #endif

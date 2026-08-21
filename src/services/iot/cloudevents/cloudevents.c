@@ -175,28 +175,22 @@ void protocore_cloud_events_read_binary(uint8_t *restrict work)
         return;
     }
 
-    HttpParserV.get_header_args.req = CloudEventsV.msg.req;
-    HttpParserV.get_header_args.key = CE_HDR_ID;
-    HttpParser.get_header(protocore_http_parser_span());
-    CloudEventsV.attr.id = HttpParserV.text;
-    HttpParserV.get_header_args.req = CloudEventsV.msg.req;
-    HttpParserV.get_header_args.key = CE_HDR_SOURCE;
-    HttpParser.get_header(protocore_http_parser_span());
-    CloudEventsV.attr.source = HttpParserV.text;
-    HttpParserV.get_header_args.req = CloudEventsV.msg.req;
-    HttpParserV.get_header_args.key = CE_HDR_TYPE;
-    HttpParser.get_header(protocore_http_parser_span());
-    CloudEventsV.attr.type = HttpParserV.text;
-    HttpParserV.get_header_args.req = CloudEventsV.msg.req;
-    HttpParserV.get_header_args.key = CE_HDR_SUBJECT;
-    HttpParser.get_header(protocore_http_parser_span());
-    CloudEventsV.attr.subject = HttpParserV.text;
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), CloudEventsV.msg.req, CE_HDR_ID);
+    CloudEventsV.attr.id = http_parser_text;
+    const char *http_parser_text2 =
+        HttpParser.get_header(protocore_http_parser_span(), CloudEventsV.msg.req, CE_HDR_SOURCE);
+    CloudEventsV.attr.source = http_parser_text2;
+    const char *http_parser_text3 =
+        HttpParser.get_header(protocore_http_parser_span(), CloudEventsV.msg.req, CE_HDR_TYPE);
+    CloudEventsV.attr.type = http_parser_text3;
+    const char *http_parser_text4 =
+        HttpParser.get_header(protocore_http_parser_span(), CloudEventsV.msg.req, CE_HDR_SUBJECT);
+    CloudEventsV.attr.subject = http_parser_text4;
     // datacontenttype rides in Content-Type, and a ce-datacontenttype header "MUST NOT also be
     // present in the message" (HTTP Protocol Binding 1.0.2 sec 3.1.1).
-    HttpParserV.get_header_args.req = CloudEventsV.msg.req;
-    HttpParserV.get_header_args.key = CE_HDR_CONTENT_TYPE;
-    HttpParser.get_header(protocore_http_parser_span());
-    CloudEventsV.attr.datacontenttype = HttpParserV.text;
+    const char *http_parser_text5 =
+        HttpParser.get_header(protocore_http_parser_span(), CloudEventsV.msg.req, CE_HDR_CONTENT_TYPE);
+    CloudEventsV.attr.datacontenttype = http_parser_text5;
 
     CloudEventsV.ok =
         ce_present(CloudEventsV.attr.id) && ce_present(CloudEventsV.attr.source) && ce_present(CloudEventsV.attr.type);

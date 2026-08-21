@@ -334,9 +334,8 @@ static proto_bool cb_headers_end(void *app, uint32_t sid, proto_bool end_stream)
     // against the required set is zero exactly when none of the three is missing.
     if (((mask & H2_PH_REQUIRED) ^ H2_PH_REQUIRED) != 0 || (mask & H2_HDR_BAD) != 0)
     {
-        HttpParserV.reset_args.req = &http_pool[slot];
-        HttpParser.reset(protocore_http_parser_span()); // never dispatch a malformed request
-        return PROTO_FALSE;                             // the engine resets the stream
+        HttpParser.reset(protocore_http_parser_span(), &http_pool[slot]); // never dispatch a malformed request
+        return PROTO_FALSE;                                               // the engine resets the stream
     }
     http_h2_stream[slot] = sid;
     http_pool[slot].parse_state = PARSE_COMPLETE; // the worker's handle() loop dispatches it
@@ -371,8 +370,7 @@ static void open_conn(uint8_t *restrict work)
     H2_SERVER_CTX(work)->slot[slot].hmask = 0;
     H2ConnV.init_args.cb = &cb;
     H2Conn.init(s_conn[slot]); // emits our SETTINGS through cb_write
-    HttpParserV.reset_args.req = &http_pool[slot];
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParser.reset(protocore_http_parser_span(), &http_pool[slot]);
 }
 
 static void data(uint8_t *restrict work)
@@ -405,8 +403,8 @@ static void respond(uint8_t *restrict work)
     H2ConnV.respond_args.body_len = H2Server.resp.len;
     H2Conn.respond(s_conn[slot]);
     H2Server.ok = H2ConnV.ok;
-    HttpParserV.reset_args.req = &http_pool[slot];
-    HttpParser.reset(protocore_http_parser_span()); // ready for the next stream; keep the connection open
+    HttpParser.reset(protocore_http_parser_span(),
+                     &http_pool[slot]); // ready for the next stream; keep the connection open
 }
 
 static void close_conn(uint8_t *restrict work)

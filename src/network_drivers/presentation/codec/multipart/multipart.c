@@ -69,10 +69,8 @@ proto_bool protocore_multipart_parse(uint8_t *restrict work, HttpReq *req, Multi
 
     mp->part_count = 0;
 
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Content-Type";
-    HttpParser.get_header(protocore_http_parser_span());
-    const char *ct = HttpParserV.text;
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Content-Type");
+    const char *ct = http_parser_text;
     if (!ct)
     {
         return PROTO_FALSE;

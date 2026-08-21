@@ -135,10 +135,8 @@ static char g_query_seen[48];
 static void query_handler(uint8_t id, HttpReq *req)
 {
     (void)id;
-    HttpParserV.get_query_args.req = req;
-    HttpParserV.get_query_args.key = "id";
-    HttpParser.get_query(protocore_http_parser_span());
-    const char *v = HttpParserV.text;
+    const char *http_parser_text = HttpParser.get_query(protocore_http_parser_span(), req, "id");
+    const char *v = http_parser_text;
     if (v)
     {
         strncpy(g_query_seen, v, sizeof(g_query_seen) - 1);
@@ -149,10 +147,8 @@ static char g_header_seen[48];
 static void header_handler(uint8_t id, HttpReq *req)
 {
     (void)id;
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "X-Token";
-    HttpParser.get_header(protocore_http_parser_span());
-    const char *v = HttpParserV.text;
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "X-Token");
+    const char *v = http_parser_text;
     if (v)
     {
         strncpy(g_header_seen, v, sizeof(g_header_seen) - 1);

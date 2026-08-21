@@ -11,13 +11,10 @@
 
 static void feed_request(uint8_t slot, const char *raw)
 {
-    HttpParserV.reset_args.req = &http_pool[slot];
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParser.reset(protocore_http_parser_span(), &http_pool[slot]);
     for (const char *s = raw; *s; s++)
     {
-        HttpParserV.feed_args.req = &http_pool[slot];
-        HttpParserV.feed_args.byte = (uint8_t)*s;
-        HttpParser.feed(protocore_http_parser_span());
+        HttpParser.feed(protocore_http_parser_span(), &http_pool[slot], (uint8_t)*s);
     }
 }
 
@@ -27,8 +24,7 @@ void setUp()
     {
         http_pool[i] = (HttpReq){0};
         http_pool[i].slot_id = (uint8_t)i;
-        HttpParserV.reset_args.req = &http_pool[i];
-        HttpParser.reset(protocore_http_parser_span());
+        HttpParser.reset(protocore_http_parser_span(), &http_pool[i]);
     }
 }
 
