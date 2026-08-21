@@ -170,6 +170,25 @@ def T(path, usage, hint, argv=()):
 GOLDENIZE = "tools/dev_env/goldenize.py"
 
 CONVERT = {
+    "ns": T(
+        GOLDENIZE,
+        "ns <module.h> [--dry]",
+        "MMGR'S SHAPE, which is where this tree is going: an entry carries its REAL signature and "
+        "returns its result, instead of taking a borrow and leaving the answer in <X>V. The args "
+        "struct WAS the parameter list and the <X>V member an entry assigns WAS the return type, so "
+        "this is a decoding rather than a redesign - it reads a work-taking module back into the "
+        "signatures it always had. Writes the header with the dispatch table PINNED "
+        "(PROTOCORE_NS_LAYOUT asserts every member's offset and the struct's size, so a reordered "
+        "or padded table does not compile), the namespace object beside it as `static const` "
+        "(gcc devirtualises through const and not through extern), and gives the .c its signatures "
+        "back. "
+        "THE BORROW STAYS. `uint8_t *restrict work` is still the first parameter of every entry: "
+        "its size and its offset are each a static_assert, and that pair is what makes an improper "
+        "feature combination fail to compile and a legal one fit. "
+        "--dry prints the diff and writes nothing. Read that diff - it is one module at a time for "
+        "a reason.",
+        ("ns",),
+    ),
     "scan": T(
         GOLDENIZE,
         "scan <module.h>",
@@ -233,6 +252,7 @@ CONVERT = {
         "Vars instead; forgetting the Vars is an undefined reference to <X>V. And &Namespace is a "
         "different address in every translation unit, so a cross-TU pointer COMPARISON fails where "
         "calling through the pointer still works.",
+        ("handle",),
     ),
     "unnull": T(
         GOLDENIZE,
