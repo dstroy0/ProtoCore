@@ -49,12 +49,7 @@ static void tohex(const uint8_t *d, size_t n, char *out)
 static void mac_hex(const uint8_t *key, size_t key_len, const void *msg, size_t msg_len, size_t take, char *out)
 {
     uint8_t d[PROTOCORE_HMAC_SHA384_LEN];
-    HmacSha384V.mac_args.key = key;
-    HmacSha384V.mac_args.key_len = key_len;
-    HmacSha384V.mac_args.data = (const uint8_t *)msg;
-    HmacSha384V.mac_args.len = msg_len;
-    HmacSha384V.mac_args.out = d;
-    HmacSha384.mac(g_work);
+    HmacSha384.mac(g_work, key, key_len, (const uint8_t *)msg, msg_len, d);
     tohex(d, take, out);
 }
 
@@ -151,17 +146,9 @@ void test_the_block_is_the_sha512_block(void)
     // A 128-octet key is padded; a 129-octet one is pre-hashed. Two different keys, two different
     // MACs, and neither path writes past its block.
     uint8_t at[PROTOCORE_HMAC_SHA384_LEN], over[PROTOCORE_HMAC_SHA384_LEN];
-    HmacSha384V.mac_args.key = fill_key(0x5au, 128u);
-    HmacSha384V.mac_args.key_len = 128u;
-    HmacSha384V.mac_args.data = (const uint8_t *)"abc";
-    HmacSha384V.mac_args.len = 3u;
-    HmacSha384V.mac_args.out = at;
-    HmacSha384.mac(g_work);
+    HmacSha384.mac(g_work, fill_key(0x5au, 128u), 128u, (const uint8_t *)"abc", 3u, at);
 
-    HmacSha384V.mac_args.key = fill_key(0x5au, 129u);
-    HmacSha384V.mac_args.key_len = 129u;
-    HmacSha384V.mac_args.out = over;
-    HmacSha384.mac(g_work);
+    HmacSha384.mac(g_work, fill_key(0x5au, 129u), 129u, (const uint8_t *)"abc", 3u, over);
 
     TEST_ASSERT_TRUE(memcmp(at, over, sizeof(at)) != 0);
 }
@@ -172,12 +159,7 @@ void test_not_a_truncated_hmac_sha512(void)
     uint8_t d384[PROTOCORE_HMAC_SHA384_LEN];
     uint8_t d512[PROTOCORE_HMAC_SHA512_LEN];
 
-    HmacSha384V.mac_args.key = fill_key(0x0bu, 20u);
-    HmacSha384V.mac_args.key_len = 20u;
-    HmacSha384V.mac_args.data = (const uint8_t *)"Hi There";
-    HmacSha384V.mac_args.len = 8u;
-    HmacSha384V.mac_args.out = d384;
-    HmacSha384.mac(g_work);
+    HmacSha384.mac(g_work, fill_key(0x0bu, 20u), 20u, (const uint8_t *)"Hi There", 8u, d384);
 
     HmacSha512.mac(g_512_work, fill_key(0x0bu, 20u), 20u, (const uint8_t *)"Hi There", 8u, d512);
 
@@ -191,26 +173,14 @@ void test_streaming_matches_one_shot(void)
     const char *msg = CASE7_DATA;
     const size_t len = sizeof(CASE7_DATA) - 1;
 
-    HmacSha384V.mac_args.key = fill_key(0xaau, 131u);
-    HmacSha384V.mac_args.key_len = 131u;
-    HmacSha384V.mac_args.data = (const uint8_t *)msg;
-    HmacSha384V.mac_args.len = len;
-    HmacSha384V.mac_args.out = one;
-    HmacSha384.mac(g_work);
+    HmacSha384.mac(g_work, fill_key(0xaau, 131u), 131u, (const uint8_t *)msg, len, one);
 
     for (size_t cut = 1; cut < len; cut += 23)
     {
-        HmacSha384V.key_args.key = fill_key(0xaau, 131u);
-        HmacSha384V.key_args.key_len = 131u;
-        HmacSha384.init(g_ctx_work);
-        HmacSha384V.update_args.data = (const uint8_t *)msg;
-        HmacSha384V.update_args.len = cut;
-        HmacSha384.update(g_ctx_work);
-        HmacSha384V.update_args.data = (const uint8_t *)msg + cut;
-        HmacSha384V.update_args.len = len - cut;
-        HmacSha384.update(g_ctx_work);
-        HmacSha384V.final_args.out = streamed;
-        HmacSha384.final(g_ctx_work);
+        HmacSha384.init(g_ctx_work, fill_key(0xaau, 131u), 131u);
+        HmacSha384.update(g_ctx_work, (const uint8_t *)msg, cut);
+        HmacSha384.update(g_ctx_work, (const uint8_t *)msg + cut, len - cut);
+        HmacSha384.final(g_ctx_work, streamed);
         TEST_ASSERT_EQUAL_MEMORY(one, streamed, sizeof(one));
     }
 }
@@ -220,24 +190,11 @@ void test_a_changed_key_or_message_changes_the_mac(void)
 {
     uint8_t base[PROTOCORE_HMAC_SHA384_LEN], other[PROTOCORE_HMAC_SHA384_LEN];
 
-    HmacSha384V.mac_args.key = fill_key(0x0bu, 20u);
-    HmacSha384V.mac_args.key_len = 20u;
-    HmacSha384V.mac_args.data = (const uint8_t *)"Hi There";
-    HmacSha384V.mac_args.len = 8u;
-    HmacSha384V.mac_args.out = base;
-    HmacSha384.mac(g_work);
+    HmacSha384.mac(g_work, fill_key(0x0bu, 20u), 20u, (const uint8_t *)"Hi There", 8u, base);
 
-    HmacSha384V.mac_args.key = fill_key(0x0au, 20u);
-    HmacSha384V.mac_args.key_len = 20u;
-    HmacSha384V.mac_args.out = other;
-    HmacSha384.mac(g_work);
+    HmacSha384.mac(g_work, fill_key(0x0au, 20u), 20u, (const uint8_t *)"Hi There", 8u, other);
     TEST_ASSERT_TRUE(memcmp(base, other, sizeof(base)) != 0);
 
-    HmacSha384V.mac_args.key = fill_key(0x0bu, 20u);
-    HmacSha384V.mac_args.key_len = 20u;
-    HmacSha384V.mac_args.data = (const uint8_t *)"Hi there";
-    HmacSha384V.mac_args.len = 8u;
-    HmacSha384V.mac_args.out = other;
-    HmacSha384.mac(g_work);
+    HmacSha384.mac(g_work, fill_key(0x0bu, 20u), 20u, (const uint8_t *)"Hi there", 8u, other);
     TEST_ASSERT_TRUE(memcmp(base, other, sizeof(base)) != 0);
 }

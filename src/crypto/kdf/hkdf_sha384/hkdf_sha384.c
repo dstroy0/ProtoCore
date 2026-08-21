@@ -63,20 +63,11 @@ static proto_bool hkdf_sha384_derive(uint8_t *restrict work, const uint8_t *prk,
     while (done < out_len)
     {
         counter++;
-        HmacSha384V.key_args.key = prk;
-        HmacSha384V.key_args.key_len = PROTOCORE_HKDF_SHA384_HASH_LEN;
-        HmacSha384.init(HKDF_SHA384_HMAC(work));
-        HmacSha384V.update_args.data = t;
-        HmacSha384V.update_args.len = t_len;
-        HmacSha384.update(HKDF_SHA384_HMAC(work));
-        HmacSha384V.update_args.data = info;
-        HmacSha384V.update_args.len = info_len;
-        HmacSha384.update(HKDF_SHA384_HMAC(work));
-        HmacSha384V.update_args.data = &counter;
-        HmacSha384V.update_args.len = 1;
-        HmacSha384.update(HKDF_SHA384_HMAC(work));
-        HmacSha384V.final_args.out = t;
-        HmacSha384.final(HKDF_SHA384_HMAC(work));
+        HmacSha384.init(HKDF_SHA384_HMAC(work), prk, PROTOCORE_HKDF_SHA384_HASH_LEN);
+        HmacSha384.update(HKDF_SHA384_HMAC(work), t, t_len);
+        HmacSha384.update(HKDF_SHA384_HMAC(work), info, info_len);
+        HmacSha384.update(HKDF_SHA384_HMAC(work), &counter, 1);
+        HmacSha384.final(HKDF_SHA384_HMAC(work), t);
         t_len = PROTOCORE_HKDF_SHA384_HASH_LEN;
 
         size_t take = out_len - done;
@@ -136,13 +127,10 @@ void protocore_hkdf_sha384_extract(uint8_t *restrict work)
     {
         return;
     }
-    HmacSha384V.mac_args.key = HkdfSha384V.extract_args.salt;
-    HmacSha384V.mac_args.key_len = HkdfSha384V.extract_args.salt_len;
-    HmacSha384V.mac_args.data = HkdfSha384V.extract_args.ikm;
-    HmacSha384V.mac_args.len = HkdfSha384V.extract_args.ikm_len;
-    HmacSha384V.mac_args.out = HkdfSha384V.extract_args.prk;
-    HmacSha384.mac(HKDF_SHA384_HMAC(work));
-    HkdfSha384V.ok = HmacSha384V.ok;
+    proto_bool hmac_sha384_ok =
+        HmacSha384.mac(HKDF_SHA384_HMAC(work), HkdfSha384V.extract_args.salt, HkdfSha384V.extract_args.salt_len,
+                       HkdfSha384V.extract_args.ikm, HkdfSha384V.extract_args.ikm_len, HkdfSha384V.extract_args.prk);
+    HkdfSha384V.ok = hmac_sha384_ok;
 }
 
 void protocore_hkdf_sha384_expand(uint8_t *restrict work)

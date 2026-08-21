@@ -112,12 +112,7 @@ static void finished_hmac(proto_bool is384, uint8_t *work, const uint8_t *key, c
     const size_t len = hash_len(is384);
     if (is384)
     {
-        HmacSha384V.mac_args.key = key;
-        HmacSha384V.mac_args.key_len = len;
-        HmacSha384V.mac_args.data = data;
-        HmacSha384V.mac_args.len = len;
-        HmacSha384V.mac_args.out = out;
-        HmacSha384.mac(work);
+        HmacSha384.mac(work, key, len, data, len, out);
         return;
     }
     HmacSha256.mac(work, key, len, data, len, out);
