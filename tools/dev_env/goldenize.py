@@ -26,6 +26,7 @@ R = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # --dry: every write goes through emit(), which prints the diff and leaves the file alone. The
 # reads that follow still see the originals, so a dry run is the whole conversion, shown.
 DRY = False
+FORCE = False
 
 
 def emit(path, text):
@@ -3589,6 +3590,21 @@ def _brace_end(s, ob, mask):
     return len(s) - 1
 
 
+DECLARED_FN = re.compile(r"^\s*(?:[A-Za-z_][\w ]*?[\s*])(\w+)\s*\([^;{]*\)\s*;", re.M)
+
+
+def dropped_declarations(original, converted, spec):
+    """Function names the old header declared and the new one does not, minus the entries.
+
+    An entry's flat declaration is REPLACED by the converted one, so it is expected to move; any
+    other name that disappears is a published function this conversion would delete.
+    """
+    keep = {e["flat"] for e in spec["entries"]} | {e["entry"] for e in spec["entries"]}
+    was = {m.group(1) for m in DECLARED_FN.finditer(original)}
+    now = {m.group(1) for m in DECLARED_FN.finditer(converted)}
+    return sorted(n for n in was - now if n not in keep)
+
+
 def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include")):
     """Fold each call site's staged operands into the call, and give its result a local.
 
@@ -3920,7 +3936,7 @@ def unwork_source(spec):
 
 
 def main():
-    global DRY
+    global DRY, FORCE
     # A header carries the section signs and dashes its RFC citations are written with, and the
     # console's default code page cannot encode them: printing the diff raised UnicodeEncodeError
     # part way through and took the run with it. The bytes are not the point of the diff, so an
@@ -3930,6 +3946,11 @@ def main():
             stream.reconfigure(encoding="utf-8", errors="replace")
     argv = [a for a in sys.argv if a != "--dry"]
     DRY = len(argv) != len(sys.argv)
+    # A conversion that would leave a read of <X>V behind refuses; --force writes it anyway, which
+    # means accepting a tree that does not compile until those sites are done by hand.
+    before = len(argv)
+    argv = [a for a in argv if a != "--force"]
+    FORCE = len(argv) != before
     # `align` takes no operand: with no paths it sweeps src/, which is the usual way to run it.
     if len(argv) < 3 and not (len(argv) == 2 and argv[1] in ("align", "unnull", "handle")):
         print(__doc__)
@@ -3965,18 +3986,48 @@ def main():
         print("entries:")
         for e in spec["entries"]:
             print("   %-28s %s %s(%s)" % (e["entry"], e["ret"], e["flat"], sig_params(spec, e)))
+        # THE CALL SITES DECIDE WHETHER THIS MODULE CONVERTS AT ALL, so they are worked out before
+        # anything is written. The converted header does not declare <X>V, so a site the rewriter
+        # refuses is a translation unit that stops compiling - and a module half-converted is worse
+        # than one not converted, because the tree is then in neither shape. Planned first, written
+        # only if nothing would be left behind.
+        print("call sites:")
+        was_dry = DRY
+        globals()["DRY"] = True
+        total, skipped, texts = rewrite_calls_ns(spec)
+        globals()["DRY"] = was_dry
+        print("   rewritten:", total)
+        left = remaining_vars_reads(spec, texts)
+        if left and not FORCE:
+            print("   %sV reads left: %d - NOT CONVERTING" % (spec["object"], left))
+            for rel, ln, why in sorted(set(skipped)):
+                print("   SKIPPED %s:%d  %s" % (rel, ln, why))
+            print(
+                "\n%s was left alone. Each site above has to be staged in the block directly above\n"
+                "its call, or converted by hand, before this module can move. --force writes anyway." % spec["module"]
+            )
+            return 1
         original = io.open(hp, encoding="utf-8").read()
+        header = gen_header_ns(spec, original)
+        gone = dropped_declarations(original, header, spec)
+        if gone and not FORCE:
+            print("   would DELETE published declarations: %s - NOT CONVERTING" % ", ".join(gone))
+            print(
+                "\n%s declares functions the table does not bind, and the entries wrap them rather\n"
+                "than being them. That is the wrapper/flat duplication: collapsing it means binding\n"
+                "the table to the existing function, which is not what this pass does. Left alone." % spec["module"]
+            )
+            return 1
+        if not DRY:
+            for p_, text in texts.items():
+                io.open(p_, "w", encoding="utf-8", newline="").write(text)
         print("header:", spec["header"])
-        emit(hp, gen_header_ns(spec, original))
+        emit(hp, header)
         print("source:", spec["source"])
         for n in dict.fromkeys(unwork_source(spec)):
             print("   NOTE", n)
-        print("call sites:")
-        total, skipped, texts = rewrite_calls_ns(spec)
-        print("   rewritten:", total)
         # Every remaining read of <X>V is a compile error once the header stops declaring it, so
         # count them here rather than letting the build be the first to say so.
-        left = remaining_vars_reads(spec, texts)
         print("   %sV reads left: %d" % (spec["object"], left))
         for rel, ln, why in sorted(set(skipped)):
             print("   SKIPPED %s:%d  %s" % (rel, ln, why))
