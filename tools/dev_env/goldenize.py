@@ -3293,10 +3293,12 @@ def scan_worked(hpath):
         params, group = [], name
         span = body_of(csrc, flat)
         if span and objv:
-            groups = dict.fromkeys(re.findall(r"\b%s\.(\w+)_args\b" % re.escape(objv), csrc[span[1] : span[2]]))
+            groups = dict.fromkeys(re.findall(r"\b%s\.((?:\w+_)?args)\b" % re.escape(objv), csrc[span[1] : span[2]]))
             if len(groups) == 1:
-                group = next(iter(groups))
-                member = group + "_args"
+                # The member's own name. `args` and `verify_args` are both just names; the
+                # stem-plus-suffix spelling could not express the first.
+                member = next(iter(groups))
+                group = member
                 tm = re.search(r"\b(\w+)\s+%s\s*;" % re.escape(member), s)
                 if tm:
                     params = args_params(s, tm.group(1))
@@ -3319,6 +3321,7 @@ def scan_worked(hpath):
                 # The operand group this entry stages into, which is not always its own name:
                 # aes128gcm has block_init and block_encrypt both staging into block_args.
                 "group": group,
+                "argmem": group,
                 "flat": flat,
                 "impl": flat,
                 "call": "%s.%s" % (obj, name),
@@ -3679,15 +3682,15 @@ def undecodable_operands(spec, texts=None):
     for e in spec["entries"]:
         span = body_of(text, e["flat"])
         if span:
-            spans.setdefault(e.get("group", e["entry"]), []).append((span[1], span[2]))
+            spans.setdefault(e.get("argmem", e["entry"] + "_args"), []).append((span[1], span[2]))
 
     out = []
     for m in re.finditer(r"\b%s\.(\w+)" % re.escape(objv), text):
         if not mask[m.start()]:
             continue
         member = m.group(1)
-        if member.endswith("_args"):
-            owner = member[: -len("_args")]
+        if member.endswith("args"):
+            owner = member
             if any(a <= m.start() <= b for a, b in spans.get(owner, ())):
                 continue
         if member in results:
@@ -3781,7 +3784,7 @@ def fold_comma_calls(s, spec, byname, pat, mask):
     alone, because a part this does not understand is a side effect it would be deleting.
     """
     objv = spec.get("objv", "")
-    stage = re.compile(r"^%s\.(\w+)_args\.(\w+)\s*=\s*(.+)$" % re.escape(objv), re.S)
+    stage = re.compile(r"^%s\.((?:\w+_)?args)\.(\w+)\s*=\s*(.+)$" % re.escape(objv), re.S)
     n, at = 0, 0
     while True:
         m = pat.search(s, at)
@@ -3827,7 +3830,7 @@ def fold_comma_calls(s, spec, byname, pat, mask):
                 seen_call = True
                 continue
             sm = stage.match(t)
-            if sm and sm.group(1) == e.get("group", e["entry"]):
+            if sm and sm.group(1) == e.get("argmem", e["entry"] + "_args"):
                 vals[sm.group(2)] = " ".join(sm.group(3).split())
                 continue
             if e.get("result") and t == "%s.%s" % (objv, e["result"]):
@@ -3917,7 +3920,7 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
     # line does not match, the walk stops there, the operand reads as unstaged and the site is
     # skipped - which left transport.c with one converted call and one not, in a #if arm no native
     # env compiles, so the build said nothing.
-    stage_any = re.compile(r"^[ \t]*%s\.(\w+)_args\.(\w+)\s*=\s*(.+?);[ \t]*(//[^\n]*)?$" % re.escape(objv))
+    stage_any = re.compile(r"^[ \t]*%s\.((?:\w+_)?args)\.(\w+)\s*=\s*(.+?);[ \t]*(//[^\n]*)?$" % re.escape(objv))
     total, skipped = 0, []
 
     for root in roots:
@@ -3997,7 +4000,7 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
                         # Matched on the entry's operand GROUP, not on its name. aes128gcm stages
                         # block_init through block_key_args and block_encrypt through block_args,
                         # and matching the name left every one of those sites unfolded.
-                        if sm.group(1) == e.get("group", e["entry"]):
+                        if sm.group(1) == e.get("argmem", e["entry"] + "_args"):
                             vals.setdefault(sm.group(2), sm.group(3).strip())
                             # A comment on a staged line says why that operand is what it is, and
                             # the line it sits on is about to go. Carry it to the call.
@@ -4028,7 +4031,7 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
                             if prev < stop_at:
                                 break
                             sm = stage_any.match(s[prev : back - 1])
-                            if sm and sm.group(1) == e.get("group", e["entry"]):
+                            if sm and sm.group(1) == e.get("argmem", e["entry"] + "_args"):
                                 vals.setdefault(sm.group(2), sm.group(3).strip())
                             back = prev
 
@@ -4036,7 +4039,7 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
                     # DELETES its staging, so a later call relying on an operand the earlier
                     # one staged has nothing left to walk back to - which is why the walk above
                     # did not rescue ghash. The value in effect is remembered instead.
-                    grp = e.get("group", e["entry"])
+                    grp = e.get("argmem", e["entry"] + "_args")
                     blk_here = enclosing_block(s, m.start(), mask)
                     blk_key = blk_here[0] if blk_here else -1
                     for w in want:
@@ -4232,7 +4235,7 @@ def unwork_source(spec, write=True, text=None):
             # Substituting by entry NAME left hmac_sha256_init reading HmacSha256V.key_args.key in
             # a body whose header no longer declares HmacSha256V.
             body = re.sub(
-                r"\b%s\.%s_args\.(\w+)" % (re.escape(objv), re.escape(e.get("group", e["entry"]))),
+                r"\b%s\.%s\.(\w+)" % (re.escape(objv), re.escape(e.get("argmem", e["entry"] + "_args"))),
                 r"\1",
                 body,
             )
