@@ -15,9 +15,7 @@
  * put a root, a path buffer, its capacity, and a copy of the `..` guard into a protocol server.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_SSH_SCP
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "network_drivers/session/scp/ssh_scp/ssh_scp.h"
@@ -28,8 +26,6 @@
 #include "network_drivers/session/scp/scp/scp.h"
 #include "network_drivers/session/session.h" // scp_conns: the transfer the connection carries
 #include "server/storage/filesystem/filesystem.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // All SCP state in one owner with internal linkage, the work buffer included: a stack array is the
 // one allocation the fixed-footprint accounting cannot see, and the buffer does not outlive the
@@ -336,10 +332,3 @@ void protocore_ssh_scp_begin(uint8_t *restrict work)
         SSH_SCP_CTX(work)->registered = PROTO_TRUE;
     }
 }
-
-/** @brief The operands and the outcome. */
-SshScpVars SshScpV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_SSH_SCP

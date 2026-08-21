@@ -1,6 +1,13 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#ifndef PROTOCORE_UMATI_H
+#define PROTOCORE_UMATI_H
+
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+PROTOCORE_BEGIN_DECLS
+
 /**
  * @file umati.h
  * @brief umati - OPC UA for Machine Tools (OPC 40501-1) information model (PROTOCORE_ENABLE_UMATI).
@@ -18,16 +25,16 @@
  *
  * Model exposed (BrowseNames per OPC 40501-1), under the Objects folder:
  *
- *   MachineTool
- *     Identification   Manufacturer, Model, SerialNumber, YearOfConstruction, SoftwareRevision,
- *                      ProductInstanceUri
- *     Monitoring
- *       MachineTool    OperationMode, PowerOnDuration
- *       Channel        ChannelState, FeedOverride, RapidOverride, ActiveProgram
- *       Spindle        RotationSpeed, OverrideValue, IsRotating
- *       Axis_X/Y/Z     ActualPosition
- *     Production       ActiveProgram, ProducedPartCount
- *     Notification     ActiveMessage, Severity
+ * MachineTool
+ * Identification   Manufacturer, Model, SerialNumber, YearOfConstruction, SoftwareRevision,
+ * ProductInstanceUri
+ * Monitoring
+ * MachineTool    OperationMode, PowerOnDuration
+ * Channel        ChannelState, FeedOverride, RapidOverride, ActiveProgram
+ * Spindle        RotationSpeed, OverrideValue, IsRotating
+ * Axis_X/Y/Z     ActualPosition
+ * Production       ActiveProgram, ProducedPartCount
+ * Notification     ActiveMessage, Severity
  *
  * The model is read-only (a monitoring model - the machine reports, the client observes). Scope note:
  * a single Channel/Spindle and three linear axes are exposed (the common embedded machine); the values
@@ -35,22 +42,13 @@
  * the MachineTool URI (which needs array-Variant support in the base server) are a documented follow-on
  * - a generic OPC UA client still browses the structure and reads every value by BrowseName today.
  *
+ * @c work is PROTOCORE_UMATI_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
+ *
  * @author  Douglas Quigg (dstroy0)
  * @date     2026
  */
-
-#ifndef PROTOCORE_UMATI_H
-#define PROTOCORE_UMATI_H
-
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths
-
-#if PROTOCORE_ENABLE_UMATI
-
-PROTOCORE_BEGIN_DECLS
-
-// PROTOCORE_UMATI_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
-// it into its arena. A caller takes them once and passes the pointer to every call. How they
-// are carved is this module's and is never named here.
 
 /** @brief The OPC UA for Machine Tools companion-spec namespace URI (OPC 40501-1). */
 #define UMATI_NS_URI "http://opcfoundation.org/UA/MachineTool/"
@@ -136,69 +134,26 @@ typedef struct
     uint32_t message_severity;         ///< Notification.Severity (0..1000, OPC UA event severity scale).
 } UmatiMachineTool;
 
-/** @brief What bind takes: mt. */
+/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    const UmatiMachineTool *mt;
-} UmatiBindArgs;
-
-/** @brief What install takes: mt. */
-typedef struct
-{
-    const UmatiMachineTool *mt;
-} UmatiInstallArgs;
+    void (*bind)(uint8_t *restrict, const UmatiMachineTool *);
+    void (*install)(uint8_t *restrict, const UmatiMachineTool *);
+} UmatiNs;
+PROTOCORE_NS_LAYOUT(UmatiNs, bind, install);
 
 /**
- * @brief umati - OPC UA for Machine Tools (OPC 40501-1) information model (PROTOCORE_ENABLE_UMATI). umati ("universal
- * machine technology interface") is the OPC UA companion specification for machine tools (VDW / OPC Foundation, OPC
- * 40501-1, namespace `http://opcfoundation.org/UA/MachineTool/`).
- *
- * A caller sets the members a call takes, invokes it through ::Umati with the bytes it runs
- * out of, and reads the outcome off the same handle.
- *
- *   Umati.bind_args.mt = ...;
- *   Umati.bind(work);
- *
- * @var UmatiNs::bind_args  what bind takes: mt
- * @var UmatiNs::install_args  what install takes: mt
- * @var UmatiNs::ok  a call's true/false outcome
- * @var UmatiNs::bind  bind the MachineTool the resolvers serve. mt must outlive the ...
- * @var UmatiNs::install  convenience: bind mt and register both resolvers on the OPC UA ...
- *
- * @c work is PROTOCORE_UMATI_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @brief Bind the MachineTool the resolvers serve. mt must outlive the .
+ * @param work PROTOCORE_UMATI_BORROW bytes the caller took. Not held past the call.
+ * @param mt Mt
  */
-typedef struct
-{
-    UmatiBindArgs bind_args;
-    UmatiInstallArgs install_args;
-    proto_bool ok;
-} UmatiVars;
-
-/** @brief The operands and the outcome. */
-extern UmatiVars UmatiV;
-
-/** @brief The entries. */
-typedef struct
-{
-    void (*const bind)(uint8_t *restrict work);
-    void (*const install)(uint8_t *restrict work);
-} UmatiNs;
-
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in UmatiV or a region of the borrow at a fixed offset.
-void protocore_umati_bind(uint8_t *restrict work);
-void protocore_umati_install(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Umati.bind(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const UmatiNs Umati __attribute__((unused)) = {
-    .bind = protocore_umati_bind,
-    .install = protocore_umati_install,
-};
+void protocore_umati_bind(uint8_t *restrict work, const UmatiMachineTool *mt);
+/**
+ * @brief Convenience: bind mt and register both resolvers on the OPC UA .
+ * @param work PROTOCORE_UMATI_BORROW bytes the caller took. Not held past the call.
+ * @param mt Mt
+ */
+void protocore_umati_install(uint8_t *restrict work, const UmatiMachineTool *mt);
 
 /**
  * @brief The PROTOCORE_UMATI_BORROW bytes this module's state lives in.
@@ -211,8 +166,9 @@ static const UmatiNs Umati __attribute__((unused)) = {
  */
 uint8_t *protocore_umati_span(void);
 
-PROTOCORE_END_DECLS
+/** @brief Module namespace. */
+PROTOCORE_NS UmatiNs Umati PROTOCORE_UNUSED = {.bind = protocore_umati_bind, .install = protocore_umati_install};
 
-#endif // PROTOCORE_ENABLE_UMATI
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_UMATI_H

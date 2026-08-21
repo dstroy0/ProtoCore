@@ -39,8 +39,7 @@ void dbench_run(void)
     g_mt.axis_z.actual_position = 42.0;
     g_mt.active_program = "PART_A.NC";
     g_mt.produced_part_count = 7;
-    UmatiV.bind_args.mt = &g_mt;
-    Umati.bind(protocore_umati_span());
+    Umati.bind(protocore_umati_span(), &g_mt);
 
     for (;;)
     {

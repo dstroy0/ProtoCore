@@ -1,6 +1,13 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#ifndef PROTOCORE_SSH_SCP_H
+#define PROTOCORE_SSH_SCP_H
+
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+PROTOCORE_BEGIN_DECLS
+
 /**
  * @file ssh_scp.h
  * @brief SCP server - the rcp SINK state machine over an SSH exec channel (PROTOCORE_ENABLE_SSH_SCP).
@@ -17,63 +24,26 @@
  *
  * Streamed writes, fixed buffers, no heap. Call protocore_ssh_scp_begin() once after protocore_ssh_conn_setup().
  *
+ * @c work is PROTOCORE_SSH_SCP_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
+ *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
  */
 
-#ifndef PROTOCORE_SSH_SCP_H
-#define PROTOCORE_SSH_SCP_H
-
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths
-
-#if PROTOCORE_ENABLE_SSH_SCP
-
-PROTOCORE_BEGIN_DECLS
-
-// PROTOCORE_SSH_SCP_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
-// it into its arena. A caller takes them once and passes the pointer to every call. How they
-// are carved is this module's and is never named here.
+/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
+typedef struct
+{
+    void (*begin)(uint8_t *restrict);
+} SshScpNs;
+PROTOCORE_NS_LAYOUT(SshScpNs, begin);
 
 /**
- * @brief SCP server - the rcp SINK state machine over an SSH exec channel (PROTOCORE_ENABLE_SSH_SCP).
- *
- * A caller sets the members a call takes, invokes it through ::SshScp with the bytes it runs
- * out of, and reads the outcome off the same handle.
- *
- *   SshScp.begin(work);
- *
- * @var SshScpNs::ok  a call's true/false outcome
- * @var SshScpNs::begin  serve SCP uploads onto the mounted filesystem. Installs the channel ...
- *
- * @c work is PROTOCORE_SSH_SCP_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @brief Serve SCP uploads onto the mounted filesystem. Installs the channel .
+ * @param work PROTOCORE_SSH_SCP_BORROW bytes the caller took. Not held past the call.
  */
-typedef struct
-{
-    proto_bool ok;
-} SshScpVars;
-
-/** @brief The operands and the outcome. */
-extern SshScpVars SshScpV;
-
-/** @brief The entries. */
-typedef struct
-{
-    void (*const begin)(uint8_t *restrict work);
-} SshScpNs;
-
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in SshScpV or a region of the borrow at a fixed offset.
 void protocore_ssh_scp_begin(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `SshScp.begin(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const SshScpNs SshScp __attribute__((unused)) = {
-    .begin = protocore_ssh_scp_begin,
-};
 
 /**
  * @brief The PROTOCORE_SSH_SCP_BORROW bytes this module's state lives in.
@@ -86,8 +56,9 @@ static const SshScpNs SshScp __attribute__((unused)) = {
  */
 uint8_t *protocore_ssh_scp_span(void);
 
-PROTOCORE_END_DECLS
+/** @brief Module namespace. */
+PROTOCORE_NS SshScpNs SshScp PROTOCORE_UNUSED = {.begin = protocore_ssh_scp_begin};
 
-#endif // PROTOCORE_ENABLE_SSH_SCP
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SSH_SCP_H

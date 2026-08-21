@@ -1,6 +1,13 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#ifndef PROTOCORE_DATALINK_H
+#define PROTOCORE_DATALINK_H
+
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+PROTOCORE_BEGIN_DECLS
+
 /**
  * @file datalink.h
  * @brief Layer 2 (Data Link) - the LINK LAYER of RFC 1122 sec 2.
@@ -18,55 +25,34 @@
  *
  * The module exports one symbol, @ref Datalink. Everything in datalink.c has internal linkage.
  *
+ * No argument members: init takes none.
+ * No storage member: the layer holds nothing of its own, so there is no state to hand out.
+ *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
  */
 
-#ifndef PROTOCORE_DATALINK_H
-#define PROTOCORE_DATALINK_H
+// PROTOCORE_DATALINK_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. Its size and its offset are each a static_assert, so a feature
+// combination that does not fit fails to compile rather than overrunning at run time.
 
-#include "protocore_config.h"
-
-PROTOCORE_BEGIN_DECLS
+/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
+typedef struct
+{
+    proto_bool (*init)(uint8_t *restrict);
+} DatalinkNs;
+PROTOCORE_NS_LAYOUT(DatalinkNs, init);
 
 /**
- * @brief The data link layer (RFC 1122 sec 2 "LINK LAYER").
- *
- * A caller invokes a call through ::Datalink and reads the outcome off the same handle.
- *
- * @var DatalinkNs::ok        PROTO_TRUE once @ref init has run
- * @var DatalinkNs::init      bring the layer up: sets @ref ok. The platform's link driver performs
- *                            every RFC 1122 sec 2.3.3 encapsulation step.
- *
- * No argument members: init takes none.
- * No storage member: the layer holds nothing of its own, so there is no state to hand out.
+ * @brief Bring the layer up: sets ok. The platform's link driver performs.
+ * @param work PROTOCORE_DATALINK_BORROW bytes the caller took. Not held past the call.
+ * @return PROTO_TRUE on success.
  */
-typedef struct
-{
-    proto_bool ok; ///< PROTO_TRUE once init has run
-} DatalinkVars;
+proto_bool protocore_datalink_init(uint8_t *restrict work);
 
-/** @brief The operands and the outcome. */
-extern DatalinkVars DatalinkV;
-
-/** @brief The entries. */
-typedef struct
-{
-    void (*const init)(uint8_t *restrict work);
-} DatalinkNs;
-
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in DatalinkV or a region of the borrow at a fixed offset.
-void protocore_datalink_init(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Datalink.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const DatalinkNs Datalink __attribute__((unused)) = {
-    .init = protocore_datalink_init,
-};
+/** @brief Module namespace. */
+PROTOCORE_NS DatalinkNs Datalink PROTOCORE_UNUSED = {.init = protocore_datalink_init};
 
 PROTOCORE_END_DECLS
 
-#endif
+#endif // PROTOCORE_DATALINK_H

@@ -1,10 +1,17 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#ifndef PROTOCORE_SSH_SFTP_H
+#define PROTOCORE_SSH_SFTP_H
+
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+PROTOCORE_BEGIN_DECLS
+
 /**
  * @file ssh_sftp.h
  * @brief SFTP v3 server subsystem - the SSH_FXP_* state machine over an SSH session channel
- *        (PROTOCORE_ENABLE_SSH_SFTP).
+(PROTOCORE_ENABLE_SSH_SFTP).
  *
  * Drives the pure SFTP v3 codec (network_drivers/application/sftp) over an SSH session channel: when a
  * client requests the "sftp" subsystem, this serves SSH_FXP_* requests (open/read/write/opendir/
@@ -19,64 +26,26 @@
  * Call protocore_ssh_sftp_begin() once after protocore_ssh_conn_setup(); it installs the channel subsystem + data
  * callbacks.
  *
+ * @c work is PROTOCORE_SSH_SFTP_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
+ *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
  */
 
-#ifndef PROTOCORE_SSH_SFTP_H
-#define PROTOCORE_SSH_SFTP_H
-
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths
-
-#if PROTOCORE_ENABLE_SSH_SFTP
-
-PROTOCORE_BEGIN_DECLS
-
-// PROTOCORE_SSH_SFTP_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
-// it into its arena. A caller takes them once and passes the pointer to every call. How they
-// are carved is this module's and is never named here.
+/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
+typedef struct
+{
+    void (*begin)(uint8_t *restrict);
+} SshSftpNs;
+PROTOCORE_NS_LAYOUT(SshSftpNs, begin);
 
 /**
- * @brief SFTP v3 server subsystem - the SSH_FXP_* state machine over an SSH session channel
- * (PROTOCORE_ENABLE_SSH_SFTP).
- *
- * A caller sets the members a call takes, invokes it through ::SshSftp with the bytes it runs
- * out of, and reads the outcome off the same handle.
- *
- *   SshSftp.begin(work);
- *
- * @var SshSftpNs::ok  a call's true/false outcome
- * @var SshSftpNs::begin  serve the SFTP subsystem from the mounted filesystem. Installs the ...
- *
- * @c work is PROTOCORE_SSH_SFTP_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @brief Serve the SFTP subsystem from the mounted filesystem. Installs the .
+ * @param work PROTOCORE_SSH_SFTP_BORROW bytes the caller took. Not held past the call.
  */
-typedef struct
-{
-    proto_bool ok;
-} SshSftpVars;
-
-/** @brief The operands and the outcome. */
-extern SshSftpVars SshSftpV;
-
-/** @brief The entries. */
-typedef struct
-{
-    void (*const begin)(uint8_t *restrict work);
-} SshSftpNs;
-
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in SshSftpV or a region of the borrow at a fixed offset.
 void protocore_ssh_sftp_begin(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `SshSftp.begin(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const SshSftpNs SshSftp __attribute__((unused)) = {
-    .begin = protocore_ssh_sftp_begin,
-};
 
 /**
  * @brief The PROTOCORE_SSH_SFTP_BORROW bytes this module's state lives in.
@@ -89,8 +58,9 @@ static const SshSftpNs SshSftp __attribute__((unused)) = {
  */
 uint8_t *protocore_ssh_sftp_span(void);
 
-PROTOCORE_END_DECLS
+/** @brief Module namespace. */
+PROTOCORE_NS SshSftpNs SshSftp PROTOCORE_UNUSED = {.begin = protocore_ssh_sftp_begin};
 
-#endif // PROTOCORE_ENABLE_SSH_SFTP
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SSH_SFTP_H

@@ -13,16 +13,12 @@
  * AXIS_BASE + k*10 (k = 1..axis_count) and its four variables at +1..+4.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_ROBOTICS
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protostr/protostr.h"
 #include "services/opcua/models/robotics/robotics.h"
 #include "services/opcua/opcua.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Node identifiers (namespace PROTOCORE_ROBOTICS_NS). Objects end in 0; their variables count up from it.
@@ -257,11 +253,8 @@ uint8_t *protocore_robotics_span(void)
     return s_own.span;
 }
 
-void protocore_robotics_bind(uint8_t *restrict work);
-
-void protocore_robotics_bind(uint8_t *restrict work)
+void protocore_robotics_bind(uint8_t *restrict work, const RoboticsMotionDeviceSystem *mds)
 {
-    const RoboticsMotionDeviceSystem *mds = RoboticsV.bind_args.mds;
 
     ROBOTICS_CTX(work)->mds = mds;
     build_axis_names(ROBOTICS_CTX(work));
@@ -472,19 +465,10 @@ static int32_t robotics_browse(uint16_t ns, uint32_t id, OpcUaReference *out, ui
     }
 }
 
-void protocore_robotics_install(uint8_t *restrict work)
+void protocore_robotics_install(uint8_t *restrict work, const RoboticsMotionDeviceSystem *mds)
 {
-    const RoboticsMotionDeviceSystem *mds = RoboticsV.install_args.mds;
 
-    RoboticsV.bind_args.mds = mds;
-    protocore_robotics_bind(work);
+    Robotics.bind(work, mds);
     protocore_opcua_set_read_handler(robotics_read);
     protocore_opcua_set_browse_handler(robotics_browse);
 }
-
-/** @brief The operands and the outcome. */
-RoboticsVars RoboticsV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_ROBOTICS
