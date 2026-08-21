@@ -17,7 +17,7 @@ Everything under tools/ is reachable from here, so `harness.py help` is the whol
   crypto        test vectors and keys
   assets        diagrams, theme previews, favicons, svg tooltips
   hooks         git: commit, install, status, cspell, dependabot
-  build         THE BUILD: modules, cmake, split - plus envs, ccache, psram
+  build         THE BUILD: modules, suites, cmake, split - plus envs, ccache, psram
   selftest      run the tools' own self-tests
   doc gen       regenerate the derived tables in tools/TOOLS.md
 
@@ -37,7 +37,12 @@ HOW THIS TREE BUILDS - READ THIS BEFORE TOUCHING A BUILD FILE
   .c/.h pair dropped beside an existing one is wrong - `build split` moves it into its own
   directory and rewrites every reference.
 
-    build modules    check every declaration under src/ against its sources
+  A SUITE IS A DIRECTORY TOO, and declares itself the same way: its test file, whatever sits beside
+  it, and whether it writes its own main() or takes the generated Unity runner. An env names the
+  suite it runs; it does not repeat that suite's files.
+
+    build modules    check every declaration under src/, vendor/, include/ and test/core_setup
+    build suites     check every declaration under test/unit and test/env
     build cmake      test/CMakeLists.txt: one target and one ctest per env
     build split      a pair still sharing a directory (dry run by default)
 
@@ -616,6 +621,19 @@ BUILD = {
         "stage and silently is not a dependency. "
         "--graph prints the dependency graph, --cycles the loops in it, --unowned the headers no "
         "module claims.",
+    ),
+    "suites": T(
+        "tools/ci_tooling/build/gen_suites.py",
+        "suites [--check] [--write]",
+        "The same for the 376 suite directories under test/unit and test/env. A SUITE IS A "
+        "DIRECTORY: its test file, whatever sits beside it, and the CMakeLists.txt declaring them. "
+        "Audits by default - a declaration whose SOURCES are not what the directory holds, an "
+        "OWN_MAIN that disagrees with whether a source defines main(), a parent that does not "
+        "descend into a child, a suite with no declaration at all. --write renders them from the "
+        "tree, which is the bootstrap and the way back after a large move. "
+        "A suite target is an INTERFACE library, not an OBJECT one: 59 suites are run by more than "
+        "one env and the matrix holds 296 distinct define sets, so a suite has to be compiled AS "
+        "each env that runs it rather than once for all of them.",
     ),
     "envs": T(
         "tools/dev_env/build_envs.sh",

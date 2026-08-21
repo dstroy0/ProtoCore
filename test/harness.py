@@ -2283,7 +2283,13 @@ def run_cmake(a):
     print(r.stdout.strip().splitlines()[-1] if r.stdout.strip() else "test/CMakeLists.txt regenerated")
 
     if not os.path.exists(os.path.join(build, "CMakeCache.txt")):
-        r = subprocess.run(["cmake", "-S", os.path.join(ROOT, "test"), "-B", build], cwd=ROOT)
+        # Name the generator when ninja is here. Left to CMake, Windows picks NMake Makefiles on a
+        # machine with no Visual Studio and no nmake, and the configure fails with
+        # "CMAKE_C_COMPILER not set" - so a fresh clone could not configure through this command at
+        # all, and the build directory that did work had been made by hand with -G Ninja. Where
+        # ninja is absent the default is still CMake's.
+        gen = ["-G", "Ninja"] if shutil.which("ninja") else []
+        r = subprocess.run(["cmake", "-S", os.path.join(ROOT, "test"), "-B", build] + gen, cwd=ROOT)
         if r.returncode != 0:
             return r.returncode
 

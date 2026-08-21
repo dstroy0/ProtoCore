@@ -210,6 +210,7 @@ Every one takes `--check` to assert the tracked file already matches, which is h
 | `ccache_wrap.sh`   | W |                                      | ccache, pio   |
 | `gen_cmake.py`     | W | `--check --quiet`                    | python        |
 | `gen_modules.py`   |   | `--check --cycles --graph --unowned` |               |
+| `gen_suites.py`    | W | `--check --write`                    |               |
 | `split_modules.py` | W | `--go --list`                        |               |
 
 ## crypto/ - generates test vectors and keys
