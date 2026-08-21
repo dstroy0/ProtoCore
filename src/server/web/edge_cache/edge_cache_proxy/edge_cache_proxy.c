@@ -325,12 +325,8 @@ static void serve_hit(uint8_t *restrict work, uint8_t slot, EdgeEntry *e, uint32
     {
         size_t rs = 0;
         size_t re = 0;
-        HttpRangeV.http_parse_byte_range_args.hdr = range;
-        HttpRangeV.http_parse_byte_range_args.size = e->body_len;
-        HttpRangeV.http_parse_byte_range_args.out_start = &rs;
-        HttpRangeV.http_parse_byte_range_args.out_end = &re;
-        HttpRange.http_parse_byte_range(work);
-        int rr = HttpRangeV.n;
+        int http_range_n = HttpRange.http_parse_byte_range(work, range, e->body_len, &rs, &re);
+        int rr = http_range_n;
         if (rr < 0) // syntactically valid but unsatisfiable -> 416, no body window served
         {
             char cr[48];

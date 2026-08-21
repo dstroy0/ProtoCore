@@ -444,12 +444,8 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
     HttpParserV.get_header_args.req = &http_pool[slot_id];
     HttpParserV.get_header_args.key = "Range";
     HttpParser.get_header(protocore_http_parser_span());
-    HttpRangeV.http_parse_byte_range_args.hdr = HttpParserV.text;
-    HttpRangeV.http_parse_byte_range_args.size = file_size;
-    HttpRangeV.http_parse_byte_range_args.out_start = &r_start;
-    HttpRangeV.http_parse_byte_range_args.out_end = &r_end;
-    HttpRange.http_parse_byte_range(work);
-    int rr = HttpRangeV.n;
+    int http_range_n = HttpRange.http_parse_byte_range(work, HttpParserV.text, file_size, &r_start, &r_end);
+    int rr = http_range_n;
     if (rr < 0)
     {
         // Unsatisfiable range -> 416 with Content-Range: bytes */<size>.

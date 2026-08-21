@@ -124,39 +124,23 @@ void test_rfc9110_published_range_examples(void)
     size_t s = 0;
     size_t e = 0;
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=0-499";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
-    HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    int http_range_n = HttpRange.http_parse_byte_range(http_range_work, "bytes=0-499", 10000, &s, &e);
+    TEST_ASSERT_EQUAL_INT(1, http_range_n);
     TEST_ASSERT_EQUAL_UINT(0u, s);
     TEST_ASSERT_EQUAL_UINT(499u, e);
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=500-999";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
-    HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    http_range_n = HttpRange.http_parse_byte_range(http_range_work, "bytes=500-999", 10000, &s, &e);
+    TEST_ASSERT_EQUAL_INT(1, http_range_n);
     TEST_ASSERT_EQUAL_UINT(500u, s);
     TEST_ASSERT_EQUAL_UINT(999u, e);
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=-500";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
-    HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    http_range_n = HttpRange.http_parse_byte_range(http_range_work, "bytes=-500", 10000, &s, &e);
+    TEST_ASSERT_EQUAL_INT(1, http_range_n);
     TEST_ASSERT_EQUAL_UINT(9500u, s);
     TEST_ASSERT_EQUAL_UINT(9999u, e);
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=9500-";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
-    HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    http_range_n = HttpRange.http_parse_byte_range(http_range_work, "bytes=9500-", 10000, &s, &e);
+    TEST_ASSERT_EQUAL_INT(1, http_range_n);
     TEST_ASSERT_EQUAL_UINT(9500u, s);
     TEST_ASSERT_EQUAL_UINT(9999u, e);
 }
@@ -172,40 +156,24 @@ void test_rfc9110_last_pos_and_suffix_clamping(void)
     size_t s = 0;
     size_t e = 0;
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=0-99999";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
-    HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    int http_range_n = HttpRange.http_parse_byte_range(http_range_work, "bytes=0-99999", 10000, &s, &e);
+    TEST_ASSERT_EQUAL_INT(1, http_range_n);
     TEST_ASSERT_EQUAL_UINT(0u, s);
     TEST_ASSERT_EQUAL_UINT(9999u, e);
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=-99999";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
-    HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    http_range_n = HttpRange.http_parse_byte_range(http_range_work, "bytes=-99999", 10000, &s, &e);
+    TEST_ASSERT_EQUAL_INT(1, http_range_n);
     TEST_ASSERT_EQUAL_UINT(0u, s);
     TEST_ASSERT_EQUAL_UINT(9999u, e);
 
     // The one-byte ends of both forms: first byte, last byte.
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=0-0";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
-    HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    http_range_n = HttpRange.http_parse_byte_range(http_range_work, "bytes=0-0", 10000, &s, &e);
+    TEST_ASSERT_EQUAL_INT(1, http_range_n);
     TEST_ASSERT_EQUAL_UINT(0u, s);
     TEST_ASSERT_EQUAL_UINT(0u, e);
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=-1";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
-    HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    http_range_n = HttpRange.http_parse_byte_range(http_range_work, "bytes=-1", 10000, &s, &e);
+    TEST_ASSERT_EQUAL_INT(1, http_range_n);
     TEST_ASSERT_EQUAL_UINT(9999u, s);
     TEST_ASSERT_EQUAL_UINT(9999u, e);
 }
@@ -219,24 +187,12 @@ void test_rfc9110_unsatisfiable_ranges(void)
     size_t s = 0;
     size_t e = 0;
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=10000-";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
-    HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(-1, HttpRangeV.n);
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=10500-11000";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
-    HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(-1, HttpRangeV.n);
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=-0";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
-    HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(-1, HttpRangeV.n);
+    int http_range_n = HttpRange.http_parse_byte_range(http_range_work, "bytes=10000-", 10000, &s, &e);
+    TEST_ASSERT_EQUAL_INT(-1, http_range_n);
+    http_range_n = HttpRange.http_parse_byte_range(http_range_work, "bytes=10500-11000", 10000, &s, &e);
+    TEST_ASSERT_EQUAL_INT(-1, http_range_n);
+    http_range_n = HttpRange.http_parse_byte_range(http_range_work, "bytes=-0", 10000, &s, &e);
+    TEST_ASSERT_EQUAL_INT(-1, http_range_n);
 }
 
 // sec 14.1.1: "An int-range is invalid if the last-pos value is present and less than the
@@ -248,12 +204,8 @@ void test_rfc9110_an_invalid_int_range_is_never_served(void)
     size_t s = 0;
     size_t e = 0;
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=500-499";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
-    HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_NOT_EQUAL(1, HttpRangeV.n);
+    int http_range_n = HttpRange.http_parse_byte_range(http_range_work, "bytes=500-499", 10000, &s, &e);
+    TEST_ASSERT_NOT_EQUAL(1, http_range_n);
 }
 
 // sec 14.1.2: "When a selected representation has zero length, the only satisfiable form of
@@ -272,18 +224,10 @@ void test_rfc9110_zero_length_representation(void)
     size_t s = 0;
     size_t e = 0;
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=0-0";
-    HttpRangeV.http_parse_byte_range_args.size = 0;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
-    HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(-1, HttpRangeV.n);
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=-1";
-    HttpRangeV.http_parse_byte_range_args.size = 0;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
-    HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_NOT_EQUAL(-1, HttpRangeV.n);
+    int http_range_n = HttpRange.http_parse_byte_range(http_range_work, "bytes=0-0", 0, &s, &e);
+    TEST_ASSERT_EQUAL_INT(-1, http_range_n);
+    http_range_n = HttpRange.http_parse_byte_range(http_range_work, "bytes=-1", 0, &s, &e);
+    TEST_ASSERT_NOT_EQUAL(-1, http_range_n);
 }
 
 // sec 14.2: "An origin server MUST ignore a Range header field that contains a range unit it does
@@ -308,26 +252,14 @@ void test_rfc9110_unusable_range_headers_fall_back_to_a_full_response(void)
     };
     for (size_t i = 0; i < sizeof(IGNORED) / sizeof(IGNORED[0]); i++)
     {
-        HttpRangeV.http_parse_byte_range_args.hdr = IGNORED[i];
-        HttpRangeV.http_parse_byte_range_args.size = 10000;
-        HttpRangeV.http_parse_byte_range_args.out_start = &s;
-        HttpRangeV.http_parse_byte_range_args.out_end = &e;
-        HttpRange.http_parse_byte_range(http_range_work);
-        TEST_ASSERT_EQUAL_INT_MESSAGE(0, HttpRangeV.n, IGNORED[i]);
+        int http_range_n = HttpRange.http_parse_byte_range(http_range_work, IGNORED[i], 10000, &s, &e);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(0, http_range_n, IGNORED[i]);
     }
-    HttpRangeV.http_parse_byte_range_args.hdr = NULL;
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
-    HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(0, HttpRangeV.n);
+    int http_range_n = HttpRange.http_parse_byte_range(http_range_work, NULL, 10000, &s, &e);
+    TEST_ASSERT_EQUAL_INT(0, http_range_n);
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "BYTES=0-9";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
-    HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    http_range_n = HttpRange.http_parse_byte_range(http_range_work, "BYTES=0-9", 10000, &s, &e);
+    TEST_ASSERT_EQUAL_INT(1, http_range_n);
     TEST_ASSERT_EQUAL_UINT(0u, s);
     TEST_ASSERT_EQUAL_UINT(9u, e);
 }
@@ -343,19 +275,12 @@ void test_rfc9110_large_decimal_numerals_do_not_wrap(void)
     size_t s = 0;
     size_t e = 0;
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=99999999999999999999999-";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
-    HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(-1, HttpRangeV.n);
+    int http_range_n =
+        HttpRange.http_parse_byte_range(http_range_work, "bytes=99999999999999999999999-", 10000, &s, &e);
+    TEST_ASSERT_EQUAL_INT(-1, http_range_n);
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=10-99999999999999999999999";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
-    HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    http_range_n = HttpRange.http_parse_byte_range(http_range_work, "bytes=10-99999999999999999999999", 10000, &s, &e);
+    TEST_ASSERT_EQUAL_INT(1, http_range_n);
     TEST_ASSERT_EQUAL_UINT(10u, s);
     TEST_ASSERT_EQUAL_UINT(9999u, e);
 }
