@@ -54,7 +54,7 @@
         "+<shared/utf8/utf8.c>"
       ],
       "tests": [
-        "unit/integration/transport/test_accept_gate"
+        "env/transport/test_accept_gate"
       ]
     },
     "native_ad9238": {
@@ -66,7 +66,7 @@
         "+<mmgr/rawmemcpy/rawmemcpy.c>",
         "+<mmgr/swar/swar.c>"
       ],
-      "tests": ["unit/file_conversion/server/peripherals/ad9238/test_ad9238"],
+      "tests": ["unit/src/server/peripherals/ad9238/test_ad9238"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
     "native_ads": {
@@ -123,7 +123,7 @@
       "desc": "test_application against the native_stack_http stack.",
       "base": "env:native_stack_http",
       "tests": [
-        "unit/integration/misc/test_application"
+        "env/misc/test_application"
       ],
       "flags": [
         "-DPROTOCORE_ENABLE_FILE_SERVING=1",
@@ -191,7 +191,7 @@
       "desc": "test_auth against the native_stack_http stack.",
       "base": "env:native_stack_http",
       "tests": [
-        "unit/integration/http/test_auth"
+        "env/http/test_auth"
       ],
       "flags": [
         "-DPROTOCORE_ENABLE_AUTH=1",
@@ -387,7 +387,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/integration/peripherals/test_bus_wire"
+        "env/peripherals/test_bus_wire"
       ]
     },
     "native_bytes": {
@@ -471,7 +471,7 @@
         "+<mmgr/rawmemcpy/rawmemcpy.c>",
         "+<mmgr/swar/swar.c>"
       ],
-      "tests": ["unit/protocols/radio/test_cc1101"]
+      "tests": ["unit/src/services/radio/cc1101/test_cc1101"]
     },
     "native_cclink": {
       "desc": "CC-Link cyclic fieldbus frame codec (services/fieldbus/cclink): the frame ([station][command][bit\ndata][word data][sum]) build + parse and the bit/word process-image accessors. Pure host tests.",
@@ -482,14 +482,14 @@
         "+<mmgr/rawmemcpy/rawmemcpy.c>",
         "+<mmgr/swar/swar.c>"
       ],
-      "tests": ["unit/file_conversion/services/fieldbus/cclink/test_cclink"],
+      "tests": ["unit/src/services/fieldbus/cclink/test_cclink"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
     "native_chunked": {
       "desc": "test_chunked against the native_stack_http stack.",
       "base": "env:native_stack_http",
       "tests": [
-        "unit/integration/shared/test_chunked"
+        "env/shared/test_chunked"
       ],
       "flags": [
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
@@ -567,7 +567,7 @@
         "+<mmgr/plaintext/plaintext.c>"
       ],
       "tests": [
-        "unit/protocols/transport/test_client"
+        "env/transport/test_client"
       ]
     },
     "native_clock": {
@@ -579,7 +579,7 @@
         "+<mmgr/rawmemcpy/rawmemcpy.c>",
         "+<mmgr/swar/swar.c>"
       ],
-      "tests": ["unit/protocols/protocore_clock/test_clock"]
+      "tests": ["unit/src/server/clock/test_clock"]
     },
     "native_cloudevents": {
       "desc": "CloudEvents v1.0 envelope (services/iot/cloudevents): the structured-JSON builder\n(over the JSON writer) + the binary-mode ce-* header reader. Pure host tests.",
@@ -642,7 +642,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/protocols/transport/test_coap"
+        "unit/src/services/iot/coap/coap/test_coap"
       ]
     },
     "native_coap_observe": {
@@ -677,7 +677,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/protocols/transport/test_coap"
+        "unit/src/services/iot/coap/coap/test_coap"
       ]
     },
     "native_coaps": {
@@ -730,7 +730,7 @@
         "+<network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c>"
       ],
       "tests": [
-        "unit/integration/iot/test_coaps"
+        "unit/src/services/iot/coap/coaps/test_coaps"
       ]
     },
     "native_coaps_server": {
@@ -784,7 +784,7 @@
         "+<network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c>"
       ],
       "tests": [
-        "unit/integration/iot/test_coaps_server"
+        "unit/src/services/iot/coap/coaps_server/test_coaps_server"
       ]
     },
     
@@ -838,7 +838,7 @@
         "+<network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c>"
       ],
       "tests": [
-        "unit/integration/iot/test_coaps_server"
+        "unit/src/services/iot/coap/coaps_server/test_coaps_server"
       ]
     },
     "native_codeql": {
@@ -1067,7 +1067,7 @@
         "+<server/storage/mnt_ram/mnt_ram.c>"
       ],
       "tests": [
-        "unit/integration/fieldbus/test_dispatch"
+        "env/fieldbus/test_dispatch"
       ],
       "extra_scripts": [
         "pre:test/ensure_test_keys.py"
@@ -1089,7 +1089,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/integration/http/test_compliance"
+        "env/http/test_compliance"
       ]
     },
     "native_concurrency": {
@@ -1101,7 +1101,7 @@
         "+<mmgr/rawmemcpy/rawmemcpy.c>",
         "+<mmgr/swar/swar.c>"
       ],
-      "tests": ["unit/integration/transport/test_concurrency"],
+      "tests": ["env/transport/test_concurrency"],
       "test_build_src": "no"
     },
     "native_config_io": {
@@ -1401,7 +1401,7 @@
         "+<mmgr/rawmemcpy/rawmemcpy.c>",
         "+<mmgr/swar/swar.c>"
       ],
-      "tests": ["unit/protocols/storage/test_dbm"]
+      "tests": ["unit/src/services/storage/dbm/test_dbm"]
     },
     "native_dds_rtps": {
       "desc": "DDSI-RTPS Message framing codec (services/iot/dds), OMG DDSI-RTPS 2.5 formal/2022-04-01: the sec 9.4.4 20-octet Header (PROTOCOL_RTPS magic, ProtocolVersion, VendorId, GuidPrefix), the sec 9.4.5.1 SubmessageHeader with octetsToNextHeader in the byte order the EndiannessFlag names, the sec 9.4.5.1.1 SubmessageKind octets, the sec 9.4.5.1 octetsToNextHeader==0 rule and its PAD / INFO_TS exception, and the sec 8.3.6.3 / sec 8.3.4.1 Header and Submessage validity refusals. Pure host tests.",
@@ -1412,7 +1412,7 @@
         "+<mmgr/rawmemcpy/rawmemcpy.c>",
         "+<mmgr/swar/swar.c>"
       ],
-      "tests": ["unit/file_conversion/services/iot/dds/test_dds"],
+      "tests": ["unit/src/services/iot/dds/test_dds"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
     
@@ -1434,7 +1434,7 @@
       "desc": "test_defer against the native_stack_http stack.",
       "base": "env:native_stack_http",
       "tests": [
-        "unit/integration/session/test_defer"
+        "env/session/test_defer"
       ],
       "src": [
         "+<server/io/http_clock/http_clock.c>"
@@ -1526,7 +1526,7 @@
         "+<mmgr/swar/swar.c>"
       ],
       "tests": [
-        "unit/integration/transport/test_diag"
+        "env/transport/test_diag"
       ]
     },
     "native_diffserv": {
@@ -1574,14 +1574,14 @@
         "+<mmgr/plaintext/plaintext.c>"
       ],
       "tests": [
-        "unit/integration/transport/test_diffserv"
+        "unit/src/network_drivers/transport/diffserv/test_diffserv"
       ]
     },
     "native_digest_auth": {
       "desc": "test_digest_auth against the native_stack_http stack.",
       "base": "env:native_stack_http",
       "tests": [
-        "unit/integration/http/test_digest_auth"
+        "env/http/test_digest_auth"
       ],
       "flags": [
         "-DPROTOCORE_ENABLE_AUTH=1",
@@ -1784,7 +1784,7 @@
       "desc": "test_dispatch against the native_stack_http stack.",
       "base": "env:native_stack_http",
       "tests": [
-        "unit/integration/fieldbus/test_dispatch"
+        "env/fieldbus/test_dispatch"
       ],
       "flags": [
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
@@ -1811,7 +1811,7 @@
         "+<test/core_setup/hal/host/protocore_dma_host.c>"
       ],
       "tests": [
-        "unit/protocols/mmgr/test_dma"
+        "unit/src/mmgr/dma/test_dma"
       ]
     },
     "native_dmx": {
@@ -1842,7 +1842,7 @@
       ],
       "tests": [
         "unit/src/services/machine_tool/dnc/test_dnc",
-        "unit/protocols/machine_tool/test_dnc_stream"
+        "unit/src/services/machine_tool/dnc/dnc_stream/test_dnc_stream"
       ],
       "extra_scripts": [
         "pre:test/gen_test_runners.py"
@@ -1927,7 +1927,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/protocols/network/test_dns_server"
+        "unit/src/network_drivers/network/dns/dns_server/test_dns_server"
       ]
     },
     "native_dns_wire": {
@@ -1985,7 +1985,7 @@
         "+<mmgr/float_bits/float_bits.c>"
       ],
       "tests": [
-        "unit/protocols/storage/test_docstore"
+        "unit/src/services/storage/docstore/test_docstore"
       ]
     },
     "native_dshot": {
@@ -2075,7 +2075,7 @@
         "+<network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c>"
       ],
       "tests": [
-        "unit/protocols/tls/test_dtls_conn"
+        "unit/src/network_drivers/presentation/security/dtls/dtls_conn/test_dtls_conn"
       ]
     },
     "native_dtls_hs": {
@@ -2100,7 +2100,7 @@
         "+<mmgr/swar/swar.c>"
       ],
       "tests": [
-        "unit/protocols/tls/test_dtls_handshake"
+        "unit/src/network_drivers/presentation/security/dtls/dtls_handshake/test_dtls_handshake"
       ]
     },
     "native_dtls_tls13_rfc": {
@@ -2168,7 +2168,7 @@
         "+<mmgr/plaintext/plaintext.c>"
       ],
       "tests": [
-        "unit/protocols/web/test_edge_fetch"
+        "unit/src/server/web/edge_cache/edge_fetch/test_edge_fetch"
       ]
     },
     
@@ -2241,7 +2241,7 @@
         "+<mmgr/plaintext/plaintext.c>"
       ],
       "tests": [
-        "unit/file_conversion/server/web/edge_cache/test_edge_cache"
+        "unit/src/server/web/edge_cache/edge_cache/test_edge_cache"
       ],
       "extra_scripts": [
         "pre:test/gen_test_runners.py"
@@ -2286,7 +2286,7 @@
         "+<mmgr/plaintext/plaintext.c>"
       ],
       "tests": [
-        "unit/protocols/web/test_edge_cache_sd"
+        "unit/src/server/web/edge_cache/edge_cache_sd/test_edge_cache_sd"
       ]
     },
     "native_edge_mesh": {
@@ -2324,7 +2324,7 @@
         "+<mmgr/plaintext/plaintext.c>"
       ],
       "tests": [
-        "unit/protocols/web/test_edge_mesh"
+        "unit/src/server/web/edge_cache/edge_mesh/test_edge_mesh"
       ]
     },
     "native_endian": {
@@ -2454,7 +2454,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/file_conversion/services/opcua/models/euromap77/test_euromap77"
+        "unit/src/services/opcua/models/euromap77/test_euromap77"
       ],
       "extra_scripts": [
         "pre:test/gen_test_runners.py"
@@ -2518,7 +2518,7 @@
         "+<mmgr/swar/swar.c>"
       ],
       "tests": [
-        "unit/file_conversion/services/machine_tool/fanuc_j519/test_fanuc_j519"
+        "unit/src/services/machine_tool/fanuc_j519/test_fanuc_j519"
       ],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
@@ -2549,7 +2549,7 @@
       "desc": "test_file_serving against the native_stack_http stack.",
       "base": "env:native_stack_http",
       "tests": [
-        "unit/integration/filesystem/test_file_serving"
+        "unit/src/network_drivers/application/file_serving/test_file_serving"
       ],
       "flags": [
         "-DPROTOCORE_ENABLE_FILE_SERVING=1",
@@ -2637,7 +2637,7 @@
       "desc": "test_form_params against the native_stack_http stack.",
       "base": "env:native_stack_http",
       "tests": [
-        "unit/integration/transport/test_form_params"
+        "env/transport/test_form_params"
       ],
       "flags": [
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
@@ -2673,7 +2673,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/protocols/net/test_forward"
+        "unit/src/network_drivers/network/forward/test_forward"
       ]
     },
     "native_forwarded_trust": {
@@ -2817,7 +2817,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/protocols/net/test_gateway"
+        "unit/src/server/net/gateway/test_gateway"
       ]
     },
     "native_gnss_survey": {
@@ -2903,7 +2903,7 @@
         "+<mmgr/float_bits/float_bits.c>",
         "+<shared/hex/hex.c>"
       ],
-      "tests": ["unit/file_conversion/server/signaling/test_gpio_map"],
+      "tests": ["unit/src/server/signaling/gpio_map/test_gpio_map"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
     "native_graphql_exec": {
@@ -2998,7 +2998,7 @@
         "+<shared/hex/hex.c>",
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/protocols/http/test_h2_conn"]
+      "tests": ["unit/src/network_drivers/presentation/http/http2/h2_conn/test_h2_conn"]
     },
     "native_h2_frame_rfc": {
       "desc": "HTTP/2 binary framing (network_drivers/presentation/http/http2/h2_frame, RFC 9113): the 24-octet client connection preface printed in hex by sec 3.4, the sec 4.1 nine-octet frame header field layout and its reserved bit, the 24-bit Length bound, the sec 6.5.2 SETTINGS initial values and the three ranges that section states in words (ENABLE_PUSH, INITIAL_WINDOW_SIZE, MAX_FRAME_SIZE), the SETTINGS payload round trip, and the exact octets of the SETTINGS-ACK / WINDOW_UPDATE / RST_STREAM / GOAWAY / PING-ACK / HEADERS / DATA builders against the sec 6 figures, plus the sec 6 type codes and sec 7 error codes.",
@@ -3042,7 +3042,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/protocols/http/test_h2_server"
+        "unit/src/network_drivers/presentation/http/http2/h2_server/test_h2_server"
       ]
     },
     "native_h3_conn": {
@@ -3089,7 +3089,7 @@
         "+<network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c>"
       ],
       "tests": [
-        "unit/protocols/http/test_h3_conn"
+        "unit/src/network_drivers/presentation/http/http3/h3_conn/test_h3_conn"
       ]
     },
     "native_h3_e2e": {
@@ -3138,7 +3138,7 @@
         "+<network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c>"
       ],
       "tests": [
-        "unit/integration/http/test_h3_e2e"
+        "env/http/test_h3_e2e"
       ]
     },
     "native_h3_server": {
@@ -3208,7 +3208,7 @@
         "+<network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c>"
       ],
       "tests": [
-        "unit/integration/http/test_h3_server"
+        "unit/src/network_drivers/presentation/http/http3/h3_server/test_h3_server"
       ]
     },
     "native_h3_frame_rfc": {
@@ -3245,7 +3245,7 @@
         "+<shared/hex/hex.c>"
       ],
       "tests": [
-        "unit/file_conversion/services/machine_tool/haas_mdc/test_haas_mdc"
+        "unit/src/services/machine_tool/haas_mdc/test_haas_mdc"
       ],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
@@ -3390,7 +3390,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/protocols/storage/test_hotswap"
+        "unit/src/server/storage/hotswap/test_hotswap"
       ]
     },
     "native_hpack": {
@@ -3509,7 +3509,7 @@
         "+<shared/hex/hex.c>"
       ],
       "tests": [
-        "unit/file_conversion/services/file_transfer/http_delivery/test_http_delivery"
+        "unit/src/services/file_transfer/http_delivery/test_http_delivery"
       ],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
@@ -3588,7 +3588,7 @@
       "desc": "test_iface against the native_stack_http stack.",
       "base": "env:native_stack_http",
       "tests": [
-        "unit/integration/transport/test_iface"
+        "env/transport/test_iface"
       ],
       "flags": [
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
@@ -3618,7 +3618,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/protocols/net/test_iface_bridge"
+        "unit/src/server/net/iface_bridge/iface_bridge/test_iface_bridge"
       ]
     },
     
@@ -3927,7 +3927,7 @@
         "+<mmgr/swar/swar.c>"
       ],
       "tests": [
-        "unit/file_conversion/services/transportation/j2735/test_j2735"
+        "unit/src/services/transportation/j2735/test_j2735"
       ],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
@@ -4073,7 +4073,7 @@
         "+<src/mmgr/arena/arena.c>"
       ],
       "tests": [
-        "unit/integration/server/test_keepalive"
+        "env/server/test_keepalive"
       ]
     },
     "native_ld2410": {
@@ -4160,7 +4160,7 @@
         "+<server/storage/mnt_ram/mnt_ram.c>"
       ],
       "tests": [
-        "unit/protocols/storage/test_lfs_mock"
+        "env/storage/test_lfs_mock"
       ]
     },
     "native_link_manager": {
@@ -4241,7 +4241,7 @@
         "+<mmgr/swar/swar.c>"
       ],
       "tests": [
-        "unit/file_conversion/services/fieldbus/lonworks/test_lonworks"
+        "unit/src/services/fieldbus/lonworks/test_lonworks"
       ],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
@@ -4254,7 +4254,7 @@
         "+<mmgr/rawmemcpy/rawmemcpy.c>",
         "+<mmgr/swar/swar.c>"
       ],
-      "tests": ["unit/protocols/radio/test_lora"]
+      "tests": ["unit/src/services/radio/lora/test_lora"]
     },
     "native_lsv2": {
       "desc": "Heidenhain LSV/2 telegram codec (services/machine_tool/lsv2): the framer (4-byte big-endian payload-length\nprefix + 4-char mnemonic + payload), the typed request builders (login A_LG / logout A_LO,\nnull-terminated-filename file commands, R_RI run-info with a 2-byte big-endian selector), and the\nresponse readers (T_OK, the T_ER/T_BD 2-byte error-class + error-code, data replies, stream\nre-framing). Byte-exact vectors cross-checked against pyLSV2. Pure host tests.",
@@ -4446,7 +4446,7 @@
       "desc": "test_middleware against the native_stack_http stack.",
       "base": "env:native_stack_http",
       "tests": [
-        "unit/integration/transport/test_middleware"
+        "unit/src/server/io/middleware/test_middleware"
       ],
       "flags": [
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
@@ -4492,7 +4492,7 @@
         "+<server/storage/mnt_ram/mnt_ram.c>"
       ],
       "tests": [
-        "unit/protocols/storage/test_mnt"
+        "unit/src/server/storage/mnt/test_mnt"
       ]
     },
     "native_modbus": {
@@ -4561,7 +4561,7 @@
         "+<shared/hex/hex.c>"
       ],
       "tests": [
-        "unit/integration/fieldbus/test_modbus_master"
+        "unit/src/services/fieldbus/modbus/modbus_master/test_modbus_master"
       ]
     },
     "native_mpr121": {
@@ -4691,7 +4691,7 @@
         "+<../test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/file_conversion/services/machine_tool/mtconnect/test_mtconnect"
+        "unit/src/services/machine_tool/mtconnect/test_mtconnect"
       ],
       "extra_scripts": [
         "pre:test/gen_test_runners.py"
@@ -4701,7 +4701,7 @@
       "desc": "test_multipart against the native_stack_http stack.",
       "base": "env:native_stack_http",
       "tests": [
-        "unit/integration/codec/test_multipart"
+        "unit/src/network_drivers/presentation/codec/multipart/test_multipart"
       ],
       "src": [
         "+<server/io/http_clock/http_clock.c>"
@@ -4862,7 +4862,7 @@
         "+<mmgr/rawmemcpy/rawmemcpy.c>",
         "+<mmgr/swar/swar.c>"
       ],
-      "tests": ["unit/protocols/radio/test_nrf24"]
+      "tests": ["unit/src/services/radio/nrf24/test_nrf24"]
     },
     "native_ntcip_oid": {
       "desc": "NTCIP transportation-device object OIDs (services/transportation/ntcip): every object root is asserted to sit under 1.3.6.1.4.1.1206.4.2, which is RFC 2578 sec 4's enterprises arc plus the IANA Private Enterprise Number 1206 (NEMA), and the 1202 signal-controller and 1203 DMS subtrees are asserted distinct. Plus the OID builder (root + instance index), its buffer guard and its null guards. Pure host tests.",
@@ -4910,7 +4910,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/file_conversion/network_drivers/application/ntp_server/test_ntp_server"
+        "unit/src/network_drivers/application/ntp_server/test_ntp_server"
       ],
       "extra_scripts": [
         "pre:test/gen_test_runners.py"
@@ -4973,7 +4973,7 @@
         "+<shared/hex/hex.c>"
       ],
       "tests": [
-        "unit/file_conversion/services/timing_position/gnss/test_ntrip_caster"
+        "unit/src/services/timing_position/gnss/ntrip_caster/test_ntrip_caster"
       ],
       "extra_scripts": [
         "pre:test/gen_test_runners.py"
@@ -4989,7 +4989,7 @@
         "+<mmgr/swar/swar.c>"
       ],
       "tests": [
-        "unit/file_conversion/network_drivers/application/nts/test_nts"
+        "unit/src/network_drivers/application/nts/test_nts"
       ],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
@@ -5126,7 +5126,7 @@
         "+<mmgr/plaintext/plaintext.c>"
       ],
       "tests": [
-        "unit/integration/transport/test_observability"
+        "env/transport/test_observability"
       ]
     },
     "native_ocit_msg": {
@@ -5201,7 +5201,7 @@
         "+<mmgr/swar/swar.c>",
         "+<mmgr/protostr/protostr.c>"
       ],
-      "tests": ["unit/integration/opcua/test_opcua_client"],
+      "tests": ["unit/src/services/opcua/opcua_client/test_opcua_client"],
       "desc": ""
     },
     "native_openadr": {
@@ -5240,7 +5240,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/integration/http/test_http_ota"
+        "env/http/test_http_ota"
       ]
     },
     "native_ota_rollback": {
@@ -5391,7 +5391,7 @@
       "desc": "test_path_params against the native_stack_http stack.",
       "base": "env:native_stack_http",
       "tests": [
-        "unit/integration/transport/test_path_params"
+        "env/transport/test_path_params"
       ],
       "flags": [
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
@@ -5777,7 +5777,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/file_conversion/server/core/test_power_mgmt"
+        "unit/src/server/core/power_mgmt/test_power_mgmt"
       ],
       "extra_scripts": [
         "pre:test/gen_test_runners.py"
@@ -5888,7 +5888,7 @@
     "native_presentation": {
       "desc": "test_presentation against the native_stack_l46 stack.",
       "base": "env:native_stack_l46",
-      "tests": ["unit/integration/presentation/test_presentation"]
+      "tests": ["unit/src/network_drivers/presentation/test_presentation"]
     },
     "native_primitives": {
       "desc": "Shared no-stdlib primitives (shared): the base-10 protocore_strtol/strtoul/strtof\nnumber parsers (numparse.h), the strict RFC 3629 UTF-8 validator (utf8.h), and the parameterized\nRocksoft/Williams CRC engine (crc.h). Every preset is asserted against its published cataloge check\nvalue (the CRC of \"123456789\"), and the engine is then diffed against the hand-rolled CRC loops the\nin-tree services used to carry - X-25, CCITT-FALSE, ARC, MODBUS, DNP, CRC-32, ESP3 CRC-8 and the\nSensirion CRC-8 - across every length 0..64. Those loops are interop-proven against real peers, so\nthe 13 services now calling the engine are proven byte-identical to the code they retired rather\nthan merely plausible; the transcriptions here are what still pins that behaviour. Plus the streaming\nsplit, the reflect flags, width masking, and single-bit-flip detection. Header-only; pure host tests.",
@@ -5942,7 +5942,7 @@
         "+<mmgr/swar/swar.c>"
       ],
       "tests": [
-        "unit/file_conversion/services/fieldbus/profibus/test_profibus"
+        "unit/src/services/fieldbus/profibus/test_profibus"
       ],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
@@ -6116,7 +6116,7 @@
         "+<shared/hex/hex.c>"
       ],
       "tests": [
-        "unit/file_conversion/network_drivers/transport/proxy_protocol/test_proxy_protocol"
+        "unit/src/network_drivers/transport/proxy_protocol/test_proxy_protocol"
       ],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
@@ -6142,7 +6142,7 @@
         "+<mmgr/swar/swar.c>"
       ],
       "tests": [
-        "unit/file_conversion/network_drivers/application/ptp/test_ptp"
+        "unit/src/network_drivers/application/ptp/test_ptp"
       ],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
@@ -6208,7 +6208,7 @@
         "+<network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c>"
       ],
       "tests": [
-        "unit/protocols/http/test_quic_conn"
+        "unit/src/network_drivers/presentation/http/http3/quic_conn/test_quic_conn"
       ]
     },
     "native_quic_crypto_rfc": {
@@ -6342,7 +6342,7 @@
         "+<network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c>"
       ],
       "tests": [
-        "unit/integration/http/test_quic_server"
+        "unit/src/network_drivers/presentation/http/http3/quic_server/test_quic_server"
       ]
     },
     "native_quic_tls_rfc": {
@@ -6603,7 +6603,7 @@
         "+<src/mmgr/arena/arena.c>"
       ],
       "tests": [
-        "unit/integration/server/test_range"
+        "env/server/test_range"
       ]
     },
     "native_rawl2": {
@@ -6671,7 +6671,7 @@
       "desc": "test_regex against the native_stack_http stack.",
       "base": "env:native_stack_http",
       "tests": [
-        "unit/integration/transport/test_regex"
+        "unit/src/server/regex/test_regex"
       ],
       "flags": [
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
@@ -6695,7 +6695,7 @@
         "+<mmgr/swar/swar.c>"
       ],
       "tests": [
-        "unit/protocols/net/test_relay"
+        "unit/src/server/net/relay/relay/test_relay"
       ]
     },
     
@@ -6775,7 +6775,7 @@
             "+<shared/hex/hex.c>"
           ],
           "tests": [
-            "unit/integration/application/test_response_headers"
+            "env/application/test_response_headers"
           ]
         },
     "native_rfc1951": {
@@ -6969,7 +6969,7 @@
         "+<shared/hex/hex.c>"
       ],
       "tests": [
-        "unit/integration/net/test_sb_modbus"
+        "unit/src/services/southbound/sb_modbus/test_sb_modbus"
       ]
     },
     "native_scp": {
@@ -7242,13 +7242,13 @@
         "+<mmgr/rawmemcpy/rawmemcpy.c>",
         "+<mmgr/swar/swar.c>"
       ],
-      "tests": ["unit/file_conversion/services/fieldbus/sercos/test_sercos"],
+      "tests": ["unit/src/services/fieldbus/sercos/test_sercos"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
     "native_session": {
       "desc": "test_session against the native_stack_l46 stack.",
       "base": "env:native_stack_l46",
-      "tests": ["unit/integration/presentation/test_session"],
+      "tests": ["unit/src/network_drivers/session/test_session"],
       "src": []
     },
     "native_sftp_server": {
@@ -7429,7 +7429,7 @@
         "+<mmgr/rawmemcpy/rawmemcpy.c>",
         "+<mmgr/swar/swar.c>"
       ],
-      "tests": ["unit/file_conversion/server/core/test_sleep_sched"],
+      "tests": ["unit/src/server/core/sleep_sched/test_sleep_sched"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
     "native_smb": {
@@ -7477,7 +7477,7 @@
         "unit/src/network_drivers/application/smb/test_ntlm",
         "unit/src/network_drivers/application/smb/test_ntlmssp",
         "unit/src/network_drivers/application/smb/test_spnego",
-        "unit/integration/smb/test_smb_client"
+        "unit/src/network_drivers/application/smb/smb_client/test_smb_client"
       ],
       "extra_scripts": [
         "pre:test/gen_test_runners.py"
@@ -7702,7 +7702,7 @@
         "+<mmgr/plaintext/plaintext.c>"
       ],
       "tests": [
-        "unit/protocols/net/test_smtp"
+        "unit/src/services/net/smtp/test_smtp"
       ]
     },
     "native_snmp": {
@@ -7736,7 +7736,7 @@
       ],
       "tests": [
         "unit/src/services/net/snmp/test_snmp_ber",
-        "unit/protocols/iot/test_snmp_agent"
+        "unit/src/services/net/snmp/snmp_agent/test_snmp_agent"
       ],
       "extra_scripts": [
         "pre:test/gen_test_runners.py"
@@ -7854,7 +7854,7 @@
         "+<shared/hex/hex.c>"
       ],
       "tests": [
-        "unit/protocols/iot/test_snmp_v3"
+        "unit/src/services/net/snmp/snmp_v3/test_snmp_v3"
       ]
     },
     "native_snp": {
@@ -7898,7 +7898,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/protocols/net/test_southbound"
+        "unit/src/services/southbound/southbound/test_southbound"
       ]
     },
     "native_spa_router": {
@@ -7972,7 +7972,7 @@
       "desc": "test_sse against the native_stack_l46 stack.",
       "base": "env:native_stack_l46",
       "flags": ["-DPROTOCORE_ENABLE_SSE=1", "-DPROTOCORE_ENABLE_WEBSOCKET=1"],
-      "tests": ["unit/integration/http/test_sse"]
+      "tests": ["env/http/test_sse"]
     },
     "native_ssh": {
       "desc": "SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PROTOCORE_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - the file-transfer servers reach storage through the mount, not through FILE_SERVING)",
@@ -9324,7 +9324,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/protocols/transport/test_statsd"
+        "unit/src/services/iot/statsd/test_statsd"
       ]
     },
     "native_stomp": {
@@ -9392,7 +9392,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/protocols/transport/test_syslog"
+        "unit/src/services/net/syslog/test_syslog"
       ]
     },
     "native_tcp": {
@@ -9422,7 +9422,7 @@
         "+<mmgr/plaintext/plaintext.c>"
       ],
       "tests": [
-        "unit/protocols/transport/test_tcp"
+        "env/transport/test_tcp_callbacks"
       ]
     },
     "native_tcp_client": {
@@ -9656,14 +9656,14 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/integration/session/test_telnet"
+        "unit/src/network_drivers/presentation/telnet/test_telnet"
       ]
     },
     "native_template": {
       "desc": "test_template against the native_stack_http stack.",
       "base": "env:native_stack_http",
       "tests": [
-        "unit/integration/transport/test_template"
+        "env/transport/test_template"
       ],
       "flags": [
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
@@ -9862,7 +9862,7 @@
         "+<network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c>"
       ],
       "tests": [
-        "unit/file_conversion/network_drivers/tls/handshake/test_tls_conn"
+        "unit/src/network_drivers/tls/handshake/test_tls_conn"
       ],
       "extra_scripts": [
         "pre:test/gen_test_runners.py"
@@ -10026,7 +10026,7 @@
     "native_transport": {
       "desc": "test_transport against the native_stack_l46 stack.",
       "base": "env:native_stack_l46",
-      "tests": ["unit/integration/transport/test_transport"]
+      "tests": ["unit/src/network_drivers/presentation/ssh/transport/transport/test_transport"]
     },
     "native_tsan": {
       "desc": "Same harness under ThreadSanitizer: proves ZERO data races on the slot fields\n(the protocore_atomic acquire/release happens-before lets the plain rx_buffer[] writes\nbe read on the other core safely). TSan ships with clang/gcc on Linux, so this\nenv is run by the test CI (ubuntu); it is not buildable on the Windows host.",
@@ -10037,7 +10037,7 @@
         "+<mmgr/rawmemcpy/rawmemcpy.c>",
         "+<mmgr/swar/swar.c>"
       ],
-      "tests": ["unit/integration/transport/test_concurrency"],
+      "tests": ["env/transport/test_concurrency"],
       "test_build_src": "no"
     },
     "native_ubx_codec": {
@@ -10076,7 +10076,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/integration/transport/test_udp"
+        "unit/src/network_drivers/transport/udp/test_udp"
       ]
     },
     "native_udp_telemetry": {
@@ -10132,7 +10132,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/integration/transport/test_udp_transport"
+        "env/transport/test_udp_transport"
       ]
     },
     "native_umati": {
@@ -10242,7 +10242,7 @@
         "+<src/mmgr/arena/arena.c>"
       ],
       "tests": [
-        "unit/integration/server/test_upload"
+        "env/server/test_upload"
       ]
     },
     "native_utf8": {
@@ -10321,8 +10321,8 @@
         "+<mmgr/swar/swar.c>"
       ],
       "tests": [
-        "unit/protocols/storage/test_wal",
-        "unit/protocols/storage/test_wal_store"
+        "unit/src/services/storage/wal/wal/test_wal",
+        "unit/src/services/storage/wal/wal_store/test_wal_store"
       ]
     },
     "native_wamp": {
@@ -10377,7 +10377,7 @@
       "desc": "test_web_terminal against the native_stack_http stack.",
       "base": "env:native_stack_http",
       "tests": [
-        "unit/integration/transport/test_web_terminal"
+        "unit/src/server/web/web_terminal/test_web_terminal"
       ],
       "flags": [
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
@@ -10494,7 +10494,7 @@
         "+<src/mmgr/arena/arena.c>"
       ],
       "tests": [
-        "unit/integration/http/test_webdav_handler"
+        "unit/src/server/io/webdav_handler/test_webdav_handler"
       ]
     },
     "native_webhook_json": {
@@ -10516,7 +10516,7 @@
     "native_websocket": {
       "desc": "test_websocket against the native_stack_l46 stack.",
       "base": "env:native_stack_l46",
-      "tests": ["unit/integration/http/test_websocket"],
+      "tests": ["unit/src/network_drivers/presentation/http/websocket/test_websocket"],
       "flags": ["-DPROTOCORE_ENABLE_WEBSOCKET=1", "-DPROTOCORE_ENABLE_SSE=1"]
     },
     "native_radio_wifi_sniffer": {
@@ -10618,7 +10618,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/integration/transport/test_workers"
+        "env/transport/test_workers"
       ]
     },
     "native_workers_stack": {
@@ -10649,7 +10649,7 @@
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "unit/integration/transport/test_workers"
+        "env/transport/test_workers"
       ]
     },
     "native_ws_client_rfc6455": {
@@ -10771,7 +10771,7 @@
         "+<shared/utf8/utf8.c>"
       ],
       "tests": [
-        "unit/integration/http/test_websocket"
+        "unit/src/network_drivers/presentation/http/websocket/test_websocket"
       ]
     },
     "native_xmpp": {
