@@ -9,11 +9,17 @@ harness.py - the one entry point for the native test matrix.
     harness.py run                  the whole matrix
     harness.py run native_telnet    one env, and every suite it runs
 
-which is `tools/harness.py build cmake`, `cmake --build build/native -j -- -k`, then `ctest`. Those
-three are the same thing spelled out, and are what to reach for when reading a build error:
+which is `tools/harness.py build cmake`, `cmake --build build/native -j -- -k 0`, then `ctest`.
+Those three are the same thing spelled out, and are what to reach for when reading a build error:
 
-    cmake --build build/native -j -- -k    `-k` is load bearing: without it make stops at the
-                                           first failing target and the other 30 stay hidden
+    cmake --build build/native -j -- -k 0    keep-going is load bearing: without it the build stops
+                                             at the first failing target and the other 30 stay
+                                             hidden. THE SPELLING IS THE GENERATOR'S: ninja wants
+                                             `-k 0` and make wants a bare `-k`, and giving ninja
+                                             the bare one makes it print its usage and build
+                                             nothing - a build that did not happen, reported as a
+                                             build that found nothing wrong. `run` reads the
+                                             generator out of CMakeCache.txt and picks.
 
 BUILD WHAT YOU CHANGED, NOT THE MATRIX. A whole-matrix build is 9556 objects and about twelve
 minutes; a handful of targets is seconds. While a change is still being iterated on, name them:
@@ -2234,6 +2240,30 @@ def cmd_bench(a):
     return bench.main(a.rest)
 
 
+def keep_going(build):
+    """The keep-going flag for this build directory's generator, and how that generator names a
+    target it could not build.
+
+    `-- -k` is make's. Ninja's -k takes a count, so bare `-k` makes it print its usage and build
+    NOTHING - and `cmake --build` then returns non-zero having compiled not one file. The failure
+    scrape was make-shaped too, so it found no target name, printed "0 target(s) did not build",
+    and ctest ran against whatever the directory already held: every stale binary passed, and the
+    two targets a matrix edit had just removed reported Not Run. A build that does not happen has
+    to look different from one that succeeds.
+    """
+    gen = ""
+    cache = os.path.join(build, "CMakeCache.txt")
+    if os.path.isfile(cache):
+        with open(cache, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                if line.startswith("CMAKE_GENERATOR:"):
+                    gen = line.split("=", 1)[-1].strip()
+                    break
+    if "Ninja" in gen:
+        return ["-k", "0"], r"^FAILED: .*?[/\\](\w+)\.dir[/\\]"
+    return ["-k"], r"CMakeFiles/(\w+)\.dir/all\] Error"
+
+
 def run_cmake(a):
     """Build the matrix with CMake and run it with ctest.
 
@@ -2257,18 +2287,38 @@ def run_cmake(a):
         if r.returncode != 0:
             return r.returncode
 
+    keep, broke_re = keep_going(build)
     r = subprocess.run(
-        ["cmake", "--build", build] + jobs + ["--", "-k"], cwd=ROOT, capture_output=not a.verbose, text=True
+        ["cmake", "--build", build] + jobs + ["--"] + keep, cwd=ROOT, capture_output=not a.verbose, text=True
     )
+    built = r.returncode == 0
     if r.returncode != 0:
-        broke = sorted(set(re.findall(r"CMakeFiles/(\w+)\.dir/all\] Error", (r.stdout or "") + (r.stderr or ""))))
-        print("%d target(s) did not build: %s" % (len(broke), " ".join(broke)))
-        print("  cmake --build build/native -j -- -k     to read the errors")
+        out = (r.stdout or "") + (r.stderr or "")
+        broke = sorted(set(re.findall(broke_re, out, re.M)))
+        if broke:
+            print("%d target(s) did not build: %s" % (len(broke), " ".join(broke)))
+        else:
+            # The build failed and named no target. Saying "0 target(s) did not build" here reads as
+            # success, and then ctest runs against whatever binaries the directory already held - so
+            # a stale image passes and a removed one reports Not Run. Show what it actually said.
+            print("the build FAILED and named no target - its last lines:")
+            for line in out.strip().splitlines()[-8:]:
+                print("    " + line)
+        print("  cmake --build build/native %s -- %s     to read the errors" % (" ".join(jobs), " ".join(keep)))
 
     cmd = ["ctest", "--test-dir", build, "--output-on-failure"] + jobs
     if a.envs:
         cmd += ["-R", "^(%s)(__|$)" % "|".join(re.escape(n) for n in a.envs)]
-    return subprocess.run(cmd, cwd=ROOT).returncode
+    rc = subprocess.run(cmd, cwd=ROOT).returncode
+
+    # ctest still runs after a failed build - which suite still passes is worth knowing, and
+    # keep-going means most of them were built. But its verdict is not the run's: a target that did
+    # not build leaves the binary the LAST build wrote, and ctest passes it. Returning ctest's code
+    # alone reported "100% tests passed" for a tree that does not compile.
+    if not built and rc == 0:
+        print("\nthe suites that were built passed, but the build itself failed - see above.")
+        return 1
+    return rc
 
 
 def cmd_run(a):
