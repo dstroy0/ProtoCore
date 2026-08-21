@@ -40,12 +40,15 @@ INC = re.compile(r'^\s*#\s*include\s+"([^"]+)"')
 # The WHOLE condition, not a bare flag. Six modules open with a compound one -
 # `#if PROTOCORE_ENABLE_OTA && PROTOCORE_HAS_VENDOR_OTA` - and matching only a lone token
 # skipped them, so each got no GATE and was built in every configuration.
-GATE = re.compile(r"^\s*#\s*if\s+(PROTOCORE_(?:ENABLE|HAS)_\w+(?:\s*(?:&&|\|\|)\s*\(?\s*PROTOCORE_(?:ENABLE|HAS)_\w+\)?)*)\s*$")
+GATE = re.compile(
+    r"^\s*#\s*if\s+(PROTOCORE_(?:ENABLE|HAS)_\w+(?:\s*(?:&&|\|\|)\s*\(?\s*PROTOCORE_(?:ENABLE|HAS)_\w+\)?)*)\s*$"
+)
 
 
 def cmake_gate(cond):
     """A C preprocessor condition as a CMake one: && is AND, || is OR."""
     return re.sub(r"\|\|", "OR", re.sub(r"&&", "AND", cond)).strip()
+
 
 # Reached by everything and owned by no module: the assembly chain and the primitive types.
 ENTRY = {
@@ -186,7 +189,7 @@ def file_gate(text):
         elif re.match(r"#\s*endif", t):
             if depth == 1 and opened:
                 start, m = opened.pop()
-                tail = re.sub(r"/\*.*?\*/", "", re.sub(r"//[^\n]*", "", "\n".join(lines[i + 1:])), flags=re.S)
+                tail = re.sub(r"/\*.*?\*/", "", re.sub(r"//[^\n]*", "", "\n".join(lines[i + 1 :])), flags=re.S)
                 if m and start < first_code and not tail.strip():
                     return cmake_gate(m.group(1))
             depth = max(0, depth - 1)
@@ -441,13 +444,33 @@ def main():
 
 
 DECL = re.compile(r"protocore_add_module\(\s*(?P<path>\S+)(?P<body>.*?)\n\s*\)", re.S)
-DECL_KEYWORDS = ("SOURCES", "DEPS", "PRIVATE_DEPS", "GATE", "HEADER_ONLY")
+# Every keyword protocore_add_module() takes. This list is what tells the GATE reader below where
+# the gate ENDS - a compound gate is several tokens, so it runs to the next keyword. OPT went in
+# without being added here, and the 33 modules that state one read back as gated on
+# `PROTOCORE_ENABLE_SHA256 OPT 2` instead of on the flag. The audit compared with startswith() and
+# so passed anyway, which is why it went unseen.
+DECL_KEYWORDS = ("SOURCES", "DEPS", "PRIVATE_DEPS", "GATE", "HEADER_ONLY", "OPT")
+
+
+# Directories that hold no declarations and are expensive or wrong to walk: the build output, the
+# package cache, and MMgr, which is a submodule with its own mmgr_add_module() and its own audit.
+DECL_SKIP = {".git", ".pio", "build", "node_modules", "__pycache__", "MMgr"}
 
 
 def declared():
-    """What each module's own CMakeLists.txt says: path -> {gate, deps}."""
+    """What every module's own CMakeLists.txt says: path -> {gate, deps, dir, sources, header_only}.
+
+    THE WHOLE TREE, not just src/. vendor/, include/ and test/core_setup declare modules too, and a
+    reader that only walked src/ left those declarations audited by nothing - which is the same
+    shape as the build that read no declarations at all.
+
+    The directory each was found in is recorded rather than derived from the path. src/ modules
+    state a path with the src/ prefix dropped and every other tree states a repo-relative one, so
+    there is no rule that turns one into the other; the walk already knows the answer.
+    """
     out = {}
-    for dirpath, _dn, files in os.walk(SRC):
+    for dirpath, dirnames, files in os.walk(ROOT):
+        dirnames[:] = [d for d in dirnames if d not in DECL_SKIP]
         if "CMakeLists.txt" not in files:
             continue
         text = read(os.path.join(dirpath, "CMakeLists.txt"))
@@ -464,7 +487,23 @@ def declared():
                     if tok in DECL_KEYWORDS:
                         break
                     deps.append(tok)
-            out[m.group("path")] = {"gate": g.group(1) if g else "", "deps": sorted(set(deps))}
+            s = re.search(r"\bSOURCES\b((?:\s+[\w./-]+)+)", body)
+            sources = []
+            if s:
+                for tok in s.group(1).split():
+                    if tok in DECL_KEYWORDS:
+                        break
+                    sources.append(tok)
+            # One space between tokens: the capture runs to the next keyword and so carries the
+            # newline and indent that separate them, and a gate is compared as a string.
+            gate = " ".join(g.group(1).split()) if g else ""
+            out[m.group("path")] = {
+                "gate": gate,
+                "deps": sorted(set(deps)),
+                "dir": rel(dirpath),
+                "sources": sources,
+                "header_only": "HEADER_ONLY" in body,
+            }
     return out
 
 
@@ -489,9 +528,34 @@ def audit(mods, unowned, strict):
             parts = parts[:-1]
         by_path["/".join(parts)] = (name, m)
 
-    missing_decl = sorted(set(by_path) - set(decl))
-    extra_decl = sorted(set(decl) - set(by_path))
+    # discover() reads src/ only, so only src/ declarations can be compared against a module found
+    # on disk. A declaration from vendor/, include/ or test/ is not "declared but no module" - it is
+    # one this comparison has no opinion about, and the checks below are what cover it.
+    src_decl = {p: d for p, d in decl.items() if d["dir"].startswith("src/") or d["dir"] == "src"}
+    missing_decl = sorted(set(by_path) - set(src_decl))
+    extra_decl = sorted(set(src_decl) - set(by_path))
     bad_gate, undeclared, unused = [], [], []
+
+    # THE CHECKS EVERY DECLARATION GETS, WHATEVER TREE IT IS IN.
+    #
+    # A DEPS naming a module nothing declares is the one that has to be caught here, because nothing
+    # else catches it. protocore_add_module() turns each dep into a target name and hands it to
+    # target_link_libraries(); a name no target answers is not an error there - CMake takes it for a
+    # library to pass the linker - and a module is an OBJECT library, which never links. So the name
+    # is resolved by no one, at no stage, and the dependency silently is not one.
+    bad_dep, bad_source, bad_dir = [], [], []
+    for path, d in sorted(decl.items()):
+        for dep in d["deps"]:
+            if dep not in decl:
+                bad_dep.append((path, "DEPS %s, which no CMakeLists declares" % dep))
+        for s in d["sources"]:
+            if not os.path.isfile(os.path.join(ROOT, d["dir"], s)):
+                bad_source.append((path, "SOURCES %s, which is not in %s" % (s, d["dir"])))
+        # The path is the target name and the directory is where its sources are. A module whose
+        # path does not name its own directory builds a target under a name that points elsewhere.
+        want = d["dir"][len("src/") :] if d["dir"].startswith("src/") else d["dir"]
+        if path != want:
+            bad_dir.append((path, "is declared in %s" % d["dir"]))
 
     for path, (name, m) in sorted(by_path.items()):
         d = decl.get(path)
@@ -517,12 +581,15 @@ def audit(mods, unowned, strict):
         if stale:
             unused.append((path, stale))
 
-    print("modules declared            : %d" % len(decl))
+    print("modules declared            : %d  (%d under src/)" % (len(decl), len(src_decl)))
     print("  no declaration            : %d" % len(missing_decl))
     print("  declared, no module       : %d" % len(extra_decl))
     print("  gate disagrees with source: %d" % len(bad_gate))
     print("  includes an undeclared dep: %d" % len(undeclared))
     print("  declares an unused dep    : %d" % len(unused))
+    print("  DEPS nothing declares     : %d" % len(bad_dep))
+    print("  SOURCES not on disk       : %d" % len(bad_source))
+    print("  path is not its directory : %d" % len(bad_dir))
     if unowned:
         print("  headers no module owns    : %d (--unowned to list)" % len(unowned))
 
@@ -531,11 +598,22 @@ def audit(mods, unowned, strict):
         ("declared but no module", [(p, "") for p in extra_decl]),
         ("gate", bad_gate),
         ("undeclared dependency", undeclared),
+        ("dependency", bad_dep),
+        ("source", bad_source),
+        ("path", bad_dir),
     ):
         for p, detail in rows[:10]:
             print("   %-22s %-46s %s" % (label, p, detail))
 
-    hard = len(missing_decl) + len(extra_decl) + len(bad_gate) + len(undeclared)
+    hard = (
+        len(missing_decl)
+        + len(extra_decl)
+        + len(bad_gate)
+        + len(undeclared)
+        + len(bad_dep)
+        + len(bad_source)
+        + len(bad_dir)
+    )
     if strict and hard:
         print("\n%d declaration(s) disagree with the sources" % hard, file=sys.stderr)
         return 1

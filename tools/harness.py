@@ -604,15 +604,18 @@ BUILD = {
     "modules": T(
         "tools/ci_tooling/build/gen_modules.py",
         "modules [--check|--graph|--unowned|--cycles]",
-        "Writes src/CMakeLists.txt: one CMake target per module, with the dependencies read out of "
-        "what each module includes rather than maintained by hand. Include paths and transitive deps "
-        "then propagate through the targets, and a module whose PROTOCORE_ENABLE_* gate is off is a "
-        "target that is never added instead of a file that compiles to nothing. "
-        "THIS IS HALF THE BUILD. It renders WHICH MODULE compiles; `build cmake` renders WHAT "
-        "DEFINES each test target compiles with, from the same matrix. A flag change needs both, and "
-        "running only this one leaves every target on its previous define set - which reads as the "
-        "source being wrong rather than the build being stale. `test/harness.py env gen` is a third "
-        "renderer of the same matrix, for platformio.ini.",
+        "AUDITS the module declarations; it does not write them. Every CMakeLists.txt stating a "
+        "protocore_add_module() is hand-written and is the source, so this reads the tree the "
+        "compiler reads and reports where a declaration and its sources disagree: a header included "
+        "but not declared a dependency, a declared dependency nothing includes, a gate the .c "
+        "carries and the declaration does not, a SOURCES file that is not there, a DEPS naming a "
+        "module nothing declares, and a path that is not the directory it sits in. "
+        "THE WHOLE TREE, not just src/ - vendor/, include/ and test/core_setup declare modules too. "
+        "The DEPS check is the one nothing else does: a module is an OBJECT library, which never "
+        "links, so a dependency naming a target that does not exist is resolved by no one at any "
+        "stage and silently is not a dependency. "
+        "--graph prints the dependency graph, --cycles the loops in it, --unowned the headers no "
+        "module claims.",
     ),
     "envs": T(
         "tools/dev_env/build_envs.sh",
