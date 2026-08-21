@@ -179,12 +179,7 @@ void test_not_a_truncated_hmac_sha512(void)
     HmacSha384V.mac_args.out = d384;
     HmacSha384.mac(g_work);
 
-    HmacSha512V.mac_args.key = fill_key(0x0bu, 20u);
-    HmacSha512V.mac_args.key_len = 20u;
-    HmacSha512V.mac_args.data = (const uint8_t *)"Hi There";
-    HmacSha512V.mac_args.len = 8u;
-    HmacSha512V.mac_args.out = d512;
-    HmacSha512.mac(g_512_work);
+    HmacSha512.mac(g_512_work, fill_key(0x0bu, 20u), 20u, (const uint8_t *)"Hi There", 8u, d512);
 
     TEST_ASSERT_TRUE(memcmp(d384, d512, PROTOCORE_HMAC_SHA384_LEN) != 0);
 }

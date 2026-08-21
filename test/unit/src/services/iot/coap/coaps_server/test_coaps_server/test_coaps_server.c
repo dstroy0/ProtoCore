@@ -212,9 +212,7 @@ void setUp()
     g_rng_ctr = 0;
     out_reset();
 
-    Ed25519V.pubkey_args.pub = g_server_cert;
-    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
-    Ed25519.pubkey(tw);
+    Ed25519.pubkey(tw, SERVER_ED_SEED, g_server_cert);
     memset(&CoapsServerV.identity, 0, sizeof CoapsServerV.identity);
     CoapsServerV.identity.cert_der = g_server_cert;
     CoapsServerV.identity.cert_len = 32;

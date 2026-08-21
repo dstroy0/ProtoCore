@@ -12,13 +12,9 @@
  * permutation runs over and the 64-byte keystream block it serializes into.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_CHACHA20
+#include "protocore_config.h" // the entry point: the widths
 
 #include "crypto/cipher/chacha20/chacha20.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // The one definition, private to this TU. Only what is not derivable: the keystream block sits at a
 // fixed offset in the caller's borrow, so a macro computes it from the pointer rather than the context
@@ -111,19 +107,13 @@ static const uint32_t SIGMA3 = 0x6b206574;
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_chacha20_xor_(uint8_t *restrict work)
+proto_bool protocore_chacha20_xor_(uint8_t *restrict work, const uint8_t *key, const uint8_t *iv, uint64_t counter,
+                                   const uint8_t *in, uint8_t *out, size_t len)
 {
-    Chacha20V.ok = PROTO_FALSE;
-    if (!Chacha20V.xor_args.key || !Chacha20V.xor_args.iv || !Chacha20V.xor_args.out)
+    if (!key || !iv || !out)
     {
-        return;
+        return PROTO_FALSE;
     }
-    const uint8_t *key = Chacha20V.xor_args.key;
-    const uint8_t *iv = Chacha20V.xor_args.iv;
-    const uint8_t *in = Chacha20V.xor_args.in;
-    uint8_t *out = Chacha20V.xor_args.out;
-    size_t len = Chacha20V.xor_args.len;
-    uint64_t counter = Chacha20V.xor_args.counter;
     Chacha20Ctx *w = CHACHA20_CTX(work);
     uint8_t *ks = CHACHA20_KS(work);
 
@@ -151,20 +141,16 @@ void protocore_chacha20_xor_(uint8_t *restrict work)
         off += n;
         counter++;
     }
-    Chacha20V.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_chacha20_block_ietf(uint8_t *restrict work)
+proto_bool protocore_chacha20_block_ietf(uint8_t *restrict work, const uint8_t *key, uint32_t counter,
+                                         const uint8_t *nonce, uint8_t *out)
 {
-    Chacha20V.ok = PROTO_FALSE;
-    if (!Chacha20V.block_ietf_args.key || !Chacha20V.block_ietf_args.nonce || !Chacha20V.block_ietf_args.out)
+    if (!key || !nonce || !out)
     {
-        return;
+        return PROTO_FALSE;
     }
-    const uint8_t *key = Chacha20V.block_ietf_args.key;
-    const uint8_t *nonce = Chacha20V.block_ietf_args.nonce;
-    uint32_t counter = Chacha20V.block_ietf_args.counter;
-    uint8_t *out = Chacha20V.block_ietf_args.out;
     Chacha20Ctx *w = CHACHA20_CTX(work);
 
     w->st[0] = SIGMA0;
@@ -180,12 +166,5 @@ void protocore_chacha20_block_ietf(uint8_t *restrict work)
     w->st[14] = rd_le32(nonce + 4);
     w->st[15] = rd_le32(nonce + 8);
     chacha_core(w, out);
-    Chacha20V.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
-
-/** @brief The operands and the outcome. */
-Chacha20Vars Chacha20V;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_CHACHA20

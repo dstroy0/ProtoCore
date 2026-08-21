@@ -61,13 +61,7 @@ static_assert(
 static void cp_chacha(uint8_t *restrict work, const uint8_t *key, const uint8_t iv[8], uint64_t counter,
                       const uint8_t *in, uint8_t *out, size_t len)
 {
-    Chacha20V.xor_args.key = key;
-    Chacha20V.xor_args.iv = iv;
-    Chacha20V.xor_args.counter = counter;
-    Chacha20V.xor_args.in = in;
-    Chacha20V.xor_args.out = out;
-    Chacha20V.xor_args.len = len;
-    Chacha20.xor_(CHACHAPOLY_CHACHA(work));
+    Chacha20.xor_(CHACHAPOLY_CHACHA(work), key, iv, counter, in, out, len);
 }
 
 // One tag through the Poly1305 namespace.

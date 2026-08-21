@@ -62,9 +62,7 @@ void test_rfc8410_ed25519_spki(void)
 void test_rpk_certificate_round_trip(void)
 {
     uint8_t pub[PROTOCORE_ED25519_PUBKEY_LEN];
-    Ed25519V.pubkey_args.pub = pub;
-    Ed25519V.pubkey_args.seed = RFC8032_SEED;
-    Ed25519.pubkey(g_work);
+    Ed25519.pubkey(g_work, RFC8032_SEED, pub);
 
     uint8_t msg[128];
     size_t tls13_rpk_n = Tls13Rpk.build_certificate(tls13_rpk_work, msg, sizeof(msg), pub);

@@ -44,9 +44,7 @@
  * @date    2026
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_ECDSA
+#include "protocore_config.h" // the entry point: the widths
 
 #include "crypto/asymmetric/ecdsa/ecdsa.h"
 #include "crypto/hash/sha256/sha256.h"
@@ -64,8 +62,6 @@
 // Platform-conditional headers, hoisted here so no #include follows code (no mid-file includes -
 // ci_tooling/check/check_src_banned.py enforces it). The implementation branches below use the same guards.
 #include "crypto/mac/hmac_sha256/hmac_sha256.h" // RFC 6979 HMAC-DRBG for the deterministic-nonce complete-formula path
-
-PROTOCORE_BEGIN_DECLS
 
 // The caller's borrow, split: the message hash's own bytes, then the RFC 6979 DRBG's MAC. Both nested
 // modules are driven through their own namespaces, so this borrow carries a region for each rather than
@@ -732,21 +728,18 @@ static proto_bool ecdsa_sign_core(uint8_t *restrict work, uint8_t sig[64], const
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_ecdsa_pubkey(uint8_t *restrict work)
+proto_bool protocore_ecdsa_pubkey(uint8_t *restrict work, const uint8_t *priv, uint8_t *pub)
 {
-    EcdsaV.ok = PROTO_FALSE;
-    if (!EcdsaV.pubkey_args.pub || !EcdsaV.pubkey_args.priv)
+    if (!pub || !priv)
     {
-        return;
+        return PROTO_FALSE;
     }
-    uint8_t *pub = EcdsaV.pubkey_args.pub;
-    const uint8_t *priv = EcdsaV.pubkey_args.priv;
 
     uint32_t d[8];
     load_be(d, priv);
     if (fp_is_zero(d) || fp_cmp(d, P256_N) >= 0)
     {
-        return;
+        return PROTO_FALSE;
     }
 
     ecdsa_hw_on();
@@ -765,47 +758,43 @@ void protocore_ecdsa_pubkey(uint8_t *restrict work)
         store_be(pub + 33, qy);
     }
     ecdsa_hw_off();
-    EcdsaV.ok = ok;
+    return ok;
 }
 
-void protocore_ecdsa_sign(uint8_t *restrict work)
+proto_bool protocore_ecdsa_sign(uint8_t *restrict work, const uint8_t *msg, size_t mlen, const uint8_t *priv,
+                                uint8_t *sig)
 {
-    EcdsaV.ok = PROTO_FALSE;
-    if (!EcdsaV.sign_args.sig || !EcdsaV.sign_args.priv)
+    if (!sig || !priv)
     {
-        return;
+        return PROTO_FALSE;
     }
-    uint8_t *sig = EcdsaV.sign_args.sig;
-    const uint8_t *priv = EcdsaV.sign_args.priv;
 
     uint32_t d[8];
     load_be(d, priv);
     if (fp_is_zero(d) || fp_cmp(d, P256_N) >= 0)
     {
-        return;
+        return PROTO_FALSE;
     }
     uint8_t h1[PROTOCORE_SHA256_DIGEST_LEN];
-    ecdsa_hash_msg(work, EcdsaV.sign_args.msg, EcdsaV.sign_args.mlen, h1);
+    ecdsa_hash_msg(work, msg, mlen, h1);
 
     ecdsa_hw_on();
     proto_bool ok = ecdsa_sign_core(work, sig, h1, d);
     ecdsa_hw_off();
-    EcdsaV.ok = ok;
+    return ok;
 }
 
-void protocore_ecdsa_verify(uint8_t *restrict work)
+proto_bool protocore_ecdsa_verify(uint8_t *restrict work, const uint8_t *pub, const uint8_t *msg, size_t mlen,
+                                  const uint8_t *sig)
 {
-    EcdsaV.ok = PROTO_FALSE;
-    if (!EcdsaV.verify_args.pub || !EcdsaV.verify_args.sig)
+    if (!pub || !sig)
     {
-        return;
+        return PROTO_FALSE;
     }
-    const uint8_t *pub = EcdsaV.verify_args.pub;
-    const uint8_t *sig = EcdsaV.verify_args.sig;
 
     if (pub[0] != 0x04)
     {
-        return;
+        return PROTO_FALSE;
     }
     uint32_t qx[8];
     uint32_t qy[8];
@@ -818,11 +807,11 @@ void protocore_ecdsa_verify(uint8_t *restrict work)
     load_be(s, sig + 32);
     if (fp_is_zero(r) || fp_cmp(r, P256_N) >= 0 || fp_is_zero(s) || fp_cmp(s, P256_N) >= 0)
     {
-        return;
+        return PROTO_FALSE;
     }
 
     uint8_t h1[PROTOCORE_SHA256_DIGEST_LEN];
-    ecdsa_hash_msg(work, EcdsaV.verify_args.msg, EcdsaV.verify_args.mlen, h1);
+    ecdsa_hash_msg(work, msg, mlen, h1);
     uint32_t e[8];
     uint32_t etmp[8];
     load_be(etmp, h1);
@@ -862,23 +851,19 @@ void protocore_ecdsa_verify(uint8_t *restrict work)
         }
     }
     ecdsa_hw_off();
-    EcdsaV.ok = ok;
+    return ok;
 }
 
-void protocore_ecdsa_ecdh(uint8_t *restrict work)
+proto_bool protocore_ecdsa_ecdh(uint8_t *restrict work, const uint8_t *peer_pub, const uint8_t *priv, uint8_t *shared_x)
 {
-    EcdsaV.ok = PROTO_FALSE;
-    if (!EcdsaV.ecdh_args.shared_x || !EcdsaV.ecdh_args.peer_pub || !EcdsaV.ecdh_args.priv)
+    if (!shared_x || !peer_pub || !priv)
     {
-        return;
+        return PROTO_FALSE;
     }
-    uint8_t *shared_x = EcdsaV.ecdh_args.shared_x;
-    const uint8_t *peer_pub = EcdsaV.ecdh_args.peer_pub;
-    const uint8_t *priv = EcdsaV.ecdh_args.priv;
 
     if (peer_pub[0] != 0x04)
     {
-        return;
+        return PROTO_FALSE;
     }
     uint32_t qx[8];
     uint32_t qy[8];
@@ -888,7 +873,7 @@ void protocore_ecdsa_ecdh(uint8_t *restrict work)
     load_be(d, priv);
     if (fp_is_zero(d) || fp_cmp(d, P256_N) >= 0)
     {
-        return;
+        return PROTO_FALSE;
     }
 
     ecdsa_hw_on();
@@ -915,12 +900,5 @@ void protocore_ecdsa_ecdh(uint8_t *restrict work)
         }
     }
     ecdsa_hw_off();
-    EcdsaV.ok = ok;
+    return ok;
 }
-
-/** @brief The operands and the outcome. */
-EcdsaVars EcdsaV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_ECDSA

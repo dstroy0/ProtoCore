@@ -1,6 +1,13 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#ifndef PROTOCORE_HMAC_SHA512_H
+#define PROTOCORE_HMAC_SHA512_H
+
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+PROTOCORE_BEGIN_DECLS
+
 /**
  * @file hmac_sha512.h
  * @brief HMAC-SHA2-512 (RFC 2104 + FIPS 198-1) - streaming context and one-shot API.
@@ -15,133 +22,73 @@
  * SECURITY NOTE - a MAC must be verified before the covered plaintext is acted upon; that ordering
  * guarantee lives in each protocol's packet layer, not here. These functions are pure crypto.
  *
- * @author  Douglas Quigg (dstroy0)
- * @date    2026
- */
-
-#ifndef PROTOCORE_HMAC_SHA512_H
-#define PROTOCORE_HMAC_SHA512_H
-
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_BEGIN_DECLS
-
-#if PROTOCORE_ENABLE_HMAC_SHA512
-
-PROTOCORE_BEGIN_DECLS
-
-/** @brief HMAC-SHA2-512 output length in bytes. */
-#define PROTOCORE_HMAC_SHA512_LEN 64
-
-// PROTOCORE_HMAC_SHA512_BORROW - the bytes a MAC runs out of - is stated in protocore_config.h, which
-// sums it into the secure arena. A caller takes them once and passes the pointer to every call.
-
-/** @brief The key a MAC is taken with. */
-typedef struct
-{
-    const uint8_t *key; ///< MAC key bytes
-    size_t key_len;     ///< key length; > 128 is pre-hashed (RFC 2104), shorter is zero-padded to the block
-} HmacSha512KeyArgs;
-
-/** @brief One chunk fed to a running MAC. */
-typedef struct
-{
-    const uint8_t *data; ///< the bytes
-    size_t len;          ///< how many
-} HmacSha512UpdateArgs;
-
-/** @brief Where the finished MAC lands. */
-typedef struct
-{
-    uint8_t *out; ///< PROTOCORE_HMAC_SHA512_LEN bytes
-} HmacSha512FinalArgs;
-
-/** @brief The key and message a one-shot MAC is taken over. */
-typedef struct
-{
-    const uint8_t *key;  ///< MAC key bytes
-    size_t key_len;      ///< key length
-    const uint8_t *data; ///< the message
-    size_t len;          ///< its length
-    uint8_t *out;        ///< PROTOCORE_HMAC_SHA512_LEN bytes
-} HmacSha512MacArgs;
-
-/**
- * @brief HMAC-SHA2-512 (RFC 2104).
- *
- * A caller sets the members a call takes, invokes it through ::HmacSha512 with the bytes it runs out
- * of, and reads the outcome off the same handle. How those bytes are carved is this module's and is
- * never named here.
- *
  * For a MAC assembled from separate pieces - the SSH packet MAC over
  * (uint32_be(seq_num) || plaintext_packet):
- *
- *   HmacSha512.key_args.key = key;
- *   HmacSha512.key_args.key_len = key_len;
- *   HmacSha512.init(work);
- *   HmacSha512.update_args.data = seq_bytes;
- *   HmacSha512.update_args.len = 4;
- *   HmacSha512.update(work);
- *   HmacSha512.final_args.out = mac_out;
- *   HmacSha512.final(work);
- *
- * @var HmacSha512Ns::key_args      the key a MAC is taken with
- * @var HmacSha512Ns::update_args   one chunk fed to a running MAC
- * @var HmacSha512Ns::final_args    where the finished MAC lands
- * @var HmacSha512Ns::mac_args      the key and message a one-shot MAC is taken over
- * @var HmacSha512Ns::ok            a call's true/false outcome
- * @var HmacSha512Ns::init          start a MAC under @ref HmacSha512Ns::key_args
- * @var HmacSha512Ns::update        feed the running MAC a chunk
- * @var HmacSha512Ns::final         finish, writing the 64 bytes out
- * @var HmacSha512Ns::mac           init, update and final in one call, for a message already whole
  *
  * @c work is PROTOCORE_HMAC_SHA512_BORROW secure bytes the CALLER took, at an address it knows. It
  * arrives @c restrict and is not held past the call, so nothing here aliases it. The caller releases
  * it, and the pool wipes on release; this module neither takes it, holds it, releases it, nor wipes
  * it. A connection takes those bytes once for its slot and passes them on every packet.
  *
- * No storage member and no context: a caller sets operands and reads @ref HmacSha512Ns::ok, and that
- * is all the surface there is.
+ * @author  Douglas Quigg (dstroy0)
+ * @date    2026
  */
+
+/** @brief HMAC-SHA2-512 output length in bytes. */
+#define PROTOCORE_HMAC_SHA512_LEN 64
+
+/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    HmacSha512KeyArgs key_args;
-    HmacSha512UpdateArgs update_args;
-    HmacSha512FinalArgs final_args;
-    HmacSha512MacArgs mac_args;
-    proto_bool ok;
-} HmacSha512Vars;
-
-/** @brief The operands and the outcome. */
-extern HmacSha512Vars HmacSha512V;
-
-/** @brief The entries. */
-typedef struct
-{
-    void (*const init)(uint8_t *restrict work);
-    void (*const update)(uint8_t *restrict work);
-    void (*const final)(uint8_t *restrict work);
-    void (*const mac)(uint8_t *restrict work);
+    proto_bool (*init)(uint8_t *restrict, const uint8_t *, size_t);
+    proto_bool (*update)(uint8_t *restrict, const uint8_t *, size_t);
+    proto_bool (*final)(uint8_t *restrict, uint8_t *);
+    proto_bool (*mac)(uint8_t *restrict, const uint8_t *, size_t, const uint8_t *, size_t, uint8_t *);
 } HmacSha512Ns;
+PROTOCORE_NS_LAYOUT(HmacSha512Ns, init, update, final, mac);
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in HmacSha512V or a region of the borrow at a fixed offset.
-void protocore_hmac_sha512_init(uint8_t *restrict work);
-void protocore_hmac_sha512_update(uint8_t *restrict work);
-void protocore_hmac_sha512_final(uint8_t *restrict work);
-void protocore_hmac_sha512_mac(uint8_t *restrict work);
+/**
+ * @brief Start a MAC under HmacSha512Ns::key_args.
+ * @param work PROTOCORE_HMAC_SHA512_BORROW bytes the caller took. Not held past the call.
+ * @param key MAC key bytes
+ * @param key_len key length; > 128 is pre-hashed (RFC 2104), shorter is zero-padded to the block
+ * @return PROTO_TRUE on success.
+ */
+proto_bool protocore_hmac_sha512_init(uint8_t *restrict work, const uint8_t *key, size_t key_len);
+/**
+ * @brief Feed the running MAC a chunk.
+ * @param work PROTOCORE_HMAC_SHA512_BORROW bytes the caller took. Not held past the call.
+ * @param data the bytes
+ * @param len how many
+ * @return PROTO_TRUE on success.
+ */
+proto_bool protocore_hmac_sha512_update(uint8_t *restrict work, const uint8_t *data, size_t len);
+/**
+ * @brief Finish, writing the 64 bytes out.
+ * @param work PROTOCORE_HMAC_SHA512_BORROW bytes the caller took. Not held past the call.
+ * @param out PROTOCORE_HMAC_SHA512_LEN bytes
+ * @return PROTO_TRUE on success.
+ */
+proto_bool protocore_hmac_sha512_final(uint8_t *restrict work, uint8_t *out);
+/**
+ * @brief Init, update and final in one call, for a message already whole.
+ * @param work PROTOCORE_HMAC_SHA512_BORROW bytes the caller took. Not held past the call.
+ * @param key MAC key bytes
+ * @param key_len key length
+ * @param data the message
+ * @param len its length
+ * @param out PROTOCORE_HMAC_SHA512_LEN bytes
+ * @return PROTO_TRUE on success.
+ */
+proto_bool protocore_hmac_sha512_mac(uint8_t *restrict work, const uint8_t *key, size_t key_len, const uint8_t *data,
+                                     size_t len, uint8_t *out);
 
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `HmacSha512.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const HmacSha512Ns HmacSha512 __attribute__((unused)) = {
-    .init = protocore_hmac_sha512_init,
-    .update = protocore_hmac_sha512_update,
-    .final = protocore_hmac_sha512_final,
-    .mac = protocore_hmac_sha512_mac,
-};
+/** @brief Module namespace. */
+PROTOCORE_NS HmacSha512Ns HmacSha512 PROTOCORE_UNUSED = {.init = protocore_hmac_sha512_init,
+                                                         .update = protocore_hmac_sha512_update,
+                                                         .final = protocore_hmac_sha512_final,
+                                                         .mac = protocore_hmac_sha512_mac};
 
 PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_HMAC_SHA512
 
 #endif // PROTOCORE_HMAC_SHA512_H

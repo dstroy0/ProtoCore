@@ -389,10 +389,9 @@ static proto_bool build_kex_public(void)
             RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
             RngV.fill_args.len = 32;
             Rng.fill(protocore_rng_span());
-            EcdsaV.pubkey_args.priv = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-            EcdsaV.pubkey_args.pub = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
-            Ecdsa.pubkey(work);
-            if (EcdsaV.ok)
+            proto_bool ecdsa_ok = Ecdsa.pubkey(work, SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv,
+                                               SSH_CLIENT_CTX(protocore_ssh_client_span())->qc);
+            if (ecdsa_ok)
             {
                 SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len = PROTOCORE_ECDSA_P256_PUB_LEN; // 65
                 return PROTO_TRUE;
@@ -437,11 +436,7 @@ static proto_bool build_kex_public(void)
         RngV.fill_args.out = z;
         RngV.fill_args.len = sizeof(z);
         Rng.fill(protocore_rng_span());
-        MlKemV.keygen_args.d = d;
-        MlKemV.keygen_args.z = z;
-        MlKemV.keygen_args.ek = ek;
-        MlKemV.keygen_args.dk = SSH_CLIENT_CTX(protocore_ssh_client_span())->hyb.mlkem_dk;
-        MlKem.keygen(work);
+        MlKem.keygen(work, d, z, ek, SSH_CLIENT_CTX(protocore_ssh_client_span())->hyb.mlkem_dk);
         protocore_secure_wipe(d, sizeof(d));
         protocore_secure_wipe(z, sizeof(z));
         protocore_secure_wipe(ek, sizeof(ek)); // ek persists inside mlkem_dk
@@ -695,9 +690,7 @@ static proto_bool send_userauth_publickey(void)
     const char *user = SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.user;
     uint8_t *work = (SshClient.crypto_work(protocore_ssh_client_span()), SshClient.work);
     uint8_t pub[32];
-    Ed25519V.pubkey_args.seed = SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.auth_seed;
-    Ed25519V.pubkey_args.pub = pub;
-    Ed25519.pubkey(work);
+    Ed25519.pubkey(work, SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.auth_seed, pub);
 
     // The device's public-key blob: string("ssh-ed25519") || string(pub32).
     uint8_t pkblob[4 + 11 + 4 + 32];
@@ -735,11 +728,7 @@ static proto_bool send_userauth_publickey(void)
     }
 
     uint8_t sig[64];
-    Ed25519V.sign_args.seed = SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.auth_seed;
-    Ed25519V.sign_args.msg = signed_data;
-    Ed25519V.sign_args.msg_len = sd.pos;
-    Ed25519V.sign_args.sig = sig;
-    Ed25519.sign(work);
+    Ed25519.sign(work, SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.auth_seed, signed_data, sd.pos, sig);
 
     // Signature blob: string("ssh-ed25519") || string(sig64).
     uint8_t sigblob[4 + 11 + 4 + 64];

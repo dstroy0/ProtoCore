@@ -25,8 +25,7 @@ void dbench_run(void)
     {
         DBENCH_BANNER("upload_service");
         volatile size_t sink = 0;
-        DBENCH_OP("UploadService.last_size (getter)", 200000,
-                  sink += (UploadService.last_size(work), UploadServiceV.n));
+        DBENCH_OP("UploadService.last_size (getter)", 200000, sink += UploadService.last_size(work));
         (void)sink;
         DBENCH_DONE();
     }

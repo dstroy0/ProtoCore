@@ -335,15 +335,9 @@ void test_cert_verify_signature_round_trip(void)
     Tls13Msg.cert_verify_content(tls13_msg_work);
     size_t clen = Tls13MsgV.n;
     uint8_t pub[PROTOCORE_ED25519_PUBKEY_LEN];
-    Ed25519V.pubkey_args.pub = pub;
-    Ed25519V.pubkey_args.seed = SEED;
-    Ed25519.pubkey(g_work);
-    Ed25519V.verify_args.pub = pub;
-    Ed25519V.verify_args.msg = content;
-    Ed25519V.verify_args.msg_len = clen;
-    Ed25519V.verify_args.sig = msg + 8;
-    Ed25519.verify(g_work);
-    TEST_ASSERT_TRUE(Ed25519V.ok);
+    Ed25519.pubkey(g_work, SEED, pub);
+    proto_bool ed25519_ok = Ed25519.verify(g_work, pub, content, clen, msg + 8);
+    TEST_ASSERT_TRUE(ed25519_ok);
 
     // The signature is over that content and nothing else: a different transcript hash does not
     // verify under the same signature.
@@ -357,12 +351,8 @@ void test_cert_verify_signature_round_trip(void)
     Tls13MsgV.cert_verify_content_args.is_server = PROTO_TRUE;
     Tls13Msg.cert_verify_content(tls13_msg_work);
     size_t olen = Tls13MsgV.n;
-    Ed25519V.verify_args.pub = pub;
-    Ed25519V.verify_args.msg = content;
-    Ed25519V.verify_args.msg_len = olen;
-    Ed25519V.verify_args.sig = msg + 8;
-    Ed25519.verify(g_work);
-    TEST_ASSERT_FALSE(Ed25519V.ok);
+    ed25519_ok = Ed25519.verify(g_work, pub, content, olen, msg + 8);
+    TEST_ASSERT_FALSE(ed25519_ok);
 }
 
 // RFC 8446 sec 4.4.2: "Certificate { opaque certificate_request_context<0..2^8-1>;
@@ -991,9 +981,7 @@ void test_cert_verify_round_trip(void)
     // What the parser handed back verifies over the sec 4.4.3 content, so it is the real signature
     // and not a view of the wrong bytes.
     uint8_t pub[PROTOCORE_ED25519_PUBKEY_LEN];
-    Ed25519V.pubkey_args.pub = pub;
-    Ed25519V.pubkey_args.seed = RFC8032_SEED;
-    Ed25519.pubkey(g_work);
+    Ed25519.pubkey(g_work, RFC8032_SEED, pub);
     uint8_t content[160];
     Tls13MsgV.cert_verify_content_args.out = content;
     Tls13MsgV.cert_verify_content_args.cap = sizeof(content);
@@ -1002,12 +990,8 @@ void test_cert_verify_round_trip(void)
     Tls13MsgV.cert_verify_content_args.is_server = PROTO_TRUE;
     Tls13Msg.cert_verify_content(tls13_msg_work);
     size_t clen = Tls13MsgV.n;
-    Ed25519V.verify_args.pub = pub;
-    Ed25519V.verify_args.msg = content;
-    Ed25519V.verify_args.msg_len = clen;
-    Ed25519V.verify_args.sig = sig;
-    Ed25519.verify(g_work);
-    TEST_ASSERT_TRUE(Ed25519V.ok);
+    proto_bool ed25519_ok = Ed25519.verify(g_work, pub, content, clen, sig);
+    TEST_ASSERT_TRUE(ed25519_ok);
 }
 
 void test_finished_round_trip(void)
@@ -1053,9 +1037,7 @@ void test_finished_round_trip(void)
 void test_flight_parsers_refuse_truncation(void)
 {
     uint8_t pub[PROTOCORE_ED25519_PUBKEY_LEN];
-    Ed25519V.pubkey_args.pub = pub;
-    Ed25519V.pubkey_args.seed = RFC8032_SEED;
-    Ed25519.pubkey(g_work);
+    Ed25519.pubkey(g_work, RFC8032_SEED, pub);
 
     uint8_t cert_msg[128];
     size_t tls13_rpk_n = Tls13Rpk.build_certificate(tls13_rpk_work, cert_msg, sizeof(cert_msg), pub);

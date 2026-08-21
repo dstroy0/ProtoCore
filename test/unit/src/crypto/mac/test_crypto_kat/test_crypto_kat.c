@@ -188,12 +188,7 @@ static void run_hmac(const KatMac *rows, size_t n, proto_bool is512)
         size_t wlen = unhex(v->tag, want);
         if (is512)
         {
-            HmacSha512V.mac_args.key = key;
-            HmacSha512V.mac_args.key_len = klen;
-            HmacSha512V.mac_args.data = msg;
-            HmacSha512V.mac_args.len = mlen;
-            HmacSha512V.mac_args.out = got;
-            HmacSha512.mac(g_work);
+            HmacSha512.mac(g_work, key, klen, msg, mlen, got);
         }
         else
         {
@@ -325,12 +320,8 @@ void test_ed25519_verify(void)
         unhex(v->pub, pub);
         size_t mlen = unhex(v->msg, msg);
         size_t slen = unhex(v->sig, sig);
-        Ed25519V.verify_args.pub = pub;
-        Ed25519V.verify_args.msg = msg;
-        Ed25519V.verify_args.msg_len = mlen;
-        Ed25519V.verify_args.sig = sig;
-        Ed25519.verify(g_work);
-        proto_bool ok = (slen == PROTOCORE_ED25519_SIG_LEN) && Ed25519V.ok;
+        proto_bool ed25519_ok = Ed25519.verify(g_work, pub, msg, mlen, sig);
+        proto_bool ok = (slen == PROTOCORE_ED25519_SIG_LEN) && ed25519_ok;
         TEST_ASSERT_EQUAL_MESSAGE(v->valid ? PROTO_TRUE : PROTO_FALSE, ok, v->sig);
     }
 }
@@ -347,15 +338,9 @@ void test_ed25519_sign(void)
         unhex(v->pub, want_pub);
         unhex(v->sig, want_sig);
         size_t mlen = unhex(v->msg, msg);
-        Ed25519V.pubkey_args.seed = seed;
-        Ed25519V.pubkey_args.pub = got_pub;
-        Ed25519.pubkey(g_work);
+        Ed25519.pubkey(g_work, seed, got_pub);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want_pub, got_pub, 32, v->pub);
-        Ed25519V.sign_args.seed = seed;
-        Ed25519V.sign_args.msg = msg;
-        Ed25519V.sign_args.msg_len = mlen;
-        Ed25519V.sign_args.sig = got_sig;
-        Ed25519.sign(g_work);
+        Ed25519.sign(g_work, seed, msg, mlen, got_sig);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want_sig, got_sig, 64, v->sig);
     }
 }
@@ -423,11 +408,7 @@ void test_chacha20_block(void)
         unhex(v->key, key);
         unhex(v->nonce, nonce);
         unhex(v->keystream, want);
-        Chacha20V.block_ietf_args.key = key;
-        Chacha20V.block_ietf_args.counter = v->counter;
-        Chacha20V.block_ietf_args.nonce = nonce;
-        Chacha20V.block_ietf_args.out = got;
-        Chacha20.block_ietf(g_work);
+        Chacha20.block_ietf(g_work, key, v->counter, nonce, got);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 64, v->keystream);
     }
 }

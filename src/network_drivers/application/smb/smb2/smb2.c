@@ -1314,18 +1314,8 @@ void protocore_smb2_encrypt(uint8_t *restrict work)
     case SMB2_ENCRYPTION_AES256_CCM: {
         size_t mark = protocore_secure_mark();
         uint8_t *c = protocore_secure_span(PROTOCORE_AESCCM_BORROW, 8).buf;
-        AesCcmV.seal_args.key = key;
-        AesCcmV.seal_args.key_len = key_len;
-        AesCcmV.seal_args.nonce = out + 20;
-        AesCcmV.seal_args.nonce_len = nonce_len;
-        AesCcmV.seal_args.aad = aad;
-        AesCcmV.seal_args.aad_len = 32;
-        AesCcmV.seal_args.pt = msg;
-        AesCcmV.seal_args.pt_len = msg_len;
-        AesCcmV.seal_args.ct_out = ct;
-        AesCcmV.seal_args.tag_out = tag;
-        AesCcm.seal(c);
-        ok = AesCcmV.ok;
+        proto_bool aes_ccm_ok = AesCcm.seal(c, key, key_len, out + 20, nonce_len, aad, 32, msg, msg_len, ct, tag);
+        ok = aes_ccm_ok;
         protocore_secure_release(mark);
     }
     break;
@@ -1429,18 +1419,8 @@ void protocore_smb2_decrypt(uint8_t *restrict work)
     case SMB2_ENCRYPTION_AES256_CCM: {
         size_t mark = protocore_secure_mark();
         uint8_t *c = protocore_secure_span(PROTOCORE_AESCCM_BORROW, 8).buf;
-        AesCcmV.open_args.key = key;
-        AesCcmV.open_args.key_len = key_len;
-        AesCcmV.open_args.nonce = aad;
-        AesCcmV.open_args.nonce_len = nonce_len;
-        AesCcmV.open_args.aad = aad;
-        AesCcmV.open_args.aad_len = 32;
-        AesCcmV.open_args.ct = ct;
-        AesCcmV.open_args.ct_len = ct_len;
-        AesCcmV.open_args.tag = tag;
-        AesCcmV.open_args.out = out;
-        AesCcm.open(c);
-        ok = AesCcmV.ok;
+        proto_bool aes_ccm_ok = AesCcm.open(c, key, key_len, aad, nonce_len, aad, 32, ct, ct_len, tag, out);
+        ok = aes_ccm_ok;
         protocore_secure_release(mark);
     }
     break;

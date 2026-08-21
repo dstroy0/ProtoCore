@@ -1809,12 +1809,8 @@ void protocore_ike_auth_sign_ecdsa_p256(uint8_t *restrict work)
     {
         return;
     }
-    EcdsaV.sign_args.msg = IkeV.auth.scratch;
-    EcdsaV.sign_args.mlen = n;
-    EcdsaV.sign_args.priv = IkeV.auth.priv;
-    EcdsaV.sign_args.sig = IkeV.out.buf;
-    Ecdsa.sign(IkeV.work);
-    IkeV.ok = EcdsaV.ok;
+    proto_bool ecdsa_ok = Ecdsa.sign(IkeV.work, IkeV.auth.scratch, n, IkeV.auth.priv, IkeV.out.buf);
+    IkeV.ok = ecdsa_ok;
 }
 
 void protocore_ike_auth_verify_ecdsa_p256(uint8_t *restrict work)
@@ -1832,12 +1828,8 @@ void protocore_ike_auth_verify_ecdsa_p256(uint8_t *restrict work)
     {
         return;
     }
-    EcdsaV.verify_args.pub = IkeV.auth.pub;
-    EcdsaV.verify_args.msg = IkeV.auth.scratch;
-    EcdsaV.verify_args.mlen = n;
-    EcdsaV.verify_args.sig = IkeV.auth.sig;
-    Ecdsa.verify(IkeV.work);
-    IkeV.ok = EcdsaV.ok;
+    proto_bool ecdsa_ok = Ecdsa.verify(IkeV.work, IkeV.auth.pub, IkeV.auth.scratch, n, IkeV.auth.sig);
+    IkeV.ok = ecdsa_ok;
 }
 
 // Auth Method 1, RSA Digital Signature: RSASSA-PKCS1-v1_5 over the same octets (RFC 7296 sec 3.8).

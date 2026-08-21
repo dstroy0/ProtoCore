@@ -48,28 +48,18 @@ static void x25519_base(uint8_t *out, const uint8_t *scalar)
 
 static void ed_pubkey(uint8_t *w, uint8_t *pub, const uint8_t *seed)
 {
-    Ed25519V.pubkey_args.seed = seed;
-    Ed25519V.pubkey_args.pub = pub;
-    Ed25519.pubkey(w);
+    Ed25519.pubkey(w, seed, pub);
 }
 
 static void ed_sign(uint8_t *w, uint8_t *sig, const uint8_t *msg, size_t mlen, const uint8_t *seed)
 {
-    Ed25519V.sign_args.seed = seed;
-    Ed25519V.sign_args.msg = msg;
-    Ed25519V.sign_args.msg_len = mlen;
-    Ed25519V.sign_args.sig = sig;
-    Ed25519.sign(w);
+    Ed25519.sign(w, seed, msg, mlen, sig);
 }
 
 static proto_bool ed_verify(uint8_t *w, const uint8_t *pub, const uint8_t *msg, size_t mlen, const uint8_t *sig)
 {
-    Ed25519V.verify_args.pub = pub;
-    Ed25519V.verify_args.msg = msg;
-    Ed25519V.verify_args.msg_len = mlen;
-    Ed25519V.verify_args.sig = sig;
-    Ed25519.verify(w);
-    return Ed25519V.ok;
+    proto_bool ed25519_ok = Ed25519.verify(w, pub, msg, mlen, sig);
+    return ed25519_ok;
 }
 
 static uint8_t nib(char c)
