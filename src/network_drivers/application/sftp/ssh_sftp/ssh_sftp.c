@@ -15,9 +15,7 @@
  * server that resolved would need a root, a path buffer, and a capacity of its own.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_SSH_SFTP
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem/protomem.h"
@@ -30,8 +28,6 @@
 #include "network_drivers/presentation/ssh/connection/connection.h" // callbacks + setters
 #include "network_drivers/presentation/ssh/network/network.h" // protocore_ssh_channel_send_data / protocore_ssh_channel_send_close
 #include "server/storage/filesystem/filesystem.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // Leave headroom below one SSH packet for the CHANNEL_DATA framing, so protocore_ssh_channel_send_data never rejects a
 // response.
@@ -1057,10 +1053,3 @@ void protocore_ssh_sftp_begin(uint8_t *restrict work)
         SSH_SFTP_CTX(work)->registered = PROTO_TRUE;
     }
 }
-
-/** @brief The operands and the outcome. */
-SshSftpVars SshSftpV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_SSH_SFTP

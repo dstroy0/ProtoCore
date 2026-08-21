@@ -68,14 +68,12 @@ void setUp(void)
     g_mt.produced_part_count = 77;
     g_mt.message_text = "Tool life low";
     g_mt.message_severity = 500;
-    UmatiV.bind_args.mt = &g_mt;
-    Umati.bind(protocore_umati_span());
+    Umati.bind(protocore_umati_span(), &g_mt);
 }
 
 void tearDown(void)
 {
-    UmatiV.bind_args.mt = NULL;
-    Umati.bind(protocore_umati_span());
+    Umati.bind(protocore_umati_span(), NULL);
 }
 
 // Browse a node and require exactly @p want references back.
@@ -350,8 +348,7 @@ void test_nothing_is_served_before_bind(void)
     umati_browse(0, 85, g_ref, REF_MAX);
     uint32_t root = g_ref[0].target_id;
 
-    UmatiV.bind_args.mt = NULL;
-    Umati.bind(protocore_umati_span());
+    Umati.bind(protocore_umati_span(), NULL);
     TEST_ASSERT_EQUAL_INT32(-1, umati_browse(0, 85, g_ref, REF_MAX));
     TEST_ASSERT_EQUAL_INT32(-1, umati_browse(model_ns(), root, g_ref, REF_MAX));
     TEST_ASSERT_FALSE(umati_read(model_ns(), root + 101u, OPCUA_ATTR_VALUE, &v));

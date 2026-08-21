@@ -3704,7 +3704,18 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
     texts = {}
     if not byname or not objv:
         return 0, [], texts
-    pat = re.compile(r"\b%s\.(%s)\s*\(" % (re.escape(obj), "|".join(re.escape(k) for k in byname)))
+    # BOTH SPELLINGS OF A CALL. Through the namespace object is what a consumer writes, but a module
+    # calls its own entries by the flat name - robotics_install stages bind_args and then calls
+    # protocore_robotics_bind() directly - and those sites live in the module's own .c, which
+    # remaining_vars_reads does not count. Missing them left a read of a struct that was gone, in
+    # the one file that check cannot see.
+    entry_alts = "|".join(re.escape(k) for k in byname)
+    flat = {e["flat"]: e for e in spec["entries"] if e.get("flat")}
+    byname.update(flat)
+    alts = [r"%s\.(?P<e>%s)" % (re.escape(obj), entry_alts)]
+    if flat:
+        alts.append(r"(?P<f>%s)" % "|".join(re.escape(k) for k in flat))
+    pat = re.compile(r"(?<![\w.>])(?:%s)\s*\(" % "|".join(alts))
     # A staged operand, with the trailing comment some of them carry. Without that last group the
     # line does not match, the walk stops there, the operand reads as unstaged and the site is
     # skipped - which left transport.c with one converted call and one not, in a #if arm no native
@@ -3727,7 +3738,11 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
                 if rel == spec["header"]:
                     continue
                 s = io.open(p, encoding="utf-8", errors="replace").read()
-                if obj + "." not in s:
+                # Either spelling. This skip predated the flat-name pattern and looked only for
+                # "Umati.", so umati.c - which calls its own entries by their flat names and
+                # never through the object - was passed over entirely, and the operand it
+                # staged for one of them survived into a file whose header no longer declares it.
+                if obj + "." not in s and not any(f in s for f in flat):
                     continue
                 n, at, declared = 0, 0, {}
                 mask = code_mask(s)
@@ -3738,7 +3753,7 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
                     if not mask[m.start()]:
                         at = m.end()
                         continue
-                    e = byname[m.group(1)]
+                    e = byname[m.group("e") or m.group("f")]
                     end = N.close_paren(s, m.end())
                     if re.match(r"\s*\{", s[end:]):
                         at = m.end()  # a definition, not a call
@@ -3906,6 +3921,24 @@ def unwork_source(spec):
         return ["no source file"]
     s = io.open(p, encoding="utf-8").read()
     objv, notes = spec.get("objv", ""), []
+
+    # A standalone prototype of an entry inside the .c. robotics.c forward-declares
+    # protocore_robotics_bind above its own definition; the definition gets its real signature back
+    # and the prototype keeps the old one, so the two conflict and the module does not compile. The
+    # header declares every entry, so a second declaration in the .c has nothing to say.
+    for e in spec["entries"]:
+        # A RETURN TYPE HAS TO PRECEDE THE NAME, or this matches a CALL. `protocore_umati_bind(work);`
+        # is a statement, not a declaration, and a lazy `[\w \t*]*?` matches the empty string in
+        # front of it - so the first version of this deleted the call that umati_install makes and
+        # left the operand staged above it with nothing to consume it.
+        s, gone = re.subn(
+            r"^[ \t]*[A-Za-z_]\w*[\w \t*]*[\s*]%s\s*\([^;{]*\)\s*;[ \t]*\n" % re.escape(e["flat"]),
+            "",
+            s,
+            flags=re.M,
+        )
+        if gone:
+            notes.append("%s: dropped %d stale prototype(s) in the .c" % (e["flat"], gone))
 
     for e in spec["entries"]:
         span = body_of(s, e["flat"])

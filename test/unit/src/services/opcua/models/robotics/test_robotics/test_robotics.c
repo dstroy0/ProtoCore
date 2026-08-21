@@ -73,14 +73,12 @@ void setUp(void)
     g_mds.safety.operational_mode = ROBOTICS_MODE_AUTOMATIC;
     g_mds.safety.emergency_stop = PROTO_FALSE;
     g_mds.safety.protective_stop = PROTO_TRUE;
-    RoboticsV.bind_args.mds = &g_mds;
-    Robotics.bind(protocore_robotics_span());
+    Robotics.bind(protocore_robotics_span(), &g_mds);
 }
 
 void tearDown(void)
 {
-    RoboticsV.bind_args.mds = NULL;
-    Robotics.bind(protocore_robotics_span());
+    Robotics.bind(protocore_robotics_span(), NULL);
 }
 
 static int32_t browse(uint32_t id, int32_t want)
@@ -395,8 +393,7 @@ void test_nothing_is_served_before_bind(void)
     browse(g_ref[0].target_id, 7);
     uint32_t manufacturer = g_ref[0].target_id;
 
-    RoboticsV.bind_args.mds = NULL;
-    Robotics.bind(protocore_robotics_span());
+    Robotics.bind(protocore_robotics_span(), NULL);
     TEST_ASSERT_EQUAL_INT32(-1, robotics_browse(0, 85, g_ref, REF_MAX));
     TEST_ASSERT_EQUAL_INT32(-1, robotics_browse(model_ns(), r, g_ref, REF_MAX));
     TEST_ASSERT_FALSE(robotics_read(model_ns(), manufacturer, OPCUA_ATTR_VALUE, &v));

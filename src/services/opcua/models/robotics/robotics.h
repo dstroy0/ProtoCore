@@ -1,6 +1,13 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#ifndef PROTOCORE_ROBOTICS_H
+#define PROTOCORE_ROBOTICS_H
+
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+PROTOCORE_BEGIN_DECLS
+
 /**
  * @file robotics.h
  * @brief OPC UA for Robotics (OPC 40010-1) MotionDevice information model (PROTOCORE_ENABLE_ROBOTICS).
@@ -19,18 +26,18 @@
  *
  * Model exposed (BrowseNames per OPC 40010-1), under the Objects folder:
  *
- *   MotionDeviceSystem
- *     MotionDevices (Folder)
- *       MotionDevice     Manufacturer, Model, ProductCode, SerialNumber, MotionDeviceCategory
- *         ParameterSet   OnPath, InControl, SpeedOverride
- *         Axes (Folder)
- *           Axis_1..N    ActualPosition, ActualSpeed, ActualAcceleration, MotionProfile
- *     Controllers (Folder)
- *       Controller       Manufacturer, Model, ProductCode, SerialNumber
- *         Software       Manufacturer, Model, SoftwareRevision
- *     SafetyStates (Folder)
- *       SafetyState
- *         ParameterSet   OperationalMode, EmergencyStop, ProtectiveStop
+ * MotionDeviceSystem
+ * MotionDevices (Folder)
+ * MotionDevice     Manufacturer, Model, ProductCode, SerialNumber, MotionDeviceCategory
+ * ParameterSet   OnPath, InControl, SpeedOverride
+ * Axes (Folder)
+ * Axis_1..N    ActualPosition, ActualSpeed, ActualAcceleration, MotionProfile
+ * Controllers (Folder)
+ * Controller       Manufacturer, Model, ProductCode, SerialNumber
+ * Software       Manufacturer, Model, SoftwareRevision
+ * SafetyStates (Folder)
+ * SafetyState
+ * ParameterSet   OperationalMode, EmergencyStop, ProtectiveStop
  *
  * The model is read-only (a monitoring model - the robot reports, the client observes). Scope note: one
  * MotionDevice / Controller / SafetyState and PROTOCORE_ROBOTICS_AXES parametric axes are exposed (the common
@@ -39,22 +46,13 @@
  * the base server) are a documented follow-on - a generic OPC UA client still browses the structure and
  * reads every value by BrowseName today.
  *
+ * @c work is PROTOCORE_ROBOTICS_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
+ *
  * @author  Douglas Quigg (dstroy0)
  * @date     2026
  */
-
-#ifndef PROTOCORE_ROBOTICS_H
-#define PROTOCORE_ROBOTICS_H
-
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths
-
-#if PROTOCORE_ENABLE_ROBOTICS
-
-PROTOCORE_BEGIN_DECLS
-
-// PROTOCORE_ROBOTICS_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
-// it into its arena. A caller takes them once and passes the pointer to every call. How they
-// are carved is this module's and is never named here.
 
 /** @brief The OPC UA for Robotics companion-spec namespace URI (OPC 40010-1). */
 #define ROBOTICS_NS_URI "http://opcfoundation.org/UA/Robotics/"
@@ -157,67 +155,26 @@ typedef struct
     RoboticsSafetyState safety;    ///< the SafetyState.
 } RoboticsMotionDeviceSystem;
 
-/** @brief What bind takes: mds. */
+/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    const RoboticsMotionDeviceSystem *mds;
-} RoboticsBindArgs;
-
-/** @brief What install takes: mds. */
-typedef struct
-{
-    const RoboticsMotionDeviceSystem *mds;
-} RoboticsInstallArgs;
+    void (*bind)(uint8_t *restrict, const RoboticsMotionDeviceSystem *);
+    void (*install)(uint8_t *restrict, const RoboticsMotionDeviceSystem *);
+} RoboticsNs;
+PROTOCORE_NS_LAYOUT(RoboticsNs, bind, install);
 
 /**
- * @brief OPC UA for Robotics (OPC 40010-1) MotionDevice information model (PROTOCORE_ENABLE_ROBOTICS).
- *
- * A caller sets the members a call takes, invokes it through ::Robotics with the bytes it runs
- * out of, and reads the outcome off the same handle.
- *
- *   Robotics.bind_args.mds = ...;
- *   Robotics.bind(work);
- *
- * @var RoboticsNs::bind_args  what bind takes: mds
- * @var RoboticsNs::install_args  what install takes: mds
- * @var RoboticsNs::ok  a call's true/false outcome
- * @var RoboticsNs::bind  bind the MotionDeviceSystem the resolvers serve. mds must outlive ...
- * @var RoboticsNs::install  convenience: bind mds and register both resolvers on the OPC UA ...
- *
- * @c work is PROTOCORE_ROBOTICS_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @brief Bind the MotionDeviceSystem the resolvers serve. mds must outlive .
+ * @param work PROTOCORE_ROBOTICS_BORROW bytes the caller took. Not held past the call.
+ * @param mds Mds
  */
-typedef struct
-{
-    RoboticsBindArgs bind_args;
-    RoboticsInstallArgs install_args;
-    proto_bool ok;
-} RoboticsVars;
-
-/** @brief The operands and the outcome. */
-extern RoboticsVars RoboticsV;
-
-/** @brief The entries. */
-typedef struct
-{
-    void (*const bind)(uint8_t *restrict work);
-    void (*const install)(uint8_t *restrict work);
-} RoboticsNs;
-
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in RoboticsV or a region of the borrow at a fixed offset.
-void protocore_robotics_bind(uint8_t *restrict work);
-void protocore_robotics_install(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Robotics.bind(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const RoboticsNs Robotics __attribute__((unused)) = {
-    .bind = protocore_robotics_bind,
-    .install = protocore_robotics_install,
-};
+void protocore_robotics_bind(uint8_t *restrict work, const RoboticsMotionDeviceSystem *mds);
+/**
+ * @brief Convenience: bind mds and register both resolvers on the OPC UA .
+ * @param work PROTOCORE_ROBOTICS_BORROW bytes the caller took. Not held past the call.
+ * @param mds Mds
+ */
+void protocore_robotics_install(uint8_t *restrict work, const RoboticsMotionDeviceSystem *mds);
 
 /**
  * @brief The PROTOCORE_ROBOTICS_BORROW bytes this module's state lives in.
@@ -230,8 +187,10 @@ static const RoboticsNs Robotics __attribute__((unused)) = {
  */
 uint8_t *protocore_robotics_span(void);
 
-PROTOCORE_END_DECLS
+/** @brief Module namespace. */
+PROTOCORE_NS RoboticsNs Robotics PROTOCORE_UNUSED = {.bind = protocore_robotics_bind,
+                                                     .install = protocore_robotics_install};
 
-#endif // PROTOCORE_ENABLE_ROBOTICS
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ROBOTICS_H
