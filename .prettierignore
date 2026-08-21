@@ -62,3 +62,9 @@ docs/features.html
 # are line-oriented, and reflowing them breaks the generated site rather than the file.
 docs/footer.html
 docs/header.html
+
+# Submodules. MMgr is a separate repository with its own .prettierignore, its own formatting and its
+# own CI; formatting it from here cannot become a commit there, it only shows up as a dirty
+# submodule in this repo. Prettier expands its own glob, so git ls-files not listing submodule
+# contents does not keep it out.
+include/MMgr/

@@ -23,6 +23,7 @@ single invocation reports the whole picture rather than the first thing to break
 
 import argparse
 import os
+import re
 import runpy
 import shutil
 import subprocess
@@ -260,11 +261,32 @@ def cmd_sonar(a):
     return dispatch(SONAR, [a.sub], a.rest)
 
 
+def submodule_dirs():
+    """Absolute paths of every submodule, from .gitmodules.
+
+    A submodule is a separate repository with its own formatting config and its own CI. Formatting
+    one from here cannot become a commit there - it only shows up as a dirty submodule in this
+    repo - so the tree's formatters have no business inside it.
+    """
+    gm = os.path.join(ROOT, ".gitmodules")
+    if not os.path.exists(gm):
+        return set()
+    text = open(gm, encoding="utf-8").read()
+    return {os.path.normpath(os.path.join(ROOT, p)) for p in re.findall(r"^\s*path\s*=\s*(.+)$", text, re.M)}
+
+
 def source_files():
     """The tree's own C sources: what the Format Code workflow's find selects."""
+    skip = submodule_dirs()
     out = []
     for dirpath, dirnames, filenames in os.walk(ROOT):
-        dirnames[:] = [d for d in dirnames if not d.startswith(".") and d != "managed_components"]
+        dirnames[:] = [
+            d
+            for d in dirnames
+            if not d.startswith(".")
+            and d != "managed_components"
+            and os.path.normpath(os.path.join(dirpath, d)) not in skip
+        ]
         for fn in filenames:
             if fn == "build_opt.h" or not fn.endswith((".c", ".cpp", ".h", ".ino")):
                 continue
