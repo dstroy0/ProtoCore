@@ -40,56 +40,34 @@ void test_core_spec_att_pdu_layout(void)
 
     // Read Request: [0x0A][handle:2]
     static const uint8_t READ_REQ[] = {0x0A, 0x34, 0x12};
-    BleGattV.att_read_req_args.handle = 0x1234;
-    BleGattV.att_read_req_args.out = out;
-    BleGattV.att_read_req_args.cap = sizeof(out);
-    BleGatt.att_read_req(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(sizeof(READ_REQ), BleGattV.n);
+    size_t ble_gatt_n = BleGatt.att_read_req(ble_gatt_work, 0x1234, out, sizeof(out));
+    TEST_ASSERT_EQUAL_size_t(sizeof(READ_REQ), ble_gatt_n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(READ_REQ, out, sizeof(READ_REQ));
 
     // Read Response: [0x0B][value...] - no handle, the request already named it
     static const uint8_t VAL[3] = {0xDE, 0xAD, 0xBE};
     static const uint8_t READ_RSP[] = {0x0B, 0xDE, 0xAD, 0xBE};
-    BleGattV.att_read_rsp_args.val = VAL;
-    BleGattV.att_read_rsp_args.vlen = sizeof(VAL);
-    BleGattV.att_read_rsp_args.out = out;
-    BleGattV.att_read_rsp_args.cap = sizeof(out);
-    BleGatt.att_read_rsp(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(sizeof(READ_RSP), BleGattV.n);
+    ble_gatt_n = BleGatt.att_read_rsp(ble_gatt_work, VAL, sizeof(VAL), out, sizeof(out));
+    TEST_ASSERT_EQUAL_size_t(sizeof(READ_RSP), ble_gatt_n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(READ_RSP, out, sizeof(READ_RSP));
 
     // Write Request: [0x12][handle:2][value...]
     static const uint8_t WRITE_REQ[] = {0x12, 0x34, 0x12, 0xDE, 0xAD, 0xBE};
-    BleGattV.att_write_req_args.handle = 0x1234;
-    BleGattV.att_write_req_args.val = VAL;
-    BleGattV.att_write_req_args.vlen = sizeof(VAL);
-    BleGattV.att_write_req_args.out = out;
-    BleGattV.att_write_req_args.cap = sizeof(out);
-    BleGatt.att_write_req(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(sizeof(WRITE_REQ), BleGattV.n);
+    ble_gatt_n = BleGatt.att_write_req(ble_gatt_work, 0x1234, VAL, sizeof(VAL), out, sizeof(out));
+    TEST_ASSERT_EQUAL_size_t(sizeof(WRITE_REQ), ble_gatt_n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WRITE_REQ, out, sizeof(WRITE_REQ));
 
     // Handle Value Notification: [0x1B][handle:2][value...] - the same shape under another opcode
     static const uint8_t NOTIFY[] = {0x1B, 0x34, 0x12, 0xDE, 0xAD, 0xBE};
-    BleGattV.att_notify_args.handle = 0x1234;
-    BleGattV.att_notify_args.val = VAL;
-    BleGattV.att_notify_args.vlen = sizeof(VAL);
-    BleGattV.att_notify_args.out = out;
-    BleGattV.att_notify_args.cap = sizeof(out);
-    BleGatt.att_notify(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(sizeof(NOTIFY), BleGattV.n);
+    ble_gatt_n = BleGatt.att_notify(ble_gatt_work, 0x1234, VAL, sizeof(VAL), out, sizeof(out));
+    TEST_ASSERT_EQUAL_size_t(sizeof(NOTIFY), ble_gatt_n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(NOTIFY, out, sizeof(NOTIFY));
 
     // Error Response: [0x01][request opcode][handle:2][error code], five octets, always
     // (Vol 3 Part F sec 3.4.1.1). 0x0A is the Attribute Not Found error code.
     static const uint8_t ERROR_RSP[] = {0x01, 0x0A, 0x34, 0x12, 0x0A};
-    BleGattV.att_error_rsp_args.req_op = ATT_OP_READ_REQ;
-    BleGattV.att_error_rsp_args.handle = 0x1234;
-    BleGattV.att_error_rsp_args.error = 0x0A;
-    BleGattV.att_error_rsp_args.out = out;
-    BleGattV.att_error_rsp_args.cap = sizeof(out);
-    BleGatt.att_error_rsp(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(sizeof(ERROR_RSP), BleGattV.n);
+    ble_gatt_n = BleGatt.att_error_rsp(ble_gatt_work, ATT_OP_READ_REQ, 0x1234, 0x0A, out, sizeof(out));
+    TEST_ASSERT_EQUAL_size_t(sizeof(ERROR_RSP), ble_gatt_n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ERROR_RSP, out, sizeof(ERROR_RSP));
 }
 
@@ -144,79 +122,42 @@ void test_build_parse_round_trip(void)
     static const uint8_t VAL[2] = {0x01, 0x02};
     AttPdu p;
 
-    BleGattV.att_write_req_args.handle = 0x0031;
-    BleGattV.att_write_req_args.val = VAL;
-    BleGattV.att_write_req_args.vlen = sizeof(VAL);
-    BleGattV.att_write_req_args.out = pdu;
-    BleGattV.att_write_req_args.cap = sizeof(pdu);
-    BleGatt.att_write_req(ble_gatt_work);
-    size_t n = BleGattV.n;
-    BleGattV.att_parse_args.pdu = pdu;
-    BleGattV.att_parse_args.len = n;
-    BleGattV.att_parse_args.out = &p;
-    BleGatt.att_parse(ble_gatt_work);
-    TEST_ASSERT_TRUE(BleGattV.ok);
+    size_t ble_gatt_n = BleGatt.att_write_req(ble_gatt_work, 0x0031, VAL, sizeof(VAL), pdu, sizeof(pdu));
+    size_t n = ble_gatt_n;
+    proto_bool ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, pdu, n, &p);
+    TEST_ASSERT_TRUE(ble_gatt_ok);
     TEST_ASSERT_EQUAL_HEX8(ATT_OP_WRITE_REQ, p.opcode);
     TEST_ASSERT_EQUAL_HEX16(0x0031, p.handle);
     TEST_ASSERT_EQUAL_size_t(sizeof(VAL), p.value_len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(VAL, p.value, sizeof(VAL));
 
-    BleGattV.att_notify_args.handle = 0xABCD;
-    BleGattV.att_notify_args.val = VAL;
-    BleGattV.att_notify_args.vlen = sizeof(VAL);
-    BleGattV.att_notify_args.out = pdu;
-    BleGattV.att_notify_args.cap = sizeof(pdu);
-    BleGatt.att_notify(ble_gatt_work);
-    n = BleGattV.n;
-    BleGattV.att_parse_args.pdu = pdu;
-    BleGattV.att_parse_args.len = n;
-    BleGattV.att_parse_args.out = &p;
-    BleGatt.att_parse(ble_gatt_work);
-    TEST_ASSERT_TRUE(BleGattV.ok);
+    ble_gatt_n = BleGatt.att_notify(ble_gatt_work, 0xABCD, VAL, sizeof(VAL), pdu, sizeof(pdu));
+    n = ble_gatt_n;
+    ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, pdu, n, &p);
+    TEST_ASSERT_TRUE(ble_gatt_ok);
     TEST_ASSERT_EQUAL_HEX8(ATT_OP_HANDLE_VALUE_NTF, p.opcode);
     TEST_ASSERT_EQUAL_HEX16(0xABCD, p.handle);
 
-    BleGattV.att_read_req_args.handle = 0xFF01;
-    BleGattV.att_read_req_args.out = pdu;
-    BleGattV.att_read_req_args.cap = sizeof(pdu);
-    BleGatt.att_read_req(ble_gatt_work);
-    n = BleGattV.n;
-    BleGattV.att_parse_args.pdu = pdu;
-    BleGattV.att_parse_args.len = n;
-    BleGattV.att_parse_args.out = &p;
-    BleGatt.att_parse(ble_gatt_work);
-    TEST_ASSERT_TRUE(BleGattV.ok);
+    ble_gatt_n = BleGatt.att_read_req(ble_gatt_work, 0xFF01, pdu, sizeof(pdu));
+    n = ble_gatt_n;
+    ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, pdu, n, &p);
+    TEST_ASSERT_TRUE(ble_gatt_ok);
     TEST_ASSERT_EQUAL_HEX16(0xFF01, p.handle);
     TEST_ASSERT_NULL(p.value);
 
-    BleGattV.att_error_rsp_args.req_op = ATT_OP_WRITE_REQ;
-    BleGattV.att_error_rsp_args.handle = 0x0025;
-    BleGattV.att_error_rsp_args.error = 0x03;
-    BleGattV.att_error_rsp_args.out = pdu;
-    BleGattV.att_error_rsp_args.cap = sizeof(pdu);
-    BleGatt.att_error_rsp(ble_gatt_work);
-    n = BleGattV.n; // 0x03 = Write Not Permitted
-    BleGattV.att_parse_args.pdu = pdu;
-    BleGattV.att_parse_args.len = n;
-    BleGattV.att_parse_args.out = &p;
-    BleGatt.att_parse(ble_gatt_work);
-    TEST_ASSERT_TRUE(BleGattV.ok);
+    ble_gatt_n = BleGatt.att_error_rsp(ble_gatt_work, ATT_OP_WRITE_REQ, 0x0025, 0x03, pdu, sizeof(pdu));
+    n = ble_gatt_n; // 0x03 = Write Not Permitted
+    ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, pdu, n, &p);
+    TEST_ASSERT_TRUE(ble_gatt_ok);
     TEST_ASSERT_EQUAL_HEX8(ATT_OP_ERROR_RSP, p.opcode);
     TEST_ASSERT_EQUAL_HEX8(ATT_OP_WRITE_REQ, p.req_op);
     TEST_ASSERT_EQUAL_HEX16(0x0025, p.handle);
     TEST_ASSERT_EQUAL_HEX8(0x03, p.error);
 
-    BleGattV.att_read_rsp_args.val = VAL;
-    BleGattV.att_read_rsp_args.vlen = sizeof(VAL);
-    BleGattV.att_read_rsp_args.out = pdu;
-    BleGattV.att_read_rsp_args.cap = sizeof(pdu);
-    BleGatt.att_read_rsp(ble_gatt_work);
-    n = BleGattV.n;
-    BleGattV.att_parse_args.pdu = pdu;
-    BleGattV.att_parse_args.len = n;
-    BleGattV.att_parse_args.out = &p;
-    BleGatt.att_parse(ble_gatt_work);
-    TEST_ASSERT_TRUE(BleGattV.ok);
+    ble_gatt_n = BleGatt.att_read_rsp(ble_gatt_work, VAL, sizeof(VAL), pdu, sizeof(pdu));
+    n = ble_gatt_n;
+    ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, pdu, n, &p);
+    TEST_ASSERT_TRUE(ble_gatt_ok);
     TEST_ASSERT_EQUAL_HEX8(ATT_OP_READ_RSP, p.opcode);
     TEST_ASSERT_EQUAL_size_t(sizeof(VAL), p.value_len);
 }
@@ -227,49 +168,28 @@ void test_parse_refuses_a_truncated_pdu(void)
 {
     AttPdu p;
     static const uint8_t WRITE_NO_HANDLE[] = {ATT_OP_WRITE_REQ, 0x31};
-    BleGattV.att_parse_args.pdu = WRITE_NO_HANDLE;
-    BleGattV.att_parse_args.len = sizeof(WRITE_NO_HANDLE);
-    BleGattV.att_parse_args.out = &p;
-    BleGatt.att_parse(ble_gatt_work);
-    TEST_ASSERT_FALSE(BleGattV.ok);
+    proto_bool ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, WRITE_NO_HANDLE, sizeof(WRITE_NO_HANDLE), &p);
+    TEST_ASSERT_FALSE(ble_gatt_ok);
 
     static const uint8_t READ_NO_HANDLE[] = {ATT_OP_READ_REQ, 0x25};
-    BleGattV.att_parse_args.pdu = READ_NO_HANDLE;
-    BleGattV.att_parse_args.len = sizeof(READ_NO_HANDLE);
-    BleGattV.att_parse_args.out = &p;
-    BleGatt.att_parse(ble_gatt_work);
-    TEST_ASSERT_FALSE(BleGattV.ok);
+    ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, READ_NO_HANDLE, sizeof(READ_NO_HANDLE), &p);
+    TEST_ASSERT_FALSE(ble_gatt_ok);
 
     static const uint8_t NTF_NO_HANDLE[] = {ATT_OP_HANDLE_VALUE_NTF, 0x25};
-    BleGattV.att_parse_args.pdu = NTF_NO_HANDLE;
-    BleGattV.att_parse_args.len = sizeof(NTF_NO_HANDLE);
-    BleGattV.att_parse_args.out = &p;
-    BleGatt.att_parse(ble_gatt_work);
-    TEST_ASSERT_FALSE(BleGattV.ok);
+    ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, NTF_NO_HANDLE, sizeof(NTF_NO_HANDLE), &p);
+    TEST_ASSERT_FALSE(ble_gatt_ok);
 
     static const uint8_t ERR_SHORT[] = {ATT_OP_ERROR_RSP, ATT_OP_READ_REQ, 0x25};
-    BleGattV.att_parse_args.pdu = ERR_SHORT;
-    BleGattV.att_parse_args.len = sizeof(ERR_SHORT);
-    BleGattV.att_parse_args.out = &p;
-    BleGatt.att_parse(ble_gatt_work);
-    TEST_ASSERT_FALSE(BleGattV.ok);
+    ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, ERR_SHORT, sizeof(ERR_SHORT), &p);
+    TEST_ASSERT_FALSE(ble_gatt_ok);
 
     static const uint8_t NOTHING[1] = {0};
-    BleGattV.att_parse_args.pdu = NOTHING;
-    BleGattV.att_parse_args.len = 0;
-    BleGattV.att_parse_args.out = &p;
-    BleGatt.att_parse(ble_gatt_work);
-    TEST_ASSERT_FALSE(BleGattV.ok);
-    BleGattV.att_parse_args.pdu = NULL;
-    BleGattV.att_parse_args.len = 5;
-    BleGattV.att_parse_args.out = &p;
-    BleGatt.att_parse(ble_gatt_work);
-    TEST_ASSERT_FALSE(BleGattV.ok);
-    BleGattV.att_parse_args.pdu = NOTHING;
-    BleGattV.att_parse_args.len = 1;
-    BleGattV.att_parse_args.out = NULL;
-    BleGatt.att_parse(ble_gatt_work);
-    TEST_ASSERT_FALSE(BleGattV.ok);
+    ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, NOTHING, 0, &p);
+    TEST_ASSERT_FALSE(ble_gatt_ok);
+    ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, NULL, 5, &p);
+    TEST_ASSERT_FALSE(ble_gatt_ok);
+    ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, NOTHING, 1, NULL);
+    TEST_ASSERT_FALSE(ble_gatt_ok);
 }
 
 // A PDU carrying only its fixed fields has no Attribute Value, and an opcode this codec does not
@@ -278,38 +198,26 @@ void test_parse_value_absent_and_unknown_opcode(void)
 {
     AttPdu p;
     static const uint8_t WRITE_RSP[] = {ATT_OP_WRITE_RSP};
-    BleGattV.att_parse_args.pdu = WRITE_RSP;
-    BleGattV.att_parse_args.len = sizeof(WRITE_RSP);
-    BleGattV.att_parse_args.out = &p;
-    BleGatt.att_parse(ble_gatt_work);
-    TEST_ASSERT_TRUE(BleGattV.ok);
+    proto_bool ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, WRITE_RSP, sizeof(WRITE_RSP), &p);
+    TEST_ASSERT_TRUE(ble_gatt_ok);
     TEST_ASSERT_EQUAL_HEX8(ATT_OP_WRITE_RSP, p.opcode);
     TEST_ASSERT_NULL(p.value);
     TEST_ASSERT_EQUAL_size_t(0, p.value_len);
 
     static const uint8_t READ_RSP_EMPTY[] = {ATT_OP_READ_RSP};
-    BleGattV.att_parse_args.pdu = READ_RSP_EMPTY;
-    BleGattV.att_parse_args.len = sizeof(READ_RSP_EMPTY);
-    BleGattV.att_parse_args.out = &p;
-    BleGatt.att_parse(ble_gatt_work);
-    TEST_ASSERT_TRUE(BleGattV.ok);
+    ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, READ_RSP_EMPTY, sizeof(READ_RSP_EMPTY), &p);
+    TEST_ASSERT_TRUE(ble_gatt_ok);
     TEST_ASSERT_NULL(p.value);
 
     static const uint8_t WRITE_NO_VALUE[] = {ATT_OP_WRITE_REQ, 0x31, 0x00};
-    BleGattV.att_parse_args.pdu = WRITE_NO_VALUE;
-    BleGattV.att_parse_args.len = sizeof(WRITE_NO_VALUE);
-    BleGattV.att_parse_args.out = &p;
-    BleGatt.att_parse(ble_gatt_work);
-    TEST_ASSERT_TRUE(BleGattV.ok);
+    ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, WRITE_NO_VALUE, sizeof(WRITE_NO_VALUE), &p);
+    TEST_ASSERT_TRUE(ble_gatt_ok);
     TEST_ASSERT_EQUAL_HEX16(0x0031, p.handle);
     TEST_ASSERT_NULL(p.value);
 
     static const uint8_t UNKNOWN[] = {0xFF, 0x01};
-    BleGattV.att_parse_args.pdu = UNKNOWN;
-    BleGattV.att_parse_args.len = sizeof(UNKNOWN);
-    BleGattV.att_parse_args.out = &p;
-    BleGatt.att_parse(ble_gatt_work);
-    TEST_ASSERT_TRUE(BleGattV.ok);
+    ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, UNKNOWN, sizeof(UNKNOWN), &p);
+    TEST_ASSERT_TRUE(ble_gatt_ok);
     TEST_ASSERT_EQUAL_HEX8(0xFF, p.opcode);
     TEST_ASSERT_EQUAL_HEX16(0x0000, p.handle);
     TEST_ASSERT_NULL(p.value);
@@ -321,11 +229,8 @@ void test_parsed_value_points_into_the_input(void)
 {
     AttPdu p;
     static const uint8_t PDU[] = {ATT_OP_HANDLE_VALUE_NTF, 0x25, 0x00, 0xAA, 0xBB, 0xCC};
-    BleGattV.att_parse_args.pdu = PDU;
-    BleGattV.att_parse_args.len = sizeof(PDU);
-    BleGattV.att_parse_args.out = &p;
-    BleGatt.att_parse(ble_gatt_work);
-    TEST_ASSERT_TRUE(BleGattV.ok);
+    proto_bool ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, PDU, sizeof(PDU), &p);
+    TEST_ASSERT_TRUE(ble_gatt_ok);
     TEST_ASSERT_EQUAL_PTR(PDU + 3, p.value);
     TEST_ASSERT_EQUAL_size_t(3, p.value_len);
 }
@@ -337,96 +242,39 @@ void test_builders_fail_closed(void)
     uint8_t out[16];
     static const uint8_t VAL[3] = {1, 2, 3};
 
-    BleGattV.att_read_req_args.handle = 0x0025;
-    BleGattV.att_read_req_args.out = out;
-    BleGattV.att_read_req_args.cap = 2;
-    BleGatt.att_read_req(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(0, BleGattV.n);
-    BleGattV.att_read_req_args.handle = 0x0025;
-    BleGattV.att_read_req_args.out = NULL;
-    BleGattV.att_read_req_args.cap = sizeof(out);
-    BleGatt.att_read_req(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(0, BleGattV.n);
+    size_t ble_gatt_n = BleGatt.att_read_req(ble_gatt_work, 0x0025, out, 2);
+    TEST_ASSERT_EQUAL_size_t(0, ble_gatt_n);
+    ble_gatt_n = BleGatt.att_read_req(ble_gatt_work, 0x0025, NULL, sizeof(out));
+    TEST_ASSERT_EQUAL_size_t(0, ble_gatt_n);
 
-    BleGattV.att_read_rsp_args.val = VAL;
-    BleGattV.att_read_rsp_args.vlen = 3;
-    BleGattV.att_read_rsp_args.out = out;
-    BleGattV.att_read_rsp_args.cap = 3;
-    BleGatt.att_read_rsp(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(0, BleGattV.n); // needs 1 + 3
-    BleGattV.att_read_rsp_args.val = VAL;
-    BleGattV.att_read_rsp_args.vlen = 3;
-    BleGattV.att_read_rsp_args.out = NULL;
-    BleGattV.att_read_rsp_args.cap = sizeof(out);
-    BleGatt.att_read_rsp(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(0, BleGattV.n);
-    BleGattV.att_read_rsp_args.val = NULL;
-    BleGattV.att_read_rsp_args.vlen = 3;
-    BleGattV.att_read_rsp_args.out = out;
-    BleGattV.att_read_rsp_args.cap = sizeof(out);
-    BleGatt.att_read_rsp(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(0, BleGattV.n);
+    ble_gatt_n = BleGatt.att_read_rsp(ble_gatt_work, VAL, 3, out, 3);
+    TEST_ASSERT_EQUAL_size_t(0, ble_gatt_n); // needs 1 + 3
+    ble_gatt_n = BleGatt.att_read_rsp(ble_gatt_work, VAL, 3, NULL, sizeof(out));
+    TEST_ASSERT_EQUAL_size_t(0, ble_gatt_n);
+    ble_gatt_n = BleGatt.att_read_rsp(ble_gatt_work, NULL, 3, out, sizeof(out));
+    TEST_ASSERT_EQUAL_size_t(0, ble_gatt_n);
 
-    BleGattV.att_write_req_args.handle = 0x0010;
-    BleGattV.att_write_req_args.val = VAL;
-    BleGattV.att_write_req_args.vlen = 3;
-    BleGattV.att_write_req_args.out = out;
-    BleGattV.att_write_req_args.cap = 5;
-    BleGatt.att_write_req(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(0, BleGattV.n); // needs 3 + 3
-    BleGattV.att_write_req_args.handle = 0x0010;
-    BleGattV.att_write_req_args.val = VAL;
-    BleGattV.att_write_req_args.vlen = 3;
-    BleGattV.att_write_req_args.out = NULL;
-    BleGattV.att_write_req_args.cap = sizeof(out);
-    BleGatt.att_write_req(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(0, BleGattV.n);
-    BleGattV.att_write_req_args.handle = 0x0010;
-    BleGattV.att_write_req_args.val = NULL;
-    BleGattV.att_write_req_args.vlen = 3;
-    BleGattV.att_write_req_args.out = out;
-    BleGattV.att_write_req_args.cap = sizeof(out);
-    BleGatt.att_write_req(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(0, BleGattV.n);
+    ble_gatt_n = BleGatt.att_write_req(ble_gatt_work, 0x0010, VAL, 3, out, 5);
+    TEST_ASSERT_EQUAL_size_t(0, ble_gatt_n); // needs 3 + 3
+    ble_gatt_n = BleGatt.att_write_req(ble_gatt_work, 0x0010, VAL, 3, NULL, sizeof(out));
+    TEST_ASSERT_EQUAL_size_t(0, ble_gatt_n);
+    ble_gatt_n = BleGatt.att_write_req(ble_gatt_work, 0x0010, NULL, 3, out, sizeof(out));
+    TEST_ASSERT_EQUAL_size_t(0, ble_gatt_n);
 
-    BleGattV.att_notify_args.handle = 0x0010;
-    BleGattV.att_notify_args.val = VAL;
-    BleGattV.att_notify_args.vlen = 3;
-    BleGattV.att_notify_args.out = out;
-    BleGattV.att_notify_args.cap = 5;
-    BleGatt.att_notify(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(0, BleGattV.n);
-    BleGattV.att_error_rsp_args.req_op = ATT_OP_READ_REQ;
-    BleGattV.att_error_rsp_args.handle = 0x0010;
-    BleGattV.att_error_rsp_args.error = 0x0A;
-    BleGattV.att_error_rsp_args.out = out;
-    BleGattV.att_error_rsp_args.cap = 4;
-    BleGatt.att_error_rsp(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(0, BleGattV.n);
-    BleGattV.att_error_rsp_args.req_op = ATT_OP_READ_REQ;
-    BleGattV.att_error_rsp_args.handle = 0x0010;
-    BleGattV.att_error_rsp_args.error = 0x0A;
-    BleGattV.att_error_rsp_args.out = NULL;
-    BleGattV.att_error_rsp_args.cap = sizeof(out);
-    BleGatt.att_error_rsp(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(0, BleGattV.n);
+    ble_gatt_n = BleGatt.att_notify(ble_gatt_work, 0x0010, VAL, 3, out, 5);
+    TEST_ASSERT_EQUAL_size_t(0, ble_gatt_n);
+    ble_gatt_n = BleGatt.att_error_rsp(ble_gatt_work, ATT_OP_READ_REQ, 0x0010, 0x0A, out, 4);
+    TEST_ASSERT_EQUAL_size_t(0, ble_gatt_n);
+    ble_gatt_n = BleGatt.att_error_rsp(ble_gatt_work, ATT_OP_READ_REQ, 0x0010, 0x0A, NULL, sizeof(out));
+    TEST_ASSERT_EQUAL_size_t(0, ble_gatt_n);
 
     // A zero-length Attribute Value is legal: Vol 3 Part F sec 3.2.9 allows an attribute value of
     // length zero, so the PDU is just its fixed fields.
-    BleGattV.att_read_rsp_args.val = NULL;
-    BleGattV.att_read_rsp_args.vlen = 0;
-    BleGattV.att_read_rsp_args.out = out;
-    BleGattV.att_read_rsp_args.cap = sizeof(out);
-    BleGatt.att_read_rsp(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(1, BleGattV.n);
+    ble_gatt_n = BleGatt.att_read_rsp(ble_gatt_work, NULL, 0, out, sizeof(out));
+    TEST_ASSERT_EQUAL_size_t(1, ble_gatt_n);
     TEST_ASSERT_EQUAL_HEX8(ATT_OP_READ_RSP, out[0]);
-    BleGattV.att_write_req_args.handle = 0x0010;
-    BleGattV.att_write_req_args.val = NULL;
-    BleGattV.att_write_req_args.vlen = 0;
-    BleGattV.att_write_req_args.out = out;
-    BleGattV.att_write_req_args.cap = sizeof(out);
-    BleGatt.att_write_req(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(3, BleGattV.n);
+    ble_gatt_n = BleGatt.att_write_req(ble_gatt_work, 0x0010, NULL, 0, out, sizeof(out));
+    TEST_ASSERT_EQUAL_size_t(3, ble_gatt_n);
     TEST_ASSERT_EQUAL_HEX8(ATT_OP_WRITE_REQ, out[0]);
 }
 
@@ -439,33 +287,21 @@ void test_characteristic_table_json(void)
     static const GattChar CHARS[2] = {{0x0025, 0x2A37, GATT_PROP_READ | GATT_PROP_NOTIFY},
                                       {0x0031, 0x2A6E, GATT_PROP_READ}};
     char out[160];
-    BleGattV.char_json_args.chars = CHARS;
-    BleGattV.char_json_args.n = 2;
-    BleGattV.char_json_args.out = out;
-    BleGattV.char_json_args.cap = sizeof(out);
-    BleGatt.char_json(ble_gatt_work);
-    const size_t n = BleGattV.n;
+    size_t ble_gatt_n = BleGatt.char_json(ble_gatt_work, CHARS, 2, out, sizeof(out));
+    const size_t n = ble_gatt_n;
     TEST_ASSERT_EQUAL_STRING(
         "[{\"handle\":37,\"uuid\":\"0x2a37\",\"props\":18},{\"handle\":49,\"uuid\":\"0x2a6e\",\"props\":2}]", out);
     TEST_ASSERT_EQUAL_size_t(strlen(out), n);
 
     // An empty table is the empty array, not an empty string.
-    BleGattV.char_json_args.chars = NULL;
-    BleGattV.char_json_args.n = 0;
-    BleGattV.char_json_args.out = out;
-    BleGattV.char_json_args.cap = sizeof(out);
-    BleGatt.char_json(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(2, BleGattV.n);
+    ble_gatt_n = BleGatt.char_json(ble_gatt_work, NULL, 0, out, sizeof(out));
+    TEST_ASSERT_EQUAL_size_t(2, ble_gatt_n);
     TEST_ASSERT_EQUAL_STRING("[]", out);
 
     // The UUID field is always four hex digits, so a low assigned number keeps its leading zeros.
     static const GattChar ONE = {0x0001, 0x002A, GATT_PROP_WRITE};
-    BleGattV.char_json_args.chars = &ONE;
-    BleGattV.char_json_args.n = 1;
-    BleGattV.char_json_args.out = out;
-    BleGattV.char_json_args.cap = sizeof(out);
-    BleGatt.char_json(ble_gatt_work);
-    TEST_ASSERT_TRUE(BleGattV.n > 0);
+    ble_gatt_n = BleGatt.char_json(ble_gatt_work, &ONE, 1, out, sizeof(out));
+    TEST_ASSERT_TRUE(ble_gatt_n > 0);
     TEST_ASSERT_EQUAL_STRING("[{\"handle\":1,\"uuid\":\"0x002a\",\"props\":8}]", out);
 }
 
@@ -476,30 +312,14 @@ void test_characteristic_table_json_fails_closed(void)
     static const GattChar CHARS[2] = {{0x0025, 0x2A37, GATT_PROP_READ | GATT_PROP_NOTIFY},
                                       {0x0031, 0x2A6E, GATT_PROP_READ}};
     char tiny[8];
-    BleGattV.char_json_args.chars = CHARS;
-    BleGattV.char_json_args.n = 2;
-    BleGattV.char_json_args.out = tiny;
-    BleGattV.char_json_args.cap = sizeof(tiny);
-    BleGatt.char_json(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(0, BleGattV.n);
+    size_t ble_gatt_n = BleGatt.char_json(ble_gatt_work, CHARS, 2, tiny, sizeof(tiny));
+    TEST_ASSERT_EQUAL_size_t(0, ble_gatt_n);
 
     char out[64];
-    BleGattV.char_json_args.chars = CHARS;
-    BleGattV.char_json_args.n = 1;
-    BleGattV.char_json_args.out = NULL;
-    BleGattV.char_json_args.cap = sizeof(out);
-    BleGatt.char_json(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(0, BleGattV.n);
-    BleGattV.char_json_args.chars = CHARS;
-    BleGattV.char_json_args.n = 1;
-    BleGattV.char_json_args.out = out;
-    BleGattV.char_json_args.cap = 0;
-    BleGatt.char_json(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(0, BleGattV.n);
-    BleGattV.char_json_args.chars = NULL;
-    BleGattV.char_json_args.n = 1;
-    BleGattV.char_json_args.out = out;
-    BleGattV.char_json_args.cap = sizeof(out);
-    BleGatt.char_json(ble_gatt_work);
-    TEST_ASSERT_EQUAL_size_t(0, BleGattV.n);
+    ble_gatt_n = BleGatt.char_json(ble_gatt_work, CHARS, 1, NULL, sizeof(out));
+    TEST_ASSERT_EQUAL_size_t(0, ble_gatt_n);
+    ble_gatt_n = BleGatt.char_json(ble_gatt_work, CHARS, 1, out, 0);
+    TEST_ASSERT_EQUAL_size_t(0, ble_gatt_n);
+    ble_gatt_n = BleGatt.char_json(ble_gatt_work, NULL, 1, out, sizeof(out));
+    TEST_ASSERT_EQUAL_size_t(0, ble_gatt_n);
 }

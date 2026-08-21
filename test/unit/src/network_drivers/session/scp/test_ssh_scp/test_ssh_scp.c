@@ -25,8 +25,8 @@ static uint8_t suite_mnt_work[16]; // the borrow an entry takes; Mnt never reads
 
 void setUp(void)
 {
-    MntRam.backend(suite_mnt_work);
-    MntV.args.backend = MntRamV.backend;
+    const protocore_mnt_backend *mnt_ram_backend = MntRam.backend(suite_mnt_work);
+    MntV.args.backend = mnt_ram_backend;
     Mnt.mount(suite_mnt_work);
     MntRam.format(suite_mnt_work);
 }

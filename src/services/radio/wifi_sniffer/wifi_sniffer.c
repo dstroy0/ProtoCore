@@ -418,10 +418,8 @@ void protocore_wifi_sniffer_begin(uint8_t *restrict work)
     WifiSnifferV.survey_reset_args.count =
         (uint8_t)(WIFI_SNIFFER_CTX(work)->scan.chan_last - WIFI_SNIFFER_CTX(work)->scan.chan_first + 1);
     protocore_wifi_sniffer_survey_reset(work);
-    PromiscV.begin_args.channel = WIFI_SNIFFER_CTX(work)->scan.channel;
-    PromiscV.begin_args.sink = sniffer_sink;
-    Promisc.begin(protocore_promisc_span());
-    WIFI_SNIFFER_CTX(work)->running = PromiscV.ok;
+    proto_bool promisc_ok = Promisc.begin(protocore_promisc_span(), WIFI_SNIFFER_CTX(work)->scan.channel, sniffer_sink);
+    WIFI_SNIFFER_CTX(work)->running = promisc_ok;
     WifiSnifferV.ok = WIFI_SNIFFER_CTX(work)->running;
 }
 
@@ -442,8 +440,7 @@ void protocore_wifi_sniffer_tick(uint8_t *restrict work)
     WifiSnifferV.scan_next_args.s = &WIFI_SNIFFER_CTX(work)->scan;
     WifiSnifferV.scan_next_args.now_ms = now;
     protocore_wifi_sniffer_scan_next(work);
-    PromiscV.set_channel_args.channel = WifiSnifferV.value;
-    Promisc.set_channel(protocore_promisc_span());
+    Promisc.set_channel(protocore_promisc_span(), WifiSnifferV.value);
 }
 
 void protocore_wifi_sniffer_end(uint8_t *restrict work)

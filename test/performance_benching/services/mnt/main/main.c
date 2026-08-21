@@ -27,8 +27,8 @@ void dbench_run(void)
     for (;;)
     {
         DBENCH_BANNER("mnt");
-        MntRam.backend(mnt_work);
-        MntV.args.backend = MntRamV.backend;
+        const protocore_mnt_backend *mnt_ram_backend = MntRam.backend(mnt_work);
+        MntV.args.backend = mnt_ram_backend;
         Mnt.mount(mnt_work);
         MntRam.format(mnt_work);
         Fs.mount = "";

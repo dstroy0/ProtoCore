@@ -1,8 +1,15 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#ifndef PROTOCORE_DTLS_RECORD_H
+#define PROTOCORE_DTLS_RECORD_H
+
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+PROTOCORE_BEGIN_DECLS
+
 /**
- * @file protocore_dtls_record.h
+ * @file dtls_record.h
  * @brief DTLS 1.3 record layer (RFC 9147 §4).
  *
  * The datagram counterpart to the TLS 1.3 record layer: it protects and unprotects individual
@@ -10,37 +17,32 @@
  * reuses the TLS 1.3 crypto that already backs HTTP/3 (protocore_tls13_*, protocore_hkdf, aes128gcm).
  *
  * Two record shapes (RFC 9147 §4):
- *   - **DTLSPlaintext** - the classic 13-byte header (type, legacy_version, epoch, 48-bit sequence
- *     number, length, fragment). Used unencrypted for the first handshake flight and for alerts
- *     sent in epoch 0.
- *   - **DTLSCiphertext** - the compact "unified header" plus an AEAD-sealed body, used once record
- *     keys exist. The record's sequence number is itself encrypted (RFC 9147 §4.2.3), and the AEAD
- *     nonce is the TLS 1.3 construction over the full 64-bit sequence number (§4.2.2, epoch excluded).
+ * - **DTLSPlaintext** - the classic 13-byte header (type, legacy_version, epoch, 48-bit sequence
+ * number, length, fragment). Used unencrypted for the first handshake flight and for alerts
+ * sent in epoch 0.
+ * - **DTLSCiphertext** - the compact "unified header" plus an AEAD-sealed body, used once record
+ * keys exist. The record's sequence number is itself encrypted (RFC 9147 §4.2.3), and the AEAD
+ * nonce is the TLS 1.3 construction over the full 64-bit sequence number (§4.2.2, epoch excluded).
  *
  * ─ Reuse ─
- *   AEAD (AEAD_AES_128_GCM) and the AES-128 block used for sequence-number encryption come from
- *   aes128gcm; key/iv/sn derivation from protocore_hkdf (HKDF-Expand-Label). Phase 1 supports the one
- *   cipher suite the whole hand-rolled TLS 1.3 stack uses: TLS_AES_128_GCM_SHA256.
+ * AEAD (AEAD_AES_128_GCM) and the AES-128 block used for sequence-number encryption come from
+ * aes128gcm; key/iv/sn derivation from protocore_hkdf (HKDF-Expand-Label). Phase 1 supports the one
+ * cipher suite the whole hand-rolled TLS 1.3 stack uses: TLS_AES_128_GCM_SHA256.
  *
  * Pure, zero heap, host-tested. Not the mbedTLS TCP-TLS engine (network_drivers/tls) - this is the
  * self-contained datagram record layer.
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
  */
 
-#ifndef PROTOCORE_DTLS_RECORD_H
-#define PROTOCORE_DTLS_RECORD_H
-
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths
-
-#if PROTOCORE_ENABLE_DTLS
-
-PROTOCORE_BEGIN_DECLS
-
-// This module holds nothing between calls, so it carves no borrow and states none. An entry
-// takes one all the same, and never reads it, so every namespace in the tree is invoked the
-// same way.
+// PROTOCORE_DTLS_RECORD_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. Its size and its offset are each a static_assert, so a feature
+// combination that does not fit fails to compile rather than overrunning at run time.
 
 /** @name Record content types (RFC 8446 §5 / RFC 9147 §4).
  *  Shared by the DTLSPlaintext `type` field and the DTLSInnerPlaintext trailing content type. */
@@ -50,6 +52,7 @@ PROTOCORE_BEGIN_DECLS
 #define PROTOCORE_DTLS_CT_HANDSHAKE 22
 #define PROTOCORE_DTLS_CT_APPLICATION_DATA 23
 #define PROTOCORE_DTLS_CT_ACK 26 ///< DTLS 1.3 acknowledgement (RFC 9147 §7)
+///@}
 
 /** @brief DTLSPlaintext legacy_version on the wire: DTLS 1.2 (RFC 9147 §4). */
 #define PROTOCORE_DTLS_LEGACY_VERSION 0xFEFD
@@ -115,176 +118,124 @@ typedef struct
     proto_bool seeded; ///< false until the first record is accepted
 } DtlsReplayWindow;
 
-/** @brief What keys_derive takes: out, cipher, epoch, secret. */
+/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    DtlsRecordKeys *out;
-    DtlsCipher cipher;
-    uint16_t epoch;
-    const uint8_t *secret; ///< 32 bytes.
-} DtlsRecordKeysDeriveArgs;
-
-/** @brief What plaintext_build takes: content_type, epoch, seq, ... */
-typedef struct
-{
-    uint8_t content_type;
-    uint16_t epoch;
-    uint64_t seq;
-    const uint8_t *fragment;
-    size_t frag_len;
-    uint8_t *out;
-    size_t out_cap;
-} DtlsRecordPlaintextBuildArgs;
-
-/** @brief What plaintext_parse takes: rec, rec_len, out. */
-typedef struct
-{
-    const uint8_t *rec;
-    size_t rec_len;
-    DtlsPlaintext *out;
-} DtlsRecordPlaintextParseArgs;
-
-/** @brief What protect takes: keys, seq, content_type, plaintext, ... */
-typedef struct
-{
-    DtlsRecordKeys *keys;
-    uint64_t seq;
-    uint8_t content_type;
-    const uint8_t *plaintext;
-    size_t pt_len;
-    uint8_t *out;
-    size_t out_cap;
-    const uint8_t *cid;
-    size_t cid_len;
-} DtlsRecordProtectArgs;
-
-/** @brief What unprotect takes: keys, next_seq, rec, rec_len, out, ... */
-typedef struct
-{
-    DtlsRecordKeys *keys;
-    uint64_t next_seq;
-    const uint8_t *rec;
-    size_t rec_len;
-    uint8_t *out;
-    size_t out_cap;
-    DtlsCiphertext *info;
-    const uint8_t *expected_cid;
-    size_t expected_cid_len;
-} DtlsRecordUnprotectArgs;
-
-/** @brief What replay_init takes: w. */
-typedef struct
-{
-    DtlsReplayWindow *w;
-} DtlsRecordReplayInitArgs;
-
-/** @brief What replay_check takes: w, seq. */
-typedef struct
-{
-    const DtlsReplayWindow *w;
-    uint64_t seq;
-} DtlsRecordReplayCheckArgs;
-
-/** @brief What replay_mark takes: w, seq. */
-typedef struct
-{
-    DtlsReplayWindow *w;
-    uint64_t seq;
-} DtlsRecordReplayMarkArgs;
+    void (*keys_derive)(uint8_t *restrict, DtlsRecordKeys *, DtlsCipher, uint16_t, const uint8_t *);
+    size_t (*plaintext_build)(uint8_t *restrict, uint8_t, uint16_t, uint64_t, const uint8_t *, size_t, uint8_t *,
+                              size_t);
+    size_t (*plaintext_parse)(uint8_t *restrict, const uint8_t *, size_t, DtlsPlaintext *);
+    size_t (*protect)(uint8_t *restrict, DtlsRecordKeys *, uint64_t, uint8_t, const uint8_t *, size_t, uint8_t *,
+                      size_t, const uint8_t *, size_t);
+    proto_bool (*unprotect)(uint8_t *restrict, DtlsRecordKeys *, uint64_t, const uint8_t *, size_t, uint8_t *, size_t,
+                            DtlsCiphertext *, const uint8_t *, size_t);
+    void (*replay_init)(uint8_t *restrict, DtlsReplayWindow *);
+    proto_bool (*replay_check)(uint8_t *restrict, const DtlsReplayWindow *, uint64_t);
+    void (*replay_mark)(uint8_t *restrict, DtlsReplayWindow *, uint64_t);
+} DtlsRecordNs;
+PROTOCORE_NS_LAYOUT(DtlsRecordNs, keys_derive, plaintext_build, plaintext_parse, protect, unprotect, replay_init,
+                    replay_check, replay_mark);
 
 /**
- * @brief DTLS 1.3 record layer (RFC 9147 §4).
- *
- * A caller sets the members a call takes, invokes it through ::DtlsRecord with the bytes it runs
- * out of, and reads the outcome off the same handle.
- *
- *   DtlsRecord.keys_derive_args.out = ...;
- *   DtlsRecord.keys_derive_args.cipher = ...;
- *   DtlsRecord.keys_derive_args.epoch = ...;
- *   DtlsRecord.keys_derive_args.secret = ...;
- *   DtlsRecord.keys_derive(work);
- *
- * @var DtlsRecordNs::keys_derive_args  what keys_derive takes: out, cipher, epoch, secret
- * @var DtlsRecordNs::plaintext_build_args  what plaintext_build takes: content_type, epoch, seq,
- * @var DtlsRecordNs::plaintext_parse_args  what plaintext_parse takes: rec, rec_len, out
- * @var DtlsRecordNs::protect_args  what protect takes: keys, seq, content_type, plaintext,
- * @var DtlsRecordNs::unprotect_args  what unprotect takes: keys, next_seq, rec, rec_len, out,
- * @var DtlsRecordNs::replay_init_args  what replay_init takes: w
- * @var DtlsRecordNs::replay_check_args  what replay_check takes: w, seq
- * @var DtlsRecordNs::replay_mark_args  what replay_mark takes: w, seq
- * @var DtlsRecordNs::ok  a call's true/false outcome
- * @var DtlsRecordNs::n  the count a call reports
- * @var DtlsRecordNs::keys_derive  derive one direction's record keys from a 32-byte TLS 1.3 traffic ...
- * @var DtlsRecordNs::plaintext_build  a DTLSPlaintext record; bytes written (13 + frag_len), or 0 on ...
- * @var DtlsRecordNs::plaintext_parse  the same record back, validating legacy_version and the length ...
- * @var DtlsRecordNs::protect  seal one record (RFC 9147 sec 4.2): the unified header, the ...
- * @var DtlsRecordNs::unprotect  open one received record: decrypt the sequence number, rebuild the ...
- * @var DtlsRecordNs::replay_init  reset a replay window to empty
- * @var DtlsRecordNs::replay_check  whether seq is new and inside the window, rather than a replay or ...
- * @var DtlsRecordNs::replay_mark  record seq as accepted and advance the window; only after a ...
- *
- * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
- * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
- * a caller drives every namespace the same way.
+ * @brief Derive one direction's record keys from a 32-byte TLS 1.3 traffic .
+ * @param work PROTOCORE_DTLS_RECORD_BORROW bytes the caller took. Not held past the call.
+ * @param out Out
+ * @param cipher Cipher
+ * @param epoch Epoch
+ * @param secret 32 bytes
  */
-typedef struct
-{
-    DtlsRecordKeysDeriveArgs keys_derive_args;
-    DtlsRecordPlaintextBuildArgs plaintext_build_args;
-    DtlsRecordPlaintextParseArgs plaintext_parse_args;
-    DtlsRecordProtectArgs protect_args;
-    DtlsRecordUnprotectArgs unprotect_args;
-    DtlsRecordReplayInitArgs replay_init_args;
-    DtlsRecordReplayCheckArgs replay_check_args;
-    DtlsRecordReplayMarkArgs replay_mark_args;
-    proto_bool ok;
-    size_t n;
-} DtlsRecordVars;
+void protocore_dtls_record_keys_derive(uint8_t *restrict work, DtlsRecordKeys *out, DtlsCipher cipher, uint16_t epoch,
+                                       const uint8_t *secret);
+/**
+ * @brief A DTLSPlaintext record; bytes written (13 + frag_len), or 0 on .
+ * @param work PROTOCORE_DTLS_RECORD_BORROW bytes the caller took. Not held past the call.
+ * @param content_type Content type
+ * @param epoch Epoch
+ * @param seq Seq
+ * @param fragment Fragment
+ * @param frag_len Frag len
+ * @param out Out
+ * @param out_cap Out cap
+ * @return The size_t.
+ */
+size_t protocore_dtls_record_plaintext_build(uint8_t *restrict work, uint8_t content_type, uint16_t epoch, uint64_t seq,
+                                             const uint8_t *fragment, size_t frag_len, uint8_t *out, size_t out_cap);
+/**
+ * @brief The same record back, validating legacy_version and the length .
+ * @param work PROTOCORE_DTLS_RECORD_BORROW bytes the caller took. Not held past the call.
+ * @param rec Rec
+ * @param rec_len Rec len
+ * @param out Out
+ * @return The size_t.
+ */
+size_t protocore_dtls_record_plaintext_parse(uint8_t *restrict work, const uint8_t *rec, size_t rec_len,
+                                             DtlsPlaintext *out);
+/**
+ * @brief Seal one record (RFC 9147 sec 4.2): the unified header, the .
+ * @param work PROTOCORE_DTLS_RECORD_BORROW bytes the caller took. Not held past the call.
+ * @param keys Keys
+ * @param seq Seq
+ * @param content_type Content type
+ * @param plaintext Plaintext
+ * @param pt_len Pt len
+ * @param out Out
+ * @param out_cap Out cap
+ * @param cid Cid
+ * @param cid_len Cid len
+ * @return The size_t.
+ */
+size_t protocore_dtls_record_protect(uint8_t *restrict work, DtlsRecordKeys *keys, uint64_t seq, uint8_t content_type,
+                                     const uint8_t *plaintext, size_t pt_len, uint8_t *out, size_t out_cap,
+                                     const uint8_t *cid, size_t cid_len);
+/**
+ * @brief Open one received record: decrypt the sequence number, rebuild the .
+ * @param work PROTOCORE_DTLS_RECORD_BORROW bytes the caller took. Not held past the call.
+ * @param keys Keys
+ * @param next_seq Next seq
+ * @param rec Rec
+ * @param rec_len Rec len
+ * @param out Out
+ * @param out_cap Out cap
+ * @param info Info
+ * @param expected_cid Expected cid
+ * @param expected_cid_len Expected cid len
+ * @return PROTO_TRUE on success.
+ */
+proto_bool protocore_dtls_record_unprotect(uint8_t *restrict work, DtlsRecordKeys *keys, uint64_t next_seq,
+                                           const uint8_t *rec, size_t rec_len, uint8_t *out, size_t out_cap,
+                                           DtlsCiphertext *info, const uint8_t *expected_cid, size_t expected_cid_len);
+/**
+ * @brief Reset a replay window to empty.
+ * @param work PROTOCORE_DTLS_RECORD_BORROW bytes the caller took. Not held past the call.
+ * @param w W
+ */
+void protocore_dtls_record_replay_init(uint8_t *restrict work, DtlsReplayWindow *w);
+/**
+ * @brief Whether seq is new and inside the window, rather than a replay or .
+ * @param work PROTOCORE_DTLS_RECORD_BORROW bytes the caller took. Not held past the call.
+ * @param w W
+ * @param seq Seq
+ * @return PROTO_TRUE on success.
+ */
+proto_bool protocore_dtls_record_replay_check(uint8_t *restrict work, const DtlsReplayWindow *w, uint64_t seq);
+/**
+ * @brief Record seq as accepted and advance the window; only after a .
+ * @param work PROTOCORE_DTLS_RECORD_BORROW bytes the caller took. Not held past the call.
+ * @param w W
+ * @param seq Seq
+ */
+void protocore_dtls_record_replay_mark(uint8_t *restrict work, DtlsReplayWindow *w, uint64_t seq);
 
-/** @brief The operands and the outcome. */
-extern DtlsRecordVars DtlsRecordV;
-
-/** @brief The entries. */
-typedef struct
-{
-    void (*const keys_derive)(uint8_t *restrict work);
-    void (*const plaintext_build)(uint8_t *restrict work);
-    void (*const plaintext_parse)(uint8_t *restrict work);
-    void (*const protect)(uint8_t *restrict work);
-    void (*const unprotect)(uint8_t *restrict work);
-    void (*const replay_init)(uint8_t *restrict work);
-    void (*const replay_check)(uint8_t *restrict work);
-    void (*const replay_mark)(uint8_t *restrict work);
-} DtlsRecordNs;
-
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in DtlsRecordV or a region of the borrow at a fixed offset.
-void protocore_dtls_record_keys_derive(uint8_t *restrict work);
-void protocore_dtls_record_plaintext_build(uint8_t *restrict work);
-void protocore_dtls_record_plaintext_parse(uint8_t *restrict work);
-void protocore_dtls_record_protect(uint8_t *restrict work);
-void protocore_dtls_record_unprotect(uint8_t *restrict work);
-void protocore_dtls_record_replay_init(uint8_t *restrict work);
-void protocore_dtls_record_replay_check(uint8_t *restrict work);
-void protocore_dtls_record_replay_mark(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `DtlsRecord.keys_derive(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const DtlsRecordNs DtlsRecord __attribute__((unused)) = {
-    .keys_derive = protocore_dtls_record_keys_derive,
-    .plaintext_build = protocore_dtls_record_plaintext_build,
-    .plaintext_parse = protocore_dtls_record_plaintext_parse,
-    .protect = protocore_dtls_record_protect,
-    .unprotect = protocore_dtls_record_unprotect,
-    .replay_init = protocore_dtls_record_replay_init,
-    .replay_check = protocore_dtls_record_replay_check,
-    .replay_mark = protocore_dtls_record_replay_mark,
-};
+/** @brief Module namespace. */
+PROTOCORE_NS DtlsRecordNs DtlsRecord PROTOCORE_UNUSED = {.keys_derive = protocore_dtls_record_keys_derive,
+                                                         .plaintext_build = protocore_dtls_record_plaintext_build,
+                                                         .plaintext_parse = protocore_dtls_record_plaintext_parse,
+                                                         .protect = protocore_dtls_record_protect,
+                                                         .unprotect = protocore_dtls_record_unprotect,
+                                                         .replay_init = protocore_dtls_record_replay_init,
+                                                         .replay_check = protocore_dtls_record_replay_check,
+                                                         .replay_mark = protocore_dtls_record_replay_mark};
 
 PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_DTLS
 
 #endif // PROTOCORE_DTLS_RECORD_H

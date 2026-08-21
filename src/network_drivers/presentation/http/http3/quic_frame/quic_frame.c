@@ -6,16 +6,12 @@
  * @brief QUIC frame parsing and building - implementation. See protocore_quic_frame.h.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_HTTP3
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/http/http3/quic_frame/quic_frame.h"
 
 #include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // Decode a varint at buf[*pos], advancing *pos. Returns false on truncation.
 static proto_bool rd(uint8_t *restrict work, const uint8_t *buf, size_t len, size_t *pos, uint64_t *v)
@@ -39,26 +35,21 @@ static proto_bool rd(uint8_t *restrict work, const uint8_t *buf, size_t len, siz
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_quic_frame_parse(uint8_t *restrict work)
+size_t protocore_quic_frame_parse(uint8_t *restrict work, const uint8_t *buf, size_t len, QuicFrameHeader *out)
 {
-    (void)work;
-    const uint8_t *buf = QuicFrameV.parse_args.buf;
-    size_t len = QuicFrameV.parse_args.len;
-    QuicFrameHeader *out = QuicFrameV.parse_args.out;
+    size_t n = 0;
 
     size_t pos = 0;
     uint64_t type = 0;
     if (!rd(work, buf, len, &pos, &type))
     {
-        QuicFrameV.n = 0;
-        return;
+        return 0;
     }
     out->type = type;
 
     if (type == QUIC_FT_PADDING || type == QUIC_FT_PING || type == QUIC_FT_HANDSHAKE_DONE)
     {
-        QuicFrameV.n = pos;
-        return;
+        return pos;
     }
 
     if (type == QUIC_FT_ACK || type == QUIC_FT_ACK_ECN)
@@ -66,16 +57,14 @@ void protocore_quic_frame_parse(uint8_t *restrict work)
         if (!rd(work, buf, len, &pos, &out->ack.largest) || !rd(work, buf, len, &pos, &out->ack.delay) ||
             !rd(work, buf, len, &pos, &out->ack.range_count) || !rd(work, buf, len, &pos, &out->ack.first_range))
         {
-            QuicFrameV.n = 0;
-            return;
+            return 0;
         }
         for (uint64_t i = 0; i < out->ack.range_count; i++) // skip Gap + ACK Range Length pairs
         {
             uint64_t tmp = 0;
             if (!rd(work, buf, len, &pos, &tmp) || !rd(work, buf, len, &pos, &tmp))
             {
-                QuicFrameV.n = 0;
-                return;
+                return 0;
             }
         }
         if (type == QUIC_FT_ACK_ECN) // skip the three ECN counts
@@ -83,54 +72,46 @@ void protocore_quic_frame_parse(uint8_t *restrict work)
             uint64_t tmp = 0;
             if (!rd(work, buf, len, &pos, &tmp) || !rd(work, buf, len, &pos, &tmp) || !rd(work, buf, len, &pos, &tmp))
             {
-                QuicFrameV.n = 0;
-                return;
+                return 0;
             }
         }
-        QuicFrameV.n = pos;
-        return;
+        return pos;
     }
 
     if (type == QUIC_FT_CRYPTO)
     {
         if (!rd(work, buf, len, &pos, &out->crypto.offset) || !rd(work, buf, len, &pos, &out->crypto.length))
         {
-            QuicFrameV.n = 0;
-            return;
+            return 0;
         }
         if (pos + out->crypto.length > len)
         {
-            QuicFrameV.n = 0;
-            return;
+            return 0;
         }
         out->crypto.data = buf + pos;
         pos += out->crypto.length;
-        QuicFrameV.n = pos;
-        return;
+        return pos;
     }
 
     if (type >= QUIC_FT_STREAM && type <= 0x0f)
     {
         if (!rd(work, buf, len, &pos, &out->stream.id))
         {
-            QuicFrameV.n = 0;
-            return;
+            return 0;
         }
         out->stream.offset = 0;
         if (type & QUIC_STREAM_OFF)
         {
             if (!rd(work, buf, len, &pos, &out->stream.offset))
             {
-                QuicFrameV.n = 0;
-                return;
+                return 0;
             }
         }
         if (type & QUIC_STREAM_LEN)
         {
             if (!rd(work, buf, len, &pos, &out->stream.length))
             {
-                QuicFrameV.n = 0;
-                return;
+                return 0;
             }
         }
         else
@@ -139,25 +120,21 @@ void protocore_quic_frame_parse(uint8_t *restrict work)
         }
         if (pos + out->stream.length > len)
         {
-            QuicFrameV.n = 0;
-            return;
+            return 0;
         }
         out->stream.data = buf + pos;
         out->stream.fin = (uint8_t)((type & QUIC_STREAM_FIN) ? 1 : 0);
         pos += out->stream.length;
-        QuicFrameV.n = pos;
-        return;
+        return pos;
     }
 
     if (type == QUIC_FT_MAX_DATA)
     {
         if (!rd(work, buf, len, &pos, &out->max_data.max))
         {
-            QuicFrameV.n = 0;
-            return;
+            return 0;
         }
-        QuicFrameV.n = pos;
-        return;
+        return pos;
     }
 
     if (type == QUIC_FT_CONNECTION_CLOSE || type == QUIC_FT_CONNECTION_CLOSE_APP)
@@ -166,31 +143,26 @@ void protocore_quic_frame_parse(uint8_t *restrict work)
         out->close.frame_type = 0;
         if (!rd(work, buf, len, &pos, &out->close.error_code))
         {
-            QuicFrameV.n = 0;
-            return;
+            return 0;
         }
         if (type == QUIC_FT_CONNECTION_CLOSE) // the transport variant carries the triggering frame type
         {
             if (!rd(work, buf, len, &pos, &out->close.frame_type))
             {
-                QuicFrameV.n = 0;
-                return;
+                return 0;
             }
         }
         if (!rd(work, buf, len, &pos, &out->close.reason_len))
         {
-            QuicFrameV.n = 0;
-            return;
+            return 0;
         }
         if (pos + out->close.reason_len > len)
         {
-            QuicFrameV.n = 0;
-            return;
+            return 0;
         }
         out->close.reason = buf + pos;
         pos += out->close.reason_len;
-        QuicFrameV.n = pos;
-        return;
+        return pos;
     }
 
     // Frames the server does not act on but MUST still parse so a well-formed frame from a real client is
@@ -205,45 +177,37 @@ void protocore_quic_frame_parse(uint8_t *restrict work)
         uint64_t v = 0; // one varint
         if (!rd(work, buf, len, &pos, &v))
         {
-            QuicFrameV.n = 0;
-            return;
+            return 0;
         }
-        QuicFrameV.n = pos;
-        return;
+        return pos;
     }
     if (type == QUIC_FT_STOP_SENDING || type == QUIC_FT_MAX_STREAM_DATA || type == QUIC_FT_STREAM_DATA_BLOCKED)
     {
         uint64_t v = 0; // two varints
         if (!rd(work, buf, len, &pos, &v) || !rd(work, buf, len, &pos, &v))
         {
-            QuicFrameV.n = 0;
-            return;
+            return 0;
         }
-        QuicFrameV.n = pos;
-        return;
+        return pos;
     }
     if (type == QUIC_FT_RESET_STREAM)
     {
         uint64_t v = 0; // stream id, app error code, final size
         if (!rd(work, buf, len, &pos, &v) || !rd(work, buf, len, &pos, &v) || !rd(work, buf, len, &pos, &v))
         {
-            QuicFrameV.n = 0;
-            return;
+            return 0;
         }
-        QuicFrameV.n = pos;
-        return;
+        return pos;
     }
     if (type == QUIC_FT_NEW_TOKEN)
     {
         uint64_t tlen = 0; // token length + token bytes
         if (!rd(work, buf, len, &pos, &tlen) || pos + tlen > len)
         {
-            QuicFrameV.n = 0;
-            return;
+            return 0;
         }
         pos += tlen;
-        QuicFrameV.n = pos;
-        return;
+        return pos;
     }
     if (type == QUIC_FT_NEW_CONNECTION_ID)
     {
@@ -251,78 +215,64 @@ void protocore_quic_frame_parse(uint8_t *restrict work)
         uint64_t retire = 0; // retire-prior-to, then a 1-byte CID length follows
         if (!rd(work, buf, len, &pos, &seq) || !rd(work, buf, len, &pos, &retire) || pos >= len)
         {
-            QuicFrameV.n = 0;
-            return;
+            return 0;
         }
         uint8_t cidlen = buf[pos++];
         if (pos + (size_t)cidlen + 16 > len) // connection id + 16-byte stateless reset token
         {
-            QuicFrameV.n = 0;
-            return;
+            return 0;
         }
         pos += (size_t)cidlen + 16;
-        QuicFrameV.n = pos;
-        return;
+        return pos;
     }
     if (type == QUIC_FT_PATH_CHALLENGE || type == QUIC_FT_PATH_RESPONSE)
     {
         if (pos + 8 > len) // 8 bytes of opaque data
         {
-            QuicFrameV.n = 0;
-            return;
+            return 0;
         }
         pos += 8;
-        QuicFrameV.n = pos;
-        return;
+        return pos;
     }
 
-    QuicFrameV.n = 0; // a genuinely unknown / reserved frame type
+    n = 0; // a genuinely unknown / reserved frame type
+    return n;
 }
 
-void protocore_quic_frame_build_padding(uint8_t *restrict work)
+size_t protocore_quic_frame_build_padding(uint8_t *restrict work, uint8_t *out, size_t cap, size_t n)
 {
     (void)work;
-    uint8_t *out = QuicFrameV.build_padding_args.out;
-    size_t cap = QuicFrameV.build_padding_args.cap;
-    size_t n = QuicFrameV.build_padding_args.n;
 
     if (n > cap)
     {
-        QuicFrameV.n = 0;
-        return;
+        return 0;
     }
     mem.set(out, 0, n);
-    QuicFrameV.n = n;
+    return n;
 }
 
-void protocore_quic_frame_build_ping(uint8_t *restrict work)
+size_t protocore_quic_frame_build_ping(uint8_t *restrict work, uint8_t *out, size_t cap)
 {
     (void)work;
-    uint8_t *out = QuicFrameV.build_ping_args.out;
-    size_t cap = QuicFrameV.build_ping_args.cap;
 
     if (cap < 1)
     {
-        QuicFrameV.n = 0;
-        return;
+        return 0;
     }
     out[0] = QUIC_FT_PING;
-    QuicFrameV.n = 1;
+    return 1;
 }
 
-void protocore_quic_frame_build_handshake_done(uint8_t *restrict work)
+size_t protocore_quic_frame_build_handshake_done(uint8_t *restrict work, uint8_t *out, size_t cap)
 {
     (void)work;
-    uint8_t *out = QuicFrameV.build_handshake_done_args.out;
-    size_t cap = QuicFrameV.build_handshake_done_args.cap;
 
     if (cap < 1)
     {
-        QuicFrameV.n = 0;
-        return;
+        return 0;
     }
     out[0] = QUIC_FT_HANDSHAKE_DONE;
-    QuicFrameV.n = 1;
+    return 1;
 }
 
 // Append a varint; returns false on overflow.
@@ -341,121 +291,81 @@ static proto_bool wr(uint8_t *restrict work, uint8_t *out, size_t cap, size_t *p
     return PROTO_TRUE;
 }
 
-void protocore_quic_frame_build_ack(uint8_t *restrict work)
+size_t protocore_quic_frame_build_ack(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t largest,
+                                      uint64_t delay, uint64_t first_range)
 {
-    (void)work;
-    uint8_t *out = QuicFrameV.build_ack_args.out;
-    size_t cap = QuicFrameV.build_ack_args.cap;
-    uint64_t largest = QuicFrameV.build_ack_args.largest;
-    uint64_t delay = QuicFrameV.build_ack_args.delay;
-    uint64_t first_range = QuicFrameV.build_ack_args.first_range;
-
     size_t pos = 0;
     if (!wr(work, out, cap, &pos, QUIC_FT_ACK) || !wr(work, out, cap, &pos, largest) ||
         !wr(work, out, cap, &pos, delay) || !wr(work, out, cap, &pos, 0) /* ACK Range Count */ ||
         !wr(work, out, cap, &pos, first_range))
     {
-        QuicFrameV.n = 0;
-        return;
+        return 0;
     }
-    QuicFrameV.n = pos;
+    return pos;
 }
 
-void protocore_quic_frame_build_crypto(uint8_t *restrict work)
+size_t protocore_quic_frame_build_crypto(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t offset,
+                                         const uint8_t *data, size_t len)
 {
-    (void)work;
-    uint8_t *out = QuicFrameV.build_crypto_args.out;
-    size_t cap = QuicFrameV.build_crypto_args.cap;
-    uint64_t offset = QuicFrameV.build_crypto_args.offset;
-    const uint8_t *data = QuicFrameV.build_crypto_args.data;
-    size_t len = QuicFrameV.build_crypto_args.len;
-
     size_t pos = 0;
     if (!wr(work, out, cap, &pos, QUIC_FT_CRYPTO) || !wr(work, out, cap, &pos, offset) ||
         !wr(work, out, cap, &pos, len))
     {
-        QuicFrameV.n = 0;
-        return;
+        return 0;
     }
     if (pos + len > cap)
     {
-        QuicFrameV.n = 0;
-        return;
+        return 0;
     }
     if (len)
     {
         mem.cpy(out + pos, data, len);
     }
-    QuicFrameV.n = pos + len;
+    return pos + len;
 }
 
-void protocore_quic_frame_build_stream(uint8_t *restrict work)
+size_t protocore_quic_frame_build_stream(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t id, uint64_t offset,
+                                         const uint8_t *data, size_t len, proto_bool fin)
 {
-    (void)work;
-    uint8_t *out = QuicFrameV.build_stream_args.out;
-    size_t cap = QuicFrameV.build_stream_args.cap;
-    uint64_t id = QuicFrameV.build_stream_args.id;
-    uint64_t offset = QuicFrameV.build_stream_args.offset;
-    const uint8_t *data = QuicFrameV.build_stream_args.data;
-    size_t len = QuicFrameV.build_stream_args.len;
-    proto_bool fin = QuicFrameV.build_stream_args.fin;
-
     uint64_t type = QUIC_FT_STREAM | QUIC_STREAM_LEN | (offset ? QUIC_STREAM_OFF : 0) | (fin ? QUIC_STREAM_FIN : 0);
     size_t pos = 0;
     if (!wr(work, out, cap, &pos, type) || !wr(work, out, cap, &pos, id))
     {
-        QuicFrameV.n = 0;
-        return;
+        return 0;
     }
     if (offset && !wr(work, out, cap, &pos, offset))
     {
-        QuicFrameV.n = 0;
-        return;
+        return 0;
     }
     if (!wr(work, out, cap, &pos, len))
     {
-        QuicFrameV.n = 0;
-        return;
+        return 0;
     }
     if (pos + len > cap)
     {
-        QuicFrameV.n = 0;
-        return;
+        return 0;
     }
     if (len)
     {
         mem.cpy(out + pos, data, len);
     }
-    QuicFrameV.n = pos + len;
+    return pos + len;
 }
 
-void protocore_quic_frame_build_max_data(uint8_t *restrict work)
+size_t protocore_quic_frame_build_max_data(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t max)
 {
-    (void)work;
-    uint8_t *out = QuicFrameV.build_max_data_args.out;
-    size_t cap = QuicFrameV.build_max_data_args.cap;
-    uint64_t max = QuicFrameV.build_max_data_args.max;
-
     size_t pos = 0;
     if (!wr(work, out, cap, &pos, QUIC_FT_MAX_DATA) || !wr(work, out, cap, &pos, max))
     {
-        QuicFrameV.n = 0;
-        return;
+        return 0;
     }
-    QuicFrameV.n = pos;
+    return pos;
 }
 
-void protocore_quic_frame_build_connection_close(uint8_t *restrict work)
+size_t protocore_quic_frame_build_connection_close(uint8_t *restrict work, uint8_t *out, size_t cap, proto_bool app,
+                                                   uint64_t error_code, uint64_t frame_type, const char *reason,
+                                                   size_t reason_len)
 {
-    (void)work;
-    uint8_t *out = QuicFrameV.build_connection_close_args.out;
-    size_t cap = QuicFrameV.build_connection_close_args.cap;
-    proto_bool app = QuicFrameV.build_connection_close_args.app;
-    uint64_t error_code = QuicFrameV.build_connection_close_args.error_code;
-    uint64_t frame_type = QuicFrameV.build_connection_close_args.frame_type;
-    const char *reason = QuicFrameV.build_connection_close_args.reason;
-    size_t reason_len = QuicFrameV.build_connection_close_args.reason_len;
-
     size_t pos = 0;
     // RFC 9000 sec 19.19: the application variant (0x1d) carries error codes from the application
     // protocol's own space and omits the Frame Type field entirely.
@@ -466,34 +376,23 @@ void protocore_quic_frame_build_connection_close(uint8_t *restrict work)
     }
     if (!wr(work, out, cap, &pos, type) || !wr(work, out, cap, &pos, error_code))
     {
-        QuicFrameV.n = 0;
-        return;
+        return 0;
     }
     if (!app && !wr(work, out, cap, &pos, frame_type))
     {
-        QuicFrameV.n = 0;
-        return;
+        return 0;
     }
     if (!wr(work, out, cap, &pos, reason_len))
     {
-        QuicFrameV.n = 0;
-        return;
+        return 0;
     }
     if (pos + reason_len > cap)
     {
-        QuicFrameV.n = 0;
-        return;
+        return 0;
     }
     if (reason_len)
     {
         mem.cpy(out + pos, reason, reason_len);
     }
-    QuicFrameV.n = pos + reason_len;
+    return pos + reason_len;
 }
-
-/** @brief The operands and the outcome. */
-QuicFrameVars QuicFrameV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_HTTP3

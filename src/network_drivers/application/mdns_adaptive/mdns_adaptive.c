@@ -291,10 +291,8 @@ void protocore_mdns_adaptive_begin(uint8_t *restrict work)
     MDNS_ADAPTIVE_CTX(work)->channel = ch;
 
     // Pin capture to the station's OWN channel and never hop, or the association drops.
-    PromiscV.begin_args.channel = ch;
-    PromiscV.begin_args.sink = adaptive_sink;
-    Promisc.begin(protocore_promisc_span());
-    MDNS_ADAPTIVE_CTX(work)->running = PromiscV.ok;
+    proto_bool promisc_ok = Promisc.begin(protocore_promisc_span(), ch, adaptive_sink);
+    MDNS_ADAPTIVE_CTX(work)->running = promisc_ok;
     MdnsAdaptiveV.ok = MDNS_ADAPTIVE_CTX(work)->running;
 }
 
@@ -311,8 +309,7 @@ void protocore_mdns_adaptive_tick(uint8_t *restrict work)
     uint8_t ch = PhysicalV.u8;
     if (ch != 0 && ch != MDNS_ADAPTIVE_CTX(work)->channel)
     {
-        PromiscV.set_channel_args.channel = ch;
-        Promisc.set_channel(protocore_promisc_span());
+        Promisc.set_channel(protocore_promisc_span(), ch);
         MDNS_ADAPTIVE_CTX(work)->channel = ch;
     }
 

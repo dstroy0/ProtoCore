@@ -6,44 +6,31 @@
  * @brief Modbus TCP master codec - build read requests, parse responses (pure).
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_MODBUS_MASTER
+#include "protocore_config.h" // the entry point: the widths
 
 #include "services/fieldbus/modbus/modbus_master/modbus_master.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // --- the entries -----------------------------------------------------------
 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_modbus_master_build_read(uint8_t *restrict work)
+size_t protocore_modbus_master_build_read(uint8_t *restrict work, uint8_t fc, uint16_t txid, uint8_t unit,
+                                          uint16_t start, uint16_t count, uint8_t *out, size_t cap)
 {
     (void)work;
-    uint8_t fc = ModbusMasterV.build_read_args.fc;
-    uint16_t txid = ModbusMasterV.build_read_args.txid;
-    uint8_t unit = ModbusMasterV.build_read_args.unit;
-    uint16_t start = ModbusMasterV.build_read_args.start;
-    uint16_t count = ModbusMasterV.build_read_args.count;
-    uint8_t *out = ModbusMasterV.build_read_args.out;
-    size_t cap = ModbusMasterV.build_read_args.cap;
 
     if (!out || cap < 12)
     {
-        ModbusMasterV.n = 0;
-        return;
+        return 0;
     }
     if (fc != 0x03 && fc != 0x04) // read holding / input registers only
     {
-        ModbusMasterV.n = 0;
-        return;
+        return 0;
     }
     if (count < 1 || count > 125)
     {
-        ModbusMasterV.n = 0;
-        return;
+        return 0;
     }
 
     // MBAP header
@@ -60,17 +47,13 @@ void protocore_modbus_master_build_read(uint8_t *restrict work)
     out[9] = (uint8_t)(start & 0xFF);
     out[10] = (uint8_t)(count >> 8);
     out[11] = (uint8_t)(count & 0xFF);
-    ModbusMasterV.n = 12;
+    return 12;
 }
 
-void protocore_modbus_master_parse_response(uint8_t *restrict work)
+int protocore_modbus_master_parse_response(uint8_t *restrict work, const uint8_t *adu, size_t len, uint16_t *regs_out,
+                                           size_t max_regs, uint8_t *exception_out)
 {
     (void)work;
-    const uint8_t *adu = ModbusMasterV.parse_response_args.adu;
-    size_t len = ModbusMasterV.parse_response_args.len;
-    uint16_t *regs_out = ModbusMasterV.parse_response_args.regs_out;
-    size_t max_regs = ModbusMasterV.parse_response_args.max_regs;
-    uint8_t *exception_out = ModbusMasterV.parse_response_args.exception_out;
 
     if (exception_out)
     {
@@ -78,13 +61,11 @@ void protocore_modbus_master_parse_response(uint8_t *restrict work)
     }
     if (!adu || len < 9) // MBAP(7) + FC(1) + at least one more byte
     {
-        ModbusMasterV.i32 = -1;
-        return;
+        return -1;
     }
     if (adu[2] != 0 || adu[3] != 0) // protocol id must be 0
     {
-        ModbusMasterV.i32 = -1;
-        return;
+        return -1;
     }
 
     uint8_t fc = adu[7];
@@ -94,20 +75,17 @@ void protocore_modbus_master_parse_response(uint8_t *restrict work)
         {
             *exception_out = adu[8];
         }
-        ModbusMasterV.i32 = 0;
-        return;
+        return 0;
     }
     if (fc != 0x03 && fc != 0x04 && fc != 0x17) // read holding / input / read-write-multiple all reply the same
     {
-        ModbusMasterV.i32 = -1;
-        return;
+        return -1;
     }
 
     uint8_t byte_count = adu[8];
     if ((byte_count & 1) || len < (size_t)(9 + byte_count)) // must be even and present
     {
-        ModbusMasterV.i32 = -1;
-        return;
+        return -1;
     }
 
     int nregs = byte_count / 2;
@@ -120,34 +98,25 @@ void protocore_modbus_master_parse_response(uint8_t *restrict work)
         }
         copied++;
     }
-    ModbusMasterV.i32 = copied;
+    return copied;
 }
 
-void protocore_modbus_master_build_read_bits(uint8_t *restrict work)
+size_t protocore_modbus_master_build_read_bits(uint8_t *restrict work, uint8_t fc, uint16_t txid, uint8_t unit,
+                                               uint16_t start, uint16_t count, uint8_t *out, size_t cap)
 {
     (void)work;
-    uint8_t fc = ModbusMasterV.build_read_bits_args.fc;
-    uint16_t txid = ModbusMasterV.build_read_bits_args.txid;
-    uint8_t unit = ModbusMasterV.build_read_bits_args.unit;
-    uint16_t start = ModbusMasterV.build_read_bits_args.start;
-    uint16_t count = ModbusMasterV.build_read_bits_args.count;
-    uint8_t *out = ModbusMasterV.build_read_bits_args.out;
-    size_t cap = ModbusMasterV.build_read_bits_args.cap;
 
     if (!out || cap < 12)
     {
-        ModbusMasterV.n = 0;
-        return;
+        return 0;
     }
     if (fc != 0x01 && fc != 0x02) // read coils / discrete inputs only
     {
-        ModbusMasterV.n = 0;
-        return;
+        return 0;
     }
     if (count < 1 || count > 2000) // FC 0x01/0x02 cap
     {
-        ModbusMasterV.n = 0;
-        return;
+        return 0;
     }
 
     // The read PDU is identical for bits and registers: fc | start(2) | count(2).
@@ -163,18 +132,14 @@ void protocore_modbus_master_build_read_bits(uint8_t *restrict work)
     out[9] = (uint8_t)(start & 0xFF);
     out[10] = (uint8_t)(count >> 8);
     out[11] = (uint8_t)(count & 0xFF);
-    ModbusMasterV.n = 12;
+    return 12;
 }
 
-void protocore_modbus_master_parse_read_bits_response(uint8_t *restrict work)
+int protocore_modbus_master_parse_read_bits_response(uint8_t *restrict work, const uint8_t *adu, size_t len,
+                                                     uint16_t count, uint8_t *bits_out, size_t max_bits,
+                                                     uint8_t *exception_out)
 {
     (void)work;
-    const uint8_t *adu = ModbusMasterV.parse_read_bits_response_args.adu;
-    size_t len = ModbusMasterV.parse_read_bits_response_args.len;
-    uint16_t count = ModbusMasterV.parse_read_bits_response_args.count;
-    uint8_t *bits_out = ModbusMasterV.parse_read_bits_response_args.bits_out;
-    size_t max_bits = ModbusMasterV.parse_read_bits_response_args.max_bits;
-    uint8_t *exception_out = ModbusMasterV.parse_read_bits_response_args.exception_out;
 
     if (exception_out)
     {
@@ -182,13 +147,11 @@ void protocore_modbus_master_parse_read_bits_response(uint8_t *restrict work)
     }
     if (!adu || len < 9) // MBAP(7) + FC(1) + byte count(1)
     {
-        ModbusMasterV.i32 = -1;
-        return;
+        return -1;
     }
     if (adu[2] != 0 || adu[3] != 0) // protocol id must be 0
     {
-        ModbusMasterV.i32 = -1;
-        return;
+        return -1;
     }
 
     uint8_t fc = adu[7];
@@ -198,26 +161,22 @@ void protocore_modbus_master_parse_read_bits_response(uint8_t *restrict work)
         {
             *exception_out = adu[8];
         }
-        ModbusMasterV.i32 = 0;
-        return;
+        return 0;
     }
     if (fc != 0x01 && fc != 0x02)
     {
-        ModbusMasterV.i32 = -1;
-        return;
+        return -1;
     }
     if (count < 1 || count > 2000)
     {
-        ModbusMasterV.i32 = -1;
-        return;
+        return -1;
     }
 
     uint8_t byte_count = adu[8];
     uint16_t expect_bytes = (uint16_t)((count + 7) / 8);
     if (byte_count != expect_bytes || len < (size_t)(9 + byte_count)) // must match the request and be present
     {
-        ModbusMasterV.i32 = -1;
-        return;
+        return -1;
     }
 
     int copied = 0;
@@ -230,23 +189,17 @@ void protocore_modbus_master_parse_read_bits_response(uint8_t *restrict work)
         }
         copied++;
     }
-    ModbusMasterV.i32 = copied;
+    return copied;
 }
 
-void protocore_modbus_master_build_write_single_coil(uint8_t *restrict work)
+size_t protocore_modbus_master_build_write_single_coil(uint8_t *restrict work, uint16_t txid, uint8_t unit,
+                                                       uint16_t addr, proto_bool on, uint8_t *out, size_t cap)
 {
     (void)work;
-    uint16_t txid = ModbusMasterV.build_write_single_coil_args.txid;
-    uint8_t unit = ModbusMasterV.build_write_single_coil_args.unit;
-    uint16_t addr = ModbusMasterV.build_write_single_coil_args.addr;
-    proto_bool on = ModbusMasterV.build_write_single_coil_args.on;
-    uint8_t *out = ModbusMasterV.build_write_single_coil_args.out;
-    size_t cap = ModbusMasterV.build_write_single_coil_args.cap;
 
     if (!out || cap < 12)
     {
-        ModbusMasterV.n = 0;
-        return;
+        return 0;
     }
 
     out[0] = (uint8_t)(txid >> 8);
@@ -262,29 +215,22 @@ void protocore_modbus_master_build_write_single_coil(uint8_t *restrict work)
     out[9] = (uint8_t)(addr & 0xFF);
     out[10] = on ? 0xFF : 0x00;
     out[11] = 0x00;
-    ModbusMasterV.n = 12;
+    return 12;
 }
 
-void protocore_modbus_master_build_write_multiple_coils(uint8_t *restrict work)
+size_t protocore_modbus_master_build_write_multiple_coils(uint8_t *restrict work, uint16_t txid, uint8_t unit,
+                                                          uint16_t start, const uint8_t *bits, uint16_t count,
+                                                          uint8_t *out, size_t cap)
 {
     (void)work;
-    uint16_t txid = ModbusMasterV.build_write_multiple_coils_args.txid;
-    uint8_t unit = ModbusMasterV.build_write_multiple_coils_args.unit;
-    uint16_t start = ModbusMasterV.build_write_multiple_coils_args.start;
-    const uint8_t *bits = ModbusMasterV.build_write_multiple_coils_args.bits;
-    uint16_t count = ModbusMasterV.build_write_multiple_coils_args.count;
-    uint8_t *out = ModbusMasterV.build_write_multiple_coils_args.out;
-    size_t cap = ModbusMasterV.build_write_multiple_coils_args.cap;
 
     if (!out || !bits)
     {
-        ModbusMasterV.n = 0;
-        return;
+        return 0;
     }
     if (count < 1 || count > 1968) // FC 0x0F cap (0x07B0)
     {
-        ModbusMasterV.n = 0;
-        return;
+        return 0;
     }
 
     uint8_t byte_count = (uint8_t)((count + 7) / 8);
@@ -292,8 +238,7 @@ void protocore_modbus_master_build_write_multiple_coils(uint8_t *restrict work)
     size_t total = 7u + pdu_len;              // MBAP(7) + PDU
     if (cap < total)
     {
-        ModbusMasterV.n = 0;
-        return;
+        return 0;
     }
 
     uint16_t mbap_len = (uint16_t)(1u + pdu_len); // unit + PDU
@@ -322,23 +267,17 @@ void protocore_modbus_master_build_write_multiple_coils(uint8_t *restrict work)
             out[13 + (i / 8)] |= (uint8_t)(1u << (i % 8)); // LSB-first packing (Modbus)
         }
     }
-    ModbusMasterV.n = total;
+    return total;
 }
 
-void protocore_modbus_master_build_write_single(uint8_t *restrict work)
+size_t protocore_modbus_master_build_write_single(uint8_t *restrict work, uint16_t txid, uint8_t unit, uint16_t addr,
+                                                  uint16_t value, uint8_t *out, size_t cap)
 {
     (void)work;
-    uint16_t txid = ModbusMasterV.build_write_single_args.txid;
-    uint8_t unit = ModbusMasterV.build_write_single_args.unit;
-    uint16_t addr = ModbusMasterV.build_write_single_args.addr;
-    uint16_t value = ModbusMasterV.build_write_single_args.value;
-    uint8_t *out = ModbusMasterV.build_write_single_args.out;
-    size_t cap = ModbusMasterV.build_write_single_args.cap;
 
     if (!out || cap < 12)
     {
-        ModbusMasterV.n = 0;
-        return;
+        return 0;
     }
 
     // MBAP header
@@ -355,29 +294,21 @@ void protocore_modbus_master_build_write_single(uint8_t *restrict work)
     out[9] = (uint8_t)(addr & 0xFF);
     out[10] = (uint8_t)(value >> 8);
     out[11] = (uint8_t)(value & 0xFF);
-    ModbusMasterV.n = 12;
+    return 12;
 }
 
-void protocore_modbus_master_build_write_multiple(uint8_t *restrict work)
+size_t protocore_modbus_master_build_write_multiple(uint8_t *restrict work, uint16_t txid, uint8_t unit, uint16_t start,
+                                                    const uint16_t *values, uint16_t count, uint8_t *out, size_t cap)
 {
     (void)work;
-    uint16_t txid = ModbusMasterV.build_write_multiple_args.txid;
-    uint8_t unit = ModbusMasterV.build_write_multiple_args.unit;
-    uint16_t start = ModbusMasterV.build_write_multiple_args.start;
-    const uint16_t *values = ModbusMasterV.build_write_multiple_args.values;
-    uint16_t count = ModbusMasterV.build_write_multiple_args.count;
-    uint8_t *out = ModbusMasterV.build_write_multiple_args.out;
-    size_t cap = ModbusMasterV.build_write_multiple_args.cap;
 
     if (!out || !values)
     {
-        ModbusMasterV.n = 0;
-        return;
+        return 0;
     }
     if (count < 1 || count > 123) // FC 0x10 caps at 123 registers (PDU fits 253 bytes)
     {
-        ModbusMasterV.n = 0;
-        return;
+        return 0;
     }
 
     uint8_t byte_count = (uint8_t)(count * 2);
@@ -385,8 +316,7 @@ void protocore_modbus_master_build_write_multiple(uint8_t *restrict work)
     size_t total = 7u + pdu_len;              // MBAP(7) + PDU
     if (cap < total)
     {
-        ModbusMasterV.n = 0;
-        return;
+        return 0;
     }
 
     // MBAP header
@@ -410,16 +340,13 @@ void protocore_modbus_master_build_write_multiple(uint8_t *restrict work)
         out[13 + i * 2] = (uint8_t)(values[i] >> 8);
         out[13 + i * 2 + 1] = (uint8_t)(values[i] & 0xFF);
     }
-    ModbusMasterV.n = total;
+    return total;
 }
 
-void protocore_modbus_master_parse_write_response(uint8_t *restrict work)
+int protocore_modbus_master_parse_write_response(uint8_t *restrict work, const uint8_t *adu, size_t len,
+                                                 uint16_t *addr_out, uint8_t *exception_out)
 {
     (void)work;
-    const uint8_t *adu = ModbusMasterV.parse_write_response_args.adu;
-    size_t len = ModbusMasterV.parse_write_response_args.len;
-    uint16_t *addr_out = ModbusMasterV.parse_write_response_args.addr_out;
-    uint8_t *exception_out = ModbusMasterV.parse_write_response_args.exception_out;
 
     if (exception_out)
     {
@@ -431,13 +358,11 @@ void protocore_modbus_master_parse_write_response(uint8_t *restrict work)
     }
     if (!adu || len < 9) // MBAP(7) + FC(1) + at least one more byte
     {
-        ModbusMasterV.i32 = -1;
-        return;
+        return -1;
     }
     if (adu[2] != 0 || adu[3] != 0) // protocol id must be 0
     {
-        ModbusMasterV.i32 = -1;
-        return;
+        return -1;
     }
 
     uint8_t fc = adu[7];
@@ -447,18 +372,15 @@ void protocore_modbus_master_parse_write_response(uint8_t *restrict work)
         {
             *exception_out = adu[8];
         }
-        ModbusMasterV.i32 = 0;
-        return;
+        return 0;
     }
     if (fc != 0x05 && fc != 0x06 && fc != 0x0F && fc != 0x10)
     {
-        ModbusMasterV.i32 = -1;
-        return;
+        return -1;
     }
     if (len < 12) // every reply is MBAP(7) + FC(1) + addr(2) + value-or-count(2) = 12 bytes
     {
-        ModbusMasterV.i32 = -1;
-        return;
+        return -1;
     }
 
     if (addr_out)
@@ -467,24 +389,17 @@ void protocore_modbus_master_parse_write_response(uint8_t *restrict work)
     }
     uint16_t tail = (uint16_t)((adu[10] << 8) | adu[11]); // value (0x05/0x06) or quantity (0x0F/0x10)
     proto_bool single = (fc == 0x05 || fc == 0x06);       // single-write echoes a value; multi echoes a count
-    ModbusMasterV.i32 = single ? 1 : (int)tail;
+    return single ? 1 : (int)tail;
 }
 
-void protocore_modbus_master_build_mask_write(uint8_t *restrict work)
+size_t protocore_modbus_master_build_mask_write(uint8_t *restrict work, uint16_t txid, uint8_t unit, uint16_t addr,
+                                                uint16_t and_mask, uint16_t or_mask, uint8_t *out, size_t cap)
 {
     (void)work;
-    uint16_t txid = ModbusMasterV.build_mask_write_args.txid;
-    uint8_t unit = ModbusMasterV.build_mask_write_args.unit;
-    uint16_t addr = ModbusMasterV.build_mask_write_args.addr;
-    uint16_t and_mask = ModbusMasterV.build_mask_write_args.and_mask;
-    uint16_t or_mask = ModbusMasterV.build_mask_write_args.or_mask;
-    uint8_t *out = ModbusMasterV.build_mask_write_args.out;
-    size_t cap = ModbusMasterV.build_mask_write_args.cap;
 
     if (!out || cap < 14) // MBAP(7) + FC(1) + addr(2) + And_Mask(2) + Or_Mask(2)
     {
-        ModbusMasterV.n = 0;
-        return;
+        return 0;
     }
     // MBAP header: length = unit(1) + PDU(7) = 8.
     out[0] = (uint8_t)(txid >> 8);
@@ -502,31 +417,23 @@ void protocore_modbus_master_build_mask_write(uint8_t *restrict work)
     out[11] = (uint8_t)(and_mask & 0xFF);
     out[12] = (uint8_t)(or_mask >> 8);
     out[13] = (uint8_t)(or_mask & 0xFF);
-    ModbusMasterV.n = 14;
+    return 14;
 }
 
-void protocore_modbus_master_build_read_write_multiple(uint8_t *restrict work)
+size_t protocore_modbus_master_build_read_write_multiple(uint8_t *restrict work, uint16_t txid, uint8_t unit,
+                                                         uint16_t read_start, uint16_t read_count, uint16_t write_start,
+                                                         const uint16_t *values, uint16_t write_count, uint8_t *out,
+                                                         size_t cap)
 {
     (void)work;
-    uint16_t txid = ModbusMasterV.build_read_write_multiple_args.txid;
-    uint8_t unit = ModbusMasterV.build_read_write_multiple_args.unit;
-    uint16_t read_start = ModbusMasterV.build_read_write_multiple_args.read_start;
-    uint16_t read_count = ModbusMasterV.build_read_write_multiple_args.read_count;
-    uint16_t write_start = ModbusMasterV.build_read_write_multiple_args.write_start;
-    const uint16_t *values = ModbusMasterV.build_read_write_multiple_args.values;
-    uint16_t write_count = ModbusMasterV.build_read_write_multiple_args.write_count;
-    uint8_t *out = ModbusMasterV.build_read_write_multiple_args.out;
-    size_t cap = ModbusMasterV.build_read_write_multiple_args.cap;
 
     if (!out || !values)
     {
-        ModbusMasterV.n = 0;
-        return;
+        return 0;
     }
     if (read_count < 1 || read_count > 125 || write_count < 1 || write_count > 121)
     {
-        ModbusMasterV.n = 0;
-        return;
+        return 0;
     }
 
     uint8_t byte_count = (uint8_t)(write_count * 2);
@@ -534,8 +441,7 @@ void protocore_modbus_master_build_read_write_multiple(uint8_t *restrict work)
     size_t total = 7u + pdu_len;               // MBAP(7) + PDU
     if (cap < total)
     {
-        ModbusMasterV.n = 0;
-        return;
+        return 0;
     }
 
     uint16_t mbap_len = (uint16_t)(1u + pdu_len); // unit + PDU
@@ -562,18 +468,14 @@ void protocore_modbus_master_build_read_write_multiple(uint8_t *restrict work)
         out[17 + i * 2] = (uint8_t)(values[i] >> 8);
         out[17 + i * 2 + 1] = (uint8_t)(values[i] & 0xFF);
     }
-    ModbusMasterV.n = total;
+    return total;
 }
 
-void protocore_modbus_master_parse_mask_write_response(uint8_t *restrict work)
+int protocore_modbus_master_parse_mask_write_response(uint8_t *restrict work, const uint8_t *adu, size_t len,
+                                                      uint16_t *addr_out, uint16_t *and_out, uint16_t *or_out,
+                                                      uint8_t *exception_out)
 {
     (void)work;
-    const uint8_t *adu = ModbusMasterV.parse_mask_write_response_args.adu;
-    size_t len = ModbusMasterV.parse_mask_write_response_args.len;
-    uint16_t *addr_out = ModbusMasterV.parse_mask_write_response_args.addr_out;
-    uint16_t *and_out = ModbusMasterV.parse_mask_write_response_args.and_out;
-    uint16_t *or_out = ModbusMasterV.parse_mask_write_response_args.or_out;
-    uint8_t *exception_out = ModbusMasterV.parse_mask_write_response_args.exception_out;
 
     if (exception_out)
     {
@@ -581,13 +483,11 @@ void protocore_modbus_master_parse_mask_write_response(uint8_t *restrict work)
     }
     if (!adu || len < 9)
     {
-        ModbusMasterV.i32 = -1;
-        return;
+        return -1;
     }
     if (adu[2] != 0 || adu[3] != 0) // protocol id must be 0
     {
-        ModbusMasterV.i32 = -1;
-        return;
+        return -1;
     }
     uint8_t fc = adu[7];
     if (fc & 0x80)
@@ -596,13 +496,11 @@ void protocore_modbus_master_parse_mask_write_response(uint8_t *restrict work)
         {
             *exception_out = adu[8];
         }
-        ModbusMasterV.i32 = 0;
-        return;
+        return 0;
     }
     if (fc != 0x16 || len < 14) // MBAP(7) + FC(1) + addr(2) + And_Mask(2) + Or_Mask(2)
     {
-        ModbusMasterV.i32 = -1;
-        return;
+        return -1;
     }
     if (addr_out)
     {
@@ -616,12 +514,5 @@ void protocore_modbus_master_parse_mask_write_response(uint8_t *restrict work)
     {
         *or_out = (uint16_t)((adu[12] << 8) | adu[13]);
     }
-    ModbusMasterV.i32 = 1;
+    return 1;
 }
-
-/** @brief The operands and the outcome. */
-ModbusMasterVars ModbusMasterV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_MODBUS_MASTER

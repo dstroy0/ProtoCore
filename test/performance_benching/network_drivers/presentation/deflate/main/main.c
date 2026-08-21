@@ -27,14 +27,7 @@ void dbench_run(void)
     const size_t n = strlen(MSG);
     static uint8_t comp[512], plain[512];
     size_t clen = 0;
-    DeflateV.raw_args.src = (const uint8_t *)MSG;
-    DeflateV.raw_args.src_len = n;
-    DeflateV.raw_args.dst = comp;
-    DeflateV.raw_args.dst_cap = sizeof(comp);
-    DeflateV.raw_args.out_len = &clen;
-    DeflateV.raw_args.scratch = dscratch;
-    DeflateV.raw_args.scratch_len = DEFLATE_SCRATCH_SIZE;
-    Deflate.raw(deflate_work);
+    Deflate.raw(deflate_work, (const uint8_t *)MSG, n, comp, sizeof(comp), &clen, dscratch, DEFLATE_SCRATCH_SIZE);
     comp[clen] = 0x00;
     comp[clen + 1] = 0x00;
     comp[clen + 2] = 0xFF;
@@ -45,15 +38,9 @@ void dbench_run(void)
         volatile int sink = 0;
         DBENCH_BULK("Deflate.raw (json msg)", 20000, n, {
             size_t o = 0;
-            DeflateV.raw_args.src = (const uint8_t *)MSG;
-            DeflateV.raw_args.src_len = n;
-            DeflateV.raw_args.dst = comp;
-            DeflateV.raw_args.dst_cap = sizeof(comp);
-            DeflateV.raw_args.out_len = &o;
-            DeflateV.raw_args.scratch = dscratch;
-            DeflateV.raw_args.scratch_len = DEFLATE_SCRATCH_SIZE;
-            Deflate.raw(deflate_work);
-            sink += (int)DeflateV.value;
+            DeflateResult deflate_value = Deflate.raw(deflate_work, (const uint8_t *)MSG, n, comp, sizeof(comp), &o,
+                                                      dscratch, DEFLATE_SCRATCH_SIZE);
+            sink += (int)deflate_value;
         });
         DBENCH_BULK("Inflate.raw (json msg)", 20000, n, {
             size_t plen = 0;

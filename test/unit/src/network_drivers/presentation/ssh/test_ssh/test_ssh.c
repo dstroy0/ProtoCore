@@ -25,24 +25,20 @@ void test_every_slot_in_range_has_storage(void)
 {
     for (uint8_t i = 0; i < MAX_SSH_CONNS; i++)
     {
-        SshV.conn_slot_args.i = i;
-        Ssh.conn_slot(protocore_ssh_span());
-        TEST_ASSERT_NOT_NULL(SshV.ptr);
+        uint8_t *ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), i);
+        TEST_ASSERT_NOT_NULL(ssh_ptr);
     }
 }
 
 // Out of range is null rather than a wild pointer, so a bad slot index fails closed.
 void test_slot_past_the_pool_is_null(void)
 {
-    SshV.conn_slot_args.i = MAX_SSH_CONNS;
-    Ssh.conn_slot(protocore_ssh_span());
-    TEST_ASSERT_NULL(SshV.ptr);
-    SshV.conn_slot_args.i = (uint8_t)(MAX_SSH_CONNS + 1u);
-    Ssh.conn_slot(protocore_ssh_span());
-    TEST_ASSERT_NULL(SshV.ptr);
-    SshV.conn_slot_args.i = 0xFFu;
-    Ssh.conn_slot(protocore_ssh_span());
-    TEST_ASSERT_NULL(SshV.ptr);
+    uint8_t *ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), MAX_SSH_CONNS);
+    TEST_ASSERT_NULL(ssh_ptr);
+    ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), (uint8_t)(MAX_SSH_CONNS + 1u));
+    TEST_ASSERT_NULL(ssh_ptr);
+    ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), 0xFFu);
+    TEST_ASSERT_NULL(ssh_ptr);
 }
 
 // The same slot always answers with the same base: the storage is fixed at build time, not handed
@@ -51,12 +47,10 @@ void test_the_same_slot_answers_the_same_base(void)
 {
     for (uint8_t i = 0; i < MAX_SSH_CONNS; i++)
     {
-        SshV.conn_slot_args.i = i;
-        Ssh.conn_slot(protocore_ssh_span());
-        const uint8_t *first = SshV.ptr;
-        SshV.conn_slot_args.i = i;
-        Ssh.conn_slot(protocore_ssh_span());
-        TEST_ASSERT_EQUAL_PTR(first, SshV.ptr);
+        uint8_t *ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), i);
+        const uint8_t *first = ssh_ptr;
+        ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), i);
+        TEST_ASSERT_EQUAL_PTR(first, ssh_ptr);
     }
 }
 
@@ -70,12 +64,10 @@ void test_slots_are_distinct_and_one_borrow_apart(void)
     }
     for (uint8_t i = 1; i < MAX_SSH_CONNS; i++)
     {
-        SshV.conn_slot_args.i = (uint8_t)(i - 1u);
-        Ssh.conn_slot(protocore_ssh_span());
-        const uint8_t *prev = SshV.ptr;
-        SshV.conn_slot_args.i = i;
-        Ssh.conn_slot(protocore_ssh_span());
-        const uint8_t *cur = SshV.ptr;
+        uint8_t *ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), (uint8_t)(i - 1u));
+        const uint8_t *prev = ssh_ptr;
+        ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), i);
+        const uint8_t *cur = ssh_ptr;
         TEST_ASSERT_NOT_EQUAL(prev, cur);
         TEST_ASSERT_EQUAL_UINT32((uint32_t)SSH_SLOT_BORROW, (uint32_t)(size_t)(cur - prev));
     }
@@ -88,12 +80,10 @@ void test_writing_a_whole_slot_leaves_its_neighbour_alone(void)
     {
         TEST_IGNORE_MESSAGE("pool holds one slot; nothing to separate");
     }
-    SshV.conn_slot_args.i = 0;
-    Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *a = SshV.ptr;
-    SshV.conn_slot_args.i = 1;
-    Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *b = SshV.ptr;
+    uint8_t *ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), 0);
+    uint8_t *a = ssh_ptr;
+    ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), 1);
+    uint8_t *b = ssh_ptr;
 
     for (size_t k = 0; k < SSH_SLOT_BORROW; k++)
     {

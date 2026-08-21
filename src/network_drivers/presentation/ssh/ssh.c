@@ -6,15 +6,11 @@
  * @brief Every byte the connections use, one span per slot.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_SSH
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/secure/secure.h" // the persistent end this module's key material is taken from
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/ssh.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // The connections' storage, owned by one instance (internal linkage). Reached only through
 // ssh_conn_slot(), at the offsets common.h names.
@@ -61,22 +57,11 @@ uint8_t *protocore_ssh_span(void)
     return s_own.span;
 }
 
-void protocore_ssh_conn_slot(uint8_t *restrict work)
+uint8_t *protocore_ssh_conn_slot(uint8_t *restrict work, uint8_t i)
 {
-    uint8_t i = SshV.conn_slot_args.i;
-
     if (i >= MAX_SSH_CONNS)
     {
-        SshV.ptr = NULL;
-        return;
+        return NULL;
     }
-    SshV.ptr = SSH_CTX(work)->mem[i];
+    return SSH_CTX(work)->mem[i];
 }
-/** @brief The operands and the outcome. */
-SshVars SshV;
-
-PROTOCORE_END_DECLS
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_SSH

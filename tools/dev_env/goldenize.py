@@ -3982,6 +3982,24 @@ def unwork_source(spec):
                 notes.append("%s: dropped %d operand alias(es) that became `x = x;`" % (e["flat"], aliases))
 
         res = e.get("result")
+        # THE RESULT LOCAL CANNOT SHARE A NAME WITH A PARAMETER, or the two are the same identifier
+        # after substitution and the body silently means something else. quic_frame's build_padding
+        # takes an operand `n` and reports its result in `QuicFrameV.n`: both became `n`, the write
+        # of the result read as a write of the parameter, and the tidy pass that turns `x = X;
+        # return x;` into `return X;` then collapsed the whole entry to `return 0;`. It compiled,
+        # linked, and returned the wrong number - the one thing a build cannot catch. 16 entries
+        # across 12 modules are shaped that way. A local already declared in the body is the same
+        # hazard and got `conflicting types for 'n'` and `redefinition of 'ok'` out of lora, nrf24
+        # and esp.
+        if res and objv:
+            taken = {q["name"] for q in e["params"]}
+            taken |= set(re.findall(r"\b[A-Za-z_]\w*[\s*]+([A-Za-z_]\w*)\s*[;=\[]", body))
+            if res in taken:
+                res = res + "_result"
+                while res in taken:
+                    res += "_"
+                notes.append("%s: result local renamed to %s, the name was taken" % (e["flat"], res))
+                body = re.sub(r"\b%s\.%s\b" % (re.escape(objv), re.escape(e["result"])), "%s.%s" % (objv, res), body)
         if res and objv:
             assigns = list(
                 re.finditer(r"[ \t]*%s\.%s\b\s*=(?!=)\s*([^;]+);[ \t]*\n?" % (re.escape(objv), re.escape(res)), body)

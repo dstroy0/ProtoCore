@@ -275,11 +275,8 @@ static proto_bool hrr_cookie(const uint8_t *sh, size_t len, uint8_t *cookie_out,
 static size_t frag_to_tls(const uint8_t *payload, size_t plen, uint8_t *tls_out)
 {
     DtlsHsHeader hh;
-    DtlsHandshakeV.header_parse_args.p = payload;
-    DtlsHandshakeV.header_parse_args.len = plen;
-    DtlsHandshakeV.header_parse_args.out = &hh;
-    DtlsHandshake.header_parse(dtls_handshake_work);
-    if (!DtlsHandshakeV.n || hh.frag_offset != 0 || hh.frag_length != hh.length)
+    size_t dtls_handshake_n = DtlsHandshake.header_parse(dtls_handshake_work, payload, plen, &hh);
+    if (!dtls_handshake_n || hh.frag_offset != 0 || hh.frag_length != hh.length)
     {
         return 0;
     }
@@ -374,11 +371,8 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
     size_t off = 0;
 
     DtlsPlaintext pt;
-    DtlsRecordV.plaintext_parse_args.rec = flight + off;
-    DtlsRecordV.plaintext_parse_args.rec_len = fl - off;
-    DtlsRecordV.plaintext_parse_args.out = &pt;
-    DtlsRecord.plaintext_parse(dtls_record_work);
-    size_t rl = DtlsRecordV.n;
+    size_t dtls_record_n = DtlsRecord.plaintext_parse(dtls_record_work, flight + off, fl - off, &pt);
+    size_t rl = dtls_record_n;
     TEST_ASSERT_TRUE(rl > 0);
     off += rl;
     uint8_t sh[512];
@@ -416,11 +410,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
     Tls13Ks.handshake(NULL);
 
     DtlsRecordKeys srv_read;
-    DtlsRecordV.keys_derive_args.out = &srv_read;
-    DtlsRecordV.keys_derive_args.cipher = DTLS_CIPHER_AES_128_GCM_SHA256;
-    DtlsRecordV.keys_derive_args.epoch = 2;
-    DtlsRecordV.keys_derive_args.secret = cks.s + TLS13_KS_SERVER_HS;
-    DtlsRecord.keys_derive(dtls_record_work);
+    DtlsRecord.keys_derive(dtls_record_work, &srv_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_SERVER_HS);
 
     uint8_t cert_pub[32];
     proto_bool have_cert = PROTO_FALSE;
@@ -432,17 +422,9 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
         TEST_ASSERT_TRUE(crl > 0);
         uint8_t inner[512];
         DtlsCiphertext info;
-        DtlsRecordV.unprotect_args.keys = &srv_read;
-        DtlsRecordV.unprotect_args.next_seq = exp_seq;
-        DtlsRecordV.unprotect_args.rec = flight + off;
-        DtlsRecordV.unprotect_args.rec_len = crl;
-        DtlsRecordV.unprotect_args.out = inner;
-        DtlsRecordV.unprotect_args.out_cap = sizeof(inner);
-        DtlsRecordV.unprotect_args.info = &info;
-        DtlsRecordV.unprotect_args.expected_cid = client_cid;
-        DtlsRecordV.unprotect_args.expected_cid_len = client_cid_len;
-        DtlsRecord.unprotect(dtls_record_work);
-        TEST_ASSERT_TRUE(DtlsRecordV.ok);
+        proto_bool dtls_record_ok = DtlsRecord.unprotect(dtls_record_work, &srv_read, exp_seq, flight + off, crl, inner,
+                                                         sizeof(inner), &info, client_cid, client_cid_len);
+        TEST_ASSERT_TRUE(dtls_record_ok);
         exp_seq = info.seq + 1;
         off += crl;
         TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DTLS_CT_HANDSHAKE, info.content_type);
@@ -535,35 +517,17 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
     size_t cfin_len = Tls13MsgV.n;
 
     DtlsRecordKeys cli_write;
-    DtlsRecordV.keys_derive_args.out = &cli_write;
-    DtlsRecordV.keys_derive_args.cipher = DTLS_CIPHER_AES_128_GCM_SHA256;
-    DtlsRecordV.keys_derive_args.epoch = 2;
-    DtlsRecordV.keys_derive_args.secret = cks.s + TLS13_KS_CLIENT_HS;
-    DtlsRecord.keys_derive(dtls_record_work);
+    DtlsRecord.keys_derive(dtls_record_work, &cli_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_CLIENT_HS);
 
     uint8_t cfin_frag[80];
-    DtlsHandshakeV.frag_build_args.msg_type = cfin[0];
-    DtlsHandshakeV.frag_build_args.msg_seq = cfin_msg_seq;
-    DtlsHandshakeV.frag_build_args.full_len = (uint32_t)(cfin_len - 4);
-    DtlsHandshakeV.frag_build_args.frag_offset = 0;
-    DtlsHandshakeV.frag_build_args.frag = cfin + 4;
-    DtlsHandshakeV.frag_build_args.frag_len = (uint32_t)(cfin_len - 4);
-    DtlsHandshakeV.frag_build_args.out = cfin_frag;
-    DtlsHandshakeV.frag_build_args.out_cap = sizeof(cfin_frag);
-    DtlsHandshake.frag_build(dtls_handshake_work);
-    size_t cff = DtlsHandshakeV.n;
+    size_t dtls_handshake_n =
+        DtlsHandshake.frag_build(dtls_handshake_work, cfin[0], cfin_msg_seq, (uint32_t)(cfin_len - 4), 0, cfin + 4,
+                                 (uint32_t)(cfin_len - 4), cfin_frag, sizeof(cfin_frag));
+    size_t cff = dtls_handshake_n;
     uint8_t cfin_rec[128];
-    DtlsRecordV.protect_args.keys = &cli_write;
-    DtlsRecordV.protect_args.seq = 0;
-    DtlsRecordV.protect_args.content_type = PROTOCORE_DTLS_CT_HANDSHAKE;
-    DtlsRecordV.protect_args.plaintext = cfin_frag;
-    DtlsRecordV.protect_args.pt_len = cff;
-    DtlsRecordV.protect_args.out = cfin_rec;
-    DtlsRecordV.protect_args.out_cap = sizeof(cfin_rec);
-    DtlsRecordV.protect_args.cid = scid_len ? scid : NULL;
-    DtlsRecordV.protect_args.cid_len = scid_len;
-    DtlsRecord.protect(dtls_record_work);
-    size_t cfr = DtlsRecordV.n;
+    dtls_record_n = DtlsRecord.protect(dtls_record_work, &cli_write, 0, PROTOCORE_DTLS_CT_HANDSHAKE, cfin_frag, cff,
+                                       cfin_rec, sizeof(cfin_rec), scid_len ? scid : NULL, scid_len);
+    size_t cfr = dtls_record_n;
 
     uint8_t out2[64];
     DtlsServerV.process_args.c = conn;
@@ -580,30 +544,16 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
 
     DtlsRecordKeys cli_app_read;
     DtlsRecordKeys cli_app_write;
-    DtlsRecordV.keys_derive_args.out = &cli_app_read;
-    DtlsRecordV.keys_derive_args.cipher = DTLS_CIPHER_AES_128_GCM_SHA256;
-    DtlsRecordV.keys_derive_args.epoch = 3;
-    DtlsRecordV.keys_derive_args.secret = cks.s + TLS13_KS_SERVER_AP;
-    DtlsRecord.keys_derive(dtls_record_work);
-    DtlsRecordV.keys_derive_args.out = &cli_app_write;
-    DtlsRecordV.keys_derive_args.cipher = DTLS_CIPHER_AES_128_GCM_SHA256;
-    DtlsRecordV.keys_derive_args.epoch = 3;
-    DtlsRecordV.keys_derive_args.secret = cks.s + TLS13_KS_CLIENT_AP;
-    DtlsRecord.keys_derive(dtls_record_work);
+    DtlsRecord.keys_derive(dtls_record_work, &cli_app_read, DTLS_CIPHER_AES_128_GCM_SHA256, 3,
+                           cks.s + TLS13_KS_SERVER_AP);
+    DtlsRecord.keys_derive(dtls_record_work, &cli_app_write, DTLS_CIPHER_AES_128_GCM_SHA256, 3,
+                           cks.s + TLS13_KS_CLIENT_AP);
 
     uint8_t ack_pt[64];
     DtlsCiphertext ackinfo;
-    DtlsRecordV.unprotect_args.keys = &cli_app_read;
-    DtlsRecordV.unprotect_args.next_seq = 0;
-    DtlsRecordV.unprotect_args.rec = out2;
-    DtlsRecordV.unprotect_args.rec_len = (size_t)r2;
-    DtlsRecordV.unprotect_args.out = ack_pt;
-    DtlsRecordV.unprotect_args.out_cap = sizeof(ack_pt);
-    DtlsRecordV.unprotect_args.info = &ackinfo;
-    DtlsRecordV.unprotect_args.expected_cid = client_cid;
-    DtlsRecordV.unprotect_args.expected_cid_len = client_cid_len;
-    DtlsRecord.unprotect(dtls_record_work);
-    TEST_ASSERT_TRUE(DtlsRecordV.ok);
+    proto_bool dtls_record_ok = DtlsRecord.unprotect(dtls_record_work, &cli_app_read, 0, out2, (size_t)r2, ack_pt,
+                                                     sizeof(ack_pt), &ackinfo, client_cid, client_cid_len);
+    TEST_ASSERT_TRUE(dtls_record_ok);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DTLS_CT_ACK, ackinfo.content_type);
 
     DtlsServerV.app_write_keys_args.c = conn;
@@ -621,17 +571,9 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
     assert_ctx_match(cli_app_write.gcm, srv_app_read->gcm);
 
     uint8_t cfin_rec2[128];
-    DtlsRecordV.protect_args.keys = &cli_write;
-    DtlsRecordV.protect_args.seq = 1;
-    DtlsRecordV.protect_args.content_type = PROTOCORE_DTLS_CT_HANDSHAKE;
-    DtlsRecordV.protect_args.plaintext = cfin_frag;
-    DtlsRecordV.protect_args.pt_len = cff;
-    DtlsRecordV.protect_args.out = cfin_rec2;
-    DtlsRecordV.protect_args.out_cap = sizeof(cfin_rec2);
-    DtlsRecordV.protect_args.cid = scid_len ? scid : NULL;
-    DtlsRecordV.protect_args.cid_len = scid_len;
-    DtlsRecord.protect(dtls_record_work);
-    size_t cfr2 = DtlsRecordV.n;
+    dtls_record_n = DtlsRecord.protect(dtls_record_work, &cli_write, 1, PROTOCORE_DTLS_CT_HANDSHAKE, cfin_frag, cff,
+                                       cfin_rec2, sizeof(cfin_rec2), scid_len ? scid : NULL, scid_len);
+    size_t cfr2 = dtls_record_n;
     uint8_t out3[64];
     DtlsServerV.process_args.c = conn;
     DtlsServerV.process_args.dgram = cfin_rec2;
@@ -646,17 +588,9 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
     TEST_ASSERT_TRUE(DtlsServerV.ok);
     uint8_t ack_pt3[64];
     DtlsCiphertext ackinfo3;
-    DtlsRecordV.unprotect_args.keys = &cli_app_read;
-    DtlsRecordV.unprotect_args.next_seq = 1;
-    DtlsRecordV.unprotect_args.rec = out3;
-    DtlsRecordV.unprotect_args.rec_len = (size_t)r3;
-    DtlsRecordV.unprotect_args.out = ack_pt3;
-    DtlsRecordV.unprotect_args.out_cap = sizeof(ack_pt3);
-    DtlsRecordV.unprotect_args.info = &ackinfo3;
-    DtlsRecordV.unprotect_args.expected_cid = client_cid;
-    DtlsRecordV.unprotect_args.expected_cid_len = client_cid_len;
-    DtlsRecord.unprotect(dtls_record_work);
-    TEST_ASSERT_TRUE(DtlsRecordV.ok);
+    dtls_record_ok = DtlsRecord.unprotect(dtls_record_work, &cli_app_read, 1, out3, (size_t)r3, ack_pt3,
+                                          sizeof(ack_pt3), &ackinfo3, client_cid, client_cid_len);
+    TEST_ASSERT_TRUE(dtls_record_ok);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DTLS_CT_ACK, ackinfo3.content_type);
 }
 
@@ -699,26 +633,13 @@ void test_full_handshake(void)
     Sha256.update(tr, ch, ch_len);
 
     uint8_t ch_frag[300];
-    DtlsHandshakeV.frag_build_args.msg_type = ch[0];
-    DtlsHandshakeV.frag_build_args.msg_seq = 0;
-    DtlsHandshakeV.frag_build_args.full_len = (uint32_t)(ch_len - 4);
-    DtlsHandshakeV.frag_build_args.frag_offset = 0;
-    DtlsHandshakeV.frag_build_args.frag = ch + 4;
-    DtlsHandshakeV.frag_build_args.frag_len = (uint32_t)(ch_len - 4);
-    DtlsHandshakeV.frag_build_args.out = ch_frag;
-    DtlsHandshakeV.frag_build_args.out_cap = sizeof(ch_frag);
-    DtlsHandshake.frag_build(dtls_handshake_work);
-    size_t ch_fl = DtlsHandshakeV.n;
+    size_t dtls_handshake_n = DtlsHandshake.frag_build(dtls_handshake_work, ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4,
+                                                       (uint32_t)(ch_len - 4), ch_frag, sizeof(ch_frag));
+    size_t ch_fl = dtls_handshake_n;
     uint8_t ch_rec[320];
-    DtlsRecordV.plaintext_build_args.content_type = PROTOCORE_DTLS_CT_HANDSHAKE;
-    DtlsRecordV.plaintext_build_args.epoch = 0;
-    DtlsRecordV.plaintext_build_args.seq = 0;
-    DtlsRecordV.plaintext_build_args.fragment = ch_frag;
-    DtlsRecordV.plaintext_build_args.frag_len = ch_fl;
-    DtlsRecordV.plaintext_build_args.out = ch_rec;
-    DtlsRecordV.plaintext_build_args.out_cap = sizeof(ch_rec);
-    DtlsRecord.plaintext_build(dtls_record_work);
-    size_t ch_rl = DtlsRecordV.n;
+    size_t dtls_record_n = DtlsRecord.plaintext_build(dtls_record_work, PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag,
+                                                      ch_fl, ch_rec, sizeof(ch_rec));
+    size_t ch_rl = dtls_record_n;
 
     uint8_t flight[2048];
     DtlsServerV.process_args.c = &g_dtls;
@@ -762,26 +683,13 @@ void test_full_handshake_rpk(void)
     Sha256.update(tr, ch, ch_len);
 
     uint8_t ch_frag[300];
-    DtlsHandshakeV.frag_build_args.msg_type = ch[0];
-    DtlsHandshakeV.frag_build_args.msg_seq = 0;
-    DtlsHandshakeV.frag_build_args.full_len = (uint32_t)(ch_len - 4);
-    DtlsHandshakeV.frag_build_args.frag_offset = 0;
-    DtlsHandshakeV.frag_build_args.frag = ch + 4;
-    DtlsHandshakeV.frag_build_args.frag_len = (uint32_t)(ch_len - 4);
-    DtlsHandshakeV.frag_build_args.out = ch_frag;
-    DtlsHandshakeV.frag_build_args.out_cap = sizeof(ch_frag);
-    DtlsHandshake.frag_build(dtls_handshake_work);
-    size_t ch_fl = DtlsHandshakeV.n;
+    size_t dtls_handshake_n = DtlsHandshake.frag_build(dtls_handshake_work, ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4,
+                                                       (uint32_t)(ch_len - 4), ch_frag, sizeof(ch_frag));
+    size_t ch_fl = dtls_handshake_n;
     uint8_t ch_rec[320];
-    DtlsRecordV.plaintext_build_args.content_type = PROTOCORE_DTLS_CT_HANDSHAKE;
-    DtlsRecordV.plaintext_build_args.epoch = 0;
-    DtlsRecordV.plaintext_build_args.seq = 0;
-    DtlsRecordV.plaintext_build_args.fragment = ch_frag;
-    DtlsRecordV.plaintext_build_args.frag_len = ch_fl;
-    DtlsRecordV.plaintext_build_args.out = ch_rec;
-    DtlsRecordV.plaintext_build_args.out_cap = sizeof(ch_rec);
-    DtlsRecord.plaintext_build(dtls_record_work);
-    size_t ch_rl = DtlsRecordV.n;
+    size_t dtls_record_n = DtlsRecord.plaintext_build(dtls_record_work, PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag,
+                                                      ch_fl, ch_rec, sizeof(ch_rec));
+    size_t ch_rl = dtls_record_n;
 
     uint8_t flight[2048];
     DtlsServerV.process_args.c = &g_dtls;
@@ -825,26 +733,13 @@ void test_cid_handshake(void)
     Sha256.update(tr, ch, ch_len);
 
     uint8_t ch_frag[300];
-    DtlsHandshakeV.frag_build_args.msg_type = ch[0];
-    DtlsHandshakeV.frag_build_args.msg_seq = 0;
-    DtlsHandshakeV.frag_build_args.full_len = (uint32_t)(ch_len - 4);
-    DtlsHandshakeV.frag_build_args.frag_offset = 0;
-    DtlsHandshakeV.frag_build_args.frag = ch + 4;
-    DtlsHandshakeV.frag_build_args.frag_len = (uint32_t)(ch_len - 4);
-    DtlsHandshakeV.frag_build_args.out = ch_frag;
-    DtlsHandshakeV.frag_build_args.out_cap = sizeof(ch_frag);
-    DtlsHandshake.frag_build(dtls_handshake_work);
-    size_t ch_fl = DtlsHandshakeV.n;
+    size_t dtls_handshake_n = DtlsHandshake.frag_build(dtls_handshake_work, ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4,
+                                                       (uint32_t)(ch_len - 4), ch_frag, sizeof(ch_frag));
+    size_t ch_fl = dtls_handshake_n;
     uint8_t ch_rec[320];
-    DtlsRecordV.plaintext_build_args.content_type = PROTOCORE_DTLS_CT_HANDSHAKE;
-    DtlsRecordV.plaintext_build_args.epoch = 0;
-    DtlsRecordV.plaintext_build_args.seq = 0;
-    DtlsRecordV.plaintext_build_args.fragment = ch_frag;
-    DtlsRecordV.plaintext_build_args.frag_len = ch_fl;
-    DtlsRecordV.plaintext_build_args.out = ch_rec;
-    DtlsRecordV.plaintext_build_args.out_cap = sizeof(ch_rec);
-    DtlsRecord.plaintext_build(dtls_record_work);
-    size_t ch_rl = DtlsRecordV.n;
+    size_t dtls_record_n = DtlsRecord.plaintext_build(dtls_record_work, PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag,
+                                                      ch_fl, ch_rec, sizeof(ch_rec));
+    size_t ch_rl = dtls_record_n;
 
     uint8_t flight[2048];
     DtlsServerV.process_args.c = &g_dtls;
@@ -857,11 +752,8 @@ void test_cid_handshake(void)
     TEST_ASSERT_TRUE(fl > 0);
 
     DtlsPlaintext sh_pt;
-    DtlsRecordV.plaintext_parse_args.rec = flight;
-    DtlsRecordV.plaintext_parse_args.rec_len = (size_t)fl;
-    DtlsRecordV.plaintext_parse_args.out = &sh_pt;
-    DtlsRecord.plaintext_parse(dtls_record_work);
-    size_t shrl = DtlsRecordV.n;
+    dtls_record_n = DtlsRecord.plaintext_parse(dtls_record_work, flight, (size_t)fl, &sh_pt);
+    size_t shrl = dtls_record_n;
     TEST_ASSERT_TRUE(shrl > 0);
     const uint8_t *ep2 = flight + shrl;
     TEST_ASSERT_TRUE((ep2[0] & 0x10) != 0);
@@ -893,26 +785,13 @@ void test_hrr_group_renegotiation(void)
     size_t ch1_len = build_client_hello_ex(ch1, client_pub, PROTO_FALSE, NULL, 0, NULL, 0, PROTO_FALSE,
                                            TLS_GROUP_X25519, TLS_SIG_ED25519);
     uint8_t f1[300];
-    DtlsHandshakeV.frag_build_args.msg_type = ch1[0];
-    DtlsHandshakeV.frag_build_args.msg_seq = 0;
-    DtlsHandshakeV.frag_build_args.full_len = (uint32_t)(ch1_len - 4);
-    DtlsHandshakeV.frag_build_args.frag_offset = 0;
-    DtlsHandshakeV.frag_build_args.frag = ch1 + 4;
-    DtlsHandshakeV.frag_build_args.frag_len = (uint32_t)(ch1_len - 4);
-    DtlsHandshakeV.frag_build_args.out = f1;
-    DtlsHandshakeV.frag_build_args.out_cap = sizeof(f1);
-    DtlsHandshake.frag_build(dtls_handshake_work);
-    size_t f1l = DtlsHandshakeV.n;
+    size_t dtls_handshake_n = DtlsHandshake.frag_build(dtls_handshake_work, ch1[0], 0, (uint32_t)(ch1_len - 4), 0,
+                                                       ch1 + 4, (uint32_t)(ch1_len - 4), f1, sizeof(f1));
+    size_t f1l = dtls_handshake_n;
     uint8_t r1[320];
-    DtlsRecordV.plaintext_build_args.content_type = PROTOCORE_DTLS_CT_HANDSHAKE;
-    DtlsRecordV.plaintext_build_args.epoch = 0;
-    DtlsRecordV.plaintext_build_args.seq = 0;
-    DtlsRecordV.plaintext_build_args.fragment = f1;
-    DtlsRecordV.plaintext_build_args.frag_len = f1l;
-    DtlsRecordV.plaintext_build_args.out = r1;
-    DtlsRecordV.plaintext_build_args.out_cap = sizeof(r1);
-    DtlsRecord.plaintext_build(dtls_record_work);
-    size_t r1l = DtlsRecordV.n;
+    size_t dtls_record_n =
+        DtlsRecord.plaintext_build(dtls_record_work, PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, f1, f1l, r1, sizeof(r1));
+    size_t r1l = dtls_record_n;
 
     uint8_t hrr_flight[512];
     DtlsServerV.process_args.c = &g_dtls;
@@ -928,11 +807,8 @@ void test_hrr_group_renegotiation(void)
     TEST_ASSERT_FALSE(DtlsServerV.ok);
 
     DtlsPlaintext pt;
-    DtlsRecordV.plaintext_parse_args.rec = hrr_flight;
-    DtlsRecordV.plaintext_parse_args.rec_len = (size_t)hf;
-    DtlsRecordV.plaintext_parse_args.out = &pt;
-    DtlsRecord.plaintext_parse(dtls_record_work);
-    size_t rl = DtlsRecordV.n;
+    dtls_record_n = DtlsRecord.plaintext_parse(dtls_record_work, hrr_flight, (size_t)hf, &pt);
+    size_t rl = dtls_record_n;
     TEST_ASSERT_TRUE(rl > 0);
     uint8_t hrr[512];
     size_t hrr_len = frag_to_tls(pt.fragment, pt.frag_len, hrr);
@@ -970,26 +846,13 @@ void test_hrr_group_renegotiation(void)
     Sha256.update(tr, ch2, ch2_len);
 
     uint8_t f2[380];
-    DtlsHandshakeV.frag_build_args.msg_type = ch2[0];
-    DtlsHandshakeV.frag_build_args.msg_seq = 1;
-    DtlsHandshakeV.frag_build_args.full_len = (uint32_t)(ch2_len - 4);
-    DtlsHandshakeV.frag_build_args.frag_offset = 0;
-    DtlsHandshakeV.frag_build_args.frag = ch2 + 4;
-    DtlsHandshakeV.frag_build_args.frag_len = (uint32_t)(ch2_len - 4);
-    DtlsHandshakeV.frag_build_args.out = f2;
-    DtlsHandshakeV.frag_build_args.out_cap = sizeof(f2);
-    DtlsHandshake.frag_build(dtls_handshake_work);
-    size_t f2l = DtlsHandshakeV.n;
+    dtls_handshake_n = DtlsHandshake.frag_build(dtls_handshake_work, ch2[0], 1, (uint32_t)(ch2_len - 4), 0, ch2 + 4,
+                                                (uint32_t)(ch2_len - 4), f2, sizeof(f2));
+    size_t f2l = dtls_handshake_n;
     uint8_t r2[420];
-    DtlsRecordV.plaintext_build_args.content_type = PROTOCORE_DTLS_CT_HANDSHAKE;
-    DtlsRecordV.plaintext_build_args.epoch = 0;
-    DtlsRecordV.plaintext_build_args.seq = 1;
-    DtlsRecordV.plaintext_build_args.fragment = f2;
-    DtlsRecordV.plaintext_build_args.frag_len = f2l;
-    DtlsRecordV.plaintext_build_args.out = r2;
-    DtlsRecordV.plaintext_build_args.out_cap = sizeof(r2);
-    DtlsRecord.plaintext_build(dtls_record_work);
-    size_t r2l = DtlsRecordV.n;
+    dtls_record_n =
+        DtlsRecord.plaintext_build(dtls_record_work, PROTOCORE_DTLS_CT_HANDSHAKE, 0, 1, f2, f2l, r2, sizeof(r2));
+    size_t r2l = dtls_record_n;
 
     uint8_t flight[2048];
     DtlsServerV.process_args.c = &g_dtls;
@@ -1027,26 +890,13 @@ void test_hrr_retry_without_cookie_rejected(void)
     size_t ch1_len = build_client_hello_ex(ch1, client_pub, PROTO_FALSE, NULL, 0, NULL, 0, PROTO_FALSE,
                                            TLS_GROUP_X25519, TLS_SIG_ED25519);
     uint8_t f1[300];
-    DtlsHandshakeV.frag_build_args.msg_type = ch1[0];
-    DtlsHandshakeV.frag_build_args.msg_seq = 0;
-    DtlsHandshakeV.frag_build_args.full_len = (uint32_t)(ch1_len - 4);
-    DtlsHandshakeV.frag_build_args.frag_offset = 0;
-    DtlsHandshakeV.frag_build_args.frag = ch1 + 4;
-    DtlsHandshakeV.frag_build_args.frag_len = (uint32_t)(ch1_len - 4);
-    DtlsHandshakeV.frag_build_args.out = f1;
-    DtlsHandshakeV.frag_build_args.out_cap = sizeof(f1);
-    DtlsHandshake.frag_build(dtls_handshake_work);
-    size_t f1l = DtlsHandshakeV.n;
+    size_t dtls_handshake_n = DtlsHandshake.frag_build(dtls_handshake_work, ch1[0], 0, (uint32_t)(ch1_len - 4), 0,
+                                                       ch1 + 4, (uint32_t)(ch1_len - 4), f1, sizeof(f1));
+    size_t f1l = dtls_handshake_n;
     uint8_t r1[320];
-    DtlsRecordV.plaintext_build_args.content_type = PROTOCORE_DTLS_CT_HANDSHAKE;
-    DtlsRecordV.plaintext_build_args.epoch = 0;
-    DtlsRecordV.plaintext_build_args.seq = 0;
-    DtlsRecordV.plaintext_build_args.fragment = f1;
-    DtlsRecordV.plaintext_build_args.frag_len = f1l;
-    DtlsRecordV.plaintext_build_args.out = r1;
-    DtlsRecordV.plaintext_build_args.out_cap = sizeof(r1);
-    DtlsRecord.plaintext_build(dtls_record_work);
-    size_t r1l = DtlsRecordV.n;
+    size_t dtls_record_n =
+        DtlsRecord.plaintext_build(dtls_record_work, PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, f1, f1l, r1, sizeof(r1));
+    size_t r1l = dtls_record_n;
     uint8_t hrr_flight[512];
     DtlsServerV.process_args.c = &g_dtls;
     DtlsServerV.process_args.dgram = r1;
@@ -1060,26 +910,13 @@ void test_hrr_retry_without_cookie_rejected(void)
     size_t ch2_len = build_client_hello_ex(ch2, client_pub, PROTO_TRUE, NULL, 0, NULL, 0, PROTO_FALSE, TLS_GROUP_X25519,
                                            TLS_SIG_ED25519);
     uint8_t f2[380];
-    DtlsHandshakeV.frag_build_args.msg_type = ch2[0];
-    DtlsHandshakeV.frag_build_args.msg_seq = 1;
-    DtlsHandshakeV.frag_build_args.full_len = (uint32_t)(ch2_len - 4);
-    DtlsHandshakeV.frag_build_args.frag_offset = 0;
-    DtlsHandshakeV.frag_build_args.frag = ch2 + 4;
-    DtlsHandshakeV.frag_build_args.frag_len = (uint32_t)(ch2_len - 4);
-    DtlsHandshakeV.frag_build_args.out = f2;
-    DtlsHandshakeV.frag_build_args.out_cap = sizeof(f2);
-    DtlsHandshake.frag_build(dtls_handshake_work);
-    size_t f2l = DtlsHandshakeV.n;
+    dtls_handshake_n = DtlsHandshake.frag_build(dtls_handshake_work, ch2[0], 1, (uint32_t)(ch2_len - 4), 0, ch2 + 4,
+                                                (uint32_t)(ch2_len - 4), f2, sizeof(f2));
+    size_t f2l = dtls_handshake_n;
     uint8_t r2[420];
-    DtlsRecordV.plaintext_build_args.content_type = PROTOCORE_DTLS_CT_HANDSHAKE;
-    DtlsRecordV.plaintext_build_args.epoch = 0;
-    DtlsRecordV.plaintext_build_args.seq = 1;
-    DtlsRecordV.plaintext_build_args.fragment = f2;
-    DtlsRecordV.plaintext_build_args.frag_len = f2l;
-    DtlsRecordV.plaintext_build_args.out = r2;
-    DtlsRecordV.plaintext_build_args.out_cap = sizeof(r2);
-    DtlsRecord.plaintext_build(dtls_record_work);
-    size_t r2l = DtlsRecordV.n;
+    dtls_record_n =
+        DtlsRecord.plaintext_build(dtls_record_work, PROTOCORE_DTLS_CT_HANDSHAKE, 0, 1, f2, f2l, r2, sizeof(r2));
+    size_t r2l = dtls_record_n;
     uint8_t out[2048];
     DtlsServerV.process_args.c = &g_dtls;
     DtlsServerV.process_args.dgram = r2;
@@ -1123,25 +960,12 @@ void test_reject_no_tls13(void)
         }
     }
     uint8_t frag[300], rec[320], out[1024];
-    DtlsHandshakeV.frag_build_args.msg_type = ch[0];
-    DtlsHandshakeV.frag_build_args.msg_seq = 0;
-    DtlsHandshakeV.frag_build_args.full_len = (uint32_t)(ch_len - 4);
-    DtlsHandshakeV.frag_build_args.frag_offset = 0;
-    DtlsHandshakeV.frag_build_args.frag = ch + 4;
-    DtlsHandshakeV.frag_build_args.frag_len = (uint32_t)(ch_len - 4);
-    DtlsHandshakeV.frag_build_args.out = frag;
-    DtlsHandshakeV.frag_build_args.out_cap = sizeof(frag);
-    DtlsHandshake.frag_build(dtls_handshake_work);
-    size_t fl = DtlsHandshakeV.n;
-    DtlsRecordV.plaintext_build_args.content_type = PROTOCORE_DTLS_CT_HANDSHAKE;
-    DtlsRecordV.plaintext_build_args.epoch = 0;
-    DtlsRecordV.plaintext_build_args.seq = 0;
-    DtlsRecordV.plaintext_build_args.fragment = frag;
-    DtlsRecordV.plaintext_build_args.frag_len = fl;
-    DtlsRecordV.plaintext_build_args.out = rec;
-    DtlsRecordV.plaintext_build_args.out_cap = sizeof(rec);
-    DtlsRecord.plaintext_build(dtls_record_work);
-    size_t rl = DtlsRecordV.n;
+    size_t dtls_handshake_n = DtlsHandshake.frag_build(dtls_handshake_work, ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4,
+                                                       (uint32_t)(ch_len - 4), frag, sizeof(frag));
+    size_t fl = dtls_handshake_n;
+    size_t dtls_record_n =
+        DtlsRecord.plaintext_build(dtls_record_work, PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, frag, fl, rec, sizeof(rec));
+    size_t rl = dtls_record_n;
     DtlsServerV.process_args.c = &g_dtls;
     DtlsServerV.process_args.dgram = rec;
     DtlsServerV.process_args.len = rl;
@@ -1172,26 +996,13 @@ static int drive_server_flight(DtlsConn *conn, DtlsServerConfig *cfg, uint8_t **
     Sha256.init(*tr);
     Sha256.update(*tr, ch, ch_len);
     uint8_t ch_frag[300];
-    DtlsHandshakeV.frag_build_args.msg_type = ch[0];
-    DtlsHandshakeV.frag_build_args.msg_seq = 0;
-    DtlsHandshakeV.frag_build_args.full_len = (uint32_t)(ch_len - 4);
-    DtlsHandshakeV.frag_build_args.frag_offset = 0;
-    DtlsHandshakeV.frag_build_args.frag = ch + 4;
-    DtlsHandshakeV.frag_build_args.frag_len = (uint32_t)(ch_len - 4);
-    DtlsHandshakeV.frag_build_args.out = ch_frag;
-    DtlsHandshakeV.frag_build_args.out_cap = sizeof(ch_frag);
-    DtlsHandshake.frag_build(dtls_handshake_work);
-    size_t ch_fl = DtlsHandshakeV.n;
+    size_t dtls_handshake_n = DtlsHandshake.frag_build(dtls_handshake_work, ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4,
+                                                       (uint32_t)(ch_len - 4), ch_frag, sizeof(ch_frag));
+    size_t ch_fl = dtls_handshake_n;
     uint8_t ch_rec[320];
-    DtlsRecordV.plaintext_build_args.content_type = PROTOCORE_DTLS_CT_HANDSHAKE;
-    DtlsRecordV.plaintext_build_args.epoch = 0;
-    DtlsRecordV.plaintext_build_args.seq = 0;
-    DtlsRecordV.plaintext_build_args.fragment = ch_frag;
-    DtlsRecordV.plaintext_build_args.frag_len = ch_fl;
-    DtlsRecordV.plaintext_build_args.out = ch_rec;
-    DtlsRecordV.plaintext_build_args.out_cap = sizeof(ch_rec);
-    DtlsRecord.plaintext_build(dtls_record_work);
-    size_t ch_rl = DtlsRecordV.n;
+    size_t dtls_record_n = DtlsRecord.plaintext_build(dtls_record_work, PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag,
+                                                      ch_fl, ch_rec, sizeof(ch_rec));
+    size_t ch_rl = dtls_record_n;
     DtlsServerV.process_args.c = conn;
     DtlsServerV.process_args.dgram = ch_rec;
     DtlsServerV.process_args.len = ch_rl;
@@ -1241,11 +1052,8 @@ void test_pto_retransmit_and_recovery(void)
     // reuse an AES-GCM nonce under the same key. Count what the first flight already spent, and the
     // walk below then proves the retransmit continues past it rather than starting over.
     DtlsPlaintext fpt;
-    DtlsRecordV.plaintext_parse_args.rec = flight;
-    DtlsRecordV.plaintext_parse_args.rec_len = (size_t)fl;
-    DtlsRecordV.plaintext_parse_args.out = &fpt;
-    DtlsRecord.plaintext_parse(dtls_record_work);
-    size_t fskip = DtlsRecordV.n; // the ServerHello goes out in the clear
+    size_t dtls_record_n = DtlsRecord.plaintext_parse(dtls_record_work, flight, (size_t)fl, &fpt);
+    size_t fskip = dtls_record_n; // the ServerHello goes out in the clear
     TEST_ASSERT_TRUE(fskip > 0);
     uint64_t sent = 0;
     for (size_t o = fskip; o < (size_t)fl;)
@@ -1329,11 +1137,8 @@ void test_pto_ack_cancels_retransmit(void)
     TEST_ASSERT_TRUE(DtlsServerV.n >= 0);
 
     DtlsPlaintext pt;
-    DtlsRecordV.plaintext_parse_args.rec = flight;
-    DtlsRecordV.plaintext_parse_args.rec_len = (size_t)fl;
-    DtlsRecordV.plaintext_parse_args.out = &pt;
-    DtlsRecord.plaintext_parse(dtls_record_work);
-    TEST_ASSERT_TRUE(DtlsRecordV.n > 0);
+    size_t dtls_record_n = DtlsRecord.plaintext_parse(dtls_record_work, flight, (size_t)fl, &pt);
+    TEST_ASSERT_TRUE(dtls_record_n > 0);
     uint8_t sh[512];
     size_t sh_len = frag_to_tls(pt.fragment, pt.frag_len, sh);
     TEST_ASSERT_TRUE(sh_len > 0);
@@ -1365,33 +1170,17 @@ void test_pto_ack_cancels_retransmit(void)
     Tls13KsV.step.ch_sh_hash = h;
     Tls13Ks.handshake(NULL);
     DtlsRecordKeys cli_write;
-    DtlsRecordV.keys_derive_args.out = &cli_write;
-    DtlsRecordV.keys_derive_args.cipher = DTLS_CIPHER_AES_128_GCM_SHA256;
-    DtlsRecordV.keys_derive_args.epoch = 2;
-    DtlsRecordV.keys_derive_args.secret = cks.s + TLS13_KS_CLIENT_HS;
-    DtlsRecord.keys_derive(dtls_record_work);
+    DtlsRecord.keys_derive(dtls_record_work, &cli_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_CLIENT_HS);
 
     DtlsRecordNumber rns[5] = {{0, 0}, {2, 0}, {2, 1}, {2, 2}, {2, 3}};
     uint8_t ack_body[2 + 5 * 16];
-    DtlsHandshakeV.ack_build_args.nums = rns;
-    DtlsHandshakeV.ack_build_args.count = 5;
-    DtlsHandshakeV.ack_build_args.out = ack_body;
-    DtlsHandshakeV.ack_build_args.out_cap = sizeof(ack_body);
-    DtlsHandshake.ack_build(dtls_handshake_work);
-    size_t bl = DtlsHandshakeV.n;
+    size_t dtls_handshake_n = DtlsHandshake.ack_build(dtls_handshake_work, rns, 5, ack_body, sizeof(ack_body));
+    size_t bl = dtls_handshake_n;
     TEST_ASSERT_TRUE(bl > 0);
     uint8_t ack_rec[160];
-    DtlsRecordV.protect_args.keys = &cli_write;
-    DtlsRecordV.protect_args.seq = 0;
-    DtlsRecordV.protect_args.content_type = PROTOCORE_DTLS_CT_ACK;
-    DtlsRecordV.protect_args.plaintext = ack_body;
-    DtlsRecordV.protect_args.pt_len = bl;
-    DtlsRecordV.protect_args.out = ack_rec;
-    DtlsRecordV.protect_args.out_cap = sizeof(ack_rec);
-    DtlsRecordV.protect_args.cid = NULL;
-    DtlsRecordV.protect_args.cid_len = 0;
-    DtlsRecord.protect(dtls_record_work);
-    size_t ar = DtlsRecordV.n;
+    dtls_record_n = DtlsRecord.protect(dtls_record_work, &cli_write, 0, PROTOCORE_DTLS_CT_ACK, ack_body, bl, ack_rec,
+                                       sizeof(ack_rec), NULL, 0);
+    size_t ar = dtls_record_n;
     TEST_ASSERT_TRUE(ar > 0);
 
     uint8_t out[64];
@@ -1410,29 +1199,17 @@ static size_t plain_hs_record(uint8_t *out, size_t out_cap, const uint8_t *tls_m
                               uint64_t rec_seq)
 {
     uint8_t frag[512];
-    DtlsHandshakeV.frag_build_args.msg_type = tls_msg[0];
-    DtlsHandshakeV.frag_build_args.msg_seq = msg_seq;
-    DtlsHandshakeV.frag_build_args.full_len = (uint32_t)(tls_len - 4);
-    DtlsHandshakeV.frag_build_args.frag_offset = 0;
-    DtlsHandshakeV.frag_build_args.frag = tls_msg + 4;
-    DtlsHandshakeV.frag_build_args.frag_len = (uint32_t)(tls_len - 4);
-    DtlsHandshakeV.frag_build_args.out = frag;
-    DtlsHandshakeV.frag_build_args.out_cap = sizeof(frag);
-    DtlsHandshake.frag_build(dtls_handshake_work);
-    size_t fl = DtlsHandshakeV.n;
+    size_t dtls_handshake_n =
+        DtlsHandshake.frag_build(dtls_handshake_work, tls_msg[0], msg_seq, (uint32_t)(tls_len - 4), 0, tls_msg + 4,
+                                 (uint32_t)(tls_len - 4), frag, sizeof(frag));
+    size_t fl = dtls_handshake_n;
     if (!fl)
     {
         return 0;
     }
-    DtlsRecordV.plaintext_build_args.content_type = PROTOCORE_DTLS_CT_HANDSHAKE;
-    DtlsRecordV.plaintext_build_args.epoch = 0;
-    DtlsRecordV.plaintext_build_args.seq = rec_seq;
-    DtlsRecordV.plaintext_build_args.fragment = frag;
-    DtlsRecordV.plaintext_build_args.frag_len = fl;
-    DtlsRecordV.plaintext_build_args.out = out;
-    DtlsRecordV.plaintext_build_args.out_cap = out_cap;
-    DtlsRecord.plaintext_build(dtls_record_work);
-    return DtlsRecordV.n;
+    size_t dtls_record_n =
+        DtlsRecord.plaintext_build(dtls_record_work, PROTOCORE_DTLS_CT_HANDSHAKE, 0, rec_seq, frag, fl, out, out_cap);
+    return dtls_record_n;
 }
 
 typedef struct
@@ -1485,11 +1262,8 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     }
 
     DtlsPlaintext pt;
-    DtlsRecordV.plaintext_parse_args.rec = flight;
-    DtlsRecordV.plaintext_parse_args.rec_len = (size_t)fl;
-    DtlsRecordV.plaintext_parse_args.out = &pt;
-    DtlsRecord.plaintext_parse(dtls_record_work);
-    size_t off = DtlsRecordV.n;
+    size_t dtls_record_n = DtlsRecord.plaintext_parse(dtls_record_work, flight, (size_t)fl, &pt);
+    size_t off = dtls_record_n;
     if (!off)
     {
         return PROTO_FALSE;
@@ -1524,16 +1298,10 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     Tls13KsV.step.ecdhe_len = 32;
     Tls13KsV.step.ch_sh_hash = h;
     Tls13Ks.handshake(NULL);
-    DtlsRecordV.keys_derive_args.out = &st->srv_hs_read;
-    DtlsRecordV.keys_derive_args.cipher = DTLS_CIPHER_AES_128_GCM_SHA256;
-    DtlsRecordV.keys_derive_args.epoch = 2;
-    DtlsRecordV.keys_derive_args.secret = st->cks.s + TLS13_KS_SERVER_HS;
-    DtlsRecord.keys_derive(dtls_record_work);
-    DtlsRecordV.keys_derive_args.out = &st->cli_hs_write;
-    DtlsRecordV.keys_derive_args.cipher = DTLS_CIPHER_AES_128_GCM_SHA256;
-    DtlsRecordV.keys_derive_args.epoch = 2;
-    DtlsRecordV.keys_derive_args.secret = st->cks.s + TLS13_KS_CLIENT_HS;
-    DtlsRecord.keys_derive(dtls_record_work);
+    DtlsRecord.keys_derive(dtls_record_work, &st->srv_hs_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2,
+                           st->cks.s + TLS13_KS_SERVER_HS);
+    DtlsRecord.keys_derive(dtls_record_work, &st->cli_hs_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2,
+                           st->cks.s + TLS13_KS_CLIENT_HS);
 
     uint64_t exp_seq = 0;
     while (off < (size_t)fl)
@@ -1545,17 +1313,9 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
         }
         uint8_t inner[512];
         DtlsCiphertext info;
-        DtlsRecordV.unprotect_args.keys = &st->srv_hs_read;
-        DtlsRecordV.unprotect_args.next_seq = exp_seq;
-        DtlsRecordV.unprotect_args.rec = flight + off;
-        DtlsRecordV.unprotect_args.rec_len = crl;
-        DtlsRecordV.unprotect_args.out = inner;
-        DtlsRecordV.unprotect_args.out_cap = sizeof(inner);
-        DtlsRecordV.unprotect_args.info = &info;
-        DtlsRecordV.unprotect_args.expected_cid = NULL;
-        DtlsRecordV.unprotect_args.expected_cid_len = 0;
-        DtlsRecord.unprotect(dtls_record_work);
-        if (!DtlsRecordV.ok)
+        proto_bool dtls_record_ok = DtlsRecord.unprotect(dtls_record_work, &st->srv_hs_read, exp_seq, flight + off, crl,
+                                                         inner, sizeof(inner), &info, NULL, 0);
+        if (!dtls_record_ok)
         {
             return PROTO_FALSE;
         }
@@ -1575,16 +1335,10 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     Tls13KsV.bind.ks = &st->cks;
     Tls13KsV.step.ch_sfin_hash = h_sfin;
     Tls13Ks.master(NULL);
-    DtlsRecordV.keys_derive_args.out = &st->cli_app_write;
-    DtlsRecordV.keys_derive_args.cipher = DTLS_CIPHER_AES_128_GCM_SHA256;
-    DtlsRecordV.keys_derive_args.epoch = 3;
-    DtlsRecordV.keys_derive_args.secret = st->cks.s + TLS13_KS_CLIENT_AP;
-    DtlsRecord.keys_derive(dtls_record_work);
-    DtlsRecordV.keys_derive_args.out = &st->cli_app_read;
-    DtlsRecordV.keys_derive_args.cipher = DTLS_CIPHER_AES_128_GCM_SHA256;
-    DtlsRecordV.keys_derive_args.epoch = 3;
-    DtlsRecordV.keys_derive_args.secret = st->cks.s + TLS13_KS_SERVER_AP;
-    DtlsRecord.keys_derive(dtls_record_work);
+    DtlsRecord.keys_derive(dtls_record_work, &st->cli_app_write, DTLS_CIPHER_AES_128_GCM_SHA256, 3,
+                           st->cks.s + TLS13_KS_CLIENT_AP);
+    DtlsRecord.keys_derive(dtls_record_work, &st->cli_app_read, DTLS_CIPHER_AES_128_GCM_SHA256, 3,
+                           st->cks.s + TLS13_KS_SERVER_AP);
 
     uint8_t verify[32];
     Tls13KsV.bind.ks = &st->cks;
@@ -1603,33 +1357,19 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     {
         return PROTO_FALSE;
     }
-    DtlsHandshakeV.frag_build_args.msg_type = cfin[0];
-    DtlsHandshakeV.frag_build_args.msg_seq = 1;
-    DtlsHandshakeV.frag_build_args.full_len = (uint32_t)(cfin_len - 4);
-    DtlsHandshakeV.frag_build_args.frag_offset = 0;
-    DtlsHandshakeV.frag_build_args.frag = cfin + 4;
-    DtlsHandshakeV.frag_build_args.frag_len = (uint32_t)(cfin_len - 4);
-    DtlsHandshakeV.frag_build_args.out = st->cfin_frag;
-    DtlsHandshakeV.frag_build_args.out_cap = sizeof(st->cfin_frag);
-    DtlsHandshake.frag_build(dtls_handshake_work);
-    st->cfin_frag_len = DtlsHandshakeV.n;
+    size_t dtls_handshake_n =
+        DtlsHandshake.frag_build(dtls_handshake_work, cfin[0], 1, (uint32_t)(cfin_len - 4), 0, cfin + 4,
+                                 (uint32_t)(cfin_len - 4), st->cfin_frag, sizeof(st->cfin_frag));
+    st->cfin_frag_len = dtls_handshake_n;
     return st->cfin_frag_len > 0;
 }
 
 static int feed_client_finished(DtlsConn *conn, ClientSession *st, uint64_t seq, uint8_t *out, size_t out_cap)
 {
     uint8_t rec[128];
-    DtlsRecordV.protect_args.keys = &st->cli_hs_write;
-    DtlsRecordV.protect_args.seq = seq;
-    DtlsRecordV.protect_args.content_type = PROTOCORE_DTLS_CT_HANDSHAKE;
-    DtlsRecordV.protect_args.plaintext = st->cfin_frag;
-    DtlsRecordV.protect_args.pt_len = st->cfin_frag_len;
-    DtlsRecordV.protect_args.out = rec;
-    DtlsRecordV.protect_args.out_cap = sizeof(rec);
-    DtlsRecordV.protect_args.cid = NULL;
-    DtlsRecordV.protect_args.cid_len = 0;
-    DtlsRecord.protect(dtls_record_work);
-    size_t rl = DtlsRecordV.n;
+    size_t dtls_record_n = DtlsRecord.protect(dtls_record_work, &st->cli_hs_write, seq, PROTOCORE_DTLS_CT_HANDSHAKE,
+                                              st->cfin_frag, st->cfin_frag_len, rec, sizeof(rec), NULL, 0);
+    size_t rl = dtls_record_n;
     if (!rl)
     {
         return -2;
@@ -1647,32 +1387,18 @@ static int feed_epoch2_msg(DtlsConn *conn, ClientSession *st, uint64_t seq, uint
                            size_t tls_len, uint8_t *out, size_t out_cap)
 {
     uint8_t frag[128];
-    DtlsHandshakeV.frag_build_args.msg_type = tls_msg[0];
-    DtlsHandshakeV.frag_build_args.msg_seq = msg_seq;
-    DtlsHandshakeV.frag_build_args.full_len = (uint32_t)(tls_len - 4);
-    DtlsHandshakeV.frag_build_args.frag_offset = 0;
-    DtlsHandshakeV.frag_build_args.frag = tls_msg + 4;
-    DtlsHandshakeV.frag_build_args.frag_len = (uint32_t)(tls_len - 4);
-    DtlsHandshakeV.frag_build_args.out = frag;
-    DtlsHandshakeV.frag_build_args.out_cap = sizeof(frag);
-    DtlsHandshake.frag_build(dtls_handshake_work);
-    size_t fl = DtlsHandshakeV.n;
+    size_t dtls_handshake_n =
+        DtlsHandshake.frag_build(dtls_handshake_work, tls_msg[0], msg_seq, (uint32_t)(tls_len - 4), 0, tls_msg + 4,
+                                 (uint32_t)(tls_len - 4), frag, sizeof(frag));
+    size_t fl = dtls_handshake_n;
     if (!fl)
     {
         return -2;
     }
     uint8_t rec[192];
-    DtlsRecordV.protect_args.keys = &st->cli_hs_write;
-    DtlsRecordV.protect_args.seq = seq;
-    DtlsRecordV.protect_args.content_type = PROTOCORE_DTLS_CT_HANDSHAKE;
-    DtlsRecordV.protect_args.plaintext = frag;
-    DtlsRecordV.protect_args.pt_len = fl;
-    DtlsRecordV.protect_args.out = rec;
-    DtlsRecordV.protect_args.out_cap = sizeof(rec);
-    DtlsRecordV.protect_args.cid = NULL;
-    DtlsRecordV.protect_args.cid_len = 0;
-    DtlsRecord.protect(dtls_record_work);
-    size_t rl = DtlsRecordV.n;
+    size_t dtls_record_n = DtlsRecord.protect(dtls_record_work, &st->cli_hs_write, seq, PROTOCORE_DTLS_CT_HANDSHAKE,
+                                              frag, fl, rec, sizeof(rec), NULL, 0);
+    size_t rl = dtls_record_n;
     if (!rl)
     {
         return -2;
@@ -1690,17 +1416,9 @@ static int feed_epoch2_ack(DtlsConn *conn, ClientSession *st, uint64_t seq, cons
                            uint8_t *out, size_t out_cap)
 {
     uint8_t rec[192];
-    DtlsRecordV.protect_args.keys = &st->cli_hs_write;
-    DtlsRecordV.protect_args.seq = seq;
-    DtlsRecordV.protect_args.content_type = PROTOCORE_DTLS_CT_ACK;
-    DtlsRecordV.protect_args.plaintext = body;
-    DtlsRecordV.protect_args.pt_len = blen;
-    DtlsRecordV.protect_args.out = rec;
-    DtlsRecordV.protect_args.out_cap = sizeof(rec);
-    DtlsRecordV.protect_args.cid = NULL;
-    DtlsRecordV.protect_args.cid_len = 0;
-    DtlsRecord.protect(dtls_record_work);
-    size_t rl = DtlsRecordV.n;
+    size_t dtls_record_n = DtlsRecord.protect(dtls_record_work, &st->cli_hs_write, seq, PROTOCORE_DTLS_CT_ACK, body,
+                                              blen, rec, sizeof(rec), NULL, 0);
+    size_t rl = dtls_record_n;
     if (!rl)
     {
         return -2;
@@ -1824,15 +1542,9 @@ void test_plaintext_non_handshake_record_ignored(void)
 
     const uint8_t alert_body[2] = {0x01, 0x00};
     uint8_t rec[32];
-    DtlsRecordV.plaintext_build_args.content_type = PROTOCORE_DTLS_CT_ALERT;
-    DtlsRecordV.plaintext_build_args.epoch = 0;
-    DtlsRecordV.plaintext_build_args.seq = 0;
-    DtlsRecordV.plaintext_build_args.fragment = alert_body;
-    DtlsRecordV.plaintext_build_args.frag_len = sizeof(alert_body);
-    DtlsRecordV.plaintext_build_args.out = rec;
-    DtlsRecordV.plaintext_build_args.out_cap = sizeof(rec);
-    DtlsRecord.plaintext_build(dtls_record_work);
-    size_t rl = DtlsRecordV.n;
+    size_t dtls_record_n = DtlsRecord.plaintext_build(dtls_record_work, PROTOCORE_DTLS_CT_ALERT, 0, 0, alert_body,
+                                                      sizeof(alert_body), rec, sizeof(rec));
+    size_t rl = dtls_record_n;
     TEST_ASSERT_TRUE(rl > 0);
     uint8_t out[2048];
     DtlsServerV.process_args.c = &g_dtls;
@@ -1876,15 +1588,9 @@ void test_truncated_handshake_fragment_ignored(void)
 
     const uint8_t stub[5] = {0x01, 0x00, 0x00, 0x20, 0x00};
     uint8_t rec[32];
-    DtlsRecordV.plaintext_build_args.content_type = PROTOCORE_DTLS_CT_HANDSHAKE;
-    DtlsRecordV.plaintext_build_args.epoch = 0;
-    DtlsRecordV.plaintext_build_args.seq = 0;
-    DtlsRecordV.plaintext_build_args.fragment = stub;
-    DtlsRecordV.plaintext_build_args.frag_len = sizeof(stub);
-    DtlsRecordV.plaintext_build_args.out = rec;
-    DtlsRecordV.plaintext_build_args.out_cap = sizeof(rec);
-    DtlsRecord.plaintext_build(dtls_record_work);
-    size_t rl = DtlsRecordV.n;
+    size_t dtls_record_n = DtlsRecord.plaintext_build(dtls_record_work, PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, stub,
+                                                      sizeof(stub), rec, sizeof(rec));
+    size_t rl = dtls_record_n;
     TEST_ASSERT_TRUE(rl > 0);
     uint8_t out[64];
     DtlsServerV.process_args.c = &g_dtls;
@@ -1961,27 +1667,15 @@ void test_oversize_handshake_message_rejected(void)
 
     const uint8_t body[8] = {0};
     uint8_t frag[32];
-    DtlsHandshakeV.frag_build_args.msg_type = TLS_HS_CLIENT_HELLO;
-    DtlsHandshakeV.frag_build_args.msg_seq = 0;
-    DtlsHandshakeV.frag_build_args.full_len = (uint32_t)(PROTOCORE_DTLS_CONN_REASM_CAP + 1);
-    DtlsHandshakeV.frag_build_args.frag_offset = 0;
-    DtlsHandshakeV.frag_build_args.frag = body;
-    DtlsHandshakeV.frag_build_args.frag_len = sizeof(body);
-    DtlsHandshakeV.frag_build_args.out = frag;
-    DtlsHandshakeV.frag_build_args.out_cap = sizeof(frag);
-    DtlsHandshake.frag_build(dtls_handshake_work);
-    size_t fl = DtlsHandshakeV.n;
+    size_t dtls_handshake_n = DtlsHandshake.frag_build(dtls_handshake_work, TLS_HS_CLIENT_HELLO, 0,
+                                                       (uint32_t)(PROTOCORE_DTLS_CONN_REASM_CAP + 1), 0, body,
+                                                       sizeof(body), frag, sizeof(frag));
+    size_t fl = dtls_handshake_n;
     TEST_ASSERT_TRUE(fl > 0);
     uint8_t rec[64];
-    DtlsRecordV.plaintext_build_args.content_type = PROTOCORE_DTLS_CT_HANDSHAKE;
-    DtlsRecordV.plaintext_build_args.epoch = 0;
-    DtlsRecordV.plaintext_build_args.seq = 0;
-    DtlsRecordV.plaintext_build_args.fragment = frag;
-    DtlsRecordV.plaintext_build_args.frag_len = fl;
-    DtlsRecordV.plaintext_build_args.out = rec;
-    DtlsRecordV.plaintext_build_args.out_cap = sizeof(rec);
-    DtlsRecord.plaintext_build(dtls_record_work);
-    size_t rl = DtlsRecordV.n;
+    size_t dtls_record_n =
+        DtlsRecord.plaintext_build(dtls_record_work, PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, frag, fl, rec, sizeof(rec));
+    size_t rl = dtls_record_n;
     TEST_ASSERT_TRUE(rl > 0);
     uint8_t out[64];
     DtlsServerV.process_args.c = &g_dtls;
@@ -2346,12 +2040,8 @@ void test_ack_malformed_and_partial_keep_timer(void)
 
     DtlsRecordNumber one = {0, 0};
     uint8_t body[2 + 16];
-    DtlsHandshakeV.ack_build_args.nums = &one;
-    DtlsHandshakeV.ack_build_args.count = 1;
-    DtlsHandshakeV.ack_build_args.out = body;
-    DtlsHandshakeV.ack_build_args.out_cap = sizeof(body);
-    DtlsHandshake.ack_build(dtls_handshake_work);
-    size_t bl = DtlsHandshakeV.n;
+    size_t dtls_handshake_n = DtlsHandshake.ack_build(dtls_handshake_work, &one, 1, body, sizeof(body));
+    size_t bl = dtls_handshake_n;
     TEST_ASSERT_TRUE(bl > 0);
     TEST_ASSERT_EQUAL_INT(0, feed_epoch2_ack(&g_dtls, &st, 1, body, bl, out, sizeof(out)));
     DtlsServerV.timeout_ms_args.c = &g_dtls;
@@ -2373,25 +2063,13 @@ void test_ack_replay_and_late_ack_ignored(void)
 
     DtlsRecordNumber rns[5] = {{0, 0}, {2, 0}, {2, 1}, {2, 2}, {2, 3}};
     uint8_t body[2 + 5 * 16];
-    DtlsHandshakeV.ack_build_args.nums = rns;
-    DtlsHandshakeV.ack_build_args.count = 5;
-    DtlsHandshakeV.ack_build_args.out = body;
-    DtlsHandshakeV.ack_build_args.out_cap = sizeof(body);
-    DtlsHandshake.ack_build(dtls_handshake_work);
-    size_t bl = DtlsHandshakeV.n;
+    size_t dtls_handshake_n = DtlsHandshake.ack_build(dtls_handshake_work, rns, 5, body, sizeof(body));
+    size_t bl = dtls_handshake_n;
     TEST_ASSERT_TRUE(bl > 0);
     uint8_t rec[192];
-    DtlsRecordV.protect_args.keys = &st.cli_hs_write;
-    DtlsRecordV.protect_args.seq = 0;
-    DtlsRecordV.protect_args.content_type = PROTOCORE_DTLS_CT_ACK;
-    DtlsRecordV.protect_args.plaintext = body;
-    DtlsRecordV.protect_args.pt_len = bl;
-    DtlsRecordV.protect_args.out = rec;
-    DtlsRecordV.protect_args.out_cap = sizeof(rec);
-    DtlsRecordV.protect_args.cid = NULL;
-    DtlsRecordV.protect_args.cid_len = 0;
-    DtlsRecord.protect(dtls_record_work);
-    size_t rl = DtlsRecordV.n;
+    size_t dtls_record_n = DtlsRecord.protect(dtls_record_work, &st.cli_hs_write, 0, PROTOCORE_DTLS_CT_ACK, body, bl,
+                                              rec, sizeof(rec), NULL, 0);
+    size_t rl = dtls_record_n;
     TEST_ASSERT_TRUE(rl > 0);
     DtlsServerV.process_args.c = &g_dtls;
     DtlsServerV.process_args.dgram = rec;
@@ -2457,17 +2135,9 @@ void test_completion_ack_deferred_when_out_full(void)
     TEST_ASSERT_TRUE(n > 0);
     uint8_t pt[64];
     DtlsCiphertext info;
-    DtlsRecordV.unprotect_args.keys = &st.cli_app_read;
-    DtlsRecordV.unprotect_args.next_seq = 0;
-    DtlsRecordV.unprotect_args.rec = out;
-    DtlsRecordV.unprotect_args.rec_len = (size_t)n;
-    DtlsRecordV.unprotect_args.out = pt;
-    DtlsRecordV.unprotect_args.out_cap = sizeof(pt);
-    DtlsRecordV.unprotect_args.info = &info;
-    DtlsRecordV.unprotect_args.expected_cid = NULL;
-    DtlsRecordV.unprotect_args.expected_cid_len = 0;
-    DtlsRecord.unprotect(dtls_record_work);
-    TEST_ASSERT_TRUE(DtlsRecordV.ok);
+    proto_bool dtls_record_ok =
+        DtlsRecord.unprotect(dtls_record_work, &st.cli_app_read, 0, out, (size_t)n, pt, sizeof(pt), &info, NULL, 0);
+    TEST_ASSERT_TRUE(dtls_record_ok);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DTLS_CT_ACK, info.content_type);
 }
 
@@ -2509,17 +2179,10 @@ void test_forged_record_does_not_end_the_association(void)
 
     const uint8_t payload[5] = {'h', 'e', 'l', 'l', 'o'};
     uint8_t apprec[64];
-    DtlsRecordV.protect_args.keys = &st.cli_app_write;
-    DtlsRecordV.protect_args.seq = 0;
-    DtlsRecordV.protect_args.content_type = PROTOCORE_DTLS_CT_APPLICATION_DATA;
-    DtlsRecordV.protect_args.plaintext = payload;
-    DtlsRecordV.protect_args.pt_len = sizeof(payload);
-    DtlsRecordV.protect_args.out = apprec;
-    DtlsRecordV.protect_args.out_cap = sizeof(apprec);
-    DtlsRecordV.protect_args.cid = NULL;
-    DtlsRecordV.protect_args.cid_len = 0;
-    DtlsRecord.protect(dtls_record_work);
-    size_t pl = DtlsRecordV.n;
+    size_t dtls_record_n =
+        DtlsRecord.protect(dtls_record_work, &st.cli_app_write, 0, PROTOCORE_DTLS_CT_APPLICATION_DATA, payload,
+                           sizeof(payload), apprec, sizeof(apprec), NULL, 0);
+    size_t pl = dtls_record_n;
     TEST_ASSERT_TRUE(pl > 0);
     uint8_t plain[64];
     size_t plen = 0;
@@ -2608,17 +2271,9 @@ void test_app_records_before_and_after_established(void)
     TEST_ASSERT_FALSE(DtlsServerV.ok);
 
     uint8_t ackrec[64];
-    DtlsRecordV.protect_args.keys = &st.cli_app_write;
-    DtlsRecordV.protect_args.seq = 0;
-    DtlsRecordV.protect_args.content_type = PROTOCORE_DTLS_CT_ACK;
-    DtlsRecordV.protect_args.plaintext = payload;
-    DtlsRecordV.protect_args.pt_len = sizeof(payload);
-    DtlsRecordV.protect_args.out = ackrec;
-    DtlsRecordV.protect_args.out_cap = sizeof(ackrec);
-    DtlsRecordV.protect_args.cid = NULL;
-    DtlsRecordV.protect_args.cid_len = 0;
-    DtlsRecord.protect(dtls_record_work);
-    size_t al = DtlsRecordV.n;
+    size_t dtls_record_n = DtlsRecord.protect(dtls_record_work, &st.cli_app_write, 0, PROTOCORE_DTLS_CT_ACK, payload,
+                                              sizeof(payload), ackrec, sizeof(ackrec), NULL, 0);
+    size_t al = dtls_record_n;
     TEST_ASSERT_TRUE(al > 0);
     DtlsServerV.open_app_args.c = &g_dtls2;
     DtlsServerV.open_app_args.rec = ackrec;
@@ -2630,17 +2285,9 @@ void test_app_records_before_and_after_established(void)
     TEST_ASSERT_FALSE(DtlsServerV.ok);
 
     uint8_t apprec[64];
-    DtlsRecordV.protect_args.keys = &st.cli_app_write;
-    DtlsRecordV.protect_args.seq = 1;
-    DtlsRecordV.protect_args.content_type = PROTOCORE_DTLS_CT_APPLICATION_DATA;
-    DtlsRecordV.protect_args.plaintext = payload;
-    DtlsRecordV.protect_args.pt_len = sizeof(payload);
-    DtlsRecordV.protect_args.out = apprec;
-    DtlsRecordV.protect_args.out_cap = sizeof(apprec);
-    DtlsRecordV.protect_args.cid = NULL;
-    DtlsRecordV.protect_args.cid_len = 0;
-    DtlsRecord.protect(dtls_record_work);
-    size_t pl = DtlsRecordV.n;
+    dtls_record_n = DtlsRecord.protect(dtls_record_work, &st.cli_app_write, 1, PROTOCORE_DTLS_CT_APPLICATION_DATA,
+                                       payload, sizeof(payload), apprec, sizeof(apprec), NULL, 0);
+    size_t pl = dtls_record_n;
     TEST_ASSERT_TRUE(pl > 0);
     DtlsServerV.open_app_args.c = &g_dtls2;
     DtlsServerV.open_app_args.rec = apprec;
@@ -2671,17 +2318,9 @@ void test_app_records_before_and_after_established(void)
     size_t sl = DtlsServerV.n;
     TEST_ASSERT_TRUE(sl > 0);
     DtlsCiphertext info;
-    DtlsRecordV.unprotect_args.keys = &st.cli_app_read;
-    DtlsRecordV.unprotect_args.next_seq = 1;
-    DtlsRecordV.unprotect_args.rec = srec;
-    DtlsRecordV.unprotect_args.rec_len = sl;
-    DtlsRecordV.unprotect_args.out = plain;
-    DtlsRecordV.unprotect_args.out_cap = sizeof(plain);
-    DtlsRecordV.unprotect_args.info = &info;
-    DtlsRecordV.unprotect_args.expected_cid = NULL;
-    DtlsRecordV.unprotect_args.expected_cid_len = 0;
-    DtlsRecord.unprotect(dtls_record_work);
-    TEST_ASSERT_TRUE(DtlsRecordV.ok);
+    proto_bool dtls_record_ok =
+        DtlsRecord.unprotect(dtls_record_work, &st.cli_app_read, 1, srec, sl, plain, sizeof(plain), &info, NULL, 0);
+    TEST_ASSERT_TRUE(dtls_record_ok);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DTLS_CT_APPLICATION_DATA, info.content_type);
     TEST_ASSERT_EQUAL_UINT32(sizeof(payload), (uint32_t)info.pt_len);
     TEST_ASSERT_EQUAL_MEMORY(payload, plain, sizeof(payload));
@@ -2728,11 +2367,8 @@ void test_conn_id_edge_cases(void)
     DtlsServer.local_cid(dtls_server_work);
     TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)DtlsServerV.n);
     DtlsPlaintext pt;
-    DtlsRecordV.plaintext_parse_args.rec = flight;
-    DtlsRecordV.plaintext_parse_args.rec_len = (size_t)fa;
-    DtlsRecordV.plaintext_parse_args.out = &pt;
-    DtlsRecord.plaintext_parse(dtls_record_work);
-    size_t shl = DtlsRecordV.n;
+    size_t dtls_record_n = DtlsRecord.plaintext_parse(dtls_record_work, flight, (size_t)fa, &pt);
+    size_t shl = dtls_record_n;
     TEST_ASSERT_TRUE(shl > 0);
     TEST_ASSERT_TRUE((flight[shl] & 0x10) == 0);
 
@@ -2760,11 +2396,8 @@ void test_conn_id_edge_cases(void)
     DtlsServer.local_cid(dtls_server_work);
     TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_DTLS_CONN_LOCAL_CID_LEN, (uint32_t)DtlsServerV.n);
     TEST_ASSERT_EQUAL_MEMORY(SERVER_RANDOM, cid_out, PROTOCORE_DTLS_CONN_LOCAL_CID_LEN);
-    DtlsRecordV.plaintext_parse_args.rec = flight;
-    DtlsRecordV.plaintext_parse_args.rec_len = (size_t)fb;
-    DtlsRecordV.plaintext_parse_args.out = &pt;
-    DtlsRecord.plaintext_parse(dtls_record_work);
-    size_t shl_b = DtlsRecordV.n;
+    dtls_record_n = DtlsRecord.plaintext_parse(dtls_record_work, flight, (size_t)fb, &pt);
+    size_t shl_b = dtls_record_n;
     TEST_ASSERT_TRUE(shl_b > 0);
     TEST_ASSERT_TRUE((flight[shl_b] & 0x10) == 0);
 }
@@ -2810,11 +2443,8 @@ static proto_bool hrr_roundtrip_accepted(const uint8_t *addr, size_t addr_len)
     }
 
     DtlsPlaintext pt;
-    DtlsRecordV.plaintext_parse_args.rec = hrr_flight;
-    DtlsRecordV.plaintext_parse_args.rec_len = (size_t)hf;
-    DtlsRecordV.plaintext_parse_args.out = &pt;
-    DtlsRecord.plaintext_parse(dtls_record_work);
-    if (!DtlsRecordV.n)
+    size_t dtls_record_n = DtlsRecord.plaintext_parse(dtls_record_work, hrr_flight, (size_t)hf, &pt);
+    if (!dtls_record_n)
     {
         return PROTO_FALSE;
     }
@@ -2912,11 +2542,8 @@ void test_cookie_is_worthless_to_another_peer(void)
     TEST_ASSERT_TRUE(hf > 0);
 
     DtlsPlaintext pt;
-    DtlsRecordV.plaintext_parse_args.rec = hrr_flight;
-    DtlsRecordV.plaintext_parse_args.rec_len = (size_t)hf;
-    DtlsRecordV.plaintext_parse_args.out = &pt;
-    DtlsRecord.plaintext_parse(dtls_record_work);
-    TEST_ASSERT_TRUE(DtlsRecordV.n > 0);
+    size_t dtls_record_n = DtlsRecord.plaintext_parse(dtls_record_work, hrr_flight, (size_t)hf, &pt);
+    TEST_ASSERT_TRUE(dtls_record_n > 0);
     uint8_t hrr[512];
     size_t hrr_len = frag_to_tls(pt.fragment, pt.frag_len, hrr);
     TEST_ASSERT_TRUE(hrr_len > 0);
@@ -3061,11 +2688,8 @@ void test_hrr_retry_with_corrupt_cookie_rejected(void)
     TEST_ASSERT_TRUE(hf > 0);
 
     DtlsPlaintext pt;
-    DtlsRecordV.plaintext_parse_args.rec = hrr_flight;
-    DtlsRecordV.plaintext_parse_args.rec_len = (size_t)hf;
-    DtlsRecordV.plaintext_parse_args.out = &pt;
-    DtlsRecord.plaintext_parse(dtls_record_work);
-    TEST_ASSERT_TRUE(DtlsRecordV.n > 0);
+    size_t dtls_record_n = DtlsRecord.plaintext_parse(dtls_record_work, hrr_flight, (size_t)hf, &pt);
+    TEST_ASSERT_TRUE(dtls_record_n > 0);
     uint8_t hrr[512];
     size_t hrr_len = frag_to_tls(pt.fragment, pt.frag_len, hrr);
     TEST_ASSERT_TRUE(hrr_len > 0);
@@ -3134,17 +2758,9 @@ void test_epoch2_other_content_type_ignored(void)
 
     const uint8_t payload[4] = {0xDE, 0xAD, 0xBE, 0xEF};
     uint8_t rec[128];
-    DtlsRecordV.protect_args.keys = &st.cli_hs_write;
-    DtlsRecordV.protect_args.seq = 0;
-    DtlsRecordV.protect_args.content_type = PROTOCORE_DTLS_CT_APPLICATION_DATA;
-    DtlsRecordV.protect_args.plaintext = payload;
-    DtlsRecordV.protect_args.pt_len = sizeof(payload);
-    DtlsRecordV.protect_args.out = rec;
-    DtlsRecordV.protect_args.out_cap = sizeof(rec);
-    DtlsRecordV.protect_args.cid = NULL;
-    DtlsRecordV.protect_args.cid_len = 0;
-    DtlsRecord.protect(dtls_record_work);
-    size_t rl = DtlsRecordV.n;
+    size_t dtls_record_n = DtlsRecord.protect(dtls_record_work, &st.cli_hs_write, 0, PROTOCORE_DTLS_CT_APPLICATION_DATA,
+                                              payload, sizeof(payload), rec, sizeof(rec), NULL, 0);
+    size_t rl = dtls_record_n;
     TEST_ASSERT_TRUE(rl > 0);
     uint8_t out[128];
     DtlsServerV.process_args.c = &g_dtls;
@@ -3309,26 +2925,13 @@ static void low_order_share_is_refused(const uint8_t client_pub[32], const char 
     size_t ch_len = build_client_hello(ch, client_pub);
 
     uint8_t ch_frag[300];
-    DtlsHandshakeV.frag_build_args.msg_type = ch[0];
-    DtlsHandshakeV.frag_build_args.msg_seq = 0;
-    DtlsHandshakeV.frag_build_args.full_len = (uint32_t)(ch_len - 4);
-    DtlsHandshakeV.frag_build_args.frag_offset = 0;
-    DtlsHandshakeV.frag_build_args.frag = ch + 4;
-    DtlsHandshakeV.frag_build_args.frag_len = (uint32_t)(ch_len - 4);
-    DtlsHandshakeV.frag_build_args.out = ch_frag;
-    DtlsHandshakeV.frag_build_args.out_cap = sizeof(ch_frag);
-    DtlsHandshake.frag_build(dtls_handshake_work);
-    size_t ch_fl = DtlsHandshakeV.n;
+    size_t dtls_handshake_n = DtlsHandshake.frag_build(dtls_handshake_work, ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4,
+                                                       (uint32_t)(ch_len - 4), ch_frag, sizeof(ch_frag));
+    size_t ch_fl = dtls_handshake_n;
     uint8_t ch_rec[320];
-    DtlsRecordV.plaintext_build_args.content_type = PROTOCORE_DTLS_CT_HANDSHAKE;
-    DtlsRecordV.plaintext_build_args.epoch = 0;
-    DtlsRecordV.plaintext_build_args.seq = 0;
-    DtlsRecordV.plaintext_build_args.fragment = ch_frag;
-    DtlsRecordV.plaintext_build_args.frag_len = ch_fl;
-    DtlsRecordV.plaintext_build_args.out = ch_rec;
-    DtlsRecordV.plaintext_build_args.out_cap = sizeof(ch_rec);
-    DtlsRecord.plaintext_build(dtls_record_work);
-    size_t ch_rl = DtlsRecordV.n;
+    size_t dtls_record_n = DtlsRecord.plaintext_build(dtls_record_work, PROTOCORE_DTLS_CT_HANDSHAKE, 0, 0, ch_frag,
+                                                      ch_fl, ch_rec, sizeof(ch_rec));
+    size_t ch_rl = dtls_record_n;
 
     uint8_t out[2048];
     DtlsServerV.process_args.c = &g_dtls;

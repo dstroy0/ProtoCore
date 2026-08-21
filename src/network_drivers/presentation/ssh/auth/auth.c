@@ -904,8 +904,7 @@ void protocore_ssh_auth_dispatch(uint8_t *restrict work)
         // (which itself just went out uncompressed). Idempotent - a later re-auth cannot restart it.
         if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_SUCCESS)
         {
-            CompV.on_auth_success_args.i = i;
-            Comp.on_auth_success(protocore_ssh_comp_span()); // returns 0 has written a reply
+            Comp.on_auth_success(protocore_ssh_comp_span(), i); // returns 0 has written a reply
         }
 #endif
         // sec 4: bound failed attempts per session. Only an actual USERAUTH_FAILURE counts - a
@@ -965,8 +964,7 @@ void protocore_ssh_auth_dispatch(uint8_t *restrict work)
 #if PROTOCORE_ENABLE_SSH_ZLIB
         if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_SUCCESS)
         {
-            CompV.on_auth_success_args.i = i;
-            Comp.on_auth_success(protocore_ssh_comp_span());
+            Comp.on_auth_success(protocore_ssh_comp_span(), i);
         }
 #endif
         if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_FAILURE && auth_failure_over_threshold(i, reply))

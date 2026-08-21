@@ -36,28 +36,16 @@ void test_ins12350_getversion_frame(void)
 {
     static const uint8_t WANT[5] = {ZWAVE_SOF, 0x03, ZWAVE_REQ, 0x15, 0xE9};
     uint8_t out[16];
-    ZwaveV.build_frame_args.type = ZWAVE_REQ;
-    ZwaveV.build_frame_args.cmd = 0x15;
-    ZwaveV.build_frame_args.data = NULL;
-    ZwaveV.build_frame_args.data_len = 0;
-    ZwaveV.build_frame_args.out = out;
-    ZwaveV.build_frame_args.cap = sizeof(out);
-    Zwave.build_frame(zwave_work);
-    TEST_ASSERT_EQUAL_UINT16(5, ZwaveV.value);
+    uint16_t zwave_value = Zwave.build_frame(zwave_work, ZWAVE_REQ, 0x15, NULL, 0, out, sizeof(out));
+    TEST_ASSERT_EQUAL_UINT16(5, zwave_value);
     TEST_ASSERT_EQUAL_MEMORY(WANT, out, 5);
 
     uint8_t type = 0xFF;
     uint8_t cmd = 0;
     const uint8_t *data = NULL;
     uint8_t data_len = 0xFF;
-    ZwaveV.parse_frame_args.raw = WANT;
-    ZwaveV.parse_frame_args.len = sizeof(WANT);
-    ZwaveV.parse_frame_args.type = &type;
-    ZwaveV.parse_frame_args.cmd = &cmd;
-    ZwaveV.parse_frame_args.pdata = &data;
-    ZwaveV.parse_frame_args.pdata_len = &data_len;
-    Zwave.parse_frame(zwave_work);
-    TEST_ASSERT_EQUAL_INT(5, ZwaveV.n);
+    int zwave_n = Zwave.parse_frame(zwave_work, WANT, sizeof(WANT), &type, &cmd, &data, &data_len);
+    TEST_ASSERT_EQUAL_INT(5, zwave_n);
     TEST_ASSERT_EQUAL_UINT8(ZWAVE_REQ, type);
     TEST_ASSERT_EQUAL_HEX8(0x15, cmd);
     TEST_ASSERT_EQUAL_UINT8(0, data_len);
@@ -72,14 +60,8 @@ void test_len_field_counts_type_through_checksum(void)
         uint8_t data[8];
         memset(data, 0xA5, sizeof(data));
         uint8_t out[32];
-        ZwaveV.build_frame_args.type = ZWAVE_RES;
-        ZwaveV.build_frame_args.cmd = 0x04;
-        ZwaveV.build_frame_args.data = data;
-        ZwaveV.build_frame_args.data_len = n;
-        ZwaveV.build_frame_args.out = out;
-        ZwaveV.build_frame_args.cap = sizeof(out);
-        Zwave.build_frame(zwave_work);
-        const uint16_t total = ZwaveV.value;
+        uint16_t zwave_value = Zwave.build_frame(zwave_work, ZWAVE_RES, 0x04, data, n, out, sizeof(out));
+        const uint16_t total = zwave_value;
         TEST_ASSERT_EQUAL_UINT16((uint16_t)(n + 5), total);
         TEST_ASSERT_EQUAL_HEX8(ZWAVE_SOF, out[0]);
         TEST_ASSERT_EQUAL_UINT8((uint8_t)(n + 3), out[1]);
@@ -91,14 +73,8 @@ void test_checksum_span_and_position(void)
 {
     static const uint8_t DATA[3] = {0x01, 0x0A, 0xAB};
     uint8_t out[32];
-    ZwaveV.build_frame_args.type = ZWAVE_RES;
-    ZwaveV.build_frame_args.cmd = 0x04;
-    ZwaveV.build_frame_args.data = DATA;
-    ZwaveV.build_frame_args.data_len = sizeof(DATA);
-    ZwaveV.build_frame_args.out = out;
-    ZwaveV.build_frame_args.cap = sizeof(out);
-    Zwave.build_frame(zwave_work);
-    const uint16_t n = ZwaveV.value;
+    uint16_t zwave_value = Zwave.build_frame(zwave_work, ZWAVE_RES, 0x04, DATA, sizeof(DATA), out, sizeof(out));
+    const uint16_t n = zwave_value;
     TEST_ASSERT_EQUAL_UINT16(8, n);
 
     uint8_t want = 0xFF;
@@ -114,28 +90,16 @@ void test_build_then_parse_round_trip(void)
 {
     static const uint8_t DATA[3] = {0x01, 0x0A, 0xAB};
     uint8_t buf[32];
-    ZwaveV.build_frame_args.type = ZWAVE_RES;
-    ZwaveV.build_frame_args.cmd = 0x04;
-    ZwaveV.build_frame_args.data = DATA;
-    ZwaveV.build_frame_args.data_len = sizeof(DATA);
-    ZwaveV.build_frame_args.out = buf;
-    ZwaveV.build_frame_args.cap = sizeof(buf);
-    Zwave.build_frame(zwave_work);
-    const uint16_t n = ZwaveV.value;
+    uint16_t zwave_value = Zwave.build_frame(zwave_work, ZWAVE_RES, 0x04, DATA, sizeof(DATA), buf, sizeof(buf));
+    const uint16_t n = zwave_value;
     TEST_ASSERT_EQUAL_UINT16(8, n);
 
     uint8_t type = 0;
     uint8_t cmd = 0;
     const uint8_t *data = NULL;
     uint8_t data_len = 0;
-    ZwaveV.parse_frame_args.raw = buf;
-    ZwaveV.parse_frame_args.len = n;
-    ZwaveV.parse_frame_args.type = &type;
-    ZwaveV.parse_frame_args.cmd = &cmd;
-    ZwaveV.parse_frame_args.pdata = &data;
-    ZwaveV.parse_frame_args.pdata_len = &data_len;
-    Zwave.parse_frame(zwave_work);
-    TEST_ASSERT_EQUAL_INT(8, ZwaveV.n);
+    int zwave_n = Zwave.parse_frame(zwave_work, buf, n, &type, &cmd, &data, &data_len);
+    TEST_ASSERT_EQUAL_INT(8, zwave_n);
     TEST_ASSERT_EQUAL_UINT8(ZWAVE_RES, type);
     TEST_ASSERT_EQUAL_HEX8(0x04, cmd);
     TEST_ASSERT_EQUAL_UINT8(sizeof(DATA), data_len);
@@ -148,14 +112,8 @@ void test_parse_rejects_a_corrupted_frame(void)
 {
     static const uint8_t DATA[4] = {0x11, 0x22, 0x33, 0x44};
     uint8_t frame[32];
-    ZwaveV.build_frame_args.type = ZWAVE_REQ;
-    ZwaveV.build_frame_args.cmd = 0x13;
-    ZwaveV.build_frame_args.data = DATA;
-    ZwaveV.build_frame_args.data_len = sizeof(DATA);
-    ZwaveV.build_frame_args.out = frame;
-    ZwaveV.build_frame_args.cap = sizeof(frame);
-    Zwave.build_frame(zwave_work);
-    const uint16_t n = ZwaveV.value;
+    uint16_t zwave_value = Zwave.build_frame(zwave_work, ZWAVE_REQ, 0x13, DATA, sizeof(DATA), frame, sizeof(frame));
+    const uint16_t n = zwave_value;
     TEST_ASSERT_EQUAL_UINT16(9, n);
 
     for (uint16_t i = 2; i < n; i++) // Type, Command, Data, Checksum
@@ -163,14 +121,8 @@ void test_parse_rejects_a_corrupted_frame(void)
         uint8_t bad[32];
         memcpy(bad, frame, n);
         bad[i] = (uint8_t)(bad[i] ^ 0x01);
-        ZwaveV.parse_frame_args.raw = bad;
-        ZwaveV.parse_frame_args.len = n;
-        ZwaveV.parse_frame_args.type = NULL;
-        ZwaveV.parse_frame_args.cmd = NULL;
-        ZwaveV.parse_frame_args.pdata = NULL;
-        ZwaveV.parse_frame_args.pdata_len = NULL;
-        Zwave.parse_frame(zwave_work);
-        TEST_ASSERT_EQUAL_INT(-1, ZwaveV.n);
+        int zwave_n = Zwave.parse_frame(zwave_work, bad, n, NULL, NULL, NULL, NULL);
+        TEST_ASSERT_EQUAL_INT(-1, zwave_n);
     }
 }
 
@@ -179,57 +131,27 @@ void test_parse_rejects_a_corrupted_frame(void)
 void test_parse_rejects_a_non_sof_start(void)
 {
     static const uint8_t FRAME[5] = {0x00, 0x03, 0x00, 0x15, 0xE9};
-    ZwaveV.parse_frame_args.raw = FRAME;
-    ZwaveV.parse_frame_args.len = sizeof(FRAME);
-    ZwaveV.parse_frame_args.type = NULL;
-    ZwaveV.parse_frame_args.cmd = NULL;
-    ZwaveV.parse_frame_args.pdata = NULL;
-    ZwaveV.parse_frame_args.pdata_len = NULL;
-    Zwave.parse_frame(zwave_work);
-    TEST_ASSERT_EQUAL_INT(-1, ZwaveV.n);
+    int zwave_n = Zwave.parse_frame(zwave_work, FRAME, sizeof(FRAME), NULL, NULL, NULL, NULL);
+    TEST_ASSERT_EQUAL_INT(-1, zwave_n);
 
     static const uint8_t ACK_ONLY[1] = {ZWAVE_ACK};
-    ZwaveV.parse_frame_args.raw = ACK_ONLY;
-    ZwaveV.parse_frame_args.len = 1;
-    ZwaveV.parse_frame_args.type = NULL;
-    ZwaveV.parse_frame_args.cmd = NULL;
-    ZwaveV.parse_frame_args.pdata = NULL;
-    ZwaveV.parse_frame_args.pdata_len = NULL;
-    Zwave.parse_frame(zwave_work);
-    TEST_ASSERT_EQUAL_INT(-1, ZwaveV.n);
+    zwave_n = Zwave.parse_frame(zwave_work, ACK_ONLY, 1, NULL, NULL, NULL, NULL);
+    TEST_ASSERT_EQUAL_INT(-1, zwave_n);
 }
 
 // A frame that has not fully arrived asks for more octets rather than failing.
 void test_parse_waits_for_the_rest(void)
 {
     static const uint8_t FRAME[5] = {ZWAVE_SOF, 0x03, 0x00, 0x15, 0xE9};
-    ZwaveV.parse_frame_args.raw = FRAME;
-    ZwaveV.parse_frame_args.len = 0;
-    ZwaveV.parse_frame_args.type = NULL;
-    ZwaveV.parse_frame_args.cmd = NULL;
-    ZwaveV.parse_frame_args.pdata = NULL;
-    ZwaveV.parse_frame_args.pdata_len = NULL;
-    Zwave.parse_frame(zwave_work);
-    TEST_ASSERT_EQUAL_INT(0, ZwaveV.n);
+    int zwave_n = Zwave.parse_frame(zwave_work, FRAME, 0, NULL, NULL, NULL, NULL);
+    TEST_ASSERT_EQUAL_INT(0, zwave_n);
     for (uint16_t have = 1; have < sizeof(FRAME); have++)
     {
-        ZwaveV.parse_frame_args.raw = FRAME;
-        ZwaveV.parse_frame_args.len = have;
-        ZwaveV.parse_frame_args.type = NULL;
-        ZwaveV.parse_frame_args.cmd = NULL;
-        ZwaveV.parse_frame_args.pdata = NULL;
-        ZwaveV.parse_frame_args.pdata_len = NULL;
-        Zwave.parse_frame(zwave_work);
-        TEST_ASSERT_EQUAL_INT(0, ZwaveV.n);
+        int zwave_n = Zwave.parse_frame(zwave_work, FRAME, have, NULL, NULL, NULL, NULL);
+        TEST_ASSERT_EQUAL_INT(0, zwave_n);
     }
-    ZwaveV.parse_frame_args.raw = FRAME;
-    ZwaveV.parse_frame_args.len = sizeof(FRAME);
-    ZwaveV.parse_frame_args.type = NULL;
-    ZwaveV.parse_frame_args.cmd = NULL;
-    ZwaveV.parse_frame_args.pdata = NULL;
-    ZwaveV.parse_frame_args.pdata_len = NULL;
-    Zwave.parse_frame(zwave_work);
-    TEST_ASSERT_EQUAL_INT(5, ZwaveV.n);
+    zwave_n = Zwave.parse_frame(zwave_work, FRAME, sizeof(FRAME), NULL, NULL, NULL, NULL);
+    TEST_ASSERT_EQUAL_INT(5, zwave_n);
 }
 
 // A LEN below 3 cannot cover Type + Command + Checksum, and one past the configured data maximum is
@@ -239,24 +161,12 @@ void test_parse_rejects_an_out_of_range_len(void)
     for (uint8_t len = 0; len < 3; len++)
     {
         const uint8_t frame[4] = {ZWAVE_SOF, len, 0x00, 0x00};
-        ZwaveV.parse_frame_args.raw = frame;
-        ZwaveV.parse_frame_args.len = sizeof(frame);
-        ZwaveV.parse_frame_args.type = NULL;
-        ZwaveV.parse_frame_args.cmd = NULL;
-        ZwaveV.parse_frame_args.pdata = NULL;
-        ZwaveV.parse_frame_args.pdata_len = NULL;
-        Zwave.parse_frame(zwave_work);
-        TEST_ASSERT_EQUAL_INT(-1, ZwaveV.n);
+        int zwave_n = Zwave.parse_frame(zwave_work, frame, sizeof(frame), NULL, NULL, NULL, NULL);
+        TEST_ASSERT_EQUAL_INT(-1, zwave_n);
     }
     const uint8_t too_long[4] = {ZWAVE_SOF, (uint8_t)(PROTOCORE_ZWAVE_MAX_DATA + 4), 0x00, 0x00};
-    ZwaveV.parse_frame_args.raw = too_long;
-    ZwaveV.parse_frame_args.len = sizeof(too_long);
-    ZwaveV.parse_frame_args.type = NULL;
-    ZwaveV.parse_frame_args.cmd = NULL;
-    ZwaveV.parse_frame_args.pdata = NULL;
-    ZwaveV.parse_frame_args.pdata_len = NULL;
-    Zwave.parse_frame(zwave_work);
-    TEST_ASSERT_EQUAL_INT(-1, ZwaveV.n);
+    int zwave_n = Zwave.parse_frame(zwave_work, too_long, sizeof(too_long), NULL, NULL, NULL, NULL);
+    TEST_ASSERT_EQUAL_INT(-1, zwave_n);
 }
 
 // The Serial API's single-octet flow control: ACK 0x06, NAK 0x15, CAN 0x18, each distinct from the
@@ -268,47 +178,33 @@ void test_control_octets(void)
     TEST_ASSERT_EQUAL_HEX8(0x15, ZWAVE_NAK);
     TEST_ASSERT_EQUAL_HEX8(0x18, ZWAVE_CAN);
 
-    ZwaveV.is_ack_args.b = ZWAVE_ACK;
-    Zwave.is_ack(zwave_work);
-    TEST_ASSERT_TRUE(ZwaveV.ok);
-    ZwaveV.is_nak_args.b = ZWAVE_NAK;
-    Zwave.is_nak(zwave_work);
-    TEST_ASSERT_TRUE(ZwaveV.ok);
-    ZwaveV.is_can_args.b = ZWAVE_CAN;
-    Zwave.is_can(zwave_work);
-    TEST_ASSERT_TRUE(ZwaveV.ok);
+    proto_bool zwave_ok = Zwave.is_ack(zwave_work, ZWAVE_ACK);
+    TEST_ASSERT_TRUE(zwave_ok);
+    zwave_ok = Zwave.is_nak(zwave_work, ZWAVE_NAK);
+    TEST_ASSERT_TRUE(zwave_ok);
+    zwave_ok = Zwave.is_can(zwave_work, ZWAVE_CAN);
+    TEST_ASSERT_TRUE(zwave_ok);
 
-    ZwaveV.is_ack_args.b = ZWAVE_NAK;
-    Zwave.is_ack(zwave_work);
-    TEST_ASSERT_FALSE(ZwaveV.ok);
-    ZwaveV.is_ack_args.b = ZWAVE_CAN;
-    Zwave.is_ack(zwave_work);
-    TEST_ASSERT_FALSE(ZwaveV.ok);
-    ZwaveV.is_nak_args.b = ZWAVE_ACK;
-    Zwave.is_nak(zwave_work);
-    TEST_ASSERT_FALSE(ZwaveV.ok);
-    ZwaveV.is_can_args.b = ZWAVE_ACK;
-    Zwave.is_can(zwave_work);
-    TEST_ASSERT_FALSE(ZwaveV.ok);
-    ZwaveV.is_ack_args.b = ZWAVE_SOF;
-    Zwave.is_ack(zwave_work);
-    TEST_ASSERT_FALSE(ZwaveV.ok);
+    zwave_ok = Zwave.is_ack(zwave_work, ZWAVE_NAK);
+    TEST_ASSERT_FALSE(zwave_ok);
+    zwave_ok = Zwave.is_ack(zwave_work, ZWAVE_CAN);
+    TEST_ASSERT_FALSE(zwave_ok);
+    zwave_ok = Zwave.is_nak(zwave_work, ZWAVE_ACK);
+    TEST_ASSERT_FALSE(zwave_ok);
+    zwave_ok = Zwave.is_can(zwave_work, ZWAVE_ACK);
+    TEST_ASSERT_FALSE(zwave_ok);
+    zwave_ok = Zwave.is_ack(zwave_work, ZWAVE_SOF);
+    TEST_ASSERT_FALSE(zwave_ok);
 
     uint8_t out[2] = {0xAA, 0xAA};
-    ZwaveV.build_ack_args.out = out;
-    ZwaveV.build_ack_args.cap = sizeof(out);
-    Zwave.build_ack(zwave_work);
-    TEST_ASSERT_EQUAL_UINT16(1, ZwaveV.value);
+    uint16_t zwave_value = Zwave.build_ack(zwave_work, out, sizeof(out));
+    TEST_ASSERT_EQUAL_UINT16(1, zwave_value);
     TEST_ASSERT_EQUAL_HEX8(ZWAVE_ACK, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0xAA, out[1]); // one octet written, no more
-    ZwaveV.build_ack_args.out = out;
-    ZwaveV.build_ack_args.cap = 0;
-    Zwave.build_ack(zwave_work);
-    TEST_ASSERT_EQUAL_UINT16(0, ZwaveV.value);
-    ZwaveV.build_ack_args.out = NULL;
-    ZwaveV.build_ack_args.cap = 1;
-    Zwave.build_ack(zwave_work);
-    TEST_ASSERT_EQUAL_UINT16(0, ZwaveV.value);
+    zwave_value = Zwave.build_ack(zwave_work, out, 0);
+    TEST_ASSERT_EQUAL_UINT16(0, zwave_value);
+    zwave_value = Zwave.build_ack(zwave_work, NULL, 1);
+    TEST_ASSERT_EQUAL_UINT16(0, zwave_value);
 }
 
 // Build refuses a data length past the configured maximum, a null buffer, a null payload with a
@@ -319,74 +215,27 @@ void test_build_bounds(void)
     memset(data, 0x5A, sizeof(data));
     uint8_t out[PROTOCORE_ZWAVE_MAX_DATA + 8];
 
-    ZwaveV.build_frame_args.type = ZWAVE_REQ;
-    ZwaveV.build_frame_args.cmd = 0x01;
-    ZwaveV.build_frame_args.data = data;
-    ZwaveV.build_frame_args.data_len = PROTOCORE_ZWAVE_MAX_DATA + 1;
-    ZwaveV.build_frame_args.out = out;
-    ZwaveV.build_frame_args.cap = sizeof(out);
-    Zwave.build_frame(zwave_work);
-    TEST_ASSERT_EQUAL_UINT16(0, ZwaveV.value);
-    ZwaveV.build_frame_args.type = ZWAVE_REQ;
-    ZwaveV.build_frame_args.cmd = 0x01;
-    ZwaveV.build_frame_args.data = data;
-    ZwaveV.build_frame_args.data_len = PROTOCORE_ZWAVE_MAX_DATA;
-    ZwaveV.build_frame_args.out = out;
-    ZwaveV.build_frame_args.cap = sizeof(out);
-    Zwave.build_frame(zwave_work);
-    TEST_ASSERT_EQUAL_UINT16((uint16_t)(PROTOCORE_ZWAVE_MAX_DATA + 5), ZwaveV.value);
-    ZwaveV.build_frame_args.type = ZWAVE_REQ;
-    ZwaveV.build_frame_args.cmd = 0x01;
-    ZwaveV.build_frame_args.data = data;
-    ZwaveV.build_frame_args.data_len = 4;
-    ZwaveV.build_frame_args.out = NULL;
-    ZwaveV.build_frame_args.cap = sizeof(out);
-    Zwave.build_frame(zwave_work);
-    TEST_ASSERT_EQUAL_UINT16(0, ZwaveV.value);
-    ZwaveV.build_frame_args.type = ZWAVE_REQ;
-    ZwaveV.build_frame_args.cmd = 0x01;
-    ZwaveV.build_frame_args.data = NULL;
-    ZwaveV.build_frame_args.data_len = 4;
-    ZwaveV.build_frame_args.out = out;
-    ZwaveV.build_frame_args.cap = sizeof(out);
-    Zwave.build_frame(zwave_work);
-    TEST_ASSERT_EQUAL_UINT16(0, ZwaveV.value);
-    ZwaveV.build_frame_args.type = ZWAVE_REQ;
-    ZwaveV.build_frame_args.cmd = 0x01;
-    ZwaveV.build_frame_args.data = data;
-    ZwaveV.build_frame_args.data_len = 4;
-    ZwaveV.build_frame_args.out = out;
-    ZwaveV.build_frame_args.cap = 8;
-    Zwave.build_frame(zwave_work);
-    TEST_ASSERT_EQUAL_UINT16(0, ZwaveV.value); // needs 9
-    ZwaveV.build_frame_args.type = ZWAVE_REQ;
-    ZwaveV.build_frame_args.cmd = 0x01;
-    ZwaveV.build_frame_args.data = data;
-    ZwaveV.build_frame_args.data_len = 4;
-    ZwaveV.build_frame_args.out = out;
-    ZwaveV.build_frame_args.cap = 9;
-    Zwave.build_frame(zwave_work);
-    TEST_ASSERT_EQUAL_UINT16(9, ZwaveV.value);
+    uint16_t zwave_value =
+        Zwave.build_frame(zwave_work, ZWAVE_REQ, 0x01, data, PROTOCORE_ZWAVE_MAX_DATA + 1, out, sizeof(out));
+    TEST_ASSERT_EQUAL_UINT16(0, zwave_value);
+    zwave_value = Zwave.build_frame(zwave_work, ZWAVE_REQ, 0x01, data, PROTOCORE_ZWAVE_MAX_DATA, out, sizeof(out));
+    TEST_ASSERT_EQUAL_UINT16((uint16_t)(PROTOCORE_ZWAVE_MAX_DATA + 5), zwave_value);
+    zwave_value = Zwave.build_frame(zwave_work, ZWAVE_REQ, 0x01, data, 4, NULL, sizeof(out));
+    TEST_ASSERT_EQUAL_UINT16(0, zwave_value);
+    zwave_value = Zwave.build_frame(zwave_work, ZWAVE_REQ, 0x01, NULL, 4, out, sizeof(out));
+    TEST_ASSERT_EQUAL_UINT16(0, zwave_value);
+    zwave_value = Zwave.build_frame(zwave_work, ZWAVE_REQ, 0x01, data, 4, out, 8);
+    TEST_ASSERT_EQUAL_UINT16(0, zwave_value); // needs 9
+    zwave_value = Zwave.build_frame(zwave_work, ZWAVE_REQ, 0x01, data, 4, out, 9);
+    TEST_ASSERT_EQUAL_UINT16(9, zwave_value);
 }
 
 // Every out parameter is optional: a caller that only wants to know a frame arrived passes none.
 void test_parse_accepts_null_out_parameters(void)
 {
     static const uint8_t FRAME[5] = {ZWAVE_SOF, 0x03, 0x00, 0x15, 0xE9};
-    ZwaveV.parse_frame_args.raw = FRAME;
-    ZwaveV.parse_frame_args.len = sizeof(FRAME);
-    ZwaveV.parse_frame_args.type = NULL;
-    ZwaveV.parse_frame_args.cmd = NULL;
-    ZwaveV.parse_frame_args.pdata = NULL;
-    ZwaveV.parse_frame_args.pdata_len = NULL;
-    Zwave.parse_frame(zwave_work);
-    TEST_ASSERT_EQUAL_INT(5, ZwaveV.n);
-    ZwaveV.parse_frame_args.raw = NULL;
-    ZwaveV.parse_frame_args.len = 5;
-    ZwaveV.parse_frame_args.type = NULL;
-    ZwaveV.parse_frame_args.cmd = NULL;
-    ZwaveV.parse_frame_args.pdata = NULL;
-    ZwaveV.parse_frame_args.pdata_len = NULL;
-    Zwave.parse_frame(zwave_work);
-    TEST_ASSERT_EQUAL_INT(0, ZwaveV.n);
+    int zwave_n = Zwave.parse_frame(zwave_work, FRAME, sizeof(FRAME), NULL, NULL, NULL, NULL);
+    TEST_ASSERT_EQUAL_INT(5, zwave_n);
+    zwave_n = Zwave.parse_frame(zwave_work, NULL, 5, NULL, NULL, NULL, NULL);
+    TEST_ASSERT_EQUAL_INT(0, zwave_n);
 }

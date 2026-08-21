@@ -40,9 +40,7 @@ bool stub_tx(uint8_t, uint16_t, const uint8_t *, uint16_t, void *)
 void dbench_run(void)
 {
     Gateway.reset(protocore_gateway_span());
-    GatewayV.set_uplink_cb_args.fn = stub_uplink;
-    GatewayV.set_uplink_cb_args.ctx = NULL;
-    Gateway.set_uplink_cb(protocore_gateway_span());
+    Gateway.set_uplink_cb(protocore_gateway_span(), stub_uplink, NULL);
 
     // Receive-only port (no tx) for the uplink bench, unlimited rate cap so the publish path is
     // always taken (see test_gateway.cpp's test_uplink_envelopes_and_publishes()).
@@ -51,8 +49,7 @@ void dbench_run(void)
     up_cfg.kind = PROTOCORE_GW_LORA;
     up_cfg.tx = NULL;
     up_cfg.rate_cap = 0;
-    GatewayV.add_port_args.cfg = &up_cfg;
-    Gateway.add_port(protocore_gateway_span());
+    Gateway.add_port(protocore_gateway_span(), &up_cfg);
 
     // A second port with a tx callback for the downlink bench (see test_downlink_transmits()).
     protocore_gateway_port_config down_cfg = {};
@@ -60,8 +57,7 @@ void dbench_run(void)
     down_cfg.kind = PROTOCORE_GW_NRF24;
     down_cfg.tx = stub_tx;
     down_cfg.rate_cap = 0;
-    GatewayV.add_port_args.cfg = &down_cfg;
-    Gateway.add_port(protocore_gateway_span());
+    Gateway.add_port(protocore_gateway_span(), &down_cfg);
 
     // 2-byte payload, matches test_gateway.cpp's test_uplink_envelopes_and_publishes().
     static const uint8_t up_payload[2] = {'h', 'i'};

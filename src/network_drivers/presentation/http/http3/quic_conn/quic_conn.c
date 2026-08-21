@@ -419,11 +419,8 @@ static proto_bool process_frames(QuicConnCtx *qc, int level, const uint8_t *p, s
             continue;
         }
         QuicFrameHeader f;
-        QuicFrameV.parse_args.buf = p + off;
-        QuicFrameV.parse_args.len = len - off;
-        QuicFrameV.parse_args.out = &f;
-        QuicFrame.parse(quic_frame_work);
-        size_t n = QuicFrameV.n;
+        size_t quic_frame_n = QuicFrame.parse(quic_frame_work, p + off, len - off, &f);
+        size_t n = quic_frame_n;
         if (!n)
         {
             // Undecodable frame: a transport FRAME_ENCODING_ERROR (RFC 9000 sec 20.1). Report it.
@@ -676,13 +673,8 @@ static size_t build_ack_frame(uint8_t *restrict work, QuicPnSpace *s, uint8_t *b
     {
         return 0;
     }
-    QuicFrameV.build_ack_args.out = buf;
-    QuicFrameV.build_ack_args.cap = cap;
-    QuicFrameV.build_ack_args.largest = s->largest_rx;
-    QuicFrameV.build_ack_args.delay = 0;
-    QuicFrameV.build_ack_args.first_range = s->largest_rx;
-    QuicFrame.build_ack(work);
-    size_t n = QuicFrameV.n;
+    size_t quic_frame_n = QuicFrame.build_ack(work, buf, cap, s->largest_rx, 0, s->largest_rx);
+    size_t n = quic_frame_n;
     if (n)
     {
         s->ack_eliciting_rx =
@@ -718,13 +710,8 @@ static size_t build_crypto_frame(uint8_t *restrict work, const QuicConnCtx *qc, 
     {
         return 0;
     }
-    QuicFrameV.build_crypto_args.out = buf;
-    QuicFrameV.build_crypto_args.cap = cap;
-    QuicFrameV.build_crypto_args.offset = s->crypto_tx_off;
-    QuicFrameV.build_crypto_args.data = flight + s->crypto_tx_off;
-    QuicFrameV.build_crypto_args.len = take;
-    QuicFrame.build_crypto(work);
-    size_t n = QuicFrameV.n;
+    size_t quic_frame_n = QuicFrame.build_crypto(work, buf, cap, s->crypto_tx_off, flight + s->crypto_tx_off, take);
+    size_t n = quic_frame_n;
     if (n)
     {
         s->crypto_tx_off += take;
@@ -744,10 +731,8 @@ static size_t build_app_frames(uint8_t *restrict work, QuicConnCtx *qc, int leve
     size_t p = 0;
     if (qc->handshake_done_queued)
     {
-        QuicFrameV.build_handshake_done_args.out = buf + p;
-        QuicFrameV.build_handshake_done_args.cap = cap - p;
-        QuicFrame.build_handshake_done(work);
-        size_t n = QuicFrameV.n;
+        size_t quic_frame_n = QuicFrame.build_handshake_done(work, buf + p, cap - p);
+        size_t n = quic_frame_n;
         if (n)
         { // ACK/CRYPTO, so the datagram-sized scratch always has room for it
 
@@ -774,15 +759,9 @@ static size_t build_app_frames(uint8_t *restrict work, QuicConnCtx *qc, int leve
         size_t remain = st->tx_have - st->tx_sent;
         size_t take = remain < room ? remain : room;
         proto_bool fin = st->tx_fin && (st->tx_sent + take == st->tx_have);
-        QuicFrameV.build_stream_args.out = buf + p;
-        QuicFrameV.build_stream_args.cap = cap - p;
-        QuicFrameV.build_stream_args.id = st->id;
-        QuicFrameV.build_stream_args.offset = st->tx_off;
-        QuicFrameV.build_stream_args.data = st->tx + st->tx_sent;
-        QuicFrameV.build_stream_args.len = take;
-        QuicFrameV.build_stream_args.fin = fin;
-        QuicFrame.build_stream(work);
-        size_t n = QuicFrameV.n;
+        size_t quic_frame_n =
+            QuicFrame.build_stream(work, buf + p, cap - p, st->id, st->tx_off, st->tx + st->tx_sent, take, fin);
+        size_t n = quic_frame_n;
         if (n)
         {
             p += n;
@@ -809,15 +788,9 @@ static size_t build_frames(uint8_t *restrict work, QuicConnCtx *qc, int level, u
     // this for a single level when a close is queued, so it is emitted exactly once.
     if (qc->close_queued && !qc->close_sent)
     {
-        QuicFrameV.build_connection_close_args.out = buf;
-        QuicFrameV.build_connection_close_args.cap = cap;
-        QuicFrameV.build_connection_close_args.app = qc->close_is_app;
-        QuicFrameV.build_connection_close_args.error_code = qc->close_error;
-        QuicFrameV.build_connection_close_args.frame_type = qc->close_frame_type;
-        QuicFrameV.build_connection_close_args.reason = NULL;
-        QuicFrameV.build_connection_close_args.reason_len = 0;
-        QuicFrame.build_connection_close(work);
-        return QuicFrameV.n;
+        size_t quic_frame_n = QuicFrame.build_connection_close(work, buf, cap, qc->close_is_app, qc->close_error,
+                                                               qc->close_frame_type, NULL, 0);
+        return quic_frame_n;
     }
 
     p += build_ack_frame(work, s, buf + p, cap - p); // ACK first, if we owe one

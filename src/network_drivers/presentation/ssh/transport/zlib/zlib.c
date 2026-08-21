@@ -6,9 +6,7 @@
  * @brief RFC 1951 deflate: fixed-Huffman blocks and the SSH partial flush.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_SSH_ZLIB
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/ssh/common/common.h"
@@ -16,8 +14,6 @@
 
 #include "mmgr/bitio/bitio.h"
 #include "network_drivers/presentation/codec/deflate/rfc1951/rfc1951.h" // the sec 3.2.5 tables
-
-PROTOCORE_BEGIN_DECLS
 
 #define PROTOCORE_MIN_MATCH 3   // shortest LZ77 back-reference
 #define PROTOCORE_MAX_MATCH 258 // longest (RFC 1951 length code 285)
@@ -81,16 +77,9 @@ static void zlib_chain_match(const SshDeflate *z, const uint8_t *buf, size_t i, 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_zlib_init(uint8_t *restrict work)
+void protocore_zlib_init(uint8_t *restrict work, SshDeflate *z, uint8_t *win, uint16_t *head, uint16_t *prev,
+                         uint16_t *ll_code, uint8_t *ll_len, uint16_t *d_code, uint8_t *d_len)
 {
-    SshDeflate *z = ZlibV.init_args.z;
-    uint8_t *win = ZlibV.init_args.win;
-    uint16_t *head = ZlibV.init_args.head;
-    uint16_t *prev = ZlibV.init_args.prev;
-    uint16_t *ll_code = ZlibV.init_args.ll_code;
-    uint8_t *ll_len = ZlibV.init_args.ll_len;
-    uint16_t *d_code = ZlibV.init_args.d_code;
-    uint8_t *d_len = ZlibV.init_args.d_len;
 
     z->work = win;
     z->head = head;
@@ -108,27 +97,21 @@ void protocore_zlib_init(uint8_t *restrict work)
     Rfc1951.build_fixed(work);
 }
 
-void protocore_zlib_packet(uint8_t *restrict work)
+int protocore_zlib_packet(uint8_t *restrict work, SshDeflate *z, const uint8_t *src, size_t src_len, uint8_t *dst,
+                          size_t dst_cap, size_t *out_len)
 {
-    SshDeflate *z = ZlibV.packet_args.z;
-    const uint8_t *src = ZlibV.packet_args.src;
-    size_t src_len = ZlibV.packet_args.src_len;
-    uint8_t *dst = ZlibV.packet_args.dst;
-    size_t dst_cap = ZlibV.packet_args.dst_cap;
-    size_t *out_len = ZlibV.packet_args.out_len;
-
+    int n = 0;
     if (src_len > (size_t)PROTOCORE_SSH_ZLIB_MAX_IN)
     {
-        ZlibV.n = -1;
-        return;
+        return -1;
     }
 
     // Lay [history || input] out contiguously; matches for the input may reach back into history.
     size_t hist = z->hist;
     if (hist + src_len > SSH_ZLIB_WORK_SIZE)
     {
-        ZlibV.n = -1; // sizing invariant (hist <= PROTOCORE_WINDOW, src_len <= MAX_IN) should prevent this
-        return;
+        n = -1; // sizing invariant (hist <= PROTOCORE_WINDOW, src_len <= MAX_IN) should prevent this
+        return n;
     }
     mem.cpy(z->work + hist, src, src_len);
     size_t total = hist + src_len;
@@ -236,8 +219,7 @@ void protocore_zlib_packet(uint8_t *restrict work)
 
     if (w.overflow)
     {
-        ZlibV.n = -1;
-        return;
+        return -1;
     }
 
     // Slide the window: keep the last PROTOCORE_WINDOW bytes of [history || input] as history for next time.
@@ -253,12 +235,5 @@ void protocore_zlib_packet(uint8_t *restrict work)
     z->hist = keep;
 
     *out_len = w.cnt;
-    ZlibV.n = 0;
+    return 0;
 }
-
-/** @brief The operands and the outcome. */
-ZlibVars ZlibV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_SSH_ZLIB

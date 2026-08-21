@@ -1,6 +1,14 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#ifndef PROTOCORE_MULTIPART_H
+#define PROTOCORE_MULTIPART_H
+
+#include "network_drivers/presentation/http/http_parser/http_parser.h" // the complete type a public struct below holds by value
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+PROTOCORE_BEGIN_DECLS
+
 /**
  * @file multipart.h
  * @brief In-place multipart/form-data parser (RFC 7578).
@@ -20,25 +28,20 @@
  * - Maximum parts: `MAX_MULTIPART_PARTS` (default 4).
  * - Maximum total body size: `BODY_BUF_SIZE` bytes.
  * - Only `name` and `filename` are extracted from Content-Disposition;
- *   other parameters are ignored.
+ * other parameters are ignored.
  * - Boundary value must be ≤ `MAX_BOUNDARY_LEN` bytes (RFC 2046 cap: 70).
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
  */
 
-#ifndef PROTOCORE_MULTIPART_H
-#define PROTOCORE_MULTIPART_H
-
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths
-
-#if PROTOCORE_ENABLE_MULTIPART
-
-PROTOCORE_BEGIN_DECLS
-
-// This module holds nothing between calls, so it carves no borrow and states none. An entry
-// takes one all the same, and never reads it, so every namespace in the tree is invoked the
-// same way.
+// PROTOCORE_MULTIPART_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. Its size and its offset are each a static_assert, so a feature
+// combination that does not fit fails to compile rather than overrunning at run time.
 
 /**
  * @brief One parsed part from a multipart body.
@@ -66,76 +69,35 @@ typedef struct
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq: the type a parameter points at
 
-/** @brief What parse takes: req, mp. */
+/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    HttpReq *req;
-    MultipartBody *mp;
-} MultipartParseArgs;
-
-/** @brief What get_field takes: mp, field. */
-typedef struct
-{
-    const MultipartBody *mp;
-    const char *field;
-} MultipartGetFieldArgs;
+    proto_bool (*parse)(uint8_t *restrict, HttpReq *, MultipartBody *);
+    const char *(*get_field)(uint8_t *restrict, const MultipartBody *, const char *);
+} MultipartNs;
+PROTOCORE_NS_LAYOUT(MultipartNs, parse, get_field);
 
 /**
- * @brief In-place multipart/form-data parser (RFC 7578).
- *
- * A caller sets the members a call takes, invokes it through ::Multipart with the bytes it runs
- * out of, and reads the outcome off the same handle.
- *
- *   Multipart.parse_args.req = ...;
- *   Multipart.parse_args.mp = ...;
- *   Multipart.parse(work);
- *   // Multipart.ok is what the call reports
- *
- * @var MultipartNs::parse_args  what parse takes: req, mp
- * @var MultipartNs::get_field_args  what get_field takes: mp, field
- * @var MultipartNs::ok  a call's true/false outcome
- * @var MultipartNs::text  the string a call reports
- * @var MultipartNs::parse  scan req's body as multipart/form-data, reading the boundary from
- * @var MultipartNs::get_field  the data pointer of the first part whose name matches field, or
- *
- * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
- * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
- * a caller drives every namespace the same way.
+ * @brief Scan req's body as multipart/form-data, reading the boundary from.
+ * @param work PROTOCORE_MULTIPART_BORROW bytes the caller took. Not held past the call.
+ * @param req Req
+ * @param mp Mp
+ * @return PROTO_TRUE on success.
  */
-typedef struct
-{
-    MultipartParseArgs parse_args;
-    MultipartGetFieldArgs get_field_args;
-    proto_bool ok;
-    const char *text;
-} MultipartVars;
+proto_bool protocore_multipart_parse(uint8_t *restrict work, HttpReq *req, MultipartBody *mp);
+/**
+ * @brief The data pointer of the first part whose name matches field, or.
+ * @param work PROTOCORE_MULTIPART_BORROW bytes the caller took. Not held past the call.
+ * @param mp Mp
+ * @param field Field
+ * @return The const char *.
+ */
+const char *protocore_multipart_get_field(uint8_t *restrict work, const MultipartBody *mp, const char *field);
 
-/** @brief The operands and the outcome. */
-extern MultipartVars MultipartV;
-
-/** @brief The entries. */
-typedef struct
-{
-    void (*const parse)(uint8_t *restrict work);
-    void (*const get_field)(uint8_t *restrict work);
-} MultipartNs;
-
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in MultipartV or a region of the borrow at a fixed offset.
-void protocore_multipart_parse(uint8_t *restrict work);
-void protocore_multipart_get_field(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Multipart.parse(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const MultipartNs Multipart __attribute__((unused)) = {
-    .parse = protocore_multipart_parse,
-    .get_field = protocore_multipart_get_field,
-};
+/** @brief Module namespace. */
+PROTOCORE_NS MultipartNs Multipart PROTOCORE_UNUSED = {.parse = protocore_multipart_parse,
+                                                       .get_field = protocore_multipart_get_field};
 
 PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_MULTIPART
 
 #endif // PROTOCORE_MULTIPART_H

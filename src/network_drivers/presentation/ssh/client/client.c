@@ -348,9 +348,8 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
 // connection's own storage and kept as I_C by the transport.
 static proto_bool build_kexinit(void)
 {
-    SshV.conn_slot_args.i = SSH_CLI_SLOT;
-    Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *base = SshV.ptr;
+    uint8_t *ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), SSH_CLI_SLOT);
+    uint8_t *base = ssh_ptr;
     if (base == NULL)
     {
         return PROTO_FALSE;
@@ -633,9 +632,8 @@ static void cli_send(uint8_t *restrict work)
     (void)work;
     const uint8_t *payload = SshClient.msg.payload;
     const size_t len = SshClient.msg.len;
-    SshV.conn_slot_args.i = SSH_CLI_SLOT;
-    Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *wire = SshV.ptr;
+    uint8_t *ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), SSH_CLI_SLOT);
+    uint8_t *wire = ssh_ptr;
     if (wire == NULL)
     {
         SshClient.ok = PROTO_FALSE;

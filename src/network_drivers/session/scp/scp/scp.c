@@ -6,15 +6,11 @@
  * @brief SCP (RCP) protocol wire codec - implementation. See scp.h.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_SSH_SCP
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/session/scp/scp/scp.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // Apply one scp flag token (e.g. "-t", "-rf"): -t selects the sink role, -f the source; other letters
 // (-v/-r/-p/-d and combinations) are accepted and ignored.
@@ -38,18 +34,14 @@ static void apply_scp_flags(const char *tok, size_t tlen, ScpMode *mode)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_scp_parse_cmd(uint8_t *restrict work)
+ScpMode protocore_scp_parse_cmd(uint8_t *restrict work, const char *cmd, size_t cmd_len, char *path_out,
+                                size_t path_cap)
 {
     (void)work;
-    const char *cmd = ScpV.parse_cmd_args.cmd;
-    size_t cmd_len = ScpV.parse_cmd_args.cmd_len;
-    char *path_out = ScpV.parse_cmd_args.path_out;
-    size_t path_cap = ScpV.parse_cmd_args.path_cap;
 
     if (!cmd || !path_out || path_cap == 0)
     {
-        ScpV.value = SCP_MODE_INVALID;
-        return;
+        return SCP_MODE_INVALID;
     }
     ScpMode mode = SCP_MODE_INVALID;
     const char *last_tok = NULL; // the last non-flag token is the target path
@@ -87,28 +79,21 @@ void protocore_scp_parse_cmd(uint8_t *restrict work)
     // other three conditions here are covered.
     if (mode == SCP_MODE_INVALID || !last_tok || last_len == 0 || last_len >= path_cap)
     {
-        ScpV.value = SCP_MODE_INVALID;
-        return;
+        return SCP_MODE_INVALID;
     }
     mem.cpy(path_out, last_tok, last_len);
     path_out[last_len] = '\0';
-    ScpV.value = mode;
+    return mode;
 }
 
-void protocore_scp_parse_cline(uint8_t *restrict work)
+proto_bool protocore_scp_parse_cline(uint8_t *restrict work, const char *line, size_t len, uint32_t *mode_out,
+                                     uint64_t *size_out, char *name_out, size_t name_cap)
 {
     (void)work;
-    const char *line = ScpV.parse_cline_args.line;
-    size_t len = ScpV.parse_cline_args.len;
-    uint32_t *mode_out = ScpV.parse_cline_args.mode_out;
-    uint64_t *size_out = ScpV.parse_cline_args.size_out;
-    char *name_out = ScpV.parse_cline_args.name_out;
-    size_t name_cap = ScpV.parse_cline_args.name_cap;
 
     if (!line || len < 1 || line[0] != 'C') // only plain file records (not D/E directory records)
     {
-        ScpV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     size_t i = 1;
 
@@ -121,8 +106,7 @@ void protocore_scp_parse_cline(uint8_t *restrict work)
     }
     if (i == ms || i >= len || line[i] != ' ')
     {
-        ScpV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     i++;
 
@@ -135,8 +119,7 @@ void protocore_scp_parse_cline(uint8_t *restrict work)
     }
     if (i == ss || i >= len || line[i] != ' ')
     {
-        ScpV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     i++;
 
@@ -148,8 +131,7 @@ void protocore_scp_parse_cline(uint8_t *restrict work)
     size_t nlen = i - ns;
     if (nlen == 0 || nlen >= name_cap)
     {
-        ScpV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     mem.cpy(name_out, line + ns, nlen);
     name_out[nlen] = '\0';
@@ -162,17 +144,13 @@ void protocore_scp_parse_cline(uint8_t *restrict work)
     {
         *size_out = size;
     }
-    ScpV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_scp_build_cline(uint8_t *restrict work)
+size_t protocore_scp_build_cline(uint8_t *restrict work, uint32_t mode, uint64_t size, const char *name, char *out,
+                                 size_t cap)
 {
     (void)work;
-    uint32_t mode = ScpV.build_cline_args.mode;
-    uint64_t size = ScpV.build_cline_args.size;
-    const char *name = ScpV.build_cline_args.name;
-    char *out = ScpV.build_cline_args.out;
-    size_t cap = ScpV.build_cline_args.cap;
 
     protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
     Sb.put(&sb_out, "C");
@@ -189,15 +167,7 @@ void protocore_scp_build_cline(uint8_t *restrict work)
     // covered. The guard stays as defense against a non-conforming libc.
     if (n <= 0 || (size_t)n >= cap)
     {
-        ScpV.n = 0;
-        return;
+        return 0;
     }
-    ScpV.n = (size_t)n;
+    return (size_t)n;
 }
-
-/** @brief The operands and the outcome. */
-ScpVars ScpV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_SSH_SCP

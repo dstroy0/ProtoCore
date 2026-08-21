@@ -14,8 +14,8 @@ static int s_root;
 
 void setUp()
 {
-    MntRam.backend(mnt_work);
-    MntV.args.backend = MntRamV.backend;
+    const protocore_mnt_backend *mnt_ram_backend = MntRam.backend(mnt_work);
+    MntV.args.backend = mnt_ram_backend;
     Mnt.mount(mnt_work);
     MntRam.format(mnt_work);
     Fs.mount = "/";
@@ -466,8 +466,8 @@ void test_unmounted_fails_closed()
 
 void test_ram_guard_subconditions()
 {
-    MntRam.backend(mnt_work);
-    MntV.args.backend = MntRamV.backend;
+    const protocore_mnt_backend *mnt_ram_backend = MntRam.backend(mnt_work);
+    MntV.args.backend = mnt_ram_backend;
     Mnt.mount(mnt_work);
     MntRam.format(mnt_work);
     uint8_t b[8] = {0};
@@ -549,8 +549,8 @@ void test_unmounted_all_entry_points()
     Fs.io.n = sizeof(b);
     Fs.read_file(protocore_filesystem_span());
     TEST_ASSERT_TRUE(Fs.len < 0);
-    MntRam.backend(mnt_work);
-    MntV.args.backend = MntRamV.backend;
+    const protocore_mnt_backend *mnt_ram_backend = MntRam.backend(mnt_work);
+    MntV.args.backend = mnt_ram_backend;
     Mnt.mount(mnt_work);
     Fs.path.root = s_root;
     Fs.path.dir = "/a";
@@ -888,8 +888,8 @@ void test_zero_progress_backend_terminates()
     Fs.io.n = 4;
     Fs.write_file(protocore_filesystem_span());
     TEST_ASSERT_FALSE(Fs.ok);
-    MntRam.backend(mnt_work);
-    MntV.args.backend = MntRamV.backend;
+    const protocore_mnt_backend *mnt_ram_backend = MntRam.backend(mnt_work);
+    MntV.args.backend = mnt_ram_backend;
     Mnt.mount(mnt_work);
     Fs.path.root = s_root;
     Fs.path.dir = "/x";
@@ -1242,8 +1242,8 @@ void test_null_store_is_intentional_and_says_so()
     Fs.size(protocore_filesystem_span());
     TEST_ASSERT_EQUAL_INT32(-1, Fs.len);
 
-    MntRam.backend(mnt_work);
-    MntV.args.backend = MntRamV.backend;
+    const protocore_mnt_backend *mnt_ram_backend = MntRam.backend(mnt_work);
+    MntV.args.backend = mnt_ram_backend;
     Mnt.mount(mnt_work);
     MntRam.format(mnt_work);
     Fs.present(protocore_filesystem_span());

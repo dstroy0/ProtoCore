@@ -264,12 +264,10 @@ void test_each_slot_has_its_own_storage(void)
         TEST_IGNORE_MESSAGE("needs a second slot");
         return;
     }
-    SshV.conn_slot_args.i = 0;
-    Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *a = SshV.ptr;
-    SshV.conn_slot_args.i = 1;
-    Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *b = SshV.ptr;
+    uint8_t *ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), 0);
+    uint8_t *a = ssh_ptr;
+    ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), 1);
+    uint8_t *b = ssh_ptr;
     TEST_ASSERT_NOT_NULL(a);
     TEST_ASSERT_NOT_NULL(b);
     TEST_ASSERT_TRUE(a != b);
@@ -277,7 +275,6 @@ void test_each_slot_has_its_own_storage(void)
 
 void test_storage_past_the_pool_is_null(void)
 {
-    SshV.conn_slot_args.i = MAX_SSH_CONNS;
-    Ssh.conn_slot(protocore_ssh_span());
-    TEST_ASSERT_NULL(SshV.ptr);
+    uint8_t *ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), MAX_SSH_CONNS);
+    TEST_ASSERT_NULL(ssh_ptr);
 }

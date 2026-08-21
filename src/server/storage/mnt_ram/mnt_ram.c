@@ -10,15 +10,11 @@
  * the pool directly.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_MNT
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
 #include "server/storage/mnt_ram/mnt_ram.h"
-
-PROTOCORE_BEGIN_DECLS
 
 typedef struct
 {
@@ -405,10 +401,10 @@ static const protocore_mnt_backend s_ram_backend = {ram_open,  ram_read,   ram_w
                                                     ram_size,  ram_exists, ram_remove,  ram_rename,  ram_mkdir,
                                                     ram_rmdir, ram_stat,   ram_opendir, ram_readdir, NULL};
 
-void protocore_mnt_ram_backend(uint8_t *restrict work)
+const protocore_mnt_backend *protocore_mnt_ram_backend(uint8_t *restrict work)
 {
     (void)work;
-    MntRamV.backend = &s_ram_backend;
+    return &s_ram_backend;
 }
 
 void protocore_mnt_ram_format(uint8_t *restrict work)
@@ -421,10 +417,3 @@ void protocore_mnt_ram_format(uint8_t *restrict work)
         s_mnt.rh[h].open = PROTO_FALSE;
     }
 }
-
-/** @brief The operands and the outcome. */
-MntRamVars MntRamV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_MNT

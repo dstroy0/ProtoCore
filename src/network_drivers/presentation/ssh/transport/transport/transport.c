@@ -240,9 +240,8 @@ static void build_kex_list(char *out, size_t cap, proto_bool as_client)
     // The indicator is the list's last name, so it carries the separator that precedes it.
     char ext_info[SSH_EXT_INFO_INDICATOR_MAX];
     ext_info[0] = ',';
-    ExtensionV.info_indicator_args.client_role = as_client;
-    Extension.info_indicator(protocore_ssh_transport_span());
-    str.copy(ext_info + 1, ExtensionV.text, sizeof(ext_info) - 1);
+    const char *extension_text = Extension.info_indicator(protocore_ssh_transport_span(), as_client);
+    str.copy(ext_info + 1, extension_text, sizeof(ext_info) - 1);
     const char *c1 = KEX_C25519;
     const char *c2 = KEX_C25519_LIBSSH;
     const char *dh = KEX_DH;
@@ -495,9 +494,8 @@ void ssh_transport_init(uint8_t i)
     {
         return;
     }
-    SshV.conn_slot_args.i = i;
-    Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *base = SshV.ptr;
+    uint8_t *ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), i);
+    uint8_t *base = ssh_ptr;
     if (base == NULL)
     {
         return;
@@ -908,9 +906,8 @@ void protocore_ssh_transport_kexinit_parse(uint8_t *restrict work)
     // RFC 8308 sec 2.2: "If a server receives an 'ext-info-c', or a client receives an
     // 'ext-info-s', it MAY send an SSH_MSG_EXT_INFO message." The indicator is the peer's role's,
     // which is the opposite of this end's.
-    ExtensionV.info_indicator_args.client_role = !as_client;
-    Extension.info_indicator(work);
-    s->ext_info_enabled = namelist_contains(list, nlen, ExtensionV.text);
+    const char *extension_text = Extension.info_indicator(work, !as_client);
+    s->ext_info_enabled = namelist_contains(list, nlen, extension_text);
     // sec 7.1: "The first algorithm in each name-list MUST be the preferred (guessed) algorithm."
     const uint8_t *peer_kex_first = list;
     const uint32_t peer_kex_first_len = namelist_first_len(list, nlen);
@@ -1010,18 +1007,14 @@ void protocore_ssh_transport_kexinit_parse(uint8_t *restrict work)
             SshTransportV.i32 = -1;
             return;
         }
-        CompV.set_c2s_args.i = i;
-        CompV.set_c2s_args.alg = comp;
-        Comp.set_c2s(protocore_ssh_comp_span());
+        Comp.set_c2s(protocore_ssh_comp_span(), i, comp);
         if (!bytes.rd_str(payload, len, &off, &list, &nlen) ||
             negotiate_alg(list, nlen, compc, 3, &comp, as_client) < 0)
         {
             SshTransportV.i32 = -1;
             return;
         }
-        CompV.set_s2c_args.i = i;
-        CompV.set_s2c_args.alg = comp;
-        Comp.set_s2c(protocore_ssh_comp_span());
+        Comp.set_s2c(protocore_ssh_comp_span(), i, comp);
     }
 #else
     // Both directions must offer "none" (no compression built in).
@@ -2058,8 +2051,7 @@ void protocore_ssh_transport_newkeys_sent(uint8_t *restrict work)
     ssh_sess[i].kexinit_sent = PROTO_FALSE;
 #if PROTOCORE_ENABLE_SSH_ZLIB
     // "zlib" (non-delayed) starts its s2c (outbound) stream here; idempotent, so a re-key does not restart it.
-    CompV.on_newkeys_args.i = i;
-    Comp.on_newkeys(protocore_ssh_comp_span());
+    Comp.on_newkeys(protocore_ssh_comp_span(), i);
 #endif
 }
 
@@ -2223,9 +2215,8 @@ proto_bool ssh_pkt_slot_storage(SshPacketState *s)
     {
         return PROTO_TRUE;
     }
-    SshV.conn_slot_args.i = pkt_slot(s);
-    Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *base = SshV.ptr;
+    uint8_t *ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), pkt_slot(s));
+    uint8_t *base = ssh_ptr;
     if (base == NULL)
     {
         return PROTO_FALSE;
@@ -2514,9 +2505,8 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
     // stream is active. The compressor is stateful (context takeover), so this call must be followed
     // by a full send - the same atomicity the stateful cipher below already requires. The wire buffer
     // is sized (SSH_WIRE_CAP) so the compressed payload can never overflow out_cap and desync.
-    CompV.s2c_active_args.i = i;
-    Comp.s2c_active(protocore_ssh_comp_span());
-    if (CompV.ok)
+    proto_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), i);
+    if (comp_ok)
     {
         // TODO(slot): the compressor's output still borrows; it has no named offset yet.
         size_t bound = ssh_deflate_bound(payload_len);
@@ -2527,14 +2517,9 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
         proto_bool comp_failed = (cbuf == NULL);
         if (!comp_failed)
         {
-            CompV.s2c_args.i = i;
-            CompV.s2c_args.src = out + SSH_WIRE_PAYLOAD_OFF;
-            CompV.s2c_args.src_len = payload_len;
-            CompV.s2c_args.dst = cbuf;
-            CompV.s2c_args.dst_cap = bound;
-            CompV.s2c_args.out_len = &clen;
-            Comp.s2c(protocore_ssh_comp_span());
-            comp_failed = (CompV.n != 0);
+            int comp_n =
+                Comp.s2c(protocore_ssh_comp_span(), i, out + SSH_WIRE_PAYLOAD_OFF, payload_len, cbuf, bound, &clen);
+            comp_failed = (comp_n != 0);
         }
         if (comp_failed)
         {
@@ -2700,9 +2685,8 @@ static int ssh_dispatch_payload(uint8_t i, const uint8_t *payload, size_t payloa
 {
     size_t inflate_scope = protocore_plaintext_mark();
 #if PROTOCORE_ENABLE_SSH_ZLIB
-    CompV.c2s_active_args.i = i;
-    Comp.c2s_active(protocore_ssh_comp_span());
-    if (CompV.ok)
+    proto_bool comp_ok = Comp.c2s_active(protocore_ssh_comp_span(), i);
+    if (comp_ok)
     {
         uint8_t *dbuf = (uint8_t *)protocore_plaintext_alloc(SSH_PKT_BUF_SIZE, 16);
         size_t dlen = 0;
@@ -2711,14 +2695,8 @@ static int ssh_dispatch_payload(uint8_t i, const uint8_t *payload, size_t payloa
         proto_bool inflate_failed = (dbuf == NULL);
         if (!inflate_failed)
         {
-            CompV.c2s_args.i = i;
-            CompV.c2s_args.src = payload;
-            CompV.c2s_args.src_len = payload_len;
-            CompV.c2s_args.dst = dbuf;
-            CompV.c2s_args.dst_cap = SSH_PKT_BUF_SIZE;
-            CompV.c2s_args.out_len = &dlen;
-            Comp.c2s(protocore_ssh_comp_span());
-            inflate_failed = (CompV.n != 0);
+            int comp_n = Comp.c2s(protocore_ssh_comp_span(), i, payload, payload_len, dbuf, SSH_PKT_BUF_SIZE, &dlen);
+            inflate_failed = (comp_n != 0);
         }
         if (inflate_failed)
         {
@@ -3745,11 +3723,8 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         proto_bool ext_info_built = PROTO_FALSE;
         if (s->ext_info_enabled && !s->ext_info_sent)
         {
-            ExtensionV.build_args.out = reply.buf;
-            ExtensionV.build_args.len = &n;
-            ExtensionV.build_args.cap = reply.cap;
-            Extension.build(protocore_ssh_transport_span());
-            ext_info_built = (ExtensionV.n == 0);
+            int extension_n = Extension.build(protocore_ssh_transport_span(), reply.buf, &n, reply.cap);
+            ext_info_built = (extension_n == 0);
         }
         if (ext_info_built)
         {

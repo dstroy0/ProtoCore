@@ -74,31 +74,17 @@ static proto_bool refuse(void *ctx, const char *name, size_t name_len, const cha
 static proto_bool decode(const uint8_t *block, size_t len)
 {
     g_sink.n = 0;
-    QpackV.decode_args.block = block;
-    QpackV.decode_args.len = len;
-    QpackV.decode_args.scratch = g_scratch;
-    QpackV.decode_args.scratch_cap = sizeof(g_scratch);
-    QpackV.decode_args.emit = collect;
-    QpackV.decode_args.ctx = &g_sink;
-    Qpack.decode(qpack_work);
-    return QpackV.ok;
+    proto_bool qpack_ok = Qpack.decode(qpack_work, block, len, g_scratch, sizeof(g_scratch), collect, &g_sink);
+    return qpack_ok;
 }
 
 // Encode a prefix plus one field into g_out and return the total length.
 static size_t encode_one(const char *name, const char *value)
 {
-    QpackV.encode_prefix_args.out = g_out;
-    QpackV.encode_prefix_args.cap = sizeof(g_out);
-    Qpack.encode_prefix(qpack_work);
-    size_t p = QpackV.n;
-    QpackV.encode_header_args.out = g_out + p;
-    QpackV.encode_header_args.cap = sizeof(g_out) - p;
-    QpackV.encode_header_args.name = name;
-    QpackV.encode_header_args.name_len = strlen(name);
-    QpackV.encode_header_args.value = value;
-    QpackV.encode_header_args.value_len = strlen(value);
-    Qpack.encode_header(qpack_work);
-    size_t h = QpackV.n;
+    size_t qpack_n = Qpack.encode_prefix(qpack_work, g_out, sizeof(g_out));
+    size_t p = qpack_n;
+    qpack_n = Qpack.encode_header(qpack_work, g_out + p, sizeof(g_out) - p, name, strlen(name), value, strlen(value));
+    size_t h = qpack_n;
     return (p && h) ? p + h : 0;
 }
 
@@ -121,15 +107,11 @@ void test_rfc9204_b1_worked_example(void)
 void test_rfc9204_field_section_prefix(void)
 {
     static const uint8_t EMPTY_SECTION[2] = {0x00, 0x00};
-    QpackV.encode_prefix_args.out = g_out;
-    QpackV.encode_prefix_args.cap = sizeof(g_out);
-    Qpack.encode_prefix(qpack_work);
-    TEST_ASSERT_EQUAL_UINT(2u, QpackV.n);
+    size_t qpack_n = Qpack.encode_prefix(qpack_work, g_out, sizeof(g_out));
+    TEST_ASSERT_EQUAL_UINT(2u, qpack_n);
     TEST_ASSERT_EQUAL_MEMORY(EMPTY_SECTION, g_out, 2);
-    QpackV.encode_prefix_args.out = g_out;
-    QpackV.encode_prefix_args.cap = 1;
-    Qpack.encode_prefix(qpack_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QpackV.n);
+    qpack_n = Qpack.encode_prefix(qpack_work, g_out, 1);
+    TEST_ASSERT_EQUAL_UINT(0u, qpack_n);
 
     TEST_ASSERT_TRUE(decode(EMPTY_SECTION, sizeof(EMPTY_SECTION)));
     TEST_ASSERT_EQUAL_UINT(0u, g_sink.n);
@@ -257,21 +239,14 @@ void test_field_section_round_trip(void)
         {"server", "ProtoCore"},
         {"x-protocore-trace", "7f3a"},
     };
-    QpackV.encode_prefix_args.out = g_out;
-    QpackV.encode_prefix_args.cap = sizeof(g_out);
-    Qpack.encode_prefix(qpack_work);
-    size_t o = QpackV.n;
+    size_t qpack_n = Qpack.encode_prefix(qpack_work, g_out, sizeof(g_out));
+    size_t o = qpack_n;
     TEST_ASSERT_EQUAL_UINT(2u, o);
     for (size_t i = 0; i < 4; i++)
     {
-        QpackV.encode_header_args.out = g_out + o;
-        QpackV.encode_header_args.cap = sizeof(g_out) - o;
-        QpackV.encode_header_args.name = FIELDS[i].name;
-        QpackV.encode_header_args.name_len = strlen(FIELDS[i].name);
-        QpackV.encode_header_args.value = FIELDS[i].value;
-        QpackV.encode_header_args.value_len = strlen(FIELDS[i].value);
-        Qpack.encode_header(qpack_work);
-        size_t h = QpackV.n;
+        size_t qpack_n = Qpack.encode_header(qpack_work, g_out + o, sizeof(g_out) - o, FIELDS[i].name,
+                                             strlen(FIELDS[i].name), FIELDS[i].value, strlen(FIELDS[i].value));
+        size_t h = qpack_n;
         TEST_ASSERT_TRUE(h > 0);
         o += h;
     }
@@ -327,14 +302,8 @@ void test_scratch_bound_is_respected(void)
     static const uint8_t B1[15] = {0x00, 0x00, 0x51, 0x0b, '/', 'i', 'n', 'd', 'e', 'x', '.', 'h', 't', 'm', 'l'};
     char tiny[4];
     g_sink.n = 0;
-    QpackV.decode_args.block = B1;
-    QpackV.decode_args.len = sizeof(B1);
-    QpackV.decode_args.scratch = tiny;
-    QpackV.decode_args.scratch_cap = sizeof(tiny);
-    QpackV.decode_args.emit = collect;
-    QpackV.decode_args.ctx = &g_sink;
-    Qpack.decode(qpack_work);
-    TEST_ASSERT_FALSE(QpackV.ok);
+    proto_bool qpack_ok = Qpack.decode(qpack_work, B1, sizeof(B1), tiny, sizeof(tiny), collect, &g_sink);
+    TEST_ASSERT_FALSE(qpack_ok);
 }
 
 // An emit callback that returns false stops the decode and is reported as a failure, so a caller
@@ -342,42 +311,18 @@ void test_scratch_bound_is_respected(void)
 void test_emit_refusal_aborts_the_decode(void)
 {
     static const uint8_t B1[15] = {0x00, 0x00, 0x51, 0x0b, '/', 'i', 'n', 'd', 'e', 'x', '.', 'h', 't', 'm', 'l'};
-    QpackV.decode_args.block = B1;
-    QpackV.decode_args.len = sizeof(B1);
-    QpackV.decode_args.scratch = g_scratch;
-    QpackV.decode_args.scratch_cap = sizeof(g_scratch);
-    QpackV.decode_args.emit = refuse;
-    QpackV.decode_args.ctx = NULL;
-    Qpack.decode(qpack_work);
-    TEST_ASSERT_FALSE(QpackV.ok);
+    proto_bool qpack_ok = Qpack.decode(qpack_work, B1, sizeof(B1), g_scratch, sizeof(g_scratch), refuse, NULL);
+    TEST_ASSERT_FALSE(qpack_ok);
 }
 
 // A destination that cannot hold the whole representation yields 0, so a caller never ships a field
 // line that stops in the middle of a string.
 void test_encoder_refuses_a_short_destination(void)
 {
-    QpackV.encode_header_args.out = g_out;
-    QpackV.encode_header_args.cap = 0;
-    QpackV.encode_header_args.name = ":method";
-    QpackV.encode_header_args.name_len = 7;
-    QpackV.encode_header_args.value = "GET";
-    QpackV.encode_header_args.value_len = 3;
-    Qpack.encode_header(qpack_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QpackV.n);
-    QpackV.encode_header_args.out = g_out;
-    QpackV.encode_header_args.cap = 1;
-    QpackV.encode_header_args.name = ":path";
-    QpackV.encode_header_args.name_len = 5;
-    QpackV.encode_header_args.value = "/index.html";
-    QpackV.encode_header_args.value_len = 11;
-    Qpack.encode_header(qpack_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QpackV.n);
-    QpackV.encode_header_args.out = g_out;
-    QpackV.encode_header_args.cap = 2;
-    QpackV.encode_header_args.name = "x-protocore-trace";
-    QpackV.encode_header_args.name_len = 17;
-    QpackV.encode_header_args.value = "abc123";
-    QpackV.encode_header_args.value_len = 6;
-    Qpack.encode_header(qpack_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QpackV.n);
+    size_t qpack_n = Qpack.encode_header(qpack_work, g_out, 0, ":method", 7, "GET", 3);
+    TEST_ASSERT_EQUAL_UINT(0u, qpack_n);
+    qpack_n = Qpack.encode_header(qpack_work, g_out, 1, ":path", 5, "/index.html", 11);
+    TEST_ASSERT_EQUAL_UINT(0u, qpack_n);
+    qpack_n = Qpack.encode_header(qpack_work, g_out, 2, "x-protocore-trace", 17, "abc123", 6);
+    TEST_ASSERT_EQUAL_UINT(0u, qpack_n);
 }
