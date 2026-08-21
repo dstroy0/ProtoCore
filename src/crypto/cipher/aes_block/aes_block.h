@@ -1,6 +1,15 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#ifndef PROTOCORE_AES_BLOCK_H
+#define PROTOCORE_AES_BLOCK_H
+
+#include "crypto/cipher/aes_sbox/aes_sbox.h"
+#include "mmgr/protomem/protomem.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+PROTOCORE_BEGIN_DECLS
+
 /**
  * @file aes_block.h
  * @brief Table-free software AES key schedule and single-block encrypt (FIPS 197).
@@ -15,21 +24,17 @@
  * in this header, where the per-block loops of those arms call them; ::AesBlock reaches the same key
  * expansion and the same block through the namespace.
  *
+ * The round-key schedule and the block are the CALLER's: both entries write into the buffers its args
+ * name and hold neither past the call. @c work arrives @c restrict and goes unread: nothing is carried
+ * from one call to the next, so this module states no borrow and neither takes those bytes, holds
+ * them, releases them, nor wipes them.
+ *
+ * The five functions above are the same key expansion and the same block plus the three one-liners
+ * they are built from, reached without the namespace, for a caller whose per-block loop inlines them.
+ *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
  */
-
-#ifndef PROTOCORE_AES_BLOCK_H
-#define PROTOCORE_AES_BLOCK_H
-
-#include "protocore_config.h" // the entry point: PROTOCORE_INLINE, and protocore_types.h for the widths
-
-#if PROTOCORE_ENABLE_AES_BLOCK
-
-#include "crypto/cipher/aes_sbox/aes_sbox.h" // PROTOCORE_AES_SBOX
-#include "mmgr/protomem/protomem.h"
-
-PROTOCORE_BEGIN_DECLS
 
 /** @brief GF(2^8) multiply-by-2 (xtime) for the AES MixColumns step. */
 PROTOCORE_INLINE uint8_t protocore_aes_xtime(uint8_t a)
@@ -167,96 +172,39 @@ PROTOCORE_INLINE void protocore_aes_encrypt_block(const uint32_t *rk, int nr, co
     mem.cpy(out, s, 16);
 }
 
-// This module carries nothing from one call to the next, so it states no borrow in protocore_config.h
-// and reads none of the bytes a caller passes in.
-
-/** @brief The key a schedule is expanded from, and where the round-key words land. */
+/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    const uint8_t *key; ///< 4 * @c nk key bytes
-    int nk;             ///< key words: 4 for AES-128, 8 for AES-256
-    uint32_t *rk;       ///< 4 * (@c nk + 7) round-key words
-} AesBlockKeyExpandArgs;
-
-/** @brief The schedule, the round count and the one block an encryption runs over. */
-typedef struct
-{
-    const uint32_t *rk; ///< the schedule @ref AesBlockNs::key_expand wrote
-    int nr;             ///< rounds: 10 for AES-128, 14 for AES-256
-    const uint8_t *in;  ///< 16 input bytes
-    uint8_t *out;       ///< 16 output bytes; may alias @c in
-} AesBlockEncryptBlockArgs;
+    proto_bool (*key_expand)(uint8_t *restrict, const uint8_t *, int, uint32_t *);
+    proto_bool (*encrypt_block)(uint8_t *restrict, const uint32_t *, int, const uint8_t *, uint8_t *);
+} AesBlockNs;
+PROTOCORE_NS_LAYOUT(AesBlockNs, key_expand, encrypt_block);
 
 /**
- * @brief AES key schedule and single-block encrypt (FIPS 197).
- *
- * A caller sets the members a call takes, invokes it through ::AesBlock with the bytes it runs out of,
- * and reads the outcome off the same handle. How those bytes are carved is this module's and is never
- * named here.
- *
- *   AesBlock.key_expand_args.key = key;
- *   AesBlock.key_expand_args.nk = 8;
- *   AesBlock.key_expand_args.rk = rk;
- *   AesBlock.key_expand(work);
- *   AesBlock.encrypt_block_args.rk = rk;
- *   AesBlock.encrypt_block_args.nr = 14;
- *   AesBlock.encrypt_block_args.in = counter;
- *   AesBlock.encrypt_block_args.out = ks;
- *   AesBlock.encrypt_block(work);
- *
- * @var AesBlockNs::key_expand_args     the key a schedule is expanded from, and where the words land
- * @var AesBlockNs::encrypt_block_args  the schedule, the round count and the one block
- * @var AesBlockNs::ok                  a call's true/false outcome
- * @var AesBlockNs::key_expand          expand a key into 4 * (nk + 7) round-key words
- * @var AesBlockNs::encrypt_block       encrypt one 16-byte block under that schedule
- *
- * @ref AesBlockNs::encrypt_block reads all 16 input bytes before it writes any, so
- * @c encrypt_block_args.out may equal @c encrypt_block_args.in.
- *
- * The round-key schedule and the block are the CALLER's: both entries write into the buffers its args
- * name and hold neither past the call. @c work arrives @c restrict and goes unread: nothing is carried
- * from one call to the next, so this module states no borrow and neither takes those bytes, holds
- * them, releases them, nor wipes them.
- *
- * The five functions above are the same key expansion and the same block plus the three one-liners
- * they are built from, reached without the namespace, for a caller whose per-block loop inlines them.
- *
- * No storage member and no context: a caller sets operands and reads @ref AesBlockNs::ok, and that is
- * all the surface there is.
+ * @brief Expand a key into 4 * (nk + 7) round-key words.
+ * @param work PROTOCORE_AES_BLOCK_BORROW bytes the caller took. Not held past the call.
+ * @param key 4 * nk key bytes
+ * @param nk key words: 4 for AES-128, 8 for AES-256
+ * @param rk 4 * (nk + 7) round-key words
+ * @return PROTO_TRUE on success.
  */
-typedef struct
-{
-    AesBlockKeyExpandArgs key_expand_args;
-    AesBlockEncryptBlockArgs encrypt_block_args;
-    proto_bool ok;
-} AesBlockVars;
+proto_bool protocore_aes_block_key_expand(uint8_t *restrict work, const uint8_t *key, int nk, uint32_t *rk);
+/**
+ * @brief Encrypt one 16-byte block under that schedule.
+ * @param work PROTOCORE_AES_BLOCK_BORROW bytes the caller took. Not held past the call.
+ * @param rk the schedule AesBlockNs::key_expand wrote
+ * @param nr rounds: 10 for AES-128, 14 for AES-256
+ * @param in 16 input bytes
+ * @param out 16 output bytes; may alias in
+ * @return PROTO_TRUE on success.
+ */
+proto_bool protocore_aes_block_encrypt_block(uint8_t *restrict work, const uint32_t *rk, int nr, const uint8_t *in,
+                                             uint8_t *out);
 
-/** @brief The operands and the outcome. */
-extern AesBlockVars AesBlockV;
-
-/** @brief The entries. */
-typedef struct
-{
-    void (*const key_expand)(uint8_t *restrict work);
-    void (*const encrypt_block)(uint8_t *restrict work);
-} AesBlockNs;
-
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in AesBlockV or a region of the borrow at a fixed offset.
-void protocore_aes_block_key_expand(uint8_t *restrict work);
-void protocore_aes_block_encrypt_block(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `AesBlock.key_expand(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const AesBlockNs AesBlock __attribute__((unused)) = {
-    .key_expand = protocore_aes_block_key_expand,
-    .encrypt_block = protocore_aes_block_encrypt_block,
-};
+/** @brief Module namespace. */
+PROTOCORE_NS AesBlockNs AesBlock PROTOCORE_UNUSED = {.key_expand = protocore_aes_block_key_expand,
+                                                     .encrypt_block = protocore_aes_block_encrypt_block};
 
 PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_AES_BLOCK
 
 #endif // PROTOCORE_AES_BLOCK_H

@@ -3547,6 +3547,12 @@ def gen_header_ns(spec, original):
             "#include %s // the complete type a public struct below holds by value\n" % h
             for h in spec.get("held_includes", [])
         )
+        # The rest of what the header included. These used to sit BELOW the enable gate, because
+        # nothing outside the capability should be compiled - and the converted header has no
+        # gate, so there is no below to move them to. Dropping them took aes_blocks inline round
+        # with it: PROTOCORE_AES_SBOX and mem, undeclared, in a header that had just stopped
+        # including what defines them.
+        + "".join("#include %s\n" % h for h in spec.get("moved_includes", []) if h not in spec.get("held_includes", []))
         + "\n"
         + ("#if %s\n\n" % gate if gate else "")
         + "PROTOCORE_BEGIN_DECLS\n\n"
@@ -3632,13 +3638,26 @@ def undecodable_operands(spec):
     mask = code_mask(text)
     results = {e.get("result") for e in spec["entries"] if e.get("result")}
     entries = {e["entry"] for e in spec["entries"]}
+    # Where each entry's body is. An operand is decoded by substituting inside the body of the entry
+    # it belongs to, so `Smb2V.sign_args.msg` read from a static helper - or from a DIFFERENT
+    # entry - is not decoded by anything, and the module compiles with those names undeclared.
+    # smb2 is the worked example: five operands read outside their own entry's body.
+    spans = {}
+    for e in spec["entries"]:
+        span = body_of(text, e["flat"])
+        if span:
+            spans[e["entry"]] = (span[1], span[2])
+
     out = []
     for m in re.finditer(r"\b%s\.(\w+)" % re.escape(objv), text):
         if not mask[m.start()]:
             continue
         member = m.group(1)
-        if member.endswith("_args") and member[: -len("_args")] in entries:
-            continue
+        if member.endswith("_args"):
+            owner = member[: -len("_args")]
+            here = spans.get(owner)
+            if owner in entries and here and here[0] <= m.start() <= here[1]:
+                continue
         if member in results:
             continue
         out.append((text[: m.start()].count("\n") + 1, member))
@@ -3965,7 +3984,7 @@ def unwork_source(spec):
         res = e.get("result")
         if res and objv:
             assigns = list(
-                re.finditer(r"[ \t]*%s\.%s\s*=\s*([^;]+);[ \t]*\n?" % (re.escape(objv), re.escape(res)), body)
+                re.finditer(r"[ \t]*%s\.%s\b\s*=(?!=)\s*([^;]+);[ \t]*\n?" % (re.escape(objv), re.escape(res)), body)
             )
             tail_only = len(assigns) == 1 and not body[assigns[0].end() :].strip()
             if tail_only:
@@ -3976,7 +3995,7 @@ def unwork_source(spec):
                 body = re.sub(r"\breturn\s*;", "return %s;" % res, body)
                 decl = "    %s %s = %s;\n" % (e["ret"], res, "PROTO_FALSE" if e["ret"] == "proto_bool" else "0")
                 # The first write is the initialiser, so it does not need to be a statement too.
-                first = re.search(r"[ \t]*%s\s*=\s*([^;]+);[ \t]*\n" % re.escape(res), body)
+                first = re.search(r"[ \t]*\b%s\b\s*=(?!=)\s*([^;]+);[ \t]*\n" % re.escape(res), body)
                 if first and not body[: first.start()].strip():
                     decl = "    %s %s = %s;\n" % (e["ret"], res, first.group(1).strip())
                     body = body[: first.start()] + body[first.end() :]
@@ -3985,7 +4004,7 @@ def unwork_source(spec):
                 body = "\n" + decl + body.lstrip("\n")
                 # `ok = X; return ok;` is `return X;`.
                 body = re.sub(
-                    r"[ \t]*%s\s*=\s*([^;]+);\s*\n([ \t]*)return %s;" % (re.escape(res), re.escape(res)),
+                    r"[ \t]*\b%s\b\s*=(?!=)\s*([^;]+);\s*\n([ \t]*)return %s;" % (re.escape(res), re.escape(res)),
                     r"\2return \1;",
                     body,
                 )
@@ -3993,7 +4012,7 @@ def unwork_source(spec):
                 # initialiser and the declaration is dead. No flow analysis in that - there is no
                 # assignment left to reason about.
                 rest = body.replace(decl, "", 1)
-                if not re.search(r"\b%s\s*=[^=]" % re.escape(res), rest):
+                if not re.search(r"\b%s\b\s*=[^=]" % re.escape(res), rest):
                     init_val = decl.split("=", 1)[1].strip().rstrip(";").strip()
                     body = re.sub(r"\breturn %s;" % re.escape(res), "return %s;" % init_val, rest)
 
