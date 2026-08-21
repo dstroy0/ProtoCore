@@ -9,9 +9,7 @@
  * credentials persist through hal/nvs.h.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_PROVISIONING
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h" // str: the bounded-run walks
@@ -30,8 +28,6 @@
 #include "network_drivers/transport/udp/server/server.h" // UdpListener: the catch-all DNS binds a port
 #include "protocore.h"
 #include "test/core_setup/hal/nvs.h" // the credentials outlive the reboot that applies them
-
-PROTOCORE_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 
@@ -55,24 +51,15 @@ uint8_t *protocore_provisioning_service_span(void)
     return s_own.span;
 }
 
-void protocore_prov_form_field(uint8_t *restrict work);
-
-void protocore_prov_form_field(uint8_t *restrict work)
+proto_bool protocore_prov_form_field(uint8_t *restrict work, const char *body, const char *key, char *out, size_t cap)
 {
-    (void)work;
-    const char *body = ProvV.form_field_args.body;
-    const char *key = ProvV.form_field_args.key;
-    char *out = ProvV.form_field_args.out;
-    size_t cap = ProvV.form_field_args.cap;
-
     if (out && cap)
     {
         out[0] = '\0';
     }
     if (!body || !key || !out || cap == 0)
     {
-        ProvV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
 
     size_t blen = 0;
@@ -93,8 +80,7 @@ void protocore_prov_form_field(uint8_t *restrict work)
     }
     if (!val)
     {
-        ProvV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
 
     size_t o = 0;
@@ -133,7 +119,7 @@ void protocore_prov_form_field(uint8_t *restrict work)
         }
     }
     out[o] = '\0';
-    ProvV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -243,13 +229,9 @@ static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct protocor
     UdpListener.reply(protocore_udp_listener_span());
 }
 
-void protocore_prov_load(uint8_t *restrict work)
+proto_bool protocore_prov_load(uint8_t *restrict work, char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
 {
     (void)work;
-    char *ssid = ProvV.load_args.ssid;
-    size_t ssid_cap = ProvV.load_args.ssid_cap;
-    char *psk = ProvV.load_args.psk;
-    size_t psk_cap = ProvV.load_args.psk_cap;
 
     if (ssid && ssid_cap)
     {
@@ -262,15 +244,14 @@ void protocore_prov_load(uint8_t *restrict work)
     if (!ssid || ssid_cap == 0 ||
         protocore_nvs_get_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_SSID, ssid, ssid_cap) == 0)
     {
-        ProvV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     if (psk && psk_cap)
     {
         (void)protocore_nvs_get_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_PSK, psk,
                                     psk_cap); // an open AP has none
     }
-    ProvV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
 void protocore_prov_clear(uint8_t *restrict work)
@@ -294,17 +275,9 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
 
     char ssid[33];
     char psk[64];
-    ProvV.form_field_args.body = (const char *)req->body;
-    ProvV.form_field_args.key = PROTOCORE_PROV_KEY_SSID;
-    ProvV.form_field_args.out = ssid;
-    ProvV.form_field_args.cap = sizeof(ssid);
-    protocore_prov_form_field(work);
-    proto_bool have_ssid = ProvV.ok && ssid[0] != '\0';
-    ProvV.form_field_args.body = (const char *)req->body;
-    ProvV.form_field_args.key = PROTOCORE_PROV_KEY_PSK;
-    ProvV.form_field_args.out = psk;
-    ProvV.form_field_args.cap = sizeof(psk);
-    protocore_prov_form_field(work);
+    proto_bool prov_ok = Prov.form_field(work, (const char *)req->body, PROTOCORE_PROV_KEY_SSID, ssid, sizeof(ssid));
+    proto_bool have_ssid = prov_ok && ssid[0] != '\0';
+    Prov.form_field(work, (const char *)req->body, PROTOCORE_PROV_KEY_PSK, psk, sizeof(psk));
     if (!have_ssid)
     {
         send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "SSID required");
@@ -317,9 +290,8 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
     protocore_platform_restart();
 }
 
-void protocore_prov_begin(uint8_t *restrict work)
+void protocore_prov_begin(uint8_t *restrict work, const char *ap_ssid)
 {
-    const char *ap_ssid = ProvV.begin_args.ap_ssid;
 
     PhysicalV.wifi.ssid = ap_ssid;
     PhysicalV.wifi.password = NULL;
@@ -341,10 +313,3 @@ void protocore_prov_begin(uint8_t *restrict work)
     on_http("/save", HTTP_POST, prov_save_handler);
     on_http("/*", HTTP_GET, prov_form_handler); // any other path -> the form
 }
-
-/** @brief The operands and the outcome. */
-ProvVars ProvV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_PROVISIONING

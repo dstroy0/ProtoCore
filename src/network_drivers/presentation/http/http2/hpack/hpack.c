@@ -297,13 +297,8 @@ static proto_bool decode_literal(uint8_t *restrict work, HpackDynTable *t, const
 {
     size_t c = 0;
     uint32_t name_idx = 0;
-    HpackPrimV.decode_int_args.in = block + *pos;
-    HpackPrimV.decode_int_args.len = len - *pos;
-    HpackPrimV.decode_int_args.prefix_bits = prefix_bits;
-    HpackPrimV.decode_int_args.consumed = &c;
-    HpackPrimV.decode_int_args.value = &name_idx;
-    HpackPrim.decode_int(work);
-    if (!HpackPrimV.ok)
+    proto_bool hpack_prim_ok = HpackPrim.decode_int(work, block + *pos, len - *pos, prefix_bits, &c, &name_idx);
+    if (!hpack_prim_ok)
     {
         return PROTO_FALSE;
     }
@@ -311,14 +306,8 @@ static proto_bool decode_literal(uint8_t *restrict work, HpackDynTable *t, const
     size_t name_len = 0;
     if (name_idx == 0)
     {
-        HpackPrimV.decode_str_args.block = block;
-        HpackPrimV.decode_str_args.len = len;
-        HpackPrimV.decode_str_args.pos = pos;
-        HpackPrimV.decode_str_args.out = scratch;
-        HpackPrimV.decode_str_args.cap = cap;
-        HpackPrimV.decode_str_args.out_len = &name_len;
-        HpackPrim.decode_str(work);
-        if (!HpackPrimV.ok)
+        proto_bool hpack_prim_ok = HpackPrim.decode_str(work, block, len, pos, scratch, cap, &name_len);
+        if (!hpack_prim_ok)
         {
             return PROTO_FALSE;
         }
@@ -328,14 +317,9 @@ static proto_bool decode_literal(uint8_t *restrict work, HpackDynTable *t, const
         return PROTO_FALSE;
     }
     size_t val_len = 0;
-    HpackPrimV.decode_str_args.block = block;
-    HpackPrimV.decode_str_args.len = len;
-    HpackPrimV.decode_str_args.pos = pos;
-    HpackPrimV.decode_str_args.out = scratch + name_len;
-    HpackPrimV.decode_str_args.cap = cap - name_len;
-    HpackPrimV.decode_str_args.out_len = &val_len;
-    HpackPrim.decode_str(work);
-    if (!HpackPrimV.ok)
+    proto_bool hpack_prim_ok2 =
+        HpackPrim.decode_str(work, block, len, pos, scratch + name_len, cap - name_len, &val_len);
+    if (!hpack_prim_ok2)
     {
         return PROTO_FALSE;
     }
@@ -369,13 +353,8 @@ static proto_bool hpack_decode_run(uint8_t *restrict work, HpackDynTable *t, con
         { // 6.1 Indexed Header Field
             size_t c = 0;
             uint32_t idx = 0;
-            HpackPrimV.decode_int_args.in = block + pos;
-            HpackPrimV.decode_int_args.len = len - pos;
-            HpackPrimV.decode_int_args.prefix_bits = 7;
-            HpackPrimV.decode_int_args.consumed = &c;
-            HpackPrimV.decode_int_args.value = &idx;
-            HpackPrim.decode_int(work);
-            if (!HpackPrimV.ok || idx == 0)
+            proto_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 7, &c, &idx);
+            if (!hpack_prim_ok || idx == 0)
             {
                 return PROTO_FALSE;
             }
@@ -396,13 +375,8 @@ static proto_bool hpack_decode_run(uint8_t *restrict work, HpackDynTable *t, con
         { // 6.3 Dynamic table size update (prefix 5)
             size_t c = 0;
             uint32_t nm = 0;
-            HpackPrimV.decode_int_args.in = block + pos;
-            HpackPrimV.decode_int_args.len = len - pos;
-            HpackPrimV.decode_int_args.prefix_bits = 5;
-            HpackPrimV.decode_int_args.consumed = &c;
-            HpackPrimV.decode_int_args.value = &nm;
-            HpackPrim.decode_int(work);
-            if (!HpackPrimV.ok)
+            proto_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 5, &c, &nm);
+            if (!hpack_prim_ok)
             {
                 return PROTO_FALSE;
             }
@@ -450,46 +424,28 @@ static size_t hpack_encode_header_run(uint8_t *restrict work, uint8_t *out, size
     }
     if (full_idx)
     {
-        HpackPrimV.encode_int_args.out = out;
-        HpackPrimV.encode_int_args.cap = cap;
-        HpackPrimV.encode_int_args.prefix_bits = 7;
-        HpackPrimV.encode_int_args.flags = 0x80;
-        HpackPrimV.encode_int_args.value = (uint32_t)full_idx;
-        HpackPrim.encode_int(work);
-        return HpackPrimV.n;
+        size_t hpack_prim_n = HpackPrim.encode_int(work, out, cap, 7, 0x80, (uint32_t)full_idx);
+        return hpack_prim_n;
     }
     // Literal without indexing (top nibble 0000), name prefix 4.
-    HpackPrimV.encode_int_args.out = out;
-    HpackPrimV.encode_int_args.cap = cap;
-    HpackPrimV.encode_int_args.prefix_bits = 4;
-    HpackPrimV.encode_int_args.flags = 0x00;
-    HpackPrimV.encode_int_args.value = (uint32_t)name_idx;
-    HpackPrim.encode_int(work);
-    size_t o = HpackPrimV.n;
+    size_t hpack_prim_n2 = HpackPrim.encode_int(work, out, cap, 4, 0x00, (uint32_t)name_idx);
+    size_t o = hpack_prim_n2;
     if (!o)
     {
         return 0;
     }
     if (name_idx == 0)
     {
-        HpackPrimV.encode_str_args.out = out + o;
-        HpackPrimV.encode_str_args.cap = cap - o;
-        HpackPrimV.encode_str_args.s = name;
-        HpackPrimV.encode_str_args.n = name_len;
-        HpackPrim.encode_str(work);
-        size_t ns = HpackPrimV.n;
+        size_t hpack_prim_n = HpackPrim.encode_str(work, out + o, cap - o, name, name_len);
+        size_t ns = hpack_prim_n;
         if (!ns)
         {
             return 0;
         }
         o += ns;
     }
-    HpackPrimV.encode_str_args.out = out + o;
-    HpackPrimV.encode_str_args.cap = cap - o;
-    HpackPrimV.encode_str_args.s = value;
-    HpackPrimV.encode_str_args.n = value_len;
-    HpackPrim.encode_str(work);
-    size_t vs = HpackPrimV.n;
+    size_t hpack_prim_n3 = HpackPrim.encode_str(work, out + o, cap - o, value, value_len);
+    size_t vs = hpack_prim_n3;
     if (!vs)
     {
         return 0;

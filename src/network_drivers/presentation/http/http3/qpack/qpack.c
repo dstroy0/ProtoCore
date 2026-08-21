@@ -162,34 +162,20 @@ size_t protocore_qpack_encode_header(uint8_t *restrict work, uint8_t *out, size_
     }
     if (full_idx >= 0) // Indexed Field Line, static: 1 T=1 i(6)
     {
-        HpackPrimV.encode_int_args.out = out;
-        HpackPrimV.encode_int_args.cap = cap;
-        HpackPrimV.encode_int_args.prefix_bits = 6;
-        HpackPrimV.encode_int_args.flags = 0xC0;
-        HpackPrimV.encode_int_args.value = (uint32_t)full_idx;
-        HpackPrim.encode_int(work);
-        return HpackPrimV.n;
+        size_t hpack_prim_n = HpackPrim.encode_int(work, out, cap, 6, 0xC0, (uint32_t)full_idx);
+        return hpack_prim_n;
     }
 
     if (name_idx >= 0)
     { // Literal Field Line with Name Reference, static: 01 N=0 T=1 i(4)
-        HpackPrimV.encode_int_args.out = out;
-        HpackPrimV.encode_int_args.cap = cap;
-        HpackPrimV.encode_int_args.prefix_bits = 4;
-        HpackPrimV.encode_int_args.flags = 0x50;
-        HpackPrimV.encode_int_args.value = (uint32_t)name_idx;
-        HpackPrim.encode_int(work);
-        size_t o = HpackPrimV.n;
+        size_t hpack_prim_n = HpackPrim.encode_int(work, out, cap, 4, 0x50, (uint32_t)name_idx);
+        size_t o = hpack_prim_n;
         if (!o)
         {
             return 0;
         }
-        HpackPrimV.encode_str_args.out = out + o;
-        HpackPrimV.encode_str_args.cap = cap - o;
-        HpackPrimV.encode_str_args.s = value;
-        HpackPrimV.encode_str_args.n = value_len;
-        HpackPrim.encode_str(work);
-        size_t vs = HpackPrimV.n;
+        size_t hpack_prim_n2 = HpackPrim.encode_str(work, out + o, cap - o, value, value_len);
+        size_t vs = hpack_prim_n2;
         if (!vs)
         {
             return 0;
@@ -198,31 +184,21 @@ size_t protocore_qpack_encode_header(uint8_t *restrict work, uint8_t *out, size_
     }
 
     // Literal Field Line with Literal Name: 001 N=0 H NameLen(3), name string, value string.
-    HpackPrimV.huff_len_args.s = name;
-    HpackPrimV.huff_len_args.n = name_len;
-    HpackPrim.huff_len(work);
-    size_t hl = HpackPrimV.n;
+    size_t hpack_prim_n3 = HpackPrim.huff_len(work, name, name_len);
+    size_t hl = hpack_prim_n3;
     proto_bool huff = hl < name_len;
     size_t nbytes = huff ? hl : name_len;
-    HpackPrimV.encode_int_args.out = out;
-    HpackPrimV.encode_int_args.cap = cap;
-    HpackPrimV.encode_int_args.prefix_bits = 3;
-    HpackPrimV.encode_int_args.flags = (uint8_t)(0x20 | (huff ? 0x08 : 0x00));
-    HpackPrimV.encode_int_args.value = (uint32_t)nbytes;
-    HpackPrim.encode_int(work);
-    size_t o = HpackPrimV.n;
+    size_t hpack_prim_n4 =
+        HpackPrim.encode_int(work, out, cap, 3, (uint8_t)(0x20 | (huff ? 0x08 : 0x00)), (uint32_t)nbytes);
+    size_t o = hpack_prim_n4;
     if (!o)
     {
         return 0;
     }
     if (huff)
     {
-        HpackPrimV.huff_encode_args.out = out + o;
-        HpackPrimV.huff_encode_args.cap = cap - o;
-        HpackPrimV.huff_encode_args.s = name;
-        HpackPrimV.huff_encode_args.n = name_len;
-        HpackPrim.huff_encode(work);
-        size_t body = HpackPrimV.n;
+        size_t hpack_prim_n = HpackPrim.huff_encode(work, out + o, cap - o, name, name_len);
+        size_t body = hpack_prim_n;
         if (body != hl)
         {
             return 0;
@@ -238,12 +214,8 @@ size_t protocore_qpack_encode_header(uint8_t *restrict work, uint8_t *out, size_
         mem.cpy(out + o, name, name_len);
         o += name_len;
     }
-    HpackPrimV.encode_str_args.out = out + o;
-    HpackPrimV.encode_str_args.cap = cap - o;
-    HpackPrimV.encode_str_args.s = value;
-    HpackPrimV.encode_str_args.n = value_len;
-    HpackPrim.encode_str(work);
-    size_t vs = HpackPrimV.n;
+    size_t hpack_prim_n5 = HpackPrim.encode_str(work, out + o, cap - o, value, value_len);
+    size_t vs = hpack_prim_n5;
     if (!vs)
     {
         return 0;
@@ -258,13 +230,8 @@ proto_bool protocore_qpack_decode(uint8_t *restrict work, const uint8_t *block, 
     // Encoded Field Section Prefix (RFC 9204 sec 4.5.1): Required Insert Count, then S + Delta Base.
     size_t c = 0;
     uint32_t ric = 0;
-    HpackPrimV.decode_int_args.in = block + pos;
-    HpackPrimV.decode_int_args.len = len - pos;
-    HpackPrimV.decode_int_args.prefix_bits = 8;
-    HpackPrimV.decode_int_args.consumed = &c;
-    HpackPrimV.decode_int_args.value = &ric;
-    HpackPrim.decode_int(work);
-    if (!HpackPrimV.ok)
+    proto_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 8, &c, &ric);
+    if (!hpack_prim_ok)
     {
         return PROTO_FALSE;
     }
@@ -274,13 +241,8 @@ proto_bool protocore_qpack_decode(uint8_t *restrict work, const uint8_t *block, 
         return PROTO_FALSE;
     }
     uint32_t base = 0;
-    HpackPrimV.decode_int_args.in = block + pos;
-    HpackPrimV.decode_int_args.len = len - pos;
-    HpackPrimV.decode_int_args.prefix_bits = 7;
-    HpackPrimV.decode_int_args.consumed = &c;
-    HpackPrimV.decode_int_args.value = &base;
-    HpackPrim.decode_int(work);
-    if (!HpackPrimV.ok) // S bit + Delta Base; ignored when RIC = 0
+    proto_bool hpack_prim_ok2 = HpackPrim.decode_int(work, block + pos, len - pos, 7, &c, &base);
+    if (!hpack_prim_ok2) // S bit + Delta Base; ignored when RIC = 0
     {
         return PROTO_FALSE;
     }
@@ -296,13 +258,8 @@ proto_bool protocore_qpack_decode(uint8_t *restrict work, const uint8_t *block, 
                 return PROTO_FALSE;
             }
             uint32_t idx = 0;
-            HpackPrimV.decode_int_args.in = block + pos;
-            HpackPrimV.decode_int_args.len = len - pos;
-            HpackPrimV.decode_int_args.prefix_bits = 6;
-            HpackPrimV.decode_int_args.consumed = &c;
-            HpackPrimV.decode_int_args.value = &idx;
-            HpackPrim.decode_int(work);
-            if (!HpackPrimV.ok || idx >= 99)
+            proto_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 6, &c, &idx);
+            if (!hpack_prim_ok || idx >= 99)
             {
                 return PROTO_FALSE;
             }
@@ -318,13 +275,8 @@ proto_bool protocore_qpack_decode(uint8_t *restrict work, const uint8_t *block, 
         { // Literal Field Line with Name Reference (sec 4.5.4): 01 N T i(4)
             proto_bool is_static = (b & 0x10) != 0;
             uint32_t idx = 0;
-            HpackPrimV.decode_int_args.in = block + pos;
-            HpackPrimV.decode_int_args.len = len - pos;
-            HpackPrimV.decode_int_args.prefix_bits = 4;
-            HpackPrimV.decode_int_args.consumed = &c;
-            HpackPrimV.decode_int_args.value = &idx;
-            HpackPrim.decode_int(work);
-            if (!HpackPrimV.ok)
+            proto_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 4, &c, &idx);
+            if (!hpack_prim_ok)
             {
                 return PROTO_FALSE;
             }
@@ -341,14 +293,9 @@ proto_bool protocore_qpack_decode(uint8_t *restrict work, const uint8_t *block, 
             }
             mem.cpy(scratch, nm, nlen);
             size_t vlen = 0;
-            HpackPrimV.decode_str_args.block = block;
-            HpackPrimV.decode_str_args.len = len;
-            HpackPrimV.decode_str_args.pos = &pos;
-            HpackPrimV.decode_str_args.out = scratch + nlen;
-            HpackPrimV.decode_str_args.cap = scratch_cap - nlen;
-            HpackPrimV.decode_str_args.out_len = &vlen;
-            HpackPrim.decode_str(work);
-            if (!HpackPrimV.ok)
+            proto_bool hpack_prim_ok2 =
+                HpackPrim.decode_str(work, block, len, &pos, scratch + nlen, scratch_cap - nlen, &vlen);
+            if (!hpack_prim_ok2)
             {
                 return PROTO_FALSE;
             }
@@ -361,13 +308,8 @@ proto_bool protocore_qpack_decode(uint8_t *restrict work, const uint8_t *block, 
         { // Literal Field Line with Literal Name (sec 4.5.6): 001 N H NameLen(3)
             proto_bool huff = (b & 0x08) != 0;
             uint32_t nlen32 = 0;
-            HpackPrimV.decode_int_args.in = block + pos;
-            HpackPrimV.decode_int_args.len = len - pos;
-            HpackPrimV.decode_int_args.prefix_bits = 3;
-            HpackPrimV.decode_int_args.consumed = &c;
-            HpackPrimV.decode_int_args.value = &nlen32;
-            HpackPrim.decode_int(work);
-            if (!HpackPrimV.ok)
+            proto_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 3, &c, &nlen32);
+            if (!hpack_prim_ok)
             {
                 return PROTO_FALSE;
             }
@@ -379,13 +321,9 @@ proto_bool protocore_qpack_decode(uint8_t *restrict work, const uint8_t *block, 
             size_t nlen = 0;
             if (huff)
             {
-                HpackPrimV.huff_decode_args.in = block + pos;
-                HpackPrimV.huff_decode_args.n = nlen32;
-                HpackPrimV.huff_decode_args.out = scratch;
-                HpackPrimV.huff_decode_args.cap = scratch_cap;
-                HpackPrimV.huff_decode_args.out_len = &nlen;
-                HpackPrim.huff_decode(work);
-                if (!HpackPrimV.ok)
+                proto_bool hpack_prim_ok =
+                    HpackPrim.huff_decode(work, block + pos, nlen32, scratch, scratch_cap, &nlen);
+                if (!hpack_prim_ok)
                 {
                     return PROTO_FALSE;
                 }
@@ -401,14 +339,9 @@ proto_bool protocore_qpack_decode(uint8_t *restrict work, const uint8_t *block, 
             }
             pos += nlen32;
             size_t vlen = 0;
-            HpackPrimV.decode_str_args.block = block;
-            HpackPrimV.decode_str_args.len = len;
-            HpackPrimV.decode_str_args.pos = &pos;
-            HpackPrimV.decode_str_args.out = scratch + nlen;
-            HpackPrimV.decode_str_args.cap = scratch_cap - nlen;
-            HpackPrimV.decode_str_args.out_len = &vlen;
-            HpackPrim.decode_str(work);
-            if (!HpackPrimV.ok)
+            proto_bool hpack_prim_ok2 =
+                HpackPrim.decode_str(work, block, len, &pos, scratch + nlen, scratch_cap - nlen, &vlen);
+            if (!hpack_prim_ok2)
             {
                 return PROTO_FALSE;
             }
