@@ -1,6 +1,13 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#ifndef PROTOCORE_SIGFOX_H
+#define PROTOCORE_SIGFOX_H
+
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+PROTOCORE_BEGIN_DECLS
+
 /**
  * @file sigfox.h
  * @brief Sigfox modem AT-command codec (PROTOCORE_ENABLE_SIGFOX) - Wisol / Murata over UART.
@@ -13,22 +20,17 @@
  * you carry the bytes over your UART - so it is fully host-testable. This is uplink-only
  * (the common Sigfox use); a device sends readings up, it is not addressed downlink.
  *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
+ *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
  */
 
-#ifndef PROTOCORE_SIGFOX_H
-#define PROTOCORE_SIGFOX_H
-
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths
-
-#if PROTOCORE_ENABLE_SIGFOX
-
-PROTOCORE_BEGIN_DECLS
-
-// This module holds nothing between calls, so it carves no borrow and states none. An entry
-// takes one all the same, and never reads it, so every namespace in the tree is invoked the
-// same way.
+// PROTOCORE_SIGFOX_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. Its size and its offset are each a static_assert, so a feature
+// combination that does not fit fails to compile rather than overrunning at run time.
 
 /** @brief Classification of a Sigfox modem response line. */
 typedef enum PROTO_ENUM_PACKED
@@ -38,82 +40,38 @@ typedef enum PROTO_ENUM_PACKED
     SIGFOX_ERROR = 2,   ///< the modem reported an error
 } protocore_sigfox_result;
 
-/** @brief What build_uplink takes: payload, len, out, cap. */
+/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    const uint8_t *payload;
-    uint8_t len;
-    char *out;
-    uint16_t cap;
-} SigfoxBuildUplinkArgs;
-
-/** @brief What parse_response takes: buf, len. */
-typedef struct
-{
-    const char *buf;
-    uint16_t len;
-} SigfoxParseResponseArgs;
+    uint16_t (*build_uplink)(uint8_t *restrict, const uint8_t *, uint8_t, char *, uint16_t);
+    protocore_sigfox_result (*parse_response)(uint8_t *restrict, const char *, uint16_t);
+} SigfoxNs;
+PROTOCORE_NS_LAYOUT(SigfoxNs, build_uplink, parse_response);
 
 /**
- * @brief Sigfox modem AT-command codec (PROTOCORE_ENABLE_SIGFOX) - Wisol / Murata over UART.
- *
- * A caller sets the members a call takes, invokes it through ::Sigfox with the bytes it runs
- * out of, and reads the outcome off the same handle.
- *
- *   Sigfox.build_uplink_args.payload = ...;
- *   Sigfox.build_uplink_args.len = ...;
- *   Sigfox.build_uplink_args.out = ...;
- *   Sigfox.build_uplink_args.cap = ...;
- *   Sigfox.build_uplink(work);
- *   // Sigfox.value is what the call reports
- *
- * @var SigfoxNs::build_uplink_args  what build_uplink takes: payload, len, out, cap
- * @var SigfoxNs::parse_response_args  what parse_response takes: buf, len
- * @var SigfoxNs::ok  a call's true/false outcome
- * @var SigfoxNs::value  the command length (excluding the NUL), or 0 if len exceeds ...
- * @var SigfoxNs::status  SIGFOX_OK, SIGFOX_ERROR, or SIGFOX_PENDING if neither is present yet
- * @var SigfoxNs::build_uplink  format an `AT$SF=<hex>\r\n` uplink command for payload into out (a ...
- * @var SigfoxNs::parse_response  classify a modem reply (scans buf for "OK" / "ERROR")
- *
- * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
- * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
- * a caller drives every namespace the same way.
+ * @brief Format an `AT$SF=<hex>\r\n` uplink command for payload into out (a .
+ * @param work PROTOCORE_SIGFOX_BORROW bytes the caller took. Not held past the call.
+ * @param payload Payload
+ * @param len Len
+ * @param out Out
+ * @param cap Cap
+ * @return The uint16_t.
  */
-typedef struct
-{
-    SigfoxBuildUplinkArgs build_uplink_args;
-    SigfoxParseResponseArgs parse_response_args;
-    proto_bool ok;
-    uint16_t value;
-    protocore_sigfox_result status;
-} SigfoxVars;
+uint16_t protocore_sigfox_build_uplink(uint8_t *restrict work, const uint8_t *payload, uint8_t len, char *out,
+                                       uint16_t cap);
+/**
+ * @brief Classify a modem reply (scans buf for "OK" / "ERROR").
+ * @param work PROTOCORE_SIGFOX_BORROW bytes the caller took. Not held past the call.
+ * @param buf Buf
+ * @param len Len
+ * @return The protocore_sigfox_result.
+ */
+protocore_sigfox_result protocore_sigfox_parse_response(uint8_t *restrict work, const char *buf, uint16_t len);
 
-/** @brief The operands and the outcome. */
-extern SigfoxVars SigfoxV;
-
-/** @brief The entries. */
-typedef struct
-{
-    void (*const build_uplink)(uint8_t *restrict work);
-    void (*const parse_response)(uint8_t *restrict work);
-} SigfoxNs;
-
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in SigfoxV or a region of the borrow at a fixed offset.
-void protocore_sigfox_build_uplink(uint8_t *restrict work);
-void protocore_sigfox_parse_response(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Sigfox.build_uplink(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const SigfoxNs Sigfox __attribute__((unused)) = {
-    .build_uplink = protocore_sigfox_build_uplink,
-    .parse_response = protocore_sigfox_parse_response,
-};
+/** @brief Module namespace. */
+PROTOCORE_NS SigfoxNs Sigfox PROTOCORE_UNUSED = {.build_uplink = protocore_sigfox_build_uplink,
+                                                 .parse_response = protocore_sigfox_parse_response};
 
 PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_SIGFOX
 
 #endif // PROTOCORE_SIGFOX_H

@@ -790,18 +790,12 @@ void test_inbound_sa_carries_its_replay_window(void)
     IpsecSaEntry *sa = IpsecDbV.sa;
     TEST_ASSERT_NOT_NULL(sa);
 
-    EspV.replay_check_args.r = &sa->replay;
-    EspV.replay_check_args.seq = 1u;
-    Esp.replay_check(esp_work);
-    TEST_ASSERT_TRUE(EspV.ok);
-    EspV.replay_check_args.r = &sa->replay;
-    EspV.replay_check_args.seq = 1u;
-    Esp.replay_check(esp_work);
-    TEST_ASSERT_FALSE(EspV.ok);
-    EspV.replay_check_args.r = &sa->replay;
-    EspV.replay_check_args.seq = 2u;
-    Esp.replay_check(esp_work);
-    TEST_ASSERT_TRUE(EspV.ok);
+    proto_bool esp_ok = Esp.replay_check(esp_work, &sa->replay, 1u);
+    TEST_ASSERT_TRUE(esp_ok);
+    esp_ok = Esp.replay_check(esp_work, &sa->replay, 1u);
+    TEST_ASSERT_FALSE(esp_ok);
+    esp_ok = Esp.replay_check(esp_work, &sa->replay, 2u);
+    TEST_ASSERT_TRUE(esp_ok);
 
     // A second inbound SA's window is independent of the first's.
     IpsecDbV.protocore_ipsec_sad_add_args.sad = &sad;
@@ -814,10 +808,8 @@ void test_inbound_sa_carries_its_replay_window(void)
     IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
     IpsecSaEntry *other = IpsecDbV.sa;
     TEST_ASSERT_NOT_NULL(other);
-    EspV.replay_check_args.r = &other->replay;
-    EspV.replay_check_args.seq = 1u;
-    Esp.replay_check(esp_work);
-    TEST_ASSERT_TRUE(EspV.ok);
+    esp_ok = Esp.replay_check(esp_work, &other->replay, 1u);
+    TEST_ASSERT_TRUE(esp_ok);
 }
 
 // Null arguments are reported rather than followed.

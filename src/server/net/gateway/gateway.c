@@ -11,17 +11,13 @@
  * Zero heap.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_GATEWAY
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
 #include "server/net/gateway/gateway.h"
 
 #include "server/clock/clock.h" // protocore_millis(): the one time source the rate window reads
-
-PROTOCORE_BEGIN_DECLS
 
 typedef struct
 {
@@ -172,14 +168,11 @@ void protocore_gateway_reset(uint8_t *restrict work)
     mem.set(&GATEWAY_CTX(work)->stats, 0, sizeof(GATEWAY_CTX(work)->stats));
 }
 
-void protocore_gateway_add_port(uint8_t *restrict work)
+proto_bool protocore_gateway_add_port(uint8_t *restrict work, const protocore_gateway_port_config *cfg)
 {
-    const protocore_gateway_port_config *cfg = GatewayV.add_port_args.cfg;
-
     if (!cfg || find_port(GATEWAY_CTX(work), cfg->port_id))
     {
-        GatewayV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     for (uint8_t i = 0; i < PROTOCORE_GW_MAX_PORTS; i++)
     {
@@ -195,44 +188,33 @@ void protocore_gateway_add_port(uint8_t *restrict work)
         GATEWAY_CTX(work)->ports[i].id = cfg->port_id;
         GATEWAY_CTX(work)->ports[i].kind = cfg->kind;
         GATEWAY_CTX(work)->ports[i].used = PROTO_TRUE;
-        GatewayV.ok = PROTO_TRUE;
-        return;
+        return PROTO_TRUE;
     }
-    GatewayV.ok = PROTO_FALSE;
-    return; // table full
+    return PROTO_FALSE; // table full
 }
 
-void protocore_gateway_set_uplink_cb(uint8_t *restrict work)
+void protocore_gateway_set_uplink_cb(uint8_t *restrict work, protocore_gateway_uplink_fn fn, void *ctx)
 {
-    protocore_gateway_uplink_fn fn = GatewayV.set_uplink_cb_args.fn;
-    void *ctx = GatewayV.set_uplink_cb_args.ctx;
 
     GATEWAY_CTX(work)->uplink = fn;
     GATEWAY_CTX(work)->uplink_ctx = ctx;
 }
 
-void protocore_gateway_set_topic_prefix(uint8_t *restrict work)
+void protocore_gateway_set_topic_prefix(uint8_t *restrict work, const char *prefix)
 {
-    const char *prefix = GatewayV.set_topic_prefix_args.prefix;
 
     GATEWAY_CTX(work)->prefix = prefix ? prefix : PROTOCORE_GW_DEFAULT_PREFIX;
 }
 
-void protocore_gateway_uplink(uint8_t *restrict work)
+proto_bool protocore_gateway_uplink(uint8_t *restrict work, uint8_t port_id, uint16_t src_addr, const uint8_t *payload,
+                                    uint16_t len, int16_t rssi)
 {
-    uint8_t port_id = GatewayV.uplink_args.port_id;
-    uint16_t src_addr = GatewayV.uplink_args.src_addr;
-    const uint8_t *payload = GatewayV.uplink_args.payload;
-    uint16_t len = GatewayV.uplink_args.len;
-    int16_t rssi = GatewayV.uplink_args.rssi;
-
     GATEWAY_CTX(work)->stats.up_in++;
     port *p = find_port(GATEWAY_CTX(work), port_id);
     if (!p || !GATEWAY_CTX(work)->uplink || rate_exceeded(p))
     {
         GATEWAY_CTX(work)->stats.up_dropped++;
-        GatewayV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     protocore_gateway_msg msg;
     msg.payload = payload;
@@ -245,42 +227,31 @@ void protocore_gateway_uplink(uint8_t *restrict work)
     if (GATEWAY_CTX(work)->uplink(&msg, GATEWAY_CTX(work)->uplink_ctx))
     {
         GATEWAY_CTX(work)->stats.up_published++;
-        GatewayV.ok = PROTO_TRUE;
-        return;
+        return PROTO_TRUE;
     }
     GATEWAY_CTX(work)->stats.up_dropped++;
-    GatewayV.ok = PROTO_FALSE;
+    return PROTO_FALSE;
 }
 
-void protocore_gateway_downlink(uint8_t *restrict work)
+proto_bool protocore_gateway_downlink(uint8_t *restrict work, uint8_t port_id, uint16_t dst_addr,
+                                      const uint8_t *payload, uint16_t len)
 {
-    uint8_t port_id = GatewayV.downlink_args.port_id;
-    uint16_t dst_addr = GatewayV.downlink_args.dst_addr;
-    const uint8_t *payload = GatewayV.downlink_args.payload;
-    uint16_t len = GatewayV.downlink_args.len;
-
     GATEWAY_CTX(work)->stats.down_in++;
     port *p = find_port(GATEWAY_CTX(work), port_id);
     if (!p || !p->tx || !p->tx(port_id, dst_addr, payload, len, p->ctx))
     {
         GATEWAY_CTX(work)->stats.down_dropped++;
-        GatewayV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     GATEWAY_CTX(work)->stats.down_sent++;
-    GatewayV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_gateway_topic(uint8_t *restrict work)
+uint16_t protocore_gateway_topic(uint8_t *restrict work, const protocore_gateway_msg *msg, char *buf, uint16_t buflen)
 {
-    const protocore_gateway_msg *msg = GatewayV.topic_args.msg;
-    char *buf = GatewayV.topic_args.buf;
-    uint16_t buflen = GatewayV.topic_args.buflen;
-
     if (!msg || !buf || buflen == 0)
     {
-        GatewayV.n = 0;
-        return;
+        return 0;
     }
     uint16_t pos = 0;
     // Null is "never set", which is the default - stated here rather than on the declaration so
@@ -290,8 +261,7 @@ void protocore_gateway_topic(uint8_t *restrict work)
     {
         if (!put_ch(buf, &pos, buflen, *s))
         {
-            GatewayV.n = 0;
-            return;
+            return 0;
         }
     }
     // Sequential, not one `||` chain: the two '/' separators are written at different
@@ -299,41 +269,29 @@ void protocore_gateway_topic(uint8_t *restrict work)
     // append distinct rather than repeating an identical-looking subexpression.
     if (!put_ch(buf, &pos, buflen, '/'))
     {
-        GatewayV.n = 0;
-        return;
+        return 0;
     }
     if (!put_u32(buf, &pos, buflen, msg->port_id))
     {
-        GatewayV.n = 0;
-        return;
+        return 0;
     }
     if (!put_ch(buf, &pos, buflen, '/'))
     {
-        GatewayV.n = 0;
-        return;
+        return 0;
     }
     if (!put_u32(buf, &pos, buflen, msg->src_addr))
     {
-        GatewayV.n = 0;
-        return;
+        return 0;
     }
     buf[pos] = '\0';
-    GatewayV.n = pos;
+    return pos;
 }
 
-void protocore_gateway_get_stats(uint8_t *restrict work)
+void protocore_gateway_get_stats(uint8_t *restrict work, protocore_gateway_stats *out)
 {
-    protocore_gateway_stats *out = GatewayV.get_stats_args.out;
 
     if (out)
     {
         *out = GATEWAY_CTX(work)->stats;
     }
 }
-
-/** @brief The operands and the outcome. */
-GatewayVars GatewayV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_GATEWAY

@@ -59,11 +59,8 @@ void test_sec2_3_message_starts_with_ext_info_and_a_count(void)
     uint8_t out[512];
     size_t len = 0;
 
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &len;
-    ExtensionV.build_args.cap = sizeof(out);
-    Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    int extension_n = Extension.build(extension_work, out, &len, sizeof(out));
+    TEST_ASSERT_EQUAL_INT(0, extension_n);
     TEST_ASSERT_EQUAL_UINT8(SSH_MSG_EXT_INFO, out[0]);
     TEST_ASSERT_EQUAL_UINT8(7u, out[0]); // the section fixes the value at 7
     TEST_ASSERT_EQUAL_UINT32(1u, rd32(out + 1));
@@ -75,11 +72,8 @@ void test_sec2_3_one_name_value_pair_spans_the_whole_message(void)
 {
     uint8_t out[512];
     size_t len = 0;
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &len;
-    ExtensionV.build_args.cap = sizeof(out);
-    Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    int extension_n = Extension.build(extension_work, out, &len, sizeof(out));
+    TEST_ASSERT_EQUAL_INT(0, extension_n);
 
     size_t off = 5u; // past the type byte and nr-extensions
     uint32_t nlen = 0;
@@ -100,11 +94,8 @@ void test_sec3_1_extension_name_is_server_sig_algs(void)
 {
     uint8_t out[512];
     size_t len = 0;
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &len;
-    ExtensionV.build_args.cap = sizeof(out);
-    Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    int extension_n = Extension.build(extension_work, out, &len, sizeof(out));
+    TEST_ASSERT_EQUAL_INT(0, extension_n);
 
     size_t off = 5u;
     uint32_t nlen = 0;
@@ -120,11 +111,8 @@ void test_sec3_1_value_is_a_well_formed_name_list(void)
 {
     uint8_t out[512];
     size_t len = 0;
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &len;
-    ExtensionV.build_args.cap = sizeof(out);
-    Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    int extension_n = Extension.build(extension_work, out, &len, sizeof(out));
+    TEST_ASSERT_EQUAL_INT(0, extension_n);
 
     size_t off = 5u;
     uint32_t nlen = 0;
@@ -150,11 +138,8 @@ void test_sec3_1_value_names_every_verifiable_algorithm(void)
 {
     uint8_t out[512];
     size_t len = 0;
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &len;
-    ExtensionV.build_args.cap = sizeof(out);
-    Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    int extension_n = Extension.build(extension_work, out, &len, sizeof(out));
+    TEST_ASSERT_EQUAL_INT(0, extension_n);
 
     // The value body, NUL-terminated into a scratch buffer so a substring search is well defined.
     size_t off = 5u;
@@ -186,17 +171,11 @@ void test_sec3_1_preference_reorders_but_keeps_the_same_members(void)
     size_t blen = 0;
 
     ssh_kex_set_prefer_rsa(PROTO_FALSE);
-    ExtensionV.build_args.out = a;
-    ExtensionV.build_args.len = &alen;
-    ExtensionV.build_args.cap = sizeof(a);
-    Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    int extension_n = Extension.build(extension_work, a, &alen, sizeof(a));
+    TEST_ASSERT_EQUAL_INT(0, extension_n);
     ssh_kex_set_prefer_rsa(PROTO_TRUE);
-    ExtensionV.build_args.out = b;
-    ExtensionV.build_args.len = &blen;
-    ExtensionV.build_args.cap = sizeof(b);
-    Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    extension_n = Extension.build(extension_work, b, &blen, sizeof(b));
+    TEST_ASSERT_EQUAL_INT(0, extension_n);
     ssh_kex_set_prefer_rsa(PROTO_FALSE); // leave the module as it was found
 
     TEST_ASSERT_EQUAL_UINT32((uint32_t)alen, (uint32_t)blen); // same names, same total length
@@ -209,11 +188,8 @@ void test_sec3_1_rsa_preference_puts_rsa_first(void)
     size_t len = 0;
 
     ssh_kex_set_prefer_rsa(PROTO_TRUE);
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &len;
-    ExtensionV.build_args.cap = sizeof(out);
-    Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    int extension_n = Extension.build(extension_work, out, &len, sizeof(out));
+    TEST_ASSERT_EQUAL_INT(0, extension_n);
     ssh_kex_set_prefer_rsa(PROTO_FALSE);
 
     size_t off = 5u;
@@ -231,11 +207,8 @@ void test_sec3_1_default_preference_puts_ed25519_first(void)
     size_t len = 0;
 
     ssh_kex_set_prefer_rsa(PROTO_FALSE);
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &len;
-    ExtensionV.build_args.cap = sizeof(out);
-    Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    int extension_n = Extension.build(extension_work, out, &len, sizeof(out));
+    TEST_ASSERT_EQUAL_INT(0, extension_n);
 
     size_t off = 5u;
     uint32_t nlen = 0;
@@ -256,32 +229,20 @@ void test_undersized_buffer_is_refused(void)
 {
     uint8_t out[512];
     size_t full = 0;
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &full;
-    ExtensionV.build_args.cap = sizeof(out);
-    Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    int extension_n = Extension.build(extension_work, out, &full, sizeof(out));
+    TEST_ASSERT_EQUAL_INT(0, extension_n);
 
     for (size_t cap = 0; cap < full; cap += 8u)
     {
         size_t len = 0xFFFFu;
-        ExtensionV.build_args.out = out;
-        ExtensionV.build_args.len = &len;
-        ExtensionV.build_args.cap = cap;
-        Extension.build(extension_work);
-        TEST_ASSERT_EQUAL_INT(-1, ExtensionV.n);
+        int extension_n = Extension.build(extension_work, out, &len, cap);
+        TEST_ASSERT_EQUAL_INT(-1, extension_n);
     }
     // One byte short still fails; exactly enough succeeds.
     size_t len = 0;
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &len;
-    ExtensionV.build_args.cap = full - 1u;
-    Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(-1, ExtensionV.n);
-    ExtensionV.build_args.out = out;
-    ExtensionV.build_args.len = &len;
-    ExtensionV.build_args.cap = full;
-    Extension.build(extension_work);
-    TEST_ASSERT_EQUAL_INT(0, ExtensionV.n);
+    extension_n = Extension.build(extension_work, out, &len, full - 1u);
+    TEST_ASSERT_EQUAL_INT(-1, extension_n);
+    extension_n = Extension.build(extension_work, out, &len, full);
+    TEST_ASSERT_EQUAL_INT(0, extension_n);
     TEST_ASSERT_EQUAL_UINT32((uint32_t)full, (uint32_t)len);
 }

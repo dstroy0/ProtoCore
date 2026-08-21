@@ -39,15 +39,9 @@ void tearDown(void)
 static size_t compress(const uint8_t *src, size_t src_len)
 {
     size_t clen = 0;
-    DeflateV.raw_args.src = src;
-    DeflateV.raw_args.src_len = src_len;
-    DeflateV.raw_args.dst = g_comp;
-    DeflateV.raw_args.dst_cap = sizeof(g_comp);
-    DeflateV.raw_args.out_len = &clen;
-    DeflateV.raw_args.scratch = g_dscratch;
-    DeflateV.raw_args.scratch_len = sizeof(g_dscratch);
-    Deflate.raw(deflate_work);
-    TEST_ASSERT_EQUAL_INT(DEFLATE_OK, DeflateV.value);
+    DeflateResult deflate_value =
+        Deflate.raw(deflate_work, src, src_len, g_comp, sizeof(g_comp), &clen, g_dscratch, sizeof(g_dscratch));
+    TEST_ASSERT_EQUAL_INT(DEFLATE_OK, deflate_value);
     return clen;
 }
 
@@ -293,15 +287,9 @@ void test_output_overflow_fails_closed(void)
     }
     uint8_t tiny[16];
     size_t clen = 0;
-    DeflateV.raw_args.src = buf;
-    DeflateV.raw_args.src_len = sizeof(buf);
-    DeflateV.raw_args.dst = tiny;
-    DeflateV.raw_args.dst_cap = sizeof(tiny);
-    DeflateV.raw_args.out_len = &clen;
-    DeflateV.raw_args.scratch = g_dscratch;
-    DeflateV.raw_args.scratch_len = sizeof(g_dscratch);
-    Deflate.raw(deflate_work);
-    TEST_ASSERT_EQUAL_INT(DEFLATE_ERR_OVERFLOW, DeflateV.value);
+    DeflateResult deflate_value =
+        Deflate.raw(deflate_work, buf, sizeof(buf), tiny, sizeof(tiny), &clen, g_dscratch, sizeof(g_dscratch));
+    TEST_ASSERT_EQUAL_INT(DEFLATE_ERR_OVERFLOW, deflate_value);
 }
 
 // Working memory one octet short of what the tables need is refused before anything is written.
@@ -309,13 +297,7 @@ void test_scratch_too_small_fails_closed(void)
 {
     uint8_t small[DEFLATE_SCRATCH_SIZE - 1];
     size_t clen = 0;
-    DeflateV.raw_args.src = (const uint8_t *)"anything";
-    DeflateV.raw_args.src_len = 8;
-    DeflateV.raw_args.dst = g_comp;
-    DeflateV.raw_args.dst_cap = sizeof(g_comp);
-    DeflateV.raw_args.out_len = &clen;
-    DeflateV.raw_args.scratch = small;
-    DeflateV.raw_args.scratch_len = sizeof(small);
-    Deflate.raw(deflate_work);
-    TEST_ASSERT_EQUAL_INT(DEFLATE_ERR_SCRATCH, DeflateV.value);
+    DeflateResult deflate_value =
+        Deflate.raw(deflate_work, (const uint8_t *)"anything", 8, g_comp, sizeof(g_comp), &clen, small, sizeof(small));
+    TEST_ASSERT_EQUAL_INT(DEFLATE_ERR_SCRATCH, deflate_value);
 }

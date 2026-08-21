@@ -6,9 +6,7 @@
  * @brief RFC 4253 sec 6.2: the per-direction compression state and its reset.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_SSH_ZLIB
+#include "protocore_config.h" // the entry point: the widths
 
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/comp/comp.h"
@@ -17,8 +15,6 @@
 #include "mmgr/secure/secure.h"       // protocore_secure_wipe
 #include "network_drivers/presentation/ssh/transport/inflate/inflate.h"
 #include "network_drivers/presentation/ssh/transport/zlib/zlib.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // The per-connection compressor holds a window-sized work buffer + a window-sized hash chain (tens
 // of KB).
@@ -86,15 +82,7 @@ uint8_t *protocore_ssh_comp_span(void)
 
 static void start_s2c(SshCompState *c)
 {
-    ZlibV.init_args.z = &c->z;
-    ZlibV.init_args.win = c->work;
-    ZlibV.init_args.head = c->head;
-    ZlibV.init_args.prev = c->prev;
-    ZlibV.init_args.ll_code = c->ll_code;
-    ZlibV.init_args.ll_len = c->ll_len;
-    ZlibV.init_args.d_code = c->d_code;
-    ZlibV.init_args.d_len = c->d_len;
-    Zlib.init(protocore_ssh_comp_span());
+    Zlib.init(protocore_ssh_comp_span(), &c->z, c->work, c->head, c->prev, c->ll_code, c->ll_len, c->d_code, c->d_len);
     c->s2c_active = PROTO_TRUE;
 }
 
@@ -111,9 +99,8 @@ static void start_c2s(SshCompState *c)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_comp_reset(uint8_t *restrict work)
+void protocore_comp_reset(uint8_t *restrict work, uint8_t i)
 {
-    uint8_t i = CompV.reset_args.i;
 
     if (i >= MAX_SSH_CONNS)
     {
@@ -129,10 +116,8 @@ void protocore_comp_reset(uint8_t *restrict work)
     protocore_secure_wipe(c->inf_window, sizeof(c->inf_window));
 }
 
-void protocore_comp_set_s2c(uint8_t *restrict work)
+void protocore_comp_set_s2c(uint8_t *restrict work, uint8_t i, SshCompAlg alg)
 {
-    uint8_t i = CompV.set_s2c_args.i;
-    SshCompAlg alg = CompV.set_s2c_args.alg;
 
     if (i >= MAX_SSH_CONNS)
     {
@@ -141,10 +126,8 @@ void protocore_comp_set_s2c(uint8_t *restrict work)
     COMP_CTX(work)->comp[i].s2c_alg = alg;
 }
 
-void protocore_comp_set_c2s(uint8_t *restrict work)
+void protocore_comp_set_c2s(uint8_t *restrict work, uint8_t i, SshCompAlg alg)
 {
-    uint8_t i = CompV.set_c2s_args.i;
-    SshCompAlg alg = CompV.set_c2s_args.alg;
 
     if (i >= MAX_SSH_CONNS)
     {
@@ -154,9 +137,8 @@ void protocore_comp_set_c2s(uint8_t *restrict work)
 }
 
 // "zlib" (non-delayed) starts both directions at NEWKEYS; "zlib@openssh.com" waits for auth success.
-void protocore_comp_on_newkeys(uint8_t *restrict work)
+void protocore_comp_on_newkeys(uint8_t *restrict work, uint8_t i)
 {
-    uint8_t i = CompV.on_newkeys_args.i;
 
     if (i >= MAX_SSH_CONNS)
     {
@@ -175,9 +157,8 @@ void protocore_comp_on_newkeys(uint8_t *restrict work)
     }
 }
 
-void protocore_comp_on_auth_success(uint8_t *restrict work)
+void protocore_comp_on_auth_success(uint8_t *restrict work, uint8_t i)
 {
-    uint8_t i = CompV.on_auth_success_args.i;
 
     if (i >= MAX_SSH_CONNS)
     {
@@ -194,57 +175,35 @@ void protocore_comp_on_auth_success(uint8_t *restrict work)
     }
 }
 
-void protocore_comp_s2c_active(uint8_t *restrict work)
+proto_bool protocore_comp_s2c_active(uint8_t *restrict work, uint8_t i)
 {
-    uint8_t i = CompV.s2c_active_args.i;
 
-    CompV.ok = i < MAX_SSH_CONNS && COMP_CTX(work)->comp[i].s2c_active;
+    return i < MAX_SSH_CONNS && COMP_CTX(work)->comp[i].s2c_active;
 }
 
-void protocore_comp_s2c(uint8_t *restrict work)
+int protocore_comp_s2c(uint8_t *restrict work, uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst,
+                       size_t dst_cap, size_t *out_len)
 {
-    uint8_t i = CompV.s2c_args.i;
-    const uint8_t *src = CompV.s2c_args.src;
-    size_t src_len = CompV.s2c_args.src_len;
-    uint8_t *dst = CompV.s2c_args.dst;
-    size_t dst_cap = CompV.s2c_args.dst_cap;
-    size_t *out_len = CompV.s2c_args.out_len;
-
     if (i >= MAX_SSH_CONNS || !COMP_CTX(work)->comp[i].s2c_active)
     {
-        CompV.n = -1;
-        return;
+        return -1;
     }
-    ZlibV.packet_args.z = &COMP_CTX(work)->comp[i].z;
-    ZlibV.packet_args.src = src;
-    ZlibV.packet_args.src_len = src_len;
-    ZlibV.packet_args.dst = dst;
-    ZlibV.packet_args.dst_cap = dst_cap;
-    ZlibV.packet_args.out_len = out_len;
-    Zlib.packet(work);
-    CompV.n = ZlibV.n;
+    int zlib_n = Zlib.packet(work, &COMP_CTX(work)->comp[i].z, src, src_len, dst, dst_cap, out_len);
+    return zlib_n;
 }
 
-void protocore_comp_c2s_active(uint8_t *restrict work)
+proto_bool protocore_comp_c2s_active(uint8_t *restrict work, uint8_t i)
 {
-    uint8_t i = CompV.c2s_active_args.i;
 
-    CompV.ok = i < MAX_SSH_CONNS && COMP_CTX(work)->comp[i].c2s_active;
+    return i < MAX_SSH_CONNS && COMP_CTX(work)->comp[i].c2s_active;
 }
 
-void protocore_comp_c2s(uint8_t *restrict work)
+int protocore_comp_c2s(uint8_t *restrict work, uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst,
+                       size_t dst_cap, size_t *out_len)
 {
-    uint8_t i = CompV.c2s_args.i;
-    const uint8_t *src = CompV.c2s_args.src;
-    size_t src_len = CompV.c2s_args.src_len;
-    uint8_t *dst = CompV.c2s_args.dst;
-    size_t dst_cap = CompV.c2s_args.dst_cap;
-    size_t *out_len = CompV.c2s_args.out_len;
-
     if (i >= MAX_SSH_CONNS || !COMP_CTX(work)->comp[i].c2s_active)
     {
-        CompV.n = -1;
-        return;
+        return -1;
     }
     InflateV.packet_args.z = &COMP_CTX(work)->comp[i].inf;
     InflateV.packet_args.src = src;
@@ -253,12 +212,5 @@ void protocore_comp_c2s(uint8_t *restrict work)
     InflateV.packet_args.dst_cap = dst_cap;
     InflateV.packet_args.out_len = out_len;
     Inflate.packet(work);
-    CompV.n = InflateV.n;
+    return InflateV.n;
 }
-
-/** @brief The operands and the outcome. */
-CompVars CompV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_SSH_ZLIB

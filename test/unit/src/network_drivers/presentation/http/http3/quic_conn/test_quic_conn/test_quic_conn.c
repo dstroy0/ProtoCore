@@ -335,11 +335,8 @@ static size_t extract_crypto(const uint8_t *p, size_t len, uint8_t *out)
             continue;
         }
         QuicFrameHeader f;
-        QuicFrameV.parse_args.buf = p + off;
-        QuicFrameV.parse_args.len = len - off;
-        QuicFrameV.parse_args.out = &f;
-        QuicFrame.parse(quic_frame_work);
-        size_t n = QuicFrameV.n;
+        size_t quic_frame_n = QuicFrame.parse(quic_frame_work, p + off, len - off, &f);
+        size_t n = quic_frame_n;
         if (!n)
         {
             break;
@@ -365,11 +362,8 @@ static proto_bool has_frame(const uint8_t *p, size_t len, uint64_t want)
             continue;
         }
         QuicFrameHeader f;
-        QuicFrameV.parse_args.buf = p + off;
-        QuicFrameV.parse_args.len = len - off;
-        QuicFrameV.parse_args.out = &f;
-        QuicFrame.parse(quic_frame_work);
-        size_t n = QuicFrameV.n;
+        size_t quic_frame_n = QuicFrame.parse(quic_frame_work, p + off, len - off, &f);
+        size_t n = quic_frame_n;
         if (!n)
         {
             break;
@@ -441,13 +435,8 @@ void test_full_handshake_and_stream()
     size_t ch_len = build_client_hello(ch, client_pub, ctp_enc, ctp_len);
 
     uint8_t frames[1200];
-    QuicFrameV.build_crypto_args.out = frames;
-    QuicFrameV.build_crypto_args.cap = sizeof(frames);
-    QuicFrameV.build_crypto_args.offset = 0;
-    QuicFrameV.build_crypto_args.data = ch;
-    QuicFrameV.build_crypto_args.len = ch_len;
-    QuicFrame.build_crypto(quic_frame_work);
-    size_t fl = QuicFrameV.n;
+    size_t quic_frame_n = QuicFrame.build_crypto(quic_frame_work, frames, sizeof(frames), 0, ch, ch_len);
+    size_t fl = quic_frame_n;
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
@@ -539,13 +528,8 @@ void test_full_handshake_and_stream()
     assert_ctx_match(g_qc.tls.ap_server.gcm, ap_server_keys.gcm);
 
     uint8_t ifr[64];
-    QuicFrameV.build_ack_args.out = ifr;
-    QuicFrameV.build_ack_args.cap = sizeof(ifr);
-    QuicFrameV.build_ack_args.largest = 0;
-    QuicFrameV.build_ack_args.delay = 0;
-    QuicFrameV.build_ack_args.first_range = 0;
-    QuicFrame.build_ack(quic_frame_work);
-    size_t ifl = QuicFrameV.n;
+    quic_frame_n = QuicFrame.build_ack(quic_frame_work, ifr, sizeof(ifr), 0, 0, 0);
+    size_t ifl = quic_frame_n;
     uint8_t idg[256];
     size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             1, &init.client, ifr, ifl);
@@ -557,20 +541,10 @@ void test_full_handshake_and_stream()
     Tls13KsV.finished_args.out = cfin + 4;
     Tls13Ks.finished_mac(NULL);
     uint8_t hfr[64];
-    QuicFrameV.build_ack_args.out = hfr;
-    QuicFrameV.build_ack_args.cap = sizeof(hfr);
-    QuicFrameV.build_ack_args.largest = 0;
-    QuicFrameV.build_ack_args.delay = 0;
-    QuicFrameV.build_ack_args.first_range = 0;
-    QuicFrame.build_ack(quic_frame_work);
-    size_t hfl = QuicFrameV.n;
-    QuicFrameV.build_crypto_args.out = hfr + hfl;
-    QuicFrameV.build_crypto_args.cap = sizeof(hfr) - hfl;
-    QuicFrameV.build_crypto_args.offset = 0;
-    QuicFrameV.build_crypto_args.data = cfin;
-    QuicFrameV.build_crypto_args.len = sizeof(cfin);
-    QuicFrame.build_crypto(quic_frame_work);
-    hfl += QuicFrameV.n;
+    quic_frame_n = QuicFrame.build_ack(quic_frame_work, hfr, sizeof(hfr), 0, 0, 0);
+    size_t hfl = quic_frame_n;
+    quic_frame_n = QuicFrame.build_crypto(quic_frame_work, hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
+    hfl += quic_frame_n;
     size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
                             sizeof(CLIENT_SCID), 0, &hs_client_keys, hfr, hfl);
     QuicConnV.bind.b = g_qc_b;
@@ -616,15 +590,9 @@ void test_full_handshake_and_stream()
     TEST_ASSERT_TRUE(saw_hs_done);
 
     uint8_t sfr[64];
-    QuicFrameV.build_stream_args.out = sfr;
-    QuicFrameV.build_stream_args.cap = sizeof(sfr);
-    QuicFrameV.build_stream_args.id = 0;
-    QuicFrameV.build_stream_args.offset = 0;
-    QuicFrameV.build_stream_args.data = (const uint8_t *)"GET";
-    QuicFrameV.build_stream_args.len = 3;
-    QuicFrameV.build_stream_args.fin = PROTO_TRUE;
-    QuicFrame.build_stream(quic_frame_work);
-    size_t sfl = QuicFrameV.n;
+    quic_frame_n =
+        QuicFrame.build_stream(quic_frame_work, sfr, sizeof(sfr), 0, 0, (const uint8_t *)"GET", 3, PROTO_TRUE);
+    size_t sfl = quic_frame_n;
     uint8_t s1[256];
     size_t s1l = build_short(s1, sizeof(s1), SERVER_SCID, sizeof(SERVER_SCID), 0, &ap_client_keys, sfr, sfl);
     QuicConnV.bind.b = g_qc_b;
@@ -676,11 +644,8 @@ void test_full_handshake_and_stream()
                 continue;
             }
             QuicFrameHeader f;
-            QuicFrameV.parse_args.buf = plain + fo;
-            QuicFrameV.parse_args.len = p2 - fo;
-            QuicFrameV.parse_args.out = &f;
-            QuicFrame.parse(quic_frame_work);
-            size_t n = QuicFrameV.n;
+            size_t quic_frame_n = QuicFrame.parse(quic_frame_work, plain + fo, p2 - fo, &f);
+            size_t n = quic_frame_n;
             if (!n)
             {
                 break;
@@ -734,11 +699,8 @@ void test_full_handshake_and_stream()
                 continue;
             }
             QuicFrameHeader f;
-            QuicFrameV.parse_args.buf = plain + fo;
-            QuicFrameV.parse_args.len = p2 - fo;
-            QuicFrameV.parse_args.out = &f;
-            QuicFrame.parse(quic_frame_work);
-            size_t n = QuicFrameV.n;
+            size_t quic_frame_n = QuicFrame.parse(quic_frame_work, plain + fo, p2 - fo, &f);
+            size_t n = quic_frame_n;
             if (!n)
             {
                 break;
@@ -795,13 +757,8 @@ void test_pto_retransmits_flight()
     uint8_t ch[512];
     size_t ch_len = build_client_hello(ch, client_pub, ctp_enc, ctp_len);
     uint8_t frames[1200];
-    QuicFrameV.build_crypto_args.out = frames;
-    QuicFrameV.build_crypto_args.cap = sizeof(frames);
-    QuicFrameV.build_crypto_args.offset = 0;
-    QuicFrameV.build_crypto_args.data = ch;
-    QuicFrameV.build_crypto_args.len = ch_len;
-    QuicFrame.build_crypto(quic_frame_work);
-    size_t fl = QuicFrameV.n;
+    size_t quic_frame_n = QuicFrame.build_crypto(quic_frame_work, frames, sizeof(frames), 0, ch, ch_len);
+    size_t fl = quic_frame_n;
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
@@ -910,13 +867,8 @@ static void feed_client_initial(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicInit
     Curve25519.x25519_base(tw);
     *ch_len = build_client_hello(ch, client_pub, ctp_enc, ctp_len);
     uint8_t frames[1200];
-    QuicFrameV.build_crypto_args.out = frames;
-    QuicFrameV.build_crypto_args.cap = sizeof(frames);
-    QuicFrameV.build_crypto_args.offset = 0;
-    QuicFrameV.build_crypto_args.data = ch;
-    QuicFrameV.build_crypto_args.len = *ch_len;
-    QuicFrame.build_crypto(quic_frame_work);
-    size_t fl = QuicFrameV.n;
+    size_t quic_frame_n = QuicFrame.build_crypto(quic_frame_work, frames, sizeof(frames), 0, ch, *ch_len);
+    size_t fl = quic_frame_n;
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
@@ -1043,11 +995,8 @@ void test_connection_close_on_malformed_frame()
             continue;
         }
         QuicFrameHeader f;
-        QuicFrameV.parse_args.buf = plain + fo;
-        QuicFrameV.parse_args.len = cpt - fo;
-        QuicFrameV.parse_args.out = &f;
-        QuicFrame.parse(quic_frame_work);
-        size_t n = QuicFrameV.n;
+        size_t quic_frame_n = QuicFrame.parse(quic_frame_work, plain + fo, cpt - fo, &f);
+        size_t n = quic_frame_n;
         if (!n)
         {
             break;
@@ -1107,15 +1056,9 @@ void test_quic_recv_connection_close()
     QuicCrypto.derive_initial_secrets(quic_crypto_work);
 
     uint8_t fr[32];
-    QuicFrameV.build_connection_close_args.out = fr;
-    QuicFrameV.build_connection_close_args.cap = sizeof(fr);
-    QuicFrameV.build_connection_close_args.app = PROTO_FALSE;
-    QuicFrameV.build_connection_close_args.error_code = QUIC_ERR_NO_ERROR;
-    QuicFrameV.build_connection_close_args.frame_type = 0;
-    QuicFrameV.build_connection_close_args.reason = NULL;
-    QuicFrameV.build_connection_close_args.reason_len = 0;
-    QuicFrame.build_connection_close(quic_frame_work);
-    size_t fl = QuicFrameV.n;
+    size_t quic_frame_n =
+        QuicFrame.build_connection_close(quic_frame_work, fr, sizeof(fr), PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
+    size_t fl = quic_frame_n;
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, fl);
@@ -1146,15 +1089,10 @@ void test_quic_recv_ping_and_max_data()
     QuicCrypto.derive_initial_secrets(quic_crypto_work);
 
     uint8_t fr[16];
-    QuicFrameV.build_ping_args.out = fr;
-    QuicFrameV.build_ping_args.cap = sizeof(fr);
-    QuicFrame.build_ping(quic_frame_work);
-    size_t fl = QuicFrameV.n;
-    QuicFrameV.build_max_data_args.out = fr + fl;
-    QuicFrameV.build_max_data_args.cap = sizeof(fr) - fl;
-    QuicFrameV.build_max_data_args.max = 1000000;
-    QuicFrame.build_max_data(quic_frame_work);
-    fl += QuicFrameV.n;
+    size_t quic_frame_n = QuicFrame.build_ping(quic_frame_work, fr, sizeof(fr));
+    size_t fl = quic_frame_n;
+    quic_frame_n = QuicFrame.build_max_data(quic_frame_work, fr + fl, sizeof(fr) - fl, 1000000);
+    fl += quic_frame_n;
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, fl);
@@ -1312,13 +1250,8 @@ void test_quic_crypto_out_of_order_and_dup()
     uint8_t data[4] = {0x01, 0x00, 0x00, 0xFF};
     uint8_t fr[32], dg[256];
 
-    QuicFrameV.build_crypto_args.out = fr;
-    QuicFrameV.build_crypto_args.cap = sizeof(fr);
-    QuicFrameV.build_crypto_args.offset = 100;
-    QuicFrameV.build_crypto_args.data = data;
-    QuicFrameV.build_crypto_args.len = sizeof(data);
-    QuicFrame.build_crypto(quic_frame_work);
-    size_t fl = QuicFrameV.n;
+    size_t quic_frame_n = QuicFrame.build_crypto(quic_frame_work, fr, sizeof(fr), 100, data, sizeof(data));
+    size_t fl = quic_frame_n;
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, fl);
     QuicConnV.bind.b = g_qc_b;
@@ -1329,13 +1262,8 @@ void test_quic_crypto_out_of_order_and_dup()
     QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConnV.closed);
 
-    QuicFrameV.build_crypto_args.out = fr;
-    QuicFrameV.build_crypto_args.cap = sizeof(fr);
-    QuicFrameV.build_crypto_args.offset = 0;
-    QuicFrameV.build_crypto_args.data = data;
-    QuicFrameV.build_crypto_args.len = sizeof(data);
-    QuicFrame.build_crypto(quic_frame_work);
-    fl = QuicFrameV.n;
+    quic_frame_n = QuicFrame.build_crypto(quic_frame_work, fr, sizeof(fr), 0, data, sizeof(data));
+    fl = quic_frame_n;
     dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 1,
                     &init.client, fr, fl);
     QuicConnV.bind.b = g_qc_b;
@@ -1365,15 +1293,9 @@ void test_quic_timeout_when_closed()
     QuicCryptoV.derive_initial_secrets_args.out = &init;
     QuicCrypto.derive_initial_secrets(quic_crypto_work);
     uint8_t fr[32];
-    QuicFrameV.build_connection_close_args.out = fr;
-    QuicFrameV.build_connection_close_args.cap = sizeof(fr);
-    QuicFrameV.build_connection_close_args.app = PROTO_FALSE;
-    QuicFrameV.build_connection_close_args.error_code = QUIC_ERR_NO_ERROR;
-    QuicFrameV.build_connection_close_args.frame_type = 0;
-    QuicFrameV.build_connection_close_args.reason = NULL;
-    QuicFrameV.build_connection_close_args.reason_len = 0;
-    QuicFrame.build_connection_close(quic_frame_work);
-    size_t fl = QuicFrameV.n;
+    size_t quic_frame_n =
+        QuicFrame.build_connection_close(quic_frame_work, fr, sizeof(fr), PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
+    size_t fl = quic_frame_n;
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, fl);
@@ -1488,10 +1410,8 @@ void test_quic_recv_handshake_done_frame()
     QuicCryptoV.derive_initial_secrets_args.out = &init;
     QuicCrypto.derive_initial_secrets(quic_crypto_work);
     uint8_t hd[32];
-    QuicFrameV.build_handshake_done_args.out = hd;
-    QuicFrameV.build_handshake_done_args.cap = sizeof hd;
-    QuicFrame.build_handshake_done(quic_frame_work);
-    size_t hdl = QuicFrameV.n;
+    size_t quic_frame_n = QuicFrame.build_handshake_done(quic_frame_work, hd, sizeof hd);
+    size_t hdl = quic_frame_n;
     memset(hd + hdl, 0, 20);
     hdl += 20;
     uint8_t dg[256];
@@ -1522,15 +1442,8 @@ void test_quic_conn_stream_frames()
         init_conn(&g_qc, &cb);
         uint8_t data[4] = {1, 2, 3, 4};
         uint8_t fr[32];
-        QuicFrameV.build_stream_args.out = fr;
-        QuicFrameV.build_stream_args.cap = sizeof fr;
-        QuicFrameV.build_stream_args.id = 0;
-        QuicFrameV.build_stream_args.offset = 100;
-        QuicFrameV.build_stream_args.data = data;
-        QuicFrameV.build_stream_args.len = 4;
-        QuicFrameV.build_stream_args.fin = PROTO_FALSE;
-        QuicFrame.build_stream(quic_frame_work);
-        size_t fl = QuicFrameV.n;
+        size_t quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 100, data, 4, PROTO_FALSE);
+        size_t fl = quic_frame_n;
         size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
         g_stream_len = 0;
         QuicConnV.bind.b = g_qc_b;
@@ -1545,15 +1458,8 @@ void test_quic_conn_stream_frames()
         init_conn(&g_qc, &cb);
         uint8_t d0 = 0;
         uint8_t fr[16];
-        QuicFrameV.build_stream_args.out = fr;
-        QuicFrameV.build_stream_args.cap = sizeof fr;
-        QuicFrameV.build_stream_args.id = 0;
-        QuicFrameV.build_stream_args.offset = 0;
-        QuicFrameV.build_stream_args.data = &d0;
-        QuicFrameV.build_stream_args.len = 0;
-        QuicFrameV.build_stream_args.fin = PROTO_TRUE;
-        QuicFrame.build_stream(quic_frame_work);
-        size_t fl = QuicFrameV.n;
+        size_t quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 0, &d0, 0, PROTO_TRUE);
+        size_t fl = quic_frame_n;
         size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
         g_stream_fin = PROTO_FALSE;
         QuicConnV.bind.b = g_qc_b;
@@ -1571,15 +1477,9 @@ void test_quic_conn_stream_frames()
         size_t fl = 0;
         for (int i = 0; i <= PROTOCORE_QUIC_MAX_STREAMS; i++)
         {
-            QuicFrameV.build_stream_args.out = fr + fl;
-            QuicFrameV.build_stream_args.cap = sizeof(fr) - fl;
-            QuicFrameV.build_stream_args.id = (uint64_t)(i * 4);
-            QuicFrameV.build_stream_args.offset = 0;
-            QuicFrameV.build_stream_args.data = &d1;
-            QuicFrameV.build_stream_args.len = 1;
-            QuicFrameV.build_stream_args.fin = PROTO_FALSE;
-            QuicFrame.build_stream(quic_frame_work);
-            fl += QuicFrameV.n;
+            size_t quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr + fl, sizeof(fr) - fl, (uint64_t)(i * 4),
+                                                         0, &d1, 1, PROTO_FALSE);
+            fl += quic_frame_n;
         }
         size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
         QuicConnV.bind.b = g_qc_b;
@@ -1609,13 +1509,8 @@ void test_quic_conn_crypto_window_clamp()
     chunk[3] = 0xFF;
     memset(chunk + 4, 0, sizeof(chunk) - 4);
     uint8_t fr[1300];
-    QuicFrameV.build_crypto_args.out = fr;
-    QuicFrameV.build_crypto_args.cap = sizeof fr;
-    QuicFrameV.build_crypto_args.offset = 0;
-    QuicFrameV.build_crypto_args.data = chunk;
-    QuicFrameV.build_crypto_args.len = sizeof chunk;
-    QuicFrame.build_crypto(quic_frame_work);
-    size_t fl = QuicFrameV.n;
+    size_t quic_frame_n = QuicFrame.build_crypto(quic_frame_work, fr, sizeof fr, 0, chunk, sizeof chunk);
+    size_t fl = quic_frame_n;
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
     QuicConnV.bind.b = g_qc_b;
     QuicConnV.recv_args.datagram = dg;
@@ -1624,13 +1519,8 @@ void test_quic_conn_crypto_window_clamp()
     TEST_ASSERT_TRUE(QuicConnV.ok);
     QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConnV.closed);
-    QuicFrameV.build_crypto_args.out = fr;
-    QuicFrameV.build_crypto_args.cap = sizeof fr;
-    QuicFrameV.build_crypto_args.offset = 1200;
-    QuicFrameV.build_crypto_args.data = chunk;
-    QuicFrameV.build_crypto_args.len = sizeof chunk;
-    QuicFrame.build_crypto(quic_frame_work);
-    fl = QuicFrameV.n;
+    quic_frame_n = QuicFrame.build_crypto(quic_frame_work, fr, sizeof fr, 1200, chunk, sizeof chunk);
+    fl = quic_frame_n;
     dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 1, &init.client, fr, fl);
     QuicConnV.bind.b = g_qc_b;
     QuicConnV.recv_args.datagram = dg;
@@ -1653,13 +1543,8 @@ void test_quic_conn_crypto_error_close()
     QuicCrypto.derive_initial_secrets(quic_crypto_work);
     uint8_t bad_ch[6] = {0x01, 0x00, 0x00, 0x02, 0x03, 0x03};
     uint8_t fr[32];
-    QuicFrameV.build_crypto_args.out = fr;
-    QuicFrameV.build_crypto_args.cap = sizeof fr;
-    QuicFrameV.build_crypto_args.offset = 0;
-    QuicFrameV.build_crypto_args.data = bad_ch;
-    QuicFrameV.build_crypto_args.len = sizeof bad_ch;
-    QuicFrame.build_crypto(quic_frame_work);
-    size_t fl = QuicFrameV.n;
+    size_t quic_frame_n = QuicFrame.build_crypto(quic_frame_work, fr, sizeof fr, 0, bad_ch, sizeof bad_ch);
+    size_t fl = quic_frame_n;
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
     QuicConnV.bind.b = g_qc_b;
@@ -1799,13 +1684,8 @@ static void complete_handshake(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicIniti
     uint8_t ch[512];
     size_t ch_len = build_client_hello(ch, client_pub, ctp_enc, ctp_len);
     uint8_t frames[1200];
-    QuicFrameV.build_crypto_args.out = frames;
-    QuicFrameV.build_crypto_args.cap = sizeof(frames);
-    QuicFrameV.build_crypto_args.offset = 0;
-    QuicFrameV.build_crypto_args.data = ch;
-    QuicFrameV.build_crypto_args.len = ch_len;
-    QuicFrame.build_crypto(quic_frame_work);
-    size_t fl = QuicFrameV.n;
+    size_t quic_frame_n = QuicFrame.build_crypto(quic_frame_work, frames, sizeof(frames), 0, ch, ch_len);
+    size_t fl = quic_frame_n;
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
@@ -1884,13 +1764,8 @@ static void complete_handshake(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicIniti
     QuicCrypto.keys_from_secret(quic_crypto_work);
 
     uint8_t ifr[64];
-    QuicFrameV.build_ack_args.out = ifr;
-    QuicFrameV.build_ack_args.cap = sizeof(ifr);
-    QuicFrameV.build_ack_args.largest = 0;
-    QuicFrameV.build_ack_args.delay = 0;
-    QuicFrameV.build_ack_args.first_range = 0;
-    QuicFrame.build_ack(quic_frame_work);
-    size_t ifl = QuicFrameV.n;
+    quic_frame_n = QuicFrame.build_ack(quic_frame_work, ifr, sizeof(ifr), 0, 0, 0);
+    size_t ifl = quic_frame_n;
     uint8_t idg[256];
     size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             1, &init->client, ifr, ifl);
@@ -1901,20 +1776,10 @@ static void complete_handshake(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicIniti
     Tls13KsV.finished_args.out = cfin + 4;
     Tls13Ks.finished_mac(NULL);
     uint8_t hfr[64];
-    QuicFrameV.build_ack_args.out = hfr;
-    QuicFrameV.build_ack_args.cap = sizeof(hfr);
-    QuicFrameV.build_ack_args.largest = 0;
-    QuicFrameV.build_ack_args.delay = 0;
-    QuicFrameV.build_ack_args.first_range = 0;
-    QuicFrame.build_ack(quic_frame_work);
-    size_t hfl = QuicFrameV.n;
-    QuicFrameV.build_crypto_args.out = hfr + hfl;
-    QuicFrameV.build_crypto_args.cap = sizeof(hfr) - hfl;
-    QuicFrameV.build_crypto_args.offset = 0;
-    QuicFrameV.build_crypto_args.data = cfin;
-    QuicFrameV.build_crypto_args.len = sizeof(cfin);
-    QuicFrame.build_crypto(quic_frame_work);
-    hfl += QuicFrameV.n;
+    quic_frame_n = QuicFrame.build_ack(quic_frame_work, hfr, sizeof(hfr), 0, 0, 0);
+    size_t hfl = quic_frame_n;
+    quic_frame_n = QuicFrame.build_crypto(quic_frame_work, hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
+    hfl += quic_frame_n;
     size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
                             sizeof(CLIENT_SCID), 0, &hs_client_keys, hfr, hfl);
     QuicConnV.bind.b = qc_span(qc);
@@ -2033,24 +1898,10 @@ void test_quic_conn_null_callbacks()
 
     uint8_t d[3] = {1, 2, 3};
     uint8_t fr[64];
-    QuicFrameV.build_stream_args.out = fr;
-    QuicFrameV.build_stream_args.cap = sizeof fr;
-    QuicFrameV.build_stream_args.id = 0;
-    QuicFrameV.build_stream_args.offset = 0;
-    QuicFrameV.build_stream_args.data = d;
-    QuicFrameV.build_stream_args.len = 3;
-    QuicFrameV.build_stream_args.fin = PROTO_FALSE;
-    QuicFrame.build_stream(quic_frame_work);
-    size_t fl = QuicFrameV.n;
-    QuicFrameV.build_stream_args.out = fr + fl;
-    QuicFrameV.build_stream_args.cap = sizeof(fr) - fl;
-    QuicFrameV.build_stream_args.id = 0;
-    QuicFrameV.build_stream_args.offset = 3;
-    QuicFrameV.build_stream_args.data = d;
-    QuicFrameV.build_stream_args.len = 0;
-    QuicFrameV.build_stream_args.fin = PROTO_TRUE;
-    QuicFrame.build_stream(quic_frame_work);
-    fl += QuicFrameV.n;
+    size_t quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 0, d, 3, PROTO_FALSE);
+    size_t fl = quic_frame_n;
+    quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr + fl, sizeof(fr) - fl, 0, 3, d, 0, PROTO_TRUE);
+    fl += quic_frame_n;
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
     QuicConnV.bind.b = g_qc_b;
@@ -2085,15 +1936,8 @@ void test_quic_conn_stream_duplicate_and_stale_fin()
     uint8_t fr[64], dg[256];
     uint64_t pn = 0;
 
-    QuicFrameV.build_stream_args.out = fr;
-    QuicFrameV.build_stream_args.cap = sizeof fr;
-    QuicFrameV.build_stream_args.id = 0;
-    QuicFrameV.build_stream_args.offset = 0;
-    QuicFrameV.build_stream_args.data = d;
-    QuicFrameV.build_stream_args.len = 4;
-    QuicFrameV.build_stream_args.fin = PROTO_FALSE;
-    QuicFrame.build_stream(quic_frame_work);
-    size_t fl = QuicFrameV.n;
+    size_t quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 0, d, 4, PROTO_FALSE);
+    size_t fl = quic_frame_n;
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, pn++, &init.client, fr, fl);
     QuicConnV.bind.b = g_qc_b;
     QuicConnV.recv_args.datagram = dg;
@@ -2110,15 +1954,8 @@ void test_quic_conn_stream_duplicate_and_stale_fin()
     TEST_ASSERT_TRUE(QuicConnV.ok);
     TEST_ASSERT_EQUAL_UINT(4, g_stream_len);
 
-    QuicFrameV.build_stream_args.out = fr;
-    QuicFrameV.build_stream_args.cap = sizeof fr;
-    QuicFrameV.build_stream_args.id = 0;
-    QuicFrameV.build_stream_args.offset = 0;
-    QuicFrameV.build_stream_args.data = d;
-    QuicFrameV.build_stream_args.len = 0;
-    QuicFrameV.build_stream_args.fin = PROTO_TRUE;
-    QuicFrame.build_stream(quic_frame_work);
-    fl = QuicFrameV.n;
+    quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 0, d, 0, PROTO_TRUE);
+    fl = quic_frame_n;
     dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, pn++, &init.client, fr, fl);
     g_stream_fin = PROTO_FALSE;
     QuicConnV.bind.b = g_qc_b;
@@ -2128,15 +1965,8 @@ void test_quic_conn_stream_duplicate_and_stale_fin()
     TEST_ASSERT_TRUE(QuicConnV.ok);
     TEST_ASSERT_FALSE(g_stream_fin);
 
-    QuicFrameV.build_stream_args.out = fr;
-    QuicFrameV.build_stream_args.cap = sizeof fr;
-    QuicFrameV.build_stream_args.id = 0;
-    QuicFrameV.build_stream_args.offset = 4;
-    QuicFrameV.build_stream_args.data = d;
-    QuicFrameV.build_stream_args.len = 0;
-    QuicFrameV.build_stream_args.fin = PROTO_TRUE;
-    QuicFrame.build_stream(quic_frame_work);
-    fl = QuicFrameV.n;
+    quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 4, d, 0, PROTO_TRUE);
+    fl = quic_frame_n;
     dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, pn++, &init.client, fr, fl);
     QuicConnV.bind.b = g_qc_b;
     QuicConnV.recv_args.datagram = dg;
@@ -2182,13 +2012,8 @@ void test_quic_conn_frame_dispatch_variants()
         TEST_ASSERT_FALSE(g_qc.space[QUIC_ENC_INITIAL].ack_eliciting_rx);
 
         uint8_t older[8];
-        QuicFrameV.build_ack_args.out = older;
-        QuicFrameV.build_ack_args.cap = sizeof older;
-        QuicFrameV.build_ack_args.largest = 3;
-        QuicFrameV.build_ack_args.delay = 0;
-        QuicFrameV.build_ack_args.first_range = 0;
-        QuicFrame.build_ack(quic_frame_work);
-        size_t ol = QuicFrameV.n;
+        size_t quic_frame_n = QuicFrame.build_ack(quic_frame_work, older, sizeof older, 3, 0, 0);
+        size_t ol = quic_frame_n;
         dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 1, &init.client, older, ol);
         QuicConnV.bind.b = g_qc_b;
         QuicConnV.recv_args.datagram = dg;
@@ -2294,10 +2119,8 @@ void test_quic_recv_short_header_decrypt_failure()
     complete_handshake(&g_qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
 
     uint8_t fr[32];
-    QuicFrameV.build_ping_args.out = fr;
-    QuicFrameV.build_ping_args.cap = sizeof fr;
-    QuicFrame.build_ping(quic_frame_work);
-    size_t fl = QuicFrameV.n;
+    size_t quic_frame_n = QuicFrame.build_ping(quic_frame_work, fr, sizeof fr);
+    size_t fl = quic_frame_n;
     memset(fr + fl, 0, 20);
     fl += 20;
     uint8_t dg[256];
@@ -2330,13 +2153,8 @@ void test_quic_conn_crypto_after_handshake_done()
     uint64_t off = g_qc.space[QUIC_ENC_HANDSHAKE].crypto_rx_off;
     const uint8_t frag[2] = {0xFE, 0xFF};
     uint8_t fr[64];
-    QuicFrameV.build_crypto_args.out = fr;
-    QuicFrameV.build_crypto_args.cap = sizeof fr;
-    QuicFrameV.build_crypto_args.offset = off;
-    QuicFrameV.build_crypto_args.data = frag;
-    QuicFrameV.build_crypto_args.len = sizeof frag;
-    QuicFrame.build_crypto(quic_frame_work);
-    size_t fl = QuicFrameV.n;
+    size_t quic_frame_n = QuicFrame.build_crypto(quic_frame_work, fr, sizeof fr, off, frag, sizeof frag);
+    size_t fl = quic_frame_n;
     memset(fr + fl, 0, 20);
     fl += 20;
     uint8_t dg[256];
@@ -2357,13 +2175,8 @@ void test_quic_conn_crypto_after_handshake_done()
     g_hs_done = PROTO_FALSE;
     off = g_qc.space[QUIC_ENC_HANDSHAKE].crypto_rx_off;
     TEST_ASSERT_TRUE(off > 0);
-    QuicFrameV.build_crypto_args.out = fr;
-    QuicFrameV.build_crypto_args.cap = sizeof fr;
-    QuicFrameV.build_crypto_args.offset = off;
-    QuicFrameV.build_crypto_args.data = frag;
-    QuicFrameV.build_crypto_args.len = sizeof frag;
-    QuicFrame.build_crypto(quic_frame_work);
-    fl = QuicFrameV.n;
+    quic_frame_n = QuicFrame.build_crypto(quic_frame_work, fr, sizeof fr, off, frag, sizeof frag);
+    fl = quic_frame_n;
     memset(fr + fl, 0, 20);
     fl += 20;
     dl = build_long(dg, sizeof dg, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 8,
@@ -2392,15 +2205,9 @@ void test_quic_conn_close_after_peer_close()
     QuicCrypto.derive_initial_secrets(quic_crypto_work);
 
     uint8_t fr[32];
-    QuicFrameV.build_connection_close_args.out = fr;
-    QuicFrameV.build_connection_close_args.cap = sizeof fr;
-    QuicFrameV.build_connection_close_args.app = PROTO_FALSE;
-    QuicFrameV.build_connection_close_args.error_code = QUIC_ERR_NO_ERROR;
-    QuicFrameV.build_connection_close_args.frame_type = 0;
-    QuicFrameV.build_connection_close_args.reason = NULL;
-    QuicFrameV.build_connection_close_args.reason_len = 0;
-    QuicFrame.build_connection_close(quic_frame_work);
-    size_t fl = QuicFrameV.n;
+    size_t quic_frame_n =
+        QuicFrame.build_connection_close(quic_frame_work, fr, sizeof fr, PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
+    size_t fl = quic_frame_n;
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, fl);
@@ -2453,15 +2260,9 @@ void test_quic_conn_close_queued_then_peer_close()
     TEST_ASSERT_TRUE(g_qc.close_queued);
 
     uint8_t fr[32];
-    QuicFrameV.build_connection_close_args.out = fr;
-    QuicFrameV.build_connection_close_args.cap = sizeof fr;
-    QuicFrameV.build_connection_close_args.app = PROTO_FALSE;
-    QuicFrameV.build_connection_close_args.error_code = QUIC_ERR_NO_ERROR;
-    QuicFrameV.build_connection_close_args.frame_type = 0;
-    QuicFrameV.build_connection_close_args.reason = NULL;
-    QuicFrameV.build_connection_close_args.reason_len = 0;
-    QuicFrame.build_connection_close(quic_frame_work);
-    size_t fl = QuicFrameV.n;
+    size_t quic_frame_n =
+        QuicFrame.build_connection_close(quic_frame_work, fr, sizeof fr, PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
+    size_t fl = quic_frame_n;
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 1,
                            &init.client, fr, fl);
@@ -2599,13 +2400,8 @@ void test_quic_conn_crypto_flight_fragmented()
     uint8_t chb[512];
     size_t ch_len = build_client_hello(chb, client_pub, ctp_enc, ctp_len);
     uint8_t frames[1200];
-    QuicFrameV.build_crypto_args.out = frames;
-    QuicFrameV.build_crypto_args.cap = sizeof(frames);
-    QuicFrameV.build_crypto_args.offset = 0;
-    QuicFrameV.build_crypto_args.data = chb;
-    QuicFrameV.build_crypto_args.len = ch_len;
-    QuicFrame.build_crypto(quic_frame_work);
-    size_t fl = QuicFrameV.n;
+    size_t quic_frame_n = QuicFrame.build_crypto(quic_frame_work, frames, sizeof(frames), 0, chb, ch_len);
+    size_t fl = quic_frame_n;
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
@@ -2661,15 +2457,8 @@ void test_quic_conn_stream_tx_partitioning()
 
     uint8_t d[2] = {0x11, 0x22};
     uint8_t fr[64];
-    QuicFrameV.build_stream_args.out = fr;
-    QuicFrameV.build_stream_args.cap = sizeof fr;
-    QuicFrameV.build_stream_args.id = 0;
-    QuicFrameV.build_stream_args.offset = 0;
-    QuicFrameV.build_stream_args.data = d;
-    QuicFrameV.build_stream_args.len = 2;
-    QuicFrameV.build_stream_args.fin = PROTO_FALSE;
-    QuicFrame.build_stream(quic_frame_work);
-    size_t fl = QuicFrameV.n;
+    size_t quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 0, d, 2, PROTO_FALSE);
+    size_t fl = quic_frame_n;
     uint8_t sdg[256];
     size_t sl = build_short(sdg, sizeof sdg, SERVER_SCID, sizeof(SERVER_SCID), 1, &apc, fr, fl);
     QuicConnV.bind.b = g_qc_b;
@@ -2792,11 +2581,8 @@ void test_quic_conn_stream_fin_only()
     size_t pt = open_short(out, n, sizeof(CLIENT_SCID), &aps, plain);
     TEST_ASSERT_NOT_EQUAL(SIZE_MAX, pt);
     QuicFrameHeader f;
-    QuicFrameV.parse_args.buf = plain;
-    QuicFrameV.parse_args.len = pt;
-    QuicFrameV.parse_args.out = &f;
-    QuicFrame.parse(quic_frame_work);
-    size_t got = QuicFrameV.n;
+    size_t quic_frame_n = QuicFrame.parse(quic_frame_work, plain, pt, &f);
+    size_t got = quic_frame_n;
     TEST_ASSERT_TRUE(got > 0);
     TEST_ASSERT_TRUE(f.type >= QUIC_FT_STREAM);
     TEST_ASSERT_EQUAL_UINT64(0, f.stream.length);
@@ -3122,13 +2908,8 @@ void test_quic_conn_pto_disarms_when_all_acked()
     TEST_ASSERT_TRUE(g_qc.pto_armed);
 
     uint8_t fr[32];
-    QuicFrameV.build_ack_args.out = fr;
-    QuicFrameV.build_ack_args.cap = sizeof fr;
-    QuicFrameV.build_ack_args.largest = 0;
-    QuicFrameV.build_ack_args.delay = 0;
-    QuicFrameV.build_ack_args.first_range = 0;
-    QuicFrame.build_ack(quic_frame_work);
-    size_t fl = QuicFrameV.n;
+    size_t quic_frame_n = QuicFrame.build_ack(quic_frame_work, fr, sizeof fr, 0, 0, 0);
+    size_t fl = quic_frame_n;
     uint8_t dg[256];
     size_t dl = build_short(dg, sizeof dg, SERVER_SCID, sizeof(SERVER_SCID), 0, &apc, fr, fl);
     QuicConnV.bind.b = g_qc_b;

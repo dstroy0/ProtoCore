@@ -255,13 +255,7 @@ static void dispatch_request(H3ConnCtx *h3, H3Stream *st)
         if (fr.type == H3_HEADERS)
         {
             ReqEmit e = {st};
-            QpackV.decode_args.block = fp;
-            QpackV.decode_args.len = (size_t)fr.length;
-            QpackV.decode_args.scratch = scratch;
-            QpackV.decode_args.scratch_cap = PROTOCORE_H3_QPACK_SCRATCH;
-            QpackV.decode_args.emit = req_emit;
-            QpackV.decode_args.ctx = &e;
-            Qpack.decode(qpack_work);
+            Qpack.decode(qpack_work, fp, (size_t)fr.length, scratch, PROTOCORE_H3_QPACK_SCRATCH, req_emit, &e);
             st->have_headers = PROTO_TRUE;
         }
         else if (fr.type == H3_DATA)
@@ -538,36 +532,23 @@ static proto_bool h3_conn_reply(uint8_t *restrict work, H3ConnCtx *h3, uint64_t 
     uint8_t *out = h3->b + H3_OFF_OUT;
 
     // QPACK field section: prefix + :status + optional content-type + content-length.
-    QpackV.encode_prefix_args.out = block;
-    QpackV.encode_prefix_args.cap = PROTOCORE_H3_QPACK_BLOCK;
-    Qpack.encode_prefix(work);
-    size_t bp = QpackV.n;
+    size_t qpack_n = Qpack.encode_prefix(work, block, PROTOCORE_H3_QPACK_BLOCK);
+    size_t bp = qpack_n;
     char st3[4];
     st3[0] = (char)('0' + (status / 100) % 10);
     st3[1] = (char)('0' + (status / 10) % 10);
     st3[2] = (char)('0' + status % 10);
     st3[3] = '\0';
-    QpackV.encode_header_args.out = block + bp;
-    QpackV.encode_header_args.cap = PROTOCORE_H3_QPACK_BLOCK - bp;
-    QpackV.encode_header_args.name = ":status";
-    QpackV.encode_header_args.name_len = 7;
-    QpackV.encode_header_args.value = st3;
-    QpackV.encode_header_args.value_len = 3;
-    Qpack.encode_header(work);
-    bp += QpackV.n;
+    qpack_n = Qpack.encode_header(work, block + bp, PROTOCORE_H3_QPACK_BLOCK - bp, ":status", 7, st3, 3);
+    bp += qpack_n;
     if (content_type)
     {
         // Cap above the largest content-type that can fit this block even at QPACK-Huffman's best
         // 5-bit/char (~PROTOCORE_H3_QPACK_BLOCK * 8/5), so an over-long value trips the encode's reject
         // below instead of being truncated into a fittable length (see the matching protocore_h2_conn note).
-        QpackV.encode_header_args.out = block + bp;
-        QpackV.encode_header_args.cap = PROTOCORE_H3_QPACK_BLOCK - bp;
-        QpackV.encode_header_args.name = "content-type";
-        QpackV.encode_header_args.name_len = 12;
-        QpackV.encode_header_args.value = content_type;
-        QpackV.encode_header_args.value_len = str.len(content_type, (size_t)PROTOCORE_H3_QPACK_BLOCK * 2);
-        Qpack.encode_header(work);
-        bp += QpackV.n;
+        size_t qpack_n = Qpack.encode_header(work, block + bp, PROTOCORE_H3_QPACK_BLOCK - bp, "content-type", 12,
+                                             content_type, str.len(content_type, (size_t)PROTOCORE_H3_QPACK_BLOCK * 2));
+        bp += qpack_n;
     }
     char clen[16];
     size_t cl = 0;
@@ -586,14 +567,8 @@ static proto_bool h3_conn_reply(uint8_t *restrict work, H3ConnCtx *h3, uint64_t 
             clen[cl++] = tmp[--n];
         }
     }
-    QpackV.encode_header_args.out = block + bp;
-    QpackV.encode_header_args.cap = PROTOCORE_H3_QPACK_BLOCK - bp;
-    QpackV.encode_header_args.name = "content-length";
-    QpackV.encode_header_args.name_len = 14;
-    QpackV.encode_header_args.value = clen;
-    QpackV.encode_header_args.value_len = cl;
-    Qpack.encode_header(work);
-    bp += QpackV.n;
+    qpack_n = Qpack.encode_header(work, block + bp, PROTOCORE_H3_QPACK_BLOCK - bp, "content-length", 14, clen, cl);
+    bp += qpack_n;
 
     // HEADERS frame + DATA frame, sent on the request stream with FIN.
     H3FrameV.build_headers_args.out = out;

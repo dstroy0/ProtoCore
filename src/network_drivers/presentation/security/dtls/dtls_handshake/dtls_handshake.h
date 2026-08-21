@@ -1,8 +1,15 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#ifndef PROTOCORE_DTLS_HANDSHAKE_H
+#define PROTOCORE_DTLS_HANDSHAKE_H
+
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+PROTOCORE_BEGIN_DECLS
+
 /**
- * @file protocore_dtls_handshake.h
+ * @file dtls_handshake.h
  * @brief DTLS 1.3 handshake framing and reliability (RFC 9147 §5, §7).
  *
  * The datagram-reliability layer that sits between the DTLS record layer (protocore_dtls_record) and the
@@ -13,32 +20,27 @@
  * TCP retransmission.
  *
  * This file is pure framing - no crypto state, no sockets. It provides:
- *   - the 12-byte handshake header (@ref protocore_dtls_hs_header_parse / @ref protocore_dtls_hs_frag_build);
- *   - overlap-tolerant message reassembly (@ref DtlsHsReasm), modelled on the QUIC CRYPTO-stream
- *     reassembler - a fragment may arrive split, duplicated, or overlapping (§5.4);
- *   - the ACK message (@ref protocore_dtls_ack_build / @ref protocore_dtls_ack_parse, content type 26, §7);
- *   - the stateless HelloRetryRequest cookie (@ref protocore_dtls_cookie_make / @ref protocore_dtls_cookie_verify,
- *     the §5.1 return-routability / anti-amplification defense).
+ * - the 12-byte handshake header (@ref protocore_dtls_hs_header_parse / @ref protocore_dtls_hs_frag_build);
+ * - overlap-tolerant message reassembly (@ref DtlsHsReasm), modelled on the QUIC CRYPTO-stream
+ * reassembler - a fragment may arrive split, duplicated, or overlapping (§5.4);
+ * - the ACK message (@ref protocore_dtls_ack_build / @ref protocore_dtls_ack_parse, content type 26, §7);
+ * - the stateless HelloRetryRequest cookie (@ref protocore_dtls_cookie_make / @ref protocore_dtls_cookie_verify,
+ * the §5.1 return-routability / anti-amplification defense).
  *
  * The handshake state machine that drives these (flights, epochs, PTO) is protocore_dtls_conn; the TLS 1.3
  * message bodies and key schedule are reused verbatim from the HTTP/3 stack (protocore_tls13_msg, protocore_tls13_kdf).
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
  */
 
-#ifndef PROTOCORE_DTLS_HANDSHAKE_H
-#define PROTOCORE_DTLS_HANDSHAKE_H
-
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths
-
-#if PROTOCORE_ENABLE_DTLS
-
-PROTOCORE_BEGIN_DECLS
-
-// This module holds nothing between calls, so it carves no borrow and states none. An entry
-// takes one all the same, and never reads it, so every namespace in the tree is invoked the
-// same way.
+// PROTOCORE_DTLS_HANDSHAKE_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. Its size and its offset are each a static_assert, so a feature
+// combination that does not fit fails to compile rather than overrunning at run time.
 
 /** @brief DTLS handshake header length: msg_type(1) + length(3) + message_seq(2) + fragment_offset(3)
  *         + fragment_length(3) = 12 bytes (RFC 9147 §5.2). */
@@ -96,185 +98,140 @@ typedef struct
     uint64_t seq;
 } DtlsRecordNumber;
 
-/** @brief What header_parse takes: p, len, out. */
+/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    const uint8_t *p;
-    size_t len;
-    DtlsHsHeader *out;
-} DtlsHandshakeHeaderParseArgs;
-
-/** @brief What frag_build takes: msg_type, msg_seq, full_len, ... */
-typedef struct
-{
-    uint8_t msg_type;
-    uint16_t msg_seq;
-    uint32_t full_len;
-    uint32_t frag_offset;
-    const uint8_t *frag;
-    uint32_t frag_len;
-    uint8_t *out;
-    size_t out_cap;
-} DtlsHandshakeFragBuildArgs;
-
-/** @brief What reasm_init takes: r, msg_seq, buf, buf_cap. */
-typedef struct
-{
-    DtlsHsReasm *r;
-    uint16_t msg_seq;
-    uint8_t *buf;
-    size_t buf_cap;
-} DtlsHandshakeReasmInitArgs;
-
-/** @brief What reasm_add takes: r, frag. */
-typedef struct
-{
-    DtlsHsReasm *r;
-    const DtlsHsHeader *frag;
-} DtlsHandshakeReasmAddArgs;
-
-/** @brief What ack_build takes: nums, count, out, out_cap. */
-typedef struct
-{
-    const DtlsRecordNumber *nums;
-    size_t count;
-    uint8_t *out;
-    size_t out_cap;
-} DtlsHandshakeAckBuildArgs;
-
-/** @brief What ack_parse takes: body, len, out, out_cap, out_count. */
-typedef struct
-{
-    const uint8_t *body;
-    size_t len;
-    DtlsRecordNumber *out;
-    size_t out_cap;
-    size_t *out_count;
-} DtlsHandshakeAckParseArgs;
-
-/** @brief What cookie_make takes: mac_work, protocore_hmac_key, ... */
-typedef struct
-{
-    uint8_t *mac_work;
-    const uint8_t *protocore_hmac_key; ///< 32 bytes.
-    uint64_t timestamp;
-    const uint8_t *payload;
-    size_t payload_len;
-    const uint8_t *client_addr;
-    size_t addr_len;
-    uint8_t *out;
-    size_t out_cap;
-} DtlsHandshakeCookieMakeArgs;
-
-/** @brief What cookie_verify takes: mac_work, protocore_hmac_key, ... */
-typedef struct
-{
-    uint8_t *mac_work;
-    const uint8_t *protocore_hmac_key; ///< 32 bytes.
-    uint64_t now;
-    uint64_t max_age;
-    const uint8_t *client_addr;
-    size_t addr_len;
-    const uint8_t *cookie;
-    size_t cookie_len;
-    uint8_t *payload_out;
-    size_t payload_cap;
-    size_t *payload_len_out;
-} DtlsHandshakeCookieVerifyArgs;
+    size_t (*header_parse)(uint8_t *restrict, const uint8_t *, size_t, DtlsHsHeader *);
+    size_t (*frag_build)(uint8_t *restrict, uint8_t, uint16_t, uint32_t, uint32_t, const uint8_t *, uint32_t, uint8_t *,
+                         size_t);
+    void (*reasm_init)(uint8_t *restrict, DtlsHsReasm *, uint16_t, uint8_t *, size_t);
+    size_t (*reasm_add)(uint8_t *restrict, DtlsHsReasm *, const DtlsHsHeader *);
+    size_t (*ack_build)(uint8_t *restrict, const DtlsRecordNumber *, size_t, uint8_t *, size_t);
+    proto_bool (*ack_parse)(uint8_t *restrict, const uint8_t *, size_t, DtlsRecordNumber *, size_t, size_t *);
+    size_t (*cookie_make)(uint8_t *restrict, uint8_t *, const uint8_t *, uint64_t, const uint8_t *, size_t,
+                          const uint8_t *, size_t, uint8_t *, size_t);
+    proto_bool (*cookie_verify)(uint8_t *restrict, uint8_t *, const uint8_t *, uint64_t, uint64_t, const uint8_t *,
+                                size_t, const uint8_t *, size_t, uint8_t *, size_t, size_t *);
+} DtlsHandshakeNs;
+PROTOCORE_NS_LAYOUT(DtlsHandshakeNs, header_parse, frag_build, reasm_init, reasm_add, ack_build, ack_parse, cookie_make,
+                    cookie_verify);
 
 /**
- * @brief DTLS 1.3 handshake framing and reliability (RFC 9147 §5, §7).
- *
- * A caller sets the members a call takes, invokes it through ::DtlsHandshake with the bytes it runs
- * out of, and reads the outcome off the same handle.
- *
- *   DtlsHandshake.header_parse_args.p = ...;
- *   DtlsHandshake.header_parse_args.len = ...;
- *   DtlsHandshake.header_parse_args.out = ...;
- *   DtlsHandshake.header_parse(work);
- *   // DtlsHandshake.n is what the call reports
- *
- * @var DtlsHandshakeNs::header_parse_args  what header_parse takes: p, len, out
- * @var DtlsHandshakeNs::frag_build_args  what frag_build takes: msg_type, msg_seq, full_len,
- * @var DtlsHandshakeNs::reasm_init_args  what reasm_init takes: r, msg_seq, buf, buf_cap
- * @var DtlsHandshakeNs::reasm_add_args  what reasm_add takes: r, frag
- * @var DtlsHandshakeNs::ack_build_args  what ack_build takes: nums, count, out, out_cap
- * @var DtlsHandshakeNs::ack_parse_args  what ack_parse takes: body, len, out, out_cap, out_count
- * @var DtlsHandshakeNs::cookie_make_args  what cookie_make takes: mac_work, protocore_hmac_key,
- * @var DtlsHandshakeNs::cookie_verify_args  what cookie_verify takes: mac_work, protocore_hmac_key,
- * @var DtlsHandshakeNs::ok  a call's true/false outcome
- * @var DtlsHandshakeNs::n  the count a call reports
- * @var DtlsHandshakeNs::header_parse  the 12-byte DTLS handshake header; bytes consumed, or 0 if truncated
- * @var DtlsHandshakeNs::frag_build  one handshake fragment, header and body; bytes written, or 0 on ...
- * @var DtlsHandshakeNs::reasm_init  bind a reassembler to a caller buffer for one message sequence ...
- * @var DtlsHandshakeNs::reasm_add  add one fragment to the reassembly in progress
- * @var DtlsHandshakeNs::ack_build  an ACK body (RFC 9147 sec 7) over count record numbers
- * @var DtlsHandshakeNs::ack_parse  the same body back into at most out_cap record numbers
- * @var DtlsHandshakeNs::cookie_make  a stateless HelloRetryRequest cookie bound to the client address
- * @var DtlsHandshakeNs::cookie_verify  the same cookie back, checking the address binding and the age ...
- *
- * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
- * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
- * a caller drives every namespace the same way.
+ * @brief The 12-byte DTLS handshake header; bytes consumed, or 0 if truncated.
+ * @param work PROTOCORE_DTLS_HANDSHAKE_BORROW bytes the caller took. Not held past the call.
+ * @param p P
+ * @param len Len
+ * @param out Out
+ * @return The size_t.
  */
-typedef struct
-{
-    DtlsHandshakeHeaderParseArgs header_parse_args;
-    DtlsHandshakeFragBuildArgs frag_build_args;
-    DtlsHandshakeReasmInitArgs reasm_init_args;
-    DtlsHandshakeReasmAddArgs reasm_add_args;
-    DtlsHandshakeAckBuildArgs ack_build_args;
-    DtlsHandshakeAckParseArgs ack_parse_args;
-    DtlsHandshakeCookieMakeArgs cookie_make_args;
-    DtlsHandshakeCookieVerifyArgs cookie_verify_args;
-    proto_bool ok;
-    size_t n;
-} DtlsHandshakeVars;
+size_t protocore_dtls_handshake_header_parse(uint8_t *restrict work, const uint8_t *p, size_t len, DtlsHsHeader *out);
+/**
+ * @brief One handshake fragment, header and body; bytes written, or 0 on .
+ * @param work PROTOCORE_DTLS_HANDSHAKE_BORROW bytes the caller took. Not held past the call.
+ * @param msg_type Msg type
+ * @param msg_seq Msg seq
+ * @param full_len Full len
+ * @param frag_offset Frag offset
+ * @param frag Frag
+ * @param frag_len Frag len
+ * @param out Out
+ * @param out_cap Out cap
+ * @return The size_t.
+ */
+size_t protocore_dtls_handshake_frag_build(uint8_t *restrict work, uint8_t msg_type, uint16_t msg_seq,
+                                           uint32_t full_len, uint32_t frag_offset, const uint8_t *frag,
+                                           uint32_t frag_len, uint8_t *out, size_t out_cap);
+/**
+ * @brief Bind a reassembler to a caller buffer for one message sequence .
+ * @param work PROTOCORE_DTLS_HANDSHAKE_BORROW bytes the caller took. Not held past the call.
+ * @param r R
+ * @param msg_seq Msg seq
+ * @param buf Buf
+ * @param buf_cap Buf cap
+ */
+void protocore_dtls_handshake_reasm_init(uint8_t *restrict work, DtlsHsReasm *r, uint16_t msg_seq, uint8_t *buf,
+                                         size_t buf_cap);
+/**
+ * @brief Add one fragment to the reassembly in progress.
+ * @param work PROTOCORE_DTLS_HANDSHAKE_BORROW bytes the caller took. Not held past the call.
+ * @param r R
+ * @param frag Frag
+ * @return The size_t.
+ */
+size_t protocore_dtls_handshake_reasm_add(uint8_t *restrict work, DtlsHsReasm *r, const DtlsHsHeader *frag);
+/**
+ * @brief An ACK body (RFC 9147 sec 7) over count record numbers.
+ * @param work PROTOCORE_DTLS_HANDSHAKE_BORROW bytes the caller took. Not held past the call.
+ * @param nums Nums
+ * @param count Count
+ * @param out Out
+ * @param out_cap Out cap
+ * @return The size_t.
+ */
+size_t protocore_dtls_handshake_ack_build(uint8_t *restrict work, const DtlsRecordNumber *nums, size_t count,
+                                          uint8_t *out, size_t out_cap);
+/**
+ * @brief The same body back into at most out_cap record numbers.
+ * @param work PROTOCORE_DTLS_HANDSHAKE_BORROW bytes the caller took. Not held past the call.
+ * @param body Body
+ * @param len Len
+ * @param out Out
+ * @param out_cap Out cap
+ * @param out_count Out count
+ * @return PROTO_TRUE on success.
+ */
+proto_bool protocore_dtls_handshake_ack_parse(uint8_t *restrict work, const uint8_t *body, size_t len,
+                                              DtlsRecordNumber *out, size_t out_cap, size_t *out_count);
+/**
+ * @brief A stateless HelloRetryRequest cookie bound to the client address.
+ * @param work PROTOCORE_DTLS_HANDSHAKE_BORROW bytes the caller took. Not held past the call.
+ * @param mac_work Mac work
+ * @param protocore_hmac_key 32 bytes
+ * @param timestamp Timestamp
+ * @param payload Payload
+ * @param payload_len Payload len
+ * @param client_addr Client addr
+ * @param addr_len Addr len
+ * @param out Out
+ * @param out_cap Out cap
+ * @return The size_t.
+ */
+size_t protocore_dtls_handshake_cookie_make(uint8_t *restrict work, uint8_t *mac_work,
+                                            const uint8_t *protocore_hmac_key, uint64_t timestamp,
+                                            const uint8_t *payload, size_t payload_len, const uint8_t *client_addr,
+                                            size_t addr_len, uint8_t *out, size_t out_cap);
+/**
+ * @brief The same cookie back, checking the address binding and the age .
+ * @param work PROTOCORE_DTLS_HANDSHAKE_BORROW bytes the caller took. Not held past the call.
+ * @param mac_work Mac work
+ * @param protocore_hmac_key 32 bytes
+ * @param now Now
+ * @param max_age Max age
+ * @param client_addr Client addr
+ * @param addr_len Addr len
+ * @param cookie Cookie
+ * @param cookie_len Cookie len
+ * @param payload_out Payload out
+ * @param payload_cap Payload cap
+ * @param payload_len_out Payload len out
+ * @return PROTO_TRUE on success.
+ */
+proto_bool protocore_dtls_handshake_cookie_verify(uint8_t *restrict work, uint8_t *mac_work,
+                                                  const uint8_t *protocore_hmac_key, uint64_t now, uint64_t max_age,
+                                                  const uint8_t *client_addr, size_t addr_len, const uint8_t *cookie,
+                                                  size_t cookie_len, uint8_t *payload_out, size_t payload_cap,
+                                                  size_t *payload_len_out);
 
-/** @brief The operands and the outcome. */
-extern DtlsHandshakeVars DtlsHandshakeV;
-
-/** @brief The entries. */
-typedef struct
-{
-    void (*const header_parse)(uint8_t *restrict work);
-    void (*const frag_build)(uint8_t *restrict work);
-    void (*const reasm_init)(uint8_t *restrict work);
-    void (*const reasm_add)(uint8_t *restrict work);
-    void (*const ack_build)(uint8_t *restrict work);
-    void (*const ack_parse)(uint8_t *restrict work);
-    void (*const cookie_make)(uint8_t *restrict work);
-    void (*const cookie_verify)(uint8_t *restrict work);
-} DtlsHandshakeNs;
-
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in DtlsHandshakeV or a region of the borrow at a fixed offset.
-void protocore_dtls_handshake_header_parse(uint8_t *restrict work);
-void protocore_dtls_handshake_frag_build(uint8_t *restrict work);
-void protocore_dtls_handshake_reasm_init(uint8_t *restrict work);
-void protocore_dtls_handshake_reasm_add(uint8_t *restrict work);
-void protocore_dtls_handshake_ack_build(uint8_t *restrict work);
-void protocore_dtls_handshake_ack_parse(uint8_t *restrict work);
-void protocore_dtls_handshake_cookie_make(uint8_t *restrict work);
-void protocore_dtls_handshake_cookie_verify(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `DtlsHandshake.header_parse(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const DtlsHandshakeNs DtlsHandshake __attribute__((unused)) = {
-    .header_parse = protocore_dtls_handshake_header_parse,
-    .frag_build = protocore_dtls_handshake_frag_build,
-    .reasm_init = protocore_dtls_handshake_reasm_init,
-    .reasm_add = protocore_dtls_handshake_reasm_add,
-    .ack_build = protocore_dtls_handshake_ack_build,
-    .ack_parse = protocore_dtls_handshake_ack_parse,
-    .cookie_make = protocore_dtls_handshake_cookie_make,
-    .cookie_verify = protocore_dtls_handshake_cookie_verify,
-};
+/** @brief Module namespace. */
+PROTOCORE_NS DtlsHandshakeNs DtlsHandshake PROTOCORE_UNUSED = {.header_parse = protocore_dtls_handshake_header_parse,
+                                                               .frag_build = protocore_dtls_handshake_frag_build,
+                                                               .reasm_init = protocore_dtls_handshake_reasm_init,
+                                                               .reasm_add = protocore_dtls_handshake_reasm_add,
+                                                               .ack_build = protocore_dtls_handshake_ack_build,
+                                                               .ack_parse = protocore_dtls_handshake_ack_parse,
+                                                               .cookie_make = protocore_dtls_handshake_cookie_make,
+                                                               .cookie_verify = protocore_dtls_handshake_cookie_verify};
 
 PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_DTLS
 
 #endif // PROTOCORE_DTLS_HANDSHAKE_H

@@ -1,76 +1,36 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/**
- * @file ssh.h
- * @brief Every byte the connections use, one span per slot.
- */
-
 #ifndef PROTOCORE_SSH_SSH_H
 #define PROTOCORE_SSH_SSH_H
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-#if PROTOCORE_ENABLE_SSH
-
 PROTOCORE_BEGIN_DECLS
 
-// PROTOCORE_SSH_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
-// it into its arena. A caller takes them once and passes the pointer to every call. How they
-// are carved is this module's and is never named here.
-
-/** @brief What conn_slot takes: i. */
-typedef struct
-{
-    uint8_t i;
-} SshConnSlotArgs;
-
 /**
+ * @file ssh.h
  * @brief Every byte the connections use, one span per slot.
- *
- * A caller sets the members a call takes, invokes it through ::Ssh with the bytes it runs
- * out of, and reads the outcome off the same handle.
- *
- *   Ssh.conn_slot_args.i = ...;
- *   Ssh.conn_slot(work);
- *   // Ssh.ptr is what the call reports
- *
- * @var SshNs::conn_slot_args  what conn_slot takes: i
- * @var SshNs::ok  a call's true/false outcome
- * @var SshNs::ptr  the pointer a call reports
- * @var SshNs::conn_slot  the base of slot i's span, or NULL when i is out of range. Every ...
  *
  * @c work is PROTOCORE_SSH_BORROW bytes the CALLER took, at an address it knows. It arrives
  * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
  * carved is this module's and is never named here.
  */
+
+/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    SshConnSlotArgs conn_slot_args;
-    proto_bool ok;
-    uint8_t *ptr;
-} SshVars;
-
-/** @brief The operands and the outcome. */
-extern SshVars SshV;
-
-/** @brief The entries. */
-typedef struct
-{
-    void (*const conn_slot)(uint8_t *restrict work);
+    uint8_t *(*conn_slot)(uint8_t *restrict, uint8_t);
 } SshNs;
+PROTOCORE_NS_LAYOUT(SshNs, conn_slot);
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in SshV or a region of the borrow at a fixed offset.
-void protocore_ssh_conn_slot(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Ssh.conn_slot(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const SshNs Ssh __attribute__((unused)) = {
-    .conn_slot = protocore_ssh_conn_slot,
-};
+/**
+ * @brief The base of slot i's span, or NULL when i is out of range. Every .
+ * @param work PROTOCORE_SSH_BORROW bytes the caller took. Not held past the call.
+ * @param i I
+ * @return The uint8_t *.
+ */
+uint8_t *protocore_ssh_conn_slot(uint8_t *restrict work, uint8_t i);
 
 /**
  * @brief The PROTOCORE_SSH_BORROW bytes this module's state lives in.
@@ -83,8 +43,9 @@ static const SshNs Ssh __attribute__((unused)) = {
  */
 uint8_t *protocore_ssh_span(void);
 
-PROTOCORE_END_DECLS
+/** @brief Module namespace. */
+PROTOCORE_NS SshNs Ssh PROTOCORE_UNUSED = {.conn_slot = protocore_ssh_conn_slot};
 
-#endif // PROTOCORE_ENABLE_SSH
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_SSH_SSH_H

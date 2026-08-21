@@ -6,15 +6,11 @@
  * @brief In-place multipart/form-data parser implementation.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_MULTIPART
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h" // str.find: a quoted parameter key, and the boundary in a Content-Type
 #include "multipart.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // Longest parameter key the header scan will match ("name=", "filename=").
 #define MULTIPART_KEY_MAX 32
@@ -67,11 +63,9 @@ static char *extract_quoted_param(char *src, const char *key)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_multipart_parse(uint8_t *restrict work)
+proto_bool protocore_multipart_parse(uint8_t *restrict work, HttpReq *req, MultipartBody *mp)
 {
     (void)work;
-    HttpReq *req = MultipartV.parse_args.req;
-    MultipartBody *mp = MultipartV.parse_args.mp;
 
     mp->part_count = 0;
 
@@ -81,16 +75,14 @@ void protocore_multipart_parse(uint8_t *restrict work)
     const char *ct = HttpParserV.text;
     if (!ct)
     {
-        MultipartV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
 
     // Extract boundary value (may be quoted or unquoted)
     const char *bsearch = str.find(ct, MAX_VAL_LEN, "boundary=", sizeof("boundary="), PROTO_FALSE);
     if (!bsearch)
     {
-        MultipartV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     bsearch += 9;
     if (*bsearch == '"')
@@ -111,8 +103,7 @@ void protocore_multipart_parse(uint8_t *restrict work)
 
     if (blen == 0)
     {
-        MultipartV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
 
     // Delimiter is "--" + boundary
@@ -137,8 +128,7 @@ void protocore_multipart_parse(uint8_t *restrict work)
     char *pos = mem_find(body, (size_t)(end - body), delim, dlen);
     if (!pos)
     {
-        MultipartV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     pos += dlen;
     if (pos + 2 <= end && pos[0] == '\r' && pos[1] == '\n')
@@ -173,8 +163,7 @@ void protocore_multipart_parse(uint8_t *restrict work)
             char *line_end = mem_find(pos, (size_t)(end - pos), "\r\n", 2);
             if (!line_end)
             {
-                MultipartV.ok = PROTO_FALSE;
-                return;
+                return PROTO_FALSE;
             }
 
             *line_end = '\0'; // null-terminate header line
@@ -211,8 +200,7 @@ void protocore_multipart_parse(uint8_t *restrict work)
         char *next = mem_find(pos, (size_t)(end - pos), ddelim, ddlen);
         if (!next)
         {
-            MultipartV.ok = PROTO_FALSE;
-            return;
+            return PROTO_FALSE;
         }
 
         part->data = pos;
@@ -228,31 +216,20 @@ void protocore_multipart_parse(uint8_t *restrict work)
         }
     }
 
-    MultipartV.ok = mp->part_count > 0;
+    return mp->part_count > 0;
 }
 
-void protocore_multipart_get_field(uint8_t *restrict work)
+const char *protocore_multipart_get_field(uint8_t *restrict work, const MultipartBody *mp, const char *field)
 {
     (void)work;
-    const MultipartBody *mp = MultipartV.get_field_args.mp;
-    const char *field = MultipartV.get_field_args.field;
 
     for (int i = 0; i < mp->part_count; i++)
     {
         if (mp->parts[i].name &&
             str.eq(mp->parts[i].name, field, str.len(mp->parts[i].name, str.len(field, 0xFFFF)) + 1u, PROTO_FALSE))
         {
-            MultipartV.text = mp->parts[i].data;
-            return;
+            return mp->parts[i].data;
         }
     }
-    MultipartV.text = NULL;
+    return NULL;
 }
-/** @brief The operands and the outcome. */
-MultipartVars MultipartV;
-
-PROTOCORE_END_DECLS
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_MULTIPART

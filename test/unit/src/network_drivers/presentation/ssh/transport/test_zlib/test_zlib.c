@@ -32,14 +32,8 @@ static SshInflate s_inf;
 static size_t compress_one(const uint8_t *src, size_t len, uint8_t *dst, size_t cap)
 {
     size_t out = 0;
-    ZlibV.packet_args.z = &s_def;
-    ZlibV.packet_args.src = src;
-    ZlibV.packet_args.src_len = len;
-    ZlibV.packet_args.dst = dst;
-    ZlibV.packet_args.dst_cap = cap;
-    ZlibV.packet_args.out_len = &out;
-    Zlib.packet(zlib_work);
-    TEST_ASSERT_EQUAL_INT(0, ZlibV.n);
+    int zlib_n = Zlib.packet(zlib_work, &s_def, src, len, dst, cap, &out);
+    TEST_ASSERT_EQUAL_INT(0, zlib_n);
     return out;
 }
 
@@ -61,15 +55,7 @@ static size_t expand_one(const uint8_t *src, size_t len, uint8_t *dst, size_t ca
 void setUp(void)
 {
 
-    ZlibV.init_args.z = &s_def;
-    ZlibV.init_args.win = s_work;
-    ZlibV.init_args.head = s_head;
-    ZlibV.init_args.prev = s_prev;
-    ZlibV.init_args.ll_code = s_ll_code;
-    ZlibV.init_args.ll_len = s_ll_len;
-    ZlibV.init_args.d_code = s_d_code;
-    ZlibV.init_args.d_len = s_d_len;
-    Zlib.init(zlib_work);
+    Zlib.init(zlib_work, &s_def, s_work, s_head, s_prev, s_ll_code, s_ll_len, s_d_code, s_d_len);
     InflateV.init_args.z = &s_inf;
     InflateV.init_args.window = s_window;
     Inflate.init(inflate_work);
@@ -167,14 +153,8 @@ static void test_undersized_destination_is_refused(void)
     const uint8_t msg[] = "something that will not fit in four bytes";
     uint8_t comp[4];
     size_t out = 0;
-    ZlibV.packet_args.z = &s_def;
-    ZlibV.packet_args.src = msg;
-    ZlibV.packet_args.src_len = sizeof(msg) - 1;
-    ZlibV.packet_args.dst = comp;
-    ZlibV.packet_args.dst_cap = sizeof(comp);
-    ZlibV.packet_args.out_len = &out;
-    Zlib.packet(zlib_work);
-    TEST_ASSERT_NOT_EQUAL(0, ZlibV.n);
+    int zlib_n = Zlib.packet(zlib_work, &s_def, msg, sizeof(msg) - 1, comp, sizeof(comp), &out);
+    TEST_ASSERT_NOT_EQUAL(0, zlib_n);
 }
 
 int main(void)

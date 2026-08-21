@@ -1,6 +1,13 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#ifndef PROTOCORE_DEFLATE_H
+#define PROTOCORE_DEFLATE_H
+
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+PROTOCORE_BEGIN_DECLS
+
 /**
  * @file deflate.h
  * @brief Bounded RFC 1951 DEFLATE compressor (DEFLATE) - no heap.
@@ -26,22 +33,17 @@
  * If the output would not be smaller than the input the caller simply sends the
  * message uncompressed (the per-message RSV1 flag makes that legal).
  *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
+ *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
  */
 
-#ifndef PROTOCORE_DEFLATE_H
-#define PROTOCORE_DEFLATE_H
-
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths
-
-#if PROTOCORE_ENABLE_WS_DEFLATE
-
-PROTOCORE_BEGIN_DECLS
-
-// This module holds nothing between calls, so it carves no borrow and states none. An entry
-// takes one all the same, and never reads it, so every namespace in the tree is invoked the
-// same way.
+// PROTOCORE_DEFLATE_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. Its size and its offset are each a static_assert, so a feature
+// combination that does not fit fails to compile rather than overrunning at run time.
 
 /**
  * @brief Working-memory bytes deflate_raw() needs (hash chains + code tables).
@@ -59,73 +61,31 @@ typedef enum PROTO_ENUM_PACKED
     DEFLATE_ERR_SCRATCH = -3   ///< scratch_len < DEFLATE_SCRATCH_SIZE
 } DeflateResult;
 
-/** @brief What raw takes: src, src_len, dst, dst_cap, out_len, ... */
+/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    const uint8_t *src;
-    size_t src_len;
-    uint8_t *dst;
-    size_t dst_cap;
-    size_t *out_len;
-    void *scratch;
-    size_t scratch_len;
-} DeflateRawArgs;
+    DeflateResult (*raw)(uint8_t *restrict, const uint8_t *, size_t, uint8_t *, size_t, size_t *, void *, size_t);
+} DeflateNs;
+PROTOCORE_NS_LAYOUT(DeflateNs, raw);
 
 /**
- * @brief Bounded RFC 1951 DEFLATE compressor (DEFLATE) - no heap.
- *
- * A caller sets the members a call takes, invokes it through ::Deflate with the bytes it runs
- * out of, and reads the outcome off the same handle.
- *
- *   Deflate.raw_args.src = ...;
- *   Deflate.raw_args.src_len = ...;
- *   Deflate.raw_args.dst = ...;
- *   Deflate.raw_args.dst_cap = ...;
- *   Deflate.raw_args.out_len = ...;
- *   Deflate.raw_args.scratch = ...;
- *   Deflate.raw_args.scratch_len = ...;
- *   Deflate.raw(work);
- *   // Deflate.value is what the call reports
- *
- * @var DeflateNs::raw_args  what raw takes: src, src_len, dst, dst_cap, out_len,
- * @var DeflateNs::ok  a call's true/false outcome
- * @var DeflateNs::value  the value a call reports
- * @var DeflateNs::raw  compress src into a raw permessage-deflate payload (RFC 7692): a ...
- *
- * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
- * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
- * a caller drives every namespace the same way.
+ * @brief Compress src into a raw permessage-deflate payload (RFC 7692): a .
+ * @param work PROTOCORE_DEFLATE_BORROW bytes the caller took. Not held past the call.
+ * @param src Src
+ * @param src_len Src len
+ * @param dst Dst
+ * @param dst_cap Dst cap
+ * @param out_len Out len
+ * @param scratch Scratch
+ * @param scratch_len Scratch len
+ * @return The DeflateResult.
  */
-typedef struct
-{
-    DeflateRawArgs raw_args;
-    proto_bool ok;
-    DeflateResult value;
-} DeflateVars;
+DeflateResult protocore_deflate_raw(uint8_t *restrict work, const uint8_t *src, size_t src_len, uint8_t *dst,
+                                    size_t dst_cap, size_t *out_len, void *scratch, size_t scratch_len);
 
-/** @brief The operands and the outcome. */
-extern DeflateVars DeflateV;
-
-/** @brief The entries. */
-typedef struct
-{
-    void (*const raw)(uint8_t *restrict work);
-} DeflateNs;
-
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in DeflateV or a region of the borrow at a fixed offset.
-void protocore_deflate_raw(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Deflate.raw(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const DeflateNs Deflate __attribute__((unused)) = {
-    .raw = protocore_deflate_raw,
-};
+/** @brief Module namespace. */
+PROTOCORE_NS DeflateNs Deflate PROTOCORE_UNUSED = {.raw = protocore_deflate_raw};
 
 PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_WS_DEFLATE
 
 #endif // PROTOCORE_DEFLATE_H

@@ -230,9 +230,8 @@ void protocore_ssh_network_write_msg(uint8_t *restrict work)
         SshNetworkV.i32 = -1;
         return;
     }
-    SshV.conn_slot_args.i = ssh_slot;
-    Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *slot = SshV.ptr;
+    uint8_t *ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), ssh_slot);
+    uint8_t *slot = ssh_ptr;
     if (slot == NULL)
     {
         SshNetworkV.i32 = -1;
@@ -261,9 +260,8 @@ void protocore_ssh_network_payload_region(uint8_t *restrict work)
         SshNetworkV.region = NULL;
         return;
     }
-    SshV.conn_slot_args.i = ssh_slot;
-    Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *slot = SshV.ptr;
+    uint8_t *ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), ssh_slot);
+    uint8_t *slot = ssh_ptr;
     if (slot == NULL)
     {
         SshNetworkV.region = NULL;
@@ -285,9 +283,8 @@ void protocore_ssh_network_write_msg_at(uint8_t *restrict work)
         SshNetworkV.i32 = -1;
         return;
     }
-    SshV.conn_slot_args.i = ssh_slot;
-    Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *slot = SshV.ptr;
+    uint8_t *ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), ssh_slot);
+    uint8_t *slot = ssh_ptr;
     if (slot == NULL)
     {
         SshNetworkV.i32 = -1;
@@ -375,9 +372,8 @@ void protocore_ssh_network_owns(uint8_t *restrict work)
 // it.
 void ssh_net_version_exchange_send(uint8_t i, uint8_t conn_slot)
 {
-    SshV.conn_slot_args.i = i;
-    Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *slot = SshV.ptr;
+    uint8_t *ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), i);
+    uint8_t *slot = ssh_ptr;
     if (slot == NULL)
     {
         return;

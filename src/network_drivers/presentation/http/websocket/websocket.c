@@ -301,15 +301,8 @@ void protocore_ws_send_frame(uint8_t *restrict work)
         if (scr && cbuf)
         {
             size_t clen = 0;
-            DeflateV.raw_args.src = payload;
-            DeflateV.raw_args.src_len = len;
-            DeflateV.raw_args.dst = cbuf;
-            DeflateV.raw_args.dst_cap = cap;
-            DeflateV.raw_args.out_len = &clen;
-            DeflateV.raw_args.scratch = scr;
-            DeflateV.raw_args.scratch_len = DEFLATE_SCRATCH_SIZE;
-            Deflate.raw(work);
-            DeflateResult rc = DeflateV.value;
+            DeflateResult deflate_value = Deflate.raw(work, payload, len, cbuf, cap, &clen, scr, DEFLATE_SCRATCH_SIZE);
+            DeflateResult rc = deflate_value;
             // Only adopt it if it actually shrank the message; otherwise send it
             // uncompressed (the per-message RSV1 flag makes that legal).
             // rc != DEFLATE_OK is unreachable here: Deflate.raw returns non-OK only on

@@ -17,17 +17,13 @@
  * RFC 1951 sec 3.1.1 requires. All state is the caller's scratch plus the stack.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_WS_DEFLATE
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/codec/deflate/deflate/deflate.h"
 
 #include "mmgr/bitio/bitio.h"
 #include "network_drivers/presentation/codec/deflate/rfc1951/rfc1951.h" // RFC1951: the sec 3.2.5 tables
-
-PROTOCORE_BEGIN_DECLS
 
 #define PROTOCORE_MIN_MATCH 3   // shortest LZ77 back-reference
 #define PROTOCORE_MAX_MATCH 258 // longest (RFC 1951 length code 285)
@@ -62,21 +58,12 @@ static inline int hash3(const uint8_t *p)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_deflate_raw(uint8_t *restrict work)
+DeflateResult protocore_deflate_raw(uint8_t *restrict work, const uint8_t *src, size_t src_len, uint8_t *dst,
+                                    size_t dst_cap, size_t *out_len, void *scratch, size_t scratch_len)
 {
-    (void)work;
-    const uint8_t *src = DeflateV.raw_args.src;
-    size_t src_len = DeflateV.raw_args.src_len;
-    uint8_t *dst = DeflateV.raw_args.dst;
-    size_t dst_cap = DeflateV.raw_args.dst_cap;
-    size_t *out_len = DeflateV.raw_args.out_len;
-    void *scratch = DeflateV.raw_args.scratch;
-    size_t scratch_len = DeflateV.raw_args.scratch_len;
-
     if (scratch_len < DEFLATE_SCRATCH_SIZE)
     {
-        DeflateV.value = DEFLATE_ERR_SCRATCH;
-        return;
+        return DEFLATE_ERR_SCRATCH;
     }
 
     Tables *t = (Tables *)scratch;
@@ -206,16 +193,8 @@ void protocore_deflate_raw(uint8_t *restrict work)
 
     if (w.overflow)
     {
-        DeflateV.value = DEFLATE_ERR_OVERFLOW;
-        return;
+        return DEFLATE_ERR_OVERFLOW;
     }
     *out_len = w.cnt - 4; // strip the marker for the on-wire payload
-    DeflateV.value = DEFLATE_OK;
+    return DEFLATE_OK;
 }
-
-/** @brief The operands and the outcome. */
-DeflateVars DeflateV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_WS_DEFLATE

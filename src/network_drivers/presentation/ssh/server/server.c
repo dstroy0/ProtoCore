@@ -127,8 +127,7 @@ static void net_accept(uint8_t conn_slot)
     SshConnectionV.chan.slot = j;
     SshConnection.channel_init(protocore_ssh_connection_span());
 #if PROTOCORE_ENABLE_SSH_ZLIB
-    CompV.reset_args.i = j;
-    Comp.reset(protocore_ssh_comp_span()); // clear compression state for the new connection (not run on a re-key)
+    Comp.reset(protocore_ssh_comp_span(), j); // clear compression state for the new connection (not run on a re-key)
 #endif
 
     ssh_net_version_exchange_send(j, conn_slot);
@@ -154,9 +153,8 @@ static void net_rx(uint8_t conn_slot)
     }
 
     // Drain the ring into this slot's own read scratch via the transport read API.
-    SshV.conn_slot_args.i = j;
-    Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *buf = SshV.ptr + SSH_OFF_RX_READ;
+    uint8_t *ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), j);
+    uint8_t *buf = ssh_ptr + SSH_OFF_RX_READ;
     ConnPoolV.slot = conn_slot;
     ConnPoolV.io.buf = buf;
     ConnPoolV.io.cap = RX_BUF_SIZE;
@@ -212,9 +210,8 @@ static void net_close(uint8_t conn_slot)
         ssh_keymat_wipe(j);
         SshAuthV.slot = j;
         SshAuth.reset(protocore_ssh_auth_span());
-        SshV.conn_slot_args.i = j;
-        Ssh.conn_slot(protocore_ssh_span());
-        protocore_secure_wipe(SshV.ptr, SSH_SLOT_BORROW);
+        uint8_t *ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), j);
+        protocore_secure_wipe(ssh_ptr, SSH_SLOT_BORROW);
         protocore_secure_wipe(&ssh_sess[j], sizeof(SshSession));
         SshNetworkV.ssh_slot = j;
         SshNetwork.release(protocore_ssh_network_span());

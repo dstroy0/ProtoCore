@@ -1,10 +1,17 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#ifndef PROTOCORE_GATEWAY_H
+#define PROTOCORE_GATEWAY_H
+
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+PROTOCORE_BEGIN_DECLS
+
 /**
  * @file gateway.h
  * @brief Radio / wireless gateway bridge (PROTOCORE_ENABLE_GATEWAY) - the v5 southbound-to-
- *        northbound bridge.
+northbound bridge.
  *
  * The generic gateway pattern that ties the hardware-ingest pipeline to the web stack. A
  * southbound radio (LoRa / nRF24 / CC1101 / Zigbee / Z-Wave / ... reached over SPI / I2C /
@@ -25,22 +32,13 @@
  * Per-port uplink rate cap (fail-closed), a routing-key helper (protocore_gateway_topic() formats
  * `<prefix>/<port>/<addr>`), and static tables (zero heap): PROTOCORE_GW_MAX_PORTS ports.
  *
+ * @c work is PROTOCORE_GATEWAY_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
+ *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
  */
-
-#ifndef PROTOCORE_GATEWAY_H
-#define PROTOCORE_GATEWAY_H
-
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths
-
-#if PROTOCORE_ENABLE_GATEWAY
-
-PROTOCORE_BEGIN_DECLS
-
-// PROTOCORE_GATEWAY_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
-// it into its arena. A caller takes them once and passes the pointer to every call. How they
-// are carved is this module's and is never named here.
 
 /** @brief Southbound radio / bus kind a port bridges (informational + topic hint). */
 typedef enum PROTO_ENUM_PACKED
@@ -109,143 +107,89 @@ typedef struct
     uint32_t down_dropped; ///< downlinks dropped (bad port / no tx / refused)
 } protocore_gateway_stats;
 
-/** @brief What add_port takes: cfg. */
+/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    const protocore_gateway_port_config *cfg;
-} GatewayAddPortArgs;
-
-/** @brief What set_uplink_cb takes: fn, ctx. */
-typedef struct
-{
-    protocore_gateway_uplink_fn fn;
-    void *ctx;
-} GatewaySetUplinkCbArgs;
-
-/** @brief What set_topic_prefix takes: prefix. */
-typedef struct
-{
-    const char *prefix;
-} GatewaySetTopicPrefixArgs;
-
-/** @brief What uplink takes: port_id, src_addr, payload, len, rssi. */
-typedef struct
-{
-    uint8_t port_id;
-    uint16_t src_addr;
-    const uint8_t *payload;
-    uint16_t len;
-    int16_t rssi;
-} GatewayUplinkArgs;
-
-/** @brief What downlink takes: port_id, dst_addr, payload, len. */
-typedef struct
-{
-    uint8_t port_id;
-    uint16_t dst_addr;
-    const uint8_t *payload;
-    uint16_t len;
-} GatewayDownlinkArgs;
-
-/** @brief What topic takes: msg, buf, buflen. */
-typedef struct
-{
-    const protocore_gateway_msg *msg;
-    char *buf;
-    uint16_t buflen;
-} GatewayTopicArgs;
-
-/** @brief What get_stats takes: out. */
-typedef struct
-{
-    protocore_gateway_stats *out;
-} GatewayGetStatsArgs;
+    void (*reset)(uint8_t *restrict);
+    proto_bool (*add_port)(uint8_t *restrict, const protocore_gateway_port_config *);
+    void (*set_uplink_cb)(uint8_t *restrict, protocore_gateway_uplink_fn, void *);
+    void (*set_topic_prefix)(uint8_t *restrict, const char *);
+    proto_bool (*uplink)(uint8_t *restrict, uint8_t, uint16_t, const uint8_t *, uint16_t, int16_t);
+    proto_bool (*downlink)(uint8_t *restrict, uint8_t, uint16_t, const uint8_t *, uint16_t);
+    uint16_t (*topic)(uint8_t *restrict, const protocore_gateway_msg *, char *, uint16_t);
+    void (*get_stats)(uint8_t *restrict, protocore_gateway_stats *);
+} GatewayNs;
+PROTOCORE_NS_LAYOUT(GatewayNs, reset, add_port, set_uplink_cb, set_topic_prefix, uplink, downlink, topic, get_stats);
 
 /**
- * @brief Radio / wireless gateway bridge (PROTOCORE_ENABLE_GATEWAY) - the v5 southbound-to- northbound bridge. The ...
- *
- * A caller sets the members a call takes, invokes it through ::Gateway with the bytes it runs
- * out of, and reads the outcome off the same handle.
- *
- *   Gateway.reset(work);
- *
- * @var GatewayNs::add_port_args  what add_port takes: cfg
- * @var GatewayNs::set_uplink_cb_args  what set_uplink_cb takes: fn, ctx
- * @var GatewayNs::set_topic_prefix_args  what set_topic_prefix takes: prefix
- * @var GatewayNs::uplink_args  what uplink takes: port_id, src_addr, payload, len, rssi
- * @var GatewayNs::downlink_args  what downlink takes: port_id, dst_addr, payload, len
- * @var GatewayNs::topic_args  what topic takes: msg, buf, buflen
- * @var GatewayNs::get_stats_args  what get_stats takes: out
- * @var GatewayNs::ok  true; false if cfg is null, the id is already registered, or the ...
- * @var GatewayNs::n  the string length written (excluding the NUL), or 0 if buf is too ...
- * @var GatewayNs::reset  clear all ports, the uplink sink, the topic prefix, and stats
- * @var GatewayNs::add_port  register a southbound port
- * @var GatewayNs::set_uplink_cb  install the northbound publish callback (required to publish ...
- * @var GatewayNs::set_topic_prefix  set the topic prefix used by protocore_gateway_topic() ...
- * @var GatewayNs::uplink  bridge a received southbound frame northbound: envelope it and ...
- * @var GatewayNs::downlink  bridge a northbound command southbound: transmit it on port_id's ...
- * @var GatewayNs::topic  format a northbound routing key `<prefix>/<port>/<addr>` for msg ...
- * @var GatewayNs::get_stats  copy the current gateway counters into out. The uplink rate window ...
- *
- * @c work is PROTOCORE_GATEWAY_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @brief Clear all ports, the uplink sink, the topic prefix, and stats.
+ * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
  */
-typedef struct
-{
-    GatewayAddPortArgs add_port_args;
-    GatewaySetUplinkCbArgs set_uplink_cb_args;
-    GatewaySetTopicPrefixArgs set_topic_prefix_args;
-    GatewayUplinkArgs uplink_args;
-    GatewayDownlinkArgs downlink_args;
-    GatewayTopicArgs topic_args;
-    GatewayGetStatsArgs get_stats_args;
-    proto_bool ok;
-    uint16_t n;
-} GatewayVars;
-
-/** @brief The operands and the outcome. */
-extern GatewayVars GatewayV;
-
-/** @brief The entries. */
-typedef struct
-{
-    void (*const reset)(uint8_t *restrict work);
-    void (*const add_port)(uint8_t *restrict work);
-    void (*const set_uplink_cb)(uint8_t *restrict work);
-    void (*const set_topic_prefix)(uint8_t *restrict work);
-    void (*const uplink)(uint8_t *restrict work);
-    void (*const downlink)(uint8_t *restrict work);
-    void (*const topic)(uint8_t *restrict work);
-    void (*const get_stats)(uint8_t *restrict work);
-} GatewayNs;
-
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in GatewayV or a region of the borrow at a fixed offset.
 void protocore_gateway_reset(uint8_t *restrict work);
-void protocore_gateway_add_port(uint8_t *restrict work);
-void protocore_gateway_set_uplink_cb(uint8_t *restrict work);
-void protocore_gateway_set_topic_prefix(uint8_t *restrict work);
-void protocore_gateway_uplink(uint8_t *restrict work);
-void protocore_gateway_downlink(uint8_t *restrict work);
-void protocore_gateway_topic(uint8_t *restrict work);
-void protocore_gateway_get_stats(uint8_t *restrict work);
+/**
+ * @brief Register a southbound port.
+ * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
+ * @param cfg Cfg
+ * @return PROTO_TRUE on success.
+ */
+proto_bool protocore_gateway_add_port(uint8_t *restrict work, const protocore_gateway_port_config *cfg);
+/**
+ * @brief Install the northbound publish callback (required to publish .
+ * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
+ * @param fn Fn
+ * @param ctx Ctx
+ */
+void protocore_gateway_set_uplink_cb(uint8_t *restrict work, protocore_gateway_uplink_fn fn, void *ctx);
+/**
+ * @brief Set the topic prefix used by protocore_gateway_topic() .
+ * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
+ * @param prefix Prefix
+ */
+void protocore_gateway_set_topic_prefix(uint8_t *restrict work, const char *prefix);
+/**
+ * @brief Bridge a received southbound frame northbound: envelope it and .
+ * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
+ * @param port_id Port id
+ * @param src_addr Src addr
+ * @param payload Payload
+ * @param len Len
+ * @param rssi Rssi
+ * @return PROTO_TRUE on success.
+ */
+proto_bool protocore_gateway_uplink(uint8_t *restrict work, uint8_t port_id, uint16_t src_addr, const uint8_t *payload,
+                                    uint16_t len, int16_t rssi);
+/**
+ * @brief Bridge a northbound command southbound: transmit it on port_id's .
+ * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
+ * @param port_id Port id
+ * @param dst_addr Dst addr
+ * @param payload Payload
+ * @param len Len
+ * @return PROTO_TRUE on success.
+ */
+proto_bool protocore_gateway_downlink(uint8_t *restrict work, uint8_t port_id, uint16_t dst_addr,
+                                      const uint8_t *payload, uint16_t len);
+/**
+ * @brief Format a northbound routing key `<prefix>/<port>/<addr>` for msg .
+ * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
+ * @param msg Msg
+ * @param buf Buf
+ * @param buflen Buflen
+ * @return The uint16_t.
+ */
+uint16_t protocore_gateway_topic(uint8_t *restrict work, const protocore_gateway_msg *msg, char *buf, uint16_t buflen);
+/**
+ * @brief Copy the current gateway counters into out. The uplink rate window .
+ * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
+ * @param out Out
+ */
+void protocore_gateway_get_stats(uint8_t *restrict work, protocore_gateway_stats *out);
 
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Gateway.reset(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const GatewayNs Gateway __attribute__((unused)) = {
-    .reset = protocore_gateway_reset,
-    .add_port = protocore_gateway_add_port,
-    .set_uplink_cb = protocore_gateway_set_uplink_cb,
-    .set_topic_prefix = protocore_gateway_set_topic_prefix,
-    .uplink = protocore_gateway_uplink,
-    .downlink = protocore_gateway_downlink,
-    .topic = protocore_gateway_topic,
-    .get_stats = protocore_gateway_get_stats,
-};
-
+/**
+ * @brief Northbound publish: emit @p msg to MQTT / HTTP / WebSocket / UDP.
+ * @return true if the northbound stack accepted it; false drops (counted).
+ */
+typedef proto_bool (*protocore_gateway_uplink_fn)(const protocore_gateway_msg *msg, void *ctx);
 /**
  * @brief The PROTOCORE_GATEWAY_BORROW bytes this module's state lives in.
  *
@@ -257,8 +201,16 @@ static const GatewayNs Gateway __attribute__((unused)) = {
  */
 uint8_t *protocore_gateway_span(void);
 
-PROTOCORE_END_DECLS
+/** @brief Module namespace. */
+PROTOCORE_NS GatewayNs Gateway PROTOCORE_UNUSED = {.reset = protocore_gateway_reset,
+                                                   .add_port = protocore_gateway_add_port,
+                                                   .set_uplink_cb = protocore_gateway_set_uplink_cb,
+                                                   .set_topic_prefix = protocore_gateway_set_topic_prefix,
+                                                   .uplink = protocore_gateway_uplink,
+                                                   .downlink = protocore_gateway_downlink,
+                                                   .topic = protocore_gateway_topic,
+                                                   .get_stats = protocore_gateway_get_stats};
 
-#endif // PROTOCORE_ENABLE_GATEWAY
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_GATEWAY_H

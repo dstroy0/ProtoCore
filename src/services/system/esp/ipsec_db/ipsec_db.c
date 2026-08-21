@@ -258,8 +258,7 @@ void protocore_ipsec_db_protocore_ipsec_sad_add(uint8_t *restrict work)
     e->inbound = inbound;
     if (inbound)
     {
-        EspV.replay_init_args.r = &e->replay;
-        Esp.replay_init(work);
+        Esp.replay_init(work, &e->replay);
     }
     e->valid = PROTO_TRUE;
     sad->count++;
