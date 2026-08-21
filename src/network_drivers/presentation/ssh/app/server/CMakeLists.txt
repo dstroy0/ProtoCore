@@ -5,9 +5,6 @@ protocore_add_module(network_drivers/presentation/ssh/app/server
   GATE PROTOCORE_ENABLE_SSH_SFTP
   SOURCES server.c
   DEPS
-    PRIVATE
-    mmgr/bytes
-    mmgr/protomem
     network_drivers/presentation/ssh/connection
   PRIVATE_DEPS
     mmgr/bytes

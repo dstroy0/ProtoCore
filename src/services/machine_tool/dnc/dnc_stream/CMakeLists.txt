@@ -5,8 +5,6 @@ protocore_add_module(services/machine_tool/dnc/dnc_stream
   GATE PROTOCORE_ENABLE_DNC
   SOURCES dnc_stream.c
   DEPS
-    PRIVATE
-    mmgr/protomem
     services/machine_tool/dnc/dnc
   PRIVATE_DEPS
     mmgr/protomem

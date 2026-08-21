@@ -5,13 +5,7 @@ protocore_add_module(network_drivers/transport/tcp/lower
   GATE PROTOCORE_ENABLE_DIFFSERV
   SOURCES lower.c
   DEPS
-    PRIVATE
-    mmgr/plaintext
-    mmgr/protomem
-    network_drivers/tls
-    network_drivers/transport/diffserv
     network_drivers/transport/tcp/common
-    network_drivers/transport/tcp/protocol
   PRIVATE_DEPS
     mmgr/plaintext
     mmgr/protomem

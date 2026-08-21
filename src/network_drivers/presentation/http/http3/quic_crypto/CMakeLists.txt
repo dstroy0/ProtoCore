@@ -5,12 +5,7 @@ protocore_add_module(network_drivers/presentation/http/http3/quic_crypto
   GATE PROTOCORE_ENABLE_HTTP3
   SOURCES quic_crypto.c
   DEPS
-    PRIVATE
-    crypto/aead/aes128gcm
     crypto/kdf/hkdf
-    mmgr/protomem
-    mmgr/secure
-    network_drivers/presentation/http/http3/quic_packet
   PRIVATE_DEPS
     crypto/aead/aes128gcm
     mmgr/protomem

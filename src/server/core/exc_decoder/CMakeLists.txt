@@ -5,11 +5,7 @@ protocore_add_module(server/core/exc_decoder
   GATE PROTOCORE_ENABLE_EXC_DECODER
   SOURCES exc_decoder.c
   DEPS
-    PRIVATE
-    mmgr/membuild
-    mmgr/protostr
     server/storage/mnt
-    shared/hex
   PRIVATE_DEPS
     mmgr/membuild
     mmgr/protostr

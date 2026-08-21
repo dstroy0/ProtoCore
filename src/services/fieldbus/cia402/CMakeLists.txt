@@ -5,10 +5,6 @@ protocore_add_module(services/fieldbus/cia402
   GATE PROTOCORE_ENABLE_CIA402
   SOURCES cia402.c
   DEPS
-    PRIVATE
-    mmgr/endian
-    mmgr/protomem
-    services/fieldbus/canopen
     shared/can
   PRIVATE_DEPS
     mmgr/endian

@@ -5,8 +5,6 @@ protocore_add_module(network_drivers/transport/happy_eyeballs
   GATE PROTOCORE_ENABLE_HAPPY_EYEBALLS
   SOURCES happy_eyeballs.c
   DEPS
-    PRIVATE
-    mmgr/plaintext
     shared/ip
   PRIVATE_DEPS
     mmgr/plaintext

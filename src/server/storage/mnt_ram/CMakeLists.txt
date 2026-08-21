@@ -5,9 +5,6 @@ protocore_add_module(server/storage/mnt_ram
   GATE PROTOCORE_ENABLE_MNT
   SOURCES mnt_ram.c
   DEPS
-    PRIVATE
-    mmgr/protomem
-    mmgr/protostr
     server/storage/mnt
   PRIVATE_DEPS
     mmgr/protomem

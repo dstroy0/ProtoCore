@@ -5,9 +5,6 @@ protocore_add_module(services/opcua/opcua_client
   GATE PROTOCORE_ENABLE_OPCUA_CLIENT
   SOURCES opcua_client.c
   DEPS
-    PRIVATE
-    mmgr/protomem
-    mmgr/protostr
     services/opcua
   PRIVATE_DEPS
     mmgr/protomem

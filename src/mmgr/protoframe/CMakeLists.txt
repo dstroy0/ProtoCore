@@ -4,10 +4,7 @@
 protocore_add_module(mmgr/protoframe
   SOURCES protoframe.c
   DEPS
-    PRIVATE
     mmgr/membuild
-    mmgr/protostr
-    shared/speed_opt
   PRIVATE_DEPS
     mmgr/protostr
     shared/speed_opt

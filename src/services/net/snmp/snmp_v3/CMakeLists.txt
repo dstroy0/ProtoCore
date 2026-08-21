@@ -5,19 +5,7 @@ protocore_add_module(services/net/snmp/snmp_v3
   GATE PROTOCORE_ENABLE_SNMP_V3
   SOURCES snmp_v3.c
   DEPS
-    PRIVATE
-    crypto/mac/hmac_sha256
-    mmgr/endian
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
-    network_drivers/transport/udp/client
-    server/clock
-    services/net/snmp/snmp_agent
-    services/net/snmp/snmp_ber
-    services/net/snmp/snmp_crypto
     services/net/snmp/snmp_notify
-    shared/ip
   PRIVATE_DEPS
     crypto/mac/hmac_sha256
     mmgr/endian

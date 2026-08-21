@@ -5,9 +5,6 @@ protocore_add_module(services/timing_position/gnss/gnss_survey
   GATE PROTOCORE_ENABLE_NTRIP_CASTER
   SOURCES gnss_survey.c
   DEPS
-    PRIVATE
-    mmgr/protomem
-    mmgr/protostr
     services/timing_position/nmea0183
   PRIVATE_DEPS
     mmgr/protomem

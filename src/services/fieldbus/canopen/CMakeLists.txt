@@ -5,8 +5,6 @@ protocore_add_module(services/fieldbus/canopen
   GATE PROTOCORE_ENABLE_CANOPEN
   SOURCES canopen.c
   DEPS
-    PRIVATE
-    mmgr/protomem
     shared/can
   PRIVATE_DEPS
     mmgr/protomem

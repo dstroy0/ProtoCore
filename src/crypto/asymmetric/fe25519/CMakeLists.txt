@@ -5,8 +5,6 @@ protocore_add_module(crypto/asymmetric/fe25519
   GATE PROTOCORE_ENABLE_FE25519
   SOURCES fe25519.c
   DEPS
-    PRIVATE
-    crypto/crypto_opt
     crypto/ct_eq
   PRIVATE_DEPS
     crypto/crypto_opt

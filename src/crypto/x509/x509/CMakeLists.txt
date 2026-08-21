@@ -5,10 +5,7 @@ protocore_add_module(crypto/x509/x509
   GATE PROTOCORE_ENABLE_X509
   SOURCES x509.c
   DEPS
-    PRIVATE
     crypto/x509/x509_types
-    mmgr/protomem
-    shared/der
   PRIVATE_DEPS
     mmgr/protomem
     shared/der

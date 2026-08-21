@@ -5,8 +5,6 @@ protocore_add_module(network_drivers/physical/radio_power
   GATE PROTOCORE_ENABLE_RADIO_POWER
   SOURCES radio_power.c
   DEPS
-    PRIVATE
-    mmgr/plaintext
     network_drivers/physical/physical
   PRIVATE_DEPS
     mmgr/plaintext

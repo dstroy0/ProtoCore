@@ -5,9 +5,6 @@ protocore_add_module(network_drivers/presentation/codec/multipart
   GATE PROTOCORE_ENABLE_MULTIPART
   SOURCES multipart.c
   DEPS
-    PRIVATE
-    mmgr/protomem
-    mmgr/protostr
     network_drivers/presentation/http/http_parser
   PRIVATE_DEPS
     mmgr/protomem

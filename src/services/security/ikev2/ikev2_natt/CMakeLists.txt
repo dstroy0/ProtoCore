@@ -5,11 +5,6 @@ protocore_add_module(services/security/ikev2/ikev2_natt
   GATE PROTOCORE_ENABLE_IKEV2
   SOURCES ikev2_natt.c
   DEPS
-    PRIVATE
-    crypto/hash/sha1
-    mmgr/protomem
-    mmgr/secure
-    mmgr/span
     services/security/ikev2/ikev2
   PRIVATE_DEPS
     crypto/hash/sha1

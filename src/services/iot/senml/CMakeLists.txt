@@ -5,11 +5,7 @@ protocore_add_module(services/iot/senml
   GATE PROTOCORE_ENABLE_SENML
   SOURCES senml.c
   DEPS
-    PRIVATE
-    mmgr/membuild
-    mmgr/span
     network_drivers/presentation/codec
-    network_drivers/presentation/codec/json
   PRIVATE_DEPS
     mmgr/membuild
     mmgr/span

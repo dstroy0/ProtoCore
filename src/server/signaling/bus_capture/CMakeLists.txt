@@ -5,10 +5,7 @@ protocore_add_module(server/signaling/bus_capture
   GATE PROTOCORE_ENABLE_BUS_CAPTURE
   SOURCES bus_capture.c
   DEPS
-    PRIVATE
-    mmgr/secure
     shared/can
-    shared/pcap
   PRIVATE_DEPS
     mmgr/secure
     shared/pcap

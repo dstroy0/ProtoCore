@@ -5,17 +5,7 @@ protocore_add_module(network_drivers/transport/tcp/protocol
   GATE PROTOCORE_ENABLE_TLS
   SOURCES protocol.c
   DEPS
-    PRIVATE
-    mmgr/plaintext
-    mmgr/rawmemcpy
-    network_drivers/tls
-    network_drivers/transport/net_addr
-    network_drivers/transport/tcp/common
     network_drivers/transport/tcp/evt
-    network_drivers/transport/tcp/lower
-    network_drivers/transport/tcp/server
-    server/clock
-    server/core/worker
     shared/ip
   PRIVATE_DEPS
     mmgr/plaintext

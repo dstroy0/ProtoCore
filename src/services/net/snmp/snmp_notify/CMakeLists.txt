@@ -5,13 +5,7 @@ protocore_add_module(services/net/snmp/snmp_notify
   GATE PROTOCORE_ENABLE_SNMP_TRAP
   SOURCES snmp_notify.c
   DEPS
-    PRIVATE
-    mmgr/protostr
-    mmgr/secure
-    network_drivers/transport/udp/client
-    server/clock
     services/net/snmp/snmp_ber
-    shared/ip
   PRIVATE_DEPS
     mmgr/protostr
     mmgr/secure

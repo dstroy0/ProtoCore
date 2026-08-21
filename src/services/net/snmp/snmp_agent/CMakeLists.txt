@@ -5,14 +5,7 @@ protocore_add_module(services/net/snmp/snmp_agent
   GATE PROTOCORE_ENABLE_SNMP
   SOURCES snmp_agent.c
   DEPS
-    PRIVATE
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
-    network_drivers/transport/udp/server
-    server/clock
     services/net/snmp/snmp_ber
-    services/net/snmp/snmp_v3
   PRIVATE_DEPS
     mmgr/protomem
     mmgr/protostr

@@ -5,9 +5,6 @@ protocore_add_module(services/radio/wisun
   GATE PROTOCORE_ENABLE_WISUN
   SOURCES wisun.c
   DEPS
-    PRIVATE
-    mmgr/membuild
-    mmgr/protomem
     shared/ip
   PRIVATE_DEPS
     mmgr/membuild

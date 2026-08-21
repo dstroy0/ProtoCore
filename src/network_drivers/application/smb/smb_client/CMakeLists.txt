@@ -5,14 +5,7 @@ protocore_add_module(network_drivers/application/smb/smb_client
   GATE PROTOCORE_ENABLE_SMB
   SOURCES smb_client.c
   DEPS
-    PRIVATE
-    crypto/rng
-    mmgr/protomem
-    mmgr/secure
-    network_drivers/application/smb/ntlm
-    network_drivers/application/smb/ntlmssp
     network_drivers/application/smb/smb2
-    network_drivers/application/smb/spnego
   PRIVATE_DEPS
     crypto/rng
     mmgr/protomem
