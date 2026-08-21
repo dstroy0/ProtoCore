@@ -72,10 +72,7 @@ static size_t natd_hash(const uint8_t *init_spi, const uint8_t *resp_spi, const 
         protocore_secure_release(mark);
         return 0;
     }
-    Sha1V.hash_args.data = in;
-    Sha1V.hash_args.len = n;
-    Sha1V.hash_args.out = out;
-    Sha1.hash(w.buf);
+    Sha1.hash(w.buf, in, n, out);
     protocore_secure_release(mark);
     return PROTOCORE_IKE_NATD_HASH_LEN;
 }

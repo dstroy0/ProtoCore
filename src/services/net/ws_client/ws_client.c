@@ -171,10 +171,7 @@ void protocore_ws_client_accept_for_key(uint8_t *restrict work)
         protocore_secure_release(mark);
         return;
     }
-    Sha1V.hash_args.data = (const uint8_t *)concat;
-    Sha1V.hash_args.len = klen + glen;
-    Sha1V.hash_args.out = digest;
-    Sha1.hash(w.buf);
+    Sha1.hash(w.buf, (const uint8_t *)concat, klen + glen, digest);
     protocore_secure_release(mark);
     Base64V.encode_args.src = digest;
     Base64V.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;

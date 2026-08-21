@@ -59,26 +59,11 @@ void protocore_quic_crypto_keys_from_secret(uint8_t *restrict work)
     // The key becomes a context here and the raw bytes are wiped: nothing downstream needs them.
     uint8_t *k = keys_work + PROTOCORE_HKDF_BORROW;
     uint8_t *hpk = k + PROTOCORE_AES128GCM_KEY_LEN;
-    HkdfV.expand_label_args.secret = secret;
-    HkdfV.expand_label_args.label = "quic key";
-    HkdfV.expand_label_args.out = k;
-    HkdfV.expand_label_args.out_len = PROTOCORE_AES128GCM_KEY_LEN;
-    HkdfV.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
-    Hkdf.expand_label(keys_work);
+    Hkdf.expand_label(keys_work, secret, "quic key", k, PROTOCORE_AES128GCM_KEY_LEN, PROTOCORE_HKDF_LABEL_PREFIX);
     Aes128GcmV.key_args.key = k;
     Aes128Gcm.key_init(out->gcm);
-    HkdfV.expand_label_args.secret = secret;
-    HkdfV.expand_label_args.label = "quic iv";
-    HkdfV.expand_label_args.out = out->iv;
-    HkdfV.expand_label_args.out_len = sizeof(out->iv);
-    HkdfV.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
-    Hkdf.expand_label(keys_work);
-    HkdfV.expand_label_args.secret = secret;
-    HkdfV.expand_label_args.label = "quic hp";
-    HkdfV.expand_label_args.out = hpk;
-    HkdfV.expand_label_args.out_len = PROTOCORE_AES128GCM_KEY_LEN;
-    HkdfV.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
-    Hkdf.expand_label(keys_work);
+    Hkdf.expand_label(keys_work, secret, "quic iv", out->iv, sizeof(out->iv), PROTOCORE_HKDF_LABEL_PREFIX);
+    Hkdf.expand_label(keys_work, secret, "quic hp", hpk, PROTOCORE_AES128GCM_KEY_LEN, PROTOCORE_HKDF_LABEL_PREFIX);
     Aes128GcmV.block_key_args.key = hpk;
     Aes128Gcm.block_init(out->gcm);
     protocore_secure_wipe(k, 2 * PROTOCORE_AES128GCM_KEY_LEN);
@@ -92,27 +77,14 @@ void protocore_quic_crypto_derive_initial_secrets(uint8_t *restrict work)
     QuicInitialSecrets *out = QuicCryptoV.derive_initial_secrets_args.out;
 
     uint8_t initial_secret[PROTOCORE_HKDF_HASH_LEN];
-    HkdfV.extract_args.salt = INITIAL_SALT;
-    HkdfV.extract_args.salt_len = sizeof(INITIAL_SALT);
-    HkdfV.extract_args.ikm = dcid;
-    HkdfV.extract_args.ikm_len = dcid_len;
-    HkdfV.extract_args.prk = initial_secret;
-    Hkdf.extract(keys_work);
+    Hkdf.extract(keys_work, INITIAL_SALT, sizeof(INITIAL_SALT), dcid, dcid_len, initial_secret);
 
     uint8_t client_secret[PROTOCORE_HKDF_HASH_LEN];
     uint8_t server_secret[PROTOCORE_HKDF_HASH_LEN];
-    HkdfV.expand_label_args.secret = initial_secret;
-    HkdfV.expand_label_args.label = "client in";
-    HkdfV.expand_label_args.out = client_secret;
-    HkdfV.expand_label_args.out_len = sizeof(client_secret);
-    HkdfV.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
-    Hkdf.expand_label(keys_work);
-    HkdfV.expand_label_args.secret = initial_secret;
-    HkdfV.expand_label_args.label = "server in";
-    HkdfV.expand_label_args.out = server_secret;
-    HkdfV.expand_label_args.out_len = sizeof(server_secret);
-    HkdfV.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
-    Hkdf.expand_label(keys_work);
+    Hkdf.expand_label(keys_work, initial_secret, "client in", client_secret, sizeof(client_secret),
+                      PROTOCORE_HKDF_LABEL_PREFIX);
+    Hkdf.expand_label(keys_work, initial_secret, "server in", server_secret, sizeof(server_secret),
+                      PROTOCORE_HKDF_LABEL_PREFIX);
 
     QuicCryptoV.keys_from_secret_args.keys_work = keys_work;
     QuicCryptoV.keys_from_secret_args.secret = client_secret;

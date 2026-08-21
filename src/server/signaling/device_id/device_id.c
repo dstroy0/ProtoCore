@@ -57,10 +57,7 @@ void protocore_device_id_from_mac(uint8_t *restrict work)
         out[0] = '\0';
         return;
     }
-    Sha1V.hash_args.data = input;
-    Sha1V.hash_args.len = sizeof(input);
-    Sha1V.hash_args.out = h;
-    Sha1.hash(w.buf);
+    Sha1.hash(w.buf, input, sizeof(input), h);
     protocore_secure_release(mark);
     h[6] = (uint8_t)((h[6] & 0x0F) | 0x50); // version 5
     h[8] = (uint8_t)((h[8] & 0x3F) | 0x80); // RFC 4122 variant

@@ -55,12 +55,7 @@ static void expand(const Tls13Kdf *kdf, proto_bool is384, uint8_t *work, const u
         HkdfSha384.expand_label(work);
         return;
     }
-    HkdfV.expand_label_args.secret = secret;
-    HkdfV.expand_label_args.label = label;
-    HkdfV.expand_label_args.out = out;
-    HkdfV.expand_label_args.out_len = out_len;
-    HkdfV.expand_label_args.label_prefix = kdf->label_prefix;
-    Hkdf.expand_label(work);
+    Hkdf.expand_label(work, secret, label, out, out_len, kdf->label_prefix);
 }
 
 // Derive-Secret(secret, label, Messages) = HKDF-Expand-Label(secret, label, Hash(Messages), L).
@@ -80,14 +75,7 @@ static void derive(const Tls13Kdf *kdf, proto_bool is384, uint8_t *work, const u
         HkdfSha384.expand_label_ctx(work);
         return;
     }
-    HkdfV.expand_label_ctx_args.secret = secret;
-    HkdfV.expand_label_ctx_args.label = label;
-    HkdfV.expand_label_ctx_args.context = transcript_hash;
-    HkdfV.expand_label_ctx_args.context_len = len;
-    HkdfV.expand_label_ctx_args.out = out;
-    HkdfV.expand_label_ctx_args.out_len = len;
-    HkdfV.expand_label_ctx_args.label_prefix = kdf->label_prefix;
-    Hkdf.expand_label_ctx(work);
+    Hkdf.expand_label_ctx(work, secret, label, transcript_hash, len, out, len, kdf->label_prefix);
 }
 
 // HKDF-Extract(salt, ikm) under the bound hash.
@@ -104,12 +92,7 @@ static void extract(proto_bool is384, uint8_t *work, const uint8_t *salt, size_t
         HkdfSha384.extract(work);
         return;
     }
-    HkdfV.extract_args.salt = salt;
-    HkdfV.extract_args.salt_len = salt_len;
-    HkdfV.extract_args.ikm = ikm;
-    HkdfV.extract_args.ikm_len = ikm_len;
-    HkdfV.extract_args.prk = prk;
-    Hkdf.extract(work);
+    Hkdf.extract(work, salt, salt_len, ikm, ikm_len, prk);
 }
 
 // Transcript-Hash("") under the bound hash, the context the "derived" steps take.
@@ -117,10 +100,7 @@ static void empty_hash(proto_bool is384, uint8_t *work, uint8_t *out)
 {
     if (is384)
     {
-        Sha384V.hash_args.data = NULL;
-        Sha384V.hash_args.len = 0;
-        Sha384V.hash_args.out = out;
-        Sha384.hash(work);
+        Sha384.hash(work, NULL, 0, out);
         return;
     }
     Sha256.hash(work, NULL, 0, out);
@@ -253,9 +233,7 @@ void protocore_tls13_ks_transcript_update(uint8_t *restrict work)
 {
     if (Tls13KsV.bind.ks->is384)
     {
-        Sha384V.update_args.data = Tls13KsV.transcript_args.data;
-        Sha384V.update_args.len = Tls13KsV.transcript_args.len;
-        Sha384.update(work);
+        Sha384.update(work, Tls13KsV.transcript_args.data, Tls13KsV.transcript_args.len);
         return;
     }
     Sha256.update(work, Tls13KsV.transcript_args.data, Tls13KsV.transcript_args.len);
@@ -267,8 +245,7 @@ void protocore_tls13_ks_transcript_peek(uint8_t *restrict work)
 {
     if (Tls13KsV.bind.ks->is384)
     {
-        Sha384V.final_args.out = Tls13KsV.transcript_args.out;
-        Sha384.final(work);
+        Sha384.final(work, Tls13KsV.transcript_args.out);
         return;
     }
     Sha256.final(work, Tls13KsV.transcript_args.out);

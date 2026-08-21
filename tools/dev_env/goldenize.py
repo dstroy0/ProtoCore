@@ -3497,6 +3497,15 @@ def gen_header_ns(spec, original):
         lines.append("%s %s(%s);" % (e["ret"], e["flat"], sig_params(spec, e)))
     lines.append("")
 
+    # What the module published besides its entries. Not part of the table and never was - a span
+    # accessor other modules call, most often - and dropping it took four modules' public surface
+    # with it before this was here.
+    carried = carried_declarations(spec, original)
+    if carried:
+        for c in carried:
+            lines.append(c)
+        lines.append("")
+
     lines.append("/** @brief Module namespace. */")
     inits = ", ".join(".%s = %s" % (e["entry"], e["flat"]) for e in spec["entries"])
     lines.append("PROTOCORE_NS %s %s PROTOCORE_UNUSED = {%s};" % (ns, obj, inits))
@@ -3603,6 +3612,68 @@ def dropped_declarations(original, converted, spec):
     was = {m.group(1) for m in DECLARED_FN.finditer(original)}
     now = {m.group(1) for m in DECLARED_FN.finditer(converted)}
     return sorted(n for n in was - now if n not in keep)
+
+
+def undecodable_operands(spec):
+    """Reads of <X>V in the module's own .c that unwork_source cannot turn into a parameter.
+
+    It rewrites `<X>V.<entry>_args.<member>` to `<member>` and a write of a result member to a
+    return. Anything else - a flat shared operand, a named operand group - it leaves, and the
+    converted header does not declare <X>V, so the module stops compiling with its operands gone.
+    """
+    objv = spec.get("objv", "")
+    p = os.path.join(R, spec["source"].replace("/", os.sep))
+    if not objv or not os.path.exists(p):
+        return []
+    text = io.open(p, encoding="utf-8", errors="replace").read()
+    mask = code_mask(text)
+    results = {e.get("result") for e in spec["entries"] if e.get("result")}
+    entries = {e["entry"] for e in spec["entries"]}
+    out = []
+    for m in re.finditer(r"\b%s\.(\w+)" % re.escape(objv), text):
+        if not mask[m.start()]:
+            continue
+        member = m.group(1)
+        if member.endswith("_args") and member[: -len("_args")] in entries:
+            continue
+        if member in results:
+            continue
+        out.append((text[: m.start()].count("\n") + 1, member))
+    return out
+
+
+def carried_declarations(spec, original):
+    """Prototypes the old header published that no entry wraps, with the doc block above each.
+
+    These belong to the module and are not part of the dispatch table, so the conversion has no
+    opinion about them - it just has to not lose them.
+    """
+    objv = spec.get("objv", "")
+    cpath = os.path.join(R, spec["source"].replace("/", os.sep))
+    csrc = io.open(cpath, encoding="utf-8", errors="replace").read() if os.path.exists(cpath) else ""
+    entry_names = {e["flat"] for e in spec["entries"]}
+
+    # What each entry's own body calls: a name in here is one the entry wraps.
+    wrapped = set()
+    for e in spec["entries"]:
+        span = body_of(csrc, e["flat"])
+        if not span:
+            continue
+        body = csrc[span[1] : span[2]]
+        for m in re.finditer(r"\b(\w+)\s*\(", body):
+            wrapped.add(m.group(1))
+
+    out, seen = [], set()
+    for m in DECLARED_FN.finditer(original):
+        name = m.group(1)
+        if name in entry_names or name in wrapped or name in seen:
+            continue
+        if objv and objv in m.group(0):
+            continue
+        seen.add(name)
+        doc = doc_above(original, m.start())
+        out.append(((doc.rstrip() + "\n") if doc.strip() else "") + m.group(0).strip())
+    return out
 
 
 def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include")):
@@ -3847,6 +3918,13 @@ def unwork_source(spec):
         # Operands become parameters.
         if objv:
             body = re.sub(r"\b%s\.%s_args\.(\w+)" % (re.escape(objv), re.escape(e["entry"])), r"\1", body)
+            # An entry that aliased its operands to locals of the same name - `const uint8_t *msg =
+            # AesCmacV.mac_args.msg;` - now says `const uint8_t *msg = msg;`, which redeclares the
+            # parameter. The alias WAS the parameter; the line has nothing left to do. An alias
+            # under a DIFFERENT name still does, so only the self-referential ones go.
+            body, aliases = re.subn(r"[ \t]*[A-Za-z_][\w \t*]*?\b(\w+)\s*=\s*\1\s*;[ \t]*\n", "", body)
+            if aliases:
+                notes.append("%s: dropped %d operand alias(es) that became `x = x;`" % (e["flat"], aliases))
 
         res = e.get("result")
         if res and objv:
@@ -4009,6 +4087,20 @@ def main():
             return 1
         original = io.open(hp, encoding="utf-8").read()
         header = gen_header_ns(spec, original)
+        stuck = undecodable_operands(spec)
+        if stuck and not FORCE:
+            names = sorted({n for _ln, n in stuck})
+            print(
+                "   %d read(s) of %sV in its own .c this pass cannot decode: %s - NOT CONVERTING"
+                % (len(stuck), spec["object"], ", ".join(names[:8]))
+            )
+            for ln, n in stuck[:6]:
+                print("   STUCK %s:%d  %s.%s" % (spec["source"], ln, spec["objv"], n))
+            print(
+                "\n%s keeps its operands as shared members rather than in <Entry>Args structs, so\n"
+                "there is nothing for this pass to read a parameter list out of. Left alone." % spec["module"]
+            )
+            return 1
         gone = dropped_declarations(original, header, spec)
         if gone and not FORCE:
             print("   would DELETE published declarations: %s - NOT CONVERTING" % ", ".join(gone))

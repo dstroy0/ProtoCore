@@ -328,10 +328,7 @@ static void rsa_encode(uint8_t *restrict work)
 
     if (ctx->hash == PROTOCORE_RSA_HASH_SHA512)
     {
-        Sha512V.hash_args.data = ctx->msg;
-        Sha512V.hash_args.len = ctx->msg_len;
-        Sha512V.hash_args.out = ctx->digest;
-        Sha512.hash(RSA_SHA512(work));
+        Sha512.hash(RSA_SHA512(work), ctx->msg, ctx->msg_len, ctx->digest);
         digest_len = PROTOCORE_SHA512_DIGEST_LEN;
         di = protocore_pkcs1_sha512_digestinfo;
         di_len = PROTOCORE_PKCS1_SHA512_DIGESTINFO_LEN;

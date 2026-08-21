@@ -27,16 +27,12 @@
  * house style normally.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_SNTRUP761
+#include "protocore_config.h" // the entry point: the widths
 
 #include "crypto/hash/sha512/sha512.h"
 #include "crypto/pqc/sntrup761/sntrup761.h"
 #include "crypto/rng/rng.h" // protocore_rand_fill
 #include "mmgr/protomem/protomem.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // The caller's borrow, split: the region the nested SHA-512 runs out of. That hash is driven through
 // its own namespace, so this borrow carries a region for it rather than naming any term of its split.
@@ -428,14 +424,9 @@ static void Hash_prefix(uint8_t *restrict work, uint8_t *out, int b, const uint8
     uint8_t bb = (uint8_t)b;
     uint8_t *hw = SNTRUP761_SHA512(work);
     Sha512.init(hw);
-    Sha512V.update_args.data = &bb;
-    Sha512V.update_args.len = 1;
-    Sha512.update(hw);
-    Sha512V.update_args.data = in;
-    Sha512V.update_args.len = inlen;
-    Sha512.update(hw);
-    Sha512V.final_args.out = h;
-    Sha512.final(hw);
+    Sha512.update(hw, &bb, 1);
+    Sha512.update(hw, in, inlen);
+    Sha512.final(hw, h);
     mem.cpy(out, h, PROTOCORE_HASH_BYTES);
 }
 
@@ -836,16 +827,12 @@ static int Ciphertexts_diff_mask(const uint8_t *c, const uint8_t *c2)
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_sntrup761_enc(uint8_t *restrict work)
+proto_bool protocore_sntrup761_enc(uint8_t *restrict work, const uint8_t *pk, uint8_t *ct, uint8_t *ss)
 {
-    Sntrup761V.ok = PROTO_FALSE;
-    if (!Sntrup761V.enc_args.pk || !Sntrup761V.enc_args.ct || !Sntrup761V.enc_args.ss)
+    if (!pk || !ct || !ss)
     {
-        return;
+        return PROTO_FALSE;
     }
-    const uint8_t *pk = Sntrup761V.enc_args.pk;
-    uint8_t *ct = Sntrup761V.enc_args.ct;
-    uint8_t *ss = Sntrup761V.enc_args.ss;
 
     uint16_t scr16[PROTOCORE_SCR16];
     uint32_t scr32[PROTOCORE_SCR32];
@@ -857,18 +844,15 @@ void protocore_sntrup761_enc(uint8_t *restrict work)
     Short_random(r);
     Hide(work, ct, r_enc, r, pk, cache, scr16, scr32);
     HashSession(work, ss, 1, r_enc, ct);
-    Sntrup761V.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_sntrup761_keypair(uint8_t *restrict work)
+proto_bool protocore_sntrup761_keypair(uint8_t *restrict work, uint8_t *pk, uint8_t *sk)
 {
-    Sntrup761V.ok = PROTO_FALSE;
-    if (!Sntrup761V.keypair_args.pk || !Sntrup761V.keypair_args.sk)
+    if (!pk || !sk)
     {
-        return;
+        return PROTO_FALSE;
     }
-    uint8_t *pk = Sntrup761V.keypair_args.pk;
-    uint8_t *sk = Sntrup761V.keypair_args.sk;
 
     uint16_t scr16[PROTOCORE_SCR16];
     Fq h[PROTOCORE_SNTRUP_P];
@@ -886,19 +870,15 @@ void protocore_sntrup761_keypair(uint8_t *restrict work)
     RngV.fill_args.len = PROTOCORE_SMALL_BYTES;
     Rng.fill(protocore_rng_span());
     Hash_prefix(work, tail + PROTOCORE_PK_BYTES + PROTOCORE_SMALL_BYTES, 4, pk, PROTOCORE_PK_BYTES);
-    Sntrup761V.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_sntrup761_dec(uint8_t *restrict work)
+proto_bool protocore_sntrup761_dec(uint8_t *restrict work, const uint8_t *sk, const uint8_t *ct, uint8_t *ss)
 {
-    Sntrup761V.ok = PROTO_FALSE;
-    if (!Sntrup761V.dec_args.sk || !Sntrup761V.dec_args.ct || !Sntrup761V.dec_args.ss)
+    if (!sk || !ct || !ss)
     {
-        return;
+        return PROTO_FALSE;
     }
-    const uint8_t *sk = Sntrup761V.dec_args.sk;
-    const uint8_t *ct = Sntrup761V.dec_args.ct;
-    uint8_t *ss = Sntrup761V.dec_args.ss;
 
     uint16_t scr16[PROTOCORE_SCR16];
     uint32_t scr32[PROTOCORE_SCR32];
@@ -923,12 +903,5 @@ void protocore_sntrup761_dec(uint8_t *restrict work)
         r_enc[i] = (uint8_t)(r_enc[i] ^ (mask & (r_enc[i] ^ rho[i]))); // implicit reject -> rho
     }
     HashSession(work, ss, 1 + mask, r_enc, ct);
-    Sntrup761V.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
-
-/** @brief The operands and the outcome. */
-Sntrup761Vars Sntrup761V;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_SNTRUP761

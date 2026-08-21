@@ -73,11 +73,7 @@ static void cp_chacha(uint8_t *restrict work, const uint8_t *key, const uint8_t 
 // One tag through the Poly1305 namespace.
 static void cp_poly(uint8_t *restrict work, const uint8_t *poly_key, const uint8_t *msg, size_t len, uint8_t *out)
 {
-    Poly1305V.mac_args.key = poly_key;
-    Poly1305V.mac_args.msg = msg;
-    Poly1305V.mac_args.len = len;
-    Poly1305V.mac_args.out = out;
-    Poly1305.mac(CHACHAPOLY_POLY(work));
+    Poly1305.mac(CHACHAPOLY_POLY(work), poly_key, msg, len, out);
 }
 
 // The 8-byte ChaCha nonce is the sequence number as a big-endian uint64 (POKE_U64 in OpenSSH); a

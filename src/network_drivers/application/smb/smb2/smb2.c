@@ -474,14 +474,9 @@ void protocore_smb2_preauth_update(uint8_t *restrict work)
     uint8_t prev[PROTOCORE_SMB2_PREAUTH_HASH_LEN];
     mem.cpy(prev, p->hash, sizeof(prev));
     Sha512.init(crypto_work);
-    Sha512V.update_args.data = prev;
-    Sha512V.update_args.len = sizeof(prev);
-    Sha512.update(crypto_work);
-    Sha512V.update_args.data = msg;
-    Sha512V.update_args.len = len;
-    Sha512.update(crypto_work);
-    Sha512V.final_args.out = p->hash;
-    Sha512.final(crypto_work);
+    Sha512.update(crypto_work, prev, sizeof(prev));
+    Sha512.update(crypto_work, msg, len);
+    Sha512.final(crypto_work, p->hash);
 }
 
 void protocore_smb2_build_session_setup(uint8_t *restrict work)
@@ -1037,11 +1032,7 @@ static void mac_hmac_sha256(uint8_t *crypto_work, const uint8_t key[16], const u
 
 static void mac_aes_cmac(uint8_t *crypto_work, const uint8_t key[16], const uint8_t *msg, size_t len, uint8_t out16[16])
 {
-    AesCmacV.mac_args.key = key;
-    AesCmacV.mac_args.msg = msg;
-    AesCmacV.mac_args.msg_len = len;
-    AesCmacV.mac_args.out = out16;
-    AesCmac.mac(crypto_work); // the whole 16-octet CMAC tag
+    AesCmac.mac(crypto_work, key, msg, len, out16); // the whole 16-octet CMAC tag
 }
 
 static void smb2_sign_framed(uint8_t *crypto_work, const uint8_t key[16], uint8_t *msg, size_t msg_len, Smb2MacFn mac)

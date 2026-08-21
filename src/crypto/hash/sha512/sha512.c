@@ -13,17 +13,13 @@
  * arrives, the padded last one, and the state copy finalizing compresses into.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_SHA512
+#include "protocore_config.h" // the entry point: the widths
 
 #if PROTOCORE_HAS_HW_SHA
 #endif
 #include "crypto/hash/sha512/sha512.h"
 #include "mmgr/endian/endian.h" // protocore_rd64be / protocore_wr64be: the block reader and the digest writer
 #include "mmgr/protomem/protomem.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // The one definition, both arms, private to this TU. The accelerator compresses a block; it does not
 // pad, buffer a partial block, or hold a digest a caller can keep feeding. Those are this file's, so
@@ -380,46 +376,37 @@ static void sha512_finish(uint8_t *restrict work, uint8_t digest[PROTOCORE_SHA51
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_sha512_init(uint8_t *restrict work)
+proto_bool protocore_sha512_init(uint8_t *restrict work)
 {
     sha512_state_init(work);
-    Sha512V.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_sha512_update(uint8_t *restrict work)
+proto_bool protocore_sha512_update(uint8_t *restrict work, const uint8_t *data, size_t len)
 {
-    sha512_absorb(work, Sha512V.update_args.data, Sha512V.update_args.len);
-    Sha512V.ok = PROTO_TRUE;
+    sha512_absorb(work, data, len);
+    return PROTO_TRUE;
 }
 
-void protocore_sha512_final(uint8_t *restrict work)
+proto_bool protocore_sha512_final(uint8_t *restrict work, uint8_t *out)
 {
-    if (!Sha512V.final_args.out)
+    if (!out)
     {
-        Sha512V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
-    sha512_finish(work, Sha512V.final_args.out);
-    Sha512V.ok = PROTO_TRUE;
+    sha512_finish(work, out);
+    return PROTO_TRUE;
 }
 
 // One-shot over the members already set: init, absorb, finish.
-void protocore_sha512_hash(uint8_t *restrict work)
+proto_bool protocore_sha512_hash(uint8_t *restrict work, const uint8_t *data, size_t len, uint8_t *out)
 {
-    Sha512V.ok = PROTO_FALSE;
-    if (!Sha512V.hash_args.out)
+    if (!out)
     {
-        return;
+        return PROTO_FALSE;
     }
     sha512_state_init(work);
-    sha512_absorb(work, Sha512V.hash_args.data, Sha512V.hash_args.len);
-    sha512_finish(work, Sha512V.hash_args.out);
-    Sha512V.ok = PROTO_TRUE;
+    sha512_absorb(work, data, len);
+    sha512_finish(work, out);
+    return PROTO_TRUE;
 }
-
-/** @brief The operands and the outcome. */
-Sha512Vars Sha512V;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_SHA512

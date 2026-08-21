@@ -10,17 +10,13 @@
  * blocks and the digest output are software on both arms.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_SHA1
+#include "protocore_config.h" // the entry point: the widths
 
 #if PROTOCORE_HAS_HW_SHA
 #endif
 #include "crypto/hash/sha1/sha1.h"
 #include "mmgr/endian/endian.h" // the big-endian serializers the framing and the rounds step with
 #include "mmgr/protomem/protomem.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // The one definition of Sha1Ctx - private to this TU. It sits at SHA1_OFF_CTX in the caller's borrow,
 // so its size never leaves this file and no consumer can name it.
@@ -173,20 +169,12 @@ static void sha1_run(uint8_t *restrict work, const uint8_t *data, size_t len, ui
     }
 }
 
-void protocore_sha1_hash(uint8_t *restrict work)
+proto_bool protocore_sha1_hash(uint8_t *restrict work, const uint8_t *data, size_t len, uint8_t *out)
 {
-    if (!Sha1V.hash_args.out)
+    if (!out)
     {
-        Sha1V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
-    sha1_run(work, Sha1V.hash_args.data, Sha1V.hash_args.len, Sha1V.hash_args.out);
-    Sha1V.ok = PROTO_TRUE;
+    sha1_run(work, data, len, out);
+    return PROTO_TRUE;
 }
-
-/** @brief The operands and the outcome. */
-Sha1Vars Sha1V;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_SHA1

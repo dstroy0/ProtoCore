@@ -13,17 +13,13 @@
  * its subkeys, the prepared last block, the CBC-MAC chaining value, and the block fed to the cipher.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_AES_CMAC
+#include "protocore_config.h" // the entry point: the widths
 
 #if !PROTOCORE_HAS_HW_AES
 #include "crypto/cipher/aes_block/aes_block.h" // native software AES-128 block
 #endif
 #include "crypto/mac/aes_cmac/aes_cmac.h"
 #include "mmgr/protomem/protomem.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // AES-128 single-block encrypt seam - one small wrapper, two platform bodies
@@ -141,19 +137,17 @@ static void subkeys(uint8_t *restrict work)
 // --- the entry -------------------------------------------------------------
 
 // One-shot over the members already set: expand the key, derive the subkeys, CBC-MAC the message.
-void protocore_aes_cmac_mac(uint8_t *restrict work)
+proto_bool protocore_aes_cmac_mac(uint8_t *restrict work, const uint8_t *key, const uint8_t *msg, size_t msg_len,
+                                  uint8_t *out)
 {
-    AesCmacV.ok = PROTO_FALSE;
-    if (!AesCmacV.mac_args.key || !AesCmacV.mac_args.out)
+    if (!key || !out)
     {
-        return;
+        return PROTO_FALSE;
     }
-    const uint8_t *msg = AesCmacV.mac_args.msg;
-    const size_t msg_len = AesCmacV.mac_args.msg_len;
-    uint8_t *mac = AesCmacV.mac_args.out;
+    uint8_t *mac = out;
 
     struct AesCmacCtx *ctx = AES_CMAC_CTX(work);
-    blk_init(&ctx->blk, AesCmacV.mac_args.key);
+    blk_init(&ctx->blk, key);
     subkeys(work);
 
     // n = number of blocks; the message is a whole number of blocks iff msg_len > 0 && msg_len % 16 == 0.
@@ -198,12 +192,5 @@ void protocore_aes_cmac_mac(uint8_t *restrict work)
     blk_enc(&ctx->blk, y, mac);
 
     blk_free(&ctx->blk);
-    AesCmacV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
-
-/** @brief The operands and the outcome. */
-AesCmacVars AesCmacV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_AES_CMAC
