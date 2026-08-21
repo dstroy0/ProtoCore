@@ -139,26 +139,26 @@ One entry point for CI: `harness.py ci` hands off to it unread, so `harness.py c
 
 ## generate/ - writes into tracked files
 
-| Script                   | W | Flags                         | Shells out to |
-| ------------------------ | - | ----------------------------- | ------------- |
-| `decorate_changelog.py`  | W | `--check`                     |               |
-| `example_footprints.py`  | W |                               |               |
-| `feature_budget.py`      | W |                               |               |
-| `gen_api_flow.py`        |   | `--check`                     |               |
-| `gen_build_opt.py`       | W | `--check`                     |               |
-| `gen_configurator.py`    | W | `--check`                     |               |
-| `gen_dep_graph.py`       | W | `--envs --jobs --merge --out` | pio           |
-| `gen_examples.py`        |   | `--check`                     |               |
-| `gen_feature_tables.py`  |   | `--check`                     |               |
-| `gen_features_page.py`   | W | `--check`                     |               |
-| `gen_features_tree.py`   | W | `--check`                     |               |
-| `gen_flag_deps.py`       |   | `--check`                     |               |
-| `gen_hardware_ref.py`    |   | `--check`                     |               |
-| `gen_interop_matrix.py`  |   | `--check`                     |               |
-| `gen_nav_groups.py`      | W | `--check`                     |               |
-| `gen_readme_intro.py`    |   | `--check`                     |               |
-| `gen_readme_sections.py` |   | `--check`                     |               |
-| `gen_tools_inventory.py` |   | `--check`                     |               |
+| Script                   | W | Flags                              | Shells out to |
+| ------------------------ | - | ---------------------------------- | ------------- |
+| `decorate_changelog.py`  | W | `--check`                          |               |
+| `example_footprints.py`  | W |                                    |               |
+| `feature_budget.py`      | W |                                    |               |
+| `gen_api_flow.py`        |   | `--check`                          |               |
+| `gen_build_opt.py`       | W | `--check`                          |               |
+| `gen_configurator.py`    | W | `--check`                          |               |
+| `gen_dep_graph.py`       | W | `--build-dir --envs --merge --out` |               |
+| `gen_examples.py`        |   | `--check`                          |               |
+| `gen_feature_tables.py`  |   | `--check`                          |               |
+| `gen_features_page.py`   | W | `--check`                          |               |
+| `gen_features_tree.py`   | W | `--check`                          |               |
+| `gen_flag_deps.py`       |   | `--check`                          |               |
+| `gen_hardware_ref.py`    |   | `--check`                          |               |
+| `gen_interop_matrix.py`  |   | `--check`                          |               |
+| `gen_nav_groups.py`      | W | `--check`                          |               |
+| `gen_readme_intro.py`    |   | `--check`                          |               |
+| `gen_readme_sections.py` |   | `--check`                          |               |
+| `gen_tools_inventory.py` |   | `--check`                          |               |
 
 Every one takes `--check` to assert the tracked file already matches, which is how CI detects drift. Reachable as `harness.py ci gen <name>`.
 
@@ -208,7 +208,7 @@ Every one takes `--check` to assert the tracked file already matches, which is h
 | ------------------ | - | ------------------------------------ | ------------- |
 | `ccache_wrap.sh`   | W |                                      | ccache, pio   |
 | `gen_cmake.py`     | W | `--check --quiet`                    | python        |
-| `gen_modules.py`   | W | `--check --cycles --graph --unowned` |               |
+| `gen_modules.py`   |   | `--check --cycles --graph --unowned` |               |
 | `split_modules.py` | W | `--go --list`                        |               |
 
 ## crypto/ - generates test vectors and keys

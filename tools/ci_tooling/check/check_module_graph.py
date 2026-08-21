@@ -45,16 +45,13 @@ def main():
         )
         rc = 1
 
-    files = gen_modules.render_tree(mods)
-    stale = [p for p, t in files.items() if (gen_modules.read(p) if os.path.isfile(p) else "") != t]
-    if stale:
-        print("check_module_graph: %d CMakeLists.txt stale - run `python tools/harness.py build modules`" % len(stale))
-        for p in sorted(stale)[:8]:
-            print("   " + gen_modules.rel(p))
+    # Each declaration against the sources the compiler reads: an included dependency not declared,
+    # a gate the .c carries and the declaration does not, a declared dependency nothing includes.
+    if gen_modules.audit(mods, {}, strict=True) != 0:
         rc = 1
 
     if rc == 0:
-        print("check_module_graph: OK - %d modules, no cycles, %d CMakeLists.txt current" % (len(mods), len(files)))
+        print("check_module_graph: OK - %d modules, no cycles, every declaration agrees" % len(mods))
     return rc
 
 

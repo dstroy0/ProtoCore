@@ -27,15 +27,17 @@ point means what a session learns about driving the tooling does not have to be 
 
 HOW THIS TREE BUILDS - READ THIS BEFORE TOUCHING A BUILD FILE
 
-  CMake, GENERATED FROM THE TREE. Every CMakeLists.txt under src/ says "GENERATED ... Do not edit"
-  and means it: a hand edit is reverted by the next `build modules` and reported as drift by
-  `ci check module_graph` in between. Change the generator, never the output.
+  A MODULE DECLARES ITSELF. Every CMakeLists.txt under src/ states what its module is, what gates
+  it and what it needs, and is EDITED BY HAND - it is the source, not output. `build modules` no
+  longer writes them; it reads the sources the compiler reads and reports where a declaration and
+  its .c disagree: a dependency included but not declared, a gate the source carries and the
+  declaration does not, a declared dependency nothing includes.
 
-  A MODULE IS A DIRECTORY. One .c, the .h beside it, and the CMakeLists.txt declaring the target.
-  A new .c/.h pair dropped beside an existing one is wrong - `build split` moves it into its own
+  A MODULE IS A DIRECTORY. One .c, the .h beside it, and the CMakeLists.txt declaring it. A new
+  .c/.h pair dropped beside an existing one is wrong - `build split` moves it into its own
   directory and rewrites every reference.
 
-    build modules    439 CMakeLists.txt under src/, one per directory
+    build modules    check every declaration under src/ against its sources
     build cmake      test/CMakeLists.txt: one target and one ctest per env
     build split      a pair still sharing a directory (dry run by default)
 
@@ -601,7 +603,7 @@ BUILD = {
     ),
     "modules": T(
         "tools/ci_tooling/build/gen_modules.py",
-        "modules [--check|--graph|--unowned]",
+        "modules [--check|--graph|--unowned|--cycles]",
         "Writes src/CMakeLists.txt: one CMake target per module, with the dependencies read out of "
         "what each module includes rather than maintained by hand. Include paths and transitive deps "
         "then propagate through the targets, and a module whose PROTOCORE_ENABLE_* gate is off is a "

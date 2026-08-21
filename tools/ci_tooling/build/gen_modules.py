@@ -391,28 +391,107 @@ def main():
                 print("   %-52s -> %s" % (n, ", ".join(inside)))
         return 1
 
-    files = render_tree(mods)
-    if a.check:
-        stale = [p for p, t in files.items() if (read(p) if os.path.isfile(p) else "") != t]
-        if stale:
-            print(
-                "%d CMakeLists.txt stale - run `python tools/harness.py build modules`\n  %s"
-                % (len(stale), "\n  ".join(rel(p) for p in sorted(stale)[:8])),
-                file=sys.stderr,
-            )
-            return 1
-        print("%d CMakeLists.txt current (%d modules)" % (len(files), len(mods)))
-        return 0
+    return audit(mods, unowned, strict=a.check)
 
-    for p, t in files.items():
-        os.makedirs(os.path.dirname(p), exist_ok=True)
-        with open(p, "w", encoding="utf-8", newline="\n") as f:
-            f.write(t)
-    gated = sum(1 for m in mods.values() if m["gate"])
-    edges = sum(len(m["deps"]) for m in mods.values())
-    print("wrote %d CMakeLists.txt: %d modules, %d gated, %d dependency edges" % (len(files), len(mods), gated, edges))
+
+DECL = re.compile(r"protocore_add_module\(\s*(?P<path>\S+)(?P<body>.*?)\n\s*\)", re.S)
+DECL_KEYWORDS = ("SOURCES", "DEPS", "PRIVATE_DEPS", "GATE", "HEADER_ONLY")
+
+
+def declared():
+    """What each module's own CMakeLists.txt says: path -> {gate, deps}."""
+    out = {}
+    for dirpath, _dn, files in os.walk(SRC):
+        if "CMakeLists.txt" not in files:
+            continue
+        text = read(os.path.join(dirpath, "CMakeLists.txt"))
+        for m in DECL.finditer(text):
+            body = m.group("body")
+            g = re.search(r"GATE\s+(\S+)", body)
+            deps = []
+            for key in ("DEPS", "PRIVATE_DEPS"):
+                d = re.search(r"\b%s\b((?:\s+\w[\w/]*)+)" % key, body)
+                if not d:
+                    continue
+                for tok in d.group(1).split():
+                    if tok in DECL_KEYWORDS:
+                        break
+                    deps.append(tok)
+            out[m.group("path")] = {"gate": g.group(1) if g else "", "deps": sorted(set(deps))}
+    return out
+
+
+def audit(mods, unowned, strict):
+    """Compare what each module declares against what its sources actually do.
+
+    The declaration is the contract the build reads. The includes are what the compiler acts on. A
+    module that reaches into another without declaring it links today only because something else
+    pulled that dependency in, and stops linking the moment that changes.
+    """
+    decl = declared()
+    # discover() keys modules by target name; the declarations key them by path. Both derive from
+    # the same .c, so map through it rather than trying to invert one name into the other.
+    by_path = {}
+    for name, m in mods.items():
+        # A header-only module has no .c; its identity comes from the header instead. rel() is
+        # already repo-relative here, so strip the src/ prefix rather than re-relativising.
+        f = m["c"] or m["h"]
+        p = (f[len("src/") :] if f.startswith("src/") else f)[:-2]
+        parts = p.split("/")
+        if len(parts) > 1 and parts[-1] == parts[-2]:
+            parts = parts[:-1]
+        by_path["/".join(parts)] = (name, m)
+
+    missing_decl = sorted(set(by_path) - set(decl))
+    extra_decl = sorted(set(decl) - set(by_path))
+    bad_gate, undeclared, unused = [], [], []
+
+    for path, (name, m) in sorted(by_path.items()):
+        d = decl.get(path)
+        if d is None:
+            continue
+        if m["gate"] and not d["gate"]:
+            bad_gate.append((path, "source gates on %s, declaration states none" % m["gate"]))
+        elif d["gate"] and m["gate"] and not d["gate"].startswith(m["gate"]):
+            bad_gate.append((path, "declares %s, source gates on %s" % (d["gate"], m["gate"])))
+        # discover() names dependencies by target; map each back to the path the declaration uses.
+        inferred = set()
+        for t in m["deps"]:
+            if t in mods:
+                ft = mods[t]["c"] or mods[t]["h"]
+                q = (ft[len("src/") :] if ft.startswith("src/") else ft)[:-2].split("/")
+                if len(q) > 1 and q[-1] == q[-2]:
+                    q = q[:-1]
+                inferred.add("/".join(q))
+        gap = sorted(inferred - set(d["deps"]))
+        stale = sorted(set(d["deps"]) - inferred)
+        if gap:
+            undeclared.append((path, gap))
+        if stale:
+            unused.append((path, stale))
+
+    print("modules declared            : %d" % len(decl))
+    print("  no declaration            : %d" % len(missing_decl))
+    print("  declared, no module       : %d" % len(extra_decl))
+    print("  gate disagrees with source: %d" % len(bad_gate))
+    print("  includes an undeclared dep: %d" % len(undeclared))
+    print("  declares an unused dep    : %d" % len(unused))
     if unowned:
-        print("%d included header(s) no module owns (--unowned to list)" % len(unowned))
+        print("  headers no module owns    : %d (--unowned to list)" % len(unowned))
+
+    for label, rows in (
+        ("no declaration", [(p, "") for p in missing_decl]),
+        ("declared but no module", [(p, "") for p in extra_decl]),
+        ("gate", bad_gate),
+        ("undeclared dependency", undeclared),
+    ):
+        for p, detail in rows[:10]:
+            print("   %-22s %-46s %s" % (label, p, detail))
+
+    hard = len(missing_decl) + len(extra_decl) + len(bad_gate) + len(undeclared)
+    if strict and hard:
+        print("\n%d declaration(s) disagree with the sources" % hard, file=sys.stderr)
+        return 1
     return 0
 
 
