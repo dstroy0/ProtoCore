@@ -430,8 +430,8 @@ void fill_route_base(HttpRoute *r, const char *path)
 
 void on_http(const char *path, HttpMethod method, Handler callback)
 {
-    HttpRoutes.add(protocore_http_route_span());
-    HttpRoute *r = HttpRoutesV.ptr;
+    HttpRoute *http_routes_ptr = HttpRoutes.add(protocore_http_route_span());
+    HttpRoute *r = http_routes_ptr;
     if (r == NULL)
     {
         return;
@@ -445,8 +445,8 @@ void on_http(const char *path, HttpMethod method, Handler callback)
 
 void on_http_iface(const char *path, HttpMethod method, Handler callback, protocore_if_kind iface)
 {
-    HttpRoutes.add(protocore_http_route_span());
-    HttpRoute *r = HttpRoutesV.ptr;
+    HttpRoute *http_routes_ptr = HttpRoutes.add(protocore_http_route_span());
+    HttpRoute *r = http_routes_ptr;
     if (r == NULL)
     {
         return;
@@ -466,8 +466,8 @@ void set_ap_ip(uint32_t ap_ip)
 
 void on_regex(const char *pattern, HttpMethod method, Handler callback)
 {
-    HttpRoutes.add(protocore_http_route_span());
-    HttpRoute *r = HttpRoutesV.ptr;
+    HttpRoute *http_routes_ptr = HttpRoutes.add(protocore_http_route_span());
+    HttpRoute *r = http_routes_ptr;
     if (r == NULL)
     {
         return;
@@ -484,8 +484,8 @@ void on_regex(const char *pattern, HttpMethod method, Handler callback)
 void on_http_auth(const char *path, HttpMethod method, Handler callback, const char *realm, const char *user,
                   const char *pass, proto_bool digest)
 {
-    HttpRoutes.add(protocore_http_route_span());
-    HttpRoute *r = HttpRoutesV.ptr;
+    HttpRoute *http_routes_ptr = HttpRoutes.add(protocore_http_route_span());
+    HttpRoute *r = http_routes_ptr;
     if (r == NULL)
     {
         return;
@@ -508,8 +508,8 @@ void on_http_auth(const char *path, HttpMethod method, Handler callback, const c
 #if PROTOCORE_ENABLE_WEBSOCKET
 void on_ws(const char *path, WsConnectHandler on_connect, WsMessageHandler on_message, WsCloseHandler on_close)
 {
-    HttpRoutes.add(protocore_http_route_span());
-    HttpRoute *r = HttpRoutesV.ptr;
+    HttpRoute *http_routes_ptr = HttpRoutes.add(protocore_http_route_span());
+    HttpRoute *r = http_routes_ptr;
     if (r == NULL)
     {
         return;
@@ -528,8 +528,8 @@ void on_ws(const char *path, WsConnectHandler on_connect, WsMessageHandler on_me
 #if PROTOCORE_ENABLE_SSE
 void on_sse(const char *path, SseConnectHandler on_connect)
 {
-    HttpRoutes.add(protocore_http_route_span());
-    HttpRoute *r = HttpRoutesV.ptr;
+    HttpRoute *http_routes_ptr = HttpRoutes.add(protocore_http_route_span());
+    HttpRoute *r = http_routes_ptr;
     if (r == NULL)
     {
         return;
@@ -574,12 +574,11 @@ proto_bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s)
 #if PROTOCORE_ENABLE_WEBSOCKET
 void ws_dispatch_message(const WsConn *ws)
 {
-    HttpRoutes.count(protocore_http_route_span());
-    for (uint8_t r = 0; r < HttpRoutesV.value; r++)
+    uint8_t http_routes_value = HttpRoutes.count(protocore_http_route_span());
+    for (uint8_t r = 0; r < http_routes_value; r++)
     {
-        HttpRoutesV.at_args.i = r;
-        HttpRoutes.at(protocore_http_route_span());
-        const HttpRoute *rt = HttpRoutesV.ptr;
+        HttpRoute *http_routes_ptr = HttpRoutes.at(protocore_http_route_span(), r);
+        const HttpRoute *rt = http_routes_ptr;
         if (rt->type != ROUTE_WS)
         {
             continue;
@@ -596,12 +595,11 @@ void ws_dispatch_message(const WsConn *ws)
 
 void ws_dispatch_close(const WsConn *ws)
 {
-    HttpRoutes.count(protocore_http_route_span());
-    for (uint8_t r = 0; r < HttpRoutesV.value; r++)
+    uint8_t http_routes_value = HttpRoutes.count(protocore_http_route_span());
+    for (uint8_t r = 0; r < http_routes_value; r++)
     {
-        HttpRoutesV.at_args.i = r;
-        HttpRoutes.at(protocore_http_route_span());
-        const HttpRoute *rt = HttpRoutesV.ptr;
+        HttpRoute *http_routes_ptr = HttpRoutes.at(protocore_http_route_span(), r);
+        const HttpRoute *rt = http_routes_ptr;
         if (rt->type != ROUTE_WS)
         {
             continue;

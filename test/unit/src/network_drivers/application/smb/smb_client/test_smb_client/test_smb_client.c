@@ -156,12 +156,8 @@ typedef struct
 
 static void append_frame(Mock *m, const uint8_t *resp, size_t rlen)
 {
-    Smb2V.transport_frame_args.out = m->rx + m->rx_len;
-    Smb2V.transport_frame_args.cap = sizeof(m->rx) - m->rx_len;
-    Smb2V.transport_frame_args.msg = resp;
-    Smb2V.transport_frame_args.msg_len = rlen;
-    Smb2.transport_frame(smb2_work);
-    m->rx_len += Smb2V.n;
+    size_t smb2_n = Smb2.transport_frame(smb2_work, m->rx + m->rx_len, sizeof(m->rx) - m->rx_len, resp, rlen);
+    m->rx_len += smb2_n;
 }
 
 static proto_bool mock_derive_key(const uint8_t *msg, size_t mlen, const SmbConfig *cfg, uint8_t key[16])
@@ -210,50 +206,27 @@ static void mock_sign(const Mock *m, uint8_t *msg, size_t len)
 {
     if (m->sign_algo == SMB2_SIGN_ALGO_AES_CMAC)
     {
-        Smb2V.sign_cmac_args.crypto_work = tw;
-        Smb2V.sign_cmac_args.key = m->sign_key;
-        Smb2V.sign_cmac_args.msg = msg;
-        Smb2V.sign_cmac_args.msg_len = len;
-        Smb2.sign_cmac(smb2_work);
+        Smb2.sign_cmac(smb2_work, tw, m->sign_key, msg, len);
     }
     else
     {
-        Smb2V.sign_args.crypto_work = tw;
-        Smb2V.sign_args.key = m->sign_key;
-        Smb2V.sign_args.msg = msg;
-        Smb2V.sign_args.msg_len = len;
-        Smb2.sign(smb2_work);
+        Smb2.sign(smb2_work, tw, m->sign_key, msg, len);
     }
 }
 static proto_bool mock_verify(const Mock *m, uint8_t *msg, size_t len)
 {
     if (m->sign_algo == SMB2_SIGN_ALGO_AES_CMAC)
     {
-        Smb2V.verify_cmac_args.crypto_work = tw;
-        Smb2V.verify_cmac_args.key = m->sign_key;
-        Smb2V.verify_cmac_args.msg = msg;
-        Smb2V.verify_cmac_args.msg_len = len;
-        Smb2.verify_cmac(smb2_work);
-        return Smb2V.ok;
+        proto_bool smb2_ok = Smb2.verify_cmac(smb2_work, tw, m->sign_key, msg, len);
+        return smb2_ok;
     }
-    Smb2V.verify_args.crypto_work = tw;
-    Smb2V.verify_args.key = m->sign_key;
-    Smb2V.verify_args.msg = msg;
-    Smb2V.verify_args.msg_len = len;
-    Smb2.verify(smb2_work);
-    return Smb2V.ok;
+    proto_bool smb2_ok = Smb2.verify(smb2_work, tw, m->sign_key, msg, len);
+    return smb2_ok;
 }
 
 static size_t build_neg_resp_311(uint8_t *resp, uint64_t msg_id, proto_bool offer_encrypt, uint16_t cipher)
 {
-    Smb2V.build_header_args.buf = resp;
-    Smb2V.build_header_args.cap = PROTOCORE_SMB_BUF + 128;
-    Smb2V.build_header_args.command = SMB2_NEGOTIATE;
-    Smb2V.build_header_args.credit_request = 1;
-    Smb2V.build_header_args.message_id = msg_id;
-    Smb2V.build_header_args.tree_id = 0;
-    Smb2V.build_header_args.session_id = 0;
-    Smb2.build_header(smb2_work);
+    Smb2.build_header(smb2_work, resp, PROTOCORE_SMB_BUF + 128, SMB2_NEGOTIATE, 1, msg_id, 0, 0);
     uint8_t *b = resp + 64;
     memset(b, 0, 64);
     w16(b + 0, 65);
@@ -306,14 +279,8 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
     if (m->enc_keys && mlen >= PROTOCORE_SMB2_TRANSFORM_HDR_LEN && msg[0] == 0xFD && msg[1] == 'S' && msg[2] == 'M' &&
         msg[3] == 'B')
     {
-        Smb2V.decrypt_args.cipher = m->cipher;
-        Smb2V.decrypt_args.key = m->enc_c2s;
-        Smb2V.decrypt_args.in = msg;
-        Smb2V.decrypt_args.in_len = mlen;
-        Smb2V.decrypt_args.out = plain;
-        Smb2V.decrypt_args.out_cap = sizeof(plain);
-        Smb2.decrypt(smb2_work);
-        size_t pl = Smb2V.n;
+        size_t smb2_n = Smb2.decrypt(smb2_work, m->cipher, m->enc_c2s, msg, mlen, plain, sizeof(plain));
+        size_t pl = smb2_n;
         if (pl == 0)
         {
             return -1;
@@ -323,11 +290,8 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
         req_enc = PROTO_TRUE;
     }
     Smb2Header h;
-    Smb2V.parse_header_args.buf = msg;
-    Smb2V.parse_header_args.len = mlen;
-    Smb2V.parse_header_args.out = &h;
-    Smb2.parse_header(smb2_work);
-    if (!Smb2V.ok)
+    proto_bool smb2_ok = Smb2.parse_header(smb2_work, msg, mlen, &h);
+    if (!smb2_ok)
     {
         return -1;
     }
@@ -336,16 +300,11 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
     {
         if (h.command == SMB2_NEGOTIATE)
         {
-            Smb2V.preauth_init_args.p = &m->preauth;
-            Smb2.preauth_init(smb2_work);
+            Smb2.preauth_init(smb2_work, &m->preauth);
         }
         if (h.command == SMB2_NEGOTIATE || h.command == SMB2_SESSION_SETUP)
         {
-            Smb2V.preauth_update_args.crypto_work = tw;
-            Smb2V.preauth_update_args.p = &m->preauth;
-            Smb2V.preauth_update_args.msg = msg;
-            Smb2V.preauth_update_args.len = mlen;
-            Smb2.preauth_update(smb2_work);
+            Smb2.preauth_update(smb2_work, tw, &m->preauth, msg, mlen);
         }
     }
 
@@ -378,14 +337,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
             rlen = build_neg_resp_311(resp, h.message_id, m->require_encrypt || m->encrypt_share_only, m->cipher);
             break;
         }
-        Smb2V.build_header_args.buf = resp;
-        Smb2V.build_header_args.cap = sizeof(resp);
-        Smb2V.build_header_args.command = SMB2_NEGOTIATE;
-        Smb2V.build_header_args.credit_request = 1;
-        Smb2V.build_header_args.message_id = h.message_id;
-        Smb2V.build_header_args.tree_id = 0;
-        Smb2V.build_header_args.session_id = 0;
-        Smb2.build_header(smb2_work);
+        Smb2.build_header(smb2_work, resp, sizeof(resp), SMB2_NEGOTIATE, 1, h.message_id, 0, 0);
         w16(b + 0, 65);
         if (m->require_signing)
         {
@@ -395,14 +347,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
         rlen = 128;
         break;
     case SMB2_SESSION_SETUP: {
-        Smb2V.build_header_args.buf = resp;
-        Smb2V.build_header_args.cap = sizeof(resp);
-        Smb2V.build_header_args.command = SMB2_SESSION_SETUP;
-        Smb2V.build_header_args.credit_request = 1;
-        Smb2V.build_header_args.message_id = h.message_id;
-        Smb2V.build_header_args.tree_id = 0;
-        Smb2V.build_header_args.session_id = m->session_id;
-        Smb2.build_header(smb2_work);
+        Smb2.build_header(smb2_work, resp, sizeof(resp), SMB2_SESSION_SETUP, 1, h.message_id, 0, m->session_id);
         w16(b + 0, 9);
         if (m->ss_round++ == 0)
         {
@@ -452,23 +397,15 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
             {
                 if (m->require_311)
                 {
-                    Smb2V.derive_signing_key_args.session_key = base_key;
-                    Smb2V.derive_signing_key_args.dialect = (uint16_t)SMB2_DIALECT_0311;
-                    Smb2V.derive_signing_key_args.preauth = m->preauth.hash;
-                    Smb2V.derive_signing_key_args.out_key = m->sign_key;
-                    Smb2.derive_signing_key(smb2_work);
+                    Smb2.derive_signing_key(smb2_work, base_key, (uint16_t)SMB2_DIALECT_0311, m->preauth.hash,
+                                            m->sign_key);
                     m->sign_algo = SMB2_SIGN_ALGO_AES_CMAC;
                     m->signing = PROTO_TRUE;
                     if (m->require_encrypt || m->encrypt_share_only)
                     {
 
-                        Smb2V.derive_encryption_keys_args.session_key = base_key;
-                        Smb2V.derive_encryption_keys_args.dialect = (uint16_t)SMB2_DIALECT_0311;
-                        Smb2V.derive_encryption_keys_args.preauth = m->preauth.hash;
-                        Smb2V.derive_encryption_keys_args.key_len = protocore_smb2_cipher_key_len(m->cipher);
-                        Smb2V.derive_encryption_keys_args.out_c2s = m->enc_c2s;
-                        Smb2V.derive_encryption_keys_args.out_s2c = m->enc_s2c;
-                        Smb2.derive_encryption_keys(smb2_work);
+                        Smb2.derive_encryption_keys(smb2_work, base_key, (uint16_t)SMB2_DIALECT_0311, m->preauth.hash,
+                                                    protocore_smb2_cipher_key_len(m->cipher), m->enc_c2s, m->enc_s2c);
                         m->enc_keys = PROTO_TRUE;
                         if (m->require_encrypt)
                         {
@@ -488,14 +425,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
         break;
     }
     case SMB2_TREE_CONNECT:
-        Smb2V.build_header_args.buf = resp;
-        Smb2V.build_header_args.cap = sizeof(resp);
-        Smb2V.build_header_args.command = SMB2_TREE_CONNECT;
-        Smb2V.build_header_args.credit_request = 1;
-        Smb2V.build_header_args.message_id = h.message_id;
-        Smb2V.build_header_args.tree_id = m->tree_id;
-        Smb2V.build_header_args.session_id = m->session_id;
-        Smb2.build_header(smb2_work);
+        Smb2.build_header(smb2_work, resp, sizeof(resp), SMB2_TREE_CONNECT, 1, h.message_id, m->tree_id, m->session_id);
 
         if (m->encrypt_share_only && !req_enc)
         {
@@ -510,14 +440,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
         rlen = 64 + 16;
         break;
     case SMB2_CREATE:
-        Smb2V.build_header_args.buf = resp;
-        Smb2V.build_header_args.cap = sizeof(resp);
-        Smb2V.build_header_args.command = SMB2_CREATE;
-        Smb2V.build_header_args.credit_request = 1;
-        Smb2V.build_header_args.message_id = h.message_id;
-        Smb2V.build_header_args.tree_id = m->tree_id;
-        Smb2V.build_header_args.session_id = m->session_id;
-        Smb2.build_header(smb2_work);
+        Smb2.build_header(smb2_work, resp, sizeof(resp), SMB2_CREATE, 1, h.message_id, m->tree_id, m->session_id);
         w32(resp + 8, m->create_status);
         w16(b + 0, 89);
         w32(b + 4, 1);
@@ -529,14 +452,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
         const uint8_t *rq = msg + 64;
         uint32_t length = rd32(rq + 4);
         uint64_t off = rd64(rq + 8);
-        Smb2V.build_header_args.buf = resp;
-        Smb2V.build_header_args.cap = sizeof(resp);
-        Smb2V.build_header_args.command = SMB2_READ;
-        Smb2V.build_header_args.credit_request = 1;
-        Smb2V.build_header_args.message_id = h.message_id;
-        Smb2V.build_header_args.tree_id = m->tree_id;
-        Smb2V.build_header_args.session_id = m->session_id;
-        Smb2.build_header(smb2_work);
+        Smb2.build_header(smb2_work, resp, sizeof(resp), SMB2_READ, 1, h.message_id, m->tree_id, m->session_id);
         if (off >= m->file_data_len)
         {
             w32(resp + 8, SMB2_STATUS_END_OF_FILE);
@@ -568,28 +484,14 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
                 m->file_data_len = (size_t)(off + length);
             }
         }
-        Smb2V.build_header_args.buf = resp;
-        Smb2V.build_header_args.cap = sizeof(resp);
-        Smb2V.build_header_args.command = SMB2_WRITE;
-        Smb2V.build_header_args.credit_request = 1;
-        Smb2V.build_header_args.message_id = h.message_id;
-        Smb2V.build_header_args.tree_id = m->tree_id;
-        Smb2V.build_header_args.session_id = m->session_id;
-        Smb2.build_header(smb2_work);
+        Smb2.build_header(smb2_work, resp, sizeof(resp), SMB2_WRITE, 1, h.message_id, m->tree_id, m->session_id);
         w16(b + 0, 17);
         w32(b + 4, length);
         rlen = 64 + 16;
         break;
     }
     case SMB2_CLOSE:
-        Smb2V.build_header_args.buf = resp;
-        Smb2V.build_header_args.cap = sizeof(resp);
-        Smb2V.build_header_args.command = SMB2_CLOSE;
-        Smb2V.build_header_args.credit_request = 1;
-        Smb2V.build_header_args.message_id = h.message_id;
-        Smb2V.build_header_args.tree_id = m->tree_id;
-        Smb2V.build_header_args.session_id = m->session_id;
-        Smb2.build_header(smb2_work);
+        Smb2.build_header(smb2_work, resp, sizeof(resp), SMB2_CLOSE, 1, h.message_id, m->tree_id, m->session_id);
         w16(b + 0, 60);
         rlen = 64 + 60;
         break;
@@ -616,11 +518,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
 
     if (m->require_311 && (h.command == SMB2_NEGOTIATE || (h.command == SMB2_SESSION_SETUP && m->ss_round == 1)))
     {
-        Smb2V.preauth_update_args.crypto_work = tw;
-        Smb2V.preauth_update_args.p = &m->preauth;
-        Smb2V.preauth_update_args.msg = resp;
-        Smb2V.preauth_update_args.len = rlen;
-        Smb2.preauth_update(smb2_work);
+        Smb2.preauth_update(smb2_work, tw, &m->preauth, resp, rlen);
     }
 
     if (m->signing && !req_enc)
@@ -643,16 +541,9 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
             {
                 nonce[i] = (uint8_t)(ctr >> (8 * i));
             }
-            Smb2V.encrypt_args.cipher = m->cipher;
-            Smb2V.encrypt_args.key = m->enc_s2c;
-            Smb2V.encrypt_args.nonce = nonce;
-            Smb2V.encrypt_args.session_id = m->session_id;
-            Smb2V.encrypt_args.msg = resp;
-            Smb2V.encrypt_args.msg_len = rlen;
-            Smb2V.encrypt_args.out = enc;
-            Smb2V.encrypt_args.out_cap = sizeof(enc);
-            Smb2.encrypt(smb2_work);
-            size_t el = Smb2V.n;
+            size_t smb2_n =
+                Smb2.encrypt(smb2_work, m->cipher, m->enc_s2c, nonce, m->session_id, resp, rlen, enc, sizeof(enc));
+            size_t el = smb2_n;
             if (m->corrupt_read_sig && h.command == SMB2_READ)
             {
                 enc[PROTOCORE_SMB2_TRANSFORM_HDR_LEN + 2] ^= 0xFF;
@@ -1386,14 +1277,7 @@ static int canned_recv(void *c, uint8_t *buf, size_t cap)
 
 static uint8_t *protocore_resp_hdr(uint8_t *msg, Smb2Command cmd, uint32_t status)
 {
-    Smb2V.build_header_args.buf = msg;
-    Smb2V.build_header_args.cap = 64;
-    Smb2V.build_header_args.command = cmd;
-    Smb2V.build_header_args.credit_request = 1;
-    Smb2V.build_header_args.message_id = 5;
-    Smb2V.build_header_args.tree_id = 0x00A1;
-    Smb2V.build_header_args.session_id = 0x1122334455667788ULL;
-    Smb2.build_header(smb2_work);
+    Smb2.build_header(smb2_work, msg, 64, cmd, 1, 5, 0x00A1, 0x1122334455667788ULL);
     w32(msg + 8, status);
     msg[16] |= 0x01;
     return msg + 64;
@@ -1401,12 +1285,8 @@ static uint8_t *protocore_resp_hdr(uint8_t *msg, Smb2Command cmd, uint32_t statu
 
 static void canned_frame(Canned *cn, const uint8_t *msg, size_t mlen)
 {
-    Smb2V.transport_frame_args.out = cn->resp;
-    Smb2V.transport_frame_args.cap = sizeof(cn->resp);
-    Smb2V.transport_frame_args.msg = msg;
-    Smb2V.transport_frame_args.msg_len = mlen;
-    Smb2.transport_frame(smb2_work);
-    cn->protocore_resp_len = Smb2V.n;
+    size_t smb2_n = Smb2.transport_frame(smb2_work, cn->resp, sizeof(cn->resp), msg, mlen);
+    cn->protocore_resp_len = smb2_n;
     cn->pos = 0;
 }
 

@@ -12,16 +12,12 @@
  * The one symbol this file exports is @ref HttpRoutes.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_HTTP_ROUTE
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/protomem/protomem.h" // mem.zero: the hand-out wipe
 #include "mmgr/secure/secure.h"     // where the table lives
 #include "network_drivers/presentation/http/route/http_route/http_route.h"
 #include "protocore.h" // completes HttpRoute; route.h names it only as an opaque tag
-
-PROTOCORE_BEGIN_DECLS
 
 // The table's layout, known only here. The storage behind it belongs to the secure pool.
 struct HttpRouteCtx
@@ -61,13 +57,12 @@ uint8_t *protocore_http_route_span(void)
 
 // The table is the borrow: every entry reads it through ROUTE_CTX.
 
-void protocore_http_routes_add(uint8_t *restrict work)
+HttpRoute *protocore_http_routes_add(uint8_t *restrict work)
 {
     struct HttpRouteCtx *t = ROUTE_CTX(work);
     if (t->count >= MAX_ROUTES)
     {
-        HttpRoutesV.ptr = NULL;
-        return;
+        return NULL;
     }
     HttpRoute *r = &t->entry[t->count];
     t->count++;
@@ -77,24 +72,21 @@ void protocore_http_routes_add(uint8_t *restrict work)
     // dispatch to it. There is no release path - routes are registered at setup and live forever -
     // so hand-out is the only moment this can be done.
     mem.zero(r, sizeof(*r));
-    HttpRoutesV.ptr = r;
+    return r;
 }
 
-void protocore_http_routes_count(uint8_t *restrict work)
+uint8_t protocore_http_routes_count(uint8_t *restrict work)
 {
-    HttpRoutesV.value = ROUTE_CTX(work)->count;
+    return ROUTE_CTX(work)->count;
 }
 
-void protocore_http_routes_at(uint8_t *restrict work)
+HttpRoute *protocore_http_routes_at(uint8_t *restrict work, uint8_t i)
 {
-    uint8_t i = HttpRoutesV.at_args.i;
-
     if (i >= ROUTE_CTX(work)->count)
     {
-        HttpRoutesV.ptr = NULL;
-        return;
+        return NULL;
     }
-    HttpRoutesV.ptr = &ROUTE_CTX(work)->entry[i];
+    return &ROUTE_CTX(work)->entry[i];
 }
 
 void protocore_http_routes_reset(uint8_t *restrict work)
@@ -103,10 +95,3 @@ void protocore_http_routes_reset(uint8_t *restrict work)
     // a previous tenant's fields and there is nothing to wipe here.
     ROUTE_CTX(work)->count = 0;
 }
-
-/** @brief The operands and the outcome. */
-HttpRoutesVars HttpRoutesV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_HTTP_ROUTE

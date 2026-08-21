@@ -922,12 +922,11 @@ void protocore_http_match_and_execute(uint8_t *restrict work)
     char allow_buf[64];
     allow_buf[0] = '\0';
 
-    HttpRoutes.count(protocore_http_route_span());
-    for (uint8_t i = 0; i < HttpRoutesV.value; i++)
+    uint8_t http_routes_value = HttpRoutes.count(protocore_http_route_span());
+    for (uint8_t i = 0; i < http_routes_value; i++)
     {
-        HttpRoutesV.at_args.i = i;
-        HttpRoutes.at(protocore_http_route_span());
-        HttpRoute *r = HttpRoutesV.ptr;
+        HttpRoute *http_routes_ptr = HttpRoutes.at(protocore_http_route_span(), i);
+        HttpRoute *r = http_routes_ptr;
         if (!route_admits(r, slot_id, req))
         {
             continue;

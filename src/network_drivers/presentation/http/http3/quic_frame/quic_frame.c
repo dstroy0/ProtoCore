@@ -17,12 +17,8 @@
 static proto_bool rd(uint8_t *restrict work, const uint8_t *buf, size_t len, size_t *pos, uint64_t *v)
 {
     size_t c = 0;
-    QuicVarintV.decode_args.in = buf + *pos;
-    QuicVarintV.decode_args.len = len - *pos;
-    QuicVarintV.decode_args.value = v;
-    QuicVarintV.decode_args.consumed = &c;
-    QuicVarint.decode(work);
-    if (!QuicVarintV.ok)
+    proto_bool quic_varint_ok = QuicVarint.decode(work, buf + *pos, len - *pos, v, &c);
+    if (!quic_varint_ok)
     {
         return PROTO_FALSE;
     }
@@ -278,11 +274,8 @@ size_t protocore_quic_frame_build_handshake_done(uint8_t *restrict work, uint8_t
 // Append a varint; returns false on overflow.
 static proto_bool wr(uint8_t *restrict work, uint8_t *out, size_t cap, size_t *pos, uint64_t v)
 {
-    QuicVarintV.encode_args.out = out + *pos;
-    QuicVarintV.encode_args.cap = cap - *pos;
-    QuicVarintV.encode_args.value = v;
-    QuicVarint.encode(work);
-    size_t c = QuicVarintV.n;
+    size_t quic_varint_n = QuicVarint.encode(work, out + *pos, cap - *pos, v);
+    size_t c = quic_varint_n;
     if (!c)
     {
         return PROTO_FALSE;

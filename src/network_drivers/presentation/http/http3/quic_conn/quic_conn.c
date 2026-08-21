@@ -472,12 +472,8 @@ static proto_bool skip_initial_token(const uint8_t *dg, size_t len, size_t *off)
 {
     uint64_t tok_len = 0;
     size_t c = 0;
-    QuicVarintV.decode_args.in = dg + *off;
-    QuicVarintV.decode_args.len = len - *off;
-    QuicVarintV.decode_args.value = &tok_len;
-    QuicVarintV.decode_args.consumed = &c;
-    QuicVarint.decode(quic_varint_work);
-    if (!QuicVarintV.ok)
+    proto_bool quic_varint_ok = QuicVarint.decode(quic_varint_work, dg + *off, len - *off, &tok_len, &c);
+    if (!quic_varint_ok)
     {
         return PROTO_FALSE;
     }
@@ -533,12 +529,8 @@ static proto_bool parse_packet_header(const QuicConnCtx *qc, const uint8_t *dg, 
         return PROTO_FALSE;
     }
     size_t c = 0;
-    QuicVarintV.decode_args.in = dg + off;
-    QuicVarintV.decode_args.len = len - off;
-    QuicVarintV.decode_args.value = payload_length;
-    QuicVarintV.decode_args.consumed = &c;
-    QuicVarint.decode(quic_varint_work);
-    if (!QuicVarintV.ok)
+    proto_bool quic_varint_ok = QuicVarint.decode(quic_varint_work, dg + off, len - off, payload_length, &c);
+    if (!quic_varint_ok)
     {
         return PROTO_FALSE;
     }
@@ -886,11 +878,8 @@ static size_t build_packet(uint8_t *restrict work, QuicConnCtx *qc, int level, u
         p = hn;
         if (level == QUIC_ENC_INITIAL)
         {
-            QuicVarintV.encode_args.out = out + p;
-            QuicVarintV.encode_args.cap = cap - p;
-            QuicVarintV.encode_args.value = 0;
-            QuicVarint.encode(work);
-            size_t n = QuicVarintV.n; // empty token
+            size_t quic_varint_n = QuicVarint.encode(work, out + p, cap - p, 0);
+            size_t n = quic_varint_n; // empty token
             if (!n)
             {
                 return 0;
@@ -898,11 +887,8 @@ static size_t build_packet(uint8_t *restrict work, QuicConnCtx *qc, int level, u
             p += n;
         }
         uint64_t length = (uint64_t)pn_len + frame_len + PROTOCORE_AES128GCM_TAG_LEN;
-        QuicVarintV.encode_args.out = out + p;
-        QuicVarintV.encode_args.cap = cap - p;
-        QuicVarintV.encode_args.value = length;
-        QuicVarint.encode(work);
-        size_t n = QuicVarintV.n;
+        size_t quic_varint_n = QuicVarint.encode(work, out + p, cap - p, length);
+        size_t n = quic_varint_n;
         if (!n)
         {
             return 0;

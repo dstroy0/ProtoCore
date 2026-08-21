@@ -225,11 +225,8 @@ static void dispatch_request(H3ConnCtx *h3, H3Stream *st)
     while (off < st->buf_len)
     {
         H3FrameHeader fr;
-        H3FrameV.parse_header_args.buf = st->buf + off;
-        H3FrameV.parse_header_args.len = st->buf_len - off;
-        H3FrameV.parse_header_args.out = &fr;
-        H3Frame.parse_header(h3_frame_work);
-        if (!H3FrameV.ok)
+        proto_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, st->buf + off, st->buf_len - off, &fr);
+        if (!h3_frame_ok)
         {
             break;
         }
@@ -302,12 +299,8 @@ static proto_bool protocore_h3_classify_uni_stream(H3ConnCtx *h3, H3Stream *st)
 {
     uint64_t type = 0;
     size_t c = 0;
-    QuicVarintV.decode_args.in = st->buf;
-    QuicVarintV.decode_args.len = st->buf_len;
-    QuicVarintV.decode_args.value = &type;
-    QuicVarintV.decode_args.consumed = &c;
-    QuicVarint.decode(quic_varint_work);
-    if (!QuicVarintV.ok)
+    proto_bool quic_varint_ok = QuicVarint.decode(quic_varint_work, st->buf, st->buf_len, &type, &c);
+    if (!quic_varint_ok)
     {
         return PROTO_FALSE; // need more bytes for the varint
     }
@@ -349,11 +342,8 @@ static void protocore_h3_consume_control(H3ConnCtx *h3, H3Stream *st)
     while (off < st->buf_len)
     {
         H3FrameHeader fr;
-        H3FrameV.parse_header_args.buf = st->buf + off;
-        H3FrameV.parse_header_args.len = st->buf_len - off;
-        H3FrameV.parse_header_args.out = &fr;
-        H3Frame.parse_header(h3_frame_work);
-        if (!H3FrameV.ok)
+        proto_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, st->buf + off, st->buf_len - off, &fr);
+        if (!h3_frame_ok)
         {
             break;
         }
@@ -376,13 +366,10 @@ static void protocore_h3_consume_control(H3ConnCtx *h3, H3Stream *st)
                 return;
             }
             h3->peer_settings_seen = PROTO_TRUE;
-            H3FrameV.settings_defaults_args.s = &h3->peer_settings;
-            H3Frame.settings_defaults(h3_frame_work);
-            H3FrameV.parse_settings_args.payload = st->buf + off + fr.header_len;
-            H3FrameV.parse_settings_args.len = (size_t)fr.length;
-            H3FrameV.parse_settings_args.s = &h3->peer_settings;
-            H3Frame.parse_settings(h3_frame_work);
-            if (!H3FrameV.ok)
+            H3Frame.settings_defaults(h3_frame_work, &h3->peer_settings);
+            proto_bool h3_frame_ok = H3Frame.parse_settings(h3_frame_work, st->buf + off + fr.header_len,
+                                                            (size_t)fr.length, &h3->peer_settings);
+            if (!h3_frame_ok)
             {
                 h3_fail(h3, H3_SETTINGS_ERROR);
                 return;
@@ -444,20 +431,12 @@ static void on_handshake_done(void *app, uint8_t *qc)
 
     // Server control stream (id 3): stream type 0x00 + SETTINGS.
     uint8_t buf[64];
-    QuicVarintV.encode_args.out = buf;
-    QuicVarintV.encode_args.cap = sizeof(buf);
-    QuicVarintV.encode_args.value = 0x00;
-    QuicVarint.encode(quic_varint_work);
-    size_t p = QuicVarintV.n;
+    size_t quic_varint_n = QuicVarint.encode(quic_varint_work, buf, sizeof(buf), 0x00);
+    size_t p = quic_varint_n;
     static const uint64_t ids[] = {H3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, H3_SETTINGS_QPACK_BLOCKED_STREAMS};
     static const uint64_t vals[] = {0, 0};
-    H3FrameV.build_settings_args.out = buf + p;
-    H3FrameV.build_settings_args.cap = sizeof(buf) - p;
-    H3FrameV.build_settings_args.ids = ids;
-    H3FrameV.build_settings_args.vals = vals;
-    H3FrameV.build_settings_args.n = 2;
-    H3Frame.build_settings(h3_frame_work);
-    p += H3FrameV.n;
+    size_t h3_frame_n = H3Frame.build_settings(h3_frame_work, buf + p, sizeof(buf) - p, ids, vals, 2);
+    p += h3_frame_n;
     QuicConnV.stream_send_args.stream_id = 3;
     QuicConnV.stream_send_args.data = buf;
     QuicConnV.stream_send_args.len = p;
@@ -466,21 +445,15 @@ static void on_handshake_done(void *app, uint8_t *qc)
 
     // QPACK encoder (id 7, type 0x02) and decoder (id 11, type 0x03) streams: type byte only.
     uint8_t t;
-    QuicVarintV.encode_args.out = &t;
-    QuicVarintV.encode_args.cap = 1;
-    QuicVarintV.encode_args.value = 0x02;
-    QuicVarint.encode(quic_varint_work);
-    size_t n = QuicVarintV.n;
+    quic_varint_n = QuicVarint.encode(quic_varint_work, &t, 1, 0x02);
+    size_t n = quic_varint_n;
     QuicConnV.stream_send_args.stream_id = 7;
     QuicConnV.stream_send_args.data = &t;
     QuicConnV.stream_send_args.len = n;
     QuicConnV.stream_send_args.fin = PROTO_FALSE;
     QuicConn.stream_send(qc);
-    QuicVarintV.encode_args.out = &t;
-    QuicVarintV.encode_args.cap = 1;
-    QuicVarintV.encode_args.value = 0x03;
-    QuicVarint.encode(quic_varint_work);
-    n = QuicVarintV.n;
+    quic_varint_n = QuicVarint.encode(quic_varint_work, &t, 1, 0x03);
+    n = quic_varint_n;
     QuicConnV.stream_send_args.stream_id = 11;
     QuicConnV.stream_send_args.data = &t;
     QuicConnV.stream_send_args.len = n;
@@ -509,8 +482,7 @@ static void h3_conn_open(uint8_t *restrict work, H3ConnCtx *h3, uint8_t *qc, H3R
     {
         h3->streams[i].id = UINT64_MAX;
     }
-    H3FrameV.settings_defaults_args.s = &h3->peer_settings;
-    H3Frame.settings_defaults(work);
+    H3Frame.settings_defaults(work, &h3->peer_settings);
 
     QuicConnCallbacks cb = {on_stream_data, on_handshake_done, h3};
     QuicConnV.cb = cb;
@@ -571,12 +543,8 @@ static proto_bool h3_conn_reply(uint8_t *restrict work, H3ConnCtx *h3, uint64_t 
     bp += qpack_n;
 
     // HEADERS frame + DATA frame, sent on the request stream with FIN.
-    H3FrameV.build_headers_args.out = out;
-    H3FrameV.build_headers_args.cap = PROTOCORE_H3_STREAM_BUF;
-    H3FrameV.build_headers_args.block = block;
-    H3FrameV.build_headers_args.len = bp;
-    H3Frame.build_headers(work);
-    size_t op = H3FrameV.n;
+    size_t h3_frame_n = H3Frame.build_headers(work, out, PROTOCORE_H3_STREAM_BUF, block, bp);
+    size_t op = h3_frame_n;
     if (!op)
     {
         return PROTO_FALSE;
@@ -584,12 +552,8 @@ static proto_bool h3_conn_reply(uint8_t *restrict work, H3ConnCtx *h3, uint64_t 
     }
     if (body_len)
     {
-        H3FrameV.build_data_args.out = out + op;
-        H3FrameV.build_data_args.cap = PROTOCORE_H3_STREAM_BUF - op;
-        H3FrameV.build_data_args.data = body;
-        H3FrameV.build_data_args.len = body_len;
-        H3Frame.build_data(work);
-        size_t dn = H3FrameV.n;
+        size_t h3_frame_n = H3Frame.build_data(work, out + op, PROTOCORE_H3_STREAM_BUF - op, body, body_len);
+        size_t dn = h3_frame_n;
         if (!dn)
         {
             return PROTO_FALSE;

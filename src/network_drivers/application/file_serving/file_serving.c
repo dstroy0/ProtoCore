@@ -679,8 +679,8 @@ void protocore_file_serving_serve_static(uint8_t *restrict work)
     const protocore_mnt_backend *file_sys = FileServingV.serve_static_args.file_sys;
     const char *fs_root = FileServingV.serve_static_args.fs_root;
 
-    HttpRoutes.add(protocore_http_route_span());
-    HttpRoute *r = HttpRoutesV.ptr;
+    HttpRoute *http_routes_ptr = HttpRoutes.add(protocore_http_route_span());
+    HttpRoute *r = http_routes_ptr;
     if (r == NULL)
     {
         return;
