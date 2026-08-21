@@ -65,16 +65,6 @@
 // ci_tooling/check/check_src_banned.py enforces it). The implementation branches below use the same guards.
 #include "crypto/mac/hmac_sha256/hmac_sha256.h" // RFC 6979 HMAC-DRBG for the deterministic-nonce complete-formula path
 
-// Measured (crypto bench): the S3 P-256 MODMULT path's ~14% -O3 win is carried by -fpeel-loops (bisected
-// on-device); pin just that transform on the -O2 floor. Every other die takes the crypto_opt per-die
-// default (P4 -O3, else -O2). crypto_opt.h states the die test it needs.
-#include "crypto/crypto_opt/crypto_opt.h"
-#if defined(CONFIG_IDF_TARGET_ESP32S3) && CONFIG_IDF_TARGET_ESP32S3
-PROTOCORE_CRYPTO_HOT_PEEL
-#else
-PROTOCORE_CRYPTO_HOT
-#endif
-
 PROTOCORE_BEGIN_DECLS
 
 // The caller's borrow, split: the message hash's own bytes, then the RFC 6979 DRBG's MAC. Both nested

@@ -23,12 +23,10 @@
 
 #if PROTOCORE_ENABLE_HMAC_SHA512
 
-#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/hash/sha512/sha512.h" // the Sha512 entries the inner and outer hashes run through
 #include "crypto/mac/hmac_sha512/hmac_sha512.h"
 #include "mmgr/protomem/protomem.h"
 
-PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
 // The transient half of the caller's bytes: live inside init and inside final, dead between them. The

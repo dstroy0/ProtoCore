@@ -17,9 +17,6 @@
 #if PROTOCORE_ENABLE_CHACHA20
 
 #include "crypto/cipher/chacha20/chacha20.h"
-#include "crypto/crypto_opt/crypto_opt.h"
-
-PROTOCORE_CRYPTO_HOT
 
 PROTOCORE_BEGIN_DECLS
 

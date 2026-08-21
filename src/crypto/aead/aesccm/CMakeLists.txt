@@ -3,10 +3,10 @@
 
 protocore_add_module(crypto/aead/aesccm
   GATE PROTOCORE_ENABLE_AESCCM
+  OPT 2
   SOURCES aesccm.c
   PRIVATE_DEPS
     crypto/cipher/aes_block
-    crypto/crypto_opt
     crypto/ct_eq
     mmgr/protomem
 )

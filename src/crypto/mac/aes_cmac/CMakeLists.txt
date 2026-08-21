@@ -3,9 +3,9 @@
 
 protocore_add_module(crypto/mac/aes_cmac
   GATE PROTOCORE_ENABLE_AES_CMAC
+  OPT 2
   SOURCES aes_cmac.c
   PRIVATE_DEPS
     crypto/cipher/aes_block
-    crypto/crypto_opt
     mmgr/protomem
 )

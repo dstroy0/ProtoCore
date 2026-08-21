@@ -17,13 +17,11 @@
 
 #if PROTOCORE_ENABLE_KDF
 
-#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/kdf/kdf/kdf.h"
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"
 #include "mmgr/endian/endian.h"
 #include "mmgr/protomem/protomem.h"
 
-PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
 // The one definition, private to this TU. Only what is not derivable: the counter and the block K(i)

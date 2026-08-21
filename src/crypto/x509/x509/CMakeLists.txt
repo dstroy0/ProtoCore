@@ -3,6 +3,7 @@
 
 protocore_add_module(crypto/x509/x509
   GATE PROTOCORE_ENABLE_X509
+  OPT 2
   SOURCES x509.c
   DEPS
     crypto/x509/x509_types

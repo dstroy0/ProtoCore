@@ -36,10 +36,8 @@
 // one 256-bit modular multiply on the RSA/MPI accelerator (~4.3x the software/PIE ladder). That field layer is
 // shared with Ed25519 (protocore_ed25519.cpp) and defines PROTOCORE_FE25519_MPI_HW when active (Arduino + S3).
 #include "crypto/asymmetric/fe25519/fe25519.h"
-#include "crypto/crypto_opt/crypto_opt.h"
 #include "mmgr/protomem/protomem.h"
 
-PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
 // The one definition, both arms, private to this TU. It sits at CURVE25519_OFF_CTX in the caller's

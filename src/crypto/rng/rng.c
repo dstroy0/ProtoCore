@@ -21,12 +21,10 @@
 #if PROTOCORE_ENABLE_RNG
 
 #include "crypto/cipher/chacha20/chacha20.h"
-#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/rng/rng.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/secure/secure.h" // protocore_secure_wipe
 
-PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
 // The nonce beside the seed, and the two together as one platform draw.

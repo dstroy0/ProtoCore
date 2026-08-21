@@ -7,7 +7,6 @@
 add_subdirectory(aead)
 add_subdirectory(asymmetric)
 add_subdirectory(cipher)
-add_subdirectory(crypto_opt)
 add_subdirectory(ct_eq)
 add_subdirectory(hash)
 add_subdirectory(kdf)

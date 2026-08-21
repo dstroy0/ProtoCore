@@ -3,7 +3,7 @@
 
 protocore_add_module(crypto/hash/sha3
   GATE PROTOCORE_ENABLE_SHA3
+  OPT 2
   SOURCES sha3.c
   PRIVATE_DEPS
-    crypto/crypto_opt
 )

@@ -52,11 +52,9 @@
 #ifdef ARDUINO
 #include "mbedtls/gcm.h" // reference AES-GCM (HW AES + mbedtls table GHASH) to set the optimization target
 #endif
-#include "crypto/crypto_opt/crypto_opt.h" // build the bench's inline ops at the crypto opt level under test
 #include "device_bench.h"                 // DBENCH_CYCLES
 
 static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
-PROTOCORE_CRYPTO_HOT
 
 // CCOUNT ticks at the CPU clock, which differs per die (S3 240 MHz, P4 360 MHz), so the cycle->time
 // conversion must read the live frequency - a hardcoded 240 inflates every P4 us/ns/MB/s by 1.5x. Set from
@@ -107,8 +105,9 @@ static void crypto_bench_task(void *)
     for (;;)
     {
         Serial.println("CB ==== crypto microbench start (CCOUNT, 1 KiB bulk) ====");
-        Serial.printf("CB cpu_mhz=%u crypto_opt_level=%d\n", (unsigned)getCpuFrequencyMhz(),
-                      (int)PROTOCORE_CRYPTO_OPT_LEVEL);
+        // The crypto -O level is the build's now - each module states OPT in its
+        // CMakeLists - so there is no macro here to report it.
+        Serial.printf("CB cpu_mhz=%u\n", (unsigned)getCpuFrequencyMhz());
 
         // ================= HASHES (BULK, HW SHA on S3) =================
         {

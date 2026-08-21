@@ -3,9 +3,9 @@
 
 protocore_add_module(crypto/hash/md
   GATE PROTOCORE_ENABLE_MD
+  OPT 2
   SOURCES md.c
   PRIVATE_DEPS
-    crypto/crypto_opt
     mmgr/endian
     mmgr/protomem
     mmgr/secure

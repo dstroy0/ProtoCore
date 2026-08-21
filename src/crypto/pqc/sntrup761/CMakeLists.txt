@@ -3,6 +3,7 @@
 
 protocore_add_module(crypto/pqc/sntrup761
   GATE PROTOCORE_ENABLE_SNTRUP761
+  OPT 2
   SOURCES sntrup761.c
   PRIVATE_DEPS
     crypto/hash/sha512

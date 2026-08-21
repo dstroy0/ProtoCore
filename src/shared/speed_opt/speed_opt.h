@@ -18,7 +18,7 @@
  * level adds the macro for it here rather than redefining this one.
  *
  * Apply only where there are no secrets or the code is constant-time by structure. An optimizer can
- * turn a branchless mask-select into a data-dependent branch; `crypto/crypto_opt.h` is the crypto
+ * turn a branchless mask-select into a data-dependent branch; the OPT each crypto module states in its CMakeLists is the crypto
  * policy layer with per-die levels and those caveats.
  *
  * @author  Douglas Quigg (dstroy0)

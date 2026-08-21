@@ -3,8 +3,8 @@
 
 protocore_add_module(crypto/asymmetric/bignum
   GATE PROTOCORE_ENABLE_BIGNUM
+  OPT 2
   SOURCES bignum.c
   PRIVATE_DEPS
-    crypto/crypto_opt
     mmgr/protomem
 )

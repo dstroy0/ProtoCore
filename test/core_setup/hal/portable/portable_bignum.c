@@ -17,12 +17,9 @@
 
 #include "config/platform/platform.h" // PROTOCORE_HAS_HW_BIGNUM
 #include "crypto/asymmetric/bignum/bignum.h"
-#include "crypto/crypto_opt/crypto_opt.h"
 #include "mmgr/secure/secure.h"
 
 #if !PROTOCORE_HAS_HW_BIGNUM
-
-PROTOCORE_CRYPTO_HOT
 
 // Group14 Montgomery constants, owned by one instance (internal linkage): R mod p, R^2 mod p,
 // and the init flag (all filled by bn_init()). One named owner, unreachable cross-TU.

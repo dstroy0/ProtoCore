@@ -71,7 +71,7 @@ static inline void protocore_fe_hw_disable(void)
 
 // z = x*y mod p (8 words / 256-bit) on the RSA MODMULT. Requires protocore_fe_hw_enable() first. Canonical (< p),
 // safe if z aliases x/y. Delegates to the HAL modmul with this domain's constants; the crypto TUs that pull
-// this in build at -O2 (PROTOCORE_CRYPTO_HOT), where the always_inline HAL folds FE_MOD_P / the mostly-zero
+// this in build at -O2 (the OPT the module states in its CMakeLists), where the always_inline HAL folds FE_MOD_P / the mostly-zero
 // FE_MOD_R2 into immediate stores - the hand-tuned ~1,380-cyc path.
 static inline void fe_mul(fe z, const fe x, const fe y)
 {

@@ -19,9 +19,7 @@
 #if PROTOCORE_ENABLE_AES_BLOCK
 
 #include "crypto/cipher/aes_block/aes_block.h"
-#include "crypto/crypto_opt/crypto_opt.h"
 
-PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
 // --- the entries -----------------------------------------------------------

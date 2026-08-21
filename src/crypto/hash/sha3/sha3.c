@@ -10,10 +10,8 @@
 
 #if PROTOCORE_ENABLE_SHA3
 
-#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/hash/sha3/sha3.h"
 
-PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
 // The one definition of KeccakCtx - private to this TU. It sits at SHA3_OFF_CTX in the caller's

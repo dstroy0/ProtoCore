@@ -3,10 +3,10 @@
 
 protocore_add_module(crypto/asymmetric/rsa
   GATE PROTOCORE_ENABLE_RSA
+  OPT 2
   SOURCES rsa.c
   PRIVATE_DEPS
     crypto/asymmetric/bignum
-    crypto/crypto_opt
     crypto/ct_eq
     crypto/hash/sha256
     crypto/hash/sha512

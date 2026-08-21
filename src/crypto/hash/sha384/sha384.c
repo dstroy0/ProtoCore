@@ -22,12 +22,10 @@
 
 #if PROTOCORE_HAS_HW_SHA
 #endif
-#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/hash/sha384/sha384.h"
 #include "mmgr/endian/endian.h" // protocore_rd64be / protocore_wr64be: the block reader and the digest writer
 #include "mmgr/protomem/protomem.h"
 
-PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 
 // The one definition, both arms, private to this TU. The accelerator compresses a block; it does not

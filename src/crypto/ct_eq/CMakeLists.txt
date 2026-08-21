@@ -3,9 +3,9 @@
 
 protocore_add_module(crypto/ct_eq
   GATE PROTOCORE_ENABLE_CT_EQ
+  OPT 2
   SOURCES ct_eq.c
   DEPS
     mmgr/protomem
   PRIVATE_DEPS
-    crypto/crypto_opt
 )

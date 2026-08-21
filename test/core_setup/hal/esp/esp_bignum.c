@@ -12,14 +12,11 @@
 
 #include "config/platform/platform.h" // PROTOCORE_HAS_HW_BIGNUM
 #include "crypto/asymmetric/bignum/bignum.h"
-#include "crypto/crypto_opt/crypto_opt.h"
 #include "mmgr/secure/secure.h"
 
 #if PROTOCORE_HAS_HW_BIGNUM
 
 #include <mbedtls/bignum.h> // HW bignum acceleration for the DH-2048 modexp
-
-PROTOCORE_CRYPTO_HOT
 
 // On ESP32 delegate to mbedtls which uses HW bignum acceleration.
 

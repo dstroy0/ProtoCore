@@ -3,9 +3,9 @@
 
 protocore_add_module(crypto/hash/sha512
   GATE PROTOCORE_ENABLE_SHA512
+  OPT 2
   SOURCES sha512.c
   PRIVATE_DEPS
-    crypto/crypto_opt
     mmgr/endian
     mmgr/protomem
 )

@@ -18,15 +18,13 @@
 
 #if PROTOCORE_ENABLE_POLY1305
 
-#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/mac/poly1305/poly1305.h"
 #include "mmgr/protomem/protomem.h"
 
 // Poly1305 is a hot, pure-integer MAC (the other half of chacha20-poly1305). Like ChaCha it has no vector
 // path on the S3 and runs materially faster than the framework -Os; it is constant-time by structure
 // (the final reduction is branchless), so a higher level for this TU is side-channel safe. Byte-exact.
-// See the caveats in crypto_opt.h and the ChaCha note in protocore_chacha20.cpp.
-PROTOCORE_CRYPTO_HOT
+// See the ChaCha note in protocore_chacha20.cpp.
 PROTOCORE_BEGIN_DECLS
 
 // Only what is not derivable: the buffer the padded final block is composed in lives at a fixed offset

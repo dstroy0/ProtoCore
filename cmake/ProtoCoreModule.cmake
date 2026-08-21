@@ -35,7 +35,7 @@ function(protocore_module_target path out)
 endfunction()
 
 function(protocore_add_module path)
-  cmake_parse_arguments(ARG "HEADER_ONLY" "GATE" "SOURCES;DEPS;PRIVATE_DEPS" ${ARGN})
+  cmake_parse_arguments(ARG "HEADER_ONLY" "GATE;OPT" "SOURCES;DEPS;PRIVATE_DEPS" ${ARGN})
 
   # A gate that is off is the module not existing. Declared here so the module's own directory is
   # the one place that says whether the build has it.
@@ -65,6 +65,13 @@ function(protocore_add_module path)
   endif()
 
   target_link_libraries(${target} ${scope} pc_config)
+
+  # The -O level for this module's own translation units. Stated here rather than as a
+  # `#pragma GCC optimize` in the sources: GCC documents that pragma as not for production, it
+  # interacts badly with inlining, and this tree builds with -flto. Meaningless without sources.
+  if(ARG_OPT AND NOT ARG_HEADER_ONLY)
+    target_compile_options(${target} PRIVATE -O${ARG_OPT})
+  endif()
 
   # PUBLIC, so a consumer that links this module also gets these headers and their own dependencies
   # without naming them.

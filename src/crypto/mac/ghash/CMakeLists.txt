@@ -3,8 +3,8 @@
 
 protocore_add_module(crypto/mac/ghash
   GATE PROTOCORE_ENABLE_GHASH
+  OPT 2
   SOURCES ghash.c
   PRIVATE_DEPS
-    crypto/crypto_opt
     mmgr/endian
 )
