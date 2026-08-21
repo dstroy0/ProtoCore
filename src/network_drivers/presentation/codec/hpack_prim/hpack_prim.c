@@ -9,14 +9,10 @@
  * from RFC 7541. RFC 9204 (QPACK) references the same integer coding and Huffman table.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_HPACK_PRIM
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // --- Huffman tables generated from RFC 7541 Appendix B ---------------------------------------
 
@@ -93,32 +89,20 @@ static const uint16_t DEC_SYM[257] = {
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_hpack_prim_decode_int(uint8_t *restrict work);
-void protocore_hpack_prim_encode_int(uint8_t *restrict work);
-void protocore_hpack_prim_huff_decode(uint8_t *restrict work);
-void protocore_hpack_prim_huff_encode(uint8_t *restrict work);
-void protocore_hpack_prim_huff_len(uint8_t *restrict work);
-
-void protocore_hpack_prim_encode_int(uint8_t *restrict work)
+size_t protocore_hpack_prim_encode_int(uint8_t *restrict work, uint8_t *out, size_t cap, uint8_t prefix_bits,
+                                       uint8_t flags, uint32_t value)
 {
     (void)work;
-    uint8_t *out = HpackPrimV.encode_int_args.out;
-    size_t cap = HpackPrimV.encode_int_args.cap;
-    uint8_t prefix_bits = HpackPrimV.encode_int_args.prefix_bits;
-    uint8_t flags = HpackPrimV.encode_int_args.flags;
-    uint32_t value = HpackPrimV.encode_int_args.value;
 
     uint8_t max = (uint8_t)((1u << prefix_bits) - 1);
     if (cap < 1)
     {
-        HpackPrimV.n = 0;
-        return;
+        return 0;
     }
     if (value < max)
     {
         out[0] = (uint8_t)(flags | value);
-        HpackPrimV.n = 1;
-        return;
+        return 1;
     }
     out[0] = (uint8_t)(flags | max);
     value -= max;
@@ -127,34 +111,27 @@ void protocore_hpack_prim_encode_int(uint8_t *restrict work)
     {
         if (i >= cap)
         {
-            HpackPrimV.n = 0;
-            return;
+            return 0;
         }
         out[i++] = (uint8_t)((value & 0x7f) | 0x80);
         value >>= 7;
     }
     if (i >= cap)
     {
-        HpackPrimV.n = 0;
-        return;
+        return 0;
     }
     out[i++] = (uint8_t)value;
-    HpackPrimV.n = i;
+    return i;
 }
 
-void protocore_hpack_prim_decode_int(uint8_t *restrict work)
+proto_bool protocore_hpack_prim_decode_int(uint8_t *restrict work, const uint8_t *in, size_t len, uint8_t prefix_bits,
+                                           size_t *consumed, uint32_t *value)
 {
     (void)work;
-    const uint8_t *in = HpackPrimV.decode_int_args.in;
-    size_t len = HpackPrimV.decode_int_args.len;
-    uint8_t prefix_bits = HpackPrimV.decode_int_args.prefix_bits;
-    size_t *consumed = HpackPrimV.decode_int_args.consumed;
-    uint32_t *value = HpackPrimV.decode_int_args.value;
 
     if (len < 1)
     {
-        HpackPrimV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     uint8_t max = (uint8_t)((1u << prefix_bits) - 1);
     uint32_t v = in[0] & max;
@@ -162,8 +139,7 @@ void protocore_hpack_prim_decode_int(uint8_t *restrict work)
     {
         *consumed = 1;
         *value = v;
-        HpackPrimV.ok = PROTO_TRUE;
-        return;
+        return PROTO_TRUE;
     }
     size_t i = 1;
     uint32_t m = 0;
@@ -172,8 +148,7 @@ void protocore_hpack_prim_decode_int(uint8_t *restrict work)
     {
         if (i >= len || m > 28) // bound the continuation to a 32-bit result
         {
-            HpackPrimV.ok = PROTO_FALSE;
-            return;
+            return PROTO_FALSE;
         }
         b = in[i++];
         // RFC 7541 sec 5.1: an integer encoding past the implementation's limit is a decoding error.
@@ -182,44 +157,36 @@ void protocore_hpack_prim_decode_int(uint8_t *restrict work)
         uint32_t add = (uint32_t)(b & 0x7f);
         if (m == 28 && add > 0x0Fu)
         {
-            HpackPrimV.ok = PROTO_FALSE;
-            return;
+            return PROTO_FALSE;
         }
         add <<= m;
         if (add > 0xFFFFFFFFu - v)
         {
-            HpackPrimV.ok = PROTO_FALSE;
-            return;
+            return PROTO_FALSE;
         }
         v += add;
         m += 7;
     } while (b & 0x80);
     *consumed = i;
     *value = v;
-    HpackPrimV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_hpack_prim_huff_len(uint8_t *restrict work)
+size_t protocore_hpack_prim_huff_len(uint8_t *restrict work, const char *s, size_t n)
 {
     (void)work;
-    const char *s = HpackPrimV.huff_len_args.s;
-    size_t n = HpackPrimV.huff_len_args.n;
 
     size_t bits = 0;
     for (size_t i = 0; i < n; i++)
     {
         bits += HUFF_LEN[(uint8_t)s[i]];
     }
-    HpackPrimV.n = (bits + 7) / 8;
+    return (bits + 7) / 8;
 }
 
-void protocore_hpack_prim_huff_encode(uint8_t *restrict work)
+size_t protocore_hpack_prim_huff_encode(uint8_t *restrict work, uint8_t *out, size_t cap, const char *s, size_t n)
 {
     (void)work;
-    uint8_t *out = HpackPrimV.huff_encode_args.out;
-    size_t cap = HpackPrimV.huff_encode_args.cap;
-    const char *s = HpackPrimV.huff_encode_args.s;
-    size_t n = HpackPrimV.huff_encode_args.n;
 
     uint64_t acc = 0;
     int nbits = 0;
@@ -234,8 +201,7 @@ void protocore_hpack_prim_huff_encode(uint8_t *restrict work)
             nbits -= 8;
             if (o >= cap)
             {
-                HpackPrimV.n = 0;
-                return;
+                return 0;
             }
             out[o++] = (uint8_t)(acc >> nbits);
         }
@@ -245,22 +211,17 @@ void protocore_hpack_prim_huff_encode(uint8_t *restrict work)
     {
         if (o >= cap)
         {
-            HpackPrimV.n = 0;
-            return;
+            return 0;
         }
         out[o++] = (uint8_t)((acc << (8 - nbits)) | (((uint32_t)1 << (8 - nbits)) - 1));
     }
-    HpackPrimV.n = o;
+    return o;
 }
 
-void protocore_hpack_prim_huff_decode(uint8_t *restrict work)
+proto_bool protocore_hpack_prim_huff_decode(uint8_t *restrict work, const uint8_t *in, size_t n, char *out, size_t cap,
+                                            size_t *out_len)
 {
     (void)work;
-    const uint8_t *in = HpackPrimV.huff_decode_args.in;
-    size_t n = HpackPrimV.huff_decode_args.n;
-    char *out = HpackPrimV.huff_decode_args.out;
-    size_t cap = HpackPrimV.huff_decode_args.cap;
-    size_t *out_len = HpackPrimV.huff_decode_args.out_len;
 
     uint32_t code = 0;
     int len = 0;
@@ -275,8 +236,7 @@ void protocore_hpack_prim_huff_decode(uint8_t *restrict work)
             // path matches a symbol by length 30 and len can never reach 31.
             if (len > 30)
             {
-                HpackPrimV.ok = PROTO_FALSE;
-                return;
+                return PROTO_FALSE;
             }
             uint16_t cnt = DEC_COUNT[len];
             if (!cnt)
@@ -295,13 +255,11 @@ void protocore_hpack_prim_huff_decode(uint8_t *restrict work)
             uint16_t sym = DEC_SYM[DEC_FIRSTSYM[len] + (code - first)];
             if (sym == 256) // EOS symbol must never be decoded
             {
-                HpackPrimV.ok = PROTO_FALSE;
-                return;
+                return PROTO_FALSE;
             }
             if (o >= cap)
             {
-                HpackPrimV.ok = PROTO_FALSE;
-                return;
+                return PROTO_FALSE;
             }
             out[o++] = (char)sym;
             code = 0;
@@ -310,144 +268,89 @@ void protocore_hpack_prim_huff_decode(uint8_t *restrict work)
     }
     if (len >= 8) // padding longer than a byte is malformed
     {
-        HpackPrimV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     if (len > 0)
     {
         uint32_t pad = ((uint32_t)1 << len) - 1;
         if ((code & pad) != pad) // padding must be the EOS prefix (all 1s)
         {
-            HpackPrimV.ok = PROTO_FALSE;
-            return;
+            return PROTO_FALSE;
         }
     }
     *out_len = o;
-    HpackPrimV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
 // --- string literal (RFC 7541 sec 5.2; RFC 9204 reuses it verbatim) -------------------------------
 
-void protocore_hpack_prim_decode_str(uint8_t *restrict work)
+proto_bool protocore_hpack_prim_decode_str(uint8_t *restrict work, const uint8_t *block, size_t len, size_t *pos,
+                                           char *out, size_t cap, size_t *out_len)
 {
-    const uint8_t *block = HpackPrimV.decode_str_args.block;
-    size_t len = HpackPrimV.decode_str_args.len;
-    size_t *pos = HpackPrimV.decode_str_args.pos;
-    char *out = HpackPrimV.decode_str_args.out;
-    size_t cap = HpackPrimV.decode_str_args.cap;
-    size_t *out_len = HpackPrimV.decode_str_args.out_len;
-
     if (*pos >= len)
     {
-        HpackPrimV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     proto_bool huff = (block[*pos] & 0x80) != 0;
     size_t c = 0;
     uint32_t slen = 0;
-    HpackPrimV.decode_int_args.in = block + *pos;
-    HpackPrimV.decode_int_args.len = len - *pos;
-    HpackPrimV.decode_int_args.prefix_bits = 7;
-    HpackPrimV.decode_int_args.consumed = &c;
-    HpackPrimV.decode_int_args.value = &slen;
-    protocore_hpack_prim_decode_int(work);
-    if (!HpackPrimV.ok)
+    proto_bool hpack_prim_ok = HpackPrim.decode_int(work, block + *pos, len - *pos, 7, &c, &slen);
+    if (!hpack_prim_ok)
     {
-        HpackPrimV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     *pos += c;
     if (*pos + slen > len)
     {
-        HpackPrimV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     if (huff)
     {
-        HpackPrimV.huff_decode_args.in = block + *pos;
-        HpackPrimV.huff_decode_args.n = slen;
-        HpackPrimV.huff_decode_args.out = out;
-        HpackPrimV.huff_decode_args.cap = cap;
-        HpackPrimV.huff_decode_args.out_len = out_len;
-        protocore_hpack_prim_huff_decode(work);
-        if (!HpackPrimV.ok)
+        proto_bool hpack_prim_ok = HpackPrim.huff_decode(work, block + *pos, slen, out, cap, out_len);
+        if (!hpack_prim_ok)
         {
-            HpackPrimV.ok = PROTO_FALSE;
-            return;
+            return PROTO_FALSE;
         }
     }
     else
     {
         if (slen > cap)
         {
-            HpackPrimV.ok = PROTO_FALSE;
-            return;
+            return PROTO_FALSE;
         }
         mem.cpy(out, block + *pos, slen);
         *out_len = slen;
     }
     *pos += slen;
-    HpackPrimV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_hpack_prim_encode_str(uint8_t *restrict work)
+size_t protocore_hpack_prim_encode_str(uint8_t *restrict work, uint8_t *out, size_t cap, const char *s, size_t n)
 {
-    uint8_t *out = HpackPrimV.encode_str_args.out;
-    size_t cap = HpackPrimV.encode_str_args.cap;
-    const char *s = HpackPrimV.encode_str_args.s;
-    size_t n = HpackPrimV.encode_str_args.n;
-
-    HpackPrimV.huff_len_args.s = s;
-    HpackPrimV.huff_len_args.n = n;
-    protocore_hpack_prim_huff_len(work);
-    size_t hl = HpackPrimV.n;
+    size_t hpack_prim_n = HpackPrim.huff_len(work, s, n);
+    size_t hl = hpack_prim_n;
     if (hl < n)
     {
-        HpackPrimV.encode_int_args.out = out;
-        HpackPrimV.encode_int_args.cap = cap;
-        HpackPrimV.encode_int_args.prefix_bits = 7;
-        HpackPrimV.encode_int_args.flags = 0x80;
-        HpackPrimV.encode_int_args.value = (uint32_t)hl;
-        protocore_hpack_prim_encode_int(work);
-        size_t hdr = HpackPrimV.n;
+        size_t hpack_prim_n = HpackPrim.encode_int(work, out, cap, 7, 0x80, (uint32_t)hl);
+        size_t hdr = hpack_prim_n;
         if (!hdr)
         {
-            HpackPrimV.n = 0;
-            return;
+            return 0;
         }
-        HpackPrimV.huff_encode_args.out = out + hdr;
-        HpackPrimV.huff_encode_args.cap = cap - hdr;
-        HpackPrimV.huff_encode_args.s = s;
-        HpackPrimV.huff_encode_args.n = n;
-        protocore_hpack_prim_huff_encode(work);
-        size_t body = HpackPrimV.n;
+        size_t hpack_prim_n2 = HpackPrim.huff_encode(work, out + hdr, cap - hdr, s, n);
+        size_t body = hpack_prim_n2;
         if (body != hl)
         {
-            HpackPrimV.n = 0;
-            return;
+            return 0;
         }
-        HpackPrimV.n = hdr + body;
-        return;
+        return hdr + body;
     }
-    HpackPrimV.encode_int_args.out = out;
-    HpackPrimV.encode_int_args.cap = cap;
-    HpackPrimV.encode_int_args.prefix_bits = 7;
-    HpackPrimV.encode_int_args.flags = 0x00;
-    HpackPrimV.encode_int_args.value = (uint32_t)n;
-    protocore_hpack_prim_encode_int(work);
-    size_t hdr = HpackPrimV.n;
+    size_t hpack_prim_n3 = HpackPrim.encode_int(work, out, cap, 7, 0x00, (uint32_t)n);
+    size_t hdr = hpack_prim_n3;
     if (!hdr || hdr + n > cap)
     {
-        HpackPrimV.n = 0;
-        return;
+        return 0;
     }
     mem.cpy(out + hdr, s, n);
-    HpackPrimV.n = hdr + n;
+    return hdr + n;
 }
-
-/** @brief The operands and the outcome. */
-HpackPrimVars HpackPrimV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_HPACK_PRIM

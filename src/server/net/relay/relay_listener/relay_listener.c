@@ -7,9 +7,7 @@
  *        connection to an origin protocore_client connection via the pure relay engine.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_RELAY
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
@@ -22,8 +20,6 @@
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/core/proto_handler/proto_handler.h"
 #include "server/net/relay/relay/relay.h"
-PROTOCORE_BEGIN_DECLS
-
 #if PROTOCORE_ENABLE_RADIO_POWER
 #include "network_drivers/physical/radio_power/radio_power.h" // keep the radio awake during a relayed transfer
 #endif
@@ -343,22 +339,17 @@ uint8_t *protocore_relay_listener_span(void)
     return s_own.span;
 }
 
-void protocore_relay_listener_publish(uint8_t *restrict work)
+proto_bool protocore_relay_listener_publish(uint8_t *restrict work, uint8_t listener_id, const char *origin_host,
+                                            uint16_t origin_port)
 {
-    uint8_t listener_id = RelayListenerV.publish_args.listener_id;
-    const char *origin_host = RelayListenerV.publish_args.origin_host;
-    uint16_t origin_port = RelayListenerV.publish_args.origin_port;
-
     if (!origin_host)
     {
-        RelayListenerV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     size_t hl = str.len(origin_host, PROTOCORE_RELAY_HOST_MAX + 1);
     if (hl == 0 || hl >= PROTOCORE_RELAY_HOST_MAX)
     {
-        RelayListenerV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     int idx = -1;
     for (int i = 0; i < PROTOCORE_RELAY_MAX_PUBLISH; i++)
@@ -371,8 +362,7 @@ void protocore_relay_listener_publish(uint8_t *restrict work)
     }
     if (idx < 0)
     {
-        RelayListenerV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     RELAY_LISTENER_CTX(work)->binds[idx].active = PROTO_TRUE;
     RELAY_LISTENER_CTX(work)->binds[idx].listener_id = listener_id;
@@ -385,7 +375,7 @@ void protocore_relay_listener_publish(uint8_t *restrict work)
         Protocols.add(protocore_session_span());
         RELAY_LISTENER_CTX(work)->registered = PROTO_TRUE;
     }
-    RelayListenerV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
 void protocore_relay_listener_reset(uint8_t *restrict work)
@@ -405,10 +395,3 @@ void protocore_relay_listener_reset(uint8_t *restrict work)
         }
     }
 }
-
-/** @brief The operands and the outcome. */
-RelayListenerVars RelayListenerV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_RELAY

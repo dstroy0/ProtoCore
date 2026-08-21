@@ -30,8 +30,7 @@ void tearDown(void)
 void test_reset_zeroes_every_counter(void)
 {
     EdgeCacheStats st;
-    EdgeProxyV.stats_args.out = &st;
-    EdgeProxy.stats(protocore_edge_cache_proxy_span());
+    EdgeProxy.stats(protocore_edge_cache_proxy_span(), &st);
     TEST_ASSERT_EQUAL_UINT32(0, st.hits);
     TEST_ASSERT_EQUAL_UINT32(0, st.misses);
     TEST_ASSERT_EQUAL_UINT32(0, st.revalidations_304);
@@ -46,28 +45,20 @@ void test_reset_zeroes_every_counter(void)
 // stored as an empty route that would match every path.
 void test_a_map_needs_both_a_prefix_and_an_origin(void)
 {
-    EdgeProxyV.map_args.path_prefix = NULL;
-    EdgeProxyV.map_args.origin_base_url = "http://origin.local";
-    EdgeProxy.map(protocore_edge_cache_proxy_span());
-    TEST_ASSERT_FALSE(EdgeProxyV.ok);
-    EdgeProxyV.map_args.path_prefix = "/cdn/";
-    EdgeProxyV.map_args.origin_base_url = NULL;
-    EdgeProxy.map(protocore_edge_cache_proxy_span());
-    TEST_ASSERT_FALSE(EdgeProxyV.ok);
-    EdgeProxyV.map_args.path_prefix = NULL;
-    EdgeProxyV.map_args.origin_base_url = NULL;
-    EdgeProxy.map(protocore_edge_cache_proxy_span());
-    TEST_ASSERT_FALSE(EdgeProxyV.ok);
+    proto_bool edge_proxy_ok = EdgeProxy.map(protocore_edge_cache_proxy_span(), NULL, "http://origin.local");
+    TEST_ASSERT_FALSE(edge_proxy_ok);
+    proto_bool edge_proxy_ok2 = EdgeProxy.map(protocore_edge_cache_proxy_span(), "/cdn/", NULL);
+    TEST_ASSERT_FALSE(edge_proxy_ok2);
+    proto_bool edge_proxy_ok3 = EdgeProxy.map(protocore_edge_cache_proxy_span(), NULL, NULL);
+    TEST_ASSERT_FALSE(edge_proxy_ok3);
 }
 
 // A plain http origin maps. This is the shape the header documents:
 // "/cdn/" -> "http://origin.local".
 void test_a_plain_http_origin_maps(void)
 {
-    EdgeProxyV.map_args.path_prefix = "/cdn/";
-    EdgeProxyV.map_args.origin_base_url = "http://origin.local";
-    EdgeProxy.map(protocore_edge_cache_proxy_span());
-    TEST_ASSERT_TRUE(EdgeProxyV.ok);
+    proto_bool edge_proxy_ok = EdgeProxy.map(protocore_edge_cache_proxy_span(), "/cdn/", "http://origin.local");
+    TEST_ASSERT_TRUE(edge_proxy_ok);
 }
 
 // PROTOCORE_EDGE_MAP_MAX route maps fit and the next one is refused, so a full table cannot
@@ -77,22 +68,16 @@ void test_the_map_table_is_bounded(void)
     static const char *const prefix[PROTOCORE_EDGE_MAP_MAX] = {"/a/", "/b/", "/c/", "/d/"};
     for (uint32_t i = 0; i < PROTOCORE_EDGE_MAP_MAX; i++)
     {
-        EdgeProxyV.map_args.path_prefix = prefix[i];
-        EdgeProxyV.map_args.origin_base_url = "http://origin.local";
-        EdgeProxy.map(protocore_edge_cache_proxy_span());
-        TEST_ASSERT_TRUE(EdgeProxyV.ok);
+        proto_bool edge_proxy_ok = EdgeProxy.map(protocore_edge_cache_proxy_span(), prefix[i], "http://origin.local");
+        TEST_ASSERT_TRUE(edge_proxy_ok);
     }
-    EdgeProxyV.map_args.path_prefix = "/e/";
-    EdgeProxyV.map_args.origin_base_url = "http://origin.local";
-    EdgeProxy.map(protocore_edge_cache_proxy_span());
-    TEST_ASSERT_FALSE(EdgeProxyV.ok);
+    proto_bool edge_proxy_ok2 = EdgeProxy.map(protocore_edge_cache_proxy_span(), "/e/", "http://origin.local");
+    TEST_ASSERT_FALSE(edge_proxy_ok2);
 
     // and a reset frees the table again
     EdgeProxy.reset(protocore_edge_cache_proxy_span());
-    EdgeProxyV.map_args.path_prefix = "/e/";
-    EdgeProxyV.map_args.origin_base_url = "http://origin.local";
-    EdgeProxy.map(protocore_edge_cache_proxy_span());
-    TEST_ASSERT_TRUE(EdgeProxyV.ok);
+    proto_bool edge_proxy_ok3 = EdgeProxy.map(protocore_edge_cache_proxy_span(), "/e/", "http://origin.local");
+    TEST_ASSERT_TRUE(edge_proxy_ok3);
 }
 
 // A prefix longer than the map's own field is refused rather than stored truncated: a truncated
@@ -105,48 +90,37 @@ void test_an_overlong_prefix_is_refused(void)
         huge[i] = 'x';
     }
     huge[sizeof(huge) - 1u] = '\0';
-    EdgeProxyV.map_args.path_prefix = huge;
-    EdgeProxyV.map_args.origin_base_url = "http://origin.local";
-    EdgeProxy.map(protocore_edge_cache_proxy_span());
-    TEST_ASSERT_FALSE(EdgeProxyV.ok);
+    proto_bool edge_proxy_ok = EdgeProxy.map(protocore_edge_cache_proxy_span(), huge, "http://origin.local");
+    TEST_ASSERT_FALSE(edge_proxy_ok);
 }
 
 // A malformed origin URL is refused, so a route can never point at something the fetch path cannot
 // dial.
 void test_a_malformed_origin_is_refused(void)
 {
-    EdgeProxyV.map_args.path_prefix = "/cdn/";
-    EdgeProxyV.map_args.origin_base_url = "not-a-url";
-    EdgeProxy.map(protocore_edge_cache_proxy_span());
-    TEST_ASSERT_FALSE(EdgeProxyV.ok);
-    EdgeProxyV.map_args.path_prefix = "/cdn/";
-    EdgeProxyV.map_args.origin_base_url = "";
-    EdgeProxy.map(protocore_edge_cache_proxy_span());
-    TEST_ASSERT_FALSE(EdgeProxyV.ok);
+    proto_bool edge_proxy_ok = EdgeProxy.map(protocore_edge_cache_proxy_span(), "/cdn/", "not-a-url");
+    TEST_ASSERT_FALSE(edge_proxy_ok);
+    proto_bool edge_proxy_ok2 = EdgeProxy.map(protocore_edge_cache_proxy_span(), "/cdn/", "");
+    TEST_ASSERT_FALSE(edge_proxy_ok2);
 }
 
 // Purging an empty store reports nothing purged rather than claiming a hit, and the counter agrees.
 void test_purging_an_empty_store_purges_nothing(void)
 {
-    EdgeProxyV.purge_args.canonical_key = "/nothing/here";
-    EdgeProxy.purge(protocore_edge_cache_proxy_span());
-    TEST_ASSERT_FALSE(EdgeProxyV.ok);
-    EdgeProxyV.purge_prefix_args.path_prefix = "/nothing/";
-    EdgeProxy.purge_prefix(protocore_edge_cache_proxy_span());
-    TEST_ASSERT_EQUAL_UINT32(0, EdgeProxyV.n);
+    proto_bool edge_proxy_ok = EdgeProxy.purge(protocore_edge_cache_proxy_span(), "/nothing/here");
+    TEST_ASSERT_FALSE(edge_proxy_ok);
+    uint32_t edge_proxy_n = EdgeProxy.purge_prefix(protocore_edge_cache_proxy_span(), "/nothing/");
+    TEST_ASSERT_EQUAL_UINT32(0, edge_proxy_n);
     EdgeCacheStats st;
-    EdgeProxyV.stats_args.out = &st;
-    EdgeProxy.stats(protocore_edge_cache_proxy_span());
+    EdgeProxy.stats(protocore_edge_cache_proxy_span(), &st);
     TEST_ASSERT_EQUAL_UINT32(0, st.purges);
 }
 
 // A null key is refused rather than dereferenced.
 void test_purge_refuses_a_null_key(void)
 {
-    EdgeProxyV.purge_args.canonical_key = NULL;
-    EdgeProxy.purge(protocore_edge_cache_proxy_span());
-    TEST_ASSERT_FALSE(EdgeProxyV.ok);
-    EdgeProxyV.purge_prefix_args.path_prefix = NULL;
-    EdgeProxy.purge_prefix(protocore_edge_cache_proxy_span());
-    TEST_ASSERT_EQUAL_UINT32(0, EdgeProxyV.n);
+    proto_bool edge_proxy_ok = EdgeProxy.purge(protocore_edge_cache_proxy_span(), NULL);
+    TEST_ASSERT_FALSE(edge_proxy_ok);
+    uint32_t edge_proxy_n = EdgeProxy.purge_prefix(protocore_edge_cache_proxy_span(), NULL);
+    TEST_ASSERT_EQUAL_UINT32(0, edge_proxy_n);
 }

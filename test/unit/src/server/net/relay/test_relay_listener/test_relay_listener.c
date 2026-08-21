@@ -48,11 +48,8 @@ void test_the_borrow_covers_the_context(void)
 // Header: publish binds a listener id to an origin and returns true.
 void test_publish_binds_a_listener_to_an_origin(void)
 {
-    RelayListenerV.publish_args.listener_id = 3;
-    RelayListenerV.publish_args.origin_host = "192.168.1.60";
-    RelayListenerV.publish_args.origin_port = 80;
-    RelayListener.publish(work);
-    TEST_ASSERT_TRUE(RelayListenerV.ok);
+    proto_bool relay_listener_ok = RelayListener.publish(work, 3, "192.168.1.60", 80);
+    TEST_ASSERT_TRUE(relay_listener_ok);
 
     RelayBind *b = bind_by_listener(work, 3);
     TEST_ASSERT_NOT_NULL(b);
@@ -66,10 +63,7 @@ void test_publish_binds_a_listener_to_an_origin(void)
 void test_lookup_of_an_unpublished_listener_finds_nothing(void)
 {
     TEST_ASSERT_NULL(bind_by_listener(work, 7));
-    RelayListenerV.publish_args.listener_id = 3;
-    RelayListenerV.publish_args.origin_host = "10.0.0.1";
-    RelayListenerV.publish_args.origin_port = 8080;
-    RelayListener.publish(work);
+    RelayListener.publish(work, 3, "10.0.0.1", 8080);
     TEST_ASSERT_NOT_NULL(bind_by_listener(work, 3));
     TEST_ASSERT_NULL(bind_by_listener(work, 4)); // a neighbouring id is still unbound
 }
@@ -84,21 +78,14 @@ void test_a_bad_origin_host_is_refused_and_takes_no_slot(void)
     }
     toolong[sizeof(toolong) - 1] = '\0';
 
-    RelayListenerV.publish_args.listener_id = 1;
-    RelayListenerV.publish_args.origin_host = NULL;
-    RelayListenerV.publish_args.origin_port = 80;
-    RelayListener.publish(work);
-    TEST_ASSERT_FALSE(RelayListenerV.ok);
+    proto_bool relay_listener_ok = RelayListener.publish(work, 1, NULL, 80);
+    TEST_ASSERT_FALSE(relay_listener_ok);
 
-    RelayListenerV.publish_args.listener_id = 1;
-    RelayListenerV.publish_args.origin_host = "";
-    RelayListener.publish(work);
-    TEST_ASSERT_FALSE(RelayListenerV.ok); // an empty host names no origin
+    proto_bool relay_listener_ok2 = RelayListener.publish(work, 1, "", 80);
+    TEST_ASSERT_FALSE(relay_listener_ok2); // an empty host names no origin
 
-    RelayListenerV.publish_args.listener_id = 1;
-    RelayListenerV.publish_args.origin_host = toolong;
-    RelayListener.publish(work);
-    TEST_ASSERT_FALSE(RelayListenerV.ok);
+    proto_bool relay_listener_ok3 = RelayListener.publish(work, 1, toolong, 80);
+    TEST_ASSERT_FALSE(relay_listener_ok3);
 
     TEST_ASSERT_NULL(bind_by_listener(work, 1)); // none of the three consumed a slot
 }
@@ -114,16 +101,12 @@ void test_the_host_length_boundary(void)
     }
     host[PROTOCORE_RELAY_HOST_MAX] = '\0'; // exactly HOST_MAX characters: one too many
 
-    RelayListenerV.publish_args.listener_id = 1;
-    RelayListenerV.publish_args.origin_host = host;
-    RelayListenerV.publish_args.origin_port = 80;
-    RelayListener.publish(work);
-    TEST_ASSERT_FALSE(RelayListenerV.ok);
+    proto_bool relay_listener_ok = RelayListener.publish(work, 1, host, 80);
+    TEST_ASSERT_FALSE(relay_listener_ok);
 
     host[PROTOCORE_RELAY_HOST_MAX - 1] = '\0'; // HOST_MAX-1 characters plus the NUL: the longest fit
-    RelayListenerV.publish_args.origin_host = host;
-    RelayListener.publish(work);
-    TEST_ASSERT_TRUE(RelayListenerV.ok);
+    proto_bool relay_listener_ok2 = RelayListener.publish(work, 1, host, 80);
+    TEST_ASSERT_TRUE(relay_listener_ok2);
     TEST_ASSERT_EQUAL_STRING(host, bind_by_listener(work, 1)->host);
 }
 
@@ -132,17 +115,11 @@ void test_the_table_fills_at_its_bound_and_then_refuses(void)
 {
     for (int i = 0; i < PROTOCORE_RELAY_MAX_PUBLISH; i++)
     {
-        RelayListenerV.publish_args.listener_id = (uint8_t)i;
-        RelayListenerV.publish_args.origin_host = "10.0.0.1";
-        RelayListenerV.publish_args.origin_port = (uint16_t)(1000 + i);
-        RelayListener.publish(work);
-        TEST_ASSERT_TRUE_MESSAGE(RelayListenerV.ok, "a bind inside the bound was refused");
+        proto_bool relay_listener_ok = RelayListener.publish(work, (uint8_t)i, "10.0.0.1", (uint16_t)(1000 + i));
+        TEST_ASSERT_TRUE_MESSAGE(relay_listener_ok, "a bind inside the bound was refused");
     }
-    RelayListenerV.publish_args.listener_id = 99;
-    RelayListenerV.publish_args.origin_host = "10.0.0.2";
-    RelayListenerV.publish_args.origin_port = 9999;
-    RelayListener.publish(work);
-    TEST_ASSERT_FALSE(RelayListenerV.ok); // one past the bound
+    proto_bool relay_listener_ok2 = RelayListener.publish(work, 99, "10.0.0.2", 9999);
+    TEST_ASSERT_FALSE(relay_listener_ok2); // one past the bound
 
     TEST_ASSERT_NULL(bind_by_listener(work, 99));
     for (int i = 0; i < PROTOCORE_RELAY_MAX_PUBLISH; i++)
@@ -156,10 +133,7 @@ void test_reset_returns_the_table_to_empty(void)
 {
     for (int i = 0; i < PROTOCORE_RELAY_MAX_PUBLISH; i++)
     {
-        RelayListenerV.publish_args.listener_id = (uint8_t)i;
-        RelayListenerV.publish_args.origin_host = "10.0.0.1";
-        RelayListenerV.publish_args.origin_port = 80;
-        RelayListener.publish(work);
+        RelayListener.publish(work, (uint8_t)i, "10.0.0.1", 80);
     }
     RELAY_LISTENER_CTX(work)->bridges[0].active = PROTO_TRUE;
 
@@ -212,14 +186,10 @@ void test_a_bridge_is_found_by_its_connection_slot(void)
 // id twice takes a second slot rather than overwriting, which is what the table's fill order says.
 void test_each_publish_takes_its_own_slot(void)
 {
-    RelayListenerV.publish_args.origin_host = "10.0.0.1";
-    RelayListenerV.publish_args.origin_port = 80;
-    RelayListenerV.publish_args.listener_id = 2;
-    RelayListener.publish(work);
-    TEST_ASSERT_TRUE(RelayListenerV.ok);
-    RelayListenerV.publish_args.listener_id = 2;
-    RelayListener.publish(work);
-    TEST_ASSERT_TRUE(RelayListenerV.ok);
+    proto_bool relay_listener_ok = RelayListener.publish(work, 2, "10.0.0.1", 80);
+    TEST_ASSERT_TRUE(relay_listener_ok);
+    proto_bool relay_listener_ok2 = RelayListener.publish(work, 2, "10.0.0.1", 80);
+    TEST_ASSERT_TRUE(relay_listener_ok2);
 
     TEST_ASSERT_TRUE(RELAY_LISTENER_CTX(work)->binds[0].active);
     TEST_ASSERT_TRUE(RELAY_LISTENER_CTX(work)->binds[1].active);
