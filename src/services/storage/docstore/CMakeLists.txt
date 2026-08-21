@@ -5,9 +5,6 @@ protocore_add_module(services/storage/docstore
   GATE PROTOCORE_ENABLE_DOCSTORE
   SOURCES docstore.c
   DEPS
-    PRIVATE
-    mmgr/protostr
-    network_drivers/presentation/codec/json
     services/storage/dbm
   PRIVATE_DEPS
     mmgr/protostr

@@ -5,22 +5,7 @@ protocore_add_module(network_drivers/presentation/http
   GATE PROTOCORE_ENABLE_AUTH_LOCKOUT
   SOURCES http.c
   DEPS
-    PRIVATE
-    mmgr/membuild
-    mmgr/plaintext
-    mmgr/protostr
-    mmgr/rawmemcpy
-    network_drivers/presentation/http/auth
     network_drivers/presentation/http/http_parser
-    network_drivers/presentation/http/route/http_route
-    network_drivers/session
-    network_drivers/transport/tcp/common
-    network_drivers/transport/tcp/protocol
-    server/clock
-    server/io/webdav_handler
-    server/security/auth_lockout
-    server/security/csrf
-    server/security/forwarded_trust
   PRIVATE_DEPS
     mmgr/membuild
     mmgr/plaintext

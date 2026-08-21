@@ -5,13 +5,7 @@ protocore_add_module(network_drivers/presentation/http/http3/h3_server
   GATE PROTOCORE_ENABLE_HTTP3
   SOURCES h3_server.c
   DEPS
-    PRIVATE
-    mmgr/protostr
-    mmgr/rawmemcpy
-    network_drivers/presentation/http
     network_drivers/presentation/http/http3/quic_server
-    network_drivers/session
-    network_drivers/transport/tcp/protocol
   PRIVATE_DEPS
     mmgr/protostr
     mmgr/rawmemcpy

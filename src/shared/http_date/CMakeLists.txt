@@ -4,8 +4,6 @@
 protocore_add_module(shared/http_date
   SOURCES http_date.c
   DEPS
-    PRIVATE
-    mmgr/membuild
     shared/time_compat
   PRIVATE_DEPS
     mmgr/membuild

@@ -5,10 +5,7 @@ protocore_add_module(network_drivers/presentation/http/http3/quic_tp
   GATE PROTOCORE_ENABLE_HTTP3
   SOURCES quic_tp.c
   DEPS
-    PRIVATE
-    mmgr/protomem
     network_drivers/presentation/http/http3/quic_packet
-    network_drivers/presentation/http/http3/quic_varint
   PRIVATE_DEPS
     mmgr/protomem
     network_drivers/presentation/http/http3/quic_varint

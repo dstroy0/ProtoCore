@@ -5,9 +5,6 @@ protocore_add_module(services/fieldbus/j1939
   GATE PROTOCORE_ENABLE_J1939
   SOURCES j1939.c
   DEPS
-    PRIVATE
-    mmgr/plaintext
-    mmgr/protomem
     shared/can
   PRIVATE_DEPS
     mmgr/plaintext

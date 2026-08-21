@@ -5,10 +5,6 @@ protocore_add_module(network_drivers/presentation/codec/msgpack
   GATE PROTOCORE_ENABLE_MSGPACK
   SOURCES msgpack.c
   DEPS
-    PRIVATE
-    mmgr/bytes
-    mmgr/protomem
-    mmgr/protostr
     mmgr/span
     network_drivers/presentation/codec
   PRIVATE_DEPS

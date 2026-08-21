@@ -5,9 +5,7 @@ protocore_add_module(network_drivers/presentation/codec/deflate/rfc1951
   GATE PROTOCORE_ENABLE_DEFLATE_RFC1951
   SOURCES rfc1951.c
   DEPS
-    PRIVATE
     mmgr/bitio
-    mmgr/protomem
   PRIVATE_DEPS
     mmgr/protomem
 )

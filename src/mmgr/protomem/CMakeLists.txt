@@ -4,9 +4,7 @@
 protocore_add_module(mmgr/protomem
   SOURCES protomem.c
   DEPS
-    PRIVATE
     mmgr/rawmemcpy
-    mmgr/swar
   PRIVATE_DEPS
     mmgr/swar
 )

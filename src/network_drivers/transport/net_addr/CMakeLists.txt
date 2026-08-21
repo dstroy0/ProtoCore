@@ -4,8 +4,6 @@
 protocore_add_module(network_drivers/transport/net_addr
   SOURCES net_addr.c
   DEPS
-    PRIVATE
-    mmgr/rawmemcpy
     shared/ip
   PRIVATE_DEPS
     mmgr/rawmemcpy

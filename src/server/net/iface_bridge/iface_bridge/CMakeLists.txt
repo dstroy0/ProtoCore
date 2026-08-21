@@ -5,9 +5,6 @@ protocore_add_module(server/net/iface_bridge/iface_bridge
   GATE PROTOCORE_ENABLE_IFACE_BRIDGE
   SOURCES iface_bridge.c
   DEPS
-    PRIVATE
-    mmgr/protomem
-    mmgr/secure
     shared/ip
   PRIVATE_DEPS
     mmgr/protomem

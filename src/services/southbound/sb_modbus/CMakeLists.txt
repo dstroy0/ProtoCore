@@ -4,9 +4,7 @@
 protocore_add_module(services/southbound/sb_modbus
   SOURCES sb_modbus.c
   DEPS
-    PRIVATE
     services/fieldbus/modbus/modbus
-    services/fieldbus/modbus/modbus_master
     services/southbound/southbound
   PRIVATE_DEPS
     services/fieldbus/modbus/modbus_master

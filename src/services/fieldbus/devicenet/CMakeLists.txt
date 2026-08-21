@@ -5,8 +5,6 @@ protocore_add_module(services/fieldbus/devicenet
   GATE PROTOCORE_ENABLE_DEVICENET
   SOURCES devicenet.c
   DEPS
-    PRIVATE
-    mmgr/protomem
     shared/can
   PRIVATE_DEPS
     mmgr/protomem

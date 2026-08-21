@@ -5,18 +5,7 @@ protocore_add_module(network_drivers/transport/tcp/server
   GATE PROTOCORE_ENABLE_ACCEPT_THROTTLE
   SOURCES server.c
   DEPS
-    PRIVATE
-    mmgr/plaintext
-    network_drivers/tls
-    network_drivers/transport/diffserv
-    network_drivers/transport/net_addr
-    network_drivers/transport/tcp
-    network_drivers/transport/tcp/common
     network_drivers/transport/tcp/evt
-    network_drivers/transport/tcp/lower
-    network_drivers/transport/tcp/protocol
-    server/clock
-    server/core/worker
     shared/ip
   PRIVATE_DEPS
     mmgr/plaintext

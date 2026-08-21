@@ -4,8 +4,6 @@
 protocore_add_module(mmgr/secure
   SOURCES secure.c
   DEPS
-    PRIVATE
-    mmgr/arena
     mmgr/protomem
     mmgr/span
   PRIVATE_DEPS

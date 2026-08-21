@@ -4,8 +4,6 @@
 protocore_add_module(network_drivers/physical/physical
   SOURCES physical.c
   DEPS
-    PRIVATE
-    mmgr/plaintext
     shared/ip
   PRIVATE_DEPS
     mmgr/plaintext

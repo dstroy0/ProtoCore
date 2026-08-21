@@ -5,13 +5,6 @@ protocore_add_module(services/timing_position/gnss/ntrip_caster_listener
   GATE PROTOCORE_ENABLE_NTRIP_CASTER
   SOURCES ntrip_caster_listener.c
   DEPS
-    PRIVATE
-    mmgr/protomem
-    mmgr/protostr
-    network_drivers/session
-    network_drivers/transport/tcp
-    network_drivers/transport/tcp/protocol
-    server/core/proto_handler
     services/timing_position/gnss/ntrip_caster
   PRIVATE_DEPS
     mmgr/protomem

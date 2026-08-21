@@ -5,10 +5,6 @@ protocore_add_module(server/core/worker
   GATE PROTOCORE_ENABLE_PREEMPT_QUEUE
   SOURCES worker.c
   DEPS
-    PRIVATE
-    mmgr/arena
-    mmgr/plaintext
-    mmgr/ring
     server/core/preempt_queue
   PRIVATE_DEPS
     mmgr/arena

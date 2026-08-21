@@ -5,8 +5,6 @@ protocore_add_module(services/iot/cloudevents
   GATE PROTOCORE_ENABLE_CLOUDEVENTS
   SOURCES cloudevents.c
   DEPS
-    PRIVATE
-    network_drivers/presentation/codec/json
     network_drivers/presentation/http/http_parser
   PRIVATE_DEPS
     network_drivers/presentation/codec/json

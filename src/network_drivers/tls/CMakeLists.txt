@@ -5,13 +5,9 @@ protocore_add_module(network_drivers/tls
   GATE PROTOCORE_ENABLE_TLS
   SOURCES tls.c
   DEPS
-    PRIVATE
-    crypto/rng
-    mmgr/secure
     network_drivers/presentation/http/http3/tls13_msg
     network_drivers/tls/key_schedule
     network_drivers/tls/record
-    network_drivers/transport/tcp/protocol
   PRIVATE_DEPS
     crypto/rng
     mmgr/secure

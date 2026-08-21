@@ -4,8 +4,6 @@
 protocore_add_module(mmgr/plaintext
   SOURCES plaintext.c
   DEPS
-    PRIVATE
-    mmgr/arena
     mmgr/span
   PRIVATE_DEPS
     mmgr/arena

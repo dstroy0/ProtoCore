@@ -4,9 +4,7 @@
 protocore_add_module(services/iot/coap/coaps
   SOURCES coaps.c
   DEPS
-    PRIVATE
     network_drivers/presentation/security/dtls/dtls_conn
-    services/iot/coap/coap
   PRIVATE_DEPS
     services/iot/coap/coap
 )

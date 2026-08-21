@@ -5,11 +5,6 @@ protocore_add_module(network_drivers/transport/udp/client
   GATE PROTOCORE_ENABLE_DIFFSERV
   SOURCES client.c
   DEPS
-    PRIVATE
-    mmgr/plaintext
-    mmgr/rawmemcpy
-    network_drivers/transport/diffserv
-    network_drivers/transport/net_addr
     shared/ip
   PRIVATE_DEPS
     mmgr/plaintext

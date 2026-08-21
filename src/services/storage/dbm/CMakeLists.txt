@@ -5,8 +5,6 @@ protocore_add_module(services/storage/dbm
   GATE PROTOCORE_ENABLE_DBM
   SOURCES dbm.c
   DEPS
-    PRIVATE
-    mmgr/protomem
     services/storage/wal/wal_store
   PRIVATE_DEPS
     mmgr/protomem

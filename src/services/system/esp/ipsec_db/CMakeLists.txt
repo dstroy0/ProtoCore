@@ -5,8 +5,6 @@ protocore_add_module(services/system/esp/ipsec_db
   GATE PROTOCORE_ENABLE_IKEV2
   SOURCES ipsec_db.c
   DEPS
-    PRIVATE
-    mmgr/protomem
     services/security/ikev2/ikev2
     services/system/esp/esp
   PRIVATE_DEPS

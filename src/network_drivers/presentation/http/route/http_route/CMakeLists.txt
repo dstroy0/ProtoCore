@@ -5,9 +5,6 @@ protocore_add_module(network_drivers/presentation/http/route/http_route
   GATE PROTOCORE_ENABLE_HTTP_ROUTE
   SOURCES http_route.c
   DEPS
-    PRIVATE
-    mmgr/protomem
-    mmgr/secure
     network_drivers/presentation/http
   PRIVATE_DEPS
     mmgr/protomem

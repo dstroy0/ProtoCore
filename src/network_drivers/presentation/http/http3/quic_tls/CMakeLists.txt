@@ -5,14 +5,8 @@ protocore_add_module(network_drivers/presentation/http/http3/quic_tls
   GATE PROTOCORE_ENABLE_HTTP3
   SOURCES quic_tls.c
   DEPS
-    PRIVATE
-    crypto/asymmetric/curve25519
-    crypto/ct_eq
-    crypto/pqc/mlkem
-    mmgr/protomem
     network_drivers/presentation/http/http3/quic_crypto
     network_drivers/presentation/http/http3/quic_tp
-    network_drivers/presentation/http/http3/tls13_msg
     network_drivers/tls/key_schedule
   PRIVATE_DEPS
     crypto/asymmetric/curve25519

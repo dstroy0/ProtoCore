@@ -5,8 +5,6 @@ protocore_add_module(services/timing_position/nmea2000
   GATE PROTOCORE_ENABLE_NMEA2000
   SOURCES nmea2000.c
   DEPS
-    PRIVATE
-    mmgr/protomem
     services/fieldbus/j1939
     shared/can
   PRIVATE_DEPS
