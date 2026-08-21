@@ -90,15 +90,11 @@ static size_t build_client_hello(uint8_t *out, const ChOpts *o)
 {
     uint8_t tp[256];
     QuicTransportParams params;
-    QuicTpV.defaults_args.tp = &params;
-    QuicTp.defaults(quic_tp_work);
+    QuicTp.defaults(quic_tp_work, &params);
     params.initial_max_data = 1048576;
     params.initial_max_streams_bidi = 8;
-    QuicTpV.encode_args.tp = &params;
-    QuicTpV.encode_args.out = tp;
-    QuicTpV.encode_args.cap = sizeof(tp);
-    QuicTp.encode(quic_tp_work);
-    size_t tp_len = QuicTpV.n;
+    size_t quic_tp_n = QuicTp.encode(quic_tp_work, &params, tp, sizeof(tp));
+    size_t tp_len = quic_tp_n;
 
     W w = {out, 0};
     w8(&w, TLS_HS_CLIENT_HELLO);
@@ -179,8 +175,7 @@ static void server_start(void)
     memset(g_cfg.ed25519_seed, 0x42, sizeof(g_cfg.ed25519_seed));
     memset(g_cfg.ephemeral_priv, 0x77, sizeof(g_cfg.ephemeral_priv));
     memset(g_cfg.random, 0x5A, sizeof(g_cfg.random));
-    QuicTpV.defaults_args.tp = &g_cfg.params;
-    QuicTp.defaults(quic_tp_work);
+    QuicTp.defaults(quic_tp_work, &g_cfg.params);
     g_cfg.params.initial_max_data = 65536;
     QuicTlsServerV.server_init_args.qt = &g_qt;
     QuicTlsServerV.server_init_args.cfg = &g_cfg;
@@ -371,19 +366,13 @@ void test_handshake_interop_round_trip(void)
 
     // the Handshake-level packet keys both ends derive from those secrets must agree
     QuicPacketKeys mine;
-    QuicCryptoV.keys_from_secret_args.keys_work = keys_work;
-    QuicCryptoV.keys_from_secret_args.secret = ks.s + TLS13_KS_CLIENT_HS;
-    QuicCryptoV.keys_from_secret_args.out = &mine;
-    QuicCrypto.keys_from_secret(quic_crypto_work);
+    QuicCrypto.keys_from_secret(quic_crypto_work, keys_work, ks.s + TLS13_KS_CLIENT_HS, &mine);
     QuicTlsServerV.keys_args.qt = &g_qt;
     QuicTlsServerV.keys_args.level = QUIC_ENC_HANDSHAKE;
     QuicTlsServerV.keys_args.is_server = PROTO_FALSE;
     QuicTlsServer.keys(quic_tls_work);
     TEST_ASSERT_EQUAL_MEMORY(QuicTlsServerV.pkt_keys->iv, mine.iv, 12);
-    QuicCryptoV.keys_from_secret_args.keys_work = keys_work;
-    QuicCryptoV.keys_from_secret_args.secret = ks.s + TLS13_KS_SERVER_HS;
-    QuicCryptoV.keys_from_secret_args.out = &mine;
-    QuicCrypto.keys_from_secret(quic_crypto_work);
+    QuicCrypto.keys_from_secret(quic_crypto_work, keys_work, ks.s + TLS13_KS_SERVER_HS, &mine);
     QuicTlsServerV.keys_args.qt = &g_qt;
     QuicTlsServerV.keys_args.level = QUIC_ENC_HANDSHAKE;
     QuicTlsServerV.keys_args.is_server = PROTO_TRUE;
@@ -417,19 +406,13 @@ void test_handshake_interop_round_trip(void)
     Tls13KsV.bind.s = ks_store;
     Tls13KsV.step.ch_sfin_hash = hash;
     Tls13Ks.master(NULL);
-    QuicCryptoV.keys_from_secret_args.keys_work = keys_work;
-    QuicCryptoV.keys_from_secret_args.secret = ks.s + TLS13_KS_CLIENT_AP;
-    QuicCryptoV.keys_from_secret_args.out = &mine;
-    QuicCrypto.keys_from_secret(quic_crypto_work);
+    QuicCrypto.keys_from_secret(quic_crypto_work, keys_work, ks.s + TLS13_KS_CLIENT_AP, &mine);
     QuicTlsServerV.keys_args.qt = &g_qt;
     QuicTlsServerV.keys_args.level = QUIC_ENC_APP;
     QuicTlsServerV.keys_args.is_server = PROTO_FALSE;
     QuicTlsServer.keys(quic_tls_work);
     TEST_ASSERT_EQUAL_MEMORY(QuicTlsServerV.pkt_keys->iv, mine.iv, 12);
-    QuicCryptoV.keys_from_secret_args.keys_work = keys_work;
-    QuicCryptoV.keys_from_secret_args.secret = ks.s + TLS13_KS_SERVER_AP;
-    QuicCryptoV.keys_from_secret_args.out = &mine;
-    QuicCrypto.keys_from_secret(quic_crypto_work);
+    QuicCrypto.keys_from_secret(quic_crypto_work, keys_work, ks.s + TLS13_KS_SERVER_AP, &mine);
     QuicTlsServerV.keys_args.qt = &g_qt;
     QuicTlsServerV.keys_args.level = QUIC_ENC_APP;
     QuicTlsServerV.keys_args.is_server = PROTO_TRUE;

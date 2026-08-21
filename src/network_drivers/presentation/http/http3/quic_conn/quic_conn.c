@@ -264,11 +264,7 @@ static void quic_conn_open(uint8_t *restrict work, QuicConnCtx *qc, const QuicTl
         qc->cb = *cb;
     }
 
-    QuicCryptoV.derive_initial_secrets_args.keys_work = qc->tls.keys_work;
-    QuicCryptoV.derive_initial_secrets_args.dcid = odcid;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = odcid_len;
-    QuicCryptoV.derive_initial_secrets_args.out = &qc->initial;
-    QuicCrypto.derive_initial_secrets(work);
+    QuicCrypto.derive_initial_secrets(work, qc->tls.keys_work, odcid, odcid_len, &qc->initial);
 
     for (int i = 0; i < 3; i++)
     {
@@ -509,11 +505,8 @@ static proto_bool parse_packet_header(const QuicConnCtx *qc, const uint8_t *dg, 
     }
 
     QuicLongHeader h;
-    QuicPacketV.parse_long_header_args.buf = dg;
-    QuicPacketV.parse_long_header_args.len = len;
-    QuicPacketV.parse_long_header_args.out = &h;
-    QuicPacket.parse_long_header(quic_packet_work);
-    if (!QuicPacketV.ok)
+    proto_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, dg, len, &h);
+    if (!quic_packet_ok)
     {
         return PROTO_FALSE;
     }
@@ -562,9 +555,8 @@ static size_t recv_packet(QuicConnCtx *qc, const uint8_t *dg, size_t len)
     {
         return 0;
     }
-    QuicPacketV.is_long_header_args.first = dg[0];
-    QuicPacket.is_long_header(quic_packet_work);
-    proto_bool is_long = QuicPacketV.ok;
+    proto_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, dg[0]);
+    proto_bool is_long = quic_packet_ok;
 
     int level = 0;
     size_t pn_offset = 0;
@@ -591,16 +583,9 @@ static size_t recv_packet(QuicConnCtx *qc, const uint8_t *dg, size_t len)
     }
     mem.cpy(work, dg, pkt_len);
     uint64_t pn = 0;
-    QuicCryptoV.packet_unprotect_args.pkt = work;
-    QuicCryptoV.packet_unprotect_args.pn_offset = pn_offset;
-    QuicCryptoV.packet_unprotect_args.length = (size_t)payload_length;
-    QuicCryptoV.packet_unprotect_args.largest_pn = qc->space[level].largest_rx;
-    QuicCryptoV.packet_unprotect_args.keys = keys;
-    QuicCryptoV.packet_unprotect_args.is_long = is_long;
-    QuicCryptoV.packet_unprotect_args.out = plain;
-    QuicCryptoV.packet_unprotect_args.out_pn = &pn;
-    QuicCrypto.packet_unprotect(quic_crypto_work);
-    size_t pt = QuicCryptoV.n;
+    size_t quic_crypto_n = QuicCrypto.packet_unprotect(quic_crypto_work, work, pn_offset, (size_t)payload_length,
+                                                       qc->space[level].largest_rx, keys, is_long, plain, &pn);
+    size_t pt = quic_crypto_n;
     if (pt == (size_t)-1)
     {
         return is_long ? pkt_len : 0; // drop this packet, keep parsing later coalesced ones
@@ -837,10 +822,8 @@ static size_t build_packet(uint8_t *restrict work, QuicConnCtx *qc, int level, u
     }
 
     uint64_t pn = s->next_pn;
-    QuicPacketV.pn_length_args.full_pn = pn;
-    QuicPacketV.pn_length_args.largest_acked = s->largest_acked;
-    QuicPacket.pn_length(work);
-    uint8_t pn_len = QuicPacketV.u8;
+    uint8_t quic_packet_u8 = QuicPacket.pn_length(work, pn, s->largest_acked);
+    uint8_t pn_len = quic_packet_u8;
     proto_bool is_long = (level != QUIC_ENC_APP);
 
     // Reserve the framing BEFORE filling the payload. build_frames() advances the connection's send
@@ -893,17 +876,9 @@ static size_t build_packet(uint8_t *restrict work, QuicConnCtx *qc, int level, u
     if (is_long)
     {
         // Invariant header fields, then the type-specific token (Initial only) + Length + PN.
-        QuicPacketV.build_long_header_args.out = out;
-        QuicPacketV.build_long_header_args.cap = cap;
-        QuicPacketV.build_long_header_args.type = level_lp_type(level);
-        QuicPacketV.build_long_header_args.version = QUIC_VERSION_1;
-        QuicPacketV.build_long_header_args.dcid = qc->dcid;
-        QuicPacketV.build_long_header_args.dcid_len = qc->dcid_len;
-        QuicPacketV.build_long_header_args.scid = qc->scid;
-        QuicPacketV.build_long_header_args.scid_len = qc->scid_len;
-        QuicPacketV.build_long_header_args.pn_len = pn_len;
-        QuicPacket.build_long_header(work);
-        size_t hn = QuicPacketV.n;
+        size_t quic_packet_n = QuicPacket.build_long_header(work, out, cap, level_lp_type(level), QUIC_VERSION_1,
+                                                            qc->dcid, qc->dcid_len, qc->scid, qc->scid_len, pn_len);
+        size_t hn = quic_packet_n;
         if (!hn)
         {
             return 0;
@@ -965,16 +940,8 @@ static size_t build_packet(uint8_t *restrict work, QuicConnCtx *qc, int level, u
 
     mem.cpy(out + p, frames, frame_len);
 
-    QuicCryptoV.packet_protect_args.pkt = out;
-    QuicCryptoV.packet_protect_args.cap = cap;
-    QuicCryptoV.packet_protect_args.pn_offset = pn_offset;
-    QuicCryptoV.packet_protect_args.pn_len = pn_len;
-    QuicCryptoV.packet_protect_args.full_pn = pn;
-    QuicCryptoV.packet_protect_args.payload_len = frame_len;
-    QuicCryptoV.packet_protect_args.keys = keys;
-    QuicCryptoV.packet_protect_args.is_long = is_long;
-    QuicCrypto.packet_protect(work);
-    size_t total = QuicCryptoV.n;
+    size_t quic_crypto_n = QuicCrypto.packet_protect(work, out, cap, pn_offset, pn_len, pn, frame_len, keys, is_long);
+    size_t total = quic_crypto_n;
     if (!total)
     {
         return 0;

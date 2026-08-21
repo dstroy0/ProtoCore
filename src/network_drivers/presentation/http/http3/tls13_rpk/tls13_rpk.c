@@ -6,72 +6,56 @@
  * @brief The RFC 7250 RawPublicKey credential (see tls13_rpk.h).
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_TLS_RPK
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
 #include "network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // --- the entries -----------------------------------------------------------
 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_tls13_rpk_ed25519_spki(uint8_t *restrict work)
+size_t protocore_tls13_rpk_ed25519_spki(uint8_t *restrict work, uint8_t *out, size_t cap, const uint8_t *pub)
 {
     (void)work;
-    uint8_t *out = Tls13RpkV.ed25519_spki_args.out;
-    size_t cap = Tls13RpkV.ed25519_spki_args.cap;
-    const uint8_t *pub = Tls13RpkV.ed25519_spki_args.pub;
 
     // DER SubjectPublicKeyInfo for id-Ed25519 (RFC 8410 sec 4): a fixed 12-byte prefix - SEQUENCE
     // { SEQUENCE { OID 1.3.101.112 } , BIT STRING (33, 0 unused) } - then the 32-byte public key.
     static const uint8_t PREFIX[12] = {0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00};
     if (cap < PROTOCORE_TLS13_ED25519_SPKI_LEN)
     {
-        Tls13RpkV.n = 0;
-        return;
+        return 0;
     }
     mem.cpy(out, PREFIX, sizeof(PREFIX));
     mem.cpy(out + sizeof(PREFIX), pub, 32);
-    Tls13RpkV.n = PROTOCORE_TLS13_ED25519_SPKI_LEN;
+    return PROTOCORE_TLS13_ED25519_SPKI_LEN;
 }
 
-void protocore_tls13_rpk_ed25519_from_spki(uint8_t *restrict work)
+proto_bool protocore_tls13_rpk_ed25519_from_spki(uint8_t *restrict work, const uint8_t *spki, size_t len,
+                                                 const uint8_t **pub)
 {
     (void)work;
-    const uint8_t *spki = Tls13RpkV.ed25519_from_spki_args.spki;
-    size_t len = Tls13RpkV.ed25519_from_spki_args.len;
-    const uint8_t **pub = Tls13RpkV.ed25519_from_spki_args.pub;
 
     static const uint8_t PREFIX[12] = {0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00};
     if (len != PROTOCORE_TLS13_ED25519_SPKI_LEN || mem.cmp(spki, PREFIX, sizeof(PREFIX)) != 0)
     {
-        Tls13RpkV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     *pub = spki + sizeof(PREFIX);
-    Tls13RpkV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_tls13_rpk_build_certificate(uint8_t *restrict work)
+size_t protocore_tls13_rpk_build_certificate(uint8_t *restrict work, uint8_t *out, size_t cap,
+                                             const uint8_t *ed25519_pub)
 {
-    uint8_t *out = Tls13RpkV.build_certificate_args.out;
-    size_t cap = Tls13RpkV.build_certificate_args.cap;
-    const uint8_t *ed25519_pub = Tls13RpkV.build_certificate_args.ed25519_pub;
 
     uint8_t spki[PROTOCORE_TLS13_ED25519_SPKI_LEN];
-    Tls13RpkV.ed25519_spki_args.out = spki;
-    Tls13RpkV.ed25519_spki_args.cap = sizeof(spki);
-    Tls13RpkV.ed25519_spki_args.pub = ed25519_pub;
-    protocore_tls13_rpk_ed25519_spki(work);
-    if (!Tls13RpkV.n)
+    size_t tls13_rpk_n = Tls13Rpk.ed25519_spki(work, spki, sizeof(spki), ed25519_pub);
+    if (!tls13_rpk_n)
     {
-        Tls13RpkV.n = 0;
+        tls13_rpk_n = 0;
         return;
     }
     Tls13MsgV.build_certificate_args.out = out;
@@ -79,12 +63,5 @@ void protocore_tls13_rpk_build_certificate(uint8_t *restrict work)
     Tls13MsgV.build_certificate_args.cert_der = spki;
     Tls13MsgV.build_certificate_args.cert_len = sizeof(spki);
     Tls13Msg.build_certificate(work);
-    Tls13RpkV.n = Tls13MsgV.n;
+    tls13_rpk_n = Tls13MsgV.n;
 }
-
-/** @brief The operands and the outcome. */
-Tls13RpkVars Tls13RpkV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_TLS_RPK

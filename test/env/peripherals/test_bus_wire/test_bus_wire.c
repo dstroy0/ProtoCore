@@ -129,76 +129,56 @@ void test_rtc_read_wire(void)
     const uint8_t regs[7] = {0x05, 0x04, 0x03, 0x02, 0x02, 0x01, 0x24};
     protocore_bus_host_preload(regs, sizeof(regs));
 
-    Rtc.read_epoch(protocore_rtc_span());
-    uint32_t epoch = RtcV.epoch;
+    uint32_t rtc_epoch = Rtc.read_epoch(protocore_rtc_span());
+    uint32_t epoch = rtc_epoch;
 
     const uint8_t want[1] = {0x00};
     expect_tx(want, sizeof(want), "rtc register pointer");
 
     uint32_t expect = 0;
-    RtcV.regs_to_epoch_args.regs = regs;
-    RtcV.regs_to_epoch_args.epoch = &expect;
-    Rtc.regs_to_epoch(protocore_rtc_span());
-    TEST_ASSERT_TRUE(RtcV.ok);
+    proto_bool rtc_ok = Rtc.regs_to_epoch(protocore_rtc_span(), regs, &expect);
+    TEST_ASSERT_TRUE(rtc_ok);
     TEST_ASSERT_EQUAL_UINT32(expect, epoch);
 }
 
 void test_rtc_set_wire(void)
 {
     uint32_t epoch = 1700000000u;
-    RtcV.set_epoch_args.epoch = epoch;
-    Rtc.set_epoch(protocore_rtc_span());
-    TEST_ASSERT_TRUE(RtcV.ok);
+    proto_bool rtc_ok = Rtc.set_epoch(protocore_rtc_span(), epoch);
+    TEST_ASSERT_TRUE(rtc_ok);
 
     uint8_t want[8];
     want[0] = 0x00;
-    RtcV.epoch_to_regs_args.epoch = epoch;
-    RtcV.epoch_to_regs_args.regs = &want[1];
-    Rtc.epoch_to_regs(protocore_rtc_span());
+    Rtc.epoch_to_regs(protocore_rtc_span(), epoch, &want[1]);
     expect_tx(want, sizeof(want), "rtc set");
 }
 
 void test_smbus_pec_on_the_wire(void)
 {
-    SmbusV.set_pec_args.on = PROTO_TRUE;
-    Smbus.set_pec(protocore_smbus_span());
-    SmbusV.write_byte_args.addr = 0x2A;
-    SmbusV.write_byte_args.cmd = 0x10;
-    SmbusV.write_byte_args.value = 0x5A;
-    Smbus.write_byte(protocore_smbus_span());
-    TEST_ASSERT_TRUE(SmbusV.ok);
+    Smbus.set_pec(protocore_smbus_span(), PROTO_TRUE);
+    proto_bool smbus_ok = Smbus.write_byte(protocore_smbus_span(), 0x2A, 0x10, 0x5A);
+    TEST_ASSERT_TRUE(smbus_ok);
 
     const uint8_t payload[2] = {0x10, 0x5A};
-    SmbusV.pec_write_args.addr = 0x2A;
-    SmbusV.pec_write_args.payload = payload;
-    SmbusV.pec_write_args.len = sizeof(payload);
-    Smbus.pec_write(protocore_smbus_span());
-    const uint8_t want[3] = {0x10, 0x5A, SmbusV.value};
+    uint8_t smbus_value = Smbus.pec_write(protocore_smbus_span(), 0x2A, payload, sizeof(payload));
+    const uint8_t want[3] = {0x10, 0x5A, smbus_value};
     expect_tx(want, sizeof(want), "smbus write byte with pec");
-    SmbusV.set_pec_args.on = PROTO_FALSE;
-    Smbus.set_pec(protocore_smbus_span());
+    Smbus.set_pec(protocore_smbus_span(), PROTO_FALSE);
 }
 
 void test_smbus_without_pec(void)
 {
-    SmbusV.set_pec_args.on = PROTO_FALSE;
-    Smbus.set_pec(protocore_smbus_span());
-    SmbusV.write_byte_args.addr = 0x2A;
-    SmbusV.write_byte_args.cmd = 0x10;
-    SmbusV.write_byte_args.value = 0x5A;
-    Smbus.write_byte(protocore_smbus_span());
-    TEST_ASSERT_TRUE(SmbusV.ok);
+    Smbus.set_pec(protocore_smbus_span(), PROTO_FALSE);
+    proto_bool smbus_ok = Smbus.write_byte(protocore_smbus_span(), 0x2A, 0x10, 0x5A);
+    TEST_ASSERT_TRUE(smbus_ok);
     const uint8_t want[2] = {0x10, 0x5A};
     expect_tx(want, sizeof(want), "smbus write byte without pec");
 }
 
 void test_smbus_word_is_little_endian(void)
 {
-    SmbusV.write_word_args.addr = 0x2A;
-    SmbusV.write_word_args.cmd = 0x20;
-    SmbusV.write_word_args.value = 0xBEEF;
-    Smbus.write_word(protocore_smbus_span());
-    TEST_ASSERT_TRUE(SmbusV.ok);
+    proto_bool smbus_ok = Smbus.write_word(protocore_smbus_span(), 0x2A, 0x20, 0xBEEF);
+    TEST_ASSERT_TRUE(smbus_ok);
     const uint8_t want[3] = {0x20, 0xEF, 0xBE};
     expect_tx(want, sizeof(want), "smbus write word");
 }
@@ -208,11 +188,8 @@ void test_smbus_read_word_wire(void)
     const uint8_t reply[2] = {0xEF, 0xBE};
     protocore_bus_host_preload(reply, sizeof(reply));
     uint16_t v = 0;
-    SmbusV.read_word_args.addr = 0x2A;
-    SmbusV.read_word_args.cmd = 0x20;
-    SmbusV.read_word_args.out = &v;
-    Smbus.read_word(protocore_smbus_span());
-    TEST_ASSERT_TRUE(SmbusV.ok);
+    proto_bool smbus_ok = Smbus.read_word(protocore_smbus_span(), 0x2A, 0x20, &v);
+    TEST_ASSERT_TRUE(smbus_ok);
     TEST_ASSERT_EQUAL_HEX16(0xBEEF, v);
     const uint8_t want[1] = {0x20};
     expect_tx(want, sizeof(want), "smbus read word command");
@@ -237,11 +214,8 @@ void test_transfers_carry_their_address(void)
     Pca9685V.set_pwm_args.off = 0;
     Pca9685.set_pwm(protocore_pca9685_span());
     TEST_ASSERT_TRUE(Pca9685V.ok);
-    SmbusV.write_byte_args.addr = 0x2A;
-    SmbusV.write_byte_args.cmd = 0x10;
-    SmbusV.write_byte_args.value = 0x5A;
-    Smbus.write_byte(protocore_smbus_span());
-    TEST_ASSERT_TRUE(SmbusV.ok);
+    proto_bool smbus_ok = Smbus.write_byte(protocore_smbus_span(), 0x2A, 0x10, 0x5A);
+    TEST_ASSERT_TRUE(smbus_ok);
 
     TEST_ASSERT_EQUAL_UINT32(2, protocore_bus_host_count());
     TEST_ASSERT_EQUAL_UINT16(PROTOCORE_PCA9685_I2C_ADDR, protocore_bus_host_txn_at(0)->target);
@@ -253,8 +227,8 @@ void test_rtc_read_is_one_transaction(void)
 {
     const uint8_t regs[7] = {0x05, 0x04, 0x03, 0x02, 0x02, 0x01, 0x24};
     protocore_bus_host_preload(regs, sizeof(regs));
-    Rtc.read_epoch(protocore_rtc_span());
-    (void)RtcV.epoch;
+    uint32_t rtc_epoch = Rtc.read_epoch(protocore_rtc_span());
+    (void)rtc_epoch;
 
     TEST_ASSERT_EQUAL_UINT32(1, protocore_bus_host_count());
     const protocore_bus_host_rec *t = protocore_bus_host_txn_at(0);

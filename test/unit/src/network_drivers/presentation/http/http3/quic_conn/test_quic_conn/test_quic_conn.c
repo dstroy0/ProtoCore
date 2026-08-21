@@ -192,21 +192,11 @@ static void wr_pn(uint8_t *o, uint64_t pn, uint8_t pn_len)
 static size_t build_long(uint8_t *out, size_t cap, uint8_t type, const uint8_t *dcid, uint8_t dcl, const uint8_t *scid,
                          uint8_t scl, uint64_t pn, QuicPacketKeys *keys, const uint8_t *frames, size_t frame_len)
 {
-    QuicPacketV.pn_length_args.full_pn = pn;
-    QuicPacketV.pn_length_args.largest_acked = -1;
-    QuicPacket.pn_length(quic_packet_work);
-    uint8_t pn_len = QuicPacketV.u8;
-    QuicPacketV.build_long_header_args.out = out;
-    QuicPacketV.build_long_header_args.cap = cap;
-    QuicPacketV.build_long_header_args.type = type;
-    QuicPacketV.build_long_header_args.version = QUIC_VERSION_1;
-    QuicPacketV.build_long_header_args.dcid = dcid;
-    QuicPacketV.build_long_header_args.dcid_len = dcl;
-    QuicPacketV.build_long_header_args.scid = scid;
-    QuicPacketV.build_long_header_args.scid_len = scl;
-    QuicPacketV.build_long_header_args.pn_len = pn_len;
-    QuicPacket.build_long_header(quic_packet_work);
-    size_t p = QuicPacketV.n;
+    uint8_t quic_packet_u8 = QuicPacket.pn_length(quic_packet_work, pn, -1);
+    uint8_t pn_len = quic_packet_u8;
+    size_t quic_packet_n =
+        QuicPacket.build_long_header(quic_packet_work, out, cap, type, QUIC_VERSION_1, dcid, dcl, scid, scl, pn_len);
+    size_t p = quic_packet_n;
     if (type == QUIC_LP_INITIAL)
     {
         QuicVarintV.encode_args.out = out + p;
@@ -225,51 +215,32 @@ static size_t build_long(uint8_t *out, size_t cap, uint8_t type, const uint8_t *
     wr_pn(out + p, pn, pn_len);
     p += pn_len;
     memcpy(out + p, frames, frame_len);
-    QuicCryptoV.packet_protect_args.pkt = out;
-    QuicCryptoV.packet_protect_args.cap = cap;
-    QuicCryptoV.packet_protect_args.pn_offset = pn_off;
-    QuicCryptoV.packet_protect_args.pn_len = pn_len;
-    QuicCryptoV.packet_protect_args.full_pn = pn;
-    QuicCryptoV.packet_protect_args.payload_len = frame_len;
-    QuicCryptoV.packet_protect_args.keys = keys;
-    QuicCryptoV.packet_protect_args.is_long = PROTO_TRUE;
-    QuicCrypto.packet_protect(quic_crypto_work);
-    return QuicCryptoV.n;
+    size_t quic_crypto_n =
+        QuicCrypto.packet_protect(quic_crypto_work, out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_TRUE);
+    return quic_crypto_n;
 }
 
 static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t dcl, uint64_t pn, QuicPacketKeys *keys,
                           const uint8_t *frames, size_t frame_len)
 {
-    QuicPacketV.pn_length_args.full_pn = pn;
-    QuicPacketV.pn_length_args.largest_acked = -1;
-    QuicPacket.pn_length(quic_packet_work);
-    uint8_t pn_len = QuicPacketV.u8;
+    uint8_t quic_packet_u8 = QuicPacket.pn_length(quic_packet_work, pn, -1);
+    uint8_t pn_len = quic_packet_u8;
     out[0] = (uint8_t)(0x40 | (pn_len - 1));
     memcpy(out + 1, dcid, dcl);
     size_t pn_off = 1 + dcl;
     wr_pn(out + pn_off, pn, pn_len);
     memcpy(out + pn_off + pn_len, frames, frame_len);
-    QuicCryptoV.packet_protect_args.pkt = out;
-    QuicCryptoV.packet_protect_args.cap = cap;
-    QuicCryptoV.packet_protect_args.pn_offset = pn_off;
-    QuicCryptoV.packet_protect_args.pn_len = pn_len;
-    QuicCryptoV.packet_protect_args.full_pn = pn;
-    QuicCryptoV.packet_protect_args.payload_len = frame_len;
-    QuicCryptoV.packet_protect_args.keys = keys;
-    QuicCryptoV.packet_protect_args.is_long = PROTO_FALSE;
-    QuicCrypto.packet_protect(quic_crypto_work);
-    return QuicCryptoV.n;
+    size_t quic_crypto_n =
+        QuicCrypto.packet_protect(quic_crypto_work, out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_FALSE);
+    return quic_crypto_n;
 }
 
 static size_t open_long(const uint8_t *dg, size_t len, QuicPacketKeys *keys, uint8_t *plain, size_t *wire_len,
                         uint8_t *type_out)
 {
     QuicLongHeader h;
-    QuicPacketV.parse_long_header_args.buf = dg;
-    QuicPacketV.parse_long_header_args.len = len;
-    QuicPacketV.parse_long_header_args.out = &h;
-    QuicPacket.parse_long_header(quic_packet_work);
-    TEST_ASSERT_TRUE(QuicPacketV.ok);
+    proto_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, dg, len, &h);
+    TEST_ASSERT_TRUE(quic_packet_ok);
     *type_out = h.type;
     size_t off = h.hdr_len;
     if (h.type == QUIC_LP_INITIAL)
@@ -295,16 +266,9 @@ static size_t open_long(const uint8_t *dg, size_t len, QuicPacketKeys *keys, uin
     static uint8_t work[2048];
     memcpy(work, dg, *wire_len);
     uint64_t pn = 0;
-    QuicCryptoV.packet_unprotect_args.pkt = work;
-    QuicCryptoV.packet_unprotect_args.pn_offset = off;
-    QuicCryptoV.packet_unprotect_args.length = (size_t)length;
-    QuicCryptoV.packet_unprotect_args.largest_pn = 0;
-    QuicCryptoV.packet_unprotect_args.keys = keys;
-    QuicCryptoV.packet_unprotect_args.is_long = PROTO_TRUE;
-    QuicCryptoV.packet_unprotect_args.out = plain;
-    QuicCryptoV.packet_unprotect_args.out_pn = &pn;
-    QuicCrypto.packet_unprotect(quic_crypto_work);
-    return QuicCryptoV.n;
+    size_t quic_crypto_n =
+        QuicCrypto.packet_unprotect(quic_crypto_work, work, off, (size_t)length, 0, keys, PROTO_TRUE, plain, &pn);
+    return quic_crypto_n;
 }
 
 static size_t open_short(const uint8_t *dg, size_t len, uint8_t dcl, QuicPacketKeys *keys, uint8_t *plain)
@@ -312,16 +276,9 @@ static size_t open_short(const uint8_t *dg, size_t len, uint8_t dcl, QuicPacketK
     static uint8_t work[2048];
     memcpy(work, dg, len);
     uint64_t pn = 0;
-    QuicCryptoV.packet_unprotect_args.pkt = work;
-    QuicCryptoV.packet_unprotect_args.pn_offset = 1 + dcl;
-    QuicCryptoV.packet_unprotect_args.length = len - (1 + dcl);
-    QuicCryptoV.packet_unprotect_args.largest_pn = 0;
-    QuicCryptoV.packet_unprotect_args.keys = keys;
-    QuicCryptoV.packet_unprotect_args.is_long = PROTO_FALSE;
-    QuicCryptoV.packet_unprotect_args.out = plain;
-    QuicCryptoV.packet_unprotect_args.out_pn = &pn;
-    QuicCrypto.packet_unprotect(quic_crypto_work);
-    return QuicCryptoV.n;
+    size_t quic_crypto_n =
+        QuicCrypto.packet_unprotect(quic_crypto_work, work, 1 + dcl, len - (1 + dcl), 0, keys, PROTO_FALSE, plain, &pn);
+    return quic_crypto_n;
 }
 
 static size_t extract_crypto(const uint8_t *p, size_t len, uint8_t *out)
@@ -385,8 +342,7 @@ static void make_cfg(QuicTlsConfig *cfg)
     memcpy(cfg->ed25519_seed, SERVER_SEED, 32);
     memcpy(cfg->ephemeral_priv, SERVER_PRIV, 32);
     memcpy(cfg->random, SERVER_RANDOM, 32);
-    QuicTpV.defaults_args.tp = &cfg->params;
-    QuicTp.defaults(quic_tp_work);
+    QuicTp.defaults(quic_tp_work, &cfg->params);
     cfg->params.initial_max_data = 1048576;
     cfg->params.initial_max_sd_bidi_remote = 262144;
     cfg->params.initial_max_streams_bidi = 8;
@@ -410,23 +366,15 @@ void test_full_handshake_and_stream()
     QuicConn.init(g_qc_ctx);
 
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
 
     QuicTransportParams ctp;
-    QuicTpV.defaults_args.tp = &ctp;
-    QuicTp.defaults(quic_tp_work);
+    QuicTp.defaults(quic_tp_work, &ctp);
     ctp.initial_max_data = 524288;
     ctp.initial_max_sd_bidi_local = 131072;
     uint8_t ctp_enc[128];
-    QuicTpV.encode_args.tp = &ctp;
-    QuicTpV.encode_args.out = ctp_enc;
-    QuicTpV.encode_args.cap = sizeof(ctp_enc);
-    QuicTp.encode(quic_tp_work);
-    size_t ctp_len = QuicTpV.n;
+    size_t quic_tp_n = QuicTp.encode(quic_tp_work, &ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = quic_tp_n;
     uint8_t client_pub[32];
     Curve25519V.x25519_base_args.out = client_pub;
     Curve25519V.x25519_base_args.scalar = CLIENT_PRIV;
@@ -493,14 +441,8 @@ void test_full_handshake_and_stream()
     Tls13KsV.step.ch_sh_hash = ch_sh;
     Tls13Ks.handshake(NULL);
     QuicPacketKeys hs_server_keys, hs_client_keys;
-    QuicCryptoV.keys_from_secret_args.keys_work = tw;
-    QuicCryptoV.keys_from_secret_args.secret = cks.s + TLS13_KS_SERVER_HS;
-    QuicCryptoV.keys_from_secret_args.out = &hs_server_keys;
-    QuicCrypto.keys_from_secret(quic_crypto_work);
-    QuicCryptoV.keys_from_secret_args.keys_work = tw;
-    QuicCryptoV.keys_from_secret_args.secret = cks.s + TLS13_KS_CLIENT_HS;
-    QuicCryptoV.keys_from_secret_args.out = &hs_client_keys;
-    QuicCrypto.keys_from_secret(quic_crypto_work);
+    QuicCrypto.keys_from_secret(quic_crypto_work, tw, cks.s + TLS13_KS_SERVER_HS, &hs_server_keys);
+    QuicCrypto.keys_from_secret(quic_crypto_work, tw, cks.s + TLS13_KS_CLIENT_HS, &hs_client_keys);
 
     size_t hswire = 0;
     uint8_t hstype = 0;
@@ -515,14 +457,8 @@ void test_full_handshake_and_stream()
     Tls13KsV.step.ch_sfin_hash = ch_sf;
     Tls13Ks.master(NULL);
     QuicPacketKeys ap_server_keys, ap_client_keys;
-    QuicCryptoV.keys_from_secret_args.keys_work = tw;
-    QuicCryptoV.keys_from_secret_args.secret = cks.s + TLS13_KS_SERVER_AP;
-    QuicCryptoV.keys_from_secret_args.out = &ap_server_keys;
-    QuicCrypto.keys_from_secret(quic_crypto_work);
-    QuicCryptoV.keys_from_secret_args.keys_work = tw;
-    QuicCryptoV.keys_from_secret_args.secret = cks.s + TLS13_KS_CLIENT_AP;
-    QuicCryptoV.keys_from_secret_args.out = &ap_client_keys;
-    QuicCrypto.keys_from_secret(quic_crypto_work);
+    QuicCrypto.keys_from_secret(quic_crypto_work, tw, cks.s + TLS13_KS_SERVER_AP, &ap_server_keys);
+    QuicCrypto.keys_from_secret(quic_crypto_work, tw, cks.s + TLS13_KS_CLIENT_AP, &ap_client_keys);
 
     assert_ctx_match(g_qc.tls.hs_server.gcm, hs_server_keys.gcm);
     assert_ctx_match(g_qc.tls.ap_server.gcm, ap_server_keys.gcm);
@@ -567,9 +503,8 @@ void test_full_handshake_and_stream()
     size_t off = 0;
     while (off < sl)
     {
-        QuicPacketV.is_long_header_args.first = sdg[off];
-        QuicPacket.is_long_header(quic_packet_work);
-        if (QuicPacketV.ok)
+        proto_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, sdg[off]);
+        if (quic_packet_ok)
         {
             size_t w = 0;
             uint8_t tp2 = 0;
@@ -622,9 +557,8 @@ void test_full_handshake_and_stream()
     proto_bool got_resp = PROTO_FALSE;
     while (off < sl)
     {
-        QuicPacketV.is_long_header_args.first = sdg[off];
-        QuicPacket.is_long_header(quic_packet_work);
-        if (QuicPacketV.ok)
+        proto_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, sdg[off]);
+        if (quic_packet_ok)
         {
             size_t w = 0;
             uint8_t tp2 = 0;
@@ -678,9 +612,8 @@ void test_full_handshake_and_stream()
     off = 0;
     while (off < sl)
     {
-        QuicPacketV.is_long_header_args.first = sdg[off];
-        QuicPacket.is_long_header(quic_packet_work);
-        if (QuicPacketV.ok)
+        proto_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, sdg[off]);
+        if (quic_packet_ok)
         {
             size_t w = 0;
             uint8_t tp2 = 0;
@@ -735,21 +668,13 @@ void test_pto_retransmits_flight()
     QuicConn.init(g_qc_ctx);
 
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
 
     QuicTransportParams ctp;
-    QuicTpV.defaults_args.tp = &ctp;
-    QuicTp.defaults(quic_tp_work);
+    QuicTp.defaults(quic_tp_work, &ctp);
     uint8_t ctp_enc[128];
-    QuicTpV.encode_args.tp = &ctp;
-    QuicTpV.encode_args.out = ctp_enc;
-    QuicTpV.encode_args.cap = sizeof(ctp_enc);
-    QuicTp.encode(quic_tp_work);
-    size_t ctp_len = QuicTpV.n;
+    size_t quic_tp_n = QuicTp.encode(quic_tp_work, &ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = quic_tp_n;
     uint8_t client_pub[32];
     Curve25519V.x25519_base_args.out = client_pub;
     Curve25519V.x25519_base_args.scalar = CLIENT_PRIV;
@@ -847,20 +772,12 @@ static void feed_client_initial(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicInit
         QuicConnV.cb.app = NULL;
     }
     QuicConn.init(QUIC_SPAN(qc));
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), init);
     QuicTransportParams ctp;
-    QuicTpV.defaults_args.tp = &ctp;
-    QuicTp.defaults(quic_tp_work);
+    QuicTp.defaults(quic_tp_work, &ctp);
     uint8_t ctp_enc[128];
-    QuicTpV.encode_args.tp = &ctp;
-    QuicTpV.encode_args.out = ctp_enc;
-    QuicTpV.encode_args.cap = sizeof(ctp_enc);
-    QuicTp.encode(quic_tp_work);
-    size_t ctp_len = QuicTpV.n;
+    size_t quic_tp_n = QuicTp.encode(quic_tp_work, &ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = quic_tp_n;
     uint8_t client_pub[32];
     Curve25519V.x25519_base_args.out = client_pub;
     Curve25519V.x25519_base_args.scalar = CLIENT_PRIV;
@@ -956,14 +873,8 @@ void test_connection_close_on_malformed_frame()
     Tls13KsV.step.ch_sh_hash = ch_sh;
     Tls13Ks.handshake(NULL);
     QuicPacketKeys hs_server_keys, hs_client_keys;
-    QuicCryptoV.keys_from_secret_args.keys_work = tw;
-    QuicCryptoV.keys_from_secret_args.secret = cks.s + TLS13_KS_SERVER_HS;
-    QuicCryptoV.keys_from_secret_args.out = &hs_server_keys;
-    QuicCrypto.keys_from_secret(quic_crypto_work);
-    QuicCryptoV.keys_from_secret_args.keys_work = tw;
-    QuicCryptoV.keys_from_secret_args.secret = cks.s + TLS13_KS_CLIENT_HS;
-    QuicCryptoV.keys_from_secret_args.out = &hs_client_keys;
-    QuicCrypto.keys_from_secret(quic_crypto_work);
+    QuicCrypto.keys_from_secret(quic_crypto_work, tw, cks.s + TLS13_KS_SERVER_HS, &hs_server_keys);
+    QuicCrypto.keys_from_secret(quic_crypto_work, tw, cks.s + TLS13_KS_CLIENT_HS, &hs_client_keys);
 
     uint8_t bad[4] = {QUIC_FT_CRYPTO, 0x00, 0x7f, 0xff};
     uint8_t bdg[256];
@@ -1049,11 +960,7 @@ void test_quic_recv_connection_close()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
 
     uint8_t fr[32];
     size_t quic_frame_n =
@@ -1082,11 +989,7 @@ void test_quic_recv_ping_and_max_data()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
 
     uint8_t fr[16];
     size_t quic_frame_n = QuicFrame.build_ping(quic_frame_work, fr, sizeof(fr));
@@ -1111,11 +1014,7 @@ void test_quic_recv_bad_version()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
     uint8_t fr[8] = {QUIC_FT_PING};
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
@@ -1134,11 +1033,7 @@ void test_quic_recv_unsupported_long_type()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
     uint8_t fr[8] = {QUIC_FT_PING};
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_0RTT, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
@@ -1156,11 +1051,7 @@ void test_quic_recv_short_before_app_keys()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
     uint8_t fr[8] = {QUIC_FT_PING};
     uint8_t dg[256];
     size_t dl = build_short(dg, sizeof(dg), SERVER_SCID, sizeof(SERVER_SCID), 0, &init.client, fr, 1);
@@ -1190,11 +1081,7 @@ void test_quic_recv_unprotect_failure()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
     uint8_t fr[8] = {QUIC_FT_PING};
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
@@ -1242,11 +1129,7 @@ void test_quic_crypto_out_of_order_and_dup()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
     uint8_t data[4] = {0x01, 0x00, 0x00, 0xFF};
     uint8_t fr[32], dg[256];
 
@@ -1287,11 +1170,7 @@ void test_quic_timeout_when_closed()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
     uint8_t fr[32];
     size_t quic_frame_n =
         QuicFrame.build_connection_close(quic_frame_work, fr, sizeof(fr), PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
@@ -1341,17 +1220,10 @@ void test_quic_recv_malformed_initial_headers()
     init_conn(&g_qc, &cb);
     uint8_t dg[1500];
 
-    QuicPacketV.build_long_header_args.out = dg;
-    QuicPacketV.build_long_header_args.cap = sizeof dg;
-    QuicPacketV.build_long_header_args.type = QUIC_LP_INITIAL;
-    QuicPacketV.build_long_header_args.version = QUIC_VERSION_1;
-    QuicPacketV.build_long_header_args.dcid = ODCID;
-    QuicPacketV.build_long_header_args.dcid_len = sizeof(ODCID);
-    QuicPacketV.build_long_header_args.scid = CLIENT_SCID;
-    QuicPacketV.build_long_header_args.scid_len = sizeof(CLIENT_SCID);
-    QuicPacketV.build_long_header_args.pn_len = 1;
-    QuicPacket.build_long_header(quic_packet_work);
-    size_t hn = QuicPacketV.n;
+    size_t quic_packet_n =
+        QuicPacket.build_long_header(quic_packet_work, dg, sizeof dg, QUIC_LP_INITIAL, QUIC_VERSION_1, ODCID,
+                                     sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 1);
+    size_t hn = quic_packet_n;
     dg[hn] = 0xC0;
     QuicConnV.bind.b = g_qc_b;
     QuicConnV.recv_args.datagram = dg;
@@ -1404,11 +1276,7 @@ void test_quic_recv_handshake_done_frame()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
     uint8_t hd[32];
     size_t quic_frame_n = QuicFrame.build_handshake_done(quic_frame_work, hd, sizeof hd);
     size_t hdl = quic_frame_n;
@@ -1430,11 +1298,7 @@ void test_quic_conn_stream_frames()
 {
     fill();
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
     uint8_t dg[1500];
 
     {
@@ -1496,11 +1360,7 @@ void test_quic_conn_crypto_window_clamp()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
     uint8_t dg[1500];
     uint8_t chunk[1200];
     chunk[0] = 0x01;
@@ -1536,11 +1396,7 @@ void test_quic_conn_crypto_error_close()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
     uint8_t bad_ch[6] = {0x01, 0x00, 0x00, 0x02, 0x03, 0x03};
     uint8_t fr[32];
     size_t quic_frame_n = QuicFrame.build_crypto(quic_frame_work, fr, sizeof fr, 0, bad_ch, sizeof bad_ch);
@@ -1569,11 +1425,7 @@ void test_quic_conn_no_keys_build()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
     uint8_t fr[32] = {QUIC_FT_PING};
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, sizeof fr);
@@ -1660,23 +1512,15 @@ static void complete_handshake(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicIniti
         QuicConnV.cb.app = NULL;
     }
     QuicConn.init(QUIC_SPAN(qc));
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), init);
 
     QuicTransportParams ctp;
-    QuicTpV.defaults_args.tp = &ctp;
-    QuicTp.defaults(quic_tp_work);
+    QuicTp.defaults(quic_tp_work, &ctp);
     ctp.initial_max_data = 524288;
     ctp.initial_max_sd_bidi_local = 131072;
     uint8_t ctp_enc[128];
-    QuicTpV.encode_args.tp = &ctp;
-    QuicTpV.encode_args.out = ctp_enc;
-    QuicTpV.encode_args.cap = sizeof(ctp_enc);
-    QuicTp.encode(quic_tp_work);
-    size_t ctp_len = QuicTpV.n;
+    size_t quic_tp_n = QuicTp.encode(quic_tp_work, &ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = quic_tp_n;
     uint8_t client_pub[32];
     Curve25519V.x25519_base_args.out = client_pub;
     Curve25519V.x25519_base_args.scalar = CLIENT_PRIV;
@@ -1737,14 +1581,8 @@ static void complete_handshake(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicIniti
     Tls13KsV.step.ch_sh_hash = ch_sh;
     Tls13Ks.handshake(NULL);
     QuicPacketKeys hs_server_keys, hs_client_keys;
-    QuicCryptoV.keys_from_secret_args.keys_work = tw;
-    QuicCryptoV.keys_from_secret_args.secret = cks.s + TLS13_KS_SERVER_HS;
-    QuicCryptoV.keys_from_secret_args.out = &hs_server_keys;
-    QuicCrypto.keys_from_secret(quic_crypto_work);
-    QuicCryptoV.keys_from_secret_args.keys_work = tw;
-    QuicCryptoV.keys_from_secret_args.secret = cks.s + TLS13_KS_CLIENT_HS;
-    QuicCryptoV.keys_from_secret_args.out = &hs_client_keys;
-    QuicCrypto.keys_from_secret(quic_crypto_work);
+    QuicCrypto.keys_from_secret(quic_crypto_work, tw, cks.s + TLS13_KS_SERVER_HS, &hs_server_keys);
+    QuicCrypto.keys_from_secret(quic_crypto_work, tw, cks.s + TLS13_KS_CLIENT_HS, &hs_client_keys);
     size_t hswire = 0;
     uint8_t hstype = 0;
     size_t hpt = open_long(sdg + wire, sl - wire, &hs_server_keys, plain, &hswire, &hstype);
@@ -1754,14 +1592,8 @@ static void complete_handshake(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicIniti
     Tls13KsV.bind.ks = &cks;
     Tls13KsV.step.ch_sfin_hash = ch_sf;
     Tls13Ks.master(NULL);
-    QuicCryptoV.keys_from_secret_args.keys_work = tw;
-    QuicCryptoV.keys_from_secret_args.secret = cks.s + TLS13_KS_CLIENT_AP;
-    QuicCryptoV.keys_from_secret_args.out = ap_client;
-    QuicCrypto.keys_from_secret(quic_crypto_work);
-    QuicCryptoV.keys_from_secret_args.keys_work = tw;
-    QuicCryptoV.keys_from_secret_args.secret = cks.s + TLS13_KS_SERVER_AP;
-    QuicCryptoV.keys_from_secret_args.out = ap_server;
-    QuicCrypto.keys_from_secret(quic_crypto_work);
+    QuicCrypto.keys_from_secret(quic_crypto_work, tw, cks.s + TLS13_KS_CLIENT_AP, ap_client);
+    QuicCrypto.keys_from_secret(quic_crypto_work, tw, cks.s + TLS13_KS_SERVER_AP, ap_server);
 
     uint8_t ifr[64];
     quic_frame_n = QuicFrame.build_ack(quic_frame_work, ifr, sizeof(ifr), 0, 0, 0);
@@ -1890,11 +1722,7 @@ void test_quic_conn_null_callbacks()
     TEST_ASSERT_NULL(g_qc.cb.on_handshake_done);
 
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
 
     uint8_t d[3] = {1, 2, 3};
     uint8_t fr[64];
@@ -1927,11 +1755,7 @@ void test_quic_conn_stream_duplicate_and_stale_fin()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
     uint8_t d[4] = {0xA1, 0xA2, 0xA3, 0xA4};
     uint8_t fr[64], dg[256];
     uint64_t pn = 0;
@@ -1989,11 +1813,7 @@ void test_quic_conn_frame_dispatch_variants()
 {
     fill();
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
     uint8_t dg[512];
 
     {
@@ -2062,11 +1882,7 @@ void test_quic_recv_zero_version()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
     uint8_t fr[8] = {QUIC_FT_PING};
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
@@ -2085,11 +1901,7 @@ void test_quic_recv_older_packet_number()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
     uint8_t fr[24] = {QUIC_FT_PING};
     uint8_t dg[256];
 
@@ -2198,11 +2010,7 @@ void test_quic_conn_close_after_peer_close()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
 
     uint8_t fr[32];
     size_t quic_frame_n =
@@ -2378,21 +2186,13 @@ void test_quic_conn_crypto_flight_fragmented()
     QuicConnV.cb = cb;
     QuicConn.init(g_qc_ctx);
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
 
     QuicTransportParams ctp;
-    QuicTpV.defaults_args.tp = &ctp;
-    QuicTp.defaults(quic_tp_work);
+    QuicTp.defaults(quic_tp_work, &ctp);
     uint8_t ctp_enc[128];
-    QuicTpV.encode_args.tp = &ctp;
-    QuicTpV.encode_args.out = ctp_enc;
-    QuicTpV.encode_args.cap = sizeof(ctp_enc);
-    QuicTp.encode(quic_tp_work);
-    size_t ctp_len = QuicTpV.n;
+    size_t quic_tp_n = QuicTp.encode(quic_tp_work, &ctp, ctp_enc, sizeof(ctp_enc));
+    size_t ctp_len = quic_tp_n;
     uint8_t client_pub[32];
     Curve25519V.x25519_base_args.out = client_pub;
     Curve25519V.x25519_base_args.scalar = CLIENT_PRIV;
@@ -2799,11 +2599,7 @@ void test_quic_conn_close_level_without_keys()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     QuicInitialSecrets init;
-    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
-    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCryptoV.derive_initial_secrets_args.out = &init;
-    QuicCrypto.derive_initial_secrets(quic_crypto_work);
+    QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
 
     uint8_t fr[64] = {QUIC_FT_PING};
     uint8_t dg[512];

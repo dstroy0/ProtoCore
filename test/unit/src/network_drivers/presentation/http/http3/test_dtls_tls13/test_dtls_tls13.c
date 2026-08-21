@@ -179,11 +179,8 @@ void test_rfc7250_raw_public_key_certificate(void)
     static const uint8_t RFC8410_KEY[32] = {0x19, 0xBF, 0x44, 0x09, 0x69, 0x84, 0xCD, 0xFE, 0x85, 0x41, 0xBA,
                                             0xC1, 0x67, 0xDC, 0x3B, 0x96, 0xC8, 0x50, 0x86, 0xAA, 0x30, 0xB6,
                                             0xB6, 0xCB, 0x0C, 0x5C, 0x38, 0xAD, 0x70, 0x31, 0x66, 0xE1};
-    Tls13RpkV.build_certificate_args.out = g_out;
-    Tls13RpkV.build_certificate_args.cap = sizeof(g_out);
-    Tls13RpkV.build_certificate_args.ed25519_pub = RFC8410_KEY;
-    Tls13Rpk.build_certificate(tls13_rpk_work);
-    size_t n = Tls13RpkV.n;
+    size_t tls13_rpk_n = Tls13Rpk.build_certificate(tls13_rpk_work, g_out, sizeof(g_out), RFC8410_KEY);
+    size_t n = tls13_rpk_n;
     TEST_ASSERT_EQUAL_UINT(57u, n);
     TEST_ASSERT_EQUAL_HEX8(11, g_out[0]); // handshake type certificate
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[1]);
@@ -329,9 +326,6 @@ void test_builders_refuse_a_short_destination(void)
     Tls13MsgV.build_message_hash_args.ch1_hash = ch1;
     Tls13Msg.build_message_hash(tls13_msg_work);
     TEST_ASSERT_EQUAL_UINT(0u, Tls13MsgV.n);
-    Tls13RpkV.build_certificate_args.out = g_out;
-    Tls13RpkV.build_certificate_args.cap = 56;
-    Tls13RpkV.build_certificate_args.ed25519_pub = ch1;
-    Tls13Rpk.build_certificate(tls13_rpk_work);
-    TEST_ASSERT_EQUAL_UINT(0u, Tls13RpkV.n);
+    size_t tls13_rpk_n = Tls13Rpk.build_certificate(tls13_rpk_work, g_out, 56, ch1);
+    TEST_ASSERT_EQUAL_UINT(0u, tls13_rpk_n);
 }

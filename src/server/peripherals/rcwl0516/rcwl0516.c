@@ -12,15 +12,11 @@
  * true elapsed interval.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_RCWL0516
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "server/clock/clock.h"       // Clock.millis
 #include "server/peripherals/rcwl0516/rcwl0516.h"
-
-PROTOCORE_BEGIN_DECLS
 
 #if !PROTOCORE_HAS_GPIO
 #error                                                                                                                 \
@@ -57,19 +53,10 @@ uint8_t *protocore_rcwl0516_span(void)
     return s_own.span;
 }
 
-void protocore_rcwl0516_core_init(uint8_t *restrict work);
-void protocore_rcwl0516_presence_get(uint8_t *restrict work);
-void protocore_rcwl0516_presence_init(uint8_t *restrict work);
-void protocore_rcwl0516_presence_take_event(uint8_t *restrict work);
-void protocore_rcwl0516_presence_update(uint8_t *restrict work);
-
-void protocore_rcwl0516_presence_init(uint8_t *restrict work)
+void protocore_rcwl0516_presence_init(uint8_t *restrict work, PresenceCore *c, uint32_t debounce_ms, uint32_t hold_ms,
+                                      uint32_t now)
 {
     (void)work;
-    PresenceCore *c = Rcwl0516V.presence_init_args.c;
-    uint32_t debounce_ms = Rcwl0516V.presence_init_args.debounce_ms;
-    uint32_t hold_ms = Rcwl0516V.presence_init_args.hold_ms;
-    uint32_t now = Rcwl0516V.presence_init_args.now;
 
     if (!c)
     {
@@ -85,17 +72,14 @@ void protocore_rcwl0516_presence_init(uint8_t *restrict work)
     c->changed = 0;
 }
 
-void protocore_rcwl0516_presence_update(uint8_t *restrict work)
+proto_bool protocore_rcwl0516_presence_update(uint8_t *restrict work, PresenceCore *c, proto_bool pin_high,
+                                              uint32_t now)
 {
     (void)work;
-    PresenceCore *c = Rcwl0516V.presence_update_args.c;
-    proto_bool pin_high = Rcwl0516V.presence_update_args.pin_high;
-    uint32_t now = Rcwl0516V.presence_update_args.now;
 
     if (!c)
     {
-        Rcwl0516V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     const uint8_t lvl = pin_high ? 1u : 0u;
 
@@ -128,41 +112,32 @@ void protocore_rcwl0516_presence_update(uint8_t *restrict work)
     {
         c->changed = 1;
     }
-    Rcwl0516V.ok = c->present != 0;
+    return c->present != 0;
 }
 
-void protocore_rcwl0516_presence_get(uint8_t *restrict work)
+proto_bool protocore_rcwl0516_presence_get(uint8_t *restrict work, const PresenceCore *c)
 {
     (void)work;
-    const PresenceCore *c = Rcwl0516V.presence_get_args.c;
 
-    Rcwl0516V.ok = c && c->present != 0;
+    return c && c->present != 0;
 }
 
-void protocore_rcwl0516_presence_take_event(uint8_t *restrict work)
+proto_bool protocore_rcwl0516_presence_take_event(uint8_t *restrict work, PresenceCore *c)
 {
     (void)work;
-    PresenceCore *c = Rcwl0516V.presence_take_event_args.c;
 
     if (!c || !c->changed)
     {
-        Rcwl0516V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     c->changed = 0;
-    Rcwl0516V.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_rcwl0516_core_init(uint8_t *restrict work)
+void protocore_rcwl0516_core_init(uint8_t *restrict work, PresenceCore *c, uint32_t now)
 {
-    PresenceCore *c = Rcwl0516V.core_init_args.c;
-    uint32_t now = Rcwl0516V.core_init_args.now;
 
-    Rcwl0516V.presence_init_args.c = c;
-    Rcwl0516V.presence_init_args.debounce_ms = PROTOCORE_RCWL0516_DEBOUNCE_MS;
-    Rcwl0516V.presence_init_args.hold_ms = PROTOCORE_RCWL0516_HOLD_MS;
-    Rcwl0516V.presence_init_args.now = now;
-    protocore_rcwl0516_presence_init(work);
+    Rcwl0516.presence_init(work, c, PROTOCORE_RCWL0516_DEBOUNCE_MS, PROTOCORE_RCWL0516_HOLD_MS, now);
 }
 
 // ---------------------------------------------------------------------------
@@ -206,45 +181,31 @@ static int dev_pin(uint8_t *restrict work)
     return RCWL0516_CTX(work)->begun ? RCWL0516_CTX(work)->pin : -1;
 }
 
-void protocore_rcwl0516_begin(uint8_t *restrict work)
+proto_bool protocore_rcwl0516_begin(uint8_t *restrict work, int out_pin)
 {
-    int out_pin = Rcwl0516V.begin_args.out_pin;
 
     RCWL0516_CTX(work)->pin = out_pin;
     RCWL0516_CTX(work)->begun = PROTO_TRUE;
     protocore_platform_gpio_mode((uint8_t)(out_pin),
                                  PROTOCORE_GPIO_IN); // the module drives OUT actively; no pull needed
-    Rcwl0516V.core_init_args.c = &RCWL0516_CTX(work)->core;
-    Rcwl0516V.core_init_args.now = Clock.ms;
-    protocore_rcwl0516_core_init(work);
-    Rcwl0516V.ok = PROTO_TRUE;
+    Rcwl0516.core_init(work, &RCWL0516_CTX(work)->core, Clock.ms);
+    return PROTO_TRUE;
 }
 
-void protocore_rcwl0516_poll(uint8_t *restrict work)
+proto_bool protocore_rcwl0516_poll(uint8_t *restrict work)
 {
     const int pin = dev_pin(work);
     if (pin < 0)
     {
-        Rcwl0516V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
-    Rcwl0516V.presence_update_args.c = &RCWL0516_CTX(work)->core;
-    Rcwl0516V.presence_update_args.pin_high = protocore_platform_gpio_read((uint8_t)(pin)) == PROTOCORE_GPIO_HIGH;
-    Rcwl0516V.presence_update_args.now = Clock.ms;
-    protocore_rcwl0516_presence_update(work);
-    Rcwl0516V.presence_take_event_args.c = &RCWL0516_CTX(work)->core;
-    protocore_rcwl0516_presence_take_event(work);
+    Rcwl0516.presence_update(work, &RCWL0516_CTX(work)->core,
+                             protocore_platform_gpio_read((uint8_t)(pin)) == PROTOCORE_GPIO_HIGH, Clock.ms);
+    Rcwl0516.presence_take_event(work, &RCWL0516_CTX(work)->core);
+    return PROTO_FALSE;
 }
 
 void protocore_rcwl0516_present(uint8_t *restrict work)
 {
-    Rcwl0516V.presence_get_args.c = &RCWL0516_CTX(work)->core;
-    protocore_rcwl0516_presence_get(work);
+    Rcwl0516.presence_get(work, &RCWL0516_CTX(work)->core);
 }
-
-/** @brief The operands and the outcome. */
-Rcwl0516Vars Rcwl0516V;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_RCWL0516

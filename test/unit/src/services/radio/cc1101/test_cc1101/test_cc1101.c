@@ -141,10 +141,8 @@ void tearDown()
 void test_init_configures_and_detects(void)
 {
     protocore_cc1101_config c = default_cfg();
-    Cc1101V.init_args.bus = &g_bus;
-    Cc1101V.init_args.cfg = &c;
-    Cc1101.init(cc1101_work);
-    TEST_ASSERT_TRUE(Cc1101V.ok);
+    proto_bool cc1101_ok = Cc1101.init(cc1101_work, &g_bus, &c);
+    TEST_ASSERT_TRUE(cc1101_ok);
     TEST_ASSERT_EQUAL_HEX8(0x30, g.last_strobe);
     TEST_ASSERT_EQUAL_HEX8(0x29, g.reg[0x00]);
     TEST_ASSERT_EQUAL_HEX8(0x05, g.reg[0x08]);
@@ -155,25 +153,18 @@ void test_init_fails_when_absent(void)
 {
     g.version = 0x00;
     protocore_cc1101_config c = default_cfg();
-    Cc1101V.init_args.bus = &g_bus;
-    Cc1101V.init_args.cfg = &c;
-    Cc1101.init(cc1101_work);
-    TEST_ASSERT_FALSE(Cc1101V.ok);
+    proto_bool cc1101_ok = Cc1101.init(cc1101_work, &g_bus, &c);
+    TEST_ASSERT_FALSE(cc1101_ok);
     g.version = 0xFF;
-    Cc1101V.init_args.bus = &g_bus;
-    Cc1101V.init_args.cfg = &c;
-    Cc1101.init(cc1101_work);
-    TEST_ASSERT_FALSE(Cc1101V.ok);
+    cc1101_ok = Cc1101.init(cc1101_work, &g_bus, &c);
+    TEST_ASSERT_FALSE(cc1101_ok);
 }
 
 void test_send_writes_fifo_and_strobes_tx(void)
 {
     const uint8_t data[3] = {0xAA, 0xBB, 0xCC};
-    Cc1101V.send_args.bus = &g_bus;
-    Cc1101V.send_args.data = data;
-    Cc1101V.send_args.len = 3;
-    Cc1101.send(cc1101_work);
-    TEST_ASSERT_TRUE(Cc1101V.ok);
+    proto_bool cc1101_ok = Cc1101.send(cc1101_work, &g_bus, data, 3);
+    TEST_ASSERT_TRUE(cc1101_ok);
     TEST_ASSERT_EQUAL_UINT8(4, g.txlen);
     TEST_ASSERT_EQUAL_UINT8(3, g.txfifo[0]);
     TEST_ASSERT_EQUAL_MEMORY(data, g.txfifo + 1, 3);
@@ -184,35 +175,26 @@ void test_send_writes_fifo_and_strobes_tx(void)
 void test_send_rejects_bad_len(void)
 {
     const uint8_t d[1] = {0};
-    Cc1101V.send_args.bus = &g_bus;
-    Cc1101V.send_args.data = d;
-    Cc1101V.send_args.len = 0;
-    Cc1101.send(cc1101_work);
-    TEST_ASSERT_FALSE(Cc1101V.ok);
+    proto_bool cc1101_ok = Cc1101.send(cc1101_work, &g_bus, d, 0);
+    TEST_ASSERT_FALSE(cc1101_ok);
     uint8_t big[64] = {0};
-    Cc1101V.send_args.bus = &g_bus;
-    Cc1101V.send_args.data = big;
-    Cc1101V.send_args.len = 64;
-    Cc1101.send(cc1101_work);
-    TEST_ASSERT_FALSE(Cc1101V.ok);
+    cc1101_ok = Cc1101.send(cc1101_work, &g_bus, big, 64);
+    TEST_ASSERT_FALSE(cc1101_ok);
 }
 
 void test_tx_done(void)
 {
     g.state = 2;
-    Cc1101V.tx_done_args.bus = &g_bus;
-    Cc1101.tx_done(cc1101_work);
-    TEST_ASSERT_FALSE(Cc1101V.ok);
+    proto_bool cc1101_ok = Cc1101.tx_done(cc1101_work, &g_bus);
+    TEST_ASSERT_FALSE(cc1101_ok);
     g.state = 0;
-    Cc1101V.tx_done_args.bus = &g_bus;
-    Cc1101.tx_done(cc1101_work);
-    TEST_ASSERT_TRUE(Cc1101V.ok);
+    cc1101_ok = Cc1101.tx_done(cc1101_work, &g_bus);
+    TEST_ASSERT_TRUE(cc1101_ok);
 }
 
 void test_set_rx(void)
 {
-    Cc1101V.set_rx_args.bus = &g_bus;
-    Cc1101.set_rx(cc1101_work);
+    Cc1101.set_rx(cc1101_work, &g_bus);
     TEST_ASSERT_EQUAL_HEX8(0x34, g.last_strobe);
     TEST_ASSERT_EQUAL_UINT8(1, g.state);
 }
@@ -229,12 +211,8 @@ void test_recv_reads_packet_and_rssi(void)
     g.rxread = 0;
     uint8_t buf[16];
     int16_t rssi = 0;
-    Cc1101V.recv_args.bus = &g_bus;
-    Cc1101V.recv_args.buf = buf;
-    Cc1101V.recv_args.cap = sizeof(buf);
-    Cc1101V.recv_args.rssi_dbm = &rssi;
-    Cc1101.recv(cc1101_work);
-    int n = Cc1101V.n;
+    int cc1101_n = Cc1101.recv(cc1101_work, &g_bus, buf, sizeof(buf), &rssi);
+    int n = cc1101_n;
     TEST_ASSERT_EQUAL_INT(3, n);
     TEST_ASSERT_EQUAL_MEMORY(payload, buf, 3);
     TEST_ASSERT_EQUAL_INT16(-34, rssi);
@@ -244,12 +222,8 @@ void test_recv_empty(void)
 {
     g.rxcount = 0;
     uint8_t buf[16];
-    Cc1101V.recv_args.bus = &g_bus;
-    Cc1101V.recv_args.buf = buf;
-    Cc1101V.recv_args.cap = sizeof(buf);
-    Cc1101V.recv_args.rssi_dbm = NULL;
-    Cc1101.recv(cc1101_work);
-    TEST_ASSERT_EQUAL_INT(-1, Cc1101V.n);
+    int cc1101_n = Cc1101.recv(cc1101_work, &g_bus, buf, sizeof(buf), NULL);
+    TEST_ASSERT_EQUAL_INT(-1, cc1101_n);
 }
 
 void test_recv_truncates(void)
@@ -264,12 +238,8 @@ void test_recv_truncates(void)
     g.rxcount = 7;
     g.rxread = 0;
     uint8_t buf[2];
-    Cc1101V.recv_args.bus = &g_bus;
-    Cc1101V.recv_args.buf = buf;
-    Cc1101V.recv_args.cap = sizeof(buf);
-    Cc1101V.recv_args.rssi_dbm = NULL;
-    Cc1101.recv(cc1101_work);
-    int n = Cc1101V.n;
+    int cc1101_n = Cc1101.recv(cc1101_work, &g_bus, buf, sizeof(buf), NULL);
+    int n = cc1101_n;
     TEST_ASSERT_EQUAL_INT(2, n);
     TEST_ASSERT_EQUAL_HEX8(0x60, buf[0]);
     TEST_ASSERT_EQUAL_HEX8(0x61, buf[1]);
@@ -278,62 +248,38 @@ void test_recv_truncates(void)
 void test_rssi_decode(void)
 {
 
-    Cc1101V.rssi_dbm_args.raw = 0x50;
-    Cc1101.rssi_dbm(cc1101_work);
-    TEST_ASSERT_EQUAL_INT16(-34, Cc1101V.value);
-    Cc1101V.rssi_dbm_args.raw = 0x00;
-    Cc1101.rssi_dbm(cc1101_work);
-    TEST_ASSERT_EQUAL_INT16(-74, Cc1101V.value);
-    Cc1101V.rssi_dbm_args.raw = 0x80;
-    Cc1101.rssi_dbm(cc1101_work);
-    TEST_ASSERT_EQUAL_INT16(-138, Cc1101V.value);
+    int16_t cc1101_value = Cc1101.rssi_dbm(cc1101_work, 0x50);
+    TEST_ASSERT_EQUAL_INT16(-34, cc1101_value);
+    cc1101_value = Cc1101.rssi_dbm(cc1101_work, 0x00);
+    TEST_ASSERT_EQUAL_INT16(-74, cc1101_value);
+    cc1101_value = Cc1101.rssi_dbm(cc1101_work, 0x80);
+    TEST_ASSERT_EQUAL_INT16(-138, cc1101_value);
 }
 
 void test_send_guard_subconditions()
 {
     uint8_t data[8] = {0};
-    Cc1101V.send_args.bus = NULL;
-    Cc1101V.send_args.data = data;
-    Cc1101V.send_args.len = 8;
-    Cc1101.send(cc1101_work);
-    TEST_ASSERT_FALSE(Cc1101V.ok);
-    Cc1101V.send_args.bus = &g_bus;
-    Cc1101V.send_args.data = NULL;
-    Cc1101V.send_args.len = 8;
-    Cc1101.send(cc1101_work);
-    TEST_ASSERT_FALSE(Cc1101V.ok);
-    Cc1101V.send_args.bus = &g_bus;
-    Cc1101V.send_args.data = data;
-    Cc1101V.send_args.len = 0;
-    Cc1101.send(cc1101_work);
-    TEST_ASSERT_FALSE(Cc1101V.ok);
-    Cc1101V.send_args.bus = &g_bus;
-    Cc1101V.send_args.data = data;
-    Cc1101V.send_args.len = 64;
-    Cc1101.send(cc1101_work);
-    TEST_ASSERT_FALSE(Cc1101V.ok);
-    Cc1101V.send_args.bus = &g_bus;
-    Cc1101V.send_args.data = data;
-    Cc1101V.send_args.len = 8;
-    Cc1101.send(cc1101_work);
-    TEST_ASSERT_TRUE(Cc1101V.ok);
+    proto_bool cc1101_ok = Cc1101.send(cc1101_work, NULL, data, 8);
+    TEST_ASSERT_FALSE(cc1101_ok);
+    cc1101_ok = Cc1101.send(cc1101_work, &g_bus, NULL, 8);
+    TEST_ASSERT_FALSE(cc1101_ok);
+    cc1101_ok = Cc1101.send(cc1101_work, &g_bus, data, 0);
+    TEST_ASSERT_FALSE(cc1101_ok);
+    cc1101_ok = Cc1101.send(cc1101_work, &g_bus, data, 64);
+    TEST_ASSERT_FALSE(cc1101_ok);
+    cc1101_ok = Cc1101.send(cc1101_work, &g_bus, data, 8);
+    TEST_ASSERT_TRUE(cc1101_ok);
 }
 
 void test_init_null_args(void)
 {
     protocore_cc1101_config c = default_cfg();
-    Cc1101V.init_args.bus = NULL;
-    Cc1101V.init_args.cfg = &c;
-    Cc1101.init(cc1101_work);
-    TEST_ASSERT_FALSE(Cc1101V.ok);
-    Cc1101V.init_args.bus = &g_bus_no_spi;
-    Cc1101V.init_args.cfg = &c;
-    Cc1101.init(cc1101_work);
-    TEST_ASSERT_FALSE(Cc1101V.ok);
-    Cc1101V.init_args.bus = &g_bus;
-    Cc1101V.init_args.cfg = NULL;
-    Cc1101.init(cc1101_work);
-    TEST_ASSERT_FALSE(Cc1101V.ok);
+    proto_bool cc1101_ok = Cc1101.init(cc1101_work, NULL, &c);
+    TEST_ASSERT_FALSE(cc1101_ok);
+    cc1101_ok = Cc1101.init(cc1101_work, &g_bus_no_spi, &c);
+    TEST_ASSERT_FALSE(cc1101_ok);
+    cc1101_ok = Cc1101.init(cc1101_work, &g_bus, NULL);
+    TEST_ASSERT_FALSE(cc1101_ok);
 }
 
 void test_init_no_regs(void)
@@ -342,30 +288,24 @@ void test_init_no_regs(void)
     c.regs = NULL;
     c.nregs = 2;
     c.channel = 7;
-    Cc1101V.init_args.bus = &g_bus;
-    Cc1101V.init_args.cfg = &c;
-    Cc1101.init(cc1101_work);
-    TEST_ASSERT_TRUE(Cc1101V.ok);
+    proto_bool cc1101_ok = Cc1101.init(cc1101_work, &g_bus, &c);
+    TEST_ASSERT_TRUE(cc1101_ok);
     TEST_ASSERT_EQUAL_UINT8(7, g.reg[0x0A]);
 }
 
 void test_tx_done_null_args(void)
 {
-    Cc1101V.tx_done_args.bus = NULL;
-    Cc1101.tx_done(cc1101_work);
-    TEST_ASSERT_FALSE(Cc1101V.ok);
-    Cc1101V.tx_done_args.bus = &g_bus_no_spi;
-    Cc1101.tx_done(cc1101_work);
-    TEST_ASSERT_FALSE(Cc1101V.ok);
+    proto_bool cc1101_ok = Cc1101.tx_done(cc1101_work, NULL);
+    TEST_ASSERT_FALSE(cc1101_ok);
+    cc1101_ok = Cc1101.tx_done(cc1101_work, &g_bus_no_spi);
+    TEST_ASSERT_FALSE(cc1101_ok);
 }
 
 void test_set_rx_null_args(void)
 {
     g.last_strobe = 0xEE;
-    Cc1101V.set_rx_args.bus = NULL;
-    Cc1101.set_rx(cc1101_work);
-    Cc1101V.set_rx_args.bus = &g_bus_no_spi;
-    Cc1101.set_rx(cc1101_work);
+    Cc1101.set_rx(cc1101_work, NULL);
+    Cc1101.set_rx(cc1101_work, &g_bus_no_spi);
     TEST_ASSERT_EQUAL_HEX8(0xEE, g.last_strobe);
 }
 
@@ -373,24 +313,12 @@ void test_recv_null_args(void)
 {
     uint8_t buf[16];
     int16_t rssi = 0;
-    Cc1101V.recv_args.bus = NULL;
-    Cc1101V.recv_args.buf = buf;
-    Cc1101V.recv_args.cap = sizeof(buf);
-    Cc1101V.recv_args.rssi_dbm = &rssi;
-    Cc1101.recv(cc1101_work);
-    TEST_ASSERT_EQUAL_INT(-1, Cc1101V.n);
-    Cc1101V.recv_args.bus = &g_bus_no_spi;
-    Cc1101V.recv_args.buf = buf;
-    Cc1101V.recv_args.cap = sizeof(buf);
-    Cc1101V.recv_args.rssi_dbm = &rssi;
-    Cc1101.recv(cc1101_work);
-    TEST_ASSERT_EQUAL_INT(-1, Cc1101V.n);
-    Cc1101V.recv_args.bus = &g_bus;
-    Cc1101V.recv_args.buf = NULL;
-    Cc1101V.recv_args.cap = sizeof(buf);
-    Cc1101V.recv_args.rssi_dbm = &rssi;
-    Cc1101.recv(cc1101_work);
-    TEST_ASSERT_EQUAL_INT(-1, Cc1101V.n);
+    int cc1101_n = Cc1101.recv(cc1101_work, NULL, buf, sizeof(buf), &rssi);
+    TEST_ASSERT_EQUAL_INT(-1, cc1101_n);
+    cc1101_n = Cc1101.recv(cc1101_work, &g_bus_no_spi, buf, sizeof(buf), &rssi);
+    TEST_ASSERT_EQUAL_INT(-1, cc1101_n);
+    cc1101_n = Cc1101.recv(cc1101_work, &g_bus, NULL, sizeof(buf), &rssi);
+    TEST_ASSERT_EQUAL_INT(-1, cc1101_n);
 }
 
 void test_recv_bad_length(void)
@@ -401,33 +329,22 @@ void test_recv_bad_length(void)
     g.rxcount = 1;
     g.rxread = 0;
     g.last_strobe = 0;
-    Cc1101V.recv_args.bus = &g_bus;
-    Cc1101V.recv_args.buf = buf;
-    Cc1101V.recv_args.cap = sizeof(buf);
-    Cc1101V.recv_args.rssi_dbm = NULL;
-    Cc1101.recv(cc1101_work);
-    TEST_ASSERT_EQUAL_INT(-1, Cc1101V.n);
+    int cc1101_n = Cc1101.recv(cc1101_work, &g_bus, buf, sizeof(buf), NULL);
+    TEST_ASSERT_EQUAL_INT(-1, cc1101_n);
     TEST_ASSERT_EQUAL_HEX8(0x3A, g.last_strobe);
 
     g.rxfifo[0] = 64;
     g.rxcount = 5;
     g.rxread = 0;
     g.last_strobe = 0;
-    Cc1101V.recv_args.bus = &g_bus;
-    Cc1101V.recv_args.buf = buf;
-    Cc1101V.recv_args.cap = sizeof(buf);
-    Cc1101V.recv_args.rssi_dbm = NULL;
-    Cc1101.recv(cc1101_work);
-    TEST_ASSERT_EQUAL_INT(-1, Cc1101V.n);
+    cc1101_n = Cc1101.recv(cc1101_work, &g_bus, buf, sizeof(buf), NULL);
+    TEST_ASSERT_EQUAL_INT(-1, cc1101_n);
     TEST_ASSERT_EQUAL_HEX8(0x3A, g.last_strobe);
 }
 
 void test_send_null_spi(void)
 {
     const uint8_t data[8] = {0};
-    Cc1101V.send_args.bus = &g_bus_no_spi;
-    Cc1101V.send_args.data = data;
-    Cc1101V.send_args.len = 8;
-    Cc1101.send(cc1101_work);
-    TEST_ASSERT_FALSE(Cc1101V.ok);
+    proto_bool cc1101_ok = Cc1101.send(cc1101_work, &g_bus_no_spi, data, 8);
+    TEST_ASSERT_FALSE(cc1101_ok);
 }

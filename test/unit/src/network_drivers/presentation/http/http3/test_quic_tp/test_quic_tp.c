@@ -36,8 +36,7 @@ void test_rfc9000_18_2_defaults(void)
 {
     QuicTransportParams tp;
     memset(&tp, 0xAA, sizeof(tp));
-    QuicTpV.defaults_args.tp = &tp;
-    QuicTp.defaults(quic_tp_work);
+    QuicTp.defaults(quic_tp_work, &tp);
 
     TEST_ASSERT_EQUAL_UINT64(0u, tp.max_idle_timeout);
     TEST_ASSERT_EQUAL_UINT64(65527u, tp.max_udp_payload_size);
@@ -57,11 +56,8 @@ void test_rfc9000_18_2_defaults(void)
 
     // An empty parameter string leaves every default in place: nothing present, nothing overridden.
     QuicTransportParams parsed;
-    QuicTpV.parse_args.buf = NULL;
-    QuicTpV.parse_args.len = 0;
-    QuicTpV.parse_args.tp = &parsed;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_TRUE(QuicTpV.ok);
+    proto_bool quic_tp_ok = QuicTp.parse(quic_tp_work, NULL, 0, &parsed);
+    TEST_ASSERT_TRUE(quic_tp_ok);
     TEST_ASSERT_EQUAL_UINT64(65527u, parsed.max_udp_payload_size);
     TEST_ASSERT_EQUAL_UINT64(3u, parsed.ack_delay_exponent);
     TEST_ASSERT_EQUAL_UINT64(25u, parsed.max_ack_delay);
@@ -99,11 +95,8 @@ void test_hand_built_wire_string(void)
     static const uint8_t SCID[4] = {0xde, 0xad, 0xbe, 0xef};
 
     QuicTransportParams tp;
-    QuicTpV.parse_args.buf = WIRE;
-    QuicTpV.parse_args.len = sizeof(WIRE);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_TRUE(QuicTpV.ok);
+    proto_bool quic_tp_ok = QuicTp.parse(quic_tp_work, WIRE, sizeof(WIRE), &tp);
+    TEST_ASSERT_TRUE(quic_tp_ok);
     TEST_ASSERT_EQUAL_UINT64(10000u, tp.max_idle_timeout);
     TEST_ASSERT_EQUAL_UINT64(1472u, tp.max_udp_payload_size);
     TEST_ASSERT_EQUAL_UINT64(65536u, tp.initial_max_data);
@@ -125,8 +118,7 @@ void test_hand_built_wire_string(void)
 void test_encode_parse_round_trip(void)
 {
     QuicTransportParams out;
-    QuicTpV.defaults_args.tp = &out;
-    QuicTp.defaults(quic_tp_work);
+    QuicTp.defaults(quic_tp_work, &out);
     out.has_original_dcid = PROTO_TRUE;
     out.original_dcid_len = 8;
     for (uint8_t i = 0; i < 8; i++)
@@ -156,19 +148,13 @@ void test_encode_parse_round_trip(void)
     out.disable_active_migration = PROTO_TRUE;
 
     uint8_t wire[512];
-    QuicTpV.encode_args.tp = &out;
-    QuicTpV.encode_args.out = wire;
-    QuicTpV.encode_args.cap = sizeof(wire);
-    QuicTp.encode(quic_tp_work);
-    size_t n = QuicTpV.n;
+    size_t quic_tp_n = QuicTp.encode(quic_tp_work, &out, wire, sizeof(wire));
+    size_t n = quic_tp_n;
     TEST_ASSERT_TRUE(n > 0);
 
     QuicTransportParams in;
-    QuicTpV.parse_args.buf = wire;
-    QuicTpV.parse_args.len = n;
-    QuicTpV.parse_args.tp = &in;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_TRUE(QuicTpV.ok);
+    proto_bool quic_tp_ok = QuicTp.parse(quic_tp_work, wire, n, &in);
+    TEST_ASSERT_TRUE(quic_tp_ok);
 
     TEST_ASSERT_TRUE(in.has_original_dcid);
     TEST_ASSERT_EQUAL_UINT8(8u, in.original_dcid_len);
@@ -198,24 +184,17 @@ void test_encode_parse_round_trip(void)
 void test_migration_flag_is_absent_when_clear(void)
 {
     QuicTransportParams out;
-    QuicTpV.defaults_args.tp = &out;
-    QuicTp.defaults(quic_tp_work);
+    QuicTp.defaults(quic_tp_work, &out);
     out.disable_active_migration = PROTO_FALSE;
 
     uint8_t wire[256];
-    QuicTpV.encode_args.tp = &out;
-    QuicTpV.encode_args.out = wire;
-    QuicTpV.encode_args.cap = sizeof(wire);
-    QuicTp.encode(quic_tp_work);
-    size_t n = QuicTpV.n;
+    size_t quic_tp_n = QuicTp.encode(quic_tp_work, &out, wire, sizeof(wire));
+    size_t n = quic_tp_n;
     TEST_ASSERT_TRUE(n > 0);
 
     QuicTransportParams in;
-    QuicTpV.parse_args.buf = wire;
-    QuicTpV.parse_args.len = n;
-    QuicTpV.parse_args.tp = &in;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_TRUE(QuicTpV.ok);
+    proto_bool quic_tp_ok = QuicTp.parse(quic_tp_work, wire, n, &in);
+    TEST_ASSERT_TRUE(quic_tp_ok);
     TEST_ASSERT_FALSE(in.disable_active_migration);
 }
 
@@ -232,11 +211,8 @@ void test_reserved_ids_are_ignored(void)
         0x0e, 0x01, 0x02,             // active_connection_id_limit = 2
     };
     QuicTransportParams tp;
-    QuicTpV.parse_args.buf = WIRE;
-    QuicTpV.parse_args.len = sizeof(WIRE);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_TRUE(QuicTpV.ok);
+    proto_bool quic_tp_ok = QuicTp.parse(quic_tp_work, WIRE, sizeof(WIRE), &tp);
+    TEST_ASSERT_TRUE(quic_tp_ok);
     TEST_ASSERT_EQUAL_UINT64(10u, tp.max_ack_delay);
     TEST_ASSERT_EQUAL_UINT64(2u, tp.active_connection_id_limit);
 }
@@ -249,83 +225,50 @@ void test_out_of_range_values_are_rejected(void)
     // "Values above 20 are invalid" (ack_delay_exponent).
     static const uint8_t EXP20[] = {0x0a, 0x01, 0x14};
     static const uint8_t EXP21[] = {0x0a, 0x01, 0x15};
-    QuicTpV.parse_args.buf = EXP20;
-    QuicTpV.parse_args.len = sizeof(EXP20);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_TRUE(QuicTpV.ok);
+    proto_bool quic_tp_ok = QuicTp.parse(quic_tp_work, EXP20, sizeof(EXP20), &tp);
+    TEST_ASSERT_TRUE(quic_tp_ok);
     TEST_ASSERT_EQUAL_UINT64(20u, tp.ack_delay_exponent);
-    QuicTpV.parse_args.buf = EXP21;
-    QuicTpV.parse_args.len = sizeof(EXP21);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_FALSE(QuicTpV.ok);
+    quic_tp_ok = QuicTp.parse(quic_tp_work, EXP21, sizeof(EXP21), &tp);
+    TEST_ASSERT_FALSE(quic_tp_ok);
 
     // "Values of 2^14 or greater are invalid" (max_ack_delay). 2^14-1 = 16383 = varint 0x7fff,
     // 2^14 = 16384 = varint 0x80004000.
     static const uint8_t DELAY_MAX[] = {0x0b, 0x02, 0x7f, 0xff};
     static const uint8_t DELAY_OVER[] = {0x0b, 0x04, 0x80, 0x00, 0x40, 0x00};
-    QuicTpV.parse_args.buf = DELAY_MAX;
-    QuicTpV.parse_args.len = sizeof(DELAY_MAX);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_TRUE(QuicTpV.ok);
+    quic_tp_ok = QuicTp.parse(quic_tp_work, DELAY_MAX, sizeof(DELAY_MAX), &tp);
+    TEST_ASSERT_TRUE(quic_tp_ok);
     TEST_ASSERT_EQUAL_UINT64(16383u, tp.max_ack_delay);
-    QuicTpV.parse_args.buf = DELAY_OVER;
-    QuicTpV.parse_args.len = sizeof(DELAY_OVER);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_FALSE(QuicTpV.ok);
+    quic_tp_ok = QuicTp.parse(quic_tp_work, DELAY_OVER, sizeof(DELAY_OVER), &tp);
+    TEST_ASSERT_FALSE(quic_tp_ok);
 
     // "Values below 1200 are invalid" (max_udp_payload_size). 1200 = 0x4b0 -> varint 0x44b0,
     // 1199 = 0x4af -> varint 0x44af.
     static const uint8_t MPS_1200[] = {0x03, 0x02, 0x44, 0xb0};
     static const uint8_t MPS_1199[] = {0x03, 0x02, 0x44, 0xaf};
-    QuicTpV.parse_args.buf = MPS_1200;
-    QuicTpV.parse_args.len = sizeof(MPS_1200);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_TRUE(QuicTpV.ok);
+    quic_tp_ok = QuicTp.parse(quic_tp_work, MPS_1200, sizeof(MPS_1200), &tp);
+    TEST_ASSERT_TRUE(quic_tp_ok);
     TEST_ASSERT_EQUAL_UINT64(1200u, tp.max_udp_payload_size);
-    QuicTpV.parse_args.buf = MPS_1199;
-    QuicTpV.parse_args.len = sizeof(MPS_1199);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_FALSE(QuicTpV.ok);
+    quic_tp_ok = QuicTp.parse(quic_tp_work, MPS_1199, sizeof(MPS_1199), &tp);
+    TEST_ASSERT_FALSE(quic_tp_ok);
 
     // "The value of the active_connection_id_limit parameter MUST be at least 2."
     static const uint8_t CID_2[] = {0x0e, 0x01, 0x02};
     static const uint8_t CID_1[] = {0x0e, 0x01, 0x01};
     static const uint8_t CID_0[] = {0x0e, 0x01, 0x00};
-    QuicTpV.parse_args.buf = CID_2;
-    QuicTpV.parse_args.len = sizeof(CID_2);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_TRUE(QuicTpV.ok);
-    QuicTpV.parse_args.buf = CID_1;
-    QuicTpV.parse_args.len = sizeof(CID_1);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_FALSE(QuicTpV.ok);
-    QuicTpV.parse_args.buf = CID_0;
-    QuicTpV.parse_args.len = sizeof(CID_0);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_FALSE(QuicTpV.ok);
+    quic_tp_ok = QuicTp.parse(quic_tp_work, CID_2, sizeof(CID_2), &tp);
+    TEST_ASSERT_TRUE(quic_tp_ok);
+    quic_tp_ok = QuicTp.parse(quic_tp_work, CID_1, sizeof(CID_1), &tp);
+    TEST_ASSERT_FALSE(quic_tp_ok);
+    quic_tp_ok = QuicTp.parse(quic_tp_work, CID_0, sizeof(CID_0), &tp);
+    TEST_ASSERT_FALSE(quic_tp_ok);
 
     // "This parameter is a zero-length value" (disable_active_migration).
     static const uint8_t MIG_OK[] = {0x0c, 0x00};
     static const uint8_t MIG_BAD[] = {0x0c, 0x01, 0x00};
-    QuicTpV.parse_args.buf = MIG_OK;
-    QuicTpV.parse_args.len = sizeof(MIG_OK);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_TRUE(QuicTpV.ok);
-    QuicTpV.parse_args.buf = MIG_BAD;
-    QuicTpV.parse_args.len = sizeof(MIG_BAD);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_FALSE(QuicTpV.ok);
+    quic_tp_ok = QuicTp.parse(quic_tp_work, MIG_OK, sizeof(MIG_OK), &tp);
+    TEST_ASSERT_TRUE(quic_tp_ok);
+    quic_tp_ok = QuicTp.parse(quic_tp_work, MIG_BAD, sizeof(MIG_BAD), &tp);
+    TEST_ASSERT_FALSE(quic_tp_ok);
 }
 
 // sec 17.2: a version 1 connection ID "MUST NOT exceed 20 bytes". 20 parses, 21 does not.
@@ -337,29 +280,20 @@ void test_oversized_connection_id_is_rejected(void)
     wire[0] = QUIC_TP_INITIAL_SCID;
     wire[1] = QUIC_MAX_CID_LEN; // varint(20), one byte
     memset(wire + 2, 0x11, QUIC_MAX_CID_LEN);
-    QuicTpV.parse_args.buf = wire;
-    QuicTpV.parse_args.len = 2 + QUIC_MAX_CID_LEN;
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_TRUE(QuicTpV.ok);
+    proto_bool quic_tp_ok = QuicTp.parse(quic_tp_work, wire, 2 + QUIC_MAX_CID_LEN, &tp);
+    TEST_ASSERT_TRUE(quic_tp_ok);
     TEST_ASSERT_EQUAL_UINT8(QUIC_MAX_CID_LEN, tp.initial_scid_len);
 
     wire[1] = QUIC_MAX_CID_LEN + 1;
     memset(wire + 2, 0x11, QUIC_MAX_CID_LEN + 1);
-    QuicTpV.parse_args.buf = wire;
-    QuicTpV.parse_args.len = 3 + QUIC_MAX_CID_LEN;
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_FALSE(QuicTpV.ok);
+    quic_tp_ok = QuicTp.parse(quic_tp_work, wire, 3 + QUIC_MAX_CID_LEN, &tp);
+    TEST_ASSERT_FALSE(quic_tp_ok);
 
     // A zero-length connection ID is legal: sec 18.2 speaks of "an endpoint [that] issues a
     // zero-length connection ID".
     static const uint8_t ZERO[] = {QUIC_TP_INITIAL_SCID, 0x00};
-    QuicTpV.parse_args.buf = ZERO;
-    QuicTpV.parse_args.len = sizeof(ZERO);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_TRUE(QuicTpV.ok);
+    quic_tp_ok = QuicTp.parse(quic_tp_work, ZERO, sizeof(ZERO), &tp);
+    TEST_ASSERT_TRUE(quic_tp_ok);
     TEST_ASSERT_TRUE(tp.has_initial_scid);
     TEST_ASSERT_EQUAL_UINT8(0u, tp.initial_scid_len);
 }
@@ -378,16 +312,10 @@ void test_duplicate_parameter_is_rejected(void)
         0x0f, 0x01, 0xbb, // and again
     };
     QuicTransportParams tp;
-    QuicTpV.parse_args.buf = DUP;
-    QuicTpV.parse_args.len = sizeof(DUP);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_FALSE(QuicTpV.ok);
-    QuicTpV.parse_args.buf = DUP_CID;
-    QuicTpV.parse_args.len = sizeof(DUP_CID);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_FALSE(QuicTpV.ok);
+    proto_bool quic_tp_ok = QuicTp.parse(quic_tp_work, DUP, sizeof(DUP), &tp);
+    TEST_ASSERT_FALSE(quic_tp_ok);
+    quic_tp_ok = QuicTp.parse(quic_tp_work, DUP_CID, sizeof(DUP_CID), &tp);
+    TEST_ASSERT_FALSE(quic_tp_ok);
 }
 
 // A Length field that runs past the end of the string, and a value whose varint does not fill the
@@ -398,35 +326,23 @@ void test_malformed_encoding_is_rejected(void)
 
     // Length says 4, only 2 octets follow.
     static const uint8_t OVERRUN[] = {0x04, 0x04, 0x00, 0x00};
-    QuicTpV.parse_args.buf = OVERRUN;
-    QuicTpV.parse_args.len = sizeof(OVERRUN);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_FALSE(QuicTpV.ok);
+    proto_bool quic_tp_ok = QuicTp.parse(quic_tp_work, OVERRUN, sizeof(OVERRUN), &tp);
+    TEST_ASSERT_FALSE(quic_tp_ok);
 
     // An ID with no Length after it.
     static const uint8_t NO_LEN[] = {0x04};
-    QuicTpV.parse_args.buf = NO_LEN;
-    QuicTpV.parse_args.len = sizeof(NO_LEN);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_FALSE(QuicTpV.ok);
+    quic_tp_ok = QuicTp.parse(quic_tp_work, NO_LEN, sizeof(NO_LEN), &tp);
+    TEST_ASSERT_FALSE(quic_tp_ok);
 
     // A varint-valued parameter whose value varint consumes fewer octets than Length declares.
     static const uint8_t SHORT_VALUE[] = {0x04, 0x02, 0x01, 0x01};
-    QuicTpV.parse_args.buf = SHORT_VALUE;
-    QuicTpV.parse_args.len = sizeof(SHORT_VALUE);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_FALSE(QuicTpV.ok);
+    quic_tp_ok = QuicTp.parse(quic_tp_work, SHORT_VALUE, sizeof(SHORT_VALUE), &tp);
+    TEST_ASSERT_FALSE(quic_tp_ok);
 
     // A varint-valued parameter with a zero-length value has no varint at all.
     static const uint8_t EMPTY_VALUE[] = {0x04, 0x00};
-    QuicTpV.parse_args.buf = EMPTY_VALUE;
-    QuicTpV.parse_args.len = sizeof(EMPTY_VALUE);
-    QuicTpV.parse_args.tp = &tp;
-    QuicTp.parse(quic_tp_work);
-    TEST_ASSERT_FALSE(QuicTpV.ok);
+    quic_tp_ok = QuicTp.parse(quic_tp_work, EMPTY_VALUE, sizeof(EMPTY_VALUE), &tp);
+    TEST_ASSERT_FALSE(quic_tp_ok);
 }
 
 // A destination too small for the whole parameter set writes nothing rather than a truncated one:
@@ -434,37 +350,24 @@ void test_malformed_encoding_is_rejected(void)
 void test_encode_refuses_a_short_buffer(void)
 {
     QuicTransportParams tp;
-    QuicTpV.defaults_args.tp = &tp;
-    QuicTp.defaults(quic_tp_work);
+    QuicTp.defaults(quic_tp_work, &tp);
     tp.has_original_dcid = PROTO_TRUE;
     tp.original_dcid_len = QUIC_MAX_CID_LEN;
     memset(tp.original_dcid, 0x22, QUIC_MAX_CID_LEN);
 
     uint8_t big[256];
-    QuicTpV.encode_args.tp = &tp;
-    QuicTpV.encode_args.out = big;
-    QuicTpV.encode_args.cap = sizeof(big);
-    QuicTp.encode(quic_tp_work);
-    size_t n = QuicTpV.n;
+    size_t quic_tp_n = QuicTp.encode(quic_tp_work, &tp, big, sizeof(big));
+    size_t n = quic_tp_n;
     TEST_ASSERT_TRUE(n > 0);
 
     uint8_t small[8];
-    QuicTpV.encode_args.tp = &tp;
-    QuicTpV.encode_args.out = small;
-    QuicTpV.encode_args.cap = sizeof(small);
-    QuicTp.encode(quic_tp_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicTpV.n);
+    quic_tp_n = QuicTp.encode(quic_tp_work, &tp, small, sizeof(small));
+    TEST_ASSERT_EQUAL_UINT(0u, quic_tp_n);
 
     // One octet short of what it needs is still a refusal; exactly enough is not.
     uint8_t exact[256];
-    QuicTpV.encode_args.tp = &tp;
-    QuicTpV.encode_args.out = exact;
-    QuicTpV.encode_args.cap = n - 1;
-    QuicTp.encode(quic_tp_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicTpV.n);
-    QuicTpV.encode_args.tp = &tp;
-    QuicTpV.encode_args.out = exact;
-    QuicTpV.encode_args.cap = n;
-    QuicTp.encode(quic_tp_work);
-    TEST_ASSERT_EQUAL_UINT(n, QuicTpV.n);
+    quic_tp_n = QuicTp.encode(quic_tp_work, &tp, exact, n - 1);
+    TEST_ASSERT_EQUAL_UINT(0u, quic_tp_n);
+    quic_tp_n = QuicTp.encode(quic_tp_work, &tp, exact, n);
+    TEST_ASSERT_EQUAL_UINT(n, quic_tp_n);
 }

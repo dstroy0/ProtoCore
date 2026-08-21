@@ -276,11 +276,8 @@ static void server_flight(uint8_t *restrict work)
 
     if (rpk)
     {
-        Tls13RpkV.build_certificate_args.out = c->tx;
-        Tls13RpkV.build_certificate_args.cap = PROTOCORE_TLS_CONN_MSG_CAP;
-        Tls13RpkV.build_certificate_args.ed25519_pub = c->cfg->ed25519_pub;
-        Tls13Rpk.build_certificate(work);
-        n = Tls13RpkV.n;
+        size_t tls13_rpk_n = Tls13Rpk.build_certificate(work, c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->cfg->ed25519_pub);
+        n = tls13_rpk_n;
     }
     else
     {
@@ -740,11 +737,8 @@ static void client_on_certificate(uint8_t *restrict work, const uint8_t *msg, si
 #endif
 
     const uint8_t *pub = NULL;
-    Tls13RpkV.ed25519_from_spki_args.spki = entry;
-    Tls13RpkV.ed25519_from_spki_args.len = entry_len;
-    Tls13RpkV.ed25519_from_spki_args.pub = &pub;
-    Tls13Rpk.ed25519_from_spki(work);
-    if (!Tls13RpkV.ok)
+    proto_bool tls13_rpk_ok = Tls13Rpk.ed25519_from_spki(work, entry, entry_len, &pub);
+    if (!tls13_rpk_ok)
     {
         fail(TLS_ALERT_DECODE_ERROR);
         return;
