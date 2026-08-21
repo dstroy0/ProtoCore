@@ -3560,14 +3560,20 @@ def gen_header_ns(spec, original):
     )
 
 
-def enclosing_function(s, pos, mask):
-    """(open_brace, close_brace) of the function body @p pos sits in, or None at file scope.
+def enclosing_block(s, pos, mask):
+    """(open_brace, close_brace) of the INNERMOST block @p pos sits in, or None at file scope.
 
-    The OUTERMOST enclosing brace pair, not the innermost: a result local is declared where the call
-    is, and the question this answers is whether some earlier call in the SAME FUNCTION already
-    declared that name - an inner block is still the same function.
+    The innermost, not the function's. A result local is declared where the call is, so the block is
+    what decides both whether an earlier call already declared that name and how far the name
+    reaches. Keyed on the function instead, a call inside a `for` body declared the local there and
+    the next call after the loop was given an assignment to a name that had gone out of scope with
+    the loop - which is exactly what test_ntlm did, three times.
+
+    Ending the rewrite window at the block also means a read BEYOND it is not rewritten. That is the
+    point: it stays as <X>V.<member>, remaining_vars_reads counts it, and the module refuses rather
+    than converting into something that does not compile.
     """
-    depth, outer, i = 0, None, pos - 1
+    depth, i = 0, pos - 1
     while i >= 0:
         c = s[i]
         if mask[i]:
@@ -3575,13 +3581,10 @@ def enclosing_function(s, pos, mask):
                 depth += 1
             elif c == "{":
                 if depth == 0:
-                    outer = i
-                else:
-                    depth -= 1
+                    return i, _brace_end(s, i, mask)
+                depth -= 1
         i -= 1
-    if outer is None:
-        return None
-    return outer, _brace_end(s, outer, mask)
+    return None
 
 
 def _brace_end(s, ob, mask):
@@ -3818,15 +3821,15 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
                     res, out = e.get("result"), ""
                     if res:
                         local = "%s_%s" % (snake(obj), res)
-                        fn_span = enclosing_function(s, m.start(), mask)
+                        blk = enclosing_block(s, m.start(), mask)
                         # Every read of the result between here and the next call to this object -
                         # that window is what the local has to cover.
                         stop = pat.search(s, stmt_end)
-                        stop = stop.start() if stop else (fn_span[1] if fn_span else len(s))
+                        stop = stop.start() if stop else (blk[1] if blk else len(s))
                         rd = re.compile(r"\b%s\.%s\b" % (re.escape(objv), re.escape(res)))
                         window = s[stmt_end:stop]
                         if rd.search(window):
-                            key = (fn_span[0] if fn_span else -1, local)
+                            key = (blk[0] if blk else -1, local)
                             if key in declared:
                                 out = "%s%s = %s;" % (indent, local, call)
                             else:

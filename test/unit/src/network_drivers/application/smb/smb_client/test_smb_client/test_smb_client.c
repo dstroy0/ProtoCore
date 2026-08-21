@@ -178,12 +178,8 @@ static proto_bool mock_derive_key(const uint8_t *msg, size_t mlen, const SmbConf
     }
     const uint8_t *auth = NULL;
     size_t auth_len = 0;
-    SpnegoV.parse_response_args.blob = msg + sec_off;
-    SpnegoV.parse_response_args.len = sec_len;
-    SpnegoV.parse_response_args.protocore_resp_token = &auth;
-    SpnegoV.parse_response_args.protocore_resp_len = &auth_len;
-    Spnego.parse_response(spnego_work);
-    if (!SpnegoV.ok || auth_len < 28)
+    proto_bool spnego_ok = Spnego.parse_response(spnego_work, msg + sec_off, sec_len, &auth, &auth_len);
+    if (!spnego_ok || auth_len < 28)
     {
         return PROTO_FALSE;
     }
@@ -195,15 +191,9 @@ static proto_bool mock_derive_key(const uint8_t *msg, size_t mlen, const SmbConf
     }
     uint8_t nt_hash[16];
     uint8_t owf[16];
-    NtlmV.nt_hash_args.password = cfg->pass;
-    NtlmV.nt_hash_args.nt_hash = nt_hash;
-    Ntlm.nt_hash(ntlm_work);
-    NtlmV.ntowfv2_args.nt_hash = nt_hash;
-    NtlmV.ntowfv2_args.user = cfg->user;
-    NtlmV.ntowfv2_args.domain = cfg->domain ? cfg->domain : "";
-    NtlmV.ntowfv2_args.owf = owf;
-    Ntlm.ntowfv2(ntlm_work);
-    if (!NtlmV.ok)
+    Ntlm.nt_hash(ntlm_work, cfg->pass, nt_hash);
+    proto_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, cfg->user, cfg->domain ? cfg->domain : "", owf);
+    if (!ntlm_ok)
     {
         return PROTO_FALSE;
     }
@@ -438,23 +428,15 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
                 {
                     uint8_t junk[16];
                     memset(junk, 0x55, sizeof(junk));
-                    SpnegoV.wrap_authenticate_args.ntlm = junk;
-                    SpnegoV.wrap_authenticate_args.protocore_ntlm_len = sizeof(junk);
-                    SpnegoV.wrap_authenticate_args.out = sctok;
-                    SpnegoV.wrap_authenticate_args.cap = sizeof(sctok);
-                    Spnego.wrap_authenticate(spnego_work);
-                    sc_n = SpnegoV.n;
+                    size_t spnego_n = Spnego.wrap_authenticate(spnego_work, junk, sizeof(junk), sctok, sizeof(sctok));
+                    sc_n = spnego_n;
                 }
                 else
                 {
                     size_t chal_n = m->chal_ti ? protocore_ntlmssp_challenge_ti(chal, sc, m->chal_ti, m->chal_ti_len)
                                                : protocore_ntlmssp_challenge(chal, sc);
-                    SpnegoV.wrap_authenticate_args.ntlm = chal;
-                    SpnegoV.wrap_authenticate_args.protocore_ntlm_len = chal_n;
-                    SpnegoV.wrap_authenticate_args.out = sctok;
-                    SpnegoV.wrap_authenticate_args.cap = sizeof(sctok);
-                    Spnego.wrap_authenticate(spnego_work);
-                    sc_n = SpnegoV.n;
+                    size_t spnego_n = Spnego.wrap_authenticate(spnego_work, chal, chal_n, sctok, sizeof(sctok));
+                    sc_n = spnego_n;
                 }
                 w16(b + 4, 72);
                 w16(b + 6, (uint16_t)sc_n);

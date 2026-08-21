@@ -6,16 +6,12 @@
  * @brief NTLMSSP message codec implementation (see ntlmssp.h). Little-endian; text UTF-16LE.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_SMB
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/application/smb/ntlmssp/ntlmssp.h"
 
 #include "mmgr/endian/endian.h"
-
-PROTOCORE_BEGIN_DECLS
 
 static const uint8_t NTLMSSP_SIG[8] = {'N', 'T', 'L', 'M', 'S', 'S', 'P', 0};
 
@@ -32,17 +28,13 @@ static void wr_field(uint8_t *f, uint16_t len, uint32_t off)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_ntlmssp_build_negotiate(uint8_t *restrict work)
+size_t protocore_ntlmssp_build_negotiate(uint8_t *restrict work, uint8_t *buf, size_t cap, uint32_t flags)
 {
     (void)work;
-    uint8_t *buf = NtlmsspV.build_negotiate_args.buf;
-    size_t cap = NtlmsspV.build_negotiate_args.cap;
-    uint32_t flags = NtlmsspV.build_negotiate_args.flags;
 
     if (!buf || cap < 32)
     {
-        NtlmsspV.n = 0;
-        return;
+        return 0;
     }
     mem.set(buf, 0, 32);
     mem.cpy(buf + 0, NTLMSSP_SIG, 8); // Signature
@@ -50,25 +42,20 @@ void protocore_ntlmssp_build_negotiate(uint8_t *restrict work)
     endian.wr32le(buf + 12, flags);   // NegotiateFlags
     wr_field(buf + 16, 0, 32);        // DomainNameFields (empty; offset = end of header)
     wr_field(buf + 24, 0, 32);        // WorkstationFields (empty)
-    NtlmsspV.n = 32;
+    return 32;
 }
 
-void protocore_ntlmssp_parse_challenge(uint8_t *restrict work)
+proto_bool protocore_ntlmssp_parse_challenge(uint8_t *restrict work, const uint8_t *msg, size_t len, NtlmChallenge *out)
 {
     (void)work;
-    const uint8_t *msg = NtlmsspV.parse_challenge_args.msg;
-    size_t len = NtlmsspV.parse_challenge_args.len;
-    NtlmChallenge *out = NtlmsspV.parse_challenge_args.out;
 
     if (!msg || !out || len < 48) // through TargetInfoFields
     {
-        NtlmsspV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     if (mem.cmp(msg, NTLMSSP_SIG, 8) != 0 || endian.rd32le(msg + 8) != 2)
     {
-        NtlmsspV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     out->flags = endian.rd32le(msg + 20);
     mem.cpy(out->server_challenge, msg + 24, 8);
@@ -78,17 +65,15 @@ void protocore_ntlmssp_parse_challenge(uint8_t *restrict work)
     {
         out->target_info = NULL;
         out->target_info_len = 0;
-        NtlmsspV.ok = PROTO_TRUE;
-        return;
+        return PROTO_TRUE;
     }
     if ((size_t)ti_off + ti_len > len) // target info out of bounds -> fail closed
     {
-        NtlmsspV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     out->target_info = msg + ti_off;
     out->target_info_len = ti_len;
-    NtlmsspV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
 // Append the UTF-16LE encoding of @p s to buf[at..]; returns the byte count (2 * strlen).
@@ -118,20 +103,12 @@ static size_t utf16_len(const char *s)
     return n * 2;
 }
 
-void protocore_ntlmssp_build_authenticate(uint8_t *restrict work)
+size_t protocore_ntlmssp_build_authenticate(uint8_t *restrict work, uint8_t *buf, size_t cap, const uint8_t *lm_resp,
+                                            size_t lm_len, const uint8_t *nt_resp, size_t nt_len, const char *domain,
+                                            const char *user, const char *workstation, uint32_t flags,
+                                            proto_bool with_mic)
 {
     (void)work;
-    uint8_t *buf = NtlmsspV.build_authenticate_args.buf;
-    size_t cap = NtlmsspV.build_authenticate_args.cap;
-    const uint8_t *lm_resp = NtlmsspV.build_authenticate_args.lm_resp;
-    size_t lm_len = NtlmsspV.build_authenticate_args.lm_len;
-    const uint8_t *nt_resp = NtlmsspV.build_authenticate_args.nt_resp;
-    size_t nt_len = NtlmsspV.build_authenticate_args.nt_len;
-    const char *domain = NtlmsspV.build_authenticate_args.domain;
-    const char *user = NtlmsspV.build_authenticate_args.user;
-    const char *workstation = NtlmsspV.build_authenticate_args.workstation;
-    uint32_t flags = NtlmsspV.build_authenticate_args.flags;
-    proto_bool with_mic = NtlmsspV.build_authenticate_args.with_mic;
 
     // With a MIC the fixed part carries an 8-byte Version + a 16-byte MIC before the payload (MS-NLMP
     // §2.2.1.3); NTLMSSP_NEGOTIATE_VERSION must then be set so the server knows the Version is present.
@@ -146,8 +123,7 @@ void protocore_ntlmssp_build_authenticate(uint8_t *restrict work)
     size_t total = HDR + lm_len + nt_len + dlen + ulen + wlen; // session key empty
     if (!buf || total > cap)
     {
-        NtlmsspV.n = 0;
-        return;
+        return 0;
     }
 
     mem.set(buf, 0, HDR);
@@ -192,12 +168,5 @@ void protocore_ntlmssp_build_authenticate(uint8_t *restrict work)
     wr_field(buf + 44, (uint16_t)wlen, (uint32_t)wks_off);  // WorkstationFields
     wr_field(buf + 52, 0, (uint32_t)key_off);               // EncryptedRandomSessionKeyFields
     endian.wr32le(buf + 60, flags);                         // NegotiateFlags
-    NtlmsspV.n = total;
+    return total;
 }
-
-/** @brief The operands and the outcome. */
-NtlmsspVars NtlmsspV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_SMB

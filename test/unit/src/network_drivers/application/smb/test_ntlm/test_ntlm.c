@@ -50,17 +50,11 @@ static const uint8_t TARGET_INFO[36] = {0x02, 0x00, 0x0c, 0x00, 0x44, 0x00, 0x6f
 void test_msnlmp_ntowfv2_worked_example(void)
 {
     uint8_t nt_hash[16];
-    NtlmV.nt_hash_args.password = PASSWORD;
-    NtlmV.nt_hash_args.nt_hash = nt_hash;
-    Ntlm.nt_hash(ntlm_work);
+    Ntlm.nt_hash(ntlm_work, PASSWORD, nt_hash);
 
     uint8_t owf[16];
-    NtlmV.ntowfv2_args.nt_hash = nt_hash;
-    NtlmV.ntowfv2_args.user = USER;
-    NtlmV.ntowfv2_args.domain = DOMAIN_NAME;
-    NtlmV.ntowfv2_args.owf = owf;
-    Ntlm.ntowfv2(ntlm_work);
-    TEST_ASSERT_TRUE(NtlmV.ok);
+    proto_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, USER, DOMAIN_NAME, owf);
+    TEST_ASSERT_TRUE(ntlm_ok);
 
     static const uint8_t WANT[16] = {0x0c, 0x86, 0x8a, 0x40, 0x3b, 0xfd, 0x7a, 0x93,
                                      0xa3, 0x00, 0x1e, 0xf2, 0x2e, 0xf0, 0x2e, 0x3f};
@@ -73,9 +67,7 @@ void test_msnlmp_ntowfv2_worked_example(void)
 void test_nt_hash_is_the_published_ntowfv1(void)
 {
     uint8_t nt_hash[16];
-    NtlmV.nt_hash_args.password = PASSWORD;
-    NtlmV.nt_hash_args.nt_hash = nt_hash;
-    Ntlm.nt_hash(ntlm_work);
+    Ntlm.nt_hash(ntlm_work, PASSWORD, nt_hash);
     static const uint8_t WANT[16] = {0xa4, 0xf4, 0x9c, 0x40, 0x65, 0x10, 0xbd, 0xca,
                                      0xb6, 0x82, 0x4e, 0xe7, 0xc3, 0x0f, 0xd8, 0x52};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, nt_hash, sizeof(WANT));
@@ -90,29 +82,15 @@ void test_msnlmp_ntlmv2_response_and_session_base_key(void)
 {
     uint8_t nt_hash[16];
     uint8_t owf[16];
-    NtlmV.nt_hash_args.password = PASSWORD;
-    NtlmV.nt_hash_args.nt_hash = nt_hash;
-    Ntlm.nt_hash(ntlm_work);
-    NtlmV.ntowfv2_args.nt_hash = nt_hash;
-    NtlmV.ntowfv2_args.user = USER;
-    NtlmV.ntowfv2_args.domain = DOMAIN_NAME;
-    NtlmV.ntowfv2_args.owf = owf;
-    Ntlm.ntowfv2(ntlm_work);
-    TEST_ASSERT_TRUE(NtlmV.ok);
+    Ntlm.nt_hash(ntlm_work, PASSWORD, nt_hash);
+    proto_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, USER, DOMAIN_NAME, owf);
+    TEST_ASSERT_TRUE(ntlm_ok);
 
     uint8_t out[128];
     uint8_t session_key[16];
-    NtlmV.v2_response_args.owf = owf;
-    NtlmV.v2_response_args.server_challenge = SERVER_CHALLENGE;
-    NtlmV.v2_response_args.client_challenge = CLIENT_CHALLENGE;
-    NtlmV.v2_response_args.timestamp = ZERO_TIME;
-    NtlmV.v2_response_args.target_info = TARGET_INFO;
-    NtlmV.v2_response_args.ti_len = sizeof(TARGET_INFO);
-    NtlmV.v2_response_args.out = out;
-    NtlmV.v2_response_args.out_cap = sizeof(out);
-    NtlmV.v2_response_args.session_key = session_key;
-    Ntlm.v2_response(ntlm_work);
-    size_t n = NtlmV.n;
+    size_t ntlm_n = Ntlm.v2_response(ntlm_work, owf, SERVER_CHALLENGE, CLIENT_CHALLENGE, ZERO_TIME, TARGET_INFO,
+                                     sizeof(TARGET_INFO), out, sizeof(out), session_key);
+    size_t n = ntlm_n;
     TEST_ASSERT_EQUAL_size_t(84, n);
 
     static const uint8_t WANT[84] = {
@@ -145,53 +123,31 @@ void test_msnlmp_ntlmv2_response_and_session_base_key(void)
 void test_only_the_user_is_uppercased(void)
 {
     uint8_t nt_hash[16];
-    NtlmV.nt_hash_args.password = PASSWORD;
-    NtlmV.nt_hash_args.nt_hash = nt_hash;
-    Ntlm.nt_hash(ntlm_work);
+    Ntlm.nt_hash(ntlm_work, PASSWORD, nt_hash);
     static const uint8_t WANT[16] = {0x0c, 0x86, 0x8a, 0x40, 0x3b, 0xfd, 0x7a, 0x93,
                                      0xa3, 0x00, 0x1e, 0xf2, 0x2e, 0xf0, 0x2e, 0x3f};
 
     uint8_t owf[16];
-    NtlmV.ntowfv2_args.nt_hash = nt_hash;
-    NtlmV.ntowfv2_args.user = "user";
-    NtlmV.ntowfv2_args.domain = DOMAIN_NAME;
-    NtlmV.ntowfv2_args.owf = owf;
-    Ntlm.ntowfv2(ntlm_work);
-    TEST_ASSERT_TRUE(NtlmV.ok);
+    proto_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, "user", DOMAIN_NAME, owf);
+    TEST_ASSERT_TRUE(ntlm_ok);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, owf, sizeof(WANT));
-    NtlmV.ntowfv2_args.nt_hash = nt_hash;
-    NtlmV.ntowfv2_args.user = "USER";
-    NtlmV.ntowfv2_args.domain = DOMAIN_NAME;
-    NtlmV.ntowfv2_args.owf = owf;
-    Ntlm.ntowfv2(ntlm_work);
-    TEST_ASSERT_TRUE(NtlmV.ok);
+    ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, "USER", DOMAIN_NAME, owf);
+    TEST_ASSERT_TRUE(ntlm_ok);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, owf, sizeof(WANT));
-    NtlmV.ntowfv2_args.nt_hash = nt_hash;
-    NtlmV.ntowfv2_args.user = "uSeR";
-    NtlmV.ntowfv2_args.domain = DOMAIN_NAME;
-    NtlmV.ntowfv2_args.owf = owf;
-    Ntlm.ntowfv2(ntlm_work);
-    TEST_ASSERT_TRUE(NtlmV.ok);
+    ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, "uSeR", DOMAIN_NAME, owf);
+    TEST_ASSERT_TRUE(ntlm_ok);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, owf, sizeof(WANT));
 
     // The domain is taken as given, so a different spelling is a different key.
     uint8_t lower_domain[16];
-    NtlmV.ntowfv2_args.nt_hash = nt_hash;
-    NtlmV.ntowfv2_args.user = USER;
-    NtlmV.ntowfv2_args.domain = "domain";
-    NtlmV.ntowfv2_args.owf = lower_domain;
-    Ntlm.ntowfv2(ntlm_work);
-    TEST_ASSERT_TRUE(NtlmV.ok);
+    ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, USER, "domain", lower_domain);
+    TEST_ASSERT_TRUE(ntlm_ok);
     TEST_ASSERT_TRUE(memcmp(WANT, lower_domain, 16) != 0);
 
     // An empty domain is legal and gives its own key.
     uint8_t no_domain[16];
-    NtlmV.ntowfv2_args.nt_hash = nt_hash;
-    NtlmV.ntowfv2_args.user = USER;
-    NtlmV.ntowfv2_args.domain = "";
-    NtlmV.ntowfv2_args.owf = no_domain;
-    Ntlm.ntowfv2(ntlm_work);
-    TEST_ASSERT_TRUE(NtlmV.ok);
+    ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, USER, "", no_domain);
+    TEST_ASSERT_TRUE(ntlm_ok);
     TEST_ASSERT_TRUE(memcmp(WANT, no_domain, 16) != 0);
 }
 
@@ -203,19 +159,13 @@ void test_nt_hash_is_case_sensitive(void)
     uint8_t a[16];
     uint8_t b[16];
     uint8_t empty[16];
-    NtlmV.nt_hash_args.password = "Password";
-    NtlmV.nt_hash_args.nt_hash = a;
-    Ntlm.nt_hash(ntlm_work);
-    NtlmV.nt_hash_args.password = "password";
-    NtlmV.nt_hash_args.nt_hash = b;
-    Ntlm.nt_hash(ntlm_work);
+    Ntlm.nt_hash(ntlm_work, "Password", a);
+    Ntlm.nt_hash(ntlm_work, "password", b);
     TEST_ASSERT_TRUE(memcmp(a, b, 16) != 0);
 
     // MD4 of the empty string is a fixed value, so an empty password still yields a defined hash
     // that differs from every non-empty one.
-    NtlmV.nt_hash_args.password = "";
-    NtlmV.nt_hash_args.nt_hash = empty;
-    Ntlm.nt_hash(ntlm_work);
+    Ntlm.nt_hash(ntlm_work, "", empty);
     TEST_ASSERT_TRUE(memcmp(a, empty, 16) != 0);
 }
 
@@ -233,54 +183,22 @@ void test_response_length_is_forty_eight_plus_target_info(void)
     {
         uint8_t ti[100];
         memset(ti, 0x5A, sizeof(ti));
-        NtlmV.v2_response_args.owf = owf;
-        NtlmV.v2_response_args.server_challenge = SERVER_CHALLENGE;
-        NtlmV.v2_response_args.client_challenge = CLIENT_CHALLENGE;
-        NtlmV.v2_response_args.timestamp = ZERO_TIME;
-        NtlmV.v2_response_args.target_info = ti;
-        NtlmV.v2_response_args.ti_len = TI_LENS[i];
-        NtlmV.v2_response_args.out = out;
-        NtlmV.v2_response_args.out_cap = sizeof(out);
-        NtlmV.v2_response_args.session_key = NULL;
-        Ntlm.v2_response(ntlm_work);
-        size_t n = NtlmV.n;
+        size_t ntlm_n = Ntlm.v2_response(ntlm_work, owf, SERVER_CHALLENGE, CLIENT_CHALLENGE, ZERO_TIME, ti, TI_LENS[i],
+                                         out, sizeof(out), NULL);
+        size_t n = ntlm_n;
         TEST_ASSERT_EQUAL_size_t(48 + TI_LENS[i], n);
     }
 
     // One octet short of the needed room writes nothing.
-    NtlmV.v2_response_args.owf = owf;
-    NtlmV.v2_response_args.server_challenge = SERVER_CHALLENGE;
-    NtlmV.v2_response_args.client_challenge = CLIENT_CHALLENGE;
-    NtlmV.v2_response_args.timestamp = ZERO_TIME;
-    NtlmV.v2_response_args.target_info = TARGET_INFO;
-    NtlmV.v2_response_args.ti_len = sizeof(TARGET_INFO);
-    NtlmV.v2_response_args.out = out;
-    NtlmV.v2_response_args.out_cap = 83;
-    NtlmV.v2_response_args.session_key = NULL;
-    Ntlm.v2_response(ntlm_work);
-    TEST_ASSERT_EQUAL_size_t(0, NtlmV.n);
-    NtlmV.v2_response_args.owf = owf;
-    NtlmV.v2_response_args.server_challenge = SERVER_CHALLENGE;
-    NtlmV.v2_response_args.client_challenge = CLIENT_CHALLENGE;
-    NtlmV.v2_response_args.timestamp = ZERO_TIME;
-    NtlmV.v2_response_args.target_info = TARGET_INFO;
-    NtlmV.v2_response_args.ti_len = sizeof(TARGET_INFO);
-    NtlmV.v2_response_args.out = out;
-    NtlmV.v2_response_args.out_cap = 84;
-    NtlmV.v2_response_args.session_key = NULL;
-    Ntlm.v2_response(ntlm_work);
-    TEST_ASSERT_EQUAL_size_t(84, NtlmV.n);
-    NtlmV.v2_response_args.owf = owf;
-    NtlmV.v2_response_args.server_challenge = SERVER_CHALLENGE;
-    NtlmV.v2_response_args.client_challenge = CLIENT_CHALLENGE;
-    NtlmV.v2_response_args.timestamp = ZERO_TIME;
-    NtlmV.v2_response_args.target_info = TARGET_INFO;
-    NtlmV.v2_response_args.ti_len = sizeof(TARGET_INFO);
-    NtlmV.v2_response_args.out = NULL;
-    NtlmV.v2_response_args.out_cap = 256;
-    NtlmV.v2_response_args.session_key = NULL;
-    Ntlm.v2_response(ntlm_work);
-    TEST_ASSERT_EQUAL_size_t(0, NtlmV.n);
+    size_t ntlm_n = Ntlm.v2_response(ntlm_work, owf, SERVER_CHALLENGE, CLIENT_CHALLENGE, ZERO_TIME, TARGET_INFO,
+                                     sizeof(TARGET_INFO), out, 83, NULL);
+    TEST_ASSERT_EQUAL_size_t(0, ntlm_n);
+    ntlm_n = Ntlm.v2_response(ntlm_work, owf, SERVER_CHALLENGE, CLIENT_CHALLENGE, ZERO_TIME, TARGET_INFO,
+                              sizeof(TARGET_INFO), out, 84, NULL);
+    TEST_ASSERT_EQUAL_size_t(84, ntlm_n);
+    ntlm_n = Ntlm.v2_response(ntlm_work, owf, SERVER_CHALLENGE, CLIENT_CHALLENGE, ZERO_TIME, TARGET_INFO,
+                              sizeof(TARGET_INFO), NULL, 256, NULL);
+    TEST_ASSERT_EQUAL_size_t(0, ntlm_n);
 }
 
 // The timestamp is carried through verbatim as an 8-octet little-endian FILETIME, and it changes
@@ -293,30 +211,14 @@ void test_timestamp_is_carried_and_bound_in(void)
     uint8_t out[128];
     uint8_t other[128];
 
-    NtlmV.v2_response_args.owf = owf;
-    NtlmV.v2_response_args.server_challenge = SERVER_CHALLENGE;
-    NtlmV.v2_response_args.client_challenge = CLIENT_CHALLENGE;
-    NtlmV.v2_response_args.timestamp = TIME;
-    NtlmV.v2_response_args.target_info = TARGET_INFO;
-    NtlmV.v2_response_args.ti_len = sizeof(TARGET_INFO);
-    NtlmV.v2_response_args.out = out;
-    NtlmV.v2_response_args.out_cap = sizeof(out);
-    NtlmV.v2_response_args.session_key = NULL;
-    Ntlm.v2_response(ntlm_work);
-    TEST_ASSERT_EQUAL_size_t(84, NtlmV.n);
+    size_t ntlm_n = Ntlm.v2_response(ntlm_work, owf, SERVER_CHALLENGE, CLIENT_CHALLENGE, TIME, TARGET_INFO,
+                                     sizeof(TARGET_INFO), out, sizeof(out), NULL);
+    TEST_ASSERT_EQUAL_size_t(84, ntlm_n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(TIME, out + 24, 8); // 16 NTProofStr + 2 + 6 zeros
 
-    NtlmV.v2_response_args.owf = owf;
-    NtlmV.v2_response_args.server_challenge = SERVER_CHALLENGE;
-    NtlmV.v2_response_args.client_challenge = CLIENT_CHALLENGE;
-    NtlmV.v2_response_args.timestamp = ZERO_TIME;
-    NtlmV.v2_response_args.target_info = TARGET_INFO;
-    NtlmV.v2_response_args.ti_len = sizeof(TARGET_INFO);
-    NtlmV.v2_response_args.out = other;
-    NtlmV.v2_response_args.out_cap = sizeof(other);
-    NtlmV.v2_response_args.session_key = NULL;
-    Ntlm.v2_response(ntlm_work);
-    TEST_ASSERT_EQUAL_size_t(84, NtlmV.n);
+    ntlm_n = Ntlm.v2_response(ntlm_work, owf, SERVER_CHALLENGE, CLIENT_CHALLENGE, ZERO_TIME, TARGET_INFO,
+                              sizeof(TARGET_INFO), other, sizeof(other), NULL);
+    TEST_ASSERT_EQUAL_size_t(84, ntlm_n);
     TEST_ASSERT_TRUE(memcmp(out, other, 16) != 0);
 }
 
@@ -326,39 +228,17 @@ void test_server_challenge_is_bound_into_the_proof(void)
 {
     uint8_t nt_hash[16];
     uint8_t owf[16];
-    NtlmV.nt_hash_args.password = PASSWORD;
-    NtlmV.nt_hash_args.nt_hash = nt_hash;
-    Ntlm.nt_hash(ntlm_work);
-    NtlmV.ntowfv2_args.nt_hash = nt_hash;
-    NtlmV.ntowfv2_args.user = USER;
-    NtlmV.ntowfv2_args.domain = DOMAIN_NAME;
-    NtlmV.ntowfv2_args.owf = owf;
-    Ntlm.ntowfv2(ntlm_work);
-    TEST_ASSERT_TRUE(NtlmV.ok);
+    Ntlm.nt_hash(ntlm_work, PASSWORD, nt_hash);
+    proto_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, USER, DOMAIN_NAME, owf);
+    TEST_ASSERT_TRUE(ntlm_ok);
 
     static const uint8_t OTHER_CHALLENGE[8] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xee};
     uint8_t a[128];
     uint8_t b[128];
-    NtlmV.v2_response_args.owf = owf;
-    NtlmV.v2_response_args.server_challenge = SERVER_CHALLENGE;
-    NtlmV.v2_response_args.client_challenge = CLIENT_CHALLENGE;
-    NtlmV.v2_response_args.timestamp = ZERO_TIME;
-    NtlmV.v2_response_args.target_info = TARGET_INFO;
-    NtlmV.v2_response_args.ti_len = sizeof(TARGET_INFO);
-    NtlmV.v2_response_args.out = a;
-    NtlmV.v2_response_args.out_cap = sizeof(a);
-    NtlmV.v2_response_args.session_key = NULL;
-    Ntlm.v2_response(ntlm_work);
-    NtlmV.v2_response_args.owf = owf;
-    NtlmV.v2_response_args.server_challenge = OTHER_CHALLENGE;
-    NtlmV.v2_response_args.client_challenge = CLIENT_CHALLENGE;
-    NtlmV.v2_response_args.timestamp = ZERO_TIME;
-    NtlmV.v2_response_args.target_info = TARGET_INFO;
-    NtlmV.v2_response_args.ti_len = sizeof(TARGET_INFO);
-    NtlmV.v2_response_args.out = b;
-    NtlmV.v2_response_args.out_cap = sizeof(b);
-    NtlmV.v2_response_args.session_key = NULL;
-    Ntlm.v2_response(ntlm_work);
+    Ntlm.v2_response(ntlm_work, owf, SERVER_CHALLENGE, CLIENT_CHALLENGE, ZERO_TIME, TARGET_INFO, sizeof(TARGET_INFO), a,
+                     sizeof(a), NULL);
+    Ntlm.v2_response(ntlm_work, owf, OTHER_CHALLENGE, CLIENT_CHALLENGE, ZERO_TIME, TARGET_INFO, sizeof(TARGET_INFO), b,
+                     sizeof(b), NULL);
     TEST_ASSERT_TRUE(memcmp(a, b, 16) != 0);          // the proof strings differ
     TEST_ASSERT_EQUAL_HEX8_ARRAY(a + 16, b + 16, 68); // temp is identical: only the proof moved
 }
@@ -369,12 +249,8 @@ void test_server_challenge_is_bound_into_the_proof(void)
 void test_mic_flag_is_inserted_before_the_eol(void)
 {
     uint8_t out[64];
-    NtlmV.set_mic_flag_args.target_info = TARGET_INFO;
-    NtlmV.set_mic_flag_args.ti_len = sizeof(TARGET_INFO);
-    NtlmV.set_mic_flag_args.out = out;
-    NtlmV.set_mic_flag_args.out_cap = sizeof(out);
-    Ntlm.set_mic_flag(ntlm_work);
-    size_t n = NtlmV.n;
+    size_t ntlm_n = Ntlm.set_mic_flag(ntlm_work, TARGET_INFO, sizeof(TARGET_INFO), out, sizeof(out));
+    size_t n = ntlm_n;
     TEST_ASSERT_EQUAL_size_t(sizeof(TARGET_INFO) + 8, n);
 
     // The two original pairs are untouched.
@@ -397,12 +273,8 @@ void test_mic_flag_is_ored_into_an_existing_pair(void)
         0x00, 0x00, 0x00, 0x00                          // MsvAvEOL
     };
     uint8_t out[64];
-    NtlmV.set_mic_flag_args.target_info = WITH_FLAGS;
-    NtlmV.set_mic_flag_args.ti_len = sizeof(WITH_FLAGS);
-    NtlmV.set_mic_flag_args.out = out;
-    NtlmV.set_mic_flag_args.out_cap = sizeof(out);
-    Ntlm.set_mic_flag(ntlm_work);
-    size_t n = NtlmV.n;
+    size_t ntlm_n = Ntlm.set_mic_flag(ntlm_work, WITH_FLAGS, sizeof(WITH_FLAGS), out, sizeof(out));
+    size_t n = ntlm_n;
     TEST_ASSERT_EQUAL_size_t(sizeof(WITH_FLAGS), n);
     TEST_ASSERT_EQUAL_HEX8(0x03, out[12]);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[13]);
@@ -411,12 +283,8 @@ void test_mic_flag_is_ored_into_an_existing_pair(void)
 
     // Setting it twice is the same list: OR-ing a bit already present changes nothing.
     uint8_t again[64];
-    NtlmV.set_mic_flag_args.target_info = out;
-    NtlmV.set_mic_flag_args.ti_len = n;
-    NtlmV.set_mic_flag_args.out = again;
-    NtlmV.set_mic_flag_args.out_cap = sizeof(again);
-    Ntlm.set_mic_flag(ntlm_work);
-    size_t m = NtlmV.n;
+    ntlm_n = Ntlm.set_mic_flag(ntlm_work, out, n, again, sizeof(again));
+    size_t m = ntlm_n;
     TEST_ASSERT_EQUAL_size_t(n, m);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(out, again, n);
 }
@@ -428,74 +296,32 @@ void test_mic_flag_changes_the_response_and_fails_closed(void)
 {
     uint8_t nt_hash[16];
     uint8_t owf[16];
-    NtlmV.nt_hash_args.password = PASSWORD;
-    NtlmV.nt_hash_args.nt_hash = nt_hash;
-    Ntlm.nt_hash(ntlm_work);
-    NtlmV.ntowfv2_args.nt_hash = nt_hash;
-    NtlmV.ntowfv2_args.user = USER;
-    NtlmV.ntowfv2_args.domain = DOMAIN_NAME;
-    NtlmV.ntowfv2_args.owf = owf;
-    Ntlm.ntowfv2(ntlm_work);
-    TEST_ASSERT_TRUE(NtlmV.ok);
+    Ntlm.nt_hash(ntlm_work, PASSWORD, nt_hash);
+    proto_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, USER, DOMAIN_NAME, owf);
+    TEST_ASSERT_TRUE(ntlm_ok);
 
     uint8_t flagged[64];
-    NtlmV.set_mic_flag_args.target_info = TARGET_INFO;
-    NtlmV.set_mic_flag_args.ti_len = sizeof(TARGET_INFO);
-    NtlmV.set_mic_flag_args.out = flagged;
-    NtlmV.set_mic_flag_args.out_cap = sizeof(flagged);
-    Ntlm.set_mic_flag(ntlm_work);
-    size_t fl = NtlmV.n;
+    size_t ntlm_n = Ntlm.set_mic_flag(ntlm_work, TARGET_INFO, sizeof(TARGET_INFO), flagged, sizeof(flagged));
+    size_t fl = ntlm_n;
     TEST_ASSERT_EQUAL_size_t(44, fl);
 
     uint8_t plain_resp[128];
     uint8_t flagged_resp[128];
-    NtlmV.v2_response_args.owf = owf;
-    NtlmV.v2_response_args.server_challenge = SERVER_CHALLENGE;
-    NtlmV.v2_response_args.client_challenge = CLIENT_CHALLENGE;
-    NtlmV.v2_response_args.timestamp = ZERO_TIME;
-    NtlmV.v2_response_args.target_info = TARGET_INFO;
-    NtlmV.v2_response_args.ti_len = sizeof(TARGET_INFO);
-    NtlmV.v2_response_args.out = plain_resp;
-    NtlmV.v2_response_args.out_cap = sizeof(plain_resp);
-    NtlmV.v2_response_args.session_key = NULL;
-    Ntlm.v2_response(ntlm_work);
-    NtlmV.v2_response_args.owf = owf;
-    NtlmV.v2_response_args.server_challenge = SERVER_CHALLENGE;
-    NtlmV.v2_response_args.client_challenge = CLIENT_CHALLENGE;
-    NtlmV.v2_response_args.timestamp = ZERO_TIME;
-    NtlmV.v2_response_args.target_info = flagged;
-    NtlmV.v2_response_args.ti_len = fl;
-    NtlmV.v2_response_args.out = flagged_resp;
-    NtlmV.v2_response_args.out_cap = sizeof(flagged_resp);
-    NtlmV.v2_response_args.session_key = NULL;
-    Ntlm.v2_response(ntlm_work);
+    Ntlm.v2_response(ntlm_work, owf, SERVER_CHALLENGE, CLIENT_CHALLENGE, ZERO_TIME, TARGET_INFO, sizeof(TARGET_INFO),
+                     plain_resp, sizeof(plain_resp), NULL);
+    Ntlm.v2_response(ntlm_work, owf, SERVER_CHALLENGE, CLIENT_CHALLENGE, ZERO_TIME, flagged, fl, flagged_resp,
+                     sizeof(flagged_resp), NULL);
     TEST_ASSERT_TRUE(memcmp(plain_resp, flagged_resp, 16) != 0);
 
     uint8_t small[40];
-    NtlmV.set_mic_flag_args.target_info = TARGET_INFO;
-    NtlmV.set_mic_flag_args.ti_len = sizeof(TARGET_INFO);
-    NtlmV.set_mic_flag_args.out = small;
-    NtlmV.set_mic_flag_args.out_cap = 35;
-    Ntlm.set_mic_flag(ntlm_work);
-    TEST_ASSERT_EQUAL_size_t(0, NtlmV.n); // no copy
-    NtlmV.set_mic_flag_args.target_info = TARGET_INFO;
-    NtlmV.set_mic_flag_args.ti_len = sizeof(TARGET_INFO);
-    NtlmV.set_mic_flag_args.out = small;
-    NtlmV.set_mic_flag_args.out_cap = 40;
-    Ntlm.set_mic_flag(ntlm_work);
-    TEST_ASSERT_EQUAL_size_t(0, NtlmV.n); // no pair
-    NtlmV.set_mic_flag_args.target_info = NULL;
-    NtlmV.set_mic_flag_args.ti_len = 4;
-    NtlmV.set_mic_flag_args.out = small;
-    NtlmV.set_mic_flag_args.out_cap = sizeof(small);
-    Ntlm.set_mic_flag(ntlm_work);
-    TEST_ASSERT_EQUAL_size_t(0, NtlmV.n);
-    NtlmV.set_mic_flag_args.target_info = TARGET_INFO;
-    NtlmV.set_mic_flag_args.ti_len = sizeof(TARGET_INFO);
-    NtlmV.set_mic_flag_args.out = NULL;
-    NtlmV.set_mic_flag_args.out_cap = 64;
-    Ntlm.set_mic_flag(ntlm_work);
-    TEST_ASSERT_EQUAL_size_t(0, NtlmV.n);
+    ntlm_n = Ntlm.set_mic_flag(ntlm_work, TARGET_INFO, sizeof(TARGET_INFO), small, 35);
+    TEST_ASSERT_EQUAL_size_t(0, ntlm_n); // no copy
+    ntlm_n = Ntlm.set_mic_flag(ntlm_work, TARGET_INFO, sizeof(TARGET_INFO), small, 40);
+    TEST_ASSERT_EQUAL_size_t(0, ntlm_n); // no pair
+    ntlm_n = Ntlm.set_mic_flag(ntlm_work, NULL, 4, small, sizeof(small));
+    TEST_ASSERT_EQUAL_size_t(0, ntlm_n);
+    ntlm_n = Ntlm.set_mic_flag(ntlm_work, TARGET_INFO, sizeof(TARGET_INFO), NULL, 64);
+    TEST_ASSERT_EQUAL_size_t(0, ntlm_n);
 }
 
 // MS-NLMP 3.1.5.1.2 defines the MIC as HMAC_MD5 over the three messages concatenated. The module
@@ -510,43 +336,19 @@ void test_mic_matches_the_rfc2202_hmac_md5_vectors(void)
     uint8_t out[16];
 
     memset(key, 0x0b, sizeof(key));
-    NtlmV.mic_args.session_key = key;
-    NtlmV.mic_args.neg = (const uint8_t *)"Hi ";
-    NtlmV.mic_args.neg_len = 3;
-    NtlmV.mic_args.chal = (const uint8_t *)"Th";
-    NtlmV.mic_args.chal_len = 2;
-    NtlmV.mic_args.auth = (const uint8_t *)"ere";
-    NtlmV.mic_args.auth_len = 3;
-    NtlmV.mic_args.out = out;
-    Ntlm.mic(ntlm_work);
+    Ntlm.mic(ntlm_work, key, (const uint8_t *)"Hi ", 3, (const uint8_t *)"Th", 2, (const uint8_t *)"ere", 3, out);
     static const uint8_t WANT1[16] = {0x92, 0x94, 0x72, 0x7a, 0x36, 0x38, 0xbb, 0x1c,
                                       0x13, 0xf4, 0x8e, 0xf8, 0x15, 0x8b, 0xfc, 0x9d};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT1, out, sizeof(WANT1));
 
     // The same message split differently must give the same digest: the split is not part of it.
-    NtlmV.mic_args.session_key = key;
-    NtlmV.mic_args.neg = (const uint8_t *)"H";
-    NtlmV.mic_args.neg_len = 1;
-    NtlmV.mic_args.chal = (const uint8_t *)"i Ther";
-    NtlmV.mic_args.chal_len = 6;
-    NtlmV.mic_args.auth = (const uint8_t *)"e";
-    NtlmV.mic_args.auth_len = 1;
-    NtlmV.mic_args.out = out;
-    Ntlm.mic(ntlm_work);
+    Ntlm.mic(ntlm_work, key, (const uint8_t *)"H", 1, (const uint8_t *)"i Ther", 6, (const uint8_t *)"e", 1, out);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT1, out, sizeof(WANT1));
 
     uint8_t data[50];
     memset(key, 0xaa, sizeof(key));
     memset(data, 0xdd, sizeof(data));
-    NtlmV.mic_args.session_key = key;
-    NtlmV.mic_args.neg = data;
-    NtlmV.mic_args.neg_len = 20;
-    NtlmV.mic_args.chal = data;
-    NtlmV.mic_args.chal_len = 20;
-    NtlmV.mic_args.auth = data;
-    NtlmV.mic_args.auth_len = 10;
-    NtlmV.mic_args.out = out;
-    Ntlm.mic(ntlm_work);
+    Ntlm.mic(ntlm_work, key, data, 20, data, 20, data, 10, out);
     static const uint8_t WANT3[16] = {0x56, 0xbe, 0x34, 0x52, 0x1d, 0x14, 0x4c, 0x88,
                                       0xdb, 0xb8, 0xc7, 0x33, 0xf0, 0xe8, 0xb3, 0xf6};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT3, out, sizeof(WANT3));
@@ -563,46 +365,14 @@ void test_mic_binds_the_key_and_every_message(void)
 
     uint8_t a[16];
     uint8_t b[16];
-    NtlmV.mic_args.session_key = k1;
-    NtlmV.mic_args.neg = (const uint8_t *)"neg";
-    NtlmV.mic_args.neg_len = 3;
-    NtlmV.mic_args.chal = (const uint8_t *)"chal";
-    NtlmV.mic_args.chal_len = 4;
-    NtlmV.mic_args.auth = (const uint8_t *)"auth";
-    NtlmV.mic_args.auth_len = 4;
-    NtlmV.mic_args.out = a;
-    Ntlm.mic(ntlm_work);
-    NtlmV.mic_args.session_key = k2;
-    NtlmV.mic_args.neg = (const uint8_t *)"neg";
-    NtlmV.mic_args.neg_len = 3;
-    NtlmV.mic_args.chal = (const uint8_t *)"chal";
-    NtlmV.mic_args.chal_len = 4;
-    NtlmV.mic_args.auth = (const uint8_t *)"auth";
-    NtlmV.mic_args.auth_len = 4;
-    NtlmV.mic_args.out = b;
-    Ntlm.mic(ntlm_work);
+    Ntlm.mic(ntlm_work, k1, (const uint8_t *)"neg", 3, (const uint8_t *)"chal", 4, (const uint8_t *)"auth", 4, a);
+    Ntlm.mic(ntlm_work, k2, (const uint8_t *)"neg", 3, (const uint8_t *)"chal", 4, (const uint8_t *)"auth", 4, b);
     TEST_ASSERT_TRUE(memcmp(a, b, 16) != 0);
 
-    NtlmV.mic_args.session_key = k1;
-    NtlmV.mic_args.neg = (const uint8_t *)"neg";
-    NtlmV.mic_args.neg_len = 3;
-    NtlmV.mic_args.chal = (const uint8_t *)"chal";
-    NtlmV.mic_args.chal_len = 4;
-    NtlmV.mic_args.auth = (const uint8_t *)"autH";
-    NtlmV.mic_args.auth_len = 4;
-    NtlmV.mic_args.out = b;
-    Ntlm.mic(ntlm_work);
+    Ntlm.mic(ntlm_work, k1, (const uint8_t *)"neg", 3, (const uint8_t *)"chal", 4, (const uint8_t *)"autH", 4, b);
     TEST_ASSERT_TRUE(memcmp(a, b, 16) != 0);
 
-    NtlmV.mic_args.session_key = k1;
-    NtlmV.mic_args.neg = (const uint8_t *)"Neg";
-    NtlmV.mic_args.neg_len = 3;
-    NtlmV.mic_args.chal = (const uint8_t *)"chal";
-    NtlmV.mic_args.chal_len = 4;
-    NtlmV.mic_args.auth = (const uint8_t *)"auth";
-    NtlmV.mic_args.auth_len = 4;
-    NtlmV.mic_args.out = b;
-    Ntlm.mic(ntlm_work);
+    Ntlm.mic(ntlm_work, k1, (const uint8_t *)"Neg", 3, (const uint8_t *)"chal", 4, (const uint8_t *)"auth", 4, b);
     TEST_ASSERT_TRUE(memcmp(a, b, 16) != 0);
 }
 
@@ -611,35 +381,21 @@ void test_mic_binds_the_key_and_every_message(void)
 void test_ntowfv2_refuses_an_oversized_name_pair(void)
 {
     uint8_t nt_hash[16];
-    NtlmV.nt_hash_args.password = PASSWORD;
-    NtlmV.nt_hash_args.nt_hash = nt_hash;
-    Ntlm.nt_hash(ntlm_work);
+    Ntlm.nt_hash(ntlm_work, PASSWORD, nt_hash);
 
     char long_user[300];
     memset(long_user, 'a', sizeof(long_user) - 1);
     long_user[sizeof(long_user) - 1] = '\0';
 
     uint8_t owf[16];
-    NtlmV.ntowfv2_args.nt_hash = nt_hash;
-    NtlmV.ntowfv2_args.user = long_user;
-    NtlmV.ntowfv2_args.domain = DOMAIN_NAME;
-    NtlmV.ntowfv2_args.owf = owf;
-    Ntlm.ntowfv2(ntlm_work);
-    TEST_ASSERT_FALSE(NtlmV.ok);
+    proto_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, long_user, DOMAIN_NAME, owf);
+    TEST_ASSERT_FALSE(ntlm_ok);
 
     char at_limit[257];
     memset(at_limit, 'a', 256);
     at_limit[256] = '\0';
-    NtlmV.ntowfv2_args.nt_hash = nt_hash;
-    NtlmV.ntowfv2_args.user = at_limit;
-    NtlmV.ntowfv2_args.domain = "";
-    NtlmV.ntowfv2_args.owf = owf;
-    Ntlm.ntowfv2(ntlm_work);
-    TEST_ASSERT_TRUE(NtlmV.ok); // exactly 256 chars fits
-    NtlmV.ntowfv2_args.nt_hash = nt_hash;
-    NtlmV.ntowfv2_args.user = at_limit;
-    NtlmV.ntowfv2_args.domain = "x";
-    NtlmV.ntowfv2_args.owf = owf;
-    Ntlm.ntowfv2(ntlm_work);
-    TEST_ASSERT_FALSE(NtlmV.ok);
+    ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, at_limit, "", owf);
+    TEST_ASSERT_TRUE(ntlm_ok); // exactly 256 chars fits
+    ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, at_limit, "x", owf);
+    TEST_ASSERT_FALSE(ntlm_ok);
 }
