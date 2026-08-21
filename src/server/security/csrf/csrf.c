@@ -78,12 +78,7 @@ static void sign_nonce(uint8_t *restrict work, const uint8_t *nonce, size_t nlen
 {
     const CsrfCtx *c = CSRF_CTX(work);
     uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
-    HmacSha256V.mac_args.key = c->secret;
-    HmacSha256V.mac_args.key_len = c->secret_len;
-    HmacSha256V.mac_args.data = nonce;
-    HmacSha256V.mac_args.len = nlen;
-    HmacSha256V.mac_args.out = mac;
-    HmacSha256.mac(CSRF_MAC(work));
+    HmacSha256.mac(CSRF_MAC(work), c->secret, c->secret_len, nonce, nlen, mac);
     hex_of(mac, CSRF_SIG_BYTES, sig_hex); // truncate the MAC to CSRF_SIG_BYTES
 }
 

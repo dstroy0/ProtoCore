@@ -1021,12 +1021,7 @@ static void mac_hmac_sha256(uint8_t *crypto_work, const uint8_t key[16], const u
                             uint8_t out16[16])
 {
     uint8_t mac[32];
-    HmacSha256V.mac_args.key = key;
-    HmacSha256V.mac_args.key_len = 16;
-    HmacSha256V.mac_args.data = msg;
-    HmacSha256V.mac_args.len = len;
-    HmacSha256V.mac_args.out = mac;
-    HmacSha256.mac(crypto_work);
+    HmacSha256.mac(crypto_work, key, 16, msg, len, mac);
     mem.cpy(out16, mac, 16); // Signature = first 16 octets of the HMAC
 }
 
@@ -1165,14 +1160,8 @@ void protocore_smb2_derive_signing_key(uint8_t *restrict work)
     fixed[n++] = 0x80;
     size_t mark = protocore_secure_mark();
     uint8_t *w = protocore_secure_span(PROTOCORE_KDF_BORROW, 8).buf;
-    KdfV.ctr_args.ki = session_key;
-    KdfV.ctr_args.ki_len = 16;
-    KdfV.ctr_args.fixed = fixed;
-    KdfV.ctr_args.fixed_len = n;
-    KdfV.ctr_args.out = out_key;
-    KdfV.ctr_args.out_len = 16;
-    Kdf.ctr_hmac_sha256(w);
-    const proto_bool derived = KdfV.ok;
+    proto_bool kdf_ok = Kdf.ctr_hmac_sha256(w, session_key, 16, fixed, n, out_key, 16);
+    const proto_bool derived = kdf_ok;
     protocore_secure_release(mark);
     Smb2V.ok = derived;
 }
@@ -1218,14 +1207,8 @@ static proto_bool smb3_derive_cipher_key(const uint8_t session_key[16], uint16_t
     fixed[n++] = (uint8_t)(l_bits & 0xff);
     size_t mark = protocore_secure_mark();
     uint8_t *w = protocore_secure_span(PROTOCORE_KDF_BORROW, 8).buf;
-    KdfV.ctr_args.ki = session_key;
-    KdfV.ctr_args.ki_len = 16;
-    KdfV.ctr_args.fixed = fixed;
-    KdfV.ctr_args.fixed_len = n;
-    KdfV.ctr_args.out = out_key;
-    KdfV.ctr_args.out_len = key_len;
-    Kdf.ctr_hmac_sha256(w);
-    const proto_bool derived = KdfV.ok;
+    proto_bool kdf_ok = Kdf.ctr_hmac_sha256(w, session_key, 16, fixed, n, out_key, key_len);
+    const proto_bool derived = kdf_ok;
     protocore_secure_release(mark);
     return derived;
 }
