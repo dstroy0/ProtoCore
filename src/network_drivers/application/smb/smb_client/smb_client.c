@@ -7,9 +7,7 @@
  *        NEGOTIATE / NTLMv2 SESSION_SETUP / TREE_CONNECT / CREATE exchange over a send/recv seam.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_SMB
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/secure/secure.h" // the persistent end this module's key material is taken from
@@ -20,8 +18,6 @@
 #include "network_drivers/application/smb/ntlmssp/ntlmssp.h"
 #include "network_drivers/application/smb/smb2/smb2.h"
 #include "network_drivers/application/smb/spnego/spnego.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // Every request this engine builds has to fit the shared tx buffer, and the request builders report
 // that by returning 0. Pin the relationship instead of leaving each `if (!mlen)` to hope for it:
@@ -688,18 +684,12 @@ static SmbResult smb_create(uint8_t *restrict work, const SmbConfig *cfg, SmbHan
     return SMB_OK;
 }
 
-void protocore_smb_client_smb_open(uint8_t *restrict work)
+SmbResult protocore_smb_client_smb_open(uint8_t *restrict work, const SmbConfig *cfg, SmbHandle *h, SmbSendFn send,
+                                        SmbRecvFn recv, void *ctx)
 {
-    const SmbConfig *cfg = SmbClientV.smb_open_args.cfg;
-    SmbHandle *h = SmbClientV.smb_open_args.h;
-    SmbSendFn send = SmbClientV.smb_open_args.send;
-    SmbRecvFn recv = SmbClientV.smb_open_args.recv;
-    void *ctx = SmbClientV.smb_open_args.ctx;
-
     if (!cfg || !h || !send || !recv || !cfg->user || !cfg->pass || !cfg->share || !cfg->path)
     {
-        SmbClientV.value = SMB_ERR_ARG;
-        return;
+        return SMB_ERR_ARG;
     }
 
     const char *domain = cfg->domain ? cfg->domain : "";
@@ -733,8 +723,7 @@ void protocore_smb_client_smb_open(uint8_t *restrict work)
                                 PROTOCORE_SMB2_MAX_OFFER_CIPHERS);
     if (r != SMB_OK)
     {
-        SmbClientV.value = r;
-        return;
+        return r;
     }
     // The client advertises SIGNING_ENABLED, so the session is signed exactly when the server requires it.
     proto_bool want_signing = (sec_mode & SMB2_NEGOTIATE_SIGNING_REQUIRED) != 0;
@@ -746,40 +735,32 @@ void protocore_smb_client_smb_open(uint8_t *restrict work)
                           &sign, &crypt);
     if (r != SMB_OK)
     {
-        SmbClientV.value = r;
-        return;
+        return r;
     }
 
     uint32_t tree_id = 0;
     r = smb_tree_connect(work, cfg, session_id, &sign, send, recv, ctx, &tree_id, &crypt);
     if (r != SMB_OK)
     {
-        SmbClientV.value = r;
-        return;
+        return r;
     }
 
-    SmbClientV.value = smb_create(work, cfg, h, session_id, tree_id, &sign, &crypt, send, recv, ctx);
+    return smb_create(work, cfg, h, session_id, tree_id, &sign, &crypt, send, recv, ctx);
 }
 
-void protocore_smb_client_smb_close(uint8_t *restrict work)
+SmbResult protocore_smb_client_smb_close(uint8_t *restrict work, SmbHandle *h, SmbSendFn send, SmbRecvFn recv,
+                                         void *ctx)
 {
-    SmbHandle *h = SmbClientV.smb_close_args.h;
-    SmbSendFn send = SmbClientV.smb_close_args.send;
-    SmbRecvFn recv = SmbClientV.smb_close_args.recv;
-    void *ctx = SmbClientV.smb_close_args.ctx;
-
     if (!h || !send || !recv)
     {
-        SmbClientV.value = SMB_ERR_ARG;
-        return;
+        return SMB_ERR_ARG;
     }
     size_t smb2_n = Smb2.build_close(work, SMB_CLIENT_CTX(work)->tx + 4, sizeof(SMB_CLIENT_CTX(work)->tx) - 4,
                                      h->next_message_id, h->session_id, h->tree_id, h->file_id);
     size_t mlen = smb2_n;
     if (!mlen)
     {
-        SmbClientV.value = SMB_ERR_OVERFLOW;
-        return;
+        return SMB_ERR_OVERFLOW;
     }
     SmbSign sign = {h->signing_active, h->signing_algo, {0}};
     mem.cpy(sign.key, h->signing_key, sizeof(sign.key));
@@ -791,42 +772,30 @@ void protocore_smb_client_smb_close(uint8_t *restrict work)
     h->enc_nonce = crypt.nonce; // persist the advanced nonce (must never repeat under the same key)
     if (rl < 0)
     {
-        SmbClientV.value = rt;
-        return;
+        return rt;
     }
     Smb2Header hd;
     Smb2CloseResp cl;
     proto_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &hd);
     if (!smb2_ok || hd.status != SMB2_STATUS_SUCCESS)
     {
-        SmbClientV.value = SMB_ERR_PROTOCOL;
-        return;
+        return SMB_ERR_PROTOCOL;
     }
     smb2_ok = Smb2.parse_close_response(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &cl);
     if (!smb2_ok)
     {
-        SmbClientV.value = SMB_ERR_PROTOCOL;
-        return;
+        return SMB_ERR_PROTOCOL;
     }
     h->next_message_id++;
-    SmbClientV.value = SMB_OK;
+    return SMB_OK;
 }
 
-void protocore_smb_client_smb_read(uint8_t *restrict work)
+SmbResult protocore_smb_client_smb_read(uint8_t *restrict work, SmbHandle *h, uint64_t offset, uint8_t *out, size_t cap,
+                                        size_t *out_len, SmbSendFn send, SmbRecvFn recv, void *ctx)
 {
-    SmbHandle *h = SmbClientV.smb_read_args.h;
-    uint64_t offset = SmbClientV.smb_read_args.offset;
-    uint8_t *out = SmbClientV.smb_read_args.out;
-    size_t cap = SmbClientV.smb_read_args.cap;
-    size_t *out_len = SmbClientV.smb_read_args.out_len;
-    SmbSendFn send = SmbClientV.smb_read_args.send;
-    SmbRecvFn recv = SmbClientV.smb_read_args.recv;
-    void *ctx = SmbClientV.smb_read_args.ctx;
-
     if (!h || !out || !out_len || !send || !recv)
     {
-        SmbClientV.value = SMB_ERR_ARG;
-        return;
+        return SMB_ERR_ARG;
     }
     *out_len = 0;
     SmbSign sign = {h->signing_active, h->signing_algo, {0}};
@@ -849,23 +818,20 @@ void protocore_smb_client_smb_read(uint8_t *restrict work)
         size_t mlen = smb2_n;
         if (!mlen)
         {
-            SmbClientV.value = SMB_ERR_OVERFLOW;
-            return;
+            return SMB_ERR_OVERFLOW;
         }
         SmbResult rt = SMB_ERR_IO;
         int rl = smb_round_trip(work, send, recv, ctx, mlen, &sign, &crypt, &rt);
         h->enc_nonce = crypt.nonce; // persist immediately so the nonce never repeats, even on an error return
         if (rl < 0)
         {
-            SmbClientV.value = rt;
-            return;
+            return rt;
         }
         Smb2Header hd;
         proto_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &hd);
         if (!smb2_ok)
         {
-            SmbClientV.value = SMB_ERR_PROTOCOL;
-            return;
+            return SMB_ERR_PROTOCOL;
         }
         h->next_message_id++;
         if (hd.status == SMB2_STATUS_END_OF_FILE)
@@ -874,15 +840,13 @@ void protocore_smb_client_smb_read(uint8_t *restrict work)
         }
         if (hd.status != SMB2_STATUS_SUCCESS)
         {
-            SmbClientV.value = SMB_ERR_PROTOCOL;
-            return;
+            return SMB_ERR_PROTOCOL;
         }
         Smb2ReadResp r;
         smb2_ok = Smb2.parse_read_response(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &r);
         if (!smb2_ok || r.data_len > want)
         {
-            SmbClientV.value = SMB_ERR_PROTOCOL;
-            return;
+            return SMB_ERR_PROTOCOL;
         }
         if (r.data_len == 0)
         {
@@ -896,24 +860,16 @@ void protocore_smb_client_smb_read(uint8_t *restrict work)
         }
     }
     *out_len = total;
-    SmbClientV.value = SMB_OK;
+    return SMB_OK;
 }
 
-void protocore_smb_client_smb_write(uint8_t *restrict work)
+SmbResult protocore_smb_client_smb_write(uint8_t *restrict work, SmbHandle *h, uint64_t offset, const uint8_t *data,
+                                         size_t len, size_t *written, SmbSendFn send, SmbRecvFn recv, void *ctx)
 {
-    SmbHandle *h = SmbClientV.smb_write_args.h;
-    uint64_t offset = SmbClientV.smb_write_args.offset;
-    const uint8_t *data = SmbClientV.smb_write_args.data;
-    size_t len = SmbClientV.smb_write_args.len;
-    size_t *written = SmbClientV.smb_write_args.written;
-    SmbSendFn send = SmbClientV.smb_write_args.send;
-    SmbRecvFn recv = SmbClientV.smb_write_args.recv;
-    void *ctx = SmbClientV.smb_write_args.ctx;
-
+    SmbResult value = 0;
     if (!h || !data || !written || !send || !recv)
     {
-        SmbClientV.value = SMB_ERR_ARG;
-        return;
+        return SMB_ERR_ARG;
     }
     *written = 0;
     SmbSign sign = {h->signing_active, h->signing_algo, {0}};
@@ -936,36 +892,32 @@ void protocore_smb_client_smb_write(uint8_t *restrict work)
         size_t mlen = smb2_n;
         if (!mlen)
         {
-            SmbClientV.value = SMB_ERR_OVERFLOW;
-            return;
+            return SMB_ERR_OVERFLOW;
         }
         SmbResult rt = SMB_ERR_IO;
         int rl = smb_round_trip(work, send, recv, ctx, mlen, &sign, &crypt, &rt);
         h->enc_nonce = crypt.nonce; // persist immediately so the nonce never repeats, even on an error return
         if (rl < 0)
         {
-            SmbClientV.value = rt;
-            return;
+            return rt;
         }
         Smb2Header hd;
         proto_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &hd);
         if (!smb2_ok)
         {
-            SmbClientV.value = SMB_ERR_PROTOCOL;
-            return;
+            return SMB_ERR_PROTOCOL;
         }
         h->next_message_id++;
         if (hd.status != SMB2_STATUS_SUCCESS)
         {
-            SmbClientV.value = SMB_ERR_PROTOCOL;
-            return;
+            return SMB_ERR_PROTOCOL;
         }
         Smb2WriteResp w;
         smb2_ok = Smb2.parse_write_response(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &w);
         if (!smb2_ok || w.count == 0 || w.count > want)
         {
-            SmbClientV.value = SMB_ERR_PROTOCOL; // no progress or a bogus count
-            return;
+            value = SMB_ERR_PROTOCOL; // no progress or a bogus count
+            return value;
         }
         total += w.count;
     }
@@ -974,12 +926,5 @@ void protocore_smb_client_smb_write(uint8_t *restrict work)
         h->file_size = offset + total;
     }
     *written = total;
-    SmbClientV.value = SMB_OK;
+    return SMB_OK;
 }
-
-/** @brief The operands and the outcome. */
-SmbClientVars SmbClientV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_SMB
