@@ -7,16 +7,12 @@
  *        and the 207 Multi-Status XML builder. Pure - no sockets, no filesystem.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_WEBDAV
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h" // str.find: the scheme marker inside a Destination header
 #include "network_drivers/application/webdav/webdav.h"
 #include "shared/hex/hex.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 // --- the entries -----------------------------------------------------------
@@ -24,108 +20,86 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_webdav_xml_escape(uint8_t *restrict work);
-
-void protocore_webdav_method(uint8_t *restrict work)
+WebDavMethod protocore_webdav_method(uint8_t *restrict work, const char *m)
 {
     (void)work;
-    const char *m = WebdavV.method_args.m;
 
     if (!m)
     {
-        WebdavV.value = DAV_M_UNSUPPORTED;
-        return;
+        return DAV_M_UNSUPPORTED;
     }
     if (str.eq(m, "OPTIONS", sizeof("OPTIONS"), PROTO_FALSE))
     {
-        WebdavV.value = DAV_M_OPTIONS;
-        return;
+        return DAV_M_OPTIONS;
     }
     if (str.eq(m, "GET", sizeof("GET"), PROTO_FALSE))
     {
-        WebdavV.value = DAV_M_GET;
-        return;
+        return DAV_M_GET;
     }
     if (str.eq(m, "HEAD", sizeof("HEAD"), PROTO_FALSE))
     {
-        WebdavV.value = DAV_M_HEAD;
-        return;
+        return DAV_M_HEAD;
     }
     if (str.eq(m, "PUT", sizeof("PUT"), PROTO_FALSE))
     {
-        WebdavV.value = DAV_M_PUT;
-        return;
+        return DAV_M_PUT;
     }
     if (str.eq(m, "DELETE", sizeof("DELETE"), PROTO_FALSE))
     {
-        WebdavV.value = DAV_M_DELETE;
-        return;
+        return DAV_M_DELETE;
     }
     if (str.eq(m, "PROPFIND", sizeof("PROPFIND"), PROTO_FALSE))
     {
-        WebdavV.value = DAV_M_PROPFIND;
-        return;
+        return DAV_M_PROPFIND;
     }
     if (str.eq(m, "PROPPATCH", sizeof("PROPPATCH"), PROTO_FALSE))
     {
-        WebdavV.value = DAV_M_PROPPATCH;
-        return;
+        return DAV_M_PROPPATCH;
     }
     if (str.eq(m, "MKCOL", sizeof("MKCOL"), PROTO_FALSE))
     {
-        WebdavV.value = DAV_M_MKCOL;
-        return;
+        return DAV_M_MKCOL;
     }
     if (str.eq(m, "COPY", sizeof("COPY"), PROTO_FALSE))
     {
-        WebdavV.value = DAV_M_COPY;
-        return;
+        return DAV_M_COPY;
     }
     if (str.eq(m, "MOVE", sizeof("MOVE"), PROTO_FALSE))
     {
-        WebdavV.value = DAV_M_MOVE;
-        return;
+        return DAV_M_MOVE;
     }
     if (str.eq(m, "LOCK", sizeof("LOCK"), PROTO_FALSE))
     {
-        WebdavV.value = DAV_M_LOCK;
-        return;
+        return DAV_M_LOCK;
     }
     if (str.eq(m, "UNLOCK", sizeof("UNLOCK"), PROTO_FALSE))
     {
-        WebdavV.value = DAV_M_UNLOCK;
-        return;
+        return DAV_M_UNLOCK;
     }
-    WebdavV.value = DAV_M_UNSUPPORTED;
+    return DAV_M_UNSUPPORTED;
 }
 
-void protocore_webdav_depth(uint8_t *restrict work)
+int protocore_webdav_depth(uint8_t *restrict work, const char *depth_hdr, int dflt)
 {
     (void)work;
-    const char *depth_hdr = WebdavV.depth_args.depth_hdr;
-    int dflt = WebdavV.depth_args.dflt;
 
     if (!depth_hdr || !depth_hdr[0])
     {
-        WebdavV.i32 = dflt;
-        return;
+        return dflt;
     }
     if (str.eq(depth_hdr, "0", sizeof("0"), PROTO_FALSE))
     {
-        WebdavV.i32 = 0;
-        return;
+        return 0;
     }
     if (str.eq(depth_hdr, "1", sizeof("1"), PROTO_FALSE))
     {
-        WebdavV.i32 = 1;
-        return;
+        return 1;
     }
     if (str.eq(depth_hdr, "infinity", sizeof("infinity"), PROTO_FALSE))
     {
-        WebdavV.i32 = PROTOCORE_DAV_DEPTH_INFINITY;
-        return;
+        return PROTOCORE_DAV_DEPTH_INFINITY;
     }
-    WebdavV.i32 = dflt;
+    return dflt;
 }
 
 // Append a NUL-terminated string if it fits; returns false (leaving *len and the
@@ -143,18 +117,14 @@ static proto_bool app(char *buf, size_t cap, size_t *len, const char *s)
     return PROTO_TRUE;
 }
 
-void protocore_webdav_xml_escape(uint8_t *restrict work)
+size_t protocore_webdav_xml_escape(uint8_t *restrict work, char *dst, size_t cap, const char *src)
 {
     (void)work;
-    char *dst = WebdavV.xml_escape_args.dst;
-    size_t cap = WebdavV.xml_escape_args.cap;
-    const char *src = WebdavV.xml_escape_args.src;
 
     size_t o = 0;
     if (cap == 0)
     {
-        WebdavV.n = 0;
-        return;
+        return 0;
     }
     for (const char *p = src; *p; p++)
     {
@@ -199,20 +169,16 @@ void protocore_webdav_xml_escape(uint8_t *restrict work)
         }
     }
     dst[o] = '\0';
-    WebdavV.n = o;
+    return o;
 }
 
-void protocore_webdav_dest_path(uint8_t *restrict work)
+proto_bool protocore_webdav_dest_path(uint8_t *restrict work, const char *destination, char *out, size_t cap)
 {
-    (void)work;
-    const char *destination = WebdavV.dest_path_args.destination;
-    char *out = WebdavV.dest_path_args.out;
-    size_t cap = WebdavV.dest_path_args.cap;
+    proto_bool ok = PROTO_FALSE;
 
     if (!destination || !out || cap == 0)
     {
-        WebdavV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
 
     // Skip an absolute-URI scheme + authority: after "://", advance to the first
@@ -228,14 +194,14 @@ void protocore_webdav_dest_path(uint8_t *restrict work)
         }
         if (*p != '/')
         {
-            WebdavV.ok = PROTO_FALSE; // authority with no path
-            return;
+            ok = PROTO_FALSE; // authority with no path
+            return ok;
         }
     }
     else if (*p != '/')
     {
-        WebdavV.ok = PROTO_FALSE; // not an absolute path
-        return;
+        ok = PROTO_FALSE; // not an absolute path
+        return ok;
     }
 
     // Percent-decode into out. A while loop so the %XX case can consume its two
@@ -258,74 +224,58 @@ void protocore_webdav_dest_path(uint8_t *restrict work)
             }
             if (hi < 0 || lo < 0)
             {
-                WebdavV.ok = PROTO_FALSE; // malformed escape
-                return;
+                ok = PROTO_FALSE; // malformed escape
+                return ok;
             }
             c = (char)((hi << 4) | lo);
             p += 2;
         }
         if (o + 1 >= cap)
         {
-            WebdavV.ok = PROTO_FALSE; // no room for char + NUL
-            return;
+            ok = PROTO_FALSE; // no room for char + NUL
+            return ok;
         }
         out[o++] = c;
         p++;
     }
     out[o] = '\0';
-    WebdavV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_webdav_ms_begin(uint8_t *restrict work)
+size_t protocore_webdav_ms_begin(uint8_t *restrict work, char *buf, size_t cap, size_t len)
 {
     (void)work;
-    char *buf = WebdavV.ms_begin_args.buf;
-    size_t cap = WebdavV.ms_begin_args.cap;
-    size_t len = WebdavV.ms_begin_args.len;
 
     app(buf, cap, &len, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:multistatus xmlns:D=\"DAV:\">\n");
-    WebdavV.n = len;
+    return len;
 }
 
-void protocore_webdav_ms_entry(uint8_t *restrict work)
+size_t protocore_webdav_ms_entry(uint8_t *restrict work, char *buf, size_t cap, size_t len, const char *href,
+                                 proto_bool is_collection, uint32_t size, const char *rfc1123_mtime,
+                                 const char *content_type)
 {
-    char *buf = WebdavV.ms_entry_args.buf;
-    size_t cap = WebdavV.ms_entry_args.cap;
-    size_t len = WebdavV.ms_entry_args.len;
-    const char *href = WebdavV.ms_entry_args.href;
-    proto_bool is_collection = WebdavV.ms_entry_args.is_collection;
-    uint32_t size = WebdavV.ms_entry_args.size;
-    const char *rfc1123_mtime = WebdavV.ms_entry_args.rfc1123_mtime;
-    const char *content_type = WebdavV.ms_entry_args.content_type;
-
     // Build the whole <response> in a temp first so the append is atomic: a
     // partial element is never left in the document when the buffer fills.
     char tmp[512];
     size_t t = 0;
     char esc[256];
 
-    WebdavV.xml_escape_args.dst = esc;
-    WebdavV.xml_escape_args.cap = sizeof(esc);
-    WebdavV.xml_escape_args.src = href;
-    protocore_webdav_xml_escape(work);
+    Webdav.xml_escape(work, esc, sizeof(esc), href);
     // Open the response element and write the escaped href. The block runs at most 27 + esc(<=255)
     // + 66 == 348 bytes against tmp[512].
     if (!app(tmp, sizeof(tmp), &t, "  <D:response>\n    <D:href>") || !app(tmp, sizeof(tmp), &t, esc) ||
         !app(tmp, sizeof(tmp), &t, "</D:href>\n    <D:propstat>\n      <D:prop>\n        <D:resourcetype>"))
     {
-        WebdavV.n = len;
-        return;
+        return len;
     }
 
     if (is_collection && !app(tmp, sizeof(tmp), &t, "<D:collection/>"))
     {
-        WebdavV.n = len;
-        return;
+        return len;
     }
     if (!app(tmp, sizeof(tmp), &t, "</D:resourcetype>\n"))
     {
-        WebdavV.n = len;
-        return;
+        return len;
     }
 
     if (!is_collection)
@@ -355,8 +305,7 @@ void protocore_webdav_ms_entry(uint8_t *restrict work)
         if (!app(tmp, sizeof(tmp), &t, "        <D:getcontentlength>") || !app(tmp, sizeof(tmp), &t, num) ||
             !app(tmp, sizeof(tmp), &t, "</D:getcontentlength>\n"))
         {
-            WebdavV.n = len;
-            return;
+            return len;
         }
         // content_type block. The append-overflow arm is unreachable per the budget above (running
         // total <=~446 < tmp[512]); gcov lumps the multi-app OR onto one line, so the whole merged
@@ -365,8 +314,7 @@ void protocore_webdav_ms_entry(uint8_t *restrict work)
             (!app(tmp, sizeof(tmp), &t, "        <D:getcontenttype>") || !app(tmp, sizeof(tmp), &t, content_type) ||
              !app(tmp, sizeof(tmp), &t, "</D:getcontenttype>\n")))
         {
-            WebdavV.n = len;
-            return;
+            return len;
         }
     }
 
@@ -375,8 +323,7 @@ void protocore_webdav_ms_entry(uint8_t *restrict work)
         if (!app(tmp, sizeof(tmp), &t, "        <D:getlastmodified>") || !app(tmp, sizeof(tmp), &t, rfc1123_mtime) ||
             !app(tmp, sizeof(tmp), &t, "</D:getlastmodified>\n"))
         {
-            WebdavV.n = len;
-            return;
+            return len;
         }
     }
 
@@ -384,25 +331,21 @@ void protocore_webdav_ms_entry(uint8_t *restrict work)
              "      </D:prop>\n      <D:status>HTTP/1.1 200 OK</D:status>\n"
              "    </D:propstat>\n  </D:response>\n"))
     {
-        WebdavV.n = len;
-        return;
+        return len;
     }
 
     // Atomic commit: app() appends the finished element only if it fits and leaves
     // len unchanged on no-room, so the caller sees an unchanged len and stops adding.
     app(buf, cap, &len, tmp);
-    WebdavV.n = len;
+    return len;
 }
 
-void protocore_webdav_ms_end(uint8_t *restrict work)
+size_t protocore_webdav_ms_end(uint8_t *restrict work, char *buf, size_t cap, size_t len)
 {
     (void)work;
-    char *buf = WebdavV.ms_end_args.buf;
-    size_t cap = WebdavV.ms_end_args.cap;
-    size_t len = WebdavV.ms_end_args.len;
 
     app(buf, cap, &len, "</D:multistatus>\n");
-    WebdavV.n = len;
+    return len;
 }
 
 // True for a byte that ends an XML element name (whitespace, '/', '>').
@@ -414,31 +357,22 @@ static proto_bool name_end_char(char c)
     return c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '/' || c == '>';
 }
 
-void protocore_webdav_proppatch_ms(uint8_t *restrict work)
+size_t protocore_webdav_proppatch_ms(uint8_t *restrict work, char *buf, size_t cap, const char *href, const char *body,
+                                     size_t body_len)
 {
-    char *buf = WebdavV.proppatch_ms_args.buf;
-    size_t cap = WebdavV.proppatch_ms_args.cap;
-    const char *href = WebdavV.proppatch_ms_args.href;
-    const char *body = WebdavV.proppatch_ms_args.body;
-    size_t body_len = WebdavV.proppatch_ms_args.body_len;
-
     size_t len = 0;
     if (cap)
     {
         buf[0] = '\0'; // always a valid C-string, even if nothing below fits
     }
     char esc[256];
-    WebdavV.xml_escape_args.dst = esc;
-    WebdavV.xml_escape_args.cap = sizeof(esc);
-    WebdavV.xml_escape_args.src = href;
-    protocore_webdav_xml_escape(work);
+    Webdav.xml_escape(work, esc, sizeof(esc), href);
     if (!app(buf, cap, &len,
              "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:multistatus xmlns:D=\"DAV:\">\n"
              "  <D:response>\n    <D:href>") ||
         !app(buf, cap, &len, esc) || !app(buf, cap, &len, "</D:href>\n    <D:propstat>\n      <D:prop>\n"))
     {
-        WebdavV.n = 0;
-        return;
+        return 0;
     }
 
     // Walk the request and echo every element that sits directly inside a <prop>
@@ -570,10 +504,9 @@ void protocore_webdav_proppatch_ms(uint8_t *restrict work)
              "      </D:prop>\n      <D:status>HTTP/1.1 403 Forbidden</D:status>\n"
              "    </D:propstat>\n  </D:response>\n</D:multistatus>\n"))
     {
-        WebdavV.n = 0;
-        return;
+        return 0;
     }
-    WebdavV.n = len;
+    return len;
 }
 
 // ── lock manager (RFC 4918 §6-7) ───────────────────────────────────────────────────────────────
@@ -654,10 +587,9 @@ static proto_bool dav_lock_covers(const DavLock *l, const char *np)
     return l->depth_infinity && dav_lock_same_or_under(l->path, np);
 }
 
-void protocore_webdav_lock_init(uint8_t *restrict work)
+void protocore_webdav_lock_init(uint8_t *restrict work, DavLockTable *t)
 {
     (void)work;
-    DavLockTable *t = WebdavV.lock_init_args.t;
 
     if (!t)
     {
@@ -669,31 +601,25 @@ void protocore_webdav_lock_init(uint8_t *restrict work)
     }
 }
 
-void protocore_webdav_lock_acquire(uint8_t *restrict work)
+const DavLock *protocore_webdav_lock_acquire(uint8_t *restrict work, DavLockTable *t, const char *path,
+                                             const char *token, proto_bool exclusive, proto_bool depth_infinity,
+                                             uint32_t expiry_s)
 {
+    const DavLock *ptr = 0;
     (void)work;
-    DavLockTable *t = WebdavV.lock_acquire_args.t;
-    const char *path = WebdavV.lock_acquire_args.path;
-    const char *token = WebdavV.lock_acquire_args.token;
-    proto_bool exclusive = WebdavV.lock_acquire_args.exclusive;
-    proto_bool depth_infinity = WebdavV.lock_acquire_args.depth_infinity;
-    uint32_t expiry_s = WebdavV.lock_acquire_args.expiry_s;
 
     if (!t || !path || !token)
     {
-        WebdavV.ptr = NULL;
-        return;
+        return NULL;
     }
     char np[PROTOCORE_DAV_LOCK_PATH_MAX];
     if (!dav_lock_norm(np, sizeof(np), path))
     {
-        WebdavV.ptr = NULL;
-        return;
+        return NULL;
     }
     if (str.len(token, PROTOCORE_DAV_LOCK_TOKEN_MAX) + 1 > PROTOCORE_DAV_LOCK_TOKEN_MAX) // token would not fit
     {
-        WebdavV.ptr = NULL;
-        return;
+        return NULL;
     }
 
     // Conflict: an exclusive request clashes with any overlapping lock; a shared one only with an
@@ -704,8 +630,7 @@ void protocore_webdav_lock_acquire(uint8_t *restrict work)
         if (l->active && dav_lock_overlap(l->path, l->depth_infinity, np, depth_infinity) &&
             (exclusive || l->exclusive))
         {
-            WebdavV.ptr = NULL;
-            return;
+            return NULL;
         }
     }
 
@@ -722,22 +647,19 @@ void protocore_webdav_lock_acquire(uint8_t *restrict work)
         l->depth_infinity = depth_infinity;
         l->expiry_s = expiry_s;
         l->active = PROTO_TRUE;
-        WebdavV.ptr = l;
-        return;
+        return l;
     }
-    WebdavV.ptr = NULL; // table full
+    ptr = NULL; // table full
+    return ptr;
 }
 
-void protocore_webdav_lock_sweep(uint8_t *restrict work)
+size_t protocore_webdav_lock_sweep(uint8_t *restrict work, DavLockTable *t, uint32_t now_s)
 {
     (void)work;
-    DavLockTable *t = WebdavV.lock_sweep_args.t;
-    uint32_t now_s = WebdavV.lock_sweep_args.now_s;
 
     if (!t)
     {
-        WebdavV.n = 0;
-        return;
+        return 0;
     }
     size_t dropped = 0;
     for (size_t i = 0; i < PROTOCORE_DAV_LOCK_MAX; i++)
@@ -749,20 +671,17 @@ void protocore_webdav_lock_sweep(uint8_t *restrict work)
             dropped++;
         }
     }
-    WebdavV.n = dropped;
+    return dropped;
 }
 
-void protocore_webdav_lock_refresh(uint8_t *restrict work)
+const DavLock *protocore_webdav_lock_refresh(uint8_t *restrict work, DavLockTable *t, const char *token,
+                                             uint32_t new_expiry_s)
 {
     (void)work;
-    DavLockTable *t = WebdavV.lock_refresh_args.t;
-    const char *token = WebdavV.lock_refresh_args.token;
-    uint32_t new_expiry_s = WebdavV.lock_refresh_args.new_expiry_s;
 
     if (!t || !token)
     {
-        WebdavV.ptr = NULL;
-        return;
+        return NULL;
     }
     for (size_t i = 0; i < PROTOCORE_DAV_LOCK_MAX; i++)
     {
@@ -770,86 +689,74 @@ void protocore_webdav_lock_refresh(uint8_t *restrict work)
         if (l->active && str.eq(l->token, token, sizeof(l->token), PROTO_FALSE))
         {
             l->expiry_s = new_expiry_s;
-            WebdavV.ptr = l;
-            return;
+            return l;
         }
     }
-    WebdavV.ptr = NULL;
+    return NULL;
 }
 
-void protocore_webdav_lock_find(uint8_t *restrict work)
+const DavLock *protocore_webdav_lock_find(uint8_t *restrict work, const DavLockTable *t, const char *path)
 {
     (void)work;
-    const DavLockTable *t = WebdavV.lock_find_args.t;
-    const char *path = WebdavV.lock_find_args.path;
 
     if (!t || !path)
     {
-        WebdavV.ptr = NULL;
-        return;
+        return NULL;
     }
     char np[PROTOCORE_DAV_LOCK_PATH_MAX];
     if (!dav_lock_norm(np, sizeof(np), path))
     {
-        WebdavV.ptr = NULL;
-        return;
+        return NULL;
     }
     for (size_t i = 0; i < PROTOCORE_DAV_LOCK_MAX; i++)
     {
         if (t->locks[i].active && dav_lock_covers(&t->locks[i], np))
         {
-            WebdavV.ptr = &t->locks[i];
-            return;
+            return &t->locks[i];
         }
     }
-    WebdavV.ptr = NULL;
+    return NULL;
 }
 
-void protocore_webdav_lock_release(uint8_t *restrict work)
+proto_bool protocore_webdav_lock_release(uint8_t *restrict work, DavLockTable *t, const char *token)
 {
     (void)work;
-    DavLockTable *t = WebdavV.lock_release_args.t;
-    const char *token = WebdavV.lock_release_args.token;
 
     if (!t || !token)
     {
-        WebdavV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     for (size_t i = 0; i < PROTOCORE_DAV_LOCK_MAX; i++)
     {
         if (t->locks[i].active && str.eq(t->locks[i].token, token, sizeof(t->locks[i].token), PROTO_FALSE))
         {
             t->locks[i].active = PROTO_FALSE;
-            WebdavV.ok = PROTO_TRUE;
-            return;
+            return PROTO_TRUE;
         }
     }
-    WebdavV.ok = PROTO_FALSE;
+    return PROTO_FALSE;
 }
 
-void protocore_webdav_lock_can_write(uint8_t *restrict work)
+proto_bool protocore_webdav_lock_can_write(uint8_t *restrict work, const DavLockTable *t, const char *path,
+                                           const char *presented_token)
 {
+    proto_bool ok = PROTO_FALSE;
     (void)work;
-    const DavLockTable *t = WebdavV.lock_can_write_args.t;
-    const char *path = WebdavV.lock_can_write_args.path;
-    const char *presented_token = WebdavV.lock_can_write_args.presented_token;
 
     if (!t)
     {
-        WebdavV.ok = PROTO_TRUE; // no table => nothing is locked
-        return;
+        ok = PROTO_TRUE; // no table => nothing is locked
+        return ok;
     }
     if (!path)
     {
-        WebdavV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     char np[PROTOCORE_DAV_LOCK_PATH_MAX];
     if (!dav_lock_norm(np, sizeof(np), path))
     {
-        WebdavV.ok = PROTO_TRUE; // an unparseable path is not something the lock table can guard
-        return;
+        ok = PROTO_TRUE; // an unparseable path is not something the lock table can guard
+        return ok;
     }
     proto_bool covered = PROTO_FALSE;
     for (size_t i = 0; i < PROTOCORE_DAV_LOCK_MAX; i++)
@@ -862,24 +769,21 @@ void protocore_webdav_lock_can_write(uint8_t *restrict work)
         covered = PROTO_TRUE;
         if (presented_token && str.eq(l->token, presented_token, sizeof(l->token), PROTO_FALSE))
         {
-            WebdavV.ok = PROTO_TRUE; // the request holds a covering lock's token
-            return;
+            ok = PROTO_TRUE; // the request holds a covering lock's token
+            return ok;
         }
     }
-    WebdavV.ok = !covered; // unlocked => allowed; locked with no / wrong token => denied
+    ok = !covered; // unlocked => allowed; locked with no / wrong token => denied
+    return ok;
 }
 
-void protocore_webdav_if_token(uint8_t *restrict work)
+proto_bool protocore_webdav_if_token(uint8_t *restrict work, const char *if_header, char *out, size_t cap)
 {
     (void)work;
-    const char *if_header = WebdavV.if_token_args.if_header;
-    char *out = WebdavV.if_token_args.out;
-    size_t cap = WebdavV.if_token_args.cap;
 
     if (!if_header || !out || cap == 0)
     {
-        WebdavV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     // The state tokens live inside a condition list "( ... )"; take the first Coded-URL "<...>" within it
     // (which also skips the tagged-list resource URL that precedes the '(').
@@ -889,35 +793,24 @@ void protocore_webdav_if_token(uint8_t *restrict work)
     const char *lp = str.find(if_header, if_len, "(", sizeof("("), PROTO_FALSE);
     if (!lp)
     {
-        WebdavV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     const char *lt = str.find(lp, if_len - (size_t)(lp - if_header), "<", sizeof("<"), PROTO_FALSE);
     if (!lt)
     {
-        WebdavV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     const char *gt = str.find(lt, if_len - (size_t)(lt - if_header), ">", sizeof(">"), PROTO_FALSE);
     if (!gt)
     {
-        WebdavV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     size_t n = (size_t)(gt - lt - 1);
     if (n + 1 > cap)
     {
-        WebdavV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     mem.cpy(out, lt + 1, n);
     out[n] = 0;
-    WebdavV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
-
-/** @brief The operands and the outcome. */
-WebdavVars WebdavV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_WEBDAV

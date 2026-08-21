@@ -1,8 +1,16 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#ifndef PROTOCORE_HTTP_ROUTE_H
+#define PROTOCORE_HTTP_ROUTE_H
+
+#include "network_drivers/presentation/http/http.h" // the complete type a public struct below holds by value
+#include "protocore_config.h"                       // the entry point: protocore_types.h for the widths
+
+PROTOCORE_BEGIN_DECLS
+
 /**
- * @file route.h
+ * @file http_route.h
  * @brief The route table: where a request goes.
  *
  * A row names a path pattern, a method, a handler, and the ws / sse / mount / credential id the
@@ -10,22 +18,15 @@
  * the network layer, which routes datagrams.
  *
  * The module exports one symbol, @ref HttpRoutes. Everything in route.c has internal linkage.
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
 
-#ifndef PROTOCORE_HTTP_ROUTE_H
-#define PROTOCORE_HTTP_ROUTE_H
-
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths
-
-#if PROTOCORE_ENABLE_HTTP_ROUTE
-
-#include "network_drivers/presentation/http/http.h" // the complete type a public struct below holds by value
-
-PROTOCORE_BEGIN_DECLS
-
-// This module holds nothing between calls, so it carves no borrow and states none. An entry
-// takes one all the same, and never reads it, so every namespace in the tree is invoked the
-// same way.
+// PROTOCORE_HTTP_ROUTES_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. Its size and its offset are each a static_assert, so a feature
+// combination that does not fit fails to compile rather than overrunning at run time.
 
 /** @brief Discriminates between HTTP, WebSocket, and SSE route entries. */
 typedef enum
@@ -94,71 +95,40 @@ typedef struct HttpRoute
 /** @brief The table's storage. Declared, never defined here: the layout stays in route.c. */
 typedef struct HttpRouteCtx HttpRouteCtx;
 
-/** @brief What at takes: i. */
+/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    uint8_t i;
-} HttpRoutesAtArgs;
+    HttpRoute *(*add)(uint8_t *restrict);
+    uint8_t (*count)(uint8_t *restrict);
+    HttpRoute *(*at)(uint8_t *restrict, uint8_t);
+    void (*reset)(uint8_t *restrict);
+} HttpRouteNs;
+PROTOCORE_NS_LAYOUT(HttpRouteNs, add, count, at, reset);
 
 /**
- * @brief The route table: where a request goes.
- *
- * A caller sets the members a call takes, invokes it through ::HttpRoutes with the bytes it runs
- * out of, and reads the outcome off the same handle.
- *
- *   HttpRoutes.add(work);
- *   // HttpRoutes.ptr is what the call reports
- *
- * @var HttpRouteNs::at_args  what at takes: i
- * @var HttpRouteNs::ok  a call's true/false outcome
- * @var HttpRouteNs::ptr  the pointer a call reports
- * @var HttpRouteNs::value  the value a call reports
- * @var HttpRouteNs::add  take the next free entry, zeroed and ready to fill, or NULL when ...
- * @var HttpRouteNs::count  entries currently registered
- * @var HttpRouteNs::at  entry i, or NULL if i is past the end
- * @var HttpRouteNs::reset  empty the table. For tests: a case that does not reset matches ...
- *
- * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
- * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
- * a caller drives every namespace the same way.
+ * @brief Take the next free entry, zeroed and ready to fill, or NULL when .
+ * @param work PROTOCORE_HTTP_ROUTES_BORROW bytes the caller took. Not held past the call.
+ * @return The HttpRoute *.
  */
-typedef struct
-{
-    HttpRoutesAtArgs at_args;
-    proto_bool ok;
-    HttpRoute *ptr;
-    uint8_t value;
-} HttpRoutesVars;
-
-/** @brief The operands and the outcome. */
-extern HttpRoutesVars HttpRoutesV;
-
-/** @brief The entries. */
-typedef struct
-{
-    void (*const add)(uint8_t *restrict work);
-    void (*const count)(uint8_t *restrict work);
-    void (*const at)(uint8_t *restrict work);
-    void (*const reset)(uint8_t *restrict work);
-} HttpRouteNs;
-
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in HttpRoutesV or a region of the borrow at a fixed offset.
-void protocore_http_routes_add(uint8_t *restrict work);
-void protocore_http_routes_count(uint8_t *restrict work);
-void protocore_http_routes_at(uint8_t *restrict work);
+HttpRoute *protocore_http_routes_add(uint8_t *restrict work);
+/**
+ * @brief Entries currently registered.
+ * @param work PROTOCORE_HTTP_ROUTES_BORROW bytes the caller took. Not held past the call.
+ * @return The uint8_t.
+ */
+uint8_t protocore_http_routes_count(uint8_t *restrict work);
+/**
+ * @brief Entry i, or NULL if i is past the end.
+ * @param work PROTOCORE_HTTP_ROUTES_BORROW bytes the caller took. Not held past the call.
+ * @param i I
+ * @return The HttpRoute *.
+ */
+HttpRoute *protocore_http_routes_at(uint8_t *restrict work, uint8_t i);
+/**
+ * @brief Empty the table. For tests: a case that does not reset matches .
+ * @param work PROTOCORE_HTTP_ROUTES_BORROW bytes the caller took. Not held past the call.
+ */
 void protocore_http_routes_reset(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `HttpRoutes.add(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const HttpRouteNs HttpRoutes __attribute__((unused)) = {
-    .add = protocore_http_routes_add,
-    .count = protocore_http_routes_count,
-    .at = protocore_http_routes_at,
-    .reset = protocore_http_routes_reset,
-};
 
 /**
  * @brief The bytes every entry here runs out of: the one route table.
@@ -172,8 +142,12 @@ static const HttpRouteNs HttpRoutes __attribute__((unused)) = {
  */
 uint8_t *protocore_http_route_span(void);
 
-PROTOCORE_END_DECLS
+/** @brief Module namespace. */
+PROTOCORE_NS HttpRouteNs HttpRoutes PROTOCORE_UNUSED = {.add = protocore_http_routes_add,
+                                                        .count = protocore_http_routes_count,
+                                                        .at = protocore_http_routes_at,
+                                                        .reset = protocore_http_routes_reset};
 
-#endif // PROTOCORE_ENABLE_HTTP_ROUTE
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_HTTP_ROUTE_H

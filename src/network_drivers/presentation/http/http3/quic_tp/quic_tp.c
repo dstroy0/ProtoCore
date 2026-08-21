@@ -34,21 +34,15 @@ void protocore_quic_tp_defaults(uint8_t *restrict work, QuicTransportParams *tp)
 static proto_bool put_param(uint8_t *restrict work, uint8_t *out, size_t cap, size_t *p, uint64_t id,
                             const uint8_t *val, size_t val_len)
 {
-    QuicVarintV.encode_args.out = out + *p;
-    QuicVarintV.encode_args.cap = cap - *p;
-    QuicVarintV.encode_args.value = id;
-    QuicVarint.encode(work);
-    size_t n = QuicVarintV.n;
+    size_t quic_varint_n = QuicVarint.encode(work, out + *p, cap - *p, id);
+    size_t n = quic_varint_n;
     if (!n)
     {
         return PROTO_FALSE;
     }
     *p += n;
-    QuicVarintV.encode_args.out = out + *p;
-    QuicVarintV.encode_args.cap = cap - *p;
-    QuicVarintV.encode_args.value = val_len;
-    QuicVarint.encode(work);
-    n = QuicVarintV.n;
+    quic_varint_n = QuicVarint.encode(work, out + *p, cap - *p, val_len);
+    n = quic_varint_n;
     if (!n)
     {
         return PROTO_FALSE;
@@ -73,11 +67,8 @@ static proto_bool put_varint_param(uint8_t *restrict work, uint8_t *out, size_t 
                                    uint64_t value)
 {
     uint8_t v[8];
-    QuicVarintV.encode_args.out = v;
-    QuicVarintV.encode_args.cap = sizeof(v);
-    QuicVarintV.encode_args.value = value;
-    QuicVarint.encode(work);
-    size_t vlen = QuicVarintV.n;
+    size_t quic_varint_n = QuicVarint.encode(work, v, sizeof(v), value);
+    size_t vlen = quic_varint_n;
     if (!vlen)
     {
         return PROTO_FALSE;
@@ -125,12 +116,8 @@ size_t protocore_quic_tp_encode(uint8_t *restrict work, const QuicTransportParam
 static proto_bool value_varint(uint8_t *restrict work, const uint8_t *val, size_t len, uint64_t *out)
 {
     size_t consumed = 0;
-    QuicVarintV.decode_args.in = val;
-    QuicVarintV.decode_args.len = len;
-    QuicVarintV.decode_args.value = out;
-    QuicVarintV.decode_args.consumed = &consumed;
-    QuicVarint.decode(work);
-    if (!QuicVarintV.ok)
+    proto_bool quic_varint_ok = QuicVarint.decode(work, val, len, out, &consumed);
+    if (!quic_varint_ok)
     {
         return PROTO_FALSE;
     }
@@ -253,22 +240,14 @@ proto_bool protocore_quic_tp_parse(uint8_t *restrict work, const uint8_t *buf, s
         uint64_t id = 0;
         uint64_t vlen = 0;
         size_t c = 0;
-        QuicVarintV.decode_args.in = buf + off;
-        QuicVarintV.decode_args.len = len - off;
-        QuicVarintV.decode_args.value = &id;
-        QuicVarintV.decode_args.consumed = &c;
-        QuicVarint.decode(work);
-        if (!QuicVarintV.ok)
+        proto_bool quic_varint_ok = QuicVarint.decode(work, buf + off, len - off, &id, &c);
+        if (!quic_varint_ok)
         {
             return PROTO_FALSE;
         }
         off += c;
-        QuicVarintV.decode_args.in = buf + off;
-        QuicVarintV.decode_args.len = len - off;
-        QuicVarintV.decode_args.value = &vlen;
-        QuicVarintV.decode_args.consumed = &c;
-        QuicVarint.decode(work);
-        if (!QuicVarintV.ok)
+        quic_varint_ok = QuicVarint.decode(work, buf + off, len - off, &vlen, &c);
+        if (!quic_varint_ok)
         {
             return PROTO_FALSE;
         }

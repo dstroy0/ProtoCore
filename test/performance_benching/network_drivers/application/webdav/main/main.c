@@ -29,36 +29,15 @@ void dbench_run(void)
                   sink +=
                   protocore_webdav_ms_entry(buf, sizeof(buf), 0, "/dav/report.txt", false, 4096, mtime, "text/plain"));
         DBENCH_OP("protocore_webdav propfind (dir+2)", 100000, {
-            WebdavV.ms_begin_args.buf = buf;
-            WebdavV.ms_begin_args.cap = sizeof(buf);
-            WebdavV.ms_begin_args.len = 0;
-            Webdav.ms_begin(webdav_work);
-            size_t len = WebdavV.n;
-            WebdavV.ms_entry_args.buf = buf;
-            WebdavV.ms_entry_args.cap = sizeof(buf);
-            WebdavV.ms_entry_args.len = len;
-            WebdavV.ms_entry_args.href = "/dav/";
-            WebdavV.ms_entry_args.is_collection = true;
-            WebdavV.ms_entry_args.size = 0;
-            WebdavV.ms_entry_args.rfc1123_mtime = mtime;
-            WebdavV.ms_entry_args.content_type = "";
-            Webdav.ms_entry(webdav_work);
-            len = WebdavV.n;
-            WebdavV.ms_entry_args.buf = buf;
-            WebdavV.ms_entry_args.cap = sizeof(buf);
-            WebdavV.ms_entry_args.len = len;
-            WebdavV.ms_entry_args.href = "/dav/sensor-log.csv";
-            WebdavV.ms_entry_args.is_collection = false;
-            WebdavV.ms_entry_args.size = 12800;
-            WebdavV.ms_entry_args.rfc1123_mtime = mtime;
-            WebdavV.ms_entry_args.content_type = "text/csv";
-            Webdav.ms_entry(webdav_work);
-            len = WebdavV.n;
-            WebdavV.ms_end_args.buf = buf;
-            WebdavV.ms_end_args.cap = sizeof(buf);
-            WebdavV.ms_end_args.len = len;
-            Webdav.ms_end(webdav_work);
-            len = WebdavV.n;
+            size_t webdav_n = Webdav.ms_begin(webdav_work, buf, sizeof(buf), 0);
+            size_t len = webdav_n;
+            webdav_n = Webdav.ms_entry(webdav_work, buf, sizeof(buf), len, "/dav/", true, 0, mtime, "");
+            len = webdav_n;
+            webdav_n = Webdav.ms_entry(webdav_work, buf, sizeof(buf), len, "/dav/sensor-log.csv", false, 12800, mtime,
+                                       "text/csv");
+            len = webdav_n;
+            webdav_n = Webdav.ms_end(webdav_work, buf, sizeof(buf), len);
+            len = webdav_n;
             sink += len;
         });
         static char esc[256];

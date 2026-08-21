@@ -4051,7 +4051,13 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
                         # the read outside was rewritten to a local declared inside the `else`.
                         end_of_block = blk[1] if blk else len(s)
                         stop = min(stop.start(), end_of_block) if stop else end_of_block
-                        rd = re.compile(r"\b%s\.%s\b" % (re.escape(objv), re.escape(res)))
+                        # READS ONLY. `<X>V.<res> = ...` is a WRITE, and inside this module's own
+                        # .c it is an entry reporting ITS result - which unwork_source turns into a
+                        # return. Rewriting it to the local for some other entry's call left
+                        # h3_frame's build_settings saying `h3_frame_n = 0; return;` - a bare return
+                        # in a size_t function, which gcc only warns about, so it compiled and
+                        # returned garbage. Expected 15, was 0.
+                        rd = re.compile(r"\b%s\.%s\b(?!\s*=[^=])" % (re.escape(objv), re.escape(res)))
                         window = s[stmt_end:stop]
                         if rd.search(window):
                             key = (blk[0] if blk else -1, local)

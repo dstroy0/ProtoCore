@@ -107,17 +107,11 @@ static size_t build_long(uint8_t *out, size_t cap, uint8_t type, const uint8_t *
     size_t p = quic_packet_n;
     if (type == QUIC_LP_INITIAL)
     {
-        QuicVarintV.encode_args.out = out + p;
-        QuicVarintV.encode_args.cap = cap - p;
-        QuicVarintV.encode_args.value = 0;
-        QuicVarint.encode(quic_varint_work);
-        p += QuicVarintV.n;
+        size_t quic_varint_n = QuicVarint.encode(quic_varint_work, out + p, cap - p, 0);
+        p += quic_varint_n;
     }
-    QuicVarintV.encode_args.out = out + p;
-    QuicVarintV.encode_args.cap = cap - p;
-    QuicVarintV.encode_args.value = (uint64_t)pn_len + frame_len + 16;
-    QuicVarint.encode(quic_varint_work);
-    p += QuicVarintV.n;
+    size_t quic_varint_n = QuicVarint.encode(quic_varint_work, out + p, cap - p, (uint64_t)pn_len + frame_len + 16);
+    p += quic_varint_n;
     size_t pn_off = p;
     wr_pn(out + p, pn, pn_len);
     p += pn_len;
@@ -152,20 +146,12 @@ static size_t open_long(const uint8_t *dg, size_t len, const QuicPacketKeys *key
     {
         uint64_t tl = 0;
         size_t c = 0;
-        QuicVarintV.decode_args.in = dg + off;
-        QuicVarintV.decode_args.len = len - off;
-        QuicVarintV.decode_args.value = &tl;
-        QuicVarintV.decode_args.consumed = &c;
-        QuicVarint.decode(quic_varint_work);
+        QuicVarint.decode(quic_varint_work, dg + off, len - off, &tl, &c);
         off += c + (size_t)tl;
     }
     uint64_t length = 0;
     size_t c = 0;
-    QuicVarintV.decode_args.in = dg + off;
-    QuicVarintV.decode_args.len = len - off;
-    QuicVarintV.decode_args.value = &length;
-    QuicVarintV.decode_args.consumed = &c;
-    QuicVarint.decode(quic_varint_work);
+    QuicVarint.decode(quic_varint_work, dg + off, len - off, &length, &c);
     off += c;
     *wire = off + (size_t)length;
     static uint8_t work[2048];
@@ -425,12 +411,8 @@ void test_http3_get_end_to_end()
     qpack_n = Qpack.encode_header(qpack_work, block + bp, sizeof(block) - bp, ":authority", 10, "h3.test", 7);
     bp += qpack_n;
     uint8_t h3req[256];
-    H3FrameV.build_headers_args.out = h3req;
-    H3FrameV.build_headers_args.cap = sizeof(h3req);
-    H3FrameV.build_headers_args.block = block;
-    H3FrameV.build_headers_args.len = bp;
-    H3Frame.build_headers(h3_frame_work);
-    size_t h3l = H3FrameV.n;
+    size_t h3_frame_n = H3Frame.build_headers(h3_frame_work, h3req, sizeof(h3req), block, bp);
+    size_t h3l = h3_frame_n;
     uint8_t sfr[300];
     quic_frame_n = QuicFrame.build_stream(quic_frame_work, sfr, sizeof(sfr), 0, 0, h3req, h3l, PROTO_TRUE);
     size_t sfrl = quic_frame_n;
@@ -500,11 +482,8 @@ void test_http3_get_end_to_end()
                     while (so < sn)
                     {
                         H3FrameHeader hf;
-                        H3FrameV.parse_header_args.buf = sp + so;
-                        H3FrameV.parse_header_args.len = sn - so;
-                        H3FrameV.parse_header_args.out = &hf;
-                        H3Frame.parse_header(h3_frame_work);
-                        if (!H3FrameV.ok)
+                        proto_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, sp + so, sn - so, &hf);
+                        if (!h3_frame_ok)
                         {
                             break;
                         }

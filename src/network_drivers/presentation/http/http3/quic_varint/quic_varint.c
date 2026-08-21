@@ -6,13 +6,9 @@
  * @brief QUIC variable-length integer coding - implementation. See protocore_quic_varint.h.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_HTTP3
+#include "protocore_config.h" // the entry point: the widths
 
 #include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 // --- the entries -----------------------------------------------------------
@@ -20,49 +16,36 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_quic_varint_len(uint8_t *restrict work);
-
-void protocore_quic_varint_len(uint8_t *restrict work)
+size_t protocore_quic_varint_len(uint8_t *restrict work, uint64_t value)
 {
     (void)work;
-    uint64_t value = QuicVarintV.len_args.value;
 
     if (value <= 0x3F)
     {
-        QuicVarintV.n = 1;
-        return;
+        return 1;
     }
     if (value <= 0x3FFF)
     {
-        QuicVarintV.n = 2;
-        return;
+        return 2;
     }
     if (value <= 0x3FFFFFFF)
     {
-        QuicVarintV.n = 4;
-        return;
+        return 4;
     }
     if (value <= QUIC_VARINT_MAX)
     {
-        QuicVarintV.n = 8;
-        return;
+        return 8;
     }
-    QuicVarintV.n = 0;
+    return 0;
 }
 
-void protocore_quic_varint_encode(uint8_t *restrict work)
+size_t protocore_quic_varint_encode(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t value)
 {
-    uint8_t *out = QuicVarintV.encode_args.out;
-    size_t cap = QuicVarintV.encode_args.cap;
-    uint64_t value = QuicVarintV.encode_args.value;
-
-    QuicVarintV.len_args.value = value;
-    protocore_quic_varint_len(work);
-    size_t n = QuicVarintV.n;
+    size_t quic_varint_n = QuicVarint.len(work, value);
+    size_t n = quic_varint_n;
     if (n == 0 || cap < n)
     {
-        QuicVarintV.n = 0;
-        return;
+        return 0;
     }
     // The 2-bit length prefix (log2 n) sits in the top bits of the first byte.
     static const uint8_t prefix[9] = {0, 0x00, 0x40, 0, 0x80, 0, 0, 0, 0xC0};
@@ -71,27 +54,22 @@ void protocore_quic_varint_encode(uint8_t *restrict work)
         out[n - 1 - i] = (uint8_t)(value >> (8 * i));
     }
     out[0] |= prefix[n];
-    QuicVarintV.n = n;
+    return n;
 }
 
-void protocore_quic_varint_decode(uint8_t *restrict work)
+proto_bool protocore_quic_varint_decode(uint8_t *restrict work, const uint8_t *in, size_t len, uint64_t *value,
+                                        size_t *consumed)
 {
     (void)work;
-    const uint8_t *in = QuicVarintV.decode_args.in;
-    size_t len = QuicVarintV.decode_args.len;
-    uint64_t *value = QuicVarintV.decode_args.value;
-    size_t *consumed = QuicVarintV.decode_args.consumed;
 
     if (len < 1)
     {
-        QuicVarintV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     size_t n = (size_t)1 << (in[0] >> 6); // 1, 2, 4, or 8
     if (len < n)
     {
-        QuicVarintV.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     uint64_t v = (uint64_t)(in[0] & 0x3F);
     for (size_t i = 1; i < n; i++)
@@ -100,12 +78,5 @@ void protocore_quic_varint_decode(uint8_t *restrict work)
     }
     *value = v;
     *consumed = n;
-    QuicVarintV.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
-
-/** @brief The operands and the outcome. */
-QuicVarintVars QuicVarintV;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_HTTP3

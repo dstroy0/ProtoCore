@@ -1,8 +1,15 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#ifndef PROTOCORE_QUIC_VARINT_H
+#define PROTOCORE_QUIC_VARINT_H
+
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+PROTOCORE_BEGIN_DECLS
+
 /**
- * @file protocore_quic_varint.h
+ * @file quic_varint.h
  * @brief QUIC variable-length integer coding (RFC 9000 sec 16).
  *
  * QUIC, HTTP/3 (RFC 9114), and QPACK (RFC 9204) encode most lengths and identifiers as a
@@ -12,110 +19,62 @@
  *
  * This is the foundational primitive of the HTTP/3 stack. Pure and host-tested.
  *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
+ *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
  */
 
-#ifndef PROTOCORE_QUIC_VARINT_H
-#define PROTOCORE_QUIC_VARINT_H
-
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths
-
-#if PROTOCORE_ENABLE_HTTP3
-
-PROTOCORE_BEGIN_DECLS
-
-// This module holds nothing between calls, so it carves no borrow and states none. An entry
-// takes one all the same, and never reads it, so every namespace in the tree is invoked the
-// same way.
+// PROTOCORE_QUIC_VARINT_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. Its size and its offset are each a static_assert, so a feature
+// combination that does not fit fails to compile rather than overrunning at run time.
 
 /** @brief Largest value a QUIC varint can hold (2^62 - 1). */
 #define QUIC_VARINT_MAX 0x3FFFFFFFFFFFFFFFull
 
-/** @brief What len takes: value. */
+/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    uint64_t value;
-} QuicVarintLenArgs;
-
-/** @brief What encode takes: out, cap, value. */
-typedef struct
-{
-    uint8_t *out;
-    size_t cap;
-    uint64_t value;
-} QuicVarintEncodeArgs;
-
-/** @brief What decode takes: in, len, value, consumed. */
-typedef struct
-{
-    const uint8_t *in;
-    size_t len;
-    uint64_t *value;
-    size_t *consumed;
-} QuicVarintDecodeArgs;
+    size_t (*len)(uint8_t *restrict, uint64_t);
+    size_t (*encode)(uint8_t *restrict, uint8_t *, size_t, uint64_t);
+    proto_bool (*decode)(uint8_t *restrict, const uint8_t *, size_t, uint64_t *, size_t *);
+} QuicVarintNs;
+PROTOCORE_NS_LAYOUT(QuicVarintNs, len, encode, decode);
 
 /**
- * @brief QUIC variable-length integer coding (RFC 9000 sec 16).
- *
- * A caller sets the members a call takes, invokes it through ::QuicVarint with the bytes it runs
- * out of, and reads the outcome off the same handle.
- *
- *   QuicVarint.len_args.value = ...;
- *   QuicVarint.len(work);
- *   // QuicVarint.n is what the call reports
- *
- * @var QuicVarintNs::len_args  what len takes: value
- * @var QuicVarintNs::encode_args  what encode takes: out, cap, value
- * @var QuicVarintNs::decode_args  what decode takes: in, len, value, consumed
- * @var QuicVarintNs::ok  a call's true/false outcome
- * @var QuicVarintNs::n  the count a call reports
- * @var QuicVarintNs::len  bytes value encodes to (1 / 2 / 4 / 8), or 0 if it exceeds ...
- * @var QuicVarintNs::encode  encode value in its shortest form. bytes written, or 0 on overflow ...
- * @var QuicVarintNs::decode  decode a varint at in. Sets value and consumed (1/2/4/8). false if ...
- *
- * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
- * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
- * a caller drives every namespace the same way.
+ * @brief Bytes value encodes to (1 / 2 / 4 / 8), or 0 if it exceeds .
+ * @param work PROTOCORE_QUIC_VARINT_BORROW bytes the caller took. Not held past the call.
+ * @param value Value
+ * @return The size_t.
  */
-typedef struct
-{
-    QuicVarintLenArgs len_args;
-    QuicVarintEncodeArgs encode_args;
-    QuicVarintDecodeArgs decode_args;
-    proto_bool ok;
-    size_t n;
-} QuicVarintVars;
+size_t protocore_quic_varint_len(uint8_t *restrict work, uint64_t value);
+/**
+ * @brief Encode value in its shortest form. bytes written, or 0 on overflow .
+ * @param work PROTOCORE_QUIC_VARINT_BORROW bytes the caller took. Not held past the call.
+ * @param out Out
+ * @param cap Cap
+ * @param value Value
+ * @return The size_t.
+ */
+size_t protocore_quic_varint_encode(uint8_t *restrict work, uint8_t *out, size_t cap, uint64_t value);
+/**
+ * @brief Decode a varint at in. Sets value and consumed (1/2/4/8). false if .
+ * @param work PROTOCORE_QUIC_VARINT_BORROW bytes the caller took. Not held past the call.
+ * @param in In
+ * @param len Len
+ * @param value Value
+ * @param consumed Consumed
+ * @return PROTO_TRUE on success.
+ */
+proto_bool protocore_quic_varint_decode(uint8_t *restrict work, const uint8_t *in, size_t len, uint64_t *value,
+                                        size_t *consumed);
 
-/** @brief The operands and the outcome. */
-extern QuicVarintVars QuicVarintV;
-
-/** @brief The entries. */
-typedef struct
-{
-    void (*const len)(uint8_t *restrict work);
-    void (*const encode)(uint8_t *restrict work);
-    void (*const decode)(uint8_t *restrict work);
-} QuicVarintNs;
-
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in QuicVarintV or a region of the borrow at a fixed offset.
-void protocore_quic_varint_len(uint8_t *restrict work);
-void protocore_quic_varint_encode(uint8_t *restrict work);
-void protocore_quic_varint_decode(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `QuicVarint.len(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const QuicVarintNs QuicVarint __attribute__((unused)) = {
-    .len = protocore_quic_varint_len,
-    .encode = protocore_quic_varint_encode,
-    .decode = protocore_quic_varint_decode,
-};
+/** @brief Module namespace. */
+PROTOCORE_NS QuicVarintNs QuicVarint PROTOCORE_UNUSED = {
+    .len = protocore_quic_varint_len, .encode = protocore_quic_varint_encode, .decode = protocore_quic_varint_decode};
 
 PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_HTTP3
 
 #endif // PROTOCORE_QUIC_VARINT_H

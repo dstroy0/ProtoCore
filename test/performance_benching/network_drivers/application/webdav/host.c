@@ -36,29 +36,15 @@ int main(void)
         HBENCH_NS(
             1000000,
             {
-                WebdavV.ms_entry_args.buf = buf;
-                WebdavV.ms_entry_args.cap = sizeof(buf);
-                WebdavV.ms_entry_args.len = 0;
-                WebdavV.ms_entry_args.href = "/dav/report.txt";
-                WebdavV.ms_entry_args.is_collection = false;
-                WebdavV.ms_entry_args.size = 4096;
-                WebdavV.ms_entry_args.rfc1123_mtime = mtime;
-                WebdavV.ms_entry_args.content_type = "text/plain";
-                Webdav.ms_entry(webdav_work);
-                size_t n = WebdavV.n;
+                size_t webdav_n = Webdav.ms_entry(webdav_work, buf, sizeof(buf), 0, "/dav/report.txt", false, 4096,
+                                                  mtime, "text/plain");
+                size_t n = webdav_n;
                 sink += n;
             },
             ns);
-        WebdavV.ms_entry_args.buf = buf;
-        WebdavV.ms_entry_args.cap = sizeof(buf);
-        WebdavV.ms_entry_args.len = 0;
-        WebdavV.ms_entry_args.href = "/dav/report.txt";
-        WebdavV.ms_entry_args.is_collection = false;
-        WebdavV.ms_entry_args.size = 4096;
-        WebdavV.ms_entry_args.rfc1123_mtime = mtime;
-        WebdavV.ms_entry_args.content_type = "text/plain";
-        Webdav.ms_entry(webdav_work);
-        size_t bytes = WebdavV.n;
+        size_t webdav_n =
+            Webdav.ms_entry(webdav_work, buf, sizeof(buf), 0, "/dav/report.txt", false, 4096, mtime, "text/plain");
+        size_t bytes = webdav_n;
         hbench_row("webdav", "ms_entry file", ns, (double)bytes);
         (void)sink;
     }
@@ -70,75 +56,33 @@ int main(void)
         HBENCH_NS(
             200000,
             {
-                WebdavV.ms_begin_args.buf = buf;
-                WebdavV.ms_begin_args.cap = sizeof(buf);
-                WebdavV.ms_begin_args.len = 0;
-                Webdav.ms_begin(webdav_work);
-                size_t len = WebdavV.n;
-                WebdavV.ms_entry_args.buf = buf;
-                WebdavV.ms_entry_args.cap = sizeof(buf);
-                WebdavV.ms_entry_args.len = len;
-                WebdavV.ms_entry_args.href = "/dav/";
-                WebdavV.ms_entry_args.is_collection = true;
-                WebdavV.ms_entry_args.size = 0;
-                WebdavV.ms_entry_args.rfc1123_mtime = mtime;
-                WebdavV.ms_entry_args.content_type = "";
-                Webdav.ms_entry(webdav_work);
-                len = WebdavV.n;
+                size_t webdav_n = Webdav.ms_begin(webdav_work, buf, sizeof(buf), 0);
+                size_t len = webdav_n;
+                webdav_n = Webdav.ms_entry(webdav_work, buf, sizeof(buf), len, "/dav/", true, 0, mtime, "");
+                len = webdav_n;
                 for (int k = 0; k < 8; k++)
                 {
-                    WebdavV.ms_entry_args.buf = buf;
-                    WebdavV.ms_entry_args.cap = sizeof(buf);
-                    WebdavV.ms_entry_args.len = len;
-                    WebdavV.ms_entry_args.href = "/dav/sensor-log.csv";
-                    WebdavV.ms_entry_args.is_collection = false;
-                    WebdavV.ms_entry_args.size = 12800;
-                    WebdavV.ms_entry_args.rfc1123_mtime = mtime;
-                    WebdavV.ms_entry_args.content_type = "text/csv";
-                    Webdav.ms_entry(webdav_work);
-                    len = WebdavV.n;
+                    size_t webdav_n = Webdav.ms_entry(webdav_work, buf, sizeof(buf), len, "/dav/sensor-log.csv", false,
+                                                      12800, mtime, "text/csv");
+                    len = webdav_n;
                 }
-                WebdavV.ms_end_args.buf = buf;
-                WebdavV.ms_end_args.cap = sizeof(buf);
-                WebdavV.ms_end_args.len = len;
-                Webdav.ms_end(webdav_work);
-                len = WebdavV.n;
+                webdav_n = Webdav.ms_end(webdav_work, buf, sizeof(buf), len);
+                len = webdav_n;
                 sink += len;
             },
             ns);
-        WebdavV.ms_begin_args.buf = buf;
-        WebdavV.ms_begin_args.cap = sizeof(buf);
-        WebdavV.ms_begin_args.len = 0;
-        Webdav.ms_begin(webdav_work);
-        size_t len = WebdavV.n;
-        WebdavV.ms_entry_args.buf = buf;
-        WebdavV.ms_entry_args.cap = sizeof(buf);
-        WebdavV.ms_entry_args.len = len;
-        WebdavV.ms_entry_args.href = "/dav/";
-        WebdavV.ms_entry_args.is_collection = true;
-        WebdavV.ms_entry_args.size = 0;
-        WebdavV.ms_entry_args.rfc1123_mtime = mtime;
-        WebdavV.ms_entry_args.content_type = "";
-        Webdav.ms_entry(webdav_work);
-        len = WebdavV.n;
+        size_t webdav_n = Webdav.ms_begin(webdav_work, buf, sizeof(buf), 0);
+        size_t len = webdav_n;
+        webdav_n = Webdav.ms_entry(webdav_work, buf, sizeof(buf), len, "/dav/", true, 0, mtime, "");
+        len = webdav_n;
         for (int k = 0; k < 8; k++)
         {
-            WebdavV.ms_entry_args.buf = buf;
-            WebdavV.ms_entry_args.cap = sizeof(buf);
-            WebdavV.ms_entry_args.len = len;
-            WebdavV.ms_entry_args.href = "/dav/sensor-log.csv";
-            WebdavV.ms_entry_args.is_collection = false;
-            WebdavV.ms_entry_args.size = 12800;
-            WebdavV.ms_entry_args.rfc1123_mtime = mtime;
-            WebdavV.ms_entry_args.content_type = "text/csv";
-            Webdav.ms_entry(webdav_work);
-            len = WebdavV.n;
+            size_t webdav_n = Webdav.ms_entry(webdav_work, buf, sizeof(buf), len, "/dav/sensor-log.csv", false, 12800,
+                                              mtime, "text/csv");
+            len = webdav_n;
         }
-        WebdavV.ms_end_args.buf = buf;
-        WebdavV.ms_end_args.cap = sizeof(buf);
-        WebdavV.ms_end_args.len = len;
-        Webdav.ms_end(webdav_work);
-        len = WebdavV.n;
+        webdav_n = Webdav.ms_end(webdav_work, buf, sizeof(buf), len);
+        len = webdav_n;
         hbench_row("webdav", "PROPFIND depth-1 (8)", ns, (double)len);
         (void)sink;
     }
@@ -148,16 +92,10 @@ int main(void)
         char esc[256];
         volatile size_t sink = 0;
         double ns = 0.0;
-        WebdavV.xml_escape_args.dst = esc;
-        WebdavV.xml_escape_args.cap = sizeof(esc);
-        WebdavV.xml_escape_args.src = "/dav/a&b<c>\"d'e.txt";
-        Webdav.xml_escape(webdav_work);
-        HBENCH_NS(2000000, sink += WebdavV.n, ns);
-        WebdavV.xml_escape_args.dst = esc;
-        WebdavV.xml_escape_args.cap = sizeof(esc);
-        WebdavV.xml_escape_args.src = "/dav/a&b<c>\"d'e.txt";
-        Webdav.xml_escape(webdav_work);
-        size_t bytes = WebdavV.n;
+        size_t webdav_n = Webdav.xml_escape(webdav_work, esc, sizeof(esc), "/dav/a&b<c>\"d'e.txt");
+        HBENCH_NS(2000000, sink += webdav_n, ns);
+        webdav_n = Webdav.xml_escape(webdav_work, esc, sizeof(esc), "/dav/a&b<c>\"d'e.txt");
+        size_t bytes = webdav_n;
         hbench_row("webdav", "xml_escape", ns, (double)bytes);
         (void)sink;
     }

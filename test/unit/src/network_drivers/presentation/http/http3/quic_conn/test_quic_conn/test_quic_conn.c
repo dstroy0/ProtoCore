@@ -199,18 +199,12 @@ static size_t build_long(uint8_t *out, size_t cap, uint8_t type, const uint8_t *
     size_t p = quic_packet_n;
     if (type == QUIC_LP_INITIAL)
     {
-        QuicVarintV.encode_args.out = out + p;
-        QuicVarintV.encode_args.cap = cap - p;
-        QuicVarintV.encode_args.value = 0;
-        QuicVarint.encode(quic_varint_work);
-        p += QuicVarintV.n;
+        size_t quic_varint_n = QuicVarint.encode(quic_varint_work, out + p, cap - p, 0);
+        p += quic_varint_n;
     }
     uint64_t length = (uint64_t)pn_len + frame_len + 16;
-    QuicVarintV.encode_args.out = out + p;
-    QuicVarintV.encode_args.cap = cap - p;
-    QuicVarintV.encode_args.value = length;
-    QuicVarint.encode(quic_varint_work);
-    p += QuicVarintV.n;
+    size_t quic_varint_n = QuicVarint.encode(quic_varint_work, out + p, cap - p, length);
+    p += quic_varint_n;
     size_t pn_off = p;
     wr_pn(out + p, pn, pn_len);
     p += pn_len;
@@ -247,20 +241,12 @@ static size_t open_long(const uint8_t *dg, size_t len, QuicPacketKeys *keys, uin
     {
         uint64_t tl = 0;
         size_t c = 0;
-        QuicVarintV.decode_args.in = dg + off;
-        QuicVarintV.decode_args.len = len - off;
-        QuicVarintV.decode_args.value = &tl;
-        QuicVarintV.decode_args.consumed = &c;
-        QuicVarint.decode(quic_varint_work);
+        QuicVarint.decode(quic_varint_work, dg + off, len - off, &tl, &c);
         off += c + (size_t)tl;
     }
     uint64_t length = 0;
     size_t c = 0;
-    QuicVarintV.decode_args.in = dg + off;
-    QuicVarintV.decode_args.len = len - off;
-    QuicVarintV.decode_args.value = &length;
-    QuicVarintV.decode_args.consumed = &c;
-    QuicVarint.decode(quic_varint_work);
+    QuicVarint.decode(quic_varint_work, dg + off, len - off, &length, &c);
     off += c;
     *wire_len = off + (size_t)length;
     static uint8_t work[2048];
@@ -1257,11 +1243,8 @@ void test_quic_recv_malformed_initial_headers()
     TEST_ASSERT_FALSE(QuicConnV.ok);
 
     dg[hn] = 0x00;
-    QuicVarintV.encode_args.out = dg + hn + 1;
-    QuicVarintV.encode_args.cap = sizeof(dg) - hn - 1;
-    QuicVarintV.encode_args.value = 1400;
-    QuicVarint.encode(quic_varint_work);
-    size_t c = QuicVarintV.n;
+    size_t quic_varint_n = QuicVarint.encode(quic_varint_work, dg + hn + 1, sizeof(dg) - hn - 1, 1400);
+    size_t c = quic_varint_n;
     memset(dg + hn + 1 + c, 0, 1450 - (hn + 1 + c));
     QuicConnV.bind.b = g_qc_b;
     QuicConnV.recv_args.datagram = dg;

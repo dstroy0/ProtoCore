@@ -221,38 +221,22 @@ static void smb_apply_sign(uint8_t *restrict work, const SmbSign *s, uint8_t *ms
 {
     if (s->algo == SMB2_SIGN_ALGO_AES_CMAC)
     {
-        Smb2V.sign_cmac_args.crypto_work = SMB_CLIENT_CTX(work)->crypto_work;
-        Smb2V.sign_cmac_args.key = s->key;
-        Smb2V.sign_cmac_args.msg = msg;
-        Smb2V.sign_cmac_args.msg_len = len;
-        Smb2.sign_cmac(work);
+        Smb2.sign_cmac(work, SMB_CLIENT_CTX(work)->crypto_work, s->key, msg, len);
     }
     else
     {
-        Smb2V.sign_args.crypto_work = SMB_CLIENT_CTX(work)->crypto_work;
-        Smb2V.sign_args.key = s->key;
-        Smb2V.sign_args.msg = msg;
-        Smb2V.sign_args.msg_len = len;
-        Smb2.sign(work);
+        Smb2.sign(work, SMB_CLIENT_CTX(work)->crypto_work, s->key, msg, len);
     }
 }
 static proto_bool smb_check_sign(uint8_t *restrict work, const SmbSign *s, uint8_t *msg, size_t len)
 {
     if (s->algo == SMB2_SIGN_ALGO_AES_CMAC)
     {
-        Smb2V.verify_cmac_args.crypto_work = SMB_CLIENT_CTX(work)->crypto_work;
-        Smb2V.verify_cmac_args.key = s->key;
-        Smb2V.verify_cmac_args.msg = msg;
-        Smb2V.verify_cmac_args.msg_len = len;
-        Smb2.verify_cmac(work);
-        return Smb2V.ok;
+        proto_bool smb2_ok = Smb2.verify_cmac(work, SMB_CLIENT_CTX(work)->crypto_work, s->key, msg, len);
+        return smb2_ok;
     }
-    Smb2V.verify_args.crypto_work = SMB_CLIENT_CTX(work)->crypto_work;
-    Smb2V.verify_args.key = s->key;
-    Smb2V.verify_args.msg = msg;
-    Smb2V.verify_args.msg_len = len;
-    Smb2.verify(work);
-    return Smb2V.ok;
+    proto_bool smb2_ok = Smb2.verify(work, SMB_CLIENT_CTX(work)->crypto_work, s->key, msg, len);
+    return smb2_ok;
 }
 
 // Send the framed message currently in SMB_CLIENT_CTX(work)->tx (mlen bytes at tx+4) and receive the reply into
@@ -273,16 +257,10 @@ static int smb_round_trip(uint8_t *restrict work, SmbSendFn send, SmbRecvFn recv
         {
             nonce[i] = (uint8_t)(ctr >> (8 * i));
         }
-        Smb2V.encrypt_args.cipher = crypt->cipher;
-        Smb2V.encrypt_args.key = crypt->c2s;
-        Smb2V.encrypt_args.nonce = nonce;
-        Smb2V.encrypt_args.session_id = crypt->session_id;
-        Smb2V.encrypt_args.msg = SMB_CLIENT_CTX(work)->tx + 4;
-        Smb2V.encrypt_args.msg_len = mlen;
-        Smb2V.encrypt_args.out = SMB_CLIENT_CTX(work)->rx + 4;
-        Smb2V.encrypt_args.out_cap = sizeof(SMB_CLIENT_CTX(work)->rx) - 4;
-        Smb2.encrypt(work);
-        size_t tlen = Smb2V.n;
+        size_t smb2_n =
+            Smb2.encrypt(work, crypt->cipher, crypt->c2s, nonce, crypt->session_id, SMB_CLIENT_CTX(work)->tx + 4, mlen,
+                         SMB_CLIENT_CTX(work)->rx + 4, sizeof(SMB_CLIENT_CTX(work)->rx) - 4);
+        size_t tlen = smb2_n;
         if (tlen == 0)
         {
             *res = SMB_ERR_OVERFLOW;
@@ -301,14 +279,9 @@ static int smb_round_trip(uint8_t *restrict work, SmbSendFn send, SmbRecvFn recv
         }
         // Decrypt in place: protocore_smb2_decrypt GHASHes the whole ciphertext before the CTR pass, so an
         // out == in (backward-shifted) overlap is safe. Fails closed on a bad tag / non-TRANSFORM reply.
-        Smb2V.decrypt_args.cipher = crypt->cipher;
-        Smb2V.decrypt_args.key = crypt->s2c;
-        Smb2V.decrypt_args.in = SMB_CLIENT_CTX(work)->rx;
-        Smb2V.decrypt_args.in_len = (size_t)rl;
-        Smb2V.decrypt_args.out = SMB_CLIENT_CTX(work)->rx;
-        Smb2V.decrypt_args.out_cap = sizeof(SMB_CLIENT_CTX(work)->rx);
-        Smb2.decrypt(work);
-        size_t plen = Smb2V.n;
+        smb2_n = Smb2.decrypt(work, crypt->cipher, crypt->s2c, SMB_CLIENT_CTX(work)->rx, (size_t)rl,
+                              SMB_CLIENT_CTX(work)->rx, sizeof(SMB_CLIENT_CTX(work)->rx));
+        size_t plen = smb2_n;
         if (plen == 0)
         {
             *res = SMB_ERR_PROTOCOL;
@@ -358,16 +331,10 @@ static SmbResult smb_negotiate(uint8_t *restrict work, SmbSendFn send, SmbRecvFn
     RngV.fill_args.out = salt;
     RngV.fill_args.len = sizeof(salt);
     Rng.fill(protocore_rng_span());
-    Smb2V.build_negotiate_311_args.buf = SMB_CLIENT_CTX(work)->tx + 4;
-    Smb2V.build_negotiate_311_args.cap = sizeof(SMB_CLIENT_CTX(work)->tx) - 4;
-    Smb2V.build_negotiate_311_args.client_guid = guid;
-    Smb2V.build_negotiate_311_args.security_mode = SMB2_NEGOTIATE_SIGNING_ENABLED;
-    Smb2V.build_negotiate_311_args.salt = salt;
-    Smb2V.build_negotiate_311_args.salt_len = sizeof(salt);
-    Smb2V.build_negotiate_311_args.ciphers = offer_ciphers;
-    Smb2V.build_negotiate_311_args.cipher_count = offer_count;
-    Smb2.build_negotiate_311(work);
-    size_t mlen = Smb2V.n;
+    size_t smb2_n =
+        Smb2.build_negotiate_311(work, SMB_CLIENT_CTX(work)->tx + 4, sizeof(SMB_CLIENT_CTX(work)->tx) - 4, guid,
+                                 SMB2_NEGOTIATE_SIGNING_ENABLED, salt, sizeof(salt), offer_ciphers, offer_count);
+    size_t mlen = smb2_n;
     if (!mlen)
     {
         return SMB_ERR_OVERFLOW;
@@ -376,13 +343,8 @@ static SmbResult smb_negotiate(uint8_t *restrict work, SmbSendFn send, SmbRecvFn
     // Seed the preauth-integrity hash and fold the NEGOTIATE request (the bytes are final - NEGOTIATE is
     // never signed). The chain is only consumed when the server chooses 3.1.1, but folding is harmless
     // otherwise.
-    Smb2V.preauth_init_args.p = preauth;
-    Smb2.preauth_init(work);
-    Smb2V.preauth_update_args.crypto_work = SMB_CLIENT_CTX(work)->crypto_work;
-    Smb2V.preauth_update_args.p = preauth;
-    Smb2V.preauth_update_args.msg = SMB_CLIENT_CTX(work)->tx + 4;
-    Smb2V.preauth_update_args.len = mlen;
-    Smb2.preauth_update(work);
+    Smb2.preauth_init(work, preauth);
+    Smb2.preauth_update(work, SMB_CLIENT_CTX(work)->crypto_work, preauth, SMB_CLIENT_CTX(work)->tx + 4, mlen);
 
     SmbResult rt = SMB_ERR_IO;
     // NEGOTIATE precedes authentication, so there is no session key yet: never signed.
@@ -391,17 +353,11 @@ static SmbResult smb_negotiate(uint8_t *restrict work, SmbSendFn send, SmbRecvFn
     {
         return rt;
     }
-    Smb2V.preauth_update_args.crypto_work = SMB_CLIENT_CTX(work)->crypto_work;
-    Smb2V.preauth_update_args.p = preauth;
-    Smb2V.preauth_update_args.msg = SMB_CLIENT_CTX(work)->rx;
-    Smb2V.preauth_update_args.len = (size_t)rl;
-    Smb2.preauth_update(work); // fold the NEGOTIATE response
+    Smb2.preauth_update(work, SMB_CLIENT_CTX(work)->crypto_work, preauth, SMB_CLIENT_CTX(work)->rx,
+                        (size_t)rl); // fold the NEGOTIATE response
     Smb2NegotiateResp neg;
-    Smb2V.parse_negotiate_response_args.msg = SMB_CLIENT_CTX(work)->rx;
-    Smb2V.parse_negotiate_response_args.len = (size_t)rl;
-    Smb2V.parse_negotiate_response_args.out = &neg;
-    Smb2.parse_negotiate_response(work);
-    if (!Smb2V.ok)
+    proto_bool smb2_ok = Smb2.parse_negotiate_response(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &neg);
+    if (!smb2_ok)
     {
         return SMB_ERR_PROTOCOL;
     }
@@ -414,11 +370,8 @@ static SmbResult smb_negotiate(uint8_t *restrict work, SmbSendFn send, SmbRecvFn
     if (neg.dialect == (uint16_t)SMB2_DIALECT_0311)
     {
         Smb2NegotiateContexts nc;
-        Smb2V.parse_negotiate_contexts_args.msg = SMB_CLIENT_CTX(work)->rx;
-        Smb2V.parse_negotiate_contexts_args.len = (size_t)rl;
-        Smb2V.parse_negotiate_contexts_args.out = &nc;
-        Smb2.parse_negotiate_contexts(work);
-        if (Smb2V.ok && nc.have_encryption)
+        proto_bool smb2_ok = Smb2.parse_negotiate_contexts(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &nc);
+        if (smb2_ok && nc.have_encryption)
         {
             *cipher = nc.cipher;
         }
@@ -444,24 +397,15 @@ static SmbResult smb_session_setup(uint8_t *restrict work, const SmbConfig *cfg,
     size_t ntneg_n = ntlmssp_n;
     size_t spnego_n = Spnego.wrap_negotiate(work, ntneg, ntneg_n, sp1, sizeof(sp1));
     size_t sp1_n = spnego_n;
-    Smb2V.build_session_setup_args.buf = SMB_CLIENT_CTX(work)->tx + 4;
-    Smb2V.build_session_setup_args.cap = sizeof(SMB_CLIENT_CTX(work)->tx) - 4;
-    Smb2V.build_session_setup_args.message_id = 1;
-    Smb2V.build_session_setup_args.session_id = 0;
-    Smb2V.build_session_setup_args.security_mode = SMB2_NEGOTIATE_SIGNING_ENABLED;
-    Smb2V.build_session_setup_args.sec_buf = sp1;
-    Smb2V.build_session_setup_args.sec_len = sp1_n;
-    Smb2.build_session_setup(work);
-    size_t mlen = Smb2V.n;
+    size_t smb2_n = Smb2.build_session_setup(work, SMB_CLIENT_CTX(work)->tx + 4, sizeof(SMB_CLIENT_CTX(work)->tx) - 4,
+                                             1, 0, SMB2_NEGOTIATE_SIGNING_ENABLED, sp1, sp1_n);
+    size_t mlen = smb2_n;
     if (!mlen)
     {
         return SMB_ERR_OVERFLOW;
     }
-    Smb2V.preauth_update_args.crypto_work = SMB_CLIENT_CTX(work)->crypto_work;
-    Smb2V.preauth_update_args.p = preauth;
-    Smb2V.preauth_update_args.msg = SMB_CLIENT_CTX(work)->tx + 4;
-    Smb2V.preauth_update_args.len = mlen;
-    Smb2.preauth_update(work); // fold SESSION_SETUP request 1 (unsigned)
+    Smb2.preauth_update(work, SMB_CLIENT_CTX(work)->crypto_work, preauth, SMB_CLIENT_CTX(work)->tx + 4,
+                        mlen); // fold SESSION_SETUP request 1 (unsigned)
     SmbResult rt = SMB_ERR_IO;
     // Round 1 precedes the session key, so it is never signed.
     int rl = smb_round_trip(work, send, recv, ctx, mlen, NULL, NULL, &rt);
@@ -469,27 +413,18 @@ static SmbResult smb_session_setup(uint8_t *restrict work, const SmbConfig *cfg,
     {
         return rt;
     }
-    Smb2V.preauth_update_args.crypto_work = SMB_CLIENT_CTX(work)->crypto_work;
-    Smb2V.preauth_update_args.p = preauth;
-    Smb2V.preauth_update_args.msg = SMB_CLIENT_CTX(work)->rx;
-    Smb2V.preauth_update_args.len = (size_t)rl;
-    Smb2.preauth_update(work); // fold SESSION_SETUP response 1
+    Smb2.preauth_update(work, SMB_CLIENT_CTX(work)->crypto_work, preauth, SMB_CLIENT_CTX(work)->rx,
+                        (size_t)rl); // fold SESSION_SETUP response 1
     Smb2Header h1;
-    Smb2V.parse_header_args.buf = SMB_CLIENT_CTX(work)->rx;
-    Smb2V.parse_header_args.len = (size_t)rl;
-    Smb2V.parse_header_args.out = &h1;
-    Smb2.parse_header(work);
-    if (!Smb2V.ok || h1.status != SMB2_STATUS_MORE_PROCESSING_REQUIRED)
+    proto_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &h1);
+    if (!smb2_ok || h1.status != SMB2_STATUS_MORE_PROCESSING_REQUIRED)
     {
         return SMB_ERR_AUTH;
     }
     *session_id = h1.session_id;
     Smb2SessionSetupResp ss1;
-    Smb2V.parse_session_setup_response_args.msg = SMB_CLIENT_CTX(work)->rx;
-    Smb2V.parse_session_setup_response_args.len = (size_t)rl;
-    Smb2V.parse_session_setup_response_args.out = &ss1;
-    Smb2.parse_session_setup_response(work);
-    if (!Smb2V.ok || !ss1.sec_buf)
+    smb2_ok = Smb2.parse_session_setup_response(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &ss1);
+    if (!smb2_ok || !ss1.sec_buf)
     {
         return SMB_ERR_PROTOCOL;
     }
@@ -561,24 +496,15 @@ static SmbResult smb_session_setup(uint8_t *restrict work, const SmbConfig *cfg,
 
     // 4. SESSION_SETUP round 2 (echo the server SessionId). This request completes authentication and is
     // folded into the preauth chain (unsigned), whose final value derives the SMB 3.x signing key.
-    Smb2V.build_session_setup_args.buf = SMB_CLIENT_CTX(work)->tx + 4;
-    Smb2V.build_session_setup_args.cap = sizeof(SMB_CLIENT_CTX(work)->tx) - 4;
-    Smb2V.build_session_setup_args.message_id = 2;
-    Smb2V.build_session_setup_args.session_id = *session_id;
-    Smb2V.build_session_setup_args.security_mode = SMB2_NEGOTIATE_SIGNING_ENABLED;
-    Smb2V.build_session_setup_args.sec_buf = SMB_CLIENT_CTX(work)->sp2;
-    Smb2V.build_session_setup_args.sec_len = sp2_n;
-    Smb2.build_session_setup(work);
-    mlen = Smb2V.n;
+    smb2_n = Smb2.build_session_setup(work, SMB_CLIENT_CTX(work)->tx + 4, sizeof(SMB_CLIENT_CTX(work)->tx) - 4, 2,
+                                      *session_id, SMB2_NEGOTIATE_SIGNING_ENABLED, SMB_CLIENT_CTX(work)->sp2, sp2_n);
+    mlen = smb2_n;
     if (!mlen)
     {
         return SMB_ERR_OVERFLOW;
     }
-    Smb2V.preauth_update_args.crypto_work = SMB_CLIENT_CTX(work)->crypto_work;
-    Smb2V.preauth_update_args.p = preauth;
-    Smb2V.preauth_update_args.msg = SMB_CLIENT_CTX(work)->tx + 4;
-    Smb2V.preauth_update_args.len = mlen;
-    Smb2.preauth_update(work); // fold request 2 -> the key-derivation hash is now final
+    Smb2.preauth_update(work, SMB_CLIENT_CTX(work)->crypto_work, preauth, SMB_CLIENT_CTX(work)->tx + 4,
+                        mlen); // fold request 2 -> the key-derivation hash is now final
 
     // Select the session signer from the negotiated dialect: SMB 3.x (>= 3.0) signs with AES-CMAC over the
     // SP800-108-derived key (3.1.1 mixes in the preauth hash); SMB 2.x signs with HMAC-SHA256 over the
@@ -591,22 +517,14 @@ static SmbResult smb_session_setup(uint8_t *restrict work, const SmbConfig *cfg,
     if (algo == SMB2_SIGN_ALGO_AES_CMAC)
     {
         const proto_bool is_311 = dialect == (uint16_t)SMB2_DIALECT_0311;
-        Smb2V.derive_signing_key_args.session_key = skey;
-        Smb2V.derive_signing_key_args.dialect = dialect;
-        Smb2V.derive_signing_key_args.preauth = is_311 ? preauth->hash : NULL;
-        Smb2V.derive_signing_key_args.out_key = sign_key;
-        Smb2.derive_signing_key(work);
+        Smb2.derive_signing_key(work, skey, dialect, is_311 ? preauth->hash : NULL, sign_key);
     }
     else
     {
         mem.cpy(sign_key, skey, sizeof(sign_key));
         if (want_signing)
         {
-            Smb2V.sign_args.crypto_work = SMB_CLIENT_CTX(work)->crypto_work;
-            Smb2V.sign_args.key = skey;
-            Smb2V.sign_args.msg = SMB_CLIENT_CTX(work)->tx + 4;
-            Smb2V.sign_args.msg_len = mlen;
-            Smb2.sign(work);
+            Smb2.sign(work, SMB_CLIENT_CTX(work)->crypto_work, skey, SMB_CLIENT_CTX(work)->tx + 4, mlen);
         }
     }
 
@@ -616,11 +534,8 @@ static SmbResult smb_session_setup(uint8_t *restrict work, const SmbConfig *cfg,
         return rt;
     }
     Smb2Header h2;
-    Smb2V.parse_header_args.buf = SMB_CLIENT_CTX(work)->rx;
-    Smb2V.parse_header_args.len = (size_t)rl;
-    Smb2V.parse_header_args.out = &h2;
-    Smb2.parse_header(work);
-    if (!Smb2V.ok)
+    smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &h2);
+    if (!smb2_ok)
     {
         return SMB_ERR_PROTOCOL;
     }
@@ -633,11 +548,8 @@ static SmbResult smb_session_setup(uint8_t *restrict work, const SmbConfig *cfg,
     Smb2SessionSetupResp ss2;
     proto_bool guest_or_null = PROTO_FALSE;
     uint16_t sess_flags = 0;
-    Smb2V.parse_session_setup_response_args.msg = SMB_CLIENT_CTX(work)->rx;
-    Smb2V.parse_session_setup_response_args.len = (size_t)rl;
-    Smb2V.parse_session_setup_response_args.out = &ss2;
-    Smb2.parse_session_setup_response(work);
-    if (Smb2V.ok)
+    smb2_ok = Smb2.parse_session_setup_response(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &ss2);
+    if (smb2_ok)
     {
         sess_flags = ss2.session_flags;
         guest_or_null = (sess_flags & (SMB2_SESSION_FLAG_IS_GUEST | SMB2_SESSION_FLAG_IS_NULL)) != 0;
@@ -661,14 +573,9 @@ static SmbResult smb_session_setup(uint8_t *restrict work, const SmbConfig *cfg,
     if (cipher_key_len != 0 && dialect >= (uint16_t)SMB2_DIALECT_0300 && !guest_or_null)
     {
         const proto_bool is_311 = dialect == (uint16_t)SMB2_DIALECT_0311;
-        Smb2V.derive_encryption_keys_args.session_key = skey;
-        Smb2V.derive_encryption_keys_args.dialect = dialect;
-        Smb2V.derive_encryption_keys_args.preauth = is_311 ? preauth->hash : NULL;
-        Smb2V.derive_encryption_keys_args.key_len = cipher_key_len;
-        Smb2V.derive_encryption_keys_args.out_c2s = crypt->c2s;
-        Smb2V.derive_encryption_keys_args.out_s2c = crypt->s2c;
-        Smb2.derive_encryption_keys(work);
-        crypt->available = Smb2V.ok;
+        proto_bool smb2_ok = Smb2.derive_encryption_keys(work, skey, dialect, is_311 ? preauth->hash : NULL,
+                                                         cipher_key_len, crypt->c2s, crypt->s2c);
+        crypt->available = smb2_ok;
         if (crypt->available)
         {
             crypt->cipher = cipher;
@@ -691,14 +598,9 @@ static SmbResult smb_tree_connect(uint8_t *restrict work, const SmbConfig *cfg, 
     {
         return SMB_ERR_OVERFLOW;
     }
-    Smb2V.build_tree_connect_args.buf = SMB_CLIENT_CTX(work)->tx + 4;
-    Smb2V.build_tree_connect_args.cap = sizeof(SMB_CLIENT_CTX(work)->tx) - 4;
-    Smb2V.build_tree_connect_args.message_id = 3;
-    Smb2V.build_tree_connect_args.session_id = session_id;
-    Smb2V.build_tree_connect_args.path_utf16 = SMB_CLIENT_CTX(work)->utf16;
-    Smb2V.build_tree_connect_args.path_len = utf16_n;
-    Smb2.build_tree_connect(work);
-    size_t mlen = Smb2V.n;
+    size_t smb2_n = Smb2.build_tree_connect(work, SMB_CLIENT_CTX(work)->tx + 4, sizeof(SMB_CLIENT_CTX(work)->tx) - 4, 3,
+                                            session_id, SMB_CLIENT_CTX(work)->utf16, utf16_n);
+    size_t mlen = smb2_n;
     if (!mlen)
     {
         return SMB_ERR_OVERFLOW;
@@ -711,19 +613,13 @@ static SmbResult smb_tree_connect(uint8_t *restrict work, const SmbConfig *cfg, 
     }
     Smb2Header h3;
     Smb2TreeConnectResp tc;
-    Smb2V.parse_header_args.buf = SMB_CLIENT_CTX(work)->rx;
-    Smb2V.parse_header_args.len = (size_t)rl;
-    Smb2V.parse_header_args.out = &h3;
-    Smb2.parse_header(work);
-    if (!Smb2V.ok || h3.status != SMB2_STATUS_SUCCESS)
+    proto_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &h3);
+    if (!smb2_ok || h3.status != SMB2_STATUS_SUCCESS)
     {
         return SMB_ERR_PROTOCOL;
     }
-    Smb2V.parse_tree_connect_response_args.msg = SMB_CLIENT_CTX(work)->rx;
-    Smb2V.parse_tree_connect_response_args.len = (size_t)rl;
-    Smb2V.parse_tree_connect_response_args.out = &tc;
-    Smb2.parse_tree_connect_response(work);
-    if (!Smb2V.ok)
+    smb2_ok = Smb2.parse_tree_connect_response(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &tc);
+    if (!smb2_ok)
     {
         return SMB_ERR_PROTOCOL;
     }
@@ -747,19 +643,11 @@ static SmbResult smb_create(uint8_t *restrict work, const SmbConfig *cfg, SmbHan
     {
         return SMB_ERR_OVERFLOW;
     }
-    Smb2V.build_create_args.buf = SMB_CLIENT_CTX(work)->tx + 4;
-    Smb2V.build_create_args.cap = sizeof(SMB_CLIENT_CTX(work)->tx) - 4;
-    Smb2V.build_create_args.message_id = 4;
-    Smb2V.build_create_args.session_id = session_id;
-    Smb2V.build_create_args.tree_id = tree_id;
-    Smb2V.build_create_args.desired_access = cfg->desired_access;
-    Smb2V.build_create_args.share_access = SMB2_FILE_SHARE_READ | SMB2_FILE_SHARE_WRITE;
-    Smb2V.build_create_args.create_disposition = cfg->disposition;
-    Smb2V.build_create_args.create_options = SMB2_FILE_NON_DIRECTORY_FILE;
-    Smb2V.build_create_args.name_utf16 = SMB_CLIENT_CTX(work)->utf16;
-    Smb2V.build_create_args.name_len = utf16_n;
-    Smb2.build_create(work);
-    size_t mlen = Smb2V.n;
+    size_t smb2_n =
+        Smb2.build_create(work, SMB_CLIENT_CTX(work)->tx + 4, sizeof(SMB_CLIENT_CTX(work)->tx) - 4, 4, session_id,
+                          tree_id, cfg->desired_access, SMB2_FILE_SHARE_READ | SMB2_FILE_SHARE_WRITE, cfg->disposition,
+                          SMB2_FILE_NON_DIRECTORY_FILE, SMB_CLIENT_CTX(work)->utf16, utf16_n);
+    size_t mlen = smb2_n;
     if (!mlen)
     {
         return SMB_ERR_OVERFLOW;
@@ -772,19 +660,13 @@ static SmbResult smb_create(uint8_t *restrict work, const SmbConfig *cfg, SmbHan
     }
     Smb2Header h4;
     Smb2CreateResp cr;
-    Smb2V.parse_header_args.buf = SMB_CLIENT_CTX(work)->rx;
-    Smb2V.parse_header_args.len = (size_t)rl;
-    Smb2V.parse_header_args.out = &h4;
-    Smb2.parse_header(work);
-    if (!Smb2V.ok || h4.status != SMB2_STATUS_SUCCESS)
+    proto_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &h4);
+    if (!smb2_ok || h4.status != SMB2_STATUS_SUCCESS)
     {
         return SMB_ERR_PROTOCOL;
     }
-    Smb2V.parse_create_response_args.msg = SMB_CLIENT_CTX(work)->rx;
-    Smb2V.parse_create_response_args.len = (size_t)rl;
-    Smb2V.parse_create_response_args.out = &cr;
-    Smb2.parse_create_response(work);
-    if (!Smb2V.ok)
+    smb2_ok = Smb2.parse_create_response(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &cr);
+    if (!smb2_ok)
     {
         return SMB_ERR_PROTOCOL;
     }
@@ -891,14 +773,9 @@ void protocore_smb_client_smb_close(uint8_t *restrict work)
         SmbClientV.value = SMB_ERR_ARG;
         return;
     }
-    Smb2V.build_close_args.buf = SMB_CLIENT_CTX(work)->tx + 4;
-    Smb2V.build_close_args.cap = sizeof(SMB_CLIENT_CTX(work)->tx) - 4;
-    Smb2V.build_close_args.message_id = h->next_message_id;
-    Smb2V.build_close_args.session_id = h->session_id;
-    Smb2V.build_close_args.tree_id = h->tree_id;
-    Smb2V.build_close_args.file_id = h->file_id;
-    Smb2.build_close(work);
-    size_t mlen = Smb2V.n;
+    size_t smb2_n = Smb2.build_close(work, SMB_CLIENT_CTX(work)->tx + 4, sizeof(SMB_CLIENT_CTX(work)->tx) - 4,
+                                     h->next_message_id, h->session_id, h->tree_id, h->file_id);
+    size_t mlen = smb2_n;
     if (!mlen)
     {
         SmbClientV.value = SMB_ERR_OVERFLOW;
@@ -919,20 +796,14 @@ void protocore_smb_client_smb_close(uint8_t *restrict work)
     }
     Smb2Header hd;
     Smb2CloseResp cl;
-    Smb2V.parse_header_args.buf = SMB_CLIENT_CTX(work)->rx;
-    Smb2V.parse_header_args.len = (size_t)rl;
-    Smb2V.parse_header_args.out = &hd;
-    Smb2.parse_header(work);
-    if (!Smb2V.ok || hd.status != SMB2_STATUS_SUCCESS)
+    proto_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &hd);
+    if (!smb2_ok || hd.status != SMB2_STATUS_SUCCESS)
     {
         SmbClientV.value = SMB_ERR_PROTOCOL;
         return;
     }
-    Smb2V.parse_close_response_args.msg = SMB_CLIENT_CTX(work)->rx;
-    Smb2V.parse_close_response_args.len = (size_t)rl;
-    Smb2V.parse_close_response_args.out = &cl;
-    Smb2.parse_close_response(work);
-    if (!Smb2V.ok)
+    smb2_ok = Smb2.parse_close_response(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &cl);
+    if (!smb2_ok)
     {
         SmbClientV.value = SMB_ERR_PROTOCOL;
         return;
@@ -972,16 +843,10 @@ void protocore_smb_client_smb_read(uint8_t *restrict work)
         {
             want = chunk_max;
         }
-        Smb2V.build_read_args.buf = SMB_CLIENT_CTX(work)->tx + 4;
-        Smb2V.build_read_args.cap = sizeof(SMB_CLIENT_CTX(work)->tx) - 4;
-        Smb2V.build_read_args.message_id = h->next_message_id;
-        Smb2V.build_read_args.session_id = h->session_id;
-        Smb2V.build_read_args.tree_id = h->tree_id;
-        Smb2V.build_read_args.file_id = h->file_id;
-        Smb2V.build_read_args.length = (uint32_t)want;
-        Smb2V.build_read_args.offset = offset + total;
-        Smb2.build_read(work);
-        size_t mlen = Smb2V.n;
+        size_t smb2_n =
+            Smb2.build_read(work, SMB_CLIENT_CTX(work)->tx + 4, sizeof(SMB_CLIENT_CTX(work)->tx) - 4,
+                            h->next_message_id, h->session_id, h->tree_id, h->file_id, (uint32_t)want, offset + total);
+        size_t mlen = smb2_n;
         if (!mlen)
         {
             SmbClientV.value = SMB_ERR_OVERFLOW;
@@ -996,11 +861,8 @@ void protocore_smb_client_smb_read(uint8_t *restrict work)
             return;
         }
         Smb2Header hd;
-        Smb2V.parse_header_args.buf = SMB_CLIENT_CTX(work)->rx;
-        Smb2V.parse_header_args.len = (size_t)rl;
-        Smb2V.parse_header_args.out = &hd;
-        Smb2.parse_header(work);
-        if (!Smb2V.ok)
+        proto_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &hd);
+        if (!smb2_ok)
         {
             SmbClientV.value = SMB_ERR_PROTOCOL;
             return;
@@ -1016,11 +878,8 @@ void protocore_smb_client_smb_read(uint8_t *restrict work)
             return;
         }
         Smb2ReadResp r;
-        Smb2V.parse_read_response_args.msg = SMB_CLIENT_CTX(work)->rx;
-        Smb2V.parse_read_response_args.len = (size_t)rl;
-        Smb2V.parse_read_response_args.out = &r;
-        Smb2.parse_read_response(work);
-        if (!Smb2V.ok || r.data_len > want)
+        smb2_ok = Smb2.parse_read_response(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &r);
+        if (!smb2_ok || r.data_len > want)
         {
             SmbClientV.value = SMB_ERR_PROTOCOL;
             return;
@@ -1071,17 +930,10 @@ void protocore_smb_client_smb_write(uint8_t *restrict work)
         {
             want = chunk_max;
         }
-        Smb2V.build_write_args.buf = SMB_CLIENT_CTX(work)->tx + 4;
-        Smb2V.build_write_args.cap = sizeof(SMB_CLIENT_CTX(work)->tx) - 4;
-        Smb2V.build_write_args.message_id = h->next_message_id;
-        Smb2V.build_write_args.session_id = h->session_id;
-        Smb2V.build_write_args.tree_id = h->tree_id;
-        Smb2V.build_write_args.file_id = h->file_id;
-        Smb2V.build_write_args.data = data + total;
-        Smb2V.build_write_args.data_len = want;
-        Smb2V.build_write_args.offset = offset + total;
-        Smb2.build_write(work);
-        size_t mlen = Smb2V.n;
+        size_t smb2_n = Smb2.build_write(work, SMB_CLIENT_CTX(work)->tx + 4, sizeof(SMB_CLIENT_CTX(work)->tx) - 4,
+                                         h->next_message_id, h->session_id, h->tree_id, h->file_id, data + total, want,
+                                         offset + total);
+        size_t mlen = smb2_n;
         if (!mlen)
         {
             SmbClientV.value = SMB_ERR_OVERFLOW;
@@ -1096,11 +948,8 @@ void protocore_smb_client_smb_write(uint8_t *restrict work)
             return;
         }
         Smb2Header hd;
-        Smb2V.parse_header_args.buf = SMB_CLIENT_CTX(work)->rx;
-        Smb2V.parse_header_args.len = (size_t)rl;
-        Smb2V.parse_header_args.out = &hd;
-        Smb2.parse_header(work);
-        if (!Smb2V.ok)
+        proto_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &hd);
+        if (!smb2_ok)
         {
             SmbClientV.value = SMB_ERR_PROTOCOL;
             return;
@@ -1112,11 +961,8 @@ void protocore_smb_client_smb_write(uint8_t *restrict work)
             return;
         }
         Smb2WriteResp w;
-        Smb2V.parse_write_response_args.msg = SMB_CLIENT_CTX(work)->rx;
-        Smb2V.parse_write_response_args.len = (size_t)rl;
-        Smb2V.parse_write_response_args.out = &w;
-        Smb2.parse_write_response(work);
-        if (!Smb2V.ok || w.count == 0 || w.count > want)
+        smb2_ok = Smb2.parse_write_response(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &w);
+        if (!smb2_ok || w.count == 0 || w.count > want)
         {
             SmbClientV.value = SMB_ERR_PROTOCOL; // no progress or a bogus count
             return;

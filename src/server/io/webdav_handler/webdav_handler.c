@@ -203,17 +203,11 @@ static proto_bool dav_write_blocked(uint8_t *restrict work, HttpReq *req, const 
     const char *presented = NULL;
     if (if_hdr)
     {
-        WebdavV.if_token_args.if_header = if_hdr;
-        WebdavV.if_token_args.out = tok;
-        WebdavV.if_token_args.cap = sizeof(tok);
-        Webdav.if_token(work);
-        presented = WebdavV.ok ? tok : NULL;
+        proto_bool webdav_ok = Webdav.if_token(work, if_hdr, tok, sizeof(tok));
+        presented = webdav_ok ? tok : NULL;
     }
-    WebdavV.lock_can_write_args.t = &WEBDAV_HANDLER_CTX(work)->table;
-    WebdavV.lock_can_write_args.path = path;
-    WebdavV.lock_can_write_args.presented_token = presented;
-    Webdav.lock_can_write(work);
-    return !WebdavV.ok;
+    proto_bool webdav_ok = Webdav.lock_can_write(work, &WEBDAV_HANDLER_CTX(work)->table, path, presented);
+    return !webdav_ok;
 }
 
 // True if the (always NUL-terminated) request body contains @p needle - used to spot a <shared> lockscope.
@@ -277,12 +271,11 @@ static proto_bool dav_stream_put_begin(HttpReq *req)
         return PROTO_FALSE;
     }
     uint8_t slot = (uint8_t)(req - http_pool);
-    HttpRoutes.count(protocore_http_route_span());
-    for (uint8_t i = 0; i < HttpRoutesV.value; i++)
+    uint8_t http_routes_value = HttpRoutes.count(protocore_http_route_span());
+    for (uint8_t i = 0; i < http_routes_value; i++)
     {
-        HttpRoutesV.at_args.i = i;
-        HttpRoutes.at(protocore_http_route_span());
-        HttpRoute *r = HttpRoutesV.ptr;
+        HttpRoute *http_routes_ptr = HttpRoutes.at(protocore_http_route_span(), i);
+        HttpRoute *r = http_routes_ptr;
         // The !is_active half cannot fire: every entry below route_count was filled by
         // fill_route_base, which sets is_active, and nothing ever clears it again.
         if (!r->is_active || r->type != ROUTE_DAV)
@@ -379,8 +372,8 @@ void dav(const char *url_prefix, const protocore_mnt_backend *file_sys, const ch
     // Public API with a signature protocore.h fixes, so the borrow comes from the accessor rather
     // than a parameter - the same way a callback reaches it.
     uint8_t *restrict work = protocore_webdav_handler_span();
-    HttpRoutes.add(protocore_http_route_span());
-    HttpRoute *r = HttpRoutesV.ptr;
+    HttpRoute *http_routes_ptr = HttpRoutes.add(protocore_http_route_span());
+    HttpRoute *r = http_routes_ptr;
     if (r == NULL)
     {
         return;
@@ -492,12 +485,11 @@ void protocore_dav_try_serve_dav(uint8_t *restrict work)
     uint8_t slot_id = DavV.try_serve_dav_args.slot_id;
     HttpReq *req = DavV.try_serve_dav_args.req;
 
-    HttpRoutes.count(protocore_http_route_span());
-    for (uint8_t i = 0; i < HttpRoutesV.value; i++)
+    uint8_t http_routes_value = HttpRoutes.count(protocore_http_route_span());
+    for (uint8_t i = 0; i < http_routes_value; i++)
     {
-        HttpRoutesV.at_args.i = i;
-        HttpRoutes.at(protocore_http_route_span());
-        HttpRoute *r = HttpRoutesV.ptr;
+        HttpRoute *http_routes_ptr = HttpRoutes.at(protocore_http_route_span(), i);
+        HttpRoute *r = http_routes_ptr;
         // The !is_active half cannot fire: every entry below route_count was filled by
         // fill_route_base, which sets is_active, and nothing ever clears it again.
         if (!r->is_active || r->type != ROUTE_DAV)
@@ -549,13 +541,10 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
     // Expire any timed-out locks (RFC 4918 §6.6) before this request consults the table, so a stale lock
     // never gates a write. The clock is protocore_millis() (pluggable); seconds are enough for lock lifetimes.
     uint32_t dav_now_s = (uint32_t)(Clock.ms / 1000u);
-    WebdavV.lock_sweep_args.t = &WEBDAV_HANDLER_CTX(work)->table;
-    WebdavV.lock_sweep_args.now_s = dav_now_s;
-    Webdav.lock_sweep(work);
+    Webdav.lock_sweep(work, &WEBDAV_HANDLER_CTX(work)->table, dav_now_s);
 
-    WebdavV.method_args.m = req->method;
-    Webdav.method(work);
-    switch (WebdavV.value)
+    WebDavMethod webdav_value = Webdav.method(work, req->method);
+    switch (webdav_value)
     {
     case DAV_M_OPTIONS:
         proto_add_response_header(slot_id, "DAV", "1, 2");
@@ -586,10 +575,9 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
         }
         MntV.args.id = r->mnt_id;
         Mnt.point_of(work);
-        WebdavV.method_args.m = req->method;
-        Webdav.method(work);
+        WebDavMethod webdav_value = Webdav.method(work, req->method);
         FileServingV.serve_file_internal_args.slot_id = slot_id;
-        FileServingV.serve_file_internal_args.head = WebdavV.value == DAV_M_HEAD;
+        FileServingV.serve_file_internal_args.head = webdav_value == DAV_M_HEAD;
         FileServingV.serve_file_internal_args.file_sys = MntV.backend;
         FileServingV.serve_file_internal_args.fs_path = fs_path;
         FileServingV.serve_file_internal_args.content_type = mime_type(fs_path);
@@ -721,11 +709,8 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
         proto_bool dest_ok = PROTO_FALSE;
         if (dest_hdr)
         {
-            WebdavV.dest_path_args.destination = dest_hdr;
-            WebdavV.dest_path_args.out = dest_url;
-            WebdavV.dest_path_args.cap = sizeof(dest_url);
-            Webdav.dest_path(work);
-            dest_ok = WebdavV.ok;
+            proto_bool webdav_ok = Webdav.dest_path(work, dest_hdr, dest_url, sizeof(dest_url));
+            dest_ok = webdav_ok;
         }
         if (!dest_ok)
         {
@@ -746,9 +731,8 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
         }
         // Both COPY and MOVE write the destination; MOVE additionally removes the source. Each locked
         // target needs the matching token in the If header (RFC 4918 §7).
-        WebdavV.method_args.m = req->method;
-        Webdav.method(work);
-        proto_bool is_move = WebdavV.value == DAV_M_MOVE;
+        WebDavMethod webdav_value = Webdav.method(work, req->method);
+        proto_bool is_move = webdav_value == DAV_M_MOVE;
         if (dav_write_blocked(work, req, dest_url) || (is_move && dav_write_blocked(work, req, req->path)))
         {
             dav_send_status(slot_id, 423, "");
@@ -869,19 +853,13 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
         proto_bool have_token = PROTO_FALSE;
         if (if_hdr)
         {
-            WebdavV.if_token_args.if_header = if_hdr;
-            WebdavV.if_token_args.out = iftok;
-            WebdavV.if_token_args.cap = sizeof(iftok);
-            Webdav.if_token(work);
-            have_token = WebdavV.ok;
+            proto_bool webdav_ok = Webdav.if_token(work, if_hdr, iftok, sizeof(iftok));
+            have_token = webdav_ok;
         }
         if (have_token)
         {
-            WebdavV.lock_refresh_args.t = &WEBDAV_HANDLER_CTX(work)->table;
-            WebdavV.lock_refresh_args.token = iftok;
-            WebdavV.lock_refresh_args.new_expiry_s = expiry_s;
-            Webdav.lock_refresh(work);
-            lk = WebdavV.ptr;
+            const DavLock *webdav_ptr = Webdav.lock_refresh(work, &WEBDAV_HANDLER_CTX(work)->table, iftok, expiry_s);
+            lk = webdav_ptr;
         }
 
         char token[PROTOCORE_DAV_LOCK_TOKEN_MAX];
@@ -905,10 +883,8 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
             HttpParserV.get_header_args.req = req;
             HttpParserV.get_header_args.key = "Depth";
             HttpParser.get_header(protocore_http_parser_span());
-            WebdavV.depth_args.depth_hdr = HttpParserV.text;
-            WebdavV.depth_args.dflt = PROTOCORE_DAV_DEPTH_INFINITY;
-            Webdav.depth(work);
-            depth_inf = WebdavV.i32 != 0;
+            int webdav_i32 = Webdav.depth(work, HttpParserV.text, PROTOCORE_DAV_DEPTH_INFINITY);
+            depth_inf = webdav_i32 != 0;
             unsigned long tok = (unsigned long)Clock.ms;
             uint32_t tok_rand = 0;
             RngV.fill_args.out = (uint8_t *)&tok_rand;
@@ -923,14 +899,9 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
             {
                 token[0] = '\0';
             }
-            WebdavV.lock_acquire_args.t = &WEBDAV_HANDLER_CTX(work)->table;
-            WebdavV.lock_acquire_args.path = req->path;
-            WebdavV.lock_acquire_args.token = token;
-            WebdavV.lock_acquire_args.exclusive = /*exclusive=*/!shared;
-            WebdavV.lock_acquire_args.depth_infinity = depth_inf;
-            WebdavV.lock_acquire_args.expiry_s = expiry_s;
-            Webdav.lock_acquire(work);
-            if (!WebdavV.ptr)
+            const DavLock *webdav_ptr = Webdav.lock_acquire(work, &WEBDAV_HANDLER_CTX(work)->table, req->path, token,
+                                                            /*exclusive=*/!shared, depth_inf, expiry_s);
+            if (!webdav_ptr)
             {
                 dav_send_status(slot_id, 423, ""); // a conflicting lock already holds this resource / subtree
                 return;
@@ -977,10 +948,8 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
         proto_bool released = PROTO_FALSE;
         if (lt && dav_coded_url_token(lt, token, sizeof(token)))
         {
-            WebdavV.lock_release_args.t = &WEBDAV_HANDLER_CTX(work)->table;
-            WebdavV.lock_release_args.token = token;
-            Webdav.lock_release(work);
-            released = WebdavV.ok;
+            proto_bool webdav_ok = Webdav.lock_release(work, &WEBDAV_HANDLER_CTX(work)->table, token);
+            released = webdav_ok;
         }
         if (!released)
         {
@@ -1012,10 +981,8 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
         HttpParserV.get_header_args.req = req;
         HttpParserV.get_header_args.key = "Depth";
         HttpParser.get_header(protocore_http_parser_span());
-        WebdavV.depth_args.depth_hdr = HttpParserV.text;
-        WebdavV.depth_args.dflt = 1;
-        Webdav.depth(work);
-        int depth = WebdavV.i32;
+        int webdav_i32 = Webdav.depth(work, HttpParserV.text, 1);
+        int depth = webdav_i32;
 
         // RFC 4918 9.1.1: this server lists at most one level, so a Depth: infinity
         // PROPFIND is rejected with 403 + the propfind-finite-depth precondition rather
@@ -1052,26 +1019,16 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
 
         size_t cap = sizeof(WEBDAV_HANDLER_CTX(work)->buf);
         size_t len = 0;
-        WebdavV.ms_begin_args.buf = WEBDAV_HANDLER_CTX(work)->buf;
-        WebdavV.ms_begin_args.cap = cap;
-        WebdavV.ms_begin_args.len = len;
-        Webdav.ms_begin(work);
-        len = WebdavV.n;
+        size_t webdav_n = Webdav.ms_begin(work, WEBDAV_HANDLER_CTX(work)->buf, cap, len);
+        len = webdav_n;
         char mt[40];
         FileServingV.http_rfc1123_args.epoch = mtime;
         FileServingV.http_rfc1123_args.out = mt;
         FileServingV.http_rfc1123_args.cap = sizeof(mt);
         FileServing.http_rfc1123(protocore_file_serving_span());
-        WebdavV.ms_entry_args.buf = WEBDAV_HANDLER_CTX(work)->buf;
-        WebdavV.ms_entry_args.cap = cap;
-        WebdavV.ms_entry_args.len = len;
-        WebdavV.ms_entry_args.href = self_href;
-        WebdavV.ms_entry_args.is_collection = isdir;
-        WebdavV.ms_entry_args.size = fsize;
-        WebdavV.ms_entry_args.rfc1123_mtime = mt;
-        WebdavV.ms_entry_args.content_type = isdir ? "" : mime_type(fs_path);
-        Webdav.ms_entry(work);
-        len = WebdavV.n;
+        webdav_n = Webdav.ms_entry(work, WEBDAV_HANDLER_CTX(work)->buf, cap, len, self_href, isdir, fsize, mt,
+                                   isdir ? "" : mime_type(fs_path));
+        len = webdav_n;
 
         if (isdir && depth >= 1)
         {
@@ -1119,16 +1076,10 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
                 FileServingV.http_rfc1123_args.cap = sizeof(cmtbuf);
                 FileServing.http_rfc1123(protocore_file_serving_span());
                 size_t before = len;
-                WebdavV.ms_entry_args.buf = WEBDAV_HANDLER_CTX(work)->buf;
-                WebdavV.ms_entry_args.cap = cap;
-                WebdavV.ms_entry_args.len = len;
-                WebdavV.ms_entry_args.href = chref;
-                WebdavV.ms_entry_args.is_collection = cst.is_dir;
-                WebdavV.ms_entry_args.size = (uint32_t)cst.size;
-                WebdavV.ms_entry_args.rfc1123_mtime = cmtbuf;
-                WebdavV.ms_entry_args.content_type = cst.is_dir ? "" : mime_type(WEBDAV_HANDLER_CTX(work)->child);
-                Webdav.ms_entry(work);
-                len = WebdavV.n;
+                size_t webdav_n = Webdav.ms_entry(work, WEBDAV_HANDLER_CTX(work)->buf, cap, len, chref, cst.is_dir,
+                                                  (uint32_t)cst.size, cmtbuf,
+                                                  cst.is_dir ? "" : mime_type(WEBDAV_HANDLER_CTX(work)->child));
+                len = webdav_n;
                 if (len == before)
                 {
                     break; // buffer full - stop listing
@@ -1138,11 +1089,8 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
             Fs.io.handle = d;
             Fs.close(protocore_filesystem_span());
         }
-        WebdavV.ms_end_args.buf = WEBDAV_HANDLER_CTX(work)->buf;
-        WebdavV.ms_end_args.cap = cap;
-        WebdavV.ms_end_args.len = len;
-        Webdav.ms_end(work);
-        len = WebdavV.n;
+        webdav_n = Webdav.ms_end(work, WEBDAV_HANDLER_CTX(work)->buf, cap, len);
+        len = webdav_n;
         send_text(slot_id, 207, "application/xml; charset=utf-8", WEBDAV_HANDLER_CTX(work)->buf);
         return;
     }
@@ -1160,13 +1108,10 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
             dav_send_status(slot_id, 404, "");
             return;
         }
-        WebdavV.proppatch_ms_args.buf = WEBDAV_HANDLER_CTX(work)->buf;
-        WebdavV.proppatch_ms_args.cap = sizeof(WEBDAV_HANDLER_CTX(work)->buf);
-        WebdavV.proppatch_ms_args.href = req->path;
-        WebdavV.proppatch_ms_args.body = (const char *)req->body;
-        WebdavV.proppatch_ms_args.body_len = req->body_len;
-        Webdav.proppatch_ms(work);
-        size_t n = WebdavV.n;
+        size_t webdav_n =
+            Webdav.proppatch_ms(work, WEBDAV_HANDLER_CTX(work)->buf, sizeof(WEBDAV_HANDLER_CTX(work)->buf), req->path,
+                                (const char *)req->body, req->body_len);
+        size_t n = webdav_n;
         if (!n)
         {
             dav_send_status(slot_id, 507, ""); // Insufficient Storage: response did not fit the buffer

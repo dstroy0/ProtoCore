@@ -6,9 +6,7 @@
  * @brief SMB2 client wire codec implementation (see smb2.h). All fields little-endian.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_SMB
+#include "protocore_config.h" // the entry point: the widths
 
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/application/smb/smb2/smb2.h"
@@ -23,8 +21,6 @@
 #include "mmgr/endian/endian.h"
 #include "mmgr/secure/secure.h" // the per-call GCM context borrow
 
-PROTOCORE_BEGIN_DECLS
-
 static const uint8_t SMB2_PROTOCOL_ID[4] = {0xFE, 'S', 'M', 'B'};
 
 // The entries this file calls before reaching their definitions.
@@ -33,59 +29,42 @@ static const uint8_t SMB2_PROTOCOL_ID[4] = {0xFE, 'S', 'M', 'B'};
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_smb2_build_header(uint8_t *restrict work);
-void protocore_smb2_parse_header(uint8_t *restrict work);
-
-void protocore_smb2_transport_frame(uint8_t *restrict work)
+size_t protocore_smb2_transport_frame(uint8_t *restrict work, uint8_t *out, size_t cap, const uint8_t *msg,
+                                      size_t msg_len)
 {
     (void)work;
-    uint8_t *out = Smb2V.transport_frame_args.out;
-    size_t cap = Smb2V.transport_frame_args.cap;
-    const uint8_t *msg = Smb2V.transport_frame_args.msg;
-    size_t msg_len = Smb2V.transport_frame_args.msg_len;
 
     if (!out || !msg || msg_len > 0x00FFFFFF || 4 + msg_len > cap)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
     out[0] = 0x00; // Direct TCP: first byte MUST be zero
     out[1] = (uint8_t)(msg_len >> 16);
     out[2] = (uint8_t)(msg_len >> 8);
     out[3] = (uint8_t)(msg_len);
     mem.cpy(out + 4, msg, msg_len);
-    Smb2V.n = 4 + msg_len;
+    return 4 + msg_len;
 }
 
-void protocore_smb2_transport_len(uint8_t *restrict work)
+uint32_t protocore_smb2_transport_len(uint8_t *restrict work, const uint8_t *buf, size_t len)
 {
     (void)work;
-    const uint8_t *buf = Smb2V.transport_len_args.buf;
-    size_t len = Smb2V.transport_len_args.len;
 
     if (!buf || len < 4 || buf[0] != 0x00)
     {
-        Smb2V.u32 = 0;
-        return;
+        return 0;
     }
-    Smb2V.u32 = ((uint32_t)buf[1] << 16) | ((uint32_t)buf[2] << 8) | (uint32_t)buf[3];
+    return ((uint32_t)buf[1] << 16) | ((uint32_t)buf[2] << 8) | (uint32_t)buf[3];
 }
 
-void protocore_smb2_build_header(uint8_t *restrict work)
+size_t protocore_smb2_build_header(uint8_t *restrict work, uint8_t *buf, size_t cap, Smb2Command command,
+                                   uint16_t credit_request, uint64_t message_id, uint32_t tree_id, uint64_t session_id)
 {
     (void)work;
-    uint8_t *buf = Smb2V.build_header_args.buf;
-    size_t cap = Smb2V.build_header_args.cap;
-    Smb2Command command = Smb2V.build_header_args.command;
-    uint16_t credit_request = Smb2V.build_header_args.credit_request;
-    uint64_t message_id = Smb2V.build_header_args.message_id;
-    uint32_t tree_id = Smb2V.build_header_args.tree_id;
-    uint64_t session_id = Smb2V.build_header_args.session_id;
 
     if (!buf || cap < PROTOCORE_SMB2_HEADER_SIZE)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
     mem.set(buf, 0, PROTOCORE_SMB2_HEADER_SIZE);
     mem.cpy(buf + 0, SMB2_PROTOCOL_ID, 4); // ProtocolId
@@ -99,25 +78,20 @@ void protocore_smb2_build_header(uint8_t *restrict work)
     endian.wr32le(buf + 36, tree_id);    // TreeId
     endian.wr64le(buf + 40, session_id); // SessionId
     // bytes 48 through 63 Signature stay zero
-    Smb2V.n = PROTOCORE_SMB2_HEADER_SIZE;
+    return PROTOCORE_SMB2_HEADER_SIZE;
 }
 
-void protocore_smb2_parse_header(uint8_t *restrict work)
+proto_bool protocore_smb2_parse_header(uint8_t *restrict work, const uint8_t *buf, size_t len, Smb2Header *out)
 {
     (void)work;
-    const uint8_t *buf = Smb2V.parse_header_args.buf;
-    size_t len = Smb2V.parse_header_args.len;
-    Smb2Header *out = Smb2V.parse_header_args.out;
 
     if (!buf || !out || len < PROTOCORE_SMB2_HEADER_SIZE)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     if (mem.cmp(buf, SMB2_PROTOCOL_ID, 4) != 0 || endian.rd16le(buf + 4) != 64)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     out->status = endian.rd32le(buf + 8);
     out->command = (Smb2Command)endian.rd16le(buf + 12);
@@ -126,37 +100,24 @@ void protocore_smb2_parse_header(uint8_t *restrict work)
     out->message_id = endian.rd64le(buf + 24);
     out->tree_id = endian.rd32le(buf + 36);
     out->session_id = endian.rd64le(buf + 40);
-    Smb2V.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_smb2_build_negotiate(uint8_t *restrict work)
+size_t protocore_smb2_build_negotiate(uint8_t *restrict work, uint8_t *buf, size_t cap, const uint8_t *client_guid,
+                                      uint16_t security_mode)
 {
-    uint8_t *buf = Smb2V.build_negotiate_args.buf;
-    size_t cap = Smb2V.build_negotiate_args.cap;
-    const uint8_t *client_guid = Smb2V.build_negotiate_args.client_guid;
-    uint16_t security_mode = Smb2V.build_negotiate_args.security_mode;
-
     static const Smb2Dialect dialects[] = {SMB2_DIALECT_0202, SMB2_DIALECT_0210, SMB2_DIALECT_0300, SMB2_DIALECT_0302};
     const uint16_t ndialects = (uint16_t)(sizeof(dialects) / sizeof(dialects[0]));
     const size_t total = PROTOCORE_SMB2_HEADER_SIZE + 36 + (size_t)ndialects * 2; // header + fixed body + dialects
     if (!buf || !client_guid || cap < total)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
 
-    Smb2V.build_header_args.buf = buf;
-    Smb2V.build_header_args.cap = cap;
-    Smb2V.build_header_args.command = SMB2_NEGOTIATE;
-    Smb2V.build_header_args.credit_request = 1;
-    Smb2V.build_header_args.message_id = 0;
-    Smb2V.build_header_args.tree_id = 0;
-    Smb2V.build_header_args.session_id = 0;
-    protocore_smb2_build_header(work);
-    if (Smb2V.n == 0)
+    size_t smb2_n = Smb2.build_header(work, buf, cap, SMB2_NEGOTIATE, 1, 0, 0, 0);
+    if (smb2_n == 0)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
 
     uint8_t *b = buf + PROTOCORE_SMB2_HEADER_SIZE; // NEGOTIATE request body
@@ -171,41 +132,32 @@ void protocore_smb2_build_negotiate(uint8_t *restrict work)
     {
         endian.wr16le(b + 36 + i * 2, (uint16_t)dialects[i]);
     }
-    Smb2V.n = total;
+    return total;
 }
 
-void protocore_smb2_parse_negotiate_response(uint8_t *restrict work)
+proto_bool protocore_smb2_parse_negotiate_response(uint8_t *restrict work, const uint8_t *msg, size_t len,
+                                                   Smb2NegotiateResp *out)
 {
-    const uint8_t *msg = Smb2V.parse_negotiate_response_args.msg;
-    size_t len = Smb2V.parse_negotiate_response_args.len;
-    Smb2NegotiateResp *out = Smb2V.parse_negotiate_response_args.out;
-
+    proto_bool ok = PROTO_FALSE;
     if (!msg || !out)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     Smb2Header h;
-    Smb2V.parse_header_args.buf = msg;
-    Smb2V.parse_header_args.len = len;
-    Smb2V.parse_header_args.out = &h;
-    protocore_smb2_parse_header(work);
-    if (!Smb2V.ok || h.command != SMB2_NEGOTIATE)
+    proto_bool smb2_ok = Smb2.parse_header(work, msg, len, &h);
+    if (!smb2_ok || h.command != SMB2_NEGOTIATE)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     // The fixed response body is 64 bytes (StructureSize .. NegotiateContextOffset), Buffer follows.
     if (len < PROTOCORE_SMB2_HEADER_SIZE + 64)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     const uint8_t *b = msg + PROTOCORE_SMB2_HEADER_SIZE;
     if (endian.rd16le(b + 0) != 65) // StructureSize
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
 
     out->security_mode = endian.rd16le(b + 2);
@@ -222,38 +174,29 @@ void protocore_smb2_parse_negotiate_response(uint8_t *restrict work)
     {
         out->sec_buf = NULL;
         out->sec_buf_len = 0;
-        Smb2V.ok = PROTO_TRUE;
-        return;
+        return PROTO_TRUE;
     }
     if ((size_t)sec_off + sec_len > len || sec_off < PROTOCORE_SMB2_HEADER_SIZE)
     {
-        Smb2V.ok = PROTO_FALSE; // security buffer out of bounds - fail closed
-        return;
+        ok = PROTO_FALSE; // security buffer out of bounds - fail closed
+        return ok;
     }
     out->sec_buf = msg + sec_off;
     out->sec_buf_len = sec_len;
-    Smb2V.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_smb2_build_negotiate_311(uint8_t *restrict work)
+size_t protocore_smb2_build_negotiate_311(uint8_t *restrict work, uint8_t *buf, size_t cap, const uint8_t *client_guid,
+                                          uint16_t security_mode, const uint8_t *salt, size_t salt_len,
+                                          const uint16_t *ciphers, size_t cipher_count)
 {
-    uint8_t *buf = Smb2V.build_negotiate_311_args.buf;
-    size_t cap = Smb2V.build_negotiate_311_args.cap;
-    const uint8_t *client_guid = Smb2V.build_negotiate_311_args.client_guid;
-    uint16_t security_mode = Smb2V.build_negotiate_311_args.security_mode;
-    const uint8_t *salt = Smb2V.build_negotiate_311_args.salt;
-    size_t salt_len = Smb2V.build_negotiate_311_args.salt_len;
-    const uint16_t *ciphers = Smb2V.build_negotiate_311_args.ciphers;
-    size_t cipher_count = Smb2V.build_negotiate_311_args.cipher_count;
-
     static const Smb2Dialect dialects[] = {SMB2_DIALECT_0202, SMB2_DIALECT_0210, SMB2_DIALECT_0300, SMB2_DIALECT_0302,
                                            SMB2_DIALECT_0311};
     const uint16_t ndialects = (uint16_t)(sizeof(dialects) / sizeof(dialects[0]));
     if (!buf || !client_guid || !salt || salt_len == 0 || salt_len > 0xFFFF ||
         cipher_count > PROTOCORE_SMB2_MAX_OFFER_CIPHERS || (cipher_count > 0 && !ciphers))
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
 
     // header(64) + fixed body(36) + dialects(2*n), padded to 8, then the negotiate-context list. Each
@@ -274,22 +217,13 @@ void protocore_smb2_build_negotiate_311(uint8_t *restrict work)
     const size_t total = ctx_start + preauth_ctx + preauth_pad + sign_ctx + sign_pad + enc_ctx;
     if (cap < total)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
 
-    Smb2V.build_header_args.buf = buf;
-    Smb2V.build_header_args.cap = cap;
-    Smb2V.build_header_args.command = SMB2_NEGOTIATE;
-    Smb2V.build_header_args.credit_request = 1;
-    Smb2V.build_header_args.message_id = 0;
-    Smb2V.build_header_args.tree_id = 0;
-    Smb2V.build_header_args.session_id = 0;
-    protocore_smb2_build_header(work);
-    if (Smb2V.n == 0)
+    size_t smb2_n = Smb2.build_header(work, buf, cap, SMB2_NEGOTIATE, 1, 0, 0, 0);
+    if (smb2_n == 0)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
 
     uint8_t *b = buf + PROTOCORE_SMB2_HEADER_SIZE;
@@ -349,48 +283,39 @@ void protocore_smb2_build_negotiate_311(uint8_t *restrict work)
             endian.wr16le(c3 + 10 + i * 2, ciphers[i]); // Ciphers[i]
         }
     }
-    Smb2V.n = total;
+    return total;
 }
 
-void protocore_smb2_parse_negotiate_contexts(uint8_t *restrict work)
+proto_bool protocore_smb2_parse_negotiate_contexts(uint8_t *restrict work, const uint8_t *msg, size_t len,
+                                                   Smb2NegotiateContexts *out)
 {
-    const uint8_t *msg = Smb2V.parse_negotiate_contexts_args.msg;
-    size_t len = Smb2V.parse_negotiate_contexts_args.len;
-    Smb2NegotiateContexts *out = Smb2V.parse_negotiate_contexts_args.out;
-
+    proto_bool ok = PROTO_FALSE;
     if (!msg || !out)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     mem.set(out, 0, sizeof(*out));
     Smb2Header h;
-    Smb2V.parse_header_args.buf = msg;
-    Smb2V.parse_header_args.len = len;
-    Smb2V.parse_header_args.out = &h;
-    protocore_smb2_parse_header(work);
-    if (!Smb2V.ok || h.command != SMB2_NEGOTIATE)
+    proto_bool smb2_ok = Smb2.parse_header(work, msg, len, &h);
+    if (!smb2_ok || h.command != SMB2_NEGOTIATE)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     if (len < PROTOCORE_SMB2_HEADER_SIZE + 64)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     const uint8_t *b = msg + PROTOCORE_SMB2_HEADER_SIZE;
     if (endian.rd16le(b + 0) != 65) // StructureSize
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     uint16_t count = endian.rd16le(b + 6); // NegotiateContextCount (reserved for < 3.1.1)
     uint32_t off = endian.rd32le(b + 60);  // NegotiateContextOffset (from the SMB2 header start)
     if (count == 0 || off < PROTOCORE_SMB2_HEADER_SIZE)
     {
-        Smb2V.ok = PROTO_FALSE; // not a 3.1.1 response carrying a context list
-        return;
+        ok = PROTO_FALSE; // not a 3.1.1 response carrying a context list
+        return ok;
     }
 
     size_t p = off;
@@ -399,16 +324,14 @@ void protocore_smb2_parse_negotiate_contexts(uint8_t *restrict work)
         p = (p + 7) & ~(size_t)7; // every context is 8-byte aligned
         if (p + 8 > len)
         {
-            Smb2V.ok = PROTO_FALSE;
-            return;
+            return PROTO_FALSE;
         }
         uint16_t ctype = endian.rd16le(msg + p);
         uint16_t dlen = endian.rd16le(msg + p + 2); // Reserved (4) follows at p+4
         size_t data = p + 8;
         if (data + dlen > len)
         {
-            Smb2V.ok = PROTO_FALSE;
-            return;
+            return PROTO_FALSE;
         }
         const uint8_t *d = msg + data;
         if (ctype == SMB2_PREAUTH_INTEGRITY_CAPABILITIES && dlen >= 6)
@@ -443,13 +366,12 @@ void protocore_smb2_parse_negotiate_contexts(uint8_t *restrict work)
         }
         p = data + dlen;
     }
-    Smb2V.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_smb2_preauth_init(uint8_t *restrict work)
+void protocore_smb2_preauth_init(uint8_t *restrict work, SmbPreauth *p)
 {
     (void)work;
-    SmbPreauth *p = Smb2V.preauth_init_args.p;
 
     if (p)
     {
@@ -457,13 +379,10 @@ void protocore_smb2_preauth_init(uint8_t *restrict work)
     }
 }
 
-void protocore_smb2_preauth_update(uint8_t *restrict work)
+void protocore_smb2_preauth_update(uint8_t *restrict work, uint8_t *crypto_work, SmbPreauth *p, const uint8_t *msg,
+                                   size_t len)
 {
     (void)work;
-    uint8_t *crypto_work = Smb2V.preauth_update_args.crypto_work;
-    SmbPreauth *p = Smb2V.preauth_update_args.p;
-    const uint8_t *msg = Smb2V.preauth_update_args.msg;
-    size_t len = Smb2V.preauth_update_args.len;
 
     if (!p || (!msg && len))
     {
@@ -479,35 +398,20 @@ void protocore_smb2_preauth_update(uint8_t *restrict work)
     Sha512.final(crypto_work, p->hash);
 }
 
-void protocore_smb2_build_session_setup(uint8_t *restrict work)
+size_t protocore_smb2_build_session_setup(uint8_t *restrict work, uint8_t *buf, size_t cap, uint64_t message_id,
+                                          uint64_t session_id, uint8_t security_mode, const uint8_t *sec_buf,
+                                          size_t sec_len)
 {
-    uint8_t *buf = Smb2V.build_session_setup_args.buf;
-    size_t cap = Smb2V.build_session_setup_args.cap;
-    uint64_t message_id = Smb2V.build_session_setup_args.message_id;
-    uint64_t session_id = Smb2V.build_session_setup_args.session_id;
-    uint8_t security_mode = Smb2V.build_session_setup_args.security_mode;
-    const uint8_t *sec_buf = Smb2V.build_session_setup_args.sec_buf;
-    size_t sec_len = Smb2V.build_session_setup_args.sec_len;
-
     const size_t body = 24; // fixed SESSION_SETUP request body (§2.2.5)
     const size_t total = PROTOCORE_SMB2_HEADER_SIZE + body + sec_len;
     if (!buf || !sec_buf || sec_len == 0 || sec_len > 0xFFFF || cap < total)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
-    Smb2V.build_header_args.buf = buf;
-    Smb2V.build_header_args.cap = cap;
-    Smb2V.build_header_args.command = SMB2_SESSION_SETUP;
-    Smb2V.build_header_args.credit_request = 1;
-    Smb2V.build_header_args.message_id = message_id;
-    Smb2V.build_header_args.tree_id = 0;
-    Smb2V.build_header_args.session_id = session_id;
-    protocore_smb2_build_header(work);
-    if (Smb2V.n == 0)
+    size_t smb2_n = Smb2.build_header(work, buf, cap, SMB2_SESSION_SETUP, 1, message_id, 0, session_id);
+    if (smb2_n == 0)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
 
     uint8_t *b = buf + PROTOCORE_SMB2_HEADER_SIZE;
@@ -521,41 +425,32 @@ void protocore_smb2_build_session_setup(uint8_t *restrict work)
     endian.wr16le(b + 14, (uint16_t)sec_len);                     // SecurityBufferLength
     // byte 16 PreviousSessionId stays zero for a fresh session
     mem.cpy(b + body, sec_buf, sec_len);
-    Smb2V.n = total;
+    return total;
 }
 
-void protocore_smb2_parse_session_setup_response(uint8_t *restrict work)
+proto_bool protocore_smb2_parse_session_setup_response(uint8_t *restrict work, const uint8_t *msg, size_t len,
+                                                       Smb2SessionSetupResp *out)
 {
-    const uint8_t *msg = Smb2V.parse_session_setup_response_args.msg;
-    size_t len = Smb2V.parse_session_setup_response_args.len;
-    Smb2SessionSetupResp *out = Smb2V.parse_session_setup_response_args.out;
-
+    proto_bool ok = PROTO_FALSE;
     if (!msg || !out)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     Smb2Header h;
-    Smb2V.parse_header_args.buf = msg;
-    Smb2V.parse_header_args.len = len;
-    Smb2V.parse_header_args.out = &h;
-    protocore_smb2_parse_header(work);
-    if (!Smb2V.ok || h.command != SMB2_SESSION_SETUP)
+    proto_bool smb2_ok = Smb2.parse_header(work, msg, len, &h);
+    if (!smb2_ok || h.command != SMB2_SESSION_SETUP)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     // The fixed response body is 8 bytes (StructureSize .. SecurityBufferLength), Buffer follows.
     if (len < PROTOCORE_SMB2_HEADER_SIZE + 8)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     const uint8_t *b = msg + PROTOCORE_SMB2_HEADER_SIZE;
     if (endian.rd16le(b + 0) != 9) // StructureSize
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
 
     out->session_flags = endian.rd16le(b + 2);
@@ -565,47 +460,31 @@ void protocore_smb2_parse_session_setup_response(uint8_t *restrict work)
     {
         out->sec_buf = NULL;
         out->sec_buf_len = 0;
-        Smb2V.ok = PROTO_TRUE;
-        return;
+        return PROTO_TRUE;
     }
     if ((size_t)sec_off + sec_len > len || sec_off < PROTOCORE_SMB2_HEADER_SIZE)
     {
-        Smb2V.ok = PROTO_FALSE; // security buffer out of bounds - fail closed
-        return;
+        ok = PROTO_FALSE; // security buffer out of bounds - fail closed
+        return ok;
     }
     out->sec_buf = msg + sec_off;
     out->sec_buf_len = sec_len;
-    Smb2V.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_smb2_build_tree_connect(uint8_t *restrict work)
+size_t protocore_smb2_build_tree_connect(uint8_t *restrict work, uint8_t *buf, size_t cap, uint64_t message_id,
+                                         uint64_t session_id, const uint8_t *path_utf16, size_t path_len)
 {
-    uint8_t *buf = Smb2V.build_tree_connect_args.buf;
-    size_t cap = Smb2V.build_tree_connect_args.cap;
-    uint64_t message_id = Smb2V.build_tree_connect_args.message_id;
-    uint64_t session_id = Smb2V.build_tree_connect_args.session_id;
-    const uint8_t *path_utf16 = Smb2V.build_tree_connect_args.path_utf16;
-    size_t path_len = Smb2V.build_tree_connect_args.path_len;
-
     const size_t body = 8; // fixed TREE_CONNECT request body (§2.2.9)
     const size_t total = PROTOCORE_SMB2_HEADER_SIZE + body + path_len;
     if (!buf || !path_utf16 || path_len == 0 || path_len > 0xFFFF || cap < total)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
-    Smb2V.build_header_args.buf = buf;
-    Smb2V.build_header_args.cap = cap;
-    Smb2V.build_header_args.command = SMB2_TREE_CONNECT;
-    Smb2V.build_header_args.credit_request = 1;
-    Smb2V.build_header_args.message_id = message_id;
-    Smb2V.build_header_args.tree_id = 0;
-    Smb2V.build_header_args.session_id = session_id;
-    protocore_smb2_build_header(work);
-    if (Smb2V.n == 0)
+    size_t smb2_n = Smb2.build_header(work, buf, cap, SMB2_TREE_CONNECT, 1, message_id, 0, session_id);
+    if (smb2_n == 0)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
 
     uint8_t *b = buf + PROTOCORE_SMB2_HEADER_SIZE;
@@ -615,81 +494,53 @@ void protocore_smb2_build_tree_connect(uint8_t *restrict work)
     endian.wr16le(b + 4, (uint16_t)(PROTOCORE_SMB2_HEADER_SIZE + body)); // PathOffset (from the header start) = 72
     endian.wr16le(b + 6, (uint16_t)path_len);                            // PathLength
     mem.cpy(b + body, path_utf16, path_len);                             // the \\server\share path (UTF-16LE)
-    Smb2V.n = total;
+    return total;
 }
 
-void protocore_smb2_parse_tree_connect_response(uint8_t *restrict work)
+proto_bool protocore_smb2_parse_tree_connect_response(uint8_t *restrict work, const uint8_t *msg, size_t len,
+                                                      Smb2TreeConnectResp *out)
 {
-    const uint8_t *msg = Smb2V.parse_tree_connect_response_args.msg;
-    size_t len = Smb2V.parse_tree_connect_response_args.len;
-    Smb2TreeConnectResp *out = Smb2V.parse_tree_connect_response_args.out;
-
     if (!msg || !out)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     Smb2Header h;
-    Smb2V.parse_header_args.buf = msg;
-    Smb2V.parse_header_args.len = len;
-    Smb2V.parse_header_args.out = &h;
-    protocore_smb2_parse_header(work);
-    if (!Smb2V.ok || h.command != SMB2_TREE_CONNECT)
+    proto_bool smb2_ok = Smb2.parse_header(work, msg, len, &h);
+    if (!smb2_ok || h.command != SMB2_TREE_CONNECT)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     if (len < PROTOCORE_SMB2_HEADER_SIZE + 16) // fixed 16-byte body, no variable buffer
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     const uint8_t *b = msg + PROTOCORE_SMB2_HEADER_SIZE;
     if (endian.rd16le(b + 0) != 16) // StructureSize
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     out->share_type = b[2];
     out->share_flags = endian.rd32le(b + 4);
     out->capabilities = endian.rd32le(b + 8);
     out->maximal_access = endian.rd32le(b + 12);
-    Smb2V.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_smb2_build_create(uint8_t *restrict work)
+size_t protocore_smb2_build_create(uint8_t *restrict work, uint8_t *buf, size_t cap, uint64_t message_id,
+                                   uint64_t session_id, uint32_t tree_id, uint32_t desired_access,
+                                   uint32_t share_access, uint32_t create_disposition, uint32_t create_options,
+                                   const uint8_t *name_utf16, size_t name_len)
 {
-    uint8_t *buf = Smb2V.build_create_args.buf;
-    size_t cap = Smb2V.build_create_args.cap;
-    uint64_t message_id = Smb2V.build_create_args.message_id;
-    uint64_t session_id = Smb2V.build_create_args.session_id;
-    uint32_t tree_id = Smb2V.build_create_args.tree_id;
-    uint32_t desired_access = Smb2V.build_create_args.desired_access;
-    uint32_t share_access = Smb2V.build_create_args.share_access;
-    uint32_t create_disposition = Smb2V.build_create_args.create_disposition;
-    uint32_t create_options = Smb2V.build_create_args.create_options;
-    const uint8_t *name_utf16 = Smb2V.build_create_args.name_utf16;
-    size_t name_len = Smb2V.build_create_args.name_len;
-
     const size_t body = 56; // fixed CREATE request body (§2.2.13)
     const size_t total = PROTOCORE_SMB2_HEADER_SIZE + body + name_len;
     if (!buf || !name_utf16 || name_len == 0 || name_len > 0xFFFF || cap < total)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
-    Smb2V.build_header_args.buf = buf;
-    Smb2V.build_header_args.cap = cap;
-    Smb2V.build_header_args.command = SMB2_CREATE;
-    Smb2V.build_header_args.credit_request = 1;
-    Smb2V.build_header_args.message_id = message_id;
-    Smb2V.build_header_args.tree_id = tree_id;
-    Smb2V.build_header_args.session_id = session_id;
-    protocore_smb2_build_header(work);
-    if (Smb2V.n == 0)
+    size_t smb2_n = Smb2.build_header(work, buf, cap, SMB2_CREATE, 1, message_id, tree_id, session_id);
+    if (smb2_n == 0)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
 
     uint8_t *b = buf + PROTOCORE_SMB2_HEADER_SIZE;
@@ -707,76 +558,51 @@ void protocore_smb2_build_create(uint8_t *restrict work)
     endian.wr16le(b + 46, (uint16_t)name_len);                            // NameLength
     // bytes 48 CreateContextsOffset and 52 CreateContextsLength stay zero
     mem.cpy(b + body, name_utf16, name_len);
-    Smb2V.n = total;
+    return total;
 }
 
-void protocore_smb2_parse_create_response(uint8_t *restrict work)
+proto_bool protocore_smb2_parse_create_response(uint8_t *restrict work, const uint8_t *msg, size_t len,
+                                                Smb2CreateResp *out)
 {
-    const uint8_t *msg = Smb2V.parse_create_response_args.msg;
-    size_t len = Smb2V.parse_create_response_args.len;
-    Smb2CreateResp *out = Smb2V.parse_create_response_args.out;
-
     if (!msg || !out)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     Smb2Header h;
-    Smb2V.parse_header_args.buf = msg;
-    Smb2V.parse_header_args.len = len;
-    Smb2V.parse_header_args.out = &h;
-    protocore_smb2_parse_header(work);
-    if (!Smb2V.ok || h.command != SMB2_CREATE)
+    proto_bool smb2_ok = Smb2.parse_header(work, msg, len, &h);
+    if (!smb2_ok || h.command != SMB2_CREATE)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     if (len < PROTOCORE_SMB2_HEADER_SIZE + 88) // fixed 88-byte body (StructureSize .. CreateContextsLength)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     const uint8_t *b = msg + PROTOCORE_SMB2_HEADER_SIZE;
     if (endian.rd16le(b + 0) != 89) // StructureSize
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     out->create_action = endian.rd32le(b + 4);
     out->end_of_file = endian.rd64le(b + 48);
     out->file_attributes = endian.rd32le(b + 56);
     mem.cpy(out->file_id, b + 64, 16); // FileId (persistent 8 + volatile 8)
-    Smb2V.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_smb2_build_close(uint8_t *restrict work)
+size_t protocore_smb2_build_close(uint8_t *restrict work, uint8_t *buf, size_t cap, uint64_t message_id,
+                                  uint64_t session_id, uint32_t tree_id, const uint8_t *file_id)
 {
-    uint8_t *buf = Smb2V.build_close_args.buf;
-    size_t cap = Smb2V.build_close_args.cap;
-    uint64_t message_id = Smb2V.build_close_args.message_id;
-    uint64_t session_id = Smb2V.build_close_args.session_id;
-    uint32_t tree_id = Smb2V.build_close_args.tree_id;
-    const uint8_t *file_id = Smb2V.build_close_args.file_id;
-
     const size_t body = 24; // fixed CLOSE request body (§2.2.15), no variable buffer
     const size_t total = PROTOCORE_SMB2_HEADER_SIZE + body;
     if (!buf || !file_id || cap < total)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
-    Smb2V.build_header_args.buf = buf;
-    Smb2V.build_header_args.cap = cap;
-    Smb2V.build_header_args.command = SMB2_CLOSE;
-    Smb2V.build_header_args.credit_request = 1;
-    Smb2V.build_header_args.message_id = message_id;
-    Smb2V.build_header_args.tree_id = tree_id;
-    Smb2V.build_header_args.session_id = session_id;
-    protocore_smb2_build_header(work);
-    if (Smb2V.n == 0)
+    size_t smb2_n = Smb2.build_header(work, buf, cap, SMB2_CLOSE, 1, message_id, tree_id, session_id);
+    if (smb2_n == 0)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
 
     uint8_t *b = buf + PROTOCORE_SMB2_HEADER_SIZE;
@@ -784,76 +610,50 @@ void protocore_smb2_build_close(uint8_t *restrict work)
     endian.wr16le(b + 0, 24); // StructureSize
     // byte 2 Flags stays zero (no POSTQUERY_ATTRIB); byte 4 Reserved stays zero
     mem.cpy(b + 8, file_id, 16); // FileId
-    Smb2V.n = total;
+    return total;
 }
 
-void protocore_smb2_parse_close_response(uint8_t *restrict work)
+proto_bool protocore_smb2_parse_close_response(uint8_t *restrict work, const uint8_t *msg, size_t len,
+                                               Smb2CloseResp *out)
 {
-    const uint8_t *msg = Smb2V.parse_close_response_args.msg;
-    size_t len = Smb2V.parse_close_response_args.len;
-    Smb2CloseResp *out = Smb2V.parse_close_response_args.out;
-
     if (!msg || !out)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     Smb2Header h;
-    Smb2V.parse_header_args.buf = msg;
-    Smb2V.parse_header_args.len = len;
-    Smb2V.parse_header_args.out = &h;
-    protocore_smb2_parse_header(work);
-    if (!Smb2V.ok || h.command != SMB2_CLOSE)
+    proto_bool smb2_ok = Smb2.parse_header(work, msg, len, &h);
+    if (!smb2_ok || h.command != SMB2_CLOSE)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     if (len < PROTOCORE_SMB2_HEADER_SIZE + 60) // fixed 60-byte body
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     const uint8_t *b = msg + PROTOCORE_SMB2_HEADER_SIZE;
     if (endian.rd16le(b + 0) != 60) // StructureSize
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     out->end_of_file = endian.rd64le(b + 48);
     out->file_attributes = endian.rd32le(b + 56);
-    Smb2V.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_smb2_build_read(uint8_t *restrict work)
+size_t protocore_smb2_build_read(uint8_t *restrict work, uint8_t *buf, size_t cap, uint64_t message_id,
+                                 uint64_t session_id, uint32_t tree_id, const uint8_t *file_id, uint32_t length,
+                                 uint64_t offset)
 {
-    uint8_t *buf = Smb2V.build_read_args.buf;
-    size_t cap = Smb2V.build_read_args.cap;
-    uint64_t message_id = Smb2V.build_read_args.message_id;
-    uint64_t session_id = Smb2V.build_read_args.session_id;
-    uint32_t tree_id = Smb2V.build_read_args.tree_id;
-    const uint8_t *file_id = Smb2V.build_read_args.file_id;
-    uint32_t length = Smb2V.build_read_args.length;
-    uint64_t offset = Smb2V.build_read_args.offset;
-
     const size_t body = 48;                                     // fixed READ request body (§2.2.19)
     const size_t total = PROTOCORE_SMB2_HEADER_SIZE + body + 1; // + a 1-byte buffer (StructureSize 49 convention)
     if (!buf || !file_id || cap < total)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
-    Smb2V.build_header_args.buf = buf;
-    Smb2V.build_header_args.cap = cap;
-    Smb2V.build_header_args.command = SMB2_READ;
-    Smb2V.build_header_args.credit_request = 1;
-    Smb2V.build_header_args.message_id = message_id;
-    Smb2V.build_header_args.tree_id = tree_id;
-    Smb2V.build_header_args.session_id = session_id;
-    protocore_smb2_build_header(work);
-    if (Smb2V.n == 0)
+    size_t smb2_n = Smb2.build_header(work, buf, cap, SMB2_READ, 1, message_id, tree_id, session_id);
+    if (smb2_n == 0)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
 
     uint8_t *b = buf + PROTOCORE_SMB2_HEADER_SIZE;
@@ -868,40 +668,30 @@ void protocore_smb2_build_read(uint8_t *restrict work)
     endian.wr32le(b + 32, 1);     // MinimumCount = 1 (fail if the server returns nothing)
     // bytes 36 Channel, 40 RemainingBytes and 44/46 ReadChannelInfoOffset/Length stay zero
     // the one-byte Buffer at b+48 stays zero (already zeroed)
-    Smb2V.n = total;
+    return total;
 }
 
-void protocore_smb2_parse_read_response(uint8_t *restrict work)
+proto_bool protocore_smb2_parse_read_response(uint8_t *restrict work, const uint8_t *msg, size_t len, Smb2ReadResp *out)
 {
-    const uint8_t *msg = Smb2V.parse_read_response_args.msg;
-    size_t len = Smb2V.parse_read_response_args.len;
-    Smb2ReadResp *out = Smb2V.parse_read_response_args.out;
-
+    proto_bool ok = PROTO_FALSE;
     if (!msg || !out)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     Smb2Header h;
-    Smb2V.parse_header_args.buf = msg;
-    Smb2V.parse_header_args.len = len;
-    Smb2V.parse_header_args.out = &h;
-    protocore_smb2_parse_header(work);
-    if (!Smb2V.ok || h.command != SMB2_READ)
+    proto_bool smb2_ok = Smb2.parse_header(work, msg, len, &h);
+    if (!smb2_ok || h.command != SMB2_READ)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     if (len < PROTOCORE_SMB2_HEADER_SIZE + 16) // fixed 16-byte body (StructureSize .. Reserved2), Buffer follows
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     const uint8_t *b = msg + PROTOCORE_SMB2_HEADER_SIZE;
     if (endian.rd16le(b + 0) != 17) // StructureSize
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
 
     uint8_t data_off = b[2];                  // DataOffset - from the start of the SMB2 header (msg)
@@ -910,50 +700,32 @@ void protocore_smb2_parse_read_response(uint8_t *restrict work)
     {
         out->data = NULL;
         out->data_len = 0;
-        Smb2V.ok = PROTO_TRUE;
-        return;
+        return PROTO_TRUE;
     }
     if (data_off < PROTOCORE_SMB2_HEADER_SIZE || (size_t)data_off + data_len > len)
     {
-        Smb2V.ok = PROTO_FALSE; // data out of bounds - fail closed
-        return;
+        ok = PROTO_FALSE; // data out of bounds - fail closed
+        return ok;
     }
     out->data = msg + data_off;
     out->data_len = data_len;
-    Smb2V.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_smb2_build_write(uint8_t *restrict work)
+size_t protocore_smb2_build_write(uint8_t *restrict work, uint8_t *buf, size_t cap, uint64_t message_id,
+                                  uint64_t session_id, uint32_t tree_id, const uint8_t *file_id, const uint8_t *data,
+                                  size_t data_len, uint64_t offset)
 {
-    uint8_t *buf = Smb2V.build_write_args.buf;
-    size_t cap = Smb2V.build_write_args.cap;
-    uint64_t message_id = Smb2V.build_write_args.message_id;
-    uint64_t session_id = Smb2V.build_write_args.session_id;
-    uint32_t tree_id = Smb2V.build_write_args.tree_id;
-    const uint8_t *file_id = Smb2V.build_write_args.file_id;
-    const uint8_t *data = Smb2V.build_write_args.data;
-    size_t data_len = Smb2V.build_write_args.data_len;
-    uint64_t offset = Smb2V.build_write_args.offset;
-
     const size_t body = 48; // fixed WRITE request body (§2.2.21)
     const size_t total = PROTOCORE_SMB2_HEADER_SIZE + body + data_len;
     if (!buf || !file_id || !data || data_len == 0 || data_len > 0xFFFFFFFF || cap < total)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
-    Smb2V.build_header_args.buf = buf;
-    Smb2V.build_header_args.cap = cap;
-    Smb2V.build_header_args.command = SMB2_WRITE;
-    Smb2V.build_header_args.credit_request = 1;
-    Smb2V.build_header_args.message_id = message_id;
-    Smb2V.build_header_args.tree_id = tree_id;
-    Smb2V.build_header_args.session_id = session_id;
-    protocore_smb2_build_header(work);
-    if (Smb2V.n == 0)
+    size_t smb2_n = Smb2.build_header(work, buf, cap, SMB2_WRITE, 1, message_id, tree_id, session_id);
+    if (smb2_n == 0)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
 
     uint8_t *b = buf + PROTOCORE_SMB2_HEADER_SIZE;
@@ -965,43 +737,33 @@ void protocore_smb2_build_write(uint8_t *restrict work)
     mem.cpy(b + 16, file_id, 16);                                        // FileId
     // bytes 32 Channel, 36 RemainingBytes, 40/42 WriteChannelInfoOffset/Length and 44 Flags stay zero
     mem.cpy(b + body, data, data_len); // the data to write
-    Smb2V.n = total;
+    return total;
 }
 
-void protocore_smb2_parse_write_response(uint8_t *restrict work)
+proto_bool protocore_smb2_parse_write_response(uint8_t *restrict work, const uint8_t *msg, size_t len,
+                                               Smb2WriteResp *out)
 {
-    const uint8_t *msg = Smb2V.parse_write_response_args.msg;
-    size_t len = Smb2V.parse_write_response_args.len;
-    Smb2WriteResp *out = Smb2V.parse_write_response_args.out;
-
     if (!msg || !out)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     Smb2Header h;
-    Smb2V.parse_header_args.buf = msg;
-    Smb2V.parse_header_args.len = len;
-    Smb2V.parse_header_args.out = &h;
-    protocore_smb2_parse_header(work);
-    if (!Smb2V.ok || h.command != SMB2_WRITE)
+    proto_bool smb2_ok = Smb2.parse_header(work, msg, len, &h);
+    if (!smb2_ok || h.command != SMB2_WRITE)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     if (len < PROTOCORE_SMB2_HEADER_SIZE + 16) // fixed 16-byte body
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     const uint8_t *b = msg + PROTOCORE_SMB2_HEADER_SIZE;
     if (endian.rd16le(b + 0) != 17) // StructureSize
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
     out->count = endian.rd32le(b + 4); // Count (bytes written)
-    Smb2V.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
 // --- Message signing (MS-SMB2 §3.1.4.1 / §3.1.5.1) -------------------------
@@ -1065,62 +827,45 @@ static proto_bool smb2_verify_framed(uint8_t *crypto_work, const uint8_t key[16]
     return diff == 0;
 }
 
-void protocore_smb2_sign(uint8_t *restrict work)
+void protocore_smb2_sign(uint8_t *restrict work, uint8_t *crypto_work, const uint8_t *key, uint8_t *msg, size_t msg_len)
 {
     (void)work;
-    uint8_t *crypto_work = Smb2V.sign_args.crypto_work;
-    const uint8_t *key = Smb2V.sign_args.key;
-    uint8_t *msg = Smb2V.sign_args.msg;
-    size_t msg_len = Smb2V.sign_args.msg_len;
 
     smb2_sign_framed(crypto_work, key, msg, msg_len, mac_hmac_sha256);
 }
 
-void protocore_smb2_verify(uint8_t *restrict work)
+proto_bool protocore_smb2_verify(uint8_t *restrict work, uint8_t *crypto_work, const uint8_t *key, uint8_t *msg,
+                                 size_t msg_len)
 {
     (void)work;
-    uint8_t *crypto_work = Smb2V.verify_args.crypto_work;
-    const uint8_t *key = Smb2V.verify_args.key;
-    uint8_t *msg = Smb2V.verify_args.msg;
-    size_t msg_len = Smb2V.verify_args.msg_len;
 
-    Smb2V.ok = smb2_verify_framed(crypto_work, key, msg, msg_len, mac_hmac_sha256);
+    return smb2_verify_framed(crypto_work, key, msg, msg_len, mac_hmac_sha256);
 }
 
-void protocore_smb2_sign_cmac(uint8_t *restrict work)
+void protocore_smb2_sign_cmac(uint8_t *restrict work, uint8_t *crypto_work, const uint8_t *key, uint8_t *msg,
+                              size_t msg_len)
 {
     (void)work;
-    uint8_t *crypto_work = Smb2V.sign_cmac_args.crypto_work;
-    const uint8_t *key = Smb2V.sign_cmac_args.key;
-    uint8_t *msg = Smb2V.sign_cmac_args.msg;
-    size_t msg_len = Smb2V.sign_cmac_args.msg_len;
 
     smb2_sign_framed(crypto_work, key, msg, msg_len, mac_aes_cmac);
 }
 
-void protocore_smb2_verify_cmac(uint8_t *restrict work)
+proto_bool protocore_smb2_verify_cmac(uint8_t *restrict work, uint8_t *crypto_work, const uint8_t *key, uint8_t *msg,
+                                      size_t msg_len)
 {
     (void)work;
-    uint8_t *crypto_work = Smb2V.verify_cmac_args.crypto_work;
-    const uint8_t *key = Smb2V.verify_cmac_args.key;
-    uint8_t *msg = Smb2V.verify_cmac_args.msg;
-    size_t msg_len = Smb2V.verify_cmac_args.msg_len;
 
-    Smb2V.ok = smb2_verify_framed(crypto_work, key, msg, msg_len, mac_aes_cmac);
+    return smb2_verify_framed(crypto_work, key, msg, msg_len, mac_aes_cmac);
 }
 
-void protocore_smb2_derive_signing_key(uint8_t *restrict work)
+proto_bool protocore_smb2_derive_signing_key(uint8_t *restrict work, const uint8_t *session_key, uint16_t dialect,
+                                             const uint8_t *preauth, uint8_t *out_key)
 {
     (void)work;
-    const uint8_t *session_key = Smb2V.derive_signing_key_args.session_key;
-    uint16_t dialect = Smb2V.derive_signing_key_args.dialect;
-    const uint8_t *preauth = Smb2V.derive_signing_key_args.preauth;
-    uint8_t *out_key = Smb2V.derive_signing_key_args.out_key;
 
     if (!session_key || !out_key)
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
 
     // Assemble the SP800-108 fixed input: `Label || 0x00 || Context || [L]`. The KDF prepends the 32-bit
@@ -1133,8 +878,7 @@ void protocore_smb2_derive_signing_key(uint8_t *restrict work)
     {
         if (!preauth)
         {
-            Smb2V.ok = PROTO_FALSE;
-            return;
+            return PROTO_FALSE;
         }
         static const char label[] = "SMBSigningKey"; // sizeof == 14 ("SMBSigningKey\0")
         mem.cpy(fixed + n, label, sizeof(label));
@@ -1163,7 +907,7 @@ void protocore_smb2_derive_signing_key(uint8_t *restrict work)
     proto_bool kdf_ok = Kdf.ctr_hmac_sha256(w, session_key, 16, fixed, n, out_key, 16);
     const proto_bool derived = kdf_ok;
     protocore_secure_release(mark);
-    Smb2V.ok = derived;
+    return derived;
 }
 
 // One SMB 3.x cipher key (MS-SMB2 §3.1.4.2), same SP800-108 construction as the signing key. @p c2s picks the
@@ -1213,44 +957,31 @@ static proto_bool smb3_derive_cipher_key(const uint8_t session_key[16], uint16_t
     return derived;
 }
 
-void protocore_smb2_derive_encryption_keys(uint8_t *restrict work)
+proto_bool protocore_smb2_derive_encryption_keys(uint8_t *restrict work, const uint8_t *session_key, uint16_t dialect,
+                                                 const uint8_t *preauth, size_t key_len, uint8_t *out_c2s,
+                                                 uint8_t *out_s2c)
 {
     (void)work;
-    const uint8_t *session_key = Smb2V.derive_encryption_keys_args.session_key;
-    uint16_t dialect = Smb2V.derive_encryption_keys_args.dialect;
-    const uint8_t *preauth = Smb2V.derive_encryption_keys_args.preauth;
-    size_t key_len = Smb2V.derive_encryption_keys_args.key_len;
-    uint8_t *out_c2s = Smb2V.derive_encryption_keys_args.out_c2s;
-    uint8_t *out_s2c = Smb2V.derive_encryption_keys_args.out_s2c;
 
     if (!session_key || !out_c2s || !out_s2c || (key_len != 16 && key_len != 32))
     {
-        Smb2V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
-    Smb2V.ok = smb3_derive_cipher_key(session_key, dialect, preauth, PROTO_TRUE, key_len, out_c2s) &&
-               smb3_derive_cipher_key(session_key, dialect, preauth, PROTO_FALSE, key_len, out_s2c);
+    return smb3_derive_cipher_key(session_key, dialect, preauth, PROTO_TRUE, key_len, out_c2s) &&
+           smb3_derive_cipher_key(session_key, dialect, preauth, PROTO_FALSE, key_len, out_s2c);
 }
 
-void protocore_smb2_encrypt(uint8_t *restrict work)
+size_t protocore_smb2_encrypt(uint8_t *restrict work, uint16_t cipher, const uint8_t *key, const uint8_t *nonce,
+                              uint64_t session_id, const uint8_t *msg, size_t msg_len, uint8_t *out, size_t out_cap)
 {
     (void)work;
-    uint16_t cipher = Smb2V.encrypt_args.cipher;
-    const uint8_t *key = Smb2V.encrypt_args.key;
-    const uint8_t *nonce = Smb2V.encrypt_args.nonce;
-    uint64_t session_id = Smb2V.encrypt_args.session_id;
-    const uint8_t *msg = Smb2V.encrypt_args.msg;
-    size_t msg_len = Smb2V.encrypt_args.msg_len;
-    uint8_t *out = Smb2V.encrypt_args.out;
-    size_t out_cap = Smb2V.encrypt_args.out_cap;
 
     const size_t key_len = protocore_smb2_cipher_key_len(cipher);
     const size_t nonce_len = protocore_smb2_cipher_nonce_len(cipher);
     if (!key || !nonce || !msg || !out || key_len == 0 || nonce_len == 0 ||
         out_cap < PROTOCORE_SMB2_TRANSFORM_HDR_LEN + msg_len)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
 
     // TRANSFORM_HEADER (MS-SMB2 §2.2.41). Signature (the AEAD tag) is filled after sealing; it and the
@@ -1320,45 +1051,35 @@ void protocore_smb2_encrypt(uint8_t *restrict work)
     }
     break;
     default:
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
     if (!ok)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
     mem.cpy(out + 4, tag, 16); // Signature = the 16-byte AEAD tag
-    Smb2V.n = PROTOCORE_SMB2_TRANSFORM_HDR_LEN + msg_len;
+    return PROTOCORE_SMB2_TRANSFORM_HDR_LEN + msg_len;
 }
 
-void protocore_smb2_decrypt(uint8_t *restrict work)
+size_t protocore_smb2_decrypt(uint8_t *restrict work, uint16_t cipher, const uint8_t *key, const uint8_t *in,
+                              size_t in_len, uint8_t *out, size_t out_cap)
 {
     (void)work;
-    uint16_t cipher = Smb2V.decrypt_args.cipher;
-    const uint8_t *key = Smb2V.decrypt_args.key;
-    const uint8_t *in = Smb2V.decrypt_args.in;
-    size_t in_len = Smb2V.decrypt_args.in_len;
-    uint8_t *out = Smb2V.decrypt_args.out;
-    size_t out_cap = Smb2V.decrypt_args.out_cap;
 
     const size_t key_len = protocore_smb2_cipher_key_len(cipher);
     const size_t nonce_len = protocore_smb2_cipher_nonce_len(cipher);
     if (!key || !in || !out || key_len == 0 || nonce_len == 0 || in_len < PROTOCORE_SMB2_TRANSFORM_HDR_LEN)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
     if (endian.rd32le(in + 0) != PROTOCORE_SMB2_TRANSFORM_PROTOCOL_ID)
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
     size_t ct_len = in_len - PROTOCORE_SMB2_TRANSFORM_HDR_LEN;
     if (endian.rd32le(in + 36) != (uint32_t)ct_len || out_cap < ct_len) // OriginalMessageSize must match
     {
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
 
     // AAD = header[20..51] (32 bytes), tag = Signature (in+4), ciphertext = in+52; the AEAD nonce is the leading
@@ -1425,15 +1146,7 @@ void protocore_smb2_decrypt(uint8_t *restrict work)
     }
     break;
     default:
-        Smb2V.n = 0;
-        return;
+        return 0;
     }
-    Smb2V.n = ok ? ct_len : 0;
+    return ok ? ct_len : 0;
 }
-
-/** @brief The operands and the outcome. */
-Smb2Vars Smb2V;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_SMB
