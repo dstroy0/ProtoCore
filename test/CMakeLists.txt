@@ -31,6 +31,13 @@ add_subdirectory("${PROTOCORE_ROOT}/src" "${CMAKE_CURRENT_BINARY_DIR}/pc_src")
 add_subdirectory("${PROTOCORE_ROOT}/vendor" "${CMAKE_CURRENT_BINARY_DIR}/pc_vendor")
 add_subdirectory("${PROTOCORE_ROOT}/include" "${CMAKE_CURRENT_BINARY_DIR}/pc_include")
 
+# The platform arm and what a suite is handed. src/ declares seams - a platform header, a crypto
+# HAL, an NVS interface - and names no answer to them; core_setup holds the answers a build that is
+# not a device uses. These are under test/ and are entered from here, after src/, because pc_config
+# and the options have to exist before a module declares itself against them.
+add_subdirectory(core_setup)
+add_subdirectory(support)
+
 # Unity is a package the envs link; pio installs it per env, so any copy in the tree will do.
 if(NOT PROTOCORE_UNITY_DIR)
   file(GLOB _unity_candidates "${PROTOCORE_ROOT}/.pio/libdeps/*/Unity/src")

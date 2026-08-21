@@ -166,6 +166,7 @@ Every one takes `--check` to assert the tracked file already matches, which is h
 
 | Script                | W | Flags                                                         | Shells out to            |
 | --------------------- | - | ------------------------------------------------------------- | ------------------------ |
+| `cmake_coverage.py`   |   | `--cc --envs --jobs --report-only`                            | cmake, gcovr, python     |
 | `covbase.py`          |   | `--build-dir --only --out --reports-dir --resume`             |                          |
 | `covmap.py`           |   | `--cov --limit --summary`                                     |                          |
 | `covplan.py`          | W | `--cov --json`                                                |                          |

@@ -105,6 +105,7 @@ src/
 │   │   └── buffer_sizing.h
 │   └── platform/
 │       ├── compiler_directives.h
+│       ├── ns_contract.h
 │       ├── platform.h
 │       ├── platform_defines.h
 │       ├── platform_error.h
@@ -175,9 +176,6 @@ src/
 │   │   │   ├── chacha20.h
 │   │   │   └── CMakeLists.txt
 │   │   └── CMakeLists.txt
-│   ├── crypto_opt/
-│   │   ├── CMakeLists.txt
-│   │   └── crypto_opt.h
 │   ├── ct_eq/
 │   │   ├── CMakeLists.txt
 │   │   ├── ct_eq.c
