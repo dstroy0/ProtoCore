@@ -13,15 +13,11 @@
  * arrives, the padded last one, and the state copy finalizing compresses into.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_SHA256
+#include "protocore_config.h" // the entry point: the widths
 
 #include "crypto/hash/sha256/sha256.h"
 #include "mmgr/endian/endian.h" // the big-endian reads and writes both arms' padding and digest use
 #include "mmgr/protomem/protomem.h"
-
-PROTOCORE_BEGIN_DECLS
 
 // The one definition, both arms, private to this TU. The accelerator compresses a block; it does not
 // pad, buffer a partial block, or hold a digest a caller can keep feeding. Those are this file's, so
@@ -368,46 +364,37 @@ static void sha256_finish(uint8_t *restrict work, uint8_t digest[PROTOCORE_SHA25
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_sha256_init(uint8_t *restrict work)
+proto_bool protocore_sha256_init(uint8_t *restrict work)
 {
     sha256_state_init(work);
-    Sha256V.ok = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-void protocore_sha256_update(uint8_t *restrict work)
+proto_bool protocore_sha256_update(uint8_t *restrict work, const uint8_t *data, size_t len)
 {
-    sha256_absorb(work, Sha256V.update_args.data, Sha256V.update_args.len);
-    Sha256V.ok = PROTO_TRUE;
+    sha256_absorb(work, data, len);
+    return PROTO_TRUE;
 }
 
-void protocore_sha256_final(uint8_t *restrict work)
+proto_bool protocore_sha256_final(uint8_t *restrict work, uint8_t *out)
 {
-    if (!Sha256V.final_args.out)
+    if (!out)
     {
-        Sha256V.ok = PROTO_FALSE;
-        return;
+        return PROTO_FALSE;
     }
-    sha256_finish(work, Sha256V.final_args.out);
-    Sha256V.ok = PROTO_TRUE;
+    sha256_finish(work, out);
+    return PROTO_TRUE;
 }
 
 // One-shot over the members already set: init, absorb, finish.
-void protocore_sha256_hash(uint8_t *restrict work)
+proto_bool protocore_sha256_hash(uint8_t *restrict work, const uint8_t *data, size_t len, uint8_t *out)
 {
-    Sha256V.ok = PROTO_FALSE;
-    if (!Sha256V.hash_args.out)
+    if (!out)
     {
-        return;
+        return PROTO_FALSE;
     }
     sha256_state_init(work);
-    sha256_absorb(work, Sha256V.hash_args.data, Sha256V.hash_args.len);
-    sha256_finish(work, Sha256V.hash_args.out);
-    Sha256V.ok = PROTO_TRUE;
+    sha256_absorb(work, data, len);
+    sha256_finish(work, out);
+    return PROTO_TRUE;
 }
-
-/** @brief The operands and the outcome. */
-Sha256Vars Sha256V;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_SHA256

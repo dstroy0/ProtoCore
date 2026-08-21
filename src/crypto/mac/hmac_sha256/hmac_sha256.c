@@ -70,10 +70,7 @@ static void build_key_block(const uint8_t *key, size_t key_len, uint8_t block[64
     if (key_len > 64)
     {
         // Keys longer than the block become their SHA-256 hash.
-        Sha256V.hash_args.data = key;
-        Sha256V.hash_args.len = key_len;
-        Sha256V.hash_args.out = scratch;
-        Sha256.hash(hash_work);
+        Sha256.hash(hash_work, key, key_len, scratch);
     }
     else
     {
@@ -97,17 +94,13 @@ void protocore_hmac_sha256_init(uint8_t *restrict work)
                     HMAC_HASH(work));
 
     Sha256.init(HMAC_INNER(work));
-    Sha256V.update_args.data = w->ipad;
-    Sha256V.update_args.len = PROTOCORE_SHA256_BLOCK_LEN;
-    Sha256.update(HMAC_INNER(work));
+    Sha256.update(HMAC_INNER(work), w->ipad, PROTOCORE_SHA256_BLOCK_LEN);
     HmacSha256V.ok = PROTO_TRUE;
 }
 
 void protocore_hmac_sha256_update(uint8_t *restrict work)
 {
-    Sha256V.update_args.data = HmacSha256V.update_args.data;
-    Sha256V.update_args.len = HmacSha256V.update_args.len;
-    Sha256.update(HMAC_INNER(work));
+    Sha256.update(HMAC_INNER(work), HmacSha256V.update_args.data, HmacSha256V.update_args.len);
     HmacSha256V.ok = PROTO_TRUE;
 }
 
@@ -119,19 +112,13 @@ void protocore_hmac_sha256_final(uint8_t *restrict work)
         return;
     }
     HmacWork *w = HMAC_WORK(work);
-    Sha256V.final_args.out = w->inner_digest;
-    Sha256.final(HMAC_INNER(work));
+    Sha256.final(HMAC_INNER(work), w->inner_digest);
 
     // Outer hash: H(okey || inner_digest)
     Sha256.init(HMAC_HASH(work));
-    Sha256V.update_args.data = HMAC_OKEY(work);
-    Sha256V.update_args.len = PROTOCORE_SHA256_BLOCK_LEN;
-    Sha256.update(HMAC_HASH(work));
-    Sha256V.update_args.data = w->inner_digest;
-    Sha256V.update_args.len = PROTOCORE_SHA256_DIGEST_LEN;
-    Sha256.update(HMAC_HASH(work));
-    Sha256V.final_args.out = HmacSha256V.final_args.out;
-    Sha256.final(HMAC_HASH(work));
+    Sha256.update(HMAC_HASH(work), HMAC_OKEY(work), PROTOCORE_SHA256_BLOCK_LEN);
+    Sha256.update(HMAC_HASH(work), w->inner_digest, PROTOCORE_SHA256_DIGEST_LEN);
+    Sha256.final(HMAC_HASH(work), HmacSha256V.final_args.out);
     HmacSha256V.ok = PROTO_TRUE;
 }
 
@@ -150,25 +137,15 @@ void protocore_hmac_sha256_mac(uint8_t *restrict work)
     uint8_t *hw = HMAC_HASH(work);
     build_key_block(key, key_len, w->ipad, 0x36u, w->opad, hw); // ipad block (opad slot as key-pad scratch)
     Sha256.init(hw);
-    Sha256V.update_args.data = w->ipad;
-    Sha256V.update_args.len = PROTOCORE_SHA256_BLOCK_LEN;
-    Sha256.update(hw);
-    Sha256V.update_args.data = HmacSha256V.mac_args.data;
-    Sha256V.update_args.len = HmacSha256V.mac_args.len;
-    Sha256.update(hw);
-    Sha256V.final_args.out = w->inner_digest;
-    Sha256.final(hw); // inner = H((K XOR ipad) || m)
+    Sha256.update(hw, w->ipad, PROTOCORE_SHA256_BLOCK_LEN);
+    Sha256.update(hw, HmacSha256V.mac_args.data, HmacSha256V.mac_args.len);
+    Sha256.final(hw, w->inner_digest); // inner = H((K XOR ipad) || m)
 
     build_key_block(key, key_len, w->opad, 0x5cu, w->ipad, hw); // opad block (ipad slot now free as scratch)
     Sha256.init(hw);
-    Sha256V.update_args.data = w->opad;
-    Sha256V.update_args.len = PROTOCORE_SHA256_BLOCK_LEN;
-    Sha256.update(hw);
-    Sha256V.update_args.data = w->inner_digest;
-    Sha256V.update_args.len = PROTOCORE_SHA256_DIGEST_LEN;
-    Sha256.update(hw);
-    Sha256V.final_args.out = HmacSha256V.mac_args.out;
-    Sha256.final(hw); // HMAC = H((K XOR opad) || inner)
+    Sha256.update(hw, w->opad, PROTOCORE_SHA256_BLOCK_LEN);
+    Sha256.update(hw, w->inner_digest, PROTOCORE_SHA256_DIGEST_LEN);
+    Sha256.final(hw, HmacSha256V.mac_args.out); // HMAC = H((K XOR opad) || inner)
     HmacSha256V.ok = PROTO_TRUE;
 }
 

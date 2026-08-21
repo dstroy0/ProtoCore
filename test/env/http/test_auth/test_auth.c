@@ -297,10 +297,7 @@ static const char *kDPass = "s3cret";
 static void sha256_hex_str(const char *s, char out[65])
 {
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
-    Sha256V.hash_args.data = (const uint8_t *)s;
-    Sha256V.hash_args.len = strlen(s);
-    Sha256V.hash_args.out = d;
-    Sha256.hash(tw);
+    Sha256.hash(tw, (const uint8_t *)s, strlen(s), d);
     static const char *hx = "0123456789abcdef";
     for (int i = 0; i < PROTOCORE_SHA256_DIGEST_LEN; i++)
     {

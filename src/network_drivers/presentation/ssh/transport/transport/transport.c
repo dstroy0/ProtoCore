@@ -1732,14 +1732,9 @@ static int hybrid_mlkem_x25519(uint8_t i, const uint8_t *payload, size_t len, ui
     }
     uint8_t *hw = ssh_pkt[i].crypto_work;
     Sha256.init(hw);
-    Sha256V.update_args.data = k_pq; // K = SHA256(K_PQ || K_CL) (RFC 9370 concat combiner)
-    Sha256V.update_args.len = sizeof(k_pq);
-    Sha256.update(hw);
-    Sha256V.update_args.data = k_cl;
-    Sha256V.update_args.len = sizeof(k_cl);
-    Sha256.update(hw);
-    Sha256V.final_args.out = k_out;
-    Sha256.final(hw);
+    Sha256.update(hw, k_pq, sizeof(k_pq)); // K = SHA256(K_PQ || K_CL) (RFC 9370 concat combiner)
+    Sha256.update(hw, k_cl, sizeof(k_cl));
+    Sha256.final(hw, k_out);
     protocore_secure_wipe(k_pq, sizeof(k_pq));
     protocore_secure_wipe(k_cl, sizeof(k_cl));
     return 0;
@@ -3989,14 +3984,9 @@ proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
             return PROTO_FALSE;
         }
         Sha256.init(e->work);
-        Sha256V.update_args.data = k_pq;
-        Sha256V.update_args.len = 32;
-        Sha256.update(e->work);
-        Sha256V.update_args.data = k_cl;
-        Sha256V.update_args.len = 32;
-        Sha256.update(e->work);
-        Sha256V.final_args.out = k_be + (256 - 32);
-        Sha256.final(e->work);
+        Sha256.update(e->work, k_pq, 32);
+        Sha256.update(e->work, k_cl, 32);
+        Sha256.final(e->work, k_be + (256 - 32));
         protocore_secure_wipe(k_pq, sizeof(k_pq));
         protocore_secure_wipe(k_cl, sizeof(k_cl));
         return PROTO_TRUE;

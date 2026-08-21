@@ -27,10 +27,7 @@ void dbench_run(void)
         volatile uint32_t sink = 0;
         uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN];
         DBENCH_BULK("Sha256.hash (1 KiB)", 2000, 1024, {
-            Sha256V.hash_args.data = buf;
-            Sha256V.hash_args.len = 1024;
-            Sha256V.hash_args.out = digest;
-            Sha256.hash(tw);
+            Sha256.hash(tw, buf, 1024, digest);
             sink += digest[0];
         });
         DBENCH_BULK("Chacha20.xor_ (1 KiB)", 1000, 1024, {

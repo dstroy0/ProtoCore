@@ -227,9 +227,7 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     uint8_t *tr;
     tr = tw_tr;
     Sha256.init(tr);
-    Sha256V.update_args.data = ch;
-    Sha256V.update_args.len = ch_len;
-    Sha256.update(tr);
+    Sha256.update(tr, ch, ch_len);
     uint8_t ch_frag[300];
     DtlsHandshakeV.frag_build_args.msg_type = ch[0];
     DtlsHandshakeV.frag_build_args.msg_seq = 0;
@@ -274,9 +272,7 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     uint8_t sh[512];
     size_t sh_len = frag_to_tls(pt.fragment, pt.frag_len, sh);
     TEST_ASSERT_TRUE(sh_len > 0);
-    Sha256V.update_args.data = sh;
-    Sha256V.update_args.len = sh_len;
-    Sha256.update(tr);
+    Sha256.update(tr, sh, sh_len);
     uint8_t server_pub[32];
     TEST_ASSERT_TRUE(sh_keyshare(sh, sh_len, server_pub));
 
@@ -287,8 +283,7 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     Curve25519.x25519(tw);
     Tls13KeySchedule cks;
     uint8_t h[32];
-    Sha256V.final_args.out = h;
-    Sha256.final(tr);
+    Sha256.final(tr, h);
     static uint8_t ks_store_236[PROTOCORE_TLS13_KS_BORROW];
     Tls13KsV.bind.kdf = &DTLS13_KDF;
     Tls13KsV.bind.ks = &cks;
@@ -329,14 +324,11 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
         uint8_t msg[512];
         size_t mlen = frag_to_tls(inner, info.pt_len, msg);
         TEST_ASSERT_TRUE(mlen > 0);
-        Sha256V.update_args.data = msg;
-        Sha256V.update_args.len = mlen;
-        Sha256.update(tr);
+        Sha256.update(tr, msg, mlen);
     }
 
     uint8_t h_sfin[32];
-    Sha256V.final_args.out = h_sfin;
-    Sha256.final(tr);
+    Sha256.final(tr, h_sfin);
     Tls13KsV.bind.ks = &cks;
     Tls13KsV.step.ch_sfin_hash = h_sfin;
     Tls13Ks.master(NULL);

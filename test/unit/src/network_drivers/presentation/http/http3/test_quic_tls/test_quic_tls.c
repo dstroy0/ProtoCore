@@ -355,14 +355,9 @@ void test_handshake_interop_round_trip(void)
     memset(ks_store, 0, sizeof(ks_store));
     tr = hash_work;
     Sha256.init(tr);
-    Sha256V.update_args.data = g_ch;
-    Sha256V.update_args.len = g_ch_len;
-    Sha256.update(tr);
-    Sha256V.update_args.data = sh;
-    Sha256V.update_args.len = sh_len;
-    Sha256.update(tr);
-    Sha256V.final_args.out = hash;
-    Sha256.final(tr);
+    Sha256.update(tr, g_ch, g_ch_len);
+    Sha256.update(tr, sh, sh_len);
+    Sha256.final(tr, hash);
 
     Tls13KsV.bind.kdf = &TLS13_KDF;
     Tls13KsV.bind.ks = &ks;
@@ -400,13 +395,10 @@ void test_handshake_interop_round_trip(void)
     size_t fin_at = 0;
     for (size_t i = 0; i < 3; i++)
     {
-        Sha256V.update_args.data = hs + fin_at;
-        Sha256V.update_args.len = msg_len(hs + fin_at);
-        Sha256.update(tr);
+        Sha256.update(tr, hs + fin_at, msg_len(hs + fin_at));
         fin_at += msg_len(hs + fin_at);
     }
-    Sha256V.final_args.out = hash;
-    Sha256.final(tr);
+    Sha256.final(tr, hash);
     uint8_t verify[32];
     Tls13KsV.bind.ks = &ks;
     Tls13KsV.bind.s = ks_store;
@@ -419,11 +411,8 @@ void test_handshake_interop_round_trip(void)
     TEST_ASSERT_EQUAL_MEMORY(verify, hs + fin_at + 4, 32);
 
     // Transcript-Hash(ClientHello .. server Finished) keys the application secrets
-    Sha256V.update_args.data = hs + fin_at;
-    Sha256V.update_args.len = msg_len(hs + fin_at);
-    Sha256.update(tr);
-    Sha256V.final_args.out = hash;
-    Sha256.final(tr);
+    Sha256.update(tr, hs + fin_at, msg_len(hs + fin_at));
+    Sha256.final(tr, hash);
     Tls13KsV.bind.ks = &ks;
     Tls13KsV.bind.s = ks_store;
     Tls13KsV.step.ch_sfin_hash = hash;

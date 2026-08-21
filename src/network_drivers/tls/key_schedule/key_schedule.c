@@ -123,10 +123,7 @@ static void empty_hash(proto_bool is384, uint8_t *work, uint8_t *out)
         Sha384.hash(work);
         return;
     }
-    Sha256V.hash_args.data = NULL;
-    Sha256V.hash_args.len = 0;
-    Sha256V.hash_args.out = out;
-    Sha256.hash(work);
+    Sha256.hash(work, NULL, 0, out);
 }
 
 // HMAC(finished_key, transcript_hash) under the bound hash (RFC 8446 sec 4.4.4).
@@ -261,9 +258,7 @@ void protocore_tls13_ks_transcript_update(uint8_t *restrict work)
         Sha384.update(work);
         return;
     }
-    Sha256V.update_args.data = Tls13KsV.transcript_args.data;
-    Sha256V.update_args.len = Tls13KsV.transcript_args.len;
-    Sha256.update(work);
+    Sha256.update(work, Tls13KsV.transcript_args.data, Tls13KsV.transcript_args.len);
 }
 
 // Finalizing compresses the padded blocks into a copy of the state, so the running context is
@@ -276,8 +271,7 @@ void protocore_tls13_ks_transcript_peek(uint8_t *restrict work)
         Sha384.final(work);
         return;
     }
-    Sha256V.final_args.out = Tls13KsV.transcript_args.out;
-    Sha256.final(work);
+    Sha256.final(work, Tls13KsV.transcript_args.out);
 }
 
 /** @brief The operands and the outcome. */
