@@ -73,10 +73,7 @@ static void build_key_block(const uint8_t *key, size_t key_len, uint8_t block[PR
     if (key_len > PROTOCORE_SHA384_BLOCK_LEN)
     {
         // Keys longer than the block become their SHA-384 hash: 48 bytes, the remaining 80 stay zero.
-        Sha384V.hash_args.data = key;
-        Sha384V.hash_args.len = key_len;
-        Sha384V.hash_args.out = kpad;
-        Sha384.hash(hw);
+        Sha384.hash(hw, key, key_len, kpad);
     }
     else
     {
@@ -100,17 +97,13 @@ void protocore_hmac_sha384_init(uint8_t *restrict work)
                     HMAC384_HASH(work));
 
     Sha384.init(HMAC384_INNER(work));
-    Sha384V.update_args.data = w->ipad;
-    Sha384V.update_args.len = PROTOCORE_SHA384_BLOCK_LEN;
-    Sha384.update(HMAC384_INNER(work));
+    Sha384.update(HMAC384_INNER(work), w->ipad, PROTOCORE_SHA384_BLOCK_LEN);
     HmacSha384V.ok = PROTO_TRUE;
 }
 
 void protocore_hmac_sha384_update(uint8_t *restrict work)
 {
-    Sha384V.update_args.data = HmacSha384V.update_args.data;
-    Sha384V.update_args.len = HmacSha384V.update_args.len;
-    Sha384.update(HMAC384_INNER(work));
+    Sha384.update(HMAC384_INNER(work), HmacSha384V.update_args.data, HmacSha384V.update_args.len);
     HmacSha384V.ok = PROTO_TRUE;
 }
 
@@ -122,19 +115,13 @@ void protocore_hmac_sha384_final(uint8_t *restrict work)
         return;
     }
     Hmac384Work *w = HMAC384_WORK(work);
-    Sha384V.final_args.out = w->inner_digest;
-    Sha384.final(HMAC384_INNER(work));
+    Sha384.final(HMAC384_INNER(work), w->inner_digest);
 
     // Outer hash: H(okey || inner_digest)
     Sha384.init(HMAC384_HASH(work));
-    Sha384V.update_args.data = HMAC384_OKEY(work);
-    Sha384V.update_args.len = PROTOCORE_SHA384_BLOCK_LEN;
-    Sha384.update(HMAC384_HASH(work));
-    Sha384V.update_args.data = w->inner_digest;
-    Sha384V.update_args.len = PROTOCORE_SHA384_DIGEST_LEN;
-    Sha384.update(HMAC384_HASH(work));
-    Sha384V.final_args.out = HmacSha384V.final_args.out;
-    Sha384.final(HMAC384_HASH(work));
+    Sha384.update(HMAC384_HASH(work), HMAC384_OKEY(work), PROTOCORE_SHA384_BLOCK_LEN);
+    Sha384.update(HMAC384_HASH(work), w->inner_digest, PROTOCORE_SHA384_DIGEST_LEN);
+    Sha384.final(HMAC384_HASH(work), HmacSha384V.final_args.out);
     HmacSha384V.ok = PROTO_TRUE;
 }
 
@@ -153,25 +140,15 @@ void protocore_hmac_sha384_mac(uint8_t *restrict work)
     uint8_t *hw = HMAC384_HASH(work);
     build_key_block(key, key_len, w->ipad, 0x36u, w->opad, hw); // ipad block (opad slot as key-pad scratch)
     Sha384.init(hw);
-    Sha384V.update_args.data = w->ipad;
-    Sha384V.update_args.len = PROTOCORE_SHA384_BLOCK_LEN;
-    Sha384.update(hw);
-    Sha384V.update_args.data = HmacSha384V.mac_args.data;
-    Sha384V.update_args.len = HmacSha384V.mac_args.len;
-    Sha384.update(hw);
-    Sha384V.final_args.out = w->inner_digest;
-    Sha384.final(hw); // inner = H((K XOR ipad) || m)
+    Sha384.update(hw, w->ipad, PROTOCORE_SHA384_BLOCK_LEN);
+    Sha384.update(hw, HmacSha384V.mac_args.data, HmacSha384V.mac_args.len);
+    Sha384.final(hw, w->inner_digest); // inner = H((K XOR ipad) || m)
 
     build_key_block(key, key_len, w->opad, 0x5cu, w->ipad, hw); // opad block (ipad slot now free as scratch)
     Sha384.init(hw);
-    Sha384V.update_args.data = w->opad;
-    Sha384V.update_args.len = PROTOCORE_SHA384_BLOCK_LEN;
-    Sha384.update(hw);
-    Sha384V.update_args.data = w->inner_digest;
-    Sha384V.update_args.len = PROTOCORE_SHA384_DIGEST_LEN;
-    Sha384.update(hw);
-    Sha384V.final_args.out = HmacSha384V.mac_args.out;
-    Sha384.final(hw); // HMAC = H((K XOR opad) || inner)
+    Sha384.update(hw, w->opad, PROTOCORE_SHA384_BLOCK_LEN);
+    Sha384.update(hw, w->inner_digest, PROTOCORE_SHA384_DIGEST_LEN);
+    Sha384.final(hw, HmacSha384V.mac_args.out); // HMAC = H((K XOR opad) || inner)
     HmacSha384V.ok = PROTO_TRUE;
 }
 

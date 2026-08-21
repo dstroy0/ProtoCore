@@ -1763,10 +1763,7 @@ static int hybrid_sntrup761_x25519(uint8_t *work, uint8_t i, const uint8_t *payl
     const uint8_t *qc = payload + 5 + PROTOCORE_SNTRUP761_PK_BYTES; // C_PK1: client X25519 public
 
     uint8_t k_pq[PROTOCORE_SNTRUP761_SS_BYTES];
-    Sntrup761V.enc_args.pk = pk;
-    Sntrup761V.enc_args.ct = s_reply; // ciphertext -> s_reply[0..1038]
-    Sntrup761V.enc_args.ss = k_pq;
-    Sntrup761.enc(work);
+    Sntrup761.enc(work, pk, s_reply, k_pq); // ciphertext -> s_reply[0..1038]
 
     uint8_t k_cl[32];
     Curve25519V.x25519_args.scalar = ssh_sess[i].ecdh_sk;
@@ -1787,14 +1784,9 @@ static int hybrid_sntrup761_x25519(uint8_t *work, uint8_t i, const uint8_t *payl
     mem.cpy(s_reply + PROTOCORE_SNTRUP761_CT_BYTES, ssh_sess[i].ecdh_pk, 32); // S_PK1: server X25519 public
 
     Sha512.init(work);
-    Sha512V.update_args.data = k_pq; // K = SHA512(K_PQ || K_CL) (RFC 9370 concat combiner)
-    Sha512V.update_args.len = sizeof(k_pq);
-    Sha512.update(work);
-    Sha512V.update_args.data = k_cl;
-    Sha512V.update_args.len = sizeof(k_cl);
-    Sha512.update(work);
-    Sha512V.final_args.out = k_out;
-    Sha512.final(work);
+    Sha512.update(work, k_pq, sizeof(k_pq)); // K = SHA512(K_PQ || K_CL) (RFC 9370 concat combiner)
+    Sha512.update(work, k_cl, sizeof(k_cl));
+    Sha512.final(work, k_out);
     protocore_secure_wipe(k_pq, sizeof(k_pq));
     protocore_secure_wipe(k_cl, sizeof(k_cl));
     return 0;
@@ -4001,10 +3993,7 @@ proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
             return PROTO_FALSE;
         }
         uint8_t k_pq[PROTOCORE_SNTRUP761_SS_BYTES], k_cl[32];
-        Sntrup761V.dec_args.sk = e->hybrid_sk;
-        Sntrup761V.dec_args.ct = peer_pub;
-        Sntrup761V.dec_args.ss = k_pq;
-        Sntrup761.dec(e->work);
+        Sntrup761.dec(e->work, e->hybrid_sk, peer_pub, k_pq);
         Curve25519V.x25519_args.scalar = e->priv;
         Curve25519V.x25519_args.point = peer_pub + PROTOCORE_SNTRUP761_CT_BYTES;
         Curve25519V.x25519_args.out = k_cl;
@@ -4022,14 +4011,9 @@ proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
             return PROTO_FALSE;
         }
         Sha512.init(e->work);
-        Sha512V.update_args.data = k_pq;
-        Sha512V.update_args.len = sizeof(k_pq);
-        Sha512.update(e->work);
-        Sha512V.update_args.data = k_cl;
-        Sha512V.update_args.len = 32;
-        Sha512.update(e->work);
-        Sha512V.final_args.out = k_be + (256 - 64);
-        Sha512.final(e->work);
+        Sha512.update(e->work, k_pq, sizeof(k_pq));
+        Sha512.update(e->work, k_cl, 32);
+        Sha512.final(e->work, k_be + (256 - 64));
         protocore_secure_wipe(k_pq, sizeof(k_pq));
         protocore_secure_wipe(k_cl, sizeof(k_cl));
         return PROTO_TRUE;

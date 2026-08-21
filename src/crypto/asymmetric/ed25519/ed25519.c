@@ -31,7 +31,7 @@
 #include "crypto/asymmetric/curve25519/curve25519.h" // protocore_gf + field ops (native / non-S3 path)
 #include "crypto/asymmetric/ed25519/ed25519.h"
 #include "crypto/asymmetric/fe25519/fe25519.h" // MODMULT dies: canonical uint32[8] field on the RSA accelerator
-#include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq
+#include "crypto/ct_eq/ct_eq.h"                // protocore_ct_eq
 #include "crypto/hash/sha512/sha512.h"
 #if PROTOCORE_FE25519_MPI_HW
 #include "crypto/asymmetric/ed25519_comb_table/ed25519_comb_table.h" // fixed-base comb ED_COMB[i][j] = (j+1)*256^i*B; drives the MODMULT sign
@@ -632,10 +632,7 @@ static proto_bool ed_verify_recompute(uint8_t out[32], const uint8_t S[32], cons
 static void ed_expand_seed(uint8_t *restrict work, const uint8_t *seed)
 {
     Ed25519Ctx *ctx = ED25519_CTX(work);
-    Sha512V.hash_args.data = seed;
-    Sha512V.hash_args.len = PROTOCORE_ED25519_SEED_LEN;
-    Sha512V.hash_args.out = ctx->d;
-    Sha512.hash(ED25519_SHA(work));
+    Sha512.hash(ED25519_SHA(work), seed, PROTOCORE_ED25519_SEED_LEN, ctx->d);
     ctx->d[0] &= 248;
     ctx->d[31] &= 127;
     ctx->d[31] |= 64;
@@ -648,17 +645,10 @@ static void ed_challenge(uint8_t *restrict work, const uint8_t *sig_r, const uin
     Ed25519Ctx *ctx = ED25519_CTX(work);
     uint8_t *sha = ED25519_SHA(work);
     Sha512.init(sha);
-    Sha512V.update_args.data = sig_r; // R
-    Sha512V.update_args.len = 32;
-    Sha512.update(sha);
-    Sha512V.update_args.data = pub; // A
-    Sha512V.update_args.len = 32;
-    Sha512.update(sha);
-    Sha512V.update_args.data = msg;
-    Sha512V.update_args.len = msg_len;
-    Sha512.update(sha);
-    Sha512V.final_args.out = ctx->h;
-    Sha512.final(sha);
+    Sha512.update(sha, sig_r, 32); // R
+    Sha512.update(sha, pub, 32);   // A
+    Sha512.update(sha, msg, msg_len);
+    Sha512.final(sha, ctx->h);
     ed_reduce(ctx->h);
 }
 
@@ -696,14 +686,9 @@ void protocore_ed25519_sign(uint8_t *restrict work)
 
     // r = SHA-512(prefix || M) mod L
     Sha512.init(sha);
-    Sha512V.update_args.data = ctx->d + 32;
-    Sha512V.update_args.len = 32;
-    Sha512.update(sha);
-    Sha512V.update_args.data = msg;
-    Sha512V.update_args.len = msg_len;
-    Sha512.update(sha);
-    Sha512V.final_args.out = ctx->r;
-    Sha512.final(sha);
+    Sha512.update(sha, ctx->d + 32, 32);
+    Sha512.update(sha, msg, msg_len);
+    Sha512.final(sha, ctx->r);
     ed_reduce(ctx->r);
 
     // R = r * B

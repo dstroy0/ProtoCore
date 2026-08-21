@@ -81,9 +81,7 @@ void protocore_ssh_kex_hash_update(uint8_t *restrict work)
     SshKexHashCtx *ctx = KEXHASH_CTX(work);
     if (ctx->is512)
     {
-        Sha512V.update_args.data = SshKexHashV.update_args.data;
-        Sha512V.update_args.len = SshKexHashV.update_args.len;
-        Sha512.update(KEXHASH_HASH(work));
+        Sha512.update(KEXHASH_HASH(work), SshKexHashV.update_args.data, SshKexHashV.update_args.len);
     }
     else
     {
@@ -102,8 +100,7 @@ void protocore_ssh_kex_hash_final(uint8_t *restrict work)
     SshKexHashCtx *ctx = KEXHASH_CTX(work);
     if (ctx->is512)
     {
-        Sha512V.final_args.out = SshKexHashV.final_args.out;
-        Sha512.final(KEXHASH_HASH(work));
+        Sha512.final(KEXHASH_HASH(work), SshKexHashV.final_args.out);
         SshKexHashV.len = PROTOCORE_SHA512_DIGEST_LEN;
     }
     else

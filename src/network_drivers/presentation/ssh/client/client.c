@@ -467,9 +467,7 @@ static proto_bool build_kex_public(void)
         {
             return PROTO_FALSE;
         }
-        Sntrup761V.keypair_args.pk = pk;
-        Sntrup761V.keypair_args.sk = SSH_CLIENT_CTX(protocore_ssh_client_span())->hyb.sntrup_sk;
-        Sntrup761.keypair(work);
+        Sntrup761.keypair(work, pk, SSH_CLIENT_CTX(protocore_ssh_client_span())->hyb.sntrup_sk);
         protocore_plaintext_release(mark); // pk persists inside sntrup_sk at PROTOCORE_SNTRUP761_SK_PK_OFFSET
         RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
         RngV.fill_args.len = 32;

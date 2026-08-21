@@ -85,10 +85,7 @@ static proto_bool ws_accept_key(uint8_t *restrict work, const char *client_key, 
         out[0] = '\0';
         return PROTO_FALSE;
     }
-    Sha1V.hash_args.data = (const uint8_t *)concat;
-    Sha1V.hash_args.len = key_len + magic_len;
-    Sha1V.hash_args.out = digest;
-    Sha1.hash(w.buf);
+    Sha1.hash(w.buf, (const uint8_t *)concat, key_len + magic_len, digest);
     protocore_secure_release(mark);
     Base64V.encode_args.src = digest;
     Base64V.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;

@@ -48,10 +48,7 @@ static void sha1_of(const uint8_t *data, size_t len, uint8_t out[PROTOCORE_SHA1_
     protocore_span w = protocore_secure_span(PROTOCORE_SHA1_BORROW, 8);
     if (span.ok(w))
     {
-        Sha1V.hash_args.data = data;
-        Sha1V.hash_args.len = len;
-        Sha1V.hash_args.out = out;
-        Sha1.hash(w.buf);
+        Sha1.hash(w.buf, data, len, out);
     }
     protocore_secure_release(mark);
 }

@@ -243,26 +243,11 @@ void test_rfc9001_a1_initial_secret_chain(void)
     hx("3c199828fd139efd216c155ad844cc81fb82fa8d7446fa7d78be803acdda951b", want_server, 32);
 
     uint8_t initial[32], client[32], server[32];
-    HkdfV.extract_args.salt = salt;
-    HkdfV.extract_args.salt_len = sizeof(salt);
-    HkdfV.extract_args.ikm = dcid;
-    HkdfV.extract_args.ikm_len = sizeof(dcid);
-    HkdfV.extract_args.prk = initial;
-    Hkdf.extract(g_work);
+    Hkdf.extract(g_work, salt, sizeof(salt), dcid, sizeof(dcid), initial);
     TEST_ASSERT_EQUAL_MEMORY(want_initial, initial, 32);
 
-    HkdfV.expand_label_args.secret = initial;
-    HkdfV.expand_label_args.label = "client in";
-    HkdfV.expand_label_args.out = client;
-    HkdfV.expand_label_args.out_len = 32;
-    HkdfV.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
-    Hkdf.expand_label(g_work);
-    HkdfV.expand_label_args.secret = initial;
-    HkdfV.expand_label_args.label = "server in";
-    HkdfV.expand_label_args.out = server;
-    HkdfV.expand_label_args.out_len = 32;
-    HkdfV.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
-    Hkdf.expand_label(g_work);
+    Hkdf.expand_label(g_work, initial, "client in", client, 32, PROTOCORE_HKDF_LABEL_PREFIX);
+    Hkdf.expand_label(g_work, initial, "server in", server, 32, PROTOCORE_HKDF_LABEL_PREFIX);
     TEST_ASSERT_EQUAL_MEMORY(want_client, client, 32);
     TEST_ASSERT_EQUAL_MEMORY(want_server, server, 32);
 }

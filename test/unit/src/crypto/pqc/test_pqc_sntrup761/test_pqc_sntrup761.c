@@ -27,25 +27,17 @@ static uint8_t g_work[PROTOCORE_SNTRUP761_BORROW] __attribute__((aligned(8)));
 // The namespace, called the way the cases below read: operands in, one call, answer out.
 static void sn_keypair(uint8_t *w, uint8_t *pk, uint8_t *sk)
 {
-    Sntrup761V.keypair_args.pk = pk;
-    Sntrup761V.keypair_args.sk = sk;
-    Sntrup761.keypair(w);
+    Sntrup761.keypair(w, pk, sk);
 }
 
 static void sn_enc(uint8_t *w, const uint8_t *pk, uint8_t *ct, uint8_t *ss)
 {
-    Sntrup761V.enc_args.pk = pk;
-    Sntrup761V.enc_args.ct = ct;
-    Sntrup761V.enc_args.ss = ss;
-    Sntrup761.enc(w);
+    Sntrup761.enc(w, pk, ct, ss);
 }
 
 static void sn_dec(uint8_t *w, const uint8_t *sk, const uint8_t *ct, uint8_t *ss)
 {
-    Sntrup761V.dec_args.sk = sk;
-    Sntrup761V.dec_args.ct = ct;
-    Sntrup761V.dec_args.ss = ss;
-    Sntrup761.dec(w);
+    Sntrup761.dec(w, sk, ct, ss);
 }
 
 // The CSPRNG seam sntrup761.c draws through is ::Rng, so this suite defines that one symbol itself

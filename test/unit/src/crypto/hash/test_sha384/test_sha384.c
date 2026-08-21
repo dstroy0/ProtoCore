@@ -50,24 +50,18 @@ static void tohex(const uint8_t *d, size_t n, char *out)
 // digest is its borrow, so a streaming case feeds g_ctx_work and never carries a handle of its own.
 static void sha_update(const void *data, size_t len)
 {
-    Sha384V.update_args.data = (const uint8_t *)data;
-    Sha384V.update_args.len = len;
-    Sha384.update(g_ctx_work);
+    Sha384.update(g_ctx_work, (const uint8_t *)data, len);
 }
 
 static void sha_final(uint8_t *out)
 {
-    Sha384V.final_args.out = out;
-    Sha384.final(g_ctx_work);
+    Sha384.final(g_ctx_work, out);
 }
 
 static void one_shot_hex(const void *msg, size_t len, char out[97])
 {
     uint8_t d[PROTOCORE_SHA384_DIGEST_LEN];
-    Sha384V.hash_args.data = (const uint8_t *)msg;
-    Sha384V.hash_args.len = len;
-    Sha384V.hash_args.out = d;
-    Sha384.hash(g_work);
+    Sha384.hash(g_work, (const uint8_t *)msg, len, d);
     tohex(d, sizeof(d), out);
 }
 
@@ -178,15 +172,9 @@ void test_not_a_truncated_sha512(void)
     uint8_t d384[PROTOCORE_SHA384_DIGEST_LEN];
     uint8_t d512[PROTOCORE_SHA512_DIGEST_LEN];
 
-    Sha384V.hash_args.data = (const uint8_t *)TEST1;
-    Sha384V.hash_args.len = sizeof(TEST1) - 1;
-    Sha384V.hash_args.out = d384;
-    Sha384.hash(g_work);
+    Sha384.hash(g_work, (const uint8_t *)TEST1, sizeof(TEST1) - 1, d384);
 
-    Sha512V.hash_args.data = (const uint8_t *)TEST1;
-    Sha512V.hash_args.len = sizeof(TEST1) - 1;
-    Sha512V.hash_args.out = d512;
-    Sha512.hash(g_512_work);
+    Sha512.hash(g_512_work, (const uint8_t *)TEST1, sizeof(TEST1) - 1, d512);
 
     TEST_ASSERT_TRUE(memcmp(d384, d512, PROTOCORE_SHA384_DIGEST_LEN) != 0);
 }
@@ -198,10 +186,7 @@ void test_chunk_split_invariance(void)
     const char *msg = TEST10_384;
     const size_t len = sizeof(TEST10_384) - 1;
 
-    Sha384V.hash_args.data = (const uint8_t *)msg;
-    Sha384V.hash_args.len = len;
-    Sha384V.hash_args.out = whole;
-    Sha384.hash(g_work);
+    Sha384.hash(g_work, (const uint8_t *)msg, len, whole);
 
     for (size_t cut = 1; cut < len; cut += 17)
     {
@@ -226,10 +211,7 @@ void test_final_leaves_the_context_running(void)
     sha_update("def", 3u);
     sha_final(second);
 
-    Sha384V.hash_args.data = (const uint8_t *)"abcdef";
-    Sha384V.hash_args.len = 6u;
-    Sha384V.hash_args.out = direct;
-    Sha384.hash(g_work);
+    Sha384.hash(g_work, (const uint8_t *)"abcdef", 6u, direct);
 
     TEST_ASSERT_EQUAL_MEMORY(direct, second, sizeof(direct));
     TEST_ASSERT_TRUE(memcmp(first, second, sizeof(first)) != 0);
@@ -240,10 +222,7 @@ void test_one_shot_matches_streaming(void)
 {
     uint8_t a[PROTOCORE_SHA384_DIGEST_LEN], b[PROTOCORE_SHA384_DIGEST_LEN];
 
-    Sha384V.hash_args.data = (const uint8_t *)TEST2_2;
-    Sha384V.hash_args.len = sizeof(TEST2_2) - 1;
-    Sha384V.hash_args.out = a;
-    Sha384.hash(g_work);
+    Sha384.hash(g_work, (const uint8_t *)TEST2_2, sizeof(TEST2_2) - 1, a);
 
     Sha384.init(g_ctx_work);
     sha_update(TEST2_2, sizeof(TEST2_2) - 1);
@@ -257,20 +236,11 @@ void test_distinct_messages_distinct_digests(void)
 {
     uint8_t e[PROTOCORE_SHA384_DIGEST_LEN], a[PROTOCORE_SHA384_DIGEST_LEN], b[PROTOCORE_SHA384_DIGEST_LEN];
 
-    Sha384V.hash_args.data = NULL;
-    Sha384V.hash_args.len = 0;
-    Sha384V.hash_args.out = e;
-    Sha384.hash(g_work);
+    Sha384.hash(g_work, NULL, 0, e);
 
-    Sha384V.hash_args.data = (const uint8_t *)"abc";
-    Sha384V.hash_args.len = 3u;
-    Sha384V.hash_args.out = a;
-    Sha384.hash(g_work);
+    Sha384.hash(g_work, (const uint8_t *)"abc", 3u, a);
 
-    Sha384V.hash_args.data = (const uint8_t *)"abd";
-    Sha384V.hash_args.len = 3u;
-    Sha384V.hash_args.out = b;
-    Sha384.hash(g_work);
+    Sha384.hash(g_work, (const uint8_t *)"abd", 3u, b);
 
     TEST_ASSERT_TRUE(memcmp(a, b, sizeof(a)) != 0);
     TEST_ASSERT_TRUE(memcmp(e, a, sizeof(a)) != 0);
@@ -284,13 +254,7 @@ void test_block_length_constants(void)
     TEST_ASSERT_EQUAL_UINT(48u, (unsigned)PROTOCORE_SHA384_DIGEST_LEN);
 
     uint8_t full[PROTOCORE_SHA384_DIGEST_LEN], short_[PROTOCORE_SHA384_DIGEST_LEN];
-    Sha384V.hash_args.data = (const uint8_t *)TEST10_384;
-    Sha384V.hash_args.len = 128u;
-    Sha384V.hash_args.out = full;
-    Sha384.hash(g_work);
-    Sha384V.hash_args.data = (const uint8_t *)TEST10_384;
-    Sha384V.hash_args.len = 127u;
-    Sha384V.hash_args.out = short_;
-    Sha384.hash(g_work);
+    Sha384.hash(g_work, (const uint8_t *)TEST10_384, 128u, full);
+    Sha384.hash(g_work, (const uint8_t *)TEST10_384, 127u, short_);
     TEST_ASSERT_TRUE(memcmp(full, short_, sizeof(full)) != 0);
 }

@@ -14,9 +14,7 @@
  * buffer the padded final block is composed in.
  */
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_POLY1305
+#include "protocore_config.h" // the entry point: the widths
 
 #include "crypto/mac/poly1305/poly1305.h"
 #include "mmgr/protomem/protomem.h"
@@ -25,8 +23,6 @@
 // path on the S3 and runs materially faster than the framework -Os; it is constant-time by structure
 // (the final reduction is branchless), so a higher level for this TU is side-channel safe. Byte-exact.
 // See the ChaCha note in protocore_chacha20.cpp.
-PROTOCORE_BEGIN_DECLS
-
 // Only what is not derivable: the buffer the padded final block is composed in lives at a fixed offset
 // in the caller's borrow, so a helper computes it from the pointer rather than the context storing it.
 typedef struct
@@ -245,22 +241,15 @@ static void poly1305_finish(uint8_t *restrict work, const uint8_t *key, uint8_t 
 // --- the entries -----------------------------------------------------------
 
 // One-shot over the members already set: split the key, absorb the message, reduce and add s.
-void protocore_poly1305_mac(uint8_t *restrict work)
+proto_bool protocore_poly1305_mac(uint8_t *restrict work, const uint8_t *key, const uint8_t *msg, size_t len,
+                                  uint8_t *out)
 {
-    Poly1305V.ok = PROTO_FALSE;
-    if (!Poly1305V.mac_args.key || !Poly1305V.mac_args.out)
+    if (!key || !out)
     {
-        return;
+        return PROTO_FALSE;
     }
-    poly1305_state_init(work, Poly1305V.mac_args.key);
-    poly1305_absorb(work, Poly1305V.mac_args.msg, Poly1305V.mac_args.len);
-    poly1305_finish(work, Poly1305V.mac_args.key, Poly1305V.mac_args.out);
-    Poly1305V.ok = PROTO_TRUE;
+    poly1305_state_init(work, key);
+    poly1305_absorb(work, msg, len);
+    poly1305_finish(work, key, out);
+    return PROTO_TRUE;
 }
-
-/** @brief The operands and the outcome. */
-Poly1305Vars Poly1305V;
-
-PROTOCORE_END_DECLS
-
-#endif // PROTOCORE_ENABLE_POLY1305
