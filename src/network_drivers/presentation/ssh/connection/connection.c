@@ -51,14 +51,13 @@ typedef struct
     SshForwardConfirmCb forward_confirm_cb;
     SshPtyReqCb pty_req_cb;
     SshWindowChangeCb window_change_cb;
-#if PROTOCORE_ENABLE_SSH_SFTP
+    // Unconditional, like every other hook here. PROTOCORE_SSH_CONNECTION_BORROW has no SFTP or
+    // SCP term, so gating these four saved no bytes and only forced the setters to be written
+    // twice - once recording, once doing nothing.
     SshSftpOpenCb protocore_sftp_open_cb;
     SshSftpDataCb protocore_sftp_data_cb;
-#endif
-#if PROTOCORE_ENABLE_SSH_SCP
     SshScpOpenCb protocore_scp_open_cb;
     SshScpDataCb protocore_scp_data_cb;
-#endif
 } SshConnHandlers;
 
 // A remote-forward binding: a listener this SSH connection asked us to open (RFC 4254 sec 7.1).
@@ -382,17 +381,12 @@ void protocore_ssh_connection_channel_pty(uint8_t *restrict work)
     return;
 }
 
-#if PROTOCORE_ENABLE_SSH_SFTP
 void protocore_ssh_connection_set_sftp_open_cb(uint8_t *restrict work)
 {
     (void)work;
     SshSftpOpenCb cb = SshConnectionV.sftp_open_cb;
 
     SSH_CONNECTION_CTX(protocore_ssh_connection_span())->handlers.protocore_sftp_open_cb = cb;
-}
-SshSftpOpenCb protocore_ssh_channel_sftp_open_cb(void)
-{
-    return SSH_CONNECTION_CTX(protocore_ssh_connection_span())->handlers.protocore_sftp_open_cb;
 }
 void protocore_ssh_connection_set_sftp_data_cb(uint8_t *restrict work)
 {
@@ -401,30 +395,22 @@ void protocore_ssh_connection_set_sftp_data_cb(uint8_t *restrict work)
 
     SSH_CONNECTION_CTX(protocore_ssh_connection_span())->handlers.protocore_sftp_data_cb = cb;
 }
-#else
 
-// PROTOCORE_ENABLE_SSH_SFTP is 0: the handle still carries the setters, so they exist and record nothing.
-void protocore_ssh_connection_set_sftp_open_cb(uint8_t *restrict work)
+// The reader is the half that really is conditional - gated in the header too, and nothing calls it
+// when the subsystem is off.
+#if PROTOCORE_ENABLE_SSH_SFTP
+SshSftpOpenCb protocore_ssh_channel_sftp_open_cb(void)
 {
-    (void)work;
-}
-void protocore_ssh_connection_set_sftp_data_cb(uint8_t *restrict work)
-{
-    (void)work;
+    return SSH_CONNECTION_CTX(protocore_ssh_connection_span())->handlers.protocore_sftp_open_cb;
 }
 #endif
 
-#if PROTOCORE_ENABLE_SSH_SCP
 void protocore_ssh_connection_set_scp_open_cb(uint8_t *restrict work)
 {
     (void)work;
     SshScpOpenCb cb = SshConnectionV.scp_open_cb;
 
     SSH_CONNECTION_CTX(protocore_ssh_connection_span())->handlers.protocore_scp_open_cb = cb;
-}
-SshScpOpenCb protocore_ssh_channel_scp_open_cb(void)
-{
-    return SSH_CONNECTION_CTX(protocore_ssh_connection_span())->handlers.protocore_scp_open_cb;
 }
 void protocore_ssh_connection_set_scp_data_cb(uint8_t *restrict work)
 {
@@ -433,16 +419,12 @@ void protocore_ssh_connection_set_scp_data_cb(uint8_t *restrict work)
 
     SSH_CONNECTION_CTX(protocore_ssh_connection_span())->handlers.protocore_scp_data_cb = cb;
 }
-#else
 
-// PROTOCORE_ENABLE_SSH_SCP is 0: the handle still carries the setters, so they exist and record nothing.
-void protocore_ssh_connection_set_scp_open_cb(uint8_t *restrict work)
+// As above: only the reader is conditional.
+#if PROTOCORE_ENABLE_SSH_SCP
+SshScpOpenCb protocore_ssh_channel_scp_open_cb(void)
 {
-    (void)work;
-}
-void protocore_ssh_connection_set_scp_data_cb(uint8_t *restrict work)
-{
-    (void)work;
+    return SSH_CONNECTION_CTX(protocore_ssh_connection_span())->handlers.protocore_scp_open_cb;
 }
 #endif
 
@@ -1996,31 +1978,6 @@ static SshRFwdBind *rbind_find(uint8_t ssh_slot, uint16_t port)
     return NULL;
 }
 
-// RFC 4254 sec 7.2: a connection arriving on a forwarded listener names the binding that asked for
-// it, and the forwarded-tcpip CHANNEL_OPEN echoes that binding's address and port.
-void protocore_ssh_connection_forward_binding(uint8_t *restrict work)
-{
-    (void)work;
-    const uint8_t listener_idx = SshConnectionV.fwd.listener_idx;
-    uint8_t *ssh_slot = &SshConnectionV.fwd.out_slot;
-    uint16_t *bind_port = &SshConnectionV.fwd.bind_port;
-    const char **bind_addr = &SshConnectionV.fwd.bind_addr;
-    for (int i = 0; i < PROTOCORE_SSH_RFWD_MAX; i++)
-    {
-        if (SSH_CONNECTION_CTX(protocore_ssh_connection_span())->rbind[i].active &&
-            SSH_CONNECTION_CTX(protocore_ssh_connection_span())->rbind[i].listener_idx == listener_idx)
-        {
-            *ssh_slot = SSH_CONNECTION_CTX(protocore_ssh_connection_span())->rbind[i].ssh_slot;
-            *bind_port = SSH_CONNECTION_CTX(protocore_ssh_connection_span())->rbind[i].bind_port;
-            *bind_addr = SSH_CONNECTION_CTX(protocore_ssh_connection_span())->rbind[i].bind_addr;
-            SshConnectionV.ok = PROTO_TRUE;
-            return;
-        }
-    }
-    SshConnectionV.ok = PROTO_FALSE;
-    return;
-}
-
 // Open a listener bound to bind_port and remember it for this SSH connection.
 // Returns the bound port (>= 0) on success, -1 to refuse.
 static int on_rforward_open(uint8_t ssh_slot, const char *addr, size_t addr_len, uint16_t bind_port)
@@ -2103,16 +2060,53 @@ static void on_forward_confirm(uint8_t ssh_slot, uint32_t channel, proto_bool ok
 // ProtoConn::PROTO_SSH_RFWD handler: an inbound connection on a forwarded port.
 // ---------------------------------------------------------------------------
 
+#endif // PROTOCORE_SSH_PORT_FORWARD
+
+// RFC 4254 sec 7.2: a connection arriving on a forwarded listener names the binding that asked for
+// it, and the forwarded-tcpip CHANNEL_OPEN echoes that binding's address and port.
+void protocore_ssh_connection_forward_binding(uint8_t *restrict work)
+{
+#if PROTOCORE_SSH_PORT_FORWARD
+    (void)work;
+    const uint8_t listener_idx = SshConnectionV.fwd.listener_idx;
+    uint8_t *ssh_slot = &SshConnectionV.fwd.out_slot;
+    uint16_t *bind_port = &SshConnectionV.fwd.bind_port;
+    const char **bind_addr = &SshConnectionV.fwd.bind_addr;
+    for (int i = 0; i < PROTOCORE_SSH_RFWD_MAX; i++)
+    {
+        if (SSH_CONNECTION_CTX(protocore_ssh_connection_span())->rbind[i].active &&
+            SSH_CONNECTION_CTX(protocore_ssh_connection_span())->rbind[i].listener_idx == listener_idx)
+        {
+            *ssh_slot = SSH_CONNECTION_CTX(protocore_ssh_connection_span())->rbind[i].ssh_slot;
+            *bind_port = SSH_CONNECTION_CTX(protocore_ssh_connection_span())->rbind[i].bind_port;
+            *bind_addr = SSH_CONNECTION_CTX(protocore_ssh_connection_span())->rbind[i].bind_addr;
+            SshConnectionV.ok = PROTO_TRUE;
+            return;
+        }
+    }
+    SshConnectionV.ok = PROTO_FALSE;
+    return;
+#else
+    (void)work;
+    SshConnectionV.i32 = -1;
+#endif
+}
+
 void protocore_ssh_connection_set_forward_policy_cb(uint8_t *restrict work)
 {
+#if PROTOCORE_SSH_PORT_FORWARD
     (void)work;
     SshForwardPolicyCb cb = SshConnectionV.forward_policy_cb;
 
     SSH_CONNECTION_CTX(protocore_ssh_connection_span())->policy = cb;
+#else
+    (void)work;
+#endif
 }
 
 void protocore_ssh_connection_forward_begin(uint8_t *restrict work)
 {
+#if PROTOCORE_SSH_PORT_FORWARD
 
     for (int i = 0; i < PROTOCORE_SSH_RFWD_MAX; i++)
     {
@@ -2130,10 +2124,15 @@ void protocore_ssh_connection_forward_begin(uint8_t *restrict work)
     protocore_ssh_connection_set_rforward_cancel_cb(work);
     SshConnectionV.forward_confirm_cb = on_forward_confirm;
     protocore_ssh_connection_set_forward_confirm_cb(work);
+#else
+    (void)work;
+    SshConnectionV.ok = PROTO_FALSE;
+#endif
 }
 
 void protocore_ssh_connection_forward_pump(uint8_t *restrict work)
 {
+#if PROTOCORE_SSH_PORT_FORWARD
     uint8_t ssh_slot = SshConnectionV.fwd.slot;
 
     uint8_t buf[PROTOCORE_SSH_FWD_CHUNK];
@@ -2219,10 +2218,14 @@ void protocore_ssh_connection_forward_pump(uint8_t *restrict work)
             SshNetwork.chan_close(protocore_ssh_network_span());
         }
     }
+#else
+    (void)work;
+#endif
 }
 
 void protocore_ssh_connection_forward_reset(uint8_t *restrict work)
 {
+#if PROTOCORE_SSH_PORT_FORWARD
     (void)work;
     uint8_t ssh_slot = SshConnectionV.fwd.slot;
 
@@ -2241,35 +2244,10 @@ void protocore_ssh_connection_forward_reset(uint8_t *restrict work)
             SSH_CONNECTION_CTX(protocore_ssh_connection_span())->rbind[i].active = PROTO_FALSE;
         }
     }
-}
-
 #else
-
-// PROTOCORE_SSH_PORT_FORWARD is 0: the handle still carries the forward calls, so they exist and
-// report nothing bound.
-void protocore_ssh_connection_forward_binding(uint8_t *restrict work)
-{
     (void)work;
-    SshConnectionV.i32 = -1;
+#endif
 }
-void protocore_ssh_connection_set_forward_policy_cb(uint8_t *restrict work)
-{
-    (void)work;
-}
-void protocore_ssh_connection_forward_begin(uint8_t *restrict work)
-{
-    (void)work;
-    SshConnectionV.ok = PROTO_FALSE;
-}
-void protocore_ssh_connection_forward_pump(uint8_t *restrict work)
-{
-    (void)work;
-}
-void protocore_ssh_connection_forward_reset(uint8_t *restrict work)
-{
-    (void)work;
-}
-#endif // PROTOCORE_SSH_PORT_FORWARD
 
 // ---------------------------------------------------------------------------
 // RFC 4254 - message numbers 80 to 127, reached once authentication has passed
