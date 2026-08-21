@@ -149,10 +149,8 @@ void test_fn_reset_is_idempotent()
 void test_fn_get_header_null_when_no_headers()
 {
 
-    HttpParserV.get_header_args.req = &http_pool[0];
-    HttpParserV.get_header_args.key = "Host";
-    HttpParser.get_header(protocore_http_parser_span());
-    TEST_ASSERT_NULL(HttpParserV.text);
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), &http_pool[0], "Host");
+    TEST_ASSERT_NULL(http_parser_text);
 }
 
 void test_fn_get_header_finds_single_header()
@@ -160,10 +158,8 @@ void test_fn_get_header_finds_single_header()
     push(0, "GET / HTTP/1.1\r\nHost: esp32\r\n\r\n");
     HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
-    HttpParserV.get_header_args.req = &http_pool[0];
-    HttpParserV.get_header_args.key = "Host";
-    HttpParser.get_header(protocore_http_parser_span());
-    const char *v = HttpParserV.text;
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), &http_pool[0], "Host");
+    const char *v = http_parser_text;
     TEST_ASSERT_NOT_NULL(v);
     TEST_ASSERT_EQUAL_STRING("esp32", v);
 }
@@ -173,10 +169,8 @@ void test_fn_get_header_finds_first_of_many()
     push(0, "GET / HTTP/1.1\r\nA: first\r\nB: second\r\nC: third\r\n\r\n");
     HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
-    HttpParserV.get_header_args.req = &http_pool[0];
-    HttpParserV.get_header_args.key = "A";
-    HttpParser.get_header(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("first", HttpParserV.text);
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), &http_pool[0], "A");
+    TEST_ASSERT_EQUAL_STRING("first", http_parser_text);
 }
 
 void test_fn_get_header_finds_middle_of_many()
@@ -184,10 +178,8 @@ void test_fn_get_header_finds_middle_of_many()
     push(0, "GET / HTTP/1.1\r\nA: one\r\nB: mid\r\nC: three\r\n\r\n");
     HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
-    HttpParserV.get_header_args.req = &http_pool[0];
-    HttpParserV.get_header_args.key = "B";
-    HttpParser.get_header(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("mid", HttpParserV.text);
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), &http_pool[0], "B");
+    TEST_ASSERT_EQUAL_STRING("mid", http_parser_text);
 }
 
 void test_fn_get_header_finds_last_of_many()
@@ -195,10 +187,8 @@ void test_fn_get_header_finds_last_of_many()
     push(0, "GET / HTTP/1.1\r\nA: one\r\nB: two\r\nC: last\r\n\r\n");
     HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
-    HttpParserV.get_header_args.req = &http_pool[0];
-    HttpParserV.get_header_args.key = "C";
-    HttpParser.get_header(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("last", HttpParserV.text);
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), &http_pool[0], "C");
+    TEST_ASSERT_EQUAL_STRING("last", http_parser_text);
 }
 
 void test_fn_get_header_case_insensitive_lowercase()
@@ -206,10 +196,8 @@ void test_fn_get_header_case_insensitive_lowercase()
     push(0, "GET / HTTP/1.1\r\nContent-Type: application/json\r\n\r\n");
     HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
-    HttpParserV.get_header_args.req = &http_pool[0];
-    HttpParserV.get_header_args.key = "content-type";
-    HttpParser.get_header(protocore_http_parser_span());
-    TEST_ASSERT_NOT_NULL(HttpParserV.text);
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), &http_pool[0], "content-type");
+    TEST_ASSERT_NOT_NULL(http_parser_text);
 }
 
 void test_fn_get_header_case_insensitive_uppercase()
@@ -217,10 +205,8 @@ void test_fn_get_header_case_insensitive_uppercase()
     push(0, "GET / HTTP/1.1\r\nContent-Type: text/plain\r\n\r\n");
     HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
-    HttpParserV.get_header_args.req = &http_pool[0];
-    HttpParserV.get_header_args.key = "CONTENT-TYPE";
-    HttpParser.get_header(protocore_http_parser_span());
-    TEST_ASSERT_NOT_NULL(HttpParserV.text);
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), &http_pool[0], "CONTENT-TYPE");
+    TEST_ASSERT_NOT_NULL(http_parser_text);
 }
 
 void test_fn_get_header_returns_null_for_absent_key()
@@ -228,10 +214,8 @@ void test_fn_get_header_returns_null_for_absent_key()
     push(0, "GET / HTTP/1.1\r\nHost: x\r\n\r\n");
     HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
-    HttpParserV.get_header_args.req = &http_pool[0];
-    HttpParserV.get_header_args.key = "Authorization";
-    HttpParser.get_header(protocore_http_parser_span());
-    TEST_ASSERT_NULL(HttpParserV.text);
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), &http_pool[0], "Authorization");
+    TEST_ASSERT_NULL(http_parser_text);
 }
 
 void test_fn_get_header_does_not_bleed_across_slots()
@@ -242,14 +226,10 @@ void test_fn_get_header_does_not_bleed_across_slots()
     HttpConn.parse(protocore_http_conn_span());
     HttpConnV.slot = 1;
     HttpConn.parse(protocore_http_conn_span());
-    HttpParserV.get_header_args.req = &http_pool[0];
-    HttpParserV.get_header_args.key = "Host";
-    HttpParser.get_header(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("alpha", HttpParserV.text);
-    HttpParserV.get_header_args.req = &http_pool[1];
-    HttpParserV.get_header_args.key = "Host";
-    HttpParser.get_header(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("beta", HttpParserV.text);
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), &http_pool[0], "Host");
+    TEST_ASSERT_EQUAL_STRING("alpha", http_parser_text);
+    const char *http_parser_text2 = HttpParser.get_header(protocore_http_parser_span(), &http_pool[1], "Host");
+    TEST_ASSERT_EQUAL_STRING("beta", http_parser_text2);
 }
 
 void test_fn_get_query_null_when_no_params()
@@ -257,10 +237,8 @@ void test_fn_get_query_null_when_no_params()
     push(0, "GET /path HTTP/1.1\r\n\r\n");
     HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
-    HttpParserV.get_query_args.req = &http_pool[0];
-    HttpParserV.get_query_args.key = "key";
-    HttpParser.get_query(protocore_http_parser_span());
-    TEST_ASSERT_NULL(HttpParserV.text);
+    const char *http_parser_text = HttpParser.get_query(protocore_http_parser_span(), &http_pool[0], "key");
+    TEST_ASSERT_NULL(http_parser_text);
 }
 
 void test_fn_get_query_finds_single_param()
@@ -268,10 +246,8 @@ void test_fn_get_query_finds_single_param()
     push(0, "GET /s?foo=bar HTTP/1.1\r\n\r\n");
     HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
-    HttpParserV.get_query_args.req = &http_pool[0];
-    HttpParserV.get_query_args.key = "foo";
-    HttpParser.get_query(protocore_http_parser_span());
-    const char *v = HttpParserV.text;
+    const char *http_parser_text = HttpParser.get_query(protocore_http_parser_span(), &http_pool[0], "foo");
+    const char *v = http_parser_text;
     TEST_ASSERT_NOT_NULL(v);
     TEST_ASSERT_EQUAL_STRING("bar", v);
 }
@@ -281,10 +257,8 @@ void test_fn_get_query_finds_first_param()
     push(0, "GET /s?a=1&b=2&c=3 HTTP/1.1\r\n\r\n");
     HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
-    HttpParserV.get_query_args.req = &http_pool[0];
-    HttpParserV.get_query_args.key = "a";
-    HttpParser.get_query(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("1", HttpParserV.text);
+    const char *http_parser_text = HttpParser.get_query(protocore_http_parser_span(), &http_pool[0], "a");
+    TEST_ASSERT_EQUAL_STRING("1", http_parser_text);
 }
 
 void test_fn_get_query_finds_middle_param()
@@ -292,10 +266,8 @@ void test_fn_get_query_finds_middle_param()
     push(0, "GET /s?a=1&b=mid&c=3 HTTP/1.1\r\n\r\n");
     HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
-    HttpParserV.get_query_args.req = &http_pool[0];
-    HttpParserV.get_query_args.key = "b";
-    HttpParser.get_query(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("mid", HttpParserV.text);
+    const char *http_parser_text = HttpParser.get_query(protocore_http_parser_span(), &http_pool[0], "b");
+    TEST_ASSERT_EQUAL_STRING("mid", http_parser_text);
 }
 
 void test_fn_get_query_finds_last_param()
@@ -303,10 +275,8 @@ void test_fn_get_query_finds_last_param()
     push(0, "GET /s?a=1&b=2&c=end HTTP/1.1\r\n\r\n");
     HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
-    HttpParserV.get_query_args.req = &http_pool[0];
-    HttpParserV.get_query_args.key = "c";
-    HttpParser.get_query(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("end", HttpParserV.text);
+    const char *http_parser_text = HttpParser.get_query(protocore_http_parser_span(), &http_pool[0], "c");
+    TEST_ASSERT_EQUAL_STRING("end", http_parser_text);
 }
 
 void test_fn_get_query_returns_null_for_absent_key()
@@ -314,10 +284,8 @@ void test_fn_get_query_returns_null_for_absent_key()
     push(0, "GET /s?a=1 HTTP/1.1\r\n\r\n");
     HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
-    HttpParserV.get_query_args.req = &http_pool[0];
-    HttpParserV.get_query_args.key = "z";
-    HttpParser.get_query(protocore_http_parser_span());
-    TEST_ASSERT_NULL(HttpParserV.text);
+    const char *http_parser_text = HttpParser.get_query(protocore_http_parser_span(), &http_pool[0], "z");
+    TEST_ASSERT_NULL(http_parser_text);
 }
 
 void test_fn_get_query_empty_value()
@@ -325,10 +293,8 @@ void test_fn_get_query_empty_value()
     push(0, "GET /s?key= HTTP/1.1\r\n\r\n");
     HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
-    HttpParserV.get_query_args.req = &http_pool[0];
-    HttpParserV.get_query_args.key = "key";
-    HttpParser.get_query(protocore_http_parser_span());
-    const char *v = HttpParserV.text;
+    const char *http_parser_text = HttpParser.get_query(protocore_http_parser_span(), &http_pool[0], "key");
+    const char *v = http_parser_text;
     TEST_ASSERT_NOT_NULL(v);
     TEST_ASSERT_EQUAL_STRING("", v);
 }
@@ -341,14 +307,10 @@ void test_fn_get_query_does_not_bleed_across_slots()
     HttpConn.parse(protocore_http_conn_span());
     HttpConnV.slot = 1;
     HttpConn.parse(protocore_http_conn_span());
-    HttpParserV.get_query_args.req = &http_pool[0];
-    HttpParserV.get_query_args.key = "x";
-    HttpParser.get_query(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("slot0", HttpParserV.text);
-    HttpParserV.get_query_args.req = &http_pool[1];
-    HttpParserV.get_query_args.key = "x";
-    HttpParser.get_query(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("slot1", HttpParserV.text);
+    const char *http_parser_text = HttpParser.get_query(protocore_http_parser_span(), &http_pool[0], "x");
+    TEST_ASSERT_EQUAL_STRING("slot0", http_parser_text);
+    const char *http_parser_text2 = HttpParser.get_query(protocore_http_parser_span(), &http_pool[1], "x");
+    TEST_ASSERT_EQUAL_STRING("slot1", http_parser_text2);
 }
 
 void test_get_parses_complete()
@@ -538,10 +500,8 @@ void test_content_length_header_stored_in_headers_array()
     HttpConn.parse(protocore_http_conn_span());
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
     TEST_ASSERT_EQUAL(3, (int)http_pool[0].content_length);
-    HttpParserV.get_header_args.req = &http_pool[0];
-    HttpParserV.get_header_args.key = "Content-Length";
-    HttpParser.get_header(protocore_http_parser_span());
-    const char *cl = HttpParserV.text;
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), &http_pool[0], "Content-Length");
+    const char *cl = http_parser_text;
     TEST_ASSERT_NOT_NULL(cl);
     TEST_ASSERT_EQUAL_STRING("3", cl);
 }

@@ -6,13 +6,16 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-#if PROTOCORE_ENABLE_HTTP_PARSER
-
 PROTOCORE_BEGIN_DECLS
 
-// PROTOCORE_HTTP_PARSER_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
-// it into its arena. A caller takes them once and passes the pointer to every call. How they
-// are carved is this module's and is never named here.
+/**
+ * @file http_parser.h
+ * @brief HttpParser..
+ *
+ * @c work is PROTOCORE_HTTP_PARSER_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
+ */
 
 typedef enum PROTO_ENUM_PACKED
 {
@@ -95,6 +98,12 @@ typedef struct HttpReq
 #endif
 } HttpReq;
 
+typedef proto_bool (*HttpStreamBeginCb)(HttpReq *req);
+
+typedef void (*HttpStreamDataCb)(HttpReq *req, const uint8_t *data, size_t len);
+
+typedef void (*HttpStreamAbortCb)(HttpReq *req);
+
 /**
  * @brief The per-slot request table every HTTP layer parses into and reads back out of.
  *
@@ -103,177 +112,104 @@ typedef struct HttpReq
  */
 extern HttpReq http_pool[CONN_POOL_SLOTS];
 
-typedef proto_bool (*HttpStreamBeginCb)(HttpReq *req);
-
-typedef void (*HttpStreamDataCb)(HttpReq *req, const uint8_t *data, size_t len);
-
-typedef void (*HttpStreamAbortCb)(HttpReq *req);
-
-/** @brief What set_stream_hooks takes: begin, data, abort. */
+/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    HttpStreamBeginCb begin;
-    HttpStreamDataCb data;
-    HttpStreamAbortCb abort;
-} HttpParserSetStreamHooksArgs;
-
-/** @brief What reset takes: req. */
-typedef struct
-{
-    HttpReq *req;
-} HttpParserResetArgs;
-
-/** @brief What feed takes: req, byte. */
-typedef struct
-{
-    HttpReq *req;
-    uint8_t byte;
-} HttpParserFeedArgs;
-
-/** @brief What get_header takes: req, key. */
-typedef struct
-{
-    const HttpReq *req;
-    const char *key;
-} HttpParserGetHeaderArgs;
-
-/** @brief What get_cookie takes: req, name, out, out_size. */
-typedef struct
-{
-    const HttpReq *req;
-    const char *name;
-    char *out;
-    size_t out_size;
-} HttpParserGetCookieArgs;
-
-/** @brief What forwarded_client takes: req, ip_out, ip_cap, is_https. */
-typedef struct
-{
-    const HttpReq *req;
-    char *ip_out;
-    size_t ip_cap;
-    proto_bool *is_https;
-} HttpParserForwardedClientArgs;
-
-/** @brief What get_query takes: req, key. */
-typedef struct
-{
-    const HttpReq *req;
-    const char *key;
-} HttpParserGetQueryArgs;
-
-/** @brief What get_form takes: req, key, out, out_size. */
-typedef struct
-{
-    const HttpReq *req;
-    const char *key;
-    char *out;
-    size_t out_size;
-} HttpParserGetFormArgs;
-
-/** @brief What get_param takes: req, key. */
-typedef struct
-{
-    const HttpReq *req;
-    const char *key;
-} HttpParserGetParamArgs;
+    void (*set_stream_hooks)(uint8_t *restrict, HttpStreamBeginCb, HttpStreamDataCb, HttpStreamAbortCb);
+    void (*reset)(uint8_t *restrict, HttpReq *);
+    void (*feed)(uint8_t *restrict, HttpReq *, uint8_t);
+    const char *(*get_header)(uint8_t *restrict, const HttpReq *, const char *);
+    proto_bool (*get_cookie)(uint8_t *restrict, const HttpReq *, const char *, char *, size_t);
+    proto_bool (*forwarded_client)(uint8_t *restrict, const HttpReq *, char *, size_t, proto_bool *);
+    const char *(*get_query)(uint8_t *restrict, const HttpReq *, const char *);
+    proto_bool (*get_form)(uint8_t *restrict, const HttpReq *, const char *, char *, size_t);
+    const char *(*get_param)(uint8_t *restrict, const HttpReq *, const char *);
+} HttpParserNs;
+PROTOCORE_NS_LAYOUT(HttpParserNs, set_stream_hooks, reset, feed, get_header, get_cookie, forwarded_client, get_query,
+                    get_form, get_param);
 
 /**
- * @brief HttpParser.
- *
- * A caller sets the members a call takes, invokes it through ::HttpParser with the bytes it runs
- * out of, and reads the outcome off the same handle.
- *
- *   HttpParser.set_stream_hooks_args.begin = ...;
- *   HttpParser.set_stream_hooks_args.data = ...;
- *   HttpParser.set_stream_hooks_args.abort = ...;
- *   HttpParser.set_stream_hooks(work);
- *
- * @var HttpParserNs::set_stream_hooks_args  what set_stream_hooks takes: begin, data, abort
- * @var HttpParserNs::reset_args  what reset takes: req
- * @var HttpParserNs::feed_args  what feed takes: req, byte
- * @var HttpParserNs::get_header_args  what get_header takes: req, key
- * @var HttpParserNs::get_cookie_args  what get_cookie takes: req, name, out, out_size
- * @var HttpParserNs::forwarded_client_args  what forwarded_client takes: req, ip_out, ip_cap, is_https
- * @var HttpParserNs::get_query_args  what get_query takes: req, key
- * @var HttpParserNs::get_form_args  what get_form takes: req, key, out, out_size
- * @var HttpParserNs::get_param_args  what get_param takes: req, key
- * @var HttpParserNs::ok  a call's true/false outcome
- * @var HttpParserNs::text  the string a call reports
- * @var HttpParserNs::set_stream_hooks  set_stream_hooks
- * @var HttpParserNs::reset  reset
- * @var HttpParserNs::feed  feed
- * @var HttpParserNs::get_header  get_header
- * @var HttpParserNs::get_cookie  get_cookie
- * @var HttpParserNs::forwarded_client  forwarded_client
- * @var HttpParserNs::get_query  get_query
- * @var HttpParserNs::get_form  get_form
- * @var HttpParserNs::get_param  get_param
- *
- * @c work is PROTOCORE_HTTP_PARSER_BORROW bytes the CALLER took, at an address it knows. It arrives
- * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
- * carved is this module's and is never named here.
+ * @brief Set_stream_hooks.
+ * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.
+ * @param begin Begin
+ * @param data Data
+ * @param abort Abort
  */
-typedef struct
-{
-    HttpParserSetStreamHooksArgs set_stream_hooks_args;
-    HttpParserResetArgs reset_args;
-    HttpParserFeedArgs feed_args;
-    HttpParserGetHeaderArgs get_header_args;
-    HttpParserGetCookieArgs get_cookie_args;
-    HttpParserForwardedClientArgs forwarded_client_args;
-    HttpParserGetQueryArgs get_query_args;
-    HttpParserGetFormArgs get_form_args;
-    HttpParserGetParamArgs get_param_args;
-    proto_bool ok;
-    const char *text;
-} HttpParserVars;
+void protocore_http_parser_set_stream_hooks(uint8_t *restrict work, HttpStreamBeginCb begin, HttpStreamDataCb data,
+                                            HttpStreamAbortCb abort);
+/**
+ * @brief Reset.
+ * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.
+ * @param req Req
+ */
+void protocore_http_parser_reset(uint8_t *restrict work, HttpReq *req);
+/**
+ * @brief Feed.
+ * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.
+ * @param req Req
+ * @param byte Byte
+ */
+void protocore_http_parser_feed(uint8_t *restrict work, HttpReq *req, uint8_t byte);
+/**
+ * @brief Get_header.
+ * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.
+ * @param req Req
+ * @param key Key
+ * @return The const char *.
+ */
+const char *protocore_http_parser_get_header(uint8_t *restrict work, const HttpReq *req, const char *key);
+/**
+ * @brief Get_cookie.
+ * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.
+ * @param req Req
+ * @param name Name
+ * @param out Out
+ * @param out_size Out size
+ * @return PROTO_TRUE on success.
+ */
+proto_bool protocore_http_parser_get_cookie(uint8_t *restrict work, const HttpReq *req, const char *name, char *out,
+                                            size_t out_size);
+/**
+ * @brief Forwarded_client.
+ * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.
+ * @param req Req
+ * @param ip_out Ip out
+ * @param ip_cap Ip cap
+ * @param is_https Is https
+ * @return PROTO_TRUE on success.
+ */
+proto_bool protocore_http_parser_forwarded_client(uint8_t *restrict work, const HttpReq *req, char *ip_out,
+                                                  size_t ip_cap, proto_bool *is_https);
+/**
+ * @brief Get_query.
+ * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.
+ * @param req Req
+ * @param key Key
+ * @return The const char *.
+ */
+const char *protocore_http_parser_get_query(uint8_t *restrict work, const HttpReq *req, const char *key);
+/**
+ * @brief Get_form.
+ * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.
+ * @param req Req
+ * @param key Key
+ * @param out Out
+ * @param out_size Out size
+ * @return PROTO_TRUE on success.
+ */
+proto_bool protocore_http_parser_get_form(uint8_t *restrict work, const HttpReq *req, const char *key, char *out,
+                                          size_t out_size);
+/**
+ * @brief Get_param.
+ * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.
+ * @param req Req
+ * @param key Key
+ * @return The const char *.
+ */
+const char *protocore_http_parser_get_param(uint8_t *restrict work, const HttpReq *req, const char *key);
 
-/** @brief The operands and the outcome. */
-extern HttpParserVars HttpParserV;
-
-/** @brief The entries. */
-typedef struct
-{
-    void (*const set_stream_hooks)(uint8_t *restrict work);
-    void (*const reset)(uint8_t *restrict work);
-    void (*const feed)(uint8_t *restrict work);
-    void (*const get_header)(uint8_t *restrict work);
-    void (*const get_cookie)(uint8_t *restrict work);
-    void (*const forwarded_client)(uint8_t *restrict work);
-    void (*const get_query)(uint8_t *restrict work);
-    void (*const get_form)(uint8_t *restrict work);
-    void (*const get_param)(uint8_t *restrict work);
-} HttpParserNs;
-
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in HttpParserV or a region of the borrow at a fixed offset.
-void protocore_http_parser_set_stream_hooks(uint8_t *restrict work);
-void protocore_http_parser_reset(uint8_t *restrict work);
-void protocore_http_parser_feed(uint8_t *restrict work);
-void protocore_http_parser_get_header(uint8_t *restrict work);
-void protocore_http_parser_get_cookie(uint8_t *restrict work);
-void protocore_http_parser_forwarded_client(uint8_t *restrict work);
-void protocore_http_parser_get_query(uint8_t *restrict work);
-void protocore_http_parser_get_form(uint8_t *restrict work);
-void protocore_http_parser_get_param(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `HttpParser.set_stream_hooks(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const HttpParserNs HttpParser __attribute__((unused)) = {
-    .set_stream_hooks = protocore_http_parser_set_stream_hooks,
-    .reset = protocore_http_parser_reset,
-    .feed = protocore_http_parser_feed,
-    .get_header = protocore_http_parser_get_header,
-    .get_cookie = protocore_http_parser_get_cookie,
-    .forwarded_client = protocore_http_parser_forwarded_client,
-    .get_query = protocore_http_parser_get_query,
-    .get_form = protocore_http_parser_get_form,
-    .get_param = protocore_http_parser_get_param,
-};
-
+typedef proto_bool (*HttpStreamBeginCb)(HttpReq *req);
+typedef void (*HttpStreamDataCb)(HttpReq *req, const uint8_t *data, size_t len);
 /**
  * @brief The PROTOCORE_HTTP_PARSER_BORROW bytes this module's state lives in.
  *
@@ -285,8 +221,17 @@ static const HttpParserNs HttpParser __attribute__((unused)) = {
  */
 uint8_t *protocore_http_parser_span(void);
 
-PROTOCORE_END_DECLS
+/** @brief Module namespace. */
+PROTOCORE_NS HttpParserNs HttpParser PROTOCORE_UNUSED = {.set_stream_hooks = protocore_http_parser_set_stream_hooks,
+                                                         .reset = protocore_http_parser_reset,
+                                                         .feed = protocore_http_parser_feed,
+                                                         .get_header = protocore_http_parser_get_header,
+                                                         .get_cookie = protocore_http_parser_get_cookie,
+                                                         .forwarded_client = protocore_http_parser_forwarded_client,
+                                                         .get_query = protocore_http_parser_get_query,
+                                                         .get_form = protocore_http_parser_get_form,
+                                                         .get_param = protocore_http_parser_get_param};
 
-#endif // PROTOCORE_ENABLE_HTTP_PARSER
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_HTTP_PARSER_H

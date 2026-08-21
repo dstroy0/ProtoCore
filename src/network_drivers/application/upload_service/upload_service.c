@@ -192,9 +192,6 @@ void protocore_upload_service_begin(uint8_t *restrict work, const char *path, co
     UPLOAD_SERVICE_CTX(work)->dest = dest_path;
     UPLOAD_SERVICE_CTX(work)->handle = -1;
 
-    HttpParserV.set_stream_hooks_args.begin = upload_stream_begin;
-    HttpParserV.set_stream_hooks_args.data = upload_stream_data;
-    HttpParserV.set_stream_hooks_args.abort = NULL;
-    HttpParser.set_stream_hooks(protocore_http_parser_span());
+    HttpParser.set_stream_hooks(protocore_http_parser_span(), upload_stream_begin, upload_stream_data, NULL);
     on_http(path, HTTP_POST, upload_handle);
 }

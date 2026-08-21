@@ -90,8 +90,7 @@ void protocore_http_conn_reset(uint8_t *restrict work)
         return;
     }
     http_pool[HttpConnV.slot].slot_id = HttpConnV.slot; // ensure slot_id is correct before reset reads it
-    HttpParserV.reset_args.req = &http_pool[HttpConnV.slot];
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParser.reset(protocore_http_parser_span(), &http_pool[HttpConnV.slot]);
 }
 
 // Release any WebSocket / SSE binding still attached to a slot. WS and SSE upgrades leave the slot
@@ -186,9 +185,7 @@ void protocore_http_conn_parse(uint8_t *restrict work)
         case PARSE_URI_TOO_LONG:
             break; // terminal state - feed nothing further, and leave the rest in the ring
         default:
-            HttpParserV.feed_args.req = req;
-            HttpParserV.feed_args.byte = HTTP_CONN_CTX(work)->rx[fed];
-            HttpParser.feed(protocore_http_parser_span());
+            HttpParser.feed(protocore_http_parser_span(), req, HTTP_CONN_CTX(work)->rx[fed]);
             fed++;
             continue;
         }
@@ -289,9 +286,7 @@ static void tls_data(uint8_t slot)
             {
                 break; // terminal state - let handle() dispatch before reading more
             }
-            HttpParserV.feed_args.req = req;
-            HttpParserV.feed_args.byte = buf[i];
-            HttpParser.feed(protocore_http_parser_span());
+            HttpParser.feed(protocore_http_parser_span(), req, buf[i]);
         }
     }
     if (n < 0)
@@ -429,10 +424,8 @@ void protocore_http_conn_keepalive_eval(uint8_t *restrict work)
         return;
     }
 
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Connection";
-    HttpParser.get_header(protocore_http_parser_span());
-    HttpConnV.hdr_args.hdr = HttpParserV.text;
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Connection");
+    HttpConnV.hdr_args.hdr = http_parser_text;
     proto_bool keep;
     if (req->version == HTTP_11)
     {

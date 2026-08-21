@@ -28,8 +28,7 @@ static char g_out[512];
 
 void setUp(void)
 {
-    HttpParserV.reset_args.req = &g_req;
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParser.reset(protocore_http_parser_span(), &g_req);
     memset(g_out, 0, sizeof(g_out));
     CloudEventsV.attr.id = NULL;
     CloudEventsV.attr.source = NULL;
@@ -51,9 +50,7 @@ static void feed(const char *raw)
 {
     for (const char *p = raw; *p; p++)
     {
-        HttpParserV.feed_args.req = &g_req;
-        HttpParserV.feed_args.byte = (uint8_t)*p;
-        HttpParser.feed(protocore_http_parser_span());
+        HttpParser.feed(protocore_http_parser_span(), &g_req, (uint8_t)*p);
     }
 }
 
@@ -111,8 +108,7 @@ void test_binary_mode_optional_subject(void)
     TEST_ASSERT_TRUE(CloudEventsV.ok);
     TEST_ASSERT_EQUAL_STRING("mynewfile.jpg", CloudEventsV.attr.subject);
 
-    HttpParserV.reset_args.req = &g_req;
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParser.reset(protocore_http_parser_span(), &g_req);
     static const char WITHOUT[] = "POST /x HTTP/1.1\r\n"
                                   "Host: h\r\n"
                                   "ce-id: A234-1234-1234\r\n"
@@ -140,8 +136,7 @@ void test_binary_mode_requires_id_source_and_type(void)
     };
     for (size_t i = 0; i < sizeof(MISSING) / sizeof(MISSING[0]); i++)
     {
-        HttpParserV.reset_args.req = &g_req;
-        HttpParser.reset(protocore_http_parser_span());
+        HttpParser.reset(protocore_http_parser_span(), &g_req);
         feed(MISSING[i]);
         TEST_ASSERT_EQUAL_INT(PARSE_COMPLETE, g_req.parse_state);
         CloudEventsV.msg.req = &g_req;

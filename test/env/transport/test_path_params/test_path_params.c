@@ -16,10 +16,8 @@ static proto_bool g_found_a, g_found_b, g_found_missing;
 
 static void copy_param(const HttpReq *req, const char *key, char *out, size_t n, proto_bool *found)
 {
-    HttpParserV.get_param_args.req = req;
-    HttpParserV.get_param_args.key = key;
-    HttpParser.get_param(protocore_http_parser_span());
-    const char *v = HttpParserV.text;
+    const char *http_parser_text = HttpParser.get_param(protocore_http_parser_span(), req, key);
+    const char *v = http_parser_text;
     *found = (v != NULL);
     if (v)
     {

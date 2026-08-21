@@ -63,8 +63,7 @@ static void request(uint8_t *restrict work)
     const size_t body_len = H3Server.req.body_len;
     const uint8_t slot = PROTOCORE_H3_DISPATCH_SLOT;
     HttpReq *r = &http_pool[slot];
-    HttpParserV.reset_args.req = &http_pool[slot];
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParser.reset(protocore_http_parser_span(), &http_pool[slot]);
 
     // Map the semantic request fields into the shared HttpReq (as protocore_h2_server does per stream).
     size_t mn = str.len(method, sizeof(r->method));
@@ -145,8 +144,7 @@ static void request(uint8_t *restrict work)
     ConnPoolV.slot = slot;
     ConnPoolV.st = CONN_FREE;
     ConnPool.set_state(protocore_conn_pool_span()); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
-    HttpParserV.reset_args.req = &http_pool[slot];
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParser.reset(protocore_http_parser_span(), &http_pool[slot]);
 }
 
 // The QUIC server's seam dictates these two shapes, so they carry their arguments onto the handle.

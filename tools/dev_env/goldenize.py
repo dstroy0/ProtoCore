@@ -3853,6 +3853,26 @@ def fold_comma_calls(s, spec, byname, pat, mask):
     return s, n, mask
 
 
+def pp_arm(s, pos):
+    """Which preprocessor arms are open at @p pos, as a tuple of directive offsets.
+
+    Two positions share this only when they are in the same arm of the same conditionals. It is what
+    keeps a local declared under `#if PROTOCORE_ENABLE_RANGE` from being assigned to from the other
+    side of the `#else`, where it does not exist.
+    """
+    stack = []
+    for m in re.finditer(r"^[ \t]*#\s*(ifdef|ifndef|if|elif|else|endif)\b", s[:pos], re.M):
+        d = m.group(1)
+        if d in ("if", "ifdef", "ifndef"):
+            stack.append(m.start())
+        elif d in ("elif", "else"):
+            if stack:
+                stack[-1] = m.start()
+        elif stack:
+            stack.pop()
+    return tuple(stack)
+
+
 def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include")):
     """Fold each call site's staged operands into the call, and give its result a local.
 
@@ -4060,12 +4080,30 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
                         rd = re.compile(r"\b%s\.%s\b(?!\s*=[^=])" % (re.escape(objv), re.escape(res)))
                         window = s[stmt_end:stop]
                         if rd.search(window):
-                            key = (blk[0] if blk else -1, local)
-                            if key in declared:
-                                out = "%s%s = %s;" % (indent, local, call)
-                            else:
-                                declared[key] = True
-                                out = "%s%s %s = %s;" % (indent, e["ret"], local, call)
+                            # DECLARE OR ASSIGN, decided by looking for the declaration rather than
+                            # by modelling where one would be. A map keyed on the block said
+                            # "already declared" for a call in the other arm of an #if, where the
+                            # declaration is not compiled; keying the arm in as well then said
+                            # "not declared" for two calls in the SAME arm and emitted it twice.
+                            # So: is there a declaration of this name, earlier in this block, in an
+                            # arm that is open here? That is the question, and it can be asked
+                            # directly.
+                            # ALWAYS A DECLARATION, with a fresh name when that one is taken.
+                            #
+                            # Deciding between declaring and assigning means knowing whether an
+                            # earlier declaration is in scope HERE, and two attempts at that were
+                            # both wrong: a map keyed on the block said "already declared" for a
+                            # call in the other arm of an #if, where it is not compiled; adding the
+                            # arm to the key then said "not declared" for two calls in the same arm
+                            # and emitted it twice. Each call's local covers only the window up to
+                            # the next call, so nothing needs to be shared between them - and a
+                            # declaration that cannot collide needs no scope analysis at all.
+                            start_of_block = blk[0] if blk else 0
+                            base, k = local, 2
+                            while re.search(r"\b%s\b" % re.escape(local), s[start_of_block : m.start()]):
+                                local = "%s%d" % (base, k)
+                                k += 1
+                            out = "%s%s %s = %s;" % (indent, e["ret"], local, call)
                             s = s[:stmt_end] + rd.sub(local, window) + s[stop:]
                         else:
                             # Nothing reads it. The rule is that a result becomes a local; where

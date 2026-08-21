@@ -107,8 +107,7 @@ void ws_send_version_required(uint8_t slot_id)
     ConnPool.active(protocore_conn_pool_span());
     if (!ConnPoolV.ok)
     {
-        HttpParserV.reset_args.req = &http_pool[slot_id];
-        HttpParser.reset(protocore_http_parser_span());
+        HttpParser.reset(protocore_http_parser_span(), &http_pool[slot_id]);
         return;
     }
 
@@ -124,8 +123,7 @@ void ws_send_version_required(uint8_t slot_id)
     ConnPool.flush(protocore_conn_pool_span());
     ConnPool.begin_close(protocore_conn_pool_span()); // dwell in CONN_CLOSING until the response drains
 
-    HttpParserV.reset_args.req = &http_pool[slot_id];
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParser.reset(protocore_http_parser_span(), &http_pool[slot_id]);
 }
 
 /**
@@ -136,10 +134,8 @@ void ws_send_version_required(uint8_t slot_id)
  */
 proto_bool ws_do_upgrade(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, uint8_t route_id)
 {
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Sec-WebSocket-Key";
-    HttpParser.get_header(protocore_http_parser_span());
-    const char *client_key = HttpParserV.text;
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Sec-WebSocket-Key");
+    const char *client_key = http_parser_text;
     if (!client_key)
     {
         return PROTO_FALSE;
@@ -164,10 +160,9 @@ proto_bool ws_do_upgrade(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, 
     // Negotiate permessage-deflate (RFC 7692) if the client offered it. We force
     // no_context_takeover in both directions so each message decompresses
     // independently (the INFLATE window is the message buffer, not a kept window).
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Sec-WebSocket-Extensions";
-    HttpParser.get_header(protocore_http_parser_span());
-    const char *ws_ext = HttpParserV.text;
+    const char *http_parser_text2 =
+        HttpParser.get_header(protocore_http_parser_span(), req, "Sec-WebSocket-Extensions");
+    const char *ws_ext = http_parser_text2;
     proto_bool pmd =
         ws_ext && str.has(ws_ext, MAX_VAL_LEN, "permessage-deflate", sizeof("permessage-deflate"), PROTO_FALSE);
     protocore_sb sb_hdr = {hdr, sizeof(hdr), 0, PROTO_TRUE};
@@ -197,8 +192,7 @@ proto_bool ws_do_upgrade(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, 
     ConnPool.flush(protocore_conn_pool_span());
 
     // Reset HTTP parser but keep the TCP slot -- WS owns it now
-    HttpParserV.reset_args.req = &http_pool[slot_id];
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParser.reset(protocore_http_parser_span(), &http_pool[slot_id]);
 
     // The channel is the session layer's: it takes the number, binds it to this slot and runs the
     // route's connect. This layer sent the handshake bytes.
@@ -254,8 +248,7 @@ proto_bool protocore_sse_do_upgrade(uint8_t *restrict work, uint8_t slot_id, Htt
     // path is what protocore_sse_broadcast() matches against.
     char path[MAX_PATH_LEN];
     str.copy(path, req->path, sizeof(path));
-    HttpParserV.reset_args.req = &http_pool[slot_id];
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParser.reset(protocore_http_parser_span(), &http_pool[slot_id]);
 
     // The stream is the session layer's: it takes the number, binds it to this connection and runs
     // the route's connect. This layer sent the handshake bytes.

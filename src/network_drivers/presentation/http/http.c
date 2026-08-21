@@ -625,10 +625,8 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
     // X-CSRF-Token header (GET / HEAD / OPTIONS are exempt - not state-changing).
     if (method == HTTP_POST || method == HTTP_PUT || method == HTTP_PATCH || method == HTTP_DELETE)
     {
-        HttpParserV.get_header_args.req = req;
-        HttpParserV.get_header_args.key = "X-CSRF-Token";
-        HttpParser.get_header(protocore_http_parser_span());
-        const char *tok = HttpParserV.text;
+        const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "X-CSRF-Token");
+        const char *tok = http_parser_text;
         CsrfV.verify_args.token = tok;
         Csrf.verify(protocore_csrf_span());
         if (!tok || !CsrfV.valid)
@@ -645,16 +643,12 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
 static void handle_ws_route(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, HttpMethod method,
                             const HttpRoute *r)
 {
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Upgrade";
-    HttpParser.get_header(protocore_http_parser_span());
-    const char *upgrade_hdr = HttpParserV.text;
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Upgrade");
+    const char *upgrade_hdr = http_parser_text;
     // RFC 6455 4.2.1: a valid handshake needs Upgrade: websocket AND a Connection
     // header that includes the "Upgrade" token.
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Connection";
-    HttpParser.get_header(protocore_http_parser_span());
-    HttpConnV.hdr_args.hdr = HttpParserV.text;
+    const char *http_parser_text2 = HttpParser.get_header(protocore_http_parser_span(), req, "Connection");
+    HttpConnV.hdr_args.hdr = http_parser_text2;
     HttpConnV.hdr_args.token = "upgrade";
     HttpConn.has_token(protocore_http_conn_span());
     proto_bool is_ws_upgrade = (method == HTTP_GET) && (upgrade_hdr != NULL) &&
@@ -665,10 +659,8 @@ static void handle_ws_route(uint8_t *restrict work, uint8_t slot_id, HttpReq *re
         return;
     }
     // RFC 6455 §4.2.1: only version 13 is supported; otherwise 426.
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Sec-WebSocket-Version";
-    HttpParser.get_header(protocore_http_parser_span());
-    const char *ws_ver = HttpParserV.text;
+    const char *http_parser_text3 = HttpParser.get_header(protocore_http_parser_span(), req, "Sec-WebSocket-Version");
+    const char *ws_ver = http_parser_text3;
     if (ws_ver == NULL || !str.eq(ws_ver, "13", sizeof("13"), PROTO_FALSE))
     {
         ws_send_version_required(slot_id);
@@ -702,12 +694,9 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     // spoofed header can neither evade a lockout nor frame another address.
     {
         char fbuf[PROTOCORE_IP_STR_MAX];
-        HttpParserV.forwarded_client_args.req = req;
-        HttpParserV.forwarded_client_args.ip_out = fbuf;
-        HttpParserV.forwarded_client_args.ip_cap = sizeof(fbuf);
-        HttpParserV.forwarded_client_args.is_https = NULL;
-        HttpParser.forwarded_client(protocore_http_parser_span());
-        const char *fwd = HttpParserV.ok ? fbuf : NULL;
+        proto_bool http_parser_ok =
+            HttpParser.forwarded_client(protocore_http_parser_span(), req, fbuf, sizeof(fbuf), NULL);
+        const char *fwd = http_parser_ok ? fbuf : NULL;
         protocore_ip eff;
         ForwardedTrust.effective_ip_args.peer = &cip;
         ForwardedTrust.effective_ip_args.fwd_ip_str = fwd;
@@ -900,10 +889,8 @@ void protocore_http_match_and_execute(uint8_t *restrict work)
 #endif
 
     // RFC 7230 §3.3.1: reject Transfer-Encoding
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Transfer-Encoding";
-    HttpParser.get_header(protocore_http_parser_span());
-    if (HttpParserV.text != NULL)
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Transfer-Encoding");
+    if (http_parser_text != NULL)
     {
         send_text(slot_id, 501, PROTOCORE_MIME_TEXT_PLAIN, "Not Implemented");
         return;

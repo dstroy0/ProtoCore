@@ -31,9 +31,7 @@ static void feed(HttpReq *r, const char *s)
 {
     for (size_t i = 0; s[i]; i++)
     {
-        HttpParserV.feed_args.req = r;
-        HttpParserV.feed_args.byte = (uint8_t)s[i];
-        HttpParser.feed(protocore_http_parser_span());
+        HttpParser.feed(protocore_http_parser_span(), r, (uint8_t)s[i]);
     }
 }
 
@@ -41,10 +39,7 @@ void setUp()
 {
     g_total = 0;
     g_chunks = 0;
-    HttpParserV.set_stream_hooks_args.begin = NULL;
-    HttpParserV.set_stream_hooks_args.data = NULL;
-    HttpParserV.set_stream_hooks_args.abort = NULL;
-    HttpParser.set_stream_hooks(protocore_http_parser_span());
+    HttpParser.set_stream_hooks(protocore_http_parser_span(), NULL, NULL, NULL);
 }
 void tearDown()
 {
@@ -52,14 +47,10 @@ void tearDown()
 
 void test_large_body_streams_to_completion()
 {
-    HttpParserV.set_stream_hooks_args.begin = begin_cb;
-    HttpParserV.set_stream_hooks_args.data = data_cb;
-    HttpParserV.set_stream_hooks_args.abort = NULL;
-    HttpParser.set_stream_hooks(protocore_http_parser_span());
+    HttpParser.set_stream_hooks(protocore_http_parser_span(), begin_cb, data_cb, NULL);
     HttpReq r;
     r.slot_id = 0;
-    HttpParserV.reset_args.req = &r;
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParser.reset(protocore_http_parser_span(), &r);
 
     const size_t N = 4096;
     char hdr[128];
@@ -67,9 +58,7 @@ void test_large_body_streams_to_completion()
     feed(&r, hdr);
     for (size_t i = 0; i < N; i++)
     {
-        HttpParserV.feed_args.req = &r;
-        HttpParserV.feed_args.byte = (uint8_t)('A' + (i % 26));
-        HttpParser.feed(protocore_http_parser_span());
+        HttpParser.feed(protocore_http_parser_span(), &r, (uint8_t)('A' + (i % 26)));
     }
 
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, r.parse_state);
@@ -84,14 +73,10 @@ void test_large_body_streams_to_completion()
 
 void test_partial_tail_chunk_is_flushed()
 {
-    HttpParserV.set_stream_hooks_args.begin = begin_cb;
-    HttpParserV.set_stream_hooks_args.data = data_cb;
-    HttpParserV.set_stream_hooks_args.abort = NULL;
-    HttpParser.set_stream_hooks(protocore_http_parser_span());
+    HttpParser.set_stream_hooks(protocore_http_parser_span(), begin_cb, data_cb, NULL);
     HttpReq r;
     r.slot_id = 0;
-    HttpParserV.reset_args.req = &r;
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParser.reset(protocore_http_parser_span(), &r);
 
     const size_t N = 300;
     char hdr[128];
@@ -99,9 +84,7 @@ void test_partial_tail_chunk_is_flushed()
     feed(&r, hdr);
     for (size_t i = 0; i < N; i++)
     {
-        HttpParserV.feed_args.req = &r;
-        HttpParserV.feed_args.byte = (uint8_t)('A' + (i % 26));
-        HttpParser.feed(protocore_http_parser_span());
+        HttpParser.feed(protocore_http_parser_span(), &r, (uint8_t)('A' + (i % 26)));
     }
 
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, r.parse_state);
@@ -111,14 +94,10 @@ void test_partial_tail_chunk_is_flushed()
 
 void test_stream_begin_without_data_sink_tolerates_null()
 {
-    HttpParserV.set_stream_hooks_args.begin = begin_cb;
-    HttpParserV.set_stream_hooks_args.data = NULL;
-    HttpParserV.set_stream_hooks_args.abort = NULL;
-    HttpParser.set_stream_hooks(protocore_http_parser_span());
+    HttpParser.set_stream_hooks(protocore_http_parser_span(), begin_cb, NULL, NULL);
     HttpReq r;
     r.slot_id = 0;
-    HttpParserV.reset_args.req = &r;
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParser.reset(protocore_http_parser_span(), &r);
 
     const size_t N = 300;
     char hdr[128];
@@ -126,9 +105,7 @@ void test_stream_begin_without_data_sink_tolerates_null()
     feed(&r, hdr);
     for (size_t i = 0; i < N; i++)
     {
-        HttpParserV.feed_args.req = &r;
-        HttpParserV.feed_args.byte = (uint8_t)('A' + (i % 26));
-        HttpParser.feed(protocore_http_parser_span());
+        HttpParser.feed(protocore_http_parser_span(), &r, (uint8_t)('A' + (i % 26)));
     }
 
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, r.parse_state);
@@ -140,22 +117,17 @@ void test_no_hooks_large_body_is_413()
 {
     HttpReq r;
     r.slot_id = 0;
-    HttpParserV.reset_args.req = &r;
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParser.reset(protocore_http_parser_span(), &r);
     feed(&r, "POST /update HTTP/1.1\r\nHost: x\r\nContent-Length: 4096\r\n\r\n");
     TEST_ASSERT_EQUAL(PARSE_ENTITY_TOO_LARGE, r.parse_state);
 }
 
 void test_nonmatching_path_not_streamed()
 {
-    HttpParserV.set_stream_hooks_args.begin = begin_cb;
-    HttpParserV.set_stream_hooks_args.data = data_cb;
-    HttpParserV.set_stream_hooks_args.abort = NULL;
-    HttpParser.set_stream_hooks(protocore_http_parser_span());
+    HttpParser.set_stream_hooks(protocore_http_parser_span(), begin_cb, data_cb, NULL);
     HttpReq r;
     r.slot_id = 0;
-    HttpParserV.reset_args.req = &r;
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParser.reset(protocore_http_parser_span(), &r);
     feed(&r, "POST /other HTTP/1.1\r\nHost: x\r\nContent-Length: 4096\r\n\r\n");
     TEST_ASSERT_EQUAL(PARSE_ENTITY_TOO_LARGE, r.parse_state);
     TEST_ASSERT_EQUAL_UINT(0, (unsigned)g_total);
@@ -174,28 +146,18 @@ void test_xff_bracketed_ipv6_overflow()
 
     HttpReq r;
     r.slot_id = 0;
-    HttpParserV.reset_args.req = &r;
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParser.reset(protocore_http_parser_span(), &r);
     feed(&r, req);
 
     char ip[PROTOCORE_IP_STR_MAX];
-    HttpParserV.forwarded_client_args.req = &r;
-    HttpParserV.forwarded_client_args.ip_out = ip;
-    HttpParserV.forwarded_client_args.ip_cap = sizeof(ip);
-    HttpParserV.forwarded_client_args.is_https = NULL;
-    HttpParser.forwarded_client(protocore_http_parser_span());
-    TEST_ASSERT_FALSE(HttpParserV.ok);
+    proto_bool http_parser_ok = HttpParser.forwarded_client(protocore_http_parser_span(), &r, ip, sizeof(ip), NULL);
+    TEST_ASSERT_FALSE(http_parser_ok);
 
     HttpReq r2;
     r2.slot_id = 0;
-    HttpParserV.reset_args.req = &r2;
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParser.reset(protocore_http_parser_span(), &r2);
     feed(&r2, "GET / HTTP/1.1\r\nX-Forwarded-For: [2001:db8::1]\r\n\r\n");
-    HttpParserV.forwarded_client_args.req = &r2;
-    HttpParserV.forwarded_client_args.ip_out = ip;
-    HttpParserV.forwarded_client_args.ip_cap = sizeof(ip);
-    HttpParserV.forwarded_client_args.is_https = NULL;
-    HttpParser.forwarded_client(protocore_http_parser_span());
-    TEST_ASSERT_TRUE(HttpParserV.ok);
+    proto_bool http_parser_ok2 = HttpParser.forwarded_client(protocore_http_parser_span(), &r2, ip, sizeof(ip), NULL);
+    TEST_ASSERT_TRUE(http_parser_ok2);
     TEST_ASSERT_EQUAL_STRING("2001:db8::1", ip);
 }

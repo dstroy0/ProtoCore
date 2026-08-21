@@ -404,10 +404,8 @@ void protocore_auth_challenge(uint8_t *restrict work)
 static proto_bool check_basic(uint8_t slot_id, HttpReq *req, const AuthCred *c)
 {
     (void)slot_id;
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Authorization";
-    HttpParser.get_header(protocore_http_parser_span());
-    const char *auth_hdr = HttpParserV.text;
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Authorization");
+    const char *auth_hdr = http_parser_text;
     if (!auth_hdr || !str.starts(auth_hdr, "Basic ", sizeof("Basic "), PROTO_FALSE))
     {
         return PROTO_FALSE;

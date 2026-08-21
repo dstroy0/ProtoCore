@@ -14,24 +14,13 @@ static proto_bool g_found_a, g_found_b, g_found_missing;
 
 static void h_form(uint8_t slot, HttpReq *req)
 {
-    HttpParserV.get_form_args.req = req;
-    HttpParserV.get_form_args.key = "a";
-    HttpParserV.get_form_args.out = g_a;
-    HttpParserV.get_form_args.out_size = sizeof(g_a);
-    HttpParser.get_form(protocore_http_parser_span());
-    g_found_a = HttpParserV.ok;
-    HttpParserV.get_form_args.req = req;
-    HttpParserV.get_form_args.key = "b";
-    HttpParserV.get_form_args.out = g_b;
-    HttpParserV.get_form_args.out_size = sizeof(g_b);
-    HttpParser.get_form(protocore_http_parser_span());
-    g_found_b = HttpParserV.ok;
-    HttpParserV.get_form_args.req = req;
-    HttpParserV.get_form_args.key = "nope";
-    HttpParserV.get_form_args.out = g_missing;
-    HttpParserV.get_form_args.out_size = sizeof(g_missing);
-    HttpParser.get_form(protocore_http_parser_span());
-    g_found_missing = HttpParserV.ok;
+    proto_bool http_parser_ok = HttpParser.get_form(protocore_http_parser_span(), req, "a", g_a, sizeof(g_a));
+    g_found_a = http_parser_ok;
+    proto_bool http_parser_ok2 = HttpParser.get_form(protocore_http_parser_span(), req, "b", g_b, sizeof(g_b));
+    g_found_b = http_parser_ok2;
+    proto_bool http_parser_ok3 =
+        HttpParser.get_form(protocore_http_parser_span(), req, "nope", g_missing, sizeof(g_missing));
+    g_found_missing = http_parser_ok3;
     send_text(slot, 200, "text/plain", "ok");
 }
 
@@ -39,12 +28,8 @@ static char g_trunc[4];
 static proto_bool g_found_trunc;
 static void h_form_trunc(uint8_t slot, HttpReq *req)
 {
-    HttpParserV.get_form_args.req = req;
-    HttpParserV.get_form_args.key = "a";
-    HttpParserV.get_form_args.out = g_trunc;
-    HttpParserV.get_form_args.out_size = sizeof(g_trunc);
-    HttpParser.get_form(protocore_http_parser_span());
-    g_found_trunc = HttpParserV.ok;
+    proto_bool http_parser_ok = HttpParser.get_form(protocore_http_parser_span(), req, "a", g_trunc, sizeof(g_trunc));
+    g_found_trunc = http_parser_ok;
     send_text(slot, 200, "text/plain", "ok");
 }
 

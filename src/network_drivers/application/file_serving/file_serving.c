@@ -305,8 +305,7 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
     {
         Fs.io.handle = fh;
         Fs.close(protocore_filesystem_span());
-        HttpParserV.reset_args.req = &http_pool[slot_id];
-        HttpParser.reset(protocore_http_parser_span());
+        HttpParser.reset(protocore_http_parser_span(), &http_pool[slot_id]);
         return;
     }
 
@@ -384,14 +383,12 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
 
     // Both reads are staged before the choice: each is a lookup over the request's own headers, so
     // taking both costs a scan and neither can be left in the middle of the conditional.
-    HttpParserV.get_header_args.req = &http_pool[slot_id];
-    HttpParserV.get_header_args.key = "If-None-Match";
-    HttpParser.get_header(protocore_http_parser_span());
-    const char *inm = HttpParserV.text;
-    HttpParserV.get_header_args.req = &http_pool[slot_id];
-    HttpParserV.get_header_args.key = "If-Modified-Since";
-    HttpParser.get_header(protocore_http_parser_span());
-    const char *ims = HttpParserV.text;
+    const char *http_parser_text =
+        HttpParser.get_header(protocore_http_parser_span(), &http_pool[slot_id], "If-None-Match");
+    const char *inm = http_parser_text;
+    const char *http_parser_text2 =
+        HttpParser.get_header(protocore_http_parser_span(), &http_pool[slot_id], "If-Modified-Since");
+    const char *ims = http_parser_text2;
     proto_bool not_modified = inm ? inm_matches(inm, etag) : http_not_modified_since(mtime, ims);
     if (not_modified)
     {
@@ -441,10 +438,8 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
     accept_ranges = "Accept-Ranges: bytes\r\n"; // advertise range support on every file response
     size_t r_start = 0;
     size_t r_end = 0;
-    HttpParserV.get_header_args.req = &http_pool[slot_id];
-    HttpParserV.get_header_args.key = "Range";
-    HttpParser.get_header(protocore_http_parser_span());
-    int http_range_n = HttpRange.http_parse_byte_range(work, HttpParserV.text, file_size, &r_start, &r_end);
+    const char *http_parser_text3 = HttpParser.get_header(protocore_http_parser_span(), &http_pool[slot_id], "Range");
+    int http_range_n = HttpRange.http_parse_byte_range(work, http_parser_text3, file_size, &r_start, &r_end);
     int rr = http_range_n;
     if (rr < 0)
     {
@@ -782,10 +777,8 @@ void protocore_file_serving_serve_static_request(uint8_t *restrict work)
 
     // Pre-compressed variant: serve <path>.gz if the client accepts gzip and it
     // exists. Content-Type stays that of the original (uncompressed) resource.
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Accept-Encoding";
-    HttpParser.get_header(protocore_http_parser_span());
-    const char *ae = HttpParserV.text;
+    const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Accept-Encoding");
+    const char *ae = http_parser_text;
     if (ae && str.has(ae, MAX_VAL_LEN, "gzip", sizeof("gzip"), PROTO_FALSE))
     {
         char gz[260];
