@@ -51,7 +51,13 @@ def run(cmd, **kw):
 def configure(cc):
     os.makedirs(BUILD, exist_ok=True)
     args = [
-        "cmake", "-S", os.path.join(ROOT, "test"), "-B", BUILD, "-G", "Ninja",
+        "cmake",
+        "-S",
+        os.path.join(ROOT, "test"),
+        "-B",
+        BUILD,
+        "-G",
+        "Ninja",
         "-DCMAKE_BUILD_TYPE=Debug",
         # -O0 so a line maps to the statement that wrote it. At -O1 the optimiser folds and moves
         # code, and a report against folded lines says a branch was never taken when it no longer
@@ -81,9 +87,9 @@ def gcovr_env(env):
         return False
     out = os.path.join(REPORTS, "%s.json" % env)
     r = run(
-        ["gcovr", "--root", ".", "--filter", "src/.*", "--gcov-ignore-parse-errors",
-         "--json", out, d],
-        capture_output=True, text=True,
+        ["gcovr", "--root", ".", "--filter", "src/.*", "--gcov-ignore-parse-errors", "--json", out, d],
+        capture_output=True,
+        text=True,
     )
     return r.returncode == 0 and os.path.exists(out)
 
@@ -105,8 +111,7 @@ def main():
         if run(["cmake", "--build", BUILD, "-j", a.jobs, "--", "-k", "0"]).returncode != 0:
             print("build reported failures; measuring what did build", file=sys.stderr)
         # Tests may fail; their counters are still written and still worth reporting.
-        run(["ctest", "--test-dir", BUILD, "-j", a.jobs, "--output-on-failure"],
-            stdout=subprocess.DEVNULL)
+        run(["ctest", "--test-dir", BUILD, "-j", a.jobs, "--output-on-failure"], stdout=subprocess.DEVNULL)
 
     os.makedirs(REPORTS, exist_ok=True)
     for f in glob.glob(os.path.join(REPORTS, "*.json")):
@@ -137,9 +142,19 @@ def main():
     # native_sha256_kat and native_sha256_kat_hw are the same suite over the two implementations. So
     # the union sees one name at two line numbers and the default merge mode refuses it. `separate`
     # keeps them apart, which is what they are - two functions, not one measured twice.
-    r = run(["gcovr", "--add-tracefile", os.path.join(REPORTS, "*.json"),
-             "--merge-mode-functions", "separate", "--sonarqube", OUT],
-            capture_output=True, text=True)
+    r = run(
+        [
+            "gcovr",
+            "--add-tracefile",
+            os.path.join(REPORTS, "*.json"),
+            "--merge-mode-functions",
+            "separate",
+            "--sonarqube",
+            OUT,
+        ],
+        capture_output=True,
+        text=True,
+    )
     if r.returncode != 0:
         sys.exit("union failed: %s" % r.stderr.strip()[:400])
 

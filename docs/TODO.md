@@ -850,10 +850,10 @@ shipped work:
       (per-IP) throttling is the connection-flood item below.
 
 - [x] **Software crypto paths are not constant-time.** _(done - asserted out of
-      firmware)_ The native Montgomery cluster (`src/crypto/asymmetric/bignum.c`: `bn_init`,
+      firmware)_ The native Montgomery cluster (`src/crypto/asymmetric/bignum/bignum.c`: `bn_init`,
       `bn_monpro`, `bn_shl1`, `bn_sub_inplace`, `g14_R1/R2`) is now under
       `#ifndef ARDUINO`, so it is not compiled into firmware at all; the software
-      AES (`src/crypto/cipher/aes256ctr.c`) and native RSA modexp (`ssh_rsa.c`,
+      AES (`src/crypto/cipher/aes256ctr/aes256ctr.c`) and native RSA modexp (`ssh_rsa.c`,
       `bn_reduce_full`/`bn_modexp_*`) already live in the `#else` of an
       `#ifdef ARDUINO`. On ESP32 only the HW/mbedTLS paths compile and run.
       Hardening the software paths to constant-time was deliberately skipped
@@ -1064,7 +1064,7 @@ shipped work:
       now backed by `mbedtls_sha256_context` on Arduino
       (`mbedtls_sha256_starts/update/finish`, v2/v3-guarded), so the HW SHA engine
       accelerates per-packet HMAC **and** KEX hashing. The software FIPS-180-4 path
-      is now compiled only on native (`#ifndef ARDUINO`). The `src/crypto/mac/hmac_sha256.c`
+      is now compiled only on native (`#ifndef ARDUINO`). The `src/crypto/mac/hmac_sha256/hmac_sha256.c`
       HW-acceleration comment is now accurate. Native software KATs still pass;
       `examples/SSHCryptoSelfTest` validates the HW path on-device.
 

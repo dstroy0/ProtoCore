@@ -18,8 +18,7 @@ Usage:
     python tools/dev_env/strip_comments.py PATH --go            # rewrite in place
 
     --ext .c,.h     which suffixes to visit (default .c,.h)
-    --keep-header   keep the leading copyright / SPDX block (default on)
-    --no-header     strip that block too
+    --no-header     strip the leading copyright / SPDX block too; it is kept by default
     --exclude PAT   skip any path containing PAT (repeatable)
 
 A file is only rewritten when the result differs, so a second run is a no-op.
@@ -70,11 +69,39 @@ def strip(text):
 
 
 def header_of(text):
-    """The leading copyright / SPDX lines, if the file opens with them."""
+    """The leading copyright / SPDX lines, if the file opens with them.
+
+    Both comment forms. This matched `//` only, and every tree that writes its licence as a `/* */`
+    block lost the block on every file the tool touched with --go. A tool whose stated contract is
+    preserving the licence, deleting the licence, is the defect worth the extra branch. ProtoCore's
+    own src/ is `//` throughout - 786 of 786 files carrying a copyright line - so this changes
+    nothing here and covers the tree that is one `/*` away from losing its notice.
+    """
+    lines = text.split("\n")
     head = []
-    for line in text.split("\n"):
-        s = line.strip()
-        if s.startswith("//") and ("Copyright" in s or "SPDX" in s or s == "//"):
+
+    # The block form, which has to be taken whole: the copyright and the SPDX identifier sit on
+    # continuation lines inside one comment, so matching line by line would keep the opener and drop
+    # the identifier.
+    first = lines[0].strip() if lines else ""
+    if first.startswith("/*"):
+        for line in lines:
+            head.append(line)
+            if "*/" in line:
+                break
+        else:
+            # An opener with no close is not a header, it is a file this tool does not understand.
+            # Keeping nothing here would delete the whole file.
+            return []
+        joined = "\n".join(head)
+        return head if ("Copyright" in joined or "SPDX" in joined) else []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("//") and ("Copyright" in stripped or "SPDX" in stripped or stripped == "//"):
+            head.append(line)
+            continue
+        if stripped.startswith("#") and ("Copyright" in stripped or "SPDX" in stripped):
             head.append(line)
             continue
         break

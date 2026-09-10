@@ -30,7 +30,7 @@ C11, which every compiler in that list ships. Three of its features are load-bea
 | Sizing / capacity bound    | `PROTOCORE_MAX_*`, flat                               | `PROTOCORE_MAX_CONNS`, `PROTOCORE_MAX_HANDLERS`       |
 | Enum member                | `PROTOCORE_UPPER_SNAKE`, keeps its descriptive prefix | `PROTOCORE_IP_V4`                                     |
 | Include guard              | `PROTOCORE_<FILE>_H`, max 31                          | `PROTOCORE_SHA256_H`                                  |
-| File and directory         | `snake_case`                                          | `src/crypto/mac/hmac_sha256.h`                        |
+| File and directory         | `snake_case`                                          | `src/crypto/mac/hmac_sha256/hmac_sha256.h`            |
 | Test env / suite           | `native_<topic>` / `test_<topic>`                     | `native_ip`, `test_ip`                                |
 
 No `namespace`. No `using namespace`. The table is the rule; the sections below are the reasoning.
@@ -149,7 +149,7 @@ A rule that cannot be applied uniformly is not a rule.
 ## 4. Guards, files, and test targets
 
 **Include guards are `PROTOCORE_<FILE>_H`**, built from the file's own name:
-`src/crypto/hash/sha256.h` guards with `PROTOCORE_SHA256_H`.
+`src/crypto/hash/sha256/sha256.h` guards with `PROTOCORE_SHA256_H`.
 
 A guard takes the full library name rather than the `PROTOCORE_` prefix, because it is the one macro that
 has to be unique across _someone else's_ build: `PROTOCORE_HTTP_PARSER_H` is a plausible name for another

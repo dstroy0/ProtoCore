@@ -67,6 +67,6 @@ IP: 192.168.1.42
 ## Annotated source
 
 The complete sketch is [IKEv2.ino](IKEv2.ino). The codec itself is in
-[src/services/security/ikev2/ikev2.h](../../../src/services/security/ikev2/ikev2.h); the header, payload chain, and the
+[src/services/security/ikev2/ikev2/ikev2.h](../../../src/services/security/ikev2/ikev2/ikev2.h); the header, payload chain, and the
 SA -> proposal -> transform tree (including the key-length attribute) are verified against RFC 7296 +
 the IANA registry and cross-checked byte-for-byte against scapy's IKEv2 codec.

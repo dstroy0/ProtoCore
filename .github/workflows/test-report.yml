@@ -193,8 +193,15 @@ jobs:
             python3 -m tools.ci_tooling.generate.gen_dep_graph --merge --out test/dep_graph.json --envs ${{ steps.sel.outputs.envs }}
           fi
 
+      # Every event that regenerates the artifacts also commits them, which is why this excludes
+      # pull_request rather than naming push. Gating on push alone meant the weekly cron and the
+      # workflow_dispatch 'full' input each ran the whole matrix, wrote test/coverage.xml, and threw
+      # it away: the two mechanisms that exist to recover a stale report were the two that could not
+      # write one. A source edit then left the committed coverage describing lines that had moved,
+      # ci.py check failed coverage_xml on every push, and the only path that could have fixed it was
+      # the one already blocked. A PR run still must not push to main.
       - name: Commit updated report + coverage
-        if: ${{ github.event_name == 'push' && steps.sel.outputs.mode != 'none' }}
+        if: ${{ github.event_name != 'pull_request' && steps.sel.outputs.mode != 'none' }}
         env:
           CI_SIGNING_KEY: ${{ secrets.CI_SIGNING_KEY }}
         run: |

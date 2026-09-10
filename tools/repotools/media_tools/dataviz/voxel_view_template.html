@@ -1,0 +1,2129 @@
+<title>SHA-256 Voxel Field</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root {
+    --ground:  #F3F5F8;
+    --panel:   #FFFFFF;
+    --sunk:    #E9EDF2;
+    --ink:     #161A21;
+    --muted:   #58616F;
+    --rule:    #DBE1E9;
+    --cool:    #2F7FB5;
+    --warm:    #D2552A;
+    --signal:  #1E9E71;
+    --sky:     #E7EBF1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1116; --panel: #161B23; --sunk: #0A0D12; --ink: #DCE3ED;
+      --muted: #78849A; --rule: #262E3B; --cool: #4FA8DE; --warm: #E5703C;
+      --signal: #63D2A4; --sky: #0A0D12;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1116; --panel: #161B23; --sunk: #0A0D12; --ink: #DCE3ED;
+    --muted: #78849A; --rule: #262E3B; --cool: #4FA8DE; --warm: #E5703C;
+    --signal: #63D2A4; --sky: #0A0D12;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 14px; line-height: 1.55;
+  }
+  /* Not centred. A centred column puts the controls wherever the window width happens to leave
+     them, which on a wide monitor is a long way in from the edge. The sidecar is pinned 0.2in from
+     the left and the stage takes whatever is left, so the controls sit in the same place on every
+     screen and the view window gets the rest. */
+  .wrap { max-width: none; margin: 0; padding: 0.2in; height: 100%; }
+
+  /* No heading band and no footer: the object gets the whole page, and everything those used to
+     say is behind the question mark in the corner. */
+  html, body { height: 100%; }
+
+  /* One stage, full width, with the controls floating over it in a panel the user can move.
+     Thirty-two shapes and nine transforms as flat lists made a column taller than the picture it
+     was controlling, so they are dropdowns now and the column is gone. */
+  .console { display: block; }
+
+  .panel {
+    position: absolute; left: 14px; top: 14px; z-index: 3; width: 234px;
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 5px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+  }
+  .grip {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 6px 8px; cursor: grab; user-select: none; border-bottom: 1px solid var(--rule);
+    font-family: "IBM Plex Mono", monospace; font-size: 9px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .grip.dragging { cursor: grabbing; }
+  .grip button {
+    font: inherit; font-size: 12px; line-height: 1; cursor: pointer; padding: 0 5px;
+    border: 1px solid var(--rule); background: var(--sunk); color: var(--muted); border-radius: 3px;
+  }
+  /* Never a horizontal scrollbar. The box is a fixed width and everything in it is told it may be
+     narrower than its content, so a long option name shortens with an ellipsis instead of pushing
+     a second scrollbar into a box this small. */
+  .panel-body {
+    padding: 8px; display: grid; gap: 6px;
+    max-height: calc(var(--stage-h, 560px) - 80px); overflow-y: auto; overflow-x: hidden;
+    overscroll-behavior: contain;
+    scrollbar-width: thin; scrollbar-color: var(--rule) transparent;
+  }
+  .panel-body > * { min-width: 0; }
+  .pick > * { min-width: 0; }
+  .pick select, .mark select { text-overflow: ellipsis; }
+  .pick label { flex: 0 0 auto; }
+
+  .gripbuttons { display: flex; gap: 4px; }
+
+  /* The whole bottom edge is the resize grip, not a corner. */
+  .edge {
+    height: 7px; cursor: ns-resize; border-top: 1px solid transparent;
+    border-radius: 0 0 5px 5px;
+  }
+  .edge:hover, .edge.dragging { border-top-color: var(--rule); background: var(--sunk); }
+  .panel.folded .edge { display: none; }
+  .panel-body::-webkit-scrollbar { width: 9px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .panel-body::-webkit-scrollbar-thumb {
+    background: var(--rule); border-radius: 999px; border: 2px solid var(--panel);
+  }
+  .panel-body::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  .panel.folded .panel-body { display: none; }
+
+  .pick { display: flex; align-items: center; gap: 6px; }
+  .pick label {
+    font-family: "IBM Plex Mono", monospace; font-size: 9px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--muted); min-width: 5.4em;
+  }
+  .pick select {
+    flex: 1; min-width: 0; font: inherit; font-size: 11px; padding: 2px 4px;
+    background: var(--sunk); color: var(--ink); border: 1px solid var(--rule); border-radius: 3px;
+  }
+  .pick input[type=range] { flex: 1; min-width: 0; accent-color: var(--signal); }
+  .pick output {
+    font-family: "IBM Plex Mono", monospace; font-size: 10px; font-variant-numeric: tabular-nums;
+    min-width: 4ch; text-align: right; color: var(--muted);
+  }
+  .pick button {
+    font: inherit; font-size: 10px; line-height: 1; cursor: pointer; padding: 4px 7px;
+    border: 1px solid var(--rule); background: var(--sunk); color: var(--muted); border-radius: 999px;
+  }
+  .pick button:hover { color: var(--ink); }
+  .pick input[type=color] {
+    width: 26px; height: 20px; padding: 0; border: 1px solid var(--rule); border-radius: 3px;
+    background: none; cursor: pointer;
+  }
+  .panel details > summary {
+    cursor: pointer; font-family: "IBM Plex Mono", monospace; font-size: 9px;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--muted); padding: 3px 0;
+  }
+  .tip { margin: 2px 0 0; font-size: 6.25px; line-height: 1.5; color: var(--muted); }
+  .credit {
+    display: block; margin-top: 4px; text-align: right; text-decoration: none;
+    font-family: "IBM Plex Mono", monospace; font-size: 7.5px; letter-spacing: .06em;
+    color: var(--muted); opacity: .5;
+  }
+  .credit:hover { opacity: 1; color: var(--ink); text-decoration: underline; }
+  .tickrow {
+    display: flex; align-items: center; gap: 5px; cursor: pointer;
+    font-family: "IBM Plex Mono", monospace; font-size: 9px; color: var(--muted); padding: 1px 0;
+  }
+  .tickrow input { accent-color: var(--signal); margin: 0; }
+
+  .mark { display: flex; align-items: center; gap: 4px; margin-top: 5px; }
+  .mark input[type=number] {
+    width: 52px; min-width: 0; font: inherit; font-size: 10px; padding: 2px 3px;
+    background: var(--sunk); color: var(--ink); border: 1px solid var(--rule); border-radius: 3px;
+  }
+  .mark select {
+    flex: 1; min-width: 0; font: inherit; font-size: 10px; padding: 2px 3px;
+    background: var(--sunk); color: var(--ink); border: 1px solid var(--rule); border-radius: 3px;
+  }
+  .mark input[type=color] {
+    width: 24px; height: 20px; padding: 0; border: 1px solid var(--rule); border-radius: 3px;
+    background: none; cursor: pointer;
+  }
+  .mark button {
+    font: inherit; font-size: 10px; line-height: 1; cursor: pointer; padding: 3px 6px;
+    border: 1px solid var(--rule); background: var(--sunk); color: var(--muted); border-radius: 3px;
+  }
+
+  @media (max-width: 840px) {
+    .panel { position: static; width: auto; margin: 0 0 12px; box-shadow: none; }
+    .panel-body { max-height: none; }
+  }
+
+  fieldset {
+    border: 1px solid var(--rule); border-radius: 3px; padding: 13px 13px 15px; margin: 0 0 16px;
+    background: var(--panel);
+  }
+  legend {
+    font-family: "IBM Plex Mono", monospace; font-size: 9.5px; letter-spacing: .15em;
+    text-transform: uppercase; color: var(--muted); padding: 0 6px;
+  }
+  .choice {
+    display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 8px;
+    border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit;
+    font-size: 12.5px; text-align: left; padding: 7px 8px; border-radius: 2px; width: 100%;
+  }
+  .choice span { overflow-wrap: anywhere; }
+  .choice:hover { background: var(--sunk); color: var(--ink); }
+  .choice[aria-pressed="true"] { background: var(--sunk); color: var(--ink); font-weight: 600; }
+  .choice[aria-pressed="true"] .dim { color: var(--signal); }
+  .choice .dim { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; font-weight: 400; }
+  .choice:focus-visible { outline: 2px solid var(--signal); outline-offset: 1px; }
+
+  .row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .row label {
+    font-family: "IBM Plex Mono", monospace; font-size: 9.5px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); min-width: 5.5em;
+  }
+  .row input[type=range] { flex: 1; min-width: 0; accent-color: var(--signal); }
+  .stepper { justify-content: space-between; gap: 6px; }
+  .stepper button {
+    font: inherit; font-size: 11px; line-height: 1; cursor: pointer; padding: 4px 9px;
+    border: 1px solid var(--rule); background: var(--panel); color: var(--muted);
+    border-radius: 999px;
+  }
+  .stepper button:hover { background: var(--sunk); color: var(--ink); }
+  .stepper button:focus-visible { outline: 2px solid var(--signal); outline-offset: 1px; }
+  .stepper output {
+    font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--muted);
+    flex: 1; text-align: center; min-width: 0;
+  }
+  .row output {
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; font-variant-numeric: tabular-nums;
+    min-width: 3.5ch; text-align: right;
+  }
+
+  /* Drag the bottom edge to resize. The height lives in a custom property because the sidecar is
+     capped to the same number: whatever the view window becomes, the controls beside it never grow
+     past it, and the footer below is pushed down rather than squeezed up. */
+  .stage {
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 3px; overflow: hidden;
+    position: relative; height: var(--stage-h, calc(100vh - 0.4in)); min-height: 220px;
+    resize: vertical;
+  }
+  #frame { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+  #frame.dragging { cursor: grabbing; }
+  .hint {
+    position: absolute; left: 50%; transform: translateX(-50%); bottom: 12px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10px; color: var(--muted); pointer-events: none; letter-spacing: .04em;
+    opacity: .5;
+  }
+  /* The readouts move too. They are the thing most likely to sit exactly where the object needs to
+     be, and unlike the panels they have no frame to grab, so the whole box is the handle. */
+  .axes {
+    position: absolute; right: 14px; top: 40px; z-index: 3;
+    font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--muted);
+    text-align: right; line-height: 1.7; cursor: grab; user-select: none;
+    padding: 4px 6px; border-radius: 4px; border: 1px solid transparent;
+  }
+  .axes:hover { border-color: var(--rule); background: var(--panel); }
+  .axes.dragging { cursor: grabbing; border-color: var(--rule); background: var(--panel); }
+  .axes b { color: var(--ink); font-weight: 600; }
+  #axes-lines:empty { display: none; }
+  /* The histogram is a control, not part of the handle: a drag that starts on it selects values
+     rather than moving the box. */
+  #hist {
+    display: block; margin-top: 6px; cursor: crosshair; border-radius: 3px;
+    background: var(--sunk); width: 232px; height: 52px;
+  }
+  #hist-out {
+    margin-top: 4px; font-size: 9px; text-align: left; color: var(--muted); min-height: 1.6em;
+  }
+  #hist-out b { color: var(--ink); }
+  #hist-out .none { opacity: .6; }
+
+  /* The color legend is its own panel in the bottom right, not a fold inside the controls. */
+  .colorpanel { left: auto; top: auto; right: 14px; bottom: 14px; width: 246px; }
+  .ramp-strip { height: 10px; border-radius: 999px; border: 1px solid var(--rule); }
+  .ramp-ends {
+    display: flex; justify-content: space-between; margin-top: 3px;
+    font-family: "IBM Plex Mono", monospace; font-size: 8.5px; color: var(--muted);
+  }
+  .ramp-ends span {
+    cursor: text; padding: 0 2px; border-radius: 2px; outline: none;
+  }
+  .ramp-ends span:hover { background: var(--sunk); }
+  .ramp-ends span:focus { background: var(--sunk); color: var(--ink); }
+
+  /* A question mark in the corner, and a tile only when asked for. The description of what is being
+     looked at is worth having and is not worth a paragraph competing with the object, so it stays
+     folded away and the picture keeps the attention. */
+  /* The question mark and its tile are one hover target, so moving the pointer from the button onto
+     the tile does not close it on the way. The tile is fully opaque and sits above everything: the
+     previous version inherited the button's dimming and read as invisible. */
+  .infowrap { position: absolute; right: 12px; top: 12px; z-index: 6; }
+  .info {
+    display: block; width: 22px; height: 22px; padding: 0; line-height: 1; cursor: help;
+    font: inherit; font-size: 12px; border-radius: 999px;
+    border: 1px solid var(--rule); background: var(--panel); color: var(--muted);
+    opacity: .8;
+  }
+  .info:hover { opacity: 1; color: var(--ink); }
+  .info:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+  .info-tile {
+    position: absolute; right: 0; top: 28px; width: 320px;
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 5px; padding: 11px 13px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .28);
+    color: var(--muted); font-size: 10.5px; line-height: 1.65;
+    opacity: 0; visibility: hidden; transition: opacity .12s ease;
+  }
+  .infowrap:hover .info-tile,
+  .infowrap:focus-within .info-tile { opacity: 1; visibility: visible; }
+  #info-title {
+    font-family: "IBM Plex Mono", monospace; font-size: 9px; font-weight: 600;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--ink); margin: 0 0 6px;
+  }
+  #info-body { margin: 0; }
+  code {
+    font-family: "IBM Plex Mono", monospace; font-size: .9em; background: var(--sunk);
+    padding: .1em .34em; border-radius: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <div class="console">
+    <div class="stage">
+      <canvas id="frame"></canvas>
+      <div class="axes" id="axes">
+        <div id="axes-lines"></div>
+        <canvas id="hist" width="232" height="52" title="drag across to select a range"></canvas>
+        <div id="hist-out"></div>
+      </div>
+      <p class="hint">drag to turn &middot; wheel to zoom &middot; shift-drag to pan</p>
+
+      <div class="panel colorpanel" id="color-panel">
+        <div class="grip" id="color-grip">
+          <span>Color</span>
+          <span class="gripbuttons">
+            <button type="button" id="color-full" title="full size">&#9723;</button>
+            <button type="button" id="color-fold-btn" title="fold">&minus;</button>
+          </span>
+        </div>
+        <div class="panel-body">
+          <div class="ramp-strip" id="ramp-strip"></div>
+          <div class="ramp-ends" title="click to name these however you like">
+            <span id="ramp-low" contenteditable="true" spellcheck="false"></span>
+            <span id="ramp-mid" contenteditable="true" spellcheck="false"></span>
+            <span id="ramp-high" contenteditable="true" spellcheck="false"></span>
+          </div>
+          <div id="marks"></div>
+
+          <details id="color-settings">
+            <summary>Settings</summary>
+            <div class="pick">
+              <label for="low">Low</label>
+              <input type="color" id="low">
+              <label for="mid">Zero</label>
+              <input type="color" id="mid">
+              <label for="high">High</label>
+              <input type="color" id="high">
+            </div>
+            <div class="pick">
+              <label for="contrast">Contrast</label>
+              <input type="range" id="contrast" min="10" max="200" value="60" step="1">
+              <output id="contrast-out">0.60</output>
+            </div>
+            <div class="pick">
+              <button type="button" id="mark-add">Add a mark</button>
+              <button type="button" id="gradient-reset">Reset ramp</button>
+            </div>
+          </details>
+        </div>
+        <div class="edge" id="color-edge" title="drag to resize"></div>
+      </div>
+
+      <div class="infowrap">
+        <button type="button" class="info" id="info-open" title="what is this?">?</button>
+        <div class="info-tile" id="info-tile">
+          <h2 id="info-title"></h2>
+          <p id="info-body"></p>
+        </div>
+      </div>
+
+      <div class="panel" id="panel">
+        <div class="grip" id="grip">
+          <span>Controls</span>
+          <span class="gripbuttons">
+            <button type="button" id="panel-full" title="full size">&#9723;</button>
+            <button type="button" id="panel-fold" title="fold">&minus;</button>
+          </span>
+        </div>
+        <div class="panel-body" id="panel-body">
+          <div class="pick">
+            <label for="pick-step">Step</label>
+            <select id="pick-step"></select>
+            <button type="button" id="step-back" title="previous step">&#9664;</button>
+            <button type="button" id="step-next" title="next step">&#9654;</button>
+          </div>
+          <div class="pick">
+            <label for="pick-shape">Represent as</label>
+            <select id="pick-shape"></select>
+          </div>
+          <div class="pick">
+            <label for="pick-transform">Transform</label>
+            <select id="pick-transform"></select>
+          </div>
+          <div class="pick">
+            <label for="pick-overlay">Overlay</label>
+            <select id="pick-overlay"></select>
+          </div>
+
+          <div class="pick">
+            <label for="order">Order</label>
+            <input type="range" id="order" min="3" max="4096" value="6" step="1">
+            <output id="order-out">6</output>
+          </div>
+          <div class="pick">
+            <label for="wrap">Wrap</label>
+            <input type="range" id="wrap" min="1" max="32" value="1" step="1">
+            <output id="wrap-out">1</output>
+          </div>
+          <div class="pick">
+            <label for="height">Height</label>
+            <input type="range" id="height" min="1" max="60" value="22" step="1">
+            <output id="height-out">22</output>
+          </div>
+          <div class="pick">
+            <label for="floor">Floor</label>
+            <input type="range" id="floor" min="0" max="90" value="0" step="1">
+            <output id="floor-out">0</output>
+          </div>
+
+          <details id="look-fold">
+            <summary>Appearance</summary>
+            <div class="pick">
+              <label for="bg">Ground</label>
+              <input type="color" id="bg">
+              <button type="button" id="bg-reset">Reset</button>
+            </div>
+            <div class="pick">
+              <label for="op-panel">Controls</label>
+              <input type="range" id="op-panel" min="15" max="100" value="100" step="1">
+              <output id="op-panel-out">100</output>
+            </div>
+            <div class="pick">
+              <label for="op-color">Color box</label>
+              <input type="range" id="op-color" min="15" max="100" value="100" step="1">
+              <output id="op-color-out">100</output>
+            </div>
+            <div class="pick">
+              <label for="op-axes">Readouts</label>
+              <input type="range" id="op-axes" min="15" max="100" value="100" step="1">
+              <output id="op-axes-out">100</output>
+            </div>
+          </details>
+
+          <details id="metric-fold">
+            <summary>Readouts</summary>
+            <div id="metrics"></div>
+          </details>
+
+          <p id="shape-note" class="tip"></p>
+          <a class="credit" href="https://github.com/dstroy0/" target="_blank"
+             rel="noopener">&copy; dstroy0</a>
+        </div>
+        <div class="edge" id="panel-edge" title="drag to resize"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var DATA = /*VOXEL_DATA*/null;
+  if (!DATA || typeof THREE === "undefined") { return; }
+
+  // The fields come from the data rather than being written here, so this page renders any
+  // parametric table: each field is a set of series measured over one common depth axis. What was
+  // once four SHA-256 projections is now whatever the generator was pointed at.
+  var VIEWS = DATA.fields;
+
+  function say(id, text) {
+    var node = document.getElementById(id);
+    if (!node) { return; }
+    node.textContent = text || "";
+    if (text) { node.hidden = false; }
+  }
+
+  // There is no heading band and no footer. Everything they used to hold - what this is, what it
+  // is drawn from, and how to read it - lives behind the question mark in the corner, because the
+  // object is what the page is for and prose beside it is prose competing with it.
+  say("depth-name", DATA.depthLabel);
+  say("value-name", DATA.valueLabel);
+  // The tile carries what the removed heading and footer used to say, in one place, folded away.
+  document.getElementById("info-title").textContent = DATA.title || "Parametric field";
+  document.getElementById("info-body").textContent =
+    [DATA.blurb, DATA.noteTitle ? DATA.noteTitle + "." : "", DATA.note]
+      .filter(function (one) { return one; }).join(" ");
+  document.title = DATA.title || "Parametric field";
+
+  // The tile opens on hover, which is CSS. Nothing to wire.
+
+  // Each shape is an embedding of the same measured grid, and the choice is a test rather than a
+  // decoration. Residue is genuinely periodic mod 32, so the cylinder is the honest map for it;
+  // the torus imposes a periodicity on the round axis that does not exist. Structure that shows
+  // under one embedding and not another belongs to the map, not to the field, so agreement across
+  // shapes is the invariant content - the same null-by-subtraction every other reading here uses.
+  //
+  // Each supplies a surface point and its outward normal for (u, v) in the unit square, where u
+  // runs along the rounds and v along the cut. The voxel is extruded along the normal.
+  var TAU = 6.283185307179586;
+
+  // Order is one control shared by every shape that has a countable feature: sides for the
+  // polygonal solids, petals for the superformula ones, winding for the knots, curvature for the
+  // bends. It goes to 4096, where a polygon is a circle to within a pixel and the interesting
+  // reading is the approach rather than the limit.
+  var orderAt = 6;
+  function order() { return orderAt; }
+
+  // Shapes whose extent grows with the count, rather than only their detail, are capped. A prism
+  // at 4096 sides is still a prism the same size; a helicoid at 4096 turns is 23,591 units tall and
+  // has left the camera behind. Measured, not guessed: the sweep that found it is in the scratch
+  // harness that checks every shape at orders 3 through 4096.
+  function winding() { return Math.max(1, Math.min(48, orderAt / 6)); }
+
+  // The grid this shape is currently carrying, so the space-filling layouts can recover a cell's
+  // integer index from the (u, v) they are handed.
+  var GRID = { span: 1, depth: 1 };
+
+  /** Gielis's superformula: one equation whose parameters give circles, polygons, stars and
+      flowers, and whose spherical product with itself gives the solids. Gielis 2003. */
+  function superRadius(angle, m, n1, n2, n3) {
+    var t = m * angle / 4;
+    var one = Math.pow(Math.abs(Math.cos(t)), n2);
+    var two = Math.pow(Math.abs(Math.sin(t)), n3);
+    var r = Math.pow(one + two, -1 / n1);
+    return isFinite(r) ? r : 0;
+  }
+
+  function superAt(u, v, m1, a1, b1, c1, m2, a2, b2, c2, scale) {
+    var theta = (v - 0.5) * TAU;
+    var phi = (u - 0.5) * Math.PI;
+    var r1 = superRadius(theta, m1, a1, b1, c1);
+    var r2 = superRadius(phi, m2, a2, b2, c2);
+    return [scale * r1 * Math.cos(theta) * r2 * Math.cos(phi),
+            scale * r2 * Math.sin(phi),
+            scale * r1 * Math.sin(theta) * r2 * Math.cos(phi)];
+  }
+
+  /** Hilbert's curve, index to point. Its locality is the reason binary files are read this way:
+      bytes near each other in the file stay near each other on the surface. Cortesi 2011. */
+  function hilbertAt(side, index) {
+    var x = 0, y = 0, rx, ry, t = index, s;
+    for (s = 1; s < side; s *= 2) {
+      rx = 1 & Math.floor(t / 2);
+      ry = 1 & (t ^ rx);
+      if (ry === 0) {
+        if (rx === 1) { x = s - 1 - x; y = s - 1 - y; }
+        var swap = x; x = y; y = swap;
+      }
+      x += s * rx;
+      y += s * ry;
+      t = Math.floor(t / 4);
+    }
+    return [x, y];
+  }
+
+  /** Morton's order, the cheap alternative: interleave the bits. Kept beside Hilbert because the
+      difference between them on the same data is exactly the value of locality. */
+  function mortonAt(index) {
+    var x = 0, y = 0, bit = 0, t = index;
+    while (t > 0) {
+      x |= (t & 1) << bit;
+      t = Math.floor(t / 2);
+      y |= (t & 1) << bit;
+      t = Math.floor(t / 2);
+      bit += 1;
+    }
+    return [x, y];
+  }
+
+  function cellIndex(u, v) {
+    var col = Math.round(u * Math.max(1, GRID.depth - 1));
+    var row = Math.round(v * Math.max(1, GRID.span - 1));
+    return row * GRID.depth + col;
+  }
+
+  function curveSide() {
+    var total = GRID.span * GRID.depth;
+    var side = 1;
+    while (side * side < total) { side *= 2; }
+    return side;
+  }
+
+  /** Wraps a position-only function into the {p, n} the renderer wants, taking the normal from the
+      surface itself by difference. Every shape below is then three lines instead of ten, and none
+      of them can disagree with its own normal. */
+  function surface(f) {
+    return function (u, v) {
+      var step = 0.0015;
+      var here = f(u, v);
+      // At the far edge there is nothing ahead to difference against, so the step is taken
+      // backward and the result negated. Without the negation the tangent reverses, the cross
+      // product with it, and the last row of every field is lit and extruded upside down while the
+      // other rows are not - which reads as an inverted row of data rather than as a normal.
+      var backU = u + step > 1;
+      var backV = v + step > 1;
+      var alongU = f(backU ? u - step : u + step, v);
+      var alongV = f(u, backV ? v - step : v + step);
+      var signU = backU ? -1 : 1;
+      var signV = backV ? -1 : 1;
+      var du = [(alongU[0] - here[0]) * signU,
+                (alongU[1] - here[1]) * signU,
+                (alongU[2] - here[2]) * signU];
+      var dv = [(alongV[0] - here[0]) * signV,
+                (alongV[1] - here[1]) * signV,
+                (alongV[2] - here[2]) * signV];
+      var n = [du[1] * dv[2] - du[2] * dv[1],
+               du[2] * dv[0] - du[0] * dv[2],
+               du[0] * dv[1] - du[1] * dv[0]];
+      var len = Math.sqrt((n[0] * n[0]) + (n[1] * n[1]) + (n[2] * n[2]));
+      if (!len || !isFinite(len)) { return { p: here, n: [0, 1, 0] }; }
+      n = [n[0] / len, n[1] / len, n[2] / len];
+      // Point it away from the middle, so a closed shape grows outward rather than into itself.
+      if ((n[0] * here[0]) + (n[1] * here[1]) + (n[2] * here[2]) < 0) {
+        n = [-n[0], -n[1], -n[2]];
+      }
+      return { p: here, n: n };
+    };
+  }
+
+  var SHAPES = [
+    { key: "plane", label: "Plane", note: "nothing joined to anything: position is index and no period is implied",
+      at: surface(function (u, v) { return [(u - 0.5) * 150, 0, (v - 0.5) * 150]; }) },
+
+    { key: "bend", label: "Bent plane", note: "the plane rolled by Order, with the ends left apart",
+      at: surface(function (u, v) {
+        var k = order() / 400;
+        var a = (v - 0.5) * 150 * k;
+        var r = k > 0.0001 ? 1 / k : 100000;
+        return [(u - 0.5) * 150, r * (1 - Math.cos(a)) - 20, r * Math.sin(a)];
+      }) },
+
+    { key: "wave", label: "Corrugated", note: "a plane folded Order times, which puts a period of your choosing into the picture",
+      at: surface(function (u, v) {
+        return [(u - 0.5) * 150, 13 * Math.sin(v * TAU * Math.max(1, order() / 6)), (v - 0.5) * 150];
+      }) },
+
+    { key: "saddle", label: "Saddle", note: "hyperbolic paraboloid: curvature of both signs at once",
+      at: surface(function (u, v) {
+        var x = (u - 0.5) * 2, z = (v - 0.5) * 2;
+        return [x * 75, ((x * x) - (z * z)) * 40, z * 75];
+      }) },
+
+    { key: "disk", label: "Disk", note: "polar: depth is radius, the cut is angle",
+      at: surface(function (u, v) {
+        var a = v * TAU, r = 14 + (u * 74);
+        return [r * Math.cos(a), 0, r * Math.sin(a)];
+      }) },
+
+    { key: "spiral", label: "Spiral", note: "Archimedean, flat: one continuous track, no seam",
+      at: surface(function (u, v) {
+        var turns = Math.max(1, order() / 2);
+        var a = v * TAU * turns, r = 12 + (v * 76);
+        return [r * Math.cos(a), (u - 0.5) * 28, r * Math.sin(a)];
+      }) },
+
+    { key: "cylinder", label: "Tube", note: "joins the ends of the cut, asserting one period along it",
+      at: surface(function (u, v) {
+        var a = v * TAU;
+        return [(u - 0.5) * 170, 46 * Math.cos(a), 46 * Math.sin(a)];
+      }) },
+
+    { key: "prism", label: "Prism", note: "a tube with Order flat sides, which quantises the cut and joins its ends",
+      at: surface(function (u, v) {
+        var sides = Math.max(3, Math.round(order()));
+        var a = v * TAU;
+        var wedge = TAU / sides;
+        var r = 46 / Math.cos(((a % wedge) + wedge) % wedge - (wedge / 2));
+        return [(u - 0.5) * 170, r * Math.cos(a), r * Math.sin(a)];
+      }) },
+
+    { key: "cone", label: "Cone", note: "radius falls with depth, so late values crowd together",
+      at: surface(function (u, v) {
+        var r = 74 * (1.02 - u), a = v * TAU;
+        return [r * Math.cos(a), (u - 0.5) * 150, r * Math.sin(a)];
+      }) },
+
+    { key: "pyramid", label: "Pyramid", note: "the cone with Order sides: edges the cone hides",
+      at: surface(function (u, v) {
+        var sides = Math.max(3, Math.round(order()));
+        var a = v * TAU;
+        var wedge = TAU / sides;
+        var flat = 1 / Math.cos(((a % wedge) + wedge) % wedge - (wedge / 2));
+        var r = 74 * (1.02 - u) * flat;
+        return [r * Math.cos(a), (u - 0.5) * 150, r * Math.sin(a)];
+      }) },
+
+    { key: "paraboloid", label: "Paraboloid", note: "a dish: depth is radius, height is its square",
+      at: surface(function (u, v) {
+        var a = v * TAU, r = u * 78;
+        return [r * Math.cos(a), ((r * r) / 90) - 40, r * Math.sin(a)];
+      }) },
+
+    { key: "hyperboloid", label: "Hyperboloid", note: "the waisted tube: one sheet, ruled twice over",
+      at: surface(function (u, v) {
+        var a = v * TAU, t = (u - 0.5) * 2.1;
+        var r = 34 * Math.sqrt(1 + (t * t));
+        return [r * Math.cos(a), t * 62, r * Math.sin(a)];
+      }) },
+
+    { key: "catenoid", label: "Catenoid", note: "the soap film between two rings: minimal, zero mean curvature",
+      at: surface(function (u, v) {
+        var a = v * TAU, t = (u - 0.5) * 3.0;
+        var r = 26 * Math.cosh(t);
+        return [r * Math.cos(a), t * 30, r * Math.sin(a)];
+      }) },
+
+    { key: "helicoid", label: "Helicoid", note: "the catenoid's twin: a ramp that is also minimal",
+      at: surface(function (u, v) {
+        var a = (v - 0.5) * TAU * winding();
+        var r = (u - 0.5) * 150;
+        return [r * Math.cos(a), a * 11, r * Math.sin(a)];
+      }) },
+
+    { key: "sphere", label: "Sphere", note: "depth as latitude, the cut as longitude, whose ends are joined",
+      at: surface(function (u, v) {
+        var ph = (0.06 + (0.88 * u)) * Math.PI, th = v * TAU;
+        var sp = Math.sin(ph);
+        return [sp * Math.cos(th) * 68, Math.cos(ph) * 68, sp * Math.sin(th) * 68];
+      }) },
+
+    { key: "spheroid", label: "Spheroid", note: "the sphere squashed: same topology, different sampling density",
+      at: surface(function (u, v) {
+        var ph = (0.06 + (0.88 * u)) * Math.PI, th = v * TAU;
+        var sp = Math.sin(ph);
+        return [sp * Math.cos(th) * 86, Math.cos(ph) * 44, sp * Math.sin(th) * 86];
+      }) },
+
+    { key: "cube", label: "Cube", note: "the superformula at high exponent: flat faces, sharp edges",
+      at: surface(function (u, v) {
+        return superAt(u, v, 4, 12, 12, 12, 4, 12, 12, 12, 62);
+      }) },
+
+    { key: "hedron", label: "Hedron", note: "Order sides, up to 4096, where a polygon is a circle to within a pixel",
+      at: surface(function (u, v) {
+        var sides = Math.max(3, Math.round(order()));
+        return superAt(u, v, sides, 34, 34, 34, sides, 34, 34, 34, 62);
+      }) },
+
+    { key: "superellipsoid", label: "Superellipsoid", note: "the squircle solid: corners rounded by a single exponent",
+      at: surface(function (u, v) {
+        return superAt(u, v, 4, 2.6, 2.6, 2.6, 4, 2.6, 2.6, 2.6, 66);
+      }) },
+
+    { key: "star", label: "Star", note: "superformula with Order points: sampling density is deliberately uneven",
+      at: surface(function (u, v) {
+        var m = Math.max(3, Math.round(order()));
+        return superAt(u, v, m, 0.3, 0.3, 0.3, 4, 6, 6, 6, 54);
+      }) },
+
+    { key: "flower", label: "Flower", note: "Order petals: lobes that fold the cut back over itself",
+      at: surface(function (u, v) {
+        var m = Math.max(3, Math.round(order()));
+        return superAt(u, v, m, 1.2, 1.6, 1.6, 6, 1.4, 1.2, 1.2, 58);
+      }) },
+
+    { key: "splat", label: "Splat", note: "low exponents, high symmetry: the shape thrown at a wall",
+      at: surface(function (u, v) {
+        var m = Math.max(3, Math.round(order()));
+        return superAt(u, v, m, 0.18, 1.7, 1.7, m, 0.4, 1.2, 1.2, 46);
+      }) },
+
+    { key: "balloon", label: "Balloon", note: "radius is the value, so the silhouette is the field itself",
+      at: surface(function (u, v) {
+        var ph = (0.06 + (0.88 * u)) * Math.PI, th = v * TAU;
+        var sp = Math.sin(ph);
+        return [sp * Math.cos(th) * 40, Math.cos(ph) * 40, sp * Math.sin(th) * 40];
+      }) },
+
+    { key: "torus", label: "Toroid", note: "joins both axes, asserting a period along each",
+      at: surface(function (u, v) {
+        var th = u * TAU, ph = v * TAU;
+        var big = 74 + (26 * Math.cos(ph));
+        return [big * Math.cos(th), 26 * Math.sin(ph), big * Math.sin(th)];
+      }) },
+
+    { key: "knot", label: "Torus knot", note: "a tube wound Order times, which brings distant depths alongside each other",
+      at: surface(function (u, v) {
+        var p = Math.max(2, Math.round(order() / 2)), q = 3;
+        var th = u * TAU;
+        var r = 52 + (18 * Math.cos(q * th));
+        var cx = r * Math.cos(p * th);
+        var cy = 18 * Math.sin(q * th);
+        var cz = r * Math.sin(p * th);
+        var a = v * TAU;
+        return [cx + (9 * Math.cos(a) * Math.cos(p * th)),
+                cy + (9 * Math.sin(a)),
+                cz + (9 * Math.cos(a) * Math.sin(p * th))];
+      }) },
+
+    { key: "mobius", label: "Mobius band", note: "one side and one edge: the cut comes back inverted",
+      at: surface(function (u, v) {
+        var th = u * TAU;
+        var w = (v - 0.5) * 46;
+        var r = 62 + (w * Math.cos(th / 2));
+        return [r * Math.cos(th), w * Math.sin(th / 2), r * Math.sin(th)];
+      }) },
+
+    { key: "klein", label: "Klein bottle", note: "the figure-eight immersion: no inside to be on",
+      at: surface(function (u, v) {
+        var th = u * TAU, ph = v * TAU;
+        var w = 26 * Math.cos(th / 2) * Math.sin(ph) - 26 * Math.sin(th / 2) * Math.sin(2 * ph);
+        var r = 62 + w;
+        return [r * Math.cos(th),
+                26 * Math.sin(th / 2) * Math.sin(ph) + 26 * Math.cos(th / 2) * Math.sin(2 * ph),
+                r * Math.sin(th)];
+      }) },
+
+    { key: "dini", label: "Dini surface", note: "a twisted pseudosphere: constant negative curvature",
+      at: surface(function (u, v) {
+        var a = u * TAU * winding();
+        var t = 0.05 + (v * 1.5);
+        return [30 * Math.cos(a) * Math.sin(t),
+                30 * (Math.cos(t) + Math.log(Math.tan(t / 2))) + (a * 4) - 40,
+                30 * Math.sin(a) * Math.sin(t)];
+      }) },
+
+    { key: "shell", label: "Seashell", note: "a tube on a logarithmic spiral: growth that keeps its shape",
+      at: surface(function (u, v) {
+        var th = u * TAU * 2.2;
+        var grow = Math.pow(1.19, th);
+        var a = v * TAU;
+        var r = 4.2 * grow;
+        return [(1.2 * grow * Math.cos(th)) + (r * Math.cos(a) * Math.cos(th)) - 40,
+                (r * Math.sin(a)) + (th * 3) - 30,
+                (1.2 * grow * Math.sin(th)) + (r * Math.cos(a) * Math.sin(th))];
+      }) },
+
+    { key: "enneper", label: "Enneper", note: "minimal and self-intersecting: the map is not injective",
+      at: surface(function (u, v) {
+        var x = (u - 0.5) * 3.4, y = (v - 0.5) * 3.4;
+        return [12 * (x - ((x * x * x) / 3) + (x * y * y)),
+                12 * ((x * x) - (y * y)) * 0.5,
+                12 * (y - ((y * y * y) / 3) + (y * x * x))];
+      }) },
+
+    { key: "hilbert", label: "Hilbert curve", note: "locality preserving: values adjacent in the sequence stay adjacent here",
+      at: surface(function (u, v) {
+        var side = curveSide();
+        var xy = hilbertAt(side, cellIndex(u, v));
+        var step = 150 / side;
+        return [(xy[0] * step) - 75, 0, (xy[1] * step) - 75];
+      }) },
+
+    { key: "morton", label: "Morton order", note: "interleaved bits: cheaper than Hilbert, and the seams are visible",
+      at: surface(function (u, v) {
+        var side = curveSide();
+        var xy = mortonAt(cellIndex(u, v));
+        var step = 150 / side;
+        return [(xy[0] * step) - 75, 0, (xy[1] * step) - 75];
+      }) }
+  ];
+
+  // A transform is applied to the surface after the embedding and before the value is raised, so
+  // it changes where a cell sits without changing what the cell says. Same discipline as the
+  // shapes: anything that survives a transform is in the data, anything that appears under one is
+  // in the map.
+  function unit(n) {
+    var len = Math.sqrt((n[0] * n[0]) + (n[1] * n[1]) + (n[2] * n[2]));
+    return len ? [n[0] / len, n[1] / len, n[2] / len] : [0, 1, 0];
+  }
+
+  var TRANSFORMS = [
+    { key: "none", label: "None", note: "the embedding as written",
+      go: function (p, n) { return { p: p, n: n }; } },
+
+    { key: "invert", label: "Inversion", note: "through a sphere: near and far trade places, angles survive",
+      go: function (p, n) {
+        var d2 = (p[0] * p[0]) + (p[1] * p[1]) + (p[2] * p[2]);
+        if (d2 < 1) { d2 = 1; }
+        var k = (70 * 70) / d2;
+        return { p: [p[0] * k, p[1] * k, p[2] * k], n: n };
+      } },
+
+    { key: "shadow", label: "Shadow", note: "dropped flat to the ground: the silhouette from above",
+      go: function (p) { return { p: [p[0], 0, p[2]], n: [0, 1, 0] }; } },
+
+    { key: "wall", label: "Projection", note: "cast sideways onto a wall: one axis discarded",
+      go: function (p) { return { p: [p[0], p[1], -70], n: [0, 0, 1] }; } },
+
+    { key: "spherize", label: "Spherize", note: "every point pushed to one radius: shape gone, sampling kept",
+      go: function (p, n) {
+        var u = unit(p);
+        return { p: [u[0] * 66, u[1] * 66, u[2] * 66], n: u };
+      } },
+
+    { key: "logradius", label: "Log radius", note: "radius compressed: six decades of extent on one axis",
+      go: function (p, n) {
+        var d = Math.sqrt((p[0] * p[0]) + (p[1] * p[1]) + (p[2] * p[2]));
+        if (d < 0.0001) { return { p: p, n: n }; }
+        var k = (Math.log(1 + d) * 26) / d;
+        return { p: [p[0] * k, p[1] * k, p[2] * k], n: n };
+      } },
+
+    { key: "twist", label: "Twist", note: "rotated about the upright by height, at Order turns",
+      go: function (p, n) {
+        var a = (p[1] / 150) * TAU * Math.max(1, order() / 6);
+        var cs = Math.cos(a), sn = Math.sin(a);
+        return { p: [(p[0] * cs) - (p[2] * sn), p[1], (p[0] * sn) + (p[2] * cs)],
+                 n: [(n[0] * cs) - (n[2] * sn), n[1], (n[0] * sn) + (n[2] * cs)] };
+      } },
+
+    { key: "mirror", label: "Point reflection", note: "inversion through the origin: every coordinate negated, chirality reversed",
+      go: function (p, n) {
+        return { p: [-p[0], -p[1], -p[2]], n: [-n[0], -n[1], -n[2]] };
+      } },
+
+    { key: "fold", label: "Fold", note: "reflected at the middle, so the two halves land on each other",
+      go: function (p, n) {
+        return { p: [Math.abs(p[0]) - 40, p[1], p[2]], n: n };
+      } }
+  ];
+
+  // A mark claims a range of raw values and paints it outside the gradient, optionally moving. The
+  // list is the user's, of any length, and later entries win where two claim the same cell.
+  var marks = [];
+  var markSeq = 0;
+  // Set from the theme on first paint, then owned by the colour inputs.
+  var ramp = { low: null, mid: null, high: null };
+
+  var view = VIEWS[0];
+  var shape = SHAPES[0];
+  var transform = TRANSFORMS[0];
+  var overlay = null;
+  var wrapAt = 1;
+  var lift = 22;
+  var floorAt = 0;
+
+  var frame = document.getElementById("frame");
+  var renderer = new THREE.WebGLRenderer({ canvas: frame, antialias: true });
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(46, 1, 0.5, 4000);
+
+  var group = new THREE.Group();
+  scene.add(group);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.62));
+  var key = new THREE.DirectionalLight(0xffffff, 0.78);
+  key.position.set(120, 190, 130);
+  scene.add(key);
+  var fillLight = new THREE.DirectionalLight(0xffffff, 0.28);
+  fillLight.position.set(-140, 70, -90);
+  scene.add(fillLight);
+  // Both of those are above the field. Now that the camera turns all the way under, the underside
+  // needs its own light or it reads as one flat ambient tone and the relief disappears exactly
+  // where the light cone's cliff is most legible. Weaker than the key, so up and down stay
+  // distinguishable rather than the object looking lit from nowhere.
+  var under = new THREE.DirectionalLight(0xffffff, 0.34);
+  under.position.set(60, -180, -40);
+  scene.add(under);
+
+  function token(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+  function toRgb(hex) {
+    var clean = hex.replace("#", "");
+    if (clean.length === 3) { clean = clean[0]+clean[0]+clean[1]+clean[1]+clean[2]+clean[2]; }
+    var n = parseInt(clean, 16);
+    return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+  }
+
+  var palette = {};
+  function refreshPalette() {
+    palette.cool = ramp.low || toRgb(token("--cool"));
+    palette.warm = ramp.high || toRgb(token("--warm"));
+    palette.zero = ramp.mid || toRgb(token("--sunk"));
+    scene.background = new THREE.Color(token("--sky"));
+  }
+
+  /** Signed log, so six decades of amplitude fit one axis without the top crushing the rest. */
+  function shaped(value, ceiling) {
+    var top = Math.log10(1 + ceiling);
+    if (top <= 0) { return 0; }
+    var here = Math.log10(1 + Math.abs(value)) / top;
+    return value < 0 ? -here : here;
+  }
+
+  var mesh = null;
+  var baseColor = null;
+  var drawn = 0;
+  var ceilingNow = 0;
+  var rawOf = null;
+  var brush = null;
+  var contrastAt = 0.6;
+  var picked = null;
+  // Each step keeps its own selection: a range that means something in one field means nothing in
+  // the next, so switching steps restores what was selected there rather than carrying it across.
+  var selections = {};
+
+  /** Writes the instance colors for one moment: the gradient underneath, a mark's own color over
+      it, and for a moving mark a mix between the two that depends on the clock. Separated from
+      build so an animating mark repaints colors alone rather than rebuilding the geometry sixty
+      times a second, which would be the difference between a page that turns and one that does
+      not. */
+  function paintColors(now) {
+    if (!mesh || !baseColor) { return; }
+    var count = rawOf.length;
+    for (var i = 0; i < count; i += 1) {
+      var r = baseColor[i * 3];
+      var g = baseColor[(i * 3) + 1];
+      var b = baseColor[(i * 3) + 2];
+
+      // The selection dragged on the histogram sits above every mark: it is what the eye is being
+      // pointed at right now, and a standing mark should not hide it.
+      var mark = null;
+      var raw = rawOf[i];
+      for (var m = marks.length - 1; m >= 0; m -= 1) {
+        if (raw >= marks[m].from && raw <= marks[m].to) { mark = marks[m]; break; }
+      }
+      if (brush && raw >= brush.from && raw <= brush.to) { mark = brush; }
+
+      if (mark) {
+        var mix = 1;
+        if (mark.effect === "blink") {
+          // Square: fully the mark colour or fully the field, nothing between, because a hard edge
+          // is what the eye picks out of a crowded field.
+          mix = (Math.floor(now / (mark.period / 2)) % 2) ? 0 : 1;
+        } else if (mark.effect === "pulse") {
+          mix = 0.5 + (0.5 * Math.sin((now / mark.period) * TAU));
+        }
+        r += (mark.rgb[0] - r) * mix;
+        g += (mark.rgb[1] - g) * mix;
+        b += (mark.rgb[2] - b) * mix;
+      }
+      mesh.instanceColor.setXYZ(i, r, g, b);
+    }
+    mesh.instanceColor.needsUpdate = true;
+  }
+
+  // The loop runs only while something is actually moving. A still page costs nothing.
+  var animating = false;
+  function tick(now) {
+    if (!marks.some(function (one) { return one.effect !== "solid"; })) {
+      animating = false;
+      return;
+    }
+    paintColors(now);
+    renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  function startAnimating() {
+    if (animating) { return; }
+    if (!marks.some(function (one) { return one.effect !== "solid"; })) { return; }
+    animating = true;
+    requestAnimationFrame(tick);
+  }
+
+  function build() {
+    refreshPalette();
+    if (mesh) {
+      group.remove(mesh);
+      mesh.geometry.dispose();
+      mesh.material.dispose();
+      mesh = null;
+    }
+
+    var rows = view.rows;
+    var depth = DATA.depth;
+    var span = rows.length;
+    GRID.span = span;
+    GRID.depth = depth;
+
+    // The overlay is read on the same grid, so a field of a different size is refused rather than
+    // stretched: comparing two fields cell by cell only means something when the cells correspond.
+    var tint = null;
+    if (overlay && overlay !== view && overlay.rows.length === span) {
+      tint = overlay.rows;
+    }
+    var tintTop = 0;
+    if (tint) {
+      for (var tr = 0; tr < span; tr += 1) {
+        for (var tc = 0; tc < depth; tc += 1) {
+          var mag = Math.abs(tint[tr][tc]);
+          if (mag > tintTop) { tintTop = mag; }
+        }
+      }
+    }
+
+    var ceiling = 0;
+    var r, c, size;
+    for (r = 0; r < span; r += 1) {
+      for (c = 0; c < depth; c += 1) {
+        size = Math.abs(rows[r][c]);
+        if (size > ceiling) { ceiling = size; }
+      }
+    }
+
+    ceilingNow = ceiling;
+    var kept = [];
+    for (r = 0; r < span; r += 1) {
+      for (c = 0; c < depth; c += 1) {
+        var t = shaped(rows[r][c], ceiling);
+        if (Math.abs(t) * 100 >= floorAt) { kept.push([r, c, t]); }
+      }
+    }
+
+    // Footprint from how densely the grid lands on the surface, so a 512-row cut does not overlap
+    // itself and a 32-row one does not leave the surface mostly empty.
+    var footAcross = Math.max(0.55, Math.min(4.0, 150 / depth));
+    var footAlong = Math.max(0.55, Math.min(4.0, 190 / span));
+
+    var geometry = new THREE.BoxGeometry(footAcross, 1, footAlong);
+    var material = new THREE.MeshLambertMaterial();
+    mesh = new THREE.InstancedMesh(geometry, material, Math.max(1, kept.length));
+    mesh.instanceColor = new THREE.InstancedBufferAttribute(
+      new Float32Array(Math.max(1, kept.length) * 3), 3);
+
+    baseColor = new Float32Array(Math.max(1, kept.length) * 3);
+    rawOf = new Float32Array(Math.max(1, kept.length));
+
+    var spot = new THREE.Object3D();
+    var up = new THREE.Vector3(0, 1, 0);
+    var normal = new THREE.Vector3();
+    var seat = new THREE.Vector3();
+
+    for (var i = 0; i < kept.length; i += 1) {
+      var row = kept[i][0];
+      var col = kept[i][1];
+      var t = kept[i][2];
+
+      var u = depth > 1 ? (col / (depth - 1)) : 0;
+      var v = span > 1 ? (row / (span - 1)) : 0;
+      // Wrap lays the cut around the shape more than once. A period that divides the wrap count
+      // lines up and stands still; anything else precesses, and the precession is the beat.
+      if (wrapAt > 1) { v = (v * wrapAt) % 1; }
+      var sat = shape.at(u, v);
+      var where = transform.go(sat.p, sat.n);
+
+      normal.set(where.n[0], where.n[1], where.n[2]).normalize();
+      seat.set(where.p[0], where.p[1], where.p[2]);
+
+      var reach = Math.abs(t) * lift * 4;
+      var high;
+      if (shape.key === "balloon") {
+        // The value moves the surface rather than growing a spike, so the silhouette is the field.
+        seat.addScaledVector(normal, reach);
+        high = Math.max(0.8, Math.min(footAcross, footAlong));
+      } else {
+        // No minimum height. Clamping quiet cells to a floor paints them all the same size and
+        // color, and 512 rows of that aliases into periodic banding that reads as structure -
+        // measured and refuted at 3.18 sigmas against a max-of-512 peak of 3.53. A renderer must
+        // not manufacture what the instrument says is not there.
+        high = reach;
+        seat.addScaledVector(normal, high / 2);
+      }
+
+      spot.position.copy(seat);
+      spot.scale.set(1, high, 1);
+      spot.quaternion.setFromUnitVectors(up, normal);
+      spot.updateMatrix();
+      mesh.setMatrixAt(i, spot.matrix);
+
+      // Height is the chosen cut; color is the overlay when there is one, so the surface carries
+      // two fields at once and disagreement between them is visible as shape against color.
+      var paint = t;
+      if (tint && tintTop > 0) { paint = shaped(tint[row][col], tintTop); }
+      var end = paint < 0 ? palette.cool : palette.warm;
+      var eased = Math.pow(Math.min(1, Math.abs(paint)), contrastAt);
+      baseColor[i * 3] = palette.zero[0] + (end[0] - palette.zero[0]) * eased;
+      baseColor[(i * 3) + 1] = palette.zero[1] + (end[1] - palette.zero[1]) * eased;
+      baseColor[(i * 3) + 2] = palette.zero[2] + (end[2] - palette.zero[2]) * eased;
+
+      // The raw value is kept per instance rather than the mark it matched. Which mark claims a
+      // cell then costs nothing to change: adding a mark, editing its range, or dragging a
+      // selection across the histogram repaints colors from these numbers instead of rebuilding
+      // the geometry, which is what makes a drag over 32,000 cells keep up with the pointer.
+      rawOf[i] = tint ? tint[row][col] : rows[row][col];
+    }
+    drawn = kept.length;
+    countBins();
+    drawHist();
+    sayBrush();
+    showRamp();
+    paintColors(performance.now());
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.instanceColor.needsUpdate = true;
+    group.add(mesh);
+
+    paintAxes();
+    document.getElementById("shape-note").textContent = shape.note;
+  }
+
+  // -- a small orbit controller, written rather than loaded ------------------------------------
+  //
+  // The camera is an offset from the target and an up vector, not a pair of angles. Angles are what
+  // made the drag wrong: yaw and pitch are measured against the world, so what "left" means on the
+  // screen depends on where the camera already is, and past the pole it means the opposite. There
+  // is no orientation at which this version disagrees with the screen, because the axes it turns
+  // about are read off the camera at the moment of the move.
+  //
+  // Right is recomputed on every pointermove rather than held for the gesture. Letting go and
+  // starting again therefore cannot desync it: there is no stored frame to go stale.
+  //
+  // The sense is grab and drag. Pull right and the object goes right, which means the camera orbits
+  // left, so both rotations are applied negatively.
+  var target = new THREE.Vector3(0, 12, 0);
+  var offset = new THREE.Vector3();
+  var upVec = new THREE.Vector3(0, 1, 0);
+  var right = new THREE.Vector3();
+
+  // Opening view, stated once as a direction and a distance rather than as angles.
+  offset.set(Math.sin(-0.72) * Math.cos(0.62), Math.sin(0.62), Math.cos(-0.72) * Math.cos(0.62));
+  offset.multiplyScalar(320);
+
+  function place() {
+    camera.position.copy(target).add(offset);
+    camera.up.copy(upVec);
+    camera.lookAt(target);
+  }
+
+  function screenRight() {
+    // up cross offset: with the camera on +z and up at +y this is +x, which is screen right.
+    right.crossVectors(upVec, offset);
+    if (right.lengthSq() < 1e-9) { right.set(1, 0, 0); }
+    return right.normalize();
+  }
+
+  var dragging = false;
+  var panning = false;
+  var lastX = 0;
+  var lastY = 0;
+
+  frame.addEventListener("pointerdown", function (event) {
+    dragging = true;
+    panning = event.shiftKey;
+    lastX = event.clientX;
+    lastY = event.clientY;
+    frame.classList.add("dragging");
+    frame.setPointerCapture(event.pointerId);
+  });
+
+  frame.addEventListener("pointermove", function (event) {
+    if (!dragging) { return; }
+    var dx = event.clientX - lastX;
+    var dy = event.clientY - lastY;
+    lastX = event.clientX;
+    lastY = event.clientY;
+
+    var side = screenRight();
+
+    if (panning) {
+      // The object follows the hand, so the target moves the other way.
+      var reach = offset.length() * 0.0016;
+      target.addScaledVector(side, -dx * reach);
+      target.addScaledVector(upVec, dy * reach);
+    } else {
+      // Horizontal about the camera's own up, vertical about the camera's own right. Rotating the
+      // up vector along with the offset on the vertical turn is what keeps the two perpendicular
+      // and the roll free of any accumulated tilt.
+      offset.applyAxisAngle(upVec, -dx * 0.006);
+      offset.applyAxisAngle(side, -dy * 0.006);
+      upVec.applyAxisAngle(side, -dy * 0.006).normalize();
+    }
+    place();
+    renderer.render(scene, camera);
+  });
+
+  function release(event) {
+    dragging = false;
+    frame.classList.remove("dragging");
+    if (event && event.pointerId !== undefined && frame.hasPointerCapture(event.pointerId)) {
+      frame.releasePointerCapture(event.pointerId);
+    }
+  }
+  frame.addEventListener("pointerup", release);
+  frame.addEventListener("pointercancel", release);
+  frame.addEventListener("wheel", function (event) {
+    event.preventDefault();
+    var reach = offset.length() * (1 + (event.deltaY * 0.0012));
+    offset.setLength(Math.max(60, Math.min(1400, reach)));
+    place();
+    renderer.render(scene, camera);
+  }, { passive: false });
+
+  function resize() {
+    var width = frame.clientWidth || 800;
+    var height = frame.clientHeight || 560;
+    renderer.setSize(width, height, false);
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    place();
+    renderer.render(scene, camera);
+  }
+
+  // -- the floating panel -----------------------------------------------------------------------
+  //
+  // Every control is a dropdown or a slider rather than a list of buttons, and the whole thing
+  // moves, because it sits on top of the picture it controls and will otherwise cover the part
+  // being looked at.
+
+  function fillOptions(select, items, chosen) {
+    select.innerHTML = "";
+    items.forEach(function (each, at) {
+      var option = document.createElement("option");
+      option.value = String(at);
+      option.textContent = each.label;
+      if (at === chosen) { option.selected = true; }
+      select.appendChild(option);
+    });
+  }
+
+  function redraw() {
+    build();
+    renderer.render(scene, camera);
+    startAnimating();
+  }
+
+  var stepPick = document.getElementById("pick-step");
+  fillOptions(stepPick, VIEWS, 0);
+
+  // Steps are a sequence, not a set of alternatives: a representation is fed a step at a time and
+  // the point is to walk it. The dropdown and the two arrows go through one call, so the readout
+  // and the drawing cannot disagree about which step is up.
+  function showStep(index) {
+    var many = VIEWS.length;
+    var at = ((index % many) + many) % many;
+    // Put this step's selection down before picking up the next one's.
+    if (view) { selections[view.key] = { brush: brush, picked: picked }; }
+    view = VIEWS[at];
+    var kept = selections[view.key] || {};
+    brush = kept.brush || null;
+    picked = (kept.picked === undefined) ? null : kept.picked;
+    stepPick.value = String(at);
+    paintAxes();
+    redraw();
+  }
+  stepPick.addEventListener("change", function () { showStep(parseInt(this.value, 10)); });
+  document.getElementById("step-back").addEventListener("click", function () {
+    showStep(VIEWS.indexOf(view) - 1);
+  });
+  document.getElementById("step-next").addEventListener("click", function () {
+    showStep(VIEWS.indexOf(view) + 1);
+  });
+
+  var shapePick = document.getElementById("pick-shape");
+  fillOptions(shapePick, SHAPES, 0);
+  shapePick.addEventListener("change", function () {
+    shape = SHAPES[parseInt(this.value, 10)];
+    document.getElementById("shape-note").textContent = shape.note;
+    redraw();
+  });
+  document.getElementById("shape-note").textContent = shape.note;
+
+  var transformPick = document.getElementById("pick-transform");
+  fillOptions(transformPick, TRANSFORMS, 0);
+  transformPick.addEventListener("change", function () {
+    transform = TRANSFORMS[parseInt(this.value, 10)];
+    redraw();
+  });
+
+  // Off is first, because reading one field against another only means something when it can also
+  // be turned off and the field seen alone.
+  var overlayPick = document.getElementById("pick-overlay");
+  var overlayItems = [{ label: "Off", field: null }].concat(VIEWS.map(function (one) {
+    return { label: one.label, field: one };
+  }));
+  fillOptions(overlayPick, overlayItems, 0);
+  overlayPick.addEventListener("change", function () {
+    overlay = overlayItems[parseInt(this.value, 10)].field;
+    redraw();
+  });
+
+  // Order is logarithmic on the slider: the interesting ground is 3 to 40 sides, and 4096 is the
+  // far end where a polygon has become a circle. A linear slider would spend nine tenths of its
+  // travel where nothing changes.
+  var orderSlider = document.getElementById("order");
+  orderSlider.min = 0;
+  orderSlider.max = 1000;
+  orderSlider.value = Math.round(1000 * Math.log(6 / 3) / Math.log(4096 / 3));
+  orderSlider.addEventListener("input", function () {
+    orderAt = Math.round(3 * Math.pow(4096 / 3, parseInt(this.value, 10) / 1000));
+    document.getElementById("order-out").textContent = orderAt;
+    redraw();
+  });
+
+  document.getElementById("wrap").addEventListener("input", function () {
+    wrapAt = parseInt(this.value, 10);
+    document.getElementById("wrap-out").textContent = wrapAt;
+    redraw();
+  });
+
+  document.getElementById("height").addEventListener("input", function () {
+    lift = parseInt(this.value, 10);
+    document.getElementById("height-out").textContent = lift;
+    redraw();
+  });
+
+  document.getElementById("floor").addEventListener("input", function () {
+    floorAt = parseInt(this.value, 10);
+    document.getElementById("floor-out").textContent = floorAt;
+    redraw();
+  });
+
+  // -- readouts: which of them show is the user's ------------------------------------------------
+  //
+  // The corner used to carry three fixed axis labels. Which numbers are worth having on screen
+  // depends on what is being looked at, so the list is a set of checkboxes and the corner shows
+  // whatever is ticked.
+
+  var METRICS = [
+    { key: "depth", label: "depth axis", on: true,
+      get: function () { return "x " + (DATA.depthLabel || ""); } },
+    { key: "cut", label: "series axis", on: true,
+      get: function () { return "z " + view.axis; } },
+    { key: "value", label: "value axis", on: true,
+      get: function () { return "y " + (DATA.valueLabel || ""); } },
+    { key: "step", label: "step", on: false,
+      get: function () { return view.label + "  " + (VIEWS.indexOf(view) + 1) + "/" + VIEWS.length; } },
+    { key: "shape", label: "representation", on: false,
+      get: function () { return shape.label; } },
+    { key: "transform", label: "transform", on: false,
+      get: function () { return transform.label; } },
+    { key: "series", label: "series count", on: false,
+      get: function () { return view.rows.length + " series"; } },
+    { key: "cells", label: "cells drawn", on: false,
+      get: function () { return drawn + " of " + (view.rows.length * DATA.depth) + " cells"; } },
+    { key: "ceiling", label: "largest value", on: false,
+      get: function () { return "max " + ceilingNow.toPrecision(4); } },
+    { key: "order", label: "order and wrap", on: false,
+      get: function () { return "order " + orderAt + "  wrap " + wrapAt; } }
+  ];
+
+  function paintAxes() {
+    var lines = [];
+    METRICS.forEach(function (one) {
+      if (!one.on) { return; }
+      try { lines.push(one.get()); } catch (err) { /* a readout is never worth an exception */ }
+    });
+    document.getElementById("axes-lines").innerHTML = lines.join("<br>");
+  }
+
+  var metricHolder = document.getElementById("metrics");
+  METRICS.forEach(function (one) {
+    var row = document.createElement("label");
+    row.className = "tickrow";
+    var box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = one.on;
+    box.addEventListener("change", function () {
+      one.on = this.checked;
+      paintAxes();
+    });
+    var name = document.createElement("span");
+    name.textContent = one.label;
+    row.appendChild(box);
+    row.appendChild(name);
+    metricHolder.appendChild(row);
+  });
+
+  // -- the distribution, and selecting from it ---------------------------------------------------
+  //
+  // The readouts said what the field is. This says what is in it: how the values are actually
+  // distributed, rather than only their largest. Dragging across it selects a set of values and a
+  // click selects the one bin under the pointer, and either way the cells holding those values are
+  // lit in the object while the numbers underneath say how many they are.
+
+  var BINS = 96;
+  var histCanvas = document.getElementById("hist");
+  var histOut = document.getElementById("hist-out");
+  var bins = null;
+  var binFrom = 0;
+  var binTo = 1;
+  var binMost = 1;
+
+  function countBins() {
+    var rows = view.rows;
+    var low = Infinity;
+    var high = -Infinity;
+    var r, c, one;
+    for (r = 0; r < rows.length; r += 1) {
+      for (c = 0; c < rows[r].length; c += 1) {
+        one = rows[r][c];
+        if (one < low) { low = one; }
+        if (one > high) { high = one; }
+      }
+    }
+    if (!isFinite(low)) { low = 0; high = 1; }
+    if (high === low) { high = low + 1; }
+
+    binFrom = low;
+    binTo = high;
+    bins = new Float64Array(BINS);
+    var span = high - low;
+    for (r = 0; r < rows.length; r += 1) {
+      for (c = 0; c < rows[r].length; c += 1) {
+        var at = Math.floor(((rows[r][c] - low) / span) * BINS);
+        if (at >= BINS) { at = BINS - 1; }
+        if (at < 0) { at = 0; }
+        bins[at] += 1;
+      }
+    }
+    binMost = 0;
+    for (r = 0; r < BINS; r += 1) { if (bins[r] > binMost) { binMost = bins[r]; } }
+    if (binMost <= 0) { binMost = 1; }
+  }
+
+  function valueAt(x) {
+    var wide = histCanvas.clientWidth || 232;
+    var share = Math.max(0, Math.min(1, x / wide));
+    return binFrom + (share * (binTo - binFrom));
+  }
+
+  function drawHist() {
+    if (!bins) { return; }
+    var wide = histCanvas.clientWidth || 232;
+    var high = histCanvas.clientHeight || 52;
+    var ratio = window.devicePixelRatio || 1;
+    histCanvas.width = Math.round(wide * ratio);
+    histCanvas.height = Math.round(high * ratio);
+    var ctx = histCanvas.getContext("2d");
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.clearRect(0, 0, wide, high);
+
+    // Counts are drawn on a log scale. A field whose values pile into one bin - which is most of
+    // them, the plateau being what it is - draws every other bin as nothing at all on a linear
+    // one, and the tail is the part worth seeing.
+    var top = Math.log10(1 + binMost);
+    var step = wide / BINS;
+    for (var i = 0; i < BINS; i += 1) {
+      var tall = (Math.log10(1 + bins[i]) / top) * (high - 2);
+      var from = binFrom + ((i / BINS) * (binTo - binFrom));
+      var to = binFrom + (((i + 1) / BINS) * (binTo - binFrom));
+      var inside = brush && to >= brush.from && from <= brush.to;
+      ctx.fillStyle = inside ? token("--signal") : token("--rule");
+      ctx.fillRect(i * step, high - tall, Math.max(1, step - 0.5), tall);
+    }
+
+    // A cell clicked in the object is drawn as a line at its value, so the thing seen in the shape
+    // can be located in the distribution.
+    if (picked !== null && isFinite(picked) && binTo > binFrom) {
+      var mark = ((picked - binFrom) / (binTo - binFrom)) * wide;
+      ctx.fillStyle = token("--warm");
+      ctx.fillRect(Math.max(0, Math.min(wide - 2, mark)), 0, 2, high);
+    }
+  }
+
+  function sayPicked() {
+    if (picked === null) { sayBrush(); return; }
+    var rows = view.rows;
+    var same = 0;
+    for (var r = 0; r < rows.length; r += 1) {
+      for (var c = 0; c < rows[r].length; c += 1) {
+        // The picked value came back through a Float32Array and the table holds doubles, so an
+        // exact comparison never matches and every pick reports nothing, itself included. Rounding
+        // the table value to single precision is the comparison that is actually being asked for.
+        if (Math.fround(rows[r][c]) === picked) { same += 1; }
+      }
+    }
+    histOut.innerHTML = "picked <b>" + picked.toPrecision(5) + "</b> &nbsp; "
+      + same.toLocaleString() + (same === 1 ? " cell has it" : " cells share it");
+  }
+
+  function sayBrush() {
+    if (!brush) {
+      histOut.innerHTML = '<span class="none">drag to select a range, click for one bin</span>';
+      return;
+    }
+    var held = 0;
+    var rows = view.rows;
+    var total = 0;
+    for (var r = 0; r < rows.length; r += 1) {
+      for (var c = 0; c < rows[r].length; c += 1) {
+        total += 1;
+        if (rows[r][c] >= brush.from && rows[r][c] <= brush.to) { held += 1; }
+      }
+    }
+    var share = total ? (100 * held / total) : 0;
+    histOut.innerHTML = "<b>" + held.toLocaleString() + "</b> cells, "
+      + share.toFixed(share < 1 ? 2 : 1) + "% &nbsp; "
+      + brush.from.toPrecision(4) + " to " + brush.to.toPrecision(4);
+  }
+
+  function repaint() {
+    paintColors(performance.now());
+    renderer.render(scene, camera);
+  }
+
+  var brushing = false;
+  var brushStart = 0;
+
+  histCanvas.addEventListener("pointerdown", function (event) {
+    var box = histCanvas.getBoundingClientRect();
+    brushing = true;
+    brushStart = event.clientX - box.left;
+    brush = { from: valueAt(brushStart), to: valueAt(brushStart),
+              rgb: toRgb(token("--signal")), effect: "solid", period: 900 };
+    histCanvas.setPointerCapture(event.pointerId);
+    event.stopPropagation();
+    event.preventDefault();
+  });
+
+  histCanvas.addEventListener("pointermove", function (event) {
+    if (!brushing) { return; }
+    var box = histCanvas.getBoundingClientRect();
+    var now = event.clientX - box.left;
+    brush.from = Math.min(valueAt(brushStart), valueAt(now));
+    brush.to = Math.max(valueAt(brushStart), valueAt(now));
+    drawHist();
+    sayBrush();
+    repaint();
+  });
+
+  histCanvas.addEventListener("pointerup", function (event) {
+    if (!brushing) { return; }
+    brushing = false;
+    var box = histCanvas.getBoundingClientRect();
+    var now = event.clientX - box.left;
+    // A click rather than a drag: take the single bin under the pointer, which is one value of the
+    // data rather than a set of them.
+    if (Math.abs(now - brushStart) < 3) {
+      var wide = histCanvas.clientWidth || 232;
+      var at = Math.floor((now / wide) * BINS);
+      brush.from = binFrom + ((at / BINS) * (binTo - binFrom));
+      brush.to = binFrom + (((at + 1) / BINS) * (binTo - binFrom));
+    }
+    if (histCanvas.hasPointerCapture(event.pointerId)) {
+      histCanvas.releasePointerCapture(event.pointerId);
+    }
+    drawHist();
+    sayBrush();
+    repaint();
+  });
+
+  // Double click clears, and a selection can be promoted to a standing mark so it survives being
+  // replaced by the next drag.
+  histCanvas.addEventListener("dblclick", function () {
+    brush = null;
+    drawHist();
+    sayBrush();
+    repaint();
+  });
+
+  // -- color: the ramp, and any number of marks over it -----------------------------------------
+
+  function hexOf(rgb) {
+    var out = "#";
+    for (var i = 0; i < 3; i += 1) {
+      var one = Math.round(Math.max(0, Math.min(1, rgb[i])) * 255).toString(16);
+      out += one.length < 2 ? "0" + one : one;
+    }
+    return out;
+  }
+
+  var lowPick = document.getElementById("low");
+  var midPick = document.getElementById("mid");
+  var highPick = document.getElementById("high");
+
+  function showRamp() {
+    lowPick.value = hexOf(ramp.low || toRgb(token("--cool")));
+    midPick.value = hexOf(ramp.mid || toRgb(token("--sunk")));
+    highPick.value = hexOf(ramp.high || toRgb(token("--warm")));
+    // The legend is the ramp itself with the values at its ends, so the panel says what the colors
+    // mean without being opened. Everything that changes them is folded away behind Settings.
+    document.getElementById("ramp-strip").style.background =
+      "linear-gradient(to right, " + lowPick.value + ", " + midPick.value + ", "
+      + highPick.value + ")";
+    // The end labels start as the numbers the data happens to hold and are then the reader's to
+    // write. What a colour means is asserted by whoever is reading, not carried in by the values,
+    // so once one has been typed over it is left alone.
+    if (bins) {
+      if (!rampNames.low) {
+        document.getElementById("ramp-low").textContent = binFrom.toPrecision(3);
+      }
+      if (!rampNames.mid) { document.getElementById("ramp-mid").textContent = "0"; }
+      if (!rampNames.high) {
+        document.getElementById("ramp-high").textContent = binTo.toPrecision(3);
+      }
+    }
+  }
+
+  var rampNames = { low: "", mid: "", high: "" };
+  ["low", "mid", "high"].forEach(function (which) {
+    var cell = document.getElementById("ramp-" + which);
+    cell.addEventListener("input", function () {
+      rampNames[which] = this.textContent.trim();
+    });
+    // Enter ends the edit rather than opening a second line inside the label.
+    cell.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") { event.preventDefault(); this.blur(); }
+    });
+  });
+  showRamp();
+
+  [[lowPick, "low"], [midPick, "mid"], [highPick, "high"]].forEach(function (pair) {
+    pair[0].addEventListener("input", function () {
+      ramp[pair[1]] = toRgb(this.value);
+      redraw();
+    });
+  });
+
+  // Contrast is the exponent the value is raised to before it is mixed into the ramp. Below one it
+  // lifts the quiet cells toward full color, which is what makes a faint structure visible against
+  // a plateau; above one it does the reverse and leaves only the loudest cells colored.
+  document.getElementById("contrast").addEventListener("input", function () {
+    contrastAt = parseInt(this.value, 10) / 100;
+    document.getElementById("contrast-out").textContent = contrastAt.toFixed(2);
+    redraw();
+  });
+
+  document.getElementById("gradient-reset").addEventListener("click", function () {
+    ramp.low = null;
+    ramp.mid = null;
+    ramp.high = null;
+    showRamp();
+    redraw();
+  });
+
+  var markHolder = document.getElementById("marks");
+
+  function drawMarks() {
+    markHolder.innerHTML = "";
+    marks.forEach(function (mark, at) {
+      var row = document.createElement("div");
+      row.className = "mark";
+
+      var from = document.createElement("input");
+      from.type = "number";
+      from.step = "any";
+      from.value = mark.from;
+      from.title = "from this value";
+      from.addEventListener("change", function () {
+        mark.from = parseFloat(this.value);
+        redraw();
+      });
+
+      var to = document.createElement("input");
+      to.type = "number";
+      to.step = "any";
+      to.value = mark.to;
+      to.title = "to this value";
+      to.addEventListener("change", function () {
+        mark.to = parseFloat(this.value);
+        redraw();
+      });
+
+      var color = document.createElement("input");
+      color.type = "color";
+      color.value = hexOf(mark.rgb);
+      color.addEventListener("input", function () {
+        mark.rgb = toRgb(this.value);
+        redraw();
+      });
+
+      var effect = document.createElement("select");
+      [["solid", "solid"], ["blink", "blink"], ["pulse", "pulse"]].forEach(function (one) {
+        var option = document.createElement("option");
+        option.value = one[0];
+        option.textContent = one[1];
+        if (mark.effect === one[0]) { option.selected = true; }
+        effect.appendChild(option);
+      });
+      effect.addEventListener("change", function () {
+        mark.effect = this.value;
+        redraw();
+      });
+
+      var drop = document.createElement("button");
+      drop.type = "button";
+      drop.textContent = "×";
+      drop.title = "remove this mark";
+      drop.addEventListener("click", function () {
+        marks.splice(at, 1);
+        drawMarks();
+        redraw();
+      });
+
+      row.appendChild(from);
+      row.appendChild(to);
+      row.appendChild(color);
+      row.appendChild(effect);
+      row.appendChild(drop);
+      markHolder.appendChild(row);
+    });
+  }
+
+  document.getElementById("mark-add").addEventListener("click", function () {
+    // A new mark opens on the range the current field actually holds, so it claims something the
+    // moment it appears rather than starting empty and looking broken.
+    var top = 0;
+    var rows = view.rows;
+    for (var r = 0; r < rows.length; r += 1) {
+      for (var c = 0; c < rows[r].length; c += 1) {
+        var size = Math.abs(rows[r][c]);
+        if (size > top) { top = size; }
+      }
+    }
+    markSeq += 1;
+    marks.push({
+      id: markSeq,
+      from: Math.round(top * 0.75 * 1000) / 1000,
+      to: Math.round(top * 1000) / 1000,
+      rgb: toRgb("#e8c547"),
+      effect: "blink",
+      period: 900
+    });
+    drawMarks();
+    redraw();
+  });
+
+  // -- moving the boxes --------------------------------------------------------------------------
+  //
+  // Three things float over the stage and all three get in the way of the object sooner or later,
+  // so all three move. One routine rather than three copies: the box to move and the part of it
+  // that is the handle, which for the readouts is the whole box because it has no frame to grab.
+
+  function movable(box, handle) {
+    var held = false;
+    var grabX = 0;
+    var grabY = 0;
+
+    handle.addEventListener("pointerdown", function (event) {
+      // A button inside the handle is a button, not a grip.
+      if (event.target.tagName === "BUTTON" || event.target.tagName === "INPUT") { return; }
+      held = true;
+      // Pin the box to left/top before the first move, so a box positioned from the right or the
+      // bottom does not jump across the stage as soon as left is set.
+      var here = box.getBoundingClientRect();
+      var room = box.parentElement.getBoundingClientRect();
+      box.style.left = (here.left - room.left) + "px";
+      box.style.top = (here.top - room.top) + "px";
+      box.style.right = "auto";
+      box.style.bottom = "auto";
+      grabX = event.clientX - box.offsetLeft;
+      grabY = event.clientY - box.offsetTop;
+      handle.classList.add("dragging");
+      handle.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+
+    handle.addEventListener("pointermove", function (event) {
+      if (!held) { return; }
+      var room = box.parentElement.getBoundingClientRect();
+      // Kept inside the stage, and never so far down that the handle itself is out of reach.
+      var x = Math.max(0, Math.min(room.width - box.offsetWidth, event.clientX - grabX));
+      var y = Math.max(0, Math.min(room.height - 24, event.clientY - grabY));
+      box.style.left = x + "px";
+      box.style.top = y + "px";
+    });
+
+    function letGo(event) {
+      if (!held) { return; }
+      held = false;
+      handle.classList.remove("dragging");
+      if (event && event.pointerId !== undefined && handle.hasPointerCapture(event.pointerId)) {
+        handle.releasePointerCapture(event.pointerId);
+      }
+    }
+    handle.addEventListener("pointerup", letGo);
+    handle.addEventListener("pointercancel", letGo);
+  }
+
+  var panel = document.getElementById("panel");
+  var colorPanel = document.getElementById("color-panel");
+  var axesBox = document.getElementById("axes");
+
+  movable(panel, document.getElementById("grip"));
+  movable(colorPanel, document.getElementById("color-grip"));
+  movable(axesBox, axesBox);
+
+  document.getElementById("color-fold-btn").addEventListener("click", function () {
+    colorPanel.classList.toggle("folded");
+    this.textContent = colorPanel.classList.contains("folded") ? "+" : "−";
+  });
+
+  document.getElementById("panel-fold").addEventListener("click", function () {
+
+    panel.classList.toggle("folded");
+    this.textContent = panel.classList.contains("folded") ? "+" : "−";
+  });
+
+  // -- resizing a box, and filling the stage with it ---------------------------------------------
+
+  function resizable(box, edge) {
+    var held = false;
+    var startY = 0;
+    var startHigh = 0;
+    var body = box.querySelector(".panel-body");
+
+    edge.addEventListener("pointerdown", function (event) {
+      held = true;
+      startY = event.clientY;
+      startHigh = body.getBoundingClientRect().height;
+      edge.classList.add("dragging");
+      edge.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+
+    edge.addEventListener("pointermove", function (event) {
+      if (!held) { return; }
+      var room = box.parentElement.getBoundingClientRect();
+      var want = startHigh + (event.clientY - startY);
+      // Never taller than the stage it floats on, never so short it has no content showing.
+      body.style.maxHeight = Math.max(40, Math.min(room.height - 60, want)) + "px";
+    });
+
+    function letGo(event) {
+      if (!held) { return; }
+      held = false;
+      edge.classList.remove("dragging");
+      if (event && event.pointerId !== undefined && edge.hasPointerCapture(event.pointerId)) {
+        edge.releasePointerCapture(event.pointerId);
+      }
+    }
+    edge.addEventListener("pointerup", letGo);
+    edge.addEventListener("pointercancel", letGo);
+  }
+
+  resizable(panel, document.getElementById("panel-edge"));
+  resizable(colorPanel, document.getElementById("color-edge"));
+
+  function fullSize(box, button) {
+    button.addEventListener("click", function () {
+      var body = box.querySelector(".panel-body");
+      var room = box.parentElement.getBoundingClientRect();
+      if (box.classList.contains("full")) {
+        box.classList.remove("full");
+        box.style.width = "";
+        body.style.maxHeight = "";
+      } else {
+        box.classList.add("full");
+        box.classList.remove("folded");
+        box.style.left = "14px";
+        box.style.top = "14px";
+        box.style.right = "auto";
+        box.style.bottom = "auto";
+        box.style.width = Math.round(room.width - 28) + "px";
+        body.style.maxHeight = Math.round(room.height - 70) + "px";
+      }
+    });
+  }
+
+  fullSize(panel, document.getElementById("panel-full"));
+  fullSize(colorPanel, document.getElementById("color-full"));
+
+  // -- the ground, and how present each box is ---------------------------------------------------
+
+  var bgPick = document.getElementById("bg");
+  bgPick.value = hexOf(toRgb(token("--sky")));
+  bgPick.addEventListener("input", function () {
+    document.documentElement.style.setProperty("--sky", this.value);
+    refreshPalette();
+    renderer.render(scene, camera);
+  });
+  document.getElementById("bg-reset").addEventListener("click", function () {
+    document.documentElement.style.removeProperty("--sky");
+    bgPick.value = hexOf(toRgb(token("--sky")));
+    refreshPalette();
+    renderer.render(scene, camera);
+  });
+
+  [["op-panel", panel], ["op-color", colorPanel], ["op-axes", axesBox]].forEach(function (pair) {
+    var slider = document.getElementById(pair[0]);
+    slider.addEventListener("input", function () {
+      var much = parseInt(this.value, 10);
+      document.getElementById(pair[0] + "-out").textContent = much;
+      pair[1].style.opacity = String(much / 100);
+    });
+  });
+
+  // -- picking in the object, read on the distribution -------------------------------------------
+  //
+  // The histogram selects cells in the object. This is the same road travelled the other way: click
+  // a cell and its value is marked on the distribution, so a feature seen in the shape can be found
+  // in the numbers rather than only described.
+
+  var caster = new THREE.Raycaster();
+  var atScreen = new THREE.Vector2();
+  var downAt = null;
+
+  frame.addEventListener("pointerdown", function (event) {
+    downAt = { x: event.clientX, y: event.clientY };
+  });
+
+  frame.addEventListener("pointerup", function (event) {
+    if (!downAt) { return; }
+    var moved = Math.abs(event.clientX - downAt.x) + Math.abs(event.clientY - downAt.y);
+    downAt = null;
+    // A drag turned the object. Only a click asks a question of it.
+    if (moved > 4 || !mesh) { return; }
+
+    var box = frame.getBoundingClientRect();
+    atScreen.x = (((event.clientX - box.left) / box.width) * 2) - 1;
+    atScreen.y = (-((event.clientY - box.top) / box.height) * 2) + 1;
+    caster.setFromCamera(atScreen, camera);
+
+    var hits = caster.intersectObject(mesh);
+    if (!hits.length || hits[0].instanceId === undefined || !rawOf) {
+      picked = null;
+      drawHist();
+      sayBrush();
+      return;
+    }
+    picked = rawOf[hits[0].instanceId];
+    drawHist();
+    sayPicked();
+  });
+
+
+  // -- opening state, as parameters ---------------------------------------------------------------
+  //
+  // A caller that wants a particular view asks for it here rather than publishing a page and
+  // telling the reader which controls to move. Everything is optional; anything not named keeps the
+  // default the page already had.
+
+  var SET = DATA.settings || {};
+
+  function chooseBy(select, list, key, apply) {
+    if (!key) { return; }
+    for (var i = 0; i < list.length; i += 1) {
+      if (list[i].key === key || list[i].label === key) {
+        select.value = String(i);
+        apply(list[i]);
+        return;
+      }
+    }
+    // Named and not found is worth saying, because the page otherwise opens in the default state
+    // and looks like the setting was ignored on purpose.
+    document.getElementById("hist-out").innerHTML =
+      '<span class="none">no such setting value: ' + key + "</span>";
+  }
+
+  function slide(id, value, apply) {
+    if (value === undefined || value === null || value === 0) { return; }
+    var control = document.getElementById(id);
+    control.value = String(value);
+    var out = document.getElementById(id + "-out");
+    if (out) { out.textContent = value; }
+    apply(value);
+  }
+
+  if (SET.theme === "light" || SET.theme === "dark") {
+    document.documentElement.setAttribute("data-theme", SET.theme);
+  }
+  if (SET.background) { document.documentElement.style.setProperty("--sky", SET.background); }
+  if (SET.low) { ramp.low = toRgb(SET.low); }
+  if (SET.mid) { ramp.mid = toRgb(SET.mid); }
+  if (SET.high) { ramp.high = toRgb(SET.high); }
+  if (SET.opacity) {
+    panel.style.opacity = String(SET.opacity / 100);
+    colorPanel.style.opacity = String(SET.opacity / 100);
+  }
+
+  chooseBy(shapePick, SHAPES, SET.shape, function (one) {
+    shape = one;
+    document.getElementById("shape-note").textContent = one.note;
+  });
+  chooseBy(transformPick, TRANSFORMS, SET.transform, function (one) { transform = one; });
+  if (SET.overlay) {
+    for (var oi = 0; oi < VIEWS.length; oi += 1) {
+      if (VIEWS[oi].key === SET.overlay || VIEWS[oi].label === SET.overlay) {
+        overlay = VIEWS[oi];
+        overlayPick.value = String(oi + 1);
+      }
+    }
+  }
+
+  slide("wrap", SET.wrap, function (one) { wrapAt = one; });
+  slide("height", SET.height, function (one) { lift = one; });
+  slide("floor", SET.floor, function (one) { floorAt = one; });
+  if (SET.contrast) {
+    contrastAt = SET.contrast;
+    document.getElementById("contrast").value = String(Math.round(SET.contrast * 100));
+    document.getElementById("contrast-out").textContent = SET.contrast.toFixed(2);
+  }
+  if (SET.order) {
+    orderAt = SET.order;
+    orderSlider.value = String(Math.round(
+      1000 * Math.log(Math.max(3, SET.order) / 3) / Math.log(4096 / 3)));
+    document.getElementById("order-out").textContent = orderAt;
+  }
+  if (SET.select_from !== undefined && SET.select_to !== undefined
+      && (SET.select_from || SET.select_to)) {
+    brush = { from: Math.min(SET.select_from, SET.select_to),
+              to: Math.max(SET.select_from, SET.select_to),
+              rgb: toRgb(token("--signal")), effect: "solid", period: 900 };
+  }
+
+  // The observer. Given as angles because they are what a person means by "from above and to the
+  // left", then turned into the offset the trackball actually carries.
+  if (SET.yaw || SET.pitch || SET.distance) {
+    var reach = SET.distance || offset.length();
+    var upAngle = SET.pitch || 0;
+    var roundAngle = SET.yaw || 0;
+    offset.set(Math.sin(roundAngle) * Math.cos(upAngle),
+               Math.sin(upAngle),
+               Math.cos(roundAngle) * Math.cos(upAngle));
+    offset.multiplyScalar(Math.max(60, Math.min(1400, reach)));
+    upVec.set(0, 1, 0);
+    var side = screenRight();
+    upVec.crossVectors(offset, side).normalize();
+    place();
+  }
+
+  if (SET.step) { showStep(SET.step); } else { redraw(); }
+
+  // Motion. Turns per minute about the observer's own up or right, which keeps turning about the
+  // axis the reader sees rather than a world axis that drifts as the object is dragged.
+  if (SET.spin) {
+    var perFrame = (SET.spin * TAU) / (60 * 60);
+    var about = SET.spinaxis === "right" ? "right" : "up";
+    var turning = function () {
+      if (!dragging) {
+        offset.applyAxisAngle(about === "up" ? upVec : screenRight(), perFrame);
+        if (about === "right") { upVec.applyAxisAngle(screenRight(), perFrame).normalize(); }
+        place();
+        renderer.render(scene, camera);
+      }
+      requestAnimationFrame(turning);
+    };
+    requestAnimationFrame(turning);
+  }
+
+  window.addEventListener("resize", resize);
+
+  // Dragging the stage's corner changes its height but fires no window resize, so the renderer
+  // would keep drawing at the old size and the picture would stretch. Watching the element itself
+  // catches the drag, and writing the height back out as a custom property is what keeps the
+  // sidecar's cap tied to whatever the view window has become.
+  if (window.ResizeObserver) {
+    var stage = document.querySelector(".stage");
+    var wasHigh = 0;
+    new ResizeObserver(function () {
+      // offsetHeight, not clientHeight. clientHeight leaves out the stage's 1px borders, and with
+      // box-sizing: border-box writing it back as the height makes the box two pixels shorter,
+      // which fires this observer again, which takes off another two. The stage walks down to its
+      // minimum on its own while nobody is touching it. offsetHeight is the same number the height
+      // property means, so writing it back changes nothing and the loop has no step.
+      var high = stage.offsetHeight;
+      if (Math.abs(high - wasHigh) < 1) { return; }
+      wasHigh = high;
+      document.documentElement.style.setProperty("--stage-h", high + "px");
+      resize();
+    }).observe(stage);
+  }
+  if (window.matchMedia) {
+    var watch = window.matchMedia("(prefers-color-scheme: dark)");
+    if (watch.addEventListener) {
+      watch.addEventListener("change", function () { build(); renderer.render(scene, camera); });
+    }
+  }
+
+  build();
+  resize();
+}());
+</script>

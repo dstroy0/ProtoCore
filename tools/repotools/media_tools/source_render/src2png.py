@@ -1,3 +1,6 @@
+# repotools-stamp: media_tools/source_render/src2png.py f0458b7d5b16cda4
+# repo_tools - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
 """Render source files to numbered PNG pages, for surveying at image density.
 
     src2png.py <file> <out_stem> [lines_per_page] [pt] [start] [end]
@@ -5,7 +8,7 @@
 
 The directory form walks <dir>, renders every file whose extension is in
 WALK_EXTS, and writes <dest>/<name>_<ext>_<n>.png. Pages break on whole lines
-once the page holds kb_per_page kilobytes, so a line never splits across two.
+once the page holds kb_per_page kilobytes, and a line never splits across two.
 """
 
 import os
@@ -114,13 +117,6 @@ def render_tree(root, dest, kb_per_page, size, font, cw):
 
 
 def main():
-    # Both forms take a source and a destination. Without this the missing argument surfaced as an
-    # IndexError traceback, which says a tool broke rather than that it was called wrongly, and the
-    # usage text that answers it is sitting in this file's own docstring.
-    if len(sys.argv) < 3:
-        sys.stderr.write(__doc__)
-        return 2
-
     src = sys.argv[1]
     dst = sys.argv[2]
 
@@ -139,8 +135,7 @@ def main():
 
     for name, W, H in pages:
         print("{0}  {1}x{2}".format(name, W, H))
-    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

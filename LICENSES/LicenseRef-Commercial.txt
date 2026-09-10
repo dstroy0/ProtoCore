@@ -1,0 +1,99 @@
+embedded_types Commercial License
+
+Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+
+THIS DOCUMENT DOES NOT GRANT ANYTHING BY BEING READ.
+
+It records that commercial terms are available and describes how they are reached. A commercial
+license exists only as a contract signed by the Licensor and the licensee. Absent that contract,
+every use of embedded_types falls under AGPL-3.0-or-later. The SPDX identifier
+LicenseRef-Commercial in a source file records that this route exists, not that it applies.
+
+
+1. WHY THIS ROUTE EXISTS
+
+embedded_types is consumed as source. A build compiles these headers into the program that includes
+them, and AGPL-3.0-or-later then governs that program, including section 13's obligation where users
+interact with a modified program over a network.
+
+Where that obligation does not suit a product, the copyright is held by one person, so terms are a
+conversation rather than a policy question.
+
+The Software remains free to use under AGPL-3.0-or-later. That does not change, and nothing in this
+document withdraws it.
+
+
+2. DEFINITIONS
+
+2.1  "Licensor" means Douglas Quigg (dstroy0), who holds the copyright in the Software.
+
+2.2  "Software" means embedded_types, in source or any derived form.
+
+2.3  "Contract" means a written agreement signed by the Licensor and the licensee, which sets the
+     scope, the term, the fee, and the support and warranty terms for a particular use.
+
+
+3. HOW TERMS ARE REACHED
+
+3.1  Write to <dquigg123@gmail.com> describing the product, the distribution model, and the scope
+     sought.
+
+3.2  Terms are negotiated per engagement. There is no standing price, no click-through, and no form
+     a licensee can accept unilaterally. A Contract takes effect on signature by the Licensor.
+
+3.3  Until a Contract is in force, the use is governed by AGPL-3.0-or-later.
+
+
+4. WHAT A CONTRACT ORDINARILY SETTLES
+
+The following are the points a Contract addresses. None of them is granted by this document, and the
+list is descriptive rather than an offer.
+
+4.1  Scope: the products, versions, and territories covered, and whether the grant is per product,
+     per seat, per unit shipped, or site-wide.
+
+4.2  Relief from AGPL obligations: the source-disclosure and network-interaction obligations that
+     AGPL-3.0-or-later would otherwise attach to the licensee's program.
+
+4.3  Sublicensing: whether the licensee may pass rights to its own customers, and on what terms.
+
+4.4  Modifications: whether the licensee may modify the Software, and whether modifications are to be
+     offered back.
+
+4.5  Attribution: what notice, if any, the licensee's product carries.
+
+4.6  Term, renewal, and the effect of termination on units already shipped.
+
+4.7  Support, maintenance, and any warranty, none of which is provided absent a Contract.
+
+4.8  Fees, whether one-time, recurring, or on a royalty basis.
+
+
+5. RELATIONSHIP TO THE OTHER LICENSES
+
+5.1  A Contract governs only what it names. Any use outside its scope falls under
+     AGPL-3.0-or-later.
+
+5.2  A license issued under LicenseRef-Educational is not a Contract and confers no commercial
+     rights. Section 5 of that document covers work that becomes a product.
+
+5.3  Nothing here restricts a person's rights under AGPL-3.0-or-later.
+
+
+6. RESERVATION OF RIGHTS
+
+All rights are reserved to the Licensor except those granted by AGPL-3.0-or-later or by a Contract.
+No right is granted in any trademark.
+
+
+7. NO WARRANTY ABSENT A CONTRACT
+
+WHERE NO CONTRACT IS IN FORCE, THE SOFTWARE IS PROVIDED "AS IS" UNDER AGPL-3.0-or-later, WITHOUT
+WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. THE LICENSOR DOES NOT WARRANT THAT THE SOFTWARE IS FIT FOR
+ANY SAFETY-RELATED, LIFE-CRITICAL, OR OTHERWISE HAZARDOUS APPLICATION. WARRANTY AND SUPPORT TERMS, IF
+ANY, ARE THOSE A CONTRACT STATES.
+
+
+8. CONTACT
+
+Douglas Quigg (dstroy0) <dquigg123@gmail.com>

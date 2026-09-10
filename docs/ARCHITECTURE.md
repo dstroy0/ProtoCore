@@ -146,7 +146,7 @@ acquire/release ordering).
 (last-registered-wins, so OTA / upload / WebDAV streaming are still mutually
 exclusive per build). All three now take `HttpReq*`, so a sink can keep
 per-connection state: WebDAV holds per-slot PUT state (`s_davput.put[MAX_CONNS]` in
-`src/server/io/webdav_handler.c`) and each connection streams to its own file. This
+`src/server/io/webdav_handler/webdav_handler.c`) and each connection streams to its own file. This
 fixed the concurrent-PUT clobber (docs/BUGS.md) - HW: 4 parallel PUTs with distinct
 payloads, all byte-exact.
 

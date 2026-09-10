@@ -68,3 +68,10 @@ docs/header.html
 # submodule in this repo. Prettier expands its own glob, so git ls-files not listing submodule
 # contents does not keep it out.
 include/MMgr/
+
+# Fetched toolkit code, for the same reason one level further out. tools/repotools/ is repo_tools'
+# source, copied in by `repotools fetch`. Formatting it here cannot become a commit there either,
+# and it is worse than untidy: each file carries a repotools-stamp and a digest in repotools.lock,
+# so a reformat makes `repotools check` report every one of them as edited since it was fetched.
+# The toolkit is upstream; a change worth keeping is promoted with `repotools adopt`.
+tools/repotools/
