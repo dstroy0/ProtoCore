@@ -388,8 +388,8 @@ records) is ~41.5 KB; the default arena is 48 KB.
 
 - [src/network_drivers/presentation/ssh/transport/transport.h](@ref transport.h) / [.c](@ref transport.c) - key-material types and wipe helpers, DH-group14-SHA256 KEX, binary packet protocol
 - [src/crypto/asymmetric/bignum.h](@ref bignum.h) / [.c](@ref bignum.c) - 2048-bit Montgomery arithmetic (shared library primitive)
-- [src/crypto/hash/sha256.h](@ref sha256.h) / [.c](@ref sha256.c) - SHA-256 (shared library primitive)
-- [src/crypto/mac/hmac_sha256.h](@ref hmac_sha256.h) / [.c](@ref hmac_sha256.c) - HMAC-SHA2-256 (shared library primitive)
+- [src/crypto/hash/sha256/sha256.h](@ref sha256.h) / [.c](@ref sha256.c) - SHA-256 (shared library primitive)
+- [src/crypto/mac/hmac_sha256/hmac_sha256.h](@ref hmac_sha256.h) / [.c](@ref hmac_sha256.c) - HMAC-SHA2-256 (shared library primitive)
 - [src/crypto/cipher/aes256ctr.h](@ref aes256ctr.h) / [.c](@ref aes256ctr.c) - AES-256-CTR (shared library primitive)
 - [src/crypto/asymmetric/rsa.h](@ref rsa.h) / [.c](@ref rsa.c) - RSA-2048 PKCS#1 v1.5 verify + software sign (shared primitive)
 - [src/network_drivers/presentation/ssh/transport/ssh_rsa.h](@ref ssh_rsa.h) / [.c](@ref ssh_rsa.c) - SSH RSA host-key layer (NVS key, signing, "ssh-rsa" blob)

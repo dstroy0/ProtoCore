@@ -1,0 +1,221 @@
+embedded_types Educator's License
+
+Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+
+THIS DOCUMENT DOES NOT GRANT ANYTHING BY BEING READ.
+
+It states the terms of a license that exists only when the Licensor has issued it to a named person
+in writing. Absent that writing, every use of embedded_types falls under AGPL-3.0-or-later, and this
+document has no effect on that use. The SPDX identifier LicenseRef-Educational in a source file
+records that these terms are available, not that they apply.
+
+
+PURPOSE
+
+This license exists so that value returns to the Institution and its department, and the environment
+that produced the work is enriched by what the work becomes. The Software is given free of charge to
+educators for that reason and for no other. Every condition below serves that end.
+
+This Purpose governs how the license is read. Where a term admits more than one reading, the reading
+that serves the Purpose is the one that applies. Where conduct satisfies the letter of a condition
+while defeating the Purpose, the condition is not satisfied.
+
+A licensee who does not intend to return value to the Institution should not request this license.
+AGPL-3.0-or-later is available to everyone, costs nothing, and asks none of this.
+
+
+1. DEFINITIONS
+
+1.1  "Licensor" means Douglas Quigg (dstroy0), who holds the copyright in the Software.
+
+1.2  "Software" means embedded_types, in source or any derived form.
+
+1.3  "Licensee" means the individual person named in the writing issued under Section 2. A licence
+     under this document is issued to a person and never to a department, laboratory, or institution.
+
+1.4  "Institution" means the accredited educational or non-profit research organization at which the
+     Licensee holds a faculty, research, or teaching appointment.
+
+1.5  "Academic Purposes" means teaching, coursework, and research carried on at the Institution and
+     not for commercial advantage or in the course of for-profit activity. Use by or on behalf of a
+     commercial entity is not an Academic Purpose, including research use.
+
+
+2. HOW A LICENSE IS ISSUED
+
+2.1  A prospective Licensee writes to <dquigg123@gmail.com> from a faculty, research, or teaching
+     address at the Institution, ordinarily a .edu or .org address, describing the intended use.
+
+2.2  The Licensor grants or declines case by case, at sole discretion, and a grant takes effect only
+     when the Licensor has issued it in writing to the named person.
+
+2.3  A grant covers the use described in the request. Use materially beyond what was described is
+     outside the grant and falls back to AGPL-3.0-or-later.
+
+
+3. GRANT
+
+Subject to Sections 4 and 5, the Licensor grants the Licensee a revocable, royalty-free,
+non-exclusive, non-transferable, non-sublicensable right to use, copy, modify, and run the Software
+for Academic Purposes.
+
+
+4. CONDITIONS
+
+4.1  Attribution. Any research output, publication, thesis, poster, presentation, or course material
+     describing work that used the Software shall credit the Software and the Licensor among the
+     underlying systems it relied on. Where the output has a bibliography, the citation in
+     CITATION.cff is the form to use.
+
+4.2  Credit to Participants. Students, research staff, and faculty who contributed to the work shall
+     be credited in the same materials, in accordance with the Institution's own authorship and
+     attribution norms. This condition is a term of the license, and the Licensor may take it into
+     account under Section 5.
+
+4.3  No Sharing Under These Terms. This license covers the Licensee alone. It extends to no
+     colleague, student, assistant, collaborator, department, laboratory, or institution, and it
+     extends to no person by reason of working on the same project, sitting in the same group, or
+     being supervised by the Licensee.
+
+4.4  Each Person Holds Their Own. Another person who wants these terms applies under Section 2 and
+     receives a writing of their own. There is no grandfathering: no person acquires this license by
+     inheritance, succession, assignment, transfer, association, or the passage of time, and no
+     course of dealing, silence, or prior tolerance by the Licensor creates one.
+
+4.5  What Sharing Falls Back To. Any copy the Licensee passes to any other person is governed by
+     AGPL-3.0-or-later, and that person receives the Software under the AGPL alone. Nothing in this
+     document is to be read as permitting otherwise.
+
+4.6  Notices. The Licensee shall not remove or alter any copyright notice or SPDX identifier in the
+     Software.
+
+
+5. COMMERCIALIZATION
+
+5.1  Academic work can become a product. This section is here so that outcome is provided for rather
+     than litigated.
+
+5.2  Commercialize means that money or anything else of value is received, by anyone, on account of
+     work that incorporates or derives from the Software. It does not require a sale, a price, a
+     customer, or a profit. Without limiting that, each of the following is commercialization:
+
+       (a)  selling, licensing, renting, or subscribing out a product or service;
+       (b)  providing consulting, support, hosting, or contract work;
+       (c)  advertising, sponsorship, or data revenue;
+       (d)  fundraising, investment, crowdfunding, donation, prize money, or a grant, where any part
+            of what is raised pays compensation to the Licensee or to any person or entity the
+            Licensee controls, is employed by outside the Institution, or holds an interest in;
+       (e)  equity, options, warrants, tokens, carried interest, revenue or profit shares, or any
+            other instrument or contingent interest, whether vested, unvested, or promised;
+       (f)  consideration in a form other than money, which is the same as money for the purposes of
+            this Section. Without limiting that: goods, hardware, compute, facilities, laboratory or
+            studio access, travel, accommodation, hospitality, tuition, fees, fellowships or
+            stipends directed to the Licensee or to the Licensee's nominee, forgiveness or
+            assumption of debt, terms in any transaction that are above or below market, deferred or
+            contingent compensation, and any board seat, advisory role, employment, or appointment
+            offered on account of the work;
+       (g)  consideration directed, at the Licensee's request or with the Licensee's acquiescence, to
+            a spouse, relative, associate, nominee, trust, or entity rather than to the Licensee;
+       (h)  transfer of the work to any entity that does any of the above.
+
+5.3  The single exception is salary or stipend paid by the Institution to the Licensee under the
+     appointment that qualified them under Section 1.4, at the Institution's ordinary rates.
+     Everything else falls under Section 5.2.
+
+5.4  No Loopholes. It makes no difference how the activity is structured, what an entity is called,
+     whether it is incorporated as non-profit, who holds title, whether the money is called a
+     donation or a reimbursement, whether consideration is paid in money or in kind, or whether the
+     Software is described as a component rather than a product. What governs is whether value was
+     received on account of the work. The Licensor determines this, and a structure adopted to place
+     activity outside Section 5.2 is within it.
+
+5.5  Valuation. Consideration in a form other than money is valued at its fair market value when
+     received, and where it is contingent or unvested, at the value it reaches when it vests or the
+     contingency resolves. The Institution's share under Section 5.9 is computed on that value and is
+     payable in money. A party that takes value in kind does not thereby reduce what is owed.
+
+5.6  Why This Is Written This Way. The Institution and the department carried the cost of the work
+     that produced the value: the appointment, the students, the facilities, and the time. Taking
+     that value in a form that reports as no revenue takes it from them rather than from the
+     Licensor. Sections 5.2 and 5.5 exist so that the form the consideration arrives in does not
+     decide what the Institution receives.
+
+5.7  On commercialization this license ceases to cover the activity, and the parties shall agree
+     royalty terms in writing.
+
+5.8  Those terms take the form of a royalty ladder. The rate is set by the Licensor with regard to
+     the good faith shown by the Licensee and the extent to which Section 4.2 was honored.
+
+5.9  A portion of royalties shall be paid to the Institution at a minimum, and directly to the
+     Licensee's department where the Institution's rules permit it.
+
+5.10 Until such terms are agreed in writing, the commercial activity is governed by
+     AGPL-3.0-or-later, or by a contract under LicenseRef-Commercial where one exists.
+
+5.11 The Licensee shall notify the Licensor in writing before value is first received under Section
+     5.2. Failure to do so is a breach for the purposes of Section 6.2.
+
+
+6. TERM AND TERMINATION
+
+6.1  This license runs from the date of the writing issued under Section 2 until terminated.
+
+6.2  It terminates automatically if the Licensee breaches any condition in Section 4 or Section 5 and
+     does not cure the breach within thirty days of written notice. A breach of Section 4.3 or 4.4
+     is not curable, since the copy has already left the Licensee's hands, and conduct within
+     Section 6.5 is not curable either.
+
+6.3  It terminates automatically if the Licensee ceases to hold an appointment at an Institution.
+
+6.4  The Licensor may revoke it at any time, on written notice, for any reason or for no reason. No
+     cause need be shown and none need be stated. Grounds may include the Licensee's personal
+     conduct, whether or not that conduct concerns the Software. This discretion is absolute and is
+     not subject to a standard of reasonableness.
+
+6.5  Immediate Revocation for Defeating the Purpose. Conduct undertaken to defeat the Purpose stated
+     above terminates this license at once, on the Licensor's notice, with no period to cure and no
+     opportunity to remedy. Each of the following is such conduct:
+
+       (a)  structuring an arrangement so that value does not reach the Institution;
+       (b)  understating, deferring, disguising, or failing to report what was received under
+            Section 5.2, or failing to give the notice Section 5.11 requires;
+       (c)  routing consideration to a person or entity so that Section 5.2 is not engaged;
+       (d)  omitting the attribution Section 4.1 requires or the credit Section 4.2 requires;
+       (e)  passing the Software to a person for use under these terms, including a person the
+            Licensor has refused;
+       (f)  continuing to rely on this license after ceasing to hold the appointment that qualified
+            the Licensee.
+
+     The list is not exhaustive, and it is for the Licensor to determine whether conduct is of this
+     kind.
+
+6.6  On termination, the Licensee's use of the Software reverts to AGPL-3.0-or-later. Nothing in
+     termination withdraws rights the AGPL grants independently of this document, and nothing in
+     termination discharges an obligation already accrued under Section 5.
+
+
+7. RESERVATION OF RIGHTS
+
+All rights not expressly granted in Section 3 are reserved to the Licensor. No right is granted in
+any trademark, and no patent license is granted beyond what AGPL-3.0-or-later grants of its own
+force.
+
+
+8. DISCLAIMER OF WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND
+NONINFRINGEMENT. THE LICENSOR DOES NOT WARRANT THAT THE SOFTWARE IS FIT FOR ANY SAFETY-RELATED,
+LIFE-CRITICAL, OR OTHERWISE HAZARDOUS APPLICATION.
+
+
+9. LIMITATION OF LIABILITY
+
+TO THE EXTENT PERMITTED BY LAW, THE LICENSOR SHALL NOT BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY, WHETHER IN CONTRACT, TORT, OR OTHERWISE, ARISING FROM OR IN CONNECTION WITH THE SOFTWARE
+OR ITS USE.
+
+
+10. CONTACT
+
+Douglas Quigg (dstroy0) <dquigg123@gmail.com>

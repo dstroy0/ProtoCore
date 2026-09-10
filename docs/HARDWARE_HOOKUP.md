@@ -400,7 +400,7 @@ a frame, then hand it to the codec.
 - **Codec:** `protocore_modbus_rtu_process_adu()` validates the CRC-16 and the unit address
   and dispatches to the host-tested PDU layer; a bad CRC or a non-matching
   address is dropped silently, exactly as the spec requires. See
-  `src/services/fieldbus/modbus/modbus.h`.
+  `src/services/fieldbus/modbus/modbus/modbus.h`.
 
 ### DF1 (Allen-Bradley)
 
@@ -694,7 +694,7 @@ the ESP32's built-in Wi-Fi supplies the link.
   (often 1, or 255/0xFF for a native TCP device). No serial parity or baud here;
   Modbus TCP wraps the same PDU in an MBAP header.
 - **Codec:** the same `protocore_modbus_*` data model and PDU dispatch as RTU, minus the
-  CRC (TCP already guarantees integrity). See `src/services/fieldbus/modbus/modbus.h`.
+  CRC (TCP already guarantees integrity). See `src/services/fieldbus/modbus/modbus/modbus.h`.
 
 ### SunSpec
 
@@ -805,7 +805,7 @@ both share the ASDU layer. See `src/services/energy/iec60870/iec60870.h`.
   `opc.tcp://<ip>:4840`). This library implements **SecurityPolicy `None`** (no
   message encryption), so configure the peer to allow an unencrypted endpoint, or
   put the link on a trusted/segmented network.
-- **Codec:** see `src/services/fieldbus/opcua/` and `src/services/fieldbus/opcua_client/`.
+- **Codec:** see `src/services/opcua/` and `src/services/opcua/opcua_client/`.
 
 ### SNMP (agent and traps)
 

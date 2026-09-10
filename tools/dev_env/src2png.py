@@ -114,6 +114,13 @@ def render_tree(root, dest, kb_per_page, size, font, cw):
 
 
 def main():
+    # Both forms take a source and a destination. Without this the missing argument surfaced as an
+    # IndexError traceback, which says a tool broke rather than that it was called wrongly, and the
+    # usage text that answers it is sitting in this file's own docstring.
+    if len(sys.argv) < 3:
+        sys.stderr.write(__doc__)
+        return 2
+
     src = sys.argv[1]
     dst = sys.argv[2]
 
@@ -132,7 +139,8 @@ def main():
 
     for name, W, H in pages:
         print("{0}  {1}x{2}".format(name, W, H))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

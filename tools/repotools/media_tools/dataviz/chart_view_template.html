@@ -1,0 +1,583 @@
+<title>Chart</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #F3F5F8; --panel: #FFFFFF; --sunk: #E9EDF2; --ink: #161A21;
+    --muted: #58616F; --rule: #DBE1E9; --grid: #EDF1F6; --signal: #1E9E71;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1116; --panel: #161B23; --sunk: #0A0D12; --ink: #DCE3ED;
+      --muted: #78849A; --rule: #262E3B; --grid: #1B222C; --signal: #63D2A4;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1116; --panel: #161B23; --sunk: #0A0D12; --ink: #DCE3ED;
+    --muted: #78849A; --rule: #262E3B; --grid: #1B222C; --signal: #63D2A4;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--ground); color: var(--ink); margin: 0;
+    font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 13px; line-height: 1.5;
+  }
+  .wrap { height: 100%; padding: 0.2in; }
+  .stage {
+    position: relative; height: 100%; min-height: 240px; background: var(--panel);
+    border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; resize: vertical;
+  }
+  #plot { display: block; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
+
+  .panel {
+    position: absolute; left: 14px; top: 14px; z-index: 3; width: 210px;
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 5px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+  }
+  .grip {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 6px 8px; cursor: grab; user-select: none; border-bottom: 1px solid var(--rule);
+    font-family: "IBM Plex Mono", monospace; font-size: 9px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .grip.dragging { cursor: grabbing; }
+  .grip button {
+    font: inherit; font-size: 12px; line-height: 1; cursor: pointer; padding: 0 5px;
+    border: 1px solid var(--rule); background: var(--sunk); color: var(--muted); border-radius: 3px;
+  }
+  .panel-body {
+    padding: 8px; display: grid; gap: 6px; max-height: 60vh;
+    overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+    scrollbar-width: thin; scrollbar-color: var(--rule) transparent;
+  }
+  .panel-body::-webkit-scrollbar { width: 9px; }
+  .panel-body::-webkit-scrollbar-thumb {
+    background: var(--rule); border-radius: 999px; border: 2px solid var(--panel);
+  }
+  .panel.folded .panel-body { display: none; }
+
+  .pick { display: flex; align-items: center; gap: 6px; }
+  .pick > * { min-width: 0; }
+  .pick label {
+    font-family: "IBM Plex Mono", monospace; font-size: 9px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--muted); flex: 0 0 auto; min-width: 4.6em;
+  }
+  .pick select {
+    flex: 1; min-width: 0; font: inherit; font-size: 11px; padding: 2px 4px;
+    background: var(--sunk); color: var(--ink); border: 1px solid var(--rule); border-radius: 3px;
+    text-overflow: ellipsis;
+  }
+  .pick input[type=range] { flex: 1; min-width: 0; accent-color: var(--signal); }
+  .pick button {
+    font: inherit; font-size: 10px; cursor: pointer; padding: 4px 7px;
+    border: 1px solid var(--rule); background: var(--sunk); color: var(--muted);
+    border-radius: 999px;
+  }
+  .tickrow {
+    display: flex; align-items: center; gap: 5px; cursor: pointer;
+    font-family: "IBM Plex Mono", monospace; font-size: 9.5px; color: var(--muted); padding: 1px 0;
+  }
+  .tickrow input { accent-color: var(--signal); margin: 0; flex: 0 0 auto; }
+  .tickrow .chip { width: 9px; height: 9px; border-radius: 2px; flex: 0 0 auto; }
+  .tickrow span.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .readout {
+    position: absolute; right: 14px; top: 14px; z-index: 3; padding: 5px 7px;
+    font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--muted);
+    text-align: right; line-height: 1.6; border: 1px solid transparent; border-radius: 4px;
+    cursor: grab; user-select: none; background: transparent;
+  }
+  .readout:hover, .readout.dragging { border-color: var(--rule); background: var(--panel); }
+  .readout b { color: var(--ink); font-weight: 600; }
+
+  .hint {
+    position: absolute; left: 50%; transform: translateX(-50%); bottom: 10px;
+    font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--muted);
+    pointer-events: none; opacity: .5;
+  }
+
+  .infowrap { position: absolute; right: 14px; bottom: 14px; z-index: 6; }
+  .info {
+    display: block; width: 22px; height: 22px; padding: 0; line-height: 1; cursor: help;
+    font: inherit; font-size: 12px; border-radius: 999px;
+    border: 1px solid var(--rule); background: var(--panel); color: var(--muted); opacity: .8;
+  }
+  .info:hover { opacity: 1; color: var(--ink); }
+  .info-tile {
+    position: absolute; right: 0; bottom: 28px; width: 320px;
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 5px; padding: 11px 13px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .28);
+    color: var(--muted); font-size: 10.5px; line-height: 1.65;
+    opacity: 0; visibility: hidden; transition: opacity .12s ease;
+  }
+  .infowrap:hover .info-tile { opacity: 1; visibility: visible; }
+  #info-title {
+    font-family: "IBM Plex Mono", monospace; font-size: 9px; font-weight: 600;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--ink); margin: 0 0 6px;
+  }
+  #info-body { margin: 0; }
+  .credit {
+    display: block; margin-top: 4px; text-align: right; text-decoration: none;
+    font-family: "IBM Plex Mono", monospace; font-size: 7.5px; letter-spacing: .06em;
+    color: var(--muted); opacity: .5;
+  }
+  .credit:hover { opacity: 1; color: var(--ink); text-decoration: underline; }
+</style>
+
+<div class="wrap">
+  <div class="stage">
+    <canvas id="plot"></canvas>
+
+    <div class="panel" id="panel">
+      <div class="grip" id="grip">
+        <span>Chart</span>
+        <button type="button" id="fold" title="fold">&minus;</button>
+      </div>
+      <div class="panel-body">
+        <div class="pick">
+          <label for="kind">Draw as</label>
+          <select id="kind">
+            <option value="line">line</option>
+            <option value="scatter">scatter</option>
+            <option value="step">step</option>
+            <option value="bar">bar</option>
+            <option value="area">area</option>
+          </select>
+        </div>
+        <div class="pick">
+          <label for="dot">Point</label>
+          <input type="range" id="dot" min="0" max="8" value="0" step="1">
+        </div>
+        <div class="pick">
+          <label for="wide">Line</label>
+          <input type="range" id="wide" min="1" max="6" value="2" step="1">
+        </div>
+        <label class="tickrow"><input type="checkbox" id="logy"><span class="name">log y</span></label>
+        <label class="tickrow"><input type="checkbox" id="grid" checked><span class="name">grid</span></label>
+        <div id="series"></div>
+        <div class="pick">
+          <button type="button" id="all">All</button>
+          <button type="button" id="none">None</button>
+          <button type="button" id="reset">Reset zoom</button>
+        </div>
+        <a class="credit" href="https://github.com/dstroy0/" target="_blank"
+           rel="noopener">&copy; dstroy0</a>
+      </div>
+    </div>
+
+    <div class="readout" id="readout"></div>
+    <p class="hint">drag across to zoom &middot; double click to reset &middot; hover to read</p>
+
+    <div class="infowrap">
+      <button type="button" class="info" title="what is this?">?</button>
+      <div class="info-tile">
+        <h2 id="info-title"></h2>
+        <p id="info-body"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var DATA = /*CHART_DATA*/null;
+  if (!DATA) { return; }
+
+  document.title = DATA.title || "Chart";
+  document.getElementById("info-title").textContent = DATA.title || "Chart";
+  document.getElementById("info-body").textContent = DATA.blurb || "";
+
+  var canvas = document.getElementById("plot");
+  var ctx = canvas.getContext("2d");
+  var readout = document.getElementById("readout");
+
+  function token(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  // Series colors are spread around the hue circle rather than taken from a fixed list, so any
+  // number of series stays distinguishable instead of repeating after the list runs out.
+  var series = DATA.series.map(function (one, at) {
+    return {
+      name: one.name,
+      xs: one.xs,
+      ys: one.ys,
+      on: true,
+      color: "hsl(" + Math.round((at * 360) / Math.max(1, DATA.series.length)) + " 62% 52%)"
+    };
+  });
+
+  var kind = "line";
+  var dotSize = 0;
+  var lineWide = 2;
+  var logY = false;
+  var showGrid = true;
+  var zoom = null;
+
+  function span() {
+    var xLow = Infinity, xHigh = -Infinity, yLow = Infinity, yHigh = -Infinity;
+    series.forEach(function (one) {
+      if (!one.on) { return; }
+      for (var i = 0; i < one.xs.length; i += 1) {
+        var x = one.xs[i];
+        var y = one.ys[i];
+        if (zoom && (x < zoom.from || x > zoom.to)) { continue; }
+        if (x < xLow) { xLow = x; }
+        if (x > xHigh) { xHigh = x; }
+        if (logY && y <= 0) { continue; }
+        if (y < yLow) { yLow = y; }
+        if (y > yHigh) { yHigh = y; }
+      }
+    });
+    if (!isFinite(xLow)) { xLow = 0; xHigh = 1; }
+    if (!isFinite(yLow)) { yLow = 0; yHigh = 1; }
+    if (xHigh === xLow) { xHigh = xLow + 1; }
+    if (yHigh === yLow) { yHigh = yLow + 1; }
+    // A little air above and below so the extremes are not drawn on the frame itself.
+    var pad = (yHigh - yLow) * 0.06;
+    return { xLow: xLow, xHigh: xHigh, yLow: yLow - pad, yHigh: yHigh + pad };
+  }
+
+  var pad = { left: 62, right: 16, top: 16, bottom: 30 };
+
+  function toY(value, box, at) {
+    if (!logY) {
+      return pad.top + ((box.yHigh - value) / (box.yHigh - box.yLow)) * at;
+    }
+    var low = Math.log10(Math.max(1e-12, box.yLow > 0 ? box.yLow : 1e-12));
+    var high = Math.log10(Math.max(low + 1e-9, box.yHigh));
+    var here = Math.log10(Math.max(1e-12, value));
+    return pad.top + ((high - here) / (high - low)) * at;
+  }
+
+  /** Ticks on round numbers rather than on the data's own extremes, which is what makes a chart
+      readable at a glance instead of needing its labels parsed. */
+  function ticks(low, high, want) {
+    var raw = (high - low) / want;
+    var mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    var step = mag;
+    if (raw / mag > 5) { step = mag * 10; }
+    else if (raw / mag > 2) { step = mag * 5; }
+    else if (raw / mag > 1) { step = mag * 2; }
+    var out = [];
+    for (var at = Math.ceil(low / step) * step; at <= high; at += step) { out.push(at); }
+    return out;
+  }
+
+  function label(value) {
+    if (value === 0) { return "0"; }
+    var size = Math.abs(value);
+    if (size >= 1e6 || size < 1e-3) { return value.toExponential(1); }
+    return String(Math.round(value * 1e6) / 1e6);
+  }
+
+  function draw() {
+    var wide = canvas.clientWidth || 800;
+    var high = canvas.clientHeight || 500;
+    var ratio = window.devicePixelRatio || 1;
+    canvas.width = Math.round(wide * ratio);
+    canvas.height = Math.round(high * ratio);
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.clearRect(0, 0, wide, high);
+
+    var box = span();
+    var across = wide - pad.left - pad.right;
+    var down = high - pad.top - pad.bottom;
+    if (across <= 0 || down <= 0) { return; }
+
+    function toX(value) {
+      return pad.left + ((value - box.xLow) / (box.xHigh - box.xLow)) * across;
+    }
+
+    ctx.font = "10px 'IBM Plex Mono', monospace";
+    ctx.textBaseline = "middle";
+
+    var downTicks = ticks(box.yLow, box.yHigh, 6);
+    var acrossTicks = ticks(box.xLow, box.xHigh, 8);
+
+    if (showGrid) {
+      ctx.strokeStyle = token("--grid");
+      ctx.lineWidth = 1;
+      downTicks.forEach(function (one) {
+        var y = Math.round(toY(one, box, down)) + 0.5;
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(wide - pad.right, y); ctx.stroke();
+      });
+      acrossTicks.forEach(function (one) {
+        var x = Math.round(toX(one)) + 0.5;
+        ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, high - pad.bottom); ctx.stroke();
+      });
+    }
+
+    ctx.fillStyle = token("--muted");
+    ctx.textAlign = "right";
+    downTicks.forEach(function (one) {
+      ctx.fillText(label(one), pad.left - 7, toY(one, box, down));
+    });
+    ctx.textAlign = "center";
+    acrossTicks.forEach(function (one) {
+      ctx.fillText(label(one), toX(one), high - pad.bottom + 12);
+    });
+
+    ctx.strokeStyle = token("--rule");
+    ctx.lineWidth = 1;
+    ctx.strokeRect(pad.left + 0.5, pad.top + 0.5, across - 1, down - 1);
+
+    series.forEach(function (one) {
+      if (!one.on || !one.xs.length) { return; }
+      ctx.strokeStyle = one.color;
+      ctx.fillStyle = one.color;
+      ctx.lineWidth = lineWide;
+      ctx.lineJoin = "round";
+
+      var started = false;
+      if (kind === "line" || kind === "step" || kind === "area") {
+        ctx.beginPath();
+        var lastX = 0, lastY = 0;
+        for (var i = 0; i < one.xs.length; i += 1) {
+          var x = one.xs[i];
+          if (zoom && (x < zoom.from || x > zoom.to)) { continue; }
+          var px = toX(x);
+          var py = toY(one.ys[i], box, down);
+          if (!isFinite(py)) { continue; }
+          if (!started) { ctx.moveTo(px, py); started = true; }
+          else if (kind === "step") { ctx.lineTo(px, lastY); ctx.lineTo(px, py); }
+          else { ctx.lineTo(px, py); }
+          lastX = px; lastY = py;
+        }
+        if (kind === "area" && started) {
+          ctx.lineTo(lastX, pad.top + down);
+          ctx.lineTo(toX(Math.max(box.xLow, zoom ? zoom.from : box.xLow)), pad.top + down);
+          ctx.closePath();
+          ctx.globalAlpha = 0.22;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+        ctx.stroke();
+      }
+
+      if (kind === "bar") {
+        var seen = one.xs.filter(function (x) { return !zoom || (x >= zoom.from && x <= zoom.to); });
+        var thick = Math.max(1, (across / Math.max(1, seen.length)) * 0.7);
+        for (var b = 0; b < one.xs.length; b += 1) {
+          if (zoom && (one.xs[b] < zoom.from || one.xs[b] > zoom.to)) { continue; }
+          var bx = toX(one.xs[b]);
+          var by = toY(one.ys[b], box, down);
+          var base = toY(0, box, down);
+          if (!isFinite(by)) { continue; }
+          ctx.fillRect(bx - (thick / 2), Math.min(by, base), thick, Math.abs(base - by));
+        }
+      }
+
+      var radius = kind === "scatter" ? Math.max(1.5, dotSize || 2.5) : dotSize;
+      if (radius > 0) {
+        for (var d = 0; d < one.xs.length; d += 1) {
+          if (zoom && (one.xs[d] < zoom.from || one.xs[d] > zoom.to)) { continue; }
+          var dy = toY(one.ys[d], box, down);
+          if (!isFinite(dy)) { continue; }
+          ctx.beginPath();
+          ctx.arc(toX(one.xs[d]), dy, radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    });
+
+    return { box: box, across: across, down: down, toX: toX };
+  }
+
+  var frame = null;
+  function repaint() { frame = draw(); }
+
+  // -- reading a point off the chart ---------------------------------------------------------
+
+  function nearest(px) {
+    if (!frame) { return null; }
+    var best = null;
+    series.forEach(function (one) {
+      if (!one.on) { return; }
+      for (var i = 0; i < one.xs.length; i += 1) {
+        if (zoom && (one.xs[i] < zoom.from || one.xs[i] > zoom.to)) { continue; }
+        var away = Math.abs(frame.toX(one.xs[i]) - px);
+        if (!best || away < best.away) {
+          best = { away: away, name: one.name, x: one.xs[i], y: one.ys[i], color: one.color };
+        }
+      }
+    });
+    return best;
+  }
+
+  function sayNothing() {
+    readout.innerHTML = DATA.xLabel + " &middot; " + series.length + " series";
+  }
+  sayNothing();
+
+  canvas.addEventListener("mousemove", function (event) {
+    if (dragging) { return; }
+    var box = canvas.getBoundingClientRect();
+    var found = nearest(event.clientX - box.left);
+    if (!found) { sayNothing(); return; }
+    readout.innerHTML = found.name + "<br><b>" + label(found.x) + "</b>, <b>"
+      + label(found.y) + "</b>";
+  });
+  canvas.addEventListener("mouseleave", sayNothing);
+
+  // -- zooming to a range of x ---------------------------------------------------------------
+
+  var dragging = false;
+  var fromX = 0;
+
+  canvas.addEventListener("pointerdown", function (event) {
+    var box = canvas.getBoundingClientRect();
+    dragging = true;
+    fromX = event.clientX - box.left;
+    canvas.setPointerCapture(event.pointerId);
+  });
+
+  canvas.addEventListener("pointermove", function (event) {
+    if (!dragging || !frame) { return; }
+    var box = canvas.getBoundingClientRect();
+    var nowX = event.clientX - box.left;
+    repaint();
+    ctx.fillStyle = token("--signal");
+    ctx.globalAlpha = 0.16;
+    ctx.fillRect(Math.min(fromX, nowX), pad.top, Math.abs(nowX - fromX), frame.down);
+    ctx.globalAlpha = 1;
+  });
+
+  canvas.addEventListener("pointerup", function (event) {
+    if (!dragging || !frame) { return; }
+    dragging = false;
+    if (canvas.hasPointerCapture(event.pointerId)) {
+      canvas.releasePointerCapture(event.pointerId);
+    }
+    var box = canvas.getBoundingClientRect();
+    var nowX = event.clientX - box.left;
+    if (Math.abs(nowX - fromX) < 6) { repaint(); return; }
+    var here = frame.box;
+    function toValue(px) {
+      return here.xLow + (((px - pad.left) / frame.across) * (here.xHigh - here.xLow));
+    }
+    zoom = { from: Math.min(toValue(fromX), toValue(nowX)),
+             to: Math.max(toValue(fromX), toValue(nowX)) };
+    repaint();
+  });
+
+  canvas.addEventListener("dblclick", function () { zoom = null; repaint(); });
+  document.getElementById("reset").addEventListener("click", function () { zoom = null; repaint(); });
+
+  // -- the controls --------------------------------------------------------------------------
+
+  document.getElementById("kind").addEventListener("change", function () {
+    kind = this.value;
+    repaint();
+  });
+  document.getElementById("dot").addEventListener("input", function () {
+    dotSize = parseInt(this.value, 10);
+    repaint();
+  });
+  document.getElementById("wide").addEventListener("input", function () {
+    lineWide = parseInt(this.value, 10);
+    repaint();
+  });
+  document.getElementById("logy").addEventListener("change", function () {
+    logY = this.checked;
+    repaint();
+  });
+  document.getElementById("grid").addEventListener("change", function () {
+    showGrid = this.checked;
+    repaint();
+  });
+
+  var holder = document.getElementById("series");
+  series.forEach(function (one) {
+    var row = document.createElement("label");
+    row.className = "tickrow";
+    var box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = true;
+    box.addEventListener("change", function () { one.on = this.checked; repaint(); });
+    var chip = document.createElement("span");
+    chip.className = "chip";
+    chip.style.background = one.color;
+    var name = document.createElement("span");
+    name.className = "name";
+    name.textContent = one.name;
+    row.appendChild(box);
+    row.appendChild(chip);
+    row.appendChild(name);
+    holder.appendChild(row);
+  });
+
+  function setAll(on) {
+    series.forEach(function (one, at) {
+      one.on = on;
+      holder.children[at].firstChild.checked = on;
+    });
+    repaint();
+  }
+  document.getElementById("all").addEventListener("click", function () { setAll(true); });
+  document.getElementById("none").addEventListener("click", function () { setAll(false); });
+
+  document.getElementById("fold").addEventListener("click", function () {
+    var panel = document.getElementById("panel");
+    panel.classList.toggle("folded");
+    this.textContent = panel.classList.contains("folded") ? "+" : "−";
+  });
+
+  // -- moving the boxes ----------------------------------------------------------------------
+
+  function movable(box, handle) {
+    var held = false, grabX = 0, grabY = 0;
+    handle.addEventListener("pointerdown", function (event) {
+      if (event.target.tagName === "BUTTON" || event.target.tagName === "INPUT") { return; }
+      held = true;
+      var here = box.getBoundingClientRect();
+      var room = box.parentElement.getBoundingClientRect();
+      box.style.left = (here.left - room.left) + "px";
+      box.style.top = (here.top - room.top) + "px";
+      box.style.right = "auto";
+      grabX = event.clientX - box.offsetLeft;
+      grabY = event.clientY - box.offsetTop;
+      handle.classList.add("dragging");
+      handle.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+    handle.addEventListener("pointermove", function (event) {
+      if (!held) { return; }
+      var room = box.parentElement.getBoundingClientRect();
+      box.style.left = Math.max(0, Math.min(room.width - box.offsetWidth,
+                                            event.clientX - grabX)) + "px";
+      box.style.top = Math.max(0, Math.min(room.height - 24, event.clientY - grabY)) + "px";
+    });
+    function letGo(event) {
+      if (!held) { return; }
+      held = false;
+      handle.classList.remove("dragging");
+      if (event && event.pointerId !== undefined && handle.hasPointerCapture(event.pointerId)) {
+        handle.releasePointerCapture(event.pointerId);
+      }
+    }
+    handle.addEventListener("pointerup", letGo);
+    handle.addEventListener("pointercancel", letGo);
+  }
+  movable(document.getElementById("panel"), document.getElementById("grip"));
+  movable(readout, readout);
+
+  window.addEventListener("resize", repaint);
+  if (window.ResizeObserver) {
+    var stage = document.querySelector(".stage");
+    new ResizeObserver(repaint).observe(stage);
+  }
+  if (window.matchMedia) {
+    var watch = window.matchMedia("(prefers-color-scheme: dark)");
+    if (watch.addEventListener) { watch.addEventListener("change", repaint); }
+  }
+
+  if (DATA.kind) {
+    kind = DATA.kind;
+    document.getElementById("kind").value = DATA.kind;
+  }
+  repaint();
+}());
+</script>

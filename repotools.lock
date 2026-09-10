@@ -1,0 +1,31 @@
+# repotools.lock - written by `repotools fetch`. Do not edit.
+#
+# installed_path    toolkit_source_path    digest
+#
+# Every file here came from the repo_tools checkout and is maintained there. A file absent
+# from this list belongs to this repository and the toolkit never reads it.
+
+tools/repotools/code/code_verify/test/lanes.c code/code_verify/test/lanes.c 1cb20bfe7606914b
+tools/repotools/code/code_verify/test/verify_asm.toml code/code_verify/test/verify_asm.toml 503d21f3f2b0cc27
+tools/repotools/code/code_verify/verify_asm.py code/code_verify/verify_asm.py 0913ec01f75d22c0
+tools/repotools/lib/numerics/dsp.py lib/numerics/dsp.py 6272286875e86cee
+tools/repotools/lib/numerics/precision.py lib/numerics/precision.py d1df1b5cc862b55f
+tools/repotools/lib/repotools/__init__.py lib/repotools/__init__.py 0b8196993556ca3f
+tools/repotools/lib/repotools/boot.py lib/repotools/boot.py 413320f955250bcb
+tools/repotools/lib/repotools/cli.py lib/repotools/cli.py 7706456fc9bb5f2c
+tools/repotools/lib/repotools/config.py lib/repotools/config.py 055e675db4e1be79
+tools/repotools/lib/repotools/defaults.toml lib/repotools/defaults.toml 057e94c6cce6a211
+tools/repotools/lib/repotools/fetch.py lib/repotools/fetch.py 95b0ba6478fef338
+tools/repotools/lib/repotools/findings.py lib/repotools/findings.py bb1158878b9e2ca0
+tools/repotools/lib/repotools/root.py lib/repotools/root.py 677bb1f27a459dba
+tools/repotools/lib/repotools/shape.py lib/repotools/shape.py dffd5839b6ab3b7f
+tools/repotools/media_tools/dataviz/build_blob_view.py media_tools/dataviz/build_blob_view.py fddd7815c676b410
+tools/repotools/media_tools/dataviz/build_chart_view.py media_tools/dataviz/build_chart_view.py 2b0829271be406be
+tools/repotools/media_tools/dataviz/build_field_view.py media_tools/dataviz/build_field_view.py 1c3a1fca0f733787
+tools/repotools/media_tools/dataviz/build_plot_view.py media_tools/dataviz/build_plot_view.py 3ce359eeb247859a
+tools/repotools/media_tools/dataviz/build_sound_view.py media_tools/dataviz/build_sound_view.py 15c7d4b4f710c5c7
+tools/repotools/media_tools/dataviz/build_sweep_view.py media_tools/dataviz/build_sweep_view.py 59f2c5cc158fff1c
+tools/repotools/media_tools/dataviz/chart_view_template.html media_tools/dataviz/chart_view_template.html d96ab71210f74d0e
+tools/repotools/media_tools/dataviz/settings.py media_tools/dataviz/settings.py 772ce8526654b193
+tools/repotools/media_tools/dataviz/voxel_view_template.html media_tools/dataviz/voxel_view_template.html 65b44a22d3766706
+tools/repotools/media_tools/source_render/src2png.py media_tools/source_render/src2png.py f0458b7d5b16cda4

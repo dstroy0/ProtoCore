@@ -1,0 +1,104 @@
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# ProtoCore's settings for the shared toolkit at repo_tools. This file being present at the root is
+# the marker every fetched tool walks up to find, so its location is the contract.
+#
+# Everything here has a default in the toolkit's lib/repotools/defaults.toml. What is stated below is
+# what ProtoCore answers differently, plus the settings its own tools used to hold in their bodies.
+#
+#   repotools config     what this file resolves to, after the defaults are merged under it
+#   repotools fetch      copy the named sets into tools/repotools, and write repotools.lock
+#   repotools check      report a fetched tool edited here, or one the toolkit has moved past
+
+[project]
+name = "ProtoCore"
+version = "1.0.16"
+spdx = "AGPL-3.0-or-later"
+copyright = "Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>"
+prefix = "PROTOCORE"
+
+[layout]
+source = ["src", "include"]
+docs = ["docs"]
+examples = ["examples"]
+tests = ["test"]
+tools = "tools"
+scratch = "build"
+
+[code]
+# These select a PARSER, never a scope. src/ is C11 throughout; the .cpp and .ino under examples/ are
+# sketches, and no fetched tool parses them.
+extensions = [".c", ".h"]
+skip_files = ["unity_runner.c"]
+# The defaults already carry .git, __pycache__, build, site, vendor, deps, .pio, node_modules and
+# coverage_reports. These two are ProtoCore's own: managed_components is what the IDF component
+# manager downloads into an example - 2026 vendored files, gitignored, restored unformatted by any
+# checkout - and .pio_cov_wsl is the instrumented build dir for the WSL clone.
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "build-cov",
+    "build-bench",
+    "build-werror",
+    "site",
+    "vendor",
+    "_vendor",
+    "deps",
+    ".pio",
+    ".pio_cov",
+    ".pio_cov_wsl",
+    "managed_components",
+    "node_modules",
+    "coverage_reports",
+]
+
+[prose]
+roots = ["README.md", "docs"]
+
+[hooks]
+# EMPTY ON PURPOSE. ProtoCore keeps its own tools/git-hooks/pre-commit, which does nine things the
+# toolkit's gates.py does not: clang-format on the staged C, a whole-tree drift warning, black,
+# prettier, shfmt, cspell word capture, test-matrix regeneration, the src/ banned-construct hard gate,
+# per-file version stamping, and the .bumpversion.cfg registration gate. Naming a gate here would run
+# a second, thinner hook beside it. Revisit only if that hook is retired.
+gates = []
+
+[yank]
+# Read by the toolkit's code/code_maint/yank_includes.py, which takes these from a Config where
+# ProtoCore's local copy held them in its body. Same values, stated once.
+manifest = "test/yanked_includes.json"
+# The assembly chain: these exist to be included by everything, so their includes are the point.
+keep = [
+    "src/protocore_config.h",
+    "src/config/platform/platform.h",
+    "src/config/platform/types.h",
+    "src/derived_sizing.h",
+    "vendor/vendor_detect.h",
+    "vendor/vendor_hal.h",
+]
+# Never yanked, whoever includes it. A header gates its own body on PROTOCORE_* and those macros come
+# from the entry point; take the include out and the header's body vanishes before any consumer's
+# forced include can matter.
+never = [
+    "protocore_config.h",
+    "config/platform/platform.h",
+    "config/platform/types.h",
+]
+
+[fetch]
+# Pure additions first: ProtoCore has no equivalent of either, so nothing is shadowed.
+#   code/code_verify  verify_asm.py - compiles a case, disassembles it, and requires the instructions
+#                     the source was written to use. ProtoCore gates emission nowhere today.
+#   media_tools       the viewers, which pull lib/numerics with them.
+# lib/repotools travels with every fetch whether or not it is named here.
+#
+# code/code_maint is deliberately ABSENT and the reason is in docs/TOOLKIT.md: three of its eight
+# files collide with a ProtoCore tool that is load-bearing or better, and a set is fetched whole.
+# lib/numerics is named explicitly. media_tools declares it as a dependency in the toolkit's
+# SET_NEEDS, but a fetch of media_tools alone did not pull it here: build_sound_view.py and
+# build_sweep_view.py both open with `from numerics import dsp` and died on ModuleNotFoundError.
+# Reported upstream; naming it is what makes the viewers run today.
+sets = ["code/code_verify", "media_tools", "lib/numerics"]
+into = "repotools"

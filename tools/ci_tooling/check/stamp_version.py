@@ -47,6 +47,12 @@ SKIP_DIRS = {
     "__pycache__",
     "node_modules",
     "managed_components",
+    # Fetched toolkit code. tools/repotools/ is repo_tools' source, copied in by `repotools fetch`;
+    # every file already carries that project's header and a repotools-stamp line, and repotools.lock
+    # holds its digest. A ProtoCore stamp written here is an edit `repotools check` reports as
+    # breaking and the next fetch discards. Skipped for the reason managed_components is: it is
+    # somebody else's source. .prettierignore and [tool.black] force-exclude skip it too.
+    "repotools",
     "build",
     "build-lto",
     "coverage_reports",

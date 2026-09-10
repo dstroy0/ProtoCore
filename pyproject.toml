@@ -3,3 +3,15 @@
 # (tools/git-hooks/pre-commit) runs black on staged .py automatically.
 [tool.black]
 line-length = 120
+# Fetched toolkit code. tools/repotools/ is repo_tools' source, copied in by `repotools fetch` and
+# maintained there; every file carries a repotools-stamp line and repotools.lock holds its digest.
+# Reformatting it here would be an edit the next fetch discards, and `repotools check` reports a
+# locally edited fetched file as breaking - so the format gate and the fetch contract would refuse
+# each other on every commit. Same reasoning .prettierignore already gives for include/MMgr/.
+#
+# force-exclude, not extend-exclude: CI runs `git ls-files '*.py' | xargs black --check` and the
+# pre-commit hook passes staged paths, and black only applies extend-exclude to files it discovers
+# by walking. A path handed to it explicitly is skipped only by force-exclude.
+force-exclude = '''
+^/tools/repotools/
+'''

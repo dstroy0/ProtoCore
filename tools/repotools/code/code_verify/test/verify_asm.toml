@@ -1,0 +1,85 @@
+# repotools-stamp: code/code_verify/test/verify_asm.toml 503d21f3f2b0cc27
+# repo_tools - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+#
+# The fixture manifest for verify_asm, which is how the checker gets checked.
+#
+#   python code/code_verify/verify_asm.py code/code_verify/test/verify_asm.toml
+#
+# Four cases, and three of them are supposed to pass while the fourth proves a missing compiler is
+# not counted as satisfied. A checker that only ever reports success has not been checked.
+
+# Should pass. At -O3 the comparison loop becomes vpcmpeqd on ymm registers. If a future compiler
+# stops vectorizing it, this row is the thing that says so.
+[[case]]
+label    = "avx2 at -O3"
+grade    = "emits"
+compiler = "gcc"
+flags    = ["-O3", "-mavx2"]
+source   = "code/code_verify/test/lanes.c"
+objdump  = "objdump"
+symbol   = "lanes_matching"
+require  = ["vpcmpeqd", "ymm"]
+
+# Should pass, and it is the row worth reading. -mavx2 ALONE BUYS NOTHING AT -O2. The flag is
+# accepted, the build succeeds, and the loop comes out scalar: cmp, sete, add, and not one vector
+# register. Measured on gcc 13.2 over this exact source, counting ymm and vpcmpeq occurrences in
+# lanes_matching:
+#
+#   -O2 -mavx2                     0
+#   -O3 -mavx2                    11
+#   -O2 -mavx2 -ftree-vectorize   11
+#
+# That is the whole reason this tool exists. Nothing in a build log says it, every test still
+# passes because scalar code computes the same answer, and the only way to find it is to read the
+# object. The first version of this fixture required ymm here and failed, and the expectation was
+# wrong rather than the code, which is the second time today that has been the answer.
+#
+# If a future gcc starts vectorizing at -O2 this row fires. That is information and not a false
+# alarm: it means the flag advice in the row above has changed.
+[[case]]
+label    = "flag alone is not enough"
+grade    = "emits"
+compiler = "gcc"
+flags    = ["-O2", "-mavx2"]
+source   = "code/code_verify/test/lanes.c"
+objdump  = "objdump"
+symbol   = "lanes_matching"
+forbid   = ["ymm", "vpcmpeq"]
+
+# Should pass. Narrowed to the copy, which must NOT have been turned into a library call. Written
+# with -fno-builtin so the substitution does not happen; drop that flag and this row fails, which
+# is the demonstration that forbid catches what require cannot.
+[[case]]
+label    = "copy stays inline"
+grade    = "emits"
+compiler = "gcc"
+flags    = ["-O2", "-fno-builtin"]
+source   = "code/code_verify/test/lanes.c"
+objdump  = "objdump"
+symbol   = "lanes_copy"
+forbid   = ["call.*memcpy"]
+
+# Should pass. The same source with no vector flag must not carry vector instructions, which is the
+# other direction: a build that quietly enabled something it was not asked for.
+[[case]]
+label    = "baseline stays scalar"
+grade    = "emits"
+compiler = "gcc"
+flags    = ["-O2", "-mno-avx", "-mno-avx2", "-mno-sse4.1"]
+source   = "code/code_verify/test/lanes.c"
+objdump  = "objdump"
+symbol   = "lanes_matching"
+forbid   = ["ymm", "zmm"]
+
+# Should SKIP on any machine without an aarch64 cross compiler, and must never read as a pass. A
+# manifest naming four cross compilers on a machine holding two is the ordinary case.
+[[case]]
+label    = "neon, usually absent"
+grade    = "emits"
+compiler = "aarch64-linux-gnu-gcc"
+flags    = ["-O2"]
+source   = "code/code_verify/test/lanes.c"
+objdump  = "aarch64-linux-gnu-objdump"
+symbol   = "lanes_matching"
+require  = ["cmeq"]

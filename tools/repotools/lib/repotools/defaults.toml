@@ -1,0 +1,95 @@
+# repotools-stamp: lib/repotools/defaults.toml 057e94c6cce6a211
+# repo_tools - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+#
+# The toolkit defaults. A repository's own repotools.toml is merged over this table by table, so a
+# repository states what differs and stays short enough to read in one screen.
+#
+# A key belongs here when a second repository would answer the question differently. A key only one
+# repository will ever set stays in that repository.
+
+[project]
+# name has no default. A generated header with no project name in it is a header that is wrong in
+# every repository at once, so the loader refuses instead of guessing.
+version = ""
+spdx = ""
+copyright = "Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>"
+prefix = ""
+
+[layout]
+# Where each kind of file lives, relative to the repository root. A tool asks for the kind and never
+# for the directory name, so a repository that keeps headers under include/ changes one line here
+# and no tool at all.
+source = ["src", "include"]
+docs = ["docs"]
+examples = ["examples"]
+tests = ["test"]
+# Test DATA, which is read by a check and is not itself a check. Separate from `tests` because the
+# two want opposite treatment: a tests root should be collected and a collection of zero from it is a
+# defect, while a fixtures root should never be collected at all.
+#
+# One key carrying both meanings made a guard impossible to write. A directory holding only a .c file
+# and a .toml manifest sat under `tests`, so a run of pytest over that list collected nothing, exited
+# 5, and would have reported success forever: nothing was missing and nothing was malformed, so the
+# absent-root refusal and the discoverability fix both slid past it. Splitting the key is what makes
+# a zero collection unambiguous.
+fixtures = []
+tools = "tools"
+# The throwaway directory. Anything a tool generates and nobody edits goes under here, so a tool
+# never has to assume what a tree calls it. Two repositories on this machine call it build-cov and
+# build-werror, and a tool writing to a hard coded `build` would have put objects in a tracked tree.
+scratch = "build"
+
+# A tool set that is imported rather than run lives under lib/ and is on sys.path after the four
+# line preamble. Everything else is run: invoked by path, or through bin/repotools.
+
+
+[code]
+# These select a PARSER. They must never select a scope.
+#
+# A check asking "did this rename reach every site" or "does this reference still resolve" reads
+# every file, through Config.walk_all(), and takes no extension list at all. Naming the extensions
+# decides in advance where a defect cannot be. A sweep next door filtered on *.py, *.md, *.tex and
+# *.yml, missed the one reference that mattered because a git hook is named `pre-commit` and has no
+# extension, and the gate that reference guarded silently turned itself off for a day.
+extensions = [".c", ".h"]
+# Individual files skipped by name, for a generated file that is not anybody's source. A test runner
+# emitted by a framework is the usual case.
+skip_files = []
+# Skipped by name anywhere in a walk. By name, because build/ appears at the root and again under
+# test/, and a repository listing both paths forgets the third one.
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "build-cov",
+    "build-bench",
+    "build-werror",
+    "site",
+    "vendor",
+    "_vendor",
+    "deps",
+    ".pio",
+    ".pio_cov",
+    "node_modules",
+    "coverage_reports",
+]
+
+[prose]
+extensions = [".md"]
+# Prose roots default to empty so a repository states them. The one repository that guessed read
+# four roots that had moved and reported success on every commit for a week.
+roots = []
+strict = false
+
+[hooks]
+# The checks the pre-commit driver runs, in order. Empty by default: a repository opts in to each
+# gate by naming it, because a gate nobody chose is a gate somebody turns off.
+gates = []
+
+[fetch]
+# Which tool sets this repository pulls from the toolkit. A set is a directory under the toolkit
+# root, and pulling one pulls all of it.
+sets = []
+# Where the fetched tree lands, under [layout] tools.
+into = "repotools"

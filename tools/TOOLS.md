@@ -240,7 +240,7 @@ Every one takes `--check` to assert the tracked file already matches, which is h
 | `funnel_test.py`      |   |                                                                                                                          |                 |
 | `gen_x509_fixture.py` | W |                                                                                                                          | openssl         |
 | `gen_x509_fixture.sh` | W |                                                                                                                          | openssl, python |
-| `goldenize.py`        | W | `--dry`                                                                                                                  | python          |
+| `goldenize.py`        | W | `--dry --force`                                                                                                          | python          |
 | `goldenize_test.py`   |   |                                                                                                                          |                 |
 | `move_code.py`        | W | `--anchor-after --anchor-before --append --back-over-comments --dry-run --dst --expect-end --expect-start --range --src` |                 |
 | `nodeset.py`          |   |                                                                                                                          |                 |
