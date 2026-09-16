@@ -107,7 +107,7 @@ not handed a request at run time and asked whether it fits; the set of spans it 
 ever be asked for is an input to how it was sized. That is why the pointer is
 guaranteed and there is nothing to check.
 
-**And every address is preknown too.** A module declares a span and never an offset,
+**And every address is preknown too.** A module declares a span. It never declares an offset,
 so nothing couples one module to another - but mmgr resolves that set of spans into a
 layout at compile time, which makes each TU's base a constant, decided before any
 run-time bump. Two TUs that the time domain proves are never live
