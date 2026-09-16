@@ -43,7 +43,20 @@ GEN_DEFAULT = [
     "examples",
     "nav_groups",
     "tools_inventory",
+    # These four were registered in GEN but ran in no default sweep, so `gen --check` passed while
+    # their outputs aged. docs/features.html was serving renamed symbols to readers, and
+    # HARDWARE_HOOKUP.md documented protocore_rtc_begin(void) after the entry took a work buffer. A
+    # generator nothing checks is a file that goes stale silently, which is the failure this whole
+    # sweep exists to catch. They run last: each reads FEATURES.md after feature_tables settles it.
+    "features_page",
+    "features_tree",
+    "hardware_ref",
+    "interop_matrix",
 ]
+
+# dep_graph stays out. It is the compiler dependency graph, it takes --build-dir rather than
+# --check, and it needs a populated build tree, which the Feature Tables workflow does not have.
+# Checking it belongs to a job that builds.
 
 GEN = {
     "feature_tables": "generate.gen_feature_tables",
