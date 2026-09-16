@@ -624,6 +624,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+<<<<<<< Updated upstream
+=======
+- docs prefix bugfix ([`33c1e8a`](https://github.com/dstroy0/ProtoCore/commit/33c1e8a711b9d95813a93c8421714dc7514a32e5))
+>>>>>>> Stashed changes
 - docs citation bugfix ([`4c07769`](https://github.com/dstroy0/ProtoCore/commit/4c07769060809ca6c549cea5e7a17410ed6af270))
 - docs generated regen ([`aa46daf`](https://github.com/dstroy0/ProtoCore/commit/aa46dafdb3dac219a6661c1c369763c95ba8cb48))
 - docs security bugfix ([`ccf6432`](https://github.com/dstroy0/ProtoCore/commit/ccf64321d5184fd34990ff74552da8ae8a6c9e8d))
