@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`6de5e91`](https://github.com/dstroy0/ProtoCore/commit/6de5e9115213a3d64e0879f7265b577758eb9f05))
 - update CHANGELOG.md [skip ci] ([`e772759`](https://github.com/dstroy0/ProtoCore/commit/e7727599e646d7b8f96f4a8be270e74b57e43e71))
 - update CHANGELOG.md [skip ci] ([`383f238`](https://github.com/dstroy0/ProtoCore/commit/383f2388515f3964239a70f5256e2f4390994fc4))
 - update CHANGELOG.md [skip ci] ([`fdd484a`](https://github.com/dstroy0/ProtoCore/commit/fdd484a0c2f8379d1167b66fff179e333517fe56))
@@ -420,6 +421,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`03a54c3`](https://github.com/dstroy0/ProtoCore/commit/03a54c3262762fe5d13677a0c5cf10d7e0690ae1))
+- tools checkdocs bugfix ([`5b5f546`](https://github.com/dstroy0/ProtoCore/commit/5b5f54682bb664f98751d6d068c182976bce8200))
 - merge origin ([`ede0103`](https://github.com/dstroy0/ProtoCore/commit/ede0103ca48440615b9dca0c8e830b2d58c1221b))
 - tools gate bugfix ([`d9761b2`](https://github.com/dstroy0/ProtoCore/commit/d9761b2114979964aef5d88c83c646c182ddef09))
 - tools comment bugfix ([`f8ba590`](https://github.com/dstroy0/ProtoCore/commit/f8ba5905b352af5566ccff17eee7ac9aca8b10e0))
