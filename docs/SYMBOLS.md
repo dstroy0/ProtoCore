@@ -151,8 +151,8 @@ A rule that cannot be applied uniformly is not a rule.
 **Include guards are `PROTOCORE_<FILE>_H`**, built from the file's own name:
 `src/crypto/hash/sha256/sha256.h` guards with `PROTOCORE_SHA256_H`.
 
-A guard takes the full library name rather than the `PROTOCORE_` prefix, because it is the one macro that
-has to be unique across _someone else's_ build: `PROTOCORE_HTTP_PARSER_H` is a plausible name for another
+A guard takes the full library name, because it is the only macro that
+has to be unique across _someone else's_ build: `PC_HTTP_PARSER_H` is a plausible name for another
 library's guard while `PROTOCORE_HTTP_PARSER_H` is not.
 
 **Every header file name under `src/` is unique, and `check_symbols.py` enforces it.** That is what
