@@ -1,6 +1,6 @@
 # ESP32-S3 test-rig firmware
 
-The **target firmware** for the network attack tool (`../protocore_pentest.py`) and the JTAG
+The **target firmware** for the network attack tool (`../pc_pentest.py`) and the JTAG
 perf-profiling harness. It brings up `PC` on a broad feature set and exposes the
 oracle endpoints the tools rely on, so attacks and benchmarks run against a real device.
 
@@ -99,7 +99,7 @@ grep -a 'RIG_IP=' ~/serial-ttyACM0.log | tail -1
 ## Attack it
 
 ```sh
-python3 ../protocore_pentest.py --host <rig-ip> --diag --intensity high --json report.json --authorized
+python3 ../pc_pentest.py --host <rig-ip> --diag --intensity high --json report.json --authorized
 ```
 
 ## JTAG perf profiling (cycle-accurate)
