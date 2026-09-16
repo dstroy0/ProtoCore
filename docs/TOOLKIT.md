@@ -29,23 +29,23 @@ edited, on every commit. This is the same reasoning `.prettierignore` already gi
 and that `.github/workflows/format-code.yml` gives for `managed_components`: code from another
 repository, with its own standards, that a commit here cannot reach.
 
-`force-exclude` rather than `extend-exclude` because CI runs `git ls-files '*.py' | xargs black
+`force-exclude`, because CI runs `git ls-files '*.py' | xargs black
 --check` and the pre-commit hook passes staged paths. Black applies `extend-exclude` only to files it
 discovers by walking a directory; a path handed to it explicitly is skipped only by `force-exclude`.
 
 ## What ProtoCore fetches
 
-| set                | what it brings                                                                                                          | why it is not ours                                                                          |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `lib/repotools`    | the spine: `boot`, `root`, `config`, `findings`, `fetch`, `shape`, `cli`                                                | travels with every fetch whether or not it is named                                         |
+| set                | what it brings                                                                                                         | why it is not ours                                                                          |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `lib/repotools`    | the spine: `boot`, `root`, `config`, `findings`, `fetch`, `shape`, `cli`                                               | travels with every fetch whether or not it is named                                         |
 | `code/code_verify` | `verify_asm.py`: compiles a case, disassembles the object, and requires the instructions the source was written to use | nothing in it knows what the project is; ProtoCore gates instruction selection nowhere else |
-| `media_tools`      | six viewers, `settings.py`, two page templates, `src2png.py`                                                            | they read bytes, tables and audio; none knows what the data is about                        |
-| `lib/numerics`     | `dsp.py`, `precision.py`                                                                                                | standard-library transforms; `media_tools` imports them                                     |
+| `media_tools`      | six viewers, `settings.py`, two page templates, `src2png.py`                                                           | they read bytes, tables and audio; none knows what the data is about                        |
+| `lib/numerics`     | `dsp.py`, `precision.py`                                                                                               | standard-library transforms; `media_tools` imports them                                     |
 
 `lib/numerics` is named explicitly in `[fetch] sets`. The toolkit declares it as a dependency of
 `media_tools`, but a fetch of `media_tools` alone did not pull it: `build_sound_view.py` and
 `build_sweep_view.py` both open with `from numerics import dsp` and died on `ModuleNotFoundError`.
-Naming it is what makes the viewers run. Reported upstream.
+Naming it makes the viewers run. Reported upstream.
 
 ## What ProtoCore keeps, and why
 
@@ -56,10 +56,10 @@ this tree.
 | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `tools/ci_tooling/`                                                                                                             | the twelve guards, the generators, coverage and Sonar. Tied to `src/`'s layout, `docs/SYMBOLS.md`, `docs/SRCBANNED.md`, the module graph, `.bumpversion.cfg` and the PlatformIO env matrix |
 | `tools/dev_env/goldenize.py`, `shapeaudit.py`, `nsmap.py`, `pimpl.py`, `funnel.py`                                              | the conversion toolchain for one shape: an entry taking `uint8_t *restrict work`, operands under `<X>V`, state carved out of `PROTOCORE_<X>_BORROW` at asserted offsets                    |
-| `tools/dev_env/readclean.py`                                                                                                    | see below: same filename as a toolkit tool, different tool                                                                                                                                |
+| `tools/dev_env/readclean.py`                                                                                                    | see below: same filename as a toolkit tool, different tool                                                                                                                                 |
 | `tools/dev_env/nodeset.py`, `uatree.py`, `uaspace.py`, `opcua_conform.py`                                                       | OPC UA NodeSet readers                                                                                                                                                                     |
 | `tools/crypto/`                                                                                                                 | this project's test vectors and keys                                                                                                                                                       |
-| `tools/harness.py`, `tools/findroot.py`                                                                                         | ProtoCore's entry point. A tool stays runnable by path; the harness is what makes it findable                                                                                              |
+| `tools/harness.py`, `tools/findroot.py`                                                                                         | ProtoCore's entry point. A tool stays runnable by path; the harness makes it findable                                                                                                      |
 | `tools/git-hooks/`                                                                                                              | nine steps the toolkit's driver does not do, listed under `[hooks]` in `repotools.toml`                                                                                                    |
 | `tools/include_footprint.py`, `pid_tune.py`, `dev_env/capsweep.py`, `dev_env/listener_queue/`, `dev_env/pimpl_bench/`, `psram/` | measurements of this firmware                                                                                                                                                              |
 
@@ -78,7 +78,7 @@ toolkit's deleted `readclean_test.py` was written against.
 
 **`nsconv.py` and `codemask.py` are imported, not run.** `goldenize.py` imports them as siblings from
 `tools/dev_env/`. Fetching the set installs a second copy at `tools/repotools/code/code_maint/` that
-nothing imports, which is duplication rather than the end of it.
+nothing imports, which duplicates the set without ending the duplication.
 
 The other five are wanted. `dedup.py` has no ProtoCore equivalent, and the toolkit's
 `yank_includes.py` is better than ours: it reads its keep list, its never-yank list and its manifest
@@ -87,7 +87,7 @@ path from a Config, where ProtoCore's holds them in its body. Those values are a
 
 Taking the set needs one of: per-file fetch in the toolkit, a split of `code_maint` into smaller sets,
 or ProtoCore renaming its `readclean.py` and repointing `goldenize.py` at fetched modules. That is a
-decision for the toolkit owner and it is recorded here rather than settled.
+decision for the toolkit owner. It is recorded here and left unsettled.
 
 ## Checking this stayed true
 
