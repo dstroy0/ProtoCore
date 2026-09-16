@@ -72,7 +72,7 @@ whereas an outbound **response** may use chunked transfer via
 ## HTTP authentication (RFC 7235)
 
 A route registered with credentials challenges unauthenticated requests with
-`401 Unauthorized` + `WWW-Authenticate` and `Connection: close` (so a client gets
+`401 Unauthorized` + `WWW-Authenticate` and `Connection: close` (a client gets
 exactly one guess per TCP connection - a built-in brute-force bound).
 
 <details>
@@ -139,7 +139,7 @@ does not request a client certificate, so there is no mutual-TLS mode.
 
 Optional **session resumption** ([`PROTOCORE_ENABLE_TLS_RESUMPTION`](@ref PROTOCORE_ENABLE_TLS_RESUMPTION))
 via session tickets (RFC 5077): the TLS 1.2 server issues an encrypted ticket and
-accepts it on reconnect, so a returning client completes an abbreviated handshake
+accepts it on reconnect. A returning client completes an abbreviated handshake
 (no certificate or ECDHE key exchange) - much less CPU and latency on a constrained
 device. It is stateless: the session is sealed into the client's ticket with a
 server-held AES-256-GCM key that rotates on the
@@ -210,7 +210,7 @@ RFC 7233 §3.1 explicitly permits, as does a malformed or absent `Range`.
 
 Optional ([`PROTOCORE_ENABLE_WEBDAV`](@ref PROTOCORE_ENABLE_WEBDAV), requires file serving,
 default off). [`dav()`](@ref dav) mounts a filesystem subtree that
-answers the WebDAV methods, extending HTTP so a client can manage files:
+answers the WebDAV methods, extending HTTP for a client to manage files:
 
 - **OPTIONS** advertises `DAV: 1, 2` and the supported `Allow` set.
 - **PROPFIND** (Depth `0` or `1`) returns `207 Multi-Status` with a `<D:response>`
@@ -310,8 +310,8 @@ is mandatory - omitting it is rejected by compliant clients). Supported flow:
   [`protocore_opcua_set_browse_handler`](@ref protocore_opcua_set_browse_handler)); an unknown NodeId yields
   `BadNodeIdUnknown`.
 - **Teardown / errors:** `CloseSession`, `CLO` CloseSecureChannel (closes the socket),
-  and a `ServiceFault` (`BadServiceUnsupported`) for any unsupported service so a client
-  never stalls.
+  and a `ServiceFault` (`BadServiceUnsupported`) for any unsupported service, to keep a client
+  from stalling.
 
 The built-in-type codec, framing, and all service request/response builders are
 transport-independent and host-tested; only [`protocore_opcua_rx()`](@ref protocore_opcua_rx) (the
@@ -364,7 +364,7 @@ publish/subscribe client. Conformance to the OASIS MQTT 3.1.1 specification:
   packet id). Outbound QoS 1/2 messages are held in a bounded in-flight pool.
 - **Keep-alive (§3.1.2.10):** a PINGREQ is sent when the link is idle; the
   connection is dropped if no PINGRESP returns within the keep-alive window.
-- `mqtts://` is NOT available: the library ships no client-side TLS engine, so a connection
+- `mqtts://` is NOT available: the library ships no client-side TLS engine. A connection
   asking for it is refused rather than downgraded. QoS 2 inbound flow uses method A
   (deliver on PUBLISH, de-dup by id until PUBREL). The packet codec is
   transport-independent and host-tested (env:native_mqtt).

@@ -59,7 +59,7 @@ TCP pulls this off with a few tricks:
 - **Sequence numbers.** Every byte is numbered, so the receiver can put out-of-order
   packets back in the right order.
 - **Flow control.** The receiver advertises how much buffer space it has (the
-  **window**) so a fast sender cannot overwhelm a slow receiver. This library's
+  **window**) to keep a fast sender from overwhelming a slow receiver. This library's
   transport layer manages exactly this - see the "ack-on-consume" design in
   [ARCHITECTURE.md](../ARCHITECTURE.md); getting it wrong caused a real bug, written up
   in [BUGS.md](../BUGS.md).

@@ -182,7 +182,7 @@ deployments must generate their own key with the steps above and keep it secret.
   available (opt-in); X11 forwarding is not.
 - SCP serves only the SINK (upload) direction; use SFTP `get` to download.
 - On connection teardown the server closes the TCP without a graceful
-  `SSH_MSG_DISCONNECT`, so a client may print a "broken pipe" at the very end of an
+  `SSH_MSG_DISCONNECT`. A client may print a "broken pipe" at the very end of an
   otherwise-successful session (a plain `ssh <host> exit` shows it too). The data
   transfer is unaffected. A graceful disconnect is a planned follow-up.
 - The native-build software RSA/AES/bignum paths are not constant-time; they are
@@ -215,8 +215,8 @@ shared secret K live in `ssh_keys[]` / `ssh_dh[]`. The RSA private key is never
 in static memory - it exists only on the stack during [`ssh_rsa_sign()`](@ref ssh_rsa_sign) and is
 volatile-wiped before the function returns.
 
-The BSS symbols (`ssh_pkt`, `ssh_keys`, `ssh_dh`) are separate linker symbols, so
-a linear buffer overflow from `ssh_pkt[i].rx_buf` cannot reach `ssh_keys` in a
+The BSS symbols (`ssh_pkt`, `ssh_keys`, `ssh_dh`) are separate linker symbols.
+A linear buffer overflow from `ssh_pkt[i].rx_buf` cannot reach `ssh_keys` in a
 single stride.
 
 See [SECURITY.md](SECURITY.md) for the full security treatment.
