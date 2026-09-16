@@ -717,8 +717,8 @@ the ESP32's built-in Wi-Fi supplies the link.
   **rack and slot** number that identify the CPU (for example rack 0 / slot 1 or
   slot 2 on an S7-300, rack 0 / slot 1 on an S7-1200/1500); the PLC must also
   permit "PUT/GET" access for external reads.
-- **Codec:** `protocore_s7_build_setup` / `protocore_s7_build_read_request` / `protocore_s7_parse_header` /
-  `protocore_s7_read_next_item`, wrapped with `protocore_cotp_build_dt` + `protocore_tpkt_build`. See
+- **Codec:** `protocore_s7comm_build_setup` / `protocore_s7comm_build_read_request` / `protocore_s7comm_parse_header` /
+  `protocore_s7comm_read_next_item`, wrapped with `protocore_cotp_build_dt` + `protocore_cotp_tpkt_build`. See
   `src/services/fieldbus/s7comm/s7comm.h`.
 
 ### MELSEC (Mitsubishi)
