@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`8c51010`](https://github.com/dstroy0/ProtoCore/commit/8c51010ec3e1f5c6a4f792d642901aa9823a1d3d))
 - update CHANGELOG.md [skip ci] ([`8239d5e`](https://github.com/dstroy0/ProtoCore/commit/8239d5eb15a9b7eeb5742df6c39ef03592db19d7))
 - update CHANGELOG.md [skip ci] ([`eaae866`](https://github.com/dstroy0/ProtoCore/commit/eaae8661ac10b31ef450b8a0fa1346a19230c26b))
 - update CHANGELOG.md [skip ci] ([`1d26b01`](https://github.com/dstroy0/ProtoCore/commit/1d26b0174db06c28925d64eb61a826650847fa05))
@@ -425,6 +426,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`c7f04fb`](https://github.com/dstroy0/ProtoCore/commit/c7f04fbc0cfa67e2f84dd6e00c4cb7d9a8ba0407))
+- src secure comment ([`b19157a`](https://github.com/dstroy0/ProtoCore/commit/b19157aaf06a76448b16ebc18ab9282bb4d41144))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`ae79b80`](https://github.com/dstroy0/ProtoCore/commit/ae79b80f411aac39813c19647e8e7afb6a5ccd73))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`9026969`](https://github.com/dstroy0/ProtoCore/commit/90269696139fb486d884d704798f2e3444e81379))
 - src httpclient bugfix ([`a60250d`](https://github.com/dstroy0/ProtoCore/commit/a60250d496f45d2a81a2ea8b53519050ae372f30))
@@ -610,6 +613,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- docs prose bugfix ([`bb1718c`](https://github.com/dstroy0/ProtoCore/commit/bb1718c6fe6dc405f34baafe869b09d16a506025))
 - docs citation bugfix ([`a14a501`](https://github.com/dstroy0/ProtoCore/commit/a14a50162a2fd4af459d2f76372067ccd4b26696))
 - docs citation bugfix ([`ab22766`](https://github.com/dstroy0/ProtoCore/commit/ab227664f0c0a16bd68614595a4de0c9547cb58e))
 - docs prose bugfix ([`3a70b9b`](https://github.com/dstroy0/ProtoCore/commit/3a70b9b39769aa705ed1ce731bd264a578870913))
