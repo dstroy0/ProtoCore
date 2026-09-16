@@ -17,7 +17,11 @@ Deliberately NOT checked, because they produce false positives rather than findi
 Doxygen ``@ref`` targets (resolved by Doxygen against parsed source, not the filesystem),
 C++ lambdas ``[](args)`` which are syntactically identical to a markdown link, and URLs.
 
-Run: python -m tools.ci_tooling.check.check_docs [--all]
+Run: python -m tools.ci_tooling.check.check_docs [--all] [--strict]
+
+  --all     print every finding per file instead of the first twelve
+  --strict  also check the two citation spellings the default scan cannot see,
+            `protocore_x` without an argument list and protocore_x() without backticks
 """
 
 import os
@@ -33,6 +37,23 @@ FLAG = re.compile(r"`(PROTOCORE_[A-Z0-9_]+)`")
 FUNC = re.compile(r"`(protocore_[a-z0-9_]+)\(\)`")
 SRCPATH = re.compile(r"`(src/[A-Za-z0-9_./-]+)`")
 ENV = re.compile(r"`(native_[a-z0-9_]+)`")
+
+# FUNC above wants BOTH backticks and an argument list, and the docstring's promise - "protocore_*
+# functions cited in prose" - is wider than that. Two spellings sit outside it, and the count the
+# check reports is a LOWER BOUND by however many they hold:
+#
+#   `protocore_x`     backticked, no argument list
+#   protocore_x()     an argument list, no backticks
+#
+# Both were found by hand, not by this file. protocore_senml_cbor_build and protocore_crc were
+# cited in the first form and named nothing in the tree; ThreadGateway's README cites eight
+# pre-rename spinel entries the same way, and its sketch calls them, so the checker could not see
+# an example that does not compile.
+#
+# They are NOT in the default scan, because turning them on adds a large number of findings at once
+# and burying a gate's signal is its own defect. --strict opts in.
+FUNC_NO_PARENS = re.compile(r"`(protocore_[a-z0-9_]+)`")
+FUNC_BARE = re.compile(r"(?<![`\w])(protocore_[a-z0-9_]+)\(\)")
 
 
 def sh(*a):
@@ -51,6 +72,10 @@ def main() -> int:
     # found. --all lifts the cap. The flag was named in the usage line from the start and never
     # read, so the one escape hatch from the cap did nothing and said nothing.
     show_all = "--all" in sys.argv[1:]
+
+    # Widen the function scan to the two spellings FUNC cannot see. Off by default so the gate CI
+    # runs keeps reporting the same set.
+    strict = "--strict" in sys.argv[1:]
 
     mds = [f for f in sh("git", "ls-files", "*.md").split() if f]
 
@@ -132,6 +157,14 @@ def main() -> int:
             for m in FUNC.finditer(text):
                 if m.group(1) not in known_funcs:
                     bad.append((f, "unknown function", m.group(1)))
+            if strict:
+                # Reported apart so a --strict run says which findings the default scan misses.
+                seen = {m.group(1) for m in FUNC.finditer(text)}
+                for pattern in (FUNC_NO_PARENS, FUNC_BARE):
+                    for m in pattern.finditer(text):
+                        name = m.group(1)
+                        if name not in known_funcs and name not in seen:
+                            bad.append((f, "unknown function (strict)", name))
             for m in ENV.finditer(text):
                 if m.group(1) not in known_envs:
                     bad.append((f, "unknown test env", m.group(1)))
