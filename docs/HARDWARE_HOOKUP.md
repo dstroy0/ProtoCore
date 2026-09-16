@@ -330,7 +330,7 @@ no GPIO; they are simpler but slightly less reliable at high baud.)
 - **Termination**: a **120 ohm** resistor across A and B at **each of the two far
   ends** of the cable (not in the middle). It stops signal reflections.
 - **Fail-safe bias**: one set of pull resistors (roughly 560-680 ohm: a pull-up
-  on B to VCC and a pull-down on A to GND) somewhere on the bus, so an idle bus
+  on B to VCC and a pull-down on A to GND) somewhere on the bus. An idle bus
   reads as a clean logic level. Many modules include these.
 
 A 2-wire ("half-duplex") bus is by far the most common. A 4-wire ("full-duplex")
@@ -609,7 +609,7 @@ the bus and publish them over MQTT or a web dashboard. See
 
 `PROTOCORE_ENABLE_DEVICENET`. DeviceNet is **CIP over CAN** (the same CIP objects as
 EtherNet/IP, but on a CAN wire). Electrically it is CAN with a twist: a DeviceNet
-cable carries **24 V power** alongside CAN_H / CAN_L, so a real drop also needs
+cable carries **24 V power** alongside CAN_H / CAN_L. A real drop also needs
 the power conductors and the standard 5-pin connector - but the signalling is
 ordinary CAN, so the **same transceiver wiring** as above applies (use 125, 250,
 or 500 kbit/s; each node has a MAC id 0-63).
@@ -871,7 +871,7 @@ All the I2C drivers bring the bus up and address it through one shared owner
 Two more knobs live with them. **`PROTOCORE_I2C_HZ`** (default `100000`) is the bus clock;
 100 kHz standard mode is what every driver here is rated for, and a device that
 supports 400 kHz fast mode will take it if the wiring is short and well pulled up.
-**`PROTOCORE_I2C_TIMEOUT_MS`** (default `50`) bounds one transfer, so a device that stops
+**`PROTOCORE_I2C_TIMEOUT_MS`** (default `50`) bounds one transfer. A device that stops
 clocking stalls that read instead of the main loop.
 
 > **Running alongside wired Ethernet.** Only the **classic ESP32 (WROOM/WROVER)** and

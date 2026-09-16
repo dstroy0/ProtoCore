@@ -1,6 +1,6 @@
 # Symbols and naming
 
-The naming law for ProtoCore, stated so a tool can check it and explained so it can be applied to a
+The naming law for ProtoCore, stated for a tool to check and explained so it can be applied to a
 case the table does not cover.
 
 ## The language
@@ -101,7 +101,7 @@ protocol messages, IANA cipher suites, datasheet registers.
 
 **To shorten a word, keep its consonant skeleton.** `HDR`, `MSG`, `CFG`, `PKT` are all built this way,
 and it extends to words with no conventional short form: `ENOUGH` to `ENGH`, `INTERACTIVE` to `IACTV`,
-`KEYBOARD` to `KBD`. Prefer abbreviations the library already uses so a reader meets a small
+`KEYBOARD` to `KBD`. Prefer abbreviations the library already uses. A reader meets a small
 vocabulary: `MAX`, `LEN`, `BUF`, `REG`, `CMD`, `MSG`, `HDR`, `AUTH`, `REQ`, `ERR`.
 
 **An abbreviation that reads two ways is no better than a chop.** `INVALID` has an obvious five-letter

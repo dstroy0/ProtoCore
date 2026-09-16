@@ -125,7 +125,7 @@ almost like English and uses indentation instead of braces. It is interpreted (n
 compile step), which makes it perfect for quick automation. Here it generates and
 checks project files - for example [`test/harness.py`](../../test/harness.py) `env gen`
 builds the long list of test configurations from one small table
-([`test/test_matrix.json`](../../test/test_matrix.json)), so a human never has to
+([`test/test_matrix.json`](../../test/test_matrix.json)). A human never has to
 maintain them by hand.
 
 ### Shell (`.sh`) and PowerShell (`.ps1`)
