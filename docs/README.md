@@ -428,6 +428,8 @@ src/
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── webdav.c
 │   │   │   └── webdav.h
+│   │   ├── binary_asset_blobs.c
+│   │   ├── binary_asset_blobs.h
 │   │   └── CMakeLists.txt
 │   ├── datalink/
 │   │   ├── datalink/
