@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`aebb075`](https://github.com/dstroy0/ProtoCore/commit/aebb07583ae685fcd2ffce79438e027871bb3a8d))
 - update CHANGELOG.md [skip ci] ([`de6a25f`](https://github.com/dstroy0/ProtoCore/commit/de6a25f0df08ada10863f2e3c57316cdcbdb2e95))
 - update CHANGELOG.md [skip ci] ([`8c51010`](https://github.com/dstroy0/ProtoCore/commit/8c51010ec3e1f5c6a4f792d642901aa9823a1d3d))
 - update CHANGELOG.md [skip ci] ([`8239d5e`](https://github.com/dstroy0/ProtoCore/commit/8239d5eb15a9b7eeb5742df6c39ef03592db19d7))
@@ -427,6 +428,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`1ff87bc`](https://github.com/dstroy0/ProtoCore/commit/1ff87bc99e4ebf3fdcbf4fceaf1d7a36b32403d5))
+- deps smoltoml bugfix ([`f10d243`](https://github.com/dstroy0/ProtoCore/commit/f10d2432c2d63a3aaec5fa232c3b45ea35d9306a))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`c0cc846`](https://github.com/dstroy0/ProtoCore/commit/c0cc84607c5d91585b840e175e1f0159221875c6))
 - src speedopt bugfix ([`2b75c94`](https://github.com/dstroy0/ProtoCore/commit/2b75c942083ebf445ad994b576e3813094f120c1))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`c7f04fb`](https://github.com/dstroy0/ProtoCore/commit/c7f04fbc0cfa67e2f84dd6e00c4cb7d9a8ba0407))
@@ -616,6 +619,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- docs security bugfix ([`ccf6432`](https://github.com/dstroy0/ProtoCore/commit/ccf64321d5184fd34990ff74552da8ae8a6c9e8d))
 - docs prose bugfix ([`d946f28`](https://github.com/dstroy0/ProtoCore/commit/d946f282c2e4aa563feafbb62bbaba1a87fabdca))
 - docs prose bugfix ([`bb1718c`](https://github.com/dstroy0/ProtoCore/commit/bb1718c6fe6dc405f34baafe869b09d16a506025))
 - docs citation bugfix ([`a14a501`](https://github.com/dstroy0/ProtoCore/commit/a14a50162a2fd4af459d2f76372067ccd4b26696))
