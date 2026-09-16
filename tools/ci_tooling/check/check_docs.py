@@ -47,6 +47,11 @@ def read(p):
 
 
 def main() -> int:
+    # The per-file listing is capped below, so the printed report is a LOWER BOUND on what was
+    # found. --all lifts the cap. The flag was named in the usage line from the start and never
+    # read, so the one escape hatch from the cap did nothing and said nothing.
+    show_all = "--all" in sys.argv[1:]
+
     mds = [f for f in sh("git", "ls-files", "*.md").split() if f]
 
     # Every PROTOCORE_ / protocore_ token that exists anywhere in src/. Deliberately broader than
@@ -147,11 +152,19 @@ def main() -> int:
             by_file.setdefault(f, []).append((kind, what))
         for f in sorted(by_file):
             print(f"  {f}", file=sys.stderr)
-            for kind, what in sorted(set(by_file[f]))[:12]:
+            entries = sorted(set(by_file[f]))
+            shown = entries if show_all else entries[:12]
+            for kind, what in shown:
                 print(f"      [{kind}] {what}", file=sys.stderr)
-            if len(set(by_file[f])) > 12:
-                print(f"      ... and {len(set(by_file[f])) - 12} more", file=sys.stderr)
-        print(f"\n{len(bad)} stale citation(s) in {len(by_file)} file(s).", file=sys.stderr)
+            if len(entries) > len(shown):
+                print(f"      ... and {len(entries) - len(shown)} more, --all prints them", file=sys.stderr)
+        # The listing above is deduplicated per file and this count was not, so a reader adding up
+        # the entries never reached the headline number. Both are reported, each named.
+        distinct = sum(len(set(v)) for v in by_file.values())
+        print(
+            f"\n{distinct} distinct stale citation(s) in {len(by_file)} file(s), " f"{len(bad)} occurrence(s).",
+            file=sys.stderr,
+        )
         return 1
 
     print(f"check_docs: OK - {len(mds)} markdown files, every checked citation resolves.")
