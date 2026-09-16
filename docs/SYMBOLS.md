@@ -95,8 +95,8 @@ included. Two macros agreeing in their first 31 characters are the same macro th
 **When a name does not fit, abbreviate whole words. Never cut a word short.** A chopped last word
 reads as a typo and the reader stops to work out the real name. An abbreviation keeps the word
 boundaries, so the correspondence to the spec survives: in `PROTOCORE_SSH_MSG_CH_WIN_ADJ`, `CH`=CHANNEL,
-`WIN`=WINDOW, `ADJ`=ADJUST still recovers `SSH_MSG_CHANNEL_WINDOW_ADJUST` from RFC 4254, which is
-what a reviewer checks the constant against. That matters most for names quoted from a document:
+`WIN`=WINDOW, `ADJ`=ADJUST still recovers `SSH_MSG_CHANNEL_WINDOW_ADJUST` from RFC 4254.
+A reviewer checks the constant against the RFC. Names quoted from a document need it most:
 protocol messages, IANA cipher suites, datasheet registers.
 
 **To shorten a word, keep its consonant skeleton.** `HDR`, `MSG`, `CFG`, `PKT` are all built this way,
@@ -155,7 +155,7 @@ A guard takes the full library name, because it is the only macro that
 has to be unique across _someone else's_ build: `PC_HTTP_PARSER_H` is a plausible name for another
 library's guard while `PROTOCORE_HTTP_PARSER_H` is not.
 
-**Every header file name under `src/` is unique, and `check_symbols.py` enforces it.** That is what
+**Every header file name under `src/` is unique, and `check_symbols.py` enforces it.** That
 makes a filename-derived guard collision-proof. The guard is derived from the file's name and not its
 path, because a path-derived guard overruns the 31-character limit on three quarters of the headers in
 a tree this deep; the filename form lands at median 20.

@@ -421,7 +421,7 @@ prime (p) and generator g=2. The exchange hash uses SHA-256.
 **Why group14?**
 
 Group14 (2048-bit) provides approximately 112 bits of security (NIST SP 800-131A
-equivalent), which is the minimum recommended for new deployments as of 2024.
+equivalent), the minimum recommended for new deployments as of 2024.
 It is widely supported by existing SSH clients. Group16 (4096-bit) provides
 ~140 bits but is 4× slower on ESP32; the hardware mbedTLS path makes group14
 fast enough.
