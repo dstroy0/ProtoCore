@@ -46,7 +46,7 @@ one per worker, plus the ghost, which is the library's own.
 | secure (`mmgr/secure.h`)       | key material: shared secrets, private scalars, schedules | same, and **the release wipes** before the position moves                       |
 
 The two differ in exactly one thing: reclaiming the secure pool zeroes the region
-before it becomes available again, so a secret cannot outlive its borrow. That makes
+before it becomes available again. A secret cannot outlive its borrow. That makes
 the rule structural instead of a discipline every caller has to remember on every
 return path. The regions are also disjoint, so `protocore_secure_owns()` and
 `protocore_plaintext_owns()` are mutually exclusive by construction - a secure borrow can
@@ -75,7 +75,7 @@ favor it does. The core publishes what it provides - storage of a declared span,
 declared alignment, for a declared lifetime - and a vendor backend meets those
 conditions or it does not ship. The obligation runs that way round, and it is settled
 in `test/core_setup/`, the only place a vendor type is named at all: the backend
-`static_assert`s that its context fits the span and satisfies the alignment, so a
+`static_assert`s that its context fits the span and satisfies the alignment. A
 vendor header that changes underneath us fails the build there, named, instead of
 becoming a run-time surprise in the core.
 
@@ -120,7 +120,7 @@ list, no fragmentation, and no layout decision left to make while the device is
 running.
 
 Each span is **proved where the struct lives**, by a
-`static_assert(sizeof(X) <= PROTOCORE_WORK_X)` in the module that owns it, so a working set
+`static_assert(sizeof(X) <= PROTOCORE_WORK_X)` in the module that owns it. A working set
 that grows past its declaration fails the build naming itself rather than exhausting a
 pool at run time. The declaration and the truth cannot drift apart.
 
@@ -134,12 +134,12 @@ The two pools then resolve those terms differently, because their time domains d
   under one another, where a nest depth is only correct while the call graph stays as
   it is. It buys certainty with a little slack.
 - **Plaintext: the peak concurrent.** A worker runs one event to completion before the
-  next and owns a disjoint partition of slots, so a dispatch is doing HTTP _or_
+  next and owns a disjoint partition of slots. A dispatch is doing HTTP _or_
   WebSocket _or_ SSH - never two at once. The time domain is known, so the maximum is
   a stated fact rather than an estimate, and overlapping those buffers in one arena
   cuts peak RAM without weakening the guarantee.
 
-Both are feature-gated, so a build pays only for the code it compiled.
+Both are feature-gated. A build pays only for the code it compiled.
 
 ## Knobs
 
@@ -151,7 +151,7 @@ Both are feature-gated, so a build pays only for the code it compiled.
 | `PROTOCORE_WORKER_TASK_STACK`    | 8192                 | Per-worker task stack (bytes). A build guard requires `>= PROTOCORE_WORKER_STACK_RSA_MIN` when OIDC or SSH is enabled (RSA-2048 verify needs ~7 KB).                                                                                                                       |
 | `PROTOCORE_WORKER_STACK_RSA_MIN` | 8192                 | Enforced floor for `PROTOCORE_WORKER_TASK_STACK` once an RSA-2048 verifier (OIDC/SSH) is compiled in. Lower it only if you marshal RSA verifies off the worker.                                                                                                            |
 | `PROTOCORE_WORKER_POLL_TICKS`    | 1                    | Idle-sweep block timeout (ticks). Events wake the worker immediately regardless; this only sets how often an idle worker wakes to run the timeout sweep.                                                                                                                   |
-| `EVT_QUEUE_DEPTH`                | `MAX_CONNS * 4` (32) | Per-queue event slots; tracks `MAX_CONNS` so a raised pool never trips the `>= MAX_CONNS * 4` guard. Raise it to absorb larger connection bursts.                                                                                                                          |
+| `EVT_QUEUE_DEPTH`                | `MAX_CONNS * 4` (32) | Per-queue event slots; tracks `MAX_CONNS`. A raised pool never trips the `>= MAX_CONNS * 4` guard. Raise it to absorb larger connection bursts.                                                                                                                            |
 | `MAX_CONNS`                      | 8                    | Connection pool size. The hard ceiling on concurrent connections.                                                                                                                                                                                                          |
 | `PROTO_WORD_BITS`                | 32                   | The target's natural register width. Every narrow value is carried in it and truncated at the boundary, because arithmetic narrower than the register costs the mask that keeps the unused half correct. Must be 16, 32 or 64.                                             |
 | `PROTO_INDEX_BITS`               | 32                   | Width of `proto_idx`, which is every offset, length and capacity the library declares (never `size_t`, whose width is inherited from the pointer and so differs between a device build and the host test). Must be 16 or 32, and `<= PROTO_WORD_BITS`.                     |
@@ -165,7 +165,7 @@ in the section **"Feature tuning knobs (grouped and gated by feature)"** at the 
 the file. You never have to open a feature header to turn one. Each is an override-able
 default, so you set a new value in your `build_flags` (for example
 `-D PROTOCORE_OPCUA_READ_MAX=16` or `-D PROTOCORE_GQL_MAX_DEPTH=8`) and the owning module picks
-it up. A group is wrapped in its feature's `PROTOCORE_ENABLE_*` flag, so a knob only exists
+it up. A group is wrapped in its feature's `PROTOCORE_ENABLE_*` flag. A knob only exists
 when that feature is compiled in.
 
 What is deliberately _not_ a knob and stays next to its code: protocol- and
@@ -177,7 +177,7 @@ not exposed as knobs.
 ## Board profiles (per-variant defaults)
 
 The sizing defaults above are not one flat set. They used to be, tuned to fit the
-smallest classic-ESP32 DRAM ceiling, so a board with far more RAM or flash silently
+smallest classic-ESP32 DRAM ceiling. A board with far more RAM or flash silently
 inherited the same cramped numbers. Instead, [`vendor/board_profiles/`](../vendor/board_profiles/)
 layers defaults along three independent axes, selected in [`board_profile.h`](../vendor/board_profiles/board_profile.h)
 (included first thing in `protocore_config.h`):
@@ -258,7 +258,7 @@ latency is unchanged.
   on both cores. Expect ~1.5x, not 2x (Core 0 also runs WiFi/lwIP). Ensure
   `MAX_CONNS >= PROTOCORE_WORKER_COUNT` and that handlers touch only their own slot's
   state (the model already guarantees slot isolation).
-- **Bursty connection load.** Raise `EVT_QUEUE_DEPTH` so a burst of accepts/data
+- **Bursty connection load.** Raise `EVT_QUEUE_DEPTH` to keep a burst of accepts/data
   events cannot overflow a queue (an overflow is dropped, not blocked, to keep the
   tcpip thread non-blocking). Raise `MAX_CONNS` for more concurrent connections
   (BSS cost is fixed and linear).
