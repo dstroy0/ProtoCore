@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`eaae866`](https://github.com/dstroy0/ProtoCore/commit/eaae8661ac10b31ef450b8a0fa1346a19230c26b))
 - update CHANGELOG.md [skip ci] ([`1d26b01`](https://github.com/dstroy0/ProtoCore/commit/1d26b0174db06c28925d64eb61a826650847fa05))
 - update CHANGELOG.md [skip ci] ([`e15afa9`](https://github.com/dstroy0/ProtoCore/commit/e15afa9dc3b951ec238c225c623569d7707a891b))
 - update CHANGELOG.md [skip ci] ([`6de5e91`](https://github.com/dstroy0/ProtoCore/commit/6de5e9115213a3d64e0879f7265b577758eb9f05))
@@ -423,6 +424,9 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`9026969`](https://github.com/dstroy0/ProtoCore/commit/90269696139fb486d884d704798f2e3444e81379))
+- src httpclient bugfix ([`a60250d`](https://github.com/dstroy0/ProtoCore/commit/a60250d496f45d2a81a2ea8b53519050ae372f30))
+- tools gengroup feature ([`0cede14`](https://github.com/dstroy0/ProtoCore/commit/0cede14933678df20f9badfc4c53a28c91347cde))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`f59660f`](https://github.com/dstroy0/ProtoCore/commit/f59660f7c3d2fd6e2cd14f71504b346c89bbf217))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`1efe600`](https://github.com/dstroy0/ProtoCore/commit/1efe60077ca146e14b06541c2fc313ffffa04de8))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`03a54c3`](https://github.com/dstroy0/ProtoCore/commit/03a54c3262762fe5d13677a0c5cf10d7e0690ae1))
@@ -604,6 +608,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- docs citation bugfix ([`ab22766`](https://github.com/dstroy0/ProtoCore/commit/ab227664f0c0a16bd68614595a4de0c9547cb58e))
+- docs prose bugfix ([`3a70b9b`](https://github.com/dstroy0/ProtoCore/commit/3a70b9b39769aa705ed1ce731bd264a578870913))
 - docs prose bugfix ([`63d22a9`](https://github.com/dstroy0/ProtoCore/commit/63d22a96c1f80c247dcb4dc88e92f513245dfb03))
 - docs generated regen ([`e970817`](https://github.com/dstroy0/ProtoCore/commit/e970817d2de478bd1fba8446a183f0a5138e100a))
 - docs citation bugfix ([`59c15f7`](https://github.com/dstroy0/ProtoCore/commit/59c15f7c559c0b408450eba878d2b37d1c1b5083))
@@ -786,6 +792,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- test citation bugfix ([`d1cb116`](https://github.com/dstroy0/ProtoCore/commit/d1cb116fbccaca2250ce89550d3980f70ddb5912))
 - a build that did not happen stops looking like one that found nothing wrong ([`883ed43`](https://github.com/dstroy0/ProtoCore/commit/883ed4378d5fd123b5a116e82c5f16fbcbf55e60))
 - the generated env table catches up with the tree it describes ([`c132524`](https://github.com/dstroy0/ProtoCore/commit/c132524883673137c0fed78d49fc95e098e71213))
 - the mirror is file granular, and cross-TU logic gets its own tree ([`8e3895d`](https://github.com/dstroy0/ProtoCore/commit/8e3895dbb2f31edade4c5b26837eae00e6d098ed))
