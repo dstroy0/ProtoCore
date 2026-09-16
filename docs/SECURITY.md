@@ -183,15 +183,27 @@ reach the SSH key store in a single linear stride (see §7.7).
 
 ### Compile-Time Safety Checks {#core-checks}
 
-`protocore_config.h` contains `#error` guards that catch impossible
-combinations at build time:
+The `#error` guards that catch impossible combinations at build time live in
+`src/config/features/feature_en_error.h`, which `src/protocore_config.h:1111`
+includes:
 
 ```cpp
+#if PROTOCORE_ENABLE_WEBSOCKET && PROTOCORE_ENABLE_SSE
 #if MAX_WS_CONNS + MAX_SSE_CONNS > MAX_CONNS
-#  error "MAX_WS_CONNS + MAX_SSE_CONNS must not exceed MAX_CONNS"
+#error "ProtoCore: MAX_WS_CONNS + MAX_SSE_CONNS must not exceed MAX_CONNS"
 #endif
+#elif PROTOCORE_ENABLE_WEBSOCKET
+#if MAX_WS_CONNS > MAX_CONNS
+#error "ProtoCore: MAX_WS_CONNS must not exceed MAX_CONNS"
+#endif
+#elif PROTOCORE_ENABLE_SSE
+#if MAX_SSE_CONNS > MAX_CONNS
+#error "ProtoCore: MAX_SSE_CONNS must not exceed MAX_CONNS"
+#endif
+#endif
+
 #if BODY_BUF_SIZE > RX_BUF_SIZE
-#  error "BODY_BUF_SIZE must not exceed RX_BUF_SIZE"
+#error "ProtoCore: BODY_BUF_SIZE must not exceed RX_BUF_SIZE (parser reads from the ring buffer)"
 #endif
 ```
 
