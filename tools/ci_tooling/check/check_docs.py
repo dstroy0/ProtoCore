@@ -101,8 +101,12 @@ def main() -> int:
     }
 
     # Both the envs and the shared base sections they extend: a doc naming the stack a suite is
-    # built on is naming a [native_stack_*] section, which is not spelled [env:...].
-    known_envs = set(re.findall(r"^\[(?:env:)?(native[A-Za-z0-9_]*)\]", read("platformio.ini"), re.M))
+    # built on is naming a native_stack_* entry, which is an env key like any other.
+    #
+    # THE MATRIX IS THE SOURCE, NOT platformio.ini. 892088df stopped rendering the native envs into
+    # the ini, so reading it here matched nothing and every env a document named became an unknown
+    # env: 411 of the 602 findings this check reported came from that one lookup.
+    known_envs = set(re.findall(r'"(native[A-Za-z0-9_]*)"\s*:\s*\{', read("test/test_matrix.json")))
 
     bad = []
     for f in mds:
