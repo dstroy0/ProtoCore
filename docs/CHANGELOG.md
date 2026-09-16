@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`e772759`](https://github.com/dstroy0/ProtoCore/commit/e7727599e646d7b8f96f4a8be270e74b57e43e71))
 - update CHANGELOG.md [skip ci] ([`383f238`](https://github.com/dstroy0/ProtoCore/commit/383f2388515f3964239a70f5256e2f4390994fc4))
 - update CHANGELOG.md [skip ci] ([`fdd484a`](https://github.com/dstroy0/ProtoCore/commit/fdd484a0c2f8379d1167b66fff179e333517fe56))
 - a suite is a directory, and it says what it is made of ([`f38e27a`](https://github.com/dstroy0/ProtoCore/commit/f38e27a64cf5a522fa0d896b3da9df09e3f8e112))
@@ -596,6 +597,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- docs formatting bugfix ([`61cc7c8`](https://github.com/dstroy0/ProtoCore/commit/61cc7c8f7a50d8aa31e09638422c5d25e9862efb))
 - docs generated regen ([`08853b2`](https://github.com/dstroy0/ProtoCore/commit/08853b2117063e9bc9aa23a5368daa1cc9cab7c0))
 - docs prose bugfix ([`be76096`](https://github.com/dstroy0/ProtoCore/commit/be760967c41fb9a12d8311405caf82527abc4a39))
 - docs prose bugfix ([`01693b8`](https://github.com/dstroy0/ProtoCore/commit/01693b85a0bd01a2d1487bfca5b34de424862e83))
