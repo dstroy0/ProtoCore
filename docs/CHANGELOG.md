@@ -119,6 +119,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`46bf037`](https://github.com/dstroy0/ProtoCore/commit/46bf037c60338bb3155970b266ca792d1e24c215))
+- update CHANGELOG.md [skip ci] ([`67fdc87`](https://github.com/dstroy0/ProtoCore/commit/67fdc87eceff905239475c31329c2504cf7dd97c))
 - update CHANGELOG.md [skip ci] ([`24d087d`](https://github.com/dstroy0/ProtoCore/commit/24d087d724cbfba97e6cfb02237f338f5a5e62ee))
 - update CHANGELOG.md [skip ci] ([`45942b0`](https://github.com/dstroy0/ProtoCore/commit/45942b034b86f5c35dac4f158193f69123502566))
 - update CHANGELOG.md [skip ci] ([`aebb075`](https://github.com/dstroy0/ProtoCore/commit/aebb07583ae685fcd2ffce79438e027871bb3a8d))
@@ -430,6 +432,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`c346e8c`](https://github.com/dstroy0/ProtoCore/commit/c346e8c3ed1c16ea6f8bb9ee1d1390e9195623b1))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`4923a9a`](https://github.com/dstroy0/ProtoCore/commit/4923a9a377daa451ad09a9582deaf9d8b587e43d))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`3545ad6`](https://github.com/dstroy0/ProtoCore/commit/3545ad6ac9dac564d3a333fc734a25674cfbfb43))
 - tools checkdocs feature ([`5b41784`](https://github.com/dstroy0/ProtoCore/commit/5b41784834ec90e812c291018f9ac6c2e84eb371))
@@ -624,10 +627,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
-<<<<<<< Updated upstream
-=======
+- docs prose bugfix ([`8e4fb9c`](https://github.com/dstroy0/ProtoCore/commit/8e4fb9c7e3a8e0dad98a71d34c6e8a485f04b3ed))
 - docs prefix bugfix ([`33c1e8a`](https://github.com/dstroy0/ProtoCore/commit/33c1e8a711b9d95813a93c8421714dc7514a32e5))
->>>>>>> Stashed changes
 - docs citation bugfix ([`4c07769`](https://github.com/dstroy0/ProtoCore/commit/4c07769060809ca6c549cea5e7a17410ed6af270))
 - docs generated regen ([`aa46daf`](https://github.com/dstroy0/ProtoCore/commit/aa46dafdb3dac219a6661c1c369763c95ba8cb48))
 - docs security bugfix ([`ccf6432`](https://github.com/dstroy0/ProtoCore/commit/ccf64321d5184fd34990ff74552da8ae8a6c9e8d))
