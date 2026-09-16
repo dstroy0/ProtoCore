@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`383f238`](https://github.com/dstroy0/ProtoCore/commit/383f2388515f3964239a70f5256e2f4390994fc4))
 - update CHANGELOG.md [skip ci] ([`fdd484a`](https://github.com/dstroy0/ProtoCore/commit/fdd484a0c2f8379d1167b66fff179e333517fe56))
 - a suite is a directory, and it says what it is made of ([`f38e27a`](https://github.com/dstroy0/ProtoCore/commit/f38e27a64cf5a522fa0d896b3da9df09e3f8e112))
 - test/ declares what it is, and the audit reads every tree ([`dd98c61`](https://github.com/dstroy0/ProtoCore/commit/dd98c617e0861240185138923267552a4450e536))
@@ -595,6 +596,25 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- docs generated regen ([`08853b2`](https://github.com/dstroy0/ProtoCore/commit/08853b2117063e9bc9aa23a5368daa1cc9cab7c0))
+- docs prose bugfix ([`be76096`](https://github.com/dstroy0/ProtoCore/commit/be760967c41fb9a12d8311405caf82527abc4a39))
+- docs prose bugfix ([`01693b8`](https://github.com/dstroy0/ProtoCore/commit/01693b85a0bd01a2d1487bfca5b34de424862e83))
+- docs prose bugfix ([`1435047`](https://github.com/dstroy0/ProtoCore/commit/14350471baa97c8d2d79ccfc664822947f16448b))
+- docs prose bugfix ([`8b686f3`](https://github.com/dstroy0/ProtoCore/commit/8b686f38ff0cdac67d18244ce42313fc141fe471))
+- docs prose bugfix ([`2fa8991`](https://github.com/dstroy0/ProtoCore/commit/2fa8991c232c90684fa99f68187f0e47764bc2e7))
+- docs prose bugfix ([`ec26038`](https://github.com/dstroy0/ProtoCore/commit/ec260389b4b6f0467cdc8803676d548b697f1542))
+- docs prose bugfix ([`4f0f9b8`](https://github.com/dstroy0/ProtoCore/commit/4f0f9b8c8dfb3dd06c36e75d34f184d962abb4e3))
+- docs prose bugfix ([`72c77da`](https://github.com/dstroy0/ProtoCore/commit/72c77da71a1544b1fb2aef24dbb559a06ccf1cf3))
+- docs prose bugfix ([`5343f24`](https://github.com/dstroy0/ProtoCore/commit/5343f243576ec5d55a366c236ea5d78a8680ce65))
+- docs prose bugfix ([`1679564`](https://github.com/dstroy0/ProtoCore/commit/1679564ffb712fb60dda24a14eacd70b480390da))
+- docs prose bugfix ([`6ff2c11`](https://github.com/dstroy0/ProtoCore/commit/6ff2c1112c19a3b5e9234e81003255d0ff9f7312))
+- docs prose bugfix ([`46d21bb`](https://github.com/dstroy0/ProtoCore/commit/46d21bb288aa958e4beddd77e175ad7049e26882))
+- docs prose bugfix ([`59ef675`](https://github.com/dstroy0/ProtoCore/commit/59ef675fb534c9b9efa0fd49d6cec4347ddd1947))
+- docs prose bugfix ([`f42400c`](https://github.com/dstroy0/ProtoCore/commit/f42400c5ef73f1339341970b4007ea2de46afe9a))
+- docs prose bugfix ([`b66542c`](https://github.com/dstroy0/ProtoCore/commit/b66542c61e46bd0548c3f49452fec016327d083d))
+- docs prose bugfix ([`4e2eff1`](https://github.com/dstroy0/ProtoCore/commit/4e2eff1f1f678ec67a720f7c29bbf1a83f5d80a3))
+- docs prose bugfix ([`d680bcd`](https://github.com/dstroy0/ProtoCore/commit/d680bcd5bee16ed5580404dac1cb355bc02da261))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`d525738`](https://github.com/dstroy0/ProtoCore/commit/d525738f163cefece378debfc633c473b1fd3900))
 - docs prose bugfix ([`cd66786`](https://github.com/dstroy0/ProtoCore/commit/cd6678669434fa6a2d3f6763a9a6702da470e801))
 - docs prose bugfix ([`28d99a2`](https://github.com/dstroy0/ProtoCore/commit/28d99a297c11e67ff18036aeff4f58dbcd767cac))
 - docs prose bugfix ([`b94ac86`](https://github.com/dstroy0/ProtoCore/commit/b94ac86ba71db6859de163439d482bf6eba2d97b))
