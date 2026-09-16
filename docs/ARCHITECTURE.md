@@ -83,7 +83,7 @@ used by SNMP / CoAP / captive-DNS / syslog / telemetry), the outbound client
 (`TcpClient`), and the DNS resolver all route their `tcp_*` / `udp_*` through
 `tcpip_api_call`. This is mandatory on arduino-esp32 3.x, where lwIP core-locking
 asserts on a raw call from any task but `tcpip_thread` (see docs/BUGS.md); keeping raw
-lwIP out of the app and worker tasks is the one thing this layer exists to enforce.
+lwIP out of the app and worker tasks is the only thing this layer exists to enforce.
 
 ## RX path - one owner for the window and the drain
 
@@ -421,7 +421,7 @@ deepest-nest figure: the sum is a strict upper bound however those working sets 
 where a nest depth is only correct while the call graph stays as it is. It buys
 certainty with a little slack.
 
-The consequence is the one that matters: a module whose working set grows past its
+The consequence follows. A module whose working set grows past its
 declaration **fails the build, naming itself**, instead of exhausting the pool at run
 time on a part nobody was watching. These are sizes and not offsets, so nothing couples
 one module to another - order is irrelevant and adding a module shifts no one.
@@ -521,7 +521,7 @@ src/network_drivers/physical/
   ti/  { ... }
 ```
 
-**Selector (the one new common seam):** a single `protocore_platform.h`
+**Selector (the only new common seam):** a single `protocore_platform.h`
 maps the toolchain's target macro onto two axes and nothing else pulls vendor
 detail directly:
 
@@ -718,4 +718,4 @@ against emitted instructions and documented as claim -> disassembly -> why. The 
 treatment: constant-time crypto (no branch or memory access depends on a secret), no-heap-after-`begin()`
 (no allocator reachable in the relevant `.text`), and bounded ISR / critical-section paths (a counted worst
 case, not an estimate). The octet abstraction earns a fourth once it lands: that it compiles away on
-byte-addressable targets and strip-mines to word moves on C28x. Measured, not asserted.
+byte-addressable targets and strip-mines to word moves on C28x. Each is measured.
