@@ -39,7 +39,7 @@ static const protocore_ui_fragment HMI_FRAGMENTS[] = {
 };
 ```
 
-`protocore_ui_stream_next()` emits only the fragments whose predicate holds, into a buffer of **any** size -
+`protocore_spa_router_ui_stream_next()` emits only the fragments whose predicate holds, into a buffer of **any** size -
 it resumes mid-fragment, so a page far larger than the buffer streams out in pieces. Predicates run
 as the stream reaches each fragment, not all up front, so a long render reflects the state that holds
 when it gets there.

@@ -36,12 +36,12 @@ value (`0x906E`) and the byte-stuffing in `test/test_thread`.
 
 `services/thread` also does the spinel **command** layer and the **property registry / value
 semantics**, so the sketch reads each frame's meaning, not just its bytes. A frame's payload is
-`header | command | property | value`; `protocore_spinel_command_parse()` splits it, the registry names
+`header | command | property | value`; `protocore_thread_spinel_command_parse()` splits it, the registry names
 the property, and a typed cursor decodes the value by the property's datatype:
 
 ```cpp
 uint8_t hdr; uint32_t cmd, prop; const uint8_t *val; uint16_t vlen;
-protocore_spinel_command_parse(payload, plen, &hdr, &cmd, &prop, &val, &vlen);
+protocore_thread_spinel_command_parse(payload, plen, &hdr, &cmd, &prop, &val, &vlen);
 if (cmd == SpinelCmd::SPINEL_CMD_PROP_VALUE_IS && prop == SpinelProp::SPINEL_PROP_NCP_VERSION) {
     SpinelReader r; protocore_spinel_reader_init(&r, val, vlen);
     const char *s; uint16_t slen;
@@ -53,8 +53,8 @@ if (cmd == SpinelCmd::SPINEL_CMD_PROP_VALUE_IS && prop == SpinelProp::SPINEL_PRO
 The cursor has an accessor per spinel datatype (`get_bool` / `get_u8` / `get_i8` / `get_u16` /
 `get_u32` / `get_uint` (packed) / `get_eui64` / `get_ipv6` / `get_utf8` / `get_data` /
 `get_data_wlen`) and matching `put_*` builders; an out-of-bounds read latches an error you check
-once with `protocore_spinel_reader_ok()`. This sketch GETs `PROTOCOL_VERSION`, `NCP_VERSION`, and
-`HWADDR` at boot and prints each inbound `PROP_VALUE_IS` by name. `protocore_spinel_status_name()` maps
+once with `protocore_thread_spinel_reader_ok()`. This sketch GETs `PROTOCOL_VERSION`, `NCP_VERSION`, and
+`HWADDR` at boot and prints each inbound `PROP_VALUE_IS` by name. `protocore_thread_spinel_status_name()` maps
 a `LAST_STATUS` code to text (e.g. a reset cause `0x70` -> `RESET`).
 
 ## Wiring (ESP32 host <-> Thread RCP)
