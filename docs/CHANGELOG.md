@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`24d087d`](https://github.com/dstroy0/ProtoCore/commit/24d087d724cbfba97e6cfb02237f338f5a5e62ee))
 - update CHANGELOG.md [skip ci] ([`45942b0`](https://github.com/dstroy0/ProtoCore/commit/45942b034b86f5c35dac4f158193f69123502566))
 - update CHANGELOG.md [skip ci] ([`aebb075`](https://github.com/dstroy0/ProtoCore/commit/aebb07583ae685fcd2ffce79438e027871bb3a8d))
 - update CHANGELOG.md [skip ci] ([`de6a25f`](https://github.com/dstroy0/ProtoCore/commit/de6a25f0df08ada10863f2e3c57316cdcbdb2e95))
@@ -429,6 +430,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`4923a9a`](https://github.com/dstroy0/ProtoCore/commit/4923a9a377daa451ad09a9582deaf9d8b587e43d))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`3545ad6`](https://github.com/dstroy0/ProtoCore/commit/3545ad6ac9dac564d3a333fc734a25674cfbfb43))
 - tools checkdocs feature ([`5b41784`](https://github.com/dstroy0/ProtoCore/commit/5b41784834ec90e812c291018f9ac6c2e84eb371))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`1ff87bc`](https://github.com/dstroy0/ProtoCore/commit/1ff87bc99e4ebf3fdcbf4fceaf1d7a36b32403d5))
@@ -622,6 +624,11 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+<<<<<<< Updated upstream
+=======
+- docs prefix bugfix ([`33c1e8a`](https://github.com/dstroy0/ProtoCore/commit/33c1e8a711b9d95813a93c8421714dc7514a32e5))
+>>>>>>> Stashed changes
+- docs citation bugfix ([`4c07769`](https://github.com/dstroy0/ProtoCore/commit/4c07769060809ca6c549cea5e7a17410ed6af270))
 - docs generated regen ([`aa46daf`](https://github.com/dstroy0/ProtoCore/commit/aa46dafdb3dac219a6661c1c369763c95ba8cb48))
 - docs security bugfix ([`ccf6432`](https://github.com/dstroy0/ProtoCore/commit/ccf64321d5184fd34990ff74552da8ae8a6c9e8d))
 - docs prose bugfix ([`d946f28`](https://github.com/dstroy0/ProtoCore/commit/d946f282c2e4aa563feafbb62bbaba1a87fabdca))
