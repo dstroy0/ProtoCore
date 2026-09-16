@@ -628,7 +628,7 @@ JWT bearer-token authentication (HS256). Default off. When set, src/services/sec
 
 `PROTOCORE_ENABLE_JSON`
 
-A bounded, zero-heap JSON writer and top-level reader (network_drivers/presentation/codec/json). Default off. Deliberately small: it covers the shapes IoT payloads actually take - a flat-ish object of strings, numbers and booleans, with bounded nesting. It does not implement the whole grammar. The writer formats into a caller-supplied buffer and reports truncation instead of growing one; the reader scans in place and hands back views into the caller's own bytes, so a document costs nothing but the bytes it arrived in. Pure and host-tested. See src/network_drivers/presentation/codec/json/json.h.
+A bounded, zero-heap JSON writer and top-level reader (network_drivers/presentation/codec/json). Default off. Deliberately small: it covers the shapes IoT payloads actually take - a flat-ish object of strings, numbers and booleans, with bounded nesting. It does not implement the whole grammar. The writer formats into a caller-supplied buffer and reports truncation instead of growing one; the reader scans in place and hands back views into the caller's own bytes. A document costs nothing but the bytes it arrived in. Pure and host-tested. See src/network_drivers/presentation/codec/json/json.h.
 
 ## Keep-Alive
 
@@ -1120,7 +1120,7 @@ SCPI / IEEE 488.2 instrument-control codec. Default off. services/instrumentatio
 
 `PROTOCORE_ENABLE_SDI12`
 
-SDI-12 sensor-bus codec. Default off. server/peripherals/sdi12 is a zero-heap command / response codec for the 1200-baud single-wire ASCII bus used by environmental / agricultural sensors (soil moisture, water level, weather). `protocore_sdi12_build` and the `protocore_sdi12_build_measure` / `_measure_additional` / `_concurrent` / `_concurrent_additional` / `_continuous` / `_verify` / `_data` / `_identify` / `_ack` / `_change_address` / `_query_address` helpers emit the standard `<addr><command>!` requests (`_measure_additional` / `_concurrent_additional` frame the `aM<n>!` / `aC<n>!` secondary measurement sets (1..9) a multi-parameter sensor exposes beyond the primary `aM!` / `aC!`, `_continuous` frames the `aR<n>!` / `aRC<n>!` continuous-measurement command whose sensor returns values with no service-request delay, and `_verify` the `aV!` start-verification command); `protocore_sdi12_parse_measure` reads the `atttn` measurement response (seconds-until-ready + value count, both the 1-digit `aM!` and 2-digit `aC!` forms); `protocore_sdi12_parse_values` splits a data response into floats; `protocore_sdi12_parse_identify` decodes the `aI!` identify response into an `Sdi12Identity` (the fixed-width SDI-12 version, vendor, model, and sensor-version fields), so a bus scan reports what each sensor is; and `protocore_sdi12_crc16` / `protocore_sdi12_crc_encode` / `protocore_sdi12_check_crc` implement the SDI-12 CRC (poly 0xA001, encoded as 3 printable octets) for the CRC-protected `aMC!` / `aCC!` variants. Command set + CRC verified against the SDI-12 specification; pure and host-tested. Drive the single 1200-baud line over a UART and bridge sensor readings onto Wi-Fi. See src/server/peripherals/sdi12/sdi12.h.
+SDI-12 sensor-bus codec. Default off. server/peripherals/sdi12 is a zero-heap command / response codec for the 1200-baud single-wire ASCII bus used by environmental / agricultural sensors (soil moisture, water level, weather). `protocore_sdi12_build` and the `protocore_sdi12_build_measure` / `_measure_additional` / `_concurrent` / `_concurrent_additional` / `_continuous` / `_verify` / `_data` / `_identify` / `_ack` / `_change_address` / `_query_address` helpers emit the standard `<addr><command>!` requests (`_measure_additional` / `_concurrent_additional` frame the `aM<n>!` / `aC<n>!` secondary measurement sets (1..9) a multi-parameter sensor exposes beyond the primary `aM!` / `aC!`, `_continuous` frames the `aR<n>!` / `aRC<n>!` continuous-measurement command whose sensor returns values with no service-request delay, and `_verify` the `aV!` start-verification command); `protocore_sdi12_parse_measure` reads the `atttn` measurement response (seconds-until-ready + value count, both the 1-digit `aM!` and 2-digit `aC!` forms); `protocore_sdi12_parse_values` splits a data response into floats; `protocore_sdi12_parse_identify` decodes the `aI!` identify response into an `Sdi12Identity` (the fixed-width SDI-12 version, vendor, model, and sensor-version fields), for a bus scan to report what each sensor is; and `protocore_sdi12_crc16` / `protocore_sdi12_crc_encode` / `protocore_sdi12_check_crc` implement the SDI-12 CRC (poly 0xA001, encoded as 3 printable octets) for the CRC-protected `aMC!` / `aCC!` variants. Command set + CRC verified against the SDI-12 specification; pure and host-tested. Drive the single 1200-baud line over a UART and bridge sensor readings onto Wi-Fi. See src/server/peripherals/sdi12/sdi12.h.
 
 ## SenML
 
@@ -1460,7 +1460,7 @@ Browser "web serial" terminal over WebSocket (src/server/web/web_terminal). Serv
 
 `PROTOCORE_ENABLE_WEB_ASSETS`
 
-The built-in dashboard, provisioning form and captive-portal pages, compiled in from flash (network_drivers/application/web_assets). Default off. One `const` array per document under src/web_assets/input/, its base name becoming the C symbol; on ESP32 these live in DROM and are served straight out of flash, so a device ships a working UI with no filesystem, no mount and no heap. Edit the sources under src/web_assets/input/ and re-run src/web_assets/wizard/build_assets.py to regenerate. See src/network_drivers/application/web_assets/web_assets.h.
+The built-in dashboard, provisioning form and captive-portal pages, compiled in from flash (network_drivers/application/web_assets). Default off. One `const` array per document under src/web_assets/input/, its base name becoming the C symbol; on ESP32 these live in DROM and are served straight out of flash. A device ships a working UI with no filesystem, no mount and no heap. Edit the sources under src/web_assets/input/ and re-run src/web_assets/wizard/build_assets.py to regenerate. See src/network_drivers/application/web_assets/web_assets.h.
 
 ## WebDAV
 
@@ -1538,7 +1538,7 @@ RFC 5280 certificate parsing, for a TLS connection that authenticates by certifi
 
 `PROTOCORE_ENABLE_XMPP`
 
-Opt-in XMPP (RFC 6120) stanza codec. When set, services/iot/xmpp builds correctly XML-escaped `<stream:stream>` / `<message>` / `<presence>` / `<iq>` stanzas into a caller buffer and reads the stanza element name + an attribute value out of a received stanza, so a device is an IoT XMPP client. Pure text framing (TLS/SASL ride the client TLS path; the IoT XEPs layer inside `<iq>`). Default off.
+Opt-in XMPP (RFC 6120) stanza codec. When set, services/iot/xmpp builds correctly XML-escaped `<stream:stream>` / `<message>` / `<presence>` / `<iq>` stanzas into a caller buffer and reads the stanza element name + an attribute value out of a received stanza. A device is an IoT XMPP client. Pure text framing (TLS/SASL ride the client TLS path; the IoT XEPs layer inside `<iq>`). Default off.
 
 ## Z-Wave
 
