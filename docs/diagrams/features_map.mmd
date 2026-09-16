@@ -1,32 +1,32 @@
 %%{init: {'htmlLabels':false,'themeVariables':{'fontFamily':'monospace','fontSize':'12px','lineColor':'#3b4a5c'},'flowchart':{'curve':'basis','nodeSpacing':14,'rankSpacing':70,'padding':8,'useMaxWidth':true,'htmlLabels':false}}}%%
 flowchart LR
   %% Auto-generated from docs/FEATURES.md by tools/ci_tooling/generate/gen_features_tree.py.
-  n_root["ProtoCore                 <br/>256 features              "]
+  n_root["ProtoCore                 <br/>260 features              "]
   n_Foundation["Foundation                <br/>17 features               "]
   n_root --> n_Foundation
   n_Physical___Data_Link__L1_L2_["Physical & Data Link (L1-…<br/>31 features               "]
   n_root --> n_Physical___Data_Link__L1_L2_
-  n_Network__L3_["Network (L3)              <br/>6 features                "]
+  n_Network__L3_["Network (L3)              <br/>7 features                "]
   n_root --> n_Network__L3_
-  n_Transport__L4_["Transport (L4)            <br/>9 features                "]
+  n_Transport__L4_["Transport (L4)            <br/>8 features                "]
   n_root --> n_Transport__L4_
   n_Session__L5_["Session (L5)              <br/>5 features                "]
   n_root --> n_Session__L5_
-  n_Presentation__L6_["Presentation (L6)         <br/>18 features               "]
+  n_Presentation__L6_["Presentation (L6)         <br/>21 features               "]
   n_root --> n_Presentation__L6_
-  n_Application__L7_["Application (L7)          <br/>170 features              "]
+  n_Application__L7_["Application (L7)          <br/>171 features              "]
   n_root --> n_Application__L7_
-  n_Application__L7____Other["Application (L7) - Other  <br/>39                        "]
+  n_Application__L7____Other["Application (L7) - Other  <br/>42                        "]
   n_Application__L7_ --> n_Application__L7____Other
   n_Auth__Identity___Security["Auth, Identity & Security <br/>5                         "]
   n_Application__L7_ --> n_Auth__Identity___Security
-  n_Clients___Gateways["Clients & Gateways        <br/>9                         "]
+  n_Clients___Gateways["Clients & Gateways        <br/>7                         "]
   n_Application__L7_ --> n_Clients___Gateways
   n_Firmware___System["Firmware & System         <br/>3                         "]
   n_Application__L7_ --> n_Firmware___System
   n_Industrial___Fieldbus["Industrial & Fieldbus     <br/>31                        "]
   n_Application__L7_ --> n_Industrial___Fieldbus
-  n_IoT__Messaging___APIs["IoT, Messaging & APIs     <br/>16                        "]
+  n_IoT__Messaging___APIs["IoT, Messaging & APIs     <br/>15                        "]
   n_Application__L7_ --> n_IoT__Messaging___APIs
   n_Machine_Tools___OT["Machine Tools & OT        <br/>5                         "]
   n_Application__L7_ --> n_Machine_Tools___OT
@@ -40,7 +40,7 @@ flowchart LR
   n_Application__L7_ --> n_Time___Discovery
   n_Transportation___ITS["Transportation & ITS      <br/>10                        "]
   n_Application__L7_ --> n_Transportation___ITS
-  n_Web___HTTP["Web & HTTP                <br/>16                        "]
+  n_Web___HTTP["Web & HTTP                <br/>17                        "]
   n_Application__L7_ --> n_Web___HTTP
 
   click n_Foundation "features.html#foundation" "Foundation"
@@ -49,19 +49,19 @@ flowchart LR
   click n_Transport__L4_ "features.html#transport-l4" "Transport (L4)"
   click n_Session__L5_ "features.html#session-l5" "Session (L5)"
   click n_Presentation__L6_ "features.html#presentation-l6" "Presentation (L6)"
-  click n_Application__L7____Other "features.html#application-l7---other" "Application (L7) - Other - 39 features"
+  click n_Application__L7____Other "features.html#application-l7---other" "Application (L7) - Other - 42 features"
   click n_Auth__Identity___Security "features.html#auth-identity--security" "Auth, Identity & Security - 5 features"
-  click n_Clients___Gateways "features.html#clients--gateways" "Clients & Gateways - 9 features"
+  click n_Clients___Gateways "features.html#clients--gateways" "Clients & Gateways - 7 features"
   click n_Firmware___System "features.html#firmware--system" "Firmware & System - 3 features"
   click n_Industrial___Fieldbus "features.html#industrial--fieldbus" "Industrial & Fieldbus - 31 features"
-  click n_IoT__Messaging___APIs "features.html#iot-messaging--apis" "IoT, Messaging & APIs - 16 features"
+  click n_IoT__Messaging___APIs "features.html#iot-messaging--apis" "IoT, Messaging & APIs - 15 features"
   click n_Machine_Tools___OT "features.html#machine-tools--ot" "Machine Tools & OT - 5 features"
   click n_Observability___Telemetry "features.html#observability--telemetry" "Observability & Telemetry - 14 features"
   click n_SCADA__Energy___Monitoring "features.html#scada-energy--monitoring" "SCADA, Energy & Monitoring - 10 features"
   click n_Storage___Database "features.html#storage--database" "Storage & Database - 5 features"
   click n_Time___Discovery "features.html#time--discovery" "Time & Discovery - 7 features"
   click n_Transportation___ITS "features.html#transportation--its" "Transportation & ITS - 10 features"
-  click n_Web___HTTP "features.html#web--http" "Web & HTTP - 16 features"
+  click n_Web___HTTP "features.html#web--http" "Web & HTTP - 17 features"
 
   style n_root fill:#121924,stroke:#22d3ee,color:#eaf1f8
   style n_Foundation fill:#8b93a722,stroke:#8b93a7,color:#eaf1f8

@@ -1,6 +1,6 @@
 # Symbols and naming
 
-The naming law for ProtoCore, stated so a tool can check it and explained so it can be applied to a
+The naming law for ProtoCore, stated for a tool to check and explained so it can be applied to a
 case the table does not cover.
 
 ## The language
@@ -95,13 +95,13 @@ included. Two macros agreeing in their first 31 characters are the same macro th
 **When a name does not fit, abbreviate whole words. Never cut a word short.** A chopped last word
 reads as a typo and the reader stops to work out the real name. An abbreviation keeps the word
 boundaries, so the correspondence to the spec survives: in `PROTOCORE_SSH_MSG_CH_WIN_ADJ`, `CH`=CHANNEL,
-`WIN`=WINDOW, `ADJ`=ADJUST still recovers `SSH_MSG_CHANNEL_WINDOW_ADJUST` from RFC 4254, which is
-what a reviewer checks the constant against. That matters most for names quoted from a document:
+`WIN`=WINDOW, `ADJ`=ADJUST still recovers `SSH_MSG_CHANNEL_WINDOW_ADJUST` from RFC 4254.
+A reviewer checks the constant against the RFC. Names quoted from a document need it most:
 protocol messages, IANA cipher suites, datasheet registers.
 
 **To shorten a word, keep its consonant skeleton.** `HDR`, `MSG`, `CFG`, `PKT` are all built this way,
 and it extends to words with no conventional short form: `ENOUGH` to `ENGH`, `INTERACTIVE` to `IACTV`,
-`KEYBOARD` to `KBD`. Prefer abbreviations the library already uses so a reader meets a small
+`KEYBOARD` to `KBD`. Prefer abbreviations the library already uses. A reader meets a small
 vocabulary: `MAX`, `LEN`, `BUF`, `REG`, `CMD`, `MSG`, `HDR`, `AUTH`, `REQ`, `ERR`.
 
 **An abbreviation that reads two ways is no better than a chop.** `INVALID` has an obvious five-letter
@@ -130,7 +130,7 @@ C has no scoped enum. Every member lands in one global namespace the moment it i
 prefix is the only thing keeping two enums from colliding, and the words enums want are the common
 ones: `FAILED`, `IDLE`, `STOP`, `START`, `DONE`, `PENDING`, `MISS`, `HIT`.
 
-Two further reasons the prefix is mandatory rather than a per-enum decision:
+Two further reasons the prefix is mandatory, with no per-enum decision:
 
 1. **Names are for human recognition.** A member is read far more often at a use site, in a log, a
    packet dump, or a debugger than in its declaration. `PROTOCORE_IP_V4` is self-describing when it
@@ -151,11 +151,11 @@ A rule that cannot be applied uniformly is not a rule.
 **Include guards are `PROTOCORE_<FILE>_H`**, built from the file's own name:
 `src/crypto/hash/sha256/sha256.h` guards with `PROTOCORE_SHA256_H`.
 
-A guard takes the full library name rather than the `PROTOCORE_` prefix, because it is the one macro that
-has to be unique across _someone else's_ build: `PROTOCORE_HTTP_PARSER_H` is a plausible name for another
+A guard takes the full library name, because it is the only macro that
+has to be unique across _someone else's_ build: `PC_HTTP_PARSER_H` is a plausible name for another
 library's guard while `PROTOCORE_HTTP_PARSER_H` is not.
 
-**Every header file name under `src/` is unique, and `check_symbols.py` enforces it.** That is what
+**Every header file name under `src/` is unique, and `check_symbols.py` enforces it.** That
 makes a filename-derived guard collision-proof. The guard is derived from the file's name and not its
 path, because a path-derived guard overruns the 31-character limit on three quarters of the headers in
 a tree this deep; the filename form lands at median 20.
@@ -168,7 +168,7 @@ a tree this deep; the filename form lands at median 20.
 | `server/core/provisioning_service/provisioning_service.h` | `PROTOCORE_PROVISIONING_H`   | 25     |
 
 `caster` is implied by `ntrip`, and a `_service` header is a service. `check_symbols.py` rejects any
-guard that is neither the filename form nor a listed exception; it raises rather than inventing a
+guard that is neither the filename form nor a listed exception; it raises and never invents a
 shortening. It checks uniqueness of the **final** guard, since truncation can itself create a
 collision.
 
@@ -203,7 +203,7 @@ cannot be named from C at all. Today that is three files:
 It covers what a driver must consume, never what it publishes: every name `physical_esp.cpp` defines
 is declared in `physical.h` between `PROTOCORE_BEGIN_DECLS` and `PROTOCORE_END_DECLS`, so every caller above
 the board layer is C speaking to C. A `.cpp` anywhere else under `src/`, or one that exports a C++
-type, is a violation rather than an instance of this. The list is written down because a rule with an
+type, is a violation. It is not an instance of this. The list is written down because a rule with an
 unrecorded exception gets "fixed" by the next mechanical pass.
 
 Markdown is the documented exception to `snake_case`: docs use `UPPER_SNAKE`, including the per-die

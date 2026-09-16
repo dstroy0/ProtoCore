@@ -122,7 +122,7 @@ You want a line naming a port. What it looks like depends on the USB chip on you
 are the cause:
 
 1. **Try a different USB cable.** See above. This is the most likely cause by a wide margin.
-2. **Try a different USB port**, ideally one directly on the computer rather than through a hub.
+2. **Try a different USB port**, ideally one directly on the computer, avoiding a hub.
 3. **Install the USB-serial driver** for your board's chip (CP210x or CH340). Native-USB boards
    need no driver.
 4. On Linux, **add yourself to the `dialout` group** and log out and back in, otherwise the port
@@ -188,8 +188,8 @@ Open the serial monitor and read the message. Two common ones:
 
 **Serial monitor shows nothing, or shows garbage**
 The monitor's baud rate does not match the sketch's. `Serial.begin(115200)` needs the monitor
-at 115200. Mismatched baud produces plausible-looking nonsense rather than silence, which is
-what makes it confusing.
+at 115200. Mismatched baud produces plausible-looking nonsense where you would expect silence. The
+plausibility is the confusing part.
 
 **It worked yesterday and does not today**
 Check what changed physically first: a nudged jumper wire, a different USB port, a different
@@ -330,7 +330,7 @@ no GPIO; they are simpler but slightly less reliable at high baud.)
 - **Termination**: a **120 ohm** resistor across A and B at **each of the two far
   ends** of the cable (not in the middle). It stops signal reflections.
 - **Fail-safe bias**: one set of pull resistors (roughly 560-680 ohm: a pull-up
-  on B to VCC and a pull-down on A to GND) somewhere on the bus, so an idle bus
+  on B to VCC and a pull-down on A to GND) somewhere on the bus. An idle bus
   reads as a clean logic level. Many modules include these.
 
 A 2-wire ("half-duplex") bus is by far the most common. A 4-wire ("full-duplex")
@@ -351,8 +351,8 @@ connector and the ESP32 UART:
 | RS-232 `T1OUT`/`R1IN` | the device's RX/TX |
 | `VCC`/`GND`           | 3.3 V and ground   |
 
-Cross TX to RX and RX to TX (a "null-modem" crossover) if both ends are devices
-rather than a PC-and-modem pair.
+Cross TX to RX and RX to TX (a "null-modem" crossover) if both ends are devices.
+A PC-and-modem pair does not need it.
 
 ### Choosing and using the UART
 
@@ -526,7 +526,7 @@ generates the wake-up pulse and handles the line driving; the UART runs at one o
 the three SDCI rates (**COM1 4.8 / COM2 38.4 / COM3 230.4 kbit/s**).
 
 This codec is the data-link **message** layer - in particular the SDCI checksum,
-which is the easy thing to get wrong:
+the easy thing to get wrong:
 
 - Master message: lay out the M-sequence (the `protocore_iolink_mc()` control octet, any
   on-request / process octets, and an `protocore_iolink_ckt()` checksum/type octet), then
@@ -553,7 +553,7 @@ You need a CAN transceiver between the ESP32 and the bus. Two cheap options:
   controller. Connect ESP32 `TX` GPIO -> transceiver `D` (TXD), transceiver `R`
   (RXD) -> ESP32 `RX` GPIO, plus 3V3 and GND. CAN_H / CAN_L go to the bus.
 - **MCP2515 + TJA1050 module (~$2)**: a standalone CAN controller you talk to
-  over **SPI** (use this if you would rather not use the internal TWAI, or need a
+  over **SPI** (use this if you prefer not to use the internal TWAI, or need a
   second CAN channel). Wire SPI (SCK/MOSI/MISO/CS) + an interrupt GPIO.
 
 Bus rules that matter: terminate **both ends** of the bus with a **120 ohm**
@@ -609,7 +609,7 @@ the bus and publish them over MQTT or a web dashboard. See
 
 `PROTOCORE_ENABLE_DEVICENET`. DeviceNet is **CIP over CAN** (the same CIP objects as
 EtherNet/IP, but on a CAN wire). Electrically it is CAN with a twist: a DeviceNet
-cable carries **24 V power** alongside CAN_H / CAN_L, so a real drop also needs
+cable carries **24 V power** alongside CAN_H / CAN_L. A real drop also needs
 the power conductors and the standard 5-pin connector - but the signalling is
 ordinary CAN, so the **same transceiver wiring** as above applies (use 125, 250,
 or 500 kbit/s; each node has a MAC id 0-63).
@@ -717,8 +717,8 @@ the ESP32's built-in Wi-Fi supplies the link.
   **rack and slot** number that identify the CPU (for example rack 0 / slot 1 or
   slot 2 on an S7-300, rack 0 / slot 1 on an S7-1200/1500); the PLC must also
   permit "PUT/GET" access for external reads.
-- **Codec:** `protocore_s7_build_setup` / `protocore_s7_build_read_request` / `protocore_s7_parse_header` /
-  `protocore_s7_read_next_item`, wrapped with `protocore_cotp_build_dt` + `protocore_tpkt_build`. See
+- **Codec:** `protocore_s7comm_build_setup` / `protocore_s7comm_build_read_request` / `protocore_s7comm_parse_header` /
+  `protocore_s7comm_read_next_item`, wrapped with `protocore_cotp_build_dt` + `protocore_cotp_tpkt_build`. See
   `src/services/fieldbus/s7comm/s7comm.h`.
 
 ### MELSEC (Mitsubishi)
@@ -871,7 +871,7 @@ All the I2C drivers bring the bus up and address it through one shared owner
 Two more knobs live with them. **`PROTOCORE_I2C_HZ`** (default `100000`) is the bus clock;
 100 kHz standard mode is what every driver here is rated for, and a device that
 supports 400 kHz fast mode will take it if the wiring is short and well pulled up.
-**`PROTOCORE_I2C_TIMEOUT_MS`** (default `50`) bounds one transfer, so a device that stops
+**`PROTOCORE_I2C_TIMEOUT_MS`** (default `50`) bounds one transfer. A device that stops
 clocking stalls that read instead of the main loop.
 
 > **Running alongside wired Ethernet.** Only the **classic ESP32 (WROOM/WROVER)** and
@@ -987,7 +987,7 @@ codec, see [FEATURES.md](FEATURES.md) and [STANDARDS.md](STANDARDS.md).
 
 <!-- prettier-ignore-start -->
 
-**73 modules** attach to something physical. Every one takes its wiring **through the API** -
+**76 modules** attach to something physical. Every one takes its wiring **through the API** -
 an I2C address, explicit pins, or a caller-supplied bus struct - so the library never dictates a
 pinout and none is documented here. Pure codecs have no bring-up call at all: you own the link.
 
@@ -995,36 +995,36 @@ pinout and none is documented here. Pure codecs have no bring-up call at all: yo
 
 | Module | Attaches via | Bring-up call | Feature flag |
 | ------ | ------------ | ------------- | ------------ |
-| `rtc` | I2C | `protocore_rtc_begin(void)` | `PROTOCORE_ENABLE_RTC` |
+| `rtc` | caller-supplied link | `protocore_rtc_begin(uint8_t *work)` | `PROTOCORE_ENABLE_RTC` |
 | `time_source` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_TIME_SOURCE` |
 
 ### Physical & Data Link (L1-L2)
 
 | Module | Attaches via | Bring-up call | Feature flag |
 | ------ | ------------ | ------------- | ------------ |
-| `ads1115` | I2C | `protocore_ads1115_begin(uint8_t addr)` | `PROTOCORE_ENABLE_ADS1115` |
+| `ads1115` | caller-supplied link | `protocore_ads1115_begin(uint8_t *work)` | `PROTOCORE_ENABLE_ADS1115` |
 | `dshot` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_DSHOT` |
-| `fdc2214` | I2C | `protocore_fdc2214_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)` | `PROTOCORE_ENABLE_FDC2214` |
-| `ina219` | I2C | `protocore_ina219_begin(uint8_t addr, uint32_t current_lsb_ua, uint32_t shunt_mohm)` | `PROTOCORE_ENABLE_INA219` |
-| `ld2410` | UART | `protocore_ld2410_begin(int rx_pin, int tx_pin)` | `PROTOCORE_ENABLE_LD2410` |
-| `ldc1614` | I2C | `protocore_ldc1614_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)` | `PROTOCORE_ENABLE_LDC1614` |
-| `mpr121` | I2C | `protocore_mpr121_begin(uint8_t addr)` | `PROTOCORE_ENABLE_MPR121` |
-| `pca9685` | I2C | `protocore_pca9685_begin(uint8_t addr, uint32_t freq_hz)` | `PROTOCORE_ENABLE_PCA9685` |
+| `fdc2214` | caller-supplied link | `protocore_fdc2214_begin(uint8_t *work)` | `PROTOCORE_ENABLE_FDC2214` |
+| `ina219` | caller-supplied link | `protocore_ina219_begin(uint8_t *work)` | `PROTOCORE_ENABLE_INA219` |
+| `ld2410` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_LD2410` |
+| `ldc1614` | caller-supplied link | `protocore_ldc1614_begin(uint8_t *work)` | `PROTOCORE_ENABLE_LDC1614` |
+| `mpr121` | caller-supplied link | `protocore_mpr121_begin(uint8_t *work)` | `PROTOCORE_ENABLE_MPR121` |
+| `pca9685` | caller-supplied link | `protocore_pca9685_begin(uint8_t *work)` | `PROTOCORE_ENABLE_PCA9685` |
 | `pn532` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_PN532` |
-| `sht3x` | I2C | `protocore_sht3x_begin(uint8_t addr)` | `PROTOCORE_ENABLE_SHT3X` |
-| `vl53l0x` | I2C | `protocore_vl53l0x_begin(uint8_t addr)` | `PROTOCORE_ENABLE_VL53L0X` |
+| `sht3x` | caller-supplied link | `protocore_sht3x_begin(uint8_t *work)` | `PROTOCORE_ENABLE_SHT3X` |
+| `vl53l0x` | caller-supplied link | `protocore_vl53l0x_begin(uint8_t *work)` | `PROTOCORE_ENABLE_VL53L0X` |
 | `ble_gatt` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_BLE_GATT` |
-| `cc1101` | SPI (caller-supplied bus) | `protocore_cc1101_init(const protocore_cc1101_bus *bus, const protocore_cc1101_config *cfg)` | `PROTOCORE_ENABLE_CC1101` |
+| `cc1101` | SPI (caller-supplied bus) | `protocore_cc1101_init(uint8_t *work, const protocore_cc1101_bus *bus, const protocore_cc1101_config *cfg)` | `PROTOCORE_ENABLE_CC1101` |
 | `enocean` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_ENOCEAN` |
-| `espnow` | caller-supplied link | `protocore_espnow_begin(uint8_t channel, protocore_espnow_recv_fn cb)` | `PROTOCORE_ENABLE_ESPNOW` |
-| `lora` | SPI (caller-supplied bus) | `protocore_lora_init(const protocore_lora_bus *bus, const protocore_lora_config *cfg)` | `PROTOCORE_ENABLE_LORA` |
-| `nrf24` | SPI (caller-supplied bus) | `protocore_nrf24_init(const nrf_bus *bus, const nrf_config *cfg)` | `PROTOCORE_ENABLE_NRF24` |
-| `promisc` | caller-supplied link | `protocore_promisc_begin(uint8_t channel, protocore_promisc_sink_fn sink)` | `PROTOCORE_ENABLE_PROMISC` |
+| `espnow` | caller-supplied link | `protocore_espnow_begin(uint8_t *work)` | `PROTOCORE_ENABLE_ESPNOW` |
+| `lora` | SPI (caller-supplied bus) | `protocore_lora_init(uint8_t *work, const protocore_lora_bus *bus, const protocore_lora_config *cfg)` | `PROTOCORE_ENABLE_LORA` |
+| `nrf24` | SPI (caller-supplied bus) | `protocore_nrf24_init(uint8_t *work, const nrf_bus *bus, const nrf_config *cfg)` | `PROTOCORE_ENABLE_NRF24` |
+| `promisc` | caller-supplied link | `protocore_promisc_begin(uint8_t *work, uint8_t channel, protocore_promisc_sink_fn sink)` | `PROTOCORE_ENABLE_PROMISC` |
 | `radio_sniff` | CAN | _none (pure codec)_ | `PROTOCORE_ENABLE_RADIO_SNIFF` |
 | `sigfox` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_SIGFOX` |
-| `thread` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_THREAD` |
-| `wifi_sniffer` | caller-supplied link | `protocore_wifi_sniffer_begin(uint8_t first_chan, uint8_t last_chan, uint16_t dwell_ms)` | `PROTOCORE_ENABLE_WIFI_SNIFFER` |
-| `wisun` | caller-supplied link | `protocore_wisun_init(WisunFan *fan, const protocore_ip *border_router, WisunNode *storage, size_t cap)` | `PROTOCORE_ENABLE_WISUN` |
+| `thread` | caller-supplied link | `protocore_thread_spinel_reader_init(uint8_t *work, SpinelReader *r, const uint8_t *value, uint16_t len)` | `PROTOCORE_ENABLE_THREAD` |
+| `wifi_sniffer` | caller-supplied link | `protocore_wifi_sniffer_scan_init(uint8_t *work)` | `PROTOCORE_ENABLE_WIFI_SNIFFER` |
+| `wisun` | caller-supplied link | `protocore_wisun_init(uint8_t *work, WisunFan *fan, const protocore_ip *border_router, WisunNode *storage, size_t cap)` | `PROTOCORE_ENABLE_WISUN` |
 | `zigbee` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_ZIGBEE` |
 | `zwave` | CAN | _none (pure codec)_ | `PROTOCORE_ENABLE_ZWAVE` |
 | `rawl2` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_RAWL2` |
@@ -1037,7 +1037,7 @@ pinout and none is documented here. Pure codecs have no bring-up call at all: yo
 | `sdi12` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_SDI12` |
 | `ads` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_ADS` |
 | `bacnet` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_BACNET` |
-| `canopen` | CAN | `protocore_canopen_sdo_reasm_init(CanopenSdoReasm *r, uint8_t *buf, size_t cap)` | `PROTOCORE_ENABLE_CANOPEN` |
+| `canopen` | CAN | `protocore_canopen_sdo_reasm_init(uint8_t *work)` | `PROTOCORE_ENABLE_CANOPEN` |
 | `cclink` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_CCLINK` |
 | `cia402` | CAN | _none (pure codec)_ | `PROTOCORE_ENABLE_CIA402` |
 | `cip` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_CIP` |
@@ -1054,7 +1054,7 @@ pinout and none is documented here. Pure codecs have no bring-up call at all: yo
 | `lonworks` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_LONWORKS` |
 | `mbplus` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_MBPLUS` |
 | `melsec` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_MELSEC` |
-| `modbus` | caller-supplied link | `protocore_modbus_server_init()` | `PROTOCORE_ENABLE_MODBUS` |
+| `modbus` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_MODBUS` |
 | `powerlink` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_POWERLINK` |
 | `profibus` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_PROFIBUS` |
 | `profinet` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_PROFINET` |
@@ -1068,36 +1068,44 @@ pinout and none is documented here. Pure codecs have no bring-up call at all: yo
 | ------ | ------------ | ------------- | ------------ |
 | `mbus` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_MBUS` |
 
-### Machine Tools & OT
-
-| Module | Attaches via | Bring-up call | Feature flag |
-| ------ | ------------ | ------------- | ------------ |
-| `opcua` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_OPCUA` |
-| `opcua_client` | caller-supplied link | `protocore_opcua_client_init(OpcUaClient *c)` | `PROTOCORE_ENABLE_OPCUA_CLIENT` |
-
 ### Transportation & ITS
 
 | Module | Attaches via | Bring-up call | Feature flag |
 | ------ | ------------ | ------------- | ------------ |
 | `j1939` | CAN | _none (pure codec)_ | `PROTOCORE_ENABLE_J1939` |
-| `gnss` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_NMEA0183` |
 | `nmea0183` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_NMEA0183` |
-| `nmea2000` | CAN | _none (pure codec)_ | `PROTOCORE_ENABLE_NMEA2000` |
+| `nmea2000` | CAN | _none (pure codec)_ | `PROTOCORE_ENABLE_J1939` |
 
 ### Application (L7) - Other
 
 | Module | Attaches via | Bring-up call | Feature flag |
 | ------ | ------------ | ------------- | ------------ |
 | `ad9238` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_AD9238` |
-| `hmmd` | UART | `protocore_hmmd_begin(int rx_pin, int tx_pin)` | `PROTOCORE_ENABLE_HMMD` |
-| `rcwl0516` | caller-supplied link | `protocore_rcwl0516_core_init(PresenceCore *c, uint32_t now)` | `PROTOCORE_ENABLE_RCWL0516` |
-| `sen0192` | caller-supplied link | `protocore_sen0192_motion_init(Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high)` | `PROTOCORE_ENABLE_SEN0192` |
+| `hmmd` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_HMMD` |
+| `pmbus` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_PMBUS` |
+| `rcwl0516` | caller-supplied link | `protocore_rcwl0516_presence_init(uint8_t *work, PresenceCore *c, uint32_t debounce_ms, uint32_t hold_ms, uint32_t now)` | `PROTOCORE_ENABLE_RCWL0516` |
+| `sen0192` | caller-supplied link | `protocore_sen0192_motion_init(uint8_t *work, Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high)` | `PROTOCORE_ENABLE_SEN0192` |
+| `smbus` | caller-supplied link | `protocore_smbus_begin(uint8_t *work)` | `PROTOCORE_ENABLE_SMBUS` |
 | `gpib` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_GPIB` |
 | `hislip` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_HISLIP` |
 | `scpi` | caller-supplied link | `protocore_scpi_status_init(ScpiStatus *s)` | `PROTOCORE_ENABLE_SCPI` |
 | `vxi11` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_VXI11` |
 | `simatic` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_SIMATIC` |
 | `ubx` | caller-supplied link | `protocore_ubx_stream_init(protocore_ubx_stream *st)` | `PROTOCORE_ENABLE_UBX` |
+
+### peripherals
+
+| Module | Attaches via | Bring-up call | Feature flag |
+| ------ | ------------ | ------------- | ------------ |
+| `i2c` | codec only - caller owns the link | _none (pure codec)_ | - |
+| `spi` | codec only - caller owns the link | _none (pure codec)_ | - |
+| `uart` | codec only - caller owns the link | _none (pure codec)_ | - |
+
+### timing position
+
+| Module | Attaches via | Bring-up call | Feature flag |
+| ------ | ------------ | ------------- | ------------ |
+| `gnss` | codec only - caller owns the link | _none (pure codec)_ | - |
 
 <!-- prettier-ignore-end -->
 

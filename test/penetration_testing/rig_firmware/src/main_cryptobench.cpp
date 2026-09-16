@@ -52,7 +52,7 @@
 #ifdef ARDUINO
 #include "mbedtls/gcm.h" // reference AES-GCM (HW AES + mbedtls table GHASH) to set the optimization target
 #endif
-#include "device_bench.h"                 // DBENCH_CYCLES
+#include "device_bench.h" // DBENCH_CYCLES
 
 static uint8_t tw[4096]; // test-side working bytes for the crypto entry points
 

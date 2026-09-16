@@ -14,7 +14,7 @@ path, so you only change these when you have a specific reason.
 The server runs in one or more dedicated FreeRTOS worker tasks, not the user's
 `loop()`. Each worker owns a disjoint partition of connection slots (slot `i` ->
 worker `i % PROTOCORE_WORKER_COUNT`) plus its own event queue and scratch arena, so no
-two workers ever touch the same state: there are no hot-path locks, which is what
+two workers ever touch the same state: there are no hot-path locks, and that
 keeps latency bounded (= deterministic) while cores run disjoint connections in
 parallel. A worker blocks on its FreeRTOS task notification and is woken the moment
 an event or a deferred callback is queued, so event latency is independent of the
@@ -30,15 +30,15 @@ C runtime, never heap-allocated after `begin()`.
 
 **Everything is bound in two places: at ingestion, and by mmgr.** A length is bound
 where bytes enter the library - the receive path refuses a segment that will not fit
-the ring rather than truncating it, and every parser downstream carries an explicit
-run length instead of scanning for a terminator (which is why `strlen` is banned in
+the ring, never truncating it, and every parser downstream carries an explicit
+run length instead of scanning for a terminator (`strlen` is banned in
 `src/`). Working memory is bound by the two pools below. Nothing between those two
-points re-derives a bound, and that is what makes the footprint a number you can
-compute before flashing rather than a property you measure afterwards.
+points re-derives a bound, and the footprint is a number you can
+compute before flashing. It is not a property you measure afterwards.
 
 Working memory is therefore not per-feature buffers but two **pools**, both the same
 mechanism (`protocore_arena`, `mmgr/arena.h`) instantiated twice, with one arena per slot -
-one per worker, plus the ghost, which is the library's own.
+one per worker, plus the ghost, the library's own.
 
 | Pool                           | Holds                                                    | Reclaim                                                                         |
 | ------------------------------ | -------------------------------------------------------- | ------------------------------------------------------------------------------- |
@@ -46,7 +46,7 @@ one per worker, plus the ghost, which is the library's own.
 | secure (`mmgr/secure.h`)       | key material: shared secrets, private scalars, schedules | same, and **the release wipes** before the position moves                       |
 
 The two differ in exactly one thing: reclaiming the secure pool zeroes the region
-before it becomes available again, so a secret cannot outlive its borrow. That makes
+before it becomes available again. A secret cannot outlive its borrow. That makes
 the rule structural instead of a discipline every caller has to remember on every
 return path. The regions are also disjoint, so `protocore_secure_owns()` and
 `protocore_plaintext_owns()` are mutually exclusive by construction - a secure borrow can
@@ -75,7 +75,7 @@ favor it does. The core publishes what it provides - storage of a declared span,
 declared alignment, for a declared lifetime - and a vendor backend meets those
 conditions or it does not ship. The obligation runs that way round, and it is settled
 in `test/core_setup/`, the only place a vendor type is named at all: the backend
-`static_assert`s that its context fits the span and satisfies the alignment, so a
+`static_assert`s that its context fits the span and satisfies the alignment. A
 vendor header that changes underneath us fails the build there, named, instead of
 becoming a run-time surprise in the core.
 
@@ -88,10 +88,10 @@ and neither is restated at the point of use.
 The arena's own base is the same argument one level down. The pool aligns allocation
 offsets, so the base must already satisfy the strictest alignment any caller can
 request; left an ordinary struct member it would inherit only 8, so it is declared
-`_Alignas(32)` where the storage lives - stated once, rather than every borrow hoping
-the base was good enough.
+`_Alignas(32)` where the storage lives - stated once. No borrow has to hope
+the base is good enough.
 
-The one thing C does not do for you: on the secure side **every** return path must
+C does not do this for you: on the secure side **every** return path must
 reach `protocore_secure_release()`, including the early ones taken when a peer sends
 something malformed. That is where the wipe happens.
 
@@ -100,7 +100,7 @@ something malformed. That is where the wipe happens.
 The pool sizes are not chosen numbers. Each translation unit precomputes its span -
 the worst-case bytes it borrows in a single call - and declares it as a
 `PROTOCORE_WORK_<MODULE>` constant in [`protocore_config.h`](../src/protocore_config.h),
-the one place that can see them all, since every module header includes it.
+the only place that can see them all, since every module header includes it.
 
 **mmgr therefore has preknowledge of every TU's span before the build runs.** It is
 not handed a request at run time and asked whether it fits; the set of spans it will
@@ -109,19 +109,19 @@ guaranteed and there is nothing to check.
 
 **And every address is preknown too.** A module declares a span and never an offset,
 so nothing couples one module to another - but mmgr resolves that set of spans into a
-layout at compile time, which makes each TU's base a constant rather than whatever a
-run-time bump happened to return. Two TUs that the time domain proves are never live
+layout at compile time, which makes each TU's base a constant, decided before any
+run-time bump. Two TUs that the time domain proves are never live
 together resolve to the _same_ base: that overlap is precisely why the peak-concurrent
 figure is smaller than the sum, and it costs nothing, because the exclusivity was
 already known.
 
-So a borrow resolves to a known address in known storage. There is no search, no free
+A borrow resolves to a known address in known storage. There is no search, no free
 list, no fragmentation, and no layout decision left to make while the device is
 running.
 
 Each span is **proved where the struct lives**, by a
-`static_assert(sizeof(X) <= PROTOCORE_WORK_X)` in the module that owns it, so a working set
-that grows past its declaration fails the build naming itself rather than exhausting a
+`static_assert(sizeof(X) <= PROTOCORE_WORK_X)` in the module that owns it. A working set
+that grows past its declaration fails the build naming itself. It never exhausts a
 pool at run time. The declaration and the truth cannot drift apart.
 
 These are sizes, not offsets. Nothing couples one module to another: each is a term,
@@ -134,12 +134,12 @@ The two pools then resolve those terms differently, because their time domains d
   under one another, where a nest depth is only correct while the call graph stays as
   it is. It buys certainty with a little slack.
 - **Plaintext: the peak concurrent.** A worker runs one event to completion before the
-  next and owns a disjoint partition of slots, so a dispatch is doing HTTP _or_
+  next and owns a disjoint partition of slots. A dispatch is doing HTTP _or_
   WebSocket _or_ SSH - never two at once. The time domain is known, so the maximum is
-  a stated fact rather than an estimate, and overlapping those buffers in one arena
+  a stated fact. Overlapping those buffers in one arena
   cuts peak RAM without weakening the guarantee.
 
-Both are feature-gated, so a build pays only for the code it compiled.
+Both are feature-gated. A build pays only for the code it compiled.
 
 ## Knobs
 
@@ -151,7 +151,7 @@ Both are feature-gated, so a build pays only for the code it compiled.
 | `PROTOCORE_WORKER_TASK_STACK`    | 8192                 | Per-worker task stack (bytes). A build guard requires `>= PROTOCORE_WORKER_STACK_RSA_MIN` when OIDC or SSH is enabled (RSA-2048 verify needs ~7 KB).                                                                                                                       |
 | `PROTOCORE_WORKER_STACK_RSA_MIN` | 8192                 | Enforced floor for `PROTOCORE_WORKER_TASK_STACK` once an RSA-2048 verifier (OIDC/SSH) is compiled in. Lower it only if you marshal RSA verifies off the worker.                                                                                                            |
 | `PROTOCORE_WORKER_POLL_TICKS`    | 1                    | Idle-sweep block timeout (ticks). Events wake the worker immediately regardless; this only sets how often an idle worker wakes to run the timeout sweep.                                                                                                                   |
-| `EVT_QUEUE_DEPTH`                | `MAX_CONNS * 4` (32) | Per-queue event slots; tracks `MAX_CONNS` so a raised pool never trips the `>= MAX_CONNS * 4` guard. Raise it to absorb larger connection bursts.                                                                                                                          |
+| `EVT_QUEUE_DEPTH`                | `MAX_CONNS * 4` (32) | Per-queue event slots; tracks `MAX_CONNS`. A raised pool never trips the `>= MAX_CONNS * 4` guard. Raise it to absorb larger connection bursts.                                                                                                                            |
 | `MAX_CONNS`                      | 8                    | Connection pool size. The hard ceiling on concurrent connections.                                                                                                                                                                                                          |
 | `PROTO_WORD_BITS`                | 32                   | The target's natural register width. Every narrow value is carried in it and truncated at the boundary, because arithmetic narrower than the register costs the mask that keeps the unused half correct. Must be 16, 32 or 64.                                             |
 | `PROTO_INDEX_BITS`               | 32                   | Width of `proto_idx`, which is every offset, length and capacity the library declares (never `size_t`, whose width is inherited from the pointer and so differs between a device build and the host test). Must be 16 or 32, and `<= PROTO_WORD_BITS`.                     |
@@ -165,7 +165,7 @@ in the section **"Feature tuning knobs (grouped and gated by feature)"** at the 
 the file. You never have to open a feature header to turn one. Each is an override-able
 default, so you set a new value in your `build_flags` (for example
 `-D PROTOCORE_OPCUA_READ_MAX=16` or `-D PROTOCORE_GQL_MAX_DEPTH=8`) and the owning module picks
-it up. A group is wrapped in its feature's `PROTOCORE_ENABLE_*` flag, so a knob only exists
+it up. A group is wrapped in its feature's `PROTOCORE_ENABLE_*` flag. A knob only exists
 when that feature is compiled in.
 
 What is deliberately _not_ a knob and stays next to its code: protocol- and
@@ -177,7 +177,7 @@ not exposed as knobs.
 ## Board profiles (per-variant defaults)
 
 The sizing defaults above are not one flat set. They used to be, tuned to fit the
-smallest classic-ESP32 DRAM ceiling, so a board with far more RAM or flash silently
+smallest classic-ESP32 DRAM ceiling. A board with far more RAM or flash silently
 inherited the same cramped numbers. Instead, [`vendor/board_profiles/`](../vendor/board_profiles/)
 layers defaults along three independent axes, selected in [`board_profile.h`](../vendor/board_profiles/board_profile.h)
 (included first thing in `protocore_config.h`):
@@ -230,8 +230,8 @@ off to isolate scheduling, `GET /health` over 15 requests:
 | 1                             | 27.2 ms | 12.4 ms | 35.1 ms |
 | 100                           | 28.0 ms | 12.5 ms | 42.2 ms |
 
-Identical at a 100x longer idle sweep. The pre-notification poll would have added
-up to one full sweep per request (~50 ms average at `POLL_TICKS=100`).
+Identical at a 100x longer idle sweep. The pre-notification poll would have reached
+one full sweep per request (~50 ms average at `POLL_TICKS=100`).
 
 **Idle worker wakeups scale as `tick_rate / PROTOCORE_WORKER_POLL_TICKS`.** At the
 Arduino 1 kHz tick that is `1000 / POLL_TICKS` wakeups per second with no traffic
@@ -258,7 +258,7 @@ latency is unchanged.
   on both cores. Expect ~1.5x, not 2x (Core 0 also runs WiFi/lwIP). Ensure
   `MAX_CONNS >= PROTOCORE_WORKER_COUNT` and that handlers touch only their own slot's
   state (the model already guarantees slot isolation).
-- **Bursty connection load.** Raise `EVT_QUEUE_DEPTH` so a burst of accepts/data
+- **Bursty connection load.** Raise `EVT_QUEUE_DEPTH` to keep a burst of accepts/data
   events cannot overflow a queue (an overflow is dropped, not blocked, to keep the
   tcpip thread non-blocking). Raise `MAX_CONNS` for more concurrent connections
   (BSS cost is fixed and linear).

@@ -170,9 +170,11 @@ static const HttpClientNs HttpClient __attribute__((unused)) = {
  *
  * @return the span.
  */
-#if PROTOCORE_HAS_NET_STACK
+// Not under PROTOCORE_HAS_NET_STACK: the borrow is the MODULE's, the same size and offset stack or
+// no stack, and http_client.c defines this above its own capability gate for that reason. Guarding
+// the declaration while the definition is unconditional hid a symbol that exists, so a caller
+// asking a stackless build for its borrow saw no declaration. Only the entries take the capability.
 uint8_t *protocore_http_client_span(void);
-#endif // PROTOCORE_HAS_NET_STACK
 
 PROTOCORE_END_DECLS
 
