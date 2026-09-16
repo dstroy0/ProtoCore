@@ -79,7 +79,7 @@ Committed and scoped, not started.
       example covers STM/Nordic/NXP/TI across Arm, RISC-V and Xtensa at once.
 - [ ] **asm-level guarantee docs** (M, verification) - claim, then disassembly, then why the disassembly
       establishes it. Constant-time crypto, no-heap-after-`begin()`, bounded ISR paths, and the
-      octet abstraction compiling away. Measured, not asserted.
+      octet abstraction compiling away. Each is measured.
 - [ ] **`posix/` examples as a CI gate** (S, hardware-free regression) - the only platform that runs without hardware, so the
       natural regression net for the other seven.
 - [ ] **Migrate the remaining 6 generators onto `doc_region`** (S, dedupe) - `feature_budget`,
