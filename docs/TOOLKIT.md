@@ -45,7 +45,7 @@ discovers by walking a directory; a path handed to it explicitly is skipped only
 `lib/numerics` is named explicitly in `[fetch] sets`. The toolkit declares it as a dependency of
 `media_tools`, but a fetch of `media_tools` alone did not pull it: `build_sound_view.py` and
 `build_sweep_view.py` both open with `from numerics import dsp` and died on `ModuleNotFoundError`.
-Naming it is what makes the viewers run. Reported upstream.
+Naming it makes the viewers run. Reported upstream.
 
 ## What ProtoCore keeps, and why
 
@@ -59,7 +59,7 @@ this tree.
 | `tools/dev_env/readclean.py`                                                                                                    | see below: same filename as a toolkit tool, different tool                                                                                                                                 |
 | `tools/dev_env/nodeset.py`, `uatree.py`, `uaspace.py`, `opcua_conform.py`                                                       | OPC UA NodeSet readers                                                                                                                                                                     |
 | `tools/crypto/`                                                                                                                 | this project's test vectors and keys                                                                                                                                                       |
-| `tools/harness.py`, `tools/findroot.py`                                                                                         | ProtoCore's entry point. A tool stays runnable by path; the harness is what makes it findable                                                                                              |
+| `tools/harness.py`, `tools/findroot.py`                                                                                         | ProtoCore's entry point. A tool stays runnable by path; the harness makes it findable                                                                                                      |
 | `tools/git-hooks/`                                                                                                              | nine steps the toolkit's driver does not do, listed under `[hooks]` in `repotools.toml`                                                                                                    |
 | `tools/include_footprint.py`, `pid_tune.py`, `dev_env/capsweep.py`, `dev_env/listener_queue/`, `dev_env/pimpl_bench/`, `psram/` | measurements of this firmware                                                                                                                                                              |
 

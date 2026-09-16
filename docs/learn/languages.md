@@ -54,7 +54,7 @@ array or forget to free memory. Power and danger in the same hand.
 **C++** was created by Bjarne Stroustrup as "C with classes": keep C's speed and
 hardware control, but add tools to organize bigger programs - **classes** (bundling
 data with the code that acts on it), templates, and stronger type checking. It is still
-one of the fastest languages in existence, which is why it dominates games, browsers,
+one of the fastest languages in existence, and it dominates games, browsers,
 trading systems, and embedded devices.
 
 **Why this library uses C++:** it runs on an **ESP32**, a microcontroller with only a
@@ -80,7 +80,7 @@ control while still reading nicely.
 ## The web trio: HTML, CSS, and SVG
 
 A web server serves web pages, so the repo includes the three languages a browser
-understands. Crucially, the browser is the one computer in this story we do **not**
+understands. Crucially, the browser is the only computer in this story we do **not**
 control - so we speak its native languages.
 
 ### HTML (1991) - structure

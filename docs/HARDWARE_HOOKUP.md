@@ -188,8 +188,8 @@ Open the serial monitor and read the message. Two common ones:
 
 **Serial monitor shows nothing, or shows garbage**
 The monitor's baud rate does not match the sketch's. `Serial.begin(115200)` needs the monitor
-at 115200. Mismatched baud produces plausible-looking nonsense rather than silence, which is
-what makes it confusing.
+at 115200. Mismatched baud produces plausible-looking nonsense where you would expect silence. The
+plausibility is the confusing part.
 
 **It worked yesterday and does not today**
 Check what changed physically first: a nudged jumper wire, a different USB port, a different
@@ -526,7 +526,7 @@ generates the wake-up pulse and handles the line driving; the UART runs at one o
 the three SDCI rates (**COM1 4.8 / COM2 38.4 / COM3 230.4 kbit/s**).
 
 This codec is the data-link **message** layer - in particular the SDCI checksum,
-which is the easy thing to get wrong:
+the easy thing to get wrong:
 
 - Master message: lay out the M-sequence (the `protocore_iolink_mc()` control octet, any
   on-request / process octets, and an `protocore_iolink_ckt()` checksum/type octet), then

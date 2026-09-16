@@ -14,7 +14,7 @@ path, so you only change these when you have a specific reason.
 The server runs in one or more dedicated FreeRTOS worker tasks, not the user's
 `loop()`. Each worker owns a disjoint partition of connection slots (slot `i` ->
 worker `i % PROTOCORE_WORKER_COUNT`) plus its own event queue and scratch arena, so no
-two workers ever touch the same state: there are no hot-path locks, which is what
+two workers ever touch the same state: there are no hot-path locks, and that
 keeps latency bounded (= deterministic) while cores run disjoint connections in
 parallel. A worker blocks on its FreeRTOS task notification and is woken the moment
 an event or a deferred callback is queued, so event latency is independent of the
@@ -31,14 +31,14 @@ C runtime, never heap-allocated after `begin()`.
 **Everything is bound in two places: at ingestion, and by mmgr.** A length is bound
 where bytes enter the library - the receive path refuses a segment that will not fit
 the ring rather than truncating it, and every parser downstream carries an explicit
-run length instead of scanning for a terminator (which is why `strlen` is banned in
+run length instead of scanning for a terminator (`strlen` is banned in
 `src/`). Working memory is bound by the two pools below. Nothing between those two
-points re-derives a bound, and that is what makes the footprint a number you can
-compute before flashing rather than a property you measure afterwards.
+points re-derives a bound, and the footprint is a number you can
+compute before flashing. It is not a property you measure afterwards.
 
 Working memory is therefore not per-feature buffers but two **pools**, both the same
 mechanism (`protocore_arena`, `mmgr/arena.h`) instantiated twice, with one arena per slot -
-one per worker, plus the ghost, which is the library's own.
+one per worker, plus the ghost, the library's own.
 
 | Pool                           | Holds                                                    | Reclaim                                                                         |
 | ------------------------------ | -------------------------------------------------------- | ------------------------------------------------------------------------------- |
@@ -91,7 +91,7 @@ request; left an ordinary struct member it would inherit only 8, so it is declar
 `_Alignas(32)` where the storage lives - stated once, rather than every borrow hoping
 the base was good enough.
 
-The one thing C does not do for you: on the secure side **every** return path must
+C does not do this for you: on the secure side **every** return path must
 reach `protocore_secure_release()`, including the early ones taken when a peer sends
 something malformed. That is where the wipe happens.
 
@@ -100,7 +100,7 @@ something malformed. That is where the wipe happens.
 The pool sizes are not chosen numbers. Each translation unit precomputes its span -
 the worst-case bytes it borrows in a single call - and declares it as a
 `PROTOCORE_WORK_<MODULE>` constant in [`protocore_config.h`](../src/protocore_config.h),
-the one place that can see them all, since every module header includes it.
+the only place that can see them all, since every module header includes it.
 
 **mmgr therefore has preknowledge of every TU's span before the build runs.** It is
 not handed a request at run time and asked whether it fits; the set of spans it will
@@ -230,8 +230,8 @@ off to isolate scheduling, `GET /health` over 15 requests:
 | 1                             | 27.2 ms | 12.4 ms | 35.1 ms |
 | 100                           | 28.0 ms | 12.5 ms | 42.2 ms |
 
-Identical at a 100x longer idle sweep. The pre-notification poll would have added
-up to one full sweep per request (~50 ms average at `POLL_TICKS=100`).
+Identical at a 100x longer idle sweep. The pre-notification poll would have reached
+one full sweep per request (~50 ms average at `POLL_TICKS=100`).
 
 **Idle worker wakeups scale as `tick_rate / PROTOCORE_WORKER_POLL_TICKS`.** At the
 Arduino 1 kHz tick that is `1000 / POLL_TICKS` wakeups per second with no traffic

@@ -728,7 +728,7 @@ Built-in radio:
   registry + dispatch, host-tested (`native_southbound`). **The Modbus adapter is shipped**
   (`services/southbound/sb_modbus`, `PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER`): it binds the
   transport-agnostic Modbus TCP master codec into a `SouthboundDriver`. An app reads register points
-  by driver name through the one facade - `protocore_sb_modbus_init` (holding FC 0x03 / input FC 0x04, unit,
+  by driver name through the only facade - `protocore_sb_modbus_init` (holding FC 0x03 / input FC 0x04, unit,
   a rolling txid) + `protocore_sb_modbus_driver` install the full vtable over an app-supplied request/response
   transaction seam (`protocore_sb_modbus_txn`, bound to protocore_client for Modbus TCP or a serial gateway): `read`
   (one register) and `read_block` (the atomic register matrix, a contiguous span up to 125 registers in
@@ -1098,7 +1098,7 @@ Settled questions, kept so they are not re-litigated.
 **Decided 2026-07-29. The name is `ProtoCore` and the rename is done.** The library was previously
 `DeterministicESPAsyncWebServer` - literal, but a mouthful, and its "ESP" stopped being true the moment the
 multi-vendor work started. `ProtoCore` is accurate. What sits in the middle is
-protocol logic and nothing else, with silicon pushed out to `test/core_setup/` and platform shells out to
+protocol logic, with silicon pushed out to `test/core_setup/` and platform shells out to
 `examples/`.
 
 Shipped alongside it: the house prefix is `pc_` / `PROTOCORE_` / `PROTOCORE`; the namespace question was settled in
@@ -1109,7 +1109,7 @@ rejected. It is history, not an open action.
 
 **Candidates considered, not chosen:**
 
-- **Keystone** - the wedge stone that locks an arch; the one piece everything else bears on. Evokes structural
+- **Keystone** - the wedge stone that locks an arch; the piece everything else bears on. Evokes structural
   reliability and "the dependable core of the system". Strong, memorable, embedded-agnostic.
 - **Coherence** - consistency / everything staying in lockstep; doubles as a signals/physics term (phase
   coherence) that lands well for an embedded + networking library. Reads as "predictable, in-phase, no drift".

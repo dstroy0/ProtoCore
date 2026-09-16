@@ -36,7 +36,7 @@ src/shared/  layer-agnostic primitives shared across the tree so
                 hex.h (base-16), mime.h (the Content-Type vocabulary), utf8.h
                 (RFC 3629 validation), http_date.h (IMF-fixdate), ip.h (a
                 family-tagged IP address), can.h, pcap.h, log.h, speed_opt.h and
-                time_compat.h. src/protocore_types.h (the one place <stdint.h>
+                time_compat.h. src/protocore_types.h (the only place <stdint.h>
                 appears) sits at the top of src/, not here. Two more shared
                 concerns live in their natural module instead of here: base64url
                 (base64 module, used by JWT + OIDC) and host->IP resolution
@@ -171,7 +171,7 @@ payloads, all byte-exact.
 2. **DONE - migrate the consumers** - HTTP / websocket / telnet / ssh / tls + the
    conn_pool-ring services (modbus / opcua) all drain through the API; no external
    `rx_tail` modulo remains. The read functions consume only; `ConnPool.ack_consumed`
-   stays the one place that reopens the window (per loop), so draining and ACKing
+   stays the only place that reopens the window (per loop), so draining and ACKing
    each have exactly one owner. HW: 10/10 50 KB byte-exact, backpressure 0.
 3. **DONE - slot-aware streaming hooks** - `HttpStreamDataCb(HttpReq*, ...)` +
    per-slot WebDAV PUT state `s_davput.put[MAX_CONNS]`; fixed the concurrent-PUT bug
@@ -284,7 +284,7 @@ data,close}` plus `tls_data` (the TLS handshake pump + ALPN "h2" detection + Web
 Net: L5 is pure dispatch and every protocol (including HTTP) lives behind the same uniform seam via
 its own module - request decode through the `ProtoHandler` seam (accept / data / close / **poll**),
 response encode through the `http_resp_sink` seam. The worker dispatch loop names no protocol and has no
-special case: HTTP plugs in exactly like SSH, Telnet, Modbus, or OPC UA. The one remaining inherent
+special case: HTTP plugs in exactly like SSH, Telnet, Modbus, or OPC UA. The only remaining inherent
 trait is that TLS is an HTTP-only inline transform (item 5). The piping is straight.
 
 ## mmgr - the memory manager (`src/mmgr/`)
@@ -361,7 +361,7 @@ putting them in the secure pool only shrinks the room left for real secrets.
 ### One slot per worker, and a borrow needs no lock
 
 Each pool is cut one arena per slot: one per server worker (`PROTOCORE_WORKER_COUNT`), plus
-the **ghost** at `PROTOCORE_GHOST_WORKER_SLOT`, which is the library's own. A borrow resolves
+the **ghost** at `PROTOCORE_GHOST_WORKER_SLOT`, the library's own. A borrow resolves
 its slot from `protocore_worker_self()` and never takes one as an argument. A borrow cannot
 cross workers and the bump needs no lock. A caller that is not a server worker clamps
 to the ghost rather than to worker 0. Under `PROTOCORE_DEBUG_CHECKS` each slot records the
@@ -381,8 +381,8 @@ those workers is scheduling and stays in `server/core/worker.h`.
 - **Secure: the borrower, and reclaiming wipes.** `protocore_secure_release()` zeroes the
   reclaimed extent **before** the position moves, so the bytes are already zero at the
   instant they become available again - there is no window in which the next borrow is
-  handed the previous tenant's key material. The wipe is structural rather than a
-  discipline every return path has to remember, which is the form that had already been
+  handed the previous tenant's key material. The wipe is structural. A
+  discipline every return path has to remember had already been
   missed on two SSH key-exchange error paths. `protocore_secure_wipe()` is the same primitive
   for storage that was never in a pool.
 - **Long-lived secrets: the persistent end.** `secure.persist_span(n)` takes the end no
@@ -426,7 +426,7 @@ declaration **fails the build, naming itself**, instead of exhausting the pool a
 time on a part nobody was watching. These are sizes and not offsets, so nothing couples
 one module to another - order is irrelevant and adding a module shifts no one.
 
-### The one memory outside the pools, and how bytes cross it
+### The only memory outside the pools, and how bytes cross it
 
 The RX rings are the exception, and they are the only one: `TcpConn::rx_buffer[]` in
 the static `conn_pool`, and the UDP datagram rings. They exist because the producer is
@@ -462,12 +462,12 @@ lands in one place and every codec inherits it.
   with the destination is funneled through two shifts and an OR. `mem.cmp` is not
   constant time - a secret comparison uses `protocore_ct_eq` (crypto/ct_eq.h).
 - **`str`** (protostr) answers where a bounded run ends and where two part company, one
-  word per test, with `ci` folding ASCII case inside the one body. Also the no-stdlib
+  word per test, with `ci` folding ASCII case inside one body. Also the no-stdlib
   number parsing (`to_long` / `to_ulong` / `to_double` / `to_float`).
 - **`swar`** is the access layer under both: load a word, test its lanes branchless,
   name the lane that fired. Byte order enters in exactly one place,
-  `protocore_swar_zero_lane`. Nothing in it walks a buffer or takes a capacity, which is what
-  keeps that claim true. The walks built on it are `str` and nothing else:
+  `protocore_swar_zero_lane`. Nothing in it walks a buffer or takes a capacity. That
+  keeps the claim true. The walks built on it are `str`:
   `shared/runops.h` was a second full implementation of the same operations
   and was removed on 2026-08-08 (docs/BUGS.md), with its 44 call sites rewritten onto
   `str`.
