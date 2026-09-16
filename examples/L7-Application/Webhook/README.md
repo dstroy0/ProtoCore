@@ -13,11 +13,11 @@ IFTTT Maker `value1/2/3` shape. It fires once at boot.
 
 ```cpp
 char body[128];
-protocore_ifttt_payload("boot", "esp32", nullptr, body, sizeof(body)); // {"value1":...,"value2":...}
+protocore_webhook_ifttt_payload("boot", "esp32", nullptr, body, sizeof(body)); // {"value1":...,"value2":...}
 int status = protocore_webhook_post(WEBHOOK_URL, body);                // returns the HTTP status
 ```
 
-`protocore_ifttt_payload()` formats the three IFTTT values into JSON;
+`protocore_webhook_ifttt_payload()` formats the three IFTTT values into JSON;
 `protocore_webhook_post()` sends it. There is also a one-shot
 `protocore_ifttt_trigger(event, key, v1, v2, v3)` that builds the Maker URL for you.
 
@@ -87,7 +87,7 @@ void loop()
     {
         fired = true;
         char body[128];
-        protocore_ifttt_payload("boot", "esp32", nullptr, body, sizeof(body));
+        protocore_webhook_ifttt_payload("boot", "esp32", nullptr, body, sizeof(body));
         int status = protocore_webhook_post(WEBHOOK_URL, body);
         Serial.printf("[webhook] POST -> status %d\n", status);
 

@@ -14,7 +14,7 @@ background. The page never blocks waiting on this device. The header is built by
 `protocore_delivery_cache_control` core that backs the `protocore_delivery_swr` decision, so the two cannot
 drift apart.
 
-**2. A service worker.** `protocore_delivery_serve_sw()` registers two routes:
+**2. A service worker.** `protocore_http_delivery_serve_sw()` registers two routes:
 
 | HttpRoute        | Serves                                                         |
 | ---------------- | -------------------------------------------------------------- |
