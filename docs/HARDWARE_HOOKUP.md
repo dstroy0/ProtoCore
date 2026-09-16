@@ -491,8 +491,8 @@ channels, n)`; your transport sends a **break** then the returned bytes.
 
 **RDM** (ANSI E1.20) adds two-way device management on the same pair (the
 transceiver must be switched to receive for the reply, and RDM needs proper
-direction timing). Build a request with `protocore_rdm_build()` (set the destination /
-source `protocore_rdm_uid()`, command class, and PID) and read a reply with `protocore_rdm_parse()`,
+direction timing). Build a request with `protocore_dmx_rdm_build()` (set the destination /
+source `protocore_dmx_rdm_uid()`, command class, and PID) and read a reply with `protocore_dmx_rdm_parse()`,
 which checks the RDM checksum. Discover, address, and configure fixtures from a
 web UI - a tidy **wireless lighting controller**. See `src/server/peripherals/dmx/dmx.h`.
 
@@ -528,8 +528,8 @@ the three SDCI rates (**COM1 4.8 / COM2 38.4 / COM3 230.4 kbit/s**).
 This codec is the data-link **message** layer - in particular the SDCI checksum,
 which is the easy thing to get wrong:
 
-- Master message: lay out the M-sequence (the `protocore_iol_mc()` control octet, any
-  on-request / process octets, and an `protocore_iol_ckt()` checksum/type octet), then
+- Master message: lay out the M-sequence (the `protocore_iolink_mc()` control octet, any
+  on-request / process octets, and an `protocore_iolink_ckt()` checksum/type octet), then
   `protocore_iol_finalize(msg, len, check_index)` fills the checksum.
 - Device reply: `protocore_iol_verify(msg, len, check_index)` checks the reply's
   checksum/status octet; read its Event and PD-valid flags.
