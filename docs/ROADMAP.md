@@ -865,8 +865,8 @@ Built-in radio:
       them, so what a mount points at is not the accessor's business. The wire half is already here
       and host-tested: `application/sftp` builds and walks SSH_FXP_\* frames (`native_ssh_sftp`) and
       `application/scp` the RCP stream (`native_scp`). Both are written from the device's side as
-      the server, though, so what is missing is the client half - the session that issues requests
-      - and the adapter presenting it as the fourteen backend calls.
+      the server, though, so what is missing is the client half (the session that issues requests)
+      and the adapter presenting it as the fourteen backend calls.
       Wants the multipoint mnt below first: a remote store is the case where mounting one thing
       must not unmount another.
 - [ ] **Multipoint mnt** (M) - `protocore_mnt_mount()` records one backend today, so a second call replaces
