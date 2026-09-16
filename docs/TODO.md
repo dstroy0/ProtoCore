@@ -1029,7 +1029,7 @@ shipped work:
       existing `ssh_transport_begin_rekey()`, and the KEXINIT dispatch carries it to completion (session
       + auth preserved). The decision is a pure, host-tested helper `ssh_rekey_due()`
       (`test_rekey_due_volume_and_time`), the timer resets in `ssh_newkeys_complete()` off the pluggable
-      clock, and the sequence-number-wrap close remains the last-resort fallback. So a long-lived /
+      clock, and the sequence-number-wrap close remains the last-resort fallback. A long-lived /
       high-throughput session re-keys in place instead of being dropped.
 
 - [~] **Compression (RFC 4253 §6.2).** _(both directions implemented; c2s HW interop pending)_
