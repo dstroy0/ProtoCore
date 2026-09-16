@@ -298,7 +298,7 @@ Grouped by the area each belongs to.
       `services/coexistence`: the reporting data model + the channel-plan policy engine (pure, host-tested);
       the actual RF scan feeds it from the radio driver.
 
-#### Seamless Wi-Fi roaming (IEEE 802.11r / k / v)
+#### Wi-Fi roaming (IEEE 802.11r / k / v)
 
 - [ ] **802.11r Fast BSS Transition (FT)** (M) - pre-authenticate / pre-derive the PTK with the target AP
       before roaming so reassociation completes in **< 50 ms** (no full 4-way handshake on the new AP). On
@@ -314,7 +314,7 @@ Grouped by the area each belongs to.
       feeding the hint into the decision layer. `PROTOCORE_ENABLE_BTM`.
 - [ ] **Predictive roaming decision layer** (M) - the policy that fuses 802.11k neighbor reports + 802.11v
       BTM hints + the RSSI trend to pick and execute an 802.11r fast transition _before_ the current link
-      degrades, not after it drops - the piece that turns the three primitives into seamless roaming. Pure,
+      degrades, not after it drops - the piece that turns the three primitives into a roaming decision. Pure,
       host-testable logic (feed it synthetic RSSI / neighbor / BTM inputs, assert the roam trigger + target);
       the actual association is the supplicant's. `services/roaming`.
 
