@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`e15afa9`](https://github.com/dstroy0/ProtoCore/commit/e15afa9dc3b951ec238c225c623569d7707a891b))
 - update CHANGELOG.md [skip ci] ([`6de5e91`](https://github.com/dstroy0/ProtoCore/commit/6de5e9115213a3d64e0879f7265b577758eb9f05))
 - update CHANGELOG.md [skip ci] ([`e772759`](https://github.com/dstroy0/ProtoCore/commit/e7727599e646d7b8f96f4a8be270e74b57e43e71))
 - update CHANGELOG.md [skip ci] ([`383f238`](https://github.com/dstroy0/ProtoCore/commit/383f2388515f3964239a70f5256e2f4390994fc4))
@@ -421,6 +422,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`1efe600`](https://github.com/dstroy0/ProtoCore/commit/1efe60077ca146e14b06541c2fc313ffffa04de8))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`03a54c3`](https://github.com/dstroy0/ProtoCore/commit/03a54c3262762fe5d13677a0c5cf10d7e0690ae1))
 - tools checkdocs bugfix ([`5b5f546`](https://github.com/dstroy0/ProtoCore/commit/5b5f54682bb664f98751d6d068c182976bce8200))
 - merge origin ([`ede0103`](https://github.com/dstroy0/ProtoCore/commit/ede0103ca48440615b9dca0c8e830b2d58c1221b))
@@ -600,6 +602,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`a665538`](https://github.com/dstroy0/ProtoCore/commit/a6655384ce375056063b421347fb9de888f4f194))
+- docs citation bugfix ([`a0ccb3e`](https://github.com/dstroy0/ProtoCore/commit/a0ccb3e1f8200d4674f7bdbcf288be57eca1185b))
+- docs prose bugfix ([`13b2a9d`](https://github.com/dstroy0/ProtoCore/commit/13b2a9d740bce6c51a7c30b5a67ac26107259c30))
+- docs generated regen ([`5d6bcc8`](https://github.com/dstroy0/ProtoCore/commit/5d6bcc8ba70f34d0dfbefdf1d08cf2ea098cf563))
 - docs formatting bugfix ([`61cc7c8`](https://github.com/dstroy0/ProtoCore/commit/61cc7c8f7a50d8aa31e09638422c5d25e9862efb))
 - docs generated regen ([`08853b2`](https://github.com/dstroy0/ProtoCore/commit/08853b2117063e9bc9aa23a5368daa1cc9cab7c0))
 - docs prose bugfix ([`be76096`](https://github.com/dstroy0/ProtoCore/commit/be760967c41fb9a12d8311405caf82527abc4a39))
