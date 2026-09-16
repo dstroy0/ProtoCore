@@ -335,7 +335,7 @@ The **persistent** end is a first-fit free list - individual free in any order,
 adjacent-block coalesce, top-block shrink, and the bytes come back zeroed. The
 **scratch** end is a bump with O(1) reset and mark/release savepoints, aligned up to
 `PROTOCORE_ARENA_MAX_ALIGN` (16). Whichever side needs room takes it, and both ends fail
-closed (NULL) rather than crossing. `protocore_arena_set` chains a DRAM base and a PSRAM
+closed (NULL) before they can cross. `protocore_arena_set` chains a DRAM base and a PSRAM
 extension: a borrow takes the first region that fits, a free routes to the owning
 region by address. No heap, no stdlib, all state in `protocore_arena` (no globals), so it is
 unit-tested on the host.
@@ -364,7 +364,7 @@ Each pool is cut one arena per slot: one per server worker (`PROTOCORE_WORKER_CO
 the **ghost** at `PROTOCORE_GHOST_WORKER_SLOT`, the library's own. A borrow resolves
 its slot from `protocore_worker_self()` and never takes one as an argument. A borrow cannot
 cross workers and the bump needs no lock. A caller that is not a server worker clamps
-to the ghost rather than to worker 0. Under `PROTOCORE_DEBUG_CHECKS` each slot records the
+to the ghost. It does not fall back to worker 0. Under `PROTOCORE_DEBUG_CHECKS` each slot records the
 first execution context to touch it and asserts on a second, turning a future
 cross-core mistake into an immediate visible failure.
 
@@ -416,9 +416,9 @@ static_assert(sizeof(ChachapolyWork) <= PROTOCORE_WORK_CHACHAPOLY, "...");
 ```
 
 `PROTOCORE_SECURE_ARENA_SIZE` is then the **sum** of the terms a build actually compiles, each
-gated by its feature flag. A build pays only for the code it has. A sum rather than a
-deepest-nest figure: the sum is a strict upper bound however those working sets nest,
-where a nest depth is only correct while the call graph stays as it is. It buys
+gated by its feature flag. A build pays only for the code it has. The sum is a strict
+upper bound however those working sets nest. A deepest-nest figure is only correct
+while the call graph stays as it is. It buys
 certainty with a little slack.
 
 The consequence follows. A module whose working set grows past its
@@ -455,7 +455,7 @@ lands in one place and every codec inherits it.
   a sticky overflow flag. `pos` keeps counting past `cap` on overflow. An undersized
   region reports the capacity it should have had instead of only failing. A failed
   borrow yields `{NULL, 0}`, never a null with a live capacity. A caller that skips
-  `protocore_span_ok()` writes nothing rather than dereferencing null. `plain.span()` /
+  `protocore_span_ok()` writes nothing and never dereferences null. `plain.span()` /
   `secure.span()` are the preferred borrow: one argument sets both fields, so the
   length cannot drift from what was reserved.
 - **`mem`** (protomem) walks a span a register word at a time; a source not co-aligned

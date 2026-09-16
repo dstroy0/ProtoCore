@@ -29,7 +29,7 @@ edited, on every commit. This is the same reasoning `.prettierignore` already gi
 and that `.github/workflows/format-code.yml` gives for `managed_components`: code from another
 repository, with its own standards, that a commit here cannot reach.
 
-`force-exclude` rather than `extend-exclude` because CI runs `git ls-files '*.py' | xargs black
+`force-exclude`, because CI runs `git ls-files '*.py' | xargs black
 --check` and the pre-commit hook passes staged paths. Black applies `extend-exclude` only to files it
 discovers by walking a directory; a path handed to it explicitly is skipped only by `force-exclude`.
 
@@ -78,7 +78,7 @@ toolkit's deleted `readclean_test.py` was written against.
 
 **`nsconv.py` and `codemask.py` are imported, not run.** `goldenize.py` imports them as siblings from
 `tools/dev_env/`. Fetching the set installs a second copy at `tools/repotools/code/code_maint/` that
-nothing imports, which is duplication rather than the end of it.
+nothing imports, which duplicates the set without ending the duplication.
 
 The other five are wanted. `dedup.py` has no ProtoCore equivalent, and the toolkit's
 `yank_includes.py` is better than ours: it reads its keep list, its never-yank list and its manifest
@@ -87,7 +87,7 @@ path from a Config, where ProtoCore's holds them in its body. Those values are a
 
 Taking the set needs one of: per-file fetch in the toolkit, a split of `code_maint` into smaller sets,
 or ProtoCore renaming its `readclean.py` and repointing `goldenize.py` at fetched modules. That is a
-decision for the toolkit owner and it is recorded here rather than settled.
+decision for the toolkit owner. It is recorded here and left unsettled.
 
 ## Checking this stayed true
 
