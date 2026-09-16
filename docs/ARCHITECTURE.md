@@ -41,7 +41,7 @@ src/shared/  layer-agnostic primitives shared across the tree so
                 concerns live in their natural module instead of here: base64url
                 (base64 module, used by JWT + OIDC) and host->IP resolution
                 (network_drivers/network/dns/dns_resolver, used by the
-                server-adjacent code AND the TCP client, so a client has one DNS owner).
+                server-adjacent code AND the TCP client; a client has one DNS owner).
 test/core_setup/     NOT under src/: board profiles (per-die sizing and capability
                 macros), the crypto HAL, and the protocore_platform selector.
 ```
@@ -144,7 +144,7 @@ acquire/release ordering).
 
 `http_parser_set_stream_hooks(begin, data, abort)` are global singletons
 (last-registered-wins, so OTA / upload / WebDAV streaming are still mutually
-exclusive per build). All three now take `HttpReq*`, so a sink can keep
+exclusive per build). All three now take `HttpReq*`. A sink can keep
 per-connection state: WebDAV holds per-slot PUT state (`s_davput.put[MAX_CONNS]` in
 `src/server/io/webdav_handler/webdav_handler.c`) and each connection streams to its own file. This
 fixed the concurrent-PUT clobber (docs/BUGS.md) - HW: 4 parallel PUTs with distinct
@@ -358,11 +358,11 @@ not the axis: both pools carry long-lived and ephemeral borrows. A peer's public
 a ciphertext on its way out, a staging buffer for an outbound frame are plaintext;
 putting them in the secure pool only shrinks the room left for real secrets.
 
-### One slot per worker, so a borrow needs no lock
+### One slot per worker, and a borrow needs no lock
 
 Each pool is cut one arena per slot: one per server worker (`PROTOCORE_WORKER_COUNT`), plus
 the **ghost** at `PROTOCORE_GHOST_WORKER_SLOT`, which is the library's own. A borrow resolves
-its slot from `protocore_worker_self()` and never takes one as an argument, so a borrow cannot
+its slot from `protocore_worker_self()` and never takes one as an argument. A borrow cannot
 cross workers and the bump needs no lock. A caller that is not a server worker clamps
 to the ghost rather than to worker 0. Under `PROTOCORE_DEBUG_CHECKS` each slot records the
 first execution context to touch it and asserts on a second, turning a future
@@ -375,7 +375,7 @@ those workers is scheduling and stays in `server/core/worker.h`.
 ### Who reclaims what
 
 - **Plaintext: the worker.** `dispatch_event()` calls `protocore_plaintext_reset()` before
-  handing an event to its protocol handler, so a borrow is valid only until that
+  handing an event to its protocol handler. A borrow is valid only until that
   handler returns and a forgotten release cannot accumulate across events. Inside one
   dispatch, `plain.mark()` / `plain.release()` nest.
 - **Secure: the borrower, and reclaiming wipes.** `protocore_secure_release()` zeroes the
@@ -386,7 +386,7 @@ those workers is scheduling and stays in `server/core/worker.h`.
   missed on two SSH key-exchange error paths. `protocore_secure_wipe()` is the same primitive
   for storage that was never in a pool.
 - **Long-lived secrets: the persistent end.** `secure.persist_span(n)` takes the end no
-  mark walks, so a credential table or a key schedule bound once at setup survives every
+  mark walks. A credential table or a key schedule bound once at setup survives every
   release and every reset, and comes back zeroed.
 
 ### Ownership is an address range
@@ -396,8 +396,8 @@ The two pools are disjoint regions, so the owner is recoverable from the pointer
 against a compile-time extent, with no loop, no per-slot comparison and no
 per-allocation metadata, and they are mutually exclusive by construction: a secret can
 never be accepted where plaintext is expected, or the reverse. A pointer below the base
-wraps to a huge offset and fails the same bound as one past the end, so an overrun
-cannot test as still-inside. `slot_of()` answers which slot, so a borrow being handed
+wraps to a huge offset and fails the same bound as one past the end. An overrun
+cannot test as still-inside. `slot_of()` answers which slot. A borrow being handed
 back can be asserted to belong to the calling worker.
 
 `high_water()` reports the peak any slot reached - the number to size the arena by.
@@ -416,7 +416,7 @@ static_assert(sizeof(ChachapolyWork) <= PROTOCORE_WORK_CHACHAPOLY, "...");
 ```
 
 `PROTOCORE_SECURE_ARENA_SIZE` is then the **sum** of the terms a build actually compiles, each
-gated by its feature flag, so a build pays only for the code it has. A sum rather than a
+gated by its feature flag. A build pays only for the code it has. A sum rather than a
 deepest-nest figure: the sum is a strict upper bound however those working sets nest,
 where a nest depth is only correct while the call graph stays as it is. It buys
 certainty with a little slack.
@@ -442,19 +442,19 @@ worker (TX)   -->  drain the borrow straight to the wire
 ```
 
 TX is the mirror: the send functions read out of a plaintext or secure borrow on the
-owning worker and write to the wire, so a byte is never staged into a third buffer on
+owning worker and write to the wire. A byte is never staged into a third buffer on
 the way out.
 
 ### The byte layer
 
 Borrowing and moving live in the same module because both are about memory the library
-owns. Every operation below acts on a pool borrow, and each is stated once so a fix
+owns. Every operation below acts on a pool borrow, and each is stated once. A fix
 lands in one place and every codec inherits it.
 
 - **`protocore_span` / `protocore_cspan`** (span.h) carry storage, capacity, the produced length, and
-  a sticky overflow flag. `pos` keeps counting past `cap` on overflow, so an undersized
+  a sticky overflow flag. `pos` keeps counting past `cap` on overflow. An undersized
   region reports the capacity it should have had instead of only failing. A failed
-  borrow yields `{NULL, 0}`, never a null with a live capacity, so a caller that skips
+  borrow yields `{NULL, 0}`, never a null with a live capacity. A caller that skips
   `protocore_span_ok()` writes nothing rather than dereferencing null. `plain.span()` /
   `secure.span()` are the preferred borrow: one argument sets both fields, so the
   length cannot drift from what was reserved.
@@ -541,7 +541,7 @@ a vendor subdir.
 **Principles (carry the ones the ESP crypto HAL already proved):**
 
 - **The HAL API is total.** Every backend maps each op to hardware or to the
-  portable software impl in `crypto/`, so a brand-new vendor with no accelerator
+  portable software impl in `crypto/`. A brand-new vendor with no accelerator
   still links and runs from day one; accel is added incrementally.
 - **Zero vendor-SDK symbols inside a HAL backend** - direct register access, our
   own `PROTOCORE_` register map, no `HAL_*` / `esp_*` / vendor struct (the
@@ -549,7 +549,7 @@ a vendor subdir.
   registers directly.
 - **Ground-truth-verify every backend** against that vendor's own headers with the
   `static_assert` regmap cross-check (`penetration_testing/rig_firmware/hal_verify` today
-  for ESP soc macros; add an STM CMSIS variant), so a map is proven correct even
+  for ESP soc macros; add an STM CMSIS variant). A map is proven correct even
   for silicon we have no board for, plus an on-device KAT where a board exists.
 - **lwIP stays the common L3+ core** _for portability_; only L1/L2 (MAC + PHY) and
   crypto accel are vendor-partitioned, and the datalink/network/transport/session/
@@ -559,7 +559,7 @@ a vendor subdir.
   retained as the portable fallback + cold-path stack, not the fast path.
 - **One RTOS seam.** ESP is FreeRTOS; STM/RP may be FreeRTOS or bare-metal. Fold
   the few primitives we use (mutex, critical section, task spawn, the already-
-  abstracted `server/clock/clock.h` time) behind a thin `services/protocore_rtos` so a
+  abstracted `server/clock/clock.h` time) behind a thin `services/protocore_rtos`. A
   vendor picks its RTOS without touching callers.
 - **MISRA C / AUTOSAR C++ hold across every backend** (global directive) and no
   `stdlib` in `src/`.
@@ -677,7 +677,7 @@ instructions. Asserting them in a comment does not make them survive a toolchain
 ### What was decided
 
 **The API and the implementation are both C11.** Flat `protocore_` / `PROTOCORE_` names at global scope, no
-namespace, so a C caller can reach everything (see [SYMBOLS.md](SYMBOLS.md) for the full naming law and the
+namespace. A C caller can reach everything (see [SYMBOLS.md](SYMBOLS.md) for the full naming law and the
 designs rejected). `src/` carries no `.cpp` at all; the three vendor-wrapper exceptions under
 `test/core_setup/` are listed in [SYMBOLS.md](SYMBOLS.md).
 
@@ -699,8 +699,8 @@ was considered and **dropped** - it is not needed, because the cost of packing i
   the lane selector leaves the inner loop. Often _faster_ than byte-at-a-time on a byte-addressable machine,
   because 16 bits move per access.
 - **TLV and variable-length parsing**: the only runtime quantity is the record base. Field offsets within a
-  record are fixed by the protocol grammar and already exist as compile-time constants, so an access is
-  `base + CONSTANT`, not `octet[runtime]`. That leaves one bit of uncertainty per record, removable by
+  record are fixed by the protocol grammar and already exist as compile-time constants. An access is
+  `base + CONSTANT` with no runtime index. That leaves one bit of uncertainty per record, removable by
   requiring word-aligned record bases or dispatching on base parity once at record entry.
 
 Still to pin: which lane is octet 0 (must be invariant across targets, **not** the machine's word

@@ -94,7 +94,7 @@ Committed and scoped, not started.
 Wanted, not yet scoped.
 
 - [ ] **RP2350 Arm-vs-RISC-V comparison** (M, dual-ISA die) - it ships Cortex-M33 and Hazard3 RISC-V cores on one
-      die, so an identical build can be A/B'd across architectures without changing boards.
+      die. An identical build can be A/B'd across architectures without changing boards.
 
 <!-- prettier-ignore-start -->
 <!-- The entry below nests prose and a checklist inside one list item at mixed indent widths, which
@@ -148,10 +148,10 @@ Wanted, not yet scoped.
             `PROTOCORE_WORK_*` today. Memory is proven by a `static_assert` that fails the build; the timing
             equivalent is what has to be settled.
           - **A wait services thread 0.** Waiting is not blocking: while an operation waits it runs
-            thread 0's work. Dead time becomes a bounded service slice, so an operation costs its own
+            thread 0's work. Dead time becomes a bounded service slice. An operation costs its own
             work plus a known number of slices, which is still a constant.
-          - **The budgets are the user's.** Knobs in `protocore_config.h` like every other bound, so
-            an application picks its own latency and throughput trade. It does not inherit ours.
+          - **The budgets are the user's.** Knobs in `protocore_config.h` like every other bound.
+            An application picks its own latency and throughput trade. It does not inherit ours.
 
           `network_drivers/` stays organized by OSI layer and pulls from idemIP, so the layering a
           reader follows does not change: the stack is what the layers are built on, not a peer of
@@ -192,7 +192,7 @@ Grouped by the area each belongs to.
 - [ ] **Secure machine agent: G-code deployment over a single secure port** (L) - the device as a
       secure local agent that deploys CNC part programs (G-code) to a machine tool over ONE authenticated,
       encrypted port: NC-program transfer/staging multiplexed on the existing TLS endpoint (or a secured
-      OPC UA channel / an OPC UA for Machine Tools program-transfer method), so a shop pushes and stages
+      OPC UA channel / an OPC UA for Machine Tools program-transfer method). A shop pushes and stages
       programs to controllers through a single connection instead of per-machine FTP/USB. Northbound
       monitoring = **umati** / **MTConnect** / **FOCAS**; southbound program push builds on TLS + file
       upload (`services/upload_service`) and the existing **DNC** drip-feed (`services/dnc`) for controllers
@@ -208,7 +208,7 @@ Grouped by the area each belongs to.
       that rely on a default-on feature to set its flag explicitly, and re-check the configurator + FEATURES
       grid.
 - [ ] **Per-base-service flash-cost table** (M) - measure and document the incremental flash (and static
-      RAM) each base service adds on top of the bare-bones baseline, so a user can budget a build. Extend the
+      RAM) each base service adds on top of the bare-bones baseline. A user can budget a build. Extend the
       footprint tooling (`tools/ci_tooling/generate/example_footprints.py`) to emit a "cost of enabling service X alone" delta
       against the minimal build and land it as a table in `docs/FOOTPRINTS.md`.
 
@@ -235,7 +235,7 @@ Grouped by the area each belongs to.
       combines them with a caller-supplied signature verdict. Lost / duplicated / inserted / reordered
       frames all reduce to one comparison against the expected counter, and each has its own test case.
       Fail-safe **latches** until an explicit `protocore_scl_reset`: a safety layer that silently reheals lets
-      an intermittent fault present as a working link, so a subsequent good frame must not revive it
+      an intermittent fault present as a working link. A subsequent good frame must not revive it
       (asserted). Pure, explicit `now`, wrap-safe watchdog. Host-tested (`native_safety_scl`, 16 cases).
       Still open: the **CRC-signature helper**. The engine half of it now exists -
       `shared/crc/crc.h` (see **Maintenance**) is the parameterized width / poly / init /
@@ -326,7 +326,7 @@ Grouped by the area each belongs to.
       example shows the real intended configuration on each board instead of the lowest-common-denominator one.
 - [ ] **CI: assert both ends of the range** (S) - keep the Arduino Build classic-ESP32 `dram0_0_seg` link
       check (the guard that caught MeshCache) and add an S3/PSRAM build of the same heavy examples asserting
-      the larger-tier defaults actually took effect (link succeeds and uses the bigger sizes), so a future
+      the larger-tier defaults actually took effect (link succeeds and uses the bigger sizes). A future
       change can't silently re-flatten the profiles or regress the classic-board ceiling.
 
 ## Partial - shipped in part, remaining work noted
@@ -585,7 +585,7 @@ Each item has a working piece in the tree and an explicit _Remaining_ note.
 ### Per-variant default sizing (don't kneecap larger boards)
 
 - [~] **Per-variant default profiles** (M) - **framework shipped** (`vendor/board_profiles/`): `board_profile.h`
-  selects, along three independent axes, per-variant default files, each guarded by `#ifndef` so a `-D` /
+  selects, along three independent axes, per-variant default files, each guarded by `#ifndef`. A `-D` /
   `build_opt.h` override always wins. Axes: **chip** (`classic_defaults.h` / `s3_defaults.h` /
   `c6_defaults.h` / `p4_defaults.h`, auto-selected from `CONFIG_IDF_TARGET_*`, holding HW-specific switches +
   chip-appropriate defaults), **PSRAM size** (`8/16/32mbpsram.h`), and **flash size** (`8/16/32mbflash.h`) -
@@ -685,7 +685,7 @@ Built-in radio:
   shipped** (`PROTOCORE_ENABLE_RADIO_SNIFF`, `services/radio_sniff`): wraps each received 802.15.4 MAC frame
   in the Wireshark IEEE 802.15.4 TAP pseudo-header (per-frame RSSI + channel TLVs, an exact int->float32
   RSSI encode) and a pcap record (new `PROTOCORE_DLT_IEEE802_15_4_TAP` / `_NOFCS` link types in
-  `shared/pcap/pcap.h`), so a sniffed channel opens directly in Wireshark; pure + host-tested
+  `shared/pcap/pcap.h`). A sniffed channel opens directly in Wireshark; pure + host-tested
   (`native_radio_sniff`). Remaining: put the CC1101 / LoRa / Thread drivers into receive-only and route
   their frames through this into the existing forwarding sink on hardware.
 - [~] \*EM / radar presence + motion (M) - mmWave radar (24 / 60 GHz: LD2410 / MR60BHA
@@ -727,7 +727,7 @@ Built-in radio:
   multi-point (register-matrix) path. Each driver owns its transport (a read/write vtable + ctx). Pure
   registry + dispatch, host-tested (`native_southbound`). **The Modbus adapter is shipped**
   (`services/southbound/sb_modbus`, `PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER`): it binds the
-  transport-agnostic Modbus TCP master codec into a `SouthboundDriver`, so an app reads register points
+  transport-agnostic Modbus TCP master codec into a `SouthboundDriver`. An app reads register points
   by driver name through the one facade - `protocore_sb_modbus_init` (holding FC 0x03 / input FC 0x04, unit,
   a rolling txid) + `protocore_sb_modbus_driver` install the full vtable over an app-supplied request/response
   transaction seam (`protocore_sb_modbus_txn`, bound to protocore_client for Modbus TCP or a serial gateway): `read`
@@ -859,7 +859,7 @@ Built-in radio:
   COMPONENT_EMBED_TXTFILES asset-offload build wiring (M).
 
 - [ ] **Mount a filesystem over SSH** (M, RFC 4254 + draft-ietf-secsh-filexfer) - a `protocore_mnt_backend`
-      whose calls travel the SSH connection instead of a local bus, so a remote directory mounts
+      whose calls travel the SSH connection instead of a local bus. A remote directory mounts
       beside a card and every reader above it stays unchanged. The seam already allows it: mnt is
       divorced from the store at the mount point, the way a VFS is, and RAM is the buffer between
       them, so what a mount points at is not the accessor's business. The wire half is already here
@@ -869,7 +869,7 @@ Built-in radio:
       and the adapter presenting it as the fourteen backend calls.
       Wants the multipoint mnt below first: a remote store is the case where mounting one thing
       must not unmount another.
-- [ ] **Multipoint mnt** (M) - `protocore_mnt_mount()` records one backend today, so a second call replaces
+- [ ] **Multipoint mnt** (M) - `protocore_mnt_mount()` records one backend today. A second call replaces
       the first and every root resolves through whichever store was mounted last. Register mount
       points instead, resolve a path to the longest match, and let the backend a caller names select
       among them. The callers are already written for it: `serve_file()`, `serve_static()` and
@@ -910,7 +910,7 @@ Built-in radio:
   (`asyncua`) 3/3 - all seven protocol families. Adding a protocol is one module in
   `peers/` (documented in its README). Remaining: wiring it into CI containers, and a
   peer per new protocol as it lands.
-- [~] **Server build configurator (CLI + GUI in `configurator/`)** (L) _(GUI + source-of-truth shipped)_ - a guided front end for the ~200 `PROTOCORE_ENABLE_*` and sizing flags so a user assembles a firmware build without hand-editing `build_flags`. Shipped as `tools/ci_tooling/generate/gen_configurator.py` -> `docs/configurator.html`: it parses [protocore_config.h](../src/protocore_config.h) (the single source of truth, so it never drifts - a `check` CI gate fails on staleness) for every feature flag + tuning knob + section group + the hard `#if child && !parent` dependencies, and emits one self-contained page that ticks features, tunes knobs, resolves dependencies (mutual-exclusion), and copies out a `platformio.ini` `build_flags` block or a `#define` set (only the values that differ from the defaults). Beginner-friendly, ships to Pages. _Remaining:_ a live per-option build-footprint estimate (flash + RAM from the FEATURES tables), advisory "this is unwise, but here you go" guardrails, and a standalone CLI backend (the emission is client-side today).
+- [~] **Server build configurator (CLI + GUI in `configurator/`)** (L) _(GUI + source-of-truth shipped)_ - a guided front end for the ~200 `PROTOCORE_ENABLE_*` and sizing flags, for a user to assemble a firmware build without hand-editing `build_flags`. Shipped as `tools/ci_tooling/generate/gen_configurator.py` -> `docs/configurator.html`: it parses [protocore_config.h](../src/protocore_config.h) (the single source of truth, so it never drifts - a `check` CI gate fails on staleness) for every feature flag + tuning knob + section group + the hard `#if child && !parent` dependencies, and emits one self-contained page that ticks features, tunes knobs, resolves dependencies (mutual-exclusion), and copies out a `platformio.ini` `build_flags` block or a `#define` set (only the values that differ from the defaults). Beginner-friendly, ships to Pages. _Remaining:_ a live per-option build-footprint estimate (flash + RAM from the FEATURES tables), advisory "this is unwise, but here you go" guardrails, and a standalone CLI backend (the emission is client-side today).
 
 ### Protocol & transport versions
 
@@ -1086,7 +1086,7 @@ Built-in radio:
       a call is about, so it passes that reference down through its own functions instead of having
       each one look the object up again. Where the library only aliases a vendor call, the alias stays
       a pass-through: nothing is copied, validated or wrapped on the way past. The reference is only
-      spent when the object reaches logic that actually reads it, so a path that just hands bytes to
+      spent when the object reaches logic that actually reads it. A path that just hands bytes to
       the vendor costs the same as calling the vendor directly. Do this after the C11 conversion is
       finished, because it touches call signatures across every layer and a half-converted tree would
       make it two passes.
