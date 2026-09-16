@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`b87e9ec`](https://github.com/dstroy0/ProtoCore/commit/b87e9ecd3fad382e73f962e1300bfaa38a5b7765))
 - update CHANGELOG.md [skip ci] ([`46bf037`](https://github.com/dstroy0/ProtoCore/commit/46bf037c60338bb3155970b266ca792d1e24c215))
 - update CHANGELOG.md [skip ci] ([`67fdc87`](https://github.com/dstroy0/ProtoCore/commit/67fdc87eceff905239475c31329c2504cf7dd97c))
 - update CHANGELOG.md [skip ci] ([`24d087d`](https://github.com/dstroy0/ProtoCore/commit/24d087d724cbfba97e6cfb02237f338f5a5e62ee))
@@ -432,6 +433,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`44cf774`](https://github.com/dstroy0/ProtoCore/commit/44cf774e801f0bca103a75f92daf5c26bb40f8b1))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`c346e8c`](https://github.com/dstroy0/ProtoCore/commit/c346e8c3ed1c16ea6f8bb9ee1d1390e9195623b1))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`4923a9a`](https://github.com/dstroy0/ProtoCore/commit/4923a9a377daa451ad09a9582deaf9d8b587e43d))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`3545ad6`](https://github.com/dstroy0/ProtoCore/commit/3545ad6ac9dac564d3a333fc734a25674cfbfb43))
@@ -627,6 +629,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- docs prose bugfix ([`7028f46`](https://github.com/dstroy0/ProtoCore/commit/7028f46601bb2a9b001078b5fa27327a0f8949f0))
 - docs prose bugfix ([`8e4fb9c`](https://github.com/dstroy0/ProtoCore/commit/8e4fb9c7e3a8e0dad98a71d34c6e8a485f04b3ed))
 - docs prefix bugfix ([`33c1e8a`](https://github.com/dstroy0/ProtoCore/commit/33c1e8a711b9d95813a93c8421714dc7514a32e5))
 - docs citation bugfix ([`4c07769`](https://github.com/dstroy0/ProtoCore/commit/4c07769060809ca6c549cea5e7a17410ed6af270))
