@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`fd76569`](https://github.com/dstroy0/ProtoCore/commit/fd765697a3f1e2c6f5fa57eade6917e7ddd21332))
 - update CHANGELOG.md [skip ci] ([`a8b6904`](https://github.com/dstroy0/ProtoCore/commit/a8b69043945dba78b7d3574c910ee249e1165ab6))
 - update CHANGELOG.md [skip ci] ([`098eb63`](https://github.com/dstroy0/ProtoCore/commit/098eb63a0047f0397ed8f844e50464e9dc4fd9a9))
 - update CHANGELOG.md [skip ci] ([`b87e9ec`](https://github.com/dstroy0/ProtoCore/commit/b87e9ecd3fad382e73f962e1300bfaa38a5b7765))
@@ -435,6 +436,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`57becfe`](https://github.com/dstroy0/ProtoCore/commit/57becfe500d17e065345a209a82bf88fdc6001e3))
+- deps mmgr feature ([`23ad3ad`](https://github.com/dstroy0/ProtoCore/commit/23ad3ad5eb11bae7d0f55cd6cf7a23fc4ccb56d6))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`4907ac8`](https://github.com/dstroy0/ProtoCore/commit/4907ac8dd08ccde77b1b55e5f35679daf597cde8))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`fcea3a7`](https://github.com/dstroy0/ProtoCore/commit/fcea3a77e10d8d5cd2d7d4e4361072d745516fbb))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`44cf774`](https://github.com/dstroy0/ProtoCore/commit/44cf774e801f0bca103a75f92daf5c26bb40f8b1))
