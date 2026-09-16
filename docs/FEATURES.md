@@ -476,7 +476,7 @@ Opt-in safeties for removable storage that can vanish mid-write. Default off. An
 
 `PROTOCORE_ENABLE_HART`
 
-Opt-in HART / HART-IP process-instrument protocol codec. When set, services/fieldbus/hart provides the HART command-frame codec (build/parse with the longitudinal XOR checksum, short + long addressing) and the 8-octet HART-IP message header (both directions: `protocore_hartip_build_header` frames a request/response/publish, and `protocore_hartip_parse_header` decodes a received message - version / type / id / status / sequence / byte-count - and exposes its payload slice, e.g. the token-passing PDU, rejecting a truncated message whose declared length exceeds the buffer), so a device speaks HART over UDP/TCP 5094 (front-end-free) or, with a HART FSK modem, over the 4-20 mA loop. Pure, host-tested. Default off.
+Opt-in HART / HART-IP process-instrument protocol codec. When set, services/fieldbus/hart provides the HART command-frame codec (build/parse with the longitudinal XOR checksum, short + long addressing) and the 8-octet HART-IP message header (both directions: `protocore_hartip_build_header` frames a request/response/publish, and `protocore_hartip_parse_header` decodes a received message - version / type / id / status / sequence / byte-count - and exposes its payload slice, e.g. the token-passing PDU, rejecting a truncated message whose declared length exceeds the buffer). A device speaks HART over UDP/TCP 5094 (front-end-free) or, with a HART FSK modem, over the 4-20 mA loop. Pure, host-tested. Default off.
 
 ## HiSLIP
 
@@ -938,7 +938,7 @@ Authenticated OTA firmware update (streaming POST to the ESP32 Update API).
 
 `PROTOCORE_ENABLE_OTA_ROLLBACK`
 
-Opt-in OTA rollback protection / soft-brick safeguard. Default off. After an OTA update the new image boots in PENDING_VERIFY; this service confirms it (esp_ota_mark_app_valid) once a self-test passes, or rolls back to the previous image if the self-test fails or the confirm window elapses without success - so a bad update self-heals instead of soft-bricking. The decision logic is pure and host-tested; the commit / rollback use esp_ota_ops. Requires the bootloader's app-rollback support (CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE).
+Opt-in OTA rollback protection / soft-brick safeguard. Default off. After an OTA update the new image boots in PENDING_VERIFY; this service confirms it (esp_ota_mark_app_valid) once a self-test passes, or rolls back to the previous image if the self-test fails or the confirm window elapses without success. A bad update self-heals instead of soft-bricking. The decision logic is pure and host-tested; the commit / rollback use esp_ota_ops. Requires the bootloader's app-rollback support (CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE).
 
 ## PackML
 
@@ -1346,7 +1346,7 @@ Telnet server support (RFC 854 / IAC option negotiation).
 
 `PROTOCORE_ENABLE_THEMES`
 
-Embed the theme stylesheet library as runtime-selectable blobs (default off). Off by default: build-time theme injection (`<!--#theme NAME-->`) costs nothing extra, but embedding the whole library for runtime switching links every theme's CSS into flash (~1 KB each). When set, application/binary_asset_blobs.{h,c} exposes `protocore_theme_css(name)` + the registry `PROTOCORE_THEME_BLOBS`, so a route (e.g. `/themes/<name>.css`) or a picker can switch themes live. Regenerate with `src/web_assets/wizard/gen_theme_blobs.py` after adding a theme.
+Embed the theme stylesheet library as runtime-selectable blobs (default off). Off by default: build-time theme injection (`<!--#theme NAME-->`) costs nothing extra, but embedding the whole library for runtime switching links every theme's CSS into flash (~1 KB each). When set, application/binary_asset_blobs.{h,c} exposes `protocore_theme_css(name)` + the registry `PROTOCORE_THEME_BLOBS`. A route (e.g. `/themes/<name>.css`) or a picker can switch themes live. Regenerate with `src/web_assets/wizard/gen_theme_blobs.py` after adding a theme.
 
 ## Thread
 
