@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`de6a25f`](https://github.com/dstroy0/ProtoCore/commit/de6a25f0df08ada10863f2e3c57316cdcbdb2e95))
 - update CHANGELOG.md [skip ci] ([`8c51010`](https://github.com/dstroy0/ProtoCore/commit/8c51010ec3e1f5c6a4f792d642901aa9823a1d3d))
 - update CHANGELOG.md [skip ci] ([`8239d5e`](https://github.com/dstroy0/ProtoCore/commit/8239d5eb15a9b7eeb5742df6c39ef03592db19d7))
 - update CHANGELOG.md [skip ci] ([`eaae866`](https://github.com/dstroy0/ProtoCore/commit/eaae8661ac10b31ef450b8a0fa1346a19230c26b))
@@ -426,6 +427,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`c0cc846`](https://github.com/dstroy0/ProtoCore/commit/c0cc84607c5d91585b840e175e1f0159221875c6))
+- src speedopt bugfix ([`2b75c94`](https://github.com/dstroy0/ProtoCore/commit/2b75c942083ebf445ad994b576e3813094f120c1))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`c7f04fb`](https://github.com/dstroy0/ProtoCore/commit/c7f04fbc0cfa67e2f84dd6e00c4cb7d9a8ba0407))
 - src secure comment ([`b19157a`](https://github.com/dstroy0/ProtoCore/commit/b19157aaf06a76448b16ebc18ab9282bb4d41144))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`ae79b80`](https://github.com/dstroy0/ProtoCore/commit/ae79b80f411aac39813c19647e8e7afb6a5ccd73))
@@ -613,6 +616,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- docs prose bugfix ([`d946f28`](https://github.com/dstroy0/ProtoCore/commit/d946f282c2e4aa563feafbb62bbaba1a87fabdca))
 - docs prose bugfix ([`bb1718c`](https://github.com/dstroy0/ProtoCore/commit/bb1718c6fe6dc405f34baafe869b09d16a506025))
 - docs citation bugfix ([`a14a501`](https://github.com/dstroy0/ProtoCore/commit/a14a50162a2fd4af459d2f76372067ccd4b26696))
 - docs citation bugfix ([`ab22766`](https://github.com/dstroy0/ProtoCore/commit/ab227664f0c0a16bd68614595a4de0c9547cb58e))
@@ -799,6 +803,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- test cryptobench bugfix ([`d8c040d`](https://github.com/dstroy0/ProtoCore/commit/d8c040d60f22989e9b4bde5383d77e02c1a4eb09))
 - test citation bugfix ([`d1cb116`](https://github.com/dstroy0/ProtoCore/commit/d1cb116fbccaca2250ce89550d3980f70ddb5912))
 - a build that did not happen stops looking like one that found nothing wrong ([`883ed43`](https://github.com/dstroy0/ProtoCore/commit/883ed4378d5fd123b5a116e82c5f16fbcbf55e60))
 - the generated env table catches up with the tree it describes ([`c132524`](https://github.com/dstroy0/ProtoCore/commit/c132524883673137c0fed78d49fc95e098e71213))
