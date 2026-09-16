@@ -3,7 +3,7 @@
 
 /**
  * @file main.cpp
- * @brief ESP32-S3 test-rig firmware: the target for penetration_testing/protocore_pentest.py and the JTAG
+ * @brief ESP32-S3 test-rig firmware: the target for penetration_testing/pc_pentest.py and the JTAG
  *        perf-profiling harness.
  *
  * Exposes a broad attack surface (auth, file serving + range, websocket, SSE, CSRF, accept
@@ -743,7 +743,7 @@ static void sse_open(uint8_t sse_id)
     server.sse_send(sse_id, "42", "tick", "3");
 }
 
-// CoAP resources (RFC 7252) on UDP/5683 - a live interop + attack surface for protocore_pentest.py.
+// CoAP resources (RFC 7252) on UDP/5683 - a live interop + attack surface for pc_pentest.py.
 static void coap_info(const CoapRequest *, CoapResponse *resp)
 {
     int n = snprintf((char *)resp->payload, resp->payload_cap, "{\"uptime_ms\":%lu,\"free_heap\":%u}",
@@ -858,7 +858,7 @@ static int32_t opcua_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint3
 
 // MQTT device-as-client probe: connect OUT to the broker named in the query (?host=&port=), subscribe +
 // publish, then pump mqtt_loop() to receive whatever the broker sends. This drives the CLIENT parser
-// (mqtt_parse_connack/publish/suback) against a broker run by protocore_pentest.py - possibly a malicious one.
+// (mqtt_parse_connack/publish/suback) against a broker run by pc_pentest.py - possibly a malicious one.
 // mqtt_connect blocks up to 8 s (bounded); the whole probe returns to keep the server responsive.
 static volatile int g_mqtt_rx = 0;
 static void mqtt_msg_cb(const char *, const uint8_t *, size_t)

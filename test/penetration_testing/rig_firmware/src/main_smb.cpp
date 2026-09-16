@@ -4,12 +4,12 @@
 /**
  * @file main_smb.cpp
  * @brief Slim SMB2-client test-rig firmware (env:rig_s3_smb) - the target for the SMB2 interop peer +
- *        the malicious-SMB2-server attack in penetration_testing/protocore_pentest.py.
+ *        the malicious-SMB2-server attack in penetration_testing/pc_pentest.py.
  *
  * The device is the SMB2 *client*: the /smb/probe endpoint connects OUT to the server named in the query
  * (?host=&port=&user=&pass=&share=&path=) over the shared outbound transport (protocore_client_*), runs the
  * smb_client.h dialogue (NEGOTIATE -> NTLMv2 SESSION_SETUP -> TREE_CONNECT -> CREATE -> READ -> CLOSE) and
- * reports each step. Against a real samba it is the interop oracle; against protocore_pentest.py's fake server
+ * reports each step. Against a real samba it is the interop oracle; against pc_pentest.py's fake server
  * it exercises the response parsers (the malicious-server harness, like the FTP / SMTP / NATS probes).
  *
  * Deliberately minimal (HTTP/80 + the one probe) so it stays DRAM-light on the stock arduino-esp32 core -
