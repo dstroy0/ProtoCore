@@ -131,7 +131,7 @@ static inline void protocore_secure_wipe(void *ptr, size_t len)
 {
     // Machine-width stores, with byte head/tail only for unaligned edges. Both edges are normally
     // empty - pool borrows are aligned and their lengths rounded up - so this is the word loop.
-    // volatile is per-access, so a volatile word store is exactly as un-elidable as a volatile byte
+    // volatile is per-access. A volatile word store is exactly as un-elidable as a volatile byte
     // store; the guarantee is unchanged and the store count drops by the width.
     volatile uint8_t *b = (volatile uint8_t *)ptr;
     while (len != 0 && (((uintptr_t)b & (sizeof(uintptr_t) - 1)) != 0))
