@@ -37,9 +37,9 @@ Related: [AUDIT.md](AUDIT.md) records the per-standard conformance verdicts this
 | Throughput benches   |   206 | `test/performance_benching/**/platformio.ini`    |
 | Advanced attacks     |    79 | `@attack(...)` in `test/penetration_testing/pc_pentest.py`       |
 | Adversarial fuzz     |    10 | `native_pentest` (`test/unit/src/network_drivers/application/smb/test_pentest/`)          |
-| Service modules      |   121 | `src/services/<group>/<module>/`                 |
+| Service modules      |   120 | `src/services/<group>/<module>/`                 |
 
-Interop peers cover **39 of 121** service modules. Not every module needs a third-party
+Interop peers cover **39 of 120** service modules. Not every module needs a third-party
 peer - many are pure codecs with pinned spec vectors, and some need hardware the project does not have -
 but the ratio is the honest measure of how much is judged by something other than ourselves.
 
