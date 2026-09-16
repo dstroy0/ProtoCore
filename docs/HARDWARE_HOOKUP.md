@@ -122,7 +122,7 @@ You want a line naming a port. What it looks like depends on the USB chip on you
 are the cause:
 
 1. **Try a different USB cable.** See above. This is the most likely cause by a wide margin.
-2. **Try a different USB port**, ideally one directly on the computer rather than through a hub.
+2. **Try a different USB port**, ideally one directly on the computer, avoiding a hub.
 3. **Install the USB-serial driver** for your board's chip (CP210x or CH340). Native-USB boards
    need no driver.
 4. On Linux, **add yourself to the `dialout` group** and log out and back in, otherwise the port
@@ -351,8 +351,8 @@ connector and the ESP32 UART:
 | RS-232 `T1OUT`/`R1IN` | the device's RX/TX |
 | `VCC`/`GND`           | 3.3 V and ground   |
 
-Cross TX to RX and RX to TX (a "null-modem" crossover) if both ends are devices
-rather than a PC-and-modem pair.
+Cross TX to RX and RX to TX (a "null-modem" crossover) if both ends are devices.
+A PC-and-modem pair does not need it.
 
 ### Choosing and using the UART
 
@@ -553,7 +553,7 @@ You need a CAN transceiver between the ESP32 and the bus. Two cheap options:
   controller. Connect ESP32 `TX` GPIO -> transceiver `D` (TXD), transceiver `R`
   (RXD) -> ESP32 `RX` GPIO, plus 3V3 and GND. CAN_H / CAN_L go to the bus.
 - **MCP2515 + TJA1050 module (~$2)**: a standalone CAN controller you talk to
-  over **SPI** (use this if you would rather not use the internal TWAI, or need a
+  over **SPI** (use this if you prefer not to use the internal TWAI, or need a
   second CAN channel). Wire SPI (SCK/MOSI/MISO/CS) + an interrupt GPIO.
 
 Bus rules that matter: terminate **both ends** of the bus with a **120 ohm**

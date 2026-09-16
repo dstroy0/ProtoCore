@@ -130,7 +130,7 @@ C has no scoped enum. Every member lands in one global namespace the moment it i
 prefix is the only thing keeping two enums from colliding, and the words enums want are the common
 ones: `FAILED`, `IDLE`, `STOP`, `START`, `DONE`, `PENDING`, `MISS`, `HIT`.
 
-Two further reasons the prefix is mandatory rather than a per-enum decision:
+Two further reasons the prefix is mandatory, with no per-enum decision:
 
 1. **Names are for human recognition.** A member is read far more often at a use site, in a log, a
    packet dump, or a debugger than in its declaration. `PROTOCORE_IP_V4` is self-describing when it
@@ -168,7 +168,7 @@ a tree this deep; the filename form lands at median 20.
 | `server/core/provisioning_service/provisioning_service.h` | `PROTOCORE_PROVISIONING_H`   | 25     |
 
 `caster` is implied by `ntrip`, and a `_service` header is a service. `check_symbols.py` rejects any
-guard that is neither the filename form nor a listed exception; it raises rather than inventing a
+guard that is neither the filename form nor a listed exception; it raises and never invents a
 shortening. It checks uniqueness of the **final** guard, since truncation can itself create a
 collision.
 
@@ -203,7 +203,7 @@ cannot be named from C at all. Today that is three files:
 It covers what a driver must consume, never what it publishes: every name `physical_esp.cpp` defines
 is declared in `physical.h` between `PROTOCORE_BEGIN_DECLS` and `PROTOCORE_END_DECLS`, so every caller above
 the board layer is C speaking to C. A `.cpp` anywhere else under `src/`, or one that exports a C++
-type, is a violation rather than an instance of this. The list is written down because a rule with an
+type, is a violation. It is not an instance of this. The list is written down because a rule with an
 unrecorded exception gets "fixed" by the next mechanical pass.
 
 Markdown is the documented exception to `snake_case`: docs use `UPPER_SNAKE`, including the per-die

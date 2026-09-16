@@ -89,7 +89,7 @@ The first scan reported all bugs and vulnerabilities (now fixed - see
 [BUGS.md](BUGS.md)) plus ~2169 "code smells". The large majority of those smells
 come from a handful of rules that contradict this library's **deliberate,
 documented design**, so they are noise here, not defects. Tune them out in a
-custom SonarCloud quality profile (or bulk "Won't Fix") rather than churning the
+custom SonarCloud quality profile (or bulk "Won't Fix"). Do not churn the
 code - changing them would break the design guarantees:
 
 | Rule                | Name                               | Why it does not apply here                                                          |

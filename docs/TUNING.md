@@ -30,7 +30,7 @@ C runtime, never heap-allocated after `begin()`.
 
 **Everything is bound in two places: at ingestion, and by mmgr.** A length is bound
 where bytes enter the library - the receive path refuses a segment that will not fit
-the ring rather than truncating it, and every parser downstream carries an explicit
+the ring, never truncating it, and every parser downstream carries an explicit
 run length instead of scanning for a terminator (`strlen` is banned in
 `src/`). Working memory is bound by the two pools below. Nothing between those two
 points re-derives a bound, and the footprint is a number you can
@@ -88,8 +88,8 @@ and neither is restated at the point of use.
 The arena's own base is the same argument one level down. The pool aligns allocation
 offsets, so the base must already satisfy the strictest alignment any caller can
 request; left an ordinary struct member it would inherit only 8, so it is declared
-`_Alignas(32)` where the storage lives - stated once, rather than every borrow hoping
-the base was good enough.
+`_Alignas(32)` where the storage lives - stated once. No borrow has to hope
+the base is good enough.
 
 C does not do this for you: on the secure side **every** return path must
 reach `protocore_secure_release()`, including the early ones taken when a peer sends
@@ -109,8 +109,8 @@ guaranteed and there is nothing to check.
 
 **And every address is preknown too.** A module declares a span and never an offset,
 so nothing couples one module to another - but mmgr resolves that set of spans into a
-layout at compile time, which makes each TU's base a constant rather than whatever a
-run-time bump happened to return. Two TUs that the time domain proves are never live
+layout at compile time, which makes each TU's base a constant, decided before any
+run-time bump. Two TUs that the time domain proves are never live
 together resolve to the _same_ base: that overlap is precisely why the peak-concurrent
 figure is smaller than the sum, and it costs nothing, because the exclusivity was
 already known.
@@ -121,7 +121,7 @@ running.
 
 Each span is **proved where the struct lives**, by a
 `static_assert(sizeof(X) <= PROTOCORE_WORK_X)` in the module that owns it. A working set
-that grows past its declaration fails the build naming itself rather than exhausting a
+that grows past its declaration fails the build naming itself. It never exhausts a
 pool at run time. The declaration and the truth cannot drift apart.
 
 These are sizes, not offsets. Nothing couples one module to another: each is a term,
@@ -136,7 +136,7 @@ The two pools then resolve those terms differently, because their time domains d
 - **Plaintext: the peak concurrent.** A worker runs one event to completion before the
   next and owns a disjoint partition of slots. A dispatch is doing HTTP _or_
   WebSocket _or_ SSH - never two at once. The time domain is known, so the maximum is
-  a stated fact rather than an estimate, and overlapping those buffers in one arena
+  a stated fact. Overlapping those buffers in one arena
   cuts peak RAM without weakening the guarantee.
 
 Both are feature-gated. A build pays only for the code it compiled.

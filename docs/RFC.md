@@ -365,7 +365,7 @@ publish/subscribe client. Conformance to the OASIS MQTT 3.1.1 specification:
 - **Keep-alive (§3.1.2.10):** a PINGREQ is sent when the link is idle; the
   connection is dropped if no PINGRESP returns within the keep-alive window.
 - `mqtts://` is NOT available: the library ships no client-side TLS engine. A connection
-  asking for it is refused rather than downgraded. QoS 2 inbound flow uses method A
+  asking for it is refused. It is not downgraded. QoS 2 inbound flow uses method A
   (deliver on PUBLISH, de-dup by id until PUBREL). The packet codec is
   transport-independent and host-tested (env:native_mqtt).
 
