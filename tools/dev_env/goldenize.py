@@ -2901,10 +2901,11 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
         block += ["void %s(uint8_t *work);" % f for f in impl]
     block += [
         "",
-        "// `static const`, initialised HERE rather than `extern` against a definition in the .c: a",
-        "// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so",
+        "// `static const`, initialized HERE. A const object whose initializer every translation",
+        "// unit can see is a COMPILE-TIME FACT, so",
         "// `%s.%s(work)` resolves to a named function and becomes a DIRECT call. An extern table" % (obj, entries[0]),
-        "// leaves the call indirect and the symbol live at every level, -O2 -flto included.",
+        "// against a definition in the .c leaves the call indirect and the symbol live at every",
+        "// level, -O2 -flto included.",
         "static const %s %s __attribute__((unused)) = {" % (ns, obj),
     ]
     if any(n for n, _ in entry_order):
