@@ -115,7 +115,7 @@ together resolve to the _same_ base: that overlap is precisely why the peak-conc
 figure is smaller than the sum, and it costs nothing, because the exclusivity was
 already known.
 
-So a borrow resolves to a known address in known storage. There is no search, no free
+A borrow resolves to a known address in known storage. There is no search, no free
 list, no fragmentation, and no layout decision left to make while the device is
 running.
 
