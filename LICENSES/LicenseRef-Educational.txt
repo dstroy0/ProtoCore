@@ -224,7 +224,7 @@ R.5  Where a term of this license can be read more than one way, the reading tha
 
 2.4  A Grant identifies:
 
-       (a)  this document, by its version and by the SHA-256 digest of its text with ProtoCore
+       (a)  this document, by its version and by the SHA-256 digest of its text with {PROJECT}
             left unsubstituted;
 
        (b)  the Royalty Schedule, by version and SHA-256 digest; and

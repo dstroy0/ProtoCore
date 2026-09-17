@@ -126,7 +126,7 @@ R.6  Where a term of this license can be read more than one way, the reading tha
 
 1.9  "Order Form" means a written instrument, signed by the Licensor and the Licensee, that
      incorporates this license by name, by version and by the SHA-256 digest of its text with
-     ProtoCore left unsubstituted, and states the items Schedule A requires,
+     {PROJECT} left unsubstituted, and states the items Schedule A requires,
      together with its schedules and every amendment signed by both parties.
 
 1.10 "Contract" means an Order Form together with this license, as incorporated in it. A Contract is
