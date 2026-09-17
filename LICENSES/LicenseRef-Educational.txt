@@ -1,221 +1,1082 @@
-embedded_types Educator's License
+ProtoCore Educator's License
+SPDX license identifier: LicenseRef-Educational
+Version 1.0
 
 Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 
 THIS DOCUMENT DOES NOT GRANT ANYTHING BY BEING READ.
 
-It states the terms of a license that exists only when the Licensor has issued it to a named person
-in writing. Absent that writing, every use of embedded_types falls under AGPL-3.0-or-later, and this
-document has no effect on that use. The SPDX identifier LicenseRef-Educational in a source file
-records that these terms are available, not that they apply.
+It states the terms of a license that exists only when the Licensor has issued a Grant to a named
+person in writing and that person has accepted it. Absent a Grant, every use of ProtoCore falls
+under AGPL-3.0-or-later, and this document has no effect on that use. The SPDX expression
+"AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational" in a source file records
+that these terms are one of three alternatives. It does not apply them to anyone who holds no Grant.
+
+This document is an alternative to AGPL-3.0-or-later. It is not a term added to that license, it
+does not modify that license, and it restricts no right that license gives to anyone. Nothing in it
+charges for any act that license permits. It is not an open source license.
+
+This version supersedes every earlier text issued under the name LicenseRef-Educational, in the
+way Section 15.9 states.
 
 
-PURPOSE
+RECITALS
 
-This license exists so that value returns to the Institution and its department, and the environment
-that produced the work is enriched by what the work becomes. The Software is given free of charge to
-educators for that reason and for no other. Every condition below serves that end.
+R.1  The author of the Software stated the purpose of this work in these words, reproduced here
+     without the capital letters of the original:
 
-This Purpose governs how the license is read. Where a term admits more than one reading, the reading
-that serves the Purpose is the one that applies. Where conduct satisfies the letter of a condition
-while defeating the Purpose, the condition is not satisfied.
+       "we aren't here to take anything from anyone, we are here to answer long standing
+       important questions to humanity and if I could do that alone I would, but I will not
+       live long enough to do it unless I have a great deal of help."
 
-A licensee who does not intend to return value to the Institution should not request this license.
-AGPL-3.0-or-later is available to everyone, costs nothing, and asks none of this.
+R.2  The terms of this license protect the following interests, which together are the "Purpose":
+
+       (a)  The research. The Software exists to answer long-standing questions. Finishing that
+            work needs more help than the author can give alone, and royalties from academic
+            work that becomes a product are one way that help is paid for.
+
+       (b)  The people whose work produced the value. When academic work becomes a product, the
+            students, research staff and faculty whose ideas were commercialized are the people
+            the value should reach. Value of that kind is often absorbed by an institution
+            before it reaches them. A Trustee Share exists so that part of it reaches them and
+            pays for their further research.
+
+       (c)  The communities whose languages the work studies. Some software under these terms
+            reads, measures or reproduces language material that the author did not create and
+            does not own. Rights in that material, and decisions about it, rest with its
+            speakers, their communities and other rights holders. The author claims no ownership
+            of it and no authority over it. Section 7 exists so that no use of the Software
+            extracts from those communities: speakers are credited, withdrawals are carried out,
+            and each community's own decisions about its material govern.
+
+       (d)  The system of access. The Software is free under AGPL-3.0-or-later, free of charge to
+            educators under this license, and paid for under LicenseRef-Commercial. Those routes
+            stay open only while no one uses a cheaper route to take commercial value the paid
+            route prices. The terms on commercialization, reporting and termination keep this
+            license available to every educator who uses it in good faith.
+
+       (e)  Continuity. The author will not live long enough to finish this work alone. These
+            terms continue after his death, provide for a successor bound to the Purpose, and
+            give the originating communities standing of their own.
+
+R.3  The parties agree that each interest in R.2 is legitimate, and that none of them is satisfied
+     by a right to recover damages alone. Each term of this license that sets a royalty, requires
+     a report, permits an audit, limits a transfer or allows termination exists to protect one or
+     more of them.
+
+R.4  The Licensor intends to use the right in Section 10.3 to protect the Purpose. That statement
+     of intent is not a condition on the right, and a termination under Section 10.3 is valid
+     whether or not a reason is given.
+
+R.5  Where a term of this license can be read more than one way, the reading that better serves
+     the Purpose applies. The Recitals explain the operative terms and impose no obligation of
+     their own. Where a Recital and an operative term conflict, the operative term controls.
 
 
 1. DEFINITIONS
 
-1.1  "Licensor" means Douglas Quigg (dstroy0), who holds the copyright in the Software.
+1.1  "Licensor" means Douglas Quigg (dstroy0), who holds the copyright in the Software, and after
+     his death the Successor Licensor under Section 13.
 
-1.2  "Software" means embedded_types, in source or any derived form.
+1.2  "Software" means the following, in source code, object code or any other form, in each
+     version of ProtoCore a Grant covers, to the extent the Licensor holds the copyright in it or
+     has the right to license it under these terms, and subject to Section 1.4:
 
-1.3  "Licensee" means the individual person named in the writing issued under Section 2. A licence
-     under this document is issued to a person and never to a department, laboratory, or institution.
+       (a)  each file of ProtoCore that is in this license under Section 1.3;
 
-1.4  "Institution" means the accredited educational or non-profit research organization at which the
-     Licensee holds a faculty, research, or teaching appointment.
+       (b)  the code in each Dependency, at the commit that version of ProtoCore pins or fetches;
+            and
 
-1.5  "Academic Purposes" means teaching, coursework, and research carried on at the Institution and
+       (c)  each modification of the material in (a) or (b), and each work derived from it, to
+            the extent that modification or work contains that material.
+
+     A "Dependency" is a repository or source tree that ProtoCore pins by a git submodule entry
+     (a gitlink) or fetches by a CMake FetchContent declaration, and each Dependency of it.
+
+1.3  "In this license". A file is in this license where its own SPDX license identifier names
+     LicenseRef-Educational, or where it carries no SPDX license identifier and the license
+     statement of the nearest directory above it that has a license statement names
+     LicenseRef-Educational as a license the files of that directory are offered under. A
+     "license statement" is a file in a directory, or in a directory named LICENSES within it,
+     that states which licenses the files of that directory are offered under, or that no license
+     is granted for them. A copy of the text of a license is not, by itself, a license statement.
+
+1.4  Exclusions. The Software does not include:
+
+       (a)  Community Language Material or Third-Party Material, whatever file or directory holds
+            it and whatever identifier or license statement names this license;
+
+       (b)  a file, in ProtoCore or in a Dependency, whose own SPDX license identifier, or the
+            license statement of the nearest directory above it that has one, states that no
+            license is granted for it; or
+
+       (c)  a file in which a Code Contributor holds copyright, until each Code Contributor who
+            holds copyright in it has signed a Contributor Agreement.
+
+     A file excluded under (c) becomes part of the Software on the day the last of those Code
+     Contributors signs.
+
+1.5  "Third-Party Material" means any work distributed with the Software, read by it, or used to
+     test or measure it, in which the Licensor neither holds the copyright nor has the right to
+     license it under these terms. It is governed by its own terms.
+
+1.6  "Code Contributor" means a person, other than the Licensor, who holds copyright in any part
+     of a file of ProtoCore or of a Dependency. "Contributor Agreement" means a written agreement,
+     signed by a Code Contributor, under which that Code Contributor keeps its copyright and its
+     credit and permits the Licensor to license its contributions under LicenseRef-Commercial and
+     LicenseRef-Educational.
+
+1.7  "Non-Public Software" means files of the Software that the Licensor has not published, that
+     the Licensor delivers to the Licensee because a Grant states the delivery under Section 2.7,
+     and whose SPDX license identifier names LicenseRef-Educational and does not name
+     AGPL-3.0-or-later.
+
+1.8  "Grant" means a writing, which may be an email, issued by the Licensor under Section 2 that
+     names one natural person, the Institution, the Described Use and the documents Section 2.4
+     requires.
+
+1.9  "Licensee" means the natural person named in a Grant. A Grant is issued to a person. No
+     department, laboratory or institution holds one.
+
+1.10 "Institution" means the accredited educational institution or non-profit research
+     organization named in the Grant, at which the Licensee holds a faculty, research or teaching
+     appointment. That appointment is the "Qualifying Appointment".
+
+1.11 "Academic Purposes" means teaching, coursework and research carried on at the Institution and
      not for commercial advantage or in the course of for-profit activity. Use by or on behalf of a
-     commercial entity is not an Academic Purpose, including research use.
+     commercial entity is not an Academic Purpose, including research use. Research whose results
+     a person may prevent from being published is not an Academic Purpose, unless that person is
+     the Licensee, the Institution, a research participant, or an Originating Community acting
+     under its Community Terms.
+
+1.12 "Described Use" means the use described in the Licensee's request, as the Grant records it.
+
+1.13 "Grant Date" means the date the Grant takes effect under Section 2.3, and "Term" means the
+     period from the Grant Date until the Grant ends under Section 10.
+
+1.14 "Grant Work" means any work that incorporates or is derived from the Software and that was
+     created, in whole or in part, within the Described Use during the Term, by the Licensee or by
+     an Authorized Participant.
+
+1.15 "Authorized Participant" means a person within a Sharing Permission under Section 6 who has
+     accepted these terms in writing.
+
+1.16 "Publication" means any paper, thesis, dissertation, poster, presentation, book, dataset
+     description, software release note or other research output. "Course Material" means any
+     syllabus, lecture, assignment or other teaching material.
+
+1.17 "Contract" has the meaning LicenseRef-Commercial gives it: an Order Form signed by the
+     Licensor and a licensee, together with LicenseRef-Commercial as incorporated in it.
+
+1.18 "AGPL-3.0-or-later" means the GNU Affero General Public License, version 3 or any later
+     version published by the Free Software Foundation. Where this license uses a term that
+     AGPL-3.0-or-later defines, including "convey", "propagate", "modify", "covered work" and
+     "Corresponding Source", it has the meaning that license gives it.
+
+1.19 "Community Language Material" means recordings of speech, transcriptions, word forms, texts,
+     lexical or grammatical data, and any other record of a language, that originate with the
+     speakers of that language or their community, together with every Derived Artifact.
+
+1.20 "Derived Artifact" means any representation, encoding, model, set of weights or parameters,
+     or other artifact derived from Community Language Material. A published measurement or
+     statistic from which no part of that material, and no speaker's voice, can be reconstructed
+     is not a Derived Artifact.
+
+1.21 "Originating Community" means, for particular Community Language Material, the community of
+     the speaker as the source of that material records it, and any other community whose
+     protocol the source records as applying to it. Where material has more than one such
+     community, each is an Originating Community for that material.
+
+1.22 "Governing Body" means the body an Originating Community designates to act for it on matters
+     concerning its language or cultural material, and where it has designated none, each body
+     that the community's own governance recognizes as acting for it on those matters. Section
+     12.4 applies when a Governing Body ceases or is replaced.
+
+1.23 "Community Terms" means, for particular Community Language Material and as in force at the
+     time of the act in question: (a) the written protocols and conditions of its Originating
+     Community; (b) any Traditional Knowledge Label or Biocultural Label that the Originating
+     Community has itself applied to it (a "Label"); and (c) any condition set by the speaker, as
+     the source records it.
+
+1.24 "Including" means including without limitation. "Days" means calendar days. A reference to a
+     statute includes it as amended and any provision that replaces it.
+
+1.25 These terms are defined where they first appear: "Purpose" in R.2; "Credit Block" in 4.2;
+     "Credit Record" in 5.3; "Sharing Permission" in 6.2; "Speaker Credit" in 7.4; "Reliant
+     Activity", "Licensee Side", "Commercialization Event", "Commercialization Value",
+     "Commercialization Notice" and "Joinder" in Section 8; "Royalty", "Royalty Schedule",
+     "Royalty Period", "Royalty Report", "Research Trustee", "Trustee Share" and "Research
+     Contributors" in Section 9; "Successor Licensor" in 13.1; "Earlier Text", "Earlier License"
+     and "Supersession Notice" in 15.9.
 
 
-2. HOW A LICENSE IS ISSUED
+2. HOW A GRANT IS ISSUED
 
-2.1  A prospective Licensee writes to <dquigg123@gmail.com> from a faculty, research, or teaching
+2.1  A prospective Licensee writes to <dquigg123@gmail.com> from a faculty, research or teaching
      address at the Institution, ordinarily a .edu or .org address, describing the intended use.
 
-2.2  The Licensor grants or declines case by case, at sole discretion, and a grant takes effect only
-     when the Licensor has issued it in writing to the named person.
+2.2  The Licensor decides whether to issue a Grant. Only the Licensor issues a Grant. No other
+     person, including the Licensee and the Institution, can issue, extend, renew or transfer one.
 
-2.3  A grant covers the use described in the request. Use materially beyond what was described is
-     outside the grant and falls back to AGPL-3.0-or-later.
+2.3  A Grant takes effect when the Licensor has issued it in writing to the named person and that
+     person has accepted it in writing. Acceptance is agreement to every term of this document and
+     of each document the Grant identifies under Section 2.4.
+
+2.4  A Grant identifies:
+
+       (a)  this document, by its version and by the SHA-256 digest of its text with ProtoCore
+            left unsubstituted;
+
+       (b)  the Royalty Schedule, by version and SHA-256 digest; and
+
+       (c)  the form of Joinder, by version and SHA-256 digest.
+
+     Where a Grant identifies no Royalty Schedule or no form of Joinder, the document is the
+     version the Licensor most recently published before the Grant Date. Where a Grant identifies
+     no Royalty Schedule and none had been published before the Grant Date, or where the Royalty
+     Schedule does not state every item Section 9.1 lists, the writing is not a Grant, and the use
+     it describes is governed by AGPL-3.0-or-later. Where a Grant identifies no form of Joinder and
+     none had been published before the Grant Date, a Joinder is any writing, signed by the
+     transferee, that assumes the obligations in Sections 8 and 9 for the Grant Work concerned.
+
+2.5  A Grant covers the Described Use. Use beyond the Described Use is outside the Grant and is
+     governed by AGPL-3.0-or-later.
+
+2.6  Protected terms. A Grant may narrow any other term of this license and may state the governing
+     law and forum under Section 15.8. No Grant, and no later writing between the Licensor and the
+     Licensee, changes:
+
+       (a)  Section 3.3, Section 8.2, Section 14, or a definition any of them uses;
+
+       (b)  the Trustee Share, or any Section a Research Trustee may enforce under Section 12.3; or
+
+       (c)  any Section a Governing Body may enforce under Section 12.1, except by a writing that
+            Governing Body has signed.
+
+2.7  Delivery of unpublished files. The Licensor delivers files of the Software that are not
+     published only where the Grant states the delivery and identifies the files. Nothing in this
+     license obliges the Licensor to deliver any file.
 
 
 3. GRANT
 
-Subject to Sections 4 and 5, the Licensor grants the Licensee a revocable, royalty-free,
-non-exclusive, non-transferable, non-sublicensable right to use, copy, modify, and run the Software
-for Academic Purposes.
+3.1  Subject to the conditions in Section 4, the Licensor grants the Licensee a personal,
+     non-exclusive, non-transferable and non-sublicensable license, free of charge for Academic
+     Purposes, for the Term and within the Described Use, to:
+
+       (a)  use, copy, modify and run the Software;
+
+       (b)  combine the Software with material held under terms that do not permit conveying it
+            under AGPL-3.0-or-later, and convey the combination only to Authorized Participants;
+            and
+
+       (c)  reproduce excerpts of the Software's source code, other than Non-Public Software, in a
+            Publication or Course Material, under the terms on which that Publication or Course
+            Material is issued, provided that the excerpts illustrate a method the Publication or
+            Course Material describes and, alone or together, are not a complete or runnable copy
+            of the Software. Excerpts in a Publication or Course Material issued during the Term
+            stay under the terms on which it was issued after the Grant ends.
+
+3.2  The permissions in Section 3.1(b) and (c), and every permission this license gives for
+     Non-Public Software, are ones AGPL-3.0-or-later does not give. They are the consideration the
+     Licensor gives for the Licensee's obligations under this license.
+
+3.3  Nothing in this license limits what AGPL-3.0-or-later permits the Licensee or anyone else to
+     do, and no term of it charges a royalty, fee or other amount for any act that license
+     permits. Where the Licensee does something that license permits, the Licensee may rely on it
+     instead of on this license. Section 8.2 excludes that activity from every Royalty.
+
+4. CONDITIONS ON THE GRANT
+
+Each permission in Section 3 is granted only on the following conditions. An act that does not
+meet them is outside the Grant, and any permission for that act comes from AGPL-3.0-or-later alone.
+
+4.1  Notices. The Licensee does not remove or alter any copyright notice, SPDX identifier, license
+     notice or Credit Block in the Software, or in any copy or modified version the Licensee
+     conveys.
+
+4.2  Credit Block. The "Credit Block" is the attribution text in the Software's NOTICE file, or
+     where the Software has no NOTICE file, its copyright notice and the citation in its
+     CITATION.cff file. Every copy or modified version the Licensee conveys carries the Credit
+     Block, unaltered, in a NOTICE file, in its documentation where it is not conveyed as files,
+     and in any interface that displays legal notices, in this order:
+
+       (a)  where it includes, is derived from or processes Community Language Material, the
+            Speaker Credit under Section 7.4;
+
+       (b)  where it includes or is derived from a published corpus or dataset, the credit that
+            corpus or dataset requires; and
+
+       (c)  the Software, the Licensor, each Code Contributor the Software's notices name, and the
+            copyright notice in the Software.
+
+     A designation by a Governing Body under Section 7.4(a) applies to copies conveyed after the
+     Licensee has notice of it from any source. The Licensor may revise the Credit Block only to
+     correct a name or a notice, and a revision applies to copies conveyed after the Licensee
+     receives it.
+
+4.3  Marking. Every modified version the Licensee conveys is marked as modified, with the date of
+     modification, and is not presented as the Licensor's unmodified Software.
+
+4.4  Origin. The Licensee does not misrepresent the origin of the Software or of any Grant Work,
+     including by presenting a Grant Work as not derived from the Software.
+
+4.5  Recipients. The Licensee conveys a copy under this license only to Authorized Participants. A
+     copy of a file of the Software published under AGPL-3.0-or-later that the Licensee passes to
+     any other person is governed by AGPL-3.0-or-later, and that person receives it under that
+     license alone. Non-Public Software is not published under AGPL-3.0-or-later, and the Licensee
+     passes it to no person except as Section 5.7 permits.
 
 
-4. CONDITIONS
+5. OBLIGATIONS OF THE LICENSEE
 
-4.1  Attribution. Any research output, publication, thesis, poster, presentation, or course material
-     describing work that used the Software shall credit the Software and the Licensor among the
-     underlying systems it relied on. Where the output has a bibliography, the citation in
-     CITATION.cff is the form to use.
+The obligations in this Section and in Sections 6.3, 7, 8.9, 8.10, 9.3, 9.4 and 9.7 to 9.10 are
+promises the Licensee makes by accepting a Grant. They are enforceable as terms of the agreement
+formed under Section 2.3.
 
-4.2  Credit to Participants. Students, research staff, and faculty who contributed to the work shall
-     be credited in the same materials, in accordance with the Institution's own authorship and
-     attribution norms. This condition is a term of the license, and the Licensor may take it into
-     account under Section 5.
+5.1  Attribution. Every Publication or Course Material the Licensee controls that describes work
+     done under the Grant credits the Software and the Licensor among the systems the work relied
+     on. Where it has a bibliography, the citation in the Software's CITATION.cff file is the form
+     used.
 
-4.3  No Sharing Under These Terms. This license covers the Licensee alone. It extends to no
-     colleague, student, assistant, collaborator, department, laboratory, or institution, and it
-     extends to no person by reason of working on the same project, sitting in the same group, or
-     being supervised by the Licensee.
+5.2  Credit to Participants. Every such Publication or Course Material credits the students,
+     research staff and faculty who contributed to the work, in accordance with the Institution's
+     authorship and attribution policy. Where the author order of a Publication is decided by its
+     author group or by its publisher, the Licensee proposes that credit to them in writing and
+     gives it in every acknowledgment the Licensee controls.
 
-4.4  Each Person Holds Their Own. Another person who wants these terms applies under Section 2 and
-     receives a writing of their own. There is no grandfathering: no person acquires this license by
-     inheritance, succession, assignment, transfer, association, or the passage of time, and no
-     course of dealing, silence, or prior tolerance by the Licensor creates one.
+5.3  Credit Record. The Licensee keeps a list of the Publications and Course Materials within
+     Sections 5.1, 5.2 and 7.4 and of the credit each gives (the "Credit Record"). The Licensee
+     delivers it with each Royalty Report that claims the reduction in Section 9.4(c), and
+     otherwise within the period the Royalty Schedule states after a written request, which the
+     Licensor may make no more often than Section 9.8 permits an audit.
 
-4.5  What Sharing Falls Back To. Any copy the Licensee passes to any other person is governed by
-     AGPL-3.0-or-later, and that person receives the Software under the AGPL alone. Nothing in this
-     document is to be read as permitting otherwise.
+5.4  Personal data. Where the Licensee's use involves recordings of, or other data about,
+     identifiable people, the Licensee complies with the data protection law that applies to that
+     data.
 
-4.6  Notices. The Licensee shall not remove or alter any copyright notice or SPDX identifier in the
-     Software.
+5.5  Names. The Licensee does not use the name of the Licensor, of any Originating Community or
+     Governing Body, of any speaker, of any Code Contributor, or of any Research Trustee to state
+     or imply endorsement, sponsorship, approval or official status, except as the Credit Block or
+     the Speaker Credit requires or as the person named permits in writing.
+
+5.6  Compliance with law. The Licensee complies with the law that applies to its exercise of the
+     Grant, including export control and data protection law.
+
+5.7  Non-Public Software. Where the Licensor delivers Non-Public Software under Section 2.7:
+
+       (a)  it is confidential information of the Licensor. The Licensee uses it only within the
+            Grant, discloses it only to Authorized Participants who need it for the Described Use,
+            and protects it with at least the care the Licensee uses for its own confidential
+            information of like importance, and in any case with reasonable care;
+
+       (b)  this Section does not apply to information that is or becomes public other than
+            through a breach of this license, that the recipient knew before receiving it without
+            a duty to keep it confidential, that the recipient develops independently without use
+            of it, or that the recipient receives lawfully from a third party without a duty to
+            keep it confidential;
+
+       (c)  this Section reaches no copy of a file that the person holding it received under
+            AGPL-3.0-or-later, and no file whose SPDX license identifier names AGPL-3.0-or-later,
+            and it restricts no act AGPL-3.0-or-later permits; and
+
+       (d)  the duties in this Section last for as long as the information remains confidential.
 
 
-5. COMMERCIALIZATION
+6. SHARING
 
-5.1  Academic work can become a product. This section is here so that outcome is provided for rather
-     than litigated.
+6.1  This license covers the Licensee alone. It extends to no colleague, student, assistant,
+     collaborator, department, laboratory or institution, and to no person by reason of working on
+     the same project, sitting in the same group or being supervised by the Licensee, except as a
+     Sharing Permission provides.
 
-5.2  Commercialize means that money or anything else of value is received, by anyone, on account of
-     work that incorporates or derives from the Software. It does not require a sale, a price, a
-     customer, or a profit. Without limiting that, each of the following is commercialization:
+6.2  Sharing for research is welcome. A Licensee may ask the Licensor in writing to permit named
+     people, or a defined group such as the students enrolled in a named course in a named term, to
+     use the Software under these terms. The Licensor decides each request. A permission the
+     Licensor gives in writing under this Section is a "Sharing Permission".
 
-       (a)  selling, licensing, renting, or subscribing out a product or service;
-       (b)  providing consulting, support, hosting, or contract work;
-       (c)  advertising, sponsorship, or data revenue;
-       (d)  fundraising, investment, crowdfunding, donation, prize money, or a grant, where any part
-            of what is raised pays compensation to the Licensee or to any person or entity the
-            Licensee controls, is employed by outside the Institution, or holds an interest in;
+6.3  A person within a Sharing Permission becomes an Authorized Participant on accepting these terms
+     in writing. An Authorized Participant holds a permission directly from the Licensor, on these
+     terms, limited to the Described Use and to the scope of the Sharing Permission, and is bound by
+     Sections 4 to 9 as though named as a Licensee.
+
+6.4  A Sharing Permission gives the Licensee no control over any Authorized Participant's
+     permission. The Licensee cannot extend, transfer, renew or end it. The Licensor may end it
+     under Section 10 as though it were a Grant, and it ends when the Grant under which it was
+     given ends.
+
+6.5  No person acquires a permission under this license by inheritance, succession, assignment,
+     transfer, association or the passage of time, and no course of dealing, silence or earlier
+     tolerance by the Licensor creates one. Another person who wants these terms applies under
+     Section 2 or is named in a Sharing Permission.
+
+
+7. COMMUNITY LANGUAGE MATERIAL
+
+7.1  Where this Section applies. This Section applies only where the Software includes, is derived
+     from or processes Community Language Material, or where the Licensee uses Community Language
+     Material with the Software. Where neither is the case, this Section imposes nothing.
+
+7.2  What the Licensor does not claim. The Licensor does not own Community Language Material, is
+     not its guardian or custodian, holds no authority over it, and grants no right in it. Nothing
+     in this license claims, licenses or implies ownership of Community Language Material or of any
+     community's words. The Licensor does not apply Traditional Knowledge Labels or Biocultural
+     Labels, which only an Originating Community applies. Nothing in this license states or implies
+     that any use conforms to any Indigenous data governance framework or protocol, and the
+     Licensee makes no such statement about its own use unless the body that governs that framework
+     or protocol has confirmed it in writing.
+
+7.3  Permission from those who hold it. Access to and use of Community Language Material require
+     the permission of those who hold the rights in it, on their terms. This license is not that
+     permission. The Licensee follows the Community Terms for any Community Language Material the
+     Licensee uses.
+
+7.4  Speaker Credit. In every Publication, Course Material, dataset and conveyed copy the Licensee
+     controls that presents or relies on Community Language Material, the Licensee gives the
+     following credit (the "Speaker Credit"):
+
+       (a)  credit in the order and form each Governing Body concerned designates, from the time
+            the Licensee has notice of the designation from any source;
+
+       (b)  until a Governing Body has designated an order, the speaker as the source records the
+            speaker, together with the Originating Community, credited first, before the linguist
+            who recorded or published the material, any transcriber, the Software and the
+            Licensor;
+
+       (c)  where the source does not name the speaker, a statement that the speaker is not named,
+            with no other person put in the speaker's place; and
+
+       (d)  where the Community Terms bar naming a person, including a person who has died, the
+            credit the Community Terms permit.
+
+     Where the author order of a Publication is decided by its author group or by its publisher,
+     the Licensee proposes the Speaker Credit to them in writing, and places it first in the
+     acknowledgments and in any data availability statement the Licensee controls.
+
+7.5  Withdrawal. Community Language Material is withdrawn when a speaker, a speaker's heir or
+     designated representative, or a Governing Body gives written notice withdrawing it. A later
+     signed version of an inventory that no longer lists material, and that states whose request
+     the change records, is notice of that person's withdrawal. After the Licensee receives notice
+     of a withdrawal from any source:
+
+       (a)  the Licensee stops using and conveying the withdrawn material and every Derived
+            Artifact made from it at once;
+
+       (b)  within the period the Governing Body sets, or where it sets none, the period the
+            Royalty Schedule states, the Licensee destroys every copy of them in the Licensee's
+            possession or control, except that where the notice does not come from a Governing
+            Body, the Licensee may wait for that Governing Body's confirmation before destroying
+            them, inside the same period; and
+
+       (c)  the Licensee confirms in writing, to the person who gave notice and to the Licensor,
+            that this has been done.
+
+     A withdrawal needs no reason and does not expire. The Licensee need not retract a Publication
+     issued before receiving notice, and makes no new use of the withdrawn material.
+
+7.6  Voice and speech patterns. The Licensee does not use Community Language Material, alone or
+     with the Software or other tools, to train, fit or condition a system that produces speech in
+     a speaker's voice or in an Originating Community's speech patterns, unless the Community Terms
+     permit that use by name.
+
+7.7  Review of generated language. The Licensee does not publish, convey or present to users, as a
+     form of an Originating Community's language, output generated or regenerated from Community
+     Language Material, unless a speaker of that language, or a person the Governing Body
+     designates, has reviewed it first. The Licensee marks any such output it publishes, conveys or
+     presents as generated.
+
+7.8  Who decides. Whether a use conforms to a Label or to Community Terms is decided by the
+     Governing Body's written statement. The Licensee does not use Community Language Material
+     contrary to a Label or to Community Terms of which the Licensee has notice. Where an
+     Originating Community or its Governing Body sets terms for its material by any instrument,
+     those terms govern the Licensee's use of that material in place of this Section to the extent
+     they differ from it.
+
+7.9  More than one community. Where material has more than one Originating Community and their
+     designations, Community Terms or withdrawal periods differ, the Licensee meets each of them it
+     can, follows the most restrictive where they cannot all be met, and refers the conflict to the
+     Governing Bodies concerned. The Licensor does not decide it.
+
+7.10 Recordings. The Licensee does not redistribute recordings of speakers except as the Community
+     Terms permit.
+
+7.11 No commercial right. Nothing in this license, including Sections 8 and 9, permits the
+     commercialization of Community Language Material or of any Grant Work that includes it or is
+     derived from it. That requires the written permission of each Originating Community concerned
+     and of any other rights holders.
+
+7.12 Changes to Community Terms. Where the Licensor receives new Community Terms, a withdrawal, or a
+     designation under Section 7.4(a), the Licensor forwards it to each Licensee the Licensor knows
+     to be using the material concerned. A Licensee is bound by new Community Terms, and by a
+     withdrawal, from the time the Licensee has notice of them, from any source.
+
+7.13 Scope. The duties in this Section concern Community Language Material and Derived Artifacts.
+     They place no restriction on any use of the Software that AGPL-3.0-or-later permits. After a
+     Grant ends they continue only as Section 15.6 states.
+
+8. COMMERCIALIZATION AND CONVERSION
+
+8.1  Academic work can become a product. This Section fixes the terms for that outcome before it
+     happens.
+
+8.2  Reliant Activity. "Reliant Activity" means activity that AGPL-3.0-or-later does not permit
+     and that:
+
+       (a)  is done under a Contract;
+
+       (b)  is done in exercise of a permission in this license that AGPL-3.0-or-later does not
+            give; or
+
+       (c)  uses a Grant Work that was made or shared in exercise of such a permission, or that
+            contains Non-Public Software.
+
+     Activity that AGPL-3.0-or-later permits, and that meets every condition of that license that
+     applies to it, is never Reliant Activity, whatever permission the Grant Work it uses was
+     first made under. No Royalty, fee or other amount under this license is measured on value
+     from that activity.
+
+8.3  Licensee Side. The "Licensee Side" for a Grant Work means the Licensee, each Authorized
+     Participant, each person or entity either of them controls, each person to whom consideration
+     is directed under Section 8.4(g), and each person or entity that has signed a Joinder for that
+     Grant Work. The Institution is on the Licensee Side only where it has signed a Joinder. No
+     other person is on the Licensee Side.
+
+8.4  Commercialization Event. A "Commercialization Event" occurs when a member of the Licensee Side
+     receives money or anything else of value on account of Reliant Activity with a Grant Work. It
+     does not require a sale, a price, a customer or a profit. Without limiting that, each of the
+     following, when received by a member of the Licensee Side on that account, is a
+     Commercialization Event:
+
+       (a)  proceeds of selling, licensing, renting or subscribing out a product or service;
+
+       (b)  payment for consulting, support, hosting or contract work;
+
+       (c)  advertising, sponsorship or data revenue;
+
+       (d)  fundraising, investment, crowdfunding, donation, prize money or a grant, where any part
+            of what is raised pays compensation to a member of the Licensee Side, or to any person
+            or entity a member controls, is employed by outside the Institution, or holds an
+            interest in;
+
        (e)  equity, options, warrants, tokens, carried interest, revenue or profit shares, or any
-            other instrument or contingent interest, whether vested, unvested, or promised;
-       (f)  consideration in a form other than money, which is the same as money for the purposes of
-            this Section. Without limiting that: goods, hardware, compute, facilities, laboratory or
-            studio access, travel, accommodation, hospitality, tuition, fees, fellowships or
-            stipends directed to the Licensee or to the Licensee's nominee, forgiveness or
-            assumption of debt, terms in any transaction that are above or below market, deferred or
-            contingent compensation, and any board seat, advisory role, employment, or appointment
-            offered on account of the work;
-       (g)  consideration directed, at the Licensee's request or with the Licensee's acquiescence, to
-            a spouse, relative, associate, nominee, trust, or entity rather than to the Licensee;
-       (h)  transfer of the work to any entity that does any of the above.
+            other instrument or contingent interest, whether vested, unvested or promised;
 
-5.3  The single exception is salary or stipend paid by the Institution to the Licensee under the
-     appointment that qualified them under Section 1.4, at the Institution's ordinary rates.
-     Everything else falls under Section 5.2.
+       (f)  consideration in a form other than money, including goods, hardware, compute,
+            facilities, laboratory or studio access, travel, accommodation, hospitality, tuition,
+            fees, fellowships or stipends directed to a member of the Licensee Side or its nominee,
+            forgiveness or assumption of debt, terms in any transaction that are above or below
+            market, deferred or contingent compensation, and any board seat, advisory role,
+            employment or appointment offered on account of the Grant Work;
 
-5.4  No Loopholes. It makes no difference how the activity is structured, what an entity is called,
-     whether it is incorporated as non-profit, who holds title, whether the money is called a
-     donation or a reimbursement, whether consideration is paid in money or in kind, or whether the
-     Software is described as a component rather than a product. What governs is whether value was
-     received on account of the work. The Licensor determines this, and a structure adopted to place
-     activity outside Section 5.2 is within it.
+       (g)  consideration directed, at the request or with the acquiescence of a member of the
+            Licensee Side, to a spouse, relative, associate, nominee, trust or entity instead of to
+            that member; and
 
-5.5  Valuation. Consideration in a form other than money is valued at its fair market value when
-     received, and where it is contingent or unvested, at the value it reaches when it vests or the
-     contingency resolves. The Institution's share under Section 5.9 is computed on that value and is
-     payable in money. A party that takes value in kind does not thereby reduce what is owed.
+       (h)  consideration for transferring a Grant Work, or a right in one, to any person or entity
+            for Reliant Activity.
 
-5.6  Why This Is Written This Way. The Institution and the department carried the cost of the work
-     that produced the value: the appointment, the students, the facilities, and the time. Taking
-     that value in a form that reports as no revenue takes it from them rather than from the
-     Licensor. Sections 5.2 and 5.5 exist so that the form the consideration arrives in does not
-     decide what the Institution receives.
+8.5  Excluded value. Salary or stipend paid by the Institution to the Licensee or to an Authorized
+     Participant, under the Qualifying Appointment or the participant's own appointment or
+     enrollment, at the Institution's ordinary rates, is not a Commercialization Event.
 
-5.7  On commercialization this license ceases to cover the activity, and the parties shall agree
-     royalty terms in writing.
+8.6  Substance governs. Within the Licensee Side, whether a Commercialization Event occurred is
+     decided by what was received and on what account. The form of the arrangement does not change
+     the answer: how it is structured, what an entity is called, whether it is incorporated as a
+     non-profit, who holds title, whether money is called a donation or a reimbursement, whether
+     consideration is paid in money or in kind, and whether the Software is described as a
+     component. This Section adds no person to the Licensee Side.
 
-5.8  Those terms take the form of a royalty ladder. The rate is set by the Licensor with regard to
-     the good faith shown by the Licensee and the extent to which Section 4.2 was honored.
+8.7  Valuation. "Commercialization Value" for a Royalty Period is the consideration members of the
+     Licensee Side receive in that period on account of Reliant Activity with a Grant Work.
+     Consideration other than money is valued at its fair market value when received. Contingent or
+     unvested consideration is valued when it vests or the contingency resolves, and counts in the
+     Royalty Period in which that happens. Where a Grant Work, or a right in one, is provided to an
+     affiliate, spinout, nominee or related person, or for less than its fair market value,
+     Commercialization Value is the greater of the consideration received and that fair market
+     value, measured as a transaction at arm's length in the ordinary course of business. Royalty
+     on value received in kind is payable in money.
 
-5.9  A portion of royalties shall be paid to the Institution at a minimum, and directly to the
-     Licensee's department where the Institution's rules permit it.
+8.8  Conversion. On the first Commercialization Event for a Grant Work:
 
-5.10 Until such terms are agreed in writing, the commercial activity is governed by
-     AGPL-3.0-or-later, or by a contract under LicenseRef-Commercial where one exists.
+       (a)  this license does not cover the commercial activity, which from then on proceeds under
+            AGPL-3.0-or-later, under a Contract, or without a license;
 
-5.11 The Licensee shall notify the Licensor in writing before value is first received under Section
-     5.2. Failure to do so is a breach for the purposes of Section 6.2.
+       (b)  the Royalty terms in Section 9 apply to Commercialization Value from that Grant Work
+            automatically, from the date value was first received, without any further agreement;
+            and
 
+       (c)  no Royalty is owed on value from activity that meets AGPL-3.0-or-later.
 
-6. TERM AND TERMINATION
+     The Royalty is the agreed deferred price of the Grant. Each person who accepted these terms or
+     signed a Joinder owes it on the Commercialization Value received by that person, by a person
+     or entity it controls, or by a person to whom it directed consideration under Section 8.4(g).
+     It is paid once on any Commercialization Value. It is not a condition on any permission
+     AGPL-3.0-or-later gives, it is owed by no person who has not accepted these terms or signed a
+     Joinder, and it is measured on no activity that license permits.
 
-6.1  This license runs from the date of the writing issued under Section 2 until terminated.
+8.9  Notice before value. The Licensee notifies the Licensor in writing before value is first
+     received on account of Reliant Activity with a Grant Work, identifying the Grant Work, the
+     persons and entities involved, and the value expected (a "Commercialization Notice").
 
-6.2  It terminates automatically if the Licensee breaches any condition in Section 4 or Section 5 and
-     does not cure the breach within thirty days of written notice. A breach of Section 4.3 or 4.4
-     is not curable, since the copy has already left the Licensee's hands, and conduct within
-     Section 6.5 is not curable either.
+8.10 Joinder. The Licensee does not assign the copyright in a Grant Work, and does not license a
+     Grant Work on terms other than AGPL-3.0-or-later, to any person or entity for commercial use,
+     unless that person or entity has first signed a writing, in the form the Grant identifies
+     under Section 2.4, assuming the obligations in Sections 8 and 9 for that Grant Work (a
+     "Joinder"). Conveying a Grant Work under AGPL-3.0-or-later is never an assignment or a license
+     within this Section. Where law, or a written obligation to the Institution made before the
+     Grant Date, requires the Licensee to assign a Grant Work without that condition, the Licensee
+     instead notifies the Licensor before the assignment and asks the assignee in writing to sign a
+     Joinder. The Licensee is not in breach because the assignee declines.
 
-6.3  It terminates automatically if the Licensee ceases to hold an appointment at an Institution.
+8.11 Federal funding. Nothing in this license requires the Licensee or the Institution to act
+     contrary to 35 U.S.C. sections 200 to 212, or to a funding agreement made under them.
 
-6.4  The Licensor may revoke it at any time, on written notice, for any reason or for no reason. No
-     cause need be shown and none need be stated. Grounds may include the Licensee's personal
-     conduct, whether or not that conduct concerns the Software. This discretion is absolute and is
-     not subject to a standard of reasonableness.
-
-6.5  Immediate Revocation for Defeating the Purpose. Conduct undertaken to defeat the Purpose stated
-     above terminates this license at once, on the Licensor's notice, with no period to cure and no
-     opportunity to remedy. Each of the following is such conduct:
-
-       (a)  structuring an arrangement so that value does not reach the Institution;
-       (b)  understating, deferring, disguising, or failing to report what was received under
-            Section 5.2, or failing to give the notice Section 5.11 requires;
-       (c)  routing consideration to a person or entity so that Section 5.2 is not engaged;
-       (d)  omitting the attribution Section 4.1 requires or the credit Section 4.2 requires;
-       (e)  passing the Software to a person for use under these terms, including a person the
-            Licensor has refused;
-       (f)  continuing to rely on this license after ceasing to hold the appointment that qualified
-            the Licensee.
-
-     The list is not exhaustive, and it is for the Licensor to determine whether conduct is of this
-     kind.
-
-6.6  On termination, the Licensee's use of the Software reverts to AGPL-3.0-or-later. Nothing in
-     termination withdraws rights the AGPL grants independently of this document, and nothing in
-     termination discharges an obligation already accrued under Section 5.
+8.12 Contracts for the same activity. Where a Contract covers Reliant Activity on which a Royalty
+     is owed, the Trustee Share is computed on the Royalty before any credit and is paid in full,
+     whatever the Contract states. The Contract states whether fees paid to the Licensor under it
+     are credited against the part of the Royalty payable to the Licensor. Where it states nothing,
+     fees paid to the Licensor under the Contract for the same activity and Royalty Period are
+     credited against that part. No amount is credited against the Trustee Share.
 
 
-7. RESERVATION OF RIGHTS
+9. ROYALTY
 
-All rights not expressly granted in Section 3 are reserved to the Licensor. No right is granted in
-any trademark, and no patent license is granted beyond what AGPL-3.0-or-later grants of its own
-force.
+9.1  Royalty Schedule. The "Royalty Schedule" is the document identified under Section 2.4. It
+     states, in numbers or by name:
+
+       (a)  bands of Commercialization Value for a calendar year, and the rate that applies to the
+            part of that value falling within each band. The lowest band may carry a rate of zero.
+            Together these bands are the royalty ladder;
+
+       (b)  any minimum annual royalty, and the band from which it applies;
+
+       (c)  the Trustee Share, as a percentage of each Royalty payment;
+
+       (d)  the reduction in rate, if any, for each condition in Section 9.4 that is met;
+
+       (e)  the percentage of understatement for Section 10.4(b);
+
+       (f)  the periods for Sections 5.3, 7.5(b), 9.3, 9.7, 9.8 and 10.3;
+
+       (g)  the currency in which the Royalty is paid; and
+
+       (h)  the publisher of the prime rate for Section 9.9.
+
+     The version a Grant identifies governs that Grant, every Sharing Permission under it and every
+     Joinder for a Grant Work made under it, for as long as the obligations in this Section last.
+     The Licensor does not change it for an issued Grant. A later version applies to an issued
+     Grant only where the Licensee accepts it in writing.
+
+9.2  Royalty. The "Royalty" for a calendar year is the amount given by applying the royalty ladder,
+     with any reductions under Section 9.4, to the Commercialization Value received in that year,
+     and is not less than any minimum annual royalty that applies.
+
+9.3  Royalty Periods and reports. Each calendar quarter is a "Royalty Period", and the Royalty for
+     each Royalty Period is a separate obligation. Within the period the Royalty Schedule states
+     after the end of each Royalty Period in which Commercialization Value was received, each person
+     who owes the Royalty delivers to the Licensor a written report stating the Commercialization
+     Value received, how it was valued and the Royalty computed on it (a "Royalty Report"), and pays
+     the Royalty for that period. The Royalty for a Royalty Period is the Royalty on
+     Commercialization Value received from the start of the calendar year to the end of that
+     period, less the Royalty already paid for earlier periods of that year.
+
+9.4  Conditions that reduce the rate. A reduction the Royalty Schedule states applies to a Royalty
+     Period only where its condition was met:
+
+       (a)  a Commercialization Notice was given under Section 8.9 before value was first received
+            on account of the Grant Work;
+
+       (b)  every Royalty Report for the Grant Work was delivered when due; and
+
+       (c)  the Credit Record shows that the credit Sections 5.2 and 7.4 require was given in the
+            Publications and Course Materials the Licensee controls.
+
+     These reductions are part of the price. Where a condition is not met, the rate is the rate the
+     Royalty Schedule states without that reduction. No other amount is added.
+
+9.5  Research Trustee. The Licensor designates in writing a person at the Institution, or a trust
+     or other legal entity connected with it, to receive the Trustee Share (the "Research
+     Trustee"). The designation takes effect when the Research Trustee accepts it in writing and
+     agrees to hold the Trustee Share under Section 9.6. The Licensee and the Institution have no
+     power over the designation, or over the Research Trustee's decisions within Section 9.6. The
+     Licensor may replace a Research Trustee by the same procedure.
+
+9.6  Use of the Trustee Share. The "Trustee Share" is the part of each Royalty payment the Royalty
+     Schedule states. The Research Trustee holds it for the students, research staff and faculty
+     whose work produced the Grant Work (the "Research Contributors"), and applies it only to fund
+     research by or for the Research Contributors, including research into the implications of the
+     work that was commercialized. The Trustee Share is not the property of the Institution, the
+     Licensee or the Licensor.
+
+9.7  Payment. The person who owes the Royalty pays the Trustee Share in full directly to the
+     Research Trustee when the Royalty is due, and pays the rest of the Royalty to the Licensor. No
+     credit, set-off, Contract or Grant reduces the Trustee Share. Until a Research Trustee has
+     accepted a designation, that person holds the Trustee Share in a separate account, identifies
+     that account in each Royalty Report, and pays the balance, with any interest earned on it, to
+     the Research Trustee within the period the Royalty Schedule states after receiving notice of
+     the acceptance. The Royalty is paid in the currency the Royalty Schedule states, without
+     set-off or counterclaim, and without deduction except for tax the law requires the payer to
+     withhold, for which the payer delivers the official receipt.
+
+9.8  Records and audit. Each person who owes the Royalty keeps complete records of Commercialization
+     Value for five years after the end of the Royalty Period they concern, and for longer while any
+     dispute about that period is unresolved. Once in each calendar year, on reasonable prior
+     written notice, an independent certified public accountant the Licensor chooses may inspect
+     those records during normal business hours. The person audited pays any underpayment the
+     audit shows within the period the Royalty Schedule states after receiving the audit report.
+     Where the underpayment for a calendar year is more than five percent of the Royalty due for
+     that year, that person also pays the cost of the audit. The right of audit continues for three
+     years after the obligations in this Section end.
+
+9.9  Interest. An amount not paid when due bears interest from the due date until paid, at the
+     United States prime rate published on the due date by the publisher the Royalty Schedule
+     names, plus two percent per year, compounded monthly, or at the highest rate the law permits
+     where that is lower.
+
+9.10 Burden. Where the Licensor has reasonable grounds to believe a Commercialization Event
+     occurred, the person who would owe the Royalty on it bears the burden of showing that it did
+     not, that the activity was not Reliant Activity, or that the value received was less than the
+     Licensor's grounds indicate.
+
+9.11 Duration. The obligations in Sections 8 and 9 for a Grant Work last until the last copyright in
+     the Software that the Grant Work incorporates expires.
+
+9.12 What the Royalty is paid for. The Royalty is paid for the copyright permissions in this license
+     that AGPL-3.0-or-later does not give. No patent license is granted in return for it, and it
+     does not depend on any patent.
+
+9.13 After termination for convenience. After a Grant ends under Section 10.3, the Royalty accrues
+     only on Commercialization Value from Reliant Activity under a Contract, or from Reliant
+     Activity named in a Commercialization Notice given before the Licensee received the notice of
+     termination.
+
+10. TERM AND TERMINATION
+
+10.1  Term. A Grant runs from the Grant Date until it ends under this Section. It ends in any case
+      when the last copyright in the Software expires.
+
+10.2  Automatic end. A Grant ends automatically, without notice, on the date the Licensee ceases to
+      hold the Qualifying Appointment at the Institution, and on the Licensee's death. A Licensee
+      who takes an appointment at another institution may apply for a new Grant. Obligations that
+      accrued before the Licensee's death bind the Licensee's estate, and the Licensor may ask the
+      Licensee's personal representative to have any person who receives a Grant Work, or the
+      copyright in one, from the estate sign a Joinder.
+
+10.3  Termination for convenience. The Licensor may end a Grant, or a Sharing Permission, for any
+      reason or for no reason, by written notice. No reason need be stated. The termination takes
+      effect on the later of (a) the end of the period the Royalty Schedule states, counted from
+      the day the Licensee receives the notice, and (b) the end of the Institution's academic term
+      in progress on the day the Licensee receives it. It operates from that date forward only.
+
+10.4  Termination for defined conduct. The Licensor may end a Grant, or a Sharing Permission, at
+      once by written notice where the Licensee or the Authorized Participant:
+
+        (a)  receives Commercialization Value and does not disclose it to the Licensor, in a
+             Commercialization Notice or a Royalty Report, by the date the Royalty Report for that
+             Royalty Period is due;
+
+        (b)  delivers a Royalty Report that understates the Royalty due for a Royalty Period by more
+             than the percentage the Royalty Schedule states, knowing of the unreported value when
+             the report was made;
+
+        (c)  assigns or licenses a Grant Work in breach of Section 8.10;
+
+        (d)  passes the Software or a Grant Work, for use under these terms, to a person who is not
+             an Authorized Participant, including a person whose request the Licensor declined, or
+             discloses Non-Public Software in breach of Section 5.7;
+
+        (e)  knowingly removes, alters or reorders a Credit Block, or a Speaker Credit, in a copy
+             the Licensee conveys;
+
+        (f)  after the period in Section 7.5(b) has run, uses, conveys or keeps withdrawn material,
+             or a Derived Artifact made from it, or redistributes a recording in breach of Section
+             7.10;
+
+        (g)  acts contrary to Section 7.6; or
+
+        (h)  continues a use of Community Language Material after the Governing Body has stated in
+             writing, under Section 7.8, that the use is contrary to a Label or to Community Terms.
+
+      This list is closed. The notice states the facts the Licensor relies on, and the Licensor
+      decides in good faith whether conduct within this Section occurred. A Governing Body may give
+      a notice under items (e) to (h) for material of its Originating Community, with the same
+      effect.
+
+10.5  Why these events are material. Each event in Section 10.4 is a material part of the agreed
+      exchange. The Grant is given free of charge in exchange for disclosure, accurate reporting,
+      keeping the Software and any Non-Public Software among the people the Licensor has permitted,
+      and respect for the credit and the decisions of speakers and their communities. Later
+      performance cannot undo harm from these events: value concealed or routed elsewhere has
+      already left the Royalty terms, a copy or a confidential file passed on cannot be recalled,
+      and a payment cannot restore a withdrawn recording or a speaker's misattributed words.
+
+10.6  Cure. Where the Licensee breaches any obligation in this license that is not an event in
+      Section 10.4, and does not cure the breach within 30 days after receiving written notice
+      describing it, the Licensor may end the Grant by written notice.
+
+10.7  Notice found unsupported. Where a court or arbitrator finds that no event in Section 10.4
+      occurred, the notice takes effect as a notice under Section 10.3, given on the date it was
+      given.
+
+10.8  Effect of ending. When a Grant or a Sharing Permission ends for any reason:
+
+        (a)  the person's use of each file of the Software published under AGPL-3.0-or-later falls
+             back to that license, and the ending withdraws no right that license gives;
+
+        (b)  anything done under Section 3.1(b) or (c) that AGPL-3.0-or-later does not permit stops,
+             or is brought into compliance with that license, on the date the ending takes effect,
+             except that a Publication or Course Material issued before that date stays under the
+             terms on which it was issued;
+
+        (c)  the person returns or destroys all Non-Public Software and confirms that in writing,
+             except copies the law requires the person to keep;
+
+        (d)  no obligation already accrued is discharged; and
+
+        (e)  the Sections listed in Section 15.6 continue as that Section states.
+
+10.9  No new Grant after defined conduct. A person whose Grant or Sharing Permission ended under
+      Section 10.4, or who exercised a permission in Section 3.1(b) or (c) after the Grant ended,
+      receives no new Grant or Sharing Permission unless the Licensor issues it with express
+      reference to that conduct.
+
+10.10 No amendment. The Licensor has no right to amend this license for an issued Grant. Ending a
+      Grant under this Section is the only way the Licensor can end the Licensee's permissions.
 
 
-8. DISCLAIMER OF WARRANTY
+11. REMEDIES
+
+11.1  Acts outside the Grant. An act outside a Grant that neither AGPL-3.0-or-later nor a Contract
+      permits is unlicensed. The Licensor may pursue every remedy the law provides for it,
+      including actual damages and profits, statutory damages and the increase in statutory
+      damages for willful infringement under 17 U.S.C. section 504, and costs and attorney's fees
+      under 17 U.S.C. section 505. The Credit Block, the Speaker Credit, the copyright notices in
+      the Software and the terms on which the Software is licensed are copyright management
+      information, and their removal or alteration is subject to the remedies in 17 U.S.C. section
+      1203 where the conditions of 17 U.S.C. section 1202 are met.
+
+11.2  Trade secrets. Where Non-Public Software is a trade secret, its misappropriation is subject
+      to the remedies the law provides, including exemplary damages and attorney's fees under 18
+      U.S.C. section 1836(b)(3) for willful and malicious misappropriation. The Licensee
+      acknowledges that the Licensor keeps Non-Public Software secret by measures that include
+      Section 5.7. This Section reaches no file held under AGPL-3.0-or-later.
+
+11.3  No sum for breach beyond what the law provides. Apart from the Royalty, interest under
+      Section 9.9, audit costs under Section 9.8, and any Community Compensation under Section
+      11.5, no sum is payable under this license on account of a breach. Additional recovery for
+      bad faith comes only from the statutes named in Sections 11.1 and 11.2, and this license
+      neither adds to it nor limits it.
+
+11.4  Injunctive relief. The Licensee acknowledges that a breach of Section 7 harms speakers and
+      their communities in ways money does not measure or repair. The Licensor, the Licensee and a
+      Governing Body may each seek interim or injunctive relief from a court at any time, and doing
+      so waives no agreement to arbitrate. This acknowledgment is evidence for the court or tribunal
+      to weigh, and it does not bind the court's or tribunal's discretion.
+
+11.5  Community Compensation. A Grant may state a sum payable to a Governing Body for an event in
+      Section 10.4(e) to (h), but only where that Governing Body, advised by its own counsel, has
+      set the sum in a writing the Grant identifies. The sum is payable to the Governing Body. No
+      part of it is payable to the Licensor. It is agreed because harm to the dignity and cultural
+      authority of a community is real and difficult to prove, and it is paid in place of damages
+      for that harm, without addition to them. Where no Grant states a sum, none is payable under
+      this Section.
+
+11.6  Remedies are cumulative, and no one recovers twice for the same loss.
+
+
+12. THIRD-PARTY BENEFICIARIES
+
+12.1  Originating Communities. Each Originating Community of Community Language Material to which
+      Section 7 applies is an intended third-party beneficiary of Section 4.2(a), Section 5.5 as it
+      concerns its name and its speakers' names, Section 7, Section 10.4(e) to (h), Section 10.8,
+      Section 11.4, Section 11.5, this Section 12, Section 15.6 as it concerns Section 7, and
+      Section 15.8 as it concerns a Governing Body. Acting through its Governing Body, it may
+      enforce those terms in its own name, seek injunctive relief and receive Community
+      Compensation, independently of the Licensor and whether or not the Licensor acts.
+
+12.2  Vesting. Those rights vest when the Grant takes effect. The Licensor and the Licensee cannot
+      amend, waive or release them, by a Grant, a later version of this document or any other
+      writing, except by a writing the Governing Body has signed. A Governing Body may confirm its
+      acceptance in writing at any time, and its rights vest without it.
+
+12.3  Research Trustee. The Research Trustee is an intended third-party beneficiary of Section
+      8.12 and Sections 9.5 to 9.9, and may enforce payment of the Trustee Share in its own name.
+
+12.4  Change of Governing Body. Where a Governing Body ceases to exist, or its Originating Community
+      designates another body, the rights and the notices of the earlier body pass to the body the
+      community designates next. No right lapses in the interval.
+
+12.5  No other beneficiary. No other person, including the Institution, is a third-party
+      beneficiary of this license.
+
+
+13. SUCCESSION AND STEWARDSHIP
+
+13.1  Successor Licensor. After the death of Douglas Quigg, the "Successor Licensor" is the person
+      or entity that holds the copyright in the Software under his will or under a trust he
+      established, and where more than one holds it, the person or entity that instrument
+      designates to act as Licensor. Where no such instrument designates one, the Successor
+      Licensor is the person who holds the copyright by law.
+
+13.2  Grants continue. Every Grant, Sharing Permission and Joinder continues after the death or
+      incapacity of Douglas Quigg on the same terms. It is not personal to him, and no obligation
+      of any party ends because of his death or incapacity. After his death, amounts payable to the
+      Licensor are payable to the Successor Licensor.
+
+13.3  The Purpose after his death. After the death of Douglas Quigg, each choice, consent,
+      conclusion and discretion this license gives the Licensor, including under Sections 2, 6, 8,
+      9.5, 10 and 15.9, is exercisable only by the Successor Licensor, only for the Purpose, and in
+      good faith. Recital R.4 does not apply to the Successor Licensor.
+
+13.4  Stewardship instrument. Where the instrument under which the Successor Licensor holds the
+      copyright gives a Governing Body, or another person, the right to enforce this license if the
+      Successor Licensor does not, that body or person may enforce it to the extent the instrument
+      provides.
+
+13.5  Community rights do not depend on succession. The rights of Originating Communities under
+      Section 12 continue whether or not a Successor Licensor exists or acts.
+
+13.6  Paying a Successor Licensor. After receiving written notice from a Successor Licensor with
+      reasonable evidence of its authority, each person who owes the Royalty reports and pays as
+      that notice directs. Amounts that fell due before that person received the notice remain
+      owed, and are paid within the period Section 9.3 allows, counted from receipt of the notice,
+      without interest for the time before that receipt.
+
+13.7  Statutory termination. Nothing in this license waives or limits any right the law gives an
+      author, or an author's heirs or successors, to terminate a grant, including under 17 U.S.C.
+      section 203.
+
+14. RELATIONSHIP TO THE OTHER LICENSES
+
+14.1  AGPL-3.0-or-later is available to everyone, costs nothing, and carries none of the
+      obligations in this license. A person who does not intend to meet these terms should use it
+      and should not request a Grant.
+
+14.2  Nothing in this license restricts any right granted or affirmed by AGPL-3.0-or-later, adds a
+      term to that license, revokes any grant made under it, or charges for any act it permits. The
+      rights of termination in Section 10 end only a Grant, the Sharing Permissions under it, and
+      the permissions this license gives.
+
+14.3  A Grant is not a Contract and gives no right to use the Software in a closed commercial
+      product. Only a Contract gives that right.
+
+
+15. GENERAL
+
+15.1  No assignment. The Licensee cannot assign or transfer a Grant, or any right under it, by
+      operation of law or otherwise. A purported assignment or transfer is void.
+
+15.2  The text that governs. A Grant is governed by the version of this document the Grant
+      identifies under Section 2.4, together with the Royalty Schedule and the form of Joinder the
+      Grant identifies. A later version of this document applies to an issued Grant only where the
+      Licensee accepts it in writing, and it never reduces rights vested in a Governing Body under
+      Section 12 without a writing that body has signed.
+
+15.3  Order of documents. Where a Grant and this document conflict, the Grant controls, subject to
+      Section 2.6. Where this document and the Royalty Schedule conflict, this document controls.
+
+15.4  Severability. Where a court or arbitrator holds a term unenforceable, that term is enforced to
+      the fullest extent the law allows, and the rest of this license continues in effect.
+
+15.5  No waiver. No delay, forbearance, silence, acceptance of payment or course of dealing waives
+      any right or creates any permission. A waiver is effective only in a writing signed by the
+      party waiving that names the right waived.
+
+15.6  Survival. When a Grant or a Sharing Permission ends, these continue:
+
+        Section 5.1 to 5.3  (Attribution, credit, Credit Record), for work done under the Grant;
+        Section 5.5         (Names);
+        Section 5.7         (Non-Public Software), for as long as Section 5.7(d) states;
+        Section 7           (Community Language Material), for Community Language Material and
+                            Derived Artifacts obtained or made during the Term, for as long as the
+                            person holds any of them, and Section 7.4 for every Publication, Course
+                            Material and dataset that presents or relies on that material;
+        Section 8           (Commercialization and conversion) and Section 9 (Royalty), for Grant
+                            Works, for the period Sections 9.11 and 9.13 state;
+        Section 10.8        (Effect of ending);
+        Section 10.9        (No new Grant after defined conduct);
+        Section 11          (Remedies);
+        Section 12          (Third-party beneficiaries);
+        Section 13          (Succession and stewardship);
+        Section 15          (General);
+        Section 17          (Disclaimer of warranty); and
+        Section 18          (Limitation of liability).
+
+      Every obligation that accrued before the ending also continues. No restriction on any use of
+      the Software that AGPL-3.0-or-later permits continues after the ending.
+
+15.7  Notices. Notices are given in writing, which includes email: to the Licensor at the address
+      in Section 19; to the Licensee at the address used under Section 2.1 or a later address the
+      Licensee gives in writing; and to a Governing Body at the address it gives.
+
+15.8  Governing law and disputes. The Grant states the governing law and the forum. Where it states
+      none, this license is governed by the law of the State of the United States in which the
+      Licensor resides on the Grant Date, without regard to its conflict of laws rules, and the
+      state and federal courts of that State have jurisdiction. Where a Grant provides for
+      arbitration, the Licensor, the Licensee and any Governing Body may each still seek interim or
+      injunctive relief from a court. In any dispute under this license, the prevailing party,
+      whether Licensor, Licensee or Governing Body, recovers its reasonable attorney's fees and
+      costs. A Governing Body may bring its claims in any court that has jurisdiction over them.
+
+15.9  Earlier licenses. This version supersedes every earlier text that carries the identifier
+      LicenseRef-Educational or the title Educator's License, in any repository of the Licensor,
+      and that is not a version of this document (an "Earlier Text"). A license issued under an
+      Earlier Text is an "Earlier License". From the date the Licensor publishes this version, the
+      Licensor issues no license under an Earlier Text. Earlier Licenses are superseded as follows:
+
+        (a)  The Licensor gives the holder of an Earlier License written notice (a "Supersession
+             Notice") that ends the Earlier License under the right to end it for any reason that
+             its Earlier Text reserves, on a stated date no earlier than the date a notice under
+             Section 10.3 given on the same day would take effect, and that offers the holder a
+             Grant under this version for the use the Earlier License covered.
+
+        (b)  Where the holder accepts the offered Grant in writing before the Earlier License ends,
+             the Grant Date is the day the Earlier License ends, and the holder's permissions
+             continue without interruption.
+
+        (c)  Where the holder does not accept, the Earlier License ends on the date the
+             Supersession Notice states, the holder's use falls back to AGPL-3.0-or-later as the
+             Earlier Text provides, and the holder may still apply for a Grant under Section 2.
+
+        (d)  Under a Grant accepted under (b), work made under the Earlier License within the use it
+             covered is a Grant Work, and no Royalty is owed under this version on value received
+             before the Grant Date.
+
+        (e)  Obligations that accrued under an Earlier License before it ended stay as its Earlier
+             Text states them. This version adds nothing to them.
+
+        (f)  This Section does not by itself end an Earlier License or change its terms. An Earlier
+             License continues on its own terms until its Supersession Notice takes effect or it
+             ends under its Earlier Text. Where an Earlier Text reserves no right to end it for any
+             reason, its Earlier License is superseded only when the holder accepts a Grant in
+             writing. No use, silence or course of dealing is acceptance of a Grant.
+
+
+16. RESERVATION OF RIGHTS
+
+All rights not expressly granted in Section 3 are reserved to the Licensor, except those
+AGPL-3.0-or-later gives of its own force. No right is granted in any trademark, no right is granted
+in Third-Party Material or in Community Language Material, and no patent license is granted beyond
+what AGPL-3.0-or-later grants of its own force.
+
+
+17. DISCLAIMER OF WARRANTY
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
 NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND
 NONINFRINGEMENT. THE LICENSOR DOES NOT WARRANT THAT THE SOFTWARE IS FIT FOR ANY SAFETY-RELATED,
-LIFE-CRITICAL, OR OTHERWISE HAZARDOUS APPLICATION.
+LIFE-CRITICAL, OR OTHERWISE HAZARDOUS APPLICATION, OR THAT ANY PERSON HAS A RIGHT TO USE COMMUNITY
+LANGUAGE MATERIAL OR THIRD-PARTY MATERIAL. WHERE THE SOFTWARE INCLUDES A LANGUAGE TOOL, THE LICENSOR
+DOES NOT WARRANT THAT ITS OUTPUT IS A FORM OF THE LANGUAGE IT WAS DRAWN FROM.
 
 
-9. LIMITATION OF LIABILITY
+18. LIMITATION OF LIABILITY
 
 TO THE EXTENT PERMITTED BY LAW, THE LICENSOR SHALL NOT BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
 LIABILITY, WHETHER IN CONTRACT, TORT, OR OTHERWISE, ARISING FROM OR IN CONNECTION WITH THE SOFTWARE
-OR ITS USE.
+OR ITS USE. THIS SECTION DOES NOT LIMIT ANY OBLIGATION OF THE LICENSEE.
 
 
-10. CONTACT
+19. CONTACT
 
 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
