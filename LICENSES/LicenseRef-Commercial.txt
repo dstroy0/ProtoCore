@@ -1,99 +1,1349 @@
-embedded_types Commercial License
+ProtoCore Commercial License
+SPDX license identifier: LicenseRef-Commercial
+Version 1.0
 
 Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 
 THIS DOCUMENT DOES NOT GRANT ANYTHING BY BEING READ.
 
-It records that commercial terms are available and describes how they are reached. A commercial
-license exists only as a contract signed by the Licensor and the licensee. Absent that contract,
-every use of embedded_types falls under AGPL-3.0-or-later. The SPDX identifier
-LicenseRef-Commercial in a source file records that this route exists, not that it applies.
+It states the terms of a commercial license that exists only when the Licensor and a licensee have
+both signed an Order Form that incorporates these terms. Absent a signed Order Form, every use of
+ProtoCore falls under AGPL-3.0-or-later, and this document has no effect on that use. Nothing here
+is an offer that anyone can accept by clicking, downloading, installing, paying or using. The SPDX
+expression "AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational" in a source file
+records that these terms are one of three alternatives. It does not apply them to anyone who has
+not signed an Order Form.
+
+This document is an alternative to AGPL-3.0-or-later. It is not a term added to that license, it
+does not modify that license, and it restricts no right that license gives to anyone. Nothing in it
+charges for any act that license permits. It is not an open source license.
 
 
-1. WHY THIS ROUTE EXISTS
+RECITALS
 
-embedded_types is consumed as source. A build compiles these headers into the program that includes
-them, and AGPL-3.0-or-later then governs that program, including section 13's obligation where users
-interact with a modified program over a network.
+R.1  The author of the Software stated the purpose of this work in these words, reproduced here
+     without the capital letters of the original:
 
-Where that obligation does not suit a product, the copyright is held by one person, so terms are a
-conversation rather than a policy question.
+       "we aren't here to take anything from anyone, we are here to answer long standing
+       important questions to humanity and if I could do that alone I would, but I will not
+       live long enough to do it unless I have a great deal of help."
 
-The Software remains free to use under AGPL-3.0-or-later. That does not change, and nothing in this
-document withdraws it.
+R.2  The Software is published under AGPL-3.0-or-later so that anyone may read, run, study, change
+     and share it without paying. That route stays open. This license exists for use that
+     AGPL-3.0-or-later does not permit: shipping or operating the Software inside a closed product
+     or service.
+
+R.3  The terms of this license protect the following interests, which together are the "Purpose":
+
+       (a)  The research. Fees paid under this license fund the continued research and the help
+            needed to finish it. The Licensor may direct part of them to the place where the work
+            that produced the value was done.
+
+       (b)  The people whose work produced the value. When academic work becomes a product, the
+            students, research staff and faculty whose ideas were commercialized are the people
+            the value should reach. Value of that kind is often absorbed by an institution
+            before it reaches them. A Trustee Share exists so that part of it reaches them and
+            pays for their further research.
+
+       (c)  The system of access. The Software is free under AGPL-3.0-or-later, free of charge to
+            educators under LicenseRef-Educational, and paid for under this license. Those routes
+            stay open only while no one uses a cheaper route to take commercial value the paid
+            route prices, whether by leaving use unreported, by moving value to related parties,
+            by routing work through an educational or academic arrangement, or by transferring the
+            license through a sale or merger. Every licensee's adherence keeps the other routes
+            available.
+
+       (d)  The communities whose languages the work studies. Some software under these terms
+            reads, measures or reproduces language material that the author did not create and
+            does not own. Rights in that material, and decisions about it, rest with its speakers,
+            their communities and other rights holders. The author claims no ownership of it and
+            no authority over it. Section 7 exists so that commercial use of the Software does not
+            become a route for taking from those communities.
+
+       (e)  The record of origin. Results produced with the Software are checked against the code
+            and the data that produced them. A result credited to the wrong source, or a modified
+            version presented as the original, cannot be checked.
+
+       (f)  Continuity. The author will not live long enough to finish this work alone. These terms
+            continue after his death, provide for a successor bound to the Purpose, and give the
+            originating communities standing of their own.
+
+R.4  The parties agree that each interest in R.3 is legitimate, and that none of them is satisfied
+     by a right to recover damages alone. Each term of this license that sets a fee, requires a
+     report, permits an audit, limits a transfer or allows termination exists to protect one or
+     more of them.
+
+R.5  The Licensor intends to use the right in Section 16.1 to protect the Purpose. That statement
+     of intent is not a condition on the right, and a termination under Section 16.1 is valid
+     whether or not a reason is given.
+
+R.6  Where a term of this license can be read more than one way, the reading that better serves
+     the Purpose applies. The Recitals explain the operative terms and impose no obligation of
+     their own. Where a Recital and an operative term conflict, the operative term controls.
 
 
-2. DEFINITIONS
+1. DEFINITIONS
 
-2.1  "Licensor" means Douglas Quigg (dstroy0), who holds the copyright in the Software.
+1.1  "Licensor" means Douglas Quigg (dstroy0), who holds the copyright in the Software, and after
+     his death the Successor Licensor under Section 21.
 
-2.2  "Software" means embedded_types, in source or any derived form.
+1.2  "Software" means the following, in source code, object code or any other form, in each
+     version of ProtoCore the Order Form covers, to the extent the Licensor holds the copyright in
+     it or has the right to license it under these terms, and subject to Section 1.37:
 
-2.3  "Contract" means a written agreement signed by the Licensor and the licensee, which sets the
-     scope, the term, the fee, and the support and warranty terms for a particular use.
+       (a)  each file of ProtoCore that is in this license under Section 1.36;
 
+       (b)  the code in each Dependency, at the commit that version of ProtoCore pins or fetches;
+            and
 
-3. HOW TERMS ARE REACHED
+       (c)  each modification of the material in (a) or (b), and each work derived from it, to
+            the extent that modification or work contains that material.
 
-3.1  Write to <dquigg123@gmail.com> describing the product, the distribution model, and the scope
-     sought.
+     A "Dependency" is a repository or source tree that ProtoCore pins by a git submodule entry
+     (a gitlink) or fetches by a CMake FetchContent declaration, and each Dependency of it.
 
-3.2  Terms are negotiated per engagement. There is no standing price, no click-through, and no form
-     a licensee can accept unilaterally. A Contract takes effect on signature by the Licensor.
+1.3  "Third-Party Material" means any work distributed with the Software, read by it, or used to
+     test or measure it, in which the Licensor neither holds the copyright nor has the right to
+     license it under these terms. It is governed by its own terms.
 
-3.3  Until a Contract is in force, the use is governed by AGPL-3.0-or-later.
-
-
-4. WHAT A CONTRACT ORDINARILY SETTLES
-
-The following are the points a Contract addresses. None of them is granted by this document, and the
-list is descriptive rather than an offer.
-
-4.1  Scope: the products, versions, and territories covered, and whether the grant is per product,
-     per seat, per unit shipped, or site-wide.
-
-4.2  Relief from AGPL obligations: the source-disclosure and network-interaction obligations that
-     AGPL-3.0-or-later would otherwise attach to the licensee's program.
-
-4.3  Sublicensing: whether the licensee may pass rights to its own customers, and on what terms.
-
-4.4  Modifications: whether the licensee may modify the Software, and whether modifications are to be
-     offered back.
-
-4.5  Attribution: what notice, if any, the licensee's product carries.
-
-4.6  Term, renewal, and the effect of termination on units already shipped.
-
-4.7  Support, maintenance, and any warranty, none of which is provided absent a Contract.
-
-4.8  Fees, whether one-time, recurring, or on a royalty basis.
-
-
-5. RELATIONSHIP TO THE OTHER LICENSES
-
-5.1  A Contract governs only what it names. Any use outside its scope falls under
+1.4  "Non-Public Software" means files of the Software that the Licensor has not published, that
+     the Licensor delivers to the Licensee because an Order Form states the delivery under Section
+     2.7, and whose SPDX license identifier names LicenseRef-Commercial and does not name
      AGPL-3.0-or-later.
 
-5.2  A license issued under LicenseRef-Educational is not a Contract and confers no commercial
-     rights. Section 5 of that document covers work that becomes a product.
+1.5  "Licensee" means the legal person named as licensee in the Order Form.
 
-5.3  Nothing here restricts a person's rights under AGPL-3.0-or-later.
+1.6  "Licensee Group" means the Licensee, each of its Affiliates, and each person acting on behalf
+     of or at the direction of the Licensee or an Affiliate.
+
+1.7  "Affiliate" means a person that Controls, is Controlled by, or is under common Control with the
+     Licensee, at any time during the Term.
+
+1.8  "Control" means the power, direct or indirect, to direct the management or policies of a
+     person, whether by ownership of voting interests, by contract, by the right to appoint a
+     majority of its governing body, or otherwise. Holding more than half of the voting interests
+     in a person is Control of it.
+
+1.9  "Order Form" means a written instrument, signed by the Licensor and the Licensee, that
+     incorporates this license by name, by version and by the SHA-256 digest of its text with
+     ProtoCore left unsubstituted, and states the items Schedule A requires,
+     together with its schedules and every amendment signed by both parties.
+
+1.10 "Contract" means an Order Form together with this license, as incorporated in it. A Contract is
+     the written agreement under LicenseRef-Commercial that LicenseRef-Educational refers to.
+
+1.11 "Effective Date" means the date on which the Order Form has been signed by both parties.
+
+1.12 "Term" means the period in Section 15.
+
+1.13 "AGPL-3.0-or-later" means the GNU Affero General Public License, version 3 or any later version
+     published by the Free Software Foundation. Where this license uses a term that
+     AGPL-3.0-or-later defines, including "convey", "propagate", "modify", "covered work" and
+     "Corresponding Source", it has the meaning that license gives it.
+
+1.14 "Covered Offering" means any product, service, device, firmware, library, application,
+     platform, dataset, model or deployment of any member of Licensee Group, whether or not it is
+     sold, that incorporates the Software, is combined or linked with it, is derived from it, or
+     makes its functionality available to any person. Making functionality available through an
+     interface, service, device or system of a third party is making it available.
+
+1.15 "AGPL-Compliant Offering" means a Covered Offering for which Licensee Group, for every copy
+     conveyed and every deployment made, meets every condition of AGPL-3.0-or-later that applies,
+     including the conditions on offering Corresponding Source in sections 4, 5, 6 and 13 of that
+     license.
+
+1.16 "Licensed Product" means a Covered Offering the Order Form names as one, and a Covered
+     Offering brought within the Commercial Grant under Section 10.2.
+
+1.17 "End User" means a person who receives or uses a Licensed Product from Licensee Group for its
+     own use and not for further distribution.
+
+1.18 "Commercial Grant" means the license granted in Section 4.1.
+
+1.19 "Field", "Territory", "Initial Term", "Notice Period" and "Wind-Down Period" mean the field of
+     use, territory, initial term, notice period and wind-down period the Order Form states.
+
+1.20 "Consideration" means money and anything else of value, in any form, received or receivable.
+     Without limiting that, it includes goods, services, hardware, compute, facilities, data,
+     equity, options, warrants, tokens, carried interest, revenue or profit shares and any other
+     instrument or contingent interest, whether vested, unvested or promised; forgiveness or
+     assumption of debt; terms in any transaction that are above or below market; and value
+     directed to any other person at the request of, or with the acquiescence of, a member of
+     Licensee Group.
+
+1.21 "Fair Market Value" means the price at which the thing concerned would change hands between a
+     willing buyer and a willing seller, neither under compulsion to deal and both having
+     reasonable knowledge of the relevant facts, in an arm's-length transaction in the ordinary
+     course of business, in the same market at the same time.
+
+1.22 "Royalty Period" means each period the Order Form states for reporting and paying fees.
+
+1.23 "Rate Card" means a schedule of list fees for commercial use of the Software that is attached
+     to the Order Form, or that the Licensor has published and the Order Form identifies by
+     version and SHA-256 digest.
+
+1.24 "Designated Payee" means a legal person the Licensor names under Section 8.6.
+
+1.25 "Grant" means a license issued under LicenseRef-Educational. "Grant Work", "Reliant Activity",
+     "Royalty", "Royalty Schedule", "Research Trustee" and "Trustee Share" have the meanings that
+     license gives them, and Section 12.7 applies the last three to fees under a Contract.
+
+1.26 "Community Language Material" means recordings of speech, transcriptions, word forms, texts,
+     lexical or grammatical data, and any other record of a language, that originate with the
+     speakers of that language or their community, together with every Derived Artifact.
+
+1.27 "Derived Artifact" means any representation, encoding, model, set of weights or parameters,
+     or other artifact derived from Community Language Material. A published measurement or
+     statistic from which no part of that material, and no speaker's voice, can be reconstructed
+     is not a Derived Artifact.
+
+1.28 "Originating Community" means, for particular Community Language Material, the community of
+     the speaker as the source of that material records it, and any other community whose
+     protocol the source records as applying to it. Where material has more than one such
+     community, each is an Originating Community for that material.
+
+1.29 "Governing Body" means the body an Originating Community designates to act for it on matters
+     concerning its language or cultural material, and where it has designated none, each body
+     that the community's own governance recognizes as acting for it on those matters. Section
+     7.12 applies when a Governing Body ceases or is replaced.
+
+1.30 "Community Terms" means, for particular Community Language Material and as in force at the
+     time of the act in question: (a) the written protocols and conditions of its Originating
+     Community; (b) any Traditional Knowledge Label or Biocultural Label that the Originating
+     Community has itself applied to it (a "Label"); and (c) any condition set by the speaker, as
+     the source records it.
+
+1.31 "Withdrawal" has the meaning given in Section 7.5.
+
+1.32 "Credit Block" means the attribution text in the Software's NOTICE file, or where the Software
+     has no NOTICE file, its copyright notice and the citation in its CITATION.cff file, together
+     with any further text the Order Form adds, in the order Section 5.3 requires. The Licensor may
+     revise it only to correct a name or a notice, and a revision applies to copies distributed
+     after the Licensee receives it.
+
+1.33 "Copyright Term" means, for a version of the Software, the period ending when the last
+     copyright the Licensor holds in that version expires.
+
+1.34 "Successor Licensor" has the meaning given in Section 21.4. "Royalty Base" has the meaning
+     given in Section 9. "Excess Use" and "Excess Use Fee" have the meanings given in Section 10.
+     "Change of Control" has the meaning given in Section 13.4. "Speaker Credit" has the meaning
+     given in Section 5.3.
+
+1.35 "Including" means including without limitation. "Days" means calendar days. A reference to a
+     statute includes it as amended and any provision that replaces it.
+
+1.36 "In this license". A file is in this license where its own SPDX license identifier names
+     LicenseRef-Commercial, or where it carries no SPDX license identifier and the license
+     statement of the nearest directory above it that has a license statement names
+     LicenseRef-Commercial as a license the files of that directory are offered under. A "license
+     statement" is a file in a directory, or in a directory named LICENSES within it, that states
+     which licenses the files of that directory are offered under, or that no license is granted
+     for them. A copy of the text of a license is not, by itself, a license statement.
+
+1.37 Exclusions. The Software does not include:
+
+       (a)  Community Language Material or Third-Party Material, whatever file or directory holds
+            it and whatever identifier or license statement names this license;
+
+       (b)  a file, in ProtoCore or in a Dependency, whose own SPDX license identifier, or the
+            license statement of the nearest directory above it that has one, states that no
+            license is granted for it; or
+
+       (c)  a file in which a Code Contributor holds copyright, until each Code Contributor who
+            holds copyright in it has signed a Contributor Agreement.
+
+     A file excluded under (c) becomes part of the Software on the day the last of those Code
+     Contributors signs.
+
+1.38 "Code Contributor" means a person, other than the Licensor, who holds copyright in any part
+     of a file of ProtoCore or of a Dependency. "Contributor Agreement" means a written agreement,
+     signed by a Code Contributor, under which that Code Contributor keeps its copyright and its
+     credit and permits the Licensor to license its contributions under LicenseRef-Commercial and
+     LicenseRef-Educational.
+
+
+2. HOW A CONTRACT IS FORMED
+
+2.1  A prospective licensee writes to <dquigg123@gmail.com> describing the product or service, how
+     it is distributed or operated, and the scope of use sought.
+
+2.2  A Contract is formed only by an Order Form signed by both parties. Nothing else forms one: not
+     a quotation, an invoice, a payment, a purchase order, correspondence, a course of dealing, or
+     the Licensor's silence or tolerance.
+
+2.3  Schedule A lists the items an Order Form states. Where an Order Form leaves blank an item that
+     Schedule A marks as required, no Commercial Grant arises under it until the parties complete
+     that item by an amendment signed by both.
+
+2.4  Where the Order Form and this license differ, they apply in this order: first, a term of the
+     Order Form that names the section of this license it changes; second, this license; third,
+     every other term of the Order Form. No term of a purchase order, invoice, portal, click-through
+     or other document of the Licensee applies, even if signed or acknowledged by the Licensor.
+
+2.5  Protected terms. No Order Form, and no amendment, changes:
+
+       (a)  Section 3, Section 10.8, Section 18, or a definition any of them uses, including
+            Sections 1.13 and 1.15;
+
+       (b)  Section 12.7, or any other section a Research Trustee may enforce under it; or
+
+       (c)  a Community Schedule, or any section an Originating Community may enforce under Section
+            7.8, except by a writing its Governing Body has signed.
+
+     An Order Form may change any other section as Section 2.4 provides.
+
+2.6  The Licensor grants no most-favored terms. What any other licensee pays or receives is not a
+     term of any Contract.
+
+2.7  Delivery of unpublished files. The Licensor delivers files of the Software that are not
+     published only where the Order Form states the delivery and identifies the files. Nothing in
+     this license obliges the Licensor to deliver any file.
+
+
+3. RELATIONSHIP TO AGPL-3.0-OR-LATER AND THE OTHER LICENSES
+
+3.1  AGPL-3.0-or-later, this license and LicenseRef-Educational are offered as alternatives. This
+     license is not an additional term or a further restriction within the meaning of sections 7
+     and 10 of AGPL-3.0-or-later, and it is not attached to any copy of the Software distributed
+     under that license.
+
+3.2  Nothing in this license restricts, conditions, narrows, revokes or terminates any right that
+     any person holds under AGPL-3.0-or-later, including the Licensee. Section 2 of that license
+     makes those rights irrevocable while its conditions are met, and this license does not claim
+     otherwise. Nothing in this license withdraws AGPL-3.0-or-later from any version of the
+     Software released under it.
+
+3.3  The terms of this license on fees, reports, audit, transfer, termination and enforcement bind
+     only the Licensee and the members of Licensee Group, and bind them only because the Licensee
+     signed an Order Form. They bind no person who receives the Software under AGPL-3.0-or-later,
+     and no End User.
+
+3.4  The Licensee may at any time do anything AGPL-3.0-or-later permits, on that license's
+     conditions, and no fee under this license is measured on an AGPL-Compliant Offering.
+     AGPL-3.0-or-later does not permit conveying a covered work without meeting its conditions on
+     Corresponding Source, or operating a modified version for users who interact with it remotely
+     without the offer its section 13 requires. Doing either without the Commercial Grant is
+     licensed neither by AGPL-3.0-or-later nor by this license.
+
+3.5  A Grant is issued to a named individual and confers no commercial right. Nothing Licensee
+     Group obtains through a Grant, or through a person who holds one, is licensed under a
+     Contract. Section 12 applies to work that passes between the two.
+
+3.6  When a Contract ends for any reason, the Licensee keeps every right AGPL-3.0-or-later then
+     gives it, on that license's conditions.
+
+
+4. COMMERCIAL GRANT
+
+4.1  Subject to the conditions in Section 5, from the Effective Date and for the Term, the Licensor
+     grants the Licensee a non-exclusive and non-transferable license, sublicensable only under
+     Section 13.2, under the copyright the Licensor holds in the Software or has the right to
+     license under these terms, within the Field and the Territory and only for Licensed Products,
+     to:
+
+       (a)  reproduce and modify the Software and prepare works derived from it;
+
+       (b)  combine the Software with software and other material that is not licensed under
+            AGPL-3.0-or-later, including the Licensee's own proprietary code;
+
+       (c)  distribute Licensed Products in the forms, object code, source code or both, that the
+            Order Form states, without the conditions AGPL-3.0-or-later attaches to conveying,
+            including the conditions to offer Corresponding Source and to license the whole work
+            under that license;
+
+       (d)  operate Licensed Products, modified or not, for users who interact with them through a
+            computer network, without the offer that section 13 of AGPL-3.0-or-later requires; and
+
+       (e)  exercise any further right the Order Form states.
+
+4.2  The Licensee may permit End Users to use the object code of a Licensed Product they receive or
+     access. Where Licensee Group supplies End Users with written or electronic terms for a Licensed
+     Product, those terms forbid them to reverse engineer, extract or redistribute the Software
+     except as the law gives them a right that cannot be excluded. Where a Licensed Product is
+     firmware in a device supplied with no end-user terms, End Users may use it in that device
+     without them. That permission is not a sublicense of any right in the source code of the
+     Software.
+
+4.3  Members of Licensee Group, and contractors engaged by the Licensee, may exercise the Commercial
+     Grant on the Licensee's behalf, for Licensed Products only, under written terms at least as
+     protective of the Licensor as this license that forbid any use of the Software for anyone
+     else. The Licensee is responsible for their acts and omissions as for its own.
+
+4.4  Fees under a Contract are paid for the Commercial Grant under copyright, for access to any
+     Non-Public Software, and for any services the Order Form names. No part of any fee is paid for
+     a license under any patent, and no patent license is granted by this license. A patent
+     license, if any, is granted only by a separate instrument signed by the Licensor that states
+     its own fees, and the fees under a Contract do not change because of it. Nothing in this
+     license limits a patent license that section 11 of AGPL-3.0-or-later grants of its own force
+     to a person who exercises rights under that license.
+
+
+5. CONDITIONS ON THE COMMERCIAL GRANT
+
+5.1  The Commercial Grant is granted only on the conditions in Sections 5.2 to 5.5. Each of them
+     limits the scope of the license and concerns reproducing, adapting, distributing or making
+     available the Software. Reproduction, modification, distribution or network operation of the
+     Software that does not meet them is outside the Commercial Grant. Section 5.6 is a promise of
+     the Licensee.
+
+5.2  Scope. The Commercial Grant extends only to Licensed Products, within the Field and the
+     Territory, during the Term, exercised by members of Licensee Group or by contractors under
+     Section 4.3.
+
+5.3  Credit Block. The Licensee may exercise the Commercial Grant for a Licensed Product provided
+     that the Licensed Product carries the Credit Block, unaltered, in its documentation, in its
+     notices file, and in any screen or interface that displays legal notices, in this order:
+
+       (a)  where the Licensed Product includes, is derived from or processes Community Language
+            Material, the Speaker Credit: the credit that each Governing Body concerned has
+            designated, from the time Licensee Group has notice of the designation from any source,
+            and until a Governing Body has designated one, the speaker as the source records the
+            speaker, together with the Originating Community, placed before the linguist who
+            recorded or published the material, any transcriber, the Software and the Licensor;
+
+       (b)  where it includes or is derived from a published corpus or dataset, the credit that
+            corpus or dataset requires;
+
+       (c)  the Software, the Licensor, each Code Contributor the Software's notices name, and the
+            copyright notice in the Software; and
+
+       (d)  any further text the Order Form adds.
+
+     Where a Licensed Product is not distributed as files, its documentation carries the Credit
+     Block. Where the source of Community Language Material does not name the speaker, the Speaker
+     Credit states that the speaker is not named and puts no other person in the speaker's place.
+     Where the Community Terms bar naming a person, including a person who has died, the Speaker
+     Credit is the credit the Community Terms permit.
+
+5.4  Notices. The Licensee may exercise the Commercial Grant provided that it does not remove or
+     alter any copyright notice, SPDX identifier, license notice or Credit Block in the Software,
+     or in any copy of the Software or of a modified version that Licensee Group distributes in
+     source code form.
+
+5.5  Origin and marking. The Licensee may exercise the Commercial Grant provided that it does not
+     misrepresent the origin of the Software, including by presenting a Licensed Product as not
+     derived from the Software, and provided that every modified version of the Software that
+     Licensee Group distributes in source code form is marked as modified, with the date of
+     modification.
+
+5.6  Names. Licensee Group does not use the name of the Licensor, of any Originating Community or
+     Governing Body, of any speaker, of any Code Contributor, of any Research Trustee, or of any
+     Designated Payee to state or imply endorsement,
+     sponsorship, approval or official status, except as the Credit Block requires or as the person
+     named permits in writing.
 
 
 6. RESERVATION OF RIGHTS
 
-All rights are reserved to the Licensor except those granted by AGPL-3.0-or-later or by a Contract.
-No right is granted in any trademark.
+6.1  Every right not expressly granted in Section 4 is reserved to the Licensor, except those
+     AGPL-3.0-or-later gives of its own force. No right arises by implication, estoppel or course
+     of dealing.
+
+6.2  No right is granted in any trademark, service mark, trade name or logo of the Licensor, of any
+     Originating Community, or of any other person.
+
+6.3  No right is granted in Third-Party Material or in Community Language Material.
 
 
-7. NO WARRANTY ABSENT A CONTRACT
+7. COMMUNITY LANGUAGE MATERIAL
 
-WHERE NO CONTRACT IS IN FORCE, THE SOFTWARE IS PROVIDED "AS IS" UNDER AGPL-3.0-or-later, WITHOUT
-WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. THE LICENSOR DOES NOT WARRANT THAT THE SOFTWARE IS FIT FOR
-ANY SAFETY-RELATED, LIFE-CRITICAL, OR OTHERWISE HAZARDOUS APPLICATION. WARRANTY AND SUPPORT TERMS, IF
-ANY, ARE THOSE A CONTRACT STATES.
+7.1  Where this Section applies. This Section applies only where the Software includes, is derived
+     from or processes Community Language Material, or where Licensee Group uses the Software or a
+     Covered Offering with Community Language Material. Where neither is the case, this Section
+     imposes nothing.
+
+7.2  What the Licensor does not claim. The Licensor does not own Community Language Material, is not
+     its guardian or custodian, holds no authority over it, and grants no right in it. Material the
+     Licensor holds privately, including any closed corpus, is not licensed by this license and is
+     not delivered under a Contract. Nothing in this license claims, licenses or implies ownership
+     of Community Language Material or of any community's words. The Licensor does not apply
+     Traditional Knowledge Labels or Biocultural Labels, which only an Originating Community
+     applies. Nothing in this license
+     permits the commercial use of Community Language Material. That requires the written
+     permission of each Originating Community concerned and of any other rights holders.
+
+7.3  Permission from those who hold it. Before a Covered Offering includes, is derived from, is
+     trained, fitted or conditioned on, or processes Community Language Material, the Licensee
+     obtains the permission the Community Terms require from the Originating Community or its
+     Governing Body, and the permission any other rights holder requires, and keeps a written
+     record of each permission for as long as Licensee Group holds the material.
+
+7.4  Obligations. Where this Section applies, Licensee Group:
+
+       (a)  follows the Community Terms for the material it uses;
+
+       (b)  gives the credit Section 5.3(a) describes in every publication, dataset, product
+            documentation and data availability statement it controls that presents or relies on
+            the material, placed first in the acknowledgments where it does not control author
+            order;
+
+       (c)  does not use Community Language Material, alone or with the Software, a Covered
+            Offering or other tools, to train, fit or condition a system that produces speech in a
+            speaker's voice or in an Originating Community's speech patterns, unless the Community
+            Terms permit that use by name;
+
+       (d)  does not redistribute recordings of speakers except as the Community Terms permit;
+
+       (e)  does not publish, convey or present to users, as a form of an Originating Community's
+            language, output generated or regenerated from Community Language Material, unless a
+            speaker of that language, or a person the Governing Body designates, has reviewed it
+            first, and marks any such output it publishes, conveys or presents as generated;
+
+       (f)  does not state or imply that a Covered Offering or its output is made, approved or
+            endorsed by an Originating Community, or conforms to any Indigenous data governance
+            framework or protocol, unless the Governing Body, or the body that governs that
+            framework or protocol, has said so in writing; and
+
+       (g)  complies with the data protection law that applies to recordings of, and other data
+            about, identifiable people.
+
+7.5  Withdrawal. Community Language Material is withdrawn (a "Withdrawal") when a speaker, a
+     speaker's heir or designated representative, or a Governing Body gives written notice
+     withdrawing it. A later signed version of an inventory that no longer lists material, and that
+     states whose request the change records, is notice of that person's Withdrawal. After
+     Licensee Group receives notice of a Withdrawal from any source:
+
+       (a)  it stops using, conveying and making available the withdrawn material and every
+            Derived Artifact made from it, including in every Covered Offering, at once;
+
+       (b)  within the period the Governing Body sets, or where it sets none, the period the Order
+            Form states under Schedule A item A.13, it destroys every copy of them in its
+            possession or control, except that where the notice does not come from a Governing
+            Body, it may wait for that Governing Body's confirmation before destroying them, inside
+            the same period; and
+
+       (c)  it confirms in writing, to the person who gave notice and to the Licensor, that this
+            has been done.
+
+     A Withdrawal needs no reason and does not expire. Licensee Group need not retract a
+     publication issued before it received notice, and makes no new use of withdrawn material.
+
+7.6  Who decides. Whether a use conforms to a Label or to Community Terms is decided by the
+     Governing Body's written statement. Where an Originating Community or its Governing Body sets
+     terms for its material by any instrument, those terms govern Licensee Group's use of that
+     material in place of this Section to the extent they differ from it.
+
+7.7  Notice of new terms. Where the Licensor receives new Community Terms, a Withdrawal, or a
+     designation of credit under Section 5.3(a), the Licensor forwards it to each licensee the
+     Licensor knows to be using the material concerned. Licensee Group is bound by new Community
+     Terms, and by a Withdrawal, from the time it has notice of them, from any source.
+
+7.8  Originating Communities as beneficiaries. Each Originating Community, acting through its
+     Governing Body, is an intended third-party beneficiary of this Section 7, of Sections 5.3(a),
+     5.6 as it concerns its name and its speakers' names, 16.3(e) and 16.6, of Schedule B, of
+     Section 22.1 as it concerns Section 7, and of Sections 17, 19 and 20 as they apply to those
+     Sections. It may enforce them in its own name, including by seeking injunctive relief, without
+     joining the Licensor. Its rights vest on the Effective Date and cannot be varied or released,
+     by an Order Form, an amendment or any other writing, except by a writing its Governing Body
+     has signed. For the purposes of the Contracts (Rights of Third Parties) Act 1999 and any
+     similar law, each Originating Community is identified by the description in Section 1.28.
+     The Licensor acts for an Originating Community only where its Governing Body asks the
+     Licensor to in writing.
+
+7.9  Community Schedule. Where the Order Form includes a Community Schedule under Schedule B that a
+     Governing Body has set and signed, Licensee Group also performs it. Where a Community Schedule
+     states a sum payable to the Governing Body on a stated act, the parties record that the harm
+     that act causes falls on the dignity of speakers and the authority of a community over its
+     language, that it is hard to prove in money, that the Governing Body set the sum, and that the
+     sum is proportionate to the community's interest in the performance of this Section. The sum
+     is payable to the Governing Body. No part of it is payable to the Licensor.
+
+7.10 Scope. This Section binds only Licensee Group, and only because the Licensee signed an Order
+     Form. It places no obligation on any person who uses the Software under AGPL-3.0-or-later. Its
+     duties concern Community Language Material and Derived Artifacts, and they place no
+     restriction on any use of the Software that AGPL-3.0-or-later permits. After a Contract ends
+     they continue only as Section 22.1 states.
+
+7.11 More than one community. Where material has more than one Originating Community and their
+     designations, Community Terms or Withdrawal periods differ, Licensee Group meets each of them
+     it can, follows the most restrictive where they cannot all be met, and refers the conflict to
+     the Governing Bodies concerned. The Licensor does not decide it.
+
+7.12 Change of Governing Body. Where a Governing Body ceases to exist, or its Originating Community
+     designates another body, the rights and the notices of the earlier body pass to the body the
+     community designates next. No right lapses in the interval.
 
 
-8. CONTACT
+8. FEES
+
+8.1  The Licensee pays the fees the Order Form states. Every rate, band, threshold, minimum and
+     deadline is stated in the Order Form as a number, or as a formula applied to facts the
+     Licensee reports. None is left to later agreement or to the discretion of either party.
+
+8.2  The Order Form may use one or more of these structures:
+
+       (a)  a running royalty at a stated rate on the Royalty Base, with a minimum annual royalty;
+
+       (b)  fees in bands measured by the revenue or funding of Licensee Group under Section 9.6;
+
+       (c)  fees per unit, seat, device, user or deployment; and
+
+       (d)  fixed fees.
+
+8.3  The fee for each Royalty Period is a separate obligation, and the report for each Royalty
+     Period is a separate obligation. Each falls due on the date the Order Form states for it.
+
+8.4  A failure to deliver a report when due is a breach whether or not any fee is owed for that
+     Royalty Period.
+
+8.5  Fees are paid in the currency the Order Form states, without set-off or counterclaim, and
+     without deduction except for tax the law requires the Licensee to withhold, for which the
+     Licensee delivers the official receipt. An amount not paid when due bears interest from the
+     due date until paid at the rate the Order Form states, or at the highest rate the law permits
+     where that is lower. Each party bears the taxes on its own income. The Licensee bears every
+     other tax on fees and on Licensed Products.
+
+8.6  Designated Payee. The Licensor may direct, in the Order Form or by later written notice, that
+     a stated percentage of the fees be paid to one or more Designated Payees, each a legal person
+     identified by name. The Licensee has no power over the choice of a Designated Payee, or over
+     how a Designated Payee uses what it receives. A direction does not change the amount the
+     Licensee owes, the currency or the due date, and payment to a Designated Payee as directed
+     discharges the Licensee to the extent of that payment. A Designated Payee is an intended
+     third-party beneficiary of the Licensee's payment obligation only where the Order Form or the
+     direction says so. No direction under this Section reduces a Trustee Share under Section 12.7.
+
+8.7  No royalty accrues for use of a version of the Software after the Copyright Term for that
+     version ends. Amounts that accrued before then remain payable.
+
+
+9. ROYALTY BASE
+
+9.1  The "Royalty Base" for a Licensed Product in a Royalty Period is the greater of:
+
+       (a)  all Consideration that Licensee Group receives, or becomes entitled to, in that period
+            on account of the Licensed Product; and
+
+       (b)  the Fair Market Value of the Licensed Product supplied, licensed or made available in
+            that period, measured as though supplied to an unrelated person.
+
+9.2  Related parties. Where a Licensed Product, or a right in one, is supplied, licensed or made
+     available to an Affiliate, a nominee, a spinout, a joint enterprise, a person in which a member
+     of Licensee Group holds an interest, or a person acting at the direction of Licensee Group, it
+     is valued at its Fair Market Value. Where that supply is for resale, the Royalty Base is also
+     measured on the resale, and the greater of the two applies.
+
+9.3  Bundles and pricing. Where a Licensed Product is supplied with other products or services for
+     one price, or at a discount tied to other products or services, the Consideration allocated to
+     the Licensed Product is not less than its Fair Market Value supplied alone. Where Licensee
+     Group prices a Licensed Product below its Fair Market Value for the purpose of increasing the
+     sales of other products or services, the Royalty Base for that Licensed Product is its Fair
+     Market Value.
+
+9.4  Consideration in kind. Consideration other than money is valued at its Fair Market Value when
+     received. Contingent or unvested Consideration is valued at its Fair Market Value when it vests
+     or the contingency resolves, and counts in the Royalty Period in which that happens. Fees on
+     Consideration in kind are payable in money.
+
+9.5  Substance governs. The form of an arrangement does not change the Royalty Base: how it is
+     structured, what an entity is called, whether it is incorporated as a non-profit, who holds
+     title, whether money is called a donation, grant, sponsorship, reimbursement, investment or
+     service fee, whether Consideration is paid in money or in kind, whether it is received by a
+     member of Licensee Group or directed to another person, and whether the Software is described
+     as a component. What counts is whether Consideration was received on account of a Licensed
+     Product.
+
+9.6  Revenue bands. Where the Order Form sets fees in bands measured by revenue or funding, the
+     measure is the combined gross revenue and funding, from all sources, of Licensee Group in its
+     most recent complete fiscal year. Where Licensee Group uses a Licensed Product to provide
+     services to a client, the measure is the greater of that figure and the client's. A higher
+     band applies from the first day on which the measure exceeds the threshold of that band.
+
+9.7  Deductions. The only deductions from the Royalty Base are those the Order Form lists by name.
+
+
+10. EXCESS USE AND CONVERSION
+
+10.1 "Excess Use" means each of the following, from the first day on which it occurs:
+
+       (a)  a Covered Offering that is neither a Licensed Product nor an AGPL-Compliant Offering;
+
+       (b)  use of a Licensed Product outside the Field, the Territory, or a number of units,
+            seats, devices, users or deployments the Order Form states; and
+
+       (c)  any other exercise of a right in Section 4.1 beyond the scope the Order Form states.
+
+10.2 Licensing Excess Use. The Licensee may bring Excess Use within the Commercial Grant. Excess Use
+     is licensed, from its first day, when the Licensee has reported all of it and has paid the
+     Excess Use Fee for all of it, with any interest Section 10.4 requires. Until then it is not
+     licensed. Excess Use under Section 10.1(a) that is licensed this way makes that Covered
+     Offering a Licensed Product.
+
+10.3 Reported Excess Use. Where the Licensee reports Excess Use in the first report that falls due
+     after any member of Licensee Group knew of it, the "Excess Use Fee" is the fee the Order Form
+     states for the most nearly comparable Licensed Product, applied from the first day of the
+     Excess Use, without interest for the period before that report fell due.
+
+10.4 Unreported or repeated Excess Use. Where Excess Use becomes known other than by a report under
+     Section 10.3, or where Excess Use of the same kind recurs after an earlier report, the "Excess
+     Use Fee" is the fee the Rate Card states for that use, or where the Rate Card states none or
+     there is no Rate Card, the fee Section 10.3 describes. It applies from the first day of the
+     Excess Use, with interest under Section 8.5 from the date on which each part would have fallen
+     due as a fee.
+
+10.5 Excess Use with no stated fee. Where the Rate Card states no fee for the Excess Use and the
+     Order Form states no fee for a comparable Licensed Product, the Excess Use can be licensed only
+     by an amendment signed by both parties, and until then it is not licensed.
+
+10.6 Remedies kept. This Section sets the price at which the Licensee may license Excess Use. It
+     does not waive any remedy for Excess Use that has not been licensed under Section 10.2. An
+     Excess Use Fee paid for particular use is credited against any damages recovered for the same
+     use.
+
+10.7 Burden. The Licensee bears the burden of showing that a Covered Offering is an AGPL-Compliant
+     Offering, that a use falls within the Commercial Grant, and that a Royalty Base, a revenue
+     measure or a deduction it reports is correct.
+
+10.8 Moving a Licensed Product to AGPL-3.0-or-later. A Licensed Product stops being one, and no fee
+     is measured on it, from the date on which it becomes an AGPL-Compliant Offering for every copy
+     conveyed and every deployment made from that date. The Licensee reports the change under
+     Section 11.1(e) in the next report due, and that report has no effect on fees. Fees that
+     accrued before that date remain payable.
+
+
+11. REPORTS, RECORDS AND AUDIT
+
+11.1 Reports. For each Royalty Period, by the date the Order Form states, the Licensee delivers a
+     written report, signed by an officer of the Licensee, stating:
+
+       (a)  each Licensed Product, and its units, seats, devices, users, deployments and
+            Consideration in that period;
+
+       (b)  the Royalty Base for each Licensed Product and how it was computed, including each
+            supply to a related party under Section 9.2 with its valuation, each allocation under
+            Section 9.3, and all Consideration in kind with its valuation;
+
+       (c)  the revenue or funding measure, where Section 9.6 applies;
+
+       (d)  all Excess Use;
+
+       (e)  each Covered Offering that Licensee Group treats as an AGPL-Compliant Offering, and
+            where its Corresponding Source is offered;
+
+       (f)  each work received under Section 12.2;
+
+       (g)  each Change of Control that has occurred or been agreed; and
+
+       (h)  the fees due.
+
+11.2 Records. Licensee Group keeps complete and accurate books and records sufficient to verify
+     every report, for five years after the end of the Royalty Period they concern, and for longer
+     while any dispute about that period is unresolved.
+
+11.3 Audit. Once in each calendar year, on reasonable prior written notice, during normal business
+     hours, an independent certified public accountant, or an equivalent professional where the
+     records are kept outside the United States, chosen by the Licensor and bound by a duty of
+     confidentiality, may inspect and copy those books and records and examine the systems that
+     produce them. The accountant reports to both parties whether each report was correct and the
+     amount of any difference, and discloses nothing else.
+
+11.4 Settlement. The Licensee pays any shortfall the audit shows, with interest under Section 8.5,
+     within the payment period the Order Form states for fees, counted from its receipt of the audit
+     report. Where the shortfall for any Royalty Period audited is more than five percent of the
+     amount due for that period, the Licensee also pays the full cost of the audit. An overpayment
+     the audit shows is credited against the next fees due, or refunded where no further fees will
+     fall due.
+
+11.5 The rights in this Section continue for three years after the Contract ends.
+
+
+12. EDUCATIONAL AND ACADEMIC ARRANGEMENTS
+
+12.1 Licensee Group does not use or rely on a Grant for any Covered Offering.
+
+12.2 Where a member of Licensee Group sponsors, funds, employs, engages or supplies a person who
+     uses the Software under a Grant or at an educational or research institution, or receives
+     results, code, data, models or know-how from such a person, a Covered Offering that
+     incorporates or is derived from the Software, including the Software as that person modified
+     it, and that Licensee Group obtained through that person, is a Covered Offering of Licensee
+     Group from the first day Licensee Group uses it, and Sections 9, 10 and 12.7 apply to it.
+
+12.3 Licensee Group does not structure, request or accept an arrangement under which work on a
+     Covered Offering is done under a Grant, or under an academic, sponsored research or
+     non-profit arrangement, so that Consideration falls outside the Royalty Base or so that a
+     Covered Offering avoids being either a Licensed Product or an AGPL-Compliant Offering.
+
+12.4 Licensee Group does not induce any holder of a Grant to breach it.
+
+12.5 Where a Contract covers commercial activity that is also Reliant Activity with a Grant Work
+     under a Grant, the Order Form states whether fees paid to the Licensor under the Contract are
+     credited against the part of the Royalty under that Grant that is payable to the Licensor. No
+     fee, credit or term of an Order Form reduces the Trustee Share under that Grant.
+
+12.6 Nothing in this Section limits any person's rights under AGPL-3.0-or-later, or places an
+     obligation on any person who has not signed an Order Form.
+
+12.7 Trustee Share on academic work. Where Section 12.2 applies to a Covered Offering:
+
+       (a)  a part of every fee measured on that Covered Offering, including any Excess Use Fee,
+            at the Trustee Share percentage the Royalty Schedule states, is the Trustee Share, and
+            is paid to a Research Trustee;
+
+       (b)  the Royalty Schedule is the version the Order Form identifies by version and SHA-256
+            digest, and where it identifies none, the version the Licensor most recently published
+            before the Effective Date. Where none had been published before the Effective Date, no
+            Commercial Grant arises for that Covered Offering until the parties identify one by an
+            amendment signed by both;
+
+       (c)  the Licensor designates the Research Trustee in writing: a person at, or a trust or
+            other legal entity connected with, the educational or research institution at which
+            the person under Section 12.2 did the work. The designation takes effect when the
+            Research Trustee accepts it in writing and agrees to hold the Trustee Share for the
+            students, research staff and faculty whose work produced the Covered Offering, and to
+            apply it only to fund research by or for them. The Licensor may replace a Research
+            Trustee by the same procedure;
+
+       (d)  Licensee Group has no power over the designation, or over the Research Trustee's
+            decisions within (c);
+
+       (e)  the Licensee pays the Trustee Share in full directly to the Research Trustee when the
+            fee is due, and pays the rest of the fee as the Contract otherwise requires. Until a
+            Research Trustee has accepted a designation, the Licensee holds the Trustee Share in a
+            separate account, identifies that account in each report under Section 11.1, and pays
+            the balance, with any interest earned on it, to the Research Trustee within the payment
+            period the Order Form states for fees, counted from its receipt of notice of the
+            acceptance;
+
+       (f)  no Order Form, amendment, credit, set-off, direction under Section 8.6 or assignment
+            under Section 13.7 reduces the Trustee Share;
+
+       (g)  the Trustee Share is not the property of Licensee Group, of the institution or of the
+            Licensor; and
+
+       (h)  the Research Trustee is an intended third-party beneficiary of this Section 12.7, and of
+            Sections 8.5, 11 and 17.6 as they concern the Trustee Share, and may enforce payment of
+            the Trustee Share in its own name.
+
+
+13. NO TRANSFER: SUBLICENSING, ASSIGNMENT AND CHANGE OF CONTROL
+
+13.1 The Commercial Grant is personal to the Licensee.
+
+13.2 Sublicensing. The Licensee grants no sublicense of any right under a Contract, except to the
+     distributors and resellers the Order Form names, on the terms it states. Any grant, permission
+     or arrangement that allows a person other than a member of Licensee Group, a contractor under
+     Section 4.3 or an End User under Section 4.2 to exercise a right in the Software is a
+     sublicense, whatever it is called.
+
+13.3 Assignment. The Licensee does not assign, delegate, transfer, pledge or otherwise dispose of a
+     Contract, or any right or duty under one, in whole or in part, whether voluntarily, by
+     operation of law, by merger, conversion or division, or otherwise, without the Licensor's prior
+     written consent. Any purported assignment, delegation or transfer without that consent is
+     void.
+
+13.4 "Change of Control" means any of the following:
+
+       (a)  a person, or persons acting together, acquiring Control of the Licensee who did not
+            have it before;
+
+       (b)  a merger, consolidation, conversion, division or share exchange to which the Licensee
+            or a person that Controls it is a party, whether or not the Licensee survives it,
+            including a merger of a subsidiary of the acquirer into the Licensee;
+
+       (c)  a sale, lease, license or other transfer of all or substantially all of the assets of
+            the Licensee, or of the business in which a Licensed Product is made, supplied or
+            operated; and
+
+       (d)  any transaction or series of related transactions with the same effect as (a), (b) or
+            (c).
+
+13.5 Effect of a Change of Control. The Licensee gives the Licensor written notice of a Change of
+     Control before it takes effect, or where the law prevents that, as soon as the law permits
+     after. The Commercial Grant continues after a Change of Control only where the Licensor
+     consents in writing, on any terms the Order Form sets in advance for a Change of Control, or
+     where it sets none, on the terms of the Licensor's written consent. Where the Licensor has not
+     consented, the Commercial Grant ends at the end of the Wind-Down Period counted from the date
+     the Change of Control takes effect, and Section 16.6 applies. The Licensee does not complete a
+     Change of Control until the person acquiring Control, or the assets or business, has agreed in
+     writing, for the benefit of the Licensor, to perform every obligation under the Contract that
+     accrued before the Change of Control takes effect or accrues during the Wind-Down Period.
+
+13.6 Rights under AGPL-3.0-or-later pass on that license's own terms, including section 10 of that
+     license. This Section does not affect them.
+
+13.7 The Licensor may assign a Contract, or the right to receive any fee under it, to any person,
+     including a Successor Licensor, a trust or a Designated Payee, by written notice to the
+     Licensee. The assignment does not change the Licensee's obligations, and it does not reach a
+     Trustee Share under Section 12.7.
+
+
+14. CONFIDENTIALITY
+
+14.1 Non-Public Software is confidential information of the Licensor. Licensee Group uses it only
+     for Licensed Products, discloses it only to members of Licensee Group and contractors under
+     Section 4.3 who need it for that use and are bound in writing to keep it confidential, and
+     protects it with at least the care it uses for its own confidential information of like
+     importance, and in any case with reasonable care.
+
+14.2 Reports, audit results and the fees stated in an Order Form are confidential to both parties.
+     Either party may disclose them to its professional advisers, to a court or tribunal, and as
+     the law requires. The Licensor may also disclose them to a Designated Payee, to a Successor
+     Licensor, and, as to Section 7, to a Governing Body.
+
+14.3 This Section does not apply to information that is or becomes public other than through a
+     breach of a Contract, that the recipient knew before receiving it without a duty to keep it
+     confidential, that the recipient develops independently without use of it, or that the
+     recipient receives lawfully from a third party without a duty to keep it confidential.
+
+14.4 The duties in this Section last for as long as the information remains confidential.
+
+14.5 This Section reaches no copy of a file that the person holding it received under
+     AGPL-3.0-or-later, and no file whose SPDX license identifier names AGPL-3.0-or-later, and it
+     restricts no act AGPL-3.0-or-later permits.
+
+
+15. TERM
+
+15.1 A Contract runs from the Effective Date for the Initial Term and renews as the Order Form
+     states, until it ends under Section 16, or the Commercial Grant ends under Section 13.5.
+
+15.2 A Contract does not run beyond the Copyright Term of the latest version of the Software it
+     covers.
+
+
+16. TERMINATION
+
+16.1 Termination by the Licensor for any reason. The Licensor may terminate a Contract, or the
+     Commercial Grant for any Licensed Product, for any reason or for no reason, by written notice.
+     No reason need be stated. Termination takes effect at the end of the Notice Period, counted
+     from the Licensee's receipt of the notice. It operates from that date forward only, it does not
+     affect any right under AGPL-3.0-or-later, and it is followed by the Wind-Down Period under
+     Section 16.6. The Licensor refunds the part of any fee paid in advance for a period after the
+     Wind-Down Period ends, in proportion to the days of that period remaining.
+
+16.2 Termination by the Licensee for any reason. The Licensee may terminate a Contract, or the
+     Commercial Grant for any Licensed Product, for any reason or for no reason, by written notice
+     taking effect at the end of the Notice Period, counted from the Licensor's receipt of the
+     notice.
+
+16.3 Immediate termination for listed conduct. The Licensor may terminate a Contract at once, by
+     written notice that identifies the conduct and states the facts relied on, where the Licensor
+     concludes in good faith that a member of Licensee Group has done any of the following:
+
+       (a)  knowingly failed to report, or knowingly understated or misstated, a Licensed Product,
+            a Covered Offering other than an AGPL-Compliant Offering, Excess Use, a Royalty Base, a
+            revenue or funding measure, or Consideration;
+
+       (b)  supplied, allocated or priced a Licensed Product below its Fair Market Value under
+            Section 9.2 or Section 9.3 for the purpose of reducing fees;
+
+       (c)  structured, requested or accepted an arrangement Section 12.3 describes, or induced a
+            breach Section 12.4 describes;
+
+       (d)  purported to sublicense, assign or transfer in breach of Section 13, or completed a
+            Change of Control without the notice or the written agreement Section 13.5 requires;
+
+       (e)  as to Community Language Material: continued to use, convey or make available withdrawn
+            material or a Derived Artifact made from it after the period in Section 7.5(b);
+            knowingly removed or reordered the credit Section 5.3(a) requires; used material in a
+            way Section 7.4(c) prohibits; or continued a use of Community Language Material after
+            the Governing Body stated in writing, under Section 7.6, that the use is contrary to a
+            Label or to Community Terms;
+
+       (f)  knowingly removed or altered a Credit Block or a notice Section 5.4 protects, or
+            misrepresented the origin of the Software;
+
+       (g)  refused or obstructed an audit under Section 11, or destroyed or altered records
+            Section 11.2 requires to be kept; or
+
+       (h)  disclosed Non-Public Software in breach of Section 14.
+
+     This list is closed. Each act in it defeats an interest named in R.3 in a way the Licensor, or
+     an Originating Community, cannot reliably detect, measure or reverse once it has happened. For
+     that reason the parties agree that the Licensee's adherence to each is a material part of the
+     agreed exchange, and that no period to cure applies to any of them.
+
+16.4 Termination after notice and cure. Either party may terminate a Contract by written notice
+     where the other party materially breaches it, other than by an act listed in Section 16.3, and
+     does not cure the breach within 30 days after receiving written notice describing it. A
+     failure to deliver a report, or to pay an amount not disputed in good faith, within 30 days
+     after written notice of the failure is a material breach.
+
+16.5 Termination does not waive a breach, and ending the Commercial Grant for one Licensed Product
+     leaves the Contract in force for the others.
+
+16.6 Effect of ending. When a Contract, or the Commercial Grant for a Licensed Product, ends for any
+     reason:
+
+       (a)  the Commercial Grant ends for what has ended, except that during the Wind-Down Period
+            following an ending under Section 13.5, 16.1 or 16.2, the Licensee may continue to
+            supply support to existing customers and to distribute Licensed Products already made,
+            and fees accrue on that activity as before;
+
+       (b)  copies of Licensed Products that End Users received before the ending, or before the
+            Wind-Down Period ends, and the permissions given to End Users under Section 4.2 for
+            those copies, continue on their terms;
+
+       (c)  the Licensee may continue any use AGPL-3.0-or-later permits, on that license's
+            conditions;
+
+       (d)  the Licensee delivers a final report covering the period up to the ending, or the end of
+            the Wind-Down Period where there is one, and pays the fees it shows, by the dates the
+            Order Form states for the last Royalty Period;
+
+       (e)  the Licensee returns or destroys all Non-Public Software and confirms that in writing,
+            except copies the law requires it to keep; and
+
+       (f)  no obligation that accrued before the ending, or during the Wind-Down Period, is
+            discharged.
+
+16.7 Notice found unsupported. Where a court or tribunal finds that no act listed in Section 16.3
+     occurred, the notice takes effect as a notice under Section 16.1, given on the date it was
+     given, with the Notice Period, the Wind-Down Period and the refund that Section provides.
+
+
+17. REMEDIES
+
+17.1 Infringement. Reproduction, modification, distribution or network operation of the Software
+     that is outside the Commercial Grant and not permitted by AGPL-3.0-or-later is not licensed.
+     The Licensor's remedies for it under copyright law apply in full, including actual damages and
+     the infringer's profits, statutory damages, increased statutory damages for willful
+     infringement, injunctions, impounding, and costs and attorneys' fees, under 17 U.S.C. sections
+     502 to 505 and under the equivalent law of any other country. A Contract does not fix,
+     multiply or limit any of those amounts. The law sets them.
+
+17.2 Copyright management information. The Credit Block, the speaker and performer credit it
+     carries, the copyright notices in the Software, and the terms on which the Software is
+     licensed are copyright management information. Their removal or alteration is subject to the
+     remedies in 17 U.S.C. section 1203, where the conditions of 17 U.S.C. section 1202 are met, and
+     to the equivalent law of any other country.
+
+17.3 Trade secrets. Where Non-Public Software, or other information the Licensor keeps secret, is a
+     trade secret, its misappropriation is subject to the remedies in 18 U.S.C. section 1836(b)(3),
+     including exemplary damages and attorneys' fees for willful and malicious misappropriation, and
+     to the equivalent law of any State or other country. The Licensee acknowledges that the
+     Licensor keeps Non-Public Software secret by measures that include Section 14. This Section
+     reaches no file held under AGPL-3.0-or-later.
+
+17.4 Contract. For a breach of a Contract, the Licensor may recover what the law allows, including
+     damages measured by the fee a willing licensor would have charged for the use taken, and where
+     the law allows it, an account of the profits Licensee Group made from the breach.
+
+17.5 Injunctive relief. The Licensee acknowledges that a breach of Section 5, 7, 12, 13 or 14 harms
+     interests named in R.3, that the harm is hard to measure in money, and that it continues for as
+     long as copies, Derived Artifacts or disclosed information remain in use. Either party, and an
+     Originating Community under Section 7.8, may seek injunctive relief for such a breach. This
+     acknowledgment is evidence for the court or tribunal to weigh, and it does not bind the
+     court's or tribunal's discretion.
+
+17.6 Fees and costs. In any action, arbitration or other proceeding arising out of or relating to a
+     Contract, the prevailing party recovers its reasonable attorneys' fees, expert fees and costs
+     from the party against which it prevails. This applies equally to the Licensor, to the
+     Licensee, and to an Originating Community or a Designated Payee enforcing a right it holds.
+
+17.7 Remedies are cumulative, and no one recovers twice for the same loss.
+
+17.8 No waiver. No delay, forbearance, silence, acceptance of payment or course of dealing waives
+     any right or creates any license. A waiver is effective only in a writing signed by the party
+     waiving that names the right waived.
+
+
+18. GOOD FAITH
+
+18.1 Each party owes the other a duty of good faith and fair dealing in the performance and the
+     enforcement of a Contract.
+
+18.2 Where this license gives the Licensor a choice, a consent, a conclusion or a discretion,
+     including under Sections 8.6, 13.5, 16.1 and 16.3, the Licensor exercises it honestly, in good
+     faith, rationally, and consistently with the Purpose. Section 16.1 requires no reason to be
+     stated, and this Section does not add a requirement to state one.
+
+18.3 The Licensee performs its duties to report, pay and cooperate in good faith, and does not adopt
+     a structure, a timing or a reading of a Contract whose purpose is to reduce what the Contract
+     requires of it.
+
+
+19. DISPUTE RESOLUTION
+
+19.1 Arbitration. Every dispute, claim or controversy arising out of or relating to a Contract,
+     including its formation, validity, interpretation, breach and termination, and the scope of
+     this Section, is finally settled by arbitration under the rules of the arbitral institution the
+     Order Form names, by the number of arbitrators and in the language the Order Form states. The
+     seat of the arbitration is the place the Order Form names, which is in a state that is a party
+     to the Convention on the Recognition and Enforcement of Foreign Arbitral Awards (New York,
+     1958).
+
+19.2 Law of this Section. This Section 19 is governed by the law the Order Form names for it. Where
+     the Order Form names no law for it, the parties expressly agree that this Section 19 is
+     governed by the law the Order Form names under Section 19.3.
+
+19.3 Governing law. A Contract, and every non-contractual obligation arising out of or relating to
+     it, is governed by the law the Order Form names, without regard to that law's rules on
+     conflict of laws.
+
+19.4 Relief from a court. Either party, and an Originating Community under Section 7.8, may apply
+     to a court of competent jurisdiction for interim, provisional or conservatory relief, including
+     an injunction, at any time, including before the tribunal is constituted, and for recognition
+     and enforcement of an award. An application of that kind is compatible with the agreement to
+     arbitrate and does not waive it. A party that files a claim in court for that relief asks the
+     court at the same time to stay any other claim pending the arbitration.
+
+19.5 Expedited procedure. Where the rules the Order Form names provide an expedited procedure, a
+     claim within its limits proceeds under it.
+
+19.6 Award. The award is final and binding. Judgment on it may be entered in any court having
+     jurisdiction. The tribunal awards fees and costs under Section 17.6.
+
+19.7 Survival. This Section continues after a Contract ends, for every dispute arising out of or
+     relating to it, including disputes about obligations that accrued before it ended or that
+     continue after it.
+
+19.8 Public bodies. Where the Licensee is a State, a public body, or an institution of either, the
+     Licensee states in the Order Form each rule of law that limits its capacity to agree to
+     arbitration, to a governing law, to indemnity or to a forum, and the Order Form states the
+     forum and the law the parties agree in their place. The Licensee represents that the dispute
+     terms of its Order Form are within its lawful capacity. To the extent its law permits, it
+     waives immunity from suit, and from enforcement of an award or judgment, for claims arising
+     out of or relating to its Contract.
+
+19.9 Originating Communities. This Section binds an Originating Community only where its Governing
+     Body elects in writing to proceed under it. Otherwise it may bring a claim under Section 7.8 in
+     any court having jurisdiction, and the Licensee does not object to that court on the ground of
+     this Section.
+
+
+20. LIMITATION PERIODS AND ACCRUAL
+
+20.1 Each fee for each Royalty Period, each report, and each day of Excess Use is a separate
+     obligation, and a claim for each accrues separately when it falls due or occurs.
+
+20.2 The duty to report under Section 11.1 continues until each fact it covers has been reported.
+     Where a member of Licensee Group fails to report a fact Section 11.1 requires, the parties
+     intend, to the extent the governing law permits, that a claim based on that fact is treated as
+     deliberately concealed, and accrues no earlier than the day on which the Licensor learned the
+     fact or could with reasonable diligence have learned it.
+
+20.3 Where the law of Delaware governs a Contract and the Contract involves at least $100,000, an
+     action based on the Contract may be commenced within 20 years after the cause of action
+     accrues.
+
+20.4 Where an Order Form states on its face that it is intended to be a deed, and is executed and
+     delivered as a deed under the law of England and Wales, the Contract takes effect as a deed.
+
+20.5 Nothing in a Contract shortens a limitation period that the law provides.
+
+
+21. SUCCESSORS
+
+21.1 A Contract binds the Licensee's successors and permitted assigns. A transfer by a member of
+     Licensee Group does not discharge any obligation under a Contract.
+
+21.2 A Contract continues after the death or incapacity of Douglas Quigg. It is not personal to him,
+     and no obligation of either party ends because of his death or incapacity.
+
+21.3 The parties intend each Contract, to the extent the law provides, to bind every successor in
+     title to the copyright in the Software.
+
+21.4 Successor Licensor. After the death of Douglas Quigg, the "Successor Licensor" is the person
+     who holds the copyright in the Software under his will, under a trust he established, or under
+     the law of succession, and where that will or trust names a person to act as licensor or
+     steward of the Software, the person it names. Where more than one person holds that copyright
+     and no person is named, they act jointly.
+
+21.5 After the death of Douglas Quigg, each choice, consent, conclusion and discretion this license
+     gives the Licensor, including under Sections 8.6, 13.5, 16.1 and 16.3, is exercisable only by
+     the Successor Licensor, only for the Purpose, and in good faith.
+
+21.6 After receiving written notice from a Successor Licensor with reasonable evidence of its
+     authority, the Licensee reports and pays as that notice directs. Amounts that fell due before
+     the Licensee received the notice remain owed, and the Licensee pays them within the payment
+     period the Order Form states for fees, counted from its receipt of the notice, without interest
+     for the time before that receipt.
+
+21.7 The Licensee has no power over the choice of a Successor Licensor, a steward, a trust or a
+     Designated Payee.
+
+21.8 Nothing in a Contract waives or limits any right the law gives an author, or an author's heirs
+     or successors, to terminate a grant, including under 17 U.S.C. section 203.
+
+21.9 Stewardship instrument. Where the instrument under which the Successor Licensor holds the
+     copyright gives a Governing Body, or another person, the right to enforce a Contract if the
+     Successor Licensor does not, that body or person may enforce it to the extent the instrument
+     provides.
+
+21.10 Community rights do not depend on succession. The rights of Originating Communities under
+      Section 7.8 continue whether or not a Successor Licensor exists or acts.
+
+
+22. SURVIVAL
+
+22.1 These survive the end of a Contract:
+
+       Section 3   (Relationship to AGPL-3.0-or-later and the other licenses);
+       Section 5.6 (Names);
+       Section 7   (Community Language Material), for Community Language Material and Derived
+                   Artifacts obtained or made during the Term, for as long as any member of
+                   Licensee Group holds any of them, and Section 7.4(b) for every publication,
+                   dataset, product documentation and data availability statement that presents
+                   or relies on that material;
+       Section 8   (Fees) and Section 9 (Royalty Base), for fees that accrued before the end or
+                   during a Wind-Down Period;
+       Section 10  (Excess Use and conversion), for use before the end;
+       Section 11  (Reports, records and audit), for the periods Sections 11.2 and 11.5 state;
+       Section 12  (Educational and academic arrangements), for work done before the end, and
+                   Section 12.7 for every Trustee Share on fees that accrued before the end or
+                   during a Wind-Down Period;
+       Section 13.3 (Assignment), 13.5 (Effect of a Change of Control) and 13.7;
+       Section 14  (Confidentiality);
+       Section 16.6 (Effect of ending);
+       Section 17  (Remedies);
+       Section 18  (Good faith);
+       Section 19  (Dispute resolution);
+       Section 20  (Limitation periods and accrual);
+       Section 21  (Successors);
+       Section 22  (Survival);
+       Section 23  (Disclaimer of warranty);
+       Section 24  (Limitation of liability);
+       Section 25  (Indemnity); and
+       Section 26  (General).
+
+22.2 Every other right and obligation that by its nature extends beyond the end of a Contract, and
+     every obligation that accrued before the end, also survives. No restriction on any use of the
+     Software that AGPL-3.0-or-later permits survives.
+
+
+23. DISCLAIMER OF WARRANTY
+
+EXCEPT AS THE ORDER FORM EXPRESSLY STATES, THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED, INCLUDING THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE, TITLE AND NONINFRINGEMENT. THE LICENSOR DOES NOT WARRANT THAT THE SOFTWARE IS FIT FOR ANY
+SAFETY-RELATED, LIFE-CRITICAL OR OTHERWISE HAZARDOUS APPLICATION, OR THAT ANY PERSON HAS A RIGHT TO
+USE COMMUNITY LANGUAGE MATERIAL OR THIRD-PARTY MATERIAL. WHERE THE SOFTWARE INCLUDES A LANGUAGE
+TOOL, THE LICENSOR DOES NOT WARRANT THAT ITS OUTPUT IS A FORM OF THE LANGUAGE IT WAS DRAWN FROM.
+
+
+24. LIMITATION OF LIABILITY
+
+TO THE EXTENT THE LAW PERMITS, THE LICENSOR IS NOT LIABLE TO ANY MEMBER OF LICENSEE GROUP FOR ANY
+INDIRECT, INCIDENTAL, SPECIAL OR CONSEQUENTIAL DAMAGES, OR FOR LOST PROFITS, REVENUE OR DATA,
+ARISING OUT OF OR RELATING TO A CONTRACT OR THE SOFTWARE, AND THE LICENSOR'S TOTAL LIABILITY FOR ALL
+CLAIMS ARISING OUT OF OR RELATING TO A CONTRACT DOES NOT EXCEED THE AMOUNT THE ORDER FORM STATES.
+THIS SECTION DOES NOT LIMIT THE LICENSEE'S LIABILITY FOR FEES, FOR EXCESS USE, UNDER SECTION 25, OR
+FOR A BREACH OF SECTION 5, 7, 12, 13 OR 14, AND IT DOES NOT LIMIT ANY LIABILITY THE LAW DOES NOT
+PERMIT TO BE LIMITED.
+
+
+25. INDEMNITY
+
+25.1 The Licensee defends and indemnifies the Licensor, each Successor Licensor and each Designated
+     Payee against every claim brought by a third party, including an Originating Community or a
+     rights holder in Community Language Material or Third-Party Material, and against the losses,
+     damages, fines and reasonable attorneys' fees that result from it, to the extent the claim
+     arises out of a Covered Offering, out of Licensee Group's use of Community Language Material or
+     Third-Party Material, or out of a breach of a Contract by a member of Licensee Group. This does
+     not apply to the extent a claim arises out of the Licensor's own breach of a Contract.
+
+25.2 This Section covers claims brought by third parties. Fees and costs in proceedings between the
+     parties are governed by Section 17.6.
+
+
+26. GENERAL
+
+26.1 Entire agreement. A Contract is the entire agreement between the parties about its subject and
+     replaces every earlier proposal and understanding about it. It does not affect any Grant or any
+     right under AGPL-3.0-or-later.
+
+26.2 Amendment. A Contract is changed only by a writing signed by both parties that names each
+     section it changes. The Licensor has no right to change a Contract, or this license as
+     incorporated in one, by itself.
+
+26.3 Versions. The Licensor may publish later versions of this license. A later version governs
+     only an Order Form that names it.
+
+26.4 Severability. Where a court or tribunal holds a term of a Contract unenforceable, the term is
+     enforced to the greatest extent the law permits and limited only as far as necessary, it is
+     read as closely to the Purpose as the law permits, and the rest of the Contract continues.
+
+26.5 Notices. Notices are in writing and are given to the addresses the Order Form states, by
+     courier, by registered mail, or by email where the Order Form permits email. A notice is given
+     when received.
+
+26.6 Signature. An Order Form may be signed in counterparts and by electronic signature, except that
+     an Order Form intended to take effect as a deed is executed with the formalities the law
+     governing the deed requires.
+
+26.7 Advice and negotiation. Each party confirms that it had the opportunity to take independent
+     legal advice before signing its Order Form, and that the Order Form was negotiated at arm's
+     length.
+
+26.8 Relationship. Nothing in a Contract creates a partnership, agency, joint enterprise or
+     fiduciary relationship between the parties.
+
+26.9 Compliance with law. Licensee Group complies with the law that applies to its exercise of the
+     Commercial Grant, including export control and data protection law.
+
+26.10 Language and headings. The English text of a Contract controls. Headings are for reference and
+      do not affect meaning.
+
+
+27. CONTACT
 
 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+
+
+SCHEDULE A: WHAT AN ORDER FORM STATES
+
+Required. Where one of these is blank, Section 2.3 applies.
+
+  A.1  The Licensee's full legal name, legal form, jurisdiction of organization and registered
+       address, and whether it is a State, a public body, or an institution of either.
+  A.2  The versions of ProtoCore the Contract covers, and the files of any Non-Public Software the
+       Licensor delivers under Section 2.7.
+  A.3  Each Licensed Product, the Field and the Territory.
+  A.4  The rights in Section 4.1 granted for each Licensed Product.
+  A.5  The fee structure under Section 8.2, with every rate, band, threshold and minimum; the
+       currency; the Royalty Period; the date each report is due; the date each payment is due;
+       and the rate of interest on late payment.
+  A.6  The Initial Term and any renewal.
+  A.7  The Notice Period and the Wind-Down Period.
+  A.8  The governing law under Section 19.3; the arbitral institution and its rules, the seat, the
+       number of arbitrators and the language under Section 19.1; and the law governing Section 19
+       where it differs from the governing law.
+  A.9  The amount of the cap in Section 24.
+  A.10 The addresses for notices, and whether notice by email is permitted.
+  A.11 Where A.1 records a State, a public body or an institution of either: the statements Section
+       19.8 requires.
+  A.12 The forms, object code, source code or both, in which each Licensed Product is distributed
+       under Section 4.1(c).
+  A.13 The period for carrying out a Withdrawal where no Governing Body has set one, under Section
+       7.5(b).
+
+Optional.
+
+  A.14 The Affiliates the Commercial Grant extends to, and the distributors and resellers under
+       Section 13.2 with the terms that apply to them.
+  A.15 A Rate Card, attached or identified by version and SHA-256 digest.
+  A.16 Deductions from the Royalty Base under Section 9.7.
+  A.17 Designated Payees, the percentage each receives, and whether each is an intended
+       third-party beneficiary under Section 8.6.
+  A.18 Terms set in advance for a Change of Control under Section 13.5.
+  A.19 Further text for the Credit Block under Section 5.3(d).
+  A.20 Support, maintenance and warranty terms.
+  A.21 Whether fees paid to the Licensor are credited against the part of a Royalty under a Grant
+       that is payable to the Licensor, under Section 12.5.
+  A.22 Whether the Order Form is intended to take effect as a deed under Section 20.4.
+  A.23 One or more Community Schedules under Schedule B.
+  A.24 Changes to this license, each naming the section it changes, under Section 2.4.
+  A.25 The Royalty Schedule for Section 12.7, identified by version and SHA-256 digest.
+
+
+SCHEDULE B: COMMUNITY SCHEDULE
+
+A Community Schedule is set by a Governing Body and signed by it. By signing, the Governing Body
+accepts the rights Section 7.8 gives the Originating Community it acts for. A Community Schedule
+states:
+
+  B.1  The Originating Community, its Governing Body, and the person who signs for the Governing
+       Body.
+  B.2  The Community Language Material concerned, and the permission given, naming each use it
+       permits.
+  B.3  The Community Terms, identified by the instrument that holds them, and how later versions are
+       given to the Licensee.
+  B.4  The credit for Section 5.3(a).
+  B.5  The period for carrying out a Withdrawal under Section 7.5.
+  B.6  Who reviews generated language output under Section 7.4(e).
+  B.7  Any benefit the Governing Body requires in return for its permission.
+  B.8  Any sum payable to the Governing Body on a stated act under Section 7.9, with the Governing
+       Body's statement that it set the sum.
+  B.9  Whether the Governing Body elects to proceed under Section 19, and the forum for its claims
+       where it does not.
+  B.10 The Governing Body's address for notices.
