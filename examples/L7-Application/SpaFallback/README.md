@@ -9,7 +9,7 @@ missing after a half-finished upload, the filesystem got wiped, the browser will
 the device came up degraded. On a machine you can actuate, "the page did not load" is not an
 acceptable state - an operator still has to see what is happening and be able to stop it.
 
-`protocore_spa_route_ex()` routes for that:
+`protocore_spa_router_route_ex()` routes for that:
 
 | Path         | Action           | When                                                      |
 | ------------ | ---------------- | --------------------------------------------------------- |

@@ -6,7 +6,7 @@
 
 An ESP32 boots with no idea what time it is. `protocore_ntp_begin(tz)` starts the
 ESP-IDF SNTP client (the first sync lands a few seconds later), and
-`protocore_ntp_http_date()` formats the current time as an RFC 7231 date string -
+`protocore_http_clock_date()` formats the current time as an RFC 7231 date string -
 the same format HTTP `Date`/`Last-Modified` headers use. `GET /time` returns it,
 or `503` until the first sync completes.
 
@@ -25,7 +25,7 @@ if (protocore_ntp_http_date(date, sizeof(date)) == 0) {  // 0 = not synced yet
 server.send(slot_id, 200, "text/plain", date);
 ```
 
-`protocore_ntp_http_date()` returns 0 until the clock is set, so the handler can
+`protocore_http_clock_date()` reports 0 (`HttpClockV.n`) until the clock is set, so the handler can
 distinguish "no time yet" from a real value and answer `503` in the meantime. The
 TZ argument is a POSIX TZ string ("UTC0", "EST5EDT", "CET-1CEST", ...) so the
 formatted time can be local.

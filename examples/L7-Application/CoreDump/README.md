@@ -17,7 +17,7 @@ boot can recover it:
 | 2. what crashed?   | `protocore_exc_coredump_summary(&info)`              | fills the same `ExcInfo` the live panel renders |
 | 3a. keep it        | `protocore_exc_coredump_save(SD_MMC, "/crash.bin")`  | streamed to a file, no heap                     |
 | 3b. get it off-box | `protocore_ftp_store(&target, path, size, src, ctx)` | streamed to an FTP server, no heap              |
-| 4. make room       | `protocore_exc_coredump_erase()`                     | so the next crash can be stored                 |
+| 4. make room       | `protocore_exc_erase()`                              | so the next crash can be stored                 |
 
 Step 2 reuses `protocore_exc_json()`, so a crash recovered from flash renders through the exact same
 `/exception` panel as a live console capture.
@@ -138,7 +138,7 @@ firmware that crashed, not a rebuild.
 
 A `coredump` partition must exist in the partition table (the default Arduino tables have one), and
 the IDF build must have `CONFIG_ESP_COREDUMP_ENABLE_TO_FLASH` + `DATA_FORMAT_ELF` - both are on in
-arduino-esp32 3.x. Without them `protocore_exc_coredump_summary()` returns false rather than guessing.
+arduino-esp32 3.x. Without them `protocore_exc_summary()` leaves `ExcV.ok` false rather than guessing.
 
 ## Tunables
 

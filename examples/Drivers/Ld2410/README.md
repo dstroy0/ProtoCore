@@ -61,7 +61,7 @@ as a **stationary** target. That is the whole point.
 
 ## Where this fits
 
-`protocore_ld2410_poll()` decodes each radar frame; `protocore_ld2410_present()` and `protocore_ld2410_distance_cm()` give you
+`Ld2410.poll()` decodes each radar frame; `Ld2410.present()` and `Ld2410.distance_cm()` give you
 a yes/no and a distance to act on. From here it is a short hop to a real project: publish
 presence over **MQTT** (example with the MQTT feature), push it to a live web page over
 **WebSocket**, or feed it into the **preempting queue** (Foundation examples) so a presence
@@ -105,7 +105,7 @@ The LD2410 sends a framed report ~10 times a second: a fixed **header** (`F4 F3 
 length, the data, and a **footer** (`F8 F7 F6 F5`). Serial data can arrive split across reads or
 with noise, so the library's `Ld2410Stream` reassembles frames one byte at a time - locking onto
 the header, reading the length, collecting exactly that many bytes, and checking the footer -
-then `protocore_ld2410_parse_report()` pulls out the state, distances, energies, and (in engineering mode)
+then `Ld2410.parse_report()` pulls out the state, distances, energies, and (in engineering mode)
 the per-gate values. It is a fixed-size buffer with **no heap** and it **resyncs** cleanly if a
 byte is dropped. The frame decoder and reassembler are unit-tested on a PC (see
 `test/test_ld2410`); only the UART read/write runs on the ESP32.

@@ -17,7 +17,7 @@ protocore_udp_telemetry_begin(COLLECTOR_IP, COLLECTOR_PORT);
 
 **Build a line into a caller-owned buffer, then cast it.** `protocore_line_*` appends
 typed fields (the `i` suffix InfluxDB uses for integers comes from the `_int`/`_uint`
-helpers); `protocore_udp_telemetry_cast()` sends one datagram:
+helpers); `protocore_udp_telemetry_write()` sends one datagram:
 
 ```cpp
 char buf[PROTOCORE_UDP_TELEMETRY_BUF];

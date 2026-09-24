@@ -117,7 +117,7 @@ sketch to both boards**, giving each the _other_ board's IP as `PEER_IP`:
 
 ## Going further
 
-- **More than two nodes.** Call `protocore_edge_cache_add_peer()` once per sibling (up to
+- **More than two nodes.** Call `protocore_edge_proxy_add_peer()` once per sibling (up to
   `PROTOCORE_MESH_MAX_PEERS`); a miss asks them in order, first hit wins. Raise
   `PROTOCORE_MESH_MAX_CONNS` if a node should answer several peers at once.
 - **`Vary`.** The puller ships a snapshot of its request headers so the peer matches

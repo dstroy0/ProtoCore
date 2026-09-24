@@ -61,7 +61,7 @@ non-goal or needs hardware / proprietary docs) - **DONE** (`[x]`, the shipped re
   by the 2026-07-26 rig bench; see the PC polling-mode HW modexp item in ROADMAP.md for the perf follow-up.
 - **CDN caching tier** - the RAM-tier reverse-proxy edge cache + cache key / invalidation / purge, the
   **SD (L2) persistence tier** (`PROTOCORE_ENABLE_DBM`), **Range/`206`-from-cache** (`PROTOCORE_ENABLE_RANGE`),
-  **`https://` origins** (`PROTOCORE_ENABLE_EDGE_ORIGIN_TLS` - since REMOVED, see below), and **cross-device mesh distribution**
+  **`https://` origins** (the EDGE_ORIGIN_TLS flag - since REMOVED, see below), and **cross-device mesh distribution**
   (`PROTOCORE_ENABLE_EDGE_MESH`: sibling-cache pull over `PROTO_MESH`, RFC 9111 age propagation, one-hop loop-free)
   are all shipped (`PROTOCORE_ENABLE_EDGE_CACHE`, server/web/edge_cache, examples EdgeCache + MeshCache). The roadmap tier is
   complete; remaining are lower-priority follow-ups: a TLS sibling link + UDP-broadcast peer discovery + push
@@ -438,7 +438,7 @@ Building on the existing forwarder (`native_forward` / `native_gateway` / `nativ
 
 Let the device act as a caching edge / content-distribution node, not just an origin. Builds on what already exists (file serving, ETag, Range/206, the reverse-proxy `Forwarded` recovery, the forwarder, and the new SD data-store stack) toward serving and replicating content near where it is consumed. Unpolished; **scope to refine with the user** (which role(s), how content is keyed/invalidated, single-device vs the two-rig / mesh case).
 
-- [x] Edge cache for upstream content _(done, HW-verified)_: `PROTOCORE_ENABLE_EDGE_CACHE` (server/web/edge_cache) - a caching reverse-proxy edge. The **pure engine** (edge_cache): RFC 9111 freshness (`Cache-Control` / `Expires` / heuristic / corrected age over the monotonic clock), the response header-field + HTTP-date parsing httpcache lacks (IMF-fixdate / RFC 850 / asctime), the canonical cache key + SHA-256 digest + `Vary` secondary key, the L1 LRU/TTL store + storeability rules, and conditional revalidation (build `If-None-Match`/`If-Modified-Since`, apply 304). The **async origin-fetch engine** (edge_fetch) accumulates the origin response over a protocore_client seam (completion by Content-Length / chunked / close) and never stalls the worker. The **glue** (edge_cache_proxy) registers a cache middleware + an async-fetch poll hook (`edge_poll_hook` in `http_poll_slot`): a fresh hit serves from RAM via `send_chunked`, a miss/stale entry suspends the client request and fetches the origin, non-cacheable/error responses use a transient slot, and every failure fails open. `protocore_edge_cache_enable(server)` + `protocore_edge_cache_map(prefix, origin)`; replays `Content-Encoding`/`ETag`/`Last-Modified`/`Age`. Host-tested (`native_edge_cache`, 30 cases) and **HW-verified on an ESP32-S3** fetching a real origin over WiFi (example EdgeCache): MISS -> HIT -> REVALIDATED(304) -> purge all **byte-exact**, the origin fetched exactly once per miss, a stale entry refreshed with a cheap 304 (no body re-download). The **L2 SD tier** (edge_cache_sd, gated `PROTOCORE_ENABLE_DBM`) now spills evicted L1 entries to a dbm store on the WAL (SD-backed) and promotes them back on a miss: a compact versioned entry<->dbm-value serialization keyed by the 32-byte cache-key digest, an `on_evict` write-back hook on the L1 store, promote-on-miss forced to revalidate (the monotonic insert time is meaningless across a reboot, so only validator-carrying entries are spilled - a cheap 304 refreshes them), reboot survival via dbm index replay, and L2-aware purge/reset (foreign values in a shared dbm are left untouched). `protocore_edge_cache_bind_sd(dbm)`; host-tested over a RAM `WalDev` (`native_edge_cache_sd`, 15 cases) incl. serialize roundtrip, spill/promote, oversize-stays-L1, reboot survival, and prefix purge. **Range/`206`** is served straight from a cached body (gated `PROTOCORE_ENABLE_RANGE`): a single-range `Range` request yields `206 Partial Content` + `Content-Range` over the existing `send_chunked` cursor (windowed `off..end`), `416` when unsatisfiable, `Accept-Ranges: bytes` on full hits, via the shared `network_drivers/application/http_range.h` parser reused with the file server. The client `Range` is captured at middleware time into a per-slot buffer because `http_pool[slot]` is reset/reused by the time a miss is served from the poll (an HW-caught bug, see BUGS.md). **`https://` origins** are supported (gated `PROTOCORE_ENABLE_EDGE_ORIGIN_TLS`): a per-route TLS transport layers the shared client-TLS session (`protocore_tls_csess`) over `protocore_client` (BIO wrappers mirroring the MQTT/WS clients), selected per route via a `bool https` on the route map and threaded through the fetch slot; the handshake blocks briefly in the transport's `open` (like `Tcp.client->open`'s connect and the MQTT/WS clients), and a `protocore_tls_client_session_active()` guard fails open and never tears down a live shared session (so one TLS origin fetch runs at a time). Verification is off by default (encrypt-only); `protocore_edge_cache_set_origin_ca` / `_pin` opt into chain+hostname or pin verification (shared client-TLS trust store). **HW-verified on an ESP32-S3** against a real https origin: encrypt-only fetch byte-exact, a correct CA verifies + a wrong CA is rejected (fail-open), and Range/`206` works over the TLS-fetched body. Note: on mbedtls v2 (espressif32 default) an IP-address origin needs a CN-matching cert (IP-address SANs are not matched; DNS origins work normally). **Cross-device mesh** (sibling cache) is shipped too - see the mesh/edge item below (`PROTOCORE_ENABLE_EDGE_MESH`, example 80). _Remaining:_ a holistic fix for the `http_pool[slot]`-goes-stale-after-the-async-fetch root cause (a miss response is emitted `HTTP/1.0`/`Connection: close`, and a `Vary` response cached on a miss stores an empty secondary key - both pre-existing efficiency issues, never a wrong-content serve) by snapshotting the client request across the suspend; and two TLS-origin follow-ups (an async handshake to keep a cold https MISS from blocking the worker, and a multi-instance client-session pool for >1 concurrent TLS fetch).
+- [x] Edge cache for upstream content _(done, HW-verified)_: `PROTOCORE_ENABLE_EDGE_CACHE` (server/web/edge_cache) - a caching reverse-proxy edge. The **pure engine** (edge_cache): RFC 9111 freshness (`Cache-Control` / `Expires` / heuristic / corrected age over the monotonic clock), the response header-field + HTTP-date parsing httpcache lacks (IMF-fixdate / RFC 850 / asctime), the canonical cache key + SHA-256 digest + `Vary` secondary key, the L1 LRU/TTL store + storeability rules, and conditional revalidation (build `If-None-Match`/`If-Modified-Since`, apply 304). The **async origin-fetch engine** (edge_fetch) accumulates the origin response over a protocore_client seam (completion by Content-Length / chunked / close) and never stalls the worker. The **glue** (edge_cache_proxy) registers a cache middleware + an async-fetch poll hook (`edge_poll_hook` in `http_poll_slot`): a fresh hit serves from RAM via `send_chunked`, a miss/stale entry suspends the client request and fetches the origin, non-cacheable/error responses use a transient slot, and every failure fails open. `protocore_edge_cache_enable(server)` + `protocore_edge_cache_map(prefix, origin)`; replays `Content-Encoding`/`ETag`/`Last-Modified`/`Age`. Host-tested (`native_edge_cache`, 30 cases) and **HW-verified on an ESP32-S3** fetching a real origin over WiFi (example EdgeCache): MISS -> HIT -> REVALIDATED(304) -> purge all **byte-exact**, the origin fetched exactly once per miss, a stale entry refreshed with a cheap 304 (no body re-download). The **L2 SD tier** (edge_cache_sd, gated `PROTOCORE_ENABLE_DBM`) now spills evicted L1 entries to a dbm store on the WAL (SD-backed) and promotes them back on a miss: a compact versioned entry<->dbm-value serialization keyed by the 32-byte cache-key digest, an `on_evict` write-back hook on the L1 store, promote-on-miss forced to revalidate (the monotonic insert time is meaningless across a reboot, so only validator-carrying entries are spilled - a cheap 304 refreshes them), reboot survival via dbm index replay, and L2-aware purge/reset (foreign values in a shared dbm are left untouched). `protocore_edge_cache_bind_sd(dbm)`; host-tested over a RAM `WalDev` (`native_edge_cache_sd`, 15 cases) incl. serialize roundtrip, spill/promote, oversize-stays-L1, reboot survival, and prefix purge. **Range/`206`** is served straight from a cached body (gated `PROTOCORE_ENABLE_RANGE`): a single-range `Range` request yields `206 Partial Content` + `Content-Range` over the existing `send_chunked` cursor (windowed `off..end`), `416` when unsatisfiable, `Accept-Ranges: bytes` on full hits, via the shared `network_drivers/application/http_range.h` parser reused with the file server. The client `Range` is captured at middleware time into a per-slot buffer because `http_pool[slot]` is reset/reused by the time a miss is served from the poll (an HW-caught bug, see BUGS.md). **`https://` origins** are supported (gated by the EDGE_ORIGIN_TLS flag, since REMOVED with the rest of client TLS - see **Client TLS hardening**): a per-route TLS transport layers the shared client-TLS session (`protocore_tls_csess`) over `protocore_client` (BIO wrappers mirroring the MQTT/WS clients), selected per route via a `bool https` on the route map and threaded through the fetch slot; the handshake blocks briefly in the transport's `open` (like `Tcp.client->open`'s connect and the MQTT/WS clients), and a session-active guard fails open and never tears down a live shared session (so one TLS origin fetch runs at a time). Verification is off by default (encrypt-only); `protocore_edge_cache_set_origin_ca` / `_pin` opt into chain+hostname or pin verification (shared client-TLS trust store). **HW-verified on an ESP32-S3** against a real https origin: encrypt-only fetch byte-exact, a correct CA verifies + a wrong CA is rejected (fail-open), and Range/`206` works over the TLS-fetched body. Note: on mbedtls v2 (espressif32 default) an IP-address origin needs a CN-matching cert (IP-address SANs are not matched; DNS origins work normally). **Cross-device mesh** (sibling cache) is shipped too - see the mesh/edge item below (`PROTOCORE_ENABLE_EDGE_MESH`, example 80). _Remaining:_ a holistic fix for the `http_pool[slot]`-goes-stale-after-the-async-fetch root cause (a miss response is emitted `HTTP/1.0`/`Connection: close`, and a `Vary` response cached on a miss stores an empty secondary key - both pre-existing efficiency issues, never a wrong-content serve) by snapshotting the client request across the suspend; and two TLS-origin follow-ups (an async handshake to keep a cold https MISS from blocking the worker, and a multi-instance client-session pool for >1 concurrent TLS fetch).
 - [x] Cache key + invalidation _(done)_: the deterministic key (method + host + path, SHA-256 digested - also the L2 dbm key) + `Vary` as a secondary key (each variant re-serialized against the request); the purge API `protocore_edge_cache_store_purge` (single) / `protocore_edge_cache_purge_prefix` (prefix/wildcard); TTL expiry + LRU eviction in the bounded store. Part of server/web/edge_cache above.
 - [x] Origin-side cache directives _(done)_: first-class helpers to emit correct edge-cacheable responses from app routes (immutable static assets, `stale-while-revalidate`, `s-maxage`). A device sitting _behind_ a real CDN is cached correctly. `PROTOCORE_ENABLE_HTTP_CACHE` (network_drivers/presentation/http/httpcache): `cache_control_build` serializes a `protocore_cache_control` struct into the canonical directive string (pass to `set_cache_control()`) with presets `cache_immutable_asset` / `cache_shared` / `cache_revalidatable` / `cache_no_store`; `cache_control_parse` is a tolerant reader; `cache_freshness_lifetime` implements the RFC 9111 4.2.1 precedence. Verified vs RFC 9111 (+ RFC 8246 `immutable`, RFC 5861 stale-*); `native_httpcache`, 8 cases incl. a build->parse round-trip. This is the standards-mechanics layer; the caching **tier** (below) is the remaining architectural piece to scope with the user.
 - [x] Content distribution across devices (mesh/edge) _(done, HW-verified)_: a fleet shares one warm cache. `PROTOCORE_ENABLE_EDGE_MESH` (server/web/edge_cache/edge_mesh) - the design pass resolved as **pull (sibling cache), not push**: on a full local miss a node queries its static sibling peers over a plaintext `ProtoConn::PROTO_MESH` TCP link before the origin, and pulls a fresh copy from whichever peer has it, so the origin is fetched once per fleet. **Consistency** is RFC 9111 §4.2.3 age propagation (the transfer carries the object's freshness/age, reusing `edge_current_age()`). A sibling-fresh object serves for its remaining lifetime with zero origin contact - no invalidation protocol, no consistency window (a stale peer copy self-expires by TTL, the puller re-checks freshness). **Addressing** is a static peer list (`protocore_edge_cache_add_peer`). The wire frame reuses the shared `edge_sd` entry serializer + a timing trailer; the puller ships a bounded request-header snapshot so the peer re-runs the exact `edge_store_find` Vary matcher. A serving node (`protocore_edge_cache_mesh_serve` after `server.listen(port, PROTO_MESH)`) answers only from its LOCAL cache - one hop, never re-querying its own origin/peers, so the fleet cannot loop. The query is a pre-origin phase of the same async fetch slot (reusing that slot's origin buffer, so no extra per-slot memory) pumped from the poll loop; a peer MISS / exhausted list transitions to the ordinary origin fetch. Pure wire codec + peer-query engine host-tested (`native_edge_mesh`: frame round-trips, age propagation, HIT/MISS/timeout/close), example MeshCache. _Follow-ups:_ a TLS sibling link, UDP-broadcast peer auto-discovery, and push replication with invalidation.
@@ -629,10 +629,10 @@ and HW-verified on an ESP32 DevKit. Per-feature footprints are in the README.
 - [x] **MQTT 3.1.1 client** ([`PROTOCORE_ENABLE_MQTT`](@ref PROTOCORE_ENABLE_MQTT)) + MQTTS.
       Full QoS 0/1/2 (DUP retransmit + inbound QoS-2 duplicate suppression),
       Last-Will, keepalive.
-      Host-tested codec (`native_mqtt`); example `MqttClient`.
+      Host-tested codec (`native_mqtt_codec`); example `MqttClient`.
 - [x] **WebSocket client** ([`PROTOCORE_ENABLE_WS_CLIENT`](@ref PROTOCORE_ENABLE_WS_CLIENT))
       + `wss://`. Masked frames, fragment reassembly, ping/pong. Host-tested codec
-      (`native_ws_client`); example `WebSocketClient`.
+      (`native_ws_client_rfc6455`); example `WebSocketClient`.
 - [x] **SNMP notifications** ([`PROTOCORE_ENABLE_SNMP_TRAP`](@ref PROTOCORE_ENABLE_SNMP_TRAP)).
       Outbound Traps + InformRequests (v2c) and SNMPv3 USM authPriv traps. Host
       -tested PDU builder (`native_snmp_trap`); example `SnmpTrap`.
@@ -645,7 +645,7 @@ and HW-verified on an ESP32 DevKit. Per-feature footprints are in the README.
       `PerIpThrottle`.
 - [x] **WebDAV** ([`PROTOCORE_ENABLE_WEBDAV`](@ref PROTOCORE_ENABLE_WEBDAV), RFC 4918 class 1
       + advisory locks): OPTIONS/PROPFIND/GET/HEAD/PUT/DELETE/MKCOL/COPY/MOVE/LOCK/
-      UNLOCK over the FS. Host-tested 207 builder (`native_webdav`); example
+      UNLOCK over the FS. Host-tested 207 builder (`native_webdav_wire`); example
       `WebDav`.
 - [x] **Modbus TCP slave** ([`PROTOCORE_ENABLE_MODBUS`](@ref PROTOCORE_ENABLE_MODBUS)). Fixed
       data model + MBAP/PDU codec, FC 1/2/3/4/5/6/15/16, via a `PROTO_MODBUS`
@@ -672,8 +672,9 @@ Open follow-ups discovered during the above:
       ([`PROTOCORE_ENABLE_TLS_RESUMPTION`](@ref PROTOCORE_ENABLE_TLS_RESUMPTION)), saves the
       established session with `mbedtls_ssl_get_session()` after each successful
       handshake, and presents it with `mbedtls_ssl_set_session()` on the next
-      `protocore_tls_client_session_begin()` for an abbreviated handshake;
-      `protocore_tls_client_session_forget_session()` forces a fresh full handshake. Compiles on the
+      client-session begin for an abbreviated handshake; forgetting the saved session
+      forces a fresh full handshake. (The client TLS engine this sat on has since been removed - see
+      **Client TLS hardening**.) Compiles on the
       ESP32 toolchain. _Full abbreviated-handshake HW proof is blocked by the same
       stock-Arduino DRAM limit as concurrent TLS (the ~48 KB `PROTOCORE_TLS_ARENA_SIZE`
       plus MQTT + transport overflows DRAM; needs a smaller-record ESP-IDF build)._
@@ -922,7 +923,7 @@ shipped work:
       single-worker-race-safe (the arena has one accessor) where a `static` buffer would
       race concurrent workers. HW-soaked on COM3: a real RS256 verify returns OK with
       `protocore_plaintext_high_water == 2624` (exactly the four buffers, now in BSS) and the verify
-      compiles + runs under ARDUINO (mbedTLS RSA). `native_oidc` links
+      compiles + runs under ARDUINO (mbedTLS RSA). `native_oidc_rfc7515` links
       `worker.c`; 13/13 OIDC tests still pass.
       _Follow-up:_ the HW soak showed the verify still consumes ~7 KB of **stack** during
       the call - that residual is the **mbedTLS RSA-2048 modexp** itself, not the decode
@@ -1023,7 +1024,7 @@ shipped work:
       equals the single-block derive and K2 chains correctly.
 
 - [x] **Session rekeying (RFC 4253 §9).** _(done)_ A server-initiated re-key now fires from
-      `protocore_ssh_conn_poll()` when either the volume budget (`SSH_REKEY_PACKET_THRESHOLD`, a packet-count
+      the SSH server's per-connection poll (`ssh_transport_key_re_exchange()`) when either the volume budget (`SSH_REKEY_PACKET_THRESHOLD`, a packet-count
       proxy for ~1 GB) or the time budget (`SSH_REKEY_TIME_MS`, default 1 h) since the last KEX is
       spent, on an authenticated channel that is not already re-keying: it emits a fresh KEXINIT via the
       existing `ssh_transport_begin_rekey()`, and the KEXINIT dispatch carries it to completion (session
@@ -1141,7 +1142,7 @@ shipped work:
 - [x] **`Date` response header** _(done, opt-in)_ - [`PROTOCORE_ENABLE_HTTP_CLOCK`](@ref PROTOCORE_ENABLE_HTTP_CLOCK)
       (default off, so the hot path is unchanged unless enabled) auto-injects
       `Date: <IMF-fixdate>` into every dynamic response once a wall-clock time exists
-      ([`protocore_ntp_http_date()`](@ref protocore_ntp_http_date) non-empty); a clock-less / pre-sync device omits it
+      ([`protocore_http_clock_date()`](@ref protocore_http_clock_date) non-empty); a clock-less / pre-sync device omits it
       (RFC 7231 §7.1.1.2). Host-tested via a time-injection seam
       (`test_response_headers`: emitted-when-set / omitted-when-clockless) and HW-verified
       with NTP (`Date: Mon, 29 Jun 2026 ... GMT`). Apps can still add it from a handler.
@@ -1221,7 +1222,7 @@ by how often a deployed device needs it.
       valid result (stopping early to skip a costly lower-priority read), so
       the device falls back automatically (e.g. GPS fix lost -> RTC -> NTP);
       `protocore_time_source_active()` reports which source answered. Host-tested
-      (`native_time_source`, 9 cases) with mock sources; example
+      (`native_time_fallback`, 9 cases) with mock sources; example
       `TimeSourceFallback` (NTP preferred, RTC fallback); esp32dev links.
 
 - [x] **Zero-copy template slicing.** _(addressed by design)_
@@ -1314,7 +1315,7 @@ by how often a deployed device needs it.
       Stateless `Authorization: Bearer <jwt>` verification, HS256
       (HMAC-SHA-256, reusing the SSH crypto layer), constant-time signature
       compare, all in fixed stack/BSS - no sessions, no heap
-      (`src/services/security/jwt/*`). Host-tested (`native_jwt`); example `JWTAuth`.
+      (`src/services/security/jwt/*`). Host-tested (`native_jwt_rfc7515`); example `JWTAuth`.
       **Time claims now enforced (opt-in via the caller's clock):** the `*_at`
       variants ([`protocore_jwt_time_claims_valid`](@ref protocore_jwt_time_valid),
       [`protocore_jwt_verify_hs256_at`](@ref protocore_jwt_verify_hs256_at),
@@ -1349,14 +1350,14 @@ by how often a deployed device needs it.
       buffer, and the output buffer doubles as the LZ77 window (no separate 32 KB
       window). Both the compressed input and the decompressed output must fit
       `WS_FRAME_SIZE`; a malformed stream closes 1002. Outbound frames stay
-      uncompressed (§6 permits). Host-tested: `native_inflate` (12 cases, vectors
+      uncompressed (§6 permits). Host-tested: `native_codec_inflate` (12 cases, vectors
       grounded against zlib) + `native_ws_deflate` (handshake / RSV1 / delivery);
       esp32dev links; example `WebSocketCompression`. _HW test pending a board._
   - [x] **Phase 2 - outbound compress _(shipped)_.** A bounded fixed-Huffman DEFLATE
         encoder compresses outbound data frames (RSV1) under `PROTOCORE_ENABLE_WS_DEFLATE`,
         with an uncompressed fallback when the result would not shrink. permessage-deflate
         is now bidirectional (see ROADMAP "WebSocket permessage-deflate, inbound and
-        outbound"); host-tested via `native_deflate` + `native_ws_deflate`.
+        outbound"); host-tested via `native_codec_deflate` + `native_ws_deflate`.
 
 (Deliberately omitted as not worth the footprint for this class of device: none
 currently. WebSocket permessage-deflate - previously omitted - now ships its

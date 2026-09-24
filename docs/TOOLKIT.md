@@ -70,8 +70,8 @@ three of its eight files collide.
 
 **`readclean.py` is two different tools sharing a filename.** ProtoCore's blinds a module while
 keeping the shape's grammar: `Sha256Ns Sha256Vars Sha256V Sha256Ctx` become `X1Ns X1Vars X1V X1Ctx`,
-so the four spellings of one module stay visibly one module, and `PROTOCORE_SHA256_BORROW` becomes
-`PROTOCORE_X1_BORROW` while `work`, `proto_bool` and `static_assert` are left alone. The toolkit's
+so the four spellings of one module stay visibly one module, and `PROTOCORE_SHA256_BORROW` has
+its `SHA256` blinded to `X1` the same way, while `work`, `proto_bool` and `static_assert` are left alone. The toolkit's
 renames to flat `fn1` / `var2` across four languages and knows nothing of the shape. Fetching would
 put the generic one beside the specific one under the same name. ProtoCore's is also the copy the
 toolkit's deleted `readclean_test.py` was written against.

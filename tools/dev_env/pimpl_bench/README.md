@@ -33,7 +33,7 @@ Calls to the accessors remaining inside the caller's hot loop:
 | `-flto -O2`+ (clang; still 2 at `-O1 -flto`) | 0                                         | inlined       |
 
 Optimization level alone never does it: without LTO the accessor bodies are already machine code by
-link time, so there is nothing left to inline from. This is why `-flto` is in `native_base` rather
+link time, so there is nothing left to inline from. This is why `-flto` is in the shared native flags (`[native_base]` in test/harness.py) rather
 than being a preference, and why `crypto_opt.h`'s `#pragma GCC optimize` does NOT substitute - that
 raises the level for functions defined in a TU, which cannot make another TU's call site inline.
 
@@ -61,7 +61,7 @@ level the Arduino framework appends after any env `build_flags`.
 
 ## Unity and LTO
 
-`native_base` also carries `lib_archive = no`. Unity is meant to be compiled from source with the
+`[native_base]` also carries `lib_archive = no`. Unity is meant to be compiled from source with the
 project's own flags; a `.a` built without LTO IR cannot satisfy an LTO link, and the plugin drops
 `UnityAssertEqualNumber` / `UnityFail` so every suite fails to link. Linking the objects directly
 fixes it - and incidentally resolved a mingw `.weak.<name>.<anchor>` COMDAT collision that had been

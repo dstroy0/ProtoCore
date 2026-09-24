@@ -25,10 +25,10 @@ if (protocore_provisioning_load(ssid, sizeof(ssid), psk, sizeof(psk))) {
 }
 ```
 
-`protocore_provisioning_load()` returns false until the device has been provisioned;
-`protocore_provisioning_begin()` stands up the softAP, the catch-all DNS, and the
+`protocore_prov_load()` returns false until the device has been provisioned;
+`protocore_prov_begin()` stands up the softAP, the catch-all DNS, and the
 form handler that writes NVS and reboots. To re-provision later, call
-`protocore_provisioning_clear()` (for example from a button handler).
+`protocore_prov_clear()` (for example from a button handler).
 
 ## Build and run
 

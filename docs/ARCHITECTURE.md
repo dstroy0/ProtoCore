@@ -219,7 +219,7 @@ shared `HttpReq` and converges on one `match_and_execute` / route / `Handler` (H
 HTTP/2, and HTTP/3), and the response funnels back through the symmetric **TX seam** - a
 per-connection `protocore_resp_sink_fn` function pointer (`http_resp_sink[slot]`, session.h) that
 HTTP/2 installs at ALPN and HTTP/3 at dispatch. `send_text()` / `send_empty()` call
-`http_resp_sink[slot](...)`
+`(*http_resp_sink[slot])(...)`
 when it is set (h2 frames the reply as HEADERS+DATA on the stream; h3 as an HTTP/3 response on
 its QUIC stream) and otherwise build the HTTP/1.1 message - so the response methods name no
 protocol. It is the RX `ProtoHandler` seam's TX counterpart: request decode and response encode
@@ -525,8 +525,8 @@ src/network_drivers/physical/
 maps the toolchain's target macro onto two axes and nothing else pulls vendor
 detail directly:
 
-- vendor: `PROTOCORE_VENDOR_ESP` (from `CONFIG_IDF_TARGET_*`), `PROTOCORE_VENDOR_STM` (from
-  `STM32*` / CMSIS device), `PROTOCORE_VENDOR_RP` (`PICO_RP2350` ...), `PROTOCORE_VENDOR_TI`.
+- vendor: one `PROTOCORE_VENDOR_<X>` per vendor, set in `vendor/vendor_detect.h` - ESP (from
+  `CONFIG_IDF_TARGET_*`), STM (from `STM32*` / CMSIS device), RP (`PICO_RP2350` ...), TI.
 - die/board: the existing `CONFIG_IDF_TARGET_*`-style discriminator per vendor.
 
 A **common selector point** then resolves the backend once per layer:

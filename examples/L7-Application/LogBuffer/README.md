@@ -26,7 +26,7 @@ static void on_trap(uint8_t level, const char *line) {
 }
 ```
 
-**Dump the ring on demand.** `protocore_log_dump()` writes the whole buffer into a
+**Dump the ring on demand.** `protocore_logbuf_dump()` writes the whole buffer into a
 caller-owned array sized `PROTOCORE_LOG_LINES * PROTOCORE_LOG_LINE_LEN`:
 
 ```cpp

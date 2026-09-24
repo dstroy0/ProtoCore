@@ -33,7 +33,7 @@ protocore_pq_post(&item, 0);
 
 `protocore_pq_lane_priority(lane)` returns a lane's default priority, so you can confirm the
 ordering. Each lane is independent: separate queue, separate task, separate
-`protocore_pq_high_water_lane()`. Queue storage is static (zero heap); a lane's task stack is
+`protocore_preempt_queue_high_water()`. Queue storage is static (zero heap); a lane's task stack is
 created only when you start it, so lanes you never start cost only their queue storage.
 
 ## Zero heap, fail-closed

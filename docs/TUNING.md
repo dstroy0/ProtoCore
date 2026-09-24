@@ -187,8 +187,8 @@ layers defaults along three independent axes, selected in [`board_profile.h`](..
   `s2` / `s3` / `c2` / `c3` / `c5` / `c6` / `c61` / `h2` / `p4` `_defaults.h`, plus preview
   targets `s31` / `h4` / `h21` (in ESP-IDF `master` only). Auto-selected from `CONFIG_IDF_TARGET_*`; classic ESP32
   and host builds use the classic floor. Holds each die's chip-appropriate sizing and its
-  per-die HW-crypto flags - `PROTOCORE_HW_AES` / `_SHA` / `_RSA` / `_ECC` / `_ECDSA` / `_HMAC` /
-  `_DS` - which are genuinely different across the lineup (e.g. C2/C61 have no general-purpose
+  per-die HW-crypto flags - `PROTOCORE_HW_<X>` for `AES` / `SHA` / `RSA` / `ECC` / `ECDSA` / `HMAC` /
+  `DS` - which are genuinely different across the lineup (e.g. C2/C61 have no general-purpose
   AES peripheral and no RSA/MPI; C6 has no ECDSA; H4 has no RSA/DS), so gate a HW path on the
   specific flag, never on "it's an ESP32". Values track each target's ESP-IDF `soc_caps.h`.
 - **PSRAM size** - `esp/2mbpsram.h` / `4mbpsram.h` / `8mbpsram.h` / `16mbpsram.h` / `32mbpsram.h`.
