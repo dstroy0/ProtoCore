@@ -99,15 +99,7 @@ static const protocore_field FILESYSTEM_ROOT[] = {PROTOCORE_STR, PROTOCORE_END};
  *             site rather than tested here.
  * @return bytes written, or 0 on overflow - the engine already knows the length, so it is handed
  *         back rather than left for the caller to rediscover with a scan. */
-PROTOCORE_INLINE size_t protocore_fs_join(const char *root, const char *dir, const char *name, char *out, size_t cap)
-{
-    if (dir[0] == '/')
-    {
-        dir++; // the root carries the separator; a second one would be "//"
-    }
-    return frame.build(out, cap, FILESYSTEM_JOIN,
-                       (const protocore_fval[]){PROTOCORE_VSTR(root), PROTOCORE_VSTR(dir), PROTOCORE_VSTR(name)}, 3);
-}
+size_t protocore_fs_join(const char *root, const char *dir, const char *name, char *out, size_t cap);
 
 /**
  * @brief Resolve a mount @p root + a request @p dir + a leaf @p name to an on-disk path in @p out:

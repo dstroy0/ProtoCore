@@ -85,8 +85,8 @@ uint8_t *protocore_h2_server_span(void);
  */
 proto_bool protocore_h2_server_respond(uint8_t slot, int code, const char *content_type, const char *body, size_t len);
 
-#endif // PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS
 
 #endif // PROTOCORE_H2_SERVER_H

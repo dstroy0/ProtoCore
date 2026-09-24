@@ -41,7 +41,30 @@
     "exclude": [
       ".github",
       ".gitignore",
-      "test",
+      "test/CMakeLists.txt",
+      "test/INVENTORY.md",
+      "test/README.md",
+      "test/TEST_REPORT.md",
+      "test/__init__.py",
+      "test/bare.py",
+      "test/compile_commands.json",
+      "test/coverage.xml",
+      "test/dep_graph.json",
+      "test/ensure_test_keys.py",
+      "test/env",
+      "test/fixtures",
+      "test/gen_test_runners.py",
+      "test/harness.py",
+      "test/harness_test.py",
+      "test/interop",
+      "test/penetration_testing",
+      "test/performance_benching",
+      "test/reverse_engineering",
+      "test/servers",
+      "test/support",
+      "test/test_matrix.json",
+      "test/unit",
+      "test/vectors",
       "platformio.ini",
       ".bumpversion.cfg",
       "cspell.json",
@@ -60,8 +83,16 @@
     ]
   },
   "build": {
-    "srcDir": "src",
+    "srcDir": ".",
+    "srcFilter": [
+      "-<*>",
+      "+<src/>",
+      "+<test/core_setup/>",
+      "-<test/core_setup/hal/host/>",
+      "-<test/core_setup/boot/>"
+    ],
+    "includeDir": "include",
     "unflags": ["-std=gnu99"],
-    "flags": ["-std=gnu11"]
+    "flags": ["-std=gnu11", "-I src", "-I .", "-I test/core_setup"]
   }
 }

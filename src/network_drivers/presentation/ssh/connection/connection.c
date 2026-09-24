@@ -6,7 +6,10 @@
  * @brief RFC 4254: the channel multiplexer, its window arithmetic, and the forwarding owners.
  */
 
-#include "network_drivers/presentation/ssh/connection/connection.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_SSH
+
 #include "mmgr/bytes/bytes.h"           // bytes.rd_u32 / bytes.rd_str - the one length-prefixed reader
 #include "mmgr/endian/endian.h"         // endian.wr32be - the one wire-integer writer
 #include "mmgr/plaintext/plaintext.h"   // protocore_plaintext_span / _mark / _release - the dispatch reply buffer
@@ -14,6 +17,7 @@
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h" // str.len - the bounded string length
 #include "mmgr/secure/secure.h"     // the persistent end this module's key material is taken from
+#include "network_drivers/presentation/ssh/connection/connection.h"
 #include "network_drivers/presentation/ssh/network/network.h" // SshNetwork: the socket seam
 #include "network_drivers/presentation/ssh/ssh.h"
 #include "network_drivers/presentation/ssh/transport/transport/transport.h" // ssh_sess, ssh_pkt - session and packet state
@@ -2541,3 +2545,5 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SshConnectionVars SshConnectionV;
+
+#endif // PROTOCORE_ENABLE_SSH

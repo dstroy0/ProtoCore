@@ -20,6 +20,8 @@
 
 #include "protocore_config.h"
 
+#if PROTOCORE_ENABLE_SSH
+
 PROTOCORE_BEGIN_DECLS
 
 /**
@@ -909,5 +911,7 @@ proto_bool ssh_pubkey_verify(uint8_t i, const char *pk_algo, const uint8_t *blob
                              uint32_t sig_len, const uint8_t *signed_data, size_t signed_len);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SSH
 
 #endif // PROTOCORE_TRANSPORT_TRANSPORT_H

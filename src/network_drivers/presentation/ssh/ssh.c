@@ -6,7 +6,9 @@
  * @brief Every byte the connections use, one span per slot.
  */
 
-#include "protocore_config.h" // the entry point: the widths
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_SSH
 
 #include "mmgr/secure/secure.h" // the persistent end this module's key material is taken from
 #include "network_drivers/presentation/ssh/common/common.h"
@@ -65,3 +67,5 @@ uint8_t *protocore_ssh_conn_slot(uint8_t *work, uint8_t i)
     }
     return SSH_CTX(work)->mem[i];
 }
+
+#endif // PROTOCORE_ENABLE_SSH

@@ -89,15 +89,31 @@ int16_t protocore_platform_die_temp_c(void)
 #endif
 }
 
+#include "esp_rom_sys.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - esp_rom_get_cpu_ticks_per_us, the IDF clock read
 uint16_t protocore_platform_cpu_mhz(void)
 {
-    return (uint16_t)getCpuFrequencyMhz();
+    return (uint16_t)esp_rom_get_cpu_ticks_per_us(); // ticks per microsecond is the core clock in MHz
 }
 
+#if defined(ARDUINO)
+#include "esp32-hal-cpu.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - setCpuFrequencyMhz, which also retunes the APB users
 int protocore_platform_set_cpu_mhz(uint32_t mhz)
 {
     return setCpuFrequencyMhz(mhz) ? 1 : 0;
 }
+#else
+#include "esp_pm.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - plain IDF pins the clock through the PM lock
+int protocore_platform_set_cpu_mhz(uint32_t mhz)
+{
+#if CONFIG_PM_ENABLE
+    esp_pm_config_t cfg = {.max_freq_mhz = (int)mhz, .min_freq_mhz = (int)mhz, .light_sleep_enable = false};
+    return esp_pm_configure(&cfg) == ESP_OK ? 1 : 0;
+#else
+    (void)mhz;
+    return 0; // power management is compiled out of this IDF build; the clock is fixed
+#endif
+}
+#endif
 #endif // PROTOCORE_HAS_VENDOR_PM
 
 #if PROTOCORE_HAS_VENDOR_BT

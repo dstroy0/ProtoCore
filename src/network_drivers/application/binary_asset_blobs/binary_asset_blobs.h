@@ -7,7 +7,9 @@
 #ifndef PROTOCORE_BINARY_ASSET_BLOBS_H
 #define PROTOCORE_BINARY_ASSET_BLOBS_H
 
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_THEMES
 
 PROTOCORE_BEGIN_DECLS
 
@@ -50,5 +52,7 @@ void protocore_binary_asset_blobs_css(uint8_t *work, const char *name);
 PROTOCORE_NS BinaryAssetBlobsNs BinaryAssetBlobs PROTOCORE_UNUSED = {.css = protocore_binary_asset_blobs_css};
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_THEMES
 
 #endif // PROTOCORE_BINARY_ASSET_BLOBS_H

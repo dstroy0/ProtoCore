@@ -27,14 +27,14 @@
 
 #include "protocore_config.h"
 
-#if PROTOCORE_HAS_BUS
-
 /** @brief Read timeout in milliseconds, for a driver that takes whatever has arrived. */
 #ifndef PROTOCORE_UART_TIMEOUT_MS
 #define PROTOCORE_UART_TIMEOUT_MS 20u
 #endif
 
 PROTOCORE_BEGIN_DECLS
+
+#if PROTOCORE_HAS_BUS
 
 /** @brief Bring up @p unit at @p baud, 8N1, on @p rx_pin / @p tx_pin (-1 = the unit's default). */
 PROTOCORE_INLINE proto_bool protocore_uart_begin(uint8_t unit, uint32_t baud, int rx_pin, int tx_pin)
@@ -109,8 +109,8 @@ PROTOCORE_INLINE proto_bool protocore_uart_read_byte(uint8_t unit, uint8_t *out)
     return protocore_uart_read(unit, out, 1, PROTOCORE_UART_TIMEOUT_MS) == 1u;
 }
 
-PROTOCORE_END_DECLS
-
 #endif // PROTOCORE_HAS_BUS
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_UART_H

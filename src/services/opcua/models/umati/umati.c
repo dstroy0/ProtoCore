@@ -11,7 +11,9 @@
  * (ns0 i=85) organizes the MachineTool so a client discovers it from the root.
  */
 
-#include "protocore_config.h" // the entry point: the widths
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_UMATI
 
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protostr/protostr.h"
@@ -416,3 +418,5 @@ void protocore_umati_install(uint8_t *work, const UmatiMachineTool *mt)
     protocore_opcua_set_read_handler(umati_read);
     protocore_opcua_set_browse_handler(umati_browse);
 }
+
+#endif // PROTOCORE_ENABLE_UMATI

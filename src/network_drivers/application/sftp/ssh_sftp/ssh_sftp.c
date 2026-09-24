@@ -15,7 +15,9 @@
  * server that resolved would need a root, a path buffer, and a capacity of its own.
  */
 
-#include "protocore_config.h" // the entry point: the widths
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_SSH_SFTP
 
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem/protomem.h"
@@ -1053,3 +1055,5 @@ void protocore_ssh_sftp_begin(uint8_t *work)
         SSH_SFTP_CTX(work)->registered = PROTO_TRUE;
     }
 }
+
+#endif // PROTOCORE_ENABLE_SSH_SFTP

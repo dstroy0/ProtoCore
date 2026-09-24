@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(network_drivers/presentation/ssh/transport/transport
-  GATE PROTOCORE_ENABLE_PQC_KEX
+  GATE PROTOCORE_ENABLE_SSH
   SOURCES transport.c
   DEPS
     crypto/aead/aesgcm

@@ -12,7 +12,9 @@
  * hash runs in and the one octet naming which hash that is.
  */
 
-#include "protocore_config.h" // the entry point: the widths
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_SSH
 
 #include "crypto/hash/sha256/sha256.h"
 #include "crypto/hash/sha512/sha512.h"
@@ -115,3 +117,5 @@ void protocore_ssh_kex_hash_final(uint8_t *work)
 SshKexHashVars SshKexHashV;
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SSH

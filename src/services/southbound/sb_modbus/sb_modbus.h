@@ -120,8 +120,8 @@ static const SbModbusNs SbModbus __attribute__((unused)) = {
     .driver = protocore_sb_modbus_driver,
 };
 
-#endif // PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER
 
 #endif // PROTOCORE_SB_MODBUS_H

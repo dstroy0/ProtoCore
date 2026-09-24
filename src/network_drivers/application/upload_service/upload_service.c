@@ -6,7 +6,9 @@
  * @brief Streaming file upload: POST body -> Arduino FS file (PROTOCORE_ENABLE_UPLOAD).
  */
 
-#include "protocore_config.h" // the entry point: the widths
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_UPLOAD
 
 #include "mmgr/plaintext/plaintext.h"   // the persistent end this module's state is taken from
 #include "mmgr/protoframe/protoframe.h" // the one frame engine
@@ -195,3 +197,5 @@ void protocore_upload_service_begin(uint8_t *work, const char *path, const char 
     HttpParser.set_stream_hooks(protocore_http_parser_span(), upload_stream_begin, upload_stream_data, NULL);
     on_http(path, HTTP_POST, upload_handle);
 }
+
+#endif // PROTOCORE_ENABLE_UPLOAD

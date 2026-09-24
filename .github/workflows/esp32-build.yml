@@ -13,6 +13,9 @@ on:
     paths:
       - "src/**"
       - "include/**"
+      - "vendor/**"
+      - "test/core_setup/**"
+      - "library.json"
       - "examples/**"
       - "platformio.ini"
       - "tools/ci_tooling/generate/example_footprints.py"
@@ -22,6 +25,9 @@ on:
     paths:
       - "src/**"
       - "include/**"
+      - "vendor/**"
+      - "test/core_setup/**"
+      - "library.json"
       - "examples/**"
   workflow_dispatch:
   schedule:

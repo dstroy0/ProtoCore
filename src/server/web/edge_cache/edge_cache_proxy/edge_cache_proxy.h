@@ -4,9 +4,14 @@
 #ifndef PROTOCORE_EDGE_CACHE_PROXY_H
 #define PROTOCORE_EDGE_CACHE_PROXY_H
 
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_EDGE_CACHE
 
 PROTOCORE_BEGIN_DECLS
+
+struct protocore_dbm;  // bind_sd: the SD-backed store, by pointer only
+struct EdgeCacheStats; // stats: filled by the engine, by pointer only
 
 /**
  * @file edge_cache_proxy.h
@@ -121,5 +126,7 @@ PROTOCORE_NS EdgeProxyNs EdgeProxy PROTOCORE_UNUSED = {.enable = protocore_edge_
                                                        .stats = protocore_edge_proxy_stats};
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_EDGE_CACHE
 
 #endif // PROTOCORE_EDGE_CACHE_PROXY_H

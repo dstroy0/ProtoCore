@@ -13,7 +13,9 @@
  * AXIS_BASE + k*10 (k = 1..axis_count) and its four variables at +1..+4.
  */
 
-#include "protocore_config.h" // the entry point: the widths
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_ROBOTICS
 
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protostr/protostr.h"
@@ -472,3 +474,5 @@ void protocore_robotics_install(uint8_t *work, const RoboticsMotionDeviceSystem 
     protocore_opcua_set_read_handler(robotics_read);
     protocore_opcua_set_browse_handler(robotics_browse);
 }
+
+#endif // PROTOCORE_ENABLE_ROBOTICS

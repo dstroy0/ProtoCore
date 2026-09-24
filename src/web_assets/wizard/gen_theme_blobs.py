@@ -9,8 +9,9 @@ serve or switch a theme at runtime (e.g. a `/themes/<name>.css` route, or a pick
 user's choice). The whole subsystem is behind `PROTOCORE_ENABLE_THEMES`, so a build that does not want
 runtime theming links none of it; enabling it embeds the set (each theme is ~1 KB of DROM/flash).
 
-Output: src/network_drivers/application/binary_asset_blobs.{h,c} (generated + committed, so the
-Arduino-IDE users who never run Python still get it). Re-run after adding/editing a theme.
+Output: src/network_drivers/application/binary_asset_blobs/binary_asset_blobs.c (generated + committed,
+so the Arduino-IDE users who never run Python still get it). Re-run after adding/editing a theme. The
+module's header beside it is hand-kept: it carries the namespace, which is not the generator's.
 
     python -m src.web_assets.wizard.gen_theme_blobs            # regenerate
     python -m src.web_assets.wizard.gen_theme_blobs --check    # CI: fail if stale
@@ -30,8 +31,8 @@ THEMES_DIRS = [
     os.path.normpath(os.path.join(SCRIPT_DIR, "..", "themes")),
     os.path.normpath(os.path.join(SCRIPT_DIR, "..", "themes", "generated")),
 ]
-OUT_DIR = os.path.join(REPO_ROOT, "src", "network_drivers", "application")
 BASENAME = "binary_asset_blobs"
+OUT_DIR = os.path.join(REPO_ROOT, "src", "network_drivers", "application", BASENAME)
 
 BANNER = (
     "// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>\n"
@@ -190,7 +191,6 @@ def render_source(themes):
 def generate(write=True):
     themes = load_themes()
     files = {
-        os.path.join(OUT_DIR, BASENAME + ".h"): render_header(themes),
         os.path.join(OUT_DIR, BASENAME + ".c"): render_source(themes),
     }
     stale = []

@@ -169,9 +169,6 @@ void protocore_ota_service_begin(uint8_t *work)
     (void)work;
 }
 
-/** @brief The operands and the outcome. */
-OtaServiceVars OtaServiceV;
-
 PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OTA && PROTOCORE_HAS_VENDOR_OTA

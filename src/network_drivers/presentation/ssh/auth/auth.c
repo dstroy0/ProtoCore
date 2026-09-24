@@ -6,7 +6,10 @@
  * @brief RFC 4252 user authentication: service request, publickey, password, keyboard-interactive.
  */
 
-#include "network_drivers/presentation/ssh/auth/auth.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_SSH
+
 #include "crypto/asymmetric/ecdsa/ecdsa.h"     // Ecdsa (ecdsa-sha2-nistp256)
 #include "crypto/asymmetric/ed25519/ed25519.h" // Ed25519 (ssh-ed25519 client keys)
 #include "mmgr/bytes/bytes.h"                  // bytes.rd_str() - the RFC 4251 sec 5 string reader
@@ -15,6 +18,7 @@
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h" // str.eq() - the bounded string compare the wire fields use
 #include "mmgr/secure/secure.h"
+#include "network_drivers/presentation/ssh/auth/auth.h"
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/connection/connection.h"         // ssh_connection_dispatch()
 #include "network_drivers/presentation/ssh/network/network.h"               // SshNetwork.emit()
@@ -1088,3 +1092,5 @@ void protocore_ssh_auth_passwd_change_reply(uint8_t *work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SshAuthVars SshAuthV;
+
+#endif // PROTOCORE_ENABLE_SSH

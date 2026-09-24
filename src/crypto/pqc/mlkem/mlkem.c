@@ -13,7 +13,9 @@
  * from one call to the next, so there is no context.
  */
 
-#include "protocore_config.h" // the entry point: the widths
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_MLKEM
 
 #include "crypto/hash/sha3/sha3.h"
 #include "crypto/pqc/mlkem/mlkem.h"
@@ -657,3 +659,5 @@ proto_bool protocore_ml_kem_decaps(uint8_t *work, const uint8_t *dk, const uint8
     }
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_MLKEM

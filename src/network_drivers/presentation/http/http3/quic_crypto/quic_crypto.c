@@ -6,7 +6,9 @@
  * @brief QUIC packet protection and Initial secrets (see quic_crypto.h).
  */
 
-#include "protocore_config.h" // the entry point: the widths
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_HTTP3
 
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/http/http3/quic_crypto/quic_crypto.h"
@@ -231,3 +233,5 @@ void protocore_quic_crypto_retry_integrity_tag(uint8_t *work, const uint8_t *odc
         protocore_secure_release(mark);
     }
 }
+
+#endif // PROTOCORE_ENABLE_HTTP3

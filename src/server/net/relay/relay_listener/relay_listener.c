@@ -7,7 +7,9 @@
  *        connection to an origin protocore_client connection via the pure relay engine.
  */
 
-#include "protocore_config.h" // the entry point: the widths
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_RELAY
 
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
@@ -395,3 +397,5 @@ void protocore_relay_listener_reset(uint8_t *work)
         }
     }
 }
+
+#endif // PROTOCORE_ENABLE_RELAY

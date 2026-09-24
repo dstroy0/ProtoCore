@@ -6,13 +6,17 @@
  * @brief The server engine: accept a connection, drive it, tear it down.
  */
 
-#include "network_drivers/presentation/ssh/server/server.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_SSH
+
 #include "mmgr/plaintext/plaintext.h"
 #include "mmgr/secure/secure.h"
 #include "network_drivers/presentation/ssh/auth/auth.h"
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/connection/connection.h"
 #include "network_drivers/presentation/ssh/network/network.h"
+#include "network_drivers/presentation/ssh/server/server.h"
 #include "network_drivers/presentation/ssh/ssh.h"
 #include "network_drivers/presentation/ssh/transport/transport/transport.h"
 #include "network_drivers/transport/tcp/common/common.h"     // TcpConn, conn_pool: the slots a session runs on
@@ -484,3 +488,5 @@ void protocore_ssh_server_rfwd_proto_handler(uint8_t *work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SshServerVars SshServerV;
+
+#endif // PROTOCORE_ENABLE_SSH

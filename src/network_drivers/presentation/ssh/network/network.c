@@ -6,11 +6,15 @@
  * @brief Ring buffer in, framed bytes out; the socket slot and the SSH slot bound together.
  */
 
-#include "network_drivers/presentation/ssh/network/network.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_SSH
+
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "network_drivers/presentation/ssh/auth/auth.h"
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/connection/connection.h"
+#include "network_drivers/presentation/ssh/network/network.h"
 #include "network_drivers/presentation/ssh/ssh.h" // ssh_conn_slot() + the memory map
 #include "network_drivers/presentation/ssh/transport/transport/transport.h"
 #if PROTOCORE_ENABLE_SSH_ZLIB
@@ -605,3 +609,5 @@ void protocore_ssh_network_chan_close_all(uint8_t *work)
 
 /** @brief The operands and the outcome. */
 SshNetworkVars SshNetworkV;
+
+#endif // PROTOCORE_ENABLE_SSH

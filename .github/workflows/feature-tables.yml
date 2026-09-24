@@ -90,8 +90,7 @@ jobs:
             README.md docs/README.md docs/ARCHITECTURE.md docs/configurator.html docs/EXAMPLES.md
             docs/THEMES.md docs/FAVICONS.md test/README.md tools/TOOLS.md docs/diagrams
             src/web_assets/themes/generated src/web_assets/favicons
-            src/network_drivers/application/binary_asset_blobs.c
-            src/network_drivers/application/binary_asset_blobs.h
+            src/network_drivers/application/binary_asset_blobs/binary_asset_blobs.c
             examples/*/*/build_opt.h
           message: "docs: regenerate feature tables + configurator + build_opt.h + example index [skip ci]"
           signing-key: ${{ secrets.CI_SIGNING_KEY }}

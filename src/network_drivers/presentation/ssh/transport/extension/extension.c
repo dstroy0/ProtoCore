@@ -6,7 +6,9 @@
  * @brief RFC 8308 extension negotiation.
  */
 
-#include "protocore_config.h" // the entry point: the widths
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_SSH
 
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/extension/extension.h"
@@ -52,3 +54,5 @@ int protocore_extension_build(uint8_t *work, uint8_t *out, size_t *len, size_t c
     *len = w.pos;
     return 0;
 }
+
+#endif // PROTOCORE_ENABLE_SSH

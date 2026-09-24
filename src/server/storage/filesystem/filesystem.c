@@ -827,3 +827,14 @@ FilesystemNs Fs = {.status = fs_status,
                    .readdir = fs_readdir,
                    .read_file = fs_read_file,
                    .write_file = fs_write_file};
+
+// Out of line: the compound literal below is C, and this header reaches C++ sketches.
+size_t protocore_fs_join(const char *root, const char *dir, const char *name, char *out, size_t cap)
+{
+    if (dir[0] == '/')
+    {
+        dir++; // the root carries the separator; a second one would be "//"
+    }
+    return frame.build(out, cap, FILESYSTEM_JOIN,
+                       (const protocore_fval[]){PROTOCORE_VSTR(root), PROTOCORE_VSTR(dir), PROTOCORE_VSTR(name)}, 3);
+}

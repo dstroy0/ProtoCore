@@ -38,6 +38,8 @@ option(PROTOCORE_WITH_ARDUINO "Build against arduino-esp32 (Arduino-as-component
 # (cmake -P) to extract REQUIRES, and CONFIGURE_DEPENDS is illegal there. The glob is therefore
 # evaluated at configure time - run `idf.py reconfigure` after adding or removing a source file.
 file(GLOB_RECURSE PROTOCORE_SRCS "src/*.c" "src/*.cpp" "test/core_setup/*.c" "test/core_setup/*.cpp")
+# test/core_setup/boot is the bare-metal runtime (reset entry, __assert_func, mem*); IDF supplies all of it.
+list(FILTER PROTOCORE_SRCS EXCLUDE REGEX "/test/core_setup/boot/")
 
 set(PROTOCORE_REQUIRES
     lwip

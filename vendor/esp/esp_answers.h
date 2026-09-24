@@ -16,20 +16,34 @@
 #ifndef PROTOCORE_VENDOR_ESP_ANSWERS_H
 #define PROTOCORE_VENDOR_ESP_ANSWERS_H
 
-#ifndef PROTOCORE_HAS_HW_AESGCM
-#define PROTOCORE_HAS_HW_AESGCM 1
-#endif
+#include "config/platform/compiler_directives.h" // PROTOCORE_INLINE for the seams below
 
 #ifndef PROTOCORE_HAS_HW_BIGNUM
 #define PROTOCORE_HAS_HW_BIGNUM 1
 #endif
 
+// The SHA and AES HALs drive the unified accelerator block, and only a die whose board profile states
+// that block's register map can run them. The classic ESP32 carries the older layout, and C2, C61, H4,
+// H21 and S31 state no map yet, so those take the software path rather than tripping the HAL's #error.
+#if defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32S3) || defined(CONFIG_IDF_TARGET_ESP32C3) ||  \
+    defined(CONFIG_IDF_TARGET_ESP32C5) || defined(CONFIG_IDF_TARGET_ESP32C6) || defined(CONFIG_IDF_TARGET_ESP32H2) ||  \
+    defined(CONFIG_IDF_TARGET_ESP32P4)
+#define PROTOCORE_ESP_UNIFIED_CRYPTO 1
+#else
+#define PROTOCORE_ESP_UNIFIED_CRYPTO 0
+#endif
+
 #ifndef PROTOCORE_HAS_HW_SHA
-#define PROTOCORE_HAS_HW_SHA 1
+#define PROTOCORE_HAS_HW_SHA PROTOCORE_ESP_UNIFIED_CRYPTO
 #endif
 
 #ifndef PROTOCORE_HAS_HW_AES
-#define PROTOCORE_HAS_HW_AES 1
+#define PROTOCORE_HAS_HW_AES PROTOCORE_ESP_UNIFIED_CRYPTO
+#endif
+
+// GCM's block runs through the same AES HAL, so it is accelerated exactly where AES is.
+#ifndef PROTOCORE_HAS_HW_AESGCM
+#define PROTOCORE_HAS_HW_AESGCM PROTOCORE_HAS_HW_AES
 #endif
 
 #ifndef PROTOCORE_HAS_HW_ECC

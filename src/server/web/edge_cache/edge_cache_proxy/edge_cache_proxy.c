@@ -6,7 +6,9 @@
  * @brief CDN edge-cache tier - server glue. See edge_cache_proxy.h.
  */
 
-#include "protocore_config.h" // the entry point: the widths
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_EDGE_CACHE
 
 #include "mmgr/membuild/membuild.h"   // protocore_sb frame builder
 #include "mmgr/plaintext/plaintext.h" // the persistent end the cached bytes are taken from
@@ -1697,3 +1699,5 @@ void protocore_edge_proxy_stats(uint8_t *work, struct EdgeCacheStats *out)
         *out = EDGE_CACHE_PROXY_CTX(work)->store.stats;
     }
 }
+
+#endif // PROTOCORE_ENABLE_EDGE_CACHE
