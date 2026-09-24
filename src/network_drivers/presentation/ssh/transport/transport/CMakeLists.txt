@@ -8,6 +8,7 @@ protocore_add_module(network_drivers/presentation/ssh/transport/transport
     crypto/aead/aesgcm
     crypto/aead/chachapoly
     crypto/asymmetric/bignum
+    crypto/asymmetric/ecdsa
     crypto/cipher/aes256ctr
     crypto/hash/sha256
     mmgr/secure
@@ -15,7 +16,6 @@ protocore_add_module(network_drivers/presentation/ssh/transport/transport
     network_drivers/presentation/ssh/transport/phase_machine
   PRIVATE_DEPS
     crypto/asymmetric/curve25519
-    crypto/asymmetric/ecdsa
     crypto/asymmetric/ed25519
     crypto/asymmetric/rsa
     crypto/ct_eq

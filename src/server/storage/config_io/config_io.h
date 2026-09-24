@@ -74,14 +74,14 @@ typedef struct
  *   ConfigIo.export_args.n = ...;
  *   ConfigIo.export_args.out = ...;
  *   ConfigIo.export_args.cap = ...;
- *   ConfigIo.export(work);
+ *   ConfigIo.dump(work);
  *   // ConfigIo.n is what the call reports
  *
  * @var ConfigIoNs::export_args  what export takes: ns, fields, n, out, cap
  * @var ConfigIoNs::import_args  what import takes: ns, fields, n, text, len
  * @var ConfigIoNs::ok  a call's true/false outcome
  * @var ConfigIoNs::n  characters written, or 0 on a too-small buffer / failure ...
- * @var ConfigIoNs::export  export the schema's current values from namespace ns as `key=value` ...
+ * @var ConfigIoNs::dump  export the schema's current values from namespace ns as `key=value` ...
  * @var ConfigIoNs::import  import `key=value` lines from text into namespace ns, writing each ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
@@ -102,7 +102,7 @@ extern ConfigIoVars ConfigIoV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const export)(uint8_t *work);
+    void (*const dump)(uint8_t *work); // export; that name is reserved in C++, and this header reaches sketches
     void (*const import)(uint8_t *work);
 } ConfigIoNs;
 
@@ -113,10 +113,10 @@ void protocore_config_io_import(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `ConfigIo.export(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// `ConfigIo.dump(work)` resolves to a named function and becomes a DIRECT call. An extern table
 // leaves the call indirect and the symbol live at every level, -O2 -flto included.
 static const ConfigIoNs ConfigIo __attribute__((unused)) = {
-    .export = protocore_config_io_export,
+    .dump = protocore_config_io_export,
     .import = protocore_config_io_import,
 };
 

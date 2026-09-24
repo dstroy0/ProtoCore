@@ -71,7 +71,7 @@ void dbench_run(void)
         ConfigIoV.export_args.n = N_FIELDS;
         ConfigIoV.export_args.out = buf;
         ConfigIoV.export_args.cap = sizeof(buf);
-        DBENCH_OP("ConfigIo.export", 50, (ConfigIo.export(config_io_work), sink += ConfigIoV.n));
+        DBENCH_OP("ConfigIo.dump", 50, (ConfigIo.dump(config_io_work), sink += ConfigIoV.n));
         // Reopens NVS + 3 writes per call (real flash commits); smaller N than export.
         ConfigIoV.import_args.ns = "bench";
         ConfigIoV.import_args.fields = SCHEMA;

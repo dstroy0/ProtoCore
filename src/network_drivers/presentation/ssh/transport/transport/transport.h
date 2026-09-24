@@ -12,6 +12,7 @@
 #include "crypto/aead/aesgcm/aesgcm.h"
 #include "crypto/aead/chachapoly/chachapoly.h"
 #include "crypto/asymmetric/bignum/bignum.h"
+#include "crypto/asymmetric/ecdsa/ecdsa.h" // PROTOCORE_ECDSA_P256_PRIV_LEN
 #include "crypto/cipher/aes256ctr/aes256ctr.h"
 #include "crypto/hash/sha256/sha256.h" // PROTOCORE_SHA256_DIGEST_LEN - the exchange hash and session id
 #include "mmgr/secure/secure.h"        // protocore_secure_wipe (the canonical secure wipe)
@@ -135,6 +136,18 @@ void ssh_kex_set_prefer_rsa(proto_bool prefer);
 
 /** @brief Current negotiation preference (true = prefer RSA / DH). */
 proto_bool ssh_kex_prefer_rsa(void);
+
+/** @brief Install the ed25519 host key from its 32-byte seed; the public key is derived here. */
+void protocore_ssh_hostkey_ed25519_set(const uint8_t seed[32]);
+
+/** @brief True once an ed25519 host key is installed. */
+proto_bool protocore_ssh_hostkey_ed25519_available(void);
+
+/** @brief Install the ecdsa-sha2-nistp256 host key; an invalid scalar is rejected and leaves none installed. */
+void protocore_ssh_hostkey_ecdsa_set(const uint8_t priv[PROTOCORE_ECDSA_P256_PRIV_LEN]);
+
+/** @brief True once an ecdsa-sha2-nistp256 host key is installed. */
+proto_bool protocore_ssh_hostkey_ecdsa_available(void);
 
 /**
  * @brief The session identifier for slot @p i, or null before the first key exchange completes.

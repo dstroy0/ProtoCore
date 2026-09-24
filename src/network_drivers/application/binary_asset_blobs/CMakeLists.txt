@@ -2,5 +2,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(network_drivers/application/binary_asset_blobs
+  GATE PROTOCORE_ENABLE_THEMES
   SOURCES binary_asset_blobs.c
 )
