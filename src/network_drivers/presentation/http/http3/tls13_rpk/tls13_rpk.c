@@ -53,13 +53,12 @@ size_t protocore_tls13_rpk_build_certificate(uint8_t *work, uint8_t *out, size_t
     size_t tls13_rpk_n = Tls13Rpk.ed25519_spki(work, spki, sizeof(spki), ed25519_pub);
     if (!tls13_rpk_n)
     {
-        tls13_rpk_n = 0;
-        return;
+        return 0;
     }
     Tls13MsgV.build_certificate_args.out = out;
     Tls13MsgV.build_certificate_args.cap = cap;
     Tls13MsgV.build_certificate_args.cert_der = spki;
     Tls13MsgV.build_certificate_args.cert_len = sizeof(spki);
     Tls13Msg.build_certificate(work);
-    tls13_rpk_n = Tls13MsgV.n;
+    return Tls13MsgV.n;
 }

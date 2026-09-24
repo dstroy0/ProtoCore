@@ -121,7 +121,7 @@ uint8_t protocore_smbus_pec_write(uint8_t *work, uint8_t addr, const uint8_t *pa
     {
         c = pec_fold(c, payload, len);
     }
-    smbus_value = pec_final(c);
+    return pec_final(c);
 }
 
 uint8_t protocore_smbus_pec_read(uint8_t *work, uint8_t addr, const uint8_t *sent, size_t slen, const uint8_t *got,
@@ -142,7 +142,7 @@ uint8_t protocore_smbus_pec_read(uint8_t *work, uint8_t addr, const uint8_t *sen
     {
         c = pec_fold(c, got, glen);
     }
-    smbus_value = pec_final(c);
+    return pec_final(c);
 }
 
 void protocore_smbus_set_pec(uint8_t *work, proto_bool on)
