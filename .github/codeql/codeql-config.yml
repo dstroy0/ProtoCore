@@ -1,10 +1,11 @@
 name: "ProtoCore CodeQL config"
 
-# Analyze only our own source. PlatformIO downloads third-party dependencies
-# (e.g. the Unity test framework) into .pio/libdeps; those are not our code, so
-# their findings are noise (they recurred as cpp/irregular-enum-init alerts).
-# .pio sits at the repo root, so the pattern has to be anchored there: a leading "**/" matches
-# path segments BEFORE .pio, of which there are none, and the littlefs alerts came through anyway.
+# Analyze only our own source. CMake fetches the third-party packages (Unity, littlefs) into
+# build/native/_deps; those are not our code, so their findings are noise (they recurred as
+# cpp/irregular-enum-init alerts). The generated Unity runners are Unity's output, not ours either.
+# .pio is kept for a local pio build of the ESP32 env.
 paths-ignore:
+  - "build/**"
   - ".pio/**"
   - "**/.pio/**"
+  - "**/unity_runner.c"

@@ -56,35 +56,37 @@ jobs:
           # Authenticate with the automatic-actions deploy key so the report commit pushes over SSH
           # (past the protected-main ruleset), which a GITHUB_TOKEN push cannot.
           ssh-key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+          submodules: recursive
 
       - uses: actions/setup-python@v7
         with:
           python-version: "3.x"
 
-      # Restore the PlatformIO toolchain + the ccache store before building. ccache keys on the
-      # preprocessed source + flags, so identical compiles hit across envs and (thanks to this cache)
-      # across runs. The key busts on platformio.ini changes; restore-keys keeps a warm cache.
-      - name: Cache PlatformIO + ccache
+      # Restore the ccache store before building. ccache keys on the preprocessed source + flags, so
+      # identical compiles hit across envs and (thanks to this cache) across runs. The key busts on
+      # test_matrix.json changes; restore-keys keeps a warm cache.
+      - name: Cache ccache
         uses: actions/cache@v6
         with:
-          path: |
-            ~/.platformio
-            ~/.ccache
-          key: test-analyze-${{ hashFiles('platformio.ini') }}
+          path: ~/.ccache
+          key: test-analyze-${{ hashFiles('test/test_matrix.json') }}
           restore-keys: test-analyze-
 
-      - name: Install PlatformIO + gcovr + ccache
+      - name: Install gcovr + ccache + ninja
         # gcovr is pinned: an unpinned drift to 8.6+ changed --filter anchoring and silently emptied
         # every coverage report (0% on Sonar). ccache provides the /usr/lib/ccache masquerade dir that
         # harness.py prefers over the bare compiler.
         run: |
-          pip install --upgrade platformio 'gcovr==8.6'
-          sudo apt-get update && sudo apt-get install -y ccache
+          pip install 'gcovr==8.6'
+          sudo apt-get update && sudo apt-get install -y ccache ninja-build
 
-      # harness.py compiles and links the envs itself rather than shelling out to `pio test`, so
-      # nothing else fetches lib_deps: Unity has to be on disk under .pio/libdeps before the run.
-      - name: Install lib_deps (Unity)
-        run: pio pkg install
+      # Unity and littlefs are fetched by CMake (cmake/ProtoCoreDeps.cmake), not installed by pio.
+      # Configuring build/native puts them under build/native/_deps, where harness.py's direct
+      # compile finds them, and writes each suite's Unity runner.
+      - name: Configure the native build (fetches Unity + littlefs)
+        run: |
+          python3 tools/harness.py build cmake
+          cmake -S test -B build/native -G Ninja
 
       - name: Check platformio.ini is in sync with the test matrix
         run: python3 test/harness.py env gen --check

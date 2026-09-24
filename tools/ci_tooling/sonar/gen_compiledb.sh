@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Generate the merged compile_commands.json for the SonarQube C/C++ analyzer.
-# Run from anywhere with PlatformIO (`pio`) on PATH.
+# Run from anywhere with cmake and ninja on PATH.
 #
 # No single env enables all PROTOCORE_ENABLE_* features, so a feature-gated source file
-# is only compiled in the env that turns its flag on; we run compiledb per env and
-# merge (merge_compiledb.py) to cover every file.
+# is only compiled in the env that turns its flag on. The native CMake build (build/native) exports
+# one compile database for every env; it is split per env target and merged (merge_compiledb.py)
+# so every file keeps one command.
 #
 # Two modes (mirrors the coverage / report baselines so an affected run stays cheap):
 #   gen_compiledb.sh                     FULL   - every native env, regenerate the baseline.
@@ -28,21 +29,30 @@ if [ "${#AFFECTED_ENVS[@]}" -eq 0 ] || [ ! -f "$BASELINE" ]; then
     MODE=full
 fi
 
-if [ "$MODE" = "full" ]; then
-    mapfile -t ENVS < <(grep -oE '^\[env:native[A-Za-z0-9_]*\]' platformio.ini | sed -E 's/\[env:(.*)\]/\1/' | grep -vE 'codeql')
-else
-    ENVS=("${AFFECTED_ENVS[@]}")
-fi
-echo "compiledb mode=$MODE envs=${#ENVS[@]}"
+BUILD=build/native
+python3 tools/harness.py build cmake
+cmake -S test -B "$BUILD" -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON >/dev/null
 
 rm -rf "$FRAGS" compile_commands.json
 mkdir -p "$FRAGS"
-for e in "${ENVS[@]}"; do
-    echo "::group::compiledb $e"
-    pio run -t compiledb -e "$e"
-    mv compile_commands.json "$FRAGS/$e.json"
-    echo "::endgroup::"
-done
+# One fragment per env target, from the objects under CMakeFiles/<env>.dir/. MMgr's own targets and
+# the fetched deps are not ProtoCore's sources and stay out.
+python3 - "$BUILD/compile_commands.json" "$FRAGS" "$MODE" "${AFFECTED_ENVS[@]}" <<'PY'
+import json, os, re, sys
+db, frags, mode, want = sys.argv[1], sys.argv[2], sys.argv[3], set(sys.argv[4:])
+per = {}
+for e in json.load(open(db)):
+    m = re.search(r"CMakeFiles/(native[A-Za-z0-9_]*)\.dir/", e.get("output", "") or e.get("command", ""))
+    if not m or m.group(1).startswith("native_codeql"):
+        continue
+    if mode != "full" and m.group(1) not in want:
+        continue
+    per.setdefault(m.group(1), []).append(e)
+for env, ents in per.items():
+    with open(os.path.join(frags, env + ".json"), "w") as f:
+        json.dump(ents, f)
+print("compiledb mode=%s envs=%d" % (mode, len(per)))
+PY
 
 if [ "$MODE" = "full" ]; then
     python3 -m tools.ci_tooling.sonar.merge_compiledb "$BASELINE" "$FRAGS/*.json" --root "$ROOT"

@@ -6,7 +6,7 @@ name: CodeQL
 #
 # Uses the "advanced" setup
 # (not GitHub default setup) because the database must be built by tracing a real
-# compile - here a host/native PlatformIO build of the security-critical cores
+# compile - here the host/native CMake build of the security-critical cores
 # (HTTP parser, WebSocket, multipart, base64/JSON, SSH crypto, SNMP, the codecs).
 #
 # The analyze step publishes a code-scanning check named "CodeQL" - require that
@@ -40,14 +40,17 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          submodules: recursive
 
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: "3.x"
 
-      - name: Install PlatformIO
-        run: pip install --upgrade platformio
+      # Unity's runner generator is Ruby; the runner image carries Ruby, ninja is added.
+      - name: Install ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4.37.7
@@ -57,46 +60,18 @@ jobs:
           config-file: ./.github/codeql/codeql-config.yml
 
       # Host/native build of every native env; CodeQL traces the compiler, so a translation unit is
-      # only analyzed if something here compiled it. A hand-listed subset silently left most of src/
-      # unscanned, and the list could not track a new env. The set is read from the generated ini, so
-      # adding an env to test/test_matrix.json extends the scan with it.
+      # only analyzed if something here compiled it. test/CMakeLists.txt is generated from
+      # test/test_matrix.json, so adding an env to the matrix extends the scan with it. Configuring
+      # fetches Unity and littlefs (cmake/ProtoCoreDeps.cmake) and writes each suite's runner.
       #
-      # --without-testing skips running the unit tests; test-report.yml is what runs and gates those.
-      # A per-env failure does not abort the sweep: extraction happens per compiler invocation, so the
-      # units that did compile are still in the database, and stopping here would discard the whole
-      # scan over one bad env - which is how this workflow produced nothing at all. Failures are
-      # reported to the run summary instead, and the test suite remains the build gate.
+      # Build only: test-report.yml is what runs and gates the suites. The build itself has to
+      # succeed - a unit that does not compile is not in the database, and a scan that silently
+      # covers part of src/ reads the same as one that covers all of it.
       - name: Build (native, traced by CodeQL)
         run: |
-          mapfile -t ENVS < <(grep -oE '^\[env:native[A-Za-z0-9_]*\]' platformio.ini | sed -E 's/\[env:(.*)\]/\1/')
-          echo "tracing ${#ENVS[@]} native env(s)"
-          FAILED=()
-          BUILT=0
-          for e in "${ENVS[@]}"; do
-            echo "::group::build $e"
-            # --without-testing builds and does not run, so PlatformIO's own summary line reads
-            # "0 test cases: 0 succeeded" for every env. That is the flag working, not an empty
-            # build: the build is the "Building..." line above it, and it is what CodeQL traces.
-            if pio test --without-testing -e "$e"; then
-              BUILT=$((BUILT + 1))
-              echo "built $e (tests deliberately not run here; test-report.yml runs them)"
-            else
-              FAILED+=("$e")
-            fi
-            echo "::endgroup::"
-          done
-          echo "built ${BUILT} of ${#ENVS[@]} env(s) into the CodeQL database"
-          {
-            echo "### CodeQL extraction"
-            echo "Built ${BUILT} of ${#ENVS[@]} env(s); ${#FAILED[@]} failed."
-            if [ "${#FAILED[@]}" -ne 0 ]; then
-              echo ""
-              echo "Not extracted (or only partially):"
-              for e in "${FAILED[@]}"; do echo "- \`$e\`"; done
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-          for e in "${FAILED[@]}"; do echo "::warning title=CodeQL build::$e failed to build; its units may be missing from the database"; done
-          exit 0
+          python3 tools/harness.py build cmake
+          cmake -S test -B build/native -G Ninja
+          cmake --build build/native
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v4.37.7

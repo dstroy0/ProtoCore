@@ -37,23 +37,17 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # full history: SonarCloud attributes findings to new code by commit date
+          submodules: recursive
 
       - uses: actions/setup-python@v7
         with:
           python-version: "3.x"
 
-      # The compile database is one `pio run -t compiledb` per native env, so the toolchain download
-      # dominates a cold run. Keyed on platformio.ini, which is what changes the env set.
-      - name: Cache PlatformIO
-        uses: actions/cache@v6
-        with:
-          path: ~/.platformio
-          key: sonar-${{ hashFiles('platformio.ini') }}
-          restore-keys: sonar-
-
-      - name: Install PlatformIO
+      # The compile database comes from the native CMake build, which fetches Unity and littlefs
+      # itself; MMgr is a submodule the build enters.
+      - name: Install ninja
         if: ${{ env.SONAR_TOKEN != '' }}
-        run: pip install --upgrade platformio
+        run: sudo apt-get update -qq && sudo apt-get install -y ninja-build
 
       # Full mode: every native env, merged. This job commits nothing, so it does not overlay onto
       # the committed test/compile_commands.json baseline - it builds the database whole each time.
