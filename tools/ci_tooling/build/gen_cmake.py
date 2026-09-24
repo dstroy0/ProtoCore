@@ -25,7 +25,6 @@ import glob as _glob
 import json
 import os
 import re
-import subprocess
 import sys
 
 import gen_suites
@@ -39,9 +38,6 @@ OWED = os.path.join(ROOT, "test", "yanked_includes.json")
 # The include dirs every env compiles with, whatever it named. -Iinclude is PlatformIO's implicit
 # include_dir, where protocore.h lives; nothing here is pio, so each one is stated.
 BASE_INCLUDES = ["test/core_setup/hal/host", "test/support", "src", "include", "."]
-
-GENERATED_RUNNER = "unity_runner.c"
-
 
 def rel(path):
     return os.path.relpath(path, ROOT).replace("\\", "/")
@@ -167,30 +163,22 @@ def reached_headers(test):
 
 
 def lib_packages(envname):
-    """A lib_dep's include dir and sources, which pio passes and a plain CMake build does not.
+    """The packages an env can reach beyond Unity: their include dirs, and per package its headers
+    and sources.
 
-    Unity is handled on its own because every env links it. Anything else under an env's libdeps is
-    a package the env asked for - littlefs is the one in the tree, reached through the host mount
-    mock. The include dir costs nothing to add, so it always is; the sources are only compiled when
-    the suite actually reaches the package, because pio installs a package per env whether that
-    env's suite uses it or not.
+    littlefs is the one, reached through the host mount mock. cmake/ProtoCoreDeps.cmake fetches it
+    and sets PROTOCORE_LITTLEFS_DIR, so the paths are that variable's rather than the tree's. The
+    include dir costs nothing to add, so every env has it; the sources are only compiled when the
+    suite actually reaches lfs.h.
     """
-    base = os.path.join(ROOT, ".pio", "libdeps", envname)
-    if not os.path.isdir(base):
-        return [], []
-    incs, pkgs = [], []
-    for d in sorted(os.listdir(base)):
-        if d == "Unity":
-            continue
-        inc = os.path.join(base, d, "include")
-        src = os.path.join(base, d, "src")
-        if not os.path.isdir(inc) or not os.path.isdir(src):
-            continue
-        incs.append(rel(inc))
-        heads = [h for h in os.listdir(inc) if h.endswith(".h")]
-        srcs = [rel(os.path.join(src, f)) for f in sorted(os.listdir(src)) if f.endswith(".c")]
-        pkgs.append((heads, srcs))
-    return incs, pkgs
+    lfs = "${PROTOCORE_LITTLEFS_DIR}"
+    return [lfs], [(["lfs.h", "lfs_util.h"], [lfs + "/lfs.c", lfs + "/lfs_util.c"])]
+
+
+def cmake_path(p):
+    """A tree path under ${PROTOCORE_ROOT}; a path that already names a CMake variable as is."""
+    p = cmake_escape(p)
+    return p if p.startswith("${") else "${PROTOCORE_ROOT}/" + p
 
 
 def target_names(name, tests):
@@ -244,6 +232,9 @@ enable_testing()
 # source paths instead. Declaring a module and never entering its directory means its GATE decides
 # nothing, which is the whole point of stating one.
 list(APPEND CMAKE_MODULE_PATH "${PROTOCORE_ROOT}/cmake")
+# Unity and littlefs, fetched and pinned. First, because a suite generates its runner as it declares
+# itself, and because include/MMgr declares Unity too - the first declaration is the one kept.
+include(ProtoCoreDeps)
 include(ProtoCoreModule)
 include(ProtoCoreSuite)
 add_subdirectory("${PROTOCORE_ROOT}/src" "${CMAKE_CURRENT_BINARY_DIR}/pc_src")
@@ -264,23 +255,11 @@ add_subdirectory(support)
 add_subdirectory(unit)
 add_subdirectory(env)
 
-# Unity is a package the envs link; pio installs it per env, so any copy in the tree will do.
-if(NOT PROTOCORE_UNITY_DIR)
-  file(GLOB _unity_candidates "${PROTOCORE_ROOT}/.pio/libdeps/*/Unity/src")
-  if(_unity_candidates)
-    list(GET _unity_candidates 0 PROTOCORE_UNITY_DIR)
-  endif()
-endif()
-if(NOT PROTOCORE_UNITY_DIR)
-  message(FATAL_ERROR
-    "Unity sources not found. Run `pio pkg install` once, or pass -DPROTOCORE_UNITY_DIR=<path to Unity/src>.")
-endif()
-
 # Every env compiles under the same base: C11, POSIX, no exceptions, -O1. Matched to the direct
 # compile in test/harness.py so a CMake build and a harness run are the same translation.
 add_library(protocore_env_base INTERFACE)
 target_compile_definitions(protocore_env_base INTERFACE _POSIX_C_SOURCE=200809L)
-target_compile_options(protocore_env_base INTERFACE -fno-exceptions -O1)
+target_compile_options(protocore_env_base INTERFACE -fno-exceptions -O1 -Werror=return-type)
 target_include_directories(protocore_env_base INTERFACE "${PROTOCORE_UNITY_DIR}")
 target_link_libraries(protocore_env_base INTERFACE m)
 
@@ -343,22 +322,6 @@ def render_owed(owed):
     return "".join(out)
 
 
-def make_runner(test):
-    """Generate the suite's unity_runner.c through the test harness. True when one is on disk after.
-
-    Unity's generator lives under .pio/libdeps, so this fails on a checkout that has never installed
-    it - which is exactly the case that must not write a truncated CMakeLists.
-    """
-    sd = os.path.join(ROOT, "test", *test.split("/"))
-    subprocess.run(
-        [sys.executable, os.path.join(ROOT, "test", "harness.py"), "runners", "gen", rel(sd)],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-    )
-    return os.path.isfile(os.path.join(sd, GENERATED_RUNNER))
-
-
 def render(envs, warn, dropped):
     out = [HEADER, render_owed(load_owed())]
     rendered = 0
@@ -383,24 +346,13 @@ def render(envs, warn, dropped):
             # The suite's own files are its directory's to state - the target carries them, and an
             # env names the suite rather than repeating its sources and its include path. What is
             # still the env's is below: the library slice it compiles, its defines, and the package
-            # sources, which live under .pio/libdeps/<this env>/ and so are not the suite's at all.
+            # sources, which cmake/ProtoCoreDeps.cmake fetches and so are not the suite's at all.
             spec = suites.get(t)
             if spec is None:
                 dropped.append(targets[t])
                 warn.append("%s: the matrix runs %s and no CMakeLists declares it" % (targets[t], t))
                 continue
-            if not spec["own_main"] and not os.path.isfile(os.path.join(ROOT, "test", *t.split("/"), GENERATED_RUNNER)):
-                # The runner is generated, not committed, so a fresh checkout has none of them.
-                # protocore_add_suite() stops the configure by name when one is missing, which is
-                # the backstop; making it here is what keeps a fresh checkout building at all.
-                if not make_runner(t):
-                    dropped.append(targets[t])
-                    warn.append(
-                        "%s: no main() and no %s - run `test/harness.py runners gen`" % (targets[t], GENERATED_RUNNER)
-                    )
-                    continue
-
-            # A lib_dep the suite reaches has to be compiled in: pio links it, a plain CMake build
+            # A package the suite reaches has to be compiled in: pio linked it, a plain CMake build
             # does not, and the suite fails at the mock's `#include <lfs.h>` instead.
             reached = reached_headers(t)
             pkg_srcs = []
@@ -413,14 +365,14 @@ def render(envs, warn, dropped):
             out.append("  SUITE %s\n" % t)
             out.append("  SOURCES\n")
             for s in srcs + pkg_srcs:
-                out.append('    "${PROTOCORE_ROOT}/%s"\n' % cmake_escape(s))
+                out.append('    "%s"\n' % cmake_path(s))
             if defs:
                 out.append("  DEFINES\n")
                 for d in defs:
                     out.append('    "%s"\n' % cmake_escape(d))
             out.append("  INCLUDES\n")
             for i in incs + lib_incs:
-                out.append('    "${PROTOCORE_ROOT}/%s"\n' % cmake_escape(i))
+                out.append('    "%s"\n' % cmake_path(i))
             out.append(")\n\n")
             rendered += 1
     return "".join(out), rendered
@@ -442,17 +394,16 @@ def main():
     text, n = render(envs, warn, dropped)
 
     # A dropped target is a target the file loses, and this file is committed. Refuse the write
-    # rather than hand back a smaller CMakeLists that still looks like a good one. Two reasons a
-    # target drops now: the suite has no declaration, or it needs a runner that is not there and
-    # could not be generated. The warnings above say which, per target.
+    # rather than hand back a smaller CMakeLists that still looks like a good one. A target drops
+    # when the suite it runs has no declaration; the warnings above name each one. Runners are not
+    # a reason: protocore_add_suite() generates them at configure time, from the fetched Unity.
     if dropped and not a.check:
         print(
-            "gen_cmake: %d target(s) could not be rendered - a suite the matrix runs either has no\n"
-            "  CMakeLists declaring it, or needs a %s that could not be generated.\n"
+            "gen_cmake: %d target(s) could not be rendered - a suite the matrix runs has no\n"
+            "  CMakeLists declaring it.\n"
             "  test/CMakeLists.txt was NOT written - it would have lost those targets silently.\n"
-            "  `harness.py build suites` reports the first; for the second, Unity's generator lives\n"
-            "  under .pio/libdeps - install it, then re-run.\n"
-            "  first few: %s" % (len(dropped), GENERATED_RUNNER, " ".join(sorted(dropped)[:5])),
+            "  `harness.py build suites` reports which.\n"
+            "  first few: %s" % (len(dropped), " ".join(sorted(dropped)[:5])),
             file=sys.stderr,
         )
         for w in warn:

@@ -45,15 +45,38 @@ function(protocore_add_suite path)
 
   # Unity's runner - the file that calls RUN_TEST once per test - is GENERATED, not committed, so a
   # fresh checkout has none of them. 354 of the 376 suites need one; the 22 that write their own
-  # main() say OWN_MAIN. Stopping here names the suite and the fix; without it the suite links with
-  # no main() and the error is a linker's, pointing at nothing.
+  # main() say OWN_MAIN. It is written here, at configure time, from the Unity that
+  # cmake/ProtoCoreDeps.cmake fetched, through the same `harness.py runners gen` a person runs by
+  # hand - so its refusals (a case the generator would walk past) stop the configure by name.
+  #
+  # Configure time and not a build rule: the runner is an INTERFACE source compiled by env targets
+  # in another directory, and a custom command's OUTPUT is only built for targets in its own. The
+  # suite's sources are configure dependencies, so adding a case reruns this on the next build.
   if(NOT ARG_OWN_MAIN)
-    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/unity_runner.c")
-      message(FATAL_ERROR
-        "suite ${path} has no unity_runner.c and does not declare OWN_MAIN.\n"
-        "  Generate the runners:  python test/harness.py runners gen")
+    set(_runner "${CMAKE_CURRENT_SOURCE_DIR}/unity_runner.c")
+    set(_stale FALSE)
+    if(NOT EXISTS "${_runner}")
+      set(_stale TRUE)
     endif()
-    target_sources(${target} INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/unity_runner.c")
+    foreach(s IN LISTS ARG_SOURCES)
+      set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${s}")
+      if("${CMAKE_CURRENT_SOURCE_DIR}/${s}" IS_NEWER_THAN "${_runner}")
+        set(_stale TRUE)
+      endif()
+    endforeach()
+    if(_stale)
+      execute_process(
+        COMMAND "${Python3_EXECUTABLE}" "${PROTOCORE_ROOT}/test/harness.py" runners gen
+                "${CMAKE_CURRENT_SOURCE_DIR}" --unity "${PROTOCORE_UNITY_RB}"
+        WORKING_DIRECTORY "${PROTOCORE_ROOT}"
+        RESULT_VARIABLE _rc
+        OUTPUT_QUIET
+        ERROR_VARIABLE _err)
+      if(NOT _rc EQUAL 0 OR NOT EXISTS "${_runner}")
+        message(FATAL_ERROR "suite ${path}: could not generate unity_runner.c\n${_err}")
+      endif()
+    endif()
+    target_sources(${target} INTERFACE "${_runner}")
   endif()
 
   # A suite includes its own fixtures by bare name.
