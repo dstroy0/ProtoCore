@@ -311,7 +311,7 @@ def cmd_build(a):
         print("no %s toolchain at %s" % (a.arch, arch["cc"]))
         return 3
 
-    envs = harness.parse_ini_envs(harness.INI)
+    envs = harness.load_matrix_envs()
     names = a.envs or [n for n, e in envs.items() if e.get("tests") and n not in harness.NEVER_SELECT]
     out_dir = os.path.join(ROOT, ".pio", "bare", a.arch)
     os.makedirs(out_dir, exist_ok=True)
@@ -451,7 +451,7 @@ def cmd_sim(a):
         )
         return 3
 
-    envs = harness.parse_ini_envs(harness.INI)
+    envs = harness.load_matrix_envs()
     names = a.envs or ["native_protostr"]
     out_dir = os.path.join(ROOT, ".pio", "bare", a.arch)
     os.makedirs(out_dir, exist_ok=True)

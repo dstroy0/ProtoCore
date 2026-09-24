@@ -21,8 +21,6 @@ import harness  # noqa: E402 - the path above is what makes this importable
 name = env.get("PIOTEST_RUNNING_NAME")  # noqa: F821
 if name:
     suite = os.path.join(PROJECT_DIR, env.get("PIOTEST_DIR") or "test", *name.split("/"))  # noqa: F821
-    harness.generate_runner(
-        suite,
-        libdeps=env.get("PROJECT_LIBDEPS_DIR"),  # noqa: F821
-        envname=env.get("PIOENV"),  # noqa: F821
-    )
+    libdeps = env.get("PROJECT_LIBDEPS_DIR")  # noqa: F821
+    rb = os.path.join(libdeps, env.get("PIOENV"), "Unity", "auto", "generate_test_runner.rb") if libdeps else None  # noqa: F821
+    harness.generate_runner(suite, rb if rb and os.path.isfile(rb) else None)

@@ -950,88 +950,47 @@ IGNORE_EXACT = {
 }
 
 
-def parse_ini_envs(ini_path):
-    """Return {env: {"src": [globs], "tests": [dirs], "flags": [str]}} for native_* envs."""
-    envs = {}
-    cur = None
-    section = None
-    with open(ini_path, encoding="utf-8") as fh:
-        for raw in fh:
-            line = raw.rstrip("\n")
-            # A stack base is a bare [native_stack_l46]-style section: it owns no suite and carries
-            # the flags and sources for the envs that extend it, so it has to be read too.
-            m = re.match(r"^\[(?:env:)?(native[A-Za-z0-9_]*)\]\s*$", line)
-            if m:
-                cur = m.group(1)
-                envs[cur] = {"src": [], "tests": [], "flags": [], "extends": None}
-                section = None
-                continue
-            if line.startswith("["):
-                cur = None
-                section = None
-                continue
-            if cur is not None:
-                x = re.match(r"^\s*extends\s*=\s*(?:env:)?([A-Za-z0-9_]+)\s*$", line)
-                if x:
-                    envs[cur]["extends"] = x.group(1)
-                    section = None
+def load_matrix_envs(table_path=None):
+    """Return {env: {"src": [globs], "tests": [dirs], "flags": [str]}} for every env in the matrix.
+
+    The matrix is the one declaration of the native envs; test/CMakeLists.txt is generated from it
+    and platformio.ini no longer carries them. Each env's base chain is folded in, base first, and a
+    `${env:NAME.build_src_filter}` entry is expanded to that env's own sources, so the direct compile
+    links what the CMake build links.
+    """
+    with open(table_path or TABLE, encoding="utf-8") as fh:
+        table = json.load(fh)["envs"]
+
+    def expand(globs, seen):
+        out = []
+        for g in globs:
+            m = g.strip()
+            if m.startswith("${env:") and m.endswith(".build_src_filter}"):
+                other = m[len("${env:") : -len(".build_src_filter}")]
+                if other in seen or other not in table:
                     continue
-            if cur is None:
-                continue
-            # A blank line or a comment ends the current list. The next env's desc is emitted as
-            # ';' lines above its header, and without this they are read as more list entries.
-            if not line.strip() or line.lstrip().startswith(";"):
-                section = None
-                continue
-            if re.match(r"^\s*build_src_filter\s*=", line):
-                section = "src"
-                rest = line.split("=", 1)[1].strip()
-                if rest:
-                    _add_src(envs[cur], rest)
-                continue
-            if re.match(r"^\s*test_filter\s*=", line):
-                section = "tests"
-                rest = line.split("=", 1)[1].strip()
-                if rest:
-                    envs[cur]["tests"].append(rest)
-                continue
-            if re.match(r"^\s*build_flags\s*=", line):
-                section = "flags"
-                continue
-            if re.match(r"^\s*[A-Za-z_]+\s*=", line):
-                section = None
-                continue
-            if section == "src" and line.strip():
-                _add_src(envs[cur], line.strip())
-            elif section == "tests" and line.strip():
-                envs[cur]["tests"].append(line.strip())
-            elif section == "flags" and line.strip():
-                envs[cur]["flags"].append(line.strip())
+                seen.add(other)
+                out += expand(inherited(table, other, "src"), seen)
+            elif not m.startswith("${"):
+                out.append(m)
+        return out
 
-    # Fold each base chain in. `extends` is what carries a stack base's sources and flags to the
-    # envs built on it; without this a direct compile builds the suite against nothing and every
-    # namespace the suite drives comes back undefined at the link. The base goes first so the env's
-    # own entries are the later word. A ${base.build_flags} interpolation is dropped: the flags it
-    # names are now present literally.
-    def fold(name, key, seen):
-        e = envs.get(name)
-        if not e or name in seen:
-            return []
-        seen.add(name)
-        base = e.get("extends")
-        out = fold(base, key, seen) if base else []
-        return out + [v for v in e[key] if not v.startswith("${")]
-
-    for name in list(envs):
-        for key in ("src", "flags"):
-            envs[name][key] = fold(name, key, set())
+    envs = {}
+    for name, e in table.items():
+        src = []
+        for g in expand(inherited(table, name, "src"), set()):
+            x = re.match(r"^\+<(.+)>$", g)
+            if x and x.group(1) not in src:
+                src.append(x.group(1))
+        flags = [f for f in inherited(table, name, "flags") if not f.startswith("${")]
+        base = e.get("base", "")
+        envs[name] = {
+            "src": src,
+            "tests": list(e.get("tests", [])),
+            "flags": flags,
+            "extends": base[len("env:") :] if base.startswith("env:") else None,
+        }
     return envs
-
-
-def _add_src(env, token):
-    m = re.match(r"^\+<(.+)>$", token)
-    if m:
-        env["src"].append(m.group(1))
 
 
 def _match_glob(rel, glob):
@@ -1156,7 +1115,7 @@ def cmd_env_select(a):
     if not changed:
         print("NONE")
         return 0
-    envs = parse_ini_envs(INI)
+    envs = load_matrix_envs()
     result = classify(changed, envs, load_graph(), len(set(envs) - NEVER_SELECT), base=a.base, head=a.head)
     print(" ".join(result) if isinstance(result, list) else result)
     return 0
@@ -1173,7 +1132,7 @@ def cmd_env_deps(a):
     Runs the compiler's own dependency scan (-MM) per env with that env's flags, so the answer is
     the include closure the env really compiles rather than a guess from the src filter.
     """
-    envs = parse_ini_envs(INI)
+    envs = load_matrix_envs()
     names = a.envs or sorted(n for n in envs if envs[n]["tests"] and n not in NEVER_SELECT)
     graph = {}
     cc = shutil.which("gcc") or shutil.which("cc")
@@ -1331,19 +1290,34 @@ def find_ruby():
     return None
 
 
-def find_unity_generator(libdeps=None, envname=None):
-    """Unity is a lib_dep, so the generator lives under an env's libdeps."""
-    libdeps = libdeps or os.path.join(ROOT, ".pio", "libdeps")
-    candidates = []
-    if envname:
-        candidates.append(os.path.join(libdeps, envname, "Unity", "auto", "generate_test_runner.rb"))
-    if os.path.isdir(libdeps):
-        for d in sorted(os.listdir(libdeps)):
-            candidates.append(os.path.join(libdeps, d, "Unity", "auto", "generate_test_runner.rb"))
-    for c in candidates:
-        if os.path.isfile(c):
-            return c
-    return None
+NATIVE_BUILD = os.path.join(ROOT, "build", "native")
+
+
+def fetched_dep(name):
+    """A package cmake/ProtoCoreDeps.cmake fetched, configuring build/native to fetch it if needed.
+
+    Unity and littlefs come from CMake's FetchContent, pinned in that one file; nothing is read from
+    .pio/. The direct compile and `runners gen` run outside the CMake build, so they find the sources
+    where the configure put them, and run that configure once when it has not happened yet.
+    """
+    d = os.path.join(NATIVE_BUILD, "_deps", name + "-src")
+    if os.path.isdir(d):
+        return d
+    if not os.path.exists(os.path.join(NATIVE_BUILD, "CMakeCache.txt")) and shutil.which("cmake"):
+        r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "harness.py"), "build", "cmake"], cwd=ROOT)
+        if r.returncode == 0:
+            gen = ["-G", "Ninja"] if shutil.which("ninja") else []
+            subprocess.run(["cmake", "-S", os.path.join(ROOT, "test"), "-B", NATIVE_BUILD] + gen, cwd=ROOT)
+    return d if os.path.isdir(d) else None
+
+
+def find_unity_generator(unity_rb=None):
+    """Unity's generate_test_runner.rb: the one named, else the one CMake fetched."""
+    if unity_rb:
+        return unity_rb if os.path.isfile(unity_rb) else None
+    d = fetched_dep("unity")
+    c = os.path.join(d, "auto", "generate_test_runner.rb") if d else None
+    return c if c and os.path.isfile(c) else None
 
 
 # What Unity's generate_test_runner.rb collects, and the shape a case has to have to be collected.
@@ -1374,7 +1348,7 @@ def suite_source(suite_dir):
     return None
 
 
-def generate_runner(suite_dir, libdeps=None, envname=None):
+def generate_runner(suite_dir, unity_rb=None):
     """Emit suite_dir/unity_runner.c from the one source that holds the cases.
 
     This is the bridge to Unity's generate_test_runner.rb: it is what turns a suite source into a
@@ -1420,14 +1394,17 @@ def generate_runner(suite_dir, libdeps=None, envname=None):
             % (os.path.relpath(suite_dir, ROOT), len(sources), ", ".join(sources))
         )
     ruby = find_ruby()
-    generator = find_unity_generator(libdeps, envname)
+    generator = find_unity_generator(unity_rb)
     if not ruby:
         raise SystemExit(
             "runners: ruby not found on PATH or in %s - install it "
             "(choco install ruby, or winget install RubyInstallerTeam.Ruby.3.4)" % ", ".join(RUBY_GLOBS[:3])
         )
     if not generator:
-        raise SystemExit("runners: Unity's generate_test_runner.rb not found under .pio/libdeps")
+        raise SystemExit(
+            "runners: Unity's generate_test_runner.rb not found - configure build/native "
+            "(cmake -S test -B build/native) so CMake fetches Unity, or pass --unity"
+        )
     src = os.path.join(suite_dir, sources[0])
     out = os.path.join(suite_dir, GENERATED_RUNNER)
     subprocess.run([ruby, generator, src, out], check=True)
@@ -1451,7 +1428,7 @@ def generate_runner(suite_dir, libdeps=None, envname=None):
 def cmd_runners_gen(a):
     for d in a.suite:
         full = d if os.path.isabs(d) else os.path.join(ROOT, d)
-        out = generate_runner(full)
+        out = generate_runner(full, a.unity)
         if not out:
             print(
                 "no runner for %s\n"
@@ -1774,15 +1751,10 @@ def cmd_readme_gen(a):
 
 
 def unity_src():
-    """Unity's own sources, from any env's libdeps."""
-    base = os.path.join(ROOT, ".pio", "libdeps")
-    if not os.path.isdir(base):
-        return None
-    for d in sorted(os.listdir(base)):
-        c = os.path.join(base, d, "Unity", "src")
-        if os.path.isfile(os.path.join(c, "unity.c")):
-            return c
-    return None
+    """Unity's own sources, as CMake fetched them."""
+    d = fetched_dep("unity")
+    c = os.path.join(d, "src") if d else None
+    return c if c and os.path.isfile(os.path.join(c, "unity.c")) else None
 
 
 def suite_dirs(env_entry):
@@ -1811,30 +1783,17 @@ def inherited(envs, name, key, seen=None):
 
 
 def lib_packages(envname):
-    """A lib_dep's include dir and sources, which `pio` passes and a direct compile does not.
+    """The packages an env can reach beyond Unity: their include dirs, and per package its headers
+    and sources.
 
-    Unity is handled on its own because every env links it. Anything else under an env's libdeps is
-    a package the env asked for: littlefs is the one in the tree, reached through the host mount
-    mock. The include dir costs nothing to add, so it always is; the sources are only compiled when
-    the suite actually reaches the package, because pio installs a package per env whether that
-    env's suite uses it or not.
+    littlefs is the one, reached through the host mount mock, and fetched by CMake. The include dir
+    costs nothing to add, so it always is; the sources are only compiled when the suite actually
+    reaches lfs.h. Same rule as tools/ci_tooling/build/gen_cmake.py's lib_packages.
     """
-    base = os.path.join(ROOT, ".pio", "libdeps", envname)
-    if not os.path.isdir(base):
+    d = fetched_dep("littlefs")
+    if not d:
         return [], []
-    incs, pkgs = [], []
-    for d in sorted(os.listdir(base)):
-        if d == "Unity":
-            continue
-        inc = os.path.join(base, d, "include")
-        src = os.path.join(base, d, "src")
-        if not os.path.isdir(inc) or not os.path.isdir(src):
-            continue
-        incs.append(inc)
-        heads = [h for h in os.listdir(inc) if h.endswith(".h")]
-        srcs = [os.path.join(src, f) for f in sorted(os.listdir(src)) if f.endswith(".c")]
-        pkgs.append((heads, srcs))
-    return incs, pkgs
+    return [d], [(["lfs.h", "lfs_util.h"], [os.path.join(d, "lfs.c"), os.path.join(d, "lfs_util.c")])]
 
 
 def _reached_headers(sdir):
@@ -1946,7 +1905,7 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
         return 1, "no gcc on PATH"
     usrc = unity_src()
     if not usrc:
-        return 1, "Unity sources not found under .pio/libdeps - run `pio pkg install` once"
+        return 1, "Unity sources not found - configure build/native (cmake -S test -B build/native) once"
     incs, defs = _flag_split(e["flags"])
     incs.append("-I" + os.path.relpath(usrc, ROOT).replace("\\", "/"))
     lib_incs, lib_pkgs = lib_packages(name)
@@ -1980,7 +1939,9 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
         opt = ["-g", "-O0"] if debug else ["-O1"]
         # Coverage counters are what is being measured, so the optimizer stays out of the way.
         if coverage:
-            opt = ["-g", "-O0", "--coverage"]
+            # -O0 keeps every unused static table, and some of those name functions this env does not
+            # build; -O1 drops them. Per-section objects and --gc-sections drop them here the same way.
+            opt = ["-g", "-O0", "--coverage", "-ffunction-sections", "-fdata-sections"]
         base = (
             [cc, "-std=c11", "-D_POSIX_C_SOURCE=200809L", "-fno-exceptions"]
             + opt
@@ -2008,7 +1969,7 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
                 out_lines.append(failed)
                 rc_total = 1
                 continue
-            cmd = [cc, "--coverage"] + objs + ["-o", exe, "-lm"]
+            cmd = [cc, "--coverage", "-Wl,--gc-sections"] + objs + ["-o", exe, "-lm"]
         else:
             cmd = base + srcs + ["-o", exe, "-lm"]
         if verbose:
@@ -2148,7 +2109,7 @@ def cov_merge(gc, out_rel):
     inline lines once per including TU, and the generic format requires each line once per file, so
     the dedupe pass folds those.
     """
-    out = os.path.join(ROOT, *out_rel.split("/"))
+    out = os.path.join(ROOT, *out_rel.replace("\\", "/").split("/")) if not os.path.isabs(out_rel) else out_rel
     p = subprocess.run(
         gc + ["--add-tracefile", "%s/*.json" % COV_REPORTS, "--merge-mode-functions=separate", "--sonarqube", out],
         capture_output=True,
@@ -2337,7 +2298,7 @@ def cmd_run(a):
     with open(TABLE, encoding="utf-8") as f:
         table = json.load(f)["envs"]
     names = a.envs or [n for n, e in table.items() if e.get("tests") and n not in NEVER_SELECT]
-    envs = parse_ini_envs(INI)
+    envs = load_matrix_envs()
     gc = None
     if a.coverage:
         gc = gcovr_cmd()
@@ -2700,6 +2661,7 @@ def build_parser():
         "that only looks like a case is named here rather than silently never running.",
     )
     p.add_argument("suite", nargs="+", help="suite directories, repo-relative")
+    p.add_argument("--unity", help="Unity's generate_test_runner.rb (default: the one CMake fetched)")
     p.set_defaults(fn=cmd_runners_gen)
 
     keys = sub.add_parser("keys", help="test key provisioning").add_subparsers(dest="cmd", required=True)

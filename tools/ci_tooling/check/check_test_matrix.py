@@ -35,7 +35,6 @@ from tools.ci_tooling.lib import doc_region as dr
 
 ROOT = dr.repo_root(__file__)
 MATRIX = os.path.join(ROOT, "test", "test_matrix.json")
-INI = os.path.join(ROOT, "platformio.ini")
 BASELINE = bl.path_for(__file__, "test_matrix_baseline")
 
 INTERP = "${env:"
@@ -76,7 +75,7 @@ def base_of(src):
 
 def check():
     h = harness()
-    ini_envs = h.parse_ini_envs(INI)
+    ini_envs = h.load_matrix_envs()
     with open(MATRIX, encoding="utf-8") as fh:
         matrix = json.load(fh)["envs"]
     cache = {}
