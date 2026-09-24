@@ -17,14 +17,15 @@
  *
  * Point ADAPTER_IP at a Prologix GPIB-Ethernet controller (or an AR488-Ethernet build). See README.
  *
- * Build flags (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_GPIB=1
+ * Build flags (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_GPIB=1 -DPROTOCORE_ENABLE_TCP_CLIENT=1
+ *                                               -DPROTOCORE_ENABLE_DNS_RESOLVER=1
  */
 
 #define PROTOCORE_ENABLE_GPIB 1
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical/physical.h"
-#include "network_drivers/transport/tcp/tcp.h"
+#include "network_drivers/transport/tcp/client/client.h"
 #include "services/instrumentation/gpib/gpib.h"
 
 static const char *SSID = "YOUR_SSID";
@@ -36,6 +37,15 @@ static const uint8_t INSTRUMENT_ADDR = 9;       // the instrument's primary GPIB
 static char c_cmd[64];
 static uint8_t c_data[96];
 
+// Send len bytes of data on connection cid.
+static void client_send(int cid, const void *data, size_t len)
+{
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = data;
+    TcpClientV.io.len = len;
+    TcpClient.send(protocore_tcp_client_span());
+}
+
 // Read one newline-terminated line into out (CR stripped); return its length (0 on timeout).
 static size_t read_line(int cid, char *out, size_t cap)
 {
@@ -43,12 +53,18 @@ static size_t read_line(int cid, char *out, size_t cap)
     unsigned long deadline = millis() + 3000;
     while (o + 1 < cap && millis() < deadline)
     {
-        if (!Tcp.client->available(cid))
+        TcpClientV.cid = cid;
+        TcpClient.available(protocore_tcp_client_span());
+        if (!TcpClientV.n)
         {
             continue;
         }
         uint8_t ch = 0;
-        if (Tcp.client->read(cid, &ch, 1) != 1)
+        TcpClientV.cid = cid;
+        TcpClientV.io.buf = &ch;
+        TcpClientV.io.cap = 1;
+        TcpClient.read(protocore_tcp_client_span());
+        if (TcpClientV.n != 1)
         {
             continue;
         }
@@ -67,23 +83,47 @@ static size_t read_line(int cid, char *out, size_t cap)
 
 static void run_session(const char *host)
 {
-    int cid = Tcp.client->open(host, PROTOCORE_GPIB_PORT, 8000);
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = PROTOCORE_GPIB_PORT;
+    TcpClientV.dial.timeout_ms = 8000;
+    TcpClient.open(protocore_tcp_client_span());
+    int cid = TcpClientV.i32;
     if (cid < 0)
     {
         Serial.println("[gpib] connect failed");
         return;
     }
+    // open is non-blocking: wait for the handshake to finish (or the dial to fail).
+    for (;;)
+    {
+        TcpClientV.cid = cid;
+        TcpClient.connected(protocore_tcp_client_span());
+        if (TcpClientV.ok)
+        {
+            break;
+        }
+        TcpClientV.cid = cid;
+        TcpClient.is_closed(protocore_tcp_client_span());
+        if (TcpClientV.ok)
+        {
+            Serial.println("[gpib] connect failed");
+            TcpClientV.cid = cid;
+            TcpClient.close(protocore_tcp_client_span());
+            return;
+        }
+        delay(10);
+    }
 
     // Configure the adapter as the controller-in-charge, targeting the instrument.
-    Tcp.client->send(cid, c_cmd, protocore_gpib_command(c_cmd, sizeof(c_cmd), "mode 1"));
-    Tcp.client->send(cid, c_cmd, protocore_gpib_addr(c_cmd, sizeof(c_cmd), INSTRUMENT_ADDR, -1));
-    Tcp.client->send(cid, c_cmd, protocore_gpib_eos(c_cmd, sizeof(c_cmd), GpibEos::LF));
-    Tcp.client->send(cid, c_cmd, protocore_gpib_command(c_cmd, sizeof(c_cmd), "eoi 1"));
-    Tcp.client->send(cid, c_cmd, protocore_gpib_command(c_cmd, sizeof(c_cmd), "auto 0"));
+    client_send(cid, c_cmd, protocore_gpib_command(c_cmd, sizeof(c_cmd), "mode 1"));
+    client_send(cid, c_cmd, protocore_gpib_addr(c_cmd, sizeof(c_cmd), INSTRUMENT_ADDR, -1));
+    client_send(cid, c_cmd, protocore_gpib_eos(c_cmd, sizeof(c_cmd), GpibEos::GPIB_EOS_LF));
+    client_send(cid, c_cmd, protocore_gpib_command(c_cmd, sizeof(c_cmd), "eoi 1"));
+    client_send(cid, c_cmd, protocore_gpib_command(c_cmd, sizeof(c_cmd), "auto 0"));
 
     // Send "*IDN?" as (escaped) data, then request a read until EOI.
-    Tcp.client->send(cid, c_data, protocore_gpib_build_data(c_data, sizeof(c_data), (const uint8_t *)"*IDN?", 5));
-    Tcp.client->send(cid, c_cmd, protocore_gpib_read(c_cmd, sizeof(c_cmd), UNTIL_EOI, 0));
+    client_send(cid, c_data, protocore_gpib_build_data(c_data, sizeof(c_data), (const uint8_t *)"*IDN?", 5));
+    client_send(cid, c_cmd, protocore_gpib_read(c_cmd, sizeof(c_cmd), UNTIL_EOI, 0));
 
     char resp[160];
     size_t r = read_line(cid, resp, sizeof(resp));
@@ -97,7 +137,7 @@ static void run_session(const char *host)
     }
 
     // Query the adapter's own version.
-    Tcp.client->send(cid, c_cmd, protocore_gpib_command(c_cmd, sizeof(c_cmd), "ver"));
+    client_send(cid, c_cmd, protocore_gpib_command(c_cmd, sizeof(c_cmd), "ver"));
     r = read_line(cid, resp, sizeof(resp));
     const char *ver = nullptr;
     size_t vlen = 0;
@@ -106,19 +146,23 @@ static void run_session(const char *host)
         Serial.printf("[gpib] adapter version %.*s\n", (int)vlen, ver);
     }
 
-    Tcp.client->close(cid);
+    TcpClientV.cid = cid;
+    TcpClient.close(protocore_tcp_client_span());
     Serial.println("[gpib] done");
 }
 
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 }
@@ -129,7 +173,7 @@ void loop()
     if (!done && millis() > 2000)
     {
         done = true;
-        run_session(ADAPTER_IP); // Tcp.client->open resolves the dotted-quad host directly
+        run_session(ADAPTER_IP); // TcpClient.open resolves the dotted-quad host directly
     }
     delay(10);
 }

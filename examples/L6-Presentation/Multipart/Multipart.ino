@@ -13,6 +13,7 @@
  * Flash, open Serial @ 115200 for the IP, then browse to http://<ip>/.
  */
 
+
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
 
@@ -25,15 +26,19 @@ static const char FORM[] = "<!doctype html><meta charset=utf-8><title>upload</ti
                            "<input name=name placeholder=name> "
                            "<input type=file name=file> <button>upload</button></form>";
 
+// The borrow every Multipart entry takes. The parser carries nothing between calls and never
+// reads it, so a small static buffer serves.
+static uint8_t multipart_work[16];
+
 void handle_upload(uint8_t id, HttpReq *req)
 {
     MultipartBody mp;
-    if (!Multipart.parse(req, &mp))
+    if (!Multipart.parse(multipart_work, req, &mp))
     {
         send_text(id, 400, "text/plain", "expected multipart/form-data (and within BODY_BUF_SIZE)");
         return;
     }
-    const char *name = Multipart.get_field(&mp, "name");
+    const char *name = Multipart.get_field(multipart_work, &mp, "name");
     char out[160];
     snprintf(out, sizeof(out), "parsed %d part(s); field 'name' = %s", mp.part_count, name ? name : "(absent)");
     send_text(id, 200, "text/plain", out);
@@ -42,14 +47,18 @@ void handle_upload(uint8_t id, HttpReq *req)
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
+    // Every Physical entry reads its operands from PhysicalV and writes its outcome back there.
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

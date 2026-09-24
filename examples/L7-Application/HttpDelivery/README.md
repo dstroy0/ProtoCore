@@ -88,6 +88,6 @@ The flags must reach the library build, so pass them as build flags:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_HTTP_DELIVERY=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -DPROTOCORE_ENABLE_RANGE=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_HTTP_DELIVERY=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -DPROTOCORE_ENABLE_RANGE=1 -DPROTOCORE_ENABLE_MNT=1" \
   --lib="." examples/L7-Application/HttpDelivery/HttpDelivery.ino
 ```

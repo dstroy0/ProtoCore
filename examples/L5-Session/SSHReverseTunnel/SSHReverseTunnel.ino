@@ -30,7 +30,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
-#include "network_drivers/presentation/ssh/ssh_client.h"
+#include "network_drivers/presentation/ssh/app/client/client.h" // SshAppClient (state, pubkey) + SshClient (begin, poll)
 #include "shared/mime/mime.h"
 
 // ---- Provisioning: replace these for your network + relay ----
@@ -49,6 +49,8 @@ static const uint8_t AUTH_SEED[32] = {0};
 // The handshake aborts if the relay presents any other key (no trust-on-first-use).
 static const uint8_t HOST_PIN[32] = {0};
 
+static uint8_t app_work[16]; // the borrow an SshAppClient entry takes; it never reads it
+
 
 static void root(uint8_t slot, HttpReq *req)
 {
@@ -59,7 +61,7 @@ static void root(uint8_t slot, HttpReq *req)
 // Dedicated task: enough stack for the KEX, and the same task owns begin()+poll().
 static void tunnel_task(void *)
 {
-    protocore_ssh_tunnel_cfg cfg = {};
+    protocore_ssh_client_cfg cfg = {}; // lives as long as this task, which never returns
     cfg.host = RELAY_HOST;
     cfg.port = 22;
     cfg.user = RELAY_USER;
@@ -68,15 +70,18 @@ static void tunnel_task(void *)
     cfg.bind_addr = "";   // relay binds the forward on localhost (GatewayPorts no)
     cfg.bind_port = 8022; // relay listens here; connections tunnel back to us
     cfg.local_port = 80;  // bridged to our own web server
-    protocore_ssh_tunnel_begin(&cfg);
+    SshClient.cfg = &cfg;
+    SshClient.begin(protocore_ssh_client_span());
     for (;;)
     {
-        protocore_ssh_tunnel_poll();
+        SshClient.poll(protocore_ssh_client_span());
         // Reconnect with a backoff if the relay drops us or the pin/auth fails.
-        if (protocore_ssh_tunnel_state_get() == protocore_ssh_tunnel_state::PROTOCORE_TUN_FAILED)
+        SshAppClient.state_get(app_work);
+        if (SshAppClientV.state == PROTOCORE_SSH_CLIENT_FAILED)
         {
             delay(5000);
-            protocore_ssh_tunnel_begin(&cfg);
+            SshClient.cfg = &cfg;
+            SshClient.begin(protocore_ssh_client_span());
         }
         delay(5);
     }
@@ -86,15 +91,19 @@ void setup()
 {
     Serial.begin(115200);
     delay(300);
-    Physical.wifi->init(WIFI_SSID, WIFI_PASS);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = WIFI_SSID;
+    PhysicalV.wifi.password = WIFI_PASS;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(200);
     }
 
     // Print our public key so you can add it to the relay's authorized_keys.
     uint8_t pub[32];
-    protocore_ssh_tunnel_pubkey(AUTH_SEED, pub);
+    SshAppClientV.seed = AUTH_SEED;
+    SshAppClientV.pub = pub;
+    SshAppClient.pubkey(app_work);
     Serial.print("device ssh-ed25519 raw pubkey (add to relay authorized_keys): ");
     for (int i = 0; i < 32; i++)
     {
@@ -112,7 +121,8 @@ void setup()
 void loop()
 {
     handle();
-    if (protocore_ssh_tunnel_up())
+    SshAppClient.up(app_work);
+    if (SshAppClientV.ok)
     {
         static bool announced = false;
         if (!announced)

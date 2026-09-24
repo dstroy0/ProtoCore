@@ -46,12 +46,15 @@ static const char *AUDIENCE = "your-client-id";
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
@@ -68,8 +71,16 @@ void setup()
         const char *token = hdr + 7;
         uint32_t now = 1700000100; // production: read from NTP
 
-        protocore_oidc_claims claims;
-        protocore_oidc_result rc = protocore_oidc_verify(token, strlen(token), JWKS, ISSUER, AUDIENCE, now, &claims);
+        static uint8_t oidc_work[16]; // the borrow an Oidc entry takes; Oidc never reads it
+        OidcV.token = token;
+        OidcV.token_len = strlen(token);
+        OidcV.key.jwks = JWKS;
+        OidcV.expect.iss = ISSUER;
+        OidcV.expect.aud = AUDIENCE;
+        OidcV.expect.now_unix = now;
+        Oidc.verify(oidc_work);
+        protocore_oidc_result rc = OidcV.result;
+        const protocore_oidc_claims &claims = OidcV.claims;
         if (rc != protocore_oidc_result::PROTOCORE_OIDC_OK)
         {
             char b[40];

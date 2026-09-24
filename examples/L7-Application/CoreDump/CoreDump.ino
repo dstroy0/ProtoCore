@@ -3,14 +3,14 @@
 // A panic prints a Guru Meditation dump to a console nobody is watching, then reboots. ESP-IDF also
 // writes a core dump to a flash partition, and that survives. So on the next boot this device can:
 //
-//   1. notice a dump is waiting        protocore_exc_coredump_present()
-//   2. say what crashed                protocore_exc_coredump_summary()  -> the same ExcInfo/JSON the
+//   1. notice a dump is waiting        Exc.present()
+//   2. say what crashed                Exc.summary()  -> the same ExcInfo/JSON the
 //                                      live /exception panel already renders
-//   3. put it somewhere durable        protocore_exc_coredump_save(SD, "/crash.bin")  (a filesystem)
-//                                      protocore_ftp_store(...)                       (off the device)
-//   4. clear the partition             protocore_exc_coredump_erase()    so the next crash has room
+//   3. put it somewhere durable        Exc.save() to SD "/crash.bin"      (a filesystem)
+//                                      FtpSession.store()                 (off the device)
+//   4. clear the partition             Exc.erase()    so the next crash has room
 //
-// Step 3 shows both offload transports. They share one seam: protocore_exc_coredump_read() pulls the
+// Step 3 shows both offload transports. They share one seam: Exc.read() pulls the
 // image in chunks, so the FTP uploader streams straight out of flash and neither owner knows about
 // the other. A dump that only ever reaches the device's own SD card is still lost with the device;
 // FTP is what gets it to a machine you can run esp-coredump on.
@@ -27,7 +27,8 @@
 // GET /crash      -> triggers a null dereference, so you can watch the whole cycle
 //
 // Requires a `coredump` partition (the default Arduino partition tables have one).
-// Build flags (whole build): PROTOCORE_ENABLE_EXC_DECODER=1 PROTOCORE_ENABLE_FTP=1
+// Build flags (whole build): PROTOCORE_ENABLE_EXC_DECODER=1 PROTOCORE_ENABLE_FTP=1 PROTOCORE_ENABLE_MNT=1
+// PROTOCORE_ENABLE_FILE_SERVING=1 (see the README for the full list)
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
@@ -35,6 +36,7 @@
 #include "server/core/exc_decoder/exc_decoder.h"
 #include "shared/log/log.h"
 #include "shared/mime/mime.h"
+#include "test/core_setup/hal/esp/esp_mnt_fs.h" // protocore_mnt_fs(): bind an Arduino FS to the storage seam
 #include <SD_MMC.h>
 
 static const char *WIFI_SSID = "your-ssid";
@@ -50,6 +52,7 @@ static const char *FTP_PASS = "pc";
 static char g_last_json[512] = "{}"; // the recovered crash, rendered once at boot
 static bool g_saved = false;
 static bool g_uploaded = false;
+static uint8_t exc_work[16]; // the borrow an Exc entry takes; Exc never reads it
 
 // Send the library's own log lines to the console. Build with -DPROTOCORE_LOG_LEVEL=PROTOCORE_LOG_LEVEL_DEBUG
 // to watch the FTP conversation step by step; at the default level these lines are not in the
@@ -65,7 +68,11 @@ static void serial_log_sink(uint8_t level, const char *line)
 static size_t coredump_source(void *ctx, size_t offset, uint8_t *buf, size_t cap)
 {
     (void)ctx;
-    return protocore_exc_coredump_read(offset, buf, cap) ? cap : 0;
+    ExcV.dump.offset = offset;
+    ExcV.dump.buf = buf;
+    ExcV.dump.len = cap;
+    Exc.read(exc_work);
+    return ExcV.ok ? cap : 0;
 }
 
 static void exception_handler(uint8_t slot_id, HttpReq *req)
@@ -88,7 +95,8 @@ void setup()
 {
     Serial.begin(115200);
     delay(300);
-    protocore_log_set_sink(serial_log_sink);
+    LogV.sink = serial_log_sink;
+    Log.set_sink(protocore_log_span());
 
     bool sd = SD_MMC.begin();
     Serial.printf("SD: %s\n", sd ? "mounted" : "FAILED");
@@ -96,21 +104,31 @@ void setup()
     // Recover anything the previous boot left behind, before doing anything else. Decoding and the
     // SD copy need no network, so they happen first - a dump survives even if the radio never joins.
     ExcCoreDump img;
-    bool have_dump = protocore_exc_coredump_present(&img);
+    ExcV.dump.img = &img;
+    Exc.present(exc_work);
+    bool have_dump = ExcV.ok;
     if (have_dump)
     {
         Serial.printf("core dump present: %u bytes @ 0x%08X\n", (unsigned)img.size, (unsigned)img.addr);
 
         ExcInfo info;
-        if (protocore_exc_coredump_summary(&info))
+        ExcV.parse_args.info = &info;
+        Exc.summary(exc_work);
+        if (ExcV.ok)
         {
-            protocore_exc_json(&info, g_last_json, sizeof(g_last_json));
+            ExcV.parse_args.info = &info;
+            ExcV.out_args.out = g_last_json;
+            ExcV.out_args.cap = sizeof(g_last_json);
+            Exc.json(exc_work);
             Serial.printf("crash: %s\n", g_last_json);
         }
 
         if (sd)
         {
-            g_saved = protocore_exc_coredump_save(SD_MMC, DUMP_PATH);
+            ExcV.dump.file_sys = protocore_mnt_fs(&SD_MMC);
+            ExcV.dump.path = DUMP_PATH;
+            Exc.save(exc_work);
+            g_saved = ExcV.ok;
             Serial.printf("SD copy: %s\n", g_saved ? DUMP_PATH : "FAILED");
         }
     }
@@ -119,8 +137,10 @@ void setup()
         Serial.println("no core dump stored (clean boot)");
     }
 
-    Physical.wifi->init(WIFI_SSID, WIFI_PASS);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = WIFI_SSID;
+    PhysicalV.wifi.password = WIFI_PASS;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
@@ -129,7 +149,18 @@ void setup()
     if (have_dump && FTP_HOST[0] != '\0')
     {
         FtpTarget target = {FTP_HOST, FTP_PORT, FTP_USER, FTP_PASS};
-        g_uploaded = protocore_ftp_store(&target, DUMP_PATH, img.size, coredump_source, nullptr);
+        FtpSessionV.store_args.target = &target;
+        FtpSessionV.store_args.remote_path = DUMP_PATH;
+        FtpSessionV.store_args.total = img.size;
+        FtpSessionV.store_args.src = coredump_source;
+        FtpSessionV.store_args.ctx = nullptr;
+        // Non-blocking: each call advances the upload as far as the sockets allow, then reports BUSY.
+        for (FtpSession.store(protocore_ftp_session_span()); FtpSessionV.value == PROTOCORE_FTP_BUSY;
+             FtpSession.store(protocore_ftp_session_span()))
+        {
+            delay(10);
+        }
+        g_uploaded = FtpSessionV.value == PROTOCORE_FTP_READY;
         Serial.printf("FTP offload: %s\n", g_uploaded ? "ok" : "FAILED");
     }
 
@@ -137,7 +168,7 @@ void setup()
     // stays in flash so the next boot can try again rather than losing the crash for good.
     if (have_dump && (g_saved || g_uploaded))
     {
-        protocore_exc_coredump_erase();
+        Exc.erase(exc_work);
         Serial.println("core-dump partition erased");
     }
     else if (have_dump)
@@ -149,11 +180,15 @@ void setup()
     on_http("/crash", HTTP_GET, crash_handler);
     if (sd)
     {
-        serve_static("/files/", SD_MMC, "/"); // download the saved dump
+        FileServingV.serve_static_args.url_prefix = "/files/";
+        FileServingV.serve_static_args.file_sys = protocore_mnt_fs(&SD_MMC);
+        FileServingV.serve_static_args.fs_root = "/";
+        FileServing.serve_static(protocore_file_serving_span()); // download the saved dump
     }
     begin_http(80, NULL);
 
-    uint32_t ip = Physical.link->egress_ip();
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32;
     Serial.printf("http://%u.%u.%u.%u/exception  (sd=%s ftp=%s)\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF), g_saved ? "yes" : "no",
                   g_uploaded ? "yes" : "no");

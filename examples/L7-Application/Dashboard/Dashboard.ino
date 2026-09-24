@@ -9,8 +9,8 @@
  * Declares a fixed compile-time widget table and serves it at /dashboard. Display
  * widgets (gauge / value / chart) update live over SSE; control widgets (toggle /
  * slider / button) send values back to the device over WebSocket, delivered to a
- * control callback. The sketch feeds readings with protocore_dashboard_set(key, value)
- * and pushes a frame with protocore_dashboard_publish().
+ * control callback. The sketch feeds readings with Dashboard.set (DashboardV.set_args.key /
+ * .value) and pushes a frame with Dashboard.publish().
  *
  * NOTE: enable the dashboard for the whole build (a .ino #define does not reach
  * the separately compiled library). In platformio.ini:
@@ -62,23 +62,38 @@ static void on_control(const char *key, float value)
     // "ident" is momentary - just log it above.
 }
 
+// Set one widget's current value by key.
+static void dashboard_set(const char *key, float value)
+{
+    DashboardV.set_args.key = key;
+    DashboardV.set_args.value = value;
+    Dashboard.set(protocore_dashboard_span());
+}
+
 void setup()
 {
     Serial.begin(115200);
     pinMode(LED_PIN, OUTPUT);
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_dashboard_on_control(on_control);
-    protocore_dashboard_begin("/dashboard", WIDGETS, sizeof(WIDGETS) / sizeof(WIDGETS[0]));
+    DashboardV.on_control_args.cb = on_control;
+    Dashboard.on_control(protocore_dashboard_span());
+    DashboardV.begin_args.path = "/dashboard";
+    DashboardV.begin_args.widgets = WIDGETS;
+    DashboardV.begin_args.count = sizeof(WIDGETS) / sizeof(WIDGETS[0]);
+    Dashboard.begin(protocore_dashboard_span());
     begin_http(80, NULL);
 }
 
@@ -92,9 +107,10 @@ void loop()
     if (now - last_ms >= 1000)
     {
         last_ms = now;
-        protocore_dashboard_set("heap", (float)ESP.getFreeHeap());
-        protocore_dashboard_set("uptime", (float)(now / 1000));
-        protocore_dashboard_set("rssi", (float)Physical.wifi->rssi());
-        protocore_dashboard_publish();
+        dashboard_set("heap", (float)ESP.getFreeHeap());
+        dashboard_set("uptime", (float)(now / 1000));
+        Physical.wifi_rssi(protocore_physical_span());
+        dashboard_set("rssi", (float)PhysicalV.i8);
+        Dashboard.publish(protocore_dashboard_span());
     }
 }

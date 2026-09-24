@@ -5,7 +5,7 @@
  * @file Mnt.ino
  * @brief Mounted storage over a real filesystem (PROTOCORE_ENABLE_MNT).
  *
- * The same protocore_fs_* API drives a RAM pool in tests and a real filesystem on the
+ * The same Fs API drives a RAM pool in tests and a real filesystem on the
  * device. Here it is mounted on LittleFS, so writes persist across reboots:
  *
  *   GET /save?name=greeting&data=hello   -> stores /greeting on flash
@@ -13,14 +13,14 @@
  *   GET /size?name=greeting              -> byte count (-1 if absent)
  *   GET /rm?name=greeting                -> deletes it
  *
- * Note what the handlers do NOT do: they never build a path. protocore_fs_begin() binds
+ * Note what the handlers do NOT do: they never build a path. Fs.begin binds
  * the root once and hands back a handle; every call below passes that handle, an
  * empty dir, and the client's name straight through - the accessor joins the three
  * and refuses any `..` before storage is touched. A query of `name=../../secret`
  * is rejected without this sketch containing a single line about it.
  *
  * To run entirely in RAM instead (no flash, deterministic), mount the built-in
- * backend: `protocore_mnt_mount(protocore_mnt_ram());` - every endpoint below is unchanged.
+ * backend: `MntV.args.backend = MntRam.backend(work); Mnt.mount(work);` - every endpoint below is unchanged.
  * That is the whole point: features target one API, the application chooses the
  * medium.
  *
@@ -40,47 +40,75 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-// The root protocore_fs_begin() binds, at file scope because the handlers below are captureless lambdas.
+// The root Fs.begin binds, at file scope because the handlers below are captureless lambdas.
 static int s_root = -1;
 
+static uint8_t mnt_work[16]; // the borrow a Mnt entry takes; Mnt never reads it
+
+// Point Fs at one client-named entry under the bound root (empty dir: the accessor joins them).
+static void fs_name(const char *name)
+{
+    Fs.path.root = s_root;
+    Fs.path.dir = "";
+    Fs.path.name = name;
+}
+
+static const char *query(HttpReq *req, const char *key)
+{
+    return HttpParser.get_query(protocore_http_parser_span(), req, key);
+}
 
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     LittleFS.begin(true); // format on first use
-    protocore_mnt_mount(protocore_mnt_fs(&LittleFS));
-    s_root = protocore_fs_begin("/"); // every name below is resolved against this root
+    MntV.args.backend = protocore_mnt_fs(&LittleFS);
+    Mnt.mount(mnt_work);
+    Fs.mount = "/";
+    Fs.begin(protocore_filesystem_span());
+    s_root = Fs.i32; // every name below is resolved against this root
 
     on_http("/save", HTTP_GET, [](uint8_t id, HttpReq *req) {
-        const char *name = http_get_query(req, "name");
-        const char *data = http_get_query(req, "data");
+        const char *name = query(req, "name");
+        const char *data = query(req, "data");
         if (!name || !*name || !data)
         {
             send_text(id, 400, "application/json", "{\"error\":\"name+data\"}");
             return;
         }
-        bool ok = protocore_fs_write_file(s_root, "", name, data, strlen(data));
+        fs_name(name);
+        Fs.io.wbuf = data;
+        Fs.io.n = strlen(data);
+        Fs.write_file(protocore_filesystem_span());
+        bool ok = Fs.ok;
         send_text(id, ok ? 200 : 500, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
     });
 
     on_http("/load", HTTP_GET, [](uint8_t id, HttpReq *req) {
-        const char *name = http_get_query(req, "name");
+        const char *name = query(req, "name");
         if (!name || !*name)
         {
             send_text(id, 400, "text/plain", "name?");
             return;
         }
         char buf[512];
-        long n = protocore_fs_read_file(s_root, "", name, buf, sizeof(buf) - 1);
+        fs_name(name);
+        Fs.io.buf = buf;
+        Fs.io.n = sizeof(buf) - 1;
+        Fs.read_file(protocore_filesystem_span());
+        long n = Fs.len;
         if (n < 0)
         {
             send_text(id, 404, "text/plain", "not found");
@@ -91,16 +119,28 @@ void setup()
     });
 
     on_http("/size", HTTP_GET, [](uint8_t id, HttpReq *req) {
-        const char *name = http_get_query(req, "name");
-        long n = (name && *name) ? protocore_fs_size(s_root, "", name) : -1;
+        const char *name = query(req, "name");
+        long n = -1;
+        if (name && *name)
+        {
+            fs_name(name);
+            Fs.size(protocore_filesystem_span());
+            n = Fs.len;
+        }
         char b[24];
         snprintf(b, sizeof(b), "%ld", n);
         send_text(id, 200, "text/plain", b);
     });
 
     on_http("/rm", HTTP_GET, [](uint8_t id, HttpReq *req) {
-        const char *name = http_get_query(req, "name");
-        bool ok = (name && *name) && protocore_fs_remove(s_root, "", name);
+        const char *name = query(req, "name");
+        bool ok = false;
+        if (name && *name)
+        {
+            fs_name(name);
+            Fs.remove(protocore_filesystem_span());
+            ok = Fs.ok;
+        }
         send_text(id, ok ? 200 : 404, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
     });
 

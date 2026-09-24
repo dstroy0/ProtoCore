@@ -44,20 +44,27 @@ void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_coap_server_reset();
-    protocore_coap_server_add_resource("/count", COAP_ALLOW_GET, h_count);
-    protocore_coap_server_begin(5683);
+    Coap.reset(protocore_coap_span());
+    CoapV.resource.path = "/count";
+    CoapV.resource.methods = COAP_ALLOW_GET;
+    CoapV.resource.handler = h_count;
+    Coap.add_resource(protocore_coap_span());
+    CoapV.bind.port = 5683;
+    Coap.begin(protocore_coap_span());
     Serial.println("CoAP server on :5683, observe coap://<ip>/count");
 }
 
@@ -68,6 +75,7 @@ void loop()
     {
         last = millis();
         g_count++;
-        protocore_coap_notify("/count"); // push the new value to every observer
+        CoapV.observe.path = "/count";
+        Coap.notify(protocore_coap_span()); // push the new value to every observer
     }
 }

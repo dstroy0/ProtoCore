@@ -54,7 +54,7 @@ server just makes the example self-contained. Read and write items are small str
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_OPCUA=1 -DPROTOCORE_ENABLE_OPCUA_CLIENT=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_OPCUA=1 -DPROTOCORE_ENABLE_OPCUA_CLIENT=1 -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_DNS_RESOLVER=1" \
   --lib="." examples/L7-Application/OpcUaClient/OpcUaClient.ino
 ```
 

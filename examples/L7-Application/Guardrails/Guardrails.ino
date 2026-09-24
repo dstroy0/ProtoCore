@@ -37,22 +37,30 @@ static void on_breach(uint8_t breaches, const protocore_health *h)
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_guardrails_begin(on_breach);
+    GuardrailsV.cb = on_breach;
+    Guardrails.begin(protocore_guardrails_span());
 
     on_http("/health", HTTP_GET, [](uint8_t id, HttpReq *) {
         protocore_health h;
-        protocore_guardrails_sample(&h);
+        GuardrailsV.health = &h;
+        Guardrails.sample(protocore_guardrails_span());
         char buf[128];
-        protocore_health_json(&h, buf, sizeof(buf));
+        GuardrailsV.health = &h;
+        GuardrailsV.out.out = buf;
+        GuardrailsV.out.cap = sizeof(buf);
+        Guardrails.json(protocore_guardrails_span());
         send_text(id, 200, "application/json", buf);
     });
     begin_http(80, NULL);
@@ -64,6 +72,6 @@ void loop()
     if (millis() - last >= 1000)
     {
         last = millis();
-        protocore_guardrails_check(); // fires on_breach() if any floor is crossed
+        Guardrails.check(protocore_guardrails_span()); // fires on_breach() if any floor is crossed
     }
 }

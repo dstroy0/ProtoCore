@@ -18,15 +18,79 @@
  *
  * Point TNC_IP at a Heidenhain control that has the LSV/2 / DNC interface enabled. See README.
  *
- * Build flags (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_LSV2=1
+ * Build flags (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_LSV2=1 -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_DNS_RESOLVER=1
  */
 
 #define PROTOCORE_ENABLE_LSV2 1
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical/physical.h"
-#include "network_drivers/transport/tcp/tcp.h"
+#include "network_drivers/transport/tcp/client/client.h"
 #include "services/machine_tool/lsv2/lsv2.h"
+
+// The TCP client is work-borrow: each entry reads its operands from TcpClientV and writes its
+// outcome back there. These wrappers keep the session code below reading as plain calls.
+static void tcp_close(int cid)
+{
+    TcpClientV.cid = cid;
+    TcpClient.close(protocore_tcp_client_span());
+}
+
+// Dial and wait for the handshake (open() returns before the connection exists); -1 on failure.
+static int tcp_open(const char *host, uint16_t port, uint32_t timeout_ms)
+{
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = port;
+    TcpClientV.dial.timeout_ms = timeout_ms;
+    TcpClient.open(protocore_tcp_client_span());
+    int cid = TcpClientV.i32;
+    if (cid < 0)
+    {
+        return -1;
+    }
+    for (;;)
+    {
+        TcpClientV.cid = cid;
+        TcpClient.connected(protocore_tcp_client_span());
+        if (TcpClientV.ok)
+        {
+            return cid;
+        }
+        TcpClientV.cid = cid;
+        TcpClient.is_closed(protocore_tcp_client_span());
+        if (TcpClientV.ok)
+        {
+            tcp_close(cid);
+            return -1;
+        }
+        delay(1);
+    }
+}
+
+static bool tcp_send(int cid, const void *data, size_t len)
+{
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = data;
+    TcpClientV.io.len = len;
+    TcpClient.send(protocore_tcp_client_span());
+    return TcpClientV.ok;
+}
+
+static size_t tcp_available(int cid)
+{
+    TcpClientV.cid = cid;
+    TcpClient.available(protocore_tcp_client_span());
+    return TcpClientV.n;
+}
+
+static size_t tcp_read(int cid, uint8_t *buf, size_t cap)
+{
+    TcpClientV.cid = cid;
+    TcpClientV.io.buf = buf;
+    TcpClientV.io.cap = cap;
+    TcpClient.read(protocore_tcp_client_span());
+    return TcpClientV.n;
+}
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
@@ -44,12 +108,12 @@ static size_t read_response(int cid, uint8_t *out, size_t cap)
     unsigned long deadline = millis() + 3000;
     while (got < PROTOCORE_LSV2_HEADER_LEN && millis() < deadline)
     {
-        if (!Tcp.client->available(cid))
+        if (!tcp_available(cid))
         {
             continue;
         }
         uint8_t ch = 0;
-        if (Tcp.client->read(cid, &ch, 1) != 1)
+        if (tcp_read(cid, &ch, 1) != 1)
         {
             continue;
         }
@@ -67,12 +131,12 @@ static size_t read_response(int cid, uint8_t *out, size_t cap)
     size_t need = PROTOCORE_LSV2_HEADER_LEN + plen;
     while (got < need && got < cap && millis() < deadline)
     {
-        if (!Tcp.client->available(cid))
+        if (!tcp_available(cid))
         {
             continue;
         }
         uint8_t ch = 0;
-        if (Tcp.client->read(cid, &ch, 1) != 1)
+        if (tcp_read(cid, &ch, 1) != 1)
         {
             continue;
         }
@@ -89,7 +153,7 @@ static bool txrx(int cid, size_t tx_len, Lsv2Telegram *r, const char *label)
         Serial.printf("[lsv2] %s: request build failed\n", label);
         return false;
     }
-    Tcp.client->send(cid, c_tx, tx_len);
+    tcp_send(cid, c_tx, tx_len);
     size_t n = read_response(cid, c_rx, sizeof(c_rx));
     size_t consumed = 0;
     if (!protocore_lsv2_parse(c_rx, n, r, &consumed))
@@ -124,7 +188,7 @@ static void query_run_info(int cid, uint16_t sel, const char *label)
 
 static void run_session(const char *host)
 {
-    int cid = Tcp.client->open(host, PROTOCORE_LSV2_TCP_PORT, 8000);
+    int cid = tcp_open(host, PROTOCORE_LSV2_TCP_PORT, 8000);
     if (cid < 0)
     {
         Serial.println("[lsv2] connect failed");
@@ -137,7 +201,7 @@ static void run_session(const char *host)
         !protocore_lsv2_is_ok(&r))
     {
         Serial.println("[lsv2] login INSPECT failed");
-        Tcp.client->close(cid);
+        tcp_close(cid);
         return;
     }
     Serial.println("[lsv2] login INSPECT: T_OK");
@@ -148,19 +212,22 @@ static void run_session(const char *host)
 
     // drop all access rights
     txrx(cid, protocore_lsv2_build_logout(c_tx, sizeof(c_tx), nullptr), &r, "logout");
-    Tcp.client->close(cid);
+    tcp_close(cid);
     Serial.println("[lsv2] done");
 }
 
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 }
@@ -171,7 +238,7 @@ void loop()
     if (!done && millis() > 2000)
     {
         done = true;
-        run_session(TNC_IP); // Tcp.client->open resolves the dotted-quad host directly
+        run_session(TNC_IP); // tcp_open resolves the dotted-quad host directly
     }
     delay(10);
 }

@@ -13,7 +13,7 @@
  * own origin or peers, so the fleet cannot loop). Pull only: no push, no invalidation.
  *
  * This is the edge-cache example (79) plus three calls: listen(MESH_PORT, PROTO_MESH) opens the
- * sibling port, protocore_edge_cache_mesh_serve() answers peers from the local cache, and protocore_edge_cache_add_peer()
+ * sibling port, EdgeProxy.mesh_serve() answers peers from the local cache, and EdgeProxy.add_peer()
  * lists a sibling to query on a miss. Flash the SAME sketch to both boards, giving each the OTHER's IP as
  * PEER_IP. Warm node A (request GET /cdn/<path> from A), then request the same URL from node B: B reports
  * X-Cache: MESH and the origin never sees B.
@@ -34,6 +34,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
+#include "server/web/edge_cache/edge_cache/edge_cache.h" // EdgeCacheStats
 #include "server/web/edge_cache/edge_cache_proxy/edge_cache_proxy.h"
 
 // --- CHANGE ME: your WiFi ---
@@ -53,7 +54,7 @@ static void handle_stats(uint8_t slot, HttpReq *req)
 {
     (void)req;
     EdgeCacheStats st;
-    protocore_edge_cache_stats(&st);
+    EdgeProxy.stats(protocore_edge_cache_proxy_span(), &st);
     char body[320];
     snprintf(body, sizeof(body),
              "{\"hits\":%u,\"misses\":%u,\"mesh_hits\":%u,\"mesh_misses\":%u,\"revalidations\":%u,\"stores\":%u,"
@@ -67,7 +68,7 @@ static void handle_stats(uint8_t slot, HttpReq *req)
 static void handle_purge(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    uint32_t n = protocore_edge_cache_purge_prefix("/cdn/");
+    uint32_t n = EdgeProxy.purge_prefix(protocore_edge_cache_proxy_span(), "/cdn/");
     char body[48];
     snprintf(body, sizeof(body), "{\"purged\":%u}", (unsigned)n);
     send_text(slot, 200, "application/json", body);
@@ -77,20 +78,23 @@ void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Cache everything under /cdn/ from the origin, then enable the cache on the server.
-    protocore_edge_cache_map("/cdn/", ORIGIN);
-    protocore_edge_cache_enable(server);
+    EdgeProxy.map(protocore_edge_cache_proxy_span(), "/cdn/", ORIGIN);
+    EdgeProxy.enable(protocore_edge_cache_proxy_span());
 
     // Mesh: open the sibling port, answer peers from the local cache, and list the other node as a peer.
     int32_t li = listen(MESH_PORT, PROTO_MESH);
@@ -98,8 +102,8 @@ void setup()
     {
         Serial.println("mesh: could not open the sibling listener");
     }
-    protocore_edge_cache_mesh_serve();
-    protocore_edge_cache_add_peer(PEER_IP, MESH_PORT);
+    EdgeProxy.mesh_serve(protocore_edge_cache_proxy_span());
+    EdgeProxy.add_peer(protocore_edge_cache_proxy_span(), PEER_IP, MESH_PORT);
 
     on_http("/cache/stats", HTTP_GET, handle_stats);
     on_http("/cache/purge", HTTP_POST, handle_purge);

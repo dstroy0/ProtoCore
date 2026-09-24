@@ -11,7 +11,7 @@
  * loop(). Any OPC UA / MES client (UaExpert, python asyncua, open62541) browses the IMM and reads live
  * values by their standard BrowseNames - the same shape across machine vendors.
  *
- *   protocore_em77_install(&imm)                 -> registers the OPC UA Browse + Read resolvers
+ *   Euromap77.install() (install_args.imm = &imm) -> registers the OPC UA Browse + Read resolvers
  *   listen(4840, PROTO_OPCUA)       -> the OPC UA / EUROMAP endpoint
  *
  * Builds on example OpcUa (the OPC UA Binary server); EUROMAP 77 is the injection-molding model on top -
@@ -42,12 +42,15 @@ static EmImm imm;
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
@@ -75,7 +78,8 @@ void setup()
     imm.active_job.nominal_parts = 100000;
     imm.active_job_values.job_status = EM_JOB_IN_PRODUCTION;
 
-    protocore_em77_install(&imm); // bind + register the OPC UA Browse/Read resolvers
+    Euromap77V.install_args.imm = &imm;
+    Euromap77.install(protocore_euromap77_span()); // bind + register the OPC UA Browse/Read resolvers
     on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "EUROMAP 77 IMM on :4840"); });
     listen(4840, PROTO_OPCUA); // OPC UA / EUROMAP endpoint - before begin()

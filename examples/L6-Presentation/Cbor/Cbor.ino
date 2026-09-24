@@ -56,14 +56,18 @@ static size_t protocore_cbor_source(uint8_t *out, size_t cap, void *vctx)
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
+    // Every Physical entry reads its operands from PhysicalV and writes its outcome back there.
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
@@ -77,7 +81,8 @@ void setup()
         Cbor.put_str(&w, "uptime");
         Cbor.put_uint(&w, millis() / 1000);
         Cbor.put_str(&w, "rssi");
-        Cbor.put_int(&w, Physical.wifi->rssi());
+        Physical.wifi_rssi(protocore_physical_span());
+        Cbor.put_int(&w, PhysicalV.i8);
         ctx.len = protocore_span_ok(w) ? protocore_span_len(w) : 0;
         ctx.off = 0;
         send_chunked(id, 200, "application/cbor", protocore_cbor_source, &ctx);

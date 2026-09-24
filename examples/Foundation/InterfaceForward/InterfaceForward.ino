@@ -13,7 +13,7 @@
 //                                                          interface B egress send
 //
 // The forwarding plane is default-deny and fail-closed. Here interface A is a DMA channel
-// fed by the simulator (no wire needed) and interface B's "egress" just counts the bytes;
+// in loopback (no wire needed) and interface B's "egress" just counts the bytes;
 // a real build would send B out Wi-Fi / Ethernet / a bus (or another DMA channel).
 //
 // Build flags (whole build):
@@ -21,6 +21,7 @@
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
 #include "network_drivers/network/forward/forward.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "mmgr/dma/dma.h"
 #include "server/core/preempt_queue/preempt_queue.h"
 
@@ -56,7 +57,10 @@ union pq_item {
 static void on_forward(const void *item, void *)
 {
     const fwd_msg *m = &((const pq_item *)item)->msg;
-    protocore_forward_ingress(m->src, m->bytes, m->len);
+    ForwardV.src_if = m->src;
+    ForwardV.frame.data = m->bytes;
+    ForwardV.frame.len = m->len;
+    Forward.ingress(protocore_forward_span());
 }
 
 // DMA-complete on interface A: copy the frame and post it onto the FORWARD lane.
@@ -71,7 +75,9 @@ static void on_dma_complete(const protocore_dma_event *ev, void *)
     it.msg.len = ev->len;
     uint16_t n = (ev->len < sizeof(it.msg.bytes)) ? ev->len : sizeof(it.msg.bytes);
     memcpy(it.msg.bytes, ev->data, n);
-    Session.workers->queue->post_from_isr(protocore_pq_lane::PROTOCORE_PQ_LANE_FORWARD, &it);
+    PreemptQueueV.lane = protocore_pq_lane::PROTOCORE_PQ_LANE_FORWARD;
+    PreemptQueueV.post_args.item = &it;
+    PreemptQueue.post_from_isr(protocore_preempt_queue_span());
 }
 
 void setup()
@@ -85,23 +91,42 @@ void setup()
     fwd.priority = 0; // 0 -> the FORWARD lane default (above the user lane)
     fwd.core = 1;
     fwd.name = "forward";
-    Session.workers->queue->start(protocore_pq_lane::PROTOCORE_PQ_LANE_FORWARD, &fwd);
+    PreemptQueueV.lane = protocore_pq_lane::PROTOCORE_PQ_LANE_FORWARD;
+    PreemptQueueV.cfg = &fwd;
+    PreemptQueue.start(protocore_preempt_queue_span());
 
-    // Interface A ingress: a DMA channel fed by the simulator.
+    // Interface A ingress: a DMA channel in loopback, so a frame submitted for egress on it
+    // arrives back as an RX completion (no wire needed).
     protocore_dma_config a = {};
     a.channel = IF_A;
     a.periph = protocore_dma_periph::PROTOCORE_DMA_UART;
+    a.loopback = true;
     a.on_complete = on_dma_complete;
     protocore_dma_open(&a);
 
     // Forwarding rule: A -> B allowed (default-deny otherwise), no rate cap.
-    protocore_forward_reset();
-    protocore_forward_add_if(IF_B, protocore_if_kind::PROTOCORE_IF_WIFI_STA, if_b_send, nullptr);
-    protocore_forward_add_rule(IF_A, IF_B, protocore_fwd_action::PROTOCORE_FWD_ALLOW, 0);
+    // Interfaces are layer 1's: IF_B is registered with Physical, and the plane sends through it.
+    Forward.reset(protocore_forward_span());
+    PhysicalV.iface.id = IF_B;
+    PhysicalV.iface.kind = protocore_if_kind::PROTOCORE_IF_WIFI_STA;
+    PhysicalV.iface.send = if_b_send;
+    PhysicalV.iface.ctx = nullptr;
+    Physical.iface_add(protocore_physical_span());
+    ForwardV.src_if = IF_A;
+    ForwardV.rule.dst_if = IF_B;
+    ForwardV.rule.action = protocore_fwd_action::PROTOCORE_FWD_ALLOW;
+    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.add_rule(protocore_forward_span());
 
     // Ingress ACL: drop frames whose first byte is 0xFF (a "bad" marker) before forwarding.
     uint8_t bad_pat[1] = {0xFF}, bad_mask[1] = {0xFF};
-    protocore_forward_acl_add(IF_A, 0, bad_pat, bad_mask, 1, protocore_fwd_action::PROTOCORE_FWD_DENY);
+    ForwardV.src_if = IF_A;
+    ForwardV.match.offset = 0;
+    ForwardV.match.pattern = bad_pat;
+    ForwardV.match.mask = bad_mask;
+    ForwardV.match.patlen = 1;
+    ForwardV.acl.action = protocore_fwd_action::PROTOCORE_FWD_DENY;
+    Forward.acl_add(protocore_forward_span());
 
     Serial.println("forwarding: IF_A (DMA) -> FORWARD lane -> ACL + plane -> IF_B egress");
 }
@@ -110,7 +135,8 @@ static uint8_t g_seq = 0;
 
 void loop()
 {
-    // A frame arrives on interface A. protocore_dma_poll() completes the RX, which fires the
+    // A frame arrives on interface A (submitted for egress and looped back into RX).
+    // protocore_dma_poll() completes the RX, which fires the
     // callback -> FORWARD lane -> forwarding plane -> IF_B egress. Every 5th frame is a
     // "bad" one (first byte 0xFF) that the ingress ACL should drop.
     uint8_t frame[8] = {0xBB, g_seq, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
@@ -118,14 +144,14 @@ void loop()
     {
         frame[0] = 0xFF;
     }
-    protocore_dma_sim_feed(IF_A, frame, sizeof(frame));
+    protocore_dma_tx_submit(IF_A, frame, sizeof(frame)); // loops back into IF_A's RX
     protocore_dma_poll();
     g_seq++;
 
     if ((g_seq & 0x07) == 0)
     {
-        protocore_forward_stats st;
-        protocore_forward_get_stats(&st);
+        Forward.get_stats(protocore_forward_span());
+        const protocore_forward_stats &st = ForwardV.stats;
         Serial.printf("stats: in=%lu forwarded=%lu acl_denied=%lu (IF_B frames=%lu)\n", (unsigned long)st.frames_in,
                       (unsigned long)st.forwarded, (unsigned long)st.acl_denied, (unsigned long)g_out_frames);
     }

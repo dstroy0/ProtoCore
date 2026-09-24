@@ -20,14 +20,14 @@
  * an AMS route on the PLC back to this device's AMSNetId (below) or the router will
  * reject the connection - see the README.
  *
- * Build flag (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_ADS=1
+ * Build flags (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_ADS=1 -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_DNS_RESOLVER=1
  */
 
 #define PROTOCORE_ENABLE_ADS 1
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical/physical.h"
-#include "network_drivers/transport/tcp/tcp.h"
+#include "network_drivers/transport/tcp/client/client.h"
 #include "services/fieldbus/ads/ads.h"
 
 static const char *SSID = "YOUR_SSID";
@@ -45,6 +45,7 @@ static AdsAmsAddr g_source;
 static uint16_t g_invoke = 1;
 static uint8_t c_req[256];
 static uint8_t c_resp[512];
+static uint8_t ads_work[16]; // the borrow an Ads entry takes; the codec carries no state, so it never reads it
 
 // Parse "a.b.c.d.e.f" into six octets. Returns false on a malformed id.
 static bool parse_net_id(const char *s, uint8_t out[ADS_NET_ID_LEN])
@@ -71,10 +72,44 @@ static AdsRequest next_request()
     return r;
 }
 
+// Read up to cap wire bytes from the client slot cid into buf, if any are buffered. Returns the count read.
+static size_t client_read(int cid, uint8_t *buf, size_t cap)
+{
+    TcpClientV.cid = cid;
+    TcpClient.available(protocore_tcp_client_span());
+    if (!TcpClientV.n)
+    {
+        return 0;
+    }
+    TcpClientV.cid = cid;
+    TcpClientV.io.buf = buf;
+    TcpClientV.io.cap = cap;
+    TcpClient.read(protocore_tcp_client_span());
+    return TcpClientV.n;
+}
+
+// Parse one AMS/TCP-framed reply of n octets from c_resp into h. False on a malformed frame.
+static bool parse_reply(size_t n, AdsAmsHeader *h)
+{
+    AdsV.parse_ams_header_args.buf = c_resp;
+    AdsV.parse_ams_header_args.len = n;
+    AdsV.parse_ams_header_args.out = h;
+    Ads.parse_ams_header(ads_work);
+    return AdsV.ok;
+}
+
 // Send one framed request, read one AMS/TCP-framed reply. Returns the total reply length.
 static size_t exchange(int cid, size_t reqlen)
 {
-    if (reqlen == 0 || !Tcp.client->send(cid, c_req, reqlen))
+    if (reqlen == 0)
+    {
+        return 0;
+    }
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = c_req;
+    TcpClientV.io.len = reqlen;
+    TcpClient.send(protocore_tcp_client_span());
+    if (!TcpClientV.ok)
     {
         return 0;
     }
@@ -83,10 +118,7 @@ static size_t exchange(int cid, size_t reqlen)
     // Read the 6-octet AMS/TCP header first (reserved(2) + length(4)).
     while (got < ADS_AMSTCP_HDR_LEN && millis() < deadline)
     {
-        if (Tcp.client->available(cid))
-        {
-            got += Tcp.client->read(cid, c_resp + got, ADS_AMSTCP_HDR_LEN - got);
-        }
+        got += client_read(cid, c_resp + got, ADS_AMSTCP_HDR_LEN - got);
     }
     if (got < ADS_AMSTCP_HDR_LEN)
     {
@@ -101,21 +133,42 @@ static size_t exchange(int cid, size_t reqlen)
     }
     while (got < total && millis() < deadline)
     {
-        if (Tcp.client->available(cid))
-        {
-            got += Tcp.client->read(cid, c_resp + got, total - got);
-        }
+        got += client_read(cid, c_resp + got, total - got);
     }
     return got == total ? total : 0;
 }
 
 static void run_client(const char *host)
 {
-    int cid = Tcp.client->open(host, ADS_TCP_PORT, 8000);
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = ADS_TCP_PORT;
+    TcpClientV.dial.timeout_ms = 8000;
+    TcpClient.open(protocore_tcp_client_span());
+    int cid = TcpClientV.i32;
     if (cid < 0)
     {
         Serial.println("[ads] connect failed");
         return;
+    }
+    // open() returns before the connection exists: step it until the handshake completes or it fails.
+    for (;;)
+    {
+        TcpClientV.cid = cid;
+        TcpClient.connected(protocore_tcp_client_span());
+        if (TcpClientV.ok)
+        {
+            break;
+        }
+        TcpClientV.cid = cid;
+        TcpClient.is_closed(protocore_tcp_client_span());
+        if (TcpClientV.ok)
+        {
+            Serial.println("[ads] connect failed");
+            TcpClientV.cid = cid;
+            TcpClient.close(protocore_tcp_client_span());
+            return;
+        }
+        delay(10);
     }
 
     AdsRequest r;
@@ -124,10 +177,22 @@ static void run_client(const char *host)
 
     // 1) ReadDeviceInfo.
     r = next_request();
-    n = exchange(cid, protocore_ads_build_read_device_info(c_req, sizeof(c_req), &r));
+    AdsV.build_read_device_info_args.buf = c_req;
+    AdsV.build_read_device_info_args.cap = sizeof(c_req);
+    AdsV.build_read_device_info_args.r = &r;
+    Ads.build_read_device_info(ads_work);
+    n = exchange(cid, AdsV.n);
     AdsDeviceInfo di;
-    if (n && protocore_ads_parse_ams_header(c_resp, n, &h) && protocore_ads_parse_read_device_info(h.data, h.data_len, &di) &&
-        di.result == 0)
+    bool ok = n && parse_reply(n, &h);
+    if (ok)
+    {
+        AdsV.parse_read_device_info_args.data = h.data;
+        AdsV.parse_read_device_info_args.data_len = h.data_len;
+        AdsV.parse_read_device_info_args.out = &di;
+        Ads.parse_read_device_info(ads_work);
+        ok = AdsV.ok;
+    }
+    if (ok && di.result == 0)
     {
         Serial.printf("[ads] device: %s v%u.%u build %u\n", di.device_name, di.version_major, di.version_minor,
                       di.version_build);
@@ -139,15 +204,27 @@ static void run_client(const char *host)
 
     // 2) ReadState.
     r = next_request();
-    n = exchange(cid, protocore_ads_build_read_state(c_req, sizeof(c_req), &r));
+    AdsV.build_read_state_args.buf = c_req;
+    AdsV.build_read_state_args.cap = sizeof(c_req);
+    AdsV.build_read_state_args.r = &r;
+    Ads.build_read_state(ads_work);
+    n = exchange(cid, AdsV.n);
     AdsReadStateResult st;
-    if (n && protocore_ads_parse_ams_header(c_resp, n, &h) && protocore_ads_parse_read_state(h.data, h.data_len, &st) &&
-        st.result == 0)
+    ok = n && parse_reply(n, &h);
+    if (ok)
     {
-        const char *name = st.protocore_ads_state == (uint16_t)AdsState::run      ? "RUN"
-                           : st.protocore_ads_state == (uint16_t)AdsState::stop   ? "STOP"
-                           : st.protocore_ads_state == (uint16_t)AdsState::config ? "CONFIG"
-                                                                           : "?";
+        AdsV.parse_read_state_args.data = h.data;
+        AdsV.parse_read_state_args.data_len = h.data_len;
+        AdsV.parse_read_state_args.out = &st;
+        Ads.parse_read_state(ads_work);
+        ok = AdsV.ok;
+    }
+    if (ok && st.result == 0)
+    {
+        const char *name = st.protocore_ads_state == (uint16_t)ADS_STATE_RUN      ? "RUN"
+                           : st.protocore_ads_state == (uint16_t)ADS_STATE_STOP   ? "STOP"
+                           : st.protocore_ads_state == (uint16_t)ADS_STATE_CONFIG ? "CONFIG"
+                                                                                  : "?";
         Serial.printf("[ads] state: %s (%u)\n", name, st.protocore_ads_state);
     }
     else
@@ -157,14 +234,31 @@ static void run_client(const char *host)
 
     // 3) ReadWrite: resolve the symbol name to a handle.
     r = next_request();
-    n = exchange(cid, protocore_ads_build_read_write(c_req, sizeof(c_req), &r, ADS_IGRP_SYM_HND_BY_NAME, 0, 4,
-                                              (const uint8_t *)SYMBOL, (uint32_t)strlen(SYMBOL)));
+    AdsV.build_read_write_args.buf = c_req;
+    AdsV.build_read_write_args.cap = sizeof(c_req);
+    AdsV.build_read_write_args.r = &r;
+    AdsV.build_read_write_args.index_group = ADS_IGRP_SYM_HND_BY_NAME;
+    AdsV.build_read_write_args.index_offset = 0;
+    AdsV.build_read_write_args.read_len = 4;
+    AdsV.build_read_write_args.write_data = (const uint8_t *)SYMBOL;
+    AdsV.build_read_write_args.write_len = (uint32_t)strlen(SYMBOL);
+    Ads.build_read_write(ads_work);
+    n = exchange(cid, AdsV.n);
     AdsReadResult rr;
-    if (!n || !protocore_ads_parse_ams_header(c_resp, n, &h) || !protocore_ads_parse_read(h.data, h.data_len, &rr) ||
-        rr.result != 0 || rr.len < 4)
+    ok = n && parse_reply(n, &h);
+    if (ok)
+    {
+        AdsV.parse_read_args.data = h.data;
+        AdsV.parse_read_args.data_len = h.data_len;
+        AdsV.parse_read_args.out = &rr;
+        Ads.parse_read(ads_work);
+        ok = AdsV.ok;
+    }
+    if (!ok || rr.result != 0 || rr.len < 4)
     {
         Serial.printf("[ads] handle for '%s' failed\n", SYMBOL);
-        Tcp.client->close(cid);
+        TcpClientV.cid = cid;
+        TcpClient.close(protocore_tcp_client_span());
         return;
     }
     uint32_t handle = (uint32_t)rr.data[0] | ((uint32_t)rr.data[1] << 8) | ((uint32_t)rr.data[2] << 16) |
@@ -172,9 +266,24 @@ static void run_client(const char *host)
 
     // 4) Read the symbol value (INT32) by handle.
     r = next_request();
-    n = exchange(cid, protocore_ads_build_read(c_req, sizeof(c_req), &r, ADS_IGRP_SYM_VAL_BY_HANDLE, handle, 4));
-    if (n && protocore_ads_parse_ams_header(c_resp, n, &h) && protocore_ads_parse_read(h.data, h.data_len, &rr) && rr.result == 0 &&
-        rr.len >= 4)
+    AdsV.build_read_args.buf = c_req;
+    AdsV.build_read_args.cap = sizeof(c_req);
+    AdsV.build_read_args.r = &r;
+    AdsV.build_read_args.index_group = ADS_IGRP_SYM_VAL_BY_HANDLE;
+    AdsV.build_read_args.index_offset = handle;
+    AdsV.build_read_args.read_len = 4;
+    Ads.build_read(ads_work);
+    n = exchange(cid, AdsV.n);
+    ok = n && parse_reply(n, &h);
+    if (ok)
+    {
+        AdsV.parse_read_args.data = h.data;
+        AdsV.parse_read_args.data_len = h.data_len;
+        AdsV.parse_read_args.out = &rr;
+        Ads.parse_read(ads_work);
+        ok = AdsV.ok;
+    }
+    if (ok && rr.result == 0 && rr.len >= 4)
     {
         int32_t val = (int32_t)((uint32_t)rr.data[0] | ((uint32_t)rr.data[1] << 8) | ((uint32_t)rr.data[2] << 16) |
                                 ((uint32_t)rr.data[3] << 24));
@@ -188,21 +297,33 @@ static void run_client(const char *host)
     // 5) Release the handle (Write the 4-octet handle to index group 0xF006).
     r = next_request();
     uint8_t hb[4] = {(uint8_t)handle, (uint8_t)(handle >> 8), (uint8_t)(handle >> 16), (uint8_t)(handle >> 24)};
-    exchange(cid, protocore_ads_build_write(c_req, sizeof(c_req), &r, ADS_IGRP_SYM_RELEASE_HANDLE, 0, hb, 4));
+    AdsV.build_write_args.buf = c_req;
+    AdsV.build_write_args.cap = sizeof(c_req);
+    AdsV.build_write_args.r = &r;
+    AdsV.build_write_args.index_group = ADS_IGRP_SYM_RELEASE_HANDLE;
+    AdsV.build_write_args.index_offset = 0;
+    AdsV.build_write_args.data = hb;
+    AdsV.build_write_args.len = 4;
+    Ads.build_write(ads_work);
+    exchange(cid, AdsV.n);
 
-    Tcp.client->close(cid);
+    TcpClientV.cid = cid;
+    TcpClient.close(protocore_tcp_client_span());
     Serial.println("[ads] done");
 }
 
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
@@ -224,7 +345,7 @@ void loop()
     if (!done && millis() > 2000)
     {
         done = true;
-        run_client(PLC_IP); // Tcp.client->open resolves the dotted-quad host directly
+        run_client(PLC_IP); // TcpClient.open resolves the dotted-quad host directly
     }
     delay(10);
 }

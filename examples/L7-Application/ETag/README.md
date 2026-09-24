@@ -28,7 +28,7 @@ Put a file at `data/www/index.html` and upload the LittleFS image before running
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_ETAG=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_ETAG=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -DPROTOCORE_ENABLE_MNT=1" \
   --lib="." examples/L7-Application/ETag/ETag.ino
 ```
 

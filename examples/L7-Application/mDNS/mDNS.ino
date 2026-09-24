@@ -29,17 +29,28 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 static const char *HOSTNAME = "pc-demo";
 
 
+static void mdns_txt(const char *key, const char *value)
+{
+    MdnsServiceV.txt_args.key = key;
+    MdnsServiceV.txt_args.value = value;
+    MdnsService.txt(protocore_mdns_service_span());
+}
+
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
+    // Every Physical entry reads its operands from PhysicalV and writes its outcome back there.
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
@@ -47,12 +58,18 @@ void setup()
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "hello via mDNS"); });
     begin_http(80, NULL);
 
-    if (protocore_mdns_begin(HOSTNAME, 80))
+    MdnsServiceV.begin_args.hostname = HOSTNAME;
+    MdnsServiceV.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    if (MdnsServiceV.ok)
     {
         // Bonjour TXT records (shown by DNS-SD browsers) + advertise HTTPS too.
-        protocore_mdns_txt("path", "/");
-        protocore_mdns_txt("fw", "1.0");
-        protocore_mdns_add_service("_https", "_tcp", 443);
+        mdns_txt("path", "/");
+        mdns_txt("fw", "1.0");
+        MdnsServiceV.add_service_args.service_type = "_https";
+        MdnsServiceV.add_service_args.proto = "_tcp";
+        MdnsServiceV.add_service_args.port = 443;
+        MdnsService.add_service(protocore_mdns_service_span());
         Serial.printf("mDNS: http://%s.local/\n", HOSTNAME);
     }
 }

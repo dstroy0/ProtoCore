@@ -33,6 +33,15 @@ static void on_background(const void *item, void *)
     Serial.printf("  [USER lane] background #%u\n", ((const pq_item *)item)->seq);
 }
 
+// A lane's default task priority. PreemptQueue reads the lane from PreemptQueueV and reports
+// the priority back into PreemptQueueV.u8.
+static uint8_t lane_priority(protocore_pq_lane lane)
+{
+    PreemptQueueV.lane = lane;
+    PreemptQueue.priority(protocore_preempt_queue_span());
+    return PreemptQueueV.u8;
+}
+
 void setup()
 {
     Serial.begin(115200);
@@ -42,7 +51,9 @@ void setup()
     protocore_pq_config dma = {};
     dma.handler = on_critical;
     dma.core = 1;
-    Session.workers->queue->start(protocore_pq_lane::PROTOCORE_PQ_LANE_DMA, &dma);
+    PreemptQueueV.lane = protocore_pq_lane::PROTOCORE_PQ_LANE_DMA;
+    PreemptQueueV.cfg = &dma;
+    PreemptQueue.start(protocore_preempt_queue_span());
 
     // User lane via the no-arg API (unchanged from PreemptQueue).
     protocore_pq_config user = {};
@@ -52,8 +63,8 @@ void setup()
     protocore_pq_start(&user);
 
     Serial.printf("lane priorities  DMA=%u  FORWARD=%u  DEVICE=%u  USER=%u\n",
-                  Session.workers->queue->priority(protocore_pq_lane::PROTOCORE_PQ_LANE_DMA), Session.workers->queue->priority(protocore_pq_lane::PROTOCORE_PQ_LANE_FORWARD),
-                  Session.workers->queue->priority(protocore_pq_lane::PROTOCORE_PQ_LANE_DEVICE), Session.workers->queue->priority(protocore_pq_lane::PROTOCORE_PQ_LANE_USER));
+                  lane_priority(protocore_pq_lane::PROTOCORE_PQ_LANE_DMA), lane_priority(protocore_pq_lane::PROTOCORE_PQ_LANE_FORWARD),
+                  lane_priority(protocore_pq_lane::PROTOCORE_PQ_LANE_DEVICE), lane_priority(protocore_pq_lane::PROTOCORE_PQ_LANE_USER));
     Serial.println("internal lanes outrank the user lane -> internal work preempts user work");
 }
 
@@ -65,7 +76,10 @@ void loop()
     // before the user-lane task whenever both are runnable.
     pq_item it = {};
     it.seq = g_seq++;
-    Session.workers->queue->post(protocore_pq_lane::PROTOCORE_PQ_LANE_DMA, &it, 0); // critical -> internal lane
-    protocore_pq_post(&it, 0);                                  // background -> user lane
+    PreemptQueueV.lane = protocore_pq_lane::PROTOCORE_PQ_LANE_DMA; // critical -> internal lane
+    PreemptQueueV.post_args.item = &it;
+    PreemptQueueV.post_args.timeout_ticks = 0;
+    PreemptQueue.post(protocore_preempt_queue_span());
+    protocore_pq_post(&it, 0); // background -> user lane
     delay(1000);
 }

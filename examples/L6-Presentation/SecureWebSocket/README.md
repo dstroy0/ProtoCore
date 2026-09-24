@@ -33,7 +33,7 @@ normally.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_TLS=1 -DMAX_CONNS=4 -DPROTOCORE_TLS_ARENA_SIZE=32768" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_TLS=1 -DMAX_CONNS=4 -DPROTOCORE_TLS_ARENA_SIZE=32768 -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_SSE=1" \
   --lib="." examples/L6-Presentation/SecureWebSocket/SecureWebSocket.ino
 ```
 

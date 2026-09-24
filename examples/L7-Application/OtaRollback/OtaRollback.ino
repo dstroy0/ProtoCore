@@ -28,27 +28,33 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
+static uint8_t ota_rollback_work[16]; // the borrow an OtaRollback entry takes; it keeps its state in OtaRollbackV
 
 static bool self_test()
 {
-    return Physical.wifi->ready() && ESP.getFreeHeap() > 20000; // your real health checks here
+    Physical.wifi_ready(protocore_physical_span());
+    return PhysicalV.ok && ESP.getFreeHeap() > 20000; // your real health checks here
 }
 
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     on_http("/ota-state", HTTP_GET, [](uint8_t id, HttpReq *) {
         char b[48];
-        snprintf(b, sizeof(b), "{\"img_state\":%u}", protocore_ota_img_state());
+        OtaRollback.state(ota_rollback_work);
+        snprintf(b, sizeof(b), "{\"img_state\":%u}", OtaRollbackV.img_state);
         send_text(id, 200, "application/json", b);
     });
     begin_http(80, NULL);
@@ -61,7 +67,9 @@ void loop()
     static bool done = false;
     if (!done)
     {
-        protocore_ota_action a = protocore_ota_rollback_tick(self_test());
+        OtaRollbackV.self_test_ok = self_test();
+        OtaRollback.tick(ota_rollback_work);
+        protocore_ota_action a = OtaRollbackV.action;
         if (a == protocore_ota_action::PROTOCORE_OTA_COMMIT)
         {
             Serial.println("[ota] image committed");

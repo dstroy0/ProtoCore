@@ -7,7 +7,7 @@
  *
  * The master/client side of Modbus: build read-request ADUs and parse the
  * responses into register values. This example self-scans - it runs the requests
- * through the on-board Modbus slave (protocore_modbus_process_adu) so the build/parse codec
+ * through the on-board Modbus slave (Modbus.process_adu) so the build/parse codec
  * is demonstrated end-to-end without an external device; against a real slave you
  * would send the ADU over a TCP client instead. GET /scan returns the discovered
  * holding registers as JSON.
@@ -28,35 +28,52 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
+static uint8_t modbus_master_work[16]; // the borrow a ModbusMaster entry takes; it never reads it
+
+static void set_holding(uint16_t addr, uint16_t value)
+{
+    ModbusV.set_holding_reg_args.addr = addr;
+    ModbusV.set_holding_reg_args.value = value;
+    Modbus.set_holding_reg(protocore_modbus_span());
+}
+
 
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Seed a few holding registers (the "slave" data model).
-    protocore_modbus_server_init();
-    protocore_modbus_set_holding_reg(0, 1234);
-    protocore_modbus_set_holding_reg(1, 5678);
-    protocore_modbus_set_holding_reg(2, 4095);
+    Modbus.server_init(protocore_modbus_span());
+    set_holding(0, 1234);
+    set_holding(1, 5678);
+    set_holding(2, 4095);
     listen(502, PROTO_MODBUS); // real Modbus TCP slave on :502
 
     // /scan: read holding registers 0..3 via the master codec (self-scan).
     on_http("/scan", HTTP_GET, [](uint8_t id, HttpReq *) {
         uint8_t req[16], resp[MODBUS_ADU_MAX];
-        size_t rn =
-            protocore_modbus_build_read((uint8_t)MODBUS_FC_READ_HOLDING_REGS, 1, 1, 0, 3, req, sizeof(req));
-        size_t pn = protocore_modbus_process_adu(req, rn, resp, sizeof(resp));
+        size_t rn = ModbusMaster.build_read(modbus_master_work, (uint8_t)MODBUS_FC_READ_HOLDING_REGS, 1, 1, 0, 3, req,
+                                            sizeof(req));
+        ModbusV.process_adu_args.req = req;
+        ModbusV.process_adu_args.req_len = rn;
+        ModbusV.process_adu_args.resp = resp;
+        ModbusV.process_adu_args.protocore_resp_cap = sizeof(resp);
+        Modbus.process_adu(protocore_modbus_span());
+        size_t pn = ModbusV.n;
         uint16_t regs[3];
         uint8_t ex = 0;
-        int n = protocore_modbus_parse_response(resp, pn, regs, 3, &ex);
+        int n = ModbusMaster.parse_response(modbus_master_work, resp, pn, regs, 3, &ex);
         char b[96];
         if (n > 0)
         {

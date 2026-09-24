@@ -15,7 +15,7 @@
  *
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable it for the whole build, e.g.:
- *     build_flags = -DPROTOCORE_ENABLE_UPLOAD=1 -DMAX_CONNS=4
+ *     build_flags = -DPROTOCORE_ENABLE_UPLOAD=1 -DPROTOCORE_ENABLE_MNT=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -DMAX_CONNS=4
  * (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.) The upload
  * sink shares the parser streaming hook with OTA - enable one or the other, not both.
  *
@@ -32,13 +32,14 @@
 #include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/application/upload_service/upload_service.h"
 #include "test/core_setup/hal/esp/esp_mnt_fs.h" // protocore_mnt_fs(): bind an Arduino FS to the storage seam
-#include "server/storage/mnt/mnt.h"            // protocore_mnt_mount()
+#include "server/storage/mnt/mnt.h"            // Mnt.mount()
 #include <LittleFS.h>
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
 static const char *DEST = "/uploaded.bin";
+static uint8_t mnt_work[16]; // the borrow a Mnt entry takes; Mnt never reads it
 
 
 void setup()
@@ -50,26 +51,35 @@ void setup()
         Serial.println("LittleFS mount failed");
     }
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Mount LittleFS through the storage seam; the upload service writes to whatever is mounted.
-    protocore_mnt_mount(protocore_mnt_fs(&LittleFS));
+    MntV.args.backend = protocore_mnt_fs(&LittleFS);
+    Mnt.mount(mnt_work);
 
     // POST /upload -> stream the body into DEST on the mounted store.
-    protocore_upload_begin("/upload", DEST);
+    UploadService.begin(protocore_upload_service_span(), "/upload", DEST);
 
     // GET /file -> serve the stored file back.
-    on_http("/file", HTTP_GET,
-              [](uint8_t id, HttpReq *) { serve_file(id, LittleFS, DEST, "application/octet-stream"); });
+    on_http("/file", HTTP_GET, [](uint8_t id, HttpReq *) {
+        FileServingV.serve_file_args.slot_id = id;
+        FileServingV.serve_file_args.file_sys = protocore_mnt_fs(&LittleFS);
+        FileServingV.serve_file_args.fs_path = DEST;
+        FileServingV.serve_file_args.content_type = "application/octet-stream";
+        FileServing.serve_file(protocore_file_serving_span());
+    });
 
     int32_t result = begin_http(80, NULL);
     if (result < 0)

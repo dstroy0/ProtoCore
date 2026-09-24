@@ -99,23 +99,36 @@ void setup()
     Serial.begin(115200);
     pinMode(LED_BUILTIN, OUTPUT);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Build the resource table, then bind the server to UDP/5683.
-    protocore_coap_server_reset();
-    protocore_coap_server_add_resource("/info", COAP_ALLOW_GET, coap_info);
-    protocore_coap_server_add_resource("/led", COAP_ALLOW_GET | COAP_ALLOW_PUT, coap_led);
-    protocore_coap_server_add_resource("/hello", COAP_ALLOW_GET, coap_hello);
-    protocore_coap_server_begin(5683);
+    Coap.reset(protocore_coap_span());
+    CoapV.resource.path = "/info";
+    CoapV.resource.methods = COAP_ALLOW_GET;
+    CoapV.resource.handler = coap_info;
+    Coap.add_resource(protocore_coap_span());
+    CoapV.resource.path = "/led";
+    CoapV.resource.methods = COAP_ALLOW_GET | COAP_ALLOW_PUT;
+    CoapV.resource.handler = coap_led;
+    Coap.add_resource(protocore_coap_span());
+    CoapV.resource.path = "/hello";
+    CoapV.resource.methods = COAP_ALLOW_GET;
+    CoapV.resource.handler = coap_hello;
+    Coap.add_resource(protocore_coap_span());
+    CoapV.bind.port = 5683;
+    Coap.begin(protocore_coap_span());
     Serial.println("CoAP server listening on UDP/5683 (try: coap-client -m get coap://<ip>/info)");
 
     int32_t result = begin_http(80, NULL);

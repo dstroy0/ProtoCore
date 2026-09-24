@@ -13,7 +13,7 @@
  *
  * At boot the board joins WiFi, connects to the controller's program port, and drip-feeds a
  * short program with `dnc_stream`. The engine is transport-agnostic: this sketch supplies the
- * one piece of glue it needs - `cl_send` / `cl_recv` over `protocore_client`, the shared outbound TCP
+ * one piece of glue it needs - `cl_send` / `cl_recv` over `TcpClient`, the shared outbound TCP
  * transport. `cl_recv` returns any reverse-channel bytes so the engine can honor XOFF/XON.
  *
  * Edit the lines marked "CHANGE ME" below, flash, and open Serial @ 115200.
@@ -26,7 +26,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
-#include "network_drivers/transport/tcp/tcp.h"
+#include "network_drivers/transport/tcp/client/client.h"
 #include "services/machine_tool/dnc/dnc_stream/dnc_stream.h" // dnc_stream + DncCfg / DncCode
 
 
@@ -45,7 +45,7 @@ static const char *PROGRAM = "O0001 (DEMO)\n"
                              "N30 G1 X10 Y5 F100\n"
                              "N40 M30\n";
 
-// dnc_stream's transport seam, bound to protocore_client.
+// dnc_stream's transport seam, bound to TcpClient.
 static int cl_send(void *ctx, const uint8_t *data, size_t len)
 {
     int cid = *(int *)ctx;
@@ -57,7 +57,11 @@ static int cl_send(void *ctx, const uint8_t *data, size_t len)
         {
             chunk = 0xFFFF;
         }
-        if (!Tcp.client->send(cid, data + sent, chunk))
+        TcpClientV.cid = cid;
+        TcpClientV.io.data = data + sent;
+        TcpClientV.io.len = chunk;
+        TcpClient.send(protocore_tcp_client_span());
+        if (!TcpClientV.ok)
         {
             return -1;
         }
@@ -71,12 +75,19 @@ static int cl_send(void *ctx, const uint8_t *data, size_t len)
 static int cl_recv(void *ctx, uint8_t *buf, size_t cap)
 {
     int cid = *(int *)ctx;
-    size_t n = Tcp.client->read(cid, buf, cap);
-    if (n > 0)
+    TcpClientV.cid = cid;
+    TcpClient.available(protocore_tcp_client_span());
+    if (TcpClientV.n > 0)
     {
-        return (int)n;
+        TcpClientV.cid = cid;
+        TcpClientV.io.buf = buf;
+        TcpClientV.io.cap = cap;
+        TcpClient.read(protocore_tcp_client_span());
+        return (int)TcpClientV.n;
     }
-    if (Tcp.client->is_closed(cid))
+    TcpClientV.cid = cid;
+    TcpClient.is_closed(protocore_tcp_client_span());
+    if (TcpClientV.ok)
     {
         return -1;
     }
@@ -86,11 +97,35 @@ static int cl_recv(void *ctx, uint8_t *buf, size_t cap)
 
 void send_program()
 {
-    int cid = Tcp.client->open(CNC_HOST, CNC_PORT, 8000);
+    TcpClientV.dial.host = CNC_HOST;
+    TcpClientV.dial.port = CNC_PORT;
+    TcpClientV.dial.timeout_ms = 8000;
+    TcpClient.open(protocore_tcp_client_span());
+    int cid = TcpClientV.i32;
     if (cid < 0)
     {
         Serial.println("connect failed - is the controller's program port reachable?");
         return;
+    }
+    // open is non-blocking: wait for the handshake to finish (or the dial to fail).
+    for (;;)
+    {
+        TcpClientV.cid = cid;
+        TcpClient.connected(protocore_tcp_client_span());
+        if (TcpClientV.ok)
+        {
+            break;
+        }
+        TcpClientV.cid = cid;
+        TcpClient.is_closed(protocore_tcp_client_span());
+        if (TcpClientV.ok)
+        {
+            Serial.println("connect failed - is the controller's program port reachable?");
+            TcpClientV.cid = cid;
+            TcpClient.close(protocore_tcp_client_span());
+            return;
+        }
+        delay(10);
     }
 
     DncCfg cfg;
@@ -109,21 +144,25 @@ void send_program()
         Serial.printf("drip-feed failed (DncStreamResult %d) - see the README troubleshooting table\n", (int)rc);
     }
 
-    Tcp.client->close(cid);
+    TcpClientV.cid = cid;
+    TcpClient.close(protocore_tcp_client_span());
 }
 
 void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

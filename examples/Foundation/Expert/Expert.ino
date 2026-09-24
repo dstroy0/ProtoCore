@@ -7,8 +7,8 @@
  *        rate-limiting, and memory-safe stack templating.
  *
  * Demonstrates:
- *   1. Direct low-level query of the Layer 4 connection pool (conn_pool[MAX_CONNS])
- *      to monitor TCP states, activity timestamps, and ring-buffer fill levels.
+ *   1. Low-level query of the Layer 4 connection pool (every slot of MAX_CONNS, through
+ *      ConnPool) to monitor TCP states, control blocks, and ring-buffer fill levels.
  *   2. Token-bucket rate limiting: zero-allocation, time-based threshold checks
  *      returning "429 Too Many Requests".
  *   3. Execution profiling: measuring route handler times in microseconds.
@@ -24,7 +24,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
-#include "network_drivers/transport/tcp/tcp.h" // access conn_pool and ConnState
+#include "network_drivers/transport/tcp/tcp.h" // ConnPool: per-slot state, ring fill, control block
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
@@ -69,34 +69,29 @@ bool acquire_rate_limit_token()
 /** @brief Log current TCP connection-pool statistics to Serial. */
 void print_connection_pool_stats()
 {
+    // The pool's slot layout is the transport's own; a sketch reads a slot through ConnPool,
+    // which takes the slot in ConnPoolV.slot and reports back into ConnPoolV.
     Serial.println("\n--- Connection Pool Snapshot ---");
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        TcpConn *conn = &conn_pool[i];
-        const char *state_str = "UNKNOWN";
-        switch (conn->state)
-        {
-        case CONN_FREE:
-            state_str = "FREE";
-            break;
-        case CONN_ACTIVE:
-            state_str = "ACTIVE";
-            break;
-        case ConnState::CONN_CLOSING:
-            state_str = "CLOSING";
-            break;
-        }
+        ConnPoolV.slot = (uint8_t)i;
+        ConnPool.active(protocore_conn_pool_span());
+        bool active = ConnPoolV.ok != 0;
+        ConnPool.pcb_of(protocore_conn_pool_span());
+        protocore_pcb *pcb = ConnPoolV.pcb;
+
+        // ACTIVE holds a live control block; a slot with a control block that is no longer
+        // active is draining its close; no control block at all is a free slot.
+        const char *state_str = active ? "ACTIVE" : (pcb != NULL ? "CLOSING" : "FREE");
 
         size_t rx_unread = 0;
-        if (conn->state == CONN_ACTIVE)
+        if (active)
         {
-            rx_unread = (conn->rx_head >= conn->rx_tail) ? (conn->rx_head - conn->rx_tail)
-                                                         : (RX_BUF_SIZE - (conn->rx_tail - conn->rx_head));
+            ConnPool.available(protocore_conn_pool_span());
+            rx_unread = ConnPoolV.n;
         }
 
-        Serial.printf("Slot [%d]: State=%-7s | UnreadBytes=%4zu | LastActivity=%6lu ms ago | PCB=%p\n", i, state_str,
-                      rx_unread, (conn->state == CONN_ACTIVE) ? (millis() - conn->last_activity_ms) : 0,
-                      conn->pcb);
+        Serial.printf("Slot [%d]: State=%-7s | UnreadBytes=%4zu | PCB=%p\n", i, state_str, rx_unread, (void *)pcb);
     }
     Serial.println("---------------------------------");
 }
@@ -178,7 +173,7 @@ void handle_expert_not_found(uint8_t slot_id, HttpReq *req)
     unsigned long start_us = micros();
     total_routed_requests++;
 
-    const char *accept_header = http_get_header(req, "Accept");
+    const char *accept_header = HttpParser.get_header(protocore_http_parser_span(), req, "Accept");
     bool wants_json = (accept_header && strstr(accept_header, "application/json") != nullptr);
 
     char error_buf[256];
@@ -205,14 +200,17 @@ void setup()
     delay(1000);
     Serial.println("\n--- PC Expert Performance Example ---");
 
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(500);
         Serial.print(".");
     }
     Serial.println("\nWiFi online!");
-    uint32_t ip = Physical.link->egress_ip();
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32;
     Serial.printf("Local IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

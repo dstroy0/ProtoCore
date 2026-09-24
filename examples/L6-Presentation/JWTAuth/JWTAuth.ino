@@ -36,35 +36,50 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 // DEMO shared secret - the issuer signs tokens with this; keep it secret in production.
 static const char *JWT_SECRET = "s3cr3t-key";
 
+// The borrow every Jwt entry takes. The verifier keeps no state between calls, so a small
+// static buffer serves; operands go in JwtV and each outcome comes back in JwtV.ok.
+static uint8_t jwt_work[16];
+
 
 static void protected_handler(uint8_t id, HttpReq *req)
 {
     // req->authorization holds the FULL Authorization header (JWTs exceed
     // MAX_VAL_LEN; the parser captures it whole when PROTOCORE_ENABLE_JWT is set).
-    if (!protocore_jwt_bearer_valid(req->authorization, (const uint8_t *)JWT_SECRET, strlen(JWT_SECRET)))
+    JwtV.token.credentials = req->authorization;
+    JwtV.key.secret = (const uint8_t *)JWT_SECRET;
+    JwtV.key.secret_len = strlen(JWT_SECRET);
+    Jwt.verify_bearer(jwt_work);
+    if (!JwtV.ok)
     {
         proto_add_response_header(id, "WWW-Authenticate", "Bearer");
         send_text(id, 401, "text/plain", "invalid or missing token");
         return;
     }
 
-    // Granular authorization from a token claim. protocore_jwt_claim_str / protocore_jwt_scope_allows
-    // take the bare token, so step past the "Bearer " scheme first.
-    const char *tok = req->authorization + 7;
-    while (*tok == ' ')
-    {
-        tok++;
-    }
+    // Granular authorization from a token claim. Jwt.claim_str / Jwt.scope_allows read the bare
+    // token, which verify_bearer left in JwtV.token.jws, past the "Bearer " scheme.
+    const char *tok = JwtV.token.jws;
+    JwtV.token.jws_len = strlen(tok);
     char role[16];
-    if (!protocore_jwt_claim_str(tok, strlen(tok), "role", role, sizeof(role)) || strcmp(role, "admin") != 0)
+    JwtV.claim.name = "role";
+    JwtV.claim.out = role;
+    JwtV.claim.out_cap = sizeof(role);
+    Jwt.claim_str(jwt_work);
+    if (!JwtV.ok || strcmp(role, "admin") != 0)
     {
         send_text(id, 403, "text/plain", "forbidden: admin role required");
         return;
     }
     // For OAuth2 space-separated scopes, gate on the "scope" claim instead:
     //   char scope[64];
-    //   if (protocore_jwt_claim_str(tok, strlen(tok), "scope", scope, sizeof(scope)) &&
-    //       protocore_jwt_scope_allows(scope, "telemetry:write")) { ... }
+    //   JwtV.claim.name = "scope";
+    //   JwtV.claim.out = scope;
+    //   JwtV.claim.out_cap = sizeof(scope);
+    //   Jwt.claim_str(jwt_work);
+    //   JwtV.scope.claim = scope;
+    //   JwtV.scope.required = "telemetry:write";
+    //   if (JwtV.ok) Jwt.scope_allows(jwt_work);
+    //   if (JwtV.ok) { ... }
 
     send_text(id, 200, "text/plain", "welcome admin - your token is valid");
 }
@@ -73,14 +88,18 @@ void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    // Every Physical entry reads its operands from PhysicalV and writes its outcome back there.
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

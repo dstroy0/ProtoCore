@@ -14,7 +14,7 @@
  * The application owns the data model: it writes input registers / discrete
  * inputs (read-only to the client) to publish sensor state, reads holding
  * registers / coils the client has written, and is notified of client writes via
- * protocore_modbus_on_write(). Modbus has no authentication or encryption - run it only on
+ * Modbus.on_write. Modbus has no authentication or encryption - run it only on
  * a trusted control network (front it with the per-IP accept throttle).
  *
  * NOTE: optional services are gated by a compile flag the *library* sources must
@@ -32,6 +32,19 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
+static void set_holding(uint16_t addr, uint16_t value)
+{
+    ModbusV.set_holding_reg_args.addr = addr;
+    ModbusV.set_holding_reg_args.value = value;
+    Modbus.set_holding_reg(protocore_modbus_span());
+}
+
+static void set_input(uint16_t addr, uint16_t value)
+{
+    ModbusV.set_input_reg_args.addr = addr;
+    ModbusV.set_input_reg_args.value = value;
+    Modbus.set_input_reg(protocore_modbus_span());
+}
 
 // Notified whenever a client writes a coil or holding register.
 static void on_write(uint8_t fc, uint16_t start, uint16_t count)
@@ -43,24 +56,28 @@ void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_modbus_server_init();
-    protocore_modbus_set_holding_reg(0, 0x1234); // client-writable registers
-    protocore_modbus_set_input_reg(0, 0);        // application-published (read-only to client)
-    protocore_modbus_on_write(on_write);
+    Modbus.server_init(protocore_modbus_span());
+    set_holding(0, 0x1234); // client-writable registers
+    set_input(0, 0);        // application-published (read-only to client)
+    ModbusV.on_write_args.cb = on_write;
+    Modbus.on_write(protocore_modbus_span());
 
     listen(502, PROTO_MODBUS);
-    begin();
+    proto_begin(NULL);
     Serial.println("Modbus TCP slave on :502");
 }
 
@@ -73,6 +90,6 @@ void loop()
     if (millis() - last >= 1000)
     {
         last = millis();
-        protocore_modbus_set_input_reg(0, (uint16_t)(millis() / 1000)); // uptime seconds
+        set_input(0, (uint16_t)(millis() / 1000)); // uptime seconds
     }
 }

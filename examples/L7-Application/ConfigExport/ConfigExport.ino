@@ -34,32 +34,54 @@ static const protocore_cfg_field SCHEMA[] = {
     {"location", protocore_cfg_type::PROTOCORE_CFG_STR},
 };
 static const size_t SCHEMA_N = sizeof(SCHEMA) / sizeof(SCHEMA[0]);
+static uint8_t cfg_io_work[16]; // the borrow a ConfigIo entry takes; the module holds nothing, so it never reads it
 
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Seed a couple of values (normally set at provisioning).
-    protocore_config_begin("app");
-    protocore_config_set_str("hostname", "sensor-01");
-    protocore_config_set_u32("http_port", 80);
-    protocore_config_set_str("location", "lab");
+    ConfigStoreV.begin_args.ns = "app";
+    ConfigStore.begin(protocore_config_store_span());
+    ConfigStoreV.set_str_args.key = "hostname";
+    ConfigStoreV.set_str_args.val = "sensor-01";
+    ConfigStore.set_str(protocore_config_store_span());
+    ConfigStoreV.set_u32_args.key = "http_port";
+    ConfigStoreV.set_u32_args.val = 80;
+    ConfigStore.set_u32(protocore_config_store_span());
+    ConfigStoreV.set_str_args.key = "location";
+    ConfigStoreV.set_str_args.val = "lab";
+    ConfigStore.set_str(protocore_config_store_span());
 
     on_http("/config", HTTP_GET, [](uint8_t id, HttpReq *) {
         char buf[512];
-        protocore_config_export("app", SCHEMA, SCHEMA_N, buf, sizeof(buf));
+        ConfigIoV.export_args.ns = "app";
+        ConfigIoV.export_args.fields = SCHEMA;
+        ConfigIoV.export_args.n = SCHEMA_N;
+        ConfigIoV.export_args.out = buf;
+        ConfigIoV.export_args.cap = sizeof(buf);
+        ConfigIo.dump(cfg_io_work);
         send_text(id, 200, "text/plain", buf);
     });
     on_http("/config", HTTP_POST, [](uint8_t id, HttpReq *req) {
-        int n = protocore_config_import("app", SCHEMA, SCHEMA_N, (const char *)req->body, req->body_len);
+        ConfigIoV.import_args.ns = "app";
+        ConfigIoV.import_args.fields = SCHEMA;
+        ConfigIoV.import_args.n = SCHEMA_N;
+        ConfigIoV.import_args.text = (const char *)req->body;
+        ConfigIoV.import_args.len = req->body_len;
+        protocore_config_io_import(cfg_io_work); // ConfigIo.import, called by name beside export above
+        int n = ConfigIoV.n;
         char msg[48];
         snprintf(msg, sizeof(msg), "imported %d field(s)\n", n);
         send_text(id, 200, "text/plain", msg);

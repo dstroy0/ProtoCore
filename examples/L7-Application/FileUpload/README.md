@@ -36,7 +36,7 @@ server.on("/file", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {   // read i
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_UPLOAD=1 -DMAX_CONNS=4" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_UPLOAD=1 -DPROTOCORE_ENABLE_MNT=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -DMAX_CONNS=4" \
   --lib="." examples/L7-Application/FileUpload/FileUpload.ino
 ```
 

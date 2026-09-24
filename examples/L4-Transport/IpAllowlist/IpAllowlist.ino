@@ -25,7 +25,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
-#include "network_drivers/transport/tcp/tcp.h" // Tcp.listener->ip_allow_add_cidr
+#include "network_drivers/transport/tcp/tcp.h" // TcpListener.ip_allow_add_cidr
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
@@ -34,21 +34,27 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Only these sources may connect; everything else is dropped at accept time.
-    Tcp.listener->ip_allow_add_cidr("192.168.1.0/24"); // local /24
-    Tcp.listener->ip_allow_add_cidr("10.0.0.5");       // one trusted host (bare address -> /32)
-    Tcp.listener->ip_allow_add_cidr("2001:db8::/32");  // an IPv6 prefix
+    TcpListenerV.gate.cidr = "192.168.1.0/24"; // local /24
+    TcpListener.ip_allow_add_cidr(protocore_tcp_listener_span());
+    TcpListenerV.gate.cidr = "10.0.0.5"; // one trusted host (bare address -> /32)
+    TcpListener.ip_allow_add_cidr(protocore_tcp_listener_span());
+    TcpListenerV.gate.cidr = "2001:db8::/32"; // an IPv6 prefix
+    TcpListener.ip_allow_add_cidr(protocore_tcp_listener_span());
 
     on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "hello from an allowed address"); });

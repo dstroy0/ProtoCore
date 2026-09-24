@@ -44,7 +44,7 @@ server that answers each request with the `00 00 00 00 T_OK` / `S_RI` frames abo
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_LSV2=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_LSV2=1 -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_DNS_RESOLVER=1" \
   --lib="." examples/L7-Application/HeidenhainLsv2/HeidenhainLsv2.ino
 ```
 

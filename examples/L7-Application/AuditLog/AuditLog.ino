@@ -40,7 +40,11 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 static void audit_sink(const protocore_audit_entry *e)
 {
     char line[256];
-    if (protocore_audit_format(e, line, sizeof(line)) > 0)
+    AuditLogV.format_args.entry = e;
+    AuditLogV.format_args.out = line;
+    AuditLogV.format_args.cap = sizeof(line);
+    AuditLog.format(protocore_audit_log_span());
+    if (AuditLogV.n > 0)
     {
         Serial.print("[AUDIT] ");
         Serial.println(line);
@@ -49,43 +53,58 @@ static void audit_sink(const protocore_audit_entry *e)
     }
 }
 
+// Append one record to the chain (and hand it to the sink).
+static void audit(protocore_audit_cat category, const char *msg)
+{
+    AuditLogV.append_args.category = category;
+    AuditLogV.append_args.msg = msg;
+    AuditLog.append(protocore_audit_log_span());
+}
+
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_audit_reset();
-    protocore_audit_set_sink(audit_sink);
-    protocore_audit_append(protocore_audit_cat::PROTOCORE_AUDIT_SYSTEM, "boot");
+    AuditLog.reset(protocore_audit_log_span());
+    AuditLogV.set_sink_args.sink = audit_sink;
+    AuditLog.set_sink(protocore_audit_log_span());
+    audit(protocore_audit_cat::PROTOCORE_AUDIT_SYSTEM, "boot");
 
     on_http("/login", HTTP_GET, [](uint8_t id, HttpReq *req) {
-        const char *user = http_get_query(req, "user");
-        const char *pass = http_get_query(req, "pass");
+        const char *user = HttpParser.get_query(protocore_http_parser_span(), req, "user");
+        const char *pass = HttpParser.get_query(protocore_http_parser_span(), req, "pass");
         char msg[PROTOCORE_AUDIT_MSG_LEN];
         bool ok = pass && strcmp(pass, "secret") == 0;
         snprintf(msg, sizeof(msg), "login %s", user ? user : "?");
-        protocore_audit_append(ok ? protocore_audit_cat::PROTOCORE_AUDIT_AUTH : protocore_audit_cat::PROTOCORE_AUDIT_AUTH_FAIL, msg);
+        audit(ok ? protocore_audit_cat::PROTOCORE_AUDIT_AUTH : protocore_audit_cat::PROTOCORE_AUDIT_AUTH_FAIL, msg);
         send_text(id, ok ? 200 : 401, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
     });
 
     on_http("/config", HTTP_GET, [](uint8_t id, HttpReq *req) {
-        const char *port = http_get_query(req, "http_port");
+        const char *port = HttpParser.get_query(protocore_http_parser_span(), req, "http_port");
         char msg[PROTOCORE_AUDIT_MSG_LEN];
         snprintf(msg, sizeof(msg), "set http_port=%s", port ? port : "?");
-        protocore_audit_append(protocore_audit_cat::PROTOCORE_AUDIT_CONFIG, msg);
+        audit(protocore_audit_cat::PROTOCORE_AUDIT_CONFIG, msg);
         send_text(id, 200, "application/json", "{\"ok\":true}");
     });
 
     on_http("/audit", HTTP_GET, [](uint8_t id, HttpReq *) {
         char doc[2048];
-        if (protocore_audit_dump_json(doc, sizeof(doc)) > 0)
+        AuditLogV.dump_json_args.out = doc;
+        AuditLogV.dump_json_args.cap = sizeof(doc);
+        AuditLog.dump_json(protocore_audit_log_span());
+        if (AuditLogV.n > 0)
         {
             send_text(id, 200, "application/json", doc);
         }

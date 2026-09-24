@@ -50,13 +50,15 @@ static bool resolver(const char *path, const protocore_gql_args *args, protocore
     if (!strcmp(path, "net.rssi"))
     {
         out->type = protocore_gql_type::PROTOCORE_GQL_INT;
-        out->i = Physical.wifi->rssi();
+        Physical.wifi_rssi(protocore_physical_span());
+        out->i = PhysicalV.i8;
         return true;
     }
     if (!strcmp(path, "net.ip"))
     {
         static char ip[20];
-        uint32_t v4 = Physical.link->egress_ip();
+        Physical.egress_ip(protocore_physical_span());
+        uint32_t v4 = PhysicalV.u32;
         snprintf(ip, sizeof(ip), "%u.%u.%u.%u", (unsigned)(v4 & 0xFF), (unsigned)((v4 >> 8) & 0xFF),
                  (unsigned)((v4 >> 16) & 0xFF), (unsigned)((v4 >> 24) & 0xFF));
         out->type = protocore_gql_type::PROTOCORE_GQL_STR;
@@ -66,7 +68,13 @@ static bool resolver(const char *path, const protocore_gql_args *args, protocore
     if (!strcmp(path, "greet"))
     {
         const char *who = "?";
-        protocore_gql_arg_str(args, "name", &who);
+        GraphQLV.argument.values = args;
+        GraphQLV.argument.name = "name";
+        GraphQL.arg_str(protocore_graphql_span());
+        if (GraphQLV.ok)
+        {
+            who = GraphQLV.text;
+        }
         static char b[64];
         snprintf(b, sizeof(b), "hi %s", who);
         out->type = protocore_gql_type::PROTOCORE_GQL_STR;
@@ -79,18 +87,27 @@ static bool resolver(const char *path, const protocore_gql_args *args, protocore
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     on_http("/graphql", HTTP_POST, [](uint8_t id, HttpReq *req) {
         char body[512];
-        protocore_gql_result rc = protocore_graphql_execute((const char *)req->body, req->body_len, resolver, body, sizeof(body));
+        GraphQLV.request.document = (const char *)req->body;
+        GraphQLV.request.len = req->body_len;
+        GraphQLV.request.resolver = resolver;
+        GraphQLV.response.out = body;
+        GraphQLV.response.cap = sizeof(body);
+        GraphQL.execute(protocore_graphql_span());
+        protocore_gql_result rc = GraphQLV.result;
         // The engine writes {"data":...} on success or {"errors":...} on a parse
         // error; 200 with the GraphQL error envelope is the conventional reply.
         send_text(id, rc == protocore_gql_result::PROTOCORE_GQL_OK ? 200 : 400, "application/json", body);

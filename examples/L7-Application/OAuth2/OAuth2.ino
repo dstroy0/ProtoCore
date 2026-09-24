@@ -13,7 +13,7 @@
  *     -> exchanges the code, returns {"expires_in":3600,...}
  *
  * Pair it with services/security/oidc to verify the returned id_token, and call
- * protocore_oauth2_refresh() later with the refresh_token to get fresh access tokens.
+ * Oauth2.refresh later with the refresh_token to get fresh access tokens.
  * Needs the HTTP(S) client (PROTOCORE_ENABLE_HTTP_CLIENT); use https:// token URLs in
  * production and set a CA / pin on the client.
  *
@@ -41,24 +41,35 @@ static const char *REDIRECT_URI = "http://device.local/callback";
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     on_http("/callback", HTTP_GET, [](uint8_t id, HttpReq *req) {
-        const char *code = http_get_query(req, "code");
+        const char *code = HttpParser.get_query(protocore_http_parser_span(), req, "code");
         if (!code)
         {
             send_text(id, 400, "application/json", "{\"error\":\"missing code\"}");
             return;
         }
-        protocore_o_auth2_tokens t;
-        int st = protocore_oauth2_exchange_code(TOKEN_URL, code, REDIRECT_URI, CLIENT_ID, CLIENT_SECRET, nullptr, &t);
+        static Oauth2Tokens t; // static: three token buffers are too big for the handler's stack
+        Oauth2V.request.token_endpoint = TOKEN_URL;
+        Oauth2V.client.client_id = CLIENT_ID;
+        Oauth2V.client.client_secret = CLIENT_SECRET;
+        Oauth2V.code_grant.code = code;
+        Oauth2V.code_grant.redirect_uri = REDIRECT_URI;
+        Oauth2V.code_grant.code_verifier = nullptr;
+        Oauth2V.response.tokens = &t;
+        Oauth2.exchange_code(protocore_oauth2_span());
+        int st = (int)Oauth2V.i32;
         if (st != 200)
         {
             char b[48];

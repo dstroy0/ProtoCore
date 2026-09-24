@@ -29,6 +29,7 @@ mounts LittleFS with `begin(true)` (format-on-fail).
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_FILE_SERVING=1 -DPROTOCORE_ENABLE_MNT=1" \
   --lib="." examples/L7-Application/FileServing/FileServing.ino
 ```
 

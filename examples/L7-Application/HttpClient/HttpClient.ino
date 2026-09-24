@@ -41,27 +41,33 @@ void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    HttpClientResult r;
-    int status = http_get(URL, &r);
+    // The client reads its operands from HttpClientV and writes the outcome back there; the body
+    // points into the module's receive buffer and stays valid until the next exchange.
+    HttpClientV.target.url = URL;
+    HttpClient.get(protocore_http_client_span());
+    int status = (int)HttpClientV.status;
     if (status < 0)
     {
         Serial.printf("request failed (error %d)\n", status);
     }
     else
     {
-        Serial.printf("HTTP %d, %u body bytes:\n", r.status, (unsigned)r.body_len);
-        Serial.write(r.body, r.body_len);
+        Serial.printf("HTTP %d, %u body bytes:\n", status, (unsigned)HttpClientV.body_len);
+        Serial.write(HttpClientV.body, HttpClientV.body_len);
         Serial.println();
     }
 }

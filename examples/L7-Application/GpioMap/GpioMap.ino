@@ -37,6 +37,7 @@ static protocore_gpio_pin gpio_pins[] = {
     {34, "ADC sense", PROTOCORE_GPIO_DIR_IN, 0},
 };
 static const uint8_t gpio_count = sizeof(gpio_pins) / sizeof(gpio_pins[0]);
+static uint8_t gpio_map_work[16]; // the borrow a GpioMap entry takes; GpioMap never reads it
 
 // A tiny zero-dependency diag page: fetch /gpio, render rows, toggle outputs.
 static const char DIAG_PAGE[] = R"HTML(<!doctype html><meta name=viewport content="width=device-width">
@@ -63,19 +64,25 @@ load();setInterval(load,2000);
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // GET /gpio (JSON) + POST /gpio (drive an output); pinMode is applied here.
-    protocore_gpio_map_begin("/gpio", gpio_pins, gpio_count);
+    GpioMapV.args.path = "/gpio";
+    GpioMapV.args.pins_rw = gpio_pins;
+    GpioMapV.args.count = gpio_count;
+    GpioMap.begin(gpio_map_work);
 
     on_http("/", HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/html", DIAG_PAGE); });
     begin_http(80, NULL);

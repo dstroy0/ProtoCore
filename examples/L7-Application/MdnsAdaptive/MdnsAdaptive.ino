@@ -33,14 +33,39 @@
 static const char *WIFI_SSID = "your-ssid";
 static const char *WIFI_PASS = "your-password";
 
+// Every namespace entry reads its operands from its <Name>V vars and writes its outcome back there;
+// these readouts fold each call and its outcome into one expression.
+static uint32_t adaptive_interval_ms()
+{
+    MdnsAdaptive.interval_ms(protocore_mdns_adaptive_span());
+    return MdnsAdaptiveV.ms;
+}
+
+static uint16_t adaptive_contention()
+{
+    MdnsAdaptive.contention(protocore_mdns_adaptive_span());
+    return MdnsAdaptiveV.value;
+}
+
+static uint32_t adaptive_announces()
+{
+    MdnsAdaptive.announces(protocore_mdns_adaptive_span()); // the count lands in ms
+    return MdnsAdaptiveV.ms;
+}
+
+static uint8_t wifi_channel()
+{
+    Physical.wifi_channel(protocore_physical_span());
+    return PhysicalV.u8;
+}
 
 static void mdns_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     char json[128];
     snprintf(json, sizeof(json), "{\"interval_ms\":%lu,\"contention\":%u,\"announces\":%lu,\"channel\":%u}",
-             (unsigned long)protocore_mdns_adaptive_interval_ms(), (unsigned)protocore_mdns_adaptive_contention(),
-             (unsigned long)protocore_mdns_adaptive_announces(), (unsigned)Physical.wifi->channel());
+             (unsigned long)adaptive_interval_ms(), (unsigned)adaptive_contention(),
+             (unsigned long)adaptive_announces(), (unsigned)wifi_channel());
     send_text(slot_id, 200, PROTOCORE_MIME_JSON, json);
 }
 
@@ -49,8 +74,10 @@ void setup()
     Serial.begin(115200);
     delay(300);
 
-    Physical.wifi->init(WIFI_SSID, WIFI_PASS);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = WIFI_SSID;
+    PhysicalV.wifi.password = WIFI_PASS;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
@@ -59,9 +86,14 @@ void setup()
     begin_http(80, NULL);
 
     // Bring up the responder and seed the TXT record the refresher re-applies.
-    if (protocore_mdns_begin("adaptive", 80))
+    MdnsServiceV.begin_args.hostname = "adaptive";
+    MdnsServiceV.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    if (MdnsServiceV.ok)
     {
-        protocore_mdns_txt("role", "sensor");
+        MdnsServiceV.txt_args.key = "role";
+        MdnsServiceV.txt_args.value = "sensor";
+        MdnsService.txt(protocore_mdns_service_span());
         Serial.println("mDNS up: adaptive.local");
     }
 
@@ -76,16 +108,19 @@ void setup()
     cfg.hi_contention = 40;      // >= 40 frames/window (1 s) counts as "busy"
     cfg.window_ms = 1000;
 
-    if (protocore_mdns_adaptive_begin(&cfg))
+    MdnsAdaptiveV.begin_args.cfg = &cfg;
+    MdnsAdaptive.begin(protocore_mdns_adaptive_span());
+    if (MdnsAdaptiveV.ok)
     {
-        Serial.printf("adaptive announcing on channel %u\n", (unsigned)Physical.wifi->channel());
+        Serial.printf("adaptive announcing on channel %u\n", (unsigned)wifi_channel());
     }
     else
     {
         Serial.println("adaptive begin FAILED (not associated, or promiscuous unavailable)");
     }
 
-    uint32_t ip = Physical.link->egress_ip();
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32;
     Serial.printf("http://%u.%u.%u.%u/mdns  - resolve adaptive.local from the LAN\n", (unsigned)(ip & 0xFF),
                   (unsigned)((ip >> 8) & 0xFF), (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 }
@@ -93,14 +128,14 @@ void setup()
 void loop()
 {
     handle();
-    protocore_mdns_adaptive_tick(); // samples, adapts, re-announces when due - rate-limited internally
+    MdnsAdaptive.tick(protocore_mdns_adaptive_span()); // samples, adapts, re-announces when due - rate-limited internally
 
     static uint32_t next = 0;
     if (millis() >= next)
     {
         next = millis() + 5000;
         Serial.printf("interval=%lums contention=%u announces=%lu ch=%u\n",
-                      (unsigned long)protocore_mdns_adaptive_interval_ms(), (unsigned)protocore_mdns_adaptive_contention(),
-                      (unsigned long)protocore_mdns_adaptive_announces(), (unsigned)Physical.wifi->channel());
+                      (unsigned long)adaptive_interval_ms(), (unsigned)adaptive_contention(),
+                      (unsigned long)adaptive_announces(), (unsigned)wifi_channel());
     }
 }

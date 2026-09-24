@@ -26,7 +26,8 @@
  * base board's IP (printed by the base at boot). Open Serial @ 115200 to watch each side.
  *
  * NOTE (PlatformIO): the caster is compiled into the *library*, so the flag must reach the whole build:
- * `build_flags = -DPROTOCORE_ENABLE_NTRIP_CASTER=1`. In the Arduino IDE it is set in build_opt.h.
+ * `build_flags = -DPROTOCORE_ENABLE_NTRIP_CASTER=1 -DPROTOCORE_ENABLE_NMEA0183=1` (the rover also needs
+ * `-DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_DNS_RESOLVER=1`). In the Arduino IDE it is set in build_opt.h.
  */
 
 #define PROTOCORE_ENABLE_NTRIP_CASTER 1
@@ -36,7 +37,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
-#include "network_drivers/transport/tcp/tcp.h"
+#include "network_drivers/transport/tcp/client/client.h"
 #include "services/timing_position/gnss/gnss_survey/gnss_survey.h"
 #include "services/timing_position/gnss/rtcm3/rtcm3.h"
 #include "services/timing_position/nmea0183/nmea0183.h"
@@ -107,14 +108,17 @@ void setup()
     attachInterrupt(digitalPinToInterrupt(PPS_PIN), on_pps, RISING);
     protocore_gnss_survey_reset(&s_survey);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nBASE IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF),
                   (unsigned)((ip >> 24) & 0xFF)); // <- set this as BASE_IP on the rover
@@ -133,7 +137,7 @@ void setup()
     {
         Serial.println("caster add_mount failed");
     }
-    begin();
+    proto_begin(NULL);
     Serial.printf("NTRIP caster: %u.%u.%u.%u:%u  mount /%s   (surveying in...)\n", (unsigned)(ip & 0xFF),
                   (unsigned)((ip >> 8) & 0xFF), (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF),
                   CASTER_PORT, MOUNTPOINT);
@@ -196,10 +200,87 @@ static uint8_t s_rtcm[512]; // RTCM sync/parse buffer
 static size_t s_rtcm_len = 0;
 static bool s_streaming = false;
 
+
+// The TCP client is work-borrow: each entry reads its operands from TcpClientV and writes its
+// outcome back there. These wrappers keep the session code below reading as plain calls.
+static void tcp_close(int cid)
+{
+    TcpClientV.cid = cid;
+    TcpClient.close(protocore_tcp_client_span());
+}
+
+// Dial and wait for the handshake (open() returns before the connection exists); -1 on failure.
+static int tcp_open(const char *host, uint16_t port, uint32_t timeout_ms)
+{
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = port;
+    TcpClientV.dial.timeout_ms = timeout_ms;
+    TcpClient.open(protocore_tcp_client_span());
+    int cid = TcpClientV.i32;
+    if (cid < 0)
+    {
+        return -1;
+    }
+    for (;;)
+    {
+        TcpClientV.cid = cid;
+        TcpClient.connected(protocore_tcp_client_span());
+        if (TcpClientV.ok)
+        {
+            return cid;
+        }
+        TcpClientV.cid = cid;
+        TcpClient.is_closed(protocore_tcp_client_span());
+        if (TcpClientV.ok)
+        {
+            tcp_close(cid);
+            return -1;
+        }
+        delay(1);
+    }
+}
+
+static bool tcp_send(int cid, const void *data, size_t len)
+{
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = data;
+    TcpClientV.io.len = len;
+    TcpClient.send(protocore_tcp_client_span());
+    return TcpClientV.ok;
+}
+
+static size_t tcp_available(int cid)
+{
+    TcpClientV.cid = cid;
+    TcpClient.available(protocore_tcp_client_span());
+    return TcpClientV.n;
+}
+
+static size_t tcp_read(int cid, uint8_t *buf, size_t cap)
+{
+    TcpClientV.cid = cid;
+    TcpClientV.io.buf = buf;
+    TcpClientV.io.cap = cap;
+    TcpClient.read(protocore_tcp_client_span());
+    return TcpClientV.n;
+}
+
+// A cid that never opened (< 0) counts as closed, so the loop below just redials.
+static bool tcp_is_closed(int cid)
+{
+    if (cid < 0)
+    {
+        return true;
+    }
+    TcpClientV.cid = cid;
+    TcpClient.is_closed(protocore_tcp_client_span());
+    return TcpClientV.ok;
+}
+
 static void connect_ntrip()
 {
     Serial.printf("connecting to caster %s:%u /%s ...\n", BASE_IP, CASTER_PORT, MOUNTPOINT);
-    s_client = Tcp.client->open(BASE_IP, CASTER_PORT, 8000);
+    s_client = tcp_open(BASE_IP, CASTER_PORT, 8000);
     if (s_client < 0)
     {
         Serial.println("connect failed; retrying");
@@ -211,7 +292,7 @@ static void connect_ntrip()
         snprintf(req, sizeof(req), "GET /%s HTTP/1.0\r\nUser-Agent: NTRIP PC/1.0\r\nAccept: */*\r\n\r\n", MOUNTPOINT);
     if (rn > 0)
     {
-        Tcp.client->send(s_client, req, (size_t)rn);
+        tcp_send(s_client, req, (size_t)rn);
     }
     s_streaming = false;
     s_rtcm_len = 0;
@@ -224,14 +305,17 @@ void setup()
     pinMode(PPS_PIN, INPUT);
     attachInterrupt(digitalPinToInterrupt(PPS_PIN), on_pps, RISING);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nROVER IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
     connect_ntrip();
@@ -283,16 +367,16 @@ static void protocore_rtcm_push(uint8_t b)
 
 void loop()
 {
-    if (Tcp.client->is_closed(s_client))
+    if (tcp_is_closed(s_client))
     {
         delay(2000);
         connect_ntrip();
         return;
     }
-    while (Tcp.client->available(s_client))
+    while (tcp_available(s_client))
     {
         uint8_t b = 0;
-        if (Tcp.client->read(s_client, &b, 1) != 1)
+        if (tcp_read(s_client, &b, 1) != 1)
         {
             break;
         }

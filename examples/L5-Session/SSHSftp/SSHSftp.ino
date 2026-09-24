@@ -31,20 +31,22 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
-#include "network_drivers/presentation/ssh/auth/ssh_auth.h"
-#include "network_drivers/presentation/ssh/connection/ssh_conn.h"
-#include "network_drivers/tls/ssh_rsa.h"
+#include "network_drivers/presentation/ssh/auth/auth.h"
+#include "network_drivers/presentation/ssh/transport/ssh_rsa/ssh_rsa.h"
 #include "test/core_setup/hal/esp/esp_mnt_fs.h"
+#include "server/storage/mnt/mnt.h"
 #include "server/storage/filesystem/filesystem.h"
-#include "network_drivers/application/scp/ssh_scp.h"
+#include "network_drivers/session/scp/ssh_scp/ssh_scp.h"
 #include "network_drivers/application/sftp/ssh_sftp/ssh_sftp.h"
 #include <LittleFS.h>
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
+static uint8_t mnt_work[16]; // the borrow a Mnt entry takes; Mnt never reads it
 
-static bool ssh_password_auth(const char *user, const char *pass)
+
+static proto_bool ssh_password_auth(const char *user, const char *pass)
 {
     return strcmp(user, "admin") == 0 && strcmp(pass, "s3cret") == 0; // illustrative only
 }
@@ -53,14 +55,17 @@ void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
@@ -71,31 +76,34 @@ void setup()
         return;
     }
 
-    if (protocore_ssh_rsa_load_pubkey() != 0)
+    SshRsa.load_pubkey(protocore_ssh_rsa_span());
+    if (SshRsaV.n != 0)
     {
         Serial.println("No SSH host key in NVS - see docs/SSH.md (Host key provisioning)");
         return;
     }
-    protocore_ssh_auth_set_password_cb(ssh_password_auth);
+    SshAuthV.cbs.password_cb = ssh_password_auth;
+    SshAuth.set_password_cb(protocore_ssh_auth_span());
 
     listen(22, PROTO_SSH);
-    if (begin() < 0)
+    if (proto_begin(NULL) < 0)
     {
-        Serial.println("begin() failed");
+        Serial.println("proto_begin() failed");
         return;
     }
-    protocore_ssh_conn_setup();
 
     // Serve SFTP + SCP from the whole LittleFS volume. A "subsystem sftp" request opens an SFTP session;
     // `scp localfile admin@<ip>:/path` drops a file onto the volume.
     //
     // The mount and the root are set once, for the device, not once per protocol: both servers reach
     // storage through the filesystem accessor, so they cannot disagree about where the volume begins.
-    // Narrow the exposure by mounting a subdirectory here (e.g. protocore_fs_begin("/gcode")).
-    protocore_mnt_mount(protocore_mnt_fs(&LittleFS));
-    protocore_fs_begin("/");
-    protocore_ssh_sftp_begin();
-    protocore_ssh_scp_begin();
+    // Narrow the exposure by mounting a subdirectory here (e.g. Fs.mount = "/gcode").
+    MntV.args.backend = protocore_mnt_fs(&LittleFS);
+    Mnt.mount(mnt_work);
+    Fs.mount = "/";
+    Fs.begin(protocore_filesystem_span());
+    SshSftp.begin(protocore_ssh_sftp_span());
+    SshScp.begin(protocore_ssh_scp_span());
 
     Serial.println("SFTP/SCP server started: sftp -P 22 admin@<ip> ; scp file admin@<ip>:/path");
 }

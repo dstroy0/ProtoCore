@@ -26,6 +26,12 @@
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"
 
 
+// The work each primitive runs out of: the caller takes the borrow and hands it in. Word arrays
+// so the bytes are aligned for the hash and cipher state that lives in them.
+static uint32_t sha_work[(PROTOCORE_SHA256_BORROW + 3) / 4];
+static uint32_t hmac_work[(PROTOCORE_HMAC_SHA256_BORROW + 3) / 4];
+static uint32_t aes_work[(PROTOCORE_AES256CTR_BORROW + 3) / 4];
+
 static bool eq(const uint8_t *a, const uint8_t *b, size_t n)
 {
     return memcmp(a, b, n) == 0;
@@ -53,12 +59,12 @@ void setup()
         static const uint8_t want[32] = {0xba, 0x78, 0x16, 0xbf, 0x8f, 0x01, 0xcf, 0xea, 0x41, 0x41, 0x40,
                                          0xde, 0x5d, 0xae, 0x22, 0x23, 0xb0, 0x03, 0x61, 0xa3, 0x96, 0x17,
                                          0x7a, 0x9c, 0xb4, 0x10, 0xff, 0x61, 0xf2, 0x00, 0x15, 0xad};
-        protocore_sha256_ctx c;
+        uint8_t *c = (uint8_t *)sha_work; // the borrow IS the running digest
         uint8_t out[32];
-        protocore_sha256_init(&c);
-        protocore_sha256_update(&c, (const uint8_t *)"a", 1);
-        protocore_sha256_update(&c, (const uint8_t *)"bc", 2); // chunked → exercises streaming
-        protocore_sha256_final(&c, out);
+        Sha256.init(c);
+        Sha256.update(c, (const uint8_t *)"a", 1);
+        Sha256.update(c, (const uint8_t *)"bc", 2); // chunked → exercises streaming
+        Sha256.final(c, out);
         report("sha256 streaming", eq(out, want, 32), all_ok);
     }
 
@@ -70,7 +76,7 @@ void setup()
                                          0xce, 0xaf, 0x0b, 0xf1, 0x2b, 0x88, 0x1d, 0xc2, 0x00, 0xc9, 0x83,
                                          0x3d, 0xa7, 0x26, 0xe9, 0x37, 0x6c, 0x2e, 0x32, 0xcf, 0xf7};
         uint8_t mac[32];
-        protocore_hmac_sha256(key, sizeof(key), (const uint8_t *)"Hi There", 8, mac);
+        HmacSha256.mac((uint8_t *)hmac_work, key, sizeof(key), (const uint8_t *)"Hi There", 8, mac);
         report("hmac-sha256 rfc4231", eq(mac, want, 32), all_ok);
     }
 
@@ -88,8 +94,13 @@ void setup()
         uint8_t counter[16]; // stateless API advances the counter in place, so copy the IV out of const storage
         memcpy(counter, iv, sizeof(counter));
         uint8_t out[16];
-        // Key schedule and keystream ride the wiped crypto scratch; no cipher state persists on the stack.
-        protocore_aes256ctr_crypt(key, counter, pt, out, 16);
+        // Key schedule and keystream ride the caller's borrow; no cipher state persists on the stack.
+        Aes256CtrV.crypt_args.key = key;
+        Aes256CtrV.crypt_args.counter = counter;
+        Aes256CtrV.crypt_args.in = pt;
+        Aes256CtrV.crypt_args.out = out;
+        Aes256CtrV.crypt_args.len = 16;
+        Aes256Ctr.crypt((uint8_t *)aes_work);
         report("aes256-ctr nist", eq(out, want, 16), all_ok);
     }
 

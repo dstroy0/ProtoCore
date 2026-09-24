@@ -39,15 +39,20 @@ void setup()
 {
     Serial.begin(115200);
     // ESP-NOW needs the radio up but not associated; STA mode pinned to a fixed channel.
-    Physical.wifi->init_radio(CHANNEL);
+    PhysicalV.wifi.channel = CHANNEL;
+    Physical.wifi_radio_init(protocore_physical_span());
 
-    if (!protocore_espnow_begin(CHANNEL, on_espnow))
+    EspnowV.begin_args.channel = CHANNEL;
+    EspnowV.begin_args.cb = on_espnow;
+    Espnow.begin(protocore_espnow_span());
+    if (!EspnowV.ok)
     {
         Serial.println("ESP-NOW init failed");
         return;
     }
     uint8_t mac[6];
-    Physical.link->mac(mac);
+    PhysicalV.read.mac = mac;
+    Physical.wifi_mac(protocore_physical_span()); // the station address ESP-NOW sends from
     Serial.printf("ESP-NOW up on channel %u, my MAC %02x:%02x:%02x:%02x:%02x:%02x\n", CHANNEL, mac[0], mac[1], mac[2],
                   mac[3], mac[4], mac[5]);
 }
@@ -61,7 +66,11 @@ void loop()
         last = millis();
         char msg[24];
         int len = snprintf(msg, sizeof(msg), "count=%lu", (unsigned long)n++);
-        bool ok = protocore_espnow_broadcast(MSG_COUNTER, (const uint8_t *)msg, (size_t)len);
+        EspnowV.broadcast_args.type = MSG_COUNTER;
+        EspnowV.broadcast_args.payload = (const uint8_t *)msg;
+        EspnowV.broadcast_args.len = (size_t)len;
+        Espnow.broadcast(protocore_espnow_span());
+        bool ok = EspnowV.ok;
         Serial.printf("broadcast %s -> %s\n", msg, ok ? "ok" : "FAIL");
     }
 }

@@ -134,7 +134,13 @@ static uint32_t gps_time_source()
 }
 static uint32_t protocore_ntp_upstream_source()
 {
-    return protocore_ntp_synced() ? (uint32_t)protocore_ntp_epoch() : 0;
+    NtpService.synced(protocore_ntp_service_span());
+    if (!NtpServiceV.ok)
+    {
+        return 0;
+    }
+    NtpService.epoch(protocore_ntp_service_span());
+    return (uint32_t)NtpServiceV.value;
 }
 
 void setup()
@@ -142,23 +148,32 @@ void setup()
     Serial.begin(115200);
     Serial1.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // GPS is the primary (stratum 1); the public NTP pool is the fallback.
     protocore_time_source_add("gps", 1, gps_time_source);
     protocore_time_source_add("ntp", 2, protocore_ntp_upstream_source);
-    protocore_ntp_begin(NULL, NULL, NULL); // start the upstream SNTP client for the fallback
+    NtpServiceV.begin_args.tz = NULL; // UTC, default servers
+    NtpServiceV.begin_args.server1 = NULL;
+    NtpServiceV.begin_args.server2 = NULL;
+    NtpService.begin(protocore_ntp_service_span()); // start the upstream SNTP client for the fallback
 
-    if (protocore_ntp_server_begin(1, NTP_REFID_GPS))
+    NtpServerV.begin_args.stratum = 1;
+    NtpServerV.begin_args.refid = PROTOCORE_NTP_REFID_GPS;
+    NtpServer.begin(protocore_ntp_server_span());
+    if (NtpServerV.ok)
     {
         Serial.println("NTP server listening on UDP/123 (point your devices at this IP)");
     }

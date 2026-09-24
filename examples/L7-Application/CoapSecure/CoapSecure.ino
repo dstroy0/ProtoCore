@@ -140,37 +140,51 @@ void setup()
     Serial.begin(115200);
     pinMode(LED_BUILTIN, OUTPUT);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Build the resource table once (shared by every transport), then start the DTLS front-end on 5684.
-    protocore_coap_server_reset();
-    protocore_coap_server_add_resource("/info", COAP_ALLOW_GET, coap_info);
-    protocore_coap_server_add_resource("/led", COAP_ALLOW_GET | COAP_ALLOW_PUT, coap_led);
-    protocore_coap_server_add_resource("/hello", COAP_ALLOW_GET, coap_hello);
+    Coap.reset(protocore_coap_span());
+    CoapV.resource.path = "/info";
+    CoapV.resource.methods = COAP_ALLOW_GET;
+    CoapV.resource.handler = coap_info;
+    Coap.add_resource(protocore_coap_span());
+    CoapV.resource.path = "/led";
+    CoapV.resource.methods = COAP_ALLOW_GET | COAP_ALLOW_PUT;
+    CoapV.resource.handler = coap_led;
+    Coap.add_resource(protocore_coap_span());
+    CoapV.resource.path = "/hello";
+    CoapV.resource.methods = COAP_ALLOW_GET;
+    CoapV.resource.handler = coap_hello;
+    Coap.add_resource(protocore_coap_span());
 
-    CoapsServerConfig cfg;
-    memset(&cfg, 0, sizeof cfg);
-    cfg.cert_der = COAPS_CERT_DER;
-    cfg.cert_len = sizeof(COAPS_CERT_DER);
-    memcpy(cfg.ed25519_seed, COAPS_ED25519_SEED, sizeof cfg.ed25519_seed);
-    esp_fill_random(cfg.cookie_key, sizeof cfg.cookie_key); // fresh HelloRetryRequest cookie secret per boot
-    cfg.rng = coaps_rng;
-    if (protocore_coaps_server_begin(PROTOCORE_COAPS_PORT, &cfg))
+    CoapsServerIdentityArgs *id = &CoapsServerV.identity;
+    memset(id, 0, sizeof *id);
+    id->cert_der = COAPS_CERT_DER;
+    id->cert_len = sizeof(COAPS_CERT_DER);
+    memcpy(id->ed25519_seed, COAPS_ED25519_SEED, sizeof id->ed25519_seed);
+    esp_fill_random(id->cookie_key, sizeof id->cookie_key); // fresh HelloRetryRequest cookie secret per boot
+    id->rng = coaps_rng;
+    CoapsServerV.bind.port = PROTOCORE_COAPS_PORT;
+    CoapsServer.begin(protocore_coaps_server_span());
+    if (CoapsServerV.ok)
     {
         Serial.println("CoAPs (DTLS 1.3) server listening on UDP/5684 (try: coap-client -m get coaps://<ip>/info)");
     }
     else
     {
-        Serial.println("protocore_coaps_server_begin() failed (UDP bind)");
+        Serial.println("CoapsServer.begin() failed (UDP bind)");
     }
 
     int32_t result = begin_http(80, NULL);
@@ -182,6 +196,6 @@ void setup()
 
 void loop()
 {
-    protocore_coaps_server_poll(); // drive DTLS handshakes, the retransmission timer, and idle-connection reaping
+    CoapsServer.poll(protocore_coaps_server_span()); // drive DTLS handshakes, the retransmission timer, and idle-connection reaping
     handle();        // the TCP server (CoAPs itself runs off lwIP UDP callbacks + this poll)
 }

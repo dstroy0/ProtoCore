@@ -14,11 +14,13 @@
 //
 // Files are served from SD, so the shell is real content rather than flash strings.
 //
-// Build flags (whole build): PROTOCORE_ENABLE_HTTP_DELIVERY=1 PROTOCORE_ENABLE_FILE_SERVING=1 PROTOCORE_ENABLE_RANGE=1
+// Build flags (whole build): PROTOCORE_ENABLE_HTTP_DELIVERY=1 PROTOCORE_ENABLE_FILE_SERVING=1 PROTOCORE_ENABLE_RANGE=1 PROTOCORE_ENABLE_MNT=1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
+#include "network_drivers/application/file_serving/file_serving.h"
 #include "services/file_transfer/http_delivery/http_delivery.h"
+#include "test/core_setup/hal/esp/esp_mnt_fs.h" // protocore_mnt_fs(): bind an Arduino FS to the storage seam
 #include "shared/mime/mime.h" // PROTOCORE_MIME_TEXT_HTML
 #include <SD_MMC.h>
 
@@ -29,6 +31,8 @@ static const char *WIFI_PASS = "your-password";
 // names its cache after it, so a new version invalidates the old shell exactly once.
 static const char *const SHELL[] = {"/", "/index.html", "/app.css"};
 static const char *SHELL_VERSION = "1.0.0";
+
+static uint8_t http_delivery_work[16]; // the borrow an entry takes; HttpDelivery never reads it
 
 
 static void root_handler(uint8_t slot_id, HttpReq *req)
@@ -46,8 +50,10 @@ static void root_handler(uint8_t slot_id, HttpReq *req)
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(WIFI_SSID, WIFI_PASS);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = WIFI_SSID;
+    PhysicalV.wifi.password = WIFI_PASS;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
@@ -58,7 +64,10 @@ void setup()
     }
     else
     {
-        serve_static("/files/", SD_MMC, "/"); // Range/206 comes free with PROTOCORE_ENABLE_RANGE
+        FileServingV.serve_static_args.url_prefix = "/files/";
+        FileServingV.serve_static_args.file_sys = protocore_mnt_fs(&SD_MMC);
+        FileServingV.serve_static_args.fs_root = "/";
+        FileServing.serve_static(protocore_file_serving_span()); // Range/206 comes free with PROTOCORE_ENABLE_RANGE
     }
 
     // Every served file carries the SWR policy: fresh for 60 s, then usable-while-revalidating for
@@ -67,14 +76,19 @@ void setup()
 
     on_http("/", HTTP_GET, root_handler);
     // Serves /sw.js + /precache.json.
-    if (!protocore_delivery_serve_sw(server, SHELL, sizeof(SHELL) / sizeof(SHELL[0]), SHELL_VERSION))
+    HttpDeliveryV.serve_sw_args.paths = SHELL;
+    HttpDeliveryV.serve_sw_args.n = sizeof(SHELL) / sizeof(SHELL[0]);
+    HttpDeliveryV.serve_sw_args.version = SHELL_VERSION;
+    HttpDelivery.serve_sw(http_delivery_work);
+    if (!HttpDeliveryV.ok)
     {
         Serial.println("service-worker routes failed to register");
     }
 
     begin_http(80, NULL);
 
-    uint32_t ip = Physical.link->egress_ip();
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32;
     Serial.printf("http://%u.%u.%u.%u/  (sw /sw.js, manifest /precache.json, files /files/...)\n",
                   (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF), (unsigned)((ip >> 16) & 0xFF),
                   (unsigned)((ip >> 24) & 0xFF));

@@ -55,10 +55,19 @@ static void sd_unmount(void *ctx)
 // should return its GPIO state instead - it is cheaper than a failed mount.
 static protocore_hotswap_present sd_present = nullptr;
 
+// Every Hotswap entry reads its operands from HotswapV and writes its outcome back there.
+static const char *state_name(StorageState s)
+{
+    HotswapV.state_name_args.s = s;
+    Hotswap.state_name(protocore_hotswap_span());
+    return HotswapV.text;
+}
+
 static void on_state_change(StorageState from, StorageState to, void *ctx)
 {
     (void)ctx;
-    Serial.printf("storage: %s -> %s\n", protocore_hotswap_state_name(from), protocore_hotswap_state_name(to));
+    const char *from_name = state_name(from);
+    Serial.printf("storage: %s -> %s\n", from_name, state_name(to));
 }
 
 // --- routes ---------------------------------------------------------------
@@ -67,7 +76,10 @@ static void storage_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     char json[96];
-    if (protocore_hotswap_json(json, sizeof(json)) == 0)
+    HotswapV.json_args.out = json;
+    HotswapV.json_args.cap = sizeof(json);
+    Hotswap.json(protocore_hotswap_span());
+    if (HotswapV.n == 0)
     {
         send_text(slot_id, 500, PROTOCORE_MIME_JSON, "{}");
         return;
@@ -79,7 +91,8 @@ static void write_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     // The gate. Without it this write would go into a stale mount and be silently lost.
-    if (!protocore_hotswap_ready())
+    Hotswap.ready(protocore_hotswap_span());
+    if (!HotswapV.ok)
     {
         send_text(slot_id, 503, PROTOCORE_MIME_TEXT_PLAIN, "storage not ready\n");
         return;
@@ -96,7 +109,8 @@ static void write_handler(uint8_t slot_id, HttpReq *req)
     }
 
     // Report it either way: successes are what keep a healthy volume from drifting toward a fault.
-    protocore_hotswap_io(ok);
+    HotswapV.io_args.ok = ok;
+    Hotswap.io(protocore_hotswap_span());
     send_text(slot_id, ok ? 200 : 500, PROTOCORE_MIME_TEXT_PLAIN, ok ? "ok\n" : "write failed\n");
 }
 
@@ -114,13 +128,21 @@ void setup()
     Serial.begin(115200);
     delay(300);
 
-    protocore_hotswap_set_event_cb(on_state_change);
-    protocore_hotswap_begin(sd_mount, sd_unmount, sd_present, nullptr);
-    protocore_hotswap_poll(); // first poll mounts a card that is already in the slot
-    Serial.printf("storage at boot: %s\n", protocore_hotswap_state_name(protocore_hotswap_state()));
+    HotswapV.set_event_cb_args.cb = on_state_change;
+    Hotswap.set_event_cb(protocore_hotswap_span());
+    HotswapV.begin_args.mount = sd_mount;
+    HotswapV.begin_args.unmount = sd_unmount;
+    HotswapV.begin_args.present = sd_present;
+    HotswapV.begin_args.ctx = nullptr;
+    Hotswap.begin(protocore_hotswap_span());
+    Hotswap.poll(protocore_hotswap_span()); // first poll mounts a card that is already in the slot
+    Hotswap.state(protocore_hotswap_span());
+    Serial.printf("storage at boot: %s\n", state_name(HotswapV.value));
 
-    Physical.wifi->init(WIFI_SSID, WIFI_PASS);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = WIFI_SSID;
+    PhysicalV.wifi.password = WIFI_PASS;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
@@ -130,7 +152,8 @@ void setup()
     on_http("/yank", HTTP_GET, yank_handler);
     begin_http(80, NULL);
 
-    uint32_t ip = Physical.link->egress_ip();
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32;
     Serial.printf("http://%u.%u.%u.%u/storage\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 }
@@ -138,5 +161,5 @@ void setup()
 void loop()
 {
     handle();
-    protocore_hotswap_poll(); // rate-limited internally, so this is cheap to call every pass
+    Hotswap.poll(protocore_hotswap_span()); // rate-limited internally, so this is cheap to call every pass
 }

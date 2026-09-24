@@ -36,12 +36,15 @@ void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
@@ -53,7 +56,11 @@ void setup()
     }
 
     // Authenticated streaming OTA at POST /update.
-    protocore_ota_begin("/update", "admin", "s3cret");
+    static uint8_t ota_work[16]; // the borrow OtaService.begin takes; it keeps its state in OtaServiceV
+    OtaServiceV.args.path = "/update";
+    OtaServiceV.args.user = "admin";
+    OtaServiceV.args.pass = "s3cret";
+    OtaService.begin(ota_work);
 
     Serial.println("Server up; OTA at POST /update");
 }

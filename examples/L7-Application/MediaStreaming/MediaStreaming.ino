@@ -352,20 +352,25 @@ void setup()
 #if !MEDIA_SUPPORTED
     Serial.println("Media (camera/mic) needs an ESP32-S3 on arduino-esp32 3.x - running web-only stub.");
 #endif
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Wi-Fi connecting");
     uint32_t t0 = millis();
-    while (!Physical.wifi->ready() && millis() - t0 < 20000)
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok && millis() - t0 < 20000;
+         Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    if (!Physical.wifi->ready())
+    Physical.wifi_ready(protocore_physical_span());
+    if (!PhysicalV.ok)
     {
         Serial.println(" failed - check SSID/PASSWORD");
         return;
     }
-    uint32_t ip = Physical.link->egress_ip();
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32;
     Serial.printf("\nOpen http://%u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
     on_http("/", HTTP_GET, handle_root);

@@ -110,3 +110,15 @@ void loop()
     server.handle();
 }
 ```
+
+## Build and run (PlatformIO)
+
+The feature lives in the library, so its flag must reach the whole build:
+
+```bash
+pio ci examples/L6-Presentation/WebSocket \
+  --board esp32dev --lib "." \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_WEBSOCKET=1"
+```
+
+(The Arduino IDE reads the flag from `build_opt.h` beside the sketch automatically.)

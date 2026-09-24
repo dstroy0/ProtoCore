@@ -53,7 +53,8 @@ void on_command(const char *line, uint8_t client_id)
     (void)client_id;
     if (strcmp(line, "help") == 0)
     {
-        protocore_web_terminal_println("commands: help, heap, uptime, <echo>");
+        WebTerminalV.println_args.s = "commands: help, heap, uptime, <echo>";
+        WebTerminal.println(protocore_web_terminal_span());
         return;
     }
 
@@ -71,27 +72,35 @@ void on_command(const char *line, uint8_t client_id)
     {
         frame.build(out, sizeof(out), REPLY_ECHO, (const protocore_fval[]){PROTOCORE_VSTR(line)}, 1);
     }
-    protocore_web_terminal_print(out);
+    WebTerminalV.print_args.s = out;
+    WebTerminal.print(protocore_web_terminal_span());
 }
 
 void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    // Every Physical entry reads its operands from PhysicalV and writes its outcome back there.
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
     Serial.println("Open http://<ip>/terminal in a browser");
 
-    protocore_web_terminal_begin("/terminal");
-    protocore_web_terminal_on_command(on_command);
+    // Every WebTerminal entry reads its operands from WebTerminalV and writes its outcome back there.
+    WebTerminalV.begin_args.path = "/terminal";
+    WebTerminal.begin(protocore_web_terminal_span());
+    WebTerminalV.on_command_args.cb = on_command;
+    WebTerminal.on_command(protocore_web_terminal_span());
 
     int32_t result = begin_http(80, NULL);
     if (result < 0)
@@ -111,12 +120,14 @@ void loop()
     if (millis() - last >= 3000)
     {
         last = millis();
-        if (protocore_web_terminal_client_count() > 0)
+        WebTerminal.client_count(protocore_web_terminal_span());
+        if (WebTerminalV.value > 0)
         {
             char out[96];
             frame.build(out, sizeof(out), HEARTBEAT,
                            (const protocore_fval[]){PROTOCORE_VU32((uint32_t)millis()), PROTOCORE_VU32((uint32_t)ESP.getFreeHeap())}, 2);
-            protocore_web_terminal_print(out);
+            WebTerminalV.print_args.s = out;
+            WebTerminal.print(protocore_web_terminal_span());
         }
     }
 }

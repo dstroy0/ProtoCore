@@ -41,21 +41,26 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
+    // Every Physical entry reads its operands from PhysicalV and writes its outcome back there.
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Trust the reverse proxy(ies) in front of this device. Only a request whose real TCP peer falls in
     // one of these CIDRs has its Forwarded / X-Forwarded-For client address believed. Set this to YOUR
     // proxy's address / subnet; the RFC 5737 documentation range below is a placeholder.
-    protocore_forwarded_trust_add_cidr("192.0.2.0/24");
+    ForwardedTrustV.add_cidr_args.cidr = "192.0.2.0/24";
+    ForwardedTrust.add_cidr(protocore_forwarded_trust_span());
 
     on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "public page"); });

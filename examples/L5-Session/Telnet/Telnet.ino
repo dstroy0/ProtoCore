@@ -8,7 +8,7 @@
  * Opens a Telnet listener via listen(23, ProtoConn::PROTO_TELNET). The server
  * negotiates echo + character mode, edits the line for you (backspace works),
  * and delivers each completed line to the command callback; respond with
- * Telnet.print/println/printf.
+ * Telnet.print/println/frame (operands in TelnetV).
  *
  * Telnet is PLAINTEXT - no auth, no encryption. Use only on a trusted LAN;
  * prefer SSH (SSH) or the WebSocket terminal (WebTerminal) otherwise.
@@ -41,43 +41,66 @@ static const protocore_field REPLY_HEAP[] = {
 static const protocore_field REPLY_UPTIME[] = {{PROTOCORE_FK_LIT, 0, 8, "uptime: "}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 5, " ms\r\n"}, PROTOCORE_END};
 static const protocore_field REPLY_ECHO[] = {{PROTOCORE_FK_LIT, 0, 6, "echo: "}, PROTOCORE_STR, {PROTOCORE_FK_LIT, 0, 2, "\r\n"}, PROTOCORE_END};
 
+// Telnet's entries read their operands from TelnetV: a line in out.text, or a field set in
+// out.spec / out.val / out.nv, broadcast to every connected client.
+static void telnet_println(const char *text)
+{
+    TelnetV.out.text = text;
+    Telnet.println(protocore_telnet_span());
+}
+
+static void telnet_frame(const protocore_field *spec, const protocore_fval *val, size_t nv)
+{
+    TelnetV.out.spec = spec;
+    TelnetV.out.val = val;
+    TelnetV.out.nv = nv;
+    Telnet.frame(protocore_telnet_span());
+}
+
 void on_command(const char *line, uint8_t conn_id)
 {
     (void)conn_id;
     if (strcmp(line, "help") == 0)
     {
-        Telnet.println("commands: help, heap, uptime, <echo>");
+        telnet_println("commands: help, heap, uptime, <echo>");
     }
     else if (strcmp(line, "heap") == 0)
     {
-        Telnet.frame(REPLY_HEAP, (const protocore_fval[]){PROTOCORE_VU32((uint32_t)ESP.getFreeHeap())}, 1);
+        const protocore_fval v[] = {PROTOCORE_VU32((uint32_t)ESP.getFreeHeap())};
+        telnet_frame(REPLY_HEAP, v, 1);
     }
     else if (strcmp(line, "uptime") == 0)
     {
-        Telnet.frame(REPLY_UPTIME, (const protocore_fval[]){PROTOCORE_VU32((uint32_t)millis())}, 1);
+        const protocore_fval v[] = {PROTOCORE_VU32((uint32_t)millis())};
+        telnet_frame(REPLY_UPTIME, v, 1);
     }
     else if (line[0])
     {
-        Telnet.frame(REPLY_ECHO, (const protocore_fval[]){PROTOCORE_VSTR(line)}, 1);
+        const protocore_fval v[] = {PROTOCORE_VSTR(line)};
+        telnet_frame(REPLY_ECHO, v, 1);
     }
 }
 
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     listen(23, PROTO_TELNET); // open the Telnet port
-    Telnet.on_command(on_command);
+    TelnetV.cb = on_command;
+    Telnet.on_command(protocore_telnet_span());
 
     begin_http(80, NULL); // also start HTTP (begin() activates all listeners)
     Serial.println("Telnet on port 23 (try: telnet <ip>)");

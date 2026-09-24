@@ -5,11 +5,11 @@
  * @file FormParams.ino
  * @brief Reading `application/x-www-form-urlencoded` POST fields.
  *
- * http_get_form() parses a named field out of the request body on demand into a
+ * HttpParser.get_form() parses a named field out of the request body on demand into a
  * caller-supplied buffer. It is gated on the
  * `Content-Type: application/x-www-form-urlencoded` header and returns the raw
- * (un-decoded) value, matching http_get_query(). Query-string params
- * (http_get_query) and request headers (http_get_header) are also shown.
+ * (un-decoded) value, matching HttpParser.get_query(). Query-string params
+ * (HttpParser.get_query) and request headers (HttpParser.get_header) are also shown.
  *
  * Flash, open Serial @ 115200 for the IP, then:
  *   curl -X POST http://<ip>/form -d "name=ada&email=ada@example.com"
@@ -28,8 +28,8 @@ void handle_form(uint8_t slot_id, HttpReq *req)
 {
     char name[48];
     char email[64];
-    bool have_name = http_get_form(req, "name", name, sizeof(name));
-    bool have_email = http_get_form(req, "email", email, sizeof(email));
+    bool have_name = HttpParser.get_form(protocore_http_parser_span(), req, "name", name, sizeof(name));
+    bool have_email = HttpParser.get_form(protocore_http_parser_span(), req, "email", email, sizeof(email));
 
     if (!have_name && !have_email)
     {
@@ -38,11 +38,11 @@ void handle_form(uint8_t slot_id, HttpReq *req)
     }
 
     // ?debug=1 in the query string mirrors the User-Agent header back too.
-    const char *debug = http_get_query(req, "debug");
+    const char *debug = HttpParser.get_query(protocore_http_parser_span(), req, "debug");
     char body[256];
     if (debug && strcmp(debug, "1") == 0)
     {
-        const char *ua = http_get_header(req, "User-Agent");
+        const char *ua = HttpParser.get_header(protocore_http_parser_span(), req, "User-Agent");
         snprintf(body, sizeof(body), "{\"name\":\"%s\",\"email\":\"%s\",\"ua\":\"%s\"}", have_name ? name : "",
                  have_email ? email : "", ua ? ua : "");
     }
@@ -58,14 +58,18 @@ void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    // Every Physical entry reads its operands from PhysicalV and writes its outcome back there.
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

@@ -22,7 +22,7 @@
  * NOTE: optional features are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable them for the whole build, e.g.:
  *     build_flags = -DPROTOCORE_ENABLE_TLS=1
- * (WebSocket and SSE are on by default.)
+ * (WebSocket and SSE are off by default too: add -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_SSE=1.)
  */
 
 #define PROTOCORE_ENABLE_TLS 1
@@ -83,14 +83,18 @@ void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    // Every Physical entry reads its operands from PhysicalV and writes its outcome back there.
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

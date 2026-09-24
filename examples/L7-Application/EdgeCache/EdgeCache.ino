@@ -11,7 +11,7 @@
  * never stalling the server (the origin fetch runs asynchronously while the client request is
  * suspended). A /cache/stats route reports the counters and /cache/purge invalidates by prefix.
  *
- * Wiring is two calls: protocore_edge_cache_map() binds a path prefix to an origin, protocore_edge_cache_enable()
+ * Wiring is two calls: EdgeProxy.map() binds a path prefix to an origin, EdgeProxy.enable()
  * installs the cache on the server. Edit the "CHANGE ME" lines, flash, open Serial @ 115200, then
  * request GET /cdn/<path> and watch the X-Cache header flip from MISS to HIT.
  *
@@ -78,7 +78,7 @@ static bool setup_l2()
     {
         return false;
     }
-    protocore_edge_cache_bind_sd(&g_l2);
+    EdgeProxy.bind_sd(protocore_edge_cache_proxy_span(), &g_l2);
     return true;
 }
 #endif
@@ -88,7 +88,7 @@ static void handle_stats(uint8_t slot, HttpReq *req)
 {
     (void)req;
     EdgeCacheStats st;
-    protocore_edge_cache_stats(&st);
+    EdgeProxy.stats(protocore_edge_cache_proxy_span(), &st);
     char body[288];
     snprintf(body, sizeof(body),
              "{\"hits\":%u,\"misses\":%u,\"revalidations\":%u,\"replaces\":%u,\"stores\":%u,\"evictions\":%u,"
@@ -103,7 +103,7 @@ static void handle_stats(uint8_t slot, HttpReq *req)
 static void handle_purge(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    uint32_t n = protocore_edge_cache_purge_prefix("/cdn/");
+    uint32_t n = EdgeProxy.purge_prefix(protocore_edge_cache_proxy_span(), "/cdn/");
     char body[48];
     snprintf(body, sizeof(body), "{\"purged\":%u}", (unsigned)n);
     send_text(slot, 200, "application/json", body);
@@ -113,20 +113,23 @@ void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Cache everything under /cdn/ from the origin, then enable the cache on the server.
-    protocore_edge_cache_map("/cdn/", ORIGIN);
-    protocore_edge_cache_enable(server);
+    EdgeProxy.map(protocore_edge_cache_proxy_span(), "/cdn/", ORIGIN);
+    EdgeProxy.enable(protocore_edge_cache_proxy_span());
 #if PROTOCORE_ENABLE_DBM
     Serial.println(setup_l2() ? "L2 SD tier: mounted (cache survives reboot)" : "L2 SD tier: unavailable (no SD?)");
 #endif

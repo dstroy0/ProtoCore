@@ -21,10 +21,11 @@ set(EXTRA_COMPONENT_DIRS "${PROTOCORE_ROOT}")
 # library's own .cpp sources (compiled by the repo-root component), so the flags must be global
 # compile definitions set here, before project() - the ESP-IDF equivalent of Arduino's build_opt.h or
 # PlatformIO's build_flags. A #define in main.cpp alone would not reach the separately-compiled
-# library, and modbus_server_init() / snmp_agent_init() would then fail to link.
+# library, and Modbus.server_init / SnmpAgent.init would then fail to link.
 add_compile_definitions(
     PROTOCORE_ENABLE_MODBUS=1
     PROTOCORE_ENABLE_SNMP=1
+    PROTOCORE_ENABLE_UDP=1 # SNMP rides UDP
 )
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)

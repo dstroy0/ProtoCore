@@ -37,7 +37,7 @@ dry run.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_GPIB=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_GPIB=1 -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_DNS_RESOLVER=1" \
   --lib="." examples/L7-Application/Gpib/Gpib.ino
 ```
 

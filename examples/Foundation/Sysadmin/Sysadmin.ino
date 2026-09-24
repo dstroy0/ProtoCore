@@ -275,7 +275,7 @@ const char *get_reset_reason_string(esp_reset_reason_t reason)
 /** @brief Verify the admin security-token header. */
 bool verify_admin_privileges(const HttpReq *req)
 {
-    const char *token = http_get_header(req, "X-Admin-Token");
+    const char *token = HttpParser.get_header(protocore_http_parser_span(), req, "X-Admin-Token");
     return (token && strcmp(token, ADMIN_TOKEN) == 0);
 }
 
@@ -297,8 +297,15 @@ void handle_get_sysinfo(uint8_t slot_id, HttpReq *req)
     }
 
     char ssid[33];
-    Physical.wifi->ssid(ssid, sizeof(ssid));
-    uint32_t ip = Physical.link->egress_ip();
+    PhysicalV.read.text = ssid;
+    PhysicalV.read.cap = sizeof(ssid);
+    Physical.wifi_ssid(protocore_physical_span());
+    Physical.wifi_rssi(protocore_physical_span());
+    int8_t rssi = PhysicalV.i8;
+    Physical.wifi_channel(protocore_physical_span());
+    uint8_t channel = PhysicalV.u8;
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32;
     char ip_str[16];
     snprintf(ip_str, sizeof(ip_str), "%u.%u.%u.%u", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
              (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
@@ -319,8 +326,8 @@ void handle_get_sysinfo(uint8_t slot_id, HttpReq *req)
              "\"ip_address\":\"%s\""
              "}",
              ESP.getFreeHeap(), ESP.getMinFreeHeap(), ESP.getMaxAllocHeap(), millis(),
-             get_reset_reason_string(esp_reset_reason()), ESP.getChipRevision(), ESP.getCpuFreqMHz(), Physical.wifi->rssi(),
-             ssid, Physical.wifi->channel(), ip_str);
+             get_reset_reason_string(esp_reset_reason()), ESP.getChipRevision(), ESP.getCpuFreqMHz(), rssi,
+             ssid, channel, ip_str);
 
     send_text(slot_id, 200, "application/json", response_buf);
 }
@@ -347,14 +354,17 @@ void setup()
     delay(1000);
     Serial.println("\n--- PC SysAdmin Control Console ---");
 
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(500);
         Serial.print(".");
     }
     Serial.println("\nWiFi Online!");
-    uint32_t ip = Physical.link->egress_ip();
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32;
     Serial.printf("Access the dashboard via: http://%u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

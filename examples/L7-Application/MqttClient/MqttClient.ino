@@ -11,7 +11,7 @@
  * own broker for real telemetry / command.
  *
  * Flash, open Serial @ 115200. Full QoS 0/1/2, keep-alive, and DUP retransmit are
- * handled by protocore_mqtt_loop(); call it every loop().
+ * handled by Mqtt.loop(); call it every loop().
  *
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable it for the whole build, e.g.:
@@ -41,47 +41,73 @@ void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_mqtt_set_message_cb(on_message);
+    MqttV.delivery.on_message = on_message;
+    Mqtt.on_message(protocore_mqtt_span());
 
-    MqttConnectOpts opts;
-    memset(&opts, 0, sizeof(opts));
-    opts.client_id = "pc-esp32-demo";
-    opts.keepalive_s = 30;
-    opts.clean_session = true;
+    MqttV.server.host = BROKER;
+    MqttV.server.port = PORT;
+    MqttV.server.use_tls = false;
+    MqttV.session.client_id = "pc-esp32-demo";
+    MqttV.session.user_name = NULL;
+    MqttV.session.password = NULL;
+    MqttV.session.keep_alive = 30;
+    MqttV.session.clean_session = true;
+    MqttV.will.topic = NULL; // no Will
 
-    if (protocore_mqtt_connect(BROKER, PORT, false, &opts))
-    {
-        Serial.println("MQTT connected");
-        protocore_mqtt_subscribe(TOPIC, 1);
-    }
-    else
-    {
-        Serial.println("MQTT connect failed");
-    }
+    // connect only starts the handshake; Mqtt.loop steps it, and the SUBSCRIBE goes out in
+    // loop() once the broker has accepted the CONNECT.
+    Mqtt.connect(protocore_mqtt_span());
+    Serial.println(MqttV.ok ? "MQTT connecting" : "MQTT connect failed");
 }
 
 void loop()
 {
-    protocore_mqtt_loop();
+    Mqtt.loop(protocore_mqtt_span());
+
+    Mqtt.connected(protocore_mqtt_span());
+    bool up = MqttV.ok;
+
+    static bool subscribed = false;
+    if (up && !subscribed)
+    {
+        Serial.println("MQTT connected");
+        MqttV.filter.topic_filter = TOPIC;
+        MqttV.filter.qos = 1;
+        Mqtt.subscribe(protocore_mqtt_span());
+        subscribed = MqttV.ok;
+    }
+    else if (!up)
+    {
+        subscribed = false;
+    }
 
     static uint32_t last = 0;
     static uint32_t n = 0;
-    if (protocore_mqtt_connected() && millis() - last >= 1000)
+    if (up && millis() - last >= 1000)
     {
         last = millis();
         char msg[48];
         int len = snprintf(msg, sizeof(msg), "hello from esp32 #%lu", (unsigned long)n++);
-        protocore_mqtt_publish(TOPIC, (const uint8_t *)msg, (size_t)len, 1, false);
+        MqttV.message.topic_name = TOPIC;
+        MqttV.message.payload = (const uint8_t *)msg;
+        MqttV.message.payload_len = (size_t)len;
+        MqttV.message.qos = 1;
+        MqttV.message.retain = false;
+        MqttV.message.dup = false;
+        Mqtt.publish(protocore_mqtt_span());
     }
 }
