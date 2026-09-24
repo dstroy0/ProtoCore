@@ -28,19 +28,27 @@
 
 static const int LED_PIN = 2; // onboard LED on most ESP32 dev boards
 
+// The presence tracker this sketch reads. The driver's own present()/motion_count() entries do not
+// hand their answer back, so the sketch keeps a tracker of its own and feeds it the OUT line.
+static Sen0192Motion motion;
+
 void setup()
 {
     Serial.begin(115200);
     pinMode(LED_PIN, OUTPUT);
 
-    protocore_sen0192_begin(); // input pin + polarity + hold all come from ServerConfig
+    Sen0192.begin(protocore_sen0192_span()); // input pin + polarity + hold all come from ServerConfig
+    Sen0192.motion_init(protocore_sen0192_span(), &motion, PROTOCORE_SEN0192_HOLD_MS,
+                        PROTOCORE_SEN0192_ACTIVE_HIGH != 0);
     Serial.printf("SEN0192 microwave motion ready on GPIO%d - walk in front of it\n", PROTOCORE_SEN0192_PIN);
 }
 
 void loop()
 {
-    protocore_sen0192_poll(); // sample the OUT line (updates the debounced presence)
-    bool present = protocore_sen0192_present();
+    // Sample the OUT line (updates the debounced presence).
+    proto_bool level = digitalRead(PROTOCORE_SEN0192_PIN) == HIGH;
+    Sen0192.motion_update(protocore_sen0192_span(), &motion, level, (uint32_t)millis());
+    bool present = Sen0192.motion_present(protocore_sen0192_span(), &motion);
     digitalWrite(LED_PIN, present ? HIGH : LOW);
 
     // Print only when presence changes, so the Serial Monitor stays readable.
@@ -50,7 +58,8 @@ void loop()
         last = present;
         if (present)
         {
-            Serial.printf("[motion] DETECTED  (event #%u)\n", protocore_sen0192_motion_count());
+            unsigned events = (unsigned)Sen0192.motion_events(protocore_sen0192_span(), &motion);
+            Serial.printf("[motion] DETECTED  (event #%u)\n", events);
         }
         else
         {

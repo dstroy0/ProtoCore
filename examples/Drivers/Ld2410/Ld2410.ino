@@ -48,28 +48,37 @@ void setup()
     Serial.begin(115200);
     pinMode(LED_PIN, OUTPUT);
 
-    protocore_ld2410_begin(RADAR_RX, RADAR_TX);
-    protocore_ld2410_set_engineering(true); // also report the per-gate energies (nice for tuning)
+    Ld2410.begin_args.rx_pin = RADAR_RX;
+    Ld2410.begin_args.tx_pin = RADAR_TX;
+    Ld2410.begin(protocore_ld2410_span());
+    Ld2410.set_engineering_args.on = PROTO_TRUE; // also report the per-gate energies (nice for tuning)
+    Ld2410.set_engineering(protocore_ld2410_span());
     Serial.println("LD2410 radar ready - wave a hand in front of it");
 }
 
 void loop()
 {
-    // Pump the UART; protocore_ld2410_poll() returns true only when a fresh report has been decoded.
-    if (!protocore_ld2410_poll())
+    // Pump the UART; Ld2410.poll() sets Ld2410.ok only when a fresh report has been decoded.
+    Ld2410.poll(protocore_ld2410_span());
+    if (!Ld2410.ok)
     {
         return;
     }
 
-    const Ld2410Report *r = protocore_ld2410_last();
-    digitalWrite(LED_PIN, protocore_ld2410_present(r) ? HIGH : LOW);
+    Ld2410.last(protocore_ld2410_span());
+    const Ld2410Report *r = Ld2410.report;
+    Ld2410.present_args.r = r;
+    Ld2410.present(protocore_ld2410_span());
+    digitalWrite(LED_PIN, Ld2410.ok ? HIGH : LOW);
 
     // Print only when the presence state changes, so the Serial Monitor stays readable.
     static uint8_t last_state = 0xFF;
     if (r->state != last_state)
     {
         last_state = r->state;
+        Ld2410.distance_cm_args.r = r;
+        Ld2410.distance_cm(protocore_ld2410_span());
         Serial.printf("[radar] %-17s distance=%3ucm  moving=%3ucm/%-3u static=%3ucm/%-3u\n", state_name(r->state),
-                      protocore_ld2410_distance_cm(r), r->moving_cm, r->moving_energy, r->static_cm, r->static_energy);
+                      Ld2410.cm, r->moving_cm, r->moving_energy, r->static_cm, r->static_energy);
     }
 }

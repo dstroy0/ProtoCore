@@ -26,11 +26,12 @@ static const int PIN_RX = 16, PIN_TX = 17; // UART2 to the EnOcean module
 
 static uint8_t g_buf[256]; // ESP3 accumulation buffer
 static uint16_t g_len = 0;
+static uint8_t g_enocean_work[16]; // the borrow an Enocean entry takes; the ESP3 codec keeps no state in it
 
 static bool northbound_publish(const protocore_gateway_msg *m, void *)
 {
     char topic[48];
-    protocore_gateway_topic(m, topic, sizeof(topic));
+    Gateway.topic(protocore_gateway_span(), m, topic, sizeof(topic));
     Serial.printf("PUBLISH %s  (%u bytes)\n", topic, m->len);
     return true;
 }
@@ -41,13 +42,14 @@ void setup()
     Serial2.begin(57600, SERIAL_8N1, PIN_RX, PIN_TX); // ESP3 is 57600 8N1
     delay(300);
 
-    protocore_gateway_reset();
+    uint8_t *gw = protocore_gateway_span();
+    Gateway.reset(gw);
     protocore_gateway_port_config p = {};
     p.port_id = RADIO_PORT;
     p.kind = protocore_gateway_kind::PROTOCORE_GW_ENOCEAN;
-    protocore_gateway_add_port(&p);
-    protocore_gateway_set_uplink_cb(northbound_publish, nullptr);
-    protocore_gateway_set_topic_prefix("enocean");
+    Gateway.add_port(gw, &p);
+    Gateway.set_uplink_cb(gw, northbound_publish, nullptr);
+    Gateway.set_topic_prefix(gw, "enocean");
 
     Serial.println("EnOcean gateway: ESP3 UART -> codec -> publish (enocean/0/<sender>)");
 }
@@ -63,7 +65,7 @@ void loop()
     for (;;)
     {
         protocore_esp3_packet pkt = {};
-        int n = protocore_esp3_parse(g_buf, g_len, &pkt);
+        int n = Enocean.esp3_parse(g_enocean_work, g_buf, g_len, &pkt);
         if (n == 0)
         {
             break; // need more bytes
@@ -78,7 +80,7 @@ void loop()
         {
             const uint8_t *sender = pkt.data + pkt.data_len - 5;
             uint16_t src = (uint16_t)((sender[2] << 8) | sender[3]); // low 16 bits of the id
-            protocore_gateway_uplink(RADIO_PORT, src, pkt.data, (uint16_t)(pkt.data_len - 5), 0);
+            Gateway.uplink(protocore_gateway_span(), RADIO_PORT, src, pkt.data, (uint16_t)(pkt.data_len - 5), 0);
         }
         memmove(g_buf, g_buf + n, g_len - n); // consume the telegram
         g_len = (uint16_t)(g_len - n);

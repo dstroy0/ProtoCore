@@ -47,7 +47,7 @@ a dedicated task - the same pattern the DMA ingest path uses.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_PROMISC=1 -DPROTOCORE_ENABLE_FORWARD=1 -DPROTOCORE_ENABLE_ETHERNET=1 -DETH_PHY_TYPE=ETH_PHY_LAN8720 -DETH_PHY_ADDR=1 -DETH_PHY_POWER=-1 -DETH_PHY_MDC=23 -DETH_PHY_MDIO=18 -DETH_CLK_MODE=ETH_CLOCK_GPIO0_IN" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_PROMISC=1 -DPROTOCORE_ENABLE_FORWARD=1 -DPROTOCORE_ENABLE_ETHERNET=1 -DPROTOCORE_ENABLE_UDP=1 -DETH_PHY_TYPE=ETH_PHY_LAN8720 -DETH_PHY_ADDR=1 -DETH_PHY_POWER=-1 -DETH_PHY_MDC=23 -DETH_PHY_MDIO=18 -DETH_CLK_MODE=ETH_CLOCK_GPIO0_IN" \
   --lib="." examples/Peripherals/WifiCapture/WifiCapture.ino
 ```
 

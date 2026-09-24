@@ -5,7 +5,7 @@
 // hardware-specific code (a few SPI transfers); everything above - the RadioHead frame
 // codec, the gateway envelope + publish, the downlink - is portable.
 //
-//   RFM95 RX --SPI--> protocore_lora_recv() --> protocore_lora_frame_parse() --> protocore_gateway_uplink()
+//   RFM95 RX --SPI--> Lora.recv() --> Lora.frame_parse() --> Gateway.uplink()
 //                                                                 |
 //                                              envelope + topic  lora/0/<from>
 //                                                                 |
@@ -48,12 +48,13 @@ static void spi_write(uint8_t reg, uint8_t val, void *)
 static protocore_lora_bus g_bus = {spi_read, spi_write, nullptr};
 
 static uint8_t g_tx_id = 0;
+static uint8_t g_lora_work[16]; // the borrow a Lora entry takes; the SX127x codec keeps no state in it
 
-// Northbound publish (the uplink sink): a real build calls mqtt.publish(protocore_gateway_topic(m), ...).
+// Northbound publish (the uplink sink): a real build calls mqtt.publish(Gateway.topic(m), ...).
 static bool northbound_publish(const protocore_gateway_msg *m, void *)
 {
     char topic[48];
-    protocore_gateway_topic(m, topic, sizeof(topic));
+    Gateway.topic(protocore_gateway_span(), m, topic, sizeof(topic));
     Serial.printf("PUBLISH %s  (%u bytes, rssi %d)\n", topic, m->len, m->rssi);
     return true;
 }
@@ -63,17 +64,17 @@ static bool radio_tx(uint8_t, uint16_t dst, const uint8_t *payload, uint16_t len
 {
     protocore_lora_header h = {(uint8_t)dst, NODE_SELF, g_tx_id++, 0x00};
     uint8_t frame[PROTOCORE_LORA_MAX_PAYLOAD + 4];
-    uint16_t n = protocore_lora_frame_build(&h, payload, len, frame, sizeof(frame));
-    if (n == 0 || !protocore_lora_send(&g_bus, frame, (uint8_t)n))
+    uint16_t n = Lora.frame_build(g_lora_work, &h, payload, len, frame, sizeof(frame));
+    if (n == 0 || !Lora.send(g_lora_work, &g_bus, frame, (uint8_t)n))
     {
         return false;
     }
     uint32_t t0 = millis();
-    while (!protocore_lora_tx_done(&g_bus) && millis() - t0 < 2000)
+    while (!Lora.tx_done(g_lora_work, &g_bus) && millis() - t0 < 2000)
     {
         delay(1);
     }
-    protocore_lora_set_rx(&g_bus); // back to listening
+    Lora.set_rx(g_lora_work, &g_bus); // back to listening
     return true;
 }
 
@@ -101,22 +102,22 @@ void setup()
     cfg.coding_rate = 1;
     cfg.sync_word = 0x12; // private network
     cfg.tx_power = 17;
-    if (!protocore_lora_init(&g_bus, &cfg))
+    if (!Lora.init(g_lora_work, &g_bus, &cfg))
     {
         Serial.println("no SX127x found on SPI - check wiring");
         return;
     }
 
-    protocore_gateway_reset();
+    Gateway.reset(protocore_gateway_span());
     protocore_gateway_port_config p = {};
     p.port_id = RADIO_PORT;
     p.kind = protocore_gateway_kind::PROTOCORE_GW_LORA;
     p.tx = radio_tx;
-    protocore_gateway_add_port(&p);
-    protocore_gateway_set_uplink_cb(northbound_publish, nullptr);
-    protocore_gateway_set_topic_prefix("lora");
+    Gateway.add_port(protocore_gateway_span(), &p);
+    Gateway.set_uplink_cb(protocore_gateway_span(), northbound_publish, nullptr);
+    Gateway.set_topic_prefix(protocore_gateway_span(), "lora");
 
-    protocore_lora_set_rx(&g_bus);
+    Lora.set_rx(g_lora_work, &g_bus);
     Serial.println("LoRa gateway: SX127x RX -> codec -> publish (lora/0/<from>)");
 }
 
@@ -125,15 +126,15 @@ void loop()
     // Poll for a received frame; a production build waits on the DIO0 interrupt instead.
     uint8_t buf[PROTOCORE_LORA_MAX_PAYLOAD + 4];
     int16_t rssi = 0;
-    int n = protocore_lora_recv(&g_bus, buf, sizeof(buf), &rssi);
+    int n = Lora.recv(g_lora_work, &g_bus, buf, sizeof(buf), &rssi);
     if (n > 0)
     {
         protocore_lora_header h = {};
         const uint8_t *payload = nullptr;
         uint16_t plen = 0;
-        if (protocore_lora_frame_parse(buf, (uint16_t)n, &h, &payload, &plen))
+        if (Lora.frame_parse(g_lora_work, buf, (uint16_t)n, &h, &payload, &plen))
         {
-            protocore_gateway_uplink(RADIO_PORT, h.from, payload, plen, rssi); // bridge northbound
+            Gateway.uplink(protocore_gateway_span(), RADIO_PORT, h.from, payload, plen, rssi); // bridge northbound
         }
     }
     delay(5);

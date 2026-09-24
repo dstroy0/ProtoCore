@@ -34,49 +34,71 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
+// Primary source: the battery-backed RTC (0 when it is unset or unreadable).
+static uint32_t protocore_rtc_source()
+{
+    return Rtc.read_epoch(protocore_rtc_span());
+}
+
 // Fallback used only to *set* the RTC the first time we reach the internet.
 static uint32_t protocore_ntp_source()
 {
-    return protocore_ntp_synced() ? (uint32_t)protocore_ntp_epoch() : 0;
+    NtpService.synced(protocore_ntp_service_span());
+    if (!NtpServiceV.ok)
+    {
+        return 0;
+    }
+    NtpService.epoch(protocore_ntp_service_span());
+    return (uint32_t)NtpServiceV.value;
 }
 
 void setup()
 {
     Serial.begin(115200);
-    protocore_rtc_begin();
+    Rtc.begin(protocore_rtc_span());
 
     // The RTC gives us time immediately - before WiFi, before anything - if it is set.
-    uint32_t boot = protocore_rtc_read_epoch();
+    uint32_t boot = Rtc.read_epoch(protocore_rtc_span());
     Serial.printf("RTC at boot: %lu %s\n", (unsigned long)boot, boot ? "(battery-backed time!)" : "(not set yet)");
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // The RTC is the primary source; upstream NTP is only for setting it.
-    protocore_time_source_add("rtc", 1, protocore_rtc_time_source);
+    protocore_time_source_add("rtc", 1, protocore_rtc_source);
     protocore_time_source_add("ntp", 2, protocore_ntp_source);
-    protocore_ntp_begin(NULL, NULL, NULL);
+    NtpServiceV.begin_args.tz = NULL;
+    NtpServiceV.begin_args.server1 = NULL;
+    NtpServiceV.begin_args.server2 = NULL;
+    NtpService.begin(protocore_ntp_service_span());
 }
 
 void loop()
 {
     // Self-initialize: once we have accurate internet time and the RTC is unset/wrong, write it.
     static bool protocore_rtc_set = false;
-    if (!protocore_rtc_set && protocore_ntp_synced())
+    NtpService.synced(protocore_ntp_service_span());
+    if (!protocore_rtc_set && NtpServiceV.ok)
     {
-        uint32_t protocore_rtc_now = protocore_rtc_read_epoch();
-        uint32_t protocore_ntp_now = (uint32_t)protocore_ntp_epoch();
-        if (protocore_rtc_now == 0 || (protocore_ntp_now > protocore_rtc_now ? protocore_ntp_now - protocore_rtc_now : protocore_rtc_now - protocore_ntp_now) > 5)
+        uint32_t protocore_rtc_now = Rtc.read_epoch(protocore_rtc_span());
+        NtpService.epoch(protocore_ntp_service_span());
+        uint32_t protocore_ntp_now = (uint32_t)NtpServiceV.value;
+        uint32_t drift = protocore_ntp_now > protocore_rtc_now ? protocore_ntp_now - protocore_rtc_now
+                                                               : protocore_rtc_now - protocore_ntp_now;
+        if (protocore_rtc_now == 0 || drift > 5)
         {
-            if (protocore_rtc_set_epoch(protocore_ntp_now))
+            if (Rtc.set_epoch(protocore_rtc_span(), protocore_ntp_now))
             {
                 Serial.printf("RTC set from NTP: %lu\n", (unsigned long)protocore_ntp_now);
             }

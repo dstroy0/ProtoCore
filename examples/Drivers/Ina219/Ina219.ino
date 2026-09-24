@@ -26,7 +26,11 @@ void setup()
 {
     Serial.begin(115200);
     // current LSB 100 uA/bit, 0.1 ohm (100 mohm) shunt -> up to ~3.2 A full scale.
-    if (protocore_ina219_begin(0x40, 100, 100))
+    Ina219V.begin_args.addr = 0x40;
+    Ina219V.begin_args.current_lsb_ua = 100;
+    Ina219V.begin_args.shunt_mohm = 100;
+    Ina219.begin(protocore_ina219_span());
+    if (Ina219V.ok)
     {
         Serial.println("INA219 ready");
     }
@@ -39,9 +43,15 @@ void setup()
 void loop()
 {
     int32_t bus_mv = 0, current_ua = 0, power_uw = 0;
-    bool ok = protocore_ina219_read_bus_mv(&bus_mv);
-    ok &= protocore_ina219_read_current_ua(&current_ua);
-    ok &= protocore_ina219_read_power_uw(&power_uw);
+    Ina219V.read_bus_mv_args.millivolts = &bus_mv;
+    Ina219.read_bus_mv(protocore_ina219_span());
+    bool ok = Ina219V.ok;
+    Ina219V.read_current_ua_args.microamps = &current_ua;
+    Ina219.read_current_ua(protocore_ina219_span());
+    ok &= (bool)Ina219V.ok;
+    Ina219V.read_power_uw_args.microwatts = &power_uw;
+    Ina219.read_power_uw(protocore_ina219_span());
+    ok &= (bool)Ina219V.ok;
 
     if (ok)
     {

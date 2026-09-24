@@ -28,7 +28,10 @@ static const uint8_t SERVO_CH = 0;
 void setup()
 {
     Serial.begin(115200);
-    if (protocore_pca9685_begin(0x40, 50)) // 50 Hz suits hobby servos
+    Pca9685V.begin_args.addr = 0x40;
+    Pca9685V.begin_args.freq_hz = 50; // 50 Hz suits hobby servos
+    Pca9685.begin(protocore_pca9685_span());
+    if (Pca9685V.ok)
     {
         Serial.println("PCA9685 ready - sweeping the servo on channel 0");
     }
@@ -43,12 +46,16 @@ void loop()
     // Sweep ~500 us..2500 us (roughly 0..180 degrees on a typical servo) and back.
     for (int us = 500; us <= 2500; us += 20)
     {
-        protocore_pca9685_set_servo_us(SERVO_CH, us);
+        Pca9685V.set_servo_us_args.channel = SERVO_CH;
+        Pca9685V.set_servo_us_args.microseconds = (uint32_t)us;
+        Pca9685.set_servo_us(protocore_pca9685_span());
         delay(15);
     }
     for (int us = 2500; us >= 500; us -= 20)
     {
-        protocore_pca9685_set_servo_us(SERVO_CH, us);
+        Pca9685V.set_servo_us_args.channel = SERVO_CH;
+        Pca9685V.set_servo_us_args.microseconds = (uint32_t)us;
+        Pca9685.set_servo_us(protocore_pca9685_span());
         delay(15);
     }
 }

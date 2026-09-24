@@ -4,7 +4,7 @@
 // hardware-specific code is the I2C carry of the frame bytes; the PN532 command-frame
 // protocol (build a command, verify the ACK, parse the response) is services/pn532.
 //
-//   tag scan --PN532/I2C--> protocore_pn532_parse_frame() -> UID -> protocore_gateway_uplink()
+//   tag scan --PN532/I2C--> Pn532.parse_frame() -> UID -> Gateway.uplink()
 //                                                          |
 //                                       envelope + topic  nfc/0/<target>
 //                                                          |
@@ -21,6 +21,7 @@
 
 static const uint8_t PN532_I2C_ADDR = 0x24;
 static const uint8_t RADIO_PORT = 0;
+static uint8_t g_pn532_work[16]; // the borrow a Pn532 entry takes; the frame codec keeps no state in it
 
 // I2C carry: write a frame, and read one (the PN532 prefixes a ready-status byte on reads).
 static bool protocore_pn532_write(const uint8_t *frame, uint8_t n)
@@ -53,14 +54,27 @@ static int protocore_pn532_command(const uint8_t *cmd, uint8_t cmd_len, uint8_t 
                             const uint8_t **pdata, uint8_t *pdata_len)
 {
     uint8_t frame[16 + 8];
-    uint16_t n = protocore_pn532_build_frame(PN532_TFI_HOST, cmd, cmd_len, frame, sizeof(frame));
+    Pn532V.build_frame_args.tfi = PN532_TFI_HOST;
+    Pn532V.build_frame_args.data = cmd;
+    Pn532V.build_frame_args.len = cmd_len;
+    Pn532V.build_frame_args.out = frame;
+    Pn532V.build_frame_args.cap = sizeof(frame);
+    Pn532.build_frame(g_pn532_work);
+    uint16_t n = Pn532V.len;
     if (n == 0 || !protocore_pn532_write(frame, (uint8_t)n))
     {
         return -1;
     }
     delay(2);
     uint8_t ack[8];
-    if (protocore_pn532_read(ack, 6) < 6 || !protocore_pn532_is_ack(ack, 6))
+    if (protocore_pn532_read(ack, 6) < 6)
+    {
+        return -1;
+    }
+    Pn532V.is_ack_args.raw = ack;
+    Pn532V.is_ack_args.len = 6;
+    Pn532.is_ack(g_pn532_work);
+    if (!Pn532V.ok)
     {
         return -1;
     }
@@ -71,13 +85,19 @@ static int protocore_pn532_command(const uint8_t *cmd, uint8_t cmd_len, uint8_t 
         return -1;
     }
     uint8_t tfi = 0;
-    return protocore_pn532_parse_frame(resp, (uint16_t)r, &tfi, pdata, pdata_len) > 0 ? 0 : -1;
+    Pn532V.parse_frame_args.raw = resp;
+    Pn532V.parse_frame_args.len = (uint16_t)r;
+    Pn532V.parse_frame_args.tfi = &tfi;
+    Pn532V.parse_frame_args.pdata = pdata;
+    Pn532V.parse_frame_args.pdata_len = pdata_len;
+    Pn532.parse_frame(g_pn532_work);
+    return Pn532V.n > 0 ? 0 : -1;
 }
 
 static bool northbound_publish(const protocore_gateway_msg *m, void *)
 {
     char topic[48];
-    protocore_gateway_topic(m, topic, sizeof(topic));
+    Gateway.topic(protocore_gateway_span(), m, topic, sizeof(topic));
     Serial.printf("PUBLISH %s  (UID %u bytes)\n", topic, m->len);
     return true;
 }
@@ -88,13 +108,13 @@ void setup()
     Wire.begin();
     delay(300);
 
-    protocore_gateway_reset();
+    Gateway.reset(protocore_gateway_span());
     protocore_gateway_port_config p = {};
     p.port_id = RADIO_PORT;
     p.kind = protocore_gateway_kind::PROTOCORE_GW_NFC;
-    protocore_gateway_add_port(&p);
-    protocore_gateway_set_uplink_cb(northbound_publish, nullptr);
-    protocore_gateway_set_topic_prefix("nfc");
+    Gateway.add_port(protocore_gateway_span(), &p);
+    Gateway.set_uplink_cb(protocore_gateway_span(), northbound_publish, nullptr);
+    Gateway.set_topic_prefix(protocore_gateway_span(), "nfc");
 
     const uint8_t getver[1] = {0x02}; // GetFirmwareVersion
     uint8_t resp[32];
@@ -125,7 +145,7 @@ void loop()
         uint8_t id_len = pd[6];
         if (7u + id_len <= pdlen)
         {
-            protocore_gateway_uplink(RADIO_PORT, pd[2], &pd[7], id_len, 0); // pd[2] = target number
+            Gateway.uplink(protocore_gateway_span(), RADIO_PORT, pd[2], &pd[7], id_len, 0); // pd[2] = target number
         }
     }
     delay(500);

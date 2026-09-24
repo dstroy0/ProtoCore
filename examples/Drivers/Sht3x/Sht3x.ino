@@ -25,7 +25,9 @@
 void setup()
 {
     Serial.begin(115200);
-    if (protocore_sht3x_begin(0x44))
+    Sht3xV.begin_args.addr = 0x44;
+    Sht3x.begin(protocore_sht3x_span());
+    if (Sht3xV.ok)
     {
         Serial.println("SHT3x ready");
     }
@@ -38,7 +40,10 @@ void setup()
 void loop()
 {
     int32_t temp_mc = 0, rh_mpct = 0; // milli-degrees C, milli-percent RH
-    if (protocore_sht3x_read(&temp_mc, &rh_mpct))
+    Sht3xV.read_args.temp_mc = &temp_mc;
+    Sht3xV.read_args.rh_mpct = &rh_mpct;
+    Sht3x.read(protocore_sht3x_span());
+    if (Sht3xV.ok)
     {
         // Print the milli-units as X.XXX by hand (no float formatting needed).
         long t_whole = temp_mc / 1000;

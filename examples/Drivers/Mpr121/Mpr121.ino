@@ -29,7 +29,9 @@ void setup()
     Serial.begin(115200);
     pinMode(LED_PIN, OUTPUT);
 
-    if (protocore_mpr121_begin(0x5A))
+    Mpr121V.begin_args.addr = 0x5A;
+    Mpr121.begin(protocore_mpr121_span());
+    if (Mpr121V.ok)
     {
         Serial.println("MPR121 ready - touch a pad (ELE0..ELE11)");
     }
@@ -42,15 +44,21 @@ void setup()
 void loop()
 {
     static uint16_t last = 0;
-    uint16_t now = protocore_mpr121_read_touched();
+    Mpr121.read_touched(protocore_mpr121_span());
+    uint16_t now = Mpr121V.value;
 
     if (now != last)
     {
         // Report each electrode that just changed (press or release).
         for (uint8_t e = 0; e < MPR121_ELECTRODES; e++)
         {
-            bool was = protocore_mpr121_is_touched(last, e);
-            bool is = protocore_mpr121_is_touched(now, e);
+            Mpr121V.is_touched_args.mask = last;
+            Mpr121V.is_touched_args.e = e;
+            Mpr121.is_touched(protocore_mpr121_span());
+            bool was = Mpr121V.ok;
+            Mpr121V.is_touched_args.mask = now;
+            Mpr121.is_touched(protocore_mpr121_span());
+            bool is = Mpr121V.ok;
             if (is && !was)
             {
                 Serial.printf("electrode %u touched\n", e);

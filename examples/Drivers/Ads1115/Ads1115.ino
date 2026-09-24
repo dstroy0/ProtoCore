@@ -25,14 +25,19 @@
 void setup()
 {
     Serial.begin(115200);
-    protocore_ads1115_begin(0x48);
+    Ads1115V.begin_args.addr = 0x48;
+    Ads1115.begin(protocore_ads1115_span());
     Serial.println("ADS1115 ready - reading AIN0 at +/-4.096 V full scale");
 }
 
 void loop()
 {
     int32_t uv = 0; // microvolts
-    if (protocore_ads1115_read_uv(0, ADS1115_GAIN_1, &uv))
+    Ads1115V.read_uv_args.channel = 0;
+    Ads1115V.read_uv_args.gain = ADS1115_GAIN_1;
+    Ads1115V.read_uv_args.microvolts = &uv;
+    Ads1115.read_uv(protocore_ads1115_span());
+    if (Ads1115V.ok)
     {
         // Print microvolts as V.mmm (millivolt precision) by hand - no float formatting.
         long v_whole = uv / 1000000;

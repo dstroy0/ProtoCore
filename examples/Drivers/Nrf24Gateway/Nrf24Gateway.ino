@@ -5,7 +5,7 @@
 // an SPI transfer plus a CE-set callback - the only board-specific code. Its hardware pipes
 // address the frame, so the "source" is the pipe number (no in-payload codec).
 //
-//   nRF24 RX --SPI--> protocore_nrf24_recv() -> pipe + payload -> protocore_gateway_uplink(port, pipe, ...)
+//   nRF24 RX --SPI--> Nrf24.recv() -> pipe + payload -> Gateway.uplink(port, pipe, ...)
 //                                                              |
 //                                           envelope + topic  nrf24/0/<pipe>
 //                                                              |
@@ -41,12 +41,13 @@ static void nrf_ce(bool level, void *)
     digitalWrite(PIN_CE, level ? HIGH : LOW);
 }
 static nrf_bus g_bus = {nrf_spi, nrf_ce, nullptr};
+static uint8_t g_nrf24_work[16]; // the borrow an Nrf24 entry takes; the radio codec keeps no state in it
 
-// Northbound publish (the uplink sink): a real build calls mqtt.publish(protocore_gateway_topic(m), ...).
+// Northbound publish (the uplink sink): a real build calls mqtt.publish(Gateway.topic(m), ...).
 static bool northbound_publish(const protocore_gateway_msg *m, void *)
 {
     char topic[48];
-    protocore_gateway_topic(m, topic, sizeof(topic));
+    Gateway.topic(protocore_gateway_span(), m, topic, sizeof(topic));
     Serial.printf("PUBLISH %s  (%u bytes)\n", topic, m->len);
     return true;
 }
@@ -54,16 +55,16 @@ static bool northbound_publish(const protocore_gateway_msg *m, void *)
 // Downlink: transmit a command out the radio (the gateway maps dst_addr -> the frame).
 static bool radio_tx(uint8_t, uint16_t, const uint8_t *payload, uint16_t len, void *)
 {
-    if (len > PROTOCORE_NRF24_PAYLOAD || !protocore_nrf24_send(&g_bus, payload, (uint8_t)len))
+    if (len > PROTOCORE_NRF24_PAYLOAD || !Nrf24.send(g_nrf24_work, &g_bus, payload, (uint8_t)len))
     {
         return false;
     }
     uint32_t t0 = millis();
-    while (!protocore_nrf24_tx_done(&g_bus) && millis() - t0 < 500)
+    while (!Nrf24.tx_done(g_nrf24_work, &g_bus) && millis() - t0 < 500)
     {
         delay(1);
     }
-    protocore_nrf24_set_rx(&g_bus); // back to listening
+    Nrf24.set_rx(g_nrf24_work, &g_bus); // back to listening
     return true;
 }
 
@@ -84,22 +85,22 @@ void setup()
     cfg.channel = 76;
     cfg.data_rate = 0; // 1 Mbps
     cfg.tx_power = 3;  // 0 dBm
-    if (!protocore_nrf24_init(&g_bus, &cfg))
+    if (!Nrf24.init(g_nrf24_work, &g_bus, &cfg))
     {
         Serial.println("no nRF24L01+ found on SPI - check wiring");
         return;
     }
 
-    protocore_gateway_reset();
+    Gateway.reset(protocore_gateway_span());
     protocore_gateway_port_config p = {};
     p.port_id = RADIO_PORT;
     p.kind = protocore_gateway_kind::PROTOCORE_GW_NRF24;
     p.tx = radio_tx;
-    protocore_gateway_add_port(&p);
-    protocore_gateway_set_uplink_cb(northbound_publish, nullptr);
-    protocore_gateway_set_topic_prefix("nrf24");
+    Gateway.add_port(protocore_gateway_span(), &p);
+    Gateway.set_uplink_cb(protocore_gateway_span(), northbound_publish, nullptr);
+    Gateway.set_topic_prefix(protocore_gateway_span(), "nrf24");
 
-    protocore_nrf24_set_rx(&g_bus);
+    Nrf24.set_rx(g_nrf24_work, &g_bus);
     Serial.println("nRF24 gateway: RX -> pipe/payload -> publish (nrf24/0/<pipe>)");
 }
 
@@ -107,10 +108,10 @@ void loop()
 {
     uint8_t buf[PROTOCORE_NRF24_PAYLOAD];
     uint8_t pipe = 0;
-    int n = protocore_nrf24_recv(&g_bus, buf, sizeof(buf), &pipe);
+    int n = Nrf24.recv(g_nrf24_work, &g_bus, buf, sizeof(buf), &pipe);
     if (n > 0)
     {
-        protocore_gateway_uplink(RADIO_PORT, pipe, buf, (uint16_t)n, 0); // pipe = source address
+        Gateway.uplink(protocore_gateway_span(), RADIO_PORT, pipe, buf, (uint16_t)n, 0); // pipe = source address
     }
     delay(2);
 }

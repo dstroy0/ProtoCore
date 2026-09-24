@@ -67,7 +67,9 @@ static void on_dma_complete(const protocore_dma_event *ev, void *)
     item.msg.channel = ev->channel;
     uint16_t n = (ev->len < sizeof(item.msg.bytes)) ? ev->len : sizeof(item.msg.bytes);
     memcpy(item.msg.bytes, ev->data, n);
-    Session.workers->queue->post_from_isr(protocore_pq_lane::PROTOCORE_PQ_LANE_DMA, &item);
+    PreemptQueueV.lane = protocore_pq_lane::PROTOCORE_PQ_LANE_DMA;
+    PreemptQueueV.post_args.item = &item;
+    PreemptQueue.post_from_isr(protocore_preempt_queue_span());
 }
 
 static uint8_t g_seq = 0;
@@ -84,7 +86,10 @@ void setup()
     pq.priority = 0; // 0 -> protocore_pq_lane::PROTOCORE_PQ_LANE_DMA's default priority (internal > user)
     pq.core = 1;
     pq.name = "dma_rx";
-    if (!Session.workers->queue->start(protocore_pq_lane::PROTOCORE_PQ_LANE_DMA, &pq))
+    PreemptQueueV.lane = protocore_pq_lane::PROTOCORE_PQ_LANE_DMA;
+    PreemptQueueV.cfg = &pq;
+    PreemptQueue.start(protocore_preempt_queue_span());
+    if (!PreemptQueueV.ok)
     {
         Serial.println("preempt queue failed to start");
         return;

@@ -4,47 +4,50 @@
 // Arduino autostart is enabled (CONFIG_AUTOSTART_ARDUINO=y in sdkconfig.defaults), so the arduino-esp32
 // component calls setup() once and loop() forever - the same shape as an .ino sketch. Set your Wi-Fi
 // credentials below and flash with `idf.py flash monitor`.
-#include "network_drivers/physical/physical/physical.h" // init_wifi_physical / wifi_ready
+#include "network_drivers/physical/physical/physical.h" // Physical / PhysicalV
 #include "protocore.h"
 #include <Arduino.h>
 
 static const char *WIFI_SSID = "YOUR_SSID";
 static const char *WIFI_PASS = "YOUR_PASSWORD";
 
-PC server;
-
 static void handle_root(uint8_t slot, HttpReq *)
 {
-    server.send(slot, 200, "text/plain", "Hello from ESP-IDF + ProtoCore\n");
+    send_text(slot, 200, "text/plain", "Hello from ESP-IDF + ProtoCore\n");
 }
 
 void setup()
 {
     Serial.begin(115200);
     delay(200);
-    Physical.wifi->init(WIFI_SSID, WIFI_PASS);
+    // Every Physical entry reads its operands from PhysicalV and writes its outcome back there.
+    PhysicalV.wifi.ssid = WIFI_SSID;
+    PhysicalV.wifi.password = WIFI_PASS;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("WiFi connecting");
     uint32_t t0 = millis();
-    while (!Physical.wifi->ready() && millis() - t0 < 20000)
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok && millis() - t0 < 20000;
+         Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    if (!Physical.wifi->ready())
+    if (!PhysicalV.ok)
     {
         Serial.println(" no WiFi");
         return;
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/", HTTP_GET, handle_root);
-    server.begin(80);
+    on_http("/", HTTP_GET, handle_root);
+    begin_http(80, NULL);
     Serial.println("server ready on :80");
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }
