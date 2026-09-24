@@ -56,7 +56,7 @@ static const uint32_t OID_LED[] = {1, 3, 6, 1, 4, 1, 49374, 20, 0};       // INT
 // Dynamic read: report the current free heap as a Gauge32.
 bool get_free_heap(SnmpValue *out)
 {
-    out->type = (uint8_t)SnmpTag::SNMP_GAUGE32;
+    out->type = (uint8_t)SNMP_TAG_SNMP_GAUGE32;
     out->uval = (uint32_t)ESP.getFreeHeap();
     return true;
 }
@@ -64,7 +64,7 @@ bool get_free_heap(SnmpValue *out)
 // Writable: drive the on-board LED from an INTEGER (0 = off, non-zero = on).
 bool set_led(const SnmpValue *in)
 {
-    if (in->type != (uint8_t)SnmpTag::BER_INTEGER)
+    if (in->type != (uint8_t)SNMP_TAG_BER_INTEGER)
     {
         return false; // wrong type -> the agent replies wrongType
     }
@@ -77,35 +77,62 @@ void setup()
     Serial.begin(115200);
     pinMode(LED_BUILTIN, OUTPUT);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Build the MIB: standard system group + private objects.
-    protocore_snmp_agent_init("public");              // read-only community
-    protocore_snmp_agent_set_rw_community("private"); // read-write community (authorizes Set)
-    protocore_snmp_agent_set_system("ProtoCore SNMP agent", "admin@example.com", "esp32-pc", "lab bench", 72);
-    protocore_snmp_agent_add_dynamic(OID_FREE_HEAP, 9, (uint8_t)SnmpTag::SNMP_GAUGE32, get_free_heap);
-    protocore_snmp_agent_add_integer(OID_LED, 9, 0, set_led); // writable
+    SnmpAgentV.community.ro = "public"; // read-only community
+    SnmpAgent.init(protocore_snmp_agent_span());
+    SnmpAgentV.community.rw = "private"; // read-write community (authorizes Set)
+    SnmpAgent.set_rw_community(protocore_snmp_agent_span());
+    SnmpAgentV.system.descr = "ProtoCore SNMP agent";
+    SnmpAgentV.system.contact = "admin@example.com";
+    SnmpAgentV.system.name = "esp32-pc";
+    SnmpAgentV.system.location = "lab bench";
+    SnmpAgentV.system.services = 72;
+    SnmpAgent.set_system(protocore_snmp_agent_span());
+
+    SnmpAgentV.object.oid = OID_FREE_HEAP;
+    SnmpAgentV.object.oid_len = 9;
+    SnmpAgentV.object.type = (uint8_t)SNMP_TAG_SNMP_GAUGE32;
+    SnmpAgentV.object.getter = get_free_heap;
+    SnmpAgent.add_dynamic(protocore_snmp_agent_span());
+
+    SnmpAgentV.object.oid = OID_LED;
+    SnmpAgentV.object.oid_len = 9;
+    SnmpAgentV.object.ival = 0;
+    SnmpAgentV.object.setter = set_led; // writable
+    SnmpAgent.add_integer(protocore_snmp_agent_span());
 
 #if PROTOCORE_ENABLE_SNMP_V3
     // SNMPv3 USM: a single authPriv user (HMAC-SHA-256 + AES-128). For a unique
     // engine ID, derive it from the chip MAC; persist/increment engineBoots in NVS.
-    protocore_snmp_v3_init(nullptr, 0);
-    protocore_snmp_v3_set_boots(1);
-    protocore_snmp_v3_set_user("pc", "authpass12", "privpass12");
+    SnmpV3V.engine.engine_id = nullptr;
+    SnmpV3V.engine.engine_id_len = 0;
+    SnmpV3.init(protocore_snmp_v3_span());
+    SnmpV3V.engine.boots = 1;
+    SnmpV3.set_boots(protocore_snmp_v3_span());
+    SnmpV3V.user.user = "pc";
+    SnmpV3V.user.auth_pass = "authpass12";
+    SnmpV3V.user.priv_pass = "privpass12";
+    SnmpV3.set_user(protocore_snmp_v3_span());
     Serial.println("SNMPv3 user 'pc' enabled (authPriv: SHA-256 / AES-128)");
 #endif
 
     // Bind the agent to UDP/161 (raw lwIP, callback-driven).
-    protocore_snmp_agent_begin_udp(161);
+    SnmpAgentV.port = 161;
+    SnmpAgent.listen(protocore_snmp_agent_span());
     Serial.println("SNMP agent listening on UDP/161 (try: snmpwalk -v2c -c public <ip> system)");
 
     int32_t result = begin_http(80, NULL);

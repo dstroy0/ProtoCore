@@ -32,6 +32,8 @@
 static const char *WIFI_SSID = "your-ssid";
 static const char *WIFI_PASS = "your-password";
 
+static uint8_t spa_work[16]; // SpaRouter keeps no state in its borrow
+
 
 // Device state the UI reflects. A real build would read these from the machine.
 struct HmiState
@@ -74,12 +76,20 @@ static void send_fallback(uint8_t slot_id)
     char page[512];
     size_t total = 0;
     protocore_ui_stream s;
-    protocore_ui_stream_begin(&s, HMI_FRAGMENTS, HMI_FRAGMENT_COUNT, &g_hmi);
+    SpaRouterV.ui_stream_begin_args.s = &s;
+    SpaRouterV.ui_stream_begin_args.frags = HMI_FRAGMENTS;
+    SpaRouterV.ui_stream_begin_args.count = HMI_FRAGMENT_COUNT;
+    SpaRouterV.ui_stream_begin_args.ctx = &g_hmi;
+    SpaRouter.ui_stream_begin(spa_work);
     // A deliberately small chunk: the cursor resumes mid-fragment, so this produces the same bytes
     // any larger buffer would.
     for (;;)
     {
-        size_t n = protocore_ui_stream_next(&s, page + total, 48 < sizeof(page) - total ? 48 : sizeof(page) - total);
+        SpaRouterV.ui_stream_next_args.s = &s;
+        SpaRouterV.ui_stream_next_args.out = page + total;
+        SpaRouterV.ui_stream_next_args.cap = 48 < sizeof(page) - total ? 48 : sizeof(page) - total;
+        SpaRouter.ui_stream_next(spa_work);
+        size_t n = SpaRouterV.n;
         if (n == 0)
         {
             break;
@@ -116,7 +126,10 @@ static void ui_handler(uint8_t slot_id, HttpReq *req)
     ctx.client_scripting = client_will_script(req);
     ctx.degraded = g_hmi.degraded;
 
-    switch (protocore_spa_route_ex(req->path, &ctx))
+    SpaRouterV.route_ex_args.path = req->path;
+    SpaRouterV.route_ex_args.ctx = &ctx;
+    SpaRouter.route_ex(spa_work);
+    switch (SpaRouterV.action)
     {
     case protocore_spa_action::PROTOCORE_SPA_SERVE_SHELL:
         // A real build hands this to serve_static(index.html); inline here so the example needs no
@@ -173,8 +186,10 @@ void setup()
     Serial.begin(115200);
     delay(300);
 
-    Physical.wifi->init(WIFI_SSID, WIFI_PASS);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = WIFI_SSID;
+    PhysicalV.wifi.password = WIFI_PASS;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
@@ -187,7 +202,8 @@ void setup()
     on_http("/shell", HTTP_GET, shell_handler);
     begin_http(80, NULL);
 
-    uint32_t ip = Physical.link->egress_ip();
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32;
     Serial.printf("http://%u.%u.%u.%u/\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 }

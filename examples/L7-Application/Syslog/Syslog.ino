@@ -35,34 +35,50 @@ static const char *SYSLOG_SERVER = "192.168.1.10"; // your syslog collector
 static const uint16_t SYSLOG_PORT = 514;           // 514 = IANA syslog; use 5140 for an unprivileged listener
 
 
+// Send one record to the collector through Syslog.
+static void syslog_log(SyslogSeverity severity, const char *msg)
+{
+    SyslogV.record.severity = severity;
+    SyslogV.record.msg = msg;
+    Syslog.log(protocore_syslog_span());
+}
+
 // Per-request access log -> syslog.
 static void access_log(const char *method, const char *path, int status, int len)
 {
     char line[96];
     snprintf(line, sizeof(line), "%s %s -> %d (%d bytes)", method, path, status, len);
-    protocore_syslog_log(status >= 500   ? SYSLOG_ERR
-                  : status >= 400 ? SYSLOG_WARNING
-                                  : SYSLOG_INFO,
-                  line);
+    syslog_log(status >= 500   ? SYSLOG_ERR
+               : status >= 400 ? SYSLOG_WARNING
+                               : SYSLOG_INFO,
+               line);
 }
 
 void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_syslog_init(SYSLOG_SERVER, SYSLOG_PORT, "esp32-pc", "pc", SYSLOG_FAC_LOCAL0);
-    protocore_syslog_log(SYSLOG_NOTICE, "device booted");
+    SyslogV.collector.addr = SYSLOG_SERVER;
+    SyslogV.collector.port = SYSLOG_PORT;
+    SyslogV.header.hostname = "esp32-pc";
+    SyslogV.header.app_name = "pc";
+    SyslogV.header.facility = SYSLOG_FAC_LOCAL0;
+    Syslog.init(protocore_syslog_span());
+    syslog_log(SYSLOG_NOTICE, "device booted");
 
     on_http("/", HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "ok"); });
     on_request_log(access_log); // every response is logged to syslog
@@ -89,6 +105,6 @@ void loop()
         char hb[48];
         snprintf(hb, sizeof(hb), "heartbeat uptime=%lus heap=%u", (unsigned long)(millis() / 1000),
                  (unsigned)ESP.getFreeHeap());
-        protocore_syslog_log(SYSLOG_INFO, hb);
+        syslog_log(SYSLOG_INFO, hb);
     }
 }

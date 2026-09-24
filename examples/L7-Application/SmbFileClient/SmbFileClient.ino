@@ -13,7 +13,7 @@
  *
  * `smb_client` is written against a send/recv seam, so this sketch shows the one piece of glue
  * a real device needs: `cl_send` / `cl_recv` that move bytes over the shared outbound TCP
- * transport (`protocore_client`). Any transport works the same way.
+ * transport (`TcpClient`). Any transport works the same way.
  *
  * Edit the lines marked "CHANGE ME" below, flash, and open Serial @ 115200.
  *
@@ -28,12 +28,84 @@
 #include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include "network_drivers/application/smb/smb2/smb2.h" // SMB2_FILE_GENERIC_READ / SMB2_FILE_OPEN
-#include "network_drivers/application/smb/smb_client/smb_client.h" // smb_open / smb_read / smb_close
+#include "network_drivers/application/smb/smb_client/smb_client.h" // SmbClient.smb_open / smb_read / smb_close
 
 
 // --- CHANGE ME: your WiFi ---
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
+
+// Thin wrappers over the library's outbound TCP client (TcpClient). Each call names its slot in
+// TcpClientV.cid and reads the outcome back off TcpClientV.
+static int tcp_open(const char *host, uint16_t port, uint32_t timeout_ms)
+{
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = port;
+    TcpClientV.dial.timeout_ms = timeout_ms;
+    TcpClient.open(protocore_tcp_client_span());
+    int cid = TcpClientV.i32;
+    if (cid < 0)
+    {
+        return -1;
+    }
+    // open is non-blocking: wait for the handshake to finish (or the dial to fail).
+    for (;;)
+    {
+        TcpClientV.cid = cid;
+        TcpClient.connected(protocore_tcp_client_span());
+        if (TcpClientV.ok)
+        {
+            return cid;
+        }
+        TcpClientV.cid = cid;
+        TcpClient.is_closed(protocore_tcp_client_span());
+        if (TcpClientV.ok)
+        {
+            TcpClientV.cid = cid;
+            TcpClient.close(protocore_tcp_client_span());
+            return -1;
+        }
+        delay(10);
+    }
+}
+
+static bool tcp_send(int cid, const void *data, size_t len)
+{
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = data;
+    TcpClientV.io.len = len;
+    TcpClient.send(protocore_tcp_client_span());
+    return TcpClientV.ok;
+}
+
+static size_t tcp_available(int cid)
+{
+    TcpClientV.cid = cid;
+    TcpClient.available(protocore_tcp_client_span());
+    return TcpClientV.n;
+}
+
+static size_t tcp_read(int cid, void *buf, size_t cap)
+{
+    TcpClientV.cid = cid;
+    TcpClientV.io.buf = (uint8_t *)buf;
+    TcpClientV.io.cap = cap;
+    TcpClient.read(protocore_tcp_client_span());
+    return TcpClientV.n;
+}
+
+static bool tcp_is_closed(int cid)
+{
+    TcpClientV.cid = cid;
+    TcpClient.is_closed(protocore_tcp_client_span());
+    return TcpClientV.ok;
+}
+
+static void tcp_close(int cid)
+{
+    TcpClientV.cid = cid;
+    TcpClient.close(protocore_tcp_client_span());
+}
 
 // --- CHANGE ME: your SMB server + credentials (see the README to set up Samba on a Raspberry Pi) ---
 static const char *SMB_HOST = "192.168.1.50"; // the file server's IP address
@@ -44,7 +116,7 @@ static const char *SMB_DOMAIN = "";                          // empty for a loca
 static const char *SMB_SHARE = "\\\\192.168.1.50\\programs"; // the UNC path to the share
 static const char *SMB_PATH = "PART001.NC";                  // the file on the share to read
 
-// The SMB engine's transport seam, bound to protocore_client. `deadline` bounds each recv wait.
+// The SMB engine's transport seam, bound to TcpClient. `deadline` bounds each recv wait.
 struct SmbXport
 {
     int cid;
@@ -62,7 +134,7 @@ static int cl_send(void *ctx, const uint8_t *data, size_t len)
         {
             chunk = 0xFFFF;
         }
-        if (!Tcp.client->send(x->cid, data + sent, chunk))
+        if (!tcp_send(x->cid, data + sent, chunk))
         {
             return -1;
         }
@@ -76,12 +148,12 @@ static int cl_recv(void *ctx, uint8_t *buf, size_t cap)
     SmbXport *x = (SmbXport *)ctx;
     while ((int32_t)(x->deadline - millis()) > 0)
     {
-        size_t n = Tcp.client->read(x->cid, buf, cap);
+        size_t n = tcp_read(x->cid, buf, cap);
         if (n > 0)
         {
             return (int)n;
         }
-        if (Tcp.client->is_closed(x->cid) && Tcp.client->available(x->cid) == 0)
+        if (tcp_is_closed(x->cid) && tcp_available(x->cid) == 0)
         {
             return -1;
         }
@@ -92,7 +164,7 @@ static int cl_recv(void *ctx, uint8_t *buf, size_t cap)
 
 void read_program()
 {
-    int cid = Tcp.client->open(SMB_HOST, SMB_PORT, 8000);
+    int cid = tcp_open(SMB_HOST, SMB_PORT, 8000);
     if (cid < 0)
     {
         Serial.println("connect failed - is the server reachable on port 445?");
@@ -113,11 +185,11 @@ void read_program()
 
     SmbHandle h;
     x.deadline = millis() + 8000;
-    SmbResult rc = smb_open(&cfg, &h, cl_send, cl_recv, &x);
+    SmbResult rc = SmbClient.smb_open(protocore_smb_client_span(), &cfg, &h, cl_send, cl_recv, &x);
     if (rc != SMB_OK)
     {
         Serial.printf("smb_open failed (SmbResult %d) - see the README troubleshooting table\n", (int)rc);
-        Tcp.client->close(cid);
+        tcp_close(cid);
         return;
     }
     Serial.printf("opened %s (%llu bytes)\n", SMB_PATH, (unsigned long long)h.file_size);
@@ -125,7 +197,7 @@ void read_program()
     uint8_t buf[1024];
     size_t got = 0;
     x.deadline = millis() + 8000;
-    rc = smb_read(&h, 0, buf, sizeof(buf), &got, cl_send, cl_recv, &x);
+    rc = SmbClient.smb_read(protocore_smb_client_span(), &h, 0, buf, sizeof(buf), &got, cl_send, cl_recv, &x);
     if (rc == SMB_OK)
     {
         Serial.printf("--- first %u bytes ---\n", (unsigned)got);
@@ -133,7 +205,7 @@ void read_program()
         Serial.println("\n--- end ---");
         // To read a larger file, loop smb_read with a growing offset until got == 0.
         // To upload instead, open with SMB2_FILE_GENERIC_WRITE + SMB2_FILE_OVERWRITE_IF
-        // and call smb_write(&h, 0, data, len, &wrote, cl_send, cl_recv, &x).
+        // and call SmbClient.smb_write(protocore_smb_client_span(), &h, 0, data, len, &wrote, cl_send, cl_recv, &x).
     }
     else
     {
@@ -141,22 +213,25 @@ void read_program()
     }
 
     x.deadline = millis() + 8000;
-    smb_close(&h, cl_send, cl_recv, &x);
-    Tcp.client->close(cid);
+    SmbClient.smb_close(protocore_smb_client_span(), &h, cl_send, cl_recv, &x);
+    tcp_close(cid);
 }
 
 void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

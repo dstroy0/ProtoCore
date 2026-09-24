@@ -32,24 +32,53 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 static const char *STATSD_HOST = "192.168.1.50";
 static const uint16_t STATSD_PORT = 8125;
 
+// One StatsD line each: name the bucket, set its value, emit it through Statsd.
+static void statsd_count(const char *name, int64_t delta)
+{
+    StatsdV.metric.name = name;
+    StatsdV.metric.rate = 1.0f; // unsampled
+    StatsdV.value.i64 = delta;
+    Statsd.count(protocore_statsd_span());
+}
+
+static void statsd_gauge(const char *name, int64_t value)
+{
+    StatsdV.metric.name = name;
+    StatsdV.value.i64 = value;
+    Statsd.gauge(protocore_statsd_span());
+}
+
+static void statsd_timing(const char *name, uint32_t ms)
+{
+    StatsdV.metric.name = name;
+    StatsdV.value.ms = ms;
+    Statsd.timing(protocore_statsd_span());
+}
+
 void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Every metric this device sends is tagged so the collector can group by device (DogStatsD
     // tag syntax; harmless with plain StatsD collectors that ignore it).
-    protocore_statsd_begin(STATSD_HOST, STATSD_PORT, "device:esp32-demo");
+    StatsdV.server.addr = STATSD_HOST;
+    StatsdV.server.port = STATSD_PORT;
+    StatsdV.tags.global = "device:esp32-demo";
+    Statsd.init(protocore_statsd_span());
     Serial.printf("StatsD -> %s:%u\n", STATSD_HOST, STATSD_PORT);
 }
 
@@ -60,13 +89,13 @@ void loop()
     {
         last = millis();
 
-        protocore_statsd_count("esp32.loops", 1);                              // a counter (rate over time)
-        protocore_statsd_gauge("esp32.heap.free", (int64_t)ESP.getFreeHeap()); // a gauge (absolute level)
-        protocore_statsd_gauge("esp32.uptime.s", (int64_t)(millis() / 1000));
+        statsd_count("esp32.loops", 1);                              // a counter (rate over time)
+        statsd_gauge("esp32.heap.free", (int64_t)ESP.getFreeHeap()); // a gauge (absolute level)
+        statsd_gauge("esp32.uptime.s", (int64_t)(millis() / 1000));
 
         uint32_t t0 = millis();
         // ... do some work you want to measure here ...
-        protocore_statsd_timing("esp32.loop.work_ms", millis() - t0); // a timing/duration
+        statsd_timing("esp32.loop.work_ms", millis() - t0); // a timing/duration
 
         Serial.println("pushed metrics");
     }

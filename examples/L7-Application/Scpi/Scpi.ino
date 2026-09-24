@@ -20,7 +20,7 @@
  * `pyvisa` server, or any SCPI simulator listening on port 5025. See the README to fake one with
  * a two-line `socat` / netcat responder for a dry run.
  *
- * Build flag (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_SCPI=1
+ * Build flags (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_SCPI=1 -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_DNS_RESOLVER=1
  */
 
 #define PROTOCORE_ENABLE_SCPI 1
@@ -32,6 +32,72 @@
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
+
+// Thin wrappers over the library's outbound TCP client (TcpClient). Each call names its slot in
+// TcpClientV.cid and reads the outcome back off TcpClientV.
+static int tcp_open(const char *host, uint16_t port, uint32_t timeout_ms)
+{
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = port;
+    TcpClientV.dial.timeout_ms = timeout_ms;
+    TcpClient.open(protocore_tcp_client_span());
+    int cid = TcpClientV.i32;
+    if (cid < 0)
+    {
+        return -1;
+    }
+    // open is non-blocking: wait for the handshake to finish (or the dial to fail).
+    for (;;)
+    {
+        TcpClientV.cid = cid;
+        TcpClient.connected(protocore_tcp_client_span());
+        if (TcpClientV.ok)
+        {
+            return cid;
+        }
+        TcpClientV.cid = cid;
+        TcpClient.is_closed(protocore_tcp_client_span());
+        if (TcpClientV.ok)
+        {
+            TcpClientV.cid = cid;
+            TcpClient.close(protocore_tcp_client_span());
+            return -1;
+        }
+        delay(10);
+    }
+}
+
+static bool tcp_send(int cid, const void *data, size_t len)
+{
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = data;
+    TcpClientV.io.len = len;
+    TcpClient.send(protocore_tcp_client_span());
+    return TcpClientV.ok;
+}
+
+static size_t tcp_available(int cid)
+{
+    TcpClientV.cid = cid;
+    TcpClient.available(protocore_tcp_client_span());
+    return TcpClientV.n;
+}
+
+static size_t tcp_read(int cid, void *buf, size_t cap)
+{
+    TcpClientV.cid = cid;
+    TcpClientV.io.buf = (uint8_t *)buf;
+    TcpClientV.io.cap = cap;
+    TcpClient.read(protocore_tcp_client_span());
+    return TcpClientV.n;
+}
+
+
+static void tcp_close(int cid)
+{
+    TcpClientV.cid = cid;
+    TcpClient.close(protocore_tcp_client_span());
+}
 
 // --- the target instrument ---
 static const char *INSTRUMENT_IP = "192.168.1.60"; // its raw SCPI socket host
@@ -45,7 +111,7 @@ static char c_resp[256];
 // (protocore_scpi_build does this).
 static size_t scpi_exchange(int cid, const char *cmd, size_t cmd_len)
 {
-    if (cmd_len == 0 || !Tcp.client->send(cid, cmd, cmd_len))
+    if (cmd_len == 0 || !tcp_send(cid, cmd, cmd_len))
     {
         return 0;
     }
@@ -53,12 +119,12 @@ static size_t scpi_exchange(int cid, const char *cmd, size_t cmd_len)
     unsigned long deadline = millis() + 3000;
     while (got < sizeof(c_resp) - 1 && millis() < deadline)
     {
-        if (!Tcp.client->available(cid))
+        if (!tcp_available(cid))
         {
             continue;
         }
         uint8_t b = 0;
-        if (Tcp.client->read(cid, &b, 1) != 1)
+        if (tcp_read(cid, &b, 1) != 1)
         {
             continue;
         }
@@ -78,7 +144,7 @@ static size_t scpi_exchange(int cid, const char *cmd, size_t cmd_len)
 
 static void run_session(const char *host)
 {
-    int cid = Tcp.client->open(host, PROTOCORE_SCPI_PORT, 8000);
+    int cid = tcp_open(host, PROTOCORE_SCPI_PORT, 8000);
     if (cid < 0)
     {
         Serial.println("[scpi] connect failed");
@@ -100,7 +166,7 @@ static void run_session(const char *host)
 
     // 2) *CLS - clear status byte + error queue (no response).
     n = protocore_scpi_build(c_cmd, sizeof(c_cmd), protocore_scpi_common(SCPI_CLS), nullptr, 0);
-    Tcp.client->send(cid, c_cmd, n);
+    tcp_send(cid, c_cmd, n);
 
     // 3) MEAS:VOLT:DC? - take a DC voltage reading and parse it as a number.
     n = protocore_scpi_build(c_cmd, sizeof(c_cmd), "MEASure:VOLTage:DC?", nullptr, 0);
@@ -124,19 +190,22 @@ static void run_session(const char *host)
         Serial.printf("[scpi] SYST:ERR? -> %s\n", c_resp);
     }
 
-    Tcp.client->close(cid);
+    tcp_close(cid);
     Serial.println("[scpi] done");
 }
 
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 }
@@ -147,7 +216,7 @@ void loop()
     if (!done && millis() > 2000)
     {
         done = true;
-        run_session(INSTRUMENT_IP); // Tcp.client->open resolves the dotted-quad host directly
+        run_session(INSTRUMENT_IP); // tcp_open resolves the dotted-quad host directly
     }
     delay(10);
 }

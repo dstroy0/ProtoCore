@@ -28,23 +28,32 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Apply the configured modem-sleep / TX settings AFTER the link is up (the
     // WiFi connect path may set its own default first).
-    Radio.power();
-    Serial.printf("radio modem-sleep: %s\n", Radio.ps_name(Radio.ps_mode()));
+    Radio.power(protocore_radio_power_span());
+    Radio.ps_mode(protocore_radio_power_span());
+    Radio.ps.mode = Radio.mode;
+    Radio.ps_name(protocore_radio_power_span());
+    Serial.printf("radio modem-sleep: %s\n", Radio.text);
 
     on_http("/radio", HTTP_GET, [](uint8_t id, HttpReq *) {
         char b[48];
-        snprintf(b, sizeof(b), "{\"modem_sleep\":\"%s\"}", Radio.ps_name(Radio.ps_mode()));
+        Radio.ps_mode(protocore_radio_power_span());
+        Radio.ps.mode = Radio.mode;
+        Radio.ps_name(protocore_radio_power_span());
+        snprintf(b, sizeof(b), "{\"modem_sleep\":\"%s\"}", Radio.text);
         send_text(id, 200, "application/json", b);
     });
     begin_http(80, NULL);

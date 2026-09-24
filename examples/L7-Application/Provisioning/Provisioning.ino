@@ -11,7 +11,7 @@
  * persist to NVS and the device reboots into station mode and serves normally.
  *
  * No external libraries: only WiFi (softAP), lwIP UDP, and Preferences (NVS).
- * To re-provision, call protocore_provisioning_clear() (e.g. from a button handler).
+ * To re-provision, call Prov.clear(work) (e.g. from a button handler).
  */
 
 #define PROTOCORE_ENABLE_PROVISIONING 1
@@ -33,17 +33,20 @@ void setup()
 
     char ssid[33];
     char psk[64];
-    if (protocore_provisioning_load(ssid, sizeof(ssid), psk, sizeof(psk)))
+    if (Prov.load(protocore_provisioning_service_span(), ssid, sizeof(ssid), psk, sizeof(psk)))
     {
         // Credentials present: connect as a normal station.
-        Physical.wifi->init(ssid, psk);
+        PhysicalV.wifi.ssid = ssid;
+        PhysicalV.wifi.password = psk;
+        Physical.wifi_init(protocore_physical_span());
         Serial.print("Connecting to ");
         Serial.println(ssid);
-        while (!Physical.wifi->ready())
+        for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
         {
             delay(250);
         }
-        uint32_t ip = Physical.link->egress_ip();
+        Physical.egress_ip(protocore_physical_span());
+        uint32_t ip = PhysicalV.u32;
         Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                       (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
@@ -55,7 +58,7 @@ void setup()
     {
         // No credentials: bring up the captive portal.
         begin_http(80, NULL);
-        protocore_provisioning_begin("PC-Setup");
+        Prov.begin(protocore_provisioning_service_span(), "PC-Setup");
         Serial.println("Provisioning: join WiFi 'PC-Setup' and open any page");
     }
 }

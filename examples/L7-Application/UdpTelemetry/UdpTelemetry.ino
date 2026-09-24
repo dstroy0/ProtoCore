@@ -32,18 +32,23 @@ static const uint16_t COLLECTOR_PORT = 8094;
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_udp_telemetry_begin(COLLECTOR_IP, COLLECTOR_PORT);
+    UdpTelemetryV.collector.addr = COLLECTOR_IP;
+    UdpTelemetryV.collector.port = COLLECTOR_PORT;
+    UdpTelemetry.begin(protocore_udp_telemetry_span());
 }
 
 void loop()
@@ -53,12 +58,24 @@ void loop()
     {
         last = millis();
         char buf[PROTOCORE_UDP_TELEMETRY_BUF];
-        protocore_line line;
-        protocore_line_init(&line, buf, sizeof(buf), "esp32");
-        protocore_line_add_uint(&line, "heap", ESP.getFreeHeap());
-        protocore_line_add_int(&line, "rssi", Physical.wifi->rssi());
-        protocore_line_add_float(&line, "temp", temperatureRead(), 1);
-        if (protocore_udp_telemetry_cast(&line))
+        uint8_t *span = protocore_udp_telemetry_span();
+        UdpTelemetryV.line.buf = buf;
+        UdpTelemetryV.line.cap = sizeof(buf);
+        UdpTelemetryV.line.measurement = "esp32";
+        UdpTelemetry.measurement(span);
+        UdpTelemetryV.fields.key = "heap";
+        UdpTelemetryV.fields.u64 = ESP.getFreeHeap();
+        UdpTelemetry.field_uint(span);
+        Physical.wifi_rssi(protocore_physical_span());
+        UdpTelemetryV.fields.key = "rssi";
+        UdpTelemetryV.fields.i64 = PhysicalV.i8;
+        UdpTelemetry.field_int(span);
+        UdpTelemetryV.fields.key = "temp";
+        UdpTelemetryV.fields.f32 = temperatureRead();
+        UdpTelemetryV.fields.decimals = 1;
+        UdpTelemetry.field_float(span);
+        UdpTelemetry.write(span); // send the built line as one datagram
+        if (UdpTelemetryV.ok)
         {
             Serial.printf("cast: %s\n", buf);
         }

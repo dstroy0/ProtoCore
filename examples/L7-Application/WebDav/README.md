@@ -12,7 +12,7 @@ in one call: here `/dav` on disk is exposed at the URL `/dav`.
 **One call mounts the share:**
 
 ```cpp
-server.dav("/dav", LittleFS, "/dav"); // URL "/dav" -> LittleFS "/dav"
+dav("/dav", protocore_mnt_fs(&LittleFS), "/dav"); // URL "/dav" -> LittleFS "/dav"
 ```
 
 Supported methods: `OPTIONS`, `PROPFIND` (Depth 0/1), `PROPPATCH`, `GET`, `HEAD`,
@@ -33,7 +33,7 @@ exposing it. The sketch seeds one file so a fresh share is not empty.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_WEBDAV=1 -DMAX_CONNS=3 -DMAX_WS_CONNS=1 -DMAX_SSE_CONNS=1 -DMAX_ROUTES=8 -DPROTOCORE_WEBDAV_MAX_ENTRIES=8 -DPROTOCORE_WEBDAV_BUF_SIZE=1024" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_WEBDAV=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -DPROTOCORE_ENABLE_MNT=1 -DMAX_CONNS=3 -DMAX_WS_CONNS=1 -DMAX_SSE_CONNS=1 -DMAX_ROUTES=8 -DPROTOCORE_WEBDAV_MAX_ENTRIES=8 -DPROTOCORE_WEBDAV_BUF_SIZE=1024" \
   --lib="." examples/L7-Application/WebDav/WebDav.ino
 ```
 
@@ -97,7 +97,7 @@ void setup()
     }
 
     // Mount the LittleFS subtree "/dav" as a WebDAV share at URL "/dav".
-    server.dav("/dav", LittleFS, "/dav");
+    dav("/dav", protocore_mnt_fs(&LittleFS), "/dav");
     server.begin(80);
     Serial.println("WebDAV share at http://<ip>/dav");
 }

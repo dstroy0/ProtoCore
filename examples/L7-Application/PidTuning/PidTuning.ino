@@ -42,6 +42,7 @@ static const float OUT_MAX = 50.0f;
 static const uint32_t PERIOD_MS = 20; // 50 Hz control rate
 
 static Pid pid;
+static uint8_t control_work[16]; // the borrow a Control entry takes; it keeps no state in it
 
 // Recorded run (BSS): the first LOG_N control steps after boot / GET /reset.
 #define LOG_N 400
@@ -108,7 +109,8 @@ void handle_log(uint8_t slot, HttpReq *)
 void handle_reset(uint8_t slot, HttpReq *)
 {
     g_count = 0;
-    pid_reset(&pid);
+    ControlV.pid_reset_args.p = &pid;
+    Control.pid_reset(control_work);
     sim_y = 0.0f;
     send_text(slot, 200, "text/plain", "recording restarted\n");
 }
@@ -132,18 +134,30 @@ void handle_root(uint8_t slot, HttpReq *)
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    pid_init(&pid, KP, KI, KD);
-    pid_set_output_limits(&pid, OUT_MIN, OUT_MAX);
-    pid_set_rate(&pid, PERIOD_MS * 0.001f); // fixed rate -> pid_update_fixed() skips the /dt divide
+    ControlV.pid_init_args.p = &pid;
+    ControlV.pid_init_args.kp = KP;
+    ControlV.pid_init_args.ki = KI;
+    ControlV.pid_init_args.kd = KD;
+    Control.pid_init(control_work);
+    ControlV.pid_set_output_limits_args.p = &pid;
+    ControlV.pid_set_output_limits_args.lo = OUT_MIN;
+    ControlV.pid_set_output_limits_args.hi = OUT_MAX;
+    Control.pid_set_output_limits(control_work);
+    ControlV.pid_set_rate_args.p = &pid;
+    ControlV.pid_set_rate_args.dt = PERIOD_MS * 0.001f; // fixed rate -> pid_update_fixed() skips the /dt divide
+    Control.pid_set_rate(control_work);
 
     on_http("/", HTTP_GET, handle_root);
     on_http("/log.csv", HTTP_GET, handle_log);

@@ -14,7 +14,16 @@ SNTP client from [SNTP](../SNTP).
 **A source is a function returning epoch seconds, or 0 if it has no time.**
 
 ```cpp
-static uint32_t src_ntp() { return protocore_ntp_synced() ? (uint32_t)protocore_ntp_epoch() : 0; }
+static uint32_t src_ntp()
+{
+    NtpService.synced(protocore_ntp_service_span());
+    if (!NtpServiceV.ok)
+    {
+        return 0;
+    }
+    NtpService.epoch(protocore_ntp_service_span());
+    return (uint32_t)NtpServiceV.value;
+}
 static uint32_t src_rtc() { return RTC_BASE + (uint32_t)(millis() / 1000); }
 ```
 
@@ -22,7 +31,7 @@ static uint32_t src_rtc() { return RTC_BASE + (uint32_t)(millis() / 1000); }
 the library falls through to the RTC; once NTP syncs it transparently takes over:
 
 ```cpp
-protocore_ntp_begin();                        // start SNTP
+NtpService.begin(protocore_ntp_service_span()); // start SNTP
 protocore_time_source_add("ntp", 0, src_ntp); // preferred
 protocore_time_source_add("rtc", 1, src_rtc); // fallback
 ```

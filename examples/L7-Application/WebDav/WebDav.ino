@@ -24,7 +24,7 @@
  *
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable it for the whole build, e.g.:
- *     build_flags = -DPROTOCORE_ENABLE_WEBDAV=1
+ *     build_flags = -DPROTOCORE_ENABLE_WEBDAV=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -DPROTOCORE_ENABLE_MNT=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
@@ -32,6 +32,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
+#include "test/core_setup/hal/esp/esp_mnt_fs.h" // protocore_mnt_fs: LittleFS as a mount backend
 #include <LittleFS.h>
 
 static const char *SSID = "YOUR_SSID";
@@ -42,14 +43,17 @@ void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
@@ -67,7 +71,7 @@ void setup()
         f.close();
     }
 
-    dav("/dav", LittleFS, "/dav");
+    dav("/dav", protocore_mnt_fs(&LittleFS), "/dav");
     begin_http(80, NULL);
     Serial.println("WebDAV share at http://<ip>/dav");
 }

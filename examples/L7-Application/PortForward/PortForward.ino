@@ -27,7 +27,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
-#include "server/net/relay/relay_listener/relay_listener.h" // protocore_relay_publish
+#include "server/net/relay/relay_listener/relay_listener.h" // RelayListener.publish
 
 // --- CHANGE ME: your WiFi ---
 static const char *SSID = "YOUR_SSID";
@@ -43,25 +43,28 @@ void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Open the front port for the relay, then bind it to the origin.
     int32_t li = listen(FRONT_PORT, PROTO_RELAY);
-    if (li < 0 || !protocore_relay_publish((uint8_t)li, ORIGIN_HOST, ORIGIN_PORT))
+    if (li < 0 || !RelayListener.publish(protocore_relay_listener_span(), (uint8_t)li, ORIGIN_HOST, ORIGIN_PORT))
     {
         Serial.println("relay publish failed - check the front port and origin");
         return;
     }
-    begin();
+    proto_begin(NULL);
     Serial.printf("relaying %u.%u.%u.%u:%u  ->  %s:%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF), FRONT_PORT, ORIGIN_HOST, ORIGIN_PORT);
     Serial.printf("connect to this board on port %u and you reach the origin\n", FRONT_PORT);

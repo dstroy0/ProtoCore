@@ -13,7 +13,7 @@
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable it for the whole build, e.g.:
  *     build_flags = -DPROTOCORE_ENABLE_SNMP=1 -DPROTOCORE_ENABLE_SNMP_TRAP=1
- *     ; for SNMPv3 traps also: -DPROTOCORE_ENABLE_SNMP_V3=1 (then call protocore_snmp_trap_v3)
+ *     ; for SNMPv3 traps also: -DPROTOCORE_ENABLE_SNMP_V3=1 (then call SnmpV3.trap)
  * (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
@@ -39,14 +39,17 @@ void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 }
@@ -65,7 +68,16 @@ void loop()
         vb.type = (uint8_t)SNMP_VB_GAUGE32;
         vb.ival = (long)ESP.getFreeHeap();
 
-        bool ok = protocore_snmp_trap_v2c(MANAGER, TRAP_PORT, "public", TRAP_OID, sizeof(TRAP_OID) / sizeof(uint32_t), &vb, 1);
+        SnmpNotifyV.dst.dst_ip = MANAGER;
+        SnmpNotifyV.dst.port = TRAP_PORT;
+        SnmpNotifyV.dst.community = "public";
+        SnmpNotifyV.pdu.trap_oid = TRAP_OID;
+        SnmpNotifyV.pdu.trap_oid_len = sizeof(TRAP_OID) / sizeof(uint32_t);
+        SnmpNotifyV.pdu.vbs = &vb;
+        SnmpNotifyV.pdu.vb_count = 1;
+        Clock.millis(Clock.internal); // the trap's sysUpTime.0 is read from the clock
+        SnmpNotify.trap_v2c(protocore_snmp_notify_span());
+        bool ok = SnmpNotifyV.ok;
         Serial.printf("trap -> %s : %s (heap=%ld)\n", MANAGER, ok ? "sent" : "failed", vb.ival);
     }
 }

@@ -33,9 +33,13 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
 #include <LittleFS.h>
+#include "network_drivers/application/file_serving/file_serving.h"
+#include "test/core_setup/hal/esp/esp_mnt_fs.h" // protocore_mnt_fs(): bind an Arduino FS to the storage seam
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
+
+static const protocore_mnt_backend *g_fs = NULL; // LittleFS, bound to the storage seam once in setup()
 
 
 // Create a known 1 KiB file (repeating 0..255 pattern) so range math is easy to verify.
@@ -71,21 +75,30 @@ void setup()
         Serial.println("LittleFS mount failed");
     }
     make_demo_file();
+    g_fs = protocore_mnt_fs(&LittleFS);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    // serve_file() honors Range automatically when PROTOCORE_ENABLE_RANGE is set.
-    on_http("/data.bin", HTTP_GET,
-              [](uint8_t id, HttpReq *) { serve_file(id, LittleFS, "/data.bin", "application/octet-stream"); });
+    // FileServing.serve_file() honors Range automatically when PROTOCORE_ENABLE_RANGE is set.
+    on_http("/data.bin", HTTP_GET, [](uint8_t id, HttpReq *) {
+        FileServingV.serve_file_args.slot_id = id;
+        FileServingV.serve_file_args.file_sys = g_fs;
+        FileServingV.serve_file_args.fs_path = "/data.bin";
+        FileServingV.serve_file_args.content_type = "application/octet-stream";
+        FileServing.serve_file(protocore_file_serving_span());
+    });
 
     int32_t result = begin_http(80, NULL);
     if (result < 0)

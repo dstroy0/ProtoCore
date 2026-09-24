@@ -52,7 +52,7 @@ static void handle_status(uint8_t slot, HttpReq *req)
     {
         n = 0;
     }
-    send_text(slot, 200, "application/json", (const uint8_t *)body, (size_t)n);
+    send_bin(slot, 200, "application/json", (const uint8_t *)body, (size_t)n);
 }
 
 // Apply a command and answer with the resulting state name.
@@ -62,53 +62,53 @@ static void apply(uint8_t slot, PackMlCommand cmd)
     char body[96];
     int n = snprintf(body, sizeof(body), "{\"accepted\":%s,\"state\":\"%s\"}", ok ? "true" : "false",
                      protocore_packml_state_name(protocore_packml_svc_state()));
-    send_text(slot, ok ? 200 : 409, "application/json", (const uint8_t *)body, (size_t)(n < 0 ? 0 : n));
+    send_bin(slot, ok ? 200 : 409, "application/json", (const uint8_t *)body, (size_t)(n < 0 ? 0 : n));
 }
 
 static void h_reset(uint8_t s, HttpReq *r)
 {
     (void)r;
-    apply(s, PackMlCommand::RESET);
+    apply(s, PACK_ML_COMMAND_RESET);
 }
 static void h_start(uint8_t s, HttpReq *r)
 {
     (void)r;
-    apply(s, PackMlCommand::START);
+    apply(s, PACK_ML_COMMAND_START);
 }
 static void h_stop(uint8_t s, HttpReq *r)
 {
     (void)r;
-    apply(s, PackMlCommand::STOP);
+    apply(s, PACK_ML_COMMAND_STOP);
 }
 static void h_hold(uint8_t s, HttpReq *r)
 {
     (void)r;
-    apply(s, PackMlCommand::HOLD);
+    apply(s, PACK_ML_COMMAND_HOLD);
 }
 static void h_unhold(uint8_t s, HttpReq *r)
 {
     (void)r;
-    apply(s, PackMlCommand::UNHOLD);
+    apply(s, PACK_ML_COMMAND_UNHOLD);
 }
 static void h_suspend(uint8_t s, HttpReq *r)
 {
     (void)r;
-    apply(s, PackMlCommand::SUSPEND);
+    apply(s, PACK_ML_COMMAND_SUSPEND);
 }
 static void h_unsuspend(uint8_t s, HttpReq *r)
 {
     (void)r;
-    apply(s, PackMlCommand::UNSUSPEND);
+    apply(s, PACK_ML_COMMAND_UNSUSPEND);
 }
 static void h_abort(uint8_t s, HttpReq *r)
 {
     (void)r;
-    apply(s, PackMlCommand::ABORT);
+    apply(s, PACK_ML_COMMAND_ABORT);
 }
 static void h_clear(uint8_t s, HttpReq *r)
 {
     (void)r;
-    apply(s, PackMlCommand::CLEAR);
+    apply(s, PACK_ML_COMMAND_CLEAR);
 }
 
 // End the production run: Execute -> Completing.
@@ -119,23 +119,26 @@ static void h_complete(uint8_t s, HttpReq *r)
     char body[96];
     int n = snprintf(body, sizeof(body), "{\"accepted\":%s,\"state\":\"%s\"}", ok ? "true" : "false",
                      protocore_packml_state_name(protocore_packml_svc_state()));
-    send_text(s, ok ? 200 : 409, "application/json", (const uint8_t *)body, (size_t)(n < 0 ? 0 : n));
+    send_bin(s, ok ? 200 : 409, "application/json", (const uint8_t *)body, (size_t)(n < 0 ? 0 : n));
 }
 
 void setup()
 {
     Serial.begin(115200);
     delay(300);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip();
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32;
     Serial.printf("PackML machine at http://%u.%u.%u.%u/packml\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_packml_svc_init(PackMlMode::PRODUCING);
+    protocore_packml_svc_init(PACK_ML_MODE_PRODUCING);
     protocore_packml_svc_set_speed(120.0f); // 120 units/min commanded
 
     on_http("/packml", HTTP_GET, handle_status);
@@ -177,7 +180,7 @@ void loop()
 
     // Produce one unit per second while executing (1-in-20 flagged defective, for the counters).
     static uint32_t last_unit = 0;
-    if (protocore_packml_svc_state() == PackMlState::EXECUTE && millis() - last_unit >= 1000)
+    if (protocore_packml_svc_state() == PACK_ML_STATE_EXECUTE && millis() - last_unit >= 1000)
     {
         last_unit = millis();
         static uint32_t made = 0;

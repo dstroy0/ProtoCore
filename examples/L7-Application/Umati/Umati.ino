@@ -11,7 +11,7 @@
  * in loop(). Any umati / OPC UA client (the umati dashboard, UaExpert, python asyncua) browses the
  * MachineTool and reads live values by their standard BrowseNames - the same shape across vendors.
  *
- *   protocore_umati_install(&mt)                    -> registers the OPC UA Browse + Read resolvers
+ *   Umati.install(protocore_umati_span(), &mt)     -> registers the OPC UA Browse + Read resolvers
  *   listen(4840, PROTO_OPCUA)      -> the OPC UA / umati endpoint
  *
  * Builds on example OpcUa (the OPC UA Binary server); umati is the machine-tool model on top. The
@@ -41,12 +41,15 @@ static UmatiMachineTool mt;
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
@@ -69,7 +72,7 @@ void setup()
     mt.message_text = ""; // no active message
     mt.message_severity = 0;
 
-    protocore_umati_install(&mt); // bind + register the OPC UA Browse/Read resolvers
+    Umati.install(protocore_umati_span(), &mt); // bind + register the OPC UA Browse/Read resolvers
     on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "umati MachineTool on :4840"); });
     listen(4840, PROTO_OPCUA); // OPC UA / umati endpoint - before begin()

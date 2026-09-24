@@ -6,7 +6,7 @@
  * @brief Capturing `:name` segments from the request path.
  *
  * A route path containing one or more `:name` segments captures the matching
- * path segment; the value is read back with http_get_param(). Literal segments
+ * path segment; the value is read back with HttpParser.get_param(). Literal segments
  * must match exactly. Up to MAX_PATH_PARAMS (default 4) per route.
  *
  * Flash, open Serial @ 115200 for the IP, then:
@@ -24,7 +24,7 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 // GET /users/:id
 void handle_user(uint8_t slot_id, HttpReq *req)
 {
-    const char *id = http_get_param(req, "id");
+    const char *id = HttpParser.get_param(protocore_http_parser_span(), req, "id");
     char body[96];
     snprintf(body, sizeof(body), "{\"user_id\":\"%s\"}", id ? id : "?");
     send_text(slot_id, 200, "application/json", body);
@@ -33,8 +33,8 @@ void handle_user(uint8_t slot_id, HttpReq *req)
 // GET /users/:id/posts/:slug  - two captured segments.
 void handle_user_post(uint8_t slot_id, HttpReq *req)
 {
-    const char *id = http_get_param(req, "id");
-    const char *slug = http_get_param(req, "slug");
+    const char *id = HttpParser.get_param(protocore_http_parser_span(), req, "id");
+    const char *slug = HttpParser.get_param(protocore_http_parser_span(), req, "slug");
     char body[160];
     snprintf(body, sizeof(body), "{\"user_id\":\"%s\",\"slug\":\"%s\"}", id ? id : "?", slug ? slug : "?");
     send_text(slot_id, 200, "application/json", body);
@@ -44,14 +44,17 @@ void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

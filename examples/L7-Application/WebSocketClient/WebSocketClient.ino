@@ -11,7 +11,7 @@
  * dashboard / control plane.
  *
  * Flash, open Serial @ 115200. Client frames are masked per RFC 6455;
- * ping/pong and close are handled by ws_client_loop().
+ * ping/pong and close are handled by WsClient.loop().
  *
  * The client speaks ws://. Optional services are gated by a compile flag the *library*
  * sources must also see; for PlatformIO enable it for the whole build:
@@ -42,20 +42,31 @@ void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    ws_client_on_message(on_message);
+    uint8_t *span = protocore_ws_client_span();
+    WsClientV.msg.on_message = on_message;
+    WsClient.on_message(span); // record the callback before connecting
 
-    if (ws_client_connect(HOST, PORT, PATH))
+    WsClientV.handshake.host = HOST;
+    WsClientV.handshake.port = PORT;
+    WsClientV.handshake.secure = false; // ws://
+    WsClientV.handshake.resource_name = PATH;
+    WsClientV.handshake.subprotocol = nullptr;
+    WsClient.connect(span);
+    if (WsClientV.ok)
     {
         Serial.println("WebSocket connected");
     }
@@ -67,15 +78,17 @@ void setup()
 
 void loop()
 {
-    ws_client_loop();
+    WsClient.loop(protocore_ws_client_span());
 
     static uint32_t last = 0;
     static uint32_t n = 0;
-    if (ws_client_connected() && millis() - last >= 1000)
+    WsClient.connected(protocore_ws_client_span());
+    if (WsClientV.ok && millis() - last >= 1000)
     {
         last = millis();
         char msg[48];
         snprintf(msg, sizeof(msg), "hello from esp32 #%lu", (unsigned long)n++);
-        ws_client_send_text(msg);
+        WsClientV.msg.text = msg;
+        WsClient.send_text(protocore_ws_client_span());
     }
 }

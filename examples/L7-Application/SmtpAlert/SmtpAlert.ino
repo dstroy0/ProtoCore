@@ -36,27 +36,24 @@ static const char *MAIL_TO = "dstroy0@rpi5.local"; // a real mailbox on that ser
 
 void send_alert(const char *subject, const char *body)
 {
-    SmtpConfig cfg;
-    memset(&cfg, 0, sizeof(cfg));
-    cfg.host = MAIL_SERVER;
-    cfg.port = MAIL_PORT;
+    SmtpV.session.host = MAIL_SERVER;
+    SmtpV.session.port = MAIL_PORT;
     // SMTP_PLAIN (25) for a LAN relay that trusts your network; SMTP_STARTTLS (587) upgrades an
     // ordinary connection in band and is what mail providers expect for submission; SMTP_TLS (465)
     // is encrypted from the first byte. With STARTTLS the client refuses to continue if the server
     // does not advertise it, so a stripped capability cannot downgrade you into sending in the clear.
-    cfg.security = SMTP_PLAIN;
-    cfg.user = nullptr; // no login needed for a LAN relay that trusts your network
-    cfg.pass = nullptr;
-    cfg.from = MAIL_FROM;
-    cfg.helo = "esp32";
+    SmtpV.session.security = SMTP_PLAIN;
+    SmtpV.session.client_name = "esp32";
+    SmtpV.auth.user = nullptr; // no login needed for a LAN relay that trusts your network
+    SmtpV.auth.pass = nullptr;
 
-    SmtpMessage msg;
-    memset(&msg, 0, sizeof(msg));
-    msg.to = MAIL_TO;
-    msg.subject = subject;
-    msg.body = body;
+    SmtpV.envelope.reverse_path = MAIL_FROM;
+    SmtpV.envelope.forward_path = MAIL_TO;
+    SmtpV.content.subject = subject;
+    SmtpV.content.body = body;
 
-    SmtpResult rc = smtp_send(&cfg, &msg);
+    Smtp.send(protocore_smtp_span()); // open the client transport, walk the session, close
+    SmtpResult rc = SmtpV.result;
     if (rc == SMTP_OK)
     {
         Serial.println("email sent - check the mailbox on your mail server");
@@ -71,14 +68,17 @@ void setup()
 {
     Serial.begin(115200);
 
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

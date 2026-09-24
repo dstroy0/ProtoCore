@@ -12,7 +12,7 @@
  * open62541) browses the MotionDeviceSystem and reads live values by their standard BrowseNames - the
  * same shape across robot vendors.
  *
- *   protocore_robotics_install(&mds)             -> registers the OPC UA Browse + Read resolvers
+ *   Robotics.install(work, &mds)                 -> registers the OPC UA Browse + Read resolvers
  *   listen(4840, PROTO_OPCUA)       -> the OPC UA / robotics endpoint
  *
  * Builds on example OpcUa (the OPC UA Binary server); robotics is the MotionDevice model on top - the
@@ -42,12 +42,15 @@ static RoboticsMotionDeviceSystem mds;
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
@@ -78,7 +81,7 @@ void setup()
     mds.safety.emergency_stop = false;
     mds.safety.protective_stop = false;
 
-    protocore_robotics_install(&mds); // bind + register the OPC UA Browse/Read resolvers
+    Robotics.install(protocore_robotics_span(), &mds); // bind + register the OPC UA Browse/Read resolvers
     on_http("/", HTTP_GET, [](uint8_t id, HttpReq *) {
         send_text(id, 200, "text/plain", "OPC UA for Robotics MotionDeviceSystem on :4840");
     });

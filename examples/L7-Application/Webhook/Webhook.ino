@@ -27,16 +27,21 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 // A plain webhook endpoint (Slack/Discord/your API). For IFTTT use the helper below.
 static const char *WEBHOOK_URL = "http://192.168.1.10:8080/hook";
 
+static uint8_t webhook_work[16]; // Webhook keeps no state in its borrow
+
 
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
@@ -49,15 +54,27 @@ void loop()
     // loop() (not a handler) so the blocking POST never stalls the worker that
     // serves this server.
     static bool fired = false;
-    if (!fired && Physical.wifi->ready())
+    Physical.wifi_ready(protocore_physical_span());
+    if (!fired && PhysicalV.ok)
     {
         fired = true;
         char body[128];
-        protocore_ifttt_payload("boot", "esp32", nullptr, body, sizeof(body));
-        int status = protocore_webhook_post(WEBHOOK_URL, body);
+        WebhookV.ifttt.value1 = "boot";
+        WebhookV.ifttt.value2 = "esp32";
+        WebhookV.ifttt.value3 = nullptr;
+        WebhookV.build.out = body;
+        WebhookV.build.cap = sizeof(body);
+        Webhook.ifttt_payload(webhook_work);
+        WebhookV.request.target_uri = WEBHOOK_URL;
+        WebhookV.request.content = body;
+        Webhook.post(webhook_work);
+        int status = WebhookV.i32;
         Serial.printf("[webhook] POST -> status %d\n", status);
 
         // IFTTT Maker form (needs your real key):
-        //   protocore_ifttt_trigger("device_boot", "YOUR_IFTTT_KEY", "esp32", nullptr, nullptr);
+        //   WebhookV.ifttt.event = "device_boot";
+        //   WebhookV.ifttt.key = "YOUR_IFTTT_KEY";
+        //   WebhookV.ifttt.value1 = "esp32"; // value2 / value3 = nullptr
+        //   Webhook.ifttt_trigger(webhook_work);
     }
 }

@@ -27,36 +27,62 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 
 
 static float g_window_buf[16]; // caller-owned window storage (no heap)
-static protocore_window g_window;
-static protocore_rate g_rate;
-static protocore_totalizer g_total;
+static TelemetryWindow g_window;
+static TelemetryRate g_rate;
+static TelemetryTotalizer g_total;
 static float g_last_rate = 0.0f;
+static uint8_t telemetry_work[16]; // Telemetry keeps no state in its borrow
+
+// Run one window statistic over g_window and return the float it reports.
+static float window_stat(void (*const entry)(uint8_t *work))
+{
+    TelemetryV.window.w = &g_window;
+    entry(telemetry_work);
+    return TelemetryV.f32;
+}
 
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    for (Physical.wifi_ready(protocore_physical_span()); !PhysicalV.ok; Physical.wifi_ready(protocore_physical_span()))
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    Physical.egress_ip(protocore_physical_span());
+    uint32_t ip = PhysicalV.u32; // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_window_init(&g_window, g_window_buf, 16);
-    protocore_rate_init(&g_rate);
-    protocore_totalizer_init(&g_total);
+    TelemetryV.window.w = &g_window;
+    TelemetryV.window.buf = g_window_buf;
+    TelemetryV.window.cap = 16;
+    Telemetry.window_init(telemetry_work);
+    TelemetryV.rate.r = &g_rate;
+    Telemetry.rate_init(telemetry_work);
+    TelemetryV.totalizer.t = &g_total;
+    Telemetry.totalizer_init(telemetry_work);
 
     on_http("/telemetry", HTTP_GET, [](uint8_t id, HttpReq *) {
         char body[192];
+        TelemetryV.window.w = &g_window;
+        Telemetry.window_count(telemetry_work);
+        unsigned count = TelemetryV.u16;
+        float mean = window_stat(Telemetry.window_mean);
+        float stddev = window_stat(Telemetry.window_stddev);
+        float min = window_stat(Telemetry.window_min);
+        float max = window_stat(Telemetry.window_max);
+        TelemetryV.totalizer.t = &g_total;
+        Telemetry.totalizer_total(telemetry_work);
+        double total = TelemetryV.f64;
         snprintf(body, sizeof(body),
                  "{\"samples\":%u,\"mean\":%.3f,\"stddev\":%.3f,\"min\":%.3f,\"max\":%.3f,"
                  "\"rate_per_s\":%.3f,\"total\":%.3f}",
-                 (unsigned)protocore_window_count(&g_window), protocore_window_mean(&g_window), protocore_window_stddev(&g_window),
-                 protocore_window_min(&g_window), protocore_window_max(&g_window), g_last_rate, protocore_totalizer_total(&g_total));
+                 count, mean, stddev, min, max, g_last_rate, total);
         send_text(id, 200, "application/json", body);
     });
 
@@ -75,8 +101,19 @@ void loop()
         last_ms = now;
         float sample = (float)analogRead(34) * (3.3f / 4095.0f); // example: ADC voltage
 
-        protocore_window_push(&g_window, sample);                  // stats over the last 16 readings
-        g_last_rate = protocore_rate_update(&g_rate, sample, now); // slope (units/s)
-        protocore_totalizer_add(&g_total, sample, now);            // integrate the reading over time
+        TelemetryV.window.w = &g_window; // stats over the last 16 readings
+        TelemetryV.window.sample = sample;
+        Telemetry.window_push(telemetry_work);
+
+        TelemetryV.rate.r = &g_rate; // slope (units/s)
+        TelemetryV.rate.value = sample;
+        TelemetryV.rate.now_ms = now;
+        Telemetry.rate_update(telemetry_work);
+        g_last_rate = TelemetryV.f32;
+
+        TelemetryV.totalizer.t = &g_total; // integrate the reading over time
+        TelemetryV.totalizer.rate = sample;
+        TelemetryV.totalizer.now_ms = now;
+        Telemetry.totalizer_add(telemetry_work);
     }
 }

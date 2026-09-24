@@ -5,18 +5,18 @@
 ## What this example teaches
 
 A route path can contain `:name` segments that capture the matching part of the
-request path; you read the captured value back with `http_get_param()`. Literal
+request path; you read the captured value back with `HttpParser.get_param()`. Literal
 segments must match exactly, and a route may capture up to `MAX_PATH_PARAMS`
 (default 4) segments.
 
 **Declaring and reading params.** Put `:id` (etc.) in the path; in the handler,
-`http_get_param(req, "id")` returns the captured value:
+`HttpParser.get_param(protocore_http_parser_span(), req, "id")` returns the captured value:
 
 ```cpp
 // route: /users/:id
-const char *id = http_get_param(req, "id");
+const char *id = HttpParser.get_param(protocore_http_parser_span(), req, "id");
 // route: /users/:id/posts/:slug  -> two captures
-const char *slug = http_get_param(req, "slug");
+const char *slug = HttpParser.get_param(protocore_http_parser_span(), req, "slug");
 ```
 
 **Registration order matters.** Routes are matched in the order they are
@@ -64,7 +64,7 @@ PC server;
 // GET /users/:id  - one captured segment.
 void handle_user(uint8_t slot_id, HttpReq *req)
 {
-    const char *id = http_get_param(req, "id"); // nullptr if absent
+    const char *id = HttpParser.get_param(protocore_http_parser_span(), req, "id"); // nullptr if absent
     char body[96];
     snprintf(body, sizeof(body), "{\"user_id\":\"%s\"}", id ? id : "?");
     server.send(slot_id, 200, "application/json", body);
@@ -73,8 +73,8 @@ void handle_user(uint8_t slot_id, HttpReq *req)
 // GET /users/:id/posts/:slug  - two captured segments.
 void handle_user_post(uint8_t slot_id, HttpReq *req)
 {
-    const char *id = http_get_param(req, "id");
-    const char *slug = http_get_param(req, "slug");
+    const char *id = HttpParser.get_param(protocore_http_parser_span(), req, "id");
+    const char *slug = HttpParser.get_param(protocore_http_parser_span(), req, "slug");
     char body[160];
     snprintf(body, sizeof(body), "{\"user_id\":\"%s\",\"slug\":\"%s\"}", id ? id : "?", slug ? slug : "?");
     server.send(slot_id, 200, "application/json", body);

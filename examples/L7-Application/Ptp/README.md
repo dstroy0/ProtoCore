@@ -86,7 +86,7 @@ disciplined grandmaster, combine with the **UbloxGnss** example.
 ```bash
 pio ci examples/L7-Application/Ptp \
   --board esp32dev --lib "." \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_PTP=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_PTP=1 -DPROTOCORE_ENABLE_UDP=1"
 ```
 
 (The Arduino IDE reads the flag from `build_opt.h` beside the sketch automatically.)
