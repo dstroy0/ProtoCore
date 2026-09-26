@@ -119,7 +119,10 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`cb955b5`](https://github.com/dstroy0/ProtoCore/commit/cb955b5b4ec0fe2be646dbfe8a366ce0a9ccf7bf))
 - update CHANGELOG.md [skip ci] ([`fd76569`](https://github.com/dstroy0/ProtoCore/commit/fd765697a3f1e2c6f5fa57eade6917e7ddd21332))
+- bump cspell from 10.0.1 to 10.3.1 ([`9f87f78`](https://github.com/dstroy0/ProtoCore/commit/9f87f78facde6688ae661097ffe8cfbd65d8cc0e))
+- bump github/codeql-action from 4.37.7 to 4.38.0 ([`a463dca`](https://github.com/dstroy0/ProtoCore/commit/a463dca0ea9079612d1a7658caf7bf376feaf67c))
 - update CHANGELOG.md [skip ci] ([`a8b6904`](https://github.com/dstroy0/ProtoCore/commit/a8b69043945dba78b7d3574c910ee249e1165ab6))
 - update CHANGELOG.md [skip ci] ([`098eb63`](https://github.com/dstroy0/ProtoCore/commit/098eb63a0047f0397ed8f844e50464e9dc4fd9a9))
 - update CHANGELOG.md [skip ci] ([`b87e9ec`](https://github.com/dstroy0/ProtoCore/commit/b87e9ecd3fad382e73f962e1300bfaa38a5b7765))
@@ -436,9 +439,18 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`4d1cefe`](https://github.com/dstroy0/ProtoCore/commit/4d1cefeb7af3e74e95479ac1d6c9c65ac4fdaf49))
+- housekeeping ([`f7ee7ed`](https://github.com/dstroy0/ProtoCore/commit/f7ee7ed646334ba79f15d49f5532423a79829738))
+- Merge branch 'worktree-prose-compliance' ([`8074b13`](https://github.com/dstroy0/ProtoCore/commit/8074b1343c59c72b49736ccd68d9a664052d5423))
+- Merge branch 'worktree-docs-fixes' ([`e8a52de`](https://github.com/dstroy0/ProtoCore/commit/e8a52de257c4132c7bf87e72a956a17cf161bfca))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`57becfe`](https://github.com/dstroy0/ProtoCore/commit/57becfe500d17e065345a209a82bf88fdc6001e3))
 - deps mmgr feature ([`23ad3ad`](https://github.com/dstroy0/ProtoCore/commit/23ad3ad5eb11bae7d0f55cd6cf7a23fc4ccb56d6))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`4907ac8`](https://github.com/dstroy0/ProtoCore/commit/4907ac8dd08ccde77b1b55e5f35679daf597cde8))
+- Merge Dependabot #32: build(deps-dev): bump cspell from 10.0.1 to 10.3.1 ([`6545099`](https://github.com/dstroy0/ProtoCore/commit/65450993964bfc89854a77792521ec012bcdcf56))
+- Merge Dependabot #33: build(deps): bump github/codeql-action from 4.37.7 to 4.38.0 ([`0c6bc8a`](https://github.com/dstroy0/ProtoCore/commit/0c6bc8abb77284a7237d6264406d56aca4034a90))
+- repo licenses bugfix ([`f8e0d24`](https://github.com/dstroy0/ProtoCore/commit/f8e0d244c784c9e817af7f79026f929ecfc5afe6))
+- repo licenses rewrite ([`816a363`](https://github.com/dstroy0/ProtoCore/commit/816a36390b09a266158b34b8d6857712cdd3e418))
+- Merge remote-tracking branch 'origin/main' ([`fd7d1fa`](https://github.com/dstroy0/ProtoCore/commit/fd7d1fa2f822fe86b094a4de3be32f2552a823ec))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`fcea3a7`](https://github.com/dstroy0/ProtoCore/commit/fcea3a77e10d8d5cd2d7d4e4361072d745516fbb))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`44cf774`](https://github.com/dstroy0/ProtoCore/commit/44cf774e801f0bca103a75f92daf5c26bb40f8b1))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`c346e8c`](https://github.com/dstroy0/ProtoCore/commit/c346e8c3ed1c16ea6f8bb9ee1d1390e9195623b1))
@@ -459,6 +471,7 @@ All notable changes to ProtoCore are documented here.
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`1efe600`](https://github.com/dstroy0/ProtoCore/commit/1efe60077ca146e14b06541c2fc313ffffa04de8))
 - Merge remote-tracking branch 'origin/main' into worktree-docs-fixes ([`03a54c3`](https://github.com/dstroy0/ProtoCore/commit/03a54c3262762fe5d13677a0c5cf10d7e0690ae1))
 - tools checkdocs bugfix ([`5b5f546`](https://github.com/dstroy0/ProtoCore/commit/5b5f54682bb664f98751d6d068c182976bce8200))
+- Merge remote-tracking branch 'origin/main' ([`12416f7`](https://github.com/dstroy0/ProtoCore/commit/12416f72d3d720e3503858343b0f6074b447012f))
 - merge origin ([`ede0103`](https://github.com/dstroy0/ProtoCore/commit/ede0103ca48440615b9dca0c8e830b2d58c1221b))
 - tools gate bugfix ([`d9761b2`](https://github.com/dstroy0/ProtoCore/commit/d9761b2114979964aef5d88c83c646c182ddef09))
 - tools comment bugfix ([`f8ba590`](https://github.com/dstroy0/ProtoCore/commit/f8ba5905b352af5566ccff17eee7ac9aca8b10e0))
@@ -636,6 +649,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- docs generated restore ([`bf13a60`](https://github.com/dstroy0/ProtoCore/commit/bf13a605df2cc4b6f7e96c31883d3ebb7c304508))
+- docs prose bugfix ([`efac2fd`](https://github.com/dstroy0/ProtoCore/commit/efac2fd0378fa0cd2847b94e876f42be9d70c470))
 - docs prose bugfix ([`78ca0d8`](https://github.com/dstroy0/ProtoCore/commit/78ca0d8631283914160d1b3dd458c12cd99003a8))
 - docs prose bugfix ([`fec9b6a`](https://github.com/dstroy0/ProtoCore/commit/fec9b6aec16949ee5a88e0ce5e56ad56e950b8fb))
 - docs prose bugfix ([`7028f46`](https://github.com/dstroy0/ProtoCore/commit/7028f46601bb2a9b001078b5fa27327a0f8949f0))
@@ -677,6 +692,22 @@ All notable changes to ProtoCore are documented here.
 - docs prose bugfix ([`4e2eff1`](https://github.com/dstroy0/ProtoCore/commit/4e2eff1f1f678ec67a720f7c29bbf1a83f5d80a3))
 - docs prose bugfix ([`d680bcd`](https://github.com/dstroy0/ProtoCore/commit/d680bcd5bee16ed5580404dac1cb355bc02da261))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`d525738`](https://github.com/dstroy0/ProtoCore/commit/d525738f163cefece378debfc633c473b1fd3900))
+- docs prose bugfix ([`c3bd06a`](https://github.com/dstroy0/ProtoCore/commit/c3bd06a050816255e0f1956e7b696116445f73f9))
+- docs prose bugfix ([`0a6d821`](https://github.com/dstroy0/ProtoCore/commit/0a6d8210443e3d91acb78f14530f55ef71b386a0))
+- docs prose bugfix ([`b6d4b83`](https://github.com/dstroy0/ProtoCore/commit/b6d4b83299346d5c8ed432b6fb06689fe95b569e))
+- docs prose bugfix ([`714b992`](https://github.com/dstroy0/ProtoCore/commit/714b9926036142e16b4266744331b2aaf707ad12))
+- docs prose bugfix ([`5ca68ea`](https://github.com/dstroy0/ProtoCore/commit/5ca68ea2e41ac398b2df5302ac42276d592df84c))
+- docs prose bugfix ([`fe4a055`](https://github.com/dstroy0/ProtoCore/commit/fe4a055f17a621ac652225684578c9b9d208a8e7))
+- docs prose bugfix ([`98b7f3d`](https://github.com/dstroy0/ProtoCore/commit/98b7f3d49d9b0982eb36b841c7d3d8156fc98c0d))
+- docs prose bugfix ([`0a753d4`](https://github.com/dstroy0/ProtoCore/commit/0a753d4b5b4ec3b926243d9204714309ac8d7e0b))
+- docs prose bugfix ([`42e223d`](https://github.com/dstroy0/ProtoCore/commit/42e223d0249d1c7c2421a25c7d6f8b7bd9f664da))
+- docs prose bugfix ([`59711cb`](https://github.com/dstroy0/ProtoCore/commit/59711cba6f6117ad686d222adc9f6c8e6dfd18da))
+- docs prose bugfix ([`87883f3`](https://github.com/dstroy0/ProtoCore/commit/87883f339eebf20344afa09494cd54533c5e90ce))
+- docs prose bugfix ([`6581497`](https://github.com/dstroy0/ProtoCore/commit/6581497f507232397dfdf8ff073a3ad017162eed))
+- docs prose bugfix ([`214fbc1`](https://github.com/dstroy0/ProtoCore/commit/214fbc1672000ec8f11163c7a66ca06036e5f924))
+- docs prose bugfix ([`002aef9`](https://github.com/dstroy0/ProtoCore/commit/002aef99cdf9131a30db61a4eb4a373d96e59395))
+- docs prose bugfix ([`be60eda`](https://github.com/dstroy0/ProtoCore/commit/be60eda37d4ed837a4fda03f07a299f0a506b084))
+- docs prose bugfix ([`41ee0ba`](https://github.com/dstroy0/ProtoCore/commit/41ee0baa95dd620fa4a1ceb1b9965d09cd57ad34))
 - docs prose bugfix ([`cd66786`](https://github.com/dstroy0/ProtoCore/commit/cd6678669434fa6a2d3f6763a9a6702da470e801))
 - docs prose bugfix ([`28d99a2`](https://github.com/dstroy0/ProtoCore/commit/28d99a297c11e67ff18036aeff4f58dbcd767cac))
 - docs prose bugfix ([`b94ac86`](https://github.com/dstroy0/ProtoCore/commit/b94ac86ba71db6859de163439d482bf6eba2d97b))
