@@ -23,9 +23,12 @@ PROTOCORE_BEGIN_DECLS
  * a caller drives every namespace the same way.
  */
 
-// PROTOCORE_BINARY_ASSET_BLOBS_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
-// it into its arena. Its size and its offset are each a static_assert, so a feature
-// combination that does not fit fails to compile rather than overrunning at run time.
+/** @brief One embedded theme: its name and its minified CSS (NUL-terminated flash string). */
+typedef struct
+{
+    const char *name;
+    const char *css;
+} protocore_theme_blob;
 
 /** @brief The embedded theme registry (sorted by name) and its count. */
 extern const protocore_theme_blob PROTOCORE_THEME_BLOBS[];
@@ -35,16 +38,17 @@ extern const size_t PROTOCORE_THEME_BLOB_COUNT;
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*css)(uint8_t *, const char *);
+    const char *(*css)(uint8_t *, const char *);
 } BinaryAssetBlobsNs;
 PROTOCORE_NS_LAYOUT(BinaryAssetBlobsNs, css);
 
 /**
  * @brief Look up a theme's CSS by name (exact match).
- * @param work PROTOCORE_BINARY_ASSET_BLOBS_BORROW bytes the caller took. Not held past the call.
- * @param name Name
+ * @param work Bytes the caller holds. Not read.
+ * @param name The theme name, NUL-terminated.
+ * @return The NUL-terminated minified CSS, or NULL where no theme by that name is embedded.
  */
-void protocore_binary_asset_blobs_css(uint8_t *work, const char *name);
+const char *protocore_binary_asset_blobs_css(uint8_t *work, const char *name);
 
 /** @brief Module namespace. */
 PROTOCORE_NS BinaryAssetBlobsNs BinaryAssetBlobs PROTOCORE_UNUSED = {.css = protocore_binary_asset_blobs_css};

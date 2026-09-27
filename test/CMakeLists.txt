@@ -725,6 +725,25 @@ protocore_env(native_bignum_group14_hw
     "${PROTOCORE_ROOT}/.pio/libdeps/native_bignum_group14_hw/littlefs/include"
 )
 
+# Embedded theme registry (network_drivers/application/binary_asset_blobs): every embedded name finds its own
+protocore_env(native_binary_asset_blobs
+  SUITE unit/src/network_drivers/application/binary_asset_blobs/test_binary_asset_blobs
+  SOURCES
+    "${PROTOCORE_ROOT}/src/network_drivers/application/binary_asset_blobs/binary_asset_blobs.c"
+    "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
+    "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
+    "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
+    "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
+  DEFINES
+    "PROTOCORE_ENABLE_THEMES=1"
+  INCLUDES
+    "${PROTOCORE_ROOT}/test/core_setup/hal/host"
+    "${PROTOCORE_ROOT}/test/support"
+    "${PROTOCORE_ROOT}/src"
+    "${PROTOCORE_ROOT}/include"
+    "${PROTOCORE_ROOT}/."
+)
+
 # The LSB-first bit writer (mmgr/bitio.h) the DEFLATE encoder and the SSH
 protocore_env(native_bitio
   SUITE unit/src/mmgr/test_bitio

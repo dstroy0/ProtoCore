@@ -81,10 +81,11 @@ jobs:
           pip install --upgrade platformio 'gcovr==8.6'
           sudo apt-get update && sudo apt-get install -y ccache
 
-      # harness.py compiles and links the envs itself rather than shelling out to `pio test`, so
-      # nothing else fetches lib_deps: Unity has to be on disk under .pio/libdeps before the run.
-      - name: Install lib_deps (Unity)
-        run: pio pkg install
+      # harness.py compiles and links the envs itself, and platformio.ini declares no native env, so
+      # nothing else fetches the host libraries: Unity and littlefs have to be on disk under
+      # .pio/libdeps/host before the run.
+      - name: Install the host libraries (Unity, littlefs)
+        run: python3 test/harness.py libs
 
       - name: Check platformio.ini is in sync with the test matrix
         run: python3 test/harness.py env gen --check

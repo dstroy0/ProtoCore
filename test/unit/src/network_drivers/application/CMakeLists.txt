@@ -4,6 +4,7 @@
 # The directories below. A new suite is a new directory and a line here - nothing central holds a
 # list of suites, so there is nothing else to keep in step.
 
+add_subdirectory(binary_asset_blobs)
 add_subdirectory(file_serving)
 add_subdirectory(mdns_adaptive)
 add_subdirectory(mdns_service)

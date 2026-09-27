@@ -1,5 +1,4 @@
 [
- "src/network_drivers/application/binary_asset_blobs/binary_asset_blobs.c",
  "src/network_drivers/datalink/datalink/datalink.c",
  "src/network_drivers/session/scp/ssh_scp/ssh_scp.c",
  "src/network_drivers/tls/tls.c",
