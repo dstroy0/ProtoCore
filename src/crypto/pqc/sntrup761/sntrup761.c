@@ -29,6 +29,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_SNTRUP761
+
 #include "crypto/hash/sha512/sha512.h"
 #include "crypto/pqc/sntrup761/sntrup761.h"
 #include "crypto/rng/rng.h" // protocore_rand_fill
@@ -905,3 +907,5 @@ proto_bool protocore_sntrup761_dec(uint8_t *work, const uint8_t *sk, const uint8
     HashSession(work, ss, 1 + mask, r_enc, ct);
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_SNTRUP761

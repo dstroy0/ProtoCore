@@ -11,6 +11,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_SIGFOX
+
 #include "services/radio/sigfox/sigfox.h"
 
 static char hex_nibble(uint8_t v)
@@ -99,3 +101,5 @@ protocore_sigfox_result protocore_sigfox_parse_response(uint8_t *work, const cha
     }
     return SIGFOX_PENDING;
 }
+
+#endif // PROTOCORE_ENABLE_SIGFOX

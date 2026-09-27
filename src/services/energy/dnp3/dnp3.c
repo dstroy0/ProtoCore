@@ -11,9 +11,9 @@
 #include "mmgr/protomem/protomem.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_DNP
 
-static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
-
 #if PROTOCORE_ENABLE_DNP3
+
+static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
 
 PROTOCORE_BEGIN_DECLS
 

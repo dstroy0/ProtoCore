@@ -16,21 +16,14 @@
 #ifndef PROTOCORE_VENDOR_ESP_ANSWERS_H
 #define PROTOCORE_VENDOR_ESP_ANSWERS_H
 
-#ifndef PROTOCORE_HAS_HW_AESGCM
-#define PROTOCORE_HAS_HW_AESGCM 1
-#endif
-
 #ifndef PROTOCORE_HAS_HW_BIGNUM
 #define PROTOCORE_HAS_HW_BIGNUM 1
 #endif
 
-#ifndef PROTOCORE_HAS_HW_SHA
-#define PROTOCORE_HAS_HW_SHA 1
-#endif
-
-#ifndef PROTOCORE_HAS_HW_AES
-#define PROTOCORE_HAS_HW_AES 1
-#endif
+// PROTOCORE_HAS_HW_SHA, PROTOCORE_HAS_HW_AES and PROTOCORE_HAS_HW_AESGCM (whose arm drives the same
+// AES block) are not answered here: whether the die carries the block those HALs drive is stated by
+// its board profile, which vendor/board_profiles/board_profile.h turns into the answer once the die
+// is selected.
 
 #ifndef PROTOCORE_HAS_HW_ECC
 #define PROTOCORE_HAS_HW_ECC 1

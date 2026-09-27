@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_TLS_RPK
+
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
 #include "network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.h"
@@ -63,3 +65,5 @@ size_t protocore_tls13_rpk_build_certificate(uint8_t *work, uint8_t *out, size_t
     Tls13Msg.build_certificate(work);
     tls13_rpk_n = Tls13MsgV.n;
 }
+
+#endif // PROTOCORE_ENABLE_TLS_RPK

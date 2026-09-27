@@ -8,9 +8,9 @@
 
 #include "services/southbound/sb_modbus/sb_modbus.h"
 
-static uint8_t modbus_master_work[16]; // the borrow an entry takes; ModbusMaster never reads it
-
 #if PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER
+
+static uint8_t modbus_master_work[16]; // the borrow an entry takes; ModbusMaster never reads it
 
 #include "services/fieldbus/modbus/modbus_master/modbus_master.h"
 

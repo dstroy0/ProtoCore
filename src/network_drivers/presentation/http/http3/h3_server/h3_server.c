@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+#if PROTOCORE_ENABLE_HTTP3
+
 static uint8_t h3_server_work[16]; // the borrow an entry takes; H3Server never reads it
 
 #if PROTOCORE_ENABLE_HTTP3
@@ -173,5 +175,7 @@ void protocore_h3_server_request(void *app, uint32_t conn_id, uint64_t stream_id
 H3ServerNs H3Server = {.request = request, .rng = rng};
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HTTP3
 
 #endif // PROTOCORE_ENABLE_HTTP3

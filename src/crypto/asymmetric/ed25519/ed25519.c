@@ -26,6 +26,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_ED25519
+
 #include "crypto/asymmetric/curve25519/curve25519.h" // protocore_gf + field ops (native / non-S3 path)
 #include "crypto/asymmetric/ed25519/ed25519.h"
 #include "crypto/asymmetric/fe25519/fe25519.h" // MODMULT dies: canonical uint32[8] field on the RSA accelerator
@@ -734,3 +736,5 @@ proto_bool protocore_ed25519_verify(uint8_t *work, const uint8_t *pub, const uin
     }
     return ok;
 }
+
+#endif // PROTOCORE_ENABLE_ED25519

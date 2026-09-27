@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_SSH_ZLIB
+
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/zlib/zlib.h"
@@ -237,3 +239,5 @@ int protocore_zlib_packet(uint8_t *work, SshDeflate *z, const uint8_t *src, size
     *out_len = w.cnt;
     return 0;
 }
+
+#endif // PROTOCORE_ENABLE_SSH_ZLIB

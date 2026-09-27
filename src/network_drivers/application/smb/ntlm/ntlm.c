@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_SMB
+
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/application/smb/ntlm/ntlm.h"
 
@@ -305,3 +307,5 @@ void protocore_ntlm_mic(uint8_t *work, const uint8_t *session_key, const uint8_t
     Md.final(w.buf);
     protocore_secure_release(mark);
 }
+
+#endif // PROTOCORE_ENABLE_SMB

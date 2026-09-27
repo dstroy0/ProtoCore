@@ -11,6 +11,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_ZWAVE
+
 #include "services/radio/zwave/zwave.h"
 
 // Checksum: 0xFF XORed with every byte from LEN through the last data byte.
@@ -142,3 +144,5 @@ uint16_t protocore_zwave_build_ack(uint8_t *work, uint8_t *out, uint16_t cap)
     out[0] = ZWAVE_ACK;
     return 1;
 }
+
+#endif // PROTOCORE_ENABLE_ZWAVE

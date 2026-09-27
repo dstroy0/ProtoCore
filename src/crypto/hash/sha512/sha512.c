@@ -15,6 +15,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_SHA512
+
 #if PROTOCORE_HAS_HW_SHA
 #endif
 #include "crypto/hash/sha512/sha512.h"
@@ -410,3 +412,5 @@ proto_bool protocore_sha512_hash(uint8_t *work, const uint8_t *data, size_t len,
     sha512_finish(work, out);
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_SHA512

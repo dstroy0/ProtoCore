@@ -11,6 +11,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_RTC
+
 #if !PROTOCORE_HAS_BUS
 #error                                                                                                                 \
     "ProtoCore: PROTOCORE_ENABLE_RTC needs a bus master (an I2C master). Provide one in test/core_setup/hal/<vendor>, or\
@@ -207,3 +209,5 @@ void protocore_rtc_time_source(uint8_t *work)
 {
     Rtc.read_epoch(work);
 }
+
+#endif // PROTOCORE_ENABLE_RTC

@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_RANGE
+
 #include "mmgr/protostr/protostr.h" // str.starts / str.find: the unit prefix and the multi-range comma
 #include "network_drivers/application/http_range/http_range.h"
 
@@ -125,3 +127,5 @@ int protocore_http_range_http_parse_byte_range(uint8_t *work, const char *hdr, s
     *out_end = end;
     return 1;
 }
+
+#endif // PROTOCORE_ENABLE_RANGE

@@ -9,6 +9,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_SMB
+
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/application/smb/spnego/spnego.h"
 
@@ -210,3 +212,5 @@ proto_bool protocore_spnego_parse_response(uint8_t *work, const uint8_t *blob, s
     }
     return PROTO_FALSE;
 }
+
+#endif // PROTOCORE_ENABLE_SMB

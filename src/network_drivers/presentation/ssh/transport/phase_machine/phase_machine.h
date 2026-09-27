@@ -20,7 +20,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-#if PROTOCORE_ENABLE_SSH
+#if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
 
 PROTOCORE_BEGIN_DECLS
 
@@ -324,6 +324,6 @@ static const PhaseMachineNs PhaseMachine __attribute__((unused)) = {
 
 PROTOCORE_END_DECLS
 
-#endif // PROTOCORE_ENABLE_SSH
+#endif // PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
 
 #endif // PROTOCORE_TRANSPORT_PHASE_MACHINE_H

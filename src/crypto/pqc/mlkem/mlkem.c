@@ -15,6 +15,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_MLKEM
+
 #include "crypto/hash/sha3/sha3.h"
 #include "crypto/pqc/mlkem/mlkem.h"
 #include "mmgr/protomem/protomem.h"
@@ -657,3 +659,5 @@ proto_bool protocore_ml_kem_decaps(uint8_t *work, const uint8_t *dk, const uint8
     }
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_MLKEM

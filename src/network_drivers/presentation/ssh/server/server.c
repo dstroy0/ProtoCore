@@ -6,6 +6,10 @@
  * @brief The server engine: accept a connection, drive it, tear it down.
  */
 
+#include "protocore_config.h"
+
+#if PROTOCORE_ENABLE_SSH
+
 #include "network_drivers/presentation/ssh/server/server.h"
 #include "mmgr/plaintext/plaintext.h"
 #include "mmgr/secure/secure.h"
@@ -484,3 +488,5 @@ void protocore_ssh_server_rfwd_proto_handler(uint8_t *work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SshServerVars SshServerV;
+
+#endif // PROTOCORE_ENABLE_SSH

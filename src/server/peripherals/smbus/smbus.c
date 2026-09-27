@@ -12,6 +12,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_SMBUS
+
 #if !PROTOCORE_HAS_BUS
 #error                                                                                                                 \
     "ProtoCore: PROTOCORE_ENABLE_SMBUS needs a bus master (an I2C master). Provide one in test/core_setup/hal/<vendor>, or\
@@ -386,3 +388,5 @@ proto_bool protocore_smbus_block_process_call(uint8_t *work, uint8_t addr, uint8
     *out_len = n;
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_SMBUS

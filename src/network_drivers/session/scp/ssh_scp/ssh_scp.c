@@ -17,6 +17,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_SSH_SCP
+
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "network_drivers/session/scp/ssh_scp/ssh_scp.h"
 
@@ -323,3 +325,5 @@ void protocore_ssh_scp_begin(uint8_t *work)
         SSH_SCP_CTX(work)->registered = PROTO_TRUE;
     }
 }
+
+#endif // PROTOCORE_ENABLE_SSH_SCP

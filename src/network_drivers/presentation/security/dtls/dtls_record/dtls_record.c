@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_DTLS
+
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/security/dtls/dtls_record/dtls_record.h"
 
@@ -439,3 +441,5 @@ void protocore_dtls_record_replay_mark(uint8_t *work, DtlsReplayWindow *w, uint6
         w->bitmap |= ((uint64_t)1 << diff);
     }
 }
+
+#endif // PROTOCORE_ENABLE_DTLS

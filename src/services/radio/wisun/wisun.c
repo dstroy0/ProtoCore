@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_WISUN
+
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem/protomem.h"
 #include "services/radio/wisun/wisun.h"
@@ -273,3 +275,5 @@ size_t protocore_wisun_nodes_json(uint8_t *work, const WisunFan *fan, char *out,
     out[b.len] = '\0';
     return b.len;
 }
+
+#endif // PROTOCORE_ENABLE_WISUN

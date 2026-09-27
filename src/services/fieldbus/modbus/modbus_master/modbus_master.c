@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_MODBUS_MASTER
+
 #include "services/fieldbus/modbus/modbus_master/modbus_master.h"
 
 // --- the entries -----------------------------------------------------------
@@ -513,3 +515,5 @@ int protocore_modbus_master_parse_mask_write_response(uint8_t *work, const uint8
     }
     return 1;
 }
+
+#endif // PROTOCORE_ENABLE_MODBUS_MASTER

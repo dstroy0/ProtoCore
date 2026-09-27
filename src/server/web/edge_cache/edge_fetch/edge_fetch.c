@@ -8,6 +8,8 @@
 
 #include "network_drivers/presentation/http/httpcache/httpcache.h"
 #include "protocore_config.h" // the entry point: the widths
+
+#if PROTOCORE_ENABLE_EDGE_CACHE
 #include "shared/http_date/http_date.h"
 
 #include "mmgr/protomem/protomem.h"
@@ -296,3 +298,5 @@ void protocore_edge_fetcher_end(uint8_t *work, EdgeFetch *f, const EdgeFetchTran
         f->cid = -1;
     }
 }
+
+#endif // PROTOCORE_ENABLE_EDGE_CACHE

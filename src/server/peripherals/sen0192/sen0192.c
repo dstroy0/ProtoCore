@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_SEN0192
+
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "server/peripherals/sen0192/sen0192.h"
 
@@ -182,3 +184,5 @@ void protocore_sen0192_motion_count(uint8_t *work)
 {
     Sen0192.motion_events(work, &SEN0192_CTX(work)->motion);
 }
+
+#endif // PROTOCORE_ENABLE_SEN0192

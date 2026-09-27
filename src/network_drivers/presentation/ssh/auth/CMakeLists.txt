@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(network_drivers/presentation/ssh/auth
-  GATE PROTOCORE_ENABLE_SSH_ZLIB
+  GATE PROTOCORE_ENABLE_SSH OR PROTOCORE_ENABLE_SSH_CLIENT
   SOURCES auth.c
   DEPS
     network_drivers/presentation/ssh/common

@@ -21,6 +21,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_HMAC_SHA512
+
 #include "crypto/hash/sha512/sha512.h" // the Sha512 entries the inner and outer hashes run through
 #include "crypto/mac/hmac_sha512/hmac_sha512.h"
 #include "mmgr/protomem/protomem.h"
@@ -141,3 +143,5 @@ proto_bool protocore_hmac_sha512_mac(uint8_t *work, const uint8_t *key, size_t k
     Sha512.final(hw, out); // HMAC = H((K XOR opad) || inner)
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_HMAC_SHA512

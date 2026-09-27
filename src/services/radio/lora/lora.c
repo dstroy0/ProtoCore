@@ -13,6 +13,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_LORA
+
 #include "services/radio/lora/lora.h"
 
 // SX127x LoRa register map (SX1276 datasheet, Table 41).
@@ -239,3 +241,5 @@ int protocore_lora_recv(uint8_t *work, const protocore_lora_bus *bus, uint8_t *b
     wr(bus, REG_IRQ_FLAGS, 0xFF);
     return (int)n;
 }
+
+#endif // PROTOCORE_ENABLE_LORA

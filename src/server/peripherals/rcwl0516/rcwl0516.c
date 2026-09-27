@@ -14,6 +14,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_RCWL0516
+
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "server/clock/clock.h"       // Clock.millis
 #include "server/peripherals/rcwl0516/rcwl0516.h"
@@ -208,3 +210,5 @@ void protocore_rcwl0516_present(uint8_t *work)
 {
     Rcwl0516.presence_get(work, &RCWL0516_CTX(work)->core);
 }
+
+#endif // PROTOCORE_ENABLE_RCWL0516

@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_SSH_ZLIB
+
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/comp/comp.h"
 
@@ -214,3 +216,5 @@ int protocore_comp_c2s(uint8_t *work, uint8_t i, const uint8_t *src, size_t src_
     Inflate.packet(work);
     return InflateV.n;
 }
+
+#endif // PROTOCORE_ENABLE_SSH_ZLIB

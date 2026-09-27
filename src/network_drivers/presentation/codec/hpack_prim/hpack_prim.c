@@ -11,6 +11,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_HPACK_PRIM
+
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h"
 
@@ -354,3 +356,5 @@ size_t protocore_hpack_prim_encode_str(uint8_t *work, uint8_t *out, size_t cap, 
     mem.cpy(out + hdr, s, n);
     return hdr + n;
 }
+
+#endif // PROTOCORE_ENABLE_HPACK_PRIM

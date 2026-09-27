@@ -6,6 +6,10 @@
  * @brief RFC 4254: the channel multiplexer, its window arithmetic, and the forwarding owners.
  */
 
+#include "protocore_config.h"
+
+#if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
+
 #include "network_drivers/presentation/ssh/connection/connection.h"
 #include "mmgr/bytes/bytes.h"           // bytes.rd_u32 / bytes.rd_str - the one length-prefixed reader
 #include "mmgr/endian/endian.h"         // endian.wr32be - the one wire-integer writer
@@ -2541,3 +2545,5 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SshConnectionVars SshConnectionV;
+
+#endif // PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT

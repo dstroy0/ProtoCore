@@ -144,6 +144,29 @@
 // Classic ESP32 (no dedicated profile) lands on the universal floor.
 #include "classic_defaults.h"
 #endif
+
+// The SHA and AES HALs drive the unified accelerator by its register window, so a die carries the
+// block exactly when its profile states that window. The classic die's engines are an older design
+// the HALs do not drive, and a die with no map yet is the same case: both take the software paths.
+#ifndef PROTOCORE_HAS_HW_SHA
+#ifdef PROTOCORE_SHA_BASE
+#define PROTOCORE_HAS_HW_SHA 1
+#else
+#define PROTOCORE_HAS_HW_SHA 0
+#endif
+#endif
+#ifndef PROTOCORE_HAS_HW_AES
+#ifdef PROTOCORE_AES_BASE
+#define PROTOCORE_HAS_HW_AES 1
+#else
+#define PROTOCORE_HAS_HW_AES 0
+#endif
+#endif
+// The accelerated GCM arm is the AES HAL's block encrypt under a software GHASH, so it has the AES
+// block exactly when the die does.
+#ifndef PROTOCORE_HAS_HW_AESGCM
+#define PROTOCORE_HAS_HW_AESGCM PROTOCORE_HAS_HW_AES
+#endif
 #else
 // Non-ESP vendors (STM / RP / TI) and host/native builds: the universal sizing floor until per-vendor
 // profiles land (the multi-vendor portability track). Behavior-identical to the pre-selector path, which

@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_SSH
+
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/extension/extension.h"
 #include "network_drivers/presentation/ssh/transport/transport/transport.h" // ssh_kex_prefer_rsa()
@@ -52,3 +54,5 @@ int protocore_extension_build(uint8_t *work, uint8_t *out, size_t *len, size_t c
     *len = w.pos;
     return 0;
 }
+
+#endif // PROTOCORE_ENABLE_SSH

@@ -6,6 +6,10 @@
  * @brief RFC 4253: identification exchange, algorithm negotiation, key exchange, binary packet.
  */
 
+#include "protocore_config.h"
+
+#if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
+
 #include "network_drivers/presentation/ssh/transport/transport/transport.h"
 #include "crypto/aead/aesgcm/aesgcm.h"
 #include "crypto/aead/chachapoly/chachapoly.h"
@@ -4200,3 +4204,5 @@ int ssh_transport_version_exchange_recv(uint8_t i, const uint8_t *buf, size_t n,
     *off = consumed;
     return 1;
 }
+
+#endif // PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT

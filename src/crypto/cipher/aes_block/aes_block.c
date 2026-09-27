@@ -16,6 +16,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_AES_BLOCK
+
 #include "crypto/cipher/aes_block/aes_block.h"
 
 // --- the entries -----------------------------------------------------------
@@ -47,3 +49,5 @@ proto_bool protocore_aes_block_encrypt_block(uint8_t *work, const uint32_t *rk, 
     protocore_aes_encrypt_block(rk, nr, in, out);
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_AES_BLOCK

@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_SMB
+
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/application/smb/ntlmssp/ntlmssp.h"
 
@@ -170,3 +172,5 @@ size_t protocore_ntlmssp_build_authenticate(uint8_t *work, uint8_t *buf, size_t 
     endian.wr32le(buf + 60, flags);                         // NegotiateFlags
     return total;
 }
+
+#endif // PROTOCORE_ENABLE_SMB

@@ -19,6 +19,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_WS_DEFLATE
+
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/codec/deflate/deflate/deflate.h"
 
@@ -198,3 +200,5 @@ DeflateResult protocore_deflate_raw(uint8_t *work, const uint8_t *src, size_t sr
     *out_len = w.cnt - 4; // strip the marker for the on-wire payload
     return DEFLATE_OK;
 }
+
+#endif // PROTOCORE_ENABLE_WS_DEFLATE
