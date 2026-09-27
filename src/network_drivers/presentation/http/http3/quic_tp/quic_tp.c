@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_HTTP3
+
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/http/http3/quic_tp/quic_tp.h"
 
@@ -275,3 +277,5 @@ proto_bool protocore_quic_tp_parse(uint8_t *work, const uint8_t *buf, size_t len
     }
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_HTTP3

@@ -9,6 +9,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_PROMISC
+
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/physical/physical/physical.h" // protocore_phy_monitor_*: the L1 seam this drives
@@ -181,3 +183,5 @@ void protocore_promisc_end(uint8_t *work)
     protocore_phy_monitor_end();
     PROMISC_CTX(work)->sink = NULL;
 }
+
+#endif // PROTOCORE_ENABLE_PROMISC

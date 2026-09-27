@@ -15,6 +15,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_SHA256
+
 #include "crypto/hash/sha256/sha256.h"
 #include "mmgr/endian/endian.h" // the big-endian reads and writes both arms' padding and digest use
 #include "mmgr/protomem/protomem.h"
@@ -398,3 +400,5 @@ proto_bool protocore_sha256_hash(uint8_t *work, const uint8_t *data, size_t len,
     sha256_finish(work, out);
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_SHA256

@@ -46,6 +46,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_ECDSA
+
 #include "crypto/asymmetric/ecdsa/ecdsa.h"
 #include "crypto/hash/sha256/sha256.h"
 #include "mmgr/protomem/protomem.h"
@@ -900,3 +902,5 @@ proto_bool protocore_ecdsa_ecdh(uint8_t *work, const uint8_t *peer_pub, const ui
     ecdsa_hw_off();
     return ok;
 }
+
+#endif // PROTOCORE_ENABLE_ECDSA

@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_HTTP3
+
 #include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
 
 // The entries this file calls before reaching their definitions.
@@ -79,3 +81,5 @@ proto_bool protocore_quic_varint_decode(uint8_t *work, const uint8_t *in, size_t
     *consumed = n;
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_HTTP3

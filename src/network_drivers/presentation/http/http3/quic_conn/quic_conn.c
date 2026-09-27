@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+#if PROTOCORE_ENABLE_HTTP3
+
 static uint8_t quic_tls_work[16]; // the borrow an entry takes; QuicTlsServer never reads it
 
 static uint8_t quic_crypto_work[16]; // the borrow an entry takes; QuicCrypto never reads it
@@ -1302,5 +1304,7 @@ void protocore_quic_conn_is_closed(uint8_t *work)
 QuicConnVars QuicConnV;
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HTTP3
 
 #endif // PROTOCORE_ENABLE_HTTP3

@@ -12,6 +12,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_HTTP3
+
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h" // shared prefix-int + Huffman
@@ -357,3 +359,5 @@ proto_bool protocore_qpack_decode(uint8_t *work, const uint8_t *block, size_t le
     }
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_HTTP3

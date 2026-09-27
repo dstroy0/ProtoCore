@@ -12,6 +12,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_THREAD
+
 #include "services/radio/thread/thread.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_X25
 
@@ -931,3 +933,5 @@ int protocore_thread_spinel_frame_decode(uint8_t *work, const uint8_t *raw, uint
     }
     return (int)(flag + 1);
 }
+
+#endif // PROTOCORE_ENABLE_THREAD

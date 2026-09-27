@@ -11,6 +11,8 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+#if PROTOCORE_ENABLE_NTP
+
 // Both arms of the gate below format the HTTP Date header, so the formatter and the borrow its
 // entry takes sit above the gate rather than inside one arm.
 #include "shared/http_date/http_date.h" // HttpDate.format - the shared IMF-fixdate formatter
@@ -255,3 +257,5 @@ NtpServiceVars NtpServiceV;
 PROTOCORE_END_DECLS
 
 #endif
+
+#endif // PROTOCORE_ENABLE_NTP

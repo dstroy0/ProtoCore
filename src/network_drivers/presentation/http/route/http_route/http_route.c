@@ -14,6 +14,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_HTTP_ROUTE
+
 #include "mmgr/protomem/protomem.h" // mem.zero: the hand-out wipe
 #include "mmgr/secure/secure.h"     // where the table lives
 #include "network_drivers/presentation/http/route/http_route/http_route.h"
@@ -95,3 +97,5 @@ void protocore_http_routes_reset(uint8_t *work)
     // a previous tenant's fields and there is nothing to wipe here.
     ROUTE_CTX(work)->count = 0;
 }
+
+#endif // PROTOCORE_ENABLE_HTTP_ROUTE

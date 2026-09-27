@@ -12,6 +12,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_HTTP_PARSER
+
 #include "http_parser.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem/protomem.h"
@@ -1040,3 +1042,5 @@ const char *protocore_http_parser_get_param(uint8_t *work, const HttpReq *req, c
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
+
+#endif // PROTOCORE_ENABLE_HTTP_PARSER

@@ -9,6 +9,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_SMB
+
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/secure/secure.h" // the persistent end this module's key material is taken from
 #include "network_drivers/application/smb/smb_client/smb_client.h"
@@ -924,3 +926,5 @@ SmbResult protocore_smb_client_smb_write(uint8_t *work, SmbHandle *h, uint64_t o
     *written = total;
     return SMB_OK;
 }
+
+#endif // PROTOCORE_ENABLE_SMB

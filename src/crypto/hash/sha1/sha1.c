@@ -12,6 +12,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_SHA1
+
 #if PROTOCORE_HAS_HW_SHA
 #endif
 #include "crypto/hash/sha1/sha1.h"
@@ -178,3 +180,5 @@ proto_bool protocore_sha1_hash(uint8_t *work, const uint8_t *data, size_t len, u
     sha1_run(work, data, len, out);
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_SHA1

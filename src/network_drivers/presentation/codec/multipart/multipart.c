@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_MULTIPART
+
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h" // str.find: a quoted parameter key, and the boundary in a Content-Type
 #include "multipart.h"
@@ -231,3 +233,5 @@ const char *protocore_multipart_get_field(uint8_t *work, const MultipartBody *mp
     }
     return NULL;
 }
+
+#endif // PROTOCORE_ENABLE_MULTIPART

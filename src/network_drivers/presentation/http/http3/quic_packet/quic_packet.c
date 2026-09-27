@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_HTTP3
+
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/http/http3/quic_packet/quic_packet.h"
 
@@ -208,3 +210,5 @@ uint64_t protocore_quic_packet_pn_decode(uint8_t *work, uint64_t largest_pn, uin
     }
     return candidate;
 }
+
+#endif // PROTOCORE_ENABLE_HTTP3

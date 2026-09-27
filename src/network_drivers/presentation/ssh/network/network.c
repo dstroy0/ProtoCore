@@ -6,6 +6,10 @@
  * @brief Ring buffer in, framed bytes out; the socket slot and the SSH slot bound together.
  */
 
+#include "protocore_config.h"
+
+#if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
+
 #include "network_drivers/presentation/ssh/network/network.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "network_drivers/presentation/ssh/auth/auth.h"
@@ -605,3 +609,5 @@ void protocore_ssh_network_chan_close_all(uint8_t *work)
 
 /** @brief The operands and the outcome. */
 SshNetworkVars SshNetworkV;
+
+#endif // PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT

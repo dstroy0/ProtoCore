@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_CC1101
+
 #include "services/radio/cc1101/cc1101.h"
 
 // SPI header bits.
@@ -184,3 +186,5 @@ int protocore_cc1101_recv(uint8_t *work, const protocore_cc1101_bus *bus, uint8_
     }
     return out;
 }
+
+#endif // PROTOCORE_ENABLE_CC1101

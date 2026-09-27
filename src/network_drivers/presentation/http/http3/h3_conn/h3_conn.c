@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+#if PROTOCORE_ENABLE_HTTP3
+
 static uint8_t qpack_work[16]; // the borrow an entry takes; Qpack never reads it
 
 static uint8_t h3_frame_work[16]; // the borrow an entry takes; H3Frame never reads it
@@ -607,5 +609,7 @@ void protocore_h3_conn_respond(uint8_t *work)
 H3ConnVars H3ConnV;
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HTTP3
 
 #endif // PROTOCORE_ENABLE_HTTP3

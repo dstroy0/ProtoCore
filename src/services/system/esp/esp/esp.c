@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_IKEV2
+
 #include "mmgr/protomem/protomem.h"
 #include "services/system/esp/esp/esp.h"
 
@@ -229,3 +231,5 @@ proto_bool protocore_esp_replay_check(uint8_t *work, EspReplay *r, uint32_t seq)
     r->bitmap |= mask;
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_IKEV2

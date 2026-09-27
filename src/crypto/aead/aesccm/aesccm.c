@@ -17,6 +17,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_AESCCM
+
 #if PROTOCORE_HAS_HW_AES
 #endif
 #if !PROTOCORE_HAS_HW_AES
@@ -306,3 +308,5 @@ proto_bool protocore_aes_ccm_open(uint8_t *work, const uint8_t *key, size_t key_
     }
     return aesccm_open_record(work, key, key_len, nonce, nonce_len, aad, aad_len, ct, ct_len, tag, out);
 }
+
+#endif // PROTOCORE_ENABLE_AESCCM

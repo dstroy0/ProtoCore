@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_HTTP3
+
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/http/http3/quic_frame/quic_frame.h"
 
@@ -389,3 +391,5 @@ size_t protocore_quic_frame_build_connection_close(uint8_t *work, uint8_t *out, 
     }
     return pos + reason_len;
 }
+
+#endif // PROTOCORE_ENABLE_HTTP3

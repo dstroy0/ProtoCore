@@ -13,6 +13,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_NRF24
+
 #include "services/radio/nrf24/nrf24.h"
 
 // Commands.
@@ -237,3 +239,5 @@ int protocore_nrf24_recv(uint8_t *work, const nrf_bus *bus, uint8_t *buf, uint8_
     reg_write(bus, REG_STATUS, ST_RX_DR); // clear
     return (int)n;
 }
+
+#endif // PROTOCORE_ENABLE_NRF24

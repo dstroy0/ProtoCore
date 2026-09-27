@@ -43,6 +43,12 @@ INC = re.compile(r'^\s*#\s*include\s+"([^"]+)"')
 GATE = re.compile(
     r"^\s*#\s*if\s+(PROTOCORE_(?:ENABLE|HAS)_\w+(?:\s*(?:&&|\|\|)\s*\(?\s*PROTOCORE_(?:ENABLE|HAS)_\w+\)?)*)\s*$"
 )
+# The same condition inside one pair of parentheses - `#if (PROTOCORE_ENABLE_A || PROTOCORE_ENABLE_B)`
+# is how tls13_msg.c opens. Missing it read the file as ungated, and its first inner arm got declared
+# as its gate instead.
+GATE_PAREN = re.compile(
+    r"^\s*#\s*if\s+\(\s*(PROTOCORE_(?:ENABLE|HAS)_\w+(?:\s*(?:&&|\|\|)\s*PROTOCORE_(?:ENABLE|HAS)_\w+)*)\s*\)\s*$"
+)
 
 
 def cmake_gate(cond):
@@ -185,7 +191,7 @@ def file_gate(text):
         if re.match(r"#\s*if", t):
             depth += 1
             if depth == 1:
-                opened.append((i, GATE.match(line)))
+                opened.append((i, GATE_PAREN.match(line) or GATE.match(line)))
         elif re.match(r"#\s*endif", t):
             if depth == 1 and opened:
                 start, m = opened.pop()
@@ -565,6 +571,11 @@ def audit(mods, unowned, strict):
             bad_gate.append((path, "source gates on %s, declaration states none" % m["gate"]))
         elif d["gate"] and m["gate"] and not d["gate"].startswith(m["gate"]):
             bad_gate.append((path, "declares %s, source gates on %s" % (d["gate"], m["gate"])))
+        # The other direction. CMake only builds the module when its gate is on, so a host build never
+        # compiles an ungated source with the feature off - but Arduino, PlatformIO and ESP-IDF compile
+        # every source in the tree, and an ungated body then fails on the declarations it gates away.
+        elif d["gate"] and not m["gate"] and m["c"]:
+            bad_gate.append((path, "declares %s, source has no gate" % d["gate"]))
         # discover() names dependencies by target; map each back to the path the declaration uses.
         inferred = set()
         for t in m["deps"]:

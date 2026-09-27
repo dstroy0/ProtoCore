@@ -16,6 +16,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_HKDF
+
 #include "crypto/kdf/hkdf/hkdf.h"
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"
 #include "mmgr/protomem/protomem.h"
@@ -156,3 +158,5 @@ proto_bool protocore_hkdf_expand_label_ctx(uint8_t *work, const uint8_t *secret,
     }
     return hkdf_label_derive(work, secret, label, context, context_len, out, out_len, label_prefix);
 }
+
+#endif // PROTOCORE_ENABLE_HKDF

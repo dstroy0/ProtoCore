@@ -11,9 +11,9 @@
 
 #include "server/signaling/gpio_map/gpio_map.h"
 
-static uint8_t gpio_map_work[16]; // the borrow an entry takes; GpioMap never reads it
-
 #if PROTOCORE_ENABLE_GPIO_MAP
+
+static uint8_t gpio_map_work[16]; // the borrow an entry takes; GpioMap never reads it
 
 #include "protocore.h"
 #include "shared/mime/mime.h"

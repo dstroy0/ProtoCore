@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_DTLS
+
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/security/dtls/dtls_handshake/dtls_handshake.h"
 
@@ -398,3 +400,5 @@ proto_bool protocore_dtls_handshake_cookie_verify(uint8_t *work, uint8_t *mac_wo
     *payload_len_out = payload_len;
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_DTLS

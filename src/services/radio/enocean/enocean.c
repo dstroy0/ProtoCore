@@ -11,6 +11,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_ENOCEAN
+
 #include "mmgr/protomem/protomem.h"
 #include "services/radio/enocean/enocean.h"
 
@@ -165,3 +167,5 @@ uint16_t protocore_enocean_erp1_build(uint8_t *work, uint8_t *out, uint16_t cap,
     out[p++] = status;
     return p;
 }
+
+#endif // PROTOCORE_ENABLE_ENOCEAN

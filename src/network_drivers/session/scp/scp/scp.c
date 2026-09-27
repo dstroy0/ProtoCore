@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_SSH_SCP
+
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/session/scp/scp/scp.h"
@@ -169,3 +171,5 @@ size_t protocore_scp_build_cline(uint8_t *work, uint32_t mode, uint64_t size, co
     }
     return (size_t)n;
 }
+
+#endif // PROTOCORE_ENABLE_SSH_SCP

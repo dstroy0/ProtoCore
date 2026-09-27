@@ -18,6 +18,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_SHA384
+
 #if PROTOCORE_HAS_HW_SHA
 #endif
 #include "crypto/hash/sha384/sha384.h"
@@ -416,3 +418,5 @@ proto_bool protocore_sha384_hash(uint8_t *work, const uint8_t *data, size_t len,
     sha384_finish(work, out);
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_SHA384

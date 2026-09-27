@@ -9,6 +9,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_WEBDAV
+
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h" // str.find: the scheme marker inside a Destination header
 #include "network_drivers/application/webdav/webdav.h"
@@ -812,3 +814,5 @@ proto_bool protocore_webdav_if_token(uint8_t *work, const char *if_header, char 
     out[n] = 0;
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_WEBDAV

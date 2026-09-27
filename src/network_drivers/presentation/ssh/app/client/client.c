@@ -7,19 +7,21 @@
  */
 
 #include "network_drivers/presentation/ssh/app/client/client.h"
+#include "mmgr/protomem/protomem.h"
+
+#if PROTOCORE_ENABLE_SSH_CLIENT
+
+// The live arm's stack. The stubs below need none of it, and the SSH headers are not safe to parse
+// with the SSH stack configured out.
 #include "crypto/asymmetric/ed25519/ed25519.h" // Ed25519.pubkey: the provisioning key derivation
 #include "mmgr/arena/arena.h"
-#include "mmgr/protomem/protomem.h"
 #include "mmgr/secure/secure.h"
-#include "network_drivers/presentation/ssh/client/client.h"
 #include "network_drivers/presentation/ssh/connection/connection.h"
 #include "network_drivers/presentation/ssh/network/network.h"
 #include "network_drivers/presentation/ssh/transport/transport/transport.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h"
 #include "shared/log/log.h"
-
-#if PROTOCORE_ENABLE_SSH_CLIENT
 
 // Public API
 // ---------------------------------------------------------------------------

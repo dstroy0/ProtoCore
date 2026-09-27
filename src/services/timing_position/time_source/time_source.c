@@ -11,9 +11,9 @@
 #include "time_source.h"
 #include "shared/http_date/http_date.h" // protocore_http_date() - the shared IMF-fixdate formatter
 
-static uint8_t http_date_work[16]; // the borrow an entry takes; HttpDate never reads it
-
 #if PROTOCORE_ENABLE_TIME_SOURCE
+
+static uint8_t http_date_work[16]; // the borrow an entry takes; HttpDate never reads it
 
 PROTOCORE_BEGIN_DECLS
 

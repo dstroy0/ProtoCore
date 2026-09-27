@@ -16,6 +16,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_POLY1305
+
 #include "crypto/mac/poly1305/poly1305.h"
 #include "mmgr/protomem/protomem.h"
 
@@ -252,3 +254,5 @@ proto_bool protocore_poly1305_mac(uint8_t *work, const uint8_t *key, const uint8
     poly1305_finish(work, key, out);
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_POLY1305

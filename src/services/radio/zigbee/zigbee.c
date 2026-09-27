@@ -12,6 +12,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_ZIGBEE
+
 #include "services/radio/zigbee/zigbee.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_IBM_3740
 
@@ -183,3 +185,5 @@ int protocore_zigbee_ash_frame_decode(uint8_t *work, const uint8_t *raw, uint16_
     n_result = (int)(flag + 1); // consume up to and including the flag
     return n_result;
 }
+
+#endif // PROTOCORE_ENABLE_ZIGBEE

@@ -11,9 +11,9 @@
 
 #include "services/file_transfer/http_delivery/http_delivery.h"
 
-static uint8_t http_delivery_work[16]; // the borrow an entry takes; HttpDelivery never reads it
-
 #if PROTOCORE_ENABLE_HTTP_DELIVERY
+
+static uint8_t http_delivery_work[16]; // the borrow an entry takes; HttpDelivery never reads it
 
 #include "network_drivers/application/web_assets/web_assets.h" // PROTOCORE_SERVICE_WORKER
 #include "protocore.h"

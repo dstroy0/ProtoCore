@@ -13,6 +13,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_GATEWAY
+
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
 #include "server/net/gateway/gateway.h"
@@ -295,3 +297,5 @@ void protocore_gateway_get_stats(uint8_t *work, protocore_gateway_stats *out)
         *out = GATEWAY_CTX(work)->stats;
     }
 }
+
+#endif // PROTOCORE_ENABLE_GATEWAY

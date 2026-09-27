@@ -12,6 +12,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_MNT
+
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
 #include "server/storage/mnt_ram/mnt_ram.h"
@@ -417,3 +419,5 @@ void protocore_mnt_ram_format(uint8_t *work)
         s_mnt.rh[h].open = PROTO_FALSE;
     }
 }
+
+#endif // PROTOCORE_ENABLE_MNT

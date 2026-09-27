@@ -15,6 +15,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_AES_CMAC
+
 #if !PROTOCORE_HAS_HW_AES
 #include "crypto/cipher/aes_block/aes_block.h" // native software AES-128 block
 #endif
@@ -193,3 +195,5 @@ proto_bool protocore_aes_cmac_mac(uint8_t *work, const uint8_t *key, const uint8
     blk_free(&ctx->blk);
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_AES_CMAC

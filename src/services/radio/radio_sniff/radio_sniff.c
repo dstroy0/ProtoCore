@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_RADIO_SNIFF
+
 #include "mmgr/endian/endian.h"
 #include "services/radio/radio_sniff/radio_sniff.h"
 #include "shared/pcap/pcap.h"
@@ -104,3 +106,5 @@ size_t protocore_radio_sniff_tap_record(uint8_t *work, uint8_t *out, size_t cap,
     }
     return total;
 }
+
+#endif // PROTOCORE_ENABLE_RADIO_SNIFF

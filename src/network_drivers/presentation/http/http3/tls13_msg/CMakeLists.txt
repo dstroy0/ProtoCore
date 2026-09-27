@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(network_drivers/presentation/http/http3/tls13_msg
-  GATE PROTOCORE_ENABLE_PQC_KEX
+  GATE PROTOCORE_ENABLE_HTTP3 OR PROTOCORE_ENABLE_DTLS OR PROTOCORE_ENABLE_TLS
   SOURCES tls13_msg.c
   PRIVATE_DEPS
     crypto/asymmetric/ed25519

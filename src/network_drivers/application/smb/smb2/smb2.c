@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_SMB
+
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/application/smb/smb2/smb2.h"
 
@@ -1142,3 +1144,5 @@ size_t protocore_smb2_decrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
     }
     return ok ? ct_len : 0;
 }
+
+#endif // PROTOCORE_ENABLE_SMB

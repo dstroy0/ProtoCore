@@ -11,6 +11,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_PROVISIONING
+
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h" // str: the bounded-run walks
 #include "mmgr/secure/secure.h"     // the persistent end this module's state is taken from
@@ -313,3 +315,5 @@ void protocore_prov_begin(uint8_t *work, const char *ap_ssid)
     on_http("/save", HTTP_POST, prov_save_handler);
     on_http("/*", HTTP_GET, prov_form_handler); // any other path -> the form
 }
+
+#endif // PROTOCORE_ENABLE_PROVISIONING

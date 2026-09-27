@@ -25,6 +25,11 @@ PROTOCORE_BEGIN_DECLS
  * @date    2026
  */
 
+// Named at file scope first: a struct whose first mention is a parameter list is scoped to that one
+// prototype, so the table's members and the functions below would each name a different type.
+struct protocore_dbm;
+struct EdgeCacheStats;
+
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {

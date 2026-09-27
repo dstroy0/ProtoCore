@@ -6,6 +6,10 @@
  * @brief RFC 4252 user authentication: service request, publickey, password, keyboard-interactive.
  */
 
+#include "protocore_config.h"
+
+#if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
+
 #include "network_drivers/presentation/ssh/auth/auth.h"
 #include "crypto/asymmetric/ecdsa/ecdsa.h"     // Ecdsa (ecdsa-sha2-nistp256)
 #include "crypto/asymmetric/ed25519/ed25519.h" // Ed25519 (ssh-ed25519 client keys)
@@ -1088,3 +1092,5 @@ void protocore_ssh_auth_passwd_change_reply(uint8_t *work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SshAuthVars SshAuthV;
+
+#endif // PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT

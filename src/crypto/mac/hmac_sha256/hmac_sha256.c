@@ -20,6 +20,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_HMAC_SHA256
+
 #include "crypto/hash/sha256/sha256.h" // Sha256 - the digest this MAC drives, and its lengths
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"
 #include "mmgr/protomem/protomem.h"
@@ -140,3 +142,5 @@ proto_bool protocore_hmac_sha256_mac(uint8_t *work, const uint8_t *key, size_t k
     Sha256.final(hw, out); // HMAC = H((K XOR opad) || inner)
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_HMAC_SHA256

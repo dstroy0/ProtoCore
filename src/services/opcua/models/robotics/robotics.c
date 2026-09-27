@@ -15,6 +15,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_ROBOTICS
+
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protostr/protostr.h"
 #include "services/opcua/models/robotics/robotics.h"
@@ -472,3 +474,5 @@ void protocore_robotics_install(uint8_t *work, const RoboticsMotionDeviceSystem 
     protocore_opcua_set_read_handler(robotics_read);
     protocore_opcua_set_browse_handler(robotics_browse);
 }
+
+#endif // PROTOCORE_ENABLE_ROBOTICS

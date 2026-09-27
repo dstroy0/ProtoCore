@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(network_drivers/presentation/ssh/transport/phase_machine
-  GATE PROTOCORE_ENABLE_SSH
+  GATE PROTOCORE_ENABLE_SSH OR PROTOCORE_ENABLE_SSH_CLIENT
   SOURCES phase_machine.c
   PRIVATE_DEPS
     network_drivers/presentation/ssh/common

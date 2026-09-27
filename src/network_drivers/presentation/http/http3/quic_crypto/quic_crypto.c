@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_HTTP3
+
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/http/http3/quic_crypto/quic_crypto.h"
 
@@ -231,3 +233,5 @@ void protocore_quic_crypto_retry_integrity_tag(uint8_t *work, const uint8_t *odc
         protocore_secure_release(mark);
     }
 }
+
+#endif // PROTOCORE_ENABLE_HTTP3

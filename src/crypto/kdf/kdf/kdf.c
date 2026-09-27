@@ -15,6 +15,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_KDF
+
 #include "crypto/kdf/kdf/kdf.h"
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"
 #include "mmgr/endian/endian.h"
@@ -78,3 +80,5 @@ proto_bool protocore_kdf_ctr_hmac_sha256(uint8_t *work, const uint8_t *ki, size_
     }
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_KDF

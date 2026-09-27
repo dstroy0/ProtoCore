@@ -9,9 +9,9 @@
 #include "services/energy/c37118/c37118.h"
 #include "mmgr/protomem/protomem.h"
 
-static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
-
 #if PROTOCORE_ENABLE_C37118
+
+static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
 
 #include "mmgr/endian/endian.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_IBM_3740

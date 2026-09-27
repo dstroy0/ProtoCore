@@ -8,7 +8,7 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-#if PROTOCORE_ENABLE_SSH
+#if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
 
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/phase_machine/phase_machine.h"
@@ -263,4 +263,4 @@ PhaseMachineVars PhaseMachineV;
 
 PROTOCORE_END_DECLS
 
-#endif // PROTOCORE_ENABLE_SSH
+#endif // PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT

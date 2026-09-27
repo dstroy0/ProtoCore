@@ -9,6 +9,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_RELAY
+
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
 #include "server/net/relay/relay_listener/relay_listener.h"
@@ -395,3 +397,5 @@ void protocore_relay_listener_reset(uint8_t *work)
         }
     }
 }
+
+#endif // PROTOCORE_ENABLE_RELAY

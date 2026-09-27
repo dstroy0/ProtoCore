@@ -14,6 +14,8 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_CHACHA20
+
 #include "crypto/cipher/chacha20/chacha20.h"
 
 // The one definition, private to this TU. Only what is not derivable: the keystream block sits at a
@@ -168,3 +170,5 @@ proto_bool protocore_chacha20_block_ietf(uint8_t *work, const uint8_t *key, uint
     chacha_core(w, out);
     return PROTO_TRUE;
 }
+
+#endif // PROTOCORE_ENABLE_CHACHA20
