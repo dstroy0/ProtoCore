@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Merge per-environment compile_commands.json fragments into one, deduped by file.
 
-PlatformIO writes compile_commands.json to the project root one env at a time, and
-no single env enables all of the ~111 PROTOCORE_ENABLE_* features, so a feature-gated
-source file is only compiled in the env that turns its flag on. To give the
-SonarQube C/C++ analyzer a command for *every* file, gen_compiledb.sh runs
-`pio run -t compiledb` for each native env, stashes each result, and this script
-merges them: the first env that compiled a given file wins (one command per file).
+No single env enables all of the ~111 PROTOCORE_ENABLE_* features, so a feature-gated
+source file is only compiled in the env that turns its flag on. The CMake configure of
+test/ writes one database holding every env's commands, so a file compiled by several
+envs appears several times. To give the SonarQube C/C++ analyzer one command for *every*
+file, gen_compiledb.sh hands that database to this script, and the first env that
+compiled a given file wins. Several fragment files merge the same way.
 
 Two modes, keyed off --baseline:
 

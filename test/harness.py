@@ -950,88 +950,46 @@ IGNORE_EXACT = {
 }
 
 
-def parse_ini_envs(ini_path):
-    """Return {env: {"src": [globs], "tests": [dirs], "flags": [str]}} for native_* envs."""
-    envs = {}
-    cur = None
-    section = None
-    with open(ini_path, encoding="utf-8") as fh:
-        for raw in fh:
-            line = raw.rstrip("\n")
-            # A stack base is a bare [native_stack_l46]-style section: it owns no suite and carries
-            # the flags and sources for the envs that extend it, so it has to be read too.
-            m = re.match(r"^\[(?:env:)?(native[A-Za-z0-9_]*)\]\s*$", line)
-            if m:
-                cur = m.group(1)
-                envs[cur] = {"src": [], "tests": [], "flags": [], "extends": None}
-                section = None
-                continue
-            if line.startswith("["):
-                cur = None
-                section = None
-                continue
-            if cur is not None:
-                x = re.match(r"^\s*extends\s*=\s*(?:env:)?([A-Za-z0-9_]+)\s*$", line)
-                if x:
-                    envs[cur]["extends"] = x.group(1)
-                    section = None
+def matrix_envs(table_path):
+    """Return {env: {"src": [globs], "tests": [dirs], "flags": [str]}} for every env in the matrix.
+
+    The matrix is the only place a native env is defined: CMake builds from it and platformio.ini no
+    longer carries a section per env. Each env's base chain is folded in, base first, so a stack base
+    carries its sources and flags to the envs that extend it; without that a direct compile builds
+    the suite against nothing and every namespace the suite drives comes back undefined at the link.
+    A `${env:NAME.build_src_filter}` entry is expanded to that env's filter, the way gen_cmake.py
+    does it. Stack bases are returned too, with no tests.
+    """
+    with open(table_path, encoding="utf-8") as fh:
+        table = json.load(fh)["envs"]
+
+    def expand(globs, seen):
+        out = []
+        for g in globs:
+            m = g.strip()
+            if m.startswith("${env:") and m.endswith(".build_src_filter}"):
+                other = m[len("${env:") : -len(".build_src_filter}")]
+                if other in seen or other not in table:
                     continue
-            if cur is None:
+                seen.add(other)
+                out += expand(inherited(table, other, "src"), seen)
                 continue
-            # A blank line or a comment ends the current list. The next env's desc is emitted as
-            # ';' lines above its header, and without this they are read as more list entries.
-            if not line.strip() or line.lstrip().startswith(";"):
-                section = None
-                continue
-            if re.match(r"^\s*build_src_filter\s*=", line):
-                section = "src"
-                rest = line.split("=", 1)[1].strip()
-                if rest:
-                    _add_src(envs[cur], rest)
-                continue
-            if re.match(r"^\s*test_filter\s*=", line):
-                section = "tests"
-                rest = line.split("=", 1)[1].strip()
-                if rest:
-                    envs[cur]["tests"].append(rest)
-                continue
-            if re.match(r"^\s*build_flags\s*=", line):
-                section = "flags"
-                continue
-            if re.match(r"^\s*[A-Za-z_]+\s*=", line):
-                section = None
-                continue
-            if section == "src" and line.strip():
-                _add_src(envs[cur], line.strip())
-            elif section == "tests" and line.strip():
-                envs[cur]["tests"].append(line.strip())
-            elif section == "flags" and line.strip():
-                envs[cur]["flags"].append(line.strip())
+            out.append(m)
+        return out
 
-    # Fold each base chain in. `extends` is what carries a stack base's sources and flags to the
-    # envs built on it; without this a direct compile builds the suite against nothing and every
-    # namespace the suite drives comes back undefined at the link. The base goes first so the env's
-    # own entries are the later word. A ${base.build_flags} interpolation is dropped: the flags it
-    # names are now present literally.
-    def fold(name, key, seen):
-        e = envs.get(name)
-        if not e or name in seen:
-            return []
-        seen.add(name)
-        base = e.get("extends")
-        out = fold(base, key, seen) if base else []
-        return out + [v for v in e[key] if not v.startswith("${")]
-
-    for name in list(envs):
-        for key in ("src", "flags"):
-            envs[name][key] = fold(name, key, set())
+    envs = {}
+    for name in table:
+        src = []
+        for g in expand(inherited(table, name, "src"), set()):
+            m = re.match(r"^\+<(.+)>$", g)
+            if m:
+                src.append(m.group(1))
+        envs[name] = {
+            "src": src,
+            "tests": list(table[name].get("tests", [])),
+            "flags": [f for f in inherited(table, name, "flags") if not f.startswith("${")],
+        }
     return envs
-
-
-def _add_src(env, token):
-    m = re.match(r"^\+<(.+)>$", token)
-    if m:
-        env["src"].append(m.group(1))
 
 
 def _match_glob(rel, glob):
@@ -1156,7 +1114,7 @@ def cmd_env_select(a):
     if not changed:
         print("NONE")
         return 0
-    envs = parse_ini_envs(INI)
+    envs = matrix_envs(TABLE)
     result = classify(changed, envs, load_graph(), len(set(envs) - NEVER_SELECT), base=a.base, head=a.head)
     print(" ".join(result) if isinstance(result, list) else result)
     return 0
@@ -1173,7 +1131,7 @@ def cmd_env_deps(a):
     Runs the compiler's own dependency scan (-MM) per env with that env's flags, so the answer is
     the include closure the env really compiles rather than a guess from the src filter.
     """
-    envs = parse_ini_envs(INI)
+    envs = matrix_envs(TABLE)
     names = a.envs or sorted(n for n in envs if envs[n]["tests"] and n not in NEVER_SELECT)
     graph = {}
     cc = shutil.which("gcc") or shutil.which("cc")
@@ -1773,6 +1731,21 @@ def cmd_readme_gen(a):
 # ---------------------------------------------------------------------------
 
 
+# The host build's third-party libraries. platformio.ini declared them per native env; the envs are
+# CMake's now, so the list lives here and one install under .pio/libdeps/host serves every env.
+HOST_LIBS = ("throwtheswitch/Unity", "anurag3301/littlefs@^2.11.6")
+HOST_LIBDEPS = os.path.join(ROOT, ".pio", "libdeps", "host")
+
+
+def cmd_libs(a):
+    """Install HOST_LIBS into .pio/libdeps/host, where the CMake build and the direct compile look."""
+    os.makedirs(HOST_LIBDEPS, exist_ok=True)
+    cmd = ["pio", "pkg", "install", "--storage-dir", HOST_LIBDEPS]
+    for lib in HOST_LIBS:
+        cmd += ["-l", lib]
+    return subprocess.run(cmd, cwd=ROOT).returncode
+
+
 def unity_src():
     """Unity's own sources, from any env's libdeps."""
     base = os.path.join(ROOT, ".pio", "libdeps")
@@ -1818,8 +1791,11 @@ def lib_packages(envname):
     mock. The include dir costs nothing to add, so it always is; the sources are only compiled when
     the suite actually reaches the package, because pio installs a package per env whether that
     env's suite uses it or not.
+
+    .pio/libdeps/host (`harness.py libs`) is read first. A per-env directory is what a checkout from
+    before the move to CMake still carries, and it is read only where the shared one is missing.
     """
-    base = os.path.join(ROOT, ".pio", "libdeps", envname)
+    base = HOST_LIBDEPS if os.path.isdir(HOST_LIBDEPS) else os.path.join(ROOT, ".pio", "libdeps", envname)
     if not os.path.isdir(base):
         return [], []
     incs, pkgs = [], []
@@ -1946,7 +1922,7 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
         return 1, "no gcc on PATH"
     usrc = unity_src()
     if not usrc:
-        return 1, "Unity sources not found under .pio/libdeps - run `pio pkg install` once"
+        return 1, "Unity sources not found under .pio/libdeps - run `python test/harness.py libs` once"
     incs, defs = _flag_split(e["flags"])
     incs.append("-I" + os.path.relpath(usrc, ROOT).replace("\\", "/"))
     lib_incs, lib_pkgs = lib_packages(name)
@@ -2337,7 +2313,7 @@ def cmd_run(a):
     with open(TABLE, encoding="utf-8") as f:
         table = json.load(f)["envs"]
     names = a.envs or [n for n, e in table.items() if e.get("tests") and n not in NEVER_SELECT]
-    envs = parse_ini_envs(INI)
+    envs = matrix_envs(TABLE)
     gc = None
     if a.coverage:
         gc = gcovr_cmd()
@@ -2701,6 +2677,12 @@ def build_parser():
     )
     p.add_argument("suite", nargs="+", help="suite directories, repo-relative")
     p.set_defaults(fn=cmd_runners_gen)
+
+    p = sub.add_parser(
+        "libs",
+        help="install the host build's libraries (Unity, littlefs) into .pio/libdeps/host",
+    )
+    p.set_defaults(fn=cmd_libs)
 
     keys = sub.add_parser("keys", help="test key provisioning").add_subparsers(dest="cmd", required=True)
     p = keys.add_parser("ensure")

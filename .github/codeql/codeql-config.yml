@@ -5,6 +5,9 @@ name: "ProtoCore CodeQL config"
 # their findings are noise (they recurred as cpp/irregular-enum-init alerts).
 # .pio sits at the repo root, so the pattern has to be anchored there: a leading "**/" matches
 # path segments BEFORE .pio, of which there are none, and the littlefs alerts came through anyway.
+# MMgr is a separate repository (a submodule tracking its upstream main) and is scanned there.
+# The build compiles it into the envs that use it, so without the last entry its findings land here.
 paths-ignore:
   - ".pio/**"
   - "**/.pio/**"
+  - "include/MMgr/**"

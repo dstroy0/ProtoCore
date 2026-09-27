@@ -174,8 +174,13 @@ def lib_packages(envname):
     mock. The include dir costs nothing to add, so it always is; the sources are only compiled when
     the suite actually reaches the package, because pio installs a package per env whether that
     env's suite uses it or not.
+
+    .pio/libdeps/host (`test/harness.py libs`) is read first, so the generated file names one
+    location a fresh checkout can reproduce. A per-env directory is what a checkout from before the
+    move to CMake still carries, and it is read only where the shared one is missing.
     """
-    base = os.path.join(ROOT, ".pio", "libdeps", envname)
+    host = os.path.join(ROOT, ".pio", "libdeps", "host")
+    base = host if os.path.isdir(host) else os.path.join(ROOT, ".pio", "libdeps", envname)
     if not os.path.isdir(base):
         return [], []
     incs, pkgs = [], []
@@ -264,7 +269,8 @@ add_subdirectory(support)
 add_subdirectory(unit)
 add_subdirectory(env)
 
-# Unity is a package the envs link; pio installs it per env, so any copy in the tree will do.
+# Unity is a package the envs link. `test/harness.py libs` installs it under .pio/libdeps/host; a
+# per-env copy left by an older checkout serves as well, so any copy in the tree will do.
 if(NOT PROTOCORE_UNITY_DIR)
   file(GLOB _unity_candidates "${PROTOCORE_ROOT}/.pio/libdeps/*/Unity/src")
   if(_unity_candidates)
@@ -273,7 +279,7 @@ if(NOT PROTOCORE_UNITY_DIR)
 endif()
 if(NOT PROTOCORE_UNITY_DIR)
   message(FATAL_ERROR
-    "Unity sources not found. Run `pio pkg install` once, or pass -DPROTOCORE_UNITY_DIR=<path to Unity/src>.")
+    "Unity sources not found. Run `python test/harness.py libs` once, or pass -DPROTOCORE_UNITY_DIR=<path to Unity/src>.")
 endif()
 
 # Every env compiles under the same base: C11, POSIX, no exceptions, -O1. Matched to the direct

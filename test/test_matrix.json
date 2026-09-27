@@ -2747,6 +2747,26 @@
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
     
+    "native_binary_asset_blobs": {
+      "desc": "Embedded theme registry (network_drivers/application/binary_asset_blobs): every embedded name finds its own\nCSS, the registry is sorted, and the near misses - a prefix, an appended byte, a case change, a name\nlonger than every theme, the empty name and NULL - find nothing. The trademarked themes follow their\ngate. Pure host tests.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_THEMES=1"
+      ],
+      "src": [
+        "+<network_drivers/application/binary_asset_blobs/binary_asset_blobs.c>",
+        "+<mmgr/protostr/protostr.c>",
+        "+<mmgr/protomem/protomem.c>",
+        "+<mmgr/rawmemcpy/rawmemcpy.c>",
+        "+<mmgr/swar/swar.c>"
+      ],
+      "tests": [
+        "unit/src/network_drivers/application/binary_asset_blobs/test_binary_asset_blobs"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
+    },
+    
     "native_ftp_session": {
       "desc": "The FTP client session (services/file_transfer/ftp/ftp_session.c): the stepped store over a real TCP client. RFC 959 sec 5.4's minimum command sequence for a STOR, with the RFC 2428 sec 3 EPSV reply and the RFC 959 sec 4.1.2 PASV fallback under it. Nothing in the matrix compiled this file before.",
       "flags": [

@@ -9,7 +9,7 @@ serve or switch a theme at runtime (e.g. a `/themes/<name>.css` route, or a pick
 user's choice). The whole subsystem is behind `PROTOCORE_ENABLE_THEMES`, so a build that does not want
 runtime theming links none of it; enabling it embeds the set (each theme is ~1 KB of DROM/flash).
 
-Output: src/network_drivers/application/binary_asset_blobs.{h,c} (generated + committed, so the
+Output: src/network_drivers/application/binary_asset_blobs/binary_asset_blobs.{h,c} (generated + committed, so the
 Arduino-IDE users who never run Python still get it). Re-run after adding/editing a theme.
 
     python -m src.web_assets.wizard.gen_theme_blobs            # regenerate
@@ -30,7 +30,7 @@ THEMES_DIRS = [
     os.path.normpath(os.path.join(SCRIPT_DIR, "..", "themes")),
     os.path.normpath(os.path.join(SCRIPT_DIR, "..", "themes", "generated")),
 ]
-OUT_DIR = os.path.join(REPO_ROOT, "src", "network_drivers", "application")
+OUT_DIR = os.path.join(REPO_ROOT, "src", "network_drivers", "application", "binary_asset_blobs")
 BASENAME = "binary_asset_blobs"
 
 BANNER = (
@@ -92,55 +92,79 @@ def render_header(themes):
     lines = [
         BANNER,
         "",
+        "#ifndef " + guard,
+        "#define " + guard,
+        "",
+        '#include "protocore_config.h" // the entry point: protocore_types.h for the widths',
+        "",
+        "PROTOCORE_BEGIN_DECLS",
+        "",
         "/**",
         " * @file binary_asset_blobs.h",
         " * @brief Layer 7 - toggleable embedded theme stylesheets (PROTOCORE_ENABLE_THEMES).",
         " *",
         " * A registry of minified CSS themes in flash (DROM), for serving/switching a theme at runtime.",
         " * Behind PROTOCORE_ENABLE_THEMES so a build that does not want it links nothing.",
+        " *",
+        " * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing",
+        " * between calls, so there is no state to keep and nothing to wipe. The parameter is there so",
+        " * a caller drives every namespace the same way.",
         " */",
         "",
-        "#ifndef " + guard,
-        "#define " + guard,
-        "",
-        '#include "protocore_config.h"',
-        "",
-        "#if PROTOCORE_ENABLE_THEMES",
-        "",
-        "#include <stddef.h>",
-        "",
         "/** @brief One embedded theme: its name and its minified CSS (NUL-terminated flash string). */",
-        "struct protocore_theme_blob",
+        "typedef struct",
         "{",
         "    const char *name;",
         "    const char *css;",
-        "};",
+        "} protocore_theme_blob;",
         "",
         "/** @brief The embedded theme registry (sorted by name) and its count. */",
         "extern const protocore_theme_blob PROTOCORE_THEME_BLOBS[];",
+        "",
         "extern const size_t PROTOCORE_THEME_BLOB_COUNT;",
+        "",
+        "/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */",
+        "typedef struct",
+        "{",
+        "    const char *(*css)(uint8_t *, const char *);",
+        "} BinaryAssetBlobsNs;",
+        "PROTOCORE_NS_LAYOUT(BinaryAssetBlobsNs, css);",
         "",
         "/**",
         " * @brief Look up a theme's CSS by name (exact match).",
-        " * @return the NUL-terminated minified CSS, or nullptr if no theme by that name is embedded.",
+        " * @param work Bytes the caller holds. Not read.",
+        " * @param name The theme name, NUL-terminated.",
+        " * @return The NUL-terminated minified CSS, or NULL where no theme by that name is embedded.",
         " */",
-        "const char *protocore_theme_css(const char *name);",
+        "const char *protocore_binary_asset_blobs_css(uint8_t *work, const char *name);",
         "",
-        "#endif // PROTOCORE_ENABLE_THEMES",
+        "/** @brief Module namespace. */",
+        "PROTOCORE_NS BinaryAssetBlobsNs BinaryAssetBlobs PROTOCORE_UNUSED = {.css = protocore_binary_asset_blobs_css};",
+        "",
+        "PROTOCORE_END_DECLS",
+        "",
         "#endif // " + guard,
     ]
     return "\n".join(lines) + "\n"
 
 
 def render_source(themes):
+    name_cap = max((len(name) for name, _ in themes), default=0) + 1
     lines = [
         BANNER,
         "",
-        '#include "network_drivers/application/binary_asset_blobs/binary_asset_blobs.h"',
+        '#include "protocore_config.h" // the entry point: the widths',
+        "",
+        '#include "binary_asset_blobs.h"',
+        '#include "mmgr/protostr/protostr.h"',
         "",
         "#if PROTOCORE_ENABLE_THEMES",
         "",
+        "// One past the longest embedded name. A name that reaches it is longer than every theme, so",
+        "// the length scan stops there and nothing matches.",
+        "#define THEME_NAME_CAP %du" % name_cap,
         "",
+        "PROTOCORE_BEGIN_DECLS",
         "",
     ]
     for name, css in themes:
@@ -166,24 +190,34 @@ def render_source(themes):
     lines.append(
         "const size_t PROTOCORE_THEME_BLOB_COUNT = sizeof(PROTOCORE_THEME_BLOBS) / sizeof(PROTOCORE_THEME_BLOBS[0]);"
     )
-    lines.append("")
-    lines.append("const char *protocore_theme_css(const char *name)")
-    lines.append("{")
-    lines.append("    if (!name)")
-    lines.append("    {")
-    lines.append("        return NULL;")
-    lines.append("    }")
-    lines.append("    for (size_t i = 0; i < PROTOCORE_THEME_BLOB_COUNT; i++)")
-    lines.append("    {")
-    lines.append("        if (strcmp(PROTOCORE_THEME_BLOBS[i].name, name) == 0)")
-    lines.append("        {")
-    lines.append("            return PROTOCORE_THEME_BLOBS[i].css;")
-    lines.append("        }")
-    lines.append("    }")
-    lines.append("    return NULL;")
-    lines.append("}")
-    lines.append("")
-    lines.append("#endif // PROTOCORE_ENABLE_THEMES")
+    lines += [
+        "",
+        "const char *protocore_binary_asset_blobs_css(uint8_t *work, const char *name)",
+        "{",
+        "    (void)work;",
+        "",
+        "    if (name == NULL)",
+        "    {",
+        "        return NULL;",
+        "    }",
+        "    // str.eq reads read_cap bytes of both operands, so the lengths are matched first: two",
+        "    // strings of length n each hold n + 1 readable bytes, the terminator included.",
+        "    const size_t n = str.len(name, THEME_NAME_CAP);",
+        "    for (size_t i = 0; i < PROTOCORE_THEME_BLOB_COUNT; i++)",
+        "    {",
+        "        const char *have = PROTOCORE_THEME_BLOBS[i].name;",
+        "        if (str.len(have, THEME_NAME_CAP) == n && str.eq(have, name, n + 1u, PROTO_FALSE))",
+        "        {",
+        "            return PROTOCORE_THEME_BLOBS[i].css;",
+        "        }",
+        "    }",
+        "    return NULL;",
+        "}",
+        "",
+        "PROTOCORE_END_DECLS",
+        "",
+        "#endif // PROTOCORE_ENABLE_THEMES",
+    ]
     return "\n".join(lines) + "\n"
 
 

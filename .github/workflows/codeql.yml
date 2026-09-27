@@ -6,7 +6,7 @@ name: CodeQL
 #
 # Uses the "advanced" setup
 # (not GitHub default setup) because the database must be built by tracing a real
-# compile - here a host/native PlatformIO build of the security-critical cores
+# compile - here the host CMake build of every native env, which covers the security-critical cores
 # (HTTP parser, WebSocket, multipart, base64/JSON, SSH crypto, SNMP, the codecs).
 #
 # The analyze step publishes a code-scanning check named "CodeQL" - require that
@@ -46,8 +46,12 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Install PlatformIO
-        run: pip install --upgrade platformio
+      # PlatformIO only fetches the host build's libraries (Unity, littlefs) into .pio/libdeps/host.
+      # The envs themselves are CMake targets.
+      - name: Install PlatformIO and the host libraries
+        run: |
+          pip install --upgrade platformio
+          python3 test/harness.py libs
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4.38.0
@@ -56,46 +60,30 @@ jobs:
           queries: security-and-quality
           config-file: ./.github/codeql/codeql-config.yml
 
-      # Host/native build of every native env; CodeQL traces the compiler, so a translation unit is
-      # only analyzed if something here compiled it. A hand-listed subset silently left most of src/
-      # unscanned, and the list could not track a new env. The set is read from the generated ini, so
-      # adding an env to test/test_matrix.json extends the scan with it.
+      # Host build of every native env: test/CMakeLists.txt, generated from test/test_matrix.json, so
+      # adding an env to the matrix extends the scan with it. CodeQL traces the compiler, so a
+      # translation unit is only analyzed if something here compiled it. MMgr's own suites are left
+      # out: MMgr is a separate repository, and its sources are excluded in codeql-config.yml.
       #
-      # --without-testing skips running the unit tests; test-report.yml is what runs and gates those.
-      # A per-env failure does not abort the sweep: extraction happens per compiler invocation, so the
-      # units that did compile are still in the database, and stopping here would discard the whole
-      # scan over one bad env - which is how this workflow produced nothing at all. Failures are
-      # reported to the run summary instead, and the test suite remains the build gate.
+      # Nothing is run here; test-report.yml runs and gates the tests. -k keeps the build going past a
+      # failed target: extraction happens per compiler invocation, so the units that did compile are
+      # still in the database, and stopping would discard the whole scan over one bad env - which is
+      # how this workflow produced nothing at all. Failures go to the run summary instead.
       - name: Build (native, traced by CodeQL)
         run: |
-          mapfile -t ENVS < <(grep -oE '^\[env:native[A-Za-z0-9_]*\]' platformio.ini | sed -E 's/\[env:(.*)\]/\1/')
-          echo "tracing ${#ENVS[@]} native env(s)"
-          FAILED=()
-          BUILT=0
-          for e in "${ENVS[@]}"; do
-            echo "::group::build $e"
-            # --without-testing builds and does not run, so PlatformIO's own summary line reads
-            # "0 test cases: 0 succeeded" for every env. That is the flag working, not an empty
-            # build: the build is the "Building..." line above it, and it is what CodeQL traces.
-            if pio test --without-testing -e "$e"; then
-              BUILT=$((BUILT + 1))
-              echo "built $e (tests deliberately not run here; test-report.yml runs them)"
-            else
-              FAILED+=("$e")
-            fi
-            echo "::endgroup::"
-          done
-          echo "built ${BUILT} of ${#ENVS[@]} env(s) into the CodeQL database"
+          python3 tools/harness.py build cmake
+          cmake -S test -B build/codeql -DMMGR_BUILD_TESTS=OFF
+          rc=0
+          cmake --build build/codeql -j "$(nproc)" -- -k >build.log 2>&1 || rc=$?
+          FAILED="$(grep -c '^make\[[0-9]*\]: \*\*\*' build.log || true)"
           {
             echo "### CodeQL extraction"
-            echo "Built ${BUILT} of ${#ENVS[@]} env(s); ${#FAILED[@]} failed."
-            if [ "${#FAILED[@]}" -ne 0 ]; then
-              echo ""
-              echo "Not extracted (or only partially):"
-              for e in "${FAILED[@]}"; do echo "- \`$e\`"; done
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-          for e in "${FAILED[@]}"; do echo "::warning title=CodeQL build::$e failed to build; its units may be missing from the database"; done
+            echo "cmake --build exited $rc; $FAILED failed make step(s)."
+          } >>"$GITHUB_STEP_SUMMARY"
+          if [ "$rc" -ne 0 ]; then
+            grep -E 'error:|\*\*\*' build.log | head -50
+            echo "::warning title=CodeQL build::the host build had failures; their units may be missing from the database"
+          fi
           exit 0
 
       - name: Perform CodeQL analysis

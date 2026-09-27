@@ -7,4 +7,4 @@ penetration_testing/**/*.ino
 
 # Generated theme/asset blobs (src/web_assets/wizard/gen_theme_blobs.py, build_assets.py). Machine
 # output regenerated on every run, so formatting it by hand is undone immediately.
-src/network_drivers/application/binary_asset_blobs.c
+src/network_drivers/application/binary_asset_blobs/binary_asset_blobs.c
