@@ -119,6 +119,9 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- bump cspell from 10.3.1 to 10.3.3 ([`188da5b`](https://github.com/dstroy0/ProtoCore/commit/188da5baaeabfab4e49ca1c8827a16fe036d151e))
+- update test report + coverage [skip ci] ([`43500b3`](https://github.com/dstroy0/ProtoCore/commit/43500b3faad522882efd14781004f151194371ac))
+- update CHANGELOG.md [skip ci] ([`07a9b41`](https://github.com/dstroy0/ProtoCore/commit/07a9b41f518576a2f47131f7d61cdf1263adde2c))
 - bump github/codeql-action from 4.38.0 to 4.38.1 ([`802e31f`](https://github.com/dstroy0/ProtoCore/commit/802e31f6d30bf929409c16c6259a3911fa75f350))
 - bump prettier from 3.9.6 to 3.9.9 ([`915e6d7`](https://github.com/dstroy0/ProtoCore/commit/915e6d72c0c9ae9c1f0d80da1829ef5bf267fc89))
 - update CHANGELOG.md [skip ci] ([`8550746`](https://github.com/dstroy0/ProtoCore/commit/855074610f62546bc02693214f180fcd85b096d1))
@@ -442,6 +445,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge Dependabot #36: build(deps-dev): bump cspell from 10.3.1 to 10.3.3 ([`e9958c4`](https://github.com/dstroy0/ProtoCore/commit/e9958c43af91749406e56062f6b078b0fb76184d))
+- housekeeping ([`e79cbba`](https://github.com/dstroy0/ProtoCore/commit/e79cbba42435357e440e1843beb52efab8cc24a9))
 - Merge Dependabot #35: build(deps): bump github/codeql-action from 4.38.0 to 4.38.1 ([`d293f8d`](https://github.com/dstroy0/ProtoCore/commit/d293f8d8bcfa675994b658e5e67f296f3a87f5b8))
 - Merge Dependabot #37: build(deps-dev): bump prettier from 3.9.6 to 3.9.9 ([`e0108d0`](https://github.com/dstroy0/ProtoCore/commit/e0108d0eb73537204ac222c26b4e61e2d1e75f0d))
 - housekeeping ([`0f4c3df`](https://github.com/dstroy0/ProtoCore/commit/0f4c3df92004802b93dcdad7fcd9ed9885815afa))
@@ -655,6 +660,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e1efd78`](https://github.com/dstroy0/ProtoCore/commit/e1efd7872021efde8bcf36f09c000c1c0e7c3b60))
 - docs generated restore ([`bf13a60`](https://github.com/dstroy0/ProtoCore/commit/bf13a605df2cc4b6f7e96c31883d3ebb7c304508))
 - docs prose bugfix ([`efac2fd`](https://github.com/dstroy0/ProtoCore/commit/efac2fd0378fa0cd2847b94e876f42be9d70c470))
 - docs prose bugfix ([`78ca0d8`](https://github.com/dstroy0/ProtoCore/commit/78ca0d8631283914160d1b3dd458c12cd99003a8))
