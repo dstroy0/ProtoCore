@@ -71,7 +71,7 @@ To isolate our application code from physical hardware and the operating system'
 
 <!-- BEGIN GENERATED test-environments (edit test/test_matrix.json, run test/harness.py readme gen) -->
 
-The native test matrix has **423 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [harness.py](harness.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
+The native test matrix has **424 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [harness.py](harness.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
 
 | Environment | Feature flag(s) | Test suite(s) | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -93,6 +93,7 @@ The native test matrix has **423 environments**, one per feature, generated from
 | `native_base64` | default | `unit/src/network_drivers/presentation/codec/base64/test_base64` | test_base64 against the native_stack_l46 stack. |
 | `native_bignum_group14` | default | `unit/src/crypto/asymmetric/test_bignum_group14` | The 2048-bit big-integer layer (crypto/asymmetric/bignum.h) on the portable software Montgomery backend. |
 | `native_bignum_group14_hw` | `PROTOCORE_HAS_HW_BIGNUM=1`, `PROTOCORE_RSA_MODMUL_HW=1` | `unit/src/crypto/asymmetric/test_bignum_group14` | The same big-integer layer with the accelerated bignum backend selected (PROTOCORE_HAS_HW_BIGNUM), answered by the host arm of the RSA/MPI HAL so both backends of bn_expmod_group14 run natively agains... |
+| `native_binary_asset_blobs` | `PROTOCORE_ENABLE_THEMES=1` | `unit/src/network_drivers/application/binary_asset_blobs/test_binary_asset_blobs` | Embedded theme registry (network_drivers/application/binary_asset_blobs): every embedded name finds its own CSS, the registry is sorted, and the near misses - a prefix, an appended byte, a case change... |
 | `native_bitio` | default | `unit/src/mmgr/test_bitio` | The LSB-first bit writer (mmgr/bitio.h) the DEFLATE encoder and the SSH zlib@openssh.com compressor both write their bitstreams through. |
 | `native_ble_gatt_att` | `PROTOCORE_ENABLE_BLE_GATT=1` | `unit/src/services/radio/ble_gatt/test_ble_gatt` | Bluetooth ATT codec and GATT characteristic bridge (services/radio/ble_gatt/ble_gatt.c): the Core Specification Vol 3 Part F section 3.4 PDU layouts and their section 3.4.8 opcodes with little-endian ... |
 | `native_boot` | default | `unit/core_setup/boot/test_boot` | The reset handler's loops (test/core_setup/boot): the .data copy, the .bss zero and the stack paint that protocore_platform_stack_free() reads back. |
@@ -707,7 +708,7 @@ We test session and socket race conditions by interleaved function calling:
 
 <!-- BEGIN GENERATED test-directory (run test/harness.py readme gen) -->
 
-A thorough directory of all **5809 test cases** across **364 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
+A thorough directory of all **5815 test cases** across **365 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
 
 <details>
 <summary><b>test_accept_gate (19 tests)</b></summary>
@@ -4447,6 +4448,74 @@ A thorough directory of all **5809 test cases** across **364 suites**. Expand a 
     * **Objective**: Vector table is populated
     * **Assertions**:
       * <code>Assert greater than uint (0u, (unsigned)ROWS(KAT_GROUP14))</code>
+  </details>
+
+</details>
+
+<details>
+<summary><b>test_binary_asset_blobs (6 tests)</b></summary>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_every_embedded_name_finds_its_own_css</b> &mdash; <i>Every embedded name finds its own css</i></summary>
+
+    * **Objective**: Every embedded name finds its own css
+    * **Assertions**:
+      * <code>Assert true (PROTOCORE_THEME_BLOB_COUNT &gt; 0u)</code>
+      * <code>TEST_ASSERT_EQUAL_PTR(PROTOCORE_THEME_BLOBS[i].css,</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_registry_is_sorted_by_name</b> &mdash; <i>Registry is sorted by name</i></summary>
+
+    * **Objective**: Registry is sorted by name
+    * **Assertions**:
+      * <code>Assert true (strcmp(PROTOCORE_THEME_BLOBS[i - 1].name, PROTOCORE_THEME_BLOBS[i].name) &lt; 0)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_known_theme_is_minified_css</b> &mdash; <i>Longer than the longest embedded name, so the length scan stops at its cap and nothing</i></summary>
+
+    * **Objective**: Longer than the longest embedded name, so the length scan stops at its cap and nothing
+    * **Assertions**:
+      * <code>Assert not null (css)</code>
+      * <code>Assert equal int (0, strncmp(css, ":root{--bg:#0a0600;", 19))</code>
+      * <code>Assert null (BinaryAssetBlobs.css(blobs_work, "amber"))</code>
+      * <code>Assert null (BinaryAssetBlobs.css(blobs_work, "amber-crtx"))</code>
+      * <code>Assert null (BinaryAssetBlobs.css(blobs_work, "Amber-CRT"))</code>
+      * <code>Assert null (BinaryAssetBlobs.css(blobs_work, ""))</code>
+      * <code>Assert null (BinaryAssetBlobs.css(blobs_work, NULL))</code>
+      * <code>Assert null (BinaryAssetBlobs.css(blobs_work, "amber-crt-amber-crt-amber-crt-amber-crt-amber-crt"))</code>
+      * <code>Assert not null (BinaryAssetBlobs.css(blobs_work, "barbie"))</code>
+      * <code>Assert null (BinaryAssetBlobs.css(blobs_work, "barbie"))</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_near_misses_do_not_match</b> &mdash; <i>Near misses do not match</i></summary>
+
+    * **Objective**: Near misses do not match
+    * **Assertions**:
+      * <code>Assert null (BinaryAssetBlobs.css(blobs_work, "amber"))</code>
+      * <code>Assert null (BinaryAssetBlobs.css(blobs_work, "amber-crtx"))</code>
+      * <code>Assert null (BinaryAssetBlobs.css(blobs_work, "Amber-CRT"))</code>
+      * <code>Assert null (BinaryAssetBlobs.css(blobs_work, ""))</code>
+      * <code>Assert null (BinaryAssetBlobs.css(blobs_work, NULL))</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_name_longer_than_every_theme_does_not_match</b> &mdash; <i>Longer than the longest embedded name, so the length scan stops at its cap and nothing</i></summary>
+
+    * **Objective**: Longer than the longest embedded name, so the length scan stops at its cap and nothing
+    * **Assertions**:
+      * <code>Assert null (BinaryAssetBlobs.css(blobs_work, "amber-crt-amber-crt-amber-crt-amber-crt-amber-crt"))</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_trademarked_theme_follows_its_gate</b> &mdash; <i>Trademarked theme follows its gate</i></summary>
+
+    * **Objective**: Trademarked theme follows its gate
+    * **Assertions**:
+      * <code>Assert not null (BinaryAssetBlobs.css(blobs_work, "barbie"))</code>
+      * <code>Assert null (BinaryAssetBlobs.css(blobs_work, "barbie"))</code>
   </details>
 
 </details>
