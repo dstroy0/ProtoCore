@@ -188,11 +188,11 @@ Every one takes `--check` to assert the tracked file already matches, which is h
 
 ## sonar/
 
-| Script                      | W | Flags               | Shells out to     |
-| --------------------------- | - | ------------------- | ----------------- |
-| `accept_style_conflicts.py` |   | `--dry-run`         |                   |
-| `gen_compiledb.sh`          | W |                     | pio, python3, sed |
-| `merge_compiledb.py`        | W | `--baseline --root` |                   |
+| Script                      | W | Flags               | Shells out to       |
+| --------------------------- | - | ------------------- | ------------------- |
+| `accept_style_conflicts.py` |   | `--dry-run`         |                     |
+| `gen_compiledb.sh`          | W |                     | cmake, python3, sed |
+| `merge_compiledb.py`        | W | `--baseline --root` |                     |
 
 ## assets/
 
