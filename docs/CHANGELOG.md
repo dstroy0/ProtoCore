@@ -119,6 +119,9 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- bump github/codeql-action from 4.38.0 to 4.38.1 ([`802e31f`](https://github.com/dstroy0/ProtoCore/commit/802e31f6d30bf929409c16c6259a3911fa75f350))
+- bump prettier from 3.9.6 to 3.9.9 ([`915e6d7`](https://github.com/dstroy0/ProtoCore/commit/915e6d72c0c9ae9c1f0d80da1829ef5bf267fc89))
+- update CHANGELOG.md [skip ci] ([`8550746`](https://github.com/dstroy0/ProtoCore/commit/855074610f62546bc02693214f180fcd85b096d1))
 - update CHANGELOG.md [skip ci] ([`cb955b5`](https://github.com/dstroy0/ProtoCore/commit/cb955b5b4ec0fe2be646dbfe8a366ce0a9ccf7bf))
 - update CHANGELOG.md [skip ci] ([`fd76569`](https://github.com/dstroy0/ProtoCore/commit/fd765697a3f1e2c6f5fa57eade6917e7ddd21332))
 - bump cspell from 10.0.1 to 10.3.1 ([`9f87f78`](https://github.com/dstroy0/ProtoCore/commit/9f87f78facde6688ae661097ffe8cfbd65d8cc0e))
@@ -439,6 +442,9 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge Dependabot #35: build(deps): bump github/codeql-action from 4.38.0 to 4.38.1 ([`d293f8d`](https://github.com/dstroy0/ProtoCore/commit/d293f8d8bcfa675994b658e5e67f296f3a87f5b8))
+- Merge Dependabot #37: build(deps-dev): bump prettier from 3.9.6 to 3.9.9 ([`e0108d0`](https://github.com/dstroy0/ProtoCore/commit/e0108d0eb73537204ac222c26b4e61e2d1e75f0d))
+- housekeeping ([`0f4c3df`](https://github.com/dstroy0/ProtoCore/commit/0f4c3df92004802b93dcdad7fcd9ed9885815afa))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`4d1cefe`](https://github.com/dstroy0/ProtoCore/commit/4d1cefeb7af3e74e95479ac1d6c9c65ac4fdaf49))
 - housekeeping ([`f7ee7ed`](https://github.com/dstroy0/ProtoCore/commit/f7ee7ed646334ba79f15d49f5532423a79829738))
 - Merge branch 'worktree-prose-compliance' ([`8074b13`](https://github.com/dstroy0/ProtoCore/commit/8074b1343c59c72b49736ccd68d9a664052d5423))
