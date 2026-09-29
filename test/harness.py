@@ -1449,7 +1449,8 @@ def cmd_keys_ensure(a):
 # report merge / stable
 # ---------------------------------------------------------------------------
 
-ROW_RE = re.compile(r"^\|\s*`(test_[^`]+)`\s*\|\s*`(native[^`]*)`\s*\|")
+# The names were once code-spanned; the writer no longer does it, so a row matches either way.
+ROW_RE = re.compile(r"^\|\s*`?(test_[^`|\s]+)`?\s*\|\s*`?(native[^`|\s]*)`?\s*\|")
 SEC_RE = re.compile(r"^##\s+(test_\S+)\s+-\s+(native\S*)\s+-\s")
 CNT_RE = re.compile(r"(\d+)\s+passed(?:,\s+(\d+)\s+failed)?")
 DUR_RE = re.compile(r"(\d+):(\d+):(\d+(?:\.\d+)?)\s*\|?\s*$")
