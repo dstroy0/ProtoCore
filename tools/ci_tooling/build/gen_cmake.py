@@ -340,7 +340,7 @@ def render_owed(owed):
             continue
         opts = []
         for w in incs:
-            opts.append("-include" if w.startswith("<") else "-include")
+            opts.append("-include")
             opts.append(w.strip('"<>'))
         out.append(
             'set_source_files_properties("${PROTOCORE_ROOT}/%s" PROPERTIES COMPILE_OPTIONS "%s")\n'

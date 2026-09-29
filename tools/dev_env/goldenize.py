@@ -641,7 +641,7 @@ def doc_tags(block):
     The prose a module already published is the prose the golden header keeps: a converted header
     that drops it trades a documented surface for an undocumented one.
     """
-    body = re.sub(r"^\s*/\*\*|\*/\s*$", "", block)
+    body = re.sub(r"(?:^\s*/\*\*)|(?:\*/\s*$)", "", block)
     body = "\n".join(re.sub(r"^\s*\*\s?", "", ln).strip() for ln in body.splitlines())
     tags, params, brief, ret = re.split(r"(?m)^@", body)[1:], {}, "", ""
     for t in tags:

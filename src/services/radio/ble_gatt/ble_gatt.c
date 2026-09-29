@@ -157,7 +157,7 @@ proto_bool protocore_ble_gatt_att_parse(uint8_t *work, const uint8_t *pdu, size_
         return PROTO_TRUE;
     default:
         ok = PROTO_TRUE; // unknown opcode: still report it, no fixed fields
-        return ok;
+        break;
     }
     return ok;
 }
