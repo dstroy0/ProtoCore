@@ -120,7 +120,8 @@ def test_numbers():
     """(tests_passed, env_count) from the generated test report."""
     s = read(REPORT)
     passed = re.search(r"(\d+)\s+passed", s)
-    envs = re.search(r"over\s+(\d+)\s+auto-discovered native envs", s)
+    # The harness has written both "over N native envs" and "over N auto-discovered native envs".
+    envs = re.search(r"over\s+(\d+)\s+(?:auto-discovered\s+)?native envs", s)
     return (int(passed.group(1)) if passed else None, int(envs.group(1)) if envs else None)
 
 
