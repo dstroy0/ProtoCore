@@ -119,6 +119,10 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- PlatformIO and Arduino compile the HAL arms and find the headers outside src/ ([`d23cb7a`](https://github.com/dstroy0/ProtoCore/commit/d23cb7a33212973065e5f3db1bdbf5ea2abe4a2e))
+- fix the red workflows on main ([`4ac72a8`](https://github.com/dstroy0/ProtoCore/commit/4ac72a8b304d8f9338a3be133f1fa1a58433626a))
+- update test report + coverage [skip ci] ([`4986f3e`](https://github.com/dstroy0/ProtoCore/commit/4986f3ef1cbee02b36e7a8ae97f510c2325ed6b9))
+- update CHANGELOG.md [skip ci] ([`84c2395`](https://github.com/dstroy0/ProtoCore/commit/84c2395990780095e31c0e8c58eeebc462509560))
 - bump cspell from 10.3.1 to 10.3.3 ([`188da5b`](https://github.com/dstroy0/ProtoCore/commit/188da5baaeabfab4e49ca1c8827a16fe036d151e))
 - update test report + coverage [skip ci] ([`43500b3`](https://github.com/dstroy0/ProtoCore/commit/43500b3faad522882efd14781004f151194371ac))
 - update CHANGELOG.md [skip ci] ([`07a9b41`](https://github.com/dstroy0/ProtoCore/commit/07a9b41f518576a2f47131f7d61cdf1263adde2c))
@@ -445,6 +449,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge pull request #39 from dstroy0/doug/laughing-davinci-stc796 ([`603f12a`](https://github.com/dstroy0/ProtoCore/commit/603f12a446d07a27b69c587ae98170271e96bc8c))
 - Merge Dependabot #36: build(deps-dev): bump cspell from 10.3.1 to 10.3.3 ([`e9958c4`](https://github.com/dstroy0/ProtoCore/commit/e9958c43af91749406e56062f6b078b0fb76184d))
 - housekeeping ([`e79cbba`](https://github.com/dstroy0/ProtoCore/commit/e79cbba42435357e440e1843beb52efab8cc24a9))
 - Merge Dependabot #35: build(deps): bump github/codeql-action from 4.38.0 to 4.38.1 ([`d293f8d`](https://github.com/dstroy0/ProtoCore/commit/d293f8d8bcfa675994b658e5e67f296f3a87f5b8))
@@ -874,6 +879,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- report merge matches summary rows without code spans; smbus rows green ([`eec34ee`](https://github.com/dstroy0/ProtoCore/commit/eec34eebcc49b65f350bc3b34520e2805781c5cc))
 - test cryptobench bugfix ([`d8c040d`](https://github.com/dstroy0/ProtoCore/commit/d8c040d60f22989e9b4bde5383d77e02c1a4eb09))
 - test citation bugfix ([`d1cb116`](https://github.com/dstroy0/ProtoCore/commit/d1cb116fbccaca2250ce89550d3980f70ddb5912))
 - a build that did not happen stops looking like one that found nothing wrong ([`883ed43`](https://github.com/dstroy0/ProtoCore/commit/883ed4378d5fd123b5a116e82c5f16fbcbf55e60))
