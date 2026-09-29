@@ -119,6 +119,9 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- fix the workflows #39 left red on main ([`3b5a7f9`](https://github.com/dstroy0/ProtoCore/commit/3b5a7f97339255b1c0cf76b5045a001cd2e7f409))
+- update test report + coverage [skip ci] ([`31cdbfd`](https://github.com/dstroy0/ProtoCore/commit/31cdbfdae2cf69e867b5da3771cd6469239b74c7))
+- update CHANGELOG.md [skip ci] ([`cce89fe`](https://github.com/dstroy0/ProtoCore/commit/cce89fe1f4bf20256a51c70c4dfef3b5afcd1cde))
 - PlatformIO and Arduino compile the HAL arms and find the headers outside src/ ([`d23cb7a`](https://github.com/dstroy0/ProtoCore/commit/d23cb7a33212973065e5f3db1bdbf5ea2abe4a2e))
 - fix the red workflows on main ([`4ac72a8`](https://github.com/dstroy0/ProtoCore/commit/4ac72a8b304d8f9338a3be133f1fa1a58433626a))
 - update test report + coverage [skip ci] ([`4986f3e`](https://github.com/dstroy0/ProtoCore/commit/4986f3ef1cbee02b36e7a8ae97f510c2325ed6b9))
@@ -449,6 +452,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge pull request #40 from dstroy0/doug/laughing-davinci-stc796 ([`b10513a`](https://github.com/dstroy0/ProtoCore/commit/b10513aa86476c5416cf93a52dc2aa79ae05ede5))
 - Merge pull request #39 from dstroy0/doug/laughing-davinci-stc796 ([`603f12a`](https://github.com/dstroy0/ProtoCore/commit/603f12a446d07a27b69c587ae98170271e96bc8c))
 - Merge Dependabot #36: build(deps-dev): bump cspell from 10.3.1 to 10.3.3 ([`e9958c4`](https://github.com/dstroy0/ProtoCore/commit/e9958c43af91749406e56062f6b078b0fb76184d))
 - housekeeping ([`e79cbba`](https://github.com/dstroy0/ProtoCore/commit/e79cbba42435357e440e1843beb52efab8cc24a9))
@@ -665,6 +669,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- README status table reads the report's current env-count wording ([`f07532d`](https://github.com/dstroy0/ProtoCore/commit/f07532d3cf578a2fef19f1d0cb00a1c26cf13594))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e1efd78`](https://github.com/dstroy0/ProtoCore/commit/e1efd7872021efde8bcf36f09c000c1c0e7c3b60))
 - docs generated restore ([`bf13a60`](https://github.com/dstroy0/ProtoCore/commit/bf13a605df2cc4b6f7e96c31883d3ebb7c304508))
 - docs prose bugfix ([`efac2fd`](https://github.com/dstroy0/ProtoCore/commit/efac2fd0378fa0cd2847b94e876f42be9d70c470))
