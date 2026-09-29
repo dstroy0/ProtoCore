@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-09-27 00:55:29
+**Generated:** 2026-09-29 20:19:22
 **Command:** `harness.py run` over 411 native envs
-**Result:** ❌ 4772 passed, 12 failed - 975s
+**Result:** ✅ 4784 passed - 0s
 
 ---
 
@@ -25,7 +25,7 @@
 | test_bitio              | native_mmgr_bitio           |    12 |   ✅   |        - |
 | test_ble_gatt           | native_ble_gatt_att         |    10 |   ✅   |        - |
 | test_bus_capture        | native_bus_capture          |    13 |   ✅   |        - |
-| test_bus_wire           | native_bus_wire             |    17 |   ❌   |        - |
+| test_bus_wire           | native_bus_wire             |    17 |   ✅   |        - |
 | test_bytes              | native_bytes                |    17 |   ✅   |        - |
 | test_bytes              | native_mmgr_bytes           |    17 |   ✅   |        - |
 | test_c37118             | native_c37118               |    12 |   ✅   |        - |
@@ -264,7 +264,7 @@
 | test_ntlm               | native_ntlm_v2              |    14 |   ✅   |        - |
 | test_ntlmssp            | native_ntlmssp              |     9 |   ✅   |        - |
 | test_spnego             | native_spnego               |     8 |   ✅   |        - |
-| test_smbus              | native_smbus                |    30 |   ❌   |        - |
+| test_smbus              | native_smbus                |    30 |   ✅   |        - |
 | test_smtp               | native_smtp                 |    39 |   ✅   |        - |
 | test_snmp_ber           | native_snmp                 |    19 |   ✅   |        - |
 | test_snmp_agent         | native_snmp                 |    41 |   ✅   |        - |
@@ -749,7 +749,7 @@
 
 ---
 
-## test_bus_wire - native_bus_wire - ❌ 1 of 17 failed
+## test_bus_wire - native_bus_wire - ✅ 17 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -763,7 +763,7 @@
 |   5 | `test_ina219_wire_is_big_endian`            |   ✅   | Ina219 wire is big endian            |
 |   6 | `test_rtc_read_wire`                        |   ✅   | Rtc read wire                        |
 |   7 | `test_rtc_set_wire`                         |   ✅   | Rtc set wire                         |
-|   8 | `test_smbus_pec_on_the_wire`                |   ❌   | Smbus pec on the wire                |
+|   8 | `test_smbus_pec_on_the_wire`                |   ✅   | Smbus pec on the wire                |
 |   9 | `test_smbus_without_pec`                    |   ✅   | Smbus without pec                    |
 |  10 | `test_smbus_word_is_little_endian`          |   ✅   | Smbus word is little endian          |
 |  11 | `test_smbus_read_word_wire`                 |   ✅   | Smbus read word wire                 |
@@ -775,8 +775,6 @@
 |  17 | `test_spi_wire`                             |   ✅   | Spi wire                             |
 
 </details>
-
----
 
 ## test_bytes - native_bytes - ✅ 17 passed
 
@@ -7002,7 +7000,7 @@
 
 ---
 
-## test_smbus - native_smbus - ❌ 11 of 30 failed
+## test_smbus - native_smbus - ✅ 30 passed
 
 <details>
 <summary><b>Expand Suite Details</b></summary>
@@ -7010,17 +7008,17 @@
 |   # | Test                                                         | Status | Description                                                                                  |
 | --: | :----------------------------------------------------------- | :----: | :------------------------------------------------------------------------------------------- |
 |   1 | `test_addr_octet_carries_the_direction_bit`                  |   ✅   | The address is 7 bits, so bit 7 of the argument is dropped rather than shifted into bit 8.   |
-|   2 | `test_pec_is_crc8_of_the_address_octet`                      |   ❌   | Pec is crc8 of the address octet                                                             |
-|   3 | `test_pec_write_covers_address_then_payload`                 |   ❌   | Pec write covers address then payload                                                        |
-|   4 | `test_pec_read_spans_both_halves_and_the_repeated_start`     |   ❌   | Pec read spans both halves and the repeated start                                            |
-|   5 | `test_pec_read_without_a_command`                            |   ❌   | Pec read without a command                                                                   |
+|   2 | `test_pec_is_crc8_of_the_address_octet`                      |   ✅   | Pec is crc8 of the address octet                                                             |
+|   3 | `test_pec_write_covers_address_then_payload`                 |   ✅   | Pec write covers address then payload                                                        |
+|   4 | `test_pec_read_spans_both_halves_and_the_repeated_start`     |   ✅   | Pec read spans both halves and the repeated start                                            |
+|   5 | `test_pec_read_without_a_command`                            |   ✅   | Pec read without a command                                                                   |
 |   6 | `test_pec_binds_to_the_address`                              |   ✅   | The first address is captured before the second runs: both report through the one namespace, |
 |   7 | `test_pec_binds_to_the_direction`                            |   ✅   | The write direction is captured before the read runs: both report through the one namespace. |
-|   8 | `test_pec_empty_payload_still_covers_the_address`            |   ❌   | Pec empty payload still covers the address                                                   |
-|   9 | `test_pec_holds_nothing_between_transactions`                |   ❌   | Pec holds nothing between transactions                                                       |
+|   8 | `test_pec_empty_payload_still_covers_the_address`            |   ✅   | Pec empty payload still covers the address                                                   |
+|   9 | `test_pec_holds_nothing_between_transactions`                |   ✅   | Pec holds nothing between transactions                                                       |
 |  10 | `test_pec_flag_round_trips`                                  |   ✅   | Pec flag round trips                                                                         |
 |  11 | `test_write_shapes_put_their_own_octets_on_the_wire`         |   ✅   | Write shapes put their own octets on the wire                                                |
-|  12 | `test_pec_octet_is_appended_to_a_write`                      |   ❌   | Pec octet is appended to a write                                                             |
+|  12 | `test_pec_octet_is_appended_to_a_write`                      |   ✅   | Pec octet is appended to a write                                                             |
 |  13 | `test_block_write_counts_the_payload`                        |   ✅   | Block write counts the payload                                                               |
 |  14 | `test_block_write_refuses_over_the_protocol_cap`             |   ✅   | A zero-length block and a null payload are refused the same way.                             |
 |  15 | `test_read_shapes_take_their_octets_back`                    |   ✅   | Read shapes take their octets back                                                           |
@@ -7029,14 +7027,14 @@
 |  18 | `test_block_read_refuses_a_zero_count`                       |   ✅   | Block read refuses a zero count                                                              |
 |  19 | `test_process_call_exchanges_a_word`                         |   ✅   | 6.5.6: the slave answers with a word it computed, not the one it was sent.                   |
 |  20 | `test_a_slave_that_does_not_acknowledge_fails_the_shape`     |   ✅   | A slave that does not acknowledge fails the shape                                            |
-|  21 | `test_a_wrong_pec_on_a_read_is_rejected`                     |   ❌   | The slave supplies a corrupted checksum, which is the line noise 6.4 exists to catch.        |
+|  21 | `test_a_wrong_pec_on_a_read_is_rejected`                     |   ✅   | The slave supplies a corrupted checksum, which is the line noise 6.4 exists to catch.        |
 |  22 | `test_a_byte_round_trips_through_a_command_code`             |   ✅   | A byte round trips through a command code                                                    |
 |  23 | `test_a_word_round_trips_low_octet_first`                    |   ✅   | A word round trips low octet first                                                           |
 |  24 | `test_a_block_round_trips_with_its_count`                    |   ✅   | A block round trips with its count                                                           |
-|  25 | `test_smbus31_the_pec_spans_the_address_octets`              |   ❌   | Smbus31 the pec spans the address octets                                                     |
-|  26 | `test_smbus31_a_read_verifies_the_pec_the_slave_supplied`    |   ❌   | Smbus31 a read verifies the pec the slave supplied                                           |
+|  25 | `test_smbus31_the_pec_spans_the_address_octets`              |   ✅   | Smbus31 the pec spans the address octets                                                     |
+|  26 | `test_smbus31_a_read_verifies_the_pec_the_slave_supplied`    |   ✅   | Smbus31 a read verifies the pec the slave supplied                                           |
 |  27 | `test_smbus31_a_wrong_pec_is_not_processed`                  |   ✅   | Smbus31 a wrong pec is not processed                                                         |
-|  28 | `test_smbus31_a_word_and_a_block_round_trip_with_the_pec_on` |   ❌   | Smbus31 a word and a block round trip with the pec on                                        |
+|  28 | `test_smbus31_a_word_and_a_block_round_trip_with_the_pec_on` |   ✅   | Smbus31 a word and a block round trip with the pec on                                        |
 |  29 | `test_smbus31_two_slaves_keep_their_own_command_codes`       |   ✅   | Smbus31 two slaves keep their own command codes                                              |
 |  30 | `test_a_refused_transfer_fails_the_write`                    |   ✅   | A refused transfer fails the write                                                           |
 
