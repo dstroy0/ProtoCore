@@ -119,6 +119,10 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+<<<<<<< Updated upstream
+=======
+- bump github/codeql-action from 4.38.1 to 4.38.2 ([`314be15`](https://github.com/dstroy0/ProtoCore/commit/314be1529caf0c147c01f3c41a9747124dd0a7e1))
+>>>>>>> Stashed changes
 - fix the workflows #39 left red on main ([`3b5a7f9`](https://github.com/dstroy0/ProtoCore/commit/3b5a7f97339255b1c0cf76b5045a001cd2e7f409))
 - update test report + coverage [skip ci] ([`31cdbfd`](https://github.com/dstroy0/ProtoCore/commit/31cdbfdae2cf69e867b5da3771cd6469239b74c7))
 - update CHANGELOG.md [skip ci] ([`cce89fe`](https://github.com/dstroy0/ProtoCore/commit/cce89fe1f4bf20256a51c70c4dfef3b5afcd1cde))
@@ -452,6 +456,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+<<<<<<< Updated upstream
+=======
+- Merge pull request #38 from dstroy0/dependabot/github_actions/github/codeql-action-4.38.2 ([`9eb4ec5`](https://github.com/dstroy0/ProtoCore/commit/9eb4ec525085f5f64b8c71ccf430db51d24e2425))
+>>>>>>> Stashed changes
 - Merge pull request #40 from dstroy0/doug/laughing-davinci-stc796 ([`b10513a`](https://github.com/dstroy0/ProtoCore/commit/b10513aa86476c5416cf93a52dc2aa79ae05ede5))
 - Merge pull request #39 from dstroy0/doug/laughing-davinci-stc796 ([`603f12a`](https://github.com/dstroy0/ProtoCore/commit/603f12a446d07a27b69c587ae98170271e96bc8c))
 - Merge Dependabot #36: build(deps-dev): bump cspell from 10.3.1 to 10.3.3 ([`e9958c4`](https://github.com/dstroy0/ProtoCore/commit/e9958c43af91749406e56062f6b078b0fb76184d))
