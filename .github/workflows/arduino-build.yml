@@ -13,6 +13,9 @@ on:
     paths:
       - "src/**"
       - "include/**"
+      - "vendor/**"
+      - "test/core_setup/**"
+      - "library.properties"
       - "examples/**"
       - ".github/workflows/arduino-build.yml"
   pull_request:
@@ -20,6 +23,9 @@ on:
     paths:
       - "src/**"
       - "include/**"
+      - "vendor/**"
+      - "test/core_setup/**"
+      - "library.properties"
       - "examples/**"
   workflow_dispatch:
 
@@ -105,8 +111,26 @@ jobs:
       # xtensa default and the link fails with "libstdc++.a compiled for a big endian system and
       # target is little endian". (The PlatformIO build uses the older, statically-little-endian
       # xtensa-esp32-elf toolchain, so wrapping is safe there.) Each example does a full compile.
+      # Arduino compiles a library's src/ and nothing else, and src/ is the only include path it
+      # gives the library. The tree keeps the entry header in include/, the vendor axis in vendor/
+      # and the HAL arms in test/core_setup/, so the library is staged in Arduino's layout: those
+      # three under src/, where every #include spelling in the tree resolves unchanged. It is the
+      # same set of sources the ESP-IDF component globs.
+      - name: Stage the library in Arduino layout
+        run: |
+          STAGE="$RUNNER_TEMP/ProtoCore"
+          mkdir -p "$STAGE/src/test"
+          cp library.properties "$STAGE/"
+          cp -r src/. "$STAGE/src/"
+          cp include/*.h "$STAGE/src/"
+          cp -r vendor "$STAGE/src/vendor"
+          cp -r test/core_setup "$STAGE/src/test/core_setup"
+          # Not firmware: idemIP is a host model of the IP stack, boot/ the bare-metal simulator's
+          # startup (its own gmtime_r, memcpy and vector table).
+          rm -rf "$STAGE/src/test/core_setup/idemIP" "$STAGE/src/test/core_setup/boot"
+          echo "PROTOCORE_LIB=$STAGE" >> "$GITHUB_ENV"
       - name: Compile ${{ matrix.example.name }} (Arduino IDE, esp32 3.x)
         # No --build-property / build_flags: the example's build_opt.h supplies the feature
         # flags, so this is byte-for-byte how the Arduino IDE builds it.
         run: |
-          arduino-cli compile --fqbn esp32:esp32:esp32 --library . "examples/${{ matrix.example.name }}"
+          arduino-cli compile --fqbn esp32:esp32:esp32 --library "$PROTOCORE_LIB" "examples/${{ matrix.example.name }}"

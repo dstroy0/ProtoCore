@@ -25,6 +25,7 @@ set(EXTRA_COMPONENT_DIRS "${PROTOCORE_ROOT}")
 add_compile_definitions(
     PROTOCORE_ENABLE_MODBUS=1
     PROTOCORE_ENABLE_SNMP=1
+    PROTOCORE_ENABLE_UDP=1 # SNMP runs over UDP (buffer_sizing.h enforces it)
 )
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)

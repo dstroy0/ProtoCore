@@ -11,7 +11,7 @@ the open Internet you want `coaps://` - CoAP inside a DTLS 1.3 session (RFC 7252
 authenticated.
 
 **The resource table is transport-independent.** You register resources exactly
-once with `protocore_coap_server_add_resource()`; the plaintext server (`protocore_coap_server_begin`)
+once with `protocore_coap_add_resource()`; the plaintext server (`protocore_coap_server_begin`)
 and this secure front-end both dispatch against the same table. Here we bind only
 the secure one:
 

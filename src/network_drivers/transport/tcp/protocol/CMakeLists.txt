@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(network_drivers/transport/tcp/protocol
-  GATE PROTOCORE_ENABLE_TLS
   SOURCES protocol.c
   DEPS
     network_drivers/transport/tcp/evt

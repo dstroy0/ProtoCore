@@ -10,7 +10,6 @@
 
 #if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
 
-#include "network_drivers/presentation/ssh/transport/transport/transport.h"
 #include "crypto/aead/aesgcm/aesgcm.h"
 #include "crypto/aead/chachapoly/chachapoly.h"
 #include "crypto/asymmetric/bignum/bignum.h"         // Bignum, protocore_bignum
@@ -37,7 +36,8 @@
 #include "network_drivers/presentation/ssh/transport/extension/extension.h" // ssh_extinfo_build()
 #include "network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.h"
 #include "network_drivers/presentation/ssh/transport/ssh_rsa/ssh_rsa.h" // ssh_rsa_encode_pubkey/sign, ssh_host_pubkey, SSH_RSA_*
-#include "server/clock/clock.h"                                         // protocore_millis() (re-key timer)
+#include "network_drivers/presentation/ssh/transport/transport/transport.h"
+#include "server/clock/clock.h" // protocore_millis() (re-key timer)
 
 #if PROTOCORE_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem/mlkem.h" // MlKem (PQ/T hybrid KEX responder)

@@ -38,6 +38,11 @@ option(PROTOCORE_WITH_ARDUINO "Build against arduino-esp32 (Arduino-as-component
 # (cmake -P) to extract REQUIRES, and CONFIGURE_DEPENDS is illegal there. The glob is therefore
 # evaluated at configure time - run `idf.py reconfigure` after adding or removing a source file.
 file(GLOB_RECURSE PROTOCORE_SRCS "src/*.c" "src/*.cpp" "test/core_setup/*.c" "test/core_setup/*.cpp")
+# Two arms under test/core_setup/ are not firmware and carry no guard: idemIP is a host model of the
+# IP stack (its headers resolve from test/core_setup/, which is not an include dir here), and boot/
+# is the bare-metal simulator's startup - its own gmtime_r, memcpy and vector table, which collide
+# with newlib and the IDF startup.
+list(FILTER PROTOCORE_SRCS EXCLUDE REGEX "/test/core_setup/(idemIP|boot)/")
 
 set(PROTOCORE_REQUIRES
     lwip
