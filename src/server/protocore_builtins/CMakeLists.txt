@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(server/protocore_builtins
-  GATE PROTOCORE_ENABLE_TELNET
   SOURCES protocore_builtins.c
   PRIVATE_DEPS
     network_drivers/presentation

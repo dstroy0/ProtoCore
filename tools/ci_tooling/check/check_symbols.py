@@ -72,6 +72,7 @@ def decomment(t):
 GUARD_EXCEPTIONS = {
     "ntrip_caster_listener.h": "PROTOCORE_NTRIP_LISTENER_H",  # "caster" is implied by "ntrip"
     "provisioning_service.h": "PROTOCORE_PROVISIONING_H",  # a _service header is a service
+    "feature_dependency_en.h": "PROTOCORE_DEPENDENCY_EN_H",  # it lives in config/features/
 }
 
 

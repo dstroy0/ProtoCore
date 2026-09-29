@@ -13,8 +13,8 @@
  * @date    2026
  */
 
-#ifndef PROTOCORE_FEATURE_DEPENDENCY_EN_H
-#define PROTOCORE_FEATURE_DEPENDENCY_EN_H
+#ifndef PROTOCORE_DEPENDENCY_EN_H
+#define PROTOCORE_DEPENDENCY_EN_H
 
 #ifndef PROTOCORE_CONFIG_H
 #error "include protocore_config.h instead of this file - it is the entry point that states the feature flags"
@@ -221,4 +221,4 @@
 // required above). They do NOT need FILE_SERVING: that dependency was the fs::FS seam, and the seam
 // now lives with the vendor code in test/core_setup/, behind the mount backend.
 
-#endif // PROTOCORE_FEATURE_DEPENDENCY_EN_H
+#endif // PROTOCORE_DEPENDENCY_EN_H

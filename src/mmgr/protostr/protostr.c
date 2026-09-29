@@ -513,7 +513,9 @@ static const char *find_cs(const char *hay, size_t read_cap, const char *needle,
     // a zero lane at index j < w means needle[j] is the terminator, so nlen is j. The mask only
     // decides the length when the terminator lies inside the loaded window; at j == w the needle may
     // continue past it and the bound is read the long way.
-    const protocore_swar_word n_raw = (protocore_swar_word)raw.load(needle, w);
+    // Called directly, not as raw.load: xtensa gcc will not inline an always_inline entry it
+    // reaches through the table, and fails the build.
+    const protocore_swar_word n_raw = (protocore_swar_word)proto_raw_load(needle, w);
     const protocore_swar_word nz = swar.has_zero(n_raw);
     // With no terminator in the window, what is left is [w, needle_cap). A single byte there can only
     // be the terminator, so nlen is w. Anything longer is read the long way.
@@ -837,7 +839,9 @@ static const char *find_ci(const char *hay, size_t read_cap, const char *needle,
         w = 2u;
     }
 
-    const protocore_swar_word n_raw = (protocore_swar_word)raw.load(needle, w);
+    // Called directly, not as raw.load: xtensa gcc will not inline an always_inline entry it
+    // reaches through the table, and fails the build.
+    const protocore_swar_word n_raw = (protocore_swar_word)proto_raw_load(needle, w);
     const protocore_swar_word nz = swar.has_zero(n_raw);
     size_t j0 = PROTOCORE_SWAR_BYTES;
     if (nz != 0)

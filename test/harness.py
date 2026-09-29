@@ -1957,6 +1957,13 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
         # Coverage counters are what is being measured, so the optimizer stays out of the way.
         if coverage:
             opt = ["-g", "-O0", "--coverage"]
+        # -O0 emits every header's unused static dispatch table, and a table names its module's
+        # entries whether or not the env gates that module in. Section GC drops the unreferenced
+        # tables at link, the way -O1 drops them at compile, so their relocations are never resolved.
+        gc = []
+        if "-O0" in opt:
+            opt = opt + ["-ffunction-sections", "-fdata-sections"]
+            gc = ["-Wl,--gc-sections"]
         base = (
             [cc, "-std=c11", "-D_POSIX_C_SOURCE=200809L", "-fno-exceptions"]
             + opt
@@ -1984,9 +1991,9 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
                 out_lines.append(failed)
                 rc_total = 1
                 continue
-            cmd = [cc, "--coverage"] + objs + ["-o", exe, "-lm"]
+            cmd = [cc, "--coverage"] + gc + objs + ["-o", exe, "-lm"]
         else:
-            cmd = base + srcs + ["-o", exe, "-lm"]
+            cmd = base + gc + srcs + ["-o", exe, "-lm"]
         if verbose:
             out_lines.append(" ".join(cmd))
         b = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)

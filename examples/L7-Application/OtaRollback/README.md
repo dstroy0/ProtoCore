@@ -29,7 +29,7 @@ void loop() {
 ```
 
 `protocore_ota_rollback_tick(ok)` is a no-op once the image is committed or on a
-normally-booted image, so it is safe to call every loop. `protocore_ota_img_state()`
+normally-booted image, so it is safe to call every loop. `protocore_ota_rollback_state()`
 reports the current image state for the `/ota-state` endpoint.
 
 **Requirement.** Actual rollback needs the bootloader's app-rollback support

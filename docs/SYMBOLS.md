@@ -166,8 +166,9 @@ a tree this deep; the filename form lands at median 20.
 | --------------------------------------------------------- | ---------------------------- | ------ |
 | `services/timing_position/gnss/ntrip_caster_listener.h`   | `PROTOCORE_NTRIP_LISTENER_H` | 26     |
 | `server/core/provisioning_service/provisioning_service.h` | `PROTOCORE_PROVISIONING_H`   | 25     |
+| `config/features/feature_dependency_en.h`                 | `PROTOCORE_DEPENDENCY_EN_H`  | 25     |
 
-`caster` is implied by `ntrip`, and a `_service` header is a service. `check_symbols.py` rejects any
+`caster` is implied by `ntrip`, a `_service` header is a service, and a header in `config/features/` is a feature header. `check_symbols.py` rejects any
 guard that is neither the filename form nor a listed exception; it raises and never invents a
 shortening. It checks uniqueness of the **final** guard, since truncation can itself create a
 collision.

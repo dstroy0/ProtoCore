@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(server/io/response
-  GATE PROTOCORE_ENABLE_STATS
   SOURCES response.c
   PRIVATE_DEPS
     mmgr/membuild

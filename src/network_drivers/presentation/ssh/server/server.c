@@ -10,13 +10,13 @@
 
 #if PROTOCORE_ENABLE_SSH
 
-#include "network_drivers/presentation/ssh/server/server.h"
 #include "mmgr/plaintext/plaintext.h"
 #include "mmgr/secure/secure.h"
 #include "network_drivers/presentation/ssh/auth/auth.h"
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/connection/connection.h"
 #include "network_drivers/presentation/ssh/network/network.h"
+#include "network_drivers/presentation/ssh/server/server.h"
 #include "network_drivers/presentation/ssh/ssh.h"
 #include "network_drivers/presentation/ssh/transport/transport/transport.h"
 #include "network_drivers/transport/tcp/common/common.h"     // TcpConn, conn_pool: the slots a session runs on

@@ -10,7 +10,6 @@
 
 #if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
 
-#include "network_drivers/presentation/ssh/auth/auth.h"
 #include "crypto/asymmetric/ecdsa/ecdsa.h"     // Ecdsa (ecdsa-sha2-nistp256)
 #include "crypto/asymmetric/ed25519/ed25519.h" // Ed25519 (ssh-ed25519 client keys)
 #include "mmgr/bytes/bytes.h"                  // bytes.rd_str() - the RFC 4251 sec 5 string reader
@@ -19,6 +18,7 @@
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h" // str.eq() - the bounded string compare the wire fields use
 #include "mmgr/secure/secure.h"
+#include "network_drivers/presentation/ssh/auth/auth.h"
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/connection/connection.h"         // ssh_connection_dispatch()
 #include "network_drivers/presentation/ssh/network/network.h"               // SshNetwork.emit()

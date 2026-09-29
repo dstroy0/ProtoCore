@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(shared/log
-  GATE PROTOCORE_ENABLE_LOGBUF
   SOURCES log.c
   PRIVATE_DEPS
     mmgr/plaintext

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(network_drivers/tls/key_schedule
+  GATE PROTOCORE_ENABLE_HTTP3 OR PROTOCORE_ENABLE_DTLS OR PROTOCORE_ENABLE_TLS
   SOURCES key_schedule.c
   PRIVATE_DEPS
     crypto/hash/sha256

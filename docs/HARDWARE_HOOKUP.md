@@ -907,8 +907,8 @@ clocking stalls that read instead of the main loop.
 
 - **LD2410 mmWave radar, `PROTOCORE_ENABLE_LD2410`** - a 24 GHz presence sensor that sees a
   still person (breathing), in the dark, through thin walls - over a UART at **256000
-  baud**. Cross the data wires (module TX -> ESP32 RX). `protocore_ld2410_poll()` decodes each
-  frame; `protocore_ld2410_present()` / `protocore_ld2410_distance_cm()` act on it. Example Ld2410.
+  baud**. Cross the data wires (module TX -> ESP32 RX). `Ld2410.poll()` decodes each
+  frame; `Ld2410.present()` / `Ld2410.distance_cm()` act on it. Example Ld2410.
 - **MPR121 capacitive touch, `PROTOCORE_ENABLE_MPR121`** - turns 12 wires or pads into
   touch buttons (I2C 0x5A). `protocore_mpr121_read_touched()` returns a 12-bit mask. Example
   Mpr121.

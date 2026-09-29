@@ -10,7 +10,7 @@ no sessions, no per-client state, and no heap - verification is a hash check.
 Only HS256 is supported (the deterministic, shared-secret choice for a
 constrained device).
 
-**Verify the signature.** `protocore_jwt_bearer_valid()` checks the whole
+**Verify the signature.** `protocore_jwt_verify_bearer()` checks the whole
 `Authorization` header against the secret. The full header is in
 `req->authorization` - JWTs exceed `MAX_VAL_LEN`, so the parser captures the
 authorization header whole when `PROTOCORE_ENABLE_JWT` is set:
