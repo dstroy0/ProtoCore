@@ -14,3 +14,7 @@ CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 
 # WiFi + three concurrent services (HTTP + Modbus + SNMP) headroom on the Arduino loop task
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+
+# -Os, as the Arduino and PlatformIO builds compile the library. At IDF's default -Og, xtensa gcc
+# does not inline an always_inline helper reached through its module's table, and fails the build.
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y

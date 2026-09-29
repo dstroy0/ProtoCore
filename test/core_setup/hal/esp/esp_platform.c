@@ -67,6 +67,11 @@ uint32_t protocore_platform_stack_free(void)
 
 #if PROTOCORE_HAS_VENDOR_PM
 #include "esp_system.h"
+#if defined(ARDUINO)
+#include "esp32-hal.h" // getCpuFrequencyMhz / setCpuFrequencyMhz / temperatureRead
+#else
+#include "esp_rom_sys.h" // esp_rom_get_cpu_ticks_per_us: the clock in MHz without the Arduino layer
+#endif
 
 int protocore_platform_reset_was_brownout(void)
 {
@@ -75,8 +80,9 @@ int protocore_platform_reset_was_brownout(void)
 
 int16_t protocore_platform_die_temp_c(void)
 {
-#if defined(SOC_TEMP_SENSOR_SUPPORTED) || defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32S3) ||  \
-    defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C6) || defined(CONFIG_IDF_TARGET_ESP32P4)
+#if defined(ARDUINO) &&                                                                                                \
+    (defined(SOC_TEMP_SENSOR_SUPPORTED) || defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32S3) || \
+     defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C6) || defined(CONFIG_IDF_TARGET_ESP32P4))
     float t = temperatureRead();
     // The driver reports a sentinel far outside any real die temperature when the sensor is not up.
     if (t < -60.0f || t > 200.0f)
@@ -85,18 +91,29 @@ int16_t protocore_platform_die_temp_c(void)
     }
     return (int16_t)(t + (t < 0 ? -0.5f : 0.5f));
 #else
-    return INT16_MIN; // this part has no usable internal sensor
+    return INT16_MIN; // no usable internal sensor, or no Arduino layer to read it through
 #endif
 }
 
 uint16_t protocore_platform_cpu_mhz(void)
 {
+#if defined(ARDUINO)
     return (uint16_t)getCpuFrequencyMhz();
+#else
+    return (uint16_t)esp_rom_get_cpu_ticks_per_us();
+#endif
 }
 
 int protocore_platform_set_cpu_mhz(uint32_t mhz)
 {
+#if defined(ARDUINO)
     return setCpuFrequencyMhz(mhz) ? 1 : 0;
+#else
+    // Plain IDF moves the clock through esp_pm_configure(), which needs CONFIG_PM_ENABLE; report the
+    // request as not taken rather than pretend.
+    (void)mhz;
+    return 0;
+#endif
 }
 #endif // PROTOCORE_HAS_VENDOR_PM
 

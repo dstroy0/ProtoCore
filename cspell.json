@@ -1641,7 +1641,22 @@
     "DEVICEERROR",
     "greppable",
     "pdftotext",
-    "RANGECOMPLETE"
+    "RANGECOMPLETE",
+    "davput",
+    "uintptr",
+    "repotools",
+    "pyproject",
+    "goldenize",
+    "shapeaudit",
+    "nsmap",
+    "readclean",
+    "uatree",
+    "uaspace",
+    "capsweep",
+    "maint",
+    "nsconv",
+    "codemask",
+    "repointing"
   ],
   "ignorePaths": [
     "node_modules/**",
