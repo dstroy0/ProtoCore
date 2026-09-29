@@ -41,7 +41,9 @@
     "exclude": [
       ".github",
       ".gitignore",
-      "test",
+      "test/[!c]*",
+      "test/compile_commands.json",
+      "test/coverage.xml",
       "platformio.ini",
       ".bumpversion.cfg",
       "cspell.json",
@@ -60,8 +62,15 @@
     ]
   },
   "build": {
-    "srcDir": "src",
+    "srcDir": ".",
+    "srcFilter": [
+      "-<*>",
+      "+<src/>",
+      "+<test/core_setup/>",
+      "-<test/core_setup/idemIP/>",
+      "-<test/core_setup/boot/>"
+    ],
     "unflags": ["-std=gnu99"],
-    "flags": ["-std=gnu11", "-I include", "-I ."]
+    "flags": ["-std=gnu11", "-I include", "-I src"]
   }
 }
