@@ -902,7 +902,7 @@ PY_FLAG = re.compile(
     r"""|(?:not\s+in|in|==|!=)\s*["'](--[a-z0-9][a-z0-9-]*)["']"""
     r"""|argv\.(?:remove|count|index)\(\s*["'](--[a-z0-9][a-z0-9-]*)["']"""
 )
-SH_FLAG = re.compile(r"(?m)^\s*(--[a-z0-9][a-z0-9-]*)\)|\[\s*\"\$\w+\"\s*=\s*\"?(--[a-z0-9][a-z0-9-]*)")
+SH_FLAG = re.compile(r"(?m)(?:^\s*(--[a-z0-9][a-z0-9-]*)\))|(?:\[\s*\"\$\w+\"\s*=\s*\"?(--[a-z0-9][a-z0-9-]*))")
 
 # Commands a Python file hands to the OS.
 PY_EXEC = re.compile(
