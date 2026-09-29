@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(network_drivers/presentation/ssh/app/server
-  GATE PROTOCORE_ENABLE_SSH_SFTP
   SOURCES server.c
   DEPS
     network_drivers/presentation/ssh/connection

@@ -10,7 +10,6 @@
 
 #if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
 
-#include "network_drivers/presentation/ssh/connection/connection.h"
 #include "mmgr/bytes/bytes.h"           // bytes.rd_u32 / bytes.rd_str - the one length-prefixed reader
 #include "mmgr/endian/endian.h"         // endian.wr32be - the one wire-integer writer
 #include "mmgr/plaintext/plaintext.h"   // protocore_plaintext_span / _mark / _release - the dispatch reply buffer
@@ -18,6 +17,7 @@
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h" // str.len - the bounded string length
 #include "mmgr/secure/secure.h"     // the persistent end this module's key material is taken from
+#include "network_drivers/presentation/ssh/connection/connection.h"
 #include "network_drivers/presentation/ssh/network/network.h" // SshNetwork: the socket seam
 #include "network_drivers/presentation/ssh/ssh.h"
 #include "network_drivers/presentation/ssh/transport/transport/transport.h" // ssh_sess, ssh_pkt - session and packet state

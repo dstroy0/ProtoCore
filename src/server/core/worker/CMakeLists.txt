@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(server/core/worker
-  GATE PROTOCORE_ENABLE_PREEMPT_QUEUE
   SOURCES worker.c
   DEPS
     server/core/preempt_queue

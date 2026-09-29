@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(network_drivers/session
-  GATE PROTOCORE_ENABLE_HTTP2
   SOURCES session.c
   DEPS
     network_drivers/transport/tcp/evt

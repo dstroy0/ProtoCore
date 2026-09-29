@@ -832,7 +832,6 @@ removed.
 | --------------------------------------------- | ---------------------------------------------------------------- | ---------------- |
 | `crypto_work[1536]`                           | After every [`bn_expmod_group14()`](@ref bn_expmod_group14) call | `crypto/asymmetric/bignum.c` |
 | `SshDhState.y`, `.K`                          | After key derivation in [`ssh_dh_finish()`](@ref ssh_dh_finish)  | `network_drivers/presentation/ssh/transport/transport.c` |
-| RSA sign bignum temporaries (n/d/m/s)         | Before [`protocore_rsa_sign_sw()`](@ref protocore_rsa_sign_sw) returns       | `crypto/asymmetric/rsa.c` |
 | [`SshKeyMat`](@ref SshKeyMat)                 | On connection close / error                                      | `network_drivers/presentation/ssh/transport/transport.h` |
 | [`SshDhState`](@ref SshDhState) (full struct) | On connection close / error                                      | `network_drivers/presentation/ssh/transport/transport.h` |
 | DER private key stack copy                    | After `mbedtls_pk_parse_key()` in `protocore_ssh_rsa_load_pubkey()`    | `ssh_rsa.c`    |

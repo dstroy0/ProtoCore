@@ -84,7 +84,8 @@ def main() -> int:
     # namespacing structs of static constexpr. The question is "does this symbol exist",
     # not "is it a macro".
     # test/ and penetration_testing/ define their own PROTOCORE_ symbols (PROTOCORE_SSH_BENCH,
-    # PROTOCORE_SSH_TEST_HOST_KEY_DER); a doc citing those is not stale.
+    # PROTOCORE_SSH_TEST_HOST_KEY_DER); a doc citing those is not stale. include/ and vendor/ hold
+    # the entry header and the vendor axis (PROTOCORE_VENDOR_*, the board profiles' PROTOCORE_HW_*).
     src_blob = "".join(
         read(f)
         for f in sh(
@@ -93,6 +94,10 @@ def main() -> int:
             "src/*.h",
             "src/*.c",
             "src/*.cpp",
+            "include/*.h",
+            "vendor/*.h",
+            "vendor/*.c",
+            "vendor/*.cpp",
             "test/core_setup/*.h",
             "test/core_setup/*.c",
             "test/core_setup/*.cpp",

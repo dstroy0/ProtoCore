@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(network_drivers/transport/udp/server
-  GATE PROTOCORE_ENABLE_DIFFSERV
   SOURCES server.c
   DEPS
     shared/ip
