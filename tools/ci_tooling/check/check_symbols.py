@@ -111,7 +111,9 @@ EXCLUDE = ("src/web_assets",)
 def sources():
     for base, dirs, files in os.walk(SRC):
         rel = os.path.relpath(base, ROOT).replace(os.sep, "/")
-        dirs[:] = [d for d in dirs if not d.startswith(".") and f"{rel}/{d}" not in EXCLUDE]
+        # Sorted: a guard collision names whichever header was seen first, and the baseline keys on
+        # that message, so the walk order has to be the same on every filesystem.
+        dirs[:] = sorted(d for d in dirs if not d.startswith(".") and f"{rel}/{d}" not in EXCLUDE)
         for f in sorted(files):
             if f.endswith((".h", ".c", ".cpp")):
                 yield os.path.join(base, f)

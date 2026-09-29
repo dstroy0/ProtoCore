@@ -84,12 +84,13 @@ function(protocore_add_module path)
   endforeach()
 
   # PRIVATE is for a module this one calls but does not expose in its own header, so a consumer does
-  # not inherit it. Meaningless on an INTERFACE target, which has no compilation of its own.
+  # not inherit it. It is recorded, not linked. A module's compile flags all come from pc_config,
+  # which it links above, and one OBJECT library linking another carries no objects - so a private
+  # edge would add nothing to the compile but an edge to the graph, and the halves of a layer that
+  # call each other (tcp/server, tcp/protocol, tcp/lower) would make it a cycle, which CMake refuses
+  # between anything but static libraries.
   if(ARG_PRIVATE_DEPS AND NOT ARG_HEADER_ONLY)
-    foreach(dep IN LISTS ARG_PRIVATE_DEPS)
-      protocore_module_target("${dep}" _d)
-      target_link_libraries(${target} PRIVATE ${_d})
-    endforeach()
+    set_property(TARGET ${target} PROPERTY PROTOCORE_PRIVATE_DEPS ${ARG_PRIVATE_DEPS})
   endif()
 
   # Collected so an aggregate can link every module that survived its gate without listing them,
