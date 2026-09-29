@@ -6,7 +6,10 @@
  * @brief The client engine: RFC 4253 handshake, RFC 4252 auth, RFC 4254 channels, outbound.
  */
 
-#include "network_drivers/presentation/ssh/client/client.h"
+#include "protocore_config.h"
+
+#if PROTOCORE_ENABLE_SSH_CLIENT
+
 #include "crypto/asymmetric/bignum/bignum.h"         // bn_expmod_group14 (dh-group14 client)
 #include "crypto/asymmetric/curve25519/curve25519.h" // Curve25519 (curve25519-sha256)
 #include "crypto/asymmetric/ecdsa/ecdsa.h"           // ecdh-sha2-nistp256 + ecdsa host-key verify
@@ -21,6 +24,7 @@
 #include "mmgr/rawmemcpy/rawmemcpy.h" // raw.put_u32 - one unaligned store, not four
 #include "mmgr/secure/secure.h"
 #include "network_drivers/presentation/ssh/auth/auth.h"
+#include "network_drivers/presentation/ssh/client/client.h"
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/connection/connection.h"
 #include "network_drivers/presentation/ssh/network/network.h"
@@ -39,8 +43,6 @@
 #if PROTOCORE_ENABLE_SSH_SNTRUP761
 #include "crypto/pqc/sntrup761/sntrup761.h" // sntrup761x25519-sha512 hybrid (client: KeyGen + Decaps)
 #endif
-
-#if PROTOCORE_ENABLE_SSH_CLIENT
 
 // ---------------------------------------------------------------------------
 // Port-forward logging (RFC 4254 sec 7)

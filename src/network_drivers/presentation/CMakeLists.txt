@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(network_drivers/presentation
-  GATE PROTOCORE_ENABLE_WEBSOCKET
   SOURCES presentation.c
   DEPS
     network_drivers/presentation/http/http_parser

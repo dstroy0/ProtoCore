@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(network_drivers/network
-  GATE PROTOCORE_ENABLE_DNS
   SOURCES network.c
   DEPS
     network_drivers/network/dns/dns

@@ -23,7 +23,7 @@ int n = protocore_modbus_parse_response(resp, pn, regs, 3, &ex);         // n>0 
 ```
 
 `protocore_modbus_build_read(fc, tid, unit, start, count, ...)` encodes a read request;
-`protocore_modbus_parse_response()` returns the count on success or sets the Modbus exception
+`protocore_modbus_master_parse_response()` returns the count on success or sets the Modbus exception
 code on a failure response. Swapping `protocore_modbus_process_adu` for a TCP send/receive is
 the only change needed to scan a real device.
 

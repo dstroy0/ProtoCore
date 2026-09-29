@@ -219,7 +219,7 @@ shared `HttpReq` and converges on one `match_and_execute` / route / `Handler` (H
 HTTP/2, and HTTP/3), and the response funnels back through the symmetric **TX seam** - a
 per-connection `protocore_resp_sink_fn` function pointer (`http_resp_sink[slot]`, session.h) that
 HTTP/2 installs at ALPN and HTTP/3 at dispatch. `send_text()` / `send_empty()` call
-`http_resp_sink[slot](...)`
+`http_resp_sink[slot](slot, code, content_type, payload, body_len)`
 when it is set (h2 frames the reply as HEADERS+DATA on the stream; h3 as an HTTP/3 response on
 its QUIC stream) and otherwise build the HTTP/1.1 message - so the response methods name no
 protocol. It is the RX `ProtoHandler` seam's TX counterpart: request decode and response encode

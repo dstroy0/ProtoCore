@@ -108,7 +108,7 @@ sketch to both boards**, giving each the _other_ board's IP as `PEER_IP`:
   not have a fresh matching variant - warm the peer first, or the object may `Vary`
   on a request header that did not fit the snapshot (`PROTOCORE_MESH_HDRS_MAX`); it falls
   back to the origin safely.
-- **`protocore_edge_cache_add_peer` returned false.** The peer table is full
+- **`protocore_edge_proxy_add_peer` returned false.** The peer table is full
   (`PROTOCORE_MESH_MAX_PEERS`) or the host string is empty / too long
   (`PROTOCORE_MESH_HOST_MAX`).
 - **A cold miss feels slow.** A miss now tries each peer (in series, first hit wins)
@@ -117,7 +117,7 @@ sketch to both boards**, giving each the _other_ board's IP as `PEER_IP`:
 
 ## Going further
 
-- **More than two nodes.** Call `protocore_edge_cache_add_peer()` once per sibling (up to
+- **More than two nodes.** Call `protocore_edge_proxy_add_peer()` once per sibling (up to
   `PROTOCORE_MESH_MAX_PEERS`); a miss asks them in order, first hit wins. Raise
   `PROTOCORE_MESH_MAX_CONNS` if a node should answer several peers at once.
 - **`Vary`.** The puller ships a snapshot of its request headers so the peer matches
