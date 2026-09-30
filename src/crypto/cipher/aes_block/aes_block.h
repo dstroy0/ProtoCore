@@ -5,7 +5,7 @@
 #define PROTOCORE_AES_BLOCK_H
 
 #include "crypto/cipher/aes_sbox/aes_sbox.h"
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 PROTOCORE_BEGIN_DECLS
@@ -169,7 +169,7 @@ PROTOCORE_INLINE void protocore_aes_encrypt_block(const uint32_t *rk, int nr, co
         s[i] ^= (uint8_t)(rk[nr * 4 + i / 4] >> (24 - (i % 4) * 8));
     }
 
-    mem.cpy(out, s, 16);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = s, .bytes = 16);
 }
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
