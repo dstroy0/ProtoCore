@@ -5,5 +5,5 @@ protocore_add_module(services/fieldbus/enip
   GATE PROTOCORE_ENABLE_ENIP
   SOURCES enip.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
