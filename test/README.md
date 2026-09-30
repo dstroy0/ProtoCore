@@ -49574,7 +49574,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Objective**: Emit literal puts the code on the wire
     * **Assertions**:
       * <code>Assert false (w.overflow)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1, w.cnt);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(1, w.bytes_written);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x8E, out[0]);</code>
   </details>
 
@@ -49584,7 +49584,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Objective**: Emit match selects the code for the span
     * **Assertions**:
       * <code>Assert false (w.overflow)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(2, w.cnt);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(2, w.bytes_written);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x40, out[0]);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00, out[1]);</code>
   </details>
@@ -49595,7 +49595,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Objective**: Symbol 285 is 280 + 5, so its 8-bit code is 11000000 + 5 = 11000101; then the 5-bit distance
     * **Assertions**:
       * <code>Assert false (w.overflow)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(2, w.cnt);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(2, w.bytes_written);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(rev(0xC5, 8), ll_code[285]);</code>
   </details>
 
@@ -49609,7 +49609,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_INT16(5, Rfc1951V.dist_base[4]); // distance code 4</code>
       * <code>TEST_ASSERT_EQUAL_INT16(1, Rfc1951V.dist_extra[4]);</code>
       * <code>Assert false (w.overflow)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(2, w.cnt);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(2, w.bytes_written);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -49618,7 +49618,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Objective**: Emit past the buffer latches overflow
     * **Assertions**:
       * <code>Assert true (w.overflow)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, w.cnt);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, w.bytes_written);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00, out[0]);</code>
   </details>
 
