@@ -19,7 +19,7 @@
 
 #include "crypto/hash/sha3/sha3.h"
 #include "crypto/pqc/mlkem/mlkem.h"
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 
 // ML-KEM-768 parameters (FIPS 203).
 #define MK_N 256
@@ -251,7 +251,7 @@ static void cbd2(int16_t r[MK_N], const uint8_t buf[128])
 static void poly_getnoise(uint8_t *work, int16_t r[MK_N], const uint8_t seed[32], uint8_t nonce)
 {
     uint8_t extseed[33];
-    mem.cpy(extseed, seed, 32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = extseed, .src = seed, .bytes = 32);
     extseed[32] = nonce;
     uint8_t buf[MK_ETA * MK_N / 4]; // 128
     mk_shake256(work, buf, sizeof(buf), extseed, sizeof(extseed));
@@ -262,7 +262,7 @@ static void poly_getnoise(uint8_t *work, int16_t r[MK_N], const uint8_t seed[32]
 static void gen_matrix_entry(uint8_t *work, int16_t out[MK_N], const uint8_t rho[32], uint8_t i, uint8_t j)
 {
     uint8_t seed[34];
-    mem.cpy(seed, rho, 32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = seed, .src = rho, .bytes = 32);
     seed[32] = i;
     seed[33] = j;
     mk_shake128_absorb(work, seed, sizeof(seed));
@@ -500,7 +500,7 @@ static void k_pke_keygen(uint8_t *work, uint8_t ek[MLKEM768_EK_BYTES], uint8_t d
 {
     // (rho, sigma) = G(d || k). The trailing k byte is the FIPS 203 domain separation on module rank.
     uint8_t g_in[33];
-    mem.cpy(g_in, d, 32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = g_in, .src = d, .bytes = 32);
     g_in[32] = MK_K;
     uint8_t g_out[64];
     mk_sha3_512(work, g_out, g_in, sizeof(g_in));
@@ -545,7 +545,7 @@ static void k_pke_keygen(uint8_t *work, uint8_t ek[MLKEM768_EK_BYTES], uint8_t d
         }
         poly_tobytes(ek + i * MK_POLYBYTES, t_row);
     }
-    mem.cpy(ek + MK_K * MK_POLYBYTES, rho, 32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ek + MK_K * MK_POLYBYTES, .src = rho, .bytes = 32);
 
     for (unsigned i = 0; i < MK_K; i++)
     {
@@ -592,9 +592,9 @@ proto_bool protocore_ml_kem_keygen(uint8_t *work, const uint8_t *d, const uint8_
 
     // dk = dk_PKE || ek || H(ek) || z  (FIPS 203 Algorithm 16).
     k_pke_keygen(work, ek, dk, d);
-    mem.cpy(dk + MK_K * MK_POLYBYTES, ek, MLKEM768_EK_BYTES);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = dk + MK_K * MK_POLYBYTES, .src = ek, .bytes = MLKEM768_EK_BYTES);
     mk_sha3_256(work, dk + MK_K * MK_POLYBYTES + MLKEM768_EK_BYTES, ek, MLKEM768_EK_BYTES);
-    mem.cpy(dk + MK_K * MK_POLYBYTES + MLKEM768_EK_BYTES + 32, z, 32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = dk + MK_K * MK_POLYBYTES + MLKEM768_EK_BYTES + 32, .src = z, .bytes = 32);
     return PROTO_TRUE;
 }
 
@@ -611,11 +611,11 @@ proto_bool protocore_ml_kem_encaps(uint8_t *work, const uint8_t *ek, const uint8
 
     // (K, r) = G(m || H(ek)); ss = K.
     uint8_t g_in[64];
-    mem.cpy(g_in, m, 32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = g_in, .src = m, .bytes = 32);
     mk_sha3_256(work, g_in + 32, ek, MLKEM768_EK_BYTES); // H(ek)
     uint8_t g_out[64];
     mk_sha3_512(work, g_out, g_in, sizeof(g_in));
-    mem.cpy(ss, g_out, 32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ss, .src = g_out, .bytes = 32);
 
     k_pke_encrypt(work, ct, ek, m, g_out + 32);
     return PROTO_TRUE;
@@ -637,15 +637,15 @@ proto_bool protocore_ml_kem_decaps(uint8_t *work, const uint8_t *dk, const uint8
     uint8_t mprime[32];
     k_pke_decrypt(mprime, dk_pke, ct);
     uint8_t g_in[64];
-    mem.cpy(g_in, mprime, 32);
-    mem.cpy(g_in + 32, h, 32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = g_in, .src = mprime, .bytes = 32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = g_in + 32, .src = h, .bytes = 32);
     uint8_t g_out[64];
     mk_sha3_512(work, g_out, g_in, sizeof(g_in));
 
     // Implicit-reject key K_bar = J(z || ct) = SHAKE256(z || ct, 32).
     uint8_t jbuf[32 + MLKEM768_CT_BYTES];
-    mem.cpy(jbuf, z, 32);
-    mem.cpy(jbuf + 32, ct, MLKEM768_CT_BYTES);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = jbuf, .src = z, .bytes = 32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = jbuf + 32, .src = ct, .bytes = MLKEM768_CT_BYTES);
     uint8_t kbar[32];
     mk_shake256(work, kbar, sizeof(kbar), jbuf, sizeof(jbuf));
 
