@@ -5,6 +5,6 @@ protocore_add_module(services/transportation/nema_ts2
   GATE PROTOCORE_ENABLE_NEMA_TS2
   SOURCES nema_ts2.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
     shared/crc
 )
