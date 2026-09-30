@@ -11,8 +11,9 @@
  *
  * Dispatch is a `static const` table of function pointers in rodata.
  *
- * The region types come from span.h and the byte verbs from bytes.h. A codec allocates nothing and
- * owns no buffer: it writes into a protocore_span the caller bound and reads from a protocore_cspan.
+ * The region types come from spatium.h and the byte verbs from octetus_introitus_exitus.h. A codec
+ * allocates nothing and owns no buffer: it writes into a mmgr_span the caller bound and reads from a
+ * mmgr_cspan.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -21,7 +22,7 @@
 #ifndef PROTOCORE_CODEC_H
 #define PROTOCORE_CODEC_H
 
-#include "mmgr/span/span.h"
+#include "spatium/spatium.h"
 
 #include "protocore_config.h" // PROTOCORE_ENABLE_CBOR / PROTOCORE_ENABLE_MSGPACK gate the instances below
 
@@ -57,17 +58,17 @@ typedef enum PROTO_ENUM_PACKED
  */
 typedef struct
 {
-    // --- encode into a caller-bound protocore_span ---
-    void (*put_uint)(protocore_span *w, uint64_t v);
-    void (*put_int)(protocore_span *w, int64_t v);
-    void (*put_bytes)(protocore_span *w, const uint8_t *data, size_t len);
-    void (*put_str)(protocore_span *w, const char *s);
-    void (*put_str_n)(protocore_span *w, const char *s, size_t len);
-    void (*put_bool)(protocore_span *w, proto_bool b);
-    void (*put_null)(protocore_span *w);
-    void (*put_float)(protocore_span *w, float f);
-    void (*put_array)(protocore_span *w, size_t count);
-    void (*put_map)(protocore_span *w, size_t count);
+    // --- encode into a caller-bound mmgr_span ---
+    void (*put_uint)(mmgr_span *w, uint64_t v);
+    void (*put_int)(mmgr_span *w, int64_t v);
+    void (*put_bytes)(mmgr_span *w, const uint8_t *data, size_t len);
+    void (*put_str)(mmgr_span *w, const char *s);
+    void (*put_str_n)(mmgr_span *w, const char *s, size_t len);
+    void (*put_bool)(mmgr_span *w, proto_bool b);
+    void (*put_null)(mmgr_span *w);
+    void (*put_float)(mmgr_span *w, float f);
+    void (*put_array)(mmgr_span *w, size_t count);
+    void (*put_map)(mmgr_span *w, size_t count);
 
     /**
      * @brief Emit a map key, given both spellings of it.
@@ -77,19 +78,19 @@ typedef struct
      * caller hands over both and the format picks the one it is specified to write. Without this the
      * difference leaks upward and every producer keeps one walk per encoding.
      */
-    void (*put_label)(protocore_span *w, const char *name, int64_t num);
+    void (*put_label)(mmgr_span *w, const char *name, int64_t num);
 
-    // --- decode from a caller-bound protocore_cspan ---
-    protocore_codec_type (*peek)(protocore_cspan *r);
-    proto_bool (*get_uint)(protocore_cspan *r, uint64_t *out);
-    proto_bool (*get_int)(protocore_cspan *r, int64_t *out);
-    proto_bool (*get_bytes)(protocore_cspan *r, const uint8_t **out, size_t *len);
-    proto_bool (*get_str)(protocore_cspan *r, const char **out, size_t *len);
-    proto_bool (*get_array)(protocore_cspan *r, size_t *count);
-    proto_bool (*get_map)(protocore_cspan *r, size_t *count);
-    proto_bool (*get_bool)(protocore_cspan *r, proto_bool *out);
-    proto_bool (*get_null)(protocore_cspan *r);
-    proto_bool (*get_float)(protocore_cspan *r, float *out);
+    // --- decode from a caller-bound mmgr_cspan ---
+    protocore_codec_type (*peek)(mmgr_cspan *r);
+    proto_bool (*get_uint)(mmgr_cspan *r, uint64_t *out);
+    proto_bool (*get_int)(mmgr_cspan *r, int64_t *out);
+    proto_bool (*get_bytes)(mmgr_cspan *r, const uint8_t **out, size_t *len);
+    proto_bool (*get_str)(mmgr_cspan *r, const char **out, size_t *len);
+    proto_bool (*get_array)(mmgr_cspan *r, size_t *count);
+    proto_bool (*get_map)(mmgr_cspan *r, size_t *count);
+    proto_bool (*get_bool)(mmgr_cspan *r, proto_bool *out);
+    proto_bool (*get_null)(mmgr_cspan *r);
+    proto_bool (*get_float)(mmgr_cspan *r, float *out);
 } protocore_codec;
 
 // Each format declares its own instance in its own header: cbor.h has Cbor, msgpack.h has

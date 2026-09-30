@@ -127,12 +127,7 @@ typedef struct WebServerConfig
 // protocore.h is the one header an application includes, so every service the library offers is
 // reachable from it. A feature the build did not enable costs nothing: each service header carries
 // its own PROTOCORE_ENABLE_ guard, so a disabled one contributes no declarations and no code.
-#include "mmgr/arena/arena.h"
-#include "mmgr/dma/dma.h"
-#include "mmgr/plaintext/plaintext.h"
-#include "mmgr/psram_pool/psram_pool.h"
-#include "mmgr/secure/secure.h"
-#include "mmgr/span/span.h"
+#include "locus_carcerum/locus_carcerum.h"
 #include "network_drivers/application/file_serving/file_serving.h"
 #include "network_drivers/application/http_range/http_range.h"
 #include "network_drivers/application/mdns_adaptive/mdns_adaptive.h"
