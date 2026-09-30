@@ -14,8 +14,8 @@
 
 #if PROTOCORE_ENABLE_HTTP2
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h" // shared prefix-int + Huffman
 #include "network_drivers/presentation/http/http2/hpack/hpack.h"
 
@@ -53,8 +53,8 @@ static_assert(HPACK_OFF_CTX + sizeof(HpackDynTable) <= PROTOCORE_HPACK_BORROW,
               "PROTOCORE_HPACK_BORROW is short of the dynamic table - raise it in protocore_config.h,"
               " which sums it into the connection that owns it");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(HPACK_OFF_CTX % _Alignof(HpackDynTable) == 0,
@@ -234,12 +234,12 @@ static proto_bool resolve_name(const HpackDynTable *t, uint32_t idx, char *out, 
 {
     if (idx >= 1 && idx <= 61)
     {
-        size_t nl = str.len(STATIC[idx][0], cap + 1);
+        size_t nl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = STATIC[idx][0], .cap = cap + 1);
         if (nl > cap)
         {
             return PROTO_FALSE;
         }
-        mem.cpy(out, STATIC[idx][0], nl);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = STATIC[idx][0], .bytes = nl);
         *out_len = nl;
         return PROTO_TRUE;
     }
@@ -262,14 +262,14 @@ static proto_bool emit_indexed(HpackDynTable *t, uint32_t idx, char *scratch, si
     size_t vl;
     if (idx >= 1 && idx <= 61)
     {
-        nl = str.len(STATIC[idx][0], cap + 1);
-        vl = str.len(STATIC[idx][1], cap + 1);
+        nl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = STATIC[idx][0], .cap = cap + 1);
+        vl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = STATIC[idx][1], .cap = cap + 1);
         if (nl + vl > cap)
         {
             return PROTO_FALSE;
         }
-        mem.cpy(scratch, STATIC[idx][0], nl);
-        mem.cpy(scratch + nl, STATIC[idx][1], vl);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = scratch, .src = STATIC[idx][0], .bytes = nl);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = scratch + nl, .src = STATIC[idx][1], .bytes = vl);
     }
     else
     {
@@ -334,7 +334,7 @@ static proto_bool decode_literal(uint8_t *work, HpackDynTable *t, const uint8_t 
 
 static void hpack_dyn_init_run(HpackDynTable *t, uint32_t max_bytes)
 {
-    mem.set(t, 0, sizeof(*t));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = t, .val = 0, .bytes = sizeof(*t));
     t->max_size = max_bytes ? max_bytes : (uint32_t)HPACK_BYTES;
     if (t->max_size > HPACK_BYTES)
     {
@@ -409,13 +409,15 @@ static size_t hpack_encode_header_run(uint8_t *work, uint8_t *out, size_t cap, c
     int full_idx = 0;
     for (int i = 1; i <= 61; i++)
     {
-        if (str.len(STATIC[i][0], name_len + 1) == name_len && mem.cmp(STATIC[i][0], name, name_len) == 0)
+        if (EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = STATIC[i][0], .cap = name_len + 1) == name_len &&
+            EMBED_CALL(memor.cmp, MemoriaCfg, .src = STATIC[i][0], .other = name, .bytes = name_len) == 0)
         {
             if (!name_idx)
             {
                 name_idx = i;
             }
-            if (str.len(STATIC[i][1], value_len + 1) == value_len && mem.cmp(STATIC[i][1], value, value_len) == 0)
+            if (EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = STATIC[i][1], .cap = value_len + 1) == value_len &&
+                EMBED_CALL(memor.cmp, MemoriaCfg, .src = STATIC[i][1], .other = value, .bytes = value_len) == 0)
             {
                 full_idx = i;
                 break;
