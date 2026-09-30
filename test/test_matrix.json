@@ -9840,13 +9840,8 @@
       "src": [
         "+<server/signaling/trace_capture/trace_capture.c>",
         "+<server/clock/clock.c>",
-        "+<mmgr/protomem/protomem.c>",
-        "+<mmgr/rawmemcpy/rawmemcpy.c>",
-        "+<mmgr/swar/swar.c>",
-        "+<mmgr/plaintext/plaintext.c>",
-        "+<mmgr/arena/arena.c>",
-        "+<mmgr/span/span.c>",
-        "+<test/core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<server/core/worker/worker.c>"
       ],
       "tests": [
         "unit/src/server/signaling/test_trace_capture"
