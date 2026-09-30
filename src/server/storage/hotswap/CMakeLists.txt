@@ -5,7 +5,7 @@ protocore_add_module(server/storage/hotswap
   GATE PROTOCORE_ENABLE_HOTSWAP
   SOURCES hotswap.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/secure
+    mmgr
+    server/core/worker
     server/clock
 )
