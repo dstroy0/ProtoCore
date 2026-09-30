@@ -90,8 +90,8 @@ size_t protocore_haas_mdc_build_q(char *buf, size_t cap, uint16_t qnum)
     sb_q = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_q, .text = "?Q",
                       .text_len = sizeof("?Q") - 1);
     sb_q = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_q, .val = qnum);
-    sb_q = EMBED_CALL(verba_littera.ch, VerbaLitteraCfg, .out = buf, .cap = cap, .at = sb_q,
-                      .ch = '\n'); // [NGC] Query Format: the query is "terminated with a new line"
+    // [NGC] Query Format: the query is "terminated with a new line"
+    sb_q = EMBED_CALL(verba_littera.ch, VerbaLitteraCfg, .out = buf, .cap = cap, .at = sb_q, .ch = '\n');
     return EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = buf, .cap = cap, .at = sb_q);
 }
 
@@ -105,8 +105,8 @@ size_t protocore_haas_mdc_build_var(char *buf, size_t cap, uint32_t var)
     sb_var = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_var, .text = "?Q600 ",
                         .text_len = sizeof("?Q600 ") - 1);
     sb_var = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_var, .val = var);
-    sb_var = EMBED_CALL(verba_littera.ch, VerbaLitteraCfg, .out = buf, .cap = cap, .at = sb_var,
-                        .ch = '\n'); // the ?Q600 line is a query in the ?Q### family, same sentence
+    // the ?Q600 line is a query in the ?Q### family, same sentence
+    sb_var = EMBED_CALL(verba_littera.ch, VerbaLitteraCfg, .out = buf, .cap = cap, .at = sb_var, .ch = '\n');
     return EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = buf, .cap = cap, .at = sb_var);
 }
 
