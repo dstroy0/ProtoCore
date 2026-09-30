@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_DMX
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "server/peripherals/dmx/dmx.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -46,7 +46,7 @@ void protocore_dmx_build(uint8_t *work)
     buf[0] = start_code;
     if (n)
     {
-        mem.cpy(buf + 1, channels, n);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + 1, .src = channels, .bytes = n);
     }
     DmxV.n = total;
 }
@@ -143,7 +143,7 @@ void protocore_dmx_rdm_build(uint8_t *work)
     buf[23] = pdl;
     if (pdl)
     {
-        mem.cpy(buf + 24, pdata, pdl);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + 24, .src = pdata, .bytes = pdl);
     }
     DmxV.rdm_checksum_args.buf = buf;
     DmxV.rdm_checksum_args.len = ml;
