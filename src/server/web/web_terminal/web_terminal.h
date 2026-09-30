@@ -13,15 +13,15 @@
  * auto-selects ws:// or wss:// from the page's own scheme.
  *
  * A line is built with the frame engine and handed over as text, so the shape is a
- * `static const protocore_field[]` in rodata rather than a format string parsed per call.
+ * `static const mmgr_field[]` in rodata rather than a format string parsed per call.
  *
  * @code
- *   static const protocore_field SAID[] = {{PROTOCORE_FK_LIT, 0, 10, "you said: "}, PROTOCORE_STR,
- *                                   {PROTOCORE_FK_LIT, 0, 1, "\n"}, PROTOCORE_END};
+ *   static const mmgr_field SAID[] = {{MMGR_FK_LIT, 0, 10, "you said: "}, MMGR_STR,
+ *                                   {MMGR_FK_LIT, 0, 1, "\n"}, MMGR_END};
  *   void on_cmd(const char *line, uint8_t client) {
  *     char out[64];
- *     frame.build(out, sizeof(out), SAID, (const protocore_fval[]){PROTOCORE_VSTR(line)}, 1);
- *     protocore_web_terminal_print(out);
+ *     EMBED_CALL(numer.build, NumerosCfg, .out = out, .cap = sizeof(out), .spec = SAID, .vals = (const
+ * mmgr_fval[]){MMGR_VSTR(line)}, .nvals = 1); protocore_web_terminal_print(out);
  *   }
  *   void setup() {
  *     // ... wifi + on_http(...) ...
