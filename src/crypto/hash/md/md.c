@@ -11,9 +11,8 @@
 #if PROTOCORE_ENABLE_MD
 
 #include "crypto/hash/md/md.h"
-#include "mmgr/endian/endian.h"
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/secure/secure.h" // the secure pool: digest state, wiped on release
+#include "endian/endian.h"
+#include "memoria_operor/memoria_operor.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -68,7 +67,7 @@ static void protocore_md5_compress(uint32_t s[4], const uint8_t block[64])
     uint32_t m[16];
     for (int i = 0; i < 16; i++)
     {
-        m[i] = protocore_rd32le(block + i * 4);
+        m[i] = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = block + i * 4, .width = MMGR_ENDIAN_32);
     }
     uint32_t a = s[0];
     uint32_t b = s[1];
@@ -127,7 +126,7 @@ static void protocore_md4_compress(uint32_t s[4], const uint8_t block[64])
     uint32_t x[16];
     for (int i = 0; i < 16; i++)
     {
-        x[i] = protocore_rd32le(block + i * 4);
+        x[i] = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = block + i * 4, .width = MMGR_ENDIAN_32);
     }
     uint32_t a = s[0];
     uint32_t b = s[1];
@@ -223,7 +222,7 @@ static void md_absorb(struct MdCtx *c, const uint8_t *data, size_t len, md_compr
         {
             take = (uint32_t)len;
         }
-        mem.cpy(c->buf + c->buf_len, data, take);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = c->buf + c->buf_len, .src = data, .bytes = take);
         c->buf_len += take;
         data += take;
         len -= take;
@@ -253,7 +252,7 @@ static void md_finish(struct MdCtx *c, uint8_t out[16], md_compress_fn compress)
     md_absorb(c, lenbuf, 8, compress); // triggers the final compress
     for (int i = 0; i < 4; i++)
     {
-        protocore_wr32le(out + i * 4, c->state[i]);
+        EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + i * 4, .val = c->state[i], .width = MMGR_ENDIAN_32);
     }
 }
 
@@ -357,7 +356,7 @@ void protocore_md_hmac_md5(uint8_t *work)
     uint8_t *inner = MD_INNER(work);
     struct MdCtx *c = MD_STATE(work);
 
-    mem.set(k, 0, 64);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = k, .val = 0, .bytes = 64);
     if (key_len > 64)
     {
         // Keys longer than the block are hashed down, leaving 16 bytes and the rest zero. Its state is
@@ -369,7 +368,7 @@ void protocore_md_hmac_md5(uint8_t *work)
     }
     else
     {
-        mem.cpy(k, key, key_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = k, .src = key, .bytes = key_len);
     }
 
     for (int i = 0; i < 64; i++)
