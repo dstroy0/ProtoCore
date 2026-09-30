@@ -5,5 +5,5 @@ protocore_add_module(services/fieldbus/sercos
   GATE PROTOCORE_ENABLE_SERCOS
   SOURCES sercos.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

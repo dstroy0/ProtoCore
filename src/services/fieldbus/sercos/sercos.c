@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_SERCOS
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/sercos/sercos.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -81,7 +81,7 @@ void protocore_sercos_build(uint8_t *work)
     out[3] = (uint8_t)(cycle >> 8);
     if (data_len)
     {
-        mem.cpy(out + SERCOS_HDR_LEN, data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + SERCOS_HDR_LEN, .src = data, .bytes = data_len);
     }
     SercosV.n = n;
 }
