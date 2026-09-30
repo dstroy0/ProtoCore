@@ -75,8 +75,8 @@ static size_t tlv(uint8_t tag, const uint8_t *val, size_t val_len, uint8_t *out,
     // path (it assumes val_len >= cap - k, e.g. 5 >= 254) that the n <= cap guard rules out.
     if (n > k)
     {
-        // NOSONAR - see above: bound proven, analyzer follows an infeasible path
-        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + k, .src = val, .bytes = n - k);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + k, .src = val,
+                   .bytes = n - k); // NOSONAR - see above: bound proven, analyzer follows an infeasible path
     }
     return n;
 }
