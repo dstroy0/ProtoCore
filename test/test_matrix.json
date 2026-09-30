@@ -1414,16 +1414,10 @@
       "src": [
         "+<server/signaling/device_id/device_id.c>",
         "+<crypto/hash/sha1/sha1.c>",
-        "+<mmgr/protomem/protomem.c>",
-        "+<mmgr/endian/endian.c>",
-        "+<mmgr/rawmemcpy/rawmemcpy.c>",
-        "+<mmgr/swar/swar.c>",
         "+<shared/hex/hex.c>",
         "+<test/core_setup/hal/host/host_platform.c>",
-        "+<mmgr/arena/arena.c>",
-        "+<mmgr/secure/secure.c>",
-        "+<mmgr/span/span.c>",
-        "+<test/core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<server/core/worker/worker.c>"
       ],
       "tests": ["unit/src/server/signaling/test_device_id"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]

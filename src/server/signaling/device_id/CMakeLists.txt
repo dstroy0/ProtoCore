@@ -6,7 +6,7 @@ protocore_add_module(server/signaling/device_id
   SOURCES device_id.c
   PRIVATE_DEPS
     crypto/hash/sha1
-    mmgr/secure
-    mmgr/span
+    mmgr
+    server/core/worker
     shared/hex
 )
