@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/timing_position/gnss/rtcm3/rtcm3.h"
 
 // ---------------------------------------------------------------------------------------------
@@ -158,7 +158,7 @@ size_t protocore_rtcm3_frame_build(uint8_t *out, size_t cap, const uint8_t *payl
     out[2] = (uint8_t)(payload_len & 0xFFu);
     if (payload_len && payload)
     {
-        mem.cpy(out + RTCM3_HDR_LEN, payload, payload_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + RTCM3_HDR_LEN, .src = payload, .bytes = payload_len);
     }
     uint32_t crc = protocore_rtcm3_crc24q(out, (size_t)RTCM3_HDR_LEN + payload_len);
     out[RTCM3_HDR_LEN + payload_len] = (uint8_t)((crc >> 16) & 0xFFu);
@@ -175,7 +175,7 @@ static size_t build_arp(uint8_t *out, size_t cap, uint16_t msg, uint16_t station
                         proto_bool with_h, uint16_t h)
 {
     uint8_t payload[21];
-    mem.set(payload, 0, sizeof payload);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = payload, .val = 0, .bytes = sizeof payload);
     RtcmBitWriter w;
     protocore_rtcm_bw_init(&w, payload, sizeof payload);
     protocore_rtcm_bw_u(&w, msg, 12);                // DF002 message number
