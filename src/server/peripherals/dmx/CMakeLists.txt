@@ -5,5 +5,5 @@ protocore_add_module(server/peripherals/dmx
   GATE PROTOCORE_ENABLE_DMX
   SOURCES dmx.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
