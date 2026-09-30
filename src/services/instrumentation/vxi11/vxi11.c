@@ -10,11 +10,11 @@
 
 #if PROTOCORE_ENABLE_VXI11
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/instrumentation/vxi11/vxi11.h"
 
-#include "mmgr/endian/endian.h"
+#include "endian/endian.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -38,7 +38,7 @@ static void xw_u32(XdrW *w, uint32_t v)
         w->ok = PROTO_FALSE;
         return;
     }
-    endian.wr32be(w->p + w->off, v);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = w->p + w->off, .val = v, .width = MMGR_ENDIAN_32);
     w->off += 4;
 }
 
@@ -51,11 +51,11 @@ static void xw_bytes(XdrW *w, const uint8_t *d, size_t n)
         w->ok = PROTO_FALSE;
         return;
     }
-    endian.wr32be(w->p + w->off, (uint32_t)n);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = w->p + w->off, .val = (uint32_t)n, .width = MMGR_ENDIAN_32);
     w->off += 4;
     if (n)
     {
-        mem.cpy(w->p + w->off, d, n);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->p + w->off, .src = d, .bytes = n);
         w->off += n;
     }
     for (size_t i = 0; i < pad; i++)
@@ -79,7 +79,7 @@ static uint32_t xr_u32(XdrR *r)
         r->ok = PROTO_FALSE;
         return 0;
     }
-    uint32_t v = endian.rd32be(r->p + r->off);
+    uint32_t v = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = r->p + r->off, .width = MMGR_ENDIAN_32);
     r->off += 4;
     return v;
 }
@@ -118,7 +118,8 @@ size_t protocore_rpc_record_mark(uint8_t *buf, size_t cap, uint32_t payload_len)
     {
         return 0;
     }
-    endian.wr32be(buf, 0x80000000u | payload_len); // last-fragment flag set
+    // last-fragment flag set
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf, .val = 0x80000000u | payload_len, .width = MMGR_ENDIAN_32);
     return 4;
 }
 
@@ -128,7 +129,7 @@ proto_bool protocore_rpc_parse_record_mark(const uint8_t *buf, size_t len, proto
     {
         return PROTO_FALSE;
     }
-    uint32_t rm = endian.rd32be(buf);
+    uint32_t rm = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf, .width = MMGR_ENDIAN_32);
     if (last)
     {
         *last = (rm & 0x80000000u) != 0;
@@ -259,7 +260,7 @@ size_t protocore_vxi11_build_create_link(uint8_t *buf, size_t cap, uint32_t xid,
     xw_u32(&w, (uint32_t)client_id);
     xw_u32(&w, lock_device ? 1 : 0);
     xw_u32(&w, lock_timeout);
-    size_t dlen = device ? str.len(device, cap) : 0;
+    size_t dlen = device ? EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = device, .cap = cap) : 0;
     xw_bytes(&w, (const uint8_t *)device, dlen);
     return finish_call(&w);
 }
