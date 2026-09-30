@@ -5,7 +5,7 @@ protocore_add_module(server/peripherals/hmmd
   GATE PROTOCORE_ENABLE_HMMD
   SOURCES hmmd.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/secure
+    mmgr
+    server/core/worker
     server/peripherals/uart
 )
