@@ -13,10 +13,10 @@
 
 #if PROTOCORE_ENABLE_MTCONNECT
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
-#include "server/clock/clock.h" // the always-on system clock behind creationTime
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
+#include "server/clock/clock.h"        // the always-on system clock behind creationTime
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "services/machine_tool/mtconnect/mtconnect.h"
 #include "shared/time_compat/time_compat.h" // the UTC breakdown creationTime is formatted from
 
@@ -64,8 +64,8 @@ static_assert(MTC_OFF_RING + (size_t)PROTOCORE_MTC_SAMPLE_BUFFER * sizeof(MtConn
               "PROTOCORE_MTCONNECT_BORROW is short of the context and the observation ring - raise it in "
               "protocore_config.h, which sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(MTC_OFF_CTX % _Alignof(MtConnectCtx) == 0,
@@ -87,7 +87,7 @@ uint8_t *protocore_mtconnect_span(void)
 {
     if (s_span == NULL)
     {
-        s_span = protocore_plaintext_persist_span(PROTOCORE_MTCONNECT_BORROW).buf;
+        s_span = (uint8_t *)protocore_plain_persist(PROTOCORE_MTCONNECT_BORROW);
     }
     return s_span;
 }
@@ -102,13 +102,13 @@ static void put(uint8_t *work, const char *text)
     {
         return;
     }
-    size_t tl = str.len(text, c->cap + 1);
+    size_t tl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = text, .cap = c->cap + 1);
     if (c->len + tl >= c->cap)
     {
         c->ok = PROTO_FALSE;
         return;
     }
-    mem.cpy(c->out + c->len, text, tl);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = c->out + c->len, .src = text, .bytes = tl);
     c->len += tl;
 }
 
@@ -187,7 +187,7 @@ static char *open_gap(uint8_t *work, size_t at, size_t n)
         c->ok = PROTO_FALSE;
         return NULL;
     }
-    mem.move(c->out + at + n, c->out + at, c->len - at);
+    EMBED_CALL(memor.move_up, MemoriaCfg, .dst = c->out + at + n, .src = c->out + at, .bytes = c->len - at);
     c->len += n;
     return c->out + at;
 }
@@ -195,11 +195,11 @@ static char *open_gap(uint8_t *work, size_t at, size_t n)
 // Put the literal @p text at @p at rather than at the end.
 static void put_at(uint8_t *work, size_t at, const char *text)
 {
-    size_t n = str.len(text, MTC_CTX(work)->cap + 1);
+    size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = text, .cap = MTC_CTX(work)->cap + 1);
     char *gap = open_gap(work, at, n);
     if (gap)
     {
-        mem.cpy(gap, text, n);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = gap, .src = text, .bytes = n);
     }
 }
 

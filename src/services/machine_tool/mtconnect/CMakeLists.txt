@@ -5,9 +5,8 @@ protocore_add_module(services/machine_tool/mtconnect
   GATE PROTOCORE_ENABLE_MTCONNECT
   SOURCES mtconnect.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
+    server/core/worker
     server/clock
     shared/time_compat
 )
