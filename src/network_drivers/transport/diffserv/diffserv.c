@@ -15,7 +15,7 @@
 #if PROTOCORE_ENABLE_DIFFSERV
 
 #include "diffserv.h"
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 
 PROTOCORE_BEGIN_DECLS
 
@@ -58,7 +58,7 @@ uint8_t *protocore_diffserv_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_DIFFSERV_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_DIFFSERV_BORROW);
     }
     return s_own.span;
 }
