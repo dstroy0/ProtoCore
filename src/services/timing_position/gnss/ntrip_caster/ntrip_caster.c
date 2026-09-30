@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/timing_position/gnss/ntrip_caster/ntrip_caster.h"
+#include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
 PROTOCORE_BEGIN_DECLS
 
@@ -57,12 +57,14 @@ static void fmt_deg2(char *out, size_t cap, double v)
         frac = -frac;
     }
     const char *sign = (v < 0.0 && whole == 0) ? "-" : ""; // preserve "-0.xx"
-    protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    Sb.put(&sb_out, sign);
-    Sb.i64(&sb_out, (int64_t)(whole));
-    Sb.put(&sb_out, ".");
-    Sb.u32w(&sb_out, (uint32_t)(frac), 2);
-    if (Sb.finish(&sb_out) == 0)
+    size_t sb_out = 0;
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = sign);
+    sb_out =
+        EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out, .sval = (int64_t)(whole));
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = ".");
+    sb_out = EMBED_CALL(verba_numerus.u32w, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out,
+                        .val = (uint32_t)(frac), .min = 2);
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_out) == 0)
     {
         out[0] = '\0';
     }
@@ -136,7 +138,7 @@ static void scan_headers(const char *buf, const char *end, NtripRequest *out)
 
 proto_bool protocore_ntrip_request_parse(const char *buf, size_t len, NtripRequest *out)
 {
-    mem.set(out, 0, sizeof(*out));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     out->version = NTRIP_V1;
 
     // Find the end of the request header block (blank line): CRLFCRLF, or bare LFLF as a fallback.
@@ -184,7 +186,7 @@ proto_bool protocore_ntrip_request_parse(const char *buf, size_t len, NtripReque
         {
             mlen = sizeof(out->mountpoint) - 1;
         }
-        mem.cpy(out->mountpoint, mp, mlen);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->mountpoint, .src = mp, .bytes = mlen);
         out->mountpoint[mlen] = '\0';
     }
 
@@ -197,13 +199,15 @@ size_t protocore_ntrip_build_stream_response(char *out, size_t cap, NtripVersion
 {
     // One builder, branching only on which response line goes in it: the version picks the text,
     // not a separate copy of the build-and-check.
-    protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    Sb.put(&sb_out, (version == NTRIP_V2)
-                        ? "HTTP/1.1 200 OK\r\nNtrip-Version: Ntrip/2.0\r\nServer: ProtoCore/2.0\r\nContent-Type: "
-                          "gnss/data\r\nConnection: close\r\n\r\n"
-                        : "ICY 200 OK\r\n\r\n");
-    size_t n = Sb.finish(&sb_out);
-    if (!sb_out.ok)
+    size_t sb_out = 0;
+    sb_out = EMBED_CALL(
+        verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out,
+        .text = (version == NTRIP_V2)
+                    ? "HTTP/1.1 200 OK\r\nNtrip-Version: Ntrip/2.0\r\nServer: ProtoCore/2.0\r\nContent-Type: "
+                      "gnss/data\r\nConnection: close\r\n\r\n"
+                    : "ICY 200 OK\r\n\r\n");
+    size_t n = EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_out);
+    if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .cap = cap, .at = sb_out))
     {
         return 0;
     }
@@ -215,16 +219,18 @@ size_t protocore_ntrip_build_error_response(char *out, size_t cap, NtripVersion 
     int n;
     if (version == NTRIP_V2)
     {
-        protocore_sb sb_out4 = {out, cap, 0, PROTO_TRUE};
+        size_t sb_out4 = 0;
         // The mountpoint names no resource the caster serves: RFC 9110 sec 15.5.5.
-        Sb.put(&sb_out4, "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
-        n = (int)Sb.finish(&sb_out4);
+        sb_out4 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out4,
+                             .text = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+        n = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_out4);
     }
     else
     {
-        protocore_sb sb_out5 = {out, cap, 0, PROTO_TRUE};
-        Sb.put(&sb_out5, "ERROR - Bad Request\r\n");
-        n = (int)Sb.finish(&sb_out5);
+        size_t sb_out5 = 0;
+        sb_out5 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out5,
+                             .text = "ERROR - Bad Request\r\n");
+        n = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_out5);
     }
     if (n == 0) // the frame is a fixed literal, so a zero length can only mean it did not fit
     {
@@ -238,16 +244,19 @@ size_t protocore_ntrip_build_unauthorized_response(char *out, size_t cap, NtripV
     int n;
     if (version == NTRIP_V2)
     {
-        protocore_sb sb_out6 = {out, cap, 0, PROTO_TRUE};
-        Sb.put(&sb_out6, "HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: Basic realm=\"NTRIP\"\r\nContent-Length: "
-                         "0\r\nConnection: close\r\n\r\n");
-        n = (int)Sb.finish(&sb_out6);
+        size_t sb_out6 = 0;
+        sb_out6 = EMBED_CALL(
+            verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out6,
+            .text = "HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: Basic realm=\"NTRIP\"\r\nContent-Length: "
+                    "0\r\nConnection: close\r\n\r\n");
+        n = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_out6);
     }
     else
     {
-        protocore_sb sb_out7 = {out, cap, 0, PROTO_TRUE};
-        Sb.put(&sb_out7, "ERROR - Bad Password\r\n");
-        n = (int)Sb.finish(&sb_out7);
+        size_t sb_out7 = 0;
+        sb_out7 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out7,
+                             .text = "ERROR - Bad Password\r\n");
+        n = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_out7);
     }
     if (n == 0) // the frame is a fixed literal, so a zero length can only mean it did not fit
     {
@@ -273,28 +282,31 @@ size_t protocore_ntrip_build_str_record(char *out, size_t cap, const NtripMount 
     const char *gen = m->generator ? m->generator : "PC";
     // STR;mount;identifier;format;format-details;carrier;nav;network;country;lat;lon;nmea;solution;
     //     generator;compr;auth;fee;bitrate;misc   (carrier 0 = station reference only, no observations)
-    protocore_sb sb_out8 = {out, cap, 0, PROTO_TRUE};
-    Sb.put(&sb_out8, "STR;");
-    Sb.put(&sb_out8, m->mountpoint);
-    Sb.put(&sb_out8, ";");
-    Sb.put(&sb_out8, ident);
-    Sb.put(&sb_out8, ";RTCM 3.3;");
-    Sb.put(&sb_out8, fmtd);
-    Sb.put(&sb_out8, ";0;");
-    Sb.put(&sb_out8, nav);
-    Sb.put(&sb_out8, ";none;");
-    Sb.put(&sb_out8, ctry);
-    Sb.put(&sb_out8, ";");
-    Sb.put(&sb_out8, lat);
-    Sb.put(&sb_out8, ";");
-    Sb.put(&sb_out8, lon);
-    Sb.put(&sb_out8, ";");
-    Sb.i64(&sb_out8, (int64_t)(m->nmea_required ? 1 : 0));
-    Sb.put(&sb_out8, ";0;");
-    Sb.put(&sb_out8, gen);
-    Sb.put(&sb_out8, ";none;N;N;9600;");
-    int n = (int)Sb.finish(&sb_out8);
-    if (!sb_out8.ok)
+    size_t sb_out8 = 0;
+    sb_out8 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out8, .text = "STR;");
+    sb_out8 =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out8, .text = m->mountpoint);
+    sb_out8 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out8, .text = ";");
+    sb_out8 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out8, .text = ident);
+    sb_out8 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out8, .text = ";RTCM 3.3;");
+    sb_out8 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out8, .text = fmtd);
+    sb_out8 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out8, .text = ";0;");
+    sb_out8 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out8, .text = nav);
+    sb_out8 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out8, .text = ";none;");
+    sb_out8 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out8, .text = ctry);
+    sb_out8 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out8, .text = ";");
+    sb_out8 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out8, .text = lat);
+    sb_out8 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out8, .text = ";");
+    sb_out8 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out8, .text = lon);
+    sb_out8 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out8, .text = ";");
+    sb_out8 = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out8,
+                         .sval = (int64_t)(m->nmea_required ? 1 : 0));
+    sb_out8 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out8, .text = ";0;");
+    sb_out8 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out8, .text = gen);
+    sb_out8 =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out8, .text = ";none;N;N;9600;");
+    int n = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_out8);
+    if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .cap = cap, .at = sb_out8))
     {
         return 0;
     }
@@ -324,21 +336,28 @@ size_t protocore_ntrip_build_sourcetable(char *out, size_t cap, NtripVersion ver
     int hn;
     if (version == NTRIP_V2)
     {
-        protocore_sb sb_out9 = {out, cap, 0, PROTO_TRUE};
-        Sb.put(&sb_out9, "HTTP/1.1 200 OK\r\nNtrip-Version: Ntrip/2.0\r\nServer: ProtoCore/2.0\r\nContent-Type: "
-                         "gnss/sourcetable\r\nContent-Length: ");
-        Sb.u32(&sb_out9, (uint32_t)((unsigned)body_len));
-        Sb.put(&sb_out9, "\r\nConnection: close\r\n\r\n");
-        hn = (int)Sb.finish(&sb_out9);
+        size_t sb_out9 = 0;
+        sb_out9 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out9,
+                       .text = "HTTP/1.1 200 OK\r\nNtrip-Version: Ntrip/2.0\r\nServer: ProtoCore/2.0\r\nContent-Type: "
+                               "gnss/sourcetable\r\nContent-Length: ");
+        sb_out9 = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out9,
+                             .val = (uint32_t)((unsigned)body_len));
+        sb_out9 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out9,
+                             .text = "\r\nConnection: close\r\n\r\n");
+        hn = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_out9);
     }
     else
     {
-        protocore_sb sb_out10 = {out, cap, 0, PROTO_TRUE};
-        Sb.put(&sb_out10,
-               "SOURCETABLE 200 OK\r\nServer: ProtoCore/1.0\r\nContent-Type: text/plain\r\nContent-Length: ");
-        Sb.u32(&sb_out10, (uint32_t)((unsigned)body_len));
-        Sb.put(&sb_out10, "\r\n\r\n");
-        hn = (int)Sb.finish(&sb_out10);
+        size_t sb_out10 = 0;
+        sb_out10 = EMBED_CALL(
+            verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out10,
+            .text = "SOURCETABLE 200 OK\r\nServer: ProtoCore/1.0\r\nContent-Type: text/plain\r\nContent-Length: ");
+        sb_out10 = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out10,
+                              .val = (uint32_t)((unsigned)body_len));
+        sb_out10 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out10, .text = "\r\n\r\n");
+        hn = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_out10);
     }
     if (hn == 0) // the frame always has a literal prefix, so a zero length means it did not fit
     {
@@ -361,7 +380,7 @@ size_t protocore_ntrip_build_sourcetable(char *out, size_t cap, NtripVersion ver
     {
         return 0;
     }
-    mem.cpy(out + pos, ENDLINE, sizeof(ENDLINE) - 1);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + pos, .src = ENDLINE, .bytes = sizeof(ENDLINE) - 1);
     pos += sizeof(ENDLINE) - 1;
     out[pos] = '\0';
     return pos;
