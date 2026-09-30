@@ -36,6 +36,10 @@ static size_t put_u(char *out, size_t cap, size_t at, uint32_t v)
 
 size_t protocore_utmc_request(const char *object_id, char *out, size_t cap)
 {
+    if (!out || cap == 0)
+    {
+        return 0;
+    }
     size_t b = 0;
     b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b,
                    .text = "<?xml version=\"1.0\"?><UTMCRequest><object id=\"");
@@ -47,6 +51,10 @@ size_t protocore_utmc_request(const char *object_id, char *out, size_t cap)
 size_t protocore_utmc_response(const char *object_id, const char *value, uint8_t quality, const char *timestamp,
                                char *out, size_t cap)
 {
+    if (!out || cap == 0)
+    {
+        return 0;
+    }
     size_t b2 = 0;
     b2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b2,
                     .text = "<?xml version=\"1.0\"?><UTMCResponse><object id=\"");
