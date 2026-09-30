@@ -5,7 +5,5 @@ protocore_add_module(services/instrumentation/scpi
   GATE PROTOCORE_ENABLE_SCPI
   SOURCES scpi.c
   PRIVATE_DEPS
-    mmgr/protoframe
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )
