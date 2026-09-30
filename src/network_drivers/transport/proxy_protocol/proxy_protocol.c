@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_PROXY_PROTOCOL
 
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/transport/proxy_protocol/proxy_protocol.h"
+#include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
 PROTOCORE_BEGIN_DECLS
 
@@ -156,9 +156,12 @@ static proto_bool parse_v1(const uint8_t *buf, size_t len, ProxyInfo *out, size_
     *consumed = crlf + 2;
     // "PROXY TCP4 <src> <dst> <sport> <dport>". TCP4, TCP6 and UNKNOWN are the published family
     // tokens; any other sequence does not match the protocol and is discarded.
-    proto_bool tcp4 = (ntok == 6 && tlen[1] == 4 && mem.cmp(tok[1], "TCP4", 4) == 0);
-    proto_bool tcp6 = (ntok == 6 && tlen[1] == 4 && mem.cmp(tok[1], "TCP6", 4) == 0);
-    proto_bool unknown = (ntok >= 2 && tlen[1] == 7 && mem.cmp(tok[1], "UNKNOWN", 7) == 0);
+    proto_bool tcp4 = (ntok == 6 && tlen[1] == 4 &&
+                       EMBED_CALL(memor.cmp, MemoriaCfg, .src = tok[1], .other = "TCP4", .bytes = 4) == 0);
+    proto_bool tcp6 = (ntok == 6 && tlen[1] == 4 &&
+                       EMBED_CALL(memor.cmp, MemoriaCfg, .src = tok[1], .other = "TCP6", .bytes = 4) == 0);
+    proto_bool unknown = (ntok >= 2 && tlen[1] == 7 &&
+                          EMBED_CALL(memor.cmp, MemoriaCfg, .src = tok[1], .other = "UNKNOWN", .bytes = 7) == 0);
     if (!tcp4 && !tcp6 && !unknown)
     {
         return PROTO_FALSE;
@@ -196,7 +199,8 @@ void protocore_proxy_protocol_parse(uint8_t *work)
     }
 
     // v2: the 12-octet binary signature.
-    if (len >= PROXY_V2_SIG_LEN && mem.cmp(buf, kV2Sig, PROXY_V2_SIG_LEN) == 0)
+    if (len >= PROXY_V2_SIG_LEN &&
+        EMBED_CALL(memor.cmp, MemoriaCfg, .src = buf, .other = kV2Sig, .bytes = PROXY_V2_SIG_LEN) == 0)
     {
         if (len < 16) // signature + ver_cmd + fam + 2-octet length
         {
@@ -246,7 +250,7 @@ void protocore_proxy_protocol_parse(uint8_t *work)
     }
 
     // v1: the "PROXY " text prefix.
-    if (len >= 6 && mem.cmp(buf, "PROXY ", 6) == 0)
+    if (len >= 6 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = buf, .other = "PROXY ", .bytes = 6) == 0)
     {
         ProxyProtocolV.ok = parse_v1(buf, len, out, consumed);
         return;
@@ -270,29 +274,39 @@ void protocore_proxy_protocol_v1_build(uint8_t *work)
         ProxyProtocolV.n = 0;
         return;
     }
-    protocore_sb sb_buf = {buf, cap, 0, PROTO_TRUE};
-    Sb.put(&sb_buf, "PROXY TCP4 ");
-    Sb.u32(&sb_buf, (uint32_t)((unsigned)((src_addr >> 24) & 0xFF)));
-    Sb.put(&sb_buf, ".");
-    Sb.u32(&sb_buf, (uint32_t)((unsigned)((src_addr >> 16) & 0xFF)));
-    Sb.put(&sb_buf, ".");
-    Sb.u32(&sb_buf, (uint32_t)((unsigned)((src_addr >> 8) & 0xFF)));
-    Sb.put(&sb_buf, ".");
-    Sb.u32(&sb_buf, (uint32_t)((unsigned)(src_addr & 0xFF)));
-    Sb.put(&sb_buf, " ");
-    Sb.u32(&sb_buf, (uint32_t)((unsigned)((dst_addr >> 24) & 0xFF)));
-    Sb.put(&sb_buf, ".");
-    Sb.u32(&sb_buf, (uint32_t)((unsigned)((dst_addr >> 16) & 0xFF)));
-    Sb.put(&sb_buf, ".");
-    Sb.u32(&sb_buf, (uint32_t)((unsigned)((dst_addr >> 8) & 0xFF)));
-    Sb.put(&sb_buf, ".");
-    Sb.u32(&sb_buf, (uint32_t)((unsigned)(dst_addr & 0xFF)));
-    Sb.put(&sb_buf, " ");
-    Sb.u32(&sb_buf, (uint32_t)((unsigned)src_port));
-    Sb.put(&sb_buf, " ");
-    Sb.u32(&sb_buf, (uint32_t)((unsigned)dst_port));
-    Sb.put(&sb_buf, "\r\n");
-    int n = (int)Sb.finish(&sb_buf);
+    size_t sb_buf = 0;
+    sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_buf, .text = "PROXY TCP4 ");
+    sb_buf = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_buf,
+                        .val = (uint32_t)((unsigned)((src_addr >> 24) & 0xFF)));
+    sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_buf, .text = ".");
+    sb_buf = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_buf,
+                        .val = (uint32_t)((unsigned)((src_addr >> 16) & 0xFF)));
+    sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_buf, .text = ".");
+    sb_buf = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_buf,
+                        .val = (uint32_t)((unsigned)((src_addr >> 8) & 0xFF)));
+    sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_buf, .text = ".");
+    sb_buf = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_buf,
+                        .val = (uint32_t)((unsigned)(src_addr & 0xFF)));
+    sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_buf, .text = " ");
+    sb_buf = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_buf,
+                        .val = (uint32_t)((unsigned)((dst_addr >> 24) & 0xFF)));
+    sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_buf, .text = ".");
+    sb_buf = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_buf,
+                        .val = (uint32_t)((unsigned)((dst_addr >> 16) & 0xFF)));
+    sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_buf, .text = ".");
+    sb_buf = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_buf,
+                        .val = (uint32_t)((unsigned)((dst_addr >> 8) & 0xFF)));
+    sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_buf, .text = ".");
+    sb_buf = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_buf,
+                        .val = (uint32_t)((unsigned)(dst_addr & 0xFF)));
+    sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_buf, .text = " ");
+    sb_buf = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_buf,
+                        .val = (uint32_t)((unsigned)src_port));
+    sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_buf, .text = " ");
+    sb_buf = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_buf,
+                        .val = (uint32_t)((unsigned)dst_port));
+    sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_buf, .text = "\r\n");
+    int n = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = buf, .cap = cap, .at = sb_buf);
     // n < 0 is never true here: the format string uses only %u conversions (no wide/multibyte
     // specifiers), so snprintf can't fail with an encoding error for this call.
     if (n < 0 || (size_t)n >= cap)
@@ -319,7 +333,7 @@ void protocore_proxy_protocol_v2_build(uint8_t *work)
         ProxyProtocolV.n = 0;
         return;
     }
-    mem.cpy(buf, kV2Sig, PROXY_V2_SIG_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf, .src = kV2Sig, .bytes = PROXY_V2_SIG_LEN);
     buf[12] = PROXY_V2_VER_CMD_PROXY;
     buf[13] = PROXY_V2_FAM_TCP4;
     buf[14] = 0x00; // address-block length (12), big-endian
