@@ -5,5 +5,5 @@ protocore_add_module(services/machine_tool/haas_mdc
   GATE PROTOCORE_ENABLE_HAAS_MDC
   SOURCES haas_mdc.c
   PRIVATE_DEPS
-    mmgr/membuild
+    mmgr
 )
