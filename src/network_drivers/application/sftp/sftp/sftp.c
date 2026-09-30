@@ -10,10 +10,10 @@
 
 #if PROTOCORE_ENABLE_SSH_SFTP
 
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/application/sftp/sftp/sftp.h"
+#include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
 #include "shared/time_compat/time_compat.h" // protocore_gmtime_r (portable reentrant UTC)
 
@@ -267,7 +267,7 @@ void protocore_sftp_wr_bytes(uint8_t *work)
         w->ovf = PROTO_TRUE;
         return;
     }
-    mem.cpy(w->p + w->off, b, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->p + w->off, .src = b, .bytes = n);
     w->off += n;
 }
 
@@ -437,7 +437,7 @@ void protocore_sftp_build_status(uint8_t *work)
     SftpV.wr_u32_args.w = &w;
     SftpV.wr_u32_args.v = code;
     protocore_sftp_wr_u32(work);
-    size_t ml = msg ? str.len(msg, cap) : 0;
+    size_t ml = msg ? EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = msg, .cap = cap) : 0;
     SftpV.wr_string_args.w = &w;
     SftpV.wr_string_args.s = msg ? msg : "";
     SftpV.wr_string_args.n = (uint32_t)ml;
@@ -554,11 +554,11 @@ void protocore_sftp_build_name1(uint8_t *work)
     protocore_sftp_wr_u32(work); // one entry
     SftpV.wr_string_args.w = &w;
     SftpV.wr_string_args.s = name;
-    SftpV.wr_string_args.n = (uint32_t)str.len(name, cap);
+    SftpV.wr_string_args.n = (uint32_t)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = name, .cap = cap);
     protocore_sftp_wr_string(work);
     SftpV.wr_string_args.w = &w;
     SftpV.wr_string_args.s = longname;
-    SftpV.wr_string_args.n = (uint32_t)str.len(longname, cap);
+    SftpV.wr_string_args.n = (uint32_t)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = longname, .cap = cap);
     protocore_sftp_wr_string(work);
     SftpV.wr_attrs_args.w = &w;
     SftpV.wr_attrs_args.a = a;
@@ -590,7 +590,7 @@ void protocore_sftp_format_longname(uint8_t *work)
     mode[10] = '\0';
 
     struct tm tmv;
-    mem.set(&tmv, 0, sizeof(tmv));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &tmv, .val = 0, .bytes = sizeof(tmv));
     TimeCompatV.args.epoch = (time_t)mtime; // mtime==0 -> epoch, a harmless placeholder date
     TimeCompatV.args.out = &tmv;
     TimeCompat.gmtime(work);
@@ -605,20 +605,24 @@ void protocore_sftp_format_longname(uint8_t *work)
     // a directory listing with an empty column. The wire framing is the separate length-prefixed
     // string written by protocore_sftp_wr_string, and that is never clipped. The date is appended in
     // place rather than staged: the two column widths are what `ls -l` alignment means, and
-    // Sb.u64_clip states them directly.
-    protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    Sb.put_clip(&sb_out, mode);
-    Sb.put_clip(&sb_out, " 1 0 0 ");
-    Sb.u64_clip(&sb_out, (uint64_t)size, 0);
-    Sb.put_clip(&sb_out, " ");
-    Sb.put_clip(&sb_out, kMonths[mon]);
-    Sb.put_clip(&sb_out, " ");
-    Sb.u64_clip(&sb_out, (uint64_t)tmv.tm_mday, 2);
-    Sb.put_clip(&sb_out, " ");
-    Sb.u64_clip(&sb_out, (uint64_t)(tmv.tm_year + 1900), 5);
-    Sb.put_clip(&sb_out, " ");
-    Sb.put_clip(&sb_out, name);
-    SftpV.n = Sb.finish(&sb_out);
+    // verba_numerus.u64_clip states them directly.
+    size_t sb_out = 0;
+    sb_out = EMBED_CALL(verba_textus.put_clip, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = mode);
+    sb_out = EMBED_CALL(verba_textus.put_clip, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = " 1 0 0 ");
+    sb_out = EMBED_CALL(verba_numerus.u64_clip, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out,
+                        .val = (uint64_t)size, .columns = 0);
+    sb_out = EMBED_CALL(verba_textus.put_clip, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = " ");
+    sb_out =
+        EMBED_CALL(verba_textus.put_clip, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = kMonths[mon]);
+    sb_out = EMBED_CALL(verba_textus.put_clip, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = " ");
+    sb_out = EMBED_CALL(verba_numerus.u64_clip, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out,
+                        .val = (uint64_t)tmv.tm_mday, .columns = 2);
+    sb_out = EMBED_CALL(verba_textus.put_clip, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = " ");
+    sb_out = EMBED_CALL(verba_numerus.u64_clip, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out,
+                        .val = (uint64_t)(tmv.tm_year + 1900), .columns = 5);
+    sb_out = EMBED_CALL(verba_textus.put_clip, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = " ");
+    sb_out = EMBED_CALL(verba_textus.put_clip, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = name);
+    SftpV.n = EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_out);
 }
 
 /** @brief The operands and the outcome. */
