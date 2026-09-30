@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_GUARDRAILS
 
-#include "mmgr/membuild/membuild.h"   // protocore_sb frame builder
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "server/core/guardrails/guardrails.h"
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
+#include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
 PROTOCORE_BEGIN_DECLS
 
@@ -48,7 +48,7 @@ uint8_t *protocore_guardrails_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_GUARDRAILS_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_GUARDRAILS_BORROW);
     }
     return s_own.span;
 }
@@ -99,20 +99,28 @@ void protocore_guardrails_json(uint8_t *work)
     {
         return;
     }
-    protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    Sb.put(&sb_out, "{\"free_heap\":");
-    Sb.u32(&sb_out, (uint32_t)((unsigned)h->free_heap));
-    Sb.put(&sb_out, ",\"min_free_heap\":");
-    Sb.u32(&sb_out, (uint32_t)((unsigned)h->min_free_heap));
-    Sb.put(&sb_out, ",\"largest_free_block\":");
-    Sb.u32(&sb_out, (uint32_t)((unsigned)h->largest_free_block));
-    Sb.put(&sb_out, ",\"stack_free\":");
-    Sb.u32(&sb_out, (uint32_t)((unsigned)h->stack_free));
-    Sb.put(&sb_out, "}");
-    const int w = (int)Sb.finish(&sb_out);
+    size_t sb_out = 0;
+    sb_out =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = "{\"free_heap\":");
+    sb_out = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out,
+                        .val = (uint32_t)((unsigned)h->free_heap));
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out,
+                        .text = ",\"min_free_heap\":");
+    sb_out = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out,
+                        .val = (uint32_t)((unsigned)h->min_free_heap));
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out,
+                        .text = ",\"largest_free_block\":");
+    sb_out = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out,
+                        .val = (uint32_t)((unsigned)h->largest_free_block));
+    sb_out =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = ",\"stack_free\":");
+    sb_out = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out,
+                        .val = (uint32_t)((unsigned)h->stack_free));
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = "}");
+    const int w = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_out);
     // w < 0 is unreachable: this format is all %u (unsigned) with literal text, no
     // multibyte/wide-character conversion, which is the only way snprintf goes negative.
-    if (!sb_out.ok)
+    if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .cap = cap, .at = sb_out))
     {
         out[0] = '\0';
         return;
