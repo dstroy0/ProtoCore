@@ -9,8 +9,8 @@
  * way. A second copy is a second chance to write the early-out version by accident, and an early-out
  * compare is a timing oracle no test catches.
  *
- * Zeroing storage is not here: protocore_secure_wipe() is a memory-manager operation and lives in
- * mmgr/secure.h, beside the pool that wipes on release.
+ * Zeroing storage is not here: mmgr_zero_buf() is a memory-manager operation and lives in
+ * locus_carcerum/locus_carcerum.h, beside the cellblock that zeroes on release.
  *
  * The compare is `static inline` here, so it inlines into the caller's loop. ::CtEq is the same
  * compare reached through the namespace, with the operands on the handle.
@@ -26,7 +26,7 @@
 
 #if PROTOCORE_ENABLE_CT_EQ
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -35,7 +35,7 @@ PROTOCORE_BEGIN_DECLS
  *        independent of where (or whether) they first differ.
  *
  * Use this for every secret-dependent comparison - AEAD tags, MACs, digests, signature check values - so a
- * timing side channel cannot reveal how many leading bytes matched. Never use mem.cmp() for those (it returns
+ * timing side channel cannot reveal how many leading bytes matched. Never use memor.cmp() for those (it returns
  * early on the first mismatch). The XOR-accumulate has no data-dependent branch; only the final all-zero test
  * (the intended result) is a comparison.
  */
