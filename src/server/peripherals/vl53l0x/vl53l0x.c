@@ -16,7 +16,7 @@
  turn the driver off - there is no software stand-in for a part on the other end of a bus."
 #endif
 
-#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "server/peripherals/i2c/i2c.h"
 #include "server/peripherals/vl53l0x/vl53l0x.h"
 
@@ -39,7 +39,7 @@ uint8_t *protocore_vl53l0x_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_I2C_DEVICE_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_I2C_DEVICE_BORROW);
     }
     return s_own.span;
 }
@@ -101,8 +101,8 @@ static_assert(VL53L0X_OFF_CTX + sizeof(Vl53l0xCtx) <= PROTOCORE_I2C_DEVICE_BORRO
               "PROTOCORE_I2C_DEVICE_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(VL53L0X_OFF_CTX % _Alignof(Vl53l0xCtx) == 0,
