@@ -51,6 +51,8 @@ jobs:
         idf: [v5.5]
     steps:
       - uses: actions/checkout@v7
+        with:
+          submodules: true # include/MMgr: src/ builds against it
 
       # arduino-esp32 is fetched from the ESP Component Registry on first build (minutes), and
       # lands in the example's own managed_components/. Keyed on the manifest, which is what

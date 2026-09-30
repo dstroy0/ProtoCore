@@ -52,6 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          submodules: true # include/MMgr: src/ builds against it
           fetch-depth: 0 # full history: the diff base, the report commit, SonarCloud new-code attribution
           # Authenticate with the automatic-actions deploy key so the report commit pushes over SSH
           # (past the protected-main ruleset), which a GITHUB_TOKEN push cannot.
