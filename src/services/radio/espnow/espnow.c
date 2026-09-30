@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_ESPNOW
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "services/radio/espnow/espnow.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -43,7 +43,7 @@ uint8_t *protocore_espnow_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_ESPNOW_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_ESPNOW_BORROW);
     }
     return s_own.span;
 }
@@ -72,7 +72,7 @@ void protocore_espnow_encode(uint8_t *work)
     out[2] = (uint8_t)len;
     if (len && payload)
     {
-        mem.cpy(out + PROTOCORE_ESPNOW_HDR, payload, len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + PROTOCORE_ESPNOW_HDR, .src = payload, .bytes = len);
     }
     EspnowV.n = len + PROTOCORE_ESPNOW_HDR;
 }
@@ -140,8 +140,8 @@ static_assert(ESPNOW_OFF_CTX + sizeof(EspnowCtx) <= PROTOCORE_ESPNOW_BORROW,
               "PROTOCORE_ESPNOW_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(ESPNOW_OFF_CTX % _Alignof(EspnowCtx) == 0,
@@ -155,7 +155,8 @@ static int peer_find(const EspnowCtx *c, const uint8_t mac[6])
 {
     for (int i = 0; i < PROTOCORE_ESPNOW_MAX_PEERS; i++)
     {
-        if (c->peers[i].used && mem.cmp(c->peers[i].mac, mac, 6) == 0)
+        if (c->peers[i].used &&
+            EMBED_CALL(memor.cmp, MemoriaCfg, .src = c->peers[i].mac, .other = mac, .bytes = 6) == 0)
         {
             return i;
         }
@@ -189,7 +190,7 @@ void protocore_espnow_peer_add(uint8_t *work)
     {
         if (!ESPNOW_CTX(work)->peers[i].used)
         {
-            mem.cpy(ESPNOW_CTX(work)->peers[i].mac, mac, 6);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ESPNOW_CTX(work)->peers[i].mac, .src = mac, .bytes = 6);
             ESPNOW_CTX(work)->peers[i].used = PROTO_TRUE;
             EspnowV.ok = PROTO_TRUE;
             return;
@@ -273,8 +274,8 @@ static void on_recv(const uint8_t *mac, const uint8_t *data, int len)
 static proto_bool radio_add_peer(const uint8_t mac[6], uint8_t channel)
 {
     esp_now_peer_info_t p;
-    mem.set(&p, 0, sizeof(p));
-    mem.cpy(p.peer_addr, mac, 6);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &p, .val = 0, .bytes = sizeof(p));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = p.peer_addr, .src = mac, .bytes = 6);
     p.channel = channel;
     p.encrypt = PROTO_FALSE;
     if (esp_now_is_peer_exist(mac))
