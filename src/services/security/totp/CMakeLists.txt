@@ -6,7 +6,6 @@ protocore_add_module(services/security/totp
   SOURCES totp.c
   PRIVATE_DEPS
     crypto/hash/sha1
-    mmgr/protomem
-    mmgr/secure
-    mmgr/span
+    mmgr
+    server/core/worker
 )
