@@ -1098,18 +1098,9 @@
         "+<server/storage/config_store/config_store.c>",
         "+<server/storage/config_io/config_io.c>",
         "+<test/core_setup/hal/host/host_nvs.c>",
-        "+<mmgr/protoframe/protoframe.c>",
-        "+<mmgr/protostr/protostr.c>",
-        "+<mmgr/protomem/protomem.c>",
-        "+<mmgr/membuild/membuild.c>",
-        "+<mmgr/rawmemcpy/rawmemcpy.c>",
-        "+<mmgr/swar/swar.c>",
-        "+<mmgr/float_bits/float_bits.c>",
         "+<shared/hex/hex.c>",
-        "+<mmgr/secure/secure.c>",
-        "+<mmgr/span/span.c>",
-        "+<mmgr/arena/arena.c>",
-        "+<test/core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<server/core/worker/worker.c>"
       ],
       "tests": ["unit/src/server/storage/config_io/test_config_io"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
@@ -1120,14 +1111,8 @@
       "src": [
         "+<server/storage/config_store/config_store.c>",
         "+<test/core_setup/hal/host/host_nvs.c>",
-        "+<mmgr/protomem/protomem.c>",
-        "+<mmgr/protostr/protostr.c>",
-        "+<mmgr/rawmemcpy/rawmemcpy.c>",
-        "+<mmgr/swar/swar.c>",
-        "+<mmgr/secure/secure.c>",
-        "+<mmgr/span/span.c>",
-        "+<mmgr/arena/arena.c>",
-        "+<test/core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<server/core/worker/worker.c>"
       ],
       "tests": ["unit/src/server/storage/config_store/test_config_store"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
