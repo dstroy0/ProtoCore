@@ -3769,13 +3769,8 @@
       ],
       "src": [
         "+<services/fieldbus/j1939/j1939.c>",
-        "+<mmgr/protomem/protomem.c>",
-        "+<mmgr/rawmemcpy/rawmemcpy.c>",
-        "+<mmgr/swar/swar.c>",
-        "+<mmgr/plaintext/plaintext.c>",
-        "+<mmgr/span/span.c>",
-        "+<mmgr/arena/arena.c>",
-        "+<test/core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<server/core/worker/worker.c>"
       ],
       "tests": [
         "unit/src/services/fieldbus/j1939/test_j1939"
@@ -4645,13 +4640,8 @@
       "src": [
         "+<services/timing_position/nmea2000/nmea2000.c>",
         "+<services/fieldbus/j1939/j1939.c>",
-        "+<mmgr/protomem/protomem.c>",
-        "+<mmgr/rawmemcpy/rawmemcpy.c>",
-        "+<mmgr/swar/swar.c>",
-        "+<mmgr/plaintext/plaintext.c>",
-        "+<mmgr/span/span.c>",
-        "+<mmgr/arena/arena.c>",
-        "+<test/core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<server/core/worker/worker.c>"
       ],
       "tests": [
         "unit/src/services/timing_position/nmea2000/test_nmea2000"
