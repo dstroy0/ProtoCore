@@ -5,5 +5,5 @@ protocore_add_module(network_drivers/presentation/codec/hpack_prim
   GATE PROTOCORE_ENABLE_HPACK_PRIM
   SOURCES hpack_prim.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
