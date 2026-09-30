@@ -10,10 +10,10 @@
 
 #if PROTOCORE_ENABLE_ADS
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/ads/ads.h"
 
-#include "mmgr/endian/endian.h"
+#include "endian/endian.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -29,19 +29,23 @@ static size_t write_header(uint8_t *buf, size_t cap, const AdsRequest *r, AdsCom
     // AMS/TCP header: reserved(2) + length(4). length covers the AMS header + payload.
     buf[p++] = 0x00;
     buf[p++] = 0x00;
-    p += endian.wr32le(buf + p, (uint32_t)ADS_AMS_HDR_LEN + payload_len);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = (uint32_t)ADS_AMS_HDR_LEN + payload_len,
+                    .width = MMGR_ENDIAN_32);
     // AMS header.
-    mem.cpy(buf + p, r->target.net_id, ADS_NET_ID_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = r->target.net_id, .bytes = ADS_NET_ID_LEN);
     p += ADS_NET_ID_LEN;
-    p += endian.wr16le(buf + p, r->target.port);
-    mem.cpy(buf + p, r->source.net_id, ADS_NET_ID_LEN);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = r->target.port, .width = MMGR_ENDIAN_16);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = r->source.net_id, .bytes = ADS_NET_ID_LEN);
     p += ADS_NET_ID_LEN;
-    p += endian.wr16le(buf + p, r->source.port);
-    p += endian.wr16le(buf + p, (uint16_t)cmd); // wire byte in
-    p += endian.wr16le(buf + p, ADS_STATE_REQUEST);
-    p += endian.wr32le(buf + p, payload_len); // cbData
-    p += endian.wr32le(buf + p, 0);           // error code (0 on a request)
-    p += endian.wr32le(buf + p, r->invoke_id);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = r->source.port, .width = MMGR_ENDIAN_16);
+    // wire byte in
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = (uint16_t)cmd, .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = ADS_STATE_REQUEST, .width = MMGR_ENDIAN_16);
+    // cbData
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = payload_len, .width = MMGR_ENDIAN_32);
+    // error code (0 on a request)
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = 0, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = r->invoke_id, .width = MMGR_ENDIAN_32);
     return p; // == ADS_HDR_LEN
 }
 
@@ -86,9 +90,9 @@ void protocore_ads_build_read(uint8_t *work)
         AdsV.n = 0;
         return;
     }
-    p += endian.wr32le(buf + p, index_group);
-    p += endian.wr32le(buf + p, index_offset);
-    p += endian.wr32le(buf + p, read_len);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = index_group, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = index_offset, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = read_len, .width = MMGR_ENDIAN_32);
     AdsV.n = p;
 }
 
@@ -114,12 +118,12 @@ void protocore_ads_build_write(uint8_t *work)
         AdsV.n = 0;
         return;
     }
-    p += endian.wr32le(buf + p, index_group);
-    p += endian.wr32le(buf + p, index_offset);
-    p += endian.wr32le(buf + p, len);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = index_group, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = index_offset, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = len, .width = MMGR_ENDIAN_32);
     if (len)
     {
-        mem.cpy(buf + p, data, len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = data, .bytes = len);
         p += len;
     }
     AdsV.n = p;
@@ -148,13 +152,13 @@ void protocore_ads_build_read_write(uint8_t *work)
         AdsV.n = 0;
         return;
     }
-    p += endian.wr32le(buf + p, index_group);
-    p += endian.wr32le(buf + p, index_offset);
-    p += endian.wr32le(buf + p, read_len);
-    p += endian.wr32le(buf + p, write_len);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = index_group, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = index_offset, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = read_len, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = write_len, .width = MMGR_ENDIAN_32);
     if (write_len)
     {
-        mem.cpy(buf + p, write_data, write_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = write_data, .bytes = write_len);
         p += write_len;
     }
     AdsV.n = p;
@@ -182,12 +186,13 @@ void protocore_ads_build_write_control(uint8_t *work)
         AdsV.n = 0;
         return;
     }
-    p += endian.wr16le(buf + p, protocore_ads_state);
-    p += endian.wr16le(buf + p, device_state);
-    p += endian.wr32le(buf + p, len);
+    p +=
+        EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = protocore_ads_state, .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = device_state, .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = len, .width = MMGR_ENDIAN_32);
     if (len)
     {
-        mem.cpy(buf + p, data, len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = data, .bytes = len);
         p += len;
     }
     AdsV.n = p;
@@ -213,13 +218,14 @@ void protocore_ads_build_add_notification(uint8_t *work)
         AdsV.n = 0;
         return;
     }
-    p += endian.wr32le(buf + p, index_group);
-    p += endian.wr32le(buf + p, index_offset);
-    p += endian.wr32le(buf + p, length);
-    p += endian.wr32le(buf + p, (uint32_t)mode); // wire byte in
-    p += endian.wr32le(buf + p, max_delay);
-    p += endian.wr32le(buf + p, cycle_time);
-    mem.set(buf + p, 0, 16); // reserved
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = index_group, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = index_offset, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = length, .width = MMGR_ENDIAN_32);
+    // wire byte in
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = (uint32_t)mode, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = max_delay, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = cycle_time, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = buf + p, .val = 0, .bytes = 16); // reserved
     p += 16;
     AdsV.n = p;
 }
@@ -238,7 +244,8 @@ void protocore_ads_build_del_notification(uint8_t *work)
         AdsV.n = 0;
         return;
     }
-    p += endian.wr32le(buf + p, notification_handle);
+    p +=
+        EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = notification_handle, .width = MMGR_ENDIAN_32);
     AdsV.n = p;
 }
 
@@ -259,7 +266,8 @@ void protocore_ads_parse_ams_header(uint8_t *work)
         AdsV.ok = PROTO_FALSE;
         return;
     }
-    uint32_t frame_len = endian.rd32le(buf + 2); // AMS header + payload
+    // AMS header + payload
+    uint32_t frame_len = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + 2, .width = MMGR_ENDIAN_32);
     if (frame_len < (uint32_t)ADS_AMS_HDR_LEN)
     {
         AdsV.ok = PROTO_FALSE;
@@ -271,15 +279,16 @@ void protocore_ads_parse_ams_header(uint8_t *work)
         return;
     }
     const uint8_t *a = buf + ADS_AMSTCP_HDR_LEN;
-    mem.cpy(out->target.net_id, a, ADS_NET_ID_LEN);
-    out->target.port = endian.rd16le(a + 6);
-    mem.cpy(out->source.net_id, a + 8, ADS_NET_ID_LEN);
-    out->source.port = endian.rd16le(a + 14);
-    out->cmd = (AdsCommand)endian.rd16le(a + 16); // wire byte out
-    out->state_flags = endian.rd16le(a + 18);
-    out->data_len = endian.rd32le(a + 20);
-    out->error_code = endian.rd32le(a + 24);
-    out->invoke_id = endian.rd32le(a + 28);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->target.net_id, .src = a, .bytes = ADS_NET_ID_LEN);
+    out->target.port = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = a + 6, .width = MMGR_ENDIAN_16);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->source.net_id, .src = a + 8, .bytes = ADS_NET_ID_LEN);
+    out->source.port = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = a + 14, .width = MMGR_ENDIAN_16);
+    // wire byte out
+    out->cmd = (AdsCommand)(uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = a + 16, .width = MMGR_ENDIAN_16);
+    out->state_flags = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = a + 18, .width = MMGR_ENDIAN_16);
+    out->data_len = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = a + 20, .width = MMGR_ENDIAN_32);
+    out->error_code = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = a + 24, .width = MMGR_ENDIAN_32);
+    out->invoke_id = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = a + 28, .width = MMGR_ENDIAN_32);
     // cbData must fit inside the frame the AMS/TCP length promised.
     if ((uint32_t)ADS_AMS_HDR_LEN + out->data_len > frame_len)
     {
@@ -302,8 +311,8 @@ void protocore_ads_parse_read(uint8_t *work)
         AdsV.ok = PROTO_FALSE;
         return;
     }
-    out->result = endian.rd32le(data);
-    out->len = endian.rd32le(data + 4);
+    out->result = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data, .width = MMGR_ENDIAN_32);
+    out->len = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data + 4, .width = MMGR_ENDIAN_32);
     if (8 + (size_t)out->len > data_len)
     {
         AdsV.ok = PROTO_FALSE;
@@ -325,7 +334,7 @@ void protocore_ads_parse_result(uint8_t *work)
         AdsV.ok = PROTO_FALSE;
         return;
     }
-    *result = endian.rd32le(data);
+    *result = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data, .width = MMGR_ENDIAN_32);
     AdsV.ok = PROTO_TRUE;
 }
 
@@ -341,9 +350,10 @@ void protocore_ads_parse_read_state(uint8_t *work)
         AdsV.ok = PROTO_FALSE;
         return;
     }
-    out->result = endian.rd32le(data);
-    out->protocore_ads_state = endian.rd16le(data + 4);
-    out->device_state = endian.rd16le(data + 6);
+    out->result = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data, .width = MMGR_ENDIAN_32);
+    out->protocore_ads_state =
+        (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data + 4, .width = MMGR_ENDIAN_16);
+    out->device_state = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data + 6, .width = MMGR_ENDIAN_16);
     AdsV.ok = PROTO_TRUE;
 }
 
@@ -359,11 +369,11 @@ void protocore_ads_parse_read_device_info(uint8_t *work)
         AdsV.ok = PROTO_FALSE;
         return;
     }
-    out->result = endian.rd32le(data);
+    out->result = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data, .width = MMGR_ENDIAN_32);
     out->version_major = data[4];
     out->version_minor = data[5];
-    out->version_build = endian.rd16le(data + 6);
-    mem.cpy(out->device_name, data + 8, ADS_DEVICE_NAME_LEN);
+    out->version_build = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data + 6, .width = MMGR_ENDIAN_16);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->device_name, .src = data + 8, .bytes = ADS_DEVICE_NAME_LEN);
     out->device_name[ADS_DEVICE_NAME_LEN] = '\0'; // the field is not guaranteed NUL-terminated
     AdsV.ok = PROTO_TRUE;
 }
@@ -381,8 +391,8 @@ void protocore_ads_parse_add_notification(uint8_t *work)
         AdsV.ok = PROTO_FALSE;
         return;
     }
-    *result = endian.rd32le(data);
-    *handle = endian.rd32le(data + 4);
+    *result = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data, .width = MMGR_ENDIAN_32);
+    *handle = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data + 4, .width = MMGR_ENDIAN_32);
     AdsV.ok = PROTO_TRUE;
 }
 
@@ -400,8 +410,9 @@ void protocore_ads_parse_notification(uint8_t *work)
         AdsV.ok = PROTO_FALSE;
         return;
     }
-    uint32_t length = endian.rd32le(data); // octets after this field
-    uint32_t stamps = endian.rd32le(data + 4);
+    // octets after this field
+    uint32_t length = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data, .width = MMGR_ENDIAN_32);
+    uint32_t stamps = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data + 4, .width = MMGR_ENDIAN_32);
     if (4 + (size_t)length > data_len)
     {
         AdsV.ok = PROTO_FALSE;
@@ -415,8 +426,9 @@ void protocore_ads_parse_notification(uint8_t *work)
             AdsV.ok = PROTO_FALSE;
             return;
         }
-        uint64_t timestamp = endian.rd64le(data + p);
-        uint32_t samples = endian.rd32le(data + p + 8);
+        uint64_t timestamp = EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data + p, .width = MMGR_ENDIAN_64);
+        uint32_t samples =
+            (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data + p + 8, .width = MMGR_ENDIAN_32);
         p += 12;
         for (uint32_t i = 0; i < samples; i++)
         {
@@ -425,8 +437,10 @@ void protocore_ads_parse_notification(uint8_t *work)
                 AdsV.ok = PROTO_FALSE;
                 return;
             }
-            uint32_t handle = endian.rd32le(data + p);
-            uint32_t size = endian.rd32le(data + p + 4);
+            uint32_t handle =
+                (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data + p, .width = MMGR_ENDIAN_32);
+            uint32_t size =
+                (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data + p + 4, .width = MMGR_ENDIAN_32);
             p += 8;
             if (p + (size_t)size > data_len)
             {
