@@ -5,6 +5,5 @@ protocore_add_module(services/iot/nats
   GATE PROTOCORE_ENABLE_NATS
   SOURCES nats.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )
