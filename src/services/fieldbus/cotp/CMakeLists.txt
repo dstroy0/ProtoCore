@@ -5,5 +5,5 @@ protocore_add_module(services/fieldbus/cotp
   GATE PROTOCORE_ENABLE_COTP
   SOURCES cotp.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
