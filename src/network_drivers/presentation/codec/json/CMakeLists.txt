@@ -5,7 +5,6 @@ protocore_add_module(network_drivers/presentation/codec/json
   GATE PROTOCORE_ENABLE_JSON
   SOURCES json.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/protostr
+    mmgr
     shared/hex
 )
