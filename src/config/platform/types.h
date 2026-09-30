@@ -68,6 +68,19 @@ typedef _Bool proto_bool;
 #define PROTO_FALSE ((proto_bool)0) ///< the false value
 
 /**
+ * @brief Cross-thread access to a ProtoCore field declared `_Atomic`: a slot state, a run flag.
+ *
+ * Every read is an acquire load and every write a release store, so the ordering is stated at each
+ * access rather than left to the default. MMgr keeps its ring atomics inside memoria_anularis and
+ * exposes none, so the fields ProtoCore owns itself are reached through these two.
+ *
+ * `atomic_load_explicit` and `atomic_store_explicit` are `<stdatomic.h>`, which a file using these
+ * includes itself: this header also reaches C++ sketches, where that header is not C11's.
+ */
+#define PROTO_ATOMIC_LOAD(p) atomic_load_explicit((p), memory_order_acquire)
+#define PROTO_ATOMIC_STORE(p, v) atomic_store_explicit((p), (v), memory_order_release) ///< release store of @p v
+
+/**
  * @brief Give a header's declarations C linkage, so their symbol names carry no parameter types.
  *
  * Wraps the declarations between them in `extern "C"` under a C++ compiler, and expands to nothing
