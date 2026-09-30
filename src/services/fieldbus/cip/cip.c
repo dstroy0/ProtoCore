@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_CIP
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/cip/cip.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -119,11 +119,11 @@ void protocore_cip_build_request(uint8_t *work)
     size_t p = 0;
     buf[p++] = service;
     buf[p++] = (uint8_t)(epath_len / 2); // path size in words
-    mem.cpy(buf + p, epath, epath_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = epath, .bytes = epath_len);
     p += epath_len;
     if (data_len)
     {
-        mem.cpy(buf + p, data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = data, .bytes = data_len);
         p += data_len;
     }
     CipV.n = p;

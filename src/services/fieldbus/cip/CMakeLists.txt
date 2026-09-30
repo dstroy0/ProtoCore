@@ -5,5 +5,5 @@ protocore_add_module(services/fieldbus/cip
   GATE PROTOCORE_ENABLE_CIP
   SOURCES cip.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
