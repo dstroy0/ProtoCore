@@ -10,11 +10,11 @@
  */
 
 #include "server/storage/filesystem/filesystem.h"
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h" // str: the bounded-run walks
-                                    // strncmp (root-name match), memcpy
-#include "server/storage/mnt/mnt.h" // Mnt.active: the filesystem every call works through
+#include "cellularum_laboro/cellularum_laboro.h" // str: the bounded-run walks
+#include "memoria_operor/memoria_operor.h"
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
+                                       // strncmp (root-name match), memcpy
+#include "server/storage/mnt/mnt.h"    // Mnt.active: the filesystem every call works through
 
 // One bound root. The prefix is a copy, not the caller's pointer, and always ends '/', so the join
 // concatenates `root` and `dir` without adding a separator.
@@ -55,8 +55,8 @@ static_assert(FILESYSTEM_OFF_CTX + sizeof(FilesystemCtx) <= PROTOCORE_FILESYSTEM
               "PROTOCORE_FILESYSTEM_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(
@@ -82,7 +82,7 @@ uint8_t *protocore_filesystem_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_FILESYSTEM_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_FILESYSTEM_BORROW);
     }
     return s_own.span;
 }
@@ -105,7 +105,7 @@ static const protocore_mnt_backend *store(uint8_t *work)
 // name into a different file's.
 static size_t walk_push(char *path, size_t len, const char *child)
 {
-    size_t n = str.len(child, PROTOCORE_FILESYSTEM_PATH_MAX);
+    size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = child, .cap = PROTOCORE_FILESYSTEM_PATH_MAX);
     // The root already IS the separator, so it is the one path that does not get another.
     proto_bool need_sep = !(len == 1 && path[0] == '/');
     if (len + (need_sep ? 1 : 0) + n + 1 > PROTOCORE_FILESYSTEM_PATH_MAX)
@@ -116,7 +116,7 @@ static size_t walk_push(char *path, size_t len, const char *child)
     {
         path[len++] = '/';
     }
-    mem.cpy(path + len, child, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = path + len, .src = child, .bytes = n);
     len += n;
     path[len] = '\0';
     return len;
@@ -190,7 +190,8 @@ static void fs_begin(uint8_t *work)
     // give them two views of one thing.
     for (uint8_t i = 0; i < FILESYSTEM_CTX(work)->count; i++)
     {
-        if (str.eq(FILESYSTEM_CTX(work)->root[i].name, want, PROTOCORE_FS_ROOT_NAME_MAX, PROTO_FALSE))
+        if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = FILESYSTEM_CTX(work)->root[i].name, .other = want,
+                       .cap = PROTOCORE_FS_ROOT_NAME_MAX, .ci = PROTO_FALSE))
         {
             Fs.i32 = (int)i;
             return;
@@ -205,8 +206,8 @@ static void fs_begin(uint8_t *work)
     FsRoot *r = &FILESYSTEM_CTX(work)->root[FILESYSTEM_CTX(work)->count];
 
     // One byte of the capacity is held back for the separator below, so appending cannot overrun.
-    size_t n = frame.build(r->path, PROTOCORE_FILESYSTEM_PATH_MAX - 1, FILESYSTEM_ROOT,
-                           (const protocore_fval[]){PROTOCORE_VSTR(want)}, 1);
+    size_t n = EMBED_CALL(numer.build, NumerosCfg, .out = r->path, .cap = PROTOCORE_FILESYSTEM_PATH_MAX - 1,
+                          .spec = FILESYSTEM_ROOT, .vals = (const mmgr_fval[]){MMGR_VSTR(want)}, .nvals = 1);
     if (n == 0) // a root that does not fit - refused, not truncated into another directory
     {
         Fs.i32 = -1;
@@ -217,8 +218,8 @@ static void fs_begin(uint8_t *work)
         r->path[n] = '/';      // the separator the join relies on, added once here rather than
         r->path[n + 1] = '\0'; // tested on every resolve
     }
-    if (frame.build(r->name, PROTOCORE_FS_ROOT_NAME_MAX, FILESYSTEM_ROOT,
-                    (const protocore_fval[]){PROTOCORE_VSTR(want)}, 1) == 0)
+    if (EMBED_CALL(numer.build, NumerosCfg, .out = r->name, .cap = PROTOCORE_FS_ROOT_NAME_MAX, .spec = FILESYSTEM_ROOT,
+                   .vals = (const mmgr_fval[]){MMGR_VSTR(want)}, .nvals = 1) == 0)
     {
         Fs.i32 = -1;
         return; // a name too long to record is a name that could not be matched again
@@ -366,8 +367,8 @@ static void fs_remove(uint8_t *work)
     // Destination resolving here (a mount with an empty fs_root, target "/") turned that into
     // "remove everything", after which the copy failed and answered 409 over an emptied volume.
     const char *rp = FILESYSTEM_CTX(work)->root[root].path;
-    size_t rlen = str.len(rp, PROTOCORE_FILESYSTEM_PATH_MAX);
-    size_t plen = str.len(p, PROTOCORE_FILESYSTEM_PATH_MAX);
+    size_t rlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = rp, .cap = PROTOCORE_FILESYSTEM_PATH_MAX);
+    size_t plen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = p, .cap = PROTOCORE_FILESYSTEM_PATH_MAX);
     if (rlen > 0 && rp[rlen - 1] == '/') // the root always carries the separator; a resolve may not
     {
         rlen--;
@@ -376,7 +377,7 @@ static void fs_remove(uint8_t *work)
     {
         plen--;
     }
-    if (plen == rlen && mem.cmp(p, rp, plen) == 0)
+    if (plen == rlen && EMBED_CALL(memor.cmp, MemoriaCfg, .src = p, .other = rp, .bytes = plen) == 0)
     {
         FILESYSTEM_CTX(work)->status |= PROTOCORE_FS_BAD_ROOT;
         Fs.ok = PROTO_FALSE;
@@ -402,8 +403,9 @@ static void fs_remove(uint8_t *work)
     // child, finishing a level truncates back. Each pass re-opens the current level and takes its
     // first surviving entry, so the cursor is never carried across a removal that would invalidate
     // it - whatever the previous pass removed is already gone when the next open happens.
-    size_t len = frame.build(FILESYSTEM_CTX(work)->walk, PROTOCORE_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT,
-                             (const protocore_fval[]){PROTOCORE_VSTR(p)}, 1);
+    size_t len =
+        EMBED_CALL(numer.build, NumerosCfg, .out = FILESYSTEM_CTX(work)->walk, .cap = PROTOCORE_FILESYSTEM_PATH_MAX,
+                   .spec = FILESYSTEM_ROOT, .vals = (const mmgr_fval[]){MMGR_VSTR(p)}, .nvals = 1);
     if (len == 0)
     {
         Fs.ok = PROTO_FALSE;
@@ -466,7 +468,8 @@ static void fs_remove(uint8_t *work)
             Fs.ok = PROTO_FALSE;
             return; // refuse a pathologically deep tree rather than walk forever
         }
-        len = str.len(FILESYSTEM_CTX(work)->walk, PROTOCORE_FILESYSTEM_PATH_MAX);
+        len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = FILESYSTEM_CTX(work)->walk,
+                         .cap = PROTOCORE_FILESYSTEM_PATH_MAX);
         lvl++;
     }
 }
@@ -553,10 +556,12 @@ static void fs_copy(uint8_t *work)
         return;
     }
 
-    size_t slen = frame.build(FILESYSTEM_CTX(work)->walk, PROTOCORE_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT,
-                              (const protocore_fval[]){PROTOCORE_VSTR(sp)}, 1);
-    size_t dlen = frame.build(FILESYSTEM_CTX(work)->dwalk, PROTOCORE_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT,
-                              (const protocore_fval[]){PROTOCORE_VSTR(dp)}, 1);
+    size_t slen =
+        EMBED_CALL(numer.build, NumerosCfg, .out = FILESYSTEM_CTX(work)->walk, .cap = PROTOCORE_FILESYSTEM_PATH_MAX,
+                   .spec = FILESYSTEM_ROOT, .vals = (const mmgr_fval[]){MMGR_VSTR(sp)}, .nvals = 1);
+    size_t dlen =
+        EMBED_CALL(numer.build, NumerosCfg, .out = FILESYSTEM_CTX(work)->dwalk, .cap = PROTOCORE_FILESYSTEM_PATH_MAX,
+                   .spec = FILESYSTEM_ROOT, .vals = (const mmgr_fval[]){MMGR_VSTR(dp)}, .nvals = 1);
     if (slen == 0 || dlen == 0)
     {
         Fs.ok = PROTO_FALSE;
@@ -651,7 +656,8 @@ static void fs_copy(uint8_t *work)
             Fs.ok = PROTO_FALSE;
             return;
         }
-        slen = str.len(FILESYSTEM_CTX(work)->walk, PROTOCORE_FILESYSTEM_PATH_MAX);
+        slen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = FILESYSTEM_CTX(work)->walk,
+                          .cap = PROTOCORE_FILESYSTEM_PATH_MAX);
         dlen = ndlen;
         lvl++;
         FILESYSTEM_CTX(work)->idx[lvl] = 0;

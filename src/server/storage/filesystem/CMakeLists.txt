@@ -4,10 +4,7 @@
 protocore_add_module(server/storage/filesystem
   SOURCES filesystem.c
   DEPS
-    mmgr/protoframe
+    mmgr
+    server/core/worker
     server/storage/mnt
-  PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protomem
-    mmgr/protostr
 )
