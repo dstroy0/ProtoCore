@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_RAWL2
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/rawl2/rawl2.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC32_ISO_HDLC
 
@@ -43,13 +43,13 @@ void protocore_rawl2_build(uint8_t *work)
         Rawl2V.n = 0;
         return;
     }
-    mem.cpy(out, dst, ETH_ALEN);
-    mem.cpy(out + ETH_ALEN, src, ETH_ALEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = dst, .bytes = ETH_ALEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + ETH_ALEN, .src = src, .bytes = ETH_ALEN);
     out[12] = (uint8_t)(ethertype >> 8);
     out[13] = (uint8_t)ethertype;
     if (payload_len)
     {
-        mem.cpy(out + ETH_HDR_LEN, payload, payload_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + ETH_HDR_LEN, .src = payload, .bytes = payload_len);
     }
     Rawl2V.n = n;
 }
@@ -79,8 +79,8 @@ void protocore_rawl2_build_vlan(uint8_t *work)
         Rawl2V.n = 0;
         return;
     }
-    mem.cpy(out, dst, ETH_ALEN);
-    mem.cpy(out + ETH_ALEN, src, ETH_ALEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = dst, .bytes = ETH_ALEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + ETH_ALEN, .src = src, .bytes = ETH_ALEN);
     out[12] = (uint8_t)(ETH_TPID_8021Q >> 8);
     out[13] = (uint8_t)ETH_TPID_8021Q;
     uint16_t tci = (uint16_t)(((pcp & 0x7) << 13) | ((dei ? 1 : 0) << 12) | (vid & 0x0FFF));
@@ -90,7 +90,7 @@ void protocore_rawl2_build_vlan(uint8_t *work)
     out[17] = (uint8_t)ethertype;
     if (payload_len)
     {
-        mem.cpy(out + ETH_VLAN_HDR_LEN, payload, payload_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + ETH_VLAN_HDR_LEN, .src = payload, .bytes = payload_len);
     }
     Rawl2V.n = n;
 }
