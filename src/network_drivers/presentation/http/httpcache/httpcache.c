@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_HTTP_CACHE
 
+#include "cellularum_laboro/cellularum_laboro.h"
 #include "httpcache.h"
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "memoria_operor/memoria_operor.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -85,7 +85,7 @@ static size_t cc_tok(char *buf, size_t cap, size_t n, proto_bool *first, const c
     {
         return CC_SENT;
     }
-    size_t tlen = str.len(tok, cap);
+    size_t tlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = tok, .cap = cap);
     size_t need = (*first ? 0 : 2) + tlen;
     if (n + need > cap)
     {
@@ -96,7 +96,7 @@ static size_t cc_tok(char *buf, size_t cap, size_t n, proto_bool *first, const c
         buf[n++] = ',';
         buf[n++] = ' ';
     }
-    mem.cpy(buf + n, tok, tlen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + n, .src = tok, .bytes = tlen);
     *first = PROTO_FALSE;
     return n + tlen;
 }
