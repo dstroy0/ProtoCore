@@ -5,5 +5,5 @@ protocore_add_module(services/fieldbus/lonworks
   GATE PROTOCORE_ENABLE_LONWORKS
   SOURCES lonworks.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
