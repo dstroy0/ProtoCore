@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_GPIB
 
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/instrumentation/gpib/gpib.h"
+#include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
 PROTOCORE_BEGIN_DECLS
 
@@ -22,11 +22,13 @@ size_t protocore_gpib_command(char *buf, size_t cap, const char *cmd)
     {
         return 0;
     }
-    protocore_sb sb_cmd = {buf, cap, 0, PROTO_TRUE};
-    protocore_sb_lit(&sb_cmd, "++");
-    Sb.put(&sb_cmd, cmd);
-    protocore_sb_lit(&sb_cmd, "\n");
-    return Sb.finish(&sb_cmd);
+    size_t sb_cmd = 0;
+    sb_cmd = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_cmd, .text = "++",
+                        .text_len = sizeof("++") - 1);
+    sb_cmd = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_cmd, .text = cmd);
+    sb_cmd = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_cmd, .text = "\n",
+                        .text_len = sizeof("\n") - 1);
+    return EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = buf, .cap = cap, .at = sb_cmd);
 }
 
 size_t protocore_gpib_addr(char *buf, size_t cap, uint8_t pad, int sad)
@@ -35,16 +37,18 @@ size_t protocore_gpib_addr(char *buf, size_t cap, uint8_t pad, int sad)
     {
         return 0;
     }
-    protocore_sb sb_addr = {buf, cap, 0, PROTO_TRUE};
-    protocore_sb_lit(&sb_addr, "++addr ");
-    Sb.u32(&sb_addr, pad);
+    size_t sb_addr = 0;
+    sb_addr = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_addr, .text = "++addr ",
+                         .text_len = sizeof("++addr ") - 1);
+    sb_addr = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_addr, .val = pad);
     if (sad >= 0)
     {
-        Sb.ch(&sb_addr, ' ');
-        Sb.i64(&sb_addr, sad);
+        sb_addr = EMBED_CALL(verba_littera.ch, VerbaLitteraCfg, .out = buf, .cap = cap, .at = sb_addr, .ch = ' ');
+        sb_addr = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_addr, .sval = sad);
     }
-    protocore_sb_lit(&sb_addr, "\n");
-    return Sb.finish(&sb_addr);
+    sb_addr = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_addr, .text = "\n",
+                         .text_len = sizeof("\n") - 1);
+    return EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = buf, .cap = cap, .at = sb_addr);
 }
 
 size_t protocore_gpib_read(char *buf, size_t cap, GpibRead mode, uint8_t ch)
@@ -53,23 +57,27 @@ size_t protocore_gpib_read(char *buf, size_t cap, GpibRead mode, uint8_t ch)
     {
         return 0;
     }
-    protocore_sb sb_read = {buf, cap, 0, PROTO_TRUE};
+    size_t sb_read = 0;
     switch (mode)
     {
     case UNTIL_EOI:
-        protocore_sb_lit(&sb_read, "++read eoi\n");
+        sb_read = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_read,
+                             .text = "++read eoi\n", .text_len = sizeof("++read eoi\n") - 1);
         break;
     case UNTIL_CHAR:
-        protocore_sb_lit(&sb_read, "++read ");
-        Sb.u32(&sb_read, ch);
-        protocore_sb_lit(&sb_read, "\n");
+        sb_read = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_read,
+                             .text = "++read ", .text_len = sizeof("++read ") - 1);
+        sb_read = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_read, .val = ch);
+        sb_read = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_read, .text = "\n",
+                             .text_len = sizeof("\n") - 1);
         break;
     case UNTIL_TIMEOUT:
     default:
-        protocore_sb_lit(&sb_read, "++read\n");
+        sb_read = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_read,
+                             .text = "++read\n", .text_len = sizeof("++read\n") - 1);
         break;
     }
-    return Sb.finish(&sb_read);
+    return EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = buf, .cap = cap, .at = sb_read);
 }
 
 size_t protocore_gpib_spoll(char *buf, size_t cap, int pad, int sad)
@@ -78,20 +86,23 @@ size_t protocore_gpib_spoll(char *buf, size_t cap, int pad, int sad)
     {
         return 0;
     }
-    protocore_sb sb_spoll = {buf, cap, 0, PROTO_TRUE};
-    protocore_sb_lit(&sb_spoll, "++spoll");
+    size_t sb_spoll = 0;
+    sb_spoll = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_spoll, .text = "++spoll",
+                          .text_len = sizeof("++spoll") - 1);
     if (pad >= 0)
     {
-        Sb.ch(&sb_spoll, ' ');
-        Sb.i64(&sb_spoll, pad);
+        sb_spoll = EMBED_CALL(verba_littera.ch, VerbaLitteraCfg, .out = buf, .cap = cap, .at = sb_spoll, .ch = ' ');
+        sb_spoll = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_spoll, .sval = pad);
         if (sad >= 0)
         {
-            Sb.ch(&sb_spoll, ' ');
-            Sb.i64(&sb_spoll, sad);
+            sb_spoll = EMBED_CALL(verba_littera.ch, VerbaLitteraCfg, .out = buf, .cap = cap, .at = sb_spoll, .ch = ' ');
+            sb_spoll =
+                EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_spoll, .sval = sad);
         }
     }
-    protocore_sb_lit(&sb_spoll, "\n");
-    return Sb.finish(&sb_spoll);
+    sb_spoll = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_spoll, .text = "\n",
+                          .text_len = sizeof("\n") - 1);
+    return EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = buf, .cap = cap, .at = sb_spoll);
 }
 
 size_t protocore_gpib_eos(char *buf, size_t cap, GpibEos eos)
@@ -100,11 +111,14 @@ size_t protocore_gpib_eos(char *buf, size_t cap, GpibEos eos)
     {
         return 0;
     }
-    protocore_sb sb_eos = {buf, cap, 0, PROTO_TRUE};
-    protocore_sb_lit(&sb_eos, "++eos ");
-    Sb.i64(&sb_eos, (int64_t)eos); // the wire field IS the enumerator's decimal value
-    protocore_sb_lit(&sb_eos, "\n");
-    return Sb.finish(&sb_eos);
+    size_t sb_eos = 0;
+    sb_eos = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_eos, .text = "++eos ",
+                        .text_len = sizeof("++eos ") - 1);
+    // the wire field IS the enumerator's decimal value
+    sb_eos = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_eos, .sval = (int64_t)eos);
+    sb_eos = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_eos, .text = "\n",
+                        .text_len = sizeof("\n") - 1);
+    return EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = buf, .cap = cap, .at = sb_eos);
 }
 
 size_t protocore_gpib_build_data(uint8_t *buf, size_t cap, const uint8_t *src, size_t len)
@@ -259,7 +273,7 @@ proto_bool protocore_gpib_parse_version(const char *s, size_t len, const char **
     }
     for (size_t i = 0; i + klen <= len; i++)
     {
-        if (mem.cmp(s + i, key, klen) == 0)
+        if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = s + i, .other = key, .bytes = klen) == 0)
         {
             const char *v = s + i + klen;
             size_t vlen = len - i - klen;

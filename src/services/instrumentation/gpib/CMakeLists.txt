@@ -5,6 +5,5 @@ protocore_add_module(services/instrumentation/gpib
   GATE PROTOCORE_ENABLE_GPIB
   SOURCES gpib.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/protomem
+    mmgr
 )
