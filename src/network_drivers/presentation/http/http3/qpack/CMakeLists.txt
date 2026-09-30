@@ -5,7 +5,6 @@ protocore_add_module(network_drivers/presentation/http/http3/qpack
   GATE PROTOCORE_ENABLE_HTTP3
   SOURCES qpack.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
     network_drivers/presentation/codec/hpack_prim
 )
