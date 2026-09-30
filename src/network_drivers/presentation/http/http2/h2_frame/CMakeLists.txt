@@ -5,5 +5,5 @@ protocore_add_module(network_drivers/presentation/http/http2/h2_frame
   GATE PROTOCORE_ENABLE_HTTP2
   SOURCES h2_frame.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
