@@ -5,6 +5,5 @@ protocore_add_module(services/energy/mms
   GATE PROTOCORE_ENABLE_MMS
   SOURCES mms.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )
