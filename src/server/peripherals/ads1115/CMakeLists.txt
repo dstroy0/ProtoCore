@@ -5,8 +5,8 @@ protocore_add_module(server/peripherals/ads1115
   GATE PROTOCORE_ENABLE_ADS1115
   SOURCES ads1115.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/secure
+    mmgr
+    server/core/worker
     server/clock
     server/peripherals/i2c
 )
