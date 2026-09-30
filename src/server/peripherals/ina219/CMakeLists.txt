@@ -5,7 +5,7 @@ protocore_add_module(server/peripherals/ina219
   GATE PROTOCORE_ENABLE_INA219
   SOURCES ina219.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/secure
+    mmgr
+    server/core/worker
     server/peripherals/i2c
 )

@@ -3720,15 +3720,9 @@
       ],
       "src": [
         "+<server/peripherals/ina219/ina219.c>",
-        "+<mmgr/protomem/protomem.c>",
-        "+<mmgr/endian/endian.c>",
-        "+<mmgr/rawmemcpy/rawmemcpy.c>",
-        "+<mmgr/swar/swar.c>",
-        "+<mmgr/secure/secure.c>",
-        "+<mmgr/span/span.c>",
-        "+<mmgr/arena/arena.c>",
         "+<test/core_setup/hal/portable/portable_platform.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<server/core/worker/worker.c>"
       ],
       "tests": [
         "unit/src/server/peripherals/ina219/test_ina219"
