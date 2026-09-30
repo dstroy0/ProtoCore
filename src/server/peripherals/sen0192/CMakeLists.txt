@@ -5,6 +5,7 @@ protocore_add_module(server/peripherals/sen0192
   GATE PROTOCORE_ENABLE_SEN0192
   SOURCES sen0192.c
   PRIVATE_DEPS
-    mmgr/plaintext
+    mmgr
+    server/core/worker
     server/clock
 )
