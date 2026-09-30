@@ -15,6 +15,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v7
         with:
+          submodules: true # include/MMgr: src/ builds against it
           path: "library-source"
           # Full history + tags so the release summary can diff against the previous tag.
           fetch-depth: 0
@@ -102,6 +103,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
+        with:
+          submodules: true # include/MMgr: src/ builds against it
 
       - name: Check for PlatformIO token
         id: token
