@@ -5,7 +5,6 @@ protocore_add_module(server/peripherals/sdi12
   GATE PROTOCORE_ENABLE_SDI12
   SOURCES sdi12.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
     shared/crc
 )
