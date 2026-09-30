@@ -7,8 +7,8 @@
  */
 
 #include "services/fieldbus/j1939/j1939.h"
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "shared/can/can.h"
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
@@ -34,7 +34,7 @@ uint8_t *protocore_j1939_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_J1939_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_J1939_BORROW);
     }
     return s_own.span;
 }
@@ -118,8 +118,8 @@ static_assert(J1939_OFF_CTX + sizeof(J1939Ctx) <= PROTOCORE_J1939_BORROW,
               "PROTOCORE_J1939_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(J1939_OFF_CTX % _Alignof(J1939Ctx) == 0,
@@ -147,8 +147,9 @@ static proto_bool ext_frame(uint8_t *work)
     J1939_CTX(work)->f->extended = PROTO_TRUE;
     J1939_CTX(work)->f->rtr = PROTO_FALSE;
     J1939_CTX(work)->f->dlc = J1939_CTX(work)->dlc;
-    mem.set(J1939_CTX(work)->f->data, 0xFF,
-            sizeof(J1939_CTX(work)->f->data)); // J1939 pads unused octets with 0xFF (not available)
+    // J1939 pads unused octets with 0xFF (not available)
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = J1939_CTX(work)->f->data, .val = 0xFF,
+               .bytes = sizeof(J1939_CTX(work)->f->data));
     return PROTO_TRUE;
 }
 
@@ -180,7 +181,7 @@ void protocore_j1939_build_message(uint8_t *work)
     }
     if (len)
     {
-        mem.cpy(out->data, data, len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->data, .src = data, .bytes = len);
     }
     J1939V.ok = PROTO_TRUE;
 }
@@ -349,8 +350,9 @@ void protocore_j1939_build_tp_dt(uint8_t *work)
         return;
         // can't fail
     }
-    out->data[0] = seq;                       // sequence number, 1-based
-    mem.cpy(out->data + 1, chunk, chunk_len); // remaining octets stay 0xFF padding
+    out->data[0] = seq; // sequence number, 1-based
+    // remaining octets stay 0xFF padding
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->data + 1, .src = chunk, .bytes = chunk_len);
     J1939V.ok = PROTO_TRUE;
 }
 
@@ -361,7 +363,7 @@ void protocore_j1939_tp_reset(uint8_t *work)
 
     if (rx)
     {
-        mem.set(rx, 0, sizeof(*rx));
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = rx, .val = 0, .bytes = sizeof(*rx));
     }
 }
 
@@ -440,7 +442,7 @@ void protocore_j1939_tp_feed(uint8_t *work)
         }
         uint16_t remaining = (uint16_t)(rx->total_size - rx->received);
         uint8_t take = remaining < J1939_TP_DT_LEN ? (uint8_t)remaining : (uint8_t)J1939_TP_DT_LEN;
-        mem.cpy(rx->buf + rx->received, f->data + 1, take);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = rx->buf + rx->received, .src = f->data + 1, .bytes = take);
         rx->received = (uint16_t)(rx->received + take);
         rx->next_seq++;
         if (rx->received >= rx->total_size)
