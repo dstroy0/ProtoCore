@@ -5,6 +5,6 @@ protocore_add_module(server/core/guardrails
   GATE PROTOCORE_ENABLE_GUARDRAILS
   SOURCES guardrails.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/plaintext
+    mmgr
+    server/core/worker
 )
