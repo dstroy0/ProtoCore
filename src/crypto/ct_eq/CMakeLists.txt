@@ -6,6 +6,6 @@ protocore_add_module(crypto/ct_eq
   OPT 2
   SOURCES ct_eq.c
   DEPS
-    mmgr/protomem
+    mmgr
   PRIVATE_DEPS
 )
