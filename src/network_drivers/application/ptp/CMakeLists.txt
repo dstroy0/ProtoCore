@@ -5,5 +5,5 @@ protocore_add_module(network_drivers/application/ptp
   GATE PROTOCORE_ENABLE_PTP
   SOURCES ptp.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
