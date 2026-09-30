@@ -42,8 +42,8 @@ static_assert(KEXHASH_OFF_CTX + sizeof(SshKexHashCtx) <= PROTOCORE_SSH_KEXHASH_B
 static_assert(PROTOCORE_SHA256_BORROW <= PROTOCORE_SHA512_BORROW,
               "the SHA-256 arm runs in the SHA-512 region, so it must be the narrower of the two");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(KEXHASH_OFF_CTX % _Alignof(SshKexHashCtx) == 0,
