@@ -5,6 +5,6 @@ protocore_add_module(server/core/preempt_queue
   GATE PROTOCORE_ENABLE_PREEMPT_QUEUE
   SOURCES preempt_queue.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/secure
+    mmgr
+    server/core/worker
 )
