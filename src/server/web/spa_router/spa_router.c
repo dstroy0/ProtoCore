@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_SPA_ROUTER
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "server/web/spa_router/spa_router.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -38,11 +38,12 @@ void protocore_spa_router_has_extension(uint8_t *work)
     // The last '/' opens the final segment, the last '.' inside it marks the extension. find runs
     // forward, so each search resumes past its hit and the last one to return is the rightmost; a
     // path is bounded by MAX_PATH_LEN, so the resumed walks cover it once.
-    const size_t n = str.len(path, MAX_PATH_LEN + 1);
+    const size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = path, .cap = MAX_PATH_LEN + 1);
     const char *seg = path;
     for (size_t i = 0; i < n; ++i) // each hit advances seg by at least one, so n bounds the trips
     {
-        const char *slash = str.find(seg, n - (size_t)(seg - path), "/", sizeof("/"), PROTO_FALSE);
+        const char *slash = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = seg, .cap = n - (size_t)(seg - path),
+                                       .other = "/", .other_cap = sizeof("/"), .ci = PROTO_FALSE);
         if (!slash)
         {
             break;
@@ -53,7 +54,8 @@ void protocore_spa_router_has_extension(uint8_t *work)
     const char *q = seg;
     for (size_t i = 0; i < n; ++i)
     {
-        const char *hit = str.find(q, n - (size_t)(q - path), ".", sizeof("."), PROTO_FALSE);
+        const char *hit = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = q, .cap = n - (size_t)(q - path),
+                                     .other = ".", .other_cap = sizeof("."), .ci = PROTO_FALSE);
         if (!hit)
         {
             break;
@@ -78,8 +80,8 @@ void protocore_spa_router_route(uint8_t *work)
 
     if (api_prefix && api_prefix[0])
     {
-        size_t pl = str.len(api_prefix, MAX_PATH_LEN + 1);
-        if (str.starts(path, api_prefix, pl, PROTO_FALSE))
+        size_t pl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = api_prefix, .cap = MAX_PATH_LEN + 1);
+        if (EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = path, .other = api_prefix, .cap = pl, .ci = PROTO_FALSE))
         {
             SpaRouterV.action = PROTOCORE_SPA_PASSTHROUGH;
             return; // "/api/..." -> handlers
@@ -181,7 +183,7 @@ void protocore_spa_router_ui_stream_next(uint8_t *work)
         {
             n++;
         }
-        mem.cpy(out + written, src, n);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + written, .src = src, .bytes = n);
         written += n;
         s->off += n;
         if (src[n] == '\0') // this fragment is fully emitted
