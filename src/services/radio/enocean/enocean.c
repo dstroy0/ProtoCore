@@ -13,7 +13,7 @@
 
 #if PROTOCORE_ENABLE_ENOCEAN
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/radio/enocean/enocean.h"
 
 #include "shared/crc/crc.h" // PROTOCORE_CRC8_SMBUS
@@ -157,7 +157,7 @@ uint16_t protocore_enocean_erp1_build(uint8_t *work, uint8_t *out, uint16_t cap,
     out[p++] = rorg;
     if (payload_len)
     {
-        mem.cpy(out + p, payload, payload_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + p, .src = payload, .bytes = payload_len);
         p = (uint16_t)(p + payload_len);
     }
     out[p++] = (uint8_t)(sender_id >> 24); // 4-octet sender id, big-endian
