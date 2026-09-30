@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_CCLINK
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/cclink/cclink.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -64,12 +64,12 @@ void protocore_cclink_build(uint8_t *work)
     out[i++] = command;
     if (bit_len)
     {
-        mem.cpy(out + i, bits, bit_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + i, .src = bits, .bytes = bit_len);
         i += bit_len;
     }
     if (word_len)
     {
-        mem.cpy(out + i, words, word_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + i, .src = words, .bytes = word_len);
         i += word_len;
     }
     CclinkV.sum_args.bytes = out;
