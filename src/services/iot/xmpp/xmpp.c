@@ -17,8 +17,8 @@
 
 #include "services/iot/xmpp/xmpp.h"
 
-#include "mmgr/protomem/protomem.h" // mem.cpy: a literal and an entity move whole
-#include "mmgr/protostr/protostr.h" // str.len / str.starts: the bounded length and the attribute-name match
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len / cellul.starts: the bounded length and the attribute-name match
+#include "memoria_operor/memoria_operor.h" // memor.cpy: a literal and an entity move whole
 
 PROTOCORE_BEGIN_DECLS
 
@@ -119,13 +119,13 @@ static void put(uint8_t *work, const char *s)
         return;
     }
     const size_t cap = XmppV.out.cap;
-    const size_t sl = str.len(s, cap);
+    const size_t sl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = cap);
     if (XmppV.n + sl >= cap)
     {
         XmppV.ok = PROTO_FALSE;
         return;
     }
-    mem.cpy(XmppV.out.buf + XmppV.n, s, sl);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = XmppV.out.buf + XmppV.n, .src = s, .bytes = sl);
     XmppV.n += sl;
 }
 
@@ -162,7 +162,7 @@ static void put_attr(uint8_t *work, const char *name, const char *value)
     put(work, name);
     put_char(work, '=');
     put_char(work, '"');
-    put_escaped(work, value, str.len(value, XmppV.out.cap));
+    put_escaped(work, value, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = value, .cap = XmppV.out.cap));
     put_char(work, '"');
 }
 
@@ -203,7 +203,8 @@ void protocore_xmpp_message(uint8_t *work)
     if (XmppV.child.body != NULL)
     {
         put(work, "<body>");
-        put_escaped(work, XmppV.child.body, str.len(XmppV.child.body, XmppV.out.cap));
+        put_escaped(work, XmppV.child.body,
+                    EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = XmppV.child.body, .cap = XmppV.out.cap));
         put(work, "</body>");
     }
     put(work, "</message>");
@@ -304,7 +305,7 @@ void protocore_xmpp_attr(uint8_t *work)
         finish(work);
         return;
     }
-    const size_t nl = str.len(name, len);
+    const size_t nl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = name, .cap = len);
 
     // An attribute specification belongs to the start-tag, which ends at its '>'.
     size_t end = 0;
@@ -328,7 +329,10 @@ void protocore_xmpp_attr(uint8_t *work)
         {
             sep = PROTO_TRUE;
         }
-        if (sep && str.starts(xml + i, name, nl + 1, PROTO_FALSE) && xml[i + nl] == '=')
+        if (sep &&
+            EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = xml + i, .other = name, .cap = nl + 1,
+                       .ci = PROTO_FALSE) &&
+            xml[i + nl] == '=')
         {
             found = PROTO_TRUE;
         }
