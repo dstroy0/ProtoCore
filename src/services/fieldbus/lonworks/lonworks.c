@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_LONWORKS
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/lonworks/lonworks.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -47,7 +47,7 @@ void protocore_lonworks_build_nv(uint8_t *work)
     out[1] = (uint8_t)selector;
     if (value_len)
     {
-        mem.cpy(out + LON_NV_HDR_LEN, value, value_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + LON_NV_HDR_LEN, .src = value, .bytes = value_len);
     }
     LonworksV.n = n;
 }
