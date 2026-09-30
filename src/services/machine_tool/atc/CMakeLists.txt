@@ -5,6 +5,5 @@ protocore_add_module(services/machine_tool/atc
   GATE PROTOCORE_ENABLE_ATC
   SOURCES atc.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/protostr
+    mmgr
 )

@@ -10,36 +10,31 @@
 
 #if PROTOCORE_ENABLE_ATC
 
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
-#include "mmgr/protostr/protostr.h" // str.eq: the FIO point name lookup
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.eq: the FIO point name lookup
 #include "services/machine_tool/atc/atc.h"
+#include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
 PROTOCORE_BEGIN_DECLS
 
-static void put_json_str(protocore_sb *b, const char *s)
+static size_t put_json_str(char *out, size_t cap, size_t at, const char *s)
 {
-    Sb.put(b, "\"");
+    at = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = "\"");
     for (const char *p = s ? s : ""; *p; p++)
     {
         if (*p == '"' || *p == '\\')
         {
             char esc[3] = {'\\', *p, '\0'};
-            Sb.put(b, esc);
+            at = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = esc);
         }
         else
         {
-            if (b->len + 1 >= b->cap)
-            {
-                b->ok = PROTO_FALSE;
-                return;
-            }
-            b->p[b->len++] = *p;
+            at = EMBED_CALL(verba_littera.ch, VerbaLitteraCfg, .out = out, .cap = cap, .at = at, .ch = *p);
         }
     }
-    Sb.put(b, "\"");
+    return EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = "\"");
 }
 
-static void put_u8(protocore_sb *b, uint8_t v)
+static size_t put_u8(char *out, size_t cap, size_t at, uint8_t v)
 {
     char t[4];
     int n = 0;
@@ -54,13 +49,13 @@ static void put_u8(protocore_sb *b, uint8_t v)
         o[i] = t[n - 1 - i];
     }
     o[n] = '\0';
-    Sb.put(b, o);
+    return EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = o);
 }
 
 // Append the points of one direction (outputs or inputs) as a JSON array.
-static void put_array(protocore_sb *b, const AtcFieldIo *io, proto_bool outputs)
+static size_t put_array(char *out, size_t cap, size_t at, const AtcFieldIo *io, proto_bool outputs)
 {
-    Sb.put(b, "[");
+    at = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = "[");
     proto_bool first = PROTO_TRUE;
     for (size_t i = 0; i < io->count; i++)
     {
@@ -70,16 +65,16 @@ static void put_array(protocore_sb *b, const AtcFieldIo *io, proto_bool outputs)
         }
         if (!first)
         {
-            Sb.put(b, ",");
+            at = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = ",");
         }
         first = PROTO_FALSE;
-        Sb.put(b, "{\"name\":");
-        put_json_str(b, io->points[i].name);
-        Sb.put(b, ",\"value\":");
-        put_u8(b, io->points[i].value);
-        Sb.put(b, "}");
+        at = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = "{\"name\":");
+        at = put_json_str(out, cap, at, io->points[i].name);
+        at = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = ",\"value\":");
+        at = put_u8(out, cap, at, io->points[i].value);
+        at = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = "}");
     }
-    Sb.put(b, "]");
+    return EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = "]");
 }
 
 size_t protocore_atc_snapshot_json(const AtcFieldIo *io, char *out, size_t cap)
@@ -88,18 +83,18 @@ size_t protocore_atc_snapshot_json(const AtcFieldIo *io, char *out, size_t cap)
     {
         return 0;
     }
-    protocore_sb b = {out, cap, 0, cap > 0};
-    Sb.put(&b, "{\"inputs\":");
-    put_array(&b, io, PROTO_FALSE);
-    Sb.put(&b, ",\"outputs\":");
-    put_array(&b, io, PROTO_TRUE);
-    Sb.put(&b, "}");
-    if (!b.ok)
+    size_t b = 0;
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "{\"inputs\":");
+    b = put_array(out, cap, b, io, PROTO_FALSE);
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = ",\"outputs\":");
+    b = put_array(out, cap, b, io, PROTO_TRUE);
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "}");
+    if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .cap = cap, .at = b))
     {
         return 0;
     }
-    out[b.len] = '\0';
-    return b.len;
+    out[b] = '\0';
+    return b;
 }
 
 proto_bool protocore_atc_set_output(AtcFieldIo *io, const char *name, uint8_t value)
@@ -110,7 +105,9 @@ proto_bool protocore_atc_set_output(AtcFieldIo *io, const char *name, uint8_t va
     }
     for (size_t i = 0; i < io->count; i++)
     {
-        if (io->points[i].is_output && io->points[i].name && str.eq(io->points[i].name, name, MAX_KEY_LEN, PROTO_FALSE))
+        if (io->points[i].is_output && io->points[i].name &&
+            EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = io->points[i].name, .other = name, .cap = MAX_KEY_LEN,
+                       .ci = PROTO_FALSE))
         {
             io->points[i].value = value;
             return PROTO_TRUE;
@@ -131,7 +128,8 @@ uint8_t protocore_atc_get(const AtcFieldIo *io, const char *name, proto_bool *fo
     }
     for (size_t i = 0; i < io->count; i++)
     {
-        if (io->points[i].name && str.eq(io->points[i].name, name, MAX_KEY_LEN, PROTO_FALSE))
+        if (io->points[i].name && EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = io->points[i].name, .other = name,
+                                             .cap = MAX_KEY_LEN, .ci = PROTO_FALSE))
         {
             if (found)
             {
