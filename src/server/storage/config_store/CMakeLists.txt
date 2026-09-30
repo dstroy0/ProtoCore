@@ -5,7 +5,6 @@ protocore_add_module(server/storage/config_store
   GATE PROTOCORE_ENABLE_CONFIG_STORE
   SOURCES config_store.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
+    mmgr
+    server/core/worker
 )
