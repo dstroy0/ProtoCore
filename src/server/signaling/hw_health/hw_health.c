@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_HW_HEALTH
 
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "server/signaling/hw_health/hw_health.h"
+#include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
 PROTOCORE_BEGIN_DECLS
 
@@ -71,22 +71,22 @@ void protocore_hw_health_rail_json(uint8_t *work)
     {
         return;
     }
-    protocore_sb b = {out, cap, 0, PROTO_TRUE};
-    Sb.put(&b, "{\"nominal_mv\":");
-    Sb.u32(&b, m->nominal_mv);
-    Sb.put(&b, ",\"min_mv\":");
-    Sb.u32(&b, m->min_mv);
-    Sb.put(&b, ",\"sag\":");
-    Sb.u32(&b, m->sag_events);
-    Sb.put(&b, ",\"brownout\":");
-    Sb.u32(&b, m->brownout_events);
-    Sb.put(&b, "}");
-    if (!b.ok)
+    size_t b = 0;
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "{\"nominal_mv\":");
+    b = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = b, .val = m->nominal_mv);
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = ",\"min_mv\":");
+    b = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = b, .val = m->min_mv);
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = ",\"sag\":");
+    b = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = b, .val = m->sag_events);
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = ",\"brownout\":");
+    b = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = b, .val = m->brownout_events);
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "}");
+    if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .cap = cap, .at = b))
     {
         return;
     }
-    out[b.len] = '\0';
-    HwHealthV.n = b.len;
+    out[b] = '\0';
+    HwHealthV.n = b;
 }
 
 void protocore_hw_health_spi_init(uint8_t *work)
