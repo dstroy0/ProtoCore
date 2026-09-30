@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_DIRECTNET
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/directnet/directnet.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -108,7 +108,7 @@ void protocore_directnet_data(uint8_t *work)
     out[i++] = DNET_STX;
     if (data_len)
     {
-        mem.cpy(out + i, data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + i, .src = data, .bytes = data_len);
         i += data_len;
     }
     out[i++] = DNET_ETX;

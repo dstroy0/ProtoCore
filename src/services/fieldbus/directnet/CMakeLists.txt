@@ -5,5 +5,5 @@ protocore_add_module(services/fieldbus/directnet
   GATE PROTOCORE_ENABLE_DIRECTNET
   SOURCES directnet.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
