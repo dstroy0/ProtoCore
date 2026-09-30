@@ -5,7 +5,6 @@ protocore_add_module(network_drivers/presentation/http/http2/hpack
   GATE PROTOCORE_ENABLE_HTTP2
   SOURCES hpack.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
     network_drivers/presentation/codec/hpack_prim
 )
