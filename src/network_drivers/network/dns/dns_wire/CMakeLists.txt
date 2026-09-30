@@ -4,5 +4,5 @@
 protocore_add_module(network_drivers/network/dns/dns_wire
   SOURCES dns_wire.c
   PRIVATE_DEPS
-    mmgr/rawmemcpy
+    mmgr
 )
