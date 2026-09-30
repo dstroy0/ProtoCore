@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_COTP
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/cotp/cotp.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -45,7 +45,7 @@ void protocore_cotp_tpkt_build(uint8_t *work)
     buf[3] = (uint8_t)(total & 0xFF);
     if (payload_len)
     {
-        mem.cpy(buf + TPKT_HEADER_SIZE, payload, payload_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + TPKT_HEADER_SIZE, .src = payload, .bytes = payload_len);
     }
     CotpV.n = total;
 }
@@ -115,7 +115,7 @@ void protocore_cotp_build_dt(uint8_t *work)
     buf[2] = (uint8_t)(eot ? COTP_EOT : 0); // EOT flag | TPDU-NR (0 for class 0)
     if (data_len)
     {
-        mem.cpy(buf + COTP_DT_HEADER_LEN, data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + COTP_DT_HEADER_LEN, .src = data, .bytes = data_len);
     }
     CotpV.n = total;
 }
@@ -157,7 +157,7 @@ void protocore_cotp_build_cr(uint8_t *work)
     buf[p++] = tpdu_size_code;
     if (extra_len)
     {
-        mem.cpy(buf + p, extra_params, extra_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = extra_params, .bytes = extra_len);
         p += extra_len;
     }
     CotpV.n = p;
@@ -201,7 +201,7 @@ void protocore_cotp_build_cc(uint8_t *work)
     buf[p++] = tpdu_size_code;
     if (extra_len)
     {
-        mem.cpy(buf + p, extra_params, extra_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = extra_params, .bytes = extra_len);
         p += extra_len;
     }
     CotpV.n = p;
