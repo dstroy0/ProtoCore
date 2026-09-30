@@ -9432,14 +9432,8 @@
       "src": [
         "+<services/security/totp/totp.c>",
         "+<crypto/hash/sha1/sha1.c>",
-        "+<mmgr/protomem/protomem.c>",
-        "+<mmgr/endian/endian.c>",
-        "+<mmgr/rawmemcpy/rawmemcpy.c>",
-        "+<mmgr/swar/swar.c>",
-        "+<mmgr/arena/arena.c>",
-        "+<mmgr/secure/secure.c>",
-        "+<mmgr/span/span.c>",
-        "+<test/core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<server/core/worker/worker.c>"
       ],
       "tests": ["unit/src/services/security/totp/test_totp"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]

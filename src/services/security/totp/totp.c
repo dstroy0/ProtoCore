@@ -15,12 +15,11 @@
 
 #if PROTOCORE_ENABLE_TOTP
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/security/totp/totp.h"
 
 #include "crypto/hash/sha1/sha1.h"
-#include "mmgr/secure/secure.h" // the pool the digest borrow comes from
-#include "mmgr/span/span.h"     // protocore_span, span.ok
+#include "server/core/worker/worker.h" // the cellblock guards the temporary borrows go through
 
 PROTOCORE_BEGIN_DECLS
 
@@ -44,13 +43,14 @@ static uint32_t pow10u(uint8_t n)
 // One SHA-1 over the caller's bytes, out of a pool borrow taken and released per digest.
 static void sha1_of(const uint8_t *data, size_t len, uint8_t out[PROTOCORE_SHA1_DIGEST_LEN])
 {
-    const size_t mark = protocore_secure_mark();
-    protocore_span w = protocore_secure_span(PROTOCORE_SHA1_BORROW, 8);
-    if (span.ok(w))
+    const MaximumSecurityGuard *const secure_guard = protocore_secure_guard();
+    const size_t mark = secure_guard->temporary_buf_mark();
+    uint8_t *w = (uint8_t *)secure_guard->temporary_buf_alloc(PROTOCORE_SHA1_BORROW);
+    if (w)
     {
-        Sha1.hash(w.buf, data, len, out);
+        Sha1.hash(w, data, len, out);
     }
-    protocore_secure_release(mark);
+    secure_guard->temporary_buf_release(mark);
 }
 
 // RFC 2104 sec 2 H(K XOR opad, H(K XOR ipad, text)) with text the 8-byte counter C: K is zero-padded
@@ -63,11 +63,11 @@ static void hmac_sha1_counter(const uint8_t *key, size_t keylen, const uint8_t c
     {
         uint8_t kh[PROTOCORE_SHA1_DIGEST_LEN];
         sha1_of(key, keylen, kh);
-        mem.cpy(k, kh, PROTOCORE_SHA1_DIGEST_LEN);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = k, .src = kh, .bytes = PROTOCORE_SHA1_DIGEST_LEN);
     }
     else
     {
-        mem.cpy(k, key, keylen);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = k, .src = key, .bytes = keylen);
     }
 
     uint8_t inner_in[PROTOCORE_TOTP_HMAC_B + PROTOCORE_TOTP_C_LEN];
@@ -75,7 +75,7 @@ static void hmac_sha1_counter(const uint8_t *key, size_t keylen, const uint8_t c
     {
         inner_in[i] = k[i] ^ 0x36; // ipad
     }
-    mem.cpy(inner_in + PROTOCORE_TOTP_HMAC_B, c, PROTOCORE_TOTP_C_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = inner_in + PROTOCORE_TOTP_HMAC_B, .src = c, .bytes = PROTOCORE_TOTP_C_LEN);
     uint8_t inner[PROTOCORE_SHA1_DIGEST_LEN];
     sha1_of(inner_in, sizeof(inner_in), inner);
 
@@ -84,7 +84,8 @@ static void hmac_sha1_counter(const uint8_t *key, size_t keylen, const uint8_t c
     {
         outer_in[i] = k[i] ^ 0x5c; // opad
     }
-    mem.cpy(outer_in + PROTOCORE_TOTP_HMAC_B, inner, PROTOCORE_SHA1_DIGEST_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = outer_in + PROTOCORE_TOTP_HMAC_B, .src = inner,
+               .bytes = PROTOCORE_SHA1_DIGEST_LEN);
     sha1_of(outer_in, sizeof(outer_in), out);
 }
 
