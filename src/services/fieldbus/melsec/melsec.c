@@ -10,10 +10,10 @@
 
 #if PROTOCORE_ENABLE_MELSEC
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/melsec/melsec.h"
 
-#include "mmgr/endian/endian.h"
+#include "endian/endian.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -42,19 +42,22 @@ void protocore_melsec_build_read(uint8_t *work)
     buf[p++] = MELSEC_3E_REQ_SUBHEADER1;
     buf[p++] = MELSEC_NETWORK_DEFAULT;
     buf[p++] = MELSEC_PROTOCORE_DEFAULT;
-    p += endian.wr16le(buf + p, MELSEC_DEST_IO_DEFAULT);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = MELSEC_DEST_IO_DEFAULT,
+                    .width = MMGR_ENDIAN_16);
     buf[p++] = MELSEC_DEST_MULTIDROP_DEFAULT;
     // request data length = the octets from the monitoring timer onward:
     // timer(2) + command(2) + subcommand(2) + head device(3) + device code(1) + points(2) = 12
-    p += endian.wr16le(buf + p, MELSEC_3E_READ_REQ_DATA_LEN);
-    p += endian.wr16le(buf + p, monitoring_timer);
-    p += endian.wr16le(buf + p, MELSEC_CMD_BATCH_READ);
-    p += endian.wr16le(buf + p, MELSEC_SUBCMD_WORD);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = MELSEC_3E_READ_REQ_DATA_LEN,
+                    .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = monitoring_timer, .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = MELSEC_CMD_BATCH_READ,
+                    .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = MELSEC_SUBCMD_WORD, .width = MMGR_ENDIAN_16);
     buf[p++] = (uint8_t)(head_device & 0xFF); // head device number, 3 octets little-endian
     buf[p++] = (uint8_t)((head_device >> 8) & 0xFF);
     buf[p++] = (uint8_t)((head_device >> 16) & 0xFF);
     buf[p++] = device_code;
-    p += endian.wr16le(buf + p, points);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = points, .width = MMGR_ENDIAN_16);
     MelsecV.n = p; // == MELSEC_3E_READ_REQ_LEN
 }
 
@@ -90,21 +93,24 @@ void protocore_melsec_build_write(uint8_t *work)
     buf[p++] = MELSEC_3E_REQ_SUBHEADER1;
     buf[p++] = MELSEC_NETWORK_DEFAULT;
     buf[p++] = MELSEC_PROTOCORE_DEFAULT;
-    p += endian.wr16le(buf + p, MELSEC_DEST_IO_DEFAULT);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = MELSEC_DEST_IO_DEFAULT,
+                    .width = MMGR_ENDIAN_16);
     buf[p++] = MELSEC_DEST_MULTIDROP_DEFAULT;
     // request data length = the fixed 12 (timer..points) plus the write data octets.
-    p += endian.wr16le(buf + p, (uint16_t)(MELSEC_3E_READ_REQ_DATA_LEN + data_len));
-    p += endian.wr16le(buf + p, monitoring_timer);
-    p += endian.wr16le(buf + p, MELSEC_CMD_BATCH_WRITE);
-    p += endian.wr16le(buf + p, MELSEC_SUBCMD_WORD);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p,
+                    .val = (uint16_t)(MELSEC_3E_READ_REQ_DATA_LEN + data_len), .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = monitoring_timer, .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = MELSEC_CMD_BATCH_WRITE,
+                    .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = MELSEC_SUBCMD_WORD, .width = MMGR_ENDIAN_16);
     buf[p++] = (uint8_t)(head_device & 0xFF); // head device number, 3 octets little-endian
     buf[p++] = (uint8_t)((head_device >> 8) & 0xFF);
     buf[p++] = (uint8_t)((head_device >> 16) & 0xFF);
     buf[p++] = device_code;
-    p += endian.wr16le(buf + p, points);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = points, .width = MMGR_ENDIAN_16);
     if (data_len)
     {
-        mem.cpy(buf + p, data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = data, .bytes = data_len);
         p += data_len;
     }
     MelsecV.n = p; // == MELSEC_3E_READ_REQ_LEN + data_len
@@ -128,7 +134,9 @@ void protocore_melsec_parse_response(uint8_t *work)
         MelsecV.ok = PROTO_FALSE;
         return;
     }
-    uint16_t data_length = endian.rd16le(buf + MELSEC_3E_RES_LEN_OFFSET); // covers the end code + the response data
+    // covers the end code + the response data
+    uint16_t data_length = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + MELSEC_3E_RES_LEN_OFFSET,
+                                                .width = MMGR_ENDIAN_16);
     if (data_length < MELSEC_ENDCODE_LEN)
     {
         MelsecV.ok = PROTO_FALSE;
@@ -139,7 +147,8 @@ void protocore_melsec_parse_response(uint8_t *work)
         MelsecV.ok = PROTO_FALSE;
         return;
     }
-    out->end_code = endian.rd16le(buf + MELSEC_3E_RES_DATALEN_BASE);
+    out->end_code = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + MELSEC_3E_RES_DATALEN_BASE,
+                                         .width = MMGR_ENDIAN_16);
     out->data = buf + MELSEC_3E_RES_DATA_OFFSET;
     out->data_len = (size_t)data_length - MELSEC_ENDCODE_LEN; // minus the 2-octet end code
     MelsecV.ok = PROTO_TRUE;
