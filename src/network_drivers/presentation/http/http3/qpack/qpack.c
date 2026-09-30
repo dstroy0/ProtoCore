@@ -14,8 +14,8 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h" // shared prefix-int + Huffman
 #include "network_drivers/presentation/http/http3/qpack/qpack.h"
 
@@ -148,14 +148,15 @@ size_t protocore_qpack_encode_header(uint8_t *work, uint8_t *out, size_t cap, co
     int name_idx = -1, full_idx = -1;
     for (int i = 0; i < 99; i++)
     {
-        if (str.len(QPACK_STATIC[i][0], name_len + 1) == name_len && mem.cmp(QPACK_STATIC[i][0], name, name_len) == 0)
+        if (EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = QPACK_STATIC[i][0], .cap = name_len + 1) == name_len &&
+            EMBED_CALL(memor.cmp, MemoriaCfg, .src = QPACK_STATIC[i][0], .other = name, .bytes = name_len) == 0)
         {
             if (name_idx < 0)
             {
                 name_idx = i;
             }
-            if (str.len(QPACK_STATIC[i][1], value_len + 1) == value_len &&
-                mem.cmp(QPACK_STATIC[i][1], value, value_len) == 0)
+            if (EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = QPACK_STATIC[i][1], .cap = value_len + 1) == value_len &&
+                EMBED_CALL(memor.cmp, MemoriaCfg, .src = QPACK_STATIC[i][1], .other = value, .bytes = value_len) == 0)
             {
                 full_idx = i;
                 break;
@@ -213,7 +214,7 @@ size_t protocore_qpack_encode_header(uint8_t *work, uint8_t *out, size_t cap, co
         {
             return 0;
         }
-        mem.cpy(out + o, name, name_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + o, .src = name, .bytes = name_len);
         o += name_len;
     }
     size_t hpack_prim_n5 = HpackPrim.encode_str(work, out + o, cap - o, value, value_len);
@@ -268,7 +269,8 @@ proto_bool protocore_qpack_decode(uint8_t *work, const uint8_t *block, size_t le
             pos += c;
             const char *nm = QPACK_STATIC[idx][0];
             const char *vl = QPACK_STATIC[idx][1];
-            if (!emit(ctx, nm, str.len(nm, scratch_cap + 1), vl, str.len(vl, scratch_cap + 1)))
+            if (!emit(ctx, nm, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = nm, .cap = scratch_cap + 1), vl,
+                      EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = vl, .cap = scratch_cap + 1)))
             {
                 return PROTO_FALSE;
             }
@@ -288,12 +290,12 @@ proto_bool protocore_qpack_decode(uint8_t *work, const uint8_t *block, size_t le
                 return PROTO_FALSE;
             }
             const char *nm = QPACK_STATIC[idx][0];
-            size_t nlen = str.len(nm, scratch_cap + 1);
+            size_t nlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = nm, .cap = scratch_cap + 1);
             if (nlen > scratch_cap)
             {
                 return PROTO_FALSE;
             }
-            mem.cpy(scratch, nm, nlen);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = scratch, .src = nm, .bytes = nlen);
             size_t vlen = 0;
             proto_bool hpack_prim_ok2 =
                 HpackPrim.decode_str(work, block, len, &pos, scratch + nlen, scratch_cap - nlen, &vlen);
@@ -336,7 +338,7 @@ proto_bool protocore_qpack_decode(uint8_t *work, const uint8_t *block, size_t le
                 {
                     return PROTO_FALSE;
                 }
-                mem.cpy(scratch, block + pos, nlen32);
+                EMBED_CALL(memor.cpy, MemoriaCfg, .dst = scratch, .src = block + pos, .bytes = nlen32);
                 nlen = nlen32;
             }
             pos += nlen32;
