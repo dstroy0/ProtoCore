@@ -7,7 +7,6 @@ protocore_add_module(server/core/exc_decoder
   DEPS
     server/storage/mnt
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/protostr
+    mmgr
     shared/hex
 )
