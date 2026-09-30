@@ -19,7 +19,7 @@
 #if PROTOCORE_ENABLE_POLY1305
 
 #include "crypto/mac/poly1305/poly1305.h"
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 
 // Poly1305 is a hot, pure-integer MAC (the other half of chacha20-poly1305). Like ChaCha it has no vector
 // path on the S3 and runs materially faster than the framework -Os; it is constant-time by structure
@@ -41,8 +41,8 @@ static_assert(POLY1305_OFF_BUF + 16u <= PROTOCORE_POLY1305_BORROW,
               "PROTOCORE_POLY1305_BORROW is short of the limbs and the padded final block - raise it in "
               "protocore_config.h, which sums it into the secure arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(POLY1305_OFF_CTX % _Alignof(Poly1305Ctx) == 0,
@@ -155,7 +155,7 @@ static void poly1305_absorb(uint8_t *work, const uint8_t *msg, size_t len)
     }
     if (len)
     {
-        mem.set(buf, 0, 16);
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = buf, .val = 0, .bytes = 16);
         for (size_t i = 0; i < len; i++)
         {
             buf[i] = msg[i];
