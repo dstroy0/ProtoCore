@@ -5,5 +5,5 @@ protocore_add_module(services/iot/dds
   GATE PROTOCORE_ENABLE_DDS
   SOURCES dds.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

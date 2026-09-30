@@ -16,7 +16,7 @@
 
 #include "services/iot/dds/dds.h"
 
-#include "mmgr/protomem/protomem.h" // mem.cpy: the guidPrefix and the Submessage contents
+#include "memoria_operor/memoria_operor.h" // memor.cpy: the guidPrefix and the Submessage contents
 
 PROTOCORE_BEGIN_DECLS
 
@@ -44,7 +44,7 @@ void protocore_rtps_header(uint8_t *work)
     out[5] = RTPS_VERSION[1];
     out[6] = RtpsV.hdr.vendor_id[0];
     out[7] = RtpsV.hdr.vendor_id[1];
-    mem.cpy(out + 8, RtpsV.hdr.guid_prefix, RTPS_GUIDPREFIX_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 8, .src = RtpsV.hdr.guid_prefix, .bytes = RTPS_GUIDPREFIX_LEN);
     RtpsV.n = RTPS_HEADER_LEN;
 }
 
@@ -80,7 +80,8 @@ void protocore_rtps_submessage(uint8_t *work)
     }
     if (contents_len)
     {
-        mem.cpy(out + RTPS_SUBMESSAGE_HEADER_LEN, RtpsV.sub.contents, contents_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + RTPS_SUBMESSAGE_HEADER_LEN, .src = RtpsV.sub.contents,
+                   .bytes = contents_len);
     }
     RtpsV.n = total;
 }
