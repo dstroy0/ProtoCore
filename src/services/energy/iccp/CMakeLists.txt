@@ -5,5 +5,5 @@ protocore_add_module(services/energy/iccp
   GATE PROTOCORE_ENABLE_ICCP
   SOURCES iccp.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
