@@ -13,8 +13,8 @@
 #include "crypto/aead/chachapoly/chachapoly.h"
 #include "crypto/asymmetric/bignum/bignum.h"
 #include "crypto/cipher/aes256ctr/aes256ctr.h"
-#include "crypto/hash/sha256/sha256.h" // PROTOCORE_SHA256_DIGEST_LEN - the exchange hash and session id
-#include "mmgr/secure/secure.h"        // protocore_secure_wipe (the canonical secure wipe)
+#include "crypto/hash/sha256/sha256.h"         // PROTOCORE_SHA256_DIGEST_LEN - the exchange hash and session id
+#include "locus_carcerum/locus_carcerum.h" // mmgr_zero_buf (the canonical secure wipe)
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/phase_machine/phase_machine.h" // SshPhase: the session's phase
 
@@ -602,7 +602,7 @@ static inline uint8_t ssh_mac_len(uint8_t mac_mode)
     return (mac_mode == SSH_MAC_HMAC_SHA512 || mac_mode == SSH_MAC_HMAC_SHA512_ETM) ? 64 : 32;
 }
 
-// Secure wipe: the canonical protocore_secure_wipe() lives in mmgr/secure.h (included above). Use it for
+// Secure wipe: the canonical mmgr_zero_buf() lives in locus_carcerum/locus_carcerum.h (included above). Use it for
 // any buffer that held key material - a volatile store the compiler may not elide, unlike a dead memset.
 
 // ---------------------------------------------------------------------------
@@ -768,16 +768,16 @@ static inline void ssh_keymat_wipe(uint8_t i)
             {
                 AesGcm.key_wipe(km->gcm_ctx_s2c);
             }
-            protocore_secure_wipe(km->gcm_ctx_c2s, PROTOCORE_AESGCM_BORROW);
-            protocore_secure_wipe(km->gcm_ctx_s2c, PROTOCORE_AESGCM_BORROW);
-            protocore_secure_wipe(km->chacha_key_c2s, PROTOCORE_CHACHAPOLY_KEY_LEN);
-            protocore_secure_wipe(km->chacha_key_s2c, PROTOCORE_CHACHAPOLY_KEY_LEN);
-            protocore_secure_wipe(km->mac_key_c2s, 64);
-            protocore_secure_wipe(km->mac_key_s2c, 64);
-            protocore_secure_wipe(km->aes_key_c2s, PROTOCORE_AES256CTR_KEY_LEN);
-            protocore_secure_wipe(km->aes_key_s2c, PROTOCORE_AES256CTR_KEY_LEN);
-            protocore_secure_wipe(km->aes_iv_c2s, PROTOCORE_AES256CTR_CTR_LEN);
-            protocore_secure_wipe(km->aes_iv_s2c, PROTOCORE_AES256CTR_CTR_LEN);
+            mmgr_zero_buf(km->gcm_ctx_c2s, PROTOCORE_AESGCM_BORROW);
+            mmgr_zero_buf(km->gcm_ctx_s2c, PROTOCORE_AESGCM_BORROW);
+            mmgr_zero_buf(km->chacha_key_c2s, PROTOCORE_CHACHAPOLY_KEY_LEN);
+            mmgr_zero_buf(km->chacha_key_s2c, PROTOCORE_CHACHAPOLY_KEY_LEN);
+            mmgr_zero_buf(km->mac_key_c2s, 64);
+            mmgr_zero_buf(km->mac_key_s2c, 64);
+            mmgr_zero_buf(km->aes_key_c2s, PROTOCORE_AES256CTR_KEY_LEN);
+            mmgr_zero_buf(km->aes_key_s2c, PROTOCORE_AES256CTR_KEY_LEN);
+            mmgr_zero_buf(km->aes_iv_c2s, PROTOCORE_AES256CTR_CTR_LEN);
+            mmgr_zero_buf(km->aes_iv_s2c, PROTOCORE_AES256CTR_CTR_LEN);
             km->mac_mode_c2s = 0;
             km->mac_mode_s2c = 0;
             km->cipher_mode_c2s = 0;
@@ -802,13 +802,13 @@ static inline void ssh_dh_wipe(uint8_t i)
     }
     if (ssh_dh[i].y != NULL)
     {
-        protocore_secure_wipe(ssh_dh[i].y, sizeof(protocore_bignum));
-        protocore_secure_wipe(ssh_dh[i].f, sizeof(protocore_bignum));
-        protocore_secure_wipe(ssh_dh[i].K, sizeof(protocore_bignum));
+        mmgr_zero_buf(ssh_dh[i].y, sizeof(protocore_bignum));
+        mmgr_zero_buf(ssh_dh[i].f, sizeof(protocore_bignum));
+        mmgr_zero_buf(ssh_dh[i].K, sizeof(protocore_bignum));
     }
     if (ssh_sess[i].ecdh_sk != NULL)
     {
-        protocore_secure_wipe(ssh_sess[i].ecdh_sk, SSH_ECDH_PAIR_LEN);
+        mmgr_zero_buf(ssh_sess[i].ecdh_sk, SSH_ECDH_PAIR_LEN);
     }
 }
 

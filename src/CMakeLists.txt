@@ -51,7 +51,6 @@ function(protocore_header_module name)
 endfunction()
 
 add_subdirectory(crypto)
-add_subdirectory(mmgr)
 add_subdirectory(network_drivers)
 add_subdirectory(protocore)
 add_subdirectory(server)

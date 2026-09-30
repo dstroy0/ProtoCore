@@ -10,19 +10,18 @@
  * server (sec 3.9.1.1 passive OPEN), the client (active OPEN), the protocol engine (sec 3.10) and
  * the lower-level seam (sec 3.9.2) all read this header and none of them declares its own copy.
  *
- * The event record itself is in evt.h, which this includes: the ring cursors below are `_Atomic`,
+ * The event record itself is in evt.h, which this includes: the slot state below is `_Atomic`,
  * which is C11 and not C++, so the header that reaches the sketches has to be the smaller one.
  *
  * **Concurrency model**
- * | Context          | Reads                  | Writes                  |
- * |------------------|------------------------|-------------------------|
- * | stack callbacks  | rx_head (to check full)| rx_buffer[], rx_head    |
- * | main loop        | rx_buffer[], rx_tail   | rx_tail                 |
+ * | Context          | Reads                        | Writes                   |
+ * |------------------|------------------------------|--------------------------|
+ * | stack callbacks  | anularis.vacant (to check)   | anularis.put             |
+ * | main loop        | anularis.available/read/peek | anularis.read/consume    |
  *
- * `state`, `rx_head`, and `rx_tail` are `_Atomic`, read and written through
- * PROTO_ATOMIC_LOAD / PROTO_ATOMIC_STORE (acquire/release): the single-producer /
- * single-consumer ring buffer is correct without a mutex because the release store of an index
- * publishes the preceding buffer writes and the acquire load observes them, on either core.
+ * The receive ring is a memoria_anularis ring over the slot's own aligned rx_buffer: one producer
+ * (the stack callbacks) and one consumer (the owning worker), with the ordering inside the ring.
+ * `state` is `_Atomic`, read and written through PROTO_ATOMIC_LOAD / PROTO_ATOMIC_STORE.
  *
  * **Backpressure (lossless)**
  * When a whole inbound segment will not fit the free ring space, the recv callback refuses it
@@ -38,9 +37,10 @@
 #define PROTOCORE_TCP_COMMON_H
 
 #include "config/platform/platform.h"
-#include "mmgr/ring/ring.h"                        // PROTO_ATOMIC_LOAD/STORE + the shared SPSC ring drain primitive
+#include "memoria_anularis/memoria_anularis.h"     // mmgr_ring: the receive ring, and the loculi the slots are
 #include "network_drivers/transport/tcp/evt/evt.h" // EvtType, TcpEvt: what this layer posts to a listener queue
 #include "shared/ip/ip.h"                          // protocore_ip (family-tagged peer address)
+#include <stdatomic.h>                             // atomic_load_explicit / atomic_store_explicit on the slot state
 
 #include "protocore_config.h"
 
@@ -53,7 +53,7 @@ PROTOCORE_BEGIN_DECLS
  * @brief A single TCP connection context.
  *
  * Sized so that `MAX_CONNS` instances fit in a static array without
- * fragmentation.  All fields except the ring-buffer indices may
+ * fragmentation.  All fields except the ring and the state may
  * only be accessed from the main-loop task.
  */
 typedef struct TcpConn
@@ -63,12 +63,11 @@ typedef struct TcpConn
     protocore_pcb *pcb;        ///< Stack control block; null when slot is free.
     uint32_t last_activity_ms; ///< `protocore_millis()` timestamp of last TX/RX event.
 
-    uint8_t rx_buffer[RX_BUF_SIZE]; ///< Ring buffer storage.
-    _Atomic size_t rx_head;         ///< Producer write index (stack callback context).
-    _Atomic size_t rx_tail;         ///< Consumer read index (worker context).
-    size_t rx_acked;                ///< rx_tail position last ACKed to the stack. Worker-only:
-                                    ///< the window is reopened by exactly the bytes drained since, so it
-                                    ///< tracks ring occupancy (ack-on-consume) rather than copy.
+    EMBED_ALIGN(MMGR_ALIGN_BYTES) uint8_t rx_buffer[RX_BUF_SIZE]; ///< The ring's bytes, owned here.
+    mmgr_ring rx;                                                 ///< The receive ring over rx_buffer.
+    size_t rx_unacked; ///< Bytes drained since the last ACK to the stack. Worker-only: the window is
+                       ///< reopened by exactly these, so it tracks ring occupancy (ack-on-consume)
+                       ///< rather than copy.
 
     uint8_t listener_id; ///< Index into listener_pool[]; set at accept time.
     uint8_t owner;       ///< Worker that owns this slot (round-robin at accept). Always 0 at N=1.
@@ -85,37 +84,23 @@ typedef struct TcpConn
 #define PROTOCORE_PROTO_SLOT_NONE 0xFFu
 
 // ---------------------------------------------------------------------------
-// Slot state, as bits
+// Slot state, as loculi
 // ---------------------------------------------------------------------------
 //
-// A slot's availability is two questions, and each is one bit in a mask rather than a field to
-// load and compare:
+// A slot's availability is one loculus of the pool's slot ring (protocol/protocol.c), rather than a
+// field to load and compare. Loculus i is held while conn_pool[i] is anything but CONN_FREE, keeping
+// out that slot's rx_buffer, and dropped when it returns to CONN_FREE. Written through
+// protocore_conn_set_state() only, so it stays in lock-step with the state.
 //
-//   free  bit i set = conn_pool[i] is CONN_FREE. Written through protocore_conn_set_state() only,
-//         so it stays in lock-step with the state.
-//   held  bit i set = something still owns bytes in slot i - a transfer the wire has not finished
-//         reading. Taken when that begins and dropped when it completes.
-//
-// A slot is allocatable only when it is free AND not held: protocore_slot_ready() is
-// `free & ~held`, and protocore_slot_next() picks the lowest with one ctz. Holding is what makes
-// reuse safe. Without it a slot reads free while a transfer is still walking its bytes, and the
-// index is handed to a new connection on top of the old one's in-flight data - the collision RFC
-// 9293 sec 3.6.1 keeps a connection identifier out of circulation to avoid, expressed as a bit
-// rather than a timer, because a pool index is not a socket and has no quiet period to wait out.
+// A slot is allocatable only when its loculus is free AND not held: anularis.loculus_ready is
+// `free & ~held`, and anularis.loculus_next picks the lowest. Holding is what makes reuse safe.
+// Without it a slot reads free while its bytes are still in use, and the index is handed to a new
+// connection on top of the old one's data - the collision RFC 9293 sec 3.6.1 keeps a connection
+// identifier out of circulation to avoid, expressed as a bit rather than a timer, because a pool
+// index is not a socket and has no quiet period to wait out.
 
-/** @brief The pool's slot bitmaps. Both are read by the allocator and written from stack and
- *  worker context, so both are atomic. */
-typedef struct
-{
-    _Atomic uint32_t free; ///< bit i = conn_pool[i] is CONN_FREE.
-    _Atomic uint32_t held; ///< bit i = slot i still owns bytes in flight.
-} ConnSlotBits;
-
-/** @brief The one instance, defined in protocol/protocol.c. */
-extern ConnSlotBits protocore_conn_bits;
-
-_Static_assert(MAX_CONNS <= PROTOCORE_RING_SLOTS_MAX,
-               "the slot bitmaps are uint32; raise them or fall back to a scan if MAX_CONNS exceeds 32");
+_Static_assert(MAX_CONNS <= MMGR_RING_LOCULI,
+               "every connection slot is a loculus; raise MMGR_RING_LOCULI (and MMGR_RING_WORDS) with MAX_CONNS");
 
 /**
  * @brief Access-point IPv4 address (network byte order) for STA/AP interface tagging.
@@ -133,7 +118,7 @@ extern TcpConn conn_pool[CONN_POOL_SLOTS];
 
 // The receive ring is drained through ::ConnPool - available, read_byte, peek, consume and read -
 // and a slot is asked about through active, iface, listener_id, tls, owner, proto_of and pcb_of.
-// Transport owns the ring: nothing above this layer indexes rx_buffer or advances rx_tail.
+// Transport owns the ring: nothing above this layer reaches rx_buffer or the ring itself.
 
 // ---------------------------------------------------------------------------
 // Listener pool entry
