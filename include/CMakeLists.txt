@@ -18,13 +18,43 @@ protocore_add_module(include
 # subdirectory. ProtoCore builds MMgr's sources as one more target under ProtoCore's own flags, as
 # the Arduino, PlatformIO and ESP-IDF builds do.
 #
+# The sources are the ones MMgr's src/CMakeLists.txt enters, module for module. A directory it does
+# not enter is not part of MMgr's build, and impensa_ancorae_acus compiles one profile of five, the
+# one MMGR_ANCORAE_FORMA names and generic when nothing does, since each defines the same table.
+#
 # The include roots are the three MMgr's mmgr_add_module() gives a module: include/ for mmgr.h,
 # src/ so a module header is reached as <module>/<module>.h, and embedded_types, which mmgr.h
 # includes. The capability switches are MMgr's defaults, stated so every translation unit that reads
 # them sees the same value.
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/MMgr/src")
-  file(GLOB_RECURSE PC_MMGR_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/MMgr/src/*.c")
-  add_library(pc_mmgr OBJECT ${PC_MMGR_SRCS})
+  if(DEFINED MMGR_ANCORAE_FORMA)
+    string(TOLOWER "${MMGR_ANCORAE_FORMA}" _pc_mmgr_forma)
+  else()
+    set(_pc_mmgr_forma generic)
+  endif()
+  set(_pc_mmgr_src "${CMAKE_CURRENT_SOURCE_DIR}/MMgr/src")
+  add_library(pc_mmgr OBJECT
+    "${_pc_mmgr_src}/clz/clz.c"
+    "${_pc_mmgr_src}/impensa_ancorae_acus/impensa_ancorae_acus_${_pc_mmgr_forma}.c"
+    "${_pc_mmgr_src}/ascii_persona_bitorum/ascii_persona_bitorum.c"
+    "${_pc_mmgr_src}/bitorum_introitus_exitus/bitorum_introitus_exitus.c"
+    "${_pc_mmgr_src}/endian/endian.c"
+    "${_pc_mmgr_src}/proximus_operor/proximus_operor.c"
+    "${_pc_mmgr_src}/verbum_scrutor/verbum_scrutor.c"
+    "${_pc_mmgr_src}/memoria_operor/memoria_operor.c"
+    "${_pc_mmgr_src}/cellularum_laboro/cellularum_laboro.c"
+    "${_pc_mmgr_src}/spatium/spatium.c"
+    "${_pc_mmgr_src}/octetus_introitus_exitus/octetus_introitus_exitus.c"
+    "${_pc_mmgr_src}/locus_carcerum/locus_carcerum.c"
+    "${_pc_mmgr_src}/memoria_anularis/memoria_anularis.c"
+    "${_pc_mmgr_src}/memoria_externa/memoria_externa.c"
+    "${_pc_mmgr_src}/transformo/transformo.c"
+    "${_pc_mmgr_src}/memoriam_praetereo/memoriam_praetereo.c"
+    "${_pc_mmgr_src}/memoriam_praetereo/praet_ordo.c"
+    "${_pc_mmgr_src}/memoriam_praetereo/praet_descriptor.c"
+    "${_pc_mmgr_src}/fractio/fractio.c"
+    "${_pc_mmgr_src}/verba_scribo/verba_scribo.c"
+    "${_pc_mmgr_src}/numeros_scribo/numeros_scribo.c")
   target_include_directories(pc_mmgr PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/MMgr/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/MMgr/src"

@@ -311,6 +311,9 @@ function(protocore_env name)
   target_include_directories(${name} PRIVATE ${E_INCLUDES})
   target_compile_definitions(${name} PRIVATE ${E_DEFINES})
   target_link_libraries(${name} PRIVATE protocore_env_base)
+  # MMgr is linked by every env directly, since an OBJECT library's objects reach only the target
+  # that names it and never pass through protocore_env_base.
+  target_link_libraries(${name} PRIVATE pc_mmgr)
   # The suite's own files and its include path arrive through its target, and are compiled here,
   # under this env's defines - see cmake/ProtoCoreSuite.cmake for why that is an INTERFACE library.
   protocore_suite_target("${E_SUITE}" _suite)
