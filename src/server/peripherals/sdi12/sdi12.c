@@ -10,10 +10,10 @@
 
 #if PROTOCORE_ENABLE_SDI12
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "server/peripherals/sdi12/sdi12.h"
 
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_ARC
 
 PROTOCORE_BEGIN_DECLS
@@ -41,7 +41,7 @@ void protocore_sdi12_build(uint8_t *work)
         Sdi12V.n = 0;
         return;
     }
-    size_t blen = str.len(body, cap);
+    size_t blen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = body, .cap = cap);
     size_t n = 1 + blen + 1; // addr + body + '!'
     if (cap < n + 1)         // + room for the NUL terminator
     {
@@ -49,7 +49,7 @@ void protocore_sdi12_build(uint8_t *work)
         return;
     }
     buf[0] = addr;
-    mem.cpy(buf + 1, body, blen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + 1, .src = body, .bytes = blen);
     buf[1 + blen] = '!';
     buf[n] = '\0';
     Sdi12V.n = n;
@@ -283,13 +283,13 @@ void protocore_sdi12_parse_measure(uint8_t *work)
     }
     for (int i = 1; i <= 3; i++)
     {
-        if (!str.digit(resp[i]))
+        if (!EMBED_CALL(cellul.digit, CatenaFinitaCfg, .src = resp, .at = i))
         {
             Sdi12V.ok = PROTO_FALSE;
             return;
         }
     }
-    if (!str.digit(resp[4]))
+    if (!EMBED_CALL(cellul.digit, CatenaFinitaCfg, .src = resp, .at = 4))
     {
         Sdi12V.ok = PROTO_FALSE;
         return;
@@ -304,7 +304,7 @@ void protocore_sdi12_parse_measure(uint8_t *work)
     }
     // The value count is the remaining digits (1 digit for aM!, 2 for aC!).
     uint16_t count = 0;
-    for (size_t i = 4; i < len && str.digit(resp[i]); i++)
+    for (size_t i = 4; i < len && EMBED_CALL(cellul.digit, CatenaFinitaCfg, .src = resp, .at = i); i++)
     {
         count = (uint16_t)(count * 10 + (resp[i] - '0'));
     }
@@ -342,8 +342,9 @@ void protocore_sdi12_parse_values(uint8_t *work)
         {
             const char *start = resp + i;
             const char *end = start;
-            // str.to_float handles a leading '-'; for '+' parse the magnitude after the sign.
-            float v = (c == '+') ? str.to_float(start + 1, &end) : str.to_float(start, &end);
+            // cellul.to_float handles a leading '-'; for '+' parse the magnitude after the sign.
+            float v = (c == '+') ? EMBED_CALL(cellul.to_float, TransfiguroCfg, .src = start + 1, .end = &end)
+                                 : EMBED_CALL(cellul.to_float, TransfiguroCfg, .src = start, .end = &end);
             if (end == start || (c == '+' && end == start + 1)) // no digits consumed
             {
                 i++;
@@ -374,13 +375,13 @@ void protocore_sdi12_parse_identify(uint8_t *work)
         return;
     }
     out->addr = resp[0];
-    mem.cpy(out->sdi_version, resp + 1, 2);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->sdi_version, .src = resp + 1, .bytes = 2);
     out->sdi_version[2] = '\0';
-    mem.cpy(out->vendor, resp + 3, 8);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->vendor, .src = resp + 3, .bytes = 8);
     out->vendor[8] = '\0';
-    mem.cpy(out->model, resp + 11, 6);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->model, .src = resp + 11, .bytes = 6);
     out->model[6] = '\0';
-    mem.cpy(out->sensor_version, resp + 17, 3);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->sensor_version, .src = resp + 17, .bytes = 3);
     out->sensor_version[3] = '\0';
     Sdi12V.ok = PROTO_TRUE;
 }
@@ -443,7 +444,7 @@ void protocore_sdi12_check_crc(uint8_t *work)
     Sdi12V.crc_encode_args.crc = crc;
     Sdi12V.crc_encode_args.out = enc;
     protocore_sdi12_crc_encode(work);
-    Sdi12V.ok = mem.cmp(enc, resp + data_len, SDI12_CRC_CHARS) == 0;
+    Sdi12V.ok = EMBED_CALL(memor.cmp, MemoriaCfg, .src = enc, .other = resp + data_len, .bytes = SDI12_CRC_CHARS) == 0;
 }
 
 /** @brief The operands and the outcome. */

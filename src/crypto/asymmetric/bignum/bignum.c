@@ -17,7 +17,7 @@
 #if PROTOCORE_ENABLE_BIGNUM
 
 #include "crypto/asymmetric/bignum/bignum.h"
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -46,8 +46,8 @@ static_assert(BIGNUM_OFF_PM1 + sizeof(protocore_bignum) <= PROTOCORE_BIGNUM_BORR
               "PROTOCORE_BIGNUM_BORROW is short of the staged operands and p-1 - raise it in "
               "protocore_config.h, which sums it into the secure arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(BIGNUM_OFF_PM1 % _Alignof(protocore_bignum) == 0,
@@ -130,7 +130,7 @@ void protocore_bignum_from_bytes(uint8_t *work)
     const uint8_t *bytes = BignumV.from_bytes_args.bytes;
     const size_t len = BignumV.from_bytes_args.len;
 
-    mem.set(out->d, 0, sizeof(protocore_bignum));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out->d, .val = 0, .bytes = sizeof(protocore_bignum));
     // bytes are big-endian; map to little-endian limbs.
     size_t blen = len < 256 ? len : 256;
     for (size_t i = 0; i < blen; i++)

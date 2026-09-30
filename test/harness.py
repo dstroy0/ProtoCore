@@ -1210,8 +1210,18 @@ def _flag_split(flags):
         elif f.startswith("-D"):
             defs.append(f)
     # -Iinclude is PlatformIO's implicit include_dir, where protocore.h lives. Nothing here is pio,
-    # so every path that compiles or scans a TU names it.
-    for base in ("-Itest/core_setup/hal/host", "-Itest/support", "-Isrc", "-Iinclude", "-I."):
+    # so every path that compiles or scans a TU names it. The last three are MMgr's roots, the same
+    # set as tools/ci_tooling/build/gen_cmake.py BASE_INCLUDES.
+    for base in (
+        "-Itest/core_setup/hal/host",
+        "-Itest/support",
+        "-Isrc",
+        "-Iinclude",
+        "-I.",
+        "-Iinclude/MMgr/include",
+        "-Iinclude/MMgr/src",
+        "-Iinclude/embedded_types/include",
+    ):
         if base not in incs:
             incs.append(base)
     return incs, defs

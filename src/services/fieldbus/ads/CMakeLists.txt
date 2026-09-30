@@ -5,6 +5,5 @@ protocore_add_module(services/fieldbus/ads
   GATE PROTOCORE_ENABLE_ADS
   SOURCES ads.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/protomem
+    mmgr
 )

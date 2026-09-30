@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_PROFINET
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/profinet/profinet.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -80,7 +80,7 @@ void protocore_profinet_dcp_block(uint8_t *work)
     out[3] = (uint8_t)value_len;
     if (value_len)
     {
-        mem.cpy(out + 4, value, value_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 4, .src = value, .bytes = value_len);
     }
     if (pad)
     {

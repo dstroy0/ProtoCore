@@ -5,6 +5,6 @@ protocore_add_module(services/radio/enocean
   GATE PROTOCORE_ENABLE_ENOCEAN
   SOURCES enocean.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
     shared/crc
 )

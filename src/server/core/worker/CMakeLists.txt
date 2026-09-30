@@ -4,9 +4,6 @@
 protocore_add_module(server/core/worker
   SOURCES worker.c
   DEPS
+    mmgr
     server/core/preempt_queue
-  PRIVATE_DEPS
-    mmgr/arena
-    mmgr/plaintext
-    mmgr/ring
 )

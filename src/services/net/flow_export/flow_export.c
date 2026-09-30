@@ -17,11 +17,11 @@
 
 #if PROTOCORE_ENABLE_FLOW_EXPORT
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "services/net/flow_export/flow_export.h"
 
-#include "mmgr/endian/endian.h"
+#include "endian/endian.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -79,7 +79,7 @@ uint8_t *protocore_flow_export_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_FLOW_EXPORT_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_FLOW_EXPORT_BORROW);
     }
     return s_own.span;
 }
@@ -105,7 +105,7 @@ static void put_u16(uint8_t *work, uint16_t v)
         m->error = PROTO_TRUE;
         return;
     }
-    m->pos += endian.wr16be(m->buf + m->pos, v);
+    m->pos += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = m->buf + m->pos, .val = v, .width = MMGR_ENDIAN_16);
 }
 
 // Append @p v as four octets, most significant first.
@@ -121,7 +121,7 @@ static void put_u32(uint8_t *work, uint32_t v)
         m->error = PROTO_TRUE;
         return;
     }
-    m->pos += endian.wr32be(m->buf + m->pos, v);
+    m->pos += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = m->buf + m->pos, .val = v, .width = MMGR_ENDIAN_32);
 }
 
 // Append @p n octets from @p p.
@@ -137,7 +137,7 @@ static void put_span(uint8_t *work, const uint8_t *p, size_t n)
         m->error = PROTO_TRUE;
         return;
     }
-    mem.cpy(m->buf + m->pos, p, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = m->buf + m->pos, .src = p, .bytes = n);
     m->pos += n;
 }
 
@@ -154,14 +154,15 @@ static void put_zero(uint8_t *work, size_t n)
         m->error = PROTO_TRUE;
         return;
     }
-    mem.set(m->buf + m->pos, 0, n);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = m->buf + m->pos, .val = 0, .bytes = n);
     m->pos += n;
 }
 
 // Overwrite the two octets at @p off with @p v. Only reached with off + 2 <= pos.
 static void patch_u16(uint8_t *work, size_t off, uint16_t v)
 {
-    endian.wr16be(FLOW_EXPORT_CTX(work)->buf + off, v);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = FLOW_EXPORT_CTX(work)->buf + off, .val = v,
+               .width = MMGR_ENDIAN_16);
 }
 
 // ---------------------------------------------------------------------------
@@ -181,15 +182,16 @@ void protocore_flow_export_v5_header(uint8_t *work)
         return;
     }
     size_t p = 0;
-    p += endian.wr16be(buf + p, FLOW_V5_VERSION);
-    p += endian.wr16be(buf + p, h->count);
-    p += endian.wr32be(buf + p, h->sys_uptime);
-    p += endian.wr32be(buf + p, h->unix_secs);
-    p += endian.wr32be(buf + p, h->unix_nsecs);
-    p += endian.wr32be(buf + p, h->flow_sequence);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = FLOW_V5_VERSION, .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = h->count, .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = h->sys_uptime, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = h->unix_secs, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = h->unix_nsecs, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = h->flow_sequence, .width = MMGR_ENDIAN_32);
     buf[p++] = h->engine_type;
     buf[p++] = h->engine_id;
-    p += endian.wr16be(buf + p, h->sampling_interval);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = h->sampling_interval,
+                    .width = MMGR_ENDIAN_16);
     FlowExportV.n = p; // 24
     FlowExportV.ok = PROTO_TRUE;
 }
@@ -206,23 +208,23 @@ void protocore_flow_export_v5_record(uint8_t *work)
         return;
     }
     size_t p = 0;
-    p += endian.wr32be(buf + p, r->src_addr);
-    p += endian.wr32be(buf + p, r->dst_addr);
-    p += endian.wr32be(buf + p, r->next_hop);
-    p += endian.wr16be(buf + p, r->input);
-    p += endian.wr16be(buf + p, r->output);
-    p += endian.wr32be(buf + p, r->d_pkts);
-    p += endian.wr32be(buf + p, r->d_octets);
-    p += endian.wr32be(buf + p, r->first);
-    p += endian.wr32be(buf + p, r->last);
-    p += endian.wr16be(buf + p, r->src_port);
-    p += endian.wr16be(buf + p, r->dst_port);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = r->src_addr, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = r->dst_addr, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = r->next_hop, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = r->input, .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = r->output, .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = r->d_pkts, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = r->d_octets, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = r->first, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = r->last, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = r->src_port, .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = r->dst_port, .width = MMGR_ENDIAN_16);
     buf[p++] = 0; // pad1
     buf[p++] = r->tcp_flags;
     buf[p++] = r->prot;
     buf[p++] = r->tos;
-    p += endian.wr16be(buf + p, r->src_as);
-    p += endian.wr16be(buf + p, r->dst_as);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = r->src_as, .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = r->dst_as, .width = MMGR_ENDIAN_16);
     buf[p++] = r->src_mask;
     buf[p++] = r->dst_mask;
     buf[p++] = 0; // pad2, two octets

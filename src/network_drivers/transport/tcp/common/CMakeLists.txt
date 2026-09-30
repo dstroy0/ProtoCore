@@ -4,7 +4,7 @@
 protocore_add_module(network_drivers/transport/tcp/common
   HEADER_ONLY
   DEPS
-    mmgr/ring
+    mmgr
     network_drivers/transport/tcp/evt
     shared/ip
 )

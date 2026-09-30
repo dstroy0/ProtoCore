@@ -5,5 +5,5 @@ protocore_add_module(network_drivers/datalink/roaming
   GATE PROTOCORE_ENABLE_ROAMING
   SOURCES roaming.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

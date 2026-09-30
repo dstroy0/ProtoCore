@@ -26,15 +26,81 @@
 
 #include "protocore_config.h"
 
+#include "locus_carcerum/locus_carcerum.h" // the cellblock guards each worker slot borrows through
+
 #if PROTOCORE_ENABLE_PREEMPT_QUEUE
 #include "server/core/preempt_queue/preempt_queue.h" // carried below as Session.workers->queue
 #endif
 
 PROTOCORE_BEGIN_DECLS
 
-// Worker identity (protocore_worker_count / protocore_worker_self / protocore_worker_set_self) is declared in
-// mmgr/arena.h, with the pools it indexes. This header is scheduling: starting, waking, stopping
-// and deferring onto those workers.
+// ---------------------------------------------------------------------------
+// Worker identity
+// ---------------------------------------------------------------------------
+
+/** @brief Number of server worker tasks (PROTOCORE_WORKER_COUNT). */
+int protocore_worker_count(void);
+
+/**
+ * @brief Worker id [0, count) of the calling task; 0 by default / single-worker.
+ *
+ * With PROTOCORE_WORKER_COUNT == 1 (the default) there is exactly one worker, so the answer is 0 by
+ * construction and this is an inline constant - no lookup, no call. Every borrow asks, so the
+ * multi-worker lookup is paid only where there is more than one worker to tell apart.
+ */
+#if PROTOCORE_WORKER_COUNT == 1
+PROTOCORE_INLINE int protocore_worker_self(void)
+{
+    return 0;
+}
+#else
+int protocore_worker_self(void);
+#endif
+
+/** @brief Bind the calling task/thread to worker id @p id (worker entry / tests). */
+void protocore_worker_set_self(int id);
+
+// ---------------------------------------------------------------------------
+// Cellblocks - the memory each worker slot borrows from
+// ---------------------------------------------------------------------------
+//
+// Each slot borrows through two MMgr cellblock guards: a minimum-security one for plaintext, whose
+// bytes are left as they are on release, and a maximum-security one for key material, whose bytes
+// are zeroed on release. A slot has exactly one accessor, the worker that owns it, so a borrow is a
+// plain bump with no lock.
+//
+// The worker slots are the application's: it declares the pools and the LocusCarcerum over them in
+// its own translation unit and hands the guards in through protocore_cellblocks_bind(). The ghost
+// slot (PROTOCORE_GHOST_WORKER_SLOT) is the library's own, declared in worker.c. A slot nothing was
+// bound to, and any context outside [0, PROTOCORE_WORKER_COUNT), borrows from the ghost.
+
+/**
+ * @brief Hand worker slot @p worker the guards it borrows through.
+ *
+ * @param worker a worker id in [0, PROTOCORE_WORKER_COUNT); anything else is ignored.
+ * @param plain  the minimum-security guard for plaintext, or NULL to leave the slot on the ghost's.
+ * @param secure the maximum-security guard for key material, or NULL to leave it on the ghost's.
+ */
+void protocore_cellblocks_bind(int worker, const MinimumSecurityGuard *plain, const MaximumSecurityGuard *secure);
+
+/** @brief The plaintext guard the calling worker borrows through. Never NULL. */
+const MinimumSecurityGuard *protocore_plain_guard(void);
+
+/** @brief The key-material guard the calling worker borrows through. Never NULL. */
+const MaximumSecurityGuard *protocore_secure_guard(void);
+
+/**
+ * @brief @p n persistent plaintext bytes, zeroed, or NULL if the calling worker's cellblock is full.
+ *
+ * State that lasts across dispatches starts from zero, and a cellblock hands its cells back as
+ * they were, so this is the persistent borrow followed by the zeroing.
+ */
+void *protocore_plain_persist(size_t n);
+
+/** @brief @p n persistent key-material bytes, zeroed, or NULL if the calling worker's cellblock is full. */
+void *protocore_secure_persist(size_t n);
+
+// This header is also scheduling: starting, waking, stopping and deferring onto those workers.
 
 // ---------------------------------------------------------------------------
 // Worker tasks

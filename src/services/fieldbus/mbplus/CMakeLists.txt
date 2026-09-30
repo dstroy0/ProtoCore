@@ -5,6 +5,6 @@ protocore_add_module(services/fieldbus/mbplus
   GATE PROTOCORE_ENABLE_MBPLUS
   SOURCES mbplus.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
     shared/crc
 )

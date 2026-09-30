@@ -5,7 +5,8 @@ protocore_add_module(server/peripherals/smbus
   GATE PROTOCORE_ENABLE_SMBUS
   SOURCES smbus.c
   PRIVATE_DEPS
-    mmgr/secure
+    mmgr
+    server/core/worker
     server/peripherals/i2c
     shared/crc
 )

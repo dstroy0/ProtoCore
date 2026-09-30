@@ -13,7 +13,7 @@
 
 #if PROTOCORE_ENABLE_HPACK_PRIM
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h"
 
 // --- Huffman tables generated from RFC 7541 Appendix B ---------------------------------------
@@ -320,7 +320,7 @@ proto_bool protocore_hpack_prim_decode_str(uint8_t *work, const uint8_t *block, 
         {
             return PROTO_FALSE;
         }
-        mem.cpy(out, block + *pos, slen);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = block + *pos, .bytes = slen);
         *out_len = slen;
     }
     *pos += slen;
@@ -353,7 +353,7 @@ size_t protocore_hpack_prim_encode_str(uint8_t *work, uint8_t *out, size_t cap, 
     {
         return 0;
     }
-    mem.cpy(out + hdr, s, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + hdr, .src = s, .bytes = n);
     return hdr + n;
 }
 

@@ -7,7 +7,7 @@
  */
 
 #include "services/transportation/nema_ts2/nema_ts2.h"
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_X25
 
 #if PROTOCORE_ENABLE_NEMA_TS2
@@ -43,7 +43,7 @@ size_t protocore_nema_ts2_build(uint8_t address, uint8_t control, uint8_t frame_
     out[2] = frame_type;
     if (data_len)
     {
-        mem.cpy(out + 3, data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 3, .src = data, .bytes = data_len);
     }
     uint16_t crc = protocore_nema_ts2_crc(out, 3 + data_len);
     out[3 + data_len] = (uint8_t)crc; // FCS low byte first

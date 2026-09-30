@@ -10,11 +10,11 @@
 
 #if PROTOCORE_ENABLE_HISLIP
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/instrumentation/hislip/hislip.h"
 
-#include "mmgr/endian/endian.h"
+#include "endian/endian.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -29,8 +29,8 @@ size_t protocore_hislip_build_header(uint8_t *buf, size_t cap, HislipMsg type, u
     buf[1] = 'S';
     buf[2] = (uint8_t)(type);
     buf[3] = control;
-    endian.wr32be(buf + 4, parameter);
-    endian.wr64be(buf + 8, payload_len);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 4, .val = parameter, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 8, .val = payload_len, .width = MMGR_ENDIAN_64);
     return PROTOCORE_HISLIP_HEADER_LEN;
 }
 
@@ -42,8 +42,8 @@ proto_bool protocore_hislip_parse_header(const uint8_t *buf, size_t len, HislipH
     }
     out->type = (HislipMsg)(buf[2]);
     out->control = buf[3];
-    out->parameter = endian.rd32be(buf + 4);
-    out->payload_len = endian.rd64be(buf + 8);
+    out->parameter = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 4, .width = MMGR_ENDIAN_32);
+    out->payload_len = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 8, .width = MMGR_ENDIAN_64);
     return PROTO_TRUE;
 }
 
@@ -63,7 +63,8 @@ static size_t build_with_payload(uint8_t *buf, size_t cap, HislipMsg type, uint8
     protocore_hislip_build_header(buf, cap, type, control, parameter, payload_len);
     if (payload_len)
     {
-        mem.cpy(buf + PROTOCORE_HISLIP_HEADER_LEN, payload, payload_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + PROTOCORE_HISLIP_HEADER_LEN, .src = payload,
+                   .bytes = payload_len);
     }
     return total;
 }
@@ -71,7 +72,7 @@ static size_t build_with_payload(uint8_t *buf, size_t cap, HislipMsg type, uint8
 size_t protocore_hislip_build_initialize(uint8_t *buf, size_t cap, uint16_t protocol_version, uint16_t vendor_id,
                                          const char *sub_address)
 {
-    size_t sub_len = sub_address ? str.len(sub_address, cap) : 0;
+    size_t sub_len = sub_address ? EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = sub_address, .cap = cap) : 0;
     uint32_t parameter = ((uint32_t)protocol_version << 16) | vendor_id;
     return build_with_payload(buf, cap, HISLIP_MSG_INITIALIZE, 0, parameter, (const uint8_t *)sub_address, sub_len);
 }

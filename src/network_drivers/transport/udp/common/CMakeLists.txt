@@ -4,7 +4,6 @@
 protocore_add_module(network_drivers/transport/udp/common
   HEADER_ONLY
   DEPS
-    mmgr/bytes
-    mmgr/ring
+    mmgr
     shared/ip
 )

@@ -5,6 +5,5 @@ protocore_add_module(network_drivers/application/smb/ntlmssp
   GATE PROTOCORE_ENABLE_SMB
   SOURCES ntlmssp.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/protomem
+    mmgr
 )

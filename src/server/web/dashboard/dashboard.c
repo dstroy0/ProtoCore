@@ -14,19 +14,18 @@
 
 #if PROTOCORE_ENABLE_DASHBOARD
 
-#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "server/web/dashboard/dashboard.h"
 
-#include "mmgr/membuild/membuild.h" // Sb: the route paths begin() composes
-#include "mmgr/protoframe/protoframe.h"
-#include "mmgr/protostr/protostr.h"
-#include "protocore.h" // on_http / on_sse / on_ws: the tables the begin entry installs on
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "numeros_scribo/numeros_scribo.h"
+#include "protocore.h"                 // on_http / on_sse / on_ws: the tables the begin entry installs on
+#include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
 PROTOCORE_BEGIN_DECLS
 
 // A message key as it appears in the JSON: quoted, so it cannot match a widget key containing it.
-static const protocore_field QUOTED_KEY[] = {
-    {PROTOCORE_FK_LIT, 0, 1, "\""}, PROTOCORE_STR, {PROTOCORE_FK_LIT, 0, 1, "\""}, PROTOCORE_END};
+static const mmgr_field QUOTED_KEY[] = {{MMGR_FK_LIT, 0, 1, "\""}, MMGR_STR, {MMGR_FK_LIT, 0, 1, "\""}, MMGR_END};
 
 // All dashboard state, owned by one instance (internal linkage): the widget table, the
 // per-widget value array, and the inbound-control callback, grouped so it is one named owner,
@@ -54,8 +53,8 @@ static_assert(DASHBOARD_OFF_CTX + sizeof(DashboardCtx) <= PROTOCORE_DASHBOARD_BO
               "PROTOCORE_DASHBOARD_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(
@@ -106,7 +105,7 @@ uint8_t *protocore_dashboard_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_DASHBOARD_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_DASHBOARD_BORROW);
     }
     return s_own.span;
 }
@@ -141,7 +140,8 @@ void protocore_dashboard_set(uint8_t *work)
     for (uint8_t i = 0; i < DASHBOARD_CTX(work)->count; i++)
     {
         if (DASHBOARD_CTX(work)->widgets[i].key &&
-            str.eq(DASHBOARD_CTX(work)->widgets[i].key, key, MAX_KEY_LEN, PROTO_FALSE))
+            EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = DASHBOARD_CTX(work)->widgets[i].key, .other = key,
+                       .cap = MAX_KEY_LEN, .ci = PROTO_FALSE))
         {
             DASHBOARD_CTX(work)->values[i] = value;
             DashboardV.ok = PROTO_TRUE;
@@ -157,34 +157,34 @@ void protocore_dashboard_set(uint8_t *work)
 // The item index selects it; !!i is 0 or 1, so the separator is a load rather than a branch.
 static const char *const PROTOCORE_JSON_SEP[2] = {"", ","};
 
-static const protocore_field DASH_ARRAY_OPEN[] = {{PROTOCORE_FK_LIT, 0, 1, "["}, PROTOCORE_END};
-static const protocore_field DASH_ARRAY_CLOSE[] = {{PROTOCORE_FK_LIT, 0, 1, "]"}, PROTOCORE_END};
-static const protocore_field DASH_WIDGET[] = {
-    PROTOCORE_STR,                           // "," from the second widget on
-    {PROTOCORE_FK_LIT, 0, 8, "{\"type\":"},  //
-    PROTOCORE_JSON,                          // type name
-    {PROTOCORE_FK_LIT, 0, 9, ",\"label\":"}, //
-    PROTOCORE_JSON,                          //
-    {PROTOCORE_FK_LIT, 0, 7, ",\"key\":"},   //
-    PROTOCORE_JSON,                          //
-    {PROTOCORE_FK_LIT, 0, 7, ",\"min\":"},   //
-    {PROTOCORE_FK_G, 0, 0, NULL},            // width 0 == 6 significant digits, the %g default
-    {PROTOCORE_FK_LIT, 0, 7, ",\"max\":"},   //
-    {PROTOCORE_FK_G, 0, 0, NULL},            //
-    {PROTOCORE_FK_LIT, 0, 8, ",\"unit\":"},  //
-    PROTOCORE_JSON,                          //
-    {PROTOCORE_FK_LIT, 0, 1, "}"},           //
-    PROTOCORE_END,
+static const mmgr_field DASH_ARRAY_OPEN[] = {{MMGR_FK_LIT, 0, 1, "["}, MMGR_END};
+static const mmgr_field DASH_ARRAY_CLOSE[] = {{MMGR_FK_LIT, 0, 1, "]"}, MMGR_END};
+static const mmgr_field DASH_WIDGET[] = {
+    MMGR_STR,                           // "," from the second widget on
+    {MMGR_FK_LIT, 0, 8, "{\"type\":"},  //
+    MMGR_JSON,                          // type name
+    {MMGR_FK_LIT, 0, 9, ",\"label\":"}, //
+    MMGR_JSON,                          //
+    {MMGR_FK_LIT, 0, 7, ",\"key\":"},   //
+    MMGR_JSON,                          //
+    {MMGR_FK_LIT, 0, 7, ",\"min\":"},   //
+    {MMGR_FK_G, 0, 0, NULL},            // width 0 == 6 significant digits, the %g default
+    {MMGR_FK_LIT, 0, 7, ",\"max\":"},   //
+    {MMGR_FK_G, 0, 0, NULL},            //
+    {MMGR_FK_LIT, 0, 8, ",\"unit\":"},  //
+    MMGR_JSON,                          //
+    {MMGR_FK_LIT, 0, 1, "}"},           //
+    MMGR_END,
 };
 
-static const protocore_field DASH_OBJECT_OPEN[] = {{PROTOCORE_FK_LIT, 0, 1, "{"}, PROTOCORE_END};
-static const protocore_field DASH_OBJECT_CLOSE[] = {{PROTOCORE_FK_LIT, 0, 1, "}"}, PROTOCORE_END};
-static const protocore_field DASH_VALUE[] = {
-    PROTOCORE_STR,                 // "," from the second pair on
-    PROTOCORE_JSON,                // key
-    {PROTOCORE_FK_LIT, 0, 1, ":"}, //
-    {PROTOCORE_FK_G, 0, 0, NULL},  // the reading
-    PROTOCORE_END,
+static const mmgr_field DASH_OBJECT_OPEN[] = {{MMGR_FK_LIT, 0, 1, "{"}, MMGR_END};
+static const mmgr_field DASH_OBJECT_CLOSE[] = {{MMGR_FK_LIT, 0, 1, "}"}, MMGR_END};
+static const mmgr_field DASH_VALUE[] = {
+    MMGR_STR,                 // "," from the second pair on
+    MMGR_JSON,                // key
+    {MMGR_FK_LIT, 0, 1, ":"}, //
+    {MMGR_FK_G, 0, 0, NULL},  // the reading
+    MMGR_END,
 };
 
 void protocore_dashboard_layout_json(uint8_t *work)
@@ -205,7 +205,8 @@ void protocore_dashboard_layout_json(uint8_t *work)
     }
     // Each arm empties the buffer before reporting 0: a frame that did not fit leaves the document
     // open, and a caller measuring the buffer instead of reading the count would ship the fragment.
-    if (frame.append(out, cap, DASH_ARRAY_OPEN, NULL, 0) == 0)
+    if (EMBED_CALL(numer.append, NumerosCfg, .out = out, .cap = cap, .spec = DASH_ARRAY_OPEN, .vals = NULL,
+                   .nvals = 0) == 0)
     {
         out[0] = '\0';
         DashboardV.value = 0;
@@ -214,19 +215,20 @@ void protocore_dashboard_layout_json(uint8_t *work)
     for (uint8_t i = 0; i < DASHBOARD_CTX(work)->count; i++)
     {
         const protocore_widget *w = &DASHBOARD_CTX(work)->widgets[i];
-        if (frame.append(out, cap, DASH_WIDGET,
-                         (const protocore_fval[]){PROTOCORE_VSTR(PROTOCORE_JSON_SEP[!!i]),
-                                                  PROTOCORE_VJSON(widget_type_name(w->type)), PROTOCORE_VJSON(w->label),
-                                                  PROTOCORE_VJSON(w->key), PROTOCORE_VG((double)w->min),
-                                                  PROTOCORE_VG((double)w->max), PROTOCORE_VJSON(w->unit)},
-                         7) == 0)
+        if (EMBED_CALL(numer.append, NumerosCfg, .out = out, .cap = cap, .spec = DASH_WIDGET,
+                       .vals = (const mmgr_fval[]){MMGR_VSTR(PROTOCORE_JSON_SEP[!!i]),
+                                                   MMGR_VJSON(widget_type_name(w->type)), MMGR_VJSON(w->label),
+                                                   MMGR_VJSON(w->key), MMGR_VG((double)w->min), MMGR_VG((double)w->max),
+                                                   MMGR_VJSON(w->unit)},
+                       .nvals = 7) == 0)
         {
             out[0] = '\0';
             DashboardV.value = 0;
             return;
         }
     }
-    size_t n = frame.append(out, cap, DASH_ARRAY_CLOSE, NULL, 0);
+    size_t n = EMBED_CALL(numer.append, NumerosCfg, .out = out, .cap = cap, .spec = DASH_ARRAY_CLOSE, .vals = NULL,
+                          .nvals = 0);
     if (n == 0)
     {
         out[0] = '\0';
@@ -250,7 +252,8 @@ void protocore_dashboard_values_json(uint8_t *work)
         DashboardV.value = 0;
         return;
     }
-    if (frame.append(out, cap, DASH_OBJECT_OPEN, NULL, 0) == 0)
+    if (EMBED_CALL(numer.append, NumerosCfg, .out = out, .cap = cap, .spec = DASH_OBJECT_OPEN, .vals = NULL,
+                   .nvals = 0) == 0)
     {
         out[0] = '\0';
         DashboardV.value = 0;
@@ -258,18 +261,19 @@ void protocore_dashboard_values_json(uint8_t *work)
     }
     for (uint8_t i = 0; i < DASHBOARD_CTX(work)->count; i++)
     {
-        if (frame.append(out, cap, DASH_VALUE,
-                         (const protocore_fval[]){PROTOCORE_VSTR(PROTOCORE_JSON_SEP[!!i]),
-                                                  PROTOCORE_VJSON(DASHBOARD_CTX(work)->widgets[i].key),
-                                                  PROTOCORE_VG((double)DASHBOARD_CTX(work)->values[i])},
-                         3) == 0)
+        if (EMBED_CALL(numer.append, NumerosCfg, .out = out, .cap = cap, .spec = DASH_VALUE,
+                       .vals = (const mmgr_fval[]){MMGR_VSTR(PROTOCORE_JSON_SEP[!!i]),
+                                                   MMGR_VJSON(DASHBOARD_CTX(work)->widgets[i].key),
+                                                   MMGR_VG((double)DASHBOARD_CTX(work)->values[i])},
+                       .nvals = 3) == 0)
         {
             out[0] = '\0';
             DashboardV.value = 0;
             return;
         }
     }
-    size_t n = frame.append(out, cap, DASH_OBJECT_CLOSE, NULL, 0);
+    size_t n = EMBED_CALL(numer.append, NumerosCfg, .out = out, .cap = cap, .spec = DASH_OBJECT_CLOSE, .vals = NULL,
+                          .nvals = 0);
     if (n == 0)
     {
         out[0] = '\0';
@@ -295,13 +299,17 @@ static const char *control_value_ptr(const char *s, const char *key)
 {
     char pat[8];
     // A key too long for the buffer leaves pat empty, and strstr then finds nothing - fail closed.
-    frame.build(pat, sizeof(pat), QUOTED_KEY, (const protocore_fval[]){PROTOCORE_VSTR(key)}, 1);
-    const char *p = str.find(s, str.len(s, 0xFFFF) + 1u, pat, str.len(pat, sizeof(pat)) + 1u, PROTO_FALSE);
+    EMBED_CALL(numer.build, NumerosCfg, .out = pat, .cap = sizeof(pat), .spec = QUOTED_KEY,
+               .vals = (const mmgr_fval[]){MMGR_VSTR(key)}, .nvals = 1);
+    const size_t s_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = 0xFFFF);
+    const size_t pat_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = pat, .cap = sizeof(pat));
+    const char *p = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = s, .cap = s_len + 1u, .other = pat,
+                               .other_cap = pat_len + 1u, .ci = PROTO_FALSE);
     if (!p)
     {
         return NULL;
     }
-    p += str.len(pat, sizeof(pat));
+    p += pat_len;
     while (*p == ' ' || *p == '\t')
     {
         p++;
@@ -353,7 +361,7 @@ void protocore_dashboard_parse_control(uint8_t *work)
     }
     key_out[i] = '\0';
     const char *end = NULL;
-    float v = str.to_float(vp, &end);
+    float v = EMBED_CALL(cellul.to_float, TransfiguroCfg, .src = vp, .end = &end);
     if (end == vp)
     {
         DashboardV.ok = PROTO_FALSE;
@@ -419,18 +427,25 @@ void protocore_dashboard_begin(uint8_t *work)
     }
 
     char layout_path[MAX_PATH_LEN];
-    protocore_sb sb_layout_path = {layout_path, sizeof(layout_path), 0, PROTO_TRUE};
-    Sb.put(&sb_layout_path, path);
-    Sb.put(&sb_layout_path, "/layout");
-    if (Sb.finish(&sb_layout_path) == 0)
+    size_t sb_layout_path = 0;
+    sb_layout_path = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = layout_path, .cap = sizeof(layout_path),
+                                .at = sb_layout_path, .text = path);
+    sb_layout_path = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = layout_path, .cap = sizeof(layout_path),
+                                .at = sb_layout_path, .text = "/layout");
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = layout_path, .cap = sizeof(layout_path),
+                   .at = sb_layout_path) == 0)
     {
         layout_path[0] = '\0';
     }
-    protocore_sb sb_stream_path = {DASHBOARD_CTX(work)->stream_path, sizeof(DASHBOARD_CTX(work)->stream_path), 0,
-                                   PROTO_TRUE};
-    Sb.put(&sb_stream_path, path);
-    Sb.put(&sb_stream_path, "/stream");
-    if (Sb.finish(&sb_stream_path) == 0)
+    char *const sb_stream_path_buf = DASHBOARD_CTX(work)->stream_path;
+    const size_t sb_stream_path_cap = sizeof(DASHBOARD_CTX(work)->stream_path);
+    size_t sb_stream_path = 0;
+    sb_stream_path = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_stream_path_buf, .cap = sb_stream_path_cap,
+                                .at = sb_stream_path, .text = path);
+    sb_stream_path = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_stream_path_buf, .cap = sb_stream_path_cap,
+                                .at = sb_stream_path, .text = "/stream");
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb_stream_path_buf, .cap = sb_stream_path_cap,
+                   .at = sb_stream_path) == 0)
     {
         DASHBOARD_CTX(work)->stream_path[0] = '\0';
     }
@@ -439,10 +454,15 @@ void protocore_dashboard_begin(uint8_t *work)
     on_http(layout_path, HTTP_GET, dash_layout_handler);
     on_sse(DASHBOARD_CTX(work)->stream_path, dash_sse_connect);
 #if PROTOCORE_ENABLE_WEBSOCKET
-    protocore_sb sb_ws_path = {DASHBOARD_CTX(work)->ws_path, sizeof(DASHBOARD_CTX(work)->ws_path), 0, PROTO_TRUE};
-    Sb.put(&sb_ws_path, path);
-    Sb.put(&sb_ws_path, "/ws");
-    if (Sb.finish(&sb_ws_path) == 0)
+    char *const sb_ws_path_buf = DASHBOARD_CTX(work)->ws_path;
+    const size_t sb_ws_path_cap = sizeof(DASHBOARD_CTX(work)->ws_path);
+    size_t sb_ws_path = 0;
+    sb_ws_path = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_ws_path_buf, .cap = sb_ws_path_cap,
+                            .at = sb_ws_path, .text = path);
+    sb_ws_path = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_ws_path_buf, .cap = sb_ws_path_cap,
+                            .at = sb_ws_path, .text = "/ws");
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb_ws_path_buf, .cap = sb_ws_path_cap, .at = sb_ws_path) ==
+        0)
     {
         DASHBOARD_CTX(work)->ws_path[0] = '\0';
     }

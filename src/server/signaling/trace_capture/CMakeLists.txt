@@ -5,7 +5,7 @@ protocore_add_module(server/signaling/trace_capture
   GATE PROTOCORE_ENABLE_TRACE_CAPTURE
   SOURCES trace_capture.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protomem
+    mmgr
+    server/core/worker
     server/clock
 )

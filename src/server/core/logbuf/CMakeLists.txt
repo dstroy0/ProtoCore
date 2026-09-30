@@ -5,8 +5,6 @@ protocore_add_module(server/core/logbuf
   GATE PROTOCORE_ENABLE_LOGBUF
   SOURCES logbuf.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protoframe
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
+    server/core/worker
 )

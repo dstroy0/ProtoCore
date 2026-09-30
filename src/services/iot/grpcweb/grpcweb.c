@@ -19,8 +19,8 @@
 
 #include "services/iot/grpcweb/grpcweb.h"
 
-#include "mmgr/protomem/protomem.h" // mem.cpy / mem.cmp: the spans a frame is assembled from and matched on
-#include "mmgr/protostr/protostr.h" // str.len: the bounded length of a field-line's text
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the bounded length of a field-line's text
+#include "memoria_operor/memoria_operor.h" // memor.cpy / memor.cmp: the spans a frame is assembled from and matched on
 
 PROTOCORE_BEGIN_DECLS
 
@@ -43,12 +43,12 @@ static uint32_t get_be32(const uint8_t *buf)
 // is read no further than cap, and *pos is past the prefix, so a longer string fails the test.
 static proto_bool put_str(uint8_t *buf, size_t cap, size_t *pos, const char *s)
 {
-    const size_t n = str.len(s, cap);
+    const size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = cap);
     if (*pos + n > cap)
     {
         return PROTO_FALSE;
     }
-    mem.cpy(buf + *pos, s, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + *pos, .src = s, .bytes = n);
     *pos += n;
     return PROTO_TRUE;
 }
@@ -88,7 +88,8 @@ static proto_bool find_key(const uint8_t *body, size_t len, const char *key, siz
 {
     for (size_t i = 0; i + klen <= len; i++)
     {
-        if ((i == 0 || body[i - 1] == '\n') && mem.cmp(body + i, key, klen) == 0)
+        if ((i == 0 || body[i - 1] == '\n') &&
+            EMBED_CALL(memor.cmp, MemoriaCfg, .src = body + i, .other = key, .bytes = klen) == 0)
         {
             *value_at = i + klen;
             return PROTO_TRUE;
@@ -119,7 +120,8 @@ void protocore_grpc_web_frame(uint8_t *work)
     put_be32(buf + 1, (uint32_t)body_len);
     if (body_len)
     {
-        mem.cpy(buf + PROTOCORE_GRPCWEB_PREFIX_LEN, GrpcWebV.msg.body, body_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + PROTOCORE_GRPCWEB_PREFIX_LEN, .src = GrpcWebV.msg.body,
+                   .bytes = body_len);
     }
     GrpcWebV.n = total;
     GrpcWebV.ok = PROTO_TRUE;

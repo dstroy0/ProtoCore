@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_SEN0192
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "server/peripherals/sen0192/sen0192.h"
 
 #if !PROTOCORE_HAS_GPIO
@@ -42,7 +42,7 @@ uint8_t *protocore_sen0192_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_SEN0192_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_SEN0192_BORROW);
     }
     return s_own.span;
 }
@@ -132,8 +132,8 @@ static_assert(SEN0192_OFF_CTX + sizeof(Sen0192Ctx) <= PROTOCORE_SEN0192_BORROW,
               "PROTOCORE_SEN0192_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(SEN0192_OFF_CTX % _Alignof(Sen0192Ctx) == 0,

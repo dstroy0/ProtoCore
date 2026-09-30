@@ -5,6 +5,5 @@ protocore_add_module(services/timing_position/gnss/ntrip_caster
   GATE PROTOCORE_ENABLE_NTRIP_CASTER
   SOURCES ntrip_caster.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/protomem
+    mmgr
 )

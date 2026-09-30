@@ -5,7 +5,7 @@ protocore_add_module(server/net/gateway
   GATE PROTOCORE_ENABLE_GATEWAY
   SOURCES gateway.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/secure
+    mmgr
+    server/core/worker
     server/clock
 )

@@ -69,6 +69,8 @@ jobs:
         example: ${{ fromJson(needs.discover.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          submodules: true # include/MMgr: src/ builds against it
       - uses: actions/setup-python@v7
         with:
           python-version: "3.x"

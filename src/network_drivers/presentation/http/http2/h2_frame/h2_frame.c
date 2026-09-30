@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_HTTP2
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/http2/h2_frame/h2_frame.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -184,7 +184,7 @@ static size_t h2_build_ping_ack_run(uint8_t *out, size_t cap, const uint8_t opaq
         return 0;
     }
     h2_write_header_run(out, cap, 8, H2_PING, H2_FLAG_ACK, 0);
-    mem.cpy(out + H2_FRAME_HEADER_LEN, opaque, 8);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + H2_FRAME_HEADER_LEN, .src = opaque, .bytes = 8);
     return H2_FRAME_HEADER_LEN + 8;
 }
 
@@ -197,7 +197,7 @@ static size_t h2_build_headers_run(uint8_t *out, size_t cap, uint32_t stream_id,
     }
     uint8_t flags = H2_FLAG_END_HEADERS | (end_stream ? H2_FLAG_END_STREAM : 0);
     h2_write_header_run(out, cap, (uint32_t)block_len, H2_HEADERS, flags, stream_id);
-    mem.cpy(out + H2_FRAME_HEADER_LEN, block, block_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + H2_FRAME_HEADER_LEN, .src = block, .bytes = block_len);
     return H2_FRAME_HEADER_LEN + block_len;
 }
 
@@ -211,7 +211,7 @@ static size_t h2_build_data_run(uint8_t *out, size_t cap, uint32_t stream_id, co
     h2_write_header_run(out, cap, (uint32_t)data_len, H2_DATA, end_stream ? H2_FLAG_END_STREAM : 0, stream_id);
     if (data_len)
     {
-        mem.cpy(out + H2_FRAME_HEADER_LEN, data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + H2_FRAME_HEADER_LEN, .src = data, .bytes = data_len);
     }
     return H2_FRAME_HEADER_LEN + data_len;
 }

@@ -5,6 +5,7 @@ protocore_add_module(server/peripherals/rtc
   GATE PROTOCORE_ENABLE_RTC
   SOURCES rtc.c
   PRIVATE_DEPS
-    mmgr/secure
+    mmgr
+    server/core/worker
     server/peripherals/i2c
 )

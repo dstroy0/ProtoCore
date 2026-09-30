@@ -5,6 +5,5 @@ protocore_add_module(services/energy/goose
   GATE PROTOCORE_ENABLE_GOOSE
   SOURCES goose.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )

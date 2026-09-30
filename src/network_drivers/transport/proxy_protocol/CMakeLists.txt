@@ -5,6 +5,5 @@ protocore_add_module(network_drivers/transport/proxy_protocol
   GATE PROTOCORE_ENABLE_PROXY_PROTOCOL
   SOURCES proxy_protocol.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/protomem
+    mmgr
 )

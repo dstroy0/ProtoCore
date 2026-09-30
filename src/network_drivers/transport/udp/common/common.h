@@ -17,8 +17,8 @@
  *     21      len    payload
  *
  * Every field is written and read at a stated width in network byte order, so the bytes in the ring
- * are the same bytes on every target. The header is built through a protocore_span and read through a
- * protocore_cspan, which carry the bound and latch an overrun.
+ * are the same bytes on every target. The header is built through an mmgr_span and read through an
+ * mmgr_cspan, which carry the bound and latch an overrun.
  *
  * The layout is the contract, so it is published rather than opaque. Internal to transport/udp: no
  * table, no exported symbol.
@@ -30,9 +30,10 @@
 #ifndef PROTOCORE_UDP_COMMON_H
 #define PROTOCORE_UDP_COMMON_H
 
-#include "mmgr/bytes/bytes.h" // bytes.put / bytes.put_be / bytes.take_be over a span
-#include "mmgr/ring/ring.h"   // the SPSC ring the datagrams sit in
-#include "shared/ip/ip.h"     // protocore_ip: the address a datagram carries, network order
+#include "endian/endian.h"                                   // magna_extremitas: the address as two big-endian words
+#include "memoria_anularis/memoria_anularis.h"               // mmgr_ring: the SPSC ring the datagrams sit in
+#include "octetus_introitus_exitus/octetus_introitus_exitus.h" // byteio.put / put_be / take_be over a span
+#include "shared/ip/ip.h" // protocore_ip: the address a datagram carries, network order
 
 PROTOCORE_BEGIN_DECLS
 
@@ -48,13 +49,17 @@ typedef struct
 } protocore_udp_dgram;
 
 /** @brief Write the header of @p d into @p w at its cursor. */
-PROTOCORE_INLINE void protocore_udp_dgram_encode(protocore_span *w, const protocore_udp_dgram *d)
+PROTOCORE_INLINE void protocore_udp_dgram_encode(mmgr_span *w, const protocore_udp_dgram *d)
 {
-    bytes.put(w, (uint8_t)d->addr.family);
-    bytes.put_be(w, d->port, 2);
-    bytes.put_be(w, d->len, 2);
-    bytes.put_be(w, endian.rd64be(d->addr.bytes), 8);
-    bytes.put_be(w, endian.rd64be(d->addr.bytes + 8), 8);
+    EMBED_CALL(byteio.put, OctetusCfg, .write_span = w, .byte = (uint8_t)d->addr.family);
+    EMBED_CALL(byteio.put_be, OctetusCfg, .write_span = w, .value = d->port, .bytes = 2);
+    EMBED_CALL(byteio.put_be, OctetusCfg, .write_span = w, .value = d->len, .bytes = 2);
+    EMBED_CALL(byteio.put_be, OctetusCfg, .write_span = w,
+               .value = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = d->addr.bytes, .width = MMGR_ENDIAN_64),
+               .bytes = 8);
+    EMBED_CALL(byteio.put_be, OctetusCfg, .write_span = w,
+               .value = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = d->addr.bytes + 8, .width = MMGR_ENDIAN_64),
+               .bytes = 8);
 }
 
 /**
@@ -63,15 +68,18 @@ PROTOCORE_INLINE void protocore_udp_dgram_encode(protocore_span *w, const protoc
  * A family byte that is neither 4 nor 6 leaves the address empty, so a caller cannot route on a
  * value the parser did not recognize.
  */
-PROTOCORE_INLINE proto_bool protocore_udp_dgram_decode(protocore_cspan *r, protocore_udp_dgram *d)
+PROTOCORE_INLINE proto_bool protocore_udp_dgram_decode(mmgr_cspan *r, protocore_udp_dgram *d)
 {
     uint64_t family = 0;
     uint64_t port = 0;
     uint64_t len = 0;
     uint64_t hi = 0;
     uint64_t lo = 0;
-    if (!bytes.take_be(r, 1, &family) || !bytes.take_be(r, 2, &port) || !bytes.take_be(r, 2, &len) ||
-        !bytes.take_be(r, 8, &hi) || !bytes.take_be(r, 8, &lo))
+    if (!EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .bytes = 1, .out = &family) ||
+        !EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .bytes = 2, .out = &port) ||
+        !EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .bytes = 2, .out = &len) ||
+        !EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .bytes = 8, .out = &hi) ||
+        !EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .bytes = 8, .out = &lo))
     {
         return PROTO_FALSE;
     }
@@ -84,8 +92,8 @@ PROTOCORE_INLINE proto_bool protocore_udp_dgram_decode(protocore_cspan *r, proto
     {
         d->addr.family = PROTOCORE_IP_V6;
     }
-    (void)endian.wr64be(d->addr.bytes, hi);
-    (void)endian.wr64be(d->addr.bytes + 8, lo);
+    (void)EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = d->addr.bytes, .val = hi, .width = MMGR_ENDIAN_64);
+    (void)EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = d->addr.bytes + 8, .val = lo, .width = MMGR_ENDIAN_64);
     d->port = (uint16_t)port;
     d->len = (uint16_t)len;
     return PROTO_TRUE;
@@ -98,16 +106,15 @@ PROTOCORE_INLINE proto_bool protocore_udp_dgram_decode(protocore_cspan *r, proto
  * Peeks the header, consumes it, then reads exactly its payload length, so the tail always lands on
  * the next entry boundary. Reports false when the ring holds no whole entry.
  */
-PROTOCORE_INLINE proto_bool protocore_udp_dgram_take(uint8_t *ring, size_t cap, _Atomic size_t *head,
-                                                     _Atomic size_t *tail, uint8_t *hdr, protocore_udp_dgram *d,
+PROTOCORE_INLINE proto_bool protocore_udp_dgram_take(mmgr_ring *ring, uint8_t *hdr, protocore_udp_dgram *d,
                                                      uint8_t *stage, size_t stage_cap)
 {
-    if (protocore_ring_available(head, tail, cap) < PROTOCORE_UDP_DGRAM_HDR)
+    if (EMBED_CALL(anularis.available, AnularisCfg, .ring = ring) < PROTOCORE_UDP_DGRAM_HDR)
     {
         return PROTO_FALSE;
     }
-    protocore_ring_peek(ring, cap, tail, 0, hdr, PROTOCORE_UDP_DGRAM_HDR);
-    protocore_cspan r = span.cfrom(hdr, PROTOCORE_UDP_DGRAM_HDR);
+    EMBED_CALL(anularis.peek, AnularisCfg, .ring = ring, .dst = hdr, .bytes = PROTOCORE_UDP_DGRAM_HDR, .offset = 0);
+    mmgr_cspan r = {.buf = hdr, .len = PROTOCORE_UDP_DGRAM_HDR, .pos = 0, .err = EMBED_FALSE};
     if (!protocore_udp_dgram_decode(&r, d))
     {
         return PROTO_FALSE;
@@ -116,15 +123,16 @@ PROTOCORE_INLINE proto_bool protocore_udp_dgram_take(uint8_t *ring, size_t cap, 
     {
         // Nothing queues a payload longer than the stage, so a length past it means the ring lost its
         // entry boundary. Drop the whole ring rather than read past one.
-        PROTO_ATOMIC_STORE(tail, PROTO_ATOMIC_LOAD(head));
+        EMBED_CALL(anularis.consume, AnularisCfg, .ring = ring,
+                   .bytes = EMBED_CALL(anularis.available, AnularisCfg, .ring = ring));
         return PROTO_FALSE;
     }
-    if (protocore_ring_available(head, tail, cap) < (PROTOCORE_UDP_DGRAM_HDR + (size_t)d->len))
+    if (EMBED_CALL(anularis.available, AnularisCfg, .ring = ring) < (PROTOCORE_UDP_DGRAM_HDR + (size_t)d->len))
     {
         return PROTO_FALSE;
     }
-    protocore_ring_consume(tail, cap, PROTOCORE_UDP_DGRAM_HDR);
-    (void)protocore_ring_read(ring, cap, head, tail, stage, d->len);
+    EMBED_CALL(anularis.consume, AnularisCfg, .ring = ring, .bytes = PROTOCORE_UDP_DGRAM_HDR);
+    (void)EMBED_CALL(anularis.read, AnularisCfg, .ring = ring, .dst = stage, .bytes = d->len);
     return PROTO_TRUE;
 }
 

@@ -662,8 +662,10 @@ static proto_bool dispatch_frame(uint8_t *work, H2FrameHeader h, const uint8_t *
 static proto_bool process_frame(uint8_t *work)
 {
     H2FrameHeader h;
-    (H2FrameV.parse_args.buf = H2_CONN_FHDR(work), H2FrameV.parse_args.len = H2_FRAME_HEADER_LEN,
-     H2Frame.parse_header(work), *(&h) = H2FrameV.header, H2FrameV.ok);
+    H2FrameV.parse_args.buf = H2_CONN_FHDR(work);
+    H2FrameV.parse_args.len = H2_FRAME_HEADER_LEN;
+    H2Frame.parse_header(work);
+    h = H2FrameV.header;
     const uint8_t *payload = H2_CONN_FBUF(work);
 
     // A header block must be continued only by CONTINUATION on the same stream (sec 6.10).

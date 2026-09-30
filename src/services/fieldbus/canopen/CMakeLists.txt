@@ -7,5 +7,5 @@ protocore_add_module(services/fieldbus/canopen
   DEPS
     shared/can
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

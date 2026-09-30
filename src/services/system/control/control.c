@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_CONTROL
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/system/control/control.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -174,7 +174,8 @@ static size_t put_u32le(uint8_t *p, uint32_t v)
 static size_t put_f32le(uint8_t *p, float v)
 {
     uint32_t u;
-    mem.cpy(&u, &v, 4); // reinterpret the IEEE-754 bits, then emit little-endian
+    // reinterpret the IEEE-754 bits, then emit little-endian
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &u, .src = &v, .bytes = 4);
     return put_u32le(p, u);
 }
 
@@ -192,7 +193,7 @@ void protocore_control_pid_log_header(uint8_t *work)
         return;
     }
     size_t o = 0;
-    mem.cpy(buf, PID_LOG_MAGIC, 4);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf, .src = PID_LOG_MAGIC, .bytes = 4);
     o += 4;
     buf[o++] = PID_LOG_VERSION;
     buf[o++] = 0; // flags (reserved)

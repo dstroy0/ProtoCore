@@ -5,5 +5,5 @@ protocore_add_module(server/net/relay/relay
   GATE PROTOCORE_ENABLE_RELAY
   SOURCES relay.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

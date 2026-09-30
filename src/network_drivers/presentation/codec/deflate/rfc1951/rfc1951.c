@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_DEFLATE_RFC1951
 
-#include "mmgr/protomem/protomem.h" // mem.set: build_fixed zeroes its bit-length counts
+#include "memoria_operor/memoria_operor.h" // memor.set: build_fixed zeroes its bit-length counts
 #include "network_drivers/presentation/codec/deflate/rfc1951/rfc1951.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -82,7 +82,7 @@ void protocore_rfc1951_build_fixed(uint8_t *work)
 
     // Canonical code assignment (RFC 1951 sec 3.2.2) for the lit/length alphabet.
     uint16_t bl_count[16];
-    mem.set(bl_count, 0, sizeof(bl_count));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = bl_count, .val = 0, .bytes = sizeof(bl_count));
     for (sym = 0; sym < 288; sym++)
     {
         bl_count[ll_len[sym]]++;
@@ -119,19 +119,19 @@ void protocore_rfc1951_build_fixed(uint8_t *work)
 void protocore_rfc1951_emit_literal(uint8_t *work)
 {
     (void)work;
-    protocore_bit_writer *w = Rfc1951V.emit_literal_args.w;
+    mmgr_bitor *w = Rfc1951V.emit_literal_args.w;
     const uint16_t *ll_code = Rfc1951V.emit_literal_args.ll_code;
     const uint8_t *ll_len = Rfc1951V.emit_literal_args.ll_len;
     uint8_t b = Rfc1951V.emit_literal_args.b;
 
-    bitw.put(w, ll_code[b], ll_len[b]);
+    EMBED_CALL(bitio.put, BitorumCfg, .writer = w, .val = ll_code[b], .bit_count = ll_len[b]);
 }
 
 // A (len, dist) back-reference through the fixed code tables (RFC 1951 sec 3.2.5).
 void protocore_rfc1951_emit_match(uint8_t *work)
 {
     (void)work;
-    protocore_bit_writer *w = Rfc1951V.emit_match_args.w;
+    mmgr_bitor *w = Rfc1951V.emit_match_args.w;
     const uint16_t *ll_code = Rfc1951V.emit_match_args.ll_code;
     const uint8_t *ll_len = Rfc1951V.emit_match_args.ll_len;
     const uint16_t *d_code = Rfc1951V.emit_match_args.d_code;
@@ -145,10 +145,11 @@ void protocore_rfc1951_emit_match(uint8_t *work)
         li++;
     }
     int lsym = 257 + li;
-    bitw.put(w, ll_code[lsym], ll_len[lsym]);
+    EMBED_CALL(bitio.put, BitorumCfg, .writer = w, .val = ll_code[lsym], .bit_count = ll_len[lsym]);
     if (len_extra[li])
     {
-        bitw.put(w, (uint32_t)(len - len_base[li]), len_extra[li]);
+        EMBED_CALL(bitio.put, BitorumCfg, .writer = w, .val = (uint32_t)(len - len_base[li]),
+                   .bit_count = len_extra[li]);
     }
 
     int di = 0;
@@ -156,10 +157,11 @@ void protocore_rfc1951_emit_match(uint8_t *work)
     {
         di++;
     }
-    bitw.put(w, d_code[di], d_len[di]);
+    EMBED_CALL(bitio.put, BitorumCfg, .writer = w, .val = d_code[di], .bit_count = d_len[di]);
     if (dist_extra[di])
     {
-        bitw.put(w, (uint32_t)(dist - dist_base[di]), dist_extra[di]);
+        EMBED_CALL(bitio.put, BitorumCfg, .writer = w, .val = (uint32_t)(dist - dist_base[di]),
+                   .bit_count = dist_extra[di]);
     }
 }
 

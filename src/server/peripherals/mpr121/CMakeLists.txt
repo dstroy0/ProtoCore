@@ -5,8 +5,8 @@ protocore_add_module(server/peripherals/mpr121
   GATE PROTOCORE_ENABLE_MPR121
   SOURCES mpr121.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/secure
+    mmgr
+    server/core/worker
     server/clock
     server/peripherals/i2c
 )

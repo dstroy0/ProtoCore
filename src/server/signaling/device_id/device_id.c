@@ -12,8 +12,7 @@
 #if PROTOCORE_ENABLE_DEVICE_ID
 
 #include "crypto/hash/sha1/sha1.h"
-#include "mmgr/secure/secure.h" // the pool the digest borrow comes from
-#include "mmgr/span/span.h"     // protocore_span, span.ok
+#include "server/core/worker/worker.h" // protocore_secure_guard: the cellblock the digest borrow comes from
 
 PROTOCORE_BEGIN_DECLS
 
@@ -49,16 +48,17 @@ void protocore_device_id_from_mac(uint8_t *work)
     }
 
     uint8_t h[PROTOCORE_SHA1_DIGEST_LEN];
-    const size_t mark = protocore_secure_mark();
-    protocore_span w = protocore_secure_span(PROTOCORE_SHA1_BORROW, 8);
-    if (!span.ok(w))
+    const MaximumSecurityGuard *guard = protocore_secure_guard();
+    const size_t mark = guard->temporary_buf_mark();
+    uint8_t *w = (uint8_t *)guard->temporary_buf_alloc(PROTOCORE_SHA1_BORROW);
+    if (!w)
     {
-        protocore_secure_release(mark);
+        guard->temporary_buf_release(mark);
         out[0] = '\0';
         return;
     }
-    Sha1.hash(w.buf, input, sizeof(input), h);
-    protocore_secure_release(mark);
+    Sha1.hash(w, input, sizeof(input), h);
+    guard->temporary_buf_release(mark);
     h[6] = (uint8_t)((h[6] & 0x0F) | 0x50); // version 5
     h[8] = (uint8_t)((h[8] & 0x3F) | 0x80); // RFC 4122 variant
 

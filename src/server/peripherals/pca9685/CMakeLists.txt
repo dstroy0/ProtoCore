@@ -5,7 +5,8 @@ protocore_add_module(server/peripherals/pca9685
   GATE PROTOCORE_ENABLE_PCA9685
   SOURCES pca9685.c
   PRIVATE_DEPS
-    mmgr/secure
+    mmgr
+    server/core/worker
     server/clock
     server/peripherals/i2c
 )

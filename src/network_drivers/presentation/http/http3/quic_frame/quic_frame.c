@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/http3/quic_frame/quic_frame.h"
 
 #include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
@@ -245,7 +245,7 @@ size_t protocore_quic_frame_build_padding(uint8_t *work, uint8_t *out, size_t ca
     {
         return 0;
     }
-    mem.set(out, 0, n);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = n);
     return n;
 }
 
@@ -314,7 +314,7 @@ size_t protocore_quic_frame_build_crypto(uint8_t *work, uint8_t *out, size_t cap
     }
     if (len)
     {
-        mem.cpy(out + pos, data, len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + pos, .src = data, .bytes = len);
     }
     return pos + len;
 }
@@ -342,7 +342,7 @@ size_t protocore_quic_frame_build_stream(uint8_t *work, uint8_t *out, size_t cap
     }
     if (len)
     {
-        mem.cpy(out + pos, data, len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + pos, .src = data, .bytes = len);
     }
     return pos + len;
 }
@@ -387,7 +387,7 @@ size_t protocore_quic_frame_build_connection_close(uint8_t *work, uint8_t *out, 
     }
     if (reason_len)
     {
-        mem.cpy(out + pos, reason, reason_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + pos, .src = reason, .bytes = reason_len);
     }
     return pos + reason_len;
 }

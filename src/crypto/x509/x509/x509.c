@@ -12,8 +12,8 @@
 
 #include "crypto/x509/x509/x509.h"
 
-#include "mmgr/protomem/protomem.h" // mem.set: the view is cleared before a parse fills it
-#include "shared/der/der.h"         // Der: the one reader
+#include "memoria_operor/memoria_operor.h" // memor.set: the view is cleared before a parse fills it
+#include "shared/der/der.h"                // Der: the one reader
 
 PROTOCORE_BEGIN_DECLS
 
@@ -282,7 +282,7 @@ void protocore_x509_parse(uint8_t *work)
 {
     (void)work;
     X509V.ok = PROTO_FALSE;
-    mem.set(&X509V.cert, 0, sizeof(X509V.cert));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &X509V.cert, .val = 0, .bytes = sizeof(X509V.cert));
 
     const uint8_t *der = X509V.parse_args.der;
     const size_t len = X509V.parse_args.len;

@@ -15,10 +15,10 @@
 
 #if PROTOCORE_ENABLE_FANUC_J519
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/machine_tool/fanuc_j519/fanuc_j519.h"
 
-#include "mmgr/endian/endian.h"
+#include "endian/endian.h"
 // memcpy (string.h is allowed; the no-stdlib rule is about stdlib.h/malloc)
 
 PROTOCORE_BEGIN_DECLS
@@ -27,14 +27,14 @@ PROTOCORE_BEGIN_DECLS
 static size_t wr_f32be(uint8_t *p, float v)
 {
     uint32_t u;
-    mem.cpy(&u, &v, 4);
-    return endian.wr32be(p, u);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &u, .src = &v, .bytes = 4);
+    return EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = p, .val = u, .width = MMGR_ENDIAN_32);
 }
 static float rd_f32be(const uint8_t *p)
 {
-    uint32_t u = endian.rd32be(p);
+    uint32_t u = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = p, .width = MMGR_ENDIAN_32);
     float v;
-    mem.cpy(&v, &u, 4);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &v, .src = &u, .bytes = 4);
     return v;
 }
 
@@ -57,15 +57,17 @@ static void rd_f32_block(const uint8_t *p, float *dst, size_t n)
 // Every packet opens with { type, version } - written once here so no builder repeats it.
 static void wr_header(uint8_t *buf, J519Type type, uint32_t version_no)
 {
-    endian.wr32be(buf + 0, (uint32_t)type);
-    endian.wr32be(buf + 4, version_no);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 0, .val = (uint32_t)type, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 4, .val = version_no, .width = MMGR_ENDIAN_32);
 }
 
 // A parser accepts only its own exact length and type code (the type space is shared per direction,
 // so length is what actually separates Start from Status and Request from Ack).
 static proto_bool hdr_ok(const uint8_t *buf, size_t len, size_t want_len, J519Type want_type)
 {
-    return buf && len == want_len && endian.rd32be(buf + 0) == (uint32_t)want_type;
+    return buf && len == want_len &&
+           (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 0, .width = MMGR_ENDIAN_32) ==
+               (uint32_t)want_type;
 }
 
 // --- header ---------------------------------------------------------------------------------------
@@ -78,11 +80,11 @@ proto_bool protocore_j519_peek(const uint8_t *buf, size_t len, uint32_t *type, u
     }
     if (type)
     {
-        *type = endian.rd32be(buf + 0);
+        *type = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 0, .width = MMGR_ENDIAN_32);
     }
     if (version_no)
     {
-        *version_no = endian.rd32be(buf + 4);
+        *version_no = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 4, .width = MMGR_ENDIAN_32);
     }
     return PROTO_TRUE;
 }
@@ -116,17 +118,17 @@ size_t protocore_j519_build_motion(uint8_t *buf, size_t cap, const J519MotionCom
         return 0;
     }
     wr_header(buf, J519_MOTION, cmd->version_no);
-    endian.wr32be(buf + 8, cmd->sequence_no);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 8, .val = cmd->sequence_no, .width = MMGR_ENDIAN_32);
     buf[12] = cmd->last_data;
     buf[13] = cmd->read_io_type;
-    endian.wr16be(buf + 14, cmd->read_io_index);
-    endian.wr16be(buf + 16, cmd->read_io_mask);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 14, .val = cmd->read_io_index, .width = MMGR_ENDIAN_16);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 16, .val = cmd->read_io_mask, .width = MMGR_ENDIAN_16);
     buf[18] = cmd->data_style;
     buf[19] = cmd->write_io_type;
-    endian.wr16be(buf + 20, cmd->write_io_index);
-    endian.wr16be(buf + 22, cmd->write_io_mask);
-    endian.wr16be(buf + 24, cmd->write_io_value);
-    endian.wr16be(buf + 26, 0); // unused
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 20, .val = cmd->write_io_index, .width = MMGR_ENDIAN_16);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 22, .val = cmd->write_io_mask, .width = MMGR_ENDIAN_16);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 24, .val = cmd->write_io_value, .width = MMGR_ENDIAN_16);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 26, .val = 0, .width = MMGR_ENDIAN_16); // unused
     wr_f32_block(buf + 28, cmd->joint_data, PROTOCORE_J519_AXES);
     return PROTOCORE_J519_LEN_MOTION;
 }
@@ -138,8 +140,8 @@ size_t protocore_j519_build_request(uint8_t *buf, size_t cap, const J519Request 
         return 0;
     }
     wr_header(buf, J519_REQUEST_OR_ACK, req->version_no);
-    endian.wr32be(buf + 8, req->axis_no);
-    endian.wr32be(buf + 12, req->threshold_type);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 8, .val = req->axis_no, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 12, .val = req->threshold_type, .width = MMGR_ENDIAN_32);
     return PROTOCORE_J519_LEN_REQUEST;
 }
 
@@ -151,17 +153,19 @@ proto_bool protocore_j519_parse_motion(const uint8_t *buf, size_t len, J519Motio
     {
         return PROTO_FALSE;
     }
-    out->version_no = endian.rd32be(buf + 4);
-    out->sequence_no = endian.rd32be(buf + 8);
+    out->version_no = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 4, .width = MMGR_ENDIAN_32);
+    out->sequence_no = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 8, .width = MMGR_ENDIAN_32);
     out->last_data = buf[12];
     out->read_io_type = buf[13];
-    out->read_io_index = endian.rd16be(buf + 14);
-    out->read_io_mask = endian.rd16be(buf + 16);
+    out->read_io_index = (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 14, .width = MMGR_ENDIAN_16);
+    out->read_io_mask = (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 16, .width = MMGR_ENDIAN_16);
     out->data_style = buf[18];
     out->write_io_type = buf[19];
-    out->write_io_index = endian.rd16be(buf + 20);
-    out->write_io_mask = endian.rd16be(buf + 22);
-    out->write_io_value = endian.rd16be(buf + 24);
+    out->write_io_index =
+        (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 20, .width = MMGR_ENDIAN_16);
+    out->write_io_mask = (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 22, .width = MMGR_ENDIAN_16);
+    out->write_io_value =
+        (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 24, .width = MMGR_ENDIAN_16);
     // octets 26..27 are unused padding - not surfaced
     rd_f32_block(buf + 28, out->joint_data, PROTOCORE_J519_AXES);
     return PROTO_TRUE;
@@ -173,9 +177,10 @@ proto_bool protocore_j519_parse_request(const uint8_t *buf, size_t len, J519Requ
     {
         return PROTO_FALSE;
     }
-    out->version_no = endian.rd32be(buf + 4);
-    out->axis_no = endian.rd32be(buf + 8);
-    out->threshold_type = endian.rd32be(buf + 12);
+    out->version_no = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 4, .width = MMGR_ENDIAN_32);
+    out->axis_no = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 8, .width = MMGR_ENDIAN_32);
+    out->threshold_type =
+        (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 12, .width = MMGR_ENDIAN_32);
     return PROTO_TRUE;
 }
 
@@ -188,13 +193,13 @@ size_t protocore_j519_build_status(uint8_t *buf, size_t cap, const J519RobotStat
         return 0;
     }
     wr_header(buf, J519_START_OR_STATUS, st->version_no);
-    endian.wr32be(buf + 8, st->sequence_no);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 8, .val = st->sequence_no, .width = MMGR_ENDIAN_32);
     buf[12] = st->status;
     buf[13] = st->read_io_type;
-    endian.wr16be(buf + 14, st->read_io_index);
-    endian.wr16be(buf + 16, st->read_io_mask);
-    endian.wr16be(buf + 18, st->read_io_value);
-    endian.wr32be(buf + 20, st->time_stamp);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 14, .val = st->read_io_index, .width = MMGR_ENDIAN_16);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 16, .val = st->read_io_mask, .width = MMGR_ENDIAN_16);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 18, .val = st->read_io_value, .width = MMGR_ENDIAN_16);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 20, .val = st->time_stamp, .width = MMGR_ENDIAN_32);
     wr_f32_block(buf + 24, st->cartesian_pose, PROTOCORE_J519_AXES);
     wr_f32_block(buf + 60, st->joint_pose, PROTOCORE_J519_AXES);
     wr_f32_block(buf + 96, st->motor_current, PROTOCORE_J519_AXES);
@@ -208,10 +213,10 @@ size_t protocore_j519_build_ack(uint8_t *buf, size_t cap, const J519Ack *ack)
         return 0;
     }
     wr_header(buf, J519_REQUEST_OR_ACK, ack->version_no);
-    endian.wr32be(buf + 8, ack->axis_no);
-    endian.wr32be(buf + 12, ack->threshold_type);
-    endian.wr32be(buf + 16, ack->max_cart_speed);
-    endian.wr32be(buf + 20, ack->unknown0);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 8, .val = ack->axis_no, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 12, .val = ack->threshold_type, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 16, .val = ack->max_cart_speed, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + 20, .val = ack->unknown0, .width = MMGR_ENDIAN_32);
     wr_f32_block(buf + 24, ack->threshold_no_load, PROTOCORE_J519_THRESHOLDS);
     wr_f32_block(buf + 104, ack->threshold_max_load, PROTOCORE_J519_THRESHOLDS);
     return PROTOCORE_J519_LEN_ACK;
@@ -225,14 +230,14 @@ proto_bool protocore_j519_parse_status(const uint8_t *buf, size_t len, J519Robot
     {
         return PROTO_FALSE;
     }
-    out->version_no = endian.rd32be(buf + 4);
-    out->sequence_no = endian.rd32be(buf + 8);
+    out->version_no = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 4, .width = MMGR_ENDIAN_32);
+    out->sequence_no = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 8, .width = MMGR_ENDIAN_32);
     out->status = buf[12];
     out->read_io_type = buf[13];
-    out->read_io_index = endian.rd16be(buf + 14);
-    out->read_io_mask = endian.rd16be(buf + 16);
-    out->read_io_value = endian.rd16be(buf + 18);
-    out->time_stamp = endian.rd32be(buf + 20);
+    out->read_io_index = (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 14, .width = MMGR_ENDIAN_16);
+    out->read_io_mask = (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 16, .width = MMGR_ENDIAN_16);
+    out->read_io_value = (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 18, .width = MMGR_ENDIAN_16);
+    out->time_stamp = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 20, .width = MMGR_ENDIAN_32);
     rd_f32_block(buf + 24, out->cartesian_pose, PROTOCORE_J519_AXES);
     rd_f32_block(buf + 60, out->joint_pose, PROTOCORE_J519_AXES);
     rd_f32_block(buf + 96, out->motor_current, PROTOCORE_J519_AXES);
@@ -245,11 +250,13 @@ proto_bool protocore_j519_parse_ack(const uint8_t *buf, size_t len, J519Ack *out
     {
         return PROTO_FALSE;
     }
-    out->version_no = endian.rd32be(buf + 4);
-    out->axis_no = endian.rd32be(buf + 8);
-    out->threshold_type = endian.rd32be(buf + 12);
-    out->max_cart_speed = endian.rd32be(buf + 16);
-    out->unknown0 = endian.rd32be(buf + 20);
+    out->version_no = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 4, .width = MMGR_ENDIAN_32);
+    out->axis_no = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 8, .width = MMGR_ENDIAN_32);
+    out->threshold_type =
+        (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 12, .width = MMGR_ENDIAN_32);
+    out->max_cart_speed =
+        (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 16, .width = MMGR_ENDIAN_32);
+    out->unknown0 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 20, .width = MMGR_ENDIAN_32);
     rd_f32_block(buf + 24, out->threshold_no_load, PROTOCORE_J519_THRESHOLDS);
     rd_f32_block(buf + 104, out->threshold_max_load, PROTOCORE_J519_THRESHOLDS);
     return PROTO_TRUE;

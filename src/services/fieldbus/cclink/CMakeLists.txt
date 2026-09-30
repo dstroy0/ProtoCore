@@ -5,5 +5,5 @@ protocore_add_module(services/fieldbus/cclink
   GATE PROTOCORE_ENABLE_CCLINK
   SOURCES cclink.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

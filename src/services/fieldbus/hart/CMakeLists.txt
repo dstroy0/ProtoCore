@@ -5,5 +5,5 @@ protocore_add_module(services/fieldbus/hart
   GATE PROTOCORE_ENABLE_HART
   SOURCES hart.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

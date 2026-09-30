@@ -5,7 +5,6 @@ protocore_add_module(services/energy/c37118
   GATE PROTOCORE_ENABLE_C37118
   SOURCES c37118.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/protomem
+    mmgr
     shared/crc
 )

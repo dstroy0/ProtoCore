@@ -197,7 +197,7 @@ typedef struct
     uint8_t *out;      ///< where a reply is written
     size_t out_len;    ///< what was written
     size_t cap;        ///< how much room it has
-    protocore_span *w; ///< the span a publickey request is built in
+    mmgr_span *w;      ///< the span a publickey request is built in
 } SshAuthOutArgs;
 
 /** @brief RFC 4252 sec 5 / sec 7: the names one USERAUTH_REQUEST carries, and the key it offers. */

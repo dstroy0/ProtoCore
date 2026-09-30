@@ -87,6 +87,8 @@ jobs:
         example: ${{ fromJson(needs.discover.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          submodules: true # include/MMgr: src/ builds against it
       - uses: arduino/setup-arduino-cli@v2
       # Restore-only: the build job wraps the toolchain in place for ccache, so it must never
       # save ~/.arduino15 back (a wrapped/half-wrapped tree in the cache is what broke every

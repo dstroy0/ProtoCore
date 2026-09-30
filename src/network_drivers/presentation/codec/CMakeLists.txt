@@ -4,7 +4,7 @@
 protocore_add_module(network_drivers/presentation/codec
   HEADER_ONLY
   DEPS
-    mmgr/span
+    mmgr
 )
 
 add_subdirectory(base64)

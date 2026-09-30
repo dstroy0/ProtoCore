@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_S7COMM
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/s7comm/s7comm.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -198,7 +198,7 @@ void protocore_s7comm_build_write_request(uint8_t *work)
         p += put16(buf + p, s7_data_wire_len(it->data_transport_size, it->data_len));
         if (it->data_len)
         {
-            mem.cpy(buf + p, it->data, it->data_len);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = it->data, .bytes = it->data_len);
             p += it->data_len;
         }
         if (i + 1 < n && (it->data_len & 1)) // even-pad all but the last

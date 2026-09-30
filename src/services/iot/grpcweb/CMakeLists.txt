@@ -5,6 +5,5 @@ protocore_add_module(services/iot/grpcweb
   GATE PROTOCORE_ENABLE_GRPC_WEB
   SOURCES grpcweb.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )

@@ -5,7 +5,5 @@ protocore_add_module(services/instrumentation/hislip
   GATE PROTOCORE_ENABLE_HISLIP
   SOURCES hislip.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )

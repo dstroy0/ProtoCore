@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_LSV2
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/machine_tool/lsv2/lsv2.h"
 
 // memcpy / memcmp / memset (framing + parsing are hand-rolled)
@@ -25,7 +25,7 @@ static size_t finalize(uint8_t *buf, const char *mnemonic, size_t payload_len)
     buf[1] = (uint8_t)(payload_len >> 16);
     buf[2] = (uint8_t)(payload_len >> 8);
     buf[3] = (uint8_t)(payload_len);
-    mem.cpy(buf + 4, mnemonic, PROTOCORE_LSV2_MNEMONIC_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + 4, .src = mnemonic, .bytes = PROTOCORE_LSV2_MNEMONIC_LEN);
     return PROTOCORE_LSV2_HEADER_LEN + payload_len;
 }
 
@@ -71,7 +71,7 @@ size_t protocore_lsv2_build(uint8_t *buf, size_t cap, const char *mnemonic, cons
     }
     if (payload_len)
     {
-        mem.cpy(buf + PROTOCORE_LSV2_HEADER_LEN, payload, payload_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + PROTOCORE_LSV2_HEADER_LEN, .src = payload, .bytes = payload_len);
     }
     return finalize(buf, mnemonic, payload_len);
 }
@@ -82,7 +82,7 @@ proto_bool protocore_lsv2_parse(const uint8_t *buf, size_t len, Lsv2Telegram *ou
     {
         return PROTO_FALSE;
     }
-    mem.set(out->mnemonic, 0, PROTOCORE_LSV2_MNEMONIC_LEN);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out->mnemonic, .val = 0, .bytes = PROTOCORE_LSV2_MNEMONIC_LEN);
     out->payload = NULL;
     out->payload_len = 0;
 
@@ -98,7 +98,7 @@ proto_bool protocore_lsv2_parse(const uint8_t *buf, size_t len, Lsv2Telegram *ou
         return PROTO_FALSE; // incomplete - caller accumulates more
     }
 
-    mem.cpy(out->mnemonic, buf + 4, PROTOCORE_LSV2_MNEMONIC_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->mnemonic, .src = buf + 4, .bytes = PROTOCORE_LSV2_MNEMONIC_LEN);
     out->payload = plen ? buf + PROTOCORE_LSV2_HEADER_LEN : NULL;
     out->payload_len = plen;
     if (consumed)
@@ -110,7 +110,9 @@ proto_bool protocore_lsv2_parse(const uint8_t *buf, size_t len, Lsv2Telegram *ou
 
 proto_bool protocore_lsv2_is(const Lsv2Telegram *t, const char *mnemonic4)
 {
-    return t && mnemonic4 && mem.cmp(t->mnemonic, mnemonic4, PROTOCORE_LSV2_MNEMONIC_LEN) == 0;
+    return t && mnemonic4 &&
+           EMBED_CALL(memor.cmp, MemoriaCfg, .src = t->mnemonic, .other = mnemonic4,
+                      .bytes = PROTOCORE_LSV2_MNEMONIC_LEN) == 0;
 }
 
 size_t protocore_lsv2_build_login(uint8_t *buf, size_t cap, const char *login, const char *password)

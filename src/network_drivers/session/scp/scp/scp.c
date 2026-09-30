@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_SSH_SCP
 
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/session/scp/scp/scp.h"
+#include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
 // Apply one scp flag token (e.g. "-t", "-rf"): -t selects the sink role, -f the source; other letters
 // (-v/-r/-p/-d and combinations) are accepted and ignored.
@@ -82,7 +82,7 @@ ScpMode protocore_scp_parse_cmd(uint8_t *work, const char *cmd, size_t cmd_len, 
     {
         return SCP_MODE_INVALID;
     }
-    mem.cpy(path_out, last_tok, last_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = path_out, .src = last_tok, .bytes = last_len);
     path_out[last_len] = '\0';
     return mode;
 }
@@ -134,7 +134,7 @@ proto_bool protocore_scp_parse_cline(uint8_t *work, const char *line, size_t len
     {
         return PROTO_FALSE;
     }
-    mem.cpy(name_out, line + ns, nlen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = name_out, .src = line + ns, .bytes = nlen);
     name_out[nlen] = '\0';
 
     if (mode_out)
@@ -152,15 +152,17 @@ size_t protocore_scp_build_cline(uint8_t *work, uint32_t mode, uint64_t size, co
 {
     (void)work;
 
-    protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    Sb.put(&sb_out, "C");
-    Sb.uint(&sb_out, (uint64_t)((unsigned)(mode & 07777)), 8, 4);
-    Sb.put(&sb_out, " ");
-    Sb.u64(&sb_out, (uint64_t)((unsigned long long)size));
-    Sb.put(&sb_out, " ");
-    Sb.put(&sb_out, name);
-    Sb.put(&sb_out, "\n");
-    int n = (int)Sb.finish(&sb_out);
+    size_t sb_out = 0;
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = "C");
+    sb_out = EMBED_CALL(verba_numerus.uint, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out,
+                        .val = (uint64_t)((unsigned)(mode & 07777)), .base = 8, .min = 4);
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = " ");
+    sb_out = EMBED_CALL(verba_numerus.u64, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out,
+                        .val = (uint64_t)((unsigned long long)size));
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = " ");
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = name);
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = "\n");
+    int n = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_out);
     // The n <= 0 arm can never be true, so this line is branch-excluded: snprintf returns the length
     // it WOULD have written (never negative here - no encoding can fail on this format), and that
     // format always emits at least "C0000 0 \n". Only the truncation arm is reachable, and it is

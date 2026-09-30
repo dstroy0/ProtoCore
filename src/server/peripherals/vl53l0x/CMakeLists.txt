@@ -5,6 +5,7 @@ protocore_add_module(server/peripherals/vl53l0x
   GATE PROTOCORE_ENABLE_VL53L0X
   SOURCES vl53l0x.c
   PRIVATE_DEPS
-    mmgr/secure
+    mmgr
+    server/core/worker
     server/peripherals/i2c
 )

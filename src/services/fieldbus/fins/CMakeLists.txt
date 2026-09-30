@@ -5,5 +5,5 @@ protocore_add_module(services/fieldbus/fins
   GATE PROTOCORE_ENABLE_FINS
   SOURCES fins.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

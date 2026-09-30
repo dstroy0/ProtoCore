@@ -5,5 +5,5 @@ protocore_add_module(services/energy/iec60870
   GATE PROTOCORE_ENABLE_IEC60870
   SOURCES iec60870.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

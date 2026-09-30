@@ -5,8 +5,8 @@ protocore_add_module(server/web/web_terminal
   GATE PROTOCORE_ENABLE_WEB_TERMINAL
   SOURCES web_terminal.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/secure
+    mmgr
+    server/core/worker
     network_drivers/application/web_assets
     shared/mime
 )

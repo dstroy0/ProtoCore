@@ -5,5 +5,5 @@ protocore_add_module(network_drivers/application/nts
   GATE PROTOCORE_ENABLE_NTS
   SOURCES nts.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

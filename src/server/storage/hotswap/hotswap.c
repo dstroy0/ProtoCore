@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_HOTSWAP
 
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
-#include "mmgr/secure/secure.h"     // the persistent end this module's state is taken from
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "server/storage/hotswap/hotswap.h"
+#include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
 #include "server/clock/clock.h" // protocore_millis
 
@@ -39,7 +39,7 @@ uint8_t *protocore_hotswap_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_HOTSWAP_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_HOTSWAP_BORROW);
     }
     return s_own.span;
 }
@@ -179,8 +179,8 @@ static_assert(HOTSWAP_OFF_CTX + sizeof(HotswapCtx) <= PROTOCORE_HOTSWAP_BORROW,
               "PROTOCORE_HOTSWAP_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(HOTSWAP_OFF_CTX % _Alignof(HotswapCtx) == 0,
@@ -340,20 +340,24 @@ void protocore_hotswap_json(uint8_t *work)
         HotswapV.n = 0;
         return;
     }
-    protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    Sb.put(&sb_out, "{\"storage\":\"");
+    size_t sb_out = 0;
+    sb_out =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = "{\"storage\":\"");
     HotswapV.state_name_args.s = HOTSWAP_CTX(work)->core.state;
     protocore_hotswap_state_name(work);
-    Sb.put(&sb_out, HotswapV.text);
-    Sb.put(&sb_out, "\",\"mounts\":");
-    Sb.u32(&sb_out, (uint32_t)((unsigned)HOTSWAP_CTX(work)->core.mounts));
-    Sb.put(&sb_out, ",\"faults\":");
-    Sb.u32(&sb_out, (uint32_t)((unsigned)HOTSWAP_CTX(work)->core.faults));
-    Sb.put(&sb_out, "}");
-    int n = (int)Sb.finish(&sb_out);
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = HotswapV.text);
+    sb_out =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = "\",\"mounts\":");
+    sb_out = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out,
+                        .val = (uint32_t)((unsigned)HOTSWAP_CTX(work)->core.mounts));
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = ",\"faults\":");
+    sb_out = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out,
+                        .val = (uint32_t)((unsigned)HOTSWAP_CTX(work)->core.faults));
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = "}");
+    int n = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_out);
     // `n < 0` has no true branch to reach: the format is a fixed literal with no encoding-dependent
     // conversion and cap == 0 was rejected above, so snprintf can only ever report truncation here.
-    if (!sb_out.ok)
+    if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .cap = cap, .at = sb_out))
     {
         out[0] = '\0';
         HotswapV.n = 0;

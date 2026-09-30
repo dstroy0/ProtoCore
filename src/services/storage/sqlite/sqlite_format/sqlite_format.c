@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_SQLITE
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/storage/sqlite/sqlite_format/sqlite_format.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -93,7 +93,7 @@ uint64_t protocore_sqlite_serial_type_size(uint64_t t)
 
 proto_bool protocore_sqlite_parse_db_header(const uint8_t *buf, size_t len, SqliteDbHeader *out)
 {
-    if (len < 100 || mem.cmp(buf, SQLITE_MAGIC, 16) != 0)
+    if (len < 100 || EMBED_CALL(memor.cmp, MemoriaCfg, .src = buf, .other = SQLITE_MAGIC, .bytes = 16) != 0)
     {
         return PROTO_FALSE;
     }
@@ -230,7 +230,7 @@ proto_bool protocore_sqlite_read_payload(SqlitePageReader read, void *ctx, uint3
         return PROTO_FALSE;
     }
 
-    mem.cpy(out, leaf_page + cell->local_off, cell->local_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = leaf_page + cell->local_off, .bytes = cell->local_len);
     uint32_t got = cell->local_len;
     if (!cell->has_overflow)
     {
@@ -279,7 +279,7 @@ proto_bool protocore_sqlite_read_payload(SqlitePageReader read, void *ctx, uint3
         {
             return PROTO_FALSE;
         }
-        mem.cpy(out + got, work_page + 4, chunk);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + got, .src = work_page + 4, .bytes = chunk);
         got += chunk;
         next = nnext;
     }
@@ -372,7 +372,8 @@ double protocore_sqlite_column_float(const uint8_t *val, uint32_t val_len)
         u = (u << 8) | val[i];
     }
     double d = 0.0;
-    mem.cpy(&d, &u, 8); // u holds the big-endian-read IEEE-754 bit pattern as a native u64
+    // u holds the big-endian-read IEEE-754 bit pattern as a native u64
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &d, .src = &u, .bytes = 8);
     return d;
 }
 
@@ -415,7 +416,7 @@ static proto_bool cursor_descend(SqliteTableCursor *c, uint32_t pgno)
         }
         if (h.type == SQLITE_BTREE_LEAF_TABLE)
         {
-            mem.cpy(c->leaf, c->work, c->page_size);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = c->leaf, .src = c->work, .bytes = c->page_size);
             c->leaf_hdr = h;
             c->leaf_off = (uint32_t)off;
             c->leaf_pgno = pgno;
@@ -671,14 +672,14 @@ static uint32_t write_value(const SqliteValue *v, uint64_t st, uint32_t vlen, ui
     {
         if (vlen)
         {
-            mem.cpy(out, v->data, vlen);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = v->data, .bytes = vlen);
         }
         return vlen;
     }
     if (v->type == SQLITE_COL_FLOAT)
     {
         uint64_t u = 0;
-        mem.cpy(&u, &v->f, 8); // native bit pattern -> emit big-endian
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &u, .src = &v->f, .bytes = 8); // native bit pattern -> emit big-endian
         for (int i = 7; i >= 0; i--)
         {
             *out++ = (uint8_t)(u >> (i * 8));
@@ -884,10 +885,10 @@ uint32_t protocore_sqlite_build_table_db(uint32_t page_size, const char *table_n
         return 0;
     }
 
-    mem.set(out, 0, (size_t)page_size * 2);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = (size_t)page_size * 2);
 
     // --- Page 1: the 100-byte database header ---
-    mem.cpy(out, SQLITE_MAGIC, 16);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = SQLITE_MAGIC, .bytes = 16);
     wr_be16(out + 16, (uint16_t)(page_size == 65536 ? 1 : page_size));
     out[18] = 1;                // write version (legacy)
     out[19] = 1;                // read version (legacy)
@@ -904,8 +905,8 @@ uint32_t protocore_sqlite_build_table_db(uint32_t page_size, const char *table_n
     wr_be32(out + 96, 3046001); // SQLITE_VERSION_NUMBER that wrote the file
 
     // --- Page 1: the protocore_sqlite_schema row for our table (type,name,tbl_name,rootpage,sql) ---
-    uint32_t name_len = (uint32_t)str.len(table_name, out_cap);
-    uint32_t sql_len = (uint32_t)str.len(create_sql, out_cap);
+    uint32_t name_len = (uint32_t)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = table_name, .cap = out_cap);
+    uint32_t sql_len = (uint32_t)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = create_sql, .cap = out_cap);
     SqliteValue master[5];
     master[0] = (SqliteValue){SQLITE_COL_TEXT, 0, 0, (const uint8_t *)"table", 5};
     master[1] = (SqliteValue){SQLITE_COL_TEXT, 0, 0, (const uint8_t *)table_name, name_len};

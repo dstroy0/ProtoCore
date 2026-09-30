@@ -6,7 +6,5 @@ protocore_add_module(crypto/hash/md
   OPT 2
   SOURCES md.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/protomem
-    mmgr/secure
+    mmgr
 )

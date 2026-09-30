@@ -19,8 +19,8 @@
 
 #include "services/iot/stomp/stomp.h"
 
-#include "mmgr/protomem/protomem.h" // mem.cpy / mem.cmp: the spans a frame is assembled from and matched over
-#include "mmgr/protostr/protostr.h" // str.len: the bounded length of a header-name needle
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the bounded length of a header-name needle
+#include "memoria_operor/memoria_operor.h" // memor.cpy / memor.cmp: the spans a frame is assembled from and matched over
 
 PROTOCORE_BEGIN_DECLS
 
@@ -187,7 +187,7 @@ void protocore_stomp_build(uint8_t *work)
         {
             return;
         }
-        mem.cpy(out + pos, a->body, a->body_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + pos, .src = a->body, .bytes = a->body_len);
         pos += a->body_len;
     }
     if (pos + 1 > cap)
@@ -291,7 +291,8 @@ void protocore_stomp_parse(uint8_t *work)
             // The first content-length entry sizes the body (sec 4.3.1, sec 4.4). A value that is
             // not a count of digits, or one wider than size_t, fails the frame.
             if (!have_content_length && h->name_len == PROTOCORE_STOMP_CONTENT_LENGTH_LEN &&
-                mem.cmp(h->name, PROTOCORE_STOMP_CONTENT_LENGTH, PROTOCORE_STOMP_CONTENT_LENGTH_LEN) == 0)
+                EMBED_CALL(memor.cmp, MemoriaCfg, .src = h->name, .other = PROTOCORE_STOMP_CONTENT_LENGTH,
+                           .bytes = PROTOCORE_STOMP_CONTENT_LENGTH_LEN) == 0)
             {
                 if (!parse_len(h->value, h->value_len, &content_length))
                 {
@@ -353,10 +354,11 @@ void protocore_stomp_header(uint8_t *work)
     {
         return;
     }
-    const size_t nlen = str.len(name, PROTOCORE_STOMP_HEADER_NAME_MAX);
+    const size_t nlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = name, .cap = PROTOCORE_STOMP_HEADER_NAME_MAX);
     for (size_t i = 0; i < f->header_count; i++)
     {
-        if (f->headers[i].name_len == nlen && mem.cmp(f->headers[i].name, name, nlen) == 0)
+        if (f->headers[i].name_len == nlen &&
+            EMBED_CALL(memor.cmp, MemoriaCfg, .src = f->headers[i].name, .other = name, .bytes = nlen) == 0)
         {
             StompV.value = f->headers[i].value;
             StompV.value_len = f->headers[i].value_len;

@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_ENIP
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/enip/enip.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -75,12 +75,12 @@ void protocore_enip_build(uint8_t *work)
     p += put16(buf + p, (uint16_t)data_len); // length covers the command data only
     p += put32(buf + p, h->session_handle);
     p += put32(buf + p, h->status);
-    mem.cpy(buf + p, h->sender_context, 8);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = h->sender_context, .bytes = 8);
     p += 8;
     p += put32(buf + p, h->options);
     if (data_len)
     {
-        mem.cpy(buf + p, data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = data, .bytes = data_len);
         p += data_len;
     }
     EnipV.n = p;
@@ -104,7 +104,7 @@ void protocore_enip_parse(uint8_t *work)
     out->length = get16(buf + 2);
     out->session_handle = get32(buf + 4);
     out->status = get32(buf + 8);
-    mem.cpy(out->sender_context, buf + 12, 8);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->sender_context, .src = buf + 12, .bytes = 8);
     out->options = get32(buf + 20);
     if ((size_t)EIP_HEADER_SIZE + out->length > len) // declared data not fully buffered
     {
@@ -129,11 +129,11 @@ void protocore_enip_build_register_session(uint8_t *work)
     const uint8_t *sender_context = EnipV.build_register_session_args.sender_context;
 
     EipHeader h;
-    mem.set(&h, 0, sizeof(h));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &h, .val = 0, .bytes = sizeof(h));
     h.command = EIP_CMD_REGISTER_SESSION;
     if (sender_context)
     {
-        mem.cpy(h.sender_context, sender_context, 8);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = h.sender_context, .src = sender_context, .bytes = 8);
     }
     uint8_t data[4];
     put16(data, 1);     // protocol version
@@ -154,12 +154,12 @@ void protocore_enip_build_unregister_session(uint8_t *work)
     const uint8_t *sender_context = EnipV.build_unregister_session_args.sender_context;
 
     EipHeader h;
-    mem.set(&h, 0, sizeof(h));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &h, .val = 0, .bytes = sizeof(h));
     h.command = EIP_CMD_UNREGISTER_SESSION;
     h.session_handle = session_handle; // the session to close
     if (sender_context)
     {
-        mem.cpy(h.sender_context, sender_context, 8);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = h.sender_context, .src = sender_context, .bytes = 8);
     }
     EnipV.build_args.buf = buf;
     EnipV.build_args.cap = cap;
@@ -196,12 +196,12 @@ void protocore_enip_build_send_rr_data(uint8_t *work)
     // Write the header (length = the command-data length) then the command data straight into
     // buf - no temp buffer, so a large CIP payload never lands on the stack.
     EipHeader h;
-    mem.set(&h, 0, sizeof(h));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &h, .val = 0, .bytes = sizeof(h));
     h.command = EIP_CMD_SEND_RR_DATA;
     h.session_handle = session_handle;
     if (sender_context)
     {
-        mem.cpy(h.sender_context, sender_context, 8);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = h.sender_context, .src = sender_context, .bytes = 8);
     }
     EnipV.build_args.buf = buf;
     EnipV.build_args.cap = cap;
@@ -227,7 +227,7 @@ void protocore_enip_build_send_rr_data(uint8_t *work)
     p += put16(buf + p, (uint16_t)cip_len);
     if (cip_len)
     {
-        mem.cpy(buf + p, cip, cip_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = cip, .bytes = cip_len);
         p += cip_len;
     }
     EnipV.n = p;
@@ -240,11 +240,11 @@ void protocore_enip_build_list_identity(uint8_t *work)
     const uint8_t *sender_context = EnipV.build_list_identity_args.sender_context;
 
     EipHeader h;
-    mem.set(&h, 0, sizeof(h));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &h, .val = 0, .bytes = sizeof(h));
     h.command = EIP_CMD_LIST_IDENTITY;
     if (sender_context)
     {
-        mem.cpy(h.sender_context, sender_context, 8);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = h.sender_context, .src = sender_context, .bytes = 8);
     }
     EnipV.build_args.buf = buf;
     EnipV.build_args.cap = cap;

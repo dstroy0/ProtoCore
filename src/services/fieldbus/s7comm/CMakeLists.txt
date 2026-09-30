@@ -5,5 +5,5 @@ protocore_add_module(services/fieldbus/s7comm
   GATE PROTOCORE_ENABLE_S7COMM
   SOURCES s7comm.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

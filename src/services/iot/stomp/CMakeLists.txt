@@ -5,6 +5,5 @@ protocore_add_module(services/iot/stomp
   GATE PROTOCORE_ENABLE_STOMP
   SOURCES stomp.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )

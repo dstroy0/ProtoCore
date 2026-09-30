@@ -8,7 +8,7 @@
 
 #include "shared/der/der.h"
 
-#include "mmgr/protomem/protomem.h" // mem.cmp: the OID comparison
+#include "memoria_operor/memoria_operor.h" // memor.cmp: the OID comparison
 
 PROTOCORE_BEGIN_DECLS
 
@@ -197,7 +197,8 @@ void protocore_der_oid_eq(uint8_t *work)
         return;
     }
     DerV.ok = (DerV.tlv.len == DerV.oid_args.oid_len) &&
-              (mem.cmp(DerV.tlv.content, DerV.oid_args.oid, DerV.oid_args.oid_len) == 0);
+              (EMBED_CALL(memor.cmp, MemoriaCfg, .src = DerV.tlv.content, .other = DerV.oid_args.oid,
+                          .bytes = DerV.oid_args.oid_len) == 0);
 }
 
 // Four ASCII digits as a number, or -1 when any of them is not a digit.

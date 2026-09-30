@@ -5,6 +5,5 @@ protocore_add_module(services/file_transfer/ftp/ftp
   GATE PROTOCORE_ENABLE_FTP
   SOURCES ftp.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )

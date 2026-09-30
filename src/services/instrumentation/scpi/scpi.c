@@ -10,15 +10,15 @@
 
 #if PROTOCORE_ENABLE_SCPI
 
-#include "mmgr/protoframe/protoframe.h" // the one frame engine
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
+#include "numeros_scribo/numeros_scribo.h" // the one frame engine
 #include "services/instrumentation/scpi/scpi.h"
 
 PROTOCORE_BEGIN_DECLS
 
 // A response value is one number. 10 significant digits is the SCPI NR2/NR3 rendering.
-static const protocore_field SCPI_REAL[] = {{PROTOCORE_FK_G, 10, 0, NULL}, PROTOCORE_END};
+static const mmgr_field SCPI_REAL[] = {{MMGR_FK_G, 10, 0, NULL}, MMGR_END};
 
 // ── small helpers ──────────────────────────────────────────────────────────────────────────────
 
@@ -98,14 +98,14 @@ size_t protocore_scpi_build(char *buf, size_t cap, const char *header, const cha
     {
         return 0;
     }
-    size_t hlen = str.len(header, cap);
+    size_t hlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = header, .cap = cap);
     if (hlen == 0 || hlen >= cap)
     {
         return 0;
     }
 
     size_t p = 0;
-    mem.cpy(buf, header, hlen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf, .src = header, .bytes = hlen);
     p = hlen;
     for (size_t i = 0; i < argc; i++)
     {
@@ -114,13 +114,13 @@ size_t protocore_scpi_build(char *buf, size_t cap, const char *header, const cha
             return 0;
         }
         char sep = (i == 0) ? ' ' : ',';
-        size_t alen = str.len(args[i], cap);
+        size_t alen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = args[i], .cap = cap);
         if (p + 1 + alen + 1 >= cap) // sep + arg + the trailing '\n' + NUL
         {
             return 0;
         }
         buf[p++] = sep;
-        mem.cpy(buf + p, args[i], alen);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = args[i], .bytes = alen);
         p += alen;
     }
     if (p + 1 >= cap) // room for '\n' + NUL
@@ -140,7 +140,8 @@ size_t protocore_scpi_fmt_real(char *buf, size_t cap, double v)
     }
     // %g renders NR2 (fixed) or NR3 (scientific) and trims trailing zeros - exactly the SCPI forms.
     // The frame's own contract is this function's contract: bytes written, or 0 with buf emptied.
-    return frame.build(buf, cap, SCPI_REAL, (const protocore_fval[]){PROTOCORE_VG(v)}, 1);
+    return EMBED_CALL(numer.build, NumerosCfg, .out = buf, .cap = cap, .spec = SCPI_REAL,
+                      .vals = (const mmgr_fval[]){MMGR_VG(v)}, .nvals = 1);
 }
 
 // ── response parsers ───────────────────────────────────────────────────────────────────────────
@@ -441,7 +442,7 @@ void protocore_scpi_status_init(ScpiStatus *s)
     {
         return;
     }
-    mem.set(s, 0, sizeof(*s));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = s, .val = 0, .bytes = sizeof(*s));
 }
 
 void protocore_scpi_event(ScpiStatus *s, uint8_t esr_bits)
@@ -653,7 +654,7 @@ proto_bool protocore_scpi_match(const char *input, size_t input_len, const char 
     // common command: match the whole token case-insensitively
     if (pattern[0] == '*')
     {
-        return ieq(ip, irem, pattern, str.len(pattern, 64));
+        return ieq(ip, irem, pattern, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = pattern, .cap = 64));
     }
 
     // a leading ':' on the input is an absolute-root anchor - skip it
@@ -663,7 +664,7 @@ proto_bool protocore_scpi_match(const char *input, size_t input_len, const char 
         irem--;
     }
 
-    size_t prem = str.len(pattern, 256);
+    size_t prem = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = pattern, .cap = 256);
     const char *pp = pattern;
 
     // reconcile the query '?' suffix: both must have it or neither

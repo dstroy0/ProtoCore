@@ -5,7 +5,5 @@ protocore_add_module(services/instrumentation/vxi11
   GATE PROTOCORE_ENABLE_VXI11
   SOURCES vxi11.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )

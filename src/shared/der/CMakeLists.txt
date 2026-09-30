@@ -4,5 +4,5 @@
 protocore_add_module(shared/der
   SOURCES der.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

@@ -1668,6 +1668,7 @@
     "**/*.der",
     "**/*.gz",
     "test/dep_graph.json",
-    "test/compile_commands.json"
+    "test/compile_commands.json",
+    "docs/CHANGELOG.md"
   ]
 }

@@ -16,8 +16,8 @@
 
 #include "services/iot/mqtt/mqtt_sn/mqtt_sn.h"
 
-#include "mmgr/protomem/protomem.h" // mem.cpy: the ClientId, TopicName and Data spans
-#include "mmgr/protostr/protostr.h" // str.len: their bounded lengths
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len: their bounded lengths
+#include "memoria_operor/memoria_operor.h"       // memor.cpy: the ClientId, TopicName and Data spans
 
 // ---------------------------------------------------------------------------
 // Literals
@@ -138,7 +138,7 @@ void protocore_mqttsn_build_connect(uint8_t *work)
     {
         return;
     }
-    size_t idlen = str.len(MqttsnV.field.client_id, cap);
+    size_t idlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = MqttsnV.field.client_id, .cap = cap);
     size_t total = 0;
     size_t p = frame_header(buf, cap, MQTTSN_CONNECT, 1 + 1 + MQTTSN_ID_OCTETS + idlen, &total);
     if (!p)
@@ -149,7 +149,7 @@ void protocore_mqttsn_build_connect(uint8_t *work)
     buf[p++] = MQTTSN_PROTOCOL_ID;
     wr16(buf + p, MqttsnV.field.duration);
     p += MQTTSN_ID_OCTETS;
-    mem.cpy(buf + p, MqttsnV.field.client_id, idlen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = MqttsnV.field.client_id, .bytes = idlen);
     MqttsnV.n = total;
     MqttsnV.ok = PROTO_TRUE;
 }
@@ -166,7 +166,7 @@ void protocore_mqttsn_build_register(uint8_t *work)
     {
         return;
     }
-    size_t nlen = str.len(MqttsnV.topic.topic_name, cap);
+    size_t nlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = MqttsnV.topic.topic_name, .cap = cap);
     size_t total = 0;
     size_t p = frame_header(buf, cap, MQTTSN_REGISTER, MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + nlen, &total);
     if (!p)
@@ -177,7 +177,7 @@ void protocore_mqttsn_build_register(uint8_t *work)
     p += MQTTSN_ID_OCTETS;
     wr16(buf + p, MqttsnV.field.msg_id);
     p += MQTTSN_ID_OCTETS;
-    mem.cpy(buf + p, MqttsnV.topic.topic_name, nlen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = MqttsnV.topic.topic_name, .bytes = nlen);
     MqttsnV.n = total;
     MqttsnV.ok = PROTO_TRUE;
 }
@@ -234,7 +234,7 @@ void protocore_mqttsn_build_publish(uint8_t *work)
     p += MQTTSN_ID_OCTETS;
     if (data_len)
     {
-        mem.cpy(buf + p, MqttsnV.data.data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = MqttsnV.data.data, .bytes = data_len);
     }
     MqttsnV.n = total;
     MqttsnV.ok = PROTO_TRUE;
@@ -278,7 +278,7 @@ void protocore_mqttsn_build_subscribe_name(uint8_t *work)
     {
         return;
     }
-    size_t nlen = str.len(MqttsnV.topic.topic_name, cap);
+    size_t nlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = MqttsnV.topic.topic_name, .cap = cap);
     size_t total = 0;
     size_t p = frame_header(buf, cap, MQTTSN_SUBSCRIBE, 1 + MQTTSN_ID_OCTETS + nlen, &total);
     if (!p)
@@ -288,7 +288,7 @@ void protocore_mqttsn_build_subscribe_name(uint8_t *work)
     buf[p++] = MqttsnV.flags.octet;
     wr16(buf + p, MqttsnV.field.msg_id);
     p += MQTTSN_ID_OCTETS;
-    mem.cpy(buf + p, MqttsnV.topic.topic_name, nlen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = MqttsnV.topic.topic_name, .bytes = nlen);
     MqttsnV.n = total;
     MqttsnV.ok = PROTO_TRUE;
 }
@@ -330,7 +330,9 @@ void protocore_mqttsn_build_pingreq(uint8_t *work)
     {
         return;
     }
-    size_t idlen = MqttsnV.field.client_id ? str.len(MqttsnV.field.client_id, cap) : 0;
+    size_t idlen = MqttsnV.field.client_id
+                       ? EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = MqttsnV.field.client_id, .cap = cap)
+                       : 0;
     size_t total = 0;
     size_t p = frame_header(buf, cap, MQTTSN_PINGREQ, idlen, &total);
     if (!p)
@@ -339,7 +341,7 @@ void protocore_mqttsn_build_pingreq(uint8_t *work)
     }
     if (idlen)
     {
-        mem.cpy(buf + p, MqttsnV.field.client_id, idlen);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = MqttsnV.field.client_id, .bytes = idlen);
     }
     MqttsnV.n = total;
     MqttsnV.ok = PROTO_TRUE;

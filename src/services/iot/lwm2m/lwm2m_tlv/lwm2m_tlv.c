@@ -14,11 +14,11 @@
 
 #if PROTOCORE_ENABLE_LWM2M
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "services/iot/lwm2m/lwm2m_tlv/lwm2m_tlv.h"
 
-#include "mmgr/protomem/protomem.h" // mem.cpy: the Value octets a write copies, and the Float bit pattern
-#include "mmgr/protostr/protostr.h" // str.len: the bounded String measure
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the bounded String measure
+#include "memoria_operor/memoria_operor.h" // memor.cpy: the Value octets a write copies, and the Float bit pattern
 
 PROTOCORE_BEGIN_DECLS
 
@@ -105,7 +105,7 @@ uint8_t *protocore_lwm2m_tlv_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_LWM2M_TLV_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_LWM2M_TLV_BORROW);
     }
     return s_own.span;
 }
@@ -184,7 +184,7 @@ void protocore_lwm2m_tlv_write(uint8_t *work)
     w->pos += lenbytes;
     if (value_len)
     {
-        mem.cpy(w->buf + w->pos, value, value_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->buf + w->pos, .src = value, .bytes = value_len);
         w->pos += value_len;
     }
     Lwm2mTlvV.ok = PROTO_TRUE;
@@ -219,7 +219,8 @@ void protocore_lwm2m_tlv_write_string(uint8_t *work)
         return;
     }
     Lwm2mTlvV.val.opaque = (const uint8_t *)Lwm2mTlvV.val.string_value;
-    Lwm2mTlvV.val.len = str.len(Lwm2mTlvV.val.string_value, LWM2M_TLV_CTX(work)->w.cap);
+    Lwm2mTlvV.val.len =
+        EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = Lwm2mTlvV.val.string_value, .cap = LWM2M_TLV_CTX(work)->w.cap);
     protocore_lwm2m_tlv_write(work);
 }
 
@@ -228,7 +229,7 @@ void protocore_lwm2m_tlv_write_float(uint8_t *work)
 {
     uint64_t bits;
     double v = Lwm2mTlvV.val.float_value;
-    mem.cpy(&bits, &v, 8);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &bits, .src = &v, .bytes = 8);
     store_be(LWM2M_TLV_CTX(work)->w.scalar, bits, 8);
     Lwm2mTlvV.val.opaque = LWM2M_TLV_CTX(work)->w.scalar;
     Lwm2mTlvV.val.len = 8;

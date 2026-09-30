@@ -5,5 +5,5 @@ protocore_add_module(services/fieldbus/mbus
   GATE PROTOCORE_ENABLE_MBUS
   SOURCES mbus.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

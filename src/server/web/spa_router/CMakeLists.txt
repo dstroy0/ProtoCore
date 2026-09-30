@@ -5,6 +5,5 @@ protocore_add_module(server/web/spa_router
   GATE PROTOCORE_ENABLE_SPA_ROUTER
   SOURCES spa_router.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )

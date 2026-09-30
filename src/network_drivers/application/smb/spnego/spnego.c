@@ -11,7 +11,7 @@
 
 #if PROTOCORE_ENABLE_SMB
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/application/smb/spnego/spnego.h"
 
 // OID TLVs (tag + length + content).
@@ -118,17 +118,17 @@ size_t protocore_spnego_wrap_negotiate(uint8_t *work, const uint8_t *ntlm, size_
 
     size_t p = 0;
     wr_tag_len(out, &p, 0x60, ictbody);
-    mem.cpy(out + p, SPNEGO_OID, sizeof(SPNEGO_OID));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + p, .src = SPNEGO_OID, .bytes = sizeof(SPNEGO_OID));
     p += sizeof(SPNEGO_OID);
     wr_tag_len(out, &p, 0xa0, seq);              // [0] negTokenInit
     wr_tag_len(out, &p, 0x30, mtypes + mt);      // SEQUENCE
     wr_tag_len(out, &p, 0xa0, seqof);            // [0] mechTypes
     wr_tag_len(out, &p, 0x30, sizeof(NTLM_OID)); // SEQUENCE OF
-    mem.cpy(out + p, NTLM_OID, sizeof(NTLM_OID));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + p, .src = NTLM_OID, .bytes = sizeof(NTLM_OID));
     p += sizeof(NTLM_OID);
     wr_tag_len(out, &p, 0xa2, octet); // [2] mechToken
     wr_tag_len(out, &p, 0x04, protocore_ntlm_len);
-    mem.cpy(out + p, ntlm, protocore_ntlm_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + p, .src = ntlm, .bytes = protocore_ntlm_len);
     p += protocore_ntlm_len;
     return p;
 }
@@ -156,7 +156,7 @@ size_t protocore_spnego_wrap_authenticate(uint8_t *work, const uint8_t *ntlm, si
     wr_tag_len(out, &p, 0x30, rt);    // SEQUENCE
     wr_tag_len(out, &p, 0xa2, octet); // [2] responseToken
     wr_tag_len(out, &p, 0x04, protocore_ntlm_len);
-    mem.cpy(out + p, ntlm, protocore_ntlm_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + p, .src = ntlm, .bytes = protocore_ntlm_len);
     p += protocore_ntlm_len;
     return p;
 }

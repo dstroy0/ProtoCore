@@ -16,8 +16,8 @@
 
 #if PROTOCORE_ENABLE_LD2410
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
+#include "memoria_operor/memoria_operor.h"
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "server/peripherals/ld2410/ld2410.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -56,8 +56,8 @@ static_assert(LD2410_OFF_CTX + sizeof(Ld2410Ctx) <= PROTOCORE_LD2410_BORROW,
               "PROTOCORE_LD2410_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(LD2410_OFF_CTX % _Alignof(Ld2410Ctx) == 0,
@@ -127,7 +127,7 @@ uint8_t *protocore_ld2410_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_LD2410_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_LD2410_BORROW);
     }
     return s_own.span;
 }
@@ -153,7 +153,7 @@ static void ld2410_parse_report(uint8_t *work)
         Ld2410.ok = PROTO_FALSE;
         return;
     }
-    if (mem.cmp(f, HDR, 4) != 0)
+    if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = f, .other = HDR, .bytes = 4) != 0)
     {
         Ld2410.ok = PROTO_FALSE;
         return;
@@ -164,7 +164,7 @@ static void ld2410_parse_report(uint8_t *work)
         Ld2410.ok = PROTO_FALSE;
         return; // length field must frame the buffer exactly
     }
-    if (mem.cmp(f + 6 + dl, FTR, 4) != 0)
+    if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = f + 6 + dl, .other = FTR, .bytes = 4) != 0)
     {
         Ld2410.ok = PROTO_FALSE;
         return;
@@ -172,7 +172,7 @@ static void ld2410_parse_report(uint8_t *work)
 
     const uint8_t *p = f + 6;
     Ld2410Report r;
-    mem.set(&r, 0, sizeof(r));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &r, .val = 0, .bytes = sizeof(r));
     if (p[0] == 0x02)
     {
         if (dl != LEN_BASIC)

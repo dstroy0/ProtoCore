@@ -5,5 +5,5 @@ protocore_add_module(services/fieldbus/hostlink
   GATE PROTOCORE_ENABLE_HOSTLINK
   SOURCES hostlink.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

@@ -10,10 +10,10 @@
 
 #if PROTOCORE_ENABLE_WEB_TERMINAL
 
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
-#include "mmgr/secure/secure.h"     // the persistent end this module's state is taken from
-#include "protocore.h"              // MAX_PATH_LEN, MAX_WS_CONNS, HttpReq, send_text
+#include "protocore.h"                 // MAX_PATH_LEN, MAX_WS_CONNS, HttpReq, send_text
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "server/web/web_terminal/web_terminal.h"
+#include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
 PROTOCORE_BEGIN_DECLS
 
@@ -46,8 +46,8 @@ static_assert(WEB_TERMINAL_OFF_CTX + sizeof(WebTerminalCtx) <= PROTOCORE_WEB_TER
               "PROTOCORE_WEB_TERMINAL_BORROW is short of the module context - raise it in protocore_config.h, which\n"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(
@@ -127,7 +127,7 @@ uint8_t *protocore_web_terminal_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_WEB_TERMINAL_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_WEB_TERMINAL_BORROW);
     }
     return s_own.span;
 }
@@ -146,10 +146,15 @@ void protocore_web_terminal_begin(uint8_t *work)
     {
         path = "/terminal";
     }
-    protocore_sb sb_ws_path = {WEB_TERMINAL_CTX(work)->ws_path, sizeof(WEB_TERMINAL_CTX(work)->ws_path), 0, PROTO_TRUE};
-    Sb.put(&sb_ws_path, path);
-    Sb.put(&sb_ws_path, "/ws");
-    if (Sb.finish(&sb_ws_path) == 0)
+    char *const sb_ws_path_buf = WEB_TERMINAL_CTX(work)->ws_path;
+    const size_t sb_ws_path_cap = sizeof(WEB_TERMINAL_CTX(work)->ws_path);
+    size_t sb_ws_path = 0;
+    sb_ws_path = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_ws_path_buf, .cap = sb_ws_path_cap,
+                            .at = sb_ws_path, .text = path);
+    sb_ws_path = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_ws_path_buf, .cap = sb_ws_path_cap,
+                            .at = sb_ws_path, .text = "/ws");
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb_ws_path_buf, .cap = sb_ws_path_cap, .at = sb_ws_path) ==
+        0)
     {
         WEB_TERMINAL_CTX(work)->ws_path[0] = '\0';
     }
@@ -195,12 +200,13 @@ void protocore_web_terminal_println(uint8_t *work)
     const char *s = WebTerminalV.println_args.s;
 
     char buf[TERM_TX_BUF_SIZE];
-    protocore_sb sb_buf = {buf, sizeof(buf), 0, PROTO_TRUE};
-    Sb.put(&sb_buf, s ? s : "");
-    Sb.put(&sb_buf, "\n");
+    size_t sb_buf = 0;
+    sb_buf =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = buf, .cap = sizeof(buf), .at = sb_buf, .text = s ? s : "");
+    sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = buf, .cap = sizeof(buf), .at = sb_buf, .text = "\n");
     WebTerminalV.print_args.s = buf;
     protocore_web_terminal_print(work);
-    if (Sb.finish(&sb_buf) == 0)
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = buf, .cap = sizeof(buf), .at = sb_buf) == 0)
     {
         buf[0] = '\0';
     }

@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_FINS
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/fins/fins.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -79,7 +79,7 @@ void protocore_fins_build_command(uint8_t *work)
     buf[p++] = src;
     if (params_len)
     {
-        mem.cpy(buf + p, params, params_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = params, .bytes = params_len);
         p += params_len;
     }
     FinsV.n = p;
@@ -158,7 +158,7 @@ void protocore_fins_build_memory_area_write(uint8_t *work)
             FinsV.n = 0; // the write data does not fit
             return;
         }
-        mem.cpy(buf + n, data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + n, .src = data, .bytes = data_len);
     }
     FinsV.n = n + data_len;
 }

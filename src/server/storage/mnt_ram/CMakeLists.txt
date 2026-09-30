@@ -7,6 +7,5 @@ protocore_add_module(server/storage/mnt_ram
   DEPS
     server/storage/mnt
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )

@@ -5,5 +5,5 @@ protocore_add_module(services/timing_position/gnss/rtcm3
   GATE PROTOCORE_ENABLE_NTRIP_CASTER
   SOURCES rtcm3.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

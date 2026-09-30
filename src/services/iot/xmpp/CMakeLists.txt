@@ -5,6 +5,5 @@ protocore_add_module(services/iot/xmpp
   GATE PROTOCORE_ENABLE_XMPP
   SOURCES xmpp.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )

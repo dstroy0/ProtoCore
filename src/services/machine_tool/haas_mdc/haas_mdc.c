@@ -12,7 +12,7 @@
 
 #include "services/machine_tool/haas_mdc/haas_mdc.h"
 
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
+#include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
 PROTOCORE_BEGIN_DECLS
 
@@ -86,11 +86,13 @@ size_t protocore_haas_mdc_build_q(char *buf, size_t cap, uint16_t qnum)
     {
         return 0;
     }
-    protocore_sb sb_q = {buf, cap, 0, PROTO_TRUE};
-    protocore_sb_lit(&sb_q, "?Q");
-    Sb.u32(&sb_q, qnum);
-    Sb.ch(&sb_q, '\n'); // [NGC] Query Format: the query is "terminated with a new line"
-    return Sb.finish(&sb_q);
+    size_t sb_q = 0;
+    sb_q = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_q, .text = "?Q",
+                      .text_len = sizeof("?Q") - 1);
+    sb_q = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_q, .val = qnum);
+    // [NGC] Query Format: the query is "terminated with a new line"
+    sb_q = EMBED_CALL(verba_littera.ch, VerbaLitteraCfg, .out = buf, .cap = cap, .at = sb_q, .ch = '\n');
+    return EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = buf, .cap = cap, .at = sb_q);
 }
 
 size_t protocore_haas_mdc_build_var(char *buf, size_t cap, uint32_t var)
@@ -99,11 +101,13 @@ size_t protocore_haas_mdc_build_var(char *buf, size_t cap, uint32_t var)
     {
         return 0;
     }
-    protocore_sb sb_var = {buf, cap, 0, PROTO_TRUE};
-    protocore_sb_lit(&sb_var, "?Q600 ");
-    Sb.u32(&sb_var, var);
-    Sb.ch(&sb_var, '\n'); // the ?Q600 line is a query in the ?Q### family, same sentence
-    return Sb.finish(&sb_var);
+    size_t sb_var = 0;
+    sb_var = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_var, .text = "?Q600 ",
+                        .text_len = sizeof("?Q600 ") - 1);
+    sb_var = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = buf, .cap = cap, .at = sb_var, .val = var);
+    // the ?Q600 line is a query in the ?Q### family, same sentence
+    sb_var = EMBED_CALL(verba_littera.ch, VerbaLitteraCfg, .out = buf, .cap = cap, .at = sb_var, .ch = '\n');
+    return EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = buf, .cap = cap, .at = sb_var);
 }
 
 proto_bool protocore_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *out)

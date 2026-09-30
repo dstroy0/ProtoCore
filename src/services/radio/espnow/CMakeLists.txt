@@ -5,6 +5,6 @@ protocore_add_module(services/radio/espnow
   GATE PROTOCORE_ENABLE_ESPNOW
   SOURCES espnow.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protomem
+    mmgr
+    server/core/worker
 )

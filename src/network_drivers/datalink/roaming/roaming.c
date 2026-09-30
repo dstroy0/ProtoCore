@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_ROAMING
 
-#include "mmgr/protomem/protomem.h" // mem.cmp / mem.cpy / mem.zero
+#include "memoria_operor/memoria_operor.h" // memor.cmp / memor.cpy / memor.set
 #include "network_drivers/datalink/roaming/roaming.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -34,7 +34,7 @@ PROTOCORE_BEGIN_DECLS
 
 static proto_bool mac_eq(const uint8_t *a, const uint8_t *b)
 {
-    return mem.cmp(a, b, PROTOCORE_ROAM_BSSID_LEN) == 0;
+    return EMBED_CALL(memor.cmp, MemoriaCfg, .src = a, .other = b, .bytes = PROTOCORE_ROAM_BSSID_LEN) == 0;
 }
 
 // Index of the strongest candidate that is not the serving BSS, or -1 if there is none.
@@ -75,7 +75,8 @@ static void pick(uint8_t *work, int idx, protocore_roam_reason reason)
     const protocore_roam_neighbor *nb = RoamV.cand.list;
 
     RoamV.decision.roam = PROTO_TRUE;
-    mem.cpy(RoamV.decision.target_bssid, nb[idx].bssid, PROTOCORE_ROAM_BSSID_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = RoamV.decision.target_bssid, .src = nb[idx].bssid,
+               .bytes = PROTOCORE_ROAM_BSSID_LEN);
     RoamV.decision.target_channel = nb[idx].channel;
     RoamV.decision.reason = reason;
 }
@@ -90,7 +91,7 @@ void protocore_roam_decide(uint8_t *work)
     const protocore_roam_policy *policy = RoamV.rules.policy;
 
     RoamV.decision.roam = PROTO_FALSE;
-    mem.zero(RoamV.decision.target_bssid, PROTOCORE_ROAM_BSSID_LEN);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = RoamV.decision.target_bssid, .val = 0, .bytes = PROTOCORE_ROAM_BSSID_LEN);
     RoamV.decision.target_channel = 0;
     RoamV.decision.reason = PROTOCORE_ROAM_NONE;
     if (!serving || (n && !nb))
@@ -172,7 +173,7 @@ void protocore_roam_parse_neighbor_report(uint8_t *work)
         if (id == PROTOCORE_ROAM_NR_ELEM_ID && elen >= PROTOCORE_ROAM_NR_BODY_MIN)
         {
             const uint8_t *body = elems + off + 2;
-            mem.cpy(out[count].bssid, body, PROTOCORE_ROAM_BSSID_LEN);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out[count].bssid, .src = body, .bytes = PROTOCORE_ROAM_BSSID_LEN);
             out[count].channel = body[PROTOCORE_ROAM_NR_CHANNEL_OFF];
             out[count].rssi_dbm = PROTOCORE_ROAM_RSSI_UNKNOWN;
             count++;
@@ -189,7 +190,7 @@ void protocore_roam_parse_btm_request(uint8_t *work)
     protocore_roam_btm *out = &RoamV.hint;
 
     RoamV.ok = PROTO_FALSE;
-    mem.zero(out, sizeof(*out));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     if (!frame || len < PROTOCORE_ROAM_BTM_FIXED_LEN || frame[0] != PROTOCORE_ROAM_WNM_CATEGORY ||
         frame[1] != PROTOCORE_ROAM_BTM_REQ_ACTION)
     {
@@ -218,7 +219,8 @@ void protocore_roam_parse_btm_request(uint8_t *work)
     if ((mode & PROTOCORE_ROAM_BTM_PREF_LIST) && off + 2 + PROTOCORE_ROAM_BSSID_LEN <= len &&
         frame[off] == PROTOCORE_ROAM_NR_ELEM_ID && frame[off + 1] >= PROTOCORE_ROAM_NR_BODY_MIN)
     {
-        mem.cpy(out->preferred_bssid, frame + off + 2, PROTOCORE_ROAM_BSSID_LEN);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->preferred_bssid, .src = frame + off + 2,
+                   .bytes = PROTOCORE_ROAM_BSSID_LEN);
         out->has_preferred = PROTO_TRUE;
     }
 }

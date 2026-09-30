@@ -5,6 +5,6 @@ protocore_add_module(services/fieldbus/simatic
   GATE PROTOCORE_ENABLE_SIMATIC
   SOURCES simatic.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protomem
+    mmgr
+    server/core/worker
 )

@@ -5,8 +5,6 @@ protocore_add_module(services/iot/graphql
   GATE PROTOCORE_ENABLE_GRAPHQL
   SOURCES graphql.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/plaintext
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
+    server/core/worker
 )

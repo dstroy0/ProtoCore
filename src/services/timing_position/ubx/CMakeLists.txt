@@ -5,5 +5,5 @@ protocore_add_module(services/timing_position/ubx
   GATE PROTOCORE_ENABLE_UBX
   SOURCES ubx.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

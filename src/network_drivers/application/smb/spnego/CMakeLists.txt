@@ -5,5 +5,5 @@ protocore_add_module(network_drivers/application/smb/spnego
   GATE PROTOCORE_ENABLE_SMB
   SOURCES spnego.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

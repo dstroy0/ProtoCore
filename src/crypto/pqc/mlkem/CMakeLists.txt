@@ -7,5 +7,5 @@ protocore_add_module(crypto/pqc/mlkem
   SOURCES mlkem.c
   PRIVATE_DEPS
     crypto/hash/sha3
-    mmgr/protomem
+    mmgr
 )

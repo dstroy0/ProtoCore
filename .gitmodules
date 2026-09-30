@@ -2,3 +2,6 @@
 	path = include/MMgr
 	url = https://github.com/dstroy0/MMgr.git
 	branch = main
+[submodule "include/embedded_types"]
+	path = include/embedded_types
+	url = https://github.com/dstroy0/embedded_types.git

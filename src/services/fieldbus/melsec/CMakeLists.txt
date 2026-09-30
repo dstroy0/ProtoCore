@@ -5,6 +5,5 @@ protocore_add_module(services/fieldbus/melsec
   GATE PROTOCORE_ENABLE_MELSEC
   SOURCES melsec.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/protomem
+    mmgr
 )

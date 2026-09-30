@@ -9,14 +9,15 @@
 #ifndef PROTOCORE_SSH_COMMON_H
 #define PROTOCORE_SSH_COMMON_H
 
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the length prefix on a written string
 #include "crypto/aead/chachapoly/chachapoly.h"  // PROTOCORE_CHACHAPOLY_KEY_LEN - the chacha keys in the memory map
 #include "crypto/asymmetric/bignum/bignum.h"    // protocore_bignum - the DH ephemeral in the memory map
 #include "crypto/cipher/aes256ctr/aes256ctr.h"  // PROTOCORE_AES256CTR_KEY_LEN / _CTR_LEN - the aes keys and IVs
 #include "crypto/mac/hmac_sha256/hmac_sha256.h" // PROTOCORE_HMAC_SHA256_BORROW - the packet MAC scratch
 #include "crypto/pqc/sntrup761/sntrup761.h"     // PROTOCORE_SNTRUP761_PK_BYTES - the PQC public key in the memory map
-#include "mmgr/bytes/bytes.h"                   // protocore_span, bytes.* writers, bytes.rd_str / bytes.rd_u32 readers
-#include "mmgr/protostr/protostr.h"             // str.len: the length prefix on a written string
+#include "memoria_operor/memoria_operor.h"      // memor.cpy: the copy out of a read string
 #include "network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.h" // SSH_KEXHASH_MAX_LEN - the session id span
+#include "octetus_introitus_exitus/octetus_introitus_exitus.h" // mmgr_span, byteio.* writers, byteio.rd_str / byteio.take_be readers
 
 #include "protocore_config.h" // protocore_types.h for the fixed widths, PROTOCORE_INLINE, the SSH sizing constants
 
@@ -249,10 +250,10 @@ static inline void write_u32_be(uint8_t *p, uint32_t v)
 }
 
 /** @brief Append a string: uint32 length, then @p n bytes of @p data. */
-PROTOCORE_INLINE void protocore_ssh_wr_str(protocore_span *w, const void *data, size_t n)
+PROTOCORE_INLINE void protocore_ssh_wr_str(mmgr_span *w, const void *data, size_t n)
 {
-    bytes.put_be(w, (uint64_t)n, 4);
-    bytes.raw(w, data, n);
+    EMBED_CALL(byteio.put_be, OctetusCfg, .write_span = w, .value = (uint64_t)n, .bytes = 4);
+    EMBED_CALL(byteio.raw, OctetusCfg, .write_span = w, .src = data, .bytes = n);
 }
 
 /**
@@ -260,16 +261,16 @@ PROTOCORE_INLINE void protocore_ssh_wr_str(protocore_span *w, const void *data, 
  *
  * A comma-separated name-list (RFC 4253 sec 7.1) is one of these.
  */
-PROTOCORE_INLINE void protocore_ssh_wr_cstr(protocore_span *w, const char *s)
+PROTOCORE_INLINE void protocore_ssh_wr_cstr(mmgr_span *w, const char *s)
 {
-    protocore_ssh_wr_str(w, s, str.len(s, w->cap));
+    protocore_ssh_wr_str(w, s, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = w->cap));
 }
 
 /**
  * @brief Append @p len big-endian bytes as an mpint: leading zero bytes stripped, a 0x00 prepended
  *        when the top bit is set, and a zero value written as the empty string.
  */
-PROTOCORE_INLINE void protocore_ssh_wr_mpint(protocore_span *w, const uint8_t *be, size_t len)
+PROTOCORE_INLINE void protocore_ssh_wr_mpint(mmgr_span *w, const uint8_t *be, size_t len)
 {
     size_t off = 0;
     while (off < len && be[off] == 0)
@@ -278,7 +279,7 @@ PROTOCORE_INLINE void protocore_ssh_wr_mpint(protocore_span *w, const uint8_t *b
     }
     if (off == len)
     {
-        bytes.put_be(w, 0, 4);
+        EMBED_CALL(byteio.put_be, OctetusCfg, .write_span = w, .value = 0, .bytes = 4);
         return;
     }
     proto_bool pad = (be[off] & 0x80u) != 0;
@@ -287,12 +288,12 @@ PROTOCORE_INLINE void protocore_ssh_wr_mpint(protocore_span *w, const uint8_t *b
     {
         mlen++;
     }
-    bytes.put_be(w, mlen, 4);
+    EMBED_CALL(byteio.put_be, OctetusCfg, .write_span = w, .value = mlen, .bytes = 4);
     if (pad)
     {
-        bytes.put(w, 0x00);
+        EMBED_CALL(byteio.put, OctetusCfg, .write_span = w, .byte = 0x00);
     }
-    bytes.raw(w, be + off, len - off);
+    EMBED_CALL(byteio.raw, OctetusCfg, .write_span = w, .src = be + off, .bytes = len - off);
 }
 
 // ---------------------------------------------------------------------------
@@ -422,24 +423,30 @@ PROTOCORE_INLINE uint8_t protocore_ssh_rd_u8(Rd *r)
 }
 PROTOCORE_INLINE uint32_t protocore_ssh_rd_u32(Rd *r)
 {
-    uint32_t v = 0;
-    if (!bytes.rd_u32(r->buf, r->len, &r->off, &v))
+    mmgr_cspan c = {.buf = r->buf, .len = r->len, .pos = r->off, .err = EMBED_FALSE};
+    uint64_t v = 0;
+    if (!EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = &c, .bytes = 4, .out = &v))
     {
         r->ok = PROTO_FALSE;
         return 0;
     }
-    return v;
+    r->off = c.pos;
+    return (uint32_t)v;
 }
 // Returns a pointer to an in-place string of length *n; advances past it. Fails closed on overflow.
 PROTOCORE_INLINE const uint8_t *protocore_ssh_rd_string(Rd *r, uint32_t *n)
 {
+    mmgr_cspan c = {.buf = r->buf, .len = r->len, .pos = r->off, .err = EMBED_FALSE};
     const uint8_t *p = NULL;
-    if (!bytes.rd_str(r->buf, r->len, &r->off, &p, n))
+    size_t got = 0;
+    if (!EMBED_CALL(byteio.rd_str, OctetusCfg, .read_span = &c, .blob = &p, .blob_bytes = &got))
     {
         r->ok = PROTO_FALSE;
         *n = 0;
         return NULL;
     }
+    r->off = c.pos;
+    *n = (uint32_t)got; // the length was read as four bytes, so it fits
     return p;
 }
 
@@ -450,23 +457,23 @@ PROTOCORE_INLINE const uint8_t *protocore_ssh_rd_string(Rd *r, uint32_t *n)
 // Copy an SSH string into a fixed buffer and null-terminate it. Advances *off.
 // Returns false on truncation or if the string does not fit (buffer too small).
 //
-// Reading the field by reference is bytes.rd_str()'s job; this only adds the copy and the terminator,
+// Reading the field by reference is byteio.rd_str()'s job; this only adds the copy and the terminator,
 // which is what separates it from the by-reference reads below.
 static proto_bool read_string(const uint8_t *p, size_t len, size_t *off, char *out, size_t outcap)
 {
-    size_t start = *off;
+    mmgr_cspan c = {.buf = p, .len = len, .pos = *off, .err = EMBED_FALSE};
     const uint8_t *s = NULL;
-    uint32_t n = 0;
-    if (!bytes.rd_str(p, len, off, &s, &n))
+    size_t n = 0;
+    if (!EMBED_CALL(byteio.rd_str, OctetusCfg, .read_span = &c, .blob = &s, .blob_bytes = &n))
     {
         return PROTO_FALSE;
     }
     if (n >= outcap)
     {
-        *off = start;       // same contract as bytes.rd_str: a failed read leaves the offset on its own field
-        return PROTO_FALSE; // does not fit our fixed buffer
+        return PROTO_FALSE; // does not fit our fixed buffer; same contract as byteio.rd_str: *off stays on its own field
     }
-    mem.cpy(out, s, n);
+    *off = c.pos;
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = s, .bytes = n);
     out[n] = '\0';
     return PROTO_TRUE;
 }

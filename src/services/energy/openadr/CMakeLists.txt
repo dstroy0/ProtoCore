@@ -5,5 +5,5 @@ protocore_add_module(services/energy/openadr
   GATE PROTOCORE_ENABLE_OPENADR
   SOURCES openadr.c
   PRIVATE_DEPS
-    mmgr/membuild
+    mmgr
 )

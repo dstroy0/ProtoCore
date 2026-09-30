@@ -8,7 +8,7 @@
 
 #include "network_drivers/network/dns/dns_wire/dns_wire.h"
 
-#include "mmgr/rawmemcpy/rawmemcpy.h" // raw.read: the label octets move whole
+#include "proximus_operor/proximus_operor.h" // proxim.read: the label octets move whole
 
 PROTOCORE_BEGIN_DECLS
 
@@ -96,7 +96,7 @@ void protocore_dns_wire_decode(uint8_t *work)
         {
             return;
         }
-        raw.read(out + n, pkt + cur, b);
+        EMBED_CALL(proxim.read, ProximusCfg, .dst = out + n, .at = pkt + cur, .size = b);
         n += b;
         cur += b;
     }
@@ -148,7 +148,7 @@ void protocore_dns_wire_encode(uint8_t *work)
         }
         out[w] = (uint8_t)label;
         w++;
-        raw.read(out + w, dotted + start, label);
+        EMBED_CALL(proxim.read, ProximusCfg, .dst = out + w, .at = dotted + start, .size = label);
         w += label;
         if (dotted[i] == '\0')
         {
