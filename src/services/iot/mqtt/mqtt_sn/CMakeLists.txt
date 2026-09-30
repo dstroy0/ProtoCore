@@ -5,6 +5,5 @@ protocore_add_module(services/iot/mqtt/mqtt_sn
   GATE PROTOCORE_ENABLE_MQTT_SN
   SOURCES mqtt_sn.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )
