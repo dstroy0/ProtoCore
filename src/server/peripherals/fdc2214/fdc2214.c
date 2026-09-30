@@ -16,8 +16,8 @@
  turn the driver off - there is no software stand-in for a part on the other end of a bus."
 #endif
 
-#include "mmgr/endian/endian.h" // endian.wr16be / endian.rd16be: the registers are big-endian
-#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
+#include "endian/endian.h"             // magna_extremitas.wr / magna_extremitas.rd: the registers are big-endian
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "server/peripherals/fdc2214/fdc2214.h"
 #include "server/peripherals/i2c/i2c.h"
 
@@ -40,7 +40,7 @@ uint8_t *protocore_fdc2214_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_I2C_DEVICE_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_I2C_DEVICE_BORROW);
     }
     return s_own.span;
 }
@@ -126,8 +126,8 @@ static_assert(FDC2214_OFF_CTX + sizeof(Fdc2214Ctx) <= PROTOCORE_I2C_DEVICE_BORRO
               "PROTOCORE_I2C_DEVICE_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(FDC2214_OFF_CTX % _Alignof(Fdc2214Ctx) == 0,
@@ -151,14 +151,16 @@ static proto_bool read16(uint8_t *work, uint8_t reg, uint16_t *out)
     {
         return PROTO_FALSE;
     }
-    *out = endian.rd16be(FDC2214_CTX(work)->frame);
+    *out =
+        (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = FDC2214_CTX(work)->frame, .width = MMGR_ENDIAN_16);
     return PROTO_TRUE;
 }
 
 static proto_bool write16(uint8_t *work, uint8_t reg, uint16_t val)
 {
     FDC2214_CTX(work)->frame[0] = reg;
-    (void)endian.wr16be(&FDC2214_CTX(work)->frame[1], val);
+    (void)EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = &FDC2214_CTX(work)->frame[1], .val = val,
+                     .width = MMGR_ENDIAN_16);
     return protocore_i2c_write(dev_addr(work), FDC2214_CTX(work)->frame, sizeof(FDC2214_CTX(work)->frame));
 }
 
@@ -189,7 +191,9 @@ void protocore_fdc2214_begin(uint8_t *work)
     size_t n = Fdc2214V.n;
     for (size_t i = 0; i + 3 <= n; i += 3)
     {
-        if (!write16(work, FDC2214_CTX(work)->config[i], endian.rd16be(&FDC2214_CTX(work)->config[i + 1])))
+        if (!write16(work, FDC2214_CTX(work)->config[i],
+                     (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = &FDC2214_CTX(work)->config[i + 1],
+                                          .width = MMGR_ENDIAN_16)))
         {
             Fdc2214V.ok = PROTO_FALSE;
             return;
