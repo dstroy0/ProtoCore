@@ -5,5 +5,5 @@ protocore_add_module(services/system/control
   GATE PROTOCORE_ENABLE_CONTROL
   SOURCES control.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
