@@ -59,7 +59,7 @@ static uint16_t rev(uint16_t code, int len)
     return Rfc1951V.u16;
 }
 
-static void emit_literal(protocore_bit_writer *w, const uint16_t *ll_code, const uint8_t *ll_len, uint8_t b)
+static void emit_literal(mmgr_bitor *w, const uint16_t *ll_code, const uint8_t *ll_len, uint8_t b)
 {
     Rfc1951V.emit_literal_args.w = w;
     Rfc1951V.emit_literal_args.ll_code = ll_code;
@@ -68,7 +68,7 @@ static void emit_literal(protocore_bit_writer *w, const uint16_t *ll_code, const
     Rfc1951.emit_literal(rfc1951_work);
 }
 
-static void emit_match(protocore_bit_writer *w, const uint16_t *ll_code, const uint8_t *ll_len, const uint16_t *d_code,
+static void emit_match(mmgr_bitor *w, const uint16_t *ll_code, const uint8_t *ll_len, const uint16_t *d_code,
                        const uint8_t *d_len, int len, int dist)
 {
     Rfc1951V.emit_match_args.w = w;
@@ -229,13 +229,13 @@ void test_emit_literal_puts_the_code_on_the_wire(void)
 
     uint8_t out[4];
     memset(out, 0, sizeof(out));
-    protocore_bit_writer w = {out, sizeof(out), 0, 0, 0, PROTO_FALSE};
+    mmgr_bitor w = {out, sizeof(out), 0, 0, 0, PROTO_FALSE};
 
     emit_literal(&w, ll_code, ll_len, 'A');
-    bitw.align(&w);
+    EMBED_CALL(bitio.align, BitorumCfg, .writer = &w);
 
     TEST_ASSERT_FALSE(w.overflow);
-    TEST_ASSERT_EQUAL_size_t(1, w.cnt);
+    TEST_ASSERT_EQUAL_size_t(1, w.bytes_written);
     TEST_ASSERT_EQUAL_HEX8(0x8E, out[0]);
 }
 
@@ -253,13 +253,13 @@ void test_emit_match_selects_the_code_for_the_span(void)
 
     uint8_t out[4];
     memset(out, 0, sizeof(out));
-    protocore_bit_writer w = {out, sizeof(out), 0, 0, 0, PROTO_FALSE};
+    mmgr_bitor w = {out, sizeof(out), 0, 0, 0, PROTO_FALSE};
 
     emit_match(&w, ll_code, ll_len, d_code, d_len, 3, 1);
-    bitw.align(&w);
+    EMBED_CALL(bitio.align, BitorumCfg, .writer = &w);
 
     TEST_ASSERT_FALSE(w.overflow);
-    TEST_ASSERT_EQUAL_size_t(2, w.cnt);
+    TEST_ASSERT_EQUAL_size_t(2, w.bytes_written);
     TEST_ASSERT_EQUAL_HEX8(0x40, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[1]);
 }
@@ -277,15 +277,15 @@ void test_emit_match_uses_the_single_length_code_for_258(void)
 
     uint8_t out[8];
     memset(out, 0, sizeof(out));
-    protocore_bit_writer w = {out, sizeof(out), 0, 0, 0, PROTO_FALSE};
+    mmgr_bitor w = {out, sizeof(out), 0, 0, 0, PROTO_FALSE};
 
     emit_match(&w, ll_code, ll_len, d_code, d_len, 258, 1);
-    bitw.align(&w);
+    EMBED_CALL(bitio.align, BitorumCfg, .writer = &w);
 
     TEST_ASSERT_FALSE(w.overflow);
     // Symbol 285 is 280 + 5, so its 8-bit code is 11000000 + 5 = 11000101; then the 5-bit distance
     // code 00000. Thirteen bits, so two octets.
-    TEST_ASSERT_EQUAL_size_t(2, w.cnt);
+    TEST_ASSERT_EQUAL_size_t(2, w.bytes_written);
     TEST_ASSERT_EQUAL_UINT16(rev(0xC5, 8), ll_code[285]);
 }
 
@@ -309,14 +309,14 @@ void test_emit_match_writes_the_offset_in_the_extra_bits(void)
 
     uint8_t out[8];
     memset(out, 0, sizeof(out));
-    protocore_bit_writer w = {out, sizeof(out), 0, 0, 0, PROTO_FALSE};
+    mmgr_bitor w = {out, sizeof(out), 0, 0, 0, PROTO_FALSE};
 
     emit_match(&w, ll_code, ll_len, d_code, d_len, 12, 5);
-    bitw.align(&w);
+    EMBED_CALL(bitio.align, BitorumCfg, .writer = &w);
 
     TEST_ASSERT_FALSE(w.overflow);
     // 7 bits of code 265, 1 extra bit, 5 bits of distance code 4, 1 extra bit = 14 bits, two octets.
-    TEST_ASSERT_EQUAL_size_t(2, w.cnt);
+    TEST_ASSERT_EQUAL_size_t(2, w.bytes_written);
 }
 
 // A writer whose buffer is already full latches overflow instead of writing past it.
@@ -330,12 +330,12 @@ void test_emit_past_the_buffer_latches_overflow(void)
 
     uint8_t out[1];
     out[0] = 0;
-    protocore_bit_writer w = {out, 0, 0, 0, 0, PROTO_FALSE};
+    mmgr_bitor w = {out, 0, 0, 0, 0, PROTO_FALSE};
 
     emit_literal(&w, ll_code, ll_len, 'A');
-    bitw.align(&w);
+    EMBED_CALL(bitio.align, BitorumCfg, .writer = &w);
 
     TEST_ASSERT_TRUE(w.overflow);
-    TEST_ASSERT_EQUAL_size_t(0, w.cnt);
+    TEST_ASSERT_EQUAL_size_t(0, w.bytes_written);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[0]);
 }
