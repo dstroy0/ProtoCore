@@ -7199,15 +7199,9 @@
       "src": [
         "+<server/peripherals/sht3x/sht3x.c>",
         "+<server/clock/clock.c>",
-        "+<mmgr/protomem/protomem.c>",
-        "+<mmgr/endian/endian.c>",
-        "+<mmgr/rawmemcpy/rawmemcpy.c>",
-        "+<mmgr/swar/swar.c>",
         "+<shared/crc/crc.c>",
-        "+<mmgr/secure/secure.c>",
-        "+<mmgr/span/span.c>",
-        "+<mmgr/arena/arena.c>",
-        "+<test/core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<server/core/worker/worker.c>"
       ],
       "tests": [
         "unit/src/server/peripherals/sht3x/test_sht3x"

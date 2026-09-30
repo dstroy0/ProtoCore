@@ -16,9 +16,9 @@
  turn the driver off - there is no software stand-in for a part on the other end of a bus."
 #endif
 
-#include "mmgr/endian/endian.h" // endian.wr16be: the commands and words are big-endian
-#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
-#include "server/clock/clock.h" // pcdelay
+#include "endian/endian.h"             // magna_extremitas.wr: the commands and words are big-endian
+#include "server/clock/clock.h"        // pcdelay
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "server/peripherals/i2c/i2c.h"
 #include "server/peripherals/sht3x/sht3x.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC8_NRSC5
@@ -42,7 +42,7 @@ uint8_t *protocore_sht3x_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_I2C_DEVICE_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_I2C_DEVICE_BORROW);
     }
     return s_own.span;
 }
@@ -149,8 +149,8 @@ static_assert(SHT3X_OFF_CTX + sizeof(Sht3xCtx) <= PROTOCORE_I2C_DEVICE_BORROW,
               "PROTOCORE_I2C_DEVICE_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(SHT3X_OFF_CTX % _Alignof(Sht3xCtx) == 0,
@@ -171,7 +171,8 @@ static uint8_t dev_addr(uint8_t *work)
 // A command is a bare 16-bit word, big-endian, with no register byte in front of it.
 static proto_bool send_cmd(uint8_t *work, uint16_t cmd)
 {
-    (void)endian.wr16be(SHT3X_CTX(work)->frame, cmd);
+    (void)EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = SHT3X_CTX(work)->frame, .val = cmd,
+                     .width = MMGR_ENDIAN_16);
     return protocore_i2c_write(dev_addr(work), SHT3X_CTX(work)->frame, 2);
 }
 
