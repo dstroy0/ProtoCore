@@ -22,8 +22,9 @@
 
 #include "crypto/cipher/chacha20/chacha20.h"
 #include "crypto/rng/rng.h"
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/secure/secure.h" // protocore_secure_wipe
+#include "locus_carcerum/locus_carcerum.h" // mmgr_zero_buf: the wipe the compiler cannot drop
+#include "memoria_operor/memoria_operor.h"
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 
 PROTOCORE_BEGIN_DECLS
 
@@ -56,8 +57,8 @@ static_assert(RNG_OFF_CHACHA + PROTOCORE_CHACHA20_BORROW <= PROTOCORE_RNG_BORROW
               "the nested borrow - raise it in protocore_config.h, which derives "
               "PROTOCORE_SECURE_ARENA_SIZE from it");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(RNG_OFF_CTX % _Alignof(RngCtx) == 0,
@@ -110,7 +111,7 @@ uint8_t *protocore_rng_span(void)
 {
     if (s_rng.span == NULL)
     {
-        s_rng.span = protocore_secure_persist_span(PROTOCORE_RNG_BORROW).buf;
+        s_rng.span = (uint8_t *)protocore_secure_persist(PROTOCORE_RNG_BORROW);
     }
     return s_rng.span;
 }
@@ -135,8 +136,8 @@ void protocore_rng_fill(uint8_t *work)
     }
     rng_chacha(work, key, iv, 0, NULL, next, PROTOCORE_RAND_SEED_LEN);
     rng_chacha(work, key, iv, 1, NULL, RngV.fill_args.out, len);
-    mem.cpy(key, next, PROTOCORE_RAND_SEED_LEN);
-    protocore_secure_wipe(next, PROTOCORE_RAND_SEED_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = key, .src = next, .bytes = PROTOCORE_RAND_SEED_LEN);
+    mmgr_zero_buf(next, PROTOCORE_RAND_SEED_LEN);
     ctx->drawn += len;
     RngV.ok = PROTO_TRUE;
 }
