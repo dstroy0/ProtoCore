@@ -6,5 +6,5 @@ protocore_add_module(crypto/mac/ghash
   OPT 2
   SOURCES ghash.c
   PRIVATE_DEPS
-    mmgr/endian
+    mmgr
 )
