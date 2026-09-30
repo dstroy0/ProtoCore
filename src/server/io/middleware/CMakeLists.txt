@@ -4,7 +4,7 @@
 protocore_add_module(server/io/middleware
   SOURCES middleware.c
   PRIVATE_DEPS
-    mmgr/protoframe
+    mmgr
     server/clock
     shared/mime
 )
