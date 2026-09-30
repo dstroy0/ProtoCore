@@ -6,6 +6,5 @@ protocore_add_module(network_drivers/presentation/ssh/app/server
   DEPS
     network_drivers/presentation/ssh/connection
   PRIVATE_DEPS
-    mmgr/bytes
-    mmgr/protomem
+    mmgr
 )

@@ -6,5 +6,5 @@ protocore_add_module(shared/http_date
   DEPS
     shared/time_compat
   PRIVATE_DEPS
-    mmgr/membuild
+    mmgr
 )

@@ -7,6 +7,7 @@ protocore_add_module(server/signaling/bus_capture
   DEPS
     shared/can
   PRIVATE_DEPS
-    mmgr/secure
+    mmgr
+    server/core/worker
     shared/pcap
 )

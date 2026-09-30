@@ -10,10 +10,10 @@
 
 #if PROTOCORE_ENABLE_JSON
 
+#include "cellularum_laboro/cellularum_laboro.h"
 #include "json.h"
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
-#include "mmgr/protostr/protostr.h"
-#include "shared/hex/hex.h" // PROTOCORE_HEX: the shared digit tables
+#include "shared/hex/hex.h"            // PROTOCORE_HEX: the shared digit tables
+#include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
 PROTOCORE_BEGIN_DECLS
 
@@ -255,9 +255,10 @@ void protocore_json_put_int(uint8_t *work)
     long v = JsonV.put_int_args.v;
 
     char tmp[24];
-    protocore_sb sb_tmp = {tmp, sizeof(tmp), 0, PROTO_TRUE};
-    Sb.i64(&sb_tmp, (int64_t)(v));
-    if (Sb.finish(&sb_tmp) == 0)
+    size_t sb_tmp = 0;
+    sb_tmp = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = tmp, .cap = sizeof(tmp), .at = sb_tmp,
+                        .sval = (int64_t)(v));
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = tmp, .cap = sizeof(tmp), .at = sb_tmp) == 0)
     {
         tmp[0] = '\0';
     }
@@ -272,9 +273,10 @@ void protocore_json_put_uint(uint8_t *work)
     unsigned long v = JsonV.put_uint_args.v;
 
     char tmp[24];
-    protocore_sb sb_tmp2 = {tmp, sizeof(tmp), 0, PROTO_TRUE};
-    Sb.u32(&sb_tmp2, (uint32_t)(v));
-    if (Sb.finish(&sb_tmp2) == 0)
+    size_t sb_tmp2 = 0;
+    sb_tmp2 = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = tmp, .cap = sizeof(tmp), .at = sb_tmp2,
+                         .val = (uint32_t)(v));
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = tmp, .cap = sizeof(tmp), .at = sb_tmp2) == 0)
     {
         tmp[0] = '\0';
     }
@@ -486,7 +488,7 @@ static const char *json_find_value(const char *json, const char *key)
     }
     p++; // into the object
 
-    size_t keylen = str.len(key, JSON_KEY_MAX);
+    size_t keylen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = key, .cap = JSON_KEY_MAX);
     while (PROTO_TRUE)
     {
         p = skip_ws(p);
@@ -502,7 +504,8 @@ static const char *json_find_value(const char *json, const char *key)
         const char *kstart = p + 1;
         const char *kend = skip_string(p); // just past closing quote
         size_t klen = (kend > kstart) ? (size_t)((kend - 1) - kstart) : 0;
-        proto_bool match = (klen == keylen) && (str.diff(kstart, key, klen, PROTO_FALSE) == klen);
+        proto_bool match = (klen == keylen) && (EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = kstart, .other = key,
+                                                           .cap = klen, .ci = PROTO_FALSE) == klen);
 
         p = skip_ws(kend);
         if (*p != ':')
@@ -770,7 +773,7 @@ void protocore_json_get_int(uint8_t *work)
         return;
     }
     const char *end = NULL;
-    long val = str.to_long(v, &end);
+    long val = EMBED_CALL(cellul.to_long, TransfiguroCfg, .src = v, .end = &end);
     if (end == v)
     {
         JsonV.ok = PROTO_FALSE; // no digits parsed
@@ -798,14 +801,14 @@ void protocore_json_get_bool(uint8_t *work)
         JsonV.ok = PROTO_FALSE;
         return;
     }
-    if (str.starts(v, "true", 4, PROTO_FALSE) &&
+    if (EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = v, .other = "true", .cap = 4, .ci = PROTO_FALSE) &&
         (v[4] == '\0' || v[4] == ',' || v[4] == '}' || v[4] == ']' || is_ws(v[4])))
     {
         *out = PROTO_TRUE;
         JsonV.ok = PROTO_TRUE;
         return;
     }
-    if (str.starts(v, "false", 5, PROTO_FALSE) &&
+    if (EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = v, .other = "false", .cap = 5, .ci = PROTO_FALSE) &&
         (v[5] == '\0' || v[5] == ',' || v[5] == '}' || v[5] == ']' || is_ws(v[5])))
     {
         *out = PROTO_FALSE;

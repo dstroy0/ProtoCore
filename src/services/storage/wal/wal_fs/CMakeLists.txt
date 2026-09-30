@@ -4,7 +4,7 @@
 protocore_add_module(services/storage/wal/wal_fs
   HEADER_ONLY
   DEPS
-    mmgr/protomem
+    mmgr
     server/storage/mnt
     services/storage/wal/wal_store
 )

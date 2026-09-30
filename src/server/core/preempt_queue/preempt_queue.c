@@ -14,11 +14,10 @@
 
 #if PROTOCORE_ENABLE_PREEMPT_QUEUE
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "server/core/preempt_queue/preempt_queue.h"
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 
 #include "config/platform/platform.h"
-#include "mmgr/secure/secure.h" // protocore_secure_persist_span: the item a lane's task receives into
 
 PROTOCORE_BEGIN_DECLS
 
@@ -77,7 +76,7 @@ uint8_t *protocore_preempt_queue_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_PREEMPT_QUEUE_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_PREEMPT_QUEUE_BORROW);
     }
     return s_own.span;
 }
@@ -136,19 +135,19 @@ static void pq_task(void *arg)
     protocore_pq_lane lane = (protocore_pq_lane)((uintptr_t)arg);
     // The entry never returns, so this item is permanent: it comes from the persistent end, which no
     // reset or release walks. A lane that cannot get one has nowhere to receive into and stops.
-    protocore_span item = protocore_secure_persist_span(PROTOCORE_PQ_ITEM_SIZE);
-    if (!span.has_storage(item))
+    uint8_t *const item = (uint8_t *)protocore_secure_persist(PROTOCORE_PQ_ITEM_SIZE);
+    if (item == NULL)
     {
         return;
     }
     for (;;)
     {
-        if (protocore_platform_queue_recv(PREEMPT_QUEUE_CTX(protocore_preempt_queue_span())->qq.q[(size_t)lane],
-                                          item.buf, PROTOCORE_PLATFORM_WAIT_FOREVER) == PROTOCORE_PLATFORM_OK &&
+        if (protocore_platform_queue_recv(PREEMPT_QUEUE_CTX(protocore_preempt_queue_span())->qq.q[(size_t)lane], item,
+                                          PROTOCORE_PLATFORM_WAIT_FOREVER) == PROTOCORE_PLATFORM_OK &&
             PREEMPT_QUEUE_CTX(protocore_preempt_queue_span())->pq.handler[(size_t)lane])
         {
             PREEMPT_QUEUE_CTX(protocore_preempt_queue_span())
-                ->pq.handler[(size_t)lane](item.buf,
+                ->pq.handler[(size_t)lane](item,
                                            PREEMPT_QUEUE_CTX(protocore_preempt_queue_span())->pq.ctx[(size_t)lane]);
         }
     }

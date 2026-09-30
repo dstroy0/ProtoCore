@@ -5,7 +5,6 @@ protocore_add_module(services/iot/protobuf
   GATE PROTOCORE_ENABLE_PROTOBUF
   SOURCES protobuf.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
+    server/core/worker
 )

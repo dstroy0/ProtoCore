@@ -40,6 +40,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          submodules: true # include/MMgr: src/ builds against it
 
       - name: Set up Python
         uses: actions/setup-python@v7

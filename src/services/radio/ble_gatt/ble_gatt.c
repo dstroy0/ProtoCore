@@ -10,10 +10,10 @@
 
 #if PROTOCORE_ENABLE_BLE_GATT
 
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/radio/ble_gatt/ble_gatt.h"
-#include "shared/hex/hex.h" // PROTOCORE_HEX: the shared digit tables
+#include "shared/hex/hex.h"            // PROTOCORE_HEX: the shared digit tables
+#include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
 // --- the entries -----------------------------------------------------------
 
@@ -45,7 +45,7 @@ size_t protocore_ble_gatt_att_read_rsp(uint8_t *work, const uint8_t *val, size_t
     out[0] = ATT_OP_READ_RSP;
     if (vlen)
     {
-        mem.cpy(out + 1, val, vlen);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 1, .src = val, .bytes = vlen);
     }
     return 1 + vlen;
 }
@@ -61,7 +61,7 @@ static size_t att_handle_value(uint8_t op, uint16_t handle, const uint8_t *val, 
     out[2] = (uint8_t)(handle >> 8);
     if (vlen)
     {
-        mem.cpy(out + 3, val, vlen);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 3, .src = val, .bytes = vlen);
     }
     return 3 + vlen;
 }
@@ -157,19 +157,19 @@ proto_bool protocore_ble_gatt_att_parse(uint8_t *work, const uint8_t *pdu, size_
         return PROTO_TRUE;
     default:
         ok = PROTO_TRUE; // unknown opcode: still report it, no fixed fields
-        return ok;
+        break;
     }
     return ok;
 }
 
-static void put_hex16(protocore_sb *b, uint16_t v)
+static size_t put_hex16(char *out, size_t cap, size_t at, uint16_t v)
 {
     char t[7] = "0x0000";
     for (int i = 0; i < 4; i++)
     {
         t[2 + i] = PROTOCORE_HEX.lower[(v >> ((3 - i) * 4)) & 0xF];
     }
-    Sb.put(b, t);
+    return EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = t);
 }
 
 size_t protocore_ble_gatt_char_json(uint8_t *work, const GattChar *chars, size_t n, char *out, size_t cap)
@@ -180,29 +180,29 @@ size_t protocore_ble_gatt_char_json(uint8_t *work, const GattChar *chars, size_t
     {
         return 0;
     }
-    protocore_sb b = {out, cap, 0, PROTO_TRUE};
-    Sb.put(&b, "[");
+    size_t b = 0;
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "[");
     for (size_t i = 0; i < n; i++)
     {
         if (i)
         {
-            Sb.put(&b, ",");
+            b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = ",");
         }
-        Sb.put(&b, "{\"handle\":");
-        Sb.u32(&b, chars[i].handle);
-        Sb.put(&b, ",\"uuid\":\"");
-        put_hex16(&b, chars[i].uuid);
-        Sb.put(&b, "\",\"props\":");
-        Sb.u32(&b, chars[i].props);
-        Sb.put(&b, "}");
+        b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "{\"handle\":");
+        b = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = b, .val = chars[i].handle);
+        b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = ",\"uuid\":\"");
+        b = put_hex16(out, cap, b, chars[i].uuid);
+        b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "\",\"props\":");
+        b = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = b, .val = chars[i].props);
+        b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "}");
     }
-    Sb.put(&b, "]");
-    if (!b.ok)
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "]");
+    if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .cap = cap, .at = b))
     {
         return 0;
     }
-    out[b.len] = '\0';
-    return b.len;
+    out[b] = '\0';
+    return b;
 }
 
 #endif // PROTOCORE_ENABLE_BLE_GATT

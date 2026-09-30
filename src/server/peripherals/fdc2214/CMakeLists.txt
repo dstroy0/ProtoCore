@@ -5,7 +5,7 @@ protocore_add_module(server/peripherals/fdc2214
   GATE PROTOCORE_ENABLE_FDC2214
   SOURCES fdc2214.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/secure
+    mmgr
+    server/core/worker
     server/peripherals/i2c
 )

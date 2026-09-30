@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_FTP
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/file_transfer/ftp/ftp/ftp.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -31,7 +31,8 @@ static size_t protocore_ftp_emit(char *buf, size_t cap, size_t n, const char *s,
     }
     // The guard above proves n + slen <= cap, so this write stays inside buf[0, cap). S3519 can't link
     // buf's size to the separate cap parameter and follows an infeasible path (same FP as mms.cpp).
-    mem.cpy(buf + n, s, slen); // NOSONAR - bound proven above; analyzer follows an infeasible path
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + n, .src = s,
+               .bytes = slen); // NOSONAR - bound proven above; analyzer follows an infeasible path
     return n + slen;
 }
 
@@ -97,11 +98,11 @@ void protocore_ftp_build_command(uint8_t *work)
         return;
     }
     size_t n = 0;
-    n = protocore_ftp_emit(buf, cap, n, verb, str.len(verb, cap));
+    n = protocore_ftp_emit(buf, cap, n, verb, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = verb, .cap = cap));
     if (arg && arg[0])
     {
         n = protocore_ftp_emit(buf, cap, n, " ", 1);
-        n = protocore_ftp_emit(buf, cap, n, arg, str.len(arg, cap));
+        n = protocore_ftp_emit(buf, cap, n, arg, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = arg, .cap = cap));
     }
     n = protocore_ftp_emit(buf, cap, n, "\r\n", 2);
     FtpV.n = protocore_ftp_finish(buf, cap, n);
@@ -152,7 +153,7 @@ void protocore_ftp_build_eprt(uint8_t *work)
     n = protocore_ftp_emit(buf, cap, n, "EPRT |", 6);
     n = protocore_ftp_emit(buf, cap, n, ipv6 ? "2" : "1", 1);
     n = protocore_ftp_emit(buf, cap, n, "|", 1);
-    n = protocore_ftp_emit(buf, cap, n, ip_str, str.len(ip_str, cap));
+    n = protocore_ftp_emit(buf, cap, n, ip_str, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = ip_str, .cap = cap));
     n = protocore_ftp_emit(buf, cap, n, "|", 1);
     n = protocore_ftp_emit_uint(buf, cap, n, port);
     n = protocore_ftp_emit(buf, cap, n, "|\r\n", 3);

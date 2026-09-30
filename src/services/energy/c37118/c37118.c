@@ -7,13 +7,13 @@
  */
 
 #include "services/energy/c37118/c37118.h"
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 
 #if PROTOCORE_ENABLE_C37118
 
 static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
 
-#include "mmgr/endian/endian.h"
+#include "endian/endian.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_IBM_3740
 
 PROTOCORE_BEGIN_DECLS
@@ -43,17 +43,17 @@ size_t protocore_c37118_build_frame(uint8_t *buf, size_t cap, uint8_t type, uint
     size_t p = 0;
     buf[p++] = C37118_SYNC_LEADER;
     buf[p++] = (uint8_t)(((type & C37118_TYPE_MASK) << C37118_TYPE_SHIFT) | (version & C37118_VERSION_MASK));
-    p += endian.wr16be(buf + p, (uint16_t)total);
-    p += endian.wr16be(buf + p, idcode);
-    p += endian.wr32be(buf + p, soc);
-    p += endian.wr32be(buf + p, fracsec);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = (uint16_t)total, .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = idcode, .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = soc, .width = MMGR_ENDIAN_32);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = fracsec, .width = MMGR_ENDIAN_32);
     if (payload_len)
     {
-        mem.cpy(buf + p, payload, payload_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = payload, .bytes = payload_len);
         p += payload_len;
     }
     uint16_t crc = protocore_c37118_crc(buf, p); // over everything before CHK
-    p += endian.wr16be(buf + p, crc);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = crc, .width = MMGR_ENDIAN_16);
     return p;
 }
 
@@ -61,7 +61,7 @@ size_t protocore_c37118_build_command(uint8_t *buf, size_t cap, uint16_t idcode,
                                       uint16_t cmd)
 {
     uint8_t payload[2];
-    endian.wr16be(payload, cmd);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = payload, .val = cmd, .width = MMGR_ENDIAN_16);
     return protocore_c37118_build_frame(buf, cap, C37118_TYPE_CMD, C37118_VERSION_2011, idcode, soc, fracsec, payload,
                                         2);
 }
@@ -76,13 +76,14 @@ proto_bool protocore_c37118_parse_frame(const uint8_t *buf, size_t len, C37118Fr
     {
         return PROTO_FALSE;
     }
-    uint16_t framesize = endian.rd16be(buf + 2);
+    uint16_t framesize = (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 2, .width = MMGR_ENDIAN_16);
     if (framesize < C37118_MIN_FRAME || framesize > len)
     {
         return PROTO_FALSE; // out of range / not fully buffered
     }
     uint16_t want = protocore_c37118_crc(buf, (size_t)framesize - 2);
-    uint16_t got = endian.rd16be(buf + framesize - 2);
+    uint16_t got =
+        (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + framesize - 2, .width = MMGR_ENDIAN_16);
     if (want != got)
     {
         return PROTO_FALSE; // CHK mismatch
@@ -90,9 +91,9 @@ proto_bool protocore_c37118_parse_frame(const uint8_t *buf, size_t len, C37118Fr
     out->type = (uint8_t)((buf[1] >> C37118_TYPE_SHIFT) & C37118_TYPE_MASK);
     out->version = (uint8_t)(buf[1] & C37118_VERSION_MASK);
     out->framesize = framesize;
-    out->idcode = endian.rd16be(buf + 4);
-    out->soc = endian.rd32be(buf + 6);
-    out->fracsec = endian.rd32be(buf + 10);
+    out->idcode = (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 4, .width = MMGR_ENDIAN_16);
+    out->soc = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 6, .width = MMGR_ENDIAN_32);
+    out->fracsec = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 10, .width = MMGR_ENDIAN_32);
     out->data = buf + 14;
     out->data_len = (size_t)framesize - C37118_MIN_FRAME;
     return PROTO_TRUE;
@@ -106,7 +107,7 @@ proto_bool protocore_c37118_parse_command(const C37118Frame *f, uint16_t *cmd)
     }
     if (cmd)
     {
-        *cmd = endian.rd16be(f->data);
+        *cmd = (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = f->data, .width = MMGR_ENDIAN_16);
     }
     return PROTO_TRUE;
 }
@@ -117,7 +118,8 @@ proto_bool protocore_c37118_decode_stat(const C37118Frame *f, C37118Stat *out)
     {
         return PROTO_FALSE;
     }
-    uint16_t s = endian.rd16be(f->data); // STAT is the first word of the data payload, big-endian
+    // STAT is the first word of the data payload, big-endian
+    uint16_t s = (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = f->data, .width = MMGR_ENDIAN_16);
     out->raw = s;
     out->data_valid = (s & 0x8000u) == 0;             // bit 15: 0 = valid
     out->pmu_error = (s & 0x4000u) != 0;              // bit 14

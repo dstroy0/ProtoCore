@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_DEVICENET
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/devicenet/devicenet.h"
 #include "shared/can/can.h"
 
@@ -180,7 +180,7 @@ void protocore_devicenet_build_explicit(uint8_t *work)
     out->extended = PROTO_FALSE;
     out->rtr = PROTO_FALSE;
     out->dlc = (uint8_t)(1 + body_len);
-    mem.set(out->data, 0, sizeof(out->data));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out->data, .val = 0, .bytes = sizeof(out->data));
     DevicenetV.msg_header_args.frag = PROTO_FALSE;
     DevicenetV.msg_header_args.xid = PROTO_FALSE;
     DevicenetV.msg_header_args.mac_id = mac_id;
@@ -188,7 +188,7 @@ void protocore_devicenet_build_explicit(uint8_t *work)
     out->data[0] = DevicenetV.value; // not fragmented
     if (body_len)
     {
-        mem.cpy(out->data + 1, body, body_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->data + 1, .src = body, .bytes = body_len);
     }
     DevicenetV.ok = PROTO_TRUE;
 }
@@ -227,7 +227,7 @@ void protocore_devicenet_build_fragment(uint8_t *work)
     out->extended = PROTO_FALSE;
     out->rtr = PROTO_FALSE;
     out->dlc = (uint8_t)(2 + data_len);
-    mem.set(out->data, 0, sizeof(out->data));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out->data, .val = 0, .bytes = sizeof(out->data));
     DevicenetV.msg_header_args.frag = PROTO_TRUE;
     DevicenetV.msg_header_args.xid = xid;
     DevicenetV.msg_header_args.mac_id = mac_id;
@@ -239,7 +239,7 @@ void protocore_devicenet_build_fragment(uint8_t *work)
     out->data[1] = DevicenetV.value;
     if (data_len)
     {
-        mem.cpy(out->data + 2, data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->data + 2, .src = data, .bytes = data_len);
     }
     DevicenetV.ok = PROTO_TRUE;
 }
@@ -251,7 +251,7 @@ void protocore_devicenet_frag_reset(uint8_t *work)
 
     if (rx)
     {
-        mem.set(rx, 0, sizeof(*rx));
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = rx, .val = 0, .bytes = sizeof(*rx));
     }
 }
 
@@ -271,7 +271,7 @@ static proto_bool frag_append(DeviceNetFragRx *rx, const uint8_t *p, uint8_t n)
     {
         return PROTO_FALSE;
     }
-    mem.cpy(rx->buf + rx->len, p, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = rx->buf + rx->len, .src = p, .bytes = n);
     rx->len = (uint16_t)(rx->len + n);
     return PROTO_TRUE;
 }

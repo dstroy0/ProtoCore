@@ -5,7 +5,6 @@ protocore_add_module(services/energy/dnp3
   GATE PROTOCORE_ENABLE_DNP3
   SOURCES dnp3.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/protomem
+    mmgr
     shared/crc
 )

@@ -7,6 +7,6 @@ protocore_add_module(crypto/rng
   SOURCES rng.c
   PRIVATE_DEPS
     crypto/cipher/chacha20
-    mmgr/protomem
-    mmgr/secure
+    mmgr
+    server/core/worker
 )

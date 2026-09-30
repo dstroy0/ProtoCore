@@ -32,8 +32,8 @@ static_assert(SHA3_OFF_CTX + sizeof(struct KeccakCtx) <= PROTOCORE_SHA3_BORROW,
               "PROTOCORE_SHA3_BORROW is short of the sponge - raise it in protocore_config.h, "
               "which sums it into the secure arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(SHA3_OFF_CTX % _Alignof(KeccakCtx) == 0,

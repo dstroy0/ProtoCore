@@ -15,12 +15,12 @@
 
 #if PROTOCORE_ENABLE_GPIO_MAP
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "server/clock/clock.h" // protocore_millis()
 #include "server/signaling/gpio_map/gpio_map.h"
 
-#include "mmgr/protoframe/protoframe.h"
+#include "numeros_scribo/numeros_scribo.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -54,21 +54,21 @@ void protocore_gpio_map_dir_name(uint8_t *work)
 // The item index selects it; !!i is 0 or 1, so the separator is a load rather than a branch.
 static const char *const PROTOCORE_JSON_SEP[2] = {"", ","};
 
-static const protocore_field GPIO_OPEN[] = {{PROTOCORE_FK_LIT, 0, 9, "{\"pins\":["}, PROTOCORE_END};
-static const protocore_field GPIO_PIN[] = {
-    PROTOCORE_STR,                           // "," from the second pin on
-    {PROTOCORE_FK_LIT, 0, 7, "{\"pin\":"},   //
-    PROTOCORE_U32,                           // pin number
-    {PROTOCORE_FK_LIT, 0, 9, ",\"label\":"}, //
-    PROTOCORE_JSON,                          // label, quoted and escaped
-    {PROTOCORE_FK_LIT, 0, 7, ",\"dir\":"},   //
-    PROTOCORE_JSON,                          // direction name
-    {PROTOCORE_FK_LIT, 0, 9, ",\"level\":"}, //
-    PROTOCORE_U32,                           // 0 or 1
-    {PROTOCORE_FK_LIT, 0, 1, "}"},           //
-    PROTOCORE_END,
+static const mmgr_field GPIO_OPEN[] = {{MMGR_FK_LIT, 0, 9, "{\"pins\":["}, MMGR_END};
+static const mmgr_field GPIO_PIN[] = {
+    MMGR_STR,                           // "," from the second pin on
+    {MMGR_FK_LIT, 0, 7, "{\"pin\":"},   //
+    MMGR_U32,                           // pin number
+    {MMGR_FK_LIT, 0, 9, ",\"label\":"}, //
+    MMGR_JSON,                          // label, quoted and escaped
+    {MMGR_FK_LIT, 0, 7, ",\"dir\":"},   //
+    MMGR_JSON,                          // direction name
+    {MMGR_FK_LIT, 0, 9, ",\"level\":"}, //
+    MMGR_U32,                           // 0 or 1
+    {MMGR_FK_LIT, 0, 1, "}"},           //
+    MMGR_END,
 };
-static const protocore_field GPIO_CLOSE[] = {{PROTOCORE_FK_LIT, 0, 2, "]}"}, PROTOCORE_END};
+static const mmgr_field GPIO_CLOSE[] = {{MMGR_FK_LIT, 0, 2, "]}"}, MMGR_END};
 
 void protocore_gpio_map_json(uint8_t *work)
 {
@@ -89,7 +89,7 @@ void protocore_gpio_map_json(uint8_t *work)
         GpioMapV.n = -1;
         return;
     }
-    if (frame.append(out, cap, GPIO_OPEN, NULL, 0) == 0)
+    if (EMBED_CALL(numer.append, NumerosCfg, .out = out, .cap = cap, .spec = GPIO_OPEN, .vals = NULL, .nvals = 0) == 0)
     {
         GpioMapV.n = -1;
         return;
@@ -97,19 +97,19 @@ void protocore_gpio_map_json(uint8_t *work)
     for (uint8_t i = 0; i < count; i++)
     {
         const protocore_gpio_pin *p = &pins[i];
-        if (frame.append(out, cap, GPIO_PIN,
-                         (const protocore_fval[]){PROTOCORE_VSTR(PROTOCORE_JSON_SEP[!!i]),
-                                                  PROTOCORE_VU32((uint32_t)p->pin), PROTOCORE_VJSON(p->label),
-                                                  PROTOCORE_VJSON(dir_name_of(p->dir)),
-                                                  PROTOCORE_VU32((uint32_t)(!!p->level))},
-                         5) == 0)
+        if (EMBED_CALL(numer.append, NumerosCfg, .out = out, .cap = cap, .spec = GPIO_PIN,
+                       .vals = (const mmgr_fval[]){MMGR_VSTR(PROTOCORE_JSON_SEP[!!i]), MMGR_VU32((uint32_t)p->pin),
+                                                   MMGR_VJSON(p->label), MMGR_VJSON(dir_name_of(p->dir)),
+                                                   MMGR_VU32((uint32_t)(!!p->level))},
+                       .nvals = 5) == 0)
         {
             GpioMapV.n = -1;
             return;
         }
     }
     // A document always carries its two braces, so nothing written is the close not fitting.
-    const int32_t written = (int32_t)frame.append(out, cap, GPIO_CLOSE, NULL, 0);
+    const int32_t written = (int32_t)EMBED_CALL(numer.append, NumerosCfg, .out = out, .cap = cap, .spec = GPIO_CLOSE,
+                                                .vals = NULL, .nvals = 0);
     GpioMapV.n = (written == 0) ? -1 : written;
 }
 
@@ -117,11 +117,12 @@ void protocore_gpio_map_json(uint8_t *work)
 // false if the field is absent or has no digits.
 static proto_bool form_field_uint(const char *body, size_t len, const char *name, unsigned *out)
 {
-    size_t nlen = str.len(name, len + 1);
+    size_t nlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = name, .cap = len + 1);
     for (size_t i = 0; i + nlen + 1 <= len; i++)
     {
         proto_bool at_field = (i == 0) || body[i - 1] == '&';
-        if (!at_field || mem.cmp(body + i, name, nlen) != 0 || body[i + nlen] != '=')
+        if (!at_field || EMBED_CALL(memor.cmp, MemoriaCfg, .src = body + i, .other = name, .bytes = nlen) != 0 ||
+            body[i + nlen] != '=')
         {
             continue;
         }

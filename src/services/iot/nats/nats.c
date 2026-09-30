@@ -17,8 +17,8 @@
 
 #include "services/iot/nats/nats.h"
 
-#include "mmgr/protomem/protomem.h" // mem.cpy / mem.cmp: the spans an operation is laid from and matched against
-#include "mmgr/protostr/protostr.h" // str.len: the bounded length of a caller's NUL-terminated field
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the bounded length of a caller's NUL-terminated field
+#include "memoria_operor/memoria_operor.h" // memor.cpy / memor.cmp: the spans an operation is laid from and matched against
 
 PROTOCORE_BEGIN_DECLS
 
@@ -61,13 +61,13 @@ static void put_str(Buf *b, const char *s)
     {
         return;
     }
-    size_t n = str.len(s, b->cap + 1);
+    size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = b->cap + 1);
     if (b->pos + n > b->cap)
     {
         b->ok = PROTO_FALSE;
         return;
     }
-    mem.cpy(b->p + b->pos, s, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = b->p + b->pos, .src = s, .bytes = n);
     b->pos += n;
 }
 
@@ -85,7 +85,7 @@ static void put_bytes(Buf *b, const uint8_t *d, size_t n)
     }
     if (n)
     {
-        mem.cpy(b->p + b->pos, d, n);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = b->p + b->pos, .src = d, .bytes = n);
     }
     b->pos += n;
 }
@@ -325,12 +325,12 @@ static proto_bool parse_uint(const char *s, size_t n, size_t *out)
 // True when the control line opens with the operation name op and ends there or at a delimiter.
 static proto_bool verb_is(const char *buf, size_t line_len, const char *op)
 {
-    size_t n = str.len(op, line_len + 1);
+    size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = op, .cap = line_len + 1);
     if (line_len < n)
     {
         return PROTO_FALSE;
     }
-    if (mem.cmp(buf, op, n) != 0)
+    if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = buf, .other = op, .bytes = n) != 0)
     {
         return PROTO_FALSE;
     }

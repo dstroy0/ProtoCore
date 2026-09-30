@@ -7,5 +7,5 @@ protocore_add_module(services/machine_tool/dnc/dnc_stream
   DEPS
     services/machine_tool/dnc/dnc
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

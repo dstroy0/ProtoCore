@@ -5,5 +5,6 @@ protocore_add_module(network_drivers/transport/diffserv
   GATE PROTOCORE_ENABLE_DIFFSERV
   SOURCES diffserv.c
   PRIVATE_DEPS
-    mmgr/plaintext
+    mmgr
+    server/core/worker
 )

@@ -31,7 +31,7 @@
 #ifndef PROTOCORE_FILESYSTEM_H
 #define PROTOCORE_FILESYSTEM_H
 
-#include "mmgr/protoframe/protoframe.h" // the one frame engine
+#include "numeros_scribo/numeros_scribo.h" // the one frame engine
 #include "server/storage/mnt/mnt.h"
 
 #include "protocore_config.h"
@@ -42,10 +42,10 @@ PROTOCORE_BEGIN_DECLS
 // dir+name itself and handed the result over would frame the same bytes twice, into two buffers,
 // for the same result. A mount root ends with '/', and a dir that carries a name ends with '/', so
 // both separators are already in the strings and the spec needs no literal between the fields.
-static const protocore_field FILESYSTEM_JOIN[] = {PROTOCORE_STR, PROTOCORE_STR, PROTOCORE_STR, PROTOCORE_END};
+static const mmgr_field FILESYSTEM_JOIN[] = {MMGR_STR, MMGR_STR, MMGR_STR, MMGR_END};
 
 // The mount root, copied in so its trailing '/' is owned rather than assumed (see protocore_fs_begin).
-static const protocore_field FILESYSTEM_ROOT[] = {PROTOCORE_STR, PROTOCORE_END};
+static const mmgr_field FILESYSTEM_ROOT[] = {MMGR_STR, MMGR_END};
 
 /**
  * @brief Roots that can be bound at once (see protocore_fs_begin).
@@ -105,8 +105,8 @@ PROTOCORE_INLINE size_t protocore_fs_join(const char *root, const char *dir, con
     {
         dir++; // the root carries the separator; a second one would be "//"
     }
-    return frame.build(out, cap, FILESYSTEM_JOIN,
-                       (const protocore_fval[]){PROTOCORE_VSTR(root), PROTOCORE_VSTR(dir), PROTOCORE_VSTR(name)}, 3);
+    return EMBED_CALL(numer.build, NumerosCfg, .out = out, .cap = cap, .spec = FILESYSTEM_JOIN,
+                      .vals = (const mmgr_fval[]){MMGR_VSTR(root), MMGR_VSTR(dir), MMGR_VSTR(name)}, .nvals = 3);
 }
 
 /**
@@ -160,7 +160,7 @@ PROTOCORE_INLINE int protocore_fs_resolve(const char *root, const char *dir, con
 // and do local-only path work before (or without) ever attaching a store. What it must not do is
 // look identical to a fault.
 //
-// So the reason is a sticky mask, the same way protocore_cspan carries a sticky ok: bits accumulate as
+// So the reason is a sticky mask, the same way mmgr_cspan carries a sticky err: bits accumulate as
 // operations fail and a caller tests once, at whatever granularity suits it, instead of branching on
 // every call. Mask it for the bit you care about.
 //

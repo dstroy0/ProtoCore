@@ -7,5 +7,5 @@ protocore_add_module(crypto/mac/hmac_sha256
   SOURCES hmac_sha256.c
   PRIVATE_DEPS
     crypto/hash/sha256
-    mmgr/protomem
+    mmgr
 )

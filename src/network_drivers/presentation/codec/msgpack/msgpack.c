@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_MSGPACK
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "msgpack.h"
 
 #include "mmgr/bytes/bytes.h"
@@ -121,7 +121,7 @@ static void protocore_msgpack_str_n(protocore_span *w, const char *s, size_t len
 
 static void protocore_msgpack_str(protocore_span *w, const char *s)
 {
-    protocore_msgpack_str_n(w, s, s ? str.len(s, w->cap + 1) : 0);
+    protocore_msgpack_str_n(w, s, s ? EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = w->cap + 1) : 0);
 }
 
 static void protocore_msgpack_bytes(protocore_span *w, const uint8_t *data, size_t len)
@@ -160,7 +160,7 @@ static void protocore_msgpack_null(protocore_span *w)
 static void protocore_msgpack_float(protocore_span *w, float f)
 {
     uint32_t bits;
-    mem.cpy(&bits, &f, sizeof(bits));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &bits, .src = &f, .bytes = sizeof(bits));
     put(w, 0xca); // float32
     put_be(w, bits, 4);
 }
@@ -477,7 +477,7 @@ static proto_bool protocore_msgpack_read_float(protocore_cspan *r, float *out)
             return PROTO_FALSE;
         }
         uint32_t bits = (uint32_t)v;
-        mem.cpy(out, &bits, sizeof(*out));
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = &bits, .bytes = sizeof(*out));
         return PROTO_TRUE;
     }
     if (b == 0xcb) // float64 -> narrow to float
@@ -487,7 +487,7 @@ static proto_bool protocore_msgpack_read_float(protocore_cspan *r, float *out)
             return PROTO_FALSE;
         }
         double d;
-        mem.cpy(&d, &v, sizeof(d));
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &d, .src = &v, .bytes = sizeof(d));
         *out = (float)d;
         return PROTO_TRUE;
     }

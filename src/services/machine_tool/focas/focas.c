@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_FOCAS
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/machine_tool/focas/focas.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -104,7 +104,7 @@ size_t protocore_focas_build_request(uint8_t *buf, size_t cap, FocasCmd cmd, int
     p += put32be(buf + p, (uint32_t)v5);
     if (extra_len)
     {
-        mem.cpy(buf + p, extra, extra_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = extra, .bytes = extra_len);
         p += extra_len;
     }
     return p;
@@ -207,15 +207,15 @@ proto_bool protocore_focas_parse_sysinfo(const uint8_t *data, size_t data_len, F
     }
     out->add_info = get16be(data);
     out->max_axis = get16be(data + 2);
-    mem.cpy(out->cnc_type, data + 4, 2);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->cnc_type, .src = data + 4, .bytes = 2);
     out->cnc_type[2] = '\0';
-    mem.cpy(out->mt_type, data + 6, 2);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->mt_type, .src = data + 6, .bytes = 2);
     out->mt_type[2] = '\0';
-    mem.cpy(out->series, data + 8, 4);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->series, .src = data + 8, .bytes = 4);
     out->series[4] = '\0';
-    mem.cpy(out->version, data + 12, 4);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->version, .src = data + 12, .bytes = 4);
     out->version[4] = '\0';
-    mem.cpy(out->axes, data + 16, 2);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->axes, .src = data + 16, .bytes = 2);
     out->axes[2] = '\0';
     return PROTO_TRUE;
 }

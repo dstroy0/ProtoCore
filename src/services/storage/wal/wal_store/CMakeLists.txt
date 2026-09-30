@@ -7,6 +7,5 @@ protocore_add_module(services/storage/wal/wal_store
   DEPS
     services/storage/wal/wal
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/protomem
+    mmgr
 )

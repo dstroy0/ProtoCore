@@ -7,6 +7,6 @@ protocore_add_module(crypto/cipher/aes_block
   SOURCES aes_block.c
   DEPS
     crypto/cipher/aes_sbox
-    mmgr/protomem
+    mmgr
   PRIVATE_DEPS
 )

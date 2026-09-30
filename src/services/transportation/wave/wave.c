@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_WAVE
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/transportation/wave/wave.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -131,7 +131,7 @@ size_t protocore_wsmp_build(uint32_t psid, const uint8_t *payload, size_t payloa
     out[i++] = (uint8_t)payload_len; // WSM length
     if (payload_len)
     {
-        mem.cpy(out + i, payload, payload_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + i, .src = payload, .bytes = payload_len);
         i += payload_len;
     }
     return i;
@@ -185,7 +185,7 @@ size_t protocore_wave_1609dot2_wrap(uint8_t content_type, const uint8_t *payload
     out[1] = content_type;
     if (payload_len)
     {
-        mem.cpy(out + 2, payload, payload_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 2, .src = payload, .bytes = payload_len);
     }
     return n;
 }

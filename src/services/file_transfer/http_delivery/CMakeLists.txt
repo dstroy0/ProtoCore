@@ -5,7 +5,7 @@ protocore_add_module(services/file_transfer/http_delivery
   GATE PROTOCORE_ENABLE_HTTP_DELIVERY
   SOURCES http_delivery.c
   PRIVATE_DEPS
-    mmgr/membuild
+    mmgr
 )
 
 add_subdirectory(http_delivery_routes)

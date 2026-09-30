@@ -5,5 +5,5 @@ protocore_add_module(services/transportation/ocit
   GATE PROTOCORE_ENABLE_OCIT
   SOURCES ocit.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

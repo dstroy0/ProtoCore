@@ -5,6 +5,5 @@ protocore_add_module(services/iot/amqp
   GATE PROTOCORE_ENABLE_AMQP
   SOURCES amqp.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/protomem
+    mmgr
 )

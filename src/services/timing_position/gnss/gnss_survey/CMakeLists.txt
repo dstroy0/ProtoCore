@@ -7,6 +7,5 @@ protocore_add_module(services/timing_position/gnss/gnss_survey
   DEPS
     services/timing_position/nmea0183
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )

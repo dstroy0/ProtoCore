@@ -9,7 +9,6 @@ protocore_add_module(network_drivers/presentation/ssh/common
     crypto/cipher/aes256ctr
     crypto/mac/hmac_sha256
     crypto/pqc/sntrup761
-    mmgr/bytes
-    mmgr/protostr
+    mmgr
     network_drivers/presentation/ssh/transport/ssh_kexhash
 )

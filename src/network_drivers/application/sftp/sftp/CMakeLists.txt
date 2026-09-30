@@ -5,8 +5,6 @@ protocore_add_module(network_drivers/application/sftp/sftp
   GATE PROTOCORE_ENABLE_SSH_SFTP
   SOURCES sftp.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
     shared/time_compat
 )

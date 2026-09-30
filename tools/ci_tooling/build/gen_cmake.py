@@ -37,8 +37,18 @@ OUT = os.path.join(ROOT, "test", "CMakeLists.txt")
 OWED = os.path.join(ROOT, "test", "yanked_includes.json")
 
 # The include dirs every env compiles with, whatever it named. -Iinclude is PlatformIO's implicit
-# include_dir, where protocore.h lives; nothing here is pio, so each one is stated.
-BASE_INCLUDES = ["test/core_setup/hal/host", "test/support", "src", "include", "."]
+# include_dir, where protocore.h lives; nothing here is pio, so each one is stated. The last three are
+# MMgr's roots (include/CMakeLists.txt): mmgr.h, <module>/<module>.h, and embedded_types.
+BASE_INCLUDES = [
+    "test/core_setup/hal/host",
+    "test/support",
+    "src",
+    "include",
+    ".",
+    "include/MMgr/include",
+    "include/MMgr/src",
+    "include/embedded_types/include",
+]
 
 GENERATED_RUNNER = "unity_runner.c"
 
@@ -301,6 +311,9 @@ function(protocore_env name)
   target_include_directories(${name} PRIVATE ${E_INCLUDES})
   target_compile_definitions(${name} PRIVATE ${E_DEFINES})
   target_link_libraries(${name} PRIVATE protocore_env_base)
+  # MMgr is linked by every env directly, since an OBJECT library's objects reach only the target
+  # that names it and never pass through protocore_env_base.
+  target_link_libraries(${name} PRIVATE pc_mmgr)
   # The suite's own files and its include path arrive through its target, and are compiled here,
   # under this env's defines - see cmake/ProtoCoreSuite.cmake for why that is an INTERFACE library.
   protocore_suite_target("${E_SUITE}" _suite)
@@ -340,7 +353,7 @@ def render_owed(owed):
             continue
         opts = []
         for w in incs:
-            opts.append("-include" if w.startswith("<") else "-include")
+            opts.append("-include")
             opts.append(w.strip('"<>'))
         out.append(
             'set_source_files_properties("${PROTOCORE_ROOT}/%s" PROPERTIES COMPILE_OPTIONS "%s")\n'

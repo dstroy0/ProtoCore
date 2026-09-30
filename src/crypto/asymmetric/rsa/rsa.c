@@ -24,7 +24,7 @@
 #include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq
 #include "crypto/hash/sha256/sha256.h"
 #include "crypto/hash/sha512/sha512.h"
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -66,8 +66,8 @@ static_assert(RSA_OFF_CTX + sizeof(RsaCtx) <= PROTOCORE_RSA_BORROW,
               "PROTOCORE_RSA_BORROW is short of the two digest regions, the bignum region and the ladder's "
               "working set - raise it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(RSA_OFF_CTX % _Alignof(RsaCtx) == 0,
@@ -129,7 +129,7 @@ static void rsa_mont(uint8_t *work)
     ctx->mprime = 0u - inv;
 
     uint32_t *t = ctx->rr.d;
-    mem.zero(t, sizeof(ctx->rr.d));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = t, .val = 0, .bytes = sizeof(ctx->rr.d));
     t[0] = 1u;
     for (int i = 0; i < 2 * PROTOCORE_BN_LIMBS * 32; i++)
     {
@@ -275,7 +275,7 @@ static void rsa_modexp(uint8_t *work)
 {
     RsaCtx *ctx = RSA_CTX(work);
 
-    mem.zero(ctx->acc.d, sizeof(ctx->acc.d));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = ctx->acc.d, .val = 0, .bytes = sizeof(ctx->acc.d));
     ctx->acc.d[0] = 1u;
 
     int top_limb = PROTOCORE_BN_LIMBS - 1;
@@ -344,10 +344,10 @@ static void rsa_encode(uint8_t *work)
     const size_t pad_len = PROTOCORE_RSA_KEY_BYTES - 3u - di_len - digest_len;
     ctx->em[0] = 0x00;
     ctx->em[1] = 0x01;
-    mem.set(ctx->em + 2, 0xFF, pad_len);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = ctx->em + 2, .val = 0xFF, .bytes = pad_len);
     ctx->em[2 + pad_len] = 0x00;
-    mem.cpy(ctx->em + 3 + pad_len, di, di_len);
-    mem.cpy(ctx->em + 3 + pad_len + di_len, ctx->digest, digest_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ctx->em + 3 + pad_len, .src = di, .bytes = di_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ctx->em + 3 + pad_len + di_len, .src = ctx->digest, .bytes = digest_len);
 }
 
 // RFC 8017 sec B.2.1: the mask generation function PSS masks its data block with. Hash(seed ||
@@ -356,7 +356,7 @@ static void mgf1_sha256(uint8_t *work, const uint8_t *seed, size_t seed_len, uin
 {
     uint8_t buf[PROTOCORE_SHA256_DIGEST_LEN + 4u];
     uint8_t block[PROTOCORE_SHA256_DIGEST_LEN];
-    mem.cpy(buf, seed, seed_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf, .src = seed, .bytes = seed_len);
     uint32_t counter = 0;
     for (size_t off = 0; off < mask_len; counter++)
     {
@@ -367,7 +367,7 @@ static void mgf1_sha256(uint8_t *work, const uint8_t *seed, size_t seed_len, uin
         Sha256.hash(RSA_SHA256(work), buf, seed_len + 4u, block);
         const size_t left = mask_len - off;
         const size_t n = left < PROTOCORE_SHA256_DIGEST_LEN ? left : (size_t)PROTOCORE_SHA256_DIGEST_LEN;
-        mem.cpy(mask + off, block, n);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = mask + off, .src = block, .bytes = n);
         off += n;
     }
 }
@@ -425,9 +425,9 @@ static proto_bool rsa_pss_consistent(uint8_t *work)
     // steps 11, 12 and 13: M' is eight zero octets, the message digest, then the recovered salt.
     uint8_t mprime[8u + PROTOCORE_SHA256_DIGEST_LEN + PROTOCORE_SHA256_DIGEST_LEN];
     uint8_t hprime[PROTOCORE_SHA256_DIGEST_LEN];
-    mem.set(mprime, 0, 8u);
-    mem.cpy(mprime + 8u, ctx->digest, hlen);
-    mem.cpy(mprime + 8u + hlen, db + ps + 1u, slen);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = mprime, .val = 0, .bytes = 8u);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = mprime + 8u, .src = ctx->digest, .bytes = hlen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = mprime + 8u + hlen, .src = db + ps + 1u, .bytes = slen);
     Sha256.hash(RSA_SHA256(work), mprime, sizeof(mprime), hprime);
 
     // step 14

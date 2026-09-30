@@ -61,14 +61,19 @@ def main():
 
     # Independent agreement (optional): liboqs uses the same FIPS 203 encodings.
     checked = "kyber-py round-trip"
+    # Only the import and the call are optional; a disagreement is a failure, so it is checked
+    # outside the try that tolerates liboqs being absent.
+    oqs_k = None
     try:
         import oqs
 
         with oqs.KeyEncapsulation("ML-KEM-768", secret_key=bytearray(dk)) as kem:
-            assert kem.decap_secret(ct) == K, "liboqs disagreement"
-        checked += " + liboqs decaps"
+            oqs_k = kem.decap_secret(ct)
     except Exception as e:  # noqa: BLE001 - liboqs is a nice-to-have cross-check
         checked += f" (liboqs skipped: {e})"
+    if oqs_k is not None:
+        assert oqs_k == K, "liboqs disagreement"
+        checked += " + liboqs decaps"
 
     assert len(ek) == 1184 and len(ct) == 1088 and len(K) == 32
 

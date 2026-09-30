@@ -11,11 +11,149 @@
  */
 
 #include "server/core/worker/worker.h"
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
 #include "config/platform/platform.h" // the target's queues and tasks, under our names
-#include "mmgr/arena/arena.h"         // protocore_worker_set_self: identity lives with the pools it indexes
-#include "mmgr/ring/ring.h"           // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
+
+#include <stdatomic.h> // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
+
+// ---------------------------------------------------------------------------
+// Worker identity
+// ---------------------------------------------------------------------------
+//
+// Per-task worker id, for a genuine multi-worker build. Default 0: the user loop(), the lwIP
+// thread, and unit tests all read worker 0.
+//
+// The binding is a table keyed on the platform's own answer to "which execution context is running
+// me", not a `_Thread_local`. Both reach the same place on an RTOS - the task's own storage - but a
+// thread-local makes the compiler emit __emutls_get_address, and libgcc's emulated-TLS allocates
+// each block with malloc and calls abort when it cannot. A build that owns no heap after boot
+// cannot link that, so the identity is held here instead.
+//
+// One entry per worker plus the ghost slot, which is every context that can ever bind one; the
+// count is fixed at build time, so this is BSS and the claim is a bounded walk. `s_bound` is the
+// counter: a context that has never bound reads worker 0.
+#define PROTOCORE_WORKER_BINDINGS (PROTOCORE_WORKER_COUNT + 1)
+
+static uintptr_t s_ctx[PROTOCORE_WORKER_BINDINGS];
+static int s_ctx_worker[PROTOCORE_WORKER_BINDINGS];
+static int s_bound;
+
+int protocore_worker_count(void)
+{
+    return PROTOCORE_WORKER_COUNT;
+}
+
+#if PROTOCORE_WORKER_COUNT != 1
+int protocore_worker_self(void)
+{
+    const uintptr_t me = protocore_platform_context_id();
+    for (int i = 0; i < s_bound; i++)
+    {
+        if (s_ctx[i] == me)
+        {
+            return s_ctx_worker[i];
+        }
+    }
+    return 0;
+}
+#endif
+
+void protocore_worker_set_self(int id)
+{
+    const uintptr_t me = protocore_platform_context_id();
+    for (int i = 0; i < s_bound; i++)
+    {
+        if (s_ctx[i] == me)
+        {
+            s_ctx_worker[i] = id; // this context rebinding itself
+            return;
+        }
+    }
+    if (s_bound < PROTOCORE_WORKER_BINDINGS)
+    {
+        s_ctx[s_bound] = me;
+        s_ctx_worker[s_bound] = id;
+        s_bound++;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Cellblocks
+// ---------------------------------------------------------------------------
+
+// A cellblock is a power of two, and the arena sizes are sums of what the enabled modules declare,
+// so the ghost's pools are each sum rounded up to the next power of two. Smeared on an enum name
+// rather than on the sum itself, so the expression is 32 copies of one identifier.
+enum
+{
+    GHOST_PLAIN_WANT = PROTOCORE_PLAINTEXT_ARENA_SIZE,
+    GHOST_SECURE_WANT = PROTOCORE_SECURE_ARENA_SIZE,
+};
+#define WORKER_SMEAR1(x) ((x) | ((x) >> 1))
+#define WORKER_SMEAR2(x) (WORKER_SMEAR1(x) | (WORKER_SMEAR1(x) >> 2))
+#define WORKER_SMEAR4(x) (WORKER_SMEAR2(x) | (WORKER_SMEAR2(x) >> 4))
+#define WORKER_SMEAR8(x) (WORKER_SMEAR4(x) | (WORKER_SMEAR4(x) >> 8))
+#define WORKER_SMEAR16(x) (WORKER_SMEAR8(x) | (WORKER_SMEAR8(x) >> 16))
+#define WORKER_POW2_UP(n) (WORKER_SMEAR16((unsigned long)(n) - 1u) + 1u)
+
+// The ghost slot's pools: the library's own, borrowed from by every context no worker slot covers.
+ParsMemoriaeInternae(ghost_plain, WORKER_POW2_UP(GHOST_PLAIN_WANT));
+ParsMemoriaeInternae(ghost_secure, WORKER_POW2_UP(GHOST_SECURE_WANT));
+LocusCarcerum(ghost_site, MMGR_MINIMUM_SECURITY(ghost_plain), MMGR_MAXIMUM_SECURITY(ghost_secure));
+
+// What each worker slot borrows through. NULL is the ghost's.
+static const MinimumSecurityGuard *s_plain[PROTOCORE_WORKER_COUNT];
+static const MaximumSecurityGuard *s_secure[PROTOCORE_WORKER_COUNT];
+
+void protocore_cellblocks_bind(int worker, const MinimumSecurityGuard *plain, const MaximumSecurityGuard *secure)
+{
+    if (worker < 0 || worker >= PROTOCORE_WORKER_COUNT)
+    {
+        return;
+    }
+    s_plain[worker] = plain;
+    s_secure[worker] = secure;
+}
+
+const MinimumSecurityGuard *protocore_plain_guard(void)
+{
+    const int w = protocore_worker_self();
+    if (w >= 0 && w < PROTOCORE_WORKER_COUNT && s_plain[w] != NULL)
+    {
+        return s_plain[w];
+    }
+    return &ghost_site.ghost_plain;
+}
+
+const MaximumSecurityGuard *protocore_secure_guard(void)
+{
+    const int w = protocore_worker_self();
+    if (w >= 0 && w < PROTOCORE_WORKER_COUNT && s_secure[w] != NULL)
+    {
+        return s_secure[w];
+    }
+    return &ghost_site.ghost_secure;
+}
+
+void *protocore_plain_persist(size_t n)
+{
+    void *p = protocore_plain_guard()->persistent_buf_alloc(n);
+    if (p != NULL)
+    {
+        mmgr_zero_buf(p, n);
+    }
+    return p;
+}
+
+void *protocore_secure_persist(size_t n)
+{
+    void *p = protocore_secure_guard()->persistent_buf_alloc(n);
+    if (p != NULL)
+    {
+        mmgr_zero_buf(p, n);
+    }
+    return p;
+}
 
 // ---------------------------------------------------------------------------
 // Worker tasks
@@ -73,7 +211,7 @@ uint8_t *protocore_worker_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_WORKER_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_WORKER_BORROW);
     }
     return s_own.span;
 }

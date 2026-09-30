@@ -16,8 +16,8 @@
 
 #include "services/iot/amqp/amqp.h"
 
-#include "mmgr/endian/endian.h"     // endian.wr16be / rd32be: the network byte order of sec 4.2.5.1
-#include "mmgr/protomem/protomem.h" // mem.cpy: the payload spans a frame carries
+#include "endian/endian.h"                 // magna_extremitas.wr / rd32be: the network byte order of sec 4.2.5.1
+#include "memoria_operor/memoria_operor.h" // memor.cpy: the payload spans a frame carries
 
 PROTOCORE_BEGIN_DECLS
 
@@ -26,8 +26,8 @@ static size_t write_frame_header(uint8_t *buf, uint8_t type, uint16_t channel, u
 {
     size_t p = 0;
     buf[p++] = type;
-    p += endian.wr16be(buf + p, channel);
-    p += endian.wr32be(buf + p, size);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = channel, .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = size, .width = MMGR_ENDIAN_32);
     return p;
 }
 
@@ -42,7 +42,7 @@ void protocore_amqp_protocol_header(uint8_t *work)
     {
         return;
     }
-    mem.cpy(AmqpV.out.buf, hdr, sizeof(hdr));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = AmqpV.out.buf, .src = hdr, .bytes = sizeof(hdr));
     AmqpV.n = sizeof(hdr);
     AmqpV.ok = PROTO_TRUE;
 }
@@ -68,7 +68,7 @@ void protocore_amqp_build_frame(uint8_t *work)
     size_t p = write_frame_header(buf, AmqpV.frame.type, AmqpV.frame.channel, (uint32_t)payload_len);
     if (payload_len)
     {
-        mem.cpy(buf + p, AmqpV.payload.data, payload_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = AmqpV.payload.data, .bytes = payload_len);
         p += payload_len;
     }
     buf[p++] = AMQP_FRAME_END;
@@ -96,11 +96,13 @@ void protocore_amqp_build_method(uint8_t *work)
         return;
     }
     size_t p = write_frame_header(buf, AMQP_FRAME_METHOD, AmqpV.frame.channel, (uint32_t)payload_len);
-    p += endian.wr16be(buf + p, AmqpV.method.class_id);
-    p += endian.wr16be(buf + p, AmqpV.method.method_id);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = AmqpV.method.class_id,
+                    .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = AmqpV.method.method_id,
+                    .width = MMGR_ENDIAN_16);
     if (args_len)
     {
-        mem.cpy(buf + p, AmqpV.method.args, args_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = AmqpV.method.args, .bytes = args_len);
         p += args_len;
     }
     buf[p++] = AMQP_FRAME_END;
@@ -128,13 +130,16 @@ void protocore_amqp_build_content_header(uint8_t *work)
         return;
     }
     size_t p = write_frame_header(buf, AMQP_FRAME_HEADER, AmqpV.frame.channel, (uint32_t)payload_len);
-    p += endian.wr16be(buf + p, AmqpV.content.class_id);
-    p += endian.wr16be(buf + p, 0);
-    p += endian.wr64be(buf + p, AmqpV.content.body_size);
-    p += endian.wr16be(buf + p, AmqpV.content.property_flags);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = AmqpV.content.class_id,
+                    .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = 0, .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = AmqpV.content.body_size,
+                    .width = MMGR_ENDIAN_64);
+    p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = AmqpV.content.property_flags,
+                    .width = MMGR_ENDIAN_16);
     if (list_len)
     {
-        mem.cpy(buf + p, AmqpV.content.property_list, list_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = AmqpV.content.property_list, .bytes = list_len);
         p += list_len;
     }
     buf[p++] = AMQP_FRAME_END;
@@ -172,7 +177,7 @@ void protocore_amqp_parse_frame(uint8_t *work)
     {
         return;
     }
-    uint32_t size = endian.rd32be(buf + 3);
+    uint32_t size = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 3, .width = MMGR_ENDIAN_32);
     // Compared against the remaining capacity without adding, so a 32-bit size_t cannot wrap
     // computing 8 + size and let a peer-controlled size past the bound.
     if (size > len - AMQP_FRAME_OVERHEAD)
@@ -184,7 +189,7 @@ void protocore_amqp_parse_frame(uint8_t *work)
         return; // missing or corrupt frame-end
     }
     AmqpV.frame.type = buf[0];
-    AmqpV.frame.channel = endian.rd16be(buf + 1);
+    AmqpV.frame.channel = (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 1, .width = MMGR_ENDIAN_16);
     AmqpV.payload.data = buf + 7;
     AmqpV.payload.len = size;
     AmqpV.consumed = AMQP_FRAME_OVERHEAD + (size_t)size;
@@ -202,8 +207,10 @@ void protocore_amqp_parse_method(uint8_t *work)
     {
         return;
     }
-    AmqpV.method.class_id = endian.rd16be(payload);
-    AmqpV.method.method_id = endian.rd16be(payload + 2);
+    AmqpV.method.class_id =
+        (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = payload, .width = MMGR_ENDIAN_16);
+    AmqpV.method.method_id =
+        (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = payload + 2, .width = MMGR_ENDIAN_16);
     AmqpV.method.args = payload + 4;
     AmqpV.method.args_len = payload_len - 4;
     AmqpV.ok = PROTO_TRUE;

@@ -5,7 +5,7 @@ protocore_add_module(server/peripherals/ldc1614
   GATE PROTOCORE_ENABLE_LDC1614
   SOURCES ldc1614.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/secure
+    mmgr
+    server/core/worker
     server/peripherals/i2c
 )

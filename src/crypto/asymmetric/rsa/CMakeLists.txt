@@ -10,5 +10,5 @@ protocore_add_module(crypto/asymmetric/rsa
     crypto/ct_eq
     crypto/hash/sha256
     crypto/hash/sha512
-    mmgr/protomem
+    mmgr
 )

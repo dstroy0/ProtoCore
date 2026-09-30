@@ -12,12 +12,12 @@
  */
 
 #include "services/iot/protobuf/protobuf.h"
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 
 #if PROTOCORE_ENABLE_PROTOBUF
 
-#include "mmgr/protomem/protomem.h" // mem.cpy: the payload octets and the float bit patterns
-#include "mmgr/protostr/protostr.h" // str.len: the bounded length of a NUL-terminated LEN payload
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the bounded length of a NUL-terminated LEN payload
+#include "memoria_operor/memoria_operor.h"       // memor.cpy: the payload octets and the float bit patterns
 
 PROTOCORE_BEGIN_DECLS
 
@@ -107,7 +107,7 @@ static proto_bool writer_varint(uint8_t *work, uint64_t v)
         w->error = PROTO_TRUE;
         return PROTO_FALSE;
     }
-    mem.cpy(w->buf + w->pos, tmp, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->buf + w->pos, .src = tmp, .bytes = n);
     w->pos += n;
     return PROTO_TRUE;
 }
@@ -159,7 +159,7 @@ static proto_bool writer_len(uint8_t *work, const uint8_t *data, size_t len)
         w->error = PROTO_TRUE;
         return PROTO_FALSE;
     }
-    mem.cpy(w->buf + w->pos, data, len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->buf + w->pos, .src = data, .bytes = len);
     w->pos += len;
     return PROTO_TRUE;
 }
@@ -228,7 +228,7 @@ uint8_t *protocore_protobuf_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_PROTOBUF_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_PROTOBUF_BORROW);
     }
     return s_own.span;
 }
@@ -305,7 +305,7 @@ void protocore_protobuf_write_float(uint8_t *work)
 {
     uint32_t bits = 0;
     const float v = ProtobufV.value.f32;
-    mem.cpy(&bits, &v, 4);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &bits, .src = &v, .bytes = 4);
     ProtobufV.ok = writer_tag(work, PROTOCORE_PROTOBUF_WT_I32) && writer_le(work, (uint64_t)bits, 4);
 }
 
@@ -314,7 +314,7 @@ void protocore_protobuf_write_double(uint8_t *work)
 {
     uint64_t bits = 0;
     const double v = ProtobufV.value.f64;
-    mem.cpy(&bits, &v, 8);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &bits, .src = &v, .bytes = 8);
     ProtobufV.ok = writer_tag(work, PROTOCORE_PROTOBUF_WT_I64) && writer_le(work, bits, 8);
 }
 
@@ -339,7 +339,8 @@ void protocore_protobuf_write_string(uint8_t *work)
         w->error = PROTO_TRUE;
         return;
     }
-    ProtobufV.ok = writer_len(work, (const uint8_t *)s, str.len(s, w->cap + 1));
+    ProtobufV.ok =
+        writer_len(work, (const uint8_t *)s, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = w->cap + 1));
 }
 
 // Report the encoded octet count in ns->n, or 0 when any append overflowed.
@@ -472,7 +473,7 @@ void protocore_protobuf_float_bits(uint8_t *work)
     (void)work;
     const uint32_t bits = ProtobufV.value.u32;
     float f = 0.0f;
-    mem.cpy(&f, &bits, 4);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &f, .src = &bits, .bytes = 4);
     ProtobufV.f32 = f;
     ProtobufV.ok = PROTO_TRUE;
 }
@@ -483,7 +484,7 @@ void protocore_protobuf_double_bits(uint8_t *work)
     (void)work;
     const uint64_t bits = ProtobufV.value.u64;
     double d = 0.0;
-    mem.cpy(&d, &bits, 8);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &d, .src = &bits, .bytes = 8);
     ProtobufV.f64 = d;
     ProtobufV.ok = PROTO_TRUE;
 }

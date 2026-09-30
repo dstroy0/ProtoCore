@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_HOSTLINK
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/hostlink/hostlink.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -95,7 +95,7 @@ void protocore_hostlink_build(uint8_t *work)
     buf[p++] = header_code[1];
     if (text_len)
     {
-        mem.cpy(buf + p, text, text_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = text, .bytes = text_len);
         p += text_len;
     }
     HostlinkV.fcs_args.data = buf;

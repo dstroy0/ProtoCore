@@ -23,8 +23,9 @@
 #if PROTOCORE_HAS_HW_SHA
 #endif
 #include "crypto/hash/sha384/sha384.h"
-#include "mmgr/endian/endian.h" // protocore_rd64be / protocore_wr64be: the block reader and the digest writer
-#include "mmgr/protomem/protomem.h"
+#include "endian/endian.h" // magna_extremitas.rd / magna_extremitas.wr: the block reader and the digest writer
+#include "memoria_operor/memoria_operor.h"
+#include "proximus_operor/proximus_operor.h"
 
 // The one definition, both arms, private to this TU. The accelerator compresses a block; it does not
 // pad, buffer a partial block, or hold a digest a caller can keep feeding. Those are this file's, so
@@ -49,8 +50,8 @@ static_assert(SHA384_OFF_STATE + sizeof(uint64_t) * 8 <= PROTOCORE_SHA384_BORROW
               "PROTOCORE_SHA384_BORROW is short of the context, the two blocks and the state copy - "
               "raise it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(SHA384_OFF_CTX % _Alignof(Sha384Ctx) == 0,
@@ -152,22 +153,22 @@ static inline uint64_t sha384_ssig1(uint64_t x)
 // and the schedule stays sixteen words rather than eighty.
 static void sha384_block(uint64_t h[8], const uint8_t blk[PROTOCORE_SHA384_BLOCK_LEN])
 {
-    uint64_t m0 = protocore_rd64be(blk);
-    uint64_t m1 = protocore_rd64be(blk + 8);
-    uint64_t m2 = protocore_rd64be(blk + 16);
-    uint64_t m3 = protocore_rd64be(blk + 24);
-    uint64_t m4 = protocore_rd64be(blk + 32);
-    uint64_t m5 = protocore_rd64be(blk + 40);
-    uint64_t m6 = protocore_rd64be(blk + 48);
-    uint64_t m7 = protocore_rd64be(blk + 56);
-    uint64_t m8 = protocore_rd64be(blk + 64);
-    uint64_t m9 = protocore_rd64be(blk + 72);
-    uint64_t m10 = protocore_rd64be(blk + 80);
-    uint64_t m11 = protocore_rd64be(blk + 88);
-    uint64_t m12 = protocore_rd64be(blk + 96);
-    uint64_t m13 = protocore_rd64be(blk + 104);
-    uint64_t m14 = protocore_rd64be(blk + 112);
-    uint64_t m15 = protocore_rd64be(blk + 120);
+    uint64_t m0 = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk, .width = MMGR_ENDIAN_64);
+    uint64_t m1 = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 8, .width = MMGR_ENDIAN_64);
+    uint64_t m2 = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 16, .width = MMGR_ENDIAN_64);
+    uint64_t m3 = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 24, .width = MMGR_ENDIAN_64);
+    uint64_t m4 = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 32, .width = MMGR_ENDIAN_64);
+    uint64_t m5 = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 40, .width = MMGR_ENDIAN_64);
+    uint64_t m6 = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 48, .width = MMGR_ENDIAN_64);
+    uint64_t m7 = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 56, .width = MMGR_ENDIAN_64);
+    uint64_t m8 = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 64, .width = MMGR_ENDIAN_64);
+    uint64_t m9 = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 72, .width = MMGR_ENDIAN_64);
+    uint64_t m10 = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 80, .width = MMGR_ENDIAN_64);
+    uint64_t m11 = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 88, .width = MMGR_ENDIAN_64);
+    uint64_t m12 = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 96, .width = MMGR_ENDIAN_64);
+    uint64_t m13 = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 104, .width = MMGR_ENDIAN_64);
+    uint64_t m14 = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 112, .width = MMGR_ENDIAN_64);
+    uint64_t m15 = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 120, .width = MMGR_ENDIAN_64);
 
     uint64_t v0 = h[0];
     uint64_t v1 = h[1];
@@ -326,7 +327,7 @@ static void sha384_absorb(uint8_t *work, const uint8_t *data, size_t len)
         }
         // rx + rxlen carries no alignment, so this is the raw mover, not the aligned-span one.
         uint8_t *fill = rx + ctx->rxlen;
-        proto_raw_read(fill, data, take);
+        EMBED_CALL(proxim.read, ProximusCfg, .dst = fill, .at = data, .size = take);
         ctx->rxlen += take;
         data += take;
         len -= take;
@@ -352,12 +353,12 @@ static void sha384_finish(uint8_t *work, uint8_t digest[PROTOCORE_SHA384_DIGEST_
 
     // The padded blocks compress into a copy of the state, so s, rx, rxlen and n all come out of this
     // untouched and the hash can keep taking data afterwards.
-    mem.cpy(fs, ctx->s, sizeof(ctx->s));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = fs, .src = ctx->s, .bytes = sizeof(ctx->s));
 
     // The last block is composed in tx, whole: what rx holds, the mark, zeros, and the length. rx is
     // read and never written back, so nothing it still carries from an earlier block reaches the wire.
-    mem.zero(tx, PROTOCORE_SHA384_BLOCK_LEN);
-    mem.cpy(tx, rx, ctx->rxlen);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = tx, .val = 0, .bytes = PROTOCORE_SHA384_BLOCK_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = tx, .src = rx, .bytes = ctx->rxlen);
     tx[ctx->rxlen] = 0x80;
 
     // The 128-bit length occupies the block's last 16 bytes, so a mark at or past that offset takes
@@ -365,21 +366,21 @@ static void sha384_finish(uint8_t *work, uint8_t digest[PROTOCORE_SHA384_DIGEST_
     if (ctx->rxlen >= SHA384_LEN_OFF)
     {
         sha384_block(fs, tx);
-        mem.zero(tx, PROTOCORE_SHA384_BLOCK_LEN);
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = tx, .val = 0, .bytes = PROTOCORE_SHA384_BLOCK_LEN);
     }
 
-    protocore_wr64be(tx + SHA384_LEN_OFF, len_hi);
-    protocore_wr64be(tx + SHA384_LEN_OFF + 8, len_lo);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = tx + SHA384_LEN_OFF, .val = len_hi, .width = MMGR_ENDIAN_64);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = tx + SHA384_LEN_OFF + 8, .val = len_lo, .width = MMGR_ENDIAN_64);
     sha384_block(fs, tx);
 
     // The digest is the first six of the eight state words (RFC 6234 sec 6.4); fs[6] and fs[7] stay in
     // the state copy and never reach the caller.
-    protocore_wr64be(digest, fs[0]);
-    protocore_wr64be(digest + 8, fs[1]);
-    protocore_wr64be(digest + 16, fs[2]);
-    protocore_wr64be(digest + 24, fs[3]);
-    protocore_wr64be(digest + 32, fs[4]);
-    protocore_wr64be(digest + 40, fs[5]);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = digest, .val = fs[0], .width = MMGR_ENDIAN_64);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = digest + 8, .val = fs[1], .width = MMGR_ENDIAN_64);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = digest + 16, .val = fs[2], .width = MMGR_ENDIAN_64);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = digest + 24, .val = fs[3], .width = MMGR_ENDIAN_64);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = digest + 32, .val = fs[4], .width = MMGR_ENDIAN_64);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = digest + 40, .val = fs[5], .width = MMGR_ENDIAN_64);
 }
 
 // --- the entries -----------------------------------------------------------

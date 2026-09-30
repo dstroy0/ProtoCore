@@ -5,8 +5,6 @@ protocore_add_module(server/signaling/gpio_map
   GATE PROTOCORE_ENABLE_GPIO_MAP
   SOURCES gpio_map.c
   PRIVATE_DEPS
-    mmgr/protoframe
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
     server/clock
 )

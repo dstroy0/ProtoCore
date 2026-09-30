@@ -20,7 +20,7 @@
 
 #if PROTOCORE_ENABLE_DEFLATE_RFC1951
 
-#include "mmgr/bitio/bitio.h" // protocore_bit_writer - what the emitters write through
+#include "bitorum_introitus_exitus/bitorum_introitus_exitus.h" // mmgr_bitor - what the emitters write through
 
 PROTOCORE_BEGIN_DECLS
 
@@ -47,7 +47,7 @@ typedef struct
 /** @brief What emit_literal takes: the writer, the lit/length code tables, and the byte. */
 typedef struct
 {
-    protocore_bit_writer *w; ///< the bit writer the code goes out through
+    mmgr_bitor *w;           ///< the bit writer the code goes out through
     const uint16_t *ll_code; ///< 288 entries, from build_fixed
     const uint8_t *ll_len;   ///< 288 entries, from build_fixed
     uint8_t b;               ///< the literal byte
@@ -56,7 +56,7 @@ typedef struct
 /** @brief What emit_match takes: the writer, all four code tables, and the back-reference. */
 typedef struct
 {
-    protocore_bit_writer *w; ///< the bit writer the codes go out through
+    mmgr_bitor *w;           ///< the bit writer the codes go out through
     const uint16_t *ll_code; ///< 288 entries, from build_fixed
     const uint8_t *ll_len;   ///< 288 entries, from build_fixed
     const uint16_t *d_code;  ///< 30 entries, from build_fixed

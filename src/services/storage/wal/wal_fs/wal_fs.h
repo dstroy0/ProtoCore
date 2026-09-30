@@ -40,7 +40,7 @@
 
 PROTOCORE_BEGIN_DECLS
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "server/storage/mnt/mnt.h" // protocore_mnt_backend - the store the log lives on
 #include "services/storage/wal/wal_store/wal_store.h"
 
@@ -99,7 +99,7 @@ PROTOCORE_INLINE proto_bool protocore_wal_fs_prealloc(const protocore_mnt_backen
         return PROTO_FALSE;
     }
     uint8_t z[256];
-    mem.set(z, 0, sizeof z);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = z, .val = 0, .bytes = sizeof z);
     uint64_t left = size;
     proto_bool ok = PROTO_TRUE;
     while (left)

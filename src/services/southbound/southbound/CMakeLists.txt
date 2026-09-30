@@ -5,6 +5,6 @@ protocore_add_module(services/southbound/southbound
   GATE PROTOCORE_ENABLE_SOUTHBOUND
   SOURCES southbound.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protostr
+    mmgr
+    server/core/worker
 )

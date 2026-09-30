@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_MMS
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/energy/mms/mms.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -75,7 +75,8 @@ static size_t tlv(uint8_t tag, const uint8_t *val, size_t val_len, uint8_t *out,
     // path (it assumes val_len >= cap - k, e.g. 5 >= 254) that the n <= cap guard rules out.
     if (n > k)
     {
-        mem.cpy(out + k, val, n - k); // NOSONAR - see above: bound proven, analyzer follows an infeasible path
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + k, .src = val,
+                   .bytes = n - k); // NOSONAR - see above: bound proven, analyzer follows an infeasible path
     }
     return n;
 }
@@ -146,7 +147,7 @@ size_t protocore_mms_read_request(uint32_t invoke_id, const char *item_name, uin
     {
         return 0;
     }
-    size_t name_len = str.len(item_name, 128 + 1);
+    size_t name_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = item_name, .cap = 128 + 1);
     if (name_len > 128)
     {
         return 0;
@@ -202,7 +203,7 @@ size_t protocore_mms_read_request(uint32_t invoke_id, const char *item_name, uin
     {
         return 0;
     }
-    mem.cpy(body + bn, a0, n); // append the A4 read
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = body + bn, .src = a0, .bytes = n); // append the A4 read
     bn += n;
     return tlv(MMS_PDU_CONFIRMED_REQUEST, body, bn, out, cap);
 }
@@ -239,7 +240,7 @@ size_t protocore_mms_read_response(uint32_t invoke_id, const uint8_t *data, size
     {
         return 0;
     }
-    mem.cpy(body + bn, svc, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = body + bn, .src = svc, .bytes = n);
     bn += n;
     return tlv(MMS_PDU_CONFIRMED_RESPONSE, body, bn, out, cap);
 }

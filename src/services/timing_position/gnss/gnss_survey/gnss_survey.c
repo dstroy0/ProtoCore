@@ -10,13 +10,13 @@
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/timing_position/gnss/gnss_survey/gnss_survey.h"
 
 PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_NMEA0183
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
 #include "services/timing_position/nmea0183/nmea0183.h"
 #endif
 #include <math.h>
@@ -77,7 +77,7 @@ int64_t protocore_gnss_ecef_m_to_01mm(double metres)
 
 void protocore_gnss_survey_reset(GnssSurvey *s)
 {
-    mem.set(s, 0, sizeof(*s));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = s, .val = 0, .bytes = sizeof(*s));
 }
 
 void protocore_gnss_survey_add_ecef(GnssSurvey *s, const GnssEcef *e)
@@ -173,7 +173,7 @@ static proto_bool dm_to_deg(const char *field, uint8_t len, double *out)
         return PROTO_FALSE;
     }
     const char *end = field;
-    double dm = str.to_double(field, &end);
+    double dm = EMBED_CALL(cellul.to_double, TransfiguroCfg, .src = field, .end = &end);
     if (end == field)
     {
         return PROTO_FALSE;

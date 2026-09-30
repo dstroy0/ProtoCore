@@ -4003,7 +4003,7 @@
 //     significant barrier against heap/BSS spray attacks.
 //   - The DH ephemeral private scalar y lives in ssh_dh[].y and is zeroed
 //     immediately after the shared secret K is derived.
-//   - crypto_work[] is zeroed via protocore_secure_wipe() after every use so that
+//   - crypto_work[] is zeroed via mmgr_zero_buf() after every use so that
 //     bignum intermediates (including partial products that contain key
 //     material) do not persist in memory.
 

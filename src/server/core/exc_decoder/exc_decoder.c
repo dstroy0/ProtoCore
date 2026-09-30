@@ -10,10 +10,10 @@
 
 #if PROTOCORE_ENABLE_EXC_DECODER
 
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
-#include "mmgr/protostr/protostr.h" // str.find: each field's marker inside the panic dump
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.find: each field's marker inside the panic dump
 #include "server/core/exc_decoder/exc_decoder.h"
-#include "shared/hex/hex.h" // PROTOCORE_HEX: the shared digit tables
+#include "shared/hex/hex.h"            // PROTOCORE_HEX: the shared digit tables
+#include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
 PROTOCORE_BEGIN_DECLS
 
@@ -72,41 +72,37 @@ static const char *parse_hex(const char *p, uint32_t *out)
     return p;
 }
 
-static void put_json_str(protocore_sb *b, const char *s)
+static size_t put_json_str(char *out, size_t cap, size_t at, const char *s)
 {
-    Sb.put(b, "\"");
+    at = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = "\"");
     const char *src = s ? s : "";
     for (const char *p = src; *p; p++)
     {
         if (*p == '"' || *p == '\\')
         {
             char esc[3] = {'\\', *p, '\0'};
-            Sb.put(b, esc);
-        }
-        else if (b->len + 1 < b->cap)
-        {
-            b->p[b->len++] = *p;
+            at = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = esc);
         }
         else
         {
-            b->ok = PROTO_FALSE;
+            at = EMBED_CALL(verba_littera.ch, VerbaLitteraCfg, .out = out, .cap = cap, .at = at, .ch = *p);
         }
     }
-    Sb.put(b, "\"");
+    return EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = "\"");
 }
 
 // Emit a 32-bit value as a JSON string literal "0x........".
-static void put_hex32(protocore_sb *b, uint32_t v)
+static size_t put_hex32(char *out, size_t cap, size_t at, uint32_t v)
 {
     char t[13] = "\"0x00000000\"";
     for (int i = 0; i < 8; i++)
     {
         t[3 + i] = PROTOCORE_HEX.lower[(v >> ((7 - i) * 4)) & 0xF];
     }
-    Sb.put(b, t);
+    return EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = t);
 }
 
-static void put_int(protocore_sb *b, int v)
+static size_t put_int(char *out, size_t cap, size_t at, int v)
 {
     char t[12];
     int n = 0;
@@ -128,7 +124,7 @@ static void put_int(protocore_sb *b, int v)
         o[k++] = t[n - 1 - i];
     }
     o[k] = '\0';
-    Sb.put(b, o);
+    return EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = o);
 }
 
 // Parse a run of decimal digits at @p p into a small non-negative int, clamped to avoid signed-overflow
@@ -150,7 +146,9 @@ static int parse_small_int(const char *p)
 // Cause: "...panic'ed (LoadProhibited)."
 static void parse_cause(const char *text, ExcInfo *out)
 {
-    const char *c = str.find(text, str.len(text, 0xFFFF) + 1u, "panic'ed (", sizeof("panic'ed ("), PROTO_FALSE);
+    const char *c = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = text,
+                               .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = text, .cap = 0xFFFF) + 1u,
+                               .other = "panic'ed (", .other_cap = sizeof("panic'ed ("), .ci = PROTO_FALSE);
     if (!c)
     {
         return;
@@ -168,7 +166,9 @@ static void parse_cause(const char *text, ExcInfo *out)
 // Core number: "Core  N ...".
 static void parse_core(const char *text, ExcInfo *out)
 {
-    const char *co = str.find(text, str.len(text, 0xFFFF) + 1u, "Core ", sizeof("Core "), PROTO_FALSE);
+    const char *co = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = text,
+                                .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = text, .cap = 0xFFFF) + 1u,
+                                .other = "Core ", .other_cap = sizeof("Core "), .ci = PROTO_FALSE);
     if (!co)
     {
         return;
@@ -183,12 +183,16 @@ static void parse_core(const char *text, ExcInfo *out)
 // EXCVADDR (faulting data address).
 static void parse_excvaddr(const char *text, ExcInfo *out)
 {
-    const char *e = str.find(text, str.len(text, 0xFFFF) + 1u, "EXCVADDR", sizeof("EXCVADDR"), PROTO_FALSE);
+    const char *e = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = text,
+                               .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = text, .cap = 0xFFFF) + 1u,
+                               .other = "EXCVADDR", .other_cap = sizeof("EXCVADDR"), .ci = PROTO_FALSE);
     if (!e)
     {
         return;
     }
-    const char *colon = str.find(e, str.len(e, 0xFFFF) + 1u, ":", sizeof(":"), PROTO_FALSE);
+    const char *colon = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = e,
+                                   .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = e, .cap = 0xFFFF) + 1u,
+                                   .other = ":", .other_cap = sizeof(":"), .ci = PROTO_FALSE);
     if (!colon)
     {
         return;
@@ -204,14 +208,19 @@ static void parse_excvaddr(const char *text, ExcInfo *out)
 // Register-dump PC: a line that starts with "PC" (not "EPC..."). Anchor to a line break.
 static void parse_pc(const char *text, ExcInfo *out)
 {
-    const char *pcl = str.starts(text, "PC", 2, PROTO_FALSE)
-                          ? text
-                          : str.find(text, str.len(text, 0xFFFF) + 1u, "\nPC", sizeof("\nPC"), PROTO_FALSE);
+    const char *pcl =
+        EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = text, .other = "PC", .cap = 2, .ci = PROTO_FALSE)
+            ? text
+            : EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = text,
+                         .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = text, .cap = 0xFFFF) + 1u,
+                         .other = "\nPC", .other_cap = sizeof("\nPC"), .ci = PROTO_FALSE);
     if (!pcl)
     {
         return;
     }
-    const char *colon = str.find(pcl, str.len(pcl, 0xFFFF) + 1u, ":", sizeof(":"), PROTO_FALSE);
+    const char *colon = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = pcl,
+                                   .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = pcl, .cap = 0xFFFF) + 1u,
+                                   .other = ":", .other_cap = sizeof(":"), .ci = PROTO_FALSE);
     if (!colon)
     {
         return;
@@ -226,7 +235,9 @@ static void parse_pc(const char *text, ExcInfo *out)
 // Backtrace: "Backtrace: pc:sp pc:sp ...".
 static void parse_backtrace(const char *text, ExcInfo *out)
 {
-    const char *bt = str.find(text, str.len(text, 0xFFFF) + 1u, "Backtrace:", sizeof("Backtrace:"), PROTO_FALSE);
+    const char *bt = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = text,
+                                .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = text, .cap = 0xFFFF) + 1u,
+                                .other = "Backtrace:", .other_cap = sizeof("Backtrace:"), .ci = PROTO_FALSE);
     if (!bt)
     {
         return;
@@ -298,46 +309,46 @@ void protocore_exc_json(uint8_t *work)
         ExcV.n = 0;
         return;
     }
-    protocore_sb b = {out, cap, 0, PROTO_TRUE};
-    Sb.put(&b, "{");
+    size_t b = 0;
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "{");
     proto_bool first = PROTO_TRUE;
     if (info->core >= 0)
     {
-        Sb.put(&b, "\"core\":");
-        put_int(&b, info->core);
+        b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "\"core\":");
+        b = put_int(out, cap, b, info->core);
         first = PROTO_FALSE;
     }
     if (!first)
     {
-        Sb.put(&b, ",");
+        b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = ",");
     }
-    Sb.put(&b, "\"cause\":");
-    put_json_str(&b, info->cause);
-    Sb.put(&b, ",\"pc\":");
-    put_hex32(&b, info->pc);
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "\"cause\":");
+    b = put_json_str(out, cap, b, info->cause);
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = ",\"pc\":");
+    b = put_hex32(out, cap, b, info->pc);
     if (info->has_excvaddr)
     {
-        Sb.put(&b, ",\"excvaddr\":");
-        put_hex32(&b, info->excvaddr);
+        b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = ",\"excvaddr\":");
+        b = put_hex32(out, cap, b, info->excvaddr);
     }
-    Sb.put(&b, ",\"backtrace\":[");
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = ",\"backtrace\":[");
     for (size_t i = 0; i < info->frame_count; i++)
     {
         if (i)
         {
-            Sb.put(&b, ",");
+            b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = ",");
         }
-        put_hex32(&b, info->frames[i].pc);
+        b = put_hex32(out, cap, b, info->frames[i].pc);
     }
-    Sb.put(&b, "]}");
-    if (!b.ok)
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "]}");
+    if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .cap = cap, .at = b))
     {
         out[0] = '\0';
         ExcV.n = 0;
         return;
     }
-    out[b.len] = '\0';
-    ExcV.n = b.len;
+    out[b] = '\0';
+    ExcV.n = b;
 }
 
 #if PROTOCORE_HAS_VENDOR_COREDUMP

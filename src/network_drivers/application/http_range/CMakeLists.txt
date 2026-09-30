@@ -5,5 +5,5 @@ protocore_add_module(network_drivers/application/http_range
   GATE PROTOCORE_ENABLE_RANGE
   SOURCES http_range.c
   PRIVATE_DEPS
-    mmgr/protostr
+    mmgr
 )

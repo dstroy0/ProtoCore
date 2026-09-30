@@ -21,10 +21,10 @@
 
 #if PROTOCORE_ENABLE_WS_DEFLATE
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/codec/deflate/deflate/deflate.h"
 
-#include "mmgr/bitio/bitio.h"
+#include "bitorum_introitus_exitus/bitorum_introitus_exitus.h"
 #include "network_drivers/presentation/codec/deflate/rfc1951/rfc1951.h" // RFC1951: the sec 3.2.5 tables
 
 #define PROTOCORE_MIN_MATCH 3   // shortest LZ77 back-reference
@@ -79,18 +79,12 @@ DeflateResult protocore_deflate_raw(uint8_t *work, const uint8_t *src, size_t sr
         t->head[i] = PROTOCORE_NONE;
     }
 
-    protocore_bit_writer w;
-    w.out = dst;
-    w.cap = dst_cap;
-    w.cnt = 0;
-    w.acc = 0;
-    w.nbits = 0;
-    w.overflow = PROTO_FALSE;
+    mmgr_bitor w = EMBED_CALL(bitio.init, BitorumCfg, .out = dst, .cap = dst_cap);
 
     // One fixed-Huffman block, not final (permessage-deflate streams never set
     // BFINAL): BFINAL=0 (1 bit), BTYPE=01 (2 bits, value 1).
-    bitw.put(&w, 0, 1);
-    bitw.put(&w, 1, 2);
+    EMBED_CALL(bitio.put, BitorumCfg, .writer = &w, .val = 0, .bit_count = 1);
+    EMBED_CALL(bitio.put, BitorumCfg, .writer = &w, .val = 1, .bit_count = 2);
 
     size_t i = 0;
     while (i < src_len)
@@ -178,26 +172,22 @@ DeflateResult protocore_deflate_raw(uint8_t *work, const uint8_t *src, size_t sr
     // End-of-block, then a sync flush: byte-align via an empty stored block and
     // drop its 0x00 0x00 0xff 0xff tail (RFC 7692 sec 7.2.1), leaving a ready
     // permessage-deflate payload.
-    bitw.put(&w, t->ll_code[256], t->ll_len[256]); // end-of-block symbol
-    bitw.put(&w, 0, 1);                            // BFINAL=0 (empty stored block)
-    bitw.put(&w, 0, 2);                            // BTYPE=00 (stored)
-    bitw.align(&w);
+    // end-of-block symbol
+    EMBED_CALL(bitio.put, BitorumCfg, .writer = &w, .val = t->ll_code[256], .bit_count = t->ll_len[256]);
+    EMBED_CALL(bitio.put, BitorumCfg, .writer = &w, .val = 0, .bit_count = 1); // BFINAL=0 (empty stored block)
+    EMBED_CALL(bitio.put, BitorumCfg, .writer = &w, .val = 0, .bit_count = 2); // BTYPE=00 (stored)
+    EMBED_CALL(bitio.align, BitorumCfg, .writer = &w);
     static const uint8_t marker[4] = {0x00, 0x00, 0xff, 0xff};
     for (int k = 0; k < 4; k++)
     {
-        if (w.cnt >= w.cap)
-        {
-            w.overflow = PROTO_TRUE;
-            break;
-        }
-        w.out[w.cnt++] = marker[k];
+        EMBED_CALL(bitio.put, BitorumCfg, .writer = &w, .val = marker[k], .bit_count = 8);
     }
 
     if (w.overflow)
     {
         return DEFLATE_ERR_OVERFLOW;
     }
-    *out_len = w.cnt - 4; // strip the marker for the on-wire payload
+    *out_len = w.bytes_written - 4; // strip the marker for the on-wire payload
     return DEFLATE_OK;
 }
 

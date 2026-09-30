@@ -7,6 +7,6 @@ protocore_add_module(network_drivers/presentation/http/route/http_route
   DEPS
     network_drivers/presentation/http
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/secure
+    mmgr
+    server/core/worker
 )

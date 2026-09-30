@@ -5,7 +5,6 @@ protocore_add_module(services/radio/ble_gatt
   GATE PROTOCORE_ENABLE_BLE_GATT
   SOURCES ble_gatt.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/protomem
+    mmgr
     shared/hex
 )

@@ -7,8 +7,9 @@
  */
 
 #include "network_drivers/presentation/ssh/app/server/server.h"
-#include "mmgr/bytes/bytes.h"
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
+#include "octetus_introitus_exitus/octetus_introitus_exitus.h" // byteio.rd_str: the RFC 4251 sec 5 string reader
+#include "spatium/spatium.h"                                   // spat.cfrom: the request payload as a read span
 
 #if PROTOCORE_ENABLE_SSH_SFTP || PROTOCORE_ENABLE_SSH_SCP
 // A subsystem/exec CHANNEL_REQUEST may name a file-transfer service (SFTP or SCP). Tag @p c and fire the
@@ -22,20 +23,22 @@ void protocore_ssh_app_server_classify(uint8_t *work)
     const uint32_t channel = SshAppServerV.channel;
     const uint8_t *rtype = SshAppServerV.req.rtype;
     const uint32_t rtype_len = SshAppServerV.req.rtype_len;
-    const uint8_t *payload = SshAppServerV.req.payload;
-    const size_t len = SshAppServerV.req.len;
-    size_t *off = &SshAppServerV.req.off;
+    // The request payload, read from the request-specific argument on; its cursor is handed back below.
+    mmgr_cspan req =
+        EMBED_CALL(spat.cfrom, SpatiumCfg, .cbuf = SshAppServerV.req.payload, .cap = SshAppServerV.req.len);
+    req.pos = SshAppServerV.req.off;
     proto_bool *accept = &SshAppServerV.accept;
 #if !PROTOCORE_ENABLE_SSH_SFTP
     (void)accept; // only the SFTP subsystem path flips acceptance; scp exec is already accepted
 #endif
 #if PROTOCORE_ENABLE_SSH_SFTP
     // subsystem "sftp": not in the base accept set, so accept it here and tag the channel for the SFTP binding.
-    if (rtype_len == 9 && mem.cmp(rtype, "subsystem", 9) == 0)
+    if (rtype_len == 9 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = rtype, .other = "subsystem", .bytes = 9) == 0)
     {
         const uint8_t *arg = NULL;
-        uint32_t arg_len = 0;
-        if (bytes.rd_str(payload, len, off, &arg, &arg_len) && arg_len == 4 && mem.cmp(arg, "sftp", 4) == 0)
+        size_t arg_len = 0;
+        if (EMBED_CALL(byteio.rd_str, OctetusCfg, .read_span = &req, .blob = &arg, .blob_bytes = &arg_len) &&
+            arg_len == 4 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = arg, .other = "sftp", .bytes = 4) == 0)
         {
             *accept = PROTO_TRUE;
             SshConnectionV.chan.slot = i;
@@ -52,11 +55,12 @@ void protocore_ssh_app_server_classify(uint8_t *work)
 #endif
 #if PROTOCORE_ENABLE_SSH_SCP
     // exec "scp …": already accepted (exec is in the base set); tag the channel + hand the command to the binding.
-    if (rtype_len == 4 && mem.cmp(rtype, "exec", 4) == 0)
+    if (rtype_len == 4 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = rtype, .other = "exec", .bytes = 4) == 0)
     {
         const uint8_t *arg = NULL;
-        uint32_t arg_len = 0;
-        if (bytes.rd_str(payload, len, off, &arg, &arg_len) && arg_len >= 4 && mem.cmp(arg, "scp ", 4) == 0)
+        size_t arg_len = 0;
+        if (EMBED_CALL(byteio.rd_str, OctetusCfg, .read_span = &req, .blob = &arg, .blob_bytes = &arg_len) &&
+            arg_len >= 4 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = arg, .other = "scp ", .bytes = 4) == 0)
         {
             SshConnectionV.chan.slot = i;
             SshConnectionV.chan.channel = channel;
@@ -70,6 +74,7 @@ void protocore_ssh_app_server_classify(uint8_t *work)
         }
     }
 #endif
+    SshAppServerV.req.off = req.pos;
 }
 
 #else

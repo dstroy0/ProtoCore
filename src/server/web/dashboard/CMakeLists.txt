@@ -5,10 +5,8 @@ protocore_add_module(server/web/dashboard
   GATE PROTOCORE_ENABLE_DASHBOARD
   SOURCES dashboard.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/protoframe
-    mmgr/protostr
-    mmgr/secure
+    mmgr
+    server/core/worker
 )
 
 add_subdirectory(dashboard_routes)

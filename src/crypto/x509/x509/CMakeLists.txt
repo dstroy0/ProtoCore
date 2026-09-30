@@ -8,6 +8,6 @@ protocore_add_module(crypto/x509/x509
   DEPS
     crypto/x509/x509_types
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
     shared/der
 )

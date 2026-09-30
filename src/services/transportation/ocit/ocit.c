@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_OCIT
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/transportation/ocit/ocit.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -35,7 +35,7 @@ size_t protocore_ocit_build(uint8_t msg_type, uint16_t object_type, uint16_t ins
     out[5] = data_type;
     if (value_len)
     {
-        mem.cpy(out + 6, value, value_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 6, .src = value, .bytes = value_len);
     }
     return n;
 }

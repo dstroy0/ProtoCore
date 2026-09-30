@@ -10,10 +10,10 @@
 
 #if PROTOCORE_ENABLE_WAL
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/storage/wal/wal_store/wal_store.h"
 
-#include "mmgr/endian/endian.h"
+#include "endian/endian.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -34,12 +34,13 @@ static proto_bool dev_write(const WalDev *d, uint64_t off, const uint8_t *buf, s
 static proto_bool write_super(WalStore *s, int ab, uint64_t gen, uint64_t head, uint64_t seq)
 {
     uint8_t sb[WAL_SUPER_SIZE];
-    mem.set(sb, 0, sizeof(sb));
-    endian.wr32le(sb + 0, WAL_SUPER_MAGIC);
-    endian.wr64le(sb + 4, gen);
-    endian.wr64le(sb + 12, head);
-    endian.wr64le(sb + 20, seq);
-    endian.wr32le(sb + 28, protocore_wal_crc32(sb, SUPER_USED));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = sb, .val = 0, .bytes = sizeof(sb));
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = sb + 0, .val = WAL_SUPER_MAGIC, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = sb + 4, .val = gen, .width = MMGR_ENDIAN_64);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = sb + 12, .val = head, .width = MMGR_ENDIAN_64);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = sb + 20, .val = seq, .width = MMGR_ENDIAN_64);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = sb + 28, .val = protocore_wal_crc32(sb, SUPER_USED),
+               .width = MMGR_ENDIAN_32);
     return dev_write(&s->dev, (uint64_t)ab * WAL_SUPER_SIZE, sb, sizeof(sb));
 }
 
@@ -51,17 +52,18 @@ static proto_bool read_super(const WalStore *s, int ab, uint64_t *gen, uint64_t 
     {
         return PROTO_FALSE;
     }
-    if (endian.rd32le(sb + 0) != WAL_SUPER_MAGIC)
+    if ((uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = sb + 0, .width = MMGR_ENDIAN_32) != WAL_SUPER_MAGIC)
     {
         return PROTO_FALSE;
     }
-    if (endian.rd32le(sb + 28) != protocore_wal_crc32(sb, SUPER_USED))
+    if ((uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = sb + 28, .width = MMGR_ENDIAN_32) !=
+        protocore_wal_crc32(sb, SUPER_USED))
     {
         return PROTO_FALSE;
     }
-    *gen = endian.rd64le(sb + 4);
-    *head = endian.rd64le(sb + 12);
-    *seq = endian.rd64le(sb + 20);
+    *gen = EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = sb + 4, .width = MMGR_ENDIAN_64);
+    *head = EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = sb + 12, .width = MMGR_ENDIAN_64);
+    *seq = EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = sb + 20, .width = MMGR_ENDIAN_64);
     // A head past the data region is corruption a matching CRC cannot happen for, but guard anyway.
     if (*head > s->data_cap)
     {
@@ -87,13 +89,14 @@ static void protocore_wal_replay_tail(WalStore *s)
         {
             break;
         }
-        if (endian.rd32le(hdr + 0) != WAL_MAGIC)
+        if ((uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = hdr + 0, .width = MMGR_ENDIAN_32) != WAL_MAGIC)
         {
             break;
         }
-        uint64_t seq = endian.rd64le(hdr + 4);
-        uint32_t plen = endian.rd32le(hdr + 12);
-        uint32_t crc_stored = endian.rd32le(hdr + 16);
+        uint64_t seq = EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = hdr + 4, .width = MMGR_ENDIAN_64);
+        uint32_t plen = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = hdr + 12, .width = MMGR_ENDIAN_32);
+        uint32_t crc_stored =
+            (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = hdr + 16, .width = MMGR_ENDIAN_32);
         if (off + (uint64_t)WAL_RECORD_HEADER + plen > s->data_cap)
         {
             break; // truncated tail
@@ -133,7 +136,7 @@ proto_bool protocore_wal_store_format(WalStore *s, const WalDev *dev)
     {
         return PROTO_FALSE;
     }
-    mem.set(s, 0, sizeof(*s));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = s, .val = 0, .bytes = sizeof(*s));
     s->dev = *dev;
     s->data_off = WAL_DATA_OFFSET;
     s->data_cap = dev->size - WAL_DATA_OFFSET;
@@ -144,7 +147,7 @@ proto_bool protocore_wal_store_format(WalStore *s, const WalDev *dev)
     s->ab = 0;
     // Invalidate copy B, then commit copy A as the live generation-1 superblock.
     uint8_t zero[WAL_SUPER_SIZE];
-    mem.set(zero, 0, sizeof(zero));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = zero, .val = 0, .bytes = sizeof(zero));
     if (!dev_write(&s->dev, (uint64_t)1 * WAL_SUPER_SIZE, zero, sizeof(zero)))
     {
         return PROTO_FALSE;
@@ -162,7 +165,7 @@ proto_bool protocore_wal_store_mount(WalStore *s, const WalDev *dev)
     {
         return PROTO_FALSE;
     }
-    mem.set(s, 0, sizeof(*s));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = s, .val = 0, .bytes = sizeof(*s));
     s->dev = *dev;
     s->data_off = WAL_DATA_OFFSET;
     s->data_cap = dev->size - WAL_DATA_OFFSET;
@@ -211,12 +214,13 @@ proto_bool protocore_wal_store_append(WalStore *s, const uint8_t *payload, uint3
     }
     // Assemble the 20-byte header (magic+seq+len+crc); CRC covers header + payload without buffering both.
     uint8_t hdr[WAL_RECORD_HEADER];
-    endian.wr32le(hdr + 0, WAL_MAGIC);
-    endian.wr64le(hdr + 4, s->next_seq);
-    endian.wr32le(hdr + 12, len);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = hdr + 0, .val = WAL_MAGIC, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = hdr + 4, .val = s->next_seq, .width = MMGR_ENDIAN_64);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = hdr + 12, .val = len, .width = MMGR_ENDIAN_32);
     uint32_t crc = protocore_wal_crc32_update(protocore_wal_crc32_init(), hdr, 16);
     crc = protocore_wal_crc32_update(crc, payload, len);
-    endian.wr32le(hdr + 16, protocore_wal_crc32_final(crc));
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = hdr + 16, .val = protocore_wal_crc32_final(crc),
+               .width = MMGR_ENDIAN_32);
 
     uint64_t at = s->data_off + s->head;
     if (!dev_write(&s->dev, at, hdr, WAL_RECORD_HEADER))
@@ -270,11 +274,12 @@ size_t protocore_wal_store_scan(WalStore *s, WalStoreRecordCb cb, void *ctx, uin
         {
             break;
         }
-        if (endian.rd32le(scratch) != WAL_MAGIC)
+        if ((uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = scratch, .width = MMGR_ENDIAN_32) != WAL_MAGIC)
         {
             break;
         }
-        uint32_t plen = endian.rd32le(scratch + 12);
+        uint32_t plen =
+            (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = scratch + 12, .width = MMGR_ENDIAN_32);
         size_t total = (size_t)WAL_RECORD_HEADER + plen;
         if (off + total > s->head || total > scratch_len)
         {
@@ -286,13 +291,15 @@ size_t protocore_wal_store_scan(WalStore *s, WalStoreRecordCb cb, void *ctx, uin
         }
         uint32_t crc = protocore_wal_crc32_update(protocore_wal_crc32_init(), scratch, 16);
         crc = protocore_wal_crc32_update(crc, scratch + WAL_RECORD_HEADER, plen);
-        if (protocore_wal_crc32_final(crc) != endian.rd32le(scratch + 16))
+        if (protocore_wal_crc32_final(crc) !=
+            (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = scratch + 16, .width = MMGR_ENDIAN_32))
         {
             break;
         }
         if (cb)
         {
-            cb(endian.rd64le(scratch + 4), off, scratch + WAL_RECORD_HEADER, plen, ctx);
+            cb(EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = scratch + 4, .width = MMGR_ENDIAN_64), off,
+               scratch + WAL_RECORD_HEADER, plen, ctx);
         }
         count++;
         off += total;

@@ -7,5 +7,5 @@ protocore_add_module(services/fieldbus/devicenet
   DEPS
     shared/can
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

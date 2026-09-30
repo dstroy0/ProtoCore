@@ -5,6 +5,5 @@ protocore_add_module(services/machine_tool/fanuc_j519
   GATE PROTOCORE_ENABLE_FANUC_J519
   SOURCES fanuc_j519.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/protomem
+    mmgr
 )

@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_SIMATIC
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "services/fieldbus/simatic/simatic.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -52,7 +52,7 @@ uint8_t *protocore_simatic_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_SIMATIC_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_SIMATIC_BORROW);
     }
     return s_own.span;
 }
@@ -159,8 +159,8 @@ static_assert(SIMATIC_OFF_CTX + sizeof(SimaticCtx) <= PROTOCORE_SIMATIC_BORROW,
               "PROTOCORE_SIMATIC_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(SIMATIC_OFF_CTX % _Alignof(SimaticCtx) == 0,
@@ -304,7 +304,7 @@ void protocore_simatic_init_3964r(uint8_t *work)
     Simatic3964RxFn rx = SimaticV.init_3964r_args.rx;
     void *user = SimaticV.init_3964r_args.user;
 
-    mem.set(ctx, 0, sizeof(*ctx));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = ctx, .val = 0, .bytes = sizeof(*ctx));
     ctx->state = SIMATIC3964_STATE_IDLE;
     ctx->high_priority = high_priority;
     ctx->with_bcc = with_bcc;

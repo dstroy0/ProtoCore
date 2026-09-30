@@ -43,8 +43,8 @@ static_assert(CHACHAPOLY_OFF_POLY + PROTOCORE_POLY1305_BORROW <= PROTOCORE_CHACH
               "PROTOCORE_CHACHAPOLY_BORROW is short of the per-packet working set and the two nested "
               "borrows - raise it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(

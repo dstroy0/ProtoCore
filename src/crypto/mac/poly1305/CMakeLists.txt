@@ -6,5 +6,5 @@ protocore_add_module(crypto/mac/poly1305
   OPT 2
   SOURCES poly1305.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

@@ -5,6 +5,6 @@ protocore_add_module(server/core/power_mgmt
   GATE PROTOCORE_ENABLE_POWER_MGMT
   SOURCES power_mgmt.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/plaintext
+    mmgr
+    server/core/worker
 )

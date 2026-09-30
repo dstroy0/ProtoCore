@@ -5,8 +5,8 @@ protocore_add_module(server/peripherals/sht3x
   GATE PROTOCORE_ENABLE_SHT3X
   SOURCES sht3x.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/secure
+    mmgr
+    server/core/worker
     server/clock
     server/peripherals/i2c
     shared/crc

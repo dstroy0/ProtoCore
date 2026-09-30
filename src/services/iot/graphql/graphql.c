@@ -19,12 +19,12 @@
 
 #if PROTOCORE_ENABLE_GRAPHQL
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "services/iot/graphql/graphql.h"
 
-#include "mmgr/membuild/membuild.h" // Sb: the Int, Float and \uXXXX renderings
-#include "mmgr/protomem/protomem.h" // mem.cpy: the spans a name and a decoded String move with
-#include "mmgr/protostr/protostr.h" // str.eq / str.len: the bounded compares and measures
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.eq / cellul.len: the bounded compares and measures
+#include "memoria_operor/memoria_operor.h"       // memor.cpy: the spans a name and a decoded String move with
+#include "verba_scribo/verba_scribo.h"           // verba_*: the text and number writers the builders chain
 
 PROTOCORE_BEGIN_DECLS
 
@@ -234,7 +234,7 @@ static const char *intern(uint8_t *work, const char *s, int len)
         return NULL;
     }
     char *dst = doc->strings + doc->str_len;
-    mem.cpy(dst, s, (size_t)len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = dst, .src = s, .bytes = (size_t)len);
     dst[len] = '\0';
     doc->str_len += len + 1;
     return dst;
@@ -392,19 +392,22 @@ static proto_bool parse_value(uint8_t *work, GqlLexer *lx, protocore_gql_value *
     char kw[8];
     if (parse_name(work, lx, kw, sizeof(kw)))
     {
-        if (str.eq(kw, "true", sizeof("true"), PROTO_FALSE))
+        if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = kw, .other = "true", .cap = sizeof("true"),
+                       .ci = PROTO_FALSE))
         {
             v->type = PROTOCORE_GQL_BOOL;
             v->b = PROTO_TRUE;
             return PROTO_TRUE;
         }
-        if (str.eq(kw, "false", sizeof("false"), PROTO_FALSE))
+        if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = kw, .other = "false", .cap = sizeof("false"),
+                       .ci = PROTO_FALSE))
         {
             v->type = PROTOCORE_GQL_BOOL;
             v->b = PROTO_FALSE;
             return PROTO_TRUE;
         }
-        if (str.eq(kw, "null", sizeof("null"), PROTO_FALSE))
+        if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = kw, .other = "null", .cap = sizeof("null"),
+                       .ci = PROTO_FALSE))
         {
             v->type = PROTOCORE_GQL_NULL;
             return PROTO_TRUE;
@@ -531,7 +534,9 @@ static proto_bool parse_document(uint8_t *work, GqlLexer *lx)
     if (c != '{')
     {
         char kw[PROTOCORE_GQL_NAME_MAX];
-        if (!parse_name(work, lx, kw, sizeof(kw)) || !str.eq(kw, "query", sizeof("query"), PROTO_FALSE))
+        if (!parse_name(work, lx, kw, sizeof(kw)) ||
+            !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = kw, .other = "query", .cap = sizeof("query"),
+                        .ci = PROTO_FALSE))
         {
             doc->err = PROTOCORE_GQL_ERR_PARSE; // only the query OperationType
             return PROTO_FALSE;
@@ -572,13 +577,13 @@ static void w_raw(GqlWriter *w, const char *s, size_t len)
         w->ovf = PROTO_TRUE;
         return;
     }
-    mem.cpy(w->o + w->n, s, len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->o + w->n, .src = s, .bytes = len);
     w->n += len;
 }
 
 static void w_str(GqlWriter *w, const char *s)
 {
-    w_raw(w, s, str.len(s, w->cap + 1));
+    w_raw(w, s, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = w->cap + 1));
 }
 
 // Append @p s as a JSON string: quoted, with `"` and `\` escaped, the named escapes for the three
@@ -612,10 +617,11 @@ static void w_json_str(GqlWriter *w, const char *s)
         else if (ch < 0x20)
         {
             char u[7];
-            protocore_sb sb_u = {u, sizeof(u), 0, PROTO_TRUE};
-            Sb.put(&sb_u, "\\u");
-            Sb.hex(&sb_u, (uint64_t)(ch), 4);
-            if (Sb.finish(&sb_u) == 0)
+            size_t sb_u = 0;
+            sb_u = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = u, .cap = sizeof(u), .at = sb_u, .text = "\\u");
+            sb_u = EMBED_CALL(verba_numerus.hex, VerbaNumerusCfg, .out = u, .cap = sizeof(u), .at = sb_u,
+                              .val = (uint64_t)(ch), .min = 4);
+            if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = u, .cap = sizeof(u), .at = sb_u) == 0)
             {
                 u[0] = '\0';
             }
@@ -637,9 +643,10 @@ static void w_scalar(GqlWriter *w, const protocore_gql_value *v)
     switch (v->type)
     {
     case PROTOCORE_GQL_INT: {
-        protocore_sb sb_b = {b, sizeof(b), 0, PROTO_TRUE};
-        Sb.i64(&sb_b, (int64_t)(v->i));
-        if (Sb.finish(&sb_b) == 0)
+        size_t sb_b = 0;
+        sb_b = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = b, .cap = sizeof(b), .at = sb_b,
+                          .sval = (int64_t)(v->i));
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = b, .cap = sizeof(b), .at = sb_b) == 0)
         {
             b[0] = '\0';
         }
@@ -647,9 +654,10 @@ static void w_scalar(GqlWriter *w, const protocore_gql_value *v)
         w_str(w, b);
         break;
     case PROTOCORE_GQL_FLOAT: {
-        protocore_sb sb_b2 = {b, sizeof(b), 0, PROTO_TRUE};
-        Sb.g(&sb_b2, (double)(v->f), 6);
-        if (Sb.finish(&sb_b2) == 0)
+        size_t sb_b2 = 0;
+        sb_b2 = EMBED_CALL(verba_fractio.g, VerbaFractioCfg, .out = b, .cap = sizeof(b), .at = sb_b2,
+                           .real = (double)(v->f), .sig = 6);
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = b, .cap = sizeof(b), .at = sb_b2) == 0)
         {
             b[0] = '\0';
         }
@@ -691,13 +699,13 @@ static void execute_field(uint8_t *work, GqlWriter *w, int idx, int path_len)
         }
         ex->path[plen++] = '.';
     }
-    int nl = (int)str.len(field->name, sizeof(field->name));
+    int nl = (int)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = field->name, .cap = sizeof(field->name));
     if (plen + nl >= PROTOCORE_GQL_PATH_MAX)
     {
         w->ovf = PROTO_TRUE;
         return;
     }
-    mem.cpy(ex->path + plen, field->name, (size_t)nl);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ex->path + plen, .src = field->name, .bytes = (size_t)nl);
     plen += nl;
     ex->path[plen] = '\0';
 
@@ -774,7 +782,8 @@ static const GqlArgument *arg_lookup(uint8_t *work)
     for (int k = 0; k < view->count; k++)
     {
         const GqlArgument *a = &GRAPHQL_CTX(work)->doc.args[view->idx[k]];
-        if (str.eq(a->name, GraphQLV.argument.name, sizeof(a->name), PROTO_FALSE))
+        if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = a->name, .other = GraphQLV.argument.name,
+                       .cap = sizeof(a->name), .ci = PROTO_FALSE))
         {
             return a;
         }
@@ -797,7 +806,7 @@ uint8_t *protocore_graphql_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_GRAPHQL_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_GRAPHQL_BORROW);
     }
     return s_own.span;
 }

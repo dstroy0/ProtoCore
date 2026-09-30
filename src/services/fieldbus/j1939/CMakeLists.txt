@@ -7,6 +7,6 @@ protocore_add_module(services/fieldbus/j1939
   DEPS
     shared/can
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protomem
+    mmgr
+    server/core/worker
 )
