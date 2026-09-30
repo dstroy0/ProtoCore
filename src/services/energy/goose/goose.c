@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_GOOSE
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/energy/goose/goose.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -64,7 +64,7 @@ static proto_bool tlv(uint8_t *out, size_t cap, size_t *n, uint8_t tag, const ui
     *n += write_len(out + *n, val_len);
     if (val_len)
     {
-        mem.cpy(out + *n, val, val_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + *n, .src = val, .bytes = val_len);
         *n += val_len;
     }
     return PROTO_TRUE;
@@ -102,7 +102,8 @@ static proto_bool protocore_ber_int(uint8_t *out, size_t cap, size_t *n, uint8_t
 
 static proto_bool protocore_ber_str(uint8_t *out, size_t cap, size_t *n, uint8_t tag, const char *s)
 {
-    return tlv(out, cap, n, tag, (const uint8_t *)(s ? s : ""), s ? str.len(s, cap + 1) : 0);
+    return tlv(out, cap, n, tag, (const uint8_t *)(s ? s : ""),
+               s ? EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = cap + 1) : 0);
 }
 
 static proto_bool protocore_ber_bool(uint8_t *out, size_t cap, size_t *n, uint8_t tag, proto_bool v)
@@ -187,7 +188,7 @@ size_t protocore_goose_pdu(const protocore_goose *g, uint8_t *out, size_t cap)
     size_t content_len = n - RESERVE;
     size_t hdr = 1 + len_octets(content_len);
     // Move the content down so the 0x61 tag + length sit immediately before it (no gap).
-    mem.move(out + hdr, out + RESERVE, content_len);
+    EMBED_CALL(memor.move_down, MemoriaCfg, .dst = out + hdr, .src = out + RESERVE, .bytes = content_len);
     out[0] = 0x61;
     write_len(out + 1, content_len);
     return hdr + content_len;
@@ -201,8 +202,8 @@ size_t protocore_goose_frame(const uint8_t *dst, const uint8_t *src, uint16_t ap
         return 0;
     }
     // Ethernet II header (ethertype 0x88B8 = GOOSE).
-    mem.cpy(out, dst, 6);
-    mem.cpy(out + 6, src, 6);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = dst, .bytes = 6);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 6, .src = src, .bytes = 6);
     out[12] = 0x88;
     out[13] = 0xB8;
     // GOOSE header: APPID(2), length(2, filled below), reserved1(2), reserved2(2).
@@ -234,7 +235,7 @@ proto_bool protocore_goose_parse_frame(const uint8_t *buf, size_t len, protocore
     {
         return PROTO_FALSE;
     }
-    mem.set(out, 0, sizeof(*out));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     out->appid = (uint16_t)((buf[14] << 8) | buf[15]);
 
     const uint8_t *end = buf + len;
