@@ -5,6 +5,6 @@ protocore_add_module(services/fieldbus/rawl2
   GATE PROTOCORE_ENABLE_RAWL2
   SOURCES rawl2.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
     shared/crc
 )
