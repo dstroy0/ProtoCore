@@ -5,6 +5,6 @@ protocore_add_module(services/radio/radio_sniff
   GATE PROTOCORE_ENABLE_RADIO_SNIFF
   SOURCES radio_sniff.c
   PRIVATE_DEPS
-    mmgr/endian
+    mmgr
     shared/pcap
 )

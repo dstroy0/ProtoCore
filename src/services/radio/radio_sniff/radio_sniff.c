@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_RADIO_SNIFF
 
-#include "mmgr/endian/endian.h"
+#include "endian/endian.h"
 #include "services/radio/radio_sniff/radio_sniff.h"
 #include "shared/pcap/pcap.h"
 
@@ -85,16 +85,16 @@ size_t protocore_radio_sniff_tap_record(uint8_t *work, uint8_t *out, size_t cap,
     // 802.15.4 TAP header: version(1)=0, reserved(1)=0, length(2 LE) = whole TAP block.
     p[0] = 0;
     p[1] = 0;
-    endian.wr16le(p + 2, RADIO_SNIFF_TAP_LEN);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = p + 2, .val = RADIO_SNIFF_TAP_LEN, .width = MMGR_ENDIAN_16);
     // TLV: Received Signal Strength (type 1, len 4), float32 dBm.
-    endian.wr16le(p + 4, 1);
-    endian.wr16le(p + 6, 4);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = p + 4, .val = 1, .width = MMGR_ENDIAN_16);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = p + 6, .val = 4, .width = MMGR_ENDIAN_16);
     uint32_t radio_sniff_u32 = RadioSniff.i2f32(work, rssi_dbm);
-    endian.wr32le(p + 8, radio_sniff_u32);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = p + 8, .val = radio_sniff_u32, .width = MMGR_ENDIAN_32);
     // TLV: Channel Assignment (type 3, len 3 -> padded to 4): channel number(2 LE) + page(1).
-    endian.wr16le(p + 12, 3);
-    endian.wr16le(p + 14, 3);
-    endian.wr16le(p + 16, channel);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = p + 12, .val = 3, .width = MMGR_ENDIAN_16);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = p + 14, .val = 3, .width = MMGR_ENDIAN_16);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = p + 16, .val = channel, .width = MMGR_ENDIAN_16);
     p[18] = 0; // channel page 0
     p[19] = 0; // pad
 
