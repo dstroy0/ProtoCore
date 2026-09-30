@@ -5,5 +5,5 @@ protocore_add_module(server/signaling/hw_health
   GATE PROTOCORE_ENABLE_HW_HEALTH
   SOURCES hw_health.c
   PRIVATE_DEPS
-    mmgr/membuild
+    mmgr
 )
