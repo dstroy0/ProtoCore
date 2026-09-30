@@ -6,5 +6,5 @@ protocore_add_module(crypto/asymmetric/bignum
   OPT 2
   SOURCES bignum.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
