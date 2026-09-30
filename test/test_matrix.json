@@ -1336,19 +1336,10 @@
       ],
       "src": [
         "+<server/web/dashboard/dashboard.c>",
-        "+<mmgr/protoframe/protoframe.c>",
-        "+<mmgr/protostr/protostr.c>",
-        "+<mmgr/protomem/protomem.c>",
-        "+<mmgr/membuild/membuild.c>",
-        "+<mmgr/rawmemcpy/rawmemcpy.c>",
-        "+<mmgr/swar/swar.c>",
-        "+<mmgr/float_bits/float_bits.c>",
         "+<shared/hex/hex.c>",
         "+<server/web/dashboard/dashboard_routes/dashboard_routes.c>",
-        "+<mmgr/secure/secure.c>",
-        "+<mmgr/span/span.c>",
-        "+<mmgr/arena/arena.c>",
-        "+<server/io/http_clock/http_clock.c>"
+        "+<server/io/http_clock/http_clock.c>",
+        "+<server/core/worker/worker.c>"
       ],
       "tests": [
         "unit/src/server/web/dashboard/test_dashboard"
