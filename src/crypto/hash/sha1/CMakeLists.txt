@@ -6,6 +6,5 @@ protocore_add_module(crypto/hash/sha1
   OPT 2
   SOURCES sha1.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/protomem
+    mmgr
 )

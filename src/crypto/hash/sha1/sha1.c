@@ -17,8 +17,8 @@
 #if PROTOCORE_HAS_HW_SHA
 #endif
 #include "crypto/hash/sha1/sha1.h"
-#include "mmgr/endian/endian.h" // the big-endian serializers the framing and the rounds step with
-#include "mmgr/protomem/protomem.h"
+#include "endian/endian.h" // the big-endian serializers the framing and the rounds step with
+#include "memoria_operor/memoria_operor.h"
 
 // The one definition of Sha1Ctx - private to this TU. It sits at SHA1_OFF_CTX in the caller's borrow,
 // so its size never leaves this file and no consumer can name it.
@@ -67,7 +67,7 @@ static void sha1_block(uint32_t h[5], const uint8_t block[64])
     uint32_t w[80];
     for (int i = 0; i < 16; i++)
     {
-        w[i] = protocore_rd32be(block + i * 4);
+        w[i] = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = block + i * 4, .width = MMGR_ENDIAN_32);
     }
     for (int i = 16; i < 80; i++)
     {
@@ -146,9 +146,9 @@ static void sha1_run(uint8_t *work, const uint8_t *data, size_t len, uint8_t dig
     }
 
     // Build the padded final block(s)
-    mem.set(pad, 0, 128);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = pad, .val = 0, .bytes = 128);
     size_t tail = len - blocks * 64;
-    mem.cpy(pad, data + blocks * 64, tail);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = pad, .src = data + blocks * 64, .bytes = tail);
     pad[tail] = 0x80;
 
     // Bit-length goes in the last 8 bytes of the final block
@@ -167,7 +167,7 @@ static void sha1_run(uint8_t *work, const uint8_t *data, size_t len, uint8_t dig
 
     for (int i = 0; i < 5; i++)
     {
-        protocore_wr32be(digest + i * 4, h[i]);
+        EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = digest + i * 4, .val = h[i], .width = MMGR_ENDIAN_32);
     }
 }
 
