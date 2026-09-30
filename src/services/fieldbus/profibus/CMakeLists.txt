@@ -5,5 +5,5 @@ protocore_add_module(services/fieldbus/profibus
   GATE PROTOCORE_ENABLE_PROFIBUS
   SOURCES profibus.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
