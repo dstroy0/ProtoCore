@@ -14,7 +14,7 @@
 #if PROTOCORE_ENABLE_BUS_CAPTURE
 
 #include "config/platform/platform.h"
-#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "server/signaling/bus_capture/bus_capture.h"
 #include "shared/pcap/pcap.h"
 
@@ -35,7 +35,7 @@ uint8_t *protocore_bus_capture_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_BUS_CAPTURE_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_BUS_CAPTURE_BORROW);
     }
     return s_own.span;
 }
@@ -101,8 +101,8 @@ static_assert(BUS_CAPTURE_OFF_CTX + sizeof(BusCaptureCtx) <= PROTOCORE_BUS_CAPTU
               "PROTOCORE_BUS_CAPTURE_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(
