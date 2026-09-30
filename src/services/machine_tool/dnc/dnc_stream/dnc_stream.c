@@ -11,7 +11,7 @@
 
 #if PROTOCORE_ENABLE_DNC
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/machine_tool/dnc/dnc_stream/dnc_stream.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -58,7 +58,7 @@ static proto_bool emit(DncFlow *flow, DncSendFn send, DncRecvFn recv, void *ctx,
 static proto_bool emit_runout(DncFlow *flow, DncSendFn send, DncRecvFn recv, void *ctx, uint16_t count)
 {
     uint8_t zeros[32];
-    mem.set(zeros, 0, sizeof(zeros));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = zeros, .val = 0, .bytes = sizeof(zeros));
     while (count)
     {
         uint16_t chunk = count < sizeof(zeros) ? count : (uint16_t)sizeof(zeros);
