@@ -5,6 +5,5 @@ protocore_add_module(network_drivers/presentation/codec/base64
   GATE PROTOCORE_ENABLE_BASE64
   SOURCES base64.c
   PRIVATE_DEPS
-    mmgr/protostr
-    mmgr/swar
+    mmgr
 )

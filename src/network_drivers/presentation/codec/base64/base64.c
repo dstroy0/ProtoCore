@@ -24,10 +24,9 @@
 
 #include "base64.h"
 
-#include "mmgr/protostr/protostr.h" // str: the bounded-run walks
-#include "mmgr/swar/swar.h"         // the lane math; the classification below is base64's own
-#include "protocore_config.h"       // PROTOCORE_BASE64_SWAR (scalar vs SWAR constant-time decode; default SWAR)
-                                    // strnlen
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the bounded-run walk
+#include "protocore_config.h"              // PROTOCORE_BASE64_SWAR (scalar vs SWAR constant-time decode; default SWAR)
+#include "verbum_scrutor/verbum_scrutor.h" // the lane math; the classification below is base64's own
 
 PROTOCORE_BEGIN_DECLS
 
@@ -132,31 +131,41 @@ static inline uint32_t ct_b64_val_plus1(uint32_t c, int urlsafe)
 #if PROTOCORE_BASE64_SWAR
 // ---------------------------------------------------------------------------
 // SWAR variant: classify 4 characters per 32-bit word instead of one at a time (opt-in, PROTOCORE_BASE64_SWAR).
-// The lane math itself is mmgr/swar.h; what is base64's own is the classification below.
+// The lane math itself is verbum_scrutor; what is base64's own is the classification below.
 // Every base64 character is < 0x80, so a byte lane never sets its own high bit, which is what lets the
 // guard-bit subtraction keep borrows inside their lane and the range masks stay data-independent -
 // same constant-time property as the scalar path, four lanes at once. Whether this actually wins is a HW
 // measurement, not an assumption (decode is once-per-request); see docs/FEATURE_PERFORMANCE.md.
 // ---------------------------------------------------------------------------
 
-// A base64 quad is four characters by definition of the encoding, so this path wants exactly four
-// lanes - it is the one caller of swar.h that cannot follow a retyped word width.
-static_assert(PROTOCORE_SWAR_BYTES == 4, "base64 SWAR decodes one four-character quad per word");
+// A base64 quad is four characters by definition of the encoding, so this path wants at least four
+// lanes. The quad rides in the low four; any lane above them holds zero, matches no range, and is
+// dropped when the result is narrowed back to 32 bits.
+static_assert(MMGR_SWAR_BYTES >= 4, "base64 SWAR decodes one four-character quad per word");
+
+// The lanes of @p a in [@p lo, @p hi], widened to 0xFF per lane.
+static inline embed_word swar_range(embed_word a, uint8_t lo, uint8_t hi)
+{
+    embed_word m = EMBED_CALL(lane.ge, ScrutLaneCfg, .word = a, .byte = lo) &
+                   EMBED_CALL(lane.le, ScrutLaneCfg, .word = a, .byte = hi);
+    return EMBED_CALL(mask.spread, ScrutMaskCfg, .mask = m);
+}
 
 // Decode 4 packed characters (c0 in the low byte) to 4 packed 6-bit values; *ok gets 0xFF in each valid lane.
-static inline uint32_t swar_quad(uint32_t a, uint32_t *ok)
+static inline uint32_t swar_quad(uint32_t quad, uint32_t *ok)
 {
-    uint32_t mAZ = swar.spread(swar.ge(a, 'A') & swar.le(a, 'Z'));
-    uint32_t maz = swar.spread(swar.ge(a, 'a') & swar.le(a, 'z'));
-    uint32_t m09 = swar.spread(swar.ge(a, '0') & swar.le(a, '9'));
-    uint32_t mpl = swar.spread(swar.ge(a, '+') & swar.le(a, '+'));
-    uint32_t msl = swar.spread(swar.ge(a, '/') & swar.le(a, '/'));
-    uint32_t val = (mAZ & (swar.sub7(a, 'A') + 0u * PROTOCORE_SWAR_ONES)) |
-                   (maz & (swar.sub7(a, 'a') + 26u * PROTOCORE_SWAR_ONES)) |
-                   (m09 & (swar.sub7(a, '0') + 52u * PROTOCORE_SWAR_ONES)) | (mpl & (62u * PROTOCORE_SWAR_ONES)) |
-                   (msl & (63u * PROTOCORE_SWAR_ONES));
-    *ok = mAZ | maz | m09 | mpl | msl;
-    return val;
+    const embed_word a = quad;
+    embed_word mAZ = swar_range(a, 'A', 'Z');
+    embed_word maz = swar_range(a, 'a', 'z');
+    embed_word m09 = swar_range(a, '0', '9');
+    embed_word mpl = swar_range(a, '+', '+');
+    embed_word msl = swar_range(a, '/', '/');
+    embed_word val = (mAZ & (EMBED_CALL(lane.sub7, ScrutLaneCfg, .word = a, .byte = 'A') + 0u * MMGR_SWAR_ONES)) |
+                     (maz & (EMBED_CALL(lane.sub7, ScrutLaneCfg, .word = a, .byte = 'a') + 26u * MMGR_SWAR_ONES)) |
+                     (m09 & (EMBED_CALL(lane.sub7, ScrutLaneCfg, .word = a, .byte = '0') + 52u * MMGR_SWAR_ONES)) |
+                     (mpl & (62u * MMGR_SWAR_ONES)) | (msl & (63u * MMGR_SWAR_ONES));
+    *ok = (uint32_t)(mAZ | maz | m09 | mpl | msl);
+    return (uint32_t)val;
 }
 
 void protocore_base64_decode(uint8_t *work)
@@ -166,7 +175,7 @@ void protocore_base64_decode(uint8_t *work)
     uint8_t *dst = Base64V.decode_args.dst;
     size_t dst_cap = Base64V.decode_args.dst_cap;
 
-    size_t src_len = str.len(src, ((dst_cap + 2) / 3) * 4 + 4);
+    size_t src_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = src, .cap = ((dst_cap + 2) / 3) * 4 + 4);
     if (src_len == 0 || (src_len & 3u) != 0)
     {
         Base64V.n = 0;
@@ -242,7 +251,7 @@ void protocore_base64_decode(uint8_t *work)
 
     // Bounded length (a missing NUL cannot run past what dst_cap could ever hold). Canonical base64 is
     // whole 4-character quads.
-    size_t src_len = str.len(src, ((dst_cap + 2) / 3) * 4 + 4);
+    size_t src_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = src, .cap = ((dst_cap + 2) / 3) * 4 + 4);
     if (src_len == 0 || (src_len & 3u) != 0)
     {
         Base64V.n = 0;
