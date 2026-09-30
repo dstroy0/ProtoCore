@@ -10,13 +10,13 @@
 
 #if PROTOCORE_ENABLE_UTMC
 
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/transportation/utmc/utmc.h"
+#include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
 PROTOCORE_BEGIN_DECLS
 
-static void put_u(protocore_sb *b, uint32_t v)
+static size_t put_u(char *out, size_t cap, size_t at, uint32_t v)
 {
     char tmp[11];
     int n = 0;
@@ -25,38 +25,40 @@ static void put_u(protocore_sb *b, uint32_t v)
         tmp[n++] = (char)('0' + (int)(v % 10));
         v /= 10;
     } while (v);
-    char out[12];
+    char digits[12];
     for (int i = 0; i < n; i++)
     {
-        out[i] = tmp[n - 1 - i];
+        digits[i] = tmp[n - 1 - i];
     }
-    out[n] = '\0';
-    Sb.put(b, out);
+    digits[n] = '\0';
+    return EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = digits);
 }
 
 size_t protocore_utmc_request(const char *object_id, char *out, size_t cap)
 {
-    protocore_sb b = {out, cap, 0, out != NULL && cap > 0};
-    Sb.put(&b, "<?xml version=\"1.0\"?><UTMCRequest><object id=\"");
-    Sb.xml(&b, object_id);
-    Sb.put(&b, "\"/></UTMCRequest>");
-    return Sb.finish(&b);
+    size_t b = 0;
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b,
+                   .text = "<?xml version=\"1.0\"?><UTMCRequest><object id=\"");
+    b = EMBED_CALL(verba_textus.xml, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = object_id);
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "\"/></UTMCRequest>");
+    return EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = b);
 }
 
 size_t protocore_utmc_response(const char *object_id, const char *value, uint8_t quality, const char *timestamp,
                                char *out, size_t cap)
 {
-    protocore_sb b2 = {out, cap, 0, out != NULL && cap > 0};
-    Sb.put(&b2, "<?xml version=\"1.0\"?><UTMCResponse><object id=\"");
-    Sb.xml(&b2, object_id);
-    Sb.put(&b2, "\" value=\"");
-    Sb.xml(&b2, value);
-    Sb.put(&b2, "\" quality=\"");
-    put_u(&b2, quality);
-    Sb.put(&b2, "\" timestamp=\"");
-    Sb.xml(&b2, timestamp);
-    Sb.put(&b2, "\"/></UTMCResponse>");
-    return Sb.finish(&b2);
+    size_t b2 = 0;
+    b2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b2,
+                    .text = "<?xml version=\"1.0\"?><UTMCResponse><object id=\"");
+    b2 = EMBED_CALL(verba_textus.xml, VerbaTextusCfg, .out = out, .cap = cap, .at = b2, .text = object_id);
+    b2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b2, .text = "\" value=\"");
+    b2 = EMBED_CALL(verba_textus.xml, VerbaTextusCfg, .out = out, .cap = cap, .at = b2, .text = value);
+    b2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b2, .text = "\" quality=\"");
+    b2 = put_u(out, cap, b2, quality);
+    b2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b2, .text = "\" timestamp=\"");
+    b2 = EMBED_CALL(verba_textus.xml, VerbaTextusCfg, .out = out, .cap = cap, .at = b2, .text = timestamp);
+    b2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b2, .text = "\"/></UTMCResponse>");
+    return EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = b2);
 }
 
 size_t protocore_utmc_parse_request(const char *xml, size_t len, char *out, size_t cap)
@@ -70,7 +72,7 @@ size_t protocore_utmc_parse_request(const char *xml, size_t len, char *out, size
     size_t kl = 4;
     for (size_t i = 0; i + kl < len; i++)
     {
-        if (mem.cmp(xml + i, key, kl) != 0)
+        if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = xml + i, .other = key, .bytes = kl) != 0)
         {
             continue;
         }

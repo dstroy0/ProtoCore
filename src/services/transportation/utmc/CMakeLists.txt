@@ -5,6 +5,5 @@ protocore_add_module(services/transportation/utmc
   GATE PROTOCORE_ENABLE_UTMC
   SOURCES utmc.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/protomem
+    mmgr
 )
