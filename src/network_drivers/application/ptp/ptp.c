@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_PTP
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/application/ptp/ptp.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -136,14 +136,14 @@ void protocore_ptp_build_header(uint8_t *work)
         PtpV.n = 0;
         return;
     }
-    mem.set(buf, 0, PROTOCORE_PTP_HEADER_LEN);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = buf, .val = 0, .bytes = PROTOCORE_PTP_HEADER_LEN);
     buf[0] = (uint8_t)((h->transport_specific << 4) | (h->message_type & 0x0F));
     buf[1] = (uint8_t)(h->version & 0x0F);
     put_u16(buf + 2, (uint16_t)(PROTOCORE_PTP_HEADER_LEN + body_len));
     buf[4] = h->domain;
     put_u16(buf + 6, h->flags);
     put_u64(buf + 8, (uint64_t)h->correction);
-    mem.cpy(buf + 20, h->clock_identity, 8);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + 20, .src = h->clock_identity, .bytes = 8);
     put_u16(buf + 28, h->port_number);
     put_u16(buf + 30, h->sequence_id);
     buf[32] = h->control;
@@ -170,7 +170,7 @@ void protocore_ptp_parse_header(uint8_t *work)
     h->domain = s[4];
     h->flags = get_u16(s + 6);
     h->correction = (int64_t)get_u64(s + 8);
-    mem.cpy(h->clock_identity, s + 20, 8);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = h->clock_identity, .src = s + 20, .bytes = 8);
     h->port_number = get_u16(s + 28);
     h->sequence_id = get_u16(s + 30);
     h->control = s[32];
@@ -270,7 +270,7 @@ void protocore_ptp_build_delay_resp(uint8_t *work)
     PtpV.ts_write_args.ts = recv;
     protocore_ptp_ts_write(work);
     p += PROTOCORE_PTP_TS_LEN;
-    mem.cpy(p, req_clock_id, 8);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = p, .src = req_clock_id, .bytes = 8);
     p += 8;
     put_u16(p, req_port);
     PtpV.n = PROTOCORE_PTP_HEADER_LEN + body;
@@ -305,7 +305,7 @@ void protocore_ptp_build_pdelay_req(uint8_t *work)
     PtpV.ts_write_args.p = p;
     PtpV.ts_write_args.ts = origin;
     protocore_ptp_ts_write(work);
-    mem.set(p + PROTOCORE_PTP_TS_LEN, 0, 10); // reserved
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = p + PROTOCORE_PTP_TS_LEN, .val = 0, .bytes = 10); // reserved
     PtpV.n = PROTOCORE_PTP_HEADER_LEN + body;
 }
 
@@ -337,7 +337,7 @@ static size_t build_pdelay_resp_msg(uint8_t *work, uint8_t *buf, size_t cap, con
     PtpV.ts_write_args.ts = ts;
     Ptp.ts_write(work);
     p += PROTOCORE_PTP_TS_LEN;
-    mem.cpy(p, req_clock_id, 8);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = p, .src = req_clock_id, .bytes = 8);
     p += 8;
     put_u16(p, req_port);
     return PROTOCORE_PTP_HEADER_LEN + body;
@@ -409,7 +409,7 @@ void protocore_ptp_build_announce(uint8_t *work)
     put_u16(p, a->gm_variance);
     p += 2;
     *p++ = a->gm_priority2;
-    mem.cpy(p, a->gm_identity, 8);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = p, .src = a->gm_identity, .bytes = 8);
     p += 8;
     put_u16(p, a->steps_removed);
     p += 2;
@@ -491,7 +491,7 @@ void protocore_ptp_parse_delay_resp(uint8_t *work)
     PtpV.ts_read_args.ts = &out->receive;
     protocore_ptp_ts_read(work);
     p += PROTOCORE_PTP_TS_LEN;
-    mem.cpy(out->req_clock_id, p, 8);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->req_clock_id, .src = p, .bytes = 8);
     p += 8;
     out->req_port = get_u16(p);
     PtpV.ok = PROTO_TRUE;
@@ -564,7 +564,7 @@ static proto_bool parse_pdelay_resp_msg(uint8_t *work, const uint8_t *s, size_t 
     PtpV.ts_read_args.ts = &out->timestamp;
     Ptp.ts_read(work);
     p += PROTOCORE_PTP_TS_LEN;
-    mem.cpy(out->req_clock_id, p, 8);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->req_clock_id, .src = p, .bytes = 8);
     p += 8;
     out->req_port = get_u16(p);
     return PROTO_TRUE;
@@ -638,7 +638,7 @@ void protocore_ptp_parse_announce(uint8_t *work)
     out->gm_variance = get_u16(p);
     p += 2;
     out->gm_priority2 = *p++;
-    mem.cpy(out->gm_identity, p, 8);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->gm_identity, .src = p, .bytes = 8);
     p += 8;
     out->steps_removed = get_u16(p);
     p += 2;
