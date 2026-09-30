@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_CANOPEN
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/canopen/canopen.h"
 #include "shared/can/can.h"
 
@@ -23,7 +23,7 @@ static void std_frame(CanFrame *f, uint32_t id, uint8_t dlc)
     f->extended = PROTO_FALSE;
     f->rtr = PROTO_FALSE;
     f->dlc = dlc;
-    mem.set(f->data, 0, sizeof(f->data));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = f->data, .val = 0, .bytes = sizeof(f->data));
 }
 
 static proto_bool valid_node(uint8_t node_id)
@@ -128,7 +128,8 @@ void protocore_canopen_build_emcy(uint8_t *work)
     out->data[2] = error_reg; // object 0x1001 error register
     if (msef)
     {
-        mem.cpy(out->data + 3, msef, 5); // 5 manufacturer-specific error octets
+        // 5 manufacturer-specific error octets
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->data + 3, .src = msef, .bytes = 5);
     }
     CanopenV.ok = PROTO_TRUE;
 }
@@ -158,7 +159,7 @@ static proto_bool build_pdo(CanFrame *out, uint8_t pdo_num, proto_bool transmit,
     std_frame(out, base + node_id, len);
     if (len)
     {
-        mem.cpy(out->data, data, len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->data, .src = data, .bytes = len);
     }
     return PROTO_TRUE;
 }
@@ -233,7 +234,7 @@ void protocore_canopen_build_sdo_write(uint8_t *work)
     // download initiate, expedited (e=1), size indicated (s=1); n = unused octets in data[4..7].
     out->data[0] = (uint8_t)((CANOPEN_SDO_CCS_DOWNLOAD << 5) | (((4u - len) & 3u) << 2) | 0x03u);
     sdo_set_object(out, index, sub);
-    mem.cpy(out->data + 4, data, len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->data + 4, .src = data, .bytes = len);
     CanopenV.ok = PROTO_TRUE;
 }
 
@@ -406,7 +407,7 @@ void protocore_canopen_parse_emcy(uint8_t *work)
     }
     if (msef)
     {
-        mem.cpy(msef, f->data + 3, 5);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = msef, .src = f->data + 3, .bytes = 5);
     }
     CanopenV.ok = PROTO_TRUE;
 }
@@ -491,7 +492,7 @@ void protocore_canopen_parse_sdo_response(uint8_t *work)
     out->is_upload = PROTO_FALSE;
     out->expedited = PROTO_FALSE;
     out->len = 0;
-    mem.set(out->data, 0, sizeof(out->data));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out->data, .val = 0, .bytes = sizeof(out->data));
 
     if (scs == CANOPEN_SDO_ABORT)
     {
@@ -510,7 +511,7 @@ void protocore_canopen_parse_sdo_response(uint8_t *work)
         {
             out->expedited = PROTO_TRUE;
             out->len = s ? (uint8_t)(4u - ((cmd >> 2) & 0x03u)) : 4u;
-            mem.cpy(out->data, f->data + 4, out->len);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->data, .src = f->data + 4, .bytes = out->len);
         }
         CanopenV.ok = PROTO_TRUE; // a non-expedited (segmented) response is reported with len 0
         return;
@@ -569,7 +570,7 @@ void protocore_canopen_build_sdo_download_segment(uint8_t *work)
     // segment: ccs=0, t=toggle (bit 4), n=unused octets (bits 1..3), c=last (bit 0).
     uint8_t n = (uint8_t)(CANOPEN_SDO_SEG_DATA - len);
     out->data[0] = (uint8_t)((toggle ? 0x10u : 0u) | ((n & 0x07u) << 1) | (last ? 0x01u : 0u));
-    mem.cpy(out->data + 1, data, len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->data + 1, .src = data, .bytes = len);
     CanopenV.ok = PROTO_TRUE;
 }
 
@@ -621,7 +622,7 @@ void protocore_canopen_parse_sdo_segment(uint8_t *work)
     }
     if (data)
     {
-        mem.cpy(data, f->data + 1, seg_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = data, .src = f->data + 1, .bytes = seg_len);
     }
     CanopenV.ok = PROTO_TRUE;
 }
@@ -670,7 +671,7 @@ void protocore_canopen_sdo_reasm_feed(uint8_t *work)
     }
     if (len)
     {
-        mem.cpy(r->buf + r->len, data, len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = r->buf + r->len, .src = data, .bytes = len);
     }
     r->len += len;
     r->expect_toggle = !r->expect_toggle;
