@@ -5,5 +5,6 @@ protocore_add_module(server/core/failsafe
   GATE PROTOCORE_ENABLE_FAILSAFE
   SOURCES failsafe.c
   PRIVATE_DEPS
-    mmgr/plaintext
+    mmgr
+    server/core/worker
 )
