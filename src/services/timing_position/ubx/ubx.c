@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_UBX
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/timing_position/ubx/ubx.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -293,7 +293,7 @@ void protocore_ubx_stream_init(protocore_ubx_stream *st)
 {
     if (st)
     {
-        mem.set(st, 0, sizeof(*st)); // state = S_SYNC1
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = st, .val = 0, .bytes = sizeof(*st)); // state = S_SYNC1
     }
 }
 
