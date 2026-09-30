@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_PROFIBUS
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/profibus/profibus.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -98,7 +98,7 @@ void protocore_profibus_build_sd2(uint8_t *work)
     out[i++] = fc;
     if (data_len)
     {
-        mem.cpy(out + i, data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + i, .src = data, .bytes = data_len);
         i += data_len;
     }
     // FCS over DA+SA+FC+data (out[4 .. 4+le-1]).
@@ -128,7 +128,7 @@ void protocore_profibus_build_sd3(uint8_t *work)
     out[1] = da;
     out[2] = sa;
     out[3] = fc;
-    mem.cpy(out + 4, data, 8);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 4, .src = data, .bytes = 8);
     ProfibusV.fcs_args.bytes = out + 1;
     ProfibusV.fcs_args.len = 11;
     protocore_profibus_fcs(work);
