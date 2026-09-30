@@ -5,5 +5,5 @@ protocore_add_module(services/transportation/wave
   GATE PROTOCORE_ENABLE_WAVE
   SOURCES wave.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
