@@ -16,10 +16,10 @@
 
 #if PROTOCORE_ENABLE_HTTP_ROUTE
 
-#include "mmgr/protomem/protomem.h" // mem.zero: the hand-out wipe
-#include "mmgr/secure/secure.h"     // where the table lives
+#include "memoria_operor/memoria_operor.h" // memor.set: the hand-out wipe
 #include "network_drivers/presentation/http/route/http_route/http_route.h"
-#include "protocore.h" // completes HttpRoute; route.h names it only as an opaque tag
+#include "protocore.h"                 // completes HttpRoute; route.h names it only as an opaque tag
+#include "server/core/worker/worker.h" // the cellblock the table lives in
 
 // The table's layout, known only here. The storage behind it belongs to the secure pool.
 struct HttpRouteCtx
@@ -50,7 +50,7 @@ uint8_t *protocore_http_route_span(void)
 {
     if (s_span == NULL)
     {
-        s_span = protocore_secure_persist_span(PROTOCORE_HTTP_ROUTE_BORROW).buf;
+        s_span = (uint8_t *)protocore_secure_persist(PROTOCORE_HTTP_ROUTE_BORROW);
     }
     return s_span;
 }
@@ -73,7 +73,7 @@ HttpRoute *protocore_http_routes_add(uint8_t *work)
     // leaves the rest, so an entry carrying a previous tenant's handler or backend pointer would
     // dispatch to it. There is no release path - routes are registered at setup and live forever -
     // so hand-out is the only moment this can be done.
-    mem.zero(r, sizeof(*r));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = r, .val = 0, .bytes = sizeof(*r));
     return r;
 }
 
