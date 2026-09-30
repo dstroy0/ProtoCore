@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_BACNET
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/bacnet/bacnet.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -46,7 +46,7 @@ void protocore_bacnet_bvlc_build(uint8_t *work)
     buf[3] = (uint8_t)(total & 0xFF);
     if (npdu_len)
     {
-        mem.cpy(buf + BVLC_HEADER_SIZE, npdu, npdu_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + BVLC_HEADER_SIZE, .src = npdu, .bytes = npdu_len);
     }
     BacnetV.n = total;
 }
@@ -136,14 +136,14 @@ void protocore_bacnet_npdu_build(uint8_t *work)
         buf[p++] = dadr_len;
         if (dadr_len)
         {
-            mem.cpy(buf + p, dadr, dadr_len);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = dadr, .bytes = dadr_len);
             p += dadr_len;
         }
         buf[p++] = hop_count; // follows the (absent) source fields when a destination is present
     }
     if (apdu_len)
     {
-        mem.cpy(buf + p, apdu, apdu_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = apdu, .bytes = apdu_len);
         p += apdu_len;
     }
     BacnetV.n = p;
@@ -283,7 +283,7 @@ void protocore_bacnet_apdu_build_who_is(uint8_t *work)
         BacnetV.n = 0;
         return;
     }
-    mem.cpy(buf, tmp, p);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf, .src = tmp, .bytes = p);
     BacnetV.n = p;
 }
 
@@ -322,7 +322,7 @@ void protocore_bacnet_apdu_build_i_am(uint8_t *work)
         BacnetV.n = 0;
         return;
     }
-    mem.cpy(buf, tmp, p);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf, .src = tmp, .bytes = p);
     BacnetV.n = p;
 }
 
@@ -362,7 +362,7 @@ void protocore_bacnet_apdu_build_read_property(uint8_t *work)
         BacnetV.n = 0;
         return;
     }
-    mem.cpy(buf, tmp, p);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf, .src = tmp, .bytes = p);
     BacnetV.n = p;
 }
 
@@ -434,7 +434,7 @@ void protocore_bacnet_apdu_parse(uint8_t *work)
         BacnetV.ok = PROTO_FALSE;
         return;
     }
-    mem.set(out, 0, sizeof(*out));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     out->pdu_type = (uint8_t)(apdu[0] >> 4);
     size_t p = 1;
     switch (out->pdu_type)
