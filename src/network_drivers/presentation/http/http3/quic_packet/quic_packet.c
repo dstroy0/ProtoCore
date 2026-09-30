@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/http3/quic_packet/quic_packet.h"
 
 static uint32_t rd_be32(const uint8_t *p)
@@ -62,7 +62,7 @@ proto_bool protocore_quic_packet_parse_long_header(uint8_t *work, const uint8_t 
     {
         return PROTO_FALSE;
     }
-    mem.cpy(out->dcid, buf + pos, dcl);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->dcid, .src = buf + pos, .bytes = dcl);
     out->dcid_len = dcl;
     pos += dcl;
     uint8_t scl = buf[pos++];
@@ -70,7 +70,7 @@ proto_bool protocore_quic_packet_parse_long_header(uint8_t *work, const uint8_t 
     {
         return PROTO_FALSE;
     }
-    mem.cpy(out->scid, buf + pos, scl);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->scid, .src = buf + pos, .bytes = scl);
     out->scid_len = scl;
     pos += scl;
     out->hdr_len = pos;
@@ -97,10 +97,10 @@ size_t protocore_quic_packet_build_long_header(uint8_t *work, uint8_t *out, size
     wr_be32(out + 1, version);
     size_t pos = 5;
     out[pos++] = dcid_len;
-    mem.cpy(out + pos, dcid, dcid_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + pos, .src = dcid, .bytes = dcid_len);
     pos += dcid_len;
     out[pos++] = scid_len;
-    mem.cpy(out + pos, scid, scid_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + pos, .src = scid, .bytes = scid_len);
     pos += scid_len;
     return pos;
 }
@@ -120,7 +120,7 @@ proto_bool protocore_quic_packet_parse_short_header(uint8_t *work, const uint8_t
     out->spin = (uint8_t)((buf[0] & 0x20) ? 1 : 0);
     out->key_phase = (uint8_t)((buf[0] & 0x04) ? 1 : 0);
     out->pn_len = (uint8_t)((buf[0] & 0x03) + 1);
-    mem.cpy(out->dcid, buf + 1, dcid_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->dcid, .src = buf + 1, .bytes = dcid_len);
     out->dcid_len = dcid_len;
     out->hdr_len = (size_t)1 + dcid_len;
     return PROTO_TRUE;
@@ -145,10 +145,10 @@ size_t protocore_quic_packet_build_version_negotiation(uint8_t *work, uint8_t *o
     wr_be32(out + 1, 0);  // Version = 0 marks a Version Negotiation packet
     size_t pos = 5;
     out[pos++] = dcid_len;
-    mem.cpy(out + pos, dcid, dcid_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + pos, .src = dcid, .bytes = dcid_len);
     pos += dcid_len;
     out[pos++] = scid_len;
-    mem.cpy(out + pos, scid, scid_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + pos, .src = scid, .bytes = scid_len);
     pos += scid_len;
     for (size_t i = 0; i < nversions; i++)
     {

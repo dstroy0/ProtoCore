@@ -5,5 +5,5 @@ protocore_add_module(network_drivers/presentation/http/http3/quic_packet
   GATE PROTOCORE_ENABLE_HTTP3
   SOURCES quic_packet.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
