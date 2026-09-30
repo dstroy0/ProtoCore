@@ -5,6 +5,5 @@ protocore_add_module(services/energy/sunspec
   GATE PROTOCORE_ENABLE_SUNSPEC
   SOURCES sunspec.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )

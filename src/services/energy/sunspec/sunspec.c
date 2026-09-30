@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_SUNSPEC
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/energy/sunspec/sunspec.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -133,7 +133,7 @@ static proto_bool ss_put(SunSpecWriter *w, const uint8_t *p, size_t n)
         w->error = PROTO_TRUE;
         return PROTO_FALSE;
     }
-    mem.cpy(w->buf + w->pos, p, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->buf + w->pos, .src = p, .bytes = n);
     w->pos += n;
     return PROTO_TRUE;
 }
@@ -186,7 +186,7 @@ proto_bool protocore_sunspec_write_string(SunSpecWriter *w, const char *s, size_
         w->error = PROTO_TRUE;
         return PROTO_FALSE;
     }
-    size_t slen = str.len(s, field);
+    size_t slen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = field);
     for (size_t i = 0; i < field; i++)
     {
         w->buf[w->pos + i] = (i < slen) ? (uint8_t)s[i] : 0; // NUL-pad the remainder
