@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_MBPLUS
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/mbplus/mbplus.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_X25
 
@@ -65,7 +65,7 @@ void protocore_mbplus_build(uint8_t *work)
     out[i++] = control;
     if (payload_len)
     {
-        mem.cpy(out + i, payload, payload_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + i, .src = payload, .bytes = payload_len);
         i += payload_len;
     }
     MbplusV.crc_args.bytes = out + body;
