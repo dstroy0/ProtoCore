@@ -5,8 +5,7 @@ protocore_add_module(server/storage/partition_monitor
   GATE PROTOCORE_ENABLE_PARTITION_MONITOR
   SOURCES partition_monitor.c
   PRIVATE_DEPS
-    mmgr/protoframe
-    mmgr/protostr
+    mmgr
 )
 
 add_subdirectory(partition_monitor_routes)

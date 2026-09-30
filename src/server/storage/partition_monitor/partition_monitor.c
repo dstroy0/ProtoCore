@@ -16,8 +16,8 @@
 
 #include "server/storage/partition_monitor/partition_monitor.h"
 
-#include "mmgr/protoframe/protoframe.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "numeros_scribo/numeros_scribo.h"
 #include "protocore.h" // on_http: the route table the begin entry installs on
 
 PROTOCORE_BEGIN_DECLS
@@ -95,27 +95,27 @@ void protocore_partition_monitor_kind(uint8_t *work)
 // The item index selects it; !!i is 0 or 1, so the separator is a load rather than a branch.
 static const char *const PROTOCORE_JSON_SEP[2] = {"", ","};
 
-static const protocore_field PART_OPEN[] = {{PROTOCORE_FK_LIT, 0, 15, "{\"partitions\":["}, PROTOCORE_END};
-static const protocore_field PART_ENTRY[] = {
-    PROTOCORE_STR,                              // "," from the second entry on
-    {PROTOCORE_FK_LIT, 0, 9, "{\"label\":"},    //
-    PROTOCORE_JSON,                             // label
-    {PROTOCORE_FK_LIT, 0, 8, ",\"kind\":"},     //
-    PROTOCORE_JSON,                             // kind name
-    {PROTOCORE_FK_LIT, 0, 8, ",\"type\":"},     //
-    PROTOCORE_U32,                              //
-    {PROTOCORE_FK_LIT, 0, 11, ",\"subtype\":"}, //
-    PROTOCORE_U32,                              //
-    {PROTOCORE_FK_LIT, 0, 8, ",\"addr\":"},     //
-    PROTOCORE_U32,                              //
-    {PROTOCORE_FK_LIT, 0, 8, ",\"size\":"},     //
-    PROTOCORE_U32,                              //
-    {PROTOCORE_FK_LIT, 0, 11, ",\"running\":"}, //
-    PROTOCORE_STR,                              // "true" / "false" - a JSON keyword, not a string
-    {PROTOCORE_FK_LIT, 0, 1, "}"},              //
-    PROTOCORE_END,
+static const mmgr_field PART_OPEN[] = {{MMGR_FK_LIT, 0, 15, "{\"partitions\":["}, MMGR_END};
+static const mmgr_field PART_ENTRY[] = {
+    MMGR_STR,                              // "," from the second entry on
+    {MMGR_FK_LIT, 0, 9, "{\"label\":"},    //
+    MMGR_JSON,                             // label
+    {MMGR_FK_LIT, 0, 8, ",\"kind\":"},     //
+    MMGR_JSON,                             // kind name
+    {MMGR_FK_LIT, 0, 8, ",\"type\":"},     //
+    MMGR_U32,                              //
+    {MMGR_FK_LIT, 0, 11, ",\"subtype\":"}, //
+    MMGR_U32,                              //
+    {MMGR_FK_LIT, 0, 8, ",\"addr\":"},     //
+    MMGR_U32,                              //
+    {MMGR_FK_LIT, 0, 8, ",\"size\":"},     //
+    MMGR_U32,                              //
+    {MMGR_FK_LIT, 0, 11, ",\"running\":"}, //
+    MMGR_STR,                              // "true" / "false" - a JSON keyword, not a string
+    {MMGR_FK_LIT, 0, 1, "}"},              //
+    MMGR_END,
 };
-static const protocore_field PART_CLOSE[] = {{PROTOCORE_FK_LIT, 0, 2, "]}"}, PROTOCORE_END};
+static const mmgr_field PART_CLOSE[] = {{MMGR_FK_LIT, 0, 2, "]}"}, MMGR_END};
 
 void protocore_partition_monitor_json(uint8_t *work)
 {
@@ -138,7 +138,7 @@ void protocore_partition_monitor_json(uint8_t *work)
     }
     // Each arm empties the buffer before reporting 0: a frame that did not fit leaves the document
     // open, and a caller measuring the buffer instead of reading the count would ship the fragment.
-    if (frame.append(out, cap, PART_OPEN, NULL, 0) == 0)
+    if (EMBED_CALL(numer.append, NumerosCfg, .out = out, .cap = cap, .spec = PART_OPEN, .vals = NULL, .nvals = 0) == 0)
     {
         out[0] = '\0';
         PartitionMonitorV.n = 0;
@@ -150,20 +150,21 @@ void protocore_partition_monitor_json(uint8_t *work)
         PartitionMonitorV.kind_args.type = p->type;
         PartitionMonitorV.kind_args.subtype = p->subtype;
         protocore_partition_monitor_kind(work);
-        if (frame.append(out, cap, PART_ENTRY,
-                         (const protocore_fval[]){
-                             PROTOCORE_VSTR(PROTOCORE_JSON_SEP[!!i]), PROTOCORE_VJSON(p->label),
-                             PROTOCORE_VJSON(PartitionMonitorV.text), PROTOCORE_VU32((uint32_t)p->type),
-                             PROTOCORE_VU32((uint32_t)p->subtype), PROTOCORE_VU32((uint32_t)p->address),
-                             PROTOCORE_VU32((uint32_t)p->size), PROTOCORE_VSTR(p->running ? "true" : "false")},
-                         8) == 0)
+        if (EMBED_CALL(numer.append, NumerosCfg, .out = out, .cap = cap, .spec = PART_ENTRY,
+                       .vals =
+                           (const mmgr_fval[]){MMGR_VSTR(PROTOCORE_JSON_SEP[!!i]), MMGR_VJSON(p->label),
+                                               MMGR_VJSON(PartitionMonitorV.text), MMGR_VU32((uint32_t)p->type),
+                                               MMGR_VU32((uint32_t)p->subtype), MMGR_VU32((uint32_t)p->address),
+                                               MMGR_VU32((uint32_t)p->size), MMGR_VSTR(p->running ? "true" : "false")},
+                       .nvals = 8) == 0)
         {
             out[0] = '\0';
             PartitionMonitorV.n = 0;
             return;
         }
     }
-    size_t n = frame.append(out, cap, PART_CLOSE, NULL, 0);
+    size_t n =
+        EMBED_CALL(numer.append, NumerosCfg, .out = out, .cap = cap, .spec = PART_CLOSE, .vals = NULL, .nvals = 0);
     if (n == 0)
     {
         out[0] = '\0';
@@ -194,7 +195,7 @@ void protocore_partition_monitor_collect(uint8_t *work)
     for (uint8_t i = 0; i < n; i++)
     {
         protocore_partition_info *d = &out[i];
-        (void)str.copy(d->label, tbl[i].label, sizeof(d->label));
+        (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = d->label, .src = tbl[i].label, .cap = sizeof(d->label));
         d->label[sizeof(d->label) - 1] = '\0';
         d->type = tbl[i].type;
         d->subtype = tbl[i].subtype;
