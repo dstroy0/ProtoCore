@@ -5,7 +5,6 @@ protocore_add_module(services/net/flow_export
   GATE PROTOCORE_ENABLE_FLOW_EXPORT
   SOURCES flow_export.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/plaintext
-    mmgr/protomem
+    mmgr
+    server/core/worker
 )
