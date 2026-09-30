@@ -18,8 +18,8 @@
 
 #if PROTOCORE_ENABLE_TRACE_CAPTURE
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "server/signaling/trace_capture/trace_capture.h"
 
 #include "server/clock/clock.h" // protocore_cycles()
@@ -74,7 +74,7 @@ uint8_t *protocore_trace_capture_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_TRACE_CAPTURE_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_TRACE_CAPTURE_BORROW);
     }
     return s_own.span;
 }
@@ -112,7 +112,8 @@ void protocore_trace_capture_begin(uint8_t *work)
         return;
     }
 
-    mem.set(TRACE_CAPTURE_CTX(work), 0, sizeof(*TRACE_CAPTURE_CTX(work)));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = TRACE_CAPTURE_CTX(work), .val = 0,
+               .bytes = sizeof(*TRACE_CAPTURE_CTX(work)));
     TRACE_CAPTURE_CTX(work)->sink = cfg->sink;
     TRACE_CAPTURE_CTX(work)->ctx = cfg->ctx;
     TRACE_CAPTURE_CTX(work)->pretrigger_samples = cfg->pretrigger_samples;
