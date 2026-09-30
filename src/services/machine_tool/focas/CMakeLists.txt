@@ -5,5 +5,5 @@ protocore_add_module(services/machine_tool/focas
   GATE PROTOCORE_ENABLE_FOCAS
   SOURCES focas.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
