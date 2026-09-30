@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_SOUTHBOUND
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protostr/protostr.h"   // str.eq: the driver registry name lookup
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.eq: the driver registry name lookup
+#include "server/core/worker/worker.h"           // the cellblock this module's state is taken from
 #include "services/southbound/southbound/southbound.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -57,7 +57,7 @@ uint8_t *protocore_southbound_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_SOUTHBOUND_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_SOUTHBOUND_BORROW);
     }
     return s_own.span;
 }
@@ -81,7 +81,8 @@ static const SouthboundDriver *lookup(const struct SouthboundStorage *store, con
     for (size_t i = 0; i < store->count; i++)
     {
         if (store->drivers[i] && store->drivers[i]->name &&
-            str.eq(store->drivers[i]->name, name, MAX_KEY_LEN, PROTO_FALSE))
+            EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = store->drivers[i]->name, .other = name, .cap = MAX_KEY_LEN,
+                       .ci = PROTO_FALSE))
         {
             return store->drivers[i];
         }
