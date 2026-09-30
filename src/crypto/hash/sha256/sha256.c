@@ -18,8 +18,9 @@
 #if PROTOCORE_ENABLE_SHA256
 
 #include "crypto/hash/sha256/sha256.h"
-#include "mmgr/endian/endian.h" // the big-endian reads and writes both arms' padding and digest use
-#include "mmgr/protomem/protomem.h"
+#include "endian/endian.h"                   // the big-endian reads and writes both arms' padding and digest use
+#include "memoria_operor/memoria_operor.h"   // the state copy and the block fill
+#include "proximus_operor/proximus_operor.h" // the unaligned block fill
 
 // The one definition, both arms, private to this TU. The accelerator compresses a block; it does not
 // pad, buffer a partial block, or hold a digest a caller can keep feeding. Those are this file's, so
@@ -44,10 +45,10 @@ static_assert(SHA256_OFF_STATE + sizeof(uint32_t) * 8 <= PROTOCORE_SHA256_BORROW
               "PROTOCORE_SHA256_BORROW is short of the context, the two blocks and the state copy - "
               "raise it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so - in arena.c's own words - a borrow is "met by aligning its offset
-// alone". The offset is a compile-time constant, so that is a compile-time claim and it belongs
-// here rather than in a runtime branch. Both sides are constants; nothing is checked at run time.
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. The offset is a
+// compile-time constant, so that is a compile-time claim and it belongs here rather than in a runtime
+// branch. Both sides are constants; nothing is checked at run time.
 //
 // The size assert above cannot stand in for these. It bounds the far end of the chain and says
 // nothing about where any region begins, so inserting one odd-sized region earlier leaves every
@@ -143,22 +144,22 @@ static inline uint32_t sha256_ssig1(uint32_t x)
 // so no word is ever moved and the schedule stays sixteen words rather than sixty-four.
 static void sha256_block(uint32_t h[8], const uint8_t blk[PROTOCORE_SHA256_BLOCK_LEN])
 {
-    uint32_t m0 = protocore_rd32be(blk);
-    uint32_t m1 = protocore_rd32be(blk + 4);
-    uint32_t m2 = protocore_rd32be(blk + 8);
-    uint32_t m3 = protocore_rd32be(blk + 12);
-    uint32_t m4 = protocore_rd32be(blk + 16);
-    uint32_t m5 = protocore_rd32be(blk + 20);
-    uint32_t m6 = protocore_rd32be(blk + 24);
-    uint32_t m7 = protocore_rd32be(blk + 28);
-    uint32_t m8 = protocore_rd32be(blk + 32);
-    uint32_t m9 = protocore_rd32be(blk + 36);
-    uint32_t m10 = protocore_rd32be(blk + 40);
-    uint32_t m11 = protocore_rd32be(blk + 44);
-    uint32_t m12 = protocore_rd32be(blk + 48);
-    uint32_t m13 = protocore_rd32be(blk + 52);
-    uint32_t m14 = protocore_rd32be(blk + 56);
-    uint32_t m15 = protocore_rd32be(blk + 60);
+    uint32_t m0 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk, .width = MMGR_ENDIAN_32);
+    uint32_t m1 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 4, .width = MMGR_ENDIAN_32);
+    uint32_t m2 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 8, .width = MMGR_ENDIAN_32);
+    uint32_t m3 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 12, .width = MMGR_ENDIAN_32);
+    uint32_t m4 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 16, .width = MMGR_ENDIAN_32);
+    uint32_t m5 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 20, .width = MMGR_ENDIAN_32);
+    uint32_t m6 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 24, .width = MMGR_ENDIAN_32);
+    uint32_t m7 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 28, .width = MMGR_ENDIAN_32);
+    uint32_t m8 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 32, .width = MMGR_ENDIAN_32);
+    uint32_t m9 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 36, .width = MMGR_ENDIAN_32);
+    uint32_t m10 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 40, .width = MMGR_ENDIAN_32);
+    uint32_t m11 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 44, .width = MMGR_ENDIAN_32);
+    uint32_t m12 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 48, .width = MMGR_ENDIAN_32);
+    uint32_t m13 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 52, .width = MMGR_ENDIAN_32);
+    uint32_t m14 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 56, .width = MMGR_ENDIAN_32);
+    uint32_t m15 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blk + 60, .width = MMGR_ENDIAN_32);
 
     uint32_t v0 = h[0];
     uint32_t v1 = h[1];
@@ -295,7 +296,7 @@ static void sha256_block(uint32_t h[8], const uint8_t blk[PROTOCORE_SHA256_BLOCK
 static void sha256_state_init(uint8_t *work)
 {
     Sha256Ctx *ctx = SHA256_CTX(work);
-    mem.cpy(ctx->s, H0, sizeof(H0));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ctx->s, .src = H0, .bytes = sizeof(H0));
     ctx->n = 0;
     ctx->rxlen = 0;
 }
@@ -314,7 +315,7 @@ static void sha256_absorb(uint8_t *work, const uint8_t *data, size_t len)
         }
         // rx + rxlen carries no alignment, so this is the raw mover, not the aligned-span one.
         uint8_t *fill = rx + ctx->rxlen;
-        proto_raw_read(fill, data, take);
+        EMBED_CALL(proxim.read, ProximusCfg, .dst = fill, .at = data, .size = take);
         ctx->rxlen += take;
         data += take;
         len -= take;
@@ -336,32 +337,32 @@ static void sha256_finish(uint8_t *work, uint8_t digest[PROTOCORE_SHA256_DIGEST_
 
     // The padded blocks compress into a copy of the state, so s, rx, rxlen and n all come out of this
     // untouched and the hash can keep taking data afterwards.
-    mem.cpy(fs, ctx->s, sizeof(ctx->s));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = fs, .src = ctx->s, .bytes = sizeof(ctx->s));
 
     // The last block is composed in tx, whole: what rx holds, the mark, zeros, and the length. rx is
     // read and never written back, so nothing it still carries from an earlier block reaches the wire.
-    mem.zero(tx, PROTOCORE_SHA256_BLOCK_LEN);
-    mem.cpy(tx, rx, ctx->rxlen);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = tx, .val = 0, .bytes = PROTOCORE_SHA256_BLOCK_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = tx, .src = rx, .bytes = ctx->rxlen);
     tx[ctx->rxlen] = 0x80;
 
     // The bit length occupies the block's last 8 bytes, so a mark at or past that offset takes its own.
     if (ctx->rxlen >= SHA256_LEN_OFF)
     {
         sha256_block(fs, tx);
-        mem.zero(tx, PROTOCORE_SHA256_BLOCK_LEN);
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = tx, .val = 0, .bytes = PROTOCORE_SHA256_BLOCK_LEN);
     }
 
-    protocore_wr64be(tx + SHA256_LEN_OFF, bitlen);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = tx + SHA256_LEN_OFF, .val = bitlen, .width = MMGR_ENDIAN_64);
     sha256_block(fs, tx);
 
-    protocore_wr32be(digest, fs[0]);
-    protocore_wr32be(digest + 4, fs[1]);
-    protocore_wr32be(digest + 8, fs[2]);
-    protocore_wr32be(digest + 12, fs[3]);
-    protocore_wr32be(digest + 16, fs[4]);
-    protocore_wr32be(digest + 20, fs[5]);
-    protocore_wr32be(digest + 24, fs[6]);
-    protocore_wr32be(digest + 28, fs[7]);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = digest, .val = fs[0], .width = MMGR_ENDIAN_32);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = digest + 4, .val = fs[1], .width = MMGR_ENDIAN_32);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = digest + 8, .val = fs[2], .width = MMGR_ENDIAN_32);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = digest + 12, .val = fs[3], .width = MMGR_ENDIAN_32);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = digest + 16, .val = fs[4], .width = MMGR_ENDIAN_32);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = digest + 20, .val = fs[5], .width = MMGR_ENDIAN_32);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = digest + 24, .val = fs[6], .width = MMGR_ENDIAN_32);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = digest + 28, .val = fs[7], .width = MMGR_ENDIAN_32);
 }
 
 // --- the entries -----------------------------------------------------------
