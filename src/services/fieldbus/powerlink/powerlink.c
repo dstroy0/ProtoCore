@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_POWERLINK
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/powerlink/powerlink.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -50,7 +50,7 @@ void protocore_powerlink_build(uint8_t *work)
     out[2] = source;
     if (payload_len)
     {
-        mem.cpy(out + 3, payload, payload_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 3, .src = payload, .bytes = payload_len);
     }
     PowerlinkV.n = n;
 }

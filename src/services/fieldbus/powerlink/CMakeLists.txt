@@ -5,5 +5,5 @@ protocore_add_module(services/fieldbus/powerlink
   GATE PROTOCORE_ENABLE_POWERLINK
   SOURCES powerlink.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
