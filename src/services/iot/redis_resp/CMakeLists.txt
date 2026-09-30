@@ -5,6 +5,5 @@ protocore_add_module(services/iot/redis_resp
   GATE PROTOCORE_ENABLE_REDIS
   SOURCES redis_resp.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )

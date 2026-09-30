@@ -16,8 +16,8 @@
 
 #include "services/iot/redis_resp/redis_resp.h"
 
-#include "mmgr/protomem/protomem.h" // mem.cpy: the argument octets an encode moves
-#include "mmgr/protostr/protostr.h" // str.len: the bounded length of a NUL-terminated argument
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the bounded length of a NUL-terminated argument
+#include "memoria_operor/memoria_operor.h"       // memor.cpy: the argument octets an encode moves
 
 PROTOCORE_BEGIN_DECLS
 
@@ -360,7 +360,8 @@ void protocore_resp_encode_command(uint8_t *work)
         {
             return;
         }
-        const size_t alen = argv_len ? argv_len[i] : str.len(argv[i], cap);
+        const size_t alen =
+            argv_len ? argv_len[i] : EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = argv[i], .cap = cap);
         if (!put_len_prefix(buf, cap, &pos, '$', alen))
         {
             return;
@@ -369,7 +370,7 @@ void protocore_resp_encode_command(uint8_t *work)
         {
             return;
         }
-        mem.cpy(buf + pos, argv[i], alen);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + pos, .src = argv[i], .bytes = alen);
         pos += alen;
         buf[pos++] = '\r';
         buf[pos++] = '\n';
