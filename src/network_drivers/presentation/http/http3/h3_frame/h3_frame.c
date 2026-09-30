@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/http3/h3_frame/h3_frame.h"
 #include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
 
@@ -133,7 +133,7 @@ size_t protocore_h3_frame_build_data(uint8_t *work, uint8_t *out, size_t cap, co
     }
     if (len)
     {
-        mem.cpy(out + hn, data, len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + hn, .src = data, .bytes = len);
     }
     return hn + len;
 }
@@ -148,7 +148,7 @@ size_t protocore_h3_frame_build_headers(uint8_t *work, uint8_t *out, size_t cap,
     }
     if (len)
     {
-        mem.cpy(out + hn, block, len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + hn, .src = block, .bytes = len);
     }
     return hn + len;
 }

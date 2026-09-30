@@ -5,6 +5,6 @@ protocore_add_module(network_drivers/presentation/http/http3/h3_frame
   GATE PROTOCORE_ENABLE_HTTP3
   SOURCES h3_frame.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
     network_drivers/presentation/http/http3/quic_varint
 )
