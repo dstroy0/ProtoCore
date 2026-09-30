@@ -174,8 +174,8 @@ static size_t put_u32le(uint8_t *p, uint32_t v)
 static size_t put_f32le(uint8_t *p, float v)
 {
     uint32_t u;
-    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &u, .src = &v,
-               .bytes = 4); // reinterpret the IEEE-754 bits, then emit little-endian
+    // reinterpret the IEEE-754 bits, then emit little-endian
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &u, .src = &v, .bytes = 4);
     return put_u32le(p, u);
 }
 
