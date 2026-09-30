@@ -14,8 +14,8 @@
 
 #if PROTOCORE_ENABLE_HMMD
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
+#include "memoria_operor/memoria_operor.h"
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "server/peripherals/hmmd/hmmd.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -52,8 +52,8 @@ static_assert(HMMD_OFF_CTX + sizeof(HmmdCtx) <= PROTOCORE_HMMD_BORROW,
               "PROTOCORE_HMMD_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(HMMD_OFF_CTX % _Alignof(HmmdCtx) == 0,
@@ -92,7 +92,7 @@ uint8_t *protocore_hmmd_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_HMMD_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_HMMD_BORROW);
     }
     return s_own.span;
 }
@@ -115,7 +115,7 @@ static void hmmd_parse_report(uint8_t *work)
         Hmmd.ok = PROTO_FALSE;
         return;
     }
-    if (mem.cmp(f, HDR, 4) != 0)
+    if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = f, .other = HDR, .bytes = 4) != 0)
     {
         Hmmd.ok = PROTO_FALSE;
         return;
@@ -125,7 +125,7 @@ static void hmmd_parse_report(uint8_t *work)
         Hmmd.ok = PROTO_FALSE;
         return; // the only report length this module emits
     }
-    if (mem.cmp(f + 6 + PROTOCORE_HMMD_REPORT_LEN, FTR, 4) != 0)
+    if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = f + 6 + PROTOCORE_HMMD_REPORT_LEN, .other = FTR, .bytes = 4) != 0)
     {
         Hmmd.ok = PROTO_FALSE;
         return;
@@ -133,7 +133,7 @@ static void hmmd_parse_report(uint8_t *work)
 
     const uint8_t *p = f + 6;
     HmmdReport r;
-    mem.set(&r, 0, sizeof(r));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &r, .val = 0, .bytes = sizeof(r));
     r.detected = (p[0] == 0x01) ? 1u : 0u;
     r.distance_cm = rd16(p + 1);
     for (int i = 0; i < PROTOCORE_HMMD_GATES; i++)
@@ -391,7 +391,7 @@ static void hmmd_parse_ack(uint8_t *work)
         Hmmd.ok = PROTO_FALSE;
         return;
     }
-    if (mem.cmp(f, CMD_HDR, 4) != 0)
+    if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = f, .other = CMD_HDR, .bytes = 4) != 0)
     {
         Hmmd.ok = PROTO_FALSE;
         return;
@@ -402,7 +402,7 @@ static void hmmd_parse_ack(uint8_t *work)
         Hmmd.ok = PROTO_FALSE;
         return; // the declared length must account for exactly this frame
     }
-    if (mem.cmp(f + 6 + dl, CMD_FTR, 4) != 0)
+    if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = f + 6 + dl, .other = CMD_FTR, .bytes = 4) != 0)
     {
         Hmmd.ok = PROTO_FALSE;
         return;
