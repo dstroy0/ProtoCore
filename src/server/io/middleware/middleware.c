@@ -10,13 +10,13 @@
  * counter that answers 429 + Retry-After past the budget.
  */
 
-#include "mmgr/protoframe/protoframe.h" // the one frame engine
+#include "numeros_scribo/numeros_scribo.h" // the one frame engine
 #include "protocore.h"
 #include "server/clock/clock.h" // protocore_millis: the library clock, not the platform's
 #include "shared/mime/mime.h"   // PROTOCORE_MIME_TEXT_PLAIN
 
 // Retry-After carries one number and nothing else.
-static const protocore_field RETRY_AFTER[] = {PROTOCORE_U32, PROTOCORE_END};
+static const mmgr_field RETRY_AFTER[] = {MMGR_U32, MMGR_END};
 
 // ---------------------------------------------------------------------------
 // Middleware chain + built-in rate limiter
@@ -110,8 +110,8 @@ proto_bool rate_limit_check(uint8_t slot_id)
     uint32_t remain_ms = (s_mw.rl_window_ms > elapsed) ? (s_mw.rl_window_ms - elapsed) : 0;
     char secs[12];
     // Fails closed to an empty string on its own, so there is no failure arm to write here.
-    frame.build(secs, sizeof(secs), RETRY_AFTER,
-                (const protocore_fval[]){PROTOCORE_VU32((uint32_t)((remain_ms + 999) / 1000))}, 1);
+    EMBED_CALL(numer.build, NumerosCfg, .out = secs, .cap = sizeof(secs), .spec = RETRY_AFTER,
+               .vals = (const mmgr_fval[]){MMGR_VU32((uint32_t)((remain_ms + 999) / 1000))}, .nvals = 1);
     proto_add_response_header(slot_id, "Retry-After", secs);
     send_text(slot_id, 429, PROTOCORE_MIME_TEXT_PLAIN, "Too Many Requests");
     return PROTO_TRUE;
