@@ -5,6 +5,5 @@ protocore_add_module(network_drivers/presentation/http/httpcache
   GATE PROTOCORE_ENABLE_HTTP_CACHE
   SOURCES httpcache.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )
