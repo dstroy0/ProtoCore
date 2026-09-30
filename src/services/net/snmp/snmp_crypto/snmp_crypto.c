@@ -10,13 +10,13 @@
 
 #if PROTOCORE_ENABLE_SNMP_V3
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
-#include "mmgr/secure/secure.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/net/snmp/snmp_crypto/snmp_crypto.h"
 
 #include "crypto/cipher/aes_sbox/aes_sbox.h"
 #include "crypto/hash/sha256/sha256.h"
+#include "locus_carcerum/locus_carcerum.h" // mmgr_zero_buf: the wipe the compiler cannot drop
 
 PROTOCORE_BEGIN_DECLS
 
@@ -38,12 +38,13 @@ void protocore_snmp_crypto_localize_key(uint8_t *work)
     (void)work;
     const char *password = SnmpCryptoV.key.password;
     uint8_t *key_out = SnmpCryptoV.key.out;
-    size_t pwlen = password ? str.len(password, PROTOCORE_SNMP_USM_PASS_MAX) : 0;
+    size_t pwlen =
+        password ? EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = password, .cap = PROTOCORE_SNMP_USM_PASS_MAX) : 0;
     if (pwlen == 0 || key_out == NULL)
     {
         if (key_out != NULL)
         {
-            mem.set(key_out, 0, SNMP_USM_KEY_LEN);
+            EMBED_CALL(memor.set, MemoriaCfg, .dst = key_out, .val = 0, .bytes = SNMP_USM_KEY_LEN);
         }
         SnmpCryptoV.ok = PROTO_FALSE;
         return;
@@ -75,8 +76,8 @@ void protocore_snmp_crypto_localize_key(uint8_t *work)
     Sha256.update(sha, ku, SNMP_USM_KEY_LEN);
     Sha256.final(sha, key_out);
 
-    protocore_secure_wipe(ku, sizeof(ku));
-    protocore_secure_wipe(block, sizeof(block));
+    mmgr_zero_buf(ku, sizeof(ku));
+    mmgr_zero_buf(block, sizeof(block));
     SnmpCryptoV.ok = PROTO_TRUE;
 }
 
@@ -91,11 +92,11 @@ static const uint8_t kRcon[10] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80
 // Expand a 128-bit key into 11 round keys (44 words).
 static void aes128_key_schedule(const uint8_t key[16], uint8_t rk[176])
 {
-    mem.cpy(rk, key, 16);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = rk, .src = key, .bytes = 16);
     for (int i = 4; i < 44; i++)
     {
         uint8_t t[4];
-        mem.cpy(t, rk + (i - 1) * 4, 4);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = t, .src = rk + (i - 1) * 4, .bytes = 4);
         if (i % 4 == 0)
         {
             uint8_t tmp = t[0]; // RotWord
@@ -143,7 +144,7 @@ static void aes128_encrypt_block(const uint8_t rk[176], const uint8_t in[16], ui
                 t[r + 4 * c] = s[r + 4 * ((c + r) % 4)];
             }
         }
-        mem.cpy(s, t, 16);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = s, .src = t, .bytes = 16);
 
         // MixColumns, skipped in the final round
         if (round != 10)
@@ -168,7 +169,7 @@ static void aes128_encrypt_block(const uint8_t rk[176], const uint8_t in[16], ui
             s[i] ^= rk[round * 16 + i];
         }
     }
-    mem.cpy(out, s, 16);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = s, .bytes = 16);
 }
 
 // CFB128: each block of input is XORed with the cipher applied to the feedback register, and the
@@ -190,7 +191,7 @@ void protocore_snmp_crypto_aes_cfb128(uint8_t *work)
     uint8_t rk[176];
     aes128_key_schedule(SnmpCryptoV.priv.key, rk);
     uint8_t fb[16];
-    mem.cpy(fb, SnmpCryptoV.priv.iv, 16);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = fb, .src = SnmpCryptoV.priv.iv, .bytes = 16);
     uint8_t ks[16];
 
     size_t off = 0;
@@ -222,14 +223,14 @@ void protocore_snmp_crypto_aes_cfb128(uint8_t *work)
         }
         if (bl == 16)
         {
-            mem.cpy(fb, cipher, 16);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = fb, .src = cipher, .bytes = 16);
         }
         off += bl;
     }
 
-    protocore_secure_wipe(rk, sizeof(rk));
-    protocore_secure_wipe(ks, sizeof(ks));
-    protocore_secure_wipe(fb, sizeof(fb));
+    mmgr_zero_buf(rk, sizeof(rk));
+    mmgr_zero_buf(ks, sizeof(ks));
+    mmgr_zero_buf(fb, sizeof(fb));
     SnmpCryptoV.ok = PROTO_TRUE;
 }
 
