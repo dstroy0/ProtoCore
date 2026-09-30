@@ -24,7 +24,7 @@
 
 #include "crypto/hash/sha256/sha256.h" // Sha256 - the digest this MAC drives, and its lengths
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 
 // The transient half of the caller's bytes: live inside init and inside final, dead between them. The
 // two 64-byte key blocks double as key-padding scratch for build_key_block.
@@ -45,8 +45,8 @@ static_assert(HMAC_OFF_HASH + PROTOCORE_SHA256_BORROW <= PROTOCORE_HMAC_SHA256_B
               "PROTOCORE_HMAC_SHA256_BORROW is short of the split - raise it in protocore_config.h, which "
               "sums it into the secure arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(HMAC_OFF_WORK % _Alignof(HmacWork) == 0,
@@ -64,7 +64,7 @@ static_assert(HMAC_OFF_WORK % _Alignof(HmacWork) == 0,
 static void build_key_block(const uint8_t *key, size_t key_len, uint8_t block[64], uint8_t pad_byte,
                             uint8_t scratch[64], uint8_t *hash_work)
 {
-    mem.set(scratch, 0, 64);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = scratch, .val = 0, .bytes = 64);
     if (key_len > 64)
     {
         // Keys longer than the block become their SHA-256 hash.
