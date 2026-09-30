@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_POWER_MGMT
 
-#include "mmgr/membuild/membuild.h"   // protocore_sb frame builder
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "server/core/power_mgmt/power_mgmt.h"
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
+#include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
 // ---------------------------------------------------------------------------
 // Pure decision
@@ -56,7 +56,7 @@ uint8_t *protocore_power_mgmt_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_POWER_MGMT_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_POWER_MGMT_BORROW);
     }
     return s_own.span;
 }
@@ -142,24 +142,27 @@ void protocore_power_json(uint8_t *work)
     }
     // The two forms differ by one field, so one builder emits both rather than two copies that can
     // drift apart.
-    protocore_sb sb = {out, cap, 0, PROTO_TRUE};
-    Sb.put(&sb, "{\"cpu_mhz\":");
-    Sb.u32(&sb, (uint32_t)plan->cpu_mhz);
-    Sb.put(&sb, ",\"throttled\":");
-    Sb.put(&sb, plan->throttled ? "true" : "false");
-    Sb.put(&sb, ",\"recovering\":");
-    Sb.put(&sb, plan->recovering ? "true" : "false");
-    Sb.put(&sb, ",\"temp_c\":");
+    size_t sb = 0;
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb, .text = "{\"cpu_mhz\":");
+    sb = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb,
+                    .val = (uint32_t)plan->cpu_mhz);
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb, .text = ",\"throttled\":");
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb,
+                    .text = plan->throttled ? "true" : "false");
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb, .text = ",\"recovering\":");
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb,
+                    .text = plan->recovering ? "true" : "false");
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb, .text = ",\"temp_c\":");
     if (temp_c == INT16_MIN) // no sensor: report null rather than a sentinel that reads as a reading
     {
-        Sb.put(&sb, "null");
+        sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb, .text = "null");
     }
     else
     {
-        Sb.i64(&sb, (int64_t)temp_c);
+        sb = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb, .sval = (int64_t)temp_c);
     }
-    Sb.put(&sb, "}");
-    size_t n = Sb.finish(&sb);
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb, .text = "}");
+    size_t n = EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb);
     if (n == 0)
     {
         // Fail closed: the builder writes the pieces that fit before it latches, so without this
