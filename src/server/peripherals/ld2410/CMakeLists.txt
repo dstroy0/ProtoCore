@@ -5,7 +5,7 @@ protocore_add_module(server/peripherals/ld2410
   GATE PROTOCORE_ENABLE_LD2410
   SOURCES ld2410.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/secure
+    mmgr
+    server/core/worker
     server/peripherals/uart
 )
