@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_RELAY
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "server/net/relay/relay/relay.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -111,7 +111,7 @@ void protocore_relay_init(uint8_t *work)
     {
         return;
     }
-    mem.set(r, 0, sizeof(*r));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = r, .val = 0, .bytes = sizeof(*r));
     r->a = *client;
     r->b = *origin;
 }
