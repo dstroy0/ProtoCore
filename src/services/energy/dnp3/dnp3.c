@@ -7,8 +7,8 @@
  */
 
 #include "services/energy/dnp3/dnp3.h"
-#include "mmgr/endian/endian.h" // endian.rd16le / endian.rd32le
-#include "mmgr/protomem/protomem.h"
+#include "endian/endian.h" // parva_extremitas.rd / parva_extremitas.rd
+#include "memoria_operor/memoria_operor.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_DNP
 
 #if PROTOCORE_ENABLE_DNP3
@@ -70,7 +70,7 @@ size_t protocore_dnp3_build_frame(uint8_t *buf, size_t cap, uint8_t control, uin
         {
             blk = DNP3_BLOCK_LEN;
         }
-        mem.cpy(buf + p, user_data + off, blk);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = user_data + off, .bytes = blk);
         put_crc(buf + p + blk, buf + p, blk); // CRC over this block's data
         p += blk + DNP3_CRC_LEN;
         off += blk;
@@ -138,7 +138,7 @@ proto_bool protocore_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame 
         {
             return PROTO_FALSE; // block CRC mismatch
         }
-        mem.cpy(out_user + off, buf + p, blk);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out_user + off, .src = buf + p, .bytes = blk);
         p += blk + DNP3_CRC_LEN;
         off += blk;
     }
@@ -175,7 +175,7 @@ size_t protocore_dnp3_build_transport_segment(uint8_t *out, size_t cap, proto_bo
     out[0] = protocore_dnp3_transport_header(fir, fin, seq);
     if (app_len)
     {
-        mem.cpy(out + 1, app_data, app_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 1, .src = app_data, .bytes = app_len);
     }
     return 1 + app_len;
 }
@@ -234,7 +234,7 @@ int protocore_dnp3_transport_feed(Dnp3TransportRx *r, const uint8_t *user, size_
     }
     if (app_len)
     {
-        mem.cpy(r->buf + r->len, app, app_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = r->buf + r->len, .src = app, .bytes = app_len);
     }
     r->len += app_len;
     r->expect_seq = (uint8_t)((r->expect_seq + 1) & DNP3_TR_SEQ_MASK);
@@ -264,7 +264,7 @@ size_t protocore_dnp3_build_app_request(uint8_t *out, size_t cap, uint8_t app_co
     out[1] = fc;
     if (obj_len)
     {
-        mem.cpy(out + 2, objects, obj_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 2, .src = objects, .bytes = obj_len);
     }
     return 2 + obj_len;
 }
@@ -282,7 +282,7 @@ size_t protocore_dnp3_build_app_response(uint8_t *out, size_t cap, uint8_t app_c
     out[3] = (uint8_t)(iin >> 8); // IIN2
     if (obj_len)
     {
-        mem.cpy(out + 4, objects, obj_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 4, .src = objects, .bytes = obj_len);
     }
     return 4 + obj_len;
 }
@@ -354,13 +354,13 @@ size_t protocore_dnp3_build_object_header_range(uint8_t *buf, size_t cap, uint8_
     }
     else if (range_code == DNP3_RANGE_START_STOP_2)
     {
-        endian.wr16le(buf + 3, (uint16_t)start);
-        endian.wr16le(buf + 5, (uint16_t)stop);
+        EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + 3, .val = (uint16_t)start, .width = MMGR_ENDIAN_16);
+        EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + 5, .val = (uint16_t)stop, .width = MMGR_ENDIAN_16);
     }
     else
     {
-        endian.wr32le(buf + 3, start);
-        endian.wr32le(buf + 7, stop);
+        EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + 3, .val = start, .width = MMGR_ENDIAN_32);
+        EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + 7, .val = stop, .width = MMGR_ENDIAN_32);
     }
     return total;
 }
@@ -387,8 +387,8 @@ size_t protocore_dnp3_build_crob(uint8_t *buf, size_t cap, uint8_t op_type, uint
     // Control code: op-type (bits 0-3) | clear (bit 5) | trip-close (bits 6-7). The queue bit (0x10) is obsolete.
     buf[0] = (uint8_t)((op_type & 0x0Fu) | (clear ? 0x20u : 0x00u) | (uint8_t)((tcc & 0x03u) << 6));
     buf[1] = count;
-    endian.wr32le(buf + 2, on_time_ms);
-    endian.wr32le(buf + 6, off_time_ms);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + 2, .val = on_time_ms, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + 6, .val = off_time_ms, .width = MMGR_ENDIAN_32);
     buf[10] = 0x00; // status: 0 in a request (the outstation reports the result in its response)
     return DNP3_CROB_LEN;
 }
@@ -399,8 +399,9 @@ size_t protocore_dnp3_build_aob32(uint8_t *buf, size_t cap, int32_t value)
     {
         return 0;
     }
-    endian.wr32le(buf, (uint32_t)value); // 32-bit signed setpoint, little-endian (two's complement)
-    buf[4] = 0x00;                       // control status: 0 in a request (the outstation reports the result)
+    // 32-bit signed setpoint, little-endian (two's complement)
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf, .val = (uint32_t)value, .width = MMGR_ENDIAN_32);
+    buf[4] = 0x00; // control status: 0 in a request (the outstation reports the result)
     return DNP3_AOB_LEN;
 }
 
@@ -411,8 +412,9 @@ size_t protocore_dnp3_build_aob_float(uint8_t *buf, size_t cap, float value)
         return 0;
     }
     uint32_t bits;
-    mem.cpy(&bits, &value, 4); // the IEEE-754 bit pattern, written little-endian (endian-safe)
-    endian.wr32le(buf, bits);
+    // the IEEE-754 bit pattern, written little-endian (endian-safe)
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &bits, .src = &value, .bytes = 4);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf, .val = bits, .width = MMGR_ENDIAN_32);
     buf[4] = 0x00; // control status: 0 in a request
     return DNP3_AOB_LEN;
 }
@@ -446,8 +448,8 @@ proto_bool protocore_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dn
         {
             return PROTO_FALSE;
         }
-        start = endian.rd16le(buf + p);
-        stop = endian.rd16le(buf + p + 2);
+        start = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + p, .width = MMGR_ENDIAN_16);
+        stop = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + p + 2, .width = MMGR_ENDIAN_16);
         p += 4;
         count = stop - start + 1;
         break;
@@ -456,8 +458,8 @@ proto_bool protocore_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dn
         {
             return PROTO_FALSE;
         }
-        start = endian.rd32le(buf + p);
-        stop = endian.rd32le(buf + p + 4);
+        start = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + p, .width = MMGR_ENDIAN_32);
+        stop = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + p + 4, .width = MMGR_ENDIAN_32);
         p += 8;
         count = stop - start + 1;
         break;
@@ -477,7 +479,7 @@ proto_bool protocore_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dn
         {
             return PROTO_FALSE;
         }
-        count = endian.rd16le(buf + p);
+        count = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + p, .width = MMGR_ENDIAN_16);
         p += 2;
         is_count = PROTO_TRUE;
         break;
@@ -486,7 +488,7 @@ proto_bool protocore_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dn
         {
             return PROTO_FALSE;
         }
-        count = endian.rd32le(buf + p);
+        count = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + p, .width = MMGR_ENDIAN_32);
         p += 4;
         is_count = PROTO_TRUE;
         break;
