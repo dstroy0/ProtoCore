@@ -4,6 +4,6 @@
 protocore_add_module(shared/ip
   SOURCES ip.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
     shared/hex
 )

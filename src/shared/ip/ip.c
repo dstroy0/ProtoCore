@@ -12,7 +12,7 @@
  */
 
 #include "shared/ip/ip.h"
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "shared/hex/hex.h" // PROTOCORE_HEX: the shared digit tables
 
 // -------------------------------------------------------------------------------------------
@@ -111,7 +111,7 @@ static proto_bool parse_hextet(const char *s, size_t len, uint16_t *out)
 static void assemble_v6(const uint16_t *head, int nhead, const uint16_t *tail, int ntail, uint8_t out[16])
 {
     uint16_t g[8];
-    mem.set(g, 0, sizeof(g));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = g, .val = 0, .bytes = sizeof(g));
     for (int k = 0; k < nhead; k++)
     {
         g[k] = head[k];
@@ -160,7 +160,7 @@ static proto_bool parse_v6(const char *s, size_t len, uint8_t out[16])
         i = 2;
         if (i == len) // the whole address is "::"
         {
-            mem.set(out, 0, 16);
+            EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = 16);
             return PROTO_TRUE;
         }
     }
@@ -277,7 +277,7 @@ static size_t format_v4(const uint8_t *b, char *out, size_t cap)
     {
         return 0;
     }
-    mem.cpy(out, tmp, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = tmp, .bytes = n);
     out[n] = '\0';
     return n;
 }
@@ -468,7 +468,7 @@ void protocore_ip_parse(uint8_t *work)
         return;
     }
 
-    mem.set(out->bytes, 0, 16);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out->bytes, .val = 0, .bytes = 16);
     if (colon)
     {
         if (!parse_v6(s, len, out->bytes))
@@ -529,8 +529,8 @@ void protocore_ip_format(uint8_t *work)
             IpV.n = 0;
             return;
         }
-        mem.cpy(out, "::ffff:", 7);
-        mem.cpy(out + 7, tail, tn);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = "::ffff:", .bytes = 7);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 7, .src = tail, .bytes = tn);
         out[7 + tn] = '\0';
         IpV.n = 7 + tn;
         return;
@@ -575,7 +575,7 @@ void protocore_ip_format(uint8_t *work)
         IpV.n = 0;
         return;
     }
-    mem.cpy(out, tmp, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = tmp, .bytes = n);
     out[n] = '\0';
     IpV.n = n;
 }
@@ -633,13 +633,13 @@ void protocore_ip_equal(uint8_t *work)
         IpV.ok = PROTO_TRUE;
         return; // both the same non-address family (PROTOCORE_IP_NONE)
     }
-    IpV.ok = mem.cmp(a->bytes, b->bytes, (size_t)n) == 0;
+    IpV.ok = EMBED_CALL(memor.cmp, MemoriaCfg, .src = a->bytes, .other = b->bytes, .bytes = (size_t)n) == 0;
 }
 
 protocore_ip protocore_ip_from_v4_octets(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
 {
     protocore_ip ip;
-    mem.set(&ip, 0, sizeof(ip));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &ip, .val = 0, .bytes = sizeof(ip));
     ip.family = PROTOCORE_IP_V4;
     ip.bytes[0] = a;
     ip.bytes[1] = b;
@@ -652,7 +652,7 @@ protocore_ip protocore_ip_from_v6_bytes(const uint8_t bytes[16])
 {
     protocore_ip ip;
     ip.family = PROTOCORE_IP_V6;
-    mem.cpy(ip.bytes, bytes, 16);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ip.bytes, .src = bytes, .bytes = 16);
     return ip;
 }
 
