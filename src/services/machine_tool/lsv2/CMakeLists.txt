@@ -5,5 +5,5 @@ protocore_add_module(services/machine_tool/lsv2
   GATE PROTOCORE_ENABLE_LSV2
   SOURCES lsv2.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
