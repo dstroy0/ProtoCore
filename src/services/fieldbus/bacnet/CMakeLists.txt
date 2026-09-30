@@ -5,5 +5,5 @@ protocore_add_module(services/fieldbus/bacnet
   GATE PROTOCORE_ENABLE_BACNET
   SOURCES bacnet.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
