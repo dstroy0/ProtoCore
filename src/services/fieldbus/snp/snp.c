@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_SNP
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/snp/snp.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -63,7 +63,7 @@ void protocore_snp_build(uint8_t *work)
     out[1] = (uint8_t)data_len;
     if (data_len)
     {
-        mem.cpy(out + 2, data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 2, .src = data, .bytes = data_len);
     }
     SnpV.bcc_args.bytes = out;
     SnpV.bcc_args.len = 2 + data_len;

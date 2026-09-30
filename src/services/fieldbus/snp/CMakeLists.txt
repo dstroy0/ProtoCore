@@ -5,5 +5,5 @@ protocore_add_module(services/fieldbus/snp
   GATE PROTOCORE_ENABLE_SNP
   SOURCES snp.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )
