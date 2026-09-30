@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_NTS
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/application/nts/nts.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -61,7 +61,7 @@ void protocore_nts_ke_record(uint8_t *work)
     put_u16(out + 2, (uint16_t)body_len);
     if (body_len)
     {
-        mem.cpy(out + 4, body, body_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 4, .src = body, .bytes = body_len);
     }
     NtsV.n = n;
 }
@@ -184,7 +184,7 @@ void protocore_nts_ef(uint8_t *work)
     put_u16(out + 2, (uint16_t)padded);
     if (value_len)
     {
-        mem.cpy(out + 4, value, value_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 4, .src = value, .bytes = value_len);
     }
     for (size_t i = total; i < padded; i++)
     {
