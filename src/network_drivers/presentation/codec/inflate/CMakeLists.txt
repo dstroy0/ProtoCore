@@ -5,6 +5,6 @@ protocore_add_module(network_drivers/presentation/codec/inflate
   GATE PROTOCORE_ENABLE_WS_DEFLATE
   SOURCES inflate.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
     network_drivers/presentation/codec/deflate/rfc1951
 )

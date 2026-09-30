@@ -17,7 +17,7 @@
 #if PROTOCORE_ENABLE_WS_DEFLATE
 
 #include "inflate.h"
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/codec/deflate/rfc1951/rfc1951.h" // RFC1951: the sec 3.2.5 tables
 
 PROTOCORE_BEGIN_DECLS
@@ -235,7 +235,7 @@ static InflateResult stored(State *s)
     {
         return INFLATE_ERR_OVERFLOW;
     }
-    mem.cpy(s->out + s->outcnt, s->in + s->incnt, (size_t)len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = s->out + s->outcnt, .src = s->in + s->incnt, .bytes = (size_t)len);
     s->incnt += (size_t)len;
     s->outcnt += (size_t)len;
     return INFLATE_OK;
