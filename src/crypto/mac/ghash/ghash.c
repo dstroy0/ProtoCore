@@ -22,7 +22,7 @@
 #if PROTOCORE_ENABLE_GHASH
 
 #include "crypto/mac/ghash/ghash.h"
-#include "mmgr/endian/endian.h" // protocore_rd32be / protocore_wr32be
+#include "endian/endian.h" // magna_extremitas.rd / magna_extremitas.wr
 
 PROTOCORE_BEGIN_DECLS
 
@@ -41,8 +41,8 @@ static_assert(GHASH_OFF_END <= PROTOCORE_GHASH_BORROW,
               "PROTOCORE_GHASH_BORROW is short of the 4-bit table - raise it in protocore_config.h, "
               "which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(GHASH_OFF_CTX % _Alignof(GhashCtx) == 0,
@@ -62,10 +62,10 @@ static void gf_key_init(uint8_t *work)
     GhashCtx *t = GHASH_CTX(work);
     const uint8_t *h = GhashV.key_args.h;
     // M[8] = H; M[4]=H/x, M[2]=H/x^2, M[1]=H/x^3 (one GF right-shift each, reducing by R=0xe1<<120).
-    uint32_t z0 = protocore_rd32be(h);
-    uint32_t z1 = protocore_rd32be(h + 4);
-    uint32_t z2 = protocore_rd32be(h + 8);
-    uint32_t z3 = protocore_rd32be(h + 12);
+    uint32_t z0 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = h, .width = MMGR_ENDIAN_32);
+    uint32_t z1 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = h + 4, .width = MMGR_ENDIAN_32);
+    uint32_t z2 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = h + 8, .width = MMGR_ENDIAN_32);
+    uint32_t z3 = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = h + 12, .width = MMGR_ENDIAN_32);
     t->M[8][0] = z0;
     t->M[8][1] = z1;
     t->M[8][2] = z2;
@@ -135,10 +135,10 @@ static void gf_mul(uint8_t *work, uint8_t *acc)
         z2 ^= t->M[hi][2];
         z3 ^= t->M[hi][3];
     }
-    protocore_wr32be(acc, z0);
-    protocore_wr32be(acc + 4, z1);
-    protocore_wr32be(acc + 8, z2);
-    protocore_wr32be(acc + 12, z3);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = acc, .val = z0, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = acc + 4, .val = z1, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = acc + 8, .val = z2, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = acc + 12, .val = z3, .width = MMGR_ENDIAN_32);
 }
 
 // --- the entries -----------------------------------------------------------
