@@ -15,8 +15,8 @@
 
 #if PROTOCORE_ENABLE_GATEWAY
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
+#include "memoria_operor/memoria_operor.h"
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "server/net/gateway/gateway.h"
 
 #include "server/clock/clock.h" // protocore_millis(): the one time source the rate window reads
@@ -53,8 +53,8 @@ static_assert(GATEWAY_OFF_CTX + sizeof(GatewayCtx) <= PROTOCORE_GATEWAY_BORROW,
               "PROTOCORE_GATEWAY_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(GATEWAY_OFF_CTX % _Alignof(GatewayCtx) == 0,
@@ -154,7 +154,7 @@ uint8_t *protocore_gateway_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_GATEWAY_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_GATEWAY_BORROW);
     }
     return s_own.span;
 }
@@ -162,12 +162,14 @@ uint8_t *protocore_gateway_span(void)
 void protocore_gateway_reset(uint8_t *work)
 {
 
-    mem.set(GATEWAY_CTX(work)->ports, 0, sizeof(GATEWAY_CTX(work)->ports));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = GATEWAY_CTX(work)->ports, .val = 0,
+               .bytes = sizeof(GATEWAY_CTX(work)->ports));
     GATEWAY_CTX(work)->uplink = NULL;
     GATEWAY_CTX(work)->uplink_ctx = NULL;
     GATEWAY_CTX(work)->prefix = PROTOCORE_GW_DEFAULT_PREFIX;
     GATEWAY_CTX(work)->seq = 0;
-    mem.set(&GATEWAY_CTX(work)->stats, 0, sizeof(GATEWAY_CTX(work)->stats));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &GATEWAY_CTX(work)->stats, .val = 0,
+               .bytes = sizeof(GATEWAY_CTX(work)->stats));
 }
 
 proto_bool protocore_gateway_add_port(uint8_t *work, const protocore_gateway_port_config *cfg)

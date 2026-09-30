@@ -2760,13 +2760,8 @@
       "src": [
         "+<server/net/gateway/gateway.c>",
         "+<server/clock/clock.c>",
-        "+<mmgr/protomem/protomem.c>",
-        "+<mmgr/rawmemcpy/rawmemcpy.c>",
-        "+<mmgr/swar/swar.c>",
-        "+<mmgr/secure/secure.c>",
-        "+<mmgr/span/span.c>",
-        "+<mmgr/arena/arena.c>",
-        "+<test/core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<server/core/worker/worker.c>"
       ],
       "tests": [
         "unit/src/server/net/gateway/test_gateway"
