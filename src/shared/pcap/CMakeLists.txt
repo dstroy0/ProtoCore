@@ -4,5 +4,5 @@
 protocore_add_module(shared/pcap
   SOURCES pcap.c
   DEPS
-    mmgr/endian
+    mmgr
 )
