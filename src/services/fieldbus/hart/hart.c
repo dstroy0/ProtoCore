@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_HART
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/hart/hart.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -68,13 +68,13 @@ void protocore_hart_build(uint8_t *work)
 
     size_t i = 0;
     out[i++] = delimiter;
-    mem.cpy(out + i, addr, addr_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + i, .src = addr, .bytes = addr_len);
     i += addr_len;
     out[i++] = command;
     out[i++] = (uint8_t)data_len; // byte count
     if (data_len)
     {
-        mem.cpy(out + i, data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + i, .src = data, .bytes = data_len);
         i += data_len;
     }
     HartV.checksum_args.bytes = out;
