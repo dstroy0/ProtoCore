@@ -7,7 +7,7 @@
 #include "protocore_config.h" // the entry point: the widths
 
 #include "binary_asset_blobs.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
 
 #if PROTOCORE_ENABLE_THEMES
 
@@ -2161,11 +2161,11 @@ const char *protocore_binary_asset_blobs_css(uint8_t *work, const char *name)
     }
     // str.eq reads read_cap bytes of both operands, so the lengths are matched first: two
     // strings of length n each hold n + 1 readable bytes, the terminator included.
-    const size_t n = str.len(name, THEME_NAME_CAP);
+    const size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = name, .cap = THEME_NAME_CAP);
     for (size_t i = 0; i < PROTOCORE_THEME_BLOB_COUNT; i++)
     {
         const char *have = PROTOCORE_THEME_BLOBS[i].name;
-        if (str.len(have, THEME_NAME_CAP) == n && str.eq(have, name, n + 1u, PROTO_FALSE))
+        if (EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = have, .cap = THEME_NAME_CAP) == n && EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = have, .other = name, .cap = n + 1u, .ci = PROTO_FALSE))
         {
             return PROTOCORE_THEME_BLOBS[i].css;
         }
