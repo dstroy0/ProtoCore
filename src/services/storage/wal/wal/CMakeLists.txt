@@ -5,6 +5,5 @@ protocore_add_module(services/storage/wal/wal
   GATE PROTOCORE_ENABLE_WAL
   SOURCES wal.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/protomem
+    mmgr
 )

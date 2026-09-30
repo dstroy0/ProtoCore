@@ -10,10 +10,10 @@
 
 #if PROTOCORE_ENABLE_WAL
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/storage/wal/wal/wal.h"
 
-#include "mmgr/endian/endian.h"
+#include "endian/endian.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -87,16 +87,16 @@ size_t protocore_wal_record_encode(uint8_t *out, size_t cap, uint64_t seq, const
     {
         return 0;
     }
-    endian.wr32le(out + 0, WAL_MAGIC);
-    endian.wr64le(out + 4, seq);
-    endian.wr32le(out + 12, len);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 0, .val = WAL_MAGIC, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 4, .val = seq, .width = MMGR_ENDIAN_64);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 12, .val = len, .width = MMGR_ENDIAN_32);
     // crc over the 16 header bytes (magic+seq+len) then the payload
     uint32_t crc = crc32_step(0xFFFFFFFFu, out, 16);
     crc = crc32_step(crc, payload, len) ^ 0xFFFFFFFFu;
-    endian.wr32le(out + 16, crc);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 16, .val = crc, .width = MMGR_ENDIAN_32);
     if (len)
     {
-        mem.cpy(out + WAL_RECORD_HEADER, payload, len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + WAL_RECORD_HEADER, .src = payload, .bytes = len);
     }
     return need;
 }
@@ -107,13 +107,14 @@ size_t protocore_wal_replay(const uint8_t *img, size_t len, WalRecordCb cb, void
     while (off + WAL_RECORD_HEADER <= len)
     {
         const uint8_t *r = img + off;
-        if (endian.rd32le(r) != WAL_MAGIC)
+        if ((uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = r, .width = MMGR_ENDIAN_32) != WAL_MAGIC)
         {
             break; // not a record start (end of log or garbage)
         }
-        uint64_t seq = endian.rd64le(r + 4);
-        uint32_t plen = endian.rd32le(r + 12);
-        uint32_t crc_stored = endian.rd32le(r + 16);
+        uint64_t seq = EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = r + 4, .width = MMGR_ENDIAN_64);
+        uint32_t plen = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = r + 12, .width = MMGR_ENDIAN_32);
+        uint32_t crc_stored =
+            (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = r + 16, .width = MMGR_ENDIAN_32);
         if (off + (size_t)WAL_RECORD_HEADER + plen > len)
         {
             break; // truncated tail (power loss mid-record)
