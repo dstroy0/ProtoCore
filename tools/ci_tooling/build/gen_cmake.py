@@ -37,8 +37,18 @@ OUT = os.path.join(ROOT, "test", "CMakeLists.txt")
 OWED = os.path.join(ROOT, "test", "yanked_includes.json")
 
 # The include dirs every env compiles with, whatever it named. -Iinclude is PlatformIO's implicit
-# include_dir, where protocore.h lives; nothing here is pio, so each one is stated.
-BASE_INCLUDES = ["test/core_setup/hal/host", "test/support", "src", "include", "."]
+# include_dir, where protocore.h lives; nothing here is pio, so each one is stated. The last three are
+# MMgr's roots (include/CMakeLists.txt): mmgr.h, <module>/<module>.h, and embedded_types.
+BASE_INCLUDES = [
+    "test/core_setup/hal/host",
+    "test/support",
+    "src",
+    "include",
+    ".",
+    "include/MMgr/include",
+    "include/MMgr/src",
+    "include/embedded_types/include",
+]
 
 GENERATED_RUNNER = "unity_runner.c"
 
