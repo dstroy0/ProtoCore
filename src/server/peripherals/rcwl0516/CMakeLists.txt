@@ -5,6 +5,7 @@ protocore_add_module(server/peripherals/rcwl0516
   GATE PROTOCORE_ENABLE_RCWL0516
   SOURCES rcwl0516.c
   PRIVATE_DEPS
-    mmgr/plaintext
+    mmgr
+    server/core/worker
     server/clock
 )
