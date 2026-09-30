@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_MBUS
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/mbus/mbus.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -103,7 +103,7 @@ void protocore_mbus_build_long(uint8_t *work)
     buf[6] = ci;
     if (data_len)
     {
-        mem.cpy(buf + 7, data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + 7, .src = data, .bytes = data_len);
     }
     buf[4 + L] = checksum(buf + 4, L); // sum of C..end of user data
     buf[5 + L] = MBUS_STOP;
@@ -492,7 +492,7 @@ void protocore_mbus_record_value_real(uint8_t *work)
     }
     uint32_t bits = (uint32_t)r->data[0] | ((uint32_t)r->data[1] << 8) | ((uint32_t)r->data[2] << 16) |
                     ((uint32_t)r->data[3] << 24);
-    mem.cpy(out, &bits, 4);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = &bits, .bytes = 4);
     MbusV.ok = PROTO_TRUE;
 }
 
