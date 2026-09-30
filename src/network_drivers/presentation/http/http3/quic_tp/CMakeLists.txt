@@ -7,6 +7,6 @@ protocore_add_module(network_drivers/presentation/http/http3/quic_tp
   DEPS
     network_drivers/presentation/http/http3/quic_packet
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
     network_drivers/presentation/http/http3/quic_varint
 )

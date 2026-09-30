@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/http3/quic_tp/quic_tp.h"
 
 #include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
@@ -25,7 +25,7 @@ void protocore_quic_tp_defaults(uint8_t *work, QuicTransportParams *tp)
 {
     (void)work;
 
-    mem.set(tp, 0, sizeof(*tp));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = tp, .val = 0, .bytes = sizeof(*tp));
     tp->max_udp_payload_size = 65527;
     tp->ack_delay_exponent = 3;
     tp->max_ack_delay = 25;
@@ -58,7 +58,7 @@ static proto_bool put_param(uint8_t *work, uint8_t *out, size_t cap, size_t *p, 
         {
             return PROTO_FALSE;
         }
-        mem.cpy(out + *p, val, val_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + *p, .src = val, .bytes = val_len);
         *p += val_len;
     }
     return PROTO_TRUE;
@@ -132,7 +132,7 @@ static proto_bool copy_cid(const uint8_t *val, size_t len, uint8_t *dst, uint8_t
     {
         return PROTO_FALSE;
     }
-    mem.cpy(dst, val, len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = dst, .src = val, .bytes = len);
     *dst_len = (uint8_t)len;
     *has = PROTO_TRUE;
     return PROTO_TRUE;
