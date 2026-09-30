@@ -25,5 +25,9 @@ protocore_add_module(include
 # Five targets failed to compile that way under `<build>/pc_include/mmgr`. Under `<build>/m` they
 # fit. Nested one directory deeper and they would not, so this is load bearing.
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/MMgr/CMakeLists.txt")
+  # MMgr fetches embedded_types from GitHub at the SHA its deps/CMakeLists.txt pins. The submodule
+  # beside it is that same commit, and the Arduino, PlatformIO and ESP-IDF builds read it from there,
+  # so the CMake build is handed the same copy instead of fetching a second one.
+  set(FETCHCONTENT_SOURCE_DIR_EMBEDDED_TYPES "${CMAKE_CURRENT_SOURCE_DIR}/embedded_types")
   add_subdirectory(MMgr "${CMAKE_BINARY_DIR}/m")
 endif()
