@@ -5,6 +5,5 @@ protocore_add_module(network_drivers/session/scp/scp
   GATE PROTOCORE_ENABLE_SSH_SCP
   SOURCES scp.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/protomem
+    mmgr
 )
