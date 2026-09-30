@@ -26,7 +26,7 @@
 
 #include "crypto/hash/sha384/sha384.h" // the Sha384 entries the inner and outer hashes run through
 #include "crypto/mac/hmac_sha384/hmac_sha384.h"
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 
 // The transient half of the caller's bytes: live inside init and inside final, dead between them. The
 // two 128-byte key blocks double as key-padding scratch for build_key_block.
@@ -47,8 +47,8 @@ static_assert(HMAC384_OFF_HASH + PROTOCORE_SHA384_BORROW <= PROTOCORE_HMAC_SHA38
               "PROTOCORE_HMAC_SHA384_BORROW is short of the split - raise it in protocore_config.h, which "
               "sums it into the secure arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock hands out cells on
+// MMGR_CARCER_ALIGN boundaries, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(HMAC384_OFF_WORK % _Alignof(Hmac384Work) == 0,
@@ -67,7 +67,7 @@ static_assert(HMAC384_OFF_WORK % _Alignof(Hmac384Work) == 0,
 static void build_key_block(const uint8_t *key, size_t key_len, uint8_t block[PROTOCORE_SHA384_BLOCK_LEN],
                             uint8_t pad_byte, uint8_t kpad[PROTOCORE_SHA384_BLOCK_LEN], uint8_t *hw)
 {
-    mem.set(kpad, 0, PROTOCORE_SHA384_BLOCK_LEN);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = kpad, .val = 0, .bytes = PROTOCORE_SHA384_BLOCK_LEN);
     if (key_len > PROTOCORE_SHA384_BLOCK_LEN)
     {
         // Keys longer than the block become their SHA-384 hash: 48 bytes, the remaining 80 stay zero.
@@ -75,7 +75,7 @@ static void build_key_block(const uint8_t *key, size_t key_len, uint8_t block[PR
     }
     else
     {
-        mem.cpy(kpad, key, key_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = kpad, .src = key, .bytes = key_len);
     }
     for (int i = 0; i < PROTOCORE_SHA384_BLOCK_LEN; i++)
     {
