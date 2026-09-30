@@ -5,5 +5,5 @@ protocore_add_module(services/energy/sep2
   GATE PROTOCORE_ENABLE_SEP2
   SOURCES sep2.c
   PRIVATE_DEPS
-    mmgr/membuild
+    mmgr
 )
