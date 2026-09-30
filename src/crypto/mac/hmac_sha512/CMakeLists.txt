@@ -7,5 +7,5 @@ protocore_add_module(crypto/mac/hmac_sha512
   SOURCES hmac_sha512.c
   PRIVATE_DEPS
     crypto/hash/sha512
-    mmgr/protomem
+    mmgr
 )
