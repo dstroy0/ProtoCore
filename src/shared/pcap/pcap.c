@@ -21,13 +21,15 @@ void protocore_pcap_global_header(uint8_t *work)
     {
         return;
     }
-    endian.wr32le(out + 0, 0xa1b2c3d4);           // magic: usec timestamps, little-endian
-    endian.wr16le(out + 4, 2);                    // version major
-    endian.wr16le(out + 6, 4);                    // version minor
-    endian.wr32le(out + 8, 0);                    // thiszone (GMT)
-    endian.wr32le(out + 12, 0);                   // sigfigs
-    endian.wr32le(out + 16, 65535);               // snaplen
-    endian.wr32le(out + 20, PcapV.args.linktype); // network / DLT
+    // magic: usec timestamps, little-endian
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 0, .val = 0xa1b2c3d4, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 4, .val = 2, .width = MMGR_ENDIAN_16);  // version major
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 6, .val = 4, .width = MMGR_ENDIAN_16);  // version minor
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 8, .val = 0, .width = MMGR_ENDIAN_32);  // thiszone (GMT)
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 12, .val = 0, .width = MMGR_ENDIAN_32); // sigfigs
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 16, .val = 65535, .width = MMGR_ENDIAN_32); // snaplen
+    // network / DLT
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 20, .val = PcapV.args.linktype, .width = MMGR_ENDIAN_32);
     PcapV.n = PROTOCORE_PCAP_GLOBAL_HDR_LEN;
 }
 
@@ -41,10 +43,10 @@ void protocore_pcap_record_header(uint8_t *work)
     {
         return;
     }
-    endian.wr32le(out + 0, PcapV.rec.ts_sec);
-    endian.wr32le(out + 4, PcapV.rec.ts_usec);
-    endian.wr32le(out + 8, PcapV.rec.caplen);
-    endian.wr32le(out + 12, PcapV.rec.origlen);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 0, .val = PcapV.rec.ts_sec, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 4, .val = PcapV.rec.ts_usec, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 8, .val = PcapV.rec.caplen, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 12, .val = PcapV.rec.origlen, .width = MMGR_ENDIAN_32);
     PcapV.n = PROTOCORE_PCAP_REC_HDR_LEN;
 }
 
