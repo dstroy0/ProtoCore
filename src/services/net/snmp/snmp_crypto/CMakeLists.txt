@@ -7,7 +7,5 @@ protocore_add_module(services/net/snmp/snmp_crypto
   PRIVATE_DEPS
     crypto/cipher/aes_sbox
     crypto/hash/sha256
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
+    mmgr
 )
