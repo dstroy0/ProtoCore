@@ -12,22 +12,22 @@ protocore_add_module(include
   HEADER_ONLY
 )
 
-# MMgr is a separate repository, vendored as a submodule, and brings its own build description. Its
-# ROOT is the entry, not its src/: that is where mmgr_add_module() is defined, and every directory
-# below it calls that. Entering src/ directly fails on the first module.
+# MMgr is a separate repository, vendored as a submodule. Its own build description is not entered:
+# it builds MMgr once per width environment for MMgr's suites, and it reaches its include root
+# through CMAKE_SOURCE_DIR, which names this tree's top rather than MMgr's once it is a
+# subdirectory. ProtoCore builds MMgr's sources as one more target under ProtoCore's own flags, as
+# the Arduino, PlatformIO and ESP-IDF builds do.
 #
-# ITS BINARY DIRECTORY IS ONE CHARACTER, and that is not tidiness. A Windows path is capped at 260
-# characters, and MMgr's own deepest suite spends 211 of them before the object file:
-# test/unit/confinium_exclusivum_infinitas/test_confinium_exclusivum_infinitas/CMakeFiles/
-# test_confinium_exclusivum_infinitas_host.dir - the module name three times over. Two of that
-# suite's sources live in test/support/ rather than beside it, so CMake namespaces them under a
-# 32-character hash of their directory, and gcc then cannot create the .d file beside the object.
-# Five targets failed to compile that way under `<build>/pc_include/mmgr`. Under `<build>/m` they
-# fit. Nested one directory deeper and they would not, so this is load bearing.
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/MMgr/CMakeLists.txt")
-  # MMgr fetches embedded_types from GitHub at the SHA its deps/CMakeLists.txt pins. The submodule
-  # beside it is that same commit, and the Arduino, PlatformIO and ESP-IDF builds read it from there,
-  # so the CMake build is handed the same copy instead of fetching a second one.
-  set(FETCHCONTENT_SOURCE_DIR_EMBEDDED_TYPES "${CMAKE_CURRENT_SOURCE_DIR}/embedded_types")
-  add_subdirectory(MMgr "${CMAKE_BINARY_DIR}/m")
+# The include roots are the three MMgr's mmgr_add_module() gives a module: include/ for mmgr.h,
+# src/ so a module header is reached as <module>/<module>.h, and embedded_types, which mmgr.h
+# includes. The capability switches are MMgr's defaults, stated so every translation unit that reads
+# them sees the same value.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/MMgr/src")
+  file(GLOB_RECURSE PC_MMGR_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/MMgr/src/*.c")
+  add_library(pc_mmgr OBJECT ${PC_MMGR_SRCS})
+  target_include_directories(pc_mmgr PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/MMgr/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/MMgr/src"
+    "${CMAKE_CURRENT_SOURCE_DIR}/embedded_types/include")
+  target_compile_definitions(pc_mmgr PUBLIC MMGR_ENABLE_DMA=0 MMGR_ENABLE_EXTRAM=0)
 endif()
