@@ -379,9 +379,9 @@ void test_overflow_reports_the_size_needed(void)
     TEST_ASSERT_FALSE(EMBED_CALL(spat.ok, SpatiumCfg, .span = w));
     TEST_ASSERT_TRUE(EMBED_CALL(spat.has_storage, SpatiumCfg, .span = w));
     TEST_ASSERT_EQUAL_UINT(11u, w.pos);
-    // produced() yields nothing once the region overflowed
+    // produced() carries the overflow as its read side's error
     mmgr_cspan r = EMBED_CALL(spat.produced, SpatiumCfg, .span = w);
-    TEST_ASSERT_EQUAL_UINT(0u, r.len);
+    TEST_ASSERT_FALSE(EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r));
 }
 
 // A null source string encodes as the empty string rather than reading through the pointer.

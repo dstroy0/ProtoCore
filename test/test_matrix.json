@@ -122,6 +122,7 @@
       "desc": "Tamper-evident hash-chained audit log (server/security/audit_log). Pure - the chain is\nidentical on host and ESP32 - so it unit-tests on the host; SHA-256 comes from\ncrypto/sha256 (software path on native), the timestamp from the pluggable clock.",
       "flags": ["-DPROTOCORE_ENABLE_AUDIT_LOG=1"],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<server/security/audit_log/audit_log.c>",
         "+<crypto/hash/sha256/sha256.c>",
         "+<server/clock/clock.c>",
@@ -155,6 +156,7 @@
         "-DPROTOCORE_ENABLE_SSE=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<server/security/auth_lockout/auth_lockout.c>",
         "+<shared/ip/ip.c>",
         "+<shared/hex/hex.c>",
@@ -396,6 +398,7 @@
         "-DPROTOCORE_ENABLE_JSON=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<shared/ip/ip.c>",
         "+<services/iot/cloudevents/cloudevents.c>",
         "+<network_drivers/presentation/codec/json/json.c>",
@@ -811,6 +814,7 @@
     "native_compliance": {
       "desc": "RFC-compliance suite: builds with all enforcement at production defaults\n(PROTOCORE_ENFORCE_HOST_HEADER=1) and exercises the strict behaviors.",
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<shared/ip/ip.c>",
         "+<shared/hex/hex.c>",
@@ -927,6 +931,7 @@
         "-DPROTOCORE_ENABLE_X509=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<crypto/x509/x509_verify/x509_verify.c>",
         "+<crypto/x509/x509/x509.c>",
         "+<src/shared/der/der.c>",
@@ -1819,6 +1824,7 @@
         "-DPROTOCORE_ENABLE_EUROMAP77=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<services/opcua/opcua.c>",
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
@@ -1969,6 +1975,7 @@
         "-DPROTOCORE_FWD_INSPECT=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/network/forward/forward.c>",
         "+<network_drivers/physical/physical/physical.c>",
         "+<server/clock/clock.c>",
@@ -1989,6 +1996,7 @@
         "-DPROTOCORE_ENABLE_FORWARDED_TRUST=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<server/security/forwarded_trust/forwarded_trust.c>",
         "+<shared/ip/ip.c>",
         "+<shared/hex/hex.c>",
@@ -2224,6 +2232,7 @@
         "-DPROTOCORE_ENABLE_TLS=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/presentation/http/http2/h2_server/h2_server.c>",
         "+<network_drivers/presentation/http/http2/h2_conn/h2_conn.c>",
         "+<network_drivers/presentation/http/http2/h2_frame/h2_frame.c>",
@@ -2406,6 +2415,7 @@
         "-DPROTOCORE_ENABLE_HAPPY_EYEBALLS=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/transport/happy_eyeballs/happy_eyeballs.c>",
         "+<shared/ip/ip.c>",
         "+<shared/hex/hex.c>",
@@ -2663,6 +2673,7 @@
         "-DPROTOCORE_ENABLE_SSE=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<server/net/iface_bridge/iface_bridge/iface_bridge.c>",
         "+<shared/ip/ip.c>",
         "+<shared/hex/hex.c>",
@@ -3445,6 +3456,7 @@
         "-DPROTOCORE_ENABLE_MTCONNECT=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<shared/time_compat/time_compat.c>",
         "+<server/clock/clock.c>",
         "+<../test/core_setup/hal/portable/portable_platform.c>"
@@ -3504,6 +3516,7 @@
     "native_net_egress": {
       "desc": "Egress-interface reporting (network_drivers/physical). The esp_netif default-\nroute lookups are ESP32-only; the pure interface-key classifier host-tests here.",
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/physical/physical/physical.c>",
         "+<shared/ip/ip.c>",
         "+<shared/hex/hex.c>",
@@ -3528,6 +3541,7 @@
         "-DPROTOCORE_ENABLE_ETHERNET=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/physical/physical/physical.c>",
         "+<shared/ip/ip.c>",
         "+<shared/hex/hex.c>",
@@ -3709,6 +3723,7 @@
         "-DPROTOCORE_ENABLE_DNS_RESOLVER=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/presentation/codec/json/json.c>",
         "+<shared/hex/hex.c>",
         "+<services/net/http_client/http_client.c>",
@@ -3852,6 +3867,7 @@
         "-DPROTOCORE_ENABLE_OTA=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<shared/ip/ip.c>",
         "+<shared/hex/hex.c>",
@@ -4148,6 +4164,7 @@
         "-DPROTOCORE_RADIO_WIFI_PS=2"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "-<*>",
         "+<network_drivers/physical/physical/physical.c>",
         "+<network_drivers/physical/radio_power/radio_power.c>",
@@ -4173,6 +4190,7 @@
         "-DPROTOCORE_RADIO_WIFI_PS=2"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/physical/physical/physical.c>",
         "+<network_drivers/physical/radio_power/radio_power.c>",
         "+<../test/core_setup/hal/host/physical/physical_mock.c>",
@@ -4195,6 +4213,7 @@
         "-DPROTOCORE_ENABLE_SSE=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/physical/physical/physical.c>",
         "+<shared/ip/ip.c>",
         "+<shared/hex/hex.c>",
@@ -4319,6 +4338,7 @@
         "-DPROTOCORE_PQ_ITEM_SIZE=16",
         "-DPROTOCORE_ENABLE_DMA=1",
         "-DMMGR_ENABLE_DMA=1",
+        "-DMMGR_ACCEPT_DEFAULTS=1",
         "-DPROTOCORE_DMA_BUF_SIZE=8",
         "-DPROTOCORE_DMA_CHANNELS=2"
       ],
@@ -4388,6 +4408,7 @@
         "-DPROTOCORE_PHYSICAL_HAS_BACKEND=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<services/radio/promisc/promisc.c>",
         "+<shared/pcap/pcap.c>",
         "+<shared/ip/ip.c>",
@@ -4751,6 +4772,7 @@
         "-DPROTOCORE_ENABLE_RADIO_POWER=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/physical/radio_power/radio_power.c>",
         "+<network_drivers/physical/physical/physical.c>",
         "+<shared/ip/ip.c>",
@@ -5018,6 +5040,7 @@
         "-DPROTOCORE_ENABLE_ROBOTICS=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<services/opcua/opcua.c>",
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
@@ -5413,6 +5436,7 @@
     "native_signaling": {
       "desc": "Application-layer signaling (server/signaling): the state bucket. Deposits go in from the loop\n(response class tallies, and the uptime + conn/listener bitmasks a tick already has in hand), a\nread hands back a copy rather than a window, and kill forwards a slot to the transport unchanged.\nThe module holds no logic by design, so the tests assert exactly that. protocore_conn_close is stubbed:\nthe forward is what is under test, not lwIP.",
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<server/signaling/signaling/signaling.c>",
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
@@ -5508,6 +5532,7 @@
         "-DPROTOCORE_ENABLE_DNS_RESOLVER=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/application/smb/ntlm/ntlm.c>",
         "+<crypto/hash/md/md.c>",
         "+<test/core_setup/hal/portable/portable_platform.c>"
@@ -5644,6 +5669,7 @@
         "-DPROTOCORE_ENABLE_DNS_RESOLVER=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<services/net/smtp/smtp.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<server/clock/clock.c>",
@@ -5704,6 +5730,7 @@
         "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<services/net/snmp/snmp_notify/snmp_notify.c>",
         "+<services/net/snmp/snmp_ber/snmp_ber.c>",
         "+<server/clock/clock.c>",
@@ -5727,6 +5754,7 @@
         "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<services/net/snmp/snmp_notify/snmp_notify.c>",
         "+<services/net/snmp/snmp_ber/snmp_ber.c>",
         "+<test/core_setup/hal/portable/portable_platform.c>"
@@ -7208,6 +7236,7 @@
         "-DPROTOCORE_ENABLE_TIME_SOURCE=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<server/io/http_clock/http_clock.c>",
         "+<services/timing_position/time_source/time_source.c>",
         "+<shared/http_date/http_date.c>",
@@ -7480,6 +7509,7 @@
         "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<services/iot/udp_telemetry/udp_telemetry.c>",
         "+<shared/ip/ip.c>",
         "+<shared/hex/hex.c>",
@@ -7518,6 +7548,7 @@
         "-DPROTOCORE_ENABLE_UMATI=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<services/opcua/opcua.c>",
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
@@ -7812,6 +7843,7 @@
         "-DPROTOCORE_ENABLE_WIFI_SNIFFER=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<services/radio/wifi_sniffer/wifi_sniffer.c>",
         "+<server/clock/clock.c>",
         "+<shared/pcap/pcap.c>",
@@ -7833,6 +7865,7 @@
         "-DPROTOCORE_PHYSICAL_HAS_BACKEND=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<services/radio/wifi_sniffer/wifi_sniffer.c>",
         "+<server/clock/clock.c>",
         "+<shared/pcap/pcap.c>",

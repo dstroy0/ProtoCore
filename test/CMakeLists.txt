@@ -399,6 +399,7 @@ protocore_env(native_atc
 protocore_env(native_audit_log
   SUITE unit/src/server/security/audit_log/test_audit_log
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/server/security/audit_log/audit_log.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -509,6 +510,7 @@ protocore_env(native_auth
 protocore_env(native_auth_lockout
   SUITE unit/src/server/security/auth_lockout/test_auth_lockout
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/server/security/auth_lockout/auth_lockout.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
@@ -1034,6 +1036,7 @@ protocore_env(native_clock
 protocore_env(native_cloudevents
   SUITE unit/src/services/iot/cloudevents/test_cloudevents
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/services/iot/cloudevents/cloudevents.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/json/json.c"
@@ -1689,6 +1692,7 @@ protocore_env(native_codeql
 protocore_env(native_compliance
   SUITE env/http/test_compliance
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
@@ -3265,6 +3269,7 @@ protocore_env(native_espnow_envelope
 protocore_env(native_euromap77
   SUITE unit/src/services/opcua/models/euromap77/test_euromap77
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/services/opcua/opcua.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
   DEFINES
@@ -3603,6 +3608,7 @@ protocore_env(native_form_params
 protocore_env(native_forward
   SUITE unit/src/network_drivers/network/forward/test_forward
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/network/forward/forward.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -3633,6 +3639,7 @@ protocore_env(native_forward
 protocore_env(native_forwarded_trust
   SUITE unit/src/server/security/forwarded_trust/test_forwarded_trust
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/server/security/forwarded_trust/forwarded_trust.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
@@ -4013,6 +4020,7 @@ protocore_env(native_h2conn
 protocore_env(native_h2server
   SUITE unit/src/network_drivers/presentation/http/http2/h2_server/test_h2_server
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http2/h2_server/h2_server.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http2/h2_conn/h2_conn.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http2/h2_frame/h2_frame.c"
@@ -4291,6 +4299,7 @@ protocore_env(native_haas_mdc
 protocore_env(native_happy_eyeballs
   SUITE unit/src/network_drivers/transport/happy_eyeballs/test_happy_eyeballs
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/happy_eyeballs/happy_eyeballs.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
@@ -4568,6 +4577,7 @@ protocore_env(native_http_client
 protocore_env(native_http_clock
   SUITE unit/src/server/io/http_clock/test_http_clock
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/server/io/http_clock/http_clock.c"
     "${PROTOCORE_ROOT}/src/services/timing_position/time_source/time_source.c"
     "${PROTOCORE_ROOT}/src/shared/http_date/http_date.c"
@@ -4839,6 +4849,7 @@ protocore_env(native_iface
 protocore_env(native_iface_bridge
   SUITE unit/src/server/net/iface_bridge/iface_bridge/test_iface_bridge
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/server/net/iface_bridge/iface_bridge/iface_bridge.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
@@ -5378,6 +5389,7 @@ protocore_env(native_keepalive
 protocore_env(native_l1_egress
   SUITE unit/src/network_drivers/physical/test_net_egress
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
@@ -5402,6 +5414,7 @@ protocore_env(native_l1_egress
 protocore_env(native_l1_link
   SUITE unit/src/network_drivers/physical/test_phy
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/radio_power/radio_power.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/physical/physical_mock.c"
@@ -6132,6 +6145,7 @@ protocore_env(native_msgpack_wire
 protocore_env(native_mtconnect
   SUITE unit/src/services/machine_tool/mtconnect/test_mtconnect
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/shared/time_compat/time_compat.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
@@ -6297,6 +6311,7 @@ protocore_env(native_net_addr
 protocore_env(native_net_egress
   SUITE unit/src/network_drivers/physical/test_net_egress
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
@@ -6379,6 +6394,7 @@ protocore_env(native_ntcip_oid
 protocore_env(native_ntlm_v2
   SUITE unit/src/network_drivers/application/smb/test_ntlm
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/application/smb/ntlm/ntlm.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/md/md.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
@@ -6507,6 +6523,7 @@ protocore_env(native_nts_ke
 protocore_env(native_oauth2_exchange
   SUITE unit/src/services/security/oauth2/test_oauth2_exchange
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/json/json.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/src/services/net/http_client/http_client.c"
@@ -6743,6 +6760,7 @@ protocore_env(native_openadr
 protocore_env(native_ota
   SUITE env/http/test_http_ota
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
@@ -7156,6 +7174,7 @@ protocore_env(native_pentest
 protocore_env(native_phy
   SUITE unit/src/network_drivers/physical/test_phy
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/radio_power/radio_power.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host/physical/physical_mock.c"
@@ -7184,6 +7203,7 @@ protocore_env(native_phy
 protocore_env(native_phy_iface
   SUITE unit/src/network_drivers/physical/test_iface
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
@@ -7350,6 +7370,7 @@ protocore_env(native_preempt_queue
     "PROTOCORE_PQ_ITEM_SIZE=16"
     "PROTOCORE_ENABLE_DMA=1"
     "MMGR_ENABLE_DMA=1"
+    "MMGR_ACCEPT_DEFAULTS=1"
     "PROTOCORE_DMA_BUF_SIZE=8"
     "PROTOCORE_DMA_CHANNELS=2"
   INCLUDES
@@ -7467,6 +7488,7 @@ protocore_env(native_profinet
 protocore_env(native_promisc_dot11
   SUITE unit/src/services/radio/promisc/test_promisc
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/services/radio/promisc/promisc.c"
     "${PROTOCORE_ROOT}/src/shared/pcap/pcap.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
@@ -7961,6 +7983,7 @@ protocore_env(native_quic_varint
 protocore_env(native_radio_power
   SUITE unit/src/network_drivers/physical/test_radio_power
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/radio_power/radio_power.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/physical/physical.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
@@ -8026,6 +8049,7 @@ protocore_env(native_radio_thread
 protocore_env(native_radio_wifi_sniffer
   SUITE unit/src/services/radio/wifi_sniffer/test_wifi_sniffer
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/services/radio/wifi_sniffer/wifi_sniffer.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
     "${PROTOCORE_ROOT}/src/shared/pcap/pcap.c"
@@ -8527,6 +8551,7 @@ protocore_env(native_roaming
 protocore_env(native_robotics
   SUITE unit/src/services/opcua/models/robotics/test_robotics
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/services/opcua/opcua.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
   DEFINES
@@ -9255,6 +9280,7 @@ protocore_env(native_sigfox_at
 protocore_env(native_signaling
   SUITE unit/src/server/signaling/test_signaling
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/server/signaling/signaling/signaling.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
   INCLUDES
@@ -9642,6 +9668,7 @@ protocore_env(native_smbus
 protocore_env(native_smtp
   SUITE unit/src/services/net/smtp/test_smtp
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/services/net/smtp/smtp.c"
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/base64/base64.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -9747,6 +9774,7 @@ protocore_env(native_snmp_ber_x690
 protocore_env(native_snmp_notify
   SUITE unit/src/services/net/snmp/test_snmp_trap
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/services/net/snmp/snmp_notify/snmp_notify.c"
     "${PROTOCORE_ROOT}/src/services/net/snmp/snmp_ber/snmp_ber.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
@@ -9769,6 +9797,7 @@ protocore_env(native_snmp_notify
 protocore_env(native_snmp_trap
   SUITE unit/src/services/net/snmp/test_snmp_trap
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/services/net/snmp/snmp_notify/snmp_notify.c"
     "${PROTOCORE_ROOT}/src/services/net/snmp/snmp_ber/snmp_ber.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
@@ -12400,6 +12429,7 @@ protocore_env(native_udp
 protocore_env(native_udp_telemetry
   SUITE unit/src/services/iot/udp_telemetry/test_udp_telemetry
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/services/iot/udp_telemetry/udp_telemetry.c"
     "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
@@ -12449,6 +12479,7 @@ protocore_env(native_udp_transport
 protocore_env(native_umati
   SUITE unit/src/services/opcua/models/umati/test_umati
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/services/opcua/opcua.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
   DEFINES
@@ -12977,6 +13008,7 @@ protocore_env(native_websocket
 protocore_env(native_wifi_sniffer_promisc
   SUITE unit/src/services/radio/wifi_sniffer/test_wifi_sniffer
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/services/radio/wifi_sniffer/wifi_sniffer.c"
     "${PROTOCORE_ROOT}/src/server/clock/clock.c"
     "${PROTOCORE_ROOT}/src/shared/pcap/pcap.c"
@@ -13353,6 +13385,7 @@ protocore_env(native_x509
 protocore_env(native_x509_verify
   SUITE unit/src/crypto/x509/test_x509_verify
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/crypto/x509/x509_verify/x509_verify.c"
     "${PROTOCORE_ROOT}/src/crypto/x509/x509/x509.c"
     "${PROTOCORE_ROOT}/src/shared/der/der.c"

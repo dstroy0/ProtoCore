@@ -31,7 +31,7 @@ static uint8_t tw[4096]; // the borrow every namespace call in this suite runs o
 static size_t ws_scratch_available(void)
 {
     size_t lo = 0;
-    size_t hi = PROTOCORE_PLAINTEXT_ARENA_SIZE;
+    size_t hi = protocore_plain_guard()->buf_available();
     while (lo < hi)
     {
         size_t mid = lo + (hi - lo + 1u) / 2u;
