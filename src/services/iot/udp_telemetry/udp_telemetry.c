@@ -11,13 +11,13 @@
  */
 
 #include "services/iot/udp_telemetry/udp_telemetry.h"
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
 #if PROTOCORE_ENABLE_UDP_TELEMETRY
 
-#include "mmgr/membuild/membuild.h" // Sb: the field set's numeric renderings
-#include "mmgr/protomem/protomem.h" // mem.cpy: the spans a line is assembled from
-#include "mmgr/protostr/protostr.h" // str.len: the bounded measure of an appended span
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the bounded measure of an appended span
+#include "memoria_operor/memoria_operor.h"       // memor.cpy: the spans a line is assembled from
+#include "verba_scribo/verba_scribo.h"           // Sb: the field set's numeric renderings
 
 PROTOCORE_BEGIN_DECLS
 
@@ -74,13 +74,13 @@ static void line_append(uint8_t *work, const char *s)
     {
         return;
     }
-    size_t n = str.len(s, store->cap + 1);
+    size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = store->cap + 1);
     if (store->pos + n >= store->cap)
     {
         store->overflow = PROTO_TRUE;
         return;
     }
-    mem.cpy(store->buf + store->pos, s, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = store->buf + store->pos, .src = s, .bytes = n);
     store->pos += n;
     store->buf[store->pos] = '\0';
 }
@@ -125,9 +125,9 @@ static void line_result(uint8_t *work)
 }
 
 // Terminate the number built in b, and empty num when that build overflowed.
-static void num_finish(protocore_sb *b, char *num)
+static void num_finish(char *num, size_t cap, size_t at)
 {
-    if (Sb.finish(b) == 0)
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = num, .cap = cap, .at = at) == 0)
     {
         num[0] = '\0';
     }
@@ -148,7 +148,7 @@ uint8_t *protocore_udp_telemetry_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_UDP_TELEMETRY_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_UDP_TELEMETRY_BORROW);
     }
     return s_own.span;
 }
@@ -210,10 +210,11 @@ void protocore_udp_telemetry_tag(uint8_t *work)
 void protocore_udp_telemetry_field_int(uint8_t *work)
 {
     char num[24];
-    protocore_sb b = {num, sizeof(num), 0, PROTO_TRUE};
-    Sb.i64(&b, UdpTelemetryV.fields.i64);
-    Sb.put(&b, "i");
-    num_finish(&b, num);
+    size_t b = 0;
+    b = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = num, .cap = sizeof(num), .at = b,
+                   .sval = UdpTelemetryV.fields.i64);
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = num, .cap = sizeof(num), .at = b, .text = "i");
+    num_finish(num, sizeof(num), b);
     line_sep(work);
     line_append(work, UdpTelemetryV.fields.key ? UdpTelemetryV.fields.key : "");
     line_append(work, "=");
@@ -225,10 +226,11 @@ void protocore_udp_telemetry_field_int(uint8_t *work)
 void protocore_udp_telemetry_field_uint(uint8_t *work)
 {
     char num[24];
-    protocore_sb b = {num, sizeof(num), 0, PROTO_TRUE};
-    Sb.u64(&b, UdpTelemetryV.fields.u64);
-    Sb.put(&b, "u");
-    num_finish(&b, num);
+    size_t b = 0;
+    b = EMBED_CALL(verba_numerus.u64, VerbaNumerusCfg, .out = num, .cap = sizeof(num), .at = b,
+                   .val = UdpTelemetryV.fields.u64);
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = num, .cap = sizeof(num), .at = b, .text = "u");
+    num_finish(num, sizeof(num), b);
     line_sep(work);
     line_append(work, UdpTelemetryV.fields.key ? UdpTelemetryV.fields.key : "");
     line_append(work, "=");
@@ -240,9 +242,10 @@ void protocore_udp_telemetry_field_uint(uint8_t *work)
 void protocore_udp_telemetry_field_float(uint8_t *work)
 {
     char num[32];
-    protocore_sb b = {num, sizeof(num), 0, PROTO_TRUE};
-    Sb.fixed(&b, (double)UdpTelemetryV.fields.f32, (unsigned)UdpTelemetryV.fields.decimals);
-    num_finish(&b, num);
+    size_t b = 0;
+    b = EMBED_CALL(verba_fractio.fixed, VerbaFractioCfg, .out = num, .cap = sizeof(num), .at = b,
+                   .real = (double)UdpTelemetryV.fields.f32, .decimals = (unsigned)UdpTelemetryV.fields.decimals);
+    num_finish(num, sizeof(num), b);
     line_sep(work);
     line_append(work, UdpTelemetryV.fields.key ? UdpTelemetryV.fields.key : "");
     line_append(work, "=");
@@ -262,10 +265,11 @@ void protocore_udp_telemetry_timestamp(uint8_t *work)
     else
     {
         char num[24];
-        protocore_sb b = {num, sizeof(num), 0, PROTO_TRUE};
-        Sb.put(&b, " ");
-        Sb.i64(&b, UdpTelemetryV.time.unix_ns);
-        num_finish(&b, num);
+        size_t b = 0;
+        b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = num, .cap = sizeof(num), .at = b, .text = " ");
+        b = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = num, .cap = sizeof(num), .at = b,
+                       .sval = UdpTelemetryV.time.unix_ns);
+        num_finish(num, sizeof(num), b);
         line_append(work, num);
     }
     line_result(work);

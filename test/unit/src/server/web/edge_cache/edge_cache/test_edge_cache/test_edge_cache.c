@@ -267,7 +267,7 @@ void test_rfc9110_unusable_range_headers_fall_back_to_a_full_response(void)
 // sec 14.1.2: "Since there is no predefined limit to the length of content, recipients MUST
 // anticipate potentially large decimal numerals and prevent parsing errors due to integer
 // conversion overflows." 23 digits overflow every size_t, so a wrap would turn a past-EOF
-// first-pos into a small in-range one and serve the wrong bytes. The satisfiability bullet then
+// first-pos into a small in-range one and serve the wrong byteio. The satisfiability bullet then
 // decides: a first-pos that large is not less than 10000 (416), while a last-pos that large is
 // "greater than or equal to the current length" and clamps to 9999.
 void test_rfc9110_large_decimal_numerals_do_not_wrap(void)

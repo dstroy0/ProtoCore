@@ -12,6 +12,7 @@
 // fixstr, 15/16 for fixarray - changes the first byte and the case fails.
 
 #include "network_drivers/presentation/codec/msgpack/msgpack.h"
+#include "spatium/spatium.h"
 #include <string.h>
 
 #include <unity.h>
@@ -29,15 +30,15 @@ static uint8_t g_buf[128];
 #define ENC(call, want)                                                                                                \
     do                                                                                                                 \
     {                                                                                                                  \
-        protocore_span w_ = span.from(g_buf, sizeof(g_buf));                                                           \
+        mmgr_span w_ = EMBED_CALL(spat.from, SpatiumCfg, .buf = g_buf, .cap = sizeof(g_buf));                          \
         call;                                                                                                          \
-        TEST_ASSERT_TRUE(span.ok(w_));                                                                                 \
-        TEST_ASSERT_EQUAL_UINT(sizeof(want) - 1, span.len(w_));                                                        \
+        TEST_ASSERT_TRUE(EMBED_CALL(spat.ok, SpatiumCfg, .span = w_));                                                 \
+        TEST_ASSERT_EQUAL_UINT(sizeof(want) - 1, w_.pos);                                                              \
         TEST_ASSERT_EQUAL_MEMORY(want, g_buf, sizeof(want) - 1);                                                       \
     } while (0)
 
 // Bind a reader over a literal byte string, whose length is its size minus the C terminator.
-#define RD(lit) span.cfrom((const uint8_t *)(lit), sizeof(lit) - 1)
+#define RD(lit) EMBED_CALL(spat.cfrom, SpatiumCfg, .cbuf = (const uint8_t *)(lit), .cap = sizeof(lit) - 1)
 
 // The spec's overview table, family by family, at each range boundary it states.
 //
@@ -141,7 +142,7 @@ void test_peek_maps_first_byte_to_type(void)
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
         uint8_t one = CASES[i].b;
-        protocore_cspan r = span.cfrom(&one, 1);
+        mmgr_cspan r = EMBED_CALL(spat.cfrom, SpatiumCfg, .cbuf = &one, .cap = 1);
         TEST_ASSERT_EQUAL_INT(CASES[i].t, MsgPack.peek(&r));
         TEST_ASSERT_EQUAL_UINT(0u, r.pos); // peek does not consume
     }
@@ -155,11 +156,11 @@ void test_never_used_and_ext_are_invalid(void)
     for (size_t i = 0; i < sizeof(BAD); i++)
     {
         uint8_t one = BAD[i];
-        protocore_cspan r = span.cfrom(&one, 1);
+        mmgr_cspan r = EMBED_CALL(spat.cfrom, SpatiumCfg, .cbuf = &one, .cap = 1);
         TEST_ASSERT_EQUAL_INT(PROTOCORE_CODEC_INVALID, MsgPack.peek(&r));
     }
     // an empty region has nothing to name either
-    protocore_cspan empty = span.cfrom(NULL, 0);
+    mmgr_cspan empty = EMBED_CALL(spat.cfrom, SpatiumCfg, .cbuf = NULL, .cap = 0);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_CODEC_INVALID, MsgPack.peek(&empty));
 }
 
@@ -168,7 +169,7 @@ void test_decode_int_widths(void)
 {
     uint64_t u = 0;
     int64_t s = 0;
-    protocore_cspan r;
+    mmgr_cspan r;
 
     r = RD("\x7f");
     TEST_ASSERT_TRUE(MsgPack.get_uint(&r, &u));
@@ -214,7 +215,7 @@ void test_decode_int_widths(void)
 void test_decode_str_and_bin_alias_the_input(void)
 {
     static const uint8_t IN[] = {0xa3, 'a', 'b', 'c', 0xc4, 0x02, 0xde, 0xad};
-    protocore_cspan r = span.cfrom(IN, sizeof(IN));
+    mmgr_cspan r = EMBED_CALL(spat.cfrom, SpatiumCfg, .cbuf = IN, .cap = sizeof(IN));
     const char *s = NULL;
     size_t n = 0;
     TEST_ASSERT_TRUE(MsgPack.get_str(&r, &s, &n));
@@ -235,13 +236,13 @@ void test_str_and_bin_families_do_not_cross(void)
     const uint8_t *b = NULL;
     const char *s = NULL;
     size_t n = 0;
-    protocore_cspan r = RD("\xa1\x61"); // fixstr
+    mmgr_cspan r = RD("\xa1\x61"); // fixstr
     TEST_ASSERT_FALSE(MsgPack.get_bytes(&r, &b, &n));
-    TEST_ASSERT_FALSE(span.cok(r));
+    TEST_ASSERT_FALSE(EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r));
 
-    protocore_cspan r2 = RD("\xc4\x01\x61"); // bin 8
+    mmgr_cspan r2 = RD("\xc4\x01\x61"); // bin 8
     TEST_ASSERT_FALSE(MsgPack.get_str(&r2, &s, &n));
-    TEST_ASSERT_FALSE(span.cok(r2));
+    TEST_ASSERT_FALSE(EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r2));
 }
 
 // nil, the two booleans and float 32 decode to what their one byte stands for.
@@ -249,7 +250,7 @@ void test_decode_nil_bool_float(void)
 {
     proto_bool b = PROTO_TRUE;
     float f = 0.0f;
-    protocore_cspan r = RD("\xc0");
+    mmgr_cspan r = RD("\xc0");
     TEST_ASSERT_TRUE(MsgPack.get_null(&r));
 
     r = RD("\xc2");
@@ -272,15 +273,15 @@ void test_decode_nil_bool_float(void)
 // reads back item for item.
 void test_map_round_trip(void)
 {
-    protocore_span w = span.from(g_buf, sizeof(g_buf));
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = g_buf, .cap = sizeof(g_buf));
     MsgPack.put_map(&w, 2);
     MsgPack.put_str(&w, "id");
     MsgPack.put_uint(&w, 4294967295ULL);
     MsgPack.put_str(&w, "on");
     MsgPack.put_bool(&w, PROTO_TRUE);
-    TEST_ASSERT_TRUE(span.ok(w));
+    TEST_ASSERT_TRUE(EMBED_CALL(spat.ok, SpatiumCfg, .span = w));
 
-    protocore_cspan r = span.produced(w);
+    mmgr_cspan r = EMBED_CALL(spat.produced, SpatiumCfg, .span = w);
     size_t count = 0;
     const char *k = NULL;
     size_t klen = 0;
@@ -298,23 +299,23 @@ void test_map_round_trip(void)
     TEST_ASSERT_EQUAL_MEMORY("on", k, 2);
     TEST_ASSERT_TRUE(MsgPack.get_bool(&r, &on));
     TEST_ASSERT_TRUE(on);
-    TEST_ASSERT_TRUE(span.cok(r));
+    TEST_ASSERT_TRUE(EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r));
     TEST_ASSERT_EQUAL_INT(PROTOCORE_CODEC_INVALID, MsgPack.peek(&r)); // nothing left
 }
 
 // An array header of 16 or more takes the array 16 form, and its count survives the round trip.
 void test_array_16_round_trip(void)
 {
-    protocore_span w = span.from(g_buf, sizeof(g_buf));
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = g_buf, .cap = sizeof(g_buf));
     MsgPack.put_array(&w, 16);
     for (uint64_t i = 0; i < 16; i++)
     {
         MsgPack.put_uint(&w, i);
     }
-    TEST_ASSERT_TRUE(span.ok(w));
-    TEST_ASSERT_EQUAL_UINT(3u + 16u, span.len(w)); // array 16 header is 3 bytes, each item a fixint
+    TEST_ASSERT_TRUE(EMBED_CALL(spat.ok, SpatiumCfg, .span = w));
+    TEST_ASSERT_EQUAL_UINT(3u + 16u, w.pos); // array 16 header is 3 bytes, each item a fixint
 
-    protocore_cspan r = span.produced(w);
+    mmgr_cspan r = EMBED_CALL(spat.produced, SpatiumCfg, .span = w);
     size_t count = 0;
     TEST_ASSERT_TRUE(MsgPack.get_array(&r, &count));
     TEST_ASSERT_EQUAL_UINT(16u, count);
@@ -335,9 +336,9 @@ void test_truncated_input_fails_closed(void)
     uint64_t u = 0;
     size_t count = 0;
 
-    protocore_cspan r = RD("\xa3\x61"); // fixstr of 3 with 1 byte present
+    mmgr_cspan r = RD("\xa3\x61"); // fixstr of 3 with 1 byte present
     TEST_ASSERT_FALSE(MsgPack.get_str(&r, &s, &n));
-    TEST_ASSERT_FALSE(span.cok(r));
+    TEST_ASSERT_FALSE(EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r));
 
     r = RD("\xc4\x04\x00"); // bin 8 of 4 with 1 byte present
     TEST_ASSERT_FALSE(MsgPack.get_bytes(&r, &b, &n));
@@ -357,28 +358,29 @@ void test_truncated_input_fails_closed(void)
 void test_error_is_sticky(void)
 {
     static const uint8_t IN[] = {0xcd, 0x01, 0x00}; // a valid uint 16 follows nothing
-    protocore_cspan r = span.cfrom(IN, 1);          // but the region ends after the format byte
+    mmgr_cspan r =
+        EMBED_CALL(spat.cfrom, SpatiumCfg, .cbuf = IN, .cap = 1); // but the region ends after the format byte
     uint64_t u = 0;
     TEST_ASSERT_FALSE(MsgPack.get_uint(&r, &u));
-    TEST_ASSERT_FALSE(span.cok(r));
+    TEST_ASSERT_FALSE(EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r));
 
     proto_bool b = PROTO_FALSE;
     TEST_ASSERT_FALSE(MsgPack.get_bool(&r, &b));
     TEST_ASSERT_TRUE(MsgPack.peek(&r) == PROTOCORE_CODEC_INVALID);
 }
 
-// A write that does not fit latches overflow and keeps counting, so span.len reports the capacity the
+// A write that does not fit latches overflow and keeps counting, so spat.len reports the capacity the
 // buffer should have had rather than only that it failed.
 void test_overflow_reports_the_size_needed(void)
 {
     uint8_t small[4];
-    protocore_span w = span.from(small, sizeof(small));
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = small, .cap = sizeof(small));
     MsgPack.put_str_n(&w, "abcdefghij", 10); // 1 header byte + 10 data bytes
-    TEST_ASSERT_FALSE(span.ok(w));
-    TEST_ASSERT_TRUE(span.has_storage(w));
-    TEST_ASSERT_EQUAL_UINT(11u, span.len(w));
+    TEST_ASSERT_FALSE(EMBED_CALL(spat.ok, SpatiumCfg, .span = w));
+    TEST_ASSERT_TRUE(EMBED_CALL(spat.has_storage, SpatiumCfg, .span = w));
+    TEST_ASSERT_EQUAL_UINT(11u, w.pos);
     // produced() yields nothing once the region overflowed
-    protocore_cspan r = span.produced(w);
+    mmgr_cspan r = EMBED_CALL(spat.produced, SpatiumCfg, .span = w);
     TEST_ASSERT_EQUAL_UINT(0u, r.len);
 }
 

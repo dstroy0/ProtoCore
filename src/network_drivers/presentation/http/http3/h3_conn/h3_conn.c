@@ -18,8 +18,8 @@ static uint8_t quic_varint_work[16]; // the borrow an entry takes; QuicVarint ne
 
 #if PROTOCORE_ENABLE_HTTP3
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/http3/h3_conn/h3_conn.h"
 #include "network_drivers/presentation/http/http3/h3_frame/h3_frame.h"
 #include "network_drivers/presentation/http/http3/qpack/qpack.h"
@@ -100,15 +100,15 @@ static_assert(H3_OFF_OUT + (size_t)PROTOCORE_H3_STREAM_BUF <= PROTOCORE_H3_CONN_
               "PROTOCORE_H3_CONN_BORROW is short of the context, one reassembly + pseudo-header region per "
               "stream, and the body and QPACK regions a dispatch reads - raise it in protocore_config.h");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(H3_OFF_CTX % _Alignof(H3ConnCtx) == 0,
               "H3_OFF_CTX is not a multiple of alignof(H3ConnCtx) - H3_CTX() would return a misaligned "
               "pointer; pad the region ahead of it");
 
-// The regions, at their offsets in the caller's span.
+// The regions, at their offsets in the caller's spat.
 #define H3_CTX(w) ((H3ConnCtx *)(void *)((w) + H3_OFF_CTX))
 // H3_OFF_CTX is 0, so a callback is handed back the span it was bound with.
 #define H3_SPAN(c) ((uint8_t *)(void *)(c))
@@ -154,16 +154,16 @@ static H3Stream *protocore_h3_stream_get(H3ConnCtx *h3, uint64_t id, proto_bool 
     char *method = free_slot->method;
     char *path = free_slot->path;
     char *authority = free_slot->authority;
-    mem.set(free_slot, 0, sizeof(*free_slot));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = free_slot, .val = 0, .bytes = sizeof(*free_slot));
     free_slot->buf = buf;
     free_slot->method = method;
     free_slot->path = path;
     free_slot->authority = authority;
     // The bytes are the connection's and outlive the stream that last held them. A claimed slot
     // starts empty, or this request reads the previous one's method, path and authority.
-    mem.set(method, 0, PROTOCORE_H3_METHOD_LEN);
-    mem.set(path, 0, PROTOCORE_H3_PATH_LEN);
-    mem.set(authority, 0, PROTOCORE_H3_AUTHORITY_LEN);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = method, .val = 0, .bytes = PROTOCORE_H3_METHOD_LEN);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = path, .val = 0, .bytes = PROTOCORE_H3_PATH_LEN);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = authority, .val = 0, .bytes = PROTOCORE_H3_AUTHORITY_LEN);
     free_slot->id = id;
     return free_slot;
 }
@@ -175,7 +175,7 @@ static void set_field(char *dst, size_t cap, const char *src, size_t len)
     {
         len = cap - 1;
     }
-    mem.cpy(dst, src, len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = dst, .src = src, .bytes = len);
     dst[len] = '\0';
 }
 
@@ -187,15 +187,15 @@ typedef struct
 static proto_bool req_emit(void *ctx, const char *name, size_t nlen, const char *value, size_t vlen)
 {
     H3Stream *st = ((ReqEmit *)ctx)->st;
-    if (nlen == 7 && mem.cmp(name, ":method", 7) == 0)
+    if (nlen == 7 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = name, .other = ":method", .bytes = 7) == 0)
     {
         set_field(st->method, PROTOCORE_H3_METHOD_LEN, value, vlen);
     }
-    else if (nlen == 5 && mem.cmp(name, ":path", 5) == 0)
+    else if (nlen == 5 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = name, .other = ":path", .bytes = 5) == 0)
     {
         set_field(st->path, PROTOCORE_H3_PATH_LEN, value, vlen);
     }
-    else if (nlen == 10 && mem.cmp(name, ":authority", 10) == 0)
+    else if (nlen == 10 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = name, .other = ":authority", .bytes = 10) == 0)
     {
         set_field(st->authority, PROTOCORE_H3_AUTHORITY_LEN, value, vlen);
     }
@@ -272,7 +272,7 @@ static void dispatch_request(H3ConnCtx *h3, H3Stream *st)
             }
             if (take)
             {
-                mem.cpy(body + body_len, fp, take);
+                EMBED_CALL(memor.cpy, MemoriaCfg, .dst = body + body_len, .src = fp, .bytes = take);
             }
             body_len += take;
         }
@@ -291,7 +291,7 @@ static void append(H3Stream *st, const uint8_t *data, size_t len)
     {
         len = PROTOCORE_H3_STREAM_BUF - st->buf_len;
     }
-    mem.cpy(st->buf + st->buf_len, data, len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = st->buf + st->buf_len, .src = data, .bytes = len);
     st->buf_len += len;
 }
 
@@ -332,7 +332,7 @@ static proto_bool protocore_h3_classify_uni_stream(H3ConnCtx *h3, H3Stream *st)
     {
         st->role = H3_ROLE_OTHER_UNI;
     }
-    mem.move(st->buf, st->buf + c, st->buf_len - c);
+    EMBED_CALL(memor.move_down, MemoriaCfg, .dst = st->buf, .src = st->buf + c, .bytes = st->buf_len - c);
     st->buf_len -= c;
     return PROTO_TRUE;
 }
@@ -379,7 +379,7 @@ static void protocore_h3_consume_control(H3ConnCtx *h3, H3Stream *st)
         }
         off += fr.header_len + (size_t)fr.length;
     }
-    mem.move(st->buf, st->buf + off, st->buf_len - off);
+    EMBED_CALL(memor.move_down, MemoriaCfg, .dst = st->buf, .src = st->buf + off, .bytes = st->buf_len - off);
     st->buf_len -= off;
 }
 
@@ -467,7 +467,7 @@ static void on_handshake_done(void *app, uint8_t *qc)
 static void h3_conn_open(uint8_t *work, H3ConnCtx *h3, uint8_t *qc, H3RequestFn on_request, void *app)
 {
     uint8_t *base = h3->b; // the span is the connection's, bound before this call
-    mem.set(h3, 0, sizeof(*h3));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = h3, .val = 0, .bytes = sizeof(*h3));
     h3->b = base;
     if (!h3_conn_slot_storage(h3))
     {
@@ -475,7 +475,8 @@ static void h3_conn_open(uint8_t *work, H3ConnCtx *h3, uint8_t *qc, H3RequestFn 
     }
     // The span carries the previous connection's requests; the context leads it, so only the stream
     // regions past it are cleared.
-    mem.set(h3->b + H3_OFF_BUF, 0, PROTOCORE_H3_CONN_BORROW - H3_OFF_BUF);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = h3->b + H3_OFF_BUF, .val = 0,
+               .bytes = PROTOCORE_H3_CONN_BORROW - H3_OFF_BUF);
     h3->qc = qc;
     h3->on_request = on_request;
     h3->app = app;
@@ -520,8 +521,9 @@ static proto_bool h3_conn_reply(uint8_t *work, H3ConnCtx *h3, uint64_t stream_id
         // Cap above the largest content-type that can fit this block even at QPACK-Huffman's best
         // 5-bit/char (~PROTOCORE_H3_QPACK_BLOCK * 8/5), so an over-long value trips the encode's reject
         // below instead of being truncated into a fittable length (see the matching protocore_h2_conn note).
-        size_t qpack_n = Qpack.encode_header(work, block + bp, PROTOCORE_H3_QPACK_BLOCK - bp, "content-type", 12,
-                                             content_type, str.len(content_type, (size_t)PROTOCORE_H3_QPACK_BLOCK * 2));
+        size_t qpack_n = Qpack.encode_header(
+            work, block + bp, PROTOCORE_H3_QPACK_BLOCK - bp, "content-type", 12, content_type,
+            EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = content_type, .cap = (size_t)PROTOCORE_H3_QPACK_BLOCK * 2));
         bp += qpack_n;
     }
     char clen[16];

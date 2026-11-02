@@ -9,17 +9,17 @@
  */
 
 #include "network_drivers/presentation/http/http.h"
-#include "mmgr/membuild/membuild.h"   // protocore_sb: the Allow list is appended, not formatted
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protostr/protostr.h"   // str: the bounded-run walks
-#include "mmgr/rawmemcpy/rawmemcpy.h" // raw.read: a captured segment moves into our own buffer
+#include "cellularum_laboro/cellularum_laboro.h" // str: the bounded-run walks
 #include "network_drivers/presentation/http/auth/auth.h"
 #include "network_drivers/presentation/http/route/http_route/http_route.h" // HttpRoutes
 #include "network_drivers/session/session.h"                               // the per-connection tables this reads
 #include "network_drivers/transport/tcp/common/common.h"     // TcpConn, conn_pool: the slots a response writes on
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a response writes on
 #include "protocore.h"                                       // http_pool, and the request and route widths
-#include "server/io/webdav_handler/webdav_handler.h"         // Dav: a DAV mount is intercepted before the route loop
+#include "proximus_operor/proximus_operor.h"         // proxim.read: a captured segment moves into our own buffer
+#include "server/core/worker/worker.h"               // the persistent end this module's state is taken from
+#include "server/io/webdav_handler/webdav_handler.h" // Dav: a DAV mount is intercepted before the route loop
+#include "verba_scribo/verba_scribo.h"               // verba_scribo: the Allow list is appended, not formatted
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
 #include "server/clock/clock.h" // protocore_millis() stamps the attempt the lockout counts
 #include "server/security/auth_lockout/auth_lockout.h"
@@ -71,7 +71,7 @@ uint8_t *protocore_http_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_HTTP_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_HTTP_BORROW);
     }
     return s_own.span;
 }
@@ -225,37 +225,38 @@ void protocore_http_parse_method(uint8_t *work)
     // from: one more byte than the literal is already enough to decide, because a longer method
     // scans to the bound without finding its terminator and fails on length before any byte is
     // compared. That keeps this function honest about a caller it does not otherwise constrain.
-    if (str.eq(m, "GET", sizeof("GET"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "GET", .cap = sizeof("GET"), .ci = PROTO_FALSE))
     {
         HttpV.method_of = HTTP_GET;
         return;
     }
-    if (str.eq(m, "POST", sizeof("POST"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "POST", .cap = sizeof("POST"), .ci = PROTO_FALSE))
     {
         HttpV.method_of = HTTP_POST;
         return;
     }
-    if (str.eq(m, "PUT", sizeof("PUT"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "PUT", .cap = sizeof("PUT"), .ci = PROTO_FALSE))
     {
         HttpV.method_of = HTTP_PUT;
         return;
     }
-    if (str.eq(m, "DELETE", sizeof("DELETE"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "DELETE", .cap = sizeof("DELETE"), .ci = PROTO_FALSE))
     {
         HttpV.method_of = HTTP_DELETE;
         return;
     }
-    if (str.eq(m, "PATCH", sizeof("PATCH"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "PATCH", .cap = sizeof("PATCH"), .ci = PROTO_FALSE))
     {
         HttpV.method_of = HTTP_PATCH;
         return;
     }
-    if (str.eq(m, "HEAD", sizeof("HEAD"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "HEAD", .cap = sizeof("HEAD"), .ci = PROTO_FALSE))
     {
         HttpV.method_of = HTTP_HEAD;
         return;
     }
-    if (str.eq(m, "OPTIONS", sizeof("OPTIONS"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "OPTIONS", .cap = sizeof("OPTIONS"),
+                   .ci = PROTO_FALSE))
     {
         HttpV.method_of = HTTP_OPTIONS;
         return;
@@ -319,14 +320,16 @@ void protocore_http_path_matches(uint8_t *work)
     const char *req_path = HttpV.route_args.path;
     if (!is_wildcard)
     {
-        HttpV.ok = str.eq(route, req_path, MAX_PATH_LEN, PROTO_FALSE);
+        HttpV.ok = EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = route, .other = req_path, .cap = MAX_PATH_LEN,
+                              .ci = PROTO_FALSE);
         return;
     }
 
     // Prefix match: compare everything up to (but not including) the '*'. A first difference AT the
     // bound is the whole prefix agreeing, which is what the scan returns when it never parts.
-    size_t prefix_len = str.len(route, MAX_PATH_LEN) - 1;
-    HttpV.ok = str.diff(route, req_path, prefix_len, PROTO_FALSE) == prefix_len;
+    size_t prefix_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = route, .cap = MAX_PATH_LEN) - 1;
+    HttpV.ok = EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = route, .other = req_path, .cap = prefix_len,
+                          .ci = PROTO_FALSE) == prefix_len;
 }
 
 // Record one `:name` path parameter (key from the route segment, value from the path segment).
@@ -343,13 +346,13 @@ static void capture_path_param(HttpReq *req, const char *key, size_t klen, const
     {
         klen = QUERY_KEY_LEN - 1;
     }
-    raw.read(qp->key, key, klen);
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = qp->key, .at = key, .size = klen);
     qp->key[klen] = '\0';
     if (vlen > QUERY_VAL_LEN - 1)
     {
         vlen = QUERY_VAL_LEN - 1;
     }
-    raw.read(qp->val, val, vlen);
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = qp->val, .at = val, .size = vlen);
     qp->val[vlen] = '\0';
 }
 
@@ -399,7 +402,8 @@ void protocore_http_match_path_params(uint8_t *work)
             }
             capture_path_param(req, rseg + 1, rlen - 1, pseg, plen);
         }
-        else if (rlen != plen || str.diff(rseg, pseg, rlen, PROTO_FALSE) != rlen)
+        else if (rlen != plen || EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = rseg, .other = pseg, .cap = rlen,
+                                            .ci = PROTO_FALSE) != rlen)
         {
             HttpV.ok = PROTO_FALSE;
             return; // literal segment mismatch
@@ -416,7 +420,8 @@ void protocore_http_match_path_params(uint8_t *work)
 void protocore_http_req_is_head(uint8_t *work)
 {
     (void)work;
-    HttpV.ok = str.eq(http_pool[HttpV.slot].method, "HEAD", sizeof("HEAD"), PROTO_FALSE);
+    HttpV.ok = EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = http_pool[HttpV.slot].method, .other = "HEAD",
+                          .cap = sizeof("HEAD"), .ci = PROTO_FALSE);
 }
 
 // Append a method token to a comma-separated Allow list, de-duplicating.
@@ -432,28 +437,33 @@ void protocore_http_allow_append(uint8_t *work)
     // The search runs to the NUL, not to the capacity: the caller sets only buf[0], so every byte
     // past the text is whatever the stack held. Scanning those could match a method that was never
     // appended and return early, and the Allow header would silently lose one.
-    size_t len = str.len(buf, cap);
-    if (!m[0] || str.has(buf, len, m, sizeof("OPTIONS"), PROTO_FALSE))
+    size_t len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = buf, .cap = cap);
+    if (!m[0] || EMBED_CALL(cellul.has, CatenaFinitaCfg, .src = buf, .cap = len, .other = m,
+                            .other_cap = sizeof("OPTIONS"), .ci = PROTO_FALSE))
     {
         return;
     }
     if (len == 0)
     {
-        protocore_sb sb_buf = {buf, cap, 0, PROTO_TRUE};
-        Sb.put(&sb_buf, m);
-        if (Sb.finish(&sb_buf) == 0)
+        size_t sb_buf = 0;
+        sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = buf, .cap = cap, .at = sb_buf, .text = m);
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = buf, .cap = cap, .at = sb_buf) == 0)
         {
             buf[0] = '\0';
         }
     }
     else
     {
-        protocore_sb sb1300 = {buf + len, cap - len, 0, PROTO_TRUE};
-        Sb.put(&sb1300, ", ");
-        Sb.put(&sb1300, m);
-        if (Sb.finish(&sb1300) == 0)
+        char *const sb1300_out = buf + len;
+        const size_t sb1300_cap = cap - len;
+        size_t sb1300 = 0;
+        sb1300 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb1300_out, .cap = sb1300_cap, .at = sb1300,
+                            .text = ", ");
+        sb1300 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb1300_out, .cap = sb1300_cap, .at = sb1300, .text = m);
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb1300_out, .cap = sb1300_cap, .at = sb1300) == 0)
         {
-            sb1300.p[0] = '\0';
+            sb1300_out[0] = '\0';
         }
     }
 }
@@ -473,21 +483,31 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
         return;
     }
 
-    int blen = (int)str.len(body, 0xFFFF);
+    int blen = (int)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = body, .cap = 0xFFFF);
     char header[RESP_HDR_BUF_SIZE];
     // (send_method_not_allowed, send_too_many_requests) build a non-null header string. Kept so the
     // parameter stays optional for a future caller with nothing extra to add.
-    protocore_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
-    Sb.put(&sb_header, "HTTP/1.1 ");
-    Sb.put(&sb_header, status);
-    Sb.put(&sb_header, "\r\n");
-    Sb.put(&sb_header, extra_hdr ? extra_hdr : "");
-    Sb.put(&sb_header, "Content-Type: ");
-    Sb.put(&sb_header, PROTOCORE_MIME_TEXT_PLAIN);
-    Sb.put(&sb_header, "\r\nContent-Length: ");
-    Sb.i64(&sb_header, (int64_t)(blen));
-    Sb.put(&sb_header, "\r\nConnection: close\r\n\r\n");
-    int hlen = (int)Sb.finish(&sb_header);
+    size_t sb_header = 0;
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = "HTTP/1.1 ");
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = status);
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = "\r\n");
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = extra_hdr ? extra_hdr : "");
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = "Content-Type: ");
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = PROTOCORE_MIME_TEXT_PLAIN);
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = "\r\nContent-Length: ");
+    sb_header = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .sval = (int64_t)(blen));
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = "\r\nConnection: close\r\n\r\n");
+    int hlen =
+        (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = header, .cap = sizeof(header), .at = sb_header);
 
     // The last write carries the flush: send_flush is write+output in one marshal, so
     // the response leaves in a single trip whether or not a body follows the header.
@@ -520,11 +540,14 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
 static void send_method_not_allowed(uint8_t slot_id, const char *allow)
 {
     char extra[80];
-    protocore_sb sb_extra = {extra, sizeof(extra), 0, PROTO_TRUE};
-    Sb.put(&sb_extra, "Allow: ");
-    Sb.put(&sb_extra, allow);
-    Sb.put(&sb_extra, "\r\n");
-    if (Sb.finish(&sb_extra) == 0)
+    size_t sb_extra = 0;
+    sb_extra = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = extra, .cap = sizeof(extra), .at = sb_extra,
+                          .text = "Allow: ");
+    sb_extra =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = extra, .cap = sizeof(extra), .at = sb_extra, .text = allow);
+    sb_extra = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = extra, .cap = sizeof(extra), .at = sb_extra,
+                          .text = "\r\n");
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = extra, .cap = sizeof(extra), .at = sb_extra) == 0)
     {
         extra[0] = '\0';
     }
@@ -550,11 +573,14 @@ static protocore_ip lockout_client_ip(uint8_t slot_id)
 static void send_too_many_requests(uint8_t slot_id, uint32_t retry_after_s)
 {
     char extra[40];
-    protocore_sb sb_extra2 = {extra, sizeof(extra), 0, PROTO_TRUE};
-    Sb.put(&sb_extra2, "Retry-After: ");
-    Sb.u32(&sb_extra2, (uint32_t)((unsigned long)retry_after_s));
-    Sb.put(&sb_extra2, "\r\n");
-    if (Sb.finish(&sb_extra2) == 0)
+    size_t sb_extra2 = 0;
+    sb_extra2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = extra, .cap = sizeof(extra), .at = sb_extra2,
+                           .text = "Retry-After: ");
+    sb_extra2 = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = extra, .cap = sizeof(extra), .at = sb_extra2,
+                           .val = (uint32_t)((unsigned long)retry_after_s));
+    sb_extra2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = extra, .cap = sizeof(extra), .at = sb_extra2,
+                           .text = "\r\n");
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = extra, .cap = sizeof(extra), .at = sb_extra2) == 0)
     {
         extra[0] = '\0';
     }
@@ -594,7 +620,8 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
 {
     // Built-in token endpoint: GET /csrf issues a signed token (also set as the
     // csrf cookie) for clients to echo in X-CSRF-Token on state-changing requests.
-    if (method == HTTP_GET && str.eq(req->path, "/csrf", sizeof("/csrf"), PROTO_FALSE))
+    if (method == HTTP_GET && EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->path, .other = "/csrf",
+                                         .cap = sizeof("/csrf"), .ci = PROTO_FALSE))
     {
         char tok[CSRF_TOKEN_BUF];
         CsrfV.issue_args.out = tok;
@@ -604,11 +631,14 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
         {
             set_cookie(slot_id, "csrf", tok, "Path=/; SameSite=Strict");
             char body[CSRF_TOKEN_BUF + 16];
-            protocore_sb sb_body = {body, sizeof(body), 0, PROTO_TRUE};
-            Sb.put(&sb_body, "{\"token\":\"");
-            Sb.put(&sb_body, tok);
-            Sb.put(&sb_body, "\"}");
-            if (Sb.finish(&sb_body) == 0)
+            size_t sb_body = 0;
+            sb_body = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = body, .cap = sizeof(body), .at = sb_body,
+                                 .text = "{\"token\":\"");
+            sb_body = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = body, .cap = sizeof(body), .at = sb_body,
+                                 .text = tok);
+            sb_body = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = body, .cap = sizeof(body), .at = sb_body,
+                                 .text = "\"}");
+            if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = body, .cap = sizeof(body), .at = sb_body) == 0)
             {
                 body[0] = '\0';
             }
@@ -651,7 +681,9 @@ static void handle_ws_route(uint8_t *work, uint8_t slot_id, HttpReq *req, HttpMe
     HttpConnV.hdr_args.token = "upgrade";
     HttpConn.has_token(protocore_http_conn_span());
     proto_bool is_ws_upgrade = (method == HTTP_GET) && (upgrade_hdr != NULL) &&
-                               str.eq(upgrade_hdr, "websocket", sizeof("websocket"), PROTO_TRUE) && HttpConnV.ok;
+                               EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = upgrade_hdr, .other = "websocket",
+                                          .cap = sizeof("websocket"), .ci = PROTO_TRUE) &&
+                               HttpConnV.ok;
     if (!is_ws_upgrade)
     {
         send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "WebSocket upgrade required");
@@ -660,7 +692,8 @@ static void handle_ws_route(uint8_t *work, uint8_t slot_id, HttpReq *req, HttpMe
     // RFC 6455 §4.2.1: only version 13 is supported; otherwise 426.
     const char *http_parser_text3 = HttpParser.get_header(protocore_http_parser_span(), req, "Sec-WebSocket-Version");
     const char *ws_ver = http_parser_text3;
-    if (ws_ver == NULL || !str.eq(ws_ver, "13", sizeof("13"), PROTO_FALSE))
+    if (ws_ver == NULL ||
+        !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = ws_ver, .other = "13", .cap = sizeof("13"), .ci = PROTO_FALSE))
     {
         ws_send_version_required(slot_id);
         return;

@@ -84,7 +84,7 @@ static void test_rfc1950_header_is_emitted_once_at_stream_start(void)
     const uint16_t hdr = (uint16_t)(((uint16_t)out[0] << 8) | out[1]);
     TEST_ASSERT_EQUAL_UINT16(0u, (uint16_t)(hdr % 31u));
 
-    // FDICT is FLG bit 5; no preset dictionary is used, so no DICTID follows the two bytes.
+    // FDICT is FLG bit 5; no preset dictionary is used, so no DICTID follows the two byteio.
     TEST_ASSERT_EQUAL_UINT8(0u, (uint8_t)((out[1] >> 5) & 1u));
 }
 

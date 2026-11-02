@@ -7,7 +7,8 @@
 // from the rig /bench op; this host ns/op + MB/s is a relative baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
 //   -DPROTOCORE_ENABLE_DNP3=1 test/performance_benching/services/dnp3/host.c
-//   src/services/energy/dnp3/dnp3.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bd && /tmp/bd
+//   src/services/energy/dnp3/dnp3.c src/memoria_operor/memoria_operor.h.c src/cellularum_laboro/cellularum_laboro.h.c
+//   -o /tmp/bd && /tmp/bd
 
 #define PROTOCORE_ENABLE_DNP3 1
 #include "services/energy/dnp3/dnp3.h"

@@ -5,11 +5,9 @@ protocore_add_module(services/security/jwt
   GATE PROTOCORE_ENABLE_JWT
   SOURCES jwt.c
   PRIVATE_DEPS
+    server/core/worker
     crypto/ct_eq
     crypto/mac/hmac_sha256
-    mmgr/membuild
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
+    mmgr
     network_drivers/presentation/codec/base64
 )

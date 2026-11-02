@@ -5,8 +5,8 @@ protocore_add_module(services/radio/promisc
   GATE PROTOCORE_ENABLE_PROMISC
   SOURCES promisc.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protomem
+    server/core/worker
+    mmgr
     network_drivers/physical/physical
     shared/pcap
 )

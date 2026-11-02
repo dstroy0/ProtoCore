@@ -21,7 +21,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.x"
+          python-version: "3.14"
 
       # Fails if src/network_drivers/application/web_assets.{h,c} are stale
       # relative to the source documents under src/web_assets/input/.

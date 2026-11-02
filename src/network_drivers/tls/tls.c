@@ -15,16 +15,19 @@
  * nulls TcpConn::pcb before it writes.
  */
 
+#include "locus_carcerum/locus_carcerum.h"
+#include "memoria_operor/memoria_operor.h"
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
+#include "proximus_operor/proximus_operor.h"
 
 #if PROTOCORE_ENABLE_TLS
 
 #include "network_drivers/tls/tls.h"
 
 #include "crypto/rng/rng.h"                                  // Rng.fill: the per-handshake ephemeral and random
-#include "mmgr/secure/secure.h"                              // the persistent end this module's state is taken from
 #include "network_drivers/tls/record/record.h"               // PROTOCORE_TLS_PLAINTEXT_HDR_LEN: the frame this reads
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the ring and the raw write
+#include "server/core/worker/worker.h"                       // the persistent end this module's state is taken from
 
 PROTOCORE_BEGIN_DECLS
 
@@ -73,7 +76,7 @@ uint8_t *protocore_tls_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_TLS_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_TLS_BORROW);
     }
     return s_own.span; // null while the pool was short, which every call refuses
 }
@@ -167,8 +170,8 @@ proto_bool protocore_tls_global_init(const uint8_t *cert, size_t cert_len, const
     {
         return PROTO_FALSE;
     }
-    raw.read(TLS_CTX(work)->ed_pub, cert, 32u);
-    raw.read(TLS_CTX(work)->ed_seed, key, 32u);
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = TLS_CTX(work)->ed_pub, .at = cert, .size = 32u);
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = TLS_CTX(work)->ed_seed, .at = key, .size = 32u);
     TLS_CTX(work)->ready = PROTO_TRUE;
     return PROTO_TRUE;
 }
@@ -353,9 +356,10 @@ void protocore_tls_conn_free(uint8_t slot)
     TlsRecordV.key.keys = &c->ap_rx;
     TlsRecord.keys_wipe(protocore_tls_span());
 
-    mem.set(&TLS_CTX(work)->cfg[slot], 0, sizeof(TLS_CTX(work)->cfg[slot]));
-    mem.set(TLS_CTX(work)->eph[slot], 0, 32u);
-    mem.set(TLS_CTX(work)->rnd[slot], 0, 32u);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &TLS_CTX(work)->cfg[slot], .val = 0,
+               .bytes = sizeof(TLS_CTX(work)->cfg[slot]));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = TLS_CTX(work)->eph[slot], .val = 0, .bytes = 32u);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = TLS_CTX(work)->rnd[slot], .val = 0, .bytes = 32u);
     TLS_CTX(work)->pcb[slot] = NULL;
     c->state = TLS_CONN_START;
     c->hs_keys_ready = PROTO_FALSE;
@@ -364,7 +368,7 @@ void protocore_tls_conn_free(uint8_t slot)
 
 size_t protocore_tls_arena_peak(void)
 {
-    return protocore_secure_high_water();
+    return mmgr_owner_hw(protocore_secure_owner());
 }
 
 PROTOCORE_END_DECLS

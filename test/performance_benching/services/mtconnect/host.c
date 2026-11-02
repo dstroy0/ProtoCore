@@ -7,7 +7,7 @@
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/performance_benching/common -DPROTOCORE_ENABLE_MTCONNECT=1
 //   test/performance_benching/services/mtconnect/host.c
 //   src/network_drivers/presentation/codec/base64/base64.c src/services/machine_tool/mtconnect/mtconnect.c
-//   src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/hb && /tmp/hb
+//   src/memoria_operor/memoria_operor.h.c src/cellularum_laboro/cellularum_laboro.h.c -o /tmp/hb && /tmp/hb
 
 #include "services/machine_tool/mtconnect/mtconnect.h"
 

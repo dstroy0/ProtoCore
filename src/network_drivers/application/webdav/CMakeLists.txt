@@ -5,7 +5,6 @@ protocore_add_module(network_drivers/application/webdav
   GATE PROTOCORE_ENABLE_WEBDAV
   SOURCES webdav.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
     shared/hex
 )

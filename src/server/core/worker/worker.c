@@ -135,9 +135,33 @@ const MaximumSecurityGuard *protocore_secure_guard(void)
     return &ghost_site.ghost_secure;
 }
 
+// The library's two owners, one per tier of secrecy. Each registers on its first take, which comes
+// before any cell can be counted to it, and a second context registering it at once is refused
+// with nothing changed.
+static CellOwner s_plain_owner = MMGR_CELL_OWNER("protocore_plain");
+static CellOwner s_secure_owner = MMGR_CELL_OWNER("protocore_secure");
+
+CellOwner *protocore_plain_owner(void)
+{
+    if (!mmgr_owner_registered(&s_plain_owner))
+    {
+        (void)mmgr_owner_register(&s_plain_owner);
+    }
+    return &s_plain_owner;
+}
+
+CellOwner *protocore_secure_owner(void)
+{
+    if (!mmgr_owner_registered(&s_secure_owner))
+    {
+        (void)mmgr_owner_register(&s_secure_owner);
+    }
+    return &s_secure_owner;
+}
+
 void *protocore_plain_persist(size_t n)
 {
-    void *p = protocore_plain_guard()->persistent_buf_alloc(n);
+    void *p = protocore_plain_guard()->persistent_buf_alloc(n, protocore_plain_owner());
     if (p != NULL)
     {
         mmgr_zero_buf(p, n);
@@ -147,7 +171,7 @@ void *protocore_plain_persist(size_t n)
 
 void *protocore_secure_persist(size_t n)
 {
-    void *p = protocore_secure_guard()->persistent_buf_alloc(n);
+    void *p = protocore_secure_guard()->persistent_buf_alloc(n, protocore_secure_owner());
     if (p != NULL)
     {
         mmgr_zero_buf(p, n);

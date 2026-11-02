@@ -15,7 +15,7 @@
  * The header is 10 octets, or 12 for a response ROSCTR (Ack or Ack_Data), which adds a 2-octet error code.
  * A Read Var job (function 0x04) carries one or more S7-ANY request items (area / DB / byte
  * address / element count); the Ack_Data response carries, per item, a return code + a data
- * transport size + a length + the value bytes. Per the protocol, the response length is in
+ * transport size + a length + the value byteio. Per the protocol, the response length is in
  * BITS for the bit/byte/int transport sizes (3/4/5) and in BYTES otherwise, and each item
  * is padded to an even length except the last.
  *

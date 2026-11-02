@@ -11,12 +11,12 @@
  */
 
 #include "services/iot/coap/coap/coap.h"
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
 #if PROTOCORE_ENABLE_COAP
 
-#include "mmgr/protomem/protomem.h"                      // mem.cpy / mem.set / mem.cmp: the spans a message moves
-#include "mmgr/protostr/protostr.h"                      // str.len / str.eq / str.copy: the bounded text moves
+#include "cellularum_laboro/cellularum_laboro.h"         // cellul.len / cellul.eq / cellul.copy: the bounded text moves
+#include "memoria_operor/memoria_operor.h"               // memor.cpy / memor.set / memor.cmp: the spans a message moves
 #include "network_drivers/transport/udp/server/server.h" // UdpListener: the receive port and its replies
 #include "server/clock/clock.h"                          // Clock.millis: entry freshness and notification sequencing
 #include "shared/ip/ip.h"                                // Ip.parse: an observer's address, per notification
@@ -144,7 +144,7 @@ uint8_t *protocore_coap_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_COAP_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_COAP_BORROW);
     }
     return s_own.span;
 }
@@ -153,7 +153,7 @@ uint8_t *protocore_coap_span(void)
 // Pure helpers: they read what they are given and hold nothing
 // ---------------------------------------------------------------------------
 
-// Two NUL-terminated runs are the same string within nul_cap bytes. The compare is bounded by the
+// Two NUL-terminated runs are the same string within nul_cap byteio. The compare is bounded by the
 // measured length, so neither side is read past its own terminator. An absent run matches nothing.
 static proto_bool text_eq(const char *a, const char *b, size_t nul_cap)
 {
@@ -161,8 +161,9 @@ static proto_bool text_eq(const char *a, const char *b, size_t nul_cap)
     {
         return PROTO_FALSE;
     }
-    size_t la = str.len(a, nul_cap);
-    return la == str.len(b, nul_cap) && str.eq(a, b, la + 1u, PROTO_FALSE);
+    size_t la = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = a, .cap = nul_cap);
+    return la == EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = b, .cap = nul_cap) &&
+           EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = a, .other = b, .cap = la + 1u, .ci = PROTO_FALSE);
 }
 
 // An option value as a big-endian unsigned (RFC 7252 sec 3.2, the 'uint' option format).
@@ -189,7 +190,7 @@ static proto_bool seg_append(char *buf, size_t cap, size_t *len, char sep, const
     {
         buf[(*len)++] = sep;
     }
-    mem.cpy(buf + *len, seg, seglen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + *len, .src = seg, .bytes = seglen);
     *len += seglen;
     buf[*len] = '\0';
     return PROTO_TRUE;
@@ -210,7 +211,7 @@ static size_t emit_header(uint8_t *out, size_t cap, CoapType type, uint8_t code,
     out[3] = (uint8_t)(mid & 0xFF);
     if (tkl)
     {
-        mem.cpy(out + COAP_HDR_LEN, token, tkl);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + COAP_HDR_LEN, .src = token, .bytes = tkl);
     }
     return (size_t)(COAP_HDR_LEN + tkl);
 }
@@ -263,7 +264,7 @@ static size_t append_opt(uint8_t *resp, size_t cap, size_t n, uint32_t *last_opt
 }
 
 // Append the options in ascending Option Number order (Observe, Content-Format, Block2, Block1) and
-// then the Payload Marker and the payload, to a message already holding n header and Token bytes.
+// then the Payload Marker and the payload, to a message already holding n header and Token byteio.
 // observe_seq below 0 omits Observe, which is also omitted unless code is a 2.xx (RFC 7641 sec 4.2);
 // block2_val / block1_val below 0 omit their option, whose value is the (NUM<<4)|(M<<3)|SZX of
 // RFC 7959 sec 2.2. Stops with what fits rather than overrunning cap. Returns the new length.
@@ -307,7 +308,7 @@ static size_t emit_options_payload(uint8_t *resp, size_t cap, size_t n, uint8_t 
             return n;
         }
         resp[n++] = COAP_PAYLOAD_MARKER;
-        mem.cpy(resp + n, payload, payload_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = resp + n, .src = payload, .bytes = payload_len);
         n += payload_len;
     }
     return n;
@@ -334,7 +335,7 @@ static int32_t find_resource_index(const uint8_t *work, const char *path)
 void protocore_coap_reset(uint8_t *work)
 {
     COAP_CTX(work)->res_count = 0;
-    mem.set(COAP_CTX(work)->res, 0, sizeof(COAP_CTX(work)->res));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = COAP_CTX(work)->res, .val = 0, .bytes = sizeof(COAP_CTX(work)->res));
 #if PROTOCORE_ENABLE_COAP_BLOCK
     COAP_CTX(work)->b1_len = 0;
     COAP_CTX(work)->b1_szx = 0;
@@ -445,7 +446,7 @@ void protocore_coap_process_observe(uint8_t *work)
     COAP_CTX(work)->last_tkl = tkl;
     if (tkl)
     {
-        mem.cpy(COAP_CTX(work)->last_token, token, tkl);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = COAP_CTX(work)->last_token, .src = token, .bytes = tkl);
     }
 #endif
 
@@ -637,7 +638,7 @@ void protocore_coap_process_observe(uint8_t *work)
         for (size_t i = 0; i < COAP_CTX(work)->res_count; i++)
         {
             const char *rpath = COAP_CTX(work)->res[i].path;
-            size_t plen = str.len(rpath, sizeof(COAP_CTX(work)->pl));
+            size_t plen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = rpath, .cap = sizeof(COAP_CTX(work)->pl));
             size_t need = (pl ? 1u : 0u) + 2u + plen; // ',' then '<' then the path then '>'
             if (pl + need > sizeof(COAP_CTX(work)->pl))
             {
@@ -648,7 +649,7 @@ void protocore_coap_process_observe(uint8_t *work)
                 COAP_CTX(work)->pl[pl++] = ',';
             }
             COAP_CTX(work)->pl[pl++] = '<';
-            mem.cpy(COAP_CTX(work)->pl + pl, rpath, plen);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = COAP_CTX(work)->pl + pl, .src = rpath, .bytes = plen);
             pl += plen;
             COAP_CTX(work)->pl[pl++] = '>';
         }
@@ -712,7 +713,8 @@ void protocore_coap_process_observe(uint8_t *work)
             }
             if (payload_len)
             {
-                mem.cpy(COAP_CTX(work)->b1 + COAP_CTX(work)->b1_len, payload, payload_len);
+                EMBED_CALL(memor.cpy, MemoriaCfg, .dst = COAP_CTX(work)->b1 + COAP_CTX(work)->b1_len, .src = payload,
+                           .bytes = payload_len);
             }
             COAP_CTX(work)->b1_len += payload_len;
 
@@ -894,12 +896,12 @@ void protocore_coap_dedup_store(uint8_t *work)
         }
     }
     CoapDedupEntry *e = &COAP_CTX(work)->dedup[victim];
-    (void)str.copy(e->ip, CoapV.exchange.src_ip, sizeof(e->ip));
+    (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = e->ip, .src = CoapV.exchange.src_ip, .cap = sizeof(e->ip));
     e->port = CoapV.exchange.src_port;
     e->mid = CoapV.exchange.mid;
     e->stamp_ms = now;
     e->len = (uint16_t)CoapV.exchange.resp_len;
-    mem.cpy(e->resp, CoapV.exchange.resp, CoapV.exchange.resp_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->resp, .src = CoapV.exchange.resp, .bytes = CoapV.exchange.resp_len);
     e->valid = PROTO_TRUE;
     CoapV.ok = PROTO_TRUE;
 }
@@ -954,7 +956,8 @@ static uint16_t dgram_mid(const uint8_t *data)
 static proto_bool same_token(const uint8_t *work, const CoapObserver *o)
 {
     return o->tkl == COAP_CTX(work)->last_tkl &&
-           (o->tkl == 0 || mem.cmp(o->token, COAP_CTX(work)->last_token, o->tkl) == 0);
+           (o->tkl == 0 || EMBED_CALL(memor.cmp, MemoriaCfg, .src = o->token, .other = COAP_CTX(work)->last_token,
+                                      .bytes = o->tkl) == 0);
 }
 
 // The entry is this endpoint's (RFC 7641 sec 4.1: the list is keyed by client endpoint and Token).
@@ -982,12 +985,13 @@ static int32_t obs_register(uint8_t *work, int32_t res_idx)
         if (!o->active)
         {
             o->active = PROTO_TRUE;
-            (void)str.copy(o->ip, CoapV.exchange.src_ip, sizeof(o->ip));
+            (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = o->ip, .src = CoapV.exchange.src_ip,
+                             .cap = sizeof(o->ip));
             o->port = CoapV.exchange.src_port;
             o->tkl = COAP_CTX(work)->last_tkl;
             if (o->tkl)
             {
-                mem.cpy(o->token, COAP_CTX(work)->last_token, o->tkl);
+                EMBED_CALL(memor.cpy, MemoriaCfg, .dst = o->token, .src = COAP_CTX(work)->last_token, .bytes = o->tkl);
             }
             o->res_idx = res_idx;
             o->seq = 1;

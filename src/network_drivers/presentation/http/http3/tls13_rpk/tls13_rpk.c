@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_TLS_RPK
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
 #include "network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.h"
 
@@ -30,8 +30,8 @@ size_t protocore_tls13_rpk_ed25519_spki(uint8_t *work, uint8_t *out, size_t cap,
     {
         return 0;
     }
-    mem.cpy(out, PREFIX, sizeof(PREFIX));
-    mem.cpy(out + sizeof(PREFIX), pub, 32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = PREFIX, .bytes = sizeof(PREFIX));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + sizeof(PREFIX), .src = pub, .bytes = 32);
     return PROTOCORE_TLS13_ED25519_SPKI_LEN;
 }
 
@@ -40,7 +40,8 @@ proto_bool protocore_tls13_rpk_ed25519_from_spki(uint8_t *work, const uint8_t *s
     (void)work;
 
     static const uint8_t PREFIX[12] = {0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00};
-    if (len != PROTOCORE_TLS13_ED25519_SPKI_LEN || mem.cmp(spki, PREFIX, sizeof(PREFIX)) != 0)
+    if (len != PROTOCORE_TLS13_ED25519_SPKI_LEN ||
+        EMBED_CALL(memor.cmp, MemoriaCfg, .src = spki, .other = PREFIX, .bytes = sizeof(PREFIX)) != 0)
     {
         return PROTO_FALSE;
     }

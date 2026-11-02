@@ -11,8 +11,8 @@
 #include "crypto/asymmetric/ecdsa/ecdsa.h"     // Ecdsa.verify: P-256 over the TBS
 #include "crypto/asymmetric/ed25519/ed25519.h" // Ed25519.verify: likewise
 #include "crypto/asymmetric/rsa/rsa.h"         // Rsa.verify: PKCS#1 v1.5 over the TBS
-#include "mmgr/protomem/protomem.h"            // mem.cmp / mem.set
-#include "mmgr/secure/secure.h"                // the persistent end a verification's bytes come from
+#include "memoria_operor/memoria_operor.h"     // memor.cmp / memor.set
+#include "server/core/worker/worker.h"         // the persistent end a verification's bytes come from
 #include "shared/der/der.h"                    // the reader the key and the signature are decoded with
 
 PROTOCORE_BEGIN_DECLS
@@ -39,8 +39,8 @@ static_assert(X509_VERIFY_OFF_ALG + PROTOCORE_RSA_BORROW <= PROTOCORE_X509_VERIF
               "PROTOCORE_X509_VERIFY_BORROW is short of the context and an RSA verification - raise it in"
               " protocore_config.h, which sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(
@@ -67,7 +67,7 @@ uint8_t *protocore_x509_verify_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_X509_VERIFY_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_X509_VERIFY_BORROW);
     }
     return s_own.span;
 }
@@ -111,8 +111,8 @@ static proto_bool rsa_key_split(const uint8_t *der, size_t len, uint8_t *n_out, 
     {
         return PROTO_FALSE;
     }
-    mem.set(n_out, 0, PROTOCORE_RSA_KEY_BYTES);
-    mem.cpy(n_out + (PROTOCORE_RSA_KEY_BYTES - mlen), m, mlen);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = n_out, .val = 0, .bytes = PROTOCORE_RSA_KEY_BYTES);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = n_out + (PROTOCORE_RSA_KEY_BYTES - mlen), .src = m, .bytes = mlen);
 
     DerV.read_args.pos = after_mod;
     Der.read(protocore_x509_verify_span());
@@ -131,8 +131,8 @@ static proto_bool rsa_key_split(const uint8_t *der, size_t len, uint8_t *n_out, 
     {
         return PROTO_FALSE;
     }
-    mem.set(e_out, 0, 4u);
-    mem.cpy(e_out + (4u - elen), e, elen);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = e_out, .val = 0, .bytes = 4u);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e_out + (4u - elen), .src = e, .bytes = elen);
     return PROTO_TRUE;
 }
 
@@ -148,7 +148,7 @@ static proto_bool ecdsa_sig_split(const uint8_t *der, size_t len, uint8_t out[PR
     {
         return PROTO_FALSE;
     }
-    mem.set(out, 0, PROTOCORE_ECDSA_P256_SIG_LEN);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = PROTOCORE_ECDSA_P256_SIG_LEN);
 
     for (size_t half = 0; half < 2u; half++)
     {
@@ -171,7 +171,7 @@ static proto_bool ecdsa_sig_split(const uint8_t *der, size_t len, uint8_t out[PR
         {
             return PROTO_FALSE;
         }
-        mem.cpy(out + half * 32u + (32u - vlen), v, vlen);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + half * 32u + (32u - vlen), .src = v, .bytes = vlen);
         if (half == 0u)
         {
             DerV.read_args.pos = DerV.tlv.next;
@@ -359,7 +359,8 @@ void protocore_x509_verify_link(uint8_t *work)
     // sec 6.1.3 (a)(4): the issuer name is the subject of the certificate above. Both are kept as
     // they were encoded, so this is the byte comparison the rule asks for.
     if (cert->issuer.len == 0u || cert->issuer.len != issuer->subject.len ||
-        mem.cmp(cert->issuer.p, issuer->subject.p, cert->issuer.len) != 0)
+        EMBED_CALL(memor.cmp, MemoriaCfg, .src = cert->issuer.p, .other = issuer->subject.p,
+                   .bytes = cert->issuer.len) != 0)
     {
         verdict(PROTOCORE_X509_ERR_ISSUER_NAME);
         return;

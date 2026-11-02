@@ -7,18 +7,18 @@
  */
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
+#include "spatium/spatium.h"
 
 #if PROTOCORE_ENABLE_HTTP3
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/http3/quic_server/quic_server.h"
 
-#include "mmgr/plaintext/plaintext.h" // the two engines' byte spans
-#include "mmgr/ring/ring.h"           // protocore_atomic
-#include "mmgr/secure/secure.h"       // the QUIC context span is key material
+#include "memoria_anularis/memoria_anularis.h" // protocore_atomic
 #include "network_drivers/presentation/http/http3/quic_packet/quic_packet.h"
 #include "network_drivers/presentation/http/http3/quic_tls/quic_tls.h" // QuicTlsConfig
 #include "network_drivers/presentation/http/http3/quic_tp/quic_tp.h"
+#include "server/core/worker/worker.h" // the two engines' byte spans
 
 #include "network_drivers/transport/udp/server/server.h" // UdpListener: the bound port datagrams arrive on
 
@@ -109,8 +109,8 @@ static_assert(QSRV_OFF_RING + (size_t)PROTOCORE_QUIC_INGEST_RING * sizeof(QuicIn
               "PROTOCORE_QUIC_SERVER_BORROW is short of the server - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(QSRV_OFF_CTX % _Alignof(QuicServerCtx) == 0,
@@ -137,7 +137,7 @@ uint8_t *protocore_quic_server_span(void)
 {
     if (s_span == NULL)
     {
-        s_span = protocore_plaintext_persist_span(PROTOCORE_QUIC_SERVER_BORROW).buf;
+        s_span = (uint8_t *)protocore_plain_persist(PROTOCORE_QUIC_SERVER_BORROW);
     }
     return s_span;
 }
@@ -156,7 +156,7 @@ static void copy_str(char *dst, size_t cap, const char *src)
 
 static proto_bool cid_eq(const uint8_t *a, uint8_t alen, const uint8_t *b, uint8_t blen)
 {
-    return alen == blen && mem.cmp(a, b, alen) == 0;
+    return alen == blen && EMBED_CALL(memor.cmp, MemoriaCfg, .src = a, .other = b, .bytes = alen) == 0;
 }
 
 static void server_send(uint8_t *work, const char *ip, uint16_t port, const uint8_t *data, size_t len)
@@ -190,7 +190,7 @@ static proto_bool ring_push(uint8_t *work, const uint8_t *dg, size_t len, const 
         return PROTO_FALSE; // ring full: drop (QUIC recovers via retransmission)
     }
     QuicIngest *e = &QSRV_RING(work)[head];
-    mem.cpy(e->data, dg, len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->data, .src = dg, .bytes = len);
     e->len = (uint16_t)len;
     copy_str(e->ip, sizeof e->ip, ip);
     e->port = port;
@@ -236,7 +236,7 @@ static QuicSlot *alloc_slot(uint8_t *work)
             uint8_t *qc_ctx = s->qc;
             uint8_t *qc_bytes = s->qcb;
             uint8_t *h3_bytes = s->h3;
-            mem.set(s, 0, sizeof *s);
+            EMBED_CALL(memor.set, MemoriaCfg, .dst = s, .val = 0, .bytes = sizeof *s);
             s->qc = qc_ctx;
             s->qcb = qc_bytes;
             s->h3 = h3_bytes;
@@ -277,10 +277,11 @@ static QuicSlot *open_conn(uint8_t *work, const QuicLongHeader *lh, const char *
     }
 
     QuicTlsConfig tc;
-    mem.set(&tc, 0, sizeof tc);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &tc, .val = 0, .bytes = sizeof tc);
     tc.cert_der = QSRV_CTX(work)->cfg.cert_der;
     tc.cert_len = QSRV_CTX(work)->cfg.cert_len;
-    mem.cpy(tc.ed25519_seed, QSRV_CTX(work)->cfg.ed25519_seed, sizeof tc.ed25519_seed);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = tc.ed25519_seed, .src = QSRV_CTX(work)->cfg.ed25519_seed,
+               .bytes = sizeof tc.ed25519_seed);
     QuicTp.defaults(work, &tc.params);
     // A real HTTP/3 endpoint must advertise flow-control room, or every request stream (and the
     // client's control / QPACK streams) is blocked - the RFC 9000 sec 18.2 defaults are all zero.
@@ -303,10 +304,17 @@ static QuicSlot *open_conn(uint8_t *work, const QuicLongHeader *lh, const char *
     // this slot carries. The context span is secure because the TLS handshake in it is key material.
     if (s->qc == NULL)
     {
-        protocore_span c = protocore_secure_persist_span(PROTOCORE_QUIC_CONN_CTX_BORROW);
-        protocore_span b = protocore_plaintext_persist_span(PROTOCORE_QUIC_CONN_BORROW);
-        protocore_span h = protocore_plaintext_persist_span(PROTOCORE_H3_CONN_BORROW);
-        if (!span.ok(c) || !span.ok(b) || !span.ok(h))
+        mmgr_span c = EMBED_CALL(spat.from, SpatiumCfg,
+                                 .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_QUIC_CONN_CTX_BORROW),
+                                 .cap = PROTOCORE_QUIC_CONN_CTX_BORROW);
+        mmgr_span b =
+            EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_plain_persist(PROTOCORE_QUIC_CONN_BORROW),
+                       .cap = PROTOCORE_QUIC_CONN_BORROW);
+        mmgr_span h =
+            EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_plain_persist(PROTOCORE_H3_CONN_BORROW),
+                       .cap = PROTOCORE_H3_CONN_BORROW);
+        if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = c) || !EMBED_CALL(spat.ok, SpatiumCfg, .span = b) ||
+            !EMBED_CALL(spat.ok, SpatiumCfg, .span = h))
         {
             return NULL; // no bytes to run out of; the slot opens no connection
         }
@@ -316,7 +324,8 @@ static QuicSlot *open_conn(uint8_t *work, const QuicLongHeader *lh, const char *
     }
 
     QuicConnCallbacks cb;
-    mem.set(&cb, 0, sizeof cb); // H3Conn.init installs the real callbacks
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &cb, .val = 0,
+               .bytes = sizeof cb); // H3Conn.init installs the real callbacks
     QuicConnV.bind.b = s->qcb;
     QuicConnV.cb = cb;
     QuicConnV.init_args.cfg = &tc;

@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_NMEA2000
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/timing_position/nmea2000/nmea2000.h"
 #include "shared/can/can.h"
 
@@ -51,22 +51,23 @@ proto_bool protocore_n2k_fastpacket_build_frame(CanFrame *out, uint8_t seq, uint
     out->id = id;
     out->extended = PROTO_TRUE;
     out->rtr = PROTO_FALSE;
-    out->dlc = PROTOCORE_CAN_MAX_DLC;            // Fast Packet frames are full 8-octet frames
-    mem.set(out->data, 0xFF, sizeof(out->data)); // pad unused octets with 0xFF
+    out->dlc = PROTOCORE_CAN_MAX_DLC; // Fast Packet frames are full 8-octet frames
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out->data, .val = 0xFF,
+               .bytes = sizeof(out->data)); // pad unused octets with 0xFF
 
     out->data[0] = (uint8_t)((seq << N2K_FP_SEQ_SHIFT) | (frame_idx & N2K_FP_FRAME_MASK));
     if (frame_idx == 0)
     {
         out->data[1] = (uint8_t)total_len;
         uint8_t n = total_len < N2K_FP_F0_DATA ? (uint8_t)total_len : (uint8_t)N2K_FP_F0_DATA;
-        mem.cpy(out->data + 2, data, n);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->data + 2, .src = data, .bytes = n);
     }
     else
     {
         uint16_t off = (uint16_t)(N2K_FP_F0_DATA + (frame_idx - 1) * N2K_FP_FN_DATA);
         uint16_t remaining = (uint16_t)(total_len - off);
         uint8_t n = remaining < N2K_FP_FN_DATA ? (uint8_t)remaining : (uint8_t)N2K_FP_FN_DATA;
-        mem.cpy(out->data + 1, data + off, n);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->data + 1, .src = data + off, .bytes = n);
     }
     return PROTO_TRUE;
 }
@@ -75,7 +76,7 @@ void protocore_n2k_fastpacket_reset(N2kFastPacketRx *rx)
 {
     if (rx)
     {
-        mem.set(rx, 0, sizeof(*rx));
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = rx, .val = 0, .bytes = sizeof(*rx));
     }
 }
 
@@ -113,7 +114,7 @@ N2kFpResult protocore_n2k_fastpacket_feed(N2kFastPacketRx *rx, const CanFrame *f
         rx->pgn = id.pgn;
         rx->total_len = total;
         uint8_t n = total < N2K_FP_F0_DATA ? (uint8_t)total : (uint8_t)N2K_FP_F0_DATA;
-        mem.cpy(rx->buf, f->data + 2, n);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = rx->buf, .src = f->data + 2, .bytes = n);
         rx->received = n;
         rx->next_frame = 1;
         if (rx->received >= total)
@@ -136,7 +137,7 @@ N2kFpResult protocore_n2k_fastpacket_feed(N2kFastPacketRx *rx, const CanFrame *f
     }
     uint16_t remaining = (uint16_t)(rx->total_len - rx->received);
     uint8_t n = remaining < N2K_FP_FN_DATA ? (uint8_t)remaining : (uint8_t)N2K_FP_FN_DATA;
-    mem.cpy(rx->buf + rx->received, f->data + 1, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = rx->buf + rx->received, .src = f->data + 1, .bytes = n);
     rx->received = (uint16_t)(rx->received + n);
     rx->next_frame++;
     if (rx->received >= rx->total_len)

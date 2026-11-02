@@ -10,11 +10,11 @@
 
 #if PROTOCORE_ENABLE_SSE
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
-#include "mmgr/secure/secure.h"                              // the persistent end this module's state is taken from
-#include "mmgr/span/span.h"                                  // span.ok: whether the pool had the bytes
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a stream sends on
+#include "server/core/worker/worker.h"                       // the persistent end this module's state is taken from
+#include "spatium/spatium.h"                                 // spat.ok: whether the pool had the bytes
 #include "sse.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -41,8 +41,8 @@ static_assert(SSE_OFF_CTX + sizeof(SseCtx) <= PROTOCORE_SSE_BORROW,
               "PROTOCORE_SSE_BORROW is short of the module context - raise it in protocore_config.h,"
               " which sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(SSE_OFF_CTX % _Alignof(SseCtx) == 0,
@@ -98,7 +98,8 @@ void protocore_sse_alloc(uint8_t *work)
             protocore_sse_pool[i].protocore_sse_id = (uint8_t)i;
             protocore_sse_pool[i].slot_id = SseV.slot;
             protocore_sse_pool[i].active = PROTO_TRUE;
-            str.copy(protocore_sse_pool[i].path, SseV.route.path, sizeof(protocore_sse_pool[i].path));
+            EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = protocore_sse_pool[i].path, .src = SseV.route.path,
+                       .cap = sizeof(protocore_sse_pool[i].path));
             protocore_sse_pool[i].path[MAX_PATH_LEN - 1] = '\0';
             SseV.conn = &protocore_sse_pool[i];
             return;
@@ -143,7 +144,7 @@ static inline proto_bool sse_append(char *buf, size_t n, size_t *pos, const char
     {
         return PROTO_FALSE;
     }
-    mem.cpy(buf + *pos, src, len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + *pos, .src = src, .bytes = len);
     *pos += len;
     return PROTO_TRUE;
 }
@@ -160,26 +161,29 @@ void protocore_sse_format(uint8_t *work)
     }
 
     // WHATWG event-stream field order: event, then id, then data (blank line terminates the record). A
-    // branchless memcpy framer - fixed prefixes + str.len/memcpy of each value + the terminators - instead of
+    // branchless memcpy framer - fixed prefixes + cellul.len/memcpy of each value + the terminators - instead of
     // three snprintf("%s") calls; ~an order of magnitude cheaper on the Xtensa vsnprintf path, which matters
     // for a high-rate broadcast fan-out (many subscribers). Byte-identical output (test_sse_format).
-    // Bounded lengths (str.len, cap n): a field can never exceed the output buffer (an over-long value makes
-    // the append fail and the record report 0), and str.len never reads past `n` if a value is unterminated.
+    // Bounded lengths (cellul.len, cap n): a field can never exceed the output buffer (an over-long value makes
+    // the append fail and the record report 0), and cellul.len never reads past `n` if a value is unterminated.
     size_t pos = 0;
     const char *event = SseV.event_args.event;
     const char *id = SseV.event_args.event_id;
-    if (event && (!sse_append(buf, n, &pos, "event: ", 7) || !sse_append(buf, n, &pos, event, str.len(event, n)) ||
+    if (event && (!sse_append(buf, n, &pos, "event: ", 7) ||
+                  !sse_append(buf, n, &pos, event, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = event, .cap = n)) ||
                   !sse_append(buf, n, &pos, "\n", 1)))
     {
         return;
     }
-    if (id && (!sse_append(buf, n, &pos, "id: ", 4) || !sse_append(buf, n, &pos, id, str.len(id, n)) ||
+    if (id && (!sse_append(buf, n, &pos, "id: ", 4) ||
+               !sse_append(buf, n, &pos, id, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = id, .cap = n)) ||
                !sse_append(buf, n, &pos, "\n", 1)))
     {
         return;
     }
     if (!sse_append(buf, n, &pos, "data: ", 6) ||
-        !sse_append(buf, n, &pos, SseV.event_args.data, str.len(SseV.event_args.data, n)) ||
+        !sse_append(buf, n, &pos, SseV.event_args.data,
+                    EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = SseV.event_args.data, .cap = n)) ||
         !sse_append(buf, n, &pos, "\n\n", 2))
     {
         return;
@@ -221,7 +225,7 @@ uint8_t *protocore_sse_span(void)
     static uint8_t *s_span;
     if (s_span == NULL)
     {
-        s_span = protocore_secure_persist_span(PROTOCORE_SSE_BORROW).buf;
+        s_span = (uint8_t *)protocore_secure_persist(PROTOCORE_SSE_BORROW);
     }
     return s_span;
 }

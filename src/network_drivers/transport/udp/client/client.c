@@ -10,12 +10,12 @@
  */
 
 #include "network_drivers/transport/udp/client/client.h"
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
 #include "config/platform/platform.h"                    // the stack's UDP, under our names
-#include "mmgr/rawmemcpy/rawmemcpy.h"                    // raw.read: the caller's bytes into the pbuf
 #include "network_drivers/transport/diffserv/diffserv.h" // DSCP marking; compiles out when off
 #include "network_drivers/transport/net_addr/net_addr.h" // NetAddr: the stack's address as a protocore_ip
+#include "proximus_operor/proximus_operor.h"             // proxim.read: the caller's bytes into the pbuf
 
 PROTOCORE_BEGIN_DECLS
 
@@ -82,7 +82,7 @@ static proto_bool wire_send(protocore_udp_pcb *pcb, const protocore_ip *a, uint1
     {
         return PROTO_FALSE;
     }
-    raw.read((uint8_t *)p->payload, data, len);
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = (uint8_t *)p->payload, .at = data, .size = len);
     protocore_net_err e = protocore_net_udp_sendto(pcb, p, &dst, port);
     protocore_net_pbuf_free(p);
     return e == PROTOCORE_NET_OK;
@@ -128,7 +128,7 @@ uint8_t *protocore_udp_client_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_UDP_CLIENT_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_UDP_CLIENT_BORROW);
     }
     return s_own.span;
 }

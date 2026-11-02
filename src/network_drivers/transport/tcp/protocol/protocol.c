@@ -11,7 +11,7 @@
  * The producer (recv callback) writes payload bytes into the slot's ring and then advances the
  * head. The consumer (worker) reads at the tail and advances the tail. Both indices are `_Atomic`,
  * reached acquire/release: the producer's buffer writes are published by the release store of the
- * head and observed by the consumer's acquire load. The ring math is the shared ring.h primitive.
+ * head and observed by the consumer's acquire load. The ring is MMgr's memoria_anularis.
  */
 
 #include "protocol.h"
@@ -19,10 +19,10 @@
 #include "../lower/lower.h"          // every call into the stack below goes through the seam
 #include "../server/server.h"        // TcpListener.enqueue: the owning listener posts the event
 #include "config/platform/platform.h"
-#include "mmgr/plaintext/plaintext.h"                    // the persistent end this module's state is taken from
-#include "mmgr/rawmemcpy/rawmemcpy.h"                    // raw.read: the unaligned v6 address load
 #include "network_drivers/transport/tcp/common/common.h" // TcpConn, conn_pool: the slots this engine drives
+#include "proximus_operor/proximus_operor.h"             // proxim.read: the unaligned v6 address load
 #include "server/clock/clock.h"                          // protocore_millis() pluggable monotonic clock
+#include "server/core/worker/worker.h"                   // the persistent end this module's state is taken from
 
 #include "server/core/worker/worker.h" // Workers.wake() - resume a paced send when the window drains
 
@@ -30,10 +30,11 @@
 #include "network_drivers/tls/tls.h"
 #endif
 
-static_assert(PROTOCORE_RING_POW2(RX_BUF_SIZE), "RX_BUF_SIZE must be a power of two: a ring index wraps with a mask");
+static_assert(MMGR_RING_POW2(RX_BUF_SIZE), "RX_BUF_SIZE must be a power of two: a ring index wraps with a mask");
 
 TcpConn conn_pool[CONN_POOL_SLOTS];
-ConnSlotBits protocore_conn_bits;
+mmgr_ring protocore_conn_slots;
+static uint8_t s_conn_slots_bytes[1]; // the slot ring moves no bytes; its loculi are all it is for
 uint32_t protocore_ap_ip = 0;
 
 /**
@@ -81,7 +82,7 @@ uint8_t *protocore_conn_pool_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_CONN_POOL_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_CONN_POOL_BORROW);
         // A borrow arrives zeroed, and these do not start at zero.
         CONN_POOL_CTX(s_own.span)->conn_timeout_ms = CONN_TIMEOUT_MS;
     }
@@ -214,11 +215,13 @@ void protocore_conn_pool_set_state(uint8_t *work)
     if (ConnPoolV.st == CONN_FREE)
     {
         PROTO_ATOMIC_STORE(&conn_pool[ConnPoolV.slot].state, ConnPoolV.st);
-        protocore_slot_mark(&protocore_conn_bits.free, ConnPoolV.slot);
+        EMBED_CALL(anularis.loculus_drop, AnularisCfg, .ring = &protocore_conn_slots, .index = ConnPoolV.slot);
     }
     else
     {
-        protocore_slot_clear(&protocore_conn_bits.free, ConnPoolV.slot);
+        // A slot moving between two live states already holds its loculus, and this refusal says so.
+        (void)EMBED_CALL(anularis.loculus_hold, AnularisCfg, .ring = &protocore_conn_slots, .index = ConnPoolV.slot,
+                         .src = conn_pool[ConnPoolV.slot].rx_buffer, .bytes = RX_BUF_SIZE);
         PROTO_ATOMIC_STORE(&conn_pool[ConnPoolV.slot].state, ConnPoolV.st);
     }
 }
@@ -235,8 +238,13 @@ static void protocore_conn_set_state(uint8_t slot, ConnState st)
 void protocore_conn_pool_alloc_free(uint8_t *work)
 {
     (void)work;
-    ConnPoolV.i32 =
-        protocore_slot_next(protocore_slot_ready(&protocore_conn_bits.free, &protocore_conn_bits.held, MAX_CONNS));
+    embed_word accept_slots = ~(embed_word)0u;
+    if (MAX_CONNS < EMBED_WORD_BITS)
+    {
+        accept_slots = ((embed_word)1u << MAX_CONNS) - 1u;
+    }
+    const embed_word ready = EMBED_CALL(anularis.loculus_ready, AnularisCfg, .ring = &protocore_conn_slots);
+    ConnPoolV.i32 = (int32_t)EMBED_CALL(anularis.loculus_next, AnularisCfg, .mask = ready & accept_slots);
 }
 
 static int32_t protocore_conn_alloc_free(void)
@@ -342,19 +350,18 @@ void protocore_conn_pool_ack_consumed(uint8_t *work)
         return;
     }
     TcpConn *c = &conn_pool[ConnPoolV.slot];
-    // Only the owning worker calls this, so the tail and the ack cursor are read race-free; the
-    // head is not touched. Ack nothing for a slot that is not actively receiving.
+    // Only the owning worker calls this and only it drains the ring, so the unacked count is read
+    // race-free. Ack nothing for a slot that is not actively receiving.
     if (PROTO_ATOMIC_LOAD(&c->state) != CONN_ACTIVE || c->pcb == NULL)
     {
         return;
     }
-    size_t tail = PROTO_ATOMIC_LOAD(&c->rx_tail);
-    size_t consumed = PROTOCORE_RING_WRAP(tail + RX_BUF_SIZE - c->rx_acked, RX_BUF_SIZE);
+    size_t consumed = c->rx_unacked;
     if (consumed == 0)
     {
         return;
     }
-    c->rx_acked = tail; // advance first: the marshaled window update is the slow part
+    c->rx_unacked = 0; // clear first: the marshaled window update is the slow part
     TcpLowerV.op = PROTOCORE_OP_RECVED;
     TcpLowerV.slot = ConnPoolV.slot;
     TcpLowerV.pcb = c->pcb;
@@ -556,6 +563,8 @@ static void protocore_conn_enqueue(TcpConn *slot, const TcpEvt *evt)
 void protocore_conn_pool_init(uint8_t *work)
 {
     CONN_POOL_CTX(work)->conn_timeout_ms = ConnPoolV.life.conn_timeout_ms;
+    (void)EMBED_CALL(anularis.init, AnularisCfg, .ring = &protocore_conn_slots, .buf = s_conn_slots_bytes,
+                     .capacity = sizeof(s_conn_slots_bytes), .segment_count = 1u);
     // The template lives in storage and the copy runs before any listener is accepting, so the
     // non-atomic struct assignment over the atomic members races nothing.
     for (int i = 0; i < MAX_CONNS; i++)
@@ -563,6 +572,11 @@ void protocore_conn_pool_init(uint8_t *work)
         conn_pool[i] = CONN_POOL_CTX(work)->blank;
         conn_pool[i].id = (uint8_t)i;
         protocore_conn_set_state((uint8_t)i, CONN_FREE);
+    }
+    for (int i = 0; i < CONN_POOL_SLOTS; i++)
+    {
+        (void)EMBED_CALL(anularis.init, AnularisCfg, .ring = &conn_pool[i].rx, .buf = conn_pool[i].rx_buffer,
+                         .capacity = RX_BUF_SIZE, .segment_count = 1u);
     }
 }
 
@@ -598,34 +612,42 @@ void protocore_conn_pool_stop(uint8_t *work)
 // Transport owns the ring. A layer above drains it only through these, and never indexes the
 // buffer or advances the tail itself. The consuming calls advance the tail only; the window is
 // reopened by ack_consumed once per worker loop, so there is no per-byte ACK. Single-consumer per
-// slot (the owning worker), so nothing locks here. All five delegate to the shared SPSC ring
-// primitive over the slot's rx_buffer - this layer never reimplements the ring math.
+// slot (the owning worker), so nothing locks here. All five delegate to the slot's memoria_anularis
+// ring - this layer never reimplements the ring math - and the draining ones count what they took
+// toward the next window update.
 
 void protocore_conn_pool_available(uint8_t *work)
 {
     (void)work;
-    const TcpConn *c = &conn_pool[ConnPoolV.slot];
-    ConnPoolV.n = protocore_ring_available(&c->rx_head, &c->rx_tail, RX_BUF_SIZE);
+    TcpConn *c = &conn_pool[ConnPoolV.slot];
+    ConnPoolV.n = EMBED_CALL(anularis.available, AnularisCfg, .ring = &c->rx);
 }
 
 void protocore_conn_pool_read_byte(uint8_t *work)
 {
     (void)work;
     TcpConn *c = &conn_pool[ConnPoolV.slot];
-    ConnPoolV.ok = protocore_ring_read_byte(c->rx_buffer, RX_BUF_SIZE, &c->rx_head, &c->rx_tail, &ConnPoolV.u8);
+    ConnPoolV.ok = EMBED_CALL(anularis.read_byte, AnularisCfg, .ring = &c->rx, .dst = &ConnPoolV.u8);
+    if (ConnPoolV.ok)
+    {
+        c->rx_unacked += 1u;
+    }
 }
 
 void protocore_conn_pool_peek(uint8_t *work)
 {
     (void)work;
-    const TcpConn *c = &conn_pool[ConnPoolV.slot];
-    protocore_ring_peek(c->rx_buffer, RX_BUF_SIZE, &c->rx_tail, ConnPoolV.io.off, ConnPoolV.io.buf, ConnPoolV.io.count);
+    TcpConn *c = &conn_pool[ConnPoolV.slot];
+    EMBED_CALL(anularis.peek, AnularisCfg, .ring = &c->rx, .dst = ConnPoolV.io.buf, .bytes = ConnPoolV.io.count,
+               .offset = ConnPoolV.io.off);
 }
 
 void protocore_conn_pool_consume(uint8_t *work)
 {
     (void)work;
-    protocore_ring_consume(&conn_pool[ConnPoolV.slot].rx_tail, RX_BUF_SIZE, ConnPoolV.io.count);
+    TcpConn *c = &conn_pool[ConnPoolV.slot];
+    EMBED_CALL(anularis.consume, AnularisCfg, .ring = &c->rx, .bytes = ConnPoolV.io.count);
+    c->rx_unacked += ConnPoolV.io.count;
 }
 
 void protocore_conn_pool_read(uint8_t *work)
@@ -633,7 +655,8 @@ void protocore_conn_pool_read(uint8_t *work)
     (void)work;
     TcpConn *c = &conn_pool[ConnPoolV.slot];
     ConnPoolV.n =
-        protocore_ring_read(c->rx_buffer, RX_BUF_SIZE, &c->rx_head, &c->rx_tail, ConnPoolV.io.buf, ConnPoolV.io.cap);
+        EMBED_CALL(anularis.read, AnularisCfg, .ring = &c->rx, .dst = ConnPoolV.io.buf, .bytes = ConnPoolV.io.cap);
+    c->rx_unacked += ConnPoolV.n;
 }
 
 void protocore_conn_pool_active(uint8_t *work)
@@ -896,7 +919,7 @@ protocore_net_err lowlevel_recv_cb(void *arg, protocore_pcb *tpcb, protocore_pbu
     // without taking ownership, so the stack retains it and redelivers once the application has
     // drained; nudge the loop to drain. Copying only what fits corrupts bodies larger than the ring.
     // Needs RX_BUF_SIZE greater than the largest incoming segment so a full one can eventually fit.
-    if (p->tot_len > protocore_ring_free(&slot->rx_head, &slot->rx_tail, RX_BUF_SIZE))
+    if (p->tot_len > EMBED_CALL(anularis.vacant, AnularisCfg, .ring = &slot->rx))
     {
         PROTOCORE_OBS_NOTICE(slot->id, CONN_ACTIVE, PROTOCORE_CONN_R_BACKPRESSURE);
         TcpEvt evt = {EVT_DATA, slot->id, 0}; // wake the loop so it drains the ring
@@ -909,16 +932,14 @@ protocore_net_err lowlevel_recv_cb(void *arg, protocore_pcb *tpcb, protocore_pbu
 
     slot->last_activity_ms = Clock.ms; // accepted data is progress: refresh the idle timer
 
-    // Move the segment into the ring a contiguous span per chain link, two across the wrap,
-    // advancing a local head and publishing it once at the end. The free-space check above
-    // guarantees it fits, so the head can never overrun the tail.
-    size_t head = PROTO_ATOMIC_LOAD(&slot->rx_head); // sole producer of head; one acquire load
+    // Move the segment into the ring one chain link at a time. The free-space check above guarantees
+    // each link fits, and this is the ring's sole producer.
     for (protocore_pbuf *q = p; q != NULL; q = q->next)
     {
-        head = protocore_ring_write_span(slot->rx_buffer, RX_BUF_SIZE, head, (const uint8_t *)q->payload, q->len);
+        (void)EMBED_CALL(anularis.put, AnularisCfg, .ring = &slot->rx, .src = (const uint8_t *)q->payload,
+                         .bytes = q->len);
     }
-    PROTO_ATOMIC_STORE(&slot->rx_head, head); // one release store publishes the whole segment
-    size_t bytes_copied = p->tot_len;         // the whole segment fit, checked above
+    size_t bytes_copied = p->tot_len; // the whole segment fit, checked above
 
     // Do NOT reopen the window here: that is ack_consumed()'s job as the worker drains, so the
     // advertised window tracks ring occupancy. Acking on copy decouples the window from drainage and

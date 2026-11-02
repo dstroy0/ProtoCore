@@ -8,8 +8,8 @@
 // this host ns/op + MB/s is a relative baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
 //   -DPROTOCORE_ENABLE_MQTT=1 test/performance_benching/services/mqtt/host.c
-//   src/services/iot/mqtt/mqtt.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bm && /tmp/bm
-//   (utf8.h is header-only)
+//   src/services/iot/mqtt/mqtt.c src/memoria_operor/memoria_operor.h.c src/cellularum_laboro/cellularum_laboro.h.c -o
+//   /tmp/bm && /tmp/bm (utf8.h is header-only)
 
 #define PROTOCORE_ENABLE_MQTT 1
 #include "services/iot/mqtt/mqtt/mqtt.h"

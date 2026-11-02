@@ -130,7 +130,7 @@ typedef struct
 } Tls13ServerHello;
 
 /** @brief The fixed HelloRetryRequest random - SHA-256("HelloRetryRequest"), RFC 8446 §4.1.3. A
- *  ServerHello carrying this random _is_ a HelloRetryRequest. 32 bytes. */
+ *  ServerHello carrying this random _is_ a HelloRetryRequest. 32 byteio. */
 extern const uint8_t protocore_tls13_hrr_random[32];
 
 /** @brief What parse_client_hello takes: msg, len, out, dtls. */
@@ -156,7 +156,7 @@ typedef struct
 {
     uint8_t *out;
     size_t cap;
-    const uint8_t *random; ///< 32 bytes.
+    const uint8_t *random; ///< 32 byteio.
     const uint8_t *session_id;
     uint8_t session_id_len;
     const uint8_t *share;
@@ -204,7 +204,7 @@ typedef struct
 {
     uint8_t *out;
     size_t cap;
-    const uint8_t *random;     ///< 32-byte server random 32 bytes.
+    const uint8_t *random;     ///< 32-byte server random 32 byteio.
     const uint8_t *session_id; ///< legacy_session_id_echo (the client's, echoed verbatim; may be NULL if len 0)
     uint8_t session_id_len;    ///< echoed session-id length (0..32)
     const uint8_t
@@ -245,7 +245,7 @@ typedef struct
     size_t cap;
     const uint8_t *transcript_hash; ///< Transcript-Hash through the Certificate message
     size_t hash_len;                ///< its length: the suite's Hash.length, at most PROTOCORE_TLS13_SECRET_MAX
-    const uint8_t *seed;            ///< 32-byte Ed25519 private seed 32 bytes.
+    const uint8_t *seed;            ///< 32-byte Ed25519 private seed 32 byteio.
 } Tls13MsgBuildCertVerifyArgs;
 
 /** @brief What build_finished takes: out, cap, verify_data, verify_len. */
@@ -295,7 +295,7 @@ typedef struct
 {
     uint8_t *out;
     size_t cap;
-    const uint8_t *ch1_hash; ///< 32 bytes.
+    const uint8_t *ch1_hash; ///< 32 byteio.
 } Tls13MsgBuildMessageHashArgs;
 
 /**

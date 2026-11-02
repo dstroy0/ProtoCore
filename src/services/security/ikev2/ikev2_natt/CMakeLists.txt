@@ -7,8 +7,7 @@ protocore_add_module(services/security/ikev2/ikev2_natt
   DEPS
     services/security/ikev2/ikev2
   PRIVATE_DEPS
+    server/core/worker
     crypto/hash/sha1
-    mmgr/protomem
-    mmgr/secure
-    mmgr/span
+    mmgr
 )

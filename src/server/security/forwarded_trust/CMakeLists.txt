@@ -5,6 +5,7 @@ protocore_add_module(server/security/forwarded_trust
   GATE PROTOCORE_ENABLE_FORWARDED_TRUST
   SOURCES forwarded_trust.c
   PRIVATE_DEPS
-    mmgr/secure
+    server/core/worker
+    mmgr
     shared/ip
 )

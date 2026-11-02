@@ -6,8 +6,8 @@ protocore_add_module(network_drivers/transport/udp/client
   DEPS
     shared/ip
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/rawmemcpy
+    server/core/worker
+    mmgr
     network_drivers/transport/diffserv
     network_drivers/transport/net_addr
 )

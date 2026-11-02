@@ -13,11 +13,11 @@
 
 #if PROTOCORE_ENABLE_PROVISIONING
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h" // str: the bounded-run walks
-#include "mmgr/secure/secure.h"     // the persistent end this module's state is taken from
+#include "cellularum_laboro/cellularum_laboro.h" // str: the bounded-run walks
+#include "memoria_operor/memoria_operor.h"
 #include "provisioning_service.h"
-#include "server/clock/clock.h" // pcdelay
+#include "server/clock/clock.h"        // pcdelay
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 #include "shared/hex/hex.h"
 #include "shared/mime/mime.h"
 
@@ -48,7 +48,7 @@ uint8_t *protocore_provisioning_service_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_PROVISIONING_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_PROVISIONING_BORROW);
     }
     return s_own.span;
 }
@@ -69,12 +69,15 @@ proto_bool protocore_prov_form_field(uint8_t *work, const char *body, const char
     {
         blen++;
     }
-    size_t klen = str.len(key, blen); // a name longer than the body cannot occur in it
+    size_t klen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = key,
+                             .cap = blen); // a name longer than the body cannot occur in it
     const char *val = NULL;
     for (const char *p = body; *p; p++)
     {
         // Match the key only as a whole field name: at the start or after '&'.
-        if ((p == body || p[-1] == '&') && str.starts(p, key, klen, PROTO_FALSE) && p[klen] == '=')
+        if ((p == body || p[-1] == '&') &&
+            EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = p, .other = key, .cap = klen, .ci = PROTO_FALSE) &&
+            p[klen] == '=')
         {
             val = p + klen + 1;
             break;
@@ -143,8 +146,8 @@ static_assert(PROVISIONING_SERVICE_OFF_CTX + sizeof(ProvCtx) <= PROTOCORE_PROVIS
               "PROTOCORE_PROVISIONING_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(PROVISIONING_SERVICE_OFF_CTX % _Alignof(ProvCtx) == 0,
@@ -200,7 +203,7 @@ static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct protocor
     {
         return;
     }
-    mem.cpy(resp, req, qend);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = resp, .src = req, .bytes = qend);
     resp[2] = 0x81; // QR=1, opcode 0, RD copied
     resp[3] = 0x80; // RA=1, RCODE 0
     resp[6] = 0x00;

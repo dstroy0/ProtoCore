@@ -6,5 +6,5 @@ protocore_add_module(network_drivers/transport/net_addr
   DEPS
     shared/ip
   PRIVATE_DEPS
-    mmgr/rawmemcpy
+    mmgr
 )

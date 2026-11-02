@@ -294,7 +294,7 @@ static const MtConnectNs MtConnect __attribute__((unused)) = {
  * borrow comes from. Taken once from the end of the plaintext pool, which no mark and no release
  * walks, because the ring outlives the documents replayed out of it.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_mtconnect_span(void);
 

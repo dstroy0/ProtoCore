@@ -6,7 +6,7 @@
 // Linked against src/shared/swar.c and disassembled, it shows whether the members inline
 // into the loop under LTO or cost an indirect call per lane test.
 
-#include "mmgr/swar/swar.h"
+#include "verbum_scrutor/verbum_scrutor.h"
 
 static char buf[64] __attribute__((aligned(8)));
 volatile unsigned long swar_sink = 0;
@@ -15,10 +15,10 @@ void app_main(void);
 void app_main(void)
 {
     unsigned long n = 0;
-    for (size_t i = 0; i + PROTOCORE_SWAR_BYTES <= sizeof(buf); i += PROTOCORE_SWAR_BYTES)
+    for (size_t i = 0; i + MMGR_SWAR_BYTES <= sizeof(buf); i += MMGR_SWAR_BYTES)
     {
-        protocore_swar_word w = swar.load_al(buf + i);
-        protocore_swar_word m = swar.ge(w, 'a') & swar.le(w, 'z');
+        embed_word w = swar.load_al(buf + i);
+        embed_word m = swar.ge(w, 'a') & swar.le(w, 'z');
         if (m != 0)
         {
             n += swar.zero_lane(m);

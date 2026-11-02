@@ -11,9 +11,9 @@
 
 #if PROTOCORE_ENABLE_PROMISC
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/physical/physical/physical.h" // protocore_phy_monitor_*: the L1 seam this drives
+#include "server/core/worker/worker.h"                  // the persistent end this module's state is taken from
 #include "services/radio/promisc/promisc.h"
 #include "shared/pcap/pcap.h"
 
@@ -32,7 +32,7 @@ uint8_t *protocore_promisc_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_PROMISC_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_PROMISC_BORROW);
     }
     return s_own.span;
 }
@@ -45,7 +45,7 @@ proto_bool protocore_promisc_wifi_frame_parse(uint8_t *work, const uint8_t *fram
     {
         return PROTO_FALSE;
     }
-    mem.set(out, 0, sizeof(*out));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
 
     const uint8_t fc0 = frame[0];
     const uint8_t fc1 = frame[1];
@@ -142,8 +142,8 @@ static_assert(PROMISC_OFF_CTX + sizeof(PromiscCtx) <= PROTOCORE_PROMISC_BORROW,
               "PROTOCORE_PROMISC_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(PROMISC_OFF_CTX % _Alignof(PromiscCtx) == 0,

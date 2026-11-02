@@ -5,8 +5,7 @@ protocore_add_module(network_drivers/application/smb/ntlm
   GATE PROTOCORE_ENABLE_SMB
   SOURCES ntlm.c
   PRIVATE_DEPS
+    server/core/worker
     crypto/hash/md
-    mmgr/protomem
-    mmgr/secure
-    mmgr/span
+    mmgr
 )

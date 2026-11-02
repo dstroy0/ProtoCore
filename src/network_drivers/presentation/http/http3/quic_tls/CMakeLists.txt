@@ -12,6 +12,6 @@ protocore_add_module(network_drivers/presentation/http/http3/quic_tls
     crypto/asymmetric/curve25519
     crypto/ct_eq
     crypto/pqc/mlkem
-    mmgr/protomem
+    mmgr
     network_drivers/presentation/http/http3/tls13_msg
 )

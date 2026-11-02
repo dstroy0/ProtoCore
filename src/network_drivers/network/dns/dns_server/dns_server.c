@@ -7,10 +7,10 @@
  */
 
 #include "network_drivers/network/dns/dns_server/dns_server.h"
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protostr/protostr.h"   // str.len
-#include "mmgr/rawmemcpy/rawmemcpy.h" // raw.read: the exact mover, for a destination inside a buffer
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len
 #include "protocore_config.h"
+#include "proximus_operor/proximus_operor.h" // proxim.read: the exact mover, for a destination inside a buffer
+#include "server/core/worker/worker.h"       // the persistent end this module's state is taken from
 
 #if PROTOCORE_ENABLE_DNS_SERVER
 
@@ -122,7 +122,7 @@ uint8_t *protocore_dns_server_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_DNS_SERVER_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_DNS_SERVER_BORROW);
     }
     return s_own.span;
 }
@@ -149,7 +149,7 @@ void protocore_dns_server_build_response(uint8_t *work)
         {
             return;
         }
-        raw.read(out, query, 12);
+        EMBED_CALL(proxim.read, ProximusCfg, .dst = out, .at = query, .size = 12);
         out[2] = (uint8_t)(0x84 | (query[2] & 0x01)); // QR=1, AA=1, RD copied
         out[3] = 0x04;                                // RCODE = 4 Not Implemented
         out[6] = out[7] = 0;                          // ANCOUNT 0
@@ -170,7 +170,8 @@ void protocore_dns_server_build_response(uint8_t *work)
     {
         return;
     }
-    raw.read(out, query, qend);                   // header + question (preserves ID and the question octets)
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = out, .at = query,
+               .size = qend);                     // header + question (preserves ID and the question octets)
     out[2] = (uint8_t)(0x84 | (query[2] & 0x01)); // QR=1, OPCODE=0, AA=1, RD copied
     out[3] = 0x00;                                // RA=0, RCODE=0 No Error
     out[4] = 0x00;
@@ -224,7 +225,7 @@ void protocore_dns_server_add(uint8_t *work)
     {
         return;
     }
-    size_t nlen = str.len(name, PROTOCORE_DNS_NAME_MAX);
+    size_t nlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = name, .cap = PROTOCORE_DNS_NAME_MAX);
     if (nlen >= PROTOCORE_DNS_NAME_MAX)
     {
         return;
@@ -233,7 +234,8 @@ void protocore_dns_server_add(uint8_t *work)
     {
         return;
     }
-    raw.read(DNS_SERVER_CTX(work)->names[DNS_SERVER_CTX(work)->count], name, nlen + 1);
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = DNS_SERVER_CTX(work)->names[DNS_SERVER_CTX(work)->count], .at = name,
+               .size = nlen + 1);
     DNS_SERVER_CTX(work)->ips[DNS_SERVER_CTX(work)->count] =
         ((uint32_t)DnsServerV.rec.a << 24) | ((uint32_t)DnsServerV.rec.b << 16) | ((uint32_t)DnsServerV.rec.c << 8) |
         (uint32_t)DnsServerV.rec.d;

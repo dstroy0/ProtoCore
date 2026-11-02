@@ -12,16 +12,16 @@
  */
 
 #include "services/security/oidc/oidc.h"
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
+#include "spatium/spatium.h"
+#include "verba_scribo/verba_scribo.h" // verba_scribo frame builder
 
 #if PROTOCORE_ENABLE_OIDC
 
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len / eq: the bounded walks, in place of <string.h>
 #include "crypto/asymmetric/rsa/rsa.h"
-#include "mmgr/plaintext/plaintext.h" // per-dispatch arena (keeps the decode buffers off the worker stack)
-#include "mmgr/protostr/protostr.h"   // str.len / eq: the bounded walks, in place of <string.h>
-#include "mmgr/secure/secure.h"       // the signature digest's working set, wiped on release
 #include "network_drivers/presentation/codec/base64/base64.h" // shared Base64.url_decode
+#include "server/core/worker/worker.h" // per-dispatch arena (keeps the decode buffers off the worker stack)
 
 PROTOCORE_BEGIN_DECLS
 
@@ -33,14 +33,14 @@ PROTOCORE_BEGIN_DECLS
 // Bounded substring search of [hs, he) for the NUL-terminated needle.
 static const char *mem_find(const char *hs, const char *he, const char *needle)
 {
-    size_t nl = str.len(needle, (size_t)(he - hs) + 1u);
+    size_t nl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = needle, .cap = (size_t)(he - hs) + 1u);
     if (nl == 0 || (size_t)(he - hs) < nl)
     {
         return NULL;
     }
     for (const char *p = hs; p + nl <= he; p++)
     {
-        if (mem.cmp(p, needle, nl) == 0)
+        if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = p, .other = needle, .bytes = nl) == 0)
         {
             return p;
         }
@@ -59,11 +59,14 @@ static proto_bool find_field(const char *s, const char *e, const char *name, con
     *vlen = 0;
     *type = '\0';
     char needle[96];
-    protocore_sb sb_needle = {needle, sizeof(needle), 0, PROTO_TRUE};
-    Sb.put(&sb_needle, "\"");
-    Sb.put(&sb_needle, name);
-    Sb.put(&sb_needle, "\"");
-    int nn = (int)Sb.finish(&sb_needle);
+    size_t sb_needle = 0;
+    sb_needle = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = needle, .cap = sizeof(needle), .at = sb_needle,
+                           .text = "\"");
+    sb_needle = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = needle, .cap = sizeof(needle), .at = sb_needle,
+                           .text = name);
+    sb_needle = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = needle, .cap = sizeof(needle), .at = sb_needle,
+                           .text = "\"");
+    int nn = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = needle, .cap = sizeof(needle), .at = sb_needle);
     if (nn <= 0 || nn >= (int)sizeof(needle))
     {
         return PROTO_FALSE;
@@ -212,10 +215,10 @@ static proto_bool aud_contains(const char *s, const char *e, const char *want)
     {
         return PROTO_FALSE;
     }
-    size_t wl = str.len(want, vl + 1u);
+    size_t wl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = want, .cap = vl + 1u);
     if (t == 's')
     {
-        return vl == wl && mem.cmp(v, want, wl) == 0;
+        return vl == wl && EMBED_CALL(memor.cmp, MemoriaCfg, .src = v, .other = want, .bytes = wl) == 0;
     }
     if (t == 'a')
     {
@@ -223,14 +226,17 @@ static proto_bool aud_contains(const char *s, const char *e, const char *want)
         const char *end = v + vl; // just past ']'
         while (p < end)
         {
-            const char *q = (const char *)mem.chr(p, (size_t)(end - p), '"');
-            const char *r = q ? (const char *)mem.chr(q + 1, (size_t)(end - (q + 1)), '"') : NULL;
+            const char *q =
+                (const char *)EMBED_CALL(memor.chr, MemoriaCfg, .src = p, .bytes = (size_t)(end - p), .val = '"');
+            const char *r = q ? (const char *)EMBED_CALL(memor.chr, MemoriaCfg, .src = q + 1,
+                                                         .bytes = (size_t)(end - (q + 1)), .val = '"')
+                              : NULL;
             if (!q || !r)
             {
                 break;
             }
             q++;
-            if ((size_t)(r - q) == wl && mem.cmp(q, want, wl) == 0)
+            if ((size_t)(r - q) == wl && EMBED_CALL(memor.cmp, MemoriaCfg, .src = q, .other = want, .bytes = wl) == 0)
             {
                 return PROTO_TRUE;
             }
@@ -244,19 +250,19 @@ static proto_bool aud_contains(const char *s, const char *e, const char *want)
 // exactly two '.' separators and three non-empty parts.
 static proto_bool split_compact(const char *tok, size_t len, const char **seg, size_t *seglen)
 {
-    const char *d1 = (const char *)mem.chr(tok, len, '.');
+    const char *d1 = (const char *)EMBED_CALL(memor.chr, MemoriaCfg, .src = tok, .bytes = len, .val = '.');
     if (!d1)
     {
         return PROTO_FALSE;
     }
     size_t rem = len - (size_t)(d1 + 1 - tok);
-    const char *d2 = (const char *)mem.chr(d1 + 1, rem, '.');
+    const char *d2 = (const char *)EMBED_CALL(memor.chr, MemoriaCfg, .src = d1 + 1, .bytes = rem, .val = '.');
     if (!d2)
     {
         return PROTO_FALSE;
     }
     size_t rem2 = len - (size_t)(d2 + 1 - tok);
-    if (mem.chr(d2 + 1, rem2, '.'))
+    if (EMBED_CALL(memor.chr, MemoriaCfg, .src = d2 + 1, .bytes = rem2, .val = '.'))
     {
         return PROTO_FALSE;
     }
@@ -286,8 +292,8 @@ static proto_bool right_align(const uint8_t *src, size_t len, uint8_t *dst, size
             return PROTO_FALSE;
         }
     }
-    mem.set(dst, 0, width);
-    mem.cpy(dst + (width - len), src, len);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = dst, .val = 0, .bytes = width);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = dst + (width - len), .src = src, .bytes = len);
     return PROTO_TRUE;
 }
 
@@ -302,7 +308,7 @@ static proto_bool parse_rsa_jwk(uint8_t *work, const char *s, const char *e, pro
     }
     uint8_t tmp[PROTOCORE_OIDC_RSA_BYTES + 8];
     Base64V.url_decode_args.src = b64;
-    Base64V.url_decode_args.src_len = str.len(b64, sizeof(b64));
+    Base64V.url_decode_args.src_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = b64, .cap = sizeof(b64));
     Base64V.url_decode_args.dst = tmp;
     Base64V.url_decode_args.dst_cap = sizeof(tmp);
     Base64.url_decode(work);
@@ -318,7 +324,7 @@ static proto_bool parse_rsa_jwk(uint8_t *work, const char *s, const char *e, pro
     }
     uint8_t e_tmp[8];
     Base64V.url_decode_args.src = b64;
-    Base64V.url_decode_args.src_len = str.len(b64, sizeof(b64));
+    Base64V.url_decode_args.src_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = b64, .cap = sizeof(b64));
     Base64V.url_decode_args.dst = e_tmp;
     Base64V.url_decode_args.dst_cap = sizeof(e_tmp);
     Base64.url_decode(work);
@@ -377,35 +383,39 @@ void protocore_oidc_token_kid(uint8_t *work)
 void protocore_oidc_jwks_find(uint8_t *work)
 {
     (void)work;
-    size_t scratch = protocore_plaintext_mark();
+    size_t scratch = protocore_plain_guard()->temporary_buf_mark();
     OidcV.ok = PROTO_FALSE;
     OidcV.key.rsa.loaded = PROTO_FALSE;
     if (!OidcV.key.jwks)
     {
-        protocore_plaintext_release(scratch);
+        protocore_plain_guard()->temporary_buf_release(scratch);
         return;
     }
     const char *want_kid = OidcV.key.kid;
-    size_t want_len = want_kid ? str.len(want_kid, PROTOCORE_OIDC_KID_LEN) : 0u;
+    size_t want_len =
+        want_kid ? EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = want_kid, .cap = PROTOCORE_OIDC_KID_LEN) : 0u;
     const char *jwks = OidcV.key.jwks;
-    const char *all_end = jwks + str.len(jwks, PROTOCORE_OIDC_JWKS_MAX);
+    const char *all_end = jwks + EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = jwks, .cap = PROTOCORE_OIDC_JWKS_MAX);
     const char *p = mem_find(jwks, all_end, "\"keys\"");
-    p = p ? (const char *)mem.chr(p, (size_t)(all_end - p), '[') : NULL;
+    p = p ? (const char *)EMBED_CALL(memor.chr, MemoriaCfg, .src = p, .bytes = (size_t)(all_end - p), .val = '[')
+          : NULL;
     if (!p)
     {
-        protocore_plaintext_release(scratch);
+        protocore_plain_guard()->temporary_buf_release(scratch);
         return;
     }
     p++;
 
     while (p < all_end)
     {
-        const char *obj = (const char *)mem.chr(p, (size_t)(all_end - p), '{');
+        const char *obj =
+            (const char *)EMBED_CALL(memor.chr, MemoriaCfg, .src = p, .bytes = (size_t)(all_end - p), .val = '{');
         if (!obj)
         {
             break;
         }
-        const char *end = (const char *)mem.chr(obj, (size_t)(all_end - obj), '}');
+        const char *end =
+            (const char *)EMBED_CALL(memor.chr, MemoriaCfg, .src = obj, .bytes = (size_t)(all_end - obj), .val = '}');
         if (!end)
         {
             break;
@@ -419,8 +429,9 @@ void protocore_oidc_jwks_find(uint8_t *work)
         {
             // The compare reads the wanted `kid` and its terminator, which is why one that fills the
             // capture buffer matches nothing.
-            want =
-                has_kid && want_len < PROTOCORE_OIDC_KID_LEN && str.eq(this_kid, want_kid, want_len + 1u, PROTO_FALSE);
+            want = has_kid && want_len < PROTOCORE_OIDC_KID_LEN &&
+                   EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = this_kid, .other = want_kid, .cap = want_len + 1u,
+                              .ci = PROTO_FALSE);
         }
         else
         {
@@ -430,17 +441,17 @@ void protocore_oidc_jwks_find(uint8_t *work)
         if (want && parse_rsa_jwk(work, obj, end, &OidcV.key.rsa))
         {
             OidcV.ok = PROTO_TRUE;
-            protocore_plaintext_release(scratch);
+            protocore_plain_guard()->temporary_buf_release(scratch);
             return;
         }
         if (want && want_kid && *want_kid)
         {
-            protocore_plaintext_release(scratch);
+            protocore_plain_guard()->temporary_buf_release(scratch);
             return; // the `kid` matched but the JWK is unusable
         }
         p = end;
     }
-    protocore_plaintext_release(scratch);
+    protocore_plain_guard()->temporary_buf_release(scratch);
 }
 
 // OIDC Core sec 3.1.3.7 against the key already in ns->key.rsa: steps 6 and 7 (signature and `alg`),
@@ -470,14 +481,17 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     // stack. The mark below is released on every return path. The four are live together, so
     // PROTOCORE_PLAINTEXT_WORK_OIDC is their sum and the arena is sized to hold it.
     static_assert(PROTOCORE_PLAINTEXT_WORK_OIDC <= PROTOCORE_PLAINTEXT_ARENA_SIZE, "OIDC scratch exceeds the arena");
-    size_t scope = protocore_plaintext_mark();
-    uint8_t *hdr = (uint8_t *)protocore_plaintext_alloc(PROTOCORE_OIDC_HDR_LEN, 1);
-    uint8_t *sig = (uint8_t *)protocore_plaintext_alloc(PROTOCORE_OIDC_RSA_BYTES, 1);
-    uint8_t *pl = (uint8_t *)protocore_plaintext_alloc(PROTOCORE_OIDC_MAX_LEN, 1);
-    char *iss = (char *)protocore_plaintext_alloc(PROTOCORE_OIDC_ISS_LEN, 1);
+    size_t scope = protocore_plain_guard()->temporary_buf_mark();
+    uint8_t *hdr =
+        (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_OIDC_HDR_LEN, protocore_plain_owner());
+    uint8_t *sig =
+        (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_OIDC_RSA_BYTES, protocore_plain_owner());
+    uint8_t *pl =
+        (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_OIDC_MAX_LEN, protocore_plain_owner());
+    char *iss = (char *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_OIDC_ISS_LEN, protocore_plain_owner());
     if (!hdr || !sig || !pl || !iss)
     {
-        protocore_plaintext_release(scope);
+        protocore_plain_guard()->temporary_buf_release(scope);
         OidcV.result = PROTOCORE_OIDC_ERR_FORMAT; // scratch exhausted: fail closed
         return;
     }
@@ -492,16 +506,17 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     size_t hn = Base64V.n;
     if (hn == 0)
     {
-        protocore_plaintext_release(scope);
+        protocore_plain_guard()->temporary_buf_release(scope);
         OidcV.result = PROTOCORE_OIDC_ERR_FORMAT;
         return;
     }
     hdr[hn] = '\0';
     char alg[16];
     if (!get_str((const char *)hdr, (const char *)hdr + hn, "alg", alg, sizeof(alg)) ||
-        !str.eq(alg, "RS256", sizeof("RS256"), PROTO_FALSE))
+        !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = alg, .other = "RS256", .cap = sizeof("RS256"),
+                    .ci = PROTO_FALSE))
     {
-        protocore_plaintext_release(scope);
+        protocore_plain_guard()->temporary_buf_release(scope);
         OidcV.result = PROTOCORE_OIDC_ERR_ALG;
         return;
     }
@@ -514,7 +529,7 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     Base64.url_decode(work);
     if (Base64V.n != PROTOCORE_OIDC_RSA_BYTES)
     {
-        protocore_plaintext_release(scope);
+        protocore_plain_guard()->temporary_buf_release(scope);
         OidcV.result = PROTOCORE_OIDC_ERR_FORMAT;
         return;
     }
@@ -523,12 +538,15 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     // their '.' (RFC 7515 sec 2). Rsa.verify hashes it; RS256 is SHA-256. One borrow for
     // that digest, returned either way before the Claims are read.
     size_t signing_input_len = (size_t)(seg[OIDC_SEG_PAYLOAD] + seglen[OIDC_SEG_PAYLOAD] - token);
-    size_t vmark = protocore_secure_mark();
-    protocore_span vws = protocore_secure_span(PROTOCORE_SHA256_BORROW, _Alignof(uint32_t));
-    if (!span.ok(vws))
+    size_t vmark = protocore_secure_guard()->temporary_buf_mark();
+    mmgr_span vws = EMBED_CALL(spat.from, SpatiumCfg,
+                               .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(
+                                   PROTOCORE_SHA256_BORROW, protocore_secure_owner()),
+                               .cap = PROTOCORE_SHA256_BORROW);
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = vws))
     {
-        protocore_secure_release(vmark);
-        protocore_plaintext_release(scope);
+        protocore_secure_guard()->temporary_buf_release(vmark);
+        protocore_plain_guard()->temporary_buf_release(scope);
         OidcV.result = PROTOCORE_OIDC_ERR_SIGNATURE; // pool exhausted: fail closed
         return;
     }
@@ -541,10 +559,10 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     RsaV.verify_args.hash = PROTOCORE_RSA_HASH_SHA256;
     Rsa.verify(vws.buf);
     const proto_bool verified = RsaV.ok;
-    protocore_secure_release(vmark);
+    protocore_secure_guard()->temporary_buf_release(vmark);
     if (!verified)
     {
-        protocore_plaintext_release(scope);
+        protocore_plain_guard()->temporary_buf_release(scope);
         OidcV.result = PROTOCORE_OIDC_ERR_SIGNATURE;
         return;
     }
@@ -558,7 +576,7 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     size_t pn = Base64V.n;
     if (pn == 0)
     {
-        protocore_plaintext_release(scope);
+        protocore_plain_guard()->temporary_buf_release(scope);
         OidcV.result = PROTOCORE_OIDC_ERR_FORMAT;
         return;
     }
@@ -571,11 +589,12 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     const char *want_iss = OidcV.expect.iss;
     if (want_iss && *want_iss)
     {
-        size_t want_len = str.len(want_iss, PROTOCORE_OIDC_ISS_LEN);
+        size_t want_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = want_iss, .cap = PROTOCORE_OIDC_ISS_LEN);
         if (want_len >= PROTOCORE_OIDC_ISS_LEN || !get_str(ps, pe, "iss", iss, PROTOCORE_OIDC_ISS_LEN) ||
-            !str.eq(iss, want_iss, want_len + 1u, PROTO_FALSE))
+            !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = iss, .other = want_iss, .cap = want_len + 1u,
+                        .ci = PROTO_FALSE))
         {
-            protocore_plaintext_release(scope);
+            protocore_plain_guard()->temporary_buf_release(scope);
             OidcV.result = PROTOCORE_OIDC_ERR_ISS;
             return;
         }
@@ -586,7 +605,7 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     {
         if (!aud_contains(ps, pe, want_aud))
         {
-            protocore_plaintext_release(scope);
+            protocore_plain_guard()->temporary_buf_release(scope);
             OidcV.result = PROTOCORE_OIDC_ERR_AUD;
             return;
         }
@@ -598,14 +617,14 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     int64_t exp = 0;
     if (!get_int64(ps, pe, "exp", &exp) || now >= exp)
     {
-        protocore_plaintext_release(scope);
+        protocore_plain_guard()->temporary_buf_release(scope);
         OidcV.result = PROTOCORE_OIDC_ERR_EXPIRED;
         return;
     }
     int64_t nbf = 0;
     if (get_int64(ps, pe, "nbf", &nbf) && now < nbf)
     {
-        protocore_plaintext_release(scope);
+        protocore_plain_guard()->temporary_buf_release(scope);
         OidcV.result = PROTOCORE_OIDC_ERR_NOT_YET;
         return;
     }
@@ -614,7 +633,7 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     get_str(ps, pe, "sub", OidcV.claims.sub, sizeof(OidcV.claims.sub));
     get_str(ps, pe, "email", OidcV.claims.email, sizeof(OidcV.claims.email));
     get_int64(ps, pe, "iat", &OidcV.claims.iat);
-    protocore_plaintext_release(scope);
+    protocore_plain_guard()->temporary_buf_release(scope);
     OidcV.result = PROTOCORE_OIDC_OK;
 }
 

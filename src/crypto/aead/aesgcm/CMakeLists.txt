@@ -9,6 +9,5 @@ protocore_add_module(crypto/aead/aesgcm
     crypto/cipher/aes_block
     crypto/ct_eq
     crypto/mac/ghash
-    mmgr/protomem
-    mmgr/rawmemcpy
+    mmgr
 )

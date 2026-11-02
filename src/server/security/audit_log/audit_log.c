@@ -13,18 +13,19 @@
  */
 
 #include "server/security/audit_log/audit_log.h"
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h" // str: the bounded-run walks
+#include "cellularum_laboro/cellularum_laboro.h" // str: the bounded-run walks
+#include "memoria_operor/memoria_operor.h"
 #include "shared/hex/hex.h"
+#include "spatium/spatium.h"
+#include "verba_scribo/verba_scribo.h" // verba_scribo frame builder
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_AUDIT_LOG
 
 #include "crypto/hash/sha256/sha256.h"
-#include "mmgr/secure/secure.h" // the chain hash's working set, wiped on release
 #include "server/clock/clock.h"
+#include "server/core/worker/worker.h" // the chain hash's working set, wiped on release
 
 PROTOCORE_BEGIN_DECLS
 
@@ -48,8 +49,8 @@ static_assert(AUDIT_LOG_OFF_CTX + sizeof(AuditCtx) <= PROTOCORE_AUDIT_LOG_BORROW
               "PROTOCORE_AUDIT_LOG_BORROW is short of the module context - raise it in protocore_config.h, which\n"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(AUDIT_LOG_OFF_CTX % _Alignof(AuditCtx) == 0,
@@ -87,7 +88,7 @@ static void chain_hash(uint8_t *work, const uint8_t prev[PROTOCORE_AUDIT_HASH_LE
     put_le32(le, e->ts);
     Sha256.update(c, le, 4);
     Sha256.update(c, (const uint8_t *)&e->category, 1); // hash the raw category byte
-    uint8_t mlen = (uint8_t)str.len(e->msg, PROTOCORE_AUDIT_MSG_LEN - 1);
+    uint8_t mlen = (uint8_t)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = e->msg, .cap = PROTOCORE_AUDIT_MSG_LEN - 1);
     Sha256.update(c, &mlen, 1);
     Sha256.update(c, (const uint8_t *)e->msg, mlen);
     Sha256.final(c, out);
@@ -153,7 +154,7 @@ static size_t json_escape(char *out, size_t pos, size_t cap, const char *s)
         {
             return cap + 1;
         }
-        mem.cpy(out + pos, esc, n);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + pos, .src = esc, .bytes = n);
         pos += n;
     }
     return pos;
@@ -188,7 +189,7 @@ uint8_t *protocore_audit_log_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_AUDIT_LOG_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_AUDIT_LOG_BORROW);
     }
     return s_own.span;
 }
@@ -200,7 +201,8 @@ void protocore_audit_log_reset(uint8_t *work)
     AUDIT_LOG_CTX(work)->head = 0;
     AUDIT_LOG_CTX(work)->count = 0;
     AUDIT_LOG_CTX(work)->seq = 0;
-    mem.set(AUDIT_LOG_CTX(work)->anchor, 0, sizeof(AUDIT_LOG_CTX(work)->anchor)); // genesis
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = AUDIT_LOG_CTX(work)->anchor, .val = 0,
+               .bytes = sizeof(AUDIT_LOG_CTX(work)->anchor)); // genesis
 }
 
 void protocore_audit_log_set_sink(uint8_t *work)
@@ -222,13 +224,15 @@ void protocore_audit_log_append(uint8_t *work)
     uint8_t prev[PROTOCORE_AUDIT_HASH_LEN];
     if (AUDIT_LOG_CTX(work)->count == 0)
     {
-        mem.cpy(prev, AUDIT_LOG_CTX(work)->anchor, PROTOCORE_AUDIT_HASH_LEN);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = prev, .src = AUDIT_LOG_CTX(work)->anchor,
+                   .bytes = PROTOCORE_AUDIT_HASH_LEN);
     }
     else
     {
-        mem.cpy(prev,
-                AUDIT_LOG_CTX(work)->ring[idx(AUDIT_LOG_CTX(work), (uint16_t)(AUDIT_LOG_CTX(work)->count - 1))].hash,
-                PROTOCORE_AUDIT_HASH_LEN);
+        EMBED_CALL(
+            memor.cpy, MemoriaCfg, .dst = prev,
+            .src = AUDIT_LOG_CTX(work)->ring[idx(AUDIT_LOG_CTX(work), (uint16_t)(AUDIT_LOG_CTX(work)->count - 1))].hash,
+            .bytes = PROTOCORE_AUDIT_HASH_LEN);
     }
 
     // Full ring: evict the oldest; its hash advances the chain anchor so the
@@ -236,8 +240,8 @@ void protocore_audit_log_append(uint8_t *work)
     // the newest we just read as prev.)
     if (AUDIT_LOG_CTX(work)->count == PROTOCORE_AUDIT_LOG_ENTRIES)
     {
-        mem.cpy(AUDIT_LOG_CTX(work)->anchor, AUDIT_LOG_CTX(work)->ring[AUDIT_LOG_CTX(work)->head].hash,
-                PROTOCORE_AUDIT_HASH_LEN);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = AUDIT_LOG_CTX(work)->anchor,
+                   .src = AUDIT_LOG_CTX(work)->ring[AUDIT_LOG_CTX(work)->head].hash, .bytes = PROTOCORE_AUDIT_HASH_LEN);
         AUDIT_LOG_CTX(work)->head = (uint16_t)((AUDIT_LOG_CTX(work)->head + 1) % PROTOCORE_AUDIT_LOG_ENTRIES);
         AUDIT_LOG_CTX(work)->count--;
     }
@@ -248,8 +252,8 @@ void protocore_audit_log_append(uint8_t *work)
     e->category = category;
     if (msg)
     {
-        size_t n = str.len(msg, PROTOCORE_AUDIT_MSG_LEN - 1);
-        mem.cpy(e->msg, msg, n);
+        size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = msg, .cap = PROTOCORE_AUDIT_MSG_LEN - 1);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->msg, .src = msg, .bytes = n);
         e->msg[n] = '\0';
     }
     else
@@ -258,13 +262,16 @@ void protocore_audit_log_append(uint8_t *work)
     }
     {
         // One borrow for this entry's chain hash, returned before the sink runs.
-        size_t mark = protocore_secure_mark();
-        protocore_span ws = protocore_secure_span(PROTOCORE_SHA256_BORROW, _Alignof(uint32_t));
-        if (span.ok(ws))
+        size_t mark = protocore_secure_guard()->temporary_buf_mark();
+        mmgr_span ws = EMBED_CALL(spat.from, SpatiumCfg,
+                                  .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(
+                                      PROTOCORE_SHA256_BORROW, protocore_secure_owner()),
+                                  .cap = PROTOCORE_SHA256_BORROW);
+        if (EMBED_CALL(spat.ok, SpatiumCfg, .span = ws))
         {
             chain_hash(ws.buf, prev, e, e->hash);
         }
-        protocore_secure_release(mark);
+        protocore_secure_guard()->temporary_buf_release(mark);
     }
     AUDIT_LOG_CTX(work)->count++;
 
@@ -305,35 +312,39 @@ void protocore_audit_log_verify(uint8_t *work)
     (void)work;
     uint32_t *first_broken_seq = AuditLogV.verify_args.first_broken_seq;
 
-    // One borrow for the whole walk: the chain hash re-runs per entry out of the same bytes.
-    size_t mark = protocore_secure_mark();
-    protocore_span ws = protocore_secure_span(PROTOCORE_SHA256_BORROW, _Alignof(uint32_t));
-    if (!span.ok(ws))
+    // One borrow for the whole walk: the chain hash re-runs per entry out of the same byteio.
+    size_t mark = protocore_secure_guard()->temporary_buf_mark();
+    mmgr_span ws = EMBED_CALL(spat.from, SpatiumCfg,
+                              .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_SHA256_BORROW,
+                                                                                              protocore_secure_owner()),
+                              .cap = PROTOCORE_SHA256_BORROW);
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = ws))
     {
-        protocore_secure_release(mark);
+        protocore_secure_guard()->temporary_buf_release(mark);
         AuditLogV.ok = PROTO_FALSE;
         return;
     }
     uint8_t expected[PROTOCORE_AUDIT_HASH_LEN];
-    mem.cpy(expected, AUDIT_LOG_CTX(work)->anchor, PROTOCORE_AUDIT_HASH_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = expected, .src = AUDIT_LOG_CTX(work)->anchor,
+               .bytes = PROTOCORE_AUDIT_HASH_LEN);
     for (uint16_t i = 0; i < AUDIT_LOG_CTX(work)->count; i++)
     {
         const protocore_audit_entry *e = &AUDIT_LOG_CTX(work)->ring[idx(AUDIT_LOG_CTX(work), i)];
         uint8_t h[PROTOCORE_AUDIT_HASH_LEN];
         chain_hash(ws.buf, expected, e, h);
-        if (mem.cmp(h, e->hash, PROTOCORE_AUDIT_HASH_LEN) != 0)
+        if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = h, .other = e->hash, .bytes = PROTOCORE_AUDIT_HASH_LEN) != 0)
         {
             if (first_broken_seq)
             {
                 *first_broken_seq = e->seq;
             }
-            protocore_secure_release(mark);
+            protocore_secure_guard()->temporary_buf_release(mark);
             AuditLogV.ok = PROTO_FALSE;
             return;
         }
-        mem.cpy(expected, e->hash, PROTOCORE_AUDIT_HASH_LEN);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = expected, .src = e->hash, .bytes = PROTOCORE_AUDIT_HASH_LEN);
     }
-    protocore_secure_release(mark);
+    protocore_secure_guard()->temporary_buf_release(mark);
     AuditLogV.ok = PROTO_TRUE;
     return;
 }
@@ -380,17 +391,20 @@ void protocore_audit_log_format(uint8_t *work)
         AuditLogV.n = 0;
         return;
     }
-    protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    Sb.put(&sb_out, "{\"seq\":");
-    Sb.u32(&sb_out, (uint32_t)((unsigned long)e->seq));
-    Sb.put(&sb_out, ",\"ts\":");
-    Sb.u32(&sb_out, (uint32_t)((unsigned long)e->ts));
-    Sb.put(&sb_out, ",\"cat\":\"");
+    size_t sb_out = 0;
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = "{\"seq\":");
+    sb_out = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out,
+                        .val = (uint32_t)((unsigned long)e->seq));
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = ",\"ts\":");
+    sb_out = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out,
+                        .val = (uint32_t)((unsigned long)e->ts));
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = ",\"cat\":\"");
     AuditLogV.cat_name_args.category = e->category;
     protocore_audit_log_cat_name(work);
-    Sb.put(&sb_out, AuditLogV.text);
-    Sb.put(&sb_out, "\",\"msg\":\"");
-    int head = (int)Sb.finish(&sb_out);
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = AuditLogV.text);
+    sb_out =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = "\",\"msg\":\"");
+    int head = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_out);
     // Only head<0 is unreachable here: this format is fixed ("%lu%lu%s...", no floating point,
     // no wide chars) with always-valid args (protocore_audit_cat_name never returns null; the produced
     // text is bounded by PROTOCORE_AUDIT_MSG_LEN/PROTOCORE_AUDIT_HASH_LEN, both small fixed constants, so the
@@ -417,7 +431,7 @@ void protocore_audit_log_format(uint8_t *work)
         AuditLogV.n = 0;
         return;
     }
-    mem.cpy(out + pos, mid, mid_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + pos, .src = mid, .bytes = mid_len);
     pos += mid_len;
     pos = hex_hash(out, pos, cap, e->hash);
     if (pos > cap)
@@ -462,21 +476,29 @@ void protocore_audit_log_dump_json(uint8_t *work)
     int head;
     if (intact)
     {
-        protocore_sb sb_out2 = {out, cap, 0, PROTO_TRUE};
-        Sb.put(&sb_out2, "{\"intact\":true,\"count\":");
-        Sb.u32(&sb_out2, (uint32_t)((unsigned)AUDIT_LOG_CTX(work)->count));
-        Sb.put(&sb_out2, ",\"entries\":[");
-        head = (int)Sb.finish(&sb_out2);
+        size_t sb_out2 = 0;
+        sb_out2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out2,
+                             .text = "{\"intact\":true,\"count\":");
+        sb_out2 = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out2,
+                             .val = (uint32_t)((unsigned)AUDIT_LOG_CTX(work)->count));
+        sb_out2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out2,
+                             .text = ",\"entries\":[");
+        head = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_out2);
     }
     else
     {
-        protocore_sb sb_out3 = {out, cap, 0, PROTO_TRUE};
-        Sb.put(&sb_out3, "{\"intact\":false,\"first_broken\":");
-        Sb.u32(&sb_out3, (uint32_t)((unsigned long)broken));
-        Sb.put(&sb_out3, ",\"count\":");
-        Sb.u32(&sb_out3, (uint32_t)((unsigned)AUDIT_LOG_CTX(work)->count));
-        Sb.put(&sb_out3, ",\"entries\":[");
-        head = (int)Sb.finish(&sb_out3);
+        size_t sb_out3 = 0;
+        sb_out3 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out3,
+                             .text = "{\"intact\":false,\"first_broken\":");
+        sb_out3 = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out3,
+                             .val = (uint32_t)((unsigned long)broken));
+        sb_out3 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out3, .text = ",\"count\":");
+        sb_out3 = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = sb_out3,
+                             .val = (uint32_t)((unsigned)AUDIT_LOG_CTX(work)->count));
+        sb_out3 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out3,
+                             .text = ",\"entries\":[");
+        head = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_out3);
     }
     // Only head<0 is unreachable here, for the same reason as protocore_audit_format's identical guard:
     // both snprintf formats above are fixed ("%s...:[" with %u/%lu, no floating point, no wide

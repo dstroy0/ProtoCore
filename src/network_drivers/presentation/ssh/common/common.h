@@ -10,14 +10,15 @@
 #define PROTOCORE_SSH_COMMON_H
 
 #include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the length prefix on a written string
-#include "crypto/aead/chachapoly/chachapoly.h"  // PROTOCORE_CHACHAPOLY_KEY_LEN - the chacha keys in the memory map
-#include "crypto/asymmetric/bignum/bignum.h"    // protocore_bignum - the DH ephemeral in the memory map
-#include "crypto/cipher/aes256ctr/aes256ctr.h"  // PROTOCORE_AES256CTR_KEY_LEN / _CTR_LEN - the aes keys and IVs
-#include "crypto/mac/hmac_sha256/hmac_sha256.h" // PROTOCORE_HMAC_SHA256_BORROW - the packet MAC scratch
-#include "crypto/pqc/sntrup761/sntrup761.h"     // PROTOCORE_SNTRUP761_PK_BYTES - the PQC public key in the memory map
-#include "memoria_operor/memoria_operor.h"      // memor.cpy: the copy out of a read string
+#include "crypto/aead/chachapoly/chachapoly.h"   // PROTOCORE_CHACHAPOLY_KEY_LEN - the chacha keys in the memory map
+#include "crypto/asymmetric/bignum/bignum.h"     // protocore_bignum - the DH ephemeral in the memory map
+#include "crypto/cipher/aes256ctr/aes256ctr.h"   // PROTOCORE_AES256CTR_KEY_LEN / _CTR_LEN - the aes keys and IVs
+#include "crypto/mac/hmac_sha256/hmac_sha256.h"  // PROTOCORE_HMAC_SHA256_BORROW - the packet MAC scratch
+#include "crypto/pqc/sntrup761/sntrup761.h"      // PROTOCORE_SNTRUP761_PK_BYTES - the PQC public key in the memory map
+#include "memoria_operor/memoria_operor.h"       // memor.cpy: the copy out of a read string
 #include "network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.h" // SSH_KEXHASH_MAX_LEN - the session id span
 #include "octetus_introitus_exitus/octetus_introitus_exitus.h" // mmgr_span, byteio.* writers, byteio.rd_str / byteio.take_be readers
+#include "spatium/spatium.h"
 
 #include "protocore_config.h" // protocore_types.h for the fixed widths, PROTOCORE_INLINE, the SSH sizing constants
 
@@ -454,6 +455,46 @@ PROTOCORE_INLINE const uint8_t *protocore_ssh_rd_string(Rd *r, uint32_t *n)
 // Wire helpers
 // ---------------------------------------------------------------------------
 
+// Read a uint32 at *off; advances *off. Fails closed with *off and *out as they were.
+PROTOCORE_INLINE proto_bool protocore_ssh_read_u32_at(const uint8_t *p, size_t len, size_t *off, uint32_t *out)
+{
+    mmgr_cspan c = {.buf = p, .len = len, .pos = *off, .err = EMBED_FALSE};
+    uint64_t v = 0;
+    if (!EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = &c, .bytes = 4, .out = &v))
+    {
+        return PROTO_FALSE;
+    }
+    *off = c.pos;
+    *out = (uint32_t)v;
+    return PROTO_TRUE;
+}
+
+// Point *out at the SSH string at *off and store its length; advances *off. Fails closed with *off,
+// *out and *slen as they were.
+PROTOCORE_INLINE proto_bool protocore_ssh_read_string_at(const uint8_t *p, size_t len, size_t *off, const uint8_t **out,
+                                                         uint32_t *slen)
+{
+    mmgr_cspan c = {.buf = p, .len = len, .pos = *off, .err = EMBED_FALSE};
+    const uint8_t *s = NULL;
+    size_t got = 0;
+    if (!EMBED_CALL(byteio.rd_str, OctetusCfg, .read_span = &c, .blob = &s, .blob_bytes = &got))
+    {
+        return PROTO_FALSE;
+    }
+    *off = c.pos;
+    *out = s;
+    *slen = (uint32_t)got; // the length was read as four bytes, so it fits
+    return PROTO_TRUE;
+}
+
+// Write the mpint m into out as a fixed-width big-endian field of outlen byteio. PROTO_FALSE where
+// its value does not fit.
+PROTOCORE_INLINE proto_bool protocore_ssh_mpint_fixed(const uint8_t *m, uint32_t mlen, uint8_t *out, size_t outlen)
+{
+    mmgr_span w = {.buf = out, .cap = outlen, .pos = 0, .overflow = EMBED_FALSE};
+    return EMBED_CALL(byteio.mpint_fixed, OctetusCfg, .write_span = &w, .src = m, .bytes = mlen);
+}
+
 // Copy an SSH string into a fixed buffer and null-terminate it. Advances *off.
 // Returns false on truncation or if the string does not fit (buffer too small).
 //
@@ -470,7 +511,8 @@ static proto_bool read_string(const uint8_t *p, size_t len, size_t *off, char *o
     }
     if (n >= outcap)
     {
-        return PROTO_FALSE; // does not fit our fixed buffer; same contract as byteio.rd_str: *off stays on its own field
+        return PROTO_FALSE; // does not fit our fixed buffer; same contract as byteio.rd_str: *off stays on its own
+                            // field
     }
     *off = c.pos;
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = s, .bytes = n);

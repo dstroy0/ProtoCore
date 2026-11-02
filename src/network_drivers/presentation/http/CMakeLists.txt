@@ -6,10 +6,8 @@ protocore_add_module(network_drivers/presentation/http
   DEPS
     network_drivers/presentation/http/http_parser
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/plaintext
-    mmgr/protostr
-    mmgr/rawmemcpy
+    server/core/worker
+    mmgr
     network_drivers/presentation/http/auth
     network_drivers/presentation/http/route/http_route
     network_drivers/session

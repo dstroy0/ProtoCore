@@ -8,7 +8,8 @@
 // host ns/op + MB/s is a relative baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
 //   -DPROTOCORE_ENABLE_FTP=1 test/performance_benching/services/ftp/host.c
-//   src/services/file_transfer/ftp/ftp.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bf && /tmp/bf
+//   src/services/file_transfer/ftp/ftp.c src/memoria_operor/memoria_operor.h.c
+//   src/cellularum_laboro/cellularum_laboro.h.c -o /tmp/bf && /tmp/bf
 
 #define PROTOCORE_ENABLE_FTP 1
 #include "services/file_transfer/ftp/ftp/ftp.h"

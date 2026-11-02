@@ -7,7 +7,8 @@
 // MB/s is a relative baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
 //   -DPROTOCORE_ENABLE_IEC60870=1 test/performance_benching/services/iec60870/host.c
-//   src/services/energy/iec60870/iec60870.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bi && /tmp/bi
+//   src/services/energy/iec60870/iec60870.c src/memoria_operor/memoria_operor.h.c
+//   src/cellularum_laboro/cellularum_laboro.h.c -o /tmp/bi && /tmp/bi
 
 #define PROTOCORE_ENABLE_IEC60870 1
 #include "services/energy/iec60870/iec60870.h"

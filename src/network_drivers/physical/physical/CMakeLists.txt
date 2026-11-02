@@ -6,5 +6,6 @@ protocore_add_module(network_drivers/physical/physical
   DEPS
     shared/ip
   PRIVATE_DEPS
-    mmgr/plaintext
+    server/core/worker
+    mmgr
 )

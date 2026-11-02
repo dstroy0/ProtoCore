@@ -6,10 +6,9 @@ protocore_add_module(crypto/aead/aes128gcm
   OPT 2
   SOURCES aes128gcm.c
   PRIVATE_DEPS
+    server/core/worker
     crypto/cipher/aes_block
     crypto/ct_eq
     crypto/mac/ghash
-    mmgr/protomem
-    mmgr/rawmemcpy
-    mmgr/secure
+    mmgr
 )

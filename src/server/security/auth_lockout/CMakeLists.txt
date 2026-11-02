@@ -5,6 +5,7 @@ protocore_add_module(server/security/auth_lockout
   GATE PROTOCORE_ENABLE_AUTH_LOCKOUT
   SOURCES auth_lockout.c
   PRIVATE_DEPS
-    mmgr/secure
+    server/core/worker
+    mmgr
     shared/ip
 )

@@ -12,15 +12,15 @@
 
 #if PROTOCORE_ENABLE_OPCUA_CLIENT
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/opcua/opcua_client/opcua_client.h"
 
 PROTOCORE_BEGIN_DECLS
 
 void protocore_opcua_client_init(OpcUaClient *c)
 {
-    mem.set(c, 0, sizeof(*c));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = c, .val = 0, .bytes = sizeof(*c));
 }
 
 // ---------------------------------------------------------------------------
@@ -92,7 +92,9 @@ size_t protocore_opcua_client_hello(const char *endpoint_url, uint8_t *out, size
     protocore_ua_w_u32(&w, PROTOCORE_OPCUA_BUF); // SendBufferSize
     protocore_ua_w_u32(&w, 0);                   // MaxMessageSize (no limit)
     protocore_ua_w_u32(&w, 0);                   // MaxChunkCount
-    protocore_ua_w_string(&w, endpoint_url, endpoint_url ? (int32_t)str.len(endpoint_url, w.cap) : -1);
+    protocore_ua_w_string(
+        &w, endpoint_url,
+        endpoint_url ? (int32_t)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = endpoint_url, .cap = w.cap) : -1);
     return cw_patch(&w);
 }
 
@@ -125,9 +127,12 @@ size_t protocore_opcua_client_get_endpoints(OpcUaClient *c, const char *endpoint
     UaWriter w = {out, cap, 0, PROTO_TRUE};
     cw_msg(c, &w, OPCUA_ID_GET_ENDPOINTS_REQ);
     cw_request_header(c, &w, PROTO_FALSE); // GetEndpoints needs no session
-    protocore_ua_w_string(&w, endpoint_url, endpoint_url ? (int32_t)str.len(endpoint_url, w.cap) : -1); // EndpointUrl
-    protocore_ua_w_i32(&w, -1); // LocaleIds[] (null)
-    protocore_ua_w_i32(&w, -1); // ProfileUris[] (null)
+    protocore_ua_w_string(&w, endpoint_url,
+                          endpoint_url
+                              ? (int32_t)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = endpoint_url, .cap = w.cap)
+                              : -1); // EndpointUrl
+    protocore_ua_w_i32(&w, -1);      // LocaleIds[] (null)
+    protocore_ua_w_i32(&w, -1);      // ProfileUris[] (null)
     return cw_patch(&w);
 }
 
@@ -146,8 +151,14 @@ size_t protocore_opcua_client_create_session(OpcUaClient *c, const char *session
     protocore_ua_w_string(&w, NULL, -1);                              // DiscoveryProfileUri
     protocore_ua_w_i32(&w, -1);                                       // DiscoveryUrls[] (null)
     protocore_ua_w_string(&w, NULL, -1);                              // ServerUri
-    protocore_ua_w_string(&w, endpoint_url, endpoint_url ? (int32_t)str.len(endpoint_url, w.cap) : -1); // EndpointUrl
-    protocore_ua_w_string(&w, session_name, session_name ? (int32_t)str.len(session_name, w.cap) : -1); // SessionName
+    protocore_ua_w_string(&w, endpoint_url,
+                          endpoint_url
+                              ? (int32_t)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = endpoint_url, .cap = w.cap)
+                              : -1); // EndpointUrl
+    protocore_ua_w_string(&w, session_name,
+                          session_name
+                              ? (int32_t)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = session_name, .cap = w.cap)
+                              : -1);     // SessionName
     protocore_ua_w_string(&w, NULL, -1); // ClientNonce (ByteString)
     protocore_ua_w_string(&w, NULL, -1); // ClientCertificate
     protocore_ua_w_f64(&w, 1200000.0);   // RequestedSessionTimeout
@@ -305,7 +316,8 @@ static proto_bool cr_msg_open(const uint8_t *msg, size_t len, UaReader *r, uint3
                               uint32_t *service_result)
 {
     UaMsgHeader h;
-    if (!protocore_opcua_parse_header(msg, len, &h) || mem.cmp(h.type, "MSG", 3) != 0 || h.size != len)
+    if (!protocore_opcua_parse_header(msg, len, &h) ||
+        EMBED_CALL(memor.cmp, MemoriaCfg, .src = h.type, .other = "MSG", .bytes = 3) != 0 || h.size != len)
     {
         return PROTO_FALSE;
     }
@@ -332,7 +344,8 @@ static proto_bool cr_msg_open(const uint8_t *msg, size_t len, UaReader *r, uint3
 proto_bool protocore_opcua_client_on_ack(const uint8_t *msg, size_t len, OpcUaAckInfo *out)
 {
     UaMsgHeader h;
-    if (!protocore_opcua_parse_header(msg, len, &h) || mem.cmp(h.type, "ACK", 3) != 0)
+    if (!protocore_opcua_parse_header(msg, len, &h) ||
+        EMBED_CALL(memor.cmp, MemoriaCfg, .src = h.type, .other = "ACK", .bytes = 3) != 0)
     {
         return PROTO_FALSE;
     }
@@ -352,7 +365,8 @@ proto_bool protocore_opcua_client_on_ack(const uint8_t *msg, size_t len, OpcUaAc
 proto_bool protocore_opcua_client_on_open(OpcUaClient *c, const uint8_t *msg, size_t len)
 {
     UaMsgHeader h;
-    if (!protocore_opcua_parse_header(msg, len, &h) || mem.cmp(h.type, "OPN", 3) != 0 || h.size != len)
+    if (!protocore_opcua_parse_header(msg, len, &h) ||
+        EMBED_CALL(memor.cmp, MemoriaCfg, .src = h.type, .other = "OPN", .bytes = 3) != 0 || h.size != len)
     {
         return PROTO_FALSE;
     }
@@ -441,7 +455,7 @@ int32_t protocore_opcua_client_on_read(const uint8_t *msg, size_t len, OpcUaVari
     {
         uint8_t mask = protocore_ua_r_u8(&r);
         OpcUaVariant v;
-        mem.set(&v, 0, sizeof(v));
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = &v, .val = 0, .bytes = sizeof(v));
         uint32_t st = OPCUA_STATUS_GOOD;
         if (mask & 0x01) // Value (Variant) present
         {
@@ -550,7 +564,7 @@ int32_t protocore_opcua_client_on_browse(const uint8_t *msg, size_t len, OpcUaCl
         for (int32_t j = 0; j < nrefs; j++)
         {
             OpcUaClientRef ref;
-            mem.set(&ref, 0, sizeof(ref));
+            EMBED_CALL(memor.set, MemoriaCfg, .dst = &ref, .val = 0, .bytes = sizeof(ref));
             UaNodeId rt;
             protocore_ua_r_nodeid(&r, &rt);
             ref.ref_type_id = rt.id;

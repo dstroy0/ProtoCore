@@ -5,20 +5,20 @@
  * @file forward.c
  * @brief Layer 3 (Network) - the interface forwarding plane, implementation.
  *
- * RFC 1812 sec 5.2 "FORWARDING WALK-THROUGH", run over opaque bytes. A frame is matched against
+ * RFC 1812 sec 5.2 "FORWARDING WALK-THROUGH", run over opaque byteio. A frame is matched against
  * the access list (sec 5.3.9), then against the policy routes, then against the controls on
  * forwarding (sec 5.3.11) for every registered interface other than the one it arrived on. A
  * DENY control wins, a matching ALLOW forwards, and no match blocks. Each forward passes a fixed
- * one-second rate window (sec 5.3.6) before layer 1's send takes the bytes. Static tables, no heap.
+ * one-second rate window (sec 5.3.6) before layer 1's send takes the byteio. Static tables, no heap.
  */
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_FORWARD
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/network/forward/forward.h"
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
 #include "server/clock/clock.h" // Clock.millis: the one time source the rate cap reads
 
@@ -254,8 +254,8 @@ static proto_bool fwd_acl_permits(uint8_t *work)
 static void pat_store(uint8_t *dst_pattern, uint8_t *dst_mask, const uint8_t *pattern, const uint8_t *mask,
                       uint8_t patlen)
 {
-    mem.set(dst_pattern, 0, PROTOCORE_FWD_ACL_PATLEN);
-    mem.set(dst_mask, 0, PROTOCORE_FWD_ACL_PATLEN);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = dst_pattern, .val = 0, .bytes = PROTOCORE_FWD_ACL_PATLEN);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = dst_mask, .val = 0, .bytes = PROTOCORE_FWD_ACL_PATLEN);
     for (uint8_t k = 0; k < patlen; k++)
     {
         dst_pattern[k] = (uint8_t)(pattern[k] & mask[k]);
@@ -288,7 +288,7 @@ uint8_t *protocore_forward_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_FORWARD_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_FORWARD_BORROW);
         // An empty access list passes every frame, and the borrow arrives zeroed, which reads
         // as PROTOCORE_FWD_DENY. The carve happens once, so the default is applied here.
         FORWARD_CTX(s_own.span)->acl_default = PROTOCORE_FWD_ALLOW;
@@ -299,15 +299,18 @@ uint8_t *protocore_forward_span(void)
 void protocore_forward_reset(uint8_t *work)
 {
     // The interfaces are layer 1's; emptying this plane leaves them registered.
-    mem.set(FORWARD_CTX(work)->rules, 0, sizeof(FORWARD_CTX(work)->rules));
-    mem.set(FORWARD_CTX(work)->acl, 0, sizeof(FORWARD_CTX(work)->acl));
-    mem.set(FORWARD_CTX(work)->routes, 0, sizeof(FORWARD_CTX(work)->routes));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = FORWARD_CTX(work)->rules, .val = 0,
+               .bytes = sizeof(FORWARD_CTX(work)->rules));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = FORWARD_CTX(work)->acl, .val = 0, .bytes = sizeof(FORWARD_CTX(work)->acl));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = FORWARD_CTX(work)->routes, .val = 0,
+               .bytes = sizeof(FORWARD_CTX(work)->routes));
     FORWARD_CTX(work)->acl_default = PROTOCORE_FWD_ALLOW;
 #if PROTOCORE_FWD_INSPECT
     FORWARD_CTX(work)->inspector = NULL;
     FORWARD_CTX(work)->inspect_ctx = NULL;
 #endif
-    mem.set(&FORWARD_CTX(work)->stats, 0, sizeof(FORWARD_CTX(work)->stats));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &FORWARD_CTX(work)->stats, .val = 0,
+               .bytes = sizeof(FORWARD_CTX(work)->stats));
 }
 
 void protocore_forward_acl_set_default(uint8_t *work)

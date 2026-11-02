@@ -5,11 +5,8 @@ protocore_add_module(services/security/oidc
   GATE PROTOCORE_ENABLE_OIDC
   SOURCES oidc.c
   PRIVATE_DEPS
+    server/core/worker
     crypto/asymmetric/rsa
-    mmgr/membuild
-    mmgr/plaintext
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
+    mmgr
     network_drivers/presentation/codec/base64
 )

@@ -5,10 +5,8 @@ protocore_add_module(services/net/http_client
   GATE PROTOCORE_ENABLE_HTTP_CLIENT
   SOURCES http_client.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
+    server/core/worker
+    mmgr
     network_drivers/transport/tcp/client
     server/clock
     shared/mime

@@ -9,8 +9,9 @@ protocore_add_module(network_drivers/tls
     network_drivers/tls/key_schedule
     network_drivers/tls/record
   PRIVATE_DEPS
+    server/core/worker
     crypto/rng
-    mmgr/secure
+    mmgr
     network_drivers/transport/tcp/protocol
 )
 

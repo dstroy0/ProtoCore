@@ -15,10 +15,10 @@
 
 #if PROTOCORE_ENABLE_WEBHOOK
 
-#include "mmgr/membuild/membuild.h" // protocore_sb: the bounded frame builder the URI is built with
-#include "mmgr/protomem/protomem.h" // mem.cpy
-#include "mmgr/protostr/protostr.h" // str.len: bounded length, no stdlib
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len: bounded length, no stdlib
+#include "memoria_operor/memoria_operor.h"       // memor.cpy
 #include "services/net/webhook/webhook.h"
+#include "verba_scribo/verba_scribo.h" // verba_scribo: the bounded frame builder the URI is built with
 
 PROTOCORE_BEGIN_DECLS
 
@@ -39,12 +39,12 @@ PROTOCORE_BEGIN_DECLS
 // untouched and reports false when the whole string would not fit.
 static proto_bool json_append(char *out, size_t cap, size_t *pos, const char *s)
 {
-    size_t n = str.len(s, cap + 1);
+    size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = cap + 1);
     if (*pos + n >= cap)
     {
         return PROTO_FALSE;
     }
-    mem.cpy(out + *pos, s, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + *pos, .src = s, .bytes = n);
     *pos += n;
     out[*pos] = '\0';
     return PROTO_TRUE;
@@ -98,15 +98,17 @@ void protocore_webhook_ifttt_url(uint8_t *work)
         }
         return;
     }
-    protocore_sb sb_uri = {out, cap, 0, PROTO_TRUE};
-    Sb.put(&sb_uri, PROTOCORE_IFTTT_MAKER_ROOT);
-    Sb.put(&sb_uri, event);
-    Sb.put(&sb_uri, PROTOCORE_IFTTT_MAKER_KEY_SEG);
-    Sb.put(&sb_uri, key);
-    const int w = (int)Sb.finish(&sb_uri);
+    size_t sb_uri = 0;
+    sb_uri = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_uri,
+                        .text = PROTOCORE_IFTTT_MAKER_ROOT);
+    sb_uri = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_uri, .text = event);
+    sb_uri = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_uri,
+                        .text = PROTOCORE_IFTTT_MAKER_KEY_SEG);
+    sb_uri = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_uri, .text = key);
+    const int w = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_uri);
     // The builder is the overflow signal: it refuses the frame rather than truncating, so there is
     // no would-be length to compare against cap.
-    if (!sb_uri.ok)
+    if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_uri))
     {
         out[0] = '\0';
         return;
@@ -178,8 +180,9 @@ void protocore_webhook_post(uint8_t *work)
         return;
     }
     HttpClientResult r;
-    WebhookV.i32 = http_post(target_uri, PROTOCORE_MIME_JSON, (const uint8_t *)content,
-                             str.len(content, PROTOCORE_HTTP_CLIENT_BUF_SIZE), &r);
+    WebhookV.i32 =
+        http_post(target_uri, PROTOCORE_MIME_JSON, (const uint8_t *)content,
+                  EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = content, .cap = PROTOCORE_HTTP_CLIENT_BUF_SIZE), &r);
 }
 
 #else // no outbound HTTP client in this build

@@ -36,7 +36,7 @@
 // one 256-bit modular multiply on the RSA/MPI accelerator (~4.3x the software/PIE ladder). That field layer is
 // shared with Ed25519 (protocore_ed25519.cpp) and defines PROTOCORE_FE25519_MPI_HW when active (Arduino + S3).
 #include "crypto/asymmetric/fe25519/fe25519.h"
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -91,8 +91,8 @@ static_assert(CURVE25519_OFF_END <= PROTOCORE_CURVE25519_BORROW,
               "PROTOCORE_CURVE25519_BORROW is short of the ladder's working set - raise it in "
               "protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(
@@ -592,7 +592,7 @@ void protocore_curve25519_x25519_base(uint8_t *work)
         return;
     }
     Curve25519Ctx *ctx = CURVE25519_CTX(work);
-    mem.zero(ctx->base, 32);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = ctx->base, .bytes = 32, .val = 0);
     ctx->base[0] = 9;
     x25519_mult(work, Curve25519V.x25519_base_args.out, Curve25519V.x25519_base_args.scalar, ctx->base);
     Curve25519V.ok = PROTO_TRUE;

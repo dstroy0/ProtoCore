@@ -54,7 +54,7 @@ void test_the_span_carves_the_context(void)
     TEST_ASSERT_EQUAL_INT(-1, SSH_SCP_CTX(work)->root);
 }
 
-// Taken once: a second call answers with the same bytes.
+// Taken once: a second call answers with the same byteio.
 void test_the_span_is_taken_once(void)
 {
     TEST_ASSERT_EQUAL_PTR(protocore_ssh_scp_span(), protocore_ssh_scp_span());

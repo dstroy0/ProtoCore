@@ -5,7 +5,7 @@ protocore_add_module(network_drivers/presentation/ssh/transport/inflate
   GATE PROTOCORE_ENABLE_SSH_ZLIB
   SOURCES inflate.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
     network_drivers/presentation/codec/deflate/rfc1951
     network_drivers/presentation/ssh/common
 )

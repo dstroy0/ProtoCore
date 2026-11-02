@@ -10,16 +10,16 @@
 //
 // Build/flash:  idf.py -C test/performance_benching/web_terminal -t upload --upload-port COM7
 #include "device_bench.h"
-#include "mmgr/protoframe/protoframe.h"
+#include "numeros_scribo/numeros_scribo.h"
 #include "server/web/web_terminal/web_terminal.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-static const protocore_field BENCH_LINE[] = {
-    {PROTOCORE_FK_LIT, 0, 7, "sensor="}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 4, " rh="}, PROTOCORE_U32,
-    {PROTOCORE_FK_LIT, 0, 7, "% heap="}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 1, "\n"},   PROTOCORE_END};
+static const mmgr_field BENCH_LINE[] = {
+    {MMGR_FK_LIT, 0, 7, "sensor="}, MMGR_U32, {MMGR_FK_LIT, 0, 4, " rh="}, MMGR_U32,
+    {MMGR_FK_LIT, 0, 7, "% heap="}, MMGR_U32, {MMGR_FK_LIT, 0, 1, "\n"},   MMGR_END};
 
 void dbench_run(void)
 {
@@ -29,9 +29,9 @@ void dbench_run(void)
         volatile uint32_t sink = 0;
         char line[64];
         DBENCH_OP("web terminal line (frame build)", 200000, {
-            sink += (uint32_t)frame.build(
-                line, sizeof(line), BENCH_LINE,
-                (const protocore_fval[]){PROTOCORE_VU32(214u), PROTOCORE_VU32(48u), PROTOCORE_VU32(131072u)}, 3);
+            sink += (uint32_t)EMBED_CALL(
+                numer.build, NumerosCfg, .out = line, .cap = sizeof(line), .spec = BENCH_LINE,
+                .vals = (const mmgr_fval[]){MMGR_VU32(214u), MMGR_VU32(48u), MMGR_VU32(131072u)}, .nvals = 3);
         });
         DBENCH_OP("protocore_web_terminal_client_count", 200000,
                   (WebTerminal.client_count(protocore_web_terminal_span()), sink += WebTerminalV.value));

@@ -5,9 +5,8 @@ protocore_add_module(services/security/oauth2
   GATE PROTOCORE_ENABLE_OAUTH2
   SOURCES oauth2.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/protomem
-    mmgr/secure
+    server/core/worker
+    mmgr
     network_drivers/presentation/codec/json
     services/net/http_client
     shared/hex

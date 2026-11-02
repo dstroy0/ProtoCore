@@ -5,7 +5,6 @@
 # list of suites, so there is nothing else to keep in step.
 
 add_subdirectory(crypto)
-add_subdirectory(mmgr)
 add_subdirectory(network_drivers)
 add_subdirectory(server)
 add_subdirectory(services)

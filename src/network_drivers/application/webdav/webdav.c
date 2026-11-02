@@ -11,8 +11,8 @@
 
 #if PROTOCORE_ENABLE_WEBDAV
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h" // str.find: the scheme marker inside a Destination header
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.find: the scheme marker inside a Destination header
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/application/webdav/webdav.h"
 #include "shared/hex/hex.h"
 
@@ -30,51 +30,54 @@ WebDavMethod protocore_webdav_method(uint8_t *work, const char *m)
     {
         return DAV_M_UNSUPPORTED;
     }
-    if (str.eq(m, "OPTIONS", sizeof("OPTIONS"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "OPTIONS", .cap = sizeof("OPTIONS"),
+                   .ci = PROTO_FALSE))
     {
         return DAV_M_OPTIONS;
     }
-    if (str.eq(m, "GET", sizeof("GET"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "GET", .cap = sizeof("GET"), .ci = PROTO_FALSE))
     {
         return DAV_M_GET;
     }
-    if (str.eq(m, "HEAD", sizeof("HEAD"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "HEAD", .cap = sizeof("HEAD"), .ci = PROTO_FALSE))
     {
         return DAV_M_HEAD;
     }
-    if (str.eq(m, "PUT", sizeof("PUT"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "PUT", .cap = sizeof("PUT"), .ci = PROTO_FALSE))
     {
         return DAV_M_PUT;
     }
-    if (str.eq(m, "DELETE", sizeof("DELETE"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "DELETE", .cap = sizeof("DELETE"), .ci = PROTO_FALSE))
     {
         return DAV_M_DELETE;
     }
-    if (str.eq(m, "PROPFIND", sizeof("PROPFIND"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "PROPFIND", .cap = sizeof("PROPFIND"),
+                   .ci = PROTO_FALSE))
     {
         return DAV_M_PROPFIND;
     }
-    if (str.eq(m, "PROPPATCH", sizeof("PROPPATCH"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "PROPPATCH", .cap = sizeof("PROPPATCH"),
+                   .ci = PROTO_FALSE))
     {
         return DAV_M_PROPPATCH;
     }
-    if (str.eq(m, "MKCOL", sizeof("MKCOL"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "MKCOL", .cap = sizeof("MKCOL"), .ci = PROTO_FALSE))
     {
         return DAV_M_MKCOL;
     }
-    if (str.eq(m, "COPY", sizeof("COPY"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "COPY", .cap = sizeof("COPY"), .ci = PROTO_FALSE))
     {
         return DAV_M_COPY;
     }
-    if (str.eq(m, "MOVE", sizeof("MOVE"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "MOVE", .cap = sizeof("MOVE"), .ci = PROTO_FALSE))
     {
         return DAV_M_MOVE;
     }
-    if (str.eq(m, "LOCK", sizeof("LOCK"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "LOCK", .cap = sizeof("LOCK"), .ci = PROTO_FALSE))
     {
         return DAV_M_LOCK;
     }
-    if (str.eq(m, "UNLOCK", sizeof("UNLOCK"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "UNLOCK", .cap = sizeof("UNLOCK"), .ci = PROTO_FALSE))
     {
         return DAV_M_UNLOCK;
     }
@@ -89,15 +92,16 @@ int protocore_webdav_depth(uint8_t *work, const char *depth_hdr, int dflt)
     {
         return dflt;
     }
-    if (str.eq(depth_hdr, "0", sizeof("0"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = depth_hdr, .other = "0", .cap = sizeof("0"), .ci = PROTO_FALSE))
     {
         return 0;
     }
-    if (str.eq(depth_hdr, "1", sizeof("1"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = depth_hdr, .other = "1", .cap = sizeof("1"), .ci = PROTO_FALSE))
     {
         return 1;
     }
-    if (str.eq(depth_hdr, "infinity", sizeof("infinity"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = depth_hdr, .other = "infinity", .cap = sizeof("infinity"),
+                   .ci = PROTO_FALSE))
     {
         return PROTOCORE_DAV_DEPTH_INFINITY;
     }
@@ -108,12 +112,12 @@ int protocore_webdav_depth(uint8_t *work, const char *depth_hdr, int dflt)
 // NUL terminator intact) when it would overflow.
 static proto_bool app(char *buf, size_t cap, size_t *len, const char *s)
 {
-    size_t n = str.len(s, cap + 1);
+    size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = cap + 1);
     if (*len + n + 1 > cap)
     {
         return PROTO_FALSE;
     }
-    mem.cpy(buf + *len, s, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + *len, .src = s, .bytes = n);
     *len += n;
     buf[*len] = '\0';
     return PROTO_TRUE;
@@ -153,12 +157,12 @@ size_t protocore_webdav_xml_escape(uint8_t *work, char *dst, size_t cap, const c
         }
         if (rep)
         {
-            size_t rn = str.len(rep, cap + 1);
+            size_t rn = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = rep, .cap = cap + 1);
             if (o + rn + 1 > cap)
             {
                 break;
             }
-            mem.cpy(dst + o, rep, rn);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = dst + o, .src = rep, .bytes = rn);
             o += rn;
         }
         else
@@ -186,7 +190,8 @@ proto_bool protocore_webdav_dest_path(uint8_t *work, const char *destination, ch
     // Skip an absolute-URI scheme + authority: after "://", advance to the first
     // '/' (the path). An abs-path value ("/p/q") is used as-is.
     const char *p = destination;
-    const char *scheme = str.find(destination, MAX_VAL_LEN, "://", sizeof("://"), PROTO_FALSE);
+    const char *scheme = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = destination, .cap = MAX_VAL_LEN,
+                                    .other = "://", .other_cap = sizeof("://"), .ci = PROTO_FALSE);
     if (scheme)
     {
         p = scheme + 3;
@@ -429,7 +434,8 @@ size_t protocore_webdav_proppatch_ms(uint8_t *work, char *buf, size_t cap, const
                 local = k + 1;
             }
         }
-        proto_bool is_prop = (name_end - local) == 4 && str.diff(&body[local], "prop", 4, PROTO_FALSE) == 4;
+        proto_bool is_prop = (name_end - local) == 4 && EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = &body[local],
+                                                                   .other = "prop", .cap = 4, .ci = PROTO_FALSE) == 4;
 
         if (closing)
         {
@@ -472,7 +478,7 @@ size_t protocore_webdav_proppatch_ms(uint8_t *work, char *buf, size_t cap, const
             size_t tl = copy_end - start;
             if (ok && tl < sizeof(tag))
             {
-                mem.cpy(tag, &body[start], tl);
+                EMBED_CALL(memor.cpy, MemoriaCfg, .dst = tag, .src = &body[start], .bytes = tl);
                 tag[tl] = '\0';
                 if (app(buf, cap, &len, "        <") && app(buf, cap, &len, tag) && app(buf, cap, &len, "/>\n"))
                 {
@@ -516,19 +522,19 @@ size_t protocore_webdav_proppatch_ms(uint8_t *work, char *buf, size_t cap, const
 // Copy src into dst[cap], NUL-terminated; false if it does not fit.
 static proto_bool dav_lock_copy(char *dst, size_t cap, const char *src)
 {
-    size_t n = str.len(src, cap);
+    size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = src, .cap = cap);
     if (n + 1 > cap)
     {
         return PROTO_FALSE;
     }
-    mem.cpy(dst, src, n + 1);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = dst, .src = src, .bytes = n + 1);
     return PROTO_TRUE;
 }
 
 // Normalize a path into dst, stripping trailing '/' (but keeping a lone root "/"). false on overflow.
 static proto_bool dav_lock_norm(char *dst, size_t cap, const char *path)
 {
-    size_t n = str.len(path, cap);
+    size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = path, .cap = cap);
     while (n > 1 && path[n - 1] == '/') // drop trailing slashes so "/a/" and "/a" are one resource
     {
         n--;
@@ -537,7 +543,7 @@ static proto_bool dav_lock_norm(char *dst, size_t cap, const char *path)
     {
         return PROTO_FALSE;
     }
-    mem.cpy(dst, path, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = dst, .src = path, .bytes = n);
     dst[n] = 0;
     return PROTO_TRUE;
 }
@@ -545,8 +551,8 @@ static proto_bool dav_lock_norm(char *dst, size_t cap, const char *path)
 // True if `child` equals `parent` or lies (at a segment boundary) under it. Both trailing-slash-normalized.
 static proto_bool dav_lock_same_or_under(const char *parent, const char *child)
 {
-    size_t pn = str.len(parent, PROTOCORE_DAV_LOCK_PATH_MAX);
-    if (str.diff(parent, child, pn, PROTO_FALSE) != pn)
+    size_t pn = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = parent, .cap = PROTOCORE_DAV_LOCK_PATH_MAX);
+    if (EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = parent, .other = child, .cap = pn, .ci = PROTO_FALSE) != pn)
     {
         return PROTO_FALSE;
     }
@@ -564,7 +570,8 @@ static proto_bool dav_lock_same_or_under(const char *parent, const char *child)
 // Do two lock scopes overlap? A Depth-infinity lock's scope is its whole subtree.
 static proto_bool dav_lock_overlap(const char *pa, proto_bool ia, const char *pb, proto_bool ib)
 {
-    if (str.eq(pa, pb, PROTOCORE_DAV_LOCK_PATH_MAX, PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = pa, .other = pb, .cap = PROTOCORE_DAV_LOCK_PATH_MAX,
+                   .ci = PROTO_FALSE))
     {
         return PROTO_TRUE;
     }
@@ -582,7 +589,7 @@ static proto_bool dav_lock_overlap(const char *pa, proto_bool ia, const char *pb
 // Does an active lock's scope cover the normalized query path?
 static proto_bool dav_lock_covers(const DavLock *l, const char *np)
 {
-    if (str.eq(l->path, np, sizeof(l->path), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = l->path, .other = np, .cap = sizeof(l->path), .ci = PROTO_FALSE))
     {
         return PROTO_TRUE;
     }
@@ -618,7 +625,8 @@ const DavLock *protocore_webdav_lock_acquire(uint8_t *work, DavLockTable *t, con
     {
         return NULL;
     }
-    if (str.len(token, PROTOCORE_DAV_LOCK_TOKEN_MAX) + 1 > PROTOCORE_DAV_LOCK_TOKEN_MAX) // token would not fit
+    if (EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = token, .cap = PROTOCORE_DAV_LOCK_TOKEN_MAX) + 1 >
+        PROTOCORE_DAV_LOCK_TOKEN_MAX) // token would not fit
     {
         return NULL;
     }
@@ -686,7 +694,8 @@ const DavLock *protocore_webdav_lock_refresh(uint8_t *work, DavLockTable *t, con
     for (size_t i = 0; i < PROTOCORE_DAV_LOCK_MAX; i++)
     {
         DavLock *l = &t->locks[i];
-        if (l->active && str.eq(l->token, token, sizeof(l->token), PROTO_FALSE))
+        if (l->active && EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = l->token, .other = token,
+                                    .cap = sizeof(l->token), .ci = PROTO_FALSE))
         {
             l->expiry_s = new_expiry_s;
             return l;
@@ -728,7 +737,8 @@ proto_bool protocore_webdav_lock_release(uint8_t *work, DavLockTable *t, const c
     }
     for (size_t i = 0; i < PROTOCORE_DAV_LOCK_MAX; i++)
     {
-        if (t->locks[i].active && str.eq(t->locks[i].token, token, sizeof(t->locks[i].token), PROTO_FALSE))
+        if (t->locks[i].active && EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = t->locks[i].token, .other = token,
+                                             .cap = sizeof(t->locks[i].token), .ci = PROTO_FALSE))
         {
             t->locks[i].active = PROTO_FALSE;
             return PROTO_TRUE;
@@ -767,7 +777,8 @@ proto_bool protocore_webdav_lock_can_write(uint8_t *work, const DavLockTable *t,
             continue;
         }
         covered = PROTO_TRUE;
-        if (presented_token && str.eq(l->token, presented_token, sizeof(l->token), PROTO_FALSE))
+        if (presented_token && EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = l->token, .other = presented_token,
+                                          .cap = sizeof(l->token), .ci = PROTO_FALSE))
         {
             ok = PROTO_TRUE; // the request holds a covering lock's token
             return ok;
@@ -789,18 +800,21 @@ proto_bool protocore_webdav_if_token(uint8_t *work, const char *if_header, char 
     // (which also skips the tagged-list resource URL that precedes the '(').
     // The terminator is what bounds the scans: finding it first is what makes the remaining length
     // at each marker a readable extent rather than an assumption about the caller's buffer.
-    const size_t if_len = str.len(if_header, SIZE_MAX);
-    const char *lp = str.find(if_header, if_len, "(", sizeof("("), PROTO_FALSE);
+    const size_t if_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = if_header, .cap = SIZE_MAX);
+    const char *lp = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = if_header, .cap = if_len, .other = "(",
+                                .other_cap = sizeof("("), .ci = PROTO_FALSE);
     if (!lp)
     {
         return PROTO_FALSE;
     }
-    const char *lt = str.find(lp, if_len - (size_t)(lp - if_header), "<", sizeof("<"), PROTO_FALSE);
+    const char *lt = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = lp, .cap = if_len - (size_t)(lp - if_header),
+                                .other = "<", .other_cap = sizeof("<"), .ci = PROTO_FALSE);
     if (!lt)
     {
         return PROTO_FALSE;
     }
-    const char *gt = str.find(lt, if_len - (size_t)(lt - if_header), ">", sizeof(">"), PROTO_FALSE);
+    const char *gt = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = lt, .cap = if_len - (size_t)(lt - if_header),
+                                .other = ">", .other_cap = sizeof(">"), .ci = PROTO_FALSE);
     if (!gt)
     {
         return PROTO_FALSE;
@@ -810,7 +824,7 @@ proto_bool protocore_webdav_if_token(uint8_t *work, const char *if_header, char 
     {
         return PROTO_FALSE;
     }
-    mem.cpy(out, lt + 1, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = lt + 1, .bytes = n);
     out[n] = 0;
     return PROTO_TRUE;
 }

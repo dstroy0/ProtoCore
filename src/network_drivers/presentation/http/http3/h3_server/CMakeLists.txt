@@ -7,8 +7,7 @@ protocore_add_module(network_drivers/presentation/http/http3/h3_server
   DEPS
     network_drivers/presentation/http/http3/quic_server
   PRIVATE_DEPS
-    mmgr/protostr
-    mmgr/rawmemcpy
+    mmgr
     network_drivers/presentation/http
     network_drivers/session
     network_drivers/transport/tcp/protocol

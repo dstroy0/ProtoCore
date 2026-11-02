@@ -11,11 +11,11 @@
  */
 
 #include "services/net/smtp/smtp.h"
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
-#include "mmgr/protostr/protostr.h" // str.len: the bounded length this library uses
-#include "mmgr/secure/secure.h"     // the persistent end this module's key material is taken from
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the bounded length this library uses
 #include "protocore_config.h"
-#include "server/clock/clock.h" // protocore_millis, pcdelay
+#include "server/clock/clock.h"        // protocore_millis, pcdelay
+#include "server/core/worker/worker.h" // the persistent end this module's key material is taken from
+#include "verba_scribo/verba_scribo.h" // verba_scribo frame builder
 
 #if PROTOCORE_ENABLE_SMTP
 
@@ -148,7 +148,8 @@ static proto_bool keyword_ieq(const char *a, const char *b, size_t n)
 // keeps "STARTTLSX" from reading as STARTTLS.
 static proto_bool ehlo_has_keyword(const char *buf, size_t len, const char *keyword)
 {
-    size_t wlen = str.len(keyword, len + 1); // a whole keyword cannot outrun the reply that carries it
+    size_t wlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = keyword,
+                             .cap = len + 1); // a whole keyword cannot outrun the reply that carries it
     size_t start = 0;
     for (size_t i = 0; i + 1 < len; i++)
     {
@@ -186,7 +187,7 @@ static void finish(uint8_t *work, SmtpResult r)
 // Write a whole command line; true only when every octet went out.
 static proto_bool send_line(uint8_t *work, const char *line)
 {
-    size_t n = str.len(line, PROTOCORE_SMTP_LINE_MAX + 1);
+    size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = line, .cap = PROTOCORE_SMTP_LINE_MAX + 1);
     return n == 0 || SmtpV.transport.send(SmtpV.transport.ctx, (const uint8_t *)line, n) == (int)n;
 }
 
@@ -257,12 +258,15 @@ static SmtpResult initiate_session(uint8_t *work)
     }
 
     const char *client_name = SmtpV.session.client_name;
-    protocore_sb sb = {SMTP_CTX(work)->line, sizeof(SMTP_CTX(work)->line), 0, PROTO_TRUE};
-    Sb.put(&sb, "EHLO ");
-    Sb.put(&sb, (client_name && client_name[0]) ? client_name : SMTP_DEFAULT_CLIENT_NAME);
-    Sb.put(&sb, "\r\n");
-    (void)Sb.finish(&sb);
-    if (!sb.ok)
+    char *const sb_out = SMTP_CTX(work)->line;
+    const size_t sb_cap = sizeof(SMTP_CTX(work)->line);
+    size_t sb = 0;
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out, .cap = sb_cap, .at = sb, .text = "EHLO ");
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out, .cap = sb_cap, .at = sb,
+                    .text = (client_name && client_name[0]) ? client_name : SMTP_DEFAULT_CLIENT_NAME);
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out, .cap = sb_cap, .at = sb, .text = "\r\n");
+    (void)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb_out, .cap = sb_cap, .at = sb);
+    if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .out = sb_out, .cap = sb_cap, .at = sb))
     {
         return SMTP_ERR_OVERFLOW;
     }
@@ -309,7 +313,7 @@ static SmtpResult upgrade_starttls(uint8_t *work)
 // (RFC 4954 sec 4; RFC 4648 sec 4 is the encoding). The reply code lands in store->code.
 static SmtpResult auth_response(uint8_t *work, const char *secret)
 {
-    size_t slen = str.len(secret, sizeof(SMTP_CTX(work)->b64));
+    size_t slen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = secret, .cap = sizeof(SMTP_CTX(work)->b64));
     size_t elen = ((slen + 2) / 3) * 4; // base64 encodes three octets into four characters
     if (elen + 3 > sizeof(SMTP_CTX(work)->b64))
     {
@@ -361,16 +365,20 @@ static int build_content(uint8_t *work)
     char *out = SMTP_CTX(work)->content;
     const size_t cap = sizeof(SMTP_CTX(work)->content);
 
-    protocore_sb sb = {out, cap, 0, PROTO_TRUE};
-    Sb.put(&sb, "From: <");
-    Sb.put(&sb, SmtpV.envelope.reverse_path);
-    Sb.put(&sb, ">\r\nTo: <");
-    Sb.put(&sb, SmtpV.envelope.forward_path);
-    Sb.put(&sb, ">\r\nSubject: ");
-    Sb.put(&sb, SmtpV.content.subject ? SmtpV.content.subject : "");
-    Sb.put(&sb, "\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n");
-    size_t n = Sb.finish(&sb);
-    if (!sb.ok)
+    size_t sb = 0;
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb, .text = "From: <");
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb,
+                    .text = SmtpV.envelope.reverse_path);
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb, .text = ">\r\nTo: <");
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb,
+                    .text = SmtpV.envelope.forward_path);
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb, .text = ">\r\nSubject: ");
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb,
+                    .text = SmtpV.content.subject ? SmtpV.content.subject : "");
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb,
+                    .text = "\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n");
+    size_t n = EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb);
+    if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .out = out, .cap = cap, .at = sb))
     {
         return (int)SMTP_ERR_OVERFLOW;
     }
@@ -438,12 +446,17 @@ static int build_content(uint8_t *work)
 // <forward-path>", which accepts the recipient as surely as 250 does.
 static SmtpResult mail_transaction(uint8_t *work)
 {
-    protocore_sb sb_mail = {SMTP_CTX(work)->line, sizeof(SMTP_CTX(work)->line), 0, PROTO_TRUE};
-    Sb.put(&sb_mail, "MAIL FROM:<");
-    Sb.put(&sb_mail, SmtpV.envelope.reverse_path);
-    Sb.put(&sb_mail, ">\r\n");
-    (void)Sb.finish(&sb_mail);
-    if (!sb_mail.ok)
+    char *const sb_mail_out = SMTP_CTX(work)->line;
+    const size_t sb_mail_cap = sizeof(SMTP_CTX(work)->line);
+    size_t sb_mail = 0;
+    sb_mail = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_mail_out, .cap = sb_mail_cap, .at = sb_mail,
+                         .text = "MAIL FROM:<");
+    sb_mail = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_mail_out, .cap = sb_mail_cap, .at = sb_mail,
+                         .text = SmtpV.envelope.reverse_path);
+    sb_mail = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_mail_out, .cap = sb_mail_cap, .at = sb_mail,
+                         .text = ">\r\n");
+    (void)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb_mail_out, .cap = sb_mail_cap, .at = sb_mail);
+    if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .out = sb_mail_out, .cap = sb_mail_cap, .at = sb_mail))
     {
         return SMTP_ERR_OVERFLOW;
     }
@@ -453,12 +466,17 @@ static SmtpResult mail_transaction(uint8_t *work)
         return r;
     }
 
-    protocore_sb sb_rcpt = {SMTP_CTX(work)->line, sizeof(SMTP_CTX(work)->line), 0, PROTO_TRUE};
-    Sb.put(&sb_rcpt, "RCPT TO:<");
-    Sb.put(&sb_rcpt, SmtpV.envelope.forward_path);
-    Sb.put(&sb_rcpt, ">\r\n");
-    (void)Sb.finish(&sb_rcpt);
-    if (!sb_rcpt.ok)
+    char *const sb_rcpt_out = SMTP_CTX(work)->line;
+    const size_t sb_rcpt_cap = sizeof(SMTP_CTX(work)->line);
+    size_t sb_rcpt = 0;
+    sb_rcpt = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_rcpt_out, .cap = sb_rcpt_cap, .at = sb_rcpt,
+                         .text = "RCPT TO:<");
+    sb_rcpt = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_rcpt_out, .cap = sb_rcpt_cap, .at = sb_rcpt,
+                         .text = SmtpV.envelope.forward_path);
+    sb_rcpt = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_rcpt_out, .cap = sb_rcpt_cap, .at = sb_rcpt,
+                         .text = ">\r\n");
+    (void)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb_rcpt_out, .cap = sb_rcpt_cap, .at = sb_rcpt);
+    if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .out = sb_rcpt_out, .cap = sb_rcpt_cap, .at = sb_rcpt))
     {
         return SMTP_ERR_OVERFLOW;
     }
@@ -515,7 +533,7 @@ uint8_t *protocore_smtp_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_SMTP_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_SMTP_BORROW);
     }
     return s_own.span;
 }

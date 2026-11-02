@@ -8,5 +8,5 @@ protocore_add_module(crypto/asymmetric/ecdsa
   PRIVATE_DEPS
     crypto/hash/sha256
     crypto/mac/hmac_sha256
-    mmgr/protomem
+    mmgr
 )

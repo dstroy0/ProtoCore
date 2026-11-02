@@ -4,7 +4,7 @@
 protocore_add_module(shared/log
   SOURCES log.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protoframe
+    server/core/worker
+    mmgr
     server/core/logbuf
 )

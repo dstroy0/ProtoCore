@@ -5,7 +5,7 @@ protocore_add_module(services/system/esp/esp
   GATE PROTOCORE_ENABLE_IKEV2
   SOURCES esp.c
   PRIVATE_DEPS
+    server/core/worker
     crypto/aead/aesgcm
-    mmgr/protomem
-    mmgr/secure
+    mmgr
 )

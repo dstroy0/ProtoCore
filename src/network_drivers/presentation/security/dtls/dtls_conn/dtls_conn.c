@@ -6,14 +6,15 @@
  * @brief DTLS 1.3 server handshake state machine (RFC 9147 §5-6). See protocore_dtls_conn.h.
  */
 
+#include "locus_carcerum/locus_carcerum.h"
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_DTLS
 
 #include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq: the Finished compare
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/secure/secure.h" // protocore_secure_wipe
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/security/dtls/dtls_conn/dtls_conn.h"
+#include "server/core/worker/worker.h" // mmgr_zero_buf
 
 #include "crypto/asymmetric/curve25519/curve25519.h"
 #include "crypto/asymmetric/ed25519/ed25519.h" // protocore_ed25519_pubkey for the RFC 7250 RawPublicKey
@@ -330,10 +331,11 @@ static void protocore_dtls_negotiate_conn_id(DtlsConn *c, const Tls13ClientHello
     c->peer_cid_len = (uint8_t)ch->conn_id_len;
     if (ch->conn_id_len)
     {
-        mem.cpy(c->peer_cid, ch->conn_id, ch->conn_id_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = c->peer_cid, .src = ch->conn_id, .bytes = ch->conn_id_len);
     }
     c->local_cid_len = PROTOCORE_DTLS_CONN_LOCAL_CID_LEN;
-    mem.cpy(c->local_cid, c->cfg.server_random, PROTOCORE_DTLS_CONN_LOCAL_CID_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = c->local_cid, .src = c->cfg.server_random,
+               .bytes = PROTOCORE_DTLS_CONN_LOCAL_CID_LEN);
 }
 
 // Consume a ClientHello and emit the whole server flight (ServerHello + the epoch-2 encrypted
@@ -457,7 +459,7 @@ static int handle_client_hello(uint8_t *work, DtlsConn *c, const uint8_t *msg, s
     Tls13KsV.step.ch_sh_hash = hash;
     Tls13KsV.step.ecdhe_len = 32;
     Tls13Ks.handshake(work);
-    protocore_secure_wipe(ecdhe, sizeof(ecdhe)); // every epoch-2 and epoch-3 key derives from these 32 bytes
+    mmgr_zero_buf(ecdhe, sizeof(ecdhe)); // every epoch-2 and epoch-3 key derives from these 32 bytes
     DtlsRecord.keys_derive(work, &c->ep2_srv, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.s + TLS13_KS_SERVER_HS);
     DtlsRecord.keys_derive(work, &c->ep2_cli, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.s + TLS13_KS_CLIENT_HS);
     c->ep2_ready = PROTO_TRUE;
@@ -823,7 +825,7 @@ void protocore_dtls_server_init(uint8_t *work)
     const uint8_t *peer_addr = DtlsServerV.init_args.peer_addr;
     size_t peer_addr_len = DtlsServerV.init_args.peer_addr_len;
 
-    mem.zero(c, sizeof(*c));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = c, .bytes = sizeof(*c), .val = 0);
     c->cfg = *cfg;
     c->state = DTLS_CONN_STATE_START;
     // sec 4.3: the path's datagram size bounds every fragment this connection emits. A caller that
@@ -839,7 +841,7 @@ void protocore_dtls_server_init(uint8_t *work)
         {
             peer_addr_len = PROTOCORE_DTLS_PEER_ADDR_MAX;
         }
-        mem.cpy(c->peer_addr, peer_addr, peer_addr_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = c->peer_addr, .src = peer_addr, .bytes = peer_addr_len);
         c->peer_addr_len = (uint8_t)peer_addr_len;
     }
     c->transcript = c->hash_work;
@@ -981,7 +983,7 @@ void protocore_dtls_server_local_cid(uint8_t *work)
         DtlsServerV.n = 0;
         return;
     }
-    mem.cpy(out, c->local_cid, c->local_cid_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = c->local_cid, .bytes = c->local_cid_len);
     DtlsServerV.n = c->local_cid_len;
 }
 

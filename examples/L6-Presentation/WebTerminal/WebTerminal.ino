@@ -26,6 +26,7 @@
 #define PROTOCORE_ENABLE_WEB_TERMINAL 1
 
 #include "protocore.h"
+#include "numeros_scribo/numeros_scribo.h"
 #include "network_drivers/physical/physical/physical.h"
 #include "server/web/web_terminal/web_terminal.h"
 
@@ -36,16 +37,16 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 // Each line's shape is a table, declared once. The library builds it by walking the table, so
 // nothing parses a format string at runtime and no line can come out half-written.
 // The fields are {kind, width, literal length, literal}; a valued field takes one argument below.
-static const protocore_field REPLY_HEAP[] = {
-    {PROTOCORE_FK_LIT, 0, 11, "free heap: "}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 7, " bytes\n"}, PROTOCORE_END};
-static const protocore_field REPLY_UPTIME[] = {{PROTOCORE_FK_LIT, 0, 8, "uptime: "}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 4, " ms\n"}, PROTOCORE_END};
-static const protocore_field REPLY_ECHO[] = {{PROTOCORE_FK_LIT, 0, 6, "echo: "}, PROTOCORE_STR, {PROTOCORE_FK_LIT, 0, 1, "\n"}, PROTOCORE_END};
-static const protocore_field HEARTBEAT[] = {{PROTOCORE_FK_LIT, 0, 7, "uptime "},
-                                     PROTOCORE_U32,
-                                     {PROTOCORE_FK_LIT, 0, 10, " ms, heap "},
-                                     PROTOCORE_U32,
-                                     {PROTOCORE_FK_LIT, 0, 1, "\n"},
-                                     PROTOCORE_END};
+static const mmgr_field REPLY_HEAP[] = {
+    {MMGR_FK_LIT, 0, 11, "free heap: "}, MMGR_U32, {MMGR_FK_LIT, 0, 7, " bytes\n"}, MMGR_END};
+static const mmgr_field REPLY_UPTIME[] = {{MMGR_FK_LIT, 0, 8, "uptime: "}, MMGR_U32, {MMGR_FK_LIT, 0, 4, " ms\n"}, MMGR_END};
+static const mmgr_field REPLY_ECHO[] = {{MMGR_FK_LIT, 0, 6, "echo: "}, MMGR_STR, {MMGR_FK_LIT, 0, 1, "\n"}, MMGR_END};
+static const mmgr_field HEARTBEAT[] = {{MMGR_FK_LIT, 0, 7, "uptime "},
+                                     MMGR_U32,
+                                     {MMGR_FK_LIT, 0, 10, " ms, heap "},
+                                     MMGR_U32,
+                                     {MMGR_FK_LIT, 0, 1, "\n"},
+                                     MMGR_END};
 
 // Browser -> device: handle a typed command line.
 void on_command(const char *line, uint8_t client_id)
@@ -61,15 +62,21 @@ void on_command(const char *line, uint8_t client_id)
     char out[96];
     if (strcmp(line, "heap") == 0)
     {
-        frame.build(out, sizeof(out), REPLY_HEAP, (const protocore_fval[]){PROTOCORE_VU32((uint32_t)ESP.getFreeHeap())}, 1);
+        const mmgr_fval reply_heap_vals[] = {MMGR_VU32((uint32_t)ESP.getFreeHeap())};
+        const NumerosCfg reply_heap_build = {out, sizeof(out), 0u, REPLY_HEAP, reply_heap_vals, 1u};
+        numer.build(&reply_heap_build);
     }
     else if (strcmp(line, "uptime") == 0)
     {
-        frame.build(out, sizeof(out), REPLY_UPTIME, (const protocore_fval[]){PROTOCORE_VU32((uint32_t)millis())}, 1);
+        const mmgr_fval reply_uptime_vals[] = {MMGR_VU32((uint32_t)millis())};
+        const NumerosCfg reply_uptime_build = {out, sizeof(out), 0u, REPLY_UPTIME, reply_uptime_vals, 1u};
+        numer.build(&reply_uptime_build);
     }
     else
     {
-        frame.build(out, sizeof(out), REPLY_ECHO, (const protocore_fval[]){PROTOCORE_VSTR(line)}, 1);
+        const mmgr_fval reply_echo_vals[] = {MMGR_VSTR(line)};
+        const NumerosCfg reply_echo_build = {out, sizeof(out), 0u, REPLY_ECHO, reply_echo_vals, 1u};
+        numer.build(&reply_echo_build);
     }
     protocore_web_terminal_print(out);
 }
@@ -114,8 +121,9 @@ void loop()
         if (protocore_web_terminal_client_count() > 0)
         {
             char out[96];
-            frame.build(out, sizeof(out), HEARTBEAT,
-                           (const protocore_fval[]){PROTOCORE_VU32((uint32_t)millis()), PROTOCORE_VU32((uint32_t)ESP.getFreeHeap())}, 2);
+            const mmgr_fval heartbeat_vals[] = {MMGR_VU32((uint32_t)millis()), MMGR_VU32((uint32_t)ESP.getFreeHeap())};
+            const NumerosCfg heartbeat_build = {out, sizeof(out), 0u, HEARTBEAT, heartbeat_vals, 2u};
+            numer.build(&heartbeat_build);
             protocore_web_terminal_print(out);
         }
     }

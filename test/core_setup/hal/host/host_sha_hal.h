@@ -8,7 +8,7 @@
  * A part carries a hashing peripheral and esp_sha_hal.h drives it by register. A host has no such
  * window, so the accelerated arm of every hash-based module would be uncompilable and untestable off
  * target. This states the SAME function set against a software compression, so PROTOCORE_HAS_HW_SHA
- * is a real capability on a native build: the arm compiles, runs, and answers with the same bytes.
+ * is a real capability on a native build: the arm compiles, runs, and answers with the same byteio.
  *
  * What this is and is not. It is the peripheral's CONTRACT - compress one message block into a
  * running state, with the standard IV on the first block of a digest - answered in software. It is

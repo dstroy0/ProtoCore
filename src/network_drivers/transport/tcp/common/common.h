@@ -116,6 +116,9 @@ extern uint32_t protocore_ap_ip;
  *  (HTTP/3); the TCP accept path only ever uses [0, MAX_CONNS). */
 extern TcpConn conn_pool[CONN_POOL_SLOTS];
 
+/** @brief The pool's slot ring, whose loculi are the slots. Defined in protocol/protocol.c. */
+extern mmgr_ring protocore_conn_slots;
+
 // The receive ring is drained through ::ConnPool - available, read_byte, peek, consume and read -
 // and a slot is asked about through active, iface, listener_id, tls, owner, proto_of and pcb_of.
 // Transport owns the ring: nothing above this layer reaches rx_buffer or the ring itself.

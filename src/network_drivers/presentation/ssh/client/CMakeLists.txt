@@ -7,6 +7,7 @@ protocore_add_module(network_drivers/presentation/ssh/client
   DEPS
     network_drivers/presentation/ssh/common
   PRIVATE_DEPS
+    server/core/worker
     crypto/asymmetric/bignum
     crypto/asymmetric/curve25519
     crypto/asymmetric/ecdsa
@@ -15,13 +16,7 @@ protocore_add_module(network_drivers/presentation/ssh/client
     crypto/pqc/mlkem
     crypto/pqc/sntrup761
     crypto/rng
-    mmgr/arena
-    mmgr/bytes
-    mmgr/plaintext
-    mmgr/protoframe
-    mmgr/protomem
-    mmgr/rawmemcpy
-    mmgr/secure
+    mmgr
     network_drivers/presentation/ssh
     network_drivers/presentation/ssh/auth
     network_drivers/presentation/ssh/connection

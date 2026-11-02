@@ -5,8 +5,8 @@ protocore_add_module(network_drivers/presentation/ssh/transport/comp
   GATE PROTOCORE_ENABLE_SSH_ZLIB
   SOURCES comp.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/secure
+    server/core/worker
+    mmgr
     network_drivers/presentation/ssh/common
     network_drivers/presentation/ssh/transport/inflate
     network_drivers/presentation/ssh/transport/zlib

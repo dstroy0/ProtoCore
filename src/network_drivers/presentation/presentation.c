@@ -13,10 +13,10 @@
  */
 
 #include "presentation.h"
-#include "mmgr/plaintext/plaintext.h"                        // the persistent end this module's state is taken from
-#include "mmgr/protostr/protostr.h"                          // str: the bounded-run walks
+#include "cellularum_laboro/cellularum_laboro.h"             // str: the bounded-run walks
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a handler is dispatched on
 #include "server/core/proto_handler/proto_handler.h"         // ProtoHandler (the L5 dispatch seam this registers into)
+#include "server/core/worker/worker.h"                       // the persistent end this module's state is taken from
 #if PROTOCORE_ENABLE_WEBSOCKET
 #include "network_drivers/presentation/http/websocket/websocket.h" // Ws.find/Ws.free: a WS-upgraded slot must never be HTTP-parsed
 #include "network_drivers/session/ws/ws.h" // SessionWs.close: the channel teardown that informs the application
@@ -77,7 +77,7 @@ uint8_t *protocore_http_conn_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_HTTP_CONN_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_HTTP_CONN_BORROW);
     }
     return s_own.span;
 }
@@ -246,7 +246,8 @@ static void tls_data(uint8_t slot)
     {
         http_h2_checked[slot] = 1;
         const char *alpn = protocore_tls_alpn(slot);
-        if (alpn && str.eq(alpn, "h2", sizeof("h2"), PROTO_FALSE))
+        if (alpn &&
+            EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = alpn, .other = "h2", .cap = sizeof("h2"), .ci = PROTO_FALSE))
         {
             http_h2[slot] = 1;
             http_resp_sink[slot] = protocore_h2_server_respond; // route responses through the h2 framer
@@ -379,7 +380,7 @@ void protocore_http_conn_has_token(uint8_t *work)
         return;
     }
     const char *token = HttpConnV.hdr_args.token;
-    size_t tlen = str.len(token, 32);
+    size_t tlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = token, .cap = 32);
     const char *p = HttpConnV.hdr_args.hdr;
     while (*p)
     {
@@ -400,7 +401,8 @@ void protocore_http_conn_has_token(uint8_t *work)
         // The element is a slice of the header value, not its own string, so it has no terminator to
         // measure against: the trimmed length is the bound, and the length test above it is what
         // stops a longer token matching on its prefix.
-        if (len == tlen && str.diff(start, token, tlen, PROTO_TRUE) == tlen)
+        if (len == tlen && EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = start, .other = token, .cap = tlen,
+                                      .ci = PROTO_TRUE) == tlen)
         {
             HttpConnV.ok = PROTO_TRUE;
             return;

@@ -34,12 +34,8 @@
  */
 
 #include "protocore.h"
-#include "crypto/rng/rng.h"             // Rng: the CSRF secret's seed
-#include "mmgr/membuild/membuild.h"     // Sb: the frame builder
-#include "mmgr/plaintext/plaintext.h"   // the diag document is borrowed, not a stack array
-#include "mmgr/protoframe/protoframe.h" // the diag document is a frame spec, not a concatenation
-#include "mmgr/protostr/protostr.h"     // str: the bounded-run walks
-#include "mmgr/rawmemcpy/rawmemcpy.h"   // raw.read: every move here is into our own buffer
+#include "cellularum_laboro/cellularum_laboro.h" // str: the bounded-run walks
+#include "crypto/rng/rng.h"                      // Rng: the CSRF secret's seed
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/presentation/http/route/http_route/http_route.h"
 #include "network_drivers/presentation/presentation.h" // http_protocore_set_poll (install the instance-bound HTTP poll)
@@ -48,11 +44,15 @@
 #include "network_drivers/transport/tcp/common/common.h"     // TcpConn, conn_pool: the slots this drives
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool.init: the pool this brings up
 #include "network_drivers/transport/tcp/tcp.h"
-#include "server/clock/clock.h" // protocore_millis(): the QUIC poll stamp and the request timeout
+#include "numeros_scribo/numeros_scribo.h"   // the diag document is a frame spec, not a concatenation
+#include "proximus_operor/proximus_operor.h" // proxim.read: every move here is into our own buffer
+#include "server/clock/clock.h"              // protocore_millis(): the QUIC poll stamp and the request timeout
 #include "server/core/proto_handler/proto_handler.h"
+#include "server/core/worker/worker.h" // the diag document is borrowed, not a stack array
 #include "server/core/worker/worker.h"
 #include "shared/hex/hex.h"
 #include "shared/mime/mime.h"
+#include "verba_scribo/verba_scribo.h" // Sb: the frame builder
 static uint8_t http_delivery_work[16]; // the borrow an entry takes; HttpDelivery never reads it
 
 static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
@@ -78,8 +78,8 @@ static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
 #include "network_drivers/application/web_assets/web_assets.h" // PROTOCORE_METRICS_PROM / PROTOCORE_STATS_JSON (generated)
 #endif
 // No <string.h> and no <stdio.h>: every scan, compare, copy and search on this layer goes through
-// mmgr/protostr.h, and nothing here formats. strnlen and the strcasecmp pair are POSIX rather than
-// ISO C, so they are absent under -std=c11 on a conforming libc.
+// cellularum_laboro/cellularum_laboro.h, and nothing here formats. strnlen and the strcasecmp pair are POSIX rather
+// than ISO C, so they are absent under -std=c11 on a conforming libc.
 
 // Outbound-transfer state is not held here. Each kind of transfer belongs to the TU that runs it:
 // the chunked-send state to server/response.cpp, the file-send state to
@@ -274,7 +274,8 @@ int32_t proto_begin(const WebServerConfig *cfg)
         QuicServerConfig h3cfg = {0};
         h3cfg.cert_der = s_inst.h3_cert;
         h3cfg.cert_len = s_inst.h3_cert_len;
-        raw.read(h3cfg.ed25519_seed, s_inst.h3_seed, sizeof(h3cfg.ed25519_seed));
+        EMBED_CALL(proxim.read, ProximusCfg, .dst = h3cfg.ed25519_seed, .at = s_inst.h3_seed,
+                   .size = sizeof(h3cfg.ed25519_seed));
         h3cfg.rng = protocore_h3_server_rng;
         // No app pointer: the trampoline dispatches through the global route table. The QUIC server
         // records whether it came up and protocore_quic_server_poll() reads its own answer.
@@ -313,7 +314,7 @@ proto_bool protocore_h3_cert(const uint8_t *cert_der, size_t cert_len, const uin
     }
     s_inst.h3_cert = cert_der;
     s_inst.h3_cert_len = cert_len;
-    raw.read(s_inst.h3_seed, ed25519_seed, sizeof(s_inst.h3_seed));
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = s_inst.h3_seed, .at = ed25519_seed, .size = sizeof(s_inst.h3_seed));
     s_inst.h3_port = port;
     s_inst.h3_enabled = PROTO_TRUE;
     return PROTO_TRUE;
@@ -402,13 +403,14 @@ void stop(void)
 void fill_route_base(HttpRoute *r, const char *path)
 {
     // The copy terminates the destination itself and hands back what it wrote, so the length the
-    // two shape tests need comes out of the move rather than from a second walk over those bytes.
-    size_t len = str.copy(r->path, path, MAX_PATH_LEN);
+    // two shape tests need comes out of the move rather than from a second walk over those byteio.
+    size_t len = EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = r->path, .src = path, .cap = MAX_PATH_LEN);
     r->is_active = PROTO_TRUE;
     r->is_wildcard = (len > 0 && r->path[len - 1] == '*');
     // Whether, not where: the sieve sweeps the whole field for a fixed cost rather than stopping at
     // the first `/`, which a route path is full of.
-    r->is_param = str.has(r->path, MAX_PATH_LEN, "/:", sizeof("/:"), PROTO_FALSE);
+    r->is_param = EMBED_CALL(cellul.has, CatenaFinitaCfg, .src = r->path, .cap = MAX_PATH_LEN,
+                             .other = "/:", .other_cap = sizeof("/:"), .ci = PROTO_FALSE);
     r->is_regex = PROTO_FALSE;
     r->iface_filter = PROTOCORE_IF_ANY;
 #if PROTOCORE_ENABLE_AUTH
@@ -726,109 +728,109 @@ PROTOCORE_BEGIN_DECLS
 // A flag indexes this; !!flag is 0 or 1, so the selection is a load rather than a branch.
 static const char *const PROTOCORE_DIAG_BOOL[2] = {"false", "true"};
 
-static const protocore_field DIAG_DOC[] = {
-    {PROTOCORE_FK_LIT, 0, 31, "{\"lib\":\"ProtoCore\",\"features\":{"},
-    {PROTOCORE_FK_LIT, 0, 12, "\"websocket\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 7, ",\"sse\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 13, ",\"multipart\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 16, ",\"file_serving\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 8, ",\"auth\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 10, ",\"webdav\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 8, ",\"coap\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 8, ",\"snmp\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 9, ",\"opcua\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 9, ",\"umati\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 10, ",\"modbus\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 8, ",\"mqtt\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 13, ",\"mtconnect\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 9, ",\"redis\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 7, ",\"ftp\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 8, ",\"smtp\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 7, ",\"smb\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 10, ",\"syslog\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 24, ",\"protocore_ntp_server\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 14, ",\"dns_server\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 8, ",\"nats\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 9, ",\"stomp\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 10, ",\"statsd\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 7, ",\"jwt\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 7, ",\"tls\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 9, ",\"http2\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 9, ",\"http3\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 7, ",\"ssh\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 14, ",\"ws_deflate\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 9, ",\"range\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 8, ",\"csrf\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 19, ",\"accept_throttle\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 19, ",\"per_ip_throttle\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 16, ",\"auth_lockout\":"},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 12, "},\"config\":{"},
-    {PROTOCORE_FK_LIT, 0, 12, "\"MAX_CONNS\":"},
-    PROTOCORE_U32,
-    {PROTOCORE_FK_LIT, 0, 15, ",\"RX_BUF_SIZE\":"},
-    PROTOCORE_U32,
-    {PROTOCORE_FK_LIT, 0, 17, ",\"BODY_BUF_SIZE\":"},
-    PROTOCORE_U32,
-    {PROTOCORE_FK_LIT, 0, 14, ",\"MAX_ROUTES\":"},
-    PROTOCORE_U32,
-    {PROTOCORE_FK_LIT, 0, 15, ",\"MAX_HEADERS\":"},
-    PROTOCORE_U32,
-    {PROTOCORE_FK_LIT, 0, 16, ",\"MAX_PATH_LEN\":"},
-    PROTOCORE_U32,
-    {PROTOCORE_FK_LIT, 0, 15, ",\"MAX_KEY_LEN\":"},
-    PROTOCORE_U32,
-    {PROTOCORE_FK_LIT, 0, 15, ",\"MAX_VAL_LEN\":"},
-    PROTOCORE_U32,
-    {PROTOCORE_FK_LIT, 0, 17, ",\"MAX_QUERY_LEN\":"},
-    PROTOCORE_U32,
-    {PROTOCORE_FK_LIT, 0, 20, ",\"MAX_QUERY_PARAMS\":"},
-    PROTOCORE_U32,
-    {PROTOCORE_FK_LIT, 0, 19, ",\"CONN_TIMEOUT_MS\":"},
-    PROTOCORE_U32,
-    {PROTOCORE_FK_LIT, 0, 21, ",\"RESP_HDR_BUF_SIZE\":"},
-    PROTOCORE_U32,
-    {PROTOCORE_FK_LIT, 0, 19, ",\"WS_HDR_BUF_SIZE\":"},
-    PROTOCORE_U32,
-    {PROTOCORE_FK_LIT, 0, 21, ",\"CORS_HDR_BUF_SIZE\":"},
-    PROTOCORE_U32,
-    {PROTOCORE_FK_LIT, 0, 19, ",\"EVT_QUEUE_DEPTH\":"},
-    PROTOCORE_U32,
-    {PROTOCORE_FK_LIT, 0, 2, "}}"},
-    PROTOCORE_END,
+static const mmgr_field DIAG_DOC[] = {
+    {MMGR_FK_LIT, 0, 31, "{\"lib\":\"ProtoCore\",\"features\":{"},
+    {MMGR_FK_LIT, 0, 12, "\"websocket\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 7, ",\"sse\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 13, ",\"multipart\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 16, ",\"file_serving\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 8, ",\"auth\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 10, ",\"webdav\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 8, ",\"coap\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 8, ",\"snmp\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 9, ",\"opcua\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 9, ",\"umati\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 10, ",\"modbus\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 8, ",\"mqtt\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 13, ",\"mtconnect\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 9, ",\"redis\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 7, ",\"ftp\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 8, ",\"smtp\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 7, ",\"smb\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 10, ",\"syslog\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 24, ",\"protocore_ntp_server\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 14, ",\"dns_server\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 8, ",\"nats\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 9, ",\"stomp\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 10, ",\"statsd\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 7, ",\"jwt\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 7, ",\"tls\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 9, ",\"http2\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 9, ",\"http3\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 7, ",\"ssh\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 14, ",\"ws_deflate\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 9, ",\"range\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 8, ",\"csrf\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 19, ",\"accept_throttle\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 19, ",\"per_ip_throttle\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 16, ",\"auth_lockout\":"},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 12, "},\"config\":{"},
+    {MMGR_FK_LIT, 0, 12, "\"MAX_CONNS\":"},
+    MMGR_U32,
+    {MMGR_FK_LIT, 0, 15, ",\"RX_BUF_SIZE\":"},
+    MMGR_U32,
+    {MMGR_FK_LIT, 0, 17, ",\"BODY_BUF_SIZE\":"},
+    MMGR_U32,
+    {MMGR_FK_LIT, 0, 14, ",\"MAX_ROUTES\":"},
+    MMGR_U32,
+    {MMGR_FK_LIT, 0, 15, ",\"MAX_HEADERS\":"},
+    MMGR_U32,
+    {MMGR_FK_LIT, 0, 16, ",\"MAX_PATH_LEN\":"},
+    MMGR_U32,
+    {MMGR_FK_LIT, 0, 15, ",\"MAX_KEY_LEN\":"},
+    MMGR_U32,
+    {MMGR_FK_LIT, 0, 15, ",\"MAX_VAL_LEN\":"},
+    MMGR_U32,
+    {MMGR_FK_LIT, 0, 17, ",\"MAX_QUERY_LEN\":"},
+    MMGR_U32,
+    {MMGR_FK_LIT, 0, 20, ",\"MAX_QUERY_PARAMS\":"},
+    MMGR_U32,
+    {MMGR_FK_LIT, 0, 19, ",\"CONN_TIMEOUT_MS\":"},
+    MMGR_U32,
+    {MMGR_FK_LIT, 0, 21, ",\"RESP_HDR_BUF_SIZE\":"},
+    MMGR_U32,
+    {MMGR_FK_LIT, 0, 19, ",\"WS_HDR_BUF_SIZE\":"},
+    MMGR_U32,
+    {MMGR_FK_LIT, 0, 21, ",\"CORS_HDR_BUF_SIZE\":"},
+    MMGR_U32,
+    {MMGR_FK_LIT, 0, 19, ",\"EVT_QUEUE_DEPTH\":"},
+    MMGR_U32,
+    {MMGR_FK_LIT, 0, 2, "}}"},
+    MMGR_END,
 };
 
 // Worst case: every flag rendering as the longer "false", every size at a uint32_t's ten digits.
@@ -839,67 +841,68 @@ void diag(uint8_t slot_id)
 {
     // Mark before the borrow and release on every exit: the document is transient, and the
     // per-dispatch reset is only the backstop.
-    const size_t mark = protocore_plaintext_mark();
-    char *doc = (char *)protocore_plaintext_alloc(PROTOCORE_PLAINTEXT_WORK_DIAG, 1);
+    const size_t mark = protocore_plain_guard()->temporary_buf_mark();
+    char *doc =
+        (char *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_PLAINTEXT_WORK_DIAG, protocore_plain_owner());
     if (doc == NULL ||
-        frame.build(doc, PROTOCORE_PLAINTEXT_WORK_DIAG, DIAG_DOC,
-                    (const protocore_fval[]){PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_WEBSOCKET]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_SSE]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_MULTIPART]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_FILE_SERVING]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_AUTH]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_WEBDAV]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_COAP]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_SNMP]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_OPCUA]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_UMATI]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_MODBUS]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_MQTT]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_MTCONNECT]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_REDIS]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_FTP]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_SMTP]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_SMB]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_SYSLOG]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_NTP_SERVER]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_DNS_SERVER]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_NATS]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_STOMP]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_STATSD]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_JWT]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_TLS]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_HTTP2]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_HTTP3]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_SSH]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_WS_DEFLATE]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_RANGE]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_CSRF]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_ACCEPT_THROTTLE]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_PER_IP_THROTTLE]),
-                                             PROTOCORE_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_AUTH_LOCKOUT]),
-                                             PROTOCORE_VU32((uint32_t)MAX_CONNS),
-                                             PROTOCORE_VU32((uint32_t)RX_BUF_SIZE),
-                                             PROTOCORE_VU32((uint32_t)BODY_BUF_SIZE),
-                                             PROTOCORE_VU32((uint32_t)MAX_ROUTES),
-                                             PROTOCORE_VU32((uint32_t)MAX_HEADERS),
-                                             PROTOCORE_VU32((uint32_t)MAX_PATH_LEN),
-                                             PROTOCORE_VU32((uint32_t)MAX_KEY_LEN),
-                                             PROTOCORE_VU32((uint32_t)MAX_VAL_LEN),
-                                             PROTOCORE_VU32((uint32_t)MAX_QUERY_LEN),
-                                             PROTOCORE_VU32((uint32_t)MAX_QUERY_PARAMS),
-                                             PROTOCORE_VU32((uint32_t)CONN_TIMEOUT_MS),
-                                             PROTOCORE_VU32((uint32_t)RESP_HDR_BUF_SIZE),
-                                             PROTOCORE_VU32((uint32_t)WS_HDR_BUF_SIZE),
-                                             PROTOCORE_VU32((uint32_t)CORS_HDR_BUF_SIZE),
-                                             PROTOCORE_VU32((uint32_t)EVT_QUEUE_DEPTH)},
-                    49) == 0)
+        EMBED_CALL(numer.build, NumerosCfg, .out = doc, .cap = PROTOCORE_PLAINTEXT_WORK_DIAG, .spec = DIAG_DOC,
+                   .vals = (const mmgr_fval[]){MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_WEBSOCKET]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_SSE]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_MULTIPART]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_FILE_SERVING]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_AUTH]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_WEBDAV]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_COAP]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_SNMP]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_OPCUA]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_UMATI]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_MODBUS]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_MQTT]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_MTCONNECT]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_REDIS]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_FTP]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_SMTP]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_SMB]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_SYSLOG]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_NTP_SERVER]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_DNS_SERVER]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_NATS]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_STOMP]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_STATSD]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_JWT]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_TLS]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_HTTP2]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_HTTP3]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_SSH]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_WS_DEFLATE]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_RANGE]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_CSRF]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_ACCEPT_THROTTLE]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_PER_IP_THROTTLE]),
+                                               MMGR_VSTR(PROTOCORE_DIAG_BOOL[!!PROTOCORE_ENABLE_AUTH_LOCKOUT]),
+                                               MMGR_VU32((uint32_t)MAX_CONNS),
+                                               MMGR_VU32((uint32_t)RX_BUF_SIZE),
+                                               MMGR_VU32((uint32_t)BODY_BUF_SIZE),
+                                               MMGR_VU32((uint32_t)MAX_ROUTES),
+                                               MMGR_VU32((uint32_t)MAX_HEADERS),
+                                               MMGR_VU32((uint32_t)MAX_PATH_LEN),
+                                               MMGR_VU32((uint32_t)MAX_KEY_LEN),
+                                               MMGR_VU32((uint32_t)MAX_VAL_LEN),
+                                               MMGR_VU32((uint32_t)MAX_QUERY_LEN),
+                                               MMGR_VU32((uint32_t)MAX_QUERY_PARAMS),
+                                               MMGR_VU32((uint32_t)CONN_TIMEOUT_MS),
+                                               MMGR_VU32((uint32_t)RESP_HDR_BUF_SIZE),
+                                               MMGR_VU32((uint32_t)WS_HDR_BUF_SIZE),
+                                               MMGR_VU32((uint32_t)CORS_HDR_BUF_SIZE),
+                                               MMGR_VU32((uint32_t)EVT_QUEUE_DEPTH)},
+                   .nvals = 49) == 0)
     {
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         send_text(slot_id, 503, PROTOCORE_MIME_TEXT_PLAIN, ""); // fail closed: no partial document reaches the wire
         return;
     }
     send_text(slot_id, 200, PROTOCORE_MIME_JSON, doc); // reads doc, so it runs before the release
-    protocore_plaintext_release(mark);
+    protocore_plain_guard()->temporary_buf_release(mark);
 }
 PROTOCORE_END_DECLS
 

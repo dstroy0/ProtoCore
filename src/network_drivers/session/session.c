@@ -16,7 +16,6 @@
  */
 
 #include "network_drivers/session/session.h"
-#include "mmgr/plaintext/plaintext.h"
 #include "network_drivers/presentation/presentation.h" // http_req_start_ms: the request deadline a first byte arms
 #include "network_drivers/presentation/ssh/network/network.h" // SshNetwork.owns: which SSH slot this stream carries
 #include "network_drivers/transport/tcp/protocol/protocol.h"  // ConnPool: the slot an event names
@@ -24,6 +23,7 @@
 #include "network_drivers/transport/udp/server/server.h"      // UdpListener: the datagram rings this tick drains
 #include "server/clock/clock.h"                               // Clock.ms: the pass stamp an arm takes
 #include "server/core/proto_handler/proto_handler.h"
+#include "server/core/worker/worker.h"
 #include "server/storage/filesystem/filesystem.h" // Fs: the source a released transfer still holds open
 
 // This layer is protocol-agnostic: it owns the dispatch mechanism only (register / look up /
@@ -92,7 +92,7 @@ uint8_t *protocore_session_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_SESSION_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_SESSION_BORROW);
     }
     return s_own.span;
 }
@@ -193,7 +193,7 @@ static inline void dispatch_event(const TcpEvt *evt)
     // runs with the whole arena available, and any scratch it borrows is
     // reclaimed before the next event - the backstop that stops a forgotten
     // release from accumulating across events.
-    protocore_plaintext_reset();
+    protocore_plain_guard()->temporary_buf_reset();
 
     // HttpRoute to the slot's protocol handler. PROTO_NONE and any unregistered
     // protocol have no handler, so the event is dropped.

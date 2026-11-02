@@ -8,7 +8,8 @@
 // op; this host ns/op + MB/s is a relative baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
 //   -DPROTOCORE_ENABLE_MMS=1 test/performance_benching/services/mms/host.c
-//   src/services/energy/mms/mms.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bmms && /tmp/bmms
+//   src/services/energy/mms/mms.c src/memoria_operor/memoria_operor.h.c src/cellularum_laboro/cellularum_laboro.h.c -o
+//   /tmp/bmms && /tmp/bmms
 
 #define PROTOCORE_ENABLE_MMS 1
 #include "services/energy/mms/mms.h"

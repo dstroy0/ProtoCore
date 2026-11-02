@@ -11,20 +11,20 @@
  * called by the route dispatcher.
  */
 
-#include "mmgr/membuild/membuild.h"
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h" // str.has: the permessage-deflate token in Sec-WebSocket-Extensions
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.has: the permessage-deflate token in Sec-WebSocket-Extensions
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq, http_pool: the request being upgraded
 #include "network_drivers/transport/tcp/protocol/protocol.h"           // ConnPool: the slot a refusal is written on
 #include "network_drivers/transport/tcp/tcp.h"
+#include "verba_scribo/verba_scribo.h"
 
 #if PROTOCORE_ENABLE_WEBSOCKET
 #include "crypto/hash/sha1/sha1.h"
-#include "mmgr/secure/secure.h" // the pool the digest borrow comes from
-#include "mmgr/span/span.h"     // protocore_span, span.ok
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include "network_drivers/presentation/http/websocket/websocket.h"
 #include "network_drivers/session/ws/ws.h" // SessionWs: the channel this handshake opens
+#include "server/core/worker/worker.h"     // the pool the digest borrow comes from
+#include "spatium/spatium.h"               // mmgr_span, spat.ok
 #endif
 #if PROTOCORE_ENABLE_SSE
 #include "network_drivers/presentation/http/sse/sse.h"
@@ -54,13 +54,13 @@ static const char WS_MAGIC[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
  */
 static proto_bool ws_accept_key(uint8_t *work, const char *client_key, char *out)
 {
-    size_t key_len = str.len(client_key, WS_MAX_KEY_LEN + 1);
+    size_t key_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = client_key, .cap = WS_MAX_KEY_LEN + 1);
     if (key_len > WS_MAX_KEY_LEN)
     {
         out[0] = '\0';
         return PROTO_FALSE;
     }
-    // RFC 6455 4.2.1: the Sec-WebSocket-Key must base64-decode to exactly 16 bytes.
+    // RFC 6455 4.2.1: the Sec-WebSocket-Key must base64-decode to exactly 16 byteio.
     uint8_t raw[24];
     Base64V.decode_args.src = client_key;
     Base64V.decode_args.dst = raw;
@@ -73,20 +73,23 @@ static proto_bool ws_accept_key(uint8_t *work, const char *client_key, char *out
     }
     size_t magic_len = sizeof(WS_MAGIC) - 1;
     char concat[WS_MAX_KEY_LEN + sizeof(WS_MAGIC)];
-    mem.cpy(concat, client_key, key_len);
-    mem.cpy(concat + key_len, WS_MAGIC, magic_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = concat, .src = client_key, .bytes = key_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = concat + key_len, .src = WS_MAGIC, .bytes = magic_len);
 
     uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN];
-    const size_t mark = protocore_secure_mark();
-    protocore_span w = protocore_secure_span(PROTOCORE_SHA1_BORROW, 8);
-    if (!span.ok(w))
+    const size_t mark = protocore_secure_guard()->temporary_buf_mark();
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg,
+                             .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_SHA1_BORROW,
+                                                                                             protocore_secure_owner()),
+                             .cap = PROTOCORE_SHA1_BORROW);
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
-        protocore_secure_release(mark);
+        protocore_secure_guard()->temporary_buf_release(mark);
         out[0] = '\0';
         return PROTO_FALSE;
     }
     Sha1.hash(w.buf, (const uint8_t *)concat, key_len + magic_len, digest);
-    protocore_secure_release(mark);
+    protocore_secure_guard()->temporary_buf_release(mark);
     Base64V.encode_args.src = digest;
     Base64V.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
     Base64V.encode_args.dst = out;
@@ -163,25 +166,33 @@ proto_bool ws_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t r
     const char *http_parser_text2 =
         HttpParser.get_header(protocore_http_parser_span(), req, "Sec-WebSocket-Extensions");
     const char *ws_ext = http_parser_text2;
-    proto_bool pmd =
-        ws_ext && str.has(ws_ext, MAX_VAL_LEN, "permessage-deflate", sizeof("permessage-deflate"), PROTO_FALSE);
-    protocore_sb sb_hdr = {hdr, sizeof(hdr), 0, PROTO_TRUE};
-    Sb.put(&sb_hdr,
-           "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ");
-    Sb.put(&sb_hdr, accept);
-    Sb.put(&sb_hdr, "\r\n");
-    Sb.put(&sb_hdr, pmd ? "Sec-WebSocket-Extensions: permessage-deflate; client_no_context_takeover; "
-                          "server_no_context_takeover\r\n"
-                        : "");
-    Sb.put(&sb_hdr, "\r\n");
-    hlen = (int)Sb.finish(&sb_hdr);
+    proto_bool pmd = ws_ext && EMBED_CALL(cellul.has, CatenaFinitaCfg, .src = ws_ext, .cap = MAX_VAL_LEN,
+                                          .other = "permessage-deflate", .other_cap = sizeof("permessage-deflate"),
+                                          .ci = PROTO_FALSE);
+    size_t sb_hdr = 0;
+    sb_hdr = EMBED_CALL(
+        verba_textus.put, VerbaTextusCfg, .out = hdr, .cap = sizeof(hdr), .at = sb_hdr,
+        .text =
+            "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ");
+    sb_hdr = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = hdr, .cap = sizeof(hdr), .at = sb_hdr, .text = accept);
+    sb_hdr = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = hdr, .cap = sizeof(hdr), .at = sb_hdr, .text = "\r\n");
+    sb_hdr = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = hdr, .cap = sizeof(hdr), .at = sb_hdr,
+                        .text = pmd ? "Sec-WebSocket-Extensions: permessage-deflate; client_no_context_takeover; "
+                                      "server_no_context_takeover\r\n"
+                                    : "");
+    sb_hdr = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = hdr, .cap = sizeof(hdr), .at = sb_hdr, .text = "\r\n");
+    hlen = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = hdr, .cap = sizeof(hdr), .at = sb_hdr);
 #else
-    protocore_sb sb_hdr2 = {hdr, sizeof(hdr), 0, PROTO_TRUE};
-    Sb.put(&sb_hdr2,
-           "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ");
-    Sb.put(&sb_hdr2, accept);
-    Sb.put(&sb_hdr2, "\r\n\r\n");
-    hlen = (int)Sb.finish(&sb_hdr2);
+    size_t sb_hdr2 = 0;
+    sb_hdr2 = EMBED_CALL(
+        verba_textus.put, VerbaTextusCfg, .out = hdr, .cap = sizeof(hdr), .at = sb_hdr2,
+        .text =
+            "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ");
+    sb_hdr2 =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = hdr, .cap = sizeof(hdr), .at = sb_hdr2, .text = accept);
+    sb_hdr2 =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = hdr, .cap = sizeof(hdr), .at = sb_hdr2, .text = "\r\n\r\n");
+    hlen = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = hdr, .cap = sizeof(hdr), .at = sb_hdr2);
 #endif
 
     ConnPoolV.slot = slot_id;
@@ -195,7 +206,7 @@ proto_bool ws_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t r
     HttpParser.reset(protocore_http_parser_span(), &http_pool[slot_id]);
 
     // The channel is the session layer's: it takes the number, binds it to this slot and runs the
-    // route's connect. This layer sent the handshake bytes.
+    // route's connect. This layer sent the handshake byteio.
     WsV.slot = slot_id;
     WsV.id = route_id;
 #if PROTOCORE_ENABLE_WS_DEFLATE
@@ -247,11 +258,11 @@ proto_bool protocore_sse_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req
     // HttpReq (including req->path), so a pointer into it would dangle. The saved
     // path is what protocore_sse_broadcast() matches against.
     char path[MAX_PATH_LEN];
-    str.copy(path, req->path, sizeof(path));
+    EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = path, .src = req->path, .cap = sizeof(path));
     HttpParser.reset(protocore_http_parser_span(), &http_pool[slot_id]);
 
     // The stream is the session layer's: it takes the number, binds it to this connection and runs
-    // the route's connect. This layer sent the handshake bytes.
+    // the route's connect. This layer sent the handshake byteio.
     SseV.slot = slot_id;
     SseV.route.path = path;
     SseV.id = route_id;
@@ -283,7 +294,7 @@ void ws_send_text(uint8_t ws_id, const char *text)
     {
         return;
     }
-    uint16_t len = (uint16_t)str.len(text, 0xFFFF);
+    uint16_t len = (uint16_t)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = text, .cap = 0xFFFF);
     WsV.conn = ws;
     WsV.frame.opcode = WS_OP_TEXT;
     WsV.frame.payload = (const uint8_t *)text;
@@ -391,7 +402,8 @@ void protocore_sse_broadcast(const char *path, const char *data, const char *eve
         {
             continue;
         }
-        if (!str.eq(protocore_sse_pool[i].path, path, MAX_PATH_LEN, PROTO_FALSE))
+        if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = protocore_sse_pool[i].path, .other = path,
+                        .cap = MAX_PATH_LEN, .ci = PROTO_FALSE))
         {
             continue;
         }

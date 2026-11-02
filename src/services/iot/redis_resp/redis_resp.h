@@ -47,7 +47,7 @@
 
 PROTOCORE_BEGIN_DECLS
 
-/** @brief The decoded type, named after the "RESP protocol description" table of first bytes. */
+/** @brief The decoded type, named after the "RESP protocol description" table of first byteio. */
 typedef enum PROTO_ENUM_PACKED
 {
     RESP_SIMPLE_STRING,   ///< Simple strings (+); the text in str/str_len

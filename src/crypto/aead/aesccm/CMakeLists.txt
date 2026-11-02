@@ -8,5 +8,5 @@ protocore_add_module(crypto/aead/aesccm
   PRIVATE_DEPS
     crypto/cipher/aes_block
     crypto/ct_eq
-    mmgr/protomem
+    mmgr
 )

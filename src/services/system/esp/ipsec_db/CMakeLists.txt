@@ -8,5 +8,5 @@ protocore_add_module(services/system/esp/ipsec_db
     services/security/ikev2/ikev2
     services/system/esp/esp
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

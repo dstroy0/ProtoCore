@@ -78,7 +78,7 @@ void test_a_long_form_with_a_leading_zero_is_refused(void)
 }
 
 // X.690 sec 8.1.3.6: the indefinite form is BER, and sec 10.1 forbids it in DER. Accepting it would
-// mean scanning for an end-of-contents marker inside attacker-supplied bytes.
+// mean scanning for an end-of-contents marker inside attacker-supplied byteio.
 void test_an_indefinite_length_is_refused(void)
 {
     const uint8_t v[] = {0x30, 0x80, 0x02, 0x01, 0x2A, 0x00, 0x00};
@@ -86,7 +86,7 @@ void test_an_indefinite_length_is_refused(void)
 }
 
 // A length that runs past the buffer is refused rather than clamped: the content would otherwise be
-// whatever follows the caller's bytes.
+// whatever follows the caller's byteio.
 void test_a_length_past_the_buffer_is_refused(void)
 {
     const uint8_t v[] = {0x04, 0x10, 0x01, 0x02};

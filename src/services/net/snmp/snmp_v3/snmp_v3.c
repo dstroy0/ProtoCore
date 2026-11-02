@@ -7,14 +7,14 @@
  */
 
 #include "services/net/snmp/snmp_v3/snmp_v3.h"
-#include "mmgr/protomem/protomem.h" // mem.cpy / mem.set / mem.cmp
-#include "mmgr/protostr/protostr.h" // str.len / str.copy
-#include "mmgr/secure/secure.h"     // the persistent end this module's key material is taken from
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len / cellul.copy
+#include "memoria_operor/memoria_operor.h"       // memor.cpy / memor.set / memor.cmp
+#include "server/core/worker/worker.h"           // the persistent end this module's key material is taken from
 
 #if PROTOCORE_ENABLE_SNMP_V3
 
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"
-#include "mmgr/endian/endian.h" // endian.wr32be: the big-endian fields of the IV and the salt
+#include "endian/endian.h" // endian.wr32be: the big-endian fields of the IV and the salt
 #include "services/net/snmp/snmp_agent/snmp_agent.h"
 #include "services/net/snmp/snmp_ber/snmp_ber.h"
 #include "services/net/snmp/snmp_crypto/snmp_crypto.h"
@@ -129,12 +129,13 @@ uint8_t *protocore_snmp_v3_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_SNMP_V3_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_SNMP_V3_BORROW);
         // A borrow arrives zeroed, and these do not start at zero.
         SNMP_V3_CTX(s_own.span)->boots = 1;
         SNMP_V3_CTX(s_own.span)->engine_id_len = 9;
         static const uint8_t engine_id0[] = {0x80, 0x00, 0xC0, 0xDE, 0x05, 0x01, 0x02, 0x03, 0x04};
-        mem.cpy(SNMP_V3_CTX(s_own.span)->engine_id, engine_id0, sizeof(engine_id0));
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = SNMP_V3_CTX(s_own.span)->engine_id, .src = engine_id0,
+                   .bytes = sizeof(engine_id0));
     }
     return s_own.span;
 }
@@ -169,7 +170,8 @@ void protocore_snmp_v3_init(uint8_t *work)
     const size_t engine_id_len = SnmpV3V.engine.engine_id_len;
     if (engine_id && engine_id_len >= 5 && engine_id_len <= SNMP_V3_ENGINEID_MAX)
     {
-        mem.cpy(SNMP_V3_CTX(work)->engine_id, engine_id, engine_id_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = SNMP_V3_CTX(work)->engine_id, .src = engine_id,
+                   .bytes = engine_id_len);
         SNMP_V3_CTX(work)->engine_id_len = engine_id_len;
     }
     SNMP_V3_CTX(work)->user[0] = '\0';
@@ -186,7 +188,8 @@ void protocore_snmp_v3_set_user(uint8_t *work)
     const char *auth_pass = SnmpV3V.user.auth_pass;
     const char *priv_pass = SnmpV3V.user.priv_pass;
 
-    (void)str.copy(SNMP_V3_CTX(work)->user, user ? user : "", sizeof(SNMP_V3_CTX(work)->user));
+    (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = SNMP_V3_CTX(work)->user, .src = user ? user : "",
+                     .cap = sizeof(SNMP_V3_CTX(work)->user));
     SNMP_V3_CTX(work)->auth_set = auth_pass && auth_pass[0];
     SNMP_V3_CTX(work)->priv_set = priv_pass && priv_pass[0];
 
@@ -324,13 +327,15 @@ static size_t build_message(uint8_t *work, long msg_id, proto_bool auth, proto_b
     if (priv)
     {
         // msgPrivacyParameters: snmpEngineBoots and a per-message counter, both big-endian.
-        endian.wr32be(salt, SNMP_V3_CTX(work)->boots);
-        endian.wr32be(salt + 4, ++SNMP_V3_CTX(work)->salt_ctr);
+        EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = salt, .val = SNMP_V3_CTX(work)->boots,
+                   .width = MMGR_ENDIAN_32);
+        EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = salt + 4, .val = ++SNMP_V3_CTX(work)->salt_ctr,
+                   .width = MMGR_ENDIAN_32);
         // IV: snmpEngineBoots, snmpEngineTime, then the salt (RFC 3826 sec 3.1.2.1).
         uint8_t iv[16];
-        endian.wr32be(iv, SNMP_V3_CTX(work)->boots);
-        endian.wr32be(iv + 4, now);
-        mem.cpy(iv + 8, salt, SNMP_V3_PRIV_PARAM_LEN);
+        EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = iv, .val = SNMP_V3_CTX(work)->boots, .width = MMGR_ENDIAN_32);
+        EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = iv + 4, .val = now, .width = MMGR_ENDIAN_32);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = iv + 8, .src = salt, .bytes = SNMP_V3_PRIV_PARAM_LEN);
         if (scoped_len > sizeof(SNMP_V3_CTX(work)->v3_d))
         {
             return 0;
@@ -365,13 +370,13 @@ static size_t build_message(uint8_t *work, long msg_id, proto_bool auth, proto_b
     SnmpBer.put_integer(work);
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
     SnmpBerV.tlv.bytes = (const uint8_t *)SNMP_V3_CTX(work)->user; // msgUserName
-    SnmpBerV.tlv.len = str.len(SNMP_V3_CTX(work)->user, SNMP_V3_USER_MAX);
+    SnmpBerV.tlv.len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = SNMP_V3_CTX(work)->user, .cap = SNMP_V3_USER_MAX);
     SnmpBer.put_octet_string(work);
 
     // msgAuthenticationParameters: the field is written as zero octets and the digest lands in it
     // after the message is finished (RFC 7860 sec 4.2.1). zeros stays in scope across the write.
     uint8_t zeros[SNMP_V3_AUTH_PARAM_LEN];
-    mem.set(zeros, 0, sizeof(zeros));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = zeros, .val = 0, .bytes = sizeof(zeros));
     size_t auth_off = 0;
     if (auth)
     {
@@ -458,7 +463,8 @@ static size_t build_message(uint8_t *work, long msg_id, proto_bool auth, proto_b
     {
         uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
         HmacSha256.mac(SNMP_V3_CTX(work)->mac_work, SNMP_V3_CTX(work)->auth_key, SNMP_USM_KEY_LEN, resp, total, mac);
-        mem.cpy(resp + sec_value_pos + auth_off, mac, SNMP_V3_AUTH_PARAM_LEN);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = resp + sec_value_pos + auth_off, .src = mac,
+                   .bytes = SNMP_V3_AUTH_PARAM_LEN);
     }
     return total;
 }
@@ -684,7 +690,8 @@ void protocore_snmp_v3_process(uint8_t *work)
     // Discovery (RFC 3414 sec 4): a request naming an engine this is not is answered with a Report
     // carrying usmStatsUnknownEngineIDs and this engine's snmpEngineID, boots and time.
     const proto_bool engine_match =
-        (eid_len == SNMP_V3_CTX(work)->engine_id_len) && (mem.cmp(eid, SNMP_V3_CTX(work)->engine_id, eid_len) == 0);
+        (eid_len == SNMP_V3_CTX(work)->engine_id_len) &&
+        (EMBED_CALL(memor.cmp, MemoriaCfg, .src = eid, .other = SNMP_V3_CTX(work)->engine_id, .bytes = eid_len) == 0);
     if (!engine_match)
     {
         SNMP_V3_CTX(work)->stat_unknown_engine++;
@@ -701,8 +708,10 @@ void protocore_snmp_v3_process(uint8_t *work)
 
     // usmStatsUnknownUserNames (RFC 3414 sec 5): msgUserName names no configured user.
     if (!SNMP_V3_CTX(work)->auth_set ||
-        !(uname_len == str.len(SNMP_V3_CTX(work)->user, SNMP_V3_USER_MAX) && SNMP_V3_CTX(work)->user[0] &&
-          mem.cmp(uname, SNMP_V3_CTX(work)->user, uname_len) == 0))
+        !(uname_len ==
+              EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = SNMP_V3_CTX(work)->user, .cap = SNMP_V3_USER_MAX) &&
+          SNMP_V3_CTX(work)->user[0] &&
+          EMBED_CALL(memor.cmp, MemoriaCfg, .src = uname, .other = SNMP_V3_CTX(work)->user, .bytes = uname_len) == 0))
     {
         SNMP_V3_CTX(work)->stat_unknown_user++;
         SnmpV3V.n = build_report(work, msg_id, PROTO_FALSE, (int)USM_STAT_UNKNOWN_USER,
@@ -719,8 +728,9 @@ void protocore_snmp_v3_process(uint8_t *work)
                                  SNMP_V3_CTX(work)->stat_wrong_digest, 0, resp, resp_cap);
         return;
     }
-    mem.cpy(SNMP_V3_CTX(work)->v3_a, req, req_len);
-    mem.set(SNMP_V3_CTX(work)->v3_a + aparm_off, 0, SNMP_V3_AUTH_PARAM_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = SNMP_V3_CTX(work)->v3_a, .src = req, .bytes = req_len);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = SNMP_V3_CTX(work)->v3_a + aparm_off, .val = 0,
+               .bytes = SNMP_V3_AUTH_PARAM_LEN);
     uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
     HmacSha256.mac(SNMP_V3_CTX(work)->mac_work, SNMP_V3_CTX(work)->auth_key, SNMP_USM_KEY_LEN, SNMP_V3_CTX(work)->v3_a,
                    req_len, mac);
@@ -778,9 +788,9 @@ void protocore_snmp_v3_process(uint8_t *work)
             return;
         }
         uint8_t iv[16];
-        endian.wr32be(iv, (uint32_t)req_boots);
-        endian.wr32be(iv + 4, (uint32_t)req_time);
-        mem.cpy(iv + 8, pparm, SNMP_V3_PRIV_PARAM_LEN);
+        EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = iv, .val = (uint32_t)req_boots, .width = MMGR_ENDIAN_32);
+        EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = iv + 4, .val = (uint32_t)req_time, .width = MMGR_ENDIAN_32);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = iv + 8, .src = pparm, .bytes = SNMP_V3_PRIV_PARAM_LEN);
         SnmpCryptoV.priv.key = SNMP_V3_CTX(work)->priv_key;
         SnmpCryptoV.priv.iv = iv;
         SnmpCryptoV.priv.in = ct;

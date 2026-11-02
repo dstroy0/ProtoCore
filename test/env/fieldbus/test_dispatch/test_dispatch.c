@@ -173,15 +173,14 @@ void test_http_parse_skips_ws_upgraded_slot()
     TcpConn *c = &conn_pool[2];
     for (size_t i = 0; i < sizeof(frame); i++)
     {
-        c->rx_buffer[c->rx_head] = frame[i];
-        c->rx_head = (c->rx_head + 1) % RX_BUF_SIZE;
+        rx_put(c, (uint8_t)(frame[i]));
     }
-    size_t tail_before = c->rx_tail;
+    const size_t waiting_before = rx_used(c);
 
     HttpConnV.slot = 2;
     HttpConn.parse(protocore_http_conn_span());
 
-    TEST_ASSERT_EQUAL_size_t(tail_before, c->rx_tail);
+    TEST_ASSERT_EQUAL_size_t(waiting_before, rx_used(c));
     WsV.slot = 2;
     Ws.free(protocore_ws_span());
 }

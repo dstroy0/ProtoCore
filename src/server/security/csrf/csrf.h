@@ -36,7 +36,7 @@ PROTOCORE_BEGIN_DECLS
 
 // PROTOCORE_CSRF_BORROW - the bytes the issuer runs out of - is stated in protocore_config.h, which
 // sums it into the secure arena. The secret lives in those bytes, so a caller takes them once for
-// the life of the program and every call runs out of the same span. How they are carved is this
+// the life of the program and every call runs out of the same spat. How they are carved is this
 // module's and is never named here.
 
 /** @brief The secret an issuer signs with. */
@@ -86,7 +86,7 @@ typedef struct
  *
  * @c work is PROTOCORE_CSRF_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. The secret is in those bytes rather than in this module, so a caller takes them once for
- * the life of the program and every call runs out of the same span. The caller releases it, and the pool wipes on
+ * the life of the program and every call runs out of the same spat. The caller releases it, and the pool wipes on
  * release; this module neither takes it, holds it, nor releases it.
  *
  * No storage member and no context: a caller sets operands and reads @ref CsrfNs::ok, and that is
@@ -139,7 +139,7 @@ static const CsrfNs Csrf __attribute__((unused)) = {
  * borrow comes from. Taken once from the end of the secure pool, which no mark and no release walks,
  * so the secret and the nonce counter last the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_csrf_span(void);
 

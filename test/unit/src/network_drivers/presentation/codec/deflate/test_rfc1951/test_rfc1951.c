@@ -12,6 +12,7 @@
 // The fixed-Huffman construction is checked against the sec 3.2.6 code lengths and against the four
 // boundary codes that section prints in full.
 
+#include "bitorum_introitus_exitus/bitorum_introitus_exitus.h"
 #include "network_drivers/presentation/codec/deflate/rfc1951/rfc1951.h"
 #include <string.h>
 
@@ -101,7 +102,7 @@ void test_distance_table_matches_rfc(void)
 
 // The printed ranges tile the number line without a gap or an overlap: each code's base is the
 // previous base plus 2^(previous extra bits), which is what makes a (base, extra) pair name a whole
-// span. Code 285 breaks the run by design, being the single length 258.
+// spat. Code 285 breaks the run by design, being the single length 258.
 void test_length_spans_are_contiguous(void)
 {
     for (int i = 0; i < 27; i++)

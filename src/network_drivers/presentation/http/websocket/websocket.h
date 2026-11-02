@@ -133,7 +133,7 @@ typedef enum PROTO_ENUM_PACKED
     WS_MASK1,       ///< Reading masking key byte 1.
     WS_MASK2,       ///< Reading masking key byte 2.
     WS_MASK3,       ///< Reading masking key byte 3.
-    WS_PAYLOAD,     ///< Accumulating payload bytes.
+    WS_PAYLOAD,     ///< Accumulating payload byteio.
     WS_FRAME_READY, ///< Complete frame ready for dispatch.
     WS_CLOSED,      ///< Connection closed; slot may be recycled.
     WS_ERROR        ///< Protocol error; close frame has been queued.

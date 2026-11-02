@@ -36,10 +36,10 @@ PROTOCORE_BEGIN_DECLS
  * @date    2026
  */
 
-/** @brief ChaCha20 key length in bytes. */
+/** @brief ChaCha20 key length in byteio. */
 #define PROTOCORE_CHACHA20_KEY_LEN 32
 
-/** @brief ChaCha20 keystream block length in bytes. */
+/** @brief ChaCha20 keystream block length in byteio. */
 #define PROTOCORE_CHACHA20_BLOCK_LEN 64
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */

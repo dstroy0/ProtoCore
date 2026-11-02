@@ -11,7 +11,7 @@
 
 #if PROTOCORE_ENABLE_IFACE_BRIDGE
 
-#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 #include "server/net/iface_bridge/iface_bridge/iface_bridge.h"
 #include "server/net/iface_bridge/iface_bridge_hw/iface_bridge_hw.h"
 #include "shared/ip/ip.h"
@@ -57,8 +57,8 @@ static_assert(IFACE_BRIDGE_HW_OFF_CTX + sizeof(BridgeGlueCtx) <= PROTOCORE_IFACE
               "PROTOCORE_IFACE_BRIDGE_HW_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(IFACE_BRIDGE_HW_OFF_CTX % _Alignof(BridgeGlueCtx) == 0,
@@ -412,7 +412,7 @@ uint8_t *protocore_iface_bridge_hw_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_IFACE_BRIDGE_HW_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_IFACE_BRIDGE_HW_BORROW);
     }
     return s_own.span;
 }

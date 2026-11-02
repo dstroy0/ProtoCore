@@ -6,7 +6,7 @@
 // figure comes from the rig /bench op; this host ns/op + MB/s is a relative baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
 //   -DPROTOCORE_ENABLE_BACNET=1 test/performance_benching/services/bacnet/host.c
-//   src/services/fieldbus/bacnet/bacnet.c src/mmgr/protomem.c -o /tmp/bb && /tmp/bb
+//   src/services/fieldbus/bacnet/bacnet.c src/memoria_operor/memoria_operor.h.c -o /tmp/bb && /tmp/bb
 
 #define PROTOCORE_ENABLE_BACNET 1
 #include "services/fieldbus/bacnet/bacnet.h"

@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_HTTP_CLOCK
 
-#include "mmgr/plaintext/plaintext.h" // the end this module's bytes come from
+#include "server/core/worker/worker.h" // the end this module's bytes come from
 #include "server/io/http_clock/http_clock.h"
 #include "shared/http_date/http_date.h" // HttpDate.format: the rendering this chooses an instant for
 
@@ -48,7 +48,7 @@ uint8_t *protocore_http_clock_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_HTTP_CLOCK_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_HTTP_CLOCK_BORROW);
     }
     return s_own.span;
 }

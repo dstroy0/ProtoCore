@@ -19,7 +19,7 @@
 // The env sizes PROTOCORE_PQ_DEPTH 4, PROTOCORE_PQ_ITEM_SIZE 16, PROTOCORE_DMA_BUF_SIZE 8,
 // PROTOCORE_DMA_CHANNELS 2.
 
-#include "mmgr/dma/dma.h"
+#include "memoriam_praetereo/memoriam_praetereo.h"
 #include "server/core/preempt_queue/preempt_queue.h"
 // The host DMA driver defines the protocore_dma_hw_* hooks with external linkage, so it belongs to
 // exactly one translation unit. Unity's runner generator copies every line matching "#include" at
@@ -469,7 +469,7 @@ void test_ping_pong_completions_reach_the_lane_in_order(void)
     TEST_ASSERT_EQUAL_UINT32(g_dma[0].v + 1u, g_dma[1].v); // consecutive completions
 }
 
-// An egress completion says the buffer is free, so it carries a length and no bytes.
+// An egress completion says the buffer is free, so it carries a length and no byteio.
 void test_a_tx_completion_carries_no_bytes(void)
 {
     open_dma_lane(0, PROTO_FALSE);

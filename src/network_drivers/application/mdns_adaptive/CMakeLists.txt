@@ -5,7 +5,8 @@ protocore_add_module(network_drivers/application/mdns_adaptive
   GATE PROTOCORE_ENABLE_MDNS_ADAPTIVE
   SOURCES mdns_adaptive.c
   PRIVATE_DEPS
-    mmgr/plaintext
+    server/core/worker
+    mmgr
     network_drivers/application/mdns_service
     network_drivers/physical/physical
     server/clock

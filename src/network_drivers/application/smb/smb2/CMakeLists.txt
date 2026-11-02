@@ -5,6 +5,7 @@ protocore_add_module(network_drivers/application/smb/smb2
   GATE PROTOCORE_ENABLE_SMB
   SOURCES smb2.c
   PRIVATE_DEPS
+    server/core/worker
     crypto/aead/aes128gcm
     crypto/aead/aesccm
     crypto/aead/aesgcm
@@ -12,7 +13,5 @@ protocore_add_module(network_drivers/application/smb/smb2
     crypto/kdf/kdf
     crypto/mac/aes_cmac
     crypto/mac/hmac_sha256
-    mmgr/endian
-    mmgr/protomem
-    mmgr/secure
+    mmgr
 )

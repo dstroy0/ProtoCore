@@ -4,7 +4,8 @@
 protocore_add_module(server/signaling/signaling
   SOURCES signaling.c
   PRIVATE_DEPS
-    mmgr/plaintext
+    server/core/worker
+    mmgr
     network_drivers/transport/tcp
     network_drivers/transport/tcp/protocol
 )

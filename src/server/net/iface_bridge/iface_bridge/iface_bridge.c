@@ -5,8 +5,8 @@
 
 #if PROTOCORE_ENABLE_IFACE_BRIDGE
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
+#include "memoria_operor/memoria_operor.h"
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 #include "server/net/iface_bridge/iface_bridge/iface_bridge.h"
 #include "shared/ip/ip.h"
 
@@ -26,8 +26,8 @@ static_assert(IFACE_BRIDGE_OFF_CTX + sizeof(BridgeCtx) <= PROTOCORE_IFACE_BRIDGE
               "PROTOCORE_IFACE_BRIDGE_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(
@@ -56,7 +56,7 @@ uint8_t *protocore_iface_bridge_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_IFACE_BRIDGE_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_IFACE_BRIDGE_BORROW);
     }
     return s_own.span;
 }
@@ -117,7 +117,7 @@ void protocore_iface_bridge_map(uint8_t *work)
         return;
     }
     BridgeRule r;
-    mem.set(&r, 0, sizeof(r));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &r, .val = 0, .bytes = sizeof(r));
     r.listen_ip.family = PROTOCORE_IP_NONE; // "any interface" unless a valid address is given
     if (ip && ip[0])
     {
@@ -217,7 +217,7 @@ void protocore_iface_bridge_txn_build(uint8_t *work)
     out[3] = (uint8_t)read_len;
     if (write_len && write_data)
     {
-        mem.cpy(out + PROTOCORE_BRIDGE_TXN_HDR, write_data, write_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + PROTOCORE_BRIDGE_TXN_HDR, .src = write_data, .bytes = write_len);
     }
     IfaceBridgeV.n = need;
 }

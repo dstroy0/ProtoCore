@@ -6,7 +6,9 @@
  * @brief RFC 8308 extension negotiation.
  */
 
+#include "octetus_introitus_exitus/octetus_introitus_exitus.h"
 #include "protocore_config.h" // the entry point: the widths
+#include "spatium/spatium.h"
 
 #if PROTOCORE_ENABLE_SSH
 
@@ -36,10 +38,10 @@ int protocore_extension_build(uint8_t *work, uint8_t *out, size_t *len, size_t c
     (void)work;
 
     // byte SSH_MSG_EXT_INFO || uint32 nr-extensions || (string name, string value)*
-    protocore_span w = span.from(out, cap);
-    bytes.put(&w, SSH_MSG_EXT_INFO);
-    bytes.put_be(&w, 1, 4);                       // one extension
-    protocore_ssh_wr_cstr(&w, "server-sig-algs"); // extension name
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = out, .cap = cap);
+    EMBED_CALL(byteio.put, OctetusCfg, .write_span = &w, .byte = SSH_MSG_EXT_INFO);
+    EMBED_CALL(byteio.put_be, OctetusCfg, .write_span = &w, .value = 1, .bytes = 4); // one extension
+    protocore_ssh_wr_cstr(&w, "server-sig-algs");                                    // extension name
     // Accepted client public-key signature algorithms for userauth. All are always verifiable
     // (independent of which host key we hold); ordered by our preference so a modern client picks
     // the steered-to type. Both RSA hashes are offered (rsa-sha2-512 first, RFC 8332); the verifier
@@ -47,7 +49,7 @@ int protocore_extension_build(uint8_t *work, uint8_t *out, size_t *len, size_t c
     const char *siglist = ssh_kex_prefer_rsa() ? "rsa-sha2-512,rsa-sha2-256,ecdsa-sha2-nistp256,ssh-ed25519"
                                                : "ssh-ed25519,ecdsa-sha2-nistp256,rsa-sha2-512,rsa-sha2-256";
     protocore_ssh_wr_cstr(&w, siglist); // value: accepted client-sig algorithms
-    if (!span.ok(w))
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
         return -1;
     }

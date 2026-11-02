@@ -16,7 +16,7 @@
 
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
 
-#include "mmgr/secure/secure.h" // the persistent end the table is taken from
+#include "server/core/worker/worker.h" // the persistent end the table is taken from
 #include "server/security/auth_lockout/auth_lockout.h"
 #include "shared/ip/ip.h" // protocore_ip: the address a bucket is keyed on
 
@@ -44,8 +44,8 @@ static_assert(LOCKOUT_OFF_CTX + sizeof(LockoutCtx) <= PROTOCORE_AUTH_LOCKOUT_BOR
               "PROTOCORE_AUTH_LOCKOUT_BORROW is short of the bucket table - raise it in protocore_config.h, "
               "which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(LOCKOUT_OFF_CTX % _Alignof(LockoutCtx) == 0,
@@ -104,7 +104,7 @@ uint8_t *protocore_auth_lockout_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_AUTH_LOCKOUT_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_AUTH_LOCKOUT_BORROW);
     }
     return s_own.span;
 }

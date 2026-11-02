@@ -16,17 +16,17 @@
 
 #if PROTOCORE_ENABLE_MQTT
 
-#include "mmgr/protomem/protomem.h" // mem.cpy / mem.chr / mem.move / mem.set: the spans a packet is built from
-#include "mmgr/protostr/protostr.h" // str.len: the bounded field lengths
-#include "shared/utf8/utf8.h"       // Utf8.valid: a Topic Name is a UTF-8 encoded string (sec 1.5.3)
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the bounded field lengths
+#include "memoria_operor/memoria_operor.h" // memor.cpy / memor.chr / memor.move_down / memor.set: the spans a packet is built from
+#include "shared/utf8/utf8.h"              // Utf8.valid: a Topic Name is a UTF-8 encoded string (sec 1.5.3)
 
 PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_HAS_NET_STACK
-#include "mmgr/secure/secure.h"                          // secure.persist_span: this module's storage
-#include "mmgr/span/span.h"                              // span.ok: the borrow landed
 #include "network_drivers/transport/tcp/client/client.h" // TcpClient: the outbound transport (L4)
 #include "server/clock/clock.h"                          // protocore_millis: the link timer and Keep Alive
+#include "server/core/worker/worker.h"                   // secure.persist_span: this module's storage
+#include "spatium/spatium.h"                             // spat.ok: the borrow landed
 #endif
 
 #ifdef PROTOCORE_MQTT_DEBUG
@@ -179,7 +179,7 @@ uint8_t *protocore_mqtt_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_MQTT_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_MQTT_BORROW);
         // A borrow arrives zeroed, and these do not start at zero.
         MQTT_CTX(s_own.span)->cid = -1;
         MQTT_CTX(s_own.span)->next_packet_id = 1;
@@ -211,7 +211,7 @@ static size_t put_field(uint8_t *p, const uint8_t *data, size_t len)
     put_u16(p, (uint16_t)len);
     if (len)
     {
-        mem.cpy(p + MQ_FIELD_PREFIX, data, len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = p + MQ_FIELD_PREFIX, .src = data, .bytes = len);
     }
     return MQ_FIELD_PREFIX + len;
 }
@@ -219,7 +219,8 @@ static size_t put_field(uint8_t *p, const uint8_t *data, size_t len)
 // put_field for a NUL-terminated UTF-8 encoded string, bounded by the body scratch.
 static inline size_t put_str(uint8_t *p, const char *s)
 {
-    return put_field(p, (const uint8_t *)s, s ? str.len(s, PROTOCORE_MQTT_BUF_SIZE) : 0);
+    return put_field(p, (const uint8_t *)s,
+                     s ? EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = PROTOCORE_MQTT_BUF_SIZE) : 0);
 }
 
 // Encode len as a Remaining Length field of 1 to 4 octets, seven data bits and a continuation bit
@@ -286,10 +287,10 @@ static size_t compose(uint8_t *out, size_t cap, uint8_t byte1, const uint8_t *bo
         return 0;
     }
     out[0] = byte1;
-    mem.cpy(out + 1, rl, rln);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 1, .src = rl, .bytes = rln);
     if (blen)
     {
-        mem.cpy(out + 1 + rln, body, blen);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 1 + rln, .src = body, .bytes = blen);
     }
     return total;
 }
@@ -313,7 +314,7 @@ void protocore_mqtt_encode_remaining_length(uint8_t *work)
     {
         return;
     }
-    mem.cpy(MqttV.buf.out, rl, used);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = MqttV.buf.out, .src = rl, .bytes = used);
     MqttV.n = used;
     MqttV.ok = PROTO_TRUE;
 }
@@ -383,19 +384,23 @@ void protocore_mqtt_build_connect(uint8_t *work)
 
     // Every payload field the flags called for, measured against the body scratch before any of it
     // is written.
-    size_t need = MQ_FIELD_PREFIX + str.len(MqttV.session.client_id, PROTOCORE_MQTT_BUF_SIZE);
+    size_t need = MQ_FIELD_PREFIX + EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = MqttV.session.client_id,
+                                               .cap = PROTOCORE_MQTT_BUF_SIZE);
     if (MqttV.will.topic)
     {
-        need += MQ_FIELD_PREFIX + str.len(MqttV.will.topic, PROTOCORE_MQTT_BUF_SIZE) + MQ_FIELD_PREFIX +
-                MqttV.will.message_len;
+        need += MQ_FIELD_PREFIX +
+                EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = MqttV.will.topic, .cap = PROTOCORE_MQTT_BUF_SIZE) +
+                MQ_FIELD_PREFIX + MqttV.will.message_len;
     }
     if (MqttV.session.user_name)
     {
-        need += MQ_FIELD_PREFIX + str.len(MqttV.session.user_name, PROTOCORE_MQTT_BUF_SIZE);
+        need += MQ_FIELD_PREFIX +
+                EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = MqttV.session.user_name, .cap = PROTOCORE_MQTT_BUF_SIZE);
     }
     if (MqttV.session.password)
     {
-        need += MQ_FIELD_PREFIX + str.len(MqttV.session.password, PROTOCORE_MQTT_BUF_SIZE);
+        need += MQ_FIELD_PREFIX +
+                EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = MqttV.session.password, .cap = PROTOCORE_MQTT_BUF_SIZE);
     }
     if (n + need > MqttV.buf.body_cap)
     {
@@ -442,7 +447,7 @@ void protocore_mqtt_build_publish(uint8_t *work)
             return;
         }
     }
-    size_t tlen = str.len(topic, PROTOCORE_MQTT_BUF_SIZE);
+    size_t tlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = topic, .cap = PROTOCORE_MQTT_BUF_SIZE);
     size_t blen = MQ_FIELD_PREFIX + tlen + (MqttV.message.qos > 0 ? MQ_FIELD_PREFIX : 0) + MqttV.message.payload_len;
     if (blen > MqttV.buf.body_cap)
     {
@@ -457,7 +462,8 @@ void protocore_mqtt_build_publish(uint8_t *work)
     }
     if (MqttV.message.payload_len)
     {
-        mem.cpy(body + n, MqttV.message.payload, MqttV.message.payload_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = body + n, .src = MqttV.message.payload,
+                   .bytes = MqttV.message.payload_len);
     }
     n += MqttV.message.payload_len;
 
@@ -486,7 +492,7 @@ void protocore_mqtt_build_subscribe(uint8_t *work)
     {
         return;
     }
-    size_t tlen = str.len(topic, PROTOCORE_MQTT_BUF_SIZE);
+    size_t tlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = topic, .cap = PROTOCORE_MQTT_BUF_SIZE);
     if (MQ_FIELD_PREFIX + MQ_FIELD_PREFIX + tlen + 1 > MqttV.buf.body_cap)
     {
         return;
@@ -513,7 +519,7 @@ void protocore_mqtt_build_unsubscribe(uint8_t *work)
     {
         return;
     }
-    size_t tlen = str.len(topic, PROTOCORE_MQTT_BUF_SIZE);
+    size_t tlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = topic, .cap = PROTOCORE_MQTT_BUF_SIZE);
     if (MQ_FIELD_PREFIX + MQ_FIELD_PREFIX + tlen > MqttV.buf.body_cap)
     {
         return;
@@ -625,11 +631,11 @@ void protocore_mqtt_parse_publish(uint8_t *work)
     Utf8V.args.s = buf + off;
     Utf8V.args.n = tlen;
     Utf8.valid(work);
-    if (!Utf8V.ok || mem.chr(buf + off, tlen, 0x00))
+    if (!Utf8V.ok || EMBED_CALL(memor.chr, MemoriaCfg, .src = buf + off, .bytes = tlen, .val = 0x00))
     {
         return;
     }
-    mem.cpy(MqttV.message.topic_out, buf + off, tlen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = MqttV.message.topic_out, .src = buf + off, .bytes = tlen);
     MqttV.message.topic_out[tlen] = '\0';
     MqttV.message.topic_len = tlen;
     off += tlen;
@@ -738,8 +744,10 @@ static proto_bool mem_bind(uint8_t *work)
     {
         return PROTO_TRUE;
     }
-    protocore_span region = secure.persist_span(2u * PROTOCORE_MQTT_BUF_SIZE);
-    if (!span.ok(region))
+    mmgr_span region =
+        EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(2u * PROTOCORE_MQTT_BUF_SIZE),
+                   .cap = 2u * PROTOCORE_MQTT_BUF_SIZE);
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = region))
     {
         return PROTO_FALSE;
     }
@@ -1046,7 +1054,8 @@ static void process_rx(uint8_t *work)
         if (MQTT_CTX(work)->rx_len != 0)
         {
             // The tail overlaps what it moves onto, so this is the overlapping move.
-            mem.move(MQTT_CTX(work)->rx, MQTT_CTX(work)->rx + off, MQTT_CTX(work)->rx_len);
+            EMBED_CALL(memor.move_down, MemoriaCfg, .dst = MQTT_CTX(work)->rx, .src = MQTT_CTX(work)->rx + off,
+                       .bytes = MQTT_CTX(work)->rx_len);
         }
     }
 }
@@ -1124,8 +1133,10 @@ void protocore_mqtt_connect(uint8_t *work)
     }
 
     // Every session-scoped field starts over.
-    mem.set(MQTT_CTX(work)->inflight, 0, sizeof(MQTT_CTX(work)->inflight));
-    mem.set(MQTT_CTX(work)->rx_packet_id, 0, sizeof(MQTT_CTX(work)->rx_packet_id));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = MQTT_CTX(work)->inflight, .val = 0,
+               .bytes = sizeof(MQTT_CTX(work)->inflight));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = MQTT_CTX(work)->rx_packet_id, .val = 0,
+               .bytes = sizeof(MQTT_CTX(work)->rx_packet_id));
     MQTT_CTX(work)->rx_len = 0;
     MQTT_CTX(work)->tx_len = 0;
     MQTT_CTX(work)->tx_off = 0;

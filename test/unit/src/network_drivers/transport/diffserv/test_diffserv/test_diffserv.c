@@ -94,7 +94,7 @@ void test_the_two_defaults_are_separate_marks()
     TEST_ASSERT_EQUAL_UINT8(26, DiffServV.u8);
 }
 
-// The accept path takes no borrow, so it reads the marks through the module's own span. These are
+// The accept path takes no borrow, so it reads the marks through the module's own spat. These are
 // the calls listener_accept_cb and the UDP send path actually make.
 void test_the_flat_readers_report_what_the_entries_wrote()
 {

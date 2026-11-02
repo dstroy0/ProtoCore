@@ -18,6 +18,7 @@
 // rule table (iface_bridge.c) and the glue's bind table, and a bind pointing at the wrong rule
 // sends a socket's bytes to the wrong bus.
 
+#include "memoria_operor/memoria_operor.h"
 #include "server/net/iface_bridge/iface_bridge_hw/iface_bridge_hw.c"
 
 #include <unity.h>
@@ -27,7 +28,7 @@ static uint8_t *work; // the glue's own span, the borrow every entry runs out of
 static BridgeTarget uart_target(uint32_t baud)
 {
     BridgeTarget t;
-    mem.set(&t, 0, sizeof(t));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &t, .val = 0, .bytes = sizeof(t));
     t.bus = BRIDGE_BUS_UART;
     t.mode = BRIDGE_MODE_STREAM;
     t.rate = baud;

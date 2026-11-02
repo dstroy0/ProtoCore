@@ -21,7 +21,7 @@
 #include "crypto/cipher/aes_block/aes_block.h" // native software AES-128 block
 #endif
 #include "crypto/mac/aes_cmac/aes_cmac.h"
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 
 // ---------------------------------------------------------------------------
 // AES-128 single-block encrypt seam - one small wrapper, two platform bodies
@@ -35,7 +35,7 @@ typedef struct
 } AesBlk;
 static inline void blk_init(AesBlk *b, const uint8_t key[16])
 {
-    mem.cpy(b->key, key, 16);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = b->key, .src = key, .bytes = 16);
 }
 static inline void blk_enc(AesBlk *b, const uint8_t in[16], uint8_t out[16])
 {
@@ -177,7 +177,7 @@ proto_bool protocore_aes_cmac_mac(uint8_t *work, const uint8_t *key, const uint8
     // CBC-MAC: X starts at 0; fold blocks 1..n-1, then the prepared last block.
     uint8_t *x = AES_CMAC_X(work);
     uint8_t *y = AES_CMAC_Y(work);
-    mem.zero(x, PROTOCORE_AES_CMAC_LEN);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = x, .bytes = PROTOCORE_AES_CMAC_LEN, .val = 0);
     for (size_t i = 0; i + 1 < n; i++)
     {
         for (int j = 0; j < 16; j++)

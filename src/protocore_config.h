@@ -1029,8 +1029,8 @@
 #ifndef PROTOCORE_ENABLE_GHASH
 #define PROTOCORE_ENABLE_GHASH 1
 #endif
-// The constant-time compare. Every tag check in the library ends at it and mmgr/protomem.h and
-// mmgr/protostr.h both reach for it, so a build that turns this off has no AEAD open and no
+// The constant-time compare. Every tag check in the library ends at it and memoria_operor/memoria_operor.h and
+// cellularum_laboro/cellularum_laboro.h both reach for it, so a build that turns this off has no AEAD open and no
 // authenticated anything: it is stated for the shape every other primitive has, not as a knob.
 #ifndef PROTOCORE_ENABLE_CT_EQ
 #define PROTOCORE_ENABLE_CT_EQ 1

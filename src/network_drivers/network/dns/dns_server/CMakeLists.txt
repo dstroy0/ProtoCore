@@ -5,9 +5,8 @@ protocore_add_module(network_drivers/network/dns/dns_server
   GATE PROTOCORE_ENABLE_DNS_SERVER
   SOURCES dns_server.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protostr
-    mmgr/rawmemcpy
+    server/core/worker
+    mmgr
     network_drivers/network/dns/dns_wire
     network_drivers/transport/udp/server
 )

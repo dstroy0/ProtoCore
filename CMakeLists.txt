@@ -44,6 +44,32 @@ file(GLOB_RECURSE PROTOCORE_SRCS "src/*.c" "src/*.cpp" "test/core_setup/*.c" "te
 # with newlib and the IDF startup.
 list(FILTER PROTOCORE_SRCS EXCLUDE REGEX "/test/core_setup/(idemIP|boot)/")
 
+# MMgr is a submodule, and these are the sources include/CMakeLists.txt builds as pc_mmgr.
+list(APPEND PROTOCORE_SRCS
+    "include/MMgr/src/clz/clz.c"
+    "include/MMgr/src/impensa_ancorae_acus/impensa_ancorae_acus_generic.c"
+    "include/MMgr/src/ascii_persona_bitorum/ascii_persona_bitorum.c"
+    "include/MMgr/src/bitorum_introitus_exitus/bitorum_introitus_exitus.c"
+    "include/MMgr/src/endian/endian.c"
+    "include/MMgr/src/proximus_operor/proximus_operor.c"
+    "include/MMgr/src/verbum_scrutor/verbum_scrutor.c"
+    "include/MMgr/src/memoria_operor/memoria_operor.c"
+    "include/MMgr/src/cellularum_laboro/cellularum_laboro.c"
+    "include/MMgr/src/spatium/spatium.c"
+    "include/MMgr/src/octetus_introitus_exitus/octetus_introitus_exitus.c"
+    "include/MMgr/src/locus_carcerum/locus_carcerum.c"
+    "include/MMgr/src/memoria_anularis/memoria_anularis.c"
+    "include/MMgr/src/memoria_externa/memoria_externa.c"
+    "include/MMgr/src/transformo/transformo.c"
+    "include/MMgr/src/memoriam_praetereo/memoriam_praetereo.c"
+    "include/MMgr/src/memoriam_praetereo/praet_ordo.c"
+    "include/MMgr/src/memoriam_praetereo/praet_descriptor.c"
+    "include/MMgr/src/fractio/fractio.c"
+    "include/MMgr/src/verba_scribo/verba_scribo.c"
+    "include/MMgr/src/verba_scribo/verba_linea.c"
+    "include/MMgr/src/numeros_scribo/numeros_scribo.c"
+)
+
 set(PROTOCORE_REQUIRES
     lwip
     mbedtls
@@ -71,9 +97,11 @@ endif()
 
 idf_component_register(
     SRCS ${PROTOCORE_SRCS}
-    INCLUDE_DIRS "include" "src" "."
+    INCLUDE_DIRS "include" "src" "." "include/MMgr/include" "include/MMgr/src" "include/embedded_types/include"
     REQUIRES ${PROTOCORE_REQUIRES}
 )
+
+target_compile_definitions(${COMPONENT_LIB} PUBLIC MMGR_ENABLE_DMA=0 MMGR_ENABLE_EXTRAM=0)
 
 if(PROTOCORE_WITH_ARDUINO)
     # arduino-esp32 sets -Werror=all as a global build property, which the library is never built

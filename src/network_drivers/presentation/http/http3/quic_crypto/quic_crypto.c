@@ -6,17 +6,18 @@
  * @brief QUIC packet protection and Initial secrets (see quic_crypto.h).
  */
 
+#include "locus_carcerum/locus_carcerum.h"
 #include "protocore_config.h" // the entry point: the widths
 
 #if PROTOCORE_ENABLE_HTTP3
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/http3/quic_crypto/quic_crypto.h"
 
 #include "crypto/aead/aes128gcm/aes128gcm.h"
 #include "crypto/kdf/hkdf/hkdf.h"
-#include "mmgr/secure/secure.h" // the secure pool: header-protection key schedule
 #include "network_drivers/presentation/http/http3/quic_packet/quic_packet.h"
+#include "server/core/worker/worker.h" // the secure pool: header-protection key schedule
 
 // RFC 9001 sec 5.2: the version-1 Initial salt.
 static const uint8_t INITIAL_SALT[20] = {0x38, 0x76, 0x2c, 0xf7, 0xf5, 0x59, 0x34, 0xb3, 0x4d, 0x17,
@@ -30,7 +31,7 @@ static const uint8_t RETRY_NONCE[12] = {0x46, 0x15, 0x99, 0xd3, 0x5d, 0x63, 0x2b
 // Build the AEAD nonce: the packet number, left-padded to the 12-byte IV width, XOR the IV.
 static void build_nonce(const uint8_t iv[12], uint64_t full_pn, uint8_t nonce[12])
 {
-    mem.cpy(nonce, iv, 12);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = nonce, .src = iv, .bytes = 12);
     for (int i = 0; i < 8; i++)
     {
         nonce[11 - i] ^= (uint8_t)(full_pn >> (8 * i));
@@ -60,7 +61,7 @@ void protocore_quic_crypto_keys_from_secret(uint8_t *work, uint8_t *keys_work, c
     Hkdf.expand_label(keys_work, secret, "quic hp", hpk, PROTOCORE_AES128GCM_KEY_LEN, PROTOCORE_HKDF_LABEL_PREFIX);
     Aes128GcmV.block_key_args.key = hpk;
     Aes128Gcm.block_init(out->gcm);
-    protocore_secure_wipe(k, 2 * PROTOCORE_AES128GCM_KEY_LEN);
+    mmgr_zero_buf(k, 2 * PROTOCORE_AES128GCM_KEY_LEN);
 }
 
 void protocore_quic_crypto_derive_initial_secrets(uint8_t *work, uint8_t *keys_work, const uint8_t *dcid,
@@ -141,7 +142,7 @@ size_t protocore_quic_crypto_packet_unprotect(uint8_t *work, uint8_t *pkt, size_
     }
 
     // The header-protection context is already keyed and lives in the key material; building one here
-    // would cost ~8,400 cycles to encrypt sixteen bytes.
+    // would cost ~8,400 cycles to encrypt sixteen byteio.
     uint8_t mask[16];
     Aes128GcmV.block_args.in = pkt + pn_offset + 4;
     Aes128GcmV.block_args.out = mask;
@@ -207,18 +208,19 @@ void protocore_quic_crypto_retry_integrity_tag(uint8_t *work, const uint8_t *odc
     aad[p++] = (uint8_t)odcid_len;
     if (odcid_len > QUIC_MAX_CID_LEN || 1 + odcid_len + retry_len > sizeof(aad))
     {
-        mem.set(tag, 0, 16);
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = tag, .val = 0, .bytes = 16);
         return;
     }
-    mem.cpy(aad + p, odcid, odcid_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = aad + p, .src = odcid, .bytes = odcid_len);
     p += odcid_len;
-    mem.cpy(aad + p, retry, retry_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = aad + p, .src = retry, .bytes = retry_len);
     p += retry_len;
 
     // Empty plaintext: seal writes only the 16-byte tag.
     { // fixed RFC 9001 key, once per Retry packet - not worth a resident context
-        size_t mark = protocore_secure_mark();
-        uint8_t *rk = protocore_secure_alloc(PROTOCORE_AES128GCM_BORROW, 8);
+        size_t mark = protocore_secure_guard()->temporary_buf_mark();
+        uint8_t *rk =
+            protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AES128GCM_BORROW, protocore_secure_owner());
         Aes128GcmV.key_args.key = RETRY_KEY;
         Aes128Gcm.key_init(rk);
         Aes128GcmV.seal_args.nonce = RETRY_NONCE;
@@ -230,7 +232,7 @@ void protocore_quic_crypto_retry_integrity_tag(uint8_t *work, const uint8_t *odc
         Aes128GcmV.seal_args.tag_out = tag;
         Aes128Gcm.seal(rk);
         Aes128Gcm.key_wipe(rk);
-        protocore_secure_release(mark);
+        protocore_secure_guard()->temporary_buf_release(mark);
     }
 }
 

@@ -6,10 +6,9 @@ protocore_add_module(network_drivers/presentation/ssh/app/client
   DEPS
     network_drivers/presentation/ssh/client
   PRIVATE_DEPS
+    server/core/worker
     crypto/asymmetric/ed25519
-    mmgr/arena
-    mmgr/protomem
-    mmgr/secure
+    mmgr
     network_drivers/presentation/ssh/connection
     network_drivers/presentation/ssh/network
     network_drivers/presentation/ssh/transport/transport

@@ -8,5 +8,5 @@ protocore_add_module(services/timing_position/nmea2000
     services/fieldbus/j1939
     shared/can
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

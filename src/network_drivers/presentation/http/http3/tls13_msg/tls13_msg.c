@@ -13,9 +13,9 @@
 #if PROTOCORE_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem/mlkem.h" // MLKEM768_EK_BYTES (X25519MLKEM768 share sizing)
 #endif
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the selected ProtocolName's length
 #include "crypto/asymmetric/ed25519/ed25519.h"
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h" // str.len: the selected ProtocolName's length
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -79,7 +79,7 @@ static void w_bytes(Writer *w, const uint8_t *b, size_t n)
         w->ok = PROTO_FALSE;
         return;
     }
-    mem.cpy(w->buf + w->pos, b, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->buf + w->pos, .src = b, .bytes = n);
     w->pos += n;
 }
 // Reserve a 2- or 3-byte length placeholder; returns its position for w_patch16/24.
@@ -150,7 +150,7 @@ static proto_bool r_u24(Reader *r, uint32_t *v)
     r->pos += 3;
     return PROTO_TRUE;
 }
-// Take a view of the next n bytes.
+// Take a view of the next n byteio.
 static proto_bool r_take(Reader *r, size_t n, const uint8_t **out)
 {
     if (r->pos + n > r->len)
@@ -207,14 +207,15 @@ static void parse_key_share(const uint8_t *body, size_t blen, Tls13ClientHello *
         }
         if (group == TLS_GROUP_X25519 && klen == 32)
         {
-            mem.cpy(out->client_x25519, body + i, 32);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->client_x25519, .src = body + i, .bytes = 32);
             out->has_key_share = PROTO_TRUE;
         }
 #if PROTOCORE_ENABLE_PQC_KEX
         else if (group == TLS_GROUP_X25519MLKEM768 && klen == MLKEM768_EK_BYTES + 32)
         {
-            out->client_mlkem_ek = body + i;                               // ML-KEM-768 ek (first)
-            mem.cpy(out->client_x25519, body + i + MLKEM768_EK_BYTES, 32); // X25519 (second)
+            out->client_mlkem_ek = body + i; // ML-KEM-768 ek (first)
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->client_x25519, .src = body + i + MLKEM768_EK_BYTES,
+                       .bytes = 32); // X25519 (second)
             out->has_hybrid_share = PROTO_TRUE;
         }
 #endif
@@ -358,7 +359,7 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
         out->quic_tp_len = blen;
         break;
     case TLS_EXT_COOKIE: {
-        // Cookie { opaque cookie<1..2^16-1> } (RFC 8446 §4.2.2): 2-byte length then the cookie bytes.
+        // Cookie { opaque cookie<1..2^16-1> } (RFC 8446 §4.2.2): 2-byte length then the cookie byteio.
         if (blen < 2)
         {
             return;
@@ -413,7 +414,7 @@ void protocore_tls13_msg_parse_client_hello(uint8_t *work)
     Tls13ClientHello *out = Tls13MsgV.parse_client_hello_args.out;
     proto_bool dtls = Tls13MsgV.parse_client_hello_args.dtls;
 
-    mem.zero(out, sizeof(*out));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .bytes = sizeof(*out), .val = 0);
 
     Reader r = {msg, len, 0};
     uint8_t type = 0;
@@ -649,7 +650,7 @@ void protocore_tls13_msg_build_client_hello(uint8_t *work)
     // server_name: one host_name in a ServerNameList (RFC 6066 sec 3).
     if (sni)
     {
-        const size_t nl = str.len(sni, 255);
+        const size_t nl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = sni, .cap = 255);
         w_u16(&w, TLS_EXT_SERVER_NAME);
         w_u16(&w, (uint16_t)(nl + 5));
         w_u16(&w, (uint16_t)(nl + 3));
@@ -660,7 +661,7 @@ void protocore_tls13_msg_build_client_hello(uint8_t *work)
     // ALPN: one ProtocolName in the list (RFC 7301 sec 3.1).
     if (alpn)
     {
-        const size_t nl = str.len(alpn, 255);
+        const size_t nl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = alpn, .cap = 255);
         w_u16(&w, TLS_EXT_ALPN);
         w_u16(&w, (uint16_t)(nl + 3));
         w_u16(&w, (uint16_t)(nl + 1));
@@ -806,7 +807,7 @@ void protocore_tls13_msg_parse_server_hello(uint8_t *work)
     Tls13ServerHello *out = Tls13MsgV.parse_server_hello_args.out;
     proto_bool dtls = Tls13MsgV.parse_server_hello_args.dtls;
 
-    mem.zero(out, sizeof(*out));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .bytes = sizeof(*out), .val = 0);
 
     Reader r = {msg, len, 0};
     uint8_t type = 0;
@@ -830,7 +831,8 @@ void protocore_tls13_msg_parse_server_hello(uint8_t *work)
         return;
     }
     // sec 4.1.3: a ServerHello carrying this Random is a HelloRetryRequest, not a real one.
-    out->is_hrr = mem.cmp(out->random, protocore_tls13_hrr_random, 32) == 0;
+    out->is_hrr =
+        EMBED_CALL(memor.cmp, MemoriaCfg, .src = out->random, .other = protocore_tls13_hrr_random, .bytes = 32) == 0;
 
     uint8_t sid_len = 0;
     if (!r_u8(&r, &sid_len) || sid_len > 32 || !r_take(&r, sid_len, &out->session_id))
@@ -1026,7 +1028,8 @@ void protocore_tls13_msg_build_encrypted_extensions_empty(uint8_t *work)
     size_t ext_len = w_mark(&w, 2);
     if (alpn)
     {
-        const size_t nl = str.len(alpn, 255); // ProtocolName is 1..255 octets (RFC 7301 sec 3.1)
+        const size_t nl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = alpn,
+                                     .cap = 255); // ProtocolName is 1..255 octets (RFC 7301 sec 3.1)
         w_u16(&w, TLS_EXT_ALPN);
         w_u16(&w, (uint16_t)(nl + 3)); // 2 list length + 1 name length + the name
         w_u16(&w, (uint16_t)(nl + 1));
@@ -1147,10 +1150,10 @@ void protocore_tls13_msg_cert_verify_content(uint8_t *work)
         Tls13MsgV.n = 0;
         return;
     }
-    mem.set(out, 0x20, 64);
-    mem.cpy(out + 64, ctx, ctx_len);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0x20, .bytes = 64);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 64, .src = ctx, .bytes = ctx_len);
     out[64 + ctx_len] = 0x00;
-    mem.cpy(out + 64 + ctx_len + 1, transcript_hash, hash_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 64 + ctx_len + 1, .src = transcript_hash, .bytes = hash_len);
     Tls13MsgV.n = total;
 }
 

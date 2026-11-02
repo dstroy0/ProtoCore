@@ -14,7 +14,7 @@ PROTOCORE_BEGIN_DECLS
  *
  * The shared SHA-1 primitive. On Arduino (ESP32) delegates to the hardware SHA accelerator; on native
  * builds a portable software implementation is used. Used for the WebSocket opening handshake
- * (RFC 6455 §4.2.2) and other legacy digest needs. Output is always 20 bytes.
+ * (RFC 6455 §4.2.2) and other legacy digest needs. Output is always 20 byteio.
  *
  * @c work is PROTOCORE_SHA1_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes it,
@@ -24,7 +24,7 @@ PROTOCORE_BEGIN_DECLS
  * @date    2026
  */
 
-/** @brief SHA-1 digest length in bytes. */
+/** @brief SHA-1 digest length in byteio. */
 #define PROTOCORE_SHA1_DIGEST_LEN 20
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */

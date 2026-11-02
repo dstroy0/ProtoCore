@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_MULTIPART
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h" // str.find: a quoted parameter key, and the boundary in a Content-Type
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.find: a quoted parameter key, and the boundary in a Content-Type
+#include "memoria_operor/memoria_operor.h"
 #include "multipart.h"
 
 // Longest parameter key the header scan will match ("name=", "filename=").
@@ -27,7 +27,7 @@ static char *mem_find(char *hay, size_t hlen, const char *needle, size_t nlen)
     }
     for (size_t i = 0; i + nlen <= hlen; i++)
     {
-        if (mem.cmp(hay + i, needle, nlen) == 0)
+        if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = hay + i, .other = needle, .bytes = nlen) == 0)
         {
             return hay + i;
         }
@@ -40,18 +40,24 @@ static char *mem_find(char *hay, size_t hlen, const char *needle, size_t nlen)
 // Returns NULL if not found.
 static char *extract_quoted_param(char *src, const char *key)
 {
-    char *p = (char *)str.find(src, str.len(src, 0xFFFF) + 1u, key, str.len(key, MULTIPART_KEY_MAX) + 1u, PROTO_FALSE);
+    char *p = (char *)EMBED_CALL(
+        cellul.find, CatenaFinitaCfg, .src = src,
+        .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = src, .cap = 0xFFFF) + 1u, .other = key,
+        .other_cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = key, .cap = MULTIPART_KEY_MAX) + 1u,
+        .ci = PROTO_FALSE);
     if (!p)
     {
         return NULL;
     }
-    p += str.len(key, MULTIPART_KEY_MAX);
+    p += EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = key, .cap = MULTIPART_KEY_MAX);
     if (*p != '"')
     {
         return NULL;
     }
     p++; // skip opening quote
-    char *end = (char *)str.find(p, str.len(p, 0xFFFF) + 1u, "\"", sizeof("\""), PROTO_FALSE);
+    char *end = (char *)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = p,
+                                   .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = p, .cap = 0xFFFF) + 1u,
+                                   .other = "\"", .other_cap = sizeof("\""), .ci = PROTO_FALSE);
     if (!end)
     {
         return NULL;
@@ -79,7 +85,8 @@ proto_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody 
     }
 
     // Extract boundary value (may be quoted or unquoted)
-    const char *bsearch = str.find(ct, MAX_VAL_LEN, "boundary=", sizeof("boundary="), PROTO_FALSE);
+    const char *bsearch = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = ct, .cap = MAX_VAL_LEN,
+                                     .other = "boundary=", .other_cap = sizeof("boundary="), .ci = PROTO_FALSE);
     if (!bsearch)
     {
         return PROTO_FALSE;
@@ -110,7 +117,7 @@ proto_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody 
     char delim[MAX_BOUNDARY_LEN + 3];
     delim[0] = '-';
     delim[1] = '-';
-    mem.cpy(delim + 2, bval, blen + 1); // includes null
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = delim + 2, .src = bval, .bytes = blen + 1); // includes null
     size_t dlen = blen + 2;
 
     char *body = (char *)req->body;
@@ -121,7 +128,8 @@ proto_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody 
     char ddelim[MAX_BOUNDARY_LEN + 5];
     ddelim[0] = '\r';
     ddelim[1] = '\n';
-    mem.cpy(ddelim + 2, delim, dlen); // "--boundary" (dlen bytes, no NUL)
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ddelim + 2, .src = delim,
+               .bytes = dlen); // "--boundary" (dlen bytes, no NUL)
     size_t ddlen = dlen + 2;
 
     // Find the first delimiter ("--boundary"; a leading CRLF / preamble is optional here).
@@ -170,7 +178,8 @@ proto_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody 
 
             const size_t hlen = (size_t)(line_end - pos);
 
-            if (hlen >= 20 && str.starts(pos, "Content-Disposition:", 20, PROTO_TRUE))
+            if (hlen >= 20 && EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = pos,
+                                         .other = "Content-Disposition:", .cap = 20, .ci = PROTO_TRUE))
             {
                 char *v = pos + 20;
                 while (*v == ' ')
@@ -183,7 +192,8 @@ proto_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody 
                 part->filename = extract_quoted_param(v, "filename=");
                 part->name = extract_quoted_param(v, "name=");
             }
-            else if (hlen >= 13 && str.starts(pos, "Content-Type:", 13, PROTO_TRUE))
+            else if (hlen >= 13 && EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = pos,
+                                              .other = "Content-Type:", .cap = 13, .ci = PROTO_TRUE))
             {
                 char *v = pos + 13;
                 while (*v == ' ')
@@ -226,7 +236,11 @@ const char *protocore_multipart_get_field(uint8_t *work, const MultipartBody *mp
     for (int i = 0; i < mp->part_count; i++)
     {
         if (mp->parts[i].name &&
-            str.eq(mp->parts[i].name, field, str.len(mp->parts[i].name, str.len(field, 0xFFFF)) + 1u, PROTO_FALSE))
+            EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = mp->parts[i].name, .other = field,
+                       .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = mp->parts[i].name,
+                                         .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = field, .cap = 0xFFFF)) +
+                              1u,
+                       .ci = PROTO_FALSE))
         {
             return mp->parts[i].data;
         }

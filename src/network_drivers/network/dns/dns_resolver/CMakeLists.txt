@@ -5,10 +5,8 @@ protocore_add_module(network_drivers/network/dns/dns_resolver
   GATE PROTOCORE_ENABLE_DNS_RESOLVER
   SOURCES dns_resolver.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/rawmemcpy
-    mmgr/secure
+    server/core/worker
+    mmgr
     network_drivers/network/dns/dns_wire
     network_drivers/transport/udp/server
     server/clock

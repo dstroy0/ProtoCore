@@ -161,7 +161,7 @@ static const SignalingNs Signal __attribute__((unused)) = {
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_signaling_span(void);
 

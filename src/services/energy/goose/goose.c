@@ -172,11 +172,16 @@ size_t protocore_goose_pdu(const protocore_goose *g, uint8_t *out, size_t cap)
 
     size_t n = RESERVE; // build the content after the reserved header area
     static const uint8_t ZT[8] = {0};
+    const uint8_t *timestamp = ZT;
+    if (g->t)
+    {
+        timestamp = g->t;
+    }
     proto_bool ok =
         protocore_ber_str(out, cap, &n, 0x80, g->gocb_ref) &&
         protocore_ber_int(out, cap, &n, 0x81, g->time_allowed_to_live) &&
         protocore_ber_str(out, cap, &n, 0x82, g->dat_set) && protocore_ber_str(out, cap, &n, 0x83, g->go_id) &&
-        tlv(out, cap, &n, 0x84, g->t ? g->t : ZT, 8) && protocore_ber_int(out, cap, &n, 0x85, g->st_num) &&
+        tlv(out, cap, &n, 0x84, timestamp, 8) && protocore_ber_int(out, cap, &n, 0x85, g->st_num) &&
         protocore_ber_int(out, cap, &n, 0x86, g->sq_num) && protocore_ber_bool(out, cap, &n, 0x87, g->simulation) &&
         protocore_ber_int(out, cap, &n, 0x88, g->conf_rev) && protocore_ber_bool(out, cap, &n, 0x89, g->nds_com) &&
         protocore_ber_int(out, cap, &n, 0x8A, g->num_entries) && tlv(out, cap, &n, 0xAB, g->all_data, g->all_data_len);

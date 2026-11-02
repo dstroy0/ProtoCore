@@ -8,20 +8,21 @@
  */
 
 #include "network_drivers/network/dns/dns_resolver/dns_resolver.h"
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
+#include "spatium/spatium.h"
 
 #if PROTOCORE_ENABLE_DNS_RESOLVER
 
-#include "mmgr/secure/secure.h"                            // protocore_secure_persist_span: this module's storage
 #include "network_drivers/network/dns/dns_wire/dns_wire.h" // the name codec both DNS halves share
 #include "server/clock/clock.h"                            // Clock.millis: the deadline the resolve waits to
+#include "server/core/worker/worker.h"                     // protocore_secure_persist: this module's storage
 
 #if PROTOCORE_HAS_VENDOR_DNS_RESOLVER
 #include "config/platform/platform.h" // the platform's own resolver, under our names
 #else
-#include "mmgr/protostr/protostr.h"                      // str: the bounded-run walks
-#include "mmgr/rawmemcpy/rawmemcpy.h"                    // raw.read: the server address moves whole
+#include "cellularum_laboro/cellularum_laboro.h"         // str: the bounded-run walks
 #include "network_drivers/transport/udp/server/server.h" // UdpListener: the query port and the ask
+#include "proximus_operor/proximus_operor.h"             // proxim.read: the server address moves whole
 #include "shared/ip/ip.h"                                // Ip.parse: the server, and the dotted-quad fast path
 #endif
 
@@ -42,7 +43,7 @@ uint8_t *protocore_dns_resolver_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_DNS_RESOLVER_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_DNS_RESOLVER_BORROW);
     }
     return s_own.span;
 }
@@ -74,17 +75,17 @@ uint8_t *protocore_dns_resolver_span(void)
  */
 struct ResolverStorage
 {
-    protocore_span name; ///< where a record's owner name lands while the walk steps over it
+    mmgr_span name; ///< where a record's owner name lands while the walk steps over it
 #if PROTOCORE_HAS_VENDOR_DNS_RESOLVER
     protocore_net_ip addr;   ///< the address the stack's callback reported
     _Atomic proto_bool done; ///< the callback ran
     _Atomic proto_bool ok;   ///< and it carried an address
 #else
-    protocore_span tx;     ///< the query message in flight
-    protocore_span server; ///< the nameserver being asked, as text
-    uint16_t id;           ///< the ID of the query in flight (RFC 1035 sec 4.1.1)
-    uint32_t answer;       ///< host order, 0 until a response parses
-    proto_bool done;       ///< a response parsed
+    mmgr_span tx;     ///< the query message in flight
+    mmgr_span server; ///< the nameserver being asked, as text
+    uint16_t id;      ///< the ID of the query in flight (RFC 1035 sec 4.1.1)
+    uint32_t answer;  ///< host order, 0 until a response parses
+    proto_bool done;  ///< a response parsed
 #endif
     uint32_t timer;  ///< the millisecond the query in flight left at
     proto_bool busy; ///< a query is out; a second host waits for it
@@ -210,12 +211,14 @@ static size_t question_build(uint8_t *out, size_t cap, uint16_t id, const char *
 // closed.
 static proto_bool name_bind(uint8_t *work)
 {
-    if (span.has_storage(DNS_RESOLVER_CTX(work)->name))
+    if (EMBED_CALL(spat.has_storage, SpatiumCfg, .span = DNS_RESOLVER_CTX(work)->name))
     {
         return PROTO_TRUE;
     }
-    DNS_RESOLVER_CTX(work)->name = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX);
-    return span.has_storage(DNS_RESOLVER_CTX(work)->name);
+    DNS_RESOLVER_CTX(work)->name =
+        EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_DNS_NAME_MAX),
+                   .cap = PROTOCORE_DNS_NAME_MAX);
+    return EMBED_CALL(spat.has_storage, SpatiumCfg, .span = DNS_RESOLVER_CTX(work)->name);
 }
 
 // Read the first A record out of @p pkt into @p out_ip, host order. Accepts the message only when
@@ -411,7 +414,7 @@ void protocore_resolver_resolve(uint8_t *work)
     DNS_RESOLVER_CTX(work)->done = PROTO_FALSE;
     DNS_RESOLVER_CTX(work)->ok = PROTO_FALSE;
     DnsMarshal m;
-    mem.set(&m, 0, sizeof(m));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &m, .val = 0, .bytes = sizeof(m));
     m.work = work;
     m.host = host;
     (void)protocore_net_call_marshal(dns_ask, &m.base);
@@ -444,7 +447,7 @@ void protocore_resolver_set_server(uint8_t *work)
 // Take the query and nameserver borrows on first use, and seat the configured default in the latter.
 static proto_bool client_bind(uint8_t *work)
 {
-    if (span.has_storage(DNS_RESOLVER_CTX(work)->tx))
+    if (EMBED_CALL(spat.has_storage, SpatiumCfg, .span = DNS_RESOLVER_CTX(work)->tx))
     {
         return PROTO_TRUE;
     }
@@ -452,18 +455,25 @@ static proto_bool client_bind(uint8_t *work)
     {
         return PROTO_FALSE;
     }
-    DNS_RESOLVER_CTX(work)->tx = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX + 32);
-    DNS_RESOLVER_CTX(work)->server = protocore_secure_persist_span(PROTOCORE_IP_STR_MAX);
-    if (!span.has_storage(DNS_RESOLVER_CTX(work)->tx) || !span.has_storage(DNS_RESOLVER_CTX(work)->server))
+    DNS_RESOLVER_CTX(work)->tx =
+        EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_DNS_NAME_MAX + 32),
+                   .cap = PROTOCORE_DNS_NAME_MAX + 32);
+    DNS_RESOLVER_CTX(work)->server =
+        EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_IP_STR_MAX),
+                   .cap = PROTOCORE_IP_STR_MAX);
+    if (!EMBED_CALL(spat.has_storage, SpatiumCfg, .span = DNS_RESOLVER_CTX(work)->tx) ||
+        !EMBED_CALL(spat.has_storage, SpatiumCfg, .span = DNS_RESOLVER_CTX(work)->server))
     {
         return PROTO_FALSE;
     }
-    size_t n = str.len(PROTOCORE_DNS_SERVER, DNS_RESOLVER_CTX(work)->server.cap);
+    size_t n =
+        EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = PROTOCORE_DNS_SERVER, .cap = DNS_RESOLVER_CTX(work)->server.cap);
     if (n >= DNS_RESOLVER_CTX(work)->server.cap)
     {
         return PROTO_FALSE;
     }
-    raw.read(DNS_RESOLVER_CTX(work)->server.buf, PROTOCORE_DNS_SERVER, n);
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = DNS_RESOLVER_CTX(work)->server.buf, .at = PROTOCORE_DNS_SERVER,
+               .size = n);
     DNS_RESOLVER_CTX(work)->server.buf[n] = '\0';
     return PROTO_TRUE;
 }
@@ -501,12 +511,12 @@ void protocore_resolver_set_server(uint8_t *work)
     {
         return;
     }
-    size_t n = str.len(ip, DNS_RESOLVER_CTX(work)->server.cap);
+    size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = ip, .cap = DNS_RESOLVER_CTX(work)->server.cap);
     if (n >= DNS_RESOLVER_CTX(work)->server.cap)
     {
         return;
     }
-    raw.read(DNS_RESOLVER_CTX(work)->server.buf, ip, n);
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = DNS_RESOLVER_CTX(work)->server.buf, .at = ip, .size = n);
     DNS_RESOLVER_CTX(work)->server.buf[n] = '\0';
     ResolverV.ok = PROTO_TRUE;
 }

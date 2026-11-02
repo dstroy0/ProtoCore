@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_EDGE_MESH
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "server/web/edge_cache/edge_cache/edge_cache.h"
 #include "server/web/edge_cache/edge_cache_sd/edge_cache_sd.h"
 #include "server/web/edge_cache/edge_fetch/edge_fetch.h"
@@ -101,8 +101,8 @@ void protocore_edge_mesh_build_request(uint8_t *work)
         return;
     }
     const char *hdrs = req_hdrs ? req_hdrs : "";
-    size_t kl = str.len(canon, PROTOCORE_EDGE_KEY_MAX);
-    size_t hl = str.len(hdrs, PROTOCORE_MESH_HDRS_MAX);
+    size_t kl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = canon, .cap = PROTOCORE_EDGE_KEY_MAX);
+    size_t hl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = hdrs, .cap = PROTOCORE_MESH_HDRS_MAX);
     // Both lengths are strnlen-capped to PROTOCORE_EDGE_KEY_MAX (128) and PROTOCORE_MESH_HDRS_MAX, neither of
     // which is within three orders of magnitude of the 16-bit wire limit, so neither arm can be
     // taken in any build this library is sized for. The guard is what keeps the u16 length prefixes
@@ -123,15 +123,15 @@ void protocore_edge_mesh_build_request(uint8_t *work)
     out[pos++] = PROTOCORE_EDGE_MESH_MAGIC1;
     out[pos++] = PROTOCORE_EDGE_MESH_VERSION;
     out[pos++] = PROTOCORE_EDGE_MESH_OP_GET;
-    mem.cpy(out + pos, digest, 32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + pos, .src = digest, .bytes = 32);
     pos += 32;
     put_u16(out + pos, (uint16_t)kl);
     pos += 2;
-    mem.cpy(out + pos, canon, kl);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + pos, .src = canon, .bytes = kl);
     pos += kl;
     put_u16(out + pos, (uint16_t)hl);
     pos += 2;
-    mem.cpy(out + pos, hdrs, hl);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + pos, .src = hdrs, .bytes = hl);
     pos += hl;
     EdgeMeshV.n = pos;
 }
@@ -209,16 +209,16 @@ void protocore_edge_mesh_parse_request(uint8_t *work)
     size_t hdrs_off = pos;
     if (digest_out)
     {
-        mem.cpy(digest_out, buf + digest_off, 32);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = digest_out, .src = buf + digest_off, .bytes = 32);
     }
     if (canon_out)
     {
-        mem.cpy(canon_out, buf + key_off, kl);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = canon_out, .src = buf + key_off, .bytes = kl);
         canon_out[kl] = '\0';
     }
     if (hdrs_out)
     {
-        mem.cpy(hdrs_out, buf + hdrs_off, hl);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hdrs_out, .src = buf + hdrs_off, .bytes = hl);
         hdrs_out[hl] = '\0';
     }
     EdgeMeshV.parse = EDGE_MESH_PARSE_HIT;
@@ -327,7 +327,7 @@ void protocore_edge_mesh_build_response(uint8_t *work)
         }
         put_u16(out + pos, (uint16_t)entry_len);
         pos += 2;
-        mem.cpy(out + pos, entry, entry_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + pos, .src = entry, .bytes = entry_len);
         pos += entry_len;
     }
     EdgeMeshV.n = pos;

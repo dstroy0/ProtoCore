@@ -5,9 +5,9 @@ protocore_add_module(network_drivers/presentation/http/http3/quic_conn
   GATE PROTOCORE_ENABLE_HTTP3
   SOURCES quic_conn.c
   PRIVATE_DEPS
+    server/core/worker
     crypto/aead/aes128gcm
-    mmgr/protomem
-    mmgr/secure
+    mmgr
     network_drivers/presentation/http/http3/quic_crypto
     network_drivers/presentation/http/http3/quic_frame
     network_drivers/presentation/http/http3/quic_packet

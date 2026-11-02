@@ -11,11 +11,12 @@
  */
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
+#include "spatium/spatium.h"
 
 #if PROTOCORE_ENABLE_MDNS
 
 #include "mdns_service.h"
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
 PROTOCORE_BEGIN_DECLS
 
@@ -24,12 +25,11 @@ PROTOCORE_BEGIN_DECLS
 #if PROTOCORE_HAS_VENDOR_MDNS
 #include "mdns.h" // the vendor's responder, driven through its own component API
 #else
-#include "mmgr/protostr/protostr.h"                        // str: the bounded-run walks
-#include "mmgr/rawmemcpy/rawmemcpy.h"                      // raw.read: every field moves whole
-#include "mmgr/secure/secure.h"                            // protocore_secure_persist_span: this module's storage
+#include "cellularum_laboro/cellularum_laboro.h"           // str: the bounded-run walks
 #include "network_drivers/network/dns/dns_wire/dns_wire.h" // the name codec both DNS halves share
 #include "network_drivers/physical/physical/physical.h"    // Physical.egress_ip: the address the A record carries
 #include "network_drivers/transport/udp/server/server.h"   // UdpListener: the 5353 group bind and the reply
+#include "proximus_operor/proximus_operor.h"               // proxim.read: every field moves whole
 #endif
 
 // --- the program's shared state, beside the namespace not on it -------------
@@ -47,7 +47,7 @@ uint8_t *protocore_mdns_service_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_MDNS_SERVICE_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_MDNS_SERVICE_BORROW);
     }
     return s_own.span;
 }
@@ -160,16 +160,16 @@ typedef struct
 // handler, so no two calls reach them at once.
 typedef struct
 {
-    protocore_span host; ///< the label alone, no domain
-    protocore_span fqdn; ///< "<host>.local", composed once by begin()
-    protocore_span svc;  ///< the MdnsSvc table
-    protocore_span txt;  ///< packed length-prefixed "key=value" strings
+    mmgr_span host; ///< the label alone, no domain
+    mmgr_span fqdn; ///< "<host>.local", composed once by begin()
+    mmgr_span svc;  ///< the MdnsSvc table
+    mmgr_span txt;  ///< packed length-prefixed "key=value" strings
     size_t txt_len;
-    protocore_span tx;        ///< the response being composed
-    protocore_span rd;        ///< rdata staged for the record being written
-    protocore_span qname;     ///< the question being answered
-    protocore_span svc_name;  ///< "<type>.<proto>.local"
-    protocore_span inst_name; ///< "<host>.<type>.<proto>.local"
+    mmgr_span tx;        ///< the response being composed
+    mmgr_span rd;        ///< rdata staged for the record being written
+    mmgr_span qname;     ///< the question being answered
+    mmgr_span svc_name;  ///< "<type>.<proto>.local"
+    mmgr_span inst_name; ///< "<host>.<type>.<proto>.local"
     proto_bool running;
 } MdnsCtx;
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
@@ -180,8 +180,8 @@ static_assert(MDNS_SERVICE_OFF_CTX + sizeof(MdnsCtx) <= PROTOCORE_MDNS_SERVICE_B
               "PROTOCORE_MDNS_SERVICE_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(
@@ -197,24 +197,47 @@ static_assert(
 // whose release wipes. False when the pool cannot cover them; begin() fails closed on that.
 static proto_bool mdns_mem_bind(uint8_t *work)
 {
-    if (span.has_storage(MDNS_SERVICE_CTX(work)->tx))
+    if (EMBED_CALL(spat.has_storage, SpatiumCfg, .span = MDNS_SERVICE_CTX(work)->tx))
     {
         return PROTO_TRUE;
     }
-    MDNS_SERVICE_CTX(work)->host = protocore_secure_persist_span(PROTOCORE_MDNS_LABEL_MAX);
-    MDNS_SERVICE_CTX(work)->fqdn = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX);
-    MDNS_SERVICE_CTX(work)->svc = protocore_secure_persist_span(sizeof(MdnsSvc) * PROTOCORE_MDNS_MAX_SERVICES);
-    MDNS_SERVICE_CTX(work)->txt = protocore_secure_persist_span(PROTOCORE_MDNS_TXT_MAX);
-    MDNS_SERVICE_CTX(work)->tx = protocore_secure_persist_span(PROTOCORE_MDNS_TX_MAX);
-    MDNS_SERVICE_CTX(work)->rd = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX + 8);
-    MDNS_SERVICE_CTX(work)->qname = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX);
-    MDNS_SERVICE_CTX(work)->svc_name = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX);
-    MDNS_SERVICE_CTX(work)->inst_name = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX);
-    return span.has_storage(MDNS_SERVICE_CTX(work)->host) && span.has_storage(MDNS_SERVICE_CTX(work)->fqdn) &&
-           span.has_storage(MDNS_SERVICE_CTX(work)->svc) && span.has_storage(MDNS_SERVICE_CTX(work)->txt) &&
-           span.has_storage(MDNS_SERVICE_CTX(work)->tx) && span.has_storage(MDNS_SERVICE_CTX(work)->rd) &&
-           span.has_storage(MDNS_SERVICE_CTX(work)->qname) && span.has_storage(MDNS_SERVICE_CTX(work)->svc_name) &&
-           span.has_storage(MDNS_SERVICE_CTX(work)->inst_name);
+    MDNS_SERVICE_CTX(work)->host =
+        EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_MDNS_LABEL_MAX),
+                   .cap = PROTOCORE_MDNS_LABEL_MAX);
+    MDNS_SERVICE_CTX(work)->fqdn =
+        EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_DNS_NAME_MAX),
+                   .cap = PROTOCORE_DNS_NAME_MAX);
+    MDNS_SERVICE_CTX(work)->svc =
+        EMBED_CALL(spat.from, SpatiumCfg,
+                   .buf = (uint8_t *)protocore_secure_persist(sizeof(MdnsSvc) * PROTOCORE_MDNS_MAX_SERVICES),
+                   .cap = sizeof(MdnsSvc) * PROTOCORE_MDNS_MAX_SERVICES);
+    MDNS_SERVICE_CTX(work)->txt =
+        EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_MDNS_TXT_MAX),
+                   .cap = PROTOCORE_MDNS_TXT_MAX);
+    MDNS_SERVICE_CTX(work)->tx =
+        EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_MDNS_TX_MAX),
+                   .cap = PROTOCORE_MDNS_TX_MAX);
+    MDNS_SERVICE_CTX(work)->rd =
+        EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_DNS_NAME_MAX + 8),
+                   .cap = PROTOCORE_DNS_NAME_MAX + 8);
+    MDNS_SERVICE_CTX(work)->qname =
+        EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_DNS_NAME_MAX),
+                   .cap = PROTOCORE_DNS_NAME_MAX);
+    MDNS_SERVICE_CTX(work)->svc_name =
+        EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_DNS_NAME_MAX),
+                   .cap = PROTOCORE_DNS_NAME_MAX);
+    MDNS_SERVICE_CTX(work)->inst_name =
+        EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_DNS_NAME_MAX),
+                   .cap = PROTOCORE_DNS_NAME_MAX);
+    return EMBED_CALL(spat.has_storage, SpatiumCfg, .span = MDNS_SERVICE_CTX(work)->host) &&
+           EMBED_CALL(spat.has_storage, SpatiumCfg, .span = MDNS_SERVICE_CTX(work)->fqdn) &&
+           EMBED_CALL(spat.has_storage, SpatiumCfg, .span = MDNS_SERVICE_CTX(work)->svc) &&
+           EMBED_CALL(spat.has_storage, SpatiumCfg, .span = MDNS_SERVICE_CTX(work)->txt) &&
+           EMBED_CALL(spat.has_storage, SpatiumCfg, .span = MDNS_SERVICE_CTX(work)->tx) &&
+           EMBED_CALL(spat.has_storage, SpatiumCfg, .span = MDNS_SERVICE_CTX(work)->rd) &&
+           EMBED_CALL(spat.has_storage, SpatiumCfg, .span = MDNS_SERVICE_CTX(work)->qname) &&
+           EMBED_CALL(spat.has_storage, SpatiumCfg, .span = MDNS_SERVICE_CTX(work)->svc_name) &&
+           EMBED_CALL(spat.has_storage, SpatiumCfg, .span = MDNS_SERVICE_CTX(work)->inst_name);
 }
 
 /** @brief Service @p i, over the borrow that holds the table. */
@@ -224,7 +247,7 @@ static MdnsSvc *mdns_svc(uint8_t *work, size_t i)
 }
 
 /** @brief A borrowed span read as the dotted name it holds. */
-static char *mdns_str(protocore_span s)
+static char *mdns_str(mmgr_span s)
 {
     return (char *)s.buf;
 }
@@ -250,12 +273,12 @@ static size_t name_append(char *out, size_t cap, size_t n, const char *s)
         out[n] = '.';
         n++;
     }
-    size_t l = str.len(s, cap - n);
+    size_t l = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = cap - n);
     if (n + l >= cap)
     {
         return cap;
     }
-    raw.read(out + n, s, l);
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = out + n, .at = s, .size = l);
     n += l;
     out[n] = '\0';
     return n;
@@ -319,7 +342,7 @@ static proto_bool rr_put(uint8_t *out, size_t cap, size_t *n, const char *owner,
     p++;
     if (rdlen != 0)
     {
-        raw.read(out + p, rdata, rdlen);
+        EMBED_CALL(proxim.read, ProximusCfg, .dst = out + p, .at = rdata, .size = rdlen);
         p += rdlen;
     }
     *n = p;
@@ -336,7 +359,8 @@ static uint16_t put_a(uint8_t *work, size_t *n)
     {
         return 0;
     }
-    raw.read(MDNS_SERVICE_CTX(work)->rd.buf, &ip, 4); // network order already, as the stack keeps it
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = MDNS_SERVICE_CTX(work)->rd.buf, .at = &ip,
+               .size = 4); // network order already, as the stack keeps it
     if (!rr_put(MDNS_SERVICE_CTX(work)->tx.buf, MDNS_SERVICE_CTX(work)->tx.cap, n,
                 mdns_str(MDNS_SERVICE_CTX(work)->fqdn), PROTOCORE_MDNS_T_A, PROTOCORE_MDNS_C_FLUSH,
                 PROTOCORE_MDNS_TTL_HOST, MDNS_SERVICE_CTX(work)->rd.buf, 4))
@@ -565,12 +589,12 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct proto
 // type would advertise a name nothing resolves.
 static proto_bool label_set(char *dst, size_t cap, const char *src)
 {
-    size_t n = str.len(src, cap);
+    size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = src, .cap = cap);
     if (n == 0 || n >= cap)
     {
         return PROTO_FALSE;
     }
-    raw.read(dst, src, n);
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = dst, .at = src, .size = n);
     dst[n] = '\0';
     return PROTO_TRUE;
 }
@@ -617,8 +641,8 @@ void protocore_mdns_service_txt(uint8_t *work)
         return;
     }
     uint8_t *txt = MDNS_SERVICE_CTX(work)->txt.buf;
-    size_t kl = str.len(key, MDNS_SERVICE_CTX(work)->txt.cap);
-    size_t vl = str.len(value, MDNS_SERVICE_CTX(work)->txt.cap);
+    size_t kl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = key, .cap = MDNS_SERVICE_CTX(work)->txt.cap);
+    size_t vl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = value, .cap = MDNS_SERVICE_CTX(work)->txt.cap);
     size_t entry = kl + 1 + vl; // "key=value"
     if (kl == 0 || entry > 255 || MDNS_SERVICE_CTX(work)->txt_len + 1 + entry > MDNS_SERVICE_CTX(work)->txt.cap)
     {
@@ -628,11 +652,11 @@ void protocore_mdns_service_txt(uint8_t *work)
     size_t n = MDNS_SERVICE_CTX(work)->txt_len;
     txt[n] = (uint8_t)entry; // each string carries its own length (RFC 6763 sec 6.1)
     n++;
-    raw.read(txt + n, key, kl);
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = txt + n, .at = key, .size = kl);
     n += kl;
     txt[n] = '=';
     n++;
-    raw.read(txt + n, value, vl);
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = txt + n, .at = value, .size = vl);
     n += vl;
     MDNS_SERVICE_CTX(work)->txt_len = n;
     MdnsServiceV.ok = PROTO_TRUE;

@@ -8,8 +8,8 @@
  */
 
 #include "services/net/snmp/snmp_notify/snmp_notify.h"
-#include "mmgr/protostr/protostr.h" // str.len: the community length, bounded
-#include "mmgr/secure/secure.h"     // the persistent end this module's key material is taken from
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the community length, bounded
+#include "server/core/worker/worker.h"           // the persistent end this module's key material is taken from
 
 #if PROTOCORE_ENABLE_SNMP_TRAP
 
@@ -183,7 +183,7 @@ uint8_t *protocore_snmp_notify_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_SNMP_NOTIFY_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_SNMP_NOTIFY_BORROW);
         // A borrow arrives zeroed, and these do not start at zero.
         SNMP_NOTIFY_CTX(s_own.span)->trap_reqid = 1;
     }
@@ -224,7 +224,8 @@ void protocore_snmp_notify_build_v2c(uint8_t *work)
     SnmpBer.put_integer(work);
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
     SnmpBerV.tlv.bytes = (const uint8_t *)SnmpNotifyV.dst.community;
-    SnmpBerV.tlv.len = str.len(SnmpNotifyV.dst.community, SNMP_COMMUNITY_MAX + 1);
+    SnmpBerV.tlv.len =
+        EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = SnmpNotifyV.dst.community, .cap = SNMP_COMMUNITY_MAX + 1);
     SnmpBer.put_octet_string(work);
 
     append_pdu(work, &e);

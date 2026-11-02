@@ -5,9 +5,8 @@ protocore_add_module(services/net/syslog
   GATE PROTOCORE_ENABLE_SYSLOG
   SOURCES syslog.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protomem
-    mmgr/protostr
+    server/core/worker
+    mmgr
     network_drivers/transport/udp/client
     shared/ip
 )

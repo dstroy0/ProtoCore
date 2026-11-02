@@ -5,9 +5,8 @@ protocore_add_module(network_drivers/application/upload_service
   GATE PROTOCORE_ENABLE_UPLOAD
   SOURCES upload_service.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protoframe
-    mmgr/protostr
+    server/core/worker
+    mmgr
     network_drivers/presentation/http/http_parser
     server/storage/mnt
     shared/mime

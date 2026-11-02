@@ -211,7 +211,7 @@ static InflateResult codes(State *s, const Huffman *lencode, const Huffman *dist
     return INFLATE_OK;
 }
 
-// Uncompressed (stored) block: byte-align, read LEN/NLEN, copy LEN bytes.
+// Uncompressed (stored) block: byte-align, read LEN/NLEN, copy LEN byteio.
 static InflateResult stored(State *s)
 {
     s->bitbuf = 0;

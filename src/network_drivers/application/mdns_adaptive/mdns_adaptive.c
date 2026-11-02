@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_MDNS_ADAPTIVE
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "network_drivers/application/mdns_adaptive/mdns_adaptive.h"
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 #include "shared/pcap/pcap.h"
 
 #include "network_drivers/application/mdns_service/mdns_service.h" // protocore_mdns_txt
@@ -197,8 +197,8 @@ static_assert(MDNS_ADAPTIVE_OFF_CTX + sizeof(MdnsAdaptiveCtx) <= PROTOCORE_MDNS_
               "PROTOCORE_MDNS_ADAPTIVE_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(MDNS_ADAPTIVE_OFF_CTX % _Alignof(MdnsAdaptiveCtx) == 0,
@@ -224,7 +224,7 @@ uint8_t *protocore_mdns_adaptive_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_MDNS_ADAPTIVE_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_MDNS_ADAPTIVE_BORROW);
     }
     return s_own.span;
 }

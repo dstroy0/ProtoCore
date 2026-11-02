@@ -15,20 +15,19 @@
 
 #if PROTOCORE_ENABLE_CSRF
 
-#include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq: the constant-time signature compare
+#include "cellularum_laboro/cellularum_laboro.h" // str: the bounded-run walks
+#include "crypto/ct_eq/ct_eq.h"                  // protocore_ct_eq: the constant-time signature compare
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"
-#include "mmgr/protoframe/protoframe.h" // the one frame engine
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h" // str: the bounded-run walks
-#include "mmgr/secure/secure.h"     // the persistent end the secret is taken from
+#include "memoria_operor/memoria_operor.h"
+#include "numeros_scribo/numeros_scribo.h" // the one frame engine
+#include "server/core/worker/worker.h"     // the persistent end the secret is taken from
 #include "server/security/csrf/csrf.h"
 #include "shared/hex/hex.h"
 
 PROTOCORE_BEGIN_DECLS
 
 // nonce-hex "." signature-hex
-static const protocore_field CSRF_TOKEN[] = {
-    PROTOCORE_STR, {PROTOCORE_FK_LIT, 0, 1, "."}, PROTOCORE_STR, PROTOCORE_END};
+static const mmgr_field CSRF_TOKEN[] = {MMGR_STR, {MMGR_FK_LIT, 0, 1, "."}, MMGR_STR, MMGR_END};
 
 // The one definition, private to this TU. It sits at CSRF_OFF_CTX in the caller's borrow, so its
 // size never leaves this file and no consumer can name it.
@@ -51,8 +50,8 @@ static_assert(CSRF_OFF_MAC + PROTOCORE_HMAC_SHA256_BORROW <= PROTOCORE_CSRF_BORR
               "PROTOCORE_CSRF_BORROW is short of the secret, the counter and the nested HMAC borrow - raise "
               "it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(CSRF_OFF_CTX % _Alignof(CsrfCtx) == 0,
@@ -99,7 +98,7 @@ uint8_t *protocore_csrf_span(void)
 {
     if (s_csrf.span == NULL)
     {
-        s_csrf.span = protocore_secure_persist_span(PROTOCORE_CSRF_BORROW).buf;
+        s_csrf.span = (uint8_t *)protocore_secure_persist(PROTOCORE_CSRF_BORROW);
     }
     return s_csrf.span;
 }
@@ -119,7 +118,7 @@ void protocore_csrf_set_secret(uint8_t *work)
     }
     const size_t len = CsrfV.secret_args.len;
     c->secret_len = len > sizeof(c->secret) ? sizeof(c->secret) : len;
-    mem.cpy(c->secret, secret, c->secret_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = c->secret, .src = secret, .bytes = c->secret_len);
     CsrfV.ok = PROTO_TRUE;
 }
 
@@ -150,8 +149,8 @@ void protocore_csrf_issue(uint8_t *work)
     sign_nonce(work, nonce, CSRF_NONCE_BYTES, shex);
 
     // The frame's contract is this entry's contract: the length written, or 0 and out emptied.
-    CsrfV.n = frame.build(CsrfV.issue_args.out, CsrfV.issue_args.cap, CSRF_TOKEN,
-                          (const protocore_fval[]){PROTOCORE_VSTR(nhex), PROTOCORE_VSTR(shex)}, 2);
+    CsrfV.n = EMBED_CALL(numer.build, NumerosCfg, .out = CsrfV.issue_args.out, .cap = CsrfV.issue_args.cap,
+                         .spec = CSRF_TOKEN, .vals = (const mmgr_fval[]){MMGR_VSTR(nhex), MMGR_VSTR(shex)}, .nvals = 2);
     CsrfV.ok = (CsrfV.n > 0);
 }
 
@@ -170,7 +169,9 @@ void protocore_csrf_verify(uint8_t *work)
         return;
     }
 
-    const char *dot = str.find(token, str.len(token, 0xFFFF) + 1u, ".", sizeof("."), PROTO_FALSE);
+    const char *dot = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = token,
+                                 .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = token, .cap = 0xFFFF) + 1u,
+                                 .other = ".", .other_cap = sizeof("."), .ci = PROTO_FALSE);
     if (!dot)
     {
         return;
@@ -194,7 +195,7 @@ void protocore_csrf_verify(uint8_t *work)
     }
 
     const char *sig = dot + 1;
-    if (str.len(sig, CSRF_SIG_BYTES * 2 + 1) != CSRF_SIG_BYTES * 2)
+    if (EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = sig, .cap = CSRF_SIG_BYTES * 2 + 1) != CSRF_SIG_BYTES * 2)
     {
         return;
     }
@@ -209,7 +210,7 @@ void protocore_csrf_reset(uint8_t *work)
 {
     CsrfV.ok = PROTO_FALSE;
     CsrfCtx *c = CSRF_CTX(work);
-    mem.set(c->secret, 0, sizeof(c->secret));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = c->secret, .val = 0, .bytes = sizeof(c->secret));
     c->secret_len = 0;
     c->counter = 0;
     CsrfV.ok = PROTO_TRUE;

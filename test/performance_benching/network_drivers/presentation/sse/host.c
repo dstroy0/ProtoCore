@@ -8,8 +8,8 @@
 // Build + run (same include roots as the native test env):
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
 //   -DPROTOCORE_ENABLE_SSE=1 test/performance_benching/network_drivers/presentation/sse/host.c
-//   src/network_drivers/presentation/http/sse/sse.c src/mmgr/protomem.c src/mmgr/protostr.c
-//   -o /tmp/bs && /tmp/bs
+//   src/network_drivers/presentation/http/sse/sse.c src/memoria_operor/memoria_operor.h.c
+//   src/cellularum_laboro/cellularum_laboro.h.c -o /tmp/bs && /tmp/bs
 
 #define PROTOCORE_ENABLE_SSE 1
 #include "network_drivers/presentation/http/sse/sse.h"

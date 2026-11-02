@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_WIFI_SNIFFER
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 #include "services/radio/wifi_sniffer/wifi_sniffer.h"
 #include "shared/pcap/pcap.h"
 
@@ -40,7 +40,7 @@ uint8_t *protocore_wifi_sniffer_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_WIFI_SNIFFER_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_WIFI_SNIFFER_BORROW);
     }
     return s_own.span;
 }
@@ -64,7 +64,7 @@ void protocore_wifi_sniffer_parse(uint8_t *work)
         return;
     }
 
-    mem.set(out, 0, sizeof(*out));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
 
     uint8_t fc0 = frame[0];
     uint8_t fc1 = frame[1];
@@ -77,16 +77,16 @@ void protocore_wifi_sniffer_parse(uint8_t *work)
     out->protected_frame = (fc1 & 0x40) != 0;
 
     // Address1 always present at this length (offset 4).
-    mem.cpy(out->addr1, frame + 4, 6);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->addr1, .src = frame + 4, .bytes = 6);
     out->naddr = 1;
     if (len >= 16)
     {
-        mem.cpy(out->addr2, frame + 10, 6);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->addr2, .src = frame + 10, .bytes = 6);
         out->naddr = 2;
     }
     if (len >= 24)
     {
-        mem.cpy(out->addr3, frame + 16, 6);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->addr3, .src = frame + 16, .bytes = 6);
         out->naddr = 3;
     }
     WifiSnifferV.ok = PROTO_TRUE;
@@ -99,7 +99,7 @@ void protocore_wifi_sniffer_stats_reset(uint8_t *work)
 
     if (s)
     {
-        mem.set(s, 0, sizeof(*s));
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = s, .val = 0, .bytes = sizeof(*s));
     }
 }
 
@@ -236,7 +236,7 @@ void protocore_wifi_sniffer_survey_reset(uint8_t *work)
     {
         return;
     }
-    mem.set(s, 0, sizeof(*s));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = s, .val = 0, .bytes = sizeof(*s));
     s->first = clamp_channel(first);
     s->count = (count > PROTOCORE_WIFI_SNIFFER_MAX_CHANNELS) ? (uint8_t)PROTOCORE_WIFI_SNIFFER_MAX_CHANNELS : count;
     for (uint8_t i = 0; i < PROTOCORE_WIFI_SNIFFER_MAX_CHANNELS; i++)
@@ -281,7 +281,7 @@ void protocore_wifi_sniffer_survey_add(uint8_t *work)
         // The transmitter address is the AP for a beacon; only present once addr2 was decoded.
         if (f && f->naddr >= 2)
         {
-            mem.cpy(e->best_bssid, f->addr2, 6);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->best_bssid, .src = f->addr2, .bytes = 6);
         }
     }
 }
@@ -357,8 +357,8 @@ static_assert(WIFI_SNIFFER_OFF_CTX + sizeof(WifiSnifferCtx) <= PROTOCORE_WIFI_SN
               "PROTOCORE_WIFI_SNIFFER_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(

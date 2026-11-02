@@ -6,10 +6,10 @@ protocore_add_module(crypto/x509/x509_verify
   DEPS
     crypto/x509/x509_types
   PRIVATE_DEPS
+    server/core/worker
     crypto/asymmetric/ecdsa
     crypto/asymmetric/ed25519
     crypto/asymmetric/rsa
-    mmgr/protomem
-    mmgr/secure
+    mmgr
     shared/der
 )

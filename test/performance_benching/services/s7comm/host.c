@@ -7,7 +7,8 @@
 // baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
 //   -DPROTOCORE_ENABLE_S7COMM=1 test/performance_benching/services/s7comm/host.c
-//   src/services/fieldbus/s7comm/s7comm.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bs && /tmp/bs
+//   src/services/fieldbus/s7comm/s7comm.c src/memoria_operor/memoria_operor.h.c
+//   src/cellularum_laboro/cellularum_laboro.h.c -o /tmp/bs && /tmp/bs
 
 #define PROTOCORE_ENABLE_S7COMM 1
 #include "services/fieldbus/s7comm/s7comm.h"

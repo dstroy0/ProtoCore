@@ -8,10 +8,8 @@ protocore_add_module(network_drivers/presentation/http/websocket
     network_drivers/presentation/codec/deflate/deflate
     network_drivers/presentation/codec/inflate
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protomem
-    mmgr/secure
-    mmgr/span
+    server/core/worker
+    mmgr
     network_drivers/transport/tcp/protocol
     shared/utf8
 )

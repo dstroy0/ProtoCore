@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/httpcache/httpcache.h"
 #include "server/web/edge_cache/edge_cache/edge_cache.h"
 #include "shared/http_date/http_date.h"
@@ -196,7 +196,8 @@ void protocore_edge_cache_header_value(uint8_t *work)
         return;
     }
     out[0] = '\0';
-    size_t namelen = str.len(name, out_cap); // header names are short literals, always < the value buffer
+    size_t namelen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = name,
+                                .cap = out_cap); // header names are short literals, always < the value buffer
     const char *p = hdrs;
     const char *end = hdrs + len;
     // Skip the status line.
@@ -353,7 +354,7 @@ void protocore_edge_cache_parse_http_date(uint8_t *work)
         EdgeCacheV.epoch = -1;
         return;
     }
-    mem.cpy(buf, s, len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf, .src = s, .bytes = len);
     buf[len] = '\0';
 
     int mday = 0;
@@ -362,7 +363,8 @@ void protocore_edge_cache_parse_http_date(uint8_t *work)
     int hh = 0;
     int mm = 0;
     int ss = 0;
-    const char *comma = str.find(buf, len + 1u, ",", sizeof(","), PROTO_FALSE);
+    const char *comma = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = buf, .cap = len + 1u, .other = ",",
+                                   .other_cap = sizeof(","), .ci = PROTO_FALSE);
     proto_bool ok = comma ? parse_date_after_comma(comma + 1, &mday, &mon, &year, &hh, &mm, &ss)
                           : parse_date_asctime(buf, &mday, &mon, &year, &hh, &mm, &ss);
     if (!ok)
@@ -686,7 +688,7 @@ void protocore_edge_cache_store_init(uint8_t *work)
     (void)work;
     EdgeCacheStore *s = EdgeCacheV.store_init_args.s;
 
-    mem.set(s, 0, sizeof(*s));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = s, .val = 0, .bytes = sizeof(*s));
     s->lru_head = PROTOCORE_EDGE_LRU_NONE;
     s->lru_tail = PROTOCORE_EDGE_LRU_NONE;
     for (uint16_t i = 0; i < PROTOCORE_EDGE_CACHE_SLOTS; i++)
@@ -703,7 +705,7 @@ void protocore_edge_cache_store_alloc(uint8_t *work)
     const char *canon = EdgeCacheV.store_alloc_args.canon;
     const char *vary_key = EdgeCacheV.store_alloc_args.vary_key;
 
-    size_t klen = str.len(canon, sizeof(s->entries[0].key));
+    size_t klen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = canon, .cap = sizeof(s->entries[0].key));
     if (klen >= sizeof(s->entries[0].key))
     {
         EdgeCacheV.entry = NULL;
@@ -735,25 +737,25 @@ void protocore_edge_cache_store_alloc(uint8_t *work)
         s->stats.evictions++;
     }
     EdgeEntry *e = &s->entries[slot];
-    mem.set(e, 0, sizeof(*e));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = e, .val = 0, .bytes = sizeof(*e));
     e->lru.prev = PROTOCORE_EDGE_LRU_NONE;
     e->lru.next = PROTOCORE_EDGE_LRU_NONE;
     e->used = PROTO_TRUE;
-    mem.cpy(e->key, canon, klen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->key, .src = canon, .bytes = klen);
     e->key[klen] = '\0';
     EdgeCacheV.key_digest_args.digest_work = s->digest_work;
     EdgeCacheV.key_digest_args.canon = canon;
     EdgeCacheV.key_digest_args.len = klen;
     EdgeCacheV.key_digest_args.digest = e->digest;
     protocore_edge_cache_key_digest(work);
-    size_t vl = vary_key ? str.len(vary_key, sizeof(e->vary_vals)) : 0;
+    size_t vl = vary_key ? EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = vary_key, .cap = sizeof(e->vary_vals)) : 0;
     if (vl >= sizeof(e->vary_vals))
     {
         vl = sizeof(e->vary_vals) - 1;
     }
     if (vary_key)
     {
-        mem.cpy(e->vary_vals, vary_key, vl);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->vary_vals, .src = vary_key, .bytes = vl);
     }
     e->vary_vals[vl] = '\0';
     e->date_epoch = -1;
@@ -775,8 +777,11 @@ void protocore_edge_cache_store_lookup(uint8_t *work)
     for (uint16_t i = 0; i < PROTOCORE_EDGE_CACHE_SLOTS; i++)
     {
         EdgeEntry *e = &s->entries[i];
-        if (e->used && str.eq(canon, e->key, sizeof(e->key), PROTO_FALSE) &&
-            str.eq(vk, e->vary_vals, sizeof(e->vary_vals), PROTO_FALSE))
+        if (e->used &&
+            EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = canon, .other = e->key, .cap = sizeof(e->key),
+                       .ci = PROTO_FALSE) &&
+            EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = vk, .other = e->vary_vals, .cap = sizeof(e->vary_vals),
+                       .ci = PROTO_FALSE))
         {
             lru_unlink(s, i);
             lru_push_front(s, i);
@@ -800,7 +805,8 @@ void protocore_edge_cache_store_find(uint8_t *work)
     for (uint16_t i = 0; i < PROTOCORE_EDGE_CACHE_SLOTS; i++)
     {
         EdgeEntry *e = &s->entries[i];
-        if (!e->used || !str.eq(canon, e->key, sizeof(e->key), PROTO_FALSE))
+        if (!e->used || !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = canon, .other = e->key, .cap = sizeof(e->key),
+                                    .ci = PROTO_FALSE))
         {
             continue;
         }
@@ -816,7 +822,8 @@ void protocore_edge_cache_store_find(uint8_t *work)
         {
             continue;
         }
-        if (str.eq(cur, e->vary_vals, sizeof(cur), PROTO_FALSE))
+        if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = cur, .other = e->vary_vals, .cap = sizeof(cur),
+                       .ci = PROTO_FALSE))
         {
             lru_unlink(s, i);
             lru_push_front(s, i);
@@ -945,7 +952,8 @@ void protocore_edge_cache_store_purge(uint8_t *work)
     uint32_t n = 0;
     for (uint16_t i = 0; i < PROTOCORE_EDGE_CACHE_SLOTS; i++)
     {
-        if (s->entries[i].used && str.eq(canon, s->entries[i].key, sizeof(s->entries[i].key), PROTO_FALSE))
+        if (s->entries[i].used && EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = canon, .other = s->entries[i].key,
+                                             .cap = sizeof(s->entries[i].key), .ci = PROTO_FALSE))
         {
             store_free(s, i);
             s->stats.purges++;
@@ -961,7 +969,7 @@ void protocore_edge_cache_store_purge_prefix(uint8_t *work)
     EdgeCacheStore *s = EdgeCacheV.store_purge_prefix_args.s;
     const char *prefix = EdgeCacheV.store_purge_prefix_args.prefix;
 
-    size_t plen = str.len(prefix, sizeof(s->entries[0].key));
+    size_t plen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = prefix, .cap = sizeof(s->entries[0].key));
     uint32_t n = 0;
     for (uint16_t i = 0; i < PROTOCORE_EDGE_CACHE_SLOTS; i++)
     {
@@ -970,7 +978,8 @@ void protocore_edge_cache_store_purge_prefix(uint8_t *work)
             continue;
         }
         const char *path = key_path(s->entries[i].key);
-        if (path && str.starts(path, prefix, plen, PROTO_FALSE))
+        if (path &&
+            EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = path, .other = prefix, .cap = plen, .ci = PROTO_FALSE))
         {
             store_free(s, i);
             s->stats.purges++;
@@ -1005,7 +1014,8 @@ void protocore_edge_cache_is_storeable(uint8_t *work)
     const char *vary_header = EdgeCacheV.is_storeable_args.vary_header;
     size_t body_len = EdgeCacheV.is_storeable_args.body_len;
 
-    if (!method || !str.eq(method, "GET", sizeof("GET"), PROTO_FALSE))
+    if (!method ||
+        !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = method, .other = "GET", .cap = sizeof("GET"), .ci = PROTO_FALSE))
     {
         EdgeCacheV.ok = PROTO_FALSE;
         return;
@@ -1089,7 +1099,7 @@ void protocore_edge_cache_apply_304(uint8_t *work)
     if (EdgeCacheV.ok)
     {
         HttpcacheV.control_parse_args.s = v;
-        HttpcacheV.control_parse_args.len = str.len(v, sizeof(v));
+        HttpcacheV.control_parse_args.len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = v, .cap = sizeof(v));
         HttpcacheV.control_parse_args.cc = &cc;
         Httpcache.control_parse(work);
     }
@@ -1109,7 +1119,7 @@ void protocore_edge_cache_apply_304(uint8_t *work)
     if (EdgeCacheV.ok)
     {
         EdgeCacheV.parse_http_date_args.s = v;
-        EdgeCacheV.parse_http_date_args.len = str.len(v, sizeof(v));
+        EdgeCacheV.parse_http_date_args.len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = v, .cap = sizeof(v));
         protocore_edge_cache_parse_http_date(work);
         date = EdgeCacheV.epoch;
     }
@@ -1123,7 +1133,7 @@ void protocore_edge_cache_apply_304(uint8_t *work)
     if (EdgeCacheV.ok)
     {
         EdgeCacheV.parse_http_date_args.s = v;
-        EdgeCacheV.parse_http_date_args.len = str.len(v, sizeof(v));
+        EdgeCacheV.parse_http_date_args.len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = v, .cap = sizeof(v));
         protocore_edge_cache_parse_http_date(work);
         expires = EdgeCacheV.epoch;
     }
@@ -1165,10 +1175,10 @@ void protocore_edge_cache_apply_304(uint8_t *work)
     protocore_edge_cache_header_value(work);
     if (EdgeCacheV.ok)
     {
-        size_t vlen = str.len(v, sizeof(v));
+        size_t vlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = v, .cap = sizeof(v));
         if (vlen < sizeof(e->etag))
         {
-            mem.cpy(e->etag, v, vlen + 1);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->etag, .src = v, .bytes = vlen + 1);
         }
     }
     int64_t last_mod = -1;
@@ -1180,20 +1190,21 @@ void protocore_edge_cache_apply_304(uint8_t *work)
     protocore_edge_cache_header_value(work);
     if (EdgeCacheV.ok)
     {
-        size_t vlen = str.len(v, sizeof(v));
+        size_t vlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = v, .cap = sizeof(v));
         EdgeCacheV.parse_http_date_args.s = v;
         EdgeCacheV.parse_http_date_args.len = vlen;
         protocore_edge_cache_parse_http_date(work);
         last_mod = EdgeCacheV.epoch;
         if (vlen < sizeof(e->last_modified))
         {
-            mem.cpy(e->last_modified, v, vlen + 1);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->last_modified, .src = v, .bytes = vlen + 1);
         }
     }
     else if (e->last_modified[0])
     {
         EdgeCacheV.parse_http_date_args.s = e->last_modified;
-        EdgeCacheV.parse_http_date_args.len = str.len(e->last_modified, sizeof(e->last_modified));
+        EdgeCacheV.parse_http_date_args.len =
+            EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = e->last_modified, .cap = sizeof(e->last_modified));
         protocore_edge_cache_parse_http_date(work);
         last_mod = EdgeCacheV.epoch;
     }

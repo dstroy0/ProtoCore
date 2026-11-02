@@ -44,7 +44,7 @@ struct protocore_udp_peer;
  * @brief Datagram handler, invoked once per received datagram by poll().
  *
  * @param data  contiguous payload, staged out of the slot's receive ring.
- * @param len   payload length in bytes.
+ * @param len   payload length in byteio.
  * @param peer  reply token, valid only during this call.
  * @param ctx   the opaque context passed to listen().
  */
@@ -167,7 +167,7 @@ static const UdpListenerNs UdpListener __attribute__((unused)) = {
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_udp_listener_span(void);
 

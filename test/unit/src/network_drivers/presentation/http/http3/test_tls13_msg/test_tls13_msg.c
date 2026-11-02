@@ -979,7 +979,7 @@ void test_cert_verify_round_trip(void)
     TEST_ASSERT_EQUAL_UINT(PROTOCORE_ED25519_SIG_LEN, sig_len);
 
     // What the parser handed back verifies over the sec 4.4.3 content, so it is the real signature
-    // and not a view of the wrong bytes.
+    // and not a view of the wrong byteio.
     uint8_t pub[PROTOCORE_ED25519_PUBKEY_LEN];
     Ed25519.pubkey(g_work, RFC8032_SEED, pub);
     uint8_t content[160];

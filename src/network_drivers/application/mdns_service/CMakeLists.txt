@@ -5,10 +5,8 @@ protocore_add_module(network_drivers/application/mdns_service
   GATE PROTOCORE_ENABLE_MDNS
   SOURCES mdns_service.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protostr
-    mmgr/rawmemcpy
-    mmgr/secure
+    server/core/worker
+    mmgr
     network_drivers/network/dns/dns_wire
     network_drivers/physical/physical
     network_drivers/transport/udp/server

@@ -12,8 +12,8 @@
  */
 
 #include "client.h"
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
 // Compiles only when a client transport is enabled (HTTP client / MQTT / WS client). A server-only
 // build leaves DNS_RESOLVER off, so the resolver symbols this unit calls would not be declared -
@@ -22,7 +22,7 @@
 
 #include "../../diffserv/diffserv.h"  // DiffServ DSCP marking for outbound client connections (compiles out when off)
 #include "config/platform/platform.h" // the stack's TCP, under our names
-#include "mmgr/ring/ring.h"           // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
+#include "memoria_anularis/memoria_anularis.h" // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
 #include "network_drivers/network/dns/dns_resolver/dns_resolver.h" // shared host->IP resolve (one DNS owner)
 #include "network_drivers/transport/tcp/lower/lower.h"             // TcpLower: the TTL stamp on the outbound pcb
 #include "server/clock/clock.h"                                    // Clock.millis
@@ -42,7 +42,7 @@ uint8_t *protocore_tcp_client_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_TCP_CLIENT_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_TCP_CLIENT_BORROW);
     }
     return s_own.span;
 }
@@ -63,11 +63,10 @@ typedef struct
     uint32_t timeout_ms; // what the whole open, resolve included, is given
     proto_bool resolving;
     uint8_t rx[PROTOCORE_CLIENT_RX_BUF];
-    _Atomic size_t head; // producer (stack recv cb); acquire/release SPSC, same as the server ring
-    _Atomic size_t tail; // consumer (caller)
+    mmgr_ring ring; // producer the stack recv cb, consumer the caller: SPSC, same as the server ring
 } ClientConn;
 
-static_assert(PROTOCORE_RING_POW2(PROTOCORE_CLIENT_RX_BUF),
+static_assert(MMGR_RING_POW2(PROTOCORE_CLIENT_RX_BUF),
               "PROTOCORE_CLIENT_RX_BUF must be a power of two: a ring index wraps with a mask");
 
 /**
@@ -112,20 +111,18 @@ static protocore_net_err cc_recv(void *arg, protocore_pcb *tpcb, protocore_pbuf 
         c->closed = PROTO_TRUE; // peer closed
         return PROTOCORE_NET_OK;
     }
-    // Wire bytes -> ring via the shared producer primitive (same as the server): if
-    // the whole segment will not fit, refuse it (the stack retains + redelivers); else
-    // move each span and publish head once.
+    // Wire bytes -> ring (same as the server): if the whole segment will not fit, refuse it
+    // (the stack retains + redelivers); else move each chain link.
     (void)tpcb;
-    if (p->tot_len > protocore_ring_free(&c->head, &c->tail, PROTOCORE_CLIENT_RX_BUF))
+    if (p->tot_len > EMBED_CALL(anularis.vacant, AnularisCfg, .ring = &c->ring))
     {
         return PROTOCORE_NET_ERR_MEM;
     }
-    size_t h = PROTO_ATOMIC_LOAD(&c->head); // sole producer of head; advance a local and publish once
     for (protocore_pbuf *q = p; q != NULL; q = q->next)
     {
-        h = protocore_ring_write_span(c->rx, PROTOCORE_CLIENT_RX_BUF, h, (const uint8_t *)q->payload, q->len);
+        (void)EMBED_CALL(anularis.put, AnularisCfg, .ring = &c->ring, .src = (const uint8_t *)q->payload,
+                         .bytes = q->len);
     }
-    PROTO_ATOMIC_STORE(&c->head, h); // one release store publishes the whole segment
     // Do NOT tcp_recved() here. The window is reopened by protocore_client_read() as the
     // caller drains (ack-on-consume), so it tracks ring occupancy and the peer can
     // never overflow the ring - same model as the server transport. ACKing on copy
@@ -314,7 +311,7 @@ static void cc_pump(uint8_t *work)
     c->resolving = PROTO_FALSE;
 
     CcConnCall k;
-    mem.set(&k, 0, sizeof(k));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &k, .val = 0, .bytes = sizeof(k));
     k.c = c;
     protocore_net_ip4_set(&k.addr, (uint8_t)(ip >> 24), (uint8_t)(ip >> 16), (uint8_t)(ip >> 8), (uint8_t)ip);
     k.port = c->port;
@@ -350,8 +347,8 @@ void protocore_tcp_client_open(uint8_t *work)
     c->pcb = NULL;
     c->connected = PROTO_FALSE;
     c->closed = PROTO_FALSE;
-    PROTO_ATOMIC_STORE(&c->head, 0);
-    PROTO_ATOMIC_STORE(&c->tail, 0);
+    (void)EMBED_CALL(anularis.init, AnularisCfg, .ring = &c->ring, .buf = c->rx, .capacity = PROTOCORE_CLIENT_RX_BUF,
+                     .segment_count = 1u);
     c->host = TcpClientV.dial.host;
     c->port = TcpClientV.dial.port;
     c->timeout_ms = TcpClientV.dial.timeout_ms;
@@ -396,7 +393,7 @@ void protocore_tcp_client_send(uint8_t *work)
         return;
     }
     CcSendCall k;
-    mem.set(&k, 0, sizeof(k));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &k, .val = 0, .bytes = sizeof(k));
     k.c = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid];
     k.data = TcpClientV.io.data;
     k.len = (proto_u16)(TcpClientV.io.len > 0xFFFF ? 0xFFFF : TcpClientV.io.len);
@@ -416,8 +413,7 @@ void protocore_tcp_client_available(uint8_t *work)
     // asking what has arrived would otherwise never advance a connect that has not come up, and sit
     // on an empty ring until its own timer expired.
     cc_pump(work);
-    TcpClientV.n = protocore_ring_available(&TCP_CLIENT_CTX(work)->conn->head, &TCP_CLIENT_CTX(work)->conn->tail,
-                                            PROTOCORE_CLIENT_RX_BUF);
+    TcpClientV.n = EMBED_CALL(anularis.available, AnularisCfg, .ring = &TCP_CLIENT_CTX(work)->conn->ring);
 }
 
 void protocore_tcp_client_read(uint8_t *work)
@@ -429,14 +425,13 @@ void protocore_tcp_client_read(uint8_t *work)
     }
     TCP_CLIENT_CTX(work)->conn = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid];
     cc_pump(work); // as in available(): a caller that only ever reads still steps its open along
-    TcpClientV.n =
-        protocore_ring_read(TCP_CLIENT_CTX(work)->conn->rx, PROTOCORE_CLIENT_RX_BUF, &TCP_CLIENT_CTX(work)->conn->head,
-                            &TCP_CLIENT_CTX(work)->conn->tail, TcpClientV.io.buf, TcpClientV.io.cap);
+    TcpClientV.n = EMBED_CALL(anularis.read, AnularisCfg, .ring = &TCP_CLIENT_CTX(work)->conn->ring,
+                              .dst = TcpClientV.io.buf, .bytes = TcpClientV.io.cap);
     if (TcpClientV.n > 0 && TCP_CLIENT_CTX(work)->conn->pcb)
     {
         // Ack-on-consume: reopen the receive window by exactly what we just drained.
         CcRecvedCall k;
-        mem.set(&k, 0, sizeof(k));
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = &k, .val = 0, .bytes = sizeof(k));
         k.c = TCP_CLIENT_CTX(work)->conn;
         k.len = (proto_u16)TcpClientV.n;
         protocore_net_call_marshal(cc_do_recved, &k.base);
@@ -451,7 +446,7 @@ void protocore_tcp_client_close(uint8_t *work)
         return;
     }
     CcSendCall k;
-    mem.set(&k, 0, sizeof(k));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &k, .val = 0, .bytes = sizeof(k));
     k.c = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid];
     protocore_net_call_marshal(cc_do_close, &k.base);
     TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use = PROTO_FALSE;

@@ -7,6 +7,5 @@ protocore_add_module(crypto/kdf/hkdf
   SOURCES hkdf.c
   PRIVATE_DEPS
     crypto/mac/hmac_sha256
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )

@@ -12,7 +12,7 @@
  *  - The **HART command frame**: `[delimiter][address...][command][byte-count][data...][checksum]`, where
  *    the checksum is the longitudinal XOR parity of every byte from the delimiter through the last data
  *    byte (the preamble of 0xFF sync bytes is transport, not checksummed). Short (1-byte polling) and
- *    long (5-byte unique-ID) addressing are both handled by passing the address bytes.
+ *    long (5-byte unique-ID) addressing are both handled by passing the address byteio.
  *  - The **HART-IP message header** (8 octets): version, message type, message id, status, a 2-byte
  *    sequence number, and the 2-byte total message length - wraps a HART PDU for UDP/TCP transport.
  *

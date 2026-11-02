@@ -7,14 +7,10 @@ protocore_add_module(network_drivers/presentation/ssh/auth
   DEPS
     network_drivers/presentation/ssh/common
   PRIVATE_DEPS
+    server/core/worker
     crypto/asymmetric/ecdsa
     crypto/asymmetric/ed25519
-    mmgr/bytes
-    mmgr/endian
-    mmgr/plaintext
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
+    mmgr
     network_drivers/presentation/ssh/connection
     network_drivers/presentation/ssh/network
     network_drivers/presentation/ssh/transport/comp

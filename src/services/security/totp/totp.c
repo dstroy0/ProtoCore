@@ -45,7 +45,7 @@ static void sha1_of(const uint8_t *data, size_t len, uint8_t out[PROTOCORE_SHA1_
 {
     const MaximumSecurityGuard *const secure_guard = protocore_secure_guard();
     const size_t mark = secure_guard->temporary_buf_mark();
-    uint8_t *w = (uint8_t *)secure_guard->temporary_buf_alloc(PROTOCORE_SHA1_BORROW);
+    uint8_t *w = (uint8_t *)secure_guard->temporary_buf_alloc(PROTOCORE_SHA1_BORROW, protocore_secure_owner());
     if (w)
     {
         Sha1.hash(w, data, len, out);

@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_DTLS
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/security/dtls/dtls_handshake/dtls_handshake.h"
 
 #include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq
@@ -154,7 +154,7 @@ size_t protocore_dtls_handshake_frag_build(uint8_t *work, uint8_t msg_type, uint
     out[11] = (uint8_t)frag_len;
     if (frag_len)
     {
-        mem.cpy(out + PROTOCORE_DTLS_HS_HDR_LEN, frag, frag_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + PROTOCORE_DTLS_HS_HDR_LEN, .src = frag, .bytes = frag_len);
     }
     return total;
 }
@@ -236,12 +236,13 @@ size_t protocore_dtls_handshake_reasm_add(uint8_t *work, DtlsHsReasm *r, const D
         {
             ov_hi = hi;
         }
-        if (ov_lo < ov_hi && mem.cmp(r->buf + ov_lo, frag->fragment + (ov_lo - lo), ov_hi - ov_lo) != 0)
+        if (ov_lo < ov_hi && EMBED_CALL(memor.cmp, MemoriaCfg, .src = r->buf + ov_lo,
+                                        .other = frag->fragment + (ov_lo - lo), .bytes = ov_hi - ov_lo) != 0)
         {
             return -1;
         }
     }
-    mem.cpy(r->buf + lo, frag->fragment, frag->frag_length);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = r->buf + lo, .src = frag->fragment, .bytes = frag->frag_length);
     if (reasm_merge(r, lo, hi) < 0)
     {
         return -1;
@@ -340,7 +341,7 @@ size_t protocore_dtls_handshake_cookie_make(uint8_t *work, uint8_t *mac_work, co
     out[10] = (uint8_t)payload_len;
     if (payload_len)
     {
-        mem.cpy(out + 11, payload, payload_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 11, .src = payload, .bytes = payload_len);
     }
     // MAC covers version || timestamp || client_addr || payload_len || payload: the address is
     // authenticated (so a cookie cannot be replayed from another peer) without being stored.
@@ -395,7 +396,7 @@ proto_bool protocore_dtls_handshake_cookie_verify(uint8_t *work, uint8_t *mac_wo
     }
     if (payload_len)
     {
-        mem.cpy(payload_out, cookie + 11, payload_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = payload_out, .src = cookie + 11, .bytes = payload_len);
     }
     *payload_len_out = payload_len;
     return PROTO_TRUE;

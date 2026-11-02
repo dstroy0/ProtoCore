@@ -7,5 +7,5 @@ protocore_add_module(crypto/mac/aes_cmac
   SOURCES aes_cmac.c
   PRIVATE_DEPS
     crypto/cipher/aes_block
-    mmgr/protomem
+    mmgr
 )

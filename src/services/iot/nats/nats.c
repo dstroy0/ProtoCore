@@ -29,10 +29,10 @@ PROTOCORE_BEGIN_DECLS
 // Decimal digits a 64-bit count needs.
 #define NATS_UINT_DIGITS 20u
 
-// Fields a MSG control line carries: subject, sid, [reply-to], #bytes.
+// Fields a MSG control line carries: subject, sid, [reply-to], #byteio.
 #define NATS_MSG_FIELDS 4u
 
-// Fields an HMSG control line carries: subject, sid, [reply-to], #header bytes, #total bytes.
+// Fields an HMSG control line carries: subject, sid, [reply-to], #header bytes, #total byteio.
 #define NATS_HMSG_FIELDS 5u
 
 // Octets in the operation names a parse steps past before it reads the fields.

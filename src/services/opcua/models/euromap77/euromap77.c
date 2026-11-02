@@ -16,8 +16,8 @@
 
 #if PROTOCORE_ENABLE_EUROMAP77
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 #include "services/opcua/models/euromap77/euromap77.h"
 #include "services/opcua/opcua.h"
 
@@ -91,8 +91,8 @@ static_assert(EUROMAP77_OFF_CTX + sizeof(EuroMap77Ctx) <= PROTOCORE_EUROMAP77_BO
               "PROTOCORE_EUROMAP77_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(
@@ -108,7 +108,8 @@ static void set_str(OpcUaVariant *o, const char *s)
 {
     o->type = OPCUA_VAR_STRING;
     o->str = s ? s : "";
-    o->str_len = (int32_t)str.len(o->str, 0xFFFF); // bound the scan: a model string is a caller-owned C string
+    o->str_len = (int32_t)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = o->str,
+                                     .cap = 0xFFFF); // bound the scan: a model string is a caller-owned C string
 }
 static void set_u32(OpcUaVariant *o, uint32_t v)
 {
@@ -210,7 +211,7 @@ uint8_t *protocore_euromap77_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_EUROMAP77_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_EUROMAP77_BORROW);
     }
     return s_own.span;
 }

@@ -8,7 +8,8 @@
 // codec. Pure (no socket), links standalone. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
 //   -DPROTOCORE_ENABLE_GOOSE=1 -DPROTOCORE_ENABLE_RAWL2=1 test/performance_benching/services/goose/host.c
-//   src/services/energy/goose/goose.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bg && /tmp/bg
+//   src/services/energy/goose/goose.c src/memoria_operor/memoria_operor.h.c src/cellularum_laboro/cellularum_laboro.h.c
+//   -o /tmp/bg && /tmp/bg
 
 #define PROTOCORE_ENABLE_GOOSE 1
 #define PROTOCORE_ENABLE_RAWL2 1

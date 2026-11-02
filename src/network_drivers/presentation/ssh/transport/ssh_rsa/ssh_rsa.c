@@ -10,13 +10,14 @@
  */
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
+#include "spatium/spatium.h"
 
 #if PROTOCORE_ENABLE_SSH_RSA
 
 #include "crypto/asymmetric/rsa/rsa.h" // Rsa: the signer, and the key widths
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/secure/secure.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/ssh/transport/ssh_rsa/ssh_rsa.h"
+#include "server/core/worker/worker.h"
 #include "test/core_setup/hal/nvs.h" // the host key is read from non-volatile storage
 
 PROTOCORE_BEGIN_DECLS
@@ -29,7 +30,7 @@ SshRsaPubKey ssh_host_pubkey;
 // mark and no release, so the key stays for the life of the program.
 typedef struct
 {
-    protocore_span d; ///< private exponent, PROTOCORE_RSA_KEY_BYTES big-endian
+    mmgr_span d;      ///< private exponent, PROTOCORE_RSA_KEY_BYTES big-endian
     proto_bool ready; ///< d holds a parsed key
 } SshRsaCtx;
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
@@ -40,8 +41,8 @@ static_assert(SSH_RSA_OFF_CTX + sizeof(SshRsaCtx) <= PROTOCORE_SSH_RSA_BORROW,
               "PROTOCORE_SSH_RSA_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(SSH_RSA_OFF_CTX % _Alignof(SshRsaCtx) == 0,
@@ -66,7 +67,7 @@ uint8_t *protocore_ssh_rsa_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_SSH_RSA_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_SSH_RSA_BORROW);
     }
     return s_own.span;
 }
@@ -147,8 +148,8 @@ static proto_bool der_int(const uint8_t *der, size_t len, size_t *off, uint8_t *
     {
         return PROTO_FALSE;
     }
-    mem.zero(out, width - val_len);
-    mem.cpy(out + width - val_len, der + val, val_len);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .bytes = width - val_len, .val = 0);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + width - val_len, .src = der + val, .bytes = val_len);
     return PROTO_TRUE;
 }
 
@@ -202,11 +203,13 @@ static proto_bool rsa_key_parse(const uint8_t *der, size_t len, uint8_t *d)
 
 void protocore_ssh_rsa_load_pubkey(uint8_t *work)
 {
-    if (!span.has_storage(SSH_RSA_CTX(work)->d))
+    if (!EMBED_CALL(spat.has_storage, SpatiumCfg, .span = SSH_RSA_CTX(work)->d))
     {
-        SSH_RSA_CTX(work)->d = protocore_secure_persist_span(PROTOCORE_RSA_KEY_BYTES);
+        SSH_RSA_CTX(work)->d =
+            EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_RSA_KEY_BYTES),
+                       .cap = PROTOCORE_RSA_KEY_BYTES);
     }
-    if (!span.has_storage(SSH_RSA_CTX(work)->d))
+    if (!EMBED_CALL(spat.has_storage, SpatiumCfg, .span = SSH_RSA_CTX(work)->d))
     {
         SshRsaV.n = -1;
         return;
@@ -215,11 +218,14 @@ void protocore_ssh_rsa_load_pubkey(uint8_t *work)
     ssh_host_pubkey.loaded = PROTO_FALSE;
 
     // The DER is a working set: borrowed for this call, wiped by the release on every path out.
-    const size_t mark = protocore_secure_mark();
-    protocore_span der = protocore_secure_span(SSH_RSA_KEY_DER_MAX, 0);
-    if (!span.has_storage(der))
+    const size_t mark = protocore_secure_guard()->temporary_buf_mark();
+    mmgr_span der = EMBED_CALL(
+        spat.from, SpatiumCfg,
+        .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(SSH_RSA_KEY_DER_MAX, protocore_secure_owner()),
+        .cap = SSH_RSA_KEY_DER_MAX);
+    if (!EMBED_CALL(spat.has_storage, SpatiumCfg, .span = der))
     {
-        protocore_secure_release(mark);
+        protocore_secure_guard()->temporary_buf_release(mark);
         SshRsaV.n = -1;
         return;
     }
@@ -230,7 +236,7 @@ void protocore_ssh_rsa_load_pubkey(uint8_t *work)
         SSH_RSA_CTX(work)->ready = PROTO_TRUE;
         ssh_host_pubkey.loaded = PROTO_TRUE;
     }
-    protocore_secure_release(mark);
+    protocore_secure_guard()->temporary_buf_release(mark);
     if (!SSH_RSA_CTX(work)->ready)
     {
         SshRsaV.n = -1;
@@ -288,7 +294,7 @@ static uint8_t *put_u32(uint8_t *p, uint32_t v)
     return p + 4;
 }
 
-// Write an SSH mpint (4-byte length + optional 0x00 prefix + data). data is big-endian, data_len bytes.
+// Write an SSH mpint (4-byte length + optional 0x00 prefix + data). data is big-endian, data_len byteio.
 static uint8_t *put_mpint(uint8_t *p, const uint8_t *data, size_t data_len)
 {
     size_t off = 0;
@@ -305,7 +311,7 @@ static uint8_t *put_mpint(uint8_t *p, const uint8_t *data, size_t data_len)
     {
         *p++ = 0x00;
     }
-    mem.cpy(p, src, src_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = p, .src = src, .bytes = src_len);
     return p + src_len;
 }
 
@@ -332,7 +338,7 @@ void protocore_ssh_rsa_encode_pubkey(uint8_t *work)
 
     uint8_t *p = out;
     p = put_u32(p, (uint32_t)alg_len);
-    mem.cpy(p, alg, alg_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = p, .src = alg, .bytes = alg_len);
     p += alg_len;
     p = put_mpint(p, ssh_host_pubkey.e_bytes, sizeof(ssh_host_pubkey.e_bytes));
     p = put_mpint(p, ssh_host_pubkey.n, PROTOCORE_RSA_KEY_BYTES);

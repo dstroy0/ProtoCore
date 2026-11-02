@@ -60,7 +60,7 @@ jobs:
 
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.x"
+          python-version: "3.14"
 
       # Restore the PlatformIO toolchain + the ccache store before building. ccache keys on the
       # preprocessed source + flags, so identical compiles hit across envs and (thanks to this cache)

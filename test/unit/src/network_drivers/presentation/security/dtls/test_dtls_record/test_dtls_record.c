@@ -414,7 +414,7 @@ void test_rfc9147_4_5_2_invalid_records(void)
         TEST_ASSERT_FALSE_MESSAGE(dtls_record_ok, "a flipped bit must not deprotect");
     }
 
-    // "This procedure requires the ciphertext length to be at least 16 bytes. Receivers MUST reject
+    // "This procedure requires the ciphertext length to be at least 16 byteio. Receivers MUST reject
     // shorter records": every truncation of this record is short of its own declared length.
     for (size_t take = 0; take < n; take++)
     {

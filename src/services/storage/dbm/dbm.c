@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_DBM
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/storage/dbm/dbm.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -64,7 +64,8 @@ static int find_live(const struct protocore_dbm *db, uint64_t hash, const char *
         {
             return -1; // empty -> the probe chain ends, key not present
         }
-        if (s->state == 1 && s->hash == hash && s->key_len == key_len && mem.cmp(s->key, key, key_len) == 0)
+        if (s->state == 1 && s->hash == hash && s->key_len == key_len &&
+            EMBED_CALL(memor.cmp, MemoriaCfg, .src = s->key, .other = key, .bytes = key_len) == 0)
         {
             return (int)j;
         }
@@ -85,7 +86,8 @@ static int reserve(const struct protocore_dbm *db, uint64_t hash, const char *ke
         const protocore_dbm_slot *s = &db->slots[j];
         if (s->state == 1)
         {
-            if (s->hash == hash && s->key_len == key_len && mem.cmp(s->key, key, key_len) == 0)
+            if (s->hash == hash && s->key_len == key_len &&
+                EMBED_CALL(memor.cmp, MemoriaCfg, .src = s->key, .other = key, .bytes = key_len) == 0)
             {
                 *is_new = PROTO_FALSE;
                 return (int)j;
@@ -154,7 +156,7 @@ static void replay_cb(uint64_t seq, uint64_t data_off, const uint8_t *payload, u
         s->state = 1;
         s->hash = h;
         s->key_len = klen;
-        mem.cpy(s->key, key, klen);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = s->key, .src = key, .bytes = klen);
         s->val_off = data_off + WAL_RECORD_HEADER + DBM_HDR + klen;
         s->val_len = vlen;
     }
@@ -171,7 +173,7 @@ static void replay_cb(uint64_t seq, uint64_t data_off, const uint8_t *payload, u
 
 proto_bool protocore_dbm_open(struct protocore_dbm *db, WalStore *wal)
 {
-    mem.set(db, 0, sizeof(*db));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = db, .val = 0, .bytes = sizeof(*db));
     db->wal = wal;
     ReplayCtx rc = {db, PROTO_FALSE};
     uint8_t scratch[WAL_RECORD_HEADER + DBM_HDR + PROTOCORE_DBM_KEY_MAX + PROTOCORE_DBM_VAL_MAX];
@@ -198,10 +200,10 @@ proto_bool protocore_dbm_put(struct protocore_dbm *db, const char *key, uint16_t
     rec[0] = 0;
     put_u16(rec + 1, key_len);
     put_u32(rec + 3, val_len);
-    mem.cpy(rec + DBM_HDR, key, key_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = rec + DBM_HDR, .src = key, .bytes = key_len);
     if (val_len)
     {
-        mem.cpy(rec + DBM_HDR + key_len, val, val_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = rec + DBM_HDR + key_len, .src = val, .bytes = val_len);
     }
     uint64_t old_head = protocore_wal_store_used(db->wal);
     if (!protocore_wal_store_append(db->wal, rec, (uint32_t)(DBM_HDR + key_len + val_len)))
@@ -217,7 +219,7 @@ proto_bool protocore_dbm_put(struct protocore_dbm *db, const char *key, uint16_t
     s->state = 1;
     s->hash = h;
     s->key_len = key_len;
-    mem.cpy(s->key, key, key_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = s->key, .src = key, .bytes = key_len);
     s->val_off = old_head + WAL_RECORD_HEADER + DBM_HDR + key_len;
     s->val_len = val_len;
     return PROTO_TRUE;
@@ -255,7 +257,7 @@ proto_bool protocore_dbm_del(struct protocore_dbm *db, const char *key, uint16_t
     rec[0] = 1;
     put_u16(rec + 1, key_len);
     put_u32(rec + 3, 0);
-    mem.cpy(rec + DBM_HDR, key, key_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = rec + DBM_HDR, .src = key, .bytes = key_len);
     if (!protocore_wal_store_append(db->wal, rec, (uint32_t)(DBM_HDR + key_len)))
     {
         return PROTO_FALSE; // WAL full: key stays live
@@ -328,7 +330,7 @@ proto_bool protocore_dbm_compact(struct protocore_dbm *db, WalStore *dst)
         rec[0] = 0; // put
         put_u16(rec + 1, s->key_len);
         put_u32(rec + 3, s->val_len);
-        mem.cpy(rec + DBM_HDR, s->key, s->key_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = rec + DBM_HDR, .src = s->key, .bytes = s->key_len);
         // On any failure, return before rebinding so db keeps using its intact original log (no data loss).
         if (s->val_len && !protocore_wal_store_pread(db->wal, s->val_off, rec + DBM_HDR + s->key_len, s->val_len))
         {

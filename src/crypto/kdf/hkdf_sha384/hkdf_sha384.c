@@ -18,10 +18,10 @@
 
 #if PROTOCORE_ENABLE_HKDF_SHA384
 
+#include "cellularum_laboro/cellularum_laboro.h"
 #include "crypto/kdf/hkdf_sha384/hkdf_sha384.h"
 #include "crypto/mac/hmac_sha384/hmac_sha384.h"
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "memoria_operor/memoria_operor.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -53,7 +53,7 @@ static proto_bool hkdf_sha384_derive(uint8_t *work, const uint8_t *prk, const ui
     // key material. There is no defined answer, so give none.
     if (out_len > (size_t)255 * PROTOCORE_HKDF_SHA384_HASH_LEN)
     {
-        mem.set(out, 0, out_len);
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = out_len);
         return PROTO_FALSE;
     }
     uint8_t *t = HKDF_SHA384_T(work);
@@ -75,7 +75,7 @@ static proto_bool hkdf_sha384_derive(uint8_t *work, const uint8_t *prk, const ui
         {
             take = PROTOCORE_HKDF_SHA384_HASH_LEN;
         }
-        mem.cpy(out + done, t, take);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + done, .src = t, .bytes = take);
         done += take;
     }
     return PROTO_TRUE;
@@ -95,21 +95,21 @@ static proto_bool hkdf_sha384_label_derive(uint8_t *work, const uint8_t *secret,
     // Bound the scans: the combined label is opaque<7..255> (RFC 8446 sec 7.1), so cap prefix+label at
     // 255 - this both fits the reserved region below and keeps the single length byte from wrapping,
     // even if a caller ever passed a non-NUL-terminated string.
-    size_t prefix_len = str.len(label_prefix, 255);
-    size_t label_len = str.len(label, 255 - prefix_len);
+    size_t prefix_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = label_prefix, .cap = 255);
+    size_t label_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = label, .cap = 255 - prefix_len);
     uint8_t *info = HKDF_SHA384_INFO(work);
     size_t p = 0;
     info[p++] = (uint8_t)(out_len >> 8);
     info[p++] = (uint8_t)(out_len & 0xff);
     info[p++] = (uint8_t)(prefix_len + label_len); // full label length, prefix included
-    mem.cpy(info + p, label_prefix, prefix_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = info + p, .src = label_prefix, .bytes = prefix_len);
     p += prefix_len;
-    mem.cpy(info + p, label, label_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = info + p, .src = label, .bytes = label_len);
     p += label_len;
     info[p++] = (uint8_t)context_len;
     if (context_len)
     {
-        mem.cpy(info + p, context, context_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = info + p, .src = context, .bytes = context_len);
         p += context_len;
     }
 

@@ -7,20 +7,20 @@
  */
 
 #include "network_drivers/presentation/ssh/app/client/client.h"
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 
 #if PROTOCORE_ENABLE_SSH_CLIENT
 
 // The live arm's stack. The stubs below need none of it, and the SSH headers are not safe to parse
 // with the SSH stack configured out.
 #include "crypto/asymmetric/ed25519/ed25519.h" // Ed25519.pubkey: the provisioning key derivation
-#include "mmgr/arena/arena.h"
-#include "mmgr/secure/secure.h"
+#include "locus_carcerum/locus_carcerum.h"
 #include "network_drivers/presentation/ssh/connection/connection.h"
 #include "network_drivers/presentation/ssh/network/network.h"
 #include "network_drivers/presentation/ssh/transport/transport/transport.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h"
+#include "server/core/worker/worker.h"
 #include "shared/log/log.h"
 
 // Public API
@@ -50,7 +50,7 @@ void protocore_ssh_app_client_pubkey(uint8_t *work)
     uint8_t *crypto_work = SshClient.work;
     if (crypto_work == NULL)
     {
-        mem.zero(pub, 32);
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = pub, .bytes = 32, .val = 0);
         return;
     }
     Ed25519.pubkey(crypto_work, seed, pub);
@@ -73,7 +73,7 @@ void protocore_ssh_app_client_up(uint8_t *work)
 void protocore_ssh_app_client_pubkey(uint8_t *work)
 {
     (void)work;
-    mem.zero(SshAppClientV.pub, 32);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = SshAppClientV.pub, .bytes = 32, .val = 0);
 }
 
 #endif // PROTOCORE_ENABLE_SSH_CLIENT

@@ -5,9 +5,8 @@ protocore_add_module(server/net/relay/relay_listener
   GATE PROTOCORE_ENABLE_RELAY
   SOURCES relay_listener.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
+    server/core/worker
+    mmgr
     network_drivers/physical/radio_power
     network_drivers/session
     network_drivers/transport/tcp

@@ -48,7 +48,7 @@ typedef struct
     int count;
 
     // Legacy single-file mode: when no path entry is registered, every open succeeds and yields
-    // these bytes. Several tests only care about the body, not about which name produced it.
+    // these byteio. Several tests only care about the body, not about which name produced it.
     const uint8_t *one_data;
     size_t one_size;
     proto_bool one_valid;
@@ -238,7 +238,7 @@ static inline size_t mock_mnt_written(void)
     return g_mock_mnt.wlen;
 }
 
-/** @brief Those bytes. */
+/** @brief Those byteio. */
 static inline const uint8_t *mock_mnt_wdata(void)
 {
     return g_mock_mnt.wbuf;

@@ -18,7 +18,7 @@
 #if PROTOCORE_ENABLE_AES256CTR
 
 #if PROTOCORE_HAS_HW_AES
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #endif
 #if !PROTOCORE_HAS_HW_AES
 #include "crypto/cipher/aes_block/aes_block.h" // native software AES-256 block
@@ -39,7 +39,7 @@ typedef struct
 } AesBlk;
 static inline void blk_init(AesBlk *b, const uint8_t key[32])
 {
-    mem.cpy(b->key, key, 32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = b->key, .src = key, .bytes = 32);
 }
 static inline void blk_enc(AesBlk *b, const uint8_t in[16], uint8_t out[16])
 {
@@ -91,8 +91,8 @@ static_assert(AES256CTR_OFF_KS + PROTOCORE_AES256CTR_CTR_LEN <= PROTOCORE_AES256
               "PROTOCORE_AES256CTR_BORROW is short of the expanded key and the keystream block - raise it in "
               "protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(

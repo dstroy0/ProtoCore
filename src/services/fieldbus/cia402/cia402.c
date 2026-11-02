@@ -10,12 +10,12 @@
 
 #if PROTOCORE_ENABLE_CIA402
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/canopen/canopen.h"
 #include "services/fieldbus/cia402/cia402.h"
 #include "shared/can/can.h"
 
-#include "mmgr/endian/endian.h"
+#include "endian/endian.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -146,7 +146,7 @@ void protocore_cia402_sdo_set_controlword(uint8_t *work)
     uint16_t controlword = Cia402V.sdo_set_controlword_args.controlword;
 
     uint8_t d[2];
-    endian.wr16le(d, controlword);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = d, .val = controlword, .width = MMGR_ENDIAN_16);
     CanopenV.build_sdo_write_args.out = out;
     CanopenV.build_sdo_write_args.node_id = node;
     CanopenV.build_sdo_write_args.index = CIA402_OD_CONTROLWORD;
@@ -183,7 +183,7 @@ void protocore_cia402_sdo_set_target_position(uint8_t *work)
     int32_t position = Cia402V.sdo_set_target_position_args.position;
 
     uint8_t d[4];
-    endian.wr32le(d, (uint32_t)position);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = d, .val = (uint32_t)position, .width = MMGR_ENDIAN_32);
     CanopenV.build_sdo_write_args.out = out;
     CanopenV.build_sdo_write_args.node_id = node;
     CanopenV.build_sdo_write_args.index = CIA402_OD_TARGET_POSITION;
@@ -202,7 +202,7 @@ void protocore_cia402_sdo_set_target_velocity(uint8_t *work)
     int32_t velocity = Cia402V.sdo_set_target_velocity_args.velocity;
 
     uint8_t d[4];
-    endian.wr32le(d, (uint32_t)velocity);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = d, .val = (uint32_t)velocity, .width = MMGR_ENDIAN_32);
     CanopenV.build_sdo_write_args.out = out;
     CanopenV.build_sdo_write_args.node_id = node;
     CanopenV.build_sdo_write_args.index = CIA402_OD_TARGET_VELOCITY;
@@ -221,7 +221,7 @@ void protocore_cia402_sdo_set_target_torque(uint8_t *work)
     int16_t torque = Cia402V.sdo_set_target_torque_args.torque;
 
     uint8_t d[2];
-    endian.wr16le(d, (uint16_t)torque);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = d, .val = (uint16_t)torque, .width = MMGR_ENDIAN_16);
     CanopenV.build_sdo_write_args.out = out;
     CanopenV.build_sdo_write_args.node_id = node;
     CanopenV.build_sdo_write_args.index = CIA402_OD_TARGET_TORQUE;
@@ -268,7 +268,7 @@ static proto_bool sdo_upload_bytes(uint8_t *work, const CanFrame *f, uint16_t wa
     {
         return PROTO_FALSE;
     }
-    mem.cpy(out, resp.data, need);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = resp.data, .bytes = need);
     return PROTO_TRUE;
 }
 
@@ -285,7 +285,7 @@ void protocore_cia402_sdo_get_u16(uint8_t *work)
         Cia402V.ok = PROTO_FALSE;
         return;
     }
-    *value = endian.rd16le(d);
+    *value = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = d, .width = MMGR_ENDIAN_16);
     Cia402V.ok = PROTO_TRUE;
 }
 
@@ -302,7 +302,7 @@ void protocore_cia402_sdo_get_i32(uint8_t *work)
         Cia402V.ok = PROTO_FALSE;
         return;
     }
-    *value = (int32_t)endian.rd32le(d);
+    *value = (int32_t)(uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = d, .width = MMGR_ENDIAN_32);
     Cia402V.ok = PROTO_TRUE;
 }
 
@@ -319,8 +319,8 @@ void protocore_cia402_pack_command(uint8_t *work)
         Cia402V.n = 0;
         return;
     }
-    size_t p = endian.wr16le(buf, controlword);
-    p += endian.wr32le(buf + p, (uint32_t)target);
+    size_t p = EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf, .val = controlword, .width = MMGR_ENDIAN_16);
+    p += EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + p, .val = (uint32_t)target, .width = MMGR_ENDIAN_32);
     Cia402V.n = p; // 6
 }
 
@@ -337,8 +337,8 @@ void protocore_cia402_unpack_status(uint8_t *work)
         Cia402V.ok = PROTO_FALSE;
         return;
     }
-    *statusword = endian.rd16le(buf);
-    *actual = (int32_t)endian.rd32le(buf + 2);
+    *statusword = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf, .width = MMGR_ENDIAN_16);
+    *actual = (int32_t)(uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + 2, .width = MMGR_ENDIAN_32);
     Cia402V.ok = PROTO_TRUE;
 }
 

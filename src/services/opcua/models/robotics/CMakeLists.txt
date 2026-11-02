@@ -5,7 +5,7 @@ protocore_add_module(services/opcua/models/robotics
   GATE PROTOCORE_ENABLE_ROBOTICS
   SOURCES robotics.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protostr
+    server/core/worker
+    mmgr
     services/opcua
 )

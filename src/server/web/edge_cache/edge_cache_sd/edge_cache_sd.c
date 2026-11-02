@@ -12,8 +12,8 @@
 
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "server/web/edge_cache/edge_cache/edge_cache.h"
 #include "server/web/edge_cache/edge_cache_sd/edge_cache_sd.h"
 #include "services/storage/dbm/dbm.h"
@@ -35,9 +35,9 @@ static uint16_t get_u16(const uint8_t *p)
 // Append a u16 length prefix + the NUL-terminated string @p s. False (no write) on overflow.
 static proto_bool put_str(uint8_t *out, size_t cap, size_t *pos, const char *s)
 {
-    size_t sl = str.len(s, cap);
+    size_t sl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = cap);
     // Split from the capacity check below so excluding it does not also drop that check - which IS
-    // reachable and tested - out of the branch measurement. sl is str.len-capped to `cap`, the
+    // reachable and tested - out of the branch measurement. sl is cellul.len-capped to `cap`, the
     // caller's record buffer, which is orders of magnitude below the 16-bit prefix limit in every
     // build this library is sized for. The check guards the u16 cast if cap ever grows.
     if (sl > 0xFFFFu)
@@ -50,7 +50,7 @@ static proto_bool put_str(uint8_t *out, size_t cap, size_t *pos, const char *s)
     }
     put_u16(out + *pos, (uint16_t)sl);
     *pos += 2;
-    mem.cpy(out + *pos, s, sl);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + *pos, .src = s, .bytes = sl);
     *pos += sl;
     return PROTO_TRUE;
 }
@@ -68,7 +68,7 @@ static proto_bool get_str(const uint8_t *buf, size_t len, size_t *pos, char *out
     {
         return PROTO_FALSE;
     }
-    mem.cpy(out, buf + *pos, sl);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = buf + *pos, .bytes = sl);
     out[sl] = '\0';
     *pos += sl;
     return PROTO_TRUE;
@@ -114,7 +114,7 @@ void protocore_edge_cache_sd_serialize(uint8_t *work)
     }
     put_u16(out + pos, e->body_len);
     pos += 2;
-    mem.cpy(out + pos, e->body, e->body_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + pos, .src = e->body, .bytes = e->body_len);
     pos += e->body_len;
     EdgeCacheSdV.n = pos;
 }
@@ -158,13 +158,13 @@ void protocore_edge_cache_sd_deserialize(uint8_t *work)
         EdgeCacheSdV.ok = PROTO_FALSE;
         return;
     }
-    mem.cpy(e->body, buf + pos, bl);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->body, .src = buf + pos, .bytes = bl);
     e->body_len = bl;
     // The digest is hashed in the caller's entry buffer, not in the borrow: the borrow is nominal
     // here and a SHA-256 workspace written into it would run off the end of it.
     EdgeCacheV.key_digest_args.digest_work = entry_buf;
     EdgeCacheV.key_digest_args.canon = e->key;
-    EdgeCacheV.key_digest_args.len = str.len(e->key, sizeof(e->key));
+    EdgeCacheV.key_digest_args.len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = e->key, .cap = sizeof(e->key));
     EdgeCacheV.key_digest_args.digest = e->digest;
     EdgeCache.key_digest(work);
     EdgeCacheSdV.ok = PROTO_TRUE;
@@ -238,7 +238,8 @@ static proto_bool collect_cb(const char *key, uint16_t key_len, void *vctx)
     if (c->prefix)
     {
         const char *path = canon_path(canon);
-        if (!path || !str.starts(path, c->prefix, c->plen, PROTO_FALSE))
+        if (!path || !EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = path, .other = c->prefix, .cap = c->plen,
+                                 .ci = PROTO_FALSE))
         {
             return PROTO_TRUE; // path does not match the purge prefix
         }
@@ -248,7 +249,7 @@ static proto_bool collect_cb(const char *key, uint16_t key_len, void *vctx)
         c->full = PROTO_TRUE;
         return PROTO_FALSE; // stop this pass; the caller deletes the batch then re-iterates
     }
-    mem.cpy(c->batch[c->count++], key, 32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = c->batch[c->count++], .src = key, .bytes = 32);
     return PROTO_TRUE;
 }
 
@@ -260,7 +261,7 @@ static uint32_t purge_matching(struct protocore_dbm *db, const char *prefix, uin
         CollectCtx c;
         c.db = db;
         c.prefix = prefix;
-        c.plen = prefix ? str.len(prefix, PROTOCORE_EDGE_KEY_MAX) : 0;
+        c.plen = prefix ? EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = prefix, .cap = PROTOCORE_EDGE_KEY_MAX) : 0;
         c.scratch = scratch;
         c.scratch_cap = scratch_cap;
         c.count = 0;

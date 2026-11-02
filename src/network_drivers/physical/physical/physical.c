@@ -16,7 +16,7 @@
  */
 
 #include "network_drivers/physical/physical/physical.h"
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
 // ---------------------------------------------------------------------------
 // The seam this module implements itself
@@ -96,7 +96,7 @@ uint8_t *protocore_physical_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_PHYSICAL_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_PHYSICAL_BORROW);
     }
     return s_own.span;
 }

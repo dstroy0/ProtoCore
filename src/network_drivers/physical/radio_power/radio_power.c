@@ -16,9 +16,9 @@
 
 #if PROTOCORE_ENABLE_RADIO_POWER
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/physical/radio_power/radio_power.h"
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
 PROTOCORE_BEGIN_DECLS
 
@@ -60,7 +60,7 @@ uint8_t *protocore_radio_power_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_RADIO_POWER_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_RADIO_POWER_BORROW);
     }
     return s_own.span;
 }

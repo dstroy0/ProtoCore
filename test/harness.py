@@ -1224,7 +1224,37 @@ def _flag_split(flags):
     ):
         if base not in incs:
             incs.append(base)
+    for switch in ("-DMMGR_ENABLE_DMA=0", "-DMMGR_ENABLE_EXTRAM=0"):
+        if switch not in defs:
+            defs.append(switch)
     return incs, defs
+
+
+# The sources include/CMakeLists.txt builds as pc_mmgr. Every env links them, so no env names them.
+MMGR_SOURCES = [
+    "include/MMgr/src/clz/clz.c",
+    "include/MMgr/src/impensa_ancorae_acus/impensa_ancorae_acus_generic.c",
+    "include/MMgr/src/ascii_persona_bitorum/ascii_persona_bitorum.c",
+    "include/MMgr/src/bitorum_introitus_exitus/bitorum_introitus_exitus.c",
+    "include/MMgr/src/endian/endian.c",
+    "include/MMgr/src/proximus_operor/proximus_operor.c",
+    "include/MMgr/src/verbum_scrutor/verbum_scrutor.c",
+    "include/MMgr/src/memoria_operor/memoria_operor.c",
+    "include/MMgr/src/cellularum_laboro/cellularum_laboro.c",
+    "include/MMgr/src/spatium/spatium.c",
+    "include/MMgr/src/octetus_introitus_exitus/octetus_introitus_exitus.c",
+    "include/MMgr/src/locus_carcerum/locus_carcerum.c",
+    "include/MMgr/src/memoria_anularis/memoria_anularis.c",
+    "include/MMgr/src/memoria_externa/memoria_externa.c",
+    "include/MMgr/src/transformo/transformo.c",
+    "include/MMgr/src/memoriam_praetereo/memoriam_praetereo.c",
+    "include/MMgr/src/memoriam_praetereo/praet_ordo.c",
+    "include/MMgr/src/memoriam_praetereo/praet_descriptor.c",
+    "include/MMgr/src/fractio/fractio.c",
+    "include/MMgr/src/verba_scribo/verba_scribo.c",
+    "include/MMgr/src/verba_scribo/verba_linea.c",
+    "include/MMgr/src/numeros_scribo/numeros_scribo.c",
+]
 
 
 def _resolve_src(globs):
@@ -1939,7 +1969,7 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
     lib_incs, lib_pkgs = lib_packages(name)
     for d in lib_incs:
         incs.append("-I" + os.path.relpath(d, ROOT).replace("\\", "/"))
-    tus = _resolve_src(e["src"])
+    tus = _resolve_src(e["src"]) + MMGR_SOURCES
     tus.append(os.path.relpath(os.path.join(usrc, "unity.c"), ROOT).replace("\\", "/"))
     out_lines = []
     rc_total = 0

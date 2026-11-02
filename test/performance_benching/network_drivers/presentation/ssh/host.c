@@ -14,7 +14,8 @@
 //   -DPROTOCORE_ENABLE_SSH=1 test/performance_benching/network_drivers/presentation/ssh/host.c
 //   src/crypto/asymmetric/curve25519.c src/crypto/asymmetric/ed25519.c src/crypto/hash/sha512.c
 //   src/crypto/cipher/chacha20.c src/crypto/mac/poly1305.c src/crypto/aead/chachapoly.c
-//   src/mmgr/secure.c src/mmgr/arena.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bssh && /tmp/bssh
+//   src/mmgr/secure.c src/mmgr/arena.c src/memoria_operor/memoria_operor.h.c
+//   src/cellularum_laboro/cellularum_laboro.h.c -o /tmp/bssh && /tmp/bssh
 
 #define PROTOCORE_ENABLE_SSH 1
 #include "crypto/aead/chachapoly/chachapoly.h"

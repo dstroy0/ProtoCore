@@ -10,9 +10,9 @@
  */
 
 #include "server/signaling/signaling/signaling.h"
-#include "mmgr/plaintext/plaintext.h"                        // the persistent end this module's state is taken from
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a close names
 #include "network_drivers/transport/tcp/tcp.h"
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
 /**
  * @brief The bucket's compile-time storage: the one snapshot every deposit lands in.
@@ -48,7 +48,7 @@ uint8_t *protocore_signaling_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_SIGNALING_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_SIGNALING_BORROW);
     }
     return s_own.span;
 }

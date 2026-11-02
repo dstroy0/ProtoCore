@@ -34,7 +34,7 @@
 #include "crypto/hash/sha512/sha512.h"
 #include "crypto/pqc/sntrup761/sntrup761.h"
 #include "crypto/rng/rng.h" // protocore_rand_fill
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 
 // The caller's borrow, split: the region the nested SHA-512 runs out of. That hash is driven through
 // its own namespace, so this borrow carries a region for it rather than naming any term of its split.
@@ -429,7 +429,7 @@ static void Hash_prefix(uint8_t *work, uint8_t *out, int b, const uint8_t *in, s
     Sha512.update(hw, &bb, 1);
     Sha512.update(hw, in, inlen);
     Sha512.final(hw, h);
-    mem.cpy(out, h, PROTOCORE_HASH_BYTES);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = h, .bytes = PROTOCORE_HASH_BYTES);
 }
 
 static void Small_encode(uint8_t *s, const small_t *f)
@@ -478,7 +478,7 @@ static void HashConfirm(uint8_t *work, uint8_t *h, const uint8_t *r_enc, const u
 {
     uint8_t x[PROTOCORE_HASH_BYTES * 2];
     Hash_prefix(work, x, 3, r_enc, PROTOCORE_SMALL_BYTES);
-    mem.cpy(x + PROTOCORE_HASH_BYTES, cache, PROTOCORE_HASH_BYTES);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = x + PROTOCORE_HASH_BYTES, .src = cache, .bytes = PROTOCORE_HASH_BYTES);
     Hash_prefix(work, h, 2, x, sizeof x);
 }
 
@@ -486,7 +486,7 @@ static void HashSession(uint8_t *work, uint8_t *k, int b, const uint8_t *r_enc, 
 {
     uint8_t x[PROTOCORE_HASH_BYTES + PROTOCORE_CT_BYTES];
     Hash_prefix(work, x, 3, r_enc, PROTOCORE_SMALL_BYTES);
-    mem.cpy(x + PROTOCORE_HASH_BYTES, c, PROTOCORE_CT_BYTES);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = x + PROTOCORE_HASH_BYTES, .src = c, .bytes = PROTOCORE_CT_BYTES);
     Hash_prefix(work, k, b, x, sizeof x);
 }
 
@@ -867,7 +867,7 @@ proto_bool protocore_sntrup761_keypair(uint8_t *work, uint8_t *pk, uint8_t *sk)
     Small_encode(sk + PROTOCORE_SMALL_BYTES, ginv);
     // ...then the pk copy, a random rho for implicit reject, and the cached H(4||pk).
     uint8_t *tail = sk + 2 * PROTOCORE_SMALL_BYTES; // SecretKeys_bytes = 2 * Small_bytes
-    mem.cpy(tail, pk, PROTOCORE_PK_BYTES);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = tail, .src = pk, .bytes = PROTOCORE_PK_BYTES);
     RngV.fill_args.out = tail + PROTOCORE_PK_BYTES;
     RngV.fill_args.len = PROTOCORE_SMALL_BYTES;
     Rng.fill(protocore_rng_span());

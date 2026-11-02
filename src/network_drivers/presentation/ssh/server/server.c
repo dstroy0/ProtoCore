@@ -6,12 +6,11 @@
  * @brief The server engine: accept a connection, drive it, tear it down.
  */
 
+#include "locus_carcerum/locus_carcerum.h"
 #include "protocore_config.h"
 
 #if PROTOCORE_ENABLE_SSH
 
-#include "mmgr/plaintext/plaintext.h"
-#include "mmgr/secure/secure.h"
 #include "network_drivers/presentation/ssh/auth/auth.h"
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/connection/connection.h"
@@ -25,6 +24,7 @@
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h"
 #include "server/core/proto_handler/proto_handler.h"
+#include "server/core/worker/worker.h"
 
 #if PROTOCORE_ENABLE_SSH_ZLIB
 #include "network_drivers/presentation/ssh/transport/comp/comp.h"
@@ -63,7 +63,7 @@ uint8_t *protocore_ssh_server_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_SSH_SERVER_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_SSH_SERVER_BORROW);
     }
     return s_own.span;
 }
@@ -186,7 +186,7 @@ static void net_rx(uint8_t conn_slot)
         ssh_pkt_recv(j, buf + off, n - off, msg_handler, &ssh_sess[j].in);
     }
 
-    protocore_secure_wipe(buf, n);
+    mmgr_zero_buf(buf, n);
 
     SshNetworkV.conn_slot = conn_slot;
     SshNetworkV.ssh_slot = j;
@@ -215,8 +215,8 @@ static void net_close(uint8_t conn_slot)
         SshAuthV.slot = j;
         SshAuth.reset(protocore_ssh_auth_span());
         uint8_t *ssh_ptr = Ssh.conn_slot(protocore_ssh_span(), j);
-        protocore_secure_wipe(ssh_ptr, SSH_SLOT_BORROW);
-        protocore_secure_wipe(&ssh_sess[j], sizeof(SshSession));
+        mmgr_zero_buf(ssh_ptr, SSH_SLOT_BORROW);
+        mmgr_zero_buf(&ssh_sess[j], sizeof(SshSession));
         SshNetworkV.ssh_slot = j;
         SshNetwork.release(protocore_ssh_network_span());
     }

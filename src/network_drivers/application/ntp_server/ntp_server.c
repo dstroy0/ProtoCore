@@ -10,11 +10,11 @@
 
 #if PROTOCORE_ENABLE_NTP_SERVER
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/application/ntp_server/ntp_server.h"
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
-#include "mmgr/endian/endian.h"
+#include "endian/endian.h"
 PROTOCORE_BEGIN_DECLS
 
 // memset, memcpy
@@ -59,7 +59,7 @@ void protocore_ntp_server_build_response(uint8_t *work)
         NtpServerV.n = 0;
         return;
     }
-    mem.set(out, 0, PROTOCORE_NTP_PACKET_LEN);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = PROTOCORE_NTP_PACKET_LEN);
     out[0] = (uint8_t)((0u << 6) | (vn << 3) | reply_mode); // LI = 0 (in sync), VN echoed
     out[1] = stratum;
     out[2] = req[2];        // poll interval: the request's, intact
@@ -68,16 +68,20 @@ void protocore_ntp_server_build_response(uint8_t *work)
     // stratum advertises ~1 s.
     if (stratum != 1u)
     {
-        endian.wr32be(out + 8, 0x00010000u);
+        EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = out + 8, .val = 0x00010000u, .width = MMGR_ENDIAN_32);
     }
-    endian.wr32be(out + 12, refid);
-    endian.wr32be(out + 16, protocore_ntp_secs); // reference timestamp (when our clock was last good = now)
-    endian.wr32be(out + 20, protocore_ntp_frac);
-    mem.cpy(out + 24, req + 40, 8);              // origin timestamp = the client's transmit timestamp
-    endian.wr32be(out + 32, protocore_ntp_secs); // receive timestamp
-    endian.wr32be(out + 36, protocore_ntp_frac);
-    endian.wr32be(out + 40, protocore_ntp_secs); // transmit timestamp
-    endian.wr32be(out + 44, protocore_ntp_frac);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = out + 12, .val = refid, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = out + 16, .val = protocore_ntp_secs,
+               .width = MMGR_ENDIAN_32); // reference timestamp (when our clock was last good = now)
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = out + 20, .val = protocore_ntp_frac, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 24, .src = req + 40,
+               .bytes = 8); // origin timestamp = the client's transmit timestamp
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = out + 32, .val = protocore_ntp_secs,
+               .width = MMGR_ENDIAN_32); // receive timestamp
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = out + 36, .val = protocore_ntp_frac, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = out + 40, .val = protocore_ntp_secs,
+               .width = MMGR_ENDIAN_32); // transmit timestamp
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = out + 44, .val = protocore_ntp_frac, .width = MMGR_ENDIAN_32);
     NtpServerV.n = PROTOCORE_NTP_PACKET_LEN;
 }
 
@@ -96,8 +100,8 @@ static_assert(NTP_SERVER_OFF_CTX + sizeof(NtpServerCtx) <= PROTOCORE_NTP_SERVER_
               "PROTOCORE_NTP_SERVER_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(
@@ -123,7 +127,7 @@ uint8_t *protocore_ntp_server_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_NTP_SERVER_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_NTP_SERVER_BORROW);
         // A borrow arrives zeroed, and these do not start at zero.
         NTP_SERVER_CTX(s_own.span)->refid = PROTOCORE_NTP_REFID_LOCL;
         NTP_SERVER_CTX(s_own.span)->stratum = PROTOCORE_NTP_SERVER_STRATUM;

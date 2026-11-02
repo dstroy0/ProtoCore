@@ -24,10 +24,10 @@
 #include "../protocol/protocol.h"     // ConnPool: the slots an accept claims
 #include "../tcp.h"                   // the aggregate the halves hang off
 #include "config/platform/platform.h" // the stack's queues, under our names
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "network_drivers/tls/tls.h"  // TLS handshake begin (self-stubbing)
 #include "network_drivers/transport/tcp/common/common.h" // TcpConn, conn_pool: the slots an accept claims
 #include "server/clock/clock.h"                          // protocore_millis() pluggable monotonic clock
+#include "server/core/worker/worker.h"                   // the persistent end this module's state is taken from
 #include "server/core/worker/worker.h"                   // Workers.wake() - nudge the owning worker task
 
 // Listener pool - all storage in BSS.
@@ -53,7 +53,7 @@ uint8_t *protocore_tcp_listener_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_TCP_LISTENER_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_TCP_LISTENER_BORROW);
     }
     return s_own.span;
 }
@@ -587,9 +587,9 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
     ConnPool.set_state(protocore_conn_pool_span()); // reserves the slot in the bitmask
     slot->pcb = newpcb;
     slot->last_activity_ms = Clock.ms;
-    slot->rx_head = 0;
-    slot->rx_tail = 0;
-    slot->rx_acked = 0; // window-ack cursor starts level with an empty ring
+    (void)EMBED_CALL(anularis.init, AnularisCfg, .ring = &slot->rx, .buf = slot->rx_buffer, .capacity = RX_BUF_SIZE,
+                     .segment_count = 1u);
+    slot->rx_unacked = 0; // nothing drained yet, so nothing owed to the window
     slot->listener_id = idx;
     slot->proto = lst->proto;
 

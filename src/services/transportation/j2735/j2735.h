@@ -11,7 +11,7 @@
  *
  *  - a **constrained INTEGER** in [lo, hi] is the offset (value - lo) in exactly ceil(log2(range)) bits;
  *  - a **BOOLEAN** is one bit;
- *  - an unconstrained/length-prefixed **OCTET STRING** uses a length determinant then the bytes.
+ *  - an unconstrained/length-prefixed **OCTET STRING** uses a length determinant then the byteio.
  *
  * This provides that bit-level UPER primitive layer (host-testable against hand-computed bit patterns)
  * and, on top of it, the J2735 **BSMcore** position block (msgCnt, id, secMark, lat, long, elev, speed,

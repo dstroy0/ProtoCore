@@ -6,6 +6,7 @@
  * @brief RFC 4253 sec 6.2: the per-direction compression state and its reset.
  */
 
+#include "locus_carcerum/locus_carcerum.h"
 #include "protocore_config.h" // the entry point: the widths
 
 #if PROTOCORE_ENABLE_SSH_ZLIB
@@ -13,10 +14,9 @@
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/comp/comp.h"
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/secure/secure.h"       // protocore_secure_wipe
 #include "network_drivers/presentation/ssh/transport/inflate/inflate.h"
 #include "network_drivers/presentation/ssh/transport/zlib/zlib.h"
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
 // The per-connection compressor holds a window-sized work buffer + a window-sized hash chain (tens
 // of KB).
@@ -55,8 +55,8 @@ static_assert(COMP_OFF_CTX + sizeof(SshCompCtx) <= PROTOCORE_SSH_COMP_BORROW,
               "PROTOCORE_SSH_COMP_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(COMP_OFF_CTX % _Alignof(SshCompCtx) == 0,
@@ -77,7 +77,7 @@ uint8_t *protocore_ssh_comp_span(void)
 {
     if (s_span == NULL)
     {
-        s_span = protocore_plaintext_persist_span(PROTOCORE_SSH_COMP_BORROW).buf;
+        s_span = (uint8_t *)protocore_plain_persist(PROTOCORE_SSH_COMP_BORROW);
     }
     return s_span;
 }
@@ -114,8 +114,8 @@ void protocore_comp_reset(uint8_t *work, uint8_t i)
     c->c2s_alg = SSH_COMP_NONE;
     c->c2s_active = PROTO_FALSE;
     // The deflate work buffer and the inflate window hold the session's decompressed plaintext.
-    protocore_secure_wipe(c->work, sizeof(c->work));
-    protocore_secure_wipe(c->inf_window, sizeof(c->inf_window));
+    mmgr_zero_buf(c->work, sizeof(c->work));
+    mmgr_zero_buf(c->inf_window, sizeof(c->inf_window));
 }
 
 void protocore_comp_set_s2c(uint8_t *work, uint8_t i, SshCompAlg alg)

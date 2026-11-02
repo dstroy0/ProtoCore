@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "mmgr/arena/arena.h" // protocore_worker_count / _self / _set_self
+#include "locus_carcerum/locus_carcerum.h" // protocore_worker_count / _self / _set_self
 #include "network_drivers/transport/tcp/common/common.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"

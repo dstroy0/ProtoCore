@@ -15,15 +15,15 @@
 
 #if PROTOCORE_ENABLE_WS_CLIENT
 
+#include "cellularum_laboro/cellularum_laboro.h"              // cellul.len / cellul.starts
 #include "crypto/hash/sha1/sha1.h"                            // Sha1: the accept computation
 #include "crypto/rng/rng.h"                                   // Rng: the key and the Masking-key
-#include "mmgr/membuild/membuild.h"                           // protocore_sb: the request-line and its field lines
-#include "mmgr/protomem/protomem.h"                           // mem.cpy / mem.cmp / mem.chr
-#include "mmgr/protostr/protostr.h"                           // str.len / str.starts
-#include "mmgr/secure/secure.h"                               // the pool the digest borrow comes from
-#include "mmgr/span/span.h"                                   // protocore_span, span.ok
+#include "memoria_operor/memoria_operor.h"                    // memor.cpy / memor.cmp / memor.chr
 #include "network_drivers/presentation/codec/base64/base64.h" // Base64.encode (RFC 4648)
 #include "server/clock/clock.h"                               // protocore_millis, pcdelay
+#include "server/core/worker/worker.h"                        // the pool the digest borrow comes from
+#include "spatium/spatium.h"                                  // mmgr_span, spat.ok
+#include "verba_scribo/verba_scribo.h"                        // verba_scribo: the request-line and its field lines
 
 PROTOCORE_BEGIN_DECLS
 
@@ -122,7 +122,7 @@ uint8_t *protocore_ws_client_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_WS_CLIENT_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_WS_CLIENT_BORROW);
         // A borrow arrives zeroed, and these do not start at zero.
         WS_CLIENT_CTX(s_own.span)->cid = -1;
     }
@@ -155,24 +155,27 @@ void protocore_ws_client_accept_for_key(uint8_t *work)
         return;
     }
     char concat[WSC_CONCAT_CAP];
-    const size_t klen = str.len(key, sizeof(concat));
+    const size_t klen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = key, .cap = sizeof(concat));
     const size_t glen = sizeof(WS_ACCEPT_GUID) - 1;
     if (klen + glen >= sizeof(concat) || cap < PROTOCORE_WS_ACCEPT_CAP)
     {
         return;
     }
-    mem.cpy(concat, key, klen);
-    mem.cpy(concat + klen, WS_ACCEPT_GUID, glen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = concat, .src = key, .bytes = klen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = concat + klen, .src = WS_ACCEPT_GUID, .bytes = glen);
     uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN];
-    const size_t mark = protocore_secure_mark();
-    protocore_span w = protocore_secure_span(PROTOCORE_SHA1_BORROW, 8);
-    if (!span.ok(w))
+    const size_t mark = protocore_secure_guard()->temporary_buf_mark();
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg,
+                             .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_SHA1_BORROW,
+                                                                                             protocore_secure_owner()),
+                             .cap = PROTOCORE_SHA1_BORROW);
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
-        protocore_secure_release(mark);
+        protocore_secure_guard()->temporary_buf_release(mark);
         return;
     }
     Sha1.hash(w.buf, (const uint8_t *)concat, klen + glen, digest);
-    protocore_secure_release(mark);
+    protocore_secure_guard()->temporary_buf_release(mark);
     Base64V.encode_args.src = digest;
     Base64V.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
     Base64V.encode_args.dst = accept;
@@ -196,21 +199,26 @@ void protocore_ws_client_build_opening_handshake(uint8_t *work)
     {
         return;
     }
-    protocore_sb sb = {(char *)out, cap, 0, PROTO_TRUE};
-    Sb.put(&sb, "GET ");
-    Sb.put(&sb, resource_name);
-    Sb.put(&sb, " HTTP/1.1\r\nHost: ");
-    Sb.put(&sb, host);
-    Sb.put(&sb, "\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: ");
-    Sb.put(&sb, key);
+    char *const sb_out = (char *)out;
+    size_t sb = 0;
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out, .cap = cap, .at = sb, .text = "GET ");
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out, .cap = cap, .at = sb, .text = resource_name);
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out, .cap = cap, .at = sb,
+                    .text = " HTTP/1.1\r\nHost: ");
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out, .cap = cap, .at = sb, .text = host);
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out, .cap = cap, .at = sb,
+                    .text = "\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: ");
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out, .cap = cap, .at = sb, .text = key);
     if (subprotocol && subprotocol[0])
     {
-        Sb.put(&sb, "\r\nSec-WebSocket-Protocol: ");
-        Sb.put(&sb, subprotocol);
+        sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out, .cap = cap, .at = sb,
+                        .text = "\r\nSec-WebSocket-Protocol: ");
+        sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out, .cap = cap, .at = sb, .text = subprotocol);
     }
-    Sb.put(&sb, "\r\nSec-WebSocket-Version: 13\r\n\r\n");
-    const size_t n = Sb.finish(&sb);
-    if (sb.ok)
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out, .cap = cap, .at = sb,
+                    .text = "\r\nSec-WebSocket-Version: 13\r\n\r\n");
+    const size_t n = EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb_out, .cap = cap, .at = sb);
+    if (EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .out = sb_out, .cap = cap, .at = sb))
     {
         WsClientV.n = n;
     }
@@ -222,12 +230,14 @@ void protocore_ws_client_build_opening_handshake(uint8_t *work)
 // (RFC 9110 sec 5.1).
 static const char *field_value(const uint8_t *buf, size_t len, const char *name, size_t *vlen)
 {
-    const size_t nlen = str.len(name, len + 1);
+    const size_t nlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = name, .cap = len + 1);
     const uint8_t *p = buf;
     const uint8_t *end = buf + len;
     while (p + nlen + 1 < end)
     {
-        if (str.starts((const char *)p, name, nlen + 1u, PROTO_TRUE) && p[nlen] == ':')
+        if (EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = (const char *)p, .other = name, .cap = nlen + 1u,
+                       .ci = PROTO_TRUE) &&
+            p[nlen] == ':')
         {
             const uint8_t *v = p + nlen + 1;
             while (v < end && (*v == ' ' || *v == '\t'))
@@ -268,7 +278,7 @@ void protocore_ws_client_check_server_handshake(uint8_t *work)
     {
         return;
     }
-    const uint8_t *eol = (const uint8_t *)mem.chr(buf, len, '\n');
+    const uint8_t *eol = (const uint8_t *)EMBED_CALL(memor.chr, MemoriaCfg, .src = buf, .bytes = len, .val = '\n');
     if (!eol)
     {
         return;
@@ -292,7 +302,8 @@ void protocore_ws_client_check_server_handshake(uint8_t *work)
     {
         return;
     }
-    WsClientV.ok = (vlen == str.len(accept, vlen + 1)) && mem.cmp(got, accept, vlen) == 0;
+    WsClientV.ok = (vlen == EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = accept, .cap = vlen + 1)) &&
+                   EMBED_CALL(memor.cmp, MemoriaCfg, .src = got, .other = accept, .bytes = vlen) == 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -349,7 +360,7 @@ void protocore_ws_client_build_frame(uint8_t *work)
             out[i++] = (uint8_t)((uint64_t)len >> s);
         }
     }
-    mem.cpy(out + i, mask, 4);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + i, .src = mask, .bytes = 4);
     i += 4;
     for (size_t j = 0; j < len; j++)
     {
@@ -565,13 +576,15 @@ static void ws_handle_frame(uint8_t *work, uint8_t opcode, proto_bool fin, const
             WS_CLIENT_CTX(work)->msg_op = opcode; // the first fragment
             WS_CLIENT_CTX(work)->msg_len =
                 len < sizeof(WS_CLIENT_CTX(work)->msg) ? len : sizeof(WS_CLIENT_CTX(work)->msg);
-            mem.cpy(WS_CLIENT_CTX(work)->msg, payload, WS_CLIENT_CTX(work)->msg_len);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = WS_CLIENT_CTX(work)->msg, .src = payload,
+                       .bytes = WS_CLIENT_CTX(work)->msg_len);
         }
         break;
     case WSC_OP_CONT:
         if (WS_CLIENT_CTX(work)->msg_len + len <= sizeof(WS_CLIENT_CTX(work)->msg))
         {
-            mem.cpy(WS_CLIENT_CTX(work)->msg + WS_CLIENT_CTX(work)->msg_len, payload, len);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = WS_CLIENT_CTX(work)->msg + WS_CLIENT_CTX(work)->msg_len,
+                       .src = payload, .bytes = len);
             WS_CLIENT_CTX(work)->msg_len += len;
         }
         if (fin)
@@ -776,7 +789,8 @@ void protocore_ws_client_connect(uint8_t *work)
 void protocore_ws_client_send_text(uint8_t *work)
 {
     const char *text = WsClientV.msg.text;
-    const size_t len = text ? str.len(text, PROTOCORE_WS_CLIENT_BUF_SIZE) : 0;
+    const size_t len =
+        text ? EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = text, .cap = PROTOCORE_WS_CLIENT_BUF_SIZE) : 0;
     WsClientV.ok = ws_emit_frame(work, (uint8_t)WSC_OP_TEXT, (const uint8_t *)text, len);
 }
 

@@ -5,8 +5,7 @@ protocore_add_module(server/update/ota_service
   GATE PROTOCORE_ENABLE_OTA AND PROTOCORE_HAS_VENDOR_OTA
   SOURCES ota_service.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
     network_drivers/presentation/codec/base64
     network_drivers/presentation/http/http_parser
     server/clock

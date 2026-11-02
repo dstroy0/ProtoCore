@@ -5,7 +5,8 @@ protocore_add_module(server/net/iface_bridge/iface_bridge_hw
   GATE PROTOCORE_ENABLE_IFACE_BRIDGE
   SOURCES iface_bridge_hw.c
   PRIVATE_DEPS
-    mmgr/secure
+    server/core/worker
+    mmgr
     network_drivers/session
     network_drivers/transport/tcp
     network_drivers/transport/tcp/protocol

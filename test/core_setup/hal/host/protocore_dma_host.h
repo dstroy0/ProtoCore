@@ -21,8 +21,8 @@
 #ifndef PROTOCORE_PROTOCORE_DMA_HOST_H
 #define PROTOCORE_PROTOCORE_DMA_HOST_H
 
-#include "mmgr/dma/dma.h"
-#include "mmgr/ring/ring.h"
+#include "memoria_anularis/memoria_anularis.h"
+#include "memoriam_praetereo/memoriam_praetereo.h"
 #include <stdint.h>
 #include <string.h>
 
@@ -33,7 +33,7 @@
 // is what makes the index a mask.
 #define PROTOCORE_DMA_HOST_STAGE (PROTOCORE_DMA_BUF_SIZE * 4u)
 
-static_assert(PROTOCORE_RING_POW2(PROTOCORE_DMA_HOST_STAGE),
+static_assert(MMGR_RING_POW2(PROTOCORE_DMA_HOST_STAGE),
               "PROTOCORE_DMA_BUF_SIZE must be a power of two: the staging ring indexes with a mask");
 
 typedef struct
@@ -73,19 +73,35 @@ PROTOCORE_HOST_SHARED PcDmaHostCh g_protocore_dma[PROTOCORE_DMA_CHANNELS];
 // bytes on the line no sender ever submitted. This is the ring's own lossless-backpressure rule.
 static inline proto_bool protocore_dma_stage_put(PcDmaStage *s, const uint8_t *src, uint16_t n)
 {
-    if (src == NULL || n == 0 || n > protocore_ring_free(&s->head, &s->tail, PROTOCORE_DMA_HOST_STAGE))
+    const size_t tail = PROTO_ATOMIC_LOAD(&s->tail);
+    size_t h = PROTO_ATOMIC_LOAD(&s->head);
+    const size_t room = (PROTOCORE_DMA_HOST_STAGE - 1u) - MMGR_RING_WRAP(h - tail, PROTOCORE_DMA_HOST_STAGE);
+    if (src == NULL || n == 0 || n > room)
     {
         return PROTO_FALSE;
     }
-    size_t h = PROTO_ATOMIC_LOAD(&s->head);
-    h = protocore_ring_write_span(s->buf, PROTOCORE_DMA_HOST_STAGE, h, src, n);
+    for (uint16_t i = 0; i < n; i++)
+    {
+        s->buf[h] = src[i];
+        h = MMGR_RING_WRAP(h + 1u, PROTOCORE_DMA_HOST_STAGE);
+    }
     PROTO_ATOMIC_STORE(&s->head, h);
     return PROTO_TRUE;
 }
 
 static inline uint16_t protocore_dma_stage_get(PcDmaStage *s, uint8_t *out, uint16_t max)
 {
-    return (uint16_t)protocore_ring_read(s->buf, PROTOCORE_DMA_HOST_STAGE, &s->head, &s->tail, out, max);
+    const size_t h = PROTO_ATOMIC_LOAD(&s->head);
+    size_t t = PROTO_ATOMIC_LOAD(&s->tail);
+    uint16_t n = 0;
+    while (n < max && t != h)
+    {
+        out[n] = s->buf[t];
+        n++;
+        t = MMGR_RING_WRAP(t + 1u, PROTOCORE_DMA_HOST_STAGE);
+    }
+    PROTO_ATOMIC_STORE(&s->tail, t);
+    return n;
 }
 
 static inline void protocore_dma_host_complete(PcDmaHostCh *c, uint8_t ch, protocore_dma_dir dir, const uint8_t *data,

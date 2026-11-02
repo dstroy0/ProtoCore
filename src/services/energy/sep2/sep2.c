@@ -21,27 +21,7 @@ static size_t put_i64(char *out, size_t cap, size_t at, int64_t v)
     {
         return at;
     }
-    char tmp[21];
-    int n = 0;
-    proto_bool neg = v < 0;
-    uint64_t u = neg ? (uint64_t)(-(v + 1)) + 1 : (uint64_t)v;
-    do
-    {
-        tmp[n++] = (char)('0' + (int)(u % 10));
-        u /= 10;
-    } while (u);
-    char digits[22];
-    int k = 0;
-    if (neg)
-    {
-        digits[k++] = '-';
-    }
-    for (int i = 0; i < n; i++)
-    {
-        digits[k++] = tmp[n - 1 - i];
-    }
-    digits[k] = '\0';
-    return EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = digits);
+    return EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = out, .cap = cap, .at = at, .sval = v);
 }
 
 static const char *NS = " xmlns=\"urn:ieee:std:2030.5:ns\"";

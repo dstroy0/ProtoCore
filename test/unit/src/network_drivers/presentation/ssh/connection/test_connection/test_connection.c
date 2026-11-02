@@ -5,7 +5,7 @@
 // the channel multiplexer - its window arithmetic, closing, the channel requests and the
 // pseudo-terminal one of them allocates.
 
-#include "mmgr/protostr/protostr.h" // str.len - the bounded length, since the library carries no strlen
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len - the bounded length, since the library carries no strlen
 #include "network_drivers/presentation/ssh/connection/connection.h"
 #include <stdint.h>
 #include <string.h>
@@ -203,7 +203,7 @@ static proto_bool pty_modes_valid(const uint8_t *modes, uint32_t modes_len, uint
     return SshConnectionV.ok;
 }
 
-// A length-prefixed string, RFC 4251 sec 5: uint32 length, then that many bytes.
+// A length-prefixed string, RFC 4251 sec 5: uint32 length, then that many byteio.
 static size_t put_str(uint8_t *p, size_t off, const char *s, uint32_t n)
 {
     p[off] = (uint8_t)(n >> 24);
@@ -760,8 +760,9 @@ void test_sec6_2_long_term_is_truncated_not_refused(void)
 
     SshPtyRequest pty;
     TEST_ASSERT_TRUE(pty_req_parse(p, n, 0, &pty));
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)(PROTOCORE_SSH_PTY_TERM_MAX - 1u),
-                             (uint32_t)str.len(pty.term, sizeof(pty.term)));
+    TEST_ASSERT_EQUAL_UINT32(
+        (uint32_t)(PROTOCORE_SSH_PTY_TERM_MAX - 1u),
+        (uint32_t)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = pty.term, .cap = sizeof(pty.term)));
     TEST_ASSERT_EQUAL_UINT32(80u, pty.width_chars); // the fields after it still line up
 }
 

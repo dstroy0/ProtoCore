@@ -7,5 +7,6 @@ protocore_add_module(network_drivers/transport/happy_eyeballs
   DEPS
     shared/ip
   PRIVATE_DEPS
-    mmgr/plaintext
+    server/core/worker
+    mmgr
 )

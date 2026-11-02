@@ -11,12 +11,12 @@
  */
 
 #include "services/net/syslog/syslog.h"
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
 #if PROTOCORE_ENABLE_SYSLOG
 
-#include "mmgr/protomem/protomem.h"                      // mem.cpy: the spans a line is assembled from
-#include "mmgr/protostr/protostr.h"                      // str.copy / str.len: the bounded field moves
+#include "cellularum_laboro/cellularum_laboro.h"         // cellul.copy / cellul.len: the bounded field moves
+#include "memoria_operor/memoria_operor.h"               // memor.cpy: the spans a line is assembled from
 #include "network_drivers/transport/udp/client/client.h" // UdpClient.sendto: one message, one datagram
 #include "shared/ip/ip.h"                                // Ip.parse: the collector address, once
 
@@ -58,7 +58,7 @@ static void copy_field(char *dst, size_t cap, const char *src)
         dst[0] = '\0';
         return;
     }
-    (void)str.copy(dst, src, cap);
+    (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = dst, .src = src, .cap = cap);
 }
 
 // Append len bytes at *pos while the line still leaves room for a trailing NUL. False the moment it
@@ -69,7 +69,7 @@ static inline proto_bool line_append(char *out, size_t cap, size_t *pos, const c
     {
         return PROTO_FALSE;
     }
-    mem.cpy(out + *pos, src, len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + *pos, .src = src, .bytes = len);
     *pos += len;
     return PROTO_TRUE;
 }
@@ -89,7 +89,7 @@ uint8_t *protocore_syslog_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_SYSLOG_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_SYSLOG_BORROW);
     }
     return s_own.span;
 }
@@ -145,13 +145,16 @@ void protocore_syslog_format(uint8_t *work)
     prib[pl++] = (char)('0' + pri % 10);
 
     // HEADER SP STRUCTURED-DATA SP MSG, with TIMESTAMP, PROCID, MSGID and STRUCTURED-DATA as the
-    // NILVALUE: "<" PRIVAL ">1 - " HOSTNAME " " APP-NAME " - - - " MSG. str.len bounds each field to
+    // NILVALUE: "<" PRIVAL ">1 - " HOSTNAME " " APP-NAME " - - - " MSG. cellul.len bounds each field to
     // cap, so a field longer than the buffer fails the append and the whole line reports 0.
     size_t pos = 0;
     if (!line_append(out, cap, &pos, "<", 1) || !line_append(out, cap, &pos, prib, pl) ||
-        !line_append(out, cap, &pos, ">1 - ", 5) || !line_append(out, cap, &pos, h, str.len(h, cap)) ||
-        !line_append(out, cap, &pos, " ", 1) || !line_append(out, cap, &pos, a, str.len(a, cap)) ||
-        !line_append(out, cap, &pos, " - - - ", 7) || !line_append(out, cap, &pos, m, str.len(m, cap)))
+        !line_append(out, cap, &pos, ">1 - ", 5) ||
+        !line_append(out, cap, &pos, h, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = h, .cap = cap)) ||
+        !line_append(out, cap, &pos, " ", 1) ||
+        !line_append(out, cap, &pos, a, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = a, .cap = cap)) ||
+        !line_append(out, cap, &pos, " - - - ", 7) ||
+        !line_append(out, cap, &pos, m, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = m, .cap = cap)))
     {
         return;
     }

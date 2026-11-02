@@ -1,9 +1,6 @@
 # ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# test_span: test_span.c, plus the generated Unity runner.
+# The directories below. A new suite is a new directory and a line here.
 
-protocore_add_suite(unit/src/mmgr/test_span
-  SOURCES
-    test_span.c
-)
+add_subdirectory(roaming)

@@ -5,10 +5,8 @@ protocore_add_module(network_drivers/presentation/telnet
   GATE PROTOCORE_ENABLE_TELNET
   SOURCES telnet.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protoframe
-    mmgr/protomem
-    mmgr/protostr
+    server/core/worker
+    mmgr
     network_drivers/transport/tcp/protocol
     server/core/proto_handler
 )

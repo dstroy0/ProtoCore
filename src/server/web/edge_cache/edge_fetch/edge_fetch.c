@@ -12,11 +12,11 @@
 #if PROTOCORE_ENABLE_EDGE_CACHE
 #include "shared/http_date/http_date.h"
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h" // str.has: the chunked token in a folded Transfer-Encoding
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.has: the chunked token in a folded Transfer-Encoding
+#include "memoria_operor/memoria_operor.h"
 #include "server/web/edge_cache/edge_fetch/edge_fetch.h"
 
-#include "mmgr/rawmemcpy/rawmemcpy.h"                    // raw.read: the request into this fetch's buffer
+#include "proximus_operor/proximus_operor.h"             // proxim.read: the request into this fetch's buffer
 #include "server/web/edge_cache/edge_cache/edge_cache.h" // edge_header_value
 #include "services/net/http_client/http_client.h"        // HttpClient.parse_response
 
@@ -128,7 +128,8 @@ static proto_bool has_chunked(const char *s)
         low[i] = (s[i] >= 'A' && s[i] <= 'Z') ? (char)(s[i] + 32) : s[i];
     }
     low[i] = '\0';
-    return str.has(low, sizeof(low), "chunked", sizeof("chunked"), PROTO_FALSE);
+    return EMBED_CALL(cellul.has, CatenaFinitaCfg, .src = low, .cap = sizeof(low), .other = "chunked",
+                      .other_cap = sizeof("chunked"), .ci = PROTO_FALSE);
 }
 
 // The entries this file calls before reaching their definitions.
@@ -186,7 +187,7 @@ void protocore_edge_fetcher_begin(uint8_t *work, EdgeFetch *f, const EdgeFetchTr
 {
     (void)work;
 
-    mem.set(f, 0, sizeof(*f));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = f, .val = 0, .bytes = sizeof(*f));
     f->cid = -1;
     f->start_ms = now_ms;
     f->st = EDGE_FETCH_STATUS_PENDING;
@@ -203,7 +204,7 @@ void protocore_edge_fetcher_begin(uint8_t *work, EdgeFetch *f, const EdgeFetchTr
     }
     // The connection is not up yet. Nothing has arrived to occupy the response buffer, so the
     // request waits at the head of it until the pump finds the transport connected.
-    raw.read(f->buf, request, req_len);
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = f->buf, .at = request, .size = req_len);
     f->req_len = (uint32_t)req_len;
 }
 

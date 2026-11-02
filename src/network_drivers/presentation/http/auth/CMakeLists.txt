@@ -5,12 +5,10 @@ protocore_add_module(network_drivers/presentation/http/auth
   GATE PROTOCORE_ENABLE_AUTH
   SOURCES auth.c
   PRIVATE_DEPS
+    server/core/worker
     crypto/ct_eq
     crypto/hash/sha256
-    mmgr/membuild
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
+    mmgr
     network_drivers/presentation/codec/base64
     network_drivers/presentation/http
     network_drivers/transport/tcp/protocol

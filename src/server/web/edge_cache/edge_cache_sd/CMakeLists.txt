@@ -5,8 +5,7 @@ protocore_add_module(server/web/edge_cache/edge_cache_sd
   GATE PROTOCORE_ENABLE_EDGE_CACHE
   SOURCES edge_cache_sd.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
     network_drivers/presentation/http/httpcache
     server/web/edge_cache/edge_cache
     services/storage/dbm

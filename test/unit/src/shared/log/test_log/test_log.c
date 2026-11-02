@@ -15,25 +15,25 @@
 
 #include "shared/log/log.h"
 
-#include "mmgr/protoframe/protoframe.h"
+#include "numeros_scribo/numeros_scribo.h"
 #include "server/core/logbuf/logbuf.h"
 #include <string.h>
 
 #include <unity.h>
 
 // "iface <name> up" - a literal, a string field, a literal.
-static const protocore_field IFACE[] = {
-    {PROTOCORE_FK_LIT, 0, 6, "iface "},
-    PROTOCORE_STR,
-    {PROTOCORE_FK_LIT, 0, 3, " up"},
-    PROTOCORE_END,
+static const mmgr_field IFACE[] = {
+    {MMGR_FK_LIT, 0, 6, "iface "},
+    MMGR_STR,
+    {MMGR_FK_LIT, 0, 3, " up"},
+    MMGR_END,
 };
 
 // "rx <n>" - a literal and an unsigned decimal.
-static const protocore_field RX[] = {
-    {PROTOCORE_FK_LIT, 0, 3, "rx "},
-    PROTOCORE_U32,
-    PROTOCORE_END,
+static const mmgr_field RX[] = {
+    {MMGR_FK_LIT, 0, 3, "rx "},
+    MMGR_U32,
+    MMGR_END,
 };
 
 // What the sink last received.
@@ -67,13 +67,13 @@ static void install(protocore_log_sink_fn fn)
 // Counts every evaluation of an argument handed to a log macro.
 static int g_evaluated;
 
-static const protocore_field *spec_probe(void)
+static const mmgr_field *spec_probe(void)
 {
     g_evaluated++;
     return IFACE;
 }
 
-static const protocore_fval *value_probe(const protocore_fval *v)
+static const mmgr_fval *value_probe(const mmgr_fval *v)
 {
     g_evaluated++;
     return v;
@@ -113,7 +113,7 @@ void tearDown(void)
 // DEBUG is below the floor this build was compiled at, so the call reaches neither sink nor ring.
 void test_a_discarded_call_emits_nothing(void)
 {
-    static const protocore_fval V[] = {PROTOCORE_VSTR("eth0")};
+    static const mmgr_fval V[] = {MMGR_VSTR("eth0")};
     PROTOCORE_LOGD(IFACE, V, 1);
 
     TEST_ASSERT_EQUAL_INT(0, g_sink_calls);
@@ -123,7 +123,7 @@ void test_a_discarded_call_emits_nothing(void)
 // ...and it does not evaluate what it names, which a runtime level check could not promise.
 void test_a_discarded_call_does_not_evaluate_its_arguments(void)
 {
-    static const protocore_fval V[] = {PROTOCORE_VSTR("eth0")};
+    static const mmgr_fval V[] = {MMGR_VSTR("eth0")};
     PROTOCORE_LOGD(spec_probe(), value_probe(V), 1);
 
     TEST_ASSERT_EQUAL_INT(0, g_evaluated);
@@ -139,7 +139,7 @@ void test_a_discarded_call_does_not_evaluate_its_arguments(void)
 // Each emitted level reaches the sink carrying its own severity.
 void test_each_level_emits_with_its_own_severity(void)
 {
-    static const protocore_fval V[] = {PROTOCORE_VSTR("eth0")};
+    static const mmgr_fval V[] = {MMGR_VSTR("eth0")};
 
     PROTOCORE_LOGI(IFACE, V, 1);
     TEST_ASSERT_EQUAL_INT(1, g_sink_calls);
@@ -157,8 +157,8 @@ void test_each_level_emits_with_its_own_severity(void)
 // The line handed to the sink is the frame the spec builds, with its values in spec order.
 void test_the_emitted_line_is_the_built_frame(void)
 {
-    static const protocore_fval IF_V[] = {PROTOCORE_VSTR("eth0")};
-    static const protocore_fval RX_V[] = {PROTOCORE_VU32(4096)};
+    static const mmgr_fval IF_V[] = {MMGR_VSTR("eth0")};
+    static const mmgr_fval RX_V[] = {MMGR_VU32(4096)};
 
     PROTOCORE_LOGI(IFACE, IF_V, 1);
     TEST_ASSERT_EQUAL_STRING("iface eth0 up", g_sink_line);
@@ -170,7 +170,7 @@ void test_the_emitted_line_is_the_built_frame(void)
 // A NULL string field renders as empty rather than as "(null)" or a crash.
 void test_a_null_string_field_renders_empty(void)
 {
-    static const protocore_fval V[] = {PROTOCORE_VSTR(NULL)};
+    static const mmgr_fval V[] = {MMGR_VSTR(NULL)};
     PROTOCORE_LOGI(IFACE, V, 1);
     TEST_ASSERT_EQUAL_INT(1, g_sink_calls);
     TEST_ASSERT_EQUAL_STRING("iface  up", g_sink_line);
@@ -179,7 +179,7 @@ void test_a_null_string_field_renders_empty(void)
 // An emitted line also lands in the ring, stored as its severity letter, a space, then the message.
 void test_an_emitted_line_reaches_the_ring(void)
 {
-    static const protocore_fval V[] = {PROTOCORE_VSTR("eth0")};
+    static const mmgr_fval V[] = {MMGR_VSTR("eth0")};
 
     PROTOCORE_LOGI(IFACE, V, 1);
     PROTOCORE_LOGE(IFACE, V, 1);
@@ -211,7 +211,7 @@ void test_the_log_and_ring_severity_scales_agree(void)
 // Clearing the sink stops the sink calls; the ring keeps taking lines.
 void test_clearing_the_sink(void)
 {
-    static const protocore_fval V[] = {PROTOCORE_VSTR("eth0")};
+    static const mmgr_fval V[] = {MMGR_VSTR("eth0")};
 
     install(NULL);
     PROTOCORE_LOGI(IFACE, V, 1);
@@ -227,7 +227,7 @@ void test_clearing_the_sink(void)
 // A frame with no spec has no shape to build, so nothing is emitted at all.
 void test_a_null_spec_emits_nothing(void)
 {
-    static const protocore_fval V[] = {PROTOCORE_VSTR("eth0")};
+    static const mmgr_fval V[] = {MMGR_VSTR("eth0")};
     PROTOCORE_LOGI(NULL, V, 1);
 
     TEST_ASSERT_EQUAL_INT(0, g_sink_calls);
@@ -238,8 +238,8 @@ void test_a_null_spec_emits_nothing(void)
 // than carrying a string reinterpreted as a number.
 void test_mismatched_values_yield_an_empty_line(void)
 {
-    static const protocore_fval WRONG_KIND[] = {PROTOCORE_VU32(7)}; // IFACE declares a string field
-    static const protocore_fval V[] = {PROTOCORE_VSTR("eth0")};
+    static const mmgr_fval WRONG_KIND[] = {MMGR_VU32(7)}; // IFACE declares a string field
+    static const mmgr_fval V[] = {MMGR_VSTR("eth0")};
 
     PROTOCORE_LOGI(IFACE, WRONG_KIND, 1);
     TEST_ASSERT_EQUAL_INT(1, g_sink_calls);
@@ -259,7 +259,7 @@ void test_a_line_that_does_not_fit_is_emitted_empty(void)
     memset(big, 'x', sizeof(big) - 1);
     big[sizeof(big) - 1] = '\0';
 
-    const protocore_fval v[] = {PROTOCORE_VSTR(big)};
+    const mmgr_fval v[] = {MMGR_VSTR(big)};
     PROTOCORE_LOGI(IFACE, v, 1);
 
     TEST_ASSERT_EQUAL_INT(1, g_sink_calls);

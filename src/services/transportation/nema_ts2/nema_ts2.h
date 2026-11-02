@@ -36,7 +36,7 @@ typedef struct
 #define NEMA_TS2_FT_DETECTOR 9            ///< detector BIU -> controller: detector call/status.
 } NemaTs2;
 
-/** @brief HDLC/X.25 CRC-16 (CRC-16/X-25) over @p len bytes. */
+/** @brief HDLC/X.25 CRC-16 (CRC-16/X-25) over @p len byteio. */
 uint16_t protocore_nema_ts2_crc(const uint8_t *bytes, size_t len);
 
 /**

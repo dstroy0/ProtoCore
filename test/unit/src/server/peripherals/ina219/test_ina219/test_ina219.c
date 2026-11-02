@@ -548,7 +548,7 @@ void test_begin_sends_later_transfers_to_the_address_it_was_given(void)
 }
 
 // A part at another address does not answer, so the reading returns nothing rather than someone
-// else's bytes.
+// else's byteio.
 void test_a_part_at_another_address_is_not_read(void)
 {
     protocore_bus_host_detach_all();

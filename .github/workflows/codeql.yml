@@ -46,7 +46,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.x"
+          python-version: "3.14"
 
       # PlatformIO only fetches the host build's libraries (Unity, littlefs) into .pio/libdeps/host.
       # The envs themselves are CMake targets.

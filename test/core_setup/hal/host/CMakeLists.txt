@@ -32,8 +32,7 @@ protocore_add_module(test/core_setup/hal/host
     test/core_setup/hal
     crypto/asymmetric/bignum
     crypto/cipher/aes_block
-    mmgr/protomem
-    mmgr/secure
+    mmgr
     server/storage/mnt
 )
 

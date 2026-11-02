@@ -84,7 +84,7 @@ typedef struct
     const uint8_t *msg;
     size_t msg_len;
     protocore_rsa_hash hash;
-    uint8_t *sig; ///< PROTOCORE_RSA_SIG_BYTES bytes.
+    uint8_t *sig; ///< PROTOCORE_RSA_SIG_BYTES byteio.
 } SshRsaSignArgs;
 
 /** @brief What encode_pubkey takes: out, out_len, out_cap. */
@@ -166,7 +166,7 @@ extern SshRsaPubKey ssh_host_pubkey;
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_ssh_rsa_span(void);
 

@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_HAPPY_EYEBALLS
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "network_drivers/transport/happy_eyeballs/happy_eyeballs.h"
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 #include "shared/ip/ip.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -36,8 +36,8 @@ static_assert(HAPPY_EYEBALLS_OFF_CTX + sizeof(HappyEyeballsCtx) <= PROTOCORE_HAP
               "PROTOCORE_HAPPY_EYEBALLS_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(HAPPY_EYEBALLS_OFF_CTX % _Alignof(HappyEyeballsCtx) == 0,
@@ -102,7 +102,7 @@ uint8_t *protocore_happy_eyeballs_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_HAPPY_EYEBALLS_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_HAPPY_EYEBALLS_BORROW);
     }
     return s_own.span;
 }

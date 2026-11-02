@@ -10,6 +10,7 @@
  */
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
+#include "spatium/spatium.h"
 
 #if PROTOCORE_ENABLE_NTP
 
@@ -20,12 +21,11 @@ static uint8_t http_date_work[16];      // the borrow an entry takes; HttpDate n
 
 #if PROTOCORE_ENABLE_NTP
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "network_drivers/application/ntp_service/ntp_service.h"
-#include <time.h> // time_t: the epoch this module reports
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
+#include <time.h>                      // time_t: the epoch this module reports
 
-#include "mmgr/endian/endian.h"                          // endian.rd32be / endian.wr32be: the timestamp fields
-#include "mmgr/secure/secure.h"                          // protocore_secure_persist_span: this module's storage
+#include "endian/endian.h"                               // endian.rd32be / endian.wr32be: the timestamp fields
 #include "network_drivers/application/ntp/ntp.h"         // the packet this role asks with
 #include "network_drivers/transport/udp/server/server.h" // UdpListener: the client port and the ask
 #include "server/clock/clock.h"                          // Clock.millis: how the epoch advances between syncs
@@ -42,10 +42,10 @@ static const time_t PROTOCORE_NTP_PLAUSIBLE_EPOCH = 1609459200;
 // reply had to echo, and the request buffer. One named owner, unreachable cross-TU.
 typedef struct
 {
-    time_t epoch;       ///< Unix seconds at the moment of the last accepted reply, 0 when never synced
-    uint32_t sync_ms;   ///< protocore_millis() when that reply arrived
-    uint32_t cookie;    ///< the transmit stamp the reply must echo as its origin
-    protocore_span req; ///< the request in flight, borrowed once and held
+    time_t epoch;     ///< Unix seconds at the moment of the last accepted reply, 0 when never synced
+    uint32_t sync_ms; ///< protocore_millis() when that reply arrived
+    uint32_t cookie;  ///< the transmit stamp the reply must echo as its origin
+    mmgr_span req;    ///< the request in flight, borrowed once and held
 } NtpSvcCtx;
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
 // region is that pointer plus a compile-time offset, so the assert below proves the span
@@ -55,8 +55,8 @@ static_assert(NTP_SERVICE_OFF_CTX + sizeof(NtpSvcCtx) <= PROTOCORE_NTP_SERVICE_B
               "PROTOCORE_NTP_SERVICE_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(
@@ -82,7 +82,7 @@ uint8_t *protocore_ntp_service_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_NTP_SERVICE_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_NTP_SERVICE_BORROW);
     }
     return s_own.span;
 }
@@ -92,12 +92,14 @@ uint8_t *protocore_ntp_service_span(void)
 // wipes. False when the pool cannot cover it, and begin() fails closed on that.
 static proto_bool ntp_mem_bind(uint8_t *work)
 {
-    if (span.has_storage(NTP_SERVICE_CTX(work)->req))
+    if (EMBED_CALL(spat.has_storage, SpatiumCfg, .span = NTP_SERVICE_CTX(work)->req))
     {
         return PROTO_TRUE;
     }
-    NTP_SERVICE_CTX(work)->req = protocore_secure_persist_span(PROTOCORE_NTP_PACKET_LEN);
-    return span.has_storage(NTP_SERVICE_CTX(work)->req);
+    NTP_SERVICE_CTX(work)->req =
+        EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_NTP_PACKET_LEN),
+                   .cap = PROTOCORE_NTP_PACKET_LEN);
+    return EMBED_CALL(spat.has_storage, SpatiumCfg, .span = NTP_SERVICE_CTX(work)->req);
 }
 
 /**
@@ -136,11 +138,13 @@ static void ntp_reply(const uint8_t *data, size_t len, const struct protocore_ud
     {
         return; // stratum 0 is a kiss-o'-death; past 15 is unsynchronized
     }
-    if (endian.rd32be(data + PROTOCORE_NTP_OFF_ORIGIN_SEC) != NTP_SERVICE_CTX(work)->cookie)
+    if ((uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = data + PROTOCORE_NTP_OFF_ORIGIN_SEC,
+                             .width = MMGR_ENDIAN_32) != NTP_SERVICE_CTX(work)->cookie)
     {
         return; // not an answer to what this client asked
     }
-    uint32_t secs = endian.rd32be(data + PROTOCORE_NTP_OFF_TX_SEC);
+    uint32_t secs = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = data + PROTOCORE_NTP_OFF_TX_SEC,
+                                         .width = MMGR_ENDIAN_32);
     if (secs <= PROTOCORE_NTP_UNIX_OFFSET)
     {
         return;
@@ -206,7 +210,8 @@ void protocore_ntp_service_begin(uint8_t *work)
         req[i] = 0;
     }
     req[0] = PROTOCORE_NTP_LI_VN_MODE(PROTOCORE_NTP_LI_NONE, PROTOCORE_NTP_VERSION, PROTOCORE_NTP_MODE_CLIENT);
-    endian.wr32be(req + PROTOCORE_NTP_OFF_TX_SEC, NTP_SERVICE_CTX(work)->cookie);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = req + PROTOCORE_NTP_OFF_TX_SEC,
+               .val = NTP_SERVICE_CTX(work)->cookie, .width = MMGR_ENDIAN_32);
     UdpListenerV.send_args.dst = &dst;
     UdpListenerV.send_args.dst_port = PROTOCORE_NTP_PORT;
     UdpListenerV.send_args.data = req;

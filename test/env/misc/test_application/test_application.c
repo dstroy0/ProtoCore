@@ -80,9 +80,7 @@ static void arm_slot(uint8_t slot, const char *raw)
     TcpConn *s = &conn_pool[slot];
     for (size_t i = 0; raw[i]; i++)
     {
-        size_t next = (s->rx_head + 1) % RX_BUF_SIZE;
-        s->rx_buffer[s->rx_head] = (uint8_t)raw[i];
-        s->rx_head = next;
+        rx_put(s, (uint8_t)((uint8_t)raw[i]));
     }
     HttpConnV.slot = slot;
     HttpConn.reset(protocore_http_conn_span());
@@ -2155,13 +2153,11 @@ static void push_ws_text_frame(uint8_t slot, const char *text)
     TcpConn *c = &conn_pool[slot];
     for (size_t i = 0; i < sizeof(hdr); i++)
     {
-        c->rx_buffer[c->rx_head] = hdr[i];
-        c->rx_head = (c->rx_head + 1) % RX_BUF_SIZE;
+        rx_put(c, (uint8_t)(hdr[i]));
     }
     for (size_t i = 0; i < n; i++)
     {
-        c->rx_buffer[c->rx_head] = (uint8_t)(text[i] ^ mask[i % 4]);
-        c->rx_head = (c->rx_head + 1) % RX_BUF_SIZE;
+        rx_put(c, (uint8_t)((uint8_t)(text[i] ^ mask[i % 4])));
     }
 }
 

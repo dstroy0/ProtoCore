@@ -7,6 +7,5 @@ protocore_add_module(services/radio/wisun
   DEPS
     shared/ip
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/protomem
+    mmgr
 )

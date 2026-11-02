@@ -29,8 +29,8 @@
 #include "crypto/aead/aesgcm/aesgcm.h"
 #include "crypto/ct_eq/ct_eq.h"     // protocore_ct_eq
 #include "crypto/mac/ghash/ghash.h" // the 4-bit-table GF(2^128) hash
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/rawmemcpy/rawmemcpy.h" // proto_raw_u32 - the aliasing-permitted word load
+#include "memoria_operor/memoria_operor.h"
+#include "proximus_operor/proximus_operor.h" // proto_raw_u32 - the aliasing-permitted word load
 
 PROTOCORE_BEGIN_DECLS
 
@@ -82,8 +82,8 @@ static_assert(AESGCM_OFF_END <= PROTOCORE_AESGCM_BORROW,
               "PROTOCORE_AESGCM_BORROW is short of the keyed context and the nested GHASH borrow - raise "
               "it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(AESGCM_OFF_CTX % _Alignof(GcmWork) == 0,
@@ -108,7 +108,7 @@ static inline void aes256_ecb(GcmWork *w, const uint8_t in[16], uint8_t out[16])
 }
 static inline void aes256_load_key(GcmWork *w, const uint8_t key[32])
 {
-    mem.cpy(w->blk.key, key, 32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->blk.key, .src = key, .bytes = 32);
 }
 static inline void aes256_free_key(GcmWork *w)
 {
@@ -143,7 +143,9 @@ static inline void xor16(uint8_t *dst, const uint8_t *src)
     // machine's own load and store at any alignment, and the fixup sequence only where the die needs it.
     for (int i = 0; i < 16; i += 4)
     {
-        proto_raw_put_u32(dst + i, proto_raw_u32(dst + i) ^ proto_raw_u32(src + i));
+        EMBED_CALL(proxim.put32, ProximusCfg, .dst = dst + i,
+                   .val = EMBED_CALL(proxim.load32, ProximusCfg, .at = dst + i) ^
+                          EMBED_CALL(proxim.load32, ProximusCfg, .at = src + i));
     }
 }
 
@@ -175,7 +177,8 @@ static inline void inc32(uint8_t ctr[16])
 static void gcm_key_setup(uint8_t *work)
 {
     GcmWork *w = AESGCM_CTX(work);
-    mem.zero(w->ks, 16);        // zero input for H (reuses the keystream slot; overwritten by gctr later)
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = w->ks, .bytes = 16,
+               .val = 0);       // zero input for H (reuses the keystream slot; overwritten by gctr later)
     aes256_ecb(w, w->ks, w->h); // H = E(K, 0^128)
     GhashV.key_args.h = w->h;
     Ghash.key_init(AESGCM_GHASH(work));
@@ -184,7 +187,7 @@ static void gcm_key_setup(uint8_t *work)
 // Per-record: J0 = nonce || 0^31 || 1.
 static void gcm_set_nonce(GcmWork *w, const uint8_t nonce[12])
 {
-    mem.cpy(w->j0, nonce, 12);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->j0, .src = nonce, .bytes = 12);
     w->j0[12] = 0;
     w->j0[13] = 0;
     w->j0[14] = 0;
@@ -217,7 +220,7 @@ static void gcm_tag(uint8_t *work, const uint8_t *aad, size_t aad_len, const uin
                     uint8_t tag_out[16])
 {
     GcmWork *w = AESGCM_CTX(work);
-    mem.zero(w->acc, 16);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = w->acc, .bytes = 16, .val = 0);
     GhashV.update_args.acc = w->acc;
     GhashV.update_args.data = aad;
     GhashV.update_args.len = aad_len;
@@ -257,7 +260,7 @@ static proto_bool aesgcm_seal_record(uint8_t *work, const uint8_t *nonce, const 
     GcmWork *w = AESGCM_CTX(work);
     gcm_set_nonce(w, nonce);
     // Encrypt with the CTR starting at inc32(J0), then GHASH the resulting ciphertext.
-    mem.cpy(w->ctr, w->j0, 16);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->ctr, .src = w->j0, .bytes = 16);
     inc32(w->ctr);
     gctr(w, pt, pt_len, ct_out);
     gcm_tag(work, aad, aad_len, ct_out, pt_len, tag_out);
@@ -275,7 +278,7 @@ static proto_bool aesgcm_open_record(uint8_t *work, const uint8_t *nonce, const 
     {
         return PROTO_FALSE; // tag mismatch: nothing written
     }
-    mem.cpy(w->ctr, w->j0, 16);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->ctr, .src = w->j0, .bytes = 16);
     inc32(w->ctr);
     gctr(w, ct, ct_len, out);
     return PROTO_TRUE;

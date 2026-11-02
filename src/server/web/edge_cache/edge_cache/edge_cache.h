@@ -176,7 +176,7 @@ typedef struct
     uint8_t *digest_work;
     const char *canon;
     size_t len;
-    uint8_t *digest; ///< 32 bytes.
+    uint8_t *digest; ///< 32 byteio.
 } EdgeCacheKeyDigestArgs;
 
 /** @brief What vary_serialize takes: vary_header, lookup, ctx, out, ... */

@@ -15,7 +15,7 @@
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 
-#include "mmgr/secure/secure.h" // the persistent end this module's key material is taken from
+#include "server/core/worker/worker.h" // the persistent end this module's key material is taken from
 #include "services/net/http_client/http_client.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -24,10 +24,10 @@ PROTOCORE_BEGIN_DECLS
 #include "network_drivers/transport/tcp/client/client.h" // ::TcpClient, the shared outbound transport
 #include "server/clock/clock.h"                          // ::Clock and pcdelay
 #endif
-#include "mmgr/membuild/membuild.h" // protocore_sb: the message builder
-#include "mmgr/protomem/protomem.h" // mem.cpy / mem.move / mem.cmp / mem.chr
-#include "mmgr/protostr/protostr.h" // str.len / diff / starts / digit / to_long
-#include "shared/mime/mime.h"       // PROTOCORE_MIME_OCTET_STREAM: the Content-Type default (RFC 9110 sec 8.3)
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len / diff / starts / digit / to_long
+#include "memoria_operor/memoria_operor.h"       // memor.cpy / memor.move_down / memor.cmp / memor.chr
+#include "shared/mime/mime.h"          // PROTOCORE_MIME_OCTET_STREAM: the Content-Type default (RFC 9110 sec 8.3)
+#include "verba_scribo/verba_scribo.h" // verba_scribo: the message builder
 #ifdef PROTOCORE_HTTP_CLIENT_DEBUG
 #include <stdio.h>
 #endif
@@ -103,7 +103,7 @@ uint8_t *protocore_http_client_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_HTTP_CLIENT_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_HTTP_CLIENT_BORROW);
         // A borrow arrives zeroed, and these do not start at zero.
         HTTP_CLIENT_CTX(s_own.span)->cid = -1;
     }
@@ -128,13 +128,15 @@ void protocore_http_client_parse_target_uri(uint8_t *work)
     }
 
     const char *p = ns->target.url;
-    if (str.starts(p, "https://", sizeof("https://"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = p, .other = "https://", .cap = sizeof("https://"),
+                   .ci = PROTO_FALSE))
     {
         ns->target.https = PROTO_TRUE;
         ns->target.port = 443;
         p += sizeof("https://") - 1;
     }
-    else if (str.starts(p, "http://", sizeof("http://"), PROTO_FALSE)) // NOSONAR: a user agent dials http:// too
+    else if (EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = p, .other = "http://", .cap = sizeof("http://"),
+                        .ci = PROTO_FALSE)) // NOSONAR: a user agent dials http:// too
     {
         ns->target.https = PROTO_FALSE;
         ns->target.port = 80;
@@ -156,7 +158,7 @@ void protocore_http_client_parse_target_uri(uint8_t *work)
     {
         return;
     }
-    mem.cpy(ns->target.host, h, hlen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ns->target.host, .src = h, .bytes = hlen);
     ns->target.host[hlen] = '\0';
 
     // Optional ":" port, decimal, bounded by the 16-bit port field.
@@ -191,12 +193,12 @@ void protocore_http_client_parse_target_uri(uint8_t *work)
     }
     else
     {
-        size_t plen = str.len(p, ns->target.path_cap + 1);
+        size_t plen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = p, .cap = ns->target.path_cap + 1);
         if (plen >= ns->target.path_cap)
         {
             return;
         }
-        mem.cpy(ns->target.path, p, plen + 1);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ns->target.path, .src = p, .bytes = plen + 1);
     }
     ns->ok = PROTO_TRUE;
 }
@@ -220,39 +222,55 @@ void protocore_http_client_build_request(uint8_t *work)
     const proto_bool default_port =
         (ns->target.https && ns->target.port == 443) || (!ns->target.https && ns->target.port == 80);
     char hosthdr[HTTP_CLIENT_HOST_CAP + 8];
-    protocore_sb sb_host = {hosthdr, sizeof(hosthdr), 0, PROTO_TRUE};
-    Sb.put(&sb_host, ns->target.host);
+    size_t sb_host = 0;
+    sb_host = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = hosthdr, .cap = sizeof(hosthdr), .at = sb_host,
+                         .text = ns->target.host);
     if (!default_port)
     {
-        Sb.put(&sb_host, ":");
-        Sb.u32(&sb_host, (uint32_t)ns->target.port);
+        sb_host = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = hosthdr, .cap = sizeof(hosthdr), .at = sb_host,
+                             .text = ":");
+        sb_host = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = hosthdr, .cap = sizeof(hosthdr), .at = sb_host,
+                             .val = (uint32_t)ns->target.port);
     }
-    if (Sb.finish(&sb_host) == 0)
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = hosthdr, .cap = sizeof(hosthdr), .at = sb_host) == 0)
     {
         hosthdr[0] = '\0';
     }
 
     const proto_bool has_content = (ns->request.body != NULL) && (ns->request.body_len != 0);
-    protocore_sb sb_out = {ns->request.out, ns->request.cap, 0, PROTO_TRUE};
-    Sb.put(&sb_out, ns->request.method);
-    Sb.put(&sb_out, " ");
-    Sb.put(&sb_out, ns->target.path);
-    Sb.put(&sb_out, " HTTP/1.1\r\nHost: ");
-    Sb.put(&sb_out, hosthdr);
-    Sb.put(&sb_out, "\r\nUser-Agent: PC");
+    char *const sb_out_out = ns->request.out;
+    const size_t sb_out_cap = ns->request.cap;
+    size_t sb_out = 0;
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out_out, .cap = sb_out_cap, .at = sb_out,
+                        .text = ns->request.method);
+    sb_out =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out_out, .cap = sb_out_cap, .at = sb_out, .text = " ");
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out_out, .cap = sb_out_cap, .at = sb_out,
+                        .text = ns->target.path);
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out_out, .cap = sb_out_cap, .at = sb_out,
+                        .text = " HTTP/1.1\r\nHost: ");
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out_out, .cap = sb_out_cap, .at = sb_out,
+                        .text = hosthdr);
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out_out, .cap = sb_out_cap, .at = sb_out,
+                        .text = "\r\nUser-Agent: PC");
     if (has_content)
     {
-        Sb.put(&sb_out, "\r\nContent-Type: ");
-        Sb.put(&sb_out, ns->request.content_type ? ns->request.content_type : PROTOCORE_MIME_OCTET_STREAM);
-        Sb.put(&sb_out, "\r\nContent-Length: ");
-        Sb.u32(&sb_out, (uint32_t)ns->request.body_len);
+        sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out_out, .cap = sb_out_cap, .at = sb_out,
+                            .text = "\r\nContent-Type: ");
+        sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out_out, .cap = sb_out_cap, .at = sb_out,
+                            .text = ns->request.content_type ? ns->request.content_type : PROTOCORE_MIME_OCTET_STREAM);
+        sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out_out, .cap = sb_out_cap, .at = sb_out,
+                            .text = "\r\nContent-Length: ");
+        sb_out = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = sb_out_out, .cap = sb_out_cap, .at = sb_out,
+                            .val = (uint32_t)ns->request.body_len);
     }
-    Sb.put(&sb_out, "\r\nConnection: close\r\n\r\n");
-    size_t hlen = Sb.finish(&sb_out);
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out_out, .cap = sb_out_cap, .at = sb_out,
+                        .text = "\r\nConnection: close\r\n\r\n");
+    size_t hlen = EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb_out_out, .cap = sb_out_cap, .at = sb_out);
 
     // The builder latches ok false on the first append that would overflow cap, and reports 0 for a
     // frame that did not fit.
-    if (!sb_out.ok)
+    if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .out = sb_out_out, .cap = sb_out_cap, .at = sb_out))
     {
         return;
     }
@@ -265,7 +283,8 @@ void protocore_http_client_build_request(uint8_t *work)
     {
         return;
     }
-    mem.cpy(ns->request.out + hlen, ns->request.body, ns->request.body_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ns->request.out + hlen, .src = ns->request.body,
+               .bytes = ns->request.body_len);
     ns->n = hlen + ns->request.body_len;
 }
 
@@ -278,11 +297,13 @@ void protocore_http_client_build_request(uint8_t *work)
 // must sit immediately after the name. Field names are case-insensitive (sec 5).
 static const char *field_value(const uint8_t *buf, const uint8_t *end, const char *name)
 {
-    size_t nlen = str.len(name, (size_t)(end - buf) + 1);
+    size_t nlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = name, .cap = (size_t)(end - buf) + 1);
     const uint8_t *p = buf;
     while (p + nlen + 1 < end)
     {
-        if (str.diff((const char *)p, name, nlen, PROTO_TRUE) == nlen && p[nlen] == ':')
+        if (EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = (const char *)p, .other = name, .cap = nlen,
+                       .ci = PROTO_TRUE) == nlen &&
+            p[nlen] == ':')
         {
             const uint8_t *v = p + nlen + 1;
             while (v < end && (*v == ' ' || *v == '\t'))
@@ -322,7 +343,8 @@ static proto_bool chunked_is_final(const char *value, const char *end)
         return PROTO_FALSE;
     }
     const char *last = v - nlen;
-    if (str.diff(last, "chunked", nlen, PROTO_TRUE) != nlen)
+    if (EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = last, .other = "chunked", .cap = nlen, .ci = PROTO_TRUE) !=
+        nlen)
     {
         return PROTO_FALSE;
     }
@@ -383,7 +405,7 @@ static size_t decode_chunked(uint8_t *buf, size_t len, size_t off)
         {
             chunk_size = len - in;
         }
-        mem.move(buf + out, buf + in, chunk_size);
+        EMBED_CALL(memor.move_down, MemoriaCfg, .dst = buf + out, .src = buf + in, .bytes = chunk_size);
         out += chunk_size;
         in += chunk_size;
         while (in < len && (buf[in] == '\r' || buf[in] == '\n'))
@@ -404,20 +426,22 @@ void protocore_http_client_parse_response(uint8_t *work)
     ns->body_len = 0;
     uint8_t *buf = ns->message.buf;
     const size_t len = ns->message.len;
-    if (!buf || len < 12 || mem.cmp(buf, "HTTP/1.", 7) != 0)
+    if (!buf || len < 12 || EMBED_CALL(memor.cmp, MemoriaCfg, .src = buf, .other = "HTTP/1.", .bytes = 7) != 0)
     {
         ns->status = (int32_t)HTTP_CLIENT_ERR_RESPONSE;
         return;
     }
 
     // status-line = HTTP-version SP status-code SP [ reason-phrase ], status-code = 3DIGIT.
-    const uint8_t *sp = (const uint8_t *)mem.chr(buf, len, ' ');
+    const uint8_t *sp = (const uint8_t *)EMBED_CALL(memor.chr, MemoriaCfg, .src = buf, .bytes = len, .val = ' ');
     if (!sp || sp + 4 > buf + len)
     {
         ns->status = (int32_t)HTTP_CLIENT_ERR_RESPONSE;
         return;
     }
-    if (!str.digit((char)sp[1]) || !str.digit((char)sp[2]) || !str.digit((char)sp[3]))
+    if (!EMBED_CALL(cellul.digit, CatenaFinitaCfg, .src = (const char *)sp, .at = 1) ||
+        !EMBED_CALL(cellul.digit, CatenaFinitaCfg, .src = (const char *)sp, .at = 2) ||
+        !EMBED_CALL(cellul.digit, CatenaFinitaCfg, .src = (const char *)sp, .at = 3))
     {
         ns->status = (int32_t)HTTP_CLIENT_ERR_RESPONSE;
         return;
@@ -462,7 +486,7 @@ void protocore_http_client_parse_response(uint8_t *work)
     const char *cl = field_value(buf, hdr_end, "Content-Length");
     if (cl)
     {
-        long declared = str.to_long(cl, NULL);
+        long declared = EMBED_CALL(cellul.to_long, TransfiguroCfg, .src = cl, .end = NULL);
         if (declared < 0)
         {
             declared = 0;

@@ -5,8 +5,8 @@ protocore_add_module(network_drivers/presentation/security/dtls/dtls_record
   GATE PROTOCORE_ENABLE_DTLS
   SOURCES dtls_record.c
   PRIVATE_DEPS
+    server/core/worker
     crypto/aead/aes128gcm
-    mmgr/protomem
-    mmgr/secure
+    mmgr
     network_drivers/tls/key_schedule
 )

@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_SSH_ZLIB
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/codec/deflate/rfc1951/rfc1951.h" // the sec 3.2.5 tables
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/inflate/inflate.h"
@@ -239,7 +239,7 @@ static int do_codes(BitIn *b, OutCtx *o, const Huffman *lc, const Huffman *dc)
     }
 }
 
-// Uncompressed (stored) block: align to the next byte, read LEN/NLEN, copy LEN literal bytes.
+// Uncompressed (stored) block: align to the next byte, read LEN/NLEN, copy LEN literal byteio.
 static int do_stored(BitIn *b, OutCtx *o)
 {
     if (b->bitpos & 7u)
@@ -500,7 +500,7 @@ void protocore_inflate_packet(uint8_t *work)
             {
                 tmp[i] = logical_byte(z->carry, z->carry_len, src, i);
             }
-            mem.cpy(z->carry, tmp, rem);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = z->carry, .src = tmp, .bytes = rem);
             z->carry_len = (uint8_t)rem;
             z->bit_off = 0;
             *out_len = 0;
@@ -575,7 +575,7 @@ void protocore_inflate_packet(uint8_t *work)
     {
         tmp[i] = logical_byte(z->carry, z->carry_len, src, bstart_byte + i);
     }
-    mem.cpy(z->carry, tmp, rem);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = z->carry, .src = tmp, .bytes = rem);
     z->carry_len = (uint8_t)rem;
     z->bit_off = (uint8_t)(boundary & 7u);
 

@@ -4,6 +4,7 @@
 # The directories below. A new suite is a new directory and a line here - nothing central holds a
 # list of suites, so there is nothing else to keep in step.
 
+add_subdirectory(datalink)
 add_subdirectory(application)
 add_subdirectory(network)
 add_subdirectory(physical)
