@@ -116,7 +116,7 @@ void setup()
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = protocore_physical_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = protocore_physical_egress_ipv4(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nBASE IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF),
                   (unsigned)((ip >> 24) & 0xFF)); // <- set this as BASE_IP on the rover
@@ -235,7 +235,7 @@ void setup()
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = protocore_physical_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = protocore_physical_egress_ipv4(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nROVER IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
     connect_ntrip();

@@ -298,7 +298,7 @@ void handle_get_sysinfo(uint8_t slot_id, HttpReq *req)
 
     char ssid[33];
     Physical.wifi->ssid(ssid, sizeof(ssid));
-    uint32_t ip = protocore_physical_egress_ip();
+    uint32_t ip = protocore_physical_egress_ipv4();
     char ip_str[16];
     snprintf(ip_str, sizeof(ip_str), "%u.%u.%u.%u", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
              (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
@@ -356,7 +356,7 @@ void setup()
         Serial.print(".");
     }
     Serial.println("\nWiFi Online!");
-    uint32_t ip = protocore_physical_egress_ip();
+    uint32_t ip = protocore_physical_egress_ipv4();
     Serial.printf("Access the dashboard via: http://%u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

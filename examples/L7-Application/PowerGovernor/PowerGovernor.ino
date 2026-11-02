@@ -94,7 +94,7 @@ void setup()
     on_http("/busy", HTTP_GET, busy_handler);
     begin_http(80, NULL);
 
-    uint32_t ip = protocore_physical_egress_ip();
+    uint32_t ip = protocore_physical_egress_ipv4();
     Serial.printf("http://%u.%u.%u.%u/power\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 }

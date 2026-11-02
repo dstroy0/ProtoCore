@@ -367,7 +367,7 @@ void setup()
         Serial.println(" failed - check SSID/PASSWORD");
         return;
     }
-    uint32_t ip = protocore_physical_egress_ip();
+    uint32_t ip = protocore_physical_egress_ipv4();
     Serial.printf("\nOpen http://%u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
     on_http("/", HTTP_GET, handle_root);

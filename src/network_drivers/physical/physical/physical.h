@@ -463,7 +463,7 @@ PROTOCORE_INLINE proto_bool protocore_physical_eth_up(void)
 }
 
 /** @brief Physical.egress_ip as an expression: the address a sketch prints once its link is up. */
-PROTOCORE_INLINE uint32_t protocore_physical_egress_ip(void)
+PROTOCORE_INLINE uint32_t protocore_physical_egress_ipv4(void)
 {
     Physical.egress_ip(protocore_physical_span());
     return PhysicalV.u32;

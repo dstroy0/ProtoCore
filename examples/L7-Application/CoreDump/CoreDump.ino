@@ -155,7 +155,7 @@ void setup()
     }
     begin_http(80, NULL);
 
-    uint32_t ip = protocore_physical_egress_ip();
+    uint32_t ip = protocore_physical_egress_ipv4();
     Serial.printf("http://%u.%u.%u.%u/exception  (sd=%s ftp=%s)\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF), g_saved ? "yes" : "no",
                   g_uploaded ? "yes" : "no");

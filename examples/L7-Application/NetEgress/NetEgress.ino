@@ -48,14 +48,14 @@ void setup()
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = protocore_physical_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = protocore_physical_egress_ipv4(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     Serial.printf("egress interface: %s\n", iface_name(Physical.link->egress()));
 
     on_http("/net", HTTP_GET, [](uint8_t id, HttpReq *) {
-        uint32_t ip = protocore_physical_egress_ip(); // network byte order
+        uint32_t ip = protocore_physical_egress_ipv4(); // network byte order
         char body[96];
         snprintf(body, sizeof(body), "{\"egress\":\"%s\",\"ip\":\"%u.%u.%u.%u\"}", iface_name(Physical.link->egress()),
                  (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF), (unsigned)((ip >> 16) & 0xFF),

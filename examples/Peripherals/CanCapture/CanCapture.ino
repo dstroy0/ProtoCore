@@ -76,7 +76,7 @@ void setup()
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = protocore_physical_egress_ip(); // Ethernet is the egress here
+    uint32_t ip = protocore_physical_egress_ipv4(); // Ethernet is the egress here
     Serial.printf("\nEthernet IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

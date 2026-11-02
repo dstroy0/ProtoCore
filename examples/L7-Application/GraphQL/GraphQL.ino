@@ -56,7 +56,7 @@ static bool resolver(const char *path, const protocore_gql_args *args, protocore
     if (!strcmp(path, "net.ip"))
     {
         static char ip[20];
-        uint32_t v4 = protocore_physical_egress_ip();
+        uint32_t v4 = protocore_physical_egress_ipv4();
         snprintf(ip, sizeof(ip), "%u.%u.%u.%u", (unsigned)(v4 & 0xFF), (unsigned)((v4 >> 8) & 0xFF),
                  (unsigned)((v4 >> 16) & 0xFF), (unsigned)((v4 >> 24) & 0xFF));
         out->type = protocore_gql_type::PROTOCORE_GQL_STR;
@@ -86,7 +86,7 @@ void setup()
     {
         delay(250);
     }
-    uint32_t ip = protocore_physical_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = protocore_physical_egress_ipv4(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

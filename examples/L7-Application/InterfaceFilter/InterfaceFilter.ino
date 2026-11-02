@@ -59,7 +59,7 @@ void setup()
         delay(250);
         Serial.print('.');
     }
-    uint32_t sta_ip = protocore_physical_egress_ip();
+    uint32_t sta_ip = protocore_physical_egress_ipv4();
     uint32_t ap_ip = Physical.wifi->ap_ip();
     Serial.printf("\nSTA IP: %u.%u.%u.%u\n", (unsigned)(sta_ip & 0xFF), (unsigned)((sta_ip >> 8) & 0xFF),
                   (unsigned)((sta_ip >> 16) & 0xFF), (unsigned)((sta_ip >> 24) & 0xFF));
