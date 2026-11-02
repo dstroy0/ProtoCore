@@ -25,6 +25,7 @@
 
 #include "memoria_anularis/memoria_anularis.h"
 #include "memoriam_praetereo/memoriam_praetereo.h"
+#include <stdatomic.h>
 #include <stdint.h>
 #include <string.h>
 
