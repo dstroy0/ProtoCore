@@ -77,6 +77,7 @@ set(PROTOCORE_REQUIRES
     esp_wifi
     nvs_flash
     app_update
+    bt
     esp_timer
     esp_hw_support
     esp_system
