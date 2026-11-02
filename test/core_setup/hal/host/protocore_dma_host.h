@@ -88,8 +88,8 @@ PROTOCORE_HOST_SHARED PcDmaHostCh g_protocore_dma[PROTOCORE_DMA_CHANNELS];
 // bytes on the line no sender ever submitted. This is the ring's own lossless-backpressure rule.
 static inline proto_bool protocore_dma_stage_put(PcDmaStage *s, const uint8_t *src, uint16_t n)
 {
-    const size_t tail = PROTO_ATOMIC_LOAD(&s->tail);
-    size_t h = PROTO_ATOMIC_LOAD(&s->head);
+    const size_t tail = PROTOCORE_ATOMIC_LOAD(&s->tail);
+    size_t h = PROTOCORE_ATOMIC_LOAD(&s->head);
     const size_t room = (PROTOCORE_DMA_HOST_STAGE - 1u) - MMGR_RING_WRAP(h - tail, PROTOCORE_DMA_HOST_STAGE);
     if (src == NULL || n == 0 || n > room)
     {
@@ -100,14 +100,14 @@ static inline proto_bool protocore_dma_stage_put(PcDmaStage *s, const uint8_t *s
         s->buf[h] = src[i];
         h = MMGR_RING_WRAP(h + 1u, PROTOCORE_DMA_HOST_STAGE);
     }
-    PROTO_ATOMIC_STORE(&s->head, h);
+    PROTOCORE_ATOMIC_STORE(&s->head, h);
     return PROTO_TRUE;
 }
 
 static inline uint16_t protocore_dma_stage_get(PcDmaStage *s, uint8_t *out, uint16_t max)
 {
-    const size_t h = PROTO_ATOMIC_LOAD(&s->head);
-    size_t t = PROTO_ATOMIC_LOAD(&s->tail);
+    const size_t h = PROTOCORE_ATOMIC_LOAD(&s->head);
+    size_t t = PROTOCORE_ATOMIC_LOAD(&s->tail);
     uint16_t n = 0;
     while (n < max && t != h)
     {
@@ -115,7 +115,7 @@ static inline uint16_t protocore_dma_stage_get(PcDmaStage *s, uint8_t *out, uint
         n++;
         t = MMGR_RING_WRAP(t + 1u, PROTOCORE_DMA_HOST_STAGE);
     }
-    PROTO_ATOMIC_STORE(&s->tail, t);
+    PROTOCORE_ATOMIC_STORE(&s->tail, t);
     return n;
 }
 

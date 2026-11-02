@@ -21,7 +21,7 @@
  *
  * The receive ring is a memoria_anularis ring over the slot's own aligned rx_buffer: one producer
  * (the stack callbacks) and one consumer (the owning worker), with the ordering inside the ring.
- * `state` is `_Atomic`, read and written through PROTO_ATOMIC_LOAD / PROTO_ATOMIC_STORE.
+ * `state` is `_Atomic`, read and written through PROTOCORE_ATOMIC_LOAD / PROTOCORE_ATOMIC_STORE.
  *
  * **Backpressure (lossless)**
  * When a whole inbound segment will not fit the free ring space, the recv callback refuses it

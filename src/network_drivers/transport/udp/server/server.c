@@ -31,7 +31,7 @@ PROTOCORE_BEGIN_DECLS
  *
  * One ring, on the receive side: its producer is the stack's trampoline and its consumer is poll().
  * The index pair is single-producer / single-consumer, so both are `_Atomic` and reached only
- * through PROTO_ATOMIC_LOAD / PROTO_ATOMIC_STORE. A send carries the caller's buffer to the wire
+ * through PROTOCORE_ATOMIC_LOAD / PROTOCORE_ATOMIC_STORE. A send carries the caller's buffer to the wire
  * inside one marshaled call, so nothing queues on the way out.
  */
 typedef struct
@@ -129,7 +129,7 @@ static uint32_t bind_all(void)
 /** @brief True when slot @p idx is bound. */
 static proto_bool bind_used(uint8_t *work, size_t idx)
 {
-    return (PROTO_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & bind_bit(idx)) != 0u;
+    return (PROTOCORE_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & bind_bit(idx)) != 0u;
 }
 
 // --- the program's shared state, beside the namespace not on it -------------
@@ -155,7 +155,7 @@ uint8_t *protocore_udp_listener_span(void)
 /** @brief Point UDP_LISTENER_CTX(work)->slot at the bound slot for ns->port, or NULL. */
 static void find_bind(uint8_t *work)
 {
-    uint32_t m = PROTO_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & bind_all();
+    uint32_t m = PROTOCORE_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & bind_all();
     while (m != 0u)
     {
         const int32_t i = (int32_t)EMBED_CALL(anularis.loculus_next, AnularisCfg, .mask = m);
@@ -172,7 +172,7 @@ static void find_bind(uint8_t *work)
 /** @brief Point UDP_LISTENER_CTX(work)->slot at the first free slot, or NULL when the pool is full. */
 static void free_bind(uint8_t *work)
 {
-    const uint32_t free_slots = ~PROTO_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & bind_all();
+    const uint32_t free_slots = ~PROTOCORE_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & bind_all();
     const int32_t i = (int32_t)EMBED_CALL(anularis.loculus_next, AnularisCfg, .mask = free_slots);
     UDP_LISTENER_CTX(work)->slot = NULL;
     if (i >= 0)

@@ -215,16 +215,16 @@ static void test_only_an_active_slot_with_a_pcb_is_reported_active(void)
     protocore_pcb stub;
     conn_pool[0].pcb = &stub;
 
-    PROTO_ATOMIC_STORE(&conn_pool[0].state, CONN_FREE);
+    PROTOCORE_ATOMIC_STORE(&conn_pool[0].state, CONN_FREE);
     TEST_ASSERT_FALSE(protocore_conn_active(0));
 
-    PROTO_ATOMIC_STORE(&conn_pool[0].state, CONN_CLOSING);
+    PROTOCORE_ATOMIC_STORE(&conn_pool[0].state, CONN_CLOSING);
     TEST_ASSERT_FALSE(protocore_conn_active(0));
 
-    PROTO_ATOMIC_STORE(&conn_pool[0].state, CONN_ACTIVE);
+    PROTOCORE_ATOMIC_STORE(&conn_pool[0].state, CONN_ACTIVE);
     TEST_ASSERT_TRUE(protocore_conn_active(0));
 
-    PROTO_ATOMIC_STORE(&conn_pool[0].state, CONN_FREE);
+    PROTOCORE_ATOMIC_STORE(&conn_pool[0].state, CONN_FREE);
     conn_pool[0].pcb = saved;
 }
 
@@ -233,10 +233,10 @@ static void test_a_detached_slot_is_never_sendable(void)
     protocore_pcb *saved = conn_pool[0].pcb;
     conn_pool[0].pcb = NULL;
 
-    PROTO_ATOMIC_STORE(&conn_pool[0].state, CONN_ACTIVE);
+    PROTOCORE_ATOMIC_STORE(&conn_pool[0].state, CONN_ACTIVE);
     TEST_ASSERT_FALSE(protocore_conn_active(0));
 
-    PROTO_ATOMIC_STORE(&conn_pool[0].state, CONN_FREE);
+    PROTOCORE_ATOMIC_STORE(&conn_pool[0].state, CONN_FREE);
     conn_pool[0].pcb = saved;
 }
 

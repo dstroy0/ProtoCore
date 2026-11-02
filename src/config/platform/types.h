@@ -77,8 +77,8 @@ typedef _Bool proto_bool;
  * `atomic_load_explicit` and `atomic_store_explicit` are `<stdatomic.h>`, which a file using these
  * includes itself: this header also reaches C++ sketches, where that header is not C11's.
  */
-#define PROTO_ATOMIC_LOAD(p) atomic_load_explicit((p), memory_order_acquire)
-#define PROTO_ATOMIC_STORE(p, v) atomic_store_explicit((p), (v), memory_order_release) ///< release store of @p v
+#define PROTOCORE_ATOMIC_LOAD(p) atomic_load_explicit((p), memory_order_acquire)
+#define PROTOCORE_ATOMIC_STORE(p, v) atomic_store_explicit((p), (v), memory_order_release) ///< release store of @p v
 
 /**
  * @brief Give a header's declarations C linkage, so their symbol names carry no parameter types.

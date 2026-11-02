@@ -14,7 +14,7 @@
 
 #include "config/platform/platform.h" // the target's queues and tasks, under our names
 
-#include <stdatomic.h> // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
+#include <stdatomic.h> // PROTOCORE_ATOMIC_LOAD/STORE: the run flag crosses tasks
 
 // ---------------------------------------------------------------------------
 // Worker identity
@@ -252,7 +252,7 @@ static void worker_task(void *arg)
 {
     int id = (int)(intptr_t)arg;
     protocore_worker_set_self(id);
-    while (PROTO_ATOMIC_LOAD(&WORKER_CTX(protocore_worker_span())->run))
+    while (PROTOCORE_ATOMIC_LOAD(&WORKER_CTX(protocore_worker_span())->run))
     {
         if (WORKER_CTX(protocore_worker_span())->pump)
         {
@@ -267,7 +267,7 @@ static void worker_task(void *arg)
 
 void protocore_workers_start(uint8_t *work)
 {
-    if (PROTO_ATOMIC_LOAD(&WORKER_CTX(work)->run))
+    if (PROTOCORE_ATOMIC_LOAD(&WORKER_CTX(work)->run))
     {
         return; // already running
     }
@@ -281,7 +281,7 @@ void protocore_workers_start(uint8_t *work)
                                                 WORKER_CTX(work)->dq_storage[i], &WORKER_CTX(work)->dq_struct[i]);
         }
     }
-    PROTO_ATOMIC_STORE(&WORKER_CTX(work)->run, PROTO_TRUE);
+    PROTOCORE_ATOMIC_STORE(&WORKER_CTX(work)->run, PROTO_TRUE);
     for (int i = 0; i < PROTOCORE_WORKER_COUNT; i++)
     {
         int core = (PROTOCORE_WORKER_CORE + i) % PROTOCORE_PLATFORM_CORES;
@@ -343,11 +343,11 @@ void protocore_workers_run_deferred(uint8_t *work)
 
 void protocore_workers_stop(uint8_t *work)
 {
-    if (!PROTO_ATOMIC_LOAD(&WORKER_CTX(work)->run))
+    if (!PROTOCORE_ATOMIC_LOAD(&WORKER_CTX(work)->run))
     {
         return;
     }
-    PROTO_ATOMIC_STORE(&WORKER_CTX(work)->run, PROTO_FALSE);
+    PROTOCORE_ATOMIC_STORE(&WORKER_CTX(work)->run, PROTO_FALSE);
     // Tasks self-delete on their next iteration; give them a few ticks to exit
     // before the caller tears down the slots they were servicing.
     protocore_platform_task_delay(3);
@@ -355,7 +355,7 @@ void protocore_workers_stop(uint8_t *work)
 
 void protocore_workers_running(uint8_t *work)
 {
-    WorkersV.ok = PROTO_ATOMIC_LOAD(&WORKER_CTX(work)->run);
+    WorkersV.ok = PROTOCORE_ATOMIC_LOAD(&WORKER_CTX(work)->run);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.

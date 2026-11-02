@@ -778,7 +778,7 @@ void test_free_bitmap_tracks_every_state_write(void)
     {
         proto_bool free_bit =
             (EMBED_CALL(anularis.loculus_ready, AnularisCfg, .ring = &protocore_conn_slots) >> i) & 1u;
-        proto_bool is_free = PROTO_ATOMIC_LOAD(&conn_pool[i].state) == CONN_FREE;
+        proto_bool is_free = PROTOCORE_ATOMIC_LOAD(&conn_pool[i].state) == CONN_FREE;
         TEST_ASSERT_EQUAL(is_free, free_bit);
     }
 }
