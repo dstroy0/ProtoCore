@@ -401,10 +401,14 @@
 // bitmap of bound slots, the reentrancy latch and the text a joined group is formatted into. Scales
 // with the listener count and the ring. No key material, so the plaintext end. Proved against
 // sizeof(struct UdpListenerStorage) by a static_assert in udp/server/server.c.
+// One mmgr_ring: MMGR_RING_WORDS machine words, stated here because this header reaches no MMgr header.
+// The static_assert behind each borrow that uses it proves it against sizeof(mmgr_ring).
+#define PROTOCORE_RING_STORAGE_BYTES (40u * sizeof(size_t))
+
 #ifndef PROTOCORE_UDP_LISTENER_BORROW
 #define PROTOCORE_UDP_LISTENER_BORROW                                                                                  \
-    ((size_t)PROTOCORE_MAX_UDP_LISTENERS * ((size_t)PROTOCORE_UDP_RX_RING + 96u) + (size_t)PROTOCORE_UDP_RX_BUF_SIZE + \
-     256u)
+    ((size_t)PROTOCORE_MAX_UDP_LISTENERS * ((size_t)PROTOCORE_UDP_RX_RING + PROTOCORE_RING_STORAGE_BYTES + 96u) +      \
+     (size_t)PROTOCORE_UDP_RX_BUF_SIZE + 256u)
 #endif
 
 // The TCP/lower-level seam: one marshal record per connection slot, plus the stack thread it
@@ -441,7 +445,8 @@
 // so the plaintext end. Proved against sizeof(struct TcpClientStorage) by a static_assert in
 // tcp/client/client.c.
 #ifndef PROTOCORE_TCP_CLIENT_BORROW
-#define PROTOCORE_TCP_CLIENT_BORROW ((size_t)PROTOCORE_CLIENT_CONNS * ((size_t)PROTOCORE_CLIENT_RX_BUF + 96u) + 64u)
+#define PROTOCORE_TCP_CLIENT_BORROW                                                                                    \
+    ((size_t)PROTOCORE_CLIENT_CONNS * ((size_t)PROTOCORE_CLIENT_RX_BUF + PROTOCORE_RING_STORAGE_BYTES + 96u) + 64u)
 #endif
 
 // The one address a Happy Eyeballs preference step scores. The sort compares a key it holds against
