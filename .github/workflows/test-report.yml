@@ -230,7 +230,9 @@ jobs:
             git config user.signingkey ~/.ssh/ci_signing_key
             git config commit.gpgsign true
           fi
-          git add test/TEST_REPORT.md test/coverage.xml test/dep_graph.json
+          # The README's status table is read from these two files, so it moves with them.
+          python3 -m tools.ci_tooling.generate.gen_readme_intro
+          git add test/TEST_REPORT.md test/coverage.xml test/dep_graph.json README.md
           if ! git diff --cached --quiet; then
             git commit -m "ci: update test report + coverage [skip ci]"
             # Rebase-and-retry: other auto-committing workflows advance main during this multi-minute run.

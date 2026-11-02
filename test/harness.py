@@ -2087,18 +2087,28 @@ def describe_suite(suite):
     return {}
 
 
-def write_report(path, results, envs_run, passed, failed, secs):
-    """The run's TEST_REPORT.md: a header, then one collapsible section per suite."""
-    mark = "✅" if not failed else "❌"
+def write_report(path, results, envs_run, passed, failed, secs, unbuilt=()):
+    """The run's TEST_REPORT.md: a header, then one collapsible section per suite.
+
+    An env in @p unbuilt ran no test, so it has no Unity line to count and no suite section. The
+    header states it, because a total read from Unity lines alone reads green over a matrix that
+    did not compile.
+    """
+    mark = "✅" if not (failed or unbuilt) else "❌"
+    not_built = ", %d envs did not build" % len(unbuilt) if unbuilt else ""
     md = [
         "# Test Report",
         "",
         "**Generated:** " + time.strftime("%Y-%m-%d %H:%M:%S"),
         "**Command:** `harness.py run` over %d native envs" % envs_run,
-        "**Result:** %s %d passed, %d failed - %ds" % (mark, passed, failed, secs),
+        "**Result:** %s %d passed, %d failed%s - %ds" % (mark, passed, failed, not_built, secs),
         "",
         "---",
         "",
+    ]
+    if unbuilt:
+        md += ["## Envs that did not build", ""] + ["- `%s`" % name for name in unbuilt] + ["", "---", ""]
+    md += [
         "## Summary",
         "",
         "| Suite | Environment | Tests | Status | Duration |",
@@ -2370,6 +2380,7 @@ def cmd_run(a):
         shutil.rmtree(os.path.join(ROOT, COV_BUILD), ignore_errors=True)
     failed = []
     cov_failed = []
+    unbuilt = []
     results = []
     n_pass = n_fail = 0
     t0 = time.time()
@@ -2387,6 +2398,9 @@ def cmd_run(a):
             print(out)
         if rc != 0:
             failed.append(name)
+        built = "BUILD FAILED" not in out
+        if not built:
+            unbuilt.append(name)
         if a.report_out:
             by_suite = {}
             for suite, test, st in parse_unity(out):
@@ -2395,14 +2409,16 @@ def cmd_run(a):
                 n_fail += st == "FAIL"
             for suite, cases in by_suite.items():
                 results.append((name, suite, cases))
-        if a.coverage and not cov_one(gc, name):
+        # An env that did not build measured nothing, which is the same missing tracefile as gcovr
+        # producing none, whatever gcovr says when it is asked to read an empty build.
+        if a.coverage and (not built or not cov_one(gc, name)):
             print("  ERROR: gcovr produced no coverage report for %s" % name, file=sys.stderr)
             cov_failed.append(name)
     print("\n%d/%d envs passed" % (total - len(failed), total))
     if failed:
         print("failed: " + " ".join(failed))
     if a.report_out:
-        write_report(a.report_out, results, total, n_pass, n_fail, int(time.time() - t0))
+        write_report(a.report_out, results, total, n_pass, n_fail, int(time.time() - t0), unbuilt)
         print("Report written: %s" % a.report_out)
     if a.coverage:
         # A silently-missing per-env tracefile is the worst failure here: the merge only unions, so
