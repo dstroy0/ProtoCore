@@ -2168,7 +2168,11 @@ def cov_one(gc, name):
         cwd=ROOT,
     )
     full = os.path.join(ROOT, js)
-    return p.returncode == 0 and os.path.isfile(full) and os.path.getsize(full) > 0
+    produced = p.returncode == 0 and os.path.isfile(full) and os.path.getsize(full) > 0
+    if not produced:
+        # The caller names the env and refuses the merge. What gcovr said is the only record of why.
+        print("  gcovr exit %d for %s:\n%s" % (p.returncode, name, p.stderr.strip()[-2000:]), file=sys.stderr)
+    return produced
 
 
 def cov_merge(gc, out_rel):
