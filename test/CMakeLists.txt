@@ -1062,6 +1062,7 @@ protocore_env(native_cloudevents
 protocore_env(native_coap
   SUITE unit/src/services/iot/coap/coap/test_coap
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/services/iot/coap/coap/coap.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/server/server.c"
@@ -1094,6 +1095,7 @@ protocore_env(native_coap
 protocore_env(native_coap_observe
   SUITE unit/src/services/iot/coap/coap/test_coap
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/services/iot/coap/coap/coap.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/server/server.c"
@@ -2718,6 +2720,7 @@ protocore_env(native_dns_resolver
 protocore_env(native_dns_server
   SUITE unit/src/network_drivers/network/dns/dns_server/test_dns_server
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/network/dns/dns_server/dns_server.c"
     "${PROTOCORE_ROOT}/src/network_drivers/network/dns/dns_wire/dns_wire.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
@@ -6439,6 +6442,7 @@ protocore_env(native_ntlmssp
 protocore_env(native_ntp_server
   SUITE unit/src/network_drivers/application/ntp_server/test_ntp_server
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/application/ntp_server/ntp_server.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/server/server.c"
@@ -9694,6 +9698,7 @@ protocore_env(native_smtp
 protocore_env(native_snmp__test_snmp_ber
   SUITE unit/src/services/net/snmp/test_snmp_ber
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/services/net/snmp/snmp_ber/snmp_ber.c"
     "${PROTOCORE_ROOT}/src/services/net/snmp/snmp_agent/snmp_agent.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
@@ -9724,6 +9729,7 @@ protocore_env(native_snmp__test_snmp_ber
 protocore_env(native_snmp__test_snmp_agent
   SUITE unit/src/services/net/snmp/snmp_agent/test_snmp_agent
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/services/net/snmp/snmp_ber/snmp_ber.c"
     "${PROTOCORE_ROOT}/src/services/net/snmp/snmp_agent/snmp_agent.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
@@ -11507,6 +11513,7 @@ protocore_env(native_ssh_sftp
 protocore_env(native_statsd
   SUITE unit/src/services/iot/statsd/test_statsd
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/services/iot/statsd/statsd.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/server/server.c"
@@ -11592,6 +11599,7 @@ protocore_env(native_sunspec
 protocore_env(native_syslog
   SUITE unit/src/services/net/syslog/test_syslog
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/services/net/syslog/syslog.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/server/server.c"
@@ -12404,6 +12412,7 @@ protocore_env(native_ubx_codec
 protocore_env(native_udp
   SUITE unit/src/network_drivers/transport/udp/test_udp
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/server/server.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/net_addr/net_addr.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/client/client.c"
@@ -12453,6 +12462,7 @@ protocore_env(native_udp_telemetry
 protocore_env(native_udp_transport
   SUITE env/transport/test_udp_transport
   SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/server/server.c"
     "${PROTOCORE_ROOT}/src/network_drivers/transport/net_addr/net_addr.c"

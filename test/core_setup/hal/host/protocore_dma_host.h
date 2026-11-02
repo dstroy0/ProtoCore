@@ -21,6 +21,8 @@
 #ifndef PROTOCORE_PROTOCORE_DMA_HOST_H
 #define PROTOCORE_PROTOCORE_DMA_HOST_H
 
+#include "protocore_config.h"
+
 #include "memoria_anularis/memoria_anularis.h"
 #include "memoriam_praetereo/memoriam_praetereo.h"
 #include <stdint.h>

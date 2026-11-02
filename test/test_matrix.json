@@ -424,6 +424,7 @@
         "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<services/iot/coap/coap/coap.c>",
         "+<network_drivers/transport/udp/udp.c>",
         "+<network_drivers/transport/udp/server/server.c>",
@@ -450,6 +451,7 @@
         "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<services/iot/coap/coap/coap.c>",
         "+<network_drivers/transport/udp/udp.c>",
         "+<network_drivers/transport/udp/server/server.c>",
@@ -1442,6 +1444,7 @@
         "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/network/dns/dns_server/dns_server.c>",
         "+<network_drivers/network/dns/dns_wire/dns_wire.c>",
         "+<network_drivers/transport/udp/udp.c>",
@@ -3618,6 +3621,7 @@
         "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/application/ntp_server/ntp_server.c>",
         "+<network_drivers/transport/udp/udp.c>",
         "+<network_drivers/transport/udp/server/server.c>",
@@ -5688,6 +5692,7 @@
         "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<services/net/snmp/snmp_ber/snmp_ber.c>",
         "+<services/net/snmp/snmp_agent/snmp_agent.c>",
         "+<network_drivers/transport/udp/udp.c>",
@@ -6915,6 +6920,7 @@
         "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<services/iot/statsd/statsd.c>",
         "+<network_drivers/transport/udp/udp.c>",
         "+<network_drivers/transport/udp/server/server.c>",
@@ -6954,6 +6960,7 @@
         "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<services/net/syslog/syslog.c>",
         "+<network_drivers/transport/udp/udp.c>",
         "+<network_drivers/transport/udp/server/server.c>",
@@ -7490,6 +7497,7 @@
         "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/transport/udp/server/server.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
         "+<network_drivers/transport/udp/client/client.c>",
@@ -7529,6 +7537,7 @@
         "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/transport/udp/udp.c>",
         "+<network_drivers/transport/udp/server/server.c>",
         "+<network_drivers/transport/net_addr/net_addr.c>",
