@@ -9,8 +9,10 @@ moment the interface has an IPv6 address it answers over v6 as well as v4. All y
 turning IPv6 on for the network interface:
 
 ```cpp
-Physical.wifi->init(SSID, PASSWORD);
-while (!Physical.wifi->ready()) delay(250);
+PhysicalV.wifi.ssid = SSID;
+PhysicalV.wifi.password = PASSWORD;
+Physical.wifi_init(protocore_physical_span());
+while (!protocore_physical_wifi_up()) delay(250);
 Physical.ip6->init();            // enable IPv6 (SLAAC) on the Wi-Fi netif
 while (!Physical.ip6->ready()) delay(250); // waits for a global (routable) v6 address
 ```

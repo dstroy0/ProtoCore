@@ -30,11 +30,6 @@
 
 PROTOCORE_BEGIN_DECLS
 
-// Only ever pointed at from here, so the tags are enough and the engine's header stays out of
-// every translation unit that includes this one.
-struct mmgr_field;
-struct mmgr_fval;
-
 #if PROTOCORE_ENABLE_TELNET
 
 /** @brief Called with each completed input line (NUL-terminated, no CR/LF) and its client id. */
@@ -45,10 +40,10 @@ struct ProtoHandler;
 /** @brief RFC 854 NVT data: what a write puts on the terminal, as a line or as a field set. */
 typedef struct
 {
-    const char *text;              ///< a line of NVT ASCII
-    const struct mmgr_field *spec; ///< the field layout a frame is built from
-    const struct mmgr_fval *val;   ///< the values that fill it
-    size_t nv;                     ///< how many
+    const char *text;       ///< a line of NVT ASCII
+    const mmgr_field *spec; ///< the field layout a frame is built from
+    const mmgr_fval *val;   ///< the values that fill it
+    size_t nv;              ///< how many
 } TelnetOutArgs;
 
 /**

@@ -105,8 +105,9 @@ PROTOCORE_INLINE size_t protocore_fs_join(const char *root, const char *dir, con
     {
         dir++; // the root carries the separator; a second one would be "//"
     }
-    return EMBED_CALL(numer.build, NumerosCfg, .out = out, .cap = cap, .spec = FILESYSTEM_JOIN,
-                      .vals = (const mmgr_fval[]){MMGR_VSTR(root), MMGR_VSTR(dir), MMGR_VSTR(name)}, .nvals = 3);
+    const mmgr_fval parts[] = {MMGR_VSTR(root), MMGR_VSTR(dir), MMGR_VSTR(name)};
+    return EMBED_CALL(numer.build, NumerosCfg, .out = out, .cap = cap, .spec = FILESYSTEM_JOIN, .vals = parts,
+                      .nvals = 3);
 }
 
 /**

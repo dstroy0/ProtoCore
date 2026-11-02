@@ -119,8 +119,10 @@ void setup()
     protocore_hotswap_poll(); // first poll mounts a card that is already in the slot
     Serial.printf("storage at boot: %s\n", protocore_hotswap_state_name(protocore_hotswap_state()));
 
-    Physical.wifi->init(WIFI_SSID, WIFI_PASS);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = WIFI_SSID;
+    PhysicalV.wifi.password = WIFI_PASS;
+    Physical.wifi_init(protocore_physical_span());
+    while (!protocore_physical_wifi_up())
     {
         delay(250);
     }
@@ -130,7 +132,7 @@ void setup()
     on_http("/yank", HTTP_GET, yank_handler);
     begin_http(80, NULL);
 
-    uint32_t ip = Physical.link->egress_ip();
+    uint32_t ip = protocore_physical_egress_ip();
     Serial.printf("http://%u.%u.%u.%u/storage\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 }

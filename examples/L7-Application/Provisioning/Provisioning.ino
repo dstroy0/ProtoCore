@@ -36,14 +36,16 @@ void setup()
     if (protocore_provisioning_load(ssid, sizeof(ssid), psk, sizeof(psk)))
     {
         // Credentials present: connect as a normal station.
-        Physical.wifi->init(ssid, psk);
+        PhysicalV.wifi.ssid = ssid;
+        PhysicalV.wifi.password = psk;
+        Physical.wifi_init(protocore_physical_span());
         Serial.print("Connecting to ");
         Serial.println(ssid);
-        while (!Physical.wifi->ready())
+        while (!protocore_physical_wifi_up())
         {
             delay(250);
         }
-        uint32_t ip = Physical.link->egress_ip();
+        uint32_t ip = protocore_physical_egress_ip();
         Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                       (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

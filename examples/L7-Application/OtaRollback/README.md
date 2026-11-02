@@ -16,7 +16,7 @@ instead of bricking. It is the safety net for the OTA upload in
 **Define a self-test, then tick until committed:**
 
 ```cpp
-static bool self_test() { return Physical.wifi->ready() && ESP.getFreeHeap() > 20000; }
+static bool self_test() { return protocore_physical_wifi_up() && ESP.getFreeHeap() > 20000; }
 
 void loop() {
     static bool done = false;
@@ -70,17 +70,19 @@ PC server;
 // The health check that decides commit vs rollback. Put your real checks here.
 static bool self_test()
 {
-    return Physical.wifi->ready() && ESP.getFreeHeap() > 20000;
+    return protocore_physical_wifi_up() && ESP.getFreeHeap() > 20000;
 }
 
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    while (!protocore_physical_wifi_up())
         delay(250);
     Serial.print("IP: ");
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = protocore_physical_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

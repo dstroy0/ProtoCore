@@ -32,11 +32,6 @@
 
 PROTOCORE_BEGIN_DECLS
 
-// Only ever pointed at from here, so the tags are enough and the engine's header stays out of
-// every translation unit that includes this one.
-struct mmgr_field;
-struct mmgr_fval;
-
 /** @brief Receives an emitted line, already formatted. @p level is a PROTOCORE_LOG_LEVEL_* value. */
 typedef void (*protocore_log_sink_fn)(uint8_t level, const char *line);
 
@@ -46,7 +41,7 @@ typedef void (*protocore_log_sink_fn)(uint8_t level, const char *line);
  * It exists to mark a discarded statement's arguments as used, so a variable read only by a log
  * does not warn its way into being deleted.
  */
-int protocore_log_discard_args(const struct mmgr_field *spec, const struct mmgr_fval *v, size_t nv);
+int protocore_log_discard_args(const mmgr_field *spec, const mmgr_fval *v, size_t nv);
 
 /** @brief The discarded form: marks arguments used, emits nothing. */
 #define PROTOCORE_LOG_DISCARD(spec, v, nv)                                                                             \
@@ -58,10 +53,10 @@ int protocore_log_discard_args(const struct mmgr_field *spec, const struct mmgr_
 /** @brief One line to emit: its level, and the spec that shapes it. */
 typedef struct
 {
-    uint8_t level;                 ///< the severity the line carries
-    const struct mmgr_field *spec; ///< the shape of the message
-    const struct mmgr_fval *v;     ///< the values that fill it
-    size_t nv;                     ///< how many
+    uint8_t level;          ///< the severity the line carries
+    const mmgr_field *spec; ///< the shape of the message
+    const mmgr_fval *v;     ///< the values that fill it
+    size_t nv;              ///< how many
 } LogFrameArgs;
 
 /**

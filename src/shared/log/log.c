@@ -67,7 +67,7 @@ void protocore_log_set_sink(uint8_t *work)
 void protocore_log_emit(uint8_t *work)
 {
     const uint8_t level = LogV.frame.level;
-    const struct mmgr_field *spec = LogV.frame.spec;
+    const mmgr_field *spec = LogV.frame.spec;
 
     if (!spec)
     {

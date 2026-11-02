@@ -46,8 +46,10 @@ static void root_handler(uint8_t slot_id, HttpReq *req)
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(WIFI_SSID, WIFI_PASS);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = WIFI_SSID;
+    PhysicalV.wifi.password = WIFI_PASS;
+    Physical.wifi_init(protocore_physical_span());
+    while (!protocore_physical_wifi_up())
     {
         delay(250);
     }
@@ -74,7 +76,7 @@ void setup()
 
     begin_http(80, NULL);
 
-    uint32_t ip = Physical.link->egress_ip();
+    uint32_t ip = protocore_physical_egress_ip();
     Serial.printf("http://%u.%u.%u.%u/  (sw /sw.js, manifest /precache.json, files /files/...)\n",
                   (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF), (unsigned)((ip >> 16) & 0xFF),
                   (unsigned)((ip >> 24) & 0xFF));

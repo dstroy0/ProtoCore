@@ -31,12 +31,14 @@ static const char *WEBHOOK_URL = "http://192.168.1.10:8080/hook";
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    while (!protocore_physical_wifi_up())
     {
         delay(250);
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = protocore_physical_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
@@ -49,7 +51,7 @@ void loop()
     // loop() (not a handler) so the blocking POST never stalls the worker that
     // serves this server.
     static bool fired = false;
-    if (!fired && Physical.wifi->ready())
+    if (!fired && protocore_physical_wifi_up())
     {
         fired = true;
         char body[128];
