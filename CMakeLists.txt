@@ -78,6 +78,8 @@ set(PROTOCORE_REQUIRES
     nvs_flash
     app_update
     bt
+    driver
+    espcoredump
     esp_timer
     esp_hw_support
     esp_system
