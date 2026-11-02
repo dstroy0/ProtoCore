@@ -1,6 +1,6 @@
 # InterfaceForward - bridge frames between interfaces, DMA-driven
 
-**Layer:** Foundation · **Build flags:** `PROTOCORE_ENABLE_DMA`,
+**Layer:** Foundation · **Build flags:** `PROTOCORE_ENABLE_DMA`, `MMGR_ENABLE_DMA`,
 `PROTOCORE_ENABLE_PREEMPT_QUEUE`, `PROTOCORE_ENABLE_FORWARD`, `PROTOCORE_DMA_SIMULATE`
 
 ## What this example teaches
@@ -82,6 +82,6 @@ The flags must reach the library build, so pass them as build flags:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_DMA=1 -DPROTOCORE_ENABLE_PREEMPT_QUEUE=1 -DPROTOCORE_ENABLE_FORWARD=1 -DPROTOCORE_DMA_SIMULATE=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_DMA=1 -DMMGR_ENABLE_DMA=1 -DPROTOCORE_ENABLE_PREEMPT_QUEUE=1 -DPROTOCORE_ENABLE_FORWARD=1 -DPROTOCORE_DMA_SIMULATE=1" \
   --lib="." examples/Foundation/InterfaceForward/InterfaceForward.ino
 ```

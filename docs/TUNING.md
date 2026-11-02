@@ -37,19 +37,19 @@ points re-derives a bound, and the footprint is a number you can
 compute before flashing. It is not a property you measure afterwards.
 
 Working memory is therefore not per-feature buffers but two **pools**, both the same
-mechanism (`protocore_arena`, `mmgr/arena.h`) instantiated twice, with one arena per slot -
+mechanism (`LocusCarcerum`, `locus_carcerum/locus_carcerum.h`) instantiated twice, with one arena per slot -
 one per worker, plus the ghost, the library's own.
 
-| Pool                           | Holds                                                    | Reclaim                                                                         |
-| ------------------------------ | -------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| plaintext (`mmgr/plaintext.h`) | transient bytes that are not secret                      | `protocore_plaintext_reset()` per dispatch; `protocore_plaintext_release(mark)` |
-| secure (`mmgr/secure.h`)       | key material: shared secrets, private scalars, schedules | same, and **the release wipes** before the position moves                       |
+| Pool                                      | Holds                                                    | Reclaim                                                                                                               |
+| ----------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| plaintext (`server/core/worker/worker.h`) | transient bytes that are not secret                      | `protocore_plain_guard()->temporary_buf_reset()` per dispatch; `protocore_plain_guard()->temporary_buf_release(mark)` |
+| secure (`server/core/worker/worker.h`)    | key material: shared secrets, private scalars, schedules | same, and **the release wipes** before the position moves                                                             |
 
 The two differ in exactly one thing: reclaiming the secure pool zeroes the region
 before it becomes available again. A secret cannot outlive its borrow. That makes
 the rule structural instead of a discipline every caller has to remember on every
-return path. The regions are also disjoint, so `protocore_secure_owns()` and
-`protocore_plaintext_owns()` are mutually exclusive by construction - a secure borrow can
+return path. The regions are also disjoint, so `protocore_secure_guard()->who_owns_buf()` and
+`protocore_plain_guard()->who_owns_buf()` are mutually exclusive by construction - a secure borrow can
 never be accepted where a plaintext one is expected, with no tagging and no
 per-allocation metadata.
 
@@ -59,10 +59,10 @@ only question is whether the bytes are secret.
 ### Borrowing
 
 ```c
-size_t mark = protocore_secure_mark();
-uint8_t *k  = protocore_secure_alloc(PROTOCORE_AES128GCM_KEY_LEN, 8);
+size_t mark = protocore_secure_guard()->temporary_buf_mark();
+uint8_t *k  = protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AES128GCM_KEY_LEN, protocore_secure_owner());
 /* ... use k ... */
-protocore_secure_release(mark);          /* wipes, then reclaims */
+protocore_secure_guard()->temporary_buf_release(mark);          /* wipes, then reclaims */
 ```
 
 The caller asks for RAM and gets a pointer, and **the RAM is guaranteed to be there**.
@@ -81,7 +81,7 @@ becoming a run-time surprise in the core.
 
 Because they meet those conditions, **the core behaves as advertised**: the pointer is
 guaranteed, the footprint is a number you computed before flashing, and no call site
-has a check to write. A consumer writes `protocore_secure_alloc(PROTOCORE_WORK_AES128GCM, 8)` and is
+has a check to write. A consumer writes `protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_WORK_AES128GCM, protocore_secure_owner())` and is
 done - the macro settles the size, the backend has already satisfied the requirement,
 and neither is restated at the point of use.
 
@@ -92,7 +92,7 @@ request; left an ordinary struct member it would inherit only 8, so it is declar
 the base is good enough.
 
 C does not do this for you: on the secure side **every** return path must
-reach `protocore_secure_release()`, including the early ones taken when a peer sends
+reach `protocore_secure_guard()->temporary_buf_release()`, including the early ones taken when a peer sends
 something malformed. That is where the wipe happens.
 
 ### Every TU precomputes, and mmgr knows

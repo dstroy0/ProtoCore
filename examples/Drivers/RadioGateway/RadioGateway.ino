@@ -17,11 +17,11 @@
 // build swaps the simulator feed for the module's SPI RX and the publish for an MQTT client.
 //
 // Build flags (whole build):
-//   PROTOCORE_ENABLE_DMA=1 PROTOCORE_ENABLE_PREEMPT_QUEUE=1 PROTOCORE_ENABLE_GATEWAY=1 PROTOCORE_DMA_SIMULATE=1
+//   PROTOCORE_ENABLE_DMA=1 MMGR_ENABLE_DMA=1 PROTOCORE_ENABLE_PREEMPT_QUEUE=1 PROTOCORE_ENABLE_GATEWAY=1 PROTOCORE_DMA_SIMULATE=1
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
 #include "server/net/gateway/gateway.h"
-#include "mmgr/dma/dma.h"
+#include "memoriam_praetereo/memoriam_praetereo.h"
 #include "server/core/preempt_queue/preempt_queue.h"
 
 
@@ -70,16 +70,21 @@ static void on_forward(const void *item, void *)
 }
 
 // DMA-complete on the radio port: copy the frame and post it onto the FORWARD lane.
-static void on_dma_complete(const protocore_dma_event *ev, void *)
+// The direction a port reports for a completed receive, and the peripheral numbers it is opened on.
+static const uint8_t DMA_DIRECTION_RX = 0u;
+static const uint8_t DMA_PERIPHERAL_UART = 0u;
+static const uint8_t DMA_PERIPHERAL_SPI = 2u;
+
+static void on_dma_complete(const mmgr_praet_event *ev, void *)
 {
-    if (ev->dir != protocore_dma_dir::PROTOCORE_DMA_RX)
+    if (ev->direction != DMA_DIRECTION_RX)
     {
         return;
     }
     pq_item it = {};
     it.f.port = RADIO_PORT;
-    it.f.len = ev->len;
-    uint16_t n = (ev->len < sizeof(it.f.bytes)) ? ev->len : sizeof(it.f.bytes);
+    it.f.len = ev->bytes;
+    uint16_t n = (ev->bytes < sizeof(it.f.bytes)) ? ev->bytes : sizeof(it.f.bytes);
     memcpy(it.f.bytes, ev->data, n);
     Session.workers->queue->post_from_isr(protocore_pq_lane::PROTOCORE_PQ_LANE_FORWARD, &it);
 }
@@ -96,11 +101,10 @@ void setup()
     fwd.name = "gw_rx";
     Session.workers->queue->start(protocore_pq_lane::PROTOCORE_PQ_LANE_FORWARD, &fwd);
 
-    protocore_dma_config a = {};
-    a.channel = RADIO_PORT;
-    a.periph = protocore_dma_periph::PROTOCORE_DMA_SPI; // LoRa modules are SPI
-    a.on_complete = on_dma_complete;
-    protocore_dma_open(&a);
+    // Looped back on itself, so a frame this sketch submits arrives as the receive a line would bring.
+    static const PraetCallbackCfg dma_complete = {on_dma_complete, nullptr};
+    const PraetCfg a = {RADIO_PORT, DMA_PERIPHERAL_SPI, true, &dma_complete};
+    praet.open(&a);
 
     // The gateway: one LoRa port, publishing under "lora/<port>/<addr>".
     protocore_gateway_reset();
@@ -122,8 +126,10 @@ void loop()
     // A radio frame arrives from one of four nodes (0x40..0x43): [addr_hi][addr_lo][0xAB][seq].
     uint16_t addr = 0x0040 + (g_seq & 0x03);
     uint8_t frame[4] = {(uint8_t)(addr >> 8), (uint8_t)(addr & 0xFF), 0xAB, g_seq};
-    protocore_dma_sim_feed(RADIO_PORT, frame, sizeof(frame));
-    protocore_dma_poll(); // completes RX -> FORWARD lane -> codec -> uplink publish
+    const PraetTransferCfg frame_out = {RADIO_PORT, frame, sizeof(frame)};
+    praet.tx_submit(&frame_out);
+    static const PraetCfg poll_all = {0u, 0u, false, nullptr};
+    praet.poll(&poll_all); // completes RX -> FORWARD lane -> codec -> uplink publish
     g_seq++;
 
     if ((g_seq & 0x07) == 0)

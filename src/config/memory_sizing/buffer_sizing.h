@@ -328,7 +328,7 @@
 // simulator (feed bytes in, capture bytes out, optional TX->RX loopback) so the
 // whole pipeline is exercised with no physical loopback wire - on the host test
 // bench and, with the flag set, on the device itself. It is the shipped, tested
-// engine; a real silicon backend plugs into protocore_dma_hw_* when PROTOCORE_DMA_SIMULATE=0.
+// engine; a real silicon backend plugs into mmgr_praet_hw_* when PROTOCORE_DMA_SIMULATE=0.
 
 /** @brief Number of DMA channels (static-allocated; each is one peripheral link). */
 #ifndef PROTOCORE_DMA_CHANNELS
@@ -342,7 +342,7 @@
 
 /**
  * @brief HttpRoute DMA transfers through the ingress/egress simulator (default on).
- *        Set to 0 to drive real silicon via the protocore_dma_hw_* backend hooks.
+ *        Set to 0 to drive real silicon via the mmgr_praet_hw_* backend hooks.
  */
 
 // ---------------------------------------------------------------------------

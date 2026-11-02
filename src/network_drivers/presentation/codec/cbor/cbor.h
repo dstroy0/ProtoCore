@@ -21,8 +21,8 @@
 #ifndef PROTOCORE_CBOR_H
 #define PROTOCORE_CBOR_H
 
-#include "spatium/spatium.h" // mmgr_span / mmgr_cspan - the region, bound with spat.from()
 #include "network_drivers/presentation/codec/codec.h" // protocore_codec_type - one item vocabulary
+#include "spatium/spatium.h"                          // mmgr_span / mmgr_cspan - the region, bound with spat.from()
 
 #include "protocore_config.h"
 

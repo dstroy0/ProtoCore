@@ -9,19 +9,20 @@ matters for high-rate telemetry or constrained uplinks. This serves a small
 `{heap, uptime, rssi}` map as `application/cbor` using the zero-heap CBOR writer,
 streamed through the binary-safe chunked writer.
 
-**Encoding with `protocore_span`.** You initialize the writer over a stack buffer,
-declare the map size, then emit key/value pairs; `protocore_span_ok()` reports overflow and
-`protocore_span_len()` gives the encoded length:
+**Encoding with `mmgr_span`.** You initialize the writer over a stack buffer,
+declare the map size, then emit key/value pairs; `w.overflow` reports overflow and
+`w.pos` gives the encoded length:
 
 ```cpp
 uint8_t buf[64];
-protocore_span w;
-w = protocore_span_from( buf, sizeof(buf));
+mmgr_span w;
+const SpatiumCfg w_args = {.buf =  buf, .cap = sizeof(buf)};
+w = spat.from(&w_args);
 Cbor.put_map(&w, 3);                    // a 3-entry map
 Cbor.put_str(&w, "heap"); Cbor.put_uint(&w, ESP.getFreeHeap());
 Cbor.put_str(&w, "uptime"); Cbor.put_uint(&w, millis() / 1000);
 Cbor.put_str(&w, "rssi"); Cbor.put_int(&w, Physical.wifi->rssi());   // signed
-ctx.len = protocore_span_ok(w) ? protocore_span_len(w) : 0;           // page these bytes out below
+ctx.len = w.overflow ? 0 : w.pos;           // page these bytes out below
 ```
 
 **Why `send_chunked()`.** The response is binary, so it is sent with the
@@ -113,8 +114,9 @@ void setup()
 
     server.on("/telemetry.cbor", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         static CborCtx ctx; // static: must outlive send_chunked
-        protocore_span w;
-        w = protocore_span_from( ctx.buf, sizeof(ctx.buf));
+        mmgr_span w;
+        const SpatiumCfg w_args = {.buf =  ctx.buf, .cap = sizeof(ctx.buf)};
+        w = spat.from(&w_args);
         Cbor.put_map(&w, 3);
         Cbor.put_str(&w, "heap");
         Cbor.put_uint(&w, ESP.getFreeHeap());
@@ -122,7 +124,7 @@ void setup()
         Cbor.put_uint(&w, millis() / 1000);
         Cbor.put_str(&w, "rssi");
         Cbor.put_int(&w, Physical.wifi->rssi());
-        ctx.len = protocore_span_ok(w) ? protocore_span_len(w) : 0;
+        ctx.len = w.overflow ? 0 : w.pos;
         ctx.off = 0;
         server.send_chunked(id, 200, "application/cbor", protocore_cbor_source, &ctx);
     });

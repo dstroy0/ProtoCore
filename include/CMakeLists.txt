@@ -60,5 +60,4 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/MMgr/src")
     "${CMAKE_CURRENT_SOURCE_DIR}/MMgr/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/MMgr/src"
     "${CMAKE_CURRENT_SOURCE_DIR}/embedded_types/include")
-  target_compile_definitions(pc_mmgr PUBLIC MMGR_ENABLE_DMA=0 MMGR_ENABLE_EXTRAM=0)
 endif()

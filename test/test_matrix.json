@@ -4318,10 +4318,12 @@
         "-DPROTOCORE_PQ_DEPTH=4",
         "-DPROTOCORE_PQ_ITEM_SIZE=16",
         "-DPROTOCORE_ENABLE_DMA=1",
+        "-DMMGR_ENABLE_DMA=1",
         "-DPROTOCORE_DMA_BUF_SIZE=8",
         "-DPROTOCORE_DMA_CHANNELS=2"
       ],
       "src": [
+        "+<include/MMgr/src/memoriam_praetereo/memoriam_praetereo.c>",
         "+<server/core/preempt_queue/preempt_queue.c>",
         "+<server/core/worker/worker.c>",
         "+<test/core_setup/hal/portable/portable_platform.c>",

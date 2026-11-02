@@ -101,8 +101,6 @@ idf_component_register(
     REQUIRES ${PROTOCORE_REQUIRES}
 )
 
-target_compile_definitions(${COMPONENT_LIB} PUBLIC MMGR_ENABLE_DMA=0 MMGR_ENABLE_EXTRAM=0)
-
 if(PROTOCORE_WITH_ARDUINO)
     # arduino-esp32 sets -Werror=all as a global build property, which the library is never built
     # under elsewhere (Arduino/PlatformIO use -Wall, not -Werror). Only -Werror=comment is demoted:

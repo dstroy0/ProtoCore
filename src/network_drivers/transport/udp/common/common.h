@@ -30,8 +30,8 @@
 #ifndef PROTOCORE_UDP_COMMON_H
 #define PROTOCORE_UDP_COMMON_H
 
-#include "endian/endian.h"                                   // magna_extremitas: the address as two big-endian words
-#include "memoria_anularis/memoria_anularis.h"               // mmgr_ring: the SPSC ring the datagrams sit in
+#include "endian/endian.h"                                     // magna_extremitas: the address as two big-endian words
+#include "memoria_anularis/memoria_anularis.h"                 // mmgr_ring: the SPSC ring the datagrams sit in
 #include "octetus_introitus_exitus/octetus_introitus_exitus.h" // byteio.put / put_be / take_be over a span
 #include "shared/ip/ip.h" // protocore_ip: the address a datagram carries, network order
 

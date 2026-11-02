@@ -26,10 +26,10 @@ src/network_drivers/
   application/  routes, handlers, serve_file / send_chunked pumps,
                 WebDAV
 src/services/         mqtt, modbus, opcua, snmp, coap, ... (protocol features)
-src/mmgr/       the memory manager: the two pools every borrow comes from
+include/MMgr/   the memory manager: the two pools every borrow comes from
                 (plaintext, secure), the arena mechanism under both, the byte
                 region that carries its own bound (span), and every operation
-                that moves a byte (mem, str, swar, endian, ring, membuild,
+                that moves a byte (memor, cellul, scrut, endian, anularis, verba,
                 frame). See "mmgr" below.
 src/shared/  layer-agnostic primitives shared across the tree so
                 logic is never duplicated: crc.h (one parameterized CRC engine),
@@ -287,7 +287,7 @@ response encode through the `http_resp_sink` seam. The worker dispatch loop name
 special case: HTTP plugs in exactly like SSH, Telnet, Modbus, or OPC UA. The only remaining inherent
 trait is that TLS is an HTTP-only inline transform (item 5). The piping is straight.
 
-## mmgr - the memory manager (`src/mmgr/`)
+## mmgr - the memory manager (`include/MMgr/`)
 
 One module owns every byte the library hands out and every operation that moves one.
 Nothing under `src/` declares its own working storage. A caller borrows from a pool,
@@ -300,30 +300,27 @@ private copy, and it does not decide for itself where the bytes live. For memory
 owner is mmgr, the answer is one of exactly two pools, and the request is a call.
 
 ```
-src/mmgr/
-  arena.c/.h      the double-ended allocator, and the worker identity a borrow keys on
-  plaintext.c/.h  the plaintext pool accessor (`plain`)
-  secure.c/.h     the secret pool accessor (`secure`); reclaiming wipes
-  span.c/.h       protocore_span / protocore_cspan - a byte region that carries its own bound
-  bytes.c/.h      the byte verbs: append into a span, take out of a cspan
-  endian.c/.h     a fixed width moved between an integer and the bytes at a pointer
-  bitio.c/.h      LSB-first bit writer (DEFLATE, ssh zlib)
-  rawmemcpy.c/.h  the raw load and store: PROTO_RAW, PROTO_ALIGN, proto_raw_read
-  swar.c/.h       lane math - one word treated as its byte lanes, branchless
-  protomem.c/.h   the span walks (`mem`): cpy, move, cmp, chr, set, zero
-  protostr.c/.h   the bounded-run walks (`str`): len, diff, eq, starts, find, copy, to_*
-  membuild.c/.h   protocore_sb - bounded no-heap builder into bytes the caller already owns
-  protoframe.c/.h declarative frame builder: a frame is a static table of typed fields
-  float_bits.c/.h a double read as the three fields it is
-  ring.h          the SPSC byte ring, the segment ring, and the slot-mask view
-  psram_pool.c/.h DRAM-vs-PSRAM buffer placement policy + SPI DMA ping-pong index
-                  bookkeeping (PROTOCORE_ENABLE_PSRAM_POOL)
-  dma.c/.h        DMA channel ingest / egress (PROTOCORE_ENABLE_DMA)
+include/MMgr/src/
+  locus_carcerum/                 the double-ended allocator under both guards; reclaiming a maximum-security cell wipes
+  spatium/                        mmgr_span / mmgr_cspan - a byte region that carries its own bound
+  octetus_introitus_exitus/       the byte verbs: append into a span, take out of a cspan
+  endian/                         a fixed width moved between an integer and the bytes at a pointer
+  bitorum_introitus_exitus/       LSB-first bit writer (DEFLATE, ssh zlib)
+  proximus_operor/                the raw load and store
+  verbum_scrutor/                 lane math - one word treated as its byte lanes, branchless
+  memoria_operor/                 the span walks (`memor`): cpy, move_down, move_up, cmp, chr, set
+  cellularum_laboro/              the bounded-run walks (`cellul`): len, diff, eq, starts, find, copy, to_*
+  verba_scribo/                   bounded no-heap builder into bytes the caller already owns
+  numeros_scribo/                 declarative frame builder: a frame is a static table of typed fields
+  fractio/                        a double read as the three fields it is
+  memoria_anularis/               the SPSC byte ring, the segment ring, and the loculi
+  memoria_externa/                DRAM-vs-PSRAM placement policy
+  memoriam_praetereo/             DMA channel ingest / egress (MMGR_ENABLE_DMA)
 ```
 
 ### Two pools, one mechanism
 
-`protocore_arena` is the mechanism and there is exactly one of it: one contiguous region with
+`LocusCarcerum` is the mechanism and there is exactly one of it: one contiguous region with
 two allocators growing toward each other and the free space floating in the middle.
 
 ```
@@ -334,15 +331,15 @@ two allocators growing toward each other and the free space floating in the midd
 The **persistent** end is a first-fit free list - individual free in any order,
 adjacent-block coalesce, top-block shrink, and the bytes come back zeroed. The
 **scratch** end is a bump with O(1) reset and mark/release savepoints, aligned up to
-`PROTOCORE_ARENA_MAX_ALIGN` (16). Whichever side needs room takes it, and both ends fail
+`MMGR_CARCER_ALIGN` (the machine word). Whichever side needs room takes it, and both ends fail
 closed (NULL) before they can cross. `protocore_arena_set` chains a DRAM base and a PSRAM
 extension: a borrow takes the first region that fits, a free routes to the owning
-region by address. No heap, no stdlib, all state in `protocore_arena` (no globals), so it is
+region by address. No heap, no stdlib, all state in `LocusCarcerum` (no globals), so it is
 unit-tested on the host.
 
-`plaintext.c` and `secure.c` are **not** second allocators. Each is an access layer
+`MinimumSecurityGuard` and `MaximumSecurityGuard` are **not** second allocators. Each is an access layer
 that instantiates that one mechanism over its own compile-time-sized storage and
-decides who may reach it. Nothing outside `src/mmgr/` names `protocore_arena`.
+decides who may reach it. `server/core/worker` is the one module in `src/` that names `LocusCarcerum`.
 
 |                    | plaintext (`plain`)                        | secure (`secure`)                                              |
 | ------------------ | ------------------------------------------ | -------------------------------------------------------------- |
@@ -374,16 +371,16 @@ those workers is scheduling and stays in `server/core/worker.h`.
 
 ### Who reclaims what
 
-- **Plaintext: the worker.** `dispatch_event()` calls `protocore_plaintext_reset()` before
+- **Plaintext: the worker.** `dispatch_event()` calls `protocore_plain_guard()->temporary_buf_reset()` before
   handing an event to its protocol handler. A borrow is valid only until that
   handler returns and a forgotten release cannot accumulate across events. Inside one
-  dispatch, `plain.mark()` / `plain.release()` nest.
-- **Secure: the borrower, and reclaiming wipes.** `protocore_secure_release()` zeroes the
+  dispatch, `temporary_buf_mark()` / `temporary_buf_release()` nest.
+- **Secure: the borrower, and reclaiming wipes.** `protocore_secure_guard()->temporary_buf_release()` zeroes the
   reclaimed extent **before** the position moves, so the bytes are already zero at the
   instant they become available again - there is no window in which the next borrow is
   handed the previous tenant's key material. The wipe is structural. A
   discipline every return path has to remember had already been
-  missed on two SSH key-exchange error paths. `protocore_secure_wipe()` is the same primitive
+  missed on two SSH key-exchange error paths. `mmgr_zero_buf()` is the same primitive
   for storage that was never in a pool.
 - **Long-lived secrets: the persistent end.** `secure.persist_span(n)` takes the end no
   mark walks. A credential table or a key schedule bound once at setup survives every
@@ -392,7 +389,7 @@ those workers is scheduling and stays in `server/core/worker.h`.
 ### Ownership is an address range
 
 The two pools are disjoint regions, so the owner is recoverable from the pointer alone.
-`protocore_plaintext_owns()` and `protocore_secure_owns()` are one unsigned subtract and compare
+`protocore_plain_guard()->who_owns_buf()` and `protocore_secure_guard()->who_owns_buf()` are one unsigned subtract and compare
 against a compile-time extent, with no loop, no per-slot comparison and no
 per-allocation metadata, and they are mutually exclusive by construction: a secret can
 never be accepted where plaintext is expected, or the reverse. A pointer below the base

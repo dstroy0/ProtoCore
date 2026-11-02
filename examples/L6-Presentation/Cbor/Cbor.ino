@@ -69,8 +69,9 @@ void setup()
 
     on_http("/telemetry.cbor", HTTP_GET, [](uint8_t id, HttpReq *) {
         static CborCtx ctx; // static: must outlive send_chunked
-        protocore_span w;
-        w = protocore_span_from(ctx.buf, sizeof(ctx.buf));
+        mmgr_span w;
+        const SpatiumCfg w_args = {.buf = ctx.buf, .cap = sizeof(ctx.buf)};
+        w = spat.from(&w_args);
         Cbor.put_map(&w, 3);
         Cbor.put_str(&w, "heap");
         Cbor.put_uint(&w, ESP.getFreeHeap());
@@ -78,7 +79,7 @@ void setup()
         Cbor.put_uint(&w, millis() / 1000);
         Cbor.put_str(&w, "rssi");
         Cbor.put_int(&w, Physical.wifi->rssi());
-        ctx.len = protocore_span_ok(w) ? protocore_span_len(w) : 0;
+        ctx.len = w.overflow ? 0 : w.pos;
         ctx.off = 0;
         send_chunked(id, 200, "application/cbor", protocore_cbor_source, &ctx);
     });

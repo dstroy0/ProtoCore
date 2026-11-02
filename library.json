@@ -99,9 +99,7 @@
       "-I src",
       "-I include/MMgr/include",
       "-I include/MMgr/src",
-      "-I include/embedded_types/include",
-      "-DMMGR_ENABLE_DMA=0",
-      "-DMMGR_ENABLE_EXTRAM=0"
+      "-I include/embedded_types/include"
     ]
   }
 }

@@ -7339,6 +7339,7 @@ protocore_env(native_pqc__test_pqc_mlkem
 protocore_env(native_preempt_queue
   SUITE unit/src/server/core/test_preempt_queue
   SOURCES
+    "${PROTOCORE_ROOT}/include/MMgr/src/memoriam_praetereo/memoriam_praetereo.c"
     "${PROTOCORE_ROOT}/src/server/core/preempt_queue/preempt_queue.c"
     "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
@@ -7348,6 +7349,7 @@ protocore_env(native_preempt_queue
     "PROTOCORE_PQ_DEPTH=4"
     "PROTOCORE_PQ_ITEM_SIZE=16"
     "PROTOCORE_ENABLE_DMA=1"
+    "MMGR_ENABLE_DMA=1"
     "PROTOCORE_DMA_BUF_SIZE=8"
     "PROTOCORE_DMA_CHANNELS=2"
   INCLUDES

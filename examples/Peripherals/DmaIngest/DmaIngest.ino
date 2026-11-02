@@ -8,16 +8,16 @@
 //
 // There is no physical loopback wire on the bench, so the channel runs the built-in
 // ingress/egress SIMULATOR (PROTOCORE_DMA_SIMULATE=1): each second loop() submits a frame
-// for egress DMA, the loopback jumper feeds it back into RX, protocore_dma_poll() completes
+// for egress DMA, the loopback jumper feeds it back into RX, praet.poll completes
 // the transfer, and the frame arrives at the processing task - the whole pipeline,
 // end to end, on the device itself. Swap the simulator for a real UART/SPI DMA driver
 // (protocore_dma_hw_*, PROTOCORE_DMA_SIMULATE=0) and the sketch is unchanged.
 //
 // Build flags (whole build, not just this sketch):
-//   PROTOCORE_ENABLE_DMA=1 PROTOCORE_ENABLE_PREEMPT_QUEUE=1 PROTOCORE_DMA_SIMULATE=1
+//   PROTOCORE_ENABLE_DMA=1 MMGR_ENABLE_DMA=1 PROTOCORE_ENABLE_PREEMPT_QUEUE=1 PROTOCORE_DMA_SIMULATE=1
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
-#include "mmgr/dma/dma.h"
+#include "memoriam_praetereo/memoriam_praetereo.h"
 #include "server/core/preempt_queue/preempt_queue.h"
 
 
@@ -55,17 +55,22 @@ static void on_dma_frame(const void *item, void *)
 // bytes into a queue item and post it onto the internal DMA lane (which runs above the
 // user lane, so ingest preempts user work). The post asks the scheduler to switch
 // straight to the processing task the moment we return.
-static void on_dma_complete(const protocore_dma_event *ev, void *)
+// The direction a port reports for a completed receive, and the peripheral numbers it is opened on.
+static const uint8_t DMA_DIRECTION_RX = 0u;
+static const uint8_t DMA_PERIPHERAL_UART = 0u;
+static const uint8_t DMA_PERIPHERAL_SPI = 2u;
+
+static void on_dma_complete(const mmgr_praet_event *ev, void *)
 {
-    if (ev->dir != protocore_dma_dir::PROTOCORE_DMA_RX)
+    if (ev->direction != DMA_DIRECTION_RX)
     {
         return; // TX-complete just frees the channel; nothing to process
     }
     pq_item item = {};
-    item.msg.len = ev->len;
-    item.msg.seq = ev->seq;
+    item.msg.len = ev->bytes;
+    item.msg.seq = ev->sequence;
     item.msg.channel = ev->channel;
-    uint16_t n = (ev->len < sizeof(item.msg.bytes)) ? ev->len : sizeof(item.msg.bytes);
+    uint16_t n = (ev->bytes < sizeof(item.msg.bytes)) ? ev->bytes : sizeof(item.msg.bytes);
     memcpy(item.msg.bytes, ev->data, n);
     Session.workers->queue->post_from_isr(protocore_pq_lane::PROTOCORE_PQ_LANE_DMA, &item);
 }
@@ -92,12 +97,9 @@ void setup()
 
     // A UART DMA channel in loopback: its egress DMA feeds its own ingress (the
     // simulator's internal jumper), so submitted frames arrive back as RX completions.
-    protocore_dma_config ch = {};
-    ch.channel = 0;
-    ch.periph = protocore_dma_periph::PROTOCORE_DMA_UART;
-    ch.loopback = true;
-    ch.on_complete = on_dma_complete;
-    if (!protocore_dma_open(&ch))
+    static const PraetCallbackCfg dma_complete = {on_dma_complete, nullptr};
+    const PraetCfg ch = {0u, DMA_PERIPHERAL_UART, true, &dma_complete};
+    if (!praet.open(&ch))
     {
         Serial.println("dma channel failed to open");
         return;
@@ -108,12 +110,14 @@ void setup()
 void loop()
 {
     // Submit one frame per second for egress DMA. On silicon the DMA-complete ISR fires
-    // on its own; with the simulator we step the engine with protocore_dma_poll().
+    // on its own; with the simulator we step the engine with praet.poll.
     uint8_t frame[4] = {0xDE, 0xAD, g_seq, (uint8_t)(0xB0 + g_seq)};
-    if (protocore_dma_tx_submit(0, frame, sizeof(frame)))
+    const PraetTransferCfg frame_out = {0u, frame, sizeof(frame)};
+    if (praet.tx_submit(&frame_out))
     {
         g_seq++;
     }
-    protocore_dma_poll(); // drains egress, runs the loopback, completes RX -> fires the callback
+    static const PraetCfg poll_all = {0u, 0u, false, nullptr};
+    praet.poll(&poll_all); // drains egress, runs the loopback, completes RX -> fires the callback
     delay(1000);
 }

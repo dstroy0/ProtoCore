@@ -1,6 +1,6 @@
 # DmaIngest - DMA peripheral ingest with a preempting task queue
 
-**Layer:** Foundation · **Build flags:** `PROTOCORE_ENABLE_DMA`,
+**Layer:** Foundation · **Build flags:** `PROTOCORE_ENABLE_DMA`, `MMGR_ENABLE_DMA`,
 `PROTOCORE_ENABLE_PREEMPT_QUEUE`, `PROTOCORE_DMA_SIMULATE`
 
 ## What this example teaches
@@ -30,11 +30,11 @@ DMA engine fills the other, so there is a full transfer of headroom to consume i
 There is usually no physical TX->RX jumper on the bench, so the channel runs the
 built-in **ingress/egress simulator** (`PROTOCORE_DMA_SIMULATE=1`, the default):
 
-- `protocore_dma_sim_feed()` injects bytes as if they arrived on the RX line,
+- A looped-back `praet.tx_submit` injects bytes as if they arrived on the RX line,
 - `protocore_dma_sim_capture()` reads back what egress DMA transmitted,
 - a channel opened with `loopback = true` feeds its own egress into its ingress (an
   internal jumper),
-- `protocore_dma_poll()` advances the engine and fires the completions.
+- `praet.poll` advances the engine and fires the completions.
 
 This sketch opens a **loopback** channel and, each second, submits a 4-byte frame
 for egress DMA; the jumper feeds it back into RX, the completion posts to the queue,
@@ -55,7 +55,7 @@ TX-complete events on the same channel.)
 
 Set `PROTOCORE_DMA_SIMULATE=0` and provide a real driver behind the `protocore_dma_hw_*`
 hooks (a UART UHCI / `spi_master` DMA backend). The sketch above is unchanged - it
-only ever talks to `protocore_dma_open` / `protocore_dma_tx_submit` / the completion callback.
+only ever talks to `praet.open` / `praet.tx_submit` / the completion callback.
 
 ## Sizing
 
@@ -69,6 +69,6 @@ separately compiled library), so pass them as build flags:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_DMA=1 -DPROTOCORE_ENABLE_PREEMPT_QUEUE=1 -DPROTOCORE_DMA_SIMULATE=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_DMA=1 -DMMGR_ENABLE_DMA=1 -DPROTOCORE_ENABLE_PREEMPT_QUEUE=1 -DPROTOCORE_DMA_SIMULATE=1" \
   --lib="." examples/Peripherals/DmaIngest/DmaIngest.ino
 ```

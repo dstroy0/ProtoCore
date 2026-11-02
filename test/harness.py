@@ -1224,9 +1224,6 @@ def _flag_split(flags):
     ):
         if base not in incs:
             incs.append(base)
-    for switch in ("-DMMGR_ENABLE_DMA=0", "-DMMGR_ENABLE_EXTRAM=0"):
-        if switch not in defs:
-            defs.append(switch)
     return incs, defs
 
 
@@ -1969,7 +1966,8 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
     lib_incs, lib_pkgs = lib_packages(name)
     for d in lib_incs:
         incs.append("-I" + os.path.relpath(d, ROOT).replace("\\", "/"))
-    tus = _resolve_src(e["src"]) + MMGR_SOURCES
+    tus = _resolve_src(e["src"])
+    tus += [source for source in MMGR_SOURCES if source not in tus]
     tus.append(os.path.relpath(os.path.join(usrc, "unity.c"), ROOT).replace("\\", "/"))
     out_lines = []
     rc_total = 0
