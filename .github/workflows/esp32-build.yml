@@ -97,9 +97,9 @@ jobs:
           # serves those objects across examples and runs. The toolchain itself is left unwrapped: its
           # xtensa-esp32-elf-* binaries derive the real compiler from their own file name, so a shim that
           # renames them breaks every compile.
-          PLATFORMIO_BUILD_CACHE_DIR: ~/.pio-build-cache
         run: |
           set -o pipefail
+          export PLATFORMIO_BUILD_CACHE_DIR="$HOME/.pio-build-cache"
           pio ci --board=esp32dev \
             --project-option="framework=arduino" \
             --project-option="platform=https://github.com/pioarduino/platform-espressif32.git" \
