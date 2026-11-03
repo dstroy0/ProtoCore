@@ -18,6 +18,8 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
+#include "network_drivers/application/file_serving/file_serving.h"
+#include "test/core_setup/hal/esp/esp_mnt_fs.h"
 #include "services/file_transfer/http_delivery/http_delivery.h"
 #include "shared/mime/mime.h" // PROTOCORE_MIME_TEXT_HTML
 #include <SD_MMC.h>
@@ -60,7 +62,10 @@ void setup()
     }
     else
     {
-        serve_static("/files/", SD_MMC, "/"); // Range/206 comes free with PROTOCORE_ENABLE_RANGE
+        FileServingV.serve_static_args.url_prefix = "/files/"; // Range/206 comes free with PROTOCORE_ENABLE_RANGE
+        FileServingV.serve_static_args.file_sys = protocore_mnt_fs(&SD_MMC);
+        FileServingV.serve_static_args.fs_root = "/";
+        FileServing.serve_static(protocore_file_serving_span());
     }
 
     // Every served file carries the SWR policy: fresh for 60 s, then usable-while-revalidating for

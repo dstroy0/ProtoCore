@@ -12,7 +12,7 @@
  * NOTE: this feature is compiled into the library only when PROTOCORE_ENABLE_ETAG
  * is set for the whole build (a .ino #define does not reach the separately
  * compiled library). In platformio.ini:
- *     build_flags = -DPROTOCORE_ENABLE_ETAG=1
+ *     build_flags = -DPROTOCORE_ENABLE_ETAG=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -DPROTOCORE_ENABLE_MNT=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  *
  * Put a file at `data/www/index.html`, upload the LittleFS image, then:
@@ -21,9 +21,13 @@
  */
 
 #define PROTOCORE_ENABLE_ETAG 1
+#define PROTOCORE_ENABLE_FILE_SERVING 1
+#define PROTOCORE_ENABLE_MNT 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
+#include "network_drivers/application/file_serving/file_serving.h"
+#include "test/core_setup/hal/esp/esp_mnt_fs.h"
 #include <LittleFS.h>
 
 static const char *SSID = "YOUR_SSID";
@@ -51,7 +55,10 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    serve_static("/", LittleFS, "/www"); // ETag + If-None-Match handled automatically
+    FileServingV.serve_static_args.url_prefix = "/"; // ETag + If-None-Match handled automatically
+    FileServingV.serve_static_args.file_sys = protocore_mnt_fs(&LittleFS);
+    FileServingV.serve_static_args.fs_root = "/www";
+    FileServing.serve_static(protocore_file_serving_span());
     begin_http(80, NULL);
 }
 

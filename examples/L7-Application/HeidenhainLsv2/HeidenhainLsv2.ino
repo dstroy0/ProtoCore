@@ -44,12 +44,18 @@ static size_t read_response(int cid, uint8_t *out, size_t cap)
     unsigned long deadline = millis() + 3000;
     while (got < PROTOCORE_LSV2_HEADER_LEN && millis() < deadline)
     {
-        if (!Tcp.client->available(cid))
+        TcpClientV.cid = cid;
+        TcpClient.available(protocore_tcp_client_span());
+        if (!TcpClientV.n)
         {
             continue;
         }
         uint8_t ch = 0;
-        if (Tcp.client->read(cid, &ch, 1) != 1)
+        TcpClientV.cid = cid;
+        TcpClientV.io.buf = &ch;
+        TcpClientV.io.cap = 1;
+        TcpClient.read(protocore_tcp_client_span());
+        if (TcpClientV.n != 1)
         {
             continue;
         }
@@ -67,12 +73,18 @@ static size_t read_response(int cid, uint8_t *out, size_t cap)
     size_t need = PROTOCORE_LSV2_HEADER_LEN + plen;
     while (got < need && got < cap && millis() < deadline)
     {
-        if (!Tcp.client->available(cid))
+        TcpClientV.cid = cid;
+        TcpClient.available(protocore_tcp_client_span());
+        if (!TcpClientV.n)
         {
             continue;
         }
         uint8_t ch = 0;
-        if (Tcp.client->read(cid, &ch, 1) != 1)
+        TcpClientV.cid = cid;
+        TcpClientV.io.buf = &ch;
+        TcpClientV.io.cap = 1;
+        TcpClient.read(protocore_tcp_client_span());
+        if (TcpClientV.n != 1)
         {
             continue;
         }
@@ -89,7 +101,10 @@ static bool txrx(int cid, size_t tx_len, Lsv2Telegram *r, const char *label)
         Serial.printf("[lsv2] %s: request build failed\n", label);
         return false;
     }
-    Tcp.client->send(cid, c_tx, tx_len);
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = c_tx;
+    TcpClientV.io.len = tx_len;
+    TcpClient.send(protocore_tcp_client_span());
     size_t n = read_response(cid, c_rx, sizeof(c_rx));
     size_t consumed = 0;
     if (!protocore_lsv2_parse(c_rx, n, r, &consumed))
@@ -124,7 +139,11 @@ static void query_run_info(int cid, uint16_t sel, const char *label)
 
 static void run_session(const char *host)
 {
-    int cid = Tcp.client->open(host, PROTOCORE_LSV2_TCP_PORT, 8000);
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = PROTOCORE_LSV2_TCP_PORT;
+    TcpClientV.dial.timeout_ms = 8000;
+    TcpClient.open(protocore_tcp_client_span());
+    int cid = TcpClientV.i32;
     if (cid < 0)
     {
         Serial.println("[lsv2] connect failed");
@@ -137,7 +156,8 @@ static void run_session(const char *host)
         !protocore_lsv2_is_ok(&r))
     {
         Serial.println("[lsv2] login INSPECT failed");
-        Tcp.client->close(cid);
+        TcpClientV.cid = cid;
+        TcpClient.close(protocore_tcp_client_span());
         return;
     }
     Serial.println("[lsv2] login INSPECT: T_OK");
@@ -148,7 +168,8 @@ static void run_session(const char *host)
 
     // drop all access rights
     txrx(cid, protocore_lsv2_build_logout(c_tx, sizeof(c_tx), nullptr), &r, "logout");
-    Tcp.client->close(cid);
+    TcpClientV.cid = cid;
+    TcpClient.close(protocore_tcp_client_span());
     Serial.println("[lsv2] done");
 }
 

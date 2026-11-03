@@ -40,7 +40,8 @@ void setup()
     // Physical.eth->init() installs the W5500 driver (ETH.begin with the PROTOCORE_ETH_W5500_* pins). It
     // returns false if the MAC never answered on SPI - check the return before polling for a link, or a
     // never-installed driver reboot-loops the poll below.
-    if (!Physical.eth->init())
+    Physical.eth_init(protocore_physical_span());
+    if (!PhysicalV.ok)
     {
         Serial.println("W5500 init failed: the MAC did not answer on SPI. Check 3V3 power and the SPI "
                        "wiring (CS/SCK/MISO/MOSI + RST/INT). Not polling for a link.");

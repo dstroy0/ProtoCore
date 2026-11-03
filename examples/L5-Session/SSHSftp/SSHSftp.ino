@@ -31,12 +31,11 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
-#include "network_drivers/presentation/ssh/auth/ssh_auth.h"
-#include "network_drivers/presentation/ssh/connection/ssh_conn.h"
-#include "network_drivers/tls/ssh_rsa.h"
+#include "network_drivers/presentation/ssh/auth/auth.h"
+#include "network_drivers/presentation/ssh/transport/ssh_rsa/ssh_rsa.h"
 #include "test/core_setup/hal/esp/esp_mnt_fs.h"
 #include "server/storage/filesystem/filesystem.h"
-#include "network_drivers/application/scp/ssh_scp.h"
+#include "network_drivers/session/scp/ssh_scp/ssh_scp.h"
 #include "network_drivers/application/sftp/ssh_sftp/ssh_sftp.h"
 #include <LittleFS.h>
 
@@ -75,29 +74,32 @@ void setup()
         return;
     }
 
-    if (SshRsa.load_pubkey(protocore_ssh_rsa_span()) != 0)
+    SshRsa.load_pubkey(protocore_ssh_rsa_span());
+    if (SshRsaV.n != 0)
     {
         Serial.println("No SSH host key in NVS - see docs/SSH.md (Host key provisioning)");
         return;
     }
-    protocore_ssh_auth_set_password_cb(ssh_password_auth);
+    SshAuthV.cbs.password_cb = ssh_password_auth;
+    SshAuth.set_password_cb(protocore_ssh_auth_span());
 
     listen(22, PROTO_SSH);
-    if (begin() < 0)
+    if (proto_begin(NULL) < 0)
     {
         Serial.println("begin() failed");
         return;
     }
-    protocore_ssh_conn_setup();
 
     // Serve SFTP + SCP from the whole LittleFS volume. A "subsystem sftp" request opens an SFTP session;
     // `scp localfile admin@<ip>:/path` drops a file onto the volume.
     //
     // The mount and the root are set once, for the device, not once per protocol: both servers reach
     // storage through the filesystem accessor, so they cannot disagree about where the volume begins.
-    // Narrow the exposure by mounting a subdirectory here (e.g. protocore_fs_begin("/gcode")).
-    protocore_mnt_mount(protocore_mnt_fs(&LittleFS));
-    protocore_fs_begin("/");
+    // Narrow the exposure by mounting a subdirectory here (e.g. Fs.mount = "/gcode").
+    MntV.args.backend = protocore_mnt_fs(&LittleFS);
+    Mnt.mount(mnt_work);
+    Fs.mount = "/";
+    Fs.begin(protocore_filesystem_span());
     SshSftp.begin(protocore_ssh_sftp_span());
     SshScp.begin(protocore_ssh_scp_span());
 

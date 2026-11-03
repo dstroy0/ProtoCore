@@ -43,12 +43,18 @@ static size_t read_line(int cid, char *out, size_t cap)
     unsigned long deadline = millis() + 3000;
     while (o + 1 < cap && millis() < deadline)
     {
-        if (!Tcp.client->available(cid))
+        TcpClientV.cid = cid;
+        TcpClient.available(protocore_tcp_client_span());
+        if (!TcpClientV.n)
         {
             continue;
         }
         uint8_t ch = 0;
-        if (Tcp.client->read(cid, &ch, 1) != 1)
+        TcpClientV.cid = cid;
+        TcpClientV.io.buf = &ch;
+        TcpClientV.io.cap = 1;
+        TcpClient.read(protocore_tcp_client_span());
+        if (TcpClientV.n != 1)
         {
             continue;
         }
@@ -67,7 +73,11 @@ static size_t read_line(int cid, char *out, size_t cap)
 
 static void run_session(const char *host)
 {
-    int cid = Tcp.client->open(host, PROTOCORE_GPIB_PORT, 8000);
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = PROTOCORE_GPIB_PORT;
+    TcpClientV.dial.timeout_ms = 8000;
+    TcpClient.open(protocore_tcp_client_span());
+    int cid = TcpClientV.i32;
     if (cid < 0)
     {
         Serial.println("[gpib] connect failed");
@@ -75,15 +85,36 @@ static void run_session(const char *host)
     }
 
     // Configure the adapter as the controller-in-charge, targeting the instrument.
-    Tcp.client->send(cid, c_cmd, protocore_gpib_command(c_cmd, sizeof(c_cmd), "mode 1"));
-    Tcp.client->send(cid, c_cmd, protocore_gpib_addr(c_cmd, sizeof(c_cmd), INSTRUMENT_ADDR, -1));
-    Tcp.client->send(cid, c_cmd, protocore_gpib_eos(c_cmd, sizeof(c_cmd), GpibEos::LF));
-    Tcp.client->send(cid, c_cmd, protocore_gpib_command(c_cmd, sizeof(c_cmd), "eoi 1"));
-    Tcp.client->send(cid, c_cmd, protocore_gpib_command(c_cmd, sizeof(c_cmd), "auto 0"));
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = c_cmd;
+    TcpClientV.io.len = protocore_gpib_command(c_cmd, sizeof(c_cmd), "mode 1");
+    TcpClient.send(protocore_tcp_client_span());
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = c_cmd;
+    TcpClientV.io.len = protocore_gpib_addr(c_cmd, sizeof(c_cmd), INSTRUMENT_ADDR, -1);
+    TcpClient.send(protocore_tcp_client_span());
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = c_cmd;
+    TcpClientV.io.len = protocore_gpib_eos(c_cmd, sizeof(c_cmd), GpibEos::LF);
+    TcpClient.send(protocore_tcp_client_span());
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = c_cmd;
+    TcpClientV.io.len = protocore_gpib_command(c_cmd, sizeof(c_cmd), "eoi 1");
+    TcpClient.send(protocore_tcp_client_span());
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = c_cmd;
+    TcpClientV.io.len = protocore_gpib_command(c_cmd, sizeof(c_cmd), "auto 0");
+    TcpClient.send(protocore_tcp_client_span());
 
     // Send "*IDN?" as (escaped) data, then request a read until EOI.
-    Tcp.client->send(cid, c_data, protocore_gpib_build_data(c_data, sizeof(c_data), (const uint8_t *)"*IDN?", 5));
-    Tcp.client->send(cid, c_cmd, protocore_gpib_read(c_cmd, sizeof(c_cmd), UNTIL_EOI, 0));
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = c_data;
+    TcpClientV.io.len = protocore_gpib_build_data(c_data, sizeof(c_data), (const uint8_t *)"*IDN?", 5);
+    TcpClient.send(protocore_tcp_client_span());
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = c_cmd;
+    TcpClientV.io.len = protocore_gpib_read(c_cmd, sizeof(c_cmd), UNTIL_EOI, 0);
+    TcpClient.send(protocore_tcp_client_span());
 
     char resp[160];
     size_t r = read_line(cid, resp, sizeof(resp));
@@ -97,7 +128,10 @@ static void run_session(const char *host)
     }
 
     // Query the adapter's own version.
-    Tcp.client->send(cid, c_cmd, protocore_gpib_command(c_cmd, sizeof(c_cmd), "ver"));
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = c_cmd;
+    TcpClientV.io.len = protocore_gpib_command(c_cmd, sizeof(c_cmd), "ver");
+    TcpClient.send(protocore_tcp_client_span());
     r = read_line(cid, resp, sizeof(resp));
     const char *ver = nullptr;
     size_t vlen = 0;
@@ -106,7 +140,8 @@ static void run_session(const char *host)
         Serial.printf("[gpib] adapter version %.*s\n", (int)vlen, ver);
     }
 
-    Tcp.client->close(cid);
+    TcpClientV.cid = cid;
+    TcpClient.close(protocore_tcp_client_span());
     Serial.println("[gpib] done");
 }
 

@@ -46,19 +46,32 @@ void on_command(const char *line, uint8_t conn_id)
     (void)conn_id;
     if (strcmp(line, "help") == 0)
     {
-        Telnet.println("commands: help, heap, uptime, <echo>");
+        TelnetV.out.text = "commands: help, heap, uptime, <echo>";
+        Telnet.println(protocore_telnet_span());
     }
     else if (strcmp(line, "heap") == 0)
     {
-        Telnet.frame(REPLY_HEAP, (const mmgr_fval[]){MMGR_VU32((uint32_t)ESP.getFreeHeap())}, 1);
+        const mmgr_fval heap[] = {MMGR_VU32((uint32_t)ESP.getFreeHeap())};
+        TelnetV.out.spec = REPLY_HEAP;
+        TelnetV.out.val = heap;
+        TelnetV.out.nv = 1;
+        Telnet.frame(protocore_telnet_span());
     }
     else if (strcmp(line, "uptime") == 0)
     {
-        Telnet.frame(REPLY_UPTIME, (const mmgr_fval[]){MMGR_VU32((uint32_t)millis())}, 1);
+        const mmgr_fval uptime[] = {MMGR_VU32((uint32_t)millis())};
+        TelnetV.out.spec = REPLY_UPTIME;
+        TelnetV.out.val = uptime;
+        TelnetV.out.nv = 1;
+        Telnet.frame(protocore_telnet_span());
     }
     else if (line[0])
     {
-        Telnet.frame(REPLY_ECHO, (const mmgr_fval[]){MMGR_VSTR(line)}, 1);
+        const mmgr_fval echo[] = {MMGR_VSTR(line)};
+        TelnetV.out.spec = REPLY_ECHO;
+        TelnetV.out.val = echo;
+        TelnetV.out.nv = 1;
+        Telnet.frame(protocore_telnet_span());
     }
 }
 
@@ -79,7 +92,8 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     listen(23, PROTO_TELNET); // open the Telnet port
-    Telnet.on_command(on_command);
+    TelnetV.cb = on_command;
+    Telnet.on_command(protocore_telnet_span());
 
     begin_http(80, NULL); // also start HTTP (begin() activates all listeners)
     Serial.println("Telnet on port 23 (try: telnet <ip>)");

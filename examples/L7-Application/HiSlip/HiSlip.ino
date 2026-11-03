@@ -44,9 +44,15 @@ static bool hislip_recv(int cid, HislipHeader *h)
     unsigned long deadline = millis() + 3000;
     while (got < PROTOCORE_HISLIP_HEADER_LEN && millis() < deadline)
     {
-        if (Tcp.client->available(cid))
+        TcpClientV.cid = cid;
+        TcpClient.available(protocore_tcp_client_span());
+        if (TcpClientV.n)
         {
-            got += Tcp.client->read(cid, c_resp + got, PROTOCORE_HISLIP_HEADER_LEN - got);
+            TcpClientV.cid = cid;
+            TcpClientV.io.buf = c_resp + got;
+            TcpClientV.io.cap = PROTOCORE_HISLIP_HEADER_LEN - got;
+            TcpClient.read(protocore_tcp_client_span());
+            got += TcpClientV.n;
         }
     }
     if (got < PROTOCORE_HISLIP_HEADER_LEN || !protocore_hislip_parse_header(c_resp, got, h))
@@ -60,9 +66,15 @@ static bool hislip_recv(int cid, HislipHeader *h)
     }
     while (got < total && millis() < deadline)
     {
-        if (Tcp.client->available(cid))
+        TcpClientV.cid = cid;
+        TcpClient.available(protocore_tcp_client_span());
+        if (TcpClientV.n)
         {
-            got += Tcp.client->read(cid, c_resp + got, total - got);
+            TcpClientV.cid = cid;
+            TcpClientV.io.buf = c_resp + got;
+            TcpClientV.io.cap = total - got;
+            TcpClient.read(protocore_tcp_client_span());
+            got += TcpClientV.n;
         }
     }
     return got == total;
@@ -70,7 +82,11 @@ static bool hislip_recv(int cid, HislipHeader *h)
 
 static void run_session(const char *host)
 {
-    int sync_cid = Tcp.client->open(host, PROTOCORE_HISLIP_PORT, 8000);
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = PROTOCORE_HISLIP_PORT;
+    TcpClientV.dial.timeout_ms = 8000;
+    TcpClient.open(protocore_tcp_client_span());
+    int sync_cid = TcpClientV.i32;
     if (sync_cid < 0)
     {
         Serial.println("[hislip] sync connect failed");
@@ -79,31 +95,45 @@ static void run_session(const char *host)
 
     // 1) Initialize on the sync channel (offer v1.1, vendor "DW", sub-address "hislip0").
     size_t n = protocore_hislip_build_initialize(c_buf, sizeof(c_buf), PROTOCORE_HISLIP_VERSION_1_1, 0x4457, "hislip0");
-    Tcp.client->send(sync_cid, c_buf, n);
+    TcpClientV.cid = sync_cid;
+    TcpClientV.io.data = c_buf;
+    TcpClientV.io.len = n;
+    TcpClient.send(protocore_tcp_client_span());
     HislipHeader h;
     HislipInitializeResponse ir;
     if (!hislip_recv(sync_cid, &h) || !protocore_hislip_parse_initialize_response(c_resp, PROTOCORE_HISLIP_HEADER_LEN, &ir))
     {
         Serial.println("[hislip] no InitializeResponse");
-        Tcp.client->close(sync_cid);
+        TcpClientV.cid = sync_cid;
+        TcpClient.close(protocore_tcp_client_span());
         return;
     }
     Serial.printf("[hislip] session=%u server-version=0x%04X overlap=%d\n", ir.session_id, ir.protocol_version,
                   ir.overlap);
 
     // 2) Bind the async channel with the negotiated SessionID.
-    int async_cid = Tcp.client->open(host, PROTOCORE_HISLIP_PORT, 8000);
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = PROTOCORE_HISLIP_PORT;
+    TcpClientV.dial.timeout_ms = 8000;
+    TcpClient.open(protocore_tcp_client_span());
+    int async_cid = TcpClientV.i32;
     if (async_cid >= 0)
     {
         n = protocore_hislip_build_async_initialize(c_buf, sizeof(c_buf), ir.session_id);
-        Tcp.client->send(async_cid, c_buf, n);
+        TcpClientV.cid = async_cid;
+        TcpClientV.io.data = c_buf;
+        TcpClientV.io.len = n;
+        TcpClient.send(protocore_tcp_client_span());
         hislip_recv(async_cid, &h); // AsyncInitializeResponse (server vendor id in h.parameter)
     }
 
     // 3) Send "*IDN?" as a DataEND on the sync channel, read the identity back.
     uint32_t msg_id = PROTOCORE_HISLIP_MESSAGE_ID_INIT;
     n = protocore_hislip_build_data(c_buf, sizeof(c_buf), true, 0, msg_id, (const uint8_t *)"*IDN?\n", 6);
-    Tcp.client->send(sync_cid, c_buf, n);
+    TcpClientV.cid = sync_cid;
+    TcpClientV.io.data = c_buf;
+    TcpClientV.io.len = n;
+    TcpClient.send(protocore_tcp_client_span());
     msg_id = protocore_hislip_next_message_id(msg_id);
     if (hislip_recv(sync_cid, &h) && (h.type == HislipMsg::DATA_END || h.type == HislipMsg::DATA))
     {
@@ -116,9 +146,11 @@ static void run_session(const char *host)
 
     if (async_cid >= 0)
     {
-        Tcp.client->close(async_cid);
+        TcpClientV.cid = async_cid;
+        TcpClient.close(protocore_tcp_client_span());
     }
-    Tcp.client->close(sync_cid);
+    TcpClientV.cid = sync_cid;
+    TcpClient.close(protocore_tcp_client_span());
     Serial.println("[hislip] done");
 }
 

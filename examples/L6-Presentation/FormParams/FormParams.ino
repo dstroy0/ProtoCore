@@ -28,8 +28,8 @@ void handle_form(uint8_t slot_id, HttpReq *req)
 {
     char name[48];
     char email[64];
-    bool have_name = http_get_form(req, "name", name, sizeof(name));
-    bool have_email = http_get_form(req, "email", email, sizeof(email));
+    bool have_name = HttpParser.get_form(protocore_http_parser_span(), req, "name", name, sizeof(name));
+    bool have_email = HttpParser.get_form(protocore_http_parser_span(), req, "email", email, sizeof(email));
 
     if (!have_name && !have_email)
     {
@@ -38,11 +38,11 @@ void handle_form(uint8_t slot_id, HttpReq *req)
     }
 
     // ?debug=1 in the query string mirrors the User-Agent header back too.
-    const char *debug = http_get_query(req, "debug");
+    const char *debug = HttpParser.get_query(protocore_http_parser_span(), req, "debug");
     char body[256];
     if (debug && strcmp(debug, "1") == 0)
     {
-        const char *ua = http_get_header(req, "User-Agent");
+        const char *ua = HttpParser.get_header(protocore_http_parser_span(), req, "User-Agent");
         snprintf(body, sizeof(body), "{\"name\":\"%s\",\"email\":\"%s\",\"ua\":\"%s\"}", have_name ? name : "",
                  have_email ? email : "", ua ? ua : "");
     }

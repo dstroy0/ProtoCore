@@ -77,7 +77,8 @@ void setup()
     imm.active_job.nominal_parts = 100000;
     imm.active_job_values.job_status = EM_JOB_IN_PRODUCTION;
 
-    protocore_em77_install(&imm); // bind + register the OPC UA Browse/Read resolvers
+    Euromap77V.install_args.imm = &imm; // bind + register the OPC UA Browse/Read resolvers
+    Euromap77.install(protocore_euromap77_span());
     on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "EUROMAP 77 IMM on :4840"); });
     listen(4840, PROTO_OPCUA); // OPC UA / EUROMAP endpoint - before begin()

@@ -136,7 +136,7 @@ void setup()
     {
         Serial.println("caster add_mount failed");
     }
-    begin();
+    proto_begin(NULL);
     Serial.printf("NTRIP caster: %u.%u.%u.%u:%u  mount /%s   (surveying in...)\n", (unsigned)(ip & 0xFF),
                   (unsigned)((ip >> 8) & 0xFF), (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF),
                   CASTER_PORT, MOUNTPOINT);
@@ -202,7 +202,11 @@ static bool s_streaming = false;
 static void connect_ntrip()
 {
     Serial.printf("connecting to caster %s:%u /%s ...\n", BASE_IP, CASTER_PORT, MOUNTPOINT);
-    s_client = Tcp.client->open(BASE_IP, CASTER_PORT, 8000);
+    TcpClientV.dial.host = BASE_IP;
+    TcpClientV.dial.port = CASTER_PORT;
+    TcpClientV.dial.timeout_ms = 8000;
+    TcpClient.open(protocore_tcp_client_span());
+    s_client = TcpClientV.i32;
     if (s_client < 0)
     {
         Serial.println("connect failed; retrying");
@@ -214,7 +218,10 @@ static void connect_ntrip()
         snprintf(req, sizeof(req), "GET /%s HTTP/1.0\r\nUser-Agent: NTRIP PC/1.0\r\nAccept: */*\r\n\r\n", MOUNTPOINT);
     if (rn > 0)
     {
-        Tcp.client->send(s_client, req, (size_t)rn);
+        TcpClientV.cid = s_client;
+        TcpClientV.io.data = req;
+        TcpClientV.io.len = (size_t)rn;
+        TcpClient.send(protocore_tcp_client_span());
     }
     s_streaming = false;
     s_rtcm_len = 0;
@@ -288,16 +295,28 @@ static void protocore_rtcm_push(uint8_t b)
 
 void loop()
 {
-    if (Tcp.client->is_closed(s_client))
+    TcpClientV.cid = s_client;
+    TcpClient.is_closed(protocore_tcp_client_span());
+    if (TcpClientV.ok)
     {
         delay(2000);
         connect_ntrip();
         return;
     }
-    while (Tcp.client->available(s_client))
+    for (;;)
     {
+        TcpClientV.cid = s_client;
+        TcpClient.available(protocore_tcp_client_span());
+        if (TcpClientV.n == 0)
+        {
+            break;
+        }
         uint8_t b = 0;
-        if (Tcp.client->read(s_client, &b, 1) != 1)
+        TcpClientV.cid = s_client;
+        TcpClientV.io.buf = &b;
+        TcpClientV.io.cap = 1;
+        TcpClient.read(protocore_tcp_client_span());
+        if (TcpClientV.n != 1)
         {
             break;
         }

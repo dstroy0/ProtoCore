@@ -41,12 +41,18 @@ static size_t read_frame(int cid, char *out, size_t cap)
     unsigned long deadline = millis() + 3000;
     while (o + 1 < cap && millis() < deadline)
     {
-        if (!Tcp.client->available(cid))
+        TcpClientV.cid = cid;
+        TcpClient.available(protocore_tcp_client_span());
+        if (!TcpClientV.n)
         {
             continue;
         }
         uint8_t ch = 0;
-        if (Tcp.client->read(cid, &ch, 1) != 1)
+        TcpClientV.cid = cid;
+        TcpClientV.io.buf = &ch;
+        TcpClientV.io.cap = 1;
+        TcpClient.read(protocore_tcp_client_span());
+        if (TcpClientV.n != 1)
         {
             continue;
         }
@@ -63,7 +69,10 @@ static size_t read_frame(int cid, char *out, size_t cap)
 // Send a query, parse its reply into r; return false on no-frame / UNKNOWN.
 static bool poll(int cid, size_t n, HaasMdcResp *r, const char *label)
 {
-    Tcp.client->send(cid, (const uint8_t *)c_cmd, n);
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = (const uint8_t *)c_cmd;
+    TcpClientV.io.len = n;
+    TcpClient.send(protocore_tcp_client_span());
     char frame[192];
     size_t fl = read_frame(cid, frame, sizeof(frame));
     if (!protocore_haas_mdc_parse(frame, fl, r))
@@ -96,7 +105,11 @@ static void query_value(int cid, uint16_t q, const char *label)
 
 static void run_session(const char *host)
 {
-    int cid = Tcp.client->open(host, PROTOCORE_HAAS_MDC_TCP_PORT, 8000);
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = PROTOCORE_HAAS_MDC_TCP_PORT;
+    TcpClientV.dial.timeout_ms = 8000;
+    TcpClient.open(protocore_tcp_client_span());
+    int cid = TcpClientV.i32;
     if (cid < 0)
     {
         Serial.println("[haas] connect failed");
@@ -138,7 +151,8 @@ static void run_session(const char *host)
         }
     }
 
-    Tcp.client->close(cid);
+    TcpClientV.cid = cid;
+    TcpClient.close(protocore_tcp_client_span());
     Serial.println("[haas] done");
 }
 

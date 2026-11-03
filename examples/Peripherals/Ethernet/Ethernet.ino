@@ -42,7 +42,8 @@ void setup()
 
     // Physical.eth->init() brings up the RMII PHY (ETH.begin with the ETH_PHY_* flags). Check the return
     // before polling for a link - a PHY that never installed would spin this loop forever.
-    if (!Physical.eth->init())
+    Physical.eth_init(protocore_physical_span());
+    if (!PhysicalV.ok)
     {
         Serial.println("Ethernet init failed: the PHY did not come up. Check the ETH_PHY_* pin / clock / "
                        "power flags for your board. Not polling for a link.");

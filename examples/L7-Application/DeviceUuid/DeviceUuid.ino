@@ -18,6 +18,8 @@
 #include "network_drivers/physical/physical/physical.h"
 #include "server/signaling/device_id/device_id.h"
 
+static uint8_t device_id_work[16]; // the borrow an entry takes; DeviceId never reads it
+
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
@@ -39,7 +41,8 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_device_uuid(g_uuid); // stable per-chip UUID
+    DeviceIdV.args.out = g_uuid; // stable per-chip UUID
+    DeviceId.uuid(device_id_work);
     Serial.printf("device UUID: %s\n", g_uuid);
 
     on_http("/id", HTTP_GET, [](uint8_t id, HttpReq *) {

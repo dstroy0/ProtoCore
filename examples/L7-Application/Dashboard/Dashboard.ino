@@ -105,7 +105,7 @@ void loop()
         DashboardV.set_args.value = (float)(now / 1000);
         Dashboard.set(protocore_dashboard_span());
         DashboardV.set_args.key = "rssi";
-        DashboardV.set_args.value = (float)Physical.wifi->rssi();
+        DashboardV.set_args.value = (float)protocore_physical_rssi();
         Dashboard.set(protocore_dashboard_span());
         Dashboard.publish(protocore_dashboard_span());
     }

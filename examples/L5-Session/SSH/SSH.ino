@@ -42,11 +42,9 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
-#include "network_drivers/presentation/ssh/auth/ssh_auth.h"
-#include "network_drivers/presentation/ssh/connection/ssh_channel.h"
-#include "network_drivers/presentation/ssh/connection/ssh_conn.h"
-#include "network_drivers/presentation/ssh/connection/ssh_forward.h"
-#include "network_drivers/tls/ssh_rsa.h"
+#include "network_drivers/presentation/ssh/auth/auth.h"
+#include "network_drivers/presentation/ssh/connection/connection.h"
+#include "network_drivers/presentation/ssh/transport/ssh_rsa/ssh_rsa.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
@@ -76,7 +74,11 @@ static bool ssh_pubkey_auth(const char *user, const uint8_t *blob, size_t blob_l
 
 static void ssh_on_data(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len)
 {
-    protocore_ssh_conn_send(slot, channel, data, len); // echo back on the same channel
+    SshConnectionV.chan.slot = slot; // echo back on the same channel
+    SshConnectionV.chan.channel = channel;
+    SshConnectionV.chan.data = data;
+    SshConnectionV.chan.len = len;
+    SshConnection.channel_send_data(protocore_ssh_connection_span());
 }
 
 #if PROTOCORE_SSH_PORT_FORWARD
@@ -108,36 +110,38 @@ void setup()
 
     // Load the RSA host key's public half from NVS (the private key is read
     // per-signature into a stack buffer and wiped; never held in static RAM).
-    if (SshRsa.load_pubkey(protocore_ssh_rsa_span()) != 0)
+    SshRsa.load_pubkey(protocore_ssh_rsa_span());
+    if (SshRsaV.n != 0)
     {
         Serial.println("No SSH host key in NVS - see docs/SSH.md (Host key provisioning)");
         return;
     }
 
     // Install SSH callbacks before begin().
-    protocore_ssh_auth_set_password_cb(ssh_password_auth);
-    protocore_ssh_auth_set_pubkey_cb(ssh_pubkey_auth);
-    protocore_ssh_channel_set_data_cb(ssh_on_data);
+    SshAuthV.cbs.password_cb = ssh_password_auth;
+    SshAuth.set_password_cb(protocore_ssh_auth_span());
+    SshAuthV.cbs.pubkey_cb = ssh_pubkey_auth;
+    SshAuth.set_pubkey_cb(protocore_ssh_auth_span());
+    SshConnectionV.data_cb = ssh_on_data;
+    SshConnection.set_data_cb(protocore_ssh_connection_span());
 
     // Listen for SSH on port 22 (and, optionally, HTTP on 80 alongside it).
     listen(22, PROTO_SSH);
-    int32_t result = begin();
+    int32_t result = proto_begin(NULL);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
         return;
     }
 
-    // One-time wiring of the SSH dispatcher's outbound path. Call after begin().
-    protocore_ssh_conn_setup();
-
 #if PROTOCORE_SSH_PORT_FORWARD
     // Enable forwarding (opt-in; nothing is forwarded until this runs). This turns on
     // BOTH local (ssh -L, gated by the policy below) and remote (ssh -R, a listener the
     // client asks the device to open). For ssh -R also raise PROTOCORE_SSH_MAX_CHANNELS and,
     // if you expect concurrent tunnels, PROTOCORE_SSH_RFWD_MAX / PROTOCORE_SSH_RFWD_BRIDGE_MAX.
-    protocore_ssh_forward_set_policy_cb(protocore_ssh_forward_policy);
-    protocore_ssh_forward_begin();
+    SshConnectionV.forward_policy_cb = protocore_ssh_forward_policy;
+    SshConnection.set_forward_policy_cb(protocore_ssh_connection_span());
+    SshConnection.forward_begin(protocore_ssh_connection_span());
     Serial.println("SSH port forwarding enabled (ssh -L to 80/443; ssh -R listeners)");
 #endif
 

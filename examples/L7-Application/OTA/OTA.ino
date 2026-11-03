@@ -22,6 +22,8 @@
 #include "network_drivers/physical/physical/physical.h"
 #include "server/update/ota_service/ota_service.h"
 
+static uint8_t ota_service_work[16]; // the borrow an entry takes; OtaService never reads it
+
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
@@ -55,7 +57,10 @@ void setup()
     }
 
     // Authenticated streaming OTA at POST /update.
-    protocore_ota_begin("/update", "admin", "s3cret");
+    OtaServiceV.args.path = "/update";
+    OtaServiceV.args.user = "admin";
+    OtaServiceV.args.pass = "s3cret";
+    OtaService.begin(ota_service_work);
 
     Serial.println("Server up; OTA at POST /update");
 }

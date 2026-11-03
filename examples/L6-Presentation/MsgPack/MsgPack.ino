@@ -120,7 +120,7 @@ void setup()
         MsgPack.put_str(&w, "uptime");
         MsgPack.put_uint(&w, millis() / 1000);
         MsgPack.put_str(&w, "rssi");
-        MsgPack.put_int(&w, Physical.wifi->rssi());
+        MsgPack.put_int(&w, protocore_physical_rssi());
         ctx.len = w.overflow ? 0 : w.pos;
         ctx.off = 0;
         send_chunked(id, 200, "application/msgpack", protocore_msgpack_source, &ctx);

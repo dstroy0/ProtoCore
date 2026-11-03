@@ -57,7 +57,11 @@ static int cl_send(void *ctx, const uint8_t *data, size_t len)
         {
             chunk = 0xFFFF;
         }
-        if (!Tcp.client->send(cid, data + sent, chunk))
+        TcpClientV.cid = cid;
+        TcpClientV.io.data = data + sent;
+        TcpClientV.io.len = chunk;
+        TcpClient.send(protocore_tcp_client_span());
+        if (!TcpClientV.ok)
         {
             return -1;
         }
@@ -71,12 +75,18 @@ static int cl_send(void *ctx, const uint8_t *data, size_t len)
 static int cl_recv(void *ctx, uint8_t *buf, size_t cap)
 {
     int cid = *(int *)ctx;
-    size_t n = Tcp.client->read(cid, buf, cap);
+    TcpClientV.cid = cid;
+    TcpClientV.io.buf = buf;
+    TcpClientV.io.cap = cap;
+    TcpClient.read(protocore_tcp_client_span());
+    size_t n = TcpClientV.n;
     if (n > 0)
     {
         return (int)n;
     }
-    if (Tcp.client->is_closed(cid))
+    TcpClientV.cid = cid;
+    TcpClient.is_closed(protocore_tcp_client_span());
+    if (TcpClientV.ok)
     {
         return -1;
     }
@@ -86,7 +96,11 @@ static int cl_recv(void *ctx, uint8_t *buf, size_t cap)
 
 void send_program()
 {
-    int cid = Tcp.client->open(CNC_HOST, CNC_PORT, 8000);
+    TcpClientV.dial.host = CNC_HOST;
+    TcpClientV.dial.port = CNC_PORT;
+    TcpClientV.dial.timeout_ms = 8000;
+    TcpClient.open(protocore_tcp_client_span());
+    int cid = TcpClientV.i32;
     if (cid < 0)
     {
         Serial.println("connect failed - is the controller's program port reachable?");
@@ -109,7 +123,8 @@ void send_program()
         Serial.printf("drip-feed failed (DncStreamResult %d) - see the README troubleshooting table\n", (int)rc);
     }
 
-    Tcp.client->close(cid);
+    TcpClientV.cid = cid;
+    TcpClient.close(protocore_tcp_client_span());
 }
 
 void setup()

@@ -3,7 +3,7 @@
 
 /**
  * @file NetEgress.ino
- * @brief Report which interface outbound traffic is using (Physical.link->egress()).
+ * @brief Report which interface outbound traffic is using (protocore_physical_egress_kind()).
  *
  * The OS (esp_netif) handles failover between links by reselecting the default
  * route; this sketch just *reports* the live egress interface and its IP, queried
@@ -52,12 +52,12 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    Serial.printf("egress interface: %s\n", iface_name(Physical.link->egress()));
+    Serial.printf("egress interface: %s\n", iface_name(protocore_physical_egress_kind()));
 
     on_http("/net", HTTP_GET, [](uint8_t id, HttpReq *) {
         uint32_t ip = protocore_physical_egress_ipv4(); // network byte order
         char body[96];
-        snprintf(body, sizeof(body), "{\"egress\":\"%s\",\"ip\":\"%u.%u.%u.%u\"}", iface_name(Physical.link->egress()),
+        snprintf(body, sizeof(body), "{\"egress\":\"%s\",\"ip\":\"%u.%u.%u.%u\"}", iface_name(protocore_physical_egress_kind()),
                  (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF), (unsigned)((ip >> 16) & 0xFF),
                  (unsigned)((ip >> 24) & 0xFF));
         send_text(id, 200, "application/json", body);

@@ -64,7 +64,7 @@ void setup()
         send_text(id, 200, "text/plain", b);
     });
     on_http("/totp/verify", HTTP_GET, [](uint8_t id, HttpReq *req) {
-        const char *code_s = http_get_query(req, "code");
+        const char *code_s = HttpParser.get_query(protocore_http_parser_span(), req, "code");
         uint32_t code = code_s ? (uint32_t)strtoul(code_s, nullptr, 10) : 0;
         bool ok = protocore_totp_verify(g_secret, g_secret_len, now_unix(), code, 30, 6, 1);
         send_text(id, 200, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");

@@ -86,7 +86,9 @@ static void on_dma_complete(const mmgr_praet_event *ev, void *)
     it.f.len = ev->bytes;
     uint16_t n = (ev->bytes < sizeof(it.f.bytes)) ? ev->bytes : sizeof(it.f.bytes);
     memcpy(it.f.bytes, ev->data, n);
-    Session.workers->queue->post_from_isr(protocore_pq_lane::PROTOCORE_PQ_LANE_FORWARD, &it);
+    PreemptQueueV.lane = protocore_pq_lane::PROTOCORE_PQ_LANE_FORWARD;
+    PreemptQueueV.post_args.item = &it;
+    PreemptQueue.post_from_isr(protocore_preempt_queue_span());
 }
 
 void setup()
@@ -99,7 +101,9 @@ void setup()
     fwd.priority = 0; // FORWARD lane default (above the user lane)
     fwd.core = 1;
     fwd.name = "gw_rx";
-    Session.workers->queue->start(protocore_pq_lane::PROTOCORE_PQ_LANE_FORWARD, &fwd);
+    PreemptQueueV.lane = protocore_pq_lane::PROTOCORE_PQ_LANE_FORWARD;
+    PreemptQueueV.cfg = &fwd;
+    PreemptQueue.start(protocore_preempt_queue_span());
 
     // Looped back on itself, so a frame this sketch submits arrives as the receive a line would bring.
     static const PraetCallbackCfg dma_complete = {on_dma_complete, nullptr};

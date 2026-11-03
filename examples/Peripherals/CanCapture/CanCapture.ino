@@ -47,7 +47,12 @@ static bool eth_send(uint8_t, const uint8_t *frame, uint16_t len, void *)
     uint32_t us = (uint32_t)micros();
     protocore_pcap_record_header(buf, sizeof(buf), us / 1000000u, us % 1000000u, len, len);
     memcpy(buf + PROTOCORE_PCAP_REC_HDR_LEN, frame, len);
-    return Udp.client->sendto(COLLECTOR_IP, COLLECTOR_PORT, buf, PROTOCORE_PCAP_REC_HDR_LEN + len);
+    UdpClientV.dst = COLLECTOR_IP;
+    UdpClientV.dst_port = COLLECTOR_PORT;
+    UdpClientV.data = buf;
+    UdpClientV.len = PROTOCORE_PCAP_REC_HDR_LEN + len;
+    UdpClient.sendto(protocore_udp_client_span());
+    return UdpClientV.ok;
 }
 
 // CAN is a source only - no rule forwards *to* it, so this is never called.

@@ -67,7 +67,15 @@ void loop()
         vb.type = (uint8_t)SNMP_VB_GAUGE32;
         vb.ival = (long)ESP.getFreeHeap();
 
-        bool ok = protocore_snmp_trap_v2c(MANAGER, TRAP_PORT, "public", TRAP_OID, sizeof(TRAP_OID) / sizeof(uint32_t), &vb, 1);
+        SnmpNotifyV.dst.dst_ip = MANAGER;
+        SnmpNotifyV.dst.port = TRAP_PORT;
+        SnmpNotifyV.dst.community = "public";
+        SnmpNotifyV.pdu.trap_oid = TRAP_OID;
+        SnmpNotifyV.pdu.trap_oid_len = sizeof(TRAP_OID) / sizeof(uint32_t);
+        SnmpNotifyV.pdu.vbs = &vb;
+        SnmpNotifyV.pdu.vb_count = 1;
+        SnmpNotify.trap_v2c(protocore_snmp_notify_span());
+        bool ok = SnmpNotifyV.ok;
         Serial.printf("trap -> %s : %s (heap=%ld)\n", MANAGER, ok ? "sent" : "failed", vb.ival);
     }
 }

@@ -42,7 +42,7 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     on_http("/resolve", HTTP_GET, [](uint8_t id, HttpReq *req) {
-        const char *host = http_get_query(req, "host");
+        const char *host = HttpParser.get_query(protocore_http_parser_span(), req, "host");
         if (!host)
         {
             send_text(id, 400, "application/json", "{\"error\":\"missing host\"}");

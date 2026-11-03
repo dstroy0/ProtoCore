@@ -58,7 +58,7 @@ void loop()
         protocore_line line;
         protocore_line_init(&line, buf, sizeof(buf), "esp32");
         protocore_line_add_uint(&line, "heap", ESP.getFreeHeap());
-        protocore_line_add_int(&line, "rssi", Physical.wifi->rssi());
+        protocore_line_add_int(&line, "rssi", protocore_physical_rssi());
         protocore_line_add_float(&line, "temp", temperatureRead(), 1);
         if (protocore_udp_telemetry_cast(&line))
         {

@@ -25,6 +25,8 @@
 #include "network_drivers/physical/physical/physical.h"
 #include "server/update/ota_rollback/ota_rollback.h"
 
+static uint8_t ota_rollback_work[16]; // the borrow an entry takes; OtaRollback never reads it
+
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
@@ -50,7 +52,8 @@ void setup()
 
     on_http("/ota-state", HTTP_GET, [](uint8_t id, HttpReq *) {
         char b[48];
-        snprintf(b, sizeof(b), "{\"img_state\":%u}", protocore_ota_img_state());
+        OtaRollback.state(ota_rollback_work);
+        snprintf(b, sizeof(b), "{\"img_state\":%u}", (unsigned)OtaRollbackV.img_state);
         send_text(id, 200, "application/json", b);
     });
     begin_http(80, NULL);
@@ -63,7 +66,9 @@ void loop()
     static bool done = false;
     if (!done)
     {
-        protocore_ota_action a = protocore_ota_rollback_tick(self_test());
+        OtaRollbackV.self_test_ok = self_test();
+        OtaRollback.tick(ota_rollback_work);
+        protocore_ota_action a = OtaRollbackV.action;
         if (a == protocore_ota_action::PROTOCORE_OTA_COMMIT)
         {
             Serial.println("[ota] image committed");

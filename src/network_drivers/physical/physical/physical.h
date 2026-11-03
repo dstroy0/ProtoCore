@@ -469,6 +469,34 @@ PROTOCORE_INLINE uint32_t protocore_physical_egress_ipv4(void)
     return PhysicalV.u32;
 }
 
+/** @brief Physical.egress as an expression: the kind of interface the default route leaves on. */
+PROTOCORE_INLINE protocore_if_kind protocore_physical_egress_kind(void)
+{
+    Physical.egress(protocore_physical_span());
+    return PhysicalV.if_kind;
+}
+
+/** @brief Physical.wifi_rssi as an expression: the station's received signal strength, in dBm. */
+PROTOCORE_INLINE int8_t protocore_physical_rssi(void)
+{
+    Physical.wifi_rssi(protocore_physical_span());
+    return PhysicalV.i8;
+}
+
+/** @brief Physical.wifi_channel as an expression: the 802.11 channel the radio is on. */
+PROTOCORE_INLINE uint8_t protocore_physical_channel(void)
+{
+    Physical.wifi_channel(protocore_physical_span());
+    return PhysicalV.u8;
+}
+
+/** @brief Physical.wifi_ap_ip as an expression: the softAP IPv4, network byte order; 0 if it is down. */
+PROTOCORE_INLINE uint32_t protocore_physical_ap_ipv4(void)
+{
+    Physical.wifi_ap_ip(protocore_physical_span());
+    return PhysicalV.u32;
+}
+
 PROTOCORE_END_DECLS
 
 #endif

@@ -24,7 +24,7 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 // GET /users/:id
 void handle_user(uint8_t slot_id, HttpReq *req)
 {
-    const char *id = http_get_param(req, "id");
+    const char *id = HttpParser.get_param(protocore_http_parser_span(), req, "id");
     char body[96];
     snprintf(body, sizeof(body), "{\"user_id\":\"%s\"}", id ? id : "?");
     send_text(slot_id, 200, "application/json", body);
@@ -33,8 +33,8 @@ void handle_user(uint8_t slot_id, HttpReq *req)
 // GET /users/:id/posts/:slug  - two captured segments.
 void handle_user_post(uint8_t slot_id, HttpReq *req)
 {
-    const char *id = http_get_param(req, "id");
-    const char *slug = http_get_param(req, "slug");
+    const char *id = HttpParser.get_param(protocore_http_parser_span(), req, "id");
+    const char *slug = HttpParser.get_param(protocore_http_parser_span(), req, "slug");
     char body[160];
     snprintf(body, sizeof(body), "{\"user_id\":\"%s\",\"slug\":\"%s\"}", id ? id : "?", slug ? slug : "?");
     send_text(slot_id, 200, "application/json", body);

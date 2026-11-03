@@ -50,7 +50,7 @@ static bool resolver(const char *path, const protocore_gql_args *args, protocore
     if (!strcmp(path, "net.rssi"))
     {
         out->type = protocore_gql_type::PROTOCORE_GQL_INT;
-        out->i = Physical.wifi->rssi();
+        out->i = protocore_physical_rssi();
         return true;
     }
     if (!strcmp(path, "net.ip"))
@@ -65,8 +65,10 @@ static bool resolver(const char *path, const protocore_gql_args *args, protocore
     }
     if (!strcmp(path, "greet"))
     {
-        const char *who = "?";
-        protocore_gql_arg_str(args, "name", &who);
+        GraphQLV.argument.values = args;
+        GraphQLV.argument.name = "name";
+        GraphQL.arg_str(protocore_graphql_span());
+        const char *who = GraphQLV.ok ? GraphQLV.text : "?";
         static char b[64];
         snprintf(b, sizeof(b), "hi %s", who);
         out->type = protocore_gql_type::PROTOCORE_GQL_STR;
@@ -92,7 +94,13 @@ void setup()
 
     on_http("/graphql", HTTP_POST, [](uint8_t id, HttpReq *req) {
         char body[512];
-        protocore_gql_result rc = protocore_graphql_execute((const char *)req->body, req->body_len, resolver, body, sizeof(body));
+        GraphQLV.request.document = (const char *)req->body;
+        GraphQLV.request.len = req->body_len;
+        GraphQLV.request.resolver = resolver;
+        GraphQLV.response.out = body;
+        GraphQLV.response.cap = sizeof(body);
+        GraphQL.execute(protocore_graphql_span());
+        protocore_gql_result rc = GraphQLV.result;
         // The engine writes {"data":...} on success or {"errors":...} on a parse
         // error; 200 with the GraphQL error envelope is the conventional reply.
         send_text(id, rc == protocore_gql_result::PROTOCORE_GQL_OK ? 200 : 400, "application/json", body);

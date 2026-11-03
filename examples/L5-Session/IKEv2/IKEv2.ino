@@ -169,12 +169,22 @@ static void run_once()
     }
 
     // Bind :500 to receive the reply, then send FROM :500 so the responder's reply reaches our listener.
-    if (!Udp.listener->listen(PROTOCORE_IKEV2_PORT, on_ike_reply, nullptr))
+    UdpListenerV.port = PROTOCORE_IKEV2_PORT;
+    UdpListenerV.bind.handler = on_ike_reply;
+    UdpListenerV.bind.handler_ctx = nullptr;
+    UdpListener.listen(protocore_udp_listener_span());
+    if (!UdpListenerV.ok)
     {
         Serial.println("[ike] could not bind UDP 500");
         return;
     }
-    if (!Udp.listener->sendto(PROTOCORE_IKEV2_PORT, &g_gateway, PROTOCORE_IKEV2_PORT, msg, n))
+    UdpListenerV.port = PROTOCORE_IKEV2_PORT;
+    UdpListenerV.send_args.dst = &g_gateway;
+    UdpListenerV.send_args.dst_port = PROTOCORE_IKEV2_PORT;
+    UdpListenerV.send_args.data = msg;
+    UdpListenerV.send_args.len = n;
+    UdpListener.sendto(protocore_udp_listener_span());
+    if (!UdpListenerV.ok)
     {
         Serial.println("[ike] send failed");
         return;

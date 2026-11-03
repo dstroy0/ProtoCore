@@ -31,6 +31,8 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
+#include "network_drivers/application/file_serving/file_serving.h"
+#include "test/core_setup/hal/esp/esp_mnt_fs.h"
 #include "services/file_transfer/ftp/ftp_session/ftp_session.h"
 #include "server/core/exc_decoder/exc_decoder.h"
 #include "shared/log/log.h"
@@ -151,7 +153,10 @@ void setup()
     on_http("/crash", HTTP_GET, crash_handler);
     if (sd)
     {
-        serve_static("/files/", SD_MMC, "/"); // download the saved dump
+        FileServingV.serve_static_args.url_prefix = "/files/"; // download the saved dump
+        FileServingV.serve_static_args.file_sys = protocore_mnt_fs(&SD_MMC);
+        FileServingV.serve_static_args.fs_root = "/";
+        FileServing.serve_static(protocore_file_serving_span());
     }
     begin_http(80, NULL);
 

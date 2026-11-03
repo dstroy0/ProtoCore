@@ -104,7 +104,15 @@ static uint8_t c_resp[2048];
 
 static size_t exchange(int cid, size_t reqlen)
 {
-    if (reqlen == 0 || !Tcp.client->send(cid, c_req, reqlen))
+    if (reqlen == 0)
+    {
+        return 0;
+    }
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = c_req;
+    TcpClientV.io.len = reqlen;
+    TcpClient.send(protocore_tcp_client_span());
+    if (!TcpClientV.ok)
     {
         return 0;
     }
@@ -113,9 +121,15 @@ static size_t exchange(int cid, size_t reqlen)
     uint32_t deadline = millis() + 3000;
     while (got < 8 && millis() < deadline)
     {
-        if (Tcp.client->available(cid))
+        TcpClientV.cid = cid;
+        TcpClient.available(protocore_tcp_client_span());
+        if (TcpClientV.n)
         {
-            got += Tcp.client->read(cid, c_resp + got, 8 - got);
+            TcpClientV.cid = cid;
+            TcpClientV.io.buf = c_resp + got;
+            TcpClientV.io.cap = 8 - got;
+            TcpClient.read(protocore_tcp_client_span());
+            got += TcpClientV.n;
         }
     }
     if (got < 8)
@@ -130,9 +144,15 @@ static size_t exchange(int cid, size_t reqlen)
     }
     while (got < size && millis() < deadline)
     {
-        if (Tcp.client->available(cid))
+        TcpClientV.cid = cid;
+        TcpClient.available(protocore_tcp_client_span());
+        if (TcpClientV.n)
         {
-            got += Tcp.client->read(cid, c_resp + got, size - got);
+            TcpClientV.cid = cid;
+            TcpClientV.io.buf = c_resp + got;
+            TcpClientV.io.cap = size - got;
+            TcpClient.read(protocore_tcp_client_span());
+            got += TcpClientV.n;
         }
     }
     return got == size ? size : 0;
@@ -143,7 +163,11 @@ static void run_client(uint32_t ip)
     char host[16];
     snprintf(host, sizeof(host), "%u.%u.%u.%u", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
              (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
-    int cid = Tcp.client->open(host, 4840, 8000);
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = 4840;
+    TcpClientV.dial.timeout_ms = 8000;
+    TcpClient.open(protocore_tcp_client_span());
+    int cid = TcpClientV.i32;
     if (cid < 0)
     {
         Serial.println("[opcua-client] connect failed");
@@ -227,8 +251,12 @@ static void run_client(uint32_t ip)
     }
 
     exchange(cid, protocore_opcua_client_close_session(&c, c_req, sizeof(c_req)));
-    Tcp.client->send(cid, c_req, protocore_opcua_client_close_channel(c_req, sizeof(c_req)));
-    Tcp.client->close(cid);
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = c_req;
+    TcpClientV.io.len = protocore_opcua_client_close_channel(c_req, sizeof(c_req));
+    TcpClient.send(protocore_tcp_client_span());
+    TcpClientV.cid = cid;
+    TcpClient.close(protocore_tcp_client_span());
     Serial.println("[opcua-client] done");
 }
 

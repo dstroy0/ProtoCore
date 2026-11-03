@@ -35,7 +35,8 @@ void setup()
     delay(300);
 
     // Radio up for capture only - promiscuous mode does not associate.
-    Physical.wifi->init_radio(0);
+    PhysicalV.wifi.channel = 0;
+    Physical.wifi_radio_init(protocore_physical_span());
 
     WifiSnifferV.begin_args.first_chan = CHAN_FIRST;
     WifiSnifferV.begin_args.last_chan = CHAN_LAST;

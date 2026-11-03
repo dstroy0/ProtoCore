@@ -68,8 +68,8 @@ void setup()
     protocore_audit_append(protocore_audit_cat::PROTOCORE_AUDIT_SYSTEM, "boot");
 
     on_http("/login", HTTP_GET, [](uint8_t id, HttpReq *req) {
-        const char *user = http_get_query(req, "user");
-        const char *pass = http_get_query(req, "pass");
+        const char *user = HttpParser.get_query(protocore_http_parser_span(), req, "user");
+        const char *pass = HttpParser.get_query(protocore_http_parser_span(), req, "pass");
         char msg[PROTOCORE_AUDIT_MSG_LEN];
         bool ok = pass && strcmp(pass, "secret") == 0;
         snprintf(msg, sizeof(msg), "login %s", user ? user : "?");
@@ -78,7 +78,7 @@ void setup()
     });
 
     on_http("/config", HTTP_GET, [](uint8_t id, HttpReq *req) {
-        const char *port = http_get_query(req, "http_port");
+        const char *port = HttpParser.get_query(protocore_http_parser_span(), req, "http_port");
         char msg[PROTOCORE_AUDIT_MSG_LEN];
         snprintf(msg, sizeof(msg), "set http_port=%s", port ? port : "?");
         protocore_audit_append(protocore_audit_cat::PROTOCORE_AUDIT_CONFIG, msg);

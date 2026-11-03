@@ -1,6 +1,6 @@
 # ETag - conditional GET for static files
 
-**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_ETAG` (with file serving)
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_ETAG` (with file serving), `PROTOCORE_ENABLE_FILE_SERVING`, `PROTOCORE_ENABLE_MNT`
 
 ## What this example teaches
 
@@ -28,7 +28,7 @@ Put a file at `data/www/index.html` and upload the LittleFS image before running
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_ETAG=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_ETAG=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -DPROTOCORE_ENABLE_MNT=1" \
   --lib="." examples/L7-Application/ETag/ETag.ino
 ```
 
@@ -47,6 +47,8 @@ explanatory comments:
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #define PROTOCORE_ENABLE_ETAG 1
+#define PROTOCORE_ENABLE_FILE_SERVING 1
+#define PROTOCORE_ENABLE_MNT 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

@@ -48,9 +48,12 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Only these sources may connect; everything else is dropped at accept time.
-    Tcp.listener->ip_allow_add_cidr("192.168.1.0/24"); // local /24
-    Tcp.listener->ip_allow_add_cidr("10.0.0.5");       // one trusted host (bare address -> /32)
-    Tcp.listener->ip_allow_add_cidr("2001:db8::/32");  // an IPv6 prefix
+    TcpListenerV.gate.cidr = "192.168.1.0/24";
+    TcpListener.ip_allow_add_cidr(protocore_tcp_listener_span()); // local /24
+    TcpListenerV.gate.cidr = "10.0.0.5";
+    TcpListener.ip_allow_add_cidr(protocore_tcp_listener_span());       // one trusted host (bare address -> /32)
+    TcpListenerV.gate.cidr = "2001:db8::/32";
+    TcpListener.ip_allow_add_cidr(protocore_tcp_listener_span());  // an IPv6 prefix
 
     on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "hello from an allowed address"); });

@@ -33,7 +33,7 @@ void setup()
 
     char ssid[33];
     char psk[64];
-    if (protocore_provisioning_load(ssid, sizeof(ssid), psk, sizeof(psk)))
+    if (Prov.load(protocore_provisioning_service_span(), ssid, sizeof(ssid), psk, sizeof(psk)))
     {
         // Credentials present: connect as a normal station.
         PhysicalV.wifi.ssid = ssid;
@@ -57,7 +57,7 @@ void setup()
     {
         // No credentials: bring up the captive portal.
         begin_http(80, NULL);
-        protocore_provisioning_begin("PC-Setup");
+        Prov.begin(protocore_provisioning_service_span(), "PC-Setup");
         Serial.println("Provisioning: join WiFi 'PC-Setup' and open any page");
     }
 }

@@ -39,7 +39,15 @@ static uint8_t c_resp[512];
 // mark) into c_resp. Returns the reply length, or 0 on timeout / overflow.
 static size_t rpc_call(int cid, size_t req_len)
 {
-    if (req_len == 0 || !Tcp.client->send(cid, c_req, req_len))
+    if (req_len == 0)
+    {
+        return 0;
+    }
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = c_req;
+    TcpClientV.io.len = req_len;
+    TcpClient.send(protocore_tcp_client_span());
+    if (!TcpClientV.ok)
     {
         return 0;
     }
@@ -48,9 +56,15 @@ static size_t rpc_call(int cid, size_t req_len)
     unsigned long deadline = millis() + 3000;
     while (got < 4 && millis() < deadline)
     {
-        if (Tcp.client->available(cid))
+        TcpClientV.cid = cid;
+        TcpClient.available(protocore_tcp_client_span());
+        if (TcpClientV.n)
         {
-            got += Tcp.client->read(cid, rm + got, 4 - got);
+            TcpClientV.cid = cid;
+            TcpClientV.io.buf = rm + got;
+            TcpClientV.io.cap = 4 - got;
+            TcpClient.read(protocore_tcp_client_span());
+            got += TcpClientV.n;
         }
     }
     bool last = false;
@@ -62,9 +76,15 @@ static size_t rpc_call(int cid, size_t req_len)
     got = 0;
     while (got < frag && millis() < deadline)
     {
-        if (Tcp.client->available(cid))
+        TcpClientV.cid = cid;
+        TcpClient.available(protocore_tcp_client_span());
+        if (TcpClientV.n)
         {
-            got += Tcp.client->read(cid, c_resp + got, frag - got);
+            TcpClientV.cid = cid;
+            TcpClientV.io.buf = c_resp + got;
+            TcpClientV.io.cap = frag - got;
+            TcpClient.read(protocore_tcp_client_span());
+            got += TcpClientV.n;
         }
     }
     return got == frag ? got : 0;
@@ -73,7 +93,11 @@ static size_t rpc_call(int cid, size_t req_len)
 static void run_session(const char *host)
 {
     // 1) Ask the portmapper (TCP 111) for the DEVICE_CORE port.
-    int pmap_cid = Tcp.client->open(host, PROTOCORE_RPC_PMAP_PORT, 8000);
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = PROTOCORE_RPC_PMAP_PORT;
+    TcpClientV.dial.timeout_ms = 8000;
+    TcpClient.open(protocore_tcp_client_span());
+    int pmap_cid = TcpClientV.i32;
     if (pmap_cid < 0)
     {
         Serial.println("[vxi11] portmap connect failed");
@@ -85,14 +109,20 @@ static void run_session(const char *host)
     if (!protocore_vxi11_parse_getport_resp(c_resp, rpc_call(pmap_cid, n), &core_port) || core_port == 0)
     {
         Serial.println("[vxi11] GETPORT failed");
-        Tcp.client->close(pmap_cid);
+        TcpClientV.cid = pmap_cid;
+        TcpClient.close(protocore_tcp_client_span());
         return;
     }
-    Tcp.client->close(pmap_cid);
+    TcpClientV.cid = pmap_cid;
+    TcpClient.close(protocore_tcp_client_span());
     Serial.printf("[vxi11] DEVICE_CORE port = %u\n", core_port);
 
     // 2) Open the core channel and create a link to "inst0".
-    int core_cid = Tcp.client->open(host, (uint16_t)core_port, 8000);
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = (uint16_t)core_port;
+    TcpClientV.dial.timeout_ms = 8000;
+    TcpClient.open(protocore_tcp_client_span());
+    int core_cid = TcpClientV.i32;
     if (core_cid < 0)
     {
         Serial.println("[vxi11] core connect failed");
@@ -103,7 +133,8 @@ static void run_session(const char *host)
     if (!protocore_vxi11_parse_create_link_resp(c_resp, rpc_call(core_cid, n), &link) || link.error != PROTOCORE_VXI11_ERR_NONE)
     {
         Serial.println("[vxi11] create_link failed");
-        Tcp.client->close(core_cid);
+        TcpClientV.cid = core_cid;
+        TcpClient.close(protocore_tcp_client_span());
         return;
     }
     Serial.printf("[vxi11] link=%d maxRecv=%u\n", link.lid, link.max_recv_size);
@@ -129,7 +160,8 @@ static void run_session(const char *host)
     n = protocore_vxi11_build_destroy_link(c_req, sizeof(c_req), 5, link.lid);
     int32_t err = 0;
     protocore_vxi11_parse_error_resp(c_resp, rpc_call(core_cid, n), &err);
-    Tcp.client->close(core_cid);
+    TcpClientV.cid = core_cid;
+    TcpClient.close(protocore_tcp_client_span());
     Serial.println("[vxi11] done");
 }
 

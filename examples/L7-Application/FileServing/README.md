@@ -1,6 +1,6 @@
 # FileServing - serve a static site from LittleFS
 
-**Layer:** L7 Application · **Build flags:** none (`PROTOCORE_ENABLE_FILE_SERVING` is on by default)
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_FILE_SERVING`, `PROTOCORE_ENABLE_MNT`
 
 ## What this example teaches
 
@@ -29,6 +29,7 @@ mounts LittleFS with `begin(true)` (format-on-fail).
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_FILE_SERVING=1 -DPROTOCORE_ENABLE_MNT=1" \
   --lib="." examples/L7-Application/FileServing/FileServing.ino
 ```
 

@@ -54,7 +54,7 @@ static SensorDevice sensor_db[MAX_SENSORS] = {
 /** @brief Checks if a request carries the expected Authorization header. */
 bool is_authorized(const HttpReq *req)
 {
-    const char *auth_hdr = http_get_header(req, "Authorization");
+    const char *auth_hdr = HttpParser.get_header(protocore_http_parser_span(), req, "Authorization");
     return (auth_hdr && strcmp(auth_hdr, EXPECTED_TOKEN) == 0);
 }
 
@@ -146,7 +146,7 @@ bool json_get_bool(const char *json, const char *key, bool &out_val)
  */
 void handle_get_sensors(uint8_t slot_id, HttpReq *req)
 {
-    const char *active_filter = http_get_query(req, "active");
+    const char *active_filter = HttpParser.get_query(protocore_http_parser_span(), req, "active");
     bool filter_by_active = (active_filter != nullptr);
     bool active_target_val = (filter_by_active && strcmp(active_filter, "1") == 0);
 
@@ -218,7 +218,7 @@ void handle_create_sensor(uint8_t slot_id, HttpReq *req)
         return;
     }
 
-    const char *content_type = http_get_header(req, "Content-Type");
+    const char *content_type = HttpParser.get_header(protocore_http_parser_span(), req, "Content-Type");
     if (!content_type || strstr(content_type, "application/json") == nullptr)
     {
         send_text(slot_id, 400, "text/plain", "400 Bad Request: Content-Type must be application/json");

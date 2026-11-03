@@ -62,7 +62,11 @@ static int cl_send(void *ctx, const uint8_t *data, size_t len)
         {
             chunk = 0xFFFF;
         }
-        if (!Tcp.client->send(x->cid, data + sent, chunk))
+        TcpClientV.cid = x->cid;
+        TcpClientV.io.data = data + sent;
+        TcpClientV.io.len = chunk;
+        TcpClient.send(protocore_tcp_client_span());
+        if (!TcpClientV.ok)
         {
             return -1;
         }
@@ -76,12 +80,20 @@ static int cl_recv(void *ctx, uint8_t *buf, size_t cap)
     SmbXport *x = (SmbXport *)ctx;
     while ((int32_t)(x->deadline - millis()) > 0)
     {
-        size_t n = Tcp.client->read(x->cid, buf, cap);
+        TcpClientV.cid = x->cid;
+        TcpClientV.io.buf = buf;
+        TcpClientV.io.cap = cap;
+        TcpClient.read(protocore_tcp_client_span());
+        size_t n = TcpClientV.n;
         if (n > 0)
         {
             return (int)n;
         }
-        if (Tcp.client->is_closed(x->cid) && Tcp.client->available(x->cid) == 0)
+        TcpClientV.cid = x->cid;
+        TcpClient.is_closed(protocore_tcp_client_span());
+        const bool closed = TcpClientV.ok;
+        TcpClient.available(protocore_tcp_client_span());
+        if (closed && TcpClientV.n == 0)
         {
             return -1;
         }
@@ -92,7 +104,11 @@ static int cl_recv(void *ctx, uint8_t *buf, size_t cap)
 
 void read_program()
 {
-    int cid = Tcp.client->open(SMB_HOST, SMB_PORT, 8000);
+    TcpClientV.dial.host = SMB_HOST;
+    TcpClientV.dial.port = SMB_PORT;
+    TcpClientV.dial.timeout_ms = 8000;
+    TcpClient.open(protocore_tcp_client_span());
+    int cid = TcpClientV.i32;
     if (cid < 0)
     {
         Serial.println("connect failed - is the server reachable on port 445?");
@@ -117,7 +133,8 @@ void read_program()
     if (rc != SMB_OK)
     {
         Serial.printf("smb_open failed (SmbResult %d) - see the README troubleshooting table\n", (int)rc);
-        Tcp.client->close(cid);
+        TcpClientV.cid = cid;
+        TcpClient.close(protocore_tcp_client_span());
         return;
     }
     Serial.printf("opened %s (%llu bytes)\n", SMB_PATH, (unsigned long long)h.file_size);
@@ -142,7 +159,8 @@ void read_program()
 
     x.deadline = millis() + 8000;
     smb_close(&h, cl_send, cl_recv, &x);
-    Tcp.client->close(cid);
+    TcpClientV.cid = cid;
+    TcpClient.close(protocore_tcp_client_span());
 }
 
 void setup()

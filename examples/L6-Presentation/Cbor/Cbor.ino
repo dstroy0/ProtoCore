@@ -80,7 +80,7 @@ void setup()
         Cbor.put_str(&w, "uptime");
         Cbor.put_uint(&w, millis() / 1000);
         Cbor.put_str(&w, "rssi");
-        Cbor.put_int(&w, Physical.wifi->rssi());
+        Cbor.put_int(&w, protocore_physical_rssi());
         ctx.len = w.overflow ? 0 : w.pos;
         ctx.off = 0;
         send_chunked(id, 200, "application/cbor", protocore_cbor_source, &ctx);

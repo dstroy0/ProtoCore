@@ -67,7 +67,7 @@ void setup()
     Modbus.on_write(protocore_modbus_span());
 
     listen(502, PROTO_MODBUS);
-    begin();
+    proto_begin(NULL);
     Serial.println("Modbus TCP slave on :502");
 }
 

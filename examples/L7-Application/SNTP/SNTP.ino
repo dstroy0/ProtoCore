@@ -5,9 +5,9 @@
  * @file SNTP.ino
  * @brief Wall-clock time via SNTP (PROTOCORE_ENABLE_NTP).
  *
- * protocore_ntp_begin(tz) starts the ESP-IDF SNTP client; the first sync lands a few
- * seconds later. protocore_ntp_http_date() formats the current time as an RFC 7231
- * date string (returns 0 until synced). GET /time returns it.
+ * NtpService.begin starts the ESP-IDF SNTP client; the first sync lands a few seconds later.
+ * HttpDate.format renders the NTP epoch as an RFC 9110 IMF-fixdate (empty until synced).
+ * GET /time returns it.
  *
  * NOTE: this service is compiled into the library only when PROTOCORE_ENABLE_NTP
  * is set for the whole build (a .ino #define does not reach the separately
@@ -23,6 +23,9 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/application/ntp_service/ntp_service.h"
+#include "shared/http_date/http_date.h"
+
+static uint8_t http_date_work[16]; // the borrow an entry takes; HttpDate never reads it
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
@@ -31,8 +34,13 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 void handle_time(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    char date[40];
-    if (protocore_ntp_http_date(date, sizeof(date)) == 0)
+    char date[PROTOCORE_HTTP_DATE_MAX];
+    NtpService.epoch(protocore_ntp_service_span());
+    HttpDateV.args.epoch = NtpServiceV.value;
+    HttpDateV.args.out = date;
+    HttpDateV.args.out_cap = sizeof(date);
+    HttpDate.format(http_date_work);
+    if (HttpDateV.n == 0)
     {
         send_text(slot_id, 503, "text/plain", "Time not synced yet");
         return;
@@ -59,7 +67,10 @@ void setup()
     on_http("/time", HTTP_GET, handle_time);
     begin_http(80, NULL);
 
-    protocore_ntp_begin("UTC0", NULL, NULL); // POSIX TZ string; set your zone for local time
+    NtpServiceV.begin_args.tz = "UTC0"; // POSIX TZ string; set your zone for local time
+    NtpServiceV.begin_args.server1 = NULL;
+    NtpServiceV.begin_args.server2 = NULL;
+    NtpService.begin(protocore_ntp_service_span());
 }
 
 void loop()

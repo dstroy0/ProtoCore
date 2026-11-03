@@ -78,7 +78,7 @@ void setup()
         Serial.println("SPI bridge publish failed");
     }
 
-    begin();
+    proto_begin(NULL);
     Serial.printf("UART stream : %u.%u.%u.%u:%u  <->  Serial1\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF), UART_PORT);
     Serial.printf("SPI txn     : %u.%u.%u.%u:%u  <->  SPI CS=GPIO5\n", (unsigned)(ip & 0xFF),

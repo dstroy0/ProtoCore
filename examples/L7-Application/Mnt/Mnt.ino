@@ -63,8 +63,8 @@ void setup()
     s_root = protocore_fs_begin("/"); // every name below is resolved against this root
 
     on_http("/save", HTTP_GET, [](uint8_t id, HttpReq *req) {
-        const char *name = http_get_query(req, "name");
-        const char *data = http_get_query(req, "data");
+        const char *name = HttpParser.get_query(protocore_http_parser_span(), req, "name");
+        const char *data = HttpParser.get_query(protocore_http_parser_span(), req, "data");
         if (!name || !*name || !data)
         {
             send_text(id, 400, "application/json", "{\"error\":\"name+data\"}");
@@ -75,7 +75,7 @@ void setup()
     });
 
     on_http("/load", HTTP_GET, [](uint8_t id, HttpReq *req) {
-        const char *name = http_get_query(req, "name");
+        const char *name = HttpParser.get_query(protocore_http_parser_span(), req, "name");
         if (!name || !*name)
         {
             send_text(id, 400, "text/plain", "name?");
@@ -93,7 +93,7 @@ void setup()
     });
 
     on_http("/size", HTTP_GET, [](uint8_t id, HttpReq *req) {
-        const char *name = http_get_query(req, "name");
+        const char *name = HttpParser.get_query(protocore_http_parser_span(), req, "name");
         long n = (name && *name) ? protocore_fs_size(s_root, "", name) : -1;
         char b[24];
         snprintf(b, sizeof(b), "%ld", n);
@@ -101,7 +101,7 @@ void setup()
     });
 
     on_http("/rm", HTTP_GET, [](uint8_t id, HttpReq *req) {
-        const char *name = http_get_query(req, "name");
+        const char *name = HttpParser.get_query(protocore_http_parser_span(), req, "name");
         bool ok = (name && *name) && protocore_fs_remove(s_root, "", name);
         send_text(id, ok ? 200 : 404, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
     });

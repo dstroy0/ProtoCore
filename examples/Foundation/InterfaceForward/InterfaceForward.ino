@@ -76,7 +76,9 @@ static void on_dma_complete(const mmgr_praet_event *ev, void *)
     it.msg.len = ev->bytes;
     uint16_t n = (ev->bytes < sizeof(it.msg.bytes)) ? ev->bytes : sizeof(it.msg.bytes);
     memcpy(it.msg.bytes, ev->data, n);
-    Session.workers->queue->post_from_isr(protocore_pq_lane::PROTOCORE_PQ_LANE_FORWARD, &it);
+    PreemptQueueV.lane = protocore_pq_lane::PROTOCORE_PQ_LANE_FORWARD;
+    PreemptQueueV.post_args.item = &it;
+    PreemptQueue.post_from_isr(protocore_preempt_queue_span());
 }
 
 void setup()
@@ -90,7 +92,9 @@ void setup()
     fwd.priority = 0; // 0 -> the FORWARD lane default (above the user lane)
     fwd.core = 1;
     fwd.name = "forward";
-    Session.workers->queue->start(protocore_pq_lane::PROTOCORE_PQ_LANE_FORWARD, &fwd);
+    PreemptQueueV.lane = protocore_pq_lane::PROTOCORE_PQ_LANE_FORWARD;
+    PreemptQueueV.cfg = &fwd;
+    PreemptQueue.start(protocore_preempt_queue_span());
 
     // Interface A ingress: a DMA channel fed by the simulator.
     // Looped back on itself, so a frame this sketch submits arrives as the receive a line would bring.

@@ -41,11 +41,10 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
-#include "network_drivers/presentation/ssh/auth/ssh_auth.h"
-#include "network_drivers/presentation/ssh/connection/ssh_channel.h"
-#include "network_drivers/presentation/ssh/connection/ssh_conn.h"
-#include "network_drivers/tls/ssh_rsa.h"          // protocore_ssh_rsa_load_pubkey (NVS path)
-#include "network_drivers/presentation/ssh/transport/ssh_transport.h" // protocore_ssh_hostkey_ed25519_set (embed path)
+#include "network_drivers/presentation/ssh/auth/auth.h"
+#include "network_drivers/presentation/ssh/connection/connection.h"
+#include "network_drivers/presentation/ssh/transport/ssh_rsa/ssh_rsa.h"         // SshRsa.load_pubkey (NVS path)
+#include "network_drivers/presentation/ssh/transport/transport/transport.h" // protocore_ssh_hostkey_ed25519_set (embed path)
 
 #if HOST_KEY_PROVISION == 1
 // Prefer a generated key if you made one (gen_ssh_host_key.py ... --header host_key.h);
@@ -76,7 +75,11 @@ static bool ssh_password_auth(const char *user, const char *pass)
 
 static void ssh_on_data(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len)
 {
-    protocore_ssh_conn_send(slot, channel, data, len); // echo
+    SshConnectionV.chan.slot = slot; // echo
+    SshConnectionV.chan.channel = channel;
+    SshConnectionV.chan.data = data;
+    SshConnectionV.chan.len = len;
+    SshConnection.channel_send_data(protocore_ssh_connection_span());
 }
 
 // Install the host key. Returns true on success. The two provisioning paths differ
@@ -99,7 +102,8 @@ static bool install_host_key()
     Serial.println("Host key: wrote RSA DER to NVS (remove PROVISION_WRITE_ONCE and re-flash)");
 #endif
     // Normal boot: load the public half from NVS (private key stays out of RAM).
-    if (SshRsa.load_pubkey(protocore_ssh_rsa_span()) != 0)
+    SshRsa.load_pubkey(protocore_ssh_rsa_span());
+    if (SshRsaV.n != 0)
     {
         Serial.println("Host key: none in NVS - flash once with PROVISION_WRITE_ONCE (see docs/SSH.md)");
         return false;
@@ -131,17 +135,18 @@ void setup()
         return;
     }
 
-    protocore_ssh_auth_set_password_cb(ssh_password_auth);
-    protocore_ssh_channel_set_data_cb(ssh_on_data);
+    SshAuthV.cbs.password_cb = ssh_password_auth;
+    SshAuth.set_password_cb(protocore_ssh_auth_span());
+    SshConnectionV.data_cb = ssh_on_data;
+    SshConnection.set_data_cb(protocore_ssh_connection_span());
 
     listen(22, PROTO_SSH);
-    int32_t result = begin();
+    int32_t result = proto_begin(NULL);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
         return;
     }
-    protocore_ssh_conn_setup();
     Serial.println("SSH server started on port 22");
 }
 

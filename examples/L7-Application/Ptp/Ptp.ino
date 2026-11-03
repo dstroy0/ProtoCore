@@ -122,7 +122,12 @@ static void master_tick()
     PtpV.build_announce_args.a = &a;
     Ptp.build_announce(ptp_work);
     size_t n = PtpV.n;
-    Udp.listener->sendto(PROTOCORE_PTP_GENERAL_PORT, &g_group, PROTOCORE_PTP_GENERAL_PORT, buf, n);
+    UdpListenerV.port = PROTOCORE_PTP_GENERAL_PORT;
+    UdpListenerV.send_args.dst = &g_group;
+    UdpListenerV.send_args.dst_port = PROTOCORE_PTP_GENERAL_PORT;
+    UdpListenerV.send_args.data = buf;
+    UdpListenerV.send_args.len = n;
+    UdpListener.sendto(protocore_udp_listener_span());
 
     // Sync (two-step: the precise time follows in Follow_Up).
     h.flags = 0x0200; // twoStepFlag
@@ -134,7 +139,12 @@ static void master_tick()
     Ptp.build_sync(ptp_work);
     n = PtpV.n;
     int64_t t1 = master_time_ns(); // precise egress instant
-    Udp.listener->sendto(PROTOCORE_PTP_EVENT_PORT, &g_group, PROTOCORE_PTP_EVENT_PORT, buf, n);
+    UdpListenerV.port = PROTOCORE_PTP_EVENT_PORT;
+    UdpListenerV.send_args.dst = &g_group;
+    UdpListenerV.send_args.dst_port = PROTOCORE_PTP_EVENT_PORT;
+    UdpListenerV.send_args.data = buf;
+    UdpListenerV.send_args.len = n;
+    UdpListener.sendto(protocore_udp_listener_span());
 
     // Follow_Up carries t1.
     h.flags = 0;
@@ -148,7 +158,12 @@ static void master_tick()
     PtpV.build_follow_up_args.precise = &ts1;
     Ptp.build_follow_up(ptp_work);
     n = PtpV.n;
-    Udp.listener->sendto(PROTOCORE_PTP_GENERAL_PORT, &g_group, PROTOCORE_PTP_GENERAL_PORT, buf, n);
+    UdpListenerV.port = PROTOCORE_PTP_GENERAL_PORT;
+    UdpListenerV.send_args.dst = &g_group;
+    UdpListenerV.send_args.dst_port = PROTOCORE_PTP_GENERAL_PORT;
+    UdpListenerV.send_args.data = buf;
+    UdpListenerV.send_args.len = n;
+    UdpListener.sendto(protocore_udp_listener_span());
 
     m_seq++;
 }
@@ -175,7 +190,12 @@ static void master_on_delay_req(const protocore_ptp_header *req)
     PtpV.build_delay_resp_args.req_port = req->port_number;
     Ptp.build_delay_resp(ptp_work);
     size_t n = PtpV.n;
-    Udp.listener->sendto(PROTOCORE_PTP_GENERAL_PORT, &g_group, PROTOCORE_PTP_GENERAL_PORT, buf, n);
+    UdpListenerV.port = PROTOCORE_PTP_GENERAL_PORT;
+    UdpListenerV.send_args.dst = &g_group;
+    UdpListenerV.send_args.dst_port = PROTOCORE_PTP_GENERAL_PORT;
+    UdpListenerV.send_args.data = buf;
+    UdpListenerV.send_args.len = n;
+    UdpListener.sendto(protocore_udp_listener_span());
 }
 
 static void on_event(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *ctx)
@@ -220,7 +240,12 @@ static void send_delay_req()
     Ptp.build_delay_req(ptp_work);
     size_t n = PtpV.n;
     t3 = now_ns();
-    Udp.listener->sendto(PROTOCORE_PTP_EVENT_PORT, &g_group, PROTOCORE_PTP_EVENT_PORT, buf, n);
+    UdpListenerV.port = PROTOCORE_PTP_EVENT_PORT;
+    UdpListenerV.send_args.dst = &g_group;
+    UdpListenerV.send_args.dst_port = PROTOCORE_PTP_EVENT_PORT;
+    UdpListenerV.send_args.data = buf;
+    UdpListenerV.send_args.len = n;
+    UdpListener.sendto(protocore_udp_listener_span());
 }
 
 static void on_event(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *ctx)
@@ -355,8 +380,18 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    bool e = Udp.listener->listen_multicast(PTP_GROUP, PROTOCORE_PTP_EVENT_PORT, on_event, nullptr);
-    bool g = Udp.listener->listen_multicast(PTP_GROUP, PROTOCORE_PTP_GENERAL_PORT, on_general, nullptr);
+    UdpListenerV.bind.group_ip = PTP_GROUP;
+    UdpListenerV.port = PROTOCORE_PTP_EVENT_PORT;
+    UdpListenerV.bind.handler = on_event;
+    UdpListenerV.bind.handler_ctx = nullptr;
+    UdpListener.listen_multicast(protocore_udp_listener_span());
+    bool e = UdpListenerV.ok;
+    UdpListenerV.bind.group_ip = PTP_GROUP;
+    UdpListenerV.port = PROTOCORE_PTP_GENERAL_PORT;
+    UdpListenerV.bind.handler = on_general;
+    UdpListenerV.bind.handler_ctx = nullptr;
+    UdpListener.listen_multicast(protocore_udp_listener_span());
+    bool g = UdpListenerV.ok;
     Serial.printf("PTP on 319/320 (event=%d general=%d)\n", e, g);
 }
 

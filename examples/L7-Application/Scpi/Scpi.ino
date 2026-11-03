@@ -45,7 +45,15 @@ static char c_resp[256];
 // (protocore_scpi_build does this).
 static size_t scpi_exchange(int cid, const char *cmd, size_t cmd_len)
 {
-    if (cmd_len == 0 || !Tcp.client->send(cid, cmd, cmd_len))
+    if (cmd_len == 0)
+    {
+        return 0;
+    }
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = cmd;
+    TcpClientV.io.len = cmd_len;
+    TcpClient.send(protocore_tcp_client_span());
+    if (!TcpClientV.ok)
     {
         return 0;
     }
@@ -53,12 +61,18 @@ static size_t scpi_exchange(int cid, const char *cmd, size_t cmd_len)
     unsigned long deadline = millis() + 3000;
     while (got < sizeof(c_resp) - 1 && millis() < deadline)
     {
-        if (!Tcp.client->available(cid))
+        TcpClientV.cid = cid;
+        TcpClient.available(protocore_tcp_client_span());
+        if (!TcpClientV.n)
         {
             continue;
         }
         uint8_t b = 0;
-        if (Tcp.client->read(cid, &b, 1) != 1)
+        TcpClientV.cid = cid;
+        TcpClientV.io.buf = &b;
+        TcpClientV.io.cap = 1;
+        TcpClient.read(protocore_tcp_client_span());
+        if (TcpClientV.n != 1)
         {
             continue;
         }
@@ -78,7 +92,11 @@ static size_t scpi_exchange(int cid, const char *cmd, size_t cmd_len)
 
 static void run_session(const char *host)
 {
-    int cid = Tcp.client->open(host, PROTOCORE_SCPI_PORT, 8000);
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = PROTOCORE_SCPI_PORT;
+    TcpClientV.dial.timeout_ms = 8000;
+    TcpClient.open(protocore_tcp_client_span());
+    int cid = TcpClientV.i32;
     if (cid < 0)
     {
         Serial.println("[scpi] connect failed");
@@ -100,7 +118,10 @@ static void run_session(const char *host)
 
     // 2) *CLS - clear status byte + error queue (no response).
     n = protocore_scpi_build(c_cmd, sizeof(c_cmd), protocore_scpi_common(SCPI_CLS), nullptr, 0);
-    Tcp.client->send(cid, c_cmd, n);
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = c_cmd;
+    TcpClientV.io.len = n;
+    TcpClient.send(protocore_tcp_client_span());
 
     // 3) MEAS:VOLT:DC? - take a DC voltage reading and parse it as a number.
     n = protocore_scpi_build(c_cmd, sizeof(c_cmd), "MEASure:VOLTage:DC?", nullptr, 0);
@@ -124,7 +145,8 @@ static void run_session(const char *host)
         Serial.printf("[scpi] SYST:ERR? -> %s\n", c_resp);
     }
 
-    Tcp.client->close(cid);
+    TcpClientV.cid = cid;
+    TcpClient.close(protocore_tcp_client_span());
     Serial.println("[scpi] done");
 }
 

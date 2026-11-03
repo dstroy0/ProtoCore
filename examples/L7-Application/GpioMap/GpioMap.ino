@@ -24,6 +24,8 @@
 #include "network_drivers/physical/physical/physical.h"
 #include "server/signaling/gpio_map/gpio_map.h"
 
+static uint8_t gpio_map_work[16]; // the borrow an entry takes; GpioMap never reads it
+
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
@@ -77,7 +79,10 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // GET /gpio (JSON) + POST /gpio (drive an output); pinMode is applied here.
-    protocore_gpio_map_begin("/gpio", gpio_pins, gpio_count);
+    GpioMapV.args.path = "/gpio";
+    GpioMapV.args.pins_rw = gpio_pins;
+    GpioMapV.args.count = gpio_count;
+    GpioMap.begin(gpio_map_work);
 
     on_http("/", HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/html", DIAG_PAGE); });
     begin_http(80, NULL);

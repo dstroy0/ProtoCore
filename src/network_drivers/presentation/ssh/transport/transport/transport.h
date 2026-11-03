@@ -321,6 +321,24 @@ static const SshTransportNs SshTransport __attribute__((unused)) = {
  */
 uint8_t *protocore_ssh_transport_span(void);
 
+/**
+ * @brief Install the server's ssh-ed25519 host key (RFC 8709) from its 32-byte private seed.
+ * @param seed the private seed; its public key is derived here and both are kept.
+ */
+void protocore_ssh_hostkey_ed25519_set(const uint8_t seed[32]);
+
+/** @brief Whether an ssh-ed25519 host key is installed. */
+proto_bool protocore_ssh_hostkey_ed25519_available(void);
+
+/**
+ * @brief Install the server's ecdsa-sha2-nistp256 host key (RFC 5656) from its private scalar.
+ * @param priv the 32-byte scalar; an invalid one installs no key.
+ */
+void protocore_ssh_hostkey_ecdsa_set(const uint8_t *priv);
+
+/** @brief Whether an ecdsa-sha2-nistp256 host key is installed. */
+proto_bool protocore_ssh_hostkey_ecdsa_available(void);
+
 /** @brief Reader shorthand: SSH_TRANSPORT->kexinit_parse(...). */
 #define SSH_TRANSPORT (&SshTransport)
 

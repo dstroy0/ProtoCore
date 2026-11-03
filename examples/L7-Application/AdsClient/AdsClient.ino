@@ -76,7 +76,15 @@ static AdsRequest next_request()
 // Send one framed request, read one AMS/TCP-framed reply. Returns the total reply length.
 static size_t exchange(int cid, size_t reqlen)
 {
-    if (reqlen == 0 || !Tcp.client->send(cid, c_req, reqlen))
+    if (reqlen == 0)
+    {
+        return 0;
+    }
+    TcpClientV.cid = cid;
+    TcpClientV.io.data = c_req;
+    TcpClientV.io.len = reqlen;
+    TcpClient.send(protocore_tcp_client_span());
+    if (!TcpClientV.ok)
     {
         return 0;
     }
@@ -85,9 +93,15 @@ static size_t exchange(int cid, size_t reqlen)
     // Read the 6-octet AMS/TCP header first (reserved(2) + length(4)).
     while (got < ADS_AMSTCP_HDR_LEN && millis() < deadline)
     {
-        if (Tcp.client->available(cid))
+        TcpClientV.cid = cid;
+        TcpClient.available(protocore_tcp_client_span());
+        if (TcpClientV.n)
         {
-            got += Tcp.client->read(cid, c_resp + got, ADS_AMSTCP_HDR_LEN - got);
+            TcpClientV.cid = cid;
+            TcpClientV.io.buf = c_resp + got;
+            TcpClientV.io.cap = ADS_AMSTCP_HDR_LEN - got;
+            TcpClient.read(protocore_tcp_client_span());
+            got += TcpClientV.n;
         }
     }
     if (got < ADS_AMSTCP_HDR_LEN)
@@ -103,9 +117,15 @@ static size_t exchange(int cid, size_t reqlen)
     }
     while (got < total && millis() < deadline)
     {
-        if (Tcp.client->available(cid))
+        TcpClientV.cid = cid;
+        TcpClient.available(protocore_tcp_client_span());
+        if (TcpClientV.n)
         {
-            got += Tcp.client->read(cid, c_resp + got, total - got);
+            TcpClientV.cid = cid;
+            TcpClientV.io.buf = c_resp + got;
+            TcpClientV.io.cap = total - got;
+            TcpClient.read(protocore_tcp_client_span());
+            got += TcpClientV.n;
         }
     }
     return got == total ? total : 0;
@@ -113,7 +133,11 @@ static size_t exchange(int cid, size_t reqlen)
 
 static void run_client(const char *host)
 {
-    int cid = Tcp.client->open(host, ADS_TCP_PORT, 8000);
+    TcpClientV.dial.host = host;
+    TcpClientV.dial.port = ADS_TCP_PORT;
+    TcpClientV.dial.timeout_ms = 8000;
+    TcpClient.open(protocore_tcp_client_span());
+    int cid = TcpClientV.i32;
     if (cid < 0)
     {
         Serial.println("[ads] connect failed");
@@ -206,7 +230,8 @@ static void run_client(const char *host)
         rr.result != 0 || rr.len < 4)
     {
         Serial.printf("[ads] handle for '%s' failed\n", SYMBOL);
-        Tcp.client->close(cid);
+        TcpClientV.cid = cid;
+        TcpClient.close(protocore_tcp_client_span());
         return;
     }
     uint32_t handle = (uint32_t)rr.data[0] | ((uint32_t)rr.data[1] << 8) | ((uint32_t)rr.data[2] << 16) |
@@ -255,7 +280,8 @@ static void run_client(const char *host)
     Ads.build_write(ads_work);
     exchange(cid, AdsV.n);
 
-    Tcp.client->close(cid);
+    TcpClientV.cid = cid;
+    TcpClient.close(protocore_tcp_client_span());
     Serial.println("[ads] done");
 }
 

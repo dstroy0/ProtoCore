@@ -178,7 +178,7 @@ void handle_expert_not_found(uint8_t slot_id, HttpReq *req)
     unsigned long start_us = micros();
     total_routed_requests++;
 
-    const char *accept_header = http_get_header(req, "Accept");
+    const char *accept_header = HttpParser.get_header(protocore_http_parser_span(), req, "Accept");
     bool wants_json = (accept_header && strstr(accept_header, "application/json") != nullptr);
 
     char error_buf[256];

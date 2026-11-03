@@ -275,7 +275,7 @@ const char *get_reset_reason_string(esp_reset_reason_t reason)
 /** @brief Verify the admin security-token header. */
 bool verify_admin_privileges(const HttpReq *req)
 {
-    const char *token = http_get_header(req, "X-Admin-Token");
+    const char *token = HttpParser.get_header(protocore_http_parser_span(), req, "X-Admin-Token");
     return (token && strcmp(token, ADMIN_TOKEN) == 0);
 }
 
@@ -297,7 +297,9 @@ void handle_get_sysinfo(uint8_t slot_id, HttpReq *req)
     }
 
     char ssid[33];
-    Physical.wifi->ssid(ssid, sizeof(ssid));
+    PhysicalV.read.text = ssid;
+    PhysicalV.read.cap = sizeof(ssid);
+    Physical.wifi_ssid(protocore_physical_span());
     uint32_t ip = protocore_physical_egress_ipv4();
     char ip_str[16];
     snprintf(ip_str, sizeof(ip_str), "%u.%u.%u.%u", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
@@ -319,8 +321,8 @@ void handle_get_sysinfo(uint8_t slot_id, HttpReq *req)
              "\"ip_address\":\"%s\""
              "}",
              ESP.getFreeHeap(), ESP.getMinFreeHeap(), ESP.getMaxAllocHeap(), millis(),
-             get_reset_reason_string(esp_reset_reason()), ESP.getChipRevision(), ESP.getCpuFreqMHz(), Physical.wifi->rssi(),
-             ssid, Physical.wifi->channel(), ip_str);
+             get_reset_reason_string(esp_reset_reason()), ESP.getChipRevision(), ESP.getCpuFreqMHz(), protocore_physical_rssi(),
+             ssid, protocore_physical_channel(), ip_str);
 
     send_text(slot_id, 200, "application/json", response_buf);
 }
