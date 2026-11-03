@@ -71,7 +71,7 @@ To isolate our application code from physical hardware and the operating system'
 
 <!-- BEGIN GENERATED test-environments (edit test/test_matrix.json, run test/harness.py readme gen) -->
 
-The native test matrix has **424 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [harness.py](harness.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
+The native test matrix has **396 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [harness.py](harness.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
 
 | Environment | Feature flag(s) | Test suite(s) | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -310,9 +310,9 @@ The native test matrix has **424 environments**, one per feature, generated from
 | `native_power_mgmt` | `PROTOCORE_ENABLE_POWER_MGMT=1`, `PROTOCORE_HAS_VENDOR_PM=1`, `PROTOCORE_HAS_VENDOR_BT=1` | `unit/src/server/core/power_mgmt/test_power_mgmt` | SoC power governor (server/power_mgmt): the pure clock decision from load, die temperature and reset reason - load-based scaling, the thermal hysteresis that stops a part parked at the limit from osci... |
 | `native_powerlink` | `PROTOCORE_ENABLE_POWERLINK=1` | `unit/src/services/fieldbus/powerlink/test_powerlink` | Ethernet POWERLINK basic frame codec (services/fieldbus/powerlink): the SoC / PReq / PRes / SoA / ASnd builders over the [messageType][dest][source][payload] frame, the parser, and the node addressing. |
 | `native_pqc` | `PROTOCORE_ENABLE_PQC_KEX=1` | `unit/src/crypto/hash/test_pqc_sha3`, `unit/src/crypto/hash/test_pqc_mlkem` | Post-quantum hybrid KEX primitives (network_drivers/presentation/pqc): the Keccak/SHA-3/SHAKE sponge (FIPS 202) and ML-KEM-768 Encaps (FIPS 203) - the responder half of the mlkem768x25519-sha256 (SSH)... |
-| `native_preempt_queue` | `PROTOCORE_ENABLE_PREEMPT_QUEUE=1`, `PROTOCORE_PQ_DEPTH=4`, `PROTOCORE_PQ_ITEM_SIZE=16`, `PROTOCORE_ENABLE_DMA=1`, `PROTOCORE_DMA_BUF_SIZE=8`, `PROTOCORE_DMA_CHANNELS=2` | `unit/src/server/core/test_preempt_queue` | Preempting work queue (server/core/preempt_queue), v5 real-time ingest: FIFO order, urgent-to-front, fail-closed when full, high-water, and the hand-off from a post to the lane task's handler. |
+| `native_preempt_queue` | `PROTOCORE_ENABLE_PREEMPT_QUEUE=1`, `PROTOCORE_PQ_DEPTH=4`, `PROTOCORE_PQ_ITEM_SIZE=16`, `PROTOCORE_ENABLE_DMA=1`, `MMGR_ENABLE_DMA=1`, `MMGR_ACCEPT_DEFAULTS=1`, `PROTOCORE_DMA_BUF_SIZE=8`, `PROTOCORE_DMA_CHANNELS=2` | `unit/src/server/core/test_preempt_queue` | Preempting work queue (server/core/preempt_queue), v5 real-time ingest: FIFO order, urgent-to-front, fail-closed when full, high-water, and the hand-off from a post to the lane task's handler. |
 | `native_presentation` | default | `unit/src/network_drivers/presentation/test_presentation` | test_presentation against the native_stack_l46 stack. |
-| `native_primitives` | default | `unit/src/mmgr/test_primitives`, `unit/src/shared/crc/test_crc` | Shared no-stdlib primitives (shared): the base-10 protocore_strtol/strtoul/strtof number parsers (numparse.h), the strict RFC 3629 UTF-8 validator (utf8.h), and the parameterized Rocksoft/Williams CRC... |
+| `native_primitives` | default | `unit/src/shared/crc/test_crc` | Shared no-stdlib primitives (shared): the base-10 protocore_strtol/strtoul/strtof number parsers (numparse.h), the strict RFC 3629 UTF-8 validator (utf8.h), and the parameterized Rocksoft/Williams CRC... |
 | `native_profibus` | `PROTOCORE_ENABLE_PROFIBUS=1` | `unit/src/services/fieldbus/profibus/test_profibus` | PROFIBUS-DP FDL telegram codec (services/fieldbus/profibus): the FT 1.2 SD1 / SD2 / SD3 builders and the validating parser, the FCS (the arithmetic sum of DA + SA + FC + data unit, carries discarded),... |
 | `native_profinet` | `PROTOCORE_ENABLE_PROFINET=1` | `unit/src/services/fieldbus/profinet/test_profinet` | PROFINET DCP frame codec (services/fieldbus/profinet): the 12-octet FrameID + DCP header build/parse (ServiceID, ServiceType, Xid, ResponseDelayFactor, DCPDataLength - all big-endian), the option/subo... |
 | `native_promisc_dot11` | `PROTOCORE_ENABLE_PROMISC=1`, `PROTOCORE_PHYSICAL_HAS_BACKEND=1` | `unit/src/services/radio/promisc/test_promisc` | Wi-Fi promiscuous capture helpers (services/radio/promisc/promisc.c): the IEEE 802.11 MAC header parser against clause 9.2.4.1 Frame Control, the clause 9.3.2 address-field table for all four To DS / ... |
@@ -346,7 +346,7 @@ The native test matrix has **424 environments**, one per feature, generated from
 | `native_relay_listener` | `PROTOCORE_ENABLE_RELAY=1`, `PROTOCORE_ENABLE_TCP=1`, `PROTOCORE_ENABLE_TCP_CLIENT=1`, `PROTOCORE_ENABLE_DNS_RESOLVER=1` | `unit/src/server/net/relay/test_relay_listener` | Relay / DNAT listener bind table (server/net/relay/relay_listener): the published front-port binds, the bridge allocator, and the host-length and table-full refusals. |
 | `native_response_headers` | `PROTOCORE_ENABLE_NTP=1`, `PROTOCORE_ENABLE_WEBSOCKET=1`, `PROTOCORE_ENABLE_SSE=1`, `PROTOCORE_HAS_NET_STACK=1`, `PROTOCORE_ENABLE_UDP=1` | `env/application/test_response_headers` | test_response_headers against the native_stack_http stack. |
 | `native_rfc1951` | `PROTOCORE_ENABLE_DEFLATE_RFC1951=1` | `unit/src/network_drivers/presentation/codec/deflate/test_rfc1951` | The RFC 1951 sec 3.2.5 length and distance tables and the sec 3.2.6 fixed-Huffman construction over them, defined once in codec/deflate/rfc1951.c and read by both DEFLATE codecs and both SSH zlib codecs. |
-| `native_roaming` | `PROTOCORE_ENABLE_ROAMING=1` | `unit/src/mmgr/test_roaming` | Wi-Fi roaming decision layer (network_drivers/network/roaming): the pure policy that fuses the current RSSI, a candidate neighbour list, and an optional 802.11v BTM hint into a roam/stay decision (tar... |
+| `native_roaming` | `PROTOCORE_ENABLE_ROAMING=1` | `unit/src/network_drivers/datalink/roaming/test_roaming` | Wi-Fi roaming decision layer (network_drivers/network/roaming): the pure policy that fuses the current RSSI, a candidate neighbour list, and an optional 802.11v BTM hint into a roam/stay decision (tar... |
 | `native_robotics` | `PROTOCORE_ENABLE_OPCUA=1`, `PROTOCORE_ENABLE_ROBOTICS=1` | `unit/src/services/opcua/models/robotics/test_robotics` | OPC UA for Robotics (OPC 40010-1) MotionDeviceSystem model (services/machine_tool/robotics) - the Browse hierarchy + the Read resolver over a bound RoboticsMotionDeviceSystem, including the parametric... |
 | `native_rsa_kat` | default | `unit/src/crypto/asymmetric/test_rsa_kat` | RSASSA-PKCS1-v1.5 over RSA-2048 (crypto/asymmetric/rsa.h) on the software modular multiply. |
 | `native_rsa_kat_hw` | `PROTOCORE_RSA_MODMUL_HW=1` | `unit/src/crypto/asymmetric/test_rsa_kat` | RSASSA-PKCS1-v1.5 over RSA-2048 a second time with the accelerated modular multiply selected (PROTOCORE_RSA_MODMUL_HW), answered by the host RSA/MPI HAL so both arms of the multiply run natively again... |
@@ -680,7 +680,7 @@ We test session and socket race conditions by interleaved function calling:
 
 <!-- BEGIN GENERATED test-directory (run test/harness.py readme gen) -->
 
-A thorough directory of all **5815 test cases** across **365 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
+A thorough directory of all **5560 test cases** across **347 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
 
 <details>
 <summary><b>test_accept_gate (19 tests)</b></summary>
@@ -2884,312 +2884,6 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 </details>
 
 <details>
-<summary><b>test_arena (27 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_persist_alloc_is_aligned_and_inside_the_region</b> &mdash; <i>Persist alloc is aligned and inside the region</i></summary>
-
-    * **Objective**: Persist alloc is aligned and inside the region
-    * **Assertions**:
-      * <code>Assert not null (p)</code>
-      * <code>Assert not null (q)</code>
-      * <code>Assert true (aligned(&a, p, PROTOCORE_ARENA_ALIGN))</code>
-      * <code>Assert true (aligned(&a, q, PROTOCORE_ARENA_ALIGN))</code>
-      * <code>Assert true (inside(p, g_buf, sizeof(g_buf)))</code>
-      * <code>Assert true (p + 100 &lt;= q)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_persist_alloc_is_zeroed_on_carve_and_on_reuse</b> &mdash; <i>Persist alloc is zeroed on carve and on reuse</i></summary>
-
-    * **Objective**: Persist alloc is zeroed on carve and on reuse
-    * **Assertions**:
-      * <code>Assert not null (p)</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, p[i]);</code>
-      * <code>Assert equal ptr (p, q)</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, q[i]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_persist_reuses_a_freed_hole</b> &mdash; <i>Persist reuses a freed hole</i></summary>
-
-    * **Objective**: Persist reuses a freed hole
-    * **Assertions**:
-      * <code>Assert not null (A)</code>
-      * <code>Assert not null (C)</code>
-      * <code>Assert equal ptr (B, protocore_arena_persist_alloc(&a, 64))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_persist_free_coalesces_adjacent_holes</b> &mdash; <i>Persist free coalesces adjacent holes</i></summary>
-
-    * **Objective**: Persist free coalesces adjacent holes
-    * **Assertions**:
-      * <code>Assert not null (A)</code>
-      * <code>Assert equal ptr (B, big)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_persist_skips_a_hole_that_is_too_small</b> &mdash; <i>Persist skips a hole that is too small</i></summary>
-
-    * **Objective**: Persist skips a hole that is too small
-    * **Assertions**:
-      * <code>Assert not null (B)</code>
-      * <code>Assert not null (C)</code>
-      * <code>Assert true (C &gt; (uint8_t *)B)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_persist_free_of_the_top_block_returns_the_middle</b> &mdash; <i>Persist free of the top block returns the middle</i></summary>
-
-    * **Objective**: Persist free of the top block returns the middle
-    * **Assertions**:
-      * <code>Assert not null (p)</code>
-      * <code>Assert true (protocore_arena_free_bytes(&a) &lt; free0)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(free0, protocore_arena_free_bytes(&a));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_arena_persist_used(&a));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_persist_size_overflow_fails_closed</b> &mdash; <i>Persist size overflow fails closed</i></summary>
-
-    * **Objective**: Persist size overflow fails closed
-    * **Assertions**:
-      * <code>Assert not null (protocore_arena_persist_alloc(&a, 250))</code>
-      * <code>Assert null (protocore_arena_persist_alloc(&a, huge))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_persist_double_free_and_null_free_are_noops</b> &mdash; <i>Persist double free and null free are noops</i></summary>
-
-    * **Objective**: Persist double free and null free are noops
-    * **Assertions**:
-      * <code>Assert not null (p)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_arena_persist_used(&a));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_arena_persist_used(&a));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_arena_persist_used(&a));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_free_bytes_reaches_zero_without_crossing</b> &mdash; <i>Free bytes reaches zero without crossing</i></summary>
-
-    * **Objective**: Free bytes reaches zero without crossing
-    * **Assertions**:
-      * <code>Assert true (free0 &gt; 0)</code>
-      * <code>Assert not null (protocore_arena_persist_alloc(&a, free0))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_arena_free_bytes(&a));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_scratch_bumps_down_and_resets</b> &mdash; <i>Scratch bumps down and resets</i></summary>
-
-    * **Objective**: Scratch bumps down and resets
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_arena_scratch_used(&a));</code>
-      * <code>Assert not null (p)</code>
-      * <code>Assert true (aligned(&a, p, PROTOCORE_ARENA_ALIGN))</code>
-      * <code>Assert true (protocore_arena_scratch_used(&a) &gt;= 100)</code>
-      * <code>Assert true (q &lt; p)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_arena_scratch_used(&a));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_scratch_mark_and_release</b> &mdash; <i>Scratch mark and release</i></summary>
-
-    * **Objective**: Scratch mark and release
-    * **Assertions**:
-      * <code>Assert not null (protocore_arena_scratch_alloc(&a, 100))</code>
-      * <code>Assert not null (protocore_arena_scratch_alloc(&a, 200))</code>
-      * <code>Assert not null (protocore_arena_scratch_alloc(&a, 50))</code>
-      * <code>Assert true (protocore_arena_scratch_used(&a) &gt; used)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(used, protocore_arena_scratch_used(&a));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_scratch_release_rejects_a_mark_outside_the_region</b> &mdash; <i>Scratch release rejects a mark outside the region</i></summary>
-
-    * **Objective**: Scratch release rejects a mark outside the region
-    * **Assertions**:
-      * <code>Assert not null (protocore_arena_scratch_alloc(&a, 200))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(used, protocore_arena_scratch_used(&a));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(used, protocore_arena_scratch_used(&a));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_scratch_alignment_is_clamped_to_what_the_region_guarantees</b> &mdash; <i>Scratch alignment is clamped to what the region guarantees</i></summary>
-
-    * **Objective**: Scratch alignment is clamped to what the region guarantees
-    * **Assertions**:
-      * <code>Assert not null (p)</code>
-      * <code>Assert true (aligned(&a, p, PROTOCORE_ARENA_MAX_ALIGN))</code>
-      * <code>Assert not null (low)</code>
-      * <code>Assert true (aligned(&a, low, PROTOCORE_ARENA_ALIGN))</code>
-      * <code>Assert not null (high)</code>
-      * <code>Assert true (aligned(&a, high, PROTOCORE_ARENA_MAX_ALIGN))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_two_ends_never_overlap</b> &mdash; <i>The two ends never overlap</i></summary>
-
-    * **Objective**: The two ends never overlap
-    * **Assertions**:
-      * <code>Assert not null (p)</code>
-      * <code>Assert not null (s)</code>
-      * <code>Assert true (p + 500 &lt;= s)</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x11u, p[499]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x22u, s[0]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_request_that_would_cross_fails_closed</b> &mdash; <i>A request that would cross fails closed</i></summary>
-
-    * **Objective**: A request that would cross fails closed
-    * **Assertions**:
-      * <code>Assert not null (p)</code>
-      * <code>Assert not null (s)</code>
-      * <code>Assert null (protocore_arena_persist_alloc(&a, 1000))</code>
-      * <code>Assert null (protocore_arena_scratch_alloc(&a, 1000))</code>
-      * <code>Assert true (p + 1800 &lt;= s)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_middle_floats_between_the_ends</b> &mdash; <i>The middle floats between the ends</i></summary>
-
-    * **Objective**: The middle floats between the ends
-    * **Assertions**:
-      * <code>Assert not null (protocore_arena_scratch_alloc(&a, 3000))</code>
-      * <code>Assert null (protocore_arena_persist_alloc(&a, 2000))</code>
-      * <code>Assert not null (protocore_arena_persist_alloc(&a, 2000))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_borrow_owns_its_alignment_pad</b> &mdash; <i>A borrow owns its alignment pad</i></summary>
-
-    * **Objective**: A borrow owns its alignment pad
-    * **Assertions**:
-      * <code>Assert not null (p)</code>
-      * <code>Assert not null (next)</code>
-      * <code>Assert true (aligned(&a, p, PROTOCORE_ARENA_ALIGN))</code>
-      * <code>Assert true (next &gt;= p + padded(SIZES[i]))</code>
-      * <code>Assert true (p + padded(SIZES[i]) &lt;= g_buf + sizeof(g_buf))</code>
-      * <code>Assert not null (first)</code>
-      * <code>Assert not null (s)</code>
-      * <code>Assert true (aligned(&a, s, PROTOCORE_ARENA_ALIGN))</code>
-      * <code>Assert true (s + padded(SIZES[i]) &lt;= first)</code>
-      * <code>Assert true (s &gt;= g_buf)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_write_over_the_pad_hits_no_neighbour</b> &mdash; <i>A write over the pad hits no neighbour</i></summary>
-
-    * **Objective**: A write over the pad hits no neighbour
-    * **Assertions**:
-      * <code>Assert not null (p)</code>
-      * <code>Assert not null (q)</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x5Au, q[i]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_owns_is_an_address_range_test</b> &mdash; <i>Owns is an address range test</i></summary>
-
-    * **Objective**: Owns is an address range test
-    * **Assertions**:
-      * <code>Assert true (protocore_arena_owns(&a, a.base))</code>
-      * <code>Assert true (protocore_arena_owns(&a, a.base + a.size - 1u))</code>
-      * <code>Assert false (protocore_arena_owns(&a, a.base + a.size))</code>
-      * <code>Assert false (protocore_arena_owns(&a, elsewhere))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_zero_length_region_refuses_everything</b> &mdash; <i>A zero length region refuses everything</i></summary>
-
-    * **Objective**: A zero length region refuses everything
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_arena_free_bytes(&z));</code>
-      * <code>Assert null (protocore_arena_persist_alloc(&z, 16))</code>
-      * <code>Assert null (protocore_arena_scratch_alloc(&z, 16))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_zero_size_request_still_yields_a_pointer</b> &mdash; <i>A zero size request still yields a pointer</i></summary>
-
-    * **Objective**: A zero size request still yields a pointer
-    * **Assertions**:
-      * <code>Assert not null (p)</code>
-      * <code>Assert not null (s)</code>
-      * <code>Assert true (p != s)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_set_add_limits</b> &mdash; <i>Set add limits</i></summary>
-
-    * **Objective**: Set add limits
-    * **Assertions**:
-      * <code>Assert false (protocore_arena_set_add(&s, extra, sizeof(extra)))</code>
-      * <code>Assert false (protocore_arena_set_add(&t, tiny, sizeof(tiny)))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_set_prefers_the_first_region_and_spills_to_the_second</b> &mdash; <i>Set prefers the first region and spills to the second</i></summary>
-
-    * **Objective**: Set prefers the first region and spills to the second
-    * **Assertions**:
-      * <code>Assert not null (big)</code>
-      * <code>Assert true (inside(big, g_r1, sizeof(g_r1)))</code>
-      * <code>Assert not null (small)</code>
-      * <code>Assert true (inside(small, g_r0, sizeof(g_r0)))</code>
-      * <code>Assert true (protocore_arena_set_persist_used(&s) &gt;= 732)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_set_free_routes_by_address</b> &mdash; <i>Set free routes by address</i></summary>
-
-    * **Objective**: Set free routes by address
-    * **Assertions**:
-      * <code>Assert true (inside(in_r1, g_r1, sizeof(g_r1)))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_arena_set_persist_used(&s));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_arena_set_persist_used(&s));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_set_mark_release_spans_every_region</b> &mdash; <i>Set mark release spans every region</i></summary>
-
-    * **Objective**: Set mark release spans every region
-    * **Assertions**:
-      * <code>Assert true (inside(a0, g_r0, sizeof(g_r0)))</code>
-      * <code>Assert true (inside(a1, g_r1, sizeof(g_r1)))</code>
-      * <code>Assert true (protocore_arena_set_scratch_used(&s) &gt;= 1300)</code>
-      * <code>Assert true (protocore_arena_set_scratch_used(&s) &gt;= 400)</code>
-      * <code>Assert true (protocore_arena_set_scratch_used(&s) &lt; 900)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_arena_set_scratch_used(&s));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_set_release_of_a_mark_taken_before_a_region_joined</b> &mdash; <i>Set release of a mark taken before a region joined</i></summary>
-
-    * **Objective**: Set release of a mark taken before a region joined
-    * **Assertions**:
-      * <code>Assert true (protocore_arena_set_add(&s, g_r0, sizeof(g_r0)))</code>
-      * <code>Assert true (protocore_arena_set_add(&s, g_r1, sizeof(g_r1)))</code>
-      * <code>Assert true (inside(p, g_r0, sizeof(g_r0)))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_arena_set_scratch_used(&s));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_set_exhaustion_and_free_bytes</b> &mdash; <i>Set exhaustion and free bytes</i></summary>
-
-    * **Objective**: Set exhaustion and free bytes
-    * **Assertions**:
-      * <code>Assert null (protocore_arena_set_persist_alloc(&s, 100000))</code>
-      * <code>Assert null (protocore_arena_set_scratch_alloc(&s, 100000))</code>
-      * <code>Assert true (before &gt; 0)</code>
-      * <code>Assert not null (protocore_arena_set_persist_alloc(&s, 128))</code>
-      * <code>Assert true (protocore_arena_set_free_bytes(&s) &lt; before)</code>
-  </details>
-
-</details>
-
-<details>
 <summary><b>test_atc (13 tests)</b></summary>
 
   <details style="margin-left: 20px;">
@@ -4493,129 +4187,6 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 </details>
 
 <details>
-<summary><b>test_bitio (12 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rfc1951_empty_fixed_block</b> &mdash; <i>Rfc1951 empty fixed block</i></summary>
-
-    * **Objective**: Rfc1951 empty fixed block
-    * **Assertions**:
-      * <code>Assert false (w.overflow)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(2, w.cnt);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x03u, s_out[0]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, s_out[1]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rfc1951_stored_block_header</b> &mdash; <i>Rfc1951 stored block header</i></summary>
-
-    * **Objective**: Rfc1951 stored block header
-    * **Assertions**:
-      * <code>Assert false (w.overflow)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(sizeof(WANT), w.cnt);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, s_out, sizeof(WANT));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_elements_enter_low_bit_first</b> &mdash; <i>Elements enter low bit first</i></summary>
-
-    * **Objective**: Elements enter low bit first
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(1, w.cnt);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x15u, s_out[0]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_put_takes_only_the_low_n_bits</b> &mdash; <i>Put takes only the low n bits</i></summary>
-
-    * **Objective**: Put takes only the low n bits
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(1, w.cnt);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x07u, s_out[0]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_eight_bits_is_exactly_one_byte</b> &mdash; <i>Eight bits is exactly one byte</i></summary>
-
-    * **Objective**: Eight bits is exactly one byte
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(1, w.cnt);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xA5u, s_out[0]);</code>
-      * <code>Assert equal int (0, w.nbits)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_wide_put_spills_every_completed_byte</b> &mdash; <i>A wide put spills every completed byte</i></summary>
-
-    * **Objective**: A wide put spills every completed byte
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(sizeof(WANT), w.cnt);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, s_out, sizeof(WANT));</code>
-      * <code>Assert equal int (0, w.nbits)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_align_pads_the_partial_byte_with_zero</b> &mdash; <i>Align pads the partial byte with zero</i></summary>
-
-    * **Objective**: Align pads the partial byte with zero
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(2, w.cnt);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xFFu, s_out[0]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x05u, s_out[1]);</code>
-      * <code>Assert equal int (0, w.nbits)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_align_on_a_boundary_writes_nothing</b> &mdash; <i>Align on a boundary writes nothing</i></summary>
-
-    * **Objective**: Align on a boundary writes nothing
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(1, w.cnt);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1, w.cnt);</code>
-      * <code>Assert false (w.overflow)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_exact_fill_is_not_an_overflow</b> &mdash; <i>Exact fill is not an overflow</i></summary>
-
-    * **Objective**: Exact fill is not an overflow
-    * **Assertions**:
-      * <code>Assert false (w.overflow)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(4, w.cnt);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_byte_past_cap_latches_and_stores_nothing</b> &mdash; <i>A byte past cap latches and stores nothing</i></summary>
-
-    * **Objective**: A byte past cap latches and stores nothing
-    * **Assertions**:
-      * <code>Assert true (w.overflow)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(4, w.cnt);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, s_out[4]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_align_with_no_room_latches</b> &mdash; <i>Align with no room latches</i></summary>
-
-    * **Objective**: Align with no room latches
-    * **Assertions**:
-      * <code>Assert false (w.overflow)</code>
-      * <code>Assert true (w.overflow)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1, w.cnt);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_overflow_stays_latched</b> &mdash; <i>Overflow stays latched</i></summary>
-
-    * **Objective**: Overflow stays latched
-    * **Assertions**:
-      * <code>Assert true (w.overflow)</code>
-      * <code>Assert true (w.overflow)</code>
-  </details>
-
-</details>
-
-<details>
 <summary><b>test_ble_gatt (10 tests)</b></summary>
 
   <details style="margin-left: 20px;">
@@ -5187,225 +4758,6 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 </details>
 
 <details>
-<summary><b>test_bytes (17 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rfc4251_uint32_encoding</b> &mdash; <i>The same octets read back, through the cursor form and the offset form.</i></summary>
-
-    * **Objective**: The same octets read back, through the cursor form and the offset form.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(4, span.len(w));</code>
-      * <code>Assert false (w.overflow)</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WIRE, store, 4);</code>
-      * <code>Assert true (bytes.take_be(&r, 4, &v))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(699921578u, v);</code>
-      * <code>Assert true (bytes.rd_u32(WIRE, sizeof(WIRE), &off, &u))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(699921578u, u);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(4, off);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rfc4251_string_encoding</b> &mdash; <i>Rfc4251 string encoding</i></summary>
-
-    * **Objective**: Rfc4251 string encoding
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(sizeof(WIRE), span.len(w));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WIRE, store, sizeof(WIRE));</code>
-      * <code>Assert true (bytes.rd_str(WIRE, sizeof(WIRE), &off, &s, &slen))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(7u, slen);</code>
-      * <code>Assert equal ptr (WIRE + 4, s)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(11, off);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rfc4251_mpint_examples</b> &mdash; <i>0: no data at all, so every lane of the destination is zero.</i></summary>
-
-    * **Objective**: 0: no data at all, so every lane of the destination is zero.
-    * **Assertions**:
-      * <code>Assert true (bytes.mpint_fixed(M0, 0, out, sizeof(out)))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(ZERO, out, sizeof(out));</code>
-      * <code>Assert true (bytes.mpint_fixed(M1, sizeof(M1), out, sizeof(out)))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(M1, out, sizeof(out));</code>
-      * <code>Assert true (bytes.mpint_fixed(M2, sizeof(M2), four, sizeof(four)))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(W2, four, sizeof(four));</code>
-      * <code>Assert true (bytes.mpint_fixed(M3, sizeof(M3), out, sizeof(out)))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(W3, out, sizeof(out));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_mpint_wider_than_the_destination_is_refused</b> &mdash; <i>Only the leading zeros count toward the width: the same bytes behind five zero pad bytes fit.</i></summary>
-
-    * **Objective**: Only the leading zeros count toward the width: the same bytes behind five zero pad bytes fit.
-    * **Assertions**:
-      * <code>Assert false (bytes.mpint_fixed(M, sizeof(M), four, sizeof(four)))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xAAu, four[0]); // untouched on refusal</code>
-      * <code>Assert true (bytes.mpint_fixed(PADDED, sizeof(PADDED), four, sizeof(four)))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, four, sizeof(four));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_put_writes_and_counts</b> &mdash; <i>Put writes and counts</i></summary>
-
-    * **Objective**: Put writes and counts
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(2, span.len(w));</code>
-      * <code>Assert false (w.overflow)</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xA5u, store[0]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x5Au, store[1]);</code>
-      * <code>Assert true (span.ok(w))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_put_past_cap_reports_the_capacity_needed</b> &mdash; <i>Put past cap reports the capacity needed</i></summary>
-
-    * **Objective**: Put past cap reports the capacity needed
-    * **Assertions**:
-      * <code>Assert true (w.overflow)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(10, span.len(w));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x13u, store[3]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, store[4]);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, span.room(w));</code>
-      * <code>Assert false (span.ok(w))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_put_be_writes_most_significant_byte_first</b> &mdash; <i>The low n bytes of the value, in decreasing significance: the tail of the full string.</i></summary>
-
-    * **Objective**: The low n bytes of the value, in decreasing significance: the tail of the full string.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t((size_t)n, span.len(w));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(FULL + (8 - n), store, (size_t)n);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, store[n]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_put_be_past_cap_counts_its_whole_width</b> &mdash; <i>Put be past cap counts its whole width</i></summary>
-
-    * **Objective**: Put be past cap counts its whole width
-    * **Assertions**:
-      * <code>Assert true (w.overflow)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(8, span.len(w));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(HEAD, store, 3);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, store[3]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_raw_stores_whole_or_not_at_all</b> &mdash; <i>Raw stores whole or not at all</i></summary>
-
-    * **Objective**: Raw stores whole or not at all
-    * **Assertions**:
-      * <code>Assert false (w.overflow)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(4, span.len(w));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(ABCD, store, 4);</code>
-      * <code>Assert true (w.overflow)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(6, span.len(w));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, store[4]); // nothing past the capacity</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_take_be_advances_by_the_width</b> &mdash; <i>Take be advances by the width</i></summary>
-
-    * **Objective**: Take be advances by the width
-    * **Assertions**:
-      * <code>Assert true (bytes.take_be(&r, 2, &v))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x0102u, v);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(2, r.pos);</code>
-      * <code>Assert true (bytes.take_be(&r, 4, &v))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x03040506u, v);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(6, r.pos);</code>
-      * <code>Assert true (bytes.take_be(&r, 2, &v))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x0708u, v);</code>
-      * <code>Assert true (span.cok(r))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_take_be_at_the_end_and_past_it</b> &mdash; <i>Take be at the end and past it</i></summary>
-
-    * **Objective**: Take be at the end and past it
-    * **Assertions**:
-      * <code>Assert true (bytes.take_be(&r, 4, &v))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0xAABBCCDDu, v);</code>
-      * <code>Assert false (r.err)</code>
-      * <code>Assert false (bytes.take_be(&r, 1, &v))</code>
-      * <code>Assert true (r.err)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(4, r.pos);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_take_be_refusal_is_sticky</b> &mdash; <i>Take be refusal is sticky</i></summary>
-
-    * **Objective**: Take be refusal is sticky
-    * **Assertions**:
-      * <code>Assert false (bytes.take_be(&r, 8, &v))</code>
-      * <code>Assert true (r.err)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, r.pos);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0xDEADBEEFu, v);</code>
-      * <code>Assert true (bytes.take_be(&r, 2, &v))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x1122u, v);</code>
-      * <code>Assert true (r.err)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_take_be_zero_width</b> &mdash; <i>Take be zero width</i></summary>
-
-    * **Objective**: Take be zero width
-    * **Assertions**:
-      * <code>Assert true (bytes.take_be(&r, 0, &v))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0, v);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, r.pos);</code>
-      * <code>Assert false (r.err)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rd_u32_short_read_is_refused</b> &mdash; <i>Rd u32 short read is refused</i></summary>
-
-    * **Objective**: Rd u32 short read is refused
-    * **Assertions**:
-      * <code>Assert false (bytes.rd_u32(P, sizeof(P), &off, &v))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, off);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0xA5A5A5A5u, v);</code>
-      * <code>Assert false (bytes.rd_u32(P, sizeof(P), &off, &v))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rd_str_overlong_length_rewinds</b> &mdash; <i>Rd str overlong length rewinds</i></summary>
-
-    * **Objective**: Rd str overlong length rewinds
-    * **Assertions**:
-      * <code>Assert false (bytes.rd_str(P, sizeof(P), &off, &s, &slen))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, off);</code>
-      * <code>Assert null (s)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rd_str_full_range_length_cannot_wrap_the_bound</b> &mdash; <i>Rd str full range length cannot wrap the bound</i></summary>
-
-    * **Objective**: Rd str full range length cannot wrap the bound
-    * **Assertions**:
-      * <code>Assert false (bytes.rd_str(P, sizeof(P), &off, &s, &slen))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, off);</code>
-      * <code>Assert null (s)</code>
-      * <code>Assert false (bytes.rd_str(Q, sizeof(Q), &off, &s, &slen))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, off);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rd_str_exact_fit_and_empty_string</b> &mdash; <i>Rd str exact fit and empty string</i></summary>
-
-    * **Objective**: Rd str exact fit and empty string
-    * **Assertions**:
-      * <code>Assert true (bytes.rd_str(P, sizeof(P), &off, &s, &slen))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(4u, slen);</code>
-      * <code>Assert equal ptr (P + 4, s)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(8, off);</code>
-      * <code>Assert true (bytes.rd_str(P, sizeof(P), &off, &s, &slen))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0u, slen);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(12, off);</code>
-  </details>
-
-</details>
-
-<details>
 <summary><b>test_c37118 (12 tests)</b></summary>
 
   <details style="margin-left: 20px;">
@@ -5956,11 +5308,11 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 
     * **Objective**: Head forms round trip
     * **Assertions**:
-      * <code>Assert true (span.ok(g_w))</code>
+      * <code>Assert true (EMBED_CALL(spat.ok, SpatiumCfg, .span = g_w))</code>
       * <code>Assert equal int (PROTOCORE_CODEC_UINT, Cbor.peek(&r))</code>
       * <code>Assert true (Cbor.get_uint(&r, &v))</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(VALUES[i], v);</code>
-      * <code>Assert true (span.cok(r))</code>
+      * <code>Assert true (EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5999,7 +5351,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 
     * **Objective**: Map round trips item by item
     * **Assertions**:
-      * <code>Assert true (span.ok(g_w))</code>
+      * <code>Assert true (EMBED_CALL(spat.ok, SpatiumCfg, .span = g_w))</code>
       * <code>Assert true (Cbor.get_map(&r, &n))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(3, n);</code>
       * <code>Assert true (Cbor.get_str(&r, &k, &kl))</code>
@@ -6016,7 +5368,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
       * <code>Assert equal memory ("on", k, 2)</code>
       * <code>Assert true (Cbor.get_bool(&r, &b))</code>
       * <code>Assert true (b)</code>
-      * <code>Assert true (span.cok(r))</code>
+      * <code>Assert true (EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r))</code>
       * <code>Assert equal int (PROTOCORE_CODEC_INVALID, Cbor.peek(&r))</code>
   </details>
 
@@ -6047,8 +5399,8 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 
     * **Objective**: Overflow reports the size it needed
     * **Assertions**:
-      * <code>Assert false (span.ok(w))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(5, span.len(w));</code>
+      * <code>Assert false (EMBED_CALL(spat.ok, SpatiumCfg, .span = w))</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(5, w.pos);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6057,9 +5409,9 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Objective**: 0x9f is the indefinite-length array head of Table 6's "[_ ]" (0x9fff).
     * **Assertions**:
       * <code>Assert false (Cbor.get_uint(&r, &v))</code>
-      * <code>Assert false (span.cok(r))</code>
+      * <code>Assert false (EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r))</code>
       * <code>Assert false (Cbor.get_array(&r, &n))</code>
-      * <code>Assert false (span.cok(r))</code>
+      * <code>Assert false (EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6068,9 +5420,9 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Objective**: Type mismatch fails and marks the reader
     * **Assertions**:
       * <code>Assert false (Cbor.get_uint(&r, &v))</code>
-      * <code>Assert false (span.cok(r))</code>
+      * <code>Assert false (EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r))</code>
       * <code>Assert false (Cbor.get_map(&r, &n))</code>
-      * <code>Assert false (span.cok(r))</code>
+      * <code>Assert false (EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r))</code>
       * <code>Assert false (Cbor.get_array(&r, &n))</code>
       * <code>Assert false (Cbor.get_null(&r))</code>
       * <code>Assert false (Cbor.get_bool(&r, &b))</code>
@@ -6083,9 +5435,9 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Objective**: Declared length past the end is refused
     * **Assertions**:
       * <code>Assert false (Cbor.get_str(&r, &s, &n))</code>
-      * <code>Assert false (span.cok(r))</code>
+      * <code>Assert false (EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r))</code>
       * <code>Assert false (Cbor.get_bytes(&r, &p, &n))</code>
-      * <code>Assert false (span.cok(r))</code>
+      * <code>Assert false (EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r))</code>
       * <code>Assert false (Cbor.get_float(&r, &f))</code>
       * <code>Assert false (Cbor.get_float(&r, &f))</code>
   </details>
@@ -6096,7 +5448,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Objective**: The read error is sticky
     * **Assertions**:
       * <code>Assert false (Cbor.get_uint(&r, &uv))</code>
-      * <code>Assert false (span.cok(r))</code>
+      * <code>Assert false (EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r))</code>
       * <code>Assert false (Cbor.get_uint(&r, &uv))</code>
       * <code>Assert false (Cbor.get_int(&r, &iv))</code>
       * <code>Assert false (Cbor.get_bool(&r, &bv))</code>
@@ -6115,7 +5467,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Objective**: Truncated item is refused
     * **Assertions**:
       * <code>Assert false (Cbor.get_uint(&r, &v))</code>
-      * <code>Assert false (span.cok(r))</code>
+      * <code>Assert false (EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -9016,7 +8368,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Objective**: Sec6 2 long term is truncated not refused
     * **Assertions**:
       * <code>Assert true (pty_req_parse(p, n, 0, &pty))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32((uint32_t)(PROTOCORE_SSH_PTY_TERM_MAX - 1u),</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(80u, pty.width_chars); // the fields after it still line up</code>
   </details>
 
@@ -12299,7 +11651,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Objective**: Http parse skips ws upgraded slot
     * **Assertions**:
       * <code>Assert not null (ws)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(tail_before, c-&gt;rx_tail);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(waiting_before, rx_used(c));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -12350,167 +11702,6 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Assertions**:
       * <code>Assert null (strstr(tcp_captured(), "408"))</code>
       * <code>Assert equal (CONN_ACTIVE, (ConnState)conn_pool[0].state)</code>
-  </details>
-
-</details>
-
-<details>
-<summary><b>test_dma (12 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_open_validates</b> &mdash; <i>Open validates</i></summary>
-
-    * **Objective**: Open validates
-    * **Assertions**:
-      * <code>Assert false (protocore_dma_open(NULL))</code>
-      * <code>Assert false (protocore_dma_open(&c))</code>
-      * <code>Assert false (protocore_dma_open(&c))</code>
-      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
-      * <code>Assert false (open_ch(0, PROTO_FALSE))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_ingress_emits_rx_event</b> &mdash; <i>Ingress emits rx event</i></summary>
-
-    * **Objective**: Ingress emits rx event
-    * **Assertions**:
-      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
-      * <code>Assert true (protocore_dma_host_feed(0, msg, sizeof(msg)))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, g_ev_n);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1, count_dir(PROTOCORE_DMA_RX));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(5, g_ev[0].len);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(0, g_ev[0].channel);</code>
-      * <code>Assert equal memory (msg, g_ev[0].data, sizeof(msg))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_buffer_fills_then_partial_flush</b> &mdash; <i>Buffer fills then partial flush</i></summary>
-
-    * **Objective**: Buffer fills then partial flush
-    * **Assertions**:
-      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
-      * <code>Assert true (protocore_dma_host_feed(0, msg, sizeof(msg)))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(2, count_dir(PROTOCORE_DMA_RX));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(PROTOCORE_DMA_BUF_SIZE, g_ev[0].len);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(3, g_ev[1].len);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(sizeof(msg), got_n);</code>
-      * <code>Assert equal memory (msg, g_rx, sizeof(msg))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_ping_pong_flips_buffer</b> &mdash; <i>Ping pong flips buffer</i></summary>
-
-    * **Objective**: Ping pong flips buffer
-    * **Assertions**:
-      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
-      * <code>Assert true (protocore_dma_host_feed(0, msg, sizeof(msg)))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(2, count_dir(PROTOCORE_DMA_RX));</code>
-      * <code>Assert not equal (g_ev[0].ptr, g_ev[1].ptr)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(0, g_ev[0].seq);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(1, g_ev[1].seq);</code>
-      * <code>Assert equal memory (msg, g_rx, sizeof(msg))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_egress_captures_tx</b> &mdash; <i>Egress captures tx</i></summary>
-
-    * **Objective**: Egress captures tx
-    * **Assertions**:
-      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
-      * <code>Assert true (protocore_dma_tx_submit(0, out, sizeof(out)))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1, count_dir(PROTOCORE_DMA_TX));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, count_dir(PROTOCORE_DMA_RX));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(4, g_ev[0].len);</code>
-      * <code>Assert null (g_ev[0].ptr)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(4, n);</code>
-      * <code>Assert equal memory (out, cap, 4)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_tx_one_in_flight_fail_closed</b> &mdash; <i>Tx one in flight fail closed</i></summary>
-
-    * **Objective**: Tx one in flight fail closed
-    * **Assertions**:
-      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
-      * <code>Assert true (protocore_dma_tx_submit(0, a, sizeof(a)))</code>
-      * <code>Assert false (protocore_dma_tx_submit(0, b, sizeof(b)))</code>
-      * <code>Assert true (protocore_dma_tx_submit(0, b, sizeof(b)))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(2, count_dir(PROTOCORE_DMA_TX));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_tx_rejects_bad_len</b> &mdash; <i>Tx rejects bad len</i></summary>
-
-    * **Objective**: Tx rejects bad len
-    * **Assertions**:
-      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
-      * <code>Assert false (protocore_dma_tx_submit(0, x, 0))</code>
-      * <code>Assert false (protocore_dma_tx_submit(0, big, PROTOCORE_DMA_BUF_SIZE + 1))</code>
-      * <code>Assert false (protocore_dma_tx_submit(0, NULL, 4))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_loopback_round_trip</b> &mdash; <i>Loopback round trip</i></summary>
-
-    * **Objective**: Loopback round trip
-    * **Assertions**:
-      * <code>Assert true (open_ch(0, PROTO_TRUE))</code>
-      * <code>Assert true (protocore_dma_tx_submit(0, ping, sizeof(ping)))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1, count_dir(PROTOCORE_DMA_TX));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1, count_dir(PROTOCORE_DMA_RX));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(sizeof(ping), got_n);</code>
-      * <code>Assert equal memory (ping, g_rx, sizeof(ping))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_feed_fail_closed_when_full</b> &mdash; <i>Feed fail closed when full</i></summary>
-
-    * **Objective**: Feed fail closed when full
-    * **Assertions**:
-      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
-      * <code>Assert false (protocore_dma_host_feed(0, big, sizeof(big)))</code>
-      * <code>Assert true (protocore_dma_host_feed(0, ok, sizeof(ok)))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_closed_channel_is_inert</b> &mdash; <i>Closed channel is inert</i></summary>
-
-    * **Objective**: Closed channel is inert
-    * **Assertions**:
-      * <code>Assert false (protocore_dma_host_feed(0, x, sizeof(x)))</code>
-      * <code>Assert false (protocore_dma_tx_submit(0, x, sizeof(x)))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, g_ev_n);</code>
-      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
-      * <code>Assert false (protocore_dma_host_feed(0, x, sizeof(x)))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_two_channels_independent</b> &mdash; <i>Two channels independent</i></summary>
-
-    * **Objective**: Two channels independent
-    * **Assertions**:
-      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
-      * <code>Assert true (open_ch(1, PROTO_FALSE))</code>
-      * <code>Assert true (protocore_dma_host_feed(0, a, sizeof(a)))</code>
-      * <code>Assert true (protocore_dma_host_feed(1, b, sizeof(b)))</code>
-      * <code>Assert equal memory (a, g_ev[i].data, sizeof(a))</code>
-      * <code>Assert equal memory (b, g_ev[i].data, sizeof(b))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1, ch0);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1, ch1);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_channel_guard_subconditions</b> &mdash; <i>Channel guard subconditions</i></summary>
-
-    * **Objective**: Channel guard subconditions
-    * **Assertions**:
-      * <code>Assert false (protocore_dma_host_feed(0, b, sizeof(b)))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(0, protocore_dma_host_capture(0, b, 4));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(0, protocore_dma_host_capture(255, b, 4));</code>
-      * <code>Assert false (protocore_dma_host_feed(PROTOCORE_DMA_CHANNELS, b, sizeof(b)))</code>
-      * <code>Assert false (protocore_dma_host_feed(0, NULL, sizeof(b)))</code>
-      * <code>Assert false (protocore_dma_tx_submit(PROTOCORE_DMA_CHANNELS, b, sizeof(b)))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(0, protocore_dma_host_capture(0, NULL, 4));</code>
   </details>
 
 </details>
@@ -16838,115 +16029,6 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 </details>
 
 <details>
-<summary><b>test_endian (9 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rfc1071_normal_order_is_the_big_endian_read</b> &mdash; <i>The whole string as one 64-bit field: the two 32-bit halves in the same order.</i></summary>
-
-    * **Objective**: The whole string as one 64-bit field: the two 32-bit halves in the same order.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0001u, endian.rd16be(RFC1071 + 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0xf203u, endian.rd16be(RFC1071 + 2));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0xf4f5u, endian.rd16be(RFC1071 + 4));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0xf6f7u, endian.rd16be(RFC1071 + 6));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0x0001f203u, endian.rd32be(RFC1071 + 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0xf4f5f6f7u, endian.rd32be(RFC1071 + 4));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x0001f203f4f5f6f7ull, endian.rd64be(RFC1071));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rfc1071_swapped_order_is_the_little_endian_read</b> &mdash; <i>Rfc1071 swapped order is the little endian read</i></summary>
-
-    * **Objective**: Rfc1071 swapped order is the little endian read
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x0100u, endian.rd16le(RFC1071 + 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x03f2u, endian.rd16le(RFC1071 + 2));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0xf5f4u, endian.rd16le(RFC1071 + 4));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0xf7f6u, endian.rd16le(RFC1071 + 6));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0x03f20100u, endian.rd32le(RFC1071 + 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0xf7f6f5f4u, endian.rd32le(RFC1071 + 4));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0xf7f6f5f403f20100ull, endian.rd64le(RFC1071));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rfc4251_uint32_octets</b> &mdash; <i>Rfc4251 uint32 octets</i></summary>
-
-    * **Objective**: Rfc4251 uint32 octets
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(4, endian.wr32be(at(0), 699921578u));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, at(0), 4);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(699921578u, endian.rd32be(at(0)));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_uint64_octets_in_decreasing_significance</b> &mdash; <i>Uint64 octets in decreasing significance</i></summary>
-
-    * **Objective**: Uint64 octets in decreasing significance
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(8, endian.wr64be(at(0), 0x0123456789abcdefull));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(BE, at(0), 8);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(8, endian.wr64le(at(0), 0x0123456789abcdefull));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(LE, at(0), 8);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_writers_return_their_width</b> &mdash; <i>Writers return their width</i></summary>
-
-    * **Objective**: Writers return their width
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(2, endian.wr16be(at(0), 0x1122u));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(4, endian.wr32be(at(0), 0x11223344u));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(8, endian.wr64be(at(0), 0x1122334455667788ull));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(2, endian.wr16le(at(0), 0x1122u));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(4, endian.wr32le(at(0), 0x11223344u));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(8, endian.wr64le(at(0), 0x1122334455667788ull));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_adjacent_fields_do_not_overlap</b> &mdash; <i>Adjacent fields do not overlap</i></summary>
-
-    * **Objective**: Adjacent fields do not overlap
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x1122u, endian.rd16be(at(0)));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0x33445566u, endian.rd32be(at(2)));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x7788u, endian.rd16be(at(6)));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_round_trip_at_every_offset</b> &mdash; <i>Round trip at every offset</i></summary>
-
-    * **Objective**: Round trip at every offset
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX16((uint16_t)VALS[v], endian.rd16be(at(off)));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32((uint32_t)VALS[v], endian.rd32be(at(off)));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(VALS[v], endian.rd64be(at(off)));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16((uint16_t)VALS[v], endian.rd16le(at(off)));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32((uint32_t)VALS[v], endian.rd32le(at(off)));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(VALS[v], endian.rd64le(at(off)));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_big_endian_is_the_byte_reverse_of_little_endian</b> &mdash; <i>Big endian is the byte reverse of little endian</i></summary>
-
-    * **Objective**: Big endian is the byte reverse of little endian
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(b[i], l[1u - i]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(b[i], l[3u - i]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(b[i], l[7u - i]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_narrow_write_drops_the_bits_above_its_width</b> &mdash; <i>A narrow write drops the bits above its width</i></summary>
-
-    * **Objective**: A narrow write drops the bits above its width
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX16(0x5678u, endian.rd16be(at(0)));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0x9ABCDEF0u, endian.rd32le(at(0)));</code>
-  </details>
-
-</details>
-
-<details>
 <summary><b>test_enip (9 tests)</b></summary>
 
   <details style="margin-left: 20px;">
@@ -19163,145 +18245,6 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 </details>
 
 <details>
-<summary><b>test_float_bits (11 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_ieee754_binary64_field_layout</b> &mdash; <i>Ieee754 binary64 field layout</i></summary>
-
-    * **Objective**: Ieee754 binary64 field layout
-    * **Assertions**:
-      * <code>Assert equal uint (8, sizeof(double))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0xFFFFFFFFFFFFFFFFull, PROTO_DBL_SIGN_MASK | PROTO_DBL_EXP_MASK | PROTO_DBL_MANT_MASK);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0, PROTO_DBL_SIGN_MASK & PROTO_DBL_EXP_MASK);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0, PROTO_DBL_SIGN_MASK & PROTO_DBL_MANT_MASK);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0, PROTO_DBL_EXP_MASK & PROTO_DBL_MANT_MASK);</code>
-      * <code>Assert equal uint (63, PROTO_DBL_SIGN_SHIFT)</code>
-      * <code>Assert equal uint (52, PROTO_DBL_MANT_BITS)</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x7FFull, PROTO_DBL_EXP_ALL); // 11 bits, all set</code>
-      * <code>Assert equal int (1023, PROTO_DBL_BIAS);          // sec 3.3: bias = 2^(w-1)</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(PROTO_DBL_EXP_MASK, PROTO_DBL_EXP_ALL &lt;&lt; PROTO_DBL_MANT_BITS);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(PROTO_DBL_SIGN_MASK, PROTO_DBL_SIGN_ONE &lt;&lt; PROTO_DBL_SIGN_SHIFT);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_ieee754_published_encodings</b> &mdash; <i>The same words, decoded: from_bits is the inverse of the field reads.</i></summary>
-
-    * **Objective**: The same words, decoded: from_bits is the inverse of the field reads.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x3FF0000000000000ull, split_and_merge(1.0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x4000000000000000ull, split_and_merge(2.0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0xC000000000000000ull, split_and_merge(-2.0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x3FE0000000000000ull, split_and_merge(0.5));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x4008000000000000ull, split_and_merge(3.0));</code>
-      * <code>Assert true (dbl.from_bits(0x3FF0000000000000ull) == 1.0)</code>
-      * <code>Assert true (dbl.from_bits(0x4000000000000000ull) == 2.0)</code>
-      * <code>Assert true (dbl.from_bits(0xC000000000000000ull) == -2.0)</code>
-      * <code>Assert true (dbl.from_bits(0x3FE0000000000000ull) == 0.5)</code>
-      * <code>Assert true (dbl.from_bits(0x4008000000000000ull) == 3.0)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_two_zeros_differ_only_in_the_sign</b> &mdash; <i>The two zeros differ only in the sign</i></summary>
-
-    * **Objective**: The two zeros differ only in the sign
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX64(0, dbl.sign(0.0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0, dbl.exp(0.0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0, dbl.mant(0.0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x0000000000000000ull, split_and_merge(0.0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(1, dbl.sign(-0.0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0, dbl.exp(-0.0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0, dbl.mant(-0.0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x8000000000000000ull, split_and_merge(-0.0));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_infinity_and_nan_share_the_all_ones_exponent</b> &mdash; <i>A NaN payload survives the split even though no comparison could check it.</i></summary>
-
-    * **Objective**: A NaN payload survives the split even though no comparison could check it.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX64(PROTO_DBL_EXP_ALL, dbl.exp(inf));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0, dbl.mant(inf));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0, dbl.sign(inf));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(PROTO_DBL_EXP_ALL, dbl.exp(neg_inf));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0, dbl.mant(neg_inf));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(1, dbl.sign(neg_inf));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(PROTO_DBL_EXP_ALL, dbl.exp(nan_v));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(1, dbl.mant(nan_v));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x7FF00000DEADBEEFull, split_and_merge(dbl.from_bits(0x7FF00000DEADBEEFull)));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_subnormal_boundary</b> &mdash; <i>The subnormal boundary</i></summary>
-
-    * **Objective**: The subnormal boundary
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX64(0, dbl.exp(tiny));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(1, dbl.mant(tiny));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x0000000000000001ull, split_and_merge(tiny));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0, dbl.exp(biggest_sub));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(PROTO_DBL_MANT_MASK, dbl.mant(biggest_sub));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(1, dbl.exp(smallest_normal));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0, dbl.mant(smallest_normal));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_largest_finite_value</b> &mdash; <i>The largest finite value</i></summary>
-
-    * **Objective**: The largest finite value
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX64(2046, dbl.exp(big));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(PROTO_DBL_MANT_MASK, dbl.mant(big));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x7FEFFFFFFFFFFFFFull, split_and_merge(big));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_merge_masks_each_field</b> &mdash; <i>Merge masks each field</i></summary>
-
-    * **Objective**: Merge masks each field
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX64(clean, dirty);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0xC00921F9F01B866Eull, clean); // sign 1, E 0x400, t 0x921F9F01B866E</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_every_bit_position_survives_the_split</b> &mdash; <i>Every bit position survives the split</i></summary>
-
-    * **Objective**: Every bit position survives the split
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX64(bits, split_and_merge(dbl.from_bits(bits)));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_exponent_field_walks_its_whole_range</b> &mdash; <i>The exponent field walks its whole range</i></summary>
-
-    * **Objective**: The exponent field walks its whole range
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX64(s, dbl.sign(v));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(e, dbl.exp(v));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(MANTS[m], dbl.mant(v));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(in, split_and_merge(v));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_walking_significand_bit_survives</b> &mdash; <i>A walking significand bit survives</i></summary>
-
-    * **Objective**: A walking significand bit survives
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX64(cases[c], split_and_merge(dbl.from_bits(cases[c])));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_repeating_significand_patterns_survive</b> &mdash; <i>Repeating significand patterns survive</i></summary>
-
-    * **Objective**: Repeating significand patterns survive
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX64(in, split_and_merge(dbl.from_bits(in)));</code>
-  </details>
-
-</details>
-
-<details>
 <summary><b>test_flow_export (13 tests)</b></summary>
 
   <details style="margin-left: 20px;">
@@ -20253,185 +19196,6 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Assertions**:
       * <code>Assert true (ForwardedTrustV.ok)</code>
       * <code>Assert false (ForwardedTrustV.ok)</code>
-  </details>
-
-</details>
-
-<details>
-<summary><b>test_frame (18 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_frame_interleaves_its_literals_and_values</b> &mdash; <i>A frame interleaves its literals and values</i></summary>
-
-    * **Objective**: A frame interleaves its literals and values
-    * **Assertions**:
-      * <code>Assert equal string (WANT, out)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(sizeof(WANT) - 1u, n);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_literal_only_frame_takes_no_arguments</b> &mdash; <i>A literal only frame takes no arguments</i></summary>
-
-    * **Objective**: A literal only frame takes no arguments
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(12, frame.build(out, sizeof(out), L, NULL, 0));</code>
-      * <code>Assert equal string ("no args here", out)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_an_empty_spec_yields_an_empty_string</b> &mdash; <i>An empty spec yields an empty string</i></summary>
-
-    * **Objective**: An empty spec yields an empty string
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, frame.build(out, sizeof(out), E, NULL, 0));</code>
-      * <code>Assert equal string ("", out)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_null_string_argument_renders_as_empty</b> &mdash; <i>A null string argument renders as empty</i></summary>
-
-    * **Objective**: A null string argument renders as empty
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(2, frame.build(out, sizeof(out), S, (const protocore_fval[]){PROTOCORE_VSTR(NULL)}, 1));</code>
-      * <code>Assert equal string ("[]", out)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_every_field_kind_renders_its_conversion</b> &mdash; <i>Every field kind renders its conversion</i></summary>
-
-    * **Objective**: Every field kind renders its conversion
-    * **Assertions**:
-      * <code>Assert equal string ("0000beef|007|-5|12|3.14159|2.50|x|\\"a\\\\\\"b\\"|a&lt;b|0010", out)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_width_pads_but_never_truncates</b> &mdash; <i>A width pads but never truncates</i></summary>
-
-    * **Objective**: A width pads but never truncates
-    * **Assertions**:
-      * <code>Assert equal string ("ab,00ab,00042,100,123456", out)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_float_kinds_follow_the_printf_style_rule</b> &mdash; <i>The float kinds follow the printf style rule</i></summary>
-
-    * **Objective**: The float kinds follow the printf style rule
-    * **Assertions**:
-      * <code>Assert equal string ("1e+06", out)</code>
-      * <code>Assert equal string ("123456", out)</code>
-      * <code>Assert equal string ("1e-05", out)</code>
-      * <code>Assert equal string ("-0", out)</code>
-      * <code>Assert equal string ("3.141592654", out)</code>
-      * <code>Assert equal string ("2.67", out)</code>
-      * <code>Assert equal string ("0.00", out)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_fixed_field_above_the_64_bit_range_falls_back</b> &mdash; <i>A fixed field above the 64 bit range falls back</i></summary>
-
-    * **Objective**: A fixed field above the 64 bit range falls back
-    * **Assertions**:
-      * <code>Assert equal string ("1e+20", out)</code>
-      * <code>Assert equal string ("1e+300", out)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_frame_that_does_not_fit_writes_an_empty_string</b> &mdash; <i>A frame that does not fit writes an empty string</i></summary>
-
-    * **Objective**: A frame that does not fit writes an empty string
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, frame.build(tiny, sizeof(tiny), RESP,</code>
-      * <code>Assert equal string ("", tiny)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_capacity_boundary_is_exact</b> &mdash; <i>The capacity boundary is exact</i></summary>
-
-    * **Objective**: The capacity boundary is exact
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(4, frame.build(five, sizeof(five), F, NULL, 0));</code>
-      * <code>Assert equal string ("abcd", five)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, frame.build(four, sizeof(four), F, NULL, 0));</code>
-      * <code>Assert equal string ("", four)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_null_arguments_are_refused</b> &mdash; <i>Null arguments are refused</i></summary>
-
-    * **Objective**: Null arguments are refused
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, frame.build(NULL, 8, RESP,</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, frame.build(out, sizeof(out), NULL, NULL, 0));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_zero_capacity_buffer_is_never_written</b> &mdash; <i>A zero capacity buffer is never written</i></summary>
-
-    * **Objective**: A zero capacity buffer is never written
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, frame.build(sentinel, 0, RESP,</code>
-      * <code>Assert equal char (0x7F, sentinel[0])</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, frame.build(sentinel, 0, L, NULL, 0));</code>
-      * <code>Assert equal char (0x7F, sentinel[0])</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_value_whose_kind_disagrees_with_the_spec_is_refused</b> &mdash; <i>A value whose kind disagrees with the spec is refused</i></summary>
-
-    * **Objective**: A value whose kind disagrees with the spec is refused
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, frame.build(out, sizeof(out), N, (const protocore_fval[]){PROTOCORE_VSTR("7")}, 1));</code>
-      * <code>Assert equal string ("", out)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_argument_count_must_match_the_spec</b> &mdash; <i>The argument count must match the spec</i></summary>
-
-    * **Objective**: The argument count must match the spec
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, frame.build(out, sizeof(out), TWO, (const protocore_fval[]){PROTOCORE_VU32(1u)}, 1));</code>
-      * <code>Assert equal string ("", out)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(</code>
-      * <code>Assert equal string ("", out)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(</code>
-      * <code>Assert equal string ("1-2", out)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_an_unknown_opcode_is_refused</b> &mdash; <i>An unknown opcode is refused</i></summary>
-
-    * **Objective**: An unknown opcode is refused
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, frame.build(out, sizeof(out), BAD, (const protocore_fval[]){{200, {.u32 = 0}}}, 1));</code>
-      * <code>Assert equal string ("", out)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_append_accumulates_onto_the_existing_contents</b> &mdash; <i>Append accumulates onto the existing contents</i></summary>
-
-    * **Objective**: Append accumulates onto the existing contents
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(8, frame.append(acc, sizeof(acc), HDR,</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(16, frame.append(acc, sizeof(acc), HDR,</code>
-      * <code>Assert equal string ("X-A: 1\\r\\nX-B: 2\\r\\n", acc)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_append_rewinds_the_whole_frame_on_overflow</b> &mdash; <i>Append rewinds the whole frame on overflow</i></summary>
-
-    * **Objective**: Append rewinds the whole frame on overflow
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(</code>
-      * <code>Assert equal string ("X-A: 1\\r\\n", small)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_append_to_a_full_buffer_changes_nothing</b> &mdash; <i>Append to a full buffer changes nothing</i></summary>
-
-    * **Objective**: Append to a full buffer changes nothing
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, frame.append(full, sizeof(full), HDR,</code>
-      * <code>Assert equal string ("aaaaaaa", full)</code>
   </details>
 
 </details>
@@ -32768,207 +31532,6 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 </details>
 
 <details>
-<summary><b>test_membuild (18 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_put_n_takes_the_length_and_not_a_terminator</b> &mdash; <i>Put n takes the length and not a terminator</i></summary>
-
-    * **Objective**: Put n takes the length and not a terminator
-    * **Assertions**:
-      * <code>Assert true (b.ok)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(5, Sb.finish(&b));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY("ab\\0cd", g_buf, 5);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_lit_takes_the_array_extent</b> &mdash; <i>Lit takes the array extent</i></summary>
-
-    * **Objective**: Lit takes the array extent
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(9, Sb.finish(&b));</code>
-      * <code>Assert equal string ("HTTP/1.1 ", g_buf)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_put_appends_a_runtime_string</b> &mdash; <i>Put appends a runtime string</i></summary>
-
-    * **Objective**: Put appends a runtime string
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(24, Sb.finish(&b));</code>
-      * <code>Assert equal string ("Content-Type: text/plain", g_buf)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_ch_appends_one_character</b> &mdash; <i>Ch appends one character</i></summary>
-
-    * **Objective**: Ch appends one character
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(2, Sb.finish(&b));</code>
-      * <code>Assert equal string ("x|", g_buf)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_an_append_is_all_or_nothing_at_the_exact_boundary</b> &mdash; <i>An append is all or nothing at the exact boundary</i></summary>
-
-    * **Objective**: An append is all or nothing at the exact boundary
-    * **Assertions**:
-      * <code>Assert true (fit.ok)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(5, Sb.finish(&fit));</code>
-      * <code>Assert equal string ("abcde", g_buf)</code>
-      * <code>Assert false (over.ok)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, over.len); // nothing was written, not a truncated prefix</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, Sb.finish(&over));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_ok_latches_and_every_later_append_is_a_noop</b> &mdash; <i>Ok latches and every later append is a noop</i></summary>
-
-    * **Objective**: Ok latches and every later append is a noop
-    * **Assertions**:
-      * <code>Assert true (b.ok)</code>
-      * <code>Assert false (b.ok)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(before, b.len);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(before, b.len);</code>
-      * <code>Assert false (b.ok)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, Sb.finish(&b));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_zero_capacity_writes_nothing</b> &mdash; <i>Zero capacity writes nothing</i></summary>
-
-    * **Objective**: Zero capacity writes nothing
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, Sb.finish(&b));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x7Fu, (uint8_t)sentinel[0]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_put_clip_fills_what_fits_without_latching</b> &mdash; <i>A NULL source appends nothing and still does not latch.</i></summary>
-
-    * **Objective**: A NULL source appends nothing and still does not latch.
-    * **Assertions**:
-      * <code>Assert true (b.ok)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(5, Sb.finish(&b));</code>
-      * <code>Assert equal string ("abcde", g_buf)</code>
-      * <code>Assert true (n.ok)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, Sb.finish(&n));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_u64_clip_right_aligns_or_appends_nothing</b> &mdash; <i>A field that does not fit appends nothing at all, and does not latch.</i></summary>
-
-    * **Objective**: A field that does not fit appends nothing at all, and does not latch.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(14, Sb.finish(&b));</code>
-      * <code>Assert equal string ("   42|123456|0", g_buf)</code>
-      * <code>Assert true (t.ok)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, Sb.finish(&t));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_zero_padded_widths_follow_the_printf_conversions</b> &mdash; <i>Zero padded widths follow the printf conversions</i></summary>
-
-    * **Objective**: Zero padded widths follow the printf conversions
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(26, Sb.finish(&b));</code>
-      * <code>Assert equal string ("deadbeef|0005|abc|07|12345", g_buf)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_uint_renders_base_8_10_and_16</b> &mdash; <i>Uint renders base 8 10 and 16</i></summary>
-
-    * **Objective**: Uint renders base 8 10 and 16
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(15, Sb.finish(&b));</code>
-      * <code>Assert equal string ("ff,255,377,0010", g_buf)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_full_integer_ranges</b> &mdash; <i>INT64_MIN: taking the magnitude by negating the signed value would overflow, so this is the</i></summary>
-
-    * **Objective**: INT64_MIN: taking the magnitude by negating the signed value would overflow, so this is the
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(12, Sb.finish(&u));</code>
-      * <code>Assert equal string ("0,4294967295", g_buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(20, Sb.finish(&w));</code>
-      * <code>Assert equal string ("18446744073709551615", g_buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(46, Sb.finish(&s));</code>
-      * <code>Assert equal string ("-4096,-9223372036854775808,9223372036854775807", g_buf)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_each_digit_count_at_its_exact_fit</b> &mdash; <i>Each digit count at its exact fit</i></summary>
-
-    * **Objective**: Each digit count at its exact fit
-    * **Assertions**:
-      * <code>Assert true (fit.ok)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(WIDTH[i], Sb.finish(&fit));</code>
-      * <code>Assert false (over.ok)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, over.len);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, Sb.finish(&over));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_xml_writes_the_predefined_entities</b> &mdash; <i>Xml writes the predefined entities</i></summary>
-
-    * **Objective**: Xml writes the predefined entities
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(24, Sb.finish(&b));</code>
-      * <code>Assert equal string ("a&amp;b&lt;c&gt;d&quot;e", g_buf)</code>
-      * <code>Assert true (n.ok)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, Sb.finish(&n));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_json_quotes_and_escapes_the_two_required_characters</b> &mdash; <i>A NULL source is the empty JSON string, not a crash and not "null".</i></summary>
-
-    * **Objective**: A NULL source is the empty JSON string, not a crash and not "null".
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(9, Sb.finish(&b));</code>
-      * <code>Assert equal string ("\\"a\\\\\\"b\\\\\\\\c\\"", g_buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(2, Sb.finish(&n));</code>
-      * <code>Assert equal string ("\\"\\"", g_buf)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_json_escape_that_would_straddle_the_end_fails_closed</b> &mdash; <i>A json escape that would straddle the end fails closed</i></summary>
-
-    * **Objective**: A json escape that would straddle the end fails closed
-    * **Assertions**:
-      * <code>Assert false (b.ok)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, Sb.finish(&b));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sign_bit_reads_the_encoding_not_the_value</b> &mdash; <i>Sign bit reads the encoding not the value</i></summary>
-
-    * **Objective**: Sign bit reads the encoding not the value
-    * **Assertions**:
-      * <code>Assert true (Sb.sign_bit(-0.0))</code>
-      * <code>Assert false (Sb.sign_bit(0.0))</code>
-      * <code>Assert true (Sb.sign_bit(-1.0))</code>
-      * <code>Assert false (Sb.sign_bit(1.0))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_is_inf_and_is_nan_split_the_all_ones_exponent</b> &mdash; <i>0x7FF0000000000000 is +inf and 0x7FF0000000000001 a NaN, built from the field layout.</i></summary>
-
-    * **Objective**: 0x7FF0000000000000 is +inf and 0x7FF0000000000001 a NaN, built from the field layout.
-    * **Assertions**:
-      * <code>Assert true (Sb.is_inf(inf))</code>
-      * <code>Assert true (Sb.is_inf(neg_inf))</code>
-      * <code>Assert false (Sb.is_nan(inf))</code>
-      * <code>Assert true (Sb.is_nan(nan_v))</code>
-      * <code>Assert false (Sb.is_inf(nan_v))</code>
-      * <code>Assert false (Sb.is_inf(0.0))</code>
-      * <code>Assert false (Sb.is_nan(0.0))</code>
-      * <code>Assert false (Sb.is_inf(1.7976931348623157e308))</code>
-      * <code>Assert false (Sb.is_nan(1.7976931348623157e308))</code>
-  </details>
-
-</details>
-
-<details>
 <summary><b>test_middleware (11 tests)</b></summary>
 
   <details style="margin-left: 20px;">
@@ -35005,9 +33568,9 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Objective**: Str and bin families do not cross
     * **Assertions**:
       * <code>Assert false (MsgPack.get_bytes(&r, &b, &n))</code>
-      * <code>Assert false (span.cok(r))</code>
+      * <code>Assert false (EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r))</code>
       * <code>Assert false (MsgPack.get_str(&r2, &s, &n))</code>
-      * <code>Assert false (span.cok(r2))</code>
+      * <code>Assert false (EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r2))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -35031,7 +33594,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 
     * **Objective**: Map round trip
     * **Assertions**:
-      * <code>Assert true (span.ok(w))</code>
+      * <code>Assert true (EMBED_CALL(spat.ok, SpatiumCfg, .span = w))</code>
       * <code>Assert equal int (PROTOCORE_CODEC_MAP, MsgPack.peek(&r))</code>
       * <code>Assert true (MsgPack.get_map(&r, &count))</code>
       * <code>Assert equal uint (2u, count)</code>
@@ -35043,7 +33606,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
       * <code>Assert equal memory ("on", k, 2)</code>
       * <code>Assert true (MsgPack.get_bool(&r, &on))</code>
       * <code>Assert true (on)</code>
-      * <code>Assert true (span.cok(r))</code>
+      * <code>Assert true (EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r))</code>
       * <code>Assert equal int (PROTOCORE_CODEC_INVALID, MsgPack.peek(&r))</code>
   </details>
 
@@ -35052,8 +33615,8 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 
     * **Objective**: Array 16 round trip
     * **Assertions**:
-      * <code>Assert true (span.ok(w))</code>
-      * <code>Assert equal uint (3u + 16u, span.len(w))</code>
+      * <code>Assert true (EMBED_CALL(spat.ok, SpatiumCfg, .span = w))</code>
+      * <code>Assert equal uint (3u + 16u, w.pos)</code>
       * <code>Assert true (MsgPack.get_array(&r, &count))</code>
       * <code>Assert equal uint (16u, count)</code>
       * <code>Assert true (MsgPack.get_uint(&r, &v))</code>
@@ -35066,7 +33629,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Objective**: Truncated input fails closed
     * **Assertions**:
       * <code>Assert false (MsgPack.get_str(&r, &s, &n))</code>
-      * <code>Assert false (span.cok(r))</code>
+      * <code>Assert false (EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r))</code>
       * <code>Assert false (MsgPack.get_bytes(&r, &b, &n))</code>
       * <code>Assert false (MsgPack.get_uint(&r, &u))</code>
       * <code>Assert false (MsgPack.get_array(&r, &count))</code>
@@ -35079,20 +33642,20 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Objective**: Error is sticky
     * **Assertions**:
       * <code>Assert false (MsgPack.get_uint(&r, &u))</code>
-      * <code>Assert false (span.cok(r))</code>
+      * <code>Assert false (EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r))</code>
       * <code>Assert false (MsgPack.get_bool(&r, &b))</code>
       * <code>Assert true (MsgPack.peek(&r) == PROTOCORE_CODEC_INVALID)</code>
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_overflow_reports_the_size_needed</b> &mdash; <i>produced() yields nothing once the region overflowed</i></summary>
+    <summary><b>test_overflow_reports_the_size_needed</b> &mdash; <i>produced() carries the overflow as its read side's error</i></summary>
 
-    * **Objective**: produced() yields nothing once the region overflowed
+    * **Objective**: produced() carries the overflow as its read side's error
     * **Assertions**:
-      * <code>Assert false (span.ok(w))</code>
-      * <code>Assert true (span.has_storage(w))</code>
-      * <code>Assert equal uint (11u, span.len(w))</code>
-      * <code>Assert equal uint (0u, r.len)</code>
+      * <code>Assert false (EMBED_CALL(spat.ok, SpatiumCfg, .span = w))</code>
+      * <code>Assert true (EMBED_CALL(spat.has_storage, SpatiumCfg, .span = w))</code>
+      * <code>Assert equal uint (11u, w.pos)</code>
+      * <code>Assert false (EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -41171,22 +39734,22 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 
     * **Objective**: A copy into a smaller destination terminates inside it and reports what it wrote.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(sizeof(unterminated), str.len(unterminated, sizeof(unterminated)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(4, str.len(unterminated, 4));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, str.len(unterminated, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(sizeof(unterminated),</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(4, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = unterminated, .cap = 4));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = unterminated, .cap = 0));</code>
       * <code>Assert true (n &lt; cap)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(n, strlen(dst));</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x5A, (uint8_t)dst[i]);</code>
       * <code>Assert true (hit &gt;= a)</code>
       * <code>Assert true ((size_t)(hit - a) &lt; sizeof(a))</code>
-      * <code>Assert equal int (hit != NULL, str.has(a, cap, needle, sizeof(needle), ci) ? 1 : 0)</code>
-      * <code>Assert true (str.eq("abc", "abc", 8, PROTO_FALSE))</code>
-      * <code>Assert false (str.eq("abc", "abcd", 8, PROTO_FALSE))</code>
-      * <code>Assert false (str.eq("abc", "ABC", 8, PROTO_FALSE))</code>
-      * <code>Assert true (str.eq("abc", "ABC", 8, PROTO_TRUE))</code>
-      * <code>Assert true (str.eq("ABC", "abc", 8, PROTO_TRUE))</code>
-      * <code>Assert true (str.starts("abcdef", "abc", 8, PROTO_FALSE))</code>
-      * <code>Assert false (str.starts("abc", "abcdef", 8, PROTO_FALSE))</code>
+      * <code>TEST_ASSERT_EQUAL_INT(hit != NULL, EMBED_CALL(cellul.has, CatenaFinitaCfg, .src = a, .cap = cap,</code>
+      * <code>Assert true (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = "abc", .other = "abc", .cap = 8, .ci = PROTO_FALSE))</code>
+      * <code>TEST_ASSERT_FALSE(</code>
+      * <code>TEST_ASSERT_FALSE(</code>
+      * <code>Assert true (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = "abc", .other = "ABC", .cap = 8, .ci = PROTO_TRUE))</code>
+      * <code>Assert true (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = "ABC", .other = "abc", .cap = 8, .ci = PROTO_TRUE))</code>
+      * <code>TEST_ASSERT_TRUE(</code>
+      * <code>TEST_ASSERT_FALSE(</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -41637,227 +40200,6 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
       * <code>Assert equal string ("min_modem", Radio.text)</code>
       * <code>Assert equal string ("max_modem", Radio.text)</code>
       * <code>Assert equal string ("none", Radio.text)</code>
-  </details>
-
-</details>
-
-<details>
-<summary><b>test_plaintext (19 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_high_water_mark_starts_at_zero</b> &mdash; <i>The high water mark starts at zero</i></summary>
-
-    * **Objective**: The high water mark starts at zero
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, plain.high_water());</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_borrow_advances_the_usage_report</b> &mdash; <i>A borrow advances the usage report</i></summary>
-
-    * **Objective**: A borrow advances the usage report
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, plain.used());</code>
-      * <code>Assert not null (p)</code>
-      * <code>Assert true (plain.used() &gt;= 16)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_two_borrows_never_overlap</b> &mdash; <i>Two borrows never overlap</i></summary>
-
-    * **Objective**: Two borrows never overlap
-    * **Assertions**:
-      * <code>Assert not null (a)</code>
-      * <code>Assert not null (b)</code>
-      * <code>Assert true (hi &gt;= lo + 8)</code>
-      * <code>Assert true (plain.used() &gt;= 16)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_requested_alignment_is_honored</b> &mdash; <i>The requested alignment is honored</i></summary>
-
-    * **Objective**: The requested alignment is honored
-    * **Assertions**:
-      * <code>Assert not null (p8)</code>
-      * <code>Assert not null (p16)</code>
-      * <code>Assert not null (over)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, (uintptr_t)p8 % 8u);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, (uintptr_t)p16 % PROTOCORE_ARENA_MAX_ALIGN);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, (uintptr_t)over % PROTOCORE_ARENA_MAX_ALIGN);</code>
-      * <code>Assert not null (def)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, (uintptr_t)def % PROTOCORE_ARENA_ALIGN);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_zero_size_borrow_is_not_a_failure</b> &mdash; <i>A zero size borrow is not a failure</i></summary>
-
-    * **Objective**: A zero size borrow is not a failure
-    * **Assertions**:
-      * <code>Assert not null (plain.alloc(0, 1))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_reset_empties_the_arena_and_reuses_the_base</b> &mdash; <i>The reset empties the arena and reuses the base</i></summary>
-
-    * **Objective**: The reset empties the arena and reuses the base
-    * **Assertions**:
-      * <code>Assert not null (first)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, plain.used());</code>
-      * <code>Assert equal ptr (first, plain.alloc(32, 1))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_exhaustion_fails_closed_without_moving_the_cursor</b> &mdash; <i>Exhaustion fails closed without moving the cursor</i></summary>
-
-    * **Objective**: Exhaustion fails closed without moving the cursor
-    * **Assertions**:
-      * <code>Assert not null (plain.alloc(cap, 1))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(cap, plain.used());</code>
-      * <code>Assert null (plain.alloc(1, 1))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(cap, plain.used());</code>
-      * <code>Assert not null (plain.alloc(1, 1))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_request_wider_than_the_arena_is_refused</b> &mdash; <i>A request wider than the arena is refused</i></summary>
-
-    * **Objective**: A request wider than the arena is refused
-    * **Assertions**:
-      * <code>Assert null (plain.alloc(plain.capacity() + 1u, 1))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, plain.used());</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_alignment_padding_cannot_run_past_the_end</b> &mdash; <i>Alignment padding cannot run past the end</i></summary>
-
-    * **Objective**: Alignment padding cannot run past the end
-    * **Assertions**:
-      * <code>Assert not null (plain.alloc(plain.capacity() - 1u, 1))</code>
-      * <code>Assert null (plain.alloc(1, 64))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_high_water_mark_is_bounded_by_the_arena</b> &mdash; <i>The high water mark is bounded by the arena</i></summary>
-
-    * **Objective**: The high water mark is bounded by the arena
-    * **Assertions**:
-      * <code>Assert true (plain.high_water() &gt;= plain.used())</code>
-      * <code>Assert true (plain.high_water() &lt;= plain.capacity())</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_release_restores_the_usage_at_the_mark</b> &mdash; <i>A release restores the usage at the mark</i></summary>
-
-    * **Objective**: A release restores the usage at the mark
-    * **Assertions**:
-      * <code>Assert not null (inner)</code>
-      * <code>Assert true (plain.used() &gt;= at_mark + 200)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(at_mark, plain.used());</code>
-      * <code>Assert equal ptr (inner, plain.alloc(200, 1))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_nested_marks_unwind_innermost_first</b> &mdash; <i>Nested marks unwind innermost first</i></summary>
-
-    * **Objective**: Nested marks unwind innermost first
-    * **Assertions**:
-      * <code>Assert true (plain.used() &gt; after_outer)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(after_outer, plain.used());</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, plain.used());</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_repeated_scopes_do_not_accumulate</b> &mdash; <i>Repeated scopes do not accumulate</i></summary>
-
-    * **Objective**: Repeated scopes do not accumulate
-    * **Assertions**:
-      * <code>Assert not null (p)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, plain.used());</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_two_pools_are_disjoint_regions</b> &mdash; <i>The two pools are disjoint regions</i></summary>
-
-    * **Objective**: The two pools are disjoint regions
-    * **Assertions**:
-      * <code>Assert not null (mine)</code>
-      * <code>Assert true (plain.owns(mine))</code>
-      * <code>Assert false (protocore_secure_owns(mine))</code>
-      * <code>Assert equal int (-1, protocore_secure_slot_of(mine))</code>
-      * <code>Assert true (span.ok(secret))</code>
-      * <code>Assert false (plain.owns(secret.buf))</code>
-      * <code>Assert equal int (-1, plain.slot_of(secret.buf))</code>
-      * <code>Assert true (protocore_secure_owns(secret.buf))</code>
-      * <code>Assert false (plain.owns(NULL))</code>
-      * <code>Assert equal int (-1, plain.slot_of(NULL))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_borrow_comes_from_the_callers_slot</b> &mdash; <i>A borrow comes from the callers slot</i></summary>
-
-    * **Objective**: A borrow comes from the callers slot
-    * **Assertions**:
-      * <code>Assert not null (own)</code>
-      * <code>Assert equal int (protocore_worker_self(), plain.slot_of(own))</code>
-      * <code>Assert true (plain.slot_of(own) &gt;= 0)</code>
-      * <code>Assert true (plain.slot_of(own) &lt; PROTOCORE_REG_POOL_SLOTS)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_span_form_binds_the_length_to_the_borrow</b> &mdash; <i>The span form binds the length to the borrow</i></summary>
-
-    * **Objective**: The span form binds the length to the borrow
-    * **Assertions**:
-      * <code>Assert true (span.ok(s))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(48, s.cap);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, s.pos);</code>
-      * <code>Assert true (plain.owns(s.buf))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, (uintptr_t)s.buf % 8u);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_an_over_budget_span_is_empty_not_null_with_capacity</b> &mdash; <i>An over budget span is empty not null with capacity</i></summary>
-
-    * **Objective**: An over budget span is empty not null with capacity
-    * **Assertions**:
-      * <code>Assert false (span.ok(too_big))</code>
-      * <code>Assert null (too_big.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, too_big.cap);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_persistent_borrow_survives_the_reset</b> &mdash; <i>A transient borrow after the reset does not land on the persistent one.</i></summary>
-
-    * **Objective**: A transient borrow after the reset does not land on the persistent one.
-    * **Assertions**:
-      * <code>Assert true (span.ok(keep))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(64, keep.cap);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, keep.buf[i]);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, plain.used()); // the transient end is empty</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x5Au, keep.buf[0]);</code>
-      * <code>Assert true (plain.owns(keep.buf))</code>
-      * <code>Assert not null (t)</code>
-      * <code>Assert true (t &gt;= keep.buf + 64 || t + 64 &lt;= keep.buf)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_table_names_the_functions_it_claims_to</b> &mdash; <i>The table names the functions it claims to</i></summary>
-
-    * **Objective**: The table names the functions it claims to
-    * **Assertions**:
-      * <code>Assert equal ptr (protocore_plaintext_alloc, plain.alloc)</code>
-      * <code>Assert equal ptr (protocore_plaintext_span, plain.span)</code>
-      * <code>Assert equal ptr (protocore_plaintext_persist_span, plain.persist)</code>
-      * <code>Assert equal ptr (protocore_plaintext_reset, plain.reset)</code>
-      * <code>Assert equal ptr (protocore_plaintext_mark, plain.mark)</code>
-      * <code>Assert equal ptr (protocore_plaintext_release, plain.release)</code>
-      * <code>Assert equal ptr (protocore_plaintext_used, plain.used)</code>
-      * <code>Assert equal ptr (protocore_plaintext_high_water, plain.high_water)</code>
-      * <code>Assert equal ptr (protocore_plaintext_capacity, plain.capacity)</code>
-      * <code>Assert equal ptr (protocore_plaintext_owns, plain.owns)</code>
-      * <code>Assert equal ptr (protocore_plaintext_slot_of, plain.slot_of)</code>
-      * <code>Assert equal ptr (&protocore_plaintext_internal, plain.internal)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(PROTOCORE_PLAINTEXT_ARENA_SIZE, plain.capacity());</code>
   </details>
 
 </details>
@@ -43009,7 +41351,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 
     * **Objective**: A tx completion carries no bytes
     * **Assertions**:
-      * <code>Assert true (protocore_dma_tx_submit(0, tx, (uint16_t)sizeof(tx)))</code>
+      * <code>TEST_ASSERT_TRUE(</code>
       * <code>TEST_ASSERT_EQUAL_size_t(1u, g_dma_n);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DMA_TX, g_dma[0].dir);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(sizeof(tx), g_dma[0].len);</code>
@@ -43022,7 +41364,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 
     * **Objective**: Loopback round trips through the lane
     * **Assertions**:
-      * <code>Assert true (protocore_dma_tx_submit(1, tx, (uint16_t)sizeof(tx)))</code>
+      * <code>TEST_ASSERT_TRUE(</code>
       * <code>TEST_ASSERT_EQUAL_size_t(2u, g_dma_n);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DMA_TX, g_dma[0].dir);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DMA_RX, g_dma[1].dir);</code>
@@ -43589,9 +41931,9 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 
     * **Objective**: Race - Interleaved producer consumer ring buffer
     * **Assertions**:
-      * <code>Assert equal ((uint8_t)i, s-&gt;rx_buffer[s-&gt;rx_tail])</code>
-      * <code>Assert equal ((uint8_t)i, s-&gt;rx_buffer[s-&gt;rx_tail])</code>
-      * <code>Assert equal (s-&gt;rx_head, s-&gt;rx_tail)</code>
+      * <code>Assert equal ((uint8_t)i, rx_take(s))</code>
+      * <code>Assert equal ((uint8_t)i, rx_take(s))</code>
+      * <code>Assert equal (0u, rx_used(s))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -43599,7 +41941,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 
     * **Objective**: Race - Ring buffer full prevents write
     * **Assertions**:
-      * <code>Assert equal (s-&gt;rx_tail, (s-&gt;rx_head + 1) % RX_BUF_SIZE)</code>
+      * <code>Assert equal (0u, rx_vacant(s))</code>
       * <code>Assert equal (RX_BUF_SIZE - 1, written)</code>
   </details>
 
@@ -43674,170 +42016,6 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
       * <code>Assert equal (PARSE_COMPLETE, http_pool[0].parse_state)</code>
       * <code>Assert equal (PARSE_COMPLETE, http_pool[0].parse_state)</code>
       * <code>Assert equal string ("GET", http_pool[0].method)</code>
-  </details>
-
-</details>
-
-<details>
-<summary><b>test_primitives (14 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_c11_g_selects_the_style_by_the_exponent</b> &mdash; <i>C11 g selects the style by the exponent</i></summary>
-
-    * **Objective**: C11 g selects the style by the exponent
-    * **Assertions**:
-      * <code>Assert equal string ("1e+06", g_of(1e6, 6))</code>
-      * <code>Assert equal string ("123456", g_of(123456.0, 6))</code>
-      * <code>Assert equal string ("1", g_of(1.0, 6))</code>
-      * <code>Assert equal string ("0.5", g_of(0.5, 6))</code>
-      * <code>Assert equal string ("0.0001", g_of(0.0001, 6))</code>
-      * <code>Assert equal string ("1e-05", g_of(0.00001, 6))</code>
-      * <code>Assert equal string ("1e-06", g_of(1e-6, 6))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_g_threshold_moves_with_the_precision</b> &mdash; <i>A precision of zero is taken as 1, so it renders the same as P = 1.</i></summary>
-
-    * **Objective**: A precision of zero is taken as 1, so it renders the same as P = 1.
-    * **Assertions**:
-      * <code>Assert equal string ("1e+02", g_of(100.0, 1))</code>
-      * <code>Assert equal string ("1", g_of(1.0, 1))</code>
-      * <code>Assert equal string ("0.5", g_of(0.5, 1))</code>
-      * <code>Assert equal string ("1e+02", g_of(100.0, 0))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_g_rounds_to_the_significant_digits</b> &mdash; <i>G rounds to the significant digits</i></summary>
-
-    * **Objective**: G rounds to the significant digits
-    * **Assertions**:
-      * <code>Assert equal string ("1.23457e+06", g_of(1234567.0, 6))</code>
-      * <code>Assert equal string ("6.02214e+23", g_of(6.02214076e23, 6))</code>
-      * <code>Assert equal string ("3.14159", g_of(3.14159265358979, 6))</code>
-      * <code>Assert equal string ("3.141592654", g_of(3.14159265358979, 10))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_g_strips_trailing_zeros_and_a_bare_point</b> &mdash; <i>G strips trailing zeros and a bare point</i></summary>
-
-    * **Objective**: G strips trailing zeros and a bare point
-    * **Assertions**:
-      * <code>Assert equal string ("100", g_of(100.0, 6))</code>
-      * <code>Assert equal string ("1e+20", g_of(1e20, 10))</code>
-      * <code>Assert equal string ("0.1", g_of(0.1, 6))</code>
-      * <code>Assert equal string ("0.3", g_of(0.3, 6))</code>
-      * <code>Assert equal string ("1234567", g_of(1234567.0, 10))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_g_exponent_carries_a_sign_and_two_digits</b> &mdash; <i>G exponent carries a sign and two digits</i></summary>
-
-    * **Objective**: G exponent carries a sign and two digits
-    * **Assertions**:
-      * <code>Assert equal string ("1e+06", g_of(1e6, 6))</code>
-      * <code>Assert equal string ("1e-05", g_of(1e-5, 6))</code>
-      * <code>Assert equal string ("1e+300", g_of(1e300, 6))</code>
-      * <code>Assert equal string ("1e-300", g_of(1e-300, 6))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_g_renders_the_sign_from_the_encoding</b> &mdash; <i>G renders the sign from the encoding</i></summary>
-
-    * **Objective**: G renders the sign from the encoding
-    * **Assertions**:
-      * <code>Assert equal string ("0", g_of(0.0, 6))</code>
-      * <code>Assert equal string ("-0", g_of(-0.0, 6))</code>
-      * <code>Assert equal string ("-1", g_of(-1.0, 6))</code>
-      * <code>Assert equal string ("-3.14159", g_of(-3.14159265358979, 6))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_c11_f_rounds_the_stored_binary_value</b> &mdash; <i>C11 f rounds the stored binary value</i></summary>
-
-    * **Objective**: C11 f rounds the stored binary value
-    * **Assertions**:
-      * <code>Assert equal string ("2.67", f_of(2.675, 2))</code>
-      * <code>Assert equal string ("0.1", f_of(0.05, 1))</code>
-      * <code>Assert equal string ("100.00", f_of(99.995, 2))</code>
-      * <code>Assert equal string ("1234.57", f_of(1234.5678, 2))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_an_exact_midpoint_rounds_to_the_even_digit</b> &mdash; <i>An exact midpoint rounds to the even digit</i></summary>
-
-    * **Objective**: An exact midpoint rounds to the even digit
-    * **Assertions**:
-      * <code>Assert equal string ("1.062", f_of(1.0625, 3))</code>
-      * <code>Assert equal string ("1.188", f_of(1.1875, 3))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_f_emits_exactly_the_requested_decimals</b> &mdash; <i>F emits exactly the requested decimals</i></summary>
-
-    * **Objective**: F emits exactly the requested decimals
-    * **Assertions**:
-      * <code>Assert equal string ("1", f_of(1.0, 0))</code>
-      * <code>Assert equal string ("1.0", f_of(1.0, 1))</code>
-      * <code>Assert equal string ("1.00", f_of(1.0, 2))</code>
-      * <code>Assert equal string ("1.0000", f_of(1.0, 4))</code>
-      * <code>Assert equal string ("0", f_of(0.0, 0))</code>
-      * <code>Assert equal string ("0.000", f_of(0.0, 3))</code>
-      * <code>Assert equal string ("-1.5", f_of(-1.5, 1))</code>
-      * <code>Assert equal string ("1000000", f_of(1e6, 0))</code>
-      * <code>Assert equal string ("-0.00", f_of(-0.0, 2))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_f_always_leads_with_a_digit</b> &mdash; <i>F always leads with a digit</i></summary>
-
-    * **Objective**: F always leads with a digit
-    * **Assertions**:
-      * <code>Assert equal string ("0.50", f_of(0.5, 2))</code>
-      * <code>Assert equal string ("0.0625", f_of(0.0625, 4))</code>
-      * <code>Assert equal string ("-0.25", f_of(-0.25, 2))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_f_above_the_64_bit_range_falls_back_to_the_g_form</b> &mdash; <i>Just below the boundary it is still an exact expansion: 2^63 is 9223372036854775808.</i></summary>
-
-    * **Objective**: Just below the boundary it is still an exact expansion: 2^63 is 9223372036854775808.
-    * **Assertions**:
-      * <code>Assert equal string ("1e+20", f_of(1e20, 2))</code>
-      * <code>Assert equal string ("1e+300", f_of(1e300, 2))</code>
-      * <code>Assert equal string ("9223372036854775808", f_of(9223372036854775808.0, 0))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_non_finite_values_are_named</b> &mdash; <i>Non finite values are named</i></summary>
-
-    * **Objective**: Non finite values are named
-    * **Assertions**:
-      * <code>Assert equal string ("inf", g_of(inf, 6))</code>
-      * <code>Assert equal string ("-inf", g_of(neg_inf, 6))</code>
-      * <code>Assert equal string ("nan", g_of(nan_v, 6))</code>
-      * <code>Assert equal string ("inf", f_of(inf, 2))</code>
-      * <code>Assert equal string ("-inf", f_of(neg_inf, 2))</code>
-      * <code>Assert equal string ("nan", f_of(nan_v, 2))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_number_that_does_not_fit_latches</b> &mdash; <i>A number that does not fit latches</i></summary>
-
-    * **Objective**: A number that does not fit latches
-    * **Assertions**:
-      * <code>Assert false (b.ok)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, Sb.finish(&b));</code>
-      * <code>Assert false (f.ok)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, Sb.finish(&f));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_decimal_count_is_clamped</b> &mdash; <i>0.5 is exact, so every decimal past the first is a zero however many are asked for.</i></summary>
-
-    * **Objective**: 0.5 is exact, so every decimal past the first is a zero however many are asked for.
-    * **Assertions**:
-      * <code>Assert equal string ("0.500000000000000000", f_of(0.5, 18))</code>
-      * <code>Assert equal string ("0.500000000000000000", f_of(0.5, 25))</code>
   </details>
 
 </details>
@@ -44563,403 +42741,6 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 </details>
 
 <details>
-<summary><b>test_protomem (15 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_c11_cmp_orders_bytes_as_unsigned</b> &mdash; <i>C11 cmp orders bytes as unsigned</i></summary>
-
-    * **Objective**: C11 cmp orders bytes as unsigned
-    * **Assertions**:
-      * <code>Assert true (mem.cmp(HIGH, LOW, 1) &gt; 0)</code>
-      * <code>Assert true (mem.cmp(LOW, HIGH, 1) &lt; 0)</code>
-      * <code>Assert true (mem.cmp(A, B, 4) &gt; 0)</code>
-      * <code>Assert true (mem.cmp(B, A, 4) &lt; 0)</code>
-      * <code>Assert equal int (0, mem.cmp(A, B, 2))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_cmp_of_equal_and_of_zero_length</b> &mdash; <i>Cmp of equal and of zero length</i></summary>
-
-    * **Objective**: Cmp of equal and of zero length
-    * **Assertions**:
-      * <code>Assert equal int (0, mem.cmp(A, B, 8))</code>
-      * <code>Assert equal int (0, mem.cmp(A, B, 0))</code>
-      * <code>Assert equal int (0, mem.cmp(A, C, 7))</code>
-      * <code>Assert true (mem.cmp(A, C, 8) &lt; 0)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_cmp_does_not_stop_at_a_nul</b> &mdash; <i>Cmp does not stop at a nul</i></summary>
-
-    * **Objective**: Cmp does not stop at a nul
-    * **Assertions**:
-      * <code>Assert equal int (0, mem.cmp(A, B, 5))</code>
-      * <code>Assert true (mem.cmp(A, B, 6) &lt; 0)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_cpy_moves_exactly_n_bytes</b> &mdash; <i>Cpy moves exactly n bytes</i></summary>
-
-    * **Objective**: Cpy moves exactly n bytes
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(SRC, at(4), sizeof(SRC));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_cpy_at_every_offset_pair</b> &mdash; <i>Cpy at every offset pair</i></summary>
-
-    * **Objective**: Cpy at every offset pair
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(src[so + i], at(d)[i]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_cpy_of_zero_bytes_writes_nothing</b> &mdash; <i>Cpy of zero bytes writes nothing</i></summary>
-
-    * **Objective**: Cpy of zero bytes writes nothing
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_move_is_correct_under_overlap_in_both_directions</b> &mdash; <i>destination above the source</i></summary>
-
-    * **Objective**: destination above the source
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(PATTERN, at(shift), sizeof(PATTERN));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(PATTERN, at(0), sizeof(PATTERN));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_move_onto_itself_changes_nothing</b> &mdash; <i>Move onto itself changes nothing</i></summary>
-
-    * **Objective**: Move onto itself changes nothing
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(PATTERN, at(2), sizeof(PATTERN));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_move_without_overlap</b> &mdash; <i>Move without overlap</i></summary>
-
-    * **Objective**: Move without overlap
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(PATTERN, at(32), sizeof(PATTERN));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_chr_finds_the_first_occurrence</b> &mdash; <i>Chr finds the first occurrence</i></summary>
-
-    * **Objective**: Chr finds the first occurrence
-    * **Assertions**:
-      * <code>Assert equal ptr (P + 1, mem.chr(P, sizeof(P), 'b'))</code>
-      * <code>Assert equal ptr (P + 0, mem.chr(P, sizeof(P), 'a'))</code>
-      * <code>Assert equal ptr (P + 7, mem.chr(P, sizeof(P), 'd'))</code>
-      * <code>Assert null (mem.chr(P, sizeof(P), 'z'))</code>
-      * <code>Assert null (mem.chr(P, 0, 'a'))</code>
-      * <code>Assert null (mem.chr(P, 1, 'b'))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_chr_does_not_stop_at_a_nul</b> &mdash; <i>Chr does not stop at a nul</i></summary>
-
-    * **Objective**: Chr does not stop at a nul
-    * **Assertions**:
-      * <code>Assert equal ptr (P + 4, mem.chr(P, sizeof(P), 'c'))</code>
-      * <code>Assert equal ptr (P + 1, mem.chr(P, sizeof(P), 0x00))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_chr_finds_a_high_byte</b> &mdash; <i>Chr finds a high byte</i></summary>
-
-    * **Objective**: Chr finds a high byte
-    * **Assertions**:
-      * <code>Assert equal ptr (P + 2, mem.chr(P, sizeof(P), 0x80))</code>
-      * <code>Assert equal ptr (P + 3, mem.chr(P, sizeof(P), 0xFF))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_set_fills_exactly_n_bytes</b> &mdash; <i>Set fills exactly n bytes</i></summary>
-
-    * **Objective**: Set fills exactly n bytes
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x5Au, at(d)[i]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_set_writes_a_byte_not_a_word</b> &mdash; <i>Set writes a byte not a word</i></summary>
-
-    * **Objective**: Set writes a byte not a word
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xFFu, at(0)[i]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_zero_clears_exactly_n_bytes</b> &mdash; <i>Zero clears exactly n bytes</i></summary>
-
-    * **Objective**: Zero clears exactly n bytes
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x00u, at(d)[i]);</code>
-  </details>
-
-</details>
-
-<details>
-<summary><b>test_protostr (22 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_len_is_the_bounded_strnlen</b> &mdash; <i>Len is the bounded strnlen</i></summary>
-
-    * **Objective**: Len is the bounded strnlen
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, str.len("", 8));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(5, str.len("hello", 8));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(5, str.len("hello", 5)); // the NUL sits exactly at the bound</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(3, str.len("hello", 3)); // no NUL within the bound</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, str.len("hello", 0));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_len_stops_at_the_terminator_whatever_the_cap</b> &mdash; <i>Len stops at the terminator whatever the cap</i></summary>
-
-    * **Objective**: Len stops at the terminator whatever the cap
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(5, str.len(SHORT, 0xFFFFu));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(5, str.len(SHORT, (size_t)-1));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_len_at_every_length</b> &mdash; <i>Len at every length</i></summary>
-
-    * **Objective**: Len at every length
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(n, str.len(s, sizeof(s)));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_diff_names_the_first_differing_index</b> &mdash; <i>Diff names the first differing index</i></summary>
-
-    * **Objective**: Diff names the first differing index
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, str.diff("abc", "xbc", 3, PROTO_FALSE));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1, str.diff("abc", "axc", 3, PROTO_FALSE));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(2, str.diff("abc", "abx", 3, PROTO_FALSE));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(3, str.diff("abc", "abc", 3, PROTO_FALSE));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, str.diff("abc", "abc", 0, PROTO_FALSE));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_diff_at_every_position</b> &mdash; <i>Diff at every position</i></summary>
-
-    * **Objective**: Diff at every position
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(i, str.diff(a, b, sizeof(a), PROTO_FALSE));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_eq_requires_the_terminator_before_the_difference</b> &mdash; <i>Eq requires the terminator before the difference</i></summary>
-
-    * **Objective**: Eq requires the terminator before the difference
-    * **Assertions**:
-      * <code>Assert true (str.eq("token", "token", 16, PROTO_FALSE))</code>
-      * <code>Assert true (str.eq("", "", 16, PROTO_FALSE))</code>
-      * <code>Assert false (str.eq("token", "tokens", 16, PROTO_FALSE))</code>
-      * <code>Assert false (str.eq("tokens", "token", 16, PROTO_FALSE))</code>
-      * <code>Assert false (str.eq("token", "toKen", 16, PROTO_FALSE))</code>
-      * <code>Assert true (str.eq("token", "toKen", 16, PROTO_TRUE))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_starts_reads_the_tie_as_a_match</b> &mdash; <i>Starts reads the tie as a match</i></summary>
-
-    * **Objective**: Starts reads the tie as a match
-    * **Assertions**:
-      * <code>Assert true (str.starts("Content-Length: 42", "Content-", 32, PROTO_FALSE))</code>
-      * <code>Assert true (str.starts("abc", "abc", 8, PROTO_FALSE))</code>
-      * <code>Assert true (str.starts("abc", "", 8, PROTO_FALSE))</code>
-      * <code>Assert false (str.starts("abc", "abcd", 8, PROTO_FALSE))</code>
-      * <code>Assert false (str.starts("abc", "b", 8, PROTO_FALSE))</code>
-      * <code>Assert true (str.starts("CONTENT-length: 1", "content-", 32, PROTO_TRUE))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_ci_folds_only_ascii_letters</b> &mdash; <i>Every letter, both cases, does fold.</i></summary>
-
-    * **Objective**: Every letter, both cases, does fold.
-    * **Assertions**:
-      * <code>Assert false message (str.eq(PAIRS[i][0], PAIRS[i][1], 4, PROTO_TRUE), PAIRS[i][0])</code>
-      * <code>Assert false message (str.starts(PAIRS[i][0], PAIRS[i][1], 4, PROTO_TRUE), PAIRS[i][0])</code>
-      * <code>Assert true (str.eq(lower, upper, 4, PROTO_TRUE))</code>
-      * <code>Assert false (str.eq(lower, upper, 4, PROTO_FALSE))</code>
-      * <code>Assert true (str.eq("0123456789", "0123456789", 16, PROTO_TRUE))</code>
-      * <code>Assert false (str.eq("0", "1", 4, PROTO_TRUE))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_ci_over_a_run_longer_than_a_word</b> &mdash; <i>Ci over a run longer than a word</i></summary>
-
-    * **Objective**: Ci over a run longer than a word
-    * **Assertions**:
-      * <code>Assert true (str.eq("Sec-WebSocket-Accept", "sec-websocket-accept", 32, PROTO_TRUE))</code>
-      * <code>Assert false (str.eq("Sec-WebSocket-Accept", "sec-websocket-accepT!", 32, PROTO_TRUE))</code>
-      * <code>Assert true (str.starts("Sec-WebSocket-Accept: x", "SEC-WEBSOCKET-", 32, PROTO_TRUE))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_find_returns_the_first_occurrence</b> &mdash; <i>Repeated anchor bytes: the first full match wins, not the first anchor.</i></summary>
-
-    * **Objective**: Repeated anchor bytes: the first full match wins, not the first anchor.
-    * **Assertions**:
-      * <code>Assert equal ptr (HAY + 0, str.find(HAY, sizeof(HAY), "the", 4, PROTO_FALSE))</code>
-      * <code>Assert equal ptr (HAY + 4, str.find(HAY, sizeof(HAY), "quick", 6, PROTO_FALSE))</code>
-      * <code>Assert equal ptr (HAY + 16, str.find(HAY, sizeof(HAY), "fox", 4, PROTO_FALSE))</code>
-      * <code>Assert equal ptr (HAY + 0, str.find(HAY, sizeof(HAY), "", 1, PROTO_FALSE))</code>
-      * <code>Assert null (str.find(HAY, sizeof(HAY), "cat", 4, PROTO_FALSE))</code>
-      * <code>Assert equal ptr (REP + 4, str.find(REP, sizeof(REP), "abc", 4, PROTO_FALSE))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_find_does_not_read_past_the_terminator</b> &mdash; <i>Find does not read past the terminator</i></summary>
-
-    * **Objective**: Find does not read past the terminator
-    * **Assertions**:
-      * <code>Assert null (str.find(HAY, sizeof(HAY), "def", 4, PROTO_FALSE))</code>
-      * <code>Assert equal ptr (HAY + 0, str.find(HAY, sizeof(HAY), "abc", 4, PROTO_FALSE))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_find_is_bounded_by_read_cap</b> &mdash; <i>Find is bounded by read cap</i></summary>
-
-    * **Objective**: Find is bounded by read cap
-    * **Assertions**:
-      * <code>Assert null (str.find(HAY, 8, "XY", 3, PROTO_FALSE))</code>
-      * <code>Assert equal ptr (HAY + 8, str.find(HAY, sizeof(HAY), "XY", 3, PROTO_FALSE))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_has_agrees_with_find</b> &mdash; <i>Has agrees with find</i></summary>
-
-    * **Objective**: Has agrees with find
-    * **Assertions**:
-      * <code>Assert true (str.has(HAY, sizeof(HAY), "Upgrade", 8, PROTO_FALSE))</code>
-      * <code>Assert false (str.has(HAY, sizeof(HAY), "upgrade", 8, PROTO_FALSE))</code>
-      * <code>Assert true (str.has(HAY, sizeof(HAY), "upgrade", 8, PROTO_TRUE))</code>
-      * <code>Assert false (str.has(HAY, sizeof(HAY), "close", 6, PROTO_TRUE))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_copy_always_terminates_within_the_destination</b> &mdash; <i>An exact fit: seven bytes plus the NUL.</i></summary>
-
-    * **Objective**: An exact fit: seven bytes plus the NUL.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(3, str.copy(dst, "abc", sizeof(dst)));</code>
-      * <code>Assert equal string ("abc", dst)</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x7Fu, (uint8_t)dst[4]); // nothing past the terminator</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(7, str.copy(dst, "abcdefg", sizeof(dst)));</code>
-      * <code>Assert equal string ("abcdefg", dst)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(7, str.copy(dst, "abcdefgh", sizeof(dst)));</code>
-      * <code>Assert equal string ("abcdefg", dst)</code>
-      * <code>Assert equal char ('\\0', dst[7])</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_copy_with_zero_capacity_writes_nothing</b> &mdash; <i>A capacity of one holds the terminator and nothing else.</i></summary>
-
-    * **Objective**: A capacity of one holds the terminator and nothing else.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, str.copy(dst, "abc", 0));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x7Fu, (uint8_t)dst[0]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x7Fu, (uint8_t)dst[1]);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, str.copy(dst, "abc", 1));</code>
-      * <code>Assert equal char ('\\0', dst[0])</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x7Fu, (uint8_t)dst[1]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_ws_is_the_c11_white_space_set</b> &mdash; <i>Ws is the c11 white space set</i></summary>
-
-    * **Objective**: Ws is the c11 white space set
-    * **Assertions**:
-      * <code>Assert true (str.ws(WS[i]))</code>
-      * <code>Assert equal int ((int)want, (int)str.ws((char)c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_digit_is_the_ten_decimal_digits</b> &mdash; <i>Digit is the ten decimal digits</i></summary>
-
-    * **Objective**: Digit is the ten decimal digits
-    * **Assertions**:
-      * <code>Assert equal int ((int)want, (int)str.digit((char)c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_to_long_follows_the_strtol_endptr_contract</b> &mdash; <i>A sign with no digits after it is also an empty subject sequence.</i></summary>
-
-    * **Objective**: A sign with no digits after it is also an empty subject sequence.
-    * **Assertions**:
-      * <code>Assert equal int (-42, (int)str.to_long(S, &end))</code>
-      * <code>Assert equal ptr (S + 5, end)</code>
-      * <code>Assert equal int (7, (int)str.to_long("+7", NULL))</code>
-      * <code>Assert equal int (0, (int)str.to_long("0", NULL))</code>
-      * <code>Assert equal int (0, (int)str.to_long(BAD, &e2))</code>
-      * <code>Assert equal ptr (BAD, e2)</code>
-      * <code>Assert equal int (0, (int)str.to_long(SIGN, &e3))</code>
-      * <code>Assert equal ptr (SIGN, e3)</code>
-      * <code>Assert equal int (42, (int)str.to_long(" \\f\\n\\r\\t\\v42", NULL))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_to_ulong_takes_plus_and_not_minus</b> &mdash; <i>To ulong takes plus and not minus</i></summary>
-
-    * **Objective**: To ulong takes plus and not minus
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(123u, (uint32_t)str.to_ulong(S, &end));</code>
-      * <code>Assert equal ptr (S + 6, end)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0u, (uint32_t)str.to_ulong(NEG, &e2));</code>
-      * <code>Assert equal ptr (NEG, e2)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(9u, (uint32_t)str.to_ulong("9", NULL));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_to_double_parses_the_strtod_subject_sequence</b> &mdash; <i>Values whose decimal digits are each a dyadic fraction, so the parse is exact and the</i></summary>
-
-    * **Objective**: Values whose decimal digits are each a dyadic fraction, so the parse is exact and the
-    * **Assertions**:
-      * <code>Assert true (str.to_double("0", NULL) == 0.0)</code>
-      * <code>Assert true (str.to_double("1", NULL) == 1.0)</code>
-      * <code>Assert true (str.to_double("-2.5", NULL) == -2.5)</code>
-      * <code>Assert true (str.to_double("+0.5", NULL) == 0.5)</code>
-      * <code>Assert true (str.to_double("1.5e3", &end) == 1500.0)</code>
-      * <code>Assert true (str.to_double("1.5E+3", NULL) == 1500.0)</code>
-      * <code>Assert true (str.to_double("4e-2", NULL) == 4.0 / 100.0)</code>
-      * <code>Assert true (str.to_double(TRAIL, &end) == 3.5)</code>
-      * <code>Assert equal ptr (TRAIL + 5, end)</code>
-      * <code>Assert true (str.to_double(BAD, &e2) == 0.0)</code>
-      * <code>Assert equal ptr (BAD, e2)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_to_double_clamps_a_runaway_exponent</b> &mdash; <i>To double clamps a runaway exponent</i></summary>
-
-    * **Objective**: To double clamps a runaway exponent
-    * **Assertions**:
-      * <code>Assert true (str.to_double("1e5000", NULL) &gt; 1e300)</code>
-      * <code>Assert true (str.to_double("1e-5000", NULL) &lt; 1e-300)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_to_float_narrows_a_double_parse</b> &mdash; <i>To float narrows a double parse</i></summary>
-
-    * **Objective**: To float narrows a double parse
-    * **Assertions**:
-      * <code>Assert true (str.to_float("0.5", NULL) == 0.5f)</code>
-      * <code>Assert true (str.to_float("-1.5", NULL) == -1.5f)</code>
-      * <code>Assert float within (0.0001f, 3.14f, str.to_float("  3.14", NULL))</code>
-      * <code>Assert float within (0.0001f, 0.0125f, str.to_float("1.25E-2", NULL))</code>
-      * <code>Assert true (str.to_float(BAD, &e) == 0.0f)</code>
-      * <code>Assert equal ptr (BAD, e)</code>
-  </details>
-
-</details>
-
-<details>
 <summary><b>test_provisioning (17 tests)</b></summary>
 
   <details style="margin-left: 20px;">
@@ -45398,91 +43179,6 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
       * <code>Assert false (ProxyProtocolV.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0u, ProxyProtocolV.n);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0u, ProxyProtocolV.n);</code>
-  </details>
-
-</details>
-
-<details>
-<summary><b>test_psram_pool (7 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_dram_reserve_is_never_spent</b> &mdash; <i>A reserve of 0 places the whole free heap and nothing past it.</i></summary>
-
-    * **Objective**: A reserve of 0 places the whole free heap and nothing past it.
-    * **Assertions**:
-      * <code>Assert equal int (PLACE_DRAM, protocore_psram_place(100, PROTO_FALSE, 1100, 0, 4096, 1000))</code>
-      * <code>Assert equal int (PLACE_FAIL, protocore_psram_place(101, PROTO_FALSE, 1100, 0, 4096, 1000))</code>
-      * <code>Assert equal int (PLACE_FAIL, protocore_psram_place(SIZE_MAX, PROTO_FALSE, 1100, 0, 4096, 1000))</code>
-      * <code>Assert equal int (PLACE_FAIL, protocore_psram_place(SIZE_MAX, PROTO_TRUE, 1100, 0, 4096, 1000))</code>
-      * <code>Assert equal int (PLACE_DRAM, protocore_psram_place(1100, PROTO_FALSE, 1100, 0, 4096, 0))</code>
-      * <code>Assert equal int (PLACE_FAIL, protocore_psram_place(1101, PROTO_FALSE, 1100, 0, 4096, 0))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_zero_size_request_is_refused</b> &mdash; <i>A zero size request is refused</i></summary>
-
-    * **Objective**: A zero size request is refused
-    * **Assertions**:
-      * <code>Assert equal int (PLACE_FAIL, protocore_psram_place(0, PROTO_FALSE, 120000, 2000000, 4096, 32768))</code>
-      * <code>Assert equal int (PLACE_FAIL, protocore_psram_place(0, PROTO_TRUE, 120000, 2000000, 4096, 32768))</code>
-      * <code>Assert equal int (PLACE_FAIL, protocore_psram_place(0, PROTO_FALSE, 0, 0, 0, 0))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_dma_required_never_leaves_dram</b> &mdash; <i>8192 is at/above the threshold, which without the DMA requirement would prefer PSRAM.</i></summary>
-
-    * **Objective**: 8192 is at/above the threshold, which without the DMA requirement would prefer PSRAM.
-    * **Assertions**:
-      * <code>Assert equal int (PLACE_PSRAM, protocore_psram_place(8192, PROTO_FALSE, 120000, 2000000, 4096, 32768))</code>
-      * <code>Assert equal int (PLACE_DRAM, protocore_psram_place(8192, PROTO_TRUE, 120000, 2000000, 4096, 32768))</code>
-      * <code>Assert equal int (PLACE_FAIL, protocore_psram_place(8192, PROTO_TRUE, 40000, 2000000, 4096, 32768))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_at_or_above_the_threshold_prefers_psram</b> &mdash; <i>No PSRAM: the large buffer falls back to DRAM while the reserve still fits.</i></summary>
-
-    * **Objective**: No PSRAM: the large buffer falls back to DRAM while the reserve still fits.
-    * **Assertions**:
-      * <code>Assert equal int (PLACE_DRAM, protocore_psram_place(4095, PROTO_FALSE, 120000, 2000000, 4096, 32768))</code>
-      * <code>Assert equal int (PLACE_PSRAM, protocore_psram_place(4096, PROTO_FALSE, 120000, 2000000, 4096, 32768))</code>
-      * <code>Assert equal int (PLACE_DRAM, protocore_psram_place(65536, PROTO_FALSE, 120000, 0, 4096, 32768))</code>
-      * <code>Assert equal int (PLACE_FAIL, protocore_psram_place(65536, PROTO_FALSE, 80000, 0, 4096, 32768))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_below_the_threshold_prefers_dram</b> &mdash; <i>512 + 32768 > 33000, so the reserve rules DRAM out and PSRAM takes it.</i></summary>
-
-    * **Objective**: 512 + 32768 > 33000, so the reserve rules DRAM out and PSRAM takes it.
-    * **Assertions**:
-      * <code>Assert equal int (PLACE_DRAM, protocore_psram_place(512, PROTO_FALSE, 120000, 2000000, 4096, 32768))</code>
-      * <code>Assert equal int (PLACE_PSRAM, protocore_psram_place(512, PROTO_FALSE, 33000, 2000000, 4096, 32768))</code>
-      * <code>Assert equal int (PLACE_FAIL, protocore_psram_place(512, PROTO_FALSE, 33000, 100, 4096, 32768))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_pingpong_roles_are_always_opposite</b> &mdash; <i>The swap reports the new fill index, and it is the buffer DMA was draining.</i></summary>
-
-    * **Objective**: The swap reports the new fill index, and it is the buffer DMA was draining.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT8(0, protocore_pingpong_fill_index(&pp));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(1, protocore_pingpong_drain_index(&pp));</code>
-      * <code>Assert true (fill &lt; 2u)</code>
-      * <code>Assert true (drain &lt; 2u)</code>
-      * <code>Assert true (fill != drain)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(drain, protocore_pingpong_swap(&pp));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(drain, protocore_pingpong_fill_index(&pp));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(fill, protocore_pingpong_drain_index(&pp));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(0, protocore_pingpong_fill_index(&pp));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_pingpong_accessors_refuse_a_null_handle</b> &mdash; <i>Pingpong accessors refuse a null handle</i></summary>
-
-    * **Objective**: Pingpong accessors refuse a null handle
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT8(0, protocore_pingpong_fill_index(NULL));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(1, protocore_pingpong_drain_index(NULL));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(0, protocore_pingpong_swap(NULL));</code>
   </details>
 
 </details>
@@ -46638,7 +44334,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 
     * **Objective**: Fips197 aes128 block
     * **Assertions**:
-      * <code>Assert true (span.ok(w))</code>
+      * <code>Assert true (EMBED_CALL(spat.ok, SpatiumCfg, .span = w))</code>
       * <code>Assert equal memory (want, out, 16)</code>
   </details>
 
@@ -47483,9 +45179,9 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_encode_parse_round_trip</b> &mdash; <i>sec 17.2: "In QUIC version 1, this value MUST NOT exceed 20 bytes."</i></summary>
+    <summary><b>test_encode_parse_round_trip</b> &mdash; <i>sec 17.2: "In QUIC version 1, this value MUST NOT exceed 20 byteio."</i></summary>
 
-    * **Objective**: sec 17.2: "In QUIC version 1, this value MUST NOT exceed 20 bytes."
+    * **Objective**: sec 17.2: "In QUIC version 1, this value MUST NOT exceed 20 byteio."
     * **Assertions**:
       * <code>Assert true (n &gt; 0)</code>
       * <code>Assert true (quic_tp_ok)</code>
@@ -48229,115 +45925,6 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
       * <code>Assert true (Rawl2V.ok)</code>
       * <code>Assert equal uint (len, f.payload_len)</code>
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(payload, f.payload, len);</code>
-  </details>
-
-</details>
-
-<details>
-<summary><b>test_rawmemcpy (8 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_word_rung_follows_the_declared_register_width</b> &mdash; <i>One of the three rungs the file is built from, and never wider than the declared register.</i></summary>
-
-    * **Objective**: One of the three rungs the file is built from, and never wider than the declared register.
-    * **Assertions**:
-      * <code>Assert equal uint (PROTO_RAW_WORD * 8u, (unsigned)PROTO_MV_BITS)</code>
-      * <code>Assert equal uint (PROTO_RAW_WORD, sizeof(proto_mv_word))</code>
-      * <code>Assert true (PROTO_RAW_WORD == 2 || PROTO_RAW_WORD == 4 || PROTO_RAW_WORD == 8)</code>
-      * <code>Assert true ((size_t)PROTO_RAW_WORD * 8u &lt;= (size_t)PROTO_WORD_BITS)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_scalar_rungs_match_a_byte_loop</b> &mdash; <i>Scalar rungs match a byte loop</i></summary>
-
-    * **Objective**: Scalar rungs match a byte loop
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX16((uint16_t)assemble(&g_src[off], 2), raw.u16(&g_src[off]));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32((uint32_t)assemble(&g_src[off], 4), raw.u32(&g_src[off]));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(assemble(&g_src[off], 8), raw.u64(&g_src[off]));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_load_selects_a_rung_and_refuses_every_other_width</b> &mdash; <i>Load selects a rung and refuses every other width</i></summary>
-
-    * **Objective**: Load selects a rung and refuses every other width
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX64((uint64_t)g_src[off], raw.load(&g_src[off], 1));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(assemble(&g_src[off], 2), raw.load(&g_src[off], 2));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(assemble(&g_src[off], 4), raw.load(&g_src[off], 4));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(assemble(&g_src[off], 8), raw.load(&g_src[off], 8));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0u, raw.load(g_src, NOT_A_RUNG[i]));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_put_round_trips_and_stays_inside_its_width</b> &mdash; <i>Nothing below the store either.</i></summary>
-
-    * **Objective**: Nothing below the store either.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX16((uint16_t)V, raw.u16(&g_dst[off]));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xA5, g_dst[off + 2]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32((uint32_t)V, raw.u32(&g_dst[off]));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xA5, g_dst[off + 4]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(V, raw.u64(&g_dst[off]));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xA5, g_dst[off + 8]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xA5, g_dst[off - 1]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_aligned_rungs_agree_with_the_unaligned_ones</b> &mdash; <i>The mover's own rung is the aligned load and store at PROTO_RAW_WORD.</i></summary>
-
-    * **Objective**: The mover's own rung is the aligned load and store at PROTO_RAW_WORD.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX64((uint64_t)g_src[off], raw.al_load(&g_src[off], 1));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(raw.load(&g_src[off], 2), raw.al_load(&g_src[off], 2));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(raw.load(&g_src[off], 4), raw.al_load(&g_src[off], 4));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(raw.load(&g_src[off], 8), raw.al_load(&g_src[off], 8));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0u, raw.al_load(&g_src[off], 3));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16(0xBEEFu, raw.u16(&g_dst[0]));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0xDEADBEEFu, raw.u32(&g_dst[4]));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x0123456789ABCDEFull, raw.u64(&g_dst[8]));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64((uint64_t)(proto_mv_word)0x0123456789ABCDEFull, (uint64_t)raw.mv_load(&g_dst[0]));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xA5, g_dst[PROTO_RAW_WORD]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_read_moves_every_offset_pair_and_length</b> &mdash; <i>Read moves every offset pair and length</i></summary>
-
-    * **Objective**: Read moves every offset pair and length
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(g_src[so + i], g_dst[dof + i]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xA5, g_dst[i]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xA5, g_dst[i]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_read_carries_an_overlaid_header_struct</b> &mdash; <i>Read carries an overlaid header struct</i></summary>
-
-    * **Objective**: Read carries an overlaid header struct
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX32((uint32_t)assemble(&g_src[off], 4), h.id);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX16((uint16_t)assemble(&g_src[off + 4], 2), h.len);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_table_is_wired_to_the_named_rungs</b> &mdash; <i>The table is wired to the named rungs</i></summary>
-
-    * **Objective**: The table is wired to the named rungs
-    * **Assertions**:
-      * <code>Assert equal ptr (proto_raw_u16, raw.u16)</code>
-      * <code>Assert equal ptr (proto_raw_u32, raw.u32)</code>
-      * <code>Assert equal ptr (proto_raw_u64, raw.u64)</code>
-      * <code>Assert equal ptr (proto_raw_load, raw.load)</code>
-      * <code>Assert equal ptr (proto_raw_put_u16, raw.put_u16)</code>
-      * <code>Assert equal ptr (proto_raw_put_u32, raw.put_u32)</code>
-      * <code>Assert equal ptr (proto_raw_put_u64, raw.put_u64)</code>
-      * <code>Assert equal ptr (proto_al_load, raw.al_load)</code>
-      * <code>Assert equal ptr (proto_al_put_u16, raw.al_put_u16)</code>
-      * <code>Assert equal ptr (proto_al_put_u32, raw.al_put_u32)</code>
-      * <code>Assert equal ptr (proto_al_put_u64, raw.al_put_u64)</code>
-      * <code>Assert equal ptr (proto_mv_load, raw.mv_load)</code>
-      * <code>Assert equal ptr (proto_mv_put, raw.mv_put)</code>
-      * <code>Assert equal ptr (proto_raw_read, raw.read)</code>
   </details>
 
 </details>
@@ -49592,185 +47179,6 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
       * <code>Assert true (w.overflow)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, w.bytes_written);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x00, out[0]);</code>
-  </details>
-
-</details>
-
-<details>
-<summary><b>test_ring (13 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_wrap_is_the_modulo_a_power_of_two_capacity_defines</b> &mdash; <i>Wrap is the modulo a power of two capacity defines</i></summary>
-
-    * **Objective**: Wrap is the modulo a power of two capacity defines
-    * **Assertions**:
-      * <code>Assert true (PROTOCORE_RING_POW2(cap))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(i % cap, PROTOCORE_RING_WRAP(i, cap));</code>
-      * <code>Assert false (PROTOCORE_RING_POW2(NOT_POW2[k]))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_available_and_free_partition_the_ring</b> &mdash; <i>Never more than cap-1 bytes can be written, so a producer cannot make head meet tail.</i></summary>
-
-    * **Objective**: Never more than cap-1 bytes can be written, so a producer cannot make head meet tail.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(used, avail);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(CAP - 1u, avail + room);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_ring_available(&head, &tail, CAP));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(CAP - 1u, protocore_ring_free(&head, &tail, CAP));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_read_byte_pops_in_fifo_order_and_reports_empty</b> &mdash; <i>Read byte pops in fifo order and reports empty</i></summary>
-
-    * **Objective**: Read byte pops in fifo order and reports empty
-    * **Assertions**:
-      * <code>Assert false (protocore_ring_read_byte(g_buf, CAP, &head, &tail, &out))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xFF, out); // untouched on the empty ring</code>
-      * <code>Assert true (protocore_ring_read_byte(g_buf, CAP, &head, &tail, &out))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(MSG[i], out);</code>
-      * <code>Assert false (protocore_ring_read_byte(g_buf, CAP, &head, &tail, &out))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_ring_available(&head, &tail, CAP));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_read_takes_what_is_asked_for_and_advances_the_tail</b> &mdash; <i>Asking for more than is there yields what is there, and no more.</i></summary>
-
-    * **Objective**: Asking for more than is there yields what is there, and no more.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(3u, protocore_ring_read(g_buf, CAP, &head, &tail, got, 3));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(MSG, got, 3);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0xA5, got[3]); // nothing written past what was asked for</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(5u, protocore_ring_available(&head, &tail, CAP));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(5u, protocore_ring_read(g_buf, CAP, &head, &tail, got, sizeof got));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(&MSG[3], got, 5);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_ring_available(&head, &tail, CAP));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_ring_read(g_buf, CAP, &head, &tail, got, sizeof got));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_peek_does_not_consume_and_consume_advances</b> &mdash; <i>The same peek again, and one from an offset: a header read then the body behind it.</i></summary>
-
-    * **Objective**: The same peek again, and one from an offset: a header read then the body behind it.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(MSG, got, sizeof MSG);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(sizeof MSG, protocore_ring_available(&head, &tail, CAP));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(MSG, got, sizeof MSG);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(&MSG[4], got, 2);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(2u, protocore_ring_available(&head, &tail, CAP));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(&MSG[4], got, 2);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_span_across_the_wrap_reads_back_whole</b> &mdash; <i>Start the fill 12 bytes in, so 4 bytes land before the end and 6 after the wrap.</i></summary>
-
-    * **Objective**: Start the fill 12 bytes in, so 4 bytes land before the end and 6 after the wrap.
-    * **Assertions**:
-      * <code>Assert true (protocore_ring_free(&head, &tail, CAP) &gt;= sizeof MSG)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(PROTOCORE_RING_WRAP(start + sizeof MSG, CAP), (size_t)head);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(sizeof MSG, protocore_ring_available(&head, &tail, CAP));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(MSG, got, sizeof MSG);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(sizeof MSG, protocore_ring_read(g_buf, CAP, &head, &tail, got, sizeof got));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(MSG, got, sizeof MSG);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_segment_is_invisible_until_it_is_published</b> &mdash; <i>A segment is invisible until it is published</i></summary>
-
-    * **Objective**: A segment is invisible until it is published
-    * **Assertions**:
-      * <code>Assert false (protocore_seg_front(&claim, &rel, SEGS, &idx))</code>
-      * <code>Assert true (protocore_seg_next(&claim, &rel, SEGS, &idx))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, idx);</code>
-      * <code>Assert false (protocore_seg_front(&claim, &rel, SEGS, &idx))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_seg_inflight(&claim, &rel));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1u, protocore_seg_inflight(&claim, &rel));</code>
-      * <code>Assert true (protocore_seg_front(&claim, &rel, SEGS, &idx))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, idx);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x5A, protocore_seg_at(g_segs, SEG_SIZE, idx)[0]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x5A, protocore_seg_at(g_segs, SEG_SIZE, idx)[SEG_SIZE - 1]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_segments_release_in_order_and_a_full_ring_refuses</b> &mdash; <i>The indices keep counting; the segment they name is the count masked by nsegs, so the ring</i></summary>
-
-    * **Objective**: The indices keep counting; the segment they name is the count masked by nsegs, so the ring
-    * **Assertions**:
-      * <code>Assert true (protocore_seg_next(&claim, &rel, SEGS, &idx))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(i, idx);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(SEGS, protocore_seg_inflight(&claim, &rel));</code>
-      * <code>Assert false (protocore_seg_next(&claim, &rel, SEGS, &idx))</code>
-      * <code>Assert true (protocore_seg_front(&claim, &rel, SEGS, &idx))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(i, idx);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8((uint8_t)(0x10 + i), protocore_seg_at(g_segs, SEG_SIZE, idx)[0]);</code>
-      * <code>Assert false (protocore_seg_front(&claim, &rel, SEGS, &idx))</code>
-      * <code>Assert true (protocore_seg_next(&claim, &rel, SEGS, &idx))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, idx);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_slot_take_is_won_by_exactly_one_caller</b> &mdash; <i>Slot take is won by exactly one caller</i></summary>
-
-    * **Objective**: Slot take is won by exactly one caller
-    * **Assertions**:
-      * <code>Assert true (protocore_slot_take(&held, 3))</code>
-      * <code>Assert false (protocore_slot_take(&held, 3))</code>
-      * <code>Assert true (protocore_slot_take(&held, 4))</code>
-      * <code>Assert true (protocore_slot_take(&held, 3))</code>
-      * <code>Assert false (protocore_slot_take(&held, 4))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_losing_hold_cannot_redirect_the_keepout</b> &mdash; <i>A losing hold cannot redirect the keepout</i></summary>
-
-    * **Objective**: A losing hold cannot redirect the keepout
-    * **Assertions**:
-      * <code>Assert true (protocore_slot_hold(&held, keepout, 2, WINNER, sizeof WINNER))</code>
-      * <code>Assert false (protocore_slot_hold(&held, keepout, 2, LOSER, sizeof LOSER))</code>
-      * <code>Assert equal ptr (WINNER, k-&gt;buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(sizeof WINNER, k-&gt;len);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, k-&gt;pos);</code>
-      * <code>Assert false (k-&gt;err)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_ready_is_marked_minus_held_within_the_count</b> &mdash; <i>With the count raised to reach it, slot 5 is ready too.</i></summary>
-
-    * **Objective**: With the count raised to reach it, slot 5 is ready too.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX32(0x03u, protocore_slot_ready(&mask, &held, 4));</code>
-      * <code>Assert true (protocore_slot_take(&held, 0))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0x02u, protocore_slot_ready(&mask, &held, 4));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0x01u, protocore_slot_ready(&mask, &held, 4));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0x21u, protocore_slot_ready(&mask, &held, 8));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_slot_next_is_the_lowest_set_and_minus_one_when_empty</b> &mdash; <i>With every higher bit set as well, the answer is still the lowest.</i></summary>
-
-    * **Objective**: With every higher bit set as well, the answer is still the lowest.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_INT32(-1, protocore_slot_next(0u));</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(i, protocore_slot_next(1u &lt;&lt; i));</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(i, protocore_slot_next(0xFFFFFFFFu &lt;&lt; i));</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(2, protocore_slot_next(0x84u));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_an_out_of_range_slot_names_nothing</b> &mdash; <i>The count-to-mask side of the same bound: a count at or past the width is every slot.</i></summary>
-
-    * **Objective**: The count-to-mask side of the same bound: a count at or past the width is every slot.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX32(0u, protocore_slot_bit(PROTOCORE_RING_SLOTS_MAX));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0u, protocore_slot_bit(PROTOCORE_RING_SLOTS_MAX + 100u));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0x80000000u, protocore_slot_bit(PROTOCORE_RING_SLOTS_MAX - 1u));</code>
-      * <code>Assert false (protocore_slot_take(&held, PROTOCORE_RING_SLOTS_MAX))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0u, (uint32_t)held); // and nothing was set trying</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0x0Fu, protocore_slot_all(4));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0x7FFFFFFFu, protocore_slot_all(PROTOCORE_RING_SLOTS_MAX - 1u));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0xFFFFFFFFu, protocore_slot_all(PROTOCORE_RING_SLOTS_MAX));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0xFFFFFFFFu, protocore_slot_all(PROTOCORE_RING_SLOTS_MAX + 1u));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX32(0u, protocore_slot_all(0));</code>
   </details>
 
 </details>
@@ -51951,172 +49359,6 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
       * <code>Assert equal char ('x', buf[0])</code>
       * <code>TEST_ASSERT_EQUAL_size_t(3, Sdi12V.n);</code>
       * <code>Assert equal string ("0M!", buf)</code>
-  </details>
-
-</details>
-
-<details>
-<summary><b>test_secure_pool (12 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_release_wipes_before_the_bytes_are_available_again</b> &mdash; <i>Release wipes before the bytes are available again</i></summary>
-
-    * **Objective**: Release wipes before the bytes are available again
-    * **Assertions**:
-      * <code>Assert true (protocore_span_ok(first))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0, key[i]);</code>
-      * <code>Assert true (protocore_span_ok(second))</code>
-      * <code>Assert equal ptr (key, second.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0, second.buf[i]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_reset_wipes_every_live_borrow</b> &mdash; <i>Reset wipes every live borrow</i></summary>
-
-    * **Objective**: Reset wipes every live borrow
-    * **Assertions**:
-      * <code>Assert true (protocore_span_ok(a))</code>
-      * <code>Assert true (protocore_span_ok(b))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0, pa[i]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0, pb[i]);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_secure_used());</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_scope_guard_wipes_on_every_exit_path</b> &mdash; <i>A scope guard wipes on every exit path</i></summary>
-
-    * **Objective**: A scope guard wipes on every exit path
-    * **Assertions**:
-      * <code>Assert true (protocore_span_ok(s))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0, seen[trip][i]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_nested_scopes_reclaim_lifo</b> &mdash; <i>Nested scopes reclaim lifo</i></summary>
-
-    * **Objective**: Nested scopes reclaim lifo
-    * **Assertions**:
-      * <code>Assert true (protocore_span_ok(a))</code>
-      * <code>Assert true (protocore_span_ok(b))</code>
-      * <code>Assert true (protocore_secure_used() &gt; after_a)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(after_a, protocore_secure_used());</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x77, a.buf[i]); // the outer borrow was not touched</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_two_pools_are_disjoint_regions</b> &mdash; <i>The borrowing slot is the calling worker's own.</i></summary>
-
-    * **Objective**: The borrowing slot is the calling worker's own.
-    * **Assertions**:
-      * <code>Assert true (protocore_span_ok(s))</code>
-      * <code>Assert true (protocore_secure_owns(s.buf))</code>
-      * <code>Assert false (protocore_plaintext_owns(s.buf))</code>
-      * <code>Assert equal int (-1, protocore_plaintext_slot_of(s.buf))</code>
-      * <code>Assert true (protocore_span_ok(open))</code>
-      * <code>Assert true (protocore_plaintext_owns(open.buf))</code>
-      * <code>Assert false (protocore_secure_owns(open.buf))</code>
-      * <code>Assert equal int (-1, protocore_secure_slot_of(open.buf))</code>
-      * <code>Assert equal int (0, protocore_secure_slot_of(s.buf))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_pointer_from_neither_pool_belongs_to_neither</b> &mdash; <i>A pointer from neither pool belongs to neither</i></summary>
-
-    * **Objective**: A pointer from neither pool belongs to neither
-    * **Assertions**:
-      * <code>Assert false (protocore_secure_owns(g_outside))</code>
-      * <code>Assert false (protocore_plaintext_owns(g_outside))</code>
-      * <code>Assert equal int (-1, protocore_secure_slot_of(g_outside))</code>
-      * <code>Assert equal int (-1, protocore_plaintext_slot_of(g_outside))</code>
-      * <code>Assert false (protocore_secure_owns(code))</code>
-      * <code>Assert false (protocore_plaintext_owns(code))</code>
-      * <code>Assert false (protocore_secure_owns(NULL))</code>
-      * <code>Assert false (protocore_plaintext_owns(NULL))</code>
-      * <code>Assert equal int (-1, protocore_secure_slot_of(NULL))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_one_past_the_pool_is_not_owned</b> &mdash; <i>One past the pool is not owned</i></summary>
-
-    * **Objective**: One past the pool is not owned
-    * **Assertions**:
-      * <code>Assert true (protocore_span_ok(s))</code>
-      * <code>Assert false (protocore_secure_owns(end))</code>
-      * <code>Assert equal int (-1, protocore_secure_slot_of(end))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_a_persistent_borrow_outlives_every_release</b> &mdash; <i>A persistent borrow outlives every release</i></summary>
-
-    * **Objective**: A persistent borrow outlives every release
-    * **Assertions**:
-      * <code>Assert true (protocore_span_ok(table))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0, table.buf[i]); // handed back zeroed</code>
-      * <code>Assert true (protocore_span_ok(scratch))</code>
-      * <code>Assert true (protocore_secure_owns(scratch.buf))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x3B, table.buf[i]);</code>
-      * <code>Assert true (protocore_secure_owns(table.buf))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_high_water_records_peak_demand</b> &mdash; <i>High water records peak demand</i></summary>
-
-    * **Objective**: High water records peak demand
-    * **Assertions**:
-      * <code>Assert true (protocore_span_ok(s))</code>
-      * <code>Assert true (protocore_secure_high_water() &gt;= 128)</code>
-      * <code>Assert true (protocore_secure_high_water() &gt;= 128)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, protocore_secure_used());</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_an_over_budget_borrow_fails_closed</b> &mdash; <i>An over budget borrow fails closed</i></summary>
-
-    * **Objective**: An over budget borrow fails closed
-    * **Assertions**:
-      * <code>Assert null (protocore_secure_alloc(protocore_secure_capacity() * 4u, 8))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(before, protocore_secure_used());</code>
-      * <code>Assert false (protocore_span_ok(s))</code>
-      * <code>Assert null (s.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, s.cap);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(before, protocore_secure_used());</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(PROTOCORE_SECURE_ARENA_SIZE, protocore_secure_capacity());</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_table_is_wired_to_the_named_functions</b> &mdash; <i>The table is wired to the named functions</i></summary>
-
-    * **Objective**: The table is wired to the named functions
-    * **Assertions**:
-      * <code>Assert equal ptr (protocore_secure_alloc, secure.alloc)</code>
-      * <code>Assert equal ptr (protocore_secure_span, secure.span)</code>
-      * <code>Assert equal ptr (protocore_secure_persist_span, secure.persist_span)</code>
-      * <code>Assert equal ptr (protocore_secure_reset, secure.reset)</code>
-      * <code>Assert equal ptr (protocore_secure_mark, secure.mark)</code>
-      * <code>Assert equal ptr (protocore_secure_release, secure.release)</code>
-      * <code>Assert equal ptr (protocore_secure_used, secure.used)</code>
-      * <code>Assert equal ptr (protocore_secure_high_water, secure.high_water)</code>
-      * <code>Assert equal ptr (protocore_secure_capacity, secure.capacity)</code>
-      * <code>Assert equal ptr (protocore_secure_owns, secure.owns)</code>
-      * <code>Assert equal ptr (protocore_secure_slot_of, secure.slot_of)</code>
-      * <code>Assert equal ptr (&protocore_secure_state, secure.internal)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_pool_works_through_the_table</b> &mdash; <i>The pool works through the table</i></summary>
-
-    * **Objective**: The pool works through the table
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, secure.used());</code>
-      * <code>Assert true (protocore_span_ok(s))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(32, s.cap);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, (size_t)((uintptr_t)s.buf % 8u));</code>
-      * <code>Assert true (secure.owns(s.buf))</code>
-      * <code>Assert true (secure.slot_of(s.buf) &gt;= 0)</code>
-      * <code>Assert true (secure.slot_of(s.buf) &lt; PROTOCORE_SEC_POOL_SLOTS)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, secure.used());</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0, key[i]);</code>
-      * <code>Assert false (secure.owns(NULL))</code>
   </details>
 
 </details>
@@ -57152,176 +54394,6 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 </details>
 
 <details>
-<summary><b>test_span (10 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_capacity_is_the_constant_it_was_bound_with</b> &mdash; <i>The capacity is the constant it was bound with</i></summary>
-
-    * **Objective**: The capacity is the constant it was bound with
-    * **Assertions**:
-      * <code>Assert equal ptr (g_small, s.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(SMALL_N, s.cap);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, s.pos);</code>
-      * <code>Assert false (s.overflow)</code>
-      * <code>Assert true (span.ok(s))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(SMALL_N, span.room(s));</code>
-      * <code>Assert equal ptr (g_big, b.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(BIG_N, b.cap);</code>
-      * <code>Assert equal ptr (g_big, c.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(BIG_N, c.len);</code>
-      * <code>Assert true (span.cok(c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_an_empty_region_cannot_carry_a_live_capacity</b> &mdash; <i>A write into the empty region stores nothing and dereferences nothing.</i></summary>
-
-    * **Objective**: A write into the empty region stores nothing and dereferences nothing.
-    * **Assertions**:
-      * <code>Assert null (no_buf.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, no_buf.cap);</code>
-      * <code>Assert false (span.ok(no_buf))</code>
-      * <code>Assert false (span.has_storage(no_buf))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, span.room(no_buf));</code>
-      * <code>Assert null (no_cap.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, no_cap.cap);</code>
-      * <code>Assert false (span.ok(no_cap))</code>
-      * <code>Assert null (cno_buf.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, cno_buf.len);</code>
-      * <code>Assert false (span.cok(cno_buf))</code>
-      * <code>Assert null (cno_len.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, cno_len.len);</code>
-      * <code>Assert false (span.cok(cno_len))</code>
-      * <code>Assert null (no_buf.buf)</code>
-      * <code>Assert true (no_buf.overflow)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_pos_reports_the_capacity_the_payload_needed</b> &mdash; <i>Five more than it holds: nothing is stored, the flag latches, and pos names the size wanted.</i></summary>
-
-    * **Objective**: Five more than it holds: nothing is stored, the flag latches, and pos names the size wanted.
-    * **Assertions**:
-      * <code>Assert true (span.ok(s))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(SMALL_N, span.len(s));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, span.room(s));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x40, g_small[0]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x40 + SMALL_N - 1, g_small[SMALL_N - 1]);</code>
-      * <code>Assert true (s.overflow)</code>
-      * <code>Assert false (span.ok(s))</code>
-      * <code>Assert true (span.has_storage(s))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(SMALL_N + 5u, span.len(s));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, span.room(s));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x40 + SMALL_N - 1, g_small[SMALL_N - 1]); // not written past</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_reset_rewinds_and_clears_the_overflow</b> &mdash; <i>Reset rewinds and clears the overflow</i></summary>
-
-    * **Objective**: Reset rewinds and clears the overflow
-    * **Assertions**:
-      * <code>Assert true (s.overflow)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, s.pos);</code>
-      * <code>Assert false (s.overflow)</code>
-      * <code>Assert true (span.ok(s))</code>
-      * <code>Assert equal ptr (g_small, s.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(SMALL_N, s.cap);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(SMALL_N, span.room(s));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_after_clamps_rather_than_pointing_past_the_allocation</b> &mdash; <i>After clamps rather than pointing past the allocation</i></summary>
-
-    * **Objective**: After clamps rather than pointing past the allocation
-    * **Assertions**:
-      * <code>Assert equal ptr (&g_small[3], tail.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(SMALL_N - 3u, tail.cap);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, tail.pos); // a fresh cursor over the tail</code>
-      * <code>Assert null (at_end.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, at_end.cap);</code>
-      * <code>Assert null (past.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, past.cap);</code>
-      * <code>Assert null (from_empty.buf)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_first_clamps_to_what_the_parent_holds</b> &mdash; <i>First clamps to what the parent holds</i></summary>
-
-    * **Objective**: First clamps to what the parent holds
-    * **Assertions**:
-      * <code>Assert equal ptr (g_small, head.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(3u, head.cap);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(SMALL_N, whole.cap);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(SMALL_N, asked_too_much.cap); // clamped, not granted</code>
-      * <code>Assert null (none.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, none.cap);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_produced_is_the_cursor_and_is_empty_after_an_overflow</b> &mdash; <i>Nothing produced yet is an empty view, not a view of the whole capacity.</i></summary>
-
-    * **Objective**: Nothing produced yet is an empty view, not a view of the whole capacity.
-    * **Assertions**:
-      * <code>Assert equal ptr (g_small, out.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(3u, out.len);</code>
-      * <code>Assert true (span.cok(out))</code>
-      * <code>Assert null (empty.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, empty.len);</code>
-      * <code>Assert true (s.overflow)</code>
-      * <code>Assert null (after_overflow.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, after_overflow.len);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_read_clamps_to_the_capacity</b> &mdash; <i>Read clamps to the capacity</i></summary>
-
-    * **Objective**: Read clamps to the capacity
-    * **Assertions**:
-      * <code>Assert equal ptr (g_small, part.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(4u, part.len);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(SMALL_N, too_much.len);</code>
-      * <code>Assert null (of_empty.buf)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0u, of_empty.len);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_region_round_trips_through_the_paired_verbs</b> &mdash; <i>Past the end sets the sticky err and leaves the cursor where it was.</i></summary>
-
-    * **Objective**: Past the end sets the sticky err and leaves the cursor where it was.
-    * **Assertions**:
-      * <code>Assert true (span.ok(w))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(12u, span.len(w));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(12u, r.len);</code>
-      * <code>Assert true (bytes.take_be(&r, 8, &v))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0x0102030405060708ull, v);</code>
-      * <code>Assert true (bytes.take_be(&r, 4, &v))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX64(0xA1B2C3D4ull, v);</code>
-      * <code>Assert false (bytes.take_be(&r, 1, &v))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(at, r.pos);</code>
-      * <code>Assert true (r.err)</code>
-      * <code>Assert false (span.cok(r))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_table_is_wired_to_the_named_accessors</b> &mdash; <i>The table is wired to the named accessors</i></summary>
-
-    * **Objective**: The table is wired to the named accessors
-    * **Assertions**:
-      * <code>Assert equal ptr (protocore_span_from, span.from)</code>
-      * <code>Assert equal ptr (protocore_span_ok, span.ok)</code>
-      * <code>Assert equal ptr (protocore_span_has_storage, span.has_storage)</code>
-      * <code>Assert equal ptr (protocore_span_len, span.len)</code>
-      * <code>Assert equal ptr (protocore_span_room, span.room)</code>
-      * <code>Assert equal ptr (protocore_span_reset, span.reset)</code>
-      * <code>Assert equal ptr (protocore_span_after, span.after)</code>
-      * <code>Assert equal ptr (protocore_span_first, span.first)</code>
-      * <code>Assert equal ptr (protocore_span_produced, span.produced)</code>
-      * <code>Assert equal ptr (protocore_span_read, span.read)</code>
-      * <code>Assert equal ptr (protocore_cspan_from, span.cfrom)</code>
-      * <code>Assert equal ptr (protocore_cspan_ok, span.cok)</code>
-  </details>
-
-</details>
-
-<details>
 <summary><b>test_sparkplug (18 tests)</b></summary>
 
   <details style="margin-left: 20px;">
@@ -57718,9 +54790,9 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_fileformat_serial_type_content_sizes</b> &mdash; <i>N >= 12 and even: a BLOB of (N-12)/2 bytes. N >= 13 and odd: TEXT of (N-13)/2.</i></summary>
+    <summary><b>test_fileformat_serial_type_content_sizes</b> &mdash; <i>N >= 12 and even: a BLOB of (N-12)/2 byteio. N >= 13 and odd: TEXT of (N-13)/2.</i></summary>
 
-    * **Objective**: N >= 12 and even: a BLOB of (N-12)/2 bytes. N >= 13 and odd: TEXT of (N-13)/2.
+    * **Objective**: N >= 12 and even: a BLOB of (N-12)/2 byteio. N >= 13 and odd: TEXT of (N-13)/2.
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_UINT64(0ull, protocore_sqlite_serial_type_size(0));  // NULL</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(1ull, protocore_sqlite_serial_type_size(1));  // 8-bit int</code>
@@ -57990,9 +55062,9 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_record_cursor_refuses_a_malformed_record</b> &mdash; <i>Header size 2 (itself plus one serial type), a TEXT column of 5 bytes, but no value bytes.</i></summary>
+    <summary><b>test_record_cursor_refuses_a_malformed_record</b> &mdash; <i>Header size 2 (itself plus one serial type), a TEXT column of 5 bytes, but no value byteio.</i></summary>
 
-    * **Objective**: Header size 2 (itself plus one serial type), a TEXT column of 5 bytes, but no value bytes.
+    * **Objective**: Header size 2 (itself plus one serial type), a TEXT column of 5 bytes, but no value byteio.
     * **Assertions**:
       * <code>Assert false (protocore_sqlite_record_begin(&c, HDR_TOO_BIG, sizeof(HDR_TOO_BIG)))</code>
       * <code>Assert false (protocore_sqlite_record_begin(&c, EMPTY, sizeof(EMPTY)))</code>
@@ -60039,137 +57111,6 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 </details>
 
 <details>
-<summary><b>test_swar (11 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_lane_constants_derive_from_the_carrier_width</b> &mdash; <i>The lane constants derive from the carrier width</i></summary>
-
-    * **Objective**: The lane constants derive from the carrier width
-    * **Assertions**:
-      * <code>Assert equal uint (PROTO_SWAR_BITS, (unsigned)(sizeof(protocore_swar_word) * 8u))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t((size_t)(PROTO_SWAR_BITS / 8u), LANES);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x01, ones[i]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x80, high[i]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x7F, low7[i]);</code>
-      * <code>Assert true ((protocore_swar_word)(h | l) == (protocore_swar_word) ~(protocore_swar_word)0)</code>
-      * <code>Assert true ((protocore_swar_word)(h & l) == 0)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_has_zero_is_exact_in_every_lane</b> &mdash; <i>The regression the exact form exists for: a zero lane next to a lane holding 0x01. A borrow</i></summary>
-
-    * **Objective**: The regression the exact form exists for: a zero lane next to a lane holding 0x01. A borrow
-    * **Assertions**:
-      * <code>Assert true (swar.has_zero(from_lanes(lanes)) == guard_of(set))</code>
-      * <code>Assert true (swar.has_zero(from_lanes(lanes)) == guard_of(set))</code>
-      * <code>Assert true (swar.has_zero(broadcast(0x00)) == PROTOCORE_SWAR_HIGH)</code>
-      * <code>Assert true (swar.has_zero(broadcast(0xFF)) == 0)</code>
-      * <code>Assert true (swar.has_zero(broadcast(0x80)) == 0)</code>
-      * <code>Assert true (swar.has_zero(broadcast(0x01)) == 0)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_zero_lane_is_the_first_in_address_order</b> &mdash; <i>With two zero lanes the answer is the earlier address, not the other one.</i></summary>
-
-    * **Objective**: With two zero lanes the answer is the earlier address, not the other one.
-    * **Assertions**:
-      * <code>Assert true (m != 0)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(at, swar.zero_lane(m));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(a, swar.zero_lane(swar.has_zero(swar.load(buf))));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_eq_matches_equality_on_every_byte</b> &mdash; <i>Eq matches equality on every byte</i></summary>
-
-    * **Objective**: Eq matches equality on every byte
-    * **Assertions**:
-      * <code>Assert true (got == want)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_eq_ci_matches_the_scalar_rule_on_every_byte</b> &mdash; <i>The named pairs, stated rather than left implicit in the sweep above.</i></summary>
-
-    * **Objective**: The named pairs, stated rather than left implicit in the sweep above.
-    * **Assertions**:
-      * <code>Assert true (got == want)</code>
-      * <code>Assert true (swar.eq(broadcast('A'), 'a', PROTO_TRUE) == PROTOCORE_SWAR_HIGH)</code>
-      * <code>Assert true (swar.eq(broadcast('a'), 'A', PROTO_TRUE) == PROTOCORE_SWAR_HIGH)</code>
-      * <code>Assert true (swar.eq(broadcast('A'), 'a', PROTO_FALSE) == 0)</code>
-      * <code>Assert true (swar.eq(broadcast(0x30), 0x10, PROTO_TRUE) == 0)</code>
-      * <code>Assert true (swar.eq(broadcast(0x40), 0x60, PROTO_TRUE) == 0)</code>
-      * <code>Assert true (swar.eq(broadcast(0xDB), 0xFB, PROTO_TRUE) == 0)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_lane_tests_are_independent_across_lanes</b> &mdash; <i>The syndrome is zero in exactly the lanes that match, so ORing two exact masks answers for two</i></summary>
-
-    * **Objective**: The syndrome is zero in exactly the lanes that match, so ORing two exact masks answers for two
-    * **Assertions**:
-      * <code>Assert true (swar.eq(w, 'a', PROTO_FALSE) == guard_of(set))</code>
-      * <code>Assert true (swar.eq(w, 'a', PROTO_TRUE) == guard_of(set))</code>
-      * <code>Assert true (swar.xor_(w, w, PROTO_FALSE) == 0)</code>
-      * <code>Assert true (swar.xor_(w, broadcast('a'), PROTO_FALSE) == (protocore_swar_word)(w ^ broadcast('a')))</code>
-      * <code>Assert true (swar.has_zero(swar.xor_(w, broadcast('a'), PROTO_TRUE)) == swar.eq(w, 'a', PROTO_TRUE))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_ge_and_le_match_the_scalar_compares_on_seven_bit_lanes</b> &mdash; <i>The window the base64 decoder classifies with: A-Z selected and nothing else, per lane.</i></summary>
-
-    * **Objective**: The window the base64 decoder classifies with: A-Z selected and nothing else, per lane.
-    * **Assertions**:
-      * <code>Assert true (swar.ge(w, (protocore_swar_word)v) == ((a &gt;= v) ? PROTOCORE_SWAR_HIGH : 0))</code>
-      * <code>Assert true (swar.le(w, (protocore_swar_word)v) == ((a &lt;= v) ? PROTOCORE_SWAR_HIGH : 0))</code>
-      * <code>Assert true ((swar.ge(w, 'A') & swar.le(w, 'Z')) == guard_of(set))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_spread_widens_a_guard_mask_without_carrying</b> &mdash; <i>Spread widens a guard mask without carrying</i></summary>
-
-    * **Objective**: Spread widens a guard mask without carrying
-    * **Assertions**:
-      * <code>Assert true (swar.spread(guard_of(set)) == full_of(set))</code>
-      * <code>Assert true (swar.spread(guard_of(set)) == full_of(set))</code>
-      * <code>Assert true (swar.spread(0) == 0)</code>
-      * <code>Assert true (swar.spread(PROTOCORE_SWAR_HIGH) == (protocore_swar_word) ~(protocore_swar_word)0)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sub7_is_the_lane_local_subtraction</b> &mdash; <i>(0x80 \| a) - lo, keeping the low seven bits: the guard bit absorbs the borrow.</i></summary>
-
-    * **Objective**: (0x80 \| a) - lo, keeping the low seven bits: the guard bit absorbs the borrow.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(want, out[i]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_two_loads_agree_where_both_are_legal</b> &mdash; <i>Whatever the alignment, the unaligned load reads the bytes that are there.</i></summary>
-
-    * **Objective**: Whatever the alignment, the unaligned load reads the bytes that are there.
-    * **Assertions**:
-      * <code>Assert true (swar.load(&buf[off]) == swar.load_al(&buf[off]))</code>
-      * <code>Assert true (swar.load(&buf[off]) == from_lanes(lanes))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_the_table_is_wired_to_the_named_lane_tests</b> &mdash; <i>The table is wired to the named lane tests</i></summary>
-
-    * **Objective**: The table is wired to the named lane tests
-    * **Assertions**:
-      * <code>Assert equal ptr (protocore_swar_ge, swar.ge)</code>
-      * <code>Assert equal ptr (protocore_swar_le, swar.le)</code>
-      * <code>Assert equal ptr (protocore_swar_spread, swar.spread)</code>
-      * <code>Assert equal ptr (protocore_swar_sub7, swar.sub7)</code>
-      * <code>Assert equal ptr (protocore_swar_has_zero, swar.has_zero)</code>
-      * <code>Assert equal ptr (protocore_swar_eq_sel, swar.eq)</code>
-      * <code>Assert equal ptr (protocore_swar_xor_sel, swar.xor_)</code>
-      * <code>Assert equal ptr (protocore_swar_zero_lane, swar.zero_lane)</code>
-      * <code>Assert equal ptr (protocore_swar_load, swar.load)</code>
-      * <code>Assert equal ptr (protocore_swar_load_al, swar.load_al)</code>
-  </details>
-
-</details>
-
-<details>
 <summary><b>test_syslog (14 tests)</b></summary>
 
   <details style="margin-left: 20px;">
@@ -60588,7 +57529,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Assertions**:
       * <code>Assert equal int (PROTOCORE_NET_OK, listener_accept_cb((void *)(uintptr_t)0, peer, PROTOCORE_NET_OK))</code>
       * <code>Assert equal int (PROTOCORE_NET_OK, protocore_net_host_deliver(peer, seg, (uint16_t)(sizeof(seg) - 1)))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(sizeof(seg) - 1, (uint32_t)conn_pool[0].rx_head);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(sizeof(seg) - 1, (uint32_t)rx_used(&conn_pool[0]));</code>
       * <code>Assert equal memory (seg, conn_pool[0].rx_buffer, sizeof(seg) - 1)</code>
   </details>
 
@@ -61620,7 +58561,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Assertions**:
       * <code>Assert equal (PROTOCORE_NET_OK, accept_on(0, &g_newpcb))</code>
       * <code>Assert equal uint (0, ConnPoolV.n)</code>
-      * <code>Assert equal uint (0, conn_pool[0].rx_acked)</code>
+      * <code>Assert equal uint (0, conn_pool[0].rx_unacked)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -64246,9 +61187,9 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_the_two_suites_do_not_open_each_other</b> &mdash; <i>And the two seals of the same plaintext are not the same bytes.</i></summary>
+    <summary><b>test_the_two_suites_do_not_open_each_other</b> &mdash; <i>And the two seals of the same plaintext are not the same byteio.</i></summary>
 
-    * **Objective**: And the two seals of the same plaintext are not the same bytes.
+    * **Objective**: And the two seals of the same plaintext are not the same byteio.
     * **Assertions**:
       * <code>Assert false (unprotect(sealed384, n384, opened, sizeof(opened), &info))</code>
       * <code>Assert false (unprotect(sealed256, n256, opened, sizeof(opened), &info))</code>
@@ -64804,7 +61745,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 
     * **Objective**: All ring buffers empty after init
     * **Assertions**:
-      * <code>Assert equal (conn_pool[i].rx_head, conn_pool[i].rx_tail)</code>
+      * <code>Assert equal (0u, rx_used(&conn_pool[i]))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -64833,7 +61774,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 
     * **Objective**: Ring empty when head equals tail
     * **Assertions**:
-      * <code>Assert equal (s.rx_head, s.rx_tail)</code>
+      * <code>Assert equal (0u, rx_used(&s))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -64981,9 +61922,9 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 
     * **Objective**: Stress - Ring buffer fill drain integrity
     * **Assertions**:
-      * <code>Assert equal (RX_BUF_SIZE - 1, (int)((s-&gt;rx_head - s-&gt;rx_tail + RX_BUF_SIZE) % RX_BUF_SIZE))</code>
+      * <code>Assert equal (RX_BUF_SIZE - 1, (int)rx_used(s))</code>
       * <code>Assert equal message (expected, actual, "ring buffer byte mismatch")</code>
-      * <code>Assert equal (s-&gt;rx_head, s-&gt;rx_tail)</code>
+      * <code>Assert equal (0u, rx_used(s))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -64991,9 +61932,9 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 
     * **Objective**: Stress - Ring buffer multi cycle no corruption
     * **Assertions**:
-      * <code>Assert not equal message (next, s-&gt;rx_tail, "ring full during stress write")</code>
-      * <code>Assert equal message (read_val, s-&gt;rx_buffer[s-&gt;rx_tail], "ring corrupt on drain")</code>
-      * <code>Assert equal (s-&gt;rx_head, s-&gt;rx_tail)</code>
+      * <code>Assert true message (rx_vacant(s) != 0u, "ring full during stress write")</code>
+      * <code>Assert equal message (read_val, rx_take(s), "ring corrupt on drain")</code>
+      * <code>Assert equal (0u, rx_used(s))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -65031,7 +61972,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Objective**: Stress - Ring buffer byte by byte fill and drain
     * **Assertions**:
       * <code>Assert equal (RX_BUF_SIZE - 1, written)</code>
-      * <code>Assert equal ((uint8_t)(read & 0xFF), s-&gt;rx_buffer[s-&gt;rx_tail])</code>
+      * <code>Assert equal ((uint8_t)(read & 0xFF), rx_take(s))</code>
       * <code>Assert equal (written, read)</code>
   </details>
 
@@ -65313,9 +62254,9 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
 
     * **Objective**: Ack consumed bounds inactive and real advance
     * **Assertions**:
-      * <code>Assert equal (0u, (size_t)conn_pool[0].rx_acked)</code>
-      * <code>Assert equal (5u, (size_t)conn_pool[0].rx_acked)</code>
-      * <code>Assert equal (5u, (size_t)conn_pool[0].rx_acked)</code>
+      * <code>Assert equal (5u, (size_t)conn_pool[0].rx_unacked)</code>
+      * <code>Assert equal (0u, (size_t)conn_pool[0].rx_unacked)</code>
+      * <code>Assert equal (0u, (size_t)conn_pool[0].rx_unacked)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -65470,7 +62411,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Assertions**:
       * <code>Assert equal int (PROTOCORE_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg1, PROTOCORE_NET_OK))</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(4242, conn_pool[0].last_activity_ms);</code>
-      * <code>Assert equal (5u, (size_t)conn_pool[0].rx_head)</code>
+      * <code>Assert equal (5u, rx_used(&conn_pool[0]))</code>
       * <code>Assert equal int (0, memcmp("abcde", got, 5))</code>
       * <code>Assert equal int (PROTOCORE_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg3, PROTOCORE_NET_OK))</code>
   </details>
@@ -65482,7 +62423,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
     * **Assertions**:
       * <code>Assert equal int (PROTOCORE_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg, PROTOCORE_NET_OK))</code>
       * <code>Assert equal int (PROTOCORE_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &empty_seg, PROTOCORE_NET_OK))</code>
-      * <code>Assert equal (1u, (size_t)conn_pool[0].rx_head)</code>
+      * <code>Assert equal (1u, rx_used(&conn_pool[0]))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -65549,8 +62490,7 @@ A thorough directory of all **5815 test cases** across **365 suites**. Expand a 
       * <code>Assert equal ptr (&fake, c-&gt;pcb)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(9001, c-&gt;last_activity_ms);</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0, http_req_start_ms[c-&gt;id]);</code>
-      * <code>Assert equal (0u, (size_t)c-&gt;rx_head)</code>
-      * <code>Assert equal (0u, (size_t)c-&gt;rx_tail)</code>
+      * <code>Assert equal (0u, rx_used(c))</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0, c-&gt;listener_id);</code>
       * <code>Assert equal int ((int)PROTO_HTTP, (int)c-&gt;proto)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0, protocore_ap_ip);</code>
