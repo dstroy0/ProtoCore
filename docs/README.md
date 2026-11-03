@@ -1803,7 +1803,6 @@ Feature Tables workflow from `docs/footprints.json`.
 
 | Feature | Example | Flash (bytes) | Static RAM (bytes) |
 | :------ | :------ | ------------: | -----------------: |
-| `SIGFOX` | `Drivers/SigfoxUplink` | 267,957 | 21,464 |
 | `ENOCEAN+GATEWAY` | `Drivers/EnOceanGateway` | 268,745 | 21,848 |
 | `DMA+PREEMPT_QUEUE+DMA_SIMULATE` | `Peripherals/DmaIngest` | 269,297 | 28,616 |
 | `ZIGBEE+GATEWAY` | `Drivers/ZigbeeGateway` | 269,357 | 22,104 |
@@ -1813,12 +1812,13 @@ Feature Tables workflow from `docs/footprints.json`.
 | `LD2410` | `Drivers/Ld2410` | 270,605 | 21,656 |
 | `DMA+PREEMPT_QUEUE+FORWARD+DMA_SIMULATE` | `Foundation/InterfaceForward` | 270,993 | 29,104 |
 | `THREAD+GATEWAY` | `Drivers/ThreadGateway` | 271,933 | 22,616 |
-| `PREEMPT_QUEUE` | `Foundation/PreemptQueue` | 273,861 | 23,968 |
-| `NRF24+GATEWAY` | `Drivers/Nrf24Gateway` | 275,969 | 21,688 |
 | `MPR121` | `Drivers/Mpr121` | 279,981 | 24,700 |
+| `SIGFOX` | `Drivers/SigfoxUplink` | 364,588 | 29,004 |
 | `NMEA0183+UBX` | `Drivers/UbloxGnss` | 368,824 | 29,956 |
 | `ZWAVE+GATEWAY` | `Drivers/ZWaveGateway` | 404,328 | 111,860 |
+| `NRF24+GATEWAY` | `Drivers/Nrf24Gateway` | 408,044 | 111,620 |
 | `LORA+GATEWAY` | `Drivers/LoRaGateway` | 408,272 | 111,620 |
+| `PREEMPT_QUEUE` | `Foundation/PreemptQueue` | 409,256 | 111,604 |
 | `PCA9685` | `Drivers/Pca9685` | 412,272 | 114,716 |
 | `ADS1115` | `Drivers/Ads1115` | 413,576 | 114,692 |
 | `INA219` | `Drivers/Ina219` | 413,772 | 114,724 |
