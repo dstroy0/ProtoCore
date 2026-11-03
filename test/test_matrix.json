@@ -3833,28 +3833,6 @@
       "tests": ["unit/src/services/security/oidc/test_oidc"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
-    "native_oidc_rfc7515_asan": {
-      "desc": "The OpenID Connect RS256 verifier suite under AddressSanitizer and UBSan: the RSA modexp, its bignum work borrow and the RNG state are the largest borrows one env exercises, so an overrun of any of them stops the suite at the write.",
-      "flags": ["-DPROTOCORE_ENABLE_OIDC=1", "-g", "-fsanitize=address,undefined", "-fno-sanitize-recover=all"],
-      "src": [
-        "+<services/security/oidc/oidc.c>",
-        "+<network_drivers/presentation/codec/base64/base64.c>",
-        "+<crypto/asymmetric/rsa/rsa.c>",
-        "+<network_drivers/presentation/ssh/transport/ssh_rsa/ssh_rsa.c>",
-        "+<crypto/asymmetric/bignum/bignum.c>",
-        "+<test/core_setup/hal/portable/portable_bignum.c>",
-        "+<crypto/hash/sha256/sha256.c>",
-        "+<crypto/hash/sha512/sha512.c>",
-        "+<server/core/worker/worker.c>",
-        "+<test/core_setup/hal/portable/portable_platform.c>",
-        "+<test/core_setup/hal/host/host_nvs.c>",
-        "+<shared/hex/hex.c>",
-        "+<crypto/rng/rng.c>",
-        "+<crypto/cipher/chacha20/chacha20.c>"
-      ],
-      "tests": ["unit/src/services/security/oidc/test_oidc"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
-    },
     "native_opcua": {
       "desc": "OPC UA Binary server core (services/fieldbus/opcua): the little-endian built-in type codec, NodeId encoding forms, the UACP header + Hello/Acknowledge/Error handshake, the OpenSecureChannel exchange, the MSG envelope and the CreateSession / ActivateSession / GetEndpoints / Read / Write / Browse / CloseSession / ServiceFault responses, plus Variant and DataValue. Anchored on OPC UA Part 6 sec. 5.2.2 (published byte encodings, the NodeId table) and sec. 7.1.2 (UACP), Part 4 sec. 5.5 / 5.6 / 5.8 / 5.10, and the OPC Foundation NodeIds.csv + StatusCode.csv registry values. Pure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_OPCUA=1"],

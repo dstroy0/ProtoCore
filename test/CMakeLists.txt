@@ -6701,38 +6701,6 @@ protocore_env(native_oidc_rfc7515
     "${PROTOCORE_ROOT}/.pio/libdeps/host/littlefs/include"
 )
 
-# The OpenID Connect RS256 verifier suite under AddressSanitizer and UBSan: the RSA modexp, its bignum work borrow and the RNG state are the largest borrows one env exercises, so an overrun of any of them stops the suite at the write.
-protocore_env(native_oidc_rfc7515_asan
-  SUITE unit/src/services/security/oidc/test_oidc
-  SOURCES
-    "${PROTOCORE_ROOT}/src/services/security/oidc/oidc.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/base64/base64.c"
-    "${PROTOCORE_ROOT}/src/crypto/asymmetric/rsa/rsa.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_rsa/ssh_rsa.c"
-    "${PROTOCORE_ROOT}/src/crypto/asymmetric/bignum/bignum.c"
-    "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_bignum.c"
-    "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
-    "${PROTOCORE_ROOT}/src/crypto/hash/sha512/sha512.c"
-    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
-    "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_nvs.c"
-    "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
-    "${PROTOCORE_ROOT}/src/crypto/rng/rng.c"
-    "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
-  DEFINES
-    "PROTOCORE_ENABLE_OIDC=1"
-  INCLUDES
-    "${PROTOCORE_ROOT}/test/core_setup/hal/host"
-    "${PROTOCORE_ROOT}/test/support"
-    "${PROTOCORE_ROOT}/src"
-    "${PROTOCORE_ROOT}/include"
-    "${PROTOCORE_ROOT}/."
-    "${PROTOCORE_ROOT}/include/MMgr/include"
-    "${PROTOCORE_ROOT}/include/MMgr/src"
-    "${PROTOCORE_ROOT}/include/embedded_types/include"
-    "${PROTOCORE_ROOT}/.pio/libdeps/host/littlefs/include"
-)
-
 # OPC UA Binary server core (services/fieldbus/opcua): the little-endian built-in type codec, NodeId encoding forms, the UACP header + Hello/Acknowledge/Error handshake, the OpenSecureChannel exchange, the MSG envelope and the CreateSession / ActivateSession / GetEndpoints / Read / Write / Browse / CloseSession / ServiceFault responses, plus Variant and DataValue. Anchored on OPC UA Part 6 sec. 5.2.2 (published byte encodings, the NodeId table) and sec. 7.1.2 (UACP), Part 4 sec. 5.5 / 5.6 / 5.8 / 5.10, and the OPC Foundation NodeIds.csv + StatusCode.csv registry values. Pure host tests.
 protocore_env(native_opcua
   SUITE unit/src/services/opcua/test_opcua

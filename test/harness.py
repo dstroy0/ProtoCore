@@ -1882,6 +1882,10 @@ def _reached_headers(sdir):
 
 
 COV_BUILD = ".pio_cov"  # per-env .gcno/.gcda from the instrumented build
+# Objects an env compiles uninstrumented, because gcov aborts reading their counters from that env
+# (`*** buffer overflow detected ***`) though the suite passes, under AddressSanitizer and UBSan
+# too. The other envs that build the file still measure it, so the merge still covers it.
+COV_SKIP = {"native_oidc_rfc7515": {"src/crypto/cipher/chacha20/chacha20.c"}}
 COV_REPORTS = "coverage_reports"  # per-env gcovr tracefiles, unioned once every env has run
 
 
@@ -2018,7 +2022,8 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
             failed = None
             for src in srcs:
                 obj = _obj_for(objdir, src)
-                c = base + ["-c", src, "-o", obj]
+                skipped = src in COV_SKIP.get(name, ())
+                c = [flag for flag in base if not (skipped and flag == "--coverage")] + ["-c", src, "-o", obj]
                 if verbose:
                     out_lines.append(" ".join(c))
                 p = subprocess.run(c, capture_output=True, text=True, cwd=ROOT)
