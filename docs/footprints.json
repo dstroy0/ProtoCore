@@ -17,8 +17,8 @@
     "example": "Drivers/Ads1115",
     "flags": "-DPROTOCORE_ENABLE_ADS1115=1",
     "board": "esp32dev",
-    "flash_bytes": 277873,
-    "ram_bytes": 24612
+    "flash_bytes": 413576,
+    "ram_bytes": 114692
   },
   "AUDIT_LOG": {
     "example": "L7-Application/AuditLog",
@@ -346,8 +346,8 @@
     "example": "Drivers/Ina219",
     "flags": "-DPROTOCORE_ENABLE_INA219=1",
     "board": "esp32dev",
-    "flash_bytes": 277849,
-    "ram_bytes": 24596
+    "flash_bytes": 413772,
+    "ram_bytes": 114724
   },
   "IPV6": {
     "example": "Foundation/IPv6",
@@ -395,8 +395,8 @@
     "example": "Drivers/LoRaGateway",
     "flags": "-DPROTOCORE_ENABLE_LORA=1 -DPROTOCORE_ENABLE_GATEWAY=1",
     "board": "esp32dev",
-    "flash_bytes": 276189,
-    "ram_bytes": 21688
+    "flash_bytes": 408272,
+    "ram_bytes": 111620
   },
   "LSV2": {
     "example": "L7-Application/HeidenhainLsv2",
@@ -584,8 +584,8 @@
     "example": "Drivers/Pca9685",
     "flags": "-DPROTOCORE_ENABLE_PCA9685=1",
     "board": "esp32dev",
-    "flash_bytes": 276825,
-    "ram_bytes": 24596
+    "flash_bytes": 412272,
+    "ram_bytes": 114716
   },
   "PER_IP_THROTTLE": {
     "example": "L4-Transport/PerIpThrottle",
@@ -598,8 +598,8 @@
     "example": "Drivers/NfcGateway",
     "flags": "-DPROTOCORE_ENABLE_PN532=1 -DPROTOCORE_ENABLE_GATEWAY=1",
     "board": "esp32dev",
-    "flash_bytes": 288189,
-    "ram_bytes": 21936
+    "flash_bytes": 434748,
+    "ram_bytes": 113060
   },
   "POWER_MGMT": {
     "example": "L7-Application/PowerGovernor",
@@ -682,8 +682,8 @@
     "example": "Drivers/Sht3x",
     "flags": "-DPROTOCORE_ENABLE_SHT3X=1",
     "board": "esp32dev",
-    "flash_bytes": 277957,
-    "ram_bytes": 24612
+    "flash_bytes": 413784,
+    "ram_bytes": 114716
   },
   "SIGFOX": {
     "example": "Drivers/SigfoxUplink",
@@ -948,8 +948,8 @@
     "example": "Drivers/ZWaveGateway",
     "flags": "-DPROTOCORE_ENABLE_ZWAVE=1 -DPROTOCORE_ENABLE_GATEWAY=1",
     "board": "esp32dev",
-    "flash_bytes": 268953,
-    "ram_bytes": 21848
+    "flash_bytes": 404328,
+    "ram_bytes": 111860
   },
   "core/Advanced": {
     "example": "Foundation/Advanced",

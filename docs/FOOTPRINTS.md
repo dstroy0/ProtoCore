@@ -10,7 +10,7 @@ from each example's `pio ci` size report and aggregated into
 | --------------------------------------------------------------------------------------------------------- | ------------------------------------ | ---------------- | ---------------- |
 | `ACCEPT_THROTTLE`                                                                                         | L4-Transport/AcceptThrottle          | 726.8 KB (56.8%) | 72.1 KB (22.5%)  |
 | `ADS`                                                                                                     | L7-Application/AdsClient             | 735.8 KB (57.5%) | 43.2 KB (13.5%)  |
-| `ADS1115`                                                                                                 | Drivers/Ads1115                      | 271.4 KB (21.2%) | 24.0 KB (7.5%)   |
+| `ADS1115`                                                                                                 | Drivers/Ads1115                      | 403.9 KB (31.6%) | 112.0 KB (35.0%) |
 | `AUDIT_LOG`                                                                                               | L7-Application/AuditLog              | 729.5 KB (57.0%) | 75.0 KB (23.4%)  |
 | `AUTH`                                                                                                    | L6-Presentation/DigestAuth           | 731.0 KB (57.1%) | 76.7 KB (24.0%)  |
 | `AUTH+AUTH_LOCKOUT`                                                                                       | L6-Presentation/AuthLockout          | 732.3 KB (57.2%) | 77.2 KB (24.1%)  |
@@ -57,14 +57,14 @@ from each example's `pio ci` size report and aggregated into
 | `HTTP_DELIVERY+FILE_SERVING+RANGE`                                                                        | L7-Application/HttpDelivery          | 826.5 KB (64.6%) | 80.8 KB (25.3%)  |
 | `IFACE_BRIDGE`                                                                                            | L7-Application/InterfaceBridge       | 756.8 KB (59.1%) | 69.1 KB (21.6%)  |
 | `IKEV2`                                                                                                   | L5-Session/IKEv2                     | 709.2 KB (55.4%) | 42.9 KB (13.4%)  |
-| `INA219`                                                                                                  | Drivers/Ina219                       | 271.3 KB (21.2%) | 24.0 KB (7.5%)   |
+| `INA219`                                                                                                  | Drivers/Ina219                       | 404.1 KB (31.6%) | 112.0 KB (35.0%) |
 | `IPV6`                                                                                                    | Foundation/IPv6                      | 729.4 KB (57.0%) | 72.1 KB (22.5%)  |
 | `IP_ALLOWLIST`                                                                                            | L4-Transport/IpAllowlist             | 728.3 KB (56.9%) | 72.2 KB (22.6%)  |
 | `JWT`                                                                                                     | L6-Presentation/JWTAuth              | 730.0 KB (57.0%) | 78.8 KB (24.6%)  |
 | `KEEPALIVE`                                                                                               | L4-Transport/KeepAlive               | 727.9 KB (56.9%) | 72.1 KB (22.5%)  |
 | `LD2410`                                                                                                  | Drivers/Ld2410                       | 264.3 KB (20.6%) | 21.1 KB (6.6%)   |
 | `LOGBUF`                                                                                                  | L7-Application/LogBuffer             | 730.6 KB (57.1%) | 71.4 KB (22.3%)  |
-| `LORA+GATEWAY`                                                                                            | Drivers/LoRaGateway                  | 269.7 KB (21.1%) | 21.2 KB (6.6%)   |
+| `LORA+GATEWAY`                                                                                            | Drivers/LoRaGateway                  | 398.7 KB (31.1%) | 109.0 KB (34.1%) |
 | `LSV2`                                                                                                    | L7-Application/HeidenhainLsv2        | 708.5 KB (55.3%) | 43.0 KB (13.4%)  |
 | `MDNS`                                                                                                    | L7-Application/mDNS                  | 751.8 KB (58.7%) | 74.0 KB (23.1%)  |
 | `MDNS+PROMISC+WIFI_SNIFFER+MDNS_ADAPTIVE`                                                                 | L7-Application/MdnsAdaptive          | 753.6 KB (58.9%) | 74.0 KB (23.1%)  |
@@ -91,9 +91,9 @@ from each example's `pio ci` size report and aggregated into
 | `OTA_ROLLBACK`                                                                                            | L7-Application/OtaRollback           | 727.9 KB (56.9%) | 72.1 KB (22.5%)  |
 | `PACKML`                                                                                                  | L7-Application/PackML                | 741.0 KB (57.9%) | 80.0 KB (25.0%)  |
 | `PARTITION_MONITOR`                                                                                       | L7-Application/PartitionMonitor      | 727.9 KB (56.9%) | 72.1 KB (22.5%)  |
-| `PCA9685`                                                                                                 | Drivers/Pca9685                      | 270.3 KB (21.1%) | 24.0 KB (7.5%)   |
+| `PCA9685`                                                                                                 | Drivers/Pca9685                      | 402.6 KB (31.5%) | 112.0 KB (35.0%) |
 | `PER_IP_THROTTLE`                                                                                         | L4-Transport/PerIpThrottle           | 727.3 KB (56.8%) | 72.5 KB (22.7%)  |
-| `PN532+GATEWAY`                                                                                           | Drivers/NfcGateway                   | 281.4 KB (22.0%) | 21.4 KB (6.7%)   |
+| `PN532+GATEWAY`                                                                                           | Drivers/NfcGateway                   | 424.6 KB (33.2%) | 110.4 KB (34.5%) |
 | `POWER_MGMT`                                                                                              | L7-Application/PowerGovernor         | 852.8 KB (66.6%) | 75.9 KB (23.7%)  |
 | `PREEMPT_QUEUE`                                                                                           | Foundation/PreemptQueue              | 267.4 KB (20.9%) | 23.4 KB (7.3%)   |
 | `PROMISC+FORWARD+ETHERNET`                                                                                | Peripherals/WifiCapture              | 748.3 KB (58.5%) | 46.5 KB (14.5%)  |
@@ -105,7 +105,7 @@ from each example's `pio ci` size report and aggregated into
 | `RTC+TIME_SOURCE+NTP`                                                                                     | Drivers/Rtc                          | 739.9 KB (57.8%) | 47.0 KB (14.7%)  |
 | `SCPI`                                                                                                    | L7-Application/Scpi                  | 708.5 KB (55.4%) | 42.8 KB (13.4%)  |
 | `SEN0192`                                                                                                 | Drivers/Sen0192                      | 263.4 KB (20.6%) | 21.0 KB (6.6%)   |
-| `SHT3X`                                                                                                   | Drivers/Sht3x                        | 271.4 KB (21.2%) | 24.0 KB (7.5%)   |
+| `SHT3X`                                                                                                   | Drivers/Sht3x                        | 404.1 KB (31.6%) | 112.0 KB (35.0%) |
 | `SIGFOX`                                                                                                  | Drivers/SigfoxUplink                 | 261.7 KB (20.4%) | 21.0 KB (6.6%)   |
 | `SIMATIC`                                                                                                 | L7-Application/SimaticSerial         | 740.7 KB (57.9%) | 81.4 KB (25.4%)  |
 | `SMB`                                                                                                     | L7-Application/SmbFileClient         | 747.6 KB (58.4%) | 68.6 KB (21.5%)  |
@@ -143,7 +143,7 @@ from each example's `pio ci` size report and aggregated into
 | `WS_CLIENT+TLS+WS_CLIENT_TLS+WS_CLIENT_BUF_SIZE+TLS_ARENA_SIZE`                                           | L7-Application/WebSocketClient       | 813.9 KB (63.6%) | 96.5 KB (30.1%)  |
 | `WS_DEFLATE`                                                                                              | L6-Presentation/WebSocketCompression | 743.4 KB (58.1%) | 87.9 KB (27.5%)  |
 | `ZIGBEE+GATEWAY`                                                                                          | Drivers/ZigbeeGateway                | 263.0 KB (20.6%) | 21.6 KB (6.7%)   |
-| `ZWAVE+GATEWAY`                                                                                           | Drivers/ZWaveGateway                 | 262.6 KB (20.5%) | 21.3 KB (6.7%)   |
+| `ZWAVE+GATEWAY`                                                                                           | Drivers/ZWaveGateway                 | 394.9 KB (30.8%) | 109.2 KB (34.1%) |
 | `core/Advanced`                                                                                           | Foundation/Advanced                  | 735.6 KB (57.5%) | 72.2 KB (22.6%)  |
 | `core/Basic`                                                                                              | Foundation/Basic                     | 726.8 KB (56.8%) | 72.1 KB (22.5%)  |
 | `core/BasicAuth`                                                                                          | L6-Presentation/BasicAuth            | 738.7 KB (57.7%) | 79.9 KB (25.0%)  |
