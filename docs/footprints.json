@@ -169,10 +169,10 @@
   },
   "DMA+PREEMPT_QUEUE+GATEWAY+DMA_SIMULATE": {
     "example": "Drivers/RadioGateway",
-    "flags": "-DPROTOCORE_ENABLE_DMA=1 -DPROTOCORE_ENABLE_PREEMPT_QUEUE=1 -DPROTOCORE_ENABLE_GATEWAY=1 -DPROTOCORE_DMA_SIMULATE=1",
+    "flags": "-DPROTOCORE_ENABLE_DMA=1 -DMMGR_ENABLE_DMA=1 -DMMGR_ACCEPT_DEFAULTS=1 -DPROTOCORE_ENABLE_PREEMPT_QUEUE=1 -DPROTOCORE_ENABLE_GATEWAY=1 -DPROTOCORE_DMA_SIMULATE=1",
     "board": "esp32dev",
-    "flash_bytes": 270329,
-    "ram_bytes": 28728
+    "flash_bytes": 405804,
+    "ram_bytes": 116820
   },
   "DNC": {
     "example": "L7-Application/EthernetDnc",
@@ -609,11 +609,16 @@
     "ram_bytes": 77688
   },
   "PREEMPT_QUEUE": {
-    "example": "Foundation/PreemptQueue",
+    "example": "Foundation/PreemptLanes",
     "flags": "-DPROTOCORE_ENABLE_PREEMPT_QUEUE=1",
     "board": "esp32dev",
+<<<<<<< Updated upstream
     "flash_bytes": 409256,
     "ram_bytes": 111604
+=======
+    "flash_bytes": 403332,
+    "ram_bytes": 111572
+>>>>>>> Stashed changes
   },
   "PROMISC+FORWARD+ETHERNET": {
     "example": "Peripherals/WifiCapture",

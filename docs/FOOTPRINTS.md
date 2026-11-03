@@ -32,7 +32,7 @@ from each example's `pio ci` size report and aggregated into
 | `DIFFSERV`                                                                                                | L4-Transport/DiffServ                | 727.2 KB (56.8%) | 72.1 KB (22.5%)  |
 | `DMA+PREEMPT_QUEUE+DMA_SIMULATE`                                                                          | Peripherals/DmaIngest                | 263.0 KB (20.5%) | 27.9 KB (8.7%)   |
 | `DMA+PREEMPT_QUEUE+FORWARD+DMA_SIMULATE`                                                                  | Foundation/InterfaceForward          | 264.6 KB (20.7%) | 28.4 KB (8.9%)   |
-| `DMA+PREEMPT_QUEUE+GATEWAY+DMA_SIMULATE`                                                                  | Drivers/RadioGateway                 | 264.0 KB (20.6%) | 28.1 KB (8.8%)   |
+| `DMA+PREEMPT_QUEUE+GATEWAY+DMA_SIMULATE`                                                                  | Drivers/RadioGateway                 | 396.3 KB (31.0%) | 114.1 KB (35.7%) |
 | `DNC`                                                                                                     | L7-Application/EthernetDnc           | 716.5 KB (56.0%) | 59.7 KB (18.7%)  |
 | `DNS_RESOLVER`                                                                                            | L7-Application/DnsResolver           | 732.9 KB (57.3%) | 73.4 KB (22.9%)  |
 | `DNS_SERVER`                                                                                              | L7-Application/DnsServer             | 708.6 KB (55.4%) | 45.0 KB (14.1%)  |
@@ -95,7 +95,11 @@ from each example's `pio ci` size report and aggregated into
 | `PER_IP_THROTTLE`                                                                                         | L4-Transport/PerIpThrottle           | 727.3 KB (56.8%) | 72.5 KB (22.7%)  |
 | `PN532+GATEWAY`                                                                                           | Drivers/NfcGateway                   | 424.6 KB (33.2%) | 110.4 KB (34.5%) |
 | `POWER_MGMT`                                                                                              | L7-Application/PowerGovernor         | 852.8 KB (66.6%) | 75.9 KB (23.7%)  |
+<<<<<<< Updated upstream
 | `PREEMPT_QUEUE`                                                                                           | Foundation/PreemptQueue              | 399.7 KB (31.2%) | 109.0 KB (34.1%) |
+=======
+| `PREEMPT_QUEUE`                                                                                           | Foundation/PreemptLanes              | 393.9 KB (30.8%) | 109.0 KB (34.0%) |
+>>>>>>> Stashed changes
 | `PROMISC+FORWARD+ETHERNET`                                                                                | Peripherals/WifiCapture              | 748.3 KB (58.5%) | 46.5 KB (14.5%)  |
 | `PROVISIONING`                                                                                            | L7-Application/Provisioning          | 734.3 KB (57.4%) | 73.7 KB (23.0%)  |
 | `PTP`                                                                                                     | L7-Application/Ptp                   | 711.0 KB (55.6%) | 44.0 KB (13.7%)  |
@@ -107,7 +111,11 @@ from each example's `pio ci` size report and aggregated into
 | `SEN0192`                                                                                                 | Drivers/Sen0192                      | 263.4 KB (20.6%) | 21.0 KB (6.6%)   |
 | `SHT3X`                                                                                                   | Drivers/Sht3x                        | 404.1 KB (31.6%) | 112.0 KB (35.0%) |
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 | `SIGFOX`                                                                                                  | Drivers/SigfoxUplink                 | 261.7 KB (20.4%) | 21.0 KB (6.6%)   |
+=======
+| `SIGFOX`                                                                                                  | Drivers/SigfoxUplink                 | 356.0 KB (27.8%) | 28.3 KB (8.9%)   |
+>>>>>>> Stashed changes
 =======
 | `SIGFOX`                                                                                                  | Drivers/SigfoxUplink                 | 356.0 KB (27.8%) | 28.3 KB (8.9%)   |
 >>>>>>> Stashed changes
