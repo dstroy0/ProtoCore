@@ -66,6 +66,6 @@ void loop()
     if (millis() - last >= 1000)
     {
         last = millis();
-        protocore_guardrails_check(); // fires on_breach() if any floor is crossed
+        Guardrails.check(protocore_guardrails_span()); // fires on_breach() if any floor is crossed
     }
 }

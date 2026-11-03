@@ -21,6 +21,8 @@
 #include "network_drivers/network/forward/forward.h"
 #include "server/signaling/bus_capture/bus_capture.h"
 
+static uint8_t pcap_work[16]; // the borrow an entry takes; Pcap never reads it
+
 
 static const char *COLLECTOR_IP = "192.168.1.50";
 static const uint16_t COLLECTOR_PORT = 5556;
@@ -81,7 +83,7 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Forwarding plane: CAN -> Ethernet.
-    protocore_forward_reset();
+    Forward.reset(protocore_forward_span());
     protocore_forward_add_if(IF_CAN, protocore_if_kind::PROTOCORE_IF_BUS, can_send, nullptr);
     protocore_forward_add_if(IF_ETH, protocore_if_kind::PROTOCORE_IF_ETH, eth_send, nullptr);
     protocore_forward_add_rule(IF_CAN, IF_ETH, protocore_fwd_action::PROTOCORE_FWD_ALLOW, 0); // CAN tops out ~a few k frames/s

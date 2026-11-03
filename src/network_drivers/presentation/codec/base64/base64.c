@@ -13,7 +13,7 @@
  * native path). It is the only base64 path that touches a secret - the Basic-auth credential (RFC 7617) and
  * the JWT / JWS segments (RFC 7515, via base64url) - so the character -> value mapping is evaluated with
  * branchless arithmetic range masks: no data-dependent branch and no data-indexed table, so neither the
- * timing nor the cache footprint depends on the secret byteio. Padding / length handling may branch (the
+ * timing nor the cache footprint depends on the secret bytes. Padding / length handling may branch (the
  * plaintext length mod 3 is public, not a secret). This both removes the mbedTLS base64 dependency and
  * closes the timing gap on the base64url (JWT) path, which was previously a plain branchy software decoder.
  */
@@ -269,7 +269,7 @@ void protocore_base64_decode(uint8_t *work)
         uint32_t c3 = (uint8_t)src[i + 3];
 
         // '=' padding is legal only as the last 1-2 characters of the final quad. Position is public length
-        // information, so this branch reveals nothing about the secret byteio.
+        // information, so this branch reveals nothing about the secret bytes.
         int is_last = (i + 4 == src_len);
         int p2 = is_last && (c2 == '=');
         int p3 = is_last && (c3 == '=');

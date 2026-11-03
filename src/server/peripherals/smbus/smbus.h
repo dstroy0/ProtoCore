@@ -224,7 +224,7 @@ proto_bool protocore_smbus_block_process_call(uint8_t *work, uint8_t addr, uint8
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the spat.
+ * @return the span.
  */
 uint8_t *protocore_smbus_span(void);
 

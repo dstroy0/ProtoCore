@@ -32,7 +32,7 @@ static const uint8_t RADIO_PORT = 0; // DMA channel 0 == the LoRa module
 static bool northbound_publish(const protocore_gateway_msg *m, void *)
 {
     char topic[48];
-    protocore_gateway_topic(m, topic, sizeof(topic));
+    Gateway.topic(protocore_gateway_span(), m, topic, sizeof(topic));
     Serial.printf("  PUBLISH %s  (%u bytes, rssi %d, seq %u)\n", topic, m->len, m->rssi, (unsigned)m->seq);
     return true;
 }
@@ -66,7 +66,7 @@ static void on_forward(const void *item, void *)
         return; // need the 2-byte node address header
     }
     uint16_t addr = ((uint16_t)f->bytes[0] << 8) | f->bytes[1];
-    protocore_gateway_uplink(f->port, addr, f->bytes + 2, (uint16_t)(f->len - 2), /*rssi*/ -60);
+    Gateway.uplink(protocore_gateway_span(), f->port, addr, f->bytes + 2, (uint16_t)(f->len - 2), /*rssi*/ -60);
 }
 
 // DMA-complete on the radio port: copy the frame and post it onto the FORWARD lane.
@@ -107,14 +107,14 @@ void setup()
     praet.open(&a);
 
     // The gateway: one LoRa port, publishing under "lora/<port>/<addr>".
-    protocore_gateway_reset();
+    Gateway.reset(protocore_gateway_span());
     protocore_gateway_port_config p = {};
     p.port_id = RADIO_PORT;
     p.kind = protocore_gateway_kind::PROTOCORE_GW_LORA;
     p.tx = radio_tx;
-    protocore_gateway_add_port(&p);
-    protocore_gateway_set_uplink_cb(northbound_publish, nullptr);
-    protocore_gateway_set_topic_prefix("lora");
+    Gateway.add_port(protocore_gateway_span(), &p);
+    Gateway.set_uplink_cb(protocore_gateway_span(), northbound_publish, nullptr);
+    Gateway.set_topic_prefix(protocore_gateway_span(), "lora");
 
     Serial.println("gateway: LoRa RX -> DMA -> FORWARD lane -> codec -> publish (lora/port/addr)");
 }
@@ -135,9 +135,9 @@ void loop()
     if ((g_seq & 0x07) == 0)
     {
         uint8_t cmd[2] = {0x01, g_seq};
-        protocore_gateway_downlink(RADIO_PORT, 0x0040, cmd, sizeof(cmd)); // command node 0x40
+        Gateway.downlink(protocore_gateway_span(), RADIO_PORT, 0x0040, cmd, sizeof(cmd)); // command node 0x40
         protocore_gateway_stats st;
-        protocore_gateway_get_stats(&st);
+        Gateway.get_stats(protocore_gateway_span(), &st);
         Serial.printf("stats: up_in=%lu published=%lu down_sent=%lu\n", (unsigned long)st.up_in,
                       (unsigned long)st.up_published, (unsigned long)st.down_sent);
     }

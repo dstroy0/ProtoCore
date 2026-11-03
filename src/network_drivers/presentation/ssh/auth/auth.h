@@ -192,7 +192,7 @@ typedef struct
     size_t len;             ///< how many bytes it has
 } SshAuthMsgArgs;
 
-/** @brief Where a reply is written, either as a buffer or as a spat. */
+/** @brief Where a reply is written, either as a buffer or as a span. */
 typedef struct
 {
     uint8_t *out;   ///< where a reply is written
@@ -343,7 +343,7 @@ static const SshAuthNs SshAuth __attribute__((unused)) = {
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the spat.
+ * @return the span.
  */
 uint8_t *protocore_ssh_auth_span(void);
 

@@ -277,7 +277,7 @@ void protocore_s7comm_read_next_item(uint8_t *work)
     out->transport_size = data[o + 1];
     uint16_t raw_len = get16(data + o + 2);
 
-    // The length is in bits for the bit/byte/int transport sizes, otherwise in byteio.
+    // The length is in bits for the bit/byte/int transport sizes, otherwise in bytes.
     size_t bytes;
     if (out->transport_size == S7_DTS_BIT || out->transport_size == S7_DTS_BYTE || out->transport_size == S7_DTS_INT)
     {

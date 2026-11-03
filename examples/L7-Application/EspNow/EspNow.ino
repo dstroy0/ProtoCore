@@ -41,7 +41,10 @@ void setup()
     // ESP-NOW needs the radio up but not associated; STA mode pinned to a fixed channel.
     Physical.wifi->init_radio(CHANNEL);
 
-    if (!protocore_espnow_begin(CHANNEL, on_espnow))
+    EspnowV.begin_args.channel = CHANNEL;
+    EspnowV.begin_args.cb = on_espnow;
+    Espnow.begin(protocore_espnow_span());
+    if (!EspnowV.ok)
     {
         Serial.println("ESP-NOW init failed");
         return;
@@ -61,7 +64,11 @@ void loop()
         last = millis();
         char msg[24];
         int len = snprintf(msg, sizeof(msg), "count=%lu", (unsigned long)n++);
-        bool ok = protocore_espnow_broadcast(MSG_COUNTER, (const uint8_t *)msg, (size_t)len);
+        EspnowV.broadcast_args.type = MSG_COUNTER;
+        EspnowV.broadcast_args.payload = (const uint8_t *)msg;
+        EspnowV.broadcast_args.len = (size_t)len;
+        Espnow.broadcast(protocore_espnow_span());
+        bool ok = EspnowV.ok;
         Serial.printf("broadcast %s -> %s\n", msg, ok ? "ok" : "FAIL");
     }
 }

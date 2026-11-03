@@ -68,7 +68,7 @@ void test_export_writes_one_key_value_line_per_field(void)
     ConfigIoV.export_args.n = N;
     ConfigIoV.export_args.out = buf;
     ConfigIoV.export_args.cap = sizeof(buf);
-    ConfigIo.export(config_io_work);
+    ConfigIo.export_lines(config_io_work);
     int n = ConfigIoV.n;
     TEST_ASSERT_EQUAL_STRING("ssid=myssid\nport=8080\nname=node1\n", buf);
     TEST_ASSERT_EQUAL_INT((int)strlen(buf), n);
@@ -84,7 +84,7 @@ void test_export_carries_every_field_even_when_unset(void)
     ConfigIoV.export_args.n = N;
     ConfigIoV.export_args.out = buf;
     ConfigIoV.export_args.cap = sizeof(buf);
-    ConfigIo.export(config_io_work);
+    ConfigIo.export_lines(config_io_work);
     int n = ConfigIoV.n;
     TEST_ASSERT_EQUAL_STRING("ssid=\nport=0\nname=\n", buf);
     TEST_ASSERT_EQUAL_INT((int)strlen(buf), n);
@@ -111,7 +111,7 @@ void test_export_import_round_trip(void)
     ConfigIoV.export_args.n = N;
     ConfigIoV.export_args.out = blob;
     ConfigIoV.export_args.cap = sizeof(blob);
-    ConfigIo.export(config_io_work);
+    ConfigIo.export_lines(config_io_work);
     int n = ConfigIoV.n;
     TEST_ASSERT_TRUE(n > 0);
 
@@ -127,7 +127,7 @@ void test_export_import_round_trip(void)
     ConfigIoV.import_args.n = N;
     ConfigIoV.import_args.text = blob;
     ConfigIoV.import_args.len = strlen(blob);
-    ConfigIo.import(config_io_work);
+    ConfigIo.import_lines(config_io_work);
     TEST_ASSERT_EQUAL_INT(3, ConfigIoV.n);
     TEST_ASSERT_EQUAL_STRING("abc", get_str("ssid"));
     ConfigStoreV.get_u32_args.key = "port";
@@ -157,7 +157,7 @@ void test_import_is_idempotent(void)
     ConfigIoV.export_args.n = N;
     ConfigIoV.export_args.out = first;
     ConfigIoV.export_args.cap = sizeof(first);
-    ConfigIo.export(config_io_work);
+    ConfigIo.export_lines(config_io_work);
     (void)ConfigIoV.n;
 
     ConfigIoV.import_args.ns = "t";
@@ -165,14 +165,14 @@ void test_import_is_idempotent(void)
     ConfigIoV.import_args.n = N;
     ConfigIoV.import_args.text = first;
     ConfigIoV.import_args.len = strlen(first);
-    ConfigIo.import(config_io_work);
+    ConfigIo.import_lines(config_io_work);
     TEST_ASSERT_EQUAL_INT(3, ConfigIoV.n);
     ConfigIoV.import_args.ns = "t";
     ConfigIoV.import_args.fields = SCHEMA;
     ConfigIoV.import_args.n = N;
     ConfigIoV.import_args.text = first;
     ConfigIoV.import_args.len = strlen(first);
-    ConfigIo.import(config_io_work);
+    ConfigIo.import_lines(config_io_work);
     TEST_ASSERT_EQUAL_INT(3, ConfigIoV.n);
 
     char second[256];
@@ -181,7 +181,7 @@ void test_import_is_idempotent(void)
     ConfigIoV.export_args.n = N;
     ConfigIoV.export_args.out = second;
     ConfigIoV.export_args.cap = sizeof(second);
-    ConfigIo.export(config_io_work);
+    ConfigIo.export_lines(config_io_work);
     (void)ConfigIoV.n;
     TEST_ASSERT_EQUAL_STRING(first, second);
 }
@@ -197,7 +197,7 @@ void test_import_writes_only_keys_the_schema_declares(void)
     ConfigIoV.import_args.n = N;
     ConfigIoV.import_args.text = text;
     ConfigIoV.import_args.len = strlen(text);
-    ConfigIo.import(config_io_work);
+    ConfigIo.import_lines(config_io_work);
     TEST_ASSERT_EQUAL_INT(2, ConfigIoV.n);
     ConfigStoreV.get_u32_args.key = "port";
     ConfigStoreV.get_u32_args.def = 0;
@@ -224,7 +224,7 @@ void test_import_steps_over_a_keyless_schema_entry(void)
     ConfigIoV.import_args.n = 2;
     ConfigIoV.import_args.text = text;
     ConfigIoV.import_args.len = strlen(text);
-    ConfigIo.import(config_io_work);
+    ConfigIo.import_lines(config_io_work);
     TEST_ASSERT_EQUAL_INT(1, ConfigIoV.n);
     ConfigStoreV.get_u32_args.key = "zz";
     ConfigStoreV.get_u32_args.def = 0;
@@ -245,7 +245,7 @@ void test_import_rejects_a_field_of_an_unknown_type(void)
     ConfigIoV.import_args.n = 1;
     ConfigIoV.import_args.text = text;
     ConfigIoV.import_args.len = strlen(text);
-    ConfigIo.import(config_io_work);
+    ConfigIo.import_lines(config_io_work);
     TEST_ASSERT_EQUAL_INT(0, ConfigIoV.n);
 }
 
@@ -259,7 +259,7 @@ void test_import_skips_a_line_with_no_separator(void)
     ConfigIoV.import_args.n = N;
     ConfigIoV.import_args.text = text;
     ConfigIoV.import_args.len = strlen(text);
-    ConfigIo.import(config_io_work);
+    ConfigIo.import_lines(config_io_work);
     TEST_ASSERT_EQUAL_INT(1, ConfigIoV.n);
     ConfigStoreV.get_u32_args.key = "port";
     ConfigStoreV.get_u32_args.def = 0;
@@ -276,7 +276,7 @@ void test_import_splits_on_the_first_separator(void)
     ConfigIoV.import_args.n = N;
     ConfigIoV.import_args.text = text;
     ConfigIoV.import_args.len = strlen(text);
-    ConfigIo.import(config_io_work);
+    ConfigIo.import_lines(config_io_work);
     TEST_ASSERT_EQUAL_INT(1, ConfigIoV.n);
     TEST_ASSERT_EQUAL_STRING("a=b=c", get_str("name"));
 }
@@ -311,7 +311,7 @@ void test_import_drops_a_line_past_the_store_limits(void)
     ConfigIoV.import_args.n = N;
     ConfigIoV.import_args.text = text;
     ConfigIoV.import_args.len = pos;
-    ConfigIo.import(config_io_work);
+    ConfigIo.import_lines(config_io_work);
     TEST_ASSERT_EQUAL_INT(0, ConfigIoV.n);
     TEST_ASSERT_EQUAL_STRING("", get_str("ssid"));
 }
@@ -330,7 +330,7 @@ void test_export_fails_closed_on_a_short_buffer(void)
     ConfigIoV.export_args.n = N;
     ConfigIoV.export_args.out = buf;
     ConfigIoV.export_args.cap = sizeof(buf);
-    ConfigIo.export(config_io_work);
+    ConfigIo.export_lines(config_io_work);
     TEST_ASSERT_EQUAL_INT(0, ConfigIoV.n);
     TEST_ASSERT_EQUAL_STRING("", buf);
 
@@ -341,7 +341,7 @@ void test_export_fails_closed_on_a_short_buffer(void)
     ConfigIoV.export_args.n = N;
     ConfigIoV.export_args.out = whole;
     ConfigIoV.export_args.cap = sizeof(whole);
-    ConfigIo.export(config_io_work);
+    ConfigIo.export_lines(config_io_work);
     int n = ConfigIoV.n;
     TEST_ASSERT_TRUE(n > 0);
     char tight[64];
@@ -350,7 +350,7 @@ void test_export_fails_closed_on_a_short_buffer(void)
     ConfigIoV.export_args.n = N;
     ConfigIoV.export_args.out = tight;
     ConfigIoV.export_args.cap = (size_t)n;
-    ConfigIo.export(config_io_work);
+    ConfigIo.export_lines(config_io_work);
     TEST_ASSERT_EQUAL_INT(0, ConfigIoV.n);
     TEST_ASSERT_EQUAL_STRING("", tight);
     ConfigIoV.export_args.ns = "t";
@@ -358,7 +358,7 @@ void test_export_fails_closed_on_a_short_buffer(void)
     ConfigIoV.export_args.n = N;
     ConfigIoV.export_args.out = tight;
     ConfigIoV.export_args.cap = (size_t)n + 1;
-    ConfigIo.export(config_io_work);
+    ConfigIo.export_lines(config_io_work);
     TEST_ASSERT_EQUAL_INT(n, ConfigIoV.n);
 }
 
@@ -374,28 +374,28 @@ void test_missing_arguments_are_refused(void)
     ConfigIoV.export_args.n = 1;
     ConfigIoV.export_args.out = NULL;
     ConfigIoV.export_args.cap = sizeof(out);
-    ConfigIo.export(config_io_work);
+    ConfigIo.export_lines(config_io_work);
     TEST_ASSERT_EQUAL_INT(0, ConfigIoV.n);
     ConfigIoV.export_args.ns = "t";
     ConfigIoV.export_args.fields = NULL;
     ConfigIoV.export_args.n = 1;
     ConfigIoV.export_args.out = out;
     ConfigIoV.export_args.cap = sizeof(out);
-    ConfigIo.export(config_io_work);
+    ConfigIo.export_lines(config_io_work);
     TEST_ASSERT_EQUAL_INT(0, ConfigIoV.n);
     ConfigIoV.import_args.ns = "t";
     ConfigIoV.import_args.fields = NULL;
     ConfigIoV.import_args.n = 1;
     ConfigIoV.import_args.text = "ssid=x";
     ConfigIoV.import_args.len = 6;
-    ConfigIo.import(config_io_work);
+    ConfigIo.import_lines(config_io_work);
     TEST_ASSERT_EQUAL_INT(0, ConfigIoV.n);
     ConfigIoV.import_args.ns = "t";
     ConfigIoV.import_args.fields = one;
     ConfigIoV.import_args.n = 1;
     ConfigIoV.import_args.text = NULL;
     ConfigIoV.import_args.len = 0;
-    ConfigIo.import(config_io_work);
+    ConfigIo.import_lines(config_io_work);
     TEST_ASSERT_EQUAL_INT(0, ConfigIoV.n);
 
     char sentinel[8] = {'z', '\0'};
@@ -404,7 +404,7 @@ void test_missing_arguments_are_refused(void)
     ConfigIoV.export_args.n = 1;
     ConfigIoV.export_args.out = sentinel;
     ConfigIoV.export_args.cap = 0;
-    ConfigIo.export(config_io_work);
+    ConfigIo.export_lines(config_io_work);
     TEST_ASSERT_EQUAL_INT(0, ConfigIoV.n);
     TEST_ASSERT_EQUAL_CHAR('z', sentinel[0]);
 }

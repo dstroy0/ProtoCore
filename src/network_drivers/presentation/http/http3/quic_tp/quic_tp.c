@@ -32,7 +32,7 @@ void protocore_quic_tp_defaults(uint8_t *work, QuicTransportParams *tp)
     tp->active_connection_id_limit = 2;
 }
 
-// Append one parameter: ID (varint) || Length (varint) || raw value byteio.
+// Append one parameter: ID (varint) || Length (varint) || raw value bytes.
 static proto_bool put_param(uint8_t *work, uint8_t *out, size_t cap, size_t *p, uint64_t id, const uint8_t *val,
                             size_t val_len)
 {

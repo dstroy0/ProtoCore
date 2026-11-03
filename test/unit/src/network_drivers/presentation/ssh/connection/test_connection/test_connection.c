@@ -203,7 +203,7 @@ static proto_bool pty_modes_valid(const uint8_t *modes, uint32_t modes_len, uint
     return SshConnectionV.ok;
 }
 
-// A length-prefixed string, RFC 4251 sec 5: uint32 length, then that many byteio.
+// A length-prefixed string, RFC 4251 sec 5: uint32 length, then that many bytes.
 static size_t put_str(uint8_t *p, size_t off, const char *s, uint32_t n)
 {
     p[off] = (uint8_t)(n >> 24);

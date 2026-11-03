@@ -32,7 +32,7 @@ typedef enum PROTO_ENUM_PACKED
     IDEMIP_ARP_OP_REPLY = 2,
 } IdemIpArpOp;
 
-/** @brief Length of an IPv4 protocol address (ar$pln), in byteio. */
+/** @brief Length of an IPv4 protocol address (ar$pln), in bytes. */
 #define IDEMIP_ARP_PLN_IPV4 4u
 
 /**

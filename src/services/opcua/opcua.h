@@ -77,7 +77,7 @@ void protocore_ua_w_i32(UaWriter *w, int32_t v);
 void protocore_ua_w_f32(UaWriter *w, float v);
 void protocore_ua_w_f64(UaWriter *w, double v);
 void protocore_ua_w_bool(UaWriter *w, proto_bool v);
-/** @brief Encode a String/ByteString: int32 length (-1 = null) then the byteio. */
+/** @brief Encode a String/ByteString: int32 length (-1 = null) then the bytes. */
 void protocore_ua_w_string(UaWriter *w, const char *s, int32_t len);
 
 /** @brief Bounds-checked little-endian reader; @c err latches on underrun. */

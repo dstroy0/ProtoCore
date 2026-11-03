@@ -44,10 +44,16 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Seed a few holding registers (the "slave" data model).
-    protocore_modbus_server_init();
-    protocore_modbus_set_holding_reg(0, 1234);
-    protocore_modbus_set_holding_reg(1, 5678);
-    protocore_modbus_set_holding_reg(2, 4095);
+    Modbus.server_init(protocore_modbus_span());
+    ModbusV.set_holding_reg_args.addr = 0;
+    ModbusV.set_holding_reg_args.value = 1234;
+    Modbus.set_holding_reg(protocore_modbus_span());
+    ModbusV.set_holding_reg_args.addr = 1;
+    ModbusV.set_holding_reg_args.value = 5678;
+    Modbus.set_holding_reg(protocore_modbus_span());
+    ModbusV.set_holding_reg_args.addr = 2;
+    ModbusV.set_holding_reg_args.value = 4095;
+    Modbus.set_holding_reg(protocore_modbus_span());
     listen(502, PROTO_MODBUS); // real Modbus TCP slave on :502
 
     // /scan: read holding registers 0..3 via the master codec (self-scan).
@@ -55,7 +61,12 @@ void setup()
         uint8_t req[16], resp[MODBUS_ADU_MAX];
         size_t rn =
             protocore_modbus_build_read((uint8_t)MODBUS_FC_READ_HOLDING_REGS, 1, 1, 0, 3, req, sizeof(req));
-        size_t pn = protocore_modbus_process_adu(req, rn, resp, sizeof(resp));
+        ModbusV.process_adu_args.req = req;
+        ModbusV.process_adu_args.req_len = rn;
+        ModbusV.process_adu_args.resp = resp;
+        ModbusV.process_adu_args.protocore_resp_cap = sizeof(resp);
+        Modbus.process_adu(protocore_modbus_span());
+        size_t pn = ModbusV.n;
         uint16_t regs[3];
         uint8_t ex = 0;
         int n = protocore_modbus_parse_response(resp, pn, regs, 3, &ex);

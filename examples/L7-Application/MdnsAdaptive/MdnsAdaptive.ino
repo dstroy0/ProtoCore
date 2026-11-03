@@ -39,8 +39,8 @@ static void mdns_handler(uint8_t slot_id, HttpReq *req)
     (void)req;
     char json[128];
     snprintf(json, sizeof(json), "{\"interval_ms\":%lu,\"contention\":%u,\"announces\":%lu,\"channel\":%u}",
-             (unsigned long)protocore_mdns_adaptive_interval_ms(), (unsigned)protocore_mdns_adaptive_contention(),
-             (unsigned long)protocore_mdns_adaptive_announces(), (unsigned)Physical.wifi->channel());
+             (unsigned long)MdnsAdaptive.interval_ms(protocore_mdns_adaptive_span()), (unsigned)MdnsAdaptive.contention(protocore_mdns_adaptive_span()),
+             (unsigned long)MdnsAdaptive.announces(protocore_mdns_adaptive_span()), (unsigned)Physical.wifi->channel());
     send_text(slot_id, 200, PROTOCORE_MIME_JSON, json);
 }
 
@@ -78,7 +78,9 @@ void setup()
     cfg.hi_contention = 40;      // >= 40 frames/window (1 s) counts as "busy"
     cfg.window_ms = 1000;
 
-    if (protocore_mdns_adaptive_begin(&cfg))
+    MdnsAdaptiveV.begin_args.cfg = &cfg;
+    MdnsAdaptive.begin(protocore_mdns_adaptive_span());
+    if (MdnsAdaptiveV.ok)
     {
         Serial.printf("adaptive announcing on channel %u\n", (unsigned)Physical.wifi->channel());
     }
@@ -95,14 +97,14 @@ void setup()
 void loop()
 {
     handle();
-    protocore_mdns_adaptive_tick(); // samples, adapts, re-announces when due - rate-limited internally
+    MdnsAdaptive.tick(protocore_mdns_adaptive_span()); // samples, adapts, re-announces when due - rate-limited internally
 
     static uint32_t next = 0;
     if (millis() >= next)
     {
         next = millis() + 5000;
         Serial.printf("interval=%lums contention=%u announces=%lu ch=%u\n",
-                      (unsigned long)protocore_mdns_adaptive_interval_ms(), (unsigned)protocore_mdns_adaptive_contention(),
-                      (unsigned long)protocore_mdns_adaptive_announces(), (unsigned)Physical.wifi->channel());
+                      (unsigned long)MdnsAdaptive.interval_ms(protocore_mdns_adaptive_span()), (unsigned)MdnsAdaptive.contention(protocore_mdns_adaptive_span()),
+                      (unsigned long)MdnsAdaptive.announces(protocore_mdns_adaptive_span()), (unsigned)Physical.wifi->channel());
     }
 }

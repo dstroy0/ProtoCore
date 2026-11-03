@@ -75,11 +75,11 @@ void setup()
 
 void loop()
 {
-    protocore_mqtt_loop();
+    Mqtt.loop(protocore_mqtt_span());
 
     static uint32_t last = 0;
     static uint32_t n = 0;
-    if (protocore_mqtt_connected() && millis() - last >= 1000)
+    if (Mqtt.connected(protocore_mqtt_span()) && millis() - last >= 1000)
     {
         last = millis();
         char msg[48];

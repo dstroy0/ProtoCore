@@ -8,7 +8,7 @@
 // INFLATE, which can only show that the two agree; this one derives the exact output octets from
 // RFC 1951 alone - sec 3.2.3's block header, sec 3.2.6's fixed code table, sec 3.2.5's length and
 // distance codes, sec 3.1.1's bit order, and RFC 7692 sec 7.2.1's stripped 00 00 ff ff tail - and
-// each derivation is written out beside its byteio. A compressor that agreed with its own decompressor
+// each derivation is written out beside its bytes. A compressor that agreed with its own decompressor
 // but wrote a non-conforming stream would pass every round-trip and fail here.
 
 #include "network_drivers/presentation/codec/deflate/deflate/deflate.h"

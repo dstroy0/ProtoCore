@@ -17,7 +17,7 @@
 #include "crypto/pqc/sntrup761/sntrup761.h"      // PROTOCORE_SNTRUP761_PK_BYTES - the PQC public key in the memory map
 #include "memoria_operor/memoria_operor.h"       // memor.cpy: the copy out of a read string
 #include "network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.h" // SSH_KEXHASH_MAX_LEN - the session id span
-#include "octetus_introitus_exitus/octetus_introitus_exitus.h" // mmgr_span, byteio.* writers, byteio.rd_str / byteio.take_be readers
+#include "octetus_introitus_exitus/octetus_introitus_exitus.h" // mmgr_span, bytes.* writers, byteio.rd_str / byteio.take_be readers
 #include "spatium/spatium.h"
 
 #include "protocore_config.h" // protocore_types.h for the fixed widths, PROTOCORE_INLINE, the SSH sizing constants
@@ -487,7 +487,7 @@ PROTOCORE_INLINE proto_bool protocore_ssh_read_string_at(const uint8_t *p, size_
     return PROTO_TRUE;
 }
 
-// Write the mpint m into out as a fixed-width big-endian field of outlen byteio. PROTO_FALSE where
+// Write the mpint m into out as a fixed-width big-endian field of outlen bytes. PROTO_FALSE where
 // its value does not fit.
 PROTOCORE_INLINE proto_bool protocore_ssh_mpint_fixed(const uint8_t *m, uint32_t mlen, uint8_t *out, size_t outlen)
 {

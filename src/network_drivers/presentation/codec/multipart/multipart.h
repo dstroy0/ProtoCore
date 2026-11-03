@@ -26,7 +26,7 @@ PROTOCORE_BEGIN_DECLS
  *
  * **Limitations**
  * - Maximum parts: `MAX_MULTIPART_PARTS` (default 4).
- * - Maximum total body size: `BODY_BUF_SIZE` byteio.
+ * - Maximum total body size: `BODY_BUF_SIZE` bytes.
  * - Only `name` and `filename` are extracted from Content-Disposition;
  * other parameters are ignored.
  * - Boundary value must be ≤ `MAX_BOUNDARY_LEN` bytes (RFC 2046 cap: 70).

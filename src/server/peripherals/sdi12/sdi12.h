@@ -194,7 +194,7 @@ typedef struct
 typedef struct
 {
     uint16_t crc;
-    char *out; ///< SDI12_CRC_CHARS byteio.
+    char *out; ///< SDI12_CRC_CHARS bytes.
 } Sdi12CrcEncodeArgs;
 
 /** @brief What check_crc takes: resp, len. */

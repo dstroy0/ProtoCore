@@ -24,11 +24,12 @@
  *
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable it for the whole build, e.g.:
- *     build_flags = -DPROTOCORE_ENABLE_WEBDAV=1
+ *     build_flags = -DPROTOCORE_ENABLE_WEBDAV=1 -DPROTOCORE_ENABLE_FILE_SERVING=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
 #define PROTOCORE_ENABLE_WEBDAV 1
+#define PROTOCORE_ENABLE_FILE_SERVING 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

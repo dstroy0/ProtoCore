@@ -157,7 +157,7 @@ void test_frame_round_trip(void)
     TEST_ASSERT_EQUAL_MEMORY(PAYLOAD, back, sizeof(PAYLOAD));
 }
 
-// A zero-length payload is a whole frame: control + CRC + flag, and it decodes back to zero byteio.
+// A zero-length payload is a whole frame: control + CRC + flag, and it decodes back to zero bytes.
 void test_empty_payload_round_trip(void)
 {
     uint8_t frame[16];

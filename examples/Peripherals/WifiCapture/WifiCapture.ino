@@ -19,6 +19,8 @@
 #include "network_drivers/network/forward/forward.h"
 #include "services/radio/promisc/promisc.h"
 
+static uint8_t pcap_work[16]; // the borrow an entry takes; Pcap never reads it
+
 
 // Where to stream the captured frames on the wired side.
 static const char *COLLECTOR_IP = "192.168.1.50";
@@ -80,12 +82,12 @@ void setup()
     Physical.wifi->init_radio(0);
 
     // Forwarding plane: Wi-Fi -> Ethernet, capped so a busy channel can't swamp the uplink.
-    protocore_forward_reset();
+    Forward.reset(protocore_forward_span());
     protocore_forward_add_if(IF_WIFI, protocore_if_kind::PROTOCORE_IF_WIFI_STA, wifi_send, nullptr);
     protocore_forward_add_if(IF_ETH, protocore_if_kind::PROTOCORE_IF_ETH, eth_send, nullptr);
     protocore_forward_add_rule(IF_WIFI, IF_ETH, protocore_fwd_action::PROTOCORE_FWD_ALLOW, 2000); // <= 2000 frames/s to the wire
 
-    protocore_promisc_begin(CAPTURE_CHANNEL, on_frame);
+    Promisc.begin(protocore_promisc_span(), CAPTURE_CHANNEL, on_frame);
     Serial.printf("Capturing on channel %u -> forwarding to %s:%u (PCAP over UDP)\n", CAPTURE_CHANNEL, COLLECTOR_IP,
                   COLLECTOR_PORT);
 }

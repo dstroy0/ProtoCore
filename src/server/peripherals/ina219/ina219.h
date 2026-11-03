@@ -47,13 +47,13 @@ PROTOCORE_BEGIN_DECLS
 
 #define INA219_REG_CALIBRATION 0x05 ///< calibration
 
-/** @brief What bus_mv takes: proxim. */
+/** @brief What bus_mv takes: raw. */
 typedef struct
 {
     uint16_t raw;
 } Ina219BusMvArgs;
 
-/** @brief What shunt_uv takes: proxim. */
+/** @brief What shunt_uv takes: raw. */
 typedef struct
 {
     int16_t raw;
@@ -221,7 +221,7 @@ static const Ina219Ns Ina219 __attribute__((unused)) = {
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the spat.
+ * @return the span.
  */
 uint8_t *protocore_ina219_span(void);
 

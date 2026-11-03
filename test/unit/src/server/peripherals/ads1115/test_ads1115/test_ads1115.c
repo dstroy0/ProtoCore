@@ -497,7 +497,7 @@ void test_a_second_reading_sees_the_new_input(void)
 }
 
 // A part at another address does not answer, so the reading fails rather than returning someone
-// else's byteio.
+// else's bytes.
 void test_a_part_at_another_address_is_not_read(void)
 {
     protocore_bus_host_detach_all();

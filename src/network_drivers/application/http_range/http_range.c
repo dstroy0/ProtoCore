@@ -89,7 +89,7 @@ int protocore_http_range_http_parse_byte_range(uint8_t *work, const char *hdr, s
 
     if (!have_start)
     {
-        // Suffix form "bytes=-N": the last N byteio.
+        // Suffix form "bytes=-N": the last N bytes.
         if (!have_end || end == 0)
         {
             n = -1; // "-" alone, or "-0" -> unsatisfiable

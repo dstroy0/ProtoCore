@@ -23,6 +23,8 @@
 #include "services/radio/lora/lora.h"
 #include <SPI.h>
 
+static uint8_t lora_work[16]; // the borrow an entry takes; Lora never reads it
+
 static const int PIN_NSS = 5;   // SPI chip select
 static const int PIN_RST = 14;  // radio reset
 static const int PIN_DIO0 = 26; // RxDone / TxDone interrupt (polled here)
@@ -53,7 +55,7 @@ static uint8_t g_tx_id = 0;
 static bool northbound_publish(const protocore_gateway_msg *m, void *)
 {
     char topic[48];
-    protocore_gateway_topic(m, topic, sizeof(topic));
+    Gateway.topic(protocore_gateway_span(), m, topic, sizeof(topic));
     Serial.printf("PUBLISH %s  (%u bytes, rssi %d)\n", topic, m->len, m->rssi);
     return true;
 }
@@ -63,17 +65,17 @@ static bool radio_tx(uint8_t, uint16_t dst, const uint8_t *payload, uint16_t len
 {
     protocore_lora_header h = {(uint8_t)dst, NODE_SELF, g_tx_id++, 0x00};
     uint8_t frame[PROTOCORE_LORA_MAX_PAYLOAD + 4];
-    uint16_t n = protocore_lora_frame_build(&h, payload, len, frame, sizeof(frame));
-    if (n == 0 || !protocore_lora_send(&g_bus, frame, (uint8_t)n))
+    uint16_t n = Lora.frame_build(lora_work, &h, payload, len, frame, sizeof(frame));
+    if (n == 0 || !Lora.send(lora_work, &g_bus, frame, (uint8_t)n))
     {
         return false;
     }
     uint32_t t0 = millis();
-    while (!protocore_lora_tx_done(&g_bus) && millis() - t0 < 2000)
+    while (!Lora.tx_done(lora_work, &g_bus) && millis() - t0 < 2000)
     {
         delay(1);
     }
-    protocore_lora_set_rx(&g_bus); // back to listening
+    Lora.set_rx(lora_work, &g_bus); // back to listening
     return true;
 }
 
@@ -101,22 +103,22 @@ void setup()
     cfg.coding_rate = 1;
     cfg.sync_word = 0x12; // private network
     cfg.tx_power = 17;
-    if (!protocore_lora_init(&g_bus, &cfg))
+    if (!Lora.init(lora_work, &g_bus, &cfg))
     {
         Serial.println("no SX127x found on SPI - check wiring");
         return;
     }
 
-    protocore_gateway_reset();
+    Gateway.reset(protocore_gateway_span());
     protocore_gateway_port_config p = {};
     p.port_id = RADIO_PORT;
     p.kind = protocore_gateway_kind::PROTOCORE_GW_LORA;
     p.tx = radio_tx;
-    protocore_gateway_add_port(&p);
-    protocore_gateway_set_uplink_cb(northbound_publish, nullptr);
-    protocore_gateway_set_topic_prefix("lora");
+    Gateway.add_port(protocore_gateway_span(), &p);
+    Gateway.set_uplink_cb(protocore_gateway_span(), northbound_publish, nullptr);
+    Gateway.set_topic_prefix(protocore_gateway_span(), "lora");
 
-    protocore_lora_set_rx(&g_bus);
+    Lora.set_rx(lora_work, &g_bus);
     Serial.println("LoRa gateway: SX127x RX -> codec -> publish (lora/0/<from>)");
 }
 
@@ -125,15 +127,15 @@ void loop()
     // Poll for a received frame; a production build waits on the DIO0 interrupt instead.
     uint8_t buf[PROTOCORE_LORA_MAX_PAYLOAD + 4];
     int16_t rssi = 0;
-    int n = protocore_lora_recv(&g_bus, buf, sizeof(buf), &rssi);
+    int n = Lora.recv(lora_work, &g_bus, buf, sizeof(buf), &rssi);
     if (n > 0)
     {
         protocore_lora_header h = {};
         const uint8_t *payload = nullptr;
         uint16_t plen = 0;
-        if (protocore_lora_frame_parse(buf, (uint16_t)n, &h, &payload, &plen))
+        if (Lora.frame_parse(lora_work, buf, (uint16_t)n, &h, &payload, &plen))
         {
-            protocore_gateway_uplink(RADIO_PORT, h.from, payload, plen, rssi); // bridge northbound
+            Gateway.uplink(protocore_gateway_span(), RADIO_PORT, h.from, payload, plen, rssi); // bridge northbound
         }
     }
     delay(5);

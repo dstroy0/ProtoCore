@@ -58,7 +58,11 @@ static protocore_hotswap_present sd_present = nullptr;
 static void on_state_change(StorageState from, StorageState to, void *ctx)
 {
     (void)ctx;
-    Serial.printf("storage: %s -> %s\n", protocore_hotswap_state_name(from), protocore_hotswap_state_name(to));
+    HotswapV.state_name_args.s = from;
+    Hotswap.state_name(protocore_hotswap_span());
+    HotswapV.state_name_args.s = to;
+    Hotswap.state_name(protocore_hotswap_span());
+    Serial.printf("storage: %s -> %s\n", HotswapV.text, HotswapV.text);
 }
 
 // --- routes ---------------------------------------------------------------
@@ -67,7 +71,10 @@ static void storage_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     char json[96];
-    if (protocore_hotswap_json(json, sizeof(json)) == 0)
+    HotswapV.json_args.out = json;
+    HotswapV.json_args.cap = sizeof(json);
+    Hotswap.json(protocore_hotswap_span());
+    if (HotswapV.n == 0)
     {
         send_text(slot_id, 500, PROTOCORE_MIME_JSON, "{}");
         return;
@@ -79,7 +86,7 @@ static void write_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     // The gate. Without it this write would go into a stale mount and be silently lost.
-    if (!protocore_hotswap_ready())
+    if (!Hotswap.ready(protocore_hotswap_span()))
     {
         send_text(slot_id, 503, PROTOCORE_MIME_TEXT_PLAIN, "storage not ready\n");
         return;
@@ -114,10 +121,17 @@ void setup()
     Serial.begin(115200);
     delay(300);
 
-    protocore_hotswap_set_event_cb(on_state_change);
-    protocore_hotswap_begin(sd_mount, sd_unmount, sd_present, nullptr);
-    protocore_hotswap_poll(); // first poll mounts a card that is already in the slot
-    Serial.printf("storage at boot: %s\n", protocore_hotswap_state_name(protocore_hotswap_state()));
+    HotswapV.set_event_cb_args.cb = on_state_change;
+    Hotswap.set_event_cb(protocore_hotswap_span());
+    HotswapV.begin_args.mount = sd_mount;
+    HotswapV.begin_args.unmount = sd_unmount;
+    HotswapV.begin_args.present = sd_present;
+    HotswapV.begin_args.ctx = nullptr;
+    Hotswap.begin(protocore_hotswap_span());
+    Hotswap.poll(protocore_hotswap_span()); // first poll mounts a card that is already in the slot
+    HotswapV.state_name_args.s = protocore_hotswap_state();
+    Hotswap.state_name(protocore_hotswap_span());
+    Serial.printf("storage at boot: %s\n", HotswapV.text);
 
     PhysicalV.wifi.ssid = WIFI_SSID;
     PhysicalV.wifi.password = WIFI_PASS;
@@ -140,5 +154,5 @@ void setup()
 void loop()
 {
     handle();
-    protocore_hotswap_poll(); // rate-limited internally, so this is cheap to call every pass
+    Hotswap.poll(protocore_hotswap_span()); // rate-limited internally, so this is cheap to call every pass
 }

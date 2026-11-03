@@ -199,7 +199,7 @@ static void wr16(uint8_t *p, uint16_t v)
     p[1] = (uint8_t)(v & 0xFF);
 }
 
-// Build an exception PDU (fc|0x80, code). Always 2 byteio.
+// Build an exception PDU (fc|0x80, code). Always 2 bytes.
 static size_t pdu_exception(ModbusFunction fc, ModbusException code, uint8_t *out)
 {
     out[0] = (uint8_t)((uint8_t)fc | 0x80);

@@ -30,7 +30,7 @@ static uint16_t g_len = 0;
 static bool northbound_publish(const protocore_gateway_msg *m, void *)
 {
     char topic[48];
-    protocore_gateway_topic(m, topic, sizeof(topic));
+    Gateway.topic(protocore_gateway_span(), m, topic, sizeof(topic));
     Serial.printf("PUBLISH %s  (%u bytes)\n", topic, m->len);
     return true;
 }
@@ -41,13 +41,13 @@ void setup()
     Serial2.begin(57600, SERIAL_8N1, PIN_RX, PIN_TX); // ESP3 is 57600 8N1
     delay(300);
 
-    protocore_gateway_reset();
+    Gateway.reset(protocore_gateway_span());
     protocore_gateway_port_config p = {};
     p.port_id = RADIO_PORT;
     p.kind = protocore_gateway_kind::PROTOCORE_GW_ENOCEAN;
-    protocore_gateway_add_port(&p);
-    protocore_gateway_set_uplink_cb(northbound_publish, nullptr);
-    protocore_gateway_set_topic_prefix("enocean");
+    Gateway.add_port(protocore_gateway_span(), &p);
+    Gateway.set_uplink_cb(protocore_gateway_span(), northbound_publish, nullptr);
+    Gateway.set_topic_prefix(protocore_gateway_span(), "enocean");
 
     Serial.println("EnOcean gateway: ESP3 UART -> codec -> publish (enocean/0/<sender>)");
 }
@@ -78,7 +78,7 @@ void loop()
         {
             const uint8_t *sender = pkt.data + pkt.data_len - 5;
             uint16_t src = (uint16_t)((sender[2] << 8) | sender[3]); // low 16 bits of the id
-            protocore_gateway_uplink(RADIO_PORT, src, pkt.data, (uint16_t)(pkt.data_len - 5), 0);
+            Gateway.uplink(protocore_gateway_span(), RADIO_PORT, src, pkt.data, (uint16_t)(pkt.data_len - 5), 0);
         }
         memmove(g_buf, g_buf + n, g_len - n); // consume the telegram
         g_len = (uint16_t)(g_len - n);

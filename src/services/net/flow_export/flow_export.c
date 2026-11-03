@@ -6,7 +6,7 @@
  * @brief The Exporting Process: IPFIX Messages (RFC 7011 sec 3), NetFlow v9 Export Packets
  *        (RFC 3954 sec 5), and vendor NetFlow Version 5 packets.
  *
- * The v5 writes are stateless: header and record go straight into the caller's spat. The v9 and
+ * The v5 writes are stateless: header and record go straight into the caller's span. The v9 and
  * IPFIX side is a cursor over one message: a begin lays the Message Header (RFC 7011 sec 3.1,
  * RFC 3954 sec 5.1) with its length or count left at zero, each Set records its own start offset
  * so its Length field is patched when the Set closes (RFC 7011 sec 3.3.2, RFC 3954 sec 5.3), and

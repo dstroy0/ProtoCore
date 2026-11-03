@@ -84,7 +84,7 @@ void protocore_diff_serv_udp_dscp(uint8_t *work)
     DiffServV.u8 = DIFFSERV_CTX(work)->udp_dscp;
 }
 
-// Not entries: these take no borrow, so they read the module's own spat. A null span is the pool
+// Not entries: these take no borrow, so they read the module's own span. A null span is the pool
 // coming up short, and reports the all-zero DSCP, which RFC 2474 sec 4.1 makes the default PHB.
 uint8_t protocore_diffserv_default_dscp(void)
 {

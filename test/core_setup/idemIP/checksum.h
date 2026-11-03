@@ -63,7 +63,7 @@ PROTOCORE_INLINE uint16_t idemip_cksum_final(uint32_t sum)
     return (uint16_t)(~sum & 0xFFFFu);
 }
 
-/** @brief The checksum over one spat. */
+/** @brief The checksum over one span. */
 PROTOCORE_INLINE uint16_t idemip_cksum(const uint8_t *p, size_t len)
 {
     return idemip_cksum_final(idemip_cksum_accum(0u, p, len));

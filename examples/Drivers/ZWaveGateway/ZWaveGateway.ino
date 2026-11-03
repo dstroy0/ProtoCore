@@ -20,6 +20,8 @@
 #include "server/net/gateway/gateway.h"
 #include "services/radio/zwave/zwave.h"
 
+static uint8_t zwave_work[16]; // the borrow an entry takes; Zwave never reads it
+
 static const uint8_t RADIO_PORT = 0;
 static const int PIN_RX = 16, PIN_TX = 17; // UART2 to the Z-Wave controller
 
@@ -32,7 +34,7 @@ static const uint8_t FUNC_APP_CMD_HANDLER = 0x04;
 static bool northbound_publish(const protocore_gateway_msg *m, void *)
 {
     char topic[48];
-    protocore_gateway_topic(m, topic, sizeof(topic));
+    Gateway.topic(protocore_gateway_span(), m, topic, sizeof(topic));
     Serial.printf("PUBLISH %s  (%u bytes)\n", topic, m->len);
     return true;
 }
@@ -49,16 +51,16 @@ void setup()
     Serial2.begin(115200, SERIAL_8N1, PIN_RX, PIN_TX);
     delay(300);
 
-    protocore_gateway_reset();
+    Gateway.reset(protocore_gateway_span());
     protocore_gateway_port_config p = {};
     p.port_id = RADIO_PORT;
     p.kind = protocore_gateway_kind::PROTOCORE_GW_ZWAVE;
-    protocore_gateway_add_port(&p);
-    protocore_gateway_set_uplink_cb(northbound_publish, nullptr);
-    protocore_gateway_set_topic_prefix("zwave");
+    Gateway.add_port(protocore_gateway_span(), &p);
+    Gateway.set_uplink_cb(protocore_gateway_span(), northbound_publish, nullptr);
+    Gateway.set_topic_prefix(protocore_gateway_span(), "zwave");
 
     uint8_t frame[8];
-    uint16_t n = protocore_zwave_build_frame(protocore_zwave_type::ZWAVE_REQ, 0x15, nullptr, 0, frame, sizeof(frame)); // GetVersion
+    uint16_t n = Zwave.build_frame(zwave_work, protocore_zwave_type::ZWAVE_REQ, 0x15, nullptr, 0, frame, sizeof(frame)); // GetVersion
     Serial2.write(frame, n);
     Serial.println("Z-Wave gateway: Serial API -> codec -> publish (zwave/0/<node>)");
 }
@@ -77,14 +79,14 @@ void loop()
             break;
         }
         // Single-byte control frames (ACK / NAK / CAN) are consumed and ignored.
-        if (protocore_zwave_is_ack(g_buf[0]) || protocore_zwave_is_nak(g_buf[0]) || protocore_zwave_is_can(g_buf[0]))
+        if (Zwave.is_ack(zwave_work, g_buf[0]) || Zwave.is_nak(zwave_work, g_buf[0]) || Zwave.is_can(zwave_work, g_buf[0]))
         {
             drop_front(1);
             continue;
         }
         uint8_t type = 0, cmd = 0, pdlen = 0;
         const uint8_t *pd = nullptr;
-        int n = protocore_zwave_parse_frame(g_buf, g_len, &type, &cmd, &pd, &pdlen);
+        int n = Zwave.parse_frame(zwave_work, g_buf, g_len, &type, &cmd, &pd, &pdlen);
         if (n == 0)
         {
             break; // need more
@@ -100,7 +102,7 @@ void loop()
         if (cmd == FUNC_APP_CMD_HANDLER && pdlen >= 3)
         {
             uint8_t node = pd[1];
-            protocore_gateway_uplink(RADIO_PORT, node, &pd[3], (uint16_t)(pdlen - 3), 0);
+            Gateway.uplink(protocore_gateway_span(), RADIO_PORT, node, &pd[3], (uint16_t)(pdlen - 3), 0);
         }
         drop_front((uint16_t)n);
     }

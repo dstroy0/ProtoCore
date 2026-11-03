@@ -172,7 +172,7 @@ void setup()
     }
     else
     {
-        Serial.println("protocore_coaps_server_begin() failed (UDP bind)");
+        Serial.println("CoapsServer.begin(protocore_coaps_server_span()) failed (UDP bind)");
     }
 
     int32_t result = begin_http(80, NULL);
@@ -184,6 +184,6 @@ void setup()
 
 void loop()
 {
-    protocore_coaps_server_poll(); // drive DTLS handshakes, the retransmission timer, and idle-connection reaping
+    CoapsServer.poll(protocore_coaps_server_span()); // drive DTLS handshakes, the retransmission timer, and idle-connection reaping
     handle();        // the TCP server (CoAPs itself runs off lwIP UDP callbacks + this poll)
 }

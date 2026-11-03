@@ -790,7 +790,7 @@
 #endif
 
 /**
- * @brief Maximum WebSocket frame payload in byteio.
+ * @brief Maximum WebSocket frame payload in bytes.
  *
  * Frames larger than this are rejected with Close code 1009 (Message Too Big).
  * Fragmented messages are not supported; each message must fit in one frame.
@@ -800,7 +800,7 @@
 #endif
 
 /**
- * @brief Largest outbound payload permessage-deflate will compress, in byteio.
+ * @brief Largest outbound payload permessage-deflate will compress, in bytes.
  *
  * The compressor borrows `len + len/8 + 16` from the scratch arena, so an unbounded outbound length
  * would leave the arena with no worst case - `Ws.frame.len` is a `uint16_t`, and neither
@@ -975,7 +975,7 @@
 #endif
 
 /**
- * @brief WebSocket outbound fragmentation size (RFC 6455 sec 5.4), in payload byteio. 0 = off.
+ * @brief WebSocket outbound fragmentation size (RFC 6455 sec 5.4), in payload bytes. 0 = off.
  *
  * When >0, an outbound data message (text/binary) longer than this many payload bytes is split into
  * that-sized WebSocket frames - the first carrying the opcode (and the RFC 7692 RSV1 bit if the message
@@ -1097,7 +1097,7 @@
 #define PROTOCORE_SNMP_TRAP_MAX_VARBINDS 8
 #endif
 
-/** @brief Static datagram buffer for an outbound SNMP notification, byteio. */
+/** @brief Static datagram buffer for an outbound SNMP notification, bytes. */
 #ifndef PROTOCORE_SNMP_TRAP_BUF_SIZE
 #define PROTOCORE_SNMP_TRAP_BUF_SIZE 1024
 #endif
@@ -1198,7 +1198,7 @@
 #endif
 
 /**
- * @brief Reassembly buffer for a block-wise (Block1) request upload, in byteio.
+ * @brief Reassembly buffer for a block-wise (Block1) request upload, in bytes.
  *
  * One buffer of this size lives in BSS only when PROTOCORE_ENABLE_COAP_BLOCK is set.
  * It bounds the largest payload a chunked POST/PUT can deliver to a handler.
@@ -1228,7 +1228,7 @@
 #endif
 
 /**
- * @brief Maximum CoAP request/response payload in byteio.
+ * @brief Maximum CoAP request/response payload in bytes.
  *
  * Sizes the static scratch a handler writes its response body into and bounds
  * the request payload handed to it. One buffer of this size lives in BSS.
@@ -1242,7 +1242,7 @@
  *
  * One buffer of this size lives in BSS (the request is transport-owned). Must
  * hold a 4-byte header + token (<=8) + the Content-Format option + a 0xFF marker
- * + PROTOCORE_COAP_MAX_PAYLOAD byteio. When block-wise transfer is enabled it must
+ * + PROTOCORE_COAP_MAX_PAYLOAD bytes. When block-wise transfer is enabled it must
  * also hold one full block (2^(PROTOCORE_COAP_BLOCK_SZX_MAX+4) bytes) + option
  * overhead, so the default grows accordingly.
  */
@@ -2175,7 +2175,7 @@
 // Ring depth and per-record message length are tunable in audit_log.h
 // (PROTOCORE_AUDIT_LOG_ENTRIES, PROTOCORE_AUDIT_MSG_LEN); define them before include to
 // override. The RAM cost is roughly PROTOCORE_AUDIT_LOG_ENTRIES * (PROTOCORE_AUDIT_MSG_LEN
-// + 41) byteio.
+// + 41) bytes.
 
 /** @brief Max accepted OIDC ID-token length (also sizes the Authorization buffer). */
 #ifndef PROTOCORE_OIDC_MAX_LEN
@@ -2227,7 +2227,7 @@
 #define PROTOCORE_JWT_MAX_LEN 512
 #endif
 
-/** @brief Receive buffer (and max response size) for the outbound HTTP client, byteio. */
+/** @brief Receive buffer (and max response size) for the outbound HTTP client, bytes. */
 #ifndef PROTOCORE_HTTP_CLIENT_BUF_SIZE
 #define PROTOCORE_HTTP_CLIENT_BUF_SIZE 2048
 #endif
@@ -2242,12 +2242,12 @@
 #define PROTOCORE_SMTP_LINE_MAX 256
 #endif
 
-/** @brief Max size of the assembled DATA payload (headers + dot-stuffed body), byteio. */
+/** @brief Max size of the assembled DATA payload (headers + dot-stuffed body), bytes. */
 #ifndef PROTOCORE_SMTP_MSG_MAX
 #define PROTOCORE_SMTP_MSG_MAX 2048
 #endif
 
-/** @brief Max size of one (possibly multi-line) server reply held while parsing, byteio. */
+/** @brief Max size of one (possibly multi-line) server reply held while parsing, bytes. */
 #ifndef PROTOCORE_SMTP_REPLY_MAX
 #define PROTOCORE_SMTP_REPLY_MAX 512
 #endif
@@ -2306,7 +2306,7 @@
  * A slot records the packet identifier, how far the exchange has got and when it was last sent - not
  * the packet, which stays in the client's wire buffer where a retransmit marks DUP and rewinds the
  * worker to the start of it. A publish is refused when all slots are busy. Each slot costs a
- * handful of byteio.
+ * handful of bytes.
  */
 #ifndef PROTOCORE_MQTT_MAX_INFLIGHT
 #define PROTOCORE_MQTT_MAX_INFLIGHT 4
@@ -2769,7 +2769,7 @@
 #endif
 
 /**
- * @brief Largest UDP datagram a bound port accepts, in byteio.
+ * @brief Largest UDP datagram a bound port accepts, in bytes.
  *
  * Bounds one datagram, both directions: a longer inbound datagram is truncated to this at the
  * receive trampoline, and a longer send is refused. Sizes the per-slot staging buffer the drain
@@ -2781,7 +2781,7 @@
 #endif
 
 /**
- * @brief Per-slot UDP receive ring, in byteio.
+ * @brief Per-slot UDP receive ring, in bytes.
  *
  * Backs one bound port's receive ring. The stack's trampoline frames each datagram into it and the
  * drain reads them out, so this is how many bytes of datagram, plus a header each, may wait between
@@ -3169,7 +3169,7 @@
 
 #define PROTOCORE_PLAINTEXT_WORK_SESSION PROTOCORE_SESSION_BORROW
 
-// The signalling layer's link state and the counters around it. Measured at 28 byteio. No key
+// The signalling layer's link state and the counters around it. Measured at 28 bytes. No key
 // material, so the plaintext end.
 #ifndef PROTOCORE_SIGNALING_BORROW
 #define PROTOCORE_SIGNALING_BORROW 64u
@@ -3177,7 +3177,7 @@
 
 #define PROTOCORE_PLAINTEXT_WORK_SIGNALING PROTOCORE_SIGNALING_BORROW
 
-// The trace ring one capture fills. Measured at 176 byteio. No key material, so the plaintext end.
+// The trace ring one capture fills. Measured at 176 bytes. No key material, so the plaintext end.
 #ifndef PROTOCORE_TRACE_CAPTURE_BORROW
 #define PROTOCORE_TRACE_CAPTURE_BORROW 256u
 #endif
@@ -3188,7 +3188,7 @@
 #define PROTOCORE_PLAINTEXT_WORK_TRACECAPTURE 0
 #endif
 
-// The power manager's current mode and the two flags around it. Measured at 3 byteio. No key material, so the plaintext
+// The power manager's current mode and the two flags around it. Measured at 3 bytes. No key material, so the plaintext
 // end.
 #ifndef PROTOCORE_POWER_MGMT_BORROW
 #define PROTOCORE_POWER_MGMT_BORROW 8u
@@ -3200,7 +3200,7 @@
 #define PROTOCORE_PLAINTEXT_WORK_POWERMGMT 0
 #endif
 
-// The guardrail counters one pass trips against. Measured at 8 byteio. No key material, so the plaintext end.
+// The guardrail counters one pass trips against. Measured at 8 bytes. No key material, so the plaintext end.
 #ifndef PROTOCORE_GUARDRAILS_BORROW
 #define PROTOCORE_GUARDRAILS_BORROW 16u
 #endif
@@ -3211,7 +3211,7 @@
 #define PROTOCORE_PLAINTEXT_WORK_GUARDRAILS 0
 #endif
 
-// The failsafe's armed state and what it reverts to. Measured at 208 byteio. No key material, so the plaintext end.
+// The failsafe's armed state and what it reverts to. Measured at 208 bytes. No key material, so the plaintext end.
 #ifndef PROTOCORE_FAILSAFE_BORROW
 #define PROTOCORE_FAILSAFE_BORROW 256u
 #endif
@@ -3236,9 +3236,11 @@
 #define PROTOCORE_PLAINTEXT_WORK_WORKER 0
 #endif
 
-// The preemption queue's entries and its head and tail. Measured at 408 byteio. No key material, so the plaintext end.
+// The preemption queue's four lanes: each lane's item storage, PROTOCORE_PQ_DEPTH items of
+// PROTOCORE_PQ_ITEM_SIZE, plus up to 128 bytes for its queue control block, task handle, handler,
+// context, high-water mark and run flag. No key material, so the plaintext end.
 #ifndef PROTOCORE_PREEMPT_QUEUE_BORROW
-#define PROTOCORE_PREEMPT_QUEUE_BORROW 512u
+#define PROTOCORE_PREEMPT_QUEUE_BORROW (4u * ((size_t)PROTOCORE_PQ_DEPTH * (size_t)PROTOCORE_PQ_ITEM_SIZE + 128u) + 64u)
 #endif
 
 #if PROTOCORE_ENABLE_PREEMPT_QUEUE
@@ -3248,7 +3250,7 @@
 #endif
 
 // The log ring: PROTOCORE_LOG_LINES lines of PROTOCORE_LOG_LINE_LEN, their severities, and the
-// trap. Measured at 3120 byteio. No key material, so the plaintext end.
+// trap. Measured at 3120 bytes. No key material, so the plaintext end.
 #ifndef PROTOCORE_LOGBUF_BORROW
 #define PROTOCORE_LOGBUF_BORROW 3584u
 #endif
@@ -3259,7 +3261,7 @@
 #define PROTOCORE_PLAINTEXT_WORK_LOGBUF 0
 #endif
 
-// The flow exporter's cursor into the datagram it is filling. Measured at 40 byteio. Flow records
+// The flow exporter's cursor into the datagram it is filling. Measured at 40 bytes. Flow records
 // carry no key material, so the plaintext end.
 #ifndef PROTOCORE_FLOW_EXPORT_BORROW
 #define PROTOCORE_FLOW_EXPORT_BORROW 64u
@@ -3272,7 +3274,7 @@
 #endif
 
 // The syslog sender's collector address, facility and the one line it formats. Measured at 342
-// byteio. No key material, so the plaintext end.
+// bytes. No key material, so the plaintext end.
 #ifndef PROTOCORE_SYSLOG_BORROW
 #define PROTOCORE_SYSLOG_BORROW 512u
 #endif
@@ -3283,7 +3285,7 @@
 #define PROTOCORE_PLAINTEXT_WORK_SYSLOG 0
 #endif
 
-// The trap sender's request id and the PDU it builds. Measured at 1028 byteio. A v3 trap is signed
+// The trap sender's request id and the PDU it builds. Measured at 1028 bytes. A v3 trap is signed
 // and may be encrypted with the USM keys, so the secure end.
 #ifndef PROTOCORE_SNMP_NOTIFY_BORROW
 #define PROTOCORE_SNMP_NOTIFY_BORROW 1536u
@@ -3295,7 +3297,7 @@
 #define PROTOCORE_SECURE_WORK_SNMPNOTIFY 0
 #endif
 
-// The HTTP client's receive buffer, target and built request. Measured at 3060 byteio. A request
+// The HTTP client's receive buffer, target and built request. Measured at 3060 bytes. A request
 // line carries Authorization headers and a response its bodies, so the secure end.
 #ifndef PROTOCORE_HTTP_CLIENT_BORROW
 #define PROTOCORE_HTTP_CLIENT_BORROW 3584u
@@ -3308,7 +3310,7 @@
 #endif
 
 // The SMTP session's command and reply lines, with the base64 AUTH client response (RFC 4954 sec
-// 4). Measured at 3104 byteio. That response is a credential, so the secure end.
+// 4). Measured at 3104 bytes. That response is a credential, so the secure end.
 #ifndef PROTOCORE_SMTP_BORROW
 #define PROTOCORE_SMTP_BORROW 3584u
 #endif
@@ -3320,7 +3322,7 @@
 #endif
 
 // The WebSocket client's three rings: received octets, the assembled packet and what is queued to
-// send. Measured at 4144 byteio. Over wss those rings hold the cleartext, so the secure end.
+// send. Measured at 4144 bytes. Over wss those rings hold the cleartext, so the secure end.
 #ifndef PROTOCORE_WS_CLIENT_BORROW
 #define PROTOCORE_WS_CLIENT_BORROW 4608u
 #endif
@@ -3332,7 +3334,7 @@
 #endif
 
 // The USM engine: its engine id and boots, the user, and the auth and privacy keys derived for it
-// (RFC 3414). Measured at 8680 byteio. Key material, so the secure end.
+// (RFC 3414). Measured at 8680 bytes. Key material, so the secure end.
 #ifndef PROTOCORE_SNMP_V3_BORROW
 #define PROTOCORE_SNMP_V3_BORROW 9216u
 #endif
@@ -3344,7 +3346,7 @@
 #endif
 
 // The agent's MIB table, its read and write community strings, and the varbinds one request walks.
-// Measured at 12512 byteio. A community string is a credential, so the secure end.
+// Measured at 12512 bytes. A community string is a credential, so the secure end.
 #ifndef PROTOCORE_SNMP_AGENT_BORROW
 #define PROTOCORE_SNMP_AGENT_BORROW 13312u
 #endif
@@ -3355,7 +3357,7 @@
 #define PROTOCORE_SECURE_WORK_SNMPAGENT 0
 #endif
 
-// The OAuth 2.0 request body and the token-endpoint reply. Measured at 3072 byteio. The body carries
+// The OAuth 2.0 request body and the token-endpoint reply. Measured at 3072 bytes. The body carries
 // the RFC 6749 sec 2.3.1 client password and the reply the issued tokens, so the secure end. Only
 // the transport calls own it, and those need PROTOCORE_ENABLE_HTTP_CLIENT.
 #ifndef PROTOCORE_OAUTH2_BORROW
@@ -3369,7 +3371,7 @@
 #endif
 
 // The filesystem's bound roots and the two buffers a path is resolved into. Measured at 2684
-// byteio. Paths and mount names, so the plaintext end.
+// bytes. Paths and mount names, so the plaintext end.
 #ifndef PROTOCORE_FILESYSTEM_BORROW
 #define PROTOCORE_FILESYSTEM_BORROW 3072u
 #endif
@@ -3377,7 +3379,7 @@
 #define PROTOCORE_PLAINTEXT_WORK_FILESYSTEM PROTOCORE_FILESYSTEM_BORROW
 
 // The southbound driver table: each driver's name, its point range and the callbacks that reach
-// it. Measured at 72 byteio. Field device addresses, so the plaintext end.
+// it. Measured at 72 bytes. Field device addresses, so the plaintext end.
 #ifndef PROTOCORE_SOUTHBOUND_BORROW
 #define PROTOCORE_SOUTHBOUND_BORROW 128u
 #endif
@@ -3453,7 +3455,7 @@
 #endif
 
 // The HTTP request parser's streaming-body hooks: the three callbacks an application installs to
-// take a body as it arrives. Measured at 24 byteio. Function pointers, no key material, so the
+// take a body as it arrives. Measured at 24 bytes. Function pointers, no key material, so the
 // plaintext end. The per-slot request table is http_pool[], which is not a borrow.
 #ifndef PROTOCORE_HTTP_PARSER_BORROW
 #define PROTOCORE_HTTP_PARSER_BORROW 32u
@@ -3469,7 +3471,7 @@
 
 // The adaptive mDNS announcer's live state: its config, the beacon interval, the contention window,
 // the running frame total the promiscuous sink bumps, and the channel capture is pinned to.
-// Measured at 80 byteio. Beacon timing, no key material, so the plaintext end.
+// Measured at 80 bytes. Beacon timing, no key material, so the plaintext end.
 #ifndef PROTOCORE_MDNS_ADAPTIVE_BORROW
 #define PROTOCORE_MDNS_ADAPTIVE_BORROW 96u
 #endif
@@ -3481,7 +3483,7 @@
 #endif
 
 // The upload service's in-flight transfer: the sink the streamed body is handed to and the byte
-// count the last one carried. Measured at 32 byteio. Upload bookkeeping, no key material, so the
+// count the last one carried. Measured at 32 bytes. Upload bookkeeping, no key material, so the
 // plaintext end.
 #ifndef PROTOCORE_UPLOAD_SERVICE_BORROW
 #define PROTOCORE_UPLOAD_SERVICE_BORROW 48u
@@ -3495,7 +3497,7 @@
 
 // The SNTP client's session: the epoch the last accepted reply carried, the millisecond it arrived
 // so the monotonic clock can carry it between syncs, the cookie that reply had to echo, and the
-// request span held in flight. Measured at 48 byteio. A wall clock and an anti-spoof cookie, no key
+// request span held in flight. Measured at 48 bytes. A wall clock and an anti-spoof cookie, no key
 // material, so the plaintext end.
 #ifndef PROTOCORE_NTP_SERVICE_BORROW
 #define PROTOCORE_NTP_SERVICE_BORROW 64u
@@ -3521,7 +3523,7 @@
 #define PROTOCORE_PLAINTEXT_WORK_HTTPCLOCK 0
 #endif
 
-// The NTP server's advertised stratum and reference id. Measured at 8 byteio. Clock metadata, no
+// The NTP server's advertised stratum and reference id. Measured at 8 bytes. Clock metadata, no
 // key material, so the plaintext end.
 #ifndef PROTOCORE_NTP_SERVER_BORROW
 #define PROTOCORE_NTP_SERVER_BORROW 16u
@@ -3534,7 +3536,7 @@
 #endif
 
 // The mDNS responder's advertised host name, the services and TXT pairs it answers with, and the
-// UDP binding it answers on. Measured at 304 byteio. Service names, no key material, so the
+// UDP binding it answers on. Measured at 304 bytes. Service names, no key material, so the
 // plaintext end.
 #ifndef PROTOCORE_MDNS_SERVICE_BORROW
 #define PROTOCORE_MDNS_SERVICE_BORROW 320u
@@ -3604,7 +3606,7 @@
 #define PROTOCORE_PLAINTEXT_WORK_SSHSERVER 0
 #endif
 
-// The RCWL-0516's debounce and hold state and the GPIO pin it samples. Measured at 28 byteio. A pin
+// The RCWL-0516's debounce and hold state and the GPIO pin it samples. Measured at 28 bytes. A pin
 // level, so the plaintext end.
 #ifndef PROTOCORE_RCWL0516_BORROW
 #define PROTOCORE_RCWL0516_BORROW 32u
@@ -3617,7 +3619,7 @@
 #endif
 
 // The SEN0192's motion state: the debounced level, its event count and when it last went active.
-// Measured at 24 byteio. A pin level and a counter, so the plaintext end.
+// Measured at 24 bytes. A pin level and a counter, so the plaintext end.
 #ifndef PROTOCORE_SEN0192_BORROW
 #define PROTOCORE_SEN0192_BORROW 32u
 #endif
@@ -3629,7 +3631,7 @@
 #endif
 
 // The FTP client session: its two socket handles, the step it is on and the reply buffer it reads
-// control lines into. Measured at 1320 byteio. A path and a reply line, so the plaintext end.
+// control lines into. Measured at 1320 bytes. A path and a reply line, so the plaintext end.
 #ifndef PROTOCORE_FTP_SESSION_BORROW
 #define PROTOCORE_FTP_SESSION_BORROW 1536u
 #endif
@@ -3641,7 +3643,7 @@
 #endif
 
 // The StatsD client's collector address, its tag string, and the one line it formats at a time.
-// Measured at 398 byteio. No key material, so the plaintext end.
+// Measured at 398 bytes. No key material, so the plaintext end.
 #ifndef PROTOCORE_STATSD_BORROW
 #define PROTOCORE_STATSD_BORROW 512u
 #endif
@@ -3652,7 +3654,7 @@
 #define PROTOCORE_PLAINTEXT_WORK_STATSD 0
 #endif
 
-// One parsed GraphQL document and the execution walking it. Measured at 4520 byteio. No key
+// One parsed GraphQL document and the execution walking it. Measured at 4520 bytes. No key
 // material, so the plaintext end.
 #ifndef PROTOCORE_GRAPHQL_BORROW
 #define PROTOCORE_GRAPHQL_BORROW 5120u
@@ -3664,7 +3666,7 @@
 #define PROTOCORE_PLAINTEXT_WORK_GRAPHQL 0
 #endif
 
-// The LwM2M TLV codec's two cursors, one per direction. Measured at 64 byteio. No key material,
+// The LwM2M TLV codec's two cursors, one per direction. Measured at 64 bytes. No key material,
 // so the plaintext end.
 #ifndef PROTOCORE_LWM2M_TLV_BORROW
 #define PROTOCORE_LWM2M_TLV_BORROW 128u
@@ -3677,7 +3679,7 @@
 #endif
 
 // The CoAP server's resource table, the path and query it splits out, and its message buffers.
-// Measured at 3032 byteio. No key material - DTLS keys live in coaps_server - so the plaintext end.
+// Measured at 3032 bytes. No key material - DTLS keys live in coaps_server - so the plaintext end.
 #ifndef PROTOCORE_COAP_BORROW
 #define PROTOCORE_COAP_BORROW 3584u
 #endif
@@ -3703,7 +3705,7 @@
 #endif
 
 // The MQTT session: its transport slot, keep-alive timers, inflight table and topic. Measured at
-// 304 byteio. Beside the wire buffers this module already takes from the secure end, and on the
+// 304 bytes. Beside the wire buffers this module already takes from the secure end, and on the
 // same end because a retained topic and packet ids describe secured traffic.
 #ifndef PROTOCORE_MQTT_BORROW
 #define PROTOCORE_MQTT_BORROW 512u
@@ -3715,7 +3717,7 @@
 #define PROTOCORE_SECURE_WORK_MQTT 0
 #endif
 
-// The protobuf codec's writer and reader rows, one pair per slot. Measured at 224 byteio. No key
+// The protobuf codec's writer and reader rows, one pair per slot. Measured at 224 bytes. No key
 // material, so the plaintext end.
 #ifndef PROTOCORE_PROTOBUF_BORROW
 #define PROTOCORE_PROTOBUF_BORROW 512u
@@ -3727,7 +3729,7 @@
 #define PROTOCORE_PLAINTEXT_WORK_PROTOBUF 0
 #endif
 
-// The one Sparkplug metric being encoded or decoded. Measured at 256 byteio. No key material, so
+// The one Sparkplug metric being encoded or decoded. Measured at 256 bytes. No key material, so
 // the plaintext end.
 #ifndef PROTOCORE_SPARKPLUG_BORROW
 #define PROTOCORE_SPARKPLUG_BORROW 512u
@@ -3739,7 +3741,7 @@
 #define PROTOCORE_PLAINTEXT_WORK_SPARKPLUG 0
 #endif
 
-// The UDP telemetry sender's collector address and the line it is building. Measured at 56 byteio.
+// The UDP telemetry sender's collector address and the line it is building. Measured at 56 bytes.
 // No key material, so the plaintext end.
 #ifndef PROTOCORE_UDP_TELEMETRY_BORROW
 #define PROTOCORE_UDP_TELEMETRY_BORROW 128u
@@ -3917,7 +3919,7 @@
 /**
  * @brief The HTTP auth borrow: the credential table, then the SHA-256 bytes behind it.
  *
- * Both regions of one spat. The table lasts the life of the program and the hash scratch does not,
+ * Both regions of one span. The table lasts the life of the program and the hash scratch does not,
  * but the worst case over an entry's whole chain is taken once and never exceeded, so the digest
  * nonce and the Basic check run out of the same borrow the table sits in. Proved in http/auth.c.
  */
@@ -4221,7 +4223,7 @@ typedef enum PROTO_ENUM_PACKED
 #define PROTOCORE_GQL_PATH_MAX 96 ///< Max dotted path length passed to the resolver.
 #endif
 #ifndef PROTOCORE_GQL_STRBUF
-#define PROTOCORE_GQL_STRBUF 256 ///< Pool for decoded string-argument byteio.
+#define PROTOCORE_GQL_STRBUF 256 ///< Pool for decoded string-argument bytes.
 #endif
 #endif // PROTOCORE_ENABLE_GRAPHQL
 

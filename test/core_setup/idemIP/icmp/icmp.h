@@ -6,7 +6,7 @@
  * @brief Internet control messages, RFC 792.
  *
  * Every message begins Type, Code, Checksum; what follows depends on the type. Field offsets and
- * accessors over the caller's byteio.
+ * accessors over the caller's bytes.
  */
 
 #ifndef PROTOCORE_IDEMIP_ICMP_H

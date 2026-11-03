@@ -5,11 +5,11 @@
  * @file forward.c
  * @brief Layer 3 (Network) - the interface forwarding plane, implementation.
  *
- * RFC 1812 sec 5.2 "FORWARDING WALK-THROUGH", run over opaque byteio. A frame is matched against
+ * RFC 1812 sec 5.2 "FORWARDING WALK-THROUGH", run over opaque bytes. A frame is matched against
  * the access list (sec 5.3.9), then against the policy routes, then against the controls on
  * forwarding (sec 5.3.11) for every registered interface other than the one it arrived on. A
  * DENY control wins, a matching ALLOW forwards, and no match blocks. Each forward passes a fixed
- * one-second rate window (sec 5.3.6) before layer 1's send takes the byteio. Static tables, no heap.
+ * one-second rate window (sec 5.3.6) before layer 1's send takes the bytes. Static tables, no heap.
  */
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths

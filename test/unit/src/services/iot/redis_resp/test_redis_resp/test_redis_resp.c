@@ -95,7 +95,7 @@ void test_binary_safe_arguments(void)
     TEST_ASSERT_EQUAL_STRING("*2\r\n$4\r\nECHO\r\n$0\r\n\r\n", g_out);
 }
 
-// "Simple strings": `+OK\r\n`, five byteio. "Simple errors": `-Error message\r\n`, with the printed
+// "Simple strings": `+OK\r\n`, five bytes. "Simple errors": `-Error message\r\n`, with the printed
 // examples `-ERR unknown command 'asdf'` and `-WRONGTYPE Operation against a key holding the wrong
 // kind of value`. Both carry the line itself, the CRLF excluded.
 void test_simple_strings_and_errors(void)

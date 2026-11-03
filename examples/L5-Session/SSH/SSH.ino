@@ -108,7 +108,7 @@ void setup()
 
     // Load the RSA host key's public half from NVS (the private key is read
     // per-signature into a stack buffer and wiped; never held in static RAM).
-    if (protocore_ssh_rsa_load_pubkey() != 0)
+    if (SshRsa.load_pubkey(protocore_ssh_rsa_span()) != 0)
     {
         Serial.println("No SSH host key in NVS - see docs/SSH.md (Host key provisioning)");
         return;

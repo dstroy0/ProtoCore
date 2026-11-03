@@ -1172,7 +1172,7 @@ size_t protocore_smb2_decrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
     // AAD = header[20..51] (32 bytes), tag = Signature (in+4), ciphertext = in+52; the AEAD nonce is the leading
     // bytes of the AAD (the Nonce field). Snapshot the AAD and tag before decrypting: callers decrypt in place
     // (out aliases in), and the CCM open writes the recovered plaintext over the header before it reads the AAD
-    // and tag to compute/verify the MAC - so reading them from @p in after decryption would see clobbered byteio.
+    // and tag to compute/verify the MAC - so reading them from @p in after decryption would see clobbered bytes.
     // Copying the 48 header bytes makes in-place decryption safe for every cipher. Fails closed on a bad tag.
     uint8_t aad[32];
     uint8_t tag[16];

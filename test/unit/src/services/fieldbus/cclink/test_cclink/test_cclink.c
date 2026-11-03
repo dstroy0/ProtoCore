@@ -49,7 +49,7 @@ void tearDown(void)
 #define CMD_A 0x5Au
 #define CMD_B 0x3Cu
 
-// cclink.h: the checksum is the low byte of the arithmetic sum of the framed byteio. Each expected
+// cclink.h: the checksum is the low byte of the arithmetic sum of the framed bytes. Each expected
 // value is that sum, added up here:
 //   0x01 + 0x01 + 0xFE = 1 + 1 + 254 = 256 -> 256 - 256          = 0x00
 //   0xFF + 0x01        = 255 + 1     = 256 -> 256 - 256          = 0x00

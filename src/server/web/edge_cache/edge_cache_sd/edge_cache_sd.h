@@ -73,7 +73,7 @@ typedef struct
 {
     uint8_t *entry_buf; ///< scratch the entry is decoded into
     struct protocore_dbm *db;
-    const uint8_t *digest; ///< 32 byteio.
+    const uint8_t *digest; ///< 32 bytes.
     struct EdgeEntry *e;
     uint8_t *scratch;
     size_t scratch_cap;
@@ -83,7 +83,7 @@ typedef struct
 typedef struct
 {
     struct protocore_dbm *db;
-    const uint8_t *digest; ///< 32 byteio.
+    const uint8_t *digest; ///< 32 bytes.
 } EdgeCacheSdDelArgs;
 
 /** @brief What purge_prefix takes: db, path_prefix, scratch, ... */

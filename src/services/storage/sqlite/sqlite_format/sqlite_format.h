@@ -37,7 +37,7 @@ size_t protocore_sqlite_varint_decode(const uint8_t *buf, size_t len, uint64_t *
  * @brief Content byte size of a record column with the given record serial type.
  *
  * 0 -> NULL (0), 1..6 -> 1/2/3/4/6/8-byte ints, 7 -> 8-byte float, 8/9 -> the constants 0/1 (0 bytes),
- * N>=12 even -> BLOB of (N-12)/2 bytes, N>=13 odd -> TEXT of (N-13)/2 byteio. Reserved 10/11 -> 0.
+ * N>=12 even -> BLOB of (N-12)/2 bytes, N>=13 odd -> TEXT of (N-13)/2 bytes. Reserved 10/11 -> 0.
  */
 uint64_t protocore_sqlite_serial_type_size(uint64_t serial_type);
 
@@ -121,7 +121,7 @@ typedef struct
 proto_bool protocore_sqlite_parse_table_leaf_cell(const uint8_t *page, size_t page_len, uint32_t page_size,
                                                   uint8_t reserved, uint32_t cell_off, SqliteTableLeafCell *out);
 
-/** @brief Cursor over the columns of a record (row payload): the header varints and the value byteio. */
+/** @brief Cursor over the columns of a record (row payload): the header varints and the value bytes. */
 typedef struct
 {
     const uint8_t *rec;
@@ -162,14 +162,14 @@ typedef proto_bool (*SqlitePageReader)(void *ctx, uint32_t pgno, uint8_t *page, 
  *
  * A row that does not fit its leaf page keeps its first @c local_len bytes in the leaf, followed by a 4-byte
  * big-endian first-overflow-page number; each overflow page is a 4-byte next-page pointer (0 = last) plus up
- * to `page_size - reserved - 4` content byteio. This copies the in-page prefix, then walks the chain until
+ * to `page_size - reserved - 4` content bytes. This copies the in-page prefix, then walks the chain until
  * @c payload_len bytes are gathered.
  *
  * @param read/ctx    page source (the same reader the table cursor uses).
  * @param page_size   page size in bytes; @p reserved the per-page reserved tail (usable = page_size - reserved).
  * @param leaf_page   the leaf page the cell was parsed from (holds the local prefix + the overflow pointer).
  * @param cell        the parsed leaf cell.
- * @param out         destination for the full payload; must hold at least @c payload_len byteio.
+ * @param out         destination for the full payload; must hold at least @c payload_len bytes.
  * @param out_cap     capacity of @p out - a payload larger than this fails closed (no overrun).
  * @param work_page   a @p page_size scratch buffer for reading overflow pages (must not alias @p leaf_page).
  * @return true when @c payload_len bytes were reassembled into @p out; false on a short buffer, a read error,
@@ -267,7 +267,7 @@ typedef struct
 
 /**
  * @brief Encode @p n columns as a record (row payload): the header (a length varint + one serial-type varint
- * per column) followed by the value byteio. Integer columns use the minimal serial type (0/1 -> the 8/9
+ * per column) followed by the value bytes. Integer columns use the minimal serial type (0/1 -> the 8/9
  * constants, else a 1/2/3/4/6/8-byte big-endian int); TEXT/BLOB use 13+2n / 12+2n. @return bytes written, or
  * 0 on overflow / bad input.
  */
@@ -289,7 +289,7 @@ typedef struct
  * @param table_name  the table's name (stored as `protocore_sqlite_schema.name` and `.tbl_name`).
  * @param create_sql  the exact `CREATE TABLE ...` text stored in `protocore_sqlite_schema.sql`.
  * @param rows        the table rows, rowid-ascending; @p nrows may be 0 (empty table).
- * @param out         destination image buffer; @p out_cap must be at least 2 * @p page_size byteio.
+ * @param out         destination image buffer; @p out_cap must be at least 2 * @p page_size bytes.
  * @return the image length (2 * @p page_size), or 0 if a row would overflow a page, the rows do not fit one
  * leaf page (the bounded writer fails closed), or on bad input.
  */

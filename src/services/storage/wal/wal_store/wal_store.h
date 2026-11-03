@@ -132,7 +132,7 @@ static inline uint64_t protocore_wal_store_committed(const WalStore *s)
 {
     return s->committed;
 }
-/** @brief Total usable data-region capacity in byteio. */
+/** @brief Total usable data-region capacity in bytes. */
 static inline uint64_t protocore_wal_store_capacity(const WalStore *s)
 {
     return s->data_cap;

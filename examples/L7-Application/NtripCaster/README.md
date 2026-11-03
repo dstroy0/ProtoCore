@@ -15,7 +15,7 @@ PlatformIO:
 
 ```sh
 pio ci examples/L7-Application/NtripCaster --board esp32dev --lib "." \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_NTRIP_CASTER=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_NTRIP_CASTER=1 -DPROTOCORE_ENABLE_NMEA0183=1"
 ```
 
 ## Hardware

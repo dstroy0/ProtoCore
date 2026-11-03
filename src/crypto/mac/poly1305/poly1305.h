@@ -30,7 +30,7 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Poly1305 one-time key length in bytes (r || s). */
 #define PROTOCORE_POLY1305_KEY_LEN 32
 
-/** @brief Poly1305 tag length in byteio. */
+/** @brief Poly1305 tag length in bytes. */
 #define PROTOCORE_POLY1305_TAG_LEN 16
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */

@@ -54,7 +54,8 @@ void on_command(const char *line, uint8_t client_id)
     (void)client_id;
     if (strcmp(line, "help") == 0)
     {
-        protocore_web_terminal_println("commands: help, heap, uptime, <echo>");
+        WebTerminalV.println_args.s = "commands: help, heap, uptime, <echo>";
+        WebTerminal.println(protocore_web_terminal_span());
         return;
     }
 
@@ -78,7 +79,8 @@ void on_command(const char *line, uint8_t client_id)
         const NumerosCfg reply_echo_build = {out, sizeof(out), 0u, REPLY_ECHO, reply_echo_vals, 1u};
         numer.build(&reply_echo_build);
     }
-    protocore_web_terminal_print(out);
+    WebTerminalV.print_args.s = out;
+    WebTerminal.print(protocore_web_terminal_span());
 }
 
 void setup()
@@ -99,8 +101,10 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
     Serial.println("Open http://<ip>/terminal in a browser");
 
-    protocore_web_terminal_begin("/terminal");
-    protocore_web_terminal_on_command(on_command);
+    WebTerminalV.begin_args.path = "/terminal";
+    WebTerminal.begin(protocore_web_terminal_span());
+    WebTerminalV.on_command_args.cb = on_command;
+    WebTerminal.on_command(protocore_web_terminal_span());
 
     int32_t result = begin_http(80, NULL);
     if (result < 0)
@@ -120,13 +124,14 @@ void loop()
     if (millis() - last >= 3000)
     {
         last = millis();
-        if (protocore_web_terminal_client_count() > 0)
+        if (WebTerminal.client_count(protocore_web_terminal_span()) > 0)
         {
             char out[96];
             const mmgr_fval heartbeat_vals[] = {MMGR_VU32((uint32_t)millis()), MMGR_VU32((uint32_t)ESP.getFreeHeap())};
             const NumerosCfg heartbeat_build = {out, sizeof(out), 0u, HEARTBEAT, heartbeat_vals, 2u};
             numer.build(&heartbeat_build);
-            protocore_web_terminal_print(out);
+            WebTerminalV.print_args.s = out;
+            WebTerminal.print(protocore_web_terminal_span());
         }
     }
 }

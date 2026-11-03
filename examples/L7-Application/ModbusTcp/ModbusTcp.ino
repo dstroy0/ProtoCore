@@ -56,10 +56,15 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_modbus_server_init();
-    protocore_modbus_set_holding_reg(0, 0x1234); // client-writable registers
-    protocore_modbus_set_input_reg(0, 0);        // application-published (read-only to client)
-    protocore_modbus_on_write(on_write);
+    Modbus.server_init(protocore_modbus_span());
+    ModbusV.set_holding_reg_args.addr = 0;
+    ModbusV.set_holding_reg_args.value = 0x1234;
+    Modbus.set_holding_reg(protocore_modbus_span()); // client-writable registers
+    ModbusV.set_input_reg_args.addr = 0;
+    ModbusV.set_input_reg_args.value = 0;
+    Modbus.set_input_reg(protocore_modbus_span());        // application-published (read-only to client)
+    ModbusV.on_write_args.cb = on_write;
+    Modbus.on_write(protocore_modbus_span());
 
     listen(502, PROTO_MODBUS);
     begin();
@@ -75,6 +80,8 @@ void loop()
     if (millis() - last >= 1000)
     {
         last = millis();
-        protocore_modbus_set_input_reg(0, (uint16_t)(millis() / 1000)); // uptime seconds
+        ModbusV.set_input_reg_args.addr = 0;
+        ModbusV.set_input_reg_args.value = (uint16_t)(millis() / 1000);
+        Modbus.set_input_reg(protocore_modbus_span()); // uptime seconds
     }
 }

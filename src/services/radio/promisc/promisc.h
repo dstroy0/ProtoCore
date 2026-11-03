@@ -63,7 +63,7 @@ typedef struct
 /**
  * @brief Sink for one captured frame: the raw 802.11 bytes plus radio metadata.
  * @param frame   the 802.11 MAC frame (points into the driver buffer; copy if retained).
- * @param len     frame length in byteio.
+ * @param len     frame length in bytes.
  * @param rssi    received signal strength (dBm).
  * @param channel the channel it was captured on.
  */
@@ -111,7 +111,7 @@ void protocore_promisc_end(uint8_t *work);
 /**
  * @brief Sink for one captured frame: the raw 802.11 bytes plus radio metadata.
  * @param frame   the 802.11 MAC frame (points into the driver buffer; copy if retained).
- * @param len     frame length in byteio.
+ * @param len     frame length in bytes.
  * @param rssi    received signal strength (dBm).
  * @param channel the channel it was captured on.
  */
@@ -123,7 +123,7 @@ typedef void (*protocore_promisc_sink_fn)(const uint8_t *frame, uint16_t len, in
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the spat.
+ * @return the span.
  */
 uint8_t *protocore_promisc_span(void);
 

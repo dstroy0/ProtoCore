@@ -59,7 +59,7 @@ typedef struct
  * @c work is PROTOCORE_AUTH_LOCKOUT_BORROW secure bytes the CALLER took, at an address it knows. It
  * is not held past the call, so nothing here aliases it. The table is in
  * those bytes rather than in this module, so a caller takes them once for the life of the program
- * and every call runs out of the same spat. The caller releases it, and the pool wipes on release;
+ * and every call runs out of the same span. The caller releases it, and the pool wipes on release;
  * this module neither takes it, holds it, nor releases it.
  *
  * No storage member and no context: a caller sets operands and reads @ref AuthLockoutNs::ok, and
@@ -109,7 +109,7 @@ static const AuthLockoutNs AuthLockout __attribute__((unused)) = {
  * borrow comes from. Taken once from the end of the secure pool, which no mark and no release walks,
  * so the table lasts the life of the program.
  *
- * @return the spat.
+ * @return the span.
  */
 uint8_t *protocore_auth_lockout_span(void);
 

@@ -38,13 +38,13 @@
 
 PROTOCORE_BEGIN_DECLS
 
-/** @brief AEAD_AES_128_GCM key length in byteio. */
+/** @brief AEAD_AES_128_GCM key length in bytes. */
 #define PROTOCORE_AES128GCM_KEY_LEN 16
 
-/** @brief AEAD_AES_128_GCM nonce length in byteio. */
+/** @brief AEAD_AES_128_GCM nonce length in bytes. */
 #define PROTOCORE_AES128GCM_IV_LEN 12
 
-/** @brief AEAD_AES_128_GCM authentication tag length in byteio. */
+/** @brief AEAD_AES_128_GCM authentication tag length in bytes. */
 #define PROTOCORE_AES128GCM_TAG_LEN 16
 
 // PROTOCORE_AES128GCM_BORROW - the bytes a keyed context runs out of - is stated in protocore_config.h,

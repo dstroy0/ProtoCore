@@ -153,7 +153,7 @@ uint8_t *protocore_coap_span(void)
 // Pure helpers: they read what they are given and hold nothing
 // ---------------------------------------------------------------------------
 
-// Two NUL-terminated runs are the same string within nul_cap byteio. The compare is bounded by the
+// Two NUL-terminated runs are the same string within nul_cap bytes. The compare is bounded by the
 // measured length, so neither side is read past its own terminator. An absent run matches nothing.
 static proto_bool text_eq(const char *a, const char *b, size_t nul_cap)
 {
@@ -264,7 +264,7 @@ static size_t append_opt(uint8_t *resp, size_t cap, size_t n, uint32_t *last_opt
 }
 
 // Append the options in ascending Option Number order (Observe, Content-Format, Block2, Block1) and
-// then the Payload Marker and the payload, to a message already holding n header and Token byteio.
+// then the Payload Marker and the payload, to a message already holding n header and Token bytes.
 // observe_seq below 0 omits Observe, which is also omitted unless code is a 2.xx (RFC 7641 sec 4.2);
 // block2_val / block1_val below 0 omit their option, whose value is the (NUM<<4)|(M<<3)|SZX of
 // RFC 7959 sec 2.2. Stops with what fits rather than overrunning cap. Returns the new length.

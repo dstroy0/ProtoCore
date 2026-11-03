@@ -57,7 +57,8 @@ void setup()
     // Trust the reverse proxy(ies) in front of this device. Only a request whose real TCP peer falls in
     // one of these CIDRs has its Forwarded / X-Forwarded-For client address believed. Set this to YOUR
     // proxy's address / subnet; the RFC 5737 documentation range below is a placeholder.
-    protocore_forwarded_trust_add_cidr("192.0.2.0/24");
+    ForwardedTrustV.add_cidr_args.cidr = "192.0.2.0/24";
+    ForwardedTrust.add_cidr(protocore_forwarded_trust_span());
 
     on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "public page"); });

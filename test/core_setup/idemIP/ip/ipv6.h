@@ -67,7 +67,7 @@ PROTOCORE_BEGIN_DECLS
 // Accessors
 // ---------------------------------------------------------------------------
 // The header starts 14 bytes into an Ethernet frame, so its 32-bit fields land on a two-byte
-// boundary and are assembled from their byteio.
+// boundary and are assembled from their bytes.
 
 /** @brief Version, the high nibble of the first word. */
 PROTOCORE_INLINE uint8_t idemip_ip6_version(const uint8_t *h)

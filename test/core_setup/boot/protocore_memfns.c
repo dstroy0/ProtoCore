@@ -11,7 +11,7 @@
  * image has to carry them whatever the source says.
  *
  * Nothing new is written here. mmgr already moves and compares blocks, so these are the symbols the
- * linker asks for, resolved onto @ref memor. The library's own callers keep using @ref mem directly;
+ * linker asks for, resolved onto @ref memor. The library's own callers keep using @ref memor directly;
  * this exists for the calls the compiler makes.
  *
  * The optimizer is told to leave the bodies alone: it recognises a byte loop and rewrites it as a

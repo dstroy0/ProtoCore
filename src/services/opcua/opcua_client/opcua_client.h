@@ -14,7 +14,7 @@
  *
  * It is **transport-agnostic**: every function works on caller-provided byte
  * buffers, so the application owns the outbound socket (for example an Arduino
- * WiFiClient) and just pumps these byteio. An OpcUaClient holds the small amount of
+ * WiFiClient) and just pumps these bytes. An OpcUaClient holds the small amount of
  * per-connection state (SecureChannelId, security TokenId, the session's
  * AuthenticationToken, and the monotonically increasing sequence / request ids).
  *

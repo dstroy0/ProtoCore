@@ -403,7 +403,7 @@ void stop(void)
 void fill_route_base(HttpRoute *r, const char *path)
 {
     // The copy terminates the destination itself and hands back what it wrote, so the length the
-    // two shape tests need comes out of the move rather than from a second walk over those byteio.
+    // two shape tests need comes out of the move rather than from a second walk over those bytes.
     size_t len = EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = r->path, .src = path, .cap = MAX_PATH_LEN);
     r->is_active = PROTO_TRUE;
     r->is_wildcard = (len > 0 && r->path[len - 1] == '*');

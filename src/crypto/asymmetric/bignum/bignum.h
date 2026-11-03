@@ -77,7 +77,7 @@ typedef struct
     size_t len;            ///< how many; a shorter source zeroes the top limbs, a longer one keeps its low 256
 } BignumFromBytesArgs;
 
-/** @brief Where a bignum lands as big-endian byteio. */
+/** @brief Where a bignum lands as big-endian bytes. */
 typedef struct
 {
     uint8_t *bytes;             ///< exactly 256 bytes

@@ -43,10 +43,10 @@ static uint32_t protocore_ntp_source()
 void setup()
 {
     Serial.begin(115200);
-    protocore_rtc_begin();
+    Rtc.begin(protocore_rtc_span());
 
     // The RTC gives us time immediately - before WiFi, before anything - if it is set.
-    uint32_t boot = protocore_rtc_read_epoch();
+    uint32_t boot = Rtc.read_epoch(protocore_rtc_span());
     Serial.printf("RTC at boot: %lu %s\n", (unsigned long)boot, boot ? "(battery-backed time!)" : "(not set yet)");
 
     PhysicalV.wifi.ssid = SSID;
@@ -74,11 +74,11 @@ void loop()
     static bool protocore_rtc_set = false;
     if (!protocore_rtc_set && protocore_ntp_synced())
     {
-        uint32_t protocore_rtc_now = protocore_rtc_read_epoch();
+        uint32_t protocore_rtc_now = Rtc.read_epoch(protocore_rtc_span());
         uint32_t protocore_ntp_now = (uint32_t)protocore_ntp_epoch();
         if (protocore_rtc_now == 0 || (protocore_ntp_now > protocore_rtc_now ? protocore_ntp_now - protocore_rtc_now : protocore_rtc_now - protocore_ntp_now) > 5)
         {
-            if (protocore_rtc_set_epoch(protocore_ntp_now))
+            if (Rtc.set_epoch(protocore_rtc_span(), protocore_ntp_now))
             {
                 Serial.printf("RTC set from NTP: %lu\n", (unsigned long)protocore_ntp_now);
             }

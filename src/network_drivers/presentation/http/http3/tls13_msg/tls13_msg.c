@@ -150,7 +150,7 @@ static proto_bool r_u24(Reader *r, uint32_t *v)
     r->pos += 3;
     return PROTO_TRUE;
 }
-// Take a view of the next n byteio.
+// Take a view of the next n bytes.
 static proto_bool r_take(Reader *r, size_t n, const uint8_t **out)
 {
     if (r->pos + n > r->len)
@@ -359,7 +359,7 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
         out->quic_tp_len = blen;
         break;
     case TLS_EXT_COOKIE: {
-        // Cookie { opaque cookie<1..2^16-1> } (RFC 8446 §4.2.2): 2-byte length then the cookie byteio.
+        // Cookie { opaque cookie<1..2^16-1> } (RFC 8446 §4.2.2): 2-byte length then the cookie bytes.
         if (blen < 2)
         {
             return;

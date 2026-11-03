@@ -74,13 +74,13 @@ typedef struct
 typedef struct
 {
     double celsius;
-    uint8_t *out; ///< 2 byteio.
+    uint8_t *out; ///< 2 bytes.
 } LonworksSnvtTempEncodeArgs;
 
 /** @brief What snvt_temp_decode takes: in. */
 typedef struct
 {
-    const uint8_t *in; ///< 2 byteio.
+    const uint8_t *in; ///< 2 bytes.
 } LonworksSnvtTempDecodeArgs;
 
 /** @brief What snvt_switch_encode takes: percent, state, out. */
@@ -88,13 +88,13 @@ typedef struct
 {
     double percent;
     uint8_t state;
-    uint8_t *out; ///< 2 byteio.
+    uint8_t *out; ///< 2 bytes.
 } LonworksSnvtSwitchEncodeArgs;
 
 /** @brief What snvt_switch_decode takes: in, percent, state. */
 typedef struct
 {
-    const uint8_t *in; ///< 2 byteio.
+    const uint8_t *in; ///< 2 bytes.
     double *percent;
     uint8_t *state;
 } LonworksSnvtSwitchDecodeArgs;

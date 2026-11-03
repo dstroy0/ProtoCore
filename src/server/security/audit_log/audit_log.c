@@ -312,7 +312,7 @@ void protocore_audit_log_verify(uint8_t *work)
     (void)work;
     uint32_t *first_broken_seq = AuditLogV.verify_args.first_broken_seq;
 
-    // One borrow for the whole walk: the chain hash re-runs per entry out of the same byteio.
+    // One borrow for the whole walk: the chain hash re-runs per entry out of the same bytes.
     size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span ws = EMBED_CALL(spat.from, SpatiumCfg,
                               .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_SHA256_BORROW,

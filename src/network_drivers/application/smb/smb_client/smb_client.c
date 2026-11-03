@@ -32,7 +32,7 @@
 static_assert(64 + 56 + PROTOCORE_SMB_BUF / 2 <= PROTOCORE_SMB_BUF - 4,
               "PROTOCORE_SMB_BUF is too small to frame a CREATE around a full-length path "
               "(64B header + 56B body + PROTOCORE_SMB_BUF/2 path must fit PROTOCORE_SMB_BUF-4)");
-// WRITE is the other payload-bearing case; its chunk_max already backs off by 128 byteio.
+// WRITE is the other payload-bearing case; its chunk_max already backs off by 128 bytes.
 static_assert(64 + 48 + (PROTOCORE_SMB_BUF - 128) <= PROTOCORE_SMB_BUF - 4,
               "PROTOCORE_SMB_BUF is too small to frame a WRITE around a full chunk");
 // SESSION_SETUP round 2 wraps the NTLMSSP AUTHENTICATE blob, capped at sizeof(SMB_CLIENT_CTX(work)->sp2).

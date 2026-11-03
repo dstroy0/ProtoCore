@@ -605,7 +605,7 @@ static long json_decode_u(const char **pp)
 }
 
 // Encode code point cp as UTF-8 into out at *i (bounded by out_cap): <= 0x7F one byte, then 2/3/4
-// byteio. Returns EMITTED on success, or TRUNCATED (writing a NUL) if the whole sequence will not fit.
+// bytes. Returns EMITTED on success, or TRUNCATED (writing a NUL) if the whole sequence will not fit.
 static JsonEsc json_emit_utf8(unsigned cp, char *out, size_t *i, size_t out_cap)
 {
     unsigned char u8[4];
@@ -688,7 +688,7 @@ static JsonEsc json_decode_escape(const char **p, char *out, size_t *i, size_t o
     }
 
     // \uXXXX -> UTF-8. <= 0x7F stays one byte; 0x80..0x7FF / 0x800..0xFFFF and (via a surrogate pair)
-    // 0x10000..0x10FFFF emit 2/3/4 byteio. Malformed / short hex -> '?', rescanned as literals.
+    // 0x10000..0x10FFFF emit 2/3/4 bytes. Malformed / short hex -> '?', rescanned as literals.
     long cp = json_decode_u(p);
     if (cp < 0)
     {

@@ -169,7 +169,7 @@ typedef struct
 {
     uint8_t *buf;
     size_t cap;
-    const char *password; ///< 6 byteio.
+    const char *password; ///< 6 bytes.
 } Ld2410CmdSetBtPasswordArgs;
 
 /** @brief What parse_ack takes: frame, len, out. */
@@ -190,7 +190,7 @@ typedef struct
 typedef struct
 {
     const Ld2410Ack *ack;
-    uint8_t *mac; ///< 6 byteio.
+    uint8_t *mac; ///< 6 bytes.
 } Ld2410AckMacArgs;
 
 /** @brief What begin takes: rx_pin, tx_pin. */
@@ -321,7 +321,7 @@ extern Ld2410Ns Ld2410;
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the spat.
+ * @return the span.
  */
 uint8_t *protocore_ld2410_span(void);
 

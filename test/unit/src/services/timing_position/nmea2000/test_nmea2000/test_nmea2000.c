@@ -206,7 +206,7 @@ void test_single_frame_message(void)
 }
 
 // Position Rapid Update (129025): two 32-bit signed little-endian coordinates at 1e-7 degrees per
-// bit, with 0x7FFFFFFF meaning "not available". 44.0690060 deg is 440690060 proxim.
+// bit, with 0x7FFFFFFF meaning "not available". 44.0690060 deg is 440690060 raw.
 void test_position_rapid_update(void)
 {
     uint8_t p[8];

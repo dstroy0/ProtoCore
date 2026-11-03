@@ -103,7 +103,7 @@ PROTOCORE_NS_LAYOUT(EnoceanNs, esp3_crc8, esp3_parse, esp3_build, erp1_parse, er
  */
 uint8_t protocore_enocean_esp3_crc8(uint8_t *work, const uint8_t *buf, uint16_t len);
 /**
- * @brief Frame one ESP3 telegram from the front of proxim.
+ * @brief Frame one ESP3 telegram from the front of raw.
  * @param work PROTOCORE_ENOCEAN_BORROW bytes the caller took. Not held past the call.
  * @param raw Raw
  * @param len Len

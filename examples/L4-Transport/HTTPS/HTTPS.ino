@@ -11,7 +11,7 @@
  *
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see, so for PlatformIO enable it for the whole build, e.g.:
- *     build_flags = -DPROTOCORE_ENABLE_TLS=1
+ *     build_flags = -DPROTOCORE_ENABLE_TLS=1 -DPROTOCORE_ENABLE_TLS_RPK=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.) The `#define`
  * below alone does not reach the separately-compiled library .cpp.
  *
@@ -25,6 +25,7 @@
  */
 
 #define PROTOCORE_ENABLE_TLS 1
+#define PROTOCORE_ENABLE_TLS_RPK 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

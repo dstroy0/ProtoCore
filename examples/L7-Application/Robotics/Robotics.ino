@@ -80,7 +80,7 @@ void setup()
     mds.safety.emergency_stop = false;
     mds.safety.protective_stop = false;
 
-    protocore_robotics_install(&mds); // bind + register the OPC UA Browse/Read resolvers
+    Robotics.install(protocore_robotics_span(), &mds); // bind + register the OPC UA Browse/Read resolvers
     on_http("/", HTTP_GET, [](uint8_t id, HttpReq *) {
         send_text(id, 200, "text/plain", "OPC UA for Robotics MotionDeviceSystem on :4840");
     });

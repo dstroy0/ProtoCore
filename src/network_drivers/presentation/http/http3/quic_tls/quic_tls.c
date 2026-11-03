@@ -54,7 +54,7 @@ static void fail(QuicTls *qt, uint8_t alert)
     qt->alert = alert;
 }
 
-// Point the key schedule's handle at this connection's schedule and its byteio. Every step below
+// Point the key schedule's handle at this connection's schedule and its bytes. Every step below
 // reads them off the handle, so the binding is set before each call.
 static void ks_bind(QuicTls *qt)
 {

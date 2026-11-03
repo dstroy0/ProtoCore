@@ -170,7 +170,7 @@ void protocore_snmp_ber_put_uint(uint8_t *work)
     SnmpBerV.ok = e->ok;
 }
 
-// One primitive TLV from tlv.tag and tlv.byteio. An OCTET STRING, an IpAddress, an Opaque and a
+// One primitive TLV from tlv.tag and tlv.bytes. An OCTET STRING, an IpAddress, an Opaque and a
 // bare exception marker are all this same encoding, so both calls bind here.
 void protocore_snmp_ber_put_octet_string(uint8_t *work)
 {

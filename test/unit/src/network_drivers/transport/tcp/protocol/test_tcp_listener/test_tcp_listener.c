@@ -124,7 +124,7 @@ void test_accept_claims_a_slot_and_wires_the_connection(void)
 }
 
 // The slot's ring cursors are reset at accept, so a slot reused after a previous connection does
-// not inherit its predecessor's unread byteio.
+// not inherit its predecessor's unread bytes.
 void test_accept_resets_the_ring_of_a_reused_slot(void)
 {
     rx_reset(&conn_pool[0]);

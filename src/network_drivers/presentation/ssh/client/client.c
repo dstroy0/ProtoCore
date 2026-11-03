@@ -31,7 +31,7 @@
 #include "network_drivers/transport/tcp/client/client.h" // TcpClient: the dialed connection
 #include "network_drivers/transport/tcp/tcp.h"           // protocore_client_*
 #include "numeros_scribo/numeros_scribo.h"               // the one frame engine
-#include "octetus_introitus_exitus/octetus_introitus_exitus.h" // byteio.* writers / protocore_ssh_read_string_at() - the byte verbs this file frames with
+#include "octetus_introitus_exitus/octetus_introitus_exitus.h" // bytes.* writers / protocore_ssh_read_string_at() - the byte verbs this file frames with
 #include "proximus_operor/proximus_operor.h" // proxim.put_u32 - one unaligned store, not four
 #include "server/clock/clock.h"              // protocore_millis, pcdelay
 #include "server/core/worker/worker.h"       // temporary_buf_alloc for the large hybrid C_INIT
@@ -307,7 +307,7 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
     // ssh_kex_install_keys populates c2s/s2c per the RFC 4253 §7.2 letters for the negotiated
     // cipher/MAC; the packet layer's is_client flag selects the send/receive direction. The hybrids
     // encode K as a fixed 32/64-byte string (k_is_string); the classical methods as an mpint. The
-    // -sha512 method derives over SHA-512 (is512), so H and the session_id are 64 byteio.
+    // -sha512 method derives over SHA-512 (is512), so H and the session_id are 64 bytes.
     const proto_bool is512 = ssh_kex_is_sha512(SSH_CLIENT_CTX(protocore_ssh_client_span())->kex);
     const SshKdfInputs kdf_in = {.work = (cli_crypto_work(protocore_ssh_client_span()), SshClient.work),
                                  .K_be = k_be,

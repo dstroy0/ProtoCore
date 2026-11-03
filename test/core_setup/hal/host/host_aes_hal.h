@@ -8,7 +8,7 @@
  * A part carries an AES peripheral and esp_aes_hal.h drives it by register. A host has no such
  * window, so the accelerated arm of every AES-based module would be uncompilable and untestable off
  * target. This states the SAME function set against the software block, so PROTOCORE_HAS_HW_AES is a
- * real capability on a native build: the arm compiles, runs, and answers with the same byteio.
+ * real capability on a native build: the arm compiles, runs, and answers with the same bytes.
  *
  * What this is and is not. It is the peripheral's CONTRACT - key loading, one 16-byte ECB encrypt
  * under that key, and the exclusivity bracket around a run of blocks - answered in software. It is
@@ -57,7 +57,7 @@ void protocore_aes_hw_setkey(const uint8_t *key, unsigned key_bytes);
 /**
  * @brief Encrypt one block under the loaded key. Requires @ref protocore_aes_hw_setkey first.
  *
- * @param in   PROTOCORE_AES_HW_BLOCK_LEN input byteio.
+ * @param in   PROTOCORE_AES_HW_BLOCK_LEN input bytes.
  * @param out  PROTOCORE_AES_HW_BLOCK_LEN output bytes; may alias @p in.
  */
 void protocore_aes_hw_block(const uint8_t *in, uint8_t *out);

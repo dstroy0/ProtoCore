@@ -47,7 +47,7 @@ void setup()
     protocore_dns_server_add("printer.lan", 192, 168, 1, 50);
     protocore_dns_server_add("nas.lan", 192, 168, 1, 60);
 
-    if (protocore_dns_server_begin())
+    if (DnsServer.begin(protocore_dns_server_span()))
     {
         Serial.println("DNS server on UDP/53 (point a device's DNS here, then: nslookup printer.lan <this-ip>)");
     }

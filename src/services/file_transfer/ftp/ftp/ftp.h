@@ -61,7 +61,7 @@ typedef struct
 {
     char *buf;
     size_t cap;
-    const uint8_t *ip; ///< 4 byteio.
+    const uint8_t *ip; ///< 4 bytes.
     uint16_t port;
 } FtpBuildPortArgs;
 
@@ -89,7 +89,7 @@ typedef struct
 {
     const char *buf;
     size_t len;
-    uint8_t *ip; ///< 4 byteio.
+    uint8_t *ip; ///< 4 bytes.
     uint16_t *port;
 } FtpParsePasvArgs;
 

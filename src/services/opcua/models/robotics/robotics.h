@@ -182,7 +182,7 @@ void protocore_robotics_install(uint8_t *work, const RoboticsMotionDeviceSystem 
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the spat.
+ * @return the span.
  */
 uint8_t *protocore_robotics_span(void);
 

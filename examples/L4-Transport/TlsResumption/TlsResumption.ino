@@ -17,7 +17,7 @@
  *
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable it for the whole build, e.g.:
- *     build_flags = -DPROTOCORE_ENABLE_TLS=1 -DPROTOCORE_ENABLE_TLS_RESUMPTION=1
+ *     build_flags = -DPROTOCORE_ENABLE_TLS=1 -DPROTOCORE_ENABLE_TLS_RESUMPTION=1 -DPROTOCORE_ENABLE_TLS_RPK=1
  * (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  *
  * WARNING: the certificate and PRIVATE KEY below are a throwaway self-signed pair
@@ -26,6 +26,7 @@
 
 #define PROTOCORE_ENABLE_TLS 1
 #define PROTOCORE_ENABLE_TLS_RESUMPTION 1
+#define PROTOCORE_ENABLE_TLS_RPK 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

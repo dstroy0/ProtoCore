@@ -24,6 +24,8 @@
 #include "network_drivers/physical/physical/physical.h"
 #include "server/storage/partition_monitor/partition_monitor.h"
 
+static uint8_t partition_monitor_work[16]; // the borrow an entry takes; PartitionMonitor never reads it
+
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
@@ -44,7 +46,8 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_partition_monitor_begin("/partitions");
+    PartitionMonitorV.begin_args.path = "/partitions";
+    PartitionMonitor.begin(partition_monitor_work);
     begin_http(80, NULL);
 }
 

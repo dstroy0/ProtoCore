@@ -146,7 +146,7 @@ static void cbc_mac(CcmWork *w, const uint8_t *nonce, size_t nonce_len, const ui
     const size_t L = 15 - nonce_len;
     EMBED_CALL(memor.set, MemoriaCfg, .dst = w->X, .val = 0, .bytes = 16);
 
-    // B0: flags = 64*Adata + 8*((M-2)/2) + (L-1); then nonce; then Q = pt_len big-endian in L byteio.
+    // B0: flags = 64*Adata + 8*((M-2)/2) + (L-1); then nonce; then Q = pt_len big-endian in L bytes.
     EMBED_CALL(memor.set, MemoriaCfg, .dst = w->blk, .val = 0, .bytes = 16);
     w->blk[0] = (uint8_t)((aad_len > 0 ? 0x40 : 0x00) | (((PROTOCORE_AESCCM_TAG_LEN - 2) / 2) << 3) | (L - 1));
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->blk + 1, .src = nonce, .bytes = nonce_len);

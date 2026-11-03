@@ -30,6 +30,8 @@
 #include "network_drivers/transport/tcp/tcp.h"
 #include "services/fieldbus/ads/ads.h"
 
+static uint8_t ads_work[16]; // the borrow an entry takes; Ads never reads it
+
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
@@ -124,9 +126,21 @@ static void run_client(const char *host)
 
     // 1) ReadDeviceInfo.
     r = next_request();
-    n = exchange(cid, protocore_ads_build_read_device_info(c_req, sizeof(c_req), &r));
+    AdsV.build_read_device_info_args.buf = c_req;
+    AdsV.build_read_device_info_args.cap = sizeof(c_req);
+    AdsV.build_read_device_info_args.r = &r;
+    Ads.build_read_device_info(ads_work);
+    n = exchange(cid, AdsV.n);
     AdsDeviceInfo di;
-    if (n && protocore_ads_parse_ams_header(c_resp, n, &h) && protocore_ads_parse_read_device_info(h.data, h.data_len, &di) &&
+    AdsV.parse_ams_header_args.buf = c_resp;
+    AdsV.parse_ams_header_args.len = n;
+    AdsV.parse_ams_header_args.out = &h;
+    Ads.parse_ams_header(ads_work);
+    AdsV.parse_read_device_info_args.data = h.data;
+    AdsV.parse_read_device_info_args.data_len = h.data_len;
+    AdsV.parse_read_device_info_args.out = &di;
+    Ads.parse_read_device_info(ads_work);
+    if (n && AdsV.ok && AdsV.ok &&
         di.result == 0)
     {
         Serial.printf("[ads] device: %s v%u.%u build %u\n", di.device_name, di.version_major, di.version_minor,
@@ -139,9 +153,21 @@ static void run_client(const char *host)
 
     // 2) ReadState.
     r = next_request();
-    n = exchange(cid, protocore_ads_build_read_state(c_req, sizeof(c_req), &r));
+    AdsV.build_read_state_args.buf = c_req;
+    AdsV.build_read_state_args.cap = sizeof(c_req);
+    AdsV.build_read_state_args.r = &r;
+    Ads.build_read_state(ads_work);
+    n = exchange(cid, AdsV.n);
     AdsReadStateResult st;
-    if (n && protocore_ads_parse_ams_header(c_resp, n, &h) && protocore_ads_parse_read_state(h.data, h.data_len, &st) &&
+    AdsV.parse_ams_header_args.buf = c_resp;
+    AdsV.parse_ams_header_args.len = n;
+    AdsV.parse_ams_header_args.out = &h;
+    Ads.parse_ams_header(ads_work);
+    AdsV.parse_read_state_args.data = h.data;
+    AdsV.parse_read_state_args.data_len = h.data_len;
+    AdsV.parse_read_state_args.out = &st;
+    Ads.parse_read_state(ads_work);
+    if (n && AdsV.ok && AdsV.ok &&
         st.result == 0)
     {
         const char *name = st.protocore_ads_state == (uint16_t)AdsState::run      ? "RUN"
@@ -157,10 +183,26 @@ static void run_client(const char *host)
 
     // 3) ReadWrite: resolve the symbol name to a handle.
     r = next_request();
-    n = exchange(cid, protocore_ads_build_read_write(c_req, sizeof(c_req), &r, ADS_IGRP_SYM_HND_BY_NAME, 0, 4,
-                                              (const uint8_t *)SYMBOL, (uint32_t)strlen(SYMBOL)));
+    AdsV.build_read_write_args.buf = c_req;
+    AdsV.build_read_write_args.cap = sizeof(c_req);
+    AdsV.build_read_write_args.r = &r;
+    AdsV.build_read_write_args.index_group = ADS_IGRP_SYM_HND_BY_NAME;
+    AdsV.build_read_write_args.index_offset = 0;
+    AdsV.build_read_write_args.read_len = 4;
+    AdsV.build_read_write_args.write_data = (const uint8_t *)SYMBOL;
+    AdsV.build_read_write_args.write_len = (uint32_t)strlen(SYMBOL);
+    Ads.build_read_write(ads_work);
+    n = exchange(cid, AdsV.n);
     AdsReadResult rr;
-    if (!n || !protocore_ads_parse_ams_header(c_resp, n, &h) || !protocore_ads_parse_read(h.data, h.data_len, &rr) ||
+    AdsV.parse_ams_header_args.buf = c_resp;
+    AdsV.parse_ams_header_args.len = n;
+    AdsV.parse_ams_header_args.out = &h;
+    Ads.parse_ams_header(ads_work);
+    AdsV.parse_read_args.data = h.data;
+    AdsV.parse_read_args.data_len = h.data_len;
+    AdsV.parse_read_args.out = &rr;
+    Ads.parse_read(ads_work);
+    if (!n || !AdsV.ok || !AdsV.ok ||
         rr.result != 0 || rr.len < 4)
     {
         Serial.printf("[ads] handle for '%s' failed\n", SYMBOL);
@@ -172,8 +214,23 @@ static void run_client(const char *host)
 
     // 4) Read the symbol value (INT32) by handle.
     r = next_request();
-    n = exchange(cid, protocore_ads_build_read(c_req, sizeof(c_req), &r, ADS_IGRP_SYM_VAL_BY_HANDLE, handle, 4));
-    if (n && protocore_ads_parse_ams_header(c_resp, n, &h) && protocore_ads_parse_read(h.data, h.data_len, &rr) && rr.result == 0 &&
+    AdsV.build_read_args.buf = c_req;
+    AdsV.build_read_args.cap = sizeof(c_req);
+    AdsV.build_read_args.r = &r;
+    AdsV.build_read_args.index_group = ADS_IGRP_SYM_VAL_BY_HANDLE;
+    AdsV.build_read_args.index_offset = handle;
+    AdsV.build_read_args.read_len = 4;
+    Ads.build_read(ads_work);
+    n = exchange(cid, AdsV.n);
+    AdsV.parse_ams_header_args.buf = c_resp;
+    AdsV.parse_ams_header_args.len = n;
+    AdsV.parse_ams_header_args.out = &h;
+    Ads.parse_ams_header(ads_work);
+    AdsV.parse_read_args.data = h.data;
+    AdsV.parse_read_args.data_len = h.data_len;
+    AdsV.parse_read_args.out = &rr;
+    Ads.parse_read(ads_work);
+    if (n && AdsV.ok && AdsV.ok && rr.result == 0 &&
         rr.len >= 4)
     {
         int32_t val = (int32_t)((uint32_t)rr.data[0] | ((uint32_t)rr.data[1] << 8) | ((uint32_t)rr.data[2] << 16) |
@@ -188,7 +245,15 @@ static void run_client(const char *host)
     // 5) Release the handle (Write the 4-octet handle to index group 0xF006).
     r = next_request();
     uint8_t hb[4] = {(uint8_t)handle, (uint8_t)(handle >> 8), (uint8_t)(handle >> 16), (uint8_t)(handle >> 24)};
-    exchange(cid, protocore_ads_build_write(c_req, sizeof(c_req), &r, ADS_IGRP_SYM_RELEASE_HANDLE, 0, hb, 4));
+    AdsV.build_write_args.buf = c_req;
+    AdsV.build_write_args.cap = sizeof(c_req);
+    AdsV.build_write_args.r = &r;
+    AdsV.build_write_args.index_group = ADS_IGRP_SYM_RELEASE_HANDLE;
+    AdsV.build_write_args.index_offset = 0;
+    AdsV.build_write_args.data = hb;
+    AdsV.build_write_args.len = 4;
+    Ads.build_write(ads_work);
+    exchange(cid, AdsV.n);
 
     Tcp.client->close(cid);
     Serial.println("[ads] done");

@@ -85,7 +85,7 @@ typedef struct
  *
  * @c work is PROTOCORE_RNG_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. The seed is in those bytes rather than in this module, so a caller takes them once for
- * the life of the program and every draw runs out of the same spat. The caller releases it, and the pool wipes on
+ * the life of the program and every draw runs out of the same span. The caller releases it, and the pool wipes on
  * release; this module neither takes it, holds it, nor releases it, and the only bytes of it this module erases are the
  * ratchet's replacement copy, after every draw. The borrow IS the generator, so two workers are two
  * borrows and never collide.
@@ -130,7 +130,7 @@ static const RngNs Rng __attribute__((unused)) = {
  * borrow comes from. Taken once from the end of the secure pool, which no mark and no release walks,
  * so the seed and the ratchet last the life of the program.
  *
- * @return the spat.
+ * @return the span.
  */
 uint8_t *protocore_rng_span(void);
 

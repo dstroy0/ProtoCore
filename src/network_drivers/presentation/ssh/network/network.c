@@ -79,7 +79,7 @@ uint8_t *protocore_ssh_network_span(void)
 // Everything outbound goes through these two, so the pool a handle belongs to is decided in one
 // place instead of at each write site.
 
-/** @brief True while slot @p i's stream can still carry byteio. */
+/** @brief True while slot @p i's stream can still carry bytes. */
 static proto_bool stream_live(uint8_t i)
 {
     if (i >= MAX_SSH_CONNS || SSH_NETWORK_CTX(protocore_ssh_network_span())->conn_for_ssh[i] == 0xFF)

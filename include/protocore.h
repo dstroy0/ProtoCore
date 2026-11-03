@@ -413,7 +413,7 @@ typedef const char *(*TemplateVar)(const char *name);
  * @brief Per-request access-log callback (see on_request_log()).
  *
  * Invoked once per response with the request method/path, the HTTP status code,
- * and the response body length in byteio. The strings are valid only for the
+ * and the response body length in bytes. The strings are valid only for the
  * duration of the call. This is a thin hook - the library does no buffering or
  * formatting; route the data to Serial, syslog, etc. as you see fit.
  */
@@ -496,7 +496,7 @@ struct tcp_pcb; // forward decl (full type pulled in via the transport layer)
  * static / global storage (a per-connection instance if requests can overlap), or
  * generate the body from durable state.
  *
- * @param buf  destination for the next body byteio.
+ * @param buf  destination for the next body bytes.
  * @param cap  maximum bytes to write into @p buf on this call.
  * @param ctx  caller state pointer, passed through from send_chunked().
  * @return bytes written into @p buf (<= @p cap), or 0 to end the body.
@@ -1254,7 +1254,7 @@ void ws_send_text(uint8_t ws_id, const char *text);
  * @brief Send a binary frame to a WebSocket client.
  *
  * @param ws_id    Index into ws_pool[].
- * @param data     Payload byteio.
+ * @param data     Payload bytes.
  * @param len      Payload length in bytes; must be <= WS_FRAME_SIZE.
  */
 void ws_send_binary(uint8_t ws_id, const uint8_t *data, uint16_t len);
@@ -1397,7 +1397,7 @@ char *protocore_resp_extra_hdr(uint8_t slot);
 
 #if PROTOCORE_ENABLE_WEBSOCKET
 /** @brief Perform the RFC 6455 101 handshake and hand the slot to the WS frame parser. */
-proto_bool ws_do_upgrade(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, uint8_t route_id);
+proto_bool ws_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t route_id);
 
 /** @brief Reject an unsupported Sec-WebSocket-Version with a 426 (RFC 6455 4.2.1) and close. */
 void ws_send_version_required(uint8_t slot_id);
@@ -1405,7 +1405,7 @@ void ws_send_version_required(uint8_t slot_id);
 
 #if PROTOCORE_ENABLE_SSE
 /** @brief Send the SSE 200 headers and promote the slot to server-sent-events mode. */
-proto_bool protocore_sse_do_upgrade(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, uint8_t route_id);
+proto_bool protocore_sse_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t route_id);
 #endif
 
 PROTOCORE_END_DECLS

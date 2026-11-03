@@ -8,7 +8,7 @@
 // pairs are the load-bearing case: they pin the two-bit length prefix, the big-endian body, and the
 // masking of the prefix out of the first byte all at once, and every length class of Table 4 is
 // represented. The rest of the file walks Table 4's range column, which fixes exactly where the
-// encoder must step from 1 to 2 to 4 to 8 byteio.
+// encoder must step from 1 to 2 to 4 to 8 bytes.
 
 #include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
 #include <string.h>

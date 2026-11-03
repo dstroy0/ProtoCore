@@ -126,7 +126,7 @@ void test_encode_parse_round_trip(void)
         out.original_dcid[i] = (uint8_t)(0x10 + i);
     }
     out.has_initial_scid = PROTO_TRUE;
-    // sec 17.2: "In QUIC version 1, this value MUST NOT exceed 20 byteio."
+    // sec 17.2: "In QUIC version 1, this value MUST NOT exceed 20 bytes."
     out.initial_scid_len = QUIC_MAX_CID_LEN;
     for (uint8_t i = 0; i < QUIC_MAX_CID_LEN; i++)
     {

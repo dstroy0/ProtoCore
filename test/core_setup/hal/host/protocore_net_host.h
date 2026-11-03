@@ -15,7 +15,7 @@
 // Every mutable global below carries external linkage through a shared definition rather than
 // `static`. A `static` in a header is one object PER TRANSLATION UNIT, so the core wrote its own
 // copy of the send capture while the test read a different one and found it empty - the state is
-// only a seam if both sides reach the same byteio. PROTOCORE_HOST_SHARED lets every TU emit the
+// only a seam if both sides reach the same bytes. PROTOCORE_HOST_SHARED lets every TU emit the
 // same definition and the linker keep exactly one.
 //
 // test/ is exempt from the src/ style rules, so this reads as plain host C.
@@ -108,7 +108,7 @@ PROTOCORE_HOST_SHARED uint32_t protocore_bus_host_fail;
 /* Defined with the time base further down; the log stamps every transfer with it. */
 static inline uint32_t protocore_platform_micros(void);
 
-/** @brief Record one transfer and capture its write spat. 0 when a test asked it to fail. */
+/** @brief Record one transfer and capture its write span. 0 when a test asked it to fail. */
 static inline int protocore_bus_host_record(uint8_t kind, uint16_t target, const void *w, uint32_t wlen, uint32_t rlen)
 {
     if (protocore_bus_host_fail > 0)

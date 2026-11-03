@@ -33,7 +33,7 @@ static uint16_t g_len = 0;
 static bool northbound_publish(const protocore_gateway_msg *m, void *)
 {
     char topic[48];
-    protocore_gateway_topic(m, topic, sizeof(topic));
+    Gateway.topic(protocore_gateway_span(), m, topic, sizeof(topic));
     Serial.printf("PUBLISH %s  (%u bytes)\n", topic, m->len);
     return true;
 }
@@ -131,13 +131,13 @@ void setup()
     Serial2.begin(115200, SERIAL_8N1, PIN_RX, PIN_TX);
     delay(300);
 
-    protocore_gateway_reset();
+    Gateway.reset(protocore_gateway_span());
     protocore_gateway_port_config p = {};
     p.port_id = RADIO_PORT;
     p.kind = protocore_gateway_kind::PROTOCORE_GW_THREAD;
-    protocore_gateway_add_port(&p);
-    protocore_gateway_set_uplink_cb(northbound_publish, nullptr);
-    protocore_gateway_set_topic_prefix("thread");
+    Gateway.add_port(protocore_gateway_span(), &p);
+    Gateway.set_uplink_cb(protocore_gateway_span(), northbound_publish, nullptr);
+    Gateway.set_topic_prefix(protocore_gateway_span(), "thread");
 
     // Reset the NCP: spinel RESET command (header | CMD_RESET), then query identity.
     const uint8_t reset[2] = {protocore_spinel_header(0, 0), SPINEL_CMD_RESET};
@@ -182,7 +182,7 @@ void loop()
         {
             print_property(payload, plen);
             uint16_t tid = payload[0] & 0x0F;
-            protocore_gateway_uplink(RADIO_PORT, tid, payload, plen, 0);
+            Gateway.uplink(protocore_gateway_span(), RADIO_PORT, tid, payload, plen, 0);
         }
         drop_front((uint16_t)n);
     }

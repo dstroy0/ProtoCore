@@ -18,7 +18,7 @@ PROTOCORE_BEGIN_DECLS
  * Built over the @ref HmacSha256Ns entries, so which arm compresses the PRF is not visible here.
  *
  * K(i) = HMAC-SHA256(Ki, [i]_32be || fixed); the blocks are concatenated for i = 1, 2, ... and the
- * result truncated to @ref KdfCtrArgs::out_len byteio.
+ * result truncated to @ref KdfCtrArgs::out_len bytes.
  *
  * @c work is PROTOCORE_KDF_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes it,

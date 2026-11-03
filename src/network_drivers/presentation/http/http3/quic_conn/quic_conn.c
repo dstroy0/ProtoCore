@@ -253,7 +253,7 @@ static void quic_conn_open(uint8_t *work, QuicConnCtx *qc, const QuicTlsConfig *
         qc->closed = PROTO_TRUE; // no bytes to run out of; the connection answers nothing
         return;
     }
-    // The span carries the previous connection's stream and handshake byteio.
+    // The span carries the previous connection's stream and handshake bytes.
     EMBED_CALL(memor.set, MemoriaCfg, .dst = qc->b, .val = 0, .bytes = PROTOCORE_QUIC_CONN_BORROW);
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = qc->odcid, .src = odcid, .bytes = odcid_len);
     qc->odcid_len = odcid_len;

@@ -147,7 +147,7 @@ static int handle_index(SftpSession *s, const uint8_t *h, uint32_t hl)
 
 // --- helpers --------------------------------------------------------------------------------------
 // Take a wire path (length-prefixed, not NUL-terminated) into request slot @p slot as a C string. "" and "."
-// both name the mount root. Nothing is resolved here; the string that comes back is the client's own byteio.
+// both name the mount root. Nothing is resolved here; the string that comes back is the client's own bytes.
 static const char *req_path(uint8_t *work, int slot, const uint8_t *p, uint32_t plen)
 {
     if (p == NULL || plen >= PROTOCORE_FILESYSTEM_PATH_MAX)

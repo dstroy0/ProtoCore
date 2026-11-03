@@ -30,7 +30,7 @@
 PROTOCORE_BEGIN_DECLS
 
 #define PROTOCORE_H2_FRAME_HDR_CAP 16u
-/** @brief The widest frame a received frame provokes us to send: a header plus 8 opaque byteio. */
+/** @brief The widest frame a received frame provokes us to send: a header plus 8 opaque bytes. */
 #define PROTOCORE_H2_CTL_FRAME_MAX 17u
 /**
  * @brief This module's draw on the plaintext pool, declared here and asserted in h2_conn.c.

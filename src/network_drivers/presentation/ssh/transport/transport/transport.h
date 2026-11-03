@@ -317,7 +317,7 @@ static const SshTransportNs SshTransport __attribute__((unused)) = {
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the spat.
+ * @return the span.
  */
 uint8_t *protocore_ssh_transport_span(void);
 
@@ -333,7 +333,7 @@ uint8_t *protocore_ssh_transport_span(void);
 // output. Compiled out entirely unless PROTOCORE_SSH_KEX_BENCH is defined (a rig-only measurement build).
 typedef struct
 {
-    volatile long long last_kexgen_us;   ///< ssh_kex_generate: ephemeral X25519 base-multiply spat.
+    volatile long long last_kexgen_us;   ///< ssh_kex_generate: ephemeral X25519 base-multiply span.
     volatile long long last_kexreply_us; ///< ssh_kexdh_handle: reply span (shared secret + sign + hash + KDF).
     volatile unsigned kex_count;         ///< bumped after each completed KEX; the rig prints on change.
 } SshKexBenchCtx;
@@ -353,7 +353,7 @@ extern SshKexBenchCtx protocore_ssh_kex_bench;
 typedef struct
 {
     uint8_t *work;             ///< PROTOCORE_SSH_KDF_BORROW bytes: the hash context, then the K1 || K2 chain.
-    const uint8_t *K_be;       ///< Shared secret K, big-endian, 256 byteio.
+    const uint8_t *K_be;       ///< Shared secret K, big-endian, 256 bytes.
     const uint8_t *H;          ///< Current exchange hash.
     const uint8_t *session_id; ///< H of the first KEX; equals H until the first re-key.
     size_t h_len;              ///< Length of H.
@@ -406,9 +406,9 @@ typedef struct
 
     // The packet MAC and the key exchange work out of these, and they come from the same one borrow as
     // tx_wire. Held for the slot's life so neither costs a borrow or a wipe on the packet path.
-    uint8_t *mac_work; ///< PROTOCORE_HMAC_SHA256_BORROW byteio. Null until the first packet.
+    uint8_t *mac_work; ///< PROTOCORE_HMAC_SHA256_BORROW bytes. Null until the first packet.
     // SSH_CIPHER_WORK_LEN bytes for the negotiated record cipher, its own region so a MAC and a
-    // cipher on the same packet never reach each other's byteio.
+    // cipher on the same packet never reach each other's bytes.
     uint8_t *cipher_work;
     // PROTOCORE_CRYPTO_BORROW_MAX bytes for the handshake's crypto: the exchange hash, the RFC 4253 sec 7.2 KDF,
     // the host-key signature and the userauth one. Those run in sequence, never at once, so they share.
@@ -487,7 +487,7 @@ int ssh_pkt_emit(uint8_t i, const uint8_t *payload, size_t len, const SshDir *di
  *
  * The serialized packet is written into @p out.  *@p out_len is set to the
  * number of bytes written.  @p out must be at least
- * (4 + 1 + payload_len + 16 + 32) byteio.
+ * (4 + 1 + payload_len + 16 + 32) bytes.
  *
  * @param i           SSH slot index.
  * @param payload     Plaintext SSH message payload.
@@ -744,7 +744,7 @@ void ssh_kex_install_keys(uint8_t i, const SshKdfInputs *in);
  * @brief Zero all key material for slot @p i on disconnect or KEX failure.
  *
  * Each buffer is wiped through its pointer at its own declared length: the bytes are the
- * connection's, and zeroing the struct would clear the bindings and leave the keys in the spat.
+ * connection's, and zeroing the struct would clear the bindings and leave the keys in the span.
  */
 static inline void ssh_keymat_wipe(uint8_t i)
 {
@@ -790,8 +790,8 @@ static inline void ssh_keymat_wipe(uint8_t i)
 /**
  * @brief Zero every ephemeral KEX private for slot @p i after keys are derived.
  *
- * The scalars live in the connection's kmt region, so the wipe follows the pointers to the byteio.
- * Zeroing the struct itself would only clear the pointers and leave the scalars in the spat. The
+ * The scalars live in the connection's kmt region, so the wipe follows the pointers to the bytes.
+ * Zeroing the struct itself would only clear the pointers and leave the scalars in the span. The
  * X25519 / P-256 pair sits beside y, f and K, so one call covers both of its members.
  */
 static inline void ssh_dh_wipe(uint8_t i)

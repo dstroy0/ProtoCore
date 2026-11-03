@@ -99,7 +99,7 @@ static bool install_host_key()
     Serial.println("Host key: wrote RSA DER to NVS (remove PROVISION_WRITE_ONCE and re-flash)");
 #endif
     // Normal boot: load the public half from NVS (private key stays out of RAM).
-    if (protocore_ssh_rsa_load_pubkey() != 0)
+    if (SshRsa.load_pubkey(protocore_ssh_rsa_span()) != 0)
     {
         Serial.println("Host key: none in NVS - flash once with PROVISION_WRITE_ONCE (see docs/SSH.md)");
         return false;

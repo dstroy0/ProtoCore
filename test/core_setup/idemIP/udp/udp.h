@@ -5,7 +5,7 @@
  * @file udp.h
  * @brief The user datagram header, RFC 768.
  *
- * Field offsets and the pseudo-header the checksum covers, read out of the caller's byteio.
+ * Field offsets and the pseudo-header the checksum covers, read out of the caller's bytes.
  */
 
 #ifndef PROTOCORE_IDEMIP_UDP_H

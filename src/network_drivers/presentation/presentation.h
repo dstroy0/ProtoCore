@@ -209,7 +209,7 @@ static const HttpConnNs HttpConn __attribute__((unused)) = {
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the spat.
+ * @return the span.
  */
 uint8_t *protocore_http_conn_span(void);
 

@@ -99,7 +99,7 @@ void setup()
     praet.open(&a);
 
     // Forwarding rule: A -> B allowed (default-deny otherwise), no rate cap.
-    protocore_forward_reset();
+    Forward.reset(protocore_forward_span());
     protocore_forward_add_if(IF_B, protocore_if_kind::PROTOCORE_IF_WIFI_STA, if_b_send, nullptr);
     protocore_forward_add_rule(IF_A, IF_B, protocore_fwd_action::PROTOCORE_FWD_ALLOW, 0);
 

@@ -1,6 +1,6 @@
 # Range - HTTP Range / 206 Partial Content
 
-**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_RANGE` (with file serving)
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_RANGE`, `PROTOCORE_ENABLE_FILE_SERVING`
 
 ## What this example teaches
 
@@ -28,7 +28,7 @@ range math is easy to verify with `curl -r`. Both `bytes=0-9` (first ten) and
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_RANGE=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_RANGE=1 -DPROTOCORE_ENABLE_FILE_SERVING=1" \
   --lib="." examples/L7-Application/Range/Range.ino
 ```
 
@@ -49,6 +49,7 @@ explanatory comments:
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #define PROTOCORE_ENABLE_RANGE 1
+#define PROTOCORE_ENABLE_FILE_SERVING 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

@@ -37,7 +37,11 @@ void setup()
     // Radio up for capture only - promiscuous mode does not associate.
     Physical.wifi->init_radio(0);
 
-    if (!protocore_wifi_sniffer_begin(CHAN_FIRST, CHAN_LAST, DWELL_MS))
+    WifiSnifferV.begin_args.first_chan = CHAN_FIRST;
+    WifiSnifferV.begin_args.last_chan = CHAN_LAST;
+    WifiSnifferV.begin_args.dwell_ms = DWELL_MS;
+    WifiSniffer.begin(protocore_wifi_sniffer_span());
+    if (!WifiSnifferV.ok)
     {
         Serial.println("sniffer: failed to start promiscuous capture");
         return;
@@ -47,7 +51,7 @@ void setup()
 
 void loop()
 {
-    protocore_wifi_sniffer_tick(); // hops to the next channel when the dwell elapses
+    WifiSniffer.tick(protocore_wifi_sniffer_span()); // hops to the next channel when the dwell elapses
 
     static uint32_t last_report = 0;
     if (protocore_millis() - last_report < 5000)
@@ -56,9 +60,9 @@ void loop()
     }
     last_report = protocore_millis();
 
-    const WifiStats *st = protocore_wifi_sniffer_stats();
-    const WifiSurvey *sv = protocore_wifi_sniffer_survey();
-    const WifiScan *sc = protocore_wifi_sniffer_scan();
+    const WifiStats *st = WifiSniffer.stats(protocore_wifi_sniffer_span());
+    const WifiSurvey *sv = WifiSniffer.survey(protocore_wifi_sniffer_span());
+    const WifiScan *sc = WifiSniffer.scan(protocore_wifi_sniffer_span());
 
     Serial.printf("\n-- ch %u, sweep %lu -- frames %lu (mgmt %lu, ctrl %lu, data %lu, other %lu)\n", sc->channel,
                   (unsigned long)sc->sweeps, (unsigned long)st->total, (unsigned long)st->mgmt, (unsigned long)st->ctrl,

@@ -24,7 +24,7 @@
 
 PROTOCORE_BEGIN_DECLS
 
-/** @brief MD digest length in byteio. MD4 and MD5 are both 128-bit. */
+/** @brief MD digest length in bytes. MD4 and MD5 are both 128-bit. */
 #define PROTOCORE_MD_DIGEST_LEN 16
 
 // PROTOCORE_MD_BORROW - the bytes a digest runs out of - is stated in protocore_config.h, which sums

@@ -40,7 +40,7 @@ PROTOCORE_BEGIN_DECLS
 // it into its arena. Its size and its offset are each a static_assert, so a feature
 // combination that does not fit fails to compile rather than overrunning at run time.
 
-/** @brief ASH markers / reset control byteio. */
+/** @brief ASH markers / reset control bytes. */
 #define ASH_FLAG 0x7E   ///< frame delimiter
 #define ASH_ESCAPE 0x7D ///< byte-stuffing escape
 #define ASH_RST 0xC0    ///< reset control byte

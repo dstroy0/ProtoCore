@@ -1,6 +1,6 @@
 # Stats - a runtime statistics endpoint
 
-**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_STATS`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_STATS`, `PROTOCORE_ENABLE_WEB_ASSETS`
 
 ## What this example teaches
 
@@ -23,7 +23,7 @@ poll frequently.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_STATS=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_STATS=1 -DPROTOCORE_ENABLE_WEB_ASSETS=1" \
   --lib="." examples/L7-Application/Stats/Stats.ino
 ```
 
@@ -41,6 +41,7 @@ explanatory comments:
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #define PROTOCORE_ENABLE_STATS 1
+#define PROTOCORE_ENABLE_WEB_ASSETS 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

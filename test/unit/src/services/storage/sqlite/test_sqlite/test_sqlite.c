@@ -212,7 +212,7 @@ void test_fileformat_serial_type_content_sizes(void)
     TEST_ASSERT_EQUAL_UINT64(0ull, protocore_sqlite_serial_type_size(10)); // reserved
     TEST_ASSERT_EQUAL_UINT64(0ull, protocore_sqlite_serial_type_size(11)); // reserved
 
-    // N >= 12 and even: a BLOB of (N-12)/2 byteio. N >= 13 and odd: TEXT of (N-13)/2.
+    // N >= 12 and even: a BLOB of (N-12)/2 bytes. N >= 13 and odd: TEXT of (N-13)/2.
     TEST_ASSERT_EQUAL_UINT64(0ull, protocore_sqlite_serial_type_size(12));
     TEST_ASSERT_EQUAL_UINT64(0ull, protocore_sqlite_serial_type_size(13));
     TEST_ASSERT_EQUAL_UINT64(1ull, protocore_sqlite_serial_type_size(14));
@@ -352,7 +352,7 @@ void test_fileformat_schema_row(void)
 }
 
 // sec 2.1: serial types 1-6 are big-endian twos-complement integers of 1/2/3/4/6/8 bytes, and 8 and
-// 9 are the constants 0 and 1 carrying no content byteio.
+// 9 are the constants 0 and 1 carrying no content bytes.
 void test_fileformat_column_int_is_signextended_big_endian(void)
 {
     static const uint8_t NEG1[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -586,7 +586,7 @@ void test_table_cursor_walks_the_schema_table_on_page_one(void)
 // --- the bounded writer -------------------------------------------------------------------------
 
 // sec 2.1: a record is a header (its own size as a varint, then one serial-type varint per column)
-// followed by the value byteio. Encoding then reading back must round-trip, and each column must
+// followed by the value bytes. Encoding then reading back must round-trip, and each column must
 // carry the serial type the chart assigns its value.
 void test_encode_record_round_trip(void)
 {
@@ -808,7 +808,7 @@ void test_record_cursor_refuses_a_malformed_record(void)
     TEST_ASSERT_FALSE(protocore_sqlite_record_begin(&c, EMPTY, sizeof(EMPTY)));
     TEST_ASSERT_FALSE(protocore_sqlite_record_begin(&c, HDR_TOO_BIG, 0));
 
-    // Header size 2 (itself plus one serial type), a TEXT column of 5 bytes, but no value byteio.
+    // Header size 2 (itself plus one serial type), a TEXT column of 5 bytes, but no value bytes.
     static const uint8_t SHORT_VALUE[2] = {0x02, 0x17};
     TEST_ASSERT_TRUE(protocore_sqlite_record_begin(&c, SHORT_VALUE, sizeof(SHORT_VALUE)));
     uint64_t st = 0;

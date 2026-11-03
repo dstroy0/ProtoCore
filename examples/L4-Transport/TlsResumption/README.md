@@ -1,6 +1,6 @@
 # TlsResumption - cheap repeat handshakes via session tickets
 
-**Layer:** L4 Transport · **Build flags:** `PROTOCORE_ENABLE_TLS`, `PROTOCORE_ENABLE_TLS_RESUMPTION`
+**Layer:** L4 Transport · **Build flags:** `PROTOCORE_ENABLE_TLS`, `PROTOCORE_ENABLE_TLS_RESUMPTION`, `PROTOCORE_ENABLE_TLS_RPK`
 
 ## What this example teaches
 
@@ -38,7 +38,7 @@ provide the session-ticket support; pass both flags to the library build.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_TLS=1 -DPROTOCORE_ENABLE_TLS_RESUMPTION=1 -DMAX_CONNS=4 -DPROTOCORE_TLS_ARENA_SIZE=32768" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_TLS=1 -DPROTOCORE_ENABLE_TLS_RESUMPTION=1 -DPROTOCORE_ENABLE_TLS_RPK=1 -DMAX_CONNS=4 -DPROTOCORE_TLS_ARENA_SIZE=32768" \
   --lib="." examples/L4-Transport/TlsResumption/TlsResumption.ino
 ```
 
@@ -53,6 +53,7 @@ cert/key are elided here (see the `.ino`); the C++ is verbatim with comments.
 
 #define PROTOCORE_ENABLE_TLS 1
 #define PROTOCORE_ENABLE_TLS_RESUMPTION 1
+#define PROTOCORE_ENABLE_TLS_RPK 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

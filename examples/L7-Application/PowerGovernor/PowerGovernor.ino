@@ -75,12 +75,12 @@ void setup()
     }
 
     // A build with no BLE is holding the Bluetooth domain for nothing.
-    if (protocore_power_gate_bt())
+    if (Power.gate_bt(protocore_power_mgmt_span()))
     {
         Serial.println("released the Bluetooth power domain");
     }
 
-    Serial.printf("boot clock: %u MHz, die %d C\n", (unsigned)protocore_power_cpu_mhz(), (int)protocore_power_temp_c());
+    Serial.printf("boot clock: %u MHz, die %d C\n", (unsigned)Power.cpu_mhz(protocore_power_mgmt_span()), (int)protocore_power_temp_c());
 
     PhysicalV.wifi.ssid = WIFI_SSID;
     PhysicalV.wifi.password = WIFI_PASS;

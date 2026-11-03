@@ -80,7 +80,7 @@ void test_chatter_below_the_debounce_is_swallowed(void)
 }
 
 // The module drops OUT between retriggers. Presence must not follow it down, so a gap shorter than
-// the hold stays one continuous occupied spat.
+// the hold stays one continuous occupied span.
 void test_hold_bridges_the_retrigger_gap(void)
 {
     Rcwl0516.presence_init(protocore_rcwl0516_span(), &g_core, DEBOUNCE, HOLD, 0);

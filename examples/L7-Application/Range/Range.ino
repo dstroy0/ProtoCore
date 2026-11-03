@@ -23,12 +23,13 @@
  * NOTE: optional features are gated by a compile flag the *library* sources must
  * also see. The `#define` below documents intent, but for PlatformIO enable it
  * for the whole build, e.g. in platformio.ini:
- *     build_flags = -DPROTOCORE_ENABLE_RANGE=1
+ *     build_flags = -DPROTOCORE_ENABLE_RANGE=1 -DPROTOCORE_ENABLE_FILE_SERVING=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.) A define in the
  * sketch alone does not reach the separately-compiled library .cpp.
  */
 
 #define PROTOCORE_ENABLE_RANGE 1
+#define PROTOCORE_ENABLE_FILE_SERVING 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

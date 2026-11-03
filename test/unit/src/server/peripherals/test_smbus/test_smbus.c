@@ -483,7 +483,7 @@ void test_smbus31_the_pec_spans_the_address_octets(void)
 }
 
 // And the same in the other direction: the slave supplies a PEC over the whole message and the
-// driver verifies it, so a reading only comes back when both computed the same spat.
+// driver verifies it, so a reading only comes back when both computed the same span.
 void test_smbus31_a_read_verifies_the_pec_the_slave_supplied(void)
 {
     use_pec(PROTO_TRUE);

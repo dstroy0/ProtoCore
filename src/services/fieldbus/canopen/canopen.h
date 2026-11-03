@@ -186,7 +186,7 @@ typedef struct
     uint8_t node_id;
     uint16_t error_code;
     uint8_t error_reg;
-    const uint8_t *msef; ///< 5 byteio.
+    const uint8_t *msef; ///< 5 bytes.
 } CanopenBuildEmcyArgs;
 
 /** @brief What build_tpdo takes: out, pdo_num, node_id, data, len. */
@@ -254,7 +254,7 @@ typedef struct
     uint8_t *node_id;
     uint16_t *error_code;
     uint8_t *error_reg;
-    uint8_t *msef; ///< 5 byteio.
+    uint8_t *msef; ///< 5 bytes.
 } CanopenParseEmcyArgs;
 
 /** @brief What parse_heartbeat takes: f, node_id, state. */

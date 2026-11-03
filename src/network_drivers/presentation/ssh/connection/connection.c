@@ -1962,7 +1962,7 @@ static int on_forward_open(uint8_t ssh_slot, uint32_t channel, const char *host,
     return 0;
 }
 
-// Inbound channel byteio. direct-tcpip (ssh -L): client -> outbound target socket.
+// Inbound channel bytes. direct-tcpip (ssh -L): client -> outbound target socket.
 // forwarded-tcpip (ssh -R): client -> the accepted socket we bridged back to it.
 static void on_forward_data(uint8_t ssh_slot, uint32_t channel, const uint8_t *data, size_t len)
 {

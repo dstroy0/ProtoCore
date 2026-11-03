@@ -239,7 +239,7 @@ static int do_codes(BitIn *b, OutCtx *o, const Huffman *lc, const Huffman *dc)
     }
 }
 
-// Uncompressed (stored) block: align to the next byte, read LEN/NLEN, copy LEN literal byteio.
+// Uncompressed (stored) block: align to the next byte, read LEN/NLEN, copy LEN literal bytes.
 static int do_stored(BitIn *b, OutCtx *o)
 {
     if (b->bitpos & 7u)

@@ -126,7 +126,7 @@ int protocore_comp_c2s(uint8_t *work, uint8_t i, const uint8_t *src, size_t src_
  * pool, which no mark and no release walks, because a zlib@openssh.com stream takes its window over
  * from one packet to the next.
  *
- * @return the spat.
+ * @return the span.
  */
 uint8_t *protocore_ssh_comp_span(void);
 

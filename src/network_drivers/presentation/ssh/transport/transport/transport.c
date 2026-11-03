@@ -36,7 +36,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.h"
 #include "network_drivers/presentation/ssh/transport/ssh_rsa/ssh_rsa.h" // ssh_rsa_encode_pubkey/sign, ssh_host_pubkey, SSH_RSA_*
 #include "network_drivers/presentation/ssh/transport/transport/transport.h"
-#include "octetus_introitus_exitus/octetus_introitus_exitus.h" // byteio.* writers / protocore_ssh_read_string_at() - the byte verbs this file frames with
+#include "octetus_introitus_exitus/octetus_introitus_exitus.h" // bytes.* writers / protocore_ssh_read_string_at() - the byte verbs this file frames with
 #include "server/clock/clock.h"        // protocore_millis() (re-key timer)
 #include "server/core/worker/worker.h" // temporary_buf_alloc - host-key staging off the worker stack
 #include "verba_scribo/verba_scribo.h" // verba_scribo frame builder
@@ -200,7 +200,7 @@ proto_bool ssh_kex_prefer_rsa(void)
 
 void protocore_ssh_hostkey_ed25519_set(const uint8_t seed[32])
 {
-    // The public key derives through SHA-512, out of slot 0's byteio.
+    // The public key derives through SHA-512, out of slot 0's bytes.
     if (!ssh_pkt_slot_storage(&ssh_pkt[0]))
     {
         return;
@@ -1132,7 +1132,7 @@ static void hash_u32(uint8_t *work, uint32_t v)
     hash_bytes(work, b, 4);
 }
 
-// Hash an SSH string: uint32 length + raw byteio.
+// Hash an SSH string: uint32 length + raw bytes.
 static void hash_string(uint8_t *work, const uint8_t *data, size_t len)
 {
     hash_u32(work, (uint32_t)len);
@@ -2274,8 +2274,8 @@ proto_bool ssh_pkt_slot_storage(SshPacketState *s)
 }
 
 // Compute the MAC over 4-byte seq_no || buf using the HMAC named by mac_mode, working out of the
-// slot's own byteio. For E&M the buf is the plaintext packet; for ETM it is the length field ||
-// ciphertext. Writes ssh_mac_len() byteio.
+// slot's own bytes. For E&M the buf is the plaintext packet; for ETM it is the length field ||
+// ciphertext. Writes ssh_mac_len() bytes.
 static void compute_mac_mode(uint8_t mac_mode, uint8_t *work, const uint8_t *mac_key, uint32_t seq_no,
                              const uint8_t *buf, size_t buf_len, uint8_t *mac_out)
 {
@@ -3406,7 +3406,7 @@ static inline void hash_K(uint8_t *work, const uint8_t K_be[256], proto_bool k_i
 }
 
 // The caller's region, split by offset the way the slot's own borrow is: the exchange hash works out
-// of the front, the K1 || K2 chain accumulates behind it. A caller hands in PROTOCORE_SSH_KDF_BORROW byteio.
+// of the front, the K1 || K2 chain accumulates behind it. A caller hands in PROTOCORE_SSH_KDF_BORROW bytes.
 #define SSH_KDF_OFF_HASH 0u
 #define SSH_KDF_OFF_ACC (SSH_KDF_OFF_HASH + PROTOCORE_SSH_KEXHASH_BORROW)
 static_assert(SSH_KDF_OFF_ACC + SSH_KDF_MAX <= PROTOCORE_SSH_KDF_BORROW,
@@ -3502,7 +3502,7 @@ static void install_direction(SshKeyMat *km, const SshKdfInputs *in, proto_bool 
     if (cipher_alg == SSH_CIPHER_AES256GCM)
     {
         // RFC 5647: this mode keeps only the schedule, so the key lands in aes_key - which GCM does not
-        // otherwise use - becomes the keyed context, and is wiped. The nonce is the low 12 IV byteio.
+        // otherwise use - becomes the keyed context, and is wiped. The nonce is the low 12 IV bytes.
         ssh_kdf_derive(in, key_label, aes_key, PROTOCORE_AES256CTR_KEY_LEN);
         AesGcmV.key_args.key = aes_key;
         AesGcm.key_init(gcm_ctx);

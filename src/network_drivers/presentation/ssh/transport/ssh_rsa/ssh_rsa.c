@@ -294,7 +294,7 @@ static uint8_t *put_u32(uint8_t *p, uint32_t v)
     return p + 4;
 }
 
-// Write an SSH mpint (4-byte length + optional 0x00 prefix + data). data is big-endian, data_len byteio.
+// Write an SSH mpint (4-byte length + optional 0x00 prefix + data). data is big-endian, data_len bytes.
 static uint8_t *put_mpint(uint8_t *p, const uint8_t *data, size_t data_len)
 {
     size_t off = 0;

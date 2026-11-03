@@ -163,7 +163,7 @@ size_t protocore_focas_build_open(uint8_t *buf, size_t cap);
 /// Close the session (empty payload). Send last; expect a 0x0202 response frame.
 size_t protocore_focas_build_close(uint8_t *buf, size_t cap);
 
-/// Generic command: selector + five i32 arguments + optional trailing `extra` byteio.
+/// Generic command: selector + five i32 arguments + optional trailing `extra` bytes.
 size_t protocore_focas_build_request(uint8_t *buf, size_t cap, FocasCmd cmd, int32_t v1, int32_t v2, int32_t v3,
                                      int32_t v4, int32_t v5, const uint8_t *extra, size_t extra_len);
 

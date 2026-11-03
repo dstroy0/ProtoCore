@@ -71,7 +71,7 @@ void setup()
     mt.message_text = ""; // no active message
     mt.message_severity = 0;
 
-    protocore_umati_install(&mt); // bind + register the OPC UA Browse/Read resolvers
+    Umati.install(protocore_umati_span(), &mt); // bind + register the OPC UA Browse/Read resolvers
     on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "umati MachineTool on :4840"); });
     listen(4840, PROTO_OPCUA); // OPC UA / umati endpoint - before begin()

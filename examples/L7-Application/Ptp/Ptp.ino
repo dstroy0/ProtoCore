@@ -32,6 +32,8 @@
 #include "server/clock/clock.h"
 #include "network_drivers/application/ptp/ptp.h"
 
+static uint8_t ptp_work[16]; // the borrow an entry takes; Ptp never reads it
+
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
@@ -111,22 +113,41 @@ static void master_tick()
     memcpy(a.gm_identity, my_clock_id, 8);
     a.steps_removed = 0;
     a.time_source = 0x20; // GPS
-    protocore_ptp_ts_from_ns(master_time_ns(), &a.origin);
-    size_t n = protocore_ptp_build_announce(buf, sizeof(buf), &h, &a);
+    PtpV.ts_from_ns_args.ns = master_time_ns();
+    PtpV.ts_from_ns_args.ts = &a.origin;
+    Ptp.ts_from_ns(ptp_work);
+    PtpV.build_announce_args.buf = buf;
+    PtpV.build_announce_args.cap = sizeof(buf);
+    PtpV.build_announce_args.h = &h;
+    PtpV.build_announce_args.a = &a;
+    Ptp.build_announce(ptp_work);
+    size_t n = PtpV.n;
     Udp.listener->sendto(PROTOCORE_PTP_GENERAL_PORT, &g_group, PROTOCORE_PTP_GENERAL_PORT, buf, n);
 
     // Sync (two-step: the precise time follows in Follow_Up).
     h.flags = 0x0200; // twoStepFlag
     protocore_ptp_timestamp zero = {0, 0};
-    n = protocore_ptp_build_sync(buf, sizeof(buf), &h, &zero);
+    PtpV.build_sync_args.buf = buf;
+    PtpV.build_sync_args.cap = sizeof(buf);
+    PtpV.build_sync_args.h = &h;
+    PtpV.build_sync_args.origin = &zero;
+    Ptp.build_sync(ptp_work);
+    n = PtpV.n;
     int64_t t1 = master_time_ns(); // precise egress instant
     Udp.listener->sendto(PROTOCORE_PTP_EVENT_PORT, &g_group, PROTOCORE_PTP_EVENT_PORT, buf, n);
 
     // Follow_Up carries t1.
     h.flags = 0;
     protocore_ptp_timestamp ts1;
-    protocore_ptp_ts_from_ns(t1, &ts1);
-    n = protocore_ptp_build_follow_up(buf, sizeof(buf), &h, &ts1);
+    PtpV.ts_from_ns_args.ns = t1;
+    PtpV.ts_from_ns_args.ts = &ts1;
+    Ptp.ts_from_ns(ptp_work);
+    PtpV.build_follow_up_args.buf = buf;
+    PtpV.build_follow_up_args.cap = sizeof(buf);
+    PtpV.build_follow_up_args.h = &h;
+    PtpV.build_follow_up_args.precise = &ts1;
+    Ptp.build_follow_up(ptp_work);
+    n = PtpV.n;
     Udp.listener->sendto(PROTOCORE_PTP_GENERAL_PORT, &g_group, PROTOCORE_PTP_GENERAL_PORT, buf, n);
 
     m_seq++;
@@ -142,9 +163,18 @@ static void master_on_delay_req(const protocore_ptp_header *req)
     h.port_number = MY_PORT;
     h.sequence_id = req->sequence_id; // echo the requester's sequenceId
     protocore_ptp_timestamp t4ts;
-    protocore_ptp_ts_from_ns(t4, &t4ts);
+    PtpV.ts_from_ns_args.ns = t4;
+    PtpV.ts_from_ns_args.ts = &t4ts;
+    Ptp.ts_from_ns(ptp_work);
     uint8_t buf[64];
-    size_t n = protocore_ptp_build_delay_resp(buf, sizeof(buf), &h, &t4ts, req->clock_identity, req->port_number);
+    PtpV.build_delay_resp_args.buf = buf;
+    PtpV.build_delay_resp_args.cap = sizeof(buf);
+    PtpV.build_delay_resp_args.h = &h;
+    PtpV.build_delay_resp_args.recv = &t4ts;
+    PtpV.build_delay_resp_args.req_clock_id = req->clock_identity;
+    PtpV.build_delay_resp_args.req_port = req->port_number;
+    Ptp.build_delay_resp(ptp_work);
+    size_t n = PtpV.n;
     Udp.listener->sendto(PROTOCORE_PTP_GENERAL_PORT, &g_group, PROTOCORE_PTP_GENERAL_PORT, buf, n);
 }
 
@@ -153,7 +183,11 @@ static void on_event(const uint8_t *data, size_t len, const struct protocore_udp
     (void)peer;
     (void)ctx;
     protocore_ptp_header h;
-    if (protocore_ptp_parse_header(data, len, &h) && h.message_type == PROTOCORE_PTP_DELAY_REQ)
+    PtpV.parse_header_args.s = data;
+    PtpV.parse_header_args.len = len;
+    PtpV.parse_header_args.h = &h;
+    Ptp.parse_header(ptp_work);
+    if (PtpV.ok && h.message_type == PROTOCORE_PTP_DELAY_REQ)
     {
         master_on_delay_req(&h);
     }
@@ -179,7 +213,12 @@ static void send_delay_req()
     h.log_interval = 0x7F;
     protocore_ptp_timestamp zero = {0, 0};
     uint8_t buf[PROTOCORE_PTP_HEADER_LEN + PROTOCORE_PTP_TS_LEN];
-    size_t n = protocore_ptp_build_delay_req(buf, sizeof(buf), &h, &zero);
+    PtpV.build_delay_req_args.buf = buf;
+    PtpV.build_delay_req_args.cap = sizeof(buf);
+    PtpV.build_delay_req_args.h = &h;
+    PtpV.build_delay_req_args.origin = &zero;
+    Ptp.build_delay_req(ptp_work);
+    size_t n = PtpV.n;
     t3 = now_ns();
     Udp.listener->sendto(PROTOCORE_PTP_EVENT_PORT, &g_group, PROTOCORE_PTP_EVENT_PORT, buf, n);
 }
@@ -189,7 +228,11 @@ static void on_event(const uint8_t *data, size_t len, const struct protocore_udp
     (void)peer;
     (void)ctx;
     protocore_ptp_header h;
-    if (!protocore_ptp_parse_header(data, len, &h) || h.message_type != PROTOCORE_PTP_SYNC)
+    PtpV.parse_header_args.s = data;
+    PtpV.parse_header_args.len = len;
+    PtpV.parse_header_args.h = &h;
+    Ptp.parse_header(ptp_work);
+    if (!PtpV.ok || h.message_type != PROTOCORE_PTP_SYNC)
     {
         return;
     }
@@ -202,9 +245,16 @@ static void on_event(const uint8_t *data, size_t len, const struct protocore_udp
     else
     {
         protocore_ptp_timestamp ts;
-        if (protocore_ptp_parse_timestamp_msg(data, len, &h, &ts))
+        PtpV.parse_timestamp_msg_args.s = data;
+        PtpV.parse_timestamp_msg_args.len = len;
+        PtpV.parse_timestamp_msg_args.h = &h;
+        PtpV.parse_timestamp_msg_args.ts = &ts;
+        Ptp.parse_timestamp_msg(ptp_work);
+        if (PtpV.ok)
         {
-            t1 = protocore_ptp_ts_to_ns(&ts);
+            PtpV.ts_to_ns_args.ts = &ts;
+            Ptp.ts_to_ns(ptp_work);
+            t1 = PtpV.value;
         }
         awaiting_t1 = false;
         send_delay_req();
@@ -216,16 +266,27 @@ static void on_general(const uint8_t *data, size_t len, const struct protocore_u
     (void)peer;
     (void)ctx;
     protocore_ptp_header h;
-    if (!protocore_ptp_parse_header(data, len, &h))
+    PtpV.parse_header_args.s = data;
+    PtpV.parse_header_args.len = len;
+    PtpV.parse_header_args.h = &h;
+    Ptp.parse_header(ptp_work);
+    if (!PtpV.ok)
     {
         return;
     }
     if (h.message_type == PROTOCORE_PTP_FOLLOW_UP && awaiting_t1 && h.sequence_id == sync_seq)
     {
         protocore_ptp_timestamp ts;
-        if (protocore_ptp_parse_timestamp_msg(data, len, &h, &ts))
+        PtpV.parse_timestamp_msg_args.s = data;
+        PtpV.parse_timestamp_msg_args.len = len;
+        PtpV.parse_timestamp_msg_args.h = &h;
+        PtpV.parse_timestamp_msg_args.ts = &ts;
+        Ptp.parse_timestamp_msg(ptp_work);
+        if (PtpV.ok)
         {
-            t1 = protocore_ptp_ts_to_ns(&ts);
+            PtpV.ts_to_ns_args.ts = &ts;
+            Ptp.ts_to_ns(ptp_work);
+            t1 = PtpV.value;
             awaiting_t1 = false;
             send_delay_req();
         }
@@ -233,12 +294,24 @@ static void on_general(const uint8_t *data, size_t len, const struct protocore_u
     else if (h.message_type == PROTOCORE_PTP_DELAY_RESP)
     {
         protocore_ptp_delay_resp r;
-        if (protocore_ptp_parse_delay_resp(data, len, &h, &r) && h.sequence_id == dreq_seq && r.req_port == MY_PORT &&
+        PtpV.parse_delay_resp_args.s = data;
+        PtpV.parse_delay_resp_args.len = len;
+        PtpV.parse_delay_resp_args.h = &h;
+        PtpV.parse_delay_resp_args.out = &r;
+        Ptp.parse_delay_resp(ptp_work);
+        if (PtpV.ok && h.sequence_id == dreq_seq && r.req_port == MY_PORT &&
             memcmp(r.req_clock_id, my_clock_id, 8) == 0)
         {
-            t4 = protocore_ptp_ts_to_ns(&r.receive);
+            PtpV.ts_to_ns_args.ts = &r.receive;
+            Ptp.ts_to_ns(ptp_work);
+            t4 = PtpV.value;
             protocore_ptp_sync s;
-            protocore_ptp_compute(t1, t2, t3, t4, &s);
+            PtpV.compute_args.t1 = t1;
+            PtpV.compute_args.t2 = t2;
+            PtpV.compute_args.t3 = t3;
+            PtpV.compute_args.t4 = t4;
+            PtpV.compute_args.out = &s;
+            Ptp.compute(ptp_work);
             char a[24], b[24];
             Serial.printf("PTP seq=%u  offset=%s ns  path_delay=%s ns\n", h.sequence_id, i64(s.offset_ns, a),
                           i64(s.delay_ns, b));
@@ -247,7 +320,12 @@ static void on_general(const uint8_t *data, size_t len, const struct protocore_u
     else if (h.message_type == PROTOCORE_PTP_ANNOUNCE)
     {
         protocore_ptp_announce an;
-        if (protocore_ptp_parse_announce(data, len, &h, &an))
+        PtpV.parse_announce_args.s = data;
+        PtpV.parse_announce_args.len = len;
+        PtpV.parse_announce_args.h = &h;
+        PtpV.parse_announce_args.out = &an;
+        Ptp.parse_announce(ptp_work);
+        if (PtpV.ok)
         {
             Serial.printf("PTP master: clockClass=%u priority1=%u stepsRemoved=%u utcOffset=%d\n", an.gm_clock_class,
                           an.gm_priority1, an.steps_removed, an.utc_offset);

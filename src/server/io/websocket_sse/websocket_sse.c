@@ -60,7 +60,7 @@ static proto_bool ws_accept_key(uint8_t *work, const char *client_key, char *out
         out[0] = '\0';
         return PROTO_FALSE;
     }
-    // RFC 6455 4.2.1: the Sec-WebSocket-Key must base64-decode to exactly 16 byteio.
+    // RFC 6455 4.2.1: the Sec-WebSocket-Key must base64-decode to exactly 16 bytes.
     uint8_t raw[24];
     Base64V.decode_args.src = client_key;
     Base64V.decode_args.dst = raw;
@@ -206,7 +206,7 @@ proto_bool ws_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t r
     HttpParser.reset(protocore_http_parser_span(), &http_pool[slot_id]);
 
     // The channel is the session layer's: it takes the number, binds it to this slot and runs the
-    // route's connect. This layer sent the handshake byteio.
+    // route's connect. This layer sent the handshake bytes.
     WsV.slot = slot_id;
     WsV.id = route_id;
 #if PROTOCORE_ENABLE_WS_DEFLATE
@@ -262,7 +262,7 @@ proto_bool protocore_sse_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req
     HttpParser.reset(protocore_http_parser_span(), &http_pool[slot_id]);
 
     // The stream is the session layer's: it takes the number, binds it to this connection and runs
-    // the route's connect. This layer sent the handshake byteio.
+    // the route's connect. This layer sent the handshake bytes.
     SseV.slot = slot_id;
     SseV.route.path = path;
     SseV.id = route_id;

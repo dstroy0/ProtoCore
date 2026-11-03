@@ -45179,9 +45179,9 @@ A thorough directory of all **5560 test cases** across **347 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_encode_parse_round_trip</b> &mdash; <i>sec 17.2: "In QUIC version 1, this value MUST NOT exceed 20 byteio."</i></summary>
+    <summary><b>test_encode_parse_round_trip</b> &mdash; <i>sec 17.2: "In QUIC version 1, this value MUST NOT exceed 20 bytes."</i></summary>
 
-    * **Objective**: sec 17.2: "In QUIC version 1, this value MUST NOT exceed 20 byteio."
+    * **Objective**: sec 17.2: "In QUIC version 1, this value MUST NOT exceed 20 bytes."
     * **Assertions**:
       * <code>Assert true (n &gt; 0)</code>
       * <code>Assert true (quic_tp_ok)</code>
@@ -54790,9 +54790,9 @@ A thorough directory of all **5560 test cases** across **347 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_fileformat_serial_type_content_sizes</b> &mdash; <i>N >= 12 and even: a BLOB of (N-12)/2 byteio. N >= 13 and odd: TEXT of (N-13)/2.</i></summary>
+    <summary><b>test_fileformat_serial_type_content_sizes</b> &mdash; <i>N >= 12 and even: a BLOB of (N-12)/2 bytes. N >= 13 and odd: TEXT of (N-13)/2.</i></summary>
 
-    * **Objective**: N >= 12 and even: a BLOB of (N-12)/2 byteio. N >= 13 and odd: TEXT of (N-13)/2.
+    * **Objective**: N >= 12 and even: a BLOB of (N-12)/2 bytes. N >= 13 and odd: TEXT of (N-13)/2.
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_UINT64(0ull, protocore_sqlite_serial_type_size(0));  // NULL</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(1ull, protocore_sqlite_serial_type_size(1));  // 8-bit int</code>
@@ -55062,9 +55062,9 @@ A thorough directory of all **5560 test cases** across **347 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_record_cursor_refuses_a_malformed_record</b> &mdash; <i>Header size 2 (itself plus one serial type), a TEXT column of 5 bytes, but no value byteio.</i></summary>
+    <summary><b>test_record_cursor_refuses_a_malformed_record</b> &mdash; <i>Header size 2 (itself plus one serial type), a TEXT column of 5 bytes, but no value bytes.</i></summary>
 
-    * **Objective**: Header size 2 (itself plus one serial type), a TEXT column of 5 bytes, but no value byteio.
+    * **Objective**: Header size 2 (itself plus one serial type), a TEXT column of 5 bytes, but no value bytes.
     * **Assertions**:
       * <code>Assert false (protocore_sqlite_record_begin(&c, HDR_TOO_BIG, sizeof(HDR_TOO_BIG)))</code>
       * <code>Assert false (protocore_sqlite_record_begin(&c, EMPTY, sizeof(EMPTY)))</code>
@@ -61187,9 +61187,9 @@ A thorough directory of all **5560 test cases** across **347 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_the_two_suites_do_not_open_each_other</b> &mdash; <i>And the two seals of the same plaintext are not the same byteio.</i></summary>
+    <summary><b>test_the_two_suites_do_not_open_each_other</b> &mdash; <i>And the two seals of the same plaintext are not the same bytes.</i></summary>
 
-    * **Objective**: And the two seals of the same plaintext are not the same byteio.
+    * **Objective**: And the two seals of the same plaintext are not the same bytes.
     * **Assertions**:
       * <code>Assert false (unprotect(sealed384, n384, opened, sizeof(opened), &info))</code>
       * <code>Assert false (unprotect(sealed256, n256, opened, sizeof(opened), &info))</code>

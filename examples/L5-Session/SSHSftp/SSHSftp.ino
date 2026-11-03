@@ -40,6 +40,8 @@
 #include "network_drivers/application/sftp/ssh_sftp/ssh_sftp.h"
 #include <LittleFS.h>
 
+static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
+
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
@@ -73,7 +75,7 @@ void setup()
         return;
     }
 
-    if (protocore_ssh_rsa_load_pubkey() != 0)
+    if (SshRsa.load_pubkey(protocore_ssh_rsa_span()) != 0)
     {
         Serial.println("No SSH host key in NVS - see docs/SSH.md (Host key provisioning)");
         return;
@@ -96,8 +98,8 @@ void setup()
     // Narrow the exposure by mounting a subdirectory here (e.g. protocore_fs_begin("/gcode")).
     protocore_mnt_mount(protocore_mnt_fs(&LittleFS));
     protocore_fs_begin("/");
-    protocore_ssh_sftp_begin();
-    protocore_ssh_scp_begin();
+    SshSftp.begin(protocore_ssh_sftp_span());
+    SshScp.begin(protocore_ssh_scp_span());
 
     Serial.println("SFTP/SCP server started: sftp -P 22 admin@<ip> ; scp file admin@<ip>:/path");
 }

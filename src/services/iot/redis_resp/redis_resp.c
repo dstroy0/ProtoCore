@@ -183,7 +183,7 @@ static proto_bool parse_exponent(const uint8_t *buf, size_t *i, size_t end, int 
 }
 
 // Decode a Doubles line, `,[<+|->]<integral>[.<fractional>][<E|e>[sign]<exponent>]\r\n` or one of the
-// special forms, into a double. The raw text stays authoritative in cellul.
+// special forms, into a double. The raw text stays authoritative in str.
 static proto_bool parse_double(const uint8_t *buf, size_t from, size_t end, double *out)
 {
     if (parse_double_special(buf, from, end, out))

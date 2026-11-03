@@ -79,8 +79,12 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_dashboard_on_control(on_control);
-    protocore_dashboard_begin("/dashboard", WIDGETS, sizeof(WIDGETS) / sizeof(WIDGETS[0]));
+    DashboardV.on_control_args.cb = on_control;
+    Dashboard.on_control(protocore_dashboard_span());
+    DashboardV.begin_args.path = "/dashboard";
+    DashboardV.begin_args.widgets = WIDGETS;
+    DashboardV.begin_args.count = sizeof(WIDGETS) / sizeof(WIDGETS[0]);
+    Dashboard.begin(protocore_dashboard_span());
     begin_http(80, NULL);
 }
 
@@ -94,9 +98,15 @@ void loop()
     if (now - last_ms >= 1000)
     {
         last_ms = now;
-        protocore_dashboard_set("heap", (float)ESP.getFreeHeap());
-        protocore_dashboard_set("uptime", (float)(now / 1000));
-        protocore_dashboard_set("rssi", (float)Physical.wifi->rssi());
-        protocore_dashboard_publish();
+        DashboardV.set_args.key = "heap";
+        DashboardV.set_args.value = (float)ESP.getFreeHeap();
+        Dashboard.set(protocore_dashboard_span());
+        DashboardV.set_args.key = "uptime";
+        DashboardV.set_args.value = (float)(now / 1000);
+        Dashboard.set(protocore_dashboard_span());
+        DashboardV.set_args.key = "rssi";
+        DashboardV.set_args.value = (float)Physical.wifi->rssi();
+        Dashboard.set(protocore_dashboard_span());
+        Dashboard.publish(protocore_dashboard_span());
     }
 }

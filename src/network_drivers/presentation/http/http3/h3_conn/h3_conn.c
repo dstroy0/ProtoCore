@@ -108,7 +108,7 @@ static_assert(H3_OFF_CTX % _Alignof(H3ConnCtx) == 0,
               "H3_OFF_CTX is not a multiple of alignof(H3ConnCtx) - H3_CTX() would return a misaligned "
               "pointer; pad the region ahead of it");
 
-// The regions, at their offsets in the caller's spat.
+// The regions, at their offsets in the caller's span.
 #define H3_CTX(w) ((H3ConnCtx *)(void *)((w) + H3_OFF_CTX))
 // H3_OFF_CTX is 0, so a callback is handed back the span it was bound with.
 #define H3_SPAN(c) ((uint8_t *)(void *)(c))

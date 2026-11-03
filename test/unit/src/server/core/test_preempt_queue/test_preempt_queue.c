@@ -465,7 +465,7 @@ void test_ping_pong_completions_reach_the_lane_in_order(void)
     TEST_ASSERT_EQUAL_UINT32(g_dma[0].v + 1u, g_dma[1].v); // consecutive completions
 }
 
-// An egress completion says the buffer is free, so it carries a length and no byteio.
+// An egress completion says the buffer is free, so it carries a length and no bytes.
 void test_a_tx_completion_carries_no_bytes(void)
 {
     open_dma_lane(0, PROTO_FALSE);

@@ -7,7 +7,7 @@
  *
  * NTRIP (Networked Transport of RTCM via Internet Protocol) is how a GNSS base's RTCM corrections reach
  * rovers over TCP. It is HTTP-shaped: a rover opens a connection and sends a request line
- * `GET /<mountpoint> HTTP/1.x` with headers; the caster answers and then streams raw RTCM byteio.
+ * `GET /<mountpoint> HTTP/1.x` with headers; the caster answers and then streams raw RTCM bytes.
  *
  * Two protocol revisions are in the field and this codec speaks both:
  *  - **NTRIP 1.0** - the request omits a version header; the caster replies with the bare status line
@@ -18,7 +18,7 @@
  * This file parses a rover request (mountpoint, version, optional HTTP Basic credentials) and builds the
  * caster's responses - the stream-accept line, an error line, and the RTCM source table (one `STR;...`
  * record per mountpoint per the NTRIP source-table format, terminated by `ENDSOURCETABLE`). It touches no
- * sockets; the listener glue (protocore_ntrip_caster_listener.h) drives it and pumps byteio. Zero heap.
+ * sockets; the listener glue (protocore_ntrip_caster_listener.h) drives it and pumps bytes. Zero heap.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026

@@ -414,7 +414,7 @@ void test_manifest_escapes_a_character_with_no_short_form(void)
 
 // The three characters sec 7 names outright, in the two-character forms its grammar lists. Both the
 // short form and \u00XX conform for these, so the exact octets are the module's choice among them;
-// what the RFC settles is that none of the three may appear proxim.
+// what the RFC settles is that none of the three may appear raw.
 void test_manifest_escapes_quote_solidus_and_control(void)
 {
     static const char *const PATHS[] = {"/a\"b", "/c\\d", "/e\tf"};

@@ -17,6 +17,8 @@
 #include "protocore.h" // discovers the library (adds src/ to the include path)
 #include "services/radio/sigfox/sigfox.h"
 
+static uint8_t sigfox_work[16]; // the borrow an entry takes; Sigfox never reads it
+
 static const int PIN_RX = 16, PIN_TX = 17; // UART2 to the Sigfox modem (9600 baud)
 
 // Read the modem reply for up to timeout_ms and classify it.
@@ -31,7 +33,7 @@ static protocore_sigfox_result read_reply(uint32_t timeout_ms)
         {
             buf[n++] = (char)Serial2.read();
         }
-        protocore_sigfox_result r = protocore_sigfox_parse_response(buf, n);
+        protocore_sigfox_result r = Sigfox.parse_response(sigfox_work, buf, n);
         if (r != protocore_sigfox_result::SIGFOX_PENDING)
         {
             return r;
@@ -58,7 +60,7 @@ void loop()
     uint8_t payload[4] = {(uint8_t)(g_seq >> 8), (uint8_t)g_seq, (uint8_t)(value >> 8), (uint8_t)value};
 
     char cmd[32];
-    uint16_t n = protocore_sigfox_build_uplink(payload, sizeof(payload), cmd, sizeof(cmd));
+    uint16_t n = Sigfox.build_uplink(sigfox_work, payload, sizeof(payload), cmd, sizeof(cmd));
     if (n > 0)
     {
         Serial2.write((const uint8_t *)cmd, n); // "AT$SF=xxxxxxxx\r\n"

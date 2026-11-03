@@ -20,7 +20,7 @@ PROTOCORE_BEGIN_DECLS
  *
  * This is that pure framing: ::protocore_radiosniff_global writes the pcap global header (DLT TAP), and
  * ::protocore_radiosniff_tap_record writes one record (TAP header + RSSI/channel TLVs + the MAC frame). The
- * radio drivers own the receive; this owns the on-wire capture byteio. No heap, no stdlib, host-testable.
+ * radio drivers own the receive; this owns the on-wire capture bytes. No heap, no stdlib, host-testable.
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

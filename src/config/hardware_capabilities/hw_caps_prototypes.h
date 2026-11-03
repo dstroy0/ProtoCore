@@ -27,7 +27,7 @@
 // nothing else, and it is reached before the library's own types exist.
 
 #if PROTOCORE_HAS_VENDOR_MAC
-/** @brief The part's burned-in station address, six byteio. 0 when there was none to read. */
+/** @brief The part's burned-in station address, six bytes. 0 when there was none to read. */
 int protocore_platform_mac_read(uint8_t mac[6]);
 #endif
 #if PROTOCORE_HAS_VENDOR_HEAP_INFO

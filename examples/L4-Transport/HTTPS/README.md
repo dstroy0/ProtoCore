@@ -1,6 +1,6 @@
 # HTTPS - deterministic TLS with a static memory pool
 
-**Layer:** L4 Transport · **Build flags:** `PROTOCORE_ENABLE_TLS`
+**Layer:** L4 Transport · **Build flags:** `PROTOCORE_ENABLE_TLS`, `PROTOCORE_ENABLE_TLS_RPK`
 
 ## What this example teaches
 
@@ -37,7 +37,7 @@ The arena is the only memory TLS uses; size it for your cert chain and cipher.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_TLS=1 -DMAX_CONNS=4 -DPROTOCORE_TLS_ARENA_SIZE=32768" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_TLS=1 -DPROTOCORE_ENABLE_TLS_RPK=1 -DMAX_CONNS=4 -DPROTOCORE_TLS_ARENA_SIZE=32768" \
   --lib="." examples/L4-Transport/HTTPS/HTTPS.ino
 ```
 
@@ -58,6 +58,7 @@ are elided here for brevity (see the `.ino`); the C++ is verbatim with comments.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #define PROTOCORE_ENABLE_TLS 1
+#define PROTOCORE_ENABLE_TLS_RPK 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

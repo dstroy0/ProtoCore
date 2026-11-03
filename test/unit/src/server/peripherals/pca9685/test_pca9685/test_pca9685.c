@@ -175,7 +175,7 @@ void test_pulse_width_saturates_at_the_twelve_bit_maximum(void)
 }
 
 // Table 6: each channel is LEDn_ON_L, LEDn_ON_H, LEDn_OFF_L, LEDn_OFF_H, the count split 8 LSBs
-// then 4 MSBs, so the write is the register address followed by those four byteio.
+// then 4 MSBs, so the write is the register address followed by those four bytes.
 void test_set_pwm_bytes_layout(void)
 {
     uint8_t buf[8];

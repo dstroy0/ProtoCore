@@ -24,10 +24,10 @@
 
 PROTOCORE_BEGIN_DECLS
 
-/** @brief GHASH subkey length in byteio. */
+/** @brief GHASH subkey length in bytes. */
 #define PROTOCORE_GHASH_KEY_LEN 16
 
-/** @brief GHASH accumulator length in byteio. */
+/** @brief GHASH accumulator length in bytes. */
 #define PROTOCORE_GHASH_ACC_LEN 16
 
 // PROTOCORE_GHASH_BORROW - the bytes a bound subkey runs out of - is stated in protocore_config.h,

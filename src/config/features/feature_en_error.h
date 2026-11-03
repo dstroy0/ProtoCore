@@ -730,7 +730,7 @@
 // The generator's borrow, split by offset in rng.c: the draw counter and the seeded flag, the seed,
 // the nonce, the ratchet's next seed, then the region ChaCha20 runs in. 88 octets over the cipher's
 // own borrow. This one is taken from the pool's PERSISTENT end and lives for the program, so the seed
-// survives across calls and a reseed lands in the same byteio. Proved by a static_assert in rng.c.
+// survives across calls and a reseed lands in the same bytes. Proved by a static_assert in rng.c.
 #ifndef PROTOCORE_RNG_BORROW
 #define PROTOCORE_RNG_BORROW (88 + PROTOCORE_CHACHA20_BORROW)
 #endif
@@ -1157,7 +1157,7 @@
 #endif
 
 // The SSH transport machine's host signing keys - the ed25519 seed and public half, the P-256
-// scalar and point, whether each is loaded - and the runtime KEX preference. Measured at 164 byteio.
+// scalar and point, whether each is loaded - and the runtime KEX preference. Measured at 164 bytes.
 // Host private keys, so the secure end.
 #ifndef PROTOCORE_SSH_TRANSPORT_BORROW
 #define PROTOCORE_SSH_TRANSPORT_BORROW 192u
@@ -1192,7 +1192,7 @@
 #endif
 
 // HTTP/2 runs over TLS, so a connection's bytes are secure. The slot table holds the pointers;
-// the connections hold the byteio.
+// the connections hold the bytes.
 #if PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS
 #define PROTOCORE_SECURE_WORK_H2_SERVER                                                                                \
     (PROTOCORE_H2_SERVER_BORROW +                                                                                      \
@@ -1456,7 +1456,7 @@
 // the nameserver being asked, the query ID (RFC 1035 sec 4.1.1), the deadline it waits to, and the
 // busy flag a second host waits on. The vendor arm holds the stack's reported address instead of
 // the query. The spans it hands out are already taken from the secure end and its release wipes, so
-// the handles to them are kept beside their byteio. Proved against sizeof(struct ResolverStorage) by
+// the handles to them are kept beside their bytes. Proved against sizeof(struct ResolverStorage) by
 // a static_assert in dns_resolver.c.
 #ifndef PROTOCORE_DNS_RESOLVER_BORROW
 #define PROTOCORE_DNS_RESOLVER_BORROW 192u
@@ -1791,6 +1791,10 @@ static_assert(sizeof(protocore_if_kind) == 1, "protocore_if_kind must stay one b
 
 #if PROTOCORE_ENABLE_KEEPALIVE && PROTOCORE_KEEPALIVE_MAX_REQUESTS < 1
 #error "ProtoCore: PROTOCORE_KEEPALIVE_MAX_REQUESTS must be >= 1 when PROTOCORE_ENABLE_KEEPALIVE is set"
+#endif
+
+#if (PROTOCORE_ENABLE_STATS || PROTOCORE_ENABLE_METRICS) && !PROTOCORE_ENABLE_WEB_ASSETS
+#error "ProtoCore: PROTOCORE_ENABLE_STATS and PROTOCORE_ENABLE_METRICS render templates from PROTOCORE_ENABLE_WEB_ASSETS"
 #endif
 
 #if PROTOCORE_ENABLE_RANGE && !PROTOCORE_ENABLE_FILE_SERVING && !PROTOCORE_ENABLE_EDGE_CACHE

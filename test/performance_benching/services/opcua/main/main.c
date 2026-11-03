@@ -14,7 +14,7 @@
 // peripheral driver where the bus transaction is stubbed). The input messages are assembled once at
 // task start with the same UaWriter primitives test/test_opcua/test_opcua.cpp's build_hello /
 // build_open / build_read helpers use, so the benched parses/builds run on spec-conformant,
-// known-good byteio.
+// known-good bytes.
 //
 // Out of scope (deliberately not benched): the ESP32 TCP data handler protocore_opcua_rx() and its
 // transport ring plumbing (protocore_conn_*) - that is real socket I/O this rig has no peer for; only the

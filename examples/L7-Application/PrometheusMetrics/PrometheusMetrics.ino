@@ -17,12 +17,13 @@
  *
  * NOTE: optional features are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable them for the whole build, e.g.:
- *     build_flags = -DPROTOCORE_ENABLE_STATS=1 -DPROTOCORE_ENABLE_METRICS=1
+ *     build_flags = -DPROTOCORE_ENABLE_STATS=1 -DPROTOCORE_ENABLE_METRICS=1 -DPROTOCORE_ENABLE_WEB_ASSETS=1
  * (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  */
 
 #define PROTOCORE_ENABLE_STATS 1
 #define PROTOCORE_ENABLE_METRICS 1
+#define PROTOCORE_ENABLE_WEB_ASSETS 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

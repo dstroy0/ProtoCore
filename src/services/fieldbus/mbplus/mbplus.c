@@ -84,7 +84,7 @@ void protocore_mbplus_parse(uint8_t *work)
     size_t len = MbplusV.parse_args.len;
     MbPlusFrame *out = MbplusV.parse_args.out;
 
-    // Min: 7E addr ctrl CRClo CRChi 7E = 6 byteio.
+    // Min: 7E addr ctrl CRClo CRChi 7E = 6 bytes.
     if (!frame || !out || len < 6)
     {
         MbplusV.ok = PROTO_FALSE;
@@ -95,7 +95,7 @@ void protocore_mbplus_parse(uint8_t *work)
         MbplusV.ok = PROTO_FALSE;
         return;
     }
-    // Body is frame[1 .. len-2), the CRC is the last 2 body byteio.
+    // Body is frame[1 .. len-2), the CRC is the last 2 body bytes.
     size_t body_end = len - 1;     // index of the trailing flag
     size_t crc_pos = body_end - 2; // low byte of the CRC
     size_t covered = crc_pos - 1;  // number of bytes (addr..payload) the CRC covers

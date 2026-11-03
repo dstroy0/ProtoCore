@@ -142,7 +142,7 @@ size_t protocore_quic_crypto_packet_unprotect(uint8_t *work, uint8_t *pkt, size_
     }
 
     // The header-protection context is already keyed and lives in the key material; building one here
-    // would cost ~8,400 cycles to encrypt sixteen byteio.
+    // would cost ~8,400 cycles to encrypt sixteen bytes.
     uint8_t mask[16];
     Aes128GcmV.block_args.in = pkt + pn_offset + 4;
     Aes128GcmV.block_args.out = mask;

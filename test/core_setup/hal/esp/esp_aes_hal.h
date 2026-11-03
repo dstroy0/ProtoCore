@@ -108,7 +108,7 @@ static inline void protocore_aes_hw_setkey(const uint8_t *key, unsigned key_byte
 /**
  * @brief Encrypt one block under the loaded key. Requires @ref protocore_aes_hw_setkey first.
  *
- * @param in   PROTOCORE_AES_HW_BLOCK_LEN input byteio.
+ * @param in   PROTOCORE_AES_HW_BLOCK_LEN input bytes.
  * @param out  PROTOCORE_AES_HW_BLOCK_LEN output bytes; may alias @p in.
  */
 static inline void protocore_aes_hw_block(const uint8_t *in, uint8_t *out)

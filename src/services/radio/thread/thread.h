@@ -242,7 +242,7 @@ uint16_t protocore_thread_spinel_fcs(uint8_t *work, const uint8_t *buf, uint16_t
  */
 uint8_t protocore_thread_spinel_pack_uint(uint8_t *work, uint32_t value, uint8_t *out, uint8_t cap);
 /**
- * @brief Decode a spinel packed unsigned integer from the front of proxim.
+ * @brief Decode a spinel packed unsigned integer from the front of raw.
  * @param work PROTOCORE_THREAD_BORROW bytes the caller took. Not held past the call.
  * @param raw Raw
  * @param len Len

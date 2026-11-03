@@ -42,7 +42,7 @@ static uint8_t g_qc2_b[PROTOCORE_QUIC_CONN_BORROW];
 #define g_qc (*QUIC_CTX(g_qc_ctx))
 #define g_qc2 (*QUIC_CTX(g_qc2_ctx))
 
-// The byte span that goes with a connection's context spat. A helper is handed the context and has
+// The byte span that goes with a connection's context span. A helper is handed the context and has
 // to bind both, so the pairing lives here rather than at every call.
 static uint8_t *qc_span(const QuicConnCtx *qc)
 {

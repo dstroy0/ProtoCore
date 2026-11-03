@@ -70,7 +70,7 @@ typedef struct
 // The caller's borrow, split: the context, then the regions it works out of. One pointer arrives
 // and every region is that pointer plus a compile-time offset, so the assert below proves the span
 // covers them before anything runs.
-// The widest frame a received frame provokes us to send: a header plus a PING's 8 opaque byteio.
+// The widest frame a received frame provokes us to send: a header plus a PING's 8 opaque bytes.
 #define H2_CTL_FRAME_MAX (H2_FRAME_HEADER_LEN + 8)
 
 #define H2_CONN_OFF_CTX 0u

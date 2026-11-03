@@ -113,7 +113,7 @@ typedef struct
 {
     uint8_t *buf;
     size_t cap;
-    const uint8_t *sender_context; ///< 8 byteio.
+    const uint8_t *sender_context; ///< 8 bytes.
 } EnipBuildRegisterSessionArgs;
 
 /** @brief What build_unregister_session takes: buf, cap, ... */
@@ -122,7 +122,7 @@ typedef struct
     uint8_t *buf;
     size_t cap;
     uint32_t session_handle;
-    const uint8_t *sender_context; ///< 8 byteio.
+    const uint8_t *sender_context; ///< 8 bytes.
 } EnipBuildUnregisterSessionArgs;
 
 /** @brief What build_send_rr_data takes: buf, cap, session_handle, ... */
@@ -131,7 +131,7 @@ typedef struct
     uint8_t *buf;
     size_t cap;
     uint32_t session_handle;
-    const uint8_t *sender_context; ///< 8 byteio.
+    const uint8_t *sender_context; ///< 8 bytes.
     uint16_t timeout;
     const uint8_t *cip;
     size_t cip_len;
@@ -151,7 +151,7 @@ typedef struct
 {
     uint8_t *buf;
     size_t cap;
-    const uint8_t *sender_context; ///< 8 byteio.
+    const uint8_t *sender_context; ///< 8 bytes.
 } EnipBuildListIdentityArgs;
 
 /** @brief What parse_list_identity takes: data, data_len, out. */

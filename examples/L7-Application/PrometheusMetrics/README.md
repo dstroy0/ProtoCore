@@ -1,6 +1,6 @@
 # PrometheusMetrics - a Prometheus `/metrics` endpoint
 
-**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_STATS`, `PROTOCORE_ENABLE_METRICS`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_STATS`, `PROTOCORE_ENABLE_METRICS`, `PROTOCORE_ENABLE_WEB_ASSETS`
 
 ## What this example teaches
 
@@ -25,7 +25,7 @@ something to report. Point Prometheus at the device with a scrape config like
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_STATS=1 -DPROTOCORE_ENABLE_METRICS=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_STATS=1 -DPROTOCORE_ENABLE_METRICS=1 -DPROTOCORE_ENABLE_WEB_ASSETS=1" \
   --lib="." examples/L7-Application/PrometheusMetrics/PrometheusMetrics.ino
 ```
 
@@ -44,6 +44,7 @@ reproduced verbatim with added explanatory comments:
 
 #define PROTOCORE_ENABLE_STATS 1
 #define PROTOCORE_ENABLE_METRICS 1
+#define PROTOCORE_ENABLE_WEB_ASSETS 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
