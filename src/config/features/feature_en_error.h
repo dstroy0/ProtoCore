@@ -1794,7 +1794,8 @@ static_assert(sizeof(protocore_if_kind) == 1, "protocore_if_kind must stay one b
 #endif
 
 #if (PROTOCORE_ENABLE_STATS || PROTOCORE_ENABLE_METRICS) && !PROTOCORE_ENABLE_WEB_ASSETS
-#error "ProtoCore: PROTOCORE_ENABLE_STATS and PROTOCORE_ENABLE_METRICS render templates from PROTOCORE_ENABLE_WEB_ASSETS"
+#error                                                                                                                 \
+    "ProtoCore: PROTOCORE_ENABLE_STATS and PROTOCORE_ENABLE_METRICS render templates from PROTOCORE_ENABLE_WEB_ASSETS"
 #endif
 
 #if PROTOCORE_ENABLE_RANGE && !PROTOCORE_ENABLE_FILE_SERVING && !PROTOCORE_ENABLE_EDGE_CACHE

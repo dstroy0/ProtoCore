@@ -7291,7 +7291,7 @@
 | --: | :----------------------------------------- | :----: | :-------------------------------------------------------------------------------------------- |
 |   1 | `test_rfc9000_18_2_defaults`               |   ✅   | An empty parameter string leaves every default in place: nothing present, nothing overridden. |
 |   2 | `test_hand_built_wire_string`              |   ✅   | Nothing named in the string keeps its sec 18.2 default.                                       |
-|   3 | `test_encode_parse_round_trip`             |   ✅   | sec 17.2: "In QUIC version 1, this value MUST NOT exceed 20 bytes."                          |
+|   3 | `test_encode_parse_round_trip`             |   ✅   | sec 17.2: "In QUIC version 1, this value MUST NOT exceed 20 bytes."                           |
 |   4 | `test_migration_flag_is_absent_when_clear` |   ✅   | Migration flag is absent when clear                                                           |
 |   5 | `test_reserved_ids_are_ignored`            |   ✅   | Reserved ids are ignored                                                                      |
 |   6 | `test_out_of_range_values_are_rejected`    |   ✅   | "Values above 20 are invalid" (ack_delay_exponent).                                           |
@@ -8970,7 +8970,7 @@
 |   3 | `test_fileformat_page_size_encoding`                    |   ✅   | Fileformat page size encoding                                                                 |
 |   4 | `test_fileformat_varint_decoding`                       |   ✅   | The ninth byte contributes all eight of its bits, so eight 0x7f septets plus 0xff is 2^64-1.  |
 |   5 | `test_fileformat_varint_length_boundaries`              |   ✅   | A buffer one byte short of the encoding is refused rather than written into.                  |
-|   6 | `test_fileformat_serial_type_content_sizes`             |   ✅   | N >= 12 and even: a BLOB of (N-12)/2 bytes. N >= 13 and odd: TEXT of (N-13)/2.               |
+|   6 | `test_fileformat_serial_type_content_sizes`             |   ✅   | N >= 12 and even: a BLOB of (N-12)/2 bytes. N >= 13 and odd: TEXT of (N-13)/2.                |
 |   7 | `test_fileformat_btree_page_header_offsets`             |   ✅   | The overflow fixture's table root is an interior table page: 12-byte header with the          |
 |   8 | `test_fileformat_btree_page_type_domain`                |   ✅   | An interior page needs 12 bytes of header; 11 is short.                                       |
 |   9 | `test_fileformat_cell_content_start_zero_means_65536`   |   ✅   | Fileformat cell content start zero means 65536                                                |
@@ -8987,7 +8987,7 @@
 |  20 | `test_encode_record_picks_the_narrowest_integer_type`   |   ✅   | Encode record picks the narrowest integer type                                                |
 |  21 | `test_build_table_db_writes_a_readable_file`            |   ✅   | Build table db writes a readable file                                                         |
 |  22 | `test_build_table_db_fails_closed`                      |   ✅   | One 512-byte leaf page cannot hold a row far larger than itself.                              |
-|  23 | `test_record_cursor_refuses_a_malformed_record`         |   ✅   | Header size 2 (itself plus one serial type), a TEXT column of 5 bytes, but no value bytes.   |
+|  23 | `test_record_cursor_refuses_a_malformed_record`         |   ✅   | Header size 2 (itself plus one serial type), a TEXT column of 5 bytes, but no value bytes.    |
 |  24 | `test_leaf_cell_refuses_a_truncated_cell`               |   ✅   | A payload length far larger than the page, at the very end of it.                             |
 
 </details>
@@ -10774,7 +10774,7 @@
 |  12 | `test_rederiving_restarts_the_sequence`                  |   ✅   | Rederiving restarts the sequence                                                             |
 |  13 | `test_sha384_suite_expands_the_published_iv`             |   ✅   | Sha384 suite expands the published iv                                                        |
 |  14 | `test_sha384_suite_round_trips_a_record`                 |   ✅   | Sha384 suite round trips a record                                                            |
-|  15 | `test_the_two_suites_do_not_open_each_other`             |   ✅   | And the two seals of the same plaintext are not the same bytes.                             |
+|  15 | `test_the_two_suites_do_not_open_each_other`             |   ✅   | And the two seals of the same plaintext are not the same bytes.                              |
 |  16 | `test_sha384_suite_fails_closed_when_unkeyed`            |   ✅   | Sha384 suite fails closed when unkeyed                                                       |
 
 </details>
