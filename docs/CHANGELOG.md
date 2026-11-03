@@ -120,6 +120,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`2e6ebf2`](https://github.com/dstroy0/ProtoCore/commit/2e6ebf27d7283b4d88c646b64ef4b7700cd676cd))
 - update CHANGELOG.md [skip ci] ([`5fd58a8`](https://github.com/dstroy0/ProtoCore/commit/5fd58a8effd3c4255c91c1dc4893b5e7bdb74407))
 - update CHANGELOG.md [skip ci] ([`3882125`](https://github.com/dstroy0/ProtoCore/commit/3882125a7d8e1e5b3148e5598fb9311a169366ee))
 - update CHANGELOG.md [skip ci] ([`a823497`](https://github.com/dstroy0/ProtoCore/commit/a8234970502f5cb842e4de15ce3f35b601eb0784))
@@ -468,6 +469,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Port the remaining driver, service and storage sketches onto their handles, stop counting the TCP client borrow in builds without it, and bind or restore the library entries the sketch builds found unlinked or returning nothing. ([`6aa2349`](https://github.com/dstroy0/ProtoCore/commit/6aa23491586a594da60ccc2537efa419d8a533a5))
 - Port the remaining service sketches onto their handles, size the ghost cellblocks and the CoAP borrow to what they hold, restore the RTC time source's TimeSourceFn shape, order header designators for C++, and render the footprint table from the main each bot commit lands on. ([`16ed177`](https://github.com/dstroy0/ProtoCore/commit/16ed177364eafb127adce4f4ffd6ef9c0b86351d))
 - Port the NTP, CoAP, mDNS, IPv6, file serving, HTTP client, OIDC, radio power, SPA, delivery and DiffServ sketches onto their handles and add the feature flags their examples need. ([`cf1d425`](https://github.com/dstroy0/ProtoCore/commit/cf1d4252b71d3eb5562bdef2c0f78a85b0509e33))
 - Port the remaining sketch calls onto the TCP, UDP, SSH, Physical, preempt-queue and service handles, declare the SSH host key setters, and bind the GPIO map and HTTP delivery route installers to the weak entries they override. ([`a10acf0`](https://github.com/dstroy0/ProtoCore/commit/a10acf0e4b7fb8c807d5752b0e51c20c6c68c407))
@@ -898,6 +900,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- update ESP32 build footprints [skip ci] ([`6d470aa`](https://github.com/dstroy0/ProtoCore/commit/6d470aa26badf16d1b56fa8079e8164ca1d066e9))
 - update ESP32 build footprints [skip ci] ([`12deb0e`](https://github.com/dstroy0/ProtoCore/commit/12deb0e8ff2265ab2cb427c2f92efaebed307e21))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`a0f5ba8`](https://github.com/dstroy0/ProtoCore/commit/a0f5ba8ecbce0e31178c64e56aa3b440a210126f))
 - update ESP32 build footprints [skip ci] ([`439939a`](https://github.com/dstroy0/ProtoCore/commit/439939a89b655df26f9ff0c9be66cc660d2d99a6))
