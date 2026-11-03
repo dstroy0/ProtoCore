@@ -81,10 +81,17 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_coap_server_reset();
-    protocore_coap_server_add_resource("/big", COAP_ALLOW_GET, h_big);
-    protocore_coap_server_add_resource("/upload", COAP_ALLOW_PUT, h_upload);
-    protocore_coap_server_begin(5683);
+        Coap.reset(protocore_coap_span());
+    CoapV.resource.path = "/big";
+    CoapV.resource.methods = COAP_ALLOW_GET;
+    CoapV.resource.handler = h_big;
+    Coap.add_resource(protocore_coap_span());
+    CoapV.resource.path = "/upload";
+    CoapV.resource.methods = COAP_ALLOW_PUT;
+    CoapV.resource.handler = h_upload;
+    Coap.add_resource(protocore_coap_span());
+    CoapV.bind.port = 5683;
+    Coap.begin(protocore_coap_span());
     Serial.println("CoAP server on :5683");
     Serial.println("  GET coap://<ip>/big      (block-wise responses)");
     Serial.println("  PUT coap://<ip>/upload   (block-wise uploads)");

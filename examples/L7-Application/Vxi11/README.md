@@ -1,6 +1,6 @@
 # Vxi11 - drive an instrument over VXI-11 (ONC RPC / XDR)
 
-**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_VXI11`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_VXI11`, `PROTOCORE_ENABLE_TCP_CLIENT`
 
 ## What this example teaches
 
@@ -45,7 +45,7 @@ the host's `rpcbind`/portmapper on 111).
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_VXI11=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_VXI11=1" \
   --lib="." examples/L7-Application/Vxi11/Vxi11.ino
 ```
 

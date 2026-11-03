@@ -134,7 +134,13 @@ static uint32_t gps_time_source()
 }
 static uint32_t protocore_ntp_upstream_source()
 {
-    return protocore_ntp_synced() ? (uint32_t)protocore_ntp_epoch() : 0;
+    NtpService.synced(protocore_ntp_service_span());
+    if (!NtpServiceV.ok)
+    {
+        return 0;
+    }
+    NtpService.epoch(protocore_ntp_service_span());
+    return (uint32_t)NtpServiceV.value;
 }
 
 void setup()
@@ -158,7 +164,10 @@ void setup()
     // GPS is the primary (stratum 1); the public NTP pool is the fallback.
     protocore_time_source_add("gps", 1, gps_time_source);
     protocore_time_source_add("ntp", 2, protocore_ntp_upstream_source);
-    protocore_ntp_begin(NULL, NULL, NULL); // start the upstream SNTP client for the fallback
+    NtpServiceV.begin_args.tz = NULL; // start the upstream SNTP client for the fallback
+    NtpServiceV.begin_args.server1 = NULL;
+    NtpServiceV.begin_args.server2 = NULL;
+    NtpService.begin(protocore_ntp_service_span());
 
     if (protocore_ntp_server_begin(1, NTP_REFID_GPS))
     {

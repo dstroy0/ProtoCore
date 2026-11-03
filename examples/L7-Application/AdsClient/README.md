@@ -1,6 +1,6 @@
 # AdsClient - read a TwinCAT PLC over Beckhoff ADS
 
-**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_ADS`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_ADS`, `PROTOCORE_ENABLE_TCP_CLIENT`
 
 ## What this example teaches
 
@@ -53,7 +53,7 @@ real PLC. Before it will connect:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_ADS=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_ADS=1" \
   --lib="." examples/L7-Application/AdsClient/AdsClient.ino
 ```
 

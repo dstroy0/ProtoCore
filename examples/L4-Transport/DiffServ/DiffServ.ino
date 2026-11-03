@@ -61,8 +61,9 @@ void setup()
 
     // Mark every outbound TCP connection Expedited Forwarding, and outbound UDP too. A DSCP of 0 would
     // mean best-effort (no marking). Set before begin() so listeners pick it up.
-    protocore_set_default_dscp(PROTOCORE_DSCP_EF);
-    protocore_udp_set_dscp(PROTOCORE_DSCP_EF);
+    DiffServV.dscp = PROTOCORE_DSCP_EF;
+    DiffServ.set_default(protocore_diffserv_span());
+    DiffServ.set_udp(protocore_diffserv_span());
 
     on_http("/", HTTP_GET, handle_root);
     on_http("/tag", HTTP_GET, handle_tag);

@@ -113,11 +113,21 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Build the resource table, then bind the server to UDP/5683.
-    protocore_coap_server_reset();
-    protocore_coap_server_add_resource("/info", COAP_ALLOW_GET, coap_info);
-    protocore_coap_server_add_resource("/led", COAP_ALLOW_GET | COAP_ALLOW_PUT, coap_led);
-    protocore_coap_server_add_resource("/hello", COAP_ALLOW_GET, coap_hello);
-    protocore_coap_server_begin(5683);
+        Coap.reset(protocore_coap_span());
+    CoapV.resource.path = "/info";
+    CoapV.resource.methods = COAP_ALLOW_GET;
+    CoapV.resource.handler = coap_info;
+    Coap.add_resource(protocore_coap_span());
+    CoapV.resource.path = "/led";
+    CoapV.resource.methods = COAP_ALLOW_GET | COAP_ALLOW_PUT;
+    CoapV.resource.handler = coap_led;
+    Coap.add_resource(protocore_coap_span());
+    CoapV.resource.path = "/hello";
+    CoapV.resource.methods = COAP_ALLOW_GET;
+    CoapV.resource.handler = coap_hello;
+    Coap.add_resource(protocore_coap_span());
+    CoapV.bind.port = 5683;
+    Coap.begin(protocore_coap_span());
     Serial.println("CoAP server listening on UDP/5683 (try: coap-client -m get coap://<ip>/info)");
 
     int32_t result = begin_http(80, NULL);

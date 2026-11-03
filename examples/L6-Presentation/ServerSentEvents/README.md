@@ -1,6 +1,6 @@
 # ServerSentEvents - server push with SSE
 
-**Layer:** L6 Presentation · **Build flags:** none (core; SSE is on by default)
+**Layer:** L6 Presentation · **Build flags:** `PROTOCORE_ENABLE_SSE`
 
 ## What this example teaches
 
@@ -40,6 +40,7 @@ bidirectional messaging, see [WebSocket](../WebSocket).
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_SSE=1" \
   --lib="." examples/L6-Presentation/ServerSentEvents/ServerSentEvents.ino
 ```
 

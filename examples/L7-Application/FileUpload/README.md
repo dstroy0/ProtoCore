@@ -1,6 +1,6 @@
 # FileUpload - stream a POST body straight to a file
 
-**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_UPLOAD`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_UPLOAD`, `PROTOCORE_ENABLE_MNT`, `PROTOCORE_ENABLE_FILE_SERVING`
 
 ## What this example teaches
 
@@ -36,7 +36,7 @@ server.on("/file", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {   // read i
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_UPLOAD=1 -DMAX_CONNS=4" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_FILE_SERVING=1 -DPROTOCORE_ENABLE_MNT=1 -DPROTOCORE_ENABLE_UPLOAD=1 -DMAX_CONNS=4" \
   --lib="." examples/L7-Application/FileUpload/FileUpload.ino
 ```
 
@@ -55,6 +55,8 @@ with added explanatory comments:
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #define PROTOCORE_ENABLE_UPLOAD 1
+#define PROTOCORE_ENABLE_MNT 1
+#define PROTOCORE_ENABLE_FILE_SERVING 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

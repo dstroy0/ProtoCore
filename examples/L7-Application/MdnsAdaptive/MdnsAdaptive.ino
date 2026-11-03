@@ -61,9 +61,14 @@ void setup()
     begin_http(80, NULL);
 
     // Bring up the responder and seed the TXT record the refresher re-applies.
-    if (protocore_mdns_begin("adaptive", 80))
+    MdnsServiceV.begin_args.hostname = "adaptive";
+    MdnsServiceV.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    if (MdnsServiceV.ok)
     {
-        protocore_mdns_txt("role", "sensor");
+        MdnsServiceV.txt_args.key = "role";
+        MdnsServiceV.txt_args.value = "sensor";
+        MdnsService.txt(protocore_mdns_service_span());
         Serial.println("mDNS up: adaptive.local");
     }
 

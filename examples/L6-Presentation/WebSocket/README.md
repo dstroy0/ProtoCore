@@ -1,6 +1,6 @@
 # WebSocket - bidirectional WebSocket echo
 
-**Layer:** L6 Presentation · **Build flags:** none (core; WebSocket is on by default)
+**Layer:** L6 Presentation · **Build flags:** `PROTOCORE_ENABLE_WEBSOCKET`
 
 ## What this example teaches
 
@@ -37,6 +37,7 @@ connection slot (capped at `MAX_WS_CONNS`). For `wss://` over TLS see
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_WEBSOCKET=1" \
   --lib="." examples/L6-Presentation/WebSocket/WebSocket.ino
 ```
 

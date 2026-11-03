@@ -13,6 +13,8 @@
  * Flash, open Serial @ 115200 for the IP, then browse to http://<ip>/.
  */
 
+#define PROTOCORE_ENABLE_MULTIPART 1
+
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
 

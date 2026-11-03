@@ -14,6 +14,8 @@
 #include "shared/ip/ip.h"
 #include "network_drivers/physical/physical/physical.h"
 
+static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
+
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
@@ -41,12 +43,17 @@ void handle_root(uint8_t slot_id, HttpReq *)
 {
     protocore_ip v6;
     char buf[160];
-    if (Physical.ip6->global_addr(&v6))
+    PhysicalV.read.ip6 = &v6;
+    Physical.ip6_global(protocore_physical_span());
+    if (PhysicalV.ok)
     {
         char addr[PROTOCORE_IP_STR_MAX];
-        protocore_ip_format(&v6, addr, sizeof(addr));
-        snprintf(buf, sizeof(buf), "Served over IPv6. My global address is [%s] (%s).", addr,
-                 scope_name(protocore_ip_classify(&v6)));
+        IpV.args.ip = &v6;
+        IpV.args.buf = addr;
+        IpV.args.cap = sizeof(addr);
+        Ip.format(ip_work);
+        Ip.classify(ip_work);
+        snprintf(buf, sizeof(buf), "Served over IPv6. My global address is [%s] (%s).", addr, scope_name(IpV.scope));
     }
     else
     {
@@ -66,23 +73,33 @@ void setup()
     {
         delay(250);
     }
-    Physical.ip6->init(); // enable IPv6 (SLAAC) on the Wi-Fi netif
+    Physical.ip6_init(protocore_physical_span()); // enable IPv6 (SLAAC) on the Wi-Fi netif
 
     uint32_t ip = protocore_physical_egress_ipv4();
     Serial.printf("IPv4: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
     Serial.print("Waiting for a global IPv6 address");
-    for (int i = 0; i < 40 && !Physical.ip6->ready(); i++)
+    for (int i = 0; i < 40; i++)
     {
+        Physical.ip6_ready(protocore_physical_span());
+        if (PhysicalV.ok)
+        {
+            break;
+        }
         delay(250);
         Serial.print('.');
     }
 
     protocore_ip v6;
-    if (Physical.ip6->global_addr(&v6))
+    PhysicalV.read.ip6 = &v6;
+    Physical.ip6_global(protocore_physical_span());
+    if (PhysicalV.ok)
     {
         char addr[PROTOCORE_IP_STR_MAX];
-        protocore_ip_format(&v6, addr, sizeof(addr));
+        IpV.args.ip = &v6;
+        IpV.args.buf = addr;
+        IpV.args.cap = sizeof(addr);
+        Ip.format(ip_work);
         Serial.printf("\nIPv6: %s\n", addr);
         Serial.printf("Try: curl -g 'http://[%s]/'\n", addr);
     }

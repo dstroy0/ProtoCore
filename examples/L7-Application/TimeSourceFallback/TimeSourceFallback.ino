@@ -33,7 +33,13 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 // Priority 0: NTP - valid only once SNTP has synced (else 0 -> fall through).
 static uint32_t src_ntp()
 {
-    return protocore_ntp_synced() ? (uint32_t)protocore_ntp_epoch() : 0;
+    NtpService.synced(protocore_ntp_service_span());
+    if (!NtpServiceV.ok)
+    {
+        return 0;
+    }
+    NtpService.epoch(protocore_ntp_service_span());
+    return (uint32_t)NtpServiceV.value;
 }
 
 // Priority 1: a coarse battery-RTC stand-in. A real device reads a DS3231/PCF8523
@@ -61,7 +67,10 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_ntp_begin(NULL, NULL, NULL);        // start SNTP (GMT, pool.ntp.org)
+    NtpServiceV.begin_args.tz = NULL;        // start SNTP (GMT, pool.ntp.org)
+    NtpServiceV.begin_args.server1 = NULL;
+    NtpServiceV.begin_args.server2 = NULL;
+    NtpService.begin(protocore_ntp_service_span());
     protocore_time_source_add("ntp", 0, src_ntp); // preferred
     protocore_time_source_add("rtc", 1, src_rtc); // fallback
 

@@ -20,10 +20,11 @@
  * an AMS route on the PLC back to this device's AMSNetId (below) or the router will
  * reject the connection - see the README.
  *
- * Build flag (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_ADS=1
+ * Build flag (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_ADS=1
  */
 
 #define PROTOCORE_ENABLE_ADS 1
+#define PROTOCORE_ENABLE_TCP_CLIENT 1
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical/physical.h"

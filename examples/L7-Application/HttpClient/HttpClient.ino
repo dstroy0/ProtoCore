@@ -54,16 +54,17 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    HttpClientResult r;
-    int status = http_get(URL, &r);
+    HttpClientV.target.url = URL;
+    HttpClient.get(protocore_http_client_span());
+    const int32_t status = HttpClientV.status;
     if (status < 0)
     {
-        Serial.printf("request failed (error %d)\n", status);
+        Serial.printf("request failed (error %ld)\n", (long)status);
     }
     else
     {
-        Serial.printf("HTTP %d, %u body bytes:\n", r.status, (unsigned)r.body_len);
-        Serial.write(r.body, r.body_len);
+        Serial.printf("HTTP %ld, %u body bytes:\n", (long)status, (unsigned)HttpClientV.body_len);
+        Serial.write(HttpClientV.body, HttpClientV.body_len);
         Serial.println();
     }
 }

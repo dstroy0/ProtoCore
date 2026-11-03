@@ -42,7 +42,7 @@ compressed length.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_WS_DEFLATE=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_WS_DEFLATE=1" \
   --lib="." examples/L6-Presentation/WebSocketCompression/WebSocketCompression.ino
 ```
 
@@ -59,6 +59,7 @@ reproduced verbatim with added explanatory comments:
 
 // Enable WebSocket permessage-deflate for this sketch (overrides default-off).
 #define PROTOCORE_ENABLE_WS_DEFLATE 1
+#define PROTOCORE_ENABLE_WEBSOCKET 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

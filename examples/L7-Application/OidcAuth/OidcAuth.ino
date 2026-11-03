@@ -32,6 +32,8 @@
 #include "network_drivers/physical/physical/physical.h"
 #include "services/security/oidc/oidc.h"
 
+static uint8_t oidc_work[16]; // the borrow an entry takes; Oidc never reads it
+
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
@@ -70,8 +72,15 @@ void setup()
         const char *token = hdr + 7;
         uint32_t now = 1700000100; // production: read from NTP
 
-        protocore_oidc_claims claims;
-        protocore_oidc_result rc = protocore_oidc_verify(token, strlen(token), JWKS, ISSUER, AUDIENCE, now, &claims);
+        OidcV.token = token;
+        OidcV.token_len = strlen(token);
+        OidcV.key.jwks = JWKS;
+        OidcV.expect.iss = ISSUER;
+        OidcV.expect.aud = AUDIENCE;
+        OidcV.expect.now_unix = now;
+        Oidc.verify(oidc_work);
+        protocore_oidc_result rc = OidcV.result;
+        const protocore_oidc_claims &claims = OidcV.claims;
         if (rc != protocore_oidc_result::PROTOCORE_OIDC_OK)
         {
             char b[40];

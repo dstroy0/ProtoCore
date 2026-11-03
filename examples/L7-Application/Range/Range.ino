@@ -23,16 +23,19 @@
  * NOTE: optional features are gated by a compile flag the *library* sources must
  * also see. The `#define` below documents intent, but for PlatformIO enable it
  * for the whole build, e.g. in platformio.ini:
- *     build_flags = -DPROTOCORE_ENABLE_RANGE=1 -DPROTOCORE_ENABLE_FILE_SERVING=1
+ *     build_flags = -DPROTOCORE_ENABLE_MNT=1 -DPROTOCORE_ENABLE_RANGE=1 -DPROTOCORE_ENABLE_FILE_SERVING=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.) A define in the
  * sketch alone does not reach the separately-compiled library .cpp.
  */
 
 #define PROTOCORE_ENABLE_RANGE 1
 #define PROTOCORE_ENABLE_FILE_SERVING 1
+#define PROTOCORE_ENABLE_MNT 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
+#include "network_drivers/application/file_serving/file_serving.h"
+#include "test/core_setup/hal/esp/esp_mnt_fs.h"
 #include <LittleFS.h>
 
 static const char *SSID = "YOUR_SSID";
@@ -86,9 +89,14 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    // serve_file() honors Range automatically when PROTOCORE_ENABLE_RANGE is set.
-    on_http("/data.bin", HTTP_GET,
-              [](uint8_t id, HttpReq *) { serve_file(id, LittleFS, "/data.bin", "application/octet-stream"); });
+    // FileServing.serve_file honors Range automatically when PROTOCORE_ENABLE_RANGE is set.
+    on_http("/data.bin", HTTP_GET, [](uint8_t id, HttpReq *) {
+        FileServingV.serve_file_args.slot_id = id;
+        FileServingV.serve_file_args.file_sys = protocore_mnt_fs(&LittleFS);
+        FileServingV.serve_file_args.fs_path = "/data.bin";
+        FileServingV.serve_file_args.content_type = "application/octet-stream";
+        FileServing.serve_file(protocore_file_serving_span());
+    });
 
     int32_t result = begin_http(80, NULL);
     if (result < 0)

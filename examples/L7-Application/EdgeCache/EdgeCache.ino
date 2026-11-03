@@ -16,13 +16,15 @@
  * request GET /cdn/<path> and watch the X-Cache header flip from MISS to HIT.
  *
  * NOTE (PlatformIO): the cache is compiled into the *library*, so the flags must reach the whole build:
- * build_flags = -DPROTOCORE_ENABLE_EDGE_CACHE=1 -DPROTOCORE_ENABLE_HTTP_CACHE=1 -DPROTOCORE_ENABLE_HTTP_CLIENT=1.
+ * build_flags = -DPROTOCORE_ENABLE_DBM=1 -DPROTOCORE_ENABLE_WAL=1 -DPROTOCORE_ENABLE_EDGE_CACHE=1 -DPROTOCORE_ENABLE_HTTP_CACHE=1 -DPROTOCORE_ENABLE_HTTP_CLIENT=1.
  * In the Arduino IDE they are set for you in build_opt.h.
  */
 
 #define PROTOCORE_ENABLE_EDGE_CACHE 1
 #define PROTOCORE_ENABLE_HTTP_CACHE 1
 #define PROTOCORE_ENABLE_HTTP_CLIENT 1
+#define PROTOCORE_ENABLE_WAL 1
+#define PROTOCORE_ENABLE_DBM 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

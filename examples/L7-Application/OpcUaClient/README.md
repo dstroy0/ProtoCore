@@ -1,6 +1,6 @@
 # OpcUaClient - an OPC UA Binary client
 
-**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_OPCUA`, `PROTOCORE_ENABLE_OPCUA_CLIENT`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_OPCUA`, `PROTOCORE_ENABLE_OPCUA_CLIENT`, `PROTOCORE_ENABLE_TCP_CLIENT`
 
 ## What this example teaches
 
@@ -54,7 +54,7 @@ server just makes the example self-contained. Read and write items are small str
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_OPCUA=1 -DPROTOCORE_ENABLE_OPCUA_CLIENT=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_OPCUA=1 -DPROTOCORE_ENABLE_OPCUA_CLIENT=1" \
   --lib="." examples/L7-Application/OpcUaClient/OpcUaClient.ino
 ```
 
@@ -73,6 +73,7 @@ with added explanatory comments:
 
 #define PROTOCORE_ENABLE_OPCUA 1
 #define PROTOCORE_ENABLE_OPCUA_CLIENT 1
+#define PROTOCORE_ENABLE_TCP_CLIENT 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

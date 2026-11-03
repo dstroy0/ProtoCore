@@ -28,6 +28,7 @@
 
 // Enable WebSocket permessage-deflate for this sketch (overrides default-off).
 #define PROTOCORE_ENABLE_WS_DEFLATE 1
+#define PROTOCORE_ENABLE_WEBSOCKET 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

@@ -1,6 +1,6 @@
 # Json - zero-heap JSON read and write
 
-**Layer:** L6 Presentation · **Build flags:** none (core features only)
+**Layer:** L6 Presentation · **Build flags:** `PROTOCORE_ENABLE_JSON`
 
 ## What this example teaches
 
@@ -43,6 +43,7 @@ This is the proper tool for JSON bodies; the hand-rolled scanners in
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_JSON=1" \
   --lib="." examples/L6-Presentation/Json/Json.ino
 ```
 

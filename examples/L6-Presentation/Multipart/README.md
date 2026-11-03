@@ -1,6 +1,6 @@
 # Multipart - parsing multipart/form-data in place
 
-**Layer:** L6 Presentation · **Build flags:** none (core; multipart is on by default)
+**Layer:** L6 Presentation · **Build flags:** `PROTOCORE_ENABLE_MULTIPART`
 
 ## What this example teaches
 
@@ -32,6 +32,7 @@ it from a browser.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_MULTIPART=1" \
   --lib="." examples/L6-Presentation/Multipart/Multipart.ino
 ```
 

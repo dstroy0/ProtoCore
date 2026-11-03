@@ -22,6 +22,8 @@
 #include "test/core_setup/hal/esp/esp_mnt_fs.h"
 #include "services/file_transfer/http_delivery/http_delivery.h"
 #include "shared/mime/mime.h" // PROTOCORE_MIME_TEXT_HTML
+
+static uint8_t http_delivery_work[16]; // the borrow an entry takes; HttpDelivery never reads it
 #include <SD_MMC.h>
 
 static const char *WIFI_SSID = "your-ssid";
@@ -74,7 +76,11 @@ void setup()
 
     on_http("/", HTTP_GET, root_handler);
     // Serves /sw.js + /precache.json.
-    if (!protocore_delivery_serve_sw(server, SHELL, sizeof(SHELL) / sizeof(SHELL[0]), SHELL_VERSION))
+    HttpDeliveryV.serve_sw_args.paths = SHELL;
+    HttpDeliveryV.serve_sw_args.n = sizeof(SHELL) / sizeof(SHELL[0]);
+    HttpDeliveryV.serve_sw_args.version = SHELL_VERSION;
+    HttpDelivery.serve_sw(http_delivery_work);
+    if (!HttpDeliveryV.ok)
     {
         Serial.println("service-worker routes failed to register");
     }

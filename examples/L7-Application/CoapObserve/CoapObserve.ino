@@ -57,9 +57,13 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_coap_server_reset();
-    protocore_coap_server_add_resource("/count", COAP_ALLOW_GET, h_count);
-    protocore_coap_server_begin(5683);
+        Coap.reset(protocore_coap_span());
+    CoapV.resource.path = "/count";
+    CoapV.resource.methods = COAP_ALLOW_GET;
+    CoapV.resource.handler = h_count;
+    Coap.add_resource(protocore_coap_span());
+    CoapV.bind.port = 5683;
+    Coap.begin(protocore_coap_span());
     Serial.println("CoAP server on :5683, observe coap://<ip>/count");
 }
 
@@ -70,6 +74,7 @@ void loop()
     {
         last = millis();
         g_count++;
-        protocore_coap_notify("/count"); // push the new value to every observer
+        CoapV.observe.path = "/count";
+        Coap.notify(protocore_coap_span()); // push the new value to every observer
     }
 }

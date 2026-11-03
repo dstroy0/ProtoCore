@@ -14,6 +14,8 @@
  *        -d '{"name":"ada","age":36,"admin":true}'
  */
 
+#define PROTOCORE_ENABLE_JSON 1
+
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
 

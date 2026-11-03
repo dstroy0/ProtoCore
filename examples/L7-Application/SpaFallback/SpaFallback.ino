@@ -29,6 +29,8 @@
 #include "server/web/spa_router/spa_router.h"
 #include "shared/mime/mime.h"
 
+static uint8_t spa_router_work[16]; // the borrow an entry takes; SpaRouter never reads it
+
 static const char *WIFI_SSID = "your-ssid";
 static const char *WIFI_PASS = "your-password";
 
@@ -74,12 +76,20 @@ static void send_fallback(uint8_t slot_id)
     char page[512];
     size_t total = 0;
     protocore_ui_stream s;
-    protocore_ui_stream_begin(&s, HMI_FRAGMENTS, HMI_FRAGMENT_COUNT, &g_hmi);
+    SpaRouterV.ui_stream_begin_args.s = &s;
+    SpaRouterV.ui_stream_begin_args.frags = HMI_FRAGMENTS;
+    SpaRouterV.ui_stream_begin_args.count = HMI_FRAGMENT_COUNT;
+    SpaRouterV.ui_stream_begin_args.ctx = &g_hmi;
+    SpaRouter.ui_stream_begin(spa_router_work);
     // A deliberately small chunk: the cursor resumes mid-fragment, so this produces the same bytes
     // any larger buffer would.
     for (;;)
     {
-        size_t n = protocore_ui_stream_next(&s, page + total, 48 < sizeof(page) - total ? 48 : sizeof(page) - total);
+        SpaRouterV.ui_stream_next_args.s = &s;
+        SpaRouterV.ui_stream_next_args.out = page + total;
+        SpaRouterV.ui_stream_next_args.cap = 48 < sizeof(page) - total ? 48 : sizeof(page) - total;
+        SpaRouter.ui_stream_next(spa_router_work);
+        size_t n = SpaRouterV.n;
         if (n == 0)
         {
             break;
@@ -116,7 +126,10 @@ static void ui_handler(uint8_t slot_id, HttpReq *req)
     ctx.client_scripting = client_will_script(req);
     ctx.degraded = g_hmi.degraded;
 
-    switch (protocore_spa_route_ex(req->path, &ctx))
+    SpaRouterV.route_ex_args.path = req->path;
+    SpaRouterV.route_ex_args.ctx = &ctx;
+    SpaRouter.route_ex(spa_router_work);
+    switch (SpaRouterV.action)
     {
     case protocore_spa_action::PROTOCORE_SPA_SERVE_SHELL:
         // A real build hands this to serve_static(index.html); inline here so the example needs no

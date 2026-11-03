@@ -1,6 +1,6 @@
 # Scpi - drive a bench instrument over SCPI / IEEE 488.2
 
-**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_SCPI`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_SCPI`, `PROTOCORE_ENABLE_TCP_CLIENT`
 
 ## What this example teaches
 
@@ -57,7 +57,7 @@ or use a Python `pyvisa` sim / any vendor SCPI simulator.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_SCPI=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_SCPI=1" \
   --lib="." examples/L7-Application/Scpi/Scpi.ino
 ```
 

@@ -37,7 +37,13 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 // Fallback used only to *set* the RTC the first time we reach the internet.
 static uint32_t protocore_ntp_source()
 {
-    return protocore_ntp_synced() ? (uint32_t)protocore_ntp_epoch() : 0;
+    NtpService.synced(protocore_ntp_service_span());
+    if (!NtpServiceV.ok)
+    {
+        return 0;
+    }
+    NtpService.epoch(protocore_ntp_service_span());
+    return (uint32_t)NtpServiceV.value;
 }
 
 void setup()
@@ -65,17 +71,22 @@ void setup()
     // The RTC is the primary source; upstream NTP is only for setting it.
     protocore_time_source_add("rtc", 1, protocore_rtc_time_source);
     protocore_time_source_add("ntp", 2, protocore_ntp_source);
-    protocore_ntp_begin(NULL, NULL, NULL);
+    NtpServiceV.begin_args.tz = NULL;
+    NtpServiceV.begin_args.server1 = NULL;
+    NtpServiceV.begin_args.server2 = NULL;
+    NtpService.begin(protocore_ntp_service_span());
 }
 
 void loop()
 {
     // Self-initialize: once we have accurate internet time and the RTC is unset/wrong, write it.
     static bool protocore_rtc_set = false;
-    if (!protocore_rtc_set && protocore_ntp_synced())
+    NtpService.synced(protocore_ntp_service_span());
+    if (!protocore_rtc_set && NtpServiceV.ok)
     {
         uint32_t protocore_rtc_now = Rtc.read_epoch(protocore_rtc_span());
-        uint32_t protocore_ntp_now = (uint32_t)protocore_ntp_epoch();
+        NtpService.epoch(protocore_ntp_service_span());
+        uint32_t protocore_ntp_now = (uint32_t)NtpServiceV.value;
         if (protocore_rtc_now == 0 || (protocore_ntp_now > protocore_rtc_now ? protocore_ntp_now - protocore_rtc_now : protocore_rtc_now - protocore_ntp_now) > 5)
         {
             if (Rtc.set_epoch(protocore_rtc_span(), protocore_ntp_now))

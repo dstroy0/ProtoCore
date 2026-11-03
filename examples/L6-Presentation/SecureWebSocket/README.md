@@ -1,6 +1,6 @@
 # SecureWebSocket - wss:// and SSE over TLS
 
-**Layer:** L6 Presentation · **Build flags:** `PROTOCORE_ENABLE_TLS` (WebSocket + SSE on by default)
+**Layer:** L6 Presentation · **Build flags:** `PROTOCORE_ENABLE_TLS`, `PROTOCORE_ENABLE_TLS_RPK`, `PROTOCORE_ENABLE_WEBSOCKET`, `PROTOCORE_ENABLE_SSE`
 
 ## What this example teaches
 
@@ -33,7 +33,7 @@ normally.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_TLS=1 -DMAX_CONNS=4 -DPROTOCORE_TLS_ARENA_SIZE=32768" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_SSE=1 -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_TLS_RPK=1 -DPROTOCORE_ENABLE_TLS=1 -DMAX_CONNS=4 -DPROTOCORE_TLS_ARENA_SIZE=32768" \
   --lib="." examples/L6-Presentation/SecureWebSocket/SecureWebSocket.ino
 ```
 
@@ -52,6 +52,9 @@ PEM cert/key are elided here (see the `.ino`); the C++ is verbatim with comments
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #define PROTOCORE_ENABLE_TLS 1
+#define PROTOCORE_ENABLE_TLS_RPK 1
+#define PROTOCORE_ENABLE_WEBSOCKET 1
+#define PROTOCORE_ENABLE_SSE 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

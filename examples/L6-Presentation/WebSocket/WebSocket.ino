@@ -12,6 +12,8 @@
  * Flash, open Serial @ 115200 for the IP, then browse to http://<ip>/ and type.
  */
 
+#define PROTOCORE_ENABLE_WEBSOCKET 1
+
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
 

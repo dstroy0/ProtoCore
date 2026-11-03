@@ -49,12 +49,22 @@ void setup()
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "hello via mDNS"); });
     begin_http(80, NULL);
 
-    if (protocore_mdns_begin(HOSTNAME, 80))
+    MdnsServiceV.begin_args.hostname = HOSTNAME;
+    MdnsServiceV.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    if (MdnsServiceV.ok)
     {
         // Bonjour TXT records (shown by DNS-SD browsers) + advertise HTTPS too.
-        protocore_mdns_txt("path", "/");
-        protocore_mdns_txt("fw", "1.0");
-        protocore_mdns_add_service("_https", "_tcp", 443);
+        MdnsServiceV.txt_args.key = "path";
+        MdnsServiceV.txt_args.value = "/";
+        MdnsService.txt(protocore_mdns_service_span());
+        MdnsServiceV.txt_args.key = "fw";
+        MdnsServiceV.txt_args.value = "1.0";
+        MdnsService.txt(protocore_mdns_service_span());
+        MdnsServiceV.add_service_args.service_type = "_https";
+        MdnsServiceV.add_service_args.proto = "_tcp";
+        MdnsServiceV.add_service_args.port = 443;
+        MdnsService.add_service(protocore_mdns_service_span());
         Serial.printf("mDNS: http://%s.local/\n", HOSTNAME);
     }
 }

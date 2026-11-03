@@ -21,11 +21,13 @@
  *
  * NOTE: optional features are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable them for the whole build, e.g.:
- *     build_flags = -DPROTOCORE_ENABLE_TLS=1
- * (WebSocket and SSE are on by default.)
+ *     build_flags = -DPROTOCORE_ENABLE_SSE=1 -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_TLS_RPK=1 -DPROTOCORE_ENABLE_TLS=1
  */
 
 #define PROTOCORE_ENABLE_TLS 1
+#define PROTOCORE_ENABLE_TLS_RPK 1
+#define PROTOCORE_ENABLE_WEBSOCKET 1
+#define PROTOCORE_ENABLE_SSE 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

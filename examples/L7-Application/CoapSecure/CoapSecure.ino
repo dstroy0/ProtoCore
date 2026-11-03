@@ -154,10 +154,19 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Build the resource table once (shared by every transport), then start the DTLS front-end on 5684.
-    protocore_coap_server_reset();
-    protocore_coap_server_add_resource("/info", COAP_ALLOW_GET, coap_info);
-    protocore_coap_server_add_resource("/led", COAP_ALLOW_GET | COAP_ALLOW_PUT, coap_led);
-    protocore_coap_server_add_resource("/hello", COAP_ALLOW_GET, coap_hello);
+        Coap.reset(protocore_coap_span());
+    CoapV.resource.path = "/info";
+    CoapV.resource.methods = COAP_ALLOW_GET;
+    CoapV.resource.handler = coap_info;
+    Coap.add_resource(protocore_coap_span());
+    CoapV.resource.path = "/led";
+    CoapV.resource.methods = COAP_ALLOW_GET | COAP_ALLOW_PUT;
+    CoapV.resource.handler = coap_led;
+    Coap.add_resource(protocore_coap_span());
+    CoapV.resource.path = "/hello";
+    CoapV.resource.methods = COAP_ALLOW_GET;
+    CoapV.resource.handler = coap_hello;
+    Coap.add_resource(protocore_coap_span());
 
     CoapsServerConfig cfg;
     memset(&cfg, 0, sizeof cfg);

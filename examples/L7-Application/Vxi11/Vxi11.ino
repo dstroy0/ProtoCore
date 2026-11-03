@@ -17,10 +17,11 @@
  *
  * Point INSTRUMENT_IP at a real VXI-11 / LXI instrument (or a python-vxi11 server). See the README.
  *
- * Build flags (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_VXI11=1
+ * Build flags (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_VXI11=1
  */
 
 #define PROTOCORE_ENABLE_VXI11 1
+#define PROTOCORE_ENABLE_TCP_CLIENT 1
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical/physical.h"

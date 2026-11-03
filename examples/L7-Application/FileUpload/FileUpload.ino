@@ -15,7 +15,7 @@
  *
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable it for the whole build, e.g.:
- *     build_flags = -DPROTOCORE_ENABLE_UPLOAD=1 -DMAX_CONNS=4
+ *     build_flags = -DPROTOCORE_ENABLE_FILE_SERVING=1 -DPROTOCORE_ENABLE_MNT=1 -DPROTOCORE_ENABLE_UPLOAD=1 -DMAX_CONNS=4
  * (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.) The upload
  * sink shares the parser streaming hook with OTA - enable one or the other, not both.
  *
@@ -27,13 +27,18 @@
  */
 
 #define PROTOCORE_ENABLE_UPLOAD 1
+#define PROTOCORE_ENABLE_MNT 1
+#define PROTOCORE_ENABLE_FILE_SERVING 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/application/upload_service/upload_service.h"
 #include "test/core_setup/hal/esp/esp_mnt_fs.h" // protocore_mnt_fs(): bind an Arduino FS to the storage seam
-#include "server/storage/mnt/mnt.h"            // protocore_mnt_mount()
+#include "server/storage/mnt/mnt.h"            // Mnt.mount
+#include "network_drivers/application/file_serving/file_serving.h"
 #include <LittleFS.h>
+
+static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
@@ -64,14 +69,20 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Mount LittleFS through the storage seam; the upload service writes to whatever is mounted.
-    protocore_mnt_mount(protocore_mnt_fs(&LittleFS));
+    MntV.args.backend = protocore_mnt_fs(&LittleFS);
+    Mnt.mount(mnt_work);
 
     // POST /upload -> stream the body into DEST on the mounted store.
-    protocore_upload_begin("/upload", DEST);
+    UploadService.begin(protocore_upload_service_span(), "/upload", DEST);
 
     // GET /file -> serve the stored file back.
-    on_http("/file", HTTP_GET,
-              [](uint8_t id, HttpReq *) { serve_file(id, LittleFS, DEST, "application/octet-stream"); });
+    on_http("/file", HTTP_GET, [](uint8_t id, HttpReq *) {
+        FileServingV.serve_file_args.slot_id = id;
+        FileServingV.serve_file_args.file_sys = protocore_mnt_fs(&LittleFS);
+        FileServingV.serve_file_args.fs_path = DEST;
+        FileServingV.serve_file_args.content_type = "application/octet-stream";
+        FileServing.serve_file(protocore_file_serving_span());
+    });
 
     int32_t result = begin_http(80, NULL);
     if (result < 0)
