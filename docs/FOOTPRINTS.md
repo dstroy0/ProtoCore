@@ -112,7 +112,11 @@ from each example's `pio ci` size report and aggregated into
 | `SHT3X`                                                                                                   | Drivers/Sht3x                        | 404.1 KB (31.6%) | 112.0 KB (35.0%) |
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 | `SIGFOX`                                                                                                  | Drivers/SigfoxUplink                 | 261.7 KB (20.4%) | 21.0 KB (6.6%)   |
+=======
+| `SIGFOX`                                                                                                  | Drivers/SigfoxUplink                 | 356.0 KB (27.8%) | 28.3 KB (8.9%)   |
+>>>>>>> Stashed changes
 =======
 | `SIGFOX`                                                                                                  | Drivers/SigfoxUplink                 | 356.0 KB (27.8%) | 28.3 KB (8.9%)   |
 >>>>>>> Stashed changes
