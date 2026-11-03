@@ -22,7 +22,7 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
 #include "services/radio/wifi_sniffer/wifi_sniffer.h"
-#include "server/clock/clock.h" // protocore_millis
+#include "server/clock/clock.h"
 
 static const uint8_t CHAN_FIRST = 1; // sweep 1..11 (the US 2.4 GHz plan)
 static const uint8_t CHAN_LAST = 11;
@@ -55,15 +55,18 @@ void loop()
     WifiSniffer.tick(protocore_wifi_sniffer_span()); // hops to the next channel when the dwell elapses
 
     static uint32_t last_report = 0;
-    if (protocore_millis() - last_report < 5000)
+    if (millis() - last_report < 5000)
     {
         return;
     }
-    last_report = protocore_millis();
+    last_report = millis();
 
-    const WifiStats *st = WifiSniffer.stats(protocore_wifi_sniffer_span());
-    const WifiSurvey *sv = WifiSniffer.survey(protocore_wifi_sniffer_span());
-    const WifiScan *sc = WifiSniffer.scan(protocore_wifi_sniffer_span());
+    WifiSniffer.stats(protocore_wifi_sniffer_span());
+    const WifiStats *st = WifiSnifferV.stats_out;
+    WifiSniffer.survey(protocore_wifi_sniffer_span());
+    const WifiSurvey *sv = WifiSnifferV.survey_out;
+    WifiSniffer.scan(protocore_wifi_sniffer_span());
+    const WifiScan *sc = WifiSnifferV.scan_out;
 
     Serial.printf("\n-- ch %u, sweep %lu -- frames %lu (mgmt %lu, ctrl %lu, data %lu, other %lu)\n", sc->channel,
                   (unsigned long)sc->sweeps, (unsigned long)st->total, (unsigned long)st->mgmt, (unsigned long)st->ctrl,
@@ -71,7 +74,10 @@ void loop()
 
     for (uint8_t ch = CHAN_FIRST; ch <= CHAN_LAST; ch++)
     {
-        const WifiChannelSurvey *e = protocore_wifi_survey_get(sv, ch);
+        WifiSnifferV.survey_get_args.s = sv;
+        WifiSnifferV.survey_get_args.channel = ch;
+        WifiSniffer.survey_get(protocore_wifi_sniffer_span());
+        const WifiChannelSurvey *e = WifiSnifferV.ptr;
         if (!e || e->frames == 0)
         {
             continue;
@@ -82,12 +88,24 @@ void loop()
     }
 
     // Channel-agility: is any other channel enough stronger than the one we are on?
-    const WifiChannelSurvey *cur = protocore_wifi_survey_get(sv, sc->channel);
+    WifiSnifferV.survey_get_args.s = sv;
+    WifiSnifferV.survey_get_args.channel = sc->channel;
+    WifiSniffer.survey_get(protocore_wifi_sniffer_span());
+    const WifiChannelSurvey *cur = WifiSnifferV.ptr;
     uint8_t cand_ch = 0;
     int8_t cand_rssi = 0;
-    if (cur && cur->best_rssi != PROTOCORE_WIFI_RSSI_NONE && protocore_wifi_survey_best(sv, sc->channel, &cand_ch, &cand_rssi))
+    WifiSnifferV.survey_best_args.s = sv;
+    WifiSnifferV.survey_best_args.exclude_channel = sc->channel;
+    WifiSnifferV.survey_best_args.out_channel = &cand_ch;
+    WifiSnifferV.survey_best_args.out_rssi = &cand_rssi;
+    WifiSniffer.survey_best(protocore_wifi_sniffer_span());
+    if (cur && cur->best_rssi != PROTOCORE_WIFI_RSSI_NONE && WifiSnifferV.ok)
     {
-        bool roam = protocore_wifi_should_roam(cur->best_rssi, cand_rssi, ROAM_HYSTERESIS_DB);
+        WifiSnifferV.should_roam_args.cur_rssi = cur->best_rssi;
+        WifiSnifferV.should_roam_args.cand_rssi = cand_rssi;
+        WifiSnifferV.should_roam_args.hysteresis_db = ROAM_HYSTERESIS_DB;
+        WifiSniffer.should_roam(protocore_wifi_sniffer_span());
+        bool roam = WifiSnifferV.ok;
         Serial.printf("  roam? ch %u (%d dBm) -> ch %u (%d dBm): %s\n", sc->channel, (int)cur->best_rssi, cand_ch,
                       (int)cand_rssi, roam ? "YES" : "no");
     }

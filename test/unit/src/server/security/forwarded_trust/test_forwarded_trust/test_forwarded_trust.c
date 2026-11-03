@@ -57,10 +57,10 @@ void test_an_empty_table_trusts_nothing(void)
     TEST_ASSERT_FALSE(ForwardedTrustV.ok);
 
     protocore_ip out;
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.peer = &peer;
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.fwd_ip_str = "203.0.113.9";
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.out = &out;
-    ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
+    ForwardedTrustV.effective_ip_args.peer = &peer;
+    ForwardedTrustV.effective_ip_args.fwd_ip_str = "203.0.113.9";
+    ForwardedTrustV.effective_ip_args.out = &out;
+    ForwardedTrust.effective_ip(protocore_forwarded_trust_span());
     TEST_ASSERT_FALSE(ForwardedTrustV.ok);
     TEST_ASSERT_TRUE(same(&peer, &out)); // the real TCP peer was kept
 }
@@ -285,10 +285,10 @@ void test_an_untrusted_peer_can_never_forge_a_client_address(void)
     for (size_t i = 0; i < sizeof(CLAIMS) / sizeof(CLAIMS[0]); i++)
     {
         protocore_ip out;
-        ForwardedTrustV.protocore_forwarded_effective_ip_args.peer = &attacker;
-        ForwardedTrustV.protocore_forwarded_effective_ip_args.fwd_ip_str = CLAIMS[i];
-        ForwardedTrustV.protocore_forwarded_effective_ip_args.out = &out;
-        ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
+        ForwardedTrustV.effective_ip_args.peer = &attacker;
+        ForwardedTrustV.effective_ip_args.fwd_ip_str = CLAIMS[i];
+        ForwardedTrustV.effective_ip_args.out = &out;
+        ForwardedTrust.effective_ip(protocore_forwarded_trust_span());
         TEST_ASSERT_FALSE_MESSAGE(ForwardedTrustV.ok, CLAIMS[i]);
         TEST_ASSERT_TRUE_MESSAGE(same(&attacker, &out), CLAIMS[i]);
     }
@@ -303,18 +303,18 @@ void test_a_trusted_upstream_is_believed(void)
     const protocore_ip proxy = parsed("10.0.0.1");
 
     protocore_ip out;
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.peer = &proxy;
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.fwd_ip_str = "203.0.113.9";
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.out = &out;
-    ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
+    ForwardedTrustV.effective_ip_args.peer = &proxy;
+    ForwardedTrustV.effective_ip_args.fwd_ip_str = "203.0.113.9";
+    ForwardedTrustV.effective_ip_args.out = &out;
+    ForwardedTrust.effective_ip(protocore_forwarded_trust_span());
     TEST_ASSERT_TRUE(ForwardedTrustV.ok);
     const protocore_ip want4 = parsed("203.0.113.9");
     TEST_ASSERT_TRUE(same(&want4, &out));
 
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.peer = &proxy;
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.fwd_ip_str = "2001:db8::5";
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.out = &out;
-    ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
+    ForwardedTrustV.effective_ip_args.peer = &proxy;
+    ForwardedTrustV.effective_ip_args.fwd_ip_str = "2001:db8::5";
+    ForwardedTrustV.effective_ip_args.out = &out;
+    ForwardedTrust.effective_ip(protocore_forwarded_trust_span());
     TEST_ASSERT_TRUE(ForwardedTrustV.ok);
     const protocore_ip want6 = parsed("2001:db8::5");
     TEST_ASSERT_TRUE(same(&want6, &out));
@@ -346,10 +346,10 @@ void test_a_trusted_upstream_with_no_usable_client_falls_back(void)
     {
         protocore_ip out;
         const char *what = UNUSABLE[i] ? UNUSABLE[i] : "(null)";
-        ForwardedTrustV.protocore_forwarded_effective_ip_args.peer = &proxy;
-        ForwardedTrustV.protocore_forwarded_effective_ip_args.fwd_ip_str = UNUSABLE[i];
-        ForwardedTrustV.protocore_forwarded_effective_ip_args.out = &out;
-        ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
+        ForwardedTrustV.effective_ip_args.peer = &proxy;
+        ForwardedTrustV.effective_ip_args.fwd_ip_str = UNUSABLE[i];
+        ForwardedTrustV.effective_ip_args.out = &out;
+        ForwardedTrust.effective_ip(protocore_forwarded_trust_span());
         TEST_ASSERT_FALSE_MESSAGE(ForwardedTrustV.ok, what);
         TEST_ASSERT_TRUE_MESSAGE(same(&proxy, &out), what);
     }
@@ -367,34 +367,34 @@ void test_the_destination_is_always_written(void)
 
     protocore_ip out;
     out.family = PROTOCORE_IP_V6;
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.peer = &proxy;
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.fwd_ip_str = "198.51.100.4";
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.out = &out;
-    ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
+    ForwardedTrustV.effective_ip_args.peer = &proxy;
+    ForwardedTrustV.effective_ip_args.fwd_ip_str = "198.51.100.4";
+    ForwardedTrustV.effective_ip_args.out = &out;
+    ForwardedTrust.effective_ip(protocore_forwarded_trust_span());
     TEST_ASSERT_TRUE(ForwardedTrustV.ok);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_V4, out.family);
 
     out.family = PROTOCORE_IP_V6;
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.peer = &direct;
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.fwd_ip_str = "198.51.100.4";
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.out = &out;
-    ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
+    ForwardedTrustV.effective_ip_args.peer = &direct;
+    ForwardedTrustV.effective_ip_args.fwd_ip_str = "198.51.100.4";
+    ForwardedTrustV.effective_ip_args.out = &out;
+    ForwardedTrust.effective_ip(protocore_forwarded_trust_span());
     TEST_ASSERT_FALSE(ForwardedTrustV.ok);
     TEST_ASSERT_TRUE(same(&direct, &out));
 
     // no peer at all leaves an address that names nothing, not a stale one
     out = direct;
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.peer = NULL;
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.fwd_ip_str = "198.51.100.4";
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.out = &out;
-    ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
+    ForwardedTrustV.effective_ip_args.peer = NULL;
+    ForwardedTrustV.effective_ip_args.fwd_ip_str = "198.51.100.4";
+    ForwardedTrustV.effective_ip_args.out = &out;
+    ForwardedTrust.effective_ip(protocore_forwarded_trust_span());
     TEST_ASSERT_FALSE(ForwardedTrustV.ok);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_NONE, out.family);
 
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.peer = &proxy;
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.fwd_ip_str = "198.51.100.4";
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.out = NULL;
-    ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
+    ForwardedTrustV.effective_ip_args.peer = &proxy;
+    ForwardedTrustV.effective_ip_args.fwd_ip_str = "198.51.100.4";
+    ForwardedTrustV.effective_ip_args.out = NULL;
+    ForwardedTrust.effective_ip(protocore_forwarded_trust_span());
     // a null destination is refused rather than written through
     TEST_ASSERT_FALSE(ForwardedTrustV.ok);
 }
@@ -424,10 +424,10 @@ void test_several_upstreams_are_all_trusted(void)
     TEST_ASSERT_FALSE(ForwardedTrustV.ok);
 
     protocore_ip out;
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.peer = &six;
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.fwd_ip_str = "203.0.113.1";
-    ForwardedTrustV.protocore_forwarded_effective_ip_args.out = &out;
-    ForwardedTrust.protocore_forwarded_effective_ip(protocore_forwarded_trust_span());
+    ForwardedTrustV.effective_ip_args.peer = &six;
+    ForwardedTrustV.effective_ip_args.fwd_ip_str = "203.0.113.1";
+    ForwardedTrustV.effective_ip_args.out = &out;
+    ForwardedTrust.effective_ip(protocore_forwarded_trust_span());
     TEST_ASSERT_TRUE(ForwardedTrustV.ok);
     const protocore_ip want = parsed("203.0.113.1");
     TEST_ASSERT_TRUE(same(&want, &out));

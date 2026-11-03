@@ -54,18 +54,24 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_mqtt_set_message_cb(on_message);
+    MqttV.delivery.on_message = on_message;
+    Mqtt.on_message(protocore_mqtt_span());
 
-    MqttConnectOpts opts;
-    memset(&opts, 0, sizeof(opts));
-    opts.client_id = "pc-esp32-demo";
-    opts.keepalive_s = 30;
-    opts.clean_session = true;
-
-    if (protocore_mqtt_connect(BROKER, PORT, false, &opts))
+    MqttV.server.host = BROKER;
+    MqttV.server.port = PORT;
+    MqttV.server.use_tls = false;
+    MqttV.session.client_id = "pc-esp32-demo";
+    MqttV.session.user_name = nullptr;
+    MqttV.session.password = nullptr;
+    MqttV.session.keep_alive = 30;
+    MqttV.session.clean_session = true;
+    Mqtt.connect(protocore_mqtt_span());
+    if (MqttV.ok)
     {
         Serial.println("MQTT connected");
-        protocore_mqtt_subscribe(TOPIC, 1);
+        MqttV.filter.topic_filter = TOPIC;
+        MqttV.filter.qos = 1;
+        Mqtt.subscribe(protocore_mqtt_span());
     }
     else
     {
@@ -79,11 +85,17 @@ void loop()
 
     static uint32_t last = 0;
     static uint32_t n = 0;
-    if (Mqtt.connected(protocore_mqtt_span()) && millis() - last >= 1000)
+    Mqtt.connected(protocore_mqtt_span());
+    if (MqttV.ok && millis() - last >= 1000)
     {
         last = millis();
         char msg[48];
         int len = snprintf(msg, sizeof(msg), "hello from esp32 #%lu", (unsigned long)n++);
-        protocore_mqtt_publish(TOPIC, (const uint8_t *)msg, (size_t)len, 1, false);
+        MqttV.message.topic_name = TOPIC;
+        MqttV.message.payload = (const uint8_t *)msg;
+        MqttV.message.payload_len = (size_t)len;
+        MqttV.message.qos = 1;
+        MqttV.message.retain = false;
+        Mqtt.publish(protocore_mqtt_span());
     }
 }

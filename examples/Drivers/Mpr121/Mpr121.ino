@@ -44,7 +44,8 @@ void setup()
 void loop()
 {
     static uint16_t last = 0;
-    uint16_t now = Mpr121.read_touched(protocore_mpr121_span());
+    Mpr121.read_touched(protocore_mpr121_span());
+    uint16_t now = Mpr121V.value;
 
     if (now != last)
     {

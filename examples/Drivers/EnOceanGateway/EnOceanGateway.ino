@@ -3,10 +3,10 @@
 // A UART radio plugin (see RadioGateway): an EnOcean serial gateway module (TCM 310 /
 // USB 300) streams ESP3 telegrams at 57600 baud. Unlike the SPI radios, there is no chip
 // driver - the module does the RF, and the "driver" is purely the ESP3 framing codec.
-// We accumulate incoming bytes, frame telegrams with protocore_esp3_parse(), pull the sender id +
+// We accumulate incoming bytes, frame telegrams with Enocean.esp3_parse, pull the sender id +
 // payload out of a RADIO_ERP1 telegram, and bridge it northbound.
 //
-//   TCM310 --UART--> protocore_esp3_parse() --> RADIO_ERP1 sender + payload -> protocore_gateway_uplink()
+//   TCM310 --UART--> Enocean.esp3_parse --> RADIO_ERP1 sender + payload -> Gateway.uplink
 //                                                                         |
 //                                                  envelope + topic  enocean/0/<sender>
 //                                                                         |
@@ -20,6 +20,8 @@
 #include "protocore.h" // discovers the library (adds src/ to the include path)
 #include "server/net/gateway/gateway.h"
 #include "services/radio/enocean/enocean.h"
+
+static uint8_t enocean_work[16]; // the borrow an entry takes; Enocean never reads it
 
 static const uint8_t RADIO_PORT = 0;
 static const int PIN_RX = 16, PIN_TX = 17; // UART2 to the EnOcean module
@@ -63,7 +65,7 @@ void loop()
     for (;;)
     {
         protocore_esp3_packet pkt = {};
-        int n = protocore_esp3_parse(g_buf, g_len, &pkt);
+        int n = Enocean.esp3_parse(enocean_work, g_buf, g_len, &pkt);
         if (n == 0)
         {
             break; // need more bytes

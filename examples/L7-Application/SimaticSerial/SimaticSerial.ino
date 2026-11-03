@@ -95,11 +95,23 @@ static void b_on_rx(void *u, const uint8_t *d, size_t n)
     (void)u;
     hexstr(g_last_fetch, sizeof(g_last_fetch), d, n);
     Rk512Header h;
-    if (protocore_rk512_parse_header(d, n, &h) && h.cmd == Rk512Cmd::FETCH)
+    SimaticV.parse_header_rk512_args.buf = d;
+    SimaticV.parse_header_rk512_args.len = n;
+    SimaticV.parse_header_rk512_args.out = &h;
+    Simatic.parse_header_rk512(protocore_simatic_span());
+    if (SimaticV.ok && h.cmd == RK512_CMD_FETCH)
     {
         uint8_t react[8];
-        size_t rn = protocore_rk512_build_reaction(react, sizeof(react), 0x0000); // ok
-        protocore_3964r_send(&sta_b, react, rn, protocore_millis());
+        SimaticV.build_reaction_rk512_args.buf = react;
+        SimaticV.build_reaction_rk512_args.cap = sizeof(react);
+        SimaticV.build_reaction_rk512_args.status = 0x0000;
+        Simatic.build_reaction_rk512(protocore_simatic_span());
+        size_t rn = SimaticV.n; // ok
+        SimaticV.send_3964r_args.ctx = &sta_b;
+        SimaticV.send_3964r_args.data = react;
+        SimaticV.send_3964r_args.len = rn;
+        SimaticV.send_3964r_args.now_ms = millis();
+        Simatic.send_3964r(protocore_simatic_span());
     }
 }
 
@@ -109,7 +121,13 @@ static void a_on_rx(void *u, const uint8_t *d, size_t n)
     (void)u;
     hexstr(g_last_reaction, sizeof(g_last_reaction), d, n);
     uint16_t status = 0xFFFF;
-    if (protocore_rk512_parse_reaction(d, n, &status, nullptr, nullptr) && status == 0)
+    SimaticV.parse_reaction_rk512_args.buf = d;
+    SimaticV.parse_reaction_rk512_args.len = n;
+    SimaticV.parse_reaction_rk512_args.status = &status;
+    SimaticV.parse_reaction_rk512_args.data = nullptr;
+    SimaticV.parse_reaction_rk512_args.dlen = nullptr;
+    Simatic.parse_reaction_rk512(protocore_simatic_span());
+    if (SimaticV.ok && status == 0)
     {
         g_round++;
     }
@@ -122,7 +140,7 @@ static void handle_status(uint8_t slot, HttpReq *req)
     int nn =
         snprintf(body, sizeof(body), "{\"rounds\":%lu,\"lastFetchTelegram\":\"%s\",\"lastReactionTelegram\":\"%s\"}",
                  (unsigned long)g_round, g_last_fetch, g_last_reaction);
-    send_text(slot, 200, "application/json", (const uint8_t *)body, (size_t)(nn < 0 ? 0 : nn));
+    send_bin(slot, 200, "application/json", (const uint8_t *)body, (size_t)(nn < 0 ? 0 : nn));
 }
 
 void setup()
@@ -141,8 +159,20 @@ void setup()
                   (unsigned)((ip >> 8) & 0xFF), (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Both stations run the "R" (BCC) variant; A is high priority, B low (collision arbitration).
-    protocore_3964r_init(&sta_a, /*high_priority=*/true, /*with_bcc=*/true, a_tx, a_on_rx, nullptr);
-    protocore_3964r_init(&sta_b, /*high_priority=*/false, /*with_bcc=*/true, b_tx, b_on_rx, nullptr);
+    SimaticV.init_3964r_args.ctx = &sta_a;
+    SimaticV.init_3964r_args.high_priority = /*high_priority=*/true;
+    SimaticV.init_3964r_args.with_bcc = /*with_bcc=*/true;
+    SimaticV.init_3964r_args.tx = a_tx;
+    SimaticV.init_3964r_args.rx = a_on_rx;
+    SimaticV.init_3964r_args.user = nullptr;
+    Simatic.init_3964r(protocore_simatic_span());
+    SimaticV.init_3964r_args.ctx = &sta_b;
+    SimaticV.init_3964r_args.high_priority = /*high_priority=*/false;
+    SimaticV.init_3964r_args.with_bcc = /*with_bcc=*/true;
+    SimaticV.init_3964r_args.tx = b_tx;
+    SimaticV.init_3964r_args.rx = b_on_rx;
+    SimaticV.init_3964r_args.user = nullptr;
+    Simatic.init_3964r(protocore_simatic_span());
 
     on_http("/simatic", HTTP_GET, handle_status);
     begin_http(80, NULL);
@@ -151,28 +181,54 @@ void setup()
 void loop()
 {
     handle();
-    uint32_t now = protocore_millis();
+    uint32_t now = millis();
 
     // Pump the cross-wire: bytes A sent -> B's receiver, bytes B sent -> A's receiver.
     uint8_t b;
     while (q_pop(&q_a2b, &b))
     {
-        protocore_3964r_rx_byte(&sta_b, b, now);
+        SimaticV.rx_byte_3964r_args.ctx = &sta_b;
+        SimaticV.rx_byte_3964r_args.b = b;
+        SimaticV.rx_byte_3964r_args.now_ms = now;
+        Simatic.rx_byte_3964r(protocore_simatic_span());
     }
     while (q_pop(&q_b2a, &b))
     {
-        protocore_3964r_rx_byte(&sta_a, b, now);
+        SimaticV.rx_byte_3964r_args.ctx = &sta_a;
+        SimaticV.rx_byte_3964r_args.b = b;
+        SimaticV.rx_byte_3964r_args.now_ms = now;
+        Simatic.rx_byte_3964r(protocore_simatic_span());
     }
-    protocore_3964r_tick(&sta_a, now);
-    protocore_3964r_tick(&sta_b, now);
+    SimaticV.tick_3964r_args.ctx = &sta_a;
+    SimaticV.tick_3964r_args.now_ms = now;
+    Simatic.tick_3964r(protocore_simatic_span());
+    SimaticV.tick_3964r_args.ctx = &sta_b;
+    SimaticV.tick_3964r_args.now_ms = now;
+    Simatic.tick_3964r(protocore_simatic_span());
 
     // Kick off a new FETCH from A once both stations are idle (previous exchange finished).
     static uint32_t last = 0;
-    if (protocore_3964r_idle(&sta_a) && protocore_3964r_idle(&sta_b) && now - last >= 1000)
+    SimaticV.idle_3964r_args.ctx = &sta_a;
+    Simatic.idle_3964r(protocore_simatic_span());
+    const bool a_idle = SimaticV.ok;
+    SimaticV.idle_3964r_args.ctx = &sta_b;
+    Simatic.idle_3964r(protocore_simatic_span());
+    if (a_idle && SimaticV.ok && now - last >= 1000)
     {
         last = now;
         uint8_t fetch[8];
-        size_t fn = protocore_rk512_build_fetch(fetch, sizeof(fetch), Rk512Area::DB, 5, 0x0000, 2);
-        protocore_3964r_send(&sta_a, fetch, fn, now);
+        SimaticV.build_fetch_rk512_args.buf = fetch;
+        SimaticV.build_fetch_rk512_args.cap = sizeof(fetch);
+        SimaticV.build_fetch_rk512_args.area = RK512_AREA_DB;
+        SimaticV.build_fetch_rk512_args.dbnr = 5;
+        SimaticV.build_fetch_rk512_args.addr = 0x0000;
+        SimaticV.build_fetch_rk512_args.wcount = 2;
+        Simatic.build_fetch_rk512(protocore_simatic_span());
+        size_t fn = SimaticV.n;
+        SimaticV.send_3964r_args.ctx = &sta_a;
+        SimaticV.send_3964r_args.data = fetch;
+        SimaticV.send_3964r_args.len = fn;
+        SimaticV.send_3964r_args.now_ms = now;
+        Simatic.send_3964r(protocore_simatic_span());
     }
 }

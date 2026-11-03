@@ -1,6 +1,6 @@
 # WebTerminal - a browser "web serial" terminal
 
-**Layer:** L6 Presentation · **Build flags:** `PROTOCORE_ENABLE_WEB_TERMINAL` (requires `PROTOCORE_ENABLE_WEBSOCKET`)
+**Layer:** L6 Presentation · **Build flags:** `PROTOCORE_ENABLE_WEB_TERMINAL` (requires `PROTOCORE_ENABLE_WEBSOCKET`) `PROTOCORE_ENABLE_WEB_ASSETS`
 
 ## What this example teaches
 
@@ -52,7 +52,7 @@ WebSocket primitive is [WebSocket](../WebSocket).
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_WEB_TERMINAL=1 -DPROTOCORE_ENABLE_WEBSOCKET=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_WEB_ASSETS=1 -DPROTOCORE_ENABLE_WEB_TERMINAL=1 -DPROTOCORE_ENABLE_WEBSOCKET=1" \
   --lib="." examples/L6-Presentation/WebTerminal/WebTerminal.ino
 ```
 
@@ -68,6 +68,7 @@ verbatim with added explanatory comments:
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #define PROTOCORE_ENABLE_WEB_TERMINAL 1
+#define PROTOCORE_ENABLE_WEB_ASSETS 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

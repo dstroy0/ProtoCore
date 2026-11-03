@@ -51,7 +51,10 @@ void setup()
 
     // Every metric this device sends is tagged so the collector can group by device (DogStatsD
     // tag syntax; harmless with plain StatsD collectors that ignore it).
-    protocore_statsd_begin(STATSD_HOST, STATSD_PORT, "device:esp32-demo");
+    StatsdV.server.addr = STATSD_HOST;
+    StatsdV.server.port = STATSD_PORT;
+    StatsdV.tags.global = "device:esp32-demo";
+    Statsd.init(protocore_statsd_span());
     Serial.printf("StatsD -> %s:%u\n", STATSD_HOST, STATSD_PORT);
 }
 
@@ -62,13 +65,21 @@ void loop()
     {
         last = millis();
 
-        protocore_statsd_count("esp32.loops", 1);                              // a counter (rate over time)
-        protocore_statsd_gauge("esp32.heap.free", (int64_t)ESP.getFreeHeap()); // a gauge (absolute level)
-        protocore_statsd_gauge("esp32.uptime.s", (int64_t)(millis() / 1000));
+        StatsdV.metric.name = "esp32.loops";
+        StatsdV.value.i64 = 1;
+        Statsd.count(protocore_statsd_span());                              // a counter (rate over time)
+        StatsdV.metric.name = "esp32.heap.free";
+        StatsdV.value.i64 = (int64_t)ESP.getFreeHeap();
+        Statsd.gauge(protocore_statsd_span()); // a gauge (absolute level)
+        StatsdV.metric.name = "esp32.uptime.s";
+        StatsdV.value.i64 = (int64_t)(millis() / 1000);
+        Statsd.gauge(protocore_statsd_span());
 
         uint32_t t0 = millis();
         // ... do some work you want to measure here ...
-        protocore_statsd_timing("esp32.loop.work_ms", millis() - t0); // a timing/duration
+        StatsdV.metric.name = "esp32.loop.work_ms";
+        StatsdV.value.ms = millis() - t0;
+        Statsd.timing(protocore_statsd_span()); // a timing/duration
 
         Serial.println("pushed metrics");
     }

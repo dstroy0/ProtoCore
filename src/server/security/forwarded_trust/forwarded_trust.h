@@ -53,19 +53,19 @@ typedef struct
     const struct protocore_ip *peer;
 } ForwardedTrustContainsArgs;
 
-/** @brief What protocore_forwarded_effective_ip takes. */
+/** @brief What effective_ip takes. */
 typedef struct
 {
     const struct protocore_ip *peer;
     const char *fwd_ip_str;
     struct protocore_ip *out;
-} ForwardedTrustProtocoreForwardedEffectiveIpArgs;
+} ForwardedTrustEffectiveIpArgs;
 typedef struct
 {
     ForwardedTrustAddArgs add_args;
     ForwardedTrustAddCidrArgs add_cidr_args;
     ForwardedTrustContainsArgs contains_args;
-    ForwardedTrustProtocoreForwardedEffectiveIpArgs protocore_forwarded_effective_ip_args;
+    ForwardedTrustEffectiveIpArgs effective_ip_args;
     proto_bool ok;
 } ForwardedTrustVars;
 
@@ -79,7 +79,7 @@ typedef struct
     void (*const add)(uint8_t *work);
     void (*const add_cidr)(uint8_t *work);
     void (*const contains)(uint8_t *work);
-    void (*const protocore_forwarded_effective_ip)(uint8_t *work);
+    void (*const effective_ip)(uint8_t *work);
 } ForwardedTrustNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -88,7 +88,7 @@ void protocore_forwarded_trust_reset(uint8_t *work);
 void protocore_forwarded_trust_add(uint8_t *work);
 void protocore_forwarded_trust_add_cidr(uint8_t *work);
 void protocore_forwarded_trust_contains(uint8_t *work);
-void protocore_forwarded_trust_protocore_forwarded_effective_ip(uint8_t *work);
+void protocore_forwarded_trust_effective_ip(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -99,7 +99,7 @@ static const ForwardedTrustNs ForwardedTrust __attribute__((unused)) = {
     .add = protocore_forwarded_trust_add,
     .add_cidr = protocore_forwarded_trust_add_cidr,
     .contains = protocore_forwarded_trust_contains,
-    .protocore_forwarded_effective_ip = protocore_forwarded_trust_protocore_forwarded_effective_ip,
+    .effective_ip = protocore_forwarded_trust_effective_ip,
 };
 
 /**

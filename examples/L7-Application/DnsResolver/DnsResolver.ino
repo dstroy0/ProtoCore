@@ -21,7 +21,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
-#include "network_drivers/network/dns_resolver.h"
+#include "network_drivers/network/dns/dns_resolver/dns_resolver.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
@@ -48,16 +48,27 @@ void setup()
             send_text(id, 400, "application/json", "{\"error\":\"missing host\"}");
             return;
         }
-        uint32_t ip = 0;
-        bool ok = protocore_dns_resolver_resolve(host, &ip);
-        if (!ok)
+        // The resolver is polled: the first call sends the query, a later one finds the answer.
+        ResolverV.query.host = host;
+        Resolver.resolve(protocore_dns_resolver_span());
+        if (ResolverV.state == PROTOCORE_DNS_BUSY)
+        {
+            send_text(id, 503, "application/json", "{\"error\":\"resolving, retry\"}");
+            return;
+        }
+        if (ResolverV.state != PROTOCORE_DNS_READY)
         {
             send_text(id, 502, "application/json", "{\"error\":\"resolve failed\"}");
             return;
         }
+        const uint32_t ip = ResolverV.u32;
+        ResolverV.addr.ip = ip;
+        Resolver.verify(protocore_dns_resolver_span());
+        const bool verified = ResolverV.ok;
         char b[80];
-        snprintf(b, sizeof(b), "{\"ip\":\"%u.%u.%u.%u\",\"verified\":%s}", (ip >> 24) & 0xFF, (ip >> 16) & 0xFF,
-                 (ip >> 8) & 0xFF, ip & 0xFF, protocore_dns_resolver_verify(ip) ? "true" : "false");
+        snprintf(b, sizeof(b), "{\"ip\":\"%u.%u.%u.%u\",\"verified\":%s}", (unsigned)((ip >> 24) & 0xFF),
+                 (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 8) & 0xFF), (unsigned)(ip & 0xFF),
+                 verified ? "true" : "false");
         send_text(id, 200, "application/json", b);
     });
     begin_http(80, NULL);

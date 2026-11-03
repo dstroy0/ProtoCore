@@ -7,7 +7,7 @@
  *        rate-limiting, and memory-safe stack templating.
  *
  * Demonstrates:
- *   1. Direct low-level query of the Layer 4 connection pool (conn_pool[MAX_CONNS])
+ *   1. A per-slot query of the Layer 4 connection pool through the ConnPool handle
  *      to monitor TCP states, activity timestamps, and ring-buffer fill levels.
  *   2. Token-bucket rate limiting: zero-allocation, time-based threshold checks
  *      returning "429 Too Many Requests".
@@ -24,7 +24,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
-#include "network_drivers/transport/tcp/tcp.h" // access conn_pool and ConnState
+#include "network_drivers/transport/tcp/tcp.h" // ConnPool: the per-slot readers
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
@@ -72,31 +72,16 @@ void print_connection_pool_stats()
     Serial.println("\n--- Connection Pool Snapshot ---");
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        TcpConn *conn = &conn_pool[i];
-        const char *state_str = "UNKNOWN";
-        switch (conn->state)
-        {
-        case CONN_FREE:
-            state_str = "FREE";
-            break;
-        case CONN_ACTIVE:
-            state_str = "ACTIVE";
-            break;
-        case ConnState::CONN_CLOSING:
-            state_str = "CLOSING";
-            break;
-        }
-
+        ConnPoolV.slot = (uint8_t)i;
+        ConnPool.active(protocore_conn_pool_span());
+        const bool active = ConnPoolV.ok;
         size_t rx_unread = 0;
-        if (conn->state == CONN_ACTIVE)
+        if (active)
         {
-            rx_unread = (conn->rx_head >= conn->rx_tail) ? (conn->rx_head - conn->rx_tail)
-                                                         : (RX_BUF_SIZE - (conn->rx_tail - conn->rx_head));
+            ConnPool.available(protocore_conn_pool_span());
+            rx_unread = ConnPoolV.n;
         }
-
-        Serial.printf("Slot [%d]: State=%-7s | UnreadBytes=%4zu | LastActivity=%6lu ms ago | PCB=%p\n", i, state_str,
-                      rx_unread, (conn->state == CONN_ACTIVE) ? (millis() - conn->last_activity_ms) : 0,
-                      conn->pcb);
+        Serial.printf("Slot [%d]: State=%-7s | UnreadBytes=%4zu\n", i, active ? "ACTIVE" : "IDLE", rx_unread);
     }
     Serial.println("---------------------------------");
 }

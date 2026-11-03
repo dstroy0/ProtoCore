@@ -48,13 +48,17 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_guardrails_begin(on_breach);
+    GuardrailsV.cb = on_breach;
+    Guardrails.begin(protocore_guardrails_span());
 
     on_http("/health", HTTP_GET, [](uint8_t id, HttpReq *) {
         protocore_health h;
-        protocore_guardrails_sample(&h);
+        GuardrailsV.health = &h;
+        Guardrails.sample(protocore_guardrails_span());
         char buf[128];
-        protocore_health_json(&h, buf, sizeof(buf));
+        GuardrailsV.out.out = buf;
+        GuardrailsV.out.cap = sizeof(buf);
+        Guardrails.json(protocore_guardrails_span());
         send_text(id, 200, "application/json", buf);
     });
     begin_http(80, NULL);

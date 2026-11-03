@@ -6,8 +6,8 @@
 // HDLC-lite frames and both (a) decodes the named spinel property each one carries and (b)
 // bridges the raw spinel payload northbound.
 //
-//   Thread RCP --UART--> protocore_spinel_frame_decode() --> spinel command -> property registry
-//                                                                     -> protocore_gateway_uplink()
+//   Thread RCP --UART--> Thread.spinel_frame_decode --> spinel command -> property registry
+//                                                                     -> Gateway.uplink
 //                                                                         |
 //                                                  envelope + topic  thread/0/<tid>
 //                                                                         |
@@ -23,6 +23,8 @@
 #include "protocore.h" // discovers the library (adds src/ to the include path)
 #include "server/net/gateway/gateway.h"
 #include "services/radio/thread/thread.h"
+
+static uint8_t thread_work[16]; // the borrow an entry takes; Thread never reads it
 
 static const uint8_t RADIO_PORT = 0;
 static const int PIN_RX = 16, PIN_TX = 17; // UART2 to the Thread RCP
@@ -48,10 +50,10 @@ static void drop_front(uint16_t n)
 static void rcp_get(uint32_t prop)
 {
     uint8_t payload[16];
-    uint16_t plen = protocore_spinel_command_build(protocore_spinel_header(0, 1), SPINEL_CMD_PROP_VALUE_GET, prop, nullptr,
+    uint16_t plen = Thread.spinel_command_build(thread_work, protocore_spinel_header(0, 1), SPINEL_CMD_PROP_VALUE_GET, prop, nullptr,
                                             0, payload, sizeof(payload));
     uint8_t frame[32];
-    uint16_t n = protocore_spinel_frame_encode(payload, plen, frame, sizeof(frame));
+    uint16_t n = Thread.spinel_frame_encode(thread_work, payload, plen, frame, sizeof(frame));
     if (n)
     {
         Serial2.write(frame, n);
@@ -65,7 +67,7 @@ static void print_property(const uint8_t *payload, uint16_t plen)
     uint32_t cmd = 0, prop = 0;
     const uint8_t *val = nullptr;
     uint16_t vlen = 0;
-    if (protocore_spinel_command_parse(payload, plen, &header, &cmd, &prop, &val, &vlen) < 0)
+    if (Thread.spinel_command_parse(thread_work, payload, plen, &header, &cmd, &prop, &val, &vlen) < 0)
     {
         return;
     }
@@ -75,21 +77,21 @@ static void print_property(const uint8_t *payload, uint16_t plen)
     }
 
     SpinelReader r;
-    protocore_spinel_reader_init(&r, val, vlen);
-    const char *name = protocore_spinel_prop_name(prop);
+    Thread.spinel_reader_init(thread_work, &r, val, vlen);
+    const char *name = Thread.spinel_prop_name(thread_work, prop);
     if (prop == SPINEL_PROP_LAST_STATUS)
     {
         uint32_t status = 0;
-        if (protocore_spinel_get_uint(&r, &status))
+        if (Thread.spinel_get_uint(thread_work, &r, &status))
         {
-            Serial.printf("  %s = %s (%u)\n", name, protocore_spinel_status_name(status), status);
+            Serial.printf("  %s = %s (%u)\n", name, Thread.spinel_status_name(thread_work, status), status);
         }
     }
     else if (prop == SPINEL_PROP_NCP_VERSION || prop == SPINEL_PROP_NET_NETWORK_NAME)
     {
         const char *s = nullptr;
         uint16_t slen = 0;
-        if (protocore_spinel_get_utf8(&r, &s, &slen))
+        if (Thread.spinel_get_utf8(thread_work, &r, &s, &slen))
         {
             Serial.printf("  %s = %.*s\n", name, (int)slen, s);
         }
@@ -97,7 +99,7 @@ static void print_property(const uint8_t *payload, uint16_t plen)
     else if (prop == SPINEL_PROP_PROTOCOL_VERSION)
     {
         uint32_t major = 0, minor = 0;
-        if (protocore_spinel_get_uint(&r, &major) && protocore_spinel_get_uint(&r, &minor))
+        if (Thread.spinel_get_uint(thread_work, &r, &major) && Thread.spinel_get_uint(thread_work, &r, &minor))
         {
             Serial.printf("  %s = %u.%u\n", name, major, minor);
         }
@@ -105,7 +107,7 @@ static void print_property(const uint8_t *payload, uint16_t plen)
     else if (prop == SPINEL_PROP_MAC_15_4_PANID || prop == SPINEL_PROP_MAC_15_4_SADDR)
     {
         uint16_t v = 0;
-        if (protocore_spinel_get_u16(&r, &v))
+        if (Thread.spinel_get_u16(thread_work, &r, &v))
         {
             Serial.printf("  %s = 0x%04X\n", name, v);
         }
@@ -113,7 +115,7 @@ static void print_property(const uint8_t *payload, uint16_t plen)
     else if (prop == SPINEL_PROP_HWADDR || prop == SPINEL_PROP_MAC_15_4_LADDR)
     {
         const uint8_t *eui = nullptr;
-        if (protocore_spinel_get_eui64(&r, &eui))
+        if (Thread.spinel_get_eui64(thread_work, &r, &eui))
         {
             Serial.printf("  %s = %02X%02X%02X%02X%02X%02X%02X%02X\n", name, eui[0], eui[1], eui[2], eui[3], eui[4],
                           eui[5], eui[6], eui[7]);
@@ -142,7 +144,7 @@ void setup()
     // Reset the NCP: spinel RESET command (header | CMD_RESET), then query identity.
     const uint8_t reset[2] = {protocore_spinel_header(0, 0), SPINEL_CMD_RESET};
     uint8_t frame[8];
-    uint16_t n = protocore_spinel_frame_encode(reset, 2, frame, sizeof(frame));
+    uint16_t n = Thread.spinel_frame_encode(thread_work, reset, 2, frame, sizeof(frame));
     Serial2.write(frame, n);
     delay(200);
     rcp_get(SPINEL_PROP_PROTOCOL_VERSION);
@@ -166,7 +168,7 @@ void loop()
         }
         uint8_t payload[PROTOCORE_THREAD_MAX_DATA];
         uint16_t plen = 0;
-        int n = protocore_spinel_frame_decode(g_buf, g_len, payload, sizeof(payload), &plen);
+        int n = Thread.spinel_frame_decode(thread_work, g_buf, g_len, payload, sizeof(payload), &plen);
         if (n == 0)
         {
             break; // need more

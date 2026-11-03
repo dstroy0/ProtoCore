@@ -25,6 +25,8 @@
 #include "services/fieldbus/modbus/modbus/modbus.h"
 #include "services/fieldbus/modbus/modbus_master/modbus_master.h"
 
+static uint8_t modbus_master_work[16]; // the borrow an entry takes; ModbusMaster never reads it
+
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
@@ -60,7 +62,7 @@ void setup()
     on_http("/scan", HTTP_GET, [](uint8_t id, HttpReq *) {
         uint8_t req[16], resp[MODBUS_ADU_MAX];
         size_t rn =
-            protocore_modbus_build_read((uint8_t)MODBUS_FC_READ_HOLDING_REGS, 1, 1, 0, 3, req, sizeof(req));
+            ModbusMaster.build_read(modbus_master_work, (uint8_t)MODBUS_FC_READ_HOLDING_REGS, 1, 1, 0, 3, req, sizeof(req));
         ModbusV.process_adu_args.req = req;
         ModbusV.process_adu_args.req_len = rn;
         ModbusV.process_adu_args.resp = resp;
@@ -69,7 +71,7 @@ void setup()
         size_t pn = ModbusV.n;
         uint16_t regs[3];
         uint8_t ex = 0;
-        int n = protocore_modbus_parse_response(resp, pn, regs, 3, &ex);
+        int n = ModbusMaster.parse_response(modbus_master_work, resp, pn, regs, 3, &ex);
         char b[96];
         if (n > 0)
         {

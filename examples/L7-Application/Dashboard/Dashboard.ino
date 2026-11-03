@@ -14,8 +14,8 @@
  *
  * NOTE: enable the dashboard for the whole build (a .ino #define does not reach
  * the separately compiled library). In platformio.ini:
- *     build_flags = -DPROTOCORE_ENABLE_DASHBOARD=1
- * (PROTOCORE_ENABLE_SSE and PROTOCORE_ENABLE_WEBSOCKET are on by default; SSE is required,
+ *     build_flags = -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_SSE=1 -DPROTOCORE_ENABLE_DASHBOARD=1
+ * (PROTOCORE_ENABLE_SSE is required,
  * WebSocket enables the controls. Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it
  * builds as-is.)
  *
@@ -23,6 +23,8 @@
  */
 
 #define PROTOCORE_ENABLE_DASHBOARD 1
+#define PROTOCORE_ENABLE_SSE 1
+#define PROTOCORE_ENABLE_WEBSOCKET 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

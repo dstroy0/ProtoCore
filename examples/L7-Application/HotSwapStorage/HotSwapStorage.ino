@@ -10,8 +10,8 @@
 //   READY   --N consecutive I/O errors------>  FAULTED   (unmounts immediately)
 //   FAULTED --probe interval, remount ok---->  READY
 //
-// The rule for callers is two lines: gate on protocore_hotswap_ready() before touching the filesystem,
-// and report the outcome of every call with protocore_hotswap_io(). That is what lets a run of failures
+// The rule for callers is two lines: gate on Hotswap.ready before touching the filesystem,
+// and report the outcome of every call with Hotswap.io. That is what lets a run of failures
 // mean "the card left" instead of scrolling past unnoticed.
 //
 // Why a *run* of errors and not one: a single failed write is not proof of removal (a transient bus
@@ -86,7 +86,8 @@ static void write_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     // The gate. Without it this write would go into a stale mount and be silently lost.
-    if (!Hotswap.ready(protocore_hotswap_span()))
+    Hotswap.ready(protocore_hotswap_span());
+    if (!HotswapV.ok)
     {
         send_text(slot_id, 503, PROTOCORE_MIME_TEXT_PLAIN, "storage not ready\n");
         return;
@@ -103,7 +104,8 @@ static void write_handler(uint8_t slot_id, HttpReq *req)
     }
 
     // Report it either way: successes are what keep a healthy volume from drifting toward a fault.
-    protocore_hotswap_io(ok);
+    HotswapV.io_args.ok = ok;
+    Hotswap.io(protocore_hotswap_span());
     send_text(slot_id, ok ? 200 : 500, PROTOCORE_MIME_TEXT_PLAIN, ok ? "ok\n" : "write failed\n");
 }
 
@@ -129,7 +131,8 @@ void setup()
     HotswapV.begin_args.ctx = nullptr;
     Hotswap.begin(protocore_hotswap_span());
     Hotswap.poll(protocore_hotswap_span()); // first poll mounts a card that is already in the slot
-    HotswapV.state_name_args.s = protocore_hotswap_state();
+    Hotswap.state(protocore_hotswap_span());
+    HotswapV.state_name_args.s = HotswapV.value;
     Hotswap.state_name(protocore_hotswap_span());
     Serial.printf("storage at boot: %s\n", HotswapV.text);
 

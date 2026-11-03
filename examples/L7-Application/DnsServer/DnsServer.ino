@@ -19,7 +19,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
-#include "services/net/dns_server/dns_server.h"
+#include "network_drivers/network/dns/dns_server/dns_server.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
@@ -42,12 +42,27 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // The name -> IPv4 records this server will answer. Edit these for your network.
-    protocore_dns_server_add("esp32.lan", (uint8_t)(ip & 0xFF), (uint8_t)((ip >> 8) & 0xFF), (uint8_t)((ip >> 16) & 0xFF),
-                      (uint8_t)((ip >> 24) & 0xFF)); // this board, by name
-    protocore_dns_server_add("printer.lan", 192, 168, 1, 50);
-    protocore_dns_server_add("nas.lan", 192, 168, 1, 60);
+    DnsServerV.rec.name = "esp32.lan";
+    DnsServerV.rec.a = (uint8_t)(ip & 0xFF);
+    DnsServerV.rec.b = (uint8_t)((ip >> 8) & 0xFF);
+    DnsServerV.rec.c = (uint8_t)((ip >> 16) & 0xFF);
+    DnsServerV.rec.d = (uint8_t)((ip >> 24) & 0xFF);
+    DnsServer.add(protocore_dns_server_span()); // this board, by name
+    DnsServerV.rec.name = "printer.lan";
+    DnsServerV.rec.a = 192;
+    DnsServerV.rec.b = 168;
+    DnsServerV.rec.c = 1;
+    DnsServerV.rec.d = 50;
+    DnsServer.add(protocore_dns_server_span());
+    DnsServerV.rec.name = "nas.lan";
+    DnsServerV.rec.a = 192;
+    DnsServerV.rec.b = 168;
+    DnsServerV.rec.c = 1;
+    DnsServerV.rec.d = 60;
+    DnsServer.add(protocore_dns_server_span());
 
-    if (DnsServer.begin(protocore_dns_server_span()))
+    DnsServer.begin(protocore_dns_server_span());
+    if (DnsServerV.ok)
     {
         Serial.println("DNS server on UDP/53 (point a device's DNS here, then: nslookup printer.lan <this-ip>)");
     }

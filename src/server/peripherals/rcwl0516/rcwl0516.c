@@ -206,9 +206,9 @@ proto_bool protocore_rcwl0516_poll(uint8_t *work)
     return PROTO_FALSE;
 }
 
-void protocore_rcwl0516_present(uint8_t *work)
+proto_bool protocore_rcwl0516_present(uint8_t *work)
 {
-    Rcwl0516.presence_get(work, &RCWL0516_CTX(work)->core);
+    return Rcwl0516.presence_get(work, &RCWL0516_CTX(work)->core);
 }
 
 #endif // PROTOCORE_ENABLE_RCWL0516

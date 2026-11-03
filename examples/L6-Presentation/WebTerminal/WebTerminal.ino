@@ -18,12 +18,13 @@
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see. The `#define` below documents intent, but for PlatformIO you must
  * enable it for the whole build, e.g. in platformio.ini:
- *     build_flags = -DPROTOCORE_ENABLE_WEB_TERMINAL=1
+ *     build_flags = -DPROTOCORE_ENABLE_WEB_ASSETS=1 -DPROTOCORE_ENABLE_WEB_TERMINAL=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.) A define in the
  * sketch alone does not reach the separately-compiled library .cpp.
  */
 
 #define PROTOCORE_ENABLE_WEB_TERMINAL 1
+#define PROTOCORE_ENABLE_WEB_ASSETS 1
 
 #include "protocore.h"
 #include "numeros_scribo/numeros_scribo.h"
@@ -124,7 +125,8 @@ void loop()
     if (millis() - last >= 3000)
     {
         last = millis();
-        if (WebTerminal.client_count(protocore_web_terminal_span()) > 0)
+        WebTerminal.client_count(protocore_web_terminal_span());
+        if (WebTerminalV.value > 0)
         {
             char out[96];
             const mmgr_fval heartbeat_vals[] = {MMGR_VU32((uint32_t)millis()), MMGR_VU32((uint32_t)ESP.getFreeHeap())};

@@ -89,7 +89,7 @@ typedef struct
     void (*core_init)(uint8_t *, PresenceCore *, uint32_t);
     proto_bool (*begin)(uint8_t *, int);
     proto_bool (*poll)(uint8_t *);
-    void (*present)(uint8_t *);
+    proto_bool (*present)(uint8_t *);
 } Rcwl0516Ns;
 PROTOCORE_NS_LAYOUT(Rcwl0516Ns, presence_init, presence_update, presence_get, presence_take_event, core_init, begin,
                     poll, present);
@@ -151,7 +151,7 @@ proto_bool protocore_rcwl0516_poll(uint8_t *work);
  * @brief Latest debounced, hold-extended presence.
  * @param work PROTOCORE_RCWL0516_BORROW bytes the caller took. Not held past the call.
  */
-void protocore_rcwl0516_present(uint8_t *work);
+proto_bool protocore_rcwl0516_present(uint8_t *work);
 
 /**
  * @brief The PROTOCORE_RCWL0516_BORROW bytes this module's state lives in.

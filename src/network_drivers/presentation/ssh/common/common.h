@@ -9,13 +9,15 @@
 #ifndef PROTOCORE_SSH_COMMON_H
 #define PROTOCORE_SSH_COMMON_H
 
+#ifndef __cplusplus
 #include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the length prefix on a written string
-#include "crypto/aead/chachapoly/chachapoly.h"   // PROTOCORE_CHACHAPOLY_KEY_LEN - the chacha keys in the memory map
-#include "crypto/asymmetric/bignum/bignum.h"     // protocore_bignum - the DH ephemeral in the memory map
-#include "crypto/cipher/aes256ctr/aes256ctr.h"   // PROTOCORE_AES256CTR_KEY_LEN / _CTR_LEN - the aes keys and IVs
-#include "crypto/mac/hmac_sha256/hmac_sha256.h"  // PROTOCORE_HMAC_SHA256_BORROW - the packet MAC scratch
-#include "crypto/pqc/sntrup761/sntrup761.h"      // PROTOCORE_SNTRUP761_PK_BYTES - the PQC public key in the memory map
-#include "memoria_operor/memoria_operor.h"       // memor.cpy: the copy out of a read string
+#endif
+#include "crypto/aead/chachapoly/chachapoly.h"  // PROTOCORE_CHACHAPOLY_KEY_LEN - the chacha keys in the memory map
+#include "crypto/asymmetric/bignum/bignum.h"    // protocore_bignum - the DH ephemeral in the memory map
+#include "crypto/cipher/aes256ctr/aes256ctr.h"  // PROTOCORE_AES256CTR_KEY_LEN / _CTR_LEN - the aes keys and IVs
+#include "crypto/mac/hmac_sha256/hmac_sha256.h" // PROTOCORE_HMAC_SHA256_BORROW - the packet MAC scratch
+#include "crypto/pqc/sntrup761/sntrup761.h"     // PROTOCORE_SNTRUP761_PK_BYTES - the PQC public key in the memory map
+#include "memoria_operor/memoria_operor.h"      // memor.cpy: the copy out of a read string
 #include "network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.h" // SSH_KEXHASH_MAX_LEN - the session id span
 #include "octetus_introitus_exitus/octetus_introitus_exitus.h" // mmgr_span, bytes.* writers, byteio.rd_str / byteio.take_be readers
 #include "spatium/spatium.h"
@@ -250,6 +252,9 @@ static inline void write_u32_be(uint8_t *p, uint32_t v)
     p[3] = (uint8_t)(v);
 }
 
+// The writers below and the readers further down are C: they reach MMgr's string and octet tables,
+// and a C++ sketch that includes this header for its types and sizes has no use for them.
+#ifndef __cplusplus
 /** @brief Append a string: uint32 length, then @p n bytes of @p data. */
 PROTOCORE_INLINE void protocore_ssh_wr_str(mmgr_span *w, const void *data, size_t n)
 {
@@ -296,6 +301,7 @@ PROTOCORE_INLINE void protocore_ssh_wr_mpint(mmgr_span *w, const uint8_t *be, si
     }
     EMBED_CALL(byteio.raw, OctetusCfg, .write_span = w, .src = be + off, .bytes = len - off);
 }
+#endif
 
 // ---------------------------------------------------------------------------
 // Sequence number overflow threshold
@@ -413,6 +419,7 @@ typedef struct
     size_t off;
     proto_bool ok;
 } Rd;
+#ifndef __cplusplus
 PROTOCORE_INLINE uint8_t protocore_ssh_rd_u8(Rd *r)
 {
     if (r->off + 1 > r->len)
@@ -519,6 +526,7 @@ static proto_bool read_string(const uint8_t *p, size_t len, size_t *off, char *o
     out[n] = '\0';
     return PROTO_TRUE;
 }
+#endif
 
 PROTOCORE_END_DECLS
 

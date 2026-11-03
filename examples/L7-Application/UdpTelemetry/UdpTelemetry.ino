@@ -45,7 +45,9 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_udp_telemetry_begin(COLLECTOR_IP, COLLECTOR_PORT);
+    UdpTelemetryV.collector.addr = COLLECTOR_IP;
+    UdpTelemetryV.collector.port = COLLECTOR_PORT;
+    UdpTelemetry.begin(protocore_udp_telemetry_span());
 }
 
 void loop()
@@ -55,12 +57,22 @@ void loop()
     {
         last = millis();
         char buf[PROTOCORE_UDP_TELEMETRY_BUF];
-        protocore_line line;
-        protocore_line_init(&line, buf, sizeof(buf), "esp32");
-        protocore_line_add_uint(&line, "heap", ESP.getFreeHeap());
-        protocore_line_add_int(&line, "rssi", protocore_physical_rssi());
-        protocore_line_add_float(&line, "temp", temperatureRead(), 1);
-        if (protocore_udp_telemetry_cast(&line))
+        UdpTelemetryV.line.buf = buf;
+        UdpTelemetryV.line.cap = sizeof(buf);
+        UdpTelemetryV.line.measurement = "esp32";
+        UdpTelemetry.measurement(protocore_udp_telemetry_span());
+        UdpTelemetryV.fields.key = "heap";
+        UdpTelemetryV.fields.u64 = ESP.getFreeHeap();
+        UdpTelemetry.field_uint(protocore_udp_telemetry_span());
+        UdpTelemetryV.fields.key = "rssi";
+        UdpTelemetryV.fields.i64 = protocore_physical_rssi();
+        UdpTelemetry.field_int(protocore_udp_telemetry_span());
+        UdpTelemetryV.fields.key = "temp";
+        UdpTelemetryV.fields.f32 = temperatureRead();
+        UdpTelemetryV.fields.decimals = 1;
+        UdpTelemetry.field_float(protocore_udp_telemetry_span());
+        UdpTelemetry.write(protocore_udp_telemetry_span());
+        if (UdpTelemetryV.ok)
         {
             Serial.printf("cast: %s\n", buf);
         }

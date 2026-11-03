@@ -6,7 +6,7 @@
 // the rules and hands the bytes to interface B's egress. So the device BRIDGES traffic
 // between its interfaces instead of only terminating it.
 //
-//   interface A --DMA RX--> callback --post--> FORWARD lane --> protocore_forward_ingress()
+//   interface A --DMA RX--> callback --post--> FORWARD lane --> Forward.ingress
 //                                                                     |
 //                                                    (rule A->B allow, rate-capped)
 //                                                                     |
@@ -56,7 +56,10 @@ union pq_item {
 static void on_forward(const void *item, void *)
 {
     const fwd_msg *m = &((const pq_item *)item)->msg;
-    protocore_forward_ingress(m->src, m->bytes, m->len);
+    ForwardV.src_if = m->src;
+    ForwardV.frame.data = m->bytes;
+    ForwardV.frame.len = m->len;
+    Forward.ingress(protocore_forward_span());
 }
 
 // DMA-complete on interface A: copy the frame and post it onto the FORWARD lane.
@@ -104,12 +107,26 @@ void setup()
 
     // Forwarding rule: A -> B allowed (default-deny otherwise), no rate cap.
     Forward.reset(protocore_forward_span());
-    protocore_forward_add_if(IF_B, protocore_if_kind::PROTOCORE_IF_WIFI_STA, if_b_send, nullptr);
-    protocore_forward_add_rule(IF_A, IF_B, protocore_fwd_action::PROTOCORE_FWD_ALLOW, 0);
+    PhysicalV.iface.id = IF_B;
+    PhysicalV.iface.kind = PROTOCORE_IF_WIFI_STA;
+    PhysicalV.iface.send = if_b_send;
+    PhysicalV.iface.ctx = nullptr;
+    Physical.iface_add(protocore_physical_span());
+    ForwardV.src_if = IF_A;
+    ForwardV.rule.dst_if = IF_B;
+    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
+    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.add_rule(protocore_forward_span());
 
     // Ingress ACL: drop frames whose first byte is 0xFF (a "bad" marker) before forwarding.
     uint8_t bad_pat[1] = {0xFF}, bad_mask[1] = {0xFF};
-    protocore_forward_acl_add(IF_A, 0, bad_pat, bad_mask, 1, protocore_fwd_action::PROTOCORE_FWD_DENY);
+    ForwardV.src_if = IF_A;
+    ForwardV.match.offset = 0;
+    ForwardV.match.pattern = bad_pat;
+    ForwardV.match.mask = bad_mask;
+    ForwardV.match.patlen = 1;
+    ForwardV.acl.action = PROTOCORE_FWD_DENY;
+    Forward.acl_add(protocore_forward_span());
 
     Serial.println("forwarding: IF_A (DMA) -> FORWARD lane -> ACL + plane -> IF_B egress");
 }
@@ -134,8 +151,8 @@ void loop()
 
     if ((g_seq & 0x07) == 0)
     {
-        protocore_forward_stats st;
-        protocore_forward_get_stats(&st);
+        Forward.get_stats(protocore_forward_span());
+        const protocore_forward_stats st = ForwardV.stats;
         Serial.printf("stats: in=%lu forwarded=%lu acl_denied=%lu (IF_B frames=%lu)\n", (unsigned long)st.frames_in,
                       (unsigned long)st.forwarded, (unsigned long)st.acl_denied, (unsigned long)g_out_frames);
     }

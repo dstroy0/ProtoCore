@@ -15,7 +15,7 @@
  *     and gets back the read_len bytes clocked off the bus. This is what master-initiated buses need.
  *
  * Wiring mirrors the relay: `listen(port, ProtoConn::PROTO_BRIDGE)` opens the port, then
- * `protocore_iface_bridge_publish()` binds it to a target and brings the bus up. The server poll loop does the rest.
+ * `IfaceBridgeHw.publish` binds it to a target and brings the bus up. The server poll loop does the rest.
  *
  * Edit the lines marked "CHANGE ME", flash, open Serial @ 115200, then from another machine:
  *   - UART stream:  `nc <board-ip> 2323`  (type; it goes out UART1, replies come back)
@@ -33,7 +33,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
-#include "server/net/iface_bridge/iface_bridge_hw/iface_bridge_hw.h" // protocore_iface_bridge_publish
+#include "server/net/iface_bridge/iface_bridge_hw/iface_bridge_hw.h" // IfaceBridgeHw.publish
 
 // --- CHANGE ME: your WiFi ---
 static const char *SSID = "YOUR_SSID";
@@ -63,17 +63,37 @@ void setup()
 
     // (1) UART1 as a raw serial-device server (ser2net). unit=1 -> Serial1 @ 115200 baud.
     //     {bus, mode, unit, addr_cs, rate, spi_mode, bit_order}
-    BridgeTarget uart = {BridgeBus::uart, BridgeMode::stream, 1, 0, 115200, 0, 0};
+    BridgeTarget uart = {BRIDGE_BUS_UART, BRIDGE_MODE_STREAM, 1, 0, 115200, 0, 0};
     int32_t lu = listen(UART_PORT, PROTO_BRIDGE);
-    if (lu < 0 || !protocore_iface_bridge_publish((uint8_t)lu, UART_PORT, BridgeProto::tcp, &uart))
+    bool uart_up = false;
+    if (lu >= 0)
+    {
+        IfaceBridgeHwV.publish_args.listener_id = (uint8_t)lu;
+        IfaceBridgeHwV.publish_args.port = UART_PORT;
+        IfaceBridgeHwV.publish_args.proto = BRIDGE_PROTO_TCP;
+        IfaceBridgeHwV.publish_args.target = &uart;
+        IfaceBridgeHw.publish(protocore_iface_bridge_hw_span());
+        uart_up = IfaceBridgeHwV.ok;
+    }
+    if (!uart_up)
     {
         Serial.println("UART bridge publish failed");
     }
 
     // (2) An SPI device on chip-select GPIO 5, mode 0, MSB-first, 1 MHz, as write-then-read transactions.
-    BridgeTarget spi = {BridgeBus::spi, BridgeMode::transaction, 0, 5 /*CS gpio*/, 1000000, 0, 0};
+    BridgeTarget spi = {BRIDGE_BUS_SPI, BRIDGE_MODE_TRANSACTION, 0, 5 /*CS gpio*/, 1000000, 0, 0};
     int32_t ls = listen(SPI_PORT, PROTO_BRIDGE);
-    if (ls < 0 || !protocore_iface_bridge_publish((uint8_t)ls, SPI_PORT, BridgeProto::tcp, &spi))
+    bool spi_up = false;
+    if (ls >= 0)
+    {
+        IfaceBridgeHwV.publish_args.listener_id = (uint8_t)ls;
+        IfaceBridgeHwV.publish_args.port = SPI_PORT;
+        IfaceBridgeHwV.publish_args.proto = BRIDGE_PROTO_TCP;
+        IfaceBridgeHwV.publish_args.target = &spi;
+        IfaceBridgeHw.publish(protocore_iface_bridge_hw_span());
+        spi_up = IfaceBridgeHwV.ok;
+    }
+    if (!spi_up)
     {
         Serial.println("SPI bridge publish failed");
     }

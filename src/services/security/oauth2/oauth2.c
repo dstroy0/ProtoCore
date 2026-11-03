@@ -243,9 +243,8 @@ static void post_and_parse(uint8_t *work, int body_len)
     HttpClientV.request.body_len = (size_t)body_len;
     // HttpClient's OWN span, not oauth2's. With a network stack this entry reaches
     // HTTP_CLIENT_CTX(work), so the borrow has to be the one http_client carved; without one it
-    // discards the argument. The span is published unconditionally, so one call covers both arms -
-    // this used to be an #if that passed the span on one side and NULL on the other, and a borrow
-    // is a compile-time guarantee that is never null.
+    // discards the argument. The span is published unconditionally, so one call covers both arms,
+    // and a borrow is a compile-time guarantee that is never null.
     HttpClient.post(protocore_http_client_span());
     const int32_t st = HttpClientV.status;
     if (st <= 0)

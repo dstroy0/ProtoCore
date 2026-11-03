@@ -17,6 +17,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
+#include "shared/pcap/pcap.h"
 #include "network_drivers/transport/udp/udp.h"
 #include "network_drivers/network/forward/forward.h"
 #include "server/signaling/bus_capture/bus_capture.h"
@@ -45,7 +46,13 @@ static bool eth_send(uint8_t, const uint8_t *frame, uint16_t len, void *)
         len = PROTOCORE_SOCKETCAN_FRAME_LEN;
     }
     uint32_t us = (uint32_t)micros();
-    protocore_pcap_record_header(buf, sizeof(buf), us / 1000000u, us % 1000000u, len, len);
+    PcapV.args.out = buf;
+    PcapV.args.cap = sizeof(buf);
+    PcapV.rec.ts_sec = us / 1000000u;
+    PcapV.rec.ts_usec = us % 1000000u;
+    PcapV.rec.caplen = len;
+    PcapV.rec.origlen = len;
+    Pcap.record_header(pcap_work);
     memcpy(buf + PROTOCORE_PCAP_REC_HDR_LEN, frame, len);
     UdpClientV.dst = COLLECTOR_IP;
     UdpClientV.dst_port = COLLECTOR_PORT;
@@ -67,7 +74,10 @@ static void on_can(const CanFrame *f)
     uint8_t sc[PROTOCORE_SOCKETCAN_FRAME_LEN];
     if (can_to_socketcan(f, sc, sizeof(sc)))
     {
-        protocore_forward_ingress(IF_CAN, sc, PROTOCORE_SOCKETCAN_FRAME_LEN);
+        ForwardV.src_if = IF_CAN;
+        ForwardV.frame.data = sc;
+        ForwardV.frame.len = PROTOCORE_SOCKETCAN_FRAME_LEN;
+        Forward.ingress(protocore_forward_span());
     }
 }
 
@@ -89,9 +99,21 @@ void setup()
 
     // Forwarding plane: CAN -> Ethernet.
     Forward.reset(protocore_forward_span());
-    protocore_forward_add_if(IF_CAN, protocore_if_kind::PROTOCORE_IF_BUS, can_send, nullptr);
-    protocore_forward_add_if(IF_ETH, protocore_if_kind::PROTOCORE_IF_ETH, eth_send, nullptr);
-    protocore_forward_add_rule(IF_CAN, IF_ETH, protocore_fwd_action::PROTOCORE_FWD_ALLOW, 0); // CAN tops out ~a few k frames/s
+    PhysicalV.iface.id = IF_CAN;
+    PhysicalV.iface.kind = PROTOCORE_IF_BUS;
+    PhysicalV.iface.send = can_send;
+    PhysicalV.iface.ctx = nullptr;
+    Physical.iface_add(protocore_physical_span());
+    PhysicalV.iface.id = IF_ETH;
+    PhysicalV.iface.kind = PROTOCORE_IF_ETH;
+    PhysicalV.iface.send = eth_send;
+    PhysicalV.iface.ctx = nullptr;
+    Physical.iface_add(protocore_physical_span());
+    ForwardV.src_if = IF_CAN;
+    ForwardV.rule.dst_if = IF_ETH;
+    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
+    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.add_rule(protocore_forward_span()); // CAN tops out ~a few k frames/s
 
     if (!bus_capture_begin(CAN_TX_PIN, CAN_RX_PIN, CAN_BITRATE, on_can))
     {
@@ -110,8 +132,8 @@ void loop()
     if (millis() - last > 5000)
     {
         last = millis();
-        protocore_forward_stats s;
-        protocore_forward_get_stats(&s);
+        Forward.get_stats(protocore_forward_span());
+        const protocore_forward_stats s = ForwardV.stats;
         Serial.printf("captured %lu, forwarded %lu, send-fail %lu\n", (unsigned long)s.frames_in,
                       (unsigned long)s.forwarded, (unsigned long)s.send_fail);
     }

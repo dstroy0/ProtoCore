@@ -35,12 +35,15 @@
 #include "test/core_setup/hal/esp/esp_mnt_fs.h"
 #include "network_drivers/physical/physical/physical.h"
 #include "server/storage/filesystem/filesystem.h"
+#include "server/storage/mnt/mnt.h"
 #include <LittleFS.h>
+
+static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-// The root protocore_fs_begin() binds, at file scope because the handlers below are captureless lambdas.
+// The root Fs.begin binds, at file scope because the handlers below are captureless lambdas.
 static int s_root = -1;
 
 
@@ -59,8 +62,11 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     LittleFS.begin(true); // format on first use
-    protocore_mnt_mount(protocore_mnt_fs(&LittleFS));
-    s_root = protocore_fs_begin("/"); // every name below is resolved against this root
+    MntV.args.backend = protocore_mnt_fs(&LittleFS);
+    Mnt.mount(mnt_work);
+    Fs.mount = "/"; // every name below is resolved against this root
+    Fs.begin(protocore_filesystem_span());
+    s_root = Fs.i32;
 
     on_http("/save", HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *name = HttpParser.get_query(protocore_http_parser_span(), req, "name");
@@ -70,7 +76,13 @@ void setup()
             send_text(id, 400, "application/json", "{\"error\":\"name+data\"}");
             return;
         }
-        bool ok = protocore_fs_write_file(s_root, "", name, data, strlen(data));
+        Fs.path.root = s_root;
+        Fs.path.dir = "";
+        Fs.path.name = name;
+        Fs.io.wbuf = data;
+        Fs.io.n = strlen(data);
+        Fs.write_file(protocore_filesystem_span());
+        bool ok = Fs.ok;
         send_text(id, ok ? 200 : 500, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
     });
 
@@ -82,7 +94,13 @@ void setup()
             return;
         }
         char buf[512];
-        long n = protocore_fs_read_file(s_root, "", name, buf, sizeof(buf) - 1);
+        Fs.path.root = s_root;
+        Fs.path.dir = "";
+        Fs.path.name = name;
+        Fs.io.buf = buf;
+        Fs.io.n = sizeof(buf) - 1;
+        Fs.read_file(protocore_filesystem_span());
+        long n = Fs.len;
         if (n < 0)
         {
             send_text(id, 404, "text/plain", "not found");
@@ -94,7 +112,15 @@ void setup()
 
     on_http("/size", HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *name = HttpParser.get_query(protocore_http_parser_span(), req, "name");
-        long n = (name && *name) ? protocore_fs_size(s_root, "", name) : -1;
+        long n = -1;
+        if (name && *name)
+        {
+            Fs.path.root = s_root;
+            Fs.path.dir = "";
+            Fs.path.name = name;
+            Fs.size(protocore_filesystem_span());
+            n = Fs.len;
+        }
         char b[24];
         snprintf(b, sizeof(b), "%ld", n);
         send_text(id, 200, "text/plain", b);
@@ -102,7 +128,15 @@ void setup()
 
     on_http("/rm", HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *name = HttpParser.get_query(protocore_http_parser_span(), req, "name");
-        bool ok = (name && *name) && protocore_fs_remove(s_root, "", name);
+        bool ok = false;
+        if (name && *name)
+        {
+            Fs.path.root = s_root;
+            Fs.path.dir = "";
+            Fs.path.name = name;
+            Fs.remove(protocore_filesystem_span());
+            ok = Fs.ok;
+        }
         send_text(id, ok ? 200 : 404, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
     });
 

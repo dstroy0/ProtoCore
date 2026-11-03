@@ -15,6 +15,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
+#include "shared/pcap/pcap.h"
 #include "network_drivers/transport/udp/udp.h"
 #include "network_drivers/network/forward/forward.h"
 #include "services/radio/promisc/promisc.h"
@@ -44,7 +45,13 @@ static bool eth_send(uint8_t, const uint8_t *frame, uint16_t len, void *)
         len = 2048;
     }
     uint32_t us = (uint32_t)micros();
-    protocore_pcap_record_header(buf, sizeof(buf), us / 1000000u, us % 1000000u, len, len);
+    PcapV.args.out = buf;
+    PcapV.args.cap = sizeof(buf);
+    PcapV.rec.ts_sec = us / 1000000u;
+    PcapV.rec.ts_usec = us % 1000000u;
+    PcapV.rec.caplen = len;
+    PcapV.rec.origlen = len;
+    Pcap.record_header(pcap_work);
     memcpy(buf + PROTOCORE_PCAP_REC_HDR_LEN, frame, len);
     UdpClientV.dst = COLLECTOR_IP;
     UdpClientV.dst_port = COLLECTOR_PORT;
@@ -64,7 +71,10 @@ static bool wifi_send(uint8_t, const uint8_t *, uint16_t, void *)
 // FORWARD lane of the preempting queue instead of calling ingress in the radio callback.
 static void on_frame(const uint8_t *frame, uint16_t len, int8_t, uint8_t)
 {
-    protocore_forward_ingress(IF_WIFI, frame, len);
+    ForwardV.src_if = IF_WIFI;
+    ForwardV.frame.data = frame;
+    ForwardV.frame.len = len;
+    Forward.ingress(protocore_forward_span());
 }
 
 void setup()
@@ -89,9 +99,21 @@ void setup()
 
     // Forwarding plane: Wi-Fi -> Ethernet, capped so a busy channel can't swamp the uplink.
     Forward.reset(protocore_forward_span());
-    protocore_forward_add_if(IF_WIFI, protocore_if_kind::PROTOCORE_IF_WIFI_STA, wifi_send, nullptr);
-    protocore_forward_add_if(IF_ETH, protocore_if_kind::PROTOCORE_IF_ETH, eth_send, nullptr);
-    protocore_forward_add_rule(IF_WIFI, IF_ETH, protocore_fwd_action::PROTOCORE_FWD_ALLOW, 2000); // <= 2000 frames/s to the wire
+    PhysicalV.iface.id = IF_WIFI;
+    PhysicalV.iface.kind = PROTOCORE_IF_WIFI_STA;
+    PhysicalV.iface.send = wifi_send;
+    PhysicalV.iface.ctx = nullptr;
+    Physical.iface_add(protocore_physical_span());
+    PhysicalV.iface.id = IF_ETH;
+    PhysicalV.iface.kind = PROTOCORE_IF_ETH;
+    PhysicalV.iface.send = eth_send;
+    PhysicalV.iface.ctx = nullptr;
+    Physical.iface_add(protocore_physical_span());
+    ForwardV.src_if = IF_WIFI;
+    ForwardV.rule.dst_if = IF_ETH;
+    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
+    ForwardV.rule.rate_cap_per_sec = 2000;
+    Forward.add_rule(protocore_forward_span()); // <= 2000 frames/s to the wire
 
     Promisc.begin(protocore_promisc_span(), CAPTURE_CHANNEL, on_frame);
     Serial.printf("Capturing on channel %u -> forwarding to %s:%u (PCAP over UDP)\n", CAPTURE_CHANNEL, COLLECTOR_IP,
@@ -104,8 +126,8 @@ void loop()
     if (millis() - last > 5000)
     {
         last = millis();
-        protocore_forward_stats s;
-        protocore_forward_get_stats(&s);
+        Forward.get_stats(protocore_forward_span());
+        const protocore_forward_stats s = ForwardV.stats;
         Serial.printf("captured %lu, forwarded %lu, rate-dropped %lu, send-fail %lu\n", (unsigned long)s.frames_in,
                       (unsigned long)s.forwarded, (unsigned long)s.rate_dropped, (unsigned long)s.send_fail);
     }

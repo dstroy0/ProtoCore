@@ -5,7 +5,7 @@
 // the ASH frames it sends; a DATA frame carrying an EZSP callback (e.g. an incoming Zigbee
 // message) is bridged northbound.
 //
-//   Zigbee NCP --UART--> protocore_ash_frame_decode() --> EZSP payload -> protocore_gateway_uplink()
+//   Zigbee NCP --UART--> protocore_zigbee_ash_frame_decode() --> EZSP payload -> protocore_gateway_uplink()
 //                                                                     |
 //                                              envelope + topic  zigbee/0/<node>
 //                                                                     |
@@ -21,6 +21,8 @@
 #include "protocore.h" // discovers the library (adds src/ to the include path)
 #include "server/net/gateway/gateway.h"
 #include "services/radio/zigbee/zigbee.h"
+
+static uint8_t zigbee_work[16]; // the borrow an entry takes; Zigbee never reads it
 
 static const uint8_t RADIO_PORT = 0;
 static const int PIN_RX = 16, PIN_TX = 17; // UART2 to the Zigbee NCP
@@ -57,7 +59,7 @@ void setup()
     Gateway.set_topic_prefix(protocore_gateway_span(), "zigbee");
 
     uint8_t rst[8];
-    uint16_t n = protocore_ash_frame_encode(ASH_RST, nullptr, 0, rst, sizeof(rst)); // reset the NCP
+    uint16_t n = Zigbee.ash_frame_encode(zigbee_work, ASH_RST, nullptr, 0, rst, sizeof(rst)); // reset the NCP
     Serial2.write(rst, n);
     Serial.println("Zigbee gateway: EZSP/ASH -> codec -> publish (zigbee/0/<node>)");
 }
@@ -77,7 +79,7 @@ void loop()
         }
         uint8_t control = 0, payload[PROTOCORE_ZIGBEE_MAX_DATA];
         uint16_t plen = 0;
-        int n = protocore_ash_frame_decode(g_buf, g_len, &control, payload, sizeof(payload), &plen);
+        int n = Zigbee.ash_frame_decode(zigbee_work, g_buf, g_len, &control, payload, sizeof(payload), &plen);
         if (n == 0)
         {
             break; // need more

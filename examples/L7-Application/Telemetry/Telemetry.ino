@@ -27,9 +27,10 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 
 
 static float g_window_buf[16]; // caller-owned window storage (no heap)
-static protocore_window g_window;
-static protocore_rate g_rate;
-static protocore_totalizer g_total;
+static TelemetryWindow g_window;
+static TelemetryRate g_rate;
+static TelemetryTotalizer g_total;
+static uint8_t telemetry_work[16]; // the borrow an entry takes; Telemetry never reads it
 static float g_last_rate = 0.0f;
 
 void setup()
@@ -48,17 +49,35 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_window_init(&g_window, g_window_buf, 16);
-    protocore_rate_init(&g_rate);
-    protocore_totalizer_init(&g_total);
+    TelemetryV.window.w = &g_window;
+    TelemetryV.window.buf = g_window_buf;
+    TelemetryV.window.cap = 16;
+    Telemetry.window_init(telemetry_work);
+    TelemetryV.rate.r = &g_rate;
+    Telemetry.rate_init(telemetry_work);
+    TelemetryV.totalizer.t = &g_total;
+    Telemetry.totalizer_init(telemetry_work);
 
     on_http("/telemetry", HTTP_GET, [](uint8_t id, HttpReq *) {
+        TelemetryV.window.w = &g_window;
+        Telemetry.window_count(telemetry_work);
+        const unsigned samples = TelemetryV.u16;
+        Telemetry.window_mean(telemetry_work);
+        const float mean = TelemetryV.f32;
+        Telemetry.window_stddev(telemetry_work);
+        const float stddev = TelemetryV.f32;
+        Telemetry.window_min(telemetry_work);
+        const float min = TelemetryV.f32;
+        Telemetry.window_max(telemetry_work);
+        const float max = TelemetryV.f32;
+        TelemetryV.totalizer.t = &g_total;
+        Telemetry.totalizer_total(telemetry_work);
+        const double total = TelemetryV.f64;
         char body[192];
         snprintf(body, sizeof(body),
                  "{\"samples\":%u,\"mean\":%.3f,\"stddev\":%.3f,\"min\":%.3f,\"max\":%.3f,"
                  "\"rate_per_s\":%.3f,\"total\":%.3f}",
-                 (unsigned)protocore_window_count(&g_window), protocore_window_mean(&g_window), protocore_window_stddev(&g_window),
-                 protocore_window_min(&g_window), protocore_window_max(&g_window), g_last_rate, protocore_totalizer_total(&g_total));
+                 samples, mean, stddev, min, max, g_last_rate, total);
         send_text(id, 200, "application/json", body);
     });
 
@@ -77,8 +96,17 @@ void loop()
         last_ms = now;
         float sample = (float)analogRead(34) * (3.3f / 4095.0f); // example: ADC voltage
 
-        protocore_window_push(&g_window, sample);                  // stats over the last 16 readings
-        g_last_rate = protocore_rate_update(&g_rate, sample, now); // slope (units/s)
-        protocore_totalizer_add(&g_total, sample, now);            // integrate the reading over time
+        TelemetryV.window.w = &g_window; // stats over the last 16 readings
+        TelemetryV.window.sample = sample;
+        Telemetry.window_push(telemetry_work);
+        TelemetryV.rate.r = &g_rate; // slope (units/s)
+        TelemetryV.rate.value = sample;
+        TelemetryV.rate.now_ms = now;
+        Telemetry.rate_update(telemetry_work);
+        g_last_rate = TelemetryV.f32;
+        TelemetryV.totalizer.t = &g_total; // integrate the reading over time
+        TelemetryV.totalizer.rate = sample;
+        TelemetryV.totalizer.now_ms = now;
+        Telemetry.totalizer_add(telemetry_work);
     }
 }

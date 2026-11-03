@@ -57,8 +57,8 @@ typedef struct
     uint32_t (*motion_active_age_ms)(uint8_t *, const Sen0192Motion *, uint32_t);
     proto_bool (*begin)(uint8_t *);
     proto_bool (*poll)(uint8_t *);
-    void (*present)(uint8_t *);
-    void (*motion_count)(uint8_t *);
+    proto_bool (*present)(uint8_t *);
+    uint32_t (*motion_count)(uint8_t *);
 } Sen0192Ns;
 PROTOCORE_NS_LAYOUT(Sen0192Ns, motion_init, motion_update, motion_tick, motion_present, motion_events,
                     motion_active_age_ms, begin, poll, present, motion_count);
@@ -125,13 +125,15 @@ proto_bool protocore_sen0192_poll(uint8_t *work);
 /**
  * @brief Current presence.
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
+ * @return PROTO_TRUE while presence is asserted, the hold window included.
  */
-void protocore_sen0192_present(uint8_t *work);
+proto_bool protocore_sen0192_present(uint8_t *work);
 /**
  * @brief Count of motion events (clear -> present transitions) since .
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
+ * @return the number of clear -> present transitions.
  */
-void protocore_sen0192_motion_count(uint8_t *work);
+uint32_t protocore_sen0192_motion_count(uint8_t *work);
 
 /**
  * @brief The PROTOCORE_SEN0192_BORROW bytes this module's state lives in.

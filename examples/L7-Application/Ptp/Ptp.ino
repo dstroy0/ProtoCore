@@ -16,7 +16,7 @@
  *  - **PTP_MASTER 0 (slave):** the device follows a master, running the four-message exchange
  *    (Sync/Follow_Up/Delay_Req/Delay_Resp) and reporting offset + path delay.
  *
- * Timestamps here are taken in software (in the UDP callback / send path) with `protocore_micros()`, so the
+ * Timestamps here are taken in software (in the UDP callback / send path) with `micros()`, so the
  * accuracy is millisecond-class over Wi-Fi. Sub-microsecond PTP needs MAC hardware timestamping, which
  * this chip's Ethernet MAC supports but Wi-Fi does not - so on Ethernet this same code gets far tighter.
  *
@@ -46,7 +46,7 @@ static const uint16_t MY_PORT = 1;
 
 static int64_t now_ns()
 {
-    return (int64_t)protocore_micros() * 1000;
+    return (int64_t)micros() * 1000;
 } // local monotonic software timestamp
 
 // ------- accurate time source (grandmaster) -------
@@ -399,9 +399,9 @@ void loop()
 {
 #if PTP_MASTER
     static uint32_t last = 0;
-    if (protocore_millis() - last >= 1000)
+    if (millis() - last >= 1000)
     {
-        last = protocore_millis();
+        last = millis();
         master_tick(); // send Announce + Sync + Follow_Up once per second
     }
 #endif

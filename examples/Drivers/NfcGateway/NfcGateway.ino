@@ -68,10 +68,14 @@ static int protocore_pn532_command(const uint8_t *cmd, uint8_t cmd_len, uint8_t 
     }
     delay(2);
     uint8_t ack[8];
+    if (protocore_pn532_read(ack, 6) < 6)
+    {
+        return -1;
+    }
     Pn532V.is_ack_args.raw = ack;
     Pn532V.is_ack_args.len = 6;
     Pn532.is_ack(pn532_work);
-    if (protocore_pn532_read(ack, 6) < 6 || !Pn532V.ok)
+    if (!Pn532V.ok)
     {
         return -1;
     }

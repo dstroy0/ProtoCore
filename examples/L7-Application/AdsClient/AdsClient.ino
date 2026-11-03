@@ -158,15 +158,23 @@ static void run_client(const char *host)
     Ads.build_read_device_info(ads_work);
     n = exchange(cid, AdsV.n);
     AdsDeviceInfo di;
-    AdsV.parse_ams_header_args.buf = c_resp;
-    AdsV.parse_ams_header_args.len = n;
-    AdsV.parse_ams_header_args.out = &h;
-    Ads.parse_ams_header(ads_work);
-    AdsV.parse_read_device_info_args.data = h.data;
-    AdsV.parse_read_device_info_args.data_len = h.data_len;
-    AdsV.parse_read_device_info_args.out = &di;
-    Ads.parse_read_device_info(ads_work);
-    if (n && AdsV.ok && AdsV.ok &&
+    bool di_parsed = false;
+    if (n)
+    {
+        AdsV.parse_ams_header_args.buf = c_resp;
+        AdsV.parse_ams_header_args.len = n;
+        AdsV.parse_ams_header_args.out = &h;
+        Ads.parse_ams_header(ads_work);
+        if (AdsV.ok)
+        {
+            AdsV.parse_read_device_info_args.data = h.data;
+            AdsV.parse_read_device_info_args.data_len = h.data_len;
+            AdsV.parse_read_device_info_args.out = &di;
+            Ads.parse_read_device_info(ads_work);
+            di_parsed = AdsV.ok;
+        }
+    }
+    if (di_parsed &&
         di.result == 0)
     {
         Serial.printf("[ads] device: %s v%u.%u build %u\n", di.device_name, di.version_major, di.version_minor,
@@ -185,20 +193,28 @@ static void run_client(const char *host)
     Ads.build_read_state(ads_work);
     n = exchange(cid, AdsV.n);
     AdsReadStateResult st;
-    AdsV.parse_ams_header_args.buf = c_resp;
-    AdsV.parse_ams_header_args.len = n;
-    AdsV.parse_ams_header_args.out = &h;
-    Ads.parse_ams_header(ads_work);
-    AdsV.parse_read_state_args.data = h.data;
-    AdsV.parse_read_state_args.data_len = h.data_len;
-    AdsV.parse_read_state_args.out = &st;
-    Ads.parse_read_state(ads_work);
-    if (n && AdsV.ok && AdsV.ok &&
+    bool st_parsed = false;
+    if (n)
+    {
+        AdsV.parse_ams_header_args.buf = c_resp;
+        AdsV.parse_ams_header_args.len = n;
+        AdsV.parse_ams_header_args.out = &h;
+        Ads.parse_ams_header(ads_work);
+        if (AdsV.ok)
+        {
+            AdsV.parse_read_state_args.data = h.data;
+            AdsV.parse_read_state_args.data_len = h.data_len;
+            AdsV.parse_read_state_args.out = &st;
+            Ads.parse_read_state(ads_work);
+            st_parsed = AdsV.ok;
+        }
+    }
+    if (st_parsed &&
         st.result == 0)
     {
-        const char *name = st.protocore_ads_state == (uint16_t)AdsState::run      ? "RUN"
-                           : st.protocore_ads_state == (uint16_t)AdsState::stop   ? "STOP"
-                           : st.protocore_ads_state == (uint16_t)AdsState::config ? "CONFIG"
+        const char *name = st.protocore_ads_state == (uint16_t)ADS_STATE_RUN      ? "RUN"
+                           : st.protocore_ads_state == (uint16_t)ADS_STATE_STOP   ? "STOP"
+                           : st.protocore_ads_state == (uint16_t)ADS_STATE_CONFIG ? "CONFIG"
                                                                            : "?";
         Serial.printf("[ads] state: %s (%u)\n", name, st.protocore_ads_state);
     }
@@ -220,15 +236,23 @@ static void run_client(const char *host)
     Ads.build_read_write(ads_work);
     n = exchange(cid, AdsV.n);
     AdsReadResult rr;
-    AdsV.parse_ams_header_args.buf = c_resp;
-    AdsV.parse_ams_header_args.len = n;
-    AdsV.parse_ams_header_args.out = &h;
-    Ads.parse_ams_header(ads_work);
-    AdsV.parse_read_args.data = h.data;
-    AdsV.parse_read_args.data_len = h.data_len;
-    AdsV.parse_read_args.out = &rr;
-    Ads.parse_read(ads_work);
-    if (!n || !AdsV.ok || !AdsV.ok ||
+    bool rr_parsed = false;
+    if (n)
+    {
+        AdsV.parse_ams_header_args.buf = c_resp;
+        AdsV.parse_ams_header_args.len = n;
+        AdsV.parse_ams_header_args.out = &h;
+        Ads.parse_ams_header(ads_work);
+        if (AdsV.ok)
+        {
+            AdsV.parse_read_args.data = h.data;
+            AdsV.parse_read_args.data_len = h.data_len;
+            AdsV.parse_read_args.out = &rr;
+            Ads.parse_read(ads_work);
+            rr_parsed = AdsV.ok;
+        }
+    }
+    if (!rr_parsed ||
         rr.result != 0 || rr.len < 4)
     {
         Serial.printf("[ads] handle for '%s' failed\n", SYMBOL);
@@ -249,15 +273,23 @@ static void run_client(const char *host)
     AdsV.build_read_args.read_len = 4;
     Ads.build_read(ads_work);
     n = exchange(cid, AdsV.n);
-    AdsV.parse_ams_header_args.buf = c_resp;
-    AdsV.parse_ams_header_args.len = n;
-    AdsV.parse_ams_header_args.out = &h;
-    Ads.parse_ams_header(ads_work);
-    AdsV.parse_read_args.data = h.data;
-    AdsV.parse_read_args.data_len = h.data_len;
-    AdsV.parse_read_args.out = &rr;
-    Ads.parse_read(ads_work);
-    if (n && AdsV.ok && AdsV.ok && rr.result == 0 &&
+    rr_parsed = false;
+    if (n)
+    {
+        AdsV.parse_ams_header_args.buf = c_resp;
+        AdsV.parse_ams_header_args.len = n;
+        AdsV.parse_ams_header_args.out = &h;
+        Ads.parse_ams_header(ads_work);
+        if (AdsV.ok)
+        {
+            AdsV.parse_read_args.data = h.data;
+            AdsV.parse_read_args.data_len = h.data_len;
+            AdsV.parse_read_args.out = &rr;
+            Ads.parse_read(ads_work);
+            rr_parsed = AdsV.ok;
+        }
+    }
+    if (rr_parsed && rr.result == 0 &&
         rr.len >= 4)
     {
         int32_t val = (int32_t)((uint32_t)rr.data[0] | ((uint32_t)rr.data[1] << 8) | ((uint32_t)rr.data[2] << 16) |

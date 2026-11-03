@@ -59,8 +59,16 @@ void setup()
             send_text(id, 400, "application/json", "{\"error\":\"missing code\"}");
             return;
         }
-        protocore_o_auth2_tokens t;
-        int st = protocore_oauth2_exchange_code(TOKEN_URL, code, REDIRECT_URI, CLIENT_ID, CLIENT_SECRET, nullptr, &t);
+        Oauth2Tokens t;
+        Oauth2V.request.token_endpoint = TOKEN_URL;
+        Oauth2V.code_grant.code = code;
+        Oauth2V.code_grant.redirect_uri = REDIRECT_URI;
+        Oauth2V.code_grant.code_verifier = nullptr;
+        Oauth2V.client.client_id = CLIENT_ID;
+        Oauth2V.client.client_secret = CLIENT_SECRET;
+        Oauth2V.response.tokens = &t;
+        Oauth2.exchange_code(protocore_oauth2_span());
+        int st = (int)Oauth2V.i32;
         if (st != 200)
         {
             char b[48];

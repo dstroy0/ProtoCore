@@ -174,15 +174,15 @@ proto_bool protocore_sen0192_poll(uint8_t *work)
     return PROTO_FALSE;
 }
 
-void protocore_sen0192_present(uint8_t *work)
+proto_bool protocore_sen0192_present(uint8_t *work)
 {
     Sen0192.motion_tick(work, &SEN0192_CTX(work)->motion, Clock.ms); // age presence out even between poll()s
-    Sen0192.motion_present(work, &SEN0192_CTX(work)->motion);
+    return Sen0192.motion_present(work, &SEN0192_CTX(work)->motion);
 }
 
-void protocore_sen0192_motion_count(uint8_t *work)
+uint32_t protocore_sen0192_motion_count(uint8_t *work)
 {
-    Sen0192.motion_events(work, &SEN0192_CTX(work)->motion);
+    return Sen0192.motion_events(work, &SEN0192_CTX(work)->motion);
 }
 
 #endif // PROTOCORE_ENABLE_SEN0192

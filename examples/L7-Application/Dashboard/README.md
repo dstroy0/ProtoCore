@@ -1,6 +1,6 @@
 # Dashboard - a real-time SVG dashboard with live telemetry and controls
 
-**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_DASHBOARD` (SSE + WebSocket, both on by default)
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_DASHBOARD`, `PROTOCORE_ENABLE_SSE`, `PROTOCORE_ENABLE_WEBSOCKET`
 
 ## What this example teaches
 
@@ -51,7 +51,7 @@ protocore_dashboard_publish();
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_DASHBOARD=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_SSE=1 -DPROTOCORE_ENABLE_DASHBOARD=1" \
   --lib="." examples/L7-Application/Dashboard/Dashboard.ino
 ```
 
@@ -68,6 +68,8 @@ with added explanatory comments:
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #define PROTOCORE_ENABLE_DASHBOARD 1
+#define PROTOCORE_ENABLE_SSE 1
+#define PROTOCORE_ENABLE_WEBSOCKET 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

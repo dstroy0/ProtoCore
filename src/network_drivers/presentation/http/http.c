@@ -733,9 +733,9 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
             HttpParser.forwarded_client(protocore_http_parser_span(), req, fbuf, sizeof(fbuf), NULL);
         const char *fwd = http_parser_ok ? fbuf : NULL;
         protocore_ip eff;
-        ForwardedTrust.effective_ip_args.peer = &cip;
-        ForwardedTrust.effective_ip_args.fwd_ip_str = fwd;
-        ForwardedTrust.effective_ip_args.out = &eff;
+        ForwardedTrustV.effective_ip_args.peer = &cip;
+        ForwardedTrustV.effective_ip_args.fwd_ip_str = fwd;
+        ForwardedTrustV.effective_ip_args.out = &eff;
         ForwardedTrust.effective_ip(protocore_forwarded_trust_span());
         cip = eff;
     }

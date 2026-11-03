@@ -235,12 +235,12 @@ void protocore_forwarded_trust_contains(uint8_t *work)
     return;
 }
 
-void protocore_forwarded_trust_protocore_forwarded_effective_ip(uint8_t *work)
+void protocore_forwarded_trust_effective_ip(uint8_t *work)
 {
     (void)work;
-    const protocore_ip *peer = ForwardedTrustV.protocore_forwarded_effective_ip_args.peer;
-    const char *fwd_ip_str = ForwardedTrustV.protocore_forwarded_effective_ip_args.fwd_ip_str;
-    protocore_ip *out = ForwardedTrustV.protocore_forwarded_effective_ip_args.out;
+    const protocore_ip *peer = ForwardedTrustV.effective_ip_args.peer;
+    const char *fwd_ip_str = ForwardedTrustV.effective_ip_args.fwd_ip_str;
+    protocore_ip *out = ForwardedTrustV.effective_ip_args.out;
 
     if (!out)
     {
