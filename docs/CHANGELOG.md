@@ -120,6 +120,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`52cb758`](https://github.com/dstroy0/ProtoCore/commit/52cb758308b13edd1d7f89bc0ab36ce53abc427e))
+- update CHANGELOG.md [skip ci] ([`1489cf2`](https://github.com/dstroy0/ProtoCore/commit/1489cf2bc50c79991bc32b8f754f086840466ea6))
 - update test report + coverage [skip ci] ([`d154a56`](https://github.com/dstroy0/ProtoCore/commit/d154a56386d78874cfef73658b670fa8e3ec1a1e))
 - update CHANGELOG.md [skip ci] ([`f75824d`](https://github.com/dstroy0/ProtoCore/commit/f75824dfa23e497eb124ba17a6e1874fae26deee))
 - compile MMgr's own source list as pc_mmgr and link it into every test env ([`2983534`](https://github.com/dstroy0/ProtoCore/commit/29835342062339e124b3477d5f759205e039abdd))
@@ -462,6 +464,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Port the example sketches onto the handle and span call shapes, fix the library faults their C++ builds hit, and restore the prose words the namespace rename overwrote. ([`fe77f7b`](https://github.com/dstroy0/ProtoCore/commit/fe77f7b7bf9501d0db31d8f550595123732e885d))
 - Merge pull request #48 from dstroy0/mmgr-latest-ci-repair ([`b0ee534`](https://github.com/dstroy0/ProtoCore/commit/b0ee534bd170f6a9180e3ced7a142cc286ab2a8d))
 - Set the PlatformIO build cache directory from HOME. ([`407dd0d`](https://github.com/dstroy0/ProtoCore/commit/407dd0dc8dfa550376fe57ffcb48ad91eab3e5bf))
 - Replace the ESP32 toolchain ccache wrap with PlatformIO's build cache. ([`a76115b`](https://github.com/dstroy0/ProtoCore/commit/a76115b1d87f8801a94fe398bda488d116d0534e))
@@ -887,6 +890,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- update ESP32 build footprints [skip ci] ([`1bc928b`](https://github.com/dstroy0/ProtoCore/commit/1bc928bdab80003c757a942a114da50caada655a))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`4aee461`](https://github.com/dstroy0/ProtoCore/commit/4aee461184ff718f5053a57768165495227e9ac6))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`1818462`](https://github.com/dstroy0/ProtoCore/commit/1818462dcb54ac84342841cff3f055a11b5703f9))
 - README status table reads the report's current env-count wording ([`f867425`](https://github.com/dstroy0/ProtoCore/commit/f867425ce5b40193f259ee37d77ab833a0f14eaa))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`6c27a25`](https://github.com/dstroy0/ProtoCore/commit/6c27a253f4c7a98d9fbd538baf52623085f78cd1))
