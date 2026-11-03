@@ -74,7 +74,7 @@ from each example's `pio ci` size report and aggregated into
 | `MPR121`                                                                                                  | Drivers/Mpr121                       | 273.4 KB (21.4%) | 24.1 KB (7.5%)   |
 | `MQTT`                                                                                                    | L7-Application/MqttClient            | 722.6 KB (56.5%) | 63.8 KB (19.9%)  |
 | `MSGPACK`                                                                                                 | L6-Presentation/MsgPack              | 730.6 KB (57.1%) | 72.2 KB (22.6%)  |
-| `NMEA0183+UBX`                                                                                            | Drivers/UbloxGnss                    | 267.3 KB (20.9%) | 21.9 KB (6.8%)   |
+| `NMEA0183+UBX`                                                                                            | Drivers/UbloxGnss                    | 360.2 KB (28.1%) | 29.3 KB (9.1%)   |
 | `NRF24+GATEWAY`                                                                                           | Drivers/Nrf24Gateway                 | 269.5 KB (21.1%) | 21.2 KB (6.6%)   |
 | `NTP`                                                                                                     | L7-Application/SNTP                  | 752.4 KB (58.8%) | 74.6 KB (23.3%)  |
 | `NTP+TIME_SOURCE`                                                                                         | L7-Application/TimeSourceFallback    | 747.9 KB (58.4%) | 73.7 KB (23.0%)  |
