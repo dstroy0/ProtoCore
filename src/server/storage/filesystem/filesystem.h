@@ -99,7 +99,8 @@ static const mmgr_field FILESYSTEM_ROOT[] = {MMGR_STR, MMGR_END};
  *             site rather than tested here.
  * @return bytes written, or 0 on overflow - the engine already knows the length, so it is handed
  *         back rather than left for the caller to rediscover with a scan. */
-// C only: its values are an array compound literal, which C++ has no form of, and no C++ file calls it.
+// C only, with protocore_fs_resolve below: the join's values are an array compound literal, which C++
+// has no form of, and no C++ file calls either.
 #ifndef __cplusplus
 PROTOCORE_INLINE size_t protocore_fs_join(const char *root, const char *dir, const char *name, char *out, size_t cap)
 {
@@ -110,7 +111,6 @@ PROTOCORE_INLINE size_t protocore_fs_join(const char *root, const char *dir, con
     return EMBED_CALL(numer.build, NumerosCfg, .out = out, .cap = cap, .spec = FILESYSTEM_JOIN,
                       .vals = (const mmgr_fval[]){MMGR_VSTR(root), MMGR_VSTR(dir), MMGR_VSTR(name)}, .nvals = 3);
 }
-#endif
 
 /**
  * @brief Resolve a mount @p root + a request @p dir + a leaf @p name to an on-disk path in @p out:
@@ -151,6 +151,7 @@ PROTOCORE_INLINE int protocore_fs_resolve(const char *root, const char *dir, con
     }
     return 0;
 }
+#endif
 
 // --- status ---------------------------------------------------------------------------------
 //

@@ -22,7 +22,7 @@
 // with `idf.py -p <PORT> flash monitor`.
 //
 // Modbus and SNMP have no authentication or encryption - run them only on a trusted control network.
-#include "network_drivers/physical/physical/physical.h" // init_wifi_physical / wifi_ready
+#include "network_drivers/physical/physical/physical.h" // Physical: the Wi-Fi bring-up
 #include "protocore.h"
 #include "services/fieldbus/modbus/modbus/modbus.h"
 #include "services/net/snmp/snmp_agent/snmp_agent.h"
@@ -30,8 +30,6 @@
 
 static const char *WIFI_SSID = "YOUR_SSID";
 static const char *WIFI_PASS = "YOUR_PASSWORD";
-
-PC server;
 
 // Modbus data-model addresses (shared with the dashboard + SNMP so the three faces show one state).
 static constexpr uint16_t MB_UPTIME_INPUT_REG = 0;  // application-published: uptime seconds (read-only)
@@ -43,7 +41,7 @@ static const uint32_t OID_FREE_HEAP[] = {1, 3, 6, 1, 4, 1, 49374, 10, 0};
 // SNMP dynamic read: report the current free heap as a Gauge32.
 static bool get_free_heap(SnmpValue *out)
 {
-    out->type = (uint8_t)SnmpTag::SNMP_GAUGE32;
+    out->type = (uint8_t)SNMP_TAG_SNMP_GAUGE32;
     out->uval = (uint32_t)ESP.getFreeHeap();
     return true;
 }
@@ -57,6 +55,8 @@ static void on_modbus_write(uint8_t fc, uint16_t start, uint16_t count)
 // Web dashboard: one status page that reflects the same state the fieldbus + NMS see.
 static void handle_root(uint8_t slot, HttpReq *)
 {
+    ModbusV.get_holding_reg_args.addr = MB_SETPOINT_HOLD_REG;
+    Modbus.get_holding_reg(protocore_modbus_span());
     char body[512];
     int n = snprintf(body, sizeof(body),
                      "<!doctype html><meta name=viewport content='width=device-width,initial-scale=1'>"
@@ -67,12 +67,12 @@ static void handle_root(uint8_t slot, HttpReq *)
                      "<li>Modbus setpoint (holding reg %u): %u</li>"
                      "</ul><p>Modbus TCP on :502 &middot; SNMP on UDP:161 &middot; HTTP on :80</p>",
                      (unsigned long)(millis() / 1000), (unsigned)ESP.getFreeHeap(), (unsigned)MB_SETPOINT_HOLD_REG,
-                     (unsigned)protocore_modbus_get_holding_reg(MB_SETPOINT_HOLD_REG));
+                     (unsigned)ModbusV.value);
     if (n < 0 || (size_t)n >= sizeof(body))
     {
-        return server.send(slot, 500, "text/plain", "render error");
+        return send_text(slot, 500, "text/plain", "render error");
     }
-    server.send(slot, 200, "text/html", body);
+    send_text(slot, 200, "text/html", body);
 }
 
 void setup()
@@ -100,25 +100,40 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // --- Fieldbus: Modbus TCP slave on :502 ---
-    protocore_modbus_server_init();
-    protocore_modbus_set_holding_reg(MB_SETPOINT_HOLD_REG, 0); // client-writable setpoint
-    protocore_modbus_set_input_reg(MB_UPTIME_INPUT_REG, 0);    // application-published uptime (read-only)
-    protocore_modbus_on_write(on_modbus_write);
-    server.listen(502, PROTO_MODBUS);
+    Modbus.server_init(protocore_modbus_span());
+    ModbusV.set_holding_reg_args.addr = MB_SETPOINT_HOLD_REG; // client-writable setpoint
+    ModbusV.set_holding_reg_args.value = 0;
+    Modbus.set_holding_reg(protocore_modbus_span());
+    ModbusV.set_input_reg_args.addr = MB_UPTIME_INPUT_REG; // application-published uptime (read-only)
+    ModbusV.set_input_reg_args.value = 0;
+    Modbus.set_input_reg(protocore_modbus_span());
+    ModbusV.on_write_args.cb = on_modbus_write;
+    Modbus.on_write(protocore_modbus_span());
+    listen(502, PROTO_MODBUS);
 
     // --- Management: SNMP v1/v2c agent on UDP:161 ---
-    protocore_snmp_agent_init("public");
-    protocore_snmp_agent_set_system("ProtoCore industrial gateway", "admin@example.com", "esp32-pc-gw", "plant floor",
-                                    72);
-    protocore_snmp_agent_add_dynamic(OID_FREE_HEAP, 9, (uint8_t)SnmpTag::SNMP_GAUGE32, get_free_heap);
-    protocore_snmp_agent_begin_udp(161);
+    SnmpAgentV.community.ro = "public";
+    SnmpAgent.init(protocore_snmp_agent_span());
+    SnmpAgentV.system.descr = "ProtoCore industrial gateway";
+    SnmpAgentV.system.contact = "admin@example.com";
+    SnmpAgentV.system.name = "esp32-pc-gw";
+    SnmpAgentV.system.location = "plant floor";
+    SnmpAgentV.system.services = 72;
+    SnmpAgent.set_system(protocore_snmp_agent_span());
+    SnmpAgentV.object.oid = OID_FREE_HEAP;
+    SnmpAgentV.object.oid_len = 9;
+    SnmpAgentV.object.type = (uint8_t)SNMP_TAG_SNMP_GAUGE32;
+    SnmpAgentV.object.getter = get_free_heap;
+    SnmpAgent.add_dynamic(protocore_snmp_agent_span());
+    SnmpAgentV.port = 161;
+    SnmpAgent.listen(protocore_snmp_agent_span());
 
     // --- Web dashboard + start the TCP server (HTTP/80 + the Modbus listener) ---
-    server.on("/", HTTP_GET, handle_root);
-    int32_t rc = server.begin(80);
+    on_http("/", HTTP_GET, handle_root);
+    int32_t rc = begin_http(80, NULL);
     if (rc < 0)
     {
-        Serial.printf("server.begin() failed (error %ld)\n", (long)rc);
+        Serial.printf("begin_http() failed (error %ld)\n", (long)rc);
         return;
     }
     Serial.println("gateway ready: HTTP :80, Modbus TCP :502, SNMP UDP :161");
@@ -126,13 +141,15 @@ void setup()
 
 void loop()
 {
-    server.handle(); // drives HTTP + Modbus; SNMP is serviced by lwIP UDP callbacks
+    handle(); // drives HTTP + Modbus; SNMP is serviced by lwIP UDP callbacks
 
     // Publish a live value the PLC can poll and the dashboard/SNMP reflect: uptime seconds.
     static uint32_t last = 0;
     if (millis() - last >= 1000)
     {
         last = millis();
-        protocore_modbus_set_input_reg(MB_UPTIME_INPUT_REG, (uint16_t)(millis() / 1000));
+        ModbusV.set_input_reg_args.addr = MB_UPTIME_INPUT_REG;
+        ModbusV.set_input_reg_args.value = (uint16_t)(millis() / 1000);
+        Modbus.set_input_reg(protocore_modbus_span());
     }
 }

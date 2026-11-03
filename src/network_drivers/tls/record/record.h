@@ -240,8 +240,8 @@ static const TlsRecordNs TlsRecord __attribute__((unused)) = {
     .keys_wipe = protocore_tls_record_keys_wipe,
 };
 
-#endif // PROTOCORE_ENABLE_TLS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_TLS
 
 #endif // PROTOCORE_TLS_RECORD_H
