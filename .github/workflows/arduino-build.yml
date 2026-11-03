@@ -106,13 +106,12 @@ jobs:
             arduino-cli core update-index
             arduino-cli core install "$ESP32_CORE"
           }
-      # No ccache here (unlike the PlatformIO ESP32 build). arduino-esp32 3.x ships the newer
+      # No ccache here. arduino-esp32 3.x ships the newer
       # xtensa-esp-elf toolchain, whose endianness/ISA is loaded at runtime from a dynamic config
       # found relative to the compiler binary. The ccache masquerade replaces that binary with a
       # shim, which breaks the dynconfig lookup: the driver falls back to the stock big-endian
       # xtensa default and the link fails with "libstdc++.a compiled for a big endian system and
-      # target is little endian". (The PlatformIO build uses the older, statically-little-endian
-      # xtensa-esp32-elf toolchain, so wrapping is safe there.) Each example does a full compile.
+      # target is little endian". Each example does a full compile.
       # Arduino compiles a library's src/ and nothing else, and src/ is the only include path it
       # gives the library. The tree keeps the entry header in include/, the vendor axis in vendor/
       # and the HAL arms in test/core_setup/, so the library is staged in Arduino's layout: those
