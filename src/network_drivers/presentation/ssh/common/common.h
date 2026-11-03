@@ -426,7 +426,7 @@ PROTOCORE_INLINE uint32_t protocore_ssh_rd_u32(Rd *r)
 {
     mmgr_cspan c = {.buf = r->buf, .len = r->len, .pos = r->off, .err = EMBED_FALSE};
     uint64_t v = 0;
-    if (!EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = &c, .bytes = 4, .out = &v))
+    if (!EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = &c, .out = &v, .bytes = 4))
     {
         r->ok = PROTO_FALSE;
         return 0;
@@ -460,7 +460,7 @@ PROTOCORE_INLINE proto_bool protocore_ssh_read_u32_at(const uint8_t *p, size_t l
 {
     mmgr_cspan c = {.buf = p, .len = len, .pos = *off, .err = EMBED_FALSE};
     uint64_t v = 0;
-    if (!EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = &c, .bytes = 4, .out = &v))
+    if (!EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = &c, .out = &v, .bytes = 4))
     {
         return PROTO_FALSE;
     }

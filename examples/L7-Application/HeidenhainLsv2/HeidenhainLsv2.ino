@@ -18,11 +18,12 @@
  *
  * Point TNC_IP at a Heidenhain control that has the LSV/2 / DNC interface enabled. See README.
  *
- * Build flags (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_LSV2=1
+ * Build flags (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_DNS_RESOLVER=1 -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_LSV2=1
  */
 
 #define PROTOCORE_ENABLE_LSV2 1
 #define PROTOCORE_ENABLE_TCP_CLIENT 1
+#define PROTOCORE_ENABLE_DNS_RESOLVER 1
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical/physical.h"

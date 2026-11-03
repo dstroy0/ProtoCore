@@ -26,12 +26,13 @@
  * base board's IP (printed by the base at boot). Open Serial @ 115200 to watch each side.
  *
  * NOTE (PlatformIO): the caster is compiled into the *library*, so the flag must reach the whole build:
- * `build_flags = -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_NTRIP_CASTER=1 -DPROTOCORE_ENABLE_NMEA0183=1`. In the Arduino IDE it is set in build_opt.h.
+ * `build_flags = -DPROTOCORE_ENABLE_DNS_RESOLVER=1 -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_NTRIP_CASTER=1 -DPROTOCORE_ENABLE_NMEA0183=1`. In the Arduino IDE it is set in build_opt.h.
  */
 
 #define PROTOCORE_ENABLE_NTRIP_CASTER 1
 #define PROTOCORE_ENABLE_NMEA0183 1
 #define PROTOCORE_ENABLE_TCP_CLIENT 1
+#define PROTOCORE_ENABLE_DNS_RESOLVER 1
 
 // --- CHANGE ME: 1 = base (survey-in + caster), 0 = rover (NTRIP client) ---
 #define NTRIP_ROLE_BASE 1

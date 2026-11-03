@@ -45,12 +45,18 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_log_set_trap(protocore_log_level::PROTOCORE_LOG_WARN, on_trap); // trap on WARN and ERROR
-    protocore_log(protocore_log_level::PROTOCORE_LOG_INFO, "boot complete");
+    LogbufV.trap.threshold = PROTOCORE_LOG_WARN;
+    LogbufV.trap.cb = on_trap;
+    Logbuf.set_trap(protocore_logbuf_span()); // trap on WARN and ERROR
+    LogbufV.line.level = PROTOCORE_LOG_INFO;
+    LogbufV.line.msg = "boot complete";
+    Logbuf.put(protocore_logbuf_span());
 
     on_http("/logs", HTTP_GET, [](uint8_t id, HttpReq *) {
         char buf[PROTOCORE_LOG_LINES * PROTOCORE_LOG_LINE_LEN];
-        protocore_log_dump(buf, sizeof(buf));
+        LogbufV.read.out = buf;
+        LogbufV.read.cap = sizeof(buf);
+        Logbuf.dump(protocore_logbuf_span());
         send_text(id, 200, "text/plain", buf);
     });
     begin_http(80, NULL);
@@ -65,7 +71,9 @@ void loop()
         char msg[64];
         uint32_t heap = ESP.getFreeHeap();
         snprintf(msg, sizeof(msg), "heap=%u uptime=%lus", (unsigned)heap, millis() / 1000);
-        protocore_log(heap < 20000 ? protocore_log_level::PROTOCORE_LOG_WARN : protocore_log_level::PROTOCORE_LOG_INFO, msg);
+        LogbufV.line.level = heap < 20000 ? PROTOCORE_LOG_WARN : PROTOCORE_LOG_INFO;
+        LogbufV.line.msg = msg;
+        Logbuf.put(protocore_logbuf_span());
     }
     handle();
 }

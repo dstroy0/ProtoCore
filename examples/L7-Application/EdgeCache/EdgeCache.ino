@@ -11,12 +11,12 @@
  * never stalling the server (the origin fetch runs asynchronously while the client request is
  * suspended). A /cache/stats route reports the counters and /cache/purge invalidates by prefix.
  *
- * Wiring is two calls: protocore_edge_cache_map() binds a path prefix to an origin, protocore_edge_cache_enable()
+ * Wiring is two calls: EdgeProxy.map binds a path prefix to an origin, EdgeProxy.enable
  * installs the cache on the server. Edit the "CHANGE ME" lines, flash, open Serial @ 115200, then
  * request GET /cdn/<path> and watch the X-Cache header flip from MISS to HIT.
  *
  * NOTE (PlatformIO): the cache is compiled into the *library*, so the flags must reach the whole build:
- * build_flags = -DPROTOCORE_ENABLE_DBM=1 -DPROTOCORE_ENABLE_WAL=1 -DPROTOCORE_ENABLE_EDGE_CACHE=1 -DPROTOCORE_ENABLE_HTTP_CACHE=1 -DPROTOCORE_ENABLE_HTTP_CLIENT=1.
+ * build_flags = -DPROTOCORE_ENABLE_MNT=1 -DPROTOCORE_ENABLE_DBM=1 -DPROTOCORE_ENABLE_WAL=1 -DPROTOCORE_ENABLE_EDGE_CACHE=1 -DPROTOCORE_ENABLE_HTTP_CACHE=1 -DPROTOCORE_ENABLE_HTTP_CLIENT=1.
  * In the Arduino IDE they are set for you in build_opt.h.
  */
 
@@ -25,6 +25,7 @@
 #define PROTOCORE_ENABLE_HTTP_CLIENT 1
 #define PROTOCORE_ENABLE_WAL 1
 #define PROTOCORE_ENABLE_DBM 1
+#define PROTOCORE_ENABLE_MNT 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
@@ -37,6 +38,7 @@
 #include "services/storage/dbm/dbm.h"
 #include "services/storage/wal/wal_fs/wal_fs.h"
 #include "services/storage/wal/wal_store/wal_store.h"
+#include "test/core_setup/hal/esp/esp_mnt_fs.h"
 #include <SD.h>
 #endif
 
@@ -51,7 +53,7 @@ static const char *ORIGIN = "http://192.168.1.60:8000";
 #if PROTOCORE_ENABLE_DBM
 // L2 persistence: a dbm store on a WAL file on the SD card. The file stays open for the store's lifetime.
 static constexpr uint64_t L2_WAL_BYTES = 512 * 1024; // backing file size (holds the persisted cache set)
-static fs::File g_wal_file;
+static protocore_wal_fs_ctx g_wal_fs;
 static WalStore g_wal;
 static protocore_dbm g_l2;
 
@@ -62,16 +64,16 @@ static bool setup_l2()
     {
         return false;
     }
-    if (!protocore_wal_fs_prealloc(SD, "/edgecache.wal", L2_WAL_BYTES))
+    const protocore_mnt_backend *store = protocore_mnt_fs(&SD);
+    if (!protocore_wal_fs_prealloc(store, "/edgecache.wal", L2_WAL_BYTES))
     {
         return false;
     }
-    g_wal_file = SD.open("/edgecache.wal", "r+"); // random read+write, no truncation
-    if (!g_wal_file)
+    WalDev dev;
+    if (!protocore_wal_fs_open(&g_wal_fs, &dev, store, "/edgecache.wal", L2_WAL_BYTES))
     {
         return false;
     }
-    WalDev dev = protocore_wal_fs_dev(&g_wal_file, L2_WAL_BYTES);
     if (!protocore_wal_store_mount(&g_wal, &dev) && !protocore_wal_store_format(&g_wal, &dev)) // recover, else initialize
     {
         return false;
@@ -80,7 +82,7 @@ static bool setup_l2()
     {
         return false;
     }
-    protocore_edge_cache_bind_sd(&g_l2);
+    EdgeProxy.bind_sd(protocore_edge_cache_proxy_span(), &g_l2);
     return true;
 }
 #endif
@@ -90,7 +92,7 @@ static void handle_stats(uint8_t slot, HttpReq *req)
 {
     (void)req;
     EdgeCacheStats st;
-    protocore_edge_cache_stats(&st);
+    EdgeProxy.stats(protocore_edge_cache_proxy_span(), &st);
     char body[288];
     snprintf(body, sizeof(body),
              "{\"hits\":%u,\"misses\":%u,\"revalidations\":%u,\"replaces\":%u,\"stores\":%u,\"evictions\":%u,"
@@ -105,7 +107,7 @@ static void handle_stats(uint8_t slot, HttpReq *req)
 static void handle_purge(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    uint32_t n = protocore_edge_cache_purge_prefix("/cdn/");
+    uint32_t n = EdgeProxy.purge_prefix(protocore_edge_cache_proxy_span(), "/cdn/");
     char body[48];
     snprintf(body, sizeof(body), "{\"purged\":%u}", (unsigned)n);
     send_text(slot, 200, "application/json", body);
@@ -129,8 +131,8 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Cache everything under /cdn/ from the origin, then enable the cache on the server.
-    protocore_edge_cache_map("/cdn/", ORIGIN);
-    protocore_edge_cache_enable(server);
+    EdgeProxy.map(protocore_edge_cache_proxy_span(), "/cdn/", ORIGIN);
+    EdgeProxy.enable(protocore_edge_cache_proxy_span());
 #if PROTOCORE_ENABLE_DBM
     Serial.println(setup_l2() ? "L2 SD tier: mounted (cache survives reboot)" : "L2 SD tier: unavailable (no SD?)");
 #endif

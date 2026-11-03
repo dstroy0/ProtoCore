@@ -25,6 +25,8 @@
 #include "network_drivers/physical/physical/physical.h"
 #include "services/security/totp/totp.h"
 
+static uint8_t totp_work[16]; // the borrow an entry takes; Totp never reads it
+
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
@@ -54,11 +56,22 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    int n = protocore_base32_decode(SECRET_B32, g_secret, sizeof(g_secret));
+    TotpV.secret.b32 = SECRET_B32;
+    TotpV.secret.out = g_secret;
+    TotpV.secret.cap = sizeof(g_secret);
+    Totp.base32_decode(totp_work);
+    int n = TotpV.i32;
     g_secret_len = (n > 0) ? (size_t)n : 0;
 
     on_http("/totp", HTTP_GET, [](uint8_t id, HttpReq *) {
-        uint32_t code = protocore_totp(g_secret, g_secret_len, now_unix(), 30, 6);
+        TotpV.k = g_secret;
+        TotpV.keylen = g_secret_len;
+        TotpV.digit = 6;
+        TotpV.step.unix_time = now_unix();
+        TotpV.step.t0 = 0;
+        TotpV.step.x = 30;
+        Totp.totp(totp_work);
+        uint32_t code = TotpV.u32;
         char b[16];
         snprintf(b, sizeof(b), "%06u", code); // zero-pad to 6 digits
         send_text(id, 200, "text/plain", b);
@@ -66,7 +79,16 @@ void setup()
     on_http("/totp/verify", HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *code_s = HttpParser.get_query(protocore_http_parser_span(), req, "code");
         uint32_t code = code_s ? (uint32_t)strtoul(code_s, nullptr, 10) : 0;
-        bool ok = protocore_totp_verify(g_secret, g_secret_len, now_unix(), code, 30, 6, 1);
+        TotpV.k = g_secret;
+        TotpV.keylen = g_secret_len;
+        TotpV.digit = 6;
+        TotpV.step.unix_time = now_unix();
+        TotpV.step.t0 = 0;
+        TotpV.step.x = 30;
+        TotpV.check.otp = code;
+        TotpV.check.drift = 1;
+        Totp.verify(totp_work);
+        bool ok = TotpV.ok;
         send_text(id, 200, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
     });
     begin_http(80, NULL);

@@ -30,6 +30,9 @@
 #if PROTOCORE_ENABLE_CSRF
 #include "server/security/csrf/csrf.h"
 #endif
+#if PROTOCORE_ENABLE_TLS
+#include "network_drivers/tls/tls.h" // protocore_tls_read: a wss:// slot's records are decrypted here
+#endif
 
 /**
  * @brief The root's compile-time storage: the handlers registered against it.

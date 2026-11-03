@@ -30,6 +30,8 @@
 #include "network_drivers/physical/physical/physical.h"
 #include "services/security/jwt/jwt.h"
 
+static uint8_t jwt_work[16]; // the borrow an entry takes; Jwt never reads it
+
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
@@ -41,30 +43,41 @@ static void protected_handler(uint8_t id, HttpReq *req)
 {
     // req->authorization holds the FULL Authorization header (JWTs exceed
     // MAX_VAL_LEN; the parser captures it whole when PROTOCORE_ENABLE_JWT is set).
-    if (!protocore_jwt_bearer_valid(req->authorization, (const uint8_t *)JWT_SECRET, strlen(JWT_SECRET)))
+    JwtV.token.credentials = req->authorization;
+    JwtV.key.secret = (const uint8_t *)JWT_SECRET;
+    JwtV.key.secret_len = strlen(JWT_SECRET);
+    Jwt.verify_bearer(jwt_work);
+    if (!JwtV.ok)
     {
         proto_add_response_header(id, "WWW-Authenticate", "Bearer");
         send_text(id, 401, "text/plain", "invalid or missing token");
         return;
     }
 
-    // Granular authorization from a token claim. protocore_jwt_claim_str / protocore_jwt_scope_allows
-    // take the bare token, so step past the "Bearer " scheme first.
+    // Granular authorization from a token claim. Jwt.claim_str / Jwt.scope_allows take the bare
+    // token, so step past the "Bearer " scheme first.
     const char *tok = req->authorization + 7;
     while (*tok == ' ')
     {
         tok++;
     }
     char role[16];
-    if (!protocore_jwt_claim_str(tok, strlen(tok), "role", role, sizeof(role)) || strcmp(role, "admin") != 0)
+    JwtV.token.jws = tok;
+    JwtV.token.jws_len = strlen(tok);
+    JwtV.claim.name = "role";
+    JwtV.claim.out = role;
+    JwtV.claim.out_cap = sizeof(role);
+    Jwt.claim_str(jwt_work);
+    if (!JwtV.ok || strcmp(role, "admin") != 0)
     {
         send_text(id, 403, "text/plain", "forbidden: admin role required");
         return;
     }
     // For OAuth2 space-separated scopes, gate on the "scope" claim instead:
     //   char scope[64];
-    //   if (protocore_jwt_claim_str(tok, strlen(tok), "scope", scope, sizeof(scope)) &&
-    //       protocore_jwt_scope_allows(scope, "telemetry:write")) { ... }
+    //   JwtV.claim.name = "scope"; JwtV.claim.out = scope; JwtV.claim.out_cap = sizeof(scope);
+    //   Jwt.claim_str(jwt_work);
+    //   JwtV.scope.claim = scope; JwtV.scope.required = "telemetry:write"; Jwt.scope_allows(jwt_work);
 
     send_text(id, 200, "text/plain", "welcome admin - your token is valid");
 }

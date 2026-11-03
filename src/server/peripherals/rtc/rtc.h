@@ -38,9 +38,8 @@ typedef struct
     proto_bool (*begin)(uint8_t *);
     uint32_t (*read_epoch)(uint8_t *);
     proto_bool (*set_epoch)(uint8_t *, uint32_t);
-    void (*time_source)(uint8_t *);
 } RtcNs;
-PROTOCORE_NS_LAYOUT(RtcNs, regs_to_epoch, epoch_to_regs, begin, read_epoch, set_epoch, time_source);
+PROTOCORE_NS_LAYOUT(RtcNs, regs_to_epoch, epoch_to_regs, begin, read_epoch, set_epoch);
 
 /**
  * @brief Convert the 7 raw RTC time registers (BCD: sec, min, hour, dow, .
@@ -77,10 +76,10 @@ uint32_t protocore_rtc_read_epoch(uint8_t *work);
  */
 proto_bool protocore_rtc_set_epoch(uint8_t *work, uint32_t epoch);
 /**
- * @brief A ::TimeSourceFn wrapper (returns protocore_rtc_read_epoch()) to .
- * @param work PROTOCORE_RTC_BORROW bytes the caller took. Not held past the call.
+ * @brief The RTC as a ::TimeSourceFn: protocore_rtc_read_epoch() over this module's own borrow.
+ * @return the RTC's Unix time, or 0 when it cannot be read.
  */
-void protocore_rtc_time_source(uint8_t *work);
+uint32_t protocore_rtc_time_source(void);
 
 /**
  * @brief The PROTOCORE_I2C_DEVICE_BORROW bytes this module's state lives in.
@@ -98,8 +97,7 @@ PROTOCORE_NS RtcNs Rtc PROTOCORE_UNUSED = {.regs_to_epoch = protocore_rtc_regs_t
                                            .epoch_to_regs = protocore_rtc_epoch_to_regs,
                                            .begin = protocore_rtc_begin,
                                            .read_epoch = protocore_rtc_read_epoch,
-                                           .set_epoch = protocore_rtc_set_epoch,
-                                           .time_source = protocore_rtc_time_source};
+                                           .set_epoch = protocore_rtc_set_epoch};
 
 PROTOCORE_END_DECLS
 

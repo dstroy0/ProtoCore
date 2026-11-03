@@ -3678,10 +3678,16 @@
 #define PROTOCORE_PLAINTEXT_WORK_LWM2MTLV 0
 #endif
 
-// The CoAP server's resource table, the path and query it splits out, and its message buffers.
-// Measured at 3032 bytes. No key material - DTLS keys live in coaps_server - so the plaintext end.
+// The CoAP server's resource table, the path and query it splits out, and its message buffers:
+// 2816 bytes for the table, the path, the query and the deduplication cache, plus the handler's
+// payload buffer and the outbound datagram at their configured sizes, plus the Block1 reassembly
+// buffer when block-wise transfer is on and the observer list when Observe is. No key material -
+// DTLS keys live in coaps_server - so the plaintext end.
 #ifndef PROTOCORE_COAP_BORROW
-#define PROTOCORE_COAP_BORROW 3584u
+#define PROTOCORE_COAP_BORROW                                                                                          \
+    (2816u + (size_t)PROTOCORE_COAP_MAX_PAYLOAD + (size_t)PROTOCORE_COAP_MSG_BUF_SIZE +                                \
+     (size_t)PROTOCORE_ENABLE_COAP_BLOCK * ((size_t)PROTOCORE_COAP_BLOCK1_MAX + 16u) +                                 \
+     (size_t)PROTOCORE_ENABLE_COAP_OBSERVE * ((size_t)PROTOCORE_COAP_MAX_OBSERVERS * 80u + 32u))
 #endif
 
 #if PROTOCORE_ENABLE_COAP

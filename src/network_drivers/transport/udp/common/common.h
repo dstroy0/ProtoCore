@@ -75,11 +75,11 @@ PROTOCORE_INLINE proto_bool protocore_udp_dgram_decode(mmgr_cspan *r, protocore_
     uint64_t len = 0;
     uint64_t hi = 0;
     uint64_t lo = 0;
-    if (!EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .bytes = 1, .out = &family) ||
-        !EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .bytes = 2, .out = &port) ||
-        !EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .bytes = 2, .out = &len) ||
-        !EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .bytes = 8, .out = &hi) ||
-        !EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .bytes = 8, .out = &lo))
+    if (!EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .out = &family, .bytes = 1) ||
+        !EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .out = &port, .bytes = 2) ||
+        !EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .out = &len, .bytes = 2) ||
+        !EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .out = &hi, .bytes = 8) ||
+        !EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .out = &lo, .bytes = 8))
     {
         return PROTO_FALSE;
     }

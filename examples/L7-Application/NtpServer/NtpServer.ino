@@ -169,7 +169,10 @@ void setup()
     NtpServiceV.begin_args.server2 = NULL;
     NtpService.begin(protocore_ntp_service_span());
 
-    if (protocore_ntp_server_begin(1, NTP_REFID_GPS))
+    NtpServerV.begin_args.stratum = 1;
+    NtpServerV.begin_args.refid = PROTOCORE_NTP_REFID_GPS;
+    NtpServer.begin(protocore_ntp_server_span());
+    if (NtpServerV.ok)
     {
         Serial.println("NTP server listening on UDP/123 (point your devices at this IP)");
     }

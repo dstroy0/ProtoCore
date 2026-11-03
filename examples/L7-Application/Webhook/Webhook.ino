@@ -21,6 +21,8 @@
 #include "network_drivers/physical/physical/physical.h"
 #include "services/net/webhook/webhook.h"
 
+static uint8_t webhook_work[16]; // the borrow an entry takes; Webhook never reads it
+
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
@@ -55,11 +57,20 @@ void loop()
     {
         fired = true;
         char body[128];
-        protocore_ifttt_payload("boot", "esp32", nullptr, body, sizeof(body));
-        int status = protocore_webhook_post(WEBHOOK_URL, body);
+        WebhookV.ifttt.value1 = "boot";
+        WebhookV.ifttt.value2 = "esp32";
+        WebhookV.ifttt.value3 = nullptr;
+        WebhookV.build.out = body;
+        WebhookV.build.cap = sizeof(body);
+        Webhook.ifttt_payload(webhook_work);
+        WebhookV.request.target_uri = WEBHOOK_URL;
+        WebhookV.request.content = body;
+        Webhook.post(webhook_work);
+        int status = WebhookV.i32;
         Serial.printf("[webhook] POST -> status %d\n", status);
 
         // IFTTT Maker form (needs your real key):
-        //   protocore_ifttt_trigger("device_boot", "YOUR_IFTTT_KEY", "esp32", nullptr, nullptr);
+        //   WebhookV.ifttt.event = "device_boot"; WebhookV.ifttt.key = "YOUR_IFTTT_KEY";
+        //   WebhookV.ifttt.value1 = "esp32"; Webhook.ifttt_trigger(webhook_work);
     }
 }

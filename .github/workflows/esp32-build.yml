@@ -138,15 +138,16 @@ jobs:
         with:
           path: frags
           pattern: fp-*
-      - name: Merge footprints + regenerate the table
-        run: |
-          python -m tools.ci_tooling.generate.example_footprints merge frags docs/footprints.json
-          python -m tools.ci_tooling.generate.example_footprints table docs/footprints.json docs/FOOTPRINTS.md
-      - name: Format with Prettier
-        run: npx prettier@3.9.6 --write docs/footprints.json docs/FOOTPRINTS.md
-      - name: Commit footprints + table
+      # The fragments merge into the footprints.json on the main each commit attempt lands on, and
+      # the table is rendered and formatted from that merge, so a concurrent footprint commit is
+      # merged as data instead of as two tables' text.
+      - name: Merge footprints, regenerate the table, commit
         uses: ./.github/actions/bot-commit
         with:
           files: docs/footprints.json docs/FOOTPRINTS.md
           message: "docs: update ESP32 build footprints [skip ci]"
           signing-key: ${{ secrets.CI_SIGNING_KEY }}
+          generate: |
+            python -m tools.ci_tooling.generate.example_footprints merge frags docs/footprints.json
+            python -m tools.ci_tooling.generate.example_footprints table docs/footprints.json docs/FOOTPRINTS.md
+            npx prettier@3.9.6 --write docs/footprints.json docs/FOOTPRINTS.md

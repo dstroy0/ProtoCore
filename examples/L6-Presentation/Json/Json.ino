@@ -3,9 +3,9 @@
 
 /**
  * @file Json.ino
- * @brief Zero-heap JSON: build responses with JsonWriter, read requests with json_get_*.
+ * @brief Zero-heap JSON: build responses with the Json writer, read requests with Json.get_*.
  *
- * JsonWriter formats into a fixed stack buffer (no heap); Json.get_str/int/bool
+ * The Json writer formats into a fixed stack buffer (no heap); Json.get_str/int/bool
  * read top-level members of a JSON request body in place. See json.h.
  *
  * Flash, open Serial @ 115200 for the IP, then:
@@ -19,31 +19,55 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
 
+static uint8_t json_work[16]; // the borrow an entry takes; Json never reads it
+
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
 
-// GET /api/info - build a JSON object with JsonWriter (no heap).
+// GET /api/info - build a JSON object with the Json writer into a fixed buffer (no heap).
 void handle_info(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     char buf[160];
-    JsonWriter w(buf, sizeof(buf));
-    w.begin_object();
-    w.kv_str("lib", "ProtoCore");
-    w.kv_uint("uptime_ms", (unsigned long)millis());
-    w.kv_uint("free_heap", (unsigned long)ESP.getFreeHeap());
-    w.key("features");
-    w.begin_array();
-    w.str("json");
-    w.str("chunked");
-    w.str("middleware");
-    w.end_array();
-    w.end_object();
-
-    if (w.ok())
+    protocore_json_writer w;
+    JsonV.init_args.w = &w;
+    JsonV.init_args.buf = buf;
+    JsonV.init_args.cap = sizeof(buf);
+    Json.init(json_work);
+    JsonV.begin_object_args.w = &w;
+    Json.begin_object(json_work);
+    JsonV.kv_str_args.w = &w;
+    JsonV.kv_str_args.k = "lib";
+    JsonV.kv_str_args.v = "ProtoCore";
+    Json.kv_str(json_work);
+    JsonV.kv_uint_args.w = &w;
+    JsonV.kv_uint_args.k = "uptime_ms";
+    JsonV.kv_uint_args.v = (unsigned long)millis();
+    Json.kv_uint(json_work);
+    JsonV.kv_uint_args.k = "free_heap";
+    JsonV.kv_uint_args.v = (unsigned long)ESP.getFreeHeap();
+    Json.kv_uint(json_work);
+    JsonV.key_args.w = &w;
+    JsonV.key_args.k = "features";
+    Json.key(json_work);
+    JsonV.begin_array_args.w = &w;
+    Json.begin_array(json_work);
+    static const char *const FEATURES[] = {"json", "chunked", "middleware"};
+    JsonV.put_str_args.w = &w;
+    for (const char *feature : FEATURES)
     {
-        send_text(slot_id, 200, "application/json", w.c_str());
+        JsonV.put_str_args.v = feature;
+        Json.put_str(json_work);
+    }
+    JsonV.end_array_args.w = &w;
+    Json.end_array(json_work);
+    JsonV.end_object_args.w = &w;
+    Json.end_object(json_work);
+
+    if (protocore_json_ok(&w))
+    {
+        send_text(slot_id, 200, "application/json", protocore_json_c_str(&w));
     }
     else
     {
@@ -56,19 +80,45 @@ void handle_echo(uint8_t slot_id, HttpReq *req)
 {
     char name[32];
     long age = 0;
-    bool admin = false;
-    bool have_name = Json.get_str((const char *)req->body, "name", name, sizeof(name));
-    Json.get_int((const char *)req->body, "age", &age);
-    Json.get_bool((const char *)req->body, "admin", &admin);
+    proto_bool admin = false;
+    JsonV.get_str_args.json = (const char *)req->body;
+    JsonV.get_str_args.key = "name";
+    JsonV.get_str_args.out = name;
+    JsonV.get_str_args.out_cap = sizeof(name);
+    Json.get_str(json_work);
+    const bool have_name = JsonV.ok;
+    JsonV.get_int_args.json = (const char *)req->body;
+    JsonV.get_int_args.key = "age";
+    JsonV.get_int_args.out = &age;
+    Json.get_int(json_work);
+    JsonV.get_bool_args.json = (const char *)req->body;
+    JsonV.get_bool_args.key = "admin";
+    JsonV.get_bool_args.out = &admin;
+    Json.get_bool(json_work);
 
     char buf[128];
-    JsonWriter w(buf, sizeof(buf));
-    w.begin_object();
-    w.kv_str("name", have_name ? name : "");
-    w.kv_int("age", age);
-    w.kv_bool("admin", admin);
-    w.end_object();
-    send_text(slot_id, 200, "application/json", w.c_str());
+    protocore_json_writer w;
+    JsonV.init_args.w = &w;
+    JsonV.init_args.buf = buf;
+    JsonV.init_args.cap = sizeof(buf);
+    Json.init(json_work);
+    JsonV.begin_object_args.w = &w;
+    Json.begin_object(json_work);
+    JsonV.kv_str_args.w = &w;
+    JsonV.kv_str_args.k = "name";
+    JsonV.kv_str_args.v = have_name ? name : "";
+    Json.kv_str(json_work);
+    JsonV.kv_int_args.w = &w;
+    JsonV.kv_int_args.k = "age";
+    JsonV.kv_int_args.v = age;
+    Json.kv_int(json_work);
+    JsonV.kv_bool_args.w = &w;
+    JsonV.kv_bool_args.k = "admin";
+    JsonV.kv_bool_args.v = admin;
+    Json.kv_bool(json_work);
+    JsonV.end_object_args.w = &w;
+    Json.end_object(json_work);
+    send_text(slot_id, 200, "application/json", protocore_json_c_str(&w));
 }
 
 void setup()

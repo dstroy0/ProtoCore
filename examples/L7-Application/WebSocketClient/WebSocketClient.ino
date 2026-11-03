@@ -55,9 +55,14 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    ws_client_on_message(on_message);
+    WsClientV.msg.on_message = on_message;
+    WsClient.on_message(protocore_ws_client_span());
 
-    if (ws_client_connect(HOST, PORT, PATH))
+    WsClientV.handshake.host = HOST;
+    WsClientV.handshake.port = PORT;
+    WsClientV.handshake.resource_name = PATH;
+    WsClient.connect(protocore_ws_client_span());
+    if (WsClientV.ok)
     {
         Serial.println("WebSocket connected");
     }
@@ -69,15 +74,17 @@ void setup()
 
 void loop()
 {
-    ws_client_loop();
+    WsClient.loop(protocore_ws_client_span());
 
     static uint32_t last = 0;
     static uint32_t n = 0;
-    if (ws_client_connected() && millis() - last >= 1000)
+    WsClient.connected(protocore_ws_client_span());
+    if (WsClientV.ok && millis() - last >= 1000)
     {
         last = millis();
         char msg[48];
         snprintf(msg, sizeof(msg), "hello from esp32 #%lu", (unsigned long)n++);
-        ws_client_send_text(msg);
+        WsClientV.msg.text = msg;
+        WsClient.send_text(protocore_ws_client_span());
     }
 }

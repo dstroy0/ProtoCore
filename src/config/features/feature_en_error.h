@@ -1798,6 +1798,11 @@ static_assert(sizeof(protocore_if_kind) == 1, "protocore_if_kind must stay one b
     "ProtoCore: PROTOCORE_ENABLE_STATS and PROTOCORE_ENABLE_METRICS render templates from PROTOCORE_ENABLE_WEB_ASSETS"
 #endif
 
+#if PROTOCORE_ENABLE_WS_DEFLATE && !PROTOCORE_ENABLE_DEFLATE_RFC1951
+#error                                                                                                                 \
+    "ProtoCore: PROTOCORE_ENABLE_WS_DEFLATE builds its Huffman codes from the PROTOCORE_ENABLE_DEFLATE_RFC1951 tables"
+#endif
+
 #if PROTOCORE_ENABLE_RANGE && !PROTOCORE_ENABLE_FILE_SERVING && !PROTOCORE_ENABLE_EDGE_CACHE
 #error "ProtoCore: PROTOCORE_ENABLE_RANGE requires PROTOCORE_ENABLE_FILE_SERVING or PROTOCORE_ENABLE_EDGE_CACHE"
 #endif

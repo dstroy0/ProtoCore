@@ -16,6 +16,8 @@
 //
 // Build flags (whole build): PROTOCORE_ENABLE_HTTP_DELIVERY=1 PROTOCORE_ENABLE_FILE_SERVING=1 PROTOCORE_ENABLE_RANGE=1
 
+#define PROTOCORE_ENABLE_WEB_ASSETS 1
+
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/application/file_serving/file_serving.h"

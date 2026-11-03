@@ -19,12 +19,13 @@
  * the client on its own; the bundled server just makes the example self-contained.
  *
  * Enable both flags for the build (platformio.ini):
- *     build_flags = -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_OPCUA=1 -DPROTOCORE_ENABLE_OPCUA_CLIENT=1
+ *     build_flags = -DPROTOCORE_ENABLE_DNS_RESOLVER=1 -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_OPCUA=1 -DPROTOCORE_ENABLE_OPCUA_CLIENT=1
  */
 
 #define PROTOCORE_ENABLE_OPCUA 1
 #define PROTOCORE_ENABLE_OPCUA_CLIENT 1
 #define PROTOCORE_ENABLE_TCP_CLIENT 1
+#define PROTOCORE_ENABLE_DNS_RESOLVER 1
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"

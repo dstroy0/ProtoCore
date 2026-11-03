@@ -81,24 +81,11 @@ void protocore_worker_set_self(int id)
 // Cellblocks
 // ---------------------------------------------------------------------------
 
-// A cellblock is a power of two, and the arena sizes are sums of what the enabled modules declare,
-// so the ghost's pools are each sum rounded up to the next power of two. Smeared on an enum name
-// rather than on the sum itself, so the expression is 32 copies of one identifier.
-enum
-{
-    GHOST_PLAIN_WANT = PROTOCORE_PLAINTEXT_ARENA_SIZE,
-    GHOST_SECURE_WANT = PROTOCORE_SECURE_ARENA_SIZE,
-};
-#define WORKER_SMEAR1(x) ((x) | ((x) >> 1))
-#define WORKER_SMEAR2(x) (WORKER_SMEAR1(x) | (WORKER_SMEAR1(x) >> 2))
-#define WORKER_SMEAR4(x) (WORKER_SMEAR2(x) | (WORKER_SMEAR2(x) >> 4))
-#define WORKER_SMEAR8(x) (WORKER_SMEAR4(x) | (WORKER_SMEAR4(x) >> 8))
-#define WORKER_SMEAR16(x) (WORKER_SMEAR8(x) | (WORKER_SMEAR8(x) >> 16))
-#define WORKER_POW2_UP(n) (WORKER_SMEAR16((unsigned long)(n) - 1u) + 1u)
-
 // The ghost slot's pools: the library's own, borrowed from by every context no worker slot covers.
-ParsMemoriaeInternae(ghost_plain, WORKER_POW2_UP(GHOST_PLAIN_WANT));
-ParsMemoriaeInternae(ghost_secure, WORKER_POW2_UP(GHOST_SECURE_WANT));
+// Each is exactly the sum the enabled modules declare: a cellblock's alignment is a power of two,
+// its size is not, so rounding the size up would only take DRAM nothing borrows.
+ParsMemoriaeInternae(ghost_plain, PROTOCORE_PLAINTEXT_ARENA_SIZE);
+ParsMemoriaeInternae(ghost_secure, PROTOCORE_SECURE_ARENA_SIZE);
 LocusCarcerum(ghost_site, MMGR_MINIMUM_SECURITY(ghost_plain), MMGR_MAXIMUM_SECURITY(ghost_secure));
 
 // What each worker slot borrows through. NULL is the ghost's.

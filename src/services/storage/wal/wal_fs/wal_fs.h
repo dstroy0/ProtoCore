@@ -99,7 +99,7 @@ PROTOCORE_INLINE proto_bool protocore_wal_fs_prealloc(const protocore_mnt_backen
         return PROTO_FALSE;
     }
     uint8_t z[256];
-    EMBED_CALL(memor.set, MemoriaCfg, .dst = z, .val = 0, .bytes = sizeof z);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = z, .bytes = sizeof z, .val = 0);
     uint64_t left = size;
     proto_bool ok = PROTO_TRUE;
     while (left)

@@ -13,6 +13,7 @@ protocore_add_module(network_drivers/presentation/http
     network_drivers/session
     network_drivers/transport/tcp/common
     network_drivers/transport/tcp/protocol
+    network_drivers/tls
     server/clock
     server/io/webdav_handler
     server/security/auth_lockout

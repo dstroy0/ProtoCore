@@ -16,6 +16,13 @@ inputs:
     description: Extra flags for the rebase pull, e.g. -X theirs to keep this run's regenerated files.
     required: false
     default: ""
+  generate:
+    description: >-
+      Shell commands that write the files, run on a clean tree after every pull. Set it when the files
+      are derived from what is already on main, so each attempt derives them from the newest main
+      instead of text-merging an older render into it.
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -26,6 +33,7 @@ runs:
         BOT_FILES: ${{ inputs.files }}
         BOT_MESSAGE: ${{ inputs.message }}
         REBASE_FLAGS: ${{ inputs.rebase-flags }}
+        BOT_GENERATE: ${{ inputs.generate }}
       run: |
         # Sign the commit (Verified) when the key is available; skip when the secret is
         # unset so a fork or a fresh checkout still runs.
@@ -48,6 +56,11 @@ runs:
           # --autostash: the generated files are unstaged at this point and a rebase refuses to
           # start on a dirty tree.
           git pull --rebase --autostash $REBASE_FLAGS origin main || { git rebase --abort 2>/dev/null || true; }
+          # A generated table is a function of the file it is rendered from: render it from the main
+          # this attempt is on, never merge a render of an older main into a newer one.
+          if [ -n "$BOT_GENERATE" ]; then
+            bash -e -c "$BOT_GENERATE"
+          fi
           # Unquoted: the input carries several paths and each is its own pathspec.
           git add $BOT_FILES
           if git diff --cached --quiet; then
@@ -57,7 +70,12 @@ runs:
           git commit -m "$BOT_MESSAGE"
           if git push origin HEAD:main; then exit 0; fi
           echo "push rejected (attempt $attempt/5), retrying"
-          git reset --soft HEAD~1
+          if [ -n "$BOT_GENERATE" ]; then
+            # Dropped, not carried: the next attempt renders it again from the newer main.
+            git reset --hard HEAD~1
+          else
+            git reset --soft HEAD~1
+          fi
           sleep 5
         done
         echo "push still failing after 5 pull+commit+push attempts"

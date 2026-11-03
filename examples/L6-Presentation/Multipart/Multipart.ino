@@ -18,6 +18,8 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
 
+static uint8_t multipart_work[16]; // the borrow an entry takes; Multipart never reads it
+
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
@@ -30,12 +32,12 @@ static const char FORM[] = "<!doctype html><meta charset=utf-8><title>upload</ti
 void handle_upload(uint8_t id, HttpReq *req)
 {
     MultipartBody mp;
-    if (!Multipart.parse(req, &mp))
+    if (!Multipart.parse(multipart_work, req, &mp))
     {
         send_text(id, 400, "text/plain", "expected multipart/form-data (and within BODY_BUF_SIZE)");
         return;
     }
-    const char *name = Multipart.get_field(&mp, "name");
+    const char *name = Multipart.get_field(multipart_work, &mp, "name");
     char out[160];
     snprintf(out, sizeof(out), "parsed %d part(s); field 'name' = %s", mp.part_count, name ? name : "(absent)");
     send_text(id, 200, "text/plain", out);

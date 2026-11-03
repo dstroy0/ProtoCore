@@ -40,10 +40,11 @@ static void access_log(const char *method, const char *path, int status, int len
 {
     char line[96];
     snprintf(line, sizeof(line), "%s %s -> %d (%d bytes)", method, path, status, len);
-    protocore_syslog_log(status >= 500   ? SYSLOG_ERR
+    SyslogV.record.severity = status >= 500   ? SYSLOG_ERR
                   : status >= 400 ? SYSLOG_WARNING
-                                  : SYSLOG_INFO,
-                  line);
+                                  : SYSLOG_INFO;
+    SyslogV.record.msg = line;
+    Syslog.log(protocore_syslog_span());
 }
 
 void setup()
@@ -63,8 +64,15 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    protocore_syslog_init(SYSLOG_SERVER, SYSLOG_PORT, "esp32-pc", "pc", SYSLOG_FAC_LOCAL0);
-    protocore_syslog_log(SYSLOG_NOTICE, "device booted");
+    SyslogV.collector.addr = SYSLOG_SERVER;
+    SyslogV.collector.port = SYSLOG_PORT;
+    SyslogV.header.hostname = "esp32-pc";
+    SyslogV.header.app_name = "pc";
+    SyslogV.header.facility = SYSLOG_FAC_LOCAL0;
+    Syslog.init(protocore_syslog_span());
+    SyslogV.record.severity = SYSLOG_NOTICE;
+    SyslogV.record.msg = "device booted";
+    Syslog.log(protocore_syslog_span());
 
     on_http("/", HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "ok"); });
     on_request_log(access_log); // every response is logged to syslog
@@ -91,6 +99,8 @@ void loop()
         char hb[48];
         snprintf(hb, sizeof(hb), "heartbeat uptime=%lus heap=%u", (unsigned long)(millis() / 1000),
                  (unsigned)ESP.getFreeHeap());
-        protocore_syslog_log(SYSLOG_INFO, hb);
+        SyslogV.record.severity = SYSLOG_INFO;
+        SyslogV.record.msg = hb;
+        Syslog.log(protocore_syslog_span());
     }
 }

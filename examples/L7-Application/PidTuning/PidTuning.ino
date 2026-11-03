@@ -30,6 +30,8 @@
 #include "network_drivers/physical/physical/physical.h"
 #include "services/system/control/control.h"
 
+static uint8_t control_work[16]; // the borrow an entry takes; Control never reads it
+
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
@@ -108,7 +110,8 @@ void handle_log(uint8_t slot, HttpReq *)
 void handle_reset(uint8_t slot, HttpReq *)
 {
     g_count = 0;
-    pid_reset(&pid);
+    ControlV.pid_reset_args.p = &pid;
+    Control.pid_reset(control_work);
     sim_y = 0.0f;
     send_text(slot, 200, "text/plain", "recording restarted\n");
 }
@@ -143,9 +146,18 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    pid_init(&pid, KP, KI, KD);
-    pid_set_output_limits(&pid, OUT_MIN, OUT_MAX);
-    pid_set_rate(&pid, PERIOD_MS * 0.001f); // fixed rate -> pid_update_fixed() skips the /dt divide
+    ControlV.pid_init_args.p = &pid;
+    ControlV.pid_init_args.kp = KP;
+    ControlV.pid_init_args.ki = KI;
+    ControlV.pid_init_args.kd = KD;
+    Control.pid_init(control_work);
+    ControlV.pid_set_output_limits_args.p = &pid;
+    ControlV.pid_set_output_limits_args.lo = OUT_MIN;
+    ControlV.pid_set_output_limits_args.hi = OUT_MAX;
+    Control.pid_set_output_limits(control_work);
+    ControlV.pid_set_rate_args.p = &pid; // fixed rate -> pid_update_fixed() skips the /dt divide
+    ControlV.pid_set_rate_args.dt = PERIOD_MS * 0.001f;
+    Control.pid_set_rate(control_work);
 
     on_http("/", HTTP_GET, handle_root);
     on_http("/log.csv", HTTP_GET, handle_log);

@@ -205,9 +205,9 @@ proto_bool protocore_rtc_set_epoch(uint8_t *work, uint32_t epoch)
     return protocore_i2c_write(PROTOCORE_RTC_I2C_ADDR, RTC_CTX(work)->frame, sizeof(RTC_CTX(work)->frame));
 }
 
-void protocore_rtc_time_source(uint8_t *work)
+uint32_t protocore_rtc_time_source(void)
 {
-    Rtc.read_epoch(work);
+    return Rtc.read_epoch(protocore_rtc_span());
 }
 
 #endif // PROTOCORE_ENABLE_RTC

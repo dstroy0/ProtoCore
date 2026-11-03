@@ -14,7 +14,7 @@
  * coaps_server owns a small pool of DTLS connections keyed by peer address, binds UDP/5684 through the
  * transport layer, and (once a peer's handshake completes) hands each decrypted CoAP request to the
  * same protocore_coap_server_process() the plaintext server uses - so the resource table is registered exactly
- * once with protocore_coap_server_add_resource(). protocore_coaps_server_poll() drives the handshakes, the DTLS
+ * once with Coap.add_resource. CoapsServer.poll drives the handshakes, the DTLS
  * retransmission timer, and idle-connection reaping; call it every loop iteration.
  *
  * The profile is TLS_AES_128_GCM_SHA256 + X25519 + an Ed25519 server certificate. The sketch ships a
@@ -168,20 +168,21 @@ void setup()
     CoapV.resource.handler = coap_hello;
     Coap.add_resource(protocore_coap_span());
 
-    CoapsServerConfig cfg;
-    memset(&cfg, 0, sizeof cfg);
-    cfg.cert_der = COAPS_CERT_DER;
-    cfg.cert_len = sizeof(COAPS_CERT_DER);
-    memcpy(cfg.ed25519_seed, COAPS_ED25519_SEED, sizeof cfg.ed25519_seed);
-    esp_fill_random(cfg.cookie_key, sizeof cfg.cookie_key); // fresh HelloRetryRequest cookie secret per boot
-    cfg.rng = coaps_rng;
-    if (protocore_coaps_server_begin(PROTOCORE_COAPS_PORT, &cfg))
+    CoapsServerV.identity.cert_der = COAPS_CERT_DER;
+    CoapsServerV.identity.cert_len = sizeof(COAPS_CERT_DER);
+    memcpy(CoapsServerV.identity.ed25519_seed, COAPS_ED25519_SEED, sizeof CoapsServerV.identity.ed25519_seed);
+    // A fresh HelloRetryRequest cookie secret per boot.
+    esp_fill_random(CoapsServerV.identity.cookie_key, sizeof CoapsServerV.identity.cookie_key);
+    CoapsServerV.identity.rng = coaps_rng;
+    CoapsServerV.bind.port = PROTOCORE_COAPS_PORT;
+    CoapsServer.begin(protocore_coaps_server_span());
+    if (CoapsServerV.ok)
     {
         Serial.println("CoAPs (DTLS 1.3) server listening on UDP/5684 (try: coap-client -m get coaps://<ip>/info)");
     }
     else
     {
-        Serial.println("CoapsServer.begin(protocore_coaps_server_span()) failed (UDP bind)");
+        Serial.println("CoapsServer.begin failed (UDP bind)");
     }
 
     int32_t result = begin_http(80, NULL);

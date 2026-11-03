@@ -38,9 +38,14 @@ static void mdns_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     char json[128];
+    MdnsAdaptive.interval_ms(protocore_mdns_adaptive_span());
+    const unsigned long interval_ms = MdnsAdaptiveV.ms;
+    MdnsAdaptive.contention(protocore_mdns_adaptive_span());
+    const unsigned contention = MdnsAdaptiveV.value;
+    MdnsAdaptive.announces(protocore_mdns_adaptive_span());
+    const unsigned long announces = MdnsAdaptiveV.ms;
     snprintf(json, sizeof(json), "{\"interval_ms\":%lu,\"contention\":%u,\"announces\":%lu,\"channel\":%u}",
-             (unsigned long)MdnsAdaptive.interval_ms(protocore_mdns_adaptive_span()), (unsigned)MdnsAdaptive.contention(protocore_mdns_adaptive_span()),
-             (unsigned long)MdnsAdaptive.announces(protocore_mdns_adaptive_span()), (unsigned)protocore_physical_channel());
+             interval_ms, contention, announces, (unsigned)protocore_physical_channel());
     send_text(slot_id, 200, PROTOCORE_MIME_JSON, json);
 }
 
@@ -108,8 +113,13 @@ void loop()
     if (millis() >= next)
     {
         next = millis() + 5000;
+        MdnsAdaptive.interval_ms(protocore_mdns_adaptive_span());
+        const unsigned long interval_ms = MdnsAdaptiveV.ms;
+        MdnsAdaptive.contention(protocore_mdns_adaptive_span());
+        const unsigned contention = MdnsAdaptiveV.value;
+        MdnsAdaptive.announces(protocore_mdns_adaptive_span());
+        const unsigned long announces = MdnsAdaptiveV.ms;
         Serial.printf("interval=%lums contention=%u announces=%lu ch=%u\n",
-                      (unsigned long)MdnsAdaptive.interval_ms(protocore_mdns_adaptive_span()), (unsigned)MdnsAdaptive.contention(protocore_mdns_adaptive_span()),
-                      (unsigned long)MdnsAdaptive.announces(protocore_mdns_adaptive_span()), (unsigned)protocore_physical_channel());
+                      interval_ms, contention, announces, (unsigned)protocore_physical_channel());
     }
 }

@@ -1,6 +1,6 @@
 # HttpDelivery - an app shell that loads instantly and refreshes in the background
 
-**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_HTTP_DELIVERY`, `PROTOCORE_ENABLE_FILE_SERVING`, `PROTOCORE_ENABLE_RANGE`, `PROTOCORE_ENABLE_MNT`
+**Layer:** L7 Application · **Build flags:** `PROTOCORE_ENABLE_HTTP_DELIVERY`, `PROTOCORE_ENABLE_FILE_SERVING`, `PROTOCORE_ENABLE_RANGE`, `PROTOCORE_ENABLE_MNT`, `PROTOCORE_ENABLE_WEB_ASSETS`
 
 ## What this example teaches
 
@@ -88,6 +88,6 @@ The flags must reach the library build, so pass them as build flags:
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_HTTP_DELIVERY=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -DPROTOCORE_ENABLE_RANGE=1 -DPROTOCORE_ENABLE_MNT=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_WEB_ASSETS=1 -DPROTOCORE_ENABLE_HTTP_DELIVERY=1 -DPROTOCORE_ENABLE_FILE_SERVING=1 -DPROTOCORE_ENABLE_RANGE=1 -DPROTOCORE_ENABLE_MNT=1" \
   --lib="." examples/L7-Application/HttpDelivery/HttpDelivery.ino
 ```

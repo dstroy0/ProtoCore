@@ -20,11 +20,12 @@
  * `pyvisa` server, or any SCPI simulator listening on port 5025. See the README to fake one with
  * a two-line `socat` / netcat responder for a dry run.
  *
- * Build flag (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_SCPI=1
+ * Build flag (platformio.ini):  build_flags = -DPROTOCORE_ENABLE_DNS_RESOLVER=1 -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_SCPI=1
  */
 
 #define PROTOCORE_ENABLE_SCPI 1
 #define PROTOCORE_ENABLE_TCP_CLIENT 1
+#define PROTOCORE_ENABLE_DNS_RESOLVER 1
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical/physical.h"
