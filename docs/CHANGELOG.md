@@ -120,6 +120,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`5fd58a8`](https://github.com/dstroy0/ProtoCore/commit/5fd58a8effd3c4255c91c1dc4893b5e7bdb74407))
 - update CHANGELOG.md [skip ci] ([`3882125`](https://github.com/dstroy0/ProtoCore/commit/3882125a7d8e1e5b3148e5598fb9311a169366ee))
 - update CHANGELOG.md [skip ci] ([`a823497`](https://github.com/dstroy0/ProtoCore/commit/a8234970502f5cb842e4de15ce3f35b601eb0784))
 - update CHANGELOG.md [skip ci] ([`e3d7d43`](https://github.com/dstroy0/ProtoCore/commit/e3d7d43998f949b753b5f0401a183764b82b3c7f))
@@ -467,6 +468,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Port the remaining service sketches onto their handles, size the ghost cellblocks and the CoAP borrow to what they hold, restore the RTC time source's TimeSourceFn shape, order header designators for C++, and render the footprint table from the main each bot commit lands on. ([`16ed177`](https://github.com/dstroy0/ProtoCore/commit/16ed177364eafb127adce4f4ffd6ef9c0b86351d))
 - Port the NTP, CoAP, mDNS, IPv6, file serving, HTTP client, OIDC, radio power, SPA, delivery and DiffServ sketches onto their handles and add the feature flags their examples need. ([`cf1d425`](https://github.com/dstroy0/ProtoCore/commit/cf1d4252b71d3eb5562bdef2c0f78a85b0509e33))
 - Port the remaining sketch calls onto the TCP, UDP, SSH, Physical, preempt-queue and service handles, declare the SSH host key setters, and bind the GPIO map and HTTP delivery route installers to the weak entries they override. ([`a10acf0`](https://github.com/dstroy0/ProtoCore/commit/a10acf0e4b7fb8c807d5752b0e51c20c6c68c407))
 - Wrap the web assets requirement error and realign the test report table. ([`2bff3f9`](https://github.com/dstroy0/ProtoCore/commit/2bff3f90f9f156aa45225fbe050a2c3ae1275713))
@@ -896,6 +898,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- update ESP32 build footprints [skip ci] ([`12deb0e`](https://github.com/dstroy0/ProtoCore/commit/12deb0e8ff2265ab2cb427c2f92efaebed307e21))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`a0f5ba8`](https://github.com/dstroy0/ProtoCore/commit/a0f5ba8ecbce0e31178c64e56aa3b440a210126f))
+- update ESP32 build footprints [skip ci] ([`439939a`](https://github.com/dstroy0/ProtoCore/commit/439939a89b655df26f9ff0c9be66cc660d2d99a6))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`76ae120`](https://github.com/dstroy0/ProtoCore/commit/76ae12036b7e038468fe75bcdbf05cb826a2c9bd))
 - update ESP32 build footprints [skip ci] ([`deff46f`](https://github.com/dstroy0/ProtoCore/commit/deff46f4e452bfbf86ec7d6cee80718ad3cf34fa))
 - update ESP32 build footprints [skip ci] ([`83a91fa`](https://github.com/dstroy0/ProtoCore/commit/83a91fa625b7dc9a015e7722f30563e3e866133c))
 - update ESP32 build footprints [skip ci] ([`1bc928b`](https://github.com/dstroy0/ProtoCore/commit/1bc928bdab80003c757a942a114da50caada655a))
