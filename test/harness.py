@@ -2171,7 +2171,7 @@ def cov_one(gc, name):
     produced = p.returncode == 0 and os.path.isfile(full) and os.path.getsize(full) > 0
     if not produced:
         # The caller names the env and refuses the merge. What gcovr said is the only record of why.
-        print("  gcovr exit %d for %s:\n%s" % (p.returncode, name, p.stderr.strip()[-2000:]), file=sys.stderr)
+        print("  gcovr exit %d for %s:\n%s" % (p.returncode, name, p.stderr.strip()[:12000]), file=sys.stderr)
     return produced
 
 
