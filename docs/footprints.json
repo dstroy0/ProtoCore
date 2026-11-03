@@ -472,8 +472,8 @@
     "example": "Drivers/Nrf24Gateway",
     "flags": "-DPROTOCORE_ENABLE_NRF24=1 -DPROTOCORE_ENABLE_GATEWAY=1",
     "board": "esp32dev",
-    "flash_bytes": 275969,
-    "ram_bytes": 21688
+    "flash_bytes": 408044,
+    "ram_bytes": 111620
   },
   "NTP": {
     "example": "L7-Application/SNTP",
@@ -612,8 +612,8 @@
     "example": "Foundation/PreemptQueue",
     "flags": "-DPROTOCORE_ENABLE_PREEMPT_QUEUE=1",
     "board": "esp32dev",
-    "flash_bytes": 273861,
-    "ram_bytes": 23968
+    "flash_bytes": 409256,
+    "ram_bytes": 111604
   },
   "PROMISC+FORWARD+ETHERNET": {
     "example": "Peripherals/WifiCapture",
@@ -689,8 +689,8 @@
     "example": "Drivers/SigfoxUplink",
     "flags": "-DPROTOCORE_ENABLE_SIGFOX=1",
     "board": "esp32dev",
-    "flash_bytes": 267957,
-    "ram_bytes": 21464
+    "flash_bytes": 364588,
+    "ram_bytes": 29004
   },
   "SIMATIC": {
     "example": "L7-Application/SimaticSerial",

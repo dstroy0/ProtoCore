@@ -75,7 +75,7 @@ from each example's `pio ci` size report and aggregated into
 | `MQTT`                                                                                                    | L7-Application/MqttClient            | 722.6 KB (56.5%) | 63.8 KB (19.9%)  |
 | `MSGPACK`                                                                                                 | L6-Presentation/MsgPack              | 730.6 KB (57.1%) | 72.2 KB (22.6%)  |
 | `NMEA0183+UBX`                                                                                            | Drivers/UbloxGnss                    | 360.2 KB (28.1%) | 29.3 KB (9.1%)   |
-| `NRF24+GATEWAY`                                                                                           | Drivers/Nrf24Gateway                 | 269.5 KB (21.1%) | 21.2 KB (6.6%)   |
+| `NRF24+GATEWAY`                                                                                           | Drivers/Nrf24Gateway                 | 398.5 KB (31.1%) | 109.0 KB (34.1%) |
 | `NTP`                                                                                                     | L7-Application/SNTP                  | 752.4 KB (58.8%) | 74.6 KB (23.3%)  |
 | `NTP+TIME_SOURCE`                                                                                         | L7-Application/TimeSourceFallback    | 747.9 KB (58.4%) | 73.7 KB (23.0%)  |
 | `NTP_SERVER+TIME_SOURCE+NMEA0183+NTP`                                                                     | L7-Application/NtpServer             | 730.8 KB (57.1%) | 45.6 KB (14.3%)  |
@@ -95,7 +95,7 @@ from each example's `pio ci` size report and aggregated into
 | `PER_IP_THROTTLE`                                                                                         | L4-Transport/PerIpThrottle           | 727.3 KB (56.8%) | 72.5 KB (22.7%)  |
 | `PN532+GATEWAY`                                                                                           | Drivers/NfcGateway                   | 424.6 KB (33.2%) | 110.4 KB (34.5%) |
 | `POWER_MGMT`                                                                                              | L7-Application/PowerGovernor         | 852.8 KB (66.6%) | 75.9 KB (23.7%)  |
-| `PREEMPT_QUEUE`                                                                                           | Foundation/PreemptQueue              | 267.4 KB (20.9%) | 23.4 KB (7.3%)   |
+| `PREEMPT_QUEUE`                                                                                           | Foundation/PreemptQueue              | 399.7 KB (31.2%) | 109.0 KB (34.1%) |
 | `PROMISC+FORWARD+ETHERNET`                                                                                | Peripherals/WifiCapture              | 748.3 KB (58.5%) | 46.5 KB (14.5%)  |
 | `PROVISIONING`                                                                                            | L7-Application/Provisioning          | 734.3 KB (57.4%) | 73.7 KB (23.0%)  |
 | `PTP`                                                                                                     | L7-Application/Ptp                   | 711.0 KB (55.6%) | 44.0 KB (13.7%)  |
@@ -106,7 +106,11 @@ from each example's `pio ci` size report and aggregated into
 | `SCPI`                                                                                                    | L7-Application/Scpi                  | 708.5 KB (55.4%) | 42.8 KB (13.4%)  |
 | `SEN0192`                                                                                                 | Drivers/Sen0192                      | 263.4 KB (20.6%) | 21.0 KB (6.6%)   |
 | `SHT3X`                                                                                                   | Drivers/Sht3x                        | 404.1 KB (31.6%) | 112.0 KB (35.0%) |
+<<<<<<< Updated upstream
 | `SIGFOX`                                                                                                  | Drivers/SigfoxUplink                 | 261.7 KB (20.4%) | 21.0 KB (6.6%)   |
+=======
+| `SIGFOX`                                                                                                  | Drivers/SigfoxUplink                 | 356.0 KB (27.8%) | 28.3 KB (8.9%)   |
+>>>>>>> Stashed changes
 | `SIMATIC`                                                                                                 | L7-Application/SimaticSerial         | 740.7 KB (57.9%) | 81.4 KB (25.4%)  |
 | `SMB`                                                                                                     | L7-Application/SmbFileClient         | 747.6 KB (58.4%) | 68.6 KB (21.5%)  |
 | `SMTP`                                                                                                    | L7-Application/SmtpAlert             | 718.1 KB (56.1%) | 59.7 KB (18.7%)  |
